@@ -20,6 +20,7 @@ def emit(model: dict) -> str:
     out += [f"  --{name}: {v.css()};" for name, v in model["roles"].items()]
     out.append("")
     out.append(f"  --accent: {model['accent'].css()};")
+    out.append(f"  --accent-standalone: {model['accent_standalone'].css()};")
     out.append(f"  --on-accent: {model['on_accent'].css()};")
     out.append("")
     out += [f"  --cat-{i}: {v.css()};" for i, v in enumerate(model["categorical"])]
@@ -43,14 +44,9 @@ def emit(model: dict) -> str:
     out += [f"  --text-{size}: {size}px;" for size in t["scale"]]
     out.append(f"  --weight-regular: {t['weight_regular']};")
     out.append(f"  --weight-medium: {t['weight_medium']};")
-    out.append("}")
+    out.append("")
 
-    bp = raw["breakpoints"]
-    out += [
-        "",
-        "/* Seuils sur la largeur du CONTENEUR, jamais de l'écran. */",
-        ".pane { container-type: inline-size; }",
-        f"@container (max-width: {bp['compact'] - 1}px) {{ .sidebar {{ --sidebar-mode: compact; }} }}",
-        f"@container (min-width: {bp['extended']}px) {{ .inspector {{ --inspector-visible: 1; }} }}",
-    ]
+    out.append("  /* seuils sur la largeur du CONTENEUR, jamais de l'écran */")
+    out += [f"  --breakpoint-{key}: {val}px;" for key, val in raw["breakpoints"].items()]
+    out.append("}")
     return "\n".join(out) + "\n"

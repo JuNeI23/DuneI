@@ -9,20 +9,25 @@ from __future__ import annotations
 
 from ..color import to_hex, to_srgb255
 
+# Valeurs du protocole org.freedesktop.appearance color-scheme (0 = sans préférence).
+_SCHEME = {"dark": 1, "light": 2}
+
 
 def emit(model: dict) -> str:
     """Réglages org.freedesktop.appearance.
 
     Entrée : model — sortie de model.resolve.
-    Sortie : contenu de appearance-portal.conf. Erreurs : aucune.
+    Sortie : contenu de appearance-portal.conf.
+    Erreurs : KeyError si meta.mode n'est ni « dark » ni « light ».
     Dépendances : color.to_srgb255, color.to_hex.
     """
     r, g, b = to_srgb255(model["accent"])
+    mode = model["raw"]["meta"]["mode"]
     return "\n".join([
         "# GÉNÉRÉ depuis tokens.toml",
         "# org.freedesktop.appearance",
         "",
-        "color-scheme=1                 # 1 = préférence sombre",
+        f"color-scheme={_SCHEME[mode]}                 # préférence : {mode}",
         f"accent-color=({r/255:.4f}, {g/255:.4f}, {b/255:.4f})",
         "",
         f"# teinte {model['hue']}° — accent exact : {to_hex(model['accent'])}",

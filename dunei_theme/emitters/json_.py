@@ -25,7 +25,12 @@ def _serial(v):
 def emit(model: dict) -> str:
     """Modèle résolu, sans le TOML brut.
 
+    JSON n'a pas de commentaires : l'avertissement « généré » est la clé
+    `_generated`, placée en tête.
+
     Entrée : model — sortie de model.resolve.
-    Sortie : contenu de tokens.json. Erreurs : aucune. Dépendances : json.
+    Sortie : contenu de tokens.json. Erreurs : aucune. Dépendances : json, _serial.
     """
-    return json.dumps(_serial({k: v for k, v in model.items() if k != "raw"}), indent=2, ensure_ascii=False) + "\n"
+    out = {"_generated": "GÉNÉRÉ depuis tokens.toml — NE PAS MODIFIER À LA MAIN"}
+    out |= {k: v for k, v in model.items() if k != "raw"}
+    return json.dumps(_serial(out), indent=2, ensure_ascii=False) + "\n"
