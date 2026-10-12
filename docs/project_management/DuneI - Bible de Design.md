@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas
 
-Document normatif. Version 0.5. Historique en fin de document.
+Document normatif. Version 0.5.1. Historique en fin de document.
 
 ## Comment lire ce document
 
@@ -59,7 +59,7 @@ C'est ce qui garantit le contraste par construction : si le texte est à l'éche
 | 7 | 0,53 | `text-disabled` |
 | 8 | 0,63 | `text-tertiary` |
 | 9 | 0,73 | `text-secondary` |
-| 10 | 0,93 | `text-primary` |
+| 10 | 0,935 | `text-primary` |
 | 11 | 0,97 | `text-emphasis` |
 
 Chroma des neutres : 0,020, majoré de 40 % sous L 0,45 — la perception du chroma s'affaiblit en basse lumière. Plafond de gamut : 0,16.
@@ -70,6 +70,8 @@ Chroma des neutres : 0,020, majoré de 40 % sous L 0,45 — la perception du chr
 
 - **Remplissage** — sélection, bouton primaire. Échelon 7, chroma 0,15.
 - **Autonome** — texte accentué, liens. Échelon 9. Posé sur fond sombre, il doit être bien plus clair, sinon illisible.
+
+**Les liens, en accent autonome, sont un signal court** (Lc 51–57) : ils ne portent jamais de lecture continue, qui reste en `text-primary`.
 
 **Le texte posé sur l'accent de remplissage est quasi blanc** (L 0,99, chroma minimal). Aucun texte sombre n'atteint le plancher de contraste sur un remplissage à l'échelon 7 : Lc 27 mesuré, contre 78–80 en clair.
 
@@ -118,7 +120,7 @@ Usages autorisés : bureaux virtuels, étiquettes, coloration syntaxique, série
 
 ### Invariants — ce qui ne recolore jamais
 
-- Couleurs sémantiques : erreur, avertissement, succès. **Hors plafond de chroma** : leur valeur est écrite telle quelle, et seulement rabattue dans le gamut à la conversion, à teinte préservée.
+- Couleurs sémantiques : erreur, avertissement, succès. **Elles ne servent jamais de fond à du texte** — texte, bordure, icône seulement : aucun texte n'atteint le plancher sur `warning`, `success` ou `info` (Lc 59 au mieux). Une action destructrice s'écrit en texte et bordure `error` sur une surface neutre. **Hors plafond de chroma** : leur valeur est écrite telle quelle, et seulement rabattue dans le gamut à la conversion, à teinte préservée.
 - Bleu d'information — teinte bloquée, et distinction renforcée par la forme, à cause de la collision avec un thème bleu.
 - Zones de jugement colorimétrique : pourtour de canevas, visionneuse, aperçu vidéo. **Neutre pur obligatoire** — un gris teinté fausse la perception des couleurs de l'utilisateur.
 - Indicateurs critiques : batterie faible, enregistrement, chiffrement, connexion non sécurisée.
@@ -698,7 +700,7 @@ Chacun correspond à une erreur observée dans des systèmes existants.
 | Courbure des coins (`rounding_power`) et flou des fenêtres tuilées | Aucun token ; le compositeur garde ses valeurs par défaut |
 | Parité de la gouttière | Hyprland applique la demi-gouttière de chaque côté : une gouttière impaire serait arrondie sans contrôle |
 | `shade_opacity` (0,36) et `surface-edge-shadow` (0,12) | Deux opacités d'ombre distinctes, à rapprocher ou non |
-| Corps de texte sur `surface-raised` | Lc 89,6–89,9 : à 0,4 de la cible |
+| Fonds pleins sémantiques côté GTK | libadwaita remplit boutons destructifs et bandeaux avec les sémantiques ; texte illisible (Lc 32 sur `error` en sombre). À traiter avec la cible GTK 4, L4-03 |
 
 ## Annexe D — Fichiers
 
@@ -789,4 +791,5 @@ Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si 
 | --- | --- | --- |
 | 0.4 | 2026-10-10 | Version de référence |
 | 0.4.1 | 2026-10-12 | Annexe D : la cible compositeur est un module Lua (Hyprland 0.56) |
+| 0.5.1 | 2026-10-12 | Échelon 10 à 0,935 ; sémantiques jamais en fond de texte ; liens = signal court (D12) |
 | 0.5 | 2026-10-12 | Échelons 10 et 11 relevés (0,93 / 0,97) ; texte quasi blanc sur l'accent ; sémantiques hors plafond ; rabattement à teinte préservée ; extraction paramétrée et achromatique signalé ; contrôles APCA ; annexes C et D |

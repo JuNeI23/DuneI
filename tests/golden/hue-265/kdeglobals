@@ -12,7 +12,7 @@ fixed=Source Code Pro,13,-1,5,400,0,0,0,0,0
 [Colors:View]
 BackgroundNormal=5,9,21
 BackgroundAlternate=11,17,30
-ForegroundNormal=225,232,246
+ForegroundNormal=227,234,247
 ForegroundInactive=131,137,150
 ForegroundActive=64,102,194
 ForegroundLink=64,102,194
@@ -26,7 +26,7 @@ DecorationHover=64,102,194
 [Colors:Window]
 BackgroundNormal=11,17,30
 BackgroundAlternate=20,26,40
-ForegroundNormal=225,232,246
+ForegroundNormal=227,234,247
 ForegroundInactive=131,137,150
 ForegroundActive=64,102,194
 ForegroundLink=64,102,194
@@ -40,7 +40,7 @@ DecorationHover=64,102,194
 [Colors:Header]
 BackgroundNormal=20,26,40
 BackgroundAlternate=29,36,50
-ForegroundNormal=225,232,246
+ForegroundNormal=227,234,247
 ForegroundInactive=131,137,150
 ForegroundActive=64,102,194
 ForegroundLink=64,102,194
@@ -54,7 +54,7 @@ DecorationHover=64,102,194
 [Colors:Button]
 BackgroundNormal=29,36,50
 BackgroundAlternate=20,26,40
-ForegroundNormal=225,232,246
+ForegroundNormal=227,234,247
 ForegroundInactive=131,137,150
 ForegroundActive=64,102,194
 ForegroundLink=64,102,194
@@ -68,7 +68,7 @@ DecorationHover=64,102,194
 [Colors:Tooltip]
 BackgroundNormal=29,36,50
 BackgroundAlternate=20,26,40
-ForegroundNormal=225,232,246
+ForegroundNormal=227,234,247
 ForegroundInactive=131,137,150
 ForegroundActive=64,102,194
 ForegroundLink=64,102,194
@@ -96,7 +96,7 @@ DecorationHover=64,102,194
 [Colors:Complementary]
 BackgroundNormal=20,26,40
 BackgroundAlternate=29,36,50
-ForegroundNormal=225,232,246
+ForegroundNormal=227,234,247
 ForegroundInactive=131,137,150
 ForegroundActive=64,102,194
 ForegroundLink=64,102,194
