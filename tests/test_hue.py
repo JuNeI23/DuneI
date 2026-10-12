@@ -11,7 +11,8 @@ from dunei_theme.hue import decide, from_image, quantize
 from dunei_theme.model import load
 
 ROOT = Path(__file__).resolve().parent.parent
-FALLBACK = load(ROOT / "tokens.toml")["theme"]["fallback_hue"]
+DATA = load(ROOT / "tokens.toml")
+EX = DATA["extraction"]
 
 
 def extract(pixels: np.ndarray):
@@ -23,7 +24,7 @@ def extract(pixels: np.ndarray):
     with tempfile.TemporaryDirectory() as d:
         path = Path(d) / "img.png"
         Image.fromarray(pixels.astype(np.uint8)).save(path)
-        return decide(from_image(path), FALLBACK)
+        return decide(from_image(path, EX), DATA)
 
 
 def plain(rgb, size=100):
@@ -41,7 +42,7 @@ class HueTest(unittest.TestCase):
     def test_grey_is_achromatic(self):
         res = extract(plain((128, 128, 128)))
         self.assertTrue(res.achromatic)
-        self.assertEqual(res.hue, FALLBACK)
+        self.assertEqual(res.hue, DATA["theme"]["fallback_hue"])
         self.assertIsNone(res.pivot)
 
     def test_small_vivid_zone_beats_dominant(self):
@@ -49,13 +50,13 @@ class HueTest(unittest.TestCase):
         img[:10] = (220, 40, 40)           # bande rouge vive, 10 %
         res = extract(img)
         self.assertFalse(res.achromatic)
-        self.assertEqual(res.hue, quantize(res.pivot["h"]))
+        self.assertEqual(res.hue, quantize(res.pivot["h"], EX["hue_step"]))
         self.assertLess(abs((res.hue - 25 + 180) % 360 - 180), 15)
 
     def test_quantize_never_360(self):
-        self.assertEqual(quantize(358), 0)
-        self.assertEqual(quantize(359.9), 0)
-        self.assertEqual(quantize(357), 355)
+        self.assertEqual(quantize(358, EX["hue_step"]), 0)
+        self.assertEqual(quantize(359.9, EX["hue_step"]), 0)
+        self.assertEqual(quantize(357, EX["hue_step"]), 355)
 
     def test_stability(self):
         rng = np.random.default_rng(0)

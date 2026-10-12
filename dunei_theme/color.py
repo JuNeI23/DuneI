@@ -133,3 +133,23 @@ def apca_lc(text: Oklch, bg: Oklch) -> float:
         return 0.0 if sapc < 0.1 else (sapc - 0.027) * 100
     sapc = (yb ** 0.65 - yt ** 0.62) * 1.14
     return 0.0 if sapc > -0.1 else (sapc + 0.027) * 100
+
+
+def from_srgb255(r: int, g: int, b: int) -> Oklch:
+    """sRGB 8 bits → OKLCH, sans arrondi (mesure, pas valeur écrite).
+
+    Entrées : r, g, b — canaux 0–255.
+    Sortie : Oklch (h en degrés, dans [0, 360)). Erreurs : aucune.
+    Dépendances : math. Matrices : Björn Ottosson, « A perceptual color space ».
+    """
+    def lin(c):
+        c /= 255.0
+        return c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
+    R, G, B = lin(r), lin(g), lin(b)
+    l = (0.4122214708 * R + 0.5363325363 * G + 0.0514459929 * B) ** (1 / 3)
+    m = (0.2119034982 * R + 0.6806995451 * G + 0.1073969566 * B) ** (1 / 3)
+    s = (0.0883024619 * R + 0.2817188376 * G + 0.6299787005 * B) ** (1 / 3)
+    L = 0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s
+    a = 1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s
+    bb = 0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s
+    return Oklch(L, math.hypot(a, bb), math.degrees(math.atan2(bb, a)) % 360)

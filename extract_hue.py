@@ -43,12 +43,13 @@ def main() -> int:
 
     try:
         data = load(args.src)
-        samples = from_image(args.image) if args.image else from_wal(args.wal or None)
+        ex = data["extraction"]
+        samples = from_image(args.image, ex) if args.image else from_wal(args.wal or None, ex)
     except Exception as e:  # toute lecture ratée a la même issue : on le dit et on sort
         print(f"erreur : {e}", file=sys.stderr)
         return EXIT_ERROR
 
-    res = decide(samples, data["theme"]["fallback_hue"])
+    res = decide(samples, data)
     code = EXIT_ACHROMATIC if res.achromatic else EXIT_OK
     if args.json:
         print(json.dumps(res._asdict()))
@@ -58,7 +59,7 @@ def main() -> int:
     if res.achromatic:
         print("verdict       : image ACHROMATIQUE, aucune teinte n'en est tirée")
         print(f"teinte PROPOSÉE (repli) : {res.hue}°")
-        print("pour en choisir une autre : python3 generate_tokens.py --hue N  (0–360, pas de 5°)")
+        print(f"pour en choisir une autre : python3 generate_tokens.py --hue N  (0–360, pas de {data['extraction']['hue_step']}°)")
     else:
         p = res.pivot
         print(f"couleur pivot : rgb{tuple(p['rgb'])}  L={p['l']:.3f}  C={p['c']:.3f}  H={p['h']:.1f}°")

@@ -7,7 +7,7 @@ return {
         gaps_out    = 8,
         border_size = 2,
         col = {
-            active_border   = "#aa4d00",
+            active_border   = "#a35300",
             inactive_border = "#3c2d23",
         },
     },

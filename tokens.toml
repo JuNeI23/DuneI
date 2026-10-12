@@ -134,6 +134,24 @@ info    = { l = 0.70, c = 0.13, h = 240 }
 
 
 # ===========================================================================
+# EXTRACTION DE TEINTE — fond d'écran → teinte (bible ch. 2, cinq règles)
+# ===========================================================================
+# Ne produit qu'une TEINTE : luminosité et chroma sont imposés par l'échelle.
+
+[extraction]
+neutral_chroma_max = 0.03        # règle 2 : sous ce chroma, un pixel est neutre
+hue_step = 5                     # règle 4 : pas de quantification, en degrés
+pivot_lightness = 0.55           # règle 1 : luminosité sans pénalité
+penalty_exponent = 1.5           # règle 1 : raideur de la pénalité des extrêmes
+image_max_side = 400             # px — réduction avant analyse
+image_bucket = 16                # regroupement des canaux sRGB 8 bits
+image_top_colors = 64            # nombre de groupes de couleurs retenus
+wal_extreme_indices = [0, 7, 8, 15]  # couleurs wal de fond et d'avant-plan
+wal_extreme_weight = 0.2         # leur poids, les autres valant 1
+wal_cache = "~/.cache/wal/colors.json"
+
+
+# ===========================================================================
 # PALETTE CATÉGORIELLE — dérivée de la teinte du thème
 # ===========================================================================
 # Décalages angulaires fixes : cinq couleurs qui vont ensemble par
