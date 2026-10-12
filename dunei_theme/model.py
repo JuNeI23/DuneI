@@ -5,7 +5,7 @@ from __future__ import annotations
 import tomllib
 from pathlib import Path
 
-from .color import oklch
+from .color import Oklch, oklch
 
 
 def load(src: Path) -> dict:
@@ -24,33 +24,43 @@ def resolve(data: dict, hue_override: float | None = None) -> dict:
     """Résolution — applique les deux variables du thème à l'échelle invariante.
 
     Entrées : data — TOML brut ; hue_override — teinte simulée (sans toucher la source).
-    Sortie : modèle {hue, ramp, roles, accent, on_accent, categorical, semantic, raw},
-             couleurs de type Oklch.
-    Erreurs : KeyError si une section attendue manque dans le TOML.
-    Dépendances : color.oklch.
+    Sortie : modèle {hue, ramp, roles, elevation, accent, accent_standalone, on_accent,
+             categorical, semantic, raw}, couleurs de type Oklch.
+    Erreurs : KeyError si une section attendue manque dans le TOML ;
+              IndexError si un échelon dépasse l'échelle de luminosité.
+    Dépendances : color.Oklch, color.oklch.
     """
     th = dict(data["theme"])
     if hue_override is not None:
         th["hue"] = hue_override % 360
 
     hue, ceiling, scale = th["hue"], th["chroma_ceiling"], th["chroma_scale"]
-    steps = data["lightness"]["steps"]
+    steps, acc, cat = data["lightness"]["steps"], data["accent"], data["categorical"]
 
     # Neutres : chroma majoré sous L 0.45, la perception y est plus faible.
     ramp = [oklch(l, th["neutral_chroma"] * scale * (th["dark_chroma_boost"] if l < 0.45 else 1), hue, ceiling)
             for l in steps]
 
-    cat = data["categorical"]
+    def accent(step):
+        """Accent à un échelon de l'échelle de luminosité.
+
+        Entrée : step — index d'échelon. Sortie : Oklch à la teinte du thème.
+        Erreurs : IndexError si l'échelon n'existe pas. Dépendances : color.oklch.
+        """
+        return oklch(steps[step], th["accent_chroma"] * scale, hue, ceiling)
+
     return {
         "hue": hue,
         "ramp": ramp,
         "roles": {name: ramp[i] for name, i in data["roles"].items()},
-        "accent": oklch(steps[cat["lightness_step"] - 2], th["accent_chroma"] * scale, hue, ceiling),
-        "on_accent": oklch(steps[0], 0.020, hue, ceiling),
+        "elevation": {name: ramp[lvl["step"]] for name, lvl in data["elevation"].items()},
+        "accent": accent(acc["fill_step"]),
+        "accent_standalone": accent(acc["standalone_step"]),
+        "on_accent": oklch(acc["on_lightness"], acc["on_chroma"], hue, ceiling),
         "categorical": [oklch(steps[cat["lightness_step"]], cat["chroma"] * scale, (hue + off) % 360, ceiling)
                         for off in cat["hue_offsets"]],
-        # La section [semantic] peut contenir des clés scalaires : on ne garde que les couleurs.
-        "semantic": {k: oklch(v["l"], v["c"], v["h"], ceiling)
-                     for k, v in data["semantic"].items() if isinstance(v, dict)},
+        # Hors moteur de thème : ni teinte, ni chroma_scale, ni plafond. Le rabattement
+        # dans le gamut se fait à la conversion. On ne garde que les couleurs.
+        "semantic": {k: Oklch(**v) for k, v in data["semantic"].items() if isinstance(v, dict)},
         "raw": data,
     }

@@ -11,8 +11,8 @@
   --l-7: oklch(0.530 0.0200 0);
   --l-8: oklch(0.630 0.0200 0);
   --l-9: oklch(0.730 0.0200 0);
-  --l-10: oklch(0.850 0.0200 0);
-  --l-11: oklch(0.950 0.0200 0);
+  --l-10: oklch(0.930 0.0200 0);
+  --l-11: oklch(0.970 0.0200 0);
 
   --surface-base: oklch(0.140 0.0280 0);
   --surface-window: oklch(0.180 0.0280 0);
@@ -24,11 +24,12 @@
   --text-disabled: oklch(0.530 0.0200 0);
   --text-tertiary: oklch(0.630 0.0200 0);
   --text-secondary: oklch(0.730 0.0200 0);
-  --text-primary: oklch(0.850 0.0200 0);
-  --text-emphasis: oklch(0.950 0.0200 0);
+  --text-primary: oklch(0.930 0.0200 0);
+  --text-emphasis: oklch(0.970 0.0200 0);
 
   --accent: oklch(0.530 0.1500 0);
-  --on-accent: oklch(0.140 0.0200 0);
+  --accent-standalone: oklch(0.730 0.1500 0);
+  --on-accent: oklch(0.990 0.0040 0);
 
   --cat-0: oklch(0.730 0.1300 0);
   --cat-1: oklch(0.730 0.1300 40);
@@ -37,7 +38,7 @@
   --cat-4: oklch(0.730 0.1300 300);
 
   /* hors moteur de thème : ne recolorent jamais */
-  --error: oklch(0.580 0.1600 25);
+  --error: oklch(0.580 0.1900 25);
   --warning: oklch(0.750 0.1500 75);
   --success: oklch(0.720 0.1600 148);
   --info: oklch(0.700 0.1300 240);
@@ -77,9 +78,8 @@
   --text-28: 28px;
   --weight-regular: 400;
   --weight-medium: 500;
-}
 
-/* Seuils sur la largeur du CONTENEUR, jamais de l'écran. */
-.pane { container-type: inline-size; }
-@container (max-width: 479px) { .sidebar { --sidebar-mode: compact; } }
-@container (min-width: 900px) { .inspector { --inspector-visible: 1; } }
+  /* seuils sur la largeur du CONTENEUR, jamais de l'écran */
+  --breakpoint-compact: 480px;
+  --breakpoint-extended: 900px;
+}

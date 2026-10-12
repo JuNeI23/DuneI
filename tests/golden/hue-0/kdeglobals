@@ -3,19 +3,21 @@
 # kde-gtk-config répercute ensuite vers Breeze-GTK, sans redémarrage.
 
 [General]
-ColorScheme=SystemeTheme
+ColorScheme=DuneI
 Name=Theme machine (teinte 0.0°)
 shadeSortColumn=true
+font=Source Sans 3,13,-1,5,400,0,0,0,0,0
+fixed=Source Code Pro,13,-1,5,400,0,0,0,0,0
 
 [Colors:View]
 BackgroundNormal=18,5,9
 BackgroundAlternate=28,12,17
-ForegroundNormal=218,201,205
+ForegroundNormal=244,227,231
 ForegroundInactive=148,132,136
 ForegroundActive=173,62,104
 ForegroundLink=173,62,104
 ForegroundVisited=118,103,107
-ForegroundNegative=199,75,71
+ForegroundNegative=211,58,60
 ForegroundNeutral=228,158,34
 ForegroundPositive=81,191,104
 DecorationFocus=173,62,104
@@ -24,12 +26,12 @@ DecorationHover=173,62,104
 [Colors:Window]
 BackgroundNormal=28,12,17
 BackgroundAlternate=37,21,26
-ForegroundNormal=218,201,205
+ForegroundNormal=244,227,231
 ForegroundInactive=148,132,136
 ForegroundActive=173,62,104
 ForegroundLink=173,62,104
 ForegroundVisited=118,103,107
-ForegroundNegative=199,75,71
+ForegroundNegative=211,58,60
 ForegroundNeutral=228,158,34
 ForegroundPositive=81,191,104
 DecorationFocus=173,62,104
@@ -38,12 +40,12 @@ DecorationHover=173,62,104
 [Colors:Header]
 BackgroundNormal=37,21,26
 BackgroundAlternate=48,30,35
-ForegroundNormal=218,201,205
+ForegroundNormal=244,227,231
 ForegroundInactive=148,132,136
 ForegroundActive=173,62,104
 ForegroundLink=173,62,104
 ForegroundVisited=118,103,107
-ForegroundNegative=199,75,71
+ForegroundNegative=211,58,60
 ForegroundNeutral=228,158,34
 ForegroundPositive=81,191,104
 DecorationFocus=173,62,104
@@ -52,12 +54,12 @@ DecorationHover=173,62,104
 [Colors:Button]
 BackgroundNormal=48,30,35
 BackgroundAlternate=37,21,26
-ForegroundNormal=218,201,205
+ForegroundNormal=244,227,231
 ForegroundInactive=148,132,136
 ForegroundActive=173,62,104
 ForegroundLink=173,62,104
 ForegroundVisited=118,103,107
-ForegroundNegative=199,75,71
+ForegroundNegative=211,58,60
 ForegroundNeutral=228,158,34
 ForegroundPositive=81,191,104
 DecorationFocus=173,62,104
@@ -66,12 +68,12 @@ DecorationHover=173,62,104
 [Colors:Tooltip]
 BackgroundNormal=48,30,35
 BackgroundAlternate=37,21,26
-ForegroundNormal=218,201,205
+ForegroundNormal=244,227,231
 ForegroundInactive=148,132,136
 ForegroundActive=173,62,104
 ForegroundLink=173,62,104
 ForegroundVisited=118,103,107
-ForegroundNegative=199,75,71
+ForegroundNegative=211,58,60
 ForegroundNeutral=228,158,34
 ForegroundPositive=81,191,104
 DecorationFocus=173,62,104
@@ -80,12 +82,12 @@ DecorationHover=173,62,104
 [Colors:Selection]
 BackgroundNormal=173,62,104
 BackgroundAlternate=173,62,104
-ForegroundNormal=16,6,9
-ForegroundInactive=16,6,9
+ForegroundNormal=254,251,252
+ForegroundInactive=254,251,252
 ForegroundActive=173,62,104
 ForegroundLink=173,62,104
 ForegroundVisited=118,103,107
-ForegroundNegative=199,75,71
+ForegroundNegative=211,58,60
 ForegroundNeutral=228,158,34
 ForegroundPositive=81,191,104
 DecorationFocus=173,62,104
@@ -94,24 +96,20 @@ DecorationHover=173,62,104
 [Colors:Complementary]
 BackgroundNormal=37,21,26
 BackgroundAlternate=48,30,35
-ForegroundNormal=218,201,205
+ForegroundNormal=244,227,231
 ForegroundInactive=148,132,136
 ForegroundActive=173,62,104
 ForegroundLink=173,62,104
 ForegroundVisited=118,103,107
-ForegroundNegative=199,75,71
+ForegroundNegative=211,58,60
 ForegroundNeutral=228,158,34
 ForegroundPositive=81,191,104
 DecorationFocus=173,62,104
 DecorationHover=173,62,104
 
-[General]
-font=Source Sans 3,13,-1,5,400,0,0,0,0,0
-fixed=Source Code Pro,13,-1,5,400,0,0,0,0,0
-
 [KDE]
 widgetStyle=Breeze
 
 [Icons]
-Theme=DuneOS
+Theme=DuneI
 
