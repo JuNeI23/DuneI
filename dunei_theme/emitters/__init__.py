@@ -3,7 +3,7 @@
 Ajouter une cible = écrire un module, puis l'inscrire ici. Rien d'autre ne change.
 """
 
-from . import css, gtk, json_, kde, portal
+from . import css, gtk, hyprland, json_, kde, portal
 
 TARGETS = {
     "tokens.css": css.emit,
@@ -12,4 +12,5 @@ TARGETS = {
     "gtk-3.0-gtk.css": gtk.emit_gtk3,       # adw-gtk3
     "gtk-4.0-gtk.css": gtk.emit_gtk4,       # libadwaita
     "appearance-portal.conf": portal.emit,  # repli bac à sable
+    "hyprland-tokens.lua": hyprland.emit,   # compositeur, API Lua hl.*
 }
