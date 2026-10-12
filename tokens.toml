@@ -83,8 +83,8 @@ fallback_hue = 255         # Giedi Prime, achromatique, tombera ici
 # soit le thème. Trente thèmes, aucun audit d'accessibilité à refaire.
 
 [lightness]
-# Échelons 10 et 11 relevés (D9) : corps de texte Lc ≈ 90 sur toutes les teintes.
-steps = [0.14, 0.18, 0.22, 0.26, 0.31, 0.37, 0.44, 0.53, 0.63, 0.73, 0.93, 0.97]
+# Échelons 10 et 11 relevés (D9, D12) : corps de texte Lc ≥ 90 sur E1 à E3, toutes teintes.
+steps = [0.14, 0.18, 0.22, 0.26, 0.31, 0.37, 0.44, 0.53, 0.63, 0.73, 0.935, 0.97]
 
 [roles]
 surface-base     = 0    # bureau

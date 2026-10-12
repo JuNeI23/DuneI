@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.2. Historique en fin de document.
+Version 1.3. Historique en fin de document.
 
 La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **140 éléments** répartis en **cinq lots**, sur six chantiers.
 
@@ -323,7 +323,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | --- | --- | --- | --- |
 | L4-01 | C | Écrit | Cible Qt — brancher et valider sur applications réelles |
 | L4-02 | C | Écrit | Cible GTK 3 — brancher et valider |
-| L4-03 | C | Écrit | Cible GTK 4 — brancher et valider |
+| L4-03 | C | Écrit | Cible GTK 4 — brancher et valider ; traiter les fonds pleins sémantiques de libadwaita (D12) |
 | L4-04 | C | Écrit | Valider le contrat minimal : fond E1, police, accent |
 | L4-05 | C | Écrit | Convergence du rayon de fenêtre — seule convergence géométrique |
 | L4-06 | C | Écrit | Extraction de teinte depuis le fond d'écran |
@@ -486,5 +486,6 @@ Le choix de la distribution de base et du compositeur, précédemment ouverts, s
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-12 | Version initiale, 137 éléments |
+| 1.3 | 2026-10-12 | L4-03 : fonds sémantiques (D12) |
 | 1.2 | 2026-10-12 | L1-22 fait, L1-24 fait côté tokens |
 | 1.1 | 2026-10-12 | L1-01 et L1-11 tranchés (Arch, Hyprland en Lua) ; ajout de L1-22 à L1-24 — conformité du générateur, motion manquant, cible Hyprland Lua. 140 éléments |

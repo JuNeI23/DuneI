@@ -150,6 +150,17 @@ Travail mené en quatre branches parallèles, puis fusionné et vérifié (28 te
 - **`[extraction]`** dans `tokens.toml` : les dix paramètres de l'extracteur.
 - **`tokens.toml` passe en 0.4.0.**
 
-**Dérogation — suppression de `[fleet]` sans période d'obsolescence.** La gouvernance (bible ch. 11) veut qu'un token retiré reste déclaré et marqué obsolète pendant une version mineure. `[fleet]` n'avait aucun consommateur : aucun générateur ne la lisait. La garder n'aurait protégé personne. *Périmètre : cette section seule. En attente de validation.*
+**Dérogation — suppression de `[fleet]` sans période d'obsolescence.** La gouvernance (bible ch. 11) veut qu'un token retiré reste déclaré et marqué obsolète pendant une version mineure. `[fleet]` n'avait aucun consommateur : aucun générateur ne la lisait. La garder n'aurait protégé personne. *Périmètre : cette section seule. **Validée le 2026-10-12 (D12).***
 
 **Reste ouvert** : corps de texte sur `surface-raised` à Lc 89,6–89,9, soit 0,1 à 0,4 sous la cible (voir annexe C de la bible).
+
+### D12 · Arbitrages validés après la revue du thème final
+
+Validés par Nicolas après revue de l'aperçu ; révisables à mesure que les fonctionnalités s'implémentent.
+
+1. **Échelon 10 à 0,935** (au lieu de 0,93) : corps de texte Lc ≥ 90 sur E1, E2 et E3, vérifié sur les 72 teintes — plus aucun avertissement APCA.
+2. **Les couleurs sémantiques ne servent jamais de fond à du texte.** Texte, bordure, icône seulement. Une action destructrice = texte et bordure `error` sur surface neutre. Raison : aucun texte n'atteint le plancher sur `warning`, `success`, `info` (Lc 59 au mieux), et `error` plafonne à Lc 75 en texte clair. Les fonds pleins de libadwaita (bouton destructif, bandeaux) seront traités avec la cible GTK 4 (L4-03).
+3. **Les liens sont un signal court** : accent autonome accepté à Lc 51–57, sans seuil propre. La lecture continue reste en `text-primary`.
+4. **Dérogation `[fleet]` validée** (voir D11).
+
+*Touché : tokens.toml, bible 0.5.1 (ch. 2, annexe C), backlog 1.3 (L4-03).*
