@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 0.2. Historique en fin de document.
+Version 0.4. Historique en fin de document.
 
 Socle amorçable.
 
@@ -70,7 +70,9 @@ DuneI/
 │   └── fontconfig/
 ├── tokens.toml
 ├── motion.toml             # MANQUANT au 12/10/2026 — à écrire
-├── generate_tokens.py
+├── generate_tokens.py      # point d'entrée ; la logique vit dans dunei_theme/
+├── dunei_theme/            # color, model, checks, emitters/ (une cible par module)
+├── tests/                  # unittest + instantanés de référence (tests/golden/)
 ├── generate_motion.py      # MANQUANT au 12/10/2026 — à écrire
 ├── extract_hue.py
 ├── Makefile
@@ -196,7 +198,7 @@ Depuis la version 0.5x, Hyprland se configure **en Lua** (`hyprland.lua`, API `h
 
 ```lua
 -- ~/.config/hypr/hyprland.lua — point d'entrée, ne contient que des require
-require("generated.tokens")   -- produit par generate_tokens.py
+hl.config(require("generated.hyprland-tokens"))   -- table produite par generate_tokens.py
 require("generated.motion")   -- produit par generate_motion.py
 require("modules.env")
 require("modules.input")
@@ -205,7 +207,7 @@ require("modules.rules")
 require("machines." .. hostname)   -- fragment propre à la machine
 ```
 
-Les générateurs produisent donc des **modules Lua**, et non plus des fragments `.conf` : une cible Hyprland est à ajouter à `generate_tokens.py`. Le Lua apporte aussi les ressorts natifs (`hl.curve({ type = "spring", … })`), qui servent directement le principe 5.
+Les générateurs produisent donc des **modules Lua**, et non plus des fragments `.conf`. Le module **retourne une table** et n'appelle pas `hl.config` lui-même : rien ne se passe au chargement, la configuration choisit quand l'appliquer, un fragment machine peut surcharger ensuite, et le fichier se vérifie avec un interpréteur Lua nu. Le Lua apporte aussi les ressorts natifs (`hl.curve({ type = "spring", … })`), qui servent directement le principe 5.
 
 **Aucune couleur, aucune durée, aucun rayon n'est écrit dans `hyprland.lua` ni dans `modules/`.** Tout vient des fragments produits par les générateurs. C'est la condition 2 de la définition de terminé, appliquée au compositeur.
 
@@ -235,11 +237,14 @@ Les applications encore en X11 traduit restent floues. C'est un critère supplé
 La bible impose une gouttière de 8 px entre fenêtres et un rayon de 12.
 
 ```lua
--- generated/tokens.lua — PRODUIT par generate_tokens.py, jamais écrit à la main
-hl.config({
-    general    = { gaps_in = 4, gaps_out = 8, border_size = 2 },
-    decoration = { rounding = 12 },
-})
+-- generated/hyprland-tokens.lua — PRODUIT par generate_tokens.py (extrait, teinte 55)
+return {
+    general = {
+        gaps_in = 4, gaps_out = 8, border_size = 2,   -- gouttière / 2, marge, states.focus.ring_width
+        col = { active_border = "#a35300", inactive_border = "#3c2d23" },  -- accent, border-subtle
+    },
+    decoration = { rounding = 12, shadow = { enabled = false } },  -- radii.window, elevation.e1
+}
 ```
 
 Dans l'API Lua, `rounding` vit sous `decoration`, pas sous `general`.
@@ -252,7 +257,7 @@ Dans l'API Lua, `rounding` vit sous `decoration`, pas sous `general`.
 
 La bible ne demande pas seulement une bordure accentuée sur la fenêtre active : elle demande que la fenêtre inactive porte le modificateur de conteneur, dont le chroma des accents tombe à zéro sans que le contenu soit terni.
 
-Au lot 1, la moitié compositeur est faisable — bordure accentuée sur l'active, neutre sur les autres. La mise à zéro du chroma à l'intérieur de la fenêtre appartient à la bibliothèque de composants, donc au lot 2. Le carnet installe la moitié visible ; L2-03 finit le travail.
+Au lot 1, la moitié compositeur est faisable — bordure accentuée sur l'active (`accent`), neutre sur les autres (`border-subtle`, l'échelon de la sélection inactive). L'épaisseur est celle de l'anneau de focus (`states.focus.ring_width`) : la bordure active **est** l'anneau de focus de la fenêtre. La mise à zéro du chroma à l'intérieur de la fenêtre appartient à la bibliothèque de composants, donc au lot 2. Le carnet installe la moitié visible ; L2-03 finit le travail.
 
 ### Bureaux et raccourcis
 
@@ -282,6 +287,8 @@ Le lot 1 n'a ni lanceur ni barre : le clavier est le seul chemin, et le principe
 fontconfig
 noto-fonts noto-fonts-cjk noto-fonts-emoji
 ```
+
+Outils de développement de la chaîne de thème : `make`, `python-pillow`, `python-numpy` (extraction de teinte et ses tests), `lua` (vérification des modules générés).
 
 Plus les deux familles du système, **depuis les dépôts officiels Arch** — aucune police n'est versionnée dans notre dépôt :
 
@@ -315,8 +322,11 @@ L'antialiasage sous-pixel et le hinting appuyé sont des compensations pour écr
 
 ```bash
 make tokens              # tokens.toml  → generated/
-make motion              # motion.toml  → generated/
-make install             # generated/   → ~/.config/
+make test                # tests unitaires et de non-régression
+make check               # tokens + test + git diff --exit-code generated/
+make golden              # régénère les instantanés après un changement de sortie VOULU
+make motion              # motion.toml  → generated/ (L1-23, à venir)
+make install             # generated/   → ~/.config/ (à venir)
 ```
 
 **Les fichiers de `generated/` sont versionnés et interdits à l'édition.** Ils portent l'avertissement en première ligne. Les versionner permet de voir dans un diff ce qu'un changement de token produit réellement — la meilleure protection contre une modification de source aux effets inattendus.
@@ -423,4 +433,6 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 | Version | Date | Changement |
 | --- | --- | --- |
 | 0.1 | 2026-10-12 | Version initiale |
+| 0.4 | 2026-10-12 | Module Hyprland généré (table retournée, bordures, ombre) ; dépendances de développement |
+| 0.3 | 2026-10-12 | Chaîne de thème modulaire (`dunei_theme/`), cibles `make test`, `make check`, `make golden` |
 | 0.2 | 2026-10-12 | Configuration Hyprland en Lua (0.56) ; point de départ réel de `caladan` ; choix logiciels requalifiés en propositions ; structure du dépôt à la racine de `DuneI` ; déploiement par liens symboliques et copies ; fragments par machine ; polices depuis les dépôts Arch ; `libva-mesa-driver` retiré (fourni par `mesa`) |

@@ -1,0 +1,103 @@
+/* GÉNÉRÉ depuis tokens.toml — NE PAS MODIFIER À LA MAIN */
+/* thème machine : teinte 200.0° */
+
+:root {
+  --accent-color: #00bfc6;
+  --accent-bg-color: #007b80;
+  --accent-fg-color: #f9fdfd;
+  --destructive-color: #d33a3c;
+  --destructive-bg-color: #d33a3c;
+  --destructive-fg-color: #000c0d;
+  --error-color: #d33a3c;
+  --error-bg-color: #d33a3c;
+  --error-fg-color: #000c0d;
+  --warning-color: #e49e22;
+  --warning-bg-color: #e49e22;
+  --warning-fg-color: #000c0d;
+  --success-color: #51bf68;
+  --success-bg-color: #51bf68;
+  --success-fg-color: #000c0d;
+  --view-bg-color: #000c0d;
+  --view-fg-color: #d9eced;
+  --window-bg-color: #021516;
+  --window-fg-color: #d9eced;
+  --headerbar-bg-color: #081f20;
+  --headerbar-fg-color: #d9eced;
+  --headerbar-border-color: #1f3536;
+  --headerbar-backdrop-color: #021516;
+  --sidebar-bg-color: #081f20;
+  --sidebar-fg-color: #d9eced;
+  --sidebar-border-color: #1f3536;
+  --sidebar-backdrop-color: #021516;
+  --secondary-sidebar-bg-color: #081f20;
+  --secondary-sidebar-fg-color: #d9eced;
+  --secondary-sidebar-border-color: #1f3536;
+  --secondary-sidebar-backdrop-color: #021516;
+  --card-bg-color: #122829;
+  --card-fg-color: #d9eced;
+  --dialog-bg-color: #122829;
+  --dialog-fg-color: #d9eced;
+  --popover-bg-color: #122829;
+  --popover-fg-color: #d9eced;
+  --thumbnail-bg-color: #122829;
+  --thumbnail-fg-color: #d9eced;
+  --shade-color: rgba(0,0,0,0.36);
+  --scrollbar-outline-color: rgba(0,0,0,0.5);
+  --headerbar-shade-color: rgba(0,0,0,0.36);
+  --sidebar-shade-color: rgba(0,0,0,0.36);
+  --secondary-sidebar-shade-color: rgba(0,0,0,0.36);
+  --card-shade-color: rgba(0,0,0,0.36);
+  --popover-shade-color: rgba(0,0,0,0.36);
+
+  /* seule convergence géométrique avec le shell : le coin de fenêtre */
+  --window-radius: 12px;
+  --disabled-opacity: 0.50;
+}
+
+/* compatibilité avec les versions antérieures à 1.6 */
+@define-color accent_color #00bfc6;
+@define-color accent_bg_color #007b80;
+@define-color accent_fg_color #f9fdfd;
+@define-color destructive_color #d33a3c;
+@define-color destructive_bg_color #d33a3c;
+@define-color destructive_fg_color #000c0d;
+@define-color error_color #d33a3c;
+@define-color error_bg_color #d33a3c;
+@define-color error_fg_color #000c0d;
+@define-color warning_color #e49e22;
+@define-color warning_bg_color #e49e22;
+@define-color warning_fg_color #000c0d;
+@define-color success_color #51bf68;
+@define-color success_bg_color #51bf68;
+@define-color success_fg_color #000c0d;
+@define-color view_bg_color #000c0d;
+@define-color view_fg_color #d9eced;
+@define-color window_bg_color #021516;
+@define-color window_fg_color #d9eced;
+@define-color headerbar_bg_color #081f20;
+@define-color headerbar_fg_color #d9eced;
+@define-color headerbar_border_color #1f3536;
+@define-color headerbar_backdrop_color #021516;
+@define-color sidebar_bg_color #081f20;
+@define-color sidebar_fg_color #d9eced;
+@define-color sidebar_border_color #1f3536;
+@define-color sidebar_backdrop_color #021516;
+@define-color secondary_sidebar_bg_color #081f20;
+@define-color secondary_sidebar_fg_color #d9eced;
+@define-color secondary_sidebar_border_color #1f3536;
+@define-color secondary_sidebar_backdrop_color #021516;
+@define-color card_bg_color #122829;
+@define-color card_fg_color #d9eced;
+@define-color dialog_bg_color #122829;
+@define-color dialog_fg_color #d9eced;
+@define-color popover_bg_color #122829;
+@define-color popover_fg_color #d9eced;
+@define-color thumbnail_bg_color #122829;
+@define-color thumbnail_fg_color #d9eced;
+@define-color shade_color rgba(0,0,0,0.36);
+@define-color scrollbar_outline_color rgba(0,0,0,0.5);
+@define-color headerbar_shade_color rgba(0,0,0,0.36);
+@define-color sidebar_shade_color rgba(0,0,0,0.36);
+@define-color secondary_sidebar_shade_color rgba(0,0,0,0.36);
+@define-color card_shade_color rgba(0,0,0,0.36);
+@define-color popover_shade_color rgba(0,0,0,0.36);

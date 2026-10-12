@@ -1,0 +1,85 @@
+/* GÉNÉRÉ depuis tokens.toml — NE PAS MODIFIER À LA MAIN */
+:root {
+  /* thème : teinte 55° */
+  --l-0: oklch(0.140 0.0280 55);
+  --l-1: oklch(0.180 0.0280 55);
+  --l-2: oklch(0.220 0.0280 55);
+  --l-3: oklch(0.260 0.0280 55);
+  --l-4: oklch(0.310 0.0280 55);
+  --l-5: oklch(0.370 0.0280 55);
+  --l-6: oklch(0.440 0.0280 55);
+  --l-7: oklch(0.530 0.0200 55);
+  --l-8: oklch(0.630 0.0200 55);
+  --l-9: oklch(0.730 0.0200 55);
+  --l-10: oklch(0.930 0.0200 55);
+  --l-11: oklch(0.970 0.0200 55);
+
+  --surface-base: oklch(0.140 0.0280 55);
+  --surface-window: oklch(0.180 0.0280 55);
+  --surface-panel: oklch(0.220 0.0280 55);
+  --surface-raised: oklch(0.260 0.0280 55);
+  --border-subtle: oklch(0.310 0.0280 55);
+  --border-default: oklch(0.370 0.0280 55);
+  --border-strong: oklch(0.440 0.0280 55);
+  --text-disabled: oklch(0.530 0.0200 55);
+  --text-tertiary: oklch(0.630 0.0200 55);
+  --text-secondary: oklch(0.730 0.0200 55);
+  --text-primary: oklch(0.930 0.0200 55);
+  --text-emphasis: oklch(0.970 0.0200 55);
+
+  --accent: oklch(0.530 0.1500 55);
+  --accent-standalone: oklch(0.730 0.1500 55);
+  --on-accent: oklch(0.990 0.0040 55);
+
+  --cat-0: oklch(0.730 0.1300 55);
+  --cat-1: oklch(0.730 0.1300 95);
+  --cat-2: oklch(0.730 0.1300 150);
+  --cat-3: oklch(0.730 0.1300 215);
+  --cat-4: oklch(0.730 0.1300 355);
+
+  /* hors moteur de thème : ne recolorent jamais */
+  --error: oklch(0.580 0.1900 25);
+  --warning: oklch(0.750 0.1500 75);
+  --success: oklch(0.720 0.1600 148);
+  --info: oklch(0.700 0.1300 240);
+
+  --control-height: 28px;
+  --row-height: 24px;
+  --tiling-gutter: 8px;
+  --tiling-margin: 8px;
+  --radius-window: 12px;
+  --radius-panel: 10px;
+  --radius-control: 6px;
+  --radius-small: 4px;
+  --sidebar-default: 240px;
+  --sidebar-min: 180px;
+  --sidebar-max: 400px;
+  --window-min-width: 320px;
+  --system-bar-height: 32px;
+  --reading-measure-max: 78;
+  --space-0: 4px;
+  --space-1: 8px;
+  --space-2: 12px;
+  --space-3: 16px;
+  --space-4: 24px;
+  --space-5: 32px;
+  --space-6: 48px;
+  --space-7: 64px;
+
+  --font-interface: 'Source Sans 3', sans-serif;
+  --font-mono: 'Source Code Pro', monospace;
+  --text-base: 13px;
+  --text-11: 11px;
+  --text-12: 12px;
+  --text-13: 13px;
+  --text-15: 15px;
+  --text-18: 18px;
+  --text-22: 22px;
+  --text-28: 28px;
+  --weight-regular: 400;
+  --weight-medium: 500;
+
+  /* seuils sur la largeur du CONTENEUR, jamais de l'écran */
+  --breakpoint-compact: 480px;
+  --breakpoint-extended: 900px;
+}
