@@ -2,7 +2,7 @@
 /* thème machine : teinte 265.0° */
 
 :root {
-  --accent-color: #79a4ff;
+  --accent-color: #7da5ff;
   --accent-bg-color: #4066c2;
   --accent-fg-color: #fafcff;
   --destructive-color: #d33a3c;
@@ -55,7 +55,7 @@
 }
 
 /* compatibilité avec les versions antérieures à 1.6 */
-@define-color accent_color #79a4ff;
+@define-color accent_color #7da5ff;
 @define-color accent_bg_color #4066c2;
 @define-color accent_fg_color #fafcff;
 @define-color destructive_color #d33a3c;
