@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas
 
-Document normatif. Version 0.4.
+Document normatif. Version 0.4.1. Historique en fin de document.
 
 ## Comment lire ce document
 
@@ -698,8 +698,8 @@ Chacun correspond à une erreur observée dans des systèmes existants.
 | `bible-design.md` | **Développeurs** | Ce document. Toutes les règles, toutes les annexes |
 | `tokens.toml` | Développeurs | Source de vérité — couleur, dimensions, matière |
 | `motion.toml` | Développeurs | Source de vérité — mouvement |
-| `generate_tokens.py` | Développeurs | Génère CSS, JSON, schéma Qt, GTK 3, GTK 4, portail |
-| `generate_motion.py` | Développeurs | Génère CSS et fragment compositeur |
+| `generate_tokens.py` | Développeurs | Génère CSS, JSON, schéma Qt, GTK 3, GTK 4, portail, et module Lua du compositeur (à écrire, L1-24) |
+| `generate_motion.py` | Développeurs | Génère CSS et module Lua du compositeur |
 | `extract_hue.py` | Développeurs | Extraction de teinte : lit wal ou une image |
 | `fonts.conf` | Développeurs | Indirection des noms de polices |
 | `carnet-installation.md` | Intégrateur | Ce qui est à installer, et selon quels critères |
@@ -770,3 +770,10 @@ Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si 
 | Popover, liste déroulante | contextuel | E3 | `surface` + `row` | `reveal` | Part de son élément déclencheur |
 | Infobulle | contextuel | E3 | `surface` + `text` | `reveal` | Délai de 500 ms avant apparition. Ne prend jamais le focus |
 | Notification | contextuel | E3 | `surface` + `text` + `icon` | `reveal` | Couleurs sémantiques fixes, hors thème. Décalage limité à 5 |
+
+## Historique des versions
+
+| Version | Date | Changement |
+| --- | --- | --- |
+| 0.4 | 2026-10-10 | Version de référence |
+| 0.4.1 | 2026-10-12 | Annexe D : la cible compositeur est un module Lua (Hyprland 0.56) |

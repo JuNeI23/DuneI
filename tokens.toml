@@ -1,0 +1,352 @@
+# TOKENS — SOURCE DE VÉRITÉ UNIQUE
+#
+# Seul endroit où une couleur, une dimension ou une durée est écrite à la main.
+# Tout le reste est généré. Aucune valeur en dur ailleurs, nulle part.
+#
+# Règles de nommage :
+#   - un token porte un RÔLE, jamais une valeur      → surface-panel, pas gris-800
+#   - jamais de nom de composant dans un token       → pas de bouton-fond
+#   - jamais de mode dans le nom                     → pas de -sombre
+
+[meta]
+name = "DuneOS"
+prefix = "duneos"            # préfixe de paquets, session, ~/.config/duneos/
+version = "0.3.0"
+mode = "dark"          # le mode clair viendra plus tard, sans renommage
+base_unit = 4          # px — toutes les dimensions en sont des multiples
+contrast_method = "APCA"   # WCAG 2 est peu fiable en mode sombre
+contrast_target_body = 90  # Lc — corps 13px/400 sur fond sombre
+contrast_floor = 75        # Lc — plancher de rejet
+
+
+# ===========================================================================
+# ÉCHELLE — indépendante de tout matériel
+# ===========================================================================
+# Les tokens s'écrivent TOUJOURS en pixels logiques à 100 %.
+# Le facteur d'échelle est une propriété de CHAQUE ÉCRAN, jamais un token :
+# il n'apparaît nulle part dans ce fichier.
+
+[scaling]
+# Cible de conception : densité LOGIQUE effective, soit ppi / facteur.
+# Chaque machine choisit le facteur qui l'en rapproche le plus.
+#   141 ppi à 125 %  → 113  (portable de référence)
+#   220 ppi à 200 %  → 110
+#    96 ppi à 100 %  →  96  (un peu grand, acceptable)
+target_logical_ppi = 113
+supported_factors = [1.0, 1.25, 1.5, 2.0]
+
+# Un multiple de 4 tombe sur un pixel entier pour TOUS ces facteurs.
+# C'est la vraie raison de la base à 4 px, et elle ne dépend d'aucun écran.
+height_multiple = 4
+
+# Les lignes d'un pixel (liserés, séparateurs) sont tracées en PIXELS
+# PHYSIQUES, sans mise à l'échelle : c'est le liseré qui porte toute la
+# séparation d'élévation ; flou, il salit le système entier.
+hairlines_in_physical_pixels = true
+
+# Les RAYONS sont exemptés de la règle du multiple de 4 : une courbe est
+# lissée de toute façon, un demi-pixel de rayon ne se voit pas.
+radii_exempt = true
+
+# Profondeur de couleur à supposer. 8 bits est la zone à risque de banding :
+# c'est ce qui rend le dithering du sheen obligatoire.
+assumed_color_depth = 8
+
+
+# ===========================================================================
+# THÈME — les deux seules variables. Contrat central du système.
+# ===========================================================================
+# Un thème est une fonction à deux variables : une teinte, et un facteur
+# d'échelle de chroma borné. Rien d'autre. Tout le reste est invariant.
+
+[theme]
+# Machine courante : arrakis-core.
+# Ces deux valeurs sont les SEULES du fichier surchargeables à chaud, par le
+# panneau de thème. Ce qui suit n'est que le défaut, issu de l'extraction.
+hue = 55                   # 0–360, quantifiée par pas de 5°
+chroma_scale = 1.0         # 0.8–1.2, borné
+neutral_chroma = 0.020     # infusion de la teinte dans les gris
+dark_chroma_boost = 1.4    # majoration sous L 0.45 : perception réduite en basse lumière
+accent_chroma = 0.15
+chroma_ceiling = 0.16      # plafond gamut sRGB sur toute la plage de teintes
+
+# Repli quand le fond d'écran est achromatique.
+# Jamais de teinte tirée au hasard sur du bruit.
+fallback_hue = 255         # Giedi Prime, achromatique, tombera ici
+
+
+# ===========================================================================
+# ÉCHELLE DE LUMINOSITÉ — 12 échelons. NE BOUGE JAMAIS.
+# ===========================================================================
+# C'est ce qui garantit le contraste par construction : si le texte est à
+# l'échelon 10 sur un fond à l'échelon 2, le rapport est identique quel que
+# soit le thème. Trente thèmes, aucun audit d'accessibilité à refaire.
+
+[lightness]
+steps = [0.14, 0.18, 0.22, 0.26, 0.31, 0.37, 0.44, 0.53, 0.63, 0.73, 0.85, 0.95]
+
+[roles]
+surface-base     = 0    # bureau
+surface-window   = 1
+surface-panel    = 2
+surface-raised   = 3
+border-subtle    = 4
+border-default   = 5
+border-strong    = 6
+text-disabled    = 7
+text-tertiary    = 8
+text-secondary   = 9
+text-primary     = 10
+text-emphasis    = 11
+
+
+# ===========================================================================
+# COULEURS SÉMANTIQUES — hors moteur de thème. Ne recolorent jamais.
+# ===========================================================================
+# Un rouge d'erreur qui vire au rose parce que le fond d'écran est pastel
+# est un problème de sécurité d'usage, pas une question de goût.
+
+[semantic]
+error   = { l = 0.58, c = 0.19, h = 25 }
+warning = { l = 0.75, c = 0.15, h = 75 }
+success = { l = 0.72, c = 0.16, h = 148 }
+# Le bleu d'information entre en collision avec un thème bleu.
+# Teinte bloquée, et distinction renforcée par la forme de l'icône.
+info    = { l = 0.70, c = 0.13, h = 240 }
+
+
+# ===========================================================================
+# PALETTE CATÉGORIELLE — dérivée de la teinte du thème
+# ===========================================================================
+# Décalages angulaires fixes : cinq couleurs qui vont ensemble par
+# construction, restent distinguables, et tournent toutes avec le thème.
+# Usages : bureaux virtuels, étiquettes, syntaxe, séries de données,
+# types de périphériques. JAMAIS deux accents dans une même fenêtre.
+
+[categorical]
+hue_offsets = [0, 40, 95, 160, -60]
+min_angular_separation = 30   # imposé aussi à la coloration syntaxique
+lightness_step = 9
+chroma = 0.13
+
+
+# ===========================================================================
+# FLOTTE — une planète par machine
+# ===========================================================================
+# Chaque machine porte le nom d'une planète et la teinte de son fond d'écran.
+# La fiction produit naturellement la contrainte : ces mondes ont des
+# dominantes chromatiques distinctes par construction.
+#
+# Aucune contrainte d'écart entre machines : si deux se ressemblent, la teinte
+# se change dans le panneau de thème, sans toucher à un fichier.
+
+[fleet.arrakis-core]
+hue = 55                   # bronze — portable, palier 0
+tier = 0
+
+# [fleet.caladan]          # bleu-vert océanique — tour, palier 2
+# [fleet.giedi-prime]      # achromatique → repli sur fallback_hue
+
+# ===========================================================================
+# TRANSFORMATIONS D'ÉTAT — composables, appliquées dans l'ordre
+# ===========================================================================
+# base → sélection → survol → pression → focus → désactivé
+
+[states.hover]
+lightness_delta = 0.04
+
+[states.pressed]
+lightness_delta = -0.03       # descend sous le repos : sensation d'enfoncement
+translate = 0                 # aucun déplacement, aucune réduction d'échelle
+
+[states.focus]
+ring_width = 2
+ring_offset = 2               # passe à -1 sur les rangées, pour ne pas déborder
+uses_accent = true
+modifies_background = false   # se superpose à n'importe quel autre état
+
+[states.selected_active]
+uses_accent = true
+icon_variant = "fill"
+
+[states.selected_inactive]
+lightness_step = 4            # neutre : la sélection reste visible sans accent
+
+[states.disabled]
+chroma_multiplier = 0.15
+lightness_toward_background = 0.55
+shadow = false
+
+# Modificateur de conteneur, en cascade sur tous les descendants.
+# Le contenu n'est NI terni NI estompé : seule la couleur disparaît.
+# Justification : la couleur signale où arrivent les frappes.
+[states.container_inactive]
+accent_chroma_multiplier = 0.0
+
+
+# ===========================================================================
+# ÉLÉVATION — en mode sombre, la profondeur se lit par la luminosité
+# ===========================================================================
+
+[elevation.e0]
+step = 0
+sheen = false
+edge_light = false
+shadow = false
+
+[elevation.e1]
+step = 1
+sheen = false        # grande surface : risque de banding en 8 bits
+edge_light = false
+shadow = false       # aucune ombre en couche 1
+
+[elevation.e2]
+step = 2
+sheen = true
+edge_light = true
+shadow = false
+
+[elevation.e3]
+step = 3
+sheen = true
+edge_light = true
+shadow = true
+
+# `field` est la seule primitive qui S'ENFONCE sous son conteneur.
+# Ce qui reçoit du contenu se creuse ; ce qui flotte s'élève.
+[elevation.field]
+step = 0
+inset_shadow = true
+
+[surface_material]
+sheen_delta = 0.020          # dégradé vertical, haut vers bas
+dither = "IGN"               # OBLIGATOIRE — bruit par pixel avant quantification
+                             # 0.020 L sur fond sombre en 8 bits = zone de banding
+sheen_max_height = 80        # px — au-delà, banding visible sur fond sombre
+edge_light_opacity = 0.08    # 1px blanc, arête supérieure
+edge_shadow_opacity = 0.12   # 1px noir, arête inférieure
+
+
+# ===========================================================================
+# DIMENSIONS
+# ===========================================================================
+
+[spacing]
+scale = [4, 8, 12, 16, 24, 32, 48, 64]
+panel_padding = 12
+section_gap = 16
+block_gap = 24
+
+[density.comfortable]
+multiplier = 1.0
+control_height = 28        # multiple de 4 — entier à tous les facteurs
+row_height = 24
+tiling_gutter = 8
+tiling_margin = 8            # marge = gouttière : le bureau se lit comme une grille
+
+[density.compact]
+multiplier = 0.92
+control_height = 24
+row_height = 20            # multiple de 4
+tiling_gutter = 4
+tiling_margin = 4
+
+[radii]
+window  = 12
+panel   = 10
+control = 6
+small   = 4
+# Règle d'imbrication : rayon_interne = rayon_externe − padding
+
+[layout]
+sidebar_default = 240
+sidebar_min = 180
+sidebar_max = 400
+window_min_width = 320
+system_bar_height = 32
+reading_measure_max = 78     # caractères
+
+
+# ===========================================================================
+# SEUILS D'ADAPTATION — sur la largeur du CONTENEUR, jamais de l'écran
+# ===========================================================================
+# Dans un système tuilant, la taille de l'écran ne veut rien dire : un
+# panneau peut faire 400px sur un écran 4K. En régime contraint on dégrade
+# la richesse d'un élément, on ne le supprime jamais.
+
+[breakpoints]
+compact = 480
+extended = 900
+
+
+# ===========================================================================
+# TYPOGRAPHIE
+# ===========================================================================
+
+[type]
+# Noms CANONIQUES. L'indirection vers les polices réellement installées
+# (SourceSans3VF, SourceCodeVF) est faite une seule fois dans fonts.conf.
+interface = "Source Sans 3"
+mono = "Source Code Pro"
+base_size = 13
+scale = [11, 12, 13, 15, 18, 22, 28]
+line_height_body = 1.45
+line_height_heading = 1.2
+weight_regular = 400         # à calibrer sur le shell réel, plage utile 380–400
+weight_medium = 500          # si trop discret à 13 px, monter à 600 (jamais 700)
+# La police est variable : ces valeurs s'affinent sans réinstaller quoi que ce
+# soit. Mais AUCUN composant ne doit dépendre d'une graisse intermédiaire :
+# le design se conçoit comme s'il n'existait que 400 et 500.
+tabular_numerals = true
+fallback_chain = ["Noto Sans CJK", "Noto Sans", "Noto Color Emoji", "Noto Sans Symbols 2"]
+
+
+# ===========================================================================
+# ICÔNES
+# ===========================================================================
+
+[icons]
+source = "Phosphor"
+variants = ["regular", "fill"]
+grid = 24
+stroke = 1.5
+sizes = { dense = 16, default = 20, comfortable = 24 }
+snap_stroke_to_pixel = true  # sinon flou à 16px
+
+# Nom du thème XDG livré.
+xdg_theme = "DuneOS"
+xdg_inherits = ["Adwaita", "breeze-dark", "hicolor"]
+
+# ---------------------------------------------------------------------------
+# Icônes-OBJET — dossiers, disques, paquets, types de fichiers génériques.
+# Bicolores et teintées : elles suivent le thème machine tout en restant des
+# OBJETS avec du volume, pas des pictogrammes. Le rabat plus clair que le
+# corps applique notre règle d'élévation à l'échelle d'une icône de 16 px.
+# ---------------------------------------------------------------------------
+[icons.object]
+back_lightness_step = 5      # L 0.37
+back_chroma = 0.09
+front_lightness_step = 8     # L 0.63
+front_chroma = 0.15
+
+# L'écart de luminosité entre les deux plans est de 0.26 — bien plus que les
+# 0.04 de nos surfaces. Justifié : à 16 px, une icône a besoin d'une
+# séparation franche là où une surface se contente d'un liseré.
+
+# RÈGLE DU FOND D'ACCENT : posée sur une sélection, une icône-objet teintée
+# perd son contraste. Sur fond d'accent, elle bascule donc en MONOCHROME
+# sur-accent — c'est-à-dire qu'elle emprunte le traitement des symboliques.
+on_accent_monochrome = true
+
+
+# ===========================================================================
+# RENDU
+# ===========================================================================
+# La bible spécifie l'apparence, jamais la technique. Ces valeurs décrivent
+# ce qu'il faut obtenir ; la façon de l'obtenir efficacement appartient à
+# l'implémentation.
+
+[render]
+scrim_opacity = 0.55
+never_animate_blur_radius = true   # fondu croisé net/flouté : c'est une règle
+                                   # d'apparence, pas d'optimisation

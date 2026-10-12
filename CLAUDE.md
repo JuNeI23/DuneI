@@ -5,6 +5,9 @@ Il existe deja des documentations qui sont modifiables :
 - Notes de direction indique l'etat du projet
 - Backlog a mettre a jour a chaque fois
 - carnet d'installation lot 1.
+- journal des decisions (docs/journal-decisions.md) : chaque arbitrage, avec sa raison.
+
+Versionnage des documents : numero de version en tete + table "Historique des versions" en fin de fichier. Pas de dossier d'archive, git est l'archive. Etiquette git a chaque fin de lot.
 
 # Regles globales de developpement
 1. Tout changement, installation, nouvelle feature est documente dans les ressources correspondantes.
@@ -33,7 +36,7 @@ Il existe deja des documentations qui sont modifiables :
 1. grim, ce n'est pas forcement la techno choisie pour l'utilisateur finale, elle te sert a TOI de verifier des features de design
 2. plugin context7 : Chaque feature est configuree en se basant sur sa documentation la plus moderne. On ne fait pas d'exceptions
 3. plugin superpowers : pour les brainstormings
-
+4. Sous-agents : pour accelerer le developpement et ne pas remplir ta fenetre de contexte, lance des sous-agents pour chaque tache independante, propose moi des astuces pour fluidifier.
 
 # Ta collaboration avec moi
 1. Ce projet s'adresse uniquement a moi, donc je dois tout controler. Chaque feature visible (ou invisible mais vitale) doit etre validee
