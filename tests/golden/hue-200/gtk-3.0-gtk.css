@@ -1,22 +1,22 @@
 /* GÉNÉRÉ depuis tokens.toml — NE PAS MODIFIER À LA MAIN */
 /* thème machine : teinte 200.0° */
 
-@define-color accent_color #00c2cd;
-@define-color accent_bg_color #00838e;
+@define-color accent_color #00bfc6;
+@define-color accent_bg_color #007b80;
 @define-color accent_fg_color #010c0c;
 @define-color destructive_color #c74b47;
 @define-color destructive_bg_color #c74b47;
-@define-color destructive_fg_color #000c0e;
+@define-color destructive_fg_color #000c0d;
 @define-color error_color #c74b47;
 @define-color error_bg_color #c74b47;
-@define-color error_fg_color #000c0e;
+@define-color error_fg_color #000c0d;
 @define-color warning_color #e49e22;
 @define-color warning_bg_color #e49e22;
-@define-color warning_fg_color #000c0e;
+@define-color warning_fg_color #000c0d;
 @define-color success_color #51bf68;
 @define-color success_bg_color #51bf68;
-@define-color success_fg_color #000c0e;
-@define-color view_bg_color #000c0e;
+@define-color success_fg_color #000c0d;
+@define-color view_bg_color #000c0d;
 @define-color view_fg_color #bfd2d3;
 @define-color window_bg_color #021516;
 @define-color window_fg_color #bfd2d3;
