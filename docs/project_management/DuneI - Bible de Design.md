@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas
 
-Document normatif. Version 0.4.1. Historique en fin de document.
+Document normatif. Version 0.5. Historique en fin de document.
 
 ## Comment lire ce document
 
@@ -59,8 +59,8 @@ C'est ce qui garantit le contraste par construction : si le texte est à l'éche
 | 7 | 0,53 | `text-disabled` |
 | 8 | 0,63 | `text-tertiary` |
 | 9 | 0,73 | `text-secondary` |
-| 10 | 0,85 | `text-primary` |
-| 11 | 0,95 | `text-emphasis` |
+| 10 | 0,93 | `text-primary` |
+| 11 | 0,97 | `text-emphasis` |
 
 Chroma des neutres : 0,020, majoré de 40 % sous L 0,45 — la perception du chroma s'affaiblit en basse lumière. Plafond de gamut : 0,16.
 
@@ -70,6 +70,10 @@ Chroma des neutres : 0,020, majoré de 40 % sous L 0,45 — la perception du chr
 
 - **Remplissage** — sélection, bouton primaire. Échelon 7, chroma 0,15.
 - **Autonome** — texte accentué, liens. Échelon 9. Posé sur fond sombre, il doit être bien plus clair, sinon illisible.
+
+**Le texte posé sur l'accent de remplissage est quasi blanc** (L 0,99, chroma minimal). Aucun texte sombre n'atteint le plancher de contraste sur un remplissage à l'échelon 7 : Lc 27 mesuré, contre 78–80 en clair.
+
+**L'accent sort du gamut sRGB pour environ la moitié des teintes** à chroma 0,15 : il est rabattu en réduisant le seul chroma, la teinte ne bouge jamais.
 
 Confondre les deux est l'erreur la plus fréquente.
 
@@ -86,6 +90,8 @@ Cinq règles rendent cette extraction robuste, quelle que soit l'image fournie :
 - **Ne garder que la teinte.** Luminosité et chroma sont imposés par l'échelle.
 
 Le thème généré est mis en cache, indexé par empreinte de l'image.
+
+Tous les paramètres de l'extraction (seuil de quasi-neutre, pas de quantification, pénalité des extrêmes…) vivent dans la section `[extraction]` de `tokens.toml`. L'extracteur sort une teinte et un état : **une image achromatique est signalée, jamais tranchée** — la teinte de repli est proposée et le choix revient à l'utilisateur, via le panneau de thème (`extract_hue.py --json`, code de retour 3).
 
 ### Le panneau de thème
 
@@ -112,7 +118,7 @@ Usages autorisés : bureaux virtuels, étiquettes, coloration syntaxique, série
 
 ### Invariants — ce qui ne recolore jamais
 
-- Couleurs sémantiques : erreur, avertissement, succès.
+- Couleurs sémantiques : erreur, avertissement, succès. **Hors plafond de chroma** : leur valeur est écrite telle quelle, et seulement rabattue dans le gamut à la conversion, à teinte préservée.
 - Bleu d'information — teinte bloquée, et distinction renforcée par la forme, à cause de la collision avec un thème bleu.
 - Zones de jugement colorimétrique : pourtour de canevas, visionneuse, aperçu vidéo. **Neutre pur obligatoire** — un gris teinté fausse la perception des couleurs de l'utilisateur.
 - Indicateurs critiques : batterie faible, enregistrement, chiffrement, connexion non sécurisée.
@@ -450,7 +456,7 @@ Chaque sous-système exprime les choses dans sa propre unité et sa propre synta
 
 ### Vérifications automatiques
 
-Tout ce qui peut être vérifié par un programme doit l'être, plutôt que de reposer sur l'attention de quelqu'un. Le générateur contrôle le plafond de gamut, l'écart angulaire des teintes catégorielles, la parité des hauteurs et les plafonds de durée.
+Tout ce qui peut être vérifié par un programme doit l'être, plutôt que de reposer sur l'attention de quelqu'un. Le générateur contrôle le plafond de gamut, **le contraste APCA** (corps de texte sur les surfaces E1 à E3 contre plancher et cible, texte sur accent contre plancher), l'écart angulaire des teintes catégorielles, bouclage à 360° compris, **les hauteurs multiples de la base** (`height_multiple`) et les plafonds de durée.
 
 ## 12. Curation des applications par défaut
 
@@ -689,6 +695,10 @@ Chacun correspond à une erreur observée dans des systèmes existants.
 | Recoloration symbolique côté Qt | À vérifier au montage |
 | Dossiers étiquetés et palette catégorielle | Arbitrage |
 | Écrans système détaillés | Chapitre non écrit |
+| Courbure des coins (`rounding_power`) et flou des fenêtres tuilées | Aucun token ; le compositeur garde ses valeurs par défaut |
+| Parité de la gouttière | Hyprland applique la demi-gouttière de chaque côté : une gouttière impaire serait arrondie sans contrôle |
+| `shade_opacity` (0,36) et `surface-edge-shadow` (0,12) | Deux opacités d'ombre distinctes, à rapprocher ou non |
+| Corps de texte sur `surface-raised` | Lc 89,6–89,9 : à 0,4 de la cible |
 
 ## Annexe D — Fichiers
 
@@ -698,9 +708,11 @@ Chacun correspond à une erreur observée dans des systèmes existants.
 | `bible-design.md` | **Développeurs** | Ce document. Toutes les règles, toutes les annexes |
 | `tokens.toml` | Développeurs | Source de vérité — couleur, dimensions, matière |
 | `motion.toml` | Développeurs | Source de vérité — mouvement |
-| `generate_tokens.py` | Développeurs | Génère CSS, JSON, schéma Qt, GTK 3, GTK 4, portail, et module Lua du compositeur (à écrire, L1-24) |
+| `generate_tokens.py` | Développeurs | Point d'entrée. Génère CSS, JSON, schéma Qt, GTK 3, GTK 4, portail et module Lua du compositeur (`hyprland-tokens.lua`) |
+| `dunei_theme/` | Développeurs | La logique : couleurs, modèle, contrôles, une cible par module |
+| `Makefile` | Développeurs | `tokens`, `test`, `check`, `golden` |
 | `generate_motion.py` | Développeurs | Génère CSS et module Lua du compositeur |
-| `extract_hue.py` | Développeurs | Extraction de teinte : lit wal ou une image |
+| `extract_hue.py` | Développeurs | Extraction de teinte : lit wal ou une image ; `--json` et code 3 si achromatique |
 | `fonts.conf` | Développeurs | Indirection des noms de polices |
 | `carnet-installation.md` | Intégrateur | Ce qui est à installer, et selon quels critères |
 | `bible-os-decisions-et-taches.md` | Archive | Journal des arbitrages et de leur raison |
@@ -777,3 +789,4 @@ Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si 
 | --- | --- | --- |
 | 0.4 | 2026-10-10 | Version de référence |
 | 0.4.1 | 2026-10-12 | Annexe D : la cible compositeur est un module Lua (Hyprland 0.56) |
+| 0.5 | 2026-10-12 | Échelons 10 et 11 relevés (0,93 / 0,97) ; texte quasi blanc sur l'accent ; sémantiques hors plafond ; rabattement à teinte préservée ; extraction paramétrée et achromatique signalé ; contrôles APCA ; annexes C et D |

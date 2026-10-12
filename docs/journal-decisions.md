@@ -115,3 +115,41 @@ Mesures APCA : en mode sombre, le contraste du texte dépend presque uniquement 
 `generate_tokens.py` devient un point d'entrée ; la logique vit dans `dunei_theme/` — `color`, `model`, `checks`, et `emitters/` à raison d'une cible par module. Raison : règle de modularité, et permettre à plusieurs agents de travailler en parallèle sans conflit. Le découpage est vérifié par instantanés : les 6 cibles × 4 teintes sont identiques à l'octet près à la version reçue.
 
 Tests en `unittest` (bibliothèque standard) : aucune dépendance ajoutée.
+
+### D11 · Chaîne de thème remise en conformité (L1-22, L1-24)
+
+Travail mené en quatre branches parallèles, puis fusionné et vérifié (28 tests). État des écarts de D8 :
+
+| # | Statut | Comment |
+| --- | --- | --- |
+| A1 | Corrigé | `color.fit_gamut` : dichotomie sur le seul chroma, L et H fixes. 5 couleurs des instantanés changent, toutes hors gamut ; l'accent bronze passe de 49° à 55° |
+| A2, A3 | Corrigés | D9 appliquée : échelons 10/11 à 0,93/0,97 ; texte sur accent L 0,99, C 0,004 (chroma maximal dans le gamut à cette luminosité, toutes teintes) |
+| A4 | Corrigé | `color.apca_lc` (0.0.98G-4g) ; `checks.contrast` alerte sous le plancher et sous la cible |
+| A5 | Corrigé | Ombres, opacité désactivée, texte sur accent, paramètres d'extraction : tout est token |
+| A6 | Corrigé | Section `[accent]` : `fill_step = 7`, `standalone_step = 9` |
+| A7 | Corrigé | Sémantiques hors plafond ; rabattues à la conversion |
+| A8 | Corrigé | Hauteurs contrôlées en multiple de `height_multiple` |
+| A9 | Corrigé | Le CSS émet `--breakpoint-*`, plus aucun nom de composant |
+| A10 | Corrigé | Émetteurs KDE et GTK lisent `[elevation]` et les rôles |
+| A11 | Corrigé | `DuneI` / `dunei` partout |
+| A12 | Corrigé, **dérogation** | `[fleet]` et les paliers supprimés ; la teinte machine relèvera de la surcharge (L4-08). Voir ci-dessous |
+| A13 | Corrigé | Image achromatique signalée (code de retour 3, `--json`), teinte de repli proposée, choix laissé à l'utilisateur |
+| T1 | Corrigé | Les couleurs circulent en `Oklch`, plus de re-parsing de chaînes |
+| T2 | Corrigé | Une seule section `[General]` dans `kdeglobals` |
+| T3 | Corrigé | Écart angulaire avec bouclage 360° |
+| T4 | Corrigé | Quantification dans [0, 360) |
+| T5 | Corrigé | Sortie dans `generated/` ; `tokens.json` porte la clé `_generated` |
+| T6 | Corrigé pour Hyprland | `hyprland-tokens.lua` ; fontconfig reste à faire (L1-19) |
+
+**Choix faits pendant la correction**
+
+- **Module Hyprland = table retournée**, appliquée par `hl.config(require(...))` : données pures, surcharge possible par la machine, testable sans Hyprland.
+- **Bordure inactive = `border-subtle`** (échelon 4), le même que la sélection inactive. `border-default` aurait concurrencé l'accent sur le bureau à L 0,14.
+- **Épaisseur de bordure = `states.focus.ring_width`**, sans nouveau token : la bordure active est l'anneau de focus de la fenêtre.
+- **Ombres libadwaita** : `shade_opacity = 0.36` et `overlay_outline_opacity = 0.50`, distincts de `edge_shadow_opacity` (0,12, liseré d'un pixel) pour ne rien changer au rendu sans validation. Rapprochement éventuel inscrit à l'annexe C.
+- **`[extraction]`** dans `tokens.toml` : les dix paramètres de l'extracteur.
+- **`tokens.toml` passe en 0.4.0.**
+
+**Dérogation — suppression de `[fleet]` sans période d'obsolescence.** La gouvernance (bible ch. 11) veut qu'un token retiré reste déclaré et marqué obsolète pendant une version mineure. `[fleet]` n'avait aucun consommateur : aucun générateur ne la lisait. La garder n'aurait protégé personne. *Périmètre : cette section seule. En attente de validation.*
+
+**Reste ouvert** : corps de texte sur `surface-raised` à Lc 89,6–89,9, soit 0,1 à 0,4 sous la cible (voir annexe C de la bible).
