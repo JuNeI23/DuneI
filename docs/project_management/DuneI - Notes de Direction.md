@@ -1,0 +1,190 @@
+# DuneI — Note de direction
+
+Oct 10, 2026 · @Nicolas
+
+*Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent trente-six lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
+
+## En une phrase
+
+Un système d'atelier — dense, silencieux, immédiat — qui se met au service de l'outil qu'on y installe.
+
+## Ce qu'est la 1.0
+
+> **Une machine tourne au quotidien sous DuneI, et elle est belle.**
+
+Trois usages doivent être irréprochables : **développement et travail technique**, **web et bureautique**, **communication — visioconférence et messagerie**. Tout le reste est négociable.
+
+`c``a``ladan` est la machine principale. Casser et reconstruire fait partie de la méthode ; **les trous qui durent, non.** C'est une contrainte de séquencement, pas de périmètre : chaque lot doit laisser la machine en état de servir le soir même.
+
+### Ce que la 1.0 ne contient pas
+
+Ces exclusions sont explicites. Aucune n'est un oubli, et aucune ne se rediscute pendant la 1.0.
+
+| Exclu | Renvoyé à |
+| --- | --- |
+| Le jeu comme usage de premier plan — pilotes dédiés, couche de compatibilité, manettes | 1.1. En 1.0, un jeu est une fenêtre flottante de couche 2, palier D |
+| Le provisionnement de flotte — plusieurs machines, identités multiples | 1.1 |
+| La création visuelle — retouche, montage, 3D, production sonore | Non planifié |
+| Le mode clair | Non planifié. La bible garantit qu'il reste possible sans réécriture |
+| Une image d'installation utilisable par un tiers | Non planifié |
+| Toute application originale hors de la coque | Non planifié |
+
+## La stratégie de construction
+
+> **La coque est à nous. Les applications sont empruntées. Le socle est rejouable.**
+
+Trois voies étaient possibles. Assembler des composants existants et les thématiser mène vite à un plafond : ces composants n'ont ni nos six états composables, ni notre vocabulaire de mouvement, ni notre modèle d'élévation. On obtient un rice réussi, pas un système — c'est exactement l'état qu'on veut quitter. Partir d'un bureau intégré et le recolorer offre gratuitement toutes les fonctions système, mais engage un bras de fer permanent contre une identité héritée.
+
+**La voie retenue est la troisième :** le compositeur reste un logiciel tiers, et toute la coque — barre, lanceur, overlays, réglages, verrouillage, panneau de thème — est écrite par nous, au-dessus des tokens. C'est la seule qui rende la bible opposable ligne par ligne.
+
+**Ce qu'on n'écrit pas :** la suite applicative. Le chapitre 12 désigne une famille dominante coopérative, et cette famille fournit une suite complète — fichiers, terminal, éditeur, archives, visionneuses, capture, calculatrice. On la prend telle quelle, thématisée au palier B. **Le sur-mesure là où il se voit, l'emprunt là où il ne se voit pas.**
+
+### La règle d'emprunt
+
+Le projet est personnel, sans vocation publique ni commerciale. Piocher dans les projets libres existants est encouragé partout où ça accélère.
+
+> **On emprunte du code, ****o****n s****'****i****nspir****e du de****sign****.**
+
+Ce qu'on prend chez un tiers, c'est de la mécanique : comment dialoguer avec le gestionnaire de réseau, comment dessiner une barre, comment structurer un démon de thème. Ce qu'on ne prend jamais, ce sont ses valeurs — ses rayons, ses durées, ses accents. Un rice repris tel quel entre en conflit silencieux avec la bible, et le conflit ne se voit qu'une fois qu'il est partout.
+
+**Test d'emprunt :** si le code repris contient une couleur, une durée ou une dimension écrite en dur, elle est remplacée par un token avant intégration. Sans exception.
+
+## Les cinq partis pris qui engagent le projet
+
+### 1. La beauté est une exigence, pas un bonus
+
+C'est une contrainte de spécification, pas une intention. Elle se traduit en règles vérifiables — matière des surfaces, précision géométrique, physique du mouvement — et non en appréciations. **Un livrable qui fonctionne mais qui est laid n'est pas conforme.**
+
+**Conséquence de planification :** il n'existe pas de phase de mise en beauté. La coque naît thématisée, puisqu'elle est écrite au-dessus des tokens. **La beauté est une condition d'acceptation de chaque lot, pas une étape finale.**
+
+### 2. Un thème est une fonction à deux variables
+
+Une teinte, un facteur de chroma. Rien d'autre. Toutes les autres valeurs sont invariantes.
+
+**Ce que ça achète :** on peut créer trente thèmes sans jamais refaire d'audit d'accessibilité, parce que le contraste est garanti par construction. **Ce que ça coûte :** aucune exception n'est tolérable. Une seule couleur écrite en dur dans le code fait tomber la garantie.
+
+### 3. Une source de vérité, des générateurs
+
+Deux fichiers contiennent toutes les valeurs du système. Six cibles en sont produites automatiquement, dont les feuilles de style de Qt, GTK 3 et GTK 4.
+
+**Conséquence de planification :** prévoir l'étape de génération dans la chaîne de construction dès le départ. Une valeur recopiée à la main est un défaut, au même titre qu'un bogue — c'est écrit dans la bible et ce n'est pas une formule.
+
+**Le fond d'écran est une entrée qui influe dynamiquement sur la coloration.** N'importe quelle image est acceptée ; le système en extrait une teinte et régénère le reste. Et l'extraction n'est qu'un défaut : **un panneau de thème permet de régler la teinte à la main, sans ouvrir de fichier.** Lot 4.
+
+### 4. La curation bat la thématisation
+
+Une session composée majoritairement d'applications d'une même famille est visuellement calme sans qu'on écrive une ligne de style. Une session moitié-moitié ne le sera jamais, quel que soit le travail de thématisation.
+
+> **Les responsables techniques auront l'intelligence de favoriser Qt ou GTK afin d'avoir le plus d'applications qui se ressemblent.**
+
+**Conséquence de planification :** le choix de la famille dominante se fait **avant** de choisir les applications une par une, pas après. Il est fait : c'est la famille coopérative, celle qui lit le schéma de couleurs du système et l'applique à chaud.
+
+### 5. On unifie la couleur et la typographie, pas la géométrie
+
+Forcer les applications GTK et Qt à coïncider au pixel est un puits sans fond qui casse à chaque mise à jour.
+
+> **Les applications ne ressembleront pas au shell, elles s'accorderont avec lui.**
+
+**Conséquence :** ne pas ouvrir de ticket sur « ce bouton n'a pas le même rayon que le nôtre ». C'est conforme.
+
+## Ce qui est décidé, et ne se rediscute pas
+
+| Domaine | Décision |
+| --- | --- |
+| Mode | Sombre uniquement ; le mode clair reste possible plus tard sans réécriture |
+| Couleur | OKLCH, douze échelons de luminosité fixes, contraste validé en APCA |
+| Fenêtrage | Hybride à trois couches : tuilage, flottant, superposition système |
+| Typographie | Deux familles, deux graisses, corps à 13 px |
+| Iconographie | Trois classes ; les icônes-objet suivent le thème machine |
+| Applications | Suite par défaut dans la famille qui coopère avec la thématisation |
+| Bureau intégré | **Écarté.** On prend les applications de la famille dominante, pas son environnement de bureau |
+| Réglages système | **Écrits par nous**, et remplis panneau par panneau au fil des lots |
+| Impression | Seule exception tolérée à un outil tiers visible et non thématisé |
+| Identité | Une planète et une teinte par machine |
+| Performance | **Aucun budget de rendu, aucun palier matériel.** On ne se restreint pas sur l'apparence |
+
+## Les cinq lots
+
+L'ordre découle d'une seule règle : **chaque lot laisse la machine en état de servir.** On empile des couches fonctionnelles complètes ; on ne mène pas les chantiers en parallèle pour ne les faire converger qu'à la fin.
+
+| Lot | Contenu | État de la machine à la sortie |
+| --- | --- | --- |
+| **1 — Socle amorçable** | Distribution de base, procédure d'installation rejouable, compositeur, tuilage nu, un terminal | Spartiate mais vivante. **DuneI se développe désormais depuis DuneI** |
+| **2 — Coque vitale** | Barre et ses indicateurs, lanceur, notifications, verrouillage, agent d'authentification, démon de thème, raccourcis | Habitable au quotidien, et belle par construction |
+| **3 — La bascule** | Navigateur, portails et partage d'écran, suite applicative, périphériques, impression, visio | **Machine principale.** La version bricolée est abandonnée |
+| **4 — Accord visuel** | Thématisation Qt et GTK sur cibles réelles, premier lot d'icônes, fond d'écran, panneau de thème, extraction de teinte | Cohérente de bout en bout, bible opposable partout |
+| **5 — Écrans système et voix** | Réglages panneau par panneau, connexion, amorçage, « À propos », catalogue de messages, recette | **1.0** |
+
+Le détail — cent trente-six éléments, chacun rattaché à un chantier, un lot et une nature — vit dans le document de périmètre et de backlog. **Cette note ne s'y substitue pas.**
+
+## Les risques, par ordre de gravité
+
+### Élevé — l'érosion par exceptions
+
+Les systèmes de design ne se délitent jamais d'un coup : ils se délitent par accumulation de « juste cette fois ». Chaque contrainte technique poussera à faire une exception.
+
+**Parade :** l'annexe A de la bible liste les interdits, formulés en négatif. C'est la page à faire relire en revue de code. Et **toute dérogation accordée s'écrit dans le journal des décisions, avec sa raison. Une dérogation non écrite est un défaut.**
+
+### Élevé — l'oubli des services transverses
+
+Portails, agent d'authentification, trousseau de secrets, raccourcis globaux. Ils n'apparaissent dans aucune capture d'écran, personne ne les met spontanément au backlog, et leur absence rend le système inutilisable : sans agent d'authentification, aucune installation de paquet depuis l'interface ; sans portail, pas de partage d'écran en visioconférence — un des trois usages irréprochables.
+
+**Parade :** ils sont au backlog nommément, aux lots 2 et 3, **avant** les éléments visibles qui en dépendent.
+
+### Moyen — la dérive des valeurs recopiées
+
+Chaque sous-système exprime le temps et la couleur dans sa propre unité. Une valeur recopiée à la main dérive de quelques pour cent sans que personne ne le remarque, jusqu'à ce que le système donne une impression vaguement désaccordée sans qu'on sache dire pourquoi.
+
+**Parade :** les fichiers générés sont versionnés mais interdits à l'édition, et portent l'avertissement en première ligne.
+
+### Moyen — la contamination par la machine bricolée
+
+La machine actuelle tourne déjà sur une version un peu bricolée. Une configuration héritée par accident survit indéfiniment, et plus personne ne sait pourquoi elle est là.
+
+**Parade :** rien n'entre dans DuneI sans passer par la procédure d'installation du lot 1. Ce qui survit y survit par décision, jamais par hasard.
+
+### Moyen — l'emprunt qui apporte son design
+
+Un composant repris d'un projet tiers embarque ses rayons, ses durées et ses accents. Le conflit est silencieux : il ne se voit qu'une fois qu'il est partout.
+
+**Parade :** le test d'emprunt. Toute valeur en dur remplacée par un token avant intégration.
+
+## La recette — ce que « magnifique » veut dire
+
+La condition d'acceptation n'est opposable que découpée en trois étages.
+
+1. **Ce que la machine vérifie** — plafond de gamut, contraste APCA, écart angulaire des teintes catégorielles, absence de valeurs en dur, intégrité des fichiers générés. Aucun jugement humain ne s'exerce ici.
+2. **La grille de conformité** — par écran, la liste des interdits de l'annexe A. Ce n'est pas une appréciation : un sheen sans dithering est un défaut au même titre qu'un plantage.
+3. **Le regard** — le seul endroit où le goût opère.
+
+> **Le regard peut refuser. Il ne peut pas ajouter de règle.**
+
+S'il refuse quelque chose de conforme, c'est que la bible est incomplète — et c'est la bible qu'on corrige, pas le composant isolé. Sans cette règle, les règles se multiplient au fil des humeurs et le système devient invérifiable.
+
+## État d'avancement
+
+**Terminé.** Les chapitres de conception. Les deux fichiers sources et leurs générateurs, testés : six cibles produites, changement de thème vérifié, invariance des couleurs sémantiques confirmée par génération. Le cadrage produit : périmètre, chantiers, séquencement, backlog.
+
+**Ce qui reste sur la chaîne de thème n'est plus de la conception, c'est du branchement** — connecter les cibles générées à des logiciels réels et vérifier le rechargement à chaud sur une session vivante. Lots 2 et 4.
+
+**Prêt à démarrer.** Le lot 1. Aucun prérequis ne le bloque.
+
+**Prêt en parallèle.** Le premier lot d'icônes — une soixantaine de symboles à faire correspondre à une nomenclature normalisée.
+
+**À trancher au lot où c'est utile, pas avant.** Le choix de la distribution de base et du compositeur se fait au lot 1 ; celui des applications au lot 3. Le carnet d'installation énonce les besoins et les critères de sélection ; **il ne présuppose aucun logiciel**, parce que ces choix sont des résultats du travail de design et non son point de départ.
+
+**À calibrer à l'implémentation.** Une poignée de valeurs — graisse d'accentuation, seuils d'adaptation, délais d'infobulle, opacité du voile. Elles se jugent sur le shell réel ; les figer plus tôt reviendrait à les figer à l'aveugle. Elles sont listées à l'annexe C de la bible et rattachées au lot 5.
+
+**Dette documentaire identifiée.** Quatre défauts dans la bible, tous corrigeables au lot 5 : l'annexe B annoncée au plan de lecture mais absente, la numérotation des principes du chapitre 1 — sept annoncés, six énumérés, alors que le chapitre 7 en invoque un septième, la liste des interdits présente en double aux annexes A et E avec des contenus divergents, et le chapitre des écrans système qui reste à écrire — à partir de ce qui aura été construit, pas avant.
+
+## Plan de lecture
+
+| Rôle | À lire |
+| --- | --- |
+| Chef de projet | Cette note, puis le document de périmètre et de backlog |
+| Développeur shell | Bible, chapitres 1 à 8 et annexes A et E ; backlog, lots 2 et 5 |
+| Développeur applications | Bible, chapitres 10 et 12 ; backlog, lot 3 |
+| Designer | Bible en entier |
+| Intégrateur | Carnet d'installation ; backlog, lots 1 et 3 |
+
+**Le journal des décisions** conserve l'historique des arbitrages et leur raison. Il ne sert pas à travailler, mais à comprendre pourquoi une règle existe le jour où quelqu'un voudra la changer. **Il accueille aussi les dérogations accordées** — c'est ce qui les rend visibles.
