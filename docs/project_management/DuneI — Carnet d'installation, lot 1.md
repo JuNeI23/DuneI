@@ -2,7 +2,9 @@
 
 Oct 12, 2026 · @Nicolas
 
-Socle amorçable.&#32;
+Version 0.2. Historique en fin de document.
+
+Socle amorçable.
 
 Ce carnet produit une machine spartiate et vivante : elle démarre, elle tuile, elle a un terminal. Aucune barre, aucun lanceur, aucune notification — tout cela est du lot 2. À la sortie de ce carnet, DuneI se développe depuis DuneI.
 
@@ -13,6 +15,22 @@ Ce carnet produit une machine spartiate et vivante : elle démarre, elle tuile, 
 Ce qui doit survivre est redéclaré dans le dépôt, jamais recopié depuis l'ancien dossier de configuration. Si une valeur mérite d'être reprise, elle est relue, comprise, et réécrite.
 
 La machine part d'une feuille blanche, donc la règle ne coûte rien ici : la procédure se construit sans tentation.
+
+### Point de départ réel — 12 octobre 2026
+
+Relevé sur `caladan` avant tout développement. **Aucun choix logiciel de ce carnet n'est figé** : les paquets nommés plus bas (`foot`, `greetd`, échelle 1,25…) sont des **propositions**, validées une à une au moment où la feature qui les porte est développée.
+
+| Élément | État constaté | Statut |
+| --- | --- | --- |
+| Distribution | Arch Linux, noyau 7.2 | Acquis |
+| Compositeur | Hyprland 0.56, **configuration en Lua** (`hyprland.lua`) | Acquis |
+| Configuration | Fichier générique autogénéré par Hyprland, non modifié | Conservé, remplacé morceau par morceau |
+| Gestionnaire de connexion | `sddm`, activé | Conservé jusqu'à la feature session |
+| Terminal | `kitty` | Conservé jusqu'à la feature terminal |
+| Échelle d'affichage | `auto` → 1,5 | À trancher à la feature écran |
+| Réseau, audio, énergie | NetworkManager, PipeWire + WirePlumber, power-profiles-daemon | Acquis |
+
+**La méthode : la configuration générique reste en place, et chaque feature en remplace un morceau.** Une feature terminée = un morceau de `hyprland.lua` générique remplacé par un module du dépôt, documenté et validé. La machine reste utilisable entre deux features.
 
 ## Profil matériel
 
@@ -31,38 +49,56 @@ ThinkPad T14s Gen 3, Ryzen 6000, dalle WUXGA, lecteur d'empreinte.
 
 Le carnet n'est pas une suite de commandes à retaper : il décrit ce que contient le dépôt et dans quel ordre on le déroule.
 
+Le dépôt `DuneI` est la racine : les dossiers ci-dessous vivent à côté de `docs/`.
+
 ```
-dunei/
+DuneI/
+├── docs/                   # bible, note de direction, backlog, carnet, journal
 ├── setup/
 │   ├── 00-packages.sh      # paquets de session
 │   ├── 01-services.sh      # réseau, audio, énergie
 │   ├── 02-hardware.sh      # entrée, touches, empreinte
-│   └── 03-session.sh       # greetd, Hyprland, terminal
+│   └── 03-session.sh       # gestionnaire de connexion, Hyprland, terminal
 ├── packages/
 │   ├── session.txt
 │   └── laptop.txt
 ├── config/
 │   ├── hypr/
-│   ├── fontconfig/
-│   └── greetd/
+│   │   ├── hyprland.lua    # point d'entrée : ne fait que des require
+│   │   ├── modules/        # un module par feature (input, keybinds, rules…)
+│   │   └── machines/       # un fichier par machine, choisi par nom d'hôte
+│   └── fontconfig/
 ├── tokens.toml
-├── motion.toml
+├── motion.toml             # MANQUANT au 12/10/2026 — à écrire
 ├── generate_tokens.py
-├── generate_motion.py
+├── generate_motion.py      # MANQUANT au 12/10/2026 — à écrire
+├── extract_hue.py
+├── Makefile
 └── generated/              # produit, jamais édité
 ```
 
 **Les listes de paquets sont des fichiers, pas des lignes de commande.** C'est ce qui rend la procédure rejouable : la machine suivante installe le même ensemble, et une addition se voit dans un diff.
+
+### Déploiement vers `~/.config`
+
+| Source | Méthode | Raison |
+| --- | --- | --- |
+| `config/` (écrit à la main) | **Lien symbolique** | On édite le dépôt, l'effet est immédiat, aucune dérive possible entre dépôt et machine |
+| `generated/` | **Copie** par `make install` | Un fichier généré ne s'édite pas ; la copie matérialise l'étape de génération |
+
+### Ce qui est propre à une machine
+
+**Tout ce qui dépend du matériel vit dans `config/hypr/machines/<nom-d-hôte>.lua`, et nulle part ailleurs** : nom de sortie (`eDP-1`), facteur d'échelle, périphériques d'entrée nommés. Le point d'entrée charge le fichier qui correspond au nom d'hôte ; la configuration commune ne connaît aucun matériel. Une nouvelle machine = un nouveau fichier, rien d'autre ne change.
 
 ## Graphique, énergie, veille et entrée
 
 ### Graphique — L1-06
 
 ```
-mesa vulkan-radeon libva-mesa-driver
+mesa vulkan-radeon
 ```
 
-Rien d'autre. Le pilote est dans le noyau, et le flou, le sheen et les transitions de Hyprland passent sans réserve sur un Radeon intégré de cette génération.
+Rien d'autre. `libva-mesa-driver` est désormais fourni par `mesa` lui-même : le nommer dans une liste de paquets est redondant. Le pilote est dans le noyau, et le flou, le sheen et les transitions de Hyprland passent sans réserve sur un Radeon intégré de cette génération.
 
 Les listes Intel et NVIDIA restent dans le dépôt pour les machines suivantes. Elles ne s'exécutent pas ici.
 
@@ -87,15 +123,18 @@ Si la décharge reste mauvaise après mise à jour du firmware et choix du somme
 
 Trackpoint **et** pavé tactile : deux périphériques, deux configurations, dans le fragment Hyprland.
 
-```
-input {
-    touchpad {
-        natural_scroll = true
-        disable_while_typing = true
-        clickfinger_behavior = true
-    }
-    accel_profile = adaptive
-}
+```lua
+-- config/hypr/modules/input.lua — proposition, à valider à la feature entrée
+hl.config({
+    input = {
+        accel_profile = "adaptive",
+        touchpad = {
+            natural_scroll       = true,
+            disable_while_typing = true,
+            clickfinger_behavior = true,
+        },
+    },
+})
 ```
 
 ### Touches matérielles
@@ -114,6 +153,8 @@ Les touches de luminosité et de volume sont câblées dès le lot 1, parce que 
 
 ### Paquets
 
+Propositions — chaque ligne est validée à la feature qui la porte. D'ici là, `sddm` et `kitty` restent en place.
+
 ```
 hyprland
 xdg-desktop-portal-hyprland xdg-desktop-portal-gtk
@@ -121,6 +162,8 @@ qt6-wayland qt5-wayland
 greetd greetd-tuigreet
 foot
 ```
+
+**Lancement par `uwsm` à étudier** à la feature session : c'est le lancement recommandé par la documentation Hyprland actuelle, et il déplace les variables d'environnement vers ses propres fichiers.
 
 `greetd` avec `tuigreet` est **délibérément laid et provisoire** : l'écran de connexion thématisé est L5-12. Installer maintenant un gestionnaire graphique lourd reviendrait à habiller un écran qu'on remplacera, et à traîner une dépendance du bureau intégré qu'on a écarté.
 
@@ -130,14 +173,15 @@ Les portails sont installés dès maintenant mais configurés au lot 3. Les avoi
 
 ### Variables d'environnement
 
-```
-XDG_CURRENT_DESKTOP=Hyprland
-XDG_SESSION_TYPE=wayland
-QT_QPA_PLATFORM=wayland
-QT_WAYLAND_DISABLE_WINDOWDECORATION=1
-QT_ENABLE_HIGHDPI_SCALING=0
-QT_AUTO_SCREEN_SCALE_FACTOR=0
-MOZ_ENABLE_WAYLAND=1
+```lua
+-- config/hypr/modules/env.lua
+hl.env("XDG_CURRENT_DESKTOP", "Hyprland")
+hl.env("XDG_SESSION_TYPE", "wayland")
+hl.env("QT_QPA_PLATFORM", "wayland")
+hl.env("QT_WAYLAND_DISABLE_WINDOWDECORATION", "1")
+hl.env("QT_ENABLE_HIGHDPI_SCALING", "0")
+hl.env("QT_AUTO_SCREEN_SCALE_FACTOR", "0")
+hl.env("MOZ_ENABLE_WAYLAND", "1")
 ```
 
 **`QT_WAYLAND_DISABLE_WINDOWDECORATION=1` porte L1-14.** C'est elle qui supprime les décorations dessinées par les applications Qt, pour que la fenêtre soit encadrée par le compositeur et par lui seul. Sans elle, chaque fenêtre Qt porte sa propre barre de titre et le tuilage perd sa cohérence géométrique.
@@ -148,21 +192,31 @@ MOZ_ENABLE_WAYLAND=1
 
 C'est le point d'architecture du lot, et il conditionne tout le projet.
 
-```
-# ~/.config/hypr/hyprland.conf
-source = ~/.config/hypr/generated/tokens.conf
-source = ~/.config/hypr/generated/motion.conf
-source = ~/.config/hypr/keybinds.conf
-source = ~/.config/hypr/rules.conf
+Depuis la version 0.5x, Hyprland se configure **en Lua** (`hyprland.lua`, API `hl.*`). L'ancienne syntaxe hyprlang (`source = …`, blocs `general { }`) n'est plus la référence.
+
+```lua
+-- ~/.config/hypr/hyprland.lua — point d'entrée, ne contient que des require
+require("generated.tokens")   -- produit par generate_tokens.py
+require("generated.motion")   -- produit par generate_motion.py
+require("modules.env")
+require("modules.input")
+require("modules.keybinds")
+require("modules.rules")
+require("machines." .. hostname)   -- fragment propre à la machine
 ```
 
-**Aucune couleur, aucune durée, aucun rayon n'est écrit dans `hyprland.conf`.** Tout vient des fragments produits par les générateurs. C'est la condition 2 de la définition de terminé, appliquée au compositeur.
+Les générateurs produisent donc des **modules Lua**, et non plus des fragments `.conf` : une cible Hyprland est à ajouter à `generate_tokens.py`. Le Lua apporte aussi les ressorts natifs (`hl.curve({ type = "spring", … })`), qui servent directement le principe 5.
+
+**Aucune couleur, aucune durée, aucun rayon n'est écrit dans `hyprland.lua` ni dans `modules/`.** Tout vient des fragments produits par les générateurs. C'est la condition 2 de la définition de terminé, appliquée au compositeur.
 
 ### Échelle d'affichage — la décision de cette version
 
+```lua
+-- config/hypr/machines/caladan.lua — le seul endroit où eDP-1 est nommé
+hl.monitor({ output = "eDP-1", mode = "1920x1200@60", position = "0x0", scale = 1.25 })
 ```
-monitor = eDP-1, 1920x1200@60, 0x0, 1.25
-```
+
+Proposition : la machine tourne aujourd'hui en `auto`, soit 1,5. Le choix se valide à la feature écran.
 
 À 162 points par pouce, l'échelle 1 rend le corps de 13 px à environ 60 % de sa taille physique de référence. L'échelle devient donc obligatoire, et le choix se fait entre trois valeurs.
 
@@ -180,14 +234,15 @@ Les applications encore en X11 traduit restent floues. C'est un critère supplé
 
 La bible impose une gouttière de 8 px entre fenêtres et un rayon de 12.
 
+```lua
+-- generated/tokens.lua — PRODUIT par generate_tokens.py, jamais écrit à la main
+hl.config({
+    general    = { gaps_in = 4, gaps_out = 8, border_size = 2 },
+    decoration = { rounding = 12 },
+})
 ```
-general {
-    gaps_in = 4
-    gaps_out = 8
-    border_size = 2
-    rounding = 12
-}
-```
+
+Dans l'API Lua, `rounding` vit sous `decoration`, pas sous `general`.
 
 **`gaps_in` vaut 4, pas 8.** Hyprland applique cette valeur de chaque côté de chaque fenêtre : deux fenêtres voisines produisent donc un intervalle de 8 px. Écrire 8 donnerait 16, et l'écart ne se verrait qu'en comparant à la maquette. C'est le prototype du défaut que la règle « aucune valeur en dur » existe pour empêcher — ces valeurs viennent du fragment généré, où le doublement est calculé, pas retapé.
 
@@ -217,7 +272,7 @@ Dix bureaux, sans nom au lot 1 — la palette catégorielle qui les distingue ar
 
 Le lot 1 n'a ni lanceur ni barre : le clavier est le seul chemin, et le principe 6 dit qu'il doit être complet.
 
-**Ne jamais coder en dur un nom de sortie dans un fichier versionné.** `eDP-1` vit dans le fragment propre à la machine, pas dans la configuration commune.
+**Ne jamais coder en dur un nom de sortie dans la configuration commune.** `eDP-1` vit dans `config/hypr/machines/<nom-d-hôte>.lua`, et nulle part ailleurs.
 
 ## Typographie et chaîne de génération — L1-19 à L1-21
 
@@ -228,7 +283,12 @@ fontconfig
 noto-fonts noto-fonts-cjk noto-fonts-emoji
 ```
 
-Plus les deux familles du système, installées depuis le dépôt.
+Plus les deux familles du système, **depuis les dépôts officiels Arch** — aucune police n'est versionnée dans notre dépôt :
+
+```
+adobe-source-sans-fonts      # Source Sans 3, interface
+ttf-sourcecodepro-nerd       # Source Code Pro patchée Nerd Font, terminal et barre
+```
 
 ### L'indirection
 
@@ -357,3 +417,10 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 | Écran de connexion thématisé, amorçage graphique | Lot 5 |
 | Sauvegarde et restauration | L5-22 |
 | Provisionnement multi-machines | 1.1 |
+
+## Historique des versions
+
+| Version | Date | Changement |
+| --- | --- | --- |
+| 0.1 | 2026-10-12 | Version initiale |
+| 0.2 | 2026-10-12 | Configuration Hyprland en Lua (0.56) ; point de départ réel de `caladan` ; choix logiciels requalifiés en propositions ; structure du dépôt à la racine de `DuneI` ; déploiement par liens symboliques et copies ; fragments par machine ; polices depuis les dépôts Arch ; `libva-mesa-driver` retiré (fourni par `mesa`) |

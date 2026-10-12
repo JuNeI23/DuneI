@@ -1,8 +1,10 @@
 # DuneI — Note de direction
 
-Oct 10, 2026 · @Nicolas
+Oct 10, 2026 · @Nicolas — révisée le 12 octobre 2026
 
-*Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent trente-six lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
+Version 1.1. Historique en fin de document.
+
+*Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent trente-sept lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
 
 ## En une phrase
 
@@ -163,15 +165,17 @@ S'il refuse quelque chose de conforme, c'est que la bible est incomplète — et
 
 ## État d'avancement
 
-**Terminé.** Les chapitres de conception. Les deux fichiers sources et leurs générateurs, testés : six cibles produites, changement de thème vérifié, invariance des couleurs sémantiques confirmée par génération. Le cadrage produit : périmètre, chantiers, séquencement, backlog.
+**Terminé.** Les chapitres de conception. Le cadrage produit : périmètre, chantiers, séquencement, backlog.
+
+**Corrigé le 12 octobre 2026 — la chaîne de thème n'est pas terminée.** Sont dans le dépôt : `tokens.toml`, `generate_tokens.py` (six cibles : CSS, JSON, KDE, GTK 3, GTK 4, portail) et `extract_hue.py`. **Manquent** : `motion.toml` et `generate_motion.py`, ainsi que la cible Hyprland (Lua) dont dépend tout le lot 1. L'audit du générateur relève des écarts avec la bible — rabattement de gamut qui décale la teinte, contraste APCA du corps sous la cible, absence de contrôle APCA, valeurs en dur dans le générateur, nom `DuneOS` au lieu de `DuneI`. Le détail est consigné au journal des décisions ; leur correction est un préalable du lot 1.
 
 **Ce qui reste sur la chaîne de thème n'est plus de la conception, c'est du branchement** — connecter les cibles générées à des logiciels réels et vérifier le rechargement à chaud sur une session vivante. Lots 2 et 4.
 
-**Prêt à démarrer.** Le lot 1. Aucun prérequis ne le bloque.
+**Prêt à démarrer.** Le lot 1, en commençant par remettre la chaîne de thème en conformité (voir ci-dessus). Point de départ : Arch + Hyprland 0.56 en configuration générique, **configurée en Lua**. La configuration générique reste en place et chaque feature en remplace un morceau — aucun choix logiciel du carnet n'est figé avant sa feature.
 
 **Prêt en parallèle.** Le premier lot d'icônes — une soixantaine de symboles à faire correspondre à une nomenclature normalisée.
 
-**À trancher au lot où c'est utile, pas avant.** Le choix de la distribution de base et du compositeur se fait au lot 1 ; celui des applications au lot 3. Le carnet d'installation énonce les besoins et les critères de sélection ; **il ne présuppose aucun logiciel**, parce que ces choix sont des résultats du travail de design et non son point de départ.
+**À trancher au lot où c'est utile, pas avant.** La distribution de base et le compositeur sont tranchés : Arch Linux et Hyprland. Le choix des applications se fait au lot 3. Le carnet d'installation énonce les besoins et les critères de sélection ; **il ne présuppose aucun logiciel**, parce que ces choix sont des résultats du travail de design et non son point de départ.
 
 **À calibrer à l'implémentation.** Une poignée de valeurs — graisse d'accentuation, seuils d'adaptation, délais d'infobulle, opacité du voile. Elles se jugent sur le shell réel ; les figer plus tôt reviendrait à les figer à l'aveugle. Elles sont listées à l'annexe C de la bible et rattachées au lot 5.
 
@@ -188,3 +192,10 @@ S'il refuse quelque chose de conforme, c'est que la bible est incomplète — et
 | Intégrateur | Carnet d'installation ; backlog, lots 1 et 3 |
 
 **Le journal des décisions** conserve l'historique des arbitrages et leur raison. Il ne sert pas à travailler, mais à comprendre pourquoi une règle existe le jour où quelqu'un voudra la changer. **Il accueille aussi les dérogations accordées** — c'est ce qui les rend visibles.
+
+## Historique des versions
+
+| Version | Date | Changement |
+| --- | --- | --- |
+| 1.0 | 2026-10-10 | Version initiale |
+| 1.1 | 2026-10-12 | État réel de la chaîne de thème corrigé (motion et cible Hyprland manquants, écarts relevés) ; distribution et compositeur tranchés ; configuration Hyprland en Lua ; méthode « générique remplacée feature par feature » |

@@ -2,7 +2,9 @@
 
 Oct 12, 2026 · @Nicolas
 
-La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **137 éléments** répartis en **cinq lots**, sur six chantiers.
+Version 1.1. Historique en fin de document.
+
+La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **140 éléments** répartis en **cinq lots**, sur six chantiers.
 
 Ce document dit ce qui est attendu, dans quel ordre, et à quelle condition c'est terminé. Il ne dit pas à quoi ça ressemble — c'est le rôle de la bible de design. En cas de contradiction : la bible l'emporte sur l'apparence, ce document l'emporte sur le périmètre.
 
@@ -219,7 +221,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 
 | Réf | Ch. | Nature | Élément |
 | --- | --- | --- | --- |
-| L1-01 | A | Configuré | Choisir la distribution de base selon les critères du carnet |
+| L1-01 | A | Configuré | Choisir la distribution de base selon les critères du carnet — **tranché : Arch Linux** |
 | L1-02 | A | Écrit | Rédiger la procédure d'installation rejouable |
 | L1-03 | A | Configuré | Partitionnement, système de fichiers, chiffrement du disque |
 | L1-04 | A | Configuré | Amorçage et gestionnaire de démarrage |
@@ -229,7 +231,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L1-08 | A | Offert | Service audio — vérification |
 | L1-09 | A | Offert | Service d'énergie et de veille — vérification |
 | L1-10 | A | Configuré | Gestionnaire de session et démarrage automatique |
-| L1-11 | B | Configuré | Choisir le compositeur selon les besoins de la bible |
+| L1-11 | B | Configuré | Choisir le compositeur selon les besoins de la bible — **tranché : Hyprland 0.56, configuration Lua** |
 | L1-12 | B | Configuré | Tuilage — couche 1, gouttière 8 px, rayon 12 |
 | L1-13 | B | Configuré | Fenêtre active ; inactive → modificateur de conteneur |
 | L1-14 | B | Configuré | Masquage des décorations côté serveur |
@@ -240,6 +242,9 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L1-19 | C | Écrit | Polices et indirection de noms |
 | L1-20 | C | Écrit | Chaîne de repli des polices |
 | L1-21 | C | Configuré | Brancher la génération dans la chaîne de construction |
+| L1-22 | C | Écrit | Mettre `generate_tokens.py` et `extract_hue.py` en conformité avec la bible — écarts consignés au journal |
+| L1-23 | C | Écrit | Écrire `motion.toml` et `generate_motion.py` — fichiers manquants |
+| L1-24 | C | Écrit | Cible Hyprland en Lua pour les deux générateurs |
 
 ### Lot 2 — coque vitale
 
@@ -379,7 +384,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L5-29 | — | Écrit | Passe de regard complète — étage 3 |
 | L5-30 | — | Écrit | Résorber les points ouverts de l'annexe C |
 
-**Volume total : 137 éléments** — 93 écrits, 36 configurés, 5 offerts, 3 mixtes.
+**Volume total : 140 éléments** — 96 écrits, 36 configurés, 5 offerts, 3 mixtes.
 
 Les deux tiers du travail sont de l'écrit, et les trois quarts de cet écrit se concentrent sur la coque et les écrans système. C'est cohérent avec la stratégie retenue, et c'est là que tout le risque se trouve.
 
@@ -475,3 +480,10 @@ Ils ne bloquent pas le démarrage. Chacun se tranche au lot indiqué, sur du ré
 | Opacité du voile, une fois le flou en place | Lot 5 | Calibration sur shell réel |
 
 Le choix de la distribution de base et du compositeur, précédemment ouverts, sont tranchés : Arch Linux et Hyprland. Voir le carnet d'installation du lot 1.
+
+## Historique des versions
+
+| Version | Date | Changement |
+| --- | --- | --- |
+| 1.0 | 2026-10-12 | Version initiale, 137 éléments |
+| 1.1 | 2026-10-12 | L1-01 et L1-11 tranchés (Arch, Hyprland en Lua) ; ajout de L1-22 à L1-24 — conformité du générateur, motion manquant, cible Hyprland Lua. 140 éléments |
