@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 0.2. Historique en fin de document.
+Version 0.3. Historique en fin de document.
 
 Socle amorçable.
 
@@ -70,7 +70,9 @@ DuneI/
 │   └── fontconfig/
 ├── tokens.toml
 ├── motion.toml             # MANQUANT au 12/10/2026 — à écrire
-├── generate_tokens.py
+├── generate_tokens.py      # point d'entrée ; la logique vit dans dunei_theme/
+├── dunei_theme/            # color, model, checks, emitters/ (une cible par module)
+├── tests/                  # unittest + instantanés de référence (tests/golden/)
 ├── generate_motion.py      # MANQUANT au 12/10/2026 — à écrire
 ├── extract_hue.py
 ├── Makefile
@@ -315,8 +317,11 @@ L'antialiasage sous-pixel et le hinting appuyé sont des compensations pour écr
 
 ```bash
 make tokens              # tokens.toml  → generated/
-make motion              # motion.toml  → generated/
-make install             # generated/   → ~/.config/
+make test                # tests unitaires et de non-régression
+make check               # tokens + test + git diff --exit-code generated/
+make golden              # régénère les instantanés après un changement de sortie VOULU
+make motion              # motion.toml  → generated/ (L1-23, à venir)
+make install             # generated/   → ~/.config/ (à venir)
 ```
 
 **Les fichiers de `generated/` sont versionnés et interdits à l'édition.** Ils portent l'avertissement en première ligne. Les versionner permet de voir dans un diff ce qu'un changement de token produit réellement — la meilleure protection contre une modification de source aux effets inattendus.
@@ -423,4 +428,5 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 | Version | Date | Changement |
 | --- | --- | --- |
 | 0.1 | 2026-10-12 | Version initiale |
+| 0.3 | 2026-10-12 | Chaîne de thème modulaire (`dunei_theme/`), cibles `make test`, `make check`, `make golden` |
 | 0.2 | 2026-10-12 | Configuration Hyprland en Lua (0.56) ; point de départ réel de `caladan` ; choix logiciels requalifiés en propositions ; structure du dépôt à la racine de `DuneI` ; déploiement par liens symboliques et copies ; fragments par machine ; polices depuis les dépôts Arch ; `libva-mesa-driver` retiré (fourni par `mesa`) |

@@ -243,7 +243,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L1-20 | C | Écrit | Chaîne de repli des polices |
 | L1-21 | C | Configuré | Brancher la génération dans la chaîne de construction |
 | L1-22 | C | Écrit | Mettre `generate_tokens.py` et `extract_hue.py` en conformité avec la bible — écarts consignés au journal |
-| L1-23 | C | Écrit | Écrire `motion.toml` et `generate_motion.py` — fichiers manquants |
+| L1-23 | C | Écrit | Concevoir et écrire `motion.toml` et `generate_motion.py` — **à construire de zéro**, les fichiers n'ont jamais existé. Brainstorming de design préalable |
 | L1-24 | C | Écrit | Cible Hyprland en Lua pour les deux générateurs |
 
 ### Lot 2 — coque vitale
