@@ -1,4 +1,4 @@
-# motion.toml — proposition issue du banc proto/motion (2026-10-13 17:24:56)
+# motion.toml — proposition issue du banc proto/motion (2026-10-13 17:38:59)
 #
 # Ressort commun à la coque (QML) et au compositeur (Hyprland) : progression
 # normalisée 0 → 1, masse m, raideur k, amortissement c, temps en secondes.
@@ -70,14 +70,14 @@ overshoot = false
 # hyprland : hl.curve("dunei-spectacle-out", { type = "spring", mass = 1.00, stiffness = 306.1, dampening = 35.71 })
 
 [navigate]
-mass = 1.00
-stiffness = 280.0
-damping = 33.50
+mass = 0.30
+stiffness = 600.0
+damping = 30.00
 exit_ratio = 1.00
 overshoot = false
-# ζ = 1.00 · entrée ±1 % ≈ 401 ms · sortie ≈ 401 ms
-# hyprland : hl.curve("dunei-navigate-in",  { type = "spring", mass = 1.00, stiffness = 280.0, dampening = 33.50 })
-# hyprland : hl.curve("dunei-navigate-out", { type = "spring", mass = 1.00, stiffness = 280.0, dampening = 33.50 })
+# ζ = 1.12 · entrée ±1 % ≈ 186 ms · sortie ≈ 186 ms
+# hyprland : hl.curve("dunei-navigate-in",  { type = "spring", mass = 0.30, stiffness = 600.0, dampening = 30.00 })
+# hyprland : hl.curve("dunei-navigate-out", { type = "spring", mass = 0.30, stiffness = 600.0, dampening = 30.00 })
 
 [reduced]
 # Mouvement réduit : ni déplacement ni échelle, fondu court conservé.
