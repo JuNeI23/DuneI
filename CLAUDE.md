@@ -42,3 +42,4 @@ Versionnage des documents : numero de version en tete + table "Historique des ve
 1. Ce projet s'adresse uniquement a moi, donc je dois tout controler. Chaque feature visible (ou invisible mais vitale) doit etre validee
 2. Je suis humain et mes requetes peuvent etre imprecises : tant qu'il y a des zones d'ombre, il faut creuser avant de se lancer dans le developpement
 3. Si tu vois que tu pourrais avoir besoin d'outils de dev et de test, demande le. Je veux un developpement optimal.
+4. Des que c'est pertinent, indique moi de compacter ou clear la conversation. N'hesite pas a faire de la doc et modifier tes ressources perso
