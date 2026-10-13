@@ -69,6 +69,16 @@ overshoot = false
 # hyprland : hl.curve("dunei-spectacle-in",  { type = "spring", mass = 1.00, stiffness = 150.0, dampening = 25.00 })
 # hyprland : hl.curve("dunei-spectacle-out", { type = "spring", mass = 1.00, stiffness = 306.1, dampening = 35.71 })
 
+[navigate]
+mass = 1.00
+stiffness = 280.0
+damping = 33.50
+exit_ratio = 1.00
+overshoot = false
+# ζ = 1.00 · entrée ±1 % ≈ 401 ms · sortie ≈ 401 ms
+# hyprland : hl.curve("dunei-navigate-in",  { type = "spring", mass = 1.00, stiffness = 280.0, dampening = 33.50 })
+# hyprland : hl.curve("dunei-navigate-out", { type = "spring", mass = 1.00, stiffness = 280.0, dampening = 33.50 })
+
 [reduced]
 # Mouvement réduit : ni déplacement ni échelle, fondu court conservé.
 mass = 1.00

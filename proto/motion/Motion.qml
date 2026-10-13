@@ -4,9 +4,9 @@ import Quickshell
 import Quickshell.Io
 import "physics.js" as Physics
 
-// Motion — état global du banc : les six transitions, le mouvement réduit, l'export.
+// Motion — état global du banc : les sept transitions, le mouvement réduit, l'export.
 // Rôle : source unique des réglages lus par toutes les démos et le panneau.
-// Sorties : state, reveal, overlay, window, reflow, spectacle (Params), list,
+// Sorties : state, reveal, overlay, window, reflow, spectacle, navigate (Params), list,
 //           reduced, fade (ressort du fondu court), exportText().
 // Erreurs : écriture d'export impossible → message dans la console (FileView).
 // Dépendances : Params.qml, physics.js, Quickshell.Io.FileView.
@@ -41,7 +41,11 @@ Singleton {
         name: "spectacle"; usage: "Moments sans contenu — verrouillage, bureau"
         stiffness: 80; damping: 18
     }
-    readonly property var list: [state, reveal, overlay, window, reflow, spectacle]
+    property Params navigate: Params {
+        name: "navigate"; usage: "Changement de bureau — la caméra glisse le long de la bande, symétrique"
+        stiffness: 280; damping: 33.5; exitRatio: 1; symmetric: true
+    }
+    readonly property var list: [state, reveal, overlay, window, reflow, spectacle, navigate]
 
     FileView { id: exportFile; path: Quickshell.shellPath("export.toml"); blockLoading: true; blockWrites: true }
 
@@ -67,13 +71,14 @@ Singleton {
 
     // importText — applique un export.toml (tables [transition], lignes « clé = nombre »).
     // Entrée : t, texte TOML (vide = rien). Sortie : aucune. Erreurs : lignes non reconnues
-    // ignorées ; reflow garde son facteur figé. Dépendances : set, keys.
+    // ignorées ; les transitions symétriques (reflow, navigate) gardent leur facteur figé.
+    // Une transition absente du texte garde ses valeurs de départ. Dépendances : set, keys, list.
     function importText(t) {
         let name = ""
         for (const line of (t || "").split("\n")) {
             const sec = line.match(/^\[(\w+)\]/), kv = line.match(/^(\w+)\s*=\s*(-?[\d.]+)\s*$/)
             if (sec) name = sec[1]
-            else if (kv && keys[kv[1]] && !(name === "reflow" && kv[1] === "exit_ratio")) set(name, keys[kv[1]], +kv[2])
+            else if (kv && keys[kv[1]] && !(kv[1] === "exit_ratio" && list.find(x => x.name === name)?.symmetric)) set(name, keys[kv[1]], +kv[2])
         }
     }
 

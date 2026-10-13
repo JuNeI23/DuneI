@@ -4,10 +4,10 @@ import Quickshell
 import Quickshell.Io
 
 // shell.qml — banc de mouvement DuneI (prototype jetable, backlog L1-23).
-// Rôle : choisir au ressenti les ressorts des six transitions de la bible (ch. 6)
+// Rôle : choisir au ressenti les ressorts des sept transitions de la bible (ch. 6)
 // avant de les écrire dans motion.toml. Une fenêtre normale (FloatingWindow, se tuile),
 // scène de démonstration à gauche, réglages à droite.
-// Entrées : souris, clavier (1–6, Espace, I, R, E, Échap), IPC `qs ipc call banc …`.
+// Entrées : souris, clavier (1–7, Espace, I, R, E, Échap), IPC `qs ipc call banc …`.
 // Sortie : proto/motion/export.toml sur « Exporter ». Erreurs : console de qs.
 // Dépendances : Quickshell 0.3, Qt 6 (QtQuick, Layouts, Effects), fichiers du dossier.
 ShellRoot {
@@ -23,8 +23,8 @@ ShellRoot {
         readonly property Params params: Motion.list[current]
         readonly property var demo: demos.children[current]
 
-        // select — change de transition. Entrée : i (0–5). Sortie : aucune. Erreurs : hors borne ignoré.
-        function select(i) { if (i >= 0 && i < 6) current = i }
+        // select — change de transition. Entrée : i (0–6). Sortie : aucune. Erreurs : hors borne ignoré.
+        function select(i) { if (i >= 0 && i < Motion.list.length) current = i }
         // doExport — écrit export.toml et ouvre l'aperçu. Sortie : texte exporté. Dépendances : Motion.
         function doExport() { exported = Motion.exportToFile(); exportView.toggle(true); return exported }
 
@@ -55,7 +55,7 @@ ShellRoot {
             focus: true
             Keys.onPressed: event => {
                 const k = event.key
-                if (k >= Qt.Key_1 && k <= Qt.Key_6) win.select(k - Qt.Key_1)
+                if (k >= Qt.Key_1 && k <= Qt.Key_7) win.select(k - Qt.Key_1)
                 else if (k === Qt.Key_Space) win.demo.play()
                 else if (k === Qt.Key_I) win.demo.interrupt()
                 else if (k === Qt.Key_R) Motion.reduced = !Motion.reduced
@@ -116,6 +116,7 @@ ShellRoot {
                 DemoWindow { anchors.fill: parent; visible: win.current === 3 }
                 DemoReflow { anchors.fill: parent; visible: win.current === 4 }
                 DemoSpectacle { anchors.fill: parent; visible: win.current === 5 }
+                DemoNavigate { anchors.fill: parent; visible: win.current === 6 }
             }
 
             // --- Réglages ---
@@ -216,7 +217,7 @@ ShellRoot {
                         Btn { text: "Réinitialiser cette transition"; onClicked: settings.p.reset() }
                         Text {
                             Layout.fillWidth: true; wrapMode: Text.Wrap
-                            text: "Clavier : 1–6 transition · Espace rejouer · I interrompre · R mouvement réduit · E exporter"
+                            text: "Clavier : 1–7 transition · Espace rejouer · I interrompre · R mouvement réduit · E exporter"
                             color: Theme.textTertiary; font { family: Theme.fontFamily; pixelSize: 12 }
                         }
                     }

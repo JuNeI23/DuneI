@@ -1,9 +1,9 @@
 # Banc de mouvement — prototype jetable
 
-Version 0.1 · branche `proto/mouvement` · backlog L1-23
+Version 0.2 · branche `proto/mouvement` · backlog L1-23
 
-Ce dossier sert à **choisir au ressenti** les ressorts des six transitions de la bible
-(ch. 6 « Mouvement ») avant de les écrire dans `motion.toml`. Il ne sera jamais fusionné tel
+Ce dossier sert à **choisir au ressenti** les ressorts des sept transitions de la bible
+(ch. 6 « Mouvement », plus `navigate`) avant de les écrire dans `motion.toml`. Il ne sera jamais fusionné tel
 quel : seules les valeurs choisies, et le modèle de ressort, survivront.
 
 ## Lancer
@@ -13,7 +13,7 @@ proto/motion/run.sh          # équivaut à : qs -p proto/motion
 ```
 
 Une fenêtre normale (`FloatingWindow` de Quickshell, elle se tuile) s'ouvre : scène de
-démonstration à gauche, réglages à droite, sélecteur des six transitions en haut.
+démonstration à gauche, réglages à droite, sélecteur des sept transitions en haut.
 Quickshell recharge à chaud : modifier un fichier du dossier relance le banc. Au
 démarrage comme à chaque rechargement, le banc reprend `export.toml` s'il existe :
 seuls les réglages non exportés sont perdus. « Réinitialiser » revient aux valeurs
@@ -23,14 +23,14 @@ Réglage précis : `−` / `+` à côté de chaque valeur avancent d'un pas (m 0
 c 1 · facteur 0,01 · cascade 1 ms), la molette aussi. Un clic sur la valeur permet
 de la saisir (virgule ou point) : `Entrée` valide, `Échap` annule.
 
-Clavier : `1`–`6` transition · `Espace` rejouer · `I` interrompre · `R` mouvement réduit ·
+Clavier : `1`–`7` transition · `Espace` rejouer · `I` interrompre · `R` mouvement réduit ·
 `E` exporter · `Échap` fermer l'aperçu ou le lanceur.
 
 Pilotage à distance (même instance) :
 
 ```sh
 qs -p proto/motion ipc show
-qs -p proto/motion ipc call banc select 3      # 0 = state … 5 = spectacle
+qs -p proto/motion ipc call banc select 3      # 0 = state … 5 = spectacle, 6 = navigate
 qs -p proto/motion ipc call banc play
 qs -p proto/motion ipc call banc interrupt
 qs -p proto/motion ipc call banc reduced true
@@ -42,7 +42,7 @@ qs -p proto/motion ipc call banc capture /chemin/image.png   # rendu Qt du banc 
 `capture` ne fonctionne que si la fenêtre est sur le bureau visible (une fenêtre cachée
 n'est pas rendue).
 
-## Les six démos
+## Les sept démos
 
 | Transition | Scène | Ce qu'il faut regarder |
 | --- | --- | --- |
@@ -52,6 +52,7 @@ n'est pas rendue).
 | `window` | fenêtre flottante | part du point de clic (dock ou bureau) ; seul dépassement autorisé |
 | `reflow` | tuilage maître + pile | ajout / retrait ; symétrique ; un ajout en plein retrait fait revenir la tuile |
 | `spectacle` | horloge de verrouillage | grand corps, poids léger, montée lente ; date en parallaxe |
+| `navigate` | bande de 5 bureaux vue par un écran | ←/→ ou clic sur un point (1 → 4 d'un trait) ; translation pure, bureaux séparés par `tiling_margin` ; appuis rapides reciblés en plein vol, sans à-coup |
 
 Couleurs, rayons, hauteurs, voile et polices sont lus dans `generated/tokens.json` et
 `tokens.toml` : le banc suit le thème de la machine.
@@ -90,7 +91,7 @@ La sortie est le même ressort, temps accéléré d'un facteur 1/r (r = `exit_ra
     k_sortie = k / r²     c_sortie = c / r     (m inchangée, ζ inchangé)
 
 d'où deux courbes Hyprland par transition, `-in` et `-out`, affichées dans le panneau.
-`reflow` est symétrique : r est figé à 1.
+`reflow` et `navigate` sont symétriques : r est figé à 1 (l'import ignore leur `exit_ratio`).
 
 ### Vers Hyprland
 
@@ -127,7 +128,8 @@ l'indique et l'export ajoute un commentaire d'avertissement.
 
 Bouton « Mouvement réduit » (ou `R`) : plus aucun déplacement ni changement d'échelle ;
 toutes les transitions passent par un fondu critique (ζ = 1) stable en 100 ms. En
-`reflow`, les tuiles sautent à leur place, celle qui arrive ou part fond.
+`reflow`, les tuiles sautent à leur place, celle qui arrive ou part fond. En `navigate`,
+la caméra saute et le bureau d'arrivée apparaît en fondu par-dessus l'ancien.
 
 ## Valeurs de départ
 
@@ -139,6 +141,7 @@ toutes les transitions passent par un fondu critique (ζ = 1) stable en 100 ms. 
 | window | 1 | 300 | 27 | 0,78 | 370 ms, dépassement 1,9 % | ×0,7 |
 | reflow | 1 | 400 | 40 | 1,00 | 335 ms | symétrique |
 | spectacle | 1 | 80 | 18 | 1,01 | 755 ms | ×0,7 |
+| navigate | 1 | 280 | 33,5 | 1,00 | 401 ms | symétrique |
 
 Masse à 1 partout, comme le recommande le wiki Hyprland : k et c suffisent.
 Pour mémoire, le ressort « easy » livré par Hyprland vaut k 238, c 24,2 (ζ 0,78).
@@ -147,6 +150,9 @@ Pour mémoire, le ressort « easy » livré par Hyprland vaut k 238, c 24,2 (ζ 
 
 - Prototype : pas de focus clavier dans les démos, pas de dithering du sheen, liserés
   droits (ils ne suivent pas l'arrondi), pas de variante d'icône pleine.
+- `navigate` : un seul ressort, quelle que soit la distance (1 → 4 dure autant que 1 → 2,
+  comme un ressort Hyprland). Le décor (5 bureaux, tuiles, échelle de l'écran) est un choix
+  de scène ; Hyprland anime `workspaces` avec son propre style (`slide`), à confronter.
 - Les amplitudes de déplacement et d'échelle des démos (échelle de départ 0,3 pour
   `window`, 0,94 pour `reveal`, 0,96 pour `overlay`, 6 à 48 px de glissement) sont des
   choix de scène, pas des tokens : elles relèvent d'une décision séparée.
@@ -162,3 +168,4 @@ Pour mémoire, le ressort « easy » livré par Hyprland vaut k 238, c 24,2 (ζ 
 | Version | Date | Changement |
 | --- | --- | --- |
 | 0.1 | 2026-10-13 | Banc initial : six démos, ressort commun m/k/c, export TOML |
+| 0.2 | 2026-10-13 | Septième transition `navigate` (changement de bureau, caméra sur une bande), touche `7` |
