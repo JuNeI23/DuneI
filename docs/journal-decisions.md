@@ -164,3 +164,13 @@ Validés par Nicolas après revue de l'aperçu ; révisables à mesure que les f
 4. **Dérogation `[fleet]` validée** (voir D11).
 
 *Touché : tokens.toml, bible 0.5.1 (ch. 2, annexe C), backlog 1.3 (L4-03).*
+
+## 2026-10-13 — Mouvement (L1-23)
+
+### D13 · Ressorts : vocabulaire Hyprland, `speed` sans effet
+
+1. **Les clés suivent Hyprland installé**, pas le wiki : `dampening` dans `hl.curve`, `spring =` dans `hl.animation` (le wiki récent écrit `damping` et `curve =`). Raison : Hyprland est la référence qui s'exécute ; `motion.toml` et son générateur adoptent les mêmes noms. Décidé par Nicolas.
+2. **`speed` n'agit pas sur un ressort.** Lu dans les sources des versions installées (hyprutils 0.14.2, Hyprland 0.56.2) : la boucle d'animation n'appelle que `getCurveStep()`, et pour un ressort le pas est le temps réel écoulé ; `speed` ne sert qu'aux courbes de Bézier (`getPercent()`). `hl.animation` l'exige pourtant (> 0, ≤ 100) : le générateur écrira `speed = 1` devant chaque ressort. À revérifier à chaque mise à jour de Hyprland.
+3. **Banc de mouvement conservé** (`proto/motion/`) comme outil de réglage, au-delà du prototype jetable : pas atomiques, saisie exacte, reprise de `export.toml`.
+
+*Touché : proto/motion/, journal.*
