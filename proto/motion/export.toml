@@ -1,4 +1,4 @@
-# motion.toml — proposition issue du banc proto/motion (2026-10-13 17:20:44)
+# motion.toml — proposition issue du banc proto/motion (2026-10-13 17:24:56)
 #
 # Ressort commun à la coque (QML) et au compositeur (Hyprland) : progression
 # normalisée 0 → 1, masse m, raideur k, amortissement c, temps en secondes.
@@ -9,13 +9,13 @@
 
 [state]
 mass = 0.50
-stiffness = 800.0
+stiffness = 1100.0
 damping = 50.00
 exit_ratio = 0.70
 overshoot = false
-# ζ = 1.25 · entrée ±1 % ≈ 246 ms · sortie ≈ 172 ms
-# hyprland : hl.curve("dunei-state-in",  { type = "spring", mass = 0.50, stiffness = 800.0, dampening = 50.00 })
-# hyprland : hl.curve("dunei-state-out", { type = "spring", mass = 0.50, stiffness = 1632.7, dampening = 71.43 })
+# ζ = 1.07 · entrée ±1 % ≈ 164 ms · sortie ≈ 115 ms
+# hyprland : hl.curve("dunei-state-in",  { type = "spring", mass = 0.50, stiffness = 1100.0, dampening = 50.00 })
+# hyprland : hl.curve("dunei-state-out", { type = "spring", mass = 0.50, stiffness = 2244.9, dampening = 71.43 })
 
 [reveal]
 mass = 1.00
@@ -31,23 +31,23 @@ stagger_cap = 5
 
 [overlay]
 mass = 1.00
-stiffness = 300.0
+stiffness = 400.0
 damping = 44.00
 exit_ratio = 0.70
 overshoot = false
-# ζ = 1.27 · entrée ±1 % ≈ 580 ms · sortie ≈ 406 ms
-# hyprland : hl.curve("dunei-overlay-in",  { type = "spring", mass = 1.00, stiffness = 300.0, dampening = 44.00 })
-# hyprland : hl.curve("dunei-overlay-out", { type = "spring", mass = 1.00, stiffness = 612.2, dampening = 62.86 })
+# ζ = 1.10 · entrée ±1 % ≈ 402 ms · sortie ≈ 282 ms
+# hyprland : hl.curve("dunei-overlay-in",  { type = "spring", mass = 1.00, stiffness = 400.0, dampening = 44.00 })
+# hyprland : hl.curve("dunei-overlay-out", { type = "spring", mass = 1.00, stiffness = 816.3, dampening = 62.86 })
 
 [window]
 mass = 0.70
-stiffness = 280.0
+stiffness = 300.0
 damping = 27.00
 exit_ratio = 0.70
 overshoot = true
-# ζ = 0.96 · entrée ±1 % ≈ 308 ms · sortie ≈ 216 ms
-# hyprland : hl.curve("dunei-window-in",  { type = "spring", mass = 0.70, stiffness = 280.0, dampening = 27.00 })
-# hyprland : hl.curve("dunei-window-out", { type = "spring", mass = 0.70, stiffness = 571.4, dampening = 38.57 })
+# ζ = 0.93 · entrée ±1 % ≈ 274 ms · sortie ≈ 192 ms
+# hyprland : hl.curve("dunei-window-in",  { type = "spring", mass = 0.70, stiffness = 300.0, dampening = 27.00 })
+# hyprland : hl.curve("dunei-window-out", { type = "spring", mass = 0.70, stiffness = 612.2, dampening = 38.57 })
 
 [reflow]
 mass = 0.80
