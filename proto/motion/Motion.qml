@@ -43,7 +43,39 @@ Singleton {
     }
     readonly property var list: [state, reveal, overlay, window, reflow, spectacle]
 
-    FileView { id: exportFile; path: Quickshell.shellPath("export.toml"); preload: false; blockWrites: true }
+    FileView { id: exportFile; path: Quickshell.shellPath("export.toml"); blockLoading: true; blockWrites: true }
+
+    // Clés de export.toml → propriétés de Params.
+    readonly property var keys: ({ mass: "mass", stiffness: "stiffness", damping: "damping",
+                                   exit_ratio: "exitRatio", stagger_ms: "staggerMs" })
+
+    // Au démarrage (et à chaque rechargement à chaud), reprend le dernier export :
+    // les réglages survivent à une modification du banc. Après les onCompleted des
+    // Params, pour que « Réinitialiser » garde les valeurs de départ.
+    Component.onCompleted: Qt.callLater(importText, exportFile.text())
+
+    // set — fixe un paramètre d'une transition. Entrées : name (state…), key (propriété
+    // de Params), value. Sortie : « ok » ou motif du refus. Erreurs : transition ou clé inconnue.
+    // Dépendances : list.
+    function set(name, key, value) {
+        const p = list.find(x => x.name === name)
+        if (!p) return "transition inconnue : " + name
+        if (!Object.values(keys).includes(key)) return "clé inconnue : " + key
+        p[key] = value
+        return "ok"
+    }
+
+    // importText — applique un export.toml (tables [transition], lignes « clé = nombre »).
+    // Entrée : t, texte TOML (vide = rien). Sortie : aucune. Erreurs : lignes non reconnues
+    // ignorées ; reflow garde son facteur figé. Dépendances : set, keys.
+    function importText(t) {
+        let name = ""
+        for (const line of (t || "").split("\n")) {
+            const sec = line.match(/^\[(\w+)\]/), kv = line.match(/^(\w+)\s*=\s*(-?[\d.]+)\s*$/)
+            if (sec) name = sec[1]
+            else if (kv && keys[kv[1]] && !(name === "reflow" && kv[1] === "exit_ratio")) set(name, keys[kv[1]], +kv[2])
+        }
+    }
 
     // exportPath — chemin local du fichier d'export. Sortie : chaîne. Dépendances : exportFile.
     function exportPath() { return exportFile.path.toString().replace(/^file:\/\//, "") }

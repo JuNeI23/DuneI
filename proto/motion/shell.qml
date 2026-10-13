@@ -35,6 +35,9 @@ ShellRoot {
             function interrupt(): void { win.demo.interrupt() }
             function reduced(on: bool): void { Motion.reduced = on }
             function exportToml(): string { return win.doExport() }
+            // set — fixe un paramètre exact. Entrées : transition (state…), clé (mass, stiffness,
+            // damping, exitRatio, staggerMs), valeur. Sortie : « ok » ou motif du refus.
+            function set(name: string, key: string, value: real): string { return Motion.set(name, key, value) }
             function closeExport(): void { exportView.toggle(false) }
             // capture — image du banc rendue par Qt (ne capture jamais le reste de l'écran).
             function capture(path: string): void { content.grabToImage(r => r.saveToFile(path)) }
@@ -141,15 +144,15 @@ ShellRoot {
                             font { family: Theme.fontFamily; pixelSize: Theme.fontSize }
                         }
                         ParamSlider {
-                            Layout.fillWidth: true; label: "Masse m"; from: 0.1; to: 5; log: true; decimals: 2
+                            Layout.fillWidth: true; label: "Masse m"; from: 0.1; to: 5; log: true; decimals: 2; step: 0.05
                             value: settings.p.mass; onMoved: v => settings.p.mass = v
                         }
                         ParamSlider {
-                            Layout.fillWidth: true; label: "Raideur k"; from: 10; to: 6000; log: true; decimals: 0
+                            Layout.fillWidth: true; label: "Raideur k"; from: 10; to: 6000; log: true; decimals: 0; step: 10
                             value: settings.p.stiffness; onMoved: v => settings.p.stiffness = v
                         }
                         ParamSlider {
-                            Layout.fillWidth: true; label: "Amortissement c"; from: 1; to: 300; log: true; decimals: 1
+                            Layout.fillWidth: true; label: "Amortissement c"; from: 1; to: 300; log: true; decimals: 1; step: 1
                             value: settings.p.damping; onMoved: v => settings.p.damping = v
                         }
                         ParamSlider {

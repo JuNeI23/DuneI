@@ -14,8 +14,14 @@ proto/motion/run.sh          # équivaut à : qs -p proto/motion
 
 Une fenêtre normale (`FloatingWindow` de Quickshell, elle se tuile) s'ouvre : scène de
 démonstration à gauche, réglages à droite, sélecteur des six transitions en haut.
-Quickshell recharge à chaud : modifier un fichier du dossier relance le banc (les
-réglages en cours sont alors perdus, exportez avant).
+Quickshell recharge à chaud : modifier un fichier du dossier relance le banc. Au
+démarrage comme à chaque rechargement, le banc reprend `export.toml` s'il existe :
+seuls les réglages non exportés sont perdus. « Réinitialiser » revient aux valeurs
+de départ codées dans `Motion.qml`.
+
+Réglage précis : `−` / `+` à côté de chaque valeur avancent d'un pas (m 0,05 · k 10 ·
+c 1 · facteur 0,01 · cascade 1 ms), la molette aussi. Un clic sur la valeur permet
+de la saisir (virgule ou point) : `Entrée` valide, `Échap` annule.
 
 Clavier : `1`–`6` transition · `Espace` rejouer · `I` interrompre · `R` mouvement réduit ·
 `E` exporter · `Échap` fermer l'aperçu ou le lanceur.
@@ -29,6 +35,7 @@ qs -p proto/motion ipc call banc play
 qs -p proto/motion ipc call banc interrupt
 qs -p proto/motion ipc call banc reduced true
 qs -p proto/motion ipc call banc exportToml
+qs -p proto/motion ipc call banc set state stiffness 800   # valeur exacte (mass, stiffness, damping, exitRatio, staggerMs)
 qs -p proto/motion ipc call banc capture /chemin/image.png   # rendu Qt du banc seul
 ```
 

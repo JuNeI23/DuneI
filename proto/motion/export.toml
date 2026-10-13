@@ -1,0 +1,76 @@
+# motion.toml — proposition issue du banc proto/motion (2026-10-13 17:14:44)
+#
+# Ressort commun à la coque (QML) et au compositeur (Hyprland) : progression
+# normalisée 0 → 1, masse m, raideur k, amortissement c, temps en secondes.
+# ζ = c / (2·√(k·m)) : ζ < 1 dépasse, ζ ≥ 1 ne dépasse pas.
+# Sortie : même ressort, temps accéléré de 1/exit_ratio, soit
+#   k_sortie = k / exit_ratio²,  c_sortie = c / exit_ratio  (ζ inchangé).
+# Hyprland 0.56.2 : la clé s'écrit « dampening » (le wiki récent dit « damping »).
+
+[state]
+mass = 0.50
+stiffness = 800.0
+damping = 50.00
+exit_ratio = 0.70
+overshoot = false
+# ζ = 1.25 · entrée ±1 % ≈ 246 ms · sortie ≈ 172 ms
+# hyprland : hl.curve("dunei-state-in",  { type = "spring", mass = 0.50, stiffness = 800.0, dampening = 50.00 })
+# hyprland : hl.curve("dunei-state-out", { type = "spring", mass = 0.50, stiffness = 1632.7, dampening = 71.43 })
+
+[reveal]
+mass = 1.00
+stiffness = 600.0
+damping = 50.00
+exit_ratio = 0.70
+overshoot = false
+stagger_ms = 40
+stagger_cap = 5
+# ζ = 1.02 · entrée ±1 % ≈ 286 ms · sortie ≈ 200 ms
+# hyprland : hl.curve("dunei-reveal-in",  { type = "spring", mass = 1.00, stiffness = 600.0, dampening = 50.00 })
+# hyprland : hl.curve("dunei-reveal-out", { type = "spring", mass = 1.00, stiffness = 1224.5, dampening = 71.43 })
+
+[overlay]
+mass = 1.00
+stiffness = 200.0
+damping = 44.00
+exit_ratio = 0.70
+overshoot = false
+# ζ = 1.56 · entrée ±1 % ≈ 923 ms · sortie ≈ 646 ms
+# hyprland : hl.curve("dunei-overlay-in",  { type = "spring", mass = 1.00, stiffness = 200.0, dampening = 44.00 })
+# hyprland : hl.curve("dunei-overlay-out", { type = "spring", mass = 1.00, stiffness = 408.2, dampening = 62.86 })
+
+[window]
+mass = 0.70
+stiffness = 250.0
+damping = 27.00
+exit_ratio = 0.70
+overshoot = true
+# ζ = 1.02 · entrée ±1 % ≈ 370 ms · sortie ≈ 259 ms
+# hyprland : hl.curve("dunei-window-in",  { type = "spring", mass = 0.70, stiffness = 250.0, dampening = 27.00 })
+# hyprland : hl.curve("dunei-window-out", { type = "spring", mass = 0.70, stiffness = 510.2, dampening = 38.57 })
+
+[reflow]
+mass = 1.00
+stiffness = 400.0
+damping = 40.00
+exit_ratio = 1.00
+overshoot = false
+# ζ = 1.00 · entrée ±1 % ≈ 335 ms · sortie ≈ 335 ms
+# hyprland : hl.curve("dunei-reflow-in",  { type = "spring", mass = 1.00, stiffness = 400.0, dampening = 40.00 })
+# hyprland : hl.curve("dunei-reflow-out", { type = "spring", mass = 1.00, stiffness = 400.0, dampening = 40.00 })
+
+[spectacle]
+mass = 1.00
+stiffness = 100.0
+damping = 25.00
+exit_ratio = 0.70
+overshoot = false
+# ζ = 1.25 · entrée ±1 % ≈ 980 ms · sortie ≈ 686 ms
+# hyprland : hl.curve("dunei-spectacle-in",  { type = "spring", mass = 1.00, stiffness = 100.0, dampening = 25.00 })
+# hyprland : hl.curve("dunei-spectacle-out", { type = "spring", mass = 1.00, stiffness = 204.1, dampening = 35.71 })
+
+[reduced]
+# Mouvement réduit : ni déplacement ni échelle, fondu court conservé.
+mass = 1.00
+stiffness = 4406.3
+damping = 132.76
