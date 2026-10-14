@@ -1,6 +1,6 @@
 # Branchement Hyprland : point d'entrée DuneI et `make install`
 
-Version 0.1 · 2026-10-14 · backlog L1-24 (branchement), carnet « Déploiement vers `~/.config` » · statut : validée
+Version 0.2 · 2026-10-14 · backlog L1-24 (branchement), carnet « Déploiement vers `~/.config` » · statut : validée
 
 ## 1. Objet
 
@@ -47,10 +47,12 @@ Relevé dans la source de la version installée (étiquette `v0.56.2`, commit `e
   `<dossier>` est le parent du chemin de configuration trouvé dans `$XDG_CONFIG_HOME/hypr`, sans
   résolution des liens (`ConfigManager.cpp`). Un `hyprland.lua` qui est un lien vers le dépôt cherche
   donc bien `generique.lua`, `modules/` et `generated/` dans `~/.config/hypr`.
-- **Rechargement automatique.** Hyprland surveille chaque fichier chargé, la cible de chaque lien et
-  les dossiers concernés (`ConfigWatcher.cpp`), et recharge à la moindre modification ;
-  `misc:disable_autoreload` vaut `false` sur `caladan`. `make install` déclenche donc lui-même le
-  rechargement : la bascule prend effet aussitôt.
+- **Rechargement automatique.** Hyprland surveille chaque fichier chargé et la cible de chaque lien
+  (`ConfigWatcher.cpp`, masque `IN_CLOSE_WRITE`), et recharge quand l'un d'eux est réécrit ou supprimé ;
+  `misc:disable_autoreload` vaut `false` sur `caladan`. La surveillance porte sur le fichier lui-même,
+  pas sur son nom : la bascule, qui conserve le fichier générique sous le nom `generique.lua`, ne
+  déclenche donc **aucun** rechargement. La première installation demande un `hyprctl reload` manuel,
+  que `deploy.py` rappelle ; ensuite, chaque `make install` remplace les copies et recharge seul.
 - **Erreurs.** Un module introuvable interrompt le fichier qui l'a demandé ; une erreur à l'intérieur
   d'un module `require`é n'interrompt que ce module (wiki, « Error behavior »).
 
@@ -128,7 +130,15 @@ python3 deploy.py [--dry-run]
 ```
 
 `--dry-run` affiche les actions prévues sans en effectuer aucune. Le script n'appelle jamais
-`hyprctl reload` : le rechargement automatique de Hyprland suffit (section 3).
+`hyprctl reload` : après la bascule, il rappelle seulement de le lancer une fois (section 3).
+
+**Refus supplémentaires**, relevés à la relecture finale :
+- le dépôt est un arbre de travail secondaire (`.git` est un fichier) : les liens disparaîtraient avec lui ;
+- `hyprland.lua` est absent mais `hyprland.conf` existe : Hyprland ignorerait l'ancienne configuration au
+  profit du point d'entrée DuneI, qui ne déclare encore aucun raccourci.
+
+**Dépendance au dépôt.** La session suit le contenu de la copie de travail du dépôt : celle-ci doit rester
+sur une branche qui contient `config/hypr/hyprland.lua`, sous peine d'un lien sans cible au rechargement.
 
 **Makefile**
 
@@ -140,10 +150,12 @@ install: tokens motion
 **Retour arrière**, écrit dans le carnet :
 
 ```sh
-rm ~/.config/hypr/hyprland.lua && mv ~/.config/hypr/generique.lua ~/.config/hypr/hyprland.lua
+mv ~/.config/hypr/generique.lua ~/.config/hypr/hyprland.lua
 ```
 
-Le rechargement automatique ramène aussitôt la session générique. Les liens `modules/` et le dossier
+Un seul renommage remplace le lien de façon atomique, ce qui déclenche le rechargement automatique ;
+`hyprctl reload` sert de recours si rien ne change. Supprimer le lien avant le renommage laisserait
+Hyprland recharger pendant l'absence de `hyprland.lua`. Les liens `modules/` et le dossier
 `generated/` peuvent rester : la configuration générique ne les lit pas.
 
 ## 6. Architecture
@@ -171,7 +183,8 @@ se teste sans rien écrire, `apply` ne prend aucune décision.
 
 Avant la fusion de la PR, sur `caladan`, avec Nicolas :
 
-1. Nicolas lance `python3 deploy.py --dry-run`, lit les actions, puis lance `make install`.
+1. Nicolas lance `python3 deploy.py --dry-run`, lit les actions, puis lance `make install` et
+   `hyprctl reload`.
 2. Vérification sans capture d'écran :
    - `hyprctl configerrors` est vide ;
    - `hyprctl getoption` renvoie `general:gaps_in` 4, `general:gaps_out` 8, `general:border_size` 2,
@@ -206,3 +219,4 @@ fusionne.
 | Version | Date | Changement |
 | --- | --- | --- |
 | 0.1 | 2026-10-14 | Conception validée section par section : bascule par point d'entrée, déploiement atomique, validation à l'écran. |
+| 0.2 | 2026-10-14 | Relecture finale : la première bascule demande un `hyprctl reload`, retour arrière par un seul renommage, refus d'un arbre de travail secondaire et d'un `hyprland.conf` orphelin. |

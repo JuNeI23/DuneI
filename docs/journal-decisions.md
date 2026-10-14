@@ -249,9 +249,13 @@ Ce qui est chargé en dernier l'emporte : DuneI remplace ce qu'il couvre, et le 
 fonctionner. `generique.lua` reste hors du dépôt, conformément à la règle « rien de la machine bricolée
 n'entre par copie » ; chaque feature en retire le morceau qu'elle remplace, jusqu'à sa disparition.
 
-La bascule est faite une seule fois par `make install`, de façon atomique : Hyprland recharge seul à
-chaque modification, y compris de la cible d'un lien, et ne doit jamais trouver `hyprland.lua` absent.
-Le script refuse toute situation qu'il n'a pas créée lui-même avant de modifier quoi que ce soit.
+La bascule est faite une seule fois par `make install`, de façon atomique : Hyprland recharge seul
+quand un fichier qu'il surveille est réécrit ou supprimé, et ne doit jamais trouver `hyprland.lua`
+absent. Il surveille les fichiers eux-mêmes et non leurs noms : la bascule, qui conserve le fichier
+générique sous un autre nom, ne déclenche pas de rechargement, d'où un `hyprctl reload` unique après la
+première installation. Le retour arrière est un seul renommage, pour la même raison. Le script refuse
+toute situation qu'il n'a pas créée lui-même avant de modifier quoi que ce soit, ainsi qu'un arbre de
+travail secondaire et un `hyprland.conf` orphelin (relecture finale, vérifiée dans `ConfigWatcher.cpp`).
 
 Raison : garder la machine utilisable entre deux features tout en versionnant le point d'entrée dès
 maintenant. Décidé par Nicolas (options A et A du brainstorming du 2026-10-14).

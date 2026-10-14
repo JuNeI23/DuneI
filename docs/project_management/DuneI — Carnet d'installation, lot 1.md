@@ -100,12 +100,28 @@ Celui-ci charge `generique.lua` en premier, puis les fichiers générés : la ma
 configuration générique faisait, et DuneI remplace ce qu'il couvre. Chaque feature suivante retire de
 `generique.lua` le morceau qu'elle remplace (D21).
 
-Hyprland recharge seul dès qu'un fichier de sa configuration change, y compris la cible d'un lien :
-`make install` applique donc ses changements immédiatement, sans `hyprctl reload`.
+**Rechargement.** Hyprland surveille les fichiers de sa configuration eux-mêmes, et non leurs noms. La
+bascule conserve le fichier générique sous un autre nom : elle ne déclenche donc aucun rechargement, et
+la première installation se termine par `hyprctl reload`, que `deploy.py` rappelle. Ensuite, chaque
+`make install` remplace les copies de `generated/` et Hyprland recharge seul.
 
-**Retour arrière**, en une ligne ; Hyprland recharge aussitôt la configuration générique :
+**Retour arrière**, en un seul renommage, qui remplace le lien de façon atomique et déclenche le
+rechargement ; `hyprctl reload` sert de recours si rien ne change :
 
-    rm ~/.config/hypr/hyprland.lua && mv ~/.config/hypr/generique.lua ~/.config/hypr/hyprland.lua
+    mv ~/.config/hypr/generique.lua ~/.config/hypr/hyprland.lua
+
+Ne jamais supprimer le lien avant le renommage : Hyprland pourrait recharger pendant l'absence de
+`hyprland.lua` et rester sur une configuration en erreur.
+
+**La session suit la copie de travail du dépôt.** `~/.config/hypr/hyprland.lua` et `modules/` pointent
+vers `~/DuneI` : tant que la branche du branchement n'est pas fusionnée, la copie de travail doit rester
+sur une branche qui contient `config/hypr/hyprland.lua`, sinon le lien n'a plus de cible au prochain
+rechargement. `make install` refuse de s'exécuter depuis un arbre de travail secondaire (`git worktree`),
+dont la suppression laisserait des liens sans cible.
+
+**Machine installée directement en DuneI.** Sans configuration générique, la session n'a aucun
+raccourci tant que la feature raccourcis n'est pas faite. `make install` refuse aussi une machine qui
+n'aurait qu'un ancien `hyprland.conf`, que Hyprland ignorerait au profit du point d'entrée DuneI.
 
 ### Ce qui est propre à une machine
 

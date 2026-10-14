@@ -84,6 +84,7 @@ class DeployTest(unittest.TestCase):
         self.assertEqual((self.hypr / "generique.lua").stat().st_ino, inode)
         self.assertEqual(sorted(p.name for p in self.hypr.iterdir()),
                          ["generated", "generique.lua", "hyprland.lua", "modules"])
+        self.assertIn("hyprctl reload", res.stdout)
 
     def test_second_run_changes_nothing(self):
         self.generic_machine()
@@ -121,6 +122,18 @@ class DeployTest(unittest.TestCase):
         self.generic_machine()
         (self.hypr / "generated").symlink_to(ROOT / "generated")
         self.assert_refused("generated")
+
+    def test_refuses_legacy_conf(self):
+        self.hypr.mkdir(parents=True)
+        (self.hypr / "hyprland.conf").write_text("# Ancienne configuration hyprlang.\n", encoding="utf-8")
+        self.assert_refused("hyprland.conf")
+
+    def test_refuses_linked_worktree(self):
+        repo = Path(self.tmp.name) / "arbre"
+        repo.mkdir()
+        (repo / ".git").write_text("gitdir: /ailleurs/.git/worktrees/arbre\n", encoding="utf-8")
+        actions, err = plan(repo, self.hypr)
+        self.assertTrue(any("arbre de travail" in e for e in err), err)
 
     def test_dry_run_changes_nothing(self):
         self.generic_machine()

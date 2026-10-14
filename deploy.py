@@ -36,7 +36,12 @@ def config_dir(env: Mapping[str, str]) -> Path:
 
 
 def _links_to(link: Path, target: Path) -> bool:
-    """Vrai si link est un lien symbolique dont la cible est exactement target."""
+    """Correspondance exacte d'un lien symbolique avec sa cible attendue.
+
+    Entrées : link — chemin à examiner ; target — cible absolue attendue.
+    Sortie : vrai si link est un lien dont la cible est exactement target.
+    Erreurs : aucune pour un lien lisible. Dépendances : os.readlink.
+    """
     return link.is_symlink() and Path(os.readlink(link)) == target
 
 
@@ -50,6 +55,9 @@ def plan(repo: Path, dest: Path) -> tuple[list[tuple], list[str]]:
     actions, err = [], []
     sources = [repo / ENTRY, repo / MODULES] + [repo / "generated" / f for f in COPIES]
     err += [f"source manquante : {s} (lancer make tokens motion)" for s in sources if not s.exists()]
+    if (repo / ".git").is_file():
+        err.append(f"{repo} est un arbre de travail secondaire : les liens disparaîtraient avec lui, "
+                   "lancer make install depuis le dépôt principal")
     if dest.is_symlink() or (dest.exists() and not dest.is_dir()):
         return actions, err + [f"{dest} existe mais n'est pas un dossier réel"]
     if not dest.exists():
@@ -80,6 +88,9 @@ def plan(repo: Path, dest: Path) -> tuple[list[tuple], list[str]]:
             actions.append(("switch", repo / ENTRY, entry, generic))
     elif entry.exists():
         err.append(f"{entry} existe mais n'est ni un fichier ni un lien")
+    elif (dest / "hyprland.conf").exists():
+        err.append(f"{dest / 'hyprland.conf'} existe : Hyprland l'ignorerait au profit du point d'entrée DuneI, "
+                   "qui ne déclare encore aucun raccourci ; le convertir en hyprland.lua d'abord")
     else:
         actions.append(("link", repo / ENTRY, entry))
     return actions, err
@@ -158,6 +169,10 @@ def main() -> int:
     for a in actions:
         print(f"  {'prévu' if args.dry_run else 'fait'} : {describe(a)}")
     print(f"\n{dest} : {len(actions)} action(s) {'prévue(s)' if args.dry_run else 'effectuée(s)'}.")
+    if any(a[0] == "switch" for a in actions):
+        # Hyprland surveille le fichier générique lui-même, qui survit sous un autre nom : la bascule
+        # ne déclenche donc pas le rechargement automatique. Les passages suivants le déclenchent.
+        print("Première bascule : lancer hyprctl reload une fois pour charger le point d'entrée DuneI.")
     return 0
 
 
