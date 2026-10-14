@@ -479,7 +479,12 @@ de titre, dialogue de Firefox flottant ; « tout est au top » (Nicolas).
 Jusqu'ici, Nicolas fusionnait chaque PR sur GitHub. Désormais, Claude la fusionne lui-même
 (`gh pr merge --merge --delete-branch`) dès que deux conditions sont réunies : la relecture finale de la
 branche est propre (constats critiques et importants corrigés) et Nicolas a validé la feature à l'écran.
-Il applique ensuite la procédure après fusion du carnet. Trois options ont été présentées : statu quo,
+Il applique ensuite la procédure après fusion du carnet.
+
+La commande est `gh pr merge <n> --merge`, sans `--delete-branch`. Essayée sur la PR 14, cette option
+a basculé l'arbre local sur l'ancien `main` avant de le tirer : c'est le passage que la procédure du
+carnet évite, parce qu'un module lié disparaît quelques secondes sous Hyprland. `configerrors` est
+resté vide et un `hyprctl reload` a suffi. Les branches sont supprimées ensuite, à la main. Trois options ont été présentées : statu quo,
 fusion sur ordre explicite, fusion autonome ; Nicolas a choisi la fusion autonome.
 
 Raison : supprimer un aller-retour sans valeur ajoutée, la validation à l'écran restant le point de

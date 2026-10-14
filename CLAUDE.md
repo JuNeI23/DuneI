@@ -22,9 +22,10 @@ Le reste se lit seulement au besoin.
 - Docs : docs/project_management/ (bible, direction, backlog, carnet), docs/journal-decisions.md,
   docs/superpowers/specs/ et plans/ (AAAA-MM-JJ-<sujet>.md).
 - Chaîne : make tokens | motion | test | check | golden | install. generated/ ne s'édite jamais.
-- Une branche feat/<sujet> par feature, partie de main à jour, une PR. Tu la fusionnes toi-même
-  (`gh pr merge --merge --delete-branch`) dès que la relecture finale est propre et que j'ai validé
-  à l'écran, puis tu appliques la procédure après fusion du carnet (D32).
+- Une branche feat/<sujet> par feature, partie de main à jour, une PR. Tu la fusionnes toi-même dès
+  que la relecture finale est propre et que j'ai validé à l'écran, par `gh pr merge <n> --merge` seul,
+  puis tu appliques la procédure après fusion du carnet (D32). Jamais `--delete-branch` : il bascule
+  l'arbre local sur l'ancien main avant de le tirer.
 - make install refuse les arbres git secondaires : travailler dans ~/DuneI.
 - Aperçus : .superpowers/preview/, ouverts dans un Firefox isolé et capturés avec grim ;
   jamais firefox --headless pour juger une police.
