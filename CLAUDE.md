@@ -1,4 +1,6 @@
 # DuneI : Le projet
+**Au debut de chaque session, et apres chaque /clear, appliquer la section « Reprise » avant toute autre chose.**
+
 DuneI est une distribution construite sur archlinux + hyprland co-designee par toi et moi et faite pour moi.
 Il existe deja des documentations qui sont modifiables :
 - la bible de design pose des regles strictes sur le design
@@ -8,6 +10,22 @@ Il existe deja des documentations qui sont modifiables :
 - journal des decisions (docs/journal-decisions.md) : chaque arbitrage, avec sa raison.
 
 Versionnage des documents : numero de version en tete + table "Historique des versions" en fin de fichier. Pas de dossier d'archive, git est l'archive. Etiquette git a chaque fin de lot.
+
+# Reprise
+1. `git status`, `git log --oneline -5`, `gh pr list` : branche courante, PR en attente de fusion.
+2. Notes de direction, « Etat d'avancement », dernier paragraphe : la prochaine etape.
+3. Backlog : la ligne de l'element vise (L1-xx). Carnet : sa section.
+4. Journal : les dernieres decisions (Dxx), si la feature touche un sujet deja arbitre.
+Le reste se lit seulement au besoin.
+
+# Reperes
+- Docs : docs/project_management/ (bible, direction, backlog, carnet), docs/journal-decisions.md,
+  docs/superpowers/specs/ et plans/ (AAAA-MM-JJ-<sujet>.md).
+- Chaine : make tokens | motion | test | check | golden | install. generated/ ne s'edite jamais.
+- Une branche feat/<sujet> par feature, partie de main a jour, une PR, je fusionne.
+- make install refuse les arbres git secondaires : travailler dans ~/DuneI.
+- Apercus : .superpowers/preview/, ouverts dans un Firefox isole et captures avec grim ;
+  jamais firefox --headless pour juger une police.
 
 # Regles globales de developpement
 1. Tout changement, installation, nouvelle feature est documente dans les ressources correspondantes.
@@ -29,7 +47,7 @@ Versionnage des documents : numero de version en tete + table "Historique des ve
 3. On planifie
 4. Si le plan est valide, alors on code
 5. On teste
-6. On documente
+6. On documente ; le dernier paragraphe des notes de direction nomme toujours la prochaine etape
 7. On push
 
 # Tes outils
