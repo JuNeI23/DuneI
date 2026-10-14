@@ -5,7 +5,7 @@ import shutil
 import subprocess
 import unittest
 
-from dunei_motion.hyprland import NODES, REQUIRED, style_error
+from dunei_motion.hyprland import NODES, REQUIRED, still, style_error
 
 HYPRCTL = shutil.which("hyprctl")
 
@@ -32,6 +32,13 @@ class HyprlandTablesTest(unittest.TestCase):
                             ("borderangle", "fade"), ("border", "fade"), ("fadeIn", "slide")]:
             with self.subTest(leaf=leaf, style=style):
                 self.assertNotEqual(style_error(leaf, style), "")
+
+    def test_still(self):
+        for leaf, style, expected in [("specialWorkspaceIn", "fade", True), ("border", "", True), ("layersIn", "", True),
+                                      ("borderangle", "loop", True), ("workspacesIn", "", False),
+                                      ("windowsMove", "", False), ("windowsIn", "popin 90%", False)]:
+            with self.subTest(leaf=leaf, style=style):
+                self.assertEqual(still(leaf, style), expected)
 
     @unittest.skipUnless(HYPRCTL, "Hyprland n'est pas installé")
     def test_nodes_match_running_hyprland(self):

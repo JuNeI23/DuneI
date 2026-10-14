@@ -5,6 +5,7 @@ from __future__ import annotations
 import tomllib
 from pathlib import Path
 
+from .hyprland import still
 from .spring import critical_spring, exit_spring, simulate, spring, zeta
 
 
@@ -48,13 +49,15 @@ def _reduced_animation(leaf: str, entry: dict, override: dict, prefix: str) -> d
 
     Entrées : leaf — élément ; entry — sa table dans [hyprland] ;
               override — sa table dans [hyprland_reduced], vide s'il n'y figure pas ; prefix — préfixe.
-    Sortie : entrée prête pour hl.animation, sur le ressort réduit et sans autre style que celui de override.
-    Erreurs : aucune. Dépendances : aucune.
+    Sortie : entrée prête pour hl.animation, sur le ressort réduit. Le style est celui de override,
+             sinon celui de l'entrée s'il ne déplace pas l'élément, sinon aucun.
+    Erreurs : aucune. Dépendances : hyprland.still.
     """
     if entry.get("enabled", True) is False or override.get("enabled", True) is False:
         return {"leaf": leaf, "enabled": False}
     a = {"leaf": leaf, "enabled": True, "speed": 1, "spring": f"{prefix}-reduced"}
-    return a | ({"style": override["style"]} if "style" in override else {})
+    style = override.get("style", entry.get("style", ""))
+    return a | ({"style": style} if style and ("style" in override or still(leaf, style)) else {})
 
 
 def resolve(raw: dict) -> dict:

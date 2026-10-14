@@ -50,6 +50,7 @@ class ModelTest(unittest.TestCase):
         self.assertEqual(reduced["windowsMove"], {"leaf": "windowsMove", "enabled": False})
         self.assertEqual(reduced["borderangle"], {"leaf": "borderangle", "enabled": False})
         self.assertNotIn("style", reduced["fadeIn"])
+        self.assertEqual(reduced["specialWorkspaceIn"]["style"], "fade")
         springs = {a["spring"] for a in reduced.values() if a["enabled"]}
         self.assertEqual(springs, {"dunei-reduced"})
 

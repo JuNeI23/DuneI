@@ -1,6 +1,6 @@
 # Mouvement : `motion.toml` et `generate_motion.py`
 
-Version 0.2 · 2026-10-13 · backlog L1-23, volet mouvement de L1-24 · statut : validée
+Version 0.3 · 2026-10-14 · backlog L1-23, volet mouvement de L1-24 · statut : validée
 
 ## 1. Objet
 
@@ -106,7 +106,7 @@ borderangle = { enabled = false }
 **La table `[hyprland_reduced]`** liste les écarts propres au mouvement réduit :
 
 ```toml
-[hyprland_reduced]                # Écarts du mouvement réduit ; les autres éléments gardent leur entrée, sans style.
+[hyprland_reduced]                # Écarts du mouvement réduit ; les autres éléments gardent leur entrée, avec leur style s'il est immobile.
 windowsIn    = { style = "popin 100%" }   # La fenêtre apparaît à sa taille finale ; seul le fondu reste.
 windowsOut   = { style = "popin 100%" }
 windowsMove  = { enabled = false }        # Les tuiles rejoignent leur place sans glisser.
@@ -118,7 +118,9 @@ zoomFactor   = { enabled = false }
 ```
 
 En mouvement réduit, chaque élément actif utilise le ressort réduit. Il prend le style de
-`[hyprland_reduced]` s'il y figure, sinon aucun style. Un élément y est désactivé s'il y est déclaré
+`[hyprland_reduced]` s'il y figure, sinon son style normal si celui-ci ne déplace pas l'élément
+(`fade`, par exemple), sinon aucun style. Un style vide n'est pas toujours immobile : Hyprland
+applique alors `popin` aux fenêtres et `slide` aux bureaux. Un élément y est désactivé s'il y est déclaré
 `enabled = false`, ou s'il est déjà désactivé en mode normal.
 
 ## 4. Architecture
@@ -150,6 +152,7 @@ motion.toml ──► generate_motion.py ──► dunei_motion/
 | `checks.errors` | Applique les contrôles bloquants au dictionnaire brut. | dictionnaire brut | liste de messages |
 | `checks.warnings` | Applique les contrôles non bloquants au modèle résolu. | modèle résolu | liste de messages |
 | `hyprland.style_error` | Reproduit `styleValidInConfigVar` de Hyprland 0.56.2. | élément, style | message, ou chaîne vide si le style est valide |
+| `hyprland.still` | Indique si un style laisse l'élément immobile, en tenant compte du style par défaut de Hyprland. | élément, style | booléen |
 | `emitters.TARGETS` | Associe chaque nom de fichier à une fonction d'émission. | modèle résolu | texte du fichier |
 
 Le flux de `generate_motion.py [--src motion.toml] [--out generated]` est le suivant :
@@ -293,7 +296,7 @@ transitions qui en ont une.
 | `exit_ratio` reste dans `rules.exit_ratio ± exit_tolerance`. | `transitions.state : exit_ratio 0,95 hors de 0,60–0,80` |
 | Une transition symétrique ne porte pas d'`exit_ratio`. | `transitions.reflow : symétrique, exit_ratio interdit` |
 | `stagger_ms` n'apparaît que sur les transitions de `stagger_allowed`. | `transitions.overlay : cascade interdite` |
-| En mode réduit, un élément dont le style déplace ou change l'échelle figure dans `[hyprland_reduced]`. Seuls les styles vides, `fade`, `loop` et `once` en sont dispensés. | `hyprland_reduced : windowsIn doit remplacer le style « popin 90% »` |
+| En mode réduit, un élément dont le style déplace ou change l'échelle figure dans `[hyprland_reduced]`. Seuls `fade`, `loop`, `once` et le style vide en sont dispensés, sauf le style vide des fenêtres et des bureaux, qui vaut `popin` ou `slide` dans Hyprland. | `hyprland_reduced : windowsIn doit remplacer le style « popin 90% », qui déplace l'élément` |
 
 **Avertissement**
 
@@ -359,3 +362,4 @@ validés. Elle aboutit à une seule PR « Mouvement (L1-23) », que Nicolas fusi
 | --- | --- | --- |
 | 0.1 | 2026-10-13 | Conception validée section par section : format, fichiers générés, contrôles et tests. |
 | 0.2 | 2026-10-13 | Noms des fonctions du ressort fixés par le plan ; ressort réduit calculé par la formule du banc (103 ms simulées). |
+| 0.3 | 2026-10-14 | Mouvement réduit : un style immobile comme `fade` est conservé, et le style vide des fenêtres et des bureaux, qui déplace l'élément dans Hyprland, doit être remplacé. |

@@ -116,6 +116,10 @@ class ErrorsTest(unittest.TestCase):
         r = raw(); del r["hyprland_reduced"]["workspacesIn"]
         self.check(r, "workspacesIn", "slide")
 
+    def test_reduced_missing_override_default_style(self):
+        r = raw(); del r["hyprland"]["workspacesIn"]["style"]; del r["hyprland_reduced"]["workspacesIn"]
+        self.check(r, "workspacesIn", "par défaut")
+
 
 class WarningsTest(unittest.TestCase):
     """Avertissements non bloquants."""

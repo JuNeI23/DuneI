@@ -98,7 +98,7 @@ borderangle         = { enabled = false }       # La rotation des dégradés de 
 shadowangle         = { enabled = false }
 glowangle           = { enabled = false }
 
-[hyprland_reduced]                # Écarts du mouvement réduit ; les autres éléments gardent leur entrée, sans style.
+[hyprland_reduced]                # Écarts du mouvement réduit ; les autres éléments gardent leur entrée, avec leur style s'il est immobile.
 windowsIn     = { style = "popin 100%" }        # La fenêtre apparaît à sa taille finale ; seul le fondu reste.
 windowsOut    = { style = "popin 100%" }
 windowsMove   = { enabled = false }             # Les tuiles rejoignent leur place sans glisser.

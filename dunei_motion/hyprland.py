@@ -28,6 +28,9 @@ REQUIRED = NODES - PARENTS
 # Styles qui ne déplacent pas l'élément et ne changent pas son échelle.
 STILL = ("", "fade", "loop", "once")
 
+# Éléments dont le style vide vaut un mouvement : popin pour les fenêtres, slide pour les bureaux.
+MOVING_DEFAULT = ("windows", "workspaces", "specialWorkspace")
+
 
 def _percent(style: str) -> bool:
     """Pourcentage final d'un style, par exemple « popin 90% ».
@@ -37,6 +40,16 @@ def _percent(style: str) -> bool:
     """
     head, _, tail = style.rpartition(" ")
     return bool(head) and tail.endswith("%") and tail[:-1].isdigit()
+
+
+def still(leaf: str, style: str) -> bool:
+    """Absence de mouvement d'un style, compte tenu du style par défaut de Hyprland.
+
+    Entrées : leaf — nom de l'élément ; style — style demandé, vide s'il n'y en a pas.
+    Sortie : vrai si l'élément ne se déplace pas et ne change pas d'échelle.
+    Erreurs : aucune. Dépendances : STILL, MOVING_DEFAULT.
+    """
+    return style in STILL and not (style == "" and leaf.startswith(MOVING_DEFAULT))
 
 
 def style_error(leaf: str, style: str) -> str:

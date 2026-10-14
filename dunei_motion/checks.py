@@ -7,7 +7,7 @@ afin que chaque défaut soit signalé par un message plutôt que par une trace P
 
 from __future__ import annotations
 
-from .hyprland import NODES, REQUIRED, STILL, style_error
+from .hyprland import NODES, REQUIRED, still, style_error
 from .spring import spring, zeta
 
 VERSION = "0.1.0"
@@ -84,7 +84,7 @@ def _reduced(raw: dict) -> list[str]:
 
     Entrée : raw — TOML brut, sections présentes.
     Sortie : liste d'erreurs. Erreurs : aucune exception.
-    Dépendances : hyprland.STILL, hyprland.style_error.
+    Dépendances : hyprland.still, hyprland.style_error.
     """
     hyp, red, err = raw["hyprland"], raw["hyprland_reduced"], []
     for leaf, o in red.items():
@@ -97,8 +97,9 @@ def _reduced(raw: dict) -> list[str]:
             err.append(f"{p} : style « {o['style']} » invalide ({why})")
     for leaf, e in hyp.items():
         if isinstance(e, dict) and e.get("enabled", True) is not False and leaf not in red \
-                and e.get("style", "") not in STILL:
-            err.append(f"hyprland_reduced : {leaf} doit remplacer le style « {e['style']} »")
+                and not still(leaf, style := e.get("style", "")):
+            shown = f"le style « {style} »" if style else "le style par défaut de Hyprland"
+            err.append(f"hyprland_reduced : {leaf} doit remplacer {shown}, qui déplace l'élément")
     return err
 
 
