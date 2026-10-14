@@ -49,6 +49,9 @@ class MachineTest(unittest.TestCase):
     def test_hostname_trims(self):
         self.assertEqual(self.out("print(M.hostname(HOST))", hostname="  caladan \n"), "caladan")
 
+    def test_hostname_lowercases(self):
+        self.assertEqual(self.out("print(M.hostname(HOST))", hostname="Caladan\n"), "caladan")
+
     def test_hostname_absent(self):
         self.assertEqual(self.out("print(M.hostname(HOST))"), "nil")
 

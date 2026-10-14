@@ -4,15 +4,16 @@ local M = { file = "/etc/hostname" }
 
 -- hostname : lit le nom d'hôte de la machine.
 -- Entrée : path (chaîne, facultatif), fichier à lire ; M.file par défaut.
--- Sortie : le nom, s'il ne contient que des lettres, des chiffres et des tirets ; nil si le fichier est
--- absent ou vide, ou si le nom contient un autre caractère, qui casserait la résolution du module.
+-- Sortie : le nom en minuscules, comme les fichiers de machines/, s'il ne contient que des lettres, des
+-- chiffres et des tirets ; nil si le fichier est absent ou vide, ou si le nom contient un autre
+-- caractère, qui casserait la résolution du module.
 -- Erreurs : aucune. Dépendances : io, de la bibliothèque standard de Lua.
 function M.hostname(path)
     local f = io.open(path or M.file)
     if not f then return nil end
     local name = f:read("l")
     f:close()
-    return name and name:match("^%s*([%w-]+)%s*$")
+    return name and name:lower():match("^%s*([%w-]+)%s*$")
 end
 
 -- load : charge le fragment de la machine courante, s'il existe.
