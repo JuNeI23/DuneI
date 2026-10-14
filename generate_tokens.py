@@ -24,8 +24,9 @@ def main() -> int:
     """Génération de toutes les cibles.
 
     Entrées : arguments de ligne de commande --src, --out, --hue.
-    Sortie : code de retour 0 si succès, 1 si la source est introuvable.
-    Erreurs : « source introuvable » sur stderr ; avertissements de check sur stderr.
+    Sortie : code de retour 0 si succès, 1 si la source est introuvable ou si une cible refuse une valeur.
+    Erreurs : « source introuvable » ou le message de la cible sur stderr, sans rien écrire ;
+              avertissements de check sur stderr.
     Dépendances : dunei_theme (model, checks, emitters).
     """
     ap = argparse.ArgumentParser(description=__doc__)
@@ -42,9 +43,15 @@ def main() -> int:
     for w in check(model):
         print(f"  avertissement : {w}", file=sys.stderr)
 
+    try:
+        outputs = {filename: emitter(model) for filename, emitter in TARGETS.items()}
+    except ValueError as e:
+        print(f"erreur : {e}\nRien n'a été écrit.", file=sys.stderr)
+        return 1
+
     args.out.mkdir(parents=True, exist_ok=True)
-    for filename, emitter in TARGETS.items():
-        (args.out / filename).write_text(emitter(model), encoding="utf-8")
+    for filename, text in outputs.items():
+        (args.out / filename).write_text(text, encoding="utf-8")
         print(f"  écrit {args.out / filename}")
 
     print(f"\nThème teinte {model['hue']}° généré vers {len(TARGETS)} cibles.")

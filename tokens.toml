@@ -310,8 +310,8 @@ extended = 900
 # ===========================================================================
 
 [type]
-# Noms CANONIQUES. L'indirection vers les polices réellement installées
-# (SourceSans3VF, SourceCodeVF) est faite une seule fois dans fonts.conf.
+# Noms CANONIQUES. L'indirection vers les familles réellement installées est
+# déclarée dans [type.installed] et produite une seule fois dans fonts.conf.
 interface = "Source Sans 3"
 mono = "Source Code Pro"
 base_size = 13
@@ -324,7 +324,22 @@ weight_medium = 500          # si trop discret à 13 px, monter à 600 (jamais 7
 # soit. Mais AUCUN composant ne doit dépendre d'une graisse intermédiaire :
 # le design se conçoit comme s'il n'existait que 400 et 500.
 tabular_numerals = true
-fallback_chain = ["Noto Sans CJK", "Noto Sans", "Noto Color Emoji", "Noto Sans Symbols 2"]
+# Latin, puis CJK (variante japonaise), puis emoji, puis symboles.
+fallback_chain = ["Noto Sans", "Noto Sans CJK JP", "Noto Color Emoji", "Noto Sans Symbols 2"]
+
+[type.installed]
+# Familles telles que fontconfig les connaît (fc-list : family). Source Code Pro
+# n'existe patchée Nerd Font qu'en version statique ; « Mono » garde une cellule
+# par pictogramme.
+interface = "SourceSans3VF"
+mono = "SauceCodePro Nerd Font Mono"
+
+[type.rendering]
+# Écran dense (162 ppp) : niveaux de gris, hinting léger. hintnone reste à juger
+# sur le shell réel (annexe C).
+antialias = true
+hintstyle = "hintslight"
+rgba = "none"
 
 
 # ===========================================================================
