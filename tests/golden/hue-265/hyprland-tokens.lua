@@ -5,14 +5,16 @@ return {
     general = {
         gaps_in     = 4,
         gaps_out    = 8,
-        border_size = 2,
-        col = {
-            active_border   = "#4066c2",
-            inactive_border = "#29303f",
-        },
+        border_size = 0,
     },
     decoration = {
         rounding = 12,
-        shadow   = { enabled = false },
+        shadow = {
+            enabled      = true,
+            range        = 16,
+            render_power = 2,
+            offset       = { 0, 4 },
+            color        = "rgba(0000005c)",
+        },
     },
 }

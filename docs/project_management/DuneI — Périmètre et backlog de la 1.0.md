@@ -2,9 +2,9 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.7. Historique en fin de document.
+Version 1.8. Historique en fin de document.
 
-La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **140 éléments** répartis en **cinq lots**, sur six chantiers.
+La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **141 éléments** répartis en **cinq lots**, sur six chantiers.
 
 Ce document dit ce qui est attendu, dans quel ordre, et à quelle condition c'est terminé. Il ne dit pas à quoi ça ressemble — c'est le rôle de la bible de design. En cas de contradiction : la bible l'emporte sur l'apparence, ce document l'emporte sur le périmètre.
 
@@ -232,11 +232,11 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L1-09 | A | Offert | Service d'énergie et de veille — vérification ; couvercle fermé avec écran externe : éteindre l'écran interne sans mettre en veille (reporté depuis L1-17, D25) |
 | L1-10 | A | Configuré | Gestionnaire de session et démarrage automatique |
 | L1-11 | B | Configuré | Choisir le compositeur selon les besoins de la bible — **tranché : Hyprland 0.56, configuration Lua** |
-| L1-12 | B | Configuré | Tuilage — couche 1, gouttière 8 px, rayon 12 |
-| L1-13 | B | Configuré | Fenêtre active ; inactive → modificateur de conteneur |
-| L1-14 | B | Configuré | Masquage des décorations côté serveur |
-| L1-15 | B | Configuré | Couche 2 — flottant applicatif et plein écran |
-| L1-16 | B | Configuré | Bureaux virtuels |
+| L1-12 | B | Configuré | Tuilage — couche 1, gouttière 8 px, rayon 12 — **fait (D28)** : dwindle, placement au pointeur, découpes figées |
+| L1-13 | B | Configuré | Fenêtre active ; inactive → modificateur de conteneur — **fait (D29)** : aucune bordure ; le repère de la fenêtre active revient à L2-03 |
+| L1-14 | B | Configuré | Masquage des décorations côté serveur — **fait (D31)** : Hyprland ne dessine aucune barre de titre ; `QT_WAYLAND_DISABLE_WINDOWDECORATION` |
+| L1-15 | B | Configuré | Couche 2 — flottant applicatif et plein écran — **fait (D30, D31)** : ombre des flottantes 16/4/2, plein écran sans coins ni ombre |
+| L1-16 | B | Configuré | Bureaux virtuels — à vérifier avec le raccourci d'agrandissement : la règle `plein-ecran-nu` couvre-t-elle aussi l'état agrandi (D31) |
 | L1-17 | B | Configuré | Multi-écran de base et facteur d'échelle — **fait (D24 à D27)** : fragment `machines/<nom-d-hôte>.lua` lu depuis `/etc/hostname`, écrans inconnus étendus à droite, échelle 1,25 sur `caladan` |
 | L1-18 | E | Configuré | Terminal — installation minimale |
 | L1-19 | C | Écrit | Polices et indirection de noms — **fait (D22, D23)** : `fonts.conf` généré depuis `tokens.toml`, déployé dans `fontconfig/conf.d`, vérifié par `fc-match` ; graisse d'accentuation 550 |
@@ -252,7 +252,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | --- | --- | --- | --- |
 | L2-01 | B | Écrit | Bibliothèque de composants — les primitives de l'annexe E |
 | L2-02 | B | Écrit | Les six états composables, dans l'ordre fixe |
-| L2-03 | B | Écrit | Modificateur `inactive` — chroma à zéro, contenu intact |
+| L2-03 | B | Écrit | Modificateur `inactive` — chroma à zéro, contenu intact — seul repère de la fenêtre active (D29) |
 | L2-04 | B | Écrit | Modèle d'élévation E0 à E3 — sheen, liseré, ombre |
 | L2-05 | B | Écrit | Dithering par bruit sur tout dégradé de sheen |
 | L2-06 | B | Écrit | Vocabulaire de mouvement — six transitions, interruptibles |
@@ -284,6 +284,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L2-32 | B | Écrit | Navigation clavier complète, boutons compris |
 | L2-33 | B | Écrit | Barre de défilement superposée — 8 px, 12 au survol |
 | L2-34 | C | Écrit | Brancher les tokens sur la bibliothèque de composants |
+| L2-35 | B | Écrit | Flou des overlays et de la couche 1 ; ombre de gouttière de la fenêtre active, à étudier (D29, D31) |
 
 ### Lot 3 — la bascule
 
@@ -384,7 +385,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L5-29 | — | Écrit | Passe de regard complète — étage 3 |
 | L5-30 | — | Écrit | Résorber les points ouverts de l'annexe C |
 
-**Volume total : 140 éléments** — 96 écrits, 36 configurés, 5 offerts, 3 mixtes.
+**Volume total : 141 éléments** — 97 écrits, 36 configurés, 5 offerts, 3 mixtes.
 
 Les deux tiers du travail sont de l'écrit, et les trois quarts de cet écrit se concentrent sur la coque et les écrans système. C'est cohérent avec la stratégie retenue, et c'est là que tout le risque se trouve.
 
@@ -486,6 +487,7 @@ Le choix de la distribution de base et du compositeur, précédemment ouverts, s
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-12 | Version initiale, 137 éléments |
+| 1.8 | 2026-10-14 | L1-12 à L1-15 faits : dwindle, plus de bordure, ombre des flottantes, plein écran nu, décorations Qt ; L2-03 précisé ; ajout de L2-35. 141 éléments |
 | 1.7 | 2026-10-14 | L1-17 fait : fragment machine, écrans inconnus, échelle 1,25 ; couvercle avec écran externe ajouté à L1-09 |
 | 1.6 | 2026-10-14 | L1-19 et L1-20 faits : polices résolues, chaîne de repli, rendu |
 | 1.5 | 2026-10-14 | L1-24 terminé : branchement dans la session réelle |

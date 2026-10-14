@@ -7,7 +7,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from deploy import config_home, plan
+from deploy import COPIES, config_home, plan
 
 ROOT = Path(__file__).resolve().parent.parent
 GENERIC = "-- Configuration générique de test.\n"
@@ -64,9 +64,13 @@ class DeployTest(unittest.TestCase):
         self.assertEqual(os.readlink(self.hypr / "hyprland.lua"), str(ROOT / "config" / "hypr" / "hyprland.lua"))
         self.assertEqual(os.readlink(self.hypr / "modules"), str(ROOT / "config" / "hypr" / "modules"))
         self.assertEqual(os.readlink(self.hypr / "machines"), str(ROOT / "config" / "hypr" / "machines"))
-        for name in ("hyprland-tokens.lua", "motion.lua"):
+        for name in COPIES:
             self.assertEqual((self.hypr / "generated" / name).read_bytes(), (ROOT / "generated" / name).read_bytes())
         self.assertEqual(self.fc.read_bytes(), (ROOT / "generated" / "fonts.conf").read_bytes())
+
+    def test_copies_hyprland_files(self):
+        """Hyprland lit ces trois fichiers générés : un oubli dans COPIES casserait tout le point d'entrée."""
+        self.assertEqual(set(COPIES), {"hyprland-tokens.lua", "hyprland-rules.lua", "motion.lua"})
 
     def test_config_home(self):
         self.assertEqual(config_home({"XDG_CONFIG_HOME": "/x", "HOME": "/h"}), Path("/x"))

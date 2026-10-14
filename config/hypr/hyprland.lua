@@ -6,11 +6,20 @@
 -- Elle est facultative : une machine installée directement en DuneI ne l'a pas.
 pcall(require, "generique")
 
--- Gouttières, bordures, rayon et ombre, produits par generate_tokens.py.
+-- Gouttières, rayon, bordure et ombre, produits par generate_tokens.py.
 hl.config(require("generated.hyprland-tokens"))
 
 -- Ressorts et animations produits par generate_motion.py ; apply(true) pour le mouvement réduit (D18).
 require("modules.motion").apply(false)
+
+-- Variables transmises aux clients : décorations dessinées par Qt retirées (L1-14).
+require("modules.env").apply()
+
+-- Disposition du tuilage : dwindle, découpes figées (L1-12, D28).
+require("modules.fenetres").apply()
+
+-- Règles de fenêtre : apparence générée depuis les jetons (couche 1, plein écran), puis comportement (L1-15).
+require("modules.regles").apply()
 
 -- Écrans inconnus et XWayland : règles communes, sans aucun matériel nommé.
 require("modules.ecrans").apply()

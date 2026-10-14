@@ -2,9 +2,9 @@
 
 Oct 10, 2026 · @Nicolas — révisée le 14 octobre 2026
 
-Version 1.6. Historique en fin de document.
+Version 1.7. Historique en fin de document.
 
-*Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent trente-sept lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
+*Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent quarante et une lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
 
 ## En une phrase
 
@@ -117,7 +117,7 @@ L'ordre découle d'une seule règle : **chaque lot laisse la machine en état de
 | **4 — Accord visuel** | Thématisation Qt et GTK sur cibles réelles, premier lot d'icônes, fond d'écran, panneau de thème, extraction de teinte | Cohérente de bout en bout, bible opposable partout |
 | **5 — Écrans système et voix** | Réglages panneau par panneau, connexion, amorçage, « À propos », catalogue de messages, recette | **1.0** |
 
-Le détail — cent trente-six éléments, chacun rattaché à un chantier, un lot et une nature — vit dans le document de périmètre et de backlog. **Cette note ne s'y substitue pas.**
+Le détail — cent quarante et un éléments, chacun rattaché à un chantier, un lot et une nature — vit dans le document de périmètre et de backlog. **Cette note ne s'y substitue pas.**
 
 ## Les risques, par ordre de gravité
 
@@ -167,6 +167,20 @@ S'il refuse quelque chose de conforme, c'est que la bible est incomplète — et
 
 **Terminé.** Les chapitres de conception. Le cadrage produit : périmètre, chantiers, séquencement, backlog.
 
+**Ce qui reste sur la chaîne de thème n'est plus de la conception, c'est du branchement** — connecter les cibles générées à des logiciels réels et vérifier le rechargement à chaud sur une session vivante. Lots 2 et 4.
+
+**Prêt à démarrer.** Le lot 1, en commençant par remettre la chaîne de thème en conformité (voir ci-dessus). Point de départ : Arch + Hyprland 0.56 en configuration générique, **configurée en Lua**. La configuration générique reste en place et chaque feature en remplace un morceau — aucun choix logiciel du carnet n'est figé avant sa feature.
+
+**Prêt en parallèle.** Le premier lot d'icônes — une soixantaine de symboles à faire correspondre à une nomenclature normalisée.
+
+**À trancher au lot où c'est utile, pas avant.** La distribution de base et le compositeur sont tranchés : Arch Linux et Hyprland. Le choix des applications se fait au lot 3. Le carnet d'installation énonce les besoins et les critères de sélection ; **il ne présuppose aucun logiciel**, parce que ces choix sont des résultats du travail de design et non son point de départ.
+
+**À calibrer à l'implémentation.** Une poignée de valeurs — graisse d'accentuation, seuils d'adaptation, délais d'infobulle, opacité du voile. Elles se jugent sur le shell réel ; les figer plus tôt reviendrait à les figer à l'aveugle. Elles sont listées à l'annexe C de la bible et rattachées au lot 5.
+
+**Dette documentaire identifiée.** Quatre défauts dans la bible, tous corrigeables au lot 5 : l'annexe B annoncée au plan de lecture mais absente, la numérotation des principes du chapitre 1 — sept annoncés, six énumérés, alors que le chapitre 7 en invoque un septième, la liste des interdits présente en double aux annexes A et E avec des contenus divergents, et le chapitre des écrans système qui reste à écrire — à partir de ce qui aura été construit, pas avant.
+
+Le journal d'avancement suit, du plus ancien au plus récent ; **son dernier paragraphe nomme toujours la prochaine étape**.
+
 **Corrigé le 12 octobre 2026 — la chaîne de thème n'est pas terminée.** Sont dans le dépôt : `tokens.toml`, `generate_tokens.py` (six cibles : CSS, JSON, KDE, GTK 3, GTK 4, portail) et `extract_hue.py`. **Manquent** : `motion.toml` et `generate_motion.py`, ainsi que la cible Hyprland (Lua) dont dépend tout le lot 1. L'audit du générateur relève des écarts avec la bible — rabattement de gamut qui décale la teinte, contraste APCA du corps sous la cible, absence de contrôle APCA, valeurs en dur dans le générateur, nom `DuneOS` au lieu de `DuneI`. Le détail est consigné au journal des décisions ; leur correction est un préalable du lot 1.
 
 **Mise à jour — 12 octobre 2026, fin de journée.** Écarts corrigés (D11) : la chaîne de thème est modulaire (`dunei_theme/`), testée (28 tests, instantanés de référence), conforme à la bible, et produit une septième cible, le module Lua de Hyprland. Reste : le mouvement (`motion.toml`, L1-23), à concevoir.
@@ -190,21 +204,16 @@ commune n'en connaît aucun. Un écran inconnu étend le bureau à droite, véri
 virtuelle. L'écran de `caladan` passe à l'échelle 1,25 (1536 × 960) : 4/3, préférée à l'écran, a été écartée parce qu'elle
 brise la règle des pixels entiers de la bible. Les variables
 d'échelle de Qt prévues par le carnet sont retirées : elles sont sans effet sous Wayland (D24 à D27).
-Le couvercle avec écran externe rejoint la veille (L1-09). Prochaine étape du lot 1 : le fenêtrage,
-L1-12 à L1-16 — tuilage, fenêtre active et inactive, décorations, flottant, bureaux —, à découper au
-brainstorming.
+Le couvercle avec écran externe rejoint la veille (L1-09).
 
-**Ce qui reste sur la chaîne de thème n'est plus de la conception, c'est du branchement** — connecter les cibles générées à des logiciels réels et vérifier le rechargement à chaud sur une session vivante. Lots 2 et 4.
-
-**Prêt à démarrer.** Le lot 1, en commençant par remettre la chaîne de thème en conformité (voir ci-dessus). Point de départ : Arch + Hyprland 0.56 en configuration générique, **configurée en Lua**. La configuration générique reste en place et chaque feature en remplace un morceau — aucun choix logiciel du carnet n'est figé avant sa feature.
-
-**Prêt en parallèle.** Le premier lot d'icônes — une soixantaine de symboles à faire correspondre à une nomenclature normalisée.
-
-**À trancher au lot où c'est utile, pas avant.** La distribution de base et le compositeur sont tranchés : Arch Linux et Hyprland. Le choix des applications se fait au lot 3. Le carnet d'installation énonce les besoins et les critères de sélection ; **il ne présuppose aucun logiciel**, parce que ces choix sont des résultats du travail de design et non son point de départ.
-
-**À calibrer à l'implémentation.** Une poignée de valeurs — graisse d'accentuation, seuils d'adaptation, délais d'infobulle, opacité du voile. Elles se jugent sur le shell réel ; les figer plus tôt reviendrait à les figer à l'aveugle. Elles sont listées à l'annexe C de la bible et rattachées au lot 5.
-
-**Dette documentaire identifiée.** Quatre défauts dans la bible, tous corrigeables au lot 5 : l'annexe B annoncée au plan de lecture mais absente, la numérotation des principes du chapitre 1 — sept annoncés, six énumérés, alors que le chapitre 7 en invoque un septième, la liste des interdits présente en double aux annexes A et E avec des contenus divergents, et le chapitre des écrans système qui reste à écrire — à partir de ce qui aura été construit, pas avant.
+**Fenêtrage — 14 octobre 2026.** Le tuilage reste en dwindle, scrolling ayant été essayé puis rejeté à
+l'usage. Les fenêtres n'ont plus de bordure : sur le modèle de macOS, la fenêtre active se signalera au
+lot 2 par le modificateur `inactive` (L2-03), qui devient son seul repère ; d'ici là, rien ne
+l'indique. Les fenêtres flottantes portent une ombre, une seule couche faute de mieux dans Hyprland,
+réglée à l'écran ; le plein écran n'a ni coins ni ombre ; Qt ne dessine plus de barre de titre. Ces
+valeurs viennent des jetons, dont un second fichier généré tire les règles de fenêtre.
+`generique.lua` perd toute son apparence (D28 à D31). Prochaine étape du lot 1 : **la feature
+raccourcis (L1-16)**, qui rapatrie le clavier, les gestes et les bureaux virtuels de `generique.lua`.
 
 ## Plan de lecture
 
@@ -223,6 +232,7 @@ brainstorming.
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-10 | Version initiale |
+| 1.7 | 2026-10-14 | Fenêtrage fait (L1-12 à L1-15) ; reste les raccourcis et les bureaux (L1-16). Paragraphes permanents de l'état d'avancement placés avant le journal, pour que le dernier paragraphe nomme la prochaine étape ; décomptes à 141 éléments |
 | 1.6 | 2026-10-14 | Écran et échelle faits (L1-17), échelle 1,25 ; reste le fenêtrage |
 | 1.5 | 2026-10-14 | Polices résolues (L1-19, L1-20), graisse d'accentuation 550 ; reste l'écran et l'échelle |
 | 1.4 | 2026-10-14 | Session branchée sur DuneI ; configuration générique chargée en premier |

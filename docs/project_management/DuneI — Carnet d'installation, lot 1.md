@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 0.9. Historique en fin de document.
+Version 1.0. Historique en fin de document.
 
 Socle amorçable.
 
@@ -27,6 +27,7 @@ Relevé sur `caladan` avant tout développement. **Aucun choix logiciel de ce ca
 | Configuration | Fichier générique autogénéré par Hyprland, non modifié | Renommé `generique.lua` par `make install`, chargé en premier par le point d'entrée DuneI et réduit feature après feature |
 | Gestionnaire de connexion | `sddm`, activé | Conservé jusqu'à la feature session |
 | Terminal | `kitty` | Conservé jusqu'à la feature terminal |
+| Fenêtrage | dwindle, bordure dégradée, flou, ombre sur toutes les fenêtres | Tranché à la feature fenêtrage (D28 à D31) : `general`, `decoration`, dispositions et règles de fenêtre retirés de `generique.lua` |
 | Échelle d'affichage | `auto` → 1,5 | Tranchée à la feature écran : 1,25, soit 1536 × 960 (D27) ; la règle générique est retirée de `generique.lua` |
 | Réseau, audio, énergie | NetworkManager, PipeWire + WirePlumber, power-profiles-daemon | Acquis |
 
@@ -124,7 +125,8 @@ vers `~/DuneI` : la copie de travail doit toujours rester sur une branche qui co
 sinon le lien n'a plus de cible au prochain rechargement. `make install` refuse de s'exécuter depuis un
 arbre de travail secondaire (`git worktree`), dont la suppression laisserait des liens sans cible.
 
-**Après la fusion d'une PR**, on met `main` à jour sans le sortir, puis on bascule dessus :
+**Après la fusion d'une PR** — faite par Claude dès que la relecture finale est propre et que Nicolas
+a validé à l'écran (D32) —, on met `main` à jour sans le sortir, puis on bascule dessus :
 
     git fetch origin main:main && git switch main
 
@@ -229,14 +231,12 @@ Les portails sont installés dès maintenant mais configurés au lot 3. Les avoi
 
 ```lua
 -- config/hypr/modules/env.lua
-hl.env("XDG_CURRENT_DESKTOP", "Hyprland")
-hl.env("XDG_SESSION_TYPE", "wayland")
-hl.env("QT_QPA_PLATFORM", "wayland")
 hl.env("QT_WAYLAND_DISABLE_WINDOWDECORATION", "1")
-hl.env("MOZ_ENABLE_WAYLAND", "1")
 ```
 
-**`QT_WAYLAND_DISABLE_WINDOWDECORATION=1` porte L1-14.** C'est elle qui supprime les décorations dessinées par les applications Qt, pour que la fenêtre soit encadrée par le compositeur et par lui seul. Sans elle, chaque fenêtre Qt porte sa propre barre de titre et le tuilage perd sa cohérence géométrique.
+**`QT_WAYLAND_DISABLE_WINDOWDECORATION=1` porte L1-14.** Elle supprime les barres de titre dessinées par les applications Qt ; Hyprland n'en dessine aucune de lui-même, la fenêtre n'a donc plus de décoration. Vérifiée dans l'environnement des clients et sur Dolphin (2026-10-14). Seuls les clients lancés après le chargement de la configuration voient la variable.
+
+**C'est la seule variable posée par DuneI à ce stade.** Une version antérieure de ce carnet en prévoyait quatre autres. `XDG_CURRENT_DESKTOP` et `XDG_SESSION_TYPE` sont posées par Hyprland, `MOZ_ENABLE_WAYLAND` est déjà présente dans la session, qui est lancée par `uwsm`, et `QT_QPA_PLATFORM` est inutile en Qt 6, qui choisit Wayland seul. Elles relèvent de la feature session (L1-10).
 
 **Aucune variable d'échelle de Qt n'est définie** (D26). Une version antérieure de ce carnet mettait `QT_ENABLE_HIGHDPI_SCALING` et `QT_AUTO_SCREEN_SCALE_FACTOR` à zéro ; la documentation de Qt 6 (doc.qt.io/qt-6/highdpi.html) réserve la première aux tests et la dit sans effet sous Wayland, et la seconde n'existe plus en Qt 6. Qt 6.12 implémente `wp_fractional_scale_v1` et suit seul l'échelle du compositeur. Aucune variable `GDK_SCALE` non plus : elle ne servirait qu'aux applications GTK passées par XWayland avec `force_zero_scaling`, qui n'est pas activé.
 
@@ -251,12 +251,15 @@ Depuis la version 0.5x, Hyprland se configure **en Lua** (`hyprland.lua`, API `h
 pcall(require, "generique")                        -- configuration générique, réduite feature après feature
 hl.config(require("generated.hyprland-tokens"))    -- table produite par generate_tokens.py
 require("modules.motion").apply(false)             -- ressorts de generate_motion.py ; apply(true) pour le mouvement réduit
+require("modules.env").apply()                     -- variables transmises aux clients
+require("modules.fenetres").apply()                -- disposition dwindle
+require("modules.regles").apply()                  -- règles de fenêtre générées, puis de comportement
 require("modules.ecrans").apply()                  -- écrans inconnus et XWayland, aucun matériel nommé
 require("modules.machine").load()                  -- machines/<nom-d-hôte>.lua, chargé en dernier
 ```
 
-Les modules `env`, `input`, `keybinds` et `rules` s'ajouteront à
-la suite, chacun avec la feature qui retire de `generique.lua` le morceau correspondant.
+Les modules du clavier et de l'entrée s'ajouteront avec la feature raccourcis, qui retire de
+`generique.lua` les raccourcis, les gestes et la configuration de l'entrée.
 
 Les générateurs produisent donc des **modules Lua**, et non plus des fragments `.conf`. Le module **retourne une table** et n'appelle pas `hl.config` lui-même : rien ne se passe au chargement, la configuration choisit quand l'appliquer, un fragment machine peut surcharger ensuite, et le fichier se vérifie avec un interpréteur Lua nu. Le Lua apporte aussi les ressorts natifs (`hl.curve({ type = "spring", … })`), qui servent directement le principe 5.
 
@@ -309,11 +312,11 @@ La bible impose une gouttière de 8 px entre fenêtres et un rayon de 12.
 ```lua
 -- generated/hyprland-tokens.lua — PRODUIT par generate_tokens.py (extrait, teinte 55)
 return {
-    general = {
-        gaps_in = 4, gaps_out = 8, border_size = 2,   -- gouttière / 2, marge, states.focus.ring_width
-        col = { active_border = "#a35300", inactive_border = "#3c2d23" },  -- accent, border-subtle
+    general = { gaps_in = 4, gaps_out = 8, border_size = 0 },   -- gouttière / 2, marge, window.border_width
+    decoration = {
+        rounding = 12,                                          -- radii.window
+        shadow = { enabled = true, range = 16, render_power = 2, offset = { 0, 4 }, color = "rgba(0000005c)" },
     },
-    decoration = { rounding = 12, shadow = { enabled = false } },  -- radii.window, elevation.e1
 }
 ```
 
@@ -321,13 +324,31 @@ Dans l'API Lua, `rounding` vit sous `decoration`, pas sous `general`.
 
 **`gaps_in` vaut 4, pas 8.** Hyprland applique cette valeur de chaque côté de chaque fenêtre : deux fenêtres voisines produisent donc un intervalle de 8 px. Écrire 8 donnerait 16, et l'écart ne se verrait qu'en comparant à la maquette. C'est le prototype du défaut que la règle « aucune valeur en dur » existe pour empêcher — ces valeurs viennent du fragment généré, où le doublement est calculé, pas retapé.
 
-**Et ces valeurs sont en pixels logiques**, donc déjà multipliées par 1,25 à l'affichage. Une gouttière mesurée à la règle sur une capture d'écran fera 10 pixels physiques, et un rayon de 12 en fera 15. La bordure de 2, qui n'est pas un multiple de 4, tombe sur 2,5 pixels : point à juger avec L1-13. La vérification de recette se fait en unités logiques, pas sur la capture.
+**Et ces valeurs sont en pixels logiques**, donc déjà multipliées par 1,25 à l'affichage. La gouttière mesure 10 pixels physiques sur une capture et un rayon de 12 en fait 15. La vérification de recette se fait en unités logiques, pas sur la capture.
+
+**Disposition (D28).** `config/hypr/modules/fenetres.lua` fixe dwindle et `preserve_split` ; une nouvelle fenêtre s'ouvre du côté du pointeur. scrolling a été essayé et rejeté à l'usage.
+
+**L'ombre de la couche 2 (D30).** Hyprland ne dessine qu'une ombre par fenêtre, et une règle peut la retirer mais pas l'ajouter. L'ombre est donc activée globalement, avec les valeurs de `[window.floating_shadow]`, et le second fichier généré la retire aux tuiles :
+
+```lua
+-- generated/hyprland-rules.lua — PRODUIT par generate_tokens.py
+return {
+    { name = "couche-1-sans-ombre", match = { float = false }, no_shadow = true },          -- elevation.e1.shadow
+    { name = "plein-ecran-nu", match = { fullscreen = true }, no_shadow = true, rounding = 0 }, -- radii.fullscreen
+}
+```
+
+`config/hypr/modules/regles.lua` applique ces règles, puis deux règles de comportement reprises du générique : `sans-agrandissement` (une application ne peut pas s'agrandir d'elle-même) et `glisser-xwayland` (correctif du glisser-déposer XWayland). L'ordre compte : entre deux règles qui correspondent, la dernière l'emporte, et le plein écran passe après la couche 1 pour primer sur toute règle plus générale ; aujourd'hui, les deux retirent l'ombre.
+
+**Le flou** est laissé aux défauts de Hyprland : il ne s'applique que derrière une surface transparente, et toutes les fenêtres sont opaques. Il se règle au lot 2 avec le voile (D31).
 
 ### Fenêtre active et inactive
 
-La bible ne demande pas seulement une bordure accentuée sur la fenêtre active : elle demande que la fenêtre inactive porte le modificateur de conteneur, dont le chroma des accents tombe à zéro sans que le contenu soit terni.
+**Aucune bordure n'est tracée autour des fenêtres** (D29) : `window.border_width = 0`. La bible faisait de la bordure accentuée l'indicateur de la fenêtre active ; Nicolas l'a retirée, sur le modèle de macOS, et la bible a été modifiée en conséquence. Une lueur intérieure essayée à sa place a été rejetée.
 
-Au lot 1, la moitié compositeur est faisable — bordure accentuée sur l'active (`accent`), neutre sur les autres (`border-subtle`, l'échelon de la sélection inactive). L'épaisseur est celle de l'anneau de focus (`states.focus.ring_width`) : la bordure active **est** l'anneau de focus de la fenêtre. La mise à zéro du chroma à l'intérieur de la fenêtre appartient à la bibliothèque de composants, donc au lot 2. Le carnet installe la moitié visible ; L2-03 finit le travail.
+Le repère de la fenêtre active revient au modificateur de conteneur de la bible : la fenêtre inactive perd le chroma de ses accents, sans que son contenu soit terni. Il appartient à la bibliothèque de composants, donc au lot 2 (L2-03). **Au lot 1, rien n'indique la fenêtre active**, et c'est assumé.
+
+Constat fait avant le retrait : à l'échelle 1,25, la bordure de 2 px logiques était rendue sur 3 pixels physiques pleins, sans flou. Le point « bordure à 2,5 pixels » laissé par D27 était donc sans objet.
 
 ### Bureaux et raccourcis
 
@@ -517,6 +538,7 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 | Version | Date | Changement |
 | --- | --- | --- |
 | 0.1 | 2026-10-12 | Version initiale |
+| 1.0 | 2026-10-14 | Procédure après fusion : Claude fusionne lui-même (D32). Fenêtrage : dwindle, plus de bordure, ombre des flottantes et règles de fenêtre générées, plein écran nu, module `env.lua` réduit à la variable Qt, générique réduit (D28 à D31) |
 | 0.9 | 2026-10-14 | Écran et échelle : fragment machine lu depuis `/etc/hostname`, règle des écrans inconnus, échelle 1,25 retenue après essai de 4/3, écartée pour la règle des pixels entiers, variables Qt d'échelle retirées, vérification par sortie virtuelle |
 | 0.8 | 2026-10-14 | Polices : `fonts.conf` généré et déployé dans `fontconfig/conf.d`, familles installées réelles, chaîne de repli, rendu, vérification par `fc-match`, graisse d'accentuation 550 ; `deploy.py` à destinations multiples |
 | 0.7 | 2026-10-14 | Procédure après fusion : mise à jour de `main` sans passer par l'ancien état, origine de la bannière « cannot open » |

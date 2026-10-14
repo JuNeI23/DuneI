@@ -375,3 +375,115 @@ bureau 3 qu'on y avait envoyé est revenu sur `eDP-1` à sa suppression. La rele
 ramener le nom d'hôte en minuscules, pour qu'un `/etc/hostname` à « Caladan » trouve `caladan.lua`.
 
 *Touché : config/hypr/hyprland.lua, config/hypr/modules/ecrans.lua, config/hypr/modules/machine.lua, config/hypr/machines/caladan.lua, deploy.py, tests/, ~/.config/hypr/generique.lua (hors dépôt), carnet, backlog, bible (annexe des fichiers), notes de direction, CLAUDE.md.*
+
+## 2026-10-14 — Fenêtrage (L1-12 à L1-15)
+
+### D28 · Disposition dwindle ; placement au pointeur
+
+Le tuilage reste en dwindle : chaque nouvelle fenêtre coupe la fenêtre active en deux. scrolling, la
+disposition en colonnes sur un ruban, a été recommandée pour l'écran de 1536 × 960 logiques et
+essayée en direct sur la session ; Nicolas l'a rejetée à l'usage. master et monocle ont été écartés
+sans essai. Une nouvelle fenêtre s'ouvre du côté du pointeur (`force_split` par défaut) : le côté fixe,
+proposé pour le travail au clavier, a été jugé moins intuitif par Nicolas. `preserve_split` est repris
+du générique : sans lui, une découpe change de sens quand on redimensionne.
+
+Raison : le choix de Nicolas, fait à l'usage et non sur le papier. Le paramétrage vit dans
+`config/hypr/modules/fenetres.lua`.
+
+*Touché : config/hypr/modules/fenetres.lua, config/hypr/hyprland.lua, bible (ch. 8), carnet.*
+
+### D29 · Plus de bordure de fenêtre
+
+Les fenêtres n'ont plus aucune bordure, ni active ni inactive : `border_size = 0`, issu du nouveau
+jeton `window.border_width`. Nicolas trouve le contour laid ; macOS n'en trace pas. La bible est
+modifiée, ce n'est pas une dérogation.
+
+Ce que la bordure portait : elle était l'indicateur de la fenêtre active (bible, ch. 8 et 12). Le
+repère revient au modificateur `inactive` (L2-03), à la manière de macOS et de Windows : le chrome des
+fenêtres inactives perd sa couleur, le contenu n'est ni terni ni estompé. Au lot 1, aucune indication
+de la fenêtre active n'existe, et c'est assumé. Une lueur intérieure (`decoration.glow`) a été essayée
+en trois variantes sur la fenêtre active seule (accent à 40 % sur 8 px, accent à 25 % sur 16 px, blanc à
+8 % sur 12 px) ; Nicolas l'a rejetée.
+
+`states.focus.ring_width` reste un jeton des composants (anneau de focus) ; il ne sert plus à la
+bordure de fenêtre. Les couleurs de bordure sortent de la cible Hyprland.
+
+Constat qui clôt le point laissé par D27 : à l'échelle 1,25, la bordure de 2 px logiques était rendue
+sur 3 pixels physiques pleins, sans pixel intermédiaire, sur les bords verticaux et horizontaux
+(profil de pixels d'une capture grim) ; la gouttière de 8 px logiques mesurait 10 pixels physiques.
+
+*Touché : tokens.toml, dunei_theme/emitters/hyprland.py, bible (ch. 7, 8, 12, annexe E), carnet, backlog.*
+
+### D30 · Ombre des fenêtres flottantes : une couche
+
+La bible demandait une ombre à deux couches sur les fenêtres flottantes. Hyprland ne dessine qu'une
+ombre par fenêtre ; aucun greffon existant n'en dessine deux, et un greffon maison, compilé contre les
+en-têtes exacts de Hyprland, serait à recompiler à chaque mise à jour et à adapter à chaque changement
+d'API interne. La bible passe à une seule ombre.
+
+Valeurs choisies à l'écran : trois candidates (portée 12, 24 et 40), la troisième jugée trop lourde,
+puis deux moyennes conformes à la base de 4 ; retenue : **portée 16, décalage vertical 4, puissance de
+dégradé 2**, noir à 36 % (`shadow_color` et `shade_opacity`, jetons existants). Elles vivent dans
+`[window.floating_shadow]`. Les jetons sont contrôlés comme entiers ; la portée doit être comprise
+entre 1 et 100 et la puissance entre 1 et 4 (bornes de Hyprland), la portée et le décalage être des
+multiples de 4 ; un écart refuse la génération. Le contrôle vit dans l'émetteur Hyprland, seul chemin
+qui bloque `generate_tokens.py`, `checks.py` ne produisant que des avertissements.
+
+Une règle de fenêtre peut retirer une ombre, pas en ajouter : l'ombre est activée globalement, et la
+règle générée `couche-1-sans-ombre`, dérivée de `elevation.e1.shadow = false`, la retire aux tuiles.
+
+Constat : une ombre noire est invisible sur un fond noir ; les candidates ont été jugées sur le fond
+d'écran.
+
+Vérification sur la session (2026-10-14) : `getoption` donne la portée 16, la puissance 2, le décalage
+[0, 4] et la couleur `5c000000` ; une tuile porte `no_shadow`, une flottante non ; une flottante
+basculée en tuile perd son ombre et la retrouve en revenant.
+
+*Touché : tokens.toml, dunei_theme/emitters/, generated/hyprland-rules.lua, config/hypr/modules/regles.lua, deploy.py, bible (ch. 8, annexe E).*
+
+### D31 · Coins, flou et plein écran
+
+**Coins.** Arc de cercle, `rounding_power` 2, valeur par défaut de Hyprland, non écrite. Le point de
+l'annexe C est fermé par Nicolas.
+
+**Flou.** Renvoyé au lot 2, avec l'opacité du voile : Hyprland ne floute que derrière une surface
+transparente, et toutes les fenêtres DuneI sont opaques. La taille du flou du générique (3) disparaît
+au profit du défaut (8), sans effet visible.
+
+**Plein écran.** Aucun coin, aucune ombre (bible : « tous effets désactivés »). Le rayon passe par le
+jeton `radii.fullscreen = 0`, à la demande de Nicolas, pour qu'aucun rayon ne soit écrit dans
+`modules/`. La règle générée `plein-ecran-nu` vient après `couche-1-sans-ombre` : entre deux règles qui
+correspondent, la dernière l'emporte, et le plein écran doit primer sur toute règle plus générale qui
+poserait un jour une valeur contraire. Aujourd'hui, les deux règles retirent l'ombre et l'ordre ne
+tranche rien. Vérifié : `no_shadow` vrai, `rounding` 0.
+
+**Décorations (L1-14).** Hyprland ne dessine aucune barre de titre ; `config/hypr/modules/env.lua` pose
+`QT_WAYLAND_DISABLE_WINDOWDECORATION=1`, vérifiée dans l'environnement des clients et sur Dolphin. Les
+autres variables du carnet (`XDG_*`, `MOZ_ENABLE_WAYLAND`, `QT_QPA_PLATFORM`) sont déjà présentes dans
+la session, lancée par `uwsm`, ou inutiles en Qt 6 : elles relèvent de L1-10.
+
+**Générique.** `generique.lua` perd `general`, `decoration`, les trois dispositions et les règles de
+fenêtre ; les règles `suppress-maximize-events` et `fix-xwayland-drags` sont reprises dans
+`regles.lua` sous les noms `sans-agrandissement` et `glisser-xwayland`, celle de `hyprland-run` n'est
+pas reprise. Les valeurs non réécrites par DuneI étaient toutes égales aux défauts de Hyprland.
+
+Validation à l'écran (2026-10-14) : tuiles sans bordure ni ombre, flottante ombrée, Dolphin sans barre
+de titre, dialogue de Firefox flottant ; « tout est au top » (Nicolas).
+
+*Touché : tokens.toml, config/hypr/modules/env.lua, config/hypr/modules/regles.lua, ~/.config/hypr/generique.lua (hors dépôt), bible (ch. 3, annexe C), carnet, backlog.*
+
+## 2026-10-14 — Méthode
+
+### D32 · Claude fusionne les PR
+
+Jusqu'ici, Nicolas fusionnait chaque PR sur GitHub. Désormais, Claude la fusionne lui-même
+(`gh pr merge --merge --delete-branch`) dès que deux conditions sont réunies : la relecture finale de la
+branche est propre (constats critiques et importants corrigés) et Nicolas a validé la feature à l'écran.
+Il applique ensuite la procédure après fusion du carnet. Trois options ont été présentées : statu quo,
+fusion sur ordre explicite, fusion autonome ; Nicolas a choisi la fusion autonome.
+
+Raison : supprimer un aller-retour sans valeur ajoutée, la validation à l'écran restant le point de
+contrôle de Nicolas. Ce qui ne change pas : une branche et une PR par feature, aucune fusion sans
+validation à l'écran.
+
+*Touché : CLAUDE.md, carnet (procédure après fusion).*
