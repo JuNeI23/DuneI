@@ -77,3 +77,28 @@ def emit(model: dict) -> str:
         "    },",
         "}",
     ]) + "\n"
+
+
+def emit_rules(model: dict) -> str:
+    """Module Lua des règles de fenêtre d'apparence, dérivées des jetons.
+
+    Entrée : model — sortie de model.resolve.
+    Sortie : contenu de hyprland-rules.lua (une liste Lua retournée, appliquée par modules/regles.lua).
+             La règle de la couche 1 n'existe que si E1 n'a pas d'ombre ; le plein écran vient en
+             dernier, pour l'emporter sur une fenêtre flottante en plein écran.
+    Erreurs : KeyError si le TOML brut manque ; ValueError transmise par _validate.
+    Dépendances : _validate.
+    """
+    raw = model["raw"]
+    _validate(raw)
+    rules = [] if raw["elevation"]["e1"]["shadow"] else [
+        '    { name = "couche-1-sans-ombre", match = { float = false }, no_shadow = true },']
+    rules.append('    { name = "plein-ecran-nu", match = { fullscreen = true }, no_shadow = true, '
+                 f'rounding = {raw["radii"]["fullscreen"]} }},')
+    return "\n".join([
+        "-- GÉNÉRÉ depuis tokens.toml — NE PAS MODIFIER À LA MAIN",
+        "-- Usage : for _, r in ipairs(require(\"generated.hyprland-rules\")) do hl.window_rule(r) end",
+        "return {",
+        *rules,
+        "}",
+    ]) + "\n"

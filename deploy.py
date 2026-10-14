@@ -25,7 +25,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent
 ENTRY = "config/hypr/hyprland.lua"            # Point d'entrée, lié sous hypr/hyprland.lua.
 LINKS = ("config/hypr/modules", "config/hypr/machines")  # Dossiers écrits à la main, liés sous hypr/ à leur nom.
-COPIES = ("hyprland-tokens.lua", "motion.lua")  # Fichiers de generated/ lus par Hyprland.
+COPIES = ("hyprland-tokens.lua", "hyprland-rules.lua", "motion.lua")  # Fichiers de generated/ lus par Hyprland.
 GENERIC = "generique.lua"                     # Nom donné à la configuration générique de la machine.
 TEMP = ".{}.dunei"                            # Nom temporaire, sans extension .lua, invisible pour require.
 FONTCONFIG = ("fonts.conf", "conf.d/50-dunei.conf")  # Fichier de generated/ → chemin sous fontconfig/.

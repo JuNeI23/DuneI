@@ -9,7 +9,7 @@ import unittest
 from pathlib import Path
 
 from dunei_theme.color import Oklch, to_srgb255
-from dunei_theme.emitters.hyprland import emit
+from dunei_theme.emitters.hyprland import emit, emit_rules
 from dunei_theme.model import load, resolve
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -112,6 +112,48 @@ class HyprlandTest(unittest.TestCase):
             out = subprocess.run([LUA, "-e", probe], capture_output=True, text=True, check=True).stdout.split()
         exp = expected(self.models[0])
         self.assertEqual(out, [exp["border_size"], exp["rounding"], exp["range"], exp["offset"].split()[2]])
+
+
+class RulesTest(unittest.TestCase):
+    """Règles de fenêtre générées : dérivées des jetons, dans l'ordre où la dernière l'emporte."""
+
+    def setUp(self):
+        self.data = load(ROOT / "tokens.toml")
+
+    def rules(self, **edits) -> str:
+        """Règles émises pour une source altérée. Entrée : e1_shadow, fullscreen. Sortie : texte Lua."""
+        alt = copy.deepcopy(self.data)
+        if "e1_shadow" in edits:
+            alt["elevation"]["e1"]["shadow"] = edits["e1_shadow"]
+        if "fullscreen" in edits:
+            alt["radii"]["fullscreen"] = edits["fullscreen"]
+        return emit_rules(resolve(alt))
+
+    def test_rules_values(self):
+        lua = self.rules()
+        self.assertIn('{ name = "couche-1-sans-ombre", match = { float = false }, no_shadow = true },', lua)
+        self.assertIn('{ name = "plein-ecran-nu", match = { fullscreen = true }, no_shadow = true, rounding = 0 },', lua)
+
+    def test_rules_follow_fullscreen_radius(self):
+        self.assertIn("rounding = 4", self.rules(fullscreen=4))
+
+    def test_rules_follow_e1_shadow(self):
+        lua = self.rules(e1_shadow=True)
+        self.assertNotIn("couche-1-sans-ombre", lua)
+        self.assertIn("plein-ecran-nu", lua)
+
+    def test_rules_order(self):
+        lua = self.rules()
+        self.assertLess(lua.index("couche-1-sans-ombre"), lua.index("plein-ecran-nu"))
+
+    @unittest.skipUnless(LUA, "aucun interpréteur Lua")
+    def test_rules_load_as_list(self):
+        with tempfile.NamedTemporaryFile("w", suffix=".lua", encoding="utf-8") as fh:
+            fh.write(self.rules())
+            fh.flush()
+            probe = f't = dofile("{fh.name}"); for _, r in ipairs(t) do print(r.name) end'
+            out = subprocess.run([LUA, "-e", probe], capture_output=True, text=True, check=True).stdout.split()
+        self.assertEqual(out, ["couche-1-sans-ombre", "plein-ecran-nu"])
 
 
 if __name__ == "__main__":

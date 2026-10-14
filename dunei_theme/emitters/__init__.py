@@ -13,5 +13,6 @@ TARGETS = {
     "gtk-4.0-gtk.css": gtk.emit_gtk4,       # libadwaita
     "appearance-portal.conf": portal.emit,  # repli bac à sable
     "hyprland-tokens.lua": hyprland.emit,   # compositeur, API Lua hl.*
+    "hyprland-rules.lua": hyprland.emit_rules,  # règles de fenêtre d'apparence (couche 1, plein écran)
     "fonts.conf": fontconfig.emit,          # indirection des polices, repli, rendu
 }
