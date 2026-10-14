@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas — révisée le 14 octobre 2026
 
-Version 1.5. Historique en fin de document.
+Version 1.6. Historique en fin de document.
 
 *Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent trente-sept lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
 
@@ -184,6 +184,15 @@ le mouvement générés. `make install` déploie et bascule ; chaque feature sui
 emoji, symboles. Le rendu est en niveaux de gris avec un hinting léger, et la graisse d'accentuation a
 été portée à 550 après jugement à l'écran (D22, D23). Prochaine étape du lot 1 : l'écran et l'échelle.
 
+**Écran et échelle — 14 octobre 2026.** Le matériel a sa place : `machines/<nom-d-hôte>.lua`, lu depuis
+`/etc/hostname` et chargé en dernier, est le seul endroit où un écran est nommé ; la configuration
+commune n'en connaît aucun. Un écran inconnu étend le bureau à droite, vérifié avec une sortie
+virtuelle. L'écran de `caladan` passe à l'échelle 4/3 (1440 × 900), jugée à l'écran, et les variables
+d'échelle de Qt prévues par le carnet sont retirées : elles sont sans effet sous Wayland (D24 à D27).
+Le couvercle avec écran externe rejoint la veille (L1-09). Prochaine étape du lot 1 : le fenêtrage,
+L1-12 à L1-16 — tuilage, fenêtre active et inactive, décorations, flottant, bureaux —, à découper au
+brainstorming.
+
 **Ce qui reste sur la chaîne de thème n'est plus de la conception, c'est du branchement** — connecter les cibles générées à des logiciels réels et vérifier le rechargement à chaud sur une session vivante. Lots 2 et 4.
 
 **Prêt à démarrer.** Le lot 1, en commençant par remettre la chaîne de thème en conformité (voir ci-dessus). Point de départ : Arch + Hyprland 0.56 en configuration générique, **configurée en Lua**. La configuration générique reste en place et chaque feature en remplace un morceau — aucun choix logiciel du carnet n'est figé avant sa feature.
@@ -213,6 +222,7 @@ emoji, symboles. Le rendu est en niveaux de gris avec un hinting léger, et la g
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-10 | Version initiale |
+| 1.6 | 2026-10-14 | Écran et échelle faits (L1-17), échelle 4/3 ; reste le fenêtrage |
 | 1.5 | 2026-10-14 | Polices résolues (L1-19, L1-20), graisse d'accentuation 550 ; reste l'écran et l'échelle |
 | 1.4 | 2026-10-14 | Session branchée sur DuneI ; configuration générique chargée en premier |
 | 1.3 | 2026-10-14 | Mouvement écrit et vérifié ; reste le branchement dans Hyprland |

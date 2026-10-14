@@ -312,3 +312,54 @@ gérait pas ; une fenêtre réelle les rend correctement. Une graisse ne se juge
 réelle.
 
 *Touché : tokens.toml, dunei_theme/emitters/fontconfig.py, generate_tokens.py, deploy.py, Makefile, generated/fonts.conf, generated/tokens.css, tests/, carnet, bible (ch. 4, annexes C et fichiers), backlog, notes de direction.*
+
+## 2026-10-14 — Écran et échelle (L1-17)
+
+### D24 · Le fragment machine est lu par le Lua, depuis `/etc/hostname`
+
+`config/hypr/modules/machine.lua` lit le nom d'hôte au démarrage de Hyprland et charge
+`machines/<nom>.lua` en dernier, pour qu'il l'emporte sur tout ce qui précède. Le nom n'est accepté que
+s'il ne contient que des lettres, des chiffres et des tirets. Une machine sans fichier applique les
+seules règles communes ; une erreur dans un fichier machine existant remonte dans Hyprland au lieu
+d'être ignorée, faute de quoi une faute de frappe rendrait silencieusement la machine générique.
+`make install` lie `config/hypr/machines` sous `~/.config/hypr/machines`.
+
+L'alternative écartée : `deploy.py` résout le nom d'hôte à l'installation et lie le fichier sous un nom
+fixe. Raison : le choix reste dans la configuration, où il se lit, et rien n'est à réinstaller si le nom
+d'hôte change. L'API `hl` n'expose pas le nom d'hôte, mais la bibliothèque standard de Lua est chargée.
+Décidé par Nicolas (approche A du brainstorming du 2026-10-14).
+
+### D25 · Écrans inconnus étendus à droite ; XWayland mis à l'échelle par le compositeur
+
+La règle commune, dans `modules/ecrans.lua`, est `output = ""`, mode préféré, position `auto-right`,
+échelle `auto` : un écran de passage étend le bureau à droite, à sa résolution native. La duplication
+est renvoyée à l'interface d'agencement (L3-10). Le couvercle fermé avec un écran externe est renvoyé à
+la veille (L1-09). Un écran fixe se déclare dans le fichier machine par sa description, jamais par son
+port. XWayland garde `force_zero_scaling = false`, déclaré explicitement : les applications X11
+restent à la bonne taille, au prix d'un léger flou.
+
+Raison : réponses de Nicolas (usage C : écran interne, écran fixe éventuel, écrans de passage ; écran
+inconnu : extension ; couvercle : reporté). Le retrait du bloc `MONITORS` de `generique.lua` applique
+D21.
+
+### D26 · Variables Qt d'échelle retirées du carnet
+
+`QT_ENABLE_HIGHDPI_SCALING=0` et `QT_AUTO_SCREEN_SCALE_FACTOR=0` ne sont pas définies. La documentation
+de Qt 6 (doc.qt.io/qt-6/highdpi.html) réserve la première aux tests et la dit sans effet sous Wayland ;
+la seconde n'existe plus en Qt 6. Qt 6.12 implémente `wp_fractional_scale_v1` et suit seul l'échelle du
+compositeur. Raison : le carnet les prescrivait sur une hypothèse que la documentation actuelle
+contredit ; une variable sans effet est une fausse piste le jour d'un diagnostic.
+
+### D27 · Échelle de `caladan` : 4/3
+
+L'écran interne passe de l'échelle `auto` (1,5, surface de 1280 × 800) à 4/3, soit 1440 × 900, écrite
+`4 / 3` dans `machines/caladan.lua`. 1,25 (1536 × 960), proposé par le carnet, a été essayé à l'écran ;
+4/3, troisième candidate ajoutée pendant la conception, a été jugé « parfait » par Nicolas, qui n'a pas
+souhaité essayer 1,5.
+
+Vérification sur la session (2026-10-14) : le fragment est chargé par Hyprland (échelle effective
+`1.3333334`, aucune erreur de configuration) ; un changement d'échelle s'applique à chaud. Une sortie
+virtuelle `DUNEI-TEST` s'est placée à droite de `eDP-1` (x = 1536 à l'échelle 1,25), avec l'échelle
+automatique 2 ; le bureau 3 qu'on y avait envoyé est revenu sur `eDP-1` à sa suppression.
+
+*Touché : config/hypr/hyprland.lua, config/hypr/modules/ecrans.lua, config/hypr/modules/machine.lua, config/hypr/machines/caladan.lua, deploy.py, tests/, ~/.config/hypr/generique.lua (hors dépôt), carnet, backlog, bible (annexe des fichiers), notes de direction, CLAUDE.md.*
