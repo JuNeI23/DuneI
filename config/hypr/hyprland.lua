@@ -11,3 +11,9 @@ hl.config(require("generated.hyprland-tokens"))
 
 -- Ressorts et animations produits par generate_motion.py ; apply(true) pour le mouvement réduit (D18).
 require("modules.motion").apply(false)
+
+-- Écrans inconnus et XWayland : règles communes, sans aucun matériel nommé.
+require("modules.ecrans").apply()
+
+-- Fragment de la machine courante, machines/<nom-d-hôte>.lua, chargé en dernier pour l'emporter.
+require("modules.machine").load()
