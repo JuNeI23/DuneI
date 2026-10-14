@@ -107,3 +107,4 @@ workspacesOut = { style = "fade" }
 layersIn      = { style = "fade" }
 layersOut     = { style = "fade" }
 zoomFactor    = { enabled = false }
+monitorAdded  = { enabled = false }             # Le zoom de l'écran à son arrivée est supprimé.

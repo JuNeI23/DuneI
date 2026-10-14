@@ -36,7 +36,8 @@ class HyprlandTablesTest(unittest.TestCase):
     def test_still(self):
         for leaf, style, expected in [("specialWorkspaceIn", "fade", True), ("border", "", True), ("layersIn", "", True),
                                       ("borderangle", "loop", True), ("workspacesIn", "", False),
-                                      ("windowsMove", "", False), ("windowsIn", "popin 90%", False)]:
+                                      ("windowsMove", "", False), ("windowsIn", "popin 90%", False),
+                                      ("windowsIn", "popin 100%", True), ("workspacesIn", "slide", False)]:
             with self.subTest(leaf=leaf, style=style):
                 self.assertEqual(still(leaf, style), expected)
 

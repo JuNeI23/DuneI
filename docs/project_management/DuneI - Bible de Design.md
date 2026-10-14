@@ -796,4 +796,4 @@ Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si 
 | 0.4.1 | 2026-10-12 | Annexe D : la cible compositeur est un module Lua (Hyprland 0.56) |
 | 0.5.1 | 2026-10-12 | Échelon 10 à 0,935 ; sémantiques jamais en fond de texte ; liens = signal court (D12) |
 | 0.5 | 2026-10-12 | Échelons 10 et 11 relevés (0,93 / 0,97) ; texte quasi blanc sur l'accent ; sémantiques hors plafond ; rabattement à teinte préservée ; extraction paramétrée et achromatique signalé ; contrôles APCA ; annexes C et D |
-| 0.6 | 2026-10-14 | Mouvement : septième transition `navigate`, symétrique comme `reflow` ; `generate_motion.py` produit Lua et JSON (D14 à D19) |
+| 0.6 | 2026-10-14 | Mouvement : septième transition `navigate`, symétrique comme `reflow` ; `generate_motion.py` produit Lua et JSON (D14 à D20) |

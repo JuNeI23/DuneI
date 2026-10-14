@@ -26,7 +26,7 @@ class GenerateTest(unittest.TestCase):
             data = json.loads((Path(tmp) / "motion.json").read_text(encoding="utf-8"))
             self.assertEqual(data["transitions"]["navigate"]["in"]["settle_ms"], 186)
             lua = (Path(tmp) / "motion.lua").read_text(encoding="utf-8")
-            self.assertIn('["dunei-state-out"] = { type = "spring", mass = 0.5, stiffness = 2244.9, dampening = 71.43 },', lua)
+            self.assertIn('["dunei-state-out"] = { type = "spring", mass = 1, stiffness = 4489.8, dampening = 142.86 },', lua)
             self.assertIn('{ leaf = "borderangle", enabled = false },', lua)
 
     def test_errors_write_nothing(self):
@@ -51,6 +51,25 @@ class GenerateTest(unittest.TestCase):
             self.assertIn("source illisible", res.stderr)
             self.assertNotIn("Traceback", res.stderr)
             self.assertFalse((Path(tmp) / "out").exists())
+
+    def test_wrong_encoding(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            src = Path(tmp) / "motion.toml"
+            src.write_bytes((ROOT / "motion.toml").read_text(encoding="utf-8").encode("latin-1", errors="replace"))
+            res = run(src, Path(tmp) / "out")
+            self.assertEqual(res.returncode, 1)
+            self.assertIn("source illisible", res.stderr)
+            self.assertNotIn("Traceback", res.stderr)
+
+    def test_wrong_type_reports_without_traceback(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            src = Path(tmp) / "motion.toml"
+            src.write_text((ROOT / "motion.toml").read_text(encoding="utf-8").replace("stiffness  = 1100", 'stiffness  = "1100"'),
+                           encoding="utf-8")
+            res = run(src, Path(tmp) / "out")
+            self.assertEqual(res.returncode, 1)
+            self.assertIn("stiffness", res.stderr)
+            self.assertNotIn("Traceback", res.stderr)
 
 
 if __name__ == "__main__":

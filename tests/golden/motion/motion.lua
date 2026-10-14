@@ -3,21 +3,21 @@
 return {
     -- Courbes : un ressort d'entrée et un ressort de sortie par transition, plus le fondu réduit.
     curves = {
-        ["dunei-navigate-in"] = { type = "spring", mass = 0.3, stiffness = 600, dampening = 30 },
-        ["dunei-navigate-out"] = { type = "spring", mass = 0.3, stiffness = 600, dampening = 30 },
+        ["dunei-navigate-in"] = { type = "spring", mass = 1, stiffness = 2000, dampening = 100 },
+        ["dunei-navigate-out"] = { type = "spring", mass = 1, stiffness = 2000, dampening = 100 },
         ["dunei-overlay-in"] = { type = "spring", mass = 1, stiffness = 400, dampening = 44 },
         ["dunei-overlay-out"] = { type = "spring", mass = 1, stiffness = 816.3, dampening = 62.86 },
         ["dunei-reduced"] = { type = "spring", mass = 1, stiffness = 4406.3, dampening = 132.76 },
-        ["dunei-reflow-in"] = { type = "spring", mass = 0.8, stiffness = 500, dampening = 40 },
-        ["dunei-reflow-out"] = { type = "spring", mass = 0.8, stiffness = 500, dampening = 40 },
+        ["dunei-reflow-in"] = { type = "spring", mass = 1, stiffness = 625, dampening = 50 },
+        ["dunei-reflow-out"] = { type = "spring", mass = 1, stiffness = 625, dampening = 50 },
         ["dunei-reveal-in"] = { type = "spring", mass = 1, stiffness = 600, dampening = 50 },
         ["dunei-reveal-out"] = { type = "spring", mass = 1, stiffness = 1224.5, dampening = 71.43 },
         ["dunei-spectacle-in"] = { type = "spring", mass = 1, stiffness = 150, dampening = 25 },
         ["dunei-spectacle-out"] = { type = "spring", mass = 1, stiffness = 306.1, dampening = 35.71 },
-        ["dunei-state-in"] = { type = "spring", mass = 0.5, stiffness = 1100, dampening = 50 },
-        ["dunei-state-out"] = { type = "spring", mass = 0.5, stiffness = 2244.9, dampening = 71.43 },
-        ["dunei-window-in"] = { type = "spring", mass = 0.7, stiffness = 300, dampening = 27 },
-        ["dunei-window-out"] = { type = "spring", mass = 0.7, stiffness = 612.2, dampening = 38.57 },
+        ["dunei-state-in"] = { type = "spring", mass = 1, stiffness = 2200, dampening = 100 },
+        ["dunei-state-out"] = { type = "spring", mass = 1, stiffness = 4489.8, dampening = 142.86 },
+        ["dunei-window-in"] = { type = "spring", mass = 1, stiffness = 428.6, dampening = 38.57 },
+        ["dunei-window-out"] = { type = "spring", mass = 1, stiffness = 874.7, dampening = 55.1 },
     },
     -- Animations du mode normal, une entrée par élément de Hyprland, global en premier.
     animations = {
@@ -74,7 +74,7 @@ return {
         { leaf = "fadeGlow", enabled = true, speed = 1, spring = "dunei-reduced" },
         { leaf = "zoomFactor", enabled = false },
         { leaf = "fadeDpms", enabled = true, speed = 1, spring = "dunei-reduced" },
-        { leaf = "monitorAdded", enabled = true, speed = 1, spring = "dunei-reduced" },
+        { leaf = "monitorAdded", enabled = false },
         { leaf = "borderangle", enabled = false },
         { leaf = "shadowangle", enabled = false },
         { leaf = "glowangle", enabled = false },

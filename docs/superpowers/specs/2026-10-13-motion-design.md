@@ -1,6 +1,6 @@
 # Mouvement : `motion.toml` et `generate_motion.py`
 
-Version 0.3 · 2026-10-14 · backlog L1-23, volet mouvement de L1-24 · statut : validée
+Version 0.4 · 2026-10-14 · backlog L1-23, volet mouvement de L1-24 · statut : validée
 
 ## 1. Objet
 
@@ -82,6 +82,9 @@ Chaque transition porte une clé `usage`, qui décrit en une phrase quand l'empl
 
 **Valeurs dérivées, jamais écrites dans le fichier**
 
+- **Masse ramenée à 1.** Hyprland 0.56.2 refuse une masse, une raideur ou un amortissement inférieur ou
+  égal à 0,5. Chaque ressort est donc émis avec m = 1, k ÷ m et c ÷ m, ce qui décrit exactement le même
+  mouvement ; `motion.toml` garde les valeurs du banc telles quelles.
 - **Ressort de sortie.** Il garde la même masse, avec k ÷ r² et c ÷ r (r = `exit_ratio`). ζ ne change
   pas et toutes les durées sont multipliées par r. Une transition symétrique utilise r = 1.
 - **Ressort réduit.** C'est un ressort critique (m = 1, ζ = 1) dont la stabilisation à ±1 % dure
@@ -145,6 +148,7 @@ motion.toml ──► generate_motion.py ──► dunei_motion/
 | `spring.simulate` | Intègre m·x″ = −k·(x − 1) − c·x′ par Euler semi-implicite au pas de 1 ms, comme `proto/motion/physics.js`. | m, k, c | durée de stabilisation à ±1 % (ms) et dépassement maximal |
 | `spring.spring` | Construit un ressort arrondi, la forme commune à toutes les cibles. | m, k, c | ressort |
 | `spring.zeta` | Calcule le rapport d'amortissement ζ = c / (2·√(k·m)). | ressort | ζ |
+| `spring.unit_mass` | Ramène un ressort à une masse de 1 sans changer son mouvement. | ressort | ressort |
 | `spring.exit_spring` | Dérive le ressort de sortie. | ressort, r | ressort |
 | `spring.critical_spring` | Calcule le ressort critique dont la stabilisation dure la durée demandée, par la solution analytique ωt ≈ 6,638 de (1 + ωt)·e^(−ωt) = 0,01, comme le banc. | durée (ms) | ressort |
 | `model.load` | Lit le fichier TOML. | chemin | dictionnaire brut |
@@ -207,8 +211,8 @@ Comme `hyprland-tokens.lua`, le module retourne une table et ne déclenche rien 
 return {
     -- Courbes : un ressort d'entrée et un ressort de sortie par transition, plus le fondu réduit.
     curves = {
-        ["dunei-state-in"]  = { type = "spring", mass = 0.5, stiffness = 1100, dampening = 50 },
-        ["dunei-state-out"] = { type = "spring", mass = 0.5, stiffness = 2244.9, dampening = 71.43 },
+        ["dunei-state-in"]  = { type = "spring", mass = 1, stiffness = 2200, dampening = 100 },
+        ["dunei-state-out"] = { type = "spring", mass = 1, stiffness = 4489.8, dampening = 142.86 },
         ["dunei-reduced"]   = { type = "spring", mass = 1, stiffness = 4406.3, dampening = 132.76 },
     },
     -- Animations du mode normal, une entrée par élément de Hyprland.
@@ -271,7 +275,7 @@ machine, alors que celui-ci est chargé en dernier.
       "stagger": { "ms": 40, "cap": 5 }
     }
   },
-  "reduced": { "mass": 1.0, "stiffness": 4406.3, "dampening": 132.76, "zeta": 1.0, "settle_ms": 100 }
+  "reduced": { "mass": 1.0, "stiffness": 4406.3, "dampening": 132.76, "zeta": 1.0, "settle_ms": 103 }
 }
 ```
 
@@ -287,7 +291,9 @@ transitions qui en ont une.
 | --- | --- |
 | La version de `motion.toml` est reconnue. | `version 0.2.0 inconnue (attendue : 0.1.0)` |
 | Les clés obligatoires sont présentes. | `transitions.state : clé « stiffness » manquante` |
-| La masse, la raideur et l'amortissement sont strictement positifs. | `transitions.state : mass doit être strictement positive` |
+| Chaque table ne contient que des clés connues, chacune du type attendu. | `hyprland.windowsOut : clé « phse » inconnue` |
+| La masse, la raideur et l'amortissement sont strictement positifs après arrondi. | `transitions.state : mass doit être strictement positif, après arrondi` |
+| Chaque courbe émise, masse ramenée à 1, dépasse la borne de `hl.curve` (0,5). | `transitions.spectacle (entrée, masse ramenée à 1) : stiffness 0.4 refusé par Hyprland, qui exige une valeur supérieure à 0.5` |
 | Chaque élément de `[hyprland]` et `[hyprland_reduced]` existe dans Hyprland 0.56.2. | `hyprland.windowIn : élément Hyprland inconnu` |
 | Les 27 éléments sont tous déclarés dans `[hyprland]`. | `hyprland : élément « fadeDim » non déclaré` |
 | `use` désigne une transition existante et `phase` vaut `in` ou `out`. | `hyprland.border : transition « etat » inconnue` |
@@ -296,7 +302,7 @@ transitions qui en ont une.
 | `exit_ratio` reste dans `rules.exit_ratio ± exit_tolerance`. | `transitions.state : exit_ratio 0,95 hors de 0,60–0,80` |
 | Une transition symétrique ne porte pas d'`exit_ratio`. | `transitions.reflow : symétrique, exit_ratio interdit` |
 | `stagger_ms` n'apparaît que sur les transitions de `stagger_allowed`. | `transitions.overlay : cascade interdite` |
-| En mode réduit, un élément dont le style déplace ou change l'échelle figure dans `[hyprland_reduced]`. Seuls `fade`, `loop`, `once` et le style vide en sont dispensés, sauf le style vide des fenêtres et des bureaux, qui vaut `popin` ou `slide` dans Hyprland. | `hyprland_reduced : windowsIn doit remplacer le style « popin 90% », qui déplace l'élément` |
+| En mode réduit, chaque animation émise est immobile : style `fade`, `loop`, `once` ou `popin 100%`, ou style vide hors fenêtres et bureaux, pour qui Hyprland applique `popin` ou `slide`. `windowsMove`, `zoomFactor` et `monitorAdded` y sont désactivés. | `hyprland_reduced : windowsIn doit remplacer le style « popin 90% », qui déplace l'élément` |
 
 **Avertissement**
 
@@ -363,3 +369,4 @@ validés. Elle aboutit à une seule PR « Mouvement (L1-23) », que Nicolas fusi
 | 0.1 | 2026-10-13 | Conception validée section par section : format, fichiers générés, contrôles et tests. |
 | 0.2 | 2026-10-13 | Noms des fonctions du ressort fixés par le plan ; ressort réduit calculé par la formule du banc (103 ms simulées). |
 | 0.3 | 2026-10-14 | Mouvement réduit : un style immobile comme `fade` est conservé, et le style vide des fenêtres et des bureaux, qui déplace l'élément dans Hyprland, doit être remplacé. |
+| 0.4 | 2026-10-14 | Relecture finale : masse ramenée à 1 pour la borne de `hl.curve`, clés et types contrôlés, immobilité vérifiée sur les animations réduites émises, `monitorAdded` désactivé en mode réduit. |

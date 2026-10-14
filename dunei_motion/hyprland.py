@@ -31,6 +31,13 @@ STILL = ("", "fade", "loop", "once")
 # Éléments dont le style vide vaut un mouvement : popin pour les fenêtres, slide pour les bureaux.
 MOVING_DEFAULT = ("windows", "workspaces", "specialWorkspace")
 
+# Éléments qui déplacent ou agrandissent quel que soit leur style : déplacement des tuiles, zoom de l'écran,
+# et zoom de 2× à 1× à l'arrivée d'un écran, y compris au démarrage de Hyprland.
+MOVING_LEAVES = ("windowsMove", "zoomFactor", "monitorAdded")
+
+# Borne de hl.curve : Hyprland 0.56.2 refuse une masse, une raideur ou un amortissement inférieur ou égal à 0,5.
+SPRING_MIN = 0.5
+
 
 def _percent(style: str) -> bool:
     """Pourcentage final d'un style, par exemple « popin 90% ».
@@ -46,10 +53,13 @@ def still(leaf: str, style: str) -> bool:
     """Absence de mouvement d'un style, compte tenu du style par défaut de Hyprland.
 
     Entrées : leaf — nom de l'élément ; style — style demandé, vide s'il n'y en a pas.
-    Sortie : vrai si l'élément ne se déplace pas et ne change pas d'échelle.
-    Erreurs : aucune. Dépendances : STILL, MOVING_DEFAULT.
+    Sortie : vrai si l'élément ne se déplace pas et ne change pas d'échelle ; « popin 100% » part de la
+             taille finale et n'en change donc pas.
+    Erreurs : aucune. Dépendances : STILL, MOVING_DEFAULT, MOVING_LEAVES.
     """
-    return style in STILL and not (style == "" and leaf.startswith(MOVING_DEFAULT))
+    if leaf in MOVING_LEAVES:
+        return False
+    return style == "popin 100%" or (style in STILL and not (style == "" and leaf.startswith(MOVING_DEFAULT)))
 
 
 def style_error(leaf: str, style: str) -> str:

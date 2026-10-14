@@ -17,16 +17,16 @@
     "state": {
       "usage": "Changement d'état sur place : survol, focus, pression, sélection.",
       "in": {
-        "mass": 0.5,
-        "stiffness": 1100,
-        "dampening": 50,
+        "mass": 1,
+        "stiffness": 2200.0,
+        "dampening": 100.0,
         "zeta": 1.07,
         "settle_ms": 164
       },
       "out": {
-        "mass": 0.5,
-        "stiffness": 2244.9,
-        "dampening": 71.43,
+        "mass": 1,
+        "stiffness": 4489.8,
+        "dampening": 142.86,
         "zeta": 1.07,
         "settle_ms": 115
       },
@@ -36,14 +36,14 @@
     "reveal": {
       "usage": "Apparition d'éléments dans le flux.",
       "in": {
-        "mass": 1.0,
-        "stiffness": 600,
-        "dampening": 50,
+        "mass": 1,
+        "stiffness": 600.0,
+        "dampening": 50.0,
         "zeta": 1.02,
         "settle_ms": 286
       },
       "out": {
-        "mass": 1.0,
+        "mass": 1,
         "stiffness": 1224.5,
         "dampening": 71.43,
         "zeta": 1.02,
@@ -59,14 +59,14 @@
     "overlay": {
       "usage": "Entrée d'une surface de couche 3.",
       "in": {
-        "mass": 1.0,
-        "stiffness": 400,
-        "dampening": 44,
+        "mass": 1,
+        "stiffness": 400.0,
+        "dampening": 44.0,
         "zeta": 1.1,
         "settle_ms": 402
       },
       "out": {
-        "mass": 1.0,
+        "mass": 1,
         "stiffness": 816.3,
         "dampening": 62.86,
         "zeta": 1.1,
@@ -78,16 +78,16 @@
     "window": {
       "usage": "Ouverture et fermeture de fenêtre.",
       "in": {
-        "mass": 0.7,
-        "stiffness": 300,
-        "dampening": 27,
+        "mass": 1,
+        "stiffness": 428.6,
+        "dampening": 38.57,
         "zeta": 0.93,
         "settle_ms": 274
       },
       "out": {
-        "mass": 0.7,
-        "stiffness": 612.2,
-        "dampening": 38.57,
+        "mass": 1,
+        "stiffness": 874.7,
+        "dampening": 55.1,
         "zeta": 0.93,
         "settle_ms": 192
       },
@@ -97,16 +97,16 @@
     "reflow": {
       "usage": "Réagencement du tuilage.",
       "in": {
-        "mass": 0.8,
-        "stiffness": 500,
-        "dampening": 40,
+        "mass": 1,
+        "stiffness": 625.0,
+        "dampening": 50.0,
         "zeta": 1.0,
         "settle_ms": 269
       },
       "out": {
-        "mass": 0.8,
-        "stiffness": 500,
-        "dampening": 40,
+        "mass": 1,
+        "stiffness": 625.0,
+        "dampening": 50.0,
         "zeta": 1.0,
         "settle_ms": 269
       },
@@ -116,14 +116,14 @@
     "spectacle": {
       "usage": "Moments sans contenu.",
       "in": {
-        "mass": 1.0,
-        "stiffness": 150,
-        "dampening": 25,
+        "mass": 1,
+        "stiffness": 150.0,
+        "dampening": 25.0,
         "zeta": 1.02,
         "settle_ms": 569
       },
       "out": {
-        "mass": 1.0,
+        "mass": 1,
         "stiffness": 306.1,
         "dampening": 35.71,
         "zeta": 1.02,
@@ -135,16 +135,16 @@
     "navigate": {
       "usage": "Changement de bureau : la vue glisse d'un bureau à l'autre.",
       "in": {
-        "mass": 0.3,
-        "stiffness": 600,
-        "dampening": 30,
+        "mass": 1,
+        "stiffness": 2000.0,
+        "dampening": 100.0,
         "zeta": 1.12,
         "settle_ms": 186
       },
       "out": {
-        "mass": 0.3,
-        "stiffness": 600,
-        "dampening": 30,
+        "mass": 1,
+        "stiffness": 2000.0,
+        "dampening": 100.0,
         "zeta": 1.12,
         "settle_ms": 186
       },

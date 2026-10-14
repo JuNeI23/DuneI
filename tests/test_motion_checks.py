@@ -120,6 +120,49 @@ class ErrorsTest(unittest.TestCase):
         r = raw(); del r["hyprland"]["workspacesIn"]["style"]; del r["hyprland_reduced"]["workspacesIn"]
         self.check(r, "workspacesIn", "par défaut")
 
+    def test_curve_below_hyprland_bound(self):
+        r = raw(); r["transitions"]["spectacle"]["stiffness"] = 0.4
+        self.check(r, "transitions.spectacle", "0.5")
+
+    def test_reduced_moving_leaf_enabled(self):
+        for leaf in ("zoomFactor", "monitorAdded", "windowsMove"):
+            with self.subTest(leaf=leaf):
+                r = raw(); r["hyprland_reduced"].pop(leaf, None)
+                self.check(r, leaf, "désactivé")
+
+    def test_reduced_override_moves(self):
+        r = raw(); r["hyprland_reduced"]["workspacesIn"]["style"] = "slide"
+        self.check(r, "hyprland_reduced.workspacesIn", "déplace")
+
+    def test_reduced_override_without_style(self):
+        r = raw(); r["hyprland_reduced"]["windowsIn"] = {}
+        self.check(r, "hyprland_reduced.windowsIn", "déplace")
+
+    def test_wrong_types(self):
+        cases = [(("transitions", "state", "stiffness"), "1100"), (("rules", "exit_ratio"), "0.7"),
+                 (("rules", "reduced_fade_ms"), "100"), (("rules", "overshoot_allowed"), 1),
+                 (("hyprland", "border", "use"), ["state"]), (("hyprland", "windowsIn", "style"), 90),
+                 (("hyprland_reduced", "windowsIn", "style"), 90), (("hyprland", "windowsIn", "enabled"), "false"),
+                 (("transitions", "state", "overshoot"), "yes")]
+        for path, value in cases:
+            with self.subTest(path=path, value=value):
+                r = raw(); node = r
+                for key in path[:-1]:
+                    node = node[key]
+                node[path[-1]] = value
+                self.check(r, path[-2], path[-1], "type")
+
+    def test_value_rounding_to_zero(self):
+        r = raw(); r["transitions"]["state"]["mass"] = 0.001
+        self.check(r, "transitions.state", "mass", "strictement")
+
+    def test_unknown_keys(self):
+        for section, name, key in [("hyprland", "windowsOut", "phse"), ("transitions", "state", "overshot"),
+                                   ("hyprland_reduced", "windowsIn", "stlye")]:
+            with self.subTest(key=key):
+                r = raw(); r[section][name][key] = "x"
+                self.check(r, f"{section}.{name}", key, "inconnue")
+
 
 class WarningsTest(unittest.TestCase):
     """Avertissements non bloquants."""

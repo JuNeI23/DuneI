@@ -104,6 +104,8 @@ hl.animation({ leaf = "windowsIn", enabled = true, speed = 1, spring = "dunei-wi
 Hyprland 0.56.2 (installé) attend la clé **`dampening`** et l'argument `spring =` ;
 le wiki récent écrit `damping` et `curve =`. À revérifier à chaque mise à jour.
 `speed` n'a aucun effet sur un ressort (D13) : le générateur écrit `speed = 1`.
+Hyprland 0.56.2 refuse une masse, une raideur ou un amortissement inférieur ou égal à 0,5 : le
+générateur ramène chaque ressort à une masse de 1, sans changer le mouvement (D20).
 
 ## Exporter
 

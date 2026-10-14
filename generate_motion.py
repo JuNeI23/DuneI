@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import argparse
 import sys
-import tomllib
 from pathlib import Path
 
 from dunei_motion.checks import errors, warnings
@@ -35,7 +34,7 @@ def main() -> int:
 
     try:
         raw = load(args.src)
-    except (OSError, tomllib.TOMLDecodeError) as e:
+    except (OSError, ValueError) as e:   # ValueError couvre la syntaxe TOML et l'encodage.
         print(f"source illisible : {args.src} ({e})", file=sys.stderr)
         return 1
 

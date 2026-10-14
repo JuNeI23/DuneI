@@ -243,7 +243,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L1-20 | C | Écrit | Chaîne de repli des polices |
 | L1-21 | C | Configuré | Brancher la génération dans la chaîne de construction |
 | L1-22 | C | Écrit | Mettre `generate_tokens.py` et `extract_hue.py` en conformité avec la bible — écarts consignés au journal — **fait (D11)** |
-| L1-23 | C | Écrit | Concevoir et écrire `motion.toml` et `generate_motion.py` — **fait (D14 à D19)** : paquet `dunei_motion/`, cibles Lua et JSON, contrôles bloquants, `make motion` |
+| L1-23 | C | Écrit | Concevoir et écrire `motion.toml` et `generate_motion.py` — **fait (D14 à D20)** : paquet `dunei_motion/`, cibles Lua et JSON, contrôles bloquants, `make motion` |
 | L1-24 | C | Écrit | Cible Hyprland en Lua pour les deux générateurs — **fait** (`hyprland-tokens.lua`, `motion.lua`) ; le branchement dans la configuration réelle reste à faire |
 
 ### Lot 2 — coque vitale

@@ -219,4 +219,22 @@ bureau spécial, par exemple) ; un élément de fenêtre ou de bureau sans style
 dans `[hyprland_reduced]`, sinon la génération est refusée. Raison : la bible interdit tout déplacement en
 mouvement réduit, et le bureau spécial aurait glissé. Arbitré pendant l'implémentation, le 2026-10-14.
 
+### D20 · Bornes de Hyprland et mouvement réduit vérifié sur la sortie
+
+1. **Masse ramenée à 1.** `hl.curve` de Hyprland 0.56.2 refuse une masse, une raideur ou un amortissement
+   inférieur ou égal à 0,5 ; `state` (m 0,50) et `navigate` (m 0,30) auraient été rejetées, entraînant neuf
+   animations, dont `global`. Multiplier m, k et c par un même facteur ne change pas le mouvement : le
+   générateur émet donc m 1, k ÷ m et c ÷ m (`navigate` devient m 1, k 2000, c 100), et `motion.toml` garde
+   les valeurs du banc. Toute courbe émise sous la borne est refusée à la génération.
+2. **Immobilité contrôlée sur la sortie.** Le contrôle du mouvement réduit porte sur chaque animation
+   réduite telle qu'elle sera émise, et non plus sur la seule source. `windowsMove`, `zoomFactor` et
+   `monitorAdded`, qui déplacent ou agrandissent quel que soit leur style, doivent y être désactivés ;
+   `monitorAdded` l'est désormais, car il zoomait tout l'écran de 2× à 1× à l'arrivée d'un écran.
+3. **Clés et types contrôlés.** Une clé inconnue (`phse`, `stlye`) ou une valeur du mauvais type (`"1100"`)
+   produit un message au lieu d'être ignorée ou de provoquer une trace Python ; un fichier mal encodé est
+   signalé comme illisible.
+
+Raison : constats de la relecture finale de la branche, vérifiés dans la source de Hyprland v0.56.2
+(`LuaBindingsConfigRules.cpp`, `Monitor.cpp`). Arbitré pendant l'implémentation, le 2026-10-14.
+
 *Touché : motion.toml, dunei_motion/, generate_motion.py, generated/motion.*, config/hypr/modules/motion.lua, Makefile, tests/, bible ch. 6, backlog, carnet, notes de direction, proto/motion/README.md, spec et plan du mouvement.*

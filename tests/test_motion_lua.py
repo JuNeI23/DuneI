@@ -12,11 +12,16 @@ from dunei_motion.model import load, resolve
 ROOT = Path(__file__).resolve().parent.parent
 LUA = shutil.which("lua") or shutil.which("luajit")
 
-# Sonde : remplace hl, applique le module, puis résume les appels sur une ligne.
+# Sonde : remplace hl par une version qui applique les bornes de Hyprland 0.56.2, applique le module,
+# puis résume les appels sur une ligne.
 PROBE = r"""
 local curves, anims = {}, {}
 hl = {
-    curve = function(name, c) curves[name] = c end,
+    curve = function(name, c)
+        -- Hyprland 0.56.2 refuse la courbe si la masse, la raideur ou l'amortissement vaut 0,5 ou moins.
+        assert(c.mass > 0.5 and c.stiffness > 0.5 and c.dampening > 0.5, name .. " : valeur refusée par Hyprland")
+        curves[name] = c
+    end,
     animation = function(a) anims[#anims + 1] = a end,
 }
 require("modules.motion").apply(REDUCED)

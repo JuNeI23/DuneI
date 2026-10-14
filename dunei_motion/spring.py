@@ -55,6 +55,17 @@ def simulate(s: dict) -> tuple[int, float]:
     return round(settle * STEP * 1000), round(max(0.0, peak - 1) * 100, 2)
 
 
+def unit_mass(s: dict) -> dict:
+    """Même ressort ramené à une masse de 1 : k ÷ m et c ÷ m décrivent exactement le même mouvement.
+
+    Hyprland 0.56.2 refuse une masse inférieure ou égale à 0,5 ; le banc, lui, en autorise.
+    Entrée : s — ressort à la masse strictement positive.
+    Sortie : ressort arrondi de masse 1. Erreurs : ZeroDivisionError si la masse est nulle.
+    Dépendances : spring.
+    """
+    return spring(1, s["stiffness"] / s["mass"], s["dampening"] / s["mass"])
+
+
 def exit_spring(s: dict, ratio: float) -> dict:
     """Ressort de sortie — le même mouvement, accéléré d'un facteur 1/ratio.
 

@@ -19,7 +19,9 @@ class ModelTest(unittest.TestCase):
         curves = self.model["curves"]
         self.assertEqual(len(curves), 15)
         self.assertEqual(list(curves), sorted(curves))
-        self.assertEqual(curves["dunei-state-out"], {"mass": 0.5, "stiffness": 2244.9, "dampening": 71.43})
+        self.assertEqual(curves["dunei-state-out"], {"mass": 1, "stiffness": 4489.8, "dampening": 142.86})
+        self.assertEqual(curves["dunei-navigate-in"], {"mass": 1, "stiffness": 2000, "dampening": 100})
+        self.assertTrue(all(c["mass"] == 1 for c in curves.values()))
         self.assertEqual(curves["dunei-reduced"], {"mass": 1, "stiffness": 4406.3, "dampening": 132.76})
         self.assertEqual(curves["dunei-reflow-in"], curves["dunei-reflow-out"])
 
@@ -51,6 +53,7 @@ class ModelTest(unittest.TestCase):
         self.assertEqual(reduced["borderangle"], {"leaf": "borderangle", "enabled": False})
         self.assertNotIn("style", reduced["fadeIn"])
         self.assertEqual(reduced["specialWorkspaceIn"]["style"], "fade")
+        self.assertEqual(reduced["monitorAdded"], {"leaf": "monitorAdded", "enabled": False})
         springs = {a["spring"] for a in reduced.values() if a["enabled"]}
         self.assertEqual(springs, {"dunei-reduced"})
 
