@@ -260,4 +260,12 @@ travail secondaire et un `hyprland.conf` orphelin (relecture finale, vérifiée 
 Raison : garder la machine utilisable entre deux features tout en versionnant le point d'entrée dès
 maintenant. Décidé par Nicolas (options A et A du brainstorming du 2026-10-14).
 
+Validation à l'écran (2026-10-14) : bordures, coins, gouttières, ouverture et fermeture des fenêtres,
+glissement des bureaux, fondu du bureau spécial et lanceur validés par Nicolas, sans retouche de
+`motion.toml`. Un délai perçu à l'ouverture des fenêtres a été examiné : il persiste avec les
+animations `windowsIn` et `fadeIn` coupées, et vient donc du temps que met l'application à produire sa
+première image, non de DuneI. Pour mémoire, Hyprland intègre les ressorts de façon analytique et ignore
+`speed` pour eux ; `dunei-window-in` atteint 90 % en 183 ms à 60 Hz, contre 200 ms pour l'ancien
+ressort générique.
+
 *Touché : config/hypr/hyprland.lua, deploy.py, Makefile, tests/, carnet, backlog, notes de direction, bible (annexe).*
