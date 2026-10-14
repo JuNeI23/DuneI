@@ -238,3 +238,22 @@ Raison : constats de la relecture finale de la branche, vérifiés dans la sourc
 (`LuaBindingsConfigRules.cpp`, `Monitor.cpp`). Arbitré pendant l'implémentation, le 2026-10-14.
 
 *Touché : motion.toml, dunei_motion/, generate_motion.py, generated/motion.*, config/hypr/modules/motion.lua, Makefile, tests/, bible ch. 6, backlog, carnet, notes de direction, proto/motion/README.md, spec et plan du mouvement.*
+
+## 2026-10-14 — Branchement Hyprland (L1-24)
+
+### D21 · Le point d'entrée DuneI charge la configuration générique en premier
+
+`~/.config/hypr/hyprland.lua` devient un lien vers `config/hypr/hyprland.lua`, qui charge d'abord
+`generique.lua`, l'ancienne configuration générique de la machine, puis les jetons, puis le mouvement.
+Ce qui est chargé en dernier l'emporte : DuneI remplace ce qu'il couvre, et le reste continue de
+fonctionner. `generique.lua` reste hors du dépôt, conformément à la règle « rien de la machine bricolée
+n'entre par copie » ; chaque feature en retire le morceau qu'elle remplace, jusqu'à sa disparition.
+
+La bascule est faite une seule fois par `make install`, de façon atomique : Hyprland recharge seul à
+chaque modification, y compris de la cible d'un lien, et ne doit jamais trouver `hyprland.lua` absent.
+Le script refuse toute situation qu'il n'a pas créée lui-même avant de modifier quoi que ce soit.
+
+Raison : garder la machine utilisable entre deux features tout en versionnant le point d'entrée dès
+maintenant. Décidé par Nicolas (options A et A du brainstorming du 2026-10-14).
+
+*Touché : config/hypr/hyprland.lua, deploy.py, Makefile, tests/, carnet, backlog, notes de direction, bible (annexe).*

@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas
 
-Document normatif. Version 0.6. Historique en fin de document.
+Document normatif. Version 0.6.1. Historique en fin de document.
 
 ## Comment lire ce document
 
@@ -715,8 +715,9 @@ Chacun correspond à une erreur observée dans des systèmes existants.
 | `motion.toml` | Développeurs | Source de vérité — mouvement |
 | `generate_tokens.py` | Développeurs | Point d'entrée. Génère CSS, JSON, schéma Qt, GTK 3, GTK 4, portail et module Lua du compositeur (`hyprland-tokens.lua`) |
 | `dunei_theme/` | Développeurs | La logique : couleurs, modèle, contrôles, une cible par module |
-| `Makefile` | Développeurs | `tokens`, `motion`, `test`, `check`, `golden` |
+| `Makefile` | Développeurs | `tokens`, `motion`, `test`, `check`, `golden`, `install` |
 | `generate_motion.py` | Développeurs | Génère le module Lua du compositeur et le JSON de la coque, après contrôle des règles du chapitre 6 |
+| `deploy.py` | Développeurs | Installe la configuration Hyprland dans `~/.config/hypr` : liens vers `config/`, copies de `generated/`, bascule depuis la configuration générique |
 | `extract_hue.py` | Développeurs | Extraction de teinte : lit wal ou une image ; `--json` et code 3 si achromatique |
 | `fonts.conf` | Développeurs | Indirection des noms de polices |
 | `carnet-installation.md` | Intégrateur | Ce qui est à installer, et selon quels critères |
@@ -797,3 +798,4 @@ Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si 
 | 0.5.1 | 2026-10-12 | Échelon 10 à 0,935 ; sémantiques jamais en fond de texte ; liens = signal court (D12) |
 | 0.5 | 2026-10-12 | Échelons 10 et 11 relevés (0,93 / 0,97) ; texte quasi blanc sur l'accent ; sémantiques hors plafond ; rabattement à teinte préservée ; extraction paramétrée et achromatique signalé ; contrôles APCA ; annexes C et D |
 | 0.6 | 2026-10-14 | Mouvement : septième transition `navigate`, symétrique comme `reflow` ; `generate_motion.py` produit Lua et JSON (D14 à D20) |
+| 0.6.1 | 2026-10-14 | Annexe des fichiers : `deploy.py` et la cible `install` (D21) |

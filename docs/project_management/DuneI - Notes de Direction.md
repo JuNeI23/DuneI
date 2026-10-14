@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas — révisée le 12 octobre 2026
 
-Version 1.3. Historique en fin de document.
+Version 1.4. Historique en fin de document.
 
 *Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent trente-sept lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
 
@@ -173,6 +173,11 @@ S'il refuse quelque chose de conforme, c'est que la bible est incomplète — et
 
 **Mise à jour — 14 octobre 2026.** Mouvement (L1-23) : `motion.toml` porte les sept transitions réglées au ressenti dans le banc `proto/motion/` ; `generate_motion.py` en vérifie les règles et produit `motion.lua` et `motion.json`. Prochaine étape : brancher `hyprland-tokens.lua` et le mouvement dans la configuration Hyprland réelle, à valider à l'écran.
 
+**Branchement Hyprland — 14 octobre 2026.** La session de `caladan` lit désormais le point d'entrée
+DuneI : la configuration générique, renommée `generique.lua`, est chargée en premier, puis les jetons et
+le mouvement générés. `make install` déploie et bascule ; chaque feature suivante retire un morceau de
+`generique.lua`. Prochaines étapes du lot 1 : L1-19 (`fonts.conf`), puis l'écran et l'échelle.
+
 **Ce qui reste sur la chaîne de thème n'est plus de la conception, c'est du branchement** — connecter les cibles générées à des logiciels réels et vérifier le rechargement à chaud sur une session vivante. Lots 2 et 4.
 
 **Prêt à démarrer.** Le lot 1, en commençant par remettre la chaîne de thème en conformité (voir ci-dessus). Point de départ : Arch + Hyprland 0.56 en configuration générique, **configurée en Lua**. La configuration générique reste en place et chaque feature en remplace un morceau — aucun choix logiciel du carnet n'est figé avant sa feature.
@@ -202,6 +207,7 @@ S'il refuse quelque chose de conforme, c'est que la bible est incomplète — et
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-10 | Version initiale |
+| 1.4 | 2026-10-14 | Session branchée sur DuneI ; configuration générique chargée en premier |
 | 1.3 | 2026-10-14 | Mouvement écrit et vérifié ; reste le branchement dans Hyprland |
 | 1.2 | 2026-10-12 | Chaîne de thème conforme ; reste le mouvement |
 | 1.1 | 2026-10-12 | État réel de la chaîne de thème corrigé (motion et cible Hyprland manquants, écarts relevés) ; distribution et compositeur tranchés ; configuration Hyprland en Lua ; méthode « générique remplacée feature par feature » |
