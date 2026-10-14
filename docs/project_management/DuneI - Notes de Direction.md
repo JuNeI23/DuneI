@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas — révisée le 14 octobre 2026
 
-Version 1.6. Historique en fin de document.
+Version 1.7. Historique en fin de document.
 
 *Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent trente-sept lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
 
@@ -190,9 +190,16 @@ commune n'en connaît aucun. Un écran inconnu étend le bureau à droite, véri
 virtuelle. L'écran de `caladan` passe à l'échelle 1,25 (1536 × 960) : 4/3, préférée à l'écran, a été écartée parce qu'elle
 brise la règle des pixels entiers de la bible. Les variables
 d'échelle de Qt prévues par le carnet sont retirées : elles sont sans effet sous Wayland (D24 à D27).
-Le couvercle avec écran externe rejoint la veille (L1-09). Prochaine étape du lot 1 : le fenêtrage,
-L1-12 à L1-16 — tuilage, fenêtre active et inactive, décorations, flottant, bureaux —, à découper au
-brainstorming.
+Le couvercle avec écran externe rejoint la veille (L1-09).
+
+**Fenêtrage — 14 octobre 2026.** Le tuilage reste en dwindle, scrolling ayant été essayé puis rejeté à
+l'usage. Les fenêtres n'ont plus de bordure : sur le modèle de macOS, la fenêtre active se signalera au
+lot 2 par le modificateur `inactive` (L2-03), qui devient son seul repère ; d'ici là, rien ne
+l'indique. Les fenêtres flottantes portent une ombre, une seule couche faute de mieux dans Hyprland,
+réglée à l'écran ; le plein écran n'a ni coins ni ombre ; Qt ne dessine plus de barre de titre. Ces
+valeurs viennent des jetons, dont un second fichier généré tire les règles de fenêtre.
+`generique.lua` perd toute son apparence (D28 à D31). Prochaine étape du lot 1 : **la feature
+raccourcis (L1-16)**, qui rapatrie le clavier, les gestes et les bureaux virtuels de `generique.lua`.
 
 **Ce qui reste sur la chaîne de thème n'est plus de la conception, c'est du branchement** — connecter les cibles générées à des logiciels réels et vérifier le rechargement à chaud sur une session vivante. Lots 2 et 4.
 
@@ -223,6 +230,7 @@ brainstorming.
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-10 | Version initiale |
+| 1.7 | 2026-10-14 | Fenêtrage fait (L1-12 à L1-15) ; reste les raccourcis et les bureaux (L1-16) |
 | 1.6 | 2026-10-14 | Écran et échelle faits (L1-17), échelle 1,25 ; reste le fenêtrage |
 | 1.5 | 2026-10-14 | Polices résolues (L1-19, L1-20), graisse d'accentuation 550 ; reste l'écran et l'échelle |
 | 1.4 | 2026-10-14 | Session branchée sur DuneI ; configuration générique chargée en premier |

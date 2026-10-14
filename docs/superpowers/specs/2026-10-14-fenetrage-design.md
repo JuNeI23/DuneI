@@ -1,6 +1,6 @@
 # Fenêtrage : disposition, bordure, couche 2 et décorations
 
-Version 0.1 · 2026-10-14 · backlog L1-12 à L1-15 · carnet « Géométrie », « Fenêtre active et inactive », « Variables d'environnement » · statut : à relire
+Version 0.2 · 2026-10-14 · backlog L1-12 à L1-15 · carnet « Géométrie », « Fenêtre active et inactive », « Variables d'environnement » · statut : validée, implémentée
 
 ## 1. Objet
 
@@ -220,3 +220,4 @@ si une existe ; à défaut, le point est reporté au lot 3 et noté au carnet.
 | Version | Date | Changement |
 | --- | --- | --- |
 | 0.1 | 2026-10-14 | Version initiale, issue du brainstorming |
+| 0.2 | 2026-10-14 | Implémentée ; critères vérifiés sur la session ; contrôles bloquants placés dans l'émetteur Hyprland |

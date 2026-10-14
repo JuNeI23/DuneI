@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas
 
-Document normatif. Version 0.6.3. Historique en fin de document.
+Document normatif. Version 0.7. Historique en fin de document.
 
 ## Comment lire ce document
 
@@ -159,7 +159,7 @@ Un multiplicateur unique bascule l'ensemble. Aucun composant ne connaît la dens
 
 ### Rayons
 
-Fenêtre 12 · panneau 10 · contrôle 6 · minuscule 4.
+Fenêtre 12 · panneau 10 · contrôle 6 · minuscule 4 · plein écran 0.
 
 **Règle d'imbrication :** `rayon_interne = max(0, rayon_externe − padding)`.
 
@@ -276,6 +276,8 @@ S'applique en cascade et met à zéro le chroma des accents.
 
 > Justification : *la couleur signale où arrivent les frappes.*
 
+**C'est le seul repère de la fenêtre active.** Aucun contour n'est tracé autour des fenêtres : comme sur macOS, la fenêtre active se reconnaît à ce que ses accents gardent leur couleur.
+
 ### Clavier
 
 **Tout est atteignable à la tabulation, boutons compris, par défaut** — sans réglage d'accessibilité à activer. Principe 7.
@@ -284,8 +286,8 @@ S'applique en cascade et met à zéro le chroma des accents.
 
 ### Trois couches
 
-- **Couche 1 — tuilage.** Aucune ombre, aucune superposition. La hiérarchie se lit par les gouttières et par le traitement de la fenêtre active.
-- **Couche 2 — flottant applicatif.** Dialogues, palettes, médias, jeux. Ombre douce. Flottent au-dessus sans suspendre le tuilage.
+- **Couche 1 — tuilage.** Disposition dwindle. Aucune bordure, aucune ombre, aucune superposition. La hiérarchie se lit par les gouttières et par le chrome de la fenêtre active, qui garde ses accents.
+- **Couche 2 — flottant applicatif.** Dialogues, palettes, médias, jeux. Ombre douce, une seule couche. Flottent au-dessus sans suspendre le tuilage.
 - **Couche 3 — superposition système.** Lanceur, sélecteurs, menus, notifications, verrouillage.
 
 ### Deux familles d'overlay
@@ -517,11 +519,11 @@ Cela ne change rien aux décisions du chapitre 10 : les deux chaînes de génér
 
 ### Décorations de fenêtre
 
-En tuilage, le titre d'une fenêtre est largement redondant : la disposition indique déjà où l'on est, et la fenêtre active porte déjà notre bordure accentuée.
+En tuilage, le titre d'une fenêtre est largement redondant : la disposition indique déjà où l'on est, et la fenêtre active se reconnaît à ses accents, que les fenêtres inactives perdent.
 
 - **Les barres de titre côté serveur sont masquées.** Le compositeur ne dessine pas de titre. L'identité de la fenêtre vient de la tuile.
 - **Les en-têtes côté client ne peuvent pas être supprimés** : ils contiennent les commandes de l'application. Ils sont donc traités comme du **contenu applicatif**, pas comme du chrome système — cohérent avec « le cadre est à nous, le contenu est à eux ».
-- **À capacités égales, préférer les applications à en-tête compact.** Un en-tête haut dans une tuile déjà bordée gaspille deux fois la même hauteur.
+- **À capacités égales, préférer les applications à en-tête compact.** Un en-tête haut dans une tuile gaspille deux fois la même hauteur.
 
 ### Les catégories à pourvoir
 
@@ -701,7 +703,8 @@ Chacun correspond à une erreur observée dans des systèmes existants.
 | Recoloration symbolique côté Qt | À vérifier au montage |
 | Dossiers étiquetés et palette catégorielle | Arbitrage |
 | Écrans système détaillés | Chapitre non écrit |
-| Courbure des coins (`rounding_power`) et flou des fenêtres tuilées | Aucun token ; le compositeur garde ses valeurs par défaut |
+| Flou des overlays et de la couche 1 | Lot 2, avec l'opacité du voile ; invisible tant que les fenêtres sont opaques (D31) |
+| Ombre courte dans la gouttière de la fenêtre active | Piste du lot 2, non étudiée (D29) |
 | Parité de la gouttière | Hyprland applique la demi-gouttière de chaque côté : une gouttière impaire serait arrondie sans contrôle |
 | `shade_opacity` (0,36) et `surface-edge-shadow` (0,12) | Deux opacités d'ombre distinctes, à rapprocher ou non |
 | Fonds pleins sémantiques côté GTK | libadwaita remplit boutons destructifs et bandeaux avec les sémantiques ; texte illisible (Lc 32 sur `error` en sombre). À traiter avec la cible GTK 4, L4-03 |
@@ -714,12 +717,15 @@ Chacun correspond à une erreur observée dans des systèmes existants.
 | `bible-design.md` | **Développeurs** | Ce document. Toutes les règles, toutes les annexes |
 | `tokens.toml` | Développeurs | Source de vérité — couleur, dimensions, matière |
 | `motion.toml` | Développeurs | Source de vérité — mouvement |
-| `generate_tokens.py` | Développeurs | Point d'entrée. Génère CSS, JSON, schéma Qt, GTK 3, GTK 4, portail et module Lua du compositeur (`hyprland-tokens.lua`) |
+| `generate_tokens.py` | Développeurs | Point d'entrée. Génère CSS, JSON, schéma Qt, GTK 3, GTK 4, portail et modules Lua du compositeur (`hyprland-tokens.lua`, `hyprland-rules.lua`) |
 | `dunei_theme/` | Développeurs | La logique : couleurs, modèle, contrôles, une cible par module |
 | `Makefile` | Développeurs | `tokens`, `motion`, `test`, `check`, `golden`, `install` |
 | `generate_motion.py` | Développeurs | Génère le module Lua du compositeur et le JSON de la coque, après contrôle des règles du chapitre 6 |
 | `deploy.py` | Développeurs | Installe la configuration dans `~/.config`, destination par destination : Hyprland (liens vers `config/`, copies de `generated/`, bascule depuis la configuration générique) et fontconfig (`conf.d/50-dunei.conf`). Les dossiers `config/hypr/modules` et `config/hypr/machines` sont liés |
 | `config/hypr/modules/ecrans.lua` | Développeurs | Règles d'écran communes : écrans inconnus étendus à droite, XWayland. Aucun matériel nommé |
+| `config/hypr/modules/env.lua` | Développeurs | Variables transmises aux clients : décorations Qt retirées |
+| `config/hypr/modules/fenetres.lua` | Développeurs | Disposition du tuilage : dwindle, découpes figées |
+| `config/hypr/modules/regles.lua` | Développeurs | Règles de fenêtre : apparence générée (couche 1, plein écran), puis comportement |
 | `config/hypr/modules/machine.lua` | Développeurs | Lit `/etc/hostname` et charge le fragment de la machine en dernier |
 | `config/hypr/machines/` | Développeurs | Un fichier par machine, le seul endroit où le matériel est nommé : sorties, échelle |
 | `extract_hue.py` | Développeurs | Extraction de teinte : lit wal ou une image ; `--json` et code 3 si achromatique |
@@ -755,7 +761,7 @@ Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si 
 | Composant | Élév. | Primitives | Transition | Règles particulières |
 | --- | --- | --- | --- | --- |
 | Bureau | E0 | `surface` | `spectacle` | Registre de spectacle |
-| Fenêtre tuilée | E1 | `surface` | `reflow` | **Aucune ombre.** Gouttière 8px, rayon 12. Inactive → modificateur `container_inactive` |
+| Fenêtre tuilée | E1 | `surface` | `reflow` | **Aucune ombre, aucune bordure.** Gouttière 8px, rayon 12. Fenêtre active : les autres portent le modificateur `container_inactive` |
 | Barre système | E2 | `surface` + `text` + `interactive` | `state` | 32px. Sheen + liseré, pas d'ombre. Porte la couleur franche du thème machine |
 | Barre latérale | E2 | `surface` + `row` | `state` | 240px, redimensionnable 180–400 par pas de 4. Sous 480px de conteneur → icônes seules |
 | En-tête de panneau | E2 | `surface` + `text` | — | Sheen autorisé : hauteur sous 80px |
@@ -773,10 +779,10 @@ Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si 
 
 | Composant | Élév. | Primitives | Transition | Règles particulières |
 | --- | --- | --- | --- | --- |
-| Fenêtre flottante | E1 | `surface` | `window` | Ombre 2 couches. Seul dépassement autorisé du système |
+| Fenêtre flottante | E1 | `surface` | `window` | Une ombre : portée 16, décalage 4, noir à 36 %. Seul dépassement autorisé du système |
 | Dialogue modal | E3 | `overlay` + `surface` + `field` + `interactive` | `overlay` | Attention : voile **sur sa fenêtre parente seulement**, pas sur l'écran |
 | Palette flottante | E3 | `surface` + `interactive` | `window` | Contextuel : ombre seule, pas de voile |
-| Média plein écran | E0 | `surface` | `spectacle` | Tous effets désactivés. Neutre colorimétrique pur |
+| Média plein écran | E0 | `surface` | `spectacle` | Tous effets désactivés : rayon 0, aucune ombre. Neutre colorimétrique pur |
 | Panneau de thème | E1 | `surface` + `interactive` + `row` | `window` | Deux contrôles seulement : teinte et chroma. Aperçu à chaud. Écrit dans la surcharge |
 
 ### Couche 3 — la superposition système
@@ -805,3 +811,4 @@ Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si 
 | 0.6.1 | 2026-10-14 | Annexe des fichiers : `deploy.py` et la cible `install` (D21) |
 | 0.6.2 | 2026-10-14 | Typographie : graisse d'accentuation 550 ; Source Code Pro patchée Nerd en version statique ; `fonts.conf` généré et déployé ; hinting à l'annexe C (D22, D23) |
 | 0.6.3 | 2026-10-14 | Annexe des fichiers : modules `ecrans.lua` et `machine.lua`, dossier `machines/` (D24, D25) ; annexe C, échelle de référence 1,25 (D27) |
+| 0.7 | 2026-10-14 | Fenêtrage : plus de bordure, la fenêtre active se signale par le modificateur `inactive` ; dwindle ; ombre des flottantes à une couche ; rayon plein écran 0 ; annexe C, coins fermés et flou au lot 2 ; annexe D, modules `env`, `fenetres`, `regles` (D28 à D31) |
