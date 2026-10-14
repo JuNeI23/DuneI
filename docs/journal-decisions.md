@@ -269,3 +269,46 @@ première image, non de DuneI. Pour mémoire, Hyprland intègre les ressorts de 
 ressort générique.
 
 *Touché : config/hypr/hyprland.lua, deploy.py, Makefile, tests/, carnet, backlog, notes de direction, bible (annexe).*
+
+## 2026-10-14 — Polices (L1-19, L1-20)
+
+### D22 · `fonts.conf` est généré depuis les jetons
+
+`tokens.toml` porte, à côté des noms canoniques, les familles réellement installées (`[type.installed]`)
+et le rendu (`[type.rendering]`). La cible `fonts.conf` de `dunei_theme` en tire l'indirection, la
+chaîne de repli et le rendu ; `make install` la copie vers
+`$XDG_CONFIG_HOME/fontconfig/conf.d/50-dunei.conf`, lu avant les préférences d'Arch, ce qui laisse
+`fontconfig/fonts.conf` libre pour des réglages personnels. Une valeur de rendu hors des constantes de
+fontconfig arrête la génération sans rien écrire. `deploy.py` gère désormais une liste de destinations,
+toutes inspectées avant la moindre modification.
+
+Raison : avant cette décision, `Source Code Pro` était servi par Noto Sans Mono, `Source Sans 3` par sa
+version statique, et `Noto Sans CJK` n'existait pas, sans aucun message. Une seule source empêche les
+noms de dériver, et un test interroge le vrai `fc-match`. Décidé par Nicolas (brainstorming du
+2026-10-14).
+
+### D23 · Choix des familles, du rendu et de la graisse d'accentuation
+
+- **Monospace** : `SauceCodePro Nerd Font Mono`, qui garde une cellule par pictogramme.
+- **Familles génériques** : `sans-serif` et `monospace` mènent aux familles DuneI ; `serif` n'est pas
+  touché, pour qu'un document qui demande du serif le garde.
+- **CJK** : `Noto Sans CJK JP` par défaut ; un texte balisé avec sa langue garde sa variante.
+- **Rendu** : niveaux de gris, `hintslight`, sous-pixel désactivé. Le passage à `hintnone` reste un point
+  de l'annexe C ; à l'échelle 1,5, l'écart est négligeable.
+- **Graisse d'accentuation : 550.** Jugée à l'écran, 500 était trop discret. La bible prévoyait 500 ou
+  600 ; 550 est l'affinage que permet la police variable. Le monospace, statique, rend 550 en 600 —
+  sans conséquence, la bible n'accentuant pas le monospace.
+- **Écart avec la bible** : « Source Code Pro variable, patchée Nerd Font » n'existe pas, Nerd Fonts
+  patche la version statique. Sans conséquence pour les mêmes raisons. La bible est corrigée.
+
+Raison : options recommandées et retenues par Nicolas pendant le brainstorming et la validation à
+l'écran du 2026-10-14.
+
+Validation à l'écran (2026-10-14) : page d'aperçu dans Firefox (échelle, chiffres tabulaires,
+monospace et pictogrammes Nerd, japonais, emoji, symboles) validée par Nicolas, avec la graisse
+d'accentuation portée de 500 à 550. Piège rencontré : `firefox --headless` ignore les graisses des
+polices variables et affiche tout en Regular, ce qui a d'abord fait conclure à tort que Firefox ne les
+gérait pas ; une fenêtre réelle les rend correctement. Une graisse ne se juge que dans une fenêtre
+réelle.
+
+*Touché : tokens.toml, dunei_theme/emitters/fontconfig.py, generate_tokens.py, deploy.py, Makefile, generated/fonts.conf, generated/tokens.css, tests/, carnet, bible (ch. 4, annexes C et fichiers), backlog, notes de direction.*

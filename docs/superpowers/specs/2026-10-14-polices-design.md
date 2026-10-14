@@ -1,6 +1,6 @@
 # Polices : indirection des noms, chaîne de repli et rendu
 
-Version 0.1 · 2026-10-14 · backlog L1-19 (indirection), L1-20 (chaîne de repli) · carnet « Typographie et chaîne de génération » · statut : validée
+Version 0.2 · 2026-10-14 · backlog L1-19 (indirection), L1-20 (chaîne de repli) · carnet « Typographie et chaîne de génération » · statut : validée
 
 ## 1. Objet
 
@@ -182,3 +182,4 @@ Nicolas la fusionne.
 | Version | Date | Changement |
 | --- | --- | --- |
 | 0.1 | 2026-10-14 | Conception validée : génération depuis les jetons, Nerd Font Mono, génériques `sans-serif` et `monospace`, CJK japonais, `hintslight` provisoire, déploiement par liste de destinations. |
+| 0.2 | 2026-10-14 | Implémentation : chaque destination vérifie ses propres sources ; graisse d'accentuation portée à 550 à la validation à l'écran ; `firefox --headless` écarté pour juger une graisse (D23). |

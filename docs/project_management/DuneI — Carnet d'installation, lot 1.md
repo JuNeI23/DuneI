@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 0.6. Historique en fin de document.
+Version 0.7. Historique en fin de document.
 
 Socle amorçable.
 
@@ -67,7 +67,6 @@ DuneI/
 │   │   ├── hyprland.lua    # point d'entrée : ne fait que des require (L1-24)
 │   │   ├── modules/        # un module par feature (input, keybinds, rules…) ; motion.lua existe déjà
 │   │   └── machines/       # un fichier par machine, choisi par nom d'hôte
-│   └── fontconfig/
 ├── tokens.toml
 ├── motion.toml             # source du mouvement (L1-23)
 ├── generate_tokens.py      # point d'entrée ; la logique vit dans dunei_theme/
@@ -76,7 +75,7 @@ DuneI/
 ├── generate_motion.py      # point d'entrée ; la logique vit dans dunei_motion/
 ├── dunei_motion/           # spring, hyprland, model, checks, emitters/
 ├── extract_hue.py
-├── deploy.py               # make install : liens, copies et bascule (L1-24)
+├── deploy.py               # make install : une destination par logiciel (hypr, fontconfig)
 ├── Makefile
 └── generated/              # produit, jamais édité
 ```
@@ -90,9 +89,15 @@ DuneI/
 | `config/` (écrit à la main) | **Lien symbolique** | On édite le dépôt, l'effet est immédiat, aucune dérive possible entre dépôt et machine |
 | `generated/` | **Copie** par `make install` | Un fichier généré ne s'édite pas ; la copie matérialise l'étape de génération |
 
-`make install` régénère `generated/`, puis lance `deploy.py`. Le script vérifie toute la destination
-avant d'agir : un fichier qu'il n'a pas posé lui-même, ou un lien qui pointe ailleurs, l'arrête avec
-un message, sans rien modifier. `python3 deploy.py --dry-run` affiche les actions prévues.
+`make install` régénère `generated/`, puis lance `deploy.py`. Le script connaît une liste de
+destinations, une par logiciel : `hypr` (`~/.config/hypr`) et `fontconfig`
+(`~/.config/fontconfig/conf.d/50-dunei.conf`). Il les vérifie toutes avant d'agir : un fichier qu'il
+n'a pas posé lui-même, ou un lien qui pointe ailleurs, l'arrête avec un message, sans rien modifier
+nulle part. `python3 deploy.py --dry-run` affiche les actions prévues.
+
+Un fichier copié depuis `generated/` est reconnu comme posé par DuneI à son avertissement de
+génération ; s'il est absent, la copie est refusée. Pour `fonts.conf`, l'avertissement est en deuxième
+ligne, la première étant réservée à la déclaration XML.
 
 **La bascule, une seule fois.** Au premier passage, le `hyprland.lua` générique de la machine reçoit le
 nom `generique.lua`, puis il est remplacé, de façon atomique, par le lien vers le point d'entrée DuneI.
@@ -327,30 +332,44 @@ Outils de développement de la chaîne de thème : `make`, `python-pillow`, `pyt
 Plus les deux familles du système, **depuis les dépôts officiels Arch** — aucune police n'est versionnée dans notre dépôt :
 
 ```
-adobe-source-sans-fonts      # Source Sans 3, interface
-ttf-sourcecodepro-nerd       # Source Code Pro patchée Nerd Font, terminal et barre
+adobe-source-sans-fonts      # Source Sans 3, interface ; famille employée : SourceSans3VF (variable)
+ttf-sourcecodepro-nerd       # Source Code Pro patchée Nerd Font ; famille employée : SauceCodePro Nerd Font Mono
 ```
+
+Nerd Fonts ne patche que la version statique de Source Code Pro : le monospace n'a pas de graisse
+intermédiaire, et une graisse de 550 y est rendue en 600 (D23).
 
 ### L'indirection
 
-`config/fontconfig/fonts.conf` fait correspondre les noms canoniques des tokens aux noms réellement installés. La bible signale le piège : **une feuille de style qui demande un nom introuvable retombe silencieusement sur la police système, sans aucun message d'erreur.** Le défaut ne se voit pas, il se devine.
+`fonts.conf` fait correspondre les noms canoniques des tokens aux noms réellement installés. La bible signale le piège : **une feuille de style qui demande un nom introuvable retombe silencieusement sur la police système, sans aucun message d'erreur.** Le défaut ne se voit pas, il se devine. Avant cette feature, `Source Code Pro` était servi par Noto Sans Mono sans le moindre message.
 
-D'où une vérification qui n'est pas optionnelle :
+Le fichier est **généré** par `make tokens` depuis `[type]`, `[type.installed]` et `[type.rendering]` de `tokens.toml` (D22), puis copié par `make install` vers `~/.config/fontconfig/conf.d/50-dunei.conf`. Fontconfig le lit à la position 50, avant les préférences d'Arch (`60-latin.conf`) ; `~/.config/fontconfig/fonts.conf` reste libre pour des réglages personnels. Les familles génériques `sans-serif` et `monospace` mènent aux familles DuneI ; `serif` n'est pas touché.
+
+Aucun `fc-cache` n'est nécessaire : une règle de configuration ne touche pas le cache des polices. Les applications lancées après `make install` lisent la règle ; celles déjà ouvertes doivent être relancées.
+
+D'où une vérification qui n'est pas optionnelle. `make test` la fait sans toucher la session (`tests/test_fontconfig_match.py`) ; sur la machine, après `make install` :
 
 ```bash
-fc-match "<nom-canonique-interface>"
-fc-match "<nom-canonique-monospace>"
+fc-match "Source Sans 3"; fc-match sans-serif        # SourceSans3VF
+fc-match "Source Code Pro"; fc-match monospace       # SauceCodePro Nerd Font Mono
+fc-match -f '%{family[0]}\n' "Source Sans 3:charset=3042"    # Noto Sans CJK JP
+fc-match -f '%{family[0]}\n' "Source Sans 3:charset=1f600"   # Noto Color Emoji
+fc-match -f '%{antialias} %{hintstyle} %{rgba}\n' "Source Sans 3"   # True 1 5
 ```
 
 Si la réponse n'est pas la police attendue, l'indirection est fausse — et tout le projet sera construit sur une typographie qui n'est pas la bonne.
 
+**Pour juger une graisse, ne jamais se fier à `firefox --headless`** : ce mode ignore les graisses des polices variables et affiche tout en Regular. Seule une fenêtre réelle fait foi (D23).
+
 ### Chaîne de repli
 
-Déclarée dans `fonts.conf`, latin → CJK → emoji. Sans elle, carrés vides à la première ouverture d'un fichier en japonais.
+Déclarée dans `fonts.conf` : `Noto Sans` → `Noto Sans CJK JP` → `Noto Color Emoji` → `Noto Sans Symbols 2`. Sans elle, carrés vides à la première ouverture d'un fichier en japonais. La variante japonaise sert par défaut ; un texte balisé avec sa langue garde la sienne.
 
 ### Rendu à 162 points par pouce
 
-L'antialiasage sous-pixel et le hinting appuyé sont des compensations pour écrans peu denses. À cette densité, ils nuisent : **antialiasage en niveaux de gris, hinting léger ou nul.** C'est aussi ce qui rend la graisse 500 lisible sans passer à 600, et donc ce qui alimente le point ouvert de l'annexe C.
+L'antialiasage sous-pixel et le hinting appuyé sont des compensations pour écrans peu denses. À cette densité, ils nuisent : **antialiasage en niveaux de gris, hinting léger ou nul.** Valeur retenue : `hintslight`, `rgba = none`, dans `[type.rendering]` de `tokens.toml`. À l'échelle 1,5, un corps de 13 px fait près de 20 pixels physiques et le hinting n'y change presque rien ; le passage à `hintnone` reste un point de l'annexe C.
+
+La graisse d'accentuation a été calibrée à l'écran à **550** : 500 était trop discret (D23).
 
 ### La chaîne de génération — L1-21
 
@@ -360,10 +379,10 @@ make test                # tests unitaires et de non-régression
 make check               # tokens + motion + test + git diff --exit-code generated/
 make golden              # régénère les instantanés après un changement de sortie VOULU
 make motion              # motion.toml  → generated/
-make install             # generated/ et config/ → ~/.config/hypr ; bascule au premier passage
+make install             # generated/ et config/ → ~/.config/hypr et ~/.config/fontconfig ; bascule au premier passage
 ```
 
-**Les fichiers de `generated/` sont versionnés et interdits à l'édition.** Ils portent l'avertissement en première ligne. Les versionner permet de voir dans un diff ce qu'un changement de token produit réellement — la meilleure protection contre une modification de source aux effets inattendus.
+**Les fichiers de `generated/` sont versionnés et interdits à l'édition.** Ils portent l'avertissement en première ligne, ou en deuxième pour `fonts.conf`, dont la première ligne est la déclaration XML. Les versionner permet de voir dans un diff ce qu'un changement de token produit réellement — la meilleure protection contre une modification de source aux effets inattendus.
 
 **Un contrôle refuse la validation si un fichier généré a été modifié à la main :**
 
@@ -467,6 +486,7 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 | Version | Date | Changement |
 | --- | --- | --- |
 | 0.1 | 2026-10-12 | Version initiale |
+| 0.7 | 2026-10-14 | Polices : `fonts.conf` généré et déployé dans `fontconfig/conf.d`, familles installées réelles, chaîne de repli, rendu, vérification par `fc-match`, graisse d'accentuation 550 ; `deploy.py` à destinations multiples |
 | 0.6 | 2026-10-14 | Branchement Hyprland : point d'entrée `config/hypr/hyprland.lua`, `deploy.py` et `make install`, bascule depuis la configuration générique, retour arrière |
 | 0.5 | 2026-10-14 | Mouvement : `motion.toml`, `generate_motion.py`, paquet `dunei_motion/`, module `config/hypr/modules/motion.lua`, `make motion` |
 | 0.4 | 2026-10-12 | Module Hyprland généré (table retournée, bordures, ombre) ; dépendances de développement |
