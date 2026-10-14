@@ -1,6 +1,6 @@
 # Mouvement : `motion.toml` et `generate_motion.py`
 
-Version 0.1 · 2026-10-13 · backlog L1-23, volet mouvement de L1-24 · statut : à valider
+Version 0.2 · 2026-10-13 · backlog L1-23, volet mouvement de L1-24 · statut : validée
 
 ## 1. Objet
 
@@ -141,9 +141,10 @@ motion.toml ──► generate_motion.py ──► dunei_motion/
 | Unité | Rôle | Entrée | Sortie |
 | --- | --- | --- | --- |
 | `spring.simulate` | Intègre m·x″ = −k·(x − 1) − c·x′ par Euler semi-implicite au pas de 1 ms, comme `proto/motion/physics.js`. | m, k, c | durée de stabilisation à ±1 % (ms) et dépassement maximal |
-| `spring.zeta` | Calcule le rapport d'amortissement ζ = c / (2·√(k·m)). | m, k, c | ζ |
-| `spring.exit` | Dérive le ressort de sortie. | ressort, r | ressort |
-| `spring.critical` | Cherche par dichotomie le ressort critique dont la stabilisation dure la durée demandée. | durée (ms) | ressort |
+| `spring.spring` | Construit un ressort arrondi, la forme commune à toutes les cibles. | m, k, c | ressort |
+| `spring.zeta` | Calcule le rapport d'amortissement ζ = c / (2·√(k·m)). | ressort | ζ |
+| `spring.exit_spring` | Dérive le ressort de sortie. | ressort, r | ressort |
+| `spring.critical_spring` | Calcule le ressort critique dont la stabilisation dure la durée demandée, par la solution analytique ωt ≈ 6,638 de (1 + ωt)·e^(−ωt) = 0,01, comme le banc. | durée (ms) | ressort |
 | `model.load` | Lit le fichier TOML. | chemin | dictionnaire brut |
 | `model.resolve` | Calcule les ressorts d'entrée, de sortie et réduit, puis les deux listes d'animations. | dictionnaire brut | modèle résolu |
 | `checks.errors` | Applique les contrôles bloquants au dictionnaire brut. | dictionnaire brut | liste de messages |
@@ -317,7 +318,7 @@ Les tests suivent le modèle de `dunei_theme` (unittest, `make test`).
 
 | Fichier | Ce qu'il prouve |
 | --- | --- |
-| `tests/test_motion_spring.py` | Le simulateur retrouve les durées mesurées par le banc : state 164 ms, reveal 286 ms, overlay 402 ms, window 274 ms, reflow 269 ms, spectacle 569 ms, navigate 186 ms. La sortie dérivée garde ζ et dure r fois l'entrée. Le ressort réduit se stabilise en 100 ms et vaut k 4406,3, c 132,76. |
+| `tests/test_motion_spring.py` | Le simulateur retrouve les durées mesurées par le banc : state 164 ms, reveal 286 ms, overlay 402 ms, window 274 ms, reflow 269 ms, spectacle 569 ms, navigate 186 ms. La sortie dérivée garde ζ et dure r fois l'entrée. Le ressort réduit vaut k 4406,3 et c 132,76 ; simulé au pas de 1 ms, il se stabilise en 103 ms, à 5 ms près de la cible. |
 | `tests/test_motion_checks.py` | Le vrai `motion.toml` ne produit aucune erreur. Chaque contrôle bloquant est déclenché par une copie du fichier modifiée sur une seule clé, et son message est vérifié. |
 | `tests/test_motion_lua.py` | `lua` ou `luajit` charge `config/hypr/modules/motion.lua` avec un faux `hl` qui enregistre les appels. Il vérifie 27 animations dans chaque mode, que chaque ressort cité est déclaré, `speed = 1` partout, et que `apply(true)` n'utilise que `dunei-reduced`. Le test est ignoré si aucun interpréteur n'est installé. |
 | `tests/test_motion_hyprland.py` | Si `hyprctl` répond, la liste des éléments connus est comparée à `hyprctl animations -j`, ce qui signale une mise à jour de Hyprland. Sinon, le test est ignoré. |
@@ -357,3 +358,4 @@ validés. Elle aboutit à une seule PR « Mouvement (L1-23) », que Nicolas fusi
 | Version | Date | Changement |
 | --- | --- | --- |
 | 0.1 | 2026-10-13 | Conception validée section par section : format, fichiers générés, contrôles et tests. |
+| 0.2 | 2026-10-13 | Noms des fonctions du ressort fixés par le plan ; ressort réduit calculé par la formule du banc (103 ms simulées). |
