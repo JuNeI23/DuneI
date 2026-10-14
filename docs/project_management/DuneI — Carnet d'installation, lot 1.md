@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 0.5. Historique en fin de document.
+Version 0.6. Historique en fin de document.
 
 Socle amorçable.
 
@@ -24,7 +24,7 @@ Relevé sur `caladan` avant tout développement. **Aucun choix logiciel de ce ca
 | --- | --- | --- |
 | Distribution | Arch Linux, noyau 7.2 | Acquis |
 | Compositeur | Hyprland 0.56, **configuration en Lua** (`hyprland.lua`) | Acquis |
-| Configuration | Fichier générique autogénéré par Hyprland, non modifié | Conservé, remplacé morceau par morceau |
+| Configuration | Fichier générique autogénéré par Hyprland, non modifié | Renommé `generique.lua` par `make install`, chargé en premier par le point d'entrée DuneI et réduit feature après feature |
 | Gestionnaire de connexion | `sddm`, activé | Conservé jusqu'à la feature session |
 | Terminal | `kitty` | Conservé jusqu'à la feature terminal |
 | Échelle d'affichage | `auto` → 1,5 | À trancher à la feature écran |
@@ -64,7 +64,7 @@ DuneI/
 │   └── laptop.txt
 ├── config/
 │   ├── hypr/
-│   │   ├── hyprland.lua    # point d'entrée : ne fait que des require
+│   │   ├── hyprland.lua    # point d'entrée : ne fait que des require (L1-24)
 │   │   ├── modules/        # un module par feature (input, keybinds, rules…) ; motion.lua existe déjà
 │   │   └── machines/       # un fichier par machine, choisi par nom d'hôte
 │   └── fontconfig/
@@ -76,6 +76,7 @@ DuneI/
 ├── generate_motion.py      # point d'entrée ; la logique vit dans dunei_motion/
 ├── dunei_motion/           # spring, hyprland, model, checks, emitters/
 ├── extract_hue.py
+├── deploy.py               # make install : liens, copies et bascule (L1-24)
 ├── Makefile
 └── generated/              # produit, jamais édité
 ```
@@ -88,6 +89,39 @@ DuneI/
 | --- | --- | --- |
 | `config/` (écrit à la main) | **Lien symbolique** | On édite le dépôt, l'effet est immédiat, aucune dérive possible entre dépôt et machine |
 | `generated/` | **Copie** par `make install` | Un fichier généré ne s'édite pas ; la copie matérialise l'étape de génération |
+
+`make install` régénère `generated/`, puis lance `deploy.py`. Le script vérifie toute la destination
+avant d'agir : un fichier qu'il n'a pas posé lui-même, ou un lien qui pointe ailleurs, l'arrête avec
+un message, sans rien modifier. `python3 deploy.py --dry-run` affiche les actions prévues.
+
+**La bascule, une seule fois.** Au premier passage, le `hyprland.lua` générique de la machine reçoit le
+nom `generique.lua`, puis il est remplacé, de façon atomique, par le lien vers le point d'entrée DuneI.
+Celui-ci charge `generique.lua` en premier, puis les fichiers générés : la machine garde tout ce que la
+configuration générique faisait, et DuneI remplace ce qu'il couvre. Chaque feature suivante retire de
+`generique.lua` le morceau qu'elle remplace (D21).
+
+**Rechargement.** Hyprland surveille les fichiers de sa configuration eux-mêmes, et non leurs noms. La
+bascule conserve le fichier générique sous un autre nom : elle ne déclenche donc aucun rechargement, et
+la première installation se termine par `hyprctl reload`, que `deploy.py` rappelle. Ensuite, chaque
+`make install` remplace les copies de `generated/` et Hyprland recharge seul.
+
+**Retour arrière**, en un seul renommage, qui remplace le lien de façon atomique et déclenche le
+rechargement ; `hyprctl reload` sert de recours si rien ne change :
+
+    mv ~/.config/hypr/generique.lua ~/.config/hypr/hyprland.lua
+
+Ne jamais supprimer le lien avant le renommage : Hyprland pourrait recharger pendant l'absence de
+`hyprland.lua` et rester sur une configuration en erreur.
+
+**La session suit la copie de travail du dépôt.** `~/.config/hypr/hyprland.lua` et `modules/` pointent
+vers `~/DuneI` : tant que la branche du branchement n'est pas fusionnée, la copie de travail doit rester
+sur une branche qui contient `config/hypr/hyprland.lua`, sinon le lien n'a plus de cible au prochain
+rechargement. `make install` refuse de s'exécuter depuis un arbre de travail secondaire (`git worktree`),
+dont la suppression laisserait des liens sans cible.
+
+**Machine installée directement en DuneI.** Sans configuration générique, la session n'a aucun
+raccourci tant que la feature raccourcis n'est pas faite. `make install` refuse aussi une machine qui
+n'aurait qu'un ancien `hyprland.conf`, que Hyprland ignorerait au profit du point d'entrée DuneI.
 
 ### Ce qui est propre à une machine
 
@@ -198,15 +232,14 @@ C'est le point d'architecture du lot, et il conditionne tout le projet.
 Depuis la version 0.5x, Hyprland se configure **en Lua** (`hyprland.lua`, API `hl.*`). L'ancienne syntaxe hyprlang (`source = …`, blocs `general { }`) n'est plus la référence.
 
 ```lua
--- ~/.config/hypr/hyprland.lua — point d'entrée, ne contient que des require
-hl.config(require("generated.hyprland-tokens"))   -- table produite par generate_tokens.py
-require("modules.motion").apply(false)   -- ressorts de generate_motion.py ; apply(true) pour le mouvement réduit
-require("modules.env")
-require("modules.input")
-require("modules.keybinds")
-require("modules.rules")
-require("machines." .. hostname)   -- fragment propre à la machine
+-- ~/.config/hypr/hyprland.lua → lien vers config/hypr/hyprland.lua
+pcall(require, "generique")                        -- configuration générique, réduite feature après feature
+hl.config(require("generated.hyprland-tokens"))    -- table produite par generate_tokens.py
+require("modules.motion").apply(false)             -- ressorts de generate_motion.py ; apply(true) pour le mouvement réduit
 ```
+
+Les modules `env`, `input`, `keybinds`, `rules` et le fragment `machines/<nom-d-hôte>.lua` s'ajouteront à
+la suite, chacun avec la feature qui retire de `generique.lua` le morceau correspondant.
 
 Les générateurs produisent donc des **modules Lua**, et non plus des fragments `.conf`. Le module **retourne une table** et n'appelle pas `hl.config` lui-même : rien ne se passe au chargement, la configuration choisit quand l'appliquer, un fragment machine peut surcharger ensuite, et le fichier se vérifie avec un interpréteur Lua nu. Le Lua apporte aussi les ressorts natifs (`hl.curve({ type = "spring", … })`), qui servent directement le principe 5.
 
@@ -327,7 +360,7 @@ make test                # tests unitaires et de non-régression
 make check               # tokens + motion + test + git diff --exit-code generated/
 make golden              # régénère les instantanés après un changement de sortie VOULU
 make motion              # motion.toml  → generated/
-make install             # generated/   → ~/.config/ (à venir)
+make install             # generated/ et config/ → ~/.config/hypr ; bascule au premier passage
 ```
 
 **Les fichiers de `generated/` sont versionnés et interdits à l'édition.** Ils portent l'avertissement en première ligne. Les versionner permet de voir dans un diff ce qu'un changement de token produit réellement — la meilleure protection contre une modification de source aux effets inattendus.
@@ -434,6 +467,7 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 | Version | Date | Changement |
 | --- | --- | --- |
 | 0.1 | 2026-10-12 | Version initiale |
+| 0.6 | 2026-10-14 | Branchement Hyprland : point d'entrée `config/hypr/hyprland.lua`, `deploy.py` et `make install`, bascule depuis la configuration générique, retour arrière |
 | 0.5 | 2026-10-14 | Mouvement : `motion.toml`, `generate_motion.py`, paquet `dunei_motion/`, module `config/hypr/modules/motion.lua`, `make motion` |
 | 0.4 | 2026-10-12 | Module Hyprland généré (table retournée, bordures, ombre) ; dépendances de développement |
 | 0.3 | 2026-10-12 | Chaîne de thème modulaire (`dunei_theme/`), cibles `make test`, `make check`, `make golden` |
