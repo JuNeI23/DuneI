@@ -21,6 +21,8 @@ hl = {
     curve = function() end,
     animation = function() animations = animations + 1; note("animation") end,
     monitor = function(t) note("monitor:" .. (t.output == "" and "*" or t.output)) end,
+    env = function(k) note("env:" .. k) end,
+    window_rule = function(t) note("rule:" .. t.name) end,
 }
 require("modules.machine").file = HOST
 dofile(ENTRY)
@@ -43,7 +45,7 @@ class EntryTest(unittest.TestCase):
             hypr = Path(tmp) / "hypr"
             (hypr / "generated").mkdir(parents=True)
             (hypr / "machines").mkdir()
-            for name in ("hyprland-tokens.lua", "motion.lua"):
+            for name in ("hyprland-tokens.lua", "hyprland-rules.lua", "motion.lua"):
                 shutil.copy(ROOT / "generated" / name, hypr / "generated" / name)
             (hypr / "modules").symlink_to(ROOT / "config" / "hypr" / "modules")
             if generic:
@@ -55,16 +57,20 @@ class EntryTest(unittest.TestCase):
                       f'ENTRY = "{ROOT}/config/hypr/hyprland.lua"\nHOST = "{hypr / "hostname"}"\n' + PROBE)
             return subprocess.run([LUA, "-e", script], capture_output=True, text=True, check=True).stdout.split()
 
+    MODULES = ("env:QT_WAYLAND_DISABLE_WINDOWDECORATION,config:dunei,rule:couche-1-sans-ombre,"
+               "rule:plein-ecran-nu,rule:sans-agrandissement,rule:glisser-xwayland")
+
     def test_with_generic(self):
         self.assertEqual(self.probe(True, True),
-                         ["config:generique,config:dunei,animation,monitor:*,config:dunei,monitor:essai", "27"])
+                         [f"config:generique,config:dunei,animation,{self.MODULES},monitor:*,config:dunei,monitor:essai", "27"])
 
     def test_without_generic(self):
         self.assertEqual(self.probe(False, True),
-                         ["config:dunei,animation,monitor:*,config:dunei,monitor:essai", "27"])
+                         [f"config:dunei,animation,{self.MODULES},monitor:*,config:dunei,monitor:essai", "27"])
 
     def test_without_machine(self):
-        self.assertEqual(self.probe(True), ["config:generique,config:dunei,animation,monitor:*,config:dunei", "27"])
+        self.assertEqual(self.probe(True),
+                         [f"config:generique,config:dunei,animation,{self.MODULES},monitor:*,config:dunei", "27"])
 
 
 class AgnosticTest(unittest.TestCase):
