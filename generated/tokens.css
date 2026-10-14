@@ -77,7 +77,7 @@
   --text-22: 22px;
   --text-28: 28px;
   --weight-regular: 400;
-  --weight-medium: 500;
+  --weight-medium: 550;
 
   /* seuils sur la largeur du CONTENEUR, jamais de l'écran */
   --breakpoint-compact: 480px;

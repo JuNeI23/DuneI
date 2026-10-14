@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas
 
-Document normatif. Version 0.6.1. Historique en fin de document.
+Document normatif. Version 0.6.2. Historique en fin de document.
 
 ## Comment lire ce document
 
@@ -172,18 +172,18 @@ Dans toute zone de lecture continue : **78 caractères maximum**. C'est la seule
 **Deux familles, trois rôles.**
 
 - **Interface** — Source Sans 3 variable. Tout le shell, sans exception.
-- **Données littérales** — Source Code Pro variable, version patchée Nerd Font pour terminal et barre d'état.
+- **Données littérales** — Source Code Pro, version statique patchée Nerd Font Mono pour terminal et barre d'état. La version variable n'existe pas patchée (D23).
 - **Affichage** — pas de troisième famille. Source Sans 3 en grand corps, poids léger, interlettrage resserré.
 
 **Quand employer le monospace :** pour tout ce que l'utilisateur pourrait copier, comparer caractère par caractère, ou dont l'alignement porte du sens. Chemins, adresses IP et MAC, empreintes, journaux, identifiants de périphériques, hexadécimal, code. **Rien d'autre** — un nom de fichier dans un explorateur n'est pas du monospace.
 
 **Échelle :** 11 · 12 · 13 · 15 · 18 · 22 · 28. Corps à 13. Interligne 1,45 sur le corps, 1,2 sur les titres.
 
-**Graisses : 400 et 500.** Aucun composant ne dépend d'une valeur intermédiaire — le design se conçoit comme s'il n'existait que ces deux-là. La police étant variable, elles s'affinent sur le shell réel sans réinstallation. Si 500 s'avère trop discret à 13 px, monter à 600, **jamais 700** : le 700 alourdit une interface dense.
+**Graisses : 400 et 550.** Aucun composant ne dépend d'une valeur intermédiaire — le design se conçoit comme s'il n'existait que ces deux-là, la régulière et l'accentuée. La police étant variable, elles s'affinent sur le shell réel sans réinstallation : l'accentuée, d'abord à 500, a été portée à 550 après jugement à l'écran (D23). **Jamais 700** : le 700 alourdit une interface dense. Le monospace, statique, rend 550 en 600.
 
 **Chiffres tabulaires obligatoires** partout où des nombres s'alignent en colonne.
 
-**Noms canoniques dans les tokens.** Les polices s'installent sous d'autres noms que ceux communiqués par les fondeurs ; l'indirection se fait une seule fois, dans `fonts.conf`. Une feuille de style qui demande un nom introuvable retombe **silencieusement** sur la police système, sans aucun message d'erreur.
+**Noms canoniques dans les tokens.** Les polices s'installent sous d'autres noms que ceux communiqués par les fondeurs ; l'indirection se fait une seule fois, dans `fonts.conf`, généré depuis les familles installées déclarées dans `tokens.toml` (D22). Une feuille de style qui demande un nom introuvable retombe **silencieusement** sur la police système, sans aucun message d'erreur.
 
 **Chaîne de repli** à déclarer, faute de quoi carrés vides à la première ouverture d'un fichier en japonais.
 
@@ -693,7 +693,8 @@ Chacun correspond à une erreur observée dans des systèmes existants.
 
 | Sujet | Nature |
 | --- | --- |
-| Graisse d'accentuation : 500 ou 600 | Calibration sur shell réel |
+| Graisse d'accentuation : 550, jugée dans Firefox le 2026-10-14 (D23) | À confirmer sur le shell réel |
+| Hinting : `hintslight` ou `hintnone` | Calibration sur shell réel ; écart négligeable à l'échelle 1,5 |
 | Seuils de conteneur | Validation à l'usage |
 | Délais d'infobulle et de barre de défilement | Validation à l'usage |
 | Opacité du voile | À revérifier une fois le flou en place |
@@ -717,9 +718,9 @@ Chacun correspond à une erreur observée dans des systèmes existants.
 | `dunei_theme/` | Développeurs | La logique : couleurs, modèle, contrôles, une cible par module |
 | `Makefile` | Développeurs | `tokens`, `motion`, `test`, `check`, `golden`, `install` |
 | `generate_motion.py` | Développeurs | Génère le module Lua du compositeur et le JSON de la coque, après contrôle des règles du chapitre 6 |
-| `deploy.py` | Développeurs | Installe la configuration Hyprland dans `~/.config/hypr` : liens vers `config/`, copies de `generated/`, bascule depuis la configuration générique |
+| `deploy.py` | Développeurs | Installe la configuration dans `~/.config`, destination par destination : Hyprland (liens vers `config/`, copies de `generated/`, bascule depuis la configuration générique) et fontconfig (`conf.d/50-dunei.conf`) |
 | `extract_hue.py` | Développeurs | Extraction de teinte : lit wal ou une image ; `--json` et code 3 si achromatique |
-| `fonts.conf` | Développeurs | Indirection des noms de polices |
+| `fonts.conf` | Développeurs | Généré. Indirection des noms de polices, chaîne de repli et rendu |
 | `carnet-installation.md` | Intégrateur | Ce qui est à installer, et selon quels critères |
 | `bible-os-decisions-et-taches.md` | Archive | Journal des arbitrages et de leur raison |
 
@@ -799,3 +800,4 @@ Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si 
 | 0.5 | 2026-10-12 | Échelons 10 et 11 relevés (0,93 / 0,97) ; texte quasi blanc sur l'accent ; sémantiques hors plafond ; rabattement à teinte préservée ; extraction paramétrée et achromatique signalé ; contrôles APCA ; annexes C et D |
 | 0.6 | 2026-10-14 | Mouvement : septième transition `navigate`, symétrique comme `reflow` ; `generate_motion.py` produit Lua et JSON (D14 à D20) |
 | 0.6.1 | 2026-10-14 | Annexe des fichiers : `deploy.py` et la cible `install` (D21) |
+| 0.6.2 | 2026-10-14 | Typographie : graisse d'accentuation 550 ; Source Code Pro patchée Nerd en version statique ; `fonts.conf` généré et déployé ; hinting à l'annexe C (D22, D23) |

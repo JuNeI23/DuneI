@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.5. Historique en fin de document.
+Version 1.6. Historique en fin de document.
 
 La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **140 éléments** répartis en **cinq lots**, sur six chantiers.
 
@@ -239,8 +239,8 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L1-16 | B | Configuré | Bureaux virtuels |
 | L1-17 | B | Configuré | Multi-écran de base et facteur d'échelle |
 | L1-18 | E | Configuré | Terminal — installation minimale |
-| L1-19 | C | Écrit | Polices et indirection de noms |
-| L1-20 | C | Écrit | Chaîne de repli des polices |
+| L1-19 | C | Écrit | Polices et indirection de noms — **fait (D22, D23)** : `fonts.conf` généré depuis `tokens.toml`, déployé dans `fontconfig/conf.d`, vérifié par `fc-match` ; graisse d'accentuation 550 |
+| L1-20 | C | Écrit | Chaîne de repli des polices — **fait (D23)** : latin, CJK japonais, emoji, symboles |
 | L1-21 | C | Configuré | Brancher la génération dans la chaîne de construction |
 | L1-22 | C | Écrit | Mettre `generate_tokens.py` et `extract_hue.py` en conformité avec la bible — écarts consignés au journal — **fait (D11)** |
 | L1-23 | C | Écrit | Concevoir et écrire `motion.toml` et `generate_motion.py` — **fait (D14 à D20)** : paquet `dunei_motion/`, cibles Lua et JSON, contrôles bloquants, `make motion` |
@@ -486,6 +486,7 @@ Le choix de la distribution de base et du compositeur, précédemment ouverts, s
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-12 | Version initiale, 137 éléments |
+| 1.6 | 2026-10-14 | L1-19 et L1-20 faits : polices résolues, chaîne de repli, rendu |
 | 1.5 | 2026-10-14 | L1-24 terminé : branchement dans la session réelle |
 | 1.4 | 2026-10-14 | L1-23 fait ; L1-24 fait pour les deux générateurs |
 | 1.3 | 2026-10-12 | L4-03 : fonds sémantiques (D12) |

@@ -1,10 +1,15 @@
 #!/usr/bin/env python3
-"""Déploiement — installe la configuration Hyprland de DuneI dans le dossier de configuration.
+"""Déploiement — installe la configuration de DuneI dans le dossier de configuration de l'utilisateur.
 
-config/ est déployé par lien symbolique et generated/ par copie. Au premier passage, une
-configuration générique existante est conservée sous le nom generique.lua, puis remplacée de
-façon atomique par le point d'entrée DuneI. Le script vérifie tout avant d'agir, n'écrase jamais
-un fichier qu'il n'a pas posé lui-même et ne recharge pas Hyprland, qui recharge seul.
+Chaque destination de DESTINATIONS planifie ses propres actions ; toutes sont inspectées avant la
+moindre modification, et une seule erreur suffit à tout refuser. config/ est déployé par lien
+symbolique et generated/ par copie atomique. Le script n'écrase jamais un fichier qu'il n'a pas
+posé lui-même.
+
+- hypr : au premier passage, une configuration générique existante est conservée sous le nom
+  generique.lua, puis remplacée de façon atomique par le point d'entrée DuneI. Hyprland recharge seul.
+- fontconfig : generated/fonts.conf est copié vers fontconfig/conf.d/50-dunei.conf. Les applications
+  lancées ensuite le lisent ; aucun fc-cache n'est nécessaire.
 
     python3 deploy.py [--dry-run]
 """
@@ -23,16 +28,18 @@ MODULES = "config/hypr/modules"               # Modules écrits à la main, lié
 COPIES = ("hyprland-tokens.lua", "motion.lua")  # Fichiers de generated/ lus par Hyprland.
 GENERIC = "generique.lua"                     # Nom donné à la configuration générique de la machine.
 TEMP = ".{}.dunei"                            # Nom temporaire, sans extension .lua, invisible pour require.
+FONTCONFIG = ("fonts.conf", "conf.d/50-dunei.conf")  # Fichier de generated/ → chemin sous fontconfig/.
+MARK = "GÉNÉRÉ depuis tokens.toml"                    # Avertissement de deuxième ligne : le fichier est à DuneI.
 
 
-def config_dir(env: Mapping[str, str]) -> Path:
-    """Dossier de configuration Hyprland de l'utilisateur.
+def config_home(env: Mapping[str, str]) -> Path:
+    """Dossier de configuration racine de l'utilisateur.
 
     Entrée : env — environnement, os.environ en usage normal.
-    Sortie : $XDG_CONFIG_HOME/hypr, ou ~/.config/hypr si la variable est absente ou vide.
+    Sortie : $XDG_CONFIG_HOME, ou ~/.config si la variable est absente ou vide.
     Erreurs : aucune. Dépendances : aucune.
     """
-    return Path(env.get("XDG_CONFIG_HOME") or Path(env.get("HOME") or os.path.expanduser("~")) / ".config") / "hypr"
+    return Path(env.get("XDG_CONFIG_HOME") or Path(env.get("HOME") or os.path.expanduser("~")) / ".config")
 
 
 def _links_to(link: Path, target: Path) -> bool:
@@ -45,19 +52,32 @@ def _links_to(link: Path, target: Path) -> bool:
     return link.is_symlink() and Path(os.readlink(link)) == target
 
 
-def plan(repo: Path, dest: Path) -> tuple[list[tuple], list[str]]:
-    """Inspection de la destination, sans aucune modification.
+def _ours(path: Path) -> bool:
+    """Reconnaissance d'un fichier posé par DuneI, à son avertissement de génération.
 
-    Entrées : repo — racine du dépôt ; dest — dossier de configuration Hyprland.
-    Sortie : (actions dans l'ordre d'exécution, erreurs). Une seule erreur suffit à tout refuser.
+    Entrée : path — fichier existant à examiner.
+    Sortie : vrai si la deuxième ligne porte MARK ; faux si elle ne le porte pas ou si le fichier
+             est illisible (dossier, droits, encodage).
+    Erreurs : aucune. Dépendances : MARK.
+    """
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except (OSError, UnicodeDecodeError):
+        return False
+    return len(lines) > 1 and MARK in lines[1]
+
+
+def plan_hypr(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
+    """Inspection de la destination Hyprland, sans aucune modification.
+
+    Entrées : repo — racine du dépôt ; home — dossier de configuration racine.
+    Sortie : (actions dans l'ordre d'exécution, erreurs).
     Erreurs : aucune exception ; chaque problème devient un message. Dépendances : _links_to.
     """
+    dest = home / "hypr"
     actions, err = [], []
     sources = [repo / ENTRY, repo / MODULES] + [repo / "generated" / f for f in COPIES]
     err += [f"source manquante : {s} (lancer make tokens motion)" for s in sources if not s.exists()]
-    if (repo / ".git").is_file():
-        err.append(f"{repo} est un arbre de travail secondaire : les liens disparaîtraient avec lui, "
-                   "lancer make install depuis le dépôt principal")
     if dest.is_symlink() or (dest.exists() and not dest.is_dir()):
         return actions, err + [f"{dest} existe mais n'est pas un dossier réel"]
     if not dest.exists():
@@ -93,6 +113,50 @@ def plan(repo: Path, dest: Path) -> tuple[list[tuple], list[str]]:
                    "qui ne déclare encore aucun raccourci ; le convertir en hyprland.lua d'abord")
     else:
         actions.append(("link", repo / ENTRY, entry))
+    return actions, err
+
+
+def plan_fontconfig(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
+    """Inspection de la destination fontconfig, sans aucune modification.
+
+    Entrées : repo — racine du dépôt ; home — dossier de configuration racine.
+    Sortie : (actions dans l'ordre d'exécution, erreurs).
+    Erreurs : aucune exception ; source absente, dossier qui n'en est pas un, fichier ou lien
+              étranger à la place de 50-dunei.conf deviennent des messages.
+    Dépendances : _ours, FONTCONFIG.
+    """
+    src, dest = repo / "generated" / FONTCONFIG[0], home / "fontconfig" / FONTCONFIG[1]
+    actions, err = [], []
+    if not src.exists():
+        err.append(f"source manquante : {src} (lancer make tokens)")
+    for d in (dest.parent.parent, dest.parent):
+        if d.is_symlink() or (d.exists() and not d.is_dir()):
+            return actions, err + [f"{d} existe mais n'est pas un dossier réel"]
+        if not d.exists():
+            actions.append(("mkdir", d))
+    if dest.is_symlink() or (dest.exists() and not _ours(dest)):
+        err.append(f"{dest} existe mais n'a pas été posé par DuneI")
+    return actions + [("copy", src, dest)], err
+
+
+DESTINATIONS = {"hypr": plan_hypr, "fontconfig": plan_fontconfig}  # Nom → planification.
+
+
+def plan(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
+    """Inspection de toutes les destinations, sans aucune modification.
+
+    Entrées : repo — racine du dépôt ; home — dossier de configuration racine.
+    Sortie : (actions de toutes les destinations, dans l'ordre de DESTINATIONS ; erreurs).
+             Une seule erreur suffit à tout refuser.
+    Erreurs : aucune exception ; chaque problème devient un message. Dépendances : DESTINATIONS.
+    """
+    actions, err = [], []
+    if (repo / ".git").is_file():
+        err.append(f"{repo} est un arbre de travail secondaire : les liens disparaîtraient avec lui, "
+                   "lancer make install depuis le dépôt principal")
+    for plan_one in DESTINATIONS.values():
+        a, e = plan_one(repo, home)
+        actions, err = actions + a, err + e
     return actions, err
 
 
@@ -146,18 +210,18 @@ def main() -> int:
     Entrée : argument de ligne de commande --dry-run.
     Sortie : code de retour 0 si succès, 1 si la destination est douteuse ou si une opération échoue.
     Erreurs : messages sur la sortie d'erreur ; en cas de refus, rien n'est modifié.
-    Dépendances : config_dir, plan, describe, apply.
+    Dépendances : config_home, plan, describe, apply.
     """
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--dry-run", action="store_true", help="affiche les actions prévues sans les effectuer")
     args = ap.parse_args()
 
-    dest = config_dir(os.environ)
-    actions, err = plan(REPO, dest)
+    home = config_home(os.environ)
+    actions, err = plan(REPO, home)
     if err:
         for e in err:
             print(f"  erreur : {e}", file=sys.stderr)
-        print(f"\n{len(err)} erreur(s) : rien n'a été modifié dans {dest}.", file=sys.stderr)
+        print(f"\n{len(err)} erreur(s) : rien n'a été modifié dans {home}.", file=sys.stderr)
         return 1
 
     if not args.dry_run:
@@ -168,7 +232,7 @@ def main() -> int:
             return 1
     for a in actions:
         print(f"  {'prévu' if args.dry_run else 'fait'} : {describe(a)}")
-    print(f"\n{dest} : {len(actions)} action(s) {'prévue(s)' if args.dry_run else 'effectuée(s)'}.")
+    print(f"\n{home} : {len(actions)} action(s) {'prévue(s)' if args.dry_run else 'effectuée(s)'}.")
     if any(a[0] == "switch" for a in actions):
         # Hyprland surveille le fichier générique lui-même, qui survit sous un autre nom : la bascule
         # ne déclenche donc pas le rechargement automatique. Les passages suivants le déclenchent.

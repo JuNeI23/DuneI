@@ -1,8 +1,8 @@
 # DuneI — Note de direction
 
-Oct 10, 2026 · @Nicolas — révisée le 12 octobre 2026
+Oct 10, 2026 · @Nicolas — révisée le 14 octobre 2026
 
-Version 1.4. Historique en fin de document.
+Version 1.5. Historique en fin de document.
 
 *Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent trente-sept lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
 
@@ -178,6 +178,12 @@ DuneI : la configuration générique, renommée `generique.lua`, est chargée en
 le mouvement générés. `make install` déploie et bascule ; chaque feature suivante retire un morceau de
 `generique.lua`. Prochaines étapes du lot 1 : L1-19 (`fonts.conf`), puis l'écran et l'échelle.
 
+**Polices — 14 octobre 2026.** Les noms canoniques des jetons sont résolus : `fonts.conf`, généré depuis
+`tokens.toml` et déployé par `make install`, mène `Source Sans 3` et `sans-serif` à la version variable,
+`Source Code Pro` et `monospace` à la version Nerd Font Mono, puis à la chaîne de repli latin, japonais,
+emoji, symboles. Le rendu est en niveaux de gris avec un hinting léger, et la graisse d'accentuation a
+été portée à 550 après jugement à l'écran (D22, D23). Prochaine étape du lot 1 : l'écran et l'échelle.
+
 **Ce qui reste sur la chaîne de thème n'est plus de la conception, c'est du branchement** — connecter les cibles générées à des logiciels réels et vérifier le rechargement à chaud sur une session vivante. Lots 2 et 4.
 
 **Prêt à démarrer.** Le lot 1, en commençant par remettre la chaîne de thème en conformité (voir ci-dessus). Point de départ : Arch + Hyprland 0.56 en configuration générique, **configurée en Lua**. La configuration générique reste en place et chaque feature en remplace un morceau — aucun choix logiciel du carnet n'est figé avant sa feature.
@@ -207,6 +213,7 @@ le mouvement générés. `make install` déploie et bascule ; chaque feature sui
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-10 | Version initiale |
+| 1.5 | 2026-10-14 | Polices résolues (L1-19, L1-20), graisse d'accentuation 550 ; reste l'écran et l'échelle |
 | 1.4 | 2026-10-14 | Session branchée sur DuneI ; configuration générique chargée en premier |
 | 1.3 | 2026-10-14 | Mouvement écrit et vérifié ; reste le branchement dans Hyprland |
 | 1.2 | 2026-10-12 | Chaîne de thème conforme ; reste le mouvement |
