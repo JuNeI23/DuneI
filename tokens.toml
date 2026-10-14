@@ -319,7 +319,7 @@ scale = [11, 12, 13, 15, 18, 22, 28]
 line_height_body = 1.45
 line_height_heading = 1.2
 weight_regular = 400         # à calibrer sur le shell réel, plage utile 380–400
-weight_medium = 500          # si trop discret à 13 px, monter à 600 (jamais 700)
+weight_medium = 550          # calibré à l'écran le 2026-10-14 (500 trop discret) ; jamais 700
 # La police est variable : ces valeurs s'affinent sans réinstaller quoi que ce
 # soit. Mais AUCUN composant ne doit dépendre d'une graisse intermédiaire :
 # le design se conçoit comme s'il n'existait que 400 et 500.
