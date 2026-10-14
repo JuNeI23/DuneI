@@ -24,7 +24,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent
 ENTRY = "config/hypr/hyprland.lua"            # Point d'entrée, lié sous hypr/hyprland.lua.
-MODULES = "config/hypr/modules"               # Modules écrits à la main, liés sous hypr/modules.
+LINKS = ("config/hypr/modules", "config/hypr/machines")  # Dossiers écrits à la main, liés sous hypr/ à leur nom.
 COPIES = ("hyprland-tokens.lua", "motion.lua")  # Fichiers de generated/ lus par Hyprland.
 GENERIC = "generique.lua"                     # Nom donné à la configuration générique de la machine.
 TEMP = ".{}.dunei"                            # Nom temporaire, sans extension .lua, invisible pour require.
@@ -76,7 +76,7 @@ def plan_hypr(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
     """
     dest = home / "hypr"
     actions, err = [], []
-    sources = [repo / ENTRY, repo / MODULES] + [repo / "generated" / f for f in COPIES]
+    sources = [repo / ENTRY] + [repo / d for d in LINKS] + [repo / "generated" / f for f in COPIES]
     err += [f"source manquante : {s} (lancer make tokens motion)" for s in sources if not s.exists()]
     if dest.is_symlink() or (dest.exists() and not dest.is_dir()):
         return actions, err + [f"{dest} existe mais n'est pas un dossier réel"]
@@ -90,12 +90,14 @@ def plan_hypr(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
         actions.append(("mkdir", generated))
     actions += [("copy", repo / "generated" / f, generated / f) for f in COPIES]
 
-    modules = dest / "modules"
-    if modules.is_symlink() or modules.exists():
-        if not _links_to(modules, repo / MODULES):
-            err.append(f"{modules} existe mais n'est pas un lien vers {repo / MODULES}")
-    else:
-        actions.append(("link", repo / MODULES, modules))
+    for d in LINKS:
+        src, link = repo / d, dest / Path(d).name
+        if link.is_symlink() or link.exists():
+            if not _links_to(link, src):
+                err.append(f"{link} existe mais n'est pas un lien vers {src}"
+                           + (f" : il pointe vers {os.readlink(link)}" if link.is_symlink() else ""))
+        else:
+            actions.append(("link", src, link))
 
     entry, generic = dest / "hyprland.lua", dest / GENERIC
     if entry.is_symlink():

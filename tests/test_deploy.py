@@ -63,6 +63,7 @@ class DeployTest(unittest.TestCase):
         """Vérifie les liens et les copies attendus."""
         self.assertEqual(os.readlink(self.hypr / "hyprland.lua"), str(ROOT / "config" / "hypr" / "hyprland.lua"))
         self.assertEqual(os.readlink(self.hypr / "modules"), str(ROOT / "config" / "hypr" / "modules"))
+        self.assertEqual(os.readlink(self.hypr / "machines"), str(ROOT / "config" / "hypr" / "machines"))
         for name in ("hyprland-tokens.lua", "motion.lua"):
             self.assertEqual((self.hypr / "generated" / name).read_bytes(), (ROOT / "generated" / name).read_bytes())
         self.assertEqual(self.fc.read_bytes(), (ROOT / "generated" / "fonts.conf").read_bytes())
@@ -87,7 +88,7 @@ class DeployTest(unittest.TestCase):
         self.assertEqual((self.hypr / "generique.lua").read_text(encoding="utf-8"), GENERIC)
         self.assertEqual((self.hypr / "generique.lua").stat().st_ino, inode)
         self.assertEqual(sorted(p.name for p in self.hypr.iterdir()),
-                         ["generated", "generique.lua", "hyprland.lua", "modules"])
+                         ["generated", "generique.lua", "hyprland.lua", "machines", "modules"])
         self.assertIn("hyprctl reload", res.stdout)
 
     def test_second_run_changes_nothing(self):
@@ -111,6 +112,16 @@ class DeployTest(unittest.TestCase):
         self.generic_machine()
         (self.hypr / "modules").mkdir()
         self.assert_refused("modules")
+
+    def test_refuses_real_machines_dir(self):
+        self.generic_machine()
+        (self.hypr / "machines").mkdir()
+        self.assert_refused("machines")
+
+    def test_refuses_foreign_machines_link(self):
+        self.generic_machine()
+        (self.hypr / "machines").symlink_to(Path(self.tmp.name) / "ailleurs")
+        self.assert_refused("machines", "ailleurs")
 
     def test_refuses_foreign_link(self):
         self.hypr.mkdir(parents=True)
