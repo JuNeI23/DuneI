@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 0.7. Historique en fin de document.
+Version 0.8. Historique en fin de document.
 
 Socle amorçable.
 
@@ -120,10 +120,19 @@ Ne jamais supprimer le lien avant le renommage : Hyprland pourrait recharger pen
 `hyprland.lua` et rester sur une configuration en erreur.
 
 **La session suit la copie de travail du dépôt.** `~/.config/hypr/hyprland.lua` et `modules/` pointent
-vers `~/DuneI` : tant que la branche du branchement n'est pas fusionnée, la copie de travail doit rester
-sur une branche qui contient `config/hypr/hyprland.lua`, sinon le lien n'a plus de cible au prochain
-rechargement. `make install` refuse de s'exécuter depuis un arbre de travail secondaire (`git worktree`),
-dont la suppression laisserait des liens sans cible.
+vers `~/DuneI` : la copie de travail doit toujours rester sur une branche qui contient les fichiers liés,
+sinon le lien n'a plus de cible au prochain rechargement. `make install` refuse de s'exécuter depuis un
+arbre de travail secondaire (`git worktree`), dont la suppression laisserait des liens sans cible.
+
+**Après la fusion d'une PR**, on met `main` à jour sans le sortir, puis on bascule dessus :
+
+    git fetch origin main:main && git switch main
+
+Un `git switch main` suivi d'un `git pull` passe d'abord par l'ancien `main`. Si un fichier lié n'y
+existe pas encore, il disparaît quelques secondes : Hyprland recharge pendant ce trou, affiche
+« cannot open … hyprland.lua », puis ne voit pas le fichier revenir, car il surveillait le fichier
+supprimé. La bannière reste alors affichée alors que la configuration est intacte ; `hyprctl reload`
+l'efface.
 
 **Machine installée directement en DuneI.** Sans configuration générique, la session n'a aucun
 raccourci tant que la feature raccourcis n'est pas faite. `make install` refuse aussi une machine qui
@@ -487,7 +496,8 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 | Version | Date | Changement |
 | --- | --- | --- |
 | 0.1 | 2026-10-12 | Version initiale |
-| 0.7 | 2026-10-14 | Polices : `fonts.conf` généré et déployé dans `fontconfig/conf.d`, familles installées réelles, chaîne de repli, rendu, vérification par `fc-match`, graisse d'accentuation 550 ; `deploy.py` à destinations multiples |
+| 0.8 | 2026-10-14 | Polices : `fonts.conf` généré et déployé dans `fontconfig/conf.d`, familles installées réelles, chaîne de repli, rendu, vérification par `fc-match`, graisse d'accentuation 550 ; `deploy.py` à destinations multiples |
+| 0.7 | 2026-10-14 | Procédure après fusion : mise à jour de `main` sans passer par l'ancien état, origine de la bannière « cannot open » |
 | 0.6 | 2026-10-14 | Branchement Hyprland : point d'entrée `config/hypr/hyprland.lua`, `deploy.py` et `make install`, bascule depuis la configuration générique, retour arrière |
 | 0.5 | 2026-10-14 | Mouvement : `motion.toml`, `generate_motion.py`, paquet `dunei_motion/`, module `config/hypr/modules/motion.lua`, `make motion` |
 | 0.4 | 2026-10-12 | Module Hyprland généré (table retournée, bordures, ombre) ; dépendances de développement |
