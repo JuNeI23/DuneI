@@ -101,6 +101,26 @@ class HyprlandTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "border_width"):
             emit(resolve(alt))
 
+    def test_shadow_rejects_range_out_of_bounds(self):
+        for value in (0, -4, 104):
+            with self.subTest(range=value), self.assertRaisesRegex(ValueError, "range"):
+                emit(self.bad(range=value))
+
+    def test_rejects_non_integers(self):
+        for key, value in (("render_power", 2.5), ("range", 16.0), ("offset_y", True)):
+            with self.subTest(**{key: value}), self.assertRaisesRegex(ValueError, key):
+                emit(self.bad(**{key: value}))
+        alt = copy.deepcopy(self.data)
+        alt["window"]["border_width"] = 1.5
+        with self.assertRaisesRegex(ValueError, "border_width"):
+            emit(resolve(alt))
+
+    def test_rejects_negative_fullscreen_radius(self):
+        alt = copy.deepcopy(self.data)
+        alt["radii"]["fullscreen"] = -1
+        with self.assertRaisesRegex(ValueError, "radii.fullscreen"):
+            emit(resolve(alt))
+
     @unittest.skipUnless(LUA, "aucun interpréteur Lua")
     def test_lua_loads_and_returns_table(self):
         lua = emit(self.models[0])

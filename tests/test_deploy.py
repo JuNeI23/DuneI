@@ -68,6 +68,10 @@ class DeployTest(unittest.TestCase):
             self.assertEqual((self.hypr / "generated" / name).read_bytes(), (ROOT / "generated" / name).read_bytes())
         self.assertEqual(self.fc.read_bytes(), (ROOT / "generated" / "fonts.conf").read_bytes())
 
+    def test_copies_hyprland_files(self):
+        """Hyprland lit ces trois fichiers générés : un oubli dans COPIES casserait tout le point d'entrée."""
+        self.assertEqual(set(COPIES), {"hyprland-tokens.lua", "hyprland-rules.lua", "motion.lua"})
+
     def test_config_home(self):
         self.assertEqual(config_home({"XDG_CONFIG_HOME": "/x", "HOME": "/h"}), Path("/x"))
         self.assertEqual(config_home({"XDG_CONFIG_HOME": "", "HOME": "/h"}), Path("/h/.config"))

@@ -26,20 +26,28 @@ def _validate(raw: dict) -> None:
 
     Entrée : raw — TOML brut du modèle.
     Sortie : aucune.
-    Erreurs : ValueError si la portée ou le décalage de l'ombre flottante n'est pas un multiple de la
-              base (bible, ch. 3), si render_power sort des bornes de Hyprland (1 à 4), ou si
-              border_width ou radii.fullscreen est négatif.
+    Erreurs : ValueError si un jeton n'est pas un entier (un booléen est refusé), si la portée de
+              l'ombre flottante sort de 1 à 100 (bornes de Hyprland, 0 éteindrait l'ombre), si la portée
+              ou le décalage n'est pas un multiple de la base (bible, ch. 3), si render_power sort de 1
+              à 4 (bornes de Hyprland), ou si border_width ou radii.fullscreen est négatif.
     Dépendances : aucune.
     """
     s, base = raw["window"]["floating_shadow"], raw["scaling"]["height_multiple"]
+    tokens = {f"window.floating_shadow.{k}": s[k] for k in ("range", "offset_y", "render_power")}
+    tokens |= {"window.border_width": raw["window"]["border_width"], "radii.fullscreen": raw["radii"]["fullscreen"]}
+    for name, val in tokens.items():
+        if type(val) is not int:
+            raise ValueError(f"{name} = {val!r} : entier attendu")
+    if not 1 <= s["range"] <= 100:
+        raise ValueError(f"window.floating_shadow.range = {s['range']} hors des bornes de Hyprland (1 à 100)")
     for key in ("range", "offset_y"):
         if s[key] % base:
             raise ValueError(f"window.floating_shadow.{key} = {s[key]} n'est pas un multiple de {base}")
     if not 1 <= s["render_power"] <= 4:
         raise ValueError(f"window.floating_shadow.render_power = {s['render_power']} hors des bornes de Hyprland (1 à 4)")
-    for name, val in (("window.border_width", raw["window"]["border_width"]), ("radii.fullscreen", raw["radii"]["fullscreen"])):
-        if val < 0:
-            raise ValueError(f"{name} = {val} : entier positif ou nul attendu")
+    for name in ("window.border_width", "radii.fullscreen"):
+        if tokens[name] < 0:
+            raise ValueError(f"{name} = {tokens[name]} : entier positif ou nul attendu")
 
 
 def emit(model: dict) -> str:
@@ -85,7 +93,8 @@ def emit_rules(model: dict) -> str:
     Entrée : model — sortie de model.resolve.
     Sortie : contenu de hyprland-rules.lua (une liste Lua retournée, appliquée par modules/regles.lua).
              La règle de la couche 1 n'existe que si E1 n'a pas d'ombre ; le plein écran vient en
-             dernier, pour l'emporter sur une fenêtre flottante en plein écran.
+             dernier, pour qu'une règle de plein écran l'emporte sur toute règle plus générale qui
+             poserait une valeur contraire (aujourd'hui, les deux retirent l'ombre).
     Erreurs : KeyError si le TOML brut manque ; ValueError transmise par _validate.
     Dépendances : _validate.
     """
