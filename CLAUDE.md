@@ -42,7 +42,7 @@ Le reste se lit seulement au besoin.
 7. Je travaille sur la machine sur laquelle tu développes DuneI. Si des états changent, son, luminosité, etc., c'est très sûrement parce que je l'ai fait et pas un bug.
 
 # Développement d'une feature
-1. On identifie une feature
+1. On identifie une feature et tu m'en expliques l'enjeu avant toute question : ce qu'elle change pour moi, ce qui casse sans elle, ce qu'elle engage pour la suite, ce qu'elle ne couvre pas
 2. On la décompose : objectifs, listing des technos possibles, récupération de leur documentation la plus moderne, dépendances avec d'autres features, etc.
 3. On planifie
 4. Si le plan est validé, alors on code
