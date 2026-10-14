@@ -128,7 +128,9 @@ arbre de travail secondaire (`git worktree`), dont la suppression laisserait des
 **Après la fusion d'une PR** — faite par Claude dès que la relecture finale est propre et que Nicolas
 a validé à l'écran (D32) —, on met `main` à jour sans le sortir, puis on bascule dessus :
 
+    gh pr merge <n> --merge            # sans --delete-branch, qui passerait par l'ancien main
     git fetch origin main:main && git switch main
+    git branch -d feat/<sujet> && git push origin --delete feat/<sujet>
 
 Un `git switch main` suivi d'un `git pull` passe d'abord par l'ancien `main`. Si un fichier lié n'y
 existe pas encore, il disparaît quelques secondes : Hyprland recharge pendant ce trou, affiche
@@ -538,7 +540,7 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 | Version | Date | Changement |
 | --- | --- | --- |
 | 0.1 | 2026-10-12 | Version initiale |
-| 1.0 | 2026-10-14 | Procédure après fusion : Claude fusionne lui-même (D32). Fenêtrage : dwindle, plus de bordure, ombre des flottantes et règles de fenêtre générées, plein écran nu, module `env.lua` réduit à la variable Qt, générique réduit (D28 à D31) |
+| 1.0 | 2026-10-14 | Procédure après fusion : Claude fusionne lui-même, sans `--delete-branch` (D32). Fenêtrage : dwindle, plus de bordure, ombre des flottantes et règles de fenêtre générées, plein écran nu, module `env.lua` réduit à la variable Qt, générique réduit (D28 à D31) |
 | 0.9 | 2026-10-14 | Écran et échelle : fragment machine lu depuis `/etc/hostname`, règle des écrans inconnus, échelle 1,25 retenue après essai de 4/3, écartée pour la règle des pixels entiers, variables Qt d'échelle retirées, vérification par sortie virtuelle |
 | 0.8 | 2026-10-14 | Polices : `fonts.conf` généré et déployé dans `fontconfig/conf.d`, familles installées réelles, chaîne de repli, rendu, vérification par `fc-match`, graisse d'accentuation 550 ; `deploy.py` à destinations multiples |
 | 0.7 | 2026-10-14 | Procédure après fusion : mise à jour de `main` sans passer par l'ancien état, origine de la bannière « cannot open » |
