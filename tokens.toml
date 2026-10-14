@@ -322,7 +322,7 @@ weight_regular = 400         # à calibrer sur le shell réel, plage utile 380�
 weight_medium = 550          # calibré à l'écran le 2026-10-14 (500 trop discret) ; jamais 700
 # La police est variable : ces valeurs s'affinent sans réinstaller quoi que ce
 # soit. Mais AUCUN composant ne doit dépendre d'une graisse intermédiaire :
-# le design se conçoit comme s'il n'existait que 400 et 500.
+# le design se conçoit comme s'il n'existait que la régulière et l'accentuée.
 tabular_numerals = true
 # Latin, puis CJK (variante japonaise), puis emoji, puis symboles.
 fallback_chain = ["Noto Sans", "Noto Sans CJK JP", "Noto Color Emoji", "Noto Sans Symbols 2"]

@@ -48,7 +48,11 @@ class FontconfigMatchTest(unittest.TestCase):
         return subprocess.run([tool, *args], capture_output=True, text=True, env=self.env, check=True).stdout
 
     def first(self, query: str) -> str:
-        """Première famille choisie par fc-match. Entrée : motif fontconfig. Sortie : nom de famille."""
+        """Première famille choisie par fc-match.
+
+        Entrée : query — motif fontconfig. Sortie : nom de la famille retenue.
+        Erreurs : CalledProcessError si fc-match échoue. Dépendances : fc.
+        """
         return self.fc(FC_MATCH, "-f", "%{family[0]}", query)
 
     def test_fonts_installed(self):
@@ -68,8 +72,9 @@ class FontconfigMatchTest(unittest.TestCase):
         for base in (self.t["interface"], self.t["mono"]):
             for cp in (HIRAGANA, EMOJI, SYMBOL):
                 with self.subTest(base=base, cp=hex(cp)):
-                    expected = next(f for f in self.t["fallback_chain"]
-                                    if self.fc(FC_LIST, f"{f}:charset={cp:x}", "family").strip())
+                    expected = next((f for f in self.t["fallback_chain"]
+                                     if self.fc(FC_LIST, f"{f}:charset={cp:x}", "family").strip()), None)
+                    self.assertIsNotNone(expected, f"aucune famille de fallback_chain ne couvre U+{cp:04X}")
                     self.assertEqual(self.first(f"{base}:charset={cp:x}"), expected)
 
     def test_rendering(self):

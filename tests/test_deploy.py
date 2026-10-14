@@ -184,6 +184,16 @@ class DeployTest(unittest.TestCase):
         (self.cfg / "fontconfig").write_text("", encoding="utf-8")
         self.assert_refused("fontconfig")
 
+    def test_refuses_conf_d_not_a_dir(self):
+        (self.cfg / "fontconfig").mkdir(parents=True)
+        (self.cfg / "fontconfig" / "conf.d").write_text("", encoding="utf-8")
+        self.assert_refused("conf.d")
+
+    def test_refuses_conf_d_link(self):
+        (self.cfg / "fontconfig").mkdir(parents=True)
+        (self.cfg / "fontconfig" / "conf.d").symlink_to(Path(self.tmp.name))
+        self.assert_refused("conf.d")
+
     def test_fontconfig_refusal_blocks_hypr(self):
         self.generic_machine()
         self.fc.parent.mkdir(parents=True)

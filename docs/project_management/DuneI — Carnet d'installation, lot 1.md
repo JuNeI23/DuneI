@@ -95,9 +95,10 @@ destinations, une par logiciel : `hypr` (`~/.config/hypr`) et `fontconfig`
 n'a pas posé lui-même, ou un lien qui pointe ailleurs, l'arrête avec un message, sans rien modifier
 nulle part. `python3 deploy.py --dry-run` affiche les actions prévues.
 
-Un fichier copié depuis `generated/` est reconnu comme posé par DuneI à son avertissement de
-génération ; s'il est absent, la copie est refusée. Pour `fonts.conf`, l'avertissement est en deuxième
-ligne, la première étant réservée à la déclaration XML.
+Dans `~/.config/fontconfig/conf.d`, dossier partagé avec d'autres réglages, `50-dunei.conf` est
+reconnu comme posé par DuneI à son avertissement de génération, en deuxième ligne, la première étant
+réservée à la déclaration XML ; s'il est absent, la copie est refusée. Les copies vers
+`~/.config/hypr/generated/`, dossier qui n'appartient qu'à DuneI, ne font pas ce contrôle.
 
 **La bascule, une seule fois.** Au premier passage, le `hyprland.lua` générique de la machine reçoit le
 nom `generique.lua`, puis il est remplacé, de façon atomique, par le lien vers le point d'entrée DuneI.

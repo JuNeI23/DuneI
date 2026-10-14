@@ -1,6 +1,6 @@
 # Polices : indirection des noms, chaîne de repli et rendu
 
-Version 0.2 · 2026-10-14 · backlog L1-19 (indirection), L1-20 (chaîne de repli) · carnet « Typographie et chaîne de génération » · statut : validée
+Version 0.3 · 2026-10-14 · backlog L1-19 (indirection), L1-20 (chaîne de repli) · carnet « Typographie et chaîne de génération » · statut : validée
 
 ## 1. Objet
 
@@ -108,7 +108,7 @@ que fontconfig rejetterait ne doit pas exister.
 
 - `config_dir(env)` devient `config_home(env)` : `$XDG_CONFIG_HOME`, ou `~/.config` si la variable est
   absente ou vide.
-- `DESTINATIONS = (("hypr", plan_hypr), ("fontconfig", plan_fontconfig))`. Chaque fonction de
+- `DESTINATIONS = {"hypr": plan_hypr, "fontconfig": plan_fontconfig}`. Chaque fonction de
   planification reçoit le dépôt et `config_home`, et rend ses actions et ses erreurs.
 - `plan_hypr` est l'ancien `plan`, au même comportement : ses tests restent valables.
 - La vérification d'arbre de travail secondaire est commune ; chaque destination vérifie ses propres
@@ -146,7 +146,8 @@ relancées.
    `fontconfig/conf.d/50-dunei.conf`, puis le vrai `fc-match` est interrogé sans rien toucher sur la
    machine. Il vérifie les critères 1 à 3 : noms canoniques et génériques, un hiragana (U+3042), un
    emoji (U+1F600), et le rendu (`%{antialias}`, `%{hintstyle}`, `%{rgba}`). Le test est ignoré si
-   `fc-match` est absent ; il échoue en nommant le paquet si une police manque.
+   `fc-match` est absent ; il échoue en nommant la famille manquante et en renvoyant à la liste des
+   paquets du carnet, qui reste la seule table famille → paquet.
 5. **Machine réelle**, après `make install` : les mêmes `fc-match`, sans environnement modifié. Les
    commandes figurent au carnet.
 
@@ -183,3 +184,4 @@ Nicolas la fusionne.
 | --- | --- | --- |
 | 0.1 | 2026-10-14 | Conception validée : génération depuis les jetons, Nerd Font Mono, génériques `sans-serif` et `monospace`, CJK japonais, `hintslight` provisoire, déploiement par liste de destinations. |
 | 0.2 | 2026-10-14 | Implémentation : chaque destination vérifie ses propres sources ; graisse d'accentuation portée à 550 à la validation à l'écran ; `firefox --headless` écarté pour juger une graisse (D23). |
+| 0.3 | 2026-10-14 | Relecture finale : `DESTINATIONS` est un dictionnaire ; le test d'intégration renvoie au carnet pour le paquet manquant. |
