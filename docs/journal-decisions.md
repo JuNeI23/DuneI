@@ -424,8 +424,10 @@ d'API interne. La bible passe à une seule ombre.
 Valeurs choisies à l'écran : trois candidates (portée 12, 24 et 40), la troisième jugée trop lourde,
 puis deux moyennes conformes à la base de 4 ; retenue : **portée 16, décalage vertical 4, puissance de
 dégradé 2**, noir à 36 % (`shadow_color` et `shade_opacity`, jetons existants). Elles vivent dans
-`[window.floating_shadow]`. La portée et le décalage sont contrôlés comme multiples de 4 et la
-puissance comme comprise entre 1 et 4 ; un écart refuse la génération.
+`[window.floating_shadow]`. Les jetons sont contrôlés comme entiers ; la portée doit être comprise
+entre 1 et 100 et la puissance entre 1 et 4 (bornes de Hyprland), la portée et le décalage être des
+multiples de 4 ; un écart refuse la génération. Le contrôle vit dans l'émetteur Hyprland, seul chemin
+qui bloque `generate_tokens.py`, `checks.py` ne produisant que des avertissements.
 
 Une règle de fenêtre peut retirer une ombre, pas en ajouter : l'ombre est activée globalement, et la
 règle générée `couche-1-sans-ombre`, dérivée de `elevation.e1.shadow = false`, la retire aux tuiles.
@@ -450,8 +452,10 @@ au profit du défaut (8), sans effet visible.
 
 **Plein écran.** Aucun coin, aucune ombre (bible : « tous effets désactivés »). Le rayon passe par le
 jeton `radii.fullscreen = 0`, à la demande de Nicolas, pour qu'aucun rayon ne soit écrit dans
-`modules/`. La règle générée `plein-ecran-nu` vient après `couche-1-sans-ombre`, pour l'emporter sur
-une fenêtre flottante en plein écran. Vérifié : `no_shadow` vrai, `rounding` 0.
+`modules/`. La règle générée `plein-ecran-nu` vient après `couche-1-sans-ombre` : entre deux règles qui
+correspondent, la dernière l'emporte, et le plein écran doit primer sur toute règle plus générale qui
+poserait un jour une valeur contraire. Aujourd'hui, les deux règles retirent l'ombre et l'ordre ne
+tranche rien. Vérifié : `no_shadow` vrai, `rounding` 0.
 
 **Décorations (L1-14).** Hyprland ne dessine aucune barre de titre ; `config/hypr/modules/env.lua` pose
 `QT_WAYLAND_DISABLE_WINDOWDECORATION=1`, vérifiée dans l'environnement des clients et sur Dolphin. Les

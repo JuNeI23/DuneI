@@ -110,7 +110,10 @@ La couleur de l'ombre n'a pas de nouveau jeton : elle se compose de `surface_mat
 `states.focus.ring_width` reste un jeton des composants (anneau de focus, lot 2) ; il ne sert plus à la
 bordure de fenêtre.
 
-### 3.2 Contrôles bloquants (`dunei_theme/checks.py`)
+### 3.2 Contrôles bloquants (`dunei_theme/emitters/hyprland.py`)
+
+Placés dans l'émetteur Hyprland, seul chemin qui bloque `generate_tokens.py` : `checks.py` ne produit
+que des avertissements. Tous les jetons sont des entiers ; la portée est comprise entre 1 et 100.
 
 - `window.floating_shadow.range` et `offset_y` sont des multiples de 4 (bible, ch. 3, base 4) ;
 - `render_power` est compris entre 1 et 4 (borne de Hyprland) ;

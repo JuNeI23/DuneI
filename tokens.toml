@@ -11,7 +11,7 @@
 [meta]
 name = "DuneI"
 prefix = "dunei"             # préfixe de paquets, session, ~/.config/dunei/
-version = "0.4.0"          # majeure (0.x) : [fleet] supprimée, accent découplé de [categorical]
+version = "0.4.1"          # mineure : [window], radii.fullscreen (D29 à D31) ; 0.4 majeure : [fleet] supprimée, accent découplé de [categorical]
 mode = "dark"          # le mode clair viendra plus tard, sans renommage
 base_unit = 4          # px — toutes les dimensions en sont des multiples
 contrast_method = "APCA"   # WCAG 2 est peu fiable en mode sombre

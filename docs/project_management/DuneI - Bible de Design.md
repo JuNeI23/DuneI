@@ -547,7 +547,7 @@ Souvent bâti sur des technologies web, avec son propre système de thèmes. Deu
 
 #### Les jeux et les applications à identité verrouillée
 
-**Palier D. On ne se bat pas.** La gouttière et la bordure les encadrent, et c'est tout.
+**Palier D. On ne se bat pas.** La gouttière les encadre, et c'est tout.
 
 ### Points ouverts
 
@@ -811,4 +811,4 @@ Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si 
 | 0.6.1 | 2026-10-14 | Annexe des fichiers : `deploy.py` et la cible `install` (D21) |
 | 0.6.2 | 2026-10-14 | Typographie : graisse d'accentuation 550 ; Source Code Pro patchée Nerd en version statique ; `fonts.conf` généré et déployé ; hinting à l'annexe C (D22, D23) |
 | 0.6.3 | 2026-10-14 | Annexe des fichiers : modules `ecrans.lua` et `machine.lua`, dossier `machines/` (D24, D25) ; annexe C, échelle de référence 1,25 (D27) |
-| 0.7 | 2026-10-14 | Fenêtrage : plus de bordure, la fenêtre active se signale par le modificateur `inactive` ; dwindle ; ombre des flottantes à une couche ; rayon plein écran 0 ; annexe C, coins fermés et flou au lot 2 ; annexe D, modules `env`, `fenetres`, `regles` (D28 à D31) |
+| 0.7 | 2026-10-14 | Fenêtrage : plus de bordure, la fenêtre active se signale par le modificateur `inactive` ; dwindle ; ombre des flottantes à une couche ; rayon plein écran 0 ; annexe C, coins fermés et flou au lot 2 ; annexe D, modules `env`, `fenetres`, `regles` ; ch. 12, palier D sans bordure (D28 à D31) |

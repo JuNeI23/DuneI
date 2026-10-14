@@ -338,7 +338,7 @@ return {
 }
 ```
 
-`config/hypr/modules/regles.lua` applique ces règles, puis deux règles de comportement reprises du générique : `sans-agrandissement` (une application ne peut pas s'agrandir d'elle-même) et `glisser-xwayland` (correctif du glisser-déposer XWayland). L'ordre compte : entre deux règles qui correspondent, la dernière l'emporte, et le plein écran passe après la couche 1.
+`config/hypr/modules/regles.lua` applique ces règles, puis deux règles de comportement reprises du générique : `sans-agrandissement` (une application ne peut pas s'agrandir d'elle-même) et `glisser-xwayland` (correctif du glisser-déposer XWayland). L'ordre compte : entre deux règles qui correspondent, la dernière l'emporte, et le plein écran passe après la couche 1 pour primer sur toute règle plus générale ; aujourd'hui, les deux retirent l'ombre.
 
 **Le flou** est laissé aux défauts de Hyprland : il ne s'applique que derrière une surface transparente, et toutes les fenêtres sont opaques. Il se règle au lot 2 avec le voile (D31).
 

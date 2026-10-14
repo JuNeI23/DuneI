@@ -236,7 +236,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L1-13 | B | Configuré | Fenêtre active ; inactive → modificateur de conteneur — **fait (D29)** : aucune bordure ; le repère de la fenêtre active revient à L2-03 |
 | L1-14 | B | Configuré | Masquage des décorations côté serveur — **fait (D31)** : Hyprland ne dessine aucune barre de titre ; `QT_WAYLAND_DISABLE_WINDOWDECORATION` |
 | L1-15 | B | Configuré | Couche 2 — flottant applicatif et plein écran — **fait (D30, D31)** : ombre des flottantes 16/4/2, plein écran sans coins ni ombre |
-| L1-16 | B | Configuré | Bureaux virtuels |
+| L1-16 | B | Configuré | Bureaux virtuels — à vérifier avec le raccourci d'agrandissement : la règle `plein-ecran-nu` couvre-t-elle aussi l'état agrandi (D31) |
 | L1-17 | B | Configuré | Multi-écran de base et facteur d'échelle — **fait (D24 à D27)** : fragment `machines/<nom-d-hôte>.lua` lu depuis `/etc/hostname`, écrans inconnus étendus à droite, échelle 1,25 sur `caladan` |
 | L1-18 | E | Configuré | Terminal — installation minimale |
 | L1-19 | C | Écrit | Polices et indirection de noms — **fait (D22, D23)** : `fonts.conf` généré depuis `tokens.toml`, déployé dans `fontconfig/conf.d`, vérifié par `fc-match` ; graisse d'accentuation 550 |
