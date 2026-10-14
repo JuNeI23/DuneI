@@ -1,6 +1,6 @@
 # Branchement Hyprland : point d'entrée DuneI et `make install`
 
-Version 0.1 · 2026-10-14 · backlog L1-24 (branchement), carnet « Déploiement vers `~/.config` » · statut : à valider
+Version 0.1 · 2026-10-14 · backlog L1-24 (branchement), carnet « Déploiement vers `~/.config` » · statut : validée
 
 ## 1. Objet
 
