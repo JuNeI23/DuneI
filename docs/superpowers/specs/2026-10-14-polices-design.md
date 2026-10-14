@@ -111,7 +111,8 @@ que fontconfig rejetterait ne doit pas exister.
 - `DESTINATIONS = (("hypr", plan_hypr), ("fontconfig", plan_fontconfig))`. Chaque fonction de
   planification reçoit le dépôt et `config_home`, et rend ses actions et ses erreurs.
 - `plan_hypr` est l'ancien `plan`, au même comportement : ses tests restent valables.
-- La vérification d'arbre de travail secondaire et celle des sources manquantes sont communes.
+- La vérification d'arbre de travail secondaire est commune ; chaque destination vérifie ses propres
+  sources.
 - `main` planifie toutes les destinations, affiche toutes les erreurs, et n'applique rien s'il y en a
   une seule.
 
