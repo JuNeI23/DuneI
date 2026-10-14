@@ -467,3 +467,19 @@ Validation à l'écran (2026-10-14) : tuiles sans bordure ni ombre, flottante om
 de titre, dialogue de Firefox flottant ; « tout est au top » (Nicolas).
 
 *Touché : tokens.toml, config/hypr/modules/env.lua, config/hypr/modules/regles.lua, ~/.config/hypr/generique.lua (hors dépôt), bible (ch. 3, annexe C), carnet, backlog.*
+
+## 2026-10-14 — Méthode
+
+### D32 · Claude fusionne les PR
+
+Jusqu'ici, Nicolas fusionnait chaque PR sur GitHub. Désormais, Claude la fusionne lui-même
+(`gh pr merge --merge --delete-branch`) dès que deux conditions sont réunies : la relecture finale de la
+branche est propre (constats critiques et importants corrigés) et Nicolas a validé la feature à l'écran.
+Il applique ensuite la procédure après fusion du carnet. Trois options ont été présentées : statu quo,
+fusion sur ordre explicite, fusion autonome ; Nicolas a choisi la fusion autonome.
+
+Raison : supprimer un aller-retour sans valeur ajoutée, la validation à l'écran restant le point de
+contrôle de Nicolas. Ce qui ne change pas : une branche et une PR par feature, aucune fusion sans
+validation à l'écran.
+
+*Touché : CLAUDE.md, carnet (procédure après fusion).*

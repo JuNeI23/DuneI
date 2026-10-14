@@ -22,7 +22,9 @@ Le reste se lit seulement au besoin.
 - Docs : docs/project_management/ (bible, direction, backlog, carnet), docs/journal-decisions.md,
   docs/superpowers/specs/ et plans/ (AAAA-MM-JJ-<sujet>.md).
 - Chaîne : make tokens | motion | test | check | golden | install. generated/ ne s'édite jamais.
-- Une branche feat/<sujet> par feature, partie de main à jour, une PR, je fusionne.
+- Une branche feat/<sujet> par feature, partie de main à jour, une PR. Tu la fusionnes toi-même
+  (`gh pr merge --merge --delete-branch`) dès que la relecture finale est propre et que j'ai validé
+  à l'écran, puis tu appliques la procédure après fusion du carnet (D32).
 - make install refuse les arbres git secondaires : travailler dans ~/DuneI.
 - Aperçus : .superpowers/preview/, ouverts dans un Firefox isolé et capturés avec grim ;
   jamais firefox --headless pour juger une police.
@@ -48,7 +50,7 @@ Le reste se lit seulement au besoin.
 4. Si le plan est validé, alors on code
 5. On teste
 6. On documente ; le dernier paragraphe des notes de direction nomme toujours la prochaine étape
-7. On push
+7. On push, puis tu fusionnes (voir Repères)
 
 # Tes outils
 1. grim, ce n'est pas forcément la techno choisie pour l'utilisateur final, elle te sert à TOI de vérifier des features de design
