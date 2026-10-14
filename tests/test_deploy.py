@@ -7,10 +7,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from deploy import config_dir, plan
+from deploy import config_home, plan
 
 ROOT = Path(__file__).resolve().parent.parent
 GENERIC = "-- Configuration générique de test.\n"
+FOREIGN = "<?xml version=\"1.0\"?>\n<fontconfig/>\n"
+OLD_OWN = "<?xml version=\"1.0\"?>\n<!-- GÉNÉRÉ depuis tokens.toml — NE PAS MODIFIER À LA MAIN -->\n<fontconfig/>\n"
 
 
 def run(cfg: Path, *args: str) -> subprocess.CompletedProcess:
@@ -38,6 +40,7 @@ class DeployTest(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.cfg = Path(self.tmp.name) / "cfg"
         self.hypr = self.cfg / "hypr"
+        self.fc = self.cfg / "fontconfig" / "conf.d" / "50-dunei.conf"
 
     def tearDown(self):
         self.tmp.cleanup()
@@ -62,11 +65,12 @@ class DeployTest(unittest.TestCase):
         self.assertEqual(os.readlink(self.hypr / "modules"), str(ROOT / "config" / "hypr" / "modules"))
         for name in ("hyprland-tokens.lua", "motion.lua"):
             self.assertEqual((self.hypr / "generated" / name).read_bytes(), (ROOT / "generated" / name).read_bytes())
+        self.assertEqual(self.fc.read_bytes(), (ROOT / "generated" / "fonts.conf").read_bytes())
 
-    def test_config_dir(self):
-        self.assertEqual(config_dir({"XDG_CONFIG_HOME": "/x", "HOME": "/h"}), Path("/x/hypr"))
-        self.assertEqual(config_dir({"XDG_CONFIG_HOME": "", "HOME": "/h"}), Path("/h/.config/hypr"))
-        self.assertEqual(config_dir({"HOME": "/h"}), Path("/h/.config/hypr"))
+    def test_config_home(self):
+        self.assertEqual(config_home({"XDG_CONFIG_HOME": "/x", "HOME": "/h"}), Path("/x"))
+        self.assertEqual(config_home({"XDG_CONFIG_HOME": "", "HOME": "/h"}), Path("/h/.config"))
+        self.assertEqual(config_home({"HOME": "/h"}), Path("/h/.config"))
 
     def test_fresh_machine(self):
         res = run(self.cfg)
@@ -132,7 +136,7 @@ class DeployTest(unittest.TestCase):
         repo = Path(self.tmp.name) / "arbre"
         repo.mkdir()
         (repo / ".git").write_text("gitdir: /ailleurs/.git/worktrees/arbre\n", encoding="utf-8")
-        actions, err = plan(repo, self.hypr)
+        actions, err = plan(repo, self.cfg)
         self.assertTrue(any("arbre de travail" in e for e in err), err)
 
     def test_dry_run_changes_nothing(self):
@@ -144,8 +148,54 @@ class DeployTest(unittest.TestCase):
         self.assertEqual(snapshot(self.cfg), before)
 
     def test_missing_source(self):
-        actions, err = plan(Path(self.tmp.name) / "depot-vide", self.hypr)
+        actions, err = plan(Path(self.tmp.name) / "depot-vide", self.cfg)
         self.assertTrue(any("make tokens motion" in e for e in err), err)
+        self.assertTrue(any("fonts.conf" in e for e in err), err)
+
+    def test_replaces_own_file(self):
+        self.fc.parent.mkdir(parents=True)
+        self.fc.write_text(OLD_OWN, encoding="utf-8")
+        res = run(self.cfg)
+        self.assertEqual(res.returncode, 0, res.stderr)
+        self.assert_deployed()
+
+    def test_keeps_user_fontconfig_files(self):
+        self.fc.parent.mkdir(parents=True)
+        user = {self.cfg / "fontconfig" / "fonts.conf": FOREIGN, self.fc.parent / "99-perso.conf": FOREIGN}
+        for p, text in user.items():
+            p.write_text(text, encoding="utf-8")
+        res = run(self.cfg)
+        self.assertEqual(res.returncode, 0, res.stderr)
+        for p, text in user.items():
+            self.assertEqual(p.read_text(encoding="utf-8"), text)
+
+    def test_refuses_foreign_fontconfig_file(self):
+        self.fc.parent.mkdir(parents=True)
+        self.fc.write_text(FOREIGN, encoding="utf-8")
+        self.assert_refused("50-dunei.conf")
+
+    def test_refuses_fontconfig_link(self):
+        self.fc.parent.mkdir(parents=True)
+        self.fc.symlink_to(ROOT / "generated" / "fonts.conf")
+        self.assert_refused("50-dunei.conf")
+
+    def test_refuses_fontconfig_not_a_dir(self):
+        self.cfg.mkdir()
+        (self.cfg / "fontconfig").write_text("", encoding="utf-8")
+        self.assert_refused("fontconfig")
+
+    def test_fontconfig_refusal_blocks_hypr(self):
+        self.generic_machine()
+        self.fc.parent.mkdir(parents=True)
+        self.fc.write_text(FOREIGN, encoding="utf-8")
+        self.assert_refused("50-dunei.conf")
+        self.assertEqual((self.hypr / "hyprland.lua").read_text(encoding="utf-8"), GENERIC)
+
+    def test_hypr_refusal_blocks_fontconfig(self):
+        self.generic_machine()
+        (self.hypr / "modules").mkdir()
+        self.assert_refused("modules")
+        self.assertFalse((self.cfg / "fontconfig").exists())
 
 
 if __name__ == "__main__":
