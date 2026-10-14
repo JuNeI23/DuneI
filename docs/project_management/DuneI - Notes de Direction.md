@@ -187,7 +187,8 @@ emoji, symboles. Le rendu est en niveaux de gris avec un hinting léger, et la g
 **Écran et échelle — 14 octobre 2026.** Le matériel a sa place : `machines/<nom-d-hôte>.lua`, lu depuis
 `/etc/hostname` et chargé en dernier, est le seul endroit où un écran est nommé ; la configuration
 commune n'en connaît aucun. Un écran inconnu étend le bureau à droite, vérifié avec une sortie
-virtuelle. L'écran de `caladan` passe à l'échelle 4/3 (1440 × 900), jugée à l'écran, et les variables
+virtuelle. L'écran de `caladan` passe à l'échelle 1,25 (1536 × 960) : 4/3, préférée à l'écran, a été écartée parce qu'elle
+brise la règle des pixels entiers de la bible. Les variables
 d'échelle de Qt prévues par le carnet sont retirées : elles sont sans effet sous Wayland (D24 à D27).
 Le couvercle avec écran externe rejoint la veille (L1-09). Prochaine étape du lot 1 : le fenêtrage,
 L1-12 à L1-16 — tuilage, fenêtre active et inactive, décorations, flottant, bureaux —, à découper au
@@ -222,7 +223,7 @@ brainstorming.
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-10 | Version initiale |
-| 1.6 | 2026-10-14 | Écran et échelle faits (L1-17), échelle 4/3 ; reste le fenêtrage |
+| 1.6 | 2026-10-14 | Écran et échelle faits (L1-17), échelle 1,25 ; reste le fenêtrage |
 | 1.5 | 2026-10-14 | Polices résolues (L1-19, L1-20), graisse d'accentuation 550 ; reste l'écran et l'échelle |
 | 1.4 | 2026-10-14 | Session branchée sur DuneI ; configuration générique chargée en premier |
 | 1.3 | 2026-10-14 | Mouvement écrit et vérifié ; reste le branchement dans Hyprland |

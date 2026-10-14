@@ -27,7 +27,7 @@ Relevé sur `caladan` avant tout développement. **Aucun choix logiciel de ce ca
 | Configuration | Fichier générique autogénéré par Hyprland, non modifié | Renommé `generique.lua` par `make install`, chargé en premier par le point d'entrée DuneI et réduit feature après feature |
 | Gestionnaire de connexion | `sddm`, activé | Conservé jusqu'à la feature session |
 | Terminal | `kitty` | Conservé jusqu'à la feature terminal |
-| Échelle d'affichage | `auto` → 1,5 | Tranchée à la feature écran : 4/3, soit 1440 × 900 (D27) ; la règle générique est retirée de `generique.lua` |
+| Échelle d'affichage | `auto` → 1,5 | Tranchée à la feature écran : 1,25, soit 1536 × 960 (D27) ; la règle générique est retirée de `generique.lua` |
 | Réseau, audio, énergie | NetworkManager, PipeWire + WirePlumber, power-profiles-daemon | Acquis |
 
 **La méthode : la configuration générique reste en place, et chaque feature en remplace un morceau.** Une feature terminée = un morceau de `hyprland.lua` générique remplacé par un module du dépôt, documenté et validé. La machine reste utilisable entre deux features.
@@ -266,19 +266,19 @@ Les générateurs produisent donc des **modules Lua**, et non plus des fragments
 
 ```lua
 -- config/hypr/machines/caladan.lua — le seul endroit où eDP-1 est nommé
-hl.monitor({ output = "eDP-1", mode = "1920x1200@60", position = "0x0", scale = 4 / 3 })  -- surface logique de 1440 × 900
+hl.monitor({ output = "eDP-1", mode = "1920x1200@60", position = "0x0", scale = 1.25 })  -- surface logique de 1536 × 960
 ```
 
-À 162 points par pouce, l'échelle 1 rend le corps de 13 px à environ 60 % de sa taille physique de référence. L'échelle est donc obligatoire. Trois valeurs fractionnaires ont été retenues comme candidates ; chacune donne une surface logique en pixels entiers, condition imposée par Hyprland.
+À 162 points par pouce, l'échelle 1 rend le corps de 13 px à environ 60 % de sa taille physique de référence. L'échelle est donc obligatoire. Trois valeurs fractionnaires ont été retenues comme candidates ; chacune donne une surface logique en pixels entiers, condition imposée par Hyprland. La bible (chapitre 3) ajoute une règle plus stricte : le facteur doit faire tomber tout multiple de 4 sur un pixel entier, ce que font 1, 1,25, 1,5 et 2.
 
 | Échelle | Surface logique | Jugement |
 | --- | --- | --- |
 | 1 | 1920 × 1200 | Écartée d'office : texte trop petit, et la bible interdit de relever l'échelle typographique pour compenser |
-| 1,25 | 1536 × 960 | Essayée à l'écran. Proposition de la version précédente de ce carnet |
-| **4/3** | 1440 × 900 | **Retenue** (D27), jugée « parfaite » par Nicolas à l'écran, sur son usage réel |
-| 1,5 | 1280 × 800 | Non essayée : c'était l'échelle `auto` de la configuration générique, trop à l'étroit pour un système dense |
+| **1,25** | 1536 × 960 | **Retenue** (D27) par Nicolas, essayée à l'écran. Pixels entiers pour toute la base de 4 ; 129,6 points par pouce logiques, au-dessus de la cible de 113 — dérogation consignée au journal |
+| 4/3 | 1440 × 900 | Essayée à l'écran et jugée « parfaite » par Nicolas, puis écartée : hors des facteurs de la bible, elle fait tomber 4 sur 5,33 pixels et 8 sur 10,67, d'où des gouttières et des bordures possiblement irrégulières |
+| 1,5 | 1280 × 800 | Non essayée dans cette feature ; c'était l'échelle `auto` de la configuration générique, sur laquelle Nicolas travaillait jusque-là |
 
-L'échelle s'écrit `4 / 3` et non `1.333333` : la valeur est exacte et l'intention lisible. Hyprland l'affiche `1.3333334` dans `hyprctl monitors`. Un changement d'échelle dans le fichier machine s'applique à chaud, sans redémarrer la session.
+Un changement d'échelle dans le fichier machine s'applique à chaud, sans redémarrer la session.
 
 **Les écrans inconnus** (D25) relèvent de la règle commune de `config/hypr/modules/ecrans.lua`, qui ne nomme aucun matériel : `output = ""`, mode préféré, position `auto-right`, échelle `auto`. Hyprland n'applique cette règle qu'aux sorties qu'aucune autre règle ne vise ; entre deux règles qui correspondent, la dernière déclarée l'emporte. Un écran de passage — vidéoprojecteur, salle de réunion — étend donc le bureau à droite, à sa résolution native. La duplication sera une action manuelle de l'interface d'agencement (L3-10) ; le couvercle fermé avec un écran externe est traité avec la veille (L1-09). Un écran externe fixe se déclare dans le fichier machine, **par sa description** (`desc:<marque> <modèle>`, comparée au début de la description), jamais par son port : le même écran peut changer de prise.
 
@@ -296,7 +296,7 @@ hyprctl output remove DUNEI-TEST
 hyprctl -j workspaces | python3 -c 'import json,sys; [print(w["id"], w["monitor"], w["windows"]) for w in json.load(sys.stdin)]'
 ```
 
-Relevé du 2026-10-14, à l'échelle 1,25 alors en vigueur : la sortie s'est placée à x = 1536, la largeur logique de `eDP-1` (ce sera 1440 à l'échelle 4/3), y = 0, échelle automatique 2 (sortie sans taille physique) ; le bureau 3 et sa fenêtre sont revenus sur `eDP-1` à la suppression. En 0.56, `hyprctl dispatch` prend une expression Lua (`hl.dsp.…`), non plus le nom d'un répartiteur.
+Relevé du 2026-10-14, à l'échelle 1,25 alors en vigueur : la sortie s'est placée à x = 1536, la largeur logique de `eDP-1`, y = 0, échelle automatique 2 (sortie sans taille physique) ; le bureau 3 et sa fenêtre sont revenus sur `eDP-1` à la suppression. En 0.56, `hyprctl dispatch` prend une expression Lua (`hl.dsp.…`), non plus le nom d'un répartiteur.
 
 **Ce que l'échelle fractionnaire coûte.** Elle rend flou tout ce qui n'implémente pas le protocole d'échelle fractionnaire de Wayland. Qt 6.5 et suivants l'implémentent ; GTK 3 (3.24.52 sur `caladan`) n'implémente pas ce protocole : il rend à l'entier supérieur et le compositeur réduit l'image, d'où un léger flou. **C'est un argument de plus pour la famille Qt comme famille dominante** — argument qu'on n'avait pas vu venir en décidant, et qui conforte le choix.
 
@@ -321,7 +321,7 @@ Dans l'API Lua, `rounding` vit sous `decoration`, pas sous `general`.
 
 **`gaps_in` vaut 4, pas 8.** Hyprland applique cette valeur de chaque côté de chaque fenêtre : deux fenêtres voisines produisent donc un intervalle de 8 px. Écrire 8 donnerait 16, et l'écart ne se verrait qu'en comparant à la maquette. C'est le prototype du défaut que la règle « aucune valeur en dur » existe pour empêcher — ces valeurs viennent du fragment généré, où le doublement est calculé, pas retapé.
 
-**Et ces valeurs sont en pixels logiques**, donc déjà multipliées par 4/3 à l'affichage. Une gouttière mesurée à la règle sur une capture d'écran fera 10 ou 11 pixels physiques, et un rayon de 12 en fera 16. La vérification de recette se fait en unités logiques, pas sur la capture.
+**Et ces valeurs sont en pixels logiques**, donc déjà multipliées par 1,25 à l'affichage. Une gouttière mesurée à la règle sur une capture d'écran fera 10 pixels physiques, et un rayon de 12 en fera 15. La bordure de 2, qui n'est pas un multiple de 4, tombe sur 2,5 pixels : point à juger avec L1-13. La vérification de recette se fait en unités logiques, pas sur la capture.
 
 ### Fenêtre active et inactive
 
@@ -398,7 +398,7 @@ Déclarée dans `fonts.conf` : `Noto Sans` → `Noto Sans CJK JP` → `Noto Colo
 
 ### Rendu à 162 points par pouce
 
-L'antialiasage sous-pixel et le hinting appuyé sont des compensations pour écrans peu denses. À cette densité, ils nuisent : **antialiasage en niveaux de gris, hinting léger ou nul.** Valeur retenue : `hintslight`, `rgba = none`, dans `[type.rendering]` de `tokens.toml`. À l'échelle 4/3, un corps de 13 px fait plus de 17 pixels physiques et le hinting n'y change presque rien ; le passage à `hintnone` reste un point de l'annexe C.
+L'antialiasage sous-pixel et le hinting appuyé sont des compensations pour écrans peu denses. À cette densité, ils nuisent : **antialiasage en niveaux de gris, hinting léger ou nul.** Valeur retenue : `hintslight`, `rgba = none`, dans `[type.rendering]` de `tokens.toml`. À l'échelle 1,25, un corps de 13 px fait plus de 16 pixels physiques et le hinting n'y change presque rien ; le passage à `hintnone` reste un point de l'annexe C.
 
 La graisse d'accentuation a été calibrée à l'écran à **550** : 500 était trop discret (D23).
 
@@ -481,7 +481,7 @@ Le lot est terminé quand les seize lignes passent. Pas quinze.
 - [ ] Le tuilage fonctionne, gouttière de 8 px en unités logiques
 - [ ] Le rayon est de 12, la fenêtre active se distingue des autres
 - [ ] Aucune application Qt n'affiche sa propre barre de titre
-- [ ] À l'échelle 4/3, le texte d'une application Qt est net — pas flou, pas doublement mis à l'échelle
+- [ ] À l'échelle 1,25, le texte d'une application Qt est net — pas flou, pas doublement mis à l'échelle
 - [ ] Les dix bureaux sont atteignables au clavier
 - [ ] Trackpoint et pavé tactile fonctionnent tous les deux
 - [ ] `fc-match` renvoie les deux polices attendues
@@ -517,7 +517,7 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 | Version | Date | Changement |
 | --- | --- | --- |
 | 0.1 | 2026-10-12 | Version initiale |
-| 0.9 | 2026-10-14 | Écran et échelle : fragment machine lu depuis `/etc/hostname`, règle des écrans inconnus, échelle 4/3 validée à l'écran, variables Qt d'échelle retirées, vérification par sortie virtuelle |
+| 0.9 | 2026-10-14 | Écran et échelle : fragment machine lu depuis `/etc/hostname`, règle des écrans inconnus, échelle 1,25 retenue après essai de 4/3, écartée pour la règle des pixels entiers, variables Qt d'échelle retirées, vérification par sortie virtuelle |
 | 0.8 | 2026-10-14 | Polices : `fonts.conf` généré et déployé dans `fontconfig/conf.d`, familles installées réelles, chaîne de repli, rendu, vérification par `fc-match`, graisse d'accentuation 550 ; `deploy.py` à destinations multiples |
 | 0.7 | 2026-10-14 | Procédure après fusion : mise à jour de `main` sans passer par l'ancien état, origine de la bannière « cannot open » |
 | 0.6 | 2026-10-14 | Branchement Hyprland : point d'entrée `config/hypr/hyprland.lua`, `deploy.py` et `make install`, bascule depuis la configuration générique, retour arrière |

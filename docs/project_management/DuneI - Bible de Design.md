@@ -694,7 +694,7 @@ Chacun correspond à une erreur observée dans des systèmes existants.
 | Sujet | Nature |
 | --- | --- |
 | Graisse d'accentuation : 550, jugée dans Firefox le 2026-10-14 (D23) | À confirmer sur le shell réel |
-| Hinting : `hintslight` ou `hintnone` | Calibration sur shell réel ; écart négligeable à l'échelle 1,5 |
+| Hinting : `hintslight` ou `hintnone` | Calibration sur shell réel ; écart négligeable à l'échelle 1,25 de `caladan` (D27) |
 | Seuils de conteneur | Validation à l'usage |
 | Délais d'infobulle et de barre de défilement | Validation à l'usage |
 | Opacité du voile | À revérifier une fois le flou en place |
@@ -804,4 +804,4 @@ Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si 
 | 0.6 | 2026-10-14 | Mouvement : septième transition `navigate`, symétrique comme `reflow` ; `generate_motion.py` produit Lua et JSON (D14 à D20) |
 | 0.6.1 | 2026-10-14 | Annexe des fichiers : `deploy.py` et la cible `install` (D21) |
 | 0.6.2 | 2026-10-14 | Typographie : graisse d'accentuation 550 ; Source Code Pro patchée Nerd en version statique ; `fonts.conf` généré et déployé ; hinting à l'annexe C (D22, D23) |
-| 0.6.3 | 2026-10-14 | Annexe des fichiers : modules `ecrans.lua` et `machine.lua`, dossier `machines/` (D24, D25) |
+| 0.6.3 | 2026-10-14 | Annexe des fichiers : modules `ecrans.lua` et `machine.lua`, dossier `machines/` (D24, D25) ; annexe C, échelle de référence 1,25 (D27) |

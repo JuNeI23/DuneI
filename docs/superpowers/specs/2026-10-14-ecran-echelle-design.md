@@ -1,6 +1,6 @@
 # Écran et échelle : fragment machine, écrans inconnus et facteur d'échelle
 
-Version 0.2 · 2026-10-14 · backlog L1-17 · carnet « Ce qui est propre à une machine », « Échelle d'affichage » · statut : validée
+Version 0.3 · 2026-10-14 · backlog L1-17 · carnet « Ce qui est propre à une machine », « Échelle d'affichage » · statut : validée
 
 ## 1. Objet
 
@@ -107,7 +107,7 @@ que l'appel `apply(false)` du mouvement.
 
 ```lua
 -- Le seul fichier où les écrans de caladan sont nommés.
-hl.monitor({ output = "eDP-1", mode = "1920x1200@60", position = "0x0", scale = 4 / 3 })  -- valeur validée à l'écran (D27)
+hl.monitor({ output = "eDP-1", mode = "1920x1200@60", position = "0x0", scale = 1.25 })  -- valeur retenue (D27)
 -- Écran fixe : à déclarer par sa description, relevée avec hyprctl monitors.
 -- hl.monitor({ output = "desc:<marque modèle>", mode = "preferred", position = "auto-right", scale = "auto" })
 ```
@@ -139,7 +139,7 @@ puisque DuneI est chargé après et redéclare la même sortie ; il applique D21
 
 ## 7. Validation à l'écran
 
-Les trois échelles sont essayées à chaud en modifiant `machines/caladan.lua`, sur l'usage réel de
+Les échelles candidates sont essayées à chaud en modifiant `machines/caladan.lua`, sur l'usage réel de
 Nicolas : terminal, navigateur, deux fenêtres côte à côte. Une capture grim par échelle sert à ma
 vérification. Nicolas choisit ; la valeur et son jugement entrent au journal.
 
@@ -168,3 +168,4 @@ l'écran. Nicolas la fusionne.
 | --- | --- | --- |
 | 0.1 | 2026-10-14 | Conception : fragment machine lu depuis `/etc/hostname`, écrans inconnus étendus à droite, couvercle reporté à L1-09, test par sortie virtuelle, variables Qt retirées, échelle à choisir à l'écran. |
 | 0.2 | 2026-10-14 | Implémentation : échelle 4/3 retenue à l'écran, 1,5 non essayée ; le refus d'un lien étranger nomme sa cible ; sortie virtuelle en échelle automatique 2. |
+| 0.3 | 2026-10-14 | Relecture : 4/3 écartée car hors des facteurs de la bible (pixels non entiers) ; retour à 1,25, avec dérogation à la cible de 113 points par pouce ; nom d'hôte ramené en minuscules. |

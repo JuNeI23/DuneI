@@ -350,16 +350,28 @@ la seconde n'existe plus en Qt 6. Qt 6.12 implémente `wp_fractional_scale_v1` e
 compositeur. Raison : le carnet les prescrivait sur une hypothèse que la documentation actuelle
 contredit ; une variable sans effet est une fausse piste le jour d'un diagnostic.
 
-### D27 · Échelle de `caladan` : 4/3
+### D27 · Échelle de `caladan` : 1,25 — dérogation à la cible de densité
 
-L'écran interne passe de l'échelle `auto` (1,5, surface de 1280 × 800) à 4/3, soit 1440 × 900, écrite
-`4 / 3` dans `machines/caladan.lua`. 1,25 (1536 × 960), proposé par le carnet, a été essayé à l'écran ;
-4/3, troisième candidate ajoutée pendant la conception, a été jugé « parfait » par Nicolas, qui n'a pas
-souhaité essayer 1,5.
+L'écran interne passe de l'échelle `auto` (1,5, surface de 1280 × 800) à 1,25, soit 1536 × 960.
+
+Le parcours : 1,25, proposé par le carnet, puis 4/3 (1440 × 900), troisième candidate ajoutée pendant la
+conception, ont été essayés à l'écran. Nicolas a jugé 4/3 « parfait ». La relecture de la branche a
+relevé que 4/3 n'est pas un facteur de la bible (chapitre 3 : 1 · 1,25 · 1,5 · 2) et brise la raison
+même de la base de 4 px : 4 y tombe sur 5,33 pixels physiques et 8 sur 10,67, d'où des gouttières et
+des bordures possiblement irrégulières. Nicolas a alors retenu 1,25 plutôt que d'amender la bible.
+
+**Dérogation.** La bible fixe une cible de 113 points par pouce logiques, « chaque machine choisit le
+facteur qui l'en rapproche ». À 162 points par pouce, 1,25 donne 129,6 et 1,5 en donne 108, plus
+proche. Nicolas préfère la surface de 1,25 à la taille de texte de 1,5 : la règle des pixels entiers
+est respectée, la cible de densité ne l'est pas, et c'est son choix.
+
+Point laissé à L1-13 : la bordure de 2 (`states.focus.ring_width`), qui n'est pas un multiple de 4,
+tombe sur 2,5 pixels physiques à 1,25.
 
 Vérification sur la session (2026-10-14) : le fragment est chargé par Hyprland (échelle effective
-`1.3333334`, aucune erreur de configuration) ; un changement d'échelle s'applique à chaud. Une sortie
-virtuelle `DUNEI-TEST` s'est placée à droite de `eDP-1` (x = 1536 à l'échelle 1,25), avec l'échelle
-automatique 2 ; le bureau 3 qu'on y avait envoyé est revenu sur `eDP-1` à sa suppression.
+1,25, aucune erreur de configuration) ; un changement d'échelle s'applique à chaud. Une sortie
+virtuelle `DUNEI-TEST` s'est placée à droite de `eDP-1` (x = 1536), avec l'échelle automatique 2 ; le
+bureau 3 qu'on y avait envoyé est revenu sur `eDP-1` à sa suppression. La relecture a aussi conduit à
+ramener le nom d'hôte en minuscules, pour qu'un `/etc/hostname` à « Caladan » trouve `caladan.lua`.
 
 *Touché : config/hypr/hyprland.lua, config/hypr/modules/ecrans.lua, config/hypr/modules/machine.lua, config/hypr/machines/caladan.lua, deploy.py, tests/, ~/.config/hypr/generique.lua (hors dépôt), carnet, backlog, bible (annexe des fichiers), notes de direction, CLAUDE.md.*
