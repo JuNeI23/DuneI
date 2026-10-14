@@ -282,7 +282,16 @@ window  = 12
 panel   = 10
 control = 6
 small   = 4
+fullscreen = 0               # plein écran : aucun effet, coins compris (bible, annexe E)
 # Règle d'imbrication : rayon_interne = rayon_externe − padding
+
+[window]
+border_width = 0             # aucune bordure de fenêtre ; la fenêtre active se signale au lot 2 (L2-03, D29)
+
+[window.floating_shadow]     # couche 2 seulement ; une seule ombre, Hyprland n'en dessine qu'une (D30)
+range = 16                   # px logiques, multiple de 4
+offset_y = 4                 # px logiques vers le bas, multiple de 4
+render_power = 2             # dégradé, de 1 (doux) à 4 (rapide), bornes de Hyprland
 
 [layout]
 sidebar_default = 240
