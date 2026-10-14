@@ -56,6 +56,7 @@ Singleton {
     readonly property real rowHeight: num("density.comfortable", "row_height", 24)
     readonly property real controlHeight: num("density.comfortable", "control_height", 28)
     readonly property real gutter: num("density.comfortable", "tiling_gutter", 8)
+    readonly property real tilingMargin: num("density.comfortable", "tiling_margin", 8)
     readonly property real padding: num("spacing", "panel_padding", 12)
     readonly property real sectionGap: num("spacing", "section_gap", 16)
     readonly property real fontSize: num("type", "base_size", 13)

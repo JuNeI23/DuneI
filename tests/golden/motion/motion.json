@@ -1,0 +1,162 @@
+{
+  "_generated": "GÉNÉRÉ depuis motion.toml par generate_motion.py. Ne pas modifier à la main.",
+  "version": "0.1.0",
+  "rules": {
+    "exit_ratio": 0.7,
+    "exit_tolerance": 0.1,
+    "overshoot_allowed": [
+      "window"
+    ],
+    "stagger_allowed": [
+      "reveal"
+    ],
+    "stagger_cap": 5,
+    "reduced_fade_ms": 100
+  },
+  "transitions": {
+    "state": {
+      "usage": "Changement d'état sur place : survol, focus, pression, sélection.",
+      "in": {
+        "mass": 1,
+        "stiffness": 2200.0,
+        "dampening": 100.0,
+        "zeta": 1.07,
+        "settle_ms": 164
+      },
+      "out": {
+        "mass": 1,
+        "stiffness": 4489.8,
+        "dampening": 142.86,
+        "zeta": 1.07,
+        "settle_ms": 115
+      },
+      "overshoot": false,
+      "symmetric": false
+    },
+    "reveal": {
+      "usage": "Apparition d'éléments dans le flux.",
+      "in": {
+        "mass": 1,
+        "stiffness": 600.0,
+        "dampening": 50.0,
+        "zeta": 1.02,
+        "settle_ms": 286
+      },
+      "out": {
+        "mass": 1,
+        "stiffness": 1224.5,
+        "dampening": 71.43,
+        "zeta": 1.02,
+        "settle_ms": 201
+      },
+      "overshoot": false,
+      "symmetric": false,
+      "stagger": {
+        "ms": 40,
+        "cap": 5
+      }
+    },
+    "overlay": {
+      "usage": "Entrée d'une surface de couche 3.",
+      "in": {
+        "mass": 1,
+        "stiffness": 400.0,
+        "dampening": 44.0,
+        "zeta": 1.1,
+        "settle_ms": 402
+      },
+      "out": {
+        "mass": 1,
+        "stiffness": 816.3,
+        "dampening": 62.86,
+        "zeta": 1.1,
+        "settle_ms": 282
+      },
+      "overshoot": false,
+      "symmetric": false
+    },
+    "window": {
+      "usage": "Ouverture et fermeture de fenêtre.",
+      "in": {
+        "mass": 1,
+        "stiffness": 428.6,
+        "dampening": 38.57,
+        "zeta": 0.93,
+        "settle_ms": 274
+      },
+      "out": {
+        "mass": 1,
+        "stiffness": 874.7,
+        "dampening": 55.1,
+        "zeta": 0.93,
+        "settle_ms": 192
+      },
+      "overshoot": true,
+      "symmetric": false
+    },
+    "reflow": {
+      "usage": "Réagencement du tuilage.",
+      "in": {
+        "mass": 1,
+        "stiffness": 625.0,
+        "dampening": 50.0,
+        "zeta": 1.0,
+        "settle_ms": 269
+      },
+      "out": {
+        "mass": 1,
+        "stiffness": 625.0,
+        "dampening": 50.0,
+        "zeta": 1.0,
+        "settle_ms": 269
+      },
+      "overshoot": false,
+      "symmetric": true
+    },
+    "spectacle": {
+      "usage": "Moments sans contenu.",
+      "in": {
+        "mass": 1,
+        "stiffness": 150.0,
+        "dampening": 25.0,
+        "zeta": 1.02,
+        "settle_ms": 569
+      },
+      "out": {
+        "mass": 1,
+        "stiffness": 306.1,
+        "dampening": 35.71,
+        "zeta": 1.02,
+        "settle_ms": 399
+      },
+      "overshoot": false,
+      "symmetric": false
+    },
+    "navigate": {
+      "usage": "Changement de bureau : la vue glisse d'un bureau à l'autre.",
+      "in": {
+        "mass": 1,
+        "stiffness": 2000.0,
+        "dampening": 100.0,
+        "zeta": 1.12,
+        "settle_ms": 186
+      },
+      "out": {
+        "mass": 1,
+        "stiffness": 2000.0,
+        "dampening": 100.0,
+        "zeta": 1.12,
+        "settle_ms": 186
+      },
+      "overshoot": false,
+      "symmetric": true
+    }
+  },
+  "reduced": {
+    "mass": 1,
+    "stiffness": 4406.3,
+    "dampening": 132.76,
+    "zeta": 1.0,
+    "settle_ms": 103
+  }
+}

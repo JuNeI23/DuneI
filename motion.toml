@@ -1,0 +1,110 @@
+# motion.toml — source unique du mouvement de DuneI.
+#
+# Chaque transition est un ressort : masse, raideur, amortissement, sur une progression
+# normalisée de 0 à 1 (modèle de Hyprland et du banc proto/motion). Les valeurs ont été
+# validées au ressenti dans le banc le 2026-10-13. generate_motion.py en dérive le
+# ressort de sortie, le ressort réduit, puis les fichiers de generated/.
+version = "0.1.0"
+
+[meta]
+name   = "DuneI"
+prefix = "dunei"                  # Préfixe des courbes Hyprland, par exemple dunei-state-in.
+
+[rules]                           # Règles chiffrées du chapitre 6 de la bible, vérifiées à chaque génération.
+exit_ratio        = 0.70          # Une sortie dure environ 70 % de l'entrée.
+exit_tolerance    = 0.10          # Les rapports compris entre 0,60 et 0,80 sont acceptés.
+overshoot_allowed = ["window"]    # Seules ces transitions peuvent dépasser leur cible (ζ < 1).
+stagger_allowed   = ["reveal"]    # Seules ces transitions peuvent échelonner leurs éléments.
+stagger_cap       = 5             # Nombre maximal d'éléments échelonnés dans une cascade.
+reduced_fade_ms   = 100           # Durée du fondu qui remplace tout mouvement en mode réduit.
+
+[transitions.state]
+usage      = "Changement d'état sur place : survol, focus, pression, sélection."
+mass       = 0.50
+stiffness  = 1100
+dampening  = 50                   # Nom de clé de Hyprland 0.56.2 (D13).
+exit_ratio = 0.70
+
+[transitions.reveal]
+usage      = "Apparition d'éléments dans le flux."
+mass       = 1.00
+stiffness  = 600
+dampening  = 50
+exit_ratio = 0.70
+stagger_ms = 40                   # Décalage entre deux éléments successifs de la cascade.
+
+[transitions.overlay]
+usage      = "Entrée d'une surface de couche 3."
+mass       = 1.00
+stiffness  = 400
+dampening  = 44
+exit_ratio = 0.70
+
+[transitions.window]
+usage      = "Ouverture et fermeture de fenêtre."
+mass       = 0.70
+stiffness  = 300
+dampening  = 27
+exit_ratio = 0.70
+overshoot  = true                 # Seule transition autorisée à dépasser sa cible.
+
+[transitions.reflow]
+usage      = "Réagencement du tuilage."
+mass       = 0.80
+stiffness  = 500
+dampening  = 40
+symmetric  = true                 # Rien n'entre ni ne sort : le même ressort sert dans les deux sens.
+
+[transitions.spectacle]
+usage      = "Moments sans contenu."
+mass       = 1.00
+stiffness  = 150
+dampening  = 25
+exit_ratio = 0.70
+
+[transitions.navigate]
+usage      = "Changement de bureau : la vue glisse d'un bureau à l'autre."
+mass       = 0.30
+stiffness  = 600
+dampening  = 30
+symmetric  = true                 # Aller et retour sont le même déplacement.
+
+[hyprland]                        # Chaque élément d'animation de Hyprland reçoit une transition DuneI.
+global              = { use = "state" }         # Déclaré en premier : valeur par défaut des éléments futurs.
+windowsIn           = { use = "window",    phase = "in",  style = "popin 90%" }
+windowsOut          = { use = "window",    phase = "out", style = "popin 90%" }
+windowsMove         = { use = "reflow" }
+fadeIn              = { use = "window",    phase = "in" }
+fadeOut             = { use = "window",    phase = "out" }
+layersIn            = { use = "overlay",   phase = "in",  style = "popin 96%" }
+layersOut           = { use = "overlay",   phase = "out", style = "popin 96%" }
+fadeLayersIn        = { use = "overlay",   phase = "in" }
+fadeLayersOut       = { use = "overlay",   phase = "out" }
+fadePopupsIn        = { use = "reveal",    phase = "in" }
+fadePopupsOut       = { use = "reveal",    phase = "out" }
+workspacesIn        = { use = "navigate",  phase = "in",  style = "slide" }
+workspacesOut       = { use = "navigate",  phase = "out", style = "slide" }
+specialWorkspaceIn  = { use = "overlay",   phase = "in",  style = "fade" }
+specialWorkspaceOut = { use = "overlay",   phase = "out", style = "fade" }
+border              = { use = "state" }
+fadeSwitch          = { use = "state" }
+fadeDim             = { use = "state" }
+fadeShadow          = { use = "state" }
+fadeGlow            = { use = "state" }
+zoomFactor          = { use = "state" }
+fadeDpms            = { use = "spectacle" }
+monitorAdded        = { use = "spectacle" }
+borderangle         = { enabled = false }       # La rotation des dégradés de bordure est désactivée.
+shadowangle         = { enabled = false }
+glowangle           = { enabled = false }
+
+[hyprland_reduced]                # Écarts du mouvement réduit ; les autres éléments gardent leur entrée, avec leur style s'il est immobile.
+windowsIn     = { style = "popin 100%" }        # La fenêtre apparaît à sa taille finale ; seul le fondu reste.
+windowsOut    = { style = "popin 100%" }
+windowsMove   = { enabled = false }             # Les tuiles rejoignent leur place sans glisser.
+workspacesIn  = { style = "fade" }
+workspacesOut = { style = "fade" }
+layersIn      = { style = "fade" }
+layersOut     = { style = "fade" }
+zoomFactor    = { enabled = false }
+monitorAdded  = { enabled = false }             # Le zoom de l'écran à son arrivée est supprimé.

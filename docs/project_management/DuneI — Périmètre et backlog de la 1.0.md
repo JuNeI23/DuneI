@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.3. Historique en fin de document.
+Version 1.4. Historique en fin de document.
 
 La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **140 éléments** répartis en **cinq lots**, sur six chantiers.
 
@@ -243,8 +243,8 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L1-20 | C | Écrit | Chaîne de repli des polices |
 | L1-21 | C | Configuré | Brancher la génération dans la chaîne de construction |
 | L1-22 | C | Écrit | Mettre `generate_tokens.py` et `extract_hue.py` en conformité avec la bible — écarts consignés au journal — **fait (D11)** |
-| L1-23 | C | Écrit | Concevoir et écrire `motion.toml` et `generate_motion.py` — **à construire de zéro**, les fichiers n'ont jamais existé. Brainstorming de design préalable |
-| L1-24 | C | Écrit | Cible Hyprland en Lua pour les deux générateurs — **fait pour les tokens** (`hyprland-tokens.lua`) ; le mouvement suivra L1-23 |
+| L1-23 | C | Écrit | Concevoir et écrire `motion.toml` et `generate_motion.py` — **fait (D14 à D20)** : paquet `dunei_motion/`, cibles Lua et JSON, contrôles bloquants, `make motion` |
+| L1-24 | C | Écrit | Cible Hyprland en Lua pour les deux générateurs — **fait** (`hyprland-tokens.lua`, `motion.lua`) ; le branchement dans la configuration réelle reste à faire |
 
 ### Lot 2 — coque vitale
 
@@ -486,6 +486,7 @@ Le choix de la distribution de base et du compositeur, précédemment ouverts, s
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-12 | Version initiale, 137 éléments |
+| 1.4 | 2026-10-14 | L1-23 fait ; L1-24 fait pour les deux générateurs |
 | 1.3 | 2026-10-12 | L4-03 : fonds sémantiques (D12) |
 | 1.2 | 2026-10-12 | L1-22 fait, L1-24 fait côté tokens |
 | 1.1 | 2026-10-12 | L1-01 et L1-11 tranchés (Arch, Hyprland en Lua) ; ajout de L1-22 à L1-24 — conformité du générateur, motion manquant, cible Hyprland Lua. 140 éléments |

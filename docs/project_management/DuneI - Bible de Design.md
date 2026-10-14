@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas
 
-Document normatif. Version 0.5.1. Historique en fin de document.
+Document normatif. Version 0.6. Historique en fin de document.
 
 ## Comment lire ce document
 
@@ -217,7 +217,7 @@ Ils agissent ensemble ; isolément, aucun ne fait grand-chose.
 
 ## 6. Mouvement
 
-**Vocabulaire fermé de six transitions.** Aucun composant ne décrit sa propre animation : il déclare laquelle il utilise. **Inventer une durée est une faute, pas une improvisation.**
+**Vocabulaire fermé de sept transitions.** Aucun composant ne décrit sa propre animation : il déclare laquelle il utilise. **Inventer une durée est une faute, pas une improvisation.**
 
 | Transition | Emploi |
 | --- | --- |
@@ -227,6 +227,7 @@ Ils agissent ensemble ; isolément, aucun ne fait grand-chose.
 | `window` | Ouverture et fermeture de fenêtre |
 | `reflow` | Réagencement du tuilage |
 | `spectacle` | Moments sans contenu |
+| `navigate` | Changement de bureau : la vue glisse d'un bureau à l'autre |
 
 ### Trois règles transversales
 
@@ -238,13 +239,15 @@ Ils agissent ensemble ; isolément, aucun ne fait grand-chose.
 
 - **La sortie vaut environ 70 % de l'entrée.** Un élément qui s'en va n'a plus besoin d'être suivi du regard.
 - **`window` est la seule transition à dépassement autorisé.** Si tout dépasse, le système paraît mou et enfantin.
-- **`reflow` est la seule symétrique** — rien n'entre, rien ne sort : l'espace se redistribue.
+- **`reflow` et `navigate` sont symétriques** — rien n'entre, rien ne sort : l'espace se redistribue, ou la vue se déplace.
 - Le décalage de `reveal` est plafonné à cinq éléments. Au-delà, le dernier arrive trop tard et le système paraît lent.
 - **Aucune animation linéaire, nulle part.**
 
 ### Mouvement réduit
 
 Suppression des déplacements et changements d'échelle, **conservation d'un fondu court**. Une apparition sans aucune transition est plus désorientante, pour une personne sensible au mouvement, qu'un fondu de 100 ms.
+
+Les valeurs vivent dans `motion.toml` ; `generate_motion.py` refuse toute infraction à ces règles.
 
 ## 7. Composants
 
@@ -712,8 +715,8 @@ Chacun correspond à une erreur observée dans des systèmes existants.
 | `motion.toml` | Développeurs | Source de vérité — mouvement |
 | `generate_tokens.py` | Développeurs | Point d'entrée. Génère CSS, JSON, schéma Qt, GTK 3, GTK 4, portail et module Lua du compositeur (`hyprland-tokens.lua`) |
 | `dunei_theme/` | Développeurs | La logique : couleurs, modèle, contrôles, une cible par module |
-| `Makefile` | Développeurs | `tokens`, `test`, `check`, `golden` |
-| `generate_motion.py` | Développeurs | Génère CSS et module Lua du compositeur |
+| `Makefile` | Développeurs | `tokens`, `motion`, `test`, `check`, `golden` |
+| `generate_motion.py` | Développeurs | Génère le module Lua du compositeur et le JSON de la coque, après contrôle des règles du chapitre 6 |
 | `extract_hue.py` | Développeurs | Extraction de teinte : lit wal ou une image ; `--json` et code 3 si achromatique |
 | `fonts.conf` | Développeurs | Indirection des noms de polices |
 | `carnet-installation.md` | Intégrateur | Ce qui est à installer, et selon quels critères |
@@ -793,3 +796,4 @@ Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si 
 | 0.4.1 | 2026-10-12 | Annexe D : la cible compositeur est un module Lua (Hyprland 0.56) |
 | 0.5.1 | 2026-10-12 | Échelon 10 à 0,935 ; sémantiques jamais en fond de texte ; liens = signal court (D12) |
 | 0.5 | 2026-10-12 | Échelons 10 et 11 relevés (0,93 / 0,97) ; texte quasi blanc sur l'accent ; sémantiques hors plafond ; rabattement à teinte préservée ; extraction paramétrée et achromatique signalé ; contrôles APCA ; annexes C et D |
+| 0.6 | 2026-10-14 | Mouvement : septième transition `navigate`, symétrique comme `reflow` ; `generate_motion.py` produit Lua et JSON (D14 à D20) |
