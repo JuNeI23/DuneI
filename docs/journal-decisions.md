@@ -174,3 +174,49 @@ Validés par Nicolas après revue de l'aperçu ; révisables à mesure que les f
 3. **Banc de mouvement conservé** (`proto/motion/`) comme outil de réglage, au-delà du prototype jetable : pas atomiques, saisie exacte, reprise de `export.toml`.
 
 *Touché : proto/motion/, journal.*
+
+### D14 · Une septième transition, `navigate`
+
+Le changement de bureau n'entrait dans aucune des six transitions : ce n'est ni un réagencement, ni une
+surface qui entre. `navigate` déplace la vue d'un bureau à l'autre, en translation pure. Comme `reflow`,
+elle est symétrique, et sans dépassement. Réglée au ressenti dans le banc : m 0,30, k 600, c 30 (ζ 1,12,
+186 ms). Elle reste plus courte que le seuil d'environ 300 ms au-delà duquel un changement de vue se lit
+comme une coupure ; le ressenti de Nicolas prime.
+
+### D15 · Cibles du mouvement : Lua et JSON, CSS reporté
+
+`generate_motion.py` produit `generated/motion.lua` pour Hyprland et `generated/motion.json` pour la future
+coque Quickshell. Aucun consommateur CSS n'a encore besoin des ressorts : la cible CSS sera ajoutée le jour
+où il en existera un, par un module de plus dans `dunei_motion/emitters/`.
+
+### D16 · Correspondance entre Hyprland et les transitions DuneI
+
+Chacun des 27 éléments d'animation de Hyprland 0.56.2 (les 26 éléments terminaux et `global`) est associé
+explicitement à une transition dans `[hyprland]`, pour qu'aucun ne retombe sur la courbe par défaut de
+Hyprland. Fenêtres sur `window` en `popin 90%`, déplacements sur `reflow`, bureaux sur `navigate` en
+`slide`, bureau spécial et couches sur `overlay`, menus surgissants sur `reveal`, bordures et états sur
+`state`, extinction et nouvel écran sur `spectacle` ; les rotations de dégradés sont désactivées. Les
+amplitudes `popin 90%` et `popin 96%` sont des valeurs de départ, à ajuster au branchement.
+
+### D17 · Paquet `dunei_motion`, séparé de `dunei_theme`
+
+Le mouvement n'a aucune donnée commune avec la couleur. Il a son propre paquet, construit sur le même
+modèle (modèle, contrôles, une cible par module, registre `TARGETS`) et partageant le même `Makefile`.
+
+### D18 · Règles de la bible bloquantes ; mouvement réduit par `apply(reduced)`
+
+Toute infraction aux règles du chapitre 6 empêche la génération : les valeurs sont peu nombreuses, réglées
+au banc, et un avertissement finit toujours par être ignoré. Les listes de transitions autorisées à dépasser
+ou à échelonner sont des données de `[rules]`, pas du code. Le mouvement réduit est choisi par
+`require("modules.motion").apply(true)`, appelable depuis un fragment chargé après le point d'entrée,
+plutôt que par une variable globale qui aurait dû être définie avant le fragment machine.
+
+### D19 · Mouvement réduit : les styles immobiles sont conservés
+
+Sans style, Hyprland applique `popin` aux fenêtres et `slide` aux bureaux : un style vide n'est donc pas
+toujours immobile. En mouvement réduit, un élément garde son style normal s'il ne déplace rien (`fade` du
+bureau spécial, par exemple) ; un élément de fenêtre ou de bureau sans style doit recevoir un remplacement
+dans `[hyprland_reduced]`, sinon la génération est refusée. Raison : la bible interdit tout déplacement en
+mouvement réduit, et le bureau spécial aurait glissé. Arbitré pendant l'implémentation, le 2026-10-14.
+
+*Touché : motion.toml, dunei_motion/, generate_motion.py, generated/motion.*, config/hypr/modules/motion.lua, Makefile, tests/, bible ch. 6, backlog, carnet, notes de direction, proto/motion/README.md, spec et plan du mouvement.*

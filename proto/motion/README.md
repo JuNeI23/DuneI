@@ -1,10 +1,11 @@
 # Banc de mouvement — prototype jetable
 
-Version 0.2 · branche `proto/mouvement` · backlog L1-23
+Version 0.3 · branche `proto/mouvement` · backlog L1-23
 
 Ce dossier sert à **choisir au ressenti** les ressorts des sept transitions de la bible
-(ch. 6 « Mouvement », plus `navigate`) avant de les écrire dans `motion.toml`. Il ne sera jamais fusionné tel
-quel : seules les valeurs choisies, et le modèle de ressort, survivront.
+(ch. 6 « Mouvement », plus `navigate`) avant de les écrire dans `motion.toml`. Le banc reste l'outil de réglage
+(D13) : une valeur validée ici est reportée à la main dans `motion.toml`, à la racine du dépôt, puis
+`make motion` en dérive tout le reste.
 
 ## Lancer
 
@@ -102,8 +103,7 @@ hl.animation({ leaf = "windowsIn", enabled = true, speed = 1, spring = "dunei-wi
 
 Hyprland 0.56.2 (installé) attend la clé **`dampening`** et l'argument `spring =` ;
 le wiki récent écrit `damping` et `curve =`. À revérifier à chaque mise à jour.
-L'effet de `speed` sur un ressort n'est pas documenté : à mesurer avant d'écrire
-`motion.toml` (voir limites).
+`speed` n'a aucun effet sur un ressort (D13) : le générateur écrit `speed = 1`.
 
 ## Exporter
 
@@ -158,7 +158,6 @@ Pour mémoire, le ressort « easy » livré par Hyprland vaut k 238, c 24,2 (ζ 
   choix de scène, pas des tokens : elles relèvent d'une décision séparée.
 - Le flou d'`overlay` est un `MultiEffect` en direct sur une scène statique ; le shell réel
   prendra un instantané.
-- L'effet du paramètre `speed` de Hyprland sur un ressort reste à mesurer.
 - Sur cette machine, le nom canonique « Source Code Pro » n'est pas résolu par fontconfig
   (repli silencieux sur Noto Sans) : le banc retombe sur « SauceCodePro Nerd Font Mono ».
   L'indirection `fonts.conf` du lot 1 est à vérifier.
@@ -169,3 +168,4 @@ Pour mémoire, le ressort « easy » livré par Hyprland vaut k 238, c 24,2 (ζ 
 | --- | --- | --- |
 | 0.1 | 2026-10-13 | Banc initial : six démos, ressort commun m/k/c, export TOML |
 | 0.2 | 2026-10-13 | Septième transition `navigate` (changement de bureau, caméra sur une bande), touche `7` |
+| 0.3 | 2026-10-14 | Valeurs reportées dans `motion.toml` ; effet de `speed` tranché (D13) |
