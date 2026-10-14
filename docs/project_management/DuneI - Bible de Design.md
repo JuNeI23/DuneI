@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas
 
-Document normatif. Version 0.6.2. Historique en fin de document.
+Document normatif. Version 0.6.3. Historique en fin de document.
 
 ## Comment lire ce document
 
@@ -694,7 +694,7 @@ Chacun correspond à une erreur observée dans des systèmes existants.
 | Sujet | Nature |
 | --- | --- |
 | Graisse d'accentuation : 550, jugée dans Firefox le 2026-10-14 (D23) | À confirmer sur le shell réel |
-| Hinting : `hintslight` ou `hintnone` | Calibration sur shell réel ; écart négligeable à l'échelle 1,5 |
+| Hinting : `hintslight` ou `hintnone` | Calibration sur shell réel ; écart négligeable à l'échelle 1,25 de `caladan` (D27) |
 | Seuils de conteneur | Validation à l'usage |
 | Délais d'infobulle et de barre de défilement | Validation à l'usage |
 | Opacité du voile | À revérifier une fois le flou en place |
@@ -718,7 +718,10 @@ Chacun correspond à une erreur observée dans des systèmes existants.
 | `dunei_theme/` | Développeurs | La logique : couleurs, modèle, contrôles, une cible par module |
 | `Makefile` | Développeurs | `tokens`, `motion`, `test`, `check`, `golden`, `install` |
 | `generate_motion.py` | Développeurs | Génère le module Lua du compositeur et le JSON de la coque, après contrôle des règles du chapitre 6 |
-| `deploy.py` | Développeurs | Installe la configuration dans `~/.config`, destination par destination : Hyprland (liens vers `config/`, copies de `generated/`, bascule depuis la configuration générique) et fontconfig (`conf.d/50-dunei.conf`) |
+| `deploy.py` | Développeurs | Installe la configuration dans `~/.config`, destination par destination : Hyprland (liens vers `config/`, copies de `generated/`, bascule depuis la configuration générique) et fontconfig (`conf.d/50-dunei.conf`). Les dossiers `config/hypr/modules` et `config/hypr/machines` sont liés |
+| `config/hypr/modules/ecrans.lua` | Développeurs | Règles d'écran communes : écrans inconnus étendus à droite, XWayland. Aucun matériel nommé |
+| `config/hypr/modules/machine.lua` | Développeurs | Lit `/etc/hostname` et charge le fragment de la machine en dernier |
+| `config/hypr/machines/` | Développeurs | Un fichier par machine, le seul endroit où le matériel est nommé : sorties, échelle |
 | `extract_hue.py` | Développeurs | Extraction de teinte : lit wal ou une image ; `--json` et code 3 si achromatique |
 | `fonts.conf` | Développeurs | Généré. Indirection des noms de polices, chaîne de repli et rendu |
 | `carnet-installation.md` | Intégrateur | Ce qui est à installer, et selon quels critères |
@@ -801,3 +804,4 @@ Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si 
 | 0.6 | 2026-10-14 | Mouvement : septième transition `navigate`, symétrique comme `reflow` ; `generate_motion.py` produit Lua et JSON (D14 à D20) |
 | 0.6.1 | 2026-10-14 | Annexe des fichiers : `deploy.py` et la cible `install` (D21) |
 | 0.6.2 | 2026-10-14 | Typographie : graisse d'accentuation 550 ; Source Code Pro patchée Nerd en version statique ; `fonts.conf` généré et déployé ; hinting à l'annexe C (D22, D23) |
+| 0.6.3 | 2026-10-14 | Annexe des fichiers : modules `ecrans.lua` et `machine.lua`, dossier `machines/` (D24, D25) ; annexe C, échelle de référence 1,25 (D27) |
