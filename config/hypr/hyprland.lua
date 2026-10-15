@@ -30,5 +30,8 @@ require("modules.entree").apply()
 -- Raccourcis et gestes, décrits par donnees/raccourcis.lua et donnees/roles.lua, contrôlés puis liés (L1-16).
 require("modules.clavier").apply()
 
+-- Diode de sourdine du micro alignée au démarrage de session ; F4 l'aligne ensuite à chaque appui (L1-08).
+require("modules.audio").apply()
+
 -- Fragment de la machine courante, machines/<nom-d-hôte>.lua, chargé en dernier pour l'emporter.
 require("modules.machine").load()

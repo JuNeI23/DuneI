@@ -31,14 +31,14 @@ M.touches = {
     { touches = "SUPER + mouse:273", action = "etirer",  drapeaux = { mouse = true }, description = "Redimensionner la fenêtre à la souris" },
     { touches = "SUPER + mouse_down", action = "bureau", bureau = "e+1", description = "Bureau occupé suivant" },
     { touches = "SUPER + mouse_up",   action = "bureau", bureau = "e-1", description = "Bureau occupé précédent" },
-    -- Touches matérielles, actives écran verrouillé ; la diode du micro relève de L1-08
+    -- Touches matérielles, actives écran verrouillé ; sourdine-micro aligne aussi la diode du micro (L1-08)
     { touches = "XF86AudioMute", action = "commande", commande = "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle",
       drapeaux = { locked = true }, description = "Couper ou rétablir le son" },
     { touches = "XF86AudioLowerVolume", action = "commande", commande = "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-",
       drapeaux = { locked = true, repeating = true }, description = "Baisser le volume" },
     { touches = "XF86AudioRaiseVolume", action = "commande", commande = "wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 5%+",
       drapeaux = { locked = true, repeating = true }, description = "Monter le volume, jusqu'à 100 %" },
-    { touches = "XF86AudioMicMute", action = "commande", commande = "wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle",
+    { touches = "XF86AudioMicMute", action = "script", script = "sourdine-micro bascule",
       drapeaux = { locked = true }, description = "Couper ou rétablir le micro" },
     { touches = "XF86MonBrightnessDown", action = "commande", commande = "brightnessctl -e4 -n2 set 5%-",
       drapeaux = { locked = true, repeating = true }, description = "Baisser la luminosité" },

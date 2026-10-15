@@ -1,4 +1,4 @@
-"""Modules env, fenetres et regles — exécutés par Lua avec un faux hl, dans un dossier imitant ~/.config/hypr."""
+"""Modules env, fenetres, regles et audio — exécutés par Lua avec un faux hl, dans un dossier imitant ~/.config/hypr."""
 
 import shutil
 import subprocess
@@ -22,6 +22,9 @@ hl = {
         end
     end,
     window_rule = function(r) print("rule", r.name) end,
+    exec_cmd = function(c) print("exec", c) end,
+    -- L'événement est imprimé, puis le rappel est exécuté aussitôt, comme au démarrage de Hyprland.
+    on = function(e, f) print("on", e); f() end,
 }
 """
 
@@ -57,6 +60,11 @@ class ModulesTest(unittest.TestCase):
     def test_regles_generated_then_behaviour(self):
         self.assertEqual(self.run_module("regles"), ["rule\tcouche-1-sans-ombre", "rule\tplein-ecran-nu",
                                                      "rule\tsans-agrandissement", "rule\tglisser-xwayland"])
+
+    def test_audio_aligns_the_led_at_start(self):
+        # Au démarrage seulement : un rechargement de la configuration ne relance pas l'alignement.
+        self.assertEqual(self.run_module("audio"), ["on\thyprland.start",
+                         'exec\t"${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/"sourdine-micro aligne'])
 
 
 if __name__ == "__main__":

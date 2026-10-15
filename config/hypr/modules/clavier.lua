@@ -7,7 +7,7 @@ local M = {}
 local SENS = { left = { -1, 0 }, right = { 1, 0 }, up = { 0, -1 }, down = { 0, 1 } }
 -- Paramètre que chaque action exige ; une direction doit en outre appartenir à SENS.
 local REQUIS = { focus = "direction", deplacer = "direction", redimensionner = "direction",
-                 bureau = "bureau", envoyer = "bureau", role = "role", commande = "commande" }
+                 bureau = "bureau", envoyer = "bureau", role = "role", commande = "commande", script = "script" }
 -- Actions de geste connues de hl.gesture.
 local GESTES = { workspace = true, special = true }
 -- Nom canonique de chaque modificateur, pour reconnaître deux écritures de la même combinaison.
@@ -36,6 +36,7 @@ M.ACTIONS = {
     ranger         = function(_, c) return hl.dsp.window.move({ workspace = "special:" .. c.special, follow = false }) end,
     role           = function(e, c) return hl.dsp.exec_cmd("uwsm app -- " .. c.roles[e.role]) end,
     commande       = function(e) return hl.dsp.exec_cmd(e.commande) end,
+    script         = function(e) return hl.dsp.exec_cmd(require("modules.scripts").commande(e.script)) end,
     recharger      = function() return hl.dsp.exec_cmd("hyprctl reload") end,  -- pas de répartiteur natif en 0.56.2
     glisser        = function() return hl.dsp.window.drag() end,
     etirer         = function() return hl.dsp.window.resize() end,

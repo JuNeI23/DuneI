@@ -1,0 +1,51 @@
+#!/bin/sh
+# sourdine-micro — coupe ou rétablit le micro par défaut, puis aligne la diode de sourdine (L1-08, D38).
+#
+# La diode suit les contrôles ALSA que le noyau liste sous /sys/class/sound/ctl-led/mic/ ; elle ne voit
+# pas une sourdine posée en logiciel par WirePlumber, comme celle d'un micro numérique sans interrupteur
+# matériel. Le script recopie donc l'état de la source par défaut sur chaque contrôle listé : coupée,
+# ils passent sur off et la diode s'allume ; active, ils passent sur on et elle s'éteint. Aucune carte
+# ni aucun contrôle n'est nommé ici : chaque machine fournit sa propre liste, vide si elle n'a pas de diode.
+#
+# Usage : sourdine-micro bascule | aligne
+#   bascule — inverse la sourdine de la source par défaut, puis aligne la diode ;
+#   aligne  — aligne seulement la diode sur l'état actuel (démarrage de session). PipeWire démarre à
+#             la demande, parfois quinze secondes après Hyprland : aligne attend que la source par
+#             défaut existe, en la cherchant toutes les demi-secondes, trente fois au plus.
+# Sortie : 0 si tout a réussi ; 1 si wpctl ou amixer échoue, ou si la source reste introuvable ; 2 pour
+#          un usage incorrect.
+# Dépendances : wpctl (WirePlumber), amixer (alsa-utils), sleep. DUNEI_CTL_LED et DUNEI_ESSAIS
+# remplacent le dossier des diodes et le nombre d'essais, pour les tests seulement.
+
+LED=${DUNEI_CTL_LED:-/sys/class/sound/ctl-led/mic}
+
+# aligner : règle chaque contrôle ALSA lié à la diode du micro.
+# Entrée : $1 — on (micro actif, diode éteinte) ou off (micro coupé, diode allumée).
+# Sortie : 0 si chaque contrôle a été réglé, ou s'il n'y en a aucun ; 1 dès qu'amixer échoue.
+# Erreurs : celles d'amixer, sur la sortie d'erreur. Dépendances : amixer, LED.
+aligner() {
+    for liste in "$LED"/card*/list; do
+        [ -r "$liste" ] || continue
+        carte=${liste%/list}
+        carte=${carte##*card}
+        for id in $(tr ',' ' ' < "$liste"); do
+            amixer -q -c "$carte" cset numid="$id" "$1" || return 1
+        done
+    done
+}
+
+case ${1:-} in
+    bascule) wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle || exit 1; essais=1 ;;
+    aligne) essais=${DUNEI_ESSAIS:-30} ;;
+    *) echo "usage : sourdine-micro bascule | aligne" >&2; exit 2 ;;
+esac
+# wpctl répond 0 même quand la source est introuvable : seule une ligne « Volume: » prouve qu'elle existe.
+until etat=$(wpctl get-volume @DEFAULT_AUDIO_SOURCE@ 2>/dev/null) && [ "${etat#Volume:}" != "$etat" ]; do
+    essais=$((essais - 1))
+    [ "$essais" -gt 0 ] || { echo "sourdine-micro : source par défaut introuvable" >&2; exit 1; }
+    sleep 0.5
+done
+case $etat in
+    *MUTED*) aligner off ;;
+    *) aligner on ;;
+esac
