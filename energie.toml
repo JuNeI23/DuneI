@@ -1,0 +1,28 @@
+# energie.toml — source unique de l'échelle d'inactivité de DuneI (L1-09).
+#
+# Chaque palier donne son délai, en secondes depuis le début de l'inactivité, pour chaque
+# alimentation ; une alimentation absente veut dire « jamais ». generate_energie.py en vérifie
+# l'ordre, puis écrit generated/hypridle.conf, où chaque palier existe une fois par alimentation.
+version = "0.1.0"
+
+[commandes]
+verrouiller  = "loginctl lock-session"                    # Seul chemin vers le verrouillage.
+verrouilleur = "pidof hyprlock || hyprlock --no-fade-in"  # Seul endroit où le verrouilleur est nommé (provisoire, L2-22).
+
+[attenuation]
+niveau = 10           # Luminosité de l'écran atténué, en % ; jamais au-dessus de la luminosité courante.
+
+[paliers.attenuation] # Écran atténué, clavier éteint ; rétablis au premier geste.
+batterie = 150
+secteur  = 300
+
+[paliers.verrouillage]
+batterie = 300
+secteur  = 600
+
+[paliers.ecran]       # Écran éteint.
+batterie = 330
+secteur  = 630
+
+[paliers.veille]      # Pas de veille automatique sur secteur.
+batterie = 900
