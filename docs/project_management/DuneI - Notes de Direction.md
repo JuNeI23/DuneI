@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas — révisée le 15 octobre 2026
 
-Version 1.9. Historique en fin de document.
+Version 1.10. Historique en fin de document.
 
 *Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent quarante-deux lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
 
@@ -234,6 +234,13 @@ le micro et les haut-parleurs sont vérifiés. La méthode gagne une règle : ch
 repérage, jamais imposée (D38, D39). Prochaine étape du lot 1 : **L1-07, la vérification du réseau**,
 puis L1-09, l'énergie et la veille.
 
+**Réseau — 15 octobre 2026.** Le réseau est offert et fonctionne : NetworkManager et `wpa_supplicant`
+sont conservés après repérage, et seule la base réglementaire manquait. `wireless-regdb`, installé sans
+pays écrit en dur, n'a aucun effet sur la carte de `caladan`, dont le micrologiciel fixe déjà le pays ; il
+sert les autres machines. Connexion au démarrage, reconnexion après coupure, touche mode avion et
+rétroéclairage du clavier sont vérifiés, sans une ligne de code (D40). Prochaine étape du lot 1 :
+**L1-09, l'énergie et la veille**, dont l'extinction du rétroéclairage du clavier à l'inactivité.
+
 ## Plan de lecture
 
 | Rôle | À lire |
@@ -251,6 +258,7 @@ puis L1-09, l'énergie et la veille.
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-10 | Version initiale |
+| 1.10 | 2026-10-15 | Réseau vérifié, base réglementaire installée (D40) ; prochaine étape : L1-09 |
 | 1.9 | 2026-10-15 | Audio fait (L1-08) : `alsa-utils` répare la diode du micro, son et micro vérifiés ; règle de repérage des technos ; décompte de l'en-tête corrigé (cent quarante-deux) ; prochaine étape L1-07 |
 | 1.8 | 2026-10-15 | Raccourcis faits (L1-16) ; diode du micro renvoyée à L1-08, prochaine étape ; décomptes à 142 éléments |
 | 1.7 | 2026-10-14 | Fenêtrage fait (L1-12 à L1-15) ; reste les raccourcis et les bureaux (L1-16). Paragraphes permanents de l'état d'avancement placés avant le journal, pour que le dernier paragraphe nomme la prochaine étape ; décomptes à 141 éléments |

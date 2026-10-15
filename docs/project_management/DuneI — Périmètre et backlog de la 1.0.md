@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.10. Historique en fin de document.
+Version 1.11. Historique en fin de document.
 
 La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **142 éléments** répartis en **cinq lots**, sur six chantiers.
 
@@ -228,9 +228,9 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L1-04 | A | Configuré | Amorçage et gestionnaire de démarrage |
 | L1-05 | A | Configuré | Gestion des paquets et politique de mise à jour |
 | L1-06 | A | Configuré | Pilotes graphiques et accélération matérielle |
-| L1-07 | A | Offert | Service réseau — vérification |
+| L1-07 | A | Offert | Service réseau — vérification — **fait (D40)** : NetworkManager et `wpa_supplicant` conservés ; `wireless-regdb` installé, sans effet sur la carte *self-managed* de `caladan` ; connexion au démarrage, reconnexion après coupure et touche mode avion vérifiées |
 | L1-08 | A | Offert | Service audio — vérification — **fait (D38)** : son, micro et haut-parleurs vérifiés ; `alsa-utils` installé, dont `alsactl` exécute l'initialisation UCM qui rattache la diode de sourdine au micro numérique : elle suit toute sourdine, F4 garde `wpctl` seul |
-| L1-09 | A | Offert | Service d'énergie et de veille — vérification ; couvercle fermé avec écran externe : éteindre l'écran interne sans mettre en veille (reporté depuis L1-17, D25) |
+| L1-09 | A | Offert | Service d'énergie et de veille — vérification ; couvercle fermé avec écran externe : éteindre l'écran interne sans mettre en veille (reporté depuis L1-17, D25) ; rétroéclairage du clavier : allumage par Fn + Espace et niveau gardé, déjà fonctionnels, reste à l'éteindre à l'inactivité et pendant la veille (D40) |
 | L1-10 | A | Configuré | Gestionnaire de session et démarrage automatique |
 | L1-11 | B | Configuré | Choisir le compositeur selon les besoins de la bible — **tranché : Hyprland 0.56, configuration Lua** |
 | L1-12 | B | Configuré | Tuilage — couche 1, gouttière 8 px, rayon 12 — **fait (D28)** : dwindle, placement au pointeur, découpes figées |
@@ -261,7 +261,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L2-08 | B | Écrit | Barre système — structure, 32 px, couleur franche du thème |
 | L2-09 | B | Écrit | Barre système — horloge, chiffres tabulaires |
 | L2-10 | B | Écrit | Barre système — indicateur de bureaux virtuels |
-| L2-11 | B | Écrit | Indicateur réseau et son popover |
+| L2-11 | B | Écrit | Indicateur réseau et son popover ; décider du sort de `nm-applet`, lancé par l'autostart XDG : le garder ou le remplacer (D40) |
 | L2-12 | B | Écrit | Indicateur audio et son popover — volume, sorties ; niveau du micro numérique, qui sature à 100 % (relevé du 2026-10-15, D38) |
 | L2-13 | B | Écrit | Indicateur d'énergie et son popover |
 | L2-14 | B | Écrit | Indicateur Bluetooth et son popover |
@@ -489,6 +489,7 @@ Le choix de la distribution de base et du compositeur, précédemment ouverts, s
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-12 | Version initiale, 137 éléments |
+| 1.11 | 2026-10-15 | L1-07 fait : réseau vérifié, `wireless-regdb` installé ; L1-09 reçoit l'extinction du rétroéclairage du clavier ; L2-11 reçoit le sort de `nm-applet` |
 | 1.10 | 2026-10-15 | L1-08 fait : `alsa-utils` répare la diode du micro ; L2-12 reçoit le niveau du micro ; décompte des natures corrigé (37 configurés, 2 mixtes) ; nature mixte définie |
 | 1.9 | 2026-10-15 | L1-16 fait : raccourcis en données, rôles, grammaire, Compose, touches réservées ; L1-08 reçoit le relevé de la diode du micro ; L2-16, L2-22, L2-28, L2-30 notent leur touche ; ajout de L2-36. 142 éléments |
 | 1.8 | 2026-10-14 | L1-12 à L1-15 faits : dwindle, plus de bordure, ombre des flottantes, plein écran nu, décorations Qt ; L2-03 précisé ; ajout de L2-35. 141 éléments |
