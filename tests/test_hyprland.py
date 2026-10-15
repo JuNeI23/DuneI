@@ -9,7 +9,7 @@ import unittest
 from pathlib import Path
 
 from dunei_theme.color import Oklch, to_srgb255
-from dunei_theme.emitters.hyprland import emit, emit_rules
+from dunei_theme.emitters.hyprland import emit, emit_binds, emit_rules
 from dunei_theme.model import load, resolve
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -152,7 +152,7 @@ class RulesTest(unittest.TestCase):
     def test_rules_values(self):
         lua = self.rules()
         self.assertIn('{ name = "couche-1-sans-ombre", match = { float = false }, no_shadow = true },', lua)
-        self.assertIn('{ name = "plein-ecran-nu", match = { fullscreen = true }, no_shadow = true, rounding = 0 },', lua)
+        self.assertIn('{ name = "plein-ecran-nu", match = { fullscreen_state_internal = 2 }, no_shadow = true, rounding = 0 },', lua)
 
     def test_rules_follow_fullscreen_radius(self):
         self.assertIn("rounding = 4", self.rules(fullscreen=4))
@@ -174,6 +174,42 @@ class RulesTest(unittest.TestCase):
             probe = f't = dofile("{fh.name}"); for _, r in ipairs(t) do print(r.name) end'
             out = subprocess.run([LUA, "-e", probe], capture_output=True, text=True, check=True).stdout.split()
         self.assertEqual(out, ["couche-1-sans-ombre", "plein-ecran-nu"])
+
+
+class BindsTest(unittest.TestCase):
+    """Fragment lu par les raccourcis : le pas de redimensionnement vient des jetons et reste sur l'échelle."""
+
+    def setUp(self):
+        self.data = load(ROOT / "tokens.toml")
+
+    def binds(self, step) -> str:
+        """Fragment émis pour un pas donné. Entrée : step — valeur de window.resize_step. Sortie : texte Lua."""
+        alt = copy.deepcopy(self.data)
+        alt["window"]["resize_step"] = step
+        return emit_binds(resolve(alt))
+
+    def test_step_follows_token(self):
+        self.assertIn("resize_step = 48,", emit_binds(resolve(self.data)))
+        self.assertIn("resize_step = 64,", self.binds(64))
+
+    def test_rejects_step_off_scale(self):
+        for step in (40, 0, -48):
+            with self.subTest(step=step), self.assertRaisesRegex(ValueError, "resize_step"):
+                self.binds(step)
+
+    def test_rejects_non_integer_step(self):
+        for step in (48.0, True, "48"):
+            with self.subTest(step=step), self.assertRaisesRegex(ValueError, "resize_step"):
+                self.binds(step)
+
+    @unittest.skipUnless(LUA, "aucun interpréteur Lua")
+    def test_binds_load_as_table(self):
+        with tempfile.NamedTemporaryFile("w", suffix=".lua", encoding="utf-8") as fh:
+            fh.write(emit_binds(resolve(self.data)))
+            fh.flush()
+            out = subprocess.run([LUA, "-e", f'print(dofile("{fh.name}").resize_step)'],
+                                 capture_output=True, text=True, check=True).stdout.split()
+        self.assertEqual(out, ["48"])
 
 
 if __name__ == "__main__":

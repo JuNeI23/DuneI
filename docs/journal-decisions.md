@@ -470,7 +470,17 @@ pas reprise. Les valeurs non réécrites par DuneI étaient toutes égales aux d
 Validation à l'écran (2026-10-14) : tuiles sans bordure ni ombre, flottante ombrée, Dolphin sans barre
 de titre, dialogue de Firefox flottant ; « tout est au top » (Nicolas).
 
+**Suite du 2026-10-15 — fenêtre agrandie.** Le point laissé ouvert est tranché pendant la feature
+raccourcis. Une fenêtre agrandie (`SUPER + M`) est, pour Hyprland, un plein écran à l'état interne 1,
+qui garde les marges : la règle, qui visait `fullscreen = true`, lui retirait ses coins et son ombre.
+Constaté par capture : coin carré au milieu des gouttières. Nicolas a choisi que la fenêtre agrandie
+garde ses coins, comme une grande tuile : la règle vise désormais `fullscreen_state_internal = 2`, le
+seul vrai plein écran. Vérifié : agrandie, `rounding` 12 ; plein écran, 0. L'état 3 n'est pas
+accessible par le répartiteur `fullscreen_state` (essai) ; aucune règle ne le vise.
+
 *Touché : tokens.toml, config/hypr/modules/env.lua, config/hypr/modules/regles.lua, ~/.config/hypr/generique.lua (hors dépôt), bible (ch. 3, annexe C), carnet, backlog.*
+
+*Touché le 2026-10-15 : dunei_theme/emitters/hyprland.py, generated/hyprland-rules.lua.*
 
 ## 2026-10-14 — Méthode
 
@@ -492,3 +502,89 @@ contrôle de Nicolas. Ce qui ne change pas : une branche et une PR par feature, 
 validation à l'écran.
 
 *Touché : CLAUDE.md, carnet (procédure après fusion).*
+
+## 2026-10-15 — Raccourcis (L1-16)
+
+### D33 · Grammaire des modificateurs ; table construite touche par touche
+
+`SUPER` agit ou va ; `SUPER + Maj` emporte la fenêtre active ; `SUPER + Ctrl` redimensionne ;
+`SUPER + Alt` porte les actions rares ou système. La grammaire est inscrite à la bible (ch. 7).
+
+Ni le tableau du carnet, jamais utilisé, ni la configuration générique, aux touches cassées, n'ont servi
+de base : Nicolas a choisi chaque touche, famille par famille. Ses choix s'écartent du carnet : fermer
+reste `SUPER + C` (tuer : `SUPER + Alt + C`), `SUPER + F` ouvre le navigateur, `SUPER + J` change le
+sens de découpe, ce qui écarte le focus à la Vim : focus et déplacement passent par les flèches. Ni
+plein écran ni pseudo-tuile au clavier : il ne s'en sert pas, et une application peut toujours demander
+le plein écran. Une collision est apparue pendant la conception : agrandir et quitter sur `SUPER + M` ;
+agrandir garde la lettre, quitter prend le garde-fou (`SUPER + Alt + M`). Envoyer au bureau ne suit pas
+la fenêtre : on range et on continue. Un seul bureau spécial, nommé `accueil` par Nicolas : sans barre,
+rien ne signale une fenêtre cachée, et un seul évite de perdre ce qu'on y range.
+
+Raison : un raccourci se devine au lieu de s'apprendre, et `Alt` protège les actions rares d'un accident.
+
+### D34 · Raccourcis en données, applications par rôle
+
+Les raccourcis et les gestes sont une table de données (`config/hypr/donnees/raccourcis.lua`), sans
+appel à `hl`, que `modules/clavier.lua` contrôle puis lie. Le contrôle est bloquant et précède toute
+liaison : combinaison vide, description manquante, action, rôle ou direction inconnus, combinaison déjà
+prise, écritures différentes et réservations comprises. Une table fausse ne lie rien. Les applications
+se lancent par rôle (`donnees/roles.lua` : terminal, fichiers, navigateur, lanceur), préfixées une seule
+fois par `uwsm app --`, que la documentation d'uwsm recommande ; tous les logiciels sont provisoires
+jusqu'au lot 3. Le pas de redimensionnement est un jeton, `window.resize_step = 48`, membre de
+`spacing.scale`, émis dans `generated/hyprland-binds.lua`.
+
+Trois approches ont été comparées : table Lua appliquée par un module (retenue), source TOML et
+générateur (une chaîne de plus, pour des données qui n'ont rien à calculer), appels `hl.bind` directs
+(rien de contrôlable). La future cheatsheet lira `hyprctl binds -j`, qui rend les descriptions.
+
+La documentation consultée annonçait un répartiteur `hl.dsp.reload_config()` ; il n'existe pas dans
+Hyprland 0.56.2. À la première activation, la configuration s'est arrêtée sur cette ligne et la session
+est restée quelques secondes sans fichier machine. Le rechargement passe par `hyprctl reload`.
+
+Raison : un seul endroit où une touche est déclarée, et un seul endroit où un logiciel est nommé.
+
+Relecture finale (2026-10-15). Deux défauts corrigés. Sur une machine neuve, la configuration d'origine
+de Hyprland, gardée comme `generique.lua`, lie elle aussi `SUPER + M` (sortie de session), `SUPER + Q`
+ou `XF86AudioMute`, et deux liaisons sur une même touche se déclenchent toutes deux (vérifié sur la
+session) : `clavier.lua` appelle désormais `hl.unbind` sur chaque touche de la table, réservées
+comprises, avant de lier. Les gestes et les touches que DuneI ne déclare pas restent ceux du générique
+jusqu'à son nettoyage. Second défaut : un paramètre requis manquant ou un geste faux passaient le
+contrôle et la table était liée à moitié ; les paramètres requis et les gestes sont contrôlés, et tous
+les répartiteurs sont construits avant la première liaison.
+
+### D35 · Touches réservées pour le lot 2
+
+`SUPER + L` (verrouillage, L2-22), `SUPER + /` (cheatsheet, L2-28), `Print` (capture d'écran, L2-30)
+et Ctrl gauche tenu une seconde (localiser le pointeur, L2-36) sont déclarées dans la table sans être
+liées : le contrôle de collision empêche toute autre entrée de les prendre. Le halo autour du pointeur
+est une idée de Nicolas ; Hyprland ne sait pas le dessiner, il demande un composant de la coque. Un
+appui long sur SUPER a été écarté : SUPER commence tous les raccourcis, chaque hésitation le
+déclencherait. Pas de raccourci pour la veille (inutilisée), ni pour éteindre ou redémarrer (menu de
+déconnexion du lot 2 ; d'ici là, le terminal). La cheatsheet provisoire en wofi a été proposée et
+renvoyée au lot 2 par Nicolas.
+
+### D36 · Compose sur AltGr ; disposition dans le fichier machine
+
+`kb_options = "compose:ralt"` : Nicolas garde son clavier QWERTY et écrit le français correct. AltGr
+relâchée, puis `'` et `e`, donne é ; la table Compose de la locale contient déjà toutes les séquences,
+majuscules, œ et guillemets compris, et aucune n'est définie par DuneI. Vérifié par Nicolas dans kitty
+et Firefox, Verrouillage majuscules compris. La disposition (`gb`) dépend du clavier physique : elle va
+dans `machines/caladan.lua`. `hl.config` fusionne la table `input` : les réglages communs et ceux de la
+machine coexistent.
+
+### D37 · Sortie par `uwsm stop` ; touches multimédia retirées ; diode du micro renvoyée à L1-08
+
+La session se ferme par `uwsm stop` : la documentation proscrit le répartiteur `exit`, qui retire le
+compositeur sous ses clients. Les touches Lecture, Suivant et Précédent sont retirées : le T14s ne les a
+pas, et `playerctl` n'est pas installé.
+
+La diode de sourdine du micro ne suit pas `wpctl`. Relevé du 2026-10-15 : `platform::micmute` suit le
+contrôle 7 de la carte 1 (codec Realtek ALC257, micro analogique), seul contrôle listé dans
+`/sys/class/sound/ctl-led/mic/` ; la source par défaut est le micro numérique `acp6x` (carte 2), relié à
+aucune diode, et `wpctl` coupe en logiciel. La diode est restée allumée, micro analogique coupé ou non.
+Remède retenu pour L1-08, découpage choisi par Nicolas : après `wpctl`, aligner les contrôles listés dans
+`ctl-led` sur l'état obtenu, avec `amixer` (`alsa-utils`), sans droits root. Une règle udev donnant le
+droit d'écrire la diode a été écartée : elle demande un fichier système et des droits root à
+l'installation.
+
+*Touché : tokens.toml, dunei_theme/emitters/, generated/hyprland-binds.lua, config/hypr/donnees/, config/hypr/modules/clavier.lua, config/hypr/modules/entree.lua, config/hypr/hyprland.lua, config/hypr/machines/caladan.lua, deploy.py, tests/, ~/.config/hypr/generique.lua (hors dépôt), bible (ch. 7, annexe D), carnet, backlog, notes de direction.*

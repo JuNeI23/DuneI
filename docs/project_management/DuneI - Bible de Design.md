@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas
 
-Document normatif. Version 0.7. Historique en fin de document.
+Document normatif. Version 0.8. Historique en fin de document.
 
 ## Comment lire ce document
 
@@ -281,6 +281,12 @@ S'applique en cascade et met à zéro le chroma des accents.
 ### Clavier
 
 **Tout est atteignable à la tabulation, boutons compris, par défaut** — sans réglage d'accessibilité à activer. Principe 7.
+
+**Grammaire des raccourcis du système.** `SUPER` agit ou va ; `SUPER + Maj` emporte la fenêtre active
+(la même action, la fenêtre suit) ; `SUPER + Ctrl` redimensionne ; `SUPER + Alt` porte les actions rares
+ou système, que la touche supplémentaire protège d'un appui accidentel. Un raccourci qui déroge à cette
+grammaire est une dérogation, consignée au journal. Une application se lance par son rôle (terminal,
+fichiers, navigateur, lanceur), jamais par le nom d'un logiciel.
 
 ## 8. Fenêtrage et grille
 
@@ -717,17 +723,20 @@ Chacun correspond à une erreur observée dans des systèmes existants.
 | `bible-design.md` | **Développeurs** | Ce document. Toutes les règles, toutes les annexes |
 | `tokens.toml` | Développeurs | Source de vérité — couleur, dimensions, matière |
 | `motion.toml` | Développeurs | Source de vérité — mouvement |
-| `generate_tokens.py` | Développeurs | Point d'entrée. Génère CSS, JSON, schéma Qt, GTK 3, GTK 4, portail et modules Lua du compositeur (`hyprland-tokens.lua`, `hyprland-rules.lua`) |
+| `generate_tokens.py` | Développeurs | Point d'entrée. Génère CSS, JSON, schéma Qt, GTK 3, GTK 4, portail et modules Lua du compositeur (`hyprland-tokens.lua`, `hyprland-rules.lua`, `hyprland-binds.lua`) |
 | `dunei_theme/` | Développeurs | La logique : couleurs, modèle, contrôles, une cible par module |
 | `Makefile` | Développeurs | `tokens`, `motion`, `test`, `check`, `golden`, `install` |
 | `generate_motion.py` | Développeurs | Génère le module Lua du compositeur et le JSON de la coque, après contrôle des règles du chapitre 6 |
-| `deploy.py` | Développeurs | Installe la configuration dans `~/.config`, destination par destination : Hyprland (liens vers `config/`, copies de `generated/`, bascule depuis la configuration générique) et fontconfig (`conf.d/50-dunei.conf`). Les dossiers `config/hypr/modules` et `config/hypr/machines` sont liés |
+| `deploy.py` | Développeurs | Installe la configuration dans `~/.config`, destination par destination : Hyprland (liens vers `config/`, copies de `generated/`, bascule depuis la configuration générique) et fontconfig (`conf.d/50-dunei.conf`). Les dossiers `config/hypr/modules`, `config/hypr/machines` et `config/hypr/donnees` sont liés |
 | `config/hypr/modules/ecrans.lua` | Développeurs | Règles d'écran communes : écrans inconnus étendus à droite, XWayland. Aucun matériel nommé |
 | `config/hypr/modules/env.lua` | Développeurs | Variables transmises aux clients : décorations Qt retirées |
 | `config/hypr/modules/fenetres.lua` | Développeurs | Disposition du tuilage : dwindle, découpes figées |
 | `config/hypr/modules/regles.lua` | Développeurs | Règles de fenêtre : apparence générée (couche 1, plein écran), puis comportement |
+| `config/hypr/modules/entree.lua` | Développeurs | Entrée commune : touche Compose sur AltGr, pavé tactile |
+| `config/hypr/modules/clavier.lua` | Développeurs | Contrôle puis lie les raccourcis et les gestes ; seul module qui traduit une action en répartiteur |
+| `config/hypr/donnees/` | Développeurs | Données seulement : `raccourcis.lua` (raccourcis, gestes, touches réservées) et `roles.lua` (le logiciel de chaque rôle) |
 | `config/hypr/modules/machine.lua` | Développeurs | Lit `/etc/hostname` et charge le fragment de la machine en dernier |
-| `config/hypr/machines/` | Développeurs | Un fichier par machine, le seul endroit où le matériel est nommé : sorties, échelle |
+| `config/hypr/machines/` | Développeurs | Un fichier par machine, le seul endroit où le matériel est nommé : sorties, échelle, disposition du clavier |
 | `extract_hue.py` | Développeurs | Extraction de teinte : lit wal ou une image ; `--json` et code 3 si achromatique |
 | `fonts.conf` | Développeurs | Généré. Indirection des noms de polices, chaîne de repli et rendu |
 | `carnet-installation.md` | Intégrateur | Ce qui est à installer, et selon quels critères |
@@ -812,3 +821,4 @@ Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si 
 | 0.6.2 | 2026-10-14 | Typographie : graisse d'accentuation 550 ; Source Code Pro patchée Nerd en version statique ; `fonts.conf` généré et déployé ; hinting à l'annexe C (D22, D23) |
 | 0.6.3 | 2026-10-14 | Annexe des fichiers : modules `ecrans.lua` et `machine.lua`, dossier `machines/` (D24, D25) ; annexe C, échelle de référence 1,25 (D27) |
 | 0.7 | 2026-10-14 | Fenêtrage : plus de bordure, la fenêtre active se signale par le modificateur `inactive` ; dwindle ; ombre des flottantes à une couche ; rayon plein écran 0 ; annexe C, coins fermés et flou au lot 2 ; annexe D, modules `env`, `fenetres`, `regles` ; ch. 12, palier D sans bordure (D28 à D31) |
+| 0.8 | 2026-10-15 | Clavier : grammaire des raccourcis du système, applications par rôle ; annexe D, modules `entree` et `clavier`, dossier `donnees/`, fragment `hyprland-binds.lua` (D33 à D37) |

@@ -64,13 +64,14 @@ class DeployTest(unittest.TestCase):
         self.assertEqual(os.readlink(self.hypr / "hyprland.lua"), str(ROOT / "config" / "hypr" / "hyprland.lua"))
         self.assertEqual(os.readlink(self.hypr / "modules"), str(ROOT / "config" / "hypr" / "modules"))
         self.assertEqual(os.readlink(self.hypr / "machines"), str(ROOT / "config" / "hypr" / "machines"))
+        self.assertEqual(os.readlink(self.hypr / "donnees"), str(ROOT / "config" / "hypr" / "donnees"))
         for name in COPIES:
             self.assertEqual((self.hypr / "generated" / name).read_bytes(), (ROOT / "generated" / name).read_bytes())
         self.assertEqual(self.fc.read_bytes(), (ROOT / "generated" / "fonts.conf").read_bytes())
 
     def test_copies_hyprland_files(self):
-        """Hyprland lit ces trois fichiers générés : un oubli dans COPIES casserait tout le point d'entrée."""
-        self.assertEqual(set(COPIES), {"hyprland-tokens.lua", "hyprland-rules.lua", "motion.lua"})
+        """Hyprland lit ces quatre fichiers générés : un oubli dans COPIES casserait tout le point d'entrée."""
+        self.assertEqual(set(COPIES), {"hyprland-tokens.lua", "hyprland-rules.lua", "hyprland-binds.lua", "motion.lua"})
 
     def test_config_home(self):
         self.assertEqual(config_home({"XDG_CONFIG_HOME": "/x", "HOME": "/h"}), Path("/x"))
@@ -92,7 +93,7 @@ class DeployTest(unittest.TestCase):
         self.assertEqual((self.hypr / "generique.lua").read_text(encoding="utf-8"), GENERIC)
         self.assertEqual((self.hypr / "generique.lua").stat().st_ino, inode)
         self.assertEqual(sorted(p.name for p in self.hypr.iterdir()),
-                         ["generated", "generique.lua", "hyprland.lua", "machines", "modules"])
+                         ["donnees", "generated", "generique.lua", "hyprland.lua", "machines", "modules"])
         self.assertIn("hyprctl reload", res.stdout)
 
     def test_second_run_changes_nothing(self):

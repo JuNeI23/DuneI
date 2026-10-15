@@ -287,6 +287,7 @@ fullscreen = 0               # plein écran : aucun effet, coins compris (bible,
 
 [window]
 border_width = 0             # aucune bordure de fenêtre ; la fenêtre active se signale au lot 2 (L2-03, D29)
+resize_step = 48             # px logiques, pas de SUPER + Ctrl + flèche ; membre de spacing.scale
 
 [window.floating_shadow]     # couche 2 seulement ; une seule ombre, Hyprland n'en dessine qu'une (D30)
 range = 16                   # px logiques, multiple de 4

@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas — révisée le 14 octobre 2026
 
-Version 1.7. Historique en fin de document.
+Version 1.8. Historique en fin de document.
 
 *Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent quarante et une lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
 
@@ -117,7 +117,7 @@ L'ordre découle d'une seule règle : **chaque lot laisse la machine en état de
 | **4 — Accord visuel** | Thématisation Qt et GTK sur cibles réelles, premier lot d'icônes, fond d'écran, panneau de thème, extraction de teinte | Cohérente de bout en bout, bible opposable partout |
 | **5 — Écrans système et voix** | Réglages panneau par panneau, connexion, amorçage, « À propos », catalogue de messages, recette | **1.0** |
 
-Le détail — cent quarante et un éléments, chacun rattaché à un chantier, un lot et une nature — vit dans le document de périmètre et de backlog. **Cette note ne s'y substitue pas.**
+Le détail — cent quarante-deux éléments, chacun rattaché à un chantier, un lot et une nature — vit dans le document de périmètre et de backlog. **Cette note ne s'y substitue pas.**
 
 ## Les risques, par ordre de gravité
 
@@ -215,6 +215,17 @@ valeurs viennent des jetons, dont un second fichier généré tire les règles d
 `generique.lua` perd toute son apparence (D28 à D31). Prochaine étape du lot 1 : **la feature
 raccourcis (L1-16)**, qui rapatrie le clavier, les gestes et les bureaux virtuels de `generique.lua`.
 
+**Raccourcis — 15 octobre 2026.** Le clavier est désormais un chemin complet, versionné et contrôlé :
+chaque raccourci et chaque geste est une donnée, avec sa description, dans `donnees/raccourcis.lua`, et
+le module `clavier.lua` refuse une table fausse sans rien lier. Les applications se lancent par rôle ;
+les logiciels qui tiennent ces rôles restent provisoires jusqu'au lot 3. La grammaire des modificateurs
+est inscrite à la bible, AltGr devient la touche Compose pour écrire le français sur le clavier QWERTY,
+et les touches du lot 2 (verrouillage, cheatsheet, capture, halo du pointeur) sont réservées. Une
+fenêtre agrandie garde désormais ses coins ; seul le vrai plein écran est nu. `generique.lua` ne garde
+que les anciennes courbes, `misc` et la taille du curseur. La diode du micro ne suit pas l'état réel :
+la cause est relevée et le remède choisi (D33 à D37). Prochaine étape du lot 1 : **L1-08, le pont de la
+diode du micro**, puis la vérification audio.
+
 ## Plan de lecture
 
 | Rôle | À lire |
@@ -232,6 +243,7 @@ raccourcis (L1-16)**, qui rapatrie le clavier, les gestes et les bureaux virtuel
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-10 | Version initiale |
+| 1.8 | 2026-10-15 | Raccourcis faits (L1-16) ; diode du micro renvoyée à L1-08, prochaine étape ; décomptes à 142 éléments |
 | 1.7 | 2026-10-14 | Fenêtrage fait (L1-12 à L1-15) ; reste les raccourcis et les bureaux (L1-16). Paragraphes permanents de l'état d'avancement placés avant le journal, pour que le dernier paragraphe nomme la prochaine étape ; décomptes à 141 éléments |
 | 1.6 | 2026-10-14 | Écran et échelle faits (L1-17), échelle 1,25 ; reste le fenêtrage |
 | 1.5 | 2026-10-14 | Polices résolues (L1-19, L1-20), graisse d'accentuation 550 ; reste l'écran et l'échelle |
