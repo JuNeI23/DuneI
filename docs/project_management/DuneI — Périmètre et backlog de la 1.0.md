@@ -2,9 +2,9 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.8. Historique en fin de document.
+Version 1.9. Historique en fin de document.
 
-La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **141 éléments** répartis en **cinq lots**, sur six chantiers.
+La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **142 éléments** répartis en **cinq lots**, sur six chantiers.
 
 Ce document dit ce qui est attendu, dans quel ordre, et à quelle condition c'est terminé. Il ne dit pas à quoi ça ressemble — c'est le rôle de la bible de design. En cas de contradiction : la bible l'emporte sur l'apparence, ce document l'emporte sur le périmètre.
 
@@ -228,7 +228,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L1-05 | A | Configuré | Gestion des paquets et politique de mise à jour |
 | L1-06 | A | Configuré | Pilotes graphiques et accélération matérielle |
 | L1-07 | A | Offert | Service réseau — vérification |
-| L1-08 | A | Offert | Service audio — vérification |
+| L1-08 | A | Offert | Service audio — vérification ; diode du micro : ne suit pas `wpctl` (relevé du 2026-10-15, D37) — remède retenu : après `wpctl`, aligner les contrôles listés dans `/sys/class/sound/ctl-led/mic/` avec `amixer` (`alsa-utils`), sans droits root |
 | L1-09 | A | Offert | Service d'énergie et de veille — vérification ; couvercle fermé avec écran externe : éteindre l'écran interne sans mettre en veille (reporté depuis L1-17, D25) |
 | L1-10 | A | Configuré | Gestionnaire de session et démarrage automatique |
 | L1-11 | B | Configuré | Choisir le compositeur selon les besoins de la bible — **tranché : Hyprland 0.56, configuration Lua** |
@@ -236,7 +236,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L1-13 | B | Configuré | Fenêtre active ; inactive → modificateur de conteneur — **fait (D29)** : aucune bordure ; le repère de la fenêtre active revient à L2-03 |
 | L1-14 | B | Configuré | Masquage des décorations côté serveur — **fait (D31)** : Hyprland ne dessine aucune barre de titre ; `QT_WAYLAND_DISABLE_WINDOWDECORATION` |
 | L1-15 | B | Configuré | Couche 2 — flottant applicatif et plein écran — **fait (D30, D31)** : ombre des flottantes 16/4/2, plein écran sans coins ni ombre |
-| L1-16 | B | Configuré | Bureaux virtuels — à vérifier avec le raccourci d'agrandissement : la règle `plein-ecran-nu` couvre-t-elle aussi l'état agrandi (D31) |
+| L1-16 | B | Configuré | Bureaux virtuels et raccourcis — **fait (D33 à D37)** : table de données contrôlée (`donnees/raccourcis.lua`), applications par rôle, grammaire des modificateurs, bureau spécial `accueil`, Compose sur AltGr, touches réservées ; une fenêtre agrandie garde ses coins, `plein-ecran-nu` ne vise que le plein écran (D31, suite) |
 | L1-17 | B | Configuré | Multi-écran de base et facteur d'échelle — **fait (D24 à D27)** : fragment `machines/<nom-d-hôte>.lua` lu depuis `/etc/hostname`, écrans inconnus étendus à droite, échelle 1,25 sur `caladan` |
 | L1-18 | E | Configuré | Terminal — installation minimale |
 | L1-19 | C | Écrit | Polices et indirection de noms — **fait (D22, D23)** : `fonts.conf` généré depuis `tokens.toml`, déployé dans `fontconfig/conf.d`, vérifié par `fc-match` ; graisse d'accentuation 550 |
@@ -265,26 +265,27 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L2-13 | B | Écrit | Indicateur d'énergie et son popover |
 | L2-14 | B | Écrit | Indicateur Bluetooth et son popover |
 | L2-15 | B | Écrit | Zone d'état des applications tierces |
-| L2-16 | B | Écrit | Lanceur — voile, flou par instantané, focus clavier |
+| L2-16 | B | Écrit | Lanceur — voile, flou par instantané, focus clavier ; touche `SUPER + R`, tenue par wofi au lot 1 |
 | L2-17 | B | Écrit | Sélecteur de fenêtres — vignettes en neutre pur |
 | L2-18 | B | Écrit | Sélecteur de bureaux — une teinte catégorielle par bureau |
 | L2-19 | B | Écrit | Notifications — couleurs sémantiques invariantes |
 | L2-20 | B | Écrit | Menu contextuel du bureau — part du point de clic |
 | L2-21 | B | Écrit | Infobulles — délai de 500 ms |
-| L2-22 | B | Écrit | Verrouillage — registre de spectacle |
+| L2-22 | B | Écrit | Verrouillage — registre de spectacle ; touche réservée `SUPER + L` |
 | L2-23 | B | Écrit | Menu de déconnexion — action destructrice en `error` |
 | L2-24 | B | Écrit | Agent d'authentification |
 | L2-25 | B | Configuré | Trousseau de secrets |
 | L2-26 | B | Écrit | Démon de thème — rechargement à chaud |
 | L2-27 | B | Écrit | Application du fond d'écran |
-| L2-28 | B | Mixte | Raccourcis clavier globaux et leur affichage |
+| L2-28 | B | Mixte | Raccourcis clavier globaux et leur affichage ; touche réservée `SUPER + /` ; lire `hyprctl binds -j`, qui rend les descriptions de la table |
 | L2-29 | B | Écrit | Contrôle de la luminosité |
-| L2-30 | B | Écrit | Capture d'écran |
+| L2-30 | B | Écrit | Capture d'écran ; touche réservée `Print` |
 | L2-31 | B | Écrit | Presse-papiers et historique |
 | L2-32 | B | Écrit | Navigation clavier complète, boutons compris |
 | L2-33 | B | Écrit | Barre de défilement superposée — 8 px, 12 au survol |
 | L2-34 | C | Écrit | Brancher les tokens sur la bibliothèque de composants |
 | L2-35 | B | Écrit | Flou des overlays et de la couche 1 ; ombre de gouttière de la fenêtre active, à étudier (D29, D31) |
+| L2-36 | B | Écrit | Localiser le pointeur — halo autour du pointeur, Ctrl gauche tenu une seconde ; touche réservée en L1-16 (D35) |
 
 ### Lot 3 — la bascule
 
@@ -385,7 +386,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L5-29 | — | Écrit | Passe de regard complète — étage 3 |
 | L5-30 | — | Écrit | Résorber les points ouverts de l'annexe C |
 
-**Volume total : 141 éléments** — 97 écrits, 36 configurés, 5 offerts, 3 mixtes.
+**Volume total : 142 éléments** — 98 écrits, 36 configurés, 5 offerts, 3 mixtes.
 
 Les deux tiers du travail sont de l'écrit, et les trois quarts de cet écrit se concentrent sur la coque et les écrans système. C'est cohérent avec la stratégie retenue, et c'est là que tout le risque se trouve.
 
@@ -487,6 +488,7 @@ Le choix de la distribution de base et du compositeur, précédemment ouverts, s
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-12 | Version initiale, 137 éléments |
+| 1.9 | 2026-10-15 | L1-16 fait : raccourcis en données, rôles, grammaire, Compose, touches réservées ; L1-08 reçoit le relevé de la diode du micro ; L2-16, L2-22, L2-28, L2-30 notent leur touche ; ajout de L2-36. 142 éléments |
 | 1.8 | 2026-10-14 | L1-12 à L1-15 faits : dwindle, plus de bordure, ombre des flottantes, plein écran nu, décorations Qt ; L2-03 précisé ; ajout de L2-35. 141 éléments |
 | 1.7 | 2026-10-14 | L1-17 fait : fragment machine, écrans inconnus, échelle 1,25 ; couvercle avec écran externe ajouté à L1-09 |
 | 1.6 | 2026-10-14 | L1-19 et L1-20 faits : polices résolues, chaîne de repli, rendu |

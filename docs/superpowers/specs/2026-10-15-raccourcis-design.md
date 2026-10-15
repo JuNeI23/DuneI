@@ -1,6 +1,6 @@
 # Raccourcis : clavier, gestes, bureaux et entrée
 
-Version 0.3 · 2026-10-15 · backlog L1-16 · carnet « Entrée », « Touches matérielles », « Bureaux et raccourcis » · statut : validée
+Version 0.4 · 2026-10-15 · backlog L1-16 · carnet « Entrée », « Touches matérielles », « Bureaux et raccourcis » · statut : validée, implémentée
 
 ## 1. Objet
 
@@ -237,7 +237,8 @@ Vérifications faites pendant le plan :
 - **Envoyer sans suivre** : la documentation ne donne pas la valeur par défaut de `follow` ;
   `follow = false` est donc écrit explicitement.
 - **Lancement** : `uwsm app --`, d'après la documentation d'uwsm (section 3.2).
-- **Rechargement** : répartiteur natif `hl.dsp.reload_config()`.
+- **Rechargement** : la documentation annonçait `hl.dsp.reload_config()`, absent de Hyprland 0.56.2 ;
+  le rechargement passe par `hyprctl reload` (constaté à l'activation, D34).
 - **Noms `XF86`** des touches matérielles : relevés avec `wev` pendant la validation à l'écran.
 - **Diodes : elles ne suivent pas, et le point passe à L1-08** (découpage validé par Nicolas). Relevé du
   2026-10-15 : la diode `platform::micmute` suit le contrôle 7 de la carte 1 (codec Realtek ALC257, micro
@@ -291,3 +292,4 @@ et grim. `SUPER + Alt + M` est essayé en dernier.
 | 0.1 | 2026-10-15 | Version initiale, issue du brainstorming |
 | 0.2 | 2026-10-15 | Bureau spécial nommé `accueil` |
 | 0.3 | 2026-10-15 | Diodes déplacées à L1-08 (relevé consigné) ; tables dans `donnees/` ; `uwsm app --`, `follow = false` et `reload_config` établis |
+| 0.4 | 2026-10-15 | Implémentée ; rechargement par `hyprctl reload` ; `plein-ecran-nu` restreinte au vrai plein écran (D31, suite) |

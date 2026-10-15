@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.0. Historique en fin de document.
+Version 1.1. Historique en fin de document.
 
 Socle amorçable.
 
@@ -120,7 +120,7 @@ rechargement ; `hyprctl reload` sert de recours si rien ne change :
 Ne jamais supprimer le lien avant le renommage : Hyprland pourrait recharger pendant l'absence de
 `hyprland.lua` et rester sur une configuration en erreur.
 
-**La session suit la copie de travail du dépôt.** `~/.config/hypr/hyprland.lua` et `modules/` pointent
+**La session suit la copie de travail du dépôt.** `~/.config/hypr/hyprland.lua`, `modules/`, `machines/` et `donnees/` pointent
 vers `~/DuneI` : la copie de travail doit toujours rester sur une branche qui contient les fichiers liés,
 sinon le lien n'a plus de cible au prochain rechargement. `make install` refuse de s'exécuter depuis un
 arbre de travail secondaire (`git worktree`), dont la suppression laisserait des liens sans cible.
@@ -138,13 +138,13 @@ existe pas encore, il disparaît quelques secondes : Hyprland recharge pendant c
 supprimé. La bannière reste alors affichée alors que la configuration est intacte ; `hyprctl reload`
 l'efface.
 
-**Machine installée directement en DuneI.** Sans configuration générique, la session n'a aucun
-raccourci tant que la feature raccourcis n'est pas faite. `make install` refuse aussi une machine qui
+**Machine installée directement en DuneI.** Sans configuration générique, la session a tout de même
+tous ses raccourcis : ils viennent de `donnees/raccourcis.lua` (L1-16). `make install` refuse aussi une machine qui
 n'aurait qu'un ancien `hyprland.conf`, que Hyprland ignorerait au profit du point d'entrée DuneI.
 
 ### Ce qui est propre à une machine
 
-**Tout ce qui dépend du matériel vit dans `config/hypr/machines/<nom-d-hôte>.lua`, et nulle part ailleurs** : nom de sortie (`eDP-1`), facteur d'échelle, périphériques d'entrée nommés. Le point d'entrée charge le fichier qui correspond au nom d'hôte ; la configuration commune ne connaît aucun matériel. Une nouvelle machine = un nouveau fichier, rien d'autre ne change.
+**Tout ce qui dépend du matériel vit dans `config/hypr/machines/<nom-d-hôte>.lua`, et nulle part ailleurs** : nom de sortie (`eDP-1`), facteur d'échelle, disposition du clavier, périphériques d'entrée nommés. Le point d'entrée charge le fichier qui correspond au nom d'hôte ; la configuration commune ne connaît aucun matériel. Une nouvelle machine = un nouveau fichier, rien d'autre ne change.
 
 Le mécanisme (D24) : `config/hypr/modules/machine.lua` lit `/etc/hostname` au démarrage de Hyprland — l'API `hl` n'expose pas le nom d'hôte, mais la bibliothèque standard de Lua est chargée — et charge `machines/<nom>.lua` en dernier, pour qu'il l'emporte sur tout ce qui précède. Le nom n'est accepté que s'il ne contient que des lettres, des chiffres et des tirets : un point ou une barre oblique casserait la résolution du module. Une machine sans fichier, ou au nom refusé, applique les seules règles communes. Une erreur dans un fichier machine existant n'est **pas** avalée : elle remonte dans Hyprland, comme toute erreur de configuration. `make install` lie `config/hypr/machines` sous `~/.config/hypr/machines`, comme `modules`.
 
@@ -179,33 +179,58 @@ Si la décharge reste mauvaise après mise à jour du firmware et choix du somme
 
 ### Entrée
 
-Trackpoint **et** pavé tactile : deux périphériques, deux configurations, dans le fragment Hyprland.
+Fait (L1-16, D36). Les réglages communs vivent dans `config/hypr/modules/entree.lua` ; seules les
+valeurs différentes des défauts de Hyprland y sont écrites :
 
 ```lua
--- config/hypr/modules/input.lua — proposition, à valider à la feature entrée
 hl.config({
     input = {
-        accel_profile = "adaptive",
-        touchpad = {
-            natural_scroll       = true,
-            disable_while_typing = true,
-            clickfinger_behavior = true,
-        },
+        kb_options = "compose:ralt",       -- AltGr droite devient la touche Compose
+        touchpad = { natural_scroll = true, clickfinger_behavior = true },
     },
 })
 ```
 
+Restent aux défauts, non écrits : le focus suit la souris, le pavé est coupé pendant la frappe, toucher
+vaut clic, accélération adaptative, vitesses du TrackPoint et du pavé à 0. La disposition dépend du
+clavier physique : `kb_layout = "gb"` est déclaré dans `machines/caladan.lua`. `hl.config` fusionne la
+table `input`, les deux déclarations coexistent.
+
+**Accents.** AltGr relâchée, puis deux touches ; la majuscule ne porte que sur la dernière, et le
+Verrouillage majuscules fonctionne. Les séquences viennent de la table Compose de la locale
+(`/usr/share/X11/locale/en_US.UTF-8/Compose`) ; DuneI n'en définit aucune.
+
+| Séquence après AltGr | Résultat |
+| --- | --- |
+| `^` puis voyelle | â ê î ô û |
+| `` ` `` puis `a`, `e`, `u` | à è ù |
+| `'` puis `e` | é |
+| `"` puis `e`, `i`, `u` | ë ï ü |
+| `,` puis `c` | ç |
+| `o` puis `e` · `<` `<` · `>` `>` | œ « » |
+
 ### Touches matérielles
 
-Les touches de luminosité et de volume sont câblées dès le lot 1, parce que sans barre ni indicateur elles sont le seul moyen d'agir.
+Les touches de luminosité et de volume sont câblées dès le lot 1, parce que sans barre ni indicateur
+elles sont le seul moyen d'agir. Elles sont déclarées dans `donnees/raccourcis.lua`, actives écran
+verrouillé (`locked`) ; volume et luminosité se répètent quand on les tient.
 
 | Touche | Lot 1 | Plus tard |
 | --- | --- | --- |
-| Luminosité | `brightnessctl` directement | Indicateur et retour visuel, L2-29 |
-| Volume | `wpctl` directement | Indicateur audio, L2-12 |
-| Sourdine micro | `wpctl`, **et la diode doit suivre** | Indicateur, L2-12 |
+| Sourdine, volume −/+ | `wpctl`, ±5 %, plafond 100 % | Indicateur audio, L2-12 |
+| Sourdine micro | `wpctl` sur la source par défaut | Diode : L1-08 ; indicateur, L2-12 |
+| Luminosité −/+ | `brightnessctl -e4 -n2`, ±5 % | Indicateur et retour visuel, L2-29 |
+
+Les touches Lecture, Suivant et Précédent ne sont pas liées : le T14s ne les a pas (D37). F7 (écran)
+et F9 à F12 restent libres.
 
 **La diode de sourdine micro mérite sa ligne.** Une diode qui ne correspond pas à l'état réel du micro est un défaut de confiance, pas un défaut cosmétique — c'est exactement le genre de détail que le principe 3 vise : un signal qui porte une information doit être juste.
+
+**Elle ne suit pas, relevé du 2026-10-15 (D37).** `platform::micmute` suit le contrôle 7 de la carte 1
+(codec Realtek ALC257, micro analogique), seul contrôle listé dans `/sys/class/sound/ctl-led/mic/` ; la
+source par défaut est le micro numérique `acp6x` (carte 2), relié à aucune diode, et `wpctl` coupe en
+logiciel. Remède retenu pour L1-08 : après `wpctl`, aligner les contrôles listés dans `ctl-led` sur
+l'état obtenu, avec `amixer` (`alsa-utils`), sans droits root ; la ligne de la table changera seule.
 
 ## Session et compositeur — L1-10 à L1-17
 
@@ -225,7 +250,7 @@ foot
 
 `greetd` avec `tuigreet` est **délibérément laid et provisoire** : l'écran de connexion thématisé est L5-12. Installer maintenant un gestionnaire graphique lourd reviendrait à habiller un écran qu'on remplacera, et à traîner une dépendance du bureau intégré qu'on a écarté.
 
-`foot` est le terminal du lot 1 : natif Wayland, léger, sans dépendance de bureau. Lui aussi est provisoire — le terminal définitif vient de la famille dominante au lot 3.
+`foot` est le terminal du lot 1 : natif Wayland, léger, sans dépendance de bureau. Lui aussi est provisoire — le terminal définitif vient de la famille dominante au lot 3. Au 2026-10-15, foot n'est pas installé : le rôle terminal de `donnees/roles.lua` est tenu par kitty, déjà présent, jusqu'à L1-18.
 
 Les portails sont installés dès maintenant mais configurés au lot 3. Les avoir présents évite une session qui se comporte différemment entre les deux lots.
 
@@ -257,11 +282,13 @@ require("modules.env").apply()                     -- variables transmises aux c
 require("modules.fenetres").apply()                -- disposition dwindle
 require("modules.regles").apply()                  -- règles de fenêtre générées, puis de comportement
 require("modules.ecrans").apply()                  -- écrans inconnus et XWayland, aucun matériel nommé
+require("modules.entree").apply()                  -- touche Compose, pavé tactile
+require("modules.clavier").apply()                 -- raccourcis et gestes de donnees/, contrôlés puis liés
 require("modules.machine").load()                  -- machines/<nom-d-hôte>.lua, chargé en dernier
 ```
 
-Les modules du clavier et de l'entrée s'ajouteront avec la feature raccourcis, qui retire de
-`generique.lua` les raccourcis, les gestes et la configuration de l'entrée.
+Depuis la feature raccourcis (L1-16), `generique.lua` ne garde que les anciennes courbes et
+animations, le bloc `misc` et `XCURSOR_SIZE`.
 
 Les générateurs produisent donc des **modules Lua**, et non plus des fragments `.conf`. Le module **retourne une table** et n'appelle pas `hl.config` lui-même : rien ne se passe au chargement, la configuration choisit quand l'appliquer, un fragment machine peut surcharger ensuite, et le fichier se vérifie avec un interpréteur Lua nu. Le Lua apporte aussi les ressorts natifs (`hl.curve({ type = "spring", … })`), qui servent directement le principe 5.
 
@@ -336,7 +363,7 @@ Dans l'API Lua, `rounding` vit sous `decoration`, pas sous `general`.
 -- generated/hyprland-rules.lua — PRODUIT par generate_tokens.py
 return {
     { name = "couche-1-sans-ombre", match = { float = false }, no_shadow = true },          -- elevation.e1.shadow
-    { name = "plein-ecran-nu", match = { fullscreen = true }, no_shadow = true, rounding = 0 }, -- radii.fullscreen
+    { name = "plein-ecran-nu", match = { fullscreen_state_internal = 2 }, no_shadow = true, rounding = 0 }, -- radii.fullscreen ; une fenêtre agrandie (état 1) garde ses coins
 }
 ```
 
@@ -354,21 +381,51 @@ Constat fait avant le retrait : à l'échelle 1,25, la bordure de 2 px logiques 
 
 ### Bureaux et raccourcis
 
-Dix bureaux, sans nom au lot 1 — la palette catégorielle qui les distingue arrive avec L2-18.
+Fait (L1-16, D33 à D37). Le lot 1 n'a ni lanceur ni barre : le clavier est le seul chemin, et le
+principe 6 dit qu'il doit être complet.
+
+**Où ça vit.** `config/hypr/donnees/raccourcis.lua` décrit chaque raccourci et chaque geste comme une
+donnée : combinaison, action, description obligatoire, drapeaux. `config/hypr/donnees/roles.lua` dit
+quel logiciel tient chaque rôle. `config/hypr/modules/clavier.lua` contrôle la table (combinaison vide,
+description manquante, action, rôle ou direction inconnus, combinaison déjà prise) et ne lie rien si
+elle est fausse ; l'erreur s'affiche dans la bannière de Hyprland. Ajouter un raccourci, c'est ajouter
+une ligne à la table ; changer de terminal, c'est changer une ligne de `roles.lua`. Le pas de
+redimensionnement vient du jeton `window.resize_step` (48), par `generated/hyprland-binds.lua`.
+
+**Grammaire** (bible, ch. 7) : `SUPER` agit ou va ; `SUPER + Maj` emporte la fenêtre active ;
+`SUPER + Ctrl` redimensionne ; `SUPER + Alt` porte les actions rares ou système.
+
+Dix bureaux, sans nom au lot 1 — la palette catégorielle qui les distingue arrive avec L2-18 — et un
+bureau spécial, `accueil`, qui s'affiche par-dessus le bureau courant.
 
 | Raccourci | Action |
 | --- | --- |
-| `SUPER + Entrée` | Terminal |
-| `SUPER + Q` | Fermer la fenêtre |
-| `SUPER + H/J/K/L` | Déplacer le focus |
-| `SUPER + Maj + H/J/K/L` | Déplacer la fenêtre |
-| `SUPER + 1…0` | Aller au bureau |
-| `SUPER + Maj + 1…0` | Envoyer au bureau |
-| `SUPER + V` | Basculer flottant |
-| `SUPER + F` | Plein écran |
-| `SUPER + Maj + Q` | Quitter la session |
+| `SUPER + C` / `SUPER + Alt + C` | Fermer la fenêtre / tuer l'application |
+| `SUPER + M` | Agrandir, gouttières et coins gardés ; rendre à sa tuile |
+| `SUPER + V` | Flottante ou tuilée |
+| `SUPER + J` | Changer le sens de découpe |
+| `SUPER + Alt + P` | Épingler une flottante sur tous les bureaux |
+| `SUPER + flèches` | Focus dans la direction |
+| `SUPER + Tab` | Fenêtre suivante |
+| `SUPER + Maj + flèches` | Déplacer la fenêtre |
+| `SUPER + Ctrl + flèches` | Redimensionner, par pas de 48 px logiques |
+| `SUPER + 1…0` | Aller au bureau 1 à 10 |
+| `SUPER + Maj + 1…0` | Envoyer la fenêtre au bureau, sans la suivre |
+| `SUPER + S` / `SUPER + Maj + S` | Afficher ou masquer l'accueil / y ranger la fenêtre |
+| `SUPER + Q`, `E`, `F`, `R` | Terminal, fichiers, navigateur, lanceur (kitty, dolphin, firefox, wofi : provisoires) |
+| `SUPER + Alt + M` | Quitter la session (`uwsm stop`) |
+| `SUPER + Alt + R` | Recharger la configuration (`hyprctl reload`) |
+| `SUPER + clic gauche / droit` glissé | Déplacer / redimensionner à la souris |
+| `SUPER + molette` | Bureau occupé suivant ou précédent |
+| Pavé, trois doigts à l'horizontale / vers le bas | Changer de bureau / afficher ou masquer l'accueil |
 
-Le lot 1 n'a ni lanceur ni barre : le clavier est le seul chemin, et le principe 6 dit qu'il doit être complet.
+**Touches réservées**, déclarées sans être liées : `SUPER + L` (verrouillage, L2-22), `SUPER + /`
+(cheatsheet, L2-28), `Print` (capture d'écran, L2-30), Ctrl gauche tenu une seconde (localiser le
+pointeur, L2-36). Pas de raccourci pour la veille, ni pour éteindre ou redémarrer : le terminal, d'ici
+le menu de déconnexion du lot 2.
+
+**Les applications se lancent par `uwsm app --`**, chacune dans sa propre unité systemd, et non comme
+processus enfants du compositeur (documentation d'uwsm).
 
 **Ne jamais coder en dur un nom de sortie dans la configuration commune.** `eDP-1` vit dans `config/hypr/machines/<nom-d-hôte>.lua`, et nulle part ailleurs.
 
@@ -540,6 +597,7 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 | Version | Date | Changement |
 | --- | --- | --- |
 | 0.1 | 2026-10-12 | Version initiale |
+| 1.1 | 2026-10-15 | Raccourcis : table de données contrôlée, rôles, grammaire, bureau `accueil`, touches réservées ; entrée réelle, Compose sur AltGr, disposition dans le fichier machine ; touches matérielles, diode du micro renvoyée à L1-08 avec son relevé ; `donnees/` lié par `make install` ; kitty tient le rôle terminal (D33 à D37) ; `plein-ecran-nu` restreinte au vrai plein écran (D31, suite) |
 | 1.0 | 2026-10-14 | Procédure après fusion : Claude fusionne lui-même, sans `--delete-branch` (D32). Fenêtrage : dwindle, plus de bordure, ombre des flottantes et règles de fenêtre générées, plein écran nu, module `env.lua` réduit à la variable Qt, générique réduit (D28 à D31) |
 | 0.9 | 2026-10-14 | Écran et échelle : fragment machine lu depuis `/etc/hostname`, règle des écrans inconnus, échelle 1,25 retenue après essai de 4/3, écartée pour la règle des pixels entiers, variables Qt d'échelle retirées, vérification par sortie virtuelle |
 | 0.8 | 2026-10-14 | Polices : `fonts.conf` généré et déployé dans `fontconfig/conf.d`, familles installées réelles, chaîne de repli, rendu, vérification par `fc-match`, graisse d'accentuation 550 ; `deploy.py` à destinations multiples |
