@@ -98,7 +98,9 @@ def emit_rules(model: dict) -> str:
 
     Entrée : model — sortie de model.resolve.
     Sortie : contenu de hyprland-rules.lua (une liste Lua retournée, appliquée par modules/regles.lua).
-             La règle de la couche 1 n'existe que si E1 n'a pas d'ombre ; le plein écran vient en
+             La règle de la couche 1 n'existe que si E1 n'a pas d'ombre. Le plein écran vise l'état
+             interne 2 seul : une fenêtre agrandie (état 1) garde ses gouttières et ses coins, comme
+             une tuile (D31, suite du 2026-10-15). Le plein écran vient en
              dernier, pour qu'une règle de plein écran l'emporte sur toute règle plus générale qui
              poserait une valeur contraire (aujourd'hui, les deux retirent l'ombre).
     Erreurs : KeyError si le TOML brut manque ; ValueError transmise par _validate.
@@ -108,7 +110,7 @@ def emit_rules(model: dict) -> str:
     _validate(raw)
     rules = [] if raw["elevation"]["e1"]["shadow"] else [
         '    { name = "couche-1-sans-ombre", match = { float = false }, no_shadow = true },']
-    rules.append('    { name = "plein-ecran-nu", match = { fullscreen = true }, no_shadow = true, '
+    rules.append('    { name = "plein-ecran-nu", match = { fullscreen_state_internal = 2 }, no_shadow = true, '
                  f'rounding = {raw["radii"]["fullscreen"]} }},')
     return "\n".join([
         "-- GÉNÉRÉ depuis tokens.toml — NE PAS MODIFIER À LA MAIN",

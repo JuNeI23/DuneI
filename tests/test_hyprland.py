@@ -152,7 +152,7 @@ class RulesTest(unittest.TestCase):
     def test_rules_values(self):
         lua = self.rules()
         self.assertIn('{ name = "couche-1-sans-ombre", match = { float = false }, no_shadow = true },', lua)
-        self.assertIn('{ name = "plein-ecran-nu", match = { fullscreen = true }, no_shadow = true, rounding = 0 },', lua)
+        self.assertIn('{ name = "plein-ecran-nu", match = { fullscreen_state_internal = 2 }, no_shadow = true, rounding = 0 },', lua)
 
     def test_rules_follow_fullscreen_radius(self):
         self.assertIn("rounding = 4", self.rules(fullscreen=4))
