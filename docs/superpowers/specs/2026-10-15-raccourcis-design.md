@@ -1,6 +1,6 @@
 # Raccourcis : clavier, gestes, bureaux et entrée
 
-Version 0.2 · 2026-10-15 · backlog L1-16 · carnet « Entrée », « Touches matérielles », « Bureaux et raccourcis » · statut : validée
+Version 0.3 · 2026-10-15 · backlog L1-16 · carnet « Entrée », « Touches matérielles », « Bureaux et raccourcis » · statut : validée
 
 ## 1. Objet
 
@@ -30,7 +30,8 @@ Cette fonctionnalité :
 4. `SUPER + Ctrl + flèche` redimensionne par pas de 48 px logiques, valeur lue dans `generated/`.
 5. Les séquences Compose de la section 3.5 produisent le bon caractère dans kitty et dans Firefox,
    majuscules et Verrouillage majuscules compris.
-6. Les diodes `platform::mute` et `platform::micmute` suivent l'état réel du son et du micro.
+6. *(Déplacé à L1-08, voir section 3.9.)* Les touches de son, de micro et de luminosité agissent,
+   écran verrouillé compris (`locked`).
 7. Le geste à trois doigts vers le bas affiche puis masque le bureau spécial ; le geste horizontal
    change de bureau.
 8. `SUPER + Alt + M` ferme la session par `uwsm stop`.
@@ -113,7 +114,7 @@ return { resize_step = 48 }
 
 `deploy.py` le copie avec les autres fragments.
 
-### 3.2 Rôles (`config/hypr/roles.lua`)
+### 3.2 Rôles (`config/hypr/donnees/roles.lua`)
 
 Une table de données : rôle → commande. Tous les logiciels sont provisoires ; un commentaire le dit.
 
@@ -126,10 +127,13 @@ return {
 }
 ```
 
-Le plan vérifie si uwsm demande de lancer les applications par `uwsm app --`. Si oui, le préfixe est
-ajouté une seule fois, dans `clavier.lua`, et non dans chaque rôle.
+La documentation d'uwsm déconseille de lancer les applications comme processus enfants du
+compositeur : `clavier.lua` préfixe chaque rôle par `uwsm app --`, une seule fois, et non chaque ligne.
 
-### 3.3 Table des raccourcis (`config/hypr/raccourcis.lua`)
+Les deux tables vivent dans `config/hypr/donnees/`, lié sous `~/.config/hypr/donnees` par `make install`
+comme `modules` et `machines`.
+
+### 3.3 Table des raccourcis (`config/hypr/donnees/raccourcis.lua`)
 
 Une table de données, sans appel à `hl`. Elle retourne trois champs : `special` (le nom du bureau
 spécial), `touches` (la liste des raccourcis) et `gestes`. Chaque entrée de `touches` porte :
@@ -228,12 +232,21 @@ animations anciennes, `misc` et `XCURSOR_SIZE`.
 
 ### 3.9 Points à vérifier sur la machine pendant le plan
 
-- `hl.dsp.window.move({ workspace })` laisse bien le focus sur place par défaut ; sinon, `follow = false`
-  est écrit explicitement.
-- Lancer par `uwsm app --` : nécessaire ou non (section 3.2).
-- Rechargement : répartiteur natif ou `hyprctl reload`.
-- Noms `XF86` des touches matérielles, relevés avec `wev`.
-- Les diodes suivent-elles `wpctl` sans aide ? Sinon, le plan ajoute le pont nécessaire.
+Vérifications faites pendant le plan :
+
+- **Envoyer sans suivre** : la documentation ne donne pas la valeur par défaut de `follow` ;
+  `follow = false` est donc écrit explicitement.
+- **Lancement** : `uwsm app --`, d'après la documentation d'uwsm (section 3.2).
+- **Rechargement** : répartiteur natif `hl.dsp.reload_config()`.
+- **Noms `XF86`** des touches matérielles : relevés avec `wev` pendant la validation à l'écran.
+- **Diodes : elles ne suivent pas, et le point passe à L1-08** (découpage validé par Nicolas). Relevé du
+  2026-10-15 : la diode `platform::micmute` suit le contrôle 7 de la carte 1 (codec Realtek ALC257, micro
+  analogique), seul contrôle relié dans `/sys/class/sound/ctl-led/mic/` ; la source par défaut est le
+  micro numérique `acp6x` (carte 2), relié à aucune diode. `wpctl` coupe en logiciel : la diode est
+  restée allumée, micro analogique coupé ou non. Remède retenu pour L1-08 : après `wpctl`, aligner les
+  contrôles listés dans `ctl-led` sur l'état obtenu, avec `amixer` (paquet `alsa-utils`), sans droits
+  root. La diode du son n'a pas été essayée. Dans cette feature, la touche micro lance `wpctl` seul ;
+  L1-08 changera cette ligne de la table.
 
 ## 4. Tests
 
@@ -249,7 +262,7 @@ animations anciennes, `misc` et `XCURSOR_SIZE`.
 - point d'entrée : présence et ordre des deux nouveaux `require`.
 
 **Sur la session réelle**, après `make install` : critères 1 à 11 de la section 1, avec `hyprctl`, `wev`,
-grim et les deux diodes. `SUPER + Alt + M` est essayé en dernier.
+et grim. `SUPER + Alt + M` est essayé en dernier.
 
 **Validation de Nicolas à l'écran et au doigt** : critère 12.
 
@@ -267,7 +280,7 @@ grim et les deux diodes. `SUPER + Alt + M` est essayé en dernier.
   réelle ; « Touches matérielles » mise à jour ; kitty noté comme terminal provisoire ; la réserve « une
   machine installée directement en DuneI n'a aucun raccourci » retirée ; liste des modules du point
   d'entrée.
-- **Backlog** : L1-16 fait ; nouvel élément au lot 2, « Localiser le pointeur : halo, Ctrl tenu une
+- **Backlog** : L1-16 fait ; L1-08 reçoit le relevé des diodes et le remède retenu ; nouvel élément au lot 2, « Localiser le pointeur : halo, Ctrl tenu une
   seconde » ; L2-16, L2-22, L2-28 et L2-30 notent leur touche ; décomptes mis à jour.
 - **Notes de direction** : paragraphe d'avancement et prochaine étape.
 
@@ -277,3 +290,4 @@ grim et les deux diodes. `SUPER + Alt + M` est essayé en dernier.
 | --- | --- | --- |
 | 0.1 | 2026-10-15 | Version initiale, issue du brainstorming |
 | 0.2 | 2026-10-15 | Bureau spécial nommé `accueil` |
+| 0.3 | 2026-10-15 | Diodes déplacées à L1-08 (relevé consigné) ; tables dans `donnees/` ; `uwsm app --`, `follow = false` et `reload_config` établis |
