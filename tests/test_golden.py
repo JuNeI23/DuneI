@@ -11,6 +11,8 @@ from dunei_theme.emitters import TARGETS
 from dunei_theme.model import load, resolve
 from dunei_motion.emitters import TARGETS as MOTION_TARGETS
 from dunei_motion.model import load as load_motion, resolve as resolve_motion
+from dunei_energie.emitters import TARGETS as ENERGIE_TARGETS
+from dunei_energie.model import load as load_energie, resolve as resolve_energie
 
 ROOT = Path(__file__).resolve().parent.parent
 GOLDEN = ROOT / "tests" / "golden"
@@ -32,6 +34,12 @@ class GoldenTest(unittest.TestCase):
         for filename, emitter in MOTION_TARGETS.items():
             with self.subTest(target=filename):
                 self.assertEqual(emitter(model), (GOLDEN / "motion" / filename).read_text(encoding="utf-8"))
+
+    def test_energie_matches_golden(self):
+        model = resolve_energie(load_energie(ROOT / "energie.toml"))
+        for filename, emitter in ENERGIE_TARGETS.items():
+            with self.subTest(target=filename):
+                self.assertEqual(emitter(model), (GOLDEN / "energie" / filename).read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":
