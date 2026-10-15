@@ -1,0 +1,35 @@
+#!/bin/sh
+# dunei-attenuer — palier d'atténuation de l'échelle d'inactivité (L1-09).
+# Entrée : NIVEAU (entier, en %) : enregistre les luminosités de l'écran et du clavier, ramène l'écran à
+#          NIVEAU % s'il est plus lumineux, et éteint le clavier ; sans effet si un enregistrement existe,
+#          pour ne jamais enregistrer une valeur déjà atténuée.
+#          --restaurer : rétablit les valeurs enregistrées, puis efface l'enregistrement.
+# Sortie : code 0 ; code 2 et message d'usage si l'argument est invalide.
+# Erreurs : un périphérique absent est sauté sans message. Dépendances : brightnessctl 0.5, $XDG_RUNTIME_DIR.
+etat="${XDG_RUNTIME_DIR:-/tmp}/dunei/attenuation"
+clavier='*::kbd_backlight'   # Rétroéclairage du clavier, repéré par sa classe et sans nom de machine.
+
+# champ : lit un champ de la sortie lisible de brightnessctl (3 : valeur brute, 4 : pourcentage).
+# Entrées : numéro du champ, puis les options qui désignent le périphérique.
+# Sortie : la valeur sur la sortie standard, vide si le périphérique est absent. Dépendances : brightnessctl, cut.
+champ() { n=$1; shift; brightnessctl -m "$@" info 2>/dev/null | cut -d, -f"$n" | tr -d %; }
+
+case "$1" in
+--restaurer)
+    [ -f "$etat" ] || exit 0
+    read -r ecran touches < "$etat"
+    [ "$ecran" != - ] && brightnessctl -q -c backlight set "$ecran"
+    [ "$touches" != - ] && brightnessctl -q -d "$clavier" set "$touches"
+    rm -f "$etat" ;;
+'' | *[!0-9]*)
+    echo "usage : dunei-attenuer NIVEAU | dunei-attenuer --restaurer" >&2
+    exit 2 ;;
+*)
+    [ -f "$etat" ] && exit 0
+    ecran=$(champ 3 -c backlight); touches=$(champ 3 -d "$clavier"); pct=$(champ 4 -c backlight)
+    mkdir -p "${etat%/*}"
+    echo "${ecran:--} ${touches:--}" > "$etat"
+    [ -n "$ecran" ] && [ "$pct" -gt "$1" ] && brightnessctl -q -c backlight set "$1%"
+    [ -n "$touches" ] && brightnessctl -q -d "$clavier" set 0 ;;
+esac
+exit 0
