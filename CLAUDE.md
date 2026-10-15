@@ -47,6 +47,7 @@ Le reste se lit seulement au besoin.
 # Développement d'une feature
 1. On identifie une feature et tu m'en expliques l'enjeu avant toute question : ce qu'elle change pour moi, ce qui casse sans elle, ce qu'elle engage pour la suite, ce qu'elle ne couvre pas
 2. On la décompose : objectifs, listing des technos possibles, récupération de leur documentation la plus moderne, dépendances avec d'autres features, etc.
+2bis. tu n'imposes jamais une techno directement, on fait un scouting de la meilleure option melangeant confort, integrabilité et performance.
 3. On planifie
 4. Si le plan est validé, alors on code
 5. On teste
