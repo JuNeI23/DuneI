@@ -607,8 +607,8 @@ Relevés qui fondent la décision : le micro numérique (`acp6x`) n'a aucun cont
 coupe donc en logiciel et ne touche jamais le `Capture Switch` du codec, dont dépend la diode. Passé sur
 `on` à la main, cet interrupteur l'est resté après un redémarrage de WirePlumber : le remède tient. La
 diode du son suit déjà, WirePlumber coupant le son sur le mélangeur matériel. PipeWire démarre à la
-demande, quinze secondes après Hyprland au démarrage du jour : `aligne` attend la source par défaut,
-trente demi-secondes au plus. `wpctl` répond 0 même quand la source est introuvable ; seule la ligne
+demande, seize secondes après Hyprland au démarrage du jour : `aligne` attend la source par défaut,
+soixante demi-secondes au plus. Deux appuis rapprochés sont sérialisés par `flock`. `wpctl` répond 0 même quand la source est introuvable ; seule la ligne
 « Volume: » prouve qu'elle existe.
 
 Options repérées (règle 2bis, D39) et retenues par Nicolas. Pour écrire l'interrupteur : `amixer`,

@@ -6,38 +6,47 @@
 # matériel. Le script recopie donc l'état de la source par défaut sur chaque contrôle listé : coupée,
 # ils passent sur off et la diode s'allume ; active, ils passent sur on et elle s'éteint. Aucune carte
 # ni aucun contrôle n'est nommé ici : chaque machine fournit sa propre liste, vide si elle n'a pas de diode.
+# Le script suppose le mode follow-mute du noyau, celui par défaut (fichier mode du même dossier) : en
+# follow-route, la diode s'allumerait au contraire quand le contrôle est sur on.
 #
 # Usage : sourdine-micro bascule | aligne
 #   bascule — inverse la sourdine de la source par défaut, puis aligne la diode ;
 #   aligne  — aligne seulement la diode sur l'état actuel (démarrage de session). PipeWire démarre à
-#             la demande, parfois quinze secondes après Hyprland : aligne attend que la source par
-#             défaut existe, en la cherchant toutes les demi-secondes, trente fois au plus.
+#             la demande, parfois seize secondes après Hyprland : aligne attend que la source par
+#             défaut existe, en la cherchant toutes les demi-secondes, soixante fois au plus.
+# Deux appuis rapprochés sont traités l'un après l'autre (flock), sans quoi le premier pourrait écrire
+# son état après celui du second.
 # Sortie : 0 si tout a réussi ; 1 si wpctl ou amixer échoue, ou si la source reste introuvable ; 2 pour
 #          un usage incorrect.
-# Dépendances : wpctl (WirePlumber), amixer (alsa-utils), sleep. DUNEI_CTL_LED et DUNEI_ESSAIS
+# Dépendances : wpctl (WirePlumber), amixer (alsa-utils), flock (util-linux), sleep. DUNEI_CTL_LED et DUNEI_ESSAIS
 # remplacent le dossier des diodes et le nombre d'essais, pour les tests seulement.
 
 LED=${DUNEI_CTL_LED:-/sys/class/sound/ctl-led/mic}
 
 # aligner : règle chaque contrôle ALSA lié à la diode du micro.
 # Entrée : $1 — on (micro actif, diode éteinte) ou off (micro coupé, diode allumée).
-# Sortie : 0 si chaque contrôle a été réglé, ou s'il n'y en a aucun ; 1 dès qu'amixer échoue.
+# Sortie : 0 si chaque contrôle a été réglé, ou s'il n'y en a aucun ; 1 si amixer a échoué sur l'un
+#          d'eux, les suivants étant réglés quand même.
 # Erreurs : celles d'amixer, sur la sortie d'erreur. Dépendances : amixer, LED.
 aligner() {
+    err=0
     for liste in "$LED"/card*/list; do
         [ -r "$liste" ] || continue
         carte=${liste%/list}
         carte=${carte##*card}
-        for id in $(tr ',' ' ' < "$liste"); do
-            amixer -q -c "$carte" cset numid="$id" "$1" || return 1
+        for id in $(cat "$liste"); do
+            amixer -q -c "$carte" cset numid="$id" "$1" || err=1
         done
     done
+    return $err
 }
 
-case ${1:-} in
+case ${1:-} in bascule | aligne) ;; *) echo "usage : sourdine-micro bascule | aligne" >&2; exit 2 ;; esac
+exec 9> "${XDG_RUNTIME_DIR:-/tmp}/sourdine-micro.verrou"
+flock 9
+case $1 in
     bascule) wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle || exit 1; essais=1 ;;
-    aligne) essais=${DUNEI_ESSAIS:-30} ;;
-    *) echo "usage : sourdine-micro bascule | aligne" >&2; exit 2 ;;
+    aligne) essais=${DUNEI_ESSAIS:-60} ;;
 esac
 # wpctl répond 0 même quand la source est introuvable : seule une ligne « Volume: » prouve qu'elle existe.
 until etat=$(wpctl get-volume @DEFAULT_AUDIO_SOURCE@ 2>/dev/null) && [ "${etat#Volume:}" != "$etat" ]; do

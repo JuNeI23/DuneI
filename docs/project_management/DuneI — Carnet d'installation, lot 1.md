@@ -183,8 +183,9 @@ restaure au démarrage l'état des mélangeurs matériels et le sauvegarde à l'
 et ne voit pas une sourdine posée en logiciel. Le script `config/hypr/scripts/sourdine-micro` coupe ou
 rétablit la source par défaut avec `wpctl`, puis recopie son état sur chaque contrôle listé, avec
 `amixer`, sans droits root ; il ne nomme aucune carte. Le module `audio.lua` l'appelle aussi au
-démarrage de Hyprland (`hl.on("hyprland.start")`) ; PipeWire démarrant à la demande, jusqu'à quinze
-secondes plus tard, le script attend la source par défaut. Une sourdine posée hors de F4 (depuis une
+démarrage de Hyprland (`hl.on("hyprland.start")`) ; PipeWire démarrant à la demande, seize
+secondes plus tard au démarrage du 2026-10-15, le script attend la source par défaut, trente secondes au
+plus ; deux appuis rapprochés sont traités l'un après l'autre (`flock`). Une sourdine posée hors de F4 (depuis une
 application) n'est suivie qu'au prochain appui ou à la prochaine session : l'écoute permanente revient
 à L2-12. La diode du son, elle, suit déjà : WirePlumber coupe le son sur le mélangeur matériel.
 

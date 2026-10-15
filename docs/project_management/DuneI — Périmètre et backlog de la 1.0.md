@@ -111,13 +111,14 @@ Les sources de vérité et leurs générateurs sont écrits et testés. Ce qui r
 
 Inventaire de ce que le chantier B recouvre. Chaque ligne vient soit d'une spécification de la bible, soit de la moitié « contrôle » de l'ancien chantier G.
 
-Trois natures, qui ne se traitent pas de la même façon et ne se mélangent jamais dans le backlog.
+Trois natures, qui ne se traitent pas de la même façon. Une ligne qui en réunit deux est dite mixte : chacune de ses parties suit l'exigence de sa nature.
 
 | Nature | Ce que c'est | Exigence |
 | --- | --- | --- |
 | **Écrit** | Se conçoit, puis se code | La définition de terminé entière |
 | **Configuré** | Se choisit, puis se règle | La thématisation seulement |
 | **Offert** | Se vérifie | Aucune conception |
+| **Mixte** | Réunit deux natures, par exemple une vérification et un pont écrit | Celle de chaque partie |
 |  |  |  |
 
 ### Fenêtrage
@@ -488,7 +489,7 @@ Le choix de la distribution de base et du compositeur, précédemment ouverts, s
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-12 | Version initiale, 137 éléments |
-| 1.10 | 2026-10-15 | L1-08 fait, devenu mixte (vérification et pont de la diode) ; L2-12 reçoit l'écoute de la sourdine et le niveau du micro ; décompte des natures corrigé (37 configurés) |
+| 1.10 | 2026-10-15 | L1-08 fait, devenu mixte (vérification et pont de la diode) ; L2-12 reçoit l'écoute de la sourdine et le niveau du micro ; décompte des natures corrigé (37 configurés) ; nature mixte définie |
 | 1.9 | 2026-10-15 | L1-16 fait : raccourcis en données, rôles, grammaire, Compose, touches réservées ; L1-08 reçoit le relevé de la diode du micro ; L2-16, L2-22, L2-28, L2-30 notent leur touche ; ajout de L2-36. 142 éléments |
 | 1.8 | 2026-10-14 | L1-12 à L1-15 faits : dwindle, plus de bordure, ombre des flottantes, plein écran nu, décorations Qt ; L2-03 précisé ; ajout de L2-35. 141 éléments |
 | 1.7 | 2026-10-14 | L1-17 fait : fragment machine, écrans inconnus, échelle 1,25 ; couvercle avec écran externe ajouté à L1-09 |

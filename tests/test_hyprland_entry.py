@@ -90,7 +90,8 @@ class AgnosticTest(unittest.TestCase):
     def test_no_output_named(self):
         files = [ROOT / "config" / "hypr" / "hyprland.lua",
                  *sorted((ROOT / "config" / "hypr" / "modules").glob("*.lua")),
-                 *sorted((ROOT / "config" / "hypr" / "donnees").glob("*.lua"))]
+                 *sorted((ROOT / "config" / "hypr" / "donnees").glob("*.lua")),
+                 *sorted((ROOT / "config" / "hypr" / "scripts").iterdir())]
         for f in files:
             with self.subTest(fichier=f.name):
                 self.assertIsNone(self.PATTERN.search(f.read_text(encoding="utf-8")))

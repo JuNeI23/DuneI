@@ -11,9 +11,11 @@ ROOT = Path(__file__).resolve().parent.parent
 SCRIPT = ROOT / "config" / "hypr" / "scripts" / "sourdine-micro"
 
 # Faux wpctl : l'état de la source vit dans le fichier ETAT (« actif » ou « coupe ») ; sans ce fichier,
-# la source est introuvable et wpctl répond 0 quand même, comme le vrai. Chaque appel est noté dans LOG.
+# la source est introuvable et wpctl répond 0 quand même, comme le vrai. set-mute échoue si le fichier
+# ECHEC_WPCTL existe. Chaque appel est noté dans LOG.
 WPCTL = """#!/bin/sh
 echo "wpctl $*" >> "$LOG"
+[ "$1" = set-mute ] && [ -f "$ECHEC_WPCTL" ] && exit 1
 [ -f "$ETAT" ] || { echo "Object not found"; exit 0; }
 case $1 in
     set-mute) if [ "$(cat "$ETAT")" = coupe ]; then echo actif > "$ETAT"; else echo coupe > "$ETAT"; fi ;;
@@ -31,7 +33,8 @@ class SourdineMicroTest(unittest.TestCase):
     """La diode suit l'état de la source par défaut, sur chaque contrôle listé et sur eux seuls."""
 
     def setUp(self):
-        """Prépare un dossier temporaire : faux outils, dossier de diodes à deux cartes, état actif."""
+        """Prépare un dossier temporaire : faux outils, dossier de diodes à trois cartes dont une sans
+        contrôle et une à deux chiffres, état actif."""
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         self.tmp = Path(tmp.name)
@@ -41,13 +44,14 @@ class SourdineMicroTest(unittest.TestCase):
             (bin_ / name).write_text(body, encoding="utf-8")
             (bin_ / name).chmod(0o755)
         self.led = self.tmp / "mic"
-        for card, ids in (("card0", ""), ("card1", "7"), ("card3", "3 4")):
+        for card, ids in (("card0", ""), ("card1", "7"), ("card10", "3 4")):
             (self.led / card).mkdir(parents=True)
             (self.led / card / "list").write_text(ids, encoding="utf-8")
         self.etat = self.tmp / "etat"
         self.etat.write_text("actif\n", encoding="utf-8")
         self.env = {**os.environ, "PATH": f"{bin_}:{os.environ['PATH']}", "LOG": str(self.tmp / "log"),
                     "ETAT": str(self.etat), "ECHEC": str(self.tmp / "echec"),
+                    "ECHEC_WPCTL": str(self.tmp / "echec-wpctl"), "XDG_RUNTIME_DIR": str(self.tmp),
                     "DUNEI_CTL_LED": str(self.led), "DUNEI_ESSAIS": "2"}
 
     def run_script(self, *args: str) -> tuple[subprocess.CompletedProcess, list[str]]:
@@ -61,12 +65,12 @@ class SourdineMicroTest(unittest.TestCase):
         return res, log.read_text(encoding="utf-8").splitlines() if log.exists() else []
 
     def amixer(self, value: str) -> list[str]:
-        """Appels amixer attendus, carte par carte, dans l'ordre du dossier de diodes.
+        """Appels amixer attendus, carte par carte, dans l'ordre du glob du shell (card10 avant card1).
 
         Entrée : value — on ou off. Sortie : lignes attendues dans LOG. Erreurs : aucune.
         """
-        return [f"amixer -q -c 1 cset numid=7 {value}", f"amixer -q -c 3 cset numid=3 {value}",
-                f"amixer -q -c 3 cset numid=4 {value}"]
+        return [f"amixer -q -c 10 cset numid=3 {value}", f"amixer -q -c 10 cset numid=4 {value}",
+                f"amixer -q -c 1 cset numid=7 {value}"]
 
     def test_bascule_mutes_then_lights_the_led(self):
         res, log = self.run_script("bascule")
@@ -99,11 +103,17 @@ class SourdineMicroTest(unittest.TestCase):
         self.assertIn("source par défaut introuvable", res.stderr)
         self.assertEqual(log, ["wpctl get-volume @DEFAULT_AUDIO_SOURCE@"] * 2)
 
-    def test_amixer_failure_is_reported(self):
+    def test_amixer_failure_is_reported_after_every_control(self):
         (self.tmp / "echec").touch()
         res, log = self.run_script("aligne")
         self.assertEqual(res.returncode, 1)
-        self.assertEqual(log[1:], self.amixer("on")[:1])
+        self.assertEqual(log[1:], self.amixer("on"))
+
+    def test_wpctl_failure_leaves_the_led(self):
+        (self.tmp / "echec-wpctl").touch()
+        res, log = self.run_script("bascule")
+        self.assertEqual(res.returncode, 1)
+        self.assertEqual(log, ["wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"])
 
     def test_usage(self):
         for args in ((), ("autre",)):
