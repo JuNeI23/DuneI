@@ -5,8 +5,11 @@ local M = {}
 
 -- Vecteur de chaque direction, multiplié par le pas généré pour le redimensionnement.
 local SENS = { left = { -1, 0 }, right = { 1, 0 }, up = { 0, -1 }, down = { 0, 1 } }
--- Actions qui exigent une direction de SENS.
-local DIRIGEES = { focus = true, deplacer = true, redimensionner = true }
+-- Paramètre que chaque action exige ; une direction doit en outre appartenir à SENS.
+local REQUIS = { focus = "direction", deplacer = "direction", redimensionner = "direction",
+                 bureau = "bureau", envoyer = "bureau", role = "role", commande = "commande" }
+-- Actions de geste connues de hl.gesture.
+local GESTES = { workspace = true, special = true }
 -- Nom canonique de chaque modificateur, pour reconnaître deux écritures de la même combinaison.
 local MODS = { SUPER = "SUPER", SHIFT = "SHIFT", CTRL = "CTRL", CONTROL = "CTRL", ALT = "ALT" }
 
@@ -57,9 +60,10 @@ end
 -- Entrées : d — table de donnees/raccourcis.lua ; roles — table de donnees/roles.lua.
 -- Sortie : aucune.
 -- Erreurs : error() au premier défaut, avec le numéro et la combinaison de l'entrée : combinaison vide,
---           description manquante, action inconnue, rôle inconnu, direction inconnue, combinaison déjà
---           prise par une autre entrée (réservations comprises).
--- Dépendances : M.ACTIONS, M.normalise, SENS, DIRIGEES.
+--           description manquante, action inconnue, paramètre requis manquant, rôle inconnu, direction
+--           inconnue, combinaison déjà prise par une autre entrée (réservations comprises) ; pour un
+--           geste : action inconnue, doigts ou direction invalides, description manquante, geste déjà pris.
+-- Dépendances : M.ACTIONS, M.normalise, SENS, REQUIS, GESTES.
 function M.verifier(d, roles)
     local vues = {}
     for i, e in ipairs(d.touches) do
@@ -69,35 +73,59 @@ function M.verifier(d, roles)
         if type(e.description) ~= "string" or e.description == "" then error(nom .. " : description manquante", 0) end
         if not e.reserve then
             if not M.ACTIONS[e.action] then error(nom .. " : action inconnue « " .. tostring(e.action) .. " »", 0) end
+            local p = REQUIS[e.action]
+            if p and e[p] == nil then error(nom .. " : paramètre « " .. p .. " » manquant", 0) end
             if e.action == "role" and not roles[e.role] then error(nom .. " : rôle inconnu « " .. tostring(e.role) .. " »", 0) end
-            if DIRIGEES[e.action] and not SENS[e.direction] then
+            if p == "direction" and not SENS[e.direction] then
                 error(nom .. " : direction inconnue « " .. tostring(e.direction) .. " »", 0)
             end
         end
         if vues[cle] then error(nom .. " : combinaison déjà prise par l'entrée " .. vues[cle], 0) end
         vues[cle] = i
     end
+    local pris = {}
+    for i, g in ipairs(d.gestes) do
+        local nom = ("raccourcis, geste %d (%s doigts, %s)"):format(i, tostring(g.fingers), tostring(g.direction))
+        if not GESTES[g.action] then error(nom .. " : action inconnue « " .. tostring(g.action) .. " »", 0) end
+        if math.type(g.fingers) ~= "integer" or type(g.direction) ~= "string" then
+            error(nom .. " : doigts ou direction invalides", 0)
+        end
+        if type(g.description) ~= "string" or g.description == "" then error(nom .. " : description manquante", 0) end
+        local cle = g.fingers .. "|" .. g.direction
+        if pris[cle] then error(nom .. " : geste déjà pris par le geste " .. pris[cle], 0) end
+        pris[cle] = i
+    end
 end
 
--- apply : contrôle la table, puis lie chaque raccourci non réservé et chaque geste.
+-- apply : contrôle la table, construit tous les répartiteurs, retire les liaisons antérieures de chaque
+--         touche de la table, puis lie chaque raccourci non réservé et chaque geste.
 -- Entrées facultatives, pour les tests : d, roles, binds — par défaut donnees.raccourcis,
 --          donnees.roles et generated.hyprland-binds.
--- Sortie : aucune. Erreurs : celles de M.verifier, levées avant toute liaison ; puis celles de hl.bind
---          et hl.gesture. L'erreur remonte dans Hyprland comme toute erreur de configuration.
+-- Sortie : aucune.
+-- Erreurs : celles de M.verifier, puis celle d'un répartiteur qui ne se construit pas, nommant l'entrée ;
+--           toutes levées avant la première liaison. Puis celles de hl.bind et hl.gesture. L'erreur
+--           remonte dans Hyprland comme toute erreur de configuration.
 -- Dépendances : M.verifier, M.ACTIONS, API hl de Hyprland 0.56.
+-- hl.unbind retire toute liaison antérieure écrite de la même façon : sur une machine neuve, la
+-- configuration d'origine de Hyprland, gardée comme generique.lua, lie elle aussi SUPER + M (sortie de
+-- session), SUPER + Q ou XF86AudioMute ; sans ce retrait, les deux liaisons se déclencheraient.
 function M.apply(d, roles, binds)
     d = d or require("donnees.raccourcis")
     roles = roles or require("donnees.roles")
     binds = binds or require("generated.hyprland-binds")
     M.verifier(d, roles)
-    local c = { roles = roles, special = d.special, pas = binds.resize_step }
-    for _, e in ipairs(d.touches) do
+    local c, liens = { roles = roles, special = d.special, pas = binds.resize_step }, {}
+    for i, e in ipairs(d.touches) do
         if not e.reserve then
+            local ok, dsp = pcall(M.ACTIONS[e.action], e, c)
+            if not ok then error(("raccourcis, entrée %d (%s) : %s"):format(i, e.touches, tostring(dsp)), 0) end
             local opts = { description = e.description }
             for k, v in pairs(e.drapeaux or {}) do opts[k] = v end
-            hl.bind(e.touches, M.ACTIONS[e.action](e, c), opts)
+            liens[#liens + 1] = { e.touches, dsp, opts }
         end
     end
+    for _, e in ipairs(d.touches) do hl.unbind(e.touches) end
+    for _, l in ipairs(liens) do hl.bind(l[1], l[2], l[3]) end
     for _, g in ipairs(d.gestes) do
         hl.gesture({ fingers = g.fingers, direction = g.direction, action = g.action,
                      workspace_name = g.action == "special" and d.special or nil })

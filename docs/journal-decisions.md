@@ -543,6 +543,15 @@ est restée quelques secondes sans fichier machine. Le rechargement passe par `h
 
 Raison : un seul endroit où une touche est déclarée, et un seul endroit où un logiciel est nommé.
 
+Relecture finale (2026-10-15). Deux défauts corrigés. Sur une machine neuve, la configuration d'origine
+de Hyprland, gardée comme `generique.lua`, lie elle aussi `SUPER + M` (sortie de session), `SUPER + Q`
+ou `XF86AudioMute`, et deux liaisons sur une même touche se déclenchent toutes deux (vérifié sur la
+session) : `clavier.lua` appelle désormais `hl.unbind` sur chaque touche de la table, réservées
+comprises, avant de lier. Les gestes et les touches que DuneI ne déclare pas restent ceux du générique
+jusqu'à son nettoyage. Second défaut : un paramètre requis manquant ou un geste faux passaient le
+contrôle et la table était liée à moitié ; les paramètres requis et les gestes sont contrôlés, et tous
+les répartiteurs sont construits avant la première liaison.
+
 ### D35 · Touches réservées pour le lot 2
 
 `SUPER + L` (verrouillage, L2-22), `SUPER + /` (cheatsheet, L2-28), `Print` (capture d'écran, L2-30)

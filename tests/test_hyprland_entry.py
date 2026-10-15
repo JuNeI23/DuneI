@@ -20,6 +20,7 @@ hl = {
     config = function(t) note("config:" .. (t.source or (t.input and "input") or "dunei")) end,
     bind = function() note("bind") end,
     gesture = function() note("gesture") end,
+    unbind = function() note("unbind") end,
     dsp = setmetatable({}, { __index = function(s) return s end, __call = function() return "dsp" end }),
     curve = function() end,
     animation = function() animations = animations + 1; note("animation") end,
@@ -67,17 +68,17 @@ class EntryTest(unittest.TestCase):
     def test_with_generic(self):
         self.assertEqual(self.probe(True, True),
                          [f"config:generique,config:dunei,animation,{self.MODULES},monitor:*,config:dunei,"
-                          "config:input,bind,gesture,monitor:essai", "27"])
+                          "config:input,unbind,bind,gesture,monitor:essai", "27"])
 
     def test_without_generic(self):
         self.assertEqual(self.probe(False, True),
                          [f"config:dunei,animation,{self.MODULES},monitor:*,config:dunei,"
-                          "config:input,bind,gesture,monitor:essai", "27"])
+                          "config:input,unbind,bind,gesture,monitor:essai", "27"])
 
     def test_without_machine(self):
         self.assertEqual(self.probe(True),
                          [f"config:generique,config:dunei,animation,{self.MODULES},monitor:*,config:dunei,"
-                          "config:input,bind,gesture", "27"])
+                          "config:input,unbind,bind,gesture", "27"])
 
 
 class AgnosticTest(unittest.TestCase):

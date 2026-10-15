@@ -36,6 +36,7 @@ hl = {
         print("bind", k, d, ser(f), tostring(type(o.description) == "string" and o.description ~= ""))
     end,
     gesture = function(g) print("gesture", ser(g)) end,
+    unbind = function(k) print("unbind", k) end,
     config = function(t) print("config", ser(t)) end,
 }
 """
@@ -190,11 +191,56 @@ class ClavierTest(unittest.TestCase):
             "action inconnue « fermr »": '{ touches = "SUPER + C", action = "fermr", description = "a" }',
             "rôle inconnu « editeur »": '{ touches = "SUPER + C", action = "role", role = "editeur", description = "a" }',
             "direction inconnue « gauche »": '{ touches = "SUPER + C", action = "focus", direction = "gauche", description = "a" }',
+            "paramètre « commande » manquant": '{ touches = "SUPER + C", action = "commande", comande = "ls", description = "a" }',
+            "paramètre « bureau » manquant": '{ touches = "SUPER + C", action = "envoyer", description = "a" }',
+            "paramètre « role » manquant": '{ touches = "SUPER + C", action = "role", description = "a" }',
         }
         for message, entry in cases.items():
             with self.subTest(message=message):
                 err = self.refusal(entry)
                 self.assertIn("raccourcis, entrée 1 (", err)
+                self.assertIn(message, err)
+
+    def test_unbinds_every_key_before_binding(self):
+        out = self.apply_real()
+        unbound = [l[1] for l in out if l[0] == "unbind"]
+        first_bind = next(i for i, l in enumerate(out) if l[0] == "bind")
+        self.assertEqual(set(unbound), set(expected()) | {"SUPER + L", "SUPER + slash", "Print", "Control_L"})
+        self.assertTrue(all(l[0] == "unbind" for l in out[:first_bind]))
+        self.assertEqual(len(unbound), first_bind)
+
+    def test_builder_error_names_entry_and_binds_nothing(self):
+        res = self.run_lua(f'require("modules.clavier").apply(nil, {ROLES}, {{}})\n')
+        self.assertNotEqual(res.returncode, 0)
+        self.assertNotIn("bind", res.stdout)
+        self.assertIn("raccourcis, entrée", res.stderr)
+        self.assertIn("SUPER + CTRL + left", res.stderr)
+
+    def gesture_refusal(self, gestes: str) -> str:
+        """Message d'erreur de M.apply pour des gestes d'essai, avec une touche valide.
+
+        Entrée : gestes — corps Lua de la liste gestes. Sortie : stderr de Lua.
+        Erreurs : AssertionError si la table est acceptée ou si une touche a été liée.
+        Dépendances : run_lua, ROLES.
+        """
+        res = self.run_lua(f'require("modules.clavier").apply({{ special = "accueil", gestes = {{ {gestes} }}, touches = {{ '
+                           f'{{ touches = "SUPER + C", action = "fermer", description = "a" }} }} }}, {ROLES})\n')
+        self.assertNotEqual(res.returncode, 0, "les gestes auraient dû être refusés")
+        self.assertNotIn("bind", res.stdout)
+        return res.stderr
+
+    def test_gesture_refusals(self):
+        cases = {
+            "action inconnue « specail »": '{ fingers = 3, direction = "down", action = "specail", description = "a" }',
+            "description manquante": '{ fingers = 3, direction = "down", action = "special" }',
+            "doigts ou direction invalides": '{ fingers = "3", direction = "down", action = "special", description = "a" }',
+            "déjà pris par le geste 1": '{ fingers = 3, direction = "down", action = "special", description = "a" }, '
+                                        '{ fingers = 3, direction = "down", action = "workspace", description = "b" }',
+        }
+        for message, gestes in cases.items():
+            with self.subTest(message=message):
+                err = self.gesture_refusal(gestes)
+                self.assertIn("raccourcis, geste", err)
                 self.assertIn(message, err)
 
     def test_invalid_table_binds_nothing(self):

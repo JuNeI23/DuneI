@@ -105,7 +105,11 @@ réservée à la déclaration XML ; s'il est absent, la copie est refusée. Les 
 nom `generique.lua`, puis il est remplacé, de façon atomique, par le lien vers le point d'entrée DuneI.
 Celui-ci charge `generique.lua` en premier, puis les fichiers générés : la machine garde tout ce que la
 configuration générique faisait, et DuneI remplace ce qu'il couvre. Chaque feature suivante retire de
-`generique.lua` le morceau qu'elle remplace (D21).
+`generique.lua` le morceau qu'elle remplace (D21). Les raccourcis font exception à l'empilement : deux liaisons
+sur une même touche se déclencheraient toutes deux, et `modules/clavier.lua` retire donc toute liaison
+antérieure de chaque touche qu'il déclare (`hl.unbind`). Sur une machine neuve, les gestes et les
+touches du générique que DuneI ne déclare pas restent actifs jusqu'à ce qu'on les retire de
+`generique.lua` (D34).
 
 **Rechargement.** Hyprland surveille les fichiers de sa configuration eux-mêmes, et non leurs noms. La
 bascule conserve le fichier générique sous un autre nom : elle ne déclenche donc aucun rechargement, et
