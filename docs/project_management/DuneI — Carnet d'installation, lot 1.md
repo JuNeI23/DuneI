@@ -68,7 +68,6 @@ DuneI/
 │   │   ├── hyprland.lua    # point d'entrée : ne fait que des require (L1-24)
 │   │   ├── modules/        # un module par feature (input, keybinds, rules…) ; motion.lua existe déjà
 │   │   ├── donnees/        # tables de données : raccourcis, rôles (L1-16)
-│   │   ├── scripts/        # scripts shell lancés par Hyprland, ex. sourdine-micro (L1-08)
 │   │   └── machines/       # un fichier par machine, choisi par nom d'hôte
 ├── tokens.toml
 ├── motion.toml             # source du mouvement (L1-23)
@@ -174,24 +173,24 @@ alsa-utils
 
 PipeWire et WirePlumber sont acquis : le son sort, et WirePlumber garde volumes, sourdines et sortie
 choisie dans `~/.local/state/wireplumber/`. `alsa-utils` (2,5 Mo, dépendances déjà présentes) apporte
-`amixer`, dont dépend la diode du micro, `arecord` et `speaker-test` pour la vérification, et
-`alsactl`. Ce dernier s'active seul à l'installation : `alsa-restore.service`, tiré par `sound.target`,
-restaure au démarrage l'état des mélangeurs matériels et le sauvegarde à l'extinction dans
-`/var/lib/alsa/asound.state`. Aucun `systemctl enable` n'est nécessaire (D38).
+`alsactl`, qui s'active seul à l'installation, sans `systemctl enable` : à l'apparition de chaque carte,
+la règle udev `90-alsa-restore.rules` lance `alsactl restore`, qui exécute l'initialisation du profil UCM
+et restaure l'état des mélangeurs matériels ; `alsa-restore.service`, tiré par `sound.target`, le
+sauvegarde à l'extinction dans `/var/lib/alsa/asound.state`. Le paquet apporte aussi `amixer`, `arecord` et `speaker-test`, qui servent aux relevés (D38).
 
-**La diode du micro.** Elle suit les contrôles que le noyau liste sous `/sys/class/sound/ctl-led/mic/`,
-et ne voit pas une sourdine posée en logiciel. Le script `config/hypr/scripts/sourdine-micro` coupe ou
-rétablit la source par défaut avec `wpctl`, puis recopie son état sur chaque contrôle listé, avec
-`amixer`, sans droits root ; il ne nomme aucune carte. Le module `audio.lua` l'appelle aussi au
-démarrage de Hyprland (`hl.on("hyprland.start")`) ; PipeWire démarrant à la demande, seize
-secondes plus tard au démarrage du 2026-10-15, le script attend la source par défaut, trente secondes au
-plus ; deux appuis rapprochés sont traités l'un après l'autre (`flock`). Une sourdine posée hors de F4 (depuis une
-application) n'est suivie qu'au prochain appui ou à la prochaine session : l'écoute permanente revient
-à L2-12. La diode du son, elle, suit déjà : WirePlumber coupe le son sur le mélangeur matériel.
+**La diode du micro dépend de ce paquet.** Pour un micro numérique ACP sur un codec HDA, le profil UCM
+d'`alsa-ucm-conf` (`HDA/HDA.conf`, `HDA/HiFi-acp.conf`) crée, à son initialisation, un interrupteur virtuel,
+`Mic ACP LED Capture Switch`, y rattache la diode, l'en détache du `Capture Switch` analogique, et le
+déclare comme interrupteur de sourdine du micro numérique. WirePlumber le bascule alors à chaque
+sourdine, d'où qu'elle vienne : F4, une application, un futur indicateur. La règle udev prévoit ce cas
+nommément : quand le micro numérique `acp6x` apparaît, elle relance `alsactl` sur la carte HDA. Sans
+`alsa-utils`, cette initialisation ne s'exécute pas, et la diode reste attachée à l'interrupteur analogique, que personne ne touche. F4
+garde donc `wpctl` seul, et DuneI n'ajoute aucun code.
 
-**Vérification du 2026-10-15** : diode instantanée à chaque appui ; micro rétabli, enregistrement de
-quatre secondes à 23 % de niveau moyen (crête à 100 %, voix saturée par moments) ; micro coupé, silence
-total ; haut-parleurs gauche et droit justes.
+**Vérification du 2026-10-15** : après un redémarrage, la diode suit `wpctl` seul, sans délai ; micro
+rétabli, enregistrement de quatre secondes à 23 % de niveau moyen (crête à 100 %, voix saturée par
+moments) ; micro coupé, silence total ; haut-parleurs gauche et droit justes ; la diode du son suit la
+sourdine.
 
 ### Énergie — L1-09
 
@@ -251,7 +250,7 @@ verrouillé (`locked`) ; volume et luminosité se répètent quand on les tient.
 | Touche | Lot 1 | Plus tard |
 | --- | --- | --- |
 | Sourdine, volume −/+ | `wpctl`, ±5 %, plafond 100 % | Indicateur audio, L2-12 |
-| Sourdine micro | `sourdine-micro bascule` : `wpctl`, puis diode alignée (L1-08) | Indicateur et écoute permanente, L2-12 |
+| Sourdine micro | `wpctl` sur la source par défaut ; la diode suit (L1-08) | Indicateur audio, L2-12 |
 | Luminosité −/+ | `brightnessctl -e4 -n2`, ±5 % | Indicateur et retour visuel, L2-29 |
 
 Les touches Lecture, Suivant et Précédent ne sont pas liées : le T14s ne les a pas (D37). F7 (écran)
@@ -259,11 +258,11 @@ et F9 à F12 restent libres.
 
 **La diode de sourdine micro mérite sa ligne.** Une diode qui ne correspond pas à l'état réel du micro est un défaut de confiance, pas un défaut cosmétique — c'est exactement le genre de détail que le principe 3 vise : un signal qui porte une information doit être juste.
 
-**Elle ne suivait pas, relevé du 2026-10-15 (D37).** `platform::micmute` suit le contrôle 7 de la carte 1
-(codec Realtek ALC257, micro analogique), seul contrôle listé dans `/sys/class/sound/ctl-led/mic/` ; la
-source par défaut est le micro numérique `acp6x` (carte 2), relié à aucune diode, et `wpctl` coupe en
-logiciel. Remède, fait à L1-08 (D38) : après `wpctl`, aligner les contrôles listés dans `ctl-led` sur
-l'état obtenu, avec `amixer` (`alsa-utils`), sans droits root — voir la section Audio.
+**Elle ne suivait pas, relevé du 2026-10-15 (D37).** `platform::micmute` suivait le contrôle 7 de la
+carte 1 (codec Realtek ALC257, micro analogique) ; la source par défaut est le micro numérique `acp6x`,
+et `wpctl` coupe en logiciel. Cause trouvée à L1-08 (D38) : `alsa-utils` manquait, et avec lui
+l'initialisation UCM qui rattache la diode au micro numérique. Le paquet installé, elle suit — voir la
+section Audio.
 
 ## Session et compositeur — L1-10 à L1-17
 
@@ -630,7 +629,7 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 | Version | Date | Changement |
 | --- | --- | --- |
 | 0.1 | 2026-10-12 | Version initiale |
-| 1.2 | 2026-10-15 | Audio (L1-08) : `alsa-utils`, persistance `alsactl` active par défaut ; diode du micro alignée par `scripts/sourdine-micro`, à chaque appui de F4 et au démarrage ; vérification du son et du micro ; `scripts/` lié par `make install` (D38) |
+| 1.2 | 2026-10-15 | Audio (L1-08) : `alsa-utils` installé, dont `alsactl` exécute l'initialisation UCM qui rattache la diode du micro au micro numérique ; F4 garde `wpctl` seul ; vérification du son et du micro (D38) |
 | 1.1 | 2026-10-15 | Raccourcis : table de données contrôlée, rôles, grammaire, bureau `accueil`, touches réservées ; entrée réelle, Compose sur AltGr, disposition dans le fichier machine ; touches matérielles, diode du micro renvoyée à L1-08 avec son relevé ; `donnees/` lié par `make install` ; kitty tient le rôle terminal (D33 à D37) ; `plein-ecran-nu` restreinte au vrai plein écran (D31, suite) |
 | 1.0 | 2026-10-14 | Procédure après fusion : Claude fusionne lui-même, sans `--delete-branch` (D32). Fenêtrage : dwindle, plus de bordure, ombre des flottantes et règles de fenêtre générées, plein écran nu, module `env.lua` réduit à la variable Qt, générique réduit (D28 à D31) |
 | 0.9 | 2026-10-14 | Écran et échelle : fragment machine lu depuis `/etc/hostname`, règle des écrans inconnus, échelle 1,25 retenue après essai de 4/3, écartée pour la règle des pixels entiers, variables Qt d'échelle retirées, vérification par sortie virtuelle |

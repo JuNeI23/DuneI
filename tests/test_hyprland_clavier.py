@@ -49,7 +49,7 @@ HW = {
     "XF86AudioMute": ("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle", "{locked=true}"),
     "XF86AudioLowerVolume": ("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-", "{locked=true,repeating=true}"),
     "XF86AudioRaiseVolume": ("wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 5%+", "{locked=true,repeating=true}"),
-    "XF86AudioMicMute": ('"${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/"sourdine-micro bascule', "{locked=true}"),
+    "XF86AudioMicMute": ("wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle", "{locked=true}"),
     "XF86MonBrightnessDown": ("brightnessctl -e4 -n2 set 5%-", "{locked=true,repeating=true}"),
     "XF86MonBrightnessUp": ("brightnessctl -e4 -n2 set 5%+", "{locked=true,repeating=true}"),
 }
@@ -194,7 +194,6 @@ class ClavierTest(unittest.TestCase):
             "paramètre « commande » manquant": '{ touches = "SUPER + C", action = "commande", comande = "ls", description = "a" }',
             "paramètre « bureau » manquant": '{ touches = "SUPER + C", action = "envoyer", description = "a" }',
             "paramètre « role » manquant": '{ touches = "SUPER + C", action = "role", description = "a" }',
-            "paramètre « script » manquant": '{ touches = "SUPER + C", action = "script", description = "a" }',
         }
         for message, entry in cases.items():
             with self.subTest(message=message):

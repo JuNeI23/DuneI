@@ -21,7 +21,6 @@ hl = {
     bind = function() note("bind") end,
     gesture = function() note("gesture") end,
     unbind = function() note("unbind") end,
-    on = function(e) note("on:" .. e) end,
     dsp = setmetatable({}, { __index = function(s) return s end, __call = function() return "dsp" end }),
     curve = function() end,
     animation = function() animations = animations + 1; note("animation") end,
@@ -69,17 +68,17 @@ class EntryTest(unittest.TestCase):
     def test_with_generic(self):
         self.assertEqual(self.probe(True, True),
                          [f"config:generique,config:dunei,animation,{self.MODULES},monitor:*,config:dunei,"
-                          "config:input,unbind,bind,gesture,on:hyprland.start,monitor:essai", "27"])
+                          "config:input,unbind,bind,gesture,monitor:essai", "27"])
 
     def test_without_generic(self):
         self.assertEqual(self.probe(False, True),
                          [f"config:dunei,animation,{self.MODULES},monitor:*,config:dunei,"
-                          "config:input,unbind,bind,gesture,on:hyprland.start,monitor:essai", "27"])
+                          "config:input,unbind,bind,gesture,monitor:essai", "27"])
 
     def test_without_machine(self):
         self.assertEqual(self.probe(True),
                          [f"config:generique,config:dunei,animation,{self.MODULES},monitor:*,config:dunei,"
-                          "config:input,unbind,bind,gesture,on:hyprland.start", "27"])
+                          "config:input,unbind,bind,gesture", "27"])
 
 
 class AgnosticTest(unittest.TestCase):
@@ -90,8 +89,7 @@ class AgnosticTest(unittest.TestCase):
     def test_no_output_named(self):
         files = [ROOT / "config" / "hypr" / "hyprland.lua",
                  *sorted((ROOT / "config" / "hypr" / "modules").glob("*.lua")),
-                 *sorted((ROOT / "config" / "hypr" / "donnees").glob("*.lua")),
-                 *sorted((ROOT / "config" / "hypr" / "scripts").iterdir())]
+                 *sorted((ROOT / "config" / "hypr" / "donnees").glob("*.lua"))]
         for f in files:
             with self.subTest(fichier=f.name):
                 self.assertIsNone(self.PATTERN.search(f.read_text(encoding="utf-8")))

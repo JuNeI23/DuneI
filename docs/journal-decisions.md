@@ -595,40 +595,38 @@ proprement. Le journal montre `uwsm stop` à 17:36:08, Hyprland arrêté en deux
 
 ## 2026-10-15 — Audio (L1-08)
 
-### D38 · Diode du micro : `sourdine-micro`, `amixer`, alignement au démarrage
+### D38 · Diode du micro : la cause était l'absence d'`alsa-utils`
 
-F4 lance désormais `scripts/sourdine-micro bascule` : `wpctl` coupe ou rétablit la source par défaut,
-puis le script recopie son état sur chaque contrôle listé sous `/sys/class/sound/ctl-led/mic/`, avec
-`amixer`, sans droits root. Le module `audio.lua` lance `sourdine-micro aligne` au démarrage de Hyprland
-(`hl.on("hyprland.start")`). Une action `script` rejoint `clavier.lua` ; seul `modules/scripts.lua`
-connaît le dossier des scripts, lié sous `~/.config/hypr/scripts` par `make install`.
+La diode de sourdine suit désormais toute sourdine du micro, sans code DuneI : F4 garde
+`wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle`. `alsa-utils` est installé, et sa persistance
+(`alsa-restore.service`, tiré par `sound.target`) reste active.
 
-Relevés qui fondent la décision : le micro numérique (`acp6x`) n'a aucun contrôle matériel, WirePlumber
-coupe donc en logiciel et ne touche jamais le `Capture Switch` du codec, dont dépend la diode. Passé sur
-`on` à la main, cet interrupteur l'est resté après un redémarrage de WirePlumber : le remède tient. La
-diode du son suit déjà, WirePlumber coupant le son sur le mélangeur matériel. PipeWire démarre à la
-demande, seize secondes après Hyprland au démarrage du jour : `aligne` attend la source par défaut,
-soixante demi-secondes au plus. Deux appuis rapprochés sont sérialisés par `flock`. `wpctl` répond 0 même quand la source est introuvable ; seule la ligne
-« Volume: » prouve qu'elle existe.
+Cause : pour un micro numérique ACP sur un codec HDA, le profil UCM d'`alsa-ucm-conf` (`HDA/HDA.conf`)
+crée au démarrage l'interrupteur virtuel `Mic ACP LED Capture Switch`, y rattache la diode et l'en
+détache du `Capture Switch` analogique ; `HDA/HiFi-acp.conf` le déclare interrupteur de sourdine du
+micro numérique, que WirePlumber bascule alors à chaque sourdine. Cette initialisation est exécutée par
+`alsactl restore`, que la règle udev d'`alsa-utils` (`90-alsa-restore.rules`) lance sur la carte HDA
+quand le micro numérique ACP apparaît ; le paquet était absent jusqu'ici : la diode restait attachée au `Capture Switch`, que WirePlumber ne touche
+pas, et le relevé de D37 décrivait cet état incomplet. Constaté au premier redémarrage après
+l'installation : `alsa-restore` à 19:24:08, PipeWire à 19:24:18, puis la diode suit `wpctl` seul, dans
+les deux sens.
 
-Options repérées (règle 2bis, D39) et retenues par Nicolas. Pour écrire l'interrupteur : `amixer`,
-plutôt qu'un programme C sur alsa-lib, Python et `pyalsa`, ou la diode écrite directement, qui demande
-root. Pour lire l'état : `wpctl`, plutôt que `pactl` ou `pw-dump`. Pour le démarrage : `hl.on` avec
-attente, plutôt qu'une unité systemd utilisateur liée à WirePlumber, dont le seul gain, le redémarrage
-de WirePlumber, est sans objet puisque l'interrupteur garde sa valeur, et qui demanderait une nouvelle
-mécanique de déploiement. Un script WirePlumber, qui aurait suivi toute sourdine, est impossible : son
-bac à sable interdit fichiers et commandes. Langage : `sh` POSIX.
+Chemin suivi. Le remède retenu à D37 a d'abord été écrit, après repérage des options (règle 2bis,
+D39) : un script `sourdine-micro` qui recopiait l'état de la source sur les contrôles listés sous
+`/sys/class/sound/ctl-led/mic/` avec `amixer`, à chaque appui de F4 et au démarrage de Hyprland. Il a
+été validé à l'écran et relu. Le redémarrage a révélé la vraie cause : le script ne faisait plus
+qu'écrire, juste après WirePlumber, le même interrupteur. Trois options présentées : retirer le pont,
+le garder en filet de sécurité pour d'autres machines, garder la seule action `script` ; Nicolas a
+choisi de le retirer. Le code revient à l'état de `main`, au commentaire d'F4 près. Leçon : un relevé
+fait avant l'installation d'un paquet système ne vaut plus après son premier redémarrage.
 
-`alsa-utils` est installé ; sa persistance (`alsa-restore.service`, tiré par `sound.target`) reste
-active : elle ne gêne pas WirePlumber et garde les autres réglages matériels. Limite acceptée par
-Nicolas : une sourdine posée hors de F4 n'est suivie qu'au prochain appui ou à la prochaine session ;
-l'écoute permanente revient à L2-12, qui en aura besoin pour son indicateur.
+Conséquences : la limite d'une sourdine posée hors de F4, qui devait revenir à L2-12, disparaît. Le
+niveau du micro numérique, réglé à 100 % et qui sature par moments, est noté pour L2-12.
 
 Vérification : diode instantanée ; micro rétabli, quatre secondes enregistrées à 23 % de niveau moyen,
-crête à 100 % (saturation notée pour L2-12) ; micro coupé, silence total ; haut-parleurs gauche et
-droit justes.
+crête à 100 % ; micro coupé, silence total ; haut-parleurs gauche et droit justes ; diode du son juste.
 
-*Touché : config/hypr/scripts/sourdine-micro, config/hypr/modules/scripts.lua, config/hypr/modules/audio.lua, config/hypr/modules/clavier.lua, config/hypr/donnees/raccourcis.lua, config/hypr/hyprland.lua, deploy.py, tests/, carnet, backlog, notes de direction.*
+*Touché : config/hypr/donnees/raccourcis.lua (commentaire), carnet, backlog, notes de direction.*
 
 ### D39 · Repérer les technos avant de choisir
 

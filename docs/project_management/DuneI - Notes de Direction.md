@@ -226,13 +226,13 @@ que les anciennes courbes, `misc` et la taille du curseur. La diode du micro ne 
 la cause est relevée et le remède choisi (D33 à D37). Prochaine étape du lot 1 : **L1-08, le pont de la
 diode du micro**, puis la vérification audio.
 
-**Audio — 15 octobre 2026.** La diode du micro dit vrai : F4 passe par le script `sourdine-micro`, qui
-coupe avec `wpctl` puis aligne les contrôles dont dépend la diode, avec `amixer`, sans droits root ; la
-session l'aligne aussi au démarrage. Le son, le micro et les haut-parleurs sont vérifiés, la diode du son
-suivait déjà. `alsa-utils` est installé, avec sa persistance des mélangeurs. Une sourdine posée depuis
-une application n'est suivie qu'au prochain appui : l'écoute permanente revient à L2-12. La méthode
-gagne une règle : chaque techno est choisie sur repérage, jamais imposée (D38, D39). Prochaine étape du
-lot 1 : **L1-07, la vérification du réseau**, puis L1-09, l'énergie et la veille.
+**Audio — 15 octobre 2026.** La diode du micro dit vrai, sans une ligne de code : il manquait
+`alsa-utils`, dont `alsactl` exécute au démarrage l'initialisation UCM qui rattache la diode au micro
+numérique. WirePlumber la bascule désormais à chaque sourdine, d'où qu'elle vienne ; F4 garde `wpctl`.
+Un pont écrit, puis validé à l'écran, a été retiré quand le redémarrage a révélé la vraie cause. Le son,
+le micro et les haut-parleurs sont vérifiés. La méthode gagne une règle : chaque techno est choisie sur
+repérage, jamais imposée (D38, D39). Prochaine étape du lot 1 : **L1-07, la vérification du réseau**,
+puis L1-09, l'énergie et la veille.
 
 ## Plan de lecture
 
@@ -251,7 +251,7 @@ lot 1 : **L1-07, la vérification du réseau**, puis L1-09, l'énergie et la vei
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-10 | Version initiale |
-| 1.9 | 2026-10-15 | Audio fait (L1-08) : diode du micro alignée, son et micro vérifiés ; règle de repérage des technos ; prochaine étape L1-07 |
+| 1.9 | 2026-10-15 | Audio fait (L1-08) : `alsa-utils` répare la diode du micro, son et micro vérifiés ; règle de repérage des technos ; prochaine étape L1-07 |
 | 1.8 | 2026-10-15 | Raccourcis faits (L1-16) ; diode du micro renvoyée à L1-08, prochaine étape ; décomptes à 142 éléments |
 | 1.7 | 2026-10-14 | Fenêtrage fait (L1-12 à L1-15) ; reste les raccourcis et les bureaux (L1-16). Paragraphes permanents de l'état d'avancement placés avant le journal, pour que le dernier paragraphe nomme la prochaine étape ; décomptes à 141 éléments |
 | 1.6 | 2026-10-14 | Écran et échelle faits (L1-17), échelle 1,25 ; reste le fenêtrage |
