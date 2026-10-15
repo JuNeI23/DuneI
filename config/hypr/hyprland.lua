@@ -24,5 +24,11 @@ require("modules.regles").apply()
 -- Écrans inconnus et XWayland : règles communes, sans aucun matériel nommé.
 require("modules.ecrans").apply()
 
+-- Entrée commune : touche Compose, pavé tactile ; la disposition vit dans le fichier machine (L1-16).
+require("modules.entree").apply()
+
+-- Raccourcis et gestes, décrits par donnees/raccourcis.lua et donnees/roles.lua, contrôlés puis liés (L1-16).
+require("modules.clavier").apply()
+
 -- Fragment de la machine courante, machines/<nom-d-hôte>.lua, chargé en dernier pour l'emporter.
 require("modules.machine").load()

@@ -17,7 +17,10 @@ PROBE = r"""
 local events, animations = {}, 0
 local function note(e) if events[#events] ~= e then events[#events + 1] = e end end
 hl = {
-    config = function(t) note("config:" .. (t.source or "dunei")) end,
+    config = function(t) note("config:" .. (t.source or (t.input and "input") or "dunei")) end,
+    bind = function() note("bind") end,
+    gesture = function() note("gesture") end,
+    dsp = setmetatable({}, { __index = function(s) return s end, __call = function() return "dsp" end }),
     curve = function() end,
     animation = function() animations = animations + 1; note("animation") end,
     monitor = function(t) note("monitor:" .. (t.output == "" and "*" or t.output)) end,
@@ -45,9 +48,10 @@ class EntryTest(unittest.TestCase):
             hypr = Path(tmp) / "hypr"
             (hypr / "generated").mkdir(parents=True)
             (hypr / "machines").mkdir()
-            for name in ("hyprland-tokens.lua", "hyprland-rules.lua", "motion.lua"):
+            for name in ("hyprland-tokens.lua", "hyprland-rules.lua", "hyprland-binds.lua", "motion.lua"):
                 shutil.copy(ROOT / "generated" / name, hypr / "generated" / name)
             (hypr / "modules").symlink_to(ROOT / "config" / "hypr" / "modules")
+            (hypr / "donnees").symlink_to(ROOT / "config" / "hypr" / "donnees")
             if generic:
                 (hypr / "generique.lua").write_text('hl.config({ source = "generique" })\n', encoding="utf-8")
             if machine:
@@ -62,15 +66,18 @@ class EntryTest(unittest.TestCase):
 
     def test_with_generic(self):
         self.assertEqual(self.probe(True, True),
-                         [f"config:generique,config:dunei,animation,{self.MODULES},monitor:*,config:dunei,monitor:essai", "27"])
+                         [f"config:generique,config:dunei,animation,{self.MODULES},monitor:*,config:dunei,"
+                          "config:input,bind,gesture,monitor:essai", "27"])
 
     def test_without_generic(self):
         self.assertEqual(self.probe(False, True),
-                         [f"config:dunei,animation,{self.MODULES},monitor:*,config:dunei,monitor:essai", "27"])
+                         [f"config:dunei,animation,{self.MODULES},monitor:*,config:dunei,"
+                          "config:input,bind,gesture,monitor:essai", "27"])
 
     def test_without_machine(self):
         self.assertEqual(self.probe(True),
-                         [f"config:generique,config:dunei,animation,{self.MODULES},monitor:*,config:dunei", "27"])
+                         [f"config:generique,config:dunei,animation,{self.MODULES},monitor:*,config:dunei,"
+                          "config:input,bind,gesture", "27"])
 
 
 class AgnosticTest(unittest.TestCase):
@@ -79,7 +86,9 @@ class AgnosticTest(unittest.TestCase):
     PATTERN = re.compile(r"\b(?:e?DP|HDMI-[A-Z]|DVI-[A-Z]|VGA)-\d|desc:")
 
     def test_no_output_named(self):
-        files = [ROOT / "config" / "hypr" / "hyprland.lua", *sorted((ROOT / "config" / "hypr" / "modules").glob("*.lua"))]
+        files = [ROOT / "config" / "hypr" / "hyprland.lua",
+                 *sorted((ROOT / "config" / "hypr" / "modules").glob("*.lua")),
+                 *sorted((ROOT / "config" / "hypr" / "donnees").glob("*.lua"))]
         for f in files:
             with self.subTest(fichier=f.name):
                 self.assertIsNone(self.PATTERN.search(f.read_text(encoding="utf-8")))

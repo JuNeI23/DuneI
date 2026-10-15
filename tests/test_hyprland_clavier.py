@@ -75,7 +75,7 @@ def expected() -> dict[str, tuple[str, str]]:
         "SUPER + F": ("dsp.exec_cmd(uwsm app -- N)", "{}"),
         "SUPER + R": ("dsp.exec_cmd(uwsm app -- L)", "{}"),
         "SUPER + ALT + M": ("dsp.exec_cmd(uwsm stop)", "{}"),
-        "SUPER + ALT + R": ("dsp.reload_config()", "{}"),
+        "SUPER + ALT + R": ("dsp.exec_cmd(hyprctl reload)", "{}"),
         "SUPER + mouse:272": ("dsp.window.drag()", "{mouse=true}"),
         "SUPER + mouse:273": ("dsp.window.resize()", "{mouse=true}"),
         "SUPER + mouse_down": ("dsp.focus({workspace=e+1})", "{}"),
