@@ -284,6 +284,8 @@ class DeployTest(unittest.TestCase):
         self.assertEqual(res.returncode, 1)
         self.assertIn("déploiement interrompu", res.stderr)
         self.assertNotIn("Traceback", res.stderr)
+        self.assertIn("seuls les fichiers système restent à poser", res.stderr)
+        self.assertIn("systemctl --user restart hypridle.service", self.journal())
 
     def test_deploys_idle_files(self):
         self.assertEqual(run(self.cfg).returncode, 0)

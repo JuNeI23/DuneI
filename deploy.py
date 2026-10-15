@@ -10,9 +10,10 @@ posé lui-même.
   generique.lua, puis remplacée de façon atomique par le point d'entrée DuneI. Hyprland recharge seul.
 - fontconfig : generated/fonts.conf est copié vers fontconfig/conf.d/50-dunei.conf. Les applications
   lancées ensuite le lisent ; aucun fc-cache n'est nécessaire.
+- services : hypridle.service est activé s'il ne l'est pas, et redémarré si sa configuration change.
+  Cette étape précède les fichiers système : un échec de sudo ne laisse jamais l'ancienne échelle active.
 - systeme : chaque fichier de systeme/ est copié sous la racine du système, /etc compris, avec sudo, et
   seulement s'il manque ou diffère ; un fichier de logind.conf.d recharge logind, sans le redémarrer.
-- services : hypridle.service est activé s'il ne l'est pas, et redémarré si sa configuration change.
 
     python3 deploy.py [--dry-run]
 """
@@ -213,7 +214,7 @@ def plan_services(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
 
 
 DESTINATIONS = {"hypr": plan_hypr, "fontconfig": plan_fontconfig,
-                "systeme": plan_systeme, "services": plan_services}  # Nom → planification, dans l'ordre d'exécution.
+                "services": plan_services, "systeme": plan_systeme}  # Nom → planification, dans l'ordre d'exécution (sudo en dernier).
 
 
 def plan(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
@@ -318,7 +319,8 @@ def main() -> int:
         except (OSError, subprocess.CalledProcessError) as e:
             print(f"déploiement interrompu : {e}", file=sys.stderr)
             if isinstance(e, subprocess.CalledProcessError) and e.cmd[0] == "sudo":
-                print("Les fichiers système demandent sudo : relancer make install dans un terminal.", file=sys.stderr)
+                print("La configuration utilisateur est installée ; seuls les fichiers système restent à poser : "
+                      "relancer make install dans un terminal.", file=sys.stderr)
             return 1
     for a in actions:
         print(f"  {'prévu' if args.dry_run else 'fait'} : {describe(a)}")
