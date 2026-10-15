@@ -174,18 +174,19 @@ alsa-utils
 PipeWire et WirePlumber sont acquis : le son sort, et WirePlumber garde volumes, sourdines et sortie
 choisie dans `~/.local/state/wireplumber/`. `alsa-utils` (2,5 Mo, dépendances déjà présentes) apporte
 `alsactl`, qui s'active seul à l'installation, sans `systemctl enable` : à l'apparition de chaque carte,
-la règle udev `90-alsa-restore.rules` lance `alsactl restore`, qui exécute l'initialisation du profil UCM
-et restaure l'état des mélangeurs matériels ; `alsa-restore.service`, tiré par `sound.target`, le
-sauvegarde à l'extinction dans `/var/lib/alsa/asound.state`. Le paquet apporte aussi `amixer`, `arecord` et `speaker-test`, qui servent aux relevés (D38).
+la règle udev `90-alsa-restore.rules` lance `alsactl restore`, qui exécute l'initialisation du profil
+UCM et restaure l'état des mélangeurs matériels ; `alsa-restore.service`, tiré par `sound.target`, le
+sauvegarde à l'extinction dans `/var/lib/alsa/asound.state`. Le paquet apporte aussi `amixer`, `arecord`
+et `speaker-test`, qui servent aux relevés (D38).
 
 **La diode du micro dépend de ce paquet.** Pour un micro numérique ACP sur un codec HDA, le profil UCM
-d'`alsa-ucm-conf` (`HDA/HDA.conf`, `HDA/HiFi-acp.conf`) crée, à son initialisation, un interrupteur virtuel,
-`Mic ACP LED Capture Switch`, y rattache la diode, l'en détache du `Capture Switch` analogique, et le
-déclare comme interrupteur de sourdine du micro numérique. WirePlumber le bascule alors à chaque
+d'`alsa-ucm-conf` (`HDA/HDA.conf`, `HDA/HiFi-acp.conf`) crée, à son initialisation, un interrupteur
+virtuel, `Mic ACP LED Capture Switch`, y rattache la diode, l'en détache du `Capture Switch` analogique,
+et le déclare comme interrupteur de sourdine du micro numérique. WirePlumber le bascule alors à chaque
 sourdine, d'où qu'elle vienne : F4, une application, un futur indicateur. La règle udev prévoit ce cas
 nommément : quand le micro numérique `acp6x` apparaît, elle relance `alsactl` sur la carte HDA. Sans
-`alsa-utils`, cette initialisation ne s'exécute pas, et la diode reste attachée à l'interrupteur analogique, que personne ne touche. F4
-garde donc `wpctl` seul, et DuneI n'ajoute aucun code.
+`alsa-utils`, cette initialisation ne s'exécute pas, et la diode reste attachée à l'interrupteur
+analogique, que personne ne touche. F4 garde donc `wpctl` seul, et DuneI n'ajoute aucun code.
 
 **Vérification du 2026-10-15** : après un redémarrage, la diode suit `wpctl` seul, sans délai ; micro
 rétabli, enregistrement de quatre secondes à 23 % de niveau moyen (crête à 100 %, voix saturée par
@@ -629,7 +630,7 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 | Version | Date | Changement |
 | --- | --- | --- |
 | 0.1 | 2026-10-12 | Version initiale |
-| 1.2 | 2026-10-15 | Audio (L1-08) : `alsa-utils` installé, dont `alsactl` exécute l'initialisation UCM qui rattache la diode du micro au micro numérique ; F4 garde `wpctl` seul ; vérification du son et du micro (D38) |
+| 1.2 | 2026-10-15 | Audio (L1-08) : `alsa-utils` installé, dont `alsactl` exécute l'initialisation UCM qui rattache la diode du micro au micro numérique ; F4 garde `wpctl` seul ; vérification du son et du micro (D38) ; `donnees/` ajouté à l'arborescence |
 | 1.1 | 2026-10-15 | Raccourcis : table de données contrôlée, rôles, grammaire, bureau `accueil`, touches réservées ; entrée réelle, Compose sur AltGr, disposition dans le fichier machine ; touches matérielles, diode du micro renvoyée à L1-08 avec son relevé ; `donnees/` lié par `make install` ; kitty tient le rôle terminal (D33 à D37) ; `plein-ecran-nu` restreinte au vrai plein écran (D31, suite) |
 | 1.0 | 2026-10-14 | Procédure après fusion : Claude fusionne lui-même, sans `--delete-branch` (D32). Fenêtrage : dwindle, plus de bordure, ombre des flottantes et règles de fenêtre générées, plein écran nu, module `env.lua` réduit à la variable Qt, générique réduit (D28 à D31) |
 | 0.9 | 2026-10-14 | Écran et échelle : fragment machine lu depuis `/etc/hostname`, règle des écrans inconnus, échelle 1,25 retenue après essai de 4/3, écartée pour la règle des pixels entiers, variables Qt d'échelle retirées, vérification par sortie virtuelle |

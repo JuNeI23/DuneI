@@ -111,7 +111,7 @@ Les sources de vérité et leurs générateurs sont écrits et testés. Ce qui r
 
 Inventaire de ce que le chantier B recouvre. Chaque ligne vient soit d'une spécification de la bible, soit de la moitié « contrôle » de l'ancien chantier G.
 
-Trois natures, qui ne se traitent pas de la même façon. Une ligne qui en réunit deux est dite mixte : chacune de ses parties suit l'exigence de sa nature.
+Trois natures, qui ne se traitent pas de la même façon. Une ligne qui en réunit deux est dite mixte, quatrième ligne du tableau : chacune de ses parties suit l'exigence de sa nature.
 
 | Nature | Ce que c'est | Exigence |
 | --- | --- | --- |

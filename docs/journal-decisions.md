@@ -606,10 +606,10 @@ crée au démarrage l'interrupteur virtuel `Mic ACP LED Capture Switch`, y ratta
 détache du `Capture Switch` analogique ; `HDA/HiFi-acp.conf` le déclare interrupteur de sourdine du
 micro numérique, que WirePlumber bascule alors à chaque sourdine. Cette initialisation est exécutée par
 `alsactl restore`, que la règle udev d'`alsa-utils` (`90-alsa-restore.rules`) lance sur la carte HDA
-quand le micro numérique ACP apparaît ; le paquet était absent jusqu'ici : la diode restait attachée au `Capture Switch`, que WirePlumber ne touche
-pas, et le relevé de D37 décrivait cet état incomplet. Constaté au premier redémarrage après
-l'installation : `alsa-restore` à 19:24:08, PipeWire à 19:24:18, puis la diode suit `wpctl` seul, dans
-les deux sens.
+quand le micro numérique ACP apparaît ; le paquet était absent jusqu'ici : la diode restait attachée au
+`Capture Switch`, que WirePlumber ne touche pas, et le relevé de D37 décrivait cet état incomplet.
+Constaté au premier redémarrage après l'installation : `alsa-restore` à 19:24:08, PipeWire à 19:24:18,
+puis la diode suit `wpctl` seul, dans les deux sens.
 
 Chemin suivi. Le remède retenu à D37 a d'abord été écrit, après repérage des options (règle 2bis,
 D39) : un script `sourdine-micro` qui recopiait l'état de la source sur les contrôles listés sous
@@ -617,7 +617,7 @@ D39) : un script `sourdine-micro` qui recopiait l'état de la source sur les con
 été validé à l'écran et relu. Le redémarrage a révélé la vraie cause : le script ne faisait plus
 qu'écrire, juste après WirePlumber, le même interrupteur. Trois options présentées : retirer le pont,
 le garder en filet de sécurité pour d'autres machines, garder la seule action `script` ; Nicolas a
-choisi de le retirer. Le code revient à l'état de `main`, au commentaire d'F4 près. Leçon : un relevé
+choisi de le retirer. Le code revient à l'état de `main`, au commentaire de F4 près. Leçon : un relevé
 fait avant l'installation d'un paquet système ne vaut plus après son premier redémarrage.
 
 Conséquences : la limite d'une sourdine posée hors de F4, qui devait revenir à L2-12, disparaît. Le

@@ -251,7 +251,7 @@ puis L1-09, l'énergie et la veille.
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-10 | Version initiale |
-| 1.9 | 2026-10-15 | Audio fait (L1-08) : `alsa-utils` répare la diode du micro, son et micro vérifiés ; règle de repérage des technos ; prochaine étape L1-07 |
+| 1.9 | 2026-10-15 | Audio fait (L1-08) : `alsa-utils` répare la diode du micro, son et micro vérifiés ; règle de repérage des technos ; décompte de l'en-tête corrigé (cent quarante-deux) ; prochaine étape L1-07 |
 | 1.8 | 2026-10-15 | Raccourcis faits (L1-16) ; diode du micro renvoyée à L1-08, prochaine étape ; décomptes à 142 éléments |
 | 1.7 | 2026-10-14 | Fenêtrage fait (L1-12 à L1-15) ; reste les raccourcis et les bureaux (L1-16). Paragraphes permanents de l'état d'avancement placés avant le journal, pour que le dernier paragraphe nomme la prochaine étape ; décomptes à 141 éléments |
 | 1.6 | 2026-10-14 | Écran et échelle faits (L1-17), échelle 1,25 ; reste le fenêtrage |
