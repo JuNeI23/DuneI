@@ -1,6 +1,6 @@
 # Raccourcis : clavier, gestes, bureaux et entrée
 
-Version 0.1 · 2026-10-15 · backlog L1-16 · carnet « Entrée », « Touches matérielles », « Bureaux et raccourcis » · statut : en relecture
+Version 0.2 · 2026-10-15 · backlog L1-16 · carnet « Entrée », « Touches matérielles », « Bureaux et raccourcis » · statut : en relecture
 
 ## 1. Objet
 
@@ -68,7 +68,7 @@ Les touches ont été choisies une à une par Nicolas, famille par famille.
 | Plein écran, pseudo-tuile | Aucun raccourci | Nicolas ne s'en sert pas ; une application peut toujours demander le plein écran (F11) |
 | Agrandir et quitter | `SUPER + M` agrandit ; `SUPER + Alt + M` quitte | Collision relevée pendant la conception ; quitter garde la lettre et prend le garde-fou |
 | Envoyer au bureau | La fenêtre part, le focus reste | Choix de Nicolas : on range et on continue |
-| Bureau spécial | Un seul, nommé `tiroir` | Sans barre, rien ne signale une fenêtre cachée ; un seul tiroir évite de perdre ce qu'on y range |
+| Bureau spécial | Un seul, nommé `accueil` (choix de Nicolas) | Sans barre, rien ne signale une fenêtre cachée ; un seul évite de perdre ce qu'on y range |
 | Applications | Par rôle ; terminal sur `SUPER + Q` | Le logiciel change au lot 3 sans toucher la touche ; `Q` est le réflexe de Nicolas |
 | Lanceur | `wofi --show drun`, provisoire | `hyprlauncher`, absent, laissait la touche morte ; wofi est installé |
 | Sortie de session | `uwsm stop` | La session est lancée par uwsm ; la documentation proscrit l'`exit` de Hyprland, qui coupe la session sous ses clients |
@@ -131,7 +131,7 @@ ajouté une seule fois, dans `clavier.lua`, et non dans chaque rôle.
 
 ### 3.3 Table des raccourcis (`config/hypr/raccourcis.lua`)
 
-Une table de données, sans appel à `hl`. Elle retourne trois champs : `tiroir` (le nom du bureau
+Une table de données, sans appel à `hl`. Elle retourne trois champs : `special` (le nom du bureau
 spécial), `touches` (la liste des raccourcis) et `gestes`. Chaque entrée de `touches` porte :
 
 - `touches` : la combinaison, dans la syntaxe de `hl.bind` ;
@@ -157,8 +157,8 @@ fichier même.
 | Taille | `SUPER + Ctrl + ←↑→↓` | Redimensionner de `resize_step` |
 | Bureaux | `SUPER + 1…0` | Aller au bureau 1 à 10 |
 | | `SUPER + Maj + 1…0` | Envoyer au bureau 1 à 10, sans suivre |
-| | `SUPER + S` | Afficher ou masquer le tiroir |
-| | `SUPER + Maj + S` | Ranger la fenêtre dans le tiroir |
+| | `SUPER + S` | Afficher ou masquer l'accueil |
+| | `SUPER + Maj + S` | Ranger la fenêtre dans l'accueil |
 | Applications | `SUPER + Q` | Rôle terminal |
 | | `SUPER + E` | Rôle fichiers |
 | | `SUPER + F` | Rôle navigateur |
@@ -177,7 +177,7 @@ fichier même.
 | | `Control_L` tenu une seconde | Halo du pointeur, nouvel élément du lot 2 |
 
 Gestes : trois doigts à l'horizontale pour changer de bureau ; trois doigts vers le bas pour afficher ou
-masquer le tiroir.
+masquer l'accueil.
 
 Les noms exacts des touches matérielles (`XF86…`) sont relevés avec `wev` sur la machine.
 
@@ -276,3 +276,4 @@ grim et les deux diodes. `SUPER + Alt + M` est essayé en dernier.
 | Version | Date | Changement |
 | --- | --- | --- |
 | 0.1 | 2026-10-15 | Version initiale, issue du brainstorming |
+| 0.2 | 2026-10-15 | Bureau spécial nommé `accueil` |
