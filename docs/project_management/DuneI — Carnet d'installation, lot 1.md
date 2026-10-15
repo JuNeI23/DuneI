@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.2. Historique en fin de document.
+Version 1.3. Historique en fin de document.
 
 Socle amorçable.
 
@@ -165,6 +165,31 @@ Rien d'autre. `libva-mesa-driver` est désormais fourni par `mesa` lui-même : l
 
 Les listes Intel et NVIDIA restent dans le dépôt pour les machines suivantes. Elles ne s'exécutent pas ici.
 
+### Réseau — L1-07
+
+```
+wireless-regdb iw
+```
+
+NetworkManager est acquis, avec `wpa_supplicant` comme moteur Wi-Fi : c'est lui que l'indicateur réseau
+du lot 2 (L2-11) interrogera sur D-Bus. Le moteur `iwd` a été écarté : NetworkManager le déclare
+expérimental, et il faudrait convertir les réseaux enregistrés pour un gain de vitesse de connexion
+marginal. NetworkManager écrit lui-même `/etc/resolv.conf`, sans service intermédiaire. `nm-applet`
+démarre par l'autostart XDG ; sans barre, il ne montre que ses notifications. Son sort se décide à L2-11.
+
+`wireless-regdb` (22 Ko) apporte la base réglementaire que le noyau charge au démarrage : sans elle, il
+journalise `failed to load regulatory.db` et applique le domaine « monde » (`00`), le plus restrictif.
+Sur `caladan`, l'effet est nul : la carte Qualcomm (`ath11k`) est *self-managed*, son micrologiciel fixe
+lui-même le pays (FR, règles ETSI, bande 6 GHz comprise). Le paquet sert les machines dont la carte suit
+le noyau. Aucun pays n'est écrit dans `/etc/conf.d/wireless-regdom` : le noyau prend celui qu'annonce le
+point d'accès, ce qui reste juste en voyage (D40). `iw` sert aux relevés : `iw reg get`, `iw dev`.
+
+**Vérification du 2026-10-15** : après un redémarrage, la base est chargée, sans erreur ; connexion
+automatique 12 s après le démarrage du noyau ; puissance d'émission inchangée (17 dBm). Radio coupée
+puis rallumée par `nmcli radio wifi`, reconnexion au même réseau en 8,6 s, connectivité complète. La
+touche mode avion (F8) agit sans aucun raccourci : le noyau bloque la radio, NetworkManager le voit et
+reconnecte au déblocage.
+
 ### Audio — L1-08
 
 ```
@@ -256,6 +281,13 @@ verrouillé (`locked`) ; volume et luminosité se répètent quand on les tient.
 
 Les touches Lecture, Suivant et Précédent ne sont pas liées : le T14s ne les a pas (D37). F7 (écran)
 et F9 à F12 restent libres.
+
+Deux touches agissent sans aucun raccourci DuneI, vérifié le 2026-10-15 (L1-07) :
+
+| Touche | Qui agit | Plus tard |
+| --- | --- | --- |
+| Mode avion (F8) | Le noyau bloque la radio ; NetworkManager déconnecte, puis reconnecte au déblocage | Indicateur réseau, L2-11 |
+| Rétroéclairage du clavier (Fn + Espace) | Le micrologiciel, trois niveaux ; `systemd-backlight` garde le niveau d'un démarrage à l'autre | Extinction à l'inactivité, L1-09 |
 
 **La diode de sourdine micro mérite sa ligne.** Une diode qui ne correspond pas à l'état réel du micro est un défaut de confiance, pas un défaut cosmétique — c'est exactement le genre de détail que le principe 3 vise : un signal qui porte une information doit être juste.
 
@@ -630,6 +662,7 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 | Version | Date | Changement |
 | --- | --- | --- |
 | 0.1 | 2026-10-12 | Version initiale |
+| 1.3 | 2026-10-15 | Réseau (L1-07) : NetworkManager et `wpa_supplicant` conservés, `wireless-regdb` et `iw` installés, carte *self-managed*, vérification de la connexion et de la reconnexion ; touches mode avion et rétroéclairage du clavier, actives sans raccourci (D40) |
 | 1.2 | 2026-10-15 | Audio (L1-08) : `alsa-utils` installé, dont `alsactl` exécute l'initialisation UCM qui rattache la diode du micro au micro numérique ; F4 garde `wpctl` seul ; vérification du son et du micro (D38) ; `donnees/` ajouté à l'arborescence |
 | 1.1 | 2026-10-15 | Raccourcis : table de données contrôlée, rôles, grammaire, bureau `accueil`, touches réservées ; entrée réelle, Compose sur AltGr, disposition dans le fichier machine ; touches matérielles, diode du micro renvoyée à L1-08 avec son relevé ; `donnees/` lié par `make install` ; kitty tient le rôle terminal (D33 à D37) ; `plein-ecran-nu` restreinte au vrai plein écran (D31, suite) |
 | 1.0 | 2026-10-14 | Procédure après fusion : Claude fusionne lui-même, sans `--delete-branch` (D32). Fenêtrage : dwindle, plus de bordure, ombre des flottantes et règles de fenêtre générées, plein écran nu, module `env.lua` réduit à la variable Qt, générique réduit (D28 à D31) |

@@ -637,3 +637,32 @@ l'intégration et la performance, avec une recommandation. Appliquée dès L1-08
 Raison : garder la main sur chaque choix technique, comme sur chaque choix visible.
 
 *Touché : CLAUDE.md.*
+
+## 2026-10-15 — Réseau (L1-07)
+
+### D40 · Réseau : NetworkManager et `wpa_supplicant` conservés, base réglementaire installée
+
+Relevé du 2026-10-15 sur `caladan` : NetworkManager 1.58 avec `wpa_supplicant`, carte Qualcomm
+QCNFA765 (`ath11k`), connexion automatique aux trois réseaux enregistrés. Seul écart : le noyau
+journalisait `failed to load regulatory.db`. Repérage fait avec Nicolas, qui a retenu les trois
+recommandations :
+
+- **Pays de la carte** : `wireless-regdb` seul, sans pays écrit dans `/etc/conf.d/wireless-regdom`. Le
+  noyau prend le pays annoncé par le point d'accès, ce qui reste juste en voyage ; un pays fixé lierait
+  la configuration à un lieu. Écart du diagnostic : la carte est *self-managed*, son micrologiciel
+  fixait déjà FR. Le paquet est sans effet ici (puissance d'émission inchangée, 17 dBm) et sert les
+  cartes qui suivent le noyau.
+- **Moteur Wi-Fi** : `wpa_supplicant` conservé ; `iwd` est déclaré expérimental par NetworkManager et
+  demanderait de convertir les réseaux enregistrés.
+- **`nm-applet`** : laissé tel quel ; son sort se décide à L2-11.
+
+Vérifié après redémarrage : base chargée, connexion 12 s après le démarrage du noyau, reconnexion en
+8,6 s après `nmcli radio wifi off/on`. La touche mode avion (F8) et le rétroéclairage du clavier
+(Fn + Espace) fonctionnent sans raccourci : le premier passe par le noyau, le second par le micrologiciel,
+et `systemd-backlight` garde le niveau du clavier. L'extinction du rétroéclairage à l'inactivité rejoint
+L1-09.
+
+Raison : le service réseau est offert et fonctionne ; on n'ajoute que ce qui manque, et on l'écrit pour
+toute machine, pas pour celle-ci.
+
+*Touché : carnet, backlog (L1-07, L1-09, L2-11), notes de direction.*
