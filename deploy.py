@@ -24,8 +24,8 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent
 ENTRY = "config/hypr/hyprland.lua"            # Point d'entrée, lié sous hypr/hyprland.lua.
-LINKS = ("config/hypr/modules", "config/hypr/machines")  # Dossiers écrits à la main, liés sous hypr/ à leur nom.
-COPIES = ("hyprland-tokens.lua", "hyprland-rules.lua", "motion.lua")  # Fichiers de generated/ lus par Hyprland.
+LINKS = ("config/hypr/modules", "config/hypr/machines", "config/hypr/donnees")  # Dossiers écrits à la main, liés sous hypr/ à leur nom.
+COPIES = ("hyprland-tokens.lua", "hyprland-rules.lua", "hyprland-binds.lua", "motion.lua")  # Fichiers de generated/ lus par Hyprland.
 GENERIC = "generique.lua"                     # Nom donné à la configuration générique de la machine.
 TEMP = ".{}.dunei"                            # Nom temporaire, sans extension .lua, invisible pour require.
 FONTCONFIG = ("fonts.conf", "conf.d/50-dunei.conf")  # Fichier de generated/ → chemin sous fontconfig/.
@@ -111,8 +111,8 @@ def plan_hypr(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
     elif entry.exists():
         err.append(f"{entry} existe mais n'est ni un fichier ni un lien")
     elif (dest / "hyprland.conf").exists():
-        err.append(f"{dest / 'hyprland.conf'} existe : Hyprland l'ignorerait au profit du point d'entrée DuneI, "
-                   "qui ne déclare encore aucun raccourci ; le convertir en hyprland.lua d'abord")
+        err.append(f"{dest / 'hyprland.conf'} existe : Hyprland l'ignorerait au profit du point d'entrée DuneI ; "
+                   "le convertir en hyprland.lua d'abord")
     else:
         actions.append(("link", repo / ENTRY, entry))
     return actions, err

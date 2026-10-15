@@ -13,7 +13,14 @@ LUA = shutil.which("lua") or shutil.which("luajit")
 FAKE = r"""
 hl = {
     env = function(k, v) print("env", k, v) end,
-    config = function(t) print("config", t.general.layout, tostring(t.dwindle.preserve_split)) end,
+    config = function(t)
+        if t.input then
+            print("input", t.input.kb_options, tostring(t.input.touchpad.natural_scroll),
+                  tostring(t.input.touchpad.clickfinger_behavior), tostring(t.input.kb_layout))
+        else
+            print("config", t.general.layout, tostring(t.dwindle.preserve_split))
+        end
+    end,
     window_rule = function(r) print("rule", r.name) end,
 }
 """
@@ -42,6 +49,10 @@ class ModulesTest(unittest.TestCase):
 
     def test_fenetres(self):
         self.assertEqual(self.run_module("fenetres"), ["config\tdwindle\ttrue"])
+
+    def test_entree(self):
+        # La disposition dépend du clavier physique : elle vit dans le fichier machine, pas ici.
+        self.assertEqual(self.run_module("entree"), ["input\tcompose:ralt\ttrue\ttrue\tnil"])
 
     def test_regles_generated_then_behaviour(self):
         self.assertEqual(self.run_module("regles"), ["rule\tcouche-1-sans-ombre", "rule\tplein-ecran-nu",
