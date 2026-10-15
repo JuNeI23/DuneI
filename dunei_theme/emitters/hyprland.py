@@ -29,12 +29,15 @@ def _validate(raw: dict) -> None:
     Erreurs : ValueError si un jeton n'est pas un entier (un booléen est refusé), si la portée de
               l'ombre flottante sort de 1 à 100 (bornes de Hyprland, 0 éteindrait l'ombre), si la portée
               ou le décalage n'est pas un multiple de la base (bible, ch. 3), si render_power sort de 1
-              à 4 (bornes de Hyprland), ou si border_width ou radii.fullscreen est négatif.
+              à 4 (bornes de Hyprland), si border_width ou radii.fullscreen est négatif, ou si
+              window.resize_step n'appartient pas à spacing.scale (le pas de redimensionnement reste
+              sur l'échelle des espacements).
     Dépendances : aucune.
     """
     s, base = raw["window"]["floating_shadow"], raw["scaling"]["height_multiple"]
     tokens = {f"window.floating_shadow.{k}": s[k] for k in ("range", "offset_y", "render_power")}
     tokens |= {"window.border_width": raw["window"]["border_width"], "radii.fullscreen": raw["radii"]["fullscreen"]}
+    tokens["window.resize_step"] = raw["window"]["resize_step"]
     for name, val in tokens.items():
         if type(val) is not int:
             raise ValueError(f"{name} = {val!r} : entier attendu")
@@ -48,6 +51,9 @@ def _validate(raw: dict) -> None:
     for name in ("window.border_width", "radii.fullscreen"):
         if tokens[name] < 0:
             raise ValueError(f"{name} = {tokens[name]} : entier positif ou nul attendu")
+    if tokens["window.resize_step"] not in raw["spacing"]["scale"]:
+        raise ValueError(f"window.resize_step = {tokens['window.resize_step']} n'appartient pas à "
+                         f"spacing.scale {raw['spacing']['scale']}")
 
 
 def emit(model: dict) -> str:
@@ -109,5 +115,24 @@ def emit_rules(model: dict) -> str:
         "-- Usage : for _, r in ipairs(require(\"generated.hyprland-rules\")) do hl.window_rule(r) end",
         "return {",
         *rules,
+        "}",
+    ]) + "\n"
+
+
+def emit_binds(model: dict) -> str:
+    """Module Lua des valeurs lues par les raccourcis.
+
+    Entrée : model — sortie de model.resolve.
+    Sortie : contenu de hyprland-binds.lua (une table Lua retournée, lue par modules/clavier.lua).
+    Erreurs : KeyError si le TOML brut manque ; ValueError transmise par _validate.
+    Dépendances : _validate.
+    """
+    raw = model["raw"]
+    _validate(raw)
+    return "\n".join([
+        "-- GÉNÉRÉ depuis tokens.toml — NE PAS MODIFIER À LA MAIN",
+        "-- Usage : local pas = require(\"generated.hyprland-binds\").resize_step",
+        "return {",
+        f"    resize_step = {raw['window']['resize_step']},",
         "}",
     ]) + "\n"

@@ -14,5 +14,6 @@ TARGETS = {
     "appearance-portal.conf": portal.emit,  # repli bac à sable
     "hyprland-tokens.lua": hyprland.emit,   # compositeur, API Lua hl.*
     "hyprland-rules.lua": hyprland.emit_rules,  # règles de fenêtre d'apparence (couche 1, plein écran)
+    "hyprland-binds.lua": hyprland.emit_binds,  # valeurs lues par les raccourcis (pas de redimensionnement)
     "fonts.conf": fontconfig.emit,          # indirection des polices, repli, rendu
 }
