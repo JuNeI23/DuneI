@@ -1523,8 +1523,10 @@ Cette tâche se fait dans la session principale, jamais par un sous-agent : chaq
   écran dans Firefox : l'échelle est suspendue. Rétablir enfin la vraie échelle par `make install`
   (redémarrage de hypridle inclus).
 - [ ] **Étape 5 : liste du carnet** — veille et réveil trois fois, l'écran verrouillé au réveil, sans image
-  du bureau ; capot fermé puis rouvert ; bouton marche, appui court ; veille avec écran externe branché.
-- [ ] **Étape 6 : couvercle avec écran externe** — capot fermé : l'écran interne disparaît de
+  du bureau ; capot fermé puis rouvert ; bouton marche, appui court. La veille avec écran externe branché
+  est **en attente** (pas d'écran externe disponible, décision de Nicolas du 2026-10-15).
+- [ ] **Étape 6 : couvercle avec écran externe — EN ATTENTE** (pas d'écran externe disponible, décision de
+  Nicolas du 2026-10-15 ; L1-09 ne se clôt pas sans elle, la ligne du backlog le dit). Capot fermé : l'écran interne disparaît de
   `hyprctl monitors`, les fenêtres passent sur l'externe, la machine ne dort pas ; capot rouvert : l'écran
   interne revient à l'échelle 1,25. Débrancher l'externe capot fermé : verrouillage puis veille. Si
   `hl.monitor` ne s'applique pas à chaud, ou si `hl.on` ne se réabonne pas après rechargement, revenir au
@@ -1546,7 +1548,8 @@ Chaque constat, avec sa date, est noté pour la tâche 7.
   remplacée par le relevé : le micrologiciel n'offre que `s2idle`. « Touches matérielles » : la ligne du
   rétroéclairage du clavier renvoie à l'atténuation de L1-09. Piège consigné : toute valeur `dpms` inconnue
   fait basculer l'écran. Version et historique.
-- [ ] **Étape 2 : backlog** — L1-09 fait ; nouvelle ligne au lot qui convient pour l'empreinte (`fprintd`,
+- [ ] **Étape 2 : backlog** — L1-09 fait, sauf la recette avec écran externe (étapes 5 et 6 de la tâche 6),
+  notée en attente sur sa ligne ; nouvelle ligne au lot qui convient pour l'empreinte (`fprintd`,
   verrouilleur, `sudo`, connexion) ; L2-22 : `SUPER + L` déjà lié, point de remplacement unique
   (`verrouilleur` dans `energie.toml`), esthétique ouverte et ressource machine acceptée ; décomptes ;
   version et historique.
@@ -1568,3 +1571,4 @@ Chaque constat, avec sa date, est noté pour la tâche 7.
 | Version | Date | Changement |
 | --- | --- | --- |
 | 0.1 | 2026-10-15 | Version initiale |
+| 0.2 | 2026-10-15 | Recette avec écran externe mise en attente ; `expected()` du clavier précisé |
