@@ -4,6 +4,8 @@
 
 -- Écran interne, nommé par son port, qui ne change pas pour une dalle intégrée. Échelle validée à l'écran (D27).
 hl.monitor({ output = "eDP-1", mode = "1920x1200@60", position = "0x0", scale = 1.25 })  -- surface logique de 1536 × 960
+-- L'écran interne est repéré par son connecteur (modules/couvercle.lua) ; une machine dont la dalle n'a pas
+-- un connecteur eDP, LVDS ou DSI le désigne ici : require("modules.couvercle").interne = "<nom>".
 
 -- Clavier interne en disposition britannique ; la touche Compose est commune (modules/entree.lua).
 hl.config({ input = { kb_layout = "gb" } })

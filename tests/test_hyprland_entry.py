@@ -25,10 +25,14 @@ hl = {
     curve = function() end,
     animation = function() animations = animations + 1; note("animation") end,
     monitor = function(t) note("monitor:" .. (t.output == "" and "*" or t.output)) end,
+    on = function() note("on") end,
+    get_monitors = function() return {} end,
+    exec_cmd = function() note("exec") end,
     env = function(k) note("env:" .. k) end,
     window_rule = function(t) note("rule:" .. t.name) end,
 }
 require("modules.machine").file = HOST
+require("modules.couvercle").etat = "echo 'b false'"
 dofile(ENTRY)
 print(table.concat(events, ","), animations)
 """
@@ -68,17 +72,17 @@ class EntryTest(unittest.TestCase):
     def test_with_generic(self):
         self.assertEqual(self.probe(True, True),
                          [f"config:generique,config:dunei,animation,{self.MODULES},monitor:*,config:dunei,"
-                          "config:input,unbind,bind,gesture,monitor:essai", "27"])
+                          "config:input,unbind,bind,gesture,config:dunei,monitor:essai,bind,on", "27"])
 
     def test_without_generic(self):
         self.assertEqual(self.probe(False, True),
                          [f"config:dunei,animation,{self.MODULES},monitor:*,config:dunei,"
-                          "config:input,unbind,bind,gesture,monitor:essai", "27"])
+                          "config:input,unbind,bind,gesture,config:dunei,monitor:essai,bind,on", "27"])
 
     def test_without_machine(self):
         self.assertEqual(self.probe(True),
                          [f"config:generique,config:dunei,animation,{self.MODULES},monitor:*,config:dunei,"
-                          "config:input,unbind,bind,gesture", "27"])
+                          "config:input,unbind,bind,gesture,config:dunei,bind,on", "27"])
 
 
 class AgnosticTest(unittest.TestCase):
