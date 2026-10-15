@@ -587,4 +587,55 @@ Remède retenu pour L1-08, découpage choisi par Nicolas : après `wpctl`, align
 droit d'écrire la diode a été écartée : elle demande un fichier système et des droits root à
 l'installation.
 
+Critère 8 de la spec, constaté le 2026-10-15 : `SUPER + Alt + M`, essayé par Nicolas, ferme la session
+proprement. Le journal montre `uwsm stop` à 17:36:08, Hyprland arrêté en deux secondes, aucun signal
+`SIGKILL` ni délai dépassé, puis une reconnexion par SDDM à 17:36:18.
+
 *Touché : tokens.toml, dunei_theme/emitters/, generated/hyprland-binds.lua, config/hypr/donnees/, config/hypr/modules/clavier.lua, config/hypr/modules/entree.lua, config/hypr/hyprland.lua, config/hypr/machines/caladan.lua, deploy.py, tests/, ~/.config/hypr/generique.lua (hors dépôt), bible (ch. 7, annexe D), carnet, backlog, notes de direction.*
+
+## 2026-10-15 — Audio (L1-08)
+
+### D38 · Diode du micro : `sourdine-micro`, `amixer`, alignement au démarrage
+
+F4 lance désormais `scripts/sourdine-micro bascule` : `wpctl` coupe ou rétablit la source par défaut,
+puis le script recopie son état sur chaque contrôle listé sous `/sys/class/sound/ctl-led/mic/`, avec
+`amixer`, sans droits root. Le module `audio.lua` lance `sourdine-micro aligne` au démarrage de Hyprland
+(`hl.on("hyprland.start")`). Une action `script` rejoint `clavier.lua` ; seul `modules/scripts.lua`
+connaît le dossier des scripts, lié sous `~/.config/hypr/scripts` par `make install`.
+
+Relevés qui fondent la décision : le micro numérique (`acp6x`) n'a aucun contrôle matériel, WirePlumber
+coupe donc en logiciel et ne touche jamais le `Capture Switch` du codec, dont dépend la diode. Passé sur
+`on` à la main, cet interrupteur l'est resté après un redémarrage de WirePlumber : le remède tient. La
+diode du son suit déjà, WirePlumber coupant le son sur le mélangeur matériel. PipeWire démarre à la
+demande, quinze secondes après Hyprland au démarrage du jour : `aligne` attend la source par défaut,
+trente demi-secondes au plus. `wpctl` répond 0 même quand la source est introuvable ; seule la ligne
+« Volume: » prouve qu'elle existe.
+
+Options repérées (règle 2bis, D39) et retenues par Nicolas. Pour écrire l'interrupteur : `amixer`,
+plutôt qu'un programme C sur alsa-lib, Python et `pyalsa`, ou la diode écrite directement, qui demande
+root. Pour lire l'état : `wpctl`, plutôt que `pactl` ou `pw-dump`. Pour le démarrage : `hl.on` avec
+attente, plutôt qu'une unité systemd utilisateur liée à WirePlumber, dont le seul gain, le redémarrage
+de WirePlumber, est sans objet puisque l'interrupteur garde sa valeur, et qui demanderait une nouvelle
+mécanique de déploiement. Un script WirePlumber, qui aurait suivi toute sourdine, est impossible : son
+bac à sable interdit fichiers et commandes. Langage : `sh` POSIX.
+
+`alsa-utils` est installé ; sa persistance (`alsa-restore.service`, tiré par `sound.target`) reste
+active : elle ne gêne pas WirePlumber et garde les autres réglages matériels. Limite acceptée par
+Nicolas : une sourdine posée hors de F4 n'est suivie qu'au prochain appui ou à la prochaine session ;
+l'écoute permanente revient à L2-12, qui en aura besoin pour son indicateur.
+
+Vérification : diode instantanée ; micro rétabli, quatre secondes enregistrées à 23 % de niveau moyen,
+crête à 100 % (saturation notée pour L2-12) ; micro coupé, silence total ; haut-parleurs gauche et
+droit justes.
+
+*Touché : config/hypr/scripts/sourdine-micro, config/hypr/modules/scripts.lua, config/hypr/modules/audio.lua, config/hypr/modules/clavier.lua, config/hypr/donnees/raccourcis.lua, config/hypr/hyprland.lua, deploy.py, tests/, carnet, backlog, notes de direction.*
+
+### D39 · Repérer les technos avant de choisir
+
+Nicolas ajoute la règle 2bis à la méthode de développement d'une feature : aucune techno n'est imposée
+directement ; chaque choix passe par un repérage des options, jugées sur trois critères, le confort,
+l'intégration et la performance, avec une recommandation. Appliquée dès L1-08 (D38).
+
+Raison : garder la main sur chaque choix technique, comme sur chaque choix visible.
+
+*Touché : CLAUDE.md.*

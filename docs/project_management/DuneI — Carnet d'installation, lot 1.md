@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.1. Historique en fin de document.
+Version 1.2. Historique en fin de document.
 
 Socle amorçable.
 
@@ -67,6 +67,8 @@ DuneI/
 │   ├── hypr/
 │   │   ├── hyprland.lua    # point d'entrée : ne fait que des require (L1-24)
 │   │   ├── modules/        # un module par feature (input, keybinds, rules…) ; motion.lua existe déjà
+│   │   ├── donnees/        # tables de données : raccourcis, rôles (L1-16)
+│   │   ├── scripts/        # scripts shell lancés par Hyprland, ex. sourdine-micro (L1-08)
 │   │   └── machines/       # un fichier par machine, choisi par nom d'hôte
 ├── tokens.toml
 ├── motion.toml             # source du mouvement (L1-23)
@@ -164,6 +166,32 @@ Rien d'autre. `libva-mesa-driver` est désormais fourni par `mesa` lui-même : l
 
 Les listes Intel et NVIDIA restent dans le dépôt pour les machines suivantes. Elles ne s'exécutent pas ici.
 
+### Audio — L1-08
+
+```
+alsa-utils
+```
+
+PipeWire et WirePlumber sont acquis : le son sort, et WirePlumber garde volumes, sourdines et sortie
+choisie dans `~/.local/state/wireplumber/`. `alsa-utils` (2,5 Mo, dépendances déjà présentes) apporte
+`amixer`, dont dépend la diode du micro, `arecord` et `speaker-test` pour la vérification, et
+`alsactl`. Ce dernier s'active seul à l'installation : `alsa-restore.service`, tiré par `sound.target`,
+restaure au démarrage l'état des mélangeurs matériels et le sauvegarde à l'extinction dans
+`/var/lib/alsa/asound.state`. Aucun `systemctl enable` n'est nécessaire (D38).
+
+**La diode du micro.** Elle suit les contrôles que le noyau liste sous `/sys/class/sound/ctl-led/mic/`,
+et ne voit pas une sourdine posée en logiciel. Le script `config/hypr/scripts/sourdine-micro` coupe ou
+rétablit la source par défaut avec `wpctl`, puis recopie son état sur chaque contrôle listé, avec
+`amixer`, sans droits root ; il ne nomme aucune carte. Le module `audio.lua` l'appelle aussi au
+démarrage de Hyprland (`hl.on("hyprland.start")`) ; PipeWire démarrant à la demande, jusqu'à quinze
+secondes plus tard, le script attend la source par défaut. Une sourdine posée hors de F4 (depuis une
+application) n'est suivie qu'au prochain appui ou à la prochaine session : l'écoute permanente revient
+à L2-12. La diode du son, elle, suit déjà : WirePlumber coupe le son sur le mélangeur matériel.
+
+**Vérification du 2026-10-15** : diode instantanée à chaque appui ; micro rétabli, enregistrement de
+quatre secondes à 23 % de niveau moyen (crête à 100 %, voix saturée par moments) ; micro coupé, silence
+total ; haut-parleurs gauche et droit justes.
+
 ### Énergie — L1-09
 
 `power-profiles-daemon` et non un gestionnaire d'économie classique. La raison est architecturale : **il expose les profils sur D-Bus, donc c'est à lui que parlera l'indicateur d'énergie du lot 2** (L2-13). Un outil qui ne s'adresse qu'en ligne de commande obligerait à écrire une interface contre des fichiers, ce qui est fragile et laid.
@@ -222,7 +250,7 @@ verrouillé (`locked`) ; volume et luminosité se répètent quand on les tient.
 | Touche | Lot 1 | Plus tard |
 | --- | --- | --- |
 | Sourdine, volume −/+ | `wpctl`, ±5 %, plafond 100 % | Indicateur audio, L2-12 |
-| Sourdine micro | `wpctl` sur la source par défaut | Diode : L1-08 ; indicateur, L2-12 |
+| Sourdine micro | `sourdine-micro bascule` : `wpctl`, puis diode alignée (L1-08) | Indicateur et écoute permanente, L2-12 |
 | Luminosité −/+ | `brightnessctl -e4 -n2`, ±5 % | Indicateur et retour visuel, L2-29 |
 
 Les touches Lecture, Suivant et Précédent ne sont pas liées : le T14s ne les a pas (D37). F7 (écran)
@@ -230,11 +258,11 @@ et F9 à F12 restent libres.
 
 **La diode de sourdine micro mérite sa ligne.** Une diode qui ne correspond pas à l'état réel du micro est un défaut de confiance, pas un défaut cosmétique — c'est exactement le genre de détail que le principe 3 vise : un signal qui porte une information doit être juste.
 
-**Elle ne suit pas, relevé du 2026-10-15 (D37).** `platform::micmute` suit le contrôle 7 de la carte 1
+**Elle ne suivait pas, relevé du 2026-10-15 (D37).** `platform::micmute` suit le contrôle 7 de la carte 1
 (codec Realtek ALC257, micro analogique), seul contrôle listé dans `/sys/class/sound/ctl-led/mic/` ; la
 source par défaut est le micro numérique `acp6x` (carte 2), relié à aucune diode, et `wpctl` coupe en
-logiciel. Remède retenu pour L1-08 : après `wpctl`, aligner les contrôles listés dans `ctl-led` sur
-l'état obtenu, avec `amixer` (`alsa-utils`), sans droits root ; la ligne de la table changera seule.
+logiciel. Remède, fait à L1-08 (D38) : après `wpctl`, aligner les contrôles listés dans `ctl-led` sur
+l'état obtenu, avec `amixer` (`alsa-utils`), sans droits root — voir la section Audio.
 
 ## Session et compositeur — L1-10 à L1-17
 
@@ -601,6 +629,7 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 | Version | Date | Changement |
 | --- | --- | --- |
 | 0.1 | 2026-10-12 | Version initiale |
+| 1.2 | 2026-10-15 | Audio (L1-08) : `alsa-utils`, persistance `alsactl` active par défaut ; diode du micro alignée par `scripts/sourdine-micro`, à chaque appui de F4 et au démarrage ; vérification du son et du micro ; `scripts/` lié par `make install` (D38) |
 | 1.1 | 2026-10-15 | Raccourcis : table de données contrôlée, rôles, grammaire, bureau `accueil`, touches réservées ; entrée réelle, Compose sur AltGr, disposition dans le fichier machine ; touches matérielles, diode du micro renvoyée à L1-08 avec son relevé ; `donnees/` lié par `make install` ; kitty tient le rôle terminal (D33 à D37) ; `plein-ecran-nu` restreinte au vrai plein écran (D31, suite) |
 | 1.0 | 2026-10-14 | Procédure après fusion : Claude fusionne lui-même, sans `--delete-branch` (D32). Fenêtrage : dwindle, plus de bordure, ombre des flottantes et règles de fenêtre générées, plein écran nu, module `env.lua` réduit à la variable Qt, générique réduit (D28 à D31) |
 | 0.9 | 2026-10-14 | Écran et échelle : fragment machine lu depuis `/etc/hostname`, règle des écrans inconnus, échelle 1,25 retenue après essai de 4/3, écartée pour la règle des pixels entiers, variables Qt d'échelle retirées, vérification par sortie virtuelle |
