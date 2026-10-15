@@ -31,7 +31,7 @@ M.touches = {
     { touches = "SUPER + mouse:273", action = "etirer",  drapeaux = { mouse = true }, description = "Redimensionner la fenêtre à la souris" },
     { touches = "SUPER + mouse_down", action = "bureau", bureau = "e+1", description = "Bureau occupé suivant" },
     { touches = "SUPER + mouse_up",   action = "bureau", bureau = "e-1", description = "Bureau occupé précédent" },
-    -- Touches matérielles, actives écran verrouillé ; la diode du micro relève de L1-08
+    -- Touches matérielles, actives écran verrouillé ; la diode du micro suit la sourdine seule (L1-08, D38)
     { touches = "XF86AudioMute", action = "commande", commande = "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle",
       drapeaux = { locked = true }, description = "Couper ou rétablir le son" },
     { touches = "XF86AudioLowerVolume", action = "commande", commande = "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-",

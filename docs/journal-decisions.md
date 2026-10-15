@@ -587,4 +587,53 @@ Remède retenu pour L1-08, découpage choisi par Nicolas : après `wpctl`, align
 droit d'écrire la diode a été écartée : elle demande un fichier système et des droits root à
 l'installation.
 
+Critère 8 de la spec, constaté le 2026-10-15 : `SUPER + Alt + M`, essayé par Nicolas, ferme la session
+proprement. Le journal montre `uwsm stop` à 17:36:08, Hyprland arrêté en deux secondes, aucun signal
+`SIGKILL` ni délai dépassé, puis une reconnexion par SDDM à 17:36:18.
+
 *Touché : tokens.toml, dunei_theme/emitters/, generated/hyprland-binds.lua, config/hypr/donnees/, config/hypr/modules/clavier.lua, config/hypr/modules/entree.lua, config/hypr/hyprland.lua, config/hypr/machines/caladan.lua, deploy.py, tests/, ~/.config/hypr/generique.lua (hors dépôt), bible (ch. 7, annexe D), carnet, backlog, notes de direction.*
+
+## 2026-10-15 — Audio (L1-08)
+
+### D38 · Diode du micro : la cause était l'absence d'`alsa-utils`
+
+La diode de sourdine suit désormais toute sourdine du micro, sans code DuneI : F4 garde
+`wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle`. `alsa-utils` est installé, et sa persistance
+(`alsa-restore.service`, tiré par `sound.target`) reste active.
+
+Cause : pour un micro numérique ACP sur un codec HDA, le profil UCM d'`alsa-ucm-conf` (`HDA/HDA.conf`)
+crée au démarrage l'interrupteur virtuel `Mic ACP LED Capture Switch`, y rattache la diode et l'en
+détache du `Capture Switch` analogique ; `HDA/HiFi-acp.conf` le déclare interrupteur de sourdine du
+micro numérique, que WirePlumber bascule alors à chaque sourdine. Cette initialisation est exécutée par
+`alsactl restore`, que la règle udev d'`alsa-utils` (`90-alsa-restore.rules`) lance sur la carte HDA
+quand le micro numérique ACP apparaît ; le paquet était absent jusqu'ici : la diode restait attachée au
+`Capture Switch`, que WirePlumber ne touche pas, et le relevé de D37 décrivait cet état incomplet.
+Constaté au premier redémarrage après l'installation : `alsa-restore` à 19:24:08, PipeWire à 19:24:18,
+puis la diode suit `wpctl` seul, dans les deux sens.
+
+Chemin suivi. Le remède retenu à D37 a d'abord été écrit, après repérage des options (règle 2bis,
+D39) : un script `sourdine-micro` qui recopiait l'état de la source sur les contrôles listés sous
+`/sys/class/sound/ctl-led/mic/` avec `amixer`, à chaque appui de F4 et au démarrage de Hyprland. Il a
+été validé à l'écran et relu. Le redémarrage a révélé la vraie cause : le script ne faisait plus
+qu'écrire, juste après WirePlumber, le même interrupteur. Trois options présentées : retirer le pont,
+le garder en filet de sécurité pour d'autres machines, garder la seule action `script` ; Nicolas a
+choisi de le retirer. Le code revient à l'état de `main`, au commentaire de F4 près. Leçon : un relevé
+fait avant l'installation d'un paquet système ne vaut plus après son premier redémarrage.
+
+Conséquences : la limite d'une sourdine posée hors de F4, qui devait revenir à L2-12, disparaît. Le
+niveau du micro numérique, réglé à 100 % et qui sature par moments, est noté pour L2-12.
+
+Vérification : diode instantanée ; micro rétabli, quatre secondes enregistrées à 23 % de niveau moyen,
+crête à 100 % ; micro coupé, silence total ; haut-parleurs gauche et droit justes ; diode du son juste.
+
+*Touché : config/hypr/donnees/raccourcis.lua (commentaire), carnet, backlog, notes de direction.*
+
+### D39 · Repérer les technos avant de choisir
+
+Nicolas ajoute la règle 2bis à la méthode de développement d'une feature : aucune techno n'est imposée
+directement ; chaque choix passe par un repérage des options, jugées sur trois critères, le confort,
+l'intégration et la performance, avec une recommandation. Appliquée dès L1-08 (D38).
+
+Raison : garder la main sur chaque choix technique, comme sur chaque choix visible.
+
+*Touché : CLAUDE.md.*

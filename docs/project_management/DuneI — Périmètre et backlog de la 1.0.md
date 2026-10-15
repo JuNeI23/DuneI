@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.9. Historique en fin de document.
+Version 1.10. Historique en fin de document.
 
 La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **142 éléments** répartis en **cinq lots**, sur six chantiers.
 
@@ -111,13 +111,14 @@ Les sources de vérité et leurs générateurs sont écrits et testés. Ce qui r
 
 Inventaire de ce que le chantier B recouvre. Chaque ligne vient soit d'une spécification de la bible, soit de la moitié « contrôle » de l'ancien chantier G.
 
-Trois natures, qui ne se traitent pas de la même façon et ne se mélangent jamais dans le backlog.
+Trois natures, qui ne se traitent pas de la même façon. Une ligne qui en réunit deux est dite mixte, quatrième ligne du tableau : chacune de ses parties suit l'exigence de sa nature.
 
 | Nature | Ce que c'est | Exigence |
 | --- | --- | --- |
 | **Écrit** | Se conçoit, puis se code | La définition de terminé entière |
 | **Configuré** | Se choisit, puis se règle | La thématisation seulement |
 | **Offert** | Se vérifie | Aucune conception |
+| **Mixte** | Réunit deux natures, par exemple un réglage et une partie écrite | Celle de chaque partie |
 |  |  |  |
 
 ### Fenêtrage
@@ -228,7 +229,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L1-05 | A | Configuré | Gestion des paquets et politique de mise à jour |
 | L1-06 | A | Configuré | Pilotes graphiques et accélération matérielle |
 | L1-07 | A | Offert | Service réseau — vérification |
-| L1-08 | A | Offert | Service audio — vérification ; diode du micro : ne suit pas `wpctl` (relevé du 2026-10-15, D37) — remède retenu : après `wpctl`, aligner les contrôles listés dans `/sys/class/sound/ctl-led/mic/` avec `amixer` (`alsa-utils`), sans droits root |
+| L1-08 | A | Offert | Service audio — vérification — **fait (D38)** : son, micro et haut-parleurs vérifiés ; `alsa-utils` installé, dont `alsactl` exécute l'initialisation UCM qui rattache la diode de sourdine au micro numérique : elle suit toute sourdine, F4 garde `wpctl` seul |
 | L1-09 | A | Offert | Service d'énergie et de veille — vérification ; couvercle fermé avec écran externe : éteindre l'écran interne sans mettre en veille (reporté depuis L1-17, D25) |
 | L1-10 | A | Configuré | Gestionnaire de session et démarrage automatique |
 | L1-11 | B | Configuré | Choisir le compositeur selon les besoins de la bible — **tranché : Hyprland 0.56, configuration Lua** |
@@ -261,7 +262,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L2-09 | B | Écrit | Barre système — horloge, chiffres tabulaires |
 | L2-10 | B | Écrit | Barre système — indicateur de bureaux virtuels |
 | L2-11 | B | Écrit | Indicateur réseau et son popover |
-| L2-12 | B | Écrit | Indicateur audio et son popover — volume, sorties |
+| L2-12 | B | Écrit | Indicateur audio et son popover — volume, sorties ; niveau du micro numérique, qui sature à 100 % (relevé du 2026-10-15, D38) |
 | L2-13 | B | Écrit | Indicateur d'énergie et son popover |
 | L2-14 | B | Écrit | Indicateur Bluetooth et son popover |
 | L2-15 | B | Écrit | Zone d'état des applications tierces |
@@ -386,7 +387,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L5-29 | — | Écrit | Passe de regard complète — étage 3 |
 | L5-30 | — | Écrit | Résorber les points ouverts de l'annexe C |
 
-**Volume total : 142 éléments** — 98 écrits, 36 configurés, 5 offerts, 3 mixtes.
+**Volume total : 142 éléments** — 98 écrits, 37 configurés, 5 offerts, 2 mixtes.
 
 Les deux tiers du travail sont de l'écrit, et les trois quarts de cet écrit se concentrent sur la coque et les écrans système. C'est cohérent avec la stratégie retenue, et c'est là que tout le risque se trouve.
 
@@ -488,6 +489,7 @@ Le choix de la distribution de base et du compositeur, précédemment ouverts, s
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-12 | Version initiale, 137 éléments |
+| 1.10 | 2026-10-15 | L1-08 fait : `alsa-utils` répare la diode du micro ; L2-12 reçoit le niveau du micro ; décompte des natures corrigé (37 configurés, 2 mixtes) ; nature mixte définie |
 | 1.9 | 2026-10-15 | L1-16 fait : raccourcis en données, rôles, grammaire, Compose, touches réservées ; L1-08 reçoit le relevé de la diode du micro ; L2-16, L2-22, L2-28, L2-30 notent leur touche ; ajout de L2-36. 142 éléments |
 | 1.8 | 2026-10-14 | L1-12 à L1-15 faits : dwindle, plus de bordure, ombre des flottantes, plein écran nu, décorations Qt ; L2-03 précisé ; ajout de L2-35. 141 éléments |
 | 1.7 | 2026-10-14 | L1-17 fait : fragment machine, écrans inconnus, échelle 1,25 ; couvercle avec écran externe ajouté à L1-09 |
