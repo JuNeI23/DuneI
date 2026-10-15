@@ -1,6 +1,6 @@
 # Raccourcis : clavier, gestes, bureaux et entrée
 
-Version 0.2 · 2026-10-15 · backlog L1-16 · carnet « Entrée », « Touches matérielles », « Bureaux et raccourcis » · statut : en relecture
+Version 0.2 · 2026-10-15 · backlog L1-16 · carnet « Entrée », « Touches matérielles », « Bureaux et raccourcis » · statut : validée
 
 ## 1. Objet
 
