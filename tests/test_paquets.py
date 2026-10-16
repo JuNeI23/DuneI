@@ -10,6 +10,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+import deploy
 import paquets
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -477,6 +478,16 @@ class MainTest(unittest.TestCase):
             code, _, err, _, _ = self.lancer(tty=True, FAKE_QQ=noms, FAKE_QQE=noms, FAKE_QQETT="zzz")
         self.assertEqual(code, 130)
         self.assertIn("interrompu", err)
+
+
+class CoherenceTest(unittest.TestCase):
+    """Cohérence entre les paquets exigés par deploy.py et ceux que paquets.toml déclare."""
+
+    def test_deploy_exige_des_paquets_declares(self):
+        m, _ = paquets.lire(ROOT)
+        declares = set(m["provisoire"]) | {p for g in m["groupes"].values() for p in g}
+        exiges = set(deploy.PAQUETS.values()) | {paquet for _, paquet, _, _ in deploy.APPLIS}
+        self.assertEqual(exiges - declares, set())
 
 
 if __name__ == "__main__":

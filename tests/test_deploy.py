@@ -19,8 +19,8 @@ GENERIC = "-- Configuration générique de test.\n"
 FOREIGN = "<?xml version=\"1.0\"?>\n<fontconfig/>\n"
 # Faux sudo et faux systemctl : chaque appel est consigné dans $FAKE_LOG. sudo exécute la commande telle
 # quelle, sauf si $FAKE_SUDO_FAIL est posé ; systemctl répond à is-enabled par $FAKE_ENABLED et à
-# is-active par $FAKE_ACTIVE (« active » par défaut). hyprlock, greetd, tuigreet et kitty sont de faux
-# exécutables vides.
+# is-active par $FAKE_ACTIVE (« active » par défaut). hyprlock, greetd, tuigreet, kitty, checkupdates,
+# paccache, pacdiff et informant sont de faux exécutables vides.
 FAKES = {
     "sudo": '#!/bin/sh\necho "sudo $*" >> "$FAKE_LOG"\n[ -z "$FAKE_SUDO_FAIL" ] || exit 1\nexec "$@"\n',
     "systemctl": ('#!/bin/sh\necho "systemctl $*" >> "$FAKE_LOG"\n'
@@ -30,6 +30,10 @@ FAKES = {
     "greetd": "#!/bin/sh\n",
     "tuigreet": "#!/bin/sh\n",
     "kitty": "#!/bin/sh\n",
+    "checkupdates": "#!/bin/sh\n",
+    "paccache": "#!/bin/sh\n",
+    "pacdiff": "#!/bin/sh\n",
+    "informant": "#!/bin/sh\n",
 }
 MASQUE = Path("systemd/user/wayland-session-xdg-autostart@.target")
 LOGIND = Path("etc/systemd/logind.conf.d/10-dunei.conf")
@@ -40,8 +44,8 @@ OLD_OWN = "<?xml version=\"1.0\"?>\n<!-- GÉNÉRÉ depuis tokens.toml — NE PAS
 
 
 def run(cfg: Path, *args: str) -> subprocess.CompletedProcess:
-    """Lance deploy.py avec XDG_CONFIG_HOME pointant sur un dossier temporaire."""
-    env = {**os.environ, "XDG_CONFIG_HOME": str(cfg)}
+    """Lance deploy.py avec XDG_CONFIG_HOME et XDG_BIN_HOME pointant sur des dossiers temporaires."""
+    env = {**os.environ, "XDG_CONFIG_HOME": str(cfg), "XDG_BIN_HOME": str(cfg.parent / "local-bin")}
     return subprocess.run([sys.executable, str(ROOT / "deploy.py"), *args],
                           capture_output=True, text=True, cwd=ROOT, env=env)
 
@@ -66,6 +70,7 @@ class DeployTest(unittest.TestCase):
         self.hypr = self.cfg / "hypr"
         self.fc = self.cfg / "fontconfig" / "conf.d" / "50-dunei.conf"
         self.kitty = self.cfg / "kitty" / "kitty.conf"
+        self.bin = Path(self.tmp.name) / "local-bin"
         t = Path(self.tmp.name)
         self.root, self.log, fake = t / "racine", t / "journal", t / "bin"
         fake.mkdir()
@@ -73,7 +78,7 @@ class DeployTest(unittest.TestCase):
             (fake / name).write_text(body, encoding="utf-8")
             (fake / name).chmod(0o755)
         self.fake = fake
-        self.env = mock.patch.dict(os.environ, {"DUNEI_SYSROOT": str(self.root), "FAKE_LOG": str(self.log),
+        self.env = mock.patch.dict(os.environ, {"DUNEI_SYSROOT": str(self.root), "XDG_BIN_HOME": str(self.bin), "FAKE_LOG": str(self.log),
                                                 "FAKE_ENABLED": "enabled", "PATH": f"{fake}:{os.environ['PATH']}"})
         self.env.start()
         (self.root / DM).parent.mkdir(parents=True)
@@ -366,6 +371,36 @@ class DeployTest(unittest.TestCase):
         self.hypr.mkdir(parents=True)
         (self.hypr / "hypridle.conf").write_text("general {\n}\n", encoding="utf-8")
         self.assert_refused("hypridle.conf")
+
+    def test_bin_lie_dunei_maj(self):
+        self.assertEqual(run(self.cfg).returncode, 0)
+        self.assertEqual(os.readlink(self.bin / "dunei-maj"), str(ROOT / "config" / "bin" / "dunei-maj"))
+
+    def test_bin_fichier_etranger_refuse(self):
+        self.bin.mkdir()
+        (self.bin / "dunei-maj").write_text("#!/bin/sh\n", encoding="utf-8")
+        before = snapshot(self.bin)
+        res = run(self.cfg)
+        self.assertEqual(res.returncode, 1, res.stdout)
+        self.assertIn("dunei-maj", res.stderr)
+        self.assertEqual(snapshot(self.bin), before)
+        self.assertFalse(self.cfg.exists())
+
+    def test_maj_outil_absent(self):
+        (self.fake / "pacdiff").unlink()
+        res = self.deploy_with_path(f"{self.fake}:/nonexistent")
+        self.assertEqual(res.returncode, 1, res.stdout)
+        self.assertIn("pacdiff introuvable", res.stderr)
+        self.assertIn("pacman-contrib", res.stderr)
+
+    def test_maj_active_le_minuteur(self):
+        with mock.patch.dict(os.environ, {"FAKE_ENABLED": "disabled"}):
+            self.assertEqual(run(self.cfg).returncode, 0)
+        self.assertIn("sudo systemctl enable --now dunei-precharge.timer", self.journal())
+
+    def test_maj_minuteur_deja_actif(self):
+        self.assertEqual(run(self.cfg).returncode, 0)
+        self.assertNotIn("sudo systemctl enable --now dunei-precharge.timer", self.journal())
 
     def test_enables_hypridle_when_disabled(self):
         with mock.patch.dict(os.environ, {"FAKE_ENABLED": "disabled"}):

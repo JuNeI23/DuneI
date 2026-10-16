@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# dunei-maj — mise à jour de DuneI (squelette, rempli à la tâche 7).
+# Rôle : orchestrer la mise à jour du système et de la configuration.
+exit 0
