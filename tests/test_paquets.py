@@ -44,6 +44,23 @@ class LireTest(unittest.TestCase):
         self.assertEqual(modele["provisoire"], {})
         self.assertEqual(modele["materiel"], {"processeur": {}, "graphique": {}})
 
+    def test_section_de_premier_niveau_inconnue(self):
+        modele, err = self.lire('[groupe]\nsocle = ["base"]\n[groupes]\nsocle = ["base"]\n')
+        self.assertEqual(modele, {})
+        self.assertTrue(any("paquets.toml" in e and "« groupe »" in e for e in err), err)
+
+    def test_genre_materiel_inconnu(self):
+        modele, err = self.lire('[groupes]\nsocle = ["base"]\n[materiel.graphiques.amd]\npaquets = ["x"]\n')
+        self.assertEqual(modele, {})
+        self.assertTrue(any("paquets.toml" in e and "materiel.graphiques" in e for e in err), err)
+
+    def test_groupes_absent_ou_vide(self):
+        for corps in ("", "[groupes]\n"):
+            with self.subTest(corps=corps):
+                modele, err = self.lire(corps)
+                self.assertEqual(modele, {})
+                self.assertTrue(any("paquets.toml" in e and "groupes" in e for e in err), err)
+
     def test_version_inattendue(self):
         modele, err = self.lire("", entete='version = "9"\ndepots = ["core", "extra"]\n')
         self.assertEqual(modele, {})
@@ -69,7 +86,7 @@ class LireTest(unittest.TestCase):
         self.assertTrue(any("mesa" in e for e in err))
 
     def test_materiel_partage_permis(self):
-        _, err = self.lire('[materiel.graphique.amd]\npaquets = ["x"]\n[materiel.graphique.intel]\npaquets = ["x"]\n')
+        _, err = self.lire('[groupes]\nsocle = ["base"]\n[materiel.graphique.amd]\npaquets = ["x"]\n[materiel.graphique.intel]\npaquets = ["x"]\n')
         self.assertEqual(err, [])
 
     def test_nom_vide(self):
@@ -410,13 +427,13 @@ class MainTest(unittest.TestCase):
                                                        FAKE_QQ="zzz", FAKE_QQE="zzz", FAKE_QQETT="zzz")
         self.assertEqual(code, 3)
         self.assertEqual(questions, [])
-        self.assertIn("informant read", err)
+        self.assertIn("sudo informant read", err)
         self.assertEqual(len(journal.splitlines()), 1)
 
     def test_echec_de_la_premiere_commande_arrete_la_suivante(self):
         code, _, err, _, journal = self.lancer(FAKE_SUDO_CODE="1")
         self.assertEqual(code, 1)
-        self.assertIn("informant read", err)
+        self.assertIn("sudo informant read", err)
         self.assertEqual(len(journal.splitlines()), 1)
 
     def test_base_non_synchronisee_rend_1_sans_trace(self):
@@ -447,7 +464,7 @@ class MainTest(unittest.TestCase):
             FAKE_QQ=noms, FAKE_QQE=noms, FAKE_QQETT="zzz")
         self.assertEqual(code, 4)
         self.assertEqual(questions, ["Marquer ces 1 paquets comme dépendances ? [o/N] "])
-        self.assertIn("informant read", err)
+        self.assertIn("sudo informant read", err)
         self.assertNotIn("-Rns", journal)
 
     def test_detection_incomplete_ne_propose_aucun_retrait(self):

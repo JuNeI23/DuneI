@@ -263,10 +263,11 @@ def plan_bin(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
     """Inspection des exécutables de l'utilisateur, sans aucune modification.
 
     Entrées : repo — racine du dépôt ; home — dossier de configuration racine, inutilisé ici.
-    Sortie : (création de bin_home si absent, puis lien de chaque fichier de config/bin/ qui en manque ; erreurs).
+    Sortie : (création de bin_home si absent, puis lien de chaque fichier de config/bin/ qui en manque ;
+             puis un signalement ("chemin") si bin_home ne figure pas dans $PATH, qui n'empêche rien ; erreurs).
     Erreurs : aucune exception ; fichier non exécutable, dossier qui n'en est pas un, fichier ou lien
               étranger à la place du lien deviennent des messages.
-    Dépendances : bin_home, _links_to, os.access, BIN.
+    Dépendances : bin_home, _links_to, os.access, os.environ, BIN.
     """
     dest, actions, err = bin_home(os.environ), [], []
     sources = sorted(p for p in (repo / BIN).glob("*") if p.is_file())
@@ -283,6 +284,8 @@ def plan_bin(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
                 err.append(f"{link} existe mais n'est pas un lien vers {src} : le déplacer, puis relancer")
         else:
             actions.append(("link", src, link))
+    if sources and str(dest) not in os.environ.get("PATH", "").split(os.pathsep):
+        actions.append(("chemin", dest))
     return actions, err
 
 
@@ -460,6 +463,7 @@ def plan_services(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
     return actions, err
 
 
+NOTES = ("hors-liste", "chemin")  # Signalements affichés après le bilan : ils n'agissent pas et ne bloquent pas.
 DESTINATIONS = {"hypr": plan_hypr, "fontconfig": plan_fontconfig, "applis": plan_applis,
                 "bin": plan_bin, "services": plan_services, "systeme": plan_systeme, "maj": plan_maj,
                 "connexion": plan_connexion}  # Nom → planification, dans l'ordre d'exécution (sudo en dernier).
@@ -507,6 +511,7 @@ def describe(action: tuple) -> str:
         "start": "démarrer {0}",
         "enable": "activer et démarrer {0}",
         "restart": "redémarrer {0}",
+        "chemin": "{0} ne figure pas dans le PATH : ajouter ce dossier au PATH de ton shell pour joindre dunei-maj",
         "hors-liste": "{0} est accroché à la session sans figurer dans session.toml ; laissé en place",
     }[kind].format(*args)
 
@@ -592,8 +597,8 @@ def main() -> int:
                 print("La configuration utilisateur est installée ; seuls les fichiers système restent à poser : "
                       "relancer make install dans un terminal.", file=sys.stderr)
             return 1
-    notes = [a for a in actions if a[0] == "hors-liste"]
-    actions = [a for a in actions if a[0] != "hors-liste"]
+    notes = [a for a in actions if a[0] in NOTES]
+    actions = [a for a in actions if a[0] not in NOTES]
     for a in actions:
         print(f"  {'prévu' if args.dry_run else 'fait'} : {describe(a)}")
     print(f"\n{home} : {len(actions)} action(s) {'prévue(s)' if args.dry_run else 'effectuée(s)'}.")

@@ -26,6 +26,8 @@ from pathlib import Path
 
 FICHIER = "paquets.toml"                 # Source unique des paquets, à la racine du dépôt.
 VERSION = "0.1.0"                        # Version du format de paquets.toml.
+CLES = {"version", "depots", "groupes", "provisoire", "materiel", "machines"}   # Clés admises au premier niveau.
+GENRES = ("processeur", "graphique")     # Tables admises sous materiel.
 HOTE = re.compile(r"[A-Za-z0-9-]+")      # Nom d'hôte accepté (D24).
 CARTE = re.compile(r"card\d+")           # Une carte de /sys/class/drm, à l'exclusion de ses connecteurs.
 PROCESSEURS = {"AuthenticAMD": "amd", "GenuineIntel": "intel"}            # vendor_id de cpuinfo → fabricant.
@@ -39,7 +41,8 @@ def lire(repo: Path) -> tuple[dict, list[str]]:
     Sortie : (modèle, erreurs). Le modèle est {"depots", "groupes", "provisoire", "materiel":
              {"processeur", "graphique"}, "machines"}, les tables matérielles et de machines aplaties
              en dict[str, list[str]] ; il est vide ({}) dès qu'une erreur existe.
-    Erreurs : aucune exception ; fichier illisible, version ou dépôts inattendus, nom vide ou qui n'est
+    Erreurs : aucune exception ; fichier illisible, version ou dépôts inattendus, clé inconnue au premier
+              niveau ou dans materiel, table groupes absente ou vide, nom vide ou qui n'est
               pas une chaîne, nom déclaré deux fois, liste matérielle qui répète un nom commun,
               provisoire sans élément de backlog deviennent des messages. Dépendances : tomllib, FICHIER, VERSION.
     """
@@ -51,6 +54,11 @@ def lire(repo: Path) -> tuple[dict, list[str]]:
     err = []
     if raw.get("version") != VERSION:
         err.append(f"{FICHIER} : version « {raw.get('version')} », {VERSION} attendue")
+    err += [f"{FICHIER} : clé « {k} » inconnue" for k in raw if k not in CLES]
+    if isinstance(raw.get("materiel"), dict):
+        err += [f"{FICHIER} : clé « materiel.{k} » inconnue" for k in raw["materiel"] if k not in GENRES]
+    if not (isinstance(raw.get("groupes"), dict) and raw["groupes"]):
+        err.append(f"{FICHIER} : la table « groupes » est absente ou vide")
     depots = raw.get("depots")
     if not (isinstance(depots, list) and depots and all(isinstance(d, str) and d.strip() for d in depots)):
         err.append(f"{FICHIER} : depots doit être une liste non vide de noms de dépôts")
@@ -74,7 +82,7 @@ def lire(repo: Path) -> tuple[dict, list[str]]:
 
     groupes = dict(table("groupes"))
     provisoire = dict(table("provisoire"))
-    materiel = {k: aplatir(table("materiel", k)) for k in ("processeur", "graphique")}
+    materiel = {k: aplatir(table("materiel", k)) for k in GENRES}
     machines = aplatir(table("machines"))
     for nom, liste in groupes.items():
         if not isinstance(liste, list):
@@ -265,7 +273,7 @@ def agir(cmd: list[str]) -> int:
         return 1
     if code:
         print(f"erreur : {' '.join(['sudo', *cmd])} a échoué (code {code}). "
-              "Si informant a bloqué la transaction : informant read, puis relancer.", file=sys.stderr)
+              "Si informant a bloqué la transaction : sudo informant read, puis relancer.", file=sys.stderr)
     return code
 
 

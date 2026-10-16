@@ -386,6 +386,29 @@ class DeployTest(unittest.TestCase):
         self.assertEqual(snapshot(self.bin), before)
         self.assertFalse(self.cfg.exists())
 
+    def test_bin_hors_du_path_avertit_sans_bloquer(self):
+        res = run(self.cfg, "--dry-run")
+        self.assertEqual(res.returncode, 0, res.stderr)
+        self.assertIn(f"attention : {self.bin} ne figure pas dans le PATH", res.stdout)
+        self.assertIn("ajouter ce dossier au PATH", res.stdout)
+
+    def test_bin_dans_le_path_sans_avertissement(self):
+        with mock.patch.dict(os.environ, {"PATH": f"{self.bin}{os.pathsep}{os.environ['PATH']}"}):
+            res = run(self.cfg, "--dry-run")
+        self.assertEqual(res.returncode, 0, res.stderr)
+        self.assertNotIn("ne figure pas dans le PATH", res.stdout)
+
+    def test_bin_non_executable_refuse(self):
+        repo = Path(self.tmp.name) / "depot"
+        (repo / "config" / "bin").mkdir(parents=True)
+        script = repo / "config" / "bin" / "dunei-maj"
+        script.write_text("#!/bin/sh\n", encoding="utf-8")
+        script.chmod(0o644)
+        actions, err = deploy.plan_bin(repo, self.cfg)
+        self.assertEqual(len(err), 1)
+        self.assertIn("n'est pas exécutable", err[0])
+        self.assertIn(str(script), err[0])
+
     def test_maj_outil_absent(self):
         (self.fake / "pacdiff").unlink()
         res = self.deploy_with_path(f"{self.fake}:/nonexistent")

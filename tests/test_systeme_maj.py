@@ -1,7 +1,9 @@
 """Fichiers système des mises à jour — règle de cache de pacman, service et minuteur de préchargement."""
 
+import os
 import shutil
 import subprocess
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -46,6 +48,26 @@ class SystemeMajTest(unittest.TestCase):
         cond = next(x for x in l if x.startswith("ExecCondition="))
         self.assertIn("Metered", cond)
         self.assertIn("$$", cond)
+
+    def test_type_et_code_de_sortie(self):
+        l = lignes(SERVICE)
+        self.assertIn("Type=oneshot", l)
+        self.assertIn("SuccessExitStatus=2", l)
+
+    def test_abstention_sur_connexion_mesuree(self):
+        """Exécute l'ExecCondition avec un faux busctl : sortie 1 pour « u 1 » et « u 3 », 0 sinon."""
+        cond = next(x for x in lignes(SERVICE) if x.startswith("ExecCondition=")).removeprefix("ExecCondition=")
+        cond = cond.replace("$$", "$")
+        with tempfile.TemporaryDirectory() as d:
+            faux = Path(d) / "busctl"
+            faux.write_text('#!/bin/sh\nprintf "%s" "$FAKE_METERED"\n', encoding="utf-8")
+            faux.chmod(0o755)
+            env = {**os.environ, "PATH": f"{d}{os.pathsep}{os.environ['PATH']}"}
+            for rep, code in (("u 1", 1), ("u 3", 1), ("u 4", 0), ("u 2", 0), ("", 0), ("illisible", 0)):
+                with self.subTest(reponse=rep):
+                    r = subprocess.run(["/bin/sh", "-c", cond.removeprefix("/usr/bin/sh -c ").strip("'")],
+                                       env={**env, "FAKE_METERED": rep})
+                    self.assertEqual(r.returncode, code)
 
     @unittest.skipUnless(shutil.which("systemd-analyze") and Path("/usr/bin/checkupdates").exists(),
                          "systemd-analyze et /usr/bin/checkupdates requis")
