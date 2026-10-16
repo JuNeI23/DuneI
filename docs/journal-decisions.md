@@ -840,3 +840,21 @@ modèle signe ce qu'il a écrit, sans réécriture d'historique.
 Raison : l'attribution reste exacte, et elle dit quel modèle a produit quel changement.
 
 *Touché : CLAUDE.md.*
+
+### D48 · shellcheck dans `make test`
+
+Les scripts shell de DuneI (`config/hypr/scripts/`, deux depuis L1-09) sont analysés par `shellcheck`, au
+niveau le plus strict (`--severity=style`), par `tests/test_shellcheck.py`, lancé avec `make test`. Le test
+est sauté, avec le paquet à installer, sur une machine qui n'a pas l'outil, comme les tests Lua sans
+interpréteur. Les deux scripts actuels passent sans remarque.
+
+Trois options présentées : le paquet officiel avec ses bibliothèques Haskell (55 paquets, environ 207 Mio),
+`shellcheck-bin` depuis l'AUR (un exécutable autonome, mises à jour à la main, faute d'assistant AUR), ou
+aucun outil. Nicolas a installé le paquet officiel.
+
+Raison : les tests vérifient ce que font les scripts, pas les pièges du shell qu'ils ne déclenchent pas
+(guillemets, variables vides, syntaxe hors POSIX) ; l'outil les relit en une seconde à chaque modification.
+Le paquet officiel est signé et suit `pacman -Syu`.
+
+*Touché : tests/test_shellcheck.py, carnet.*
+

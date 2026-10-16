@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.4. Historique en fin de document.
+Version 1.5. Historique en fin de document.
 
 Socle amorçable.
 
@@ -577,7 +577,10 @@ fontconfig
 noto-fonts noto-fonts-cjk noto-fonts-emoji
 ```
 
-Outils de développement de la chaîne de thème : `make`, `python-pillow`, `python-numpy` (extraction de teinte et ses tests), `lua` (vérification des modules générés).
+Outils de développement de la chaîne de thème : `make`, `python-pillow`, `python-numpy` (extraction de teinte et ses tests), `lua` (vérification des modules générés), `shellcheck` (analyse des scripts de `config/hypr/scripts/`,
+lancée par `make test` ; le test est sauté si l'outil manque). `shellcheck` vient du dépôt officiel et tire
+ses bibliothèques Haskell d'exécution, `ghc-libs` et `haskell-*` : 55 paquets, environ 207 Mio, sans
+compilateur (D48).
 
 Plus les deux familles du système, **depuis les dépôts officiels Arch** — aucune police n'est versionnée dans notre dépôt :
 
@@ -736,6 +739,7 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 | Version | Date | Changement |
 | --- | --- | --- |
 | 0.1 | 2026-10-12 | Version initiale |
+| 1.5 | 2026-10-16 | `shellcheck` ajouté aux outils de développement, lancé par `make test` (D48) |
 | 1.4 | 2026-10-16 | Énergie et veille (L1-09) : `hypridle` et `hyprlock` installés, `energie.toml` et `make energie`, échelle à quatre paliers, scripts, `hyprlock.conf` provisoire, fichier logind déployé par `make install`, couvercle partagé entre logind et `couvercle.lua`, `SUPER + L` ; relevé de décharge (0,42 % par heure) et sa procédure ; sommeil profond inexistant (`s2idle` seul) ; piège de `dpms` ; recette avec écran externe en attente (D41 à D46) ; `hypridle --quiet`, dépendance à uwsm, paquets d'exécution, clavier en veille |
 | 1.3 | 2026-10-15 | Réseau (L1-07) : NetworkManager et `wpa_supplicant` conservés, `wireless-regdb` et `iw` installés, carte *self-managed*, vérification de la connexion et de la reconnexion ; touches mode avion et rétroéclairage du clavier, actives sans raccourci (D40) |
 | 1.2 | 2026-10-15 | Audio (L1-08) : `alsa-utils` installé, dont `alsactl` exécute l'initialisation UCM qui rattache la diode du micro au micro numérique ; F4 garde `wpctl` seul ; vérification du son et du micro (D38) ; `donnees/` ajouté à l'arborescence |
