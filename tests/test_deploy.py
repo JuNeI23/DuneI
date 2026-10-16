@@ -8,7 +8,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from deploy import COPIES, config_home, plan
+from deploy import COPIES, config_home, lire_session, plan
 
 ROOT = Path(__file__).resolve().parent.parent
 GENERIC = "-- Configuration générique de test.\n"
@@ -23,6 +23,7 @@ FAKES = {
                   '*is-active*) [ "${FAKE_ACTIVE:-active}" = active ] ;; esac\n'),
     "hyprlock": "#!/bin/sh\n",
 }
+MASQUE = Path("systemd/user/wayland-session-xdg-autostart@.target")
 LOGIND = Path("etc/systemd/logind.conf.d/10-dunei.conf")
 OLD_OWN = "<?xml version=\"1.0\"?>\n<!-- GÉNÉRÉ depuis tokens.toml — NE PAS MODIFIER À LA MAIN -->\n<fontconfig/>\n"
 
@@ -100,8 +101,8 @@ class DeployTest(unittest.TestCase):
         self.assertEqual(os.readlink(self.hypr / "scripts"), str(ROOT / "config" / "hypr" / "scripts"))
 
     def test_copies_hyprland_files(self):
-        """Hyprland lit ces quatre fichiers générés : un oubli dans COPIES casserait tout le point d'entrée."""
-        self.assertEqual(set(COPIES), {"hyprland-tokens.lua", "hyprland-rules.lua", "hyprland-binds.lua", "motion.lua"})
+        """Hyprland lit ces cinq fichiers générés : un oubli dans COPIES casserait tout le point d'entrée."""
+        self.assertEqual(set(COPIES), {"hyprland-tokens.lua", "hyprland-rules.lua", "hyprland-binds.lua", "motion.lua", "energie.lua"})
 
     def test_config_home(self):
         self.assertEqual(config_home({"XDG_CONFIG_HOME": "/x", "HOME": "/h"}), Path("/x"))
@@ -319,10 +320,63 @@ class DeployTest(unittest.TestCase):
         dropin = self.cfg / "systemd/user/hypridle.service.d/10-dunei.conf"
         self.assertIn("ExecStart=/usr/bin/hypridle --quiet", dropin.read_text(encoding="utf-8"))
         calls = [l for l in self.journal() if l.startswith("systemctl --user") and "is-" not in l]
-        self.assertEqual(calls, ["systemctl --user daemon-reload", "systemctl --user restart hypridle.service"])
+        self.assertEqual(calls, ["systemctl --user daemon-reload", "systemctl --user restart hypridle.service",
+                                 "systemctl --user restart nm-applet.service"])
         self.log.unlink()
         self.assertEqual(run(self.cfg).returncode, 0)
         self.assertEqual([l for l in self.journal() if "is-" not in l], [])
+
+    def write_session(self, body: str) -> Path:
+        """Dépôt factice : copie du dépôt réel limitée à session.toml, pour lire_session."""
+        repo = Path(self.tmp.name) / "depot"
+        repo.mkdir(exist_ok=True)
+        (repo / "session.toml").write_text(body, encoding="utf-8")
+        return repo
+
+    def test_session_real_list(self):
+        self.assertEqual(lire_session(ROOT), (["hypridle.service", "nm-applet.service"], []))
+
+    def test_session_refusals(self):
+        for body, word in (('version = "0.1.0"\n[demarrage]\nservices = []\n', "non vide"),
+                           ('version = "0.1.0"\n[demarrage]\nservices = ["nm-applet"]\n', "nm-applet"),
+                           ('version = "0.1.0"\n[demarrage]\nservices = ["a.service", "a.service"]\n', "deux fois"),
+                           ('version = "9"\n[demarrage]\nservices = ["a.service"]\n', "version"),
+                           ("services = [\n", "illisible")):
+            with self.subTest(attendu=word):
+                services, err = lire_session(self.write_session(body))
+                self.assertEqual(services, [])
+                self.assertTrue(any(word in e for e in err), err)
+
+    def test_masks_xdg_autostart_once(self):
+        self.assertEqual(run(self.cfg).returncode, 0)
+        self.assertEqual(os.readlink(self.cfg / MASQUE), "/dev/null")
+        self.log.unlink()
+        self.assertEqual(run(self.cfg).returncode, 0)
+        self.assertNotIn("systemctl --user daemon-reload", self.journal())
+
+    def test_refuses_foreign_mask_path(self):
+        (self.cfg / MASQUE).parent.mkdir(parents=True)
+        (self.cfg / MASQUE).write_text("[Unit]\n", encoding="utf-8")
+        self.assert_refused("autostart")
+
+    def test_deploys_and_enables_nm_applet(self):
+        with mock.patch.dict(os.environ, {"FAKE_ENABLED": "disabled"}):
+            self.assertEqual(run(self.cfg).returncode, 0)
+        unit = self.cfg / "systemd/user/nm-applet.service"
+        self.assertEqual(unit.read_bytes(), (ROOT / "config/systemd/user/nm-applet.service").read_bytes())
+        calls = [l for l in self.journal() if l.startswith("systemctl --user") and "is-" not in l]
+        self.assertEqual(calls[0], "systemctl --user daemon-reload")
+        self.assertIn("systemctl --user enable --now nm-applet.service", calls)
+
+    def test_reports_unit_outside_list(self):
+        wants = self.cfg / "systemd/user/graphical-session.target.wants"
+        wants.mkdir(parents=True)
+        (wants / "waybar.service").symlink_to("/usr/lib/systemd/user/waybar.service")
+        res = run(self.cfg)
+        self.assertEqual(res.returncode, 0, res.stderr)
+        self.assertIn("attention", res.stdout)
+        self.assertIn("waybar.service", res.stdout)
+        self.assertTrue((wants / "waybar.service").is_symlink())
 
     def test_dropin_change_triggers_reload_and_restart(self):
         run(self.cfg)
@@ -361,7 +415,7 @@ class DeployTest(unittest.TestCase):
         with mock.patch.dict(os.environ, {"FAKE_ENABLED": "not-found"}):
             res = run(self.cfg)
         self.assertEqual(res.returncode, 1)
-        self.assertIn("pacman -S hypridle", res.stderr)
+        self.assertIn("hypridle.service introuvable", res.stderr)
         self.assertEqual(snapshot(self.cfg), before)
 
 

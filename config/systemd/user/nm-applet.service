@@ -1,0 +1,16 @@
+# Applette réseau dans la session graphique de DuneI (L1-10), membre de la liste blanche de session.toml.
+# Posé par DuneI depuis config/ — NE PAS MODIFIER À LA MAIN : make install le remplace.
+# Modèle d'unité graphique d'uwsm : liée à graphical-session.target, arrêtée avant le compositeur.
+[Unit]
+Description=Applette réseau NetworkManager
+PartOf=graphical-session.target
+After=graphical-session.target
+
+[Service]
+Type=exec
+ExecStart=/usr/bin/nm-applet
+Restart=on-failure
+Slice=app-graphical.slice
+
+[Install]
+WantedBy=graphical-session.target
