@@ -5,6 +5,7 @@ paquets.toml est la seule source (L1-02, L1-05) : des groupes communs, des paque
 au backlog, des listes choisies par le matériel détecté et des listes propres à une machine.
 
 - détection : processeur et cartes graphiques sont lus sous une racine, le nom d'hôte dans etc/hostname.
+- contrôle et plan : dépôts et noms vérifiés, écart entre le voulu et l'installé en cinq catégories.
 - lecture : paquets.toml est lu et contrôlé (version, dépôts, noms, unicité) ; une seule erreur
   suffit à tout refuser.
 
@@ -14,6 +15,7 @@ au backlog, des listes choisies par le matériel détecté et des listes propres
 from __future__ import annotations
 
 import re
+import subprocess
 import tomllib
 from collections.abc import Mapping
 from pathlib import Path
@@ -162,3 +164,61 @@ def voulus(modele: dict, hote: str | None, processeurs: set[str], cartes: set[st
     else:
         avert.append(f"aucune section de machine pour « {hote} » : groupes communs seulement")
     return voulus_, avert
+
+
+def controler(modele: dict, depots_configures: list[str], noms_sync: set[str]) -> list[str]:
+    """Contrôle des dépôts configurés et des noms déclarés.
+
+    Entrée : modele — sortie de lire ; depots_configures — dépôts de pacman-conf ; noms_sync — noms
+             connus des dépôts admis (pacman -Sl).
+    Sortie : liste d'erreurs, vide si tout va bien. Les noms vérifiés sont tous les noms déclarés : groupes,
+             provisoires, listes matérielles de tous les fabricants et sections de toutes les machines.
+    Erreurs : aucune exception ; dépôt hors de modele["depots"], noms introuvables, ou base jamais
+              synchronisée (noms_sync vide, une seule erreur) deviennent des messages. Dépendances : aucune.
+    """
+    err = [f"dépôt « {d} » non admis : retirer sa section de /etc/pacman.conf"
+           for d in depots_configures if d not in modele["depots"]]
+    if not noms_sync:
+        return err + ["base de paquets non synchronisée : lancer sudo pacman -Syu"]
+    declares = {n for l in (*modele["groupes"].values(), *modele["machines"].values(),
+                            *(l for m in modele["materiel"].values() for l in m.values())) for n in l}
+    inconnus = sorted((declares | set(modele["provisoire"])) - noms_sync)
+    return err + ([f"introuvables dans {', '.join(modele['depots'])} : {', '.join(inconnus)}"] if inconnus else [])
+
+
+def calculer(voulus: set[str], installes: set[str], explicites: set[str], non_requis: set[str],
+             orphelins: set[str]) -> dict[str, list[str]]:
+    """Plan en cinq catégories (spec 3.4).
+
+    Entrée : voulus — sortie de voulus ; installes — pacman -Qq ; explicites — pacman -Qqe ;
+             non_requis — pacman -Qqett ; orphelins — pacman -Qqdt.
+    Sortie : dict de listes triées : manquants (voulus non installés), a_expliciter (voulus installés comme
+             dépendances), excedent_requis (explicites non voulus que quelque chose requiert),
+             excedent_libre (explicites non voulus que rien ne requiert), orphelins (hors voulus).
+    Erreurs : aucune. Dépendances : aucune.
+    """
+    exces = explicites - voulus
+    return {"manquants": sorted(voulus - installes), "a_expliciter": sorted((voulus & installes) - explicites),
+            "excedent_requis": sorted(exces - non_requis), "excedent_libre": sorted(exces & non_requis),
+            "orphelins": sorted(orphelins - voulus)}
+
+
+def etat() -> tuple[list[str], set[str], set[str], set[str], set[str], set[str]]:
+    """État de pacman, seule fonction qui l'interroge.
+
+    Entrée : aucune.
+    Sortie : (dépôts configurés, noms des dépôts admis, installés, explicites, explicites non requis,
+             orphelins), lus par pacman-conf --repo-list, pacman -Sl, -Qq, -Qqe, -Qqett et -Qqdt.
+    Erreurs : RuntimeError lisible (commande, code, message) si une commande échoue autrement que par le
+              code 1 à sortie vide, réponse de pacman quand rien ne correspond. Le programme appelant
+              l'affiche au lieu d'une trace. Dépendances : pacman, pacman-conf, DEPOTS, subprocess.
+    """
+    def lignes(*cmd: str) -> list[str]:
+        """Lignes de sortie de la commande ; [] pour le code 1 sans sortie."""
+        r = subprocess.run(cmd, capture_output=True, text=True)
+        if r.returncode and not (r.returncode == 1 and not r.stdout.strip()):
+            raise RuntimeError(f"{' '.join(cmd)} a échoué (code {r.returncode}) : {r.stderr.strip()}")
+        return [l for l in r.stdout.splitlines() if l.strip()]
+
+    sync = {l.split()[1] for l in lignes("pacman", "-Sl", *DEPOTS)}
+    return (lignes("pacman-conf", "--repo-list"), sync, *(set(lignes("pacman", o)) for o in ("-Qq", "-Qqe", "-Qqett", "-Qqdt")))

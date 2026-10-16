@@ -1,8 +1,10 @@
 """Paquets — lecture et contrôle de paquets.toml, dans des dossiers temporaires."""
 
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 import paquets
 
@@ -84,10 +86,6 @@ class LireTest(unittest.TestCase):
             modele, err = paquets.lire(Path(d))
         self.assertEqual(modele, {})
         self.assertTrue(any("illisible" in e for e in err))
-
-
-if __name__ == "__main__":
-    unittest.main()
 
 
 class MaterielTest(unittest.TestCase):
@@ -172,3 +170,70 @@ class VoulusTest(unittest.TestCase):
     def test_aucune_carte_avertit(self):
         _, avert = paquets.voulus(self.m, "caladan", {"amd"}, set())
         self.assertTrue(any("aucune carte graphique" in a for a in avert))
+
+
+class ControleTest(unittest.TestCase):
+    def setUp(self):
+        self.m = {"depots": ["core", "extra"], "groupes": {"base": ["vim"]}, "provisoire": {"wofi": "L2-16"},
+                  "materiel": {"processeur": {"amd": ["amd-ucode"]}, "graphique": {"intel": ["vulkan-intel"]}},
+                  "machines": {"caladan": ["steam"]}}
+        self.tous = {"vim", "wofi", "amd-ucode", "vulkan-intel", "steam"}
+
+    def test_depot_tiers(self):
+        err = paquets.controler(self.m, ["core", "extra", "chaotic-aur"], self.tous)
+        self.assertEqual(len(err), 1)
+        self.assertIn("chaotic-aur", err[0])
+
+    def test_nom_introuvable(self):
+        err = paquets.controler(self.m, ["core"], self.tous - {"vim"})
+        self.assertEqual(len(err), 1)
+        self.assertIn("vim", err[0])
+
+    def test_liste_materielle_absente_de_la_machine(self):
+        err = paquets.controler(self.m, ["core"], self.tous - {"vulkan-intel"})
+        self.assertTrue(any("vulkan-intel" in e for e in err))
+
+    def test_base_vide(self):
+        err = paquets.controler(self.m, ["core"], set())
+        self.assertEqual(len(err), 1)
+        self.assertIn("non synchronisée", err[0])
+
+    def test_tout_va_bien(self):
+        self.assertEqual(paquets.controler(self.m, ["core", "extra"], self.tous), [])
+
+
+class CalculTest(unittest.TestCase):
+    def test_categories(self):
+        p = paquets.calculer(voulus={"a", "b", "c"}, installes={"b", "c", "x", "y", "o"},
+                             explicites={"c", "x", "y"}, non_requis={"y"}, orphelins={"o"})
+        self.assertEqual(p, {"manquants": ["a"], "a_expliciter": ["b"], "excedent_requis": ["x"],
+                             "excedent_libre": ["y"], "orphelins": ["o"]})
+
+    def test_rien_a_faire(self):
+        p = paquets.calculer({"a"}, {"a"}, {"a"}, {"a"}, set())
+        self.assertEqual(p, {k: [] for k in ("manquants", "a_expliciter", "excedent_requis",
+                                              "excedent_libre", "orphelins")})
+
+
+class EtatTest(unittest.TestCase):
+    def etat(self, reponses):
+        """Appelle paquets.etat avec subprocess.run remplacé : reponses associe le début de la commande à (code, sortie, erreur)."""
+        def faux(cmd, **_):
+            code, out, err = reponses.get(cmd[1] if cmd[0] == "pacman" else cmd[0], (0, "", ""))
+            return subprocess.CompletedProcess(cmd, code, out, err)
+        with mock.patch("subprocess.run", side_effect=faux):
+            return paquets.etat()
+
+    def test_lecture_et_code_1_vide(self):
+        r = {"pacman-conf": (0, "core\nextra\n", ""), "-Sl": (0, "core vim 9 \nextra git 2 [installed]\n", ""),
+             "-Qq": (0, "vim\ngit\n", ""), "-Qqe": (0, "vim\n", ""), "-Qqett": (1, "", ""), "-Qqdt": (1, "", "")}
+        self.assertEqual(self.etat(r), (["core", "extra"], {"vim", "git"}, {"vim", "git"}, {"vim"}, set(), set()))
+
+    def test_echec_lisible(self):
+        with self.assertRaises(RuntimeError) as c:
+            self.etat({"-Qq": (2, "", "base verrouillée")})
+        self.assertIn("base verrouillée", str(c.exception))
+
+
+if __name__ == "__main__":
+    unittest.main()
