@@ -1,6 +1,6 @@
 # Installation rejouable : procédure en deux phases, paquets déclarés, mises à jour
 
-Version 0.1 · 2026-10-16 · backlog L1-02 à L1-06 · carnet « Le dépôt », « Installation » · statut : en relecture
+Version 0.2 · 2026-10-16 · backlog L1-02 à L1-06 · carnet « Le dépôt », « Installation » · statut : validée
 
 ## 1. Objet
 
@@ -64,8 +64,15 @@ Arbitrées avec Nicolas le 2026-10-16, à consigner au journal (D53 et suivantes
   jour passe par le cache de `pacman` (3 versions gardées) et le noyau `linux-lts`. Swap : `zram` seul,
   aucune hibernation.
 - **Amorçage (L1-04).** L'existant est ratifié : systemd-boot, UKI par `mkinitcpio`, `linux` et
-  `linux-lts`, `amd-ucode`. Le passage de l'initramfs à `systemd` (`sd-encrypt`) et la question « PIN puis
-  verrou, ou PIN seul » (D49) relèvent de la feature de chiffrement.
+  `linux-lts`, microcode du processeur détecté. Le passage de l'initramfs à `systemd` (`sd-encrypt`) relève
+  de la feature de chiffrement.
+- **Compatibilité avec le verrouillage (D49 à D51).** Le chiffrement ne défait rien : au démarrage, le PIN
+  déverrouille le disque, puis greetd ouvre la session, qui se verrouille aussitôt. D49, D50 et D51 restent
+  en l'état ; le PIN et le mot de passe du verrou sont gardés tous deux (le premier autorise l'allumage, le
+  second l'accès à la session), sous réserve de confirmation dans la feature de chiffrement. La limite
+  connue de D51 (un `demarrage.lua` cassé ouvre la session sans verrou) n'est plus accessible sans le PIN.
+  Deux conséquences pour la suite : l'initramfs doit charger la disposition `uk` avant l'invite du PIN, et
+  cette invite, écran texte brut, est à habiller au lot 5 (amorçage silencieux).
 - **Dépôts (L1-05).** Dépôts officiels seuls (`core`, `extra`). `chaotic-aur` retiré. L'AUR n'est admis que
   par exception écrite au journal, compilée avec `makepkg`, sans assistant tant qu'aucune exception
   n'existe. Claude Code passe par l'installateur officiel d'Anthropic, hors de `pacman`, et se met à jour
@@ -73,14 +80,23 @@ Arbitrées avec Nicolas le 2026-10-16, à consigner au journal (D53 et suivantes
 - **Mises à jour (L1-05).** Une commande, `dunei-maj`, et un préchargement quotidien. Pas d'installation
   sans surveillance : Arch annonce parfois une intervention manuelle, et `informant` bloque toute
   transaction tant qu'une actualité n'est pas lue.
-- **Pilotes (L1-06).** `mesa` et `vulkan-radeon`, rien d'autre, comme le carnet l'avait fixé. Les pilotes
-  Intel, nouveau et les pilotes X (`xf86-video-*`) sont retirés.
+- **Pilotes (L1-06), choisis d'après le matériel détecté.** Aucun pilote n'est attaché à un nom de machine :
+  le fabricant du processeur (`/proc/cpuinfo`) choisit le microcode, celui de chaque carte graphique
+  (identifiant PCI) choisit ses pilotes. `mesa` va dans `session`, Hyprland en a besoin sur tout matériel.
+  Une carte AMD reçoit `vulkan-radeon`, une carte Intel `vulkan-intel` et `intel-media-driver` ; une carte
+  NVIDIA donne un avertissement, aucun pilote n'étant décidé ; une carte inconnue (machine virtuelle)
+  n'ajoute rien. Les pilotes X (`xf86-video-*`) ne sont plus installés nulle part. Prolonge D5 : on détecte
+  ce qui se détecte, la section de machine ne garde que le reste.
 - **Forme de la procédure.** Phase 1 : `archinstall` et une configuration versionnée,
   `setup/archinstall.json`, sans disque ni secret. Phase 2 : `paquets.toml` et `make paquets`, puis
   `make install`. Les scripts `setup/0x-*.sh` et les listes `packages/*.txt` du carnet sont abandonnés au
   profit d'une source unique.
 - **Groupes.** `socle`, `session`, `provisoire` (chaque paquet nomme l'élément du backlog qui le
-  remplacera), `outils` (outils personnels de Nicolas, hors design) et `machines.<nom-d-hôte>`.
+  remplacera), `outils` (outils personnels de Nicolas, hors design), listes `materiel.*` choisies par
+  détection, et `machines.<nom-d-hôte>`, facultatif, pour ce qui ne se détecte pas.
+- **Pare-feu.** `ufw`, actif sur `caladan` sans décision, entre dans `socle` ; ses règles par défaut (entrant
+  refusé, sortant permis) sont relevées et consignées au journal. Sa configuration sera versionnée le jour
+  où une règle s'ajoute.
 - **Machine virtuelle de recette.** `qemu-base`, `edk2-ovmf` et `swtpm` sont installés (groupe `outils`).
   La feature de chiffrement y répétera la procédure avant de toucher `caladan`.
 
@@ -155,16 +171,34 @@ outils  = ["vim", ...]              # outils de Nicolas, hors design, réinstall
 [provisoire]                        # paquet = élément du backlog qui le remplacera
 wofi = "L2-16"
 
-[machines.caladan]                  # choisi par /etc/hostname (D24)
-paquets = ["amd-ucode", ...]
+[materiel.processeur.amd]           # /proc/cpuinfo : vendor_id « AuthenticAMD »
+paquets = ["amd-ucode"]
+[materiel.processeur.intel]         # « GenuineIntel »
+paquets = ["intel-ucode"]
+
+[materiel.graphique.amd]            # /sys/class/drm/card*/device/vendor : 0x1002
+paquets = ["vulkan-radeon"]
+[materiel.graphique.intel]          # 0x8086
+paquets = ["vulkan-intel", "intel-media-driver"]
+[materiel.graphique.nvidia]         # 0x10de : aucun pilote décidé, avertissement
+paquets = []
+
+[machines.caladan]                  # facultatif, choisi par /etc/hostname (D24)
+paquets = ["sof-firmware", ...]
 ```
 
 **Règles :**
 
-- un nom n'apparaît qu'une fois dans tout le fichier, toutes sections confondues ;
+- un nom n'apparaît qu'une fois parmi les groupes communs, `provisoire` et chaque section de machine ; une
+  liste `materiel.*` ne répète aucun d'eux (deux listes matérielles peuvent partager un nom : une machine à
+  deux cartes les reçoit toutes deux) ;
 - un nom est un paquet, pas un groupe `pacman` (`base-devel` serait refusé, ses membres doivent être
   nommés) ;
-- une machine sans section n'applique que les groupes communs ; `make paquets` le signale ;
+- une machine sans section n'applique que les groupes communs et ses listes matérielles ; `make paquets` le
+  signale, sans erreur ;
+- la détection lit les identifiants de fabricant de `/proc/cpuinfo` et de
+  `/sys/class/drm/card*/device/vendor` ; un fabricant sans liste est signalé, `nvidia` par un avertissement
+  qui nomme l'absence de décision ;
 - le nom d'hôte n'est accepté que s'il ne contient que des lettres, des chiffres et des tirets (D24).
 
 ### 3.4 `make paquets` (`paquets.py`)
@@ -195,7 +229,7 @@ affichées, puis une question chacune, réponse « non » par défaut : `Marquer
 dépendances ? [o/N]`, `Retirer ces N paquets ? [o/N]`. Hors terminal interactif, la réponse est toujours
 « non ». `pacman` redemande avant tout retrait.
 
-**Sortie** : le plan, puis un rappel des provisoires (`4 paquets provisoires : wofi → L2-16, …`).
+**Sortie** : le matériel détecté (`processeur amd, graphique amd`), le plan, puis un rappel des provisoires (`4 paquets provisoires : wofi → L2-16, …`).
 `--dry-run` affiche le plan et s'arrête.
 
 **Erreurs** : chaque message nomme le fichier ou la commande en cause et ce qu'il faut faire. Un
@@ -271,12 +305,12 @@ Dans cet ordre, une fois le plan validé :
 Les 89 paquets explicites de `caladan`, plus les nouveaux. Ce tri est la première version de
 `paquets.toml`.
 
-**`socle`** : `base`, `linux`, `linux-lts`, `linux-firmware`, `mkinitcpio`, `sudo`, `zram-generator`,
+**`socle`** : `base`, `linux`, `linux-lts`, `linux-firmware`, `mkinitcpio`, `sudo`, `zram-generator`, `ufw`,
 `networkmanager`, `wpa_supplicant`, `wireless-regdb` (D40), `pipewire`, `pipewire-pulse`, `wireplumber`,
 `power-profiles-daemon`, `git`, `make`, `python-numpy`, `python-pillow` (chaîne de thème), `less`,
 `man-db` (D52), `pacman-contrib`, `informant` (nouveaux).
 
-**`session`** : `hyprland`, `uwsm`, `xdg-desktop-portal-hyprland`, `qt6-wayland` (D31), `hypridle`,
+**`session`** : `hyprland`, `mesa` (L1-06), `uwsm`, `xdg-desktop-portal-hyprland`, `qt6-wayland` (D31), `hypridle`,
 `hyprlock` (D41, D42), `greetd`, `greetd-tuigreet` (D49), `kitty` (D52), `brightnessctl` (raccourcis),
 `adobe-source-sans-fonts`, `ttf-sourcecodepro-nerd`, `noto-fonts`, `noto-fonts-cjk`, `noto-fonts-emoji`
 (D22, D23).
@@ -297,16 +331,18 @@ Les 89 paquets explicites de `caladan`, plus les nouveaux. Ce tri est la premiè
 `iw`, `wev`, `grim`, `slurp` (vérification du design par Claude), `qemu-base`, `edk2-ovmf`, `swtpm`
 (nouveaux, machine virtuelle de recette).
 
-**`machines.caladan`** : `amd-ucode`, `mesa`, `vulkan-radeon` (L1-06), `sof-firmware`, `alsa-utils` (D38),
-`fprintd` (L2-37).
+**`materiel.*`**, détectés sur `caladan` : `amd-ucode` (processeur AMD), `vulkan-radeon` (graphique AMD).
+Les listes Intel ne sont prouvées sur aucun matériel réel ; la détection l'est par les tests unitaires.
+
+**`machines.caladan`** : `sof-firmware`, `alsa-utils` (D38), `fprintd` (L2-37).
 
 **Retrait proposé** :
 
 | Paquet | Raison |
 | --- | --- |
 | `chaotic-keyring`, `chaotic-mirrorlist` | Dépôt tiers retiré |
-| `vulkan-intel`, `intel-media-driver`, `libva-intel-driver`, `vpl-gpu-rt`, `libvpl` | Pilotes Intel, aucun GPU Intel |
-| `vulkan-nouveau`, `xf86-video-nouveau` | Pilotes NVIDIA libres, aucun GPU NVIDIA |
+| `vulkan-intel`, `intel-media-driver`, `libva-intel-driver`, `vpl-gpu-rt`, `libvpl` | Pilotes Intel, aucune carte Intel détectée |
+| `vulkan-nouveau`, `xf86-video-nouveau` | Pilotes NVIDIA libres, aucune carte NVIDIA détectée |
 | `xf86-video-ati`, `xf86-video-amdgpu` | Pilotes X ; Wayland et XWayland n'en ont pas besoin |
 | `quickshell` | Jamais lancé ; le choix de la coque revient au lot 2 |
 | `polkit-kde-agent` | Jamais lancé (absent de `session.toml`) ; l'agent revient à L2-24 |
@@ -319,13 +355,8 @@ Les 89 paquets explicites de `caladan`, plus les nouveaux. Ce tri est la premiè
 **Marquage comme dépendance proposé** (requis par un autre paquet, sans décision propre) : `ttf-dejavu`,
 `ttf-liberation` (Firefox), `libpulse`, `pipewire-jack`, `xdg-utils`.
 
-**Points à trancher à la relecture :**
-
-1. `ufw`, actif aujourd'hui : un pare-feu n'a jamais été décidé. Proposition : `socle`, règles par défaut
-   (entrant refusé, sortant permis) consignées au journal ; sa configuration versionnée viendrait plus
-   tard si une règle s'ajoute.
-2. `rust`, installé le 2026-10-16 à 15 h 31, requis par aucun paquet : `outils` si tu t'en sers, sinon
-   retrait.
+**Tranché à l'exécution** : `rust`, installé le 2026-10-16 à 15 h 31, requis par aucun paquet, n'est pas
+déclaré ; `make paquets` le proposera au retrait, et Nicolas répond à ce moment (`outils` s'il s'en sert).
 
 ## 4. Tests
 
@@ -333,6 +364,8 @@ Les 89 paquets explicites de `caladan`, plus les nouveaux. Ce tri est la premiè
 
 - lecture de `paquets.toml` : version, doublon entre sections, nom vide, section machine absente ;
 - nom d'hôte refusé (point, barre oblique) ;
+- détection : processeur AMD ou Intel, carte AMD, Intel, NVIDIA (avertissement), inconnue, deux cartes ;
+  liste matérielle qui répète un groupe commun refusée ;
 - dépôt tiers refusé ; nom introuvable refusé ; aucune commande exécutée après un refus ;
 - calcul du plan : manquant, à marquer explicite, excédent requis, excédent libre, orphelin ;
 - `--dry-run` n'exécute rien ; hors terminal, aucune proposition n'est acceptée ;
@@ -376,4 +409,5 @@ chiffrement.
 
 | Version | Date | Changement |
 | --- | --- | --- |
+| 0.2 | 2026-10-16 | Validée : pilotes et microcode choisis par détection du matériel (`materiel.*`), `mesa` dans `session`, section de machine facultative ; compatibilité avec D49 à D51 ; `ufw` dans `socle` ; `rust` tranché à l'exécution |
 | 0.1 | 2026-10-16 | Version initiale, validée section par section |
