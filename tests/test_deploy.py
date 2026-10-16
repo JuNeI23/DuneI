@@ -31,6 +31,7 @@ FAKES = {
     "tuigreet": "#!/bin/sh\n",
     "kitty": "#!/bin/sh\n",
     "checkupdates": "#!/bin/sh\n",
+    "fakeroot": "#!/bin/sh\n",
     "paccache": "#!/bin/sh\n",
     "pacdiff": "#!/bin/sh\n",
     "informant": "#!/bin/sh\n",

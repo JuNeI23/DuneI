@@ -16,7 +16,7 @@ posé lui-même.
   en place. Seul kitty, le terminal provisoire, y figure (L1-18).
 - bin : chaque fichier exécutable de config/bin/ est lié dans $XDG_BIN_HOME (~/.local/bin par défaut).
   Un fichier non exécutable, ou un fichier ou lien étranger à sa place, est refusé.
-- maj : checkupdates, paccache, pacdiff et informant doivent être installés ; le minuteur
+- maj : checkupdates, paccache, pacdiff, informant et fakeroot doivent être installés ; le minuteur
   dunei-precharge.timer, copié par la destination systeme, est activé et démarré avec sudo s'il ne l'est pas.
 - services : hyprlock doit être installé ; les unités et surcharges de config/systemd/user/ sont
   copiées, l'autostart XDG d'uwsm est masqué (liste blanche de session.toml) ; chaque service de la
@@ -78,8 +78,8 @@ APPLIS = (("kitty", "kitty", "config/kitty/kitty.conf", "kitty/kitty.conf"),)  #
 # Exécutable exigé hors APPLIS → paquet qui le fournit ; paquets.toml doit déclarer chacun de ces paquets.
 PAQUETS = {"greetd": "greetd", "tuigreet": "greetd-tuigreet", "hyprlock": "hyprlock", "hypridle": "hypridle",
            "checkupdates": "pacman-contrib", "paccache": "pacman-contrib", "pacdiff": "pacman-contrib",
-           "informant": "informant"}
-OUTILS_MAJ = ("checkupdates", "paccache", "pacdiff", "informant")  # Exécutables de la mise à jour, exigés par la destination maj.
+           "informant": "informant", "fakeroot": "fakeroot"}
+OUTILS_MAJ = ("checkupdates", "paccache", "pacdiff", "informant", "fakeroot")  # Exécutables de la mise à jour, exigés par la destination maj.
 BIN = "config/bin"                                           # Exécutables de l'utilisateur, liés sous bin_home.
 MINUTEUR = "dunei-precharge.timer"                           # Minuteur du préchargement des mises à jour, posé par systeme/.
 

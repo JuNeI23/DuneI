@@ -30,6 +30,7 @@ socle = [
     "less",                  # paginateur
     "man-db",                # pages de manuel (D52)
     "pacman-contrib",        # paccache, nettoyage du cache
+    "fakeroot",              # exigé par checkupdates (préchargement), même en root
     "informant",             # lecture des actualités Arch avant mise à jour
 ]
 session = [
