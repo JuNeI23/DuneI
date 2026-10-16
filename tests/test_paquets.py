@@ -88,3 +88,87 @@ class LireTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class MaterielTest(unittest.TestCase):
+    def racine(self, cpu="AuthenticAMD", cartes=None, hote=None):
+        """Fabrique une racine temporaire : cpuinfo, cartes {nom: fabricant} et connecteur, nom d'hôte."""
+        d = tempfile.TemporaryDirectory()
+        self.addCleanup(d.cleanup)
+        root = Path(d.name)
+        (root / "proc").mkdir()
+        (root / "proc/cpuinfo").write_text(f"processor\t: 0\nvendor_id\t: {cpu}\n", encoding="utf-8")
+        for nom, vendor in (cartes or {}).items():
+            (root / f"sys/class/drm/{nom}/device").mkdir(parents=True)
+            (root / f"sys/class/drm/{nom}/device/vendor").write_text(vendor + "\n", encoding="utf-8")
+        if cartes:
+            (root / "sys/class/drm/card1-eDP-1").mkdir()
+        if hote is not None:
+            (root / "etc").mkdir()
+            (root / "etc/hostname").write_text(hote, encoding="utf-8")
+        return root
+
+    def test_caladan(self):
+        root = self.racine(cartes={"card1": "0x1002"})
+        self.assertEqual(paquets.detecter(root), ({"amd"}, {"amd"}))
+
+    def test_deux_cartes(self):
+        root = self.racine(cartes={"card0": "0x8086", "card1": "0x10de"})
+        self.assertEqual(paquets.detecter(root)[1], {"intel", "nvidia"})
+
+    def test_carte_inconnue(self):
+        root = self.racine(cartes={"card0": "0x1af4"})
+        self.assertEqual(paquets.detecter(root)[1], {"inconnu:0x1af4"})
+
+    def test_aucune_carte(self):
+        self.assertEqual(paquets.detecter(self.racine())[1], set())
+
+    def test_vendor_illisible(self):
+        root = self.racine(cartes={"card0": "0x1002"})
+        (root / "sys/class/drm/card0/device/vendor").unlink()
+        self.assertEqual(paquets.detecter(root)[1], set())
+
+    def test_nom_hote(self):
+        self.assertEqual(paquets.nom_hote(self.racine(hote="caladan\n")), "caladan")
+        self.assertIsNone(paquets.nom_hote(self.racine(hote="a.b")))
+        self.assertIsNone(paquets.nom_hote(self.racine()))
+        self.assertIsNone(paquets.nom_hote(self.racine(hote="")))
+
+    def test_sysroot(self):
+        self.assertEqual(paquets.sysroot({"DUNEI_SYSROOT": "/tmp/x"}), Path("/tmp/x"))
+        self.assertEqual(paquets.sysroot({}), Path("/"))
+
+
+class VoulusTest(unittest.TestCase):
+    def setUp(self):
+        self.m, err = paquets.lire(ROOT)
+        self.assertEqual(err, [])
+
+    def test_caladan_voulus(self):
+        v, avert = paquets.voulus(self.m, "caladan", {"amd"}, {"amd"})
+        self.assertTrue({"amd-ucode", "vulkan-radeon", "mesa", "sof-firmware", "wofi"} <= v)
+        self.assertFalse({"vulkan-intel", "intel-ucode"} & v)
+        self.assertEqual(avert, [])
+
+    def test_nvidia_avertit(self):
+        _, avert = paquets.voulus(self.m, "caladan", {"amd"}, {"nvidia"})
+        self.assertTrue(any("aucun pilote décidé" in a for a in avert))
+
+    def test_inconnu_avertit(self):
+        v, avert = paquets.voulus(self.m, "caladan", {"amd"}, {"inconnu:0x1af4"})
+        self.assertTrue(any("0x1af4" in a for a in avert))
+        self.assertFalse({"vulkan-radeon", "vulkan-intel"} & v)
+
+    def test_machine_sans_section(self):
+        v, avert = paquets.voulus(self.m, "dunei-vm", {"amd"}, {"amd"})
+        self.assertTrue(avert)
+        self.assertIn("mesa", v)
+
+    def test_hote_absent(self):
+        v, avert = paquets.voulus(self.m, None, {"amd"}, {"amd"})
+        self.assertTrue(any("nom d'hôte" in a for a in avert))
+        self.assertIn("mesa", v)
+
+    def test_aucune_carte_avertit(self):
+        _, avert = paquets.voulus(self.m, "caladan", {"amd"}, set())
+        self.assertTrue(any("aucune carte graphique" in a for a in avert))
