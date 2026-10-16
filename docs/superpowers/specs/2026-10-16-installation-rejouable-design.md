@@ -1,6 +1,6 @@
 # Installation rejouable : procédure en deux phases, paquets déclarés, mises à jour
 
-Version 0.2 · 2026-10-16 · backlog L1-02 à L1-06 · carnet « Le dépôt », « Installation » · statut : validée
+Version 0.3 · 2026-10-16 · backlog L1-02 à L1-06 · carnet « Le dépôt », « Installation » · statut : validée
 
 ## 1. Objet
 
@@ -97,7 +97,7 @@ Arbitrées avec Nicolas le 2026-10-16, à consigner au journal (D53 et suivantes
 - **Pare-feu.** `ufw`, actif sur `caladan` sans décision, entre dans `socle` ; ses règles par défaut (entrant
   refusé, sortant permis) sont relevées et consignées au journal. Sa configuration sera versionnée le jour
   où une règle s'ajoute.
-- **Machine virtuelle de recette.** `qemu-base`, `edk2-ovmf` et `swtpm` sont installés (groupe `outils`).
+- **Machine virtuelle de recette.** `qemu-desktop`, `edk2-ovmf` et `swtpm` sont installés (groupe `outils`).
   La feature de chiffrement y répétera la procédure avant de toucher `caladan`.
 
 ## 3. Architecture
@@ -295,7 +295,7 @@ Dans cet ordre, une fois le plan validé :
 1. Retrait de la section `[chaotic-aur]` de `/etc/pacman.conf`, puis de `chaotic-keyring` et
    `chaotic-mirrorlist`. `pacman.conf` n'est pas versionné par DuneI (fichier du paquet `pacman`) ;
    `make paquets` refuse désormais tout dépôt tiers.
-2. Installation de `pacman-contrib`, `informant`, `qemu-base`, `edk2-ovmf`, `swtpm` par `make paquets`.
+2. Installation de `pacman-contrib`, `informant`, `qemu-desktop`, `edk2-ovmf`, `swtpm` par `make paquets`.
 3. Retrait des pilotes inutiles et de l'excédent validé ci-dessous, par `make paquets`.
 4. `make install` : `dunei-maj`, règle du cache, préchargement.
 5. Recette de la session (critère 7), puis `dunei-maj` de bout en bout.
@@ -328,7 +328,7 @@ Les 89 paquets explicites de `caladan`, plus les nouveaux. Ce tri est la premiè
 | `cups`, `cups-pk-helper`, `system-config-printer`, `ghostscript` | L3-06 et L3-24, impression |
 
 **`outils`** : `vim`, `htop`, `github-cli`, `shellcheck`, `wget`, `unzip`, `usbutils`, `smartmontools`,
-`iw`, `wev`, `grim`, `slurp` (vérification du design par Claude), `qemu-base`, `edk2-ovmf`, `swtpm`
+`iw`, `wev`, `grim`, `slurp` (vérification du design par Claude), `qemu-desktop`, `edk2-ovmf`, `swtpm`
 (nouveaux, machine virtuelle de recette).
 
 **`materiel.*`**, détectés sur `caladan` : `amd-ucode` (processeur AMD), `vulkan-radeon` (graphique AMD).
@@ -409,5 +409,6 @@ chiffrement.
 
 | Version | Date | Changement |
 | --- | --- | --- |
+| 0.3 | 2026-10-16 | `qemu-desktop` au lieu de `qemu-base`, sans interface graphique : la session de la machine virtuelle doit se voir à l'écran (critère 6) |
 | 0.2 | 2026-10-16 | Validée : pilotes et microcode choisis par détection du matériel (`materiel.*`), `mesa` dans `session`, section de machine facultative ; compatibilité avec D49 à D51 ; `ufw` dans `socle` ; `rust` tranché à l'exécution |
 | 0.1 | 2026-10-16 | Version initiale, validée section par section |
