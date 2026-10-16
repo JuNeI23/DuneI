@@ -666,3 +666,160 @@ Raison : le service réseau est offert et fonctionne ; on n'ajoute que ce qui ma
 toute machine, pas pour celle-ci.
 
 *Touché : carnet, backlog (L1-07, L1-09, L2-11), notes de direction.*
+
+## 2026-10-15 — Énergie et veille (L1-09)
+
+### D41 · Verrouilleur provisoire, appelé par un point unique
+
+`hyprlock` 0.9.6 verrouille dès le lot 1, au lieu d'attendre L2-22. Tout passe par `loginctl lock-session` ;
+`energie.toml` ne nomme le verrouilleur qu'une fois (`verrouilleur = "pidof hyprlock || hyprlock --no-fade-in"`),
+et c'est le seul point que L2-22 remplacera. `SUPER + L` est lié dès maintenant à cette commande.
+`misc.allow_session_lock_restore` est vrai : un verrouilleur planté se relance depuis un autre terminal,
+avec authentification.
+
+Repérage fait avec Nicolas : `swaylock` et `waylock` laissent l'attente du verrouillage et l'empreinte à
+régler soi-même ; `gtklock` n'a plus de version depuis 2024 ; `hyprlock` est net à l'échelle 1,25 et son
+signal de verrouillage est reconnu par `hypridle`. `hyprlock.conf` reste minimal (curseur masqué, saisie
+vide ignorée, fond uni, champ de saisie, empreinte désactivée). **L'esthétique du verrouillage n'est pas
+close** : Nicolas accepte d'y investir de la ressource machine, à reprendre à L2-22.
+
+Constaté le 2026-10-15 : `SUPER + L` affiche `hyprlock` et le mot de passe déverrouille.
+
+Raison : une machine qui dort sans verrouiller est un défaut de sécurité, et l'attendre jusqu'au lot 2
+aurait interdit toute veille automatique. Un point de remplacement unique évite qu'un provisoire se
+disperse dans la configuration.
+
+*Touché : energie.toml, config/hypr/hyprlock.conf, config/hypr/modules/verrouillage.lua, config/hypr/donnees/raccourcis.lua, backlog (L2-22).*
+
+### D42 · `hypridle` comme service d'inactivité, `energie.toml` comme source
+
+`hypridle` 0.1.8 (dépôt officiel) porte l'échelle : paliers conditionnés par `condition_cmd`, trois
+familles de blocages (D-Bus, logind, verrouillage), attente du verrouillage avant la veille
+(`inhibit_sleep = 3`). `stasis` (AUR seul, format propre, sondages coûteux) et `swayidle` (aucun blocage
+D-Bus ni logind, bascule à écrire) sont écartés après repérage.
+
+Les délais vivent dans `energie.toml`, à la racine, sur le modèle de `motion.toml` ; `generate_energie.py`
+(paquet `dunei_energie/`) les vérifie, puis écrit `generated/hypridle.conf` (`make energie`, branché sur
+`check` et `install`). Chaque règle fautive est refusée avec le nom du palier en cause : délais entiers
+et positifs, ordre strict, un palier exige ceux qui le précèdent, niveau d'atténuation entre 1 et 100.
+Deux scripts accompagnent le fichier : `dunei-sur-batterie` (code de sortie d'après `OnBattery` d'UPower ;
+UPower injoignable vaut « batterie ») et `dunei-attenuer` (enregistre puis rétablit les luminosités de
+l'écran et du clavier, sans jamais sauvegarder une valeur atténuée).
+
+Constaté : `hypridle.service` actif, « found 7 rules » au journal. Écart relevé à la recette :
+`hypridle` développe lui-même `$HOME` dans ses commandes (hyprlang), sans conséquence.
+
+Raison : un seul format de source pour le mouvement et l'énergie, vérifié avant d'atteindre la machine ;
+un fichier écrit à la main laisserait passer un ordre de paliers faux.
+
+*Touché : energie.toml, generate_energie.py, dunei_energie/, generated/hypridle.conf, config/hypr/scripts/, Makefile, tests/, README, carnet.*
+
+### D43 · Échelle d'inactivité et délais, décharge en veille mesurée
+
+Quatre paliers, deux jeux de délais, en secondes depuis le début de l'inactivité :
+
+| Palier | Batterie | Secteur |
+| --- | --- | --- |
+| Atténuation (écran à 10 %, clavier éteint) | 150 | 300 |
+| Verrouillage | 300 | 600 |
+| Écran éteint | 330 | 630 |
+| Veille | 900 | jamais |
+
+Une vidéo plein écran suspend l'échelle : Firefox demande le blocage par D-Bus et `hypridle` compte le
+verrou, qu'il relâche à chaque pause. Brancher ou débrancher le secteur pendant l'inactivité est suivi :
+les paliers refusés par leur condition sont retentés toutes les 5 s.
+
+Recette, jouée le 2026-10-15 et le 2026-10-16 avec une source temporaire aux délais courts (10, 20, 25 et
+40 s sur batterie ; 15, 30 et 35 s sur secteur), jamais commitée. Sur secteur, le 2026-10-15 à 22:23 :
+atténuation, restauration sans mot de passe au premier geste, verrouillage, écran éteint, rallumage.
+Sur batterie, le 2026-10-16 à 08:14 : atténuation, verrouillage, écran éteint, `systemctl suspend`, veille
+`s2idle`, réveil à 08:16:55 avec l'écran rallumé et la luminosité rétablie. Bascule secteur vers batterie
+et reprise de l'échelle après une pause vidéo : constatées par Nicolas ; la reprise après pause n'apparaît
+pas au journal, la vidéo étant encore en lecture à sa dernière ligne.
+
+**Micrologiciel.** Seule la veille `s2idle` existe sur `caladan` (`mem_sleep = [s2idle]`, « ACPI: PM:
+(supports S0 S4 S5) ») : le « sommeil profond » du carnet n'existe pas sur cette machine, et la phrase
+est corrigée.
+
+**Décharge.** Nuit du 15 au 16 octobre, capot fermé, sur batterie, 9 h 38 min (22:33 à 08:11) : de
+51,36 à 49,29 Wh sur 51,43 Wh de capacité, soit 2,07 Wh ou 4,0 %, **0,42 % par heure**. Sommeil matériel :
+34 480 s sur 34 680 s, soit 99,4 %. Quatre réveils brefs capot fermé (IRQ 9, ACPI SCI, contrôleur
+embarqué), chacun suivi d'une remise en veille par logind environ 27 s plus tard : leur coût est compris
+dans la mesure. Le noyau journalise au réveil `ACPI BIOS Error (bug): Could not resolve symbol
+[\_SB.PCI0.GPP5]`, défaut du micrologiciel sans effet constaté. Le seuil de quelques pour cent par heure
+du carnet est très largement respecté : rien à reprendre.
+
+Raison : verrouiller tôt et dormir tôt sur batterie, ne jamais dormir sur secteur ; l'écran qui s'atténue
+avant de se verrouiller prévient avant d'agir. La mesure referme la crainte du carnet (veille moderne qui
+vide la batterie).
+
+*Touché : energie.toml, generated/hypridle.conf, carnet (Veille), backlog (L1-09).*
+
+### D44 · Couvercle et bouton marche : logind décide de la veille, Hyprland de l'affichage
+
+Fichier `systeme/etc/systemd/logind.conf.d/10-dunei.conf` : `HandlePowerKey=suspend`,
+`HandleLidSwitch=suspend`, `HandleLidSwitchExternalPower=suspend`, `HandleLidSwitchDocked=ignore` ; les
+trois réglages du couvercle égalent les défauts, écrits pour être lus. Le bouton marche mettait la machine
+hors tension à l'appui court ; il met désormais en veille, l'appui long restant l'arrêt forcé du
+micrologiciel. Batterie à 5 % : rien au lot 1 (notification avec L2-13) ; à 2 %, UPower éteint, inchangé.
+
+`config/hypr/modules/couvercle.lua`, chargé après le fragment machine : couvercle fermé et autre écran
+actif, l'écran interne est désactivé ; sinon, s'il l'avait été, la configuration est rechargée pour que le
+fragment machine réapplique sa règle. L'état du couvercle est lu auprès de logind (`LidClosed`).
+
+Repérage : laisser Hyprland seul décider du couvercle, par un blocage de logind, supprimerait la veille
+hors session ; liée à Hyprland, la touche marche doublerait l'action de logind. Retenu : logind décide,
+Hyprland n'affiche.
+
+Constaté : le 2026-10-15 à 22:26:17 et à 22:32:59 (nuit), couvercle fermé, puis le 2026-10-15 à 22:26:48 et le
+2026-10-16 à 08:09:20, bouton marche : chaque réveil revient sur `hyprlock`, sans image du bureau, le
+sommeil matériel atteint à chaque fois. Propriétés logind relues : `HandlePowerKey=suspend`,
+`HandleLidSwitch=suspend`, `HandleLidSwitchDocked=ignore`.
+
+**Recette avec écran externe en attente** (décision de Nicolas, aucun écran disponible) : couvercle fermé
+avec écran externe (écran interne désactivé, pas de veille, retour à la réouverture, débranchement capot
+fermé), veille avec écran externe branché, comportement de `hl.on` et des liaisons au rechargement de
+Hyprland avec le couvercle. Le module est couvert par des tests sur un `hl` simulé, non par la machine.
+
+**Piège de développement.** Une sonde `hyprctl dispatch 'hl.dsp.dpms({ action = "zzz" })'` a éteint
+l'écran de Nicolas : Hyprland 0.56.2 fait basculer l'écran sur toute valeur inconnue (`parseToggleStr`).
+Règle : ne jamais sonder la session réelle avec un répartiteur ; lire le code source.
+
+Raison : une seule autorité par fonction, et la veille doit survivre à l'absence de session.
+
+*Touché : systeme/etc/systemd/logind.conf.d/10-dunei.conf, config/hypr/modules/couvercle.lua, config/hypr/hyprland.lua, config/hypr/machines/caladan.lua, tests/, carnet, backlog.*
+
+### D45 · Fichiers système déployés par `make install`, `sudo` seulement si nécessaire
+
+Le dossier `systeme/` reproduit l'arborescence de la racine du système ; ses fichiers portent la marque
+DuneI. La destination `systeme` de `deploy.py` compare chacun à son vis-à-vis : identique, aucune action ;
+absent ou différent mais marqué, copie par `sudo install -m 644` ; présent sans marque, refus avec le nom
+du fichier. Un fichier de `logind.conf.d` recharge logind (`systemctl reload`), sans le redémarrer.
+`sudo` n'est appelé que si une copie est prévue. La destination `services` active `hypridle.service` et
+le redémarre quand `hypridle.conf` change, faute de rechargement à chaud.
+
+Ordre d'exécution, tranché par Claude pendant l'exécution : `hypr`, `fontconfig`, `services`, `systeme`,
+pour que le redémarrage de `hypridle` précède tout `sudo` : un échec de `sudo` ne laisse jamais l'ancienne
+échelle active. Même ruling : les signatures de commit des sous-agents sont laissées à leur modèle.
+
+Constaté : `make install` a posé `/etc/systemd/logind.conf.d/10-dunei.conf` avec `sudo` et rechargé
+logind ; les passages suivants n'ont plus demandé `sudo` (critère 9 vérifié).
+
+Raison : option B retenue par Nicolas, contre une cible séparée ou une étape manuelle du carnet : la
+procédure reste « une commande » et la machine se reproduit sans étape cachée.
+
+*Touché : deploy.py, systeme/, Makefile, tests/test_deploy.py, carnet.*
+
+### D46 · Empreinte renvoyée à sa feature
+
+Hors de L1-09 : `hyprlock.conf` désactive l'empreinte. Le lecteur Goodix est reconnu par `fprintd`, sans
+doigt enregistré. Nouvelle ligne de backlog, **L2-37**, au lot 2 : le déverrouillage par empreinte
+touche `hyprlock` (L2-22), l'agent d'authentification (L2-24), `sudo` et la connexion, qui s'écrivent
+au lot 2 ; la conception de l'interface (indication d'attente du doigt, échec de lecture, authentification
+administrateur) reste au chapitre des écrans système du lot 5, comme le consigne le carnet. Écarté :
+activer l'empreinte pour `hyprlock` seul maintenant (un chemin biométrique à demi défini) ; ne jamais
+l'activer.
+
+Raison : une décision de sécurité ne se prend pas en passant ; elle mérite sa propre conception.
+
+*Touché : backlog (L2-37), carnet.*

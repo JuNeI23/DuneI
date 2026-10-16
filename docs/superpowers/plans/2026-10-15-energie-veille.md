@@ -65,7 +65,7 @@ Cinq situations que la spec implique sans les nommer ; chacune reçoit son test 
   constantes `checks.ORDRE = ("attenuation", "verrouillage", "ecran", "veille")`,
   `checks.ALIMENTATIONS = ("batterie", "secteur")`, `checks.VERSION = "0.1.0"`.
 
-- [ ] **Étape 1 : écrire la source**
+- [x] **Étape 1 : écrire la source**
 
 `energie.toml` :
 
@@ -100,7 +100,7 @@ secteur  = 630
 batterie = 900
 ```
 
-- [ ] **Étape 2 : écrire les tests qui échouent**
+- [x] **Étape 2 : écrire les tests qui échouent**
 
 `tests/test_energie_checks.py` :
 
@@ -191,12 +191,12 @@ if __name__ == "__main__":
     unittest.main()
 ```
 
-- [ ] **Étape 3 : vérifier l'échec**
+- [x] **Étape 3 : vérifier l'échec**
 
 Lancer : `python3 -m unittest tests.test_energie_checks -v`
 Attendu : ERREUR `ModuleNotFoundError: No module named 'dunei_energie'`.
 
-- [ ] **Étape 4 : écrire le paquet**
+- [x] **Étape 4 : écrire le paquet**
 
 `dunei_energie/__init__.py` :
 
@@ -326,12 +326,12 @@ def errors(raw: dict) -> list[str]:
     return err
 ```
 
-- [ ] **Étape 5 : vérifier le succès**
+- [x] **Étape 5 : vérifier le succès**
 
 Lancer : `python3 -m unittest tests.test_energie_checks -v`
 Attendu : tous les tests PASSENT.
 
-- [ ] **Étape 6 : commit**
+- [x] **Étape 6 : commit**
 
 ```bash
 git add energie.toml dunei_energie/ tests/test_energie_checks.py
@@ -358,7 +358,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 hyprlang ne remplace que les variables qu'il a définies : `$HOME` et `${XDG_CONFIG_HOME:-…}` passent
 intacts, puis hypridle exécute chaque commande par `/bin/sh -c` (vérifié dans `Hypridle.cpp`, v0.1.8).
 
-- [ ] **Étape 1 : écrire les tests qui échouent**
+- [x] **Étape 1 : écrire les tests qui échouent**
 
 `tests/test_energie_generate.py` :
 
@@ -462,12 +462,12 @@ from dunei_energie.model import load as load_energie, resolve as resolve_energie
                 self.assertEqual(emitter(model), (GOLDEN / "energie" / filename).read_text(encoding="utf-8"))
 ```
 
-- [ ] **Étape 2 : vérifier l'échec**
+- [x] **Étape 2 : vérifier l'échec**
 
 Lancer : `python3 -m unittest tests.test_energie_generate tests.test_golden -v`
 Attendu : échecs (`generate_energie.py` absent, `dunei_energie.emitters` introuvable).
 
-- [ ] **Étape 3 : écrire l'émetteur**
+- [x] **Étape 3 : écrire l'émetteur**
 
 `dunei_energie/emitters/__init__.py` :
 
@@ -546,7 +546,7 @@ def emit(model: dict) -> str:
     return "\n".join(out) + "\n"
 ```
 
-- [ ] **Étape 4 : écrire le point d'entrée**
+- [x] **Étape 4 : écrire le point d'entrée**
 
 `generate_energie.py` (rendre exécutable : `chmod +x generate_energie.py`) :
 
@@ -609,7 +609,7 @@ if __name__ == "__main__":
     raise SystemExit(main())
 ```
 
-- [ ] **Étape 5 : brancher la chaîne**
+- [x] **Étape 5 : brancher la chaîne**
 
 Dans `Makefile` : ajouter au commentaire d'en-tête la ligne
 `#   make energie  energie.toml → generated/hypridle.conf`, ajouter `energie` à `.PHONY`, puis :
@@ -624,14 +624,14 @@ Remplacer `check: tokens motion test` par `check: tokens motion energie test`, `
 `	$(PY) generate_energie.py --out tests/golden/energie >/dev/null`.
 Dans `README.md`, ajouter `make energie` à la liste des cibles, avec la même phrase que l'en-tête du Makefile.
 
-- [ ] **Étape 6 : produire les fichiers et vérifier**
+- [x] **Étape 6 : produire les fichiers et vérifier**
 
 Lancer : `make energie && make golden && python3 -m unittest tests.test_energie_generate tests.test_golden -v`
 Attendu : `generated/hypridle.conf` et `tests/golden/energie/hypridle.conf` écrits ; tests PASSENT.
 Puis : `git diff --stat tests/golden` — seul `tests/golden/energie/` est nouveau ; les autres instantanés sont inchangés.
 Lire `generated/hypridle.conf` en entier et vérifier à l'œil les sept listeners.
 
-- [ ] **Étape 7 : commit**
+- [x] **Étape 7 : commit**
 
 ```bash
 git add dunei_energie/emitters generate_energie.py generated/hypridle.conf tests/golden/energie \
@@ -657,7 +657,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 Relevé de `brightnessctl -m … info` sur `caladan` : `amdgpu_bl1,backlight,42998,66%,65535` et
 `tpacpi::kbd_backlight,leds,1,50%,2` ; un périphérique absent rend le code 1.
 
-- [ ] **Étape 1 : écrire les tests qui échouent**
+- [x] **Étape 1 : écrire les tests qui échouent**
 
 `tests/test_energie_scripts.py` :
 
@@ -767,12 +767,12 @@ if __name__ == "__main__":
     unittest.main()
 ```
 
-- [ ] **Étape 2 : vérifier l'échec**
+- [x] **Étape 2 : vérifier l'échec**
 
 Lancer : `python3 -m unittest tests.test_energie_scripts -v`
 Attendu : ERREURS `FileNotFoundError` (scripts absents).
 
-- [ ] **Étape 3 : écrire les scripts**
+- [x] **Étape 3 : écrire les scripts**
 
 `config/hypr/scripts/dunei-sur-batterie` :
 
@@ -828,12 +828,12 @@ exit 0
 
 Lancer : `chmod +x config/hypr/scripts/dunei-sur-batterie config/hypr/scripts/dunei-attenuer`
 
-- [ ] **Étape 4 : vérifier le succès**
+- [x] **Étape 4 : vérifier le succès**
 
 Lancer : `python3 -m unittest tests.test_energie_scripts -v`
 Attendu : tous les tests PASSENT. Si `shellcheck` est installé : `shellcheck config/hypr/scripts/*` sans avertissement.
 
-- [ ] **Étape 5 : commit**
+- [x] **Étape 5 : commit**
 
 ```bash
 git add config/hypr/scripts tests/test_energie_scripts.py
@@ -860,7 +860,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
   `hl.on("monitor.added"|"monitor.removed", cb)`, `hl.get_monitors()` (champ `name`), `hl.monitor({ output, disabled })`,
   `hl.exec_cmd(cmd)`, `hl.config({ misc = { allow_session_lock_restore = true } })`.
 
-- [ ] **Étape 1 : écrire les tests du couvercle qui échouent**
+- [x] **Étape 1 : écrire les tests du couvercle qui échouent**
 
 `tests/test_hyprland_couvercle.py` :
 
@@ -961,12 +961,12 @@ if __name__ == "__main__":
     unittest.main()
 ```
 
-- [ ] **Étape 2 : vérifier l'échec**
+- [x] **Étape 2 : vérifier l'échec**
 
 Lancer : `python3 -m unittest tests.test_hyprland_couvercle -v`
 Attendu : échecs `module 'modules.couvercle' not found`.
 
-- [ ] **Étape 3 : écrire le module du couvercle**
+- [x] **Étape 3 : écrire le module du couvercle**
 
 `config/hypr/modules/couvercle.lua` :
 
@@ -1043,12 +1043,12 @@ end
 return M
 ```
 
-- [ ] **Étape 4 : vérifier le succès**
+- [x] **Étape 4 : vérifier le succès**
 
 Lancer : `python3 -m unittest tests.test_hyprland_couvercle -v`
 Attendu : tous les tests PASSENT.
 
-- [ ] **Étape 5 : écrire le module de verrouillage et son test**
+- [x] **Étape 5 : écrire le module de verrouillage et son test**
 
 `config/hypr/modules/verrouillage.lua` :
 
@@ -1089,7 +1089,7 @@ et ajouter :
         self.assertEqual(self.run_module("verrouillage"), ["misc\ttrue"])
 ```
 
-- [ ] **Étape 6 : lier `SUPER + L`**
+- [x] **Étape 6 : lier `SUPER + L`**
 
 Dans `config/hypr/donnees/raccourcis.lua`, retirer de la section « Réservées » la ligne
 `{ touches = "SUPER + L",     reserve = "L2-22", description = "Verrouiller la session" },` et ajouter à la
@@ -1109,7 +1109,7 @@ Dans `tests/test_hyprland_clavier.py` :
   `"SUPER + L": ("dsp.exec_cmd(loginctl lock-session)", "{}"),` : les tests qui comparent la table réelle
   à `expected()` vérifient alors la nouvelle liaison.
 
-- [ ] **Étape 7 : brancher le point d'entrée**
+- [x] **Étape 7 : brancher le point d'entrée**
 
 Dans `config/hypr/hyprland.lua`, après la ligne `require("modules.clavier").apply()` :
 
@@ -1147,12 +1147,12 @@ ajouter après `require("modules.machine").file = HOST` la ligne `require("modul
 et mettre à jour les trois attendus : après `gesture`, la suite devient
 `,config:dunei,monitor:essai,bind,on` avec fragment machine, `,config:dunei,bind,on` sans.
 
-- [ ] **Étape 8 : vérifier toute la suite**
+- [x] **Étape 8 : vérifier toute la suite**
 
 Lancer : `make test`
 Attendu : tous les tests PASSENT, dont `AgnosticTest` (aucun nom de sortie dans les modules).
 
-- [ ] **Étape 9 : commit**
+- [x] **Étape 9 : commit**
 
 ```bash
 git add config/hypr tests/test_hyprland_couvercle.py tests/test_hyprland_entry.py \
@@ -1177,7 +1177,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 `systeme/` reproduit l'arborescence de la racine : `systeme/etc/…` va sous `/etc/…`.
 
-- [ ] **Étape 1 : écrire les fichiers de configuration**
+- [x] **Étape 1 : écrire les fichiers de configuration**
 
 `systeme/etc/systemd/logind.conf.d/10-dunei.conf` :
 
@@ -1219,7 +1219,7 @@ input-field {
 }
 ```
 
-- [ ] **Étape 2 : écrire les tests qui échouent**
+- [x] **Étape 2 : écrire les tests qui échouent**
 
 Dans `tests/test_deploy.py` :
 
@@ -1332,12 +1332,12 @@ Mettre à jour `assert_deployed` (ajouter les trois vérifications de `test_depl
 `test_switch`, la liste attendue :
 `["donnees", "generated", "generique.lua", "hyprland.lua", "hypridle.conf", "hyprlock.conf", "machines", "modules", "scripts"]`.
 
-- [ ] **Étape 3 : vérifier l'échec**
+- [x] **Étape 3 : vérifier l'échec**
 
 Lancer : `python3 -m unittest tests.test_deploy -v`
 Attendu : échecs des nouveaux tests (rien n'est posé sous la fausse racine, `hypridle.conf` absent).
 
-- [ ] **Étape 4 : écrire le déploiement**
+- [x] **Étape 4 : écrire le déploiement**
 
 Dans `deploy.py` :
 
@@ -1479,18 +1479,18 @@ ajouter au message d'interruption, pour un échec de sudo, la phrase :
 `print("Les fichiers système demandent sudo : relancer make install dans un terminal.", file=sys.stderr)`
 quand `isinstance(e, subprocess.CalledProcessError) and e.cmd[0] == "sudo"`.
 
-- [ ] **Étape 5 : vérifier le succès**
+- [x] **Étape 5 : vérifier le succès**
 
 Lancer : `python3 -m unittest tests.test_deploy -v`, puis `make check`
 Attendu : tous les tests PASSENT ; `make check` ne montre aucun écart dans `generated/`.
 
-- [ ] **Étape 6 : contrôle à blanc sur la vraie machine**
+- [x] **Étape 6 : contrôle à blanc sur la vraie machine**
 
 Lancer : `python3 deploy.py --dry-run`
 Attendu, tant que hypridle n'est pas installé : refus « hypridle.service introuvable … installer hypridle »,
 et rien de modifié. C'est le comportement voulu : l'installation des paquets est l'objet de la tâche 6.
 
-- [ ] **Étape 7 : commit**
+- [x] **Étape 7 : commit**
 
 ```bash
 git add systeme config/hypr/hyprlock.conf deploy.py tests/test_deploy.py
@@ -1505,16 +1505,16 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 Cette tâche se fait dans la session principale, jamais par un sous-agent : chaque étape demande Nicolas.
 
-- [ ] **Étape 1 : paquets** — Nicolas lance `! sudo pacman -S --needed hypridle hyprlock`. Relever les
+- [x] **Étape 1 : paquets** — Nicolas lance `! sudo pacman -S --needed hypridle hyprlock`. Relever les
   versions (`pacman -Q hypridle hyprlock`) : 0.1.8 et 0.9.6 attendues ; un écart se note au carnet.
-- [ ] **Étape 2 : déploiement** — Nicolas lance `! make install` (sudo demandé pour le fichier logind).
+- [x] **Étape 2 : déploiement** — Nicolas lance `! make install` (sudo demandé pour le fichier logind).
   Vérifier : `systemd-analyze cat-config systemd/logind.conf | tail -8`, `busctl get-property org.freedesktop.login1
   /org/freedesktop/login1 org.freedesktop.login1.Manager HandlePowerKey` (`s "suspend"`),
   `systemctl --user status hypridle` (actif), `journalctl --user -u hypridle -b | grep -i inhibit` (la ligne
   « inhibiting until the wayland session gets locked »), `hyprctl getoption misc:allow_session_lock_restore` (vrai).
   Relancer la configuration (`SUPER + ALT + R`) et vérifier l'absence d'erreur Lua.
-- [ ] **Étape 3 : `SUPER + L`** — verrouille ; le mot de passe déverrouille.
-- [ ] **Étape 4 : échelle raccourcie** — écrire dans le dossier temporaire de session une copie
+- [x] **Étape 3 : `SUPER + L`** — verrouille ; le mot de passe déverrouille.
+- [x] **Étape 4 : échelle raccourcie** — écrire dans le dossier temporaire de session une copie
   d'`energie.toml` aux délais batterie 10 / 20 / 25 / 40 et secteur 15 / 30 / 35, la générer
   (`python3 generate_energie.py --src <copie> --out <dossier>`), copier le résultat sur
   `~/.config/hypr/hypridle.conf`, puis `systemctl --user restart hypridle`. Sur secteur : atténuation et
@@ -1522,7 +1522,7 @@ Cette tâche se fait dans la session principale, jamais par un sous-agent : chaq
   veille suit. Débrancher pendant l'inactivité : l'échelle de la batterie s'applique en 5 s. Vidéo plein
   écran dans Firefox : l'échelle est suspendue. Rétablir enfin la vraie échelle par `make install`
   (redémarrage de hypridle inclus).
-- [ ] **Étape 5 : liste du carnet** — veille et réveil trois fois, l'écran verrouillé au réveil, sans image
+- [x] **Étape 5 : liste du carnet** — veille et réveil trois fois, l'écran verrouillé au réveil, sans image
   du bureau ; capot fermé puis rouvert ; bouton marche, appui court. La veille avec écran externe branché
   est **en attente** (pas d'écran externe disponible, décision de Nicolas du 2026-10-15).
 - [ ] **Étape 6 : couvercle avec écran externe — EN ATTENTE** (pas d'écran externe disponible, décision de
@@ -1531,7 +1531,7 @@ Cette tâche se fait dans la session principale, jamais par un sous-agent : chaq
   interne revient à l'échelle 1,25. Débrancher l'externe capot fermé : verrouillage puis veille. Si
   `hl.monitor` ne s'applique pas à chaud, ou si `hl.on` ne se réabonne pas après rechargement, revenir au
   brainstorming avant tout contournement.
-- [ ] **Étape 7 : décharge** — avant une nuit de veille : `cat /sys/class/power_supply/BAT*/energy_now`,
+- [x] **Étape 7 : décharge** — avant une nuit de veille : `cat /sys/class/power_supply/BAT*/energy_now`,
   `cat /sys/power/suspend_stats/total_hw_sleep`, l'heure. Au réveil : les mêmes valeurs. Calculer le
   pourcentage d'`energy_full` perdu par heure et la part du temps passée en sommeil matériel. Au-delà de
   quelques pour cent par heure : documenter dans le journal et chercher avant de clore.
@@ -1542,24 +1542,24 @@ Chaque constat, avec sa date, est noté pour la tâche 7.
 
 ### Tâche 7 : documentation, relecture et PR
 
-- [ ] **Étape 1 : carnet** — sections « Énergie » et « Veille » réécrites : paquets et versions, `energie.toml`
+- [x] **Étape 1 : carnet** — sections « Énergie » et « Veille » réécrites : paquets et versions, `energie.toml`
   et `make energie`, scripts, `hyprlock.conf`, fichier logind et déploiement par `make install`, couvercle,
   vérifications cochées avec leur date et le relevé de décharge. La phrase « choix du sommeil profond » est
   remplacée par le relevé : le micrologiciel n'offre que `s2idle`. « Touches matérielles » : la ligne du
   rétroéclairage du clavier renvoie à l'atténuation de L1-09. Piège consigné : toute valeur `dpms` inconnue
   fait basculer l'écran. Version et historique.
-- [ ] **Étape 2 : backlog** — L1-09 fait, sauf la recette avec écran externe (étapes 5 et 6 de la tâche 6),
+- [x] **Étape 2 : backlog** — L1-09 fait, sauf la recette avec écran externe (étapes 5 et 6 de la tâche 6),
   notée en attente sur sa ligne ; nouvelle ligne au lot qui convient pour l'empreinte (`fprintd`,
   verrouilleur, `sudo`, connexion) ; L2-22 : `SUPER + L` déjà lié, point de remplacement unique
   (`verrouilleur` dans `energie.toml`), esthétique ouverte et ressource machine acceptée ; décomptes ;
   version et historique.
-- [ ] **Étape 3 : journal** — D41 verrouilleur provisoire et point unique ; D42 hypridle et source
+- [x] **Étape 3 : journal** — D41 verrouilleur provisoire et point unique ; D42 hypridle et source
   `energie.toml` ; D43 échelle et délais ; D44 couvercle et bouton marche (rôles de logind et de Hyprland) ;
   D45 fichiers système déployés par `make install` ; D46 empreinte renvoyée à sa feature ; relevé de
   décharge dans D43 ou sa propre entrée s'il pose un problème.
-- [ ] **Étape 4 : notes de direction** — paragraphe d'avancement daté ; le dernier paragraphe nomme la
+- [x] **Étape 4 : notes de direction** — paragraphe d'avancement daté ; le dernier paragraphe nomme la
   prochaine étape ; version et historique.
-- [ ] **Étape 5 : spec** — passée en v0.2, statut « validée, implémentée », écarts constatés pendant la recette.
+- [x] **Étape 5 : spec** — passée en v0.2, statut « validée, implémentée », écarts constatés pendant la recette.
 - [ ] **Étape 6 : relecture finale** — `make check` ; relecture de toute la branche par un relecteur frais ;
   corrections.
 - [ ] **Étape 7 : PR** — `git push -u origin feat/energie-veille`, `gh pr create` (corps en français, terminé par
@@ -1572,3 +1572,4 @@ Chaque constat, avec sa date, est noté pour la tâche 7.
 | --- | --- | --- |
 | 0.1 | 2026-10-15 | Version initiale |
 | 0.2 | 2026-10-15 | Recette avec écran externe mise en attente ; `expected()` du clavier précisé |
+| 0.3 | 2026-10-16 | Cases des tâches 1 à 7 (étapes 1 à 5) cochées ; recette avec écran externe toujours en attente |

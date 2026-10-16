@@ -1,6 +1,6 @@
 # Énergie et veille : inactivité, verrouillage provisoire, couvercle, bouton marche
 
-Version 0.1 · 2026-10-15 · backlog L1-09 · carnet « Énergie », « Veille » · statut : validée en conversation, à relire
+Version 0.2 · 2026-10-16 · backlog L1-09 · carnet « Énergie », « Veille » · statut : validée, implémentée (recette avec écran externe en attente)
 
 ## 1. Objet
 
@@ -259,8 +259,22 @@ choix esthétique : ses couleurs ne sont pas des valeurs de design et seront rem
 - **Notes de direction** : paragraphe d'avancement et prochaine étape.
 - **README** : cible `make energie`.
 
+## 6. Écarts constatés à l'implémentation et à la recette
+
+- **Ordre des destinations de `deploy.py`.** La section 3.7 ne fixait pas l'ordre ; l'exécution l'a tranché :
+  `hypr`, `fontconfig`, `services`, `systeme`, pour que le redémarrage de `hypridle` précède tout `sudo` et
+  qu'un échec de `sudo` ne laisse jamais l'ancienne échelle active.
+- **`$HOME` dans les commandes.** `hypridle` (hyprlang) développe lui-même `$HOME`, sans passer par un shell
+  pour cette variable ; sans conséquence pour `hypridle.conf` (point 6 de la section 3.11).
+- **Blocage vidéo.** Le journal montre le blocage par D-Bus de Firefox (« ScreenSaver inhibit: true ») et
+  aucune action de l'échelle pendant la lecture plein écran ; la reprise de l'échelle après la pause est
+  constatée par Nicolas, sans trace au journal.
+- **Recette avec écran externe en attente.** Le critère 6, la veille avec écran externe et le comportement de
+  `hl.on` et des liaisons au rechargement avec le couvercle restent à faire dès qu'un écran est disponible.
+
 ## Historique des versions
 
 | Version | Date | Changement |
 | --- | --- | --- |
 | 0.1 | 2026-10-15 | Version initiale, issue du brainstorming |
+| 0.2 | 2026-10-16 | Implémentée ; écarts constatés à l'implémentation et à la recette (section 6) ; recette avec écran externe en attente |

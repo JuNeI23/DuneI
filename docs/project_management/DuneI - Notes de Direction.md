@@ -2,9 +2,9 @@
 
 Oct 10, 2026 · @Nicolas — révisée le 15 octobre 2026
 
-Version 1.10. Historique en fin de document.
+Version 1.11. Historique en fin de document.
 
-*Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent quarante-deux lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
+*Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent quarante-trois lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
 
 ## En une phrase
 
@@ -117,7 +117,7 @@ L'ordre découle d'une seule règle : **chaque lot laisse la machine en état de
 | **4 — Accord visuel** | Thématisation Qt et GTK sur cibles réelles, premier lot d'icônes, fond d'écran, panneau de thème, extraction de teinte | Cohérente de bout en bout, bible opposable partout |
 | **5 — Écrans système et voix** | Réglages panneau par panneau, connexion, amorçage, « À propos », catalogue de messages, recette | **1.0** |
 
-Le détail — cent quarante-deux éléments, chacun rattaché à un chantier, un lot et une nature — vit dans le document de périmètre et de backlog. **Cette note ne s'y substitue pas.**
+Le détail — cent quarante-trois éléments, chacun rattaché à un chantier, un lot et une nature — vit dans le document de périmètre et de backlog. **Cette note ne s'y substitue pas.**
 
 ## Les risques, par ordre de gravité
 
@@ -241,6 +241,18 @@ sert les autres machines. Connexion au démarrage, reconnexion après coupure, t
 rétroéclairage du clavier sont vérifiés, sans une ligne de code (D40). Prochaine étape du lot 1 :
 **L1-09, l'énergie et la veille**, dont l'extinction du rétroéclairage du clavier à l'inactivité.
 
+**Énergie et veille — 16 octobre 2026.** La machine verrouille avant de dormir et dort d'elle-même. Une
+échelle d'inactivité à quatre paliers (atténuation, verrouillage, écran éteint, veille) vit dans
+`energie.toml`, avec un jeu de délais pour la batterie et un autre pour le secteur ; `hypridle` la joue,
+`hyprlock` verrouille de façon provisoire, par un seul point que le lot 2 remplacera. Le bouton marche met
+en veille ; le couvercle est confié à logind, et Hyprland n'y gère que l'écran interne. Le premier fichier
+système de DuneI est déployé par `make install`, avec `sudo` seulement s'il diffère. Le micrologiciel n'offre
+que la veille `s2idle`, et c'est une bonne nouvelle : la nuit du 15 au 16 octobre, le sommeil matériel a
+tenu 99,4 % du temps et la décharge est de 0,42 % par heure. L'empreinte devient une feature à part
+(L2-37). La recette avec écran externe est en attente, faute d'écran (D41 à D46). Prochaine étape du lot 1 :
+**L1-10, le gestionnaire de session et le démarrage automatique** ; la recette avec écran externe de L1-09
+reste à faire dès qu'un écran est disponible.
+
 ## Plan de lecture
 
 | Rôle | À lire |
@@ -258,8 +270,9 @@ rétroéclairage du clavier sont vérifiés, sans une ligne de code (D40). Proch
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-10 | Version initiale |
+| 1.11 | 2026-10-16 | Énergie et veille faites (L1-09), sauf la recette avec écran externe ; décharge en veille mesurée ; backlog à 143 éléments ; prochaine étape : L1-10 (D41 à D46) |
 | 1.10 | 2026-10-15 | Réseau vérifié, base réglementaire installée (D40) ; prochaine étape : L1-09 |
-| 1.9 | 2026-10-15 | Audio fait (L1-08) : `alsa-utils` répare la diode du micro, son et micro vérifiés ; règle de repérage des technos ; décompte de l'en-tête corrigé (cent quarante-deux) ; prochaine étape L1-07 |
+| 1.9 | 2026-10-15 | Audio fait (L1-08) : `alsa-utils` répare la diode du micro, son et micro vérifiés ; règle de repérage des technos ; décompte de l'en-tête corrigé (cent quarante-trois) ; prochaine étape L1-07 |
 | 1.8 | 2026-10-15 | Raccourcis faits (L1-16) ; diode du micro renvoyée à L1-08, prochaine étape ; décomptes à 142 éléments |
 | 1.7 | 2026-10-14 | Fenêtrage fait (L1-12 à L1-15) ; reste les raccourcis et les bureaux (L1-16). Paragraphes permanents de l'état d'avancement placés avant le journal, pour que le dernier paragraphe nomme la prochaine étape ; décomptes à 141 éléments |
 | 1.6 | 2026-10-14 | Écran et échelle faits (L1-17), échelle 1,25 ; reste le fenêtrage |
