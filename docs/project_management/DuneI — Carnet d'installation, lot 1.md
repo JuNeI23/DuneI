@@ -221,10 +221,10 @@ sourdine.
 ### Énergie — L1-09
 
 ```
-hypridle hyprlock
+hypridle hyprlock upower brightnessctl
 ```
 
-`power-profiles-daemon` et non un gestionnaire d'économie classique. La raison est architecturale : **il expose les profils sur D-Bus, donc c'est à lui que parlera l'indicateur d'énergie du lot 2** (L2-13). Un outil qui ne s'adresse qu'en ligne de commande obligerait à écrire une interface contre des fichiers, ce qui est fragile et laid. Les deux ne s'installent pas ensemble : ils se disputent le contrôle. `upower` et `brightnessctl` sont déjà présents.
+`power-profiles-daemon` et non un gestionnaire d'économie classique. La raison est architecturale : **il expose les profils sur D-Bus, donc c'est à lui que parlera l'indicateur d'énergie du lot 2** (L2-13). Un outil qui ne s'adresse qu'en ligne de commande obligerait à écrire une interface contre des fichiers, ce qui est fragile et laid. Les deux ne s'installent pas ensemble : ils se disputent le contrôle. `upower` et `brightnessctl` sont déjà présents sur `caladan`, mais ils sont nécessaires à l'échelle (sans UPower, `dunei-sur-batterie` répond « batterie »).
 
 `hypridle` 0.1.8-2 et `hyprlock` 0.9.6-3, dépôt officiel, installés par `sudo pacman -S --needed hypridle hyprlock` (D41, D42). `hypridle` joue l'échelle d'inactivité ; `hyprlock` est le verrouilleur provisoire, remplacé à L2-22.
 
@@ -245,6 +245,12 @@ Une vidéo en lecture plein écran suspend l'échelle : Firefox demande le bloca
 
 - `dunei-sur-batterie` : code de sortie 0 sur batterie, 1 sur secteur, d'après `OnBattery` d'UPower. UPower injoignable : réponse « batterie », pour verrouiller et dormir plus tôt plutôt que vider la machine.
 - `dunei-attenuer [--restaurer]` : enregistre les luminosités de l'écran et du clavier dans `$XDG_RUNTIME_DIR/dunei/`, atténue l'écran, éteint le clavier (repéré par `*::kbd_backlight` ; une machine sans rétroéclairage passe sans erreur) ; `--restaurer` les rétablit. Il ne sauvegarde jamais une valeur déjà atténuée.
+
+**`hypridle` silencieux** (D43). Une surcharge d'unité, `config/systemd/user/hypridle.service.d/10-dunei.conf`, copiée par `make install` sous `~/.config/systemd/user/`, lance `hypridle --quiet` ; `make install` lance `systemctl --user daemon-reload` puis redémarre le service quand elle change. Pour déboguer : arrêter le service (`systemctl --user stop hypridle.service`) et lancer `hypridle -v` à la main. `make install` refuse aussi de déployer sans `hyprlock` et démarre `hypridle` s'il est activé mais arrêté.
+
+**Dépendance à uwsm.** `hypridle` (L1-09) exige `graphical-session.target` et l'environnement de Hyprland exporté au gestionnaire utilisateur (uwsm) ; sans eux, il ne démarre plus et la veille n'est plus précédée du verrouillage. À relire en premier à L1-10.
+
+**Rétroéclairage du clavier pendant la veille.** Le pilote `thinkpad_acpi` l'éteint à la mise en veille (`kbdlight_suspend`, `led_classdev_suspend`) ; constat visuel à l'écran en attente.
 
 **`hyprlock.conf`, provisoire** (D41). Configuration minimale, liée sous `~/.config/hypr/` : curseur masqué, saisie vide ignorée, fond uni, champ de saisie, empreinte désactivée. Aucun choix esthétique : ses couleurs ne sont pas des valeurs de design, et l'esthétique du verrouillage reste ouverte. `SUPER + L` lance `loginctl lock-session` ; `energie.toml` est le seul endroit qui nomme le verrouilleur (`verrouilleur`). `misc.allow_session_lock_restore` est vrai : un `hyprlock` planté se relance depuis un autre terminal, avec authentification.
 
@@ -298,7 +304,7 @@ cat /sys/class/power_supply/BAT*/energy_now /sys/class/power_supply/BAT*/energy_
 cat /sys/power/suspend_stats/total_hw_sleep                                              # sommeil matériel, en µs
 ```
 
-Pour le pourcentage par heure : (énergie avant − énergie après) ÷ `energy_full` ÷ durée en heures. Le temps de sommeil matériel est la différence des deux lectures de `total_hw_sleep`, à comparer à la durée de la veille. Au-delà de quelques pour cent par heure, le réglage est à reprendre.
+Certaines batteries n'exposent que `charge_now` et `charge_full` (µAh) : même calcul. Pour le pourcentage par heure : (énergie avant − énergie après) ÷ `energy_full` ÷ durée en heures. Le temps de sommeil matériel est la différence des deux lectures de `total_hw_sleep`, à comparer à la durée de la veille. Au-delà de quelques pour cent par heure, le réglage est à reprendre.
 
 Si la décharge reste mauvaise après mise à jour du firmware, c'est un sujet matériel à documenter dans le journal des décisions, pas un défaut à corriger au lot 2.
 
@@ -730,7 +736,7 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 | Version | Date | Changement |
 | --- | --- | --- |
 | 0.1 | 2026-10-12 | Version initiale |
-| 1.4 | 2026-10-16 | Énergie et veille (L1-09) : `hypridle` et `hyprlock` installés, `energie.toml` et `make energie`, échelle à quatre paliers, scripts, `hyprlock.conf` provisoire, fichier logind déployé par `make install`, couvercle partagé entre logind et `couvercle.lua`, `SUPER + L` ; relevé de décharge (0,42 % par heure) et sa procédure ; sommeil profond inexistant (`s2idle` seul) ; piège de `dpms` ; recette avec écran externe en attente (D41 à D46) |
+| 1.4 | 2026-10-16 | Énergie et veille (L1-09) : `hypridle` et `hyprlock` installés, `energie.toml` et `make energie`, échelle à quatre paliers, scripts, `hyprlock.conf` provisoire, fichier logind déployé par `make install`, couvercle partagé entre logind et `couvercle.lua`, `SUPER + L` ; relevé de décharge (0,42 % par heure) et sa procédure ; sommeil profond inexistant (`s2idle` seul) ; piège de `dpms` ; recette avec écran externe en attente (D41 à D46) ; `hypridle --quiet`, dépendance à uwsm, paquets d'exécution, clavier en veille |
 | 1.3 | 2026-10-15 | Réseau (L1-07) : NetworkManager et `wpa_supplicant` conservés, `wireless-regdb` et `iw` installés, carte *self-managed*, vérification de la connexion et de la reconnexion ; touches mode avion et rétroéclairage du clavier, actives sans raccourci (D40) |
 | 1.2 | 2026-10-15 | Audio (L1-08) : `alsa-utils` installé, dont `alsactl` exécute l'initialisation UCM qui rattache la diode du micro au micro numérique ; F4 garde `wpctl` seul ; vérification du son et du micro (D38) ; `donnees/` ajouté à l'arborescence |
 | 1.1 | 2026-10-15 | Raccourcis : table de données contrôlée, rôles, grammaire, bureau `accueil`, touches réservées ; entrée réelle, Compose sur AltGr, disposition dans le fichier machine ; touches matérielles, diode du micro renvoyée à L1-08 avec son relevé ; `donnees/` lié par `make install` ; kitty tient le rôle terminal (D33 à D37) ; `plein-ecran-nu` restreinte au vrai plein écran (D31, suite) |

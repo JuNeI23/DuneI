@@ -749,11 +749,18 @@ dans la mesure. Le noyau journalise au réveil `ACPI BIOS Error (bug): Could not
 [\_SB.PCI0.GPP5]`, défaut du micrologiciel sans effet constaté. Le seuil de quelques pour cent par heure
 du carnet est très largement respecté : rien à reprendre.
 
+**Journal de `hypridle`.** Constaté à la relecture finale : sur secteur, les quatre paliers de batterie
+retentent leur condition toutes les 5 s sans fin, soit environ 2 900 lignes de journal et autant de
+lancements de `busctl` par heure d'inactivité. Choix de Nicolas : `hypridle --quiet`, par une surcharge
+d'unité déployée par `make install` ; on perd les lignes d'information, pas les erreurs. Les lancements de
+`busctl` restent, prix de la bascule en 5 s (critère 2). Pour déboguer : arrêter le service et lancer
+`hypridle -v` à la main.
+
 Raison : verrouiller tôt et dormir tôt sur batterie, ne jamais dormir sur secteur ; l'écran qui s'atténue
 avant de se verrouiller prévient avant d'agir. La mesure referme la crainte du carnet (veille moderne qui
 vide la batterie).
 
-*Touché : energie.toml, generated/hypridle.conf, carnet (Veille), backlog (L1-09).*
+*Touché : energie.toml, generated/hypridle.conf, config/systemd/user/hypridle.service.d/10-dunei.conf, deploy.py, carnet (Veille), backlog (L1-09).*
 
 ### D44 · Couvercle et bouton marche : logind décide de la veille, Hyprland de l'affichage
 

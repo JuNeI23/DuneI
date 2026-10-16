@@ -1,6 +1,6 @@
 # DuneI — Note de direction
 
-Oct 10, 2026 · @Nicolas — révisée le 15 octobre 2026
+Oct 10, 2026 · @Nicolas — révisée le 16 octobre 2026
 
 Version 1.11. Historique en fin de document.
 
@@ -247,10 +247,10 @@ rétroéclairage du clavier sont vérifiés, sans une ligne de code (D40). Proch
 `hyprlock` verrouille de façon provisoire, par un seul point que le lot 2 remplacera. Le bouton marche met
 en veille ; le couvercle est confié à logind, et Hyprland n'y gère que l'écran interne. Le premier fichier
 système de DuneI est déployé par `make install`, avec `sudo` seulement s'il diffère. Le micrologiciel n'offre
-que la veille `s2idle`, et c'est une bonne nouvelle : la nuit du 15 au 16 octobre, le sommeil matériel a
+que la veille `s2idle` ; elle tient bien : la nuit du 15 au 16 octobre, le sommeil matériel a
 tenu 99,4 % du temps et la décharge est de 0,42 % par heure. L'empreinte devient une feature à part
 (L2-37). La recette avec écran externe est en attente, faute d'écran (D41 à D46). Prochaine étape du lot 1 :
-**L1-10, le gestionnaire de session et le démarrage automatique** ; la recette avec écran externe de L1-09
+**L1-10, le gestionnaire de session et le démarrage automatique** (attention : `hypridle` exige `graphical-session.target` et l'environnement de Hyprland exporté par uwsm, voir le backlog) ; la recette avec écran externe de L1-09
 reste à faire dès qu'un écran est disponible.
 
 ## Plan de lecture
@@ -270,9 +270,9 @@ reste à faire dès qu'un écran est disponible.
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-10 | Version initiale |
-| 1.11 | 2026-10-16 | Énergie et veille faites (L1-09), sauf la recette avec écran externe ; décharge en veille mesurée ; backlog à 143 éléments ; prochaine étape : L1-10 (D41 à D46) |
+| 1.11 | 2026-10-16 | Énergie et veille faites (L1-09), sauf la recette avec écran externe ; décharge en veille mesurée ; backlog à 143 éléments ; prochaine étape : L1-10 (D41 à D46) ; relecture finale : `hypridle` silencieux (D43), dépendance à uwsm consignée, date et historique corrigés |
 | 1.10 | 2026-10-15 | Réseau vérifié, base réglementaire installée (D40) ; prochaine étape : L1-09 |
-| 1.9 | 2026-10-15 | Audio fait (L1-08) : `alsa-utils` répare la diode du micro, son et micro vérifiés ; règle de repérage des technos ; décompte de l'en-tête corrigé (cent quarante-trois) ; prochaine étape L1-07 |
+| 1.9 | 2026-10-15 | Audio fait (L1-08) : `alsa-utils` répare la diode du micro, son et micro vérifiés ; règle de repérage des technos ; décompte de l'en-tête corrigé (cent quarante-deux) ; prochaine étape L1-07 |
 | 1.8 | 2026-10-15 | Raccourcis faits (L1-16) ; diode du micro renvoyée à L1-08, prochaine étape ; décomptes à 142 éléments |
 | 1.7 | 2026-10-14 | Fenêtrage fait (L1-12 à L1-15) ; reste les raccourcis et les bureaux (L1-16). Paragraphes permanents de l'état d'avancement placés avant le journal, pour que le dernier paragraphe nomme la prochaine étape ; décomptes à 141 éléments |
 | 1.6 | 2026-10-14 | Écran et échelle faits (L1-17), échelle 1,25 ; reste le fenêtrage |
