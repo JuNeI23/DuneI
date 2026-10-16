@@ -19,7 +19,8 @@ posé lui-même.
   seulement s'il manque ou diffère ; {utilisateur} est rempli par l'utilisateur courant ; un fichier de
   logind.conf.d recharge logind, sans le redémarrer ; un fichier sous etc/systemd/system recharge systemd.
 - connexion : greetd et tuigreet doivent être installés ; si display-manager.service ne désigne pas
-  greetd, le gestionnaire actuel est désactivé et greetd activé, pour le démarrage suivant. Refus en root.
+  greetd, une seule commande, systemctl enable --force, fait pointer l'alias vers greetd, pour le
+  démarrage suivant : aucun instant sans gestionnaire. Refus en root.
 
     python3 deploy.py [--dry-run]
 """
@@ -229,7 +230,8 @@ def plan_connexion(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
 
     Entrées : repo, home — inutilisés, pour l'interface commune de DESTINATIONS.
     Sortie : (bascule vers greetd si display-manager.service ne le désigne pas ; erreurs). La bascule
-             prend effet au démarrage suivant ; elle suit la copie des fichiers système.
+             remplace l'alias en une commande (enable --force), sans désactiver l'ancien gestionnaire
+             d'abord ; elle prend effet au démarrage suivant et suit la copie des fichiers système.
     Erreurs : aucune exception ; greetd ou tuigreet absent, ou alias qui ne désigne pas une unité .service,
               devient un message.
     Dépendances : shutil.which, system_root, CONNEXION, GESTIONNAIRE, DM.
@@ -408,7 +410,9 @@ def apply(actions: list[tuple]) -> None:
     Les copies passent par un fichier temporaire renommé par os.replace ; la bascule donne un
     second nom au fichier générique (os.link), puis remplace hyprland.lua par un lien temporaire
     renommé par os.replace. hyprland.lua existe ainsi à chaque instant. Les actions système passent par
-    sudo, les services par systemctl --user.
+    sudo, les services par systemctl --user. La bascule du gestionnaire de connexion est une seule
+    commande, systemctl enable --force, qui remplace le lien display-manager.service : un échec laisse
+    l'ancien gestionnaire en place.
     Entrée : actions — liste produite par plan, sans erreur.
     Sortie : aucune. Erreurs : OSError si le système de fichiers refuse une opération ou si une commande
              est absente ; subprocess.CalledProcessError si une commande échoue.
@@ -439,9 +443,7 @@ def apply(actions: list[tuple]) -> None:
         elif kind == "sudo-daemon-reload":
             subprocess.run(["sudo", "systemctl", "daemon-reload"], check=True)
         elif kind == "sudo-dm":
-            if args[0] != "aucun":
-                subprocess.run(["sudo", "systemctl", "disable", args[0]], check=True)
-            subprocess.run(["sudo", "systemctl", "enable", args[1]], check=True)
+            subprocess.run(["sudo", "systemctl", "enable", "--force", args[1]], check=True)
         elif kind == "sudo-reload":
             subprocess.run(["sudo", "systemctl", "reload", args[0]], check=True)
         elif kind == "enable":

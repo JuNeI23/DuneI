@@ -450,9 +450,10 @@ class DeployTest(unittest.TestCase):
         (self.root / DM).symlink_to("/usr/lib/systemd/system/sddm.service")
         self.assertEqual(run(self.cfg).returncode, 0)
         sudo = [l for l in self.journal() if l.startswith("sudo systemctl")]
-        self.assertEqual(sudo[-2:], ["sudo systemctl disable sddm.service", "sudo systemctl enable greetd.service"])
+        self.assertEqual(sudo[-1], "sudo systemctl enable --force greetd.service")
+        self.assertFalse([l for l in self.journal() if "disable" in l])
         copies = [i for i, l in enumerate(self.journal()) if l.startswith("sudo install")]
-        self.assertLess(max(copies), self.journal().index("sudo systemctl enable greetd.service"))
+        self.assertLess(max(copies), self.journal().index("sudo systemctl enable --force greetd.service"))
 
     def test_no_switch_when_greetd_is_active(self):
         self.assertEqual(run(self.cfg).returncode, 0)
@@ -461,7 +462,7 @@ class DeployTest(unittest.TestCase):
     def test_enables_greetd_without_previous_manager(self):
         (self.root / DM).unlink()
         self.assertEqual(run(self.cfg).returncode, 0)
-        self.assertIn("sudo systemctl enable greetd.service", self.journal())
+        self.assertIn("sudo systemctl enable --force greetd.service", self.journal())
         self.assertFalse([l for l in self.journal() if "disable" in l])
 
     def test_refuses_without_greetd(self):
