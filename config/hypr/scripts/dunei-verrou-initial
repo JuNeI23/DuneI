@@ -5,7 +5,8 @@
 #        échecs, ferme la session, et greetd affiche l'écran de connexion : échec fermé.
 # Entrée : $1 — commande du verrouilleur, lue dans energie.toml par modules/demarrage.lua.
 # Sortie : code 0 si déverrouillé, 1 si la session est fermée, 2 si l'argument manque.
-# Erreurs : chaque échec du verrouilleur est écrit au journal (logger -t dunei-verrou-initial).
+# Erreurs : chaque échec du verrouilleur est écrit au journal (logger -t dunei-verrou-initial), comme une
+#          sortie du mode refusée par Hyprland (réponse autre que « ok ») et un échec de uwsm stop.
 # Dépendances : sh, hyprctl, uwsm, logger.
 TENTATIVES=3
 
@@ -14,12 +15,13 @@ TENTATIVES=3
 i=1
 while [ "$i" -le "$TENTATIVES" ]; do
     if sh -c "$1"; then
-        hyprctl dispatch 'hl.dsp.submap("reset")' >/dev/null
+        r=$(hyprctl dispatch 'hl.dsp.submap("reset")')
+        [ "$r" = ok ] || logger -t dunei-verrou-initial "sortie du mode verrou-initial refusée : $r"
         exit 0
     fi
     logger -t dunei-verrou-initial "verrouilleur en échec, tentative $i sur $TENTATIVES"
     i=$((i + 1))
 done
 logger -t dunei-verrou-initial "verrouilleur en échec $TENTATIVES fois : fermeture de la session"
-uwsm stop
+uwsm stop || logger -t dunei-verrou-initial "uwsm stop en échec : session non fermée, recours Ctrl + Alt + F2"
 exit 1

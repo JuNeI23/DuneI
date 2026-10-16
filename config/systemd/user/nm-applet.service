@@ -1,10 +1,12 @@
-# Applette réseau dans la session graphique de DuneI (L1-10), membre de la liste blanche de session.toml.
+# Applet réseau dans la session graphique de DuneI (L1-10), membre de la liste blanche de session.toml.
 # Posé par DuneI depuis config/ — NE PAS MODIFIER À LA MAIN : make install le remplace.
 # Modèle d'unité graphique d'uwsm : liée à graphical-session.target, arrêtée avant le compositeur.
 [Unit]
-Description=Applette réseau NetworkManager
+Description=Applet réseau NetworkManager
 PartOf=graphical-session.target
 After=graphical-session.target
+# Hors session graphique, l'applet ne démarre pas (comme l'unité de hypridle).
+ConditionEnvironment=WAYLAND_DISPLAY
 
 [Service]
 Type=exec

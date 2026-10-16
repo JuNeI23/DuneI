@@ -93,6 +93,12 @@ class DemarrageTest(unittest.TestCase):
         self.assertEqual(self.lines('print(tostring(M.premier()))\nprint(tostring(M.premier()))\n'),
                          [["true"], ["true"]])
 
+    def test_unwritable_state_locks(self):
+        (Path(self.tmp.name) / "fichier").write_text("", encoding="utf-8")
+        out = self.lines(f'M.ETAT = "{self.tmp.name}/fichier/dunei/verrou-initial"\n'
+                         'print(tostring(M.premier()))\nprint(tostring(M.premier()))\n')
+        self.assertEqual(out, [["true"], ["true"]])
+
     def test_quoting_survives_apostrophes(self):
         out = self.lines('print(M.citer("l\'écran"))\n')
         self.assertEqual(out, [["'l'\\''écran'"]])

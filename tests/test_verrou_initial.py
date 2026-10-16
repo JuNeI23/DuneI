@@ -8,8 +8,11 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 SCRIPT = ROOT / "config" / "hypr" / "scripts" / "dunei-verrou-initial"
-# Chaque faux outil consigne son appel dans $FAKE_LOG, une ligne par appel.
+# Chaque faux outil consigne son appel dans $FAKE_LOG, une ligne par appel. hyprctl répond $FAKE_HYPRCTL
+# (« ok » par défaut) ; uwsm sort avec le code $FAKE_UWSM (0 par défaut).
 FAKES = {name: f'#!/bin/sh\necho "{name} $*" >> "$FAKE_LOG"\n' for name in ("hyprctl", "uwsm", "logger")}
+FAKES["hyprctl"] += 'echo "${FAKE_HYPRCTL:-ok}"\n'
+FAKES["uwsm"] += 'exit "${FAKE_UWSM:-0}"\n'
 RESET = "hyprctl dispatch hl.dsp.submap(\"reset\")"
 
 
@@ -56,6 +59,21 @@ class VerrouInitialTest(unittest.TestCase):
         self.assertEqual(res.returncode, 0, res.stderr)
         self.assertEqual(self.count.read_text().strip(), "2")
         self.assertEqual([c for c in self.calls() if not c.startswith("logger")], [RESET])
+
+    def test_refused_reset_is_logged(self):
+        self.env["FAKE_HYPRCTL"] = "erreur"
+        res = self.run_script("true")
+        self.assertEqual(res.returncode, 0, res.stderr)
+        calls = self.calls()
+        self.assertEqual(calls[0], RESET)
+        self.assertEqual(len([c for c in calls if c.startswith("logger")]), 1)
+
+    def test_failed_stop_is_logged(self):
+        self.env["FAKE_UWSM"] = "1"
+        res = self.run_script("false")
+        self.assertEqual(res.returncode, 1)
+        self.assertTrue(self.calls()[-1].startswith("logger"))
+        self.assertEqual(len([c for c in self.calls() if c.startswith("logger")]), 5)
 
     def test_usage(self):
         res = self.run_script()

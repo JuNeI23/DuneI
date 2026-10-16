@@ -44,8 +44,9 @@ end
 --         dunei-verrou-initial avec le verrouilleur et entre dans le mode.
 -- Entrée facultative, pour les tests : energie — par défaut generated.energie (energie.toml), chargé au
 --         signal seulement.
--- Sortie : aucune. Erreurs : celles de l'API hl à l'enregistrement. Au signal, aucune ne remonte : sans
---          energie.lua, le mode bloque le clavier et M.SANS_ENERGIE l'écrit au journal.
+-- Sortie : aucune. Erreurs : celles de l'API hl à l'enregistrement. Au signal, ni M.premier, ni
+--          energie.lua, ni l'entrée dans le mode n'empêchent le lancement : sans energie.lua, le mode
+--          bloque le clavier et M.SANS_ENERGIE l'écrit au journal.
 -- Dépendances : M.premier, M.citer, generated.energie, scripts/dunei-verrou-initial, API hl de Hyprland 0.56.
 -- hyprland.start ne survient qu'au lancement : un rechargement ne reverrouille pas, et il conserve le mode
 -- en cours (relevé du 2026-10-16).

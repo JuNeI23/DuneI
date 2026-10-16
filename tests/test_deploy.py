@@ -114,6 +114,7 @@ class DeployTest(unittest.TestCase):
     def test_copies_hyprland_files(self):
         """Hyprland lit ces cinq fichiers générés : un oubli dans COPIES casserait tout le point d'entrée."""
         self.assertEqual(set(COPIES), {"hyprland-tokens.lua", "hyprland-rules.lua", "hyprland-binds.lua", "motion.lua", "energie.lua"})
+        self.assertEqual(COPIES[0], "energie.lua")
 
     def test_config_home(self):
         self.assertEqual(config_home({"XDG_CONFIG_HOME": "/x", "HOME": "/h"}), Path("/x"))
