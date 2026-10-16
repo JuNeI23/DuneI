@@ -1,0 +1,15 @@
+# Borne le cache de pacman après chaque transaction (L1-05) : trois versions par paquet, aucune pour les paquets désinstallés.
+# Posé par DuneI depuis systeme/ — NE PAS MODIFIER À LA MAIN : make install le remplace.
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Operation = Remove
+Type = Package
+Target = *
+
+[Action]
+Description = Nettoyage du cache de pacman (trois versions conservées)...
+When = PostTransaction
+Depends = pacman-contrib
+# pacman n'interprète pas l'Exec : le shell enchaîne les deux nettoyages.
+Exec = /usr/bin/sh -c '/usr/bin/paccache -rk3 && /usr/bin/paccache -ruk0'

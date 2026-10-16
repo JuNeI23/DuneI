@@ -1,0 +1,12 @@
+# Déclenche chaque jour le préchargement des mises à jour (L1-05).
+# Posé par DuneI depuis systeme/ — NE PAS MODIFIER À LA MAIN : make install le remplace.
+[Unit]
+Description=Préchargement quotidien des mises à jour de paquets
+
+[Timer]
+OnCalendar=daily
+Persistent=true
+RandomizedDelaySec=1h
+
+[Install]
+WantedBy=timers.target

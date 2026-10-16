@@ -1,0 +1,18 @@
+# Préchargement quotidien des mises à jour dans le cache de pacman, sans les installer (L1-05).
+# Posé par DuneI depuis systeme/ — NE PAS MODIFIER À LA MAIN : make install le remplace.
+[Unit]
+Description=Préchargement des mises à jour de paquets
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+# Abstention (sortie 1, service ignoré sans erreur) si NetworkManager déclare la connexion mesurée
+# (u 1 : oui, u 3 : probablement oui) ; une réponse illisible vaut « non mesurée ». « $$ » devient « $ ».
+ExecCondition=/usr/bin/sh -c 'case "$$(busctl get-property org.freedesktop.NetworkManager /org/freedesktop/NetworkManager org.freedesktop.NetworkManager Metered 2>/dev/null)" in "u 1"|"u 3") exit 1 ;; esac'
+# Télécharge dans le cache sans toucher à la base synchronisée : aucune mise à jour partielle possible.
+ExecStart=/usr/bin/checkupdates -d
+# Le code 2 de checkupdates signifie « rien à mettre à jour » : ce n'est pas un échec.
+SuccessExitStatus=2
+Nice=19
+IOSchedulingClass=idle
