@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.12. Historique en fin de document.
+Version 1.13. Historique en fin de document.
 
 La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **143 éléments** répartis en **cinq lots**, sur six chantiers.
 
@@ -231,7 +231,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L1-07 | A | Offert | Service réseau — vérification — **fait (D40)** : NetworkManager et `wpa_supplicant` conservés ; `wireless-regdb` installé, sans effet sur la carte *self-managed* de `caladan` ; connexion au démarrage, reconnexion après coupure et touche mode avion vérifiées |
 | L1-08 | A | Offert | Service audio — vérification — **fait (D38)** : son, micro et haut-parleurs vérifiés ; `alsa-utils` installé, dont `alsactl` exécute l'initialisation UCM qui rattache la diode de sourdine au micro numérique : elle suit toute sourdine, F4 garde `wpctl` seul |
 | L1-09 | A | Offert | Service d'énergie et de veille — vérification — **fait (D41 à D46), sauf la recette avec écran externe, en attente** : `hypridle` et `hyprlock` installés ; échelle d'inactivité à quatre paliers, deux jeux de délais, dans `energie.toml` (`make energie`) ; verrouillage avant toute veille ; couvercle et bouton marche confiés à logind, l'écran interne à `couvercle.lua` ; premier fichier système déployé par `make install` ; rétroéclairage du clavier éteint à l'inactivité (pendant la veille, le pilote `thinkpad_acpi` l'éteint à la mise en veille, `kbdlight_suspend` / `led_classdev_suspend` ; constat visuel à l'écran en attente) ; décharge en veille mesurée à 0,42 % par heure. **En attente, faute d'écran externe** : couvercle fermé avec écran externe (écran interne éteint, pas de veille, retour à la réouverture), veille avec écran externe branché |
-| L1-10 | A | Configuré | Gestionnaire de session et démarrage automatique — **dépendance de L1-09** : `hypridle` exige `graphical-session.target` et l'environnement de Hyprland exporté au gestionnaire utilisateur (uwsm) ; sans eux, la veille n'est plus précédée du verrouillage |
+| L1-10 | A | Configuré | Gestionnaire de session et démarrage automatique — **fait (D49 à D51)** : greetd et tuigreet remplacent SDDM (`dunei.toml`, surcharge de `greetd.service`) ; connexion automatique une fois par démarrage, écran de connexion après une sortie, menu limité à DuneI ; liste blanche du démarrage de session dans `session.toml` (autostart XDG masqué, `nm-applet` et `hypridle` seuls) ; session verrouillée dès son ouverture, en échec fermé (mode `verrou-initial`, `dunei-verrou-initial`), fond uni `surface-base` ; session lancée par uwsm, dépendance de L1-09 satisfaite. Recette du 2026-10-16 passée, démarrage de 18,3 s contre 18,9 s |
 | L1-11 | B | Configuré | Choisir le compositeur selon les besoins de la bible — **tranché : Hyprland 0.56, configuration Lua** |
 | L1-12 | B | Configuré | Tuilage — couche 1, gouttière 8 px, rayon 12 — **fait (D28)** : dwindle, placement au pointeur, découpes figées |
 | L1-13 | B | Configuré | Fenêtre active ; inactive → modificateur de conteneur — **fait (D29)** : aucune bordure ; le repère de la fenêtre active revient à L2-03 |
@@ -261,7 +261,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L2-08 | B | Écrit | Barre système — structure, 32 px, couleur franche du thème |
 | L2-09 | B | Écrit | Barre système — horloge, chiffres tabulaires |
 | L2-10 | B | Écrit | Barre système — indicateur de bureaux virtuels |
-| L2-11 | B | Écrit | Indicateur réseau et son popover ; décider du sort de `nm-applet`, lancé par l'autostart XDG : le garder ou le remplacer (D40) |
+| L2-11 | B | Écrit | Indicateur réseau et son popover ; décider du sort de `nm-applet`, qui passe désormais par `session.toml` et son unité `nm-applet.service` (L1-10, D50) : le garder, ou le remplacer et retirer alors sa ligne et son unité (D40) |
 | L2-12 | B | Écrit | Indicateur audio et son popover — volume, sorties ; niveau du micro numérique, qui sature à 100 % (relevé du 2026-10-15, D38) |
 | L2-13 | B | Écrit | Indicateur d'énergie et son popover |
 | L2-14 | B | Écrit | Indicateur Bluetooth et son popover |
@@ -274,10 +274,10 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L2-21 | B | Écrit | Infobulles — délai de 500 ms |
 | L2-22 | B | Écrit | Verrouillage — registre de spectacle ; `SUPER + L` est déjà lié à `loginctl lock-session` (L1-09, D41) ; le verrouilleur provisoire, `hyprlock`, ne se nomme qu'à un endroit, `verrouilleur` dans `energie.toml`, et c'est le seul point à remplacer ; l'esthétique du verrouillage reste ouverte, Nicolas acceptant d'y investir de la ressource machine |
 | L2-23 | B | Écrit | Menu de déconnexion — action destructrice en `error` |
-| L2-24 | B | Écrit | Agent d'authentification |
+| L2-24 | B | Écrit | Agent d'authentification — il devra entrer dans `session.toml` (unité systemd utilisateur) pour démarrer avec la session (L1-10, D50) |
 | L2-25 | B | Configuré | Trousseau de secrets |
 | L2-26 | B | Écrit | Démon de thème — rechargement à chaud |
-| L2-27 | B | Écrit | Application du fond d'écran |
+| L2-27 | B | Écrit | Application du fond d'écran — le démon de fond d'écran entrera dans `session.toml` ; d'ici là, le fond uni `surface-base` du compositeur (#120601 à la teinte 55°) est le bureau provisoire validé (L1-10, D51) |
 | L2-28 | B | Mixte | Raccourcis clavier globaux et leur affichage ; touche réservée `SUPER + /` ; lire `hyprctl binds -j`, qui rend les descriptions de la table |
 | L2-29 | B | Écrit | Contrôle de la luminosité |
 | L2-30 | B | Écrit | Capture d'écran ; touche réservée `Print` |
@@ -368,7 +368,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L5-09 | B | Écrit | Panneau — apparence, renvoyant au panneau de thème |
 | L5-10 | B | Écrit | Panneau — applications par défaut |
 | L5-11 | B | Écrit | Panneau — date, heure, langue |
-| L5-12 | B | Mixte | Écran de connexion — spectacle, couleur franche |
+| L5-12 | B | Mixte | Écran de connexion — spectacle, couleur franche ; remplace tuigreet (greetd, `systeme/etc/greetd/dunei.toml`, L1-10, D49) : ReGreet, ou un écran en QML avec Quickshell (`Quickshell.Services.Greetd`) ; ferme la commande libre (F2) de tuigreet, limite acceptée à L1-10 |
 | L5-13 | B | Configuré | Amorçage silencieux |
 | L5-14 | B | Écrit | Fenêtre « À propos » — seul lieu d'apparition de l'identité |
 | L5-15 | F | Écrit | Vérifier l'absence d'identité partout ailleurs |
@@ -490,6 +490,7 @@ Le choix de la distribution de base et du compositeur, précédemment ouverts, s
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-12 | Version initiale, 137 éléments |
+| 1.13 | 2026-10-16 | L1-10 fait (D49 à D51) : greetd, liste blanche du démarrage, verrou initial ; L5-12 note greetd, `dunei.toml`, la piste Quickshell et la fermeture de F2 ; L2-11, L2-24 et L2-27 notent `session.toml`. 143 éléments |
 | 1.12 | 2026-10-16 | L1-09 fait, sauf la recette avec écran externe, en attente ; L2-22 note `SUPER + L` déjà lié, le point de remplacement unique et l'esthétique ouverte ; ajout de L2-37, déverrouillage par empreinte, au lot 2 : il touche le verrouilleur (L2-22), l'agent d'authentification (L2-24) et `sudo`, qui s'écrivent là, alors que la conception visuelle reste au lot 5 (D46) ; relecture finale : dépendance de L1-10 à uwsm, clavier en veille en attente. 143 éléments |
 | 1.11 | 2026-10-15 | L1-07 fait : réseau vérifié, `wireless-regdb` installé ; L1-09 reçoit l'extinction du rétroéclairage du clavier ; L2-11 reçoit le sort de `nm-applet` |
 | 1.10 | 2026-10-15 | L1-08 fait : `alsa-utils` répare la diode du micro ; L2-12 reçoit le niveau du micro ; décompte des natures corrigé (37 configurés, 2 mixtes) ; nature mixte définie |

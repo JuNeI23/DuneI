@@ -58,10 +58,11 @@ end
 -- Un rechargement réapplique la règle machine et rallume l'écran interne : d'où la remise à zéro.
 function M.apply()
     M.desactive = nil
+    -- Universelles : le couvercle agit aussi pendant le verrou initial (L1-10).
     hl.bind("switch:on:Lid Switch", function() M.evaluer(true) end,
-            { locked = true, description = "Couvercle fermé : écran interne désactivé si un autre écran est actif" })
+            { locked = true, submap_universal = true, description = "Couvercle fermé : écran interne désactivé si un autre écran est actif" })
     hl.bind("switch:off:Lid Switch", function() M.evaluer(false) end,
-            { locked = true, description = "Couvercle ouvert : écran interne rétabli" })
+            { locked = true, submap_universal = true, description = "Couvercle ouvert : écran interne rétabli" })
     hl.on("monitor.added", function() M.evaluer() end)
     hl.on("monitor.removed", function() M.evaluer() end)
     M.evaluer()

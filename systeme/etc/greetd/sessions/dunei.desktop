@@ -1,0 +1,7 @@
+# Seule session proposée par l'écran de connexion de DuneI (L1-10) : Hyprland lancé par uwsm.
+# Posé par DuneI depuis systeme/ — NE PAS MODIFIER À LA MAIN : make install le remplace.
+[Desktop Entry]
+Name=DuneI
+Comment=Session Hyprland lancée par uwsm
+Exec=uwsm start -e -D Hyprland hyprland.desktop
+Type=Application

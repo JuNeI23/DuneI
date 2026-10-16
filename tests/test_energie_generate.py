@@ -1,13 +1,17 @@
 """Générateur de l'échelle d'inactivité — generate_energie.py sur la vraie source et sur une source fautive."""
 
+import shutil
 import subprocess
 import sys
 import tempfile
 import unittest
 from pathlib import Path
 
+from dunei_energie.emitters import lua as lua_target
+
 ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS = '"${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts'
+LUA = shutil.which("lua") or shutil.which("luajit")
 
 
 def run(src: Path, out: Path) -> subprocess.CompletedProcess:
@@ -31,7 +35,7 @@ class GenerateTest(unittest.TestCase):
 
     def test_general(self):
         text = self.generate()
-        for line in ("    lock_cmd = pidof hyprlock || hyprlock --no-fade-in",
+        for line in ("    lock_cmd = pidof hyprlock || hyprlock --no-fade-in --immediate-render",
                      "    before_sleep_cmd = loginctl lock-session",
                      "    after_sleep_cmd = hyprctl dispatch 'hl.dsp.dpms({ action = \"on\" })'",
                      "    inhibit_sleep = 3", "    ignore_dbus_inhibit = false",
@@ -76,6 +80,31 @@ class GenerateTest(unittest.TestCase):
             res = run(Path(tmp) / "absent.toml", Path(tmp))
             self.assertEqual(res.returncode, 1)
             self.assertIn("source illisible", res.stderr)
+
+
+class LuaTargetTest(unittest.TestCase):
+    """generated/energie.lua rend la commande du verrouilleur, intacte, en Lua valide."""
+
+    def roundtrip(self, cmd: str) -> str:
+        """Évalue le module émis pour une commande donnée et rend la valeur lue par Lua."""
+        text = lua_target.emit({"verrouilleur": cmd})
+        res = subprocess.run([LUA, "-e", f"io.write((load([==[{text}]==])()).verrouilleur)"],
+                             capture_output=True, text=True)
+        self.assertEqual(res.returncode, 0, res.stderr)
+        return res.stdout
+
+    def test_marked_as_generated(self):
+        self.assertIn("GÉNÉRÉ depuis energie.toml", lua_target.emit({"verrouilleur": "x"}).splitlines()[0])
+
+    @unittest.skipUnless(LUA, "aucun interpréteur Lua")
+    def test_real_command_roundtrips(self):
+        cmd = "pidof hyprlock || hyprlock --no-fade-in --immediate-render"
+        self.assertEqual(self.roundtrip(cmd), cmd)
+
+    @unittest.skipUnless(LUA, "aucun interpréteur Lua")
+    def test_quotes_and_backslashes_roundtrip(self):
+        cmd = "verrou --texte \"l'écran\" --motif 'a\\b'"
+        self.assertEqual(self.roundtrip(cmd), cmd)
 
 
 if __name__ == "__main__":

@@ -57,7 +57,7 @@ def _validate(raw: dict) -> None:
 
 
 def emit(model: dict) -> str:
-    """Module Lua des options `general` et `decoration` de Hyprland.
+    """Module Lua des options `general`, `decoration` et `misc` de Hyprland.
 
     Entrée : model — sortie de model.resolve.
     Sortie : contenu de hyprland-tokens.lua (une table Lua retournée).
@@ -88,6 +88,10 @@ def emit(model: dict) -> str:
         f"            offset       = {{ 0, {s['offset_y']} }},",
         f"            color        = \"{_rgba(Oklch(**mat['shadow_color']), mat['shade_opacity'])}\",",
         "        },",
+        "    },",
+        "    misc = {",
+        # Fond du compositeur, visible sans fond d'écran et avant le verrou initial (L1-10) : rôle bureau.
+        f"        background_color = \"{_rgba(model['roles']['surface-base'], 1)}\",",
         "    },",
         "}",
     ]) + "\n"

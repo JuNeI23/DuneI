@@ -1,0 +1,10 @@
+# session.toml — liste blanche du démarrage de la session graphique de DuneI (L1-10).
+#
+# Seuls les services nommés ici démarrent avec la session : l'autostart XDG (/etc/xdg/autostart) est
+# masqué par make install. Un service est une unité systemd utilisateur, fournie par un paquet ou écrite
+# dans config/systemd/user/ ; make install l'active. Pour lancer un programme avec la session, on
+# l'ajoute ici, jamais par une case « lancer au démarrage » d'une application, qui reste sans effet.
+version = "0.1.0"
+
+[demarrage]
+services = ["hypridle.service", "nm-applet.service"]   # nm-applet : son sort se décide à L2-11.

@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.5. Historique en fin de document.
+Version 1.6. Historique en fin de document.
 
 Socle amorçable.
 
@@ -25,7 +25,7 @@ Relevé sur `caladan` avant tout développement. **Aucun choix logiciel de ce ca
 | Distribution | Arch Linux, noyau 7.2 | Acquis |
 | Compositeur | Hyprland 0.56, **configuration en Lua** (`hyprland.lua`) | Acquis |
 | Configuration | Fichier générique autogénéré par Hyprland, non modifié | Renommé `generique.lua` par `make install`, chargé en premier par le point d'entrée DuneI et réduit feature après feature |
-| Gestionnaire de connexion | `sddm`, activé | Conservé jusqu'à la feature session |
+| Gestionnaire de connexion | `sddm`, activé | Remplacé par greetd à la feature session (L1-10, D49) ; SDDM désinstallé après la recette |
 | Terminal | `kitty` | Conservé jusqu'à la feature terminal |
 | Fenêtrage | dwindle, bordure dégradée, flou, ombre sur toutes les fenêtres | Tranché à la feature fenêtrage (D28 à D31) : `general`, `decoration`, dispositions et règles de fenêtre retirés de `generique.lua` |
 | Échelle d'affichage | `auto` → 1,5 | Tranchée à la feature écran : 1,25, soit 1536 × 960 (D27) ; la règle générique est retirée de `generique.lua` |
@@ -374,19 +374,78 @@ section Audio.
 
 ### Paquets
 
-Propositions — chaque ligne est validée à la feature qui la porte. D'ici là, `sddm` et `kitty` restent en place.
+Propositions — chaque ligne est validée à la feature qui la porte. D'ici là, `kitty` reste en place. `greetd` et `greetd-tuigreet` sont validés (L1-10, D49) ; `sddm` est retiré.
 
 ```
 hyprland
 xdg-desktop-portal-hyprland xdg-desktop-portal-gtk
 qt6-wayland qt5-wayland
-greetd greetd-tuigreet
 foot
 ```
 
-**Lancement par `uwsm` à étudier** à la feature session : c'est le lancement recommandé par la documentation Hyprland actuelle, et il déplace les variables d'environnement vers ses propres fichiers.
+**Lancement par `uwsm`** : c'est le lancement recommandé par la documentation Hyprland actuelle, et il déplace les variables d'environnement vers ses propres fichiers. Fait établi depuis L1-10 : Hyprland est lancé par `uwsm start -e -D Hyprland hyprland.desktop`, depuis greetd (voir « Session et démarrage — L1-10 »).
 
 `greetd` avec `tuigreet` est **délibérément laid et provisoire** : l'écran de connexion thématisé est L5-12. Installer maintenant un gestionnaire graphique lourd reviendrait à habiller un écran qu'on remplacera, et à traîner une dépendance du bureau intégré qu'on a écarté.
+
+### Session et démarrage — L1-10
+
+```
+greetd greetd-tuigreet
+```
+
+`greetd` 0.10.3-2 et `greetd-tuigreet` 0.11.1-2 (le binaire se déclare 0.11.0), dépôt officiel, installés le 2026-10-16 par `sudo pacman -S --needed greetd greetd-tuigreet` (D49) ; `greetd-agreety` vient en dépendance. `make install` refuse de déployer si `greetd` ou `tuigreet` manque.
+
+**Fichiers posés.**
+
+| Fichier du dépôt | Destination | Rôle |
+| --- | --- | --- |
+| `systeme/etc/greetd/dunei.toml` | `/etc/greetd/dunei.toml` | Configuration de greetd : session automatique (`initial_session`) et écran de connexion (`default_session`) |
+| `systeme/etc/greetd/sessions/dunei.desktop` | `/etc/greetd/sessions/dunei.desktop` | Seule session proposée par le menu F3 de tuigreet |
+| `systeme/etc/systemd/system/greetd.service.d/10-dunei.conf` | `/etc/systemd/system/greetd.service.d/` | Surcharge de `ExecStart` : `greetd --config /etc/greetd/dunei.toml` ; le `config.toml` du paquet reste intact |
+| `session.toml` | lu par `deploy.py` | Liste blanche du démarrage de la session (D50) |
+| `config/systemd/user/nm-applet.service` | `~/.config/systemd/user/` | Unité de l'applet réseau, première de la liste à être écrite par DuneI |
+| `config/hypr/modules/demarrage.lua` | `~/.config/hypr/modules/` (lien) | Verrou initial (D51) |
+| `config/hypr/scripts/dunei-verrou-initial` | `~/.config/hypr/scripts/` (lien) | Trois tentatives du verrouilleur, puis `uwsm stop` |
+| `generated/energie.lua` | `~/.config/hypr/generated/` | Commande du verrouilleur, tirée d'`energie.toml` |
+
+**Ce que fait `make install`.** Dans l'ordre : `hypr`, `fontconfig`, `services`, `systeme`, `connexion`.
+- `{utilisateur}` est rempli avec l'utilisateur qui lance la commande, avant comparaison et copie ; lancé en root, `make install` refuse.
+- `services` copie les unités du dépôt, pose le masque `~/.config/systemd/user/wayland-session-xdg-autostart@.target` → `/dev/null`, recharge systemd, puis active et démarre chaque service de `session.toml`. Une unité accrochée à `graphical-session.target` hors de la liste est signalée, jamais désactivée.
+- `systeme` copie les fichiers de `/etc` avec `sudo install -D -m 644` et lance `daemon-reload` quand l'un d'eux est sous `etc/systemd/system/`. `sudo` n'est demandé que si une copie est prévue.
+- `connexion` exécute `sudo systemctl enable --force greetd.service` si `display-manager.service` ne désigne pas déjà greetd. La bascule prend effet au démarrage suivant, jamais en pleine session. Une seule commande : pas de fenêtre sans gestionnaire entre un `disable` et un `enable`.
+- `make install` refuse aussi un script de `config/hypr/scripts/` non exécutable : sans `dunei-verrou-initial`, le clavier resterait bloqué sans verrou.
+
+**Comportement.** Au démarrage, greetd ouvre la session de Nicolas sans écran de connexion, une seule fois (fichier témoin `/run/greetd.run`) ; Hyprland affiche un fond uni (`surface-base`) et lance `hyprlock` ; tant qu'il n'est pas déverrouillé, aucun raccourci ordinaire ne répond, mais son, micro et luminosité répondent. `SUPER + Alt + M` quitte la session (`uwsm stop`, D37) et affiche tuigreet : la session ouverte par là n'est pas verrouillée d'office. Le menu des sessions (F3) ne propose que DuneI ; la commande libre (F2) reste ouverte, limite acceptée, close à L5-12.
+
+**Ajouter un programme à la session.** Une ligne dans `session.toml` et son unité (celle du paquet, ou une unité écrite dans `config/systemd/user/`). Une case « lancer au démarrage » d'application reste sans effet : l'autostart XDG est masqué (D50).
+
+**Vérification.**
+
+```
+systemctl --user list-dependencies graphical-session.target   # hypridle, nm-applet, rien d'autre
+systemctl --user is-active hypridle.service nm-applet.service
+pgrep -x print-applet                                          # aucune sortie
+readlink /etc/systemd/system/display-manager.service           # greetd.service
+cat ~/.local/state/dunei/verrou-initial                        # identifiant du démarrage courant
+journalctl -t dunei-verrou-initial                             # échecs du verrouilleur, s'il y en a
+```
+
+**Recette du 2026-10-16**, après redémarrage, validée à l'écran par Nicolas.
+- Aucun écran de connexion : fond uni puis verrou, aucun bureau visible avant le verrou (constat visuel ; l'intervalle n'est pas mesurable, le journal de Hyprland n'horodate pas la pose du verrou). Touches de volume et de luminosité actives sous le verrou.
+- greetd lance la session automatique à 6,6 s après le noyau ; l'état `~/.local/state/dunei/verrou-initial` contient l'identifiant du démarrage courant.
+- Plantage simulé, `pkill -9 hyprlock` depuis `tty2`, trois fois : échecs journalisés à 60 s, 98 s et 101 s, session reverrouillée entre deux, puis fermeture de la session et tuigreet à 102 s. Connexion par tuigreet à 126,9 s : session sans verrou, mode `default`.
+- `SUPER + Alt + M` ramène tuigreet ; reconnexion normale.
+- `nm-applet` et `hypridle` actifs ; `print-applet` absent ; `loginctl lock-session` verrouille toujours.
+- Démarrage complet de 18,3 s (micrologiciel 8,2 + chargeur 3,3 + noyau 4,5 + espace utilisateur 2,3), contre 18,9 s avec SDDM.
+- Avant le redémarrage : le mode bloquant avec `hyprlock` sur la session courante, et la maquette de tuigreet (`--mock`, menu F3 ne proposant que DuneI), validés par Nicolas. Le fond `surface-base` (#120601 à la teinte 55°) est validé comme bureau provisoire jusqu'à L2-27.
+
+**Recours.** `Ctrl + Alt + F2` ouvre une console texte. Le verrou initial dépend de `demarrage.lua` : cassé, aucun verrou ne part et la session s'ouvre déverrouillée. Si la configuration casse avant `clavier`, les raccourcis de secours de Hyprland peuvent manquer. Un `hyprlock` qui échoue trois fois ferme la session et affiche tuigreet (mot de passe).
+
+**Avertissement : modules liés et fichiers générés neufs.** `config/hypr/modules` est lié au dépôt et Hyprland recharge toute modification. Un module qui exige un nouveau fichier de `generated/` casse la session vivante (fragment machine et couvercle non appliqués) jusqu'au `make install` suivant ; constaté à l'écriture de `demarrage.lua`, qui lit `generated/energie.lua`. Réparation : copier le fichier sous `~/.config/hypr/generated/`, puis `hyprctl reload`.
+
+**Bascule.** Elle suit la copie des fichiers système : greetd ne peut jamais démarrer sans `dunei.toml` ni sa surcharge. Un échec de `sudo` avant elle laisse l'ancien gestionnaire en place ; relancer `make install` reprend la procédure.
+
+**Désinstallation de SDDM**, faite après la recette : `sudo pacman -Rns sddm`. Retirés : `sddm` 0.21.0-7, `xorg-xauth`, `libxmu`, `xorg-server` 21.1.25-2, `xf86-input-libinput`. `xorg-xwayland` 24.1.14 reste, XWayland étant actif.
 
 `foot` est le terminal du lot 1 : natif Wayland, léger, sans dépendance de bureau. Lui aussi est provisoire — le terminal définitif vient de la famille dominante au lot 3. Au 2026-10-15, foot n'est pas installé : le rôle terminal de `donnees/roles.lua` est tenu par kitty, déjà présent, jusqu'à L1-18.
 
@@ -739,6 +798,7 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 | Version | Date | Changement |
 | --- | --- | --- |
 | 0.1 | 2026-10-12 | Version initiale |
+| 1.6 | 2026-10-16 | Session et démarrage (L1-10) : greetd et tuigreet installés, SDDM retiré ; fichiers système, `session.toml`, `nm-applet.service`, `demarrage.lua` et `dunei-verrou-initial` ; ce que fait `make install` ; recette du 2026-10-16 ; recours, modules liés et fichiers générés neufs ; paquets proposés mis à jour (D49 à D51) |
 | 1.5 | 2026-10-16 | `shellcheck` ajouté aux outils de développement, lancé par `make test` (D48) |
 | 1.4 | 2026-10-16 | Énergie et veille (L1-09) : `hypridle` et `hyprlock` installés, `energie.toml` et `make energie`, échelle à quatre paliers, scripts, `hyprlock.conf` provisoire, fichier logind déployé par `make install`, couvercle partagé entre logind et `couvercle.lua`, `SUPER + L` ; relevé de décharge (0,42 % par heure) et sa procédure ; sommeil profond inexistant (`s2idle` seul) ; piège de `dpms` ; recette avec écran externe en attente (D41 à D46) ; `hypridle --quiet`, dépendance à uwsm, paquets d'exécution, clavier en veille |
 | 1.3 | 2026-10-15 | Réseau (L1-07) : NetworkManager et `wpa_supplicant` conservés, `wireless-regdb` et `iw` installés, carte *self-managed*, vérification de la connexion et de la reconnexion ; touches mode avion et rétroéclairage du clavier, actives sans raccourci (D40) |

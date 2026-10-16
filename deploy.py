@@ -8,14 +8,20 @@ posé lui-même.
 
 - hypr : au premier passage, une configuration générique existante est conservée sous le nom
   generique.lua, puis remplacée de façon atomique par le point d'entrée DuneI. Hyprland recharge seul.
+  Un script de config/hypr/scripts/ non exécutable est refusé.
 - fontconfig : generated/fonts.conf est copié vers fontconfig/conf.d/50-dunei.conf. Les applications
   lancées ensuite le lisent ; aucun fc-cache n'est nécessaire.
-- services : hyprlock doit être installé ; la surcharge systemd/user/hypridle.service.d/10-dunei.conf
-  (hypridle silencieux) est copiée, puis hypridle.service est activé s'il ne l'est pas, démarré s'il
-  est arrêté, et redémarré si sa configuration ou sa surcharge change (daemon-reload d'abord).
+- services : hyprlock doit être installé ; les unités et surcharges de config/systemd/user/ sont
+  copiées, l'autostart XDG d'uwsm est masqué (liste blanche de session.toml) ; chaque service de la
+  liste est activé, démarré, ou redémarré si sa configuration change (daemon-reload d'abord). Un
+  service accroché à la session hors de la liste est signalé, jamais désactivé.
   Cette étape précède les fichiers système : un échec de sudo ne laisse jamais l'ancienne échelle active.
 - systeme : chaque fichier de systeme/ est copié sous la racine du système, /etc compris, avec sudo, et
-  seulement s'il manque ou diffère ; un fichier de logind.conf.d recharge logind, sans le redémarrer.
+  seulement s'il manque ou diffère ; {utilisateur} est rempli par l'utilisateur courant ; un fichier de
+  logind.conf.d recharge logind, sans le redémarrer ; un fichier sous etc/systemd/system recharge systemd.
+- connexion : greetd et tuigreet doivent être installés ; si display-manager.service ne désigne pas
+  greetd, une seule commande, systemctl enable --force, fait pointer l'alias vers greetd, pour le
+  démarrage suivant : aucun instant sans gestionnaire. Refus en root.
 
     python3 deploy.py [--dry-run]
 """
@@ -24,17 +30,23 @@ from __future__ import annotations
 
 import argparse
 import os
+import pwd
 import shutil
 import subprocess
 import sys
+import tempfile
+import tomllib
 from collections.abc import Mapping
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent
 ENTRY = "config/hypr/hyprland.lua"            # Point d'entrée, lié sous hypr/hyprland.lua.
+SCRIPTS = "config/hypr/scripts"               # Scripts lancés par Hyprland : chacun doit être exécutable.
 LINKS = ("config/hypr/modules", "config/hypr/machines", "config/hypr/donnees",
-         "config/hypr/scripts", "config/hypr/hyprlock.conf")   # Écrits à la main, liés sous hypr/ à leur nom.
-COPIES = ("hyprland-tokens.lua", "hyprland-rules.lua", "hyprland-binds.lua", "motion.lua")  # Fichiers de generated/ lus par Hyprland.
+         SCRIPTS, "config/hypr/hyprlock.conf")   # Écrits à la main, liés sous hypr/ à leur nom.
+# Fichiers de generated/ lus par Hyprland. energie.lua d'abord : un module en dépend, et une recharge
+# déclenchée par une autre copie le trouve ainsi déjà en place.
+COPIES = ("energie.lua", "hyprland-tokens.lua", "hyprland-rules.lua", "hyprland-binds.lua", "motion.lua")
 GENERIC = "generique.lua"                     # Nom donné à la configuration générique de la machine.
 TEMP = ".{}.dunei"                            # Nom temporaire, sans extension .lua, invisible pour require.
 FONTCONFIG = ("fonts.conf", "conf.d/50-dunei.conf")  # Fichier de generated/ → chemin sous fontconfig/.
@@ -42,10 +54,17 @@ MARK = "GÉNÉRÉ depuis tokens.toml"                    # Avertissement de deux
 IDLE = ("hypridle.conf", "GÉNÉRÉ depuis energie.toml")       # Fichier de generated/ copié sous hypr/, et sa marque.
 SYSTEME = "systeme"                                          # Arborescence copiée sous la racine du système.
 SYSTEM_MARK = "Posé par DuneI"                               # Marque de deuxième ligne d'un fichier système.
-SERVICE = "hypridle.service"                                 # Service utilisateur de l'échelle d'inactivité.
+SERVICE = "hypridle.service"                                 # Service de l'échelle d'inactivité, redémarré si hypridle.conf change.
+SESSION = "session.toml"                                     # Liste blanche du démarrage de session (L1-10).
+SESSION_VERSION = "0.1.0"
+UNITES = "config/systemd/user"                               # Unités et surcharges utilisateur du dépôt, copiées sous systemd/user/.
+MASQUE = "systemd/user/wayland-session-xdg-autostart@.target"  # Autostart XDG d'uwsm, masqué : liste blanche.
+SESSION_WANTS = "systemd/user/graphical-session.target.wants"  # Services accrochés à la session graphique.
+CHAMP = b"{utilisateur}"                                     # Champ des fichiers système, rempli par l'utilisateur courant.
+CONNEXION = ("greetd", "tuigreet")                           # Gestionnaire de connexion et écran provisoire exigés (L1-10).
+GESTIONNAIRE = "greetd.service"
+DM = "etc/systemd/system/display-manager.service"            # Alias du gestionnaire de connexion actif, sous la racine.
 VERROUILLEUR = "hyprlock"                                    # Verrouilleur exigé ; provisoire, remplacé à L2-22.
-DROPIN = ("config/systemd/user/hypridle.service.d/10-dunei.conf",
-          "systemd/user/hypridle.service.d/10-dunei.conf")   # Surcharge du service : source du dépôt → chemin sous la configuration.
 
 
 def config_home(env: Mapping[str, str]) -> Path:
@@ -66,6 +85,15 @@ def system_root(env: Mapping[str, str]) -> Path:
     Erreurs : aucune. Dépendances : aucune.
     """
     return Path(env.get("DUNEI_SYSROOT") or "/")
+
+
+def utilisateur() -> str:
+    """Nom de l'utilisateur qui lance le déploiement.
+
+    Entrée : aucune. Sortie : nom du compte de l'uid courant.
+    Erreurs : KeyError si l'uid n'a pas de compte. Dépendances : pwd.
+    """
+    return pwd.getpwuid(os.getuid()).pw_name
 
 
 def _links_to(link: Path, target: Path) -> bool:
@@ -98,13 +126,17 @@ def plan_hypr(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
 
     Entrées : repo — racine du dépôt ; home — dossier de configuration racine.
     Sortie : (actions dans l'ordre d'exécution, erreurs).
-    Erreurs : aucune exception ; chaque problème devient un message. Dépendances : _links_to.
+    Erreurs : aucune exception ; chaque problème devient un message, dont un script de SCRIPTS non
+              exécutable, que Hyprland ne pourrait pas lancer (spec 3.7).
+    Dépendances : _links_to, _ours, os.access.
     """
     dest = home / "hypr"
     actions, err = [], []
     sources = [repo / ENTRY] + [repo / d for d in LINKS] + [repo / "generated" / f for f in COPIES]
     sources.append(repo / "generated" / IDLE[0])
     err += [f"source manquante : {s} (lancer make tokens motion energie)" for s in sources if not s.exists()]
+    err += [f"{p} n'est pas exécutable : chmod 755 {p}" for p in sorted((repo / SCRIPTS).glob("*"))
+            if p.is_file() and not os.access(p, os.X_OK)]
     if dest.is_symlink() or (dest.exists() and not dest.is_dir()):
         return actions, err + [f"{dest} existe mais n'est pas un dossier réel"]
     if not dest.exists():
@@ -178,70 +210,161 @@ def plan_systeme(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
     """Inspection des fichiers système, sans aucune modification.
 
     Entrées : repo — racine du dépôt ; home — dossier de configuration racine, inutilisé ici.
-    Sortie : (copies avec sudo des fichiers absents ou différents, puis rechargement de logind si l'un
-             d'eux est sous logind.conf.d ; erreurs). Aucune action si tout est identique.
-    Erreurs : aucune exception ; un fichier ou un lien étranger à la place d'un fichier de DuneI devient
-              un message. Dépendances : system_root, _ours, SYSTEME, SYSTEM_MARK.
+    Sortie : (copies avec sudo des fichiers absents ou différents, une fois {utilisateur} rempli ; puis
+             rechargement de logind si l'un d'eux est sous logind.conf.d, et daemon-reload si l'un d'eux
+             est sous etc/systemd/system ; erreurs). Aucune action si tout est identique.
+    Erreurs : KeyError (par utilisateur) si l'uid n'a pas de compte ; sinon aucune exception, un fichier ou
+              un lien étranger à la place d'un fichier de DuneI devient un message. Dépendances : system_root, utilisateur, _ours, SYSTEME, SYSTEM_MARK, CHAMP.
     """
     root, actions, err = system_root(os.environ), [], []
+    nom = utilisateur().encode()
     for src in sorted(p for p in (repo / SYSTEME).rglob("*") if p.is_file()):
-        dst = root / src.relative_to(repo / SYSTEME)
+        rel = src.relative_to(repo / SYSTEME)
+        dst, contenu = root / rel, src.read_bytes().replace(CHAMP, nom)
         if dst.is_symlink() or (dst.exists() and not _ours(dst, SYSTEM_MARK)):
             err.append(f"{dst} existe mais n'a pas été posé par DuneI")
-        elif not dst.exists() or dst.read_bytes() != src.read_bytes():
-            actions.append(("sudo-copy", src, dst))
-    if any("logind.conf.d" in a[2].parts for a in actions):
+        elif not dst.exists() or dst.read_bytes() != contenu:
+            actions.append(("sudo-copy", src, dst, contenu))
+    rels = [a[2].relative_to(root).parts for a in actions]
+    if any("logind.conf.d" in p for p in rels):
         actions.append(("sudo-reload", "systemd-logind"))
+    if any(p[:3] == ("etc", "systemd", "system") for p in rels):
+        actions.append(("sudo-daemon-reload",))
     return actions, err
 
 
+def plan_connexion(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
+    """Inspection du gestionnaire de connexion, sans aucune modification (L1-10).
+
+    Entrées : repo, home — inutilisés, pour l'interface commune de DESTINATIONS.
+    Sortie : (bascule vers greetd si display-manager.service ne le désigne pas ; erreurs). La bascule
+             remplace l'alias en une commande (enable --force), sans désactiver l'ancien gestionnaire
+             d'abord ; elle prend effet au démarrage suivant et suit la copie des fichiers système.
+    Erreurs : aucune exception ; greetd ou tuigreet absent, ou alias qui ne désigne pas une unité .service,
+              devient un message.
+    Dépendances : shutil.which, system_root, CONNEXION, GESTIONNAIRE, DM.
+    """
+    manquants = [b for b in CONNEXION if not shutil.which(b)]
+    if manquants:
+        return [], [f"{', '.join(manquants)} introuvable : sudo pacman -S --needed greetd greetd-tuigreet"]
+    alias = system_root(os.environ) / DM
+    actuel = Path(os.readlink(alias)).name if alias.is_symlink() else "aucun"
+    if actuel != "aucun" and not actuel.endswith(".service"):
+        return [], [f"{alias} pointe vers {os.readlink(alias)}, qui n'est pas une unité .service : "
+                    "gestionnaire masqué ou inconnu, à examiner avant de basculer"]
+    return ([] if actuel == GESTIONNAIRE else [("sudo-dm", actuel, GESTIONNAIRE)]), []
+
+
+def lire_session(repo: Path) -> tuple[list[str], list[str]]:
+    """Lecture et contrôle de la liste blanche du démarrage de session.
+
+    Entrée : repo — racine du dépôt.
+    Sortie : (services de demarrage.services, dans l'ordre ; erreurs). La liste est vide dès qu'une
+             erreur existe.
+    Erreurs : aucune exception ; fichier illisible, version inattendue, liste absente ou vide, nom qui
+              n'est pas une unité .service, doublon deviennent des messages. Dépendances : tomllib,
+              SESSION, SESSION_VERSION.
+    """
+    try:
+        with (repo / SESSION).open("rb") as fh:
+            raw = tomllib.load(fh)
+    except (OSError, ValueError) as e:   # ValueError couvre la syntaxe TOML et l'encodage.
+        return [], [f"{SESSION} illisible ({e})"]
+    if raw.get("version") != SESSION_VERSION:
+        return [], [f"{SESSION} : version « {raw.get('version')} », {SESSION_VERSION} attendue"]
+    services = raw.get("demarrage", {}).get("services") if isinstance(raw.get("demarrage"), dict) else None
+    if not isinstance(services, list) or not services:
+        return [], [f"{SESSION} : demarrage.services doit être une liste non vide"]
+    err = [f"{SESSION} : « {s} » n'est pas un nom d'unité .service" for s in services
+           if not (isinstance(s, str) and s.endswith(".service") and "/" not in s)]
+    err += [f"{SESSION} : « {s} » apparaît deux fois" for s in sorted({s for s in services if isinstance(s, str)})
+            if services.count(s) > 1]
+    return ([] if err else services), err
+
+
+def _etat(service: str) -> tuple[str, bool]:
+    """État d'un service utilisateur auprès de systemd.
+
+    Entrée : service — nom d'unité. Sortie : (réponse de is-enabled, vrai s'il tourne) ; ("", False) si
+             systemctl est absent. Erreurs : aucune. Dépendances : systemctl.
+    """
+    try:
+        state = subprocess.run(["systemctl", "--user", "is-enabled", service], capture_output=True, text=True).stdout.strip()
+        active = subprocess.run(["systemctl", "--user", "is-active", service], capture_output=True).returncode == 0
+    except OSError:
+        return "", False
+    return state, active
+
+
 def plan_services(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
-    """Inspection du service d'inactivité, sans aucune modification.
+    """Inspection du démarrage de session, sans aucune modification (L1-09, L1-10).
 
     Entrées : repo — racine du dépôt ; home — dossier de configuration racine.
-    Sortie : (copie de la surcharge puis daemon-reload si elle change ; activation si le service est
-             désactivé, redémarrage si sa configuration ou sa surcharge change, démarrage s'il est
-             activé mais arrêté ; erreurs).
-    Erreurs : aucune exception ; un verrouilleur absent, un service introuvable, un systemctl absent ou
-              une surcharge étrangère deviennent un message. Dépendances : systemctl, shutil.which,
-              _ours, IDLE, SERVICE, VERROUILLEUR, DROPIN, SYSTEM_MARK.
+    Sortie : (actions, erreurs). Dans l'ordre : copie des unités et surcharges du dépôt absentes ou
+             différentes, masque de l'autostart XDG s'il manque, daemon-reload si l'un ou l'autre change ;
+             puis pour chaque service de la liste blanche : activation s'il ne l'est pas, redémarrage si
+             son unité, sa surcharge ou (pour hypridle) hypridle.conf change, démarrage s'il est arrêté ;
+             enfin un signalement ("hors-liste") par service accroché à la session hors de la liste.
+    Erreurs : aucune exception ; liste fautive, verrouilleur absent, unité introuvable, fichier ou lien
+              étranger deviennent des messages. Dépendances : lire_session, _etat, _ours, _links_to,
+              shutil.which, SERVICE, VERROUILLEUR, UNITES, MASQUE, SESSION_WANTS, IDLE, SYSTEM_MARK.
     """
+    services, err = lire_session(repo)
     if not shutil.which(VERROUILLEUR):
-        return [], [f"{VERROUILLEUR} introuvable : sans verrouilleur la machine dormirait déverrouillée "
-                    "(sudo pacman -S hypridle hyprlock)"]
-    try:
-        state = subprocess.run(["systemctl", "--user", "is-enabled", SERVICE],
-                               capture_output=True, text=True).stdout.strip()
-        active = subprocess.run(["systemctl", "--user", "is-active", SERVICE],
-                                capture_output=True, text=True).returncode == 0
-    except OSError:
-        state, active = "", False
-    if state not in ("enabled", "disabled"):
-        return [], [f"{SERVICE} introuvable ({state or 'systemctl sans réponse'}) : installer hypridle "
-                    "(sudo pacman -S hypridle hyprlock)"]
-    src, dst = repo / DROPIN[0], home / DROPIN[1]
-    actions, err = [], []
-    if not src.exists():
-        err.append(f"source manquante : {src}")
-    elif dst.is_symlink() or (dst.exists() and not _ours(dst, SYSTEM_MARK)):
-        err.append(f"{dst} existe mais n'a pas été posé par DuneI")
-    elif dst.parent.exists() and not dst.parent.is_dir():
-        err.append(f"{dst.parent} existe mais n'est pas un dossier")
-    elif not dst.exists() or dst.read_bytes() != src.read_bytes():
-        actions += ([] if dst.parent.exists() else [("mkdir", dst.parent)])
-        actions += [("copy", src, dst), ("daemon-reload",)]
+        err.append(f"{VERROUILLEUR} introuvable : sans verrouilleur la machine dormirait déverrouillée "
+                   "(sudo pacman -S hypridle hyprlock)")
+    actions, changes, dossiers = [], set(), set()
+
+    def dossier(d: Path) -> None:
+        """Planifie la création de d une seule fois, ou signale un faux dossier."""
+        if d.is_symlink() or (d.exists() and not d.is_dir()):
+            err.append(f"{d} existe mais n'est pas un dossier")
+        elif not d.exists() and d not in dossiers:
+            dossiers.add(d)
+            actions.append(("mkdir", d))
+
+    for src in sorted(p for p in (repo / UNITES).rglob("*") if p.is_file()):
+        rel = src.relative_to(repo / UNITES)
+        dst = home / "systemd" / "user" / rel
+        if dst.is_symlink() or (dst.exists() and not _ours(dst, SYSTEM_MARK)):
+            err.append(f"{dst} existe mais n'a pas été posé par DuneI")
+        elif not dst.exists() or dst.read_bytes() != src.read_bytes():
+            dossier(dst.parent)
+            actions.append(("copy", src, dst))
+            changes.add(rel.parts[0].removesuffix(".d"))
+    masque = home / MASQUE
+    if masque.is_symlink() or masque.exists():
+        if not _links_to(masque, Path("/dev/null")):
+            err.append(f"{masque} existe mais ne masque pas l'autostart XDG")
+    else:
+        dossier(masque.parent)
+        actions.append(("link", Path("/dev/null"), masque))
+        changes.add(masque.name)
+    if changes:
+        actions.append(("daemon-reload",))
+
     idle_src, idle_dst = repo / "generated" / IDLE[0], home / "hypr" / IDLE[0]
-    changed = bool(actions) or (idle_src.exists() and (not idle_dst.exists()
-                                                       or idle_dst.read_bytes() != idle_src.read_bytes()))
-    if state == "disabled":
-        return actions + [("enable", SERVICE)], err
-    if changed:
-        return actions + [("restart", SERVICE)], err
-    return actions + ([] if active else [("start", SERVICE)]), err
+    if idle_src.exists() and (not idle_dst.exists() or idle_dst.read_bytes() != idle_src.read_bytes()):
+        changes.add(SERVICE)
+    for s in services:
+        state, active = _etat(s)
+        if state not in ("enabled", "disabled") and not (repo / UNITES / s).exists():
+            err.append(f"{s} introuvable ({state or 'systemctl sans réponse'}) : installer le paquet qui le "
+                       "fournit, ou écrire son unité dans config/systemd/user/")
+        elif state != "enabled":
+            actions.append(("enable", s))
+        elif s in changes:
+            actions.append(("restart", s))
+        elif not active:
+            actions.append(("start", s))
+    wants = home / SESSION_WANTS
+    if wants.is_dir():
+        actions += [("hors-liste", p.name) for p in sorted(wants.iterdir()) if p.name not in services]
+    return actions, err
 
 
 DESTINATIONS = {"hypr": plan_hypr, "fontconfig": plan_fontconfig,
-                "services": plan_services, "systeme": plan_systeme}  # Nom → planification, dans l'ordre d'exécution (sudo en dernier).
+                "services": plan_services, "systeme": plan_systeme, "connexion": plan_connexion}  # Nom → planification, dans l'ordre d'exécution (sudo en dernier).
 
 
 def plan(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
@@ -252,6 +375,9 @@ def plan(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
              Une seule erreur suffit à tout refuser.
     Erreurs : aucune exception ; chaque problème devient un message. Dépendances : DESTINATIONS.
     """
+    if os.getuid() == 0:
+        return [], ["make install ne se lance pas en root : les fichiers système nommeraient root, et les "
+                    "fichiers utilisateur iraient dans /root"]
     actions, err = [], []
     if (repo / ".git").is_file():
         err.append(f"{repo} est un arbre de travail secondaire : les liens disparaîtraient avec lui, "
@@ -276,10 +402,13 @@ def describe(action: tuple) -> str:
         "switch": "conserver {1} sous le nom {2}, puis lier {1} à {0}",
         "sudo-copy": "copier {0} vers {1}, avec sudo",
         "sudo-reload": "recharger {0}, avec sudo",
+        "sudo-daemon-reload": "recharger les unités système de systemd, avec sudo",
+        "sudo-dm": "remplacer le gestionnaire de connexion {0} par {1} au prochain démarrage, avec sudo",
         "daemon-reload": "recharger les unités utilisateur de systemd",
         "start": "démarrer {0}",
         "enable": "activer et démarrer {0}",
         "restart": "redémarrer {0}",
+        "hors-liste": "{0} est accroché à la session sans figurer dans session.toml ; laissé en place",
     }[kind].format(*args)
 
 
@@ -289,15 +418,17 @@ def apply(actions: list[tuple]) -> None:
     Les copies passent par un fichier temporaire renommé par os.replace ; la bascule donne un
     second nom au fichier générique (os.link), puis remplace hyprland.lua par un lien temporaire
     renommé par os.replace. hyprland.lua existe ainsi à chaque instant. Les actions système passent par
-    sudo, les services par systemctl --user.
+    sudo, les services par systemctl --user. La bascule du gestionnaire de connexion est une seule
+    commande, systemctl enable --force, qui remplace le lien display-manager.service : un échec laisse
+    l'ancien gestionnaire en place.
     Entrée : actions — liste produite par plan, sans erreur.
     Sortie : aucune. Erreurs : OSError si le système de fichiers refuse une opération ou si une commande
              est absente ; subprocess.CalledProcessError si une commande échoue.
-    Dépendances : os, subprocess, TEMP.
+    Dépendances : os, subprocess, tempfile, TEMP.
     """
     for kind, *args in actions:
         if kind == "mkdir":
-            args[0].mkdir(parents=True)
+            args[0].mkdir(parents=True, exist_ok=True)
         elif kind == "copy":
             src, dst = args
             tmp = dst.with_name(TEMP.format(dst.name))
@@ -313,7 +444,14 @@ def apply(actions: list[tuple]) -> None:
             tmp.symlink_to(target)
             os.replace(tmp, entry)
         elif kind == "sudo-copy":
-            subprocess.run(["sudo", "install", "-D", "-m", "644", str(args[0]), str(args[1])], check=True)
+            with tempfile.NamedTemporaryFile(prefix="dunei-") as tmp:
+                tmp.write(args[2])
+                tmp.flush()
+                subprocess.run(["sudo", "install", "-D", "-m", "644", tmp.name, str(args[1])], check=True)
+        elif kind == "sudo-daemon-reload":
+            subprocess.run(["sudo", "systemctl", "daemon-reload"], check=True)
+        elif kind == "sudo-dm":
+            subprocess.run(["sudo", "systemctl", "enable", "--force", args[1]], check=True)
         elif kind == "sudo-reload":
             subprocess.run(["sudo", "systemctl", "reload", args[0]], check=True)
         elif kind == "enable":
@@ -353,9 +491,13 @@ def main() -> int:
                 print("La configuration utilisateur est installée ; seuls les fichiers système restent à poser : "
                       "relancer make install dans un terminal.", file=sys.stderr)
             return 1
+    notes = [a for a in actions if a[0] == "hors-liste"]
+    actions = [a for a in actions if a[0] != "hors-liste"]
     for a in actions:
         print(f"  {'prévu' if args.dry_run else 'fait'} : {describe(a)}")
     print(f"\n{home} : {len(actions)} action(s) {'prévue(s)' if args.dry_run else 'effectuée(s)'}.")
+    for a in notes:
+        print(f"  attention : {describe(a)}")
     if any(a[0] == "switch" for a in actions):
         # Hyprland surveille le fichier générique lui-même, qui survit sous un autre nom : la bascule
         # ne déclenche donc pas le rechargement automatique. Les passages suivants le déclenchent.
