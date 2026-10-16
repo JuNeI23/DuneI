@@ -7,7 +7,7 @@ version = "0.1.0"
 
 [commandes]
 verrouiller  = "loginctl lock-session"                    # Seul chemin vers le verrouillage.
-verrouilleur = "pidof hyprlock || hyprlock --no-fade-in"  # Seul endroit où le verrouilleur est nommé (provisoire, L2-22).
+verrouilleur = "pidof hyprlock || hyprlock --no-fade-in --immediate-render"  # Seul endroit où le verrouilleur est nommé (provisoire, L2-22).
 
 [attenuation]
 niveau = 10           # Luminosité de l'écran atténué, en % ; jamais au-dessus de la luminosité courante.

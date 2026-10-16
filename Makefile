@@ -1,7 +1,7 @@
 # DuneI — chaîne de construction.
 #   make tokens   tokens.toml → generated/
 #   make motion   motion.toml → generated/
-#   make energie  energie.toml → generated/hypridle.conf
+#   make energie  energie.toml → generated/hypridle.conf, generated/energie.lua
 #   make test     tests unitaires et de non-régression
 #   make check    refuse si un fichier de generated/ a été modifié à la main
 #   make golden   régénère les instantanés de référence (changement de sortie VOULU)
