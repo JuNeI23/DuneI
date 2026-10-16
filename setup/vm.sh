@@ -6,7 +6,8 @@
 # Sortie : la fenêtre de la machine ; dans le dossier d'état, disque.qcow2 (40 Go, créé au premier lancement),
 #   vars.fd (copie des variables OVMF), tpm/ (état de swtpm) et tpm.sock. Rien n'entre dans le dépôt.
 # Erreurs : code 1 si l'ISO donnée est introuvable, ou si KVM, QEMU, swtpm ou OVMF manque (message nommant le
-#   paquet à installer) ; dans les deux cas avant toute création. Code 1 aussi si la socket de swtpm n'apparaît pas.
+#   paquet à installer) ; dans les deux cas avant toute création. Code 1 aussi si l'ancien swtpm
+#   ne s'arrête pas ou si la socket du nouveau n'apparaît pas.
 # Dépendances : qemu-desktop (qemu-system-x86_64, qemu-img), swtpm, edk2-ovmf, accès à /dev/kvm.
 set -euo pipefail
 
@@ -38,7 +39,12 @@ mkdir -p "$ETAT/tpm"
 
 # Un swtpm resté d'une exécution précédente (QEMU tombé au démarrage) est arrêté, puis sa socket périmée retirée.
 pid=$(cat "$ETAT/swtpm.pid" 2>/dev/null || true)
-[ -z "$pid" ] || [ "$(cat "/proc/$pid/comm" 2>/dev/null)" != swtpm ] || kill "$pid"
+if [ -n "$pid" ] && [ "$(cat "/proc/$pid/comm" 2>/dev/null)" = swtpm ]; then
+  kill "$pid" 2>/dev/null || true
+  # On attend sa mort (5 s au plus) : il tient le verrou de tpm/ et retirerait la socket du nouveau.
+  for _ in {1..50}; do [ -e "/proc/$pid" ] || break; sleep 0.1; done
+  [ ! -e "/proc/$pid" ] || { echo "vm.sh : l'ancien swtpm (pid $pid) ne s'arrête pas." >&2; exit 1; }
+fi
 rm -f "$ETAT/tpm.sock"
 
 # swtpm s'arrête de lui-même quand QEMU se déconnecte (--terminate). --daemon ne garantit pas la socket prête
