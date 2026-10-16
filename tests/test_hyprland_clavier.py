@@ -46,12 +46,12 @@ ROLES = '{ terminal = "T", fichiers = "F", navigateur = "N", lanceur = "L" }'
 
 DIRS = {"left": (-1, 0), "right": (1, 0), "up": (0, -1), "down": (0, 1)}
 HW = {
-    "XF86AudioMute": ("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle", "{locked=true}"),
-    "XF86AudioLowerVolume": ("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-", "{locked=true,repeating=true}"),
-    "XF86AudioRaiseVolume": ("wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 5%+", "{locked=true,repeating=true}"),
-    "XF86AudioMicMute": ("wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle", "{locked=true}"),
-    "XF86MonBrightnessDown": ("brightnessctl -e4 -n2 set 5%-", "{locked=true,repeating=true}"),
-    "XF86MonBrightnessUp": ("brightnessctl -e4 -n2 set 5%+", "{locked=true,repeating=true}"),
+    "XF86AudioMute": ("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle", "{locked=true,submap_universal=true}"),
+    "XF86AudioLowerVolume": ("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-", "{locked=true,repeating=true,submap_universal=true}"),
+    "XF86AudioRaiseVolume": ("wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 5%+", "{locked=true,repeating=true,submap_universal=true}"),
+    "XF86AudioMicMute": ("wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle", "{locked=true,submap_universal=true}"),
+    "XF86MonBrightnessDown": ("brightnessctl -e4 -n2 set 5%-", "{locked=true,repeating=true,submap_universal=true}"),
+    "XF86MonBrightnessUp": ("brightnessctl -e4 -n2 set 5%+", "{locked=true,repeating=true,submap_universal=true}"),
 }
 
 

@@ -20,7 +20,7 @@ hl = {
     end,
     monitor = function(r) print("monitor", r.output, tostring(r.disabled)) end,
     exec_cmd = function(c) print("exec", c) end,
-    bind = function(k, f, o) print("bind", k, type(f), tostring(o.locked), tostring(o.description ~= nil)) end,
+    bind = function(k, f, o) print("bind", k, type(f), tostring(o.locked), tostring(o.submap_universal), tostring(o.description ~= nil)) end,
     on = function(e, f) print("on", e, type(f)) end,
 }
 M = require("modules.couvercle")
@@ -80,8 +80,8 @@ class CouvercleTest(unittest.TestCase):
 
     def test_apply_binds_and_subscribes(self):
         out = self.lines('MONITORS = { "eDP-1" }\nM.apply()\n')
-        self.assertEqual(out, [["bind", "switch:on:Lid Switch", "function", "true", "true"],
-                               ["bind", "switch:off:Lid Switch", "function", "true", "true"],
+        self.assertEqual(out, [["bind", "switch:on:Lid Switch", "function", "true", "true", "true"],
+                               ["bind", "switch:off:Lid Switch", "function", "true", "true", "true"],
                                ["on", "monitor.added", "function"], ["on", "monitor.removed", "function"]])
 
     def test_lid_state(self):

@@ -98,7 +98,8 @@ function M.verifier(d, roles)
 end
 
 -- apply : contrôle la table, construit tous les répartiteurs, retire les liaisons antérieures de chaque
---         touche de la table, puis lie chaque raccourci non réservé et chaque geste.
+--         touche de la table, puis lie chaque raccourci non réservé et chaque geste ; un raccourci `locked`
+--         est aussi `submap_universal`.
 -- Entrées facultatives, pour les tests : d, roles, binds — par défaut donnees.raccourcis,
 --          donnees.roles et generated.hyprland-binds.
 -- Sortie : aucune.
@@ -121,6 +122,8 @@ function M.apply(d, roles, binds)
             if not ok then error(("raccourcis, entrée %d (%s) : %s"):format(i, e.touches, tostring(dsp)), 0) end
             local opts = { description = e.description }
             for k, v in pairs(e.drapeaux or {}) do opts[k] = v end
+            -- Une touche active sous le verrou l'est aussi dans tout mode, verrou initial compris (L1-10).
+            if opts.locked then opts.submap_universal = true end
             liens[#liens + 1] = { e.touches, dsp, opts }
         end
     end

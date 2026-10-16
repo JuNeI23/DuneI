@@ -33,6 +33,9 @@ require("modules.clavier").apply()
 -- Relance possible d'un verrouilleur tombé, toujours avec authentification (L1-09).
 require("modules.verrouillage").apply()
 
+-- Verrou initial : la session ouverte par greetd se verrouille dès sa première image (L1-10).
+require("modules.demarrage").apply()
+
 -- Fragment de la machine courante, machines/<nom-d-hôte>.lua, chargé en dernier pour l'emporter.
 require("modules.machine").load()
 

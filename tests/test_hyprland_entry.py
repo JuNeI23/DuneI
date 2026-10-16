@@ -25,6 +25,8 @@ hl = {
     curve = function() end,
     animation = function() animations = animations + 1; note("animation") end,
     monitor = function(t) note("monitor:" .. (t.output == "" and "*" or t.output)) end,
+    define_submap = function(_, f) note("submap"); f() end,
+    dispatch = function() note("dispatch") end,
     on = function() note("on") end,
     get_monitors = function() return {} end,
     exec_cmd = function() note("exec") end,
@@ -53,7 +55,7 @@ class EntryTest(unittest.TestCase):
             hypr = Path(tmp) / "hypr"
             (hypr / "generated").mkdir(parents=True)
             (hypr / "machines").mkdir()
-            for name in ("hyprland-tokens.lua", "hyprland-rules.lua", "hyprland-binds.lua", "motion.lua"):
+            for name in ("hyprland-tokens.lua", "hyprland-rules.lua", "hyprland-binds.lua", "motion.lua", "energie.lua"):
                 shutil.copy(ROOT / "generated" / name, hypr / "generated" / name)
             (hypr / "modules").symlink_to(ROOT / "config" / "hypr" / "modules")
             (hypr / "donnees").symlink_to(ROOT / "config" / "hypr" / "donnees")
@@ -72,17 +74,17 @@ class EntryTest(unittest.TestCase):
     def test_with_generic(self):
         self.assertEqual(self.probe(True, True),
                          [f"config:generique,config:dunei,animation,{self.MODULES},monitor:*,config:dunei,"
-                          "config:input,unbind,bind,gesture,config:dunei,monitor:essai,bind,on", "27"])
+                          "config:input,unbind,bind,gesture,config:dunei,submap,bind,on,monitor:essai,bind,on", "27"])
 
     def test_without_generic(self):
         self.assertEqual(self.probe(False, True),
                          [f"config:dunei,animation,{self.MODULES},monitor:*,config:dunei,"
-                          "config:input,unbind,bind,gesture,config:dunei,monitor:essai,bind,on", "27"])
+                          "config:input,unbind,bind,gesture,config:dunei,submap,bind,on,monitor:essai,bind,on", "27"])
 
     def test_without_machine(self):
         self.assertEqual(self.probe(True),
                          [f"config:generique,config:dunei,animation,{self.MODULES},monitor:*,config:dunei,"
-                          "config:input,unbind,bind,gesture,config:dunei,bind,on", "27"])
+                          "config:input,unbind,bind,gesture,config:dunei,submap,bind,on,bind,on", "27"])
 
 
 class AgnosticTest(unittest.TestCase):
