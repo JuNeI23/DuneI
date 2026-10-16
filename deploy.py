@@ -204,8 +204,8 @@ def plan_systeme(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
     Sortie : (copies avec sudo des fichiers absents ou différents, une fois {utilisateur} rempli ; puis
              rechargement de logind si l'un d'eux est sous logind.conf.d, et daemon-reload si l'un d'eux
              est sous etc/systemd/system ; erreurs). Aucune action si tout est identique.
-    Erreurs : aucune exception ; un fichier ou un lien étranger à la place d'un fichier de DuneI devient
-              un message. Dépendances : system_root, utilisateur, _ours, SYSTEME, SYSTEM_MARK, CHAMP.
+    Erreurs : KeyError (par utilisateur) si l'uid n'a pas de compte ; sinon aucune exception, un fichier ou
+              un lien étranger à la place d'un fichier de DuneI devient un message. Dépendances : system_root, utilisateur, _ours, SYSTEME, SYSTEM_MARK, CHAMP.
     """
     root, actions, err = system_root(os.environ), [], []
     nom = utilisateur().encode()
@@ -230,7 +230,8 @@ def plan_connexion(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
     Entrées : repo, home — inutilisés, pour l'interface commune de DESTINATIONS.
     Sortie : (bascule vers greetd si display-manager.service ne le désigne pas ; erreurs). La bascule
              prend effet au démarrage suivant ; elle suit la copie des fichiers système.
-    Erreurs : aucune exception ; greetd ou tuigreet absent devient un message.
+    Erreurs : aucune exception ; greetd ou tuigreet absent, ou alias qui ne désigne pas une unité .service,
+              devient un message.
     Dépendances : shutil.which, system_root, CONNEXION, GESTIONNAIRE, DM.
     """
     manquants = [b for b in CONNEXION if not shutil.which(b)]
@@ -238,6 +239,9 @@ def plan_connexion(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
         return [], [f"{', '.join(manquants)} introuvable : sudo pacman -S --needed greetd greetd-tuigreet"]
     alias = system_root(os.environ) / DM
     actuel = Path(os.readlink(alias)).name if alias.is_symlink() else "aucun"
+    if actuel != "aucun" and not actuel.endswith(".service"):
+        return [], [f"{alias} pointe vers {os.readlink(alias)}, qui n'est pas une unité .service : "
+                    "gestionnaire masqué ou inconnu, à examiner avant de basculer"]
     return ([] if actuel == GESTIONNAIRE else [("sudo-dm", actuel, GESTIONNAIRE)]), []
 
 

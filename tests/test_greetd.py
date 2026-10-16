@@ -7,6 +7,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 CONF = ROOT / "systeme" / "etc" / "greetd" / "dunei.toml"
+SESSIONS = ROOT / "systeme" / "etc" / "greetd" / "sessions"
 DROPIN = ROOT / "systeme" / "etc" / "systemd" / "system" / "greetd.service.d" / "10-dunei.conf"
 SESSION = "uwsm start -e -D Hyprland hyprland.desktop"
 
@@ -27,6 +28,16 @@ class GreetdTest(unittest.TestCase):
         self.assertEqual(greeter[0], "tuigreet")
         self.assertEqual(greeter[greeter.index("--cmd") + 1], SESSION)
         self.assertEqual(self.conf["initial_session"]["command"], SESSION)
+
+    def test_session_menu_offers_only_dunei(self):
+        greeter = shlex.split(self.conf["default_session"]["command"])
+        for opt in ("--sessions", "--xsessions"):
+            self.assertEqual(greeter[greeter.index(opt) + 1], "/etc/greetd/sessions")
+        self.assertEqual([p.name for p in SESSIONS.iterdir()], ["dunei.desktop"])
+        entry = SESSIONS / "dunei.desktop"
+        lines = entry.read_text(encoding="utf-8").splitlines()
+        self.assertIn("Posé par DuneI", lines[1])
+        self.assertIn(f"Exec={SESSION}", lines)
 
     def test_users(self):
         self.assertEqual(self.conf["initial_session"]["user"], "{utilisateur}")

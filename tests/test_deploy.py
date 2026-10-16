@@ -485,6 +485,14 @@ class DeployTest(unittest.TestCase):
         self.assertEqual(res.returncode, 1)
         self.assertIn("dunei.toml", res.stderr)
 
+    def test_refuses_masked_display_manager(self):
+        (self.root / DM).unlink()
+        (self.root / DM).symlink_to("/dev/null")
+        res = run(self.cfg)
+        self.assertEqual(res.returncode, 1)
+        self.assertIn("display-manager.service", res.stderr)
+        self.assertFalse([l for l in self.journal() if l.startswith("sudo")])
+
     def test_refuses_root(self):
         with mock.patch("os.getuid", return_value=0):
             actions, err = plan(ROOT, self.cfg)
