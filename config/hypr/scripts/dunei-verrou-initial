@@ -1,0 +1,25 @@
+#!/bin/sh
+# dunei-verrou-initial — verrou de l'ouverture de session automatique (L1-10).
+# Rôle : lance le verrouilleur ; au déverrouillage, rend le clavier en quittant le mode verrou-initial ;
+#        en cas d'échec, relance (allow_session_lock_restore garde la session verrouillée) ; après trois
+#        échecs, ferme la session, et greetd affiche l'écran de connexion : échec fermé.
+# Entrée : $1 — commande du verrouilleur, lue dans energie.toml par modules/demarrage.lua.
+# Sortie : code 0 si déverrouillé, 1 si la session est fermée, 2 si l'argument manque.
+# Erreurs : chaque échec du verrouilleur est écrit au journal (logger -t dunei-verrou-initial).
+# Dépendances : sh, hyprctl, uwsm, logger.
+TENTATIVES=3
+
+[ $# -eq 1 ] || { echo "usage : dunei-verrou-initial <commande du verrouilleur>" >&2; exit 2; }
+
+i=1
+while [ "$i" -le "$TENTATIVES" ]; do
+    if sh -c "$1"; then
+        hyprctl dispatch 'hl.dsp.submap("reset")' >/dev/null
+        exit 0
+    fi
+    logger -t dunei-verrou-initial "verrouilleur en échec, tentative $i sur $TENTATIVES"
+    i=$((i + 1))
+done
+logger -t dunei-verrou-initial "verrouilleur en échec $TENTATIVES fois : fermeture de la session"
+uwsm stop
+exit 1
