@@ -26,8 +26,8 @@ hl = {
 
 @unittest.skipUnless(LUA, "aucun interpréteur Lua")
 class DemarrageTest(unittest.TestCase):
-    """Mode enregistré, logo masqué ; au premier lancement depuis le démarrage seulement : mode bloquant
-    d'abord, verrou ensuite."""
+    """Mode enregistré, logo masqué ; au premier lancement depuis le démarrage seulement : verrou d'abord,
+    mode bloquant ensuite, chacun en échec fermé."""
 
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -54,11 +54,22 @@ class DemarrageTest(unittest.TestCase):
                                ["bind", "F24", "function"], ["on", "hyprland.start"]])
         self.assertFalse(self.etat.exists())
 
-    def test_first_start_enters_mode_then_locks(self):
+    def test_first_start_locks_then_enters_mode(self):
         out = self.lines('M.apply({ verrouilleur = "pidof x || x --a" })\nHANDLERS["hyprland.start"]()\n')
-        self.assertEqual(out[-2:], [["dispatch", "submap:verrou-initial"],
-                                    ["exec", "/maison/.config/hypr/scripts/dunei-verrou-initial 'pidof x || x --a'"]])
+        self.assertEqual(out[-2:], [["exec", "/maison/.config/hypr/scripts/dunei-verrou-initial 'pidof x || x --a'"],
+                                    ["dispatch", "submap:verrou-initial"]])
         self.assertEqual(self.etat.read_text(), "id-1\n")
+
+    def test_failing_dispatch_still_locks(self):
+        out = self.lines('M.apply({ verrouilleur = "v" })\nhl.dispatch = function() error("x") end\n'
+                         'HANDLERS["hyprland.start"]()\n')
+        self.assertEqual(out[-1], ["exec", "/maison/.config/hypr/scripts/dunei-verrou-initial 'v'"])
+
+    def test_failing_first_check_locks(self):
+        out = self.lines('M.apply({ verrouilleur = "v" })\nM.premier = function() error("x") end\n'
+                         'HANDLERS["hyprland.start"]()\n')
+        self.assertEqual(out[-2:], [["exec", "/maison/.config/hypr/scripts/dunei-verrou-initial 'v'"],
+                                    ["dispatch", "submap:verrou-initial"]])
 
     def test_second_start_same_boot_does_not_lock(self):
         self.lines('M.apply({ verrouilleur = "v" })\nHANDLERS["hyprland.start"]()\n')
@@ -69,7 +80,7 @@ class DemarrageTest(unittest.TestCase):
         self.lines('M.apply({ verrouilleur = "v" })\nHANDLERS["hyprland.start"]()\n')
         self.amorcage.write_text("id-2\n", encoding="utf-8")
         out = self.lines('M.apply({ verrouilleur = "v" })\nHANDLERS["hyprland.start"]()\n')
-        self.assertEqual(out[-2][0], "dispatch")
+        self.assertEqual(out[-2][0], "exec")
 
     def test_unreadable_boot_id_locks(self):
         self.amorcage.unlink()

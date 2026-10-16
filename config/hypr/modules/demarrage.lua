@@ -38,8 +38,8 @@ function M.premier()
 end
 
 -- apply : masque le logo et le fond animé de Hyprland, enregistre le mode verrou-initial, puis, au
---         signal hyprland.start et seulement au premier lancement depuis le démarrage (M.premier), entre
---         dans le mode et lance dunei-verrou-initial avec le verrouilleur.
+--         signal hyprland.start et seulement au premier lancement depuis le démarrage (M.premier), lance
+--         dunei-verrou-initial avec le verrouilleur et entre dans le mode.
 -- Entrée facultative, pour les tests : energie — par défaut generated.energie (energie.toml).
 -- Sortie : aucune. Erreurs : celles de require, si energie.lua n'est pas déployé, et de l'API hl.
 -- Dépendances : M.premier, M.citer, generated.energie, scripts/dunei-verrou-initial, API hl de Hyprland 0.56.
@@ -52,9 +52,13 @@ function M.apply(energie)
     -- est écarté, il risquerait d'intercepter la saisie dans le verrouilleur.
     hl.define_submap(M.MODE, function() hl.bind("F24", function() end) end)
     hl.on("hyprland.start", function()
-        if not M.premier() then return end
-        hl.dispatch(hl.dsp.submap(M.MODE))
+        -- Échec fermé : une erreur de M.premier verrouille ; seul un « non » franc laisse la session ouverte.
+        local ok, p = pcall(M.premier)
+        if ok and not p then return end
+        -- Le verrouilleur part d'abord : une erreur du mode ne peut plus l'empêcher. exec_cmd est asynchrone
+        -- et ce gestionnaire synchrone : aucune touche n'est traitée entre les deux appels.
         hl.exec_cmd(M.SCRIPT .. " " .. M.citer(energie.verrouilleur))
+        pcall(function() hl.dispatch(hl.dsp.submap(M.MODE)) end)
     end)
 end
 
