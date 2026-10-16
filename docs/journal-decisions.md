@@ -830,3 +830,13 @@ l'activer.
 Raison : une décision de sécurité ne se prend pas en passant ; elle mérite sa propre conception.
 
 *Touché : backlog (L2-37), carnet.*
+
+### D47 · Chaque modèle signe sa production
+
+Les commits de L1-09 écrits par des sous-agents portent le nom de leur modèle (Haiku ou Sonnet) dans la
+ligne `Co-Authored-By`, et non celui de la session principale. Nicolas confirme que c'est attendu : chaque
+modèle signe ce qu'il a écrit, sans réécriture d'historique.
+
+Raison : l'attribution reste exacte, et elle dit quel modèle a produit quel changement.
+
+*Touché : CLAUDE.md.*
