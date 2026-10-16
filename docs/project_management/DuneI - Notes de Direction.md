@@ -268,8 +268,8 @@ minimal** (foot, proposition à valider par repérage), qui retire kitty du rôl
 **Terminal — 16 octobre 2026.** kitty reste le terminal : après repérage (foot, Konsole, Ghostty), changer
 d'outil pour un lot n'apportait rien que le choix définitif, à la grille de L3-11, ne remette en jeu ; kitty y
 sera candidat face à Konsole. Sa configuration est désormais versionnée et liée par `make install` (police
-canonique, intégration du shell, aucune couleur avant le lot 4), et chaque fenêtre s'ouvre dans le processus
-déjà lancé, sans délai. La vérification a révélé qu'aucun pager n'était installé : `less` et `man-db` le
+canonique, intégration du shell, aucune couleur avant le lot 4), et chaque nouvelle fenêtre s'ouvre dans le
+processus déjà lancé, sans délai, tant qu'une fenêtre kitty est ouverte. La vérification a révélé qu'aucun pager n'était installé : `less` et `man-db` le
 sont, `git log` se pagine et `man` répond (D52). Prochaine étape du lot 1 : **L1-02, la procédure
 d'installation rejouable** — les listes de paquets et les scripts `setup/` que le carnet décrit et que le
 dépôt n'a pas encore, qui consignent au passage L1-03 à L1-06 —, puis le point sur L1-21 et la clôture du

@@ -293,6 +293,11 @@ class DeployTest(unittest.TestCase):
         (self.cfg / "kitty").symlink_to(Path(self.tmp.name))
         self.assert_refused("kitty")
 
+    def test_refuses_kitty_file(self):
+        self.cfg.mkdir()
+        (self.cfg / "kitty").write_text("", encoding="utf-8")
+        self.assert_refused("kitty")
+
     def test_refuses_without_kitty(self):
         (self.fake / "kitty").unlink()
         before = snapshot(self.cfg)

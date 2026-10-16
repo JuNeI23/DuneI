@@ -11,14 +11,14 @@ posé lui-même.
   Un script de config/hypr/scripts/ non exécutable est refusé.
 - fontconfig : generated/fonts.conf est copié vers fontconfig/conf.d/50-dunei.conf. Les applications
   lancées ensuite le lisent ; aucun fc-cache n'est nécessaire.
+- applis : la configuration de chaque application de DuneI est liée à sa place sous le dossier de
+  configuration ; l'application doit être installée. Les autres fichiers de son dossier sont laissés
+  en place. Seul kitty, le terminal provisoire, y figure (L1-18).
 - services : hyprlock doit être installé ; les unités et surcharges de config/systemd/user/ sont
   copiées, l'autostart XDG d'uwsm est masqué (liste blanche de session.toml) ; chaque service de la
   liste est activé, démarré, ou redémarré si sa configuration change (daemon-reload d'abord). Un
   service accroché à la session hors de la liste est signalé, jamais désactivé.
   Cette étape précède les fichiers système : un échec de sudo ne laisse jamais l'ancienne échelle active.
-- applis : la configuration de chaque application de DuneI est liée à sa place sous le dossier de
-  configuration ; l'application doit être installée. Les autres fichiers de son dossier sont laissés
-  en place. Seul kitty, le terminal provisoire, y figure (L1-18).
 - systeme : chaque fichier de systeme/ est copié sous la racine du système, /etc compris, avec sudo, et
   seulement s'il manque ou diffère ; {utilisateur} est rempli par l'utilisateur courant ; un fichier de
   logind.conf.d recharge logind, sans le redémarrer ; un fichier sous etc/systemd/system recharge systemd.
@@ -68,8 +68,9 @@ CONNEXION = ("greetd", "tuigreet")                           # Gestionnaire de c
 GESTIONNAIRE = "greetd.service"
 DM = "etc/systemd/system/display-manager.service"            # Alias du gestionnaire de connexion actif, sous la racine.
 VERROUILLEUR = "hyprlock"                                    # Verrouilleur exigé ; provisoire, remplacé à L2-22.
-# Applications configurées par DuneI : exécutable exigé, fichier du dépôt, lien sous le dossier de configuration.
-APPLIS = (("kitty", "config/kitty/kitty.conf", "kitty/kitty.conf"),)  # Terminal provisoire jusqu'à L3-11 (L1-18).
+# Applications configurées par DuneI : exécutable exigé, paquet qui le fournit, fichier du dépôt, lien sous
+# le dossier de configuration.
+APPLIS = (("kitty", "kitty", "config/kitty/kitty.conf", "kitty/kitty.conf"),)  # Terminal provisoire jusqu'à L3-11 (L1-18).
 
 
 def config_home(env: Mapping[str, str]) -> Path:
@@ -221,10 +222,10 @@ def plan_applis(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
     Dépendances : shutil.which, _links_to, APPLIS.
     """
     actions, err = [], []
-    for exe, source, cible in APPLIS:
+    for exe, paquet, source, cible in APPLIS:
         src, link = repo / source, home / cible
         if not shutil.which(exe):
-            err.append(f"{exe} introuvable : sudo pacman -S --needed {exe}")
+            err.append(f"{exe} introuvable : sudo pacman -S --needed {paquet}")
         if not src.exists():
             err.append(f"source manquante : {src}")
         if link.parent.is_symlink() or (link.parent.exists() and not link.parent.is_dir()):

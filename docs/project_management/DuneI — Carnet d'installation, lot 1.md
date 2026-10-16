@@ -463,8 +463,10 @@ carnet, est écarté après repérage. Le choix définitif revient à la grille 
   (Source Code Pro Nerd Font Mono par `fonts.conf`) et `shell_integration enabled`. Aucune couleur avant le
   lot 4. Les autres fichiers de `~/.config/kitty/` sont laissés en place ; un `kitty.conf` étranger arrête
   le déploiement.
-- Rôle `terminal = "kitty -1"` : instance unique. La première fenêtre après le démarrage lance kitty
-  (~0,5 s) ; les suivantes s'ouvrent dans le même processus. Un plantage ferme toutes les fenêtres.
+- Rôle `terminal = "kitty -1"` : instance unique. Une fenêtre ouverte alors qu'aucune fenêtre kitty
+  n'existe lance kitty (~0,5 s) ; les suivantes s'ouvrent dans le même processus, qui se termine avec sa
+  dernière fenêtre. Un plantage ferme toutes les fenêtres. Garder une instance de fond
+  (`kitty -1 --start-as=hidden` dans `session.toml`) supprimerait ce délai : non retenu à ce stade.
 - `less` est le pager attendu par git, systemd et kitty (`Ctrl + Shift + G` rouvre la sortie de la dernière
   commande, grâce à l'intégration du shell) ; `man-db` fournit `man`.
 - Vérifié le 2026-10-16 : police par `kitty --debug-font-fallback`, deuxième fenêtre sans nouveau

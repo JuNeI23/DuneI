@@ -973,9 +973,11 @@ une ligne par application). Il épingle deux choix qui sont aujourd'hui des vale
 `kitty --debug-font-fallback`), et `shell_integration enabled`. Aucune couleur : la palette générée arrive
 au lot 4, par un fichier inclus. La vérification des mises à jour est déjà désactivée dans le paquet Arch.
 
-Le rôle terminal devient `kitty -1` : chaque fenêtre s'ouvre dans le processus déjà lancé, sans démarrer
-de programme (~550 ms mesurés par fenêtre sans instance unique, ~110 Mo par processus). Contrepartie
-acceptée : un plantage de kitty ferme toutes ses fenêtres.
+Le rôle terminal devient `kitty -1` : tant qu'une fenêtre kitty est ouverte, chaque nouvelle fenêtre
+s'ouvre dans ce processus, sans démarrer de programme (~550 ms mesurés par fenêtre sans instance unique,
+~110 Mo par processus). Le processus se termine avec sa dernière fenêtre : rouvrir un terminal ensuite
+repaie le démarrage ; une instance de fond (`--start-as=hidden`) l'éviterait, elle n'est pas retenue à ce
+stade. Contrepartie acceptée : un plantage de kitty ferme toutes ses fenêtres.
 
 La vérification a révélé qu'aucun pager n'était installé : `git log` échouait, `man` n'existait pas, et
 `Ctrl + Shift + G` (sortie de la dernière commande) en dépend. `less` et `man-db` sont installés ;
