@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas — révisée le 16 octobre 2026
 
-Version 1.11. Historique en fin de document.
+Version 1.12. Historique en fin de document.
 
 *Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent quarante-trois lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
 
@@ -253,6 +253,18 @@ tenu 99,4 % du temps et la décharge est de 0,42 % par heure. L'empreinte devien
 **L1-10, le gestionnaire de session et le démarrage automatique** (attention : `hypridle` exige `graphical-session.target` et l'environnement de Hyprland exporté par uwsm, voir le backlog) ; la recette avec écran externe de L1-09
 reste à faire dès qu'un écran est disponible.
 
+**Session et démarrage — 16 octobre 2026.** La machine s'ouvre seule et se verrouille aussitôt. greetd et
+tuigreet remplacent SDDM : au démarrage, aucun écran de connexion, un fond uni puis le verrou ; après une
+sortie de session, un écran de connexion provisoire (L5-12) qui ne propose que DuneI. Le verrou est fermé
+par construction : aucun raccourci ordinaire ne répond avant le déverrouillage, son et luminosité restent
+actifs, et un verrouilleur qui échoue trois fois ferme la session. Ce qui démarre avec la session est une
+liste blanche, `session.toml` (`hypridle`, `nm-applet`) : l'autostart XDG est masqué, et ajouter un
+programme demande une ligne et son unité. Recette passée à l'écran, démarrage de 18,3 s contre 18,9 s avec
+SDDM, SDDM désinstallé. Limites acceptées : la commande libre de tuigreet reste ouverte jusqu'à L5-12, et
+un `demarrage.lua` cassé ne verrouillerait rien (D49 à D51). Prochaine étape du lot 1 : **L1-18, le terminal
+minimal** (foot, proposition à valider par repérage), qui retire kitty du rôle provisoire ; la recette avec
+écran externe de L1-09 reste à faire dès qu'un écran est disponible.
+
 ## Plan de lecture
 
 | Rôle | À lire |
@@ -270,6 +282,7 @@ reste à faire dès qu'un écran est disponible.
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-10 | Version initiale |
+| 1.12 | 2026-10-16 | Session et démarrage faits (L1-10) : greetd, liste blanche, verrou initial, recette passée, SDDM retiré ; prochaine étape : L1-18 (D49 à D51) |
 | 1.11 | 2026-10-16 | Énergie et veille faites (L1-09), sauf la recette avec écran externe ; décharge en veille mesurée ; backlog à 143 éléments ; prochaine étape : L1-10 (D41 à D46) ; relecture finale : `hypridle` silencieux (D43), dépendance à uwsm consignée, date et historique corrigés |
 | 1.10 | 2026-10-15 | Réseau vérifié, base réglementaire installée (D40) ; prochaine étape : L1-09 |
 | 1.9 | 2026-10-15 | Audio fait (L1-08) : `alsa-utils` répare la diode du micro, son et micro vérifiés ; règle de repérage des technos ; décompte de l'en-tête corrigé (cent quarante-deux) ; prochaine étape L1-07 |

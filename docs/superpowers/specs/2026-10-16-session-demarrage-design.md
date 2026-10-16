@@ -1,6 +1,6 @@
 # Session et démarrage : connexion, liste blanche, verrouillage au démarrage
 
-Version 0.3 · 2026-10-16 · backlog L1-10 · carnet « Session et compositeur » · statut : validée
+Version 0.4 · 2026-10-16 · backlog L1-10 · carnet « Session et compositeur » · statut : validée, implémentée, recette passée
 
 ## 1. Objet
 
@@ -97,11 +97,15 @@ aucun `.pacnew` aux mises à jour. Deuxième ligne de chaque fichier : la marque
 
 - `[terminal] vt = 1`.
 - `[initial_session]` : `user = "{utilisateur}"`, `command = "uwsm start -e -D Hyprland hyprland.desktop"`.
-- `[default_session]` : `user = "greeter"`, `command` = tuigreet, dont la commande de session est fixée
-  par `--cmd` à la même ligne uwsm. Aucun choix de session : l'entrée sans uwsm ne peut plus être prise.
+- `[default_session]` : `user = "greeter"`, `command` = tuigreet avec `--no-config` (aucun
+  `/etc/tuigreet/config.toml` de la machine), `--sessions /etc/greetd/sessions` et `--xsessions` vers
+  `/etc/greetd/xsessions`, dossier volontairement inexistant, et `--cmd` à la même ligne uwsm. Le menu
+  des sessions (F3) ne propose que `dunei.desktop` (`systeme/etc/greetd/sessions/`, `Exec` = la ligne
+  uwsm) : l'entrée sans uwsm ne peut plus être prise. La commande libre (F2) reste ouverte, tuigreet
+  0.11.1 ne permet pas de la fermer : limite acceptée, close à L5-12.
 
-TOML n'a pas de variables : la commande uwsm est écrite deux fois dans `dunei.toml`, et un test vérifie
-que les deux occurrences sont identiques.
+TOML n'a pas de variables : la commande uwsm est écrite trois fois (deux dans `dunei.toml`, une dans
+`dunei.desktop`), et un test vérifie que les occurrences sont identiques.
 
 ### 3.3 Champ `{utilisateur}` dans les fichiers système
 
@@ -115,8 +119,9 @@ le champ désignerait root.
 ### 3.4 Bascule du gestionnaire de connexion
 
 Nouvelle action système de `deploy.py`, avec `sudo` : si `display-manager.service` ne pointe pas sur
-`greetd.service`, désactiver le gestionnaire actuel et activer greetd (`systemctl disable` puis
-`systemctl enable`, sans `--now`). Effet au redémarrage suivant, jamais en pleine session. Exécutée
+`greetd.service`, `systemctl enable --force greetd.service`, sans `--now` : une seule commande, qui
+remplace l'alias sans désactiver d'abord l'ancien gestionnaire (un `disable` suivi d'un `enable` laisserait
+une fenêtre sans gestionnaire). Effet au redémarrage suivant, jamais en pleine session. Exécutée
 après la copie de `dunei.toml` et de la surcharge, pour que greetd ne puisse jamais démarrer sans elles.
 `make install` refuse de déployer si `greetd` ou `tuigreet` manque.
 
@@ -170,8 +175,9 @@ Il est ajouté aux copies de `deploy.py` (`COPIES`), sous `~/.config/hypr/genera
 
 Le nombre de tentatives est une constante du script. Sans argument : message d'usage, code 2.
 
-**Module `config/hypr/modules/demarrage.lua`**, appelé par `hyprland.lua` après `modules.verrouillage`.
-Au signal `hyprland.start`, **seulement au premier lancement de Hyprland depuis le démarrage de la
+**Module `config/hypr/modules/demarrage.lua`**, appelé par `hyprland.lua` juste après la configuration
+générique, avant les autres modules : aucune erreur d'un module ultérieur ne peut l'empêcher d'être
+enregistré. Au signal `hyprland.start`, **seulement au premier lancement de Hyprland depuis le démarrage de la
 machine** : c'est la session de la connexion automatique, que greetd ne joue qu'une fois par démarrage.
 Une session ouverte ensuite par l'écran de connexion, mot de passe tapé, n'est pas reverrouillée
 (critère 5). Le module compare l'identifiant de démarrage du noyau (`/proc/sys/kernel/random/boot_id`) à
@@ -179,11 +185,16 @@ celui noté dans `$XDG_STATE_HOME/dunei/verrou-initial`, puis le note ; un ident
 état impossible à écrire font verrouiller. Un fichier dans `/tmp` est écarté : un autre compte pourrait
 y poser un lien symbolique.
 
-1. entrée dans le mode de raccourcis `verrou-initial`. Hyprland refuse un mode vide (relevé du
+Le gestionnaire du signal est sous `pcall` et lance d'abord le verrouilleur : une erreur du mode ne peut
+plus l'empêcher. `generated/energie.lua` n'est lu qu'au signal, sous `pcall` ; s'il manque, le mode bloque
+le clavier et un message au journal indique le recours (`Ctrl + Alt + F2`). Ordre des deux étapes :
+
+1. lancement de `dunei-verrou-initial` avec `require("generated.energie").verrouilleur` (`hl.exec_cmd`,
+   asynchrone ; le gestionnaire étant synchrone, aucune touche n'est traitée entre les deux appels) ;
+2. entrée dans le mode de raccourcis `verrou-initial`. Hyprland refuse un mode vide (relevé du
    2026-10-16) : le mode est enregistré par une seule liaison sans effet, sur une touche absente du
    clavier (`F24`). Aucun raccourci du mode global n'y répond ; un `catchall` est écarté, car il
-   risquerait d'intercepter la saisie dans le verrouilleur ;
-2. lancement de `dunei-verrou-initial` avec `require("generated.energie").verrouilleur`.
+   risquerait d'intercepter la saisie dans le verrouilleur.
 
 Le module met aussi `misc.disable_hyprland_logo` et `misc.disable_splash_rendering` à `true`, ce qui
 l'emporte sur la configuration générique, chargée avant.
@@ -211,7 +222,8 @@ visible, soumis à validation : sans fond d'écran (lot 2), le bureau vide devie
 
 ### 3.8 Hyprland
 
-`hyprland.lua` reçoit une ligne `require("modules.demarrage").apply()`. Aucune autre modification du point
+`hyprland.lua` reçoit une ligne `require("modules.demarrage").apply()`, placée juste après la
+configuration générique (section 3.6), non après `modules.verrouillage`. Aucune autre modification du point
 d'entrée.
 
 ### 3.9 Points vérifiés sur la machine (2026-10-16)
@@ -257,10 +269,37 @@ Recette à l'écran, après redémarrage : les huit critères de la section 1, p
   par la liste blanche.
 - Notes de direction : paragraphe d'avancement et prochaine étape.
 
+## 6. Écarts constatés à l'implémentation et à la recette
+
+- **Bascule du gestionnaire.** La section 3.4 prévoyait `disable` puis `enable` ; la relecture finale a
+  retenu `enable --force greetd.service`, en une commande (D49). SDDM reste nominalement activé jusqu'à son
+  retrait par `pacman -Rns`.
+- **Menu des sessions.** `--xsessions` désigne un dossier inexistant et `--no-config` écarte la
+  configuration de la machine ; aucun avertissement relevé avec `tuigreet --mock`, menu F3 validé par
+  Nicolas. La commande libre (F2) ne peut pas être fermée dans tuigreet 0.11.1 (le binaire se déclare
+  0.11.0) : limite acceptée, close à L5-12.
+- **Ordre du module de démarrage.** Enregistré juste après la configuration générique, `energie.lua` lu au
+  signal, lancement du verrouilleur avant l'entrée dans le mode (sections 3.6 et 3.8).
+- **Scripts non exécutables.** `make install` les refuse (section 3.7), vérification ajoutée à la relecture
+  finale.
+- **Module lié et fichier généré neuf.** `config/hypr/modules` est lié au dépôt et Hyprland recharge toute
+  modification : le module écrit exigeait `generated/energie.lua`, pas encore copié, et la session vivante a
+  perdu le fragment machine et le couvercle jusqu'à la copie du fichier et `hyprctl reload` (consigné au
+  carnet).
+- **Intervalle avant le verrou non mesuré.** La section 4 prévoyait de le mesurer ; le journal de Hyprland
+  n'horodate pas et ne note pas la pose du verrou. Constat visuel seulement : aucun bureau visible avant le
+  verrou.
+- **Limites connues.** `demarrage.lua` lui-même cassé : aucun verrou possible (recours `Ctrl + Alt + F2`) ;
+  raccourcis de secours de Hyprland peut-être absents si la configuration casse avant `clavier` ;
+  `hl.exec_cmd` du gestionnaire hors `pcall` (théorique, l'argument est toujours une chaîne).
+- **Recette du 2026-10-16.** Les huit critères passés, plus le plantage simulé (échecs à 60 s, 98 s et
+  101 s, tuigreet à 102 s). Démarrage complet de 18,3 s, contre 18,9 s avec SDDM. SDDM désinstallé ensuite.
+
 ## Historique des versions
 
 | Version | Date | Changement |
 | --- | --- | --- |
+| 0.4 | 2026-10-16 | Implémentée, recette passée ; bascule par `enable --force` (3.4) ; menu limité à `dunei.desktop`, `--xsessions` inexistant, `--no-config` (3.2) ; module enregistré juste après la configuration générique, `energie.lua` lu au signal, verrouilleur puis mode (3.6, 3.8) ; écarts constatés (section 6) |
 | 0.3 | 2026-10-16 | Verrou initial limité au premier lancement de Hyprland depuis le démarrage, repéré par l'identifiant de démarrage du noyau (critère 5) |
 | 0.2 | 2026-10-16 | Écarts du plan : fichier `dunei.toml` et surcharge de `greetd.service` (le paquet livre `config.toml`) ; mode enregistré par une liaison sans effet ; refus en root ; points de 3.9 vérifiés |
 | 0.1 | 2026-10-16 | Version initiale, validée section par section |

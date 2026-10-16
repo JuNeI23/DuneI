@@ -858,3 +858,98 @@ Le paquet officiel est signé et suit `pacman -Syu`.
 
 *Touché : tests/test_shellcheck.py, carnet.*
 
+
+## 2026-10-16 — Session et démarrage (L1-10)
+
+### D49 · greetd et tuigreet : connexion automatique une fois par démarrage
+
+`greetd` 0.10.3 ouvre la session de Nicolas sans écran de connexion (`initial_session`), une seule fois par
+démarrage : le manuel (`greetd(5)`) garantit qu'elle ne joue qu'au premier lancement de greetd depuis le
+démarrage, même si greetd redémarre (fichier témoin `/run/greetd.run`). Après toute sortie de session,
+`tuigreet` affiche l'écran de connexion, mot de passe tapé. Les deux sont provisoires : l'écran de connexion
+thématisé est L5-12. Cette décision tranche la « proposition greetd » de D2 (ligne 36 du journal).
+
+Repérage fait avec Nicolas (D39) : SDDM limite `Relogin=false` à la première fois par lancement du démon,
+qui a `Restart=always`, et impose Qt 6 et `xorg-server` ; ly déclare `pam_systemd.so class=greeter` dans son
+fichier PAM d'autologin, ce qui risque de mal classer la session pour uwsm ; getty, emptty et lemurs
+reconnectent après une sortie ou n'ont pas d'autologin. greetd garde l'écran de connexion interchangeable :
+ReGreet, ou un écran en QML avec Quickshell (module `Quickshell.Services.Greetd`).
+
+Le paquet livre `/etc/greetd/config.toml`, fichier de sauvegarde de pacman sans la marque DuneI : le
+mécanisme de D45 refuserait à raison de l'écraser. DuneI pose donc `/etc/greetd/dunei.toml` et une surcharge
+`greetd.service.d/10-dunei.conf` qui remplace `ExecStart` par `greetd --config /etc/greetd/dunei.toml` :
+aucun conflit avec le paquet, aucun `.pacnew`. Les fichiers de `systeme/` reçoivent le champ
+`{utilisateur}`, rempli par `deploy.py` avec l'utilisateur qui lance `make install` avant comparaison et
+copie ; `make install` en root est refusé, le champ désignerait root.
+
+L'écran de connexion est borné. Le menu des sessions (F3) ne propose que `dunei.desktop`, qui lance
+Hyprland par uwsm : `--sessions` pointe sur `/etc/greetd/sessions`, `--xsessions` sur un dossier
+volontairement inexistant (aucune session X11), et `--no-config` écarte tout `/etc/tuigreet/config.toml`
+de la machine. L'entrée Hyprland sans uwsm, qui démarrerait une session sans `hypridle`, ne peut plus être
+prise. **Limite acceptée :** la commande libre (F2) reste ouverte, tuigreet 0.11.1 ne permet pas de la
+fermer ; c'est une saisie délibérée, close à L5-12. La commande uwsm est écrite trois fois (session
+automatique, `--cmd`, `dunei.desktop`) ; `tests/test_greetd.py` vérifie qu'elles sont identiques.
+
+La bascule se fait par `sudo systemctl enable --force greetd.service`, en une commande, sans `--now` : elle
+remplace l'alias `display-manager.service` sans désactiver l'ancien gestionnaire d'abord, car un `disable`
+suivi d'un `enable` laisserait une fenêtre sans gestionnaire si le second échouait. Elle prend effet au
+démarrage suivant, après la copie des fichiers système, et `make install` refuse de déployer sans `greetd`
+ni `tuigreet`. SDDM est désinstallé après la recette, par `sudo pacman -Rns sddm`.
+
+Raison : un seul candidat dont le contrat « une fois par démarrage » est garanti par la documentation, et
+une procédure entièrement dans le dépôt, sans étape cachée.
+
+*Touché : systeme/etc/greetd/, deploy.py, carnet, backlog (L5-12), spec 0.4.*
+
+### D50 · Liste blanche du démarrage de session
+
+Seuls les services nommés dans `session.toml` démarrent avec la session : `hypridle.service` et
+`nm-applet.service`. `print-applet` est exclu, la machine n'imprime pas. Ce qui démarre est décidé par
+DuneI, non par les paquets qui déposent un fichier dans `/etc/xdg/autostart`.
+
+Mécanisme : uwsm joue l'autostart XDG par `wayland-session-xdg-autostart@.target`. `make install` masque ce
+modèle (lien vers `/dev/null` sous `~/.config/systemd/user/`) ; relevé le 2026-10-16, le masque du modèle
+masque toutes ses instances. Masquer `xdg-desktop-autostart.target` aurait fait échouer la cible d'uwsm ;
+des fichiers `Hidden=true` n'auraient fait qu'une liste noire ; un lancement depuis Hyprland n'aurait eu ni
+ordre ni relance. Chaque service de la liste est une unité systemd utilisateur, fournie par un paquet ou
+écrite dans `config/systemd/user/` ; `nm-applet.service` est la première écrite, sur le modèle d'uwsm, avec
+`ConditionEnvironment=WAYLAND_DISPLAY` comme l'unité de `hypridle`. `make install` refuse un service sans
+unité, active ce qui ne l'est pas et démarre ce qui est arrêté. Toute unité accrochée à
+`graphical-session.target` hors de la liste est signalée par un message, jamais désactivée.
+
+**Prix :** une case « lancer au démarrage » d'application reste sans effet ; ajouter un programme à la
+session, c'est une ligne dans `session.toml` et son unité.
+
+Raison : contrôle total de ce qui démarre, avec ordre et relance de systemd.
+
+*Touché : session.toml, config/systemd/user/nm-applet.service, deploy.py, carnet, backlog (L2-11, L2-24, L2-27).*
+
+### D51 · Verrou initial, en échec fermé
+
+La session de la connexion automatique est verrouillée dès son ouverture. `loginctl lock-session` lancé au
+démarrage est perdu (le compositeur est prêt avant que `hypridle` écoute) ; le verrou part donc de Hyprland
+lui-même, au signal `hyprland.start`, et **seulement au premier lancement depuis le démarrage** : le module
+`demarrage.lua` compare l'identifiant de démarrage du noyau à celui noté sous
+`$XDG_STATE_HOME/dunei/verrou-initial` (un fichier dans `/tmp` est écarté : un autre compte pourrait y
+poser un lien symbolique). Une session ouverte ensuite par tuigreet, mot de passe tapé, n'est pas
+reverrouillée. Un identifiant illisible ou un état impossible à écrire font verrouiller.
+
+L'échec est fermé. Le verrouilleur est lancé avant l'entrée dans le mode de raccourcis, tout sous `pcall`,
+et le module est enregistré juste après la configuration générique, `energie.lua` n'étant lu qu'au signal :
+rien ne peut empêcher le mode d'entrer ni le verrouilleur de partir. Le mode `verrou-initial` est enregistré
+par une liaison sans effet sur `F24` (Hyprland refuse un mode vide ; un `catchall` est écarté, il risquerait
+d'intercepter la saisie dans le verrouilleur). Les touches `locked` du clavier sont universelles, couvercle
+compris : son, micro et luminosité répondent sous le verrou. Le script `dunei-verrou-initial` tente le
+verrouilleur trois fois, journalise chaque échec (`logger -t dunei-verrou-initial`), puis ferme la session par
+`uwsm stop` : greetd affiche l'écran de connexion. Le fond du compositeur prend le jeton `surface-base`, le
+logo de Hyprland est désactivé, et le verrouilleur d'`energie.toml` reçoit `--immediate-render`.
+
+**Limites connues.** `demarrage.lua` lui-même cassé (syntaxe) : aucun verrou possible, recours
+`Ctrl + Alt + F2`. Si la configuration casse avant `clavier`, les raccourcis de secours de Hyprland
+peuvent être absents (le mode est enregistré avant). `hl.exec_cmd` du gestionnaire est hors `pcall` : une
+erreur ouvrirait la session sans mode bloquant, cas théorique (l'argument est toujours une chaîne).
+
+Raison : une connexion automatique sans verrou serait une porte ouverte, et un verrou qui échoue en
+laissant la session ouverte serait pire que pas de verrou ; mieux vaut fermer la session.
+
+*Touché : config/hypr/modules/demarrage.lua, config/hypr/modules/clavier.lua, config/hypr/modules/couvercle.lua, config/hypr/hyprland.lua, config/hypr/scripts/dunei-verrou-initial, energie.toml, generate_energie.py, émetteur Hyprland des jetons, carnet.*
