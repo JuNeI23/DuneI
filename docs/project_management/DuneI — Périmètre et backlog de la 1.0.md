@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.13. Historique en fin de document.
+Version 1.14. Historique en fin de document.
 
 La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **143 éléments** répartis en **cinq lots**, sur six chantiers.
 
@@ -239,7 +239,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L1-15 | B | Configuré | Couche 2 — flottant applicatif et plein écran — **fait (D30, D31)** : ombre des flottantes 16/4/2, plein écran sans coins ni ombre |
 | L1-16 | B | Configuré | Bureaux virtuels et raccourcis — **fait (D33 à D37)** : table de données contrôlée (`donnees/raccourcis.lua`), applications par rôle, grammaire des modificateurs, bureau spécial `accueil`, Compose sur AltGr, touches réservées ; une fenêtre agrandie garde ses coins, `plein-ecran-nu` ne vise que le plein écran (D31, suite) |
 | L1-17 | B | Configuré | Multi-écran de base et facteur d'échelle — **fait (D24 à D27)** : fragment `machines/<nom-d-hôte>.lua` lu depuis `/etc/hostname`, écrans inconnus étendus à droite, échelle 1,25 sur `caladan` |
-| L1-18 | E | Configuré | Terminal — installation minimale |
+| L1-18 | E | Configuré | Terminal — installation minimale — **fait (D52)** : kitty conservé après repérage (foot écarté), `config/kitty/kitty.conf` lié par `make install` (police canonique, intégration du shell, aucune couleur avant le lot 4) ; rôle en instance unique (`kitty -1`) ; `less` et `man-db` installés |
 | L1-19 | C | Écrit | Polices et indirection de noms — **fait (D22, D23)** : `fonts.conf` généré depuis `tokens.toml`, déployé dans `fontconfig/conf.d`, vérifié par `fc-match` ; graisse d'accentuation 550 |
 | L1-20 | C | Écrit | Chaîne de repli des polices — **fait (D23)** : latin, CJK japonais, emoji, symboles |
 | L1-21 | C | Configuré | Brancher la génération dans la chaîne de construction |
@@ -303,7 +303,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L3-08 | B | Écrit | Interface de montage et d'éjection des volumes |
 | L3-09 | B | Écrit | Interface d'appairage Bluetooth |
 | L3-10 | B | Écrit | Interface d'agencement multi-écran |
-| L3-11 | E | Configuré | Appliquer la grille de sélection du chapitre 12 |
+| L3-11 | E | Configuré | Appliquer la grille de sélection du chapitre 12 — terminal : kitty, provisoire depuis L1-18, face à Konsole, seul candidat de la famille coopérative (D52) |
 | L3-12 | E | Configuré | Gestionnaire de fichiers |
 | L3-13 | E | Configuré | Éditeur de texte |
 | L3-14 | E | Configuré | Visionneuse d'images |
@@ -490,6 +490,7 @@ Le choix de la distribution de base et du compositeur, précédemment ouverts, s
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-12 | Version initiale, 137 éléments |
+| 1.14 | 2026-10-16 | L1-18 fait (D52) : kitty conservé, instance unique, pager installé ; L3-11 note les candidats terminaux. 143 éléments |
 | 1.13 | 2026-10-16 | L1-10 fait (D49 à D51) : greetd, liste blanche du démarrage, verrou initial ; L5-12 note greetd, `dunei.toml`, la piste Quickshell et la fermeture de F2 ; L2-11, L2-24 et L2-27 notent `session.toml`. 143 éléments |
 | 1.12 | 2026-10-16 | L1-09 fait, sauf la recette avec écran externe, en attente ; L2-22 note `SUPER + L` déjà lié, le point de remplacement unique et l'esthétique ouverte ; ajout de L2-37, déverrouillage par empreinte, au lot 2 : il touche le verrouilleur (L2-22), l'agent d'authentification (L2-24) et `sudo`, qui s'écrivent là, alors que la conception visuelle reste au lot 5 (D46) ; relecture finale : dépendance de L1-10 à uwsm, clavier en veille en attente. 143 éléments |
 | 1.11 | 2026-10-15 | L1-07 fait : réseau vérifié, `wireless-regdb` installé ; L1-09 reçoit l'extinction du rétroéclairage du clavier ; L2-11 reçoit le sort de `nm-applet` |

@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas — révisée le 16 octobre 2026
 
-Version 1.12. Historique en fin de document.
+Version 1.13. Historique en fin de document.
 
 *Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent quarante-trois lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
 
@@ -265,6 +265,17 @@ un `demarrage.lua` cassé ne verrouillerait rien (D49 à D51). Prochaine étape 
 minimal** (foot, proposition à valider par repérage), qui retire kitty du rôle provisoire ; la recette avec
 écran externe de L1-09 reste à faire dès qu'un écran est disponible.
 
+**Terminal — 16 octobre 2026.** kitty reste le terminal : après repérage (foot, Konsole, Ghostty), changer
+d'outil pour un lot n'apportait rien que le choix définitif, à la grille de L3-11, ne remette en jeu ; kitty y
+sera candidat face à Konsole. Sa configuration est désormais versionnée et liée par `make install` (police
+canonique, intégration du shell, aucune couleur avant le lot 4), et chaque fenêtre s'ouvre dans le processus
+déjà lancé, sans délai. La vérification a révélé qu'aucun pager n'était installé : `less` et `man-db` le
+sont, `git log` se pagine et `man` répond (D52). Prochaine étape du lot 1 : **L1-02, la procédure
+d'installation rejouable** — les listes de paquets et les scripts `setup/` que le carnet décrit et que le
+dépôt n'a pas encore, qui consignent au passage L1-03 à L1-06 —, puis le point sur L1-21 et la clôture du
+lot par l'étiquette `lot1` ; la recette avec écran externe de L1-09 reste à faire dès qu'un écran est
+disponible.
+
 ## Plan de lecture
 
 | Rôle | À lire |
@@ -282,6 +293,7 @@ minimal** (foot, proposition à valider par repérage), qui retire kitty du rôl
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-10 | Version initiale |
+| 1.13 | 2026-10-16 | Terminal fait (L1-18) : kitty conservé, instance unique, pager installé ; prochaine étape : L1-02 (D52) |
 | 1.12 | 2026-10-16 | Session et démarrage faits (L1-10) : greetd, liste blanche, verrou initial, recette passée, SDDM retiré ; prochaine étape : L1-18 (D49 à D51) |
 | 1.11 | 2026-10-16 | Énergie et veille faites (L1-09), sauf la recette avec écran externe ; décharge en veille mesurée ; backlog à 143 éléments ; prochaine étape : L1-10 (D41 à D46) ; relecture finale : `hypridle` silencieux (D43), dépendance à uwsm consignée, date et historique corrigés |
 | 1.10 | 2026-10-15 | Réseau vérifié, base réglementaire installée (D40) ; prochaine étape : L1-09 |

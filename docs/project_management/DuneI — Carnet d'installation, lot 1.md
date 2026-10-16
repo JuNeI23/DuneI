@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.6. Historique en fin de document.
+Version 1.7. Historique en fin de document.
 
 Socle amorçable.
 
@@ -26,7 +26,7 @@ Relevé sur `caladan` avant tout développement. **Aucun choix logiciel de ce ca
 | Compositeur | Hyprland 0.56, **configuration en Lua** (`hyprland.lua`) | Acquis |
 | Configuration | Fichier générique autogénéré par Hyprland, non modifié | Renommé `generique.lua` par `make install`, chargé en premier par le point d'entrée DuneI et réduit feature après feature |
 | Gestionnaire de connexion | `sddm`, activé | Remplacé par greetd à la feature session (L1-10, D49) ; SDDM désinstallé après la recette |
-| Terminal | `kitty` | Conservé jusqu'à la feature terminal |
+| Terminal | `kitty` | Conservé à la feature terminal (L1-18, D52) : configuration versionnée, instance unique ; choix définitif à L3-11 |
 | Fenêtrage | dwindle, bordure dégradée, flou, ombre sur toutes les fenêtres | Tranché à la feature fenêtrage (D28 à D31) : `general`, `decoration`, dispositions et règles de fenêtre retirés de `generique.lua` |
 | Échelle d'affichage | `auto` → 1,5 | Tranchée à la feature écran : 1,25, soit 1536 × 960 (D27) ; la règle générique est retirée de `generique.lua` |
 | Réseau, audio, énergie | NetworkManager, PipeWire + WirePlumber, power-profiles-daemon | Acquis |
@@ -69,6 +69,7 @@ DuneI/
 │   │   ├── modules/        # un module par feature (input, keybinds, rules…) ; motion.lua existe déjà
 │   │   ├── donnees/        # tables de données : raccourcis, rôles (L1-16)
 │   │   └── machines/       # un fichier par machine, choisi par nom d'hôte
+│   └── kitty/kitty.conf    # terminal provisoire (L1-18)
 ├── tokens.toml
 ├── motion.toml             # source du mouvement (L1-23)
 ├── generate_tokens.py      # point d'entrée ; la logique vit dans dunei_theme/
@@ -77,7 +78,7 @@ DuneI/
 ├── generate_motion.py      # point d'entrée ; la logique vit dans dunei_motion/
 ├── dunei_motion/           # spring, hyprland, model, checks, emitters/
 ├── extract_hue.py
-├── deploy.py               # make install : une destination par logiciel (hypr, fontconfig)
+├── deploy.py               # make install : une destination par logiciel (hypr, fontconfig, applis…)
 ├── Makefile
 └── generated/              # produit, jamais édité
 ```
@@ -92,8 +93,9 @@ DuneI/
 | `generated/` | **Copie** par `make install` | Un fichier généré ne s'édite pas ; la copie matérialise l'étape de génération |
 
 `make install` régénère `generated/`, puis lance `deploy.py`. Le script connaît une liste de
-destinations, une par logiciel : `hypr` (`~/.config/hypr`) et `fontconfig`
-(`~/.config/fontconfig/conf.d/50-dunei.conf`). Il les vérifie toutes avant d'agir : un fichier qu'il
+destinations, une par logiciel : `hypr` (`~/.config/hypr`), `fontconfig`
+(`~/.config/fontconfig/conf.d/50-dunei.conf`) et `applis`, qui lie la configuration de chaque
+application à sa place (`~/.config/kitty/kitty.conf`) et exige qu'elle soit installée. Il les vérifie toutes avant d'agir : un fichier qu'il
 n'a pas posé lui-même, ou un lien qui pointe ailleurs, l'arrête avec un message, sans rien modifier
 nulle part. `python3 deploy.py --dry-run` affiche les actions prévues.
 
@@ -374,13 +376,12 @@ section Audio.
 
 ### Paquets
 
-Propositions — chaque ligne est validée à la feature qui la porte. D'ici là, `kitty` reste en place. `greetd` et `greetd-tuigreet` sont validés (L1-10, D49) ; `sddm` est retiré.
+Propositions — chaque ligne est validée à la feature qui la porte. `greetd` et `greetd-tuigreet` sont validés (L1-10, D49) ; `sddm` est retiré. `foot` est écarté : `kitty` reste le terminal (L1-18, D52).
 
 ```
 hyprland
 xdg-desktop-portal-hyprland xdg-desktop-portal-gtk
 qt6-wayland qt5-wayland
-foot
 ```
 
 **Lancement par `uwsm`** : c'est le lancement recommandé par la documentation Hyprland actuelle, et il déplace les variables d'environnement vers ses propres fichiers. Fait établi depuis L1-10 : Hyprland est lancé par `uwsm start -e -D Hyprland hyprland.desktop`, depuis greetd (voir « Session et démarrage — L1-10 »).
@@ -447,9 +448,29 @@ journalctl -t dunei-verrou-initial                             # échecs du verr
 
 **Désinstallation de SDDM**, faite après la recette : `sudo pacman -Rns sddm`. Retirés : `sddm` 0.21.0-7, `xorg-xauth`, `libxmu`, `xorg-server` 21.1.25-2, `xf86-input-libinput`. `xorg-xwayland` 24.1.14 reste, XWayland étant actif.
 
-`foot` est le terminal du lot 1 : natif Wayland, léger, sans dépendance de bureau. Lui aussi est provisoire — le terminal définitif vient de la famille dominante au lot 3. Au 2026-10-15, foot n'est pas installé : le rôle terminal de `donnees/roles.lua` est tenu par kitty, déjà présent, jusqu'à L1-18.
-
 Les portails sont installés dès maintenant mais configurés au lot 3. Les avoir présents évite une session qui se comporte différemment entre les deux lots.
+
+### Terminal — L1-18
+
+```
+kitty less man-db
+```
+
+kitty, déjà présent, reste le terminal du lot 1 (D52) ; foot, proposé par la version précédente de ce
+carnet, est écarté après repérage. Le choix définitif revient à la grille de L3-11, kitty face à Konsole.
+
+- `config/kitty/kitty.conf`, lié sous `~/.config/kitty/` par `make install` : `font_family monospace`
+  (Source Code Pro Nerd Font Mono par `fonts.conf`) et `shell_integration enabled`. Aucune couleur avant le
+  lot 4. Les autres fichiers de `~/.config/kitty/` sont laissés en place ; un `kitty.conf` étranger arrête
+  le déploiement.
+- Rôle `terminal = "kitty -1"` : instance unique. La première fenêtre après le démarrage lance kitty
+  (~0,5 s) ; les suivantes s'ouvrent dans le même processus. Un plantage ferme toutes les fenêtres.
+- `less` est le pager attendu par git, systemd et kitty (`Ctrl + Shift + G` rouvre la sortie de la dernière
+  commande, grâce à l'intégration du shell) ; `man-db` fournit `man`.
+- Vérifié le 2026-10-16 : police par `kitty --debug-font-fallback`, deuxième fenêtre sans nouveau
+  processus, `git log` paginé, `Ctrl + Shift + G` ; validé à l'écran par Nicolas.
+- Message au lancement, sans effet : `No such interface org.freedesktop.portal.Settings`. Le portail
+  `Settings` arrive à L3-04.
 
 ### Variables d'environnement
 
@@ -691,7 +712,7 @@ make test                # tests unitaires et de non-régression
 make check               # tokens + motion + test + git diff --exit-code generated/
 make golden              # régénère les instantanés après un changement de sortie VOULU
 make motion              # motion.toml  → generated/
-make install             # generated/ et config/ → ~/.config/hypr et ~/.config/fontconfig ; bascule au premier passage
+make install             # generated/ et config/ → ~/.config/hypr, fontconfig et kitty ; bascule au premier passage
 ```
 
 **Les fichiers de `generated/` sont versionnés et interdits à l'édition.** Ils portent l'avertissement en première ligne, ou en deuxième pour `fonts.conf`, dont la première ligne est la déclaration XML. Les versionner permet de voir dans un diff ce qu'un changement de token produit réellement — la meilleure protection contre une modification de source aux effets inattendus.
@@ -798,6 +819,7 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 | Version | Date | Changement |
 | --- | --- | --- |
 | 0.1 | 2026-10-12 | Version initiale |
+| 1.7 | 2026-10-16 | Terminal (L1-18) : kitty conservé, foot écarté ; `config/kitty/kitty.conf` et destination `applis` de `make install` ; instance unique ; `less` et `man-db` installés (D52) |
 | 1.6 | 2026-10-16 | Session et démarrage (L1-10) : greetd et tuigreet installés, SDDM retiré ; fichiers système, `session.toml`, `nm-applet.service`, `demarrage.lua` et `dunei-verrou-initial` ; ce que fait `make install` ; recette du 2026-10-16 ; recours, modules liés et fichiers générés neufs ; paquets proposés mis à jour (D49 à D51) |
 | 1.5 | 2026-10-16 | `shellcheck` ajouté aux outils de développement, lancé par `make test` (D48) |
 | 1.4 | 2026-10-16 | Énergie et veille (L1-09) : `hypridle` et `hyprlock` installés, `energie.toml` et `make energie`, échelle à quatre paliers, scripts, `hyprlock.conf` provisoire, fichier logind déployé par `make install`, couvercle partagé entre logind et `couvercle.lua`, `SUPER + L` ; relevé de décharge (0,42 % par heure) et sa procédure ; sommeil profond inexistant (`s2idle` seul) ; piège de `dpms` ; recette avec écran externe en attente (D41 à D46) ; `hypridle --quiet`, dépendance à uwsm, paquets d'exécution, clavier en veille |
