@@ -1,5 +1,9 @@
 """Paquets — lecture et contrôle de paquets.toml, dans des dossiers temporaires."""
 
+import contextlib
+import io
+import os
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -76,6 +80,12 @@ class LireTest(unittest.TestCase):
         for valeur in ('[]', '["core", ""]', '"core"', '["core", 3]'):
             _, err = self.lire("", entete=f'version = "0.1.0"\ndepots = {valeur}\n')
             self.assertTrue(any("depots" in e for e in err), valeur)
+
+    def test_provisoire_sans_backlog(self):
+        for valeur in ('""', '3', '"  "'):
+            modele, err = self.lire(f"[provisoire]\nwofi = {valeur}\n")
+            self.assertEqual(modele, {}, valeur)
+            self.assertTrue(any("provisoire.wofi" in e for e in err), valeur)
 
     def test_toml_illisible(self):
         modele, err = self.lire("[groupes\n")
@@ -247,6 +257,170 @@ class EtatTest(unittest.TestCase):
         with self.assertRaises(RuntimeError) as c:
             self.etat({"-Qq": (2, "", "base verrouillée")})
         self.assertIn("base verrouillée", str(c.exception))
+
+
+# Faux outils : seuls ils figurent dans le PATH des tests, le vrai sudo et le vrai pacman ne sont jamais
+# appelés. pacman répond aux requêtes (-Sl, -Qq…) d'après l'environnement ; sudo consigne dans $FAKE_LOG
+# puis rend $FAKE_SUDO_CODE (0 par défaut) sans rien exécuter.
+FAKES = {
+    "pacman-conf": '#!/bin/sh\nprintf \'%s\\n\' $FAKE_DEPOTS\n',
+    "pacman": ('#!/bin/sh\ncase "$1" in\n-Sl) for n in $FAKE_SYNC; do echo "extra $n 1-1"; done ;;\n'
+               '-Qq) printf \'%s\\n\' $FAKE_QQ ;;\n-Qqe) printf \'%s\\n\' $FAKE_QQE ;;\n'
+               '-Qqett) printf \'%s\\n\' $FAKE_QQETT ;;\n-Qqdt) printf \'%s\\n\' $FAKE_QQDT ;;\n'
+               '*) echo "pacman $*" >> "$FAKE_LOG"; exit 9 ;;\nesac\n'),
+    "sudo": '#!/bin/sh\necho "sudo $*" >> "$FAKE_LOG"\nexit ${FAKE_SUDO_CODE:-0}\n',
+}
+
+
+class MainTest(unittest.TestCase):
+    def setUp(self):
+        """Fabrique les faux outils, la racine « caladan » et le modèle ; le PATH ne garde que les faux outils."""
+        d = tempfile.TemporaryDirectory()
+        self.addCleanup(d.cleanup)
+        self.tmp = Path(d.name)
+        bin_ = self.tmp / "bin"
+        bin_.mkdir()
+        for nom, corps in FAKES.items():
+            (bin_ / nom).write_text(corps, encoding="utf-8")
+            (bin_ / nom).chmod(0o755)
+        root = self.tmp / "root"
+        (root / "proc").mkdir(parents=True)
+        (root / "proc/cpuinfo").write_text("vendor_id\t: AuthenticAMD\n", encoding="utf-8")
+        (root / "sys/class/drm/card1/device").mkdir(parents=True)
+        (root / "sys/class/drm/card1/device/vendor").write_text("0x1002\n", encoding="utf-8")
+        (root / "etc").mkdir()
+        (root / "etc/hostname").write_text("caladan\n", encoding="utf-8")
+        self.log = self.tmp / "log"
+        self.modele, _ = paquets.lire(ROOT)
+        self.veut, _ = paquets.voulus(self.modele, "caladan", {"amd"}, {"amd"})
+        toutes = {n for liste in (*self.modele["groupes"].values(), *self.modele["machines"].values(),
+                                  *(v for m in self.modele["materiel"].values() for v in m.values()))
+                  for n in liste} | set(self.modele["provisoire"])
+        self.env = {"PATH": str(bin_), "DUNEI_SYSROOT": str(root), "FAKE_LOG": str(self.log),
+                    "FAKE_DEPOTS": "core extra", "FAKE_SYNC": " ".join(sorted(toutes)), "FAKE_QQ": "",
+                    "FAKE_QQE": "", "FAKE_QQETT": "", "FAKE_QQDT": ""}
+        # Garde-fou : ni sudo ni pacman ne se résolvent hors des faux outils.
+        for nom in ("sudo", "pacman"):
+            self.assertEqual(shutil.which(nom, path=self.env["PATH"]), str(bin_ / nom))
+
+    def lancer(self, *args, tty=False, reponses=(), **env):
+        """Appelle paquets.main dans le PATH des faux outils ; rend (code, sortie, erreur, questions, journal)."""
+        questions = []
+
+        def faux_input(q):
+            questions.append(q)
+            return reponses[len(questions) - 1]
+        out, err = io.StringIO(), io.StringIO()
+        with mock.patch.dict(os.environ, {**self.env, **env}, clear=True), \
+                mock.patch("sys.stdin.isatty", return_value=tty), mock.patch("builtins.input", faux_input), \
+                contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            code = paquets.main(list(args))
+        journal = self.log.read_text(encoding="utf-8") if self.log.exists() else ""
+        return code, out.getvalue(), err.getvalue(), questions, journal
+
+    def installe(self, **env):
+        """Variables d'un système où tous les paquets voulus sont déjà installés et explicites."""
+        noms = " ".join(sorted(self.veut))
+        return {"FAKE_QQ": noms, "FAKE_QQE": noms, **env}
+
+    def test_dry_run_n_execute_rien(self):
+        code, out, _, _, journal = self.lancer("--dry-run")
+        self.assertEqual(code, 0)
+        self.assertNotIn("sudo", journal)
+        self.assertIn("processeur amd, graphique amd", out)
+        self.assertIn("à installer", out)
+
+    def test_depot_tiers_refuse(self):
+        code, _, err, _, journal = self.lancer(FAKE_DEPOTS="core extra chaotic-aur")
+        self.assertEqual(code, 1)
+        self.assertIn("chaotic-aur", err)
+        self.assertEqual(journal, "")
+
+    def test_nom_introuvable_refuse_avant_toute_action(self):
+        code, _, err, _, journal = self.lancer(FAKE_SYNC="vim")
+        self.assertEqual(code, 1)
+        self.assertIn("introuvables", err)
+        self.assertEqual(journal, "")
+
+    def test_installe_les_manquants(self):
+        code, out, _, _, journal = self.lancer()
+        self.assertEqual(code, 0)
+        self.assertIn("sudo pacman -S --needed " + " ".join(sorted(self.veut)), journal)
+        self.assertNotIn("-Rns", journal)
+        self.assertIn("paquets provisoires : ", out)
+        self.assertIn("wofi → L2-16", out)
+
+    def test_marque_les_installes_comme_explicites(self):
+        env = self.installe(FAKE_QQE="")
+        code, _, _, _, journal = self.lancer(**env)
+        self.assertEqual(code, 0)
+        self.assertNotIn("--needed", journal)
+        self.assertIn("sudo pacman -D --asexplicit " + " ".join(sorted(self.veut)), journal)
+
+    def test_rien_a_faire_ne_lance_aucune_commande(self):
+        code, _, _, _, journal = self.lancer(**self.installe())
+        self.assertEqual((code, journal), (0, ""))
+
+    def test_hors_terminal_ne_retire_rien(self):
+        noms = " ".join(sorted(self.veut)) + " zzz"
+        code, _, _, questions, journal = self.lancer(FAKE_QQ=noms, FAKE_QQE=noms, FAKE_QQETT="zzz")
+        self.assertEqual(code, 0)
+        self.assertEqual(questions, [])
+        self.assertNotIn("-Rns", journal)
+
+    def test_retire_sur_confirmation(self):
+        noms = " ".join(sorted(self.veut)) + " zzz"
+        env = {"FAKE_QQ": noms + " orph", "FAKE_QQE": noms, "FAKE_QQETT": "zzz", "FAKE_QQDT": "orph"}
+        code, _, _, questions, journal = self.lancer(tty=True, reponses=["o"], **env)
+        self.assertEqual(code, 0)
+        self.assertEqual(questions, ["Retirer ces 2 paquets ? [o/N] "])
+        self.assertIn("sudo pacman -Rns orph zzz", journal)
+
+    def test_refus_ne_retire_rien(self):
+        noms = " ".join(sorted(self.veut)) + " zzz"
+        code, _, _, questions, journal = self.lancer(tty=True, reponses=["non"], FAKE_QQ=noms, FAKE_QQE=noms,
+                                                     FAKE_QQETT="zzz")
+        self.assertEqual((code, len(questions)), (0, 1))
+        self.assertNotIn("-Rns", journal)
+
+    def test_marque_l_exces_requis_sur_confirmation(self):
+        noms = " ".join(sorted(self.veut)) + " yyy"
+        code, _, _, questions, journal = self.lancer(tty=True, reponses=["oui"], FAKE_QQ=noms, FAKE_QQE=noms)
+        self.assertEqual(code, 0)
+        self.assertEqual(questions, ["Marquer ces 1 paquets comme dépendances ? [o/N] "])
+        self.assertIn("sudo pacman -D --asdeps yyy", journal)
+
+    def test_reponses(self):
+        with mock.patch("sys.stdin.isatty", return_value=True):
+            for rep, attendu in (("o", True), ("OUI", True), (" O ", True), ("", False), ("n", False),
+                                 ("non", False), ("oui !", False)):
+                with mock.patch("builtins.input", return_value=rep):
+                    self.assertIs(paquets.demander("?"), attendu, rep)
+
+    def test_demander_hors_terminal_ne_lit_pas(self):
+        with mock.patch("sys.stdin.isatty", return_value=False), \
+                mock.patch("builtins.input", side_effect=AssertionError("lecture")):
+            self.assertFalse(paquets.demander("?"))
+
+    def test_echec_pacman_arrete_tout(self):
+        code, _, err, questions, journal = self.lancer(tty=True, reponses=["o", "o"], FAKE_SUDO_CODE="3",
+                                                       FAKE_QQ="zzz", FAKE_QQE="zzz", FAKE_QQETT="zzz")
+        self.assertEqual(code, 3)
+        self.assertEqual(questions, [])
+        self.assertIn("informant read", err)
+        self.assertEqual(len(journal.splitlines()), 1)
+
+    def test_echec_de_la_premiere_commande_arrete_la_suivante(self):
+        code, _, err, _, journal = self.lancer(FAKE_SUDO_CODE="1")
+        self.assertEqual(code, 1)
+        self.assertIn("informant read", err)
+        self.assertEqual(len(journal.splitlines()), 1)
+
+    def test_pacman_illisible_rend_1_sans_trace(self):
+        code, _, err, _, journal = self.lancer(FAKE_DEPOTS="", FAKE_SYNC="")
+        self.assertEqual(code, 1)
+        self.assertNotIn("Traceback", err)
+        self.assertEqual(journal, "")
 
 
 if __name__ == "__main__":
