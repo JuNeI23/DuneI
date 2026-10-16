@@ -1,4 +1,36 @@
 #!/usr/bin/env bash
-# dunei-maj — mise à jour de DuneI (squelette, rempli à la tâche 7).
-# Rôle : orchestrer la mise à jour du système et de la configuration.
-exit 0
+# dunei-maj — mise à jour de DuneI en une commande.
+# Rôle : lire les actualités Arch, mettre le système à jour, lister les .pacnew et .pacsave, puis signaler
+#   un noyau remplacé. Rien n'est fusionné : la commande de fusion est seulement rappelée.
+# Entrées : aucun argument. $DUNEI_SYSROOT préfixe /usr/lib/modules, pour les tests seulement.
+# Sortie : un message par étape sur la sortie standard ; code 0 si tout passe, sinon le code de l'étape
+#   qui échoue.
+# Erreurs : une étape échouée arrête le script avec un message sur la sortie d'erreur.
+# Dépendances : informant, pacman, pacman-contrib (pacdiff), sudo, uname.
+set -euo pipefail
+
+# etape — exécute une commande ; en cas d'échec, nomme l'étape et sort avec le code de la commande.
+# Entrées : le nom de l'étape, puis la commande et ses arguments. Sortie : celle de la commande.
+# Erreurs : message « <étape> a échoué » sur la sortie d'erreur. Dépendances : aucune.
+etape() {
+  local nom=$1 code=0
+  shift
+  "$@" || code=$?
+  [ "$code" -eq 0 ] || { echo "dunei-maj : $nom a échoué (code $code)." >&2; exit "$code"; }
+}
+
+echo "== Actualités Arch"
+# informant garde la liste des lues dans un fichier du système : seule la lecture sous sudo l'enregistre.
+[ -z "$(informant list --unread)" ] || etape "la lecture des actualités" sudo informant read
+
+echo "== Mise à jour du système"
+etape "la mise à jour" sudo pacman -Syu
+
+echo "== Fichiers .pacnew et .pacsave"
+fichiers=$(pacdiff -o)
+if [ -n "$fichiers" ]; then
+  echo "$fichiers"
+  echo "Rien n'est fusionné. Pour fusionner : sudo pacdiff"
+fi
+
+[ -d "${DUNEI_SYSROOT:-}/usr/lib/modules/$(uname -r)" ] || echo "Noyau mis à jour : redémarre."
