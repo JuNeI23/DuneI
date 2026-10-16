@@ -1,6 +1,6 @@
 # Session et démarrage : connexion, liste blanche, verrouillage au démarrage
 
-Version 0.1 · 2026-10-16 · backlog L1-10 · carnet « Session et compositeur » · statut : validée par sections, en relecture
+Version 0.3 · 2026-10-16 · backlog L1-10 · carnet « Session et compositeur » · statut : validée
 
 ## 1. Objet
 
@@ -87,31 +87,37 @@ Dépôt officiel, installés par `sudo pacman -S --needed greetd greetd-tuigreet
 qu'après un redémarrage validé à l'écran, par une commande écrite au carnet
 (`sudo pacman -Rns sddm`), qui libère aussi `xorg-server` s'il n'est plus requis.
 
-### 3.2 Fichier système (`systeme/etc/greetd/config.toml`)
+### 3.2 Fichiers système (`systeme/etc/greetd/dunei.toml`, surcharge de `greetd.service`)
 
-Deuxième ligne : la marque `Posé par DuneI`.
+Le paquet greetd livre `/etc/greetd/config.toml` (fichier de sauvegarde de pacman, sans la marque DuneI) :
+le mécanisme D45 refuserait à raison de l'écraser. DuneI pose donc son propre fichier,
+`/etc/greetd/dunei.toml`, et une surcharge `systeme/etc/systemd/system/greetd.service.d/10-dunei.conf`
+qui remplace `ExecStart` par `greetd --config /etc/greetd/dunei.toml`. Aucun conflit avec le paquet,
+aucun `.pacnew` aux mises à jour. Deuxième ligne de chaque fichier : la marque `Posé par DuneI`.
 
 - `[terminal] vt = 1`.
 - `[initial_session]` : `user = "{utilisateur}"`, `command = "uwsm start -e -D Hyprland hyprland.desktop"`.
 - `[default_session]` : `user = "greeter"`, `command` = tuigreet, dont la commande de session est fixée
   par `--cmd` à la même ligne uwsm. Aucun choix de session : l'entrée sans uwsm ne peut plus être prise.
 
-TOML n'a pas de variables : la commande uwsm est écrite deux fois dans le fichier, et un test vérifie
+TOML n'a pas de variables : la commande uwsm est écrite deux fois dans `dunei.toml`, et un test vérifie
 que les deux occurrences sont identiques.
 
 ### 3.3 Champ `{utilisateur}` dans les fichiers système
 
 `deploy.py` remplit `{utilisateur}` avec l'utilisateur qui lance `make install`, avant comparaison et
 copie : la comparaison « identique ou différent » porte sur le fichier rempli. Mécanisme commun à tout
-fichier de `systeme/` ; un fichier sans champ est copié tel quel, comme aujourd'hui. La copie d'un
-fichier rempli passe par un fichier temporaire, puis `sudo install -m 644`.
+fichier de `systeme/` ; un fichier sans champ est copié tel quel, comme aujourd'hui. Toute copie
+système passe par un fichier temporaire rempli, puis `sudo install -D -m 644`. Un fichier copié sous
+`etc/systemd/system/` entraîne `sudo systemctl daemon-reload`. `make install` lancé en root est refusé :
+le champ désignerait root.
 
 ### 3.4 Bascule du gestionnaire de connexion
 
 Nouvelle action système de `deploy.py`, avec `sudo` : si `display-manager.service` ne pointe pas sur
 `greetd.service`, désactiver le gestionnaire actuel et activer greetd (`systemctl disable` puis
 `systemctl enable`, sans `--now`). Effet au redémarrage suivant, jamais en pleine session. Exécutée
-après la copie de `config.toml`, pour que greetd ne puisse jamais démarrer sans sa configuration.
+après la copie de `dunei.toml` et de la surcharge, pour que greetd ne puisse jamais démarrer sans elles.
 `make install` refuse de déployer si `greetd` ou `tuigreet` manque.
 
 ### 3.5 Liste blanche (`session.toml`, unités, masque)
@@ -165,10 +171,18 @@ Il est ajouté aux copies de `deploy.py` (`COPIES`), sous `~/.config/hypr/genera
 Le nombre de tentatives est une constante du script. Sans argument : message d'usage, code 2.
 
 **Module `config/hypr/modules/demarrage.lua`**, appelé par `hyprland.lua` après `modules.verrouillage`.
-Au signal `hyprland.start` :
+Au signal `hyprland.start`, **seulement au premier lancement de Hyprland depuis le démarrage de la
+machine** : c'est la session de la connexion automatique, que greetd ne joue qu'une fois par démarrage.
+Une session ouverte ensuite par l'écran de connexion, mot de passe tapé, n'est pas reverrouillée
+(critère 5). Le module compare l'identifiant de démarrage du noyau (`/proc/sys/kernel/random/boot_id`) à
+celui noté dans `$XDG_STATE_HOME/dunei/verrou-initial`, puis le note ; un identifiant illisible ou un
+état impossible à écrire font verrouiller. Un fichier dans `/tmp` est écarté : un autre compte pourrait
+y poser un lien symbolique.
 
-1. entrée dans le mode de raccourcis `verrou-initial`, défini avec un `catchall` sans effet, qui
-   attrape toutes les touches ;
+1. entrée dans le mode de raccourcis `verrou-initial`. Hyprland refuse un mode vide (relevé du
+   2026-10-16) : le mode est enregistré par une seule liaison sans effet, sur une touche absente du
+   clavier (`F24`). Aucun raccourci du mode global n'y répond ; un `catchall` est écarté, car il
+   risquerait d'intercepter la saisie dans le verrouilleur ;
 2. lancement de `dunei-verrou-initial` avec `require("generated.energie").verrouilleur`.
 
 Le module met aussi `misc.disable_hyprland_logo` et `misc.disable_splash_rendering` à `true`, ce qui
@@ -191,7 +205,8 @@ visible, soumis à validation : sans fond d'écran (lot 2), le bureau vide devie
 | greetd ou tuigreet absent | Refus de `make install` |
 | Service de la liste sans unité | Refus de `make install` |
 | `session.toml` fautif | Refus de `make install`, avec la clé en cause |
-| `config.toml` présent sans marque | Refus de `make install` (mécanisme D45) |
+| `dunei.toml` ou la surcharge présents sans marque | Refus de `make install` (mécanisme D45) |
+| `make install` lancé en root | Refus |
 | Unité de session hors liste | Message, sans action |
 
 ### 3.8 Hyprland
@@ -199,17 +214,21 @@ visible, soumis à validation : sans fond d'écran (lot 2), le bureau vide devie
 `hyprland.lua` reçoit une ligne `require("modules.demarrage").apply()`. Aucune autre modification du point
 d'entrée.
 
-### 3.9 Points à vérifier sur la machine pendant le plan
+### 3.9 Points vérifiés sur la machine (2026-10-16)
 
-1. systemd accepte le masque du modèle `wayland-session-xdg-autostart@.target` côté utilisateur.
-2. `submap_universal` existe en 0.56.2 et s'applique aux raccourcis `locked`.
-3. Syntaxe de sortie du mode de raccourcis depuis un script (`hyprctl dispatch …` avec la configuration
-   Lua).
-4. Effet d'un rechargement de la configuration (`hyprctl reload`, utilisé par le module du couvercle) sur
-   le mode de raccourcis courant.
-5. Un `hl.dispatch` vers un mode de raccourcis est accepté dans le gestionnaire de `hyprland.start`.
-6. Options de `tuigreet` de la version installée (`--cmd`, `--time`, `--remember`).
-7. greetd accepte une commande `initial_session` lancée par uwsm sans passer par une entrée `.desktop`.
+1. Le masque du modèle `wayland-session-xdg-autostart@.target` masque toutes ses instances (essai en
+   `--runtime`, annulé aussitôt).
+2. `submap_universal` existe en 0.56.2 (champ de `hyprctl binds`).
+3. Sortie du mode depuis un script : `hyprctl dispatch 'hl.dsp.submap("reset")'` ; la forme
+   `hyprctl dispatch submap reset` est refusée avec la configuration Lua.
+4. `hyprctl reload` conserve le mode de raccourcis courant.
+5. Un mode sans liaison n'est pas enregistré (« submap doesn't exist »).
+6. La commande de l'entrée `hyprland-uwsm.desktop` est `uwsm start -e -D Hyprland hyprland.desktop`.
+
+Restent à vérifier à l'implémentation : `hl.dispatch` dans le gestionnaire de `hyprland.start` (essai
+au redémarrage), les options de `tuigreet` 0.11.1 installé (`--cmd`, `--time`), et, sur la session
+courante avant tout redémarrage, la saisie dans `hyprlock` et les touches universelles pendant le mode
+`verrou-initial`.
 
 ## 4. Tests
 
@@ -217,7 +236,7 @@ Automatiques (`make test`) :
 
 - Générateur : instantané de référence de `generated/energie.lua` ; verrouilleur vide refusé.
 - `session.toml` : liste vide, nom sans `.service` et doublon refusés.
-- `config.toml` de greetd : les deux commandes uwsm sont identiques.
+- `dunei.toml` de greetd : les deux commandes uwsm sont identiques ; la surcharge désigne `dunei.toml`.
 - `deploy.py`, sur une arborescence factice : champ `{utilisateur}` rempli et comparé rempli ; masque
   posé une seule fois ; service sans unité refusé ; unité hors liste signalée ; bascule vers greetd
   planifiée seulement si nécessaire ; greetd ou tuigreet absent refusé.
@@ -242,4 +261,6 @@ Recette à l'écran, après redémarrage : les huit critères de la section 1, p
 
 | Version | Date | Changement |
 | --- | --- | --- |
+| 0.3 | 2026-10-16 | Verrou initial limité au premier lancement de Hyprland depuis le démarrage, repéré par l'identifiant de démarrage du noyau (critère 5) |
+| 0.2 | 2026-10-16 | Écarts du plan : fichier `dunei.toml` et surcharge de `greetd.service` (le paquet livre `config.toml`) ; mode enregistré par une liaison sans effet ; refus en root ; points de 3.9 vérifiés |
 | 0.1 | 2026-10-16 | Version initiale, validée section par section |
