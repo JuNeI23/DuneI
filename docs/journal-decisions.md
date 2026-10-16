@@ -953,3 +953,43 @@ Raison : une connexion automatique sans verrou serait une porte ouverte, et un v
 laissant la session ouverte serait pire que pas de verrou ; mieux vaut fermer la session.
 
 *Touché : config/hypr/modules/demarrage.lua, config/hypr/modules/clavier.lua, config/hypr/modules/couvercle.lua, config/hypr/hyprland.lua, config/hypr/scripts/dunei-verrou-initial, energie.toml, generate_energie.py, émetteur Hyprland des jetons, carnet.*
+
+## 2026-10-16 — Terminal (L1-18)
+
+### D52 · kitty reste le terminal du lot 1, en instance unique ; `less` et `man-db` installés
+
+Le carnet proposait foot. Le repérage a comparé kitty, foot, Konsole et Ghostty sur quatre critères posés
+par Nicolas : rapide, intelligent, joli, intégré à l'écosystème. **kitty est conservé.** foot est le plus
+léger, mais moins riche (intégration du shell partielle, pas de protocole d'images, aucun suivi du clair et
+du sombre du système) et il faudrait l'apprendre pour un outil provisoire. Konsole, seul candidat de la
+famille coopérative (bible, ch. 12), trancherait dès maintenant ce que la grille de L3-11 doit juger.
+Ghostty repose sur libadwaita, la famille qui refuse d'être thématisée. kitty, lui, n'a aucune barre
+d'interface : toute sa fenêtre est du contenu, colorable par un fichier inclus, rechargé à chaud. Il reste
+**candidat à L3-11**, face à Konsole.
+
+`config/kitty/kitty.conf` est versionné et lié par `make install`, qui exige kitty (destination `applis`,
+une ligne par application). Il épingle deux choix qui sont aujourd'hui des valeurs par défaut :
+`font_family monospace`, résolu par `fonts.conf` vers Source Code Pro Nerd Font Mono (vérifié par
+`kitty --debug-font-fallback`), et `shell_integration enabled`. Aucune couleur : la palette générée arrive
+au lot 4, par un fichier inclus. La vérification des mises à jour est déjà désactivée dans le paquet Arch.
+
+Le rôle terminal devient `kitty -1` : tant qu'une fenêtre kitty est ouverte, chaque nouvelle fenêtre
+s'ouvre dans ce processus, sans démarrer de programme (~550 ms mesurés par fenêtre sans instance unique,
+~110 Mo par processus). Le processus se termine avec sa dernière fenêtre : rouvrir un terminal ensuite
+repaie le démarrage ; une instance de fond (`--start-as=hidden`) l'éviterait, elle n'est pas retenue à ce
+stade. Contrepartie acceptée : un plantage de kitty ferme toutes ses fenêtres.
+
+La vérification a révélé qu'aucun pager n'était installé : `git log` échouait, `man` n'existait pas, et
+`Ctrl + Shift + G` (sortie de la dernière commande) en dépend. `less` et `man-db` sont installés ;
+`man-pages` (pages du noyau et de la bibliothèque C) est laissé de côté.
+
+**Limites connues.** kitty signale au lancement l'absence du portail `Settings`
+(`org.freedesktop.portal.Settings`) : sans effet aujourd'hui, c'est par lui que le suivi du clair et du
+sombre passera (L3-04).
+
+Raison : changer deux fois de terminal en deux lots coûterait un réapprentissage sans gain ; le choix
+définitif revient à la grille, et la configuration versionnée fait de kitty un choix contrôlé, plus un reste
+de la configuration d'origine.
+
+*Touché : config/kitty/kitty.conf, config/hypr/donnees/roles.lua, deploy.py, tests/test_deploy.py, Makefile,
+carnet, backlog, notes de direction.*

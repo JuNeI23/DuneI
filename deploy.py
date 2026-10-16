@@ -11,6 +11,9 @@ posé lui-même.
   Un script de config/hypr/scripts/ non exécutable est refusé.
 - fontconfig : generated/fonts.conf est copié vers fontconfig/conf.d/50-dunei.conf. Les applications
   lancées ensuite le lisent ; aucun fc-cache n'est nécessaire.
+- applis : la configuration de chaque application de DuneI est liée à sa place sous le dossier de
+  configuration ; l'application doit être installée. Les autres fichiers de son dossier sont laissés
+  en place. Seul kitty, le terminal provisoire, y figure (L1-18).
 - services : hyprlock doit être installé ; les unités et surcharges de config/systemd/user/ sont
   copiées, l'autostart XDG d'uwsm est masqué (liste blanche de session.toml) ; chaque service de la
   liste est activé, démarré, ou redémarré si sa configuration change (daemon-reload d'abord). Un
@@ -65,6 +68,9 @@ CONNEXION = ("greetd", "tuigreet")                           # Gestionnaire de c
 GESTIONNAIRE = "greetd.service"
 DM = "etc/systemd/system/display-manager.service"            # Alias du gestionnaire de connexion actif, sous la racine.
 VERROUILLEUR = "hyprlock"                                    # Verrouilleur exigé ; provisoire, remplacé à L2-22.
+# Applications configurées par DuneI : exécutable exigé, paquet qui le fournit, fichier du dépôt, lien sous
+# le dossier de configuration.
+APPLIS = (("kitty", "kitty", "config/kitty/kitty.conf", "kitty/kitty.conf"),)  # Terminal provisoire jusqu'à L3-11 (L1-18).
 
 
 def config_home(env: Mapping[str, str]) -> Path:
@@ -204,6 +210,32 @@ def plan_fontconfig(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
     if dest.is_symlink() or (dest.exists() and not _ours(dest)):
         err.append(f"{dest} existe mais n'a pas été posé par DuneI")
     return actions + [("copy", src, dest)], err
+
+
+def plan_applis(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
+    """Inspection des configurations d'applications, sans aucune modification (L1-18).
+
+    Entrées : repo — racine du dépôt ; home — dossier de configuration racine.
+    Sortie : (création du dossier et du lien de chaque application de APPLIS qui en manque ; erreurs).
+    Erreurs : aucune exception ; application introuvable, source absente, dossier qui n'en est pas un,
+              fichier ou lien étranger à la place du lien deviennent des messages.
+    Dépendances : shutil.which, _links_to, APPLIS.
+    """
+    actions, err = [], []
+    for exe, paquet, source, cible in APPLIS:
+        src, link = repo / source, home / cible
+        if not shutil.which(exe):
+            err.append(f"{exe} introuvable : sudo pacman -S --needed {paquet}")
+        if not src.exists():
+            err.append(f"source manquante : {src}")
+        if link.parent.is_symlink() or (link.parent.exists() and not link.parent.is_dir()):
+            err.append(f"{link.parent} existe mais n'est pas un dossier réel")
+        elif link.is_symlink() or link.exists():
+            if not _links_to(link, src):
+                err.append(f"{link} existe mais n'est pas un lien vers {src} : le déplacer, puis relancer")
+        else:
+            actions += ([] if link.parent.exists() else [("mkdir", link.parent)]) + [("link", src, link)]
+    return actions, err
 
 
 def plan_systeme(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
@@ -363,7 +395,7 @@ def plan_services(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
     return actions, err
 
 
-DESTINATIONS = {"hypr": plan_hypr, "fontconfig": plan_fontconfig,
+DESTINATIONS = {"hypr": plan_hypr, "fontconfig": plan_fontconfig, "applis": plan_applis,
                 "services": plan_services, "systeme": plan_systeme, "connexion": plan_connexion}  # Nom → planification, dans l'ordre d'exécution (sudo en dernier).
 
 

@@ -19,7 +19,8 @@ GENERIC = "-- Configuration générique de test.\n"
 FOREIGN = "<?xml version=\"1.0\"?>\n<fontconfig/>\n"
 # Faux sudo et faux systemctl : chaque appel est consigné dans $FAKE_LOG. sudo exécute la commande telle
 # quelle, sauf si $FAKE_SUDO_FAIL est posé ; systemctl répond à is-enabled par $FAKE_ENABLED et à
-# is-active par $FAKE_ACTIVE (« active » par défaut). hyprlock est un faux exécutable vide.
+# is-active par $FAKE_ACTIVE (« active » par défaut). hyprlock, greetd, tuigreet et kitty sont de faux
+# exécutables vides.
 FAKES = {
     "sudo": '#!/bin/sh\necho "sudo $*" >> "$FAKE_LOG"\n[ -z "$FAKE_SUDO_FAIL" ] || exit 1\nexec "$@"\n',
     "systemctl": ('#!/bin/sh\necho "systemctl $*" >> "$FAKE_LOG"\n'
@@ -28,6 +29,7 @@ FAKES = {
     "hyprlock": "#!/bin/sh\n",
     "greetd": "#!/bin/sh\n",
     "tuigreet": "#!/bin/sh\n",
+    "kitty": "#!/bin/sh\n",
 }
 MASQUE = Path("systemd/user/wayland-session-xdg-autostart@.target")
 LOGIND = Path("etc/systemd/logind.conf.d/10-dunei.conf")
@@ -63,6 +65,7 @@ class DeployTest(unittest.TestCase):
         self.cfg = Path(self.tmp.name) / "cfg"
         self.hypr = self.cfg / "hypr"
         self.fc = self.cfg / "fontconfig" / "conf.d" / "50-dunei.conf"
+        self.kitty = self.cfg / "kitty" / "kitty.conf"
         t = Path(self.tmp.name)
         self.root, self.log, fake = t / "racine", t / "journal", t / "bin"
         fake.mkdir()
@@ -110,6 +113,7 @@ class DeployTest(unittest.TestCase):
         self.assertEqual((self.hypr / "hypridle.conf").read_bytes(), (ROOT / "generated" / "hypridle.conf").read_bytes())
         self.assertEqual(os.readlink(self.hypr / "hyprlock.conf"), str(ROOT / "config" / "hypr" / "hyprlock.conf"))
         self.assertEqual(os.readlink(self.hypr / "scripts"), str(ROOT / "config" / "hypr" / "scripts"))
+        self.assertEqual(os.readlink(self.kitty), str(ROOT / "config" / "kitty" / "kitty.conf"))
 
     def test_copies_hyprland_files(self):
         """Hyprland lit ces cinq fichiers générés : un oubli dans COPIES casserait tout le point d'entrée."""
@@ -265,6 +269,42 @@ class DeployTest(unittest.TestCase):
         (self.cfg / "fontconfig").mkdir(parents=True)
         (self.cfg / "fontconfig" / "conf.d").symlink_to(Path(self.tmp.name))
         self.assert_refused("conf.d")
+
+    def test_keeps_other_kitty_files(self):
+        self.kitty.parent.mkdir(parents=True)
+        theme = self.kitty.parent / "theme.conf"
+        theme.write_text("# perso\n", encoding="utf-8")
+        self.assertEqual(run(self.cfg).returncode, 0)
+        self.assertEqual(theme.read_text(encoding="utf-8"), "# perso\n")
+        self.assert_deployed()
+
+    def test_refuses_foreign_kitty_file(self):
+        self.kitty.parent.mkdir(parents=True)
+        self.kitty.write_text("font_size 14\n", encoding="utf-8")
+        self.assert_refused("kitty.conf")
+
+    def test_refuses_foreign_kitty_link(self):
+        self.kitty.parent.mkdir(parents=True)
+        self.kitty.symlink_to(Path(self.tmp.name))
+        self.assert_refused("kitty.conf")
+
+    def test_refuses_kitty_not_a_dir(self):
+        self.cfg.mkdir()
+        (self.cfg / "kitty").symlink_to(Path(self.tmp.name))
+        self.assert_refused("kitty")
+
+    def test_refuses_kitty_file(self):
+        self.cfg.mkdir()
+        (self.cfg / "kitty").write_text("", encoding="utf-8")
+        self.assert_refused("kitty")
+
+    def test_refuses_without_kitty(self):
+        (self.fake / "kitty").unlink()
+        before = snapshot(self.cfg)
+        res = self.deploy_with_path(f"{self.fake}:/nonexistent")
+        self.assertEqual(res.returncode, 1)
+        self.assertIn("kitty introuvable", res.stderr)
+        self.assertEqual(snapshot(self.cfg), before)
 
     def test_fontconfig_refusal_blocks_hypr(self):
         self.generic_machine()
