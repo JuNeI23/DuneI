@@ -17,4 +17,7 @@ return {
             color        = "rgba(0000005c)",
         },
     },
+    misc = {
+        background_color = "rgba(120509ff)",
+    },
 }

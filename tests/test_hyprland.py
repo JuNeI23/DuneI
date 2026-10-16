@@ -36,6 +36,7 @@ def expected(model: dict) -> dict:
         "render_power": str(s["render_power"]),
         "offset": f"{{ 0, {s['offset_y']} }}",
         "color": f'"rgba({r:02x}{g:02x}{b:02x}{round(mat["shade_opacity"] * 255):02x})"',
+        "background_color": '"rgba({:02x}{:02x}{:02x}ff)"'.format(*to_srgb255(model["roles"]["surface-base"])),
     }
 
 
