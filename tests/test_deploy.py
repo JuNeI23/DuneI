@@ -1,5 +1,7 @@
 """Déploiement — deploy.py dans un dossier de configuration temporaire, jamais dans celui de la session."""
 
+import contextlib
+import io
 import os
 import pwd
 import subprocess
@@ -9,6 +11,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+import deploy
 from deploy import COPIES, config_home, lire_session, plan
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -207,6 +210,18 @@ class DeployTest(unittest.TestCase):
         actions, err = plan(Path(self.tmp.name) / "depot-vide", self.cfg)
         self.assertTrue(any("make tokens motion" in e for e in err), err)
         self.assertTrue(any("fonts.conf" in e for e in err), err)
+
+    def test_refuses_script_not_executable(self):
+        script = ROOT / "config" / "hypr" / "scripts" / "dunei-verrou-initial"
+        real, err = os.access, io.StringIO()
+        before = snapshot(self.cfg)
+        with (mock.patch("deploy.os.access", lambda p, m: real(p, m) and Path(p) != script),
+              mock.patch.dict(os.environ, {"XDG_CONFIG_HOME": str(self.cfg)}),
+              mock.patch.object(sys, "argv", ["deploy.py"]), contextlib.redirect_stderr(err)):
+            self.assertEqual(deploy.main(), 1)
+        self.assertIn(f"{script} n'est pas exécutable : chmod 755 {script}", err.getvalue())
+        self.assertEqual(snapshot(self.cfg), before)
+        self.assertFalse([l for l in self.journal() if l.startswith("sudo")])
 
     def test_replaces_own_file(self):
         self.fc.parent.mkdir(parents=True)

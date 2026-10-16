@@ -8,6 +8,7 @@ posé lui-même.
 
 - hypr : au premier passage, une configuration générique existante est conservée sous le nom
   generique.lua, puis remplacée de façon atomique par le point d'entrée DuneI. Hyprland recharge seul.
+  Un script de config/hypr/scripts/ non exécutable est refusé.
 - fontconfig : generated/fonts.conf est copié vers fontconfig/conf.d/50-dunei.conf. Les applications
   lancées ensuite le lisent ; aucun fc-cache n'est nécessaire.
 - services : hyprlock doit être installé ; les unités et surcharges de config/systemd/user/ sont
@@ -40,8 +41,9 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent
 ENTRY = "config/hypr/hyprland.lua"            # Point d'entrée, lié sous hypr/hyprland.lua.
+SCRIPTS = "config/hypr/scripts"               # Scripts lancés par Hyprland : chacun doit être exécutable.
 LINKS = ("config/hypr/modules", "config/hypr/machines", "config/hypr/donnees",
-         "config/hypr/scripts", "config/hypr/hyprlock.conf")   # Écrits à la main, liés sous hypr/ à leur nom.
+         SCRIPTS, "config/hypr/hyprlock.conf")   # Écrits à la main, liés sous hypr/ à leur nom.
 COPIES = ("hyprland-tokens.lua", "hyprland-rules.lua", "hyprland-binds.lua", "motion.lua", "energie.lua")  # Fichiers de generated/ lus par Hyprland.
 GENERIC = "generique.lua"                     # Nom donné à la configuration générique de la machine.
 TEMP = ".{}.dunei"                            # Nom temporaire, sans extension .lua, invisible pour require.
@@ -122,13 +124,17 @@ def plan_hypr(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
 
     Entrées : repo — racine du dépôt ; home — dossier de configuration racine.
     Sortie : (actions dans l'ordre d'exécution, erreurs).
-    Erreurs : aucune exception ; chaque problème devient un message. Dépendances : _links_to.
+    Erreurs : aucune exception ; chaque problème devient un message, dont un script de SCRIPTS non
+              exécutable, que Hyprland ne pourrait pas lancer (spec 3.7).
+    Dépendances : _links_to, _ours, os.access.
     """
     dest = home / "hypr"
     actions, err = [], []
     sources = [repo / ENTRY] + [repo / d for d in LINKS] + [repo / "generated" / f for f in COPIES]
     sources.append(repo / "generated" / IDLE[0])
     err += [f"source manquante : {s} (lancer make tokens motion energie)" for s in sources if not s.exists()]
+    err += [f"{p} n'est pas exécutable : chmod 755 {p}" for p in sorted((repo / SCRIPTS).glob("*"))
+            if p.is_file() and not os.access(p, os.X_OK)]
     if dest.is_symlink() or (dest.exists() and not dest.is_dir()):
         return actions, err + [f"{dest} existe mais n'est pas un dossier réel"]
     if not dest.exists():
