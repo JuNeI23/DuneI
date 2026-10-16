@@ -6,6 +6,10 @@
 -- Elle est facultative : une machine installée directement en DuneI ne l'a pas.
 pcall(require, "generique")
 
+-- Verrou initial : la session ouverte par greetd se verrouille dès sa première image (L1-10). Il est
+-- enregistré avant tout module qui pourrait échouer : une erreur plus bas ne laisse pas la session ouverte.
+require("modules.demarrage").apply()
+
 -- Gouttières, rayon, bordure et ombre, produits par generate_tokens.py.
 hl.config(require("generated.hyprland-tokens"))
 
@@ -32,9 +36,6 @@ require("modules.clavier").apply()
 
 -- Relance possible d'un verrouilleur tombé, toujours avec authentification (L1-09).
 require("modules.verrouillage").apply()
-
--- Verrou initial : la session ouverte par greetd se verrouille dès sa première image (L1-10).
-require("modules.demarrage").apply()
 
 -- Fragment de la machine courante, machines/<nom-d-hôte>.lua, chargé en dernier pour l'emporter.
 require("modules.machine").load()

@@ -71,6 +71,12 @@ class DemarrageTest(unittest.TestCase):
         self.assertEqual(out[-2:], [["exec", "/maison/.config/hypr/scripts/dunei-verrou-initial 'v'"],
                                     ["dispatch", "submap:verrou-initial"]])
 
+    def test_missing_energie_blocks_and_logs(self):
+        out = self.lines('M.apply()\nHANDLERS["hyprland.start"]()\n')
+        self.assertIn(["dispatch", "submap:verrou-initial"], out)
+        self.assertTrue([l for l in out if l[0] == "exec" and l[1].startswith("logger -t dunei-verrou-initial ")])
+        self.assertFalse([l for l in out if l[0] == "exec" and "scripts/dunei-verrou-initial" in l[1]])
+
     def test_second_start_same_boot_does_not_lock(self):
         self.lines('M.apply({ verrouilleur = "v" })\nHANDLERS["hyprland.start"]()\n')
         out = self.lines('M.apply({ verrouilleur = "v" })\nHANDLERS["hyprland.start"]()\n')
