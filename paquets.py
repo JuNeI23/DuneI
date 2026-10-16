@@ -22,7 +22,6 @@ from pathlib import Path
 
 FICHIER = "paquets.toml"                 # Source unique des paquets, à la racine du dépôt.
 VERSION = "0.1.0"                        # Version du format de paquets.toml.
-DEPOTS = ["core", "extra"]               # Dépôts admis, exacts.
 HOTE = re.compile(r"[A-Za-z0-9-]+")      # Nom d'hôte accepté (D24).
 CARTE = re.compile(r"card\d+")           # Une carte de /sys/class/drm, à l'exclusion de ses connecteurs.
 PROCESSEURS = {"AuthenticAMD": "amd", "GenuineIntel": "intel"}            # vendor_id de cpuinfo → fabricant.
@@ -38,7 +37,7 @@ def lire(repo: Path) -> tuple[dict, list[str]]:
              en dict[str, list[str]] ; il est vide ({}) dès qu'une erreur existe.
     Erreurs : aucune exception ; fichier illisible, version ou dépôts inattendus, nom vide ou qui n'est
               pas une chaîne, nom déclaré deux fois, liste matérielle qui répète un nom commun
-              deviennent des messages. Dépendances : tomllib, FICHIER, VERSION, DEPOTS.
+              deviennent des messages. Dépendances : tomllib, FICHIER, VERSION.
     """
     try:
         with (repo / FICHIER).open("rb") as fh:
@@ -48,8 +47,9 @@ def lire(repo: Path) -> tuple[dict, list[str]]:
     err = []
     if raw.get("version") != VERSION:
         err.append(f"{FICHIER} : version « {raw.get('version')} », {VERSION} attendue")
-    if raw.get("depots") != DEPOTS:
-        err.append(f"{FICHIER} : depots doit valoir {DEPOTS}")
+    depots = raw.get("depots")
+    if not (isinstance(depots, list) and depots and all(isinstance(d, str) and d.strip() for d in depots)):
+        err.append(f"{FICHIER} : depots doit être une liste non vide de noms de dépôts")
 
     def table(*cle: str) -> dict:
         """Descend de table en table selon cle ; {} si un maillon manque ou n'est pas une table."""
@@ -84,7 +84,7 @@ def lire(repo: Path) -> tuple[dict, list[str]]:
             if communs.count(n) > 1]
     err += [f"{FICHIER} : « {n} » de {genre} répète un paquet commun" for genre, m in materiel.items()
             for l in m.values() for n in sorted({x for x in l if isinstance(x, str)} & set(communs))]
-    modele = {"depots": raw.get("depots"), "groupes": groupes, "provisoire": provisoire,
+    modele = {"depots": depots, "groupes": groupes, "provisoire": provisoire,
               "materiel": materiel, "machines": machines}
     return ({} if err else modele), err
 
@@ -180,10 +180,12 @@ def controler(modele: dict, depots_configures: list[str], noms_sync: set[str]) -
            for d in depots_configures if d not in modele["depots"]]
     if not noms_sync:
         return err + ["base de paquets non synchronisée : lancer sudo pacman -Syu"]
-    declares = {n for l in (*modele["groupes"].values(), *modele["machines"].values(),
-                            *(l for m in modele["materiel"].values() for l in m.values())) for n in l}
+    listes = [*modele["groupes"].values(), *modele["machines"].values()]
+    listes += [liste for par_fabricant in modele["materiel"].values() for liste in par_fabricant.values()]
+    declares = {nom for liste in listes for nom in liste}
     inconnus = sorted((declares | set(modele["provisoire"])) - noms_sync)
-    return err + ([f"introuvables dans {', '.join(modele['depots'])} : {', '.join(inconnus)}"] if inconnus else [])
+    return err + ([f"introuvables dans {', '.join(modele['depots'])} : {', '.join(inconnus)} ; "
+                    f"corriger ou retirer ces noms dans {FICHIER}"] if inconnus else [])
 
 
 def calculer(voulus: set[str], installes: set[str], explicites: set[str], non_requis: set[str],
@@ -203,22 +205,22 @@ def calculer(voulus: set[str], installes: set[str], explicites: set[str], non_re
             "orphelins": sorted(orphelins - voulus)}
 
 
-def etat() -> tuple[list[str], set[str], set[str], set[str], set[str], set[str]]:
+def etat(depots: list[str]) -> tuple[list[str], set[str], set[str], set[str], set[str], set[str]]:
     """État de pacman, seule fonction qui l'interroge.
 
-    Entrée : aucune.
+    Entrée : depots — dépôts admis (modele["depots"]), interrogés par pacman -Sl.
     Sortie : (dépôts configurés, noms des dépôts admis, installés, explicites, explicites non requis,
              orphelins), lus par pacman-conf --repo-list, pacman -Sl, -Qq, -Qqe, -Qqett et -Qqdt.
     Erreurs : RuntimeError lisible (commande, code, message) si une commande échoue autrement que par le
-              code 1 à sortie vide, réponse de pacman quand rien ne correspond. Le programme appelant
-              l'affiche au lieu d'une trace. Dépendances : pacman, pacman-conf, DEPOTS, subprocess.
+              code 1 sans aucune sortie (ni stdout ni stderr), réponse de pacman quand rien ne correspond. Le programme appelant
+              l'affiche au lieu d'une trace. Dépendances : pacman, pacman-conf, subprocess.
     """
     def lignes(*cmd: str) -> list[str]:
-        """Lignes de sortie de la commande ; [] pour le code 1 sans sortie."""
+        """Lignes de sortie de la commande ; [] pour le code 1 sans aucune sortie."""
         r = subprocess.run(cmd, capture_output=True, text=True)
-        if r.returncode and not (r.returncode == 1 and not r.stdout.strip()):
+        if r.returncode and not (r.returncode == 1 and not r.stdout.strip() and not r.stderr.strip()):
             raise RuntimeError(f"{' '.join(cmd)} a échoué (code {r.returncode}) : {r.stderr.strip()}")
-        return [l for l in r.stdout.splitlines() if l.strip()]
+        return [ligne for ligne in r.stdout.splitlines() if ligne.strip()]
 
-    sync = {l.split()[1] for l in lignes("pacman", "-Sl", *DEPOTS)}
+    sync = {ligne.split()[1] for ligne in lignes("pacman", "-Sl", *depots)}
     return (lignes("pacman-conf", "--repo-list"), sync, *(set(lignes("pacman", o)) for o in ("-Qq", "-Qqe", "-Qqett", "-Qqdt")))

@@ -72,9 +72,10 @@ class LireTest(unittest.TestCase):
         self.assertEqual(modele, {})
         self.assertTrue(err)
 
-    def test_depots_inattendus(self):
-        _, err = self.lire("", entete='version = "0.1.0"\ndepots = ["core", "chaotic-aur"]\n')
-        self.assertTrue(any("depots" in e for e in err))
+    def test_depots_invalides(self):
+        for valeur in ('[]', '["core", ""]', '"core"', '["core", 3]'):
+            _, err = self.lire("", entete=f'version = "0.1.0"\ndepots = {valeur}\n')
+            self.assertTrue(any("depots" in e for e in err), valeur)
 
     def test_toml_illisible(self):
         modele, err = self.lire("[groupes\n")
@@ -188,6 +189,7 @@ class ControleTest(unittest.TestCase):
         err = paquets.controler(self.m, ["core"], self.tous - {"vim"})
         self.assertEqual(len(err), 1)
         self.assertIn("vim", err[0])
+        self.assertIn("paquets.toml", err[0])
 
     def test_liste_materielle_absente_de_la_machine(self):
         err = paquets.controler(self.m, ["core"], self.tous - {"vulkan-intel"})
@@ -216,18 +218,30 @@ class CalculTest(unittest.TestCase):
 
 
 class EtatTest(unittest.TestCase):
-    def etat(self, reponses):
+    def etat(self, reponses, depots=("core", "extra")):
         """Appelle paquets.etat avec subprocess.run remplacé : reponses associe le début de la commande à (code, sortie, erreur)."""
+        appels = self.appels = []
+
         def faux(cmd, **_):
+            appels.append(list(cmd))
             code, out, err = reponses.get(cmd[1] if cmd[0] == "pacman" else cmd[0], (0, "", ""))
             return subprocess.CompletedProcess(cmd, code, out, err)
         with mock.patch("subprocess.run", side_effect=faux):
-            return paquets.etat()
+            return paquets.etat(list(depots))
 
     def test_lecture_et_code_1_vide(self):
         r = {"pacman-conf": (0, "core\nextra\n", ""), "-Sl": (0, "core vim 9 \nextra git 2 [installed]\n", ""),
              "-Qq": (0, "vim\ngit\n", ""), "-Qqe": (0, "vim\n", ""), "-Qqett": (1, "", ""), "-Qqdt": (1, "", "")}
         self.assertEqual(self.etat(r), (["core", "extra"], {"vim", "git"}, {"vim", "git"}, {"vim"}, set(), set()))
+
+    def test_sl_recoit_les_depots(self):
+        self.etat({}, depots=("core", "extra", "multilib"))
+        self.assertIn(["pacman", "-Sl", "core", "extra", "multilib"], self.appels)
+
+    def test_code_1_avec_stderr_est_une_erreur(self):
+        with self.assertRaises(RuntimeError) as c:
+            self.etat({"-Qq": (1, "", "base corrompue")})
+        self.assertIn("base corrompue", str(c.exception))
 
     def test_echec_lisible(self):
         with self.assertRaises(RuntimeError) as c:
