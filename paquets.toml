@@ -1,0 +1,106 @@
+# paquets.toml — paquets de DuneI, déclarés une fois (L1-02, L1-05).
+# Tout paquet s'ajoute ici, avec sa raison, et jamais par un `pacman -S` seul : `make paquets` retire
+# ou signale ce qui n'est pas déclaré. Un nom n'apparaît qu'une fois hors des listes matérielles.
+version = "0.1.0"
+
+depots = ["core", "extra"]   # dépôts admis ; tout autre dépôt configuré est refusé (L1-05)
+
+# Démarrer, se connecter, se mettre à jour, construire DuneI.
+[groupes]
+socle = [
+    "base",                  # système minimal
+    "linux",                 # noyau principal
+    "linux-lts",             # noyau de secours
+    "linux-firmware",        # micrologiciels des périphériques
+    "mkinitcpio",            # génération de l'initramfs
+    "sudo",                  # élévation de privilèges
+    "zram-generator",        # swap compressé en mémoire
+    "ufw",                   # pare-feu
+    "networkmanager",        # réseau
+    "wpa_supplicant",        # authentification Wi-Fi
+    "wireless-regdb",        # domaine réglementaire Wi-Fi (D40)
+    "pipewire",              # serveur audio
+    "pipewire-pulse",        # compatibilité PulseAudio
+    "wireplumber",           # gestionnaire de session audio
+    "power-profiles-daemon", # profils d'énergie
+    "git",                   # versionnage
+    "make",                  # chaîne de génération
+    "python-numpy",          # chaîne de thème
+    "python-pillow",         # chaîne de thème
+    "less",                  # paginateur
+    "man-db",                # pages de manuel (D52)
+    "pacman-contrib",        # paccache, nettoyage du cache
+    "informant",             # lecture des actualités Arch avant mise à jour
+]
+session = [
+    "hyprland",                     # compositeur
+    "mesa",                         # pile graphique (L1-06)
+    "uwsm",                         # gestion de session
+    "xdg-desktop-portal-hyprland",  # portails de bureau
+    "qt6-wayland",                  # applications Qt sous Wayland (D31)
+    "hypridle",                     # échelle d'inactivité (D41)
+    "hyprlock",                     # verrouillage (D41, D42)
+    "greetd",                       # gestionnaire de connexion
+    "greetd-tuigreet",              # écran de connexion (D49)
+    "kitty",                        # terminal (D52)
+    "brightnessctl",                # raccourcis de luminosité
+    "adobe-source-sans-fonts",      # police de l'interface (D22)
+    "ttf-sourcecodepro-nerd",       # police de code (D23)
+    "noto-fonts",                   # repli des polices (D22)
+    "noto-fonts-cjk",               # repli des polices (D22)
+    "noto-fonts-emoji",             # repli des polices (D22)
+]
+# Outils de Nicolas, hors design, réinstallés sur une nouvelle machine.
+outils = [
+    "vim",            # éditeur
+    "htop",           # moniteur de processus
+    "github-cli",     # gh
+    "shellcheck",     # analyse des scripts
+    "wget",           # téléchargement
+    "unzip",          # archives
+    "usbutils",       # lsusb
+    "smartmontools",  # état des disques
+    "iw",             # diagnostic Wi-Fi
+    "wev",            # lecture des événements clavier
+    "grim",           # capture d'écran, vérification du design par Claude
+    "slurp",          # sélection de zone, avec grim
+    "qemu-desktop",   # machine virtuelle de recette
+    "edk2-ovmf",      # UEFI de la machine virtuelle
+    "swtpm",          # TPM de la machine virtuelle
+]
+
+# Paquet = élément du backlog qui le remplacera.
+[provisoire]
+wofi = "L2-16"                      # lanceur
+network-manager-applet = "L2-11"    # indicateur réseau
+dunst = "L2-19"                     # notifications
+dolphin = "L3-12"                   # gestionnaire de fichiers
+firefox = "L3-20"                   # navigateur
+bluez = "L3-05"                     # Bluetooth
+bluez-utils = "L3-05"               # Bluetooth
+cups = "L3-06"                      # impression
+cups-pk-helper = "L3-06"            # impression
+system-config-printer = "L3-24"     # impression
+ghostscript = "L3-24"               # impression
+
+# Choisi par /proc/cpuinfo (vendor_id).
+[materiel.processeur.amd]           # « AuthenticAMD »
+paquets = ["amd-ucode"]             # microcode AMD
+[materiel.processeur.intel]         # « GenuineIntel »
+paquets = ["intel-ucode"]           # microcode Intel
+
+# Choisi par /sys/class/drm/card*/device/vendor.
+[materiel.graphique.amd]            # 0x1002
+paquets = ["vulkan-radeon"]         # Vulkan AMD
+[materiel.graphique.intel]          # 0x8086, non prouvé sur matériel réel
+paquets = ["vulkan-intel", "intel-media-driver"]   # Vulkan et décodage vidéo Intel
+[materiel.graphique.nvidia]         # 0x10de : aucun pilote décidé
+paquets = []
+
+# Facultatif, choisi par /etc/hostname (D24).
+[machines.caladan]
+paquets = [
+    "sof-firmware",   # audio de la carte mère
+    "alsa-utils",     # réglage du son (D38)
+    "fprintd",        # lecteur d'empreintes (L2-37)
+]
