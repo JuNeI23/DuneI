@@ -1,6 +1,7 @@
 """Déploiement — deploy.py dans un dossier de configuration temporaire, jamais dans celui de la session."""
 
 import os
+import pwd
 import subprocess
 import sys
 import tempfile
@@ -22,9 +23,14 @@ FAKES = {
                   'case "$*" in *is-enabled*) echo "$FAKE_ENABLED"; [ "$FAKE_ENABLED" = enabled ] ;;\n'
                   '*is-active*) [ "${FAKE_ACTIVE:-active}" = active ] ;; esac\n'),
     "hyprlock": "#!/bin/sh\n",
+    "greetd": "#!/bin/sh\n",
+    "tuigreet": "#!/bin/sh\n",
 }
 MASQUE = Path("systemd/user/wayland-session-xdg-autostart@.target")
 LOGIND = Path("etc/systemd/logind.conf.d/10-dunei.conf")
+GREETD = Path("etc/greetd/dunei.toml")
+GREETD_DROPIN = Path("etc/systemd/system/greetd.service.d/10-dunei.conf")
+DM = Path("etc/systemd/system/display-manager.service")
 OLD_OWN = "<?xml version=\"1.0\"?>\n<!-- GÉNÉRÉ depuis tokens.toml — NE PAS MODIFIER À LA MAIN -->\n<fontconfig/>\n"
 
 
@@ -64,6 +70,8 @@ class DeployTest(unittest.TestCase):
         self.env = mock.patch.dict(os.environ, {"DUNEI_SYSROOT": str(self.root), "FAKE_LOG": str(self.log),
                                                 "FAKE_ENABLED": "enabled", "PATH": f"{fake}:{os.environ['PATH']}"})
         self.env.start()
+        (self.root / DM).parent.mkdir(parents=True)
+        (self.root / DM).symlink_to("/usr/lib/systemd/system/greetd.service")
 
     def tearDown(self):
         self.env.stop()
@@ -417,6 +425,70 @@ class DeployTest(unittest.TestCase):
         self.assertEqual(res.returncode, 1)
         self.assertIn("hypridle.service introuvable", res.stderr)
         self.assertEqual(snapshot(self.cfg), before)
+
+    def deploy_with_path(self, path: str) -> subprocess.CompletedProcess:
+        """Lance deploy.py avec un PATH imposé, par l'interpréteur système (python3 hors du PATH)."""
+        with mock.patch.dict(os.environ, {"PATH": path}):
+            return subprocess.run(["/usr/bin/python3", str(ROOT / "deploy.py")], capture_output=True, text=True,
+                                  cwd=ROOT, env={**os.environ, "XDG_CONFIG_HOME": str(self.cfg)})
+
+    def test_greetd_file_names_the_user(self):
+        self.assertEqual(run(self.cfg).returncode, 0)
+        text = (self.root / GREETD).read_text(encoding="utf-8")
+        self.assertIn(f'user = "{pwd.getpwuid(os.getuid()).pw_name}"', text)
+        self.assertNotIn("{utilisateur}", text)
+        self.assertIn("sudo systemctl daemon-reload", self.journal())
+
+    def test_filled_file_is_compared_filled(self):
+        run(self.cfg)
+        self.log.unlink()
+        self.assertEqual(run(self.cfg).returncode, 0)
+        self.assertFalse([l for l in self.journal() if l.startswith("sudo")])
+
+    def test_switches_from_sddm(self):
+        (self.root / DM).unlink()
+        (self.root / DM).symlink_to("/usr/lib/systemd/system/sddm.service")
+        self.assertEqual(run(self.cfg).returncode, 0)
+        sudo = [l for l in self.journal() if l.startswith("sudo systemctl")]
+        self.assertEqual(sudo[-2:], ["sudo systemctl disable sddm.service", "sudo systemctl enable greetd.service"])
+        copies = [i for i, l in enumerate(self.journal()) if l.startswith("sudo install")]
+        self.assertLess(max(copies), self.journal().index("sudo systemctl enable greetd.service"))
+
+    def test_no_switch_when_greetd_is_active(self):
+        self.assertEqual(run(self.cfg).returncode, 0)
+        self.assertFalse([l for l in self.journal() if "enable greetd" in l or "disable" in l])
+
+    def test_enables_greetd_without_previous_manager(self):
+        (self.root / DM).unlink()
+        self.assertEqual(run(self.cfg).returncode, 0)
+        self.assertIn("sudo systemctl enable greetd.service", self.journal())
+        self.assertFalse([l for l in self.journal() if "disable" in l])
+
+    def test_refuses_without_greetd(self):
+        (self.fake / "greetd").unlink()
+        before = snapshot(self.cfg)
+        res = self.deploy_with_path(f"{self.fake}:/nonexistent")
+        self.assertEqual(res.returncode, 1)
+        self.assertIn("pacman -S --needed greetd greetd-tuigreet", res.stderr)
+        self.assertEqual(snapshot(self.cfg), before)
+
+    def test_refuses_without_tuigreet(self):
+        (self.fake / "tuigreet").unlink()
+        res = self.deploy_with_path(f"{self.fake}:/nonexistent")
+        self.assertEqual(res.returncode, 1)
+        self.assertIn("tuigreet", res.stderr)
+
+    def test_refuses_foreign_greetd_file(self):
+        (self.root / GREETD).parent.mkdir(parents=True)
+        (self.root / GREETD).write_text("[terminal]\nvt = 1\n", encoding="utf-8")
+        res = run(self.cfg)
+        self.assertEqual(res.returncode, 1)
+        self.assertIn("dunei.toml", res.stderr)
+
+    def test_refuses_root(self):
+        with mock.patch("os.getuid", return_value=0):
+            actions, err = plan(ROOT, self.cfg)
+        self.assertTrue(any("root" in e for e in err))
 
 
 if __name__ == "__main__":

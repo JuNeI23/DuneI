@@ -1,0 +1,17 @@
+# Gestionnaire de connexion de DuneI (L1-10) : connexion automatique une fois par démarrage, puis écran de connexion.
+# Posé par DuneI depuis systeme/ — NE PAS MODIFIER À LA MAIN : make install le remplace ; {utilisateur} y est rempli.
+# Lu par greetd --config (surcharge greetd.service.d/10-dunei.conf) : le config.toml du paquet reste intact.
+[terminal]
+vt = 1
+
+# Connexion automatique, jouée une seule fois par démarrage (fichier témoin /run/greetd.run) ; la session
+# se verrouille dès sa première image (modules/demarrage.lua).
+[initial_session]
+user = "{utilisateur}"
+command = "uwsm start -e -D Hyprland hyprland.desktop"
+
+# Écran de connexion provisoire, après chaque sortie de session ; remplacé à L5-12. La session est fixée
+# par --cmd : aucune entrée sans uwsm ne peut être choisie. Même commande que ci-dessus (tests/test_greetd.py).
+[default_session]
+user = "greeter"
+command = "tuigreet --time --cmd 'uwsm start -e -D Hyprland hyprland.desktop'"

@@ -16,7 +16,10 @@ posé lui-même.
   service accroché à la session hors de la liste est signalé, jamais désactivé.
   Cette étape précède les fichiers système : un échec de sudo ne laisse jamais l'ancienne échelle active.
 - systeme : chaque fichier de systeme/ est copié sous la racine du système, /etc compris, avec sudo, et
-  seulement s'il manque ou diffère ; un fichier de logind.conf.d recharge logind, sans le redémarrer.
+  seulement s'il manque ou diffère ; {utilisateur} est rempli par l'utilisateur courant ; un fichier de
+  logind.conf.d recharge logind, sans le redémarrer ; un fichier sous etc/systemd/system recharge systemd.
+- connexion : greetd et tuigreet doivent être installés ; si display-manager.service ne désigne pas
+  greetd, le gestionnaire actuel est désactivé et greetd activé, pour le démarrage suivant. Refus en root.
 
     python3 deploy.py [--dry-run]
 """
@@ -25,9 +28,11 @@ from __future__ import annotations
 
 import argparse
 import os
+import pwd
 import shutil
 import subprocess
 import sys
+import tempfile
 import tomllib
 from collections.abc import Mapping
 from pathlib import Path
@@ -50,6 +55,10 @@ SESSION_VERSION = "0.1.0"
 UNITES = "config/systemd/user"                               # Unités et surcharges utilisateur du dépôt, copiées sous systemd/user/.
 MASQUE = "systemd/user/wayland-session-xdg-autostart@.target"  # Autostart XDG d'uwsm, masqué : liste blanche.
 SESSION_WANTS = "systemd/user/graphical-session.target.wants"  # Services accrochés à la session graphique.
+CHAMP = b"{utilisateur}"                                     # Champ des fichiers système, rempli par l'utilisateur courant.
+CONNEXION = ("greetd", "tuigreet")                           # Gestionnaire de connexion et écran provisoire exigés (L1-10).
+GESTIONNAIRE = "greetd.service"
+DM = "etc/systemd/system/display-manager.service"            # Alias du gestionnaire de connexion actif, sous la racine.
 VERROUILLEUR = "hyprlock"                                    # Verrouilleur exigé ; provisoire, remplacé à L2-22.
 
 
@@ -71,6 +80,15 @@ def system_root(env: Mapping[str, str]) -> Path:
     Erreurs : aucune. Dépendances : aucune.
     """
     return Path(env.get("DUNEI_SYSROOT") or "/")
+
+
+def utilisateur() -> str:
+    """Nom de l'utilisateur qui lance le déploiement.
+
+    Entrée : aucune. Sortie : nom du compte de l'uid courant.
+    Erreurs : KeyError si l'uid n'a pas de compte. Dépendances : pwd.
+    """
+    return pwd.getpwuid(os.getuid()).pw_name
 
 
 def _links_to(link: Path, target: Path) -> bool:
@@ -183,21 +201,44 @@ def plan_systeme(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
     """Inspection des fichiers système, sans aucune modification.
 
     Entrées : repo — racine du dépôt ; home — dossier de configuration racine, inutilisé ici.
-    Sortie : (copies avec sudo des fichiers absents ou différents, puis rechargement de logind si l'un
-             d'eux est sous logind.conf.d ; erreurs). Aucune action si tout est identique.
+    Sortie : (copies avec sudo des fichiers absents ou différents, une fois {utilisateur} rempli ; puis
+             rechargement de logind si l'un d'eux est sous logind.conf.d, et daemon-reload si l'un d'eux
+             est sous etc/systemd/system ; erreurs). Aucune action si tout est identique.
     Erreurs : aucune exception ; un fichier ou un lien étranger à la place d'un fichier de DuneI devient
-              un message. Dépendances : system_root, _ours, SYSTEME, SYSTEM_MARK.
+              un message. Dépendances : system_root, utilisateur, _ours, SYSTEME, SYSTEM_MARK, CHAMP.
     """
     root, actions, err = system_root(os.environ), [], []
+    nom = utilisateur().encode()
     for src in sorted(p for p in (repo / SYSTEME).rglob("*") if p.is_file()):
-        dst = root / src.relative_to(repo / SYSTEME)
+        rel = src.relative_to(repo / SYSTEME)
+        dst, contenu = root / rel, src.read_bytes().replace(CHAMP, nom)
         if dst.is_symlink() or (dst.exists() and not _ours(dst, SYSTEM_MARK)):
             err.append(f"{dst} existe mais n'a pas été posé par DuneI")
-        elif not dst.exists() or dst.read_bytes() != src.read_bytes():
-            actions.append(("sudo-copy", src, dst))
-    if any("logind.conf.d" in a[2].parts for a in actions):
+        elif not dst.exists() or dst.read_bytes() != contenu:
+            actions.append(("sudo-copy", src, dst, contenu))
+    rels = [a[2].relative_to(root).parts for a in actions]
+    if any("logind.conf.d" in p for p in rels):
         actions.append(("sudo-reload", "systemd-logind"))
+    if any(p[:3] == ("etc", "systemd", "system") for p in rels):
+        actions.append(("sudo-daemon-reload",))
     return actions, err
+
+
+def plan_connexion(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
+    """Inspection du gestionnaire de connexion, sans aucune modification (L1-10).
+
+    Entrées : repo, home — inutilisés, pour l'interface commune de DESTINATIONS.
+    Sortie : (bascule vers greetd si display-manager.service ne le désigne pas ; erreurs). La bascule
+             prend effet au démarrage suivant ; elle suit la copie des fichiers système.
+    Erreurs : aucune exception ; greetd ou tuigreet absent devient un message.
+    Dépendances : shutil.which, system_root, CONNEXION, GESTIONNAIRE, DM.
+    """
+    manquants = [b for b in CONNEXION if not shutil.which(b)]
+    if manquants:
+        return [], [f"{', '.join(manquants)} introuvable : sudo pacman -S --needed greetd greetd-tuigreet"]
+    alias = system_root(os.environ) / DM
+    actuel = Path(os.readlink(alias)).name if alias.is_symlink() else "aucun"
+    return ([] if actuel == GESTIONNAIRE else [("sudo-dm", actuel, GESTIONNAIRE)]), []
 
 
 def lire_session(repo: Path) -> tuple[list[str], list[str]]:
@@ -309,7 +350,7 @@ def plan_services(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
 
 
 DESTINATIONS = {"hypr": plan_hypr, "fontconfig": plan_fontconfig,
-                "services": plan_services, "systeme": plan_systeme}  # Nom → planification, dans l'ordre d'exécution (sudo en dernier).
+                "services": plan_services, "systeme": plan_systeme, "connexion": plan_connexion}  # Nom → planification, dans l'ordre d'exécution (sudo en dernier).
 
 
 def plan(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
@@ -320,6 +361,9 @@ def plan(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
              Une seule erreur suffit à tout refuser.
     Erreurs : aucune exception ; chaque problème devient un message. Dépendances : DESTINATIONS.
     """
+    if os.getuid() == 0:
+        return [], ["make install ne se lance pas en root : les fichiers système nommeraient root, et les "
+                    "fichiers utilisateur iraient dans /root"]
     actions, err = [], []
     if (repo / ".git").is_file():
         err.append(f"{repo} est un arbre de travail secondaire : les liens disparaîtraient avec lui, "
@@ -344,6 +388,8 @@ def describe(action: tuple) -> str:
         "switch": "conserver {1} sous le nom {2}, puis lier {1} à {0}",
         "sudo-copy": "copier {0} vers {1}, avec sudo",
         "sudo-reload": "recharger {0}, avec sudo",
+        "sudo-daemon-reload": "recharger les unités système de systemd, avec sudo",
+        "sudo-dm": "remplacer le gestionnaire de connexion {0} par {1} au prochain démarrage, avec sudo",
         "daemon-reload": "recharger les unités utilisateur de systemd",
         "start": "démarrer {0}",
         "enable": "activer et démarrer {0}",
@@ -362,7 +408,7 @@ def apply(actions: list[tuple]) -> None:
     Entrée : actions — liste produite par plan, sans erreur.
     Sortie : aucune. Erreurs : OSError si le système de fichiers refuse une opération ou si une commande
              est absente ; subprocess.CalledProcessError si une commande échoue.
-    Dépendances : os, subprocess, TEMP.
+    Dépendances : os, subprocess, tempfile, TEMP.
     """
     for kind, *args in actions:
         if kind == "mkdir":
@@ -382,7 +428,16 @@ def apply(actions: list[tuple]) -> None:
             tmp.symlink_to(target)
             os.replace(tmp, entry)
         elif kind == "sudo-copy":
-            subprocess.run(["sudo", "install", "-D", "-m", "644", str(args[0]), str(args[1])], check=True)
+            with tempfile.NamedTemporaryFile(prefix="dunei-") as tmp:
+                tmp.write(args[2])
+                tmp.flush()
+                subprocess.run(["sudo", "install", "-D", "-m", "644", tmp.name, str(args[1])], check=True)
+        elif kind == "sudo-daemon-reload":
+            subprocess.run(["sudo", "systemctl", "daemon-reload"], check=True)
+        elif kind == "sudo-dm":
+            if args[0] != "aucun":
+                subprocess.run(["sudo", "systemctl", "disable", args[0]], check=True)
+            subprocess.run(["sudo", "systemctl", "enable", args[1]], check=True)
         elif kind == "sudo-reload":
             subprocess.run(["sudo", "systemctl", "reload", args[0]], check=True)
         elif kind == "enable":
