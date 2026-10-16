@@ -77,6 +77,7 @@ def expected() -> dict[str, tuple[str, str]]:
         "SUPER + R": ("dsp.exec_cmd(uwsm app -- L)", "{}"),
         "SUPER + ALT + M": ("dsp.exec_cmd(uwsm stop)", "{}"),
         "SUPER + ALT + R": ("dsp.exec_cmd(hyprctl reload)", "{}"),
+        "SUPER + L": ("dsp.exec_cmd(loginctl lock-session)", "{}"),
         "SUPER + mouse:272": ("dsp.window.drag()", "{mouse=true}"),
         "SUPER + mouse:273": ("dsp.window.resize()", "{mouse=true}"),
         "SUPER + mouse_down": ("dsp.focus({workspace=e+1})", "{}"),
@@ -146,14 +147,13 @@ class ClavierTest(unittest.TestCase):
 
     def test_reserved_keys_are_not_bound(self):
         keys = {l[1] for l in self.apply_real() if l[0] == "bind"}
-        for k in ("SUPER + L", "SUPER + slash", "Print", "Control_L"):
+        for k in ("SUPER + slash", "Print", "Control_L"):
             self.assertNotIn(k, keys)
 
     def test_reserved_keys_are_declared(self):
         out = self.lines('for _, e in ipairs(require("donnees.raccourcis").touches) do '
                          'if e.reserve then print(e.touches, e.reserve) end end\n')
-        self.assertEqual(sorted(map(tuple, out)), sorted([("SUPER + L", "L2-22"), ("SUPER + slash", "L2-28"),
-                                                          ("Print", "L2-30"), ("Control_L", "L2-36")]))
+        self.assertEqual(sorted(map(tuple, out)), sorted([("SUPER + slash", "L2-28"), ("Print", "L2-30"), ("Control_L", "L2-36")]))
 
     def test_gestures(self):
         gestures = [l[1] for l in self.apply_real() if l[0] == "gesture"]
@@ -205,7 +205,7 @@ class ClavierTest(unittest.TestCase):
         out = self.apply_real()
         unbound = [l[1] for l in out if l[0] == "unbind"]
         first_bind = next(i for i, l in enumerate(out) if l[0] == "bind")
-        self.assertEqual(set(unbound), set(expected()) | {"SUPER + L", "SUPER + slash", "Print", "Control_L"})
+        self.assertEqual(set(unbound), set(expected()) | {"SUPER + slash", "Print", "Control_L"})
         self.assertTrue(all(l[0] == "unbind" for l in out[:first_bind]))
         self.assertEqual(len(unbound), first_bind)
 

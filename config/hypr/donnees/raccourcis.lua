@@ -26,6 +26,8 @@ M.touches = {
     -- Session
     { touches = "SUPER + ALT + M", action = "commande", commande = "uwsm stop", description = "Quitter la session" },
     { touches = "SUPER + ALT + R", action = "recharger", description = "Recharger la configuration" },
+    { touches = "SUPER + L", action = "commande", commande = "loginctl lock-session",
+      description = "Verrouiller la session" },   -- Verrouilleur provisoire (L1-09), remplacé à L2-22.
     -- Souris
     { touches = "SUPER + mouse:272", action = "glisser", drapeaux = { mouse = true }, description = "Déplacer la fenêtre à la souris" },
     { touches = "SUPER + mouse:273", action = "etirer",  drapeaux = { mouse = true }, description = "Redimensionner la fenêtre à la souris" },
@@ -45,7 +47,6 @@ M.touches = {
     { touches = "XF86MonBrightnessUp", action = "commande", commande = "brightnessctl -e4 -n2 set 5%+",
       drapeaux = { locked = true, repeating = true }, description = "Monter la luminosité" },
     -- Réservées : la touche est prise, rien n'est lié avant l'élément du backlog
-    { touches = "SUPER + L",     reserve = "L2-22", description = "Verrouiller la session" },
     { touches = "SUPER + slash", reserve = "L2-28", description = "Afficher les raccourcis" },
     { touches = "Print",         reserve = "L2-30", description = "Capturer l'écran" },
     { touches = "Control_L",     reserve = "L2-36", drapeaux = { long_press = true },

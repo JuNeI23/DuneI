@@ -1,0 +1,7 @@
+#!/bin/sh
+# dunei-sur-batterie — dit si la machine tourne sur batterie, pour les paliers de l'échelle d'inactivité (L1-09).
+# Entrée : aucune.
+# Sortie : code 0 sur batterie, ou si UPower ne répond pas, pour verrouiller et dormir plus tôt plutôt que
+#          vider la machine ; code 1 sur secteur.
+# Erreurs : aucun message. Dépendances : busctl, UPower (propriété OnBattery).
+[ "$(busctl get-property org.freedesktop.UPower /org/freedesktop/UPower org.freedesktop.UPower OnBattery 2>/dev/null)" != "b false" ]

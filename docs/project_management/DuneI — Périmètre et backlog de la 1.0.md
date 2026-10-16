@@ -2,9 +2,9 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.11. Historique en fin de document.
+Version 1.12. Historique en fin de document.
 
-La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **142 éléments** répartis en **cinq lots**, sur six chantiers.
+La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **143 éléments** répartis en **cinq lots**, sur six chantiers.
 
 Ce document dit ce qui est attendu, dans quel ordre, et à quelle condition c'est terminé. Il ne dit pas à quoi ça ressemble — c'est le rôle de la bible de design. En cas de contradiction : la bible l'emporte sur l'apparence, ce document l'emporte sur le périmètre.
 
@@ -230,8 +230,8 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L1-06 | A | Configuré | Pilotes graphiques et accélération matérielle |
 | L1-07 | A | Offert | Service réseau — vérification — **fait (D40)** : NetworkManager et `wpa_supplicant` conservés ; `wireless-regdb` installé, sans effet sur la carte *self-managed* de `caladan` ; connexion au démarrage, reconnexion après coupure et touche mode avion vérifiées |
 | L1-08 | A | Offert | Service audio — vérification — **fait (D38)** : son, micro et haut-parleurs vérifiés ; `alsa-utils` installé, dont `alsactl` exécute l'initialisation UCM qui rattache la diode de sourdine au micro numérique : elle suit toute sourdine, F4 garde `wpctl` seul |
-| L1-09 | A | Offert | Service d'énergie et de veille — vérification ; couvercle fermé avec écran externe : éteindre l'écran interne sans mettre en veille (reporté depuis L1-17, D25) ; rétroéclairage du clavier : allumage par Fn + Espace et niveau gardé, déjà fonctionnels, reste à l'éteindre à l'inactivité et pendant la veille (D40) |
-| L1-10 | A | Configuré | Gestionnaire de session et démarrage automatique |
+| L1-09 | A | Offert | Service d'énergie et de veille — vérification — **fait (D41 à D46), sauf la recette avec écran externe, en attente** : `hypridle` et `hyprlock` installés ; échelle d'inactivité à quatre paliers, deux jeux de délais, dans `energie.toml` (`make energie`) ; verrouillage avant toute veille ; couvercle et bouton marche confiés à logind, l'écran interne à `couvercle.lua` ; premier fichier système déployé par `make install` ; rétroéclairage du clavier éteint à l'inactivité (pendant la veille, le pilote `thinkpad_acpi` l'éteint à la mise en veille, `kbdlight_suspend` / `led_classdev_suspend` ; constat visuel à l'écran en attente) ; décharge en veille mesurée à 0,42 % par heure. **En attente, faute d'écran externe** : couvercle fermé avec écran externe (écran interne éteint, pas de veille, retour à la réouverture), veille avec écran externe branché |
+| L1-10 | A | Configuré | Gestionnaire de session et démarrage automatique — **dépendance de L1-09** : `hypridle` exige `graphical-session.target` et l'environnement de Hyprland exporté au gestionnaire utilisateur (uwsm) ; sans eux, la veille n'est plus précédée du verrouillage |
 | L1-11 | B | Configuré | Choisir le compositeur selon les besoins de la bible — **tranché : Hyprland 0.56, configuration Lua** |
 | L1-12 | B | Configuré | Tuilage — couche 1, gouttière 8 px, rayon 12 — **fait (D28)** : dwindle, placement au pointeur, découpes figées |
 | L1-13 | B | Configuré | Fenêtre active ; inactive → modificateur de conteneur — **fait (D29)** : aucune bordure ; le repère de la fenêtre active revient à L2-03 |
@@ -272,7 +272,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L2-19 | B | Écrit | Notifications — couleurs sémantiques invariantes |
 | L2-20 | B | Écrit | Menu contextuel du bureau — part du point de clic |
 | L2-21 | B | Écrit | Infobulles — délai de 500 ms |
-| L2-22 | B | Écrit | Verrouillage — registre de spectacle ; touche réservée `SUPER + L` |
+| L2-22 | B | Écrit | Verrouillage — registre de spectacle ; `SUPER + L` est déjà lié à `loginctl lock-session` (L1-09, D41) ; le verrouilleur provisoire, `hyprlock`, ne se nomme qu'à un endroit, `verrouilleur` dans `energie.toml`, et c'est le seul point à remplacer ; l'esthétique du verrouillage reste ouverte, Nicolas acceptant d'y investir de la ressource machine |
 | L2-23 | B | Écrit | Menu de déconnexion — action destructrice en `error` |
 | L2-24 | B | Écrit | Agent d'authentification |
 | L2-25 | B | Configuré | Trousseau de secrets |
@@ -287,6 +287,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L2-34 | C | Écrit | Brancher les tokens sur la bibliothèque de composants |
 | L2-35 | B | Écrit | Flou des overlays et de la couche 1 ; ombre de gouttière de la fenêtre active, à étudier (D29, D31) |
 | L2-36 | B | Écrit | Localiser le pointeur — halo autour du pointeur, Ctrl gauche tenu une seconde ; touche réservée en L1-16 (D35) |
+| L2-37 | B | Configuré | Déverrouillage par empreinte — `fprintd` ; lecteur Goodix déjà reconnu, aucun doigt enregistré ; `hyprlock` (désactivé dans `hyprlock.conf` pour l'instant), `sudo` et connexion ; à traiter avec L2-22 et L2-24, la conception de l'interface restant au lot 5 (D46) |
 
 ### Lot 3 — la bascule
 
@@ -387,7 +388,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L5-29 | — | Écrit | Passe de regard complète — étage 3 |
 | L5-30 | — | Écrit | Résorber les points ouverts de l'annexe C |
 
-**Volume total : 142 éléments** — 98 écrits, 37 configurés, 5 offerts, 2 mixtes.
+**Volume total : 143 éléments** — 98 écrits, 38 configurés, 5 offerts, 2 mixtes.
 
 Les deux tiers du travail sont de l'écrit, et les trois quarts de cet écrit se concentrent sur la coque et les écrans système. C'est cohérent avec la stratégie retenue, et c'est là que tout le risque se trouve.
 
@@ -489,6 +490,7 @@ Le choix de la distribution de base et du compositeur, précédemment ouverts, s
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-12 | Version initiale, 137 éléments |
+| 1.12 | 2026-10-16 | L1-09 fait, sauf la recette avec écran externe, en attente ; L2-22 note `SUPER + L` déjà lié, le point de remplacement unique et l'esthétique ouverte ; ajout de L2-37, déverrouillage par empreinte, au lot 2 : il touche le verrouilleur (L2-22), l'agent d'authentification (L2-24) et `sudo`, qui s'écrivent là, alors que la conception visuelle reste au lot 5 (D46) ; relecture finale : dépendance de L1-10 à uwsm, clavier en veille en attente. 143 éléments |
 | 1.11 | 2026-10-15 | L1-07 fait : réseau vérifié, `wireless-regdb` installé ; L1-09 reçoit l'extinction du rétroéclairage du clavier ; L2-11 reçoit le sort de `nm-applet` |
 | 1.10 | 2026-10-15 | L1-08 fait : `alsa-utils` répare la diode du micro ; L2-12 reçoit le niveau du micro ; décompte des natures corrigé (37 configurés, 2 mixtes) ; nature mixte définie |
 | 1.9 | 2026-10-15 | L1-16 fait : raccourcis en données, rôles, grammaire, Compose, touches réservées ; L1-08 reçoit le relevé de la diode du micro ; L2-16, L2-22, L2-28, L2-30 notent leur touche ; ajout de L2-36. 142 éléments |

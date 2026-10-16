@@ -41,7 +41,8 @@ Le reste se lit seulement au besoin.
 3. Le code est minimal, si une ligne suffit alors on écrit une ligne.
 4. Le code est modulaire, le projet n'est pas figé dans le marbre donc chaque fonctionnalité doit être facilement extensible, scalable et interchangeable. On fait de l'abstraction dès que possible.
 5. Le code est agnostique de la machine et peut être installé sur n'importe quelle autre machine Arch + Hyprland.
-6. Tu es responsable du git, tu as l'interdiction formelle de push des secrets.
+6. Tu es responsable du git, tu as l'interdiction formelle de push des secrets. Chaque modèle signe sa propre
+   production (ligne `Co-Authored-By`) : un commit écrit par un sous-agent porte le nom de son modèle.
 7. Je travaille sur la machine sur laquelle tu développes DuneI. Si des états changent, son, luminosité, etc., c'est très sûrement parce que je l'ai fait et pas un bug.
 
 # Développement d'une feature

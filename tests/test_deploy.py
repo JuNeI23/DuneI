@@ -6,12 +6,24 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from deploy import COPIES, config_home, plan
 
 ROOT = Path(__file__).resolve().parent.parent
 GENERIC = "-- Configuration générique de test.\n"
 FOREIGN = "<?xml version=\"1.0\"?>\n<fontconfig/>\n"
+# Faux sudo et faux systemctl : chaque appel est consigné dans $FAKE_LOG. sudo exécute la commande telle
+# quelle, sauf si $FAKE_SUDO_FAIL est posé ; systemctl répond à is-enabled par $FAKE_ENABLED et à
+# is-active par $FAKE_ACTIVE (« active » par défaut). hyprlock est un faux exécutable vide.
+FAKES = {
+    "sudo": '#!/bin/sh\necho "sudo $*" >> "$FAKE_LOG"\n[ -z "$FAKE_SUDO_FAIL" ] || exit 1\nexec "$@"\n',
+    "systemctl": ('#!/bin/sh\necho "systemctl $*" >> "$FAKE_LOG"\n'
+                  'case "$*" in *is-enabled*) echo "$FAKE_ENABLED"; [ "$FAKE_ENABLED" = enabled ] ;;\n'
+                  '*is-active*) [ "${FAKE_ACTIVE:-active}" = active ] ;; esac\n'),
+    "hyprlock": "#!/bin/sh\n",
+}
+LOGIND = Path("etc/systemd/logind.conf.d/10-dunei.conf")
 OLD_OWN = "<?xml version=\"1.0\"?>\n<!-- GÉNÉRÉ depuis tokens.toml — NE PAS MODIFIER À LA MAIN -->\n<fontconfig/>\n"
 
 
@@ -41,9 +53,24 @@ class DeployTest(unittest.TestCase):
         self.cfg = Path(self.tmp.name) / "cfg"
         self.hypr = self.cfg / "hypr"
         self.fc = self.cfg / "fontconfig" / "conf.d" / "50-dunei.conf"
+        t = Path(self.tmp.name)
+        self.root, self.log, fake = t / "racine", t / "journal", t / "bin"
+        fake.mkdir()
+        for name, body in FAKES.items():
+            (fake / name).write_text(body, encoding="utf-8")
+            (fake / name).chmod(0o755)
+        self.fake = fake
+        self.env = mock.patch.dict(os.environ, {"DUNEI_SYSROOT": str(self.root), "FAKE_LOG": str(self.log),
+                                                "FAKE_ENABLED": "enabled", "PATH": f"{fake}:{os.environ['PATH']}"})
+        self.env.start()
 
     def tearDown(self):
+        self.env.stop()
         self.tmp.cleanup()
+
+    def journal(self) -> list[str]:
+        """Appels consignés par les faux sudo et systemctl."""
+        return self.log.read_text().splitlines() if self.log.exists() else []
 
     def generic_machine(self):
         """Prépare une machine qui n'a que la configuration générique."""
@@ -68,6 +95,9 @@ class DeployTest(unittest.TestCase):
         for name in COPIES:
             self.assertEqual((self.hypr / "generated" / name).read_bytes(), (ROOT / "generated" / name).read_bytes())
         self.assertEqual(self.fc.read_bytes(), (ROOT / "generated" / "fonts.conf").read_bytes())
+        self.assertEqual((self.hypr / "hypridle.conf").read_bytes(), (ROOT / "generated" / "hypridle.conf").read_bytes())
+        self.assertEqual(os.readlink(self.hypr / "hyprlock.conf"), str(ROOT / "config" / "hypr" / "hyprlock.conf"))
+        self.assertEqual(os.readlink(self.hypr / "scripts"), str(ROOT / "config" / "hypr" / "scripts"))
 
     def test_copies_hyprland_files(self):
         """Hyprland lit ces quatre fichiers générés : un oubli dans COPIES casserait tout le point d'entrée."""
@@ -93,7 +123,8 @@ class DeployTest(unittest.TestCase):
         self.assertEqual((self.hypr / "generique.lua").read_text(encoding="utf-8"), GENERIC)
         self.assertEqual((self.hypr / "generique.lua").stat().st_ino, inode)
         self.assertEqual(sorted(p.name for p in self.hypr.iterdir()),
-                         ["donnees", "generated", "generique.lua", "hyprland.lua", "machines", "modules"])
+                         ["donnees", "generated", "generique.lua", "hypridle.conf", "hyprland.lua", "hyprlock.conf", "machines",
+                          "modules", "scripts"])
         self.assertIn("hyprctl reload", res.stdout)
 
     def test_second_run_changes_nothing(self):
@@ -222,6 +253,116 @@ class DeployTest(unittest.TestCase):
         (self.hypr / "modules").mkdir()
         self.assert_refused("modules")
         self.assertFalse((self.cfg / "fontconfig").exists())
+
+    def test_installs_system_file_with_sudo(self):
+        res = run(self.cfg)
+        self.assertEqual(res.returncode, 0, res.stderr)
+        self.assertEqual((self.root / LOGIND).read_bytes(), (ROOT / "systeme" / LOGIND).read_bytes())
+        self.assertIn("sudo systemctl reload systemd-logind", self.journal())
+
+    def test_no_sudo_when_system_file_is_identical(self):
+        run(self.cfg)
+        self.log.unlink()
+        res = run(self.cfg)
+        self.assertEqual(res.returncode, 0, res.stderr)
+        self.assertFalse([l for l in self.journal() if l.startswith("sudo")])
+
+    def test_replaces_own_system_file(self):
+        (self.root / LOGIND).parent.mkdir(parents=True)
+        (self.root / LOGIND).write_text("# ancien\n# Posé par DuneI depuis systeme/\n[Login]\n", encoding="utf-8")
+        self.assertEqual(run(self.cfg).returncode, 0)
+        self.assertEqual((self.root / LOGIND).read_bytes(), (ROOT / "systeme" / LOGIND).read_bytes())
+
+    def test_refuses_foreign_system_file(self):
+        (self.root / LOGIND).parent.mkdir(parents=True)
+        (self.root / LOGIND).write_text("[Login]\nHandlePowerKey=poweroff\n", encoding="utf-8")
+        res = run(self.cfg)
+        self.assertEqual(res.returncode, 1)
+        self.assertIn("10-dunei.conf", res.stderr)
+        self.assertEqual((self.root / LOGIND).read_text(), "[Login]\nHandlePowerKey=poweroff\n")
+        self.assertFalse(any(l.startswith("sudo") for l in self.journal()))
+
+    def test_sudo_failure_is_reported(self):
+        with mock.patch.dict(os.environ, {"FAKE_SUDO_FAIL": "1"}):
+            res = run(self.cfg)
+        self.assertEqual(res.returncode, 1)
+        self.assertIn("déploiement interrompu", res.stderr)
+        self.assertNotIn("Traceback", res.stderr)
+        self.assertIn("seuls les fichiers système restent à poser", res.stderr)
+        self.assertIn("systemctl --user restart hypridle.service", self.journal())
+
+    def test_deploys_idle_files(self):
+        self.assertEqual(run(self.cfg).returncode, 0)
+        self.assertEqual((self.hypr / "hypridle.conf").read_bytes(), (ROOT / "generated" / "hypridle.conf").read_bytes())
+        self.assertEqual(os.readlink(self.hypr / "hyprlock.conf"), str(ROOT / "config" / "hypr" / "hyprlock.conf"))
+        self.assertEqual(os.readlink(self.hypr / "scripts"), str(ROOT / "config" / "hypr" / "scripts"))
+
+    def test_refuses_foreign_hypridle_conf(self):
+        self.hypr.mkdir(parents=True)
+        (self.hypr / "hypridle.conf").write_text("general {\n}\n", encoding="utf-8")
+        self.assert_refused("hypridle.conf")
+
+    def test_enables_hypridle_when_disabled(self):
+        with mock.patch.dict(os.environ, {"FAKE_ENABLED": "disabled"}):
+            self.assertEqual(run(self.cfg).returncode, 0)
+        self.assertIn("systemctl --user enable --now hypridle.service", self.journal())
+
+    def test_restarts_hypridle_only_when_its_file_changes(self):
+        run(self.cfg)
+        self.assertIn("systemctl --user restart hypridle.service", self.journal())
+        self.log.unlink()
+        run(self.cfg)
+        self.assertNotIn("systemctl --user restart hypridle.service", self.journal())
+
+    def test_dropin_deployed_then_reload_precedes_restart(self):
+        self.assertEqual(run(self.cfg).returncode, 0)
+        dropin = self.cfg / "systemd/user/hypridle.service.d/10-dunei.conf"
+        self.assertIn("ExecStart=/usr/bin/hypridle --quiet", dropin.read_text(encoding="utf-8"))
+        calls = [l for l in self.journal() if l.startswith("systemctl --user") and "is-" not in l]
+        self.assertEqual(calls, ["systemctl --user daemon-reload", "systemctl --user restart hypridle.service"])
+        self.log.unlink()
+        self.assertEqual(run(self.cfg).returncode, 0)
+        self.assertEqual([l for l in self.journal() if "is-" not in l], [])
+
+    def test_dropin_change_triggers_reload_and_restart(self):
+        run(self.cfg)
+        dropin = self.cfg / "systemd/user/hypridle.service.d/10-dunei.conf"
+        dropin.write_text("# a\n# Posé par DuneI\n", encoding="utf-8")
+        self.log.unlink()
+        run(self.cfg)
+        self.assertEqual([l for l in self.journal() if "is-" not in l],
+                         ["systemctl --user daemon-reload", "systemctl --user restart hypridle.service"])
+
+    def test_refuses_foreign_dropin(self):
+        d = self.cfg / "systemd/user/hypridle.service.d"
+        d.mkdir(parents=True)
+        (d / "10-dunei.conf").write_text("[Service]\nExecStart=\n", encoding="utf-8")
+        self.assert_refused("10-dunei.conf")
+
+    def test_refuses_without_hyprlock(self):
+        (self.fake / "hyprlock").unlink()
+        before = snapshot(self.cfg)
+        with mock.patch.dict(os.environ, {"PATH": f"{self.fake}:/nonexistent"}):
+            res = subprocess.run(["/usr/bin/python3", str(ROOT / "deploy.py")], capture_output=True, text=True,
+                                 cwd=ROOT, env={**os.environ, "XDG_CONFIG_HOME": str(self.cfg)})
+        self.assertEqual(res.returncode, 1)
+        self.assertIn("hyprlock", res.stderr)
+        self.assertEqual(snapshot(self.cfg), before)
+
+    def test_starts_hypridle_when_enabled_but_inactive(self):
+        run(self.cfg)
+        self.log.unlink()
+        with mock.patch.dict(os.environ, {"FAKE_ACTIVE": "inactive"}):
+            self.assertEqual(run(self.cfg).returncode, 0)
+        self.assertIn("systemctl --user start hypridle.service", self.journal())
+
+    def test_refuses_without_hypridle(self):
+        before = snapshot(self.cfg)
+        with mock.patch.dict(os.environ, {"FAKE_ENABLED": "not-found"}):
+            res = run(self.cfg)
+        self.assertEqual(res.returncode, 1)
+        self.assertIn("pacman -S hypridle", res.stderr)
+        self.assertEqual(snapshot(self.cfg), before)
 
 
 if __name__ == "__main__":

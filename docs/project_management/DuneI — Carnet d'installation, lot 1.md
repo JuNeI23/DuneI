@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.3. Historique en fin de document.
+Version 1.4. Historique en fin de document.
 
 Socle amorçable.
 
@@ -220,20 +220,93 @@ sourdine.
 
 ### Énergie — L1-09
 
-`power-profiles-daemon` et non un gestionnaire d'économie classique. La raison est architecturale : **il expose les profils sur D-Bus, donc c'est à lui que parlera l'indicateur d'énergie du lot 2** (L2-13). Un outil qui ne s'adresse qu'en ligne de commande obligerait à écrire une interface contre des fichiers, ce qui est fragile et laid.
+```
+hypridle hyprlock upower brightnessctl
+```
 
-Les deux ne s'installent pas ensemble : ils se disputent le contrôle.
+`power-profiles-daemon` et non un gestionnaire d'économie classique. La raison est architecturale : **il expose les profils sur D-Bus, donc c'est à lui que parlera l'indicateur d'énergie du lot 2** (L2-13). Un outil qui ne s'adresse qu'en ligne de commande obligerait à écrire une interface contre des fichiers, ce qui est fragile et laid. Les deux ne s'installent pas ensemble : ils se disputent le contrôle. `upower` et `brightnessctl` sont déjà présents sur `caladan`, mais ils sont nécessaires à l'échelle (sans UPower, `dunei-sur-batterie` répond « batterie »).
+
+`hypridle` 0.1.8-2 et `hyprlock` 0.9.6-3, dépôt officiel, installés par `sudo pacman -S --needed hypridle hyprlock` (D41, D42). `hypridle` joue l'échelle d'inactivité ; `hyprlock` est le verrouilleur provisoire, remplacé à L2-22.
+
+**La source : `energie.toml`.** Comme `motion.toml`, un fichier à la racine du dépôt donne les délais, en secondes depuis le début de l'inactivité. `make energie` (aussi appelée par `make check` et `make install`) lance `generate_energie.py`, qui vérifie les délais, puis écrit `generated/hypridle.conf`, où chaque palier existe une fois par alimentation. Une source fautive est refusée avec le nom du palier en cause : délais entiers et strictement positifs, ordre strict, un palier présent exige ceux qui le précèdent (aucune veille sans verrouillage), niveau d'atténuation entre 1 et 100. `hypridle.conf` est copié sous `~/.config/hypr/hypridle.conf`, où `hypridle` le cherche.
+
+**L'échelle** (D43). Une alimentation absente veut dire « jamais » ; les paliers se retentent toutes les 5 s, si bien que brancher ou débrancher le secteur pendant l'inactivité change d'échelle dans les 5 s.
+
+| Palier | Effet | Batterie | Secteur |
+| --- | --- | --- | --- |
+| Atténuation | Écran à 10 %, clavier éteint ; rétablis au premier geste, sans mot de passe | 150 s | 300 s |
+| Verrouillage | `loginctl lock-session` | 300 s | 600 s |
+| Écran éteint | Écran éteint, rallumé au premier geste | 330 s | 630 s |
+| Veille | `systemctl suspend`, après verrouillage | 900 s | jamais |
+
+Une vidéo en lecture plein écran suspend l'échelle : Firefox demande le blocage par D-Bus, `hypridle` le compte et le relâche à chaque pause. `inhibit_sleep = 3` fait attendre la veille que la session soit verrouillée, quelle qu'en soit l'origine (échelle, couvercle, bouton marche).
+
+**Les scripts** (`config/hypr/scripts/`, liés sous `~/.config/hypr/scripts/`).
+
+- `dunei-sur-batterie` : code de sortie 0 sur batterie, 1 sur secteur, d'après `OnBattery` d'UPower. UPower injoignable : réponse « batterie », pour verrouiller et dormir plus tôt plutôt que vider la machine.
+- `dunei-attenuer [--restaurer]` : enregistre les luminosités de l'écran et du clavier dans `$XDG_RUNTIME_DIR/dunei/`, atténue l'écran, éteint le clavier (repéré par `*::kbd_backlight` ; une machine sans rétroéclairage passe sans erreur) ; `--restaurer` les rétablit. Il ne sauvegarde jamais une valeur déjà atténuée.
+
+**`hypridle` silencieux** (D43). Une surcharge d'unité, `config/systemd/user/hypridle.service.d/10-dunei.conf`, copiée par `make install` sous `~/.config/systemd/user/`, lance `hypridle --quiet` ; `make install` lance `systemctl --user daemon-reload` puis redémarre le service quand elle change. Pour déboguer : arrêter le service (`systemctl --user stop hypridle.service`) et lancer `hypridle -v` à la main. `make install` refuse aussi de déployer sans `hyprlock` et démarre `hypridle` s'il est activé mais arrêté.
+
+**Dépendance à uwsm.** `hypridle` (L1-09) exige `graphical-session.target` et l'environnement de Hyprland exporté au gestionnaire utilisateur (uwsm) ; sans eux, il ne démarre plus et la veille n'est plus précédée du verrouillage. À relire en premier à L1-10.
+
+**Rétroéclairage du clavier pendant la veille.** Le pilote `thinkpad_acpi` l'éteint à la mise en veille (`kbdlight_suspend`, `led_classdev_suspend`) ; constat visuel à l'écran en attente.
+
+**`hyprlock.conf`, provisoire** (D41). Configuration minimale, liée sous `~/.config/hypr/` : curseur masqué, saisie vide ignorée, fond uni, champ de saisie, empreinte désactivée. Aucun choix esthétique : ses couleurs ne sont pas des valeurs de design, et l'esthétique du verrouillage reste ouverte. `SUPER + L` lance `loginctl lock-session` ; `energie.toml` est le seul endroit qui nomme le verrouilleur (`verrouilleur`). `misc.allow_session_lock_restore` est vrai : un `hyprlock` planté se relance depuis un autre terminal, avec authentification.
+
+**Fichier système et déploiement** (D45). `systeme/etc/systemd/logind.conf.d/10-dunei.conf` reproduit l'arborescence de `/etc` et porte la marque DuneI. `make install` le compare à `/etc/systemd/logind.conf.d/10-dunei.conf` : identique, rien ; absent ou différent, copie par `sudo install -m 644` puis `systemctl reload systemd-logind` ; présent sans marque, refus. `sudo` n'est demandé que si une copie est prévue. Ordre des destinations : `hypr`, `fontconfig`, `services`, `systeme` ; `hypridle.service` est activé puis redémarré quand sa configuration change, avant tout `sudo`.
+
+**Couvercle et bouton marche** (D44). logind décide de la veille, Hyprland n'affiche que l'écran.
+
+| Événement | Qui agit | Effet |
+| --- | --- | --- |
+| Couvercle fermé, sans écran externe | logind (`HandleLidSwitch`, `HandleLidSwitchExternalPower` : `suspend`) | Verrouillage, puis veille |
+| Couvercle fermé, écran externe actif | logind ignore (`HandleLidSwitchDocked=ignore`) ; `config/hypr/modules/couvercle.lua` | Écran interne désactivé, pas de veille ; à la réouverture, la règle machine le rétablit |
+| Bouton marche, appui court | logind (`HandlePowerKey=suspend`) | Verrouillage, puis veille ; la machine ne s'éteint plus |
+| Bouton marche, appui long | Micrologiciel | Arrêt forcé, inchangé |
+| Batterie à 5 % | — | Rien au lot 1 ; notification avec L2-13 |
+| Batterie à 2 % | UPower | Extinction, inchangée |
+
+`couvercle.lua` lit l'état du couvercle auprès de logind (`LidClosed`) ; limite connue : à la réouverture, les bureaux ne reviennent pas d'eux-mêmes sur l'écran interne.
+
+**Piège consigné (2026-10-15).** Toute valeur inconnue de `hl.dsp.dpms({ action = ... })` fait basculer l'écran : Hyprland 0.56.2 passe par `parseToggleStr`, et une sonde `action = "zzz"` a éteint l'écran. Ne jamais sonder la session réelle avec un répartiteur ; lire le code source.
+
+**Vérification** (échelle jouée avec une source temporaire aux délais courts, jamais commitée).
+
+- [x] Paquets installés ; `hypridle.service` actif (« found 7 rules ») — 2026-10-15
+- [x] `make install` pose le fichier logind avec `sudo` et recharge logind ; les passages suivants ne demandent plus `sudo` — 2026-10-15
+- [x] `SUPER + L` : `hyprlock` s'affiche, le mot de passe déverrouille — 2026-10-15
+- [x] Échelle sur secteur : atténuation, restauration au premier geste, verrouillage, écran éteint, rallumage — 2026-10-15
+- [x] Échelle sur batterie jusqu'à la veille `s2idle` et au réveil, écran rallumé et luminosité rétablie — 2026-10-16
+- [x] Bascule secteur vers batterie pendant l'inactivité — validée par Nicolas, 2026-10-16
+- [x] Vidéo plein écran : aucune action de l'échelle pendant la lecture ; reprise après pause constatée par Nicolas — 2026-10-16
+- [x] Veille puis réveil par le bouton marche (2026-10-15 et 2026-10-16) et par le couvercle (2026-10-15) : retour sur `hyprlock`, sans image du bureau
+- [ ] Couvercle fermé avec un écran externe : écran interne éteint, pas de veille, retour à la réouverture, débranchement capot fermé — *en attente* (aucun écran externe)
+- [ ] Comportement de `hl.on` et des liaisons au rechargement de Hyprland, couvercle fermé — *en attente* (aucun écran externe)
 
 ### Veille — le point le plus fragile de cette machine
 
 La veille moderne maintient une partie du système alimentée. Mal réglée, elle vide la batterie en une nuit. Le critère de recette change donc de nature : « ça se réveille » ne suffit plus.
 
-- [ ] Mise en veille, réveil immédiat — trois fois
-- [ ] Mise en veille avec écran externe branché, réveil — une fois
-- [ ] Décharge mesurée sur quatre heures de veille au moins. Au-delà de quelques pour cent par heure, le réglage est à reprendre
-- [ ] Fermeture du capot puis réouverture
+**Le micrologiciel n'offre que la veille moderne.** `/sys/power/mem_sleep` vaut `[s2idle]` et le noyau journalise `ACPI: PM: (supports S0 S4 S5)` : il n'existe pas de « sommeil profond » (S3) sur cette machine, et il n'y a donc pas de réglage à choisir. L'hibernation est refusée faute de swap sur disque (seul `zram` existe).
 
-Si la décharge reste mauvaise après mise à jour du firmware et choix du sommeil profond, c'est un sujet matériel à documenter dans le journal des décisions, pas un défaut à corriger au lot 2.
+- [x] Mise en veille, réveil immédiat — trois fois (couvercle, 2026-10-15 à 22:26 et 22:32 ; bouton marche, 22:26 et 2026-10-16 à 08:09 ; échelle, 2026-10-16 à 08:15). Chaque réveil revient sur `hyprlock`, le sommeil matériel est atteint à chaque fois
+- [ ] Mise en veille avec écran externe branché, réveil — une fois — *en attente* (aucun écran externe)
+- [x] Décharge mesurée sur quatre heures de veille au moins — 2026-10-15 au 2026-10-16, 9 h 38 min : **0,42 % par heure**, sommeil matériel 99,4 % (D43)
+- [x] Fermeture du capot puis réouverture — 2026-10-15 et 2026-10-16, sans écran externe
+
+**Relevé de décharge, nuit du 15 au 16 octobre**, capot fermé, sur batterie : 22:33 à 08:11, de 51,36 à 49,29 Wh sur 51,43 Wh, soit 2,07 Wh ou 4,0 %. Sommeil matériel : 34 480 s sur 34 680 s. Quatre réveils brefs capot fermé (IRQ 9, ACPI SCI, contrôleur embarqué), chacun suivi d'une remise en veille par logind environ 27 s plus tard, sont compris dans la mesure. Le noyau journalise au réveil `ACPI BIOS Error (bug): Could not resolve symbol [\_SB.PCI0.GPP5]` : défaut du micrologiciel, sans effet constaté.
+
+**Refaire la mesure**, avec deux commandes lancées avant la veille puis au réveil, et une soustraction :
+
+```bash
+cat /sys/class/power_supply/BAT*/energy_now /sys/class/power_supply/BAT*/energy_full   # énergie en µWh
+cat /sys/power/suspend_stats/total_hw_sleep                                              # sommeil matériel, en µs
+```
+
+Certaines batteries n'exposent que `charge_now` et `charge_full` (µAh) : même calcul. Pour le pourcentage par heure : (énergie avant − énergie après) ÷ `energy_full` ÷ durée en heures. Le temps de sommeil matériel est la différence des deux lectures de `total_hw_sleep`, à comparer à la durée de la veille. Au-delà de quelques pour cent par heure, le réglage est à reprendre.
+
+Si la décharge reste mauvaise après mise à jour du firmware, c'est un sujet matériel à documenter dans le journal des décisions, pas un défaut à corriger au lot 2.
 
 ### Entrée
 
@@ -287,7 +360,7 @@ Deux touches agissent sans aucun raccourci DuneI, vérifié le 2026-10-15 (L1-07
 | Touche | Qui agit | Plus tard |
 | --- | --- | --- |
 | Mode avion (F8) | Le noyau bloque la radio ; NetworkManager déconnecte, puis reconnecte au déblocage | Indicateur réseau, L2-11 |
-| Rétroéclairage du clavier (Fn + Espace) | Le micrologiciel, trois niveaux ; `systemd-backlight` garde le niveau d'un démarrage à l'autre | Extinction à l'inactivité, L1-09 |
+| Rétroéclairage du clavier (Fn + Espace) | Le micrologiciel, trois niveaux ; `systemd-backlight` garde le niveau d'un démarrage à l'autre | Éteint à l'atténuation et rallumé au premier geste (L1-09, `dunei-attenuer`) |
 
 **La diode de sourdine micro mérite sa ligne.** Une diode qui ne correspond pas à l'état réel du micro est un défaut de confiance, pas un défaut cosmétique — c'est exactement le genre de détail que le principe 3 vise : un signal qui porte une information doit être juste.
 
@@ -478,13 +551,14 @@ bureau spécial, `accueil`, qui s'affiche par-dessus le bureau courant.
 | `SUPER + Maj + 1…0` | Envoyer la fenêtre au bureau, sans la suivre |
 | `SUPER + S` / `SUPER + Maj + S` | Afficher ou masquer l'accueil / y ranger la fenêtre |
 | `SUPER + Q`, `E`, `F`, `R` | Terminal, fichiers, navigateur, lanceur (kitty, dolphin, firefox, wofi : provisoires) |
+| `SUPER + L` | Verrouiller : `loginctl lock-session`, verrouilleur provisoire (L1-09, remplacé à L2-22) |
 | `SUPER + Alt + M` | Quitter la session (`uwsm stop`) |
 | `SUPER + Alt + R` | Recharger la configuration (`hyprctl reload`) |
 | `SUPER + clic gauche / droit` glissé | Déplacer / redimensionner à la souris |
 | `SUPER + molette` | Bureau occupé suivant ou précédent |
 | Pavé, trois doigts à l'horizontale / vers le bas | Changer de bureau / afficher ou masquer l'accueil |
 
-**Touches réservées**, déclarées sans être liées : `SUPER + L` (verrouillage, L2-22), `SUPER + /`
+**Touches réservées**, déclarées sans être liées : `SUPER + /`
 (cheatsheet, L2-28), `Print` (capture d'écran, L2-30), Ctrl gauche tenu une seconde (localiser le
 pointeur, L2-36). Pas de raccourci pour la veille, ni pour éteindre ou redémarrer : le terminal, d'ici
 le menu de déconnexion du lot 2.
@@ -662,6 +736,7 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 | Version | Date | Changement |
 | --- | --- | --- |
 | 0.1 | 2026-10-12 | Version initiale |
+| 1.4 | 2026-10-16 | Énergie et veille (L1-09) : `hypridle` et `hyprlock` installés, `energie.toml` et `make energie`, échelle à quatre paliers, scripts, `hyprlock.conf` provisoire, fichier logind déployé par `make install`, couvercle partagé entre logind et `couvercle.lua`, `SUPER + L` ; relevé de décharge (0,42 % par heure) et sa procédure ; sommeil profond inexistant (`s2idle` seul) ; piège de `dpms` ; recette avec écran externe en attente (D41 à D46) ; `hypridle --quiet`, dépendance à uwsm, paquets d'exécution, clavier en veille |
 | 1.3 | 2026-10-15 | Réseau (L1-07) : NetworkManager et `wpa_supplicant` conservés, `wireless-regdb` et `iw` installés, carte *self-managed*, vérification de la connexion et de la reconnexion ; touches mode avion et rétroéclairage du clavier, actives sans raccourci (D40) |
 | 1.2 | 2026-10-15 | Audio (L1-08) : `alsa-utils` installé, dont `alsactl` exécute l'initialisation UCM qui rattache la diode du micro au micro numérique ; F4 garde `wpctl` seul ; vérification du son et du micro (D38) ; `donnees/` ajouté à l'arborescence |
 | 1.1 | 2026-10-15 | Raccourcis : table de données contrôlée, rôles, grammaire, bureau `accueil`, touches réservées ; entrée réelle, Compose sur AltGr, disposition dans le fichier machine ; touches matérielles, diode du micro renvoyée à L1-08 avec son relevé ; `donnees/` lié par `make install` ; kitty tient le rôle terminal (D33 à D37) ; `plein-ecran-nu` restreinte au vrai plein écran (D31, suite) |

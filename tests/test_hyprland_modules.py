@@ -17,6 +17,8 @@ hl = {
         if t.input then
             print("input", t.input.kb_options, tostring(t.input.touchpad.natural_scroll),
                   tostring(t.input.touchpad.clickfinger_behavior), tostring(t.input.kb_layout))
+        elseif t.misc then
+            print("misc", tostring(t.misc.allow_session_lock_restore))
         else
             print("config", t.general.layout, tostring(t.dwindle.preserve_split))
         end
@@ -57,6 +59,9 @@ class ModulesTest(unittest.TestCase):
     def test_regles_generated_then_behaviour(self):
         self.assertEqual(self.run_module("regles"), ["rule\tcouche-1-sans-ombre", "rule\tplein-ecran-nu",
                                                      "rule\tsans-agrandissement", "rule\tglisser-xwayland"])
+
+    def test_verrouillage(self):
+        self.assertEqual(self.run_module("verrouillage"), ["misc\ttrue"])
 
 
 if __name__ == "__main__":
