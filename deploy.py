@@ -10,7 +10,9 @@ posé lui-même.
   generique.lua, puis remplacée de façon atomique par le point d'entrée DuneI. Hyprland recharge seul.
 - fontconfig : generated/fonts.conf est copié vers fontconfig/conf.d/50-dunei.conf. Les applications
   lancées ensuite le lisent ; aucun fc-cache n'est nécessaire.
-- services : hypridle.service est activé s'il ne l'est pas, et redémarré si sa configuration change.
+- services : hyprlock doit être installé ; la surcharge systemd/user/hypridle.service.d/10-dunei.conf
+  (hypridle silencieux) est copiée, puis hypridle.service est activé s'il ne l'est pas, démarré s'il
+  est arrêté, et redémarré si sa configuration ou sa surcharge change (daemon-reload d'abord).
   Cette étape précède les fichiers système : un échec de sudo ne laisse jamais l'ancienne échelle active.
 - systeme : chaque fichier de systeme/ est copié sous la racine du système, /etc compris, avec sudo, et
   seulement s'il manque ou diffère ; un fichier de logind.conf.d recharge logind, sans le redémarrer.
@@ -22,6 +24,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import shutil
 import subprocess
 import sys
 from collections.abc import Mapping
@@ -40,6 +43,9 @@ IDLE = ("hypridle.conf", "GÉNÉRÉ depuis energie.toml")       # Fichier de gen
 SYSTEME = "systeme"                                          # Arborescence copiée sous la racine du système.
 SYSTEM_MARK = "Posé par DuneI"                               # Marque de deuxième ligne d'un fichier système.
 SERVICE = "hypridle.service"                                 # Service utilisateur de l'échelle d'inactivité.
+VERROUILLEUR = "hyprlock"                                    # Verrouilleur exigé ; provisoire, remplacé à L2-22.
+DROPIN = ("config/systemd/user/hypridle.service.d/10-dunei.conf",
+          "systemd/user/hypridle.service.d/10-dunei.conf")   # Surcharge du service : source du dépôt → chemin sous la configuration.
 
 
 def config_home(env: Mapping[str, str]) -> Path:
@@ -193,24 +199,45 @@ def plan_services(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
     """Inspection du service d'inactivité, sans aucune modification.
 
     Entrées : repo — racine du dépôt ; home — dossier de configuration racine.
-    Sortie : (activation si le service est désactivé, ou redémarrage si sa configuration va changer ;
-             erreurs).
-    Erreurs : aucune exception ; un service introuvable ou un systemctl absent devient un message qui dit
-              quoi installer. Dépendances : systemctl, IDLE, SERVICE.
+    Sortie : (copie de la surcharge puis daemon-reload si elle change ; activation si le service est
+             désactivé, redémarrage si sa configuration ou sa surcharge change, démarrage s'il est
+             activé mais arrêté ; erreurs).
+    Erreurs : aucune exception ; un verrouilleur absent, un service introuvable, un systemctl absent ou
+              une surcharge étrangère deviennent un message. Dépendances : systemctl, shutil.which,
+              _ours, IDLE, SERVICE, VERROUILLEUR, DROPIN, SYSTEM_MARK.
     """
+    if not shutil.which(VERROUILLEUR):
+        return [], [f"{VERROUILLEUR} introuvable : sans verrouilleur la machine dormirait déverrouillée "
+                    "(sudo pacman -S hypridle hyprlock)"]
     try:
         state = subprocess.run(["systemctl", "--user", "is-enabled", SERVICE],
                                capture_output=True, text=True).stdout.strip()
+        active = subprocess.run(["systemctl", "--user", "is-active", SERVICE],
+                                capture_output=True, text=True).returncode == 0
     except OSError:
-        state = ""
+        state, active = "", False
     if state not in ("enabled", "disabled"):
         return [], [f"{SERVICE} introuvable ({state or 'systemctl sans réponse'}) : installer hypridle "
                     "(sudo pacman -S hypridle hyprlock)"]
+    src, dst = repo / DROPIN[0], home / DROPIN[1]
+    actions, err = [], []
+    if not src.exists():
+        err.append(f"source manquante : {src}")
+    elif dst.is_symlink() or (dst.exists() and not _ours(dst, SYSTEM_MARK)):
+        err.append(f"{dst} existe mais n'a pas été posé par DuneI")
+    elif dst.parent.exists() and not dst.parent.is_dir():
+        err.append(f"{dst.parent} existe mais n'est pas un dossier")
+    elif not dst.exists() or dst.read_bytes() != src.read_bytes():
+        actions += ([] if dst.parent.exists() else [("mkdir", dst.parent)])
+        actions += [("copy", src, dst), ("daemon-reload",)]
+    idle_src, idle_dst = repo / "generated" / IDLE[0], home / "hypr" / IDLE[0]
+    changed = bool(actions) or (idle_src.exists() and (not idle_dst.exists()
+                                                       or idle_dst.read_bytes() != idle_src.read_bytes()))
     if state == "disabled":
-        return [("enable", SERVICE)], []
-    src, dst = repo / "generated" / IDLE[0], home / "hypr" / IDLE[0]
-    changed = src.exists() and (not dst.exists() or dst.read_bytes() != src.read_bytes())
-    return ([("restart", SERVICE)] if changed else []), []
+        return actions + [("enable", SERVICE)], err
+    if changed:
+        return actions + [("restart", SERVICE)], err
+    return actions + ([] if active else [("start", SERVICE)]), err
 
 
 DESTINATIONS = {"hypr": plan_hypr, "fontconfig": plan_fontconfig,
@@ -249,6 +276,8 @@ def describe(action: tuple) -> str:
         "switch": "conserver {1} sous le nom {2}, puis lier {1} à {0}",
         "sudo-copy": "copier {0} vers {1}, avec sudo",
         "sudo-reload": "recharger {0}, avec sudo",
+        "daemon-reload": "recharger les unités utilisateur de systemd",
+        "start": "démarrer {0}",
         "enable": "activer et démarrer {0}",
         "restart": "redémarrer {0}",
     }[kind].format(*args)
@@ -289,8 +318,10 @@ def apply(actions: list[tuple]) -> None:
             subprocess.run(["sudo", "systemctl", "reload", args[0]], check=True)
         elif kind == "enable":
             subprocess.run(["systemctl", "--user", "enable", "--now", args[0]], check=True)
-        elif kind == "restart":
-            subprocess.run(["systemctl", "--user", "restart", args[0]], check=True)
+        elif kind in ("restart", "start"):
+            subprocess.run(["systemctl", "--user", kind, args[0]], check=True)
+        elif kind == "daemon-reload":
+            subprocess.run(["systemctl", "--user", "daemon-reload"], check=True)
 
 
 def main() -> int:

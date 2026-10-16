@@ -14,11 +14,14 @@ ROOT = Path(__file__).resolve().parent.parent
 GENERIC = "-- Configuration générique de test.\n"
 FOREIGN = "<?xml version=\"1.0\"?>\n<fontconfig/>\n"
 # Faux sudo et faux systemctl : chaque appel est consigné dans $FAKE_LOG. sudo exécute la commande telle
-# quelle, sauf si $FAKE_SUDO_FAIL est posé ; systemctl répond à is-enabled par $FAKE_ENABLED.
+# quelle, sauf si $FAKE_SUDO_FAIL est posé ; systemctl répond à is-enabled par $FAKE_ENABLED et à
+# is-active par $FAKE_ACTIVE (« active » par défaut). hyprlock est un faux exécutable vide.
 FAKES = {
     "sudo": '#!/bin/sh\necho "sudo $*" >> "$FAKE_LOG"\n[ -z "$FAKE_SUDO_FAIL" ] || exit 1\nexec "$@"\n',
     "systemctl": ('#!/bin/sh\necho "systemctl $*" >> "$FAKE_LOG"\n'
-                  'case "$*" in *is-enabled*) echo "$FAKE_ENABLED"; [ "$FAKE_ENABLED" = enabled ] ;; esac\n'),
+                  'case "$*" in *is-enabled*) echo "$FAKE_ENABLED"; [ "$FAKE_ENABLED" = enabled ] ;;\n'
+                  '*is-active*) [ "${FAKE_ACTIVE:-active}" = active ] ;; esac\n'),
+    "hyprlock": "#!/bin/sh\n",
 }
 LOGIND = Path("etc/systemd/logind.conf.d/10-dunei.conf")
 OLD_OWN = "<?xml version=\"1.0\"?>\n<!-- GÉNÉRÉ depuis tokens.toml — NE PAS MODIFIER À LA MAIN -->\n<fontconfig/>\n"
@@ -56,6 +59,7 @@ class DeployTest(unittest.TestCase):
         for name, body in FAKES.items():
             (fake / name).write_text(body, encoding="utf-8")
             (fake / name).chmod(0o755)
+        self.fake = fake
         self.env = mock.patch.dict(os.environ, {"DUNEI_SYSROOT": str(self.root), "FAKE_LOG": str(self.log),
                                                 "FAKE_ENABLED": "enabled", "PATH": f"{fake}:{os.environ['PATH']}"})
         self.env.start()
@@ -309,6 +313,48 @@ class DeployTest(unittest.TestCase):
         self.log.unlink()
         run(self.cfg)
         self.assertNotIn("systemctl --user restart hypridle.service", self.journal())
+
+    def test_dropin_deployed_then_reload_precedes_restart(self):
+        self.assertEqual(run(self.cfg).returncode, 0)
+        dropin = self.cfg / "systemd/user/hypridle.service.d/10-dunei.conf"
+        self.assertIn("ExecStart=/usr/bin/hypridle --quiet", dropin.read_text(encoding="utf-8"))
+        calls = [l for l in self.journal() if l.startswith("systemctl --user") and "is-" not in l]
+        self.assertEqual(calls, ["systemctl --user daemon-reload", "systemctl --user restart hypridle.service"])
+        self.log.unlink()
+        self.assertEqual(run(self.cfg).returncode, 0)
+        self.assertEqual([l for l in self.journal() if "is-" not in l], [])
+
+    def test_dropin_change_triggers_reload_and_restart(self):
+        run(self.cfg)
+        dropin = self.cfg / "systemd/user/hypridle.service.d/10-dunei.conf"
+        dropin.write_text("# a\n# Posé par DuneI\n", encoding="utf-8")
+        self.log.unlink()
+        run(self.cfg)
+        self.assertEqual([l for l in self.journal() if "is-" not in l],
+                         ["systemctl --user daemon-reload", "systemctl --user restart hypridle.service"])
+
+    def test_refuses_foreign_dropin(self):
+        d = self.cfg / "systemd/user/hypridle.service.d"
+        d.mkdir(parents=True)
+        (d / "10-dunei.conf").write_text("[Service]\nExecStart=\n", encoding="utf-8")
+        self.assert_refused("10-dunei.conf")
+
+    def test_refuses_without_hyprlock(self):
+        (self.fake / "hyprlock").unlink()
+        before = snapshot(self.cfg)
+        with mock.patch.dict(os.environ, {"PATH": f"{self.fake}:/nonexistent"}):
+            res = subprocess.run(["/usr/bin/python3", str(ROOT / "deploy.py")], capture_output=True, text=True,
+                                 cwd=ROOT, env={**os.environ, "XDG_CONFIG_HOME": str(self.cfg)})
+        self.assertEqual(res.returncode, 1)
+        self.assertIn("hyprlock", res.stderr)
+        self.assertEqual(snapshot(self.cfg), before)
+
+    def test_starts_hypridle_when_enabled_but_inactive(self):
+        run(self.cfg)
+        self.log.unlink()
+        with mock.patch.dict(os.environ, {"FAKE_ACTIVE": "inactive"}):
+            self.assertEqual(run(self.cfg).returncode, 0)
+        self.assertIn("systemctl --user start hypridle.service", self.journal())
 
     def test_refuses_without_hypridle(self):
         before = snapshot(self.cfg)
