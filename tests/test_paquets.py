@@ -265,10 +265,11 @@ class EtatTest(unittest.TestCase):
 FAKES = {
     "pacman-conf": '#!/bin/sh\nprintf \'%s\\n\' $FAKE_DEPOTS\n',
     "pacman": ('#!/bin/sh\ncase "$1" in\n-Sl) for n in $FAKE_SYNC; do echo "extra $n 1-1"; done ;;\n'
-               '-Qq) printf \'%s\\n\' $FAKE_QQ ;;\n-Qqe) printf \'%s\\n\' $FAKE_QQE ;;\n'
+               '-Qq) [ -z "$FAKE_QQ_CODE" ] || { echo "base verrouillée" >&2; exit $FAKE_QQ_CODE; }\n   printf \'%s\\n\' $FAKE_QQ ;;\n-Qqe) printf \'%s\\n\' $FAKE_QQE ;;\n'
                '-Qqett) printf \'%s\\n\' $FAKE_QQETT ;;\n-Qqdt) printf \'%s\\n\' $FAKE_QQDT ;;\n'
                '*) echo "pacman $*" >> "$FAKE_LOG"; exit 9 ;;\nesac\n'),
-    "sudo": '#!/bin/sh\necho "sudo $*" >> "$FAKE_LOG"\nexit ${FAKE_SUDO_CODE:-0}\n',
+    "sudo": ('#!/bin/sh\necho "sudo $*" >> "$FAKE_LOG"\n'
+             'case "$*" in *"$FAKE_SUDO_FAIL_ON"*) exit ${FAKE_SUDO_CODE:-0} ;; esac\nexit 0\n'),
 }
 
 
@@ -308,6 +309,7 @@ class MainTest(unittest.TestCase):
         questions = []
 
         def faux_input(q):
+            """Consigne la question posée et rend la réponse suivante de la liste."""
             questions.append(q)
             return reponses[len(questions) - 1]
         out, err = io.StringIO(), io.StringIO()
@@ -416,11 +418,65 @@ class MainTest(unittest.TestCase):
         self.assertIn("informant read", err)
         self.assertEqual(len(journal.splitlines()), 1)
 
-    def test_pacman_illisible_rend_1_sans_trace(self):
+    def test_base_non_synchronisee_rend_1_sans_trace(self):
         code, _, err, _, journal = self.lancer(FAKE_DEPOTS="", FAKE_SYNC="")
         self.assertEqual(code, 1)
         self.assertNotIn("Traceback", err)
         self.assertEqual(journal, "")
+
+    def test_requete_pacman_en_echec_rend_1_sans_trace(self):
+        code, _, err, _, journal = self.lancer(FAKE_QQ_CODE="2")
+        self.assertEqual(code, 1)
+        self.assertIn("base verrouillée", err)
+        self.assertNotIn("Traceback", err)
+        self.assertNotIn("sudo", journal)
+
+    def test_pacman_introuvable_rend_1_sans_trace(self):
+        (self.tmp / "bin/pacman").unlink()
+        code, _, err, _, journal = self.lancer()
+        self.assertEqual(code, 1)
+        self.assertIn("erreur :", err)
+        self.assertNotIn("Traceback", err)
+        self.assertEqual(journal, "")
+
+    def test_echec_asdeps_ne_pose_plus_de_question(self):
+        noms = " ".join(sorted(self.veut)) + " yyy zzz"
+        code, _, err, questions, journal = self.lancer(
+            tty=True, reponses=["o", "o"], FAKE_SUDO_CODE="4", FAKE_SUDO_FAIL_ON="--asdeps",
+            FAKE_QQ=noms, FAKE_QQE=noms, FAKE_QQETT="zzz")
+        self.assertEqual(code, 4)
+        self.assertEqual(questions, ["Marquer ces 1 paquets comme dépendances ? [o/N] "])
+        self.assertIn("informant read", err)
+        self.assertNotIn("-Rns", journal)
+
+    def test_detection_incomplete_ne_propose_aucun_retrait(self):
+        (self.tmp / "root/etc/hostname").unlink()
+        noms = " ".join(sorted(self.veut)) + " zzz"
+        code, out, _, questions, journal = self.lancer(tty=True, reponses=["o", "o"], FAKE_QQ=noms,
+                                                       FAKE_QQE=noms, FAKE_QQETT="zzz")
+        self.assertEqual(code, 0)
+        self.assertFalse([q for q in questions if "Retirer" in q])
+        self.assertIn("retraits non proposés", out)
+        self.assertIn("zzz", out)
+        self.assertNotIn("-Rns", journal)
+
+    def test_detection_incomplete_garde_la_question_asdeps(self):
+        (self.tmp / "root/etc/hostname").unlink()
+        noms = " ".join(sorted(self.veut)) + " yyy"
+        _, _, _, questions, journal = self.lancer(tty=True, reponses=["o"], FAKE_QQ=noms, FAKE_QQE=noms)
+        self.assertEqual(len(questions), 1)
+        self.assertIn("yyy", journal)
+
+    def test_sans_avertissement_aucune_ligne_vide(self):
+        _, out, _, _, _ = self.lancer("--dry-run")
+        self.assertNotIn("\n\n", out)
+
+    def test_ctrl_c_rend_130(self):
+        noms = " ".join(sorted(self.veut)) + " zzz"
+        with mock.patch("paquets.demander", side_effect=KeyboardInterrupt):
+            code, _, err, _, _ = self.lancer(tty=True, FAKE_QQ=noms, FAKE_QQE=noms, FAKE_QQETT="zzz")
+        self.assertEqual(code, 130)
+        self.assertIn("interrompu", err)
 
 
 if __name__ == "__main__":

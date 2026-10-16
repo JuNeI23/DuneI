@@ -6,9 +6,9 @@ au backlog, des listes choisies par le matériel détecté et des listes propres
 
 - détection : processeur et cartes graphiques sont lus sous une racine, le nom d'hôte dans etc/hostname.
 - contrôle et plan : dépôts et noms vérifiés, écart entre le voulu et l'installé en cinq catégories.
-- exécution : installe le manquant, marque, propose de retirer l'excédent, sur confirmation.
 - lecture : paquets.toml est lu et contrôlé (version, dépôts, noms, unicité) ; une seule erreur
   suffit à tout refuser.
+- exécution : installe le manquant, marque, propose de retirer l'excédent, sur confirmation.
 
     python3 paquets.py [--dry-run]
 """
@@ -274,9 +274,12 @@ def main(argv: list[str] | None = None) -> int:
 
     Entrée : argv — arguments, sys.argv[1:] par défaut ; --dry-run affiche le plan et s'arrête.
     Sortie : 0 en cas de succès ou de --dry-run ; 1 si une vérification échoue (rien n'est modifié) ;
-             sinon le code de la commande sudo pacman qui a échoué, sans autre question ensuite.
-    Erreurs : messages sur la sortie d'erreur, sans trace Python. Dépendances : lire, sysroot, nom_hote,
-              detecter, voulus, etat, controler, calculer, demander, agir.
+             sinon le code de la commande sudo pacman qui a échoué, sans autre question ensuite ;
+             130 sur Ctrl-C. La question de retrait n'est jamais posée si la détection a produit un
+             avertissement (matériel ou hôte incomplet) : le retrait est destructeur.
+    Erreurs : messages sur la sortie d'erreur, sans trace Python (pacman ou pacman-conf introuvable ou en
+              échec compris). Dépendances : lire, sysroot, nom_hote, detecter, voulus, etat, controler,
+              calculer, demander, agir.
     """
     ap = argparse.ArgumentParser(description="Aligne les paquets sur paquets.toml.")
     ap.add_argument("--dry-run", action="store_true", help="affiche le plan sans rien modifier")
@@ -289,7 +292,7 @@ def main(argv: list[str] | None = None) -> int:
     processeurs, cartes = detecter(root)
     try:
         configures, noms, installes, explicites, non_requis, orphelins = etat(modele["depots"])
-    except RuntimeError as e:
+    except (RuntimeError, OSError) as e:
         print(f"erreur : {e}", file=sys.stderr)
         return 1
     erreurs = controler(modele, configures, noms)
@@ -300,7 +303,8 @@ def main(argv: list[str] | None = None) -> int:
     plan = calculer(veut, installes, explicites, non_requis, orphelins)
     print(f"matériel : processeur {', '.join(sorted(processeurs)) or 'aucun'}, "
           f"graphique {', '.join(sorted(cartes)) or 'aucun'}")
-    print("\n".join(f"avertissement : {a}" for a in avertissements))
+    if avertissements:
+        print("\n".join(f"avertissement : {a}" for a in avertissements))
     titres = {"manquants": "à installer", "a_expliciter": "à marquer explicites",
               "excedent_requis": "excédent requis par un autre paquet (marquable comme dépendance)",
               "excedent_libre": "excédent libre (retirable)", "orphelins": "orphelins (retirables)"}
@@ -308,16 +312,24 @@ def main(argv: list[str] | None = None) -> int:
         print(f"{titre} : {len(plan[cle])}" + (f" — {', '.join(plan[cle])}" if plan[cle] else ""))
     if args.dry_run:
         return 0
-    for cmd in (["pacman", "-S", "--needed", *plan["manquants"]] if plan["manquants"] else None,
-                ["pacman", "-D", "--asexplicit", *plan["a_expliciter"]] if plan["a_expliciter"] else None):
-        if cmd and (code := agir(cmd)):
-            return code
     retirables = sorted({*plan["excedent_libre"], *plan["orphelins"]})
-    for noms_, question, cmd in (
-            (plan["excedent_requis"], "Marquer ces {n} paquets comme dépendances ? [o/N] ", ["pacman", "-D", "--asdeps"]),
-            (retirables, "Retirer ces {n} paquets ? [o/N] ", ["pacman", "-Rns"])):
-        if noms_ and demander(question.format(n=len(noms_))) and (code := agir([*cmd, *noms_])):
-            return code
+    if retirables and avertissements:
+        print("retraits non proposés : détection incomplète, voir les avertissements ci-dessus")
+        retirables = []
+    try:
+        for cmd in (["pacman", "-S", "--needed", *plan["manquants"]] if plan["manquants"] else None,
+                    ["pacman", "-D", "--asexplicit", *plan["a_expliciter"]] if plan["a_expliciter"] else None):
+            if cmd and (code := agir(cmd)):
+                return code
+        for cibles, question, cmd in (
+                (plan["excedent_requis"], "Marquer ces {n} paquets comme dépendances ? [o/N] ",
+                 ["pacman", "-D", "--asdeps"]),
+                (retirables, "Retirer ces {n} paquets ? [o/N] ", ["pacman", "-Rns"])):
+            if cibles and demander(question.format(n=len(cibles))) and (code := agir([*cmd, *cibles])):
+                return code
+    except KeyboardInterrupt:
+        print("interrompu : rien d'autre n'a été modifié", file=sys.stderr)
+        return 130
     if modele["provisoire"]:
         print(f"{len(modele['provisoire'])} paquets provisoires : "
               + ", ".join(f"{p} → {item}" for p, item in sorted(modele["provisoire"].items())))
