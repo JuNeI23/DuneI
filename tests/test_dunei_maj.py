@@ -10,13 +10,13 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 SCRIPT = ROOT / "config" / "bin" / "dunei-maj"
 # Chaque faux outil consigne son appel dans $FAKE_LOG. informant répond $FAKE_NEWS à « list », pacdiff
-# répond $FAKE_PACNEW, pacman sort avec $FAKE_PACMAN (0 par défaut), uname rend « 1.0 ». sudo consigne puis
+# répond $FAKE_PACNEW ; informant et pacdiff sortent avec $FAKE_INFORMANT et $FAKE_PACDIFF, pacman sort avec $FAKE_PACMAN (0 par défaut), uname rend « 1.0 ». sudo consigne puis
 # exécute la commande qu'il reçoit, qui est donc l'un des autres faux.
 FAKES = {
-    "informant": 'echo "informant $*" >> "$FAKE_LOG"\n[ "$1" = list ] && printf "%s" "${FAKE_NEWS:-}"\nexit 0\n',
+    "informant": 'echo "informant $*" >> "$FAKE_LOG"\nif [ "$1" = list ]; then\n  printf "%s" "${FAKE_NEWS:-}"\n  exit "${FAKE_INFORMANT:-0}"\nfi\n',
     "sudo": 'echo "sudo $*" >> "$FAKE_LOG"\nexec "$@"\n',
     "pacman": 'echo "pacman $*" >> "$FAKE_LOG"\nexit "${FAKE_PACMAN:-0}"\n',
-    "pacdiff": 'echo "pacdiff $*" >> "$FAKE_LOG"\nprintf "%s" "${FAKE_PACNEW:-}"\n',
+    "pacdiff": 'echo "pacdiff $*" >> "$FAKE_LOG"\nprintf "%s" "${FAKE_PACNEW:-}"\nexit "${FAKE_PACDIFF:-0}"\n',
     "uname": 'echo 1.0\n',
 }
 
@@ -63,6 +63,7 @@ class DuneiMajTest(unittest.TestCase):
         res = self.run_script()
         self.assertEqual(res.returncode, 0, res.stderr)
         calls = self.calls()
+        self.assertIn("sudo informant read", calls)
         self.assertLess(calls.index("informant read"), calls.index("pacman -Syu"))
 
     def test_pacnew_liste(self):
@@ -81,11 +82,24 @@ class DuneiMajTest(unittest.TestCase):
         self.assertNotIn("redémarre", res.stdout)
 
     def test_echec_pacman(self):
-        self.env["FAKE_PACMAN"] = "1"
+        self.env["FAKE_PACMAN"] = "7"
         res = self.run_script()
-        self.assertEqual(res.returncode, 1)
+        self.assertEqual(res.returncode, 7)
         self.assertNotIn("pacdiff -o", self.calls())
         self.assertTrue(res.stderr)
+
+    def test_echec_pacdiff(self):
+        self.env["FAKE_PACDIFF"] = "5"
+        res = self.run_script()
+        self.assertEqual(res.returncode, 5)
+        self.assertIn("la liste des .pacnew a échoué (code 5)", res.stderr)
+
+    def test_echec_liste_des_actualites(self):
+        self.env["FAKE_INFORMANT"] = "3"
+        res = self.run_script()
+        self.assertEqual(res.returncode, 3)
+        self.assertIn("la liste des actualités a échoué (code 3)", res.stderr)
+        self.assertNotIn("sudo pacman -Syu", self.calls())
 
 
 if __name__ == "__main__":
