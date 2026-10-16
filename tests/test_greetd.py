@@ -31,8 +31,12 @@ class GreetdTest(unittest.TestCase):
 
     def test_session_menu_offers_only_dunei(self):
         greeter = shlex.split(self.conf["default_session"]["command"])
-        for opt in ("--sessions", "--xsessions"):
-            self.assertEqual(greeter[greeter.index(opt) + 1], "/etc/greetd/sessions")
+        self.assertEqual(greeter[greeter.index("--sessions") + 1], "/etc/greetd/sessions")
+        # Aucune session X11 : --xsessions désigne un dossier que DuneI ne pose pas.
+        self.assertEqual(greeter[greeter.index("--xsessions") + 1], "/etc/greetd/xsessions")
+        self.assertFalse((ROOT / "systeme" / "etc" / "greetd" / "xsessions").exists())
+        # Aucun fichier de configuration de tuigreet de la machine ne change l'écran (règle 5).
+        self.assertIn("--no-config", greeter)
         self.assertEqual([p.name for p in SESSIONS.iterdir()], ["dunei.desktop"])
         entry = SESSIONS / "dunei.desktop"
         lines = entry.read_text(encoding="utf-8").splitlines()

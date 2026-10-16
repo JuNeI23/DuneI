@@ -11,9 +11,11 @@ user = "{utilisateur}"
 command = "uwsm start -e -D Hyprland hyprland.desktop"
 
 # Écran de connexion provisoire, après chaque sortie de session ; remplacé à L5-12. Le menu des sessions
-# (F3) ne propose que DuneI (sessions/dunei.desktop), lancée par uwsm. La commande libre (F2) reste ouverte :
+# (F3) ne propose que DuneI (sessions/dunei.desktop), lancée par uwsm ; aucune session X11 n'est offerte :
+# --xsessions désigne /etc/greetd/xsessions, volontairement inexistant. --no-config écarte tout
+# /etc/tuigreet/config.toml de la machine. La commande libre (F2) reste ouverte :
 # tuigreet 0.11.1 ne permet pas de la fermer ; c'est une saisie délibérée, close à L5-12.
 # Même commande de session que ci-dessus (tests/test_greetd.py).
 [default_session]
 user = "greeter"
-command = "tuigreet --time --sessions /etc/greetd/sessions --xsessions /etc/greetd/sessions --cmd 'uwsm start -e -D Hyprland hyprland.desktop'"
+command = "tuigreet --no-config --time --sessions /etc/greetd/sessions --xsessions /etc/greetd/xsessions --cmd 'uwsm start -e -D Hyprland hyprland.desktop'"
