@@ -216,14 +216,19 @@ def _lier(src: Path, dst: Path, neuf: bool) -> None:
     """Pose du lien dst vers src, en reprenant ou gardant le fichier qui occupe dst.
 
     Entrées : src — fichier du clone ; dst — destination ; neuf — vrai si le clone vient d'être créé.
-    Sortie : aucune ; ajoute à NOTES_APPLIQUEES atelier-garde (fichier gardé en .avant-dunei) ou
+    Sortie : aucune ; ajoute à NOTES_APPLIQUEES atelier-garde (fichier gardé en .avant-dunei, ou .avant-dunei.N si ce nom est pris) ou
         atelier-repris (contenu copié dans src). Erreurs : OSError. Dépendances : os, shutil.
     """
     dst.parent.mkdir(parents=True, exist_ok=True)
     if dst.exists() and not (src.is_file() and dst.read_bytes() == src.read_bytes()):
         if neuf:
-            os.replace(dst, dst.with_name(dst.name + ".avant-dunei"))
-            NOTES_APPLIQUEES.append(("atelier-garde", dst))
+            garde = dst.with_name(dst.name + ".avant-dunei")
+            n = 0
+            while garde.exists() or garde.is_symlink():
+                n += 1
+                garde = dst.with_name(f"{dst.name}.avant-dunei.{n}")
+            os.replace(dst, garde)
+            NOTES_APPLIQUEES.append(("atelier-garde", dst, garde))
         else:
             src.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(dst, src)

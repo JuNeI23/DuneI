@@ -511,7 +511,7 @@ def describe(action: tuple) -> str:
         "atelier-clone": "cloner {0} dans {1}",
         "atelier-lien": "lier {1} à {0}",
         "atelier-repris": "{0} avait remplacé son lien : son contenu est repris dans le clone (git status le montre) et le lien est remis",
-        "atelier-garde": "{0} existait déjà : conservé sous le nom {0}.avant-dunei, remplacé par le lien de l'atelier",
+        "atelier-garde": "{0} existait déjà : conservé sous le nom {1}, remplacé par le lien de l'atelier",
         "hors-liste": "{0} est accroché à la session sans figurer dans session.toml ; laissé en place",
     }[kind].format(*args)
 

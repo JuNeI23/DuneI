@@ -263,7 +263,19 @@ class AtelierTest(unittest.TestCase):
         self._tout_poser()
         self.assertTrue(dst.is_symlink())
         self.assertEqual(dst.with_name("settings.json.avant-dunei").read_text(encoding="utf-8"), "defaut\n")
-        self.assertEqual(atelier.NOTES_APPLIQUEES, [("atelier-garde", dst)])
+        self.assertEqual(atelier.NOTES_APPLIQUEES, [("atelier-garde", dst, dst.with_name("settings.json.avant-dunei"))])
+
+    def test_ancienne_garde_jamais_ecrasee(self):
+        dst = self._dst("claude/settings.json")
+        dst.parent.mkdir(parents=True)
+        dst.write_text("nouveau\n", encoding="utf-8")
+        ancienne = dst.with_name("settings.json.avant-dunei")
+        ancienne.write_text("ancien\n", encoding="utf-8")
+        self._tout_poser()
+        self.assertEqual(ancienne.read_text(encoding="utf-8"), "ancien\n")
+        suivante = dst.with_name("settings.json.avant-dunei.1")
+        self.assertEqual(suivante.read_text(encoding="utf-8"), "nouveau\n")
+        self.assertEqual(atelier.NOTES_APPLIQUEES, [("atelier-garde", dst, suivante)])
 
     def test_reprise_d_un_lien_remplace(self):
         self._tout_poser()
