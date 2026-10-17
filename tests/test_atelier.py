@@ -205,7 +205,7 @@ class AtelierTest(unittest.TestCase):
             subprocess.run(["git", *args], check=True, cwd=t, env={**os.environ, **git})
         for rel in LIENS:
             (graine / rel).parent.mkdir(parents=True, exist_ok=True)
-            (graine / rel).write_text(f"atelier {rel}\n", encoding="utf-8")
+            (graine / rel).write_text("{}\n" if rel.endswith(".json") else f"atelier {rel}\n", encoding="utf-8")
         for args in (["add", "."], ["commit", "-qm", "graine"], ["push", "-q", str(self.nu), "main"]):
             subprocess.run(["git", "-C", str(graine), *args], check=True, env={**os.environ, **git})
         fake = t / "bin"
@@ -374,6 +374,41 @@ class AtelierTest(unittest.TestCase):
         with mock.patch.dict(os.environ, sous_path):
             self.assertTrue(appliquer(("atelier-plugins", self.clone)))
         self.assertEqual(atelier.NOTES_APPLIQUEES, [("atelier-sans-claude",)])
+
+    def _faux_claude(self, corps: str):
+        """Remplace le faux claude par un script au corps donné."""
+        (self.fake / "claude").write_text("#!/bin/sh\n" + corps + "\n", encoding="utf-8")
+
+    def _regler(self, texte: str):
+        """Écrit le settings.json du clone."""
+        (self.clone / "claude").mkdir(parents=True, exist_ok=True)
+        (self.clone / "claude" / "settings.json").write_text(texte, encoding="utf-8")
+
+    def test_liste_en_echec_a_l_inspection_planifie(self):
+        self._tout_poser()
+        self._regler('{"enabledPlugins": {"a@m": true}}')
+        self._faux_claude("exit 1")
+        actions, erreurs = self._plan()
+        self.assertEqual((erreurs, [a[0] for a in actions]), ([], ["atelier-plugins"]))
+
+    def test_liste_en_echec_a_l_application_note(self):
+        self._regler('{"enabledPlugins": {"a@m": true}}')
+        self._faux_claude("echo pas json")
+        self.assertTrue(appliquer(("atelier-plugins", self.clone)))
+        self.assertEqual([n[0] for n in atelier.NOTES_APPLIQUEES], ["atelier-plugins-echec"])
+
+    def test_installation_en_echec_note(self):
+        self._regler('{"enabledPlugins": {"a@m": true}}')
+        self._faux_claude('[ "$2" = list ] && echo "[]" && exit 0\nexit 1')
+        self.assertTrue(appliquer(("atelier-plugins", self.clone)))
+        self.assertEqual([n[0] for n in atelier.NOTES_APPLIQUEES], ["atelier-plugins-echec"])
+
+    def test_settings_invalide_note(self):
+        for texte in ("pas du json", '{"enabledPlugins": ["a"]}'):
+            atelier.NOTES_APPLIQUEES.clear()
+            self._regler(texte)
+            self.assertTrue(appliquer(("atelier-plugins", self.clone)))
+            self.assertEqual([n[0] for n in atelier.NOTES_APPLIQUEES], ["atelier-plugins-echec"], texte)
 
     def test_gitconfig_absent_cree_avec_inclusion(self):
         self._tout_poser()

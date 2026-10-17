@@ -456,7 +456,7 @@ def plan_services(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
     return actions, err
 
 
-NOTES = ("hors-liste", "chemin", "rtk-remplace", "atelier-saute", "atelier-sans-claude")  # Signalements affichés après le bilan : ils n'agissent pas et ne bloquent pas.
+NOTES = ("hors-liste", "chemin", "rtk-remplace", "atelier-saute", "atelier-sans-claude", "atelier-plugins-echec")  # Signalements affichés après le bilan : ils n'agissent pas et ne bloquent pas.
 DESTINATIONS = {"hypr": plan_hypr, "fontconfig": plan_fontconfig, "applis": plan_applis,
                 "bin": plan_bin, "rtk": atelier.plan_rtk, "atelier": atelier.plan_atelier, "services": plan_services, "systeme": plan_systeme, "maj": plan_maj,
                 "connexion": plan_connexion}  # Nom → planification, dans l'ordre d'exécution (sudo en dernier).
@@ -512,6 +512,7 @@ def describe(action: tuple) -> str:
         "atelier-plugins": "installer les plugins Claude Code déclarés dans {0}/claude/settings.json",
         "atelier-include": "inclure {0} dans ~/.gitconfig",
         "atelier-sans-claude": "claude est absent du PATH : les plugins ne sont pas installés ; installer Claude Code puis relancer make install",
+        "atelier-plugins-echec": "plugins Claude Code non installés ({0}) : lancer claude plugin install pour chaque plugin de enabledPlugins, puis relancer make install",
         "atelier-lien": "lier {1} à {0}",
         "atelier-repris": "{0} avait remplacé son lien : son contenu est repris dans le clone (git status le montre) et le lien est remis",
         "atelier-garde": "{0} existait déjà : conservé sous le nom {1}, remplacé par le lien de l'atelier",

@@ -197,7 +197,7 @@ def plan_atelier(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
     Erreurs : atelier.toml invalide ; clone qui n'est pas un dépôt git ou dont origin n'est pas le
         dépôt attendu ; destination qui est un dossier ; lien vers un autre chemin que le fichier du
         clone. Chaque message nomme le chemin.
-    Dépendances : lire_atelier, gh_accessible, _plugins_manquants, _inclusions, subprocess.
+    Dépendances : lire_atelier, gh_accessible, _plugins_a_poser, _inclusions, subprocess.
     """
     donnees, erreurs = lire_atelier(repo)
     if erreurs:
@@ -214,7 +214,7 @@ def plan_atelier(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
         return [], [f"{clone} existe sans être un dépôt git : le déplacer ou le supprimer"]
     elif not _origine_ok(clone, cfg["depot"]):
         return [], [f"l'origine de {clone} n'est pas {cfg['depot']} : vérifier avec git -C {clone} remote -v"]
-    if neuf or _plugins_manquants(clone) != []:
+    if neuf or (manquants := _plugins_a_poser(clone)) is None or manquants:
         actions.append(("atelier-plugins", clone))
     inclusion = clone / cfg["gitconfig"]
     if str(inclusion) not in _inclusions():
@@ -231,23 +231,57 @@ def plan_atelier(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
     return ([], erreurs) if erreurs else (actions, [])
 
 
-def _plugins_manquants(clone: Path) -> list[str] | None:
-    """Plugins Claude Code activés dans le clone et absents de la machine.
+def _plugins_voulus(clone: Path) -> list[str]:
+    """Plugins activés (valeur true) dans enabledPlugins du settings.json du clone.
 
-    Entrée : clone — dépôt dunei-atelier, dont claude/settings.json est lu.
-    Sortie : identifiants manquants, liste vide si le fichier est absent, illisible ou sans
-        enabledPlugins ; None si claude est absent du PATH.
-    Erreurs : subprocess.CalledProcessError si claude plugin list échoue. Dépendances : shutil, subprocess, json.
+    Entrée : clone — dépôt dunei-atelier. Sortie : identifiants activés.
+    Erreurs : ValueError, cause en une phrase, si le fichier est illisible, n'est pas du JSON ou si
+        enabledPlugins n'est pas un objet ; un enabledPlugins absent ne déclare aucun plugin.
+    Dépendances : json.
+    """
+    chemin = clone / "claude" / "settings.json"
+    try:
+        voulus = json.loads(chemin.read_text(encoding="utf-8")).get("enabledPlugins", {})
+    except (OSError, ValueError, AttributeError) as e:
+        raise ValueError(f"{chemin} illisible ou invalide : {e}") from e
+    if not isinstance(voulus, dict):
+        raise ValueError(f"enabledPlugins de {chemin} n'est pas un objet")
+    return [i for i, actif in voulus.items() if actif is True]
+
+
+def _plugins_presents() -> set[str]:
+    """Identifiants des plugins installés, d'après claude plugin list --json.
+
+    Entrée : aucune. Sortie : ensemble d'identifiants.
+    Erreurs : ValueError, cause en une phrase, si la commande échoue ou si sa sortie n'est pas une liste d'objets à id.
+    Dépendances : subprocess, json, claude.
+    """
+    try:
+        liste = subprocess.run(["claude", "plugin", "list", "--json"], check=True, capture_output=True, text=True).stdout
+        return {p["id"] for p in json.loads(liste)}
+    except (subprocess.CalledProcessError, OSError, ValueError, KeyError, TypeError) as e:
+        raise ValueError(f"claude plugin list --json a échoué : {e}") from e
+
+
+def _plugins_a_poser(clone: Path) -> list[str] | None:
+    """Plugins à installer, pour l'inspection ; ne lève jamais.
+
+    Entrée : clone — dépôt dunei-atelier. Sortie : identifiants manquants ; liste vide si le
+        settings.json est inutilisable (l'application le signalera) ; None si l'état est inconnu
+        (claude absent du PATH ou liste des plugins impossible à lire).
+    Erreurs : aucune. Dépendances : _plugins_voulus, _plugins_presents, shutil.
     """
     if shutil.which("claude") is None:
         return None
     try:
-        voulus = json.loads((clone / "claude" / "settings.json").read_text(encoding="utf-8")).get("enabledPlugins", {})
-    except (OSError, ValueError, AttributeError):
+        voulus = _plugins_voulus(clone)
+    except ValueError:
         return []
-    liste = subprocess.run(["claude", "plugin", "list", "--json"], check=True, capture_output=True, text=True).stdout
-    presents = {p["id"] for p in json.loads(liste)}
-    return [i for i, actif in voulus.items() if actif is True and i not in presents]
+    try:
+        presents = _plugins_presents()
+    except ValueError:
+        return None
+    return [i for i in voulus if i not in presents]
 
 
 def _plugins(clone: Path) -> None:
@@ -255,14 +289,21 @@ def _plugins(clone: Path) -> None:
 
     Entrée : clone — dépôt dunei-atelier, lu à l'application.
     Sortie : aucune ; lance claude plugin install pour chaque plugin manquant. Sans claude dans le
-        PATH, ajoute atelier-sans-claude à NOTES_APPLIQUEES.
-    Erreurs : subprocess.CalledProcessError si une commande claude échoue. Dépendances : _plugins_manquants, subprocess.
+        PATH, ajoute atelier-sans-claude à NOTES_APPLIQUEES ; tout échec (settings.json invalide, liste
+        ou installation en échec) ajoute ("atelier-plugins-echec", cause) et n'interrompt rien.
+    Erreurs : aucune. Dépendances : _plugins_voulus, _plugins_presents, shutil, subprocess.
     """
-    manquants = _plugins_manquants(clone)
-    if manquants is None:
+    if shutil.which("claude") is None:
         NOTES_APPLIQUEES.append(("atelier-sans-claude",))
-    for ident in manquants or []:
-        subprocess.run(["claude", "plugin", "install", ident], check=True)
+        return
+    try:
+        presents = _plugins_presents()
+        for ident in (i for i in _plugins_voulus(clone) if i not in presents):
+            subprocess.run(["claude", "plugin", "install", ident], check=True, capture_output=True)
+    except ValueError as e:
+        NOTES_APPLIQUEES.append(("atelier-plugins-echec", str(e)))
+    except (subprocess.CalledProcessError, OSError) as e:
+        NOTES_APPLIQUEES.append(("atelier-plugins-echec", f"claude plugin install a échoué : {e}"))
 
 
 def _lier(src: Path, dst: Path, neuf: bool) -> None:
