@@ -23,7 +23,7 @@ class ArchinstallTest(unittest.TestCase):
         self.assertTrue(c["ntp"])
         self.assertEqual(c["swap"], {"enabled": True, "algorithm": "zstd"})
         self.assertEqual(c["locale_config"], {"kb_layout": "uk", "sys_lang": "en_US", "sys_enc": "UTF-8"})
-        self.assertIn("France", c["mirror_config"]["mirror_regions"])
+        self.assertEqual(set(c["mirror_config"]["mirror_regions"]), {"France", "Germany", "Switzerland"})
         self.assertEqual(c["network_config"], {"type": "nm"})
         self.assertEqual(c["audio_config"], {"audio": "pipewire"})
         self.assertNotIn("profile_config", c)
