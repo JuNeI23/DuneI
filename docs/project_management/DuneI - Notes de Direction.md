@@ -287,7 +287,8 @@ jour tient en une commande, `dunei-maj`, qui fait lire les actualités Arch avan
 sont préchargés chaque jour, sauf sur connexion mesurée, et le cache garde trois versions (D53 à D60). La
 recette a passé sur `caladan` et dans une machine virtuelle UEFI munie d'un TPM2 simulé, validée par Nicolas
 en l'état : le chiffrement n'y a pas été exercé, et la seconde phase n'y a pas été confirmée explicitement.
-L1-03 reste ouvert sur un seul point, la racine de `caladan`, toujours en clair. Prochaine étape du lot 1 : **L1-25, le chiffrement de `caladan`** — LUKS2 posé sur place, déverrouillé par
+L1-03 reste ouvert sur un seul point, la racine de `caladan`, toujours en clair.
+Prochaine étape du lot 1 : **L1-25, le chiffrement de `caladan`** — LUKS2 posé sur place, déverrouillé par
 TPM2 et PIN, clé de secours hors de la machine, disposition `uk` dans l'initramfs —, **répété d'abord dans
 la machine virtuelle de recette** (actualité Arch sur `mkinitcpio` 42 à lire avant d'écrire) ; puis le point
 sur L1-21 et la clôture du lot par l'étiquette `lot1`. La recette avec écran externe de L1-09 reste à faire

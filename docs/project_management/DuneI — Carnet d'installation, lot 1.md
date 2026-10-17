@@ -236,7 +236,13 @@ d'installation de Claude Code, section « Binary integrity and code signing ») 
     sha256sum ~/.local/share/claude/versions/$VERSION
     grep -A3 '"linux-x64"' manifest.json          # la somme doit être celle de platforms.linux-x64.checksum
 
-Le 2026-10-16, le binaire 2.1.301 de `caladan` a été vérifié contre ce manifeste signé.
+Deux vérifications sur `caladan`. Le 2026-10-16, à la bascule vers l'installateur, le binaire 2.1.301 :
+signature GPG du manifeste valide, somme `sha256` conforme. Le 2026-10-17, le binaire 2.1.302, que la mise
+à jour automatique avait installé entre-temps : ces commandes exactement, lancées dans un `GNUPGHOME`
+temporaire, ont rendu l'empreinte attendue et « Good signature from "Anthropic Claude Code Release
+Signing" », et la somme du binaire était celle du champ `checksum` du manifeste. Ce second essai valide
+les commandes telles qu'écrites. La mise à jour automatique change la version : `VERSION` se relit à
+chaque vérification, et le manifeste se télécharge pour cette version.
 
 **Première lecture des actualités.** `informant`, installé par `make paquets`, bloque toute installation ou
 mise à jour tant qu'une actualité Arch n'est pas lue : sur `caladan`, trois restaient non lues juste
