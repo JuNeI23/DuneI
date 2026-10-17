@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # dunei-maj — mise à jour de DuneI en une commande.
 # Rôle : lire les actualités Arch, mettre le système à jour, lister les .pacnew et .pacsave, puis signaler
-#   un noyau remplacé. Rien n'est fusionné : la commande de fusion est seulement rappelée.
+#   un noyau remplacé et les changements de l'atelier non envoyés. Rien n'est fusionné : la commande de fusion est seulement rappelée.
 # Entrées : aucun argument. $DUNEI_SYSROOT préfixe /usr/lib/modules, pour les tests seulement.
 # Sortie : un message par étape sur la sortie standard ; code 0 si tout passe, sinon le code de l'étape
 #   qui échoue.
 # Erreurs : une étape échouée arrête le script avec un message sur la sortie d'erreur.
-# Dépendances : informant, pacman, pacman-contrib (pacdiff), sudo, uname.
+# Dépendances : informant, pacman, pacman-contrib (pacdiff), sudo, uname ; readlink et python3 pour le relevé de l'atelier.
 set -euo pipefail
 
 # echec — nomme l'étape échouée et sort avec le code de sa commande.
@@ -50,3 +50,15 @@ if [ -n "$sortie" ]; then
 fi
 
 [ -d "${DUNEI_SYSROOT:-}/usr/lib/modules/$(uname -r)" ] || echo "Noyau mis à jour : redémarre."
+
+# releve_atelier — affiche les écarts du clone dunei-atelier, si le dépôt DuneI contient atelier.py.
+# Entrées : aucune ; le dépôt se déduit de l'emplacement réel du script (<dépôt>/config/bin).
+# Sortie : les phrases de atelier.py --etat. Erreurs : aucune, un échec du relevé n'arrête rien.
+# Dépendances : readlink, python3.
+releve_atelier() {
+  local script repo
+  script=$(readlink -f "$0") || return 0
+  repo=${script%/config/bin/*}
+  [ ! -f "$repo/atelier.py" ] || python3 "$repo/atelier.py" --etat || true
+}
+releve_atelier

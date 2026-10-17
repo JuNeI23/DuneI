@@ -27,6 +27,8 @@ Le reste se lit seulement au besoin.
   puis tu appliques la procédure après fusion du carnet (D32). Jamais `--delete-branch` : il bascule
   l'arbre local sur l'ancien main avant de le tirer.
 - make install refuse les arbres git secondaires : travailler dans ~/DuneI.
+- Atelier (L1-26) : ~/dunei-atelier, dépôt privé, porte mes réglages, instructions et mémoire ; tout
+  changement y est validé et envoyé aussitôt (D64). rtk est épinglé dans atelier.toml.
 - Aperçus : .superpowers/preview/, ouverts dans un Firefox isolé et capturés avec grim ;
   jamais firefox --headless pour juger une police.
 

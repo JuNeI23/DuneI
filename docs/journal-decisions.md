@@ -1166,3 +1166,96 @@ Raison : un portable qui change de réseau doit refuser l'entrant par défaut ; 
 exactement cela, rien n'est à écrire aujourd'hui.
 
 *Touché : paquets.toml.*
+
+### D61 · `caladan` réinstallé plutôt que chiffré sur place
+
+Le chiffrement de `caladan` (L1-25) passe par une réinstallation complète selon la procédure, et non plus
+par un chiffrement de la racine sur place (révise D53). Rien sur `caladan` n'est irremplaçable : les
+fichiers de Nicolas vivent sur une autre machine, ses mots de passe dans Bitwarden, et les documents de
+`~/Documents` et `~/Downloads` sont copiés par lui sur Google Drive avant l'effacement. La raison de D53,
+ne pas risquer la machine de développement avant que la procédure soit prouvée, est tombée avec la recette
+en machine virtuelle (D59).
+
+Le relevé de ce qui vit hors du dépôt, fait avant de décider, a trouvé deux manques : l'atelier de
+développement par IA, absent de la procédure, devient L1-26 et passe avant ; des services installés mais
+jamais activés par la procédure (`ufw`, `power-profiles-daemon`, `bluetooth`, `cups`, `fstrim.timer`), et
+le `PATH`, sont ajoutés à L1-25.
+
+Raison : réinstaller fait de `caladan` la recette grandeur nature de la procédure, chiffrement compris ; le
+chemin sur place n'aurait produit qu'une procédure à usage unique.
+
+*Touché : backlog (L1-25, L1-26), spec 2026-10-17-outillage-ia.*
+
+### D62 · L'atelier tient en deux dépôts, relié par des liens
+
+L'atelier de développement par IA (L1-26) est reproduit à l'identique, sans amélioration : Nicolas n'a pas
+encore de vision sur ce qui serait à améliorer, et L3-26 recueille les irritants. Le dépôt public DuneI
+porte la façon de le poser (`atelier.toml`, `atelier.py`, destinations `rtk` et `atelier` de
+`make install`). Un dépôt **privé**, `JuNeI23/dunei-atelier`, cloné dans `~/dunei-atelier`, porte les
+réglages et les instructions de Claude Code, les réglages de rtk, la mémoire de Claude et l'identité git.
+Secrets, historique et sessions ne quittent jamais la machine.
+
+Les fichiers sont reliés par liens symboliques. Le risque principal, Claude Code remplaçant le lien en
+réécrivant `settings.json`, a été mesuré sur `caladan` : `/config` écrit **à travers** le lien. Claude Code
+réordonne en revanche les clés de `settings.json` à son premier lancement et à l'installation d'un plugin :
+la différence apparaît dans le clone et se valide une fois. La mémoire est désignée par
+`autoMemoryDirectory` dans `.claude/settings.json` **du projet** DuneI, pour ne pas mêler les mémoires
+d'autres projets ; ce réglage cesserait d'agir si `blockReadsOutsideWorkingDirectories` était activé un
+jour. `~/.gitconfig` n'est pas lié mais inclut le fichier de l'atelier : `gh auth login` y écrit ses
+propres lignes avant `make install`.
+
+`make install` ne perd jamais un fichier : un fichier différent est mis de côté sous `<nom>.avant-dunei`
+(installation neuve) ou repris dans le clone (lien remplacé), une modification non validée du clone est
+elle-même mise de côté, et un souci de l'atelier (`gh` non connecté, clone en échec, dossier
+`~/dunei-atelier` qui n'est pas un dépôt git, plugin en échec) devient une note : l'atelier ne bloque
+jamais la pose du bureau.
+
+Raison : ce qui est poussé sur un dépôt public y reste dans l'historique, et la mémoire grandira ; le
+forfait gratuit de GitHub couvre les dépôts privés.
+
+*Touché : atelier.toml, atelier.py, deploy.py, Makefile, .claude/settings.json, .gitignore, tests, carnet.*
+
+### D63 · rtk épinglé par DuneI
+
+rtk n'est dans aucun dépôt officiel et D56 exclut l'AUR. Ses publications ne sont ni signées ni attestées ;
+seule existe une liste `checksums.txt` hébergée avec les archives. DuneI épingle donc la version (1.0.1,
+édition par défaut, celle en usage), la somme de l'archive et celle du binaire dans `atelier.toml`.
+L'archive est téléchargée et vérifiée **pendant l'inspection** : une somme fausse refuse tout
+`make install`, sans rien poser. Le binaire est vérifié de nouveau avant sa pose atomique. rtk ne se met pas
+à jour seul : Claude monte la version par un commit. `rtk init` n'est jamais lancé. Écartés : le script
+officiel (version variable, vérification contre une liste de même origine) et `cargo` (chaîne Rust lourde).
+
+Raison : un tiers qui compromettrait la publication devrait aussi modifier le dépôt DuneI.
+
+*Touché : atelier.toml, atelier.py.*
+
+### D64 · Claude envoie les changements de l'atelier ; plugins depuis `enabledPlugins`
+
+Toute modification d'un fichier de l'atelier, mémoire comprise, est validée et envoyée aussitôt sur `main`
+de `dunei-atelier` par Claude, sans branche ni PR, avec sa ligne `Co-Authored-By`. La règle est écrite dans
+le `CLAUDE.md` global de l'atelier, seul ajout fait à l'atelier par L1-26. `make install` et `dunei-maj`
+signalent ce qui serait resté sur la machine ; ils n'envoient jamais rien.
+
+Les plugins se lisent dans `enabledPlugins` du `settings.json` de l'atelier, sans version épinglée. La
+recette en machine virtuelle a montré que le marché `claude-plugins-official` n'est enregistré qu'au premier
+lancement interactif de Claude Code : il est déclaré dans `extraKnownMarketplaces`, et `make install` le
+déclare (`claude plugin marketplace add`) avant d'installer ses plugins. Les appels réseau de l'application
+ont un délai de 300 s ; un plugin en échec n'empêche pas les suivants.
+
+Raison : « tu gères cela » (Nicolas) ; une seule source pour la liste des plugins.
+
+*Touché : dunei-atelier (claude/CLAUDE.md, claude/settings.json), atelier.py, config/bin/dunei-maj.*
+
+### D65 · La machine de recette se pilote par QMP
+
+`setup/vm.sh` ouvre un canal de contrôle QMP (`~/.cache/dunei-vm/qmp.sock`) : Claude y tape au clavier
+(`send-key`) et lit l'écran par une capture de la fenêtre QEMU (grim), sans rien installer dans la machine
+virtuelle. Avec l'affichage accéléré (`virtio-vga-gl`), la capture native de QMP (`screendump`) échoue dès
+que l'invité passe en mode graphique (« no surface ») ; elle reste utile en console, donc pour l'invite du
+PIN de L1-25. Les raccourcis à `SUPER` vont à l'Hyprland de `caladan` tant que la fenêtre n'a pas capturé
+le clavier (Ctrl + Alt + G).
+
+Raison : une recette fidèle ne modifie pas la machine qu'elle teste ; SSH aurait demandé `sshd` dans
+l'invité et n'existe pas avant le déverrouillage du disque.
+
+*Touché : setup/vm.sh, carnet.*

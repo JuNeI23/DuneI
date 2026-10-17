@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas — révisée le 17 octobre 2026
 
-Version 1.14. Historique en fin de document.
+Version 1.15. Historique en fin de document.
 
 *Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent quarante-cinq lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
 
@@ -288,11 +288,25 @@ sont préchargés chaque jour, sauf sur connexion mesurée, et le cache garde tr
 recette a passé sur `caladan` et dans une machine virtuelle UEFI munie d'un TPM2 simulé, validée par Nicolas
 en l'état : le chiffrement n'y a pas été exercé, et la seconde phase n'y a pas été confirmée explicitement.
 L1-03 reste ouvert sur un seul point, la racine de `caladan`, toujours en clair.
-Prochaine étape du lot 1 : **L1-25, le chiffrement de `caladan`** — LUKS2 posé sur place, déverrouillé par
-TPM2 et PIN, clé de secours hors de la machine, disposition `uk` dans l'initramfs —, **répété d'abord dans
-la machine virtuelle de recette** (actualité Arch sur `mkinitcpio` 42 à lire avant d'écrire) ; puis le point
-sur L1-21 et la clôture du lot par l'étiquette `lot1`. La recette avec écran externe de L1-09 reste à faire
-dès qu'un écran est disponible.
+
+**Atelier de développement par IA — 17 octobre 2026.** L'atelier qui construit DuneI se réinstalle désormais
+avec le reste (L1-26) : `make install` pose rtk, épinglé et vérifié contre deux sommes, et relie à leur place
+les réglages et les instructions de Claude Code, les réglages de rtk, la mémoire de Claude et l'identité git,
+tirés d'un dépôt **privé**, `dunei-atelier` ; les plugins se posent depuis la liste des plugins activés.
+Claude envoie lui-même chaque changement de l'atelier, et `make install` comme `dunei-maj` signalent ce qui
+serait resté sur la machine. Un souci de l'atelier ne bloque jamais la pose du bureau, et aucun fichier
+n'est perdu : il est mis de côté ou repris dans le clone. Recette sur `caladan` (liens, mémoire relue par
+une nouvelle session, `/config` qui écrit à travers le lien) et dans la machine virtuelle, que Claude pilote
+désormais par QMP ; elle a trouvé et fait corriger un défaut, le marché des plugins inconnu d'une
+installation neuve (D62 à D65). La décision qui précède : `caladan` sera **réinstallé** selon la procédure
+plutôt que chiffré sur place, rien n'y étant irremplaçable (D61).
+Prochaine étape du lot 1 : **L1-25, la réinstallation chiffrée de `caladan`**. D'abord les écarts de
+procédure relevés le 17 octobre : services installés mais jamais activés (`ufw` en tête, puis
+`power-profiles-daemon`, `bluetooth`, `cups`, `fstrim.timer`) et `PATH` écrit plutôt que signalé ; puis le
+chiffrement (LUKS2, TPM2 et PIN, clé de secours hors de la machine, disposition `uk` dans l'initramfs,
+actualité Arch sur `mkinitcpio` 42 à lire avant d'écrire), **répété de l'ISO à la session dans la machine
+virtuelle**, avant d'effacer `caladan`. Ensuite le point sur L1-21 et la clôture du lot par l'étiquette
+`lot1`. La recette avec écran externe de L1-09 reste à faire dès qu'un écran est disponible.
 
 ## Plan de lecture
 
@@ -311,6 +325,7 @@ dès qu'un écran est disponible.
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-10 | Version initiale |
+| 1.15 | 2026-10-17 | Atelier de développement par IA fait (L1-26) : rtk épinglé, dépôt privé `dunei-atelier`, mémoire, plugins, envoi par Claude, machine virtuelle pilotée par QMP ; `caladan` réinstallé plutôt que chiffré sur place ; prochaine étape : L1-25, écarts de procédure puis réinstallation chiffrée répétée en machine virtuelle (D61 à D65) |
 | 1.14 | 2026-10-17 | Installation rejouable faite (L1-02 à L1-06, L1-03 sauf le chiffrement) : deux phases, `paquets.toml`, `dunei-maj`, recette sur `caladan` et en machine virtuelle ; backlog à 145 éléments ; prochaine étape : L1-25, chiffrement de `caladan` répété d'abord en machine virtuelle, puis L1-21 et l'étiquette `lot1` (D53 à D60) |
 | 1.13 | 2026-10-16 | Terminal fait (L1-18) : kitty conservé, instance unique, pager installé ; prochaine étape : L1-02 (D52) |
 | 1.12 | 2026-10-16 | Session et démarrage faits (L1-10) : greetd, liste blanche, verrou initial, recette passée, SDDM retiré ; prochaine étape : L1-18 (D49 à D51) |

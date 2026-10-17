@@ -1,0 +1,19 @@
+# Atelier de développement — rtk épinglé et carte des liens de dunei-atelier (spec 2026-10-17).
+[rtk]
+version = "1.0.1"
+archive = "rtk-x86_64-unknown-linux-musl.tar.gz"
+url = "https://github.com/rtk-ai/rtk/releases/download/v1.0.1/rtk-x86_64-unknown-linux-musl.tar.gz"
+sha256_archive = "5b919c3bccb799b67a61866d0e617410a4fcdf173e2614440e59de2fa2003436"
+sha256_binaire = "2e7508fe33f5fa336df8784158fafffa9bca09d060de22f7b4c6246ede96c4c4"
+
+[atelier]
+depot = "JuNeI23/dunei-atelier"
+clone = "~/dunei-atelier"
+gitconfig = "git/gitconfig"           # inclus par ~/.gitconfig, jamais lié
+
+[atelier.liens]                       # chemin dans le clone → destination
+"claude/settings.json" = "~/.claude/settings.json"
+"claude/CLAUDE.md" = "~/.claude/CLAUDE.md"
+"claude/RTK.md" = "~/.claude/RTK.md"
+"maison/CLAUDE.md" = "~/CLAUDE.md"
+"rtk/config.toml" = "~/.config/rtk/config.toml"

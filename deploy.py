@@ -3,8 +3,9 @@
 
 Chaque destination de DESTINATIONS planifie ses propres actions ; toutes sont inspectées avant la
 moindre modification, et une seule erreur suffit à tout refuser. config/ est déployé par lien
-symbolique et generated/ par copie atomique. Le script n'écrase jamais un fichier qu'il n'a pas
-posé lui-même.
+symbolique et generated/ par copie atomique. Le script n'écrase jamais un fichier sans le garder,
+sauf rtk, qui appartient à DuneI : un rtk d'une autre version est remplacé (annoncé), un fichier occupant une destination de l'atelier est
+mis de côté sous le nom .avant-dunei, et un lien remplacé par un fichier est repris dans le clone.
 
 - hypr : au premier passage, une configuration générique existante est conservée sous le nom
   generique.lua, puis remplacée de façon atomique par le point d'entrée DuneI. Hyprland recharge seul.
@@ -18,6 +19,11 @@ posé lui-même.
   Un fichier non exécutable, ou un fichier ou lien étranger à sa place, est refusé.
 - maj : checkupdates, paccache, pacdiff, informant et fakeroot doivent être installés ; le minuteur
   dunei-precharge.timer, copié par la destination systeme, est activé et démarré avec sudo s'il ne l'est pas.
+- rtk : l'archive épinglée par atelier.toml est téléchargée et vérifiée pendant l'inspection ; le binaire
+  est posé de façon atomique dans $XDG_BIN_HOME. Une somme fausse refuse tout.
+- atelier : le dépôt privé dunei-atelier est cloné avec gh, ses plugins Claude Code sont installés, puis
+  ses fichiers sont liés sous le dossier personnel ; sans gh, sans accès ou sans clone possible, la
+  destination est sautée avec une note.
 - services : hyprlock doit être installé ; les unités et surcharges de config/systemd/user/ sont
   copiées, l'autostart XDG d'uwsm est masqué (liste blanche de session.toml) ; chaque service de la
   liste est activé, démarré, ou redémarré si sa configuration change (daemon-reload d'abord). Un
@@ -45,6 +51,9 @@ import tempfile
 import tomllib
 from collections.abc import Mapping
 from pathlib import Path
+
+import atelier
+from atelier import bin_home
 
 REPO = Path(__file__).resolve().parent
 ENTRY = "config/hypr/hyprland.lua"            # Point d'entrée, lié sous hypr/hyprland.lua.
@@ -92,16 +101,6 @@ def config_home(env: Mapping[str, str]) -> Path:
     Erreurs : aucune. Dépendances : aucune.
     """
     return Path(env.get("XDG_CONFIG_HOME") or Path(env.get("HOME") or os.path.expanduser("~")) / ".config")
-
-
-def bin_home(env: Mapping[str, str]) -> Path:
-    """Dossier des exécutables de l'utilisateur.
-
-    Entrée : env — environnement, os.environ en usage normal.
-    Sortie : $XDG_BIN_HOME, ou $HOME/.local/bin si la variable est absente ou vide.
-    Erreurs : aucune. Dépendances : aucune.
-    """
-    return Path(env.get("XDG_BIN_HOME") or Path(env.get("HOME") or os.path.expanduser("~")) / ".local" / "bin")
 
 
 def system_root(env: Mapping[str, str]) -> Path:
@@ -463,9 +462,9 @@ def plan_services(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
     return actions, err
 
 
-NOTES = ("hors-liste", "chemin")  # Signalements affichés après le bilan : ils n'agissent pas et ne bloquent pas.
+NOTES = ("hors-liste", "chemin", "rtk-remplace", "atelier-saute", "atelier-sans-claude", "atelier-plugins-echec")  # Signalements affichés après le bilan : ils n'agissent pas et ne bloquent pas.
 DESTINATIONS = {"hypr": plan_hypr, "fontconfig": plan_fontconfig, "applis": plan_applis,
-                "bin": plan_bin, "services": plan_services, "systeme": plan_systeme, "maj": plan_maj,
+                "bin": plan_bin, "rtk": atelier.plan_rtk, "atelier": atelier.plan_atelier, "services": plan_services, "systeme": plan_systeme, "maj": plan_maj,
                 "connexion": plan_connexion}  # Nom → planification, dans l'ordre d'exécution (sudo en dernier).
 
 
@@ -512,6 +511,18 @@ def describe(action: tuple) -> str:
         "enable": "activer et démarrer {0}",
         "restart": "redémarrer {0}",
         "chemin": "{0} ne figure pas dans le PATH : ajouter ce dossier au PATH de ton shell pour joindre dunei-maj",
+        "rtk-pose": "poser rtk (archive {0}) dans {2}",
+        "rtk-remplace": "{0} contient déjà un autre rtk ; remplacé par la version épinglée {1}",
+        "atelier-saute": "atelier non posé : {0}",
+        "atelier-clone": "cloner {0} dans {1}",
+        "atelier-plugins": "déclarer les marchés puis installer les plugins Claude Code de {0}/claude/settings.json",
+        "atelier-include": "inclure {0} dans ~/.gitconfig",
+        "atelier-sans-claude": "claude est absent du PATH : les plugins ne sont pas installés ; installer Claude Code puis relancer make install",
+        "atelier-plugins-echec": "plugins Claude Code non installés ({0}) : lancer claude plugin install pour chaque plugin de enabledPlugins, puis relancer make install",
+        "atelier-lien": "lier {1} à {0}",
+        "atelier-repris": "{0} avait remplacé son lien : son contenu est repris dans le clone (git status le montre) et le lien est remis",
+        "atelier-repris-garde": "{0} avait une modification non validée dans le clone : conservée sous le nom {1} avant la reprise",
+        "atelier-garde": "{0} existait déjà : conservé sous le nom {1}, remplacé par le lien de l'atelier",
         "hors-liste": "{0} est accroché à la session sans figurer dans session.toml ; laissé en place",
     }[kind].format(*args)
 
@@ -566,6 +577,8 @@ def apply(actions: list[tuple]) -> None:
             subprocess.run(["systemctl", "--user", kind, args[0]], check=True)
         elif kind == "daemon-reload":
             subprocess.run(["systemctl", "--user", "daemon-reload"], check=True)
+        elif kind not in NOTES and not atelier.appliquer((kind, *args)):
+            raise OSError(f"action inconnue : {kind}")
 
 
 def main() -> int:
@@ -574,7 +587,7 @@ def main() -> int:
     Entrée : argument de ligne de commande --dry-run.
     Sortie : code de retour 0 si succès, 1 si la destination est douteuse ou si une opération échoue.
     Erreurs : messages sur la sortie d'erreur ; en cas de refus, rien n'est modifié.
-    Dépendances : config_home, plan, describe, apply.
+    Dépendances : config_home, plan, describe, apply, atelier.
     """
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--dry-run", action="store_true", help="affiche les actions prévues sans les effectuer")
@@ -593,6 +606,8 @@ def main() -> int:
             apply(actions)
         except (OSError, subprocess.CalledProcessError) as e:
             print(f"déploiement interrompu : {e}", file=sys.stderr)
+            for a in atelier.NOTES_APPLIQUEES:
+                print(f"  attention : {describe(a)}", file=sys.stderr)
             if isinstance(e, subprocess.CalledProcessError) and e.cmd[0] == "sudo":
                 print("La configuration utilisateur est installée ; seuls les fichiers système restent à poser : "
                       "relancer make install dans un terminal.", file=sys.stderr)
@@ -602,8 +617,10 @@ def main() -> int:
     for a in actions:
         print(f"  {'prévu' if args.dry_run else 'fait'} : {describe(a)}")
     print(f"\n{home} : {len(actions)} action(s) {'prévue(s)' if args.dry_run else 'effectuée(s)'}.")
-    for a in notes:
+    for a in notes + atelier.NOTES_APPLIQUEES:
         print(f"  attention : {describe(a)}")
+    for ligne in atelier.etat_atelier(REPO):
+        print(f"  atelier : {ligne}")
     if any(a[0] == "switch" for a in actions):
         # Hyprland surveille le fichier générique lui-même, qui survit sous un autre nom : la bascule
         # ne déclenche donc pas le rechargement automatique. Les passages suivants le déclenchent.

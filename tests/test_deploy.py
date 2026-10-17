@@ -1,11 +1,13 @@
 """Déploiement — deploy.py dans un dossier de configuration temporaire, jamais dans celui de la session."""
 
 import contextlib
+import hashlib
 import io
 import os
 import pwd
 import subprocess
 import sys
+import tarfile
 import tempfile
 import unittest
 from pathlib import Path
@@ -19,13 +21,14 @@ GENERIC = "-- Configuration générique de test.\n"
 FOREIGN = "<?xml version=\"1.0\"?>\n<fontconfig/>\n"
 # Faux sudo et faux systemctl : chaque appel est consigné dans $FAKE_LOG. sudo exécute la commande telle
 # quelle, sauf si $FAKE_SUDO_FAIL est posé ; systemctl répond à is-enabled par $FAKE_ENABLED et à
-# is-active par $FAKE_ACTIVE (« active » par défaut). hyprlock, greetd, tuigreet, kitty, checkupdates,
+# is-active par $FAKE_ACTIVE (« active » par défaut). gh (non connecté), hyprlock, greetd, tuigreet, kitty, checkupdates,
 # paccache, pacdiff et informant sont de faux exécutables vides.
 FAKES = {
     "sudo": '#!/bin/sh\necho "sudo $*" >> "$FAKE_LOG"\n[ -z "$FAKE_SUDO_FAIL" ] || exit 1\nexec "$@"\n',
     "systemctl": ('#!/bin/sh\necho "systemctl $*" >> "$FAKE_LOG"\n'
                   'case "$*" in *is-enabled*) echo "$FAKE_ENABLED"; [ "$FAKE_ENABLED" = enabled ] ;;\n'
                   '*is-active*) [ "${FAKE_ACTIVE:-active}" = active ] ;; esac\n'),
+    "gh": "#!/bin/sh\nexit 1\n",  # Non connecté : la destination atelier se contente de sa note.
     "hyprlock": "#!/bin/sh\n",
     "greetd": "#!/bin/sh\n",
     "tuigreet": "#!/bin/sh\n",
@@ -44,9 +47,36 @@ DM = Path("etc/systemd/system/display-manager.service")
 OLD_OWN = "<?xml version=\"1.0\"?>\n<!-- GÉNÉRÉ depuis tokens.toml — NE PAS MODIFIER À LA MAIN -->\n<fontconfig/>\n"
 
 
+def faux_atelier(t: Path, somme_archive: str | None = None) -> Path:
+    """Prépare un atelier de test : archive rtk factice, atelier.toml pointant dessus par file://.
+
+    Entrées : t — dossier temporaire ; somme_archive — somme épinglée, celle de l'archive si absente.
+    Sortie : chemin du atelier.toml. Le binaire factice est déjà posé dans t/local-bin avec la somme
+    épinglée : par défaut, aucun test n'agit sur rtk. Erreurs : OSError. Dépendances : tarfile, hashlib.
+    """
+    binaire, archive, toml = b"#!/bin/sh\n", t / "source" / "rtk-test.tar.gz", t / "atelier.toml"
+    archive.parent.mkdir(parents=True, exist_ok=True)
+    with tarfile.open(archive, "w:gz") as tar:
+        info = tarfile.TarInfo("rtk")
+        info.size = len(binaire)
+        tar.addfile(info, io.BytesIO(binaire))
+    somme = lambda b: hashlib.sha256(b).hexdigest()
+    toml.write_text(
+        f'[rtk]\nversion = "9.9.9"\narchive = "rtk-test.tar.gz"\nurl = "file://{archive}"\n'
+        f'sha256_archive = "{somme_archive or somme(archive.read_bytes())}"\nsha256_binaire = "{somme(binaire)}"\n'
+        '[atelier]\ndepot = "x/y"\nclone = "~/c"\ngitconfig = "g"\n[atelier.liens]\n"a" = "~/a"\n', encoding="utf-8")
+    (t / "local-bin").mkdir(exist_ok=True)
+    (t / "local-bin" / "rtk").write_bytes(binaire)
+    return toml
+
+
 def run(cfg: Path, *args: str) -> subprocess.CompletedProcess:
-    """Lance deploy.py avec XDG_CONFIG_HOME et XDG_BIN_HOME pointant sur des dossiers temporaires."""
-    env = {**os.environ, "XDG_CONFIG_HOME": str(cfg), "XDG_BIN_HOME": str(cfg.parent / "local-bin")}
+    """Lance deploy.py avec des dossiers temporaires : XDG_CONFIG_HOME, XDG_BIN_HOME, XDG_CACHE_HOME, HOME,
+    GIT_CONFIG_GLOBAL et GIT_CONFIG_SYSTEM (git ignore la configuration réelle) et un atelier.toml de test (DUNEI_ATELIER_TOML) — ni le réseau ni le vrai ~ ne sont touchés."""
+    t = cfg.parent
+    env = {**os.environ, "XDG_CONFIG_HOME": str(cfg), "XDG_BIN_HOME": str(t / "local-bin"),
+           "XDG_CACHE_HOME": str(t / "cache"), "HOME": str(t / "home"), "DUNEI_ATELIER_TOML": str(t / "atelier.toml"),
+           "GIT_CONFIG_GLOBAL": "/dev/null", "GIT_CONFIG_SYSTEM": "/dev/null"}
     return subprocess.run([sys.executable, str(ROOT / "deploy.py"), *args],
                           capture_output=True, text=True, cwd=ROOT, env=env)
 
@@ -79,7 +109,10 @@ class DeployTest(unittest.TestCase):
             (fake / name).write_text(body, encoding="utf-8")
             (fake / name).chmod(0o755)
         self.fake = fake
+        faux_atelier(t)
         self.env = mock.patch.dict(os.environ, {"DUNEI_SYSROOT": str(self.root), "XDG_BIN_HOME": str(self.bin), "FAKE_LOG": str(self.log),
+                                                "XDG_CACHE_HOME": str(t / "cache"), "HOME": str(t / "home"),
+                                                "DUNEI_ATELIER_TOML": str(t / "atelier.toml"),
                                                 "FAKE_ENABLED": "enabled", "PATH": f"{fake}:{os.environ['PATH']}"})
         self.env.start()
         (self.root / DM).parent.mkdir(parents=True)
@@ -157,7 +190,7 @@ class DeployTest(unittest.TestCase):
         res = run(self.cfg)
         self.assertEqual(res.returncode, 0, res.stderr)
         self.assertEqual(snapshot(self.cfg), before)
-        self.assertNotIn("lier", res.stdout)
+        self.assertNotIn("fait : lier", res.stdout)
 
     def test_leftover_temporary_link(self):
         self.generic_machine()
@@ -378,7 +411,7 @@ class DeployTest(unittest.TestCase):
         self.assertEqual(os.readlink(self.bin / "dunei-maj"), str(ROOT / "config" / "bin" / "dunei-maj"))
 
     def test_bin_fichier_etranger_refuse(self):
-        self.bin.mkdir()
+        self.bin.mkdir(exist_ok=True)
         (self.bin / "dunei-maj").write_text("#!/bin/sh\n", encoding="utf-8")
         before = snapshot(self.bin)
         res = run(self.cfg)
@@ -608,6 +641,42 @@ class DeployTest(unittest.TestCase):
         self.assertEqual(res.returncode, 1)
         self.assertIn("display-manager.service", res.stderr)
         self.assertFalse([l for l in self.journal() if l.startswith("sudo")])
+
+    def test_install_pose_rtk(self):
+        (self.bin / "rtk").unlink()
+        res = run(self.cfg)
+        self.assertEqual(res.returncode, 0, res.stderr)
+        self.assertTrue(os.access(self.bin / "rtk", os.X_OK))
+
+    def test_install_refuse_archive_fausse(self):
+        faux_atelier(Path(self.tmp.name), somme_archive="0" * 64)
+        (self.bin / "rtk").unlink()
+        before = snapshot(self.cfg)
+        res = run(self.cfg)
+        self.assertEqual(res.returncode, 1, res.stdout)
+        self.assertIn("rien n'a été modifié", res.stderr)
+        self.assertFalse((self.bin / "rtk").exists())
+        self.assertEqual(snapshot(self.cfg), before)
+
+    def test_ligne_atelier_du_bilan(self):
+        sortie = io.StringIO()
+        with mock.patch.dict(os.environ, {"XDG_CONFIG_HOME": str(self.cfg)}), \
+                mock.patch.object(sys, "argv", ["deploy.py", "--dry-run"]), \
+                mock.patch.object(deploy.atelier, "etat_atelier", return_value=["2 fichier(s) à envoyer"]), \
+                contextlib.redirect_stdout(sortie):
+            self.assertEqual(deploy.main(), 0)
+        self.assertIn("  atelier : 2 fichier(s) à envoyer", sortie.getvalue())
+
+    def test_interruption_affiche_les_notes_appliquees(self):
+        erreur = io.StringIO()
+        deploy.atelier.NOTES_APPLIQUEES[:] = [("atelier-repris", Path("/x/y"))]
+        self.addCleanup(deploy.atelier.NOTES_APPLIQUEES.clear)
+        with mock.patch.dict(os.environ, {"XDG_CONFIG_HOME": str(self.cfg)}), \
+                mock.patch.object(sys, "argv", ["deploy.py"]), \
+                mock.patch.object(deploy, "apply", side_effect=OSError("disque plein")), \
+                contextlib.redirect_stderr(erreur):
+            self.assertEqual(deploy.main(), 1)
+        self.assertIn("/x/y", erreur.getvalue())
 
     def test_refuses_root(self):
         with mock.patch("os.getuid", return_value=0):

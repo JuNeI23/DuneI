@@ -2,9 +2,9 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.15. Historique en fin de document.
+Version 1.16. Historique en fin de document.
 
-La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **145 éléments** répartis en **cinq lots**, sur six chantiers.
+La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **147 éléments** répartis en **cinq lots**, sur six chantiers.
 
 Ce document dit ce qui est attendu, dans quel ordre, et à quelle condition c'est terminé. Il ne dit pas à quoi ça ressemble — c'est le rôle de la bible de design. En cas de contradiction : la bible l'emporte sur l'apparence, ce document l'emporte sur le périmètre.
 
@@ -246,7 +246,8 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L1-22 | C | Écrit | Mettre `generate_tokens.py` et `extract_hue.py` en conformité avec la bible — écarts consignés au journal — **fait (D11)** |
 | L1-23 | C | Écrit | Concevoir et écrire `motion.toml` et `generate_motion.py` — **fait (D14 à D20)** : paquet `dunei_motion/`, cibles Lua et JSON, contrôles bloquants, `make motion` |
 | L1-24 | C | Écrit | Cible Hyprland en Lua pour les deux générateurs — **fait** : `hyprland-tokens.lua` et `motion.lua`, branchés dans la session par le point d'entrée `config/hypr/hyprland.lua` et `make install` (D21) |
-| L1-25 | A | Configuré | Chiffrement de `caladan` (écart de L1-03, D53) : LUKS2 posé sur place sur la racine, déverrouillé par TPM2 et PIN, puce liée à aucun état d'amorçage ; clé de secours conservée hors de la machine ; disposition `uk` chargée dans l'initramfs avant l'invite du PIN ; initramfs à `systemd` (`sd-encrypt`) ; répété d'abord dans la machine virtuelle de recette (`setup/vm.sh`), où le chiffrement n'a pas encore été exercé ; lire avant d'écrire l'actualité Arch du 22 septembre 2026, « Mkinitcpio >=42 requires manual intervention for TPM2-based unlocking of LUKS devices » |
+| L1-25 | A | Configuré | Chiffrement de `caladan` (écart de L1-03, D53) par **réinstallation complète selon la procédure** (D61), et non plus sur place : LUKS2 sur la racine, déverrouillé par TPM2 et PIN, puce liée à aucun état d'amorçage ; clé de secours conservée hors de la machine ; disposition `uk` chargée dans l'initramfs avant l'invite du PIN ; initramfs à `systemd` (`sd-encrypt`) ; écarts de la procédure relevés le 2026-10-17 à corriger d'abord : services installés mais jamais activés (`ufw`, avec `ufw enable`, `power-profiles-daemon`, `bluetooth`, `cups`, `fstrim.timer`), `PATH` écrit au lieu d'être signalé ; procédure complète répétée d'abord dans la machine virtuelle de recette (`setup/vm.sh`), de l'ISO à la session ; lire avant d'écrire l'actualité Arch du 22 septembre 2026, « Mkinitcpio >=42 requires manual intervention for TPM2-based unlocking of LUKS devices » |
+| L1-26 | A | Écrit | Outillage de développement par IA — **fait (D61 à D65)** : `atelier.toml` ; rtk épinglé (1.0.1), téléchargé et vérifié contre deux sommes `sha256` ; dépôt privé `JuNeI23/dunei-atelier` cloné dans `~/dunei-atelier` et relié par `make install` (réglages et instructions de Claude Code, réglages de rtk, mémoire de Claude par `autoMemoryDirectory`, identité git par inclusion) ; plugins installés depuis `enabledPlugins`, leur marché déclaré par `extraKnownMarketplaces` ; changements non envoyés signalés par `make install` et `dunei-maj` ; recette sur `caladan` et en machine virtuelle |
 
 ### Lot 2 — coque vitale
 
@@ -320,6 +321,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L3-23 | E | Configuré | Environnement de développement |
 | L3-24 | E | Configuré | Impression — outil tiers assumé visible |
 | L3-25 | E | Écrit | Recenser les applications de palier D et leur traitement |
+| L3-26 | A | Configuré | Améliorer l'atelier de développement par IA (L1-26) au fil des irritants relevés à l'usage ; premier constat : `~/CLAUDE.md` double `~/.claude/RTK.md` |
 
 ## Backlog — lots 4 et 5
 
@@ -390,7 +392,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L5-29 | — | Écrit | Passe de regard complète — étage 3 |
 | L5-30 | — | Écrit | Résorber les points ouverts de l'annexe C |
 
-**Volume total : 145 éléments** — 99 écrits, 39 configurés, 5 offerts, 2 mixtes.
+**Volume total : 147 éléments** — 100 écrits, 40 configurés, 5 offerts, 2 mixtes.
 
 Les deux tiers du travail sont de l'écrit, et les trois quarts de cet écrit se concentrent sur la coque et les écrans système. C'est cohérent avec la stratégie retenue, et c'est là que tout le risque se trouve.
 
@@ -484,6 +486,7 @@ Ils ne bloquent pas le démarrage. Chacun se tranche au lot indiqué, sur du ré
 | Seuils de conteneur | Lot 5 | Validation à l'usage |
 | Délais d'infobulle et de barre de défilement | Lot 5 | Validation à l'usage |
 | Opacité du voile, une fois le flou en place | Lot 5 | Calibration sur shell réel |
+| Disposition du clavier : préférence de l'utilisateur ou fait de la machine (D24) ; une machine sans fichier machine, dont la machine virtuelle de recette, retombe sur le clavier américain | Lot 1 (L1-25) | Arbitrage |
 
 Le choix de la distribution de base et du compositeur, précédemment ouverts, sont tranchés : Arch Linux et Hyprland. Voir le carnet d'installation du lot 1.
 
@@ -492,6 +495,7 @@ Le choix de la distribution de base et du compositeur, précédemment ouverts, s
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-12 | Version initiale, 137 éléments |
+| 1.16 | 2026-10-17 | L1-26 fait (D61 à D65) : atelier de développement par IA rejouable ; L1-25 réécrit : réinstallation de `caladan` au lieu du chiffrement sur place, écarts de procédure à corriger d'abord (services non activés, `PATH`) ; ajout de L3-26, améliorer l'atelier ; point ouvert sur la disposition du clavier. 147 éléments |
 | 1.15 | 2026-10-17 | L1-02 à L1-06 faits, L1-03 sauf l'écart du chiffrement (D53 à D60) ; ajout de L1-25, chiffrement de `caladan`, au lot 1, et de L2-38, avis de mises à jour prêtes dans la barre, au lot 2 ; L5-13 reçoit l'invite du PIN. 145 éléments |
 | 1.14 | 2026-10-16 | L1-18 fait (D52) : kitty conservé, instance unique, pager installé ; L3-11 note les candidats terminaux. 143 éléments |
 | 1.13 | 2026-10-16 | L1-10 fait (D49 à D51) : greetd, liste blanche du démarrage, verrou initial ; L5-12 note greetd, `dunei.toml`, la piste Quickshell et la fermeture de F2 ; L2-11, L2-24 et L2-27 notent `session.toml`. 143 éléments |
