@@ -583,7 +583,7 @@ def describe(action: tuple) -> str:
         "start": "démarrer {0}",
         "enable": "activer et démarrer {0}",
         "restart": "redémarrer {0}",
-        "chemin": "{0} ne figure pas dans le PATH : ajouter ce dossier au PATH de ton shell pour joindre dunei-maj",
+        "chemin": "{0} n'est pas encore dans le PATH de cette session : /etc/profile.d/dunei-bin.sh l'y met à la prochaine connexion",
         "rtk-pose": "poser rtk (archive {0}) dans {2}",
         "rtk-remplace": "{0} contient déjà un autre rtk ; remplacé par la version épinglée {1}",
         "atelier-saute": "atelier non posé : {0}",

@@ -425,14 +425,14 @@ class DeployTest(unittest.TestCase):
     def test_bin_hors_du_path_avertit_sans_bloquer(self):
         res = run(self.cfg, "--dry-run")
         self.assertEqual(res.returncode, 0, res.stderr)
-        self.assertIn(f"attention : {self.bin} ne figure pas dans le PATH", res.stdout)
+        self.assertIn(f"attention : {self.bin} n'est pas encore dans le PATH de cette session", res.stdout)
         self.assertIn("ajouter ce dossier au PATH", res.stdout)
 
     def test_bin_dans_le_path_sans_avertissement(self):
         with mock.patch.dict(os.environ, {"PATH": f"{self.bin}{os.pathsep}{os.environ['PATH']}"}):
             res = run(self.cfg, "--dry-run")
         self.assertEqual(res.returncode, 0, res.stderr)
-        self.assertNotIn("ne figure pas dans le PATH", res.stdout)
+        self.assertNotIn("n'est pas encore dans le PATH", res.stdout)
 
     def test_bin_non_executable_refuse(self):
         repo = Path(self.tmp.name) / "depot"
@@ -744,6 +744,22 @@ class SocleTest(unittest.TestCase):
                 self.ecrire(version, unites)
                 actions, err = self.plan(("disabled", False))
                 self.assertEqual((actions, len(err)), ([], 1))
+
+
+class ProfilBinTest(unittest.TestCase):
+    """Le fichier profile.d de DuneI ajoute ~/.local/bin au PATH, une seule fois, en fin de liste."""
+
+    def chemin(self, **env):
+        """Source deux fois dunei-bin.sh sous sh avec un environnement maîtrisé. Entrées : variables à poser en plus de HOME et PATH. Sortie : le PATH obtenu. Erreurs : échec du test si sh échoue. Dépendances : sh."""
+        script = ROOT / "systeme/etc/profile.d/dunei-bin.sh"
+        res = subprocess.run(["sh", "-c", f'. {script}; . {script}; echo "$PATH"'], capture_output=True, text=True,
+                             env={"HOME": "/h", "PATH": "/usr/bin", **env})
+        self.assertEqual(res.returncode, 0, res.stderr)
+        return res.stdout.strip()
+
+    def test_profil_bin(self):
+        self.assertEqual(self.chemin(), "/usr/bin:/h/.local/bin")
+        self.assertEqual(self.chemin(XDG_BIN_HOME="/x"), "/usr/bin:/x")
 
 
 if __name__ == "__main__":
