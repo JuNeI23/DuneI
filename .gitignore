@@ -1,4 +1,5 @@
 build/
 __pycache__/
 .superpowers/
-.claude/
+.claude/*
+!.claude/settings.json
