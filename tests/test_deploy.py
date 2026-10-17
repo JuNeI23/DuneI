@@ -426,7 +426,7 @@ class DeployTest(unittest.TestCase):
         res = run(self.cfg, "--dry-run")
         self.assertEqual(res.returncode, 0, res.stderr)
         self.assertIn(f"attention : {self.bin} n'est pas encore dans le PATH de cette session", res.stdout)
-        self.assertIn("ajouter ce dossier au PATH", res.stdout)
+        self.assertIn("dunei-bin.sh l'y met", res.stdout)
 
     def test_bin_dans_le_path_sans_avertissement(self):
         with mock.patch.dict(os.environ, {"PATH": f"{self.bin}{os.pathsep}{os.environ['PATH']}"}):
