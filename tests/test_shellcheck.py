@@ -1,4 +1,4 @@
-"""Scripts shell — chaque script de config/hypr/scripts/ passe shellcheck sans aucun avertissement."""
+"""Scripts shell — chaque script de config/hypr/scripts/, de config/bin/ et de setup/ passe shellcheck sans aucun avertissement."""
 
 import shutil
 import subprocess
@@ -7,7 +7,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 SHELLCHECK = shutil.which("shellcheck")
-SCRIPTS = sorted((ROOT / "config" / "hypr" / "scripts").iterdir())
+SCRIPTS = sorted([p for d in ("hypr/scripts", "bin") for p in (ROOT / "config" / d).iterdir()] + list((ROOT / "setup").glob("*.sh")))
 
 
 @unittest.skipUnless(SHELLCHECK, "shellcheck absent : pacman -S shellcheck")

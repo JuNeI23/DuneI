@@ -993,3 +993,176 @@ de la configuration d'origine.
 
 *Touché : config/kitty/kitty.conf, config/hypr/donnees/roles.lua, deploy.py, tests/test_deploy.py, Makefile,
 carnet, backlog, notes de direction.*
+
+## 2026-10-16 — Installation rejouable (L1-02 à L1-06)
+
+### D53 · La procédure décrit une cible ; l'écart de `caladan` est le chiffrement
+
+La procédure d'installation décrit la machine voulue, pas celle qui existe. Ce qui se corrige sans
+réinstaller a été corrigé sur `caladan` dans cette feature (dépôt tiers, paquets, mises à jour). L'écart
+restant est le chiffrement : la racine de `caladan` est en `ext4` **en clair**. Il devient la feature
+suivante (L1-25).
+
+La cible du chiffrement (L1-03) : LUKS2 sur la partition racine, déverrouillé par la puce TPM2 **et un
+PIN**, avec une clé de secours conservée hors de la machine. La puce n'est liée à **aucun état
+d'amorçage** : une mise à jour du micrologiciel ne demande jamais la clé de secours. Menace couverte : le
+vol du portable ou du SSD, machine éteinte, ce qui est l'usage de Nicolas. Non couvert : une machine
+modifiée en l'absence de son propriétaire pour capturer le PIN. Secure Boot à ses propres clés reste un
+ajout possible sans réinstaller ; le mot de passe superviseur du BIOS est écarté, son oubli coûte une carte
+mère.
+
+Le chiffrement ne défait pas D49 à D51 : le PIN déverrouille le disque, puis greetd ouvre la session, qui se
+verrouille aussitôt. Le PIN et le mot de passe du verrou sont gardés tous deux, sous réserve de
+confirmation dans la feature de chiffrement ; la limite connue de D51 n'est plus accessible sans le PIN. Deux
+conséquences : l'initramfs doit charger la disposition `uk` avant l'invite du PIN, et cette invite, écran
+texte brut, est à habiller au lot 5 (L5-13). L'actualité Arch du 22 septembre 2026, « Mkinitcpio >=42
+requires manual intervention for TPM2-based unlocking of LUKS devices », est à lire avant d'écrire la
+feature.
+
+Raison : réinstaller `caladan` pour une seule ligne de l'écart aurait mis la machine de développement en jeu
+avant que la procédure soit prouvée ; la machine virtuelle de recette répète d'abord le chiffrement.
+
+*Touché : spec 2026-10-16-installation-rejouable, carnet, backlog (L1-03, L1-25, L5-13).*
+
+### D54 · `ext4` sans instantanés, `zram` seul
+
+Le système de fichiers reste `ext4`, sans `/home` séparé et sans instantanés. Le retour arrière après une
+mauvaise mise à jour passe par le cache de `pacman`, qui garde trois versions de chaque paquet (D57), et
+par le noyau de secours `linux-lts`. Le swap est un `zram` compressé (`zstd`), sans swap sur disque ni
+hibernation.
+
+Raison : Nicolas éteint toujours sa machine ; un système d'instantanés ajouterait un outil et une politique
+de rétention pour un retour arrière que le cache et le second noyau couvrent déjà.
+
+*Touché : setup/archinstall.json, carnet.*
+
+### D55 · Amorçage ratifié
+
+L'existant de `caladan` devient la cible (L1-04) : systemd-boot, images unifiées (UKI) produites par
+`mkinitcpio`, noyaux `linux` et `linux-lts`, microcode choisi par la détection du processeur (D58).
+`setup/archinstall.json` porte `Systemd-boot` avec `uki: true` et les deux noyaux. Le passage de
+l'initramfs à `systemd` (`sd-encrypt`) relève de la feature de chiffrement. La machine virtuelle de recette
+démarre OVMF sans Secure Boot, ce qui suffit tant que la puce n'est liée à aucun état d'amorçage (D53).
+
+Raison : l'amorçage fonctionne, il est minimal et documenté par Arch ; rien ne justifiait d'en changer.
+
+*Touché : setup/archinstall.json, setup/vm.sh, paquets.toml.*
+
+### D56 · Dépôts officiels seuls ; Claude Code par son installateur
+
+Seuls `core` et `extra` sont admis (L1-05). `chaotic-aur` est retiré de `caladan`, avec `chaotic-keyring`
+et `chaotic-mirrorlist`. L'AUR n'est admis que par exception écrite au journal, compilée avec `makepkg`,
+sans assistant tant qu'aucune exception n'existe. La liste des dépôts admis n'est écrite qu'à un endroit,
+`depots` dans `paquets.toml` : `paquets.py` n'en garde aucune copie, et le test `test_depot_reel` fige
+`["core", "extra"]`, pour qu'un ajout passe par une modification versionnée et visible. `make paquets`
+refuse de s'exécuter si un autre dépôt est configuré, en nommant la section de `/etc/pacman.conf` à retirer.
+
+Claude Code passe par l'installateur officiel d'Anthropic (`claude.ai/install.sh`), hors de `pacman`, et se
+met à jour seul. Son binaire se vérifie contre le manifeste de la version, signé par la clé de publication
+d'Anthropic (carnet, « Installation »).
+
+Raison : un dépôt tiers donne à un inconnu le droit de remplacer n'importe quel paquet du système à chaque
+mise à jour ; plus aucun paquet installé n'en provenait.
+
+*Touché : paquets.toml, paquets.py, tests/test_paquets.py, carnet.*
+
+### D57 · Mises à jour : `dunei-maj`, préchargement quotidien, cache borné
+
+Une commande met à jour, `dunei-maj` (`config/bin/`, lié dans `~/.local/bin` par `make install`) : elle
+affiche les actualités Arch non lues, lance `sudo pacman -Syu`, liste les `.pacnew` et `.pacsave` par
+`pacdiff -o` sans rien fusionner, puis signale un noyau remplacé. Aucune installation sans surveillance :
+Arch annonce parfois une intervention manuelle, et `informant` bloque toute transaction d'installation ou de
+mise à jour tant qu'une actualité n'est pas lue. La lecture se fait par **`sudo informant read`** :
+`informant` enregistre les lectures dans `/var/lib/informant.dat`, qui appartient à root, et une lecture
+sans `sudo` laisserait sa règle bloquer. Le rappel de `make paquets` après un échec de `pacman` le dit aussi.
+
+Le préchargement (`dunei-precharge.service` et `.timer`) tourne chaque jour, rattrapé au démarrage suivant,
+avec un délai aléatoire d'une heure au plus : `checkupdates -d` synchronise une base temporaire puis
+télécharge dans le cache réel, sans toucher à la base du système, donc sans mise à jour partielle possible.
+Il s'abstient si NetworkManager déclare la connexion mesurée (`Metered` vaut 1 ou 3). `checkupdates` exige
+`fakeroot` sans condition, même lancé en root, alors que `pacman-contrib` ne le déclare qu'en dépendance
+facultative : `fakeroot` entre dans `socle` et `make install` l'exige (constaté à la recette sur `caladan`).
+La règle `pacman` `dunei-cache.hook` borne le cache après chaque transaction : trois versions par paquet
+installé, aucune d'un paquet retiré. `make install` avertit, sans bloquer, quand `~/.local/bin` n'est pas
+dans le `PATH`, cas d'une machine neuve.
+
+Recette du 2026-10-16 sur `caladan` : 202,69 Mio préchargés sur un Wi-Fi ordinaire, abstention sur le
+partage de connexion du téléphone et sur une connexion forcée mesurée, `pacman -Syu` en 16 s depuis le
+cache préchargé, cache passé de 2,5 Go à 2,3 Go.
+
+Raison : une mise à jour en une commande, rapide parce que préparée, et qui ne s'exécute jamais sans que
+Nicolas ait lu ce qu'Arch annonce.
+
+*Touché : config/bin/dunei-maj, systeme/etc/pacman.d/hooks/dunei-cache.hook,
+systeme/etc/systemd/system/dunei-precharge.service, systeme/etc/systemd/system/dunei-precharge.timer,
+deploy.py, paquets.toml, paquets.py, carnet, backlog (L2-38).*
+
+### D58 · Pilotes et microcode choisis par la détection du matériel (prolonge D5)
+
+Aucun pilote n'est attaché à un nom de machine (L1-06). Le fabricant du processeur (`vendor_id` de
+`/proc/cpuinfo`) choisit le microcode ; celui de chaque carte graphique
+(`/sys/class/drm/card*/device/vendor`) choisit ses pilotes : AMD reçoit `vulkan-radeon`, Intel
+`vulkan-intel` et `intel-media-driver`, NVIDIA un avertissement, aucun pilote n'étant décidé, et une carte
+inconnue, comme celle d'une machine virtuelle, n'ajoute rien. `mesa` va dans `session`, Hyprland en a besoin
+sur tout matériel. Les pilotes X (`xf86-video-*`) ne sont plus installés nulle part. La section
+`machines.<nom-d-hôte>` de `paquets.toml`, facultative, ne garde que ce qui ne se détecte pas (pour
+`caladan` : `sof-firmware`, `alsa-utils`, `fprintd`).
+
+D5 plaçait tout ce qui dépend du matériel dans le fichier de la machine ; D58 précise la règle : on détecte
+ce qui se détecte, et le fichier de la machine ne garde que le reste.
+
+Recette sur `caladan` : les pilotes Intel, `nouveau` et X sont retirés ; la session est inchangée, le son
+sort dans Firefox sans `gst-plugin-pipewire` ni `pipewire-alsa`, et une fenêtre XWayland s'ouvre, floue à
+l'échelle 1,25 comme D25 l'accepte. Les listes Intel ne sont prouvées sur aucun matériel réel ; la
+détection l'est par les tests unitaires.
+
+Raison : une nouvelle machine reçoit les bons pilotes sans qu'on écrive une ligne, et une liste par machine
+aurait fini par porter des pilotes que personne n'avait décidés, comme sur `caladan`.
+
+*Touché : paquets.toml, paquets.py, tests/test_paquets.py, carnet.*
+
+### D59 · Forme de la procédure : `archinstall`, puis `paquets.toml` et `make paquets`
+
+L'installation tient en deux phases (L1-02). Phase 1, depuis l'ISO : `archinstall` avec une configuration
+versionnée, `setup/archinstall.json`, qui ne contient ni disque, ni chiffrement, ni nom d'hôte, ni
+utilisateur, ni secret : ils se saisissent au menu. Le fichier n'a pas de champ `version`, qu'`archinstall`
+4.5 écrit lui-même. Ses miroirs sont ceux de France, d'Allemagne et de Suisse, à la demande de Nicolas. La
+recette en machine virtuelle a montré que le menu propose le disque et le chiffrement sans `disk_config` :
+le repli prévu n'a pas servi. Phase 2, depuis le dépôt : `make paquets`, Claude Code, puis `make install`.
+Les scripts `setup/0x-*.sh` et les listes `packages/*.txt` qu'annonçait le carnet sont abandonnés au profit
+d'une source unique, `paquets.toml` : groupes `socle`, `session` et `outils`, table `provisoire` (chaque
+paquet nomme l'élément du backlog qui le remplacera), listes `materiel.*` et sections `machines.*`.
+
+`make paquets` vérifie tout avant d'agir : une seule erreur arrête tout, sans rien modifier. Il installe le
+manquant et marque l'explicite sans question, puis propose, réponse « non » par défaut, de marquer
+l'excédent requis comme dépendance et de retirer l'excédent libre et les orphelins. Trois durcissements de
+sûreté, ajoutés à l'exécution :
+
+- tout avertissement de la détection (nom d'hôte absent ou refusé, fabricant inconnu, aucune carte, carte
+  NVIDIA, machine sans section) supprime la question de retrait (`pacman -Rns`), avec un message qui le dit ;
+  le marquage comme dépendance, non destructif, reste proposé ;
+- la lecture de `paquets.toml` refuse toute clé inconnue, au premier niveau comme sous `materiel`, et une
+  table `groupes` absente ou vide : une faute de frappe (`[groupe]`) faisait proposer le retrait du noyau ;
+- un code 1 de `pacman` ne vaut « rien trouvé » que si ses deux sorties sont vides ; Ctrl-C rend le code
+  130, et un `pacman` ou un `pacman-conf` introuvable donne un message lisible et le code 1.
+
+Recette sur `caladan` : 5 paquets installés, `mesa` marqué explicite, 7 passés en dépendance, 18 retirés,
+dont `rust`, installé jadis pour compiler `rtk`, dont le binaire est statique ; 89 paquets explicites avant,
+70 après, et un second `--dry-run` au plan vide.
+
+Raison : une source unique se relit en un diff, et une procédure qui refuse plutôt que de deviner ne peut
+pas retirer par erreur ce qu'une détection incomplète n'a pas vu.
+
+*Touché : setup/archinstall.json, setup/vm.sh, paquets.toml, paquets.py, Makefile, tests/test_paquets.py,
+tests/test_archinstall.py, carnet.*
+
+### D60 · `ufw` dans le socle, règles par défaut relevées
+
+`ufw`, actif sur `caladan` sans qu'aucune décision l'ait installé, entre dans `socle`. Relevé à la recette
+(`ufw status verbose`) : actif, journalisation basse, entrant refusé, sortant permis, routage désactivé,
+aucune règle. Sa configuration sera versionnée le jour où une règle s'ajoute.
+
+Raison : un portable qui change de réseau doit refuser l'entrant par défaut ; les règles d'origine font
+exactement cela, rien n'est à écrire aujourd'hui.
+
+*Touché : paquets.toml.*

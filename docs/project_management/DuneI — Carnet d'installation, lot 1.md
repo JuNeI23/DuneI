@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.7. Historique en fin de document.
+Version 1.8. Historique en fin de document.
 
 Socle amorçable.
 
@@ -54,36 +54,42 @@ Le dépôt `DuneI` est la racine : les dossiers ci-dessous vivent à côté de `
 
 ```
 DuneI/
-├── docs/                   # bible, note de direction, backlog, carnet, journal
+├── docs/                   # bible, note de direction, backlog, carnet, journal, specs et plans
 ├── setup/
-│   ├── 00-packages.sh      # paquets de session
-│   ├── 01-services.sh      # réseau, audio, énergie
-│   ├── 02-hardware.sh      # entrée, touches, empreinte
-│   └── 03-session.sh       # gestionnaire de connexion, Hyprland, terminal
-├── packages/
-│   ├── session.txt
-│   └── laptop.txt
-├── config/
+│   ├── archinstall.json    # phase 1 : configuration d'archinstall, sans disque ni secret (L1-02)
+│   └── vm.sh               # machine virtuelle de recette : QEMU/KVM, UEFI, TPM2 simulé
+├── paquets.toml            # chaque paquet déclaré une fois : groupes, provisoires, matériel, machines
+├── paquets.py              # make paquets : aligne la machine sur paquets.toml
+├── config/                 # écrit à la main, lié par make install
+│   ├── bin/                # exécutables liés dans ~/.local/bin (dunei-maj)
 │   ├── hypr/
 │   │   ├── hyprland.lua    # point d'entrée : ne fait que des require (L1-24)
-│   │   ├── modules/        # un module par feature (input, keybinds, rules…) ; motion.lua existe déjà
+│   │   ├── modules/        # un module par feature (clavier, écrans, couvercle, démarrage…)
 │   │   ├── donnees/        # tables de données : raccourcis, rôles (L1-16)
-│   │   └── machines/       # un fichier par machine, choisi par nom d'hôte
-│   └── kitty/kitty.conf    # terminal provisoire (L1-18)
-├── tokens.toml
+│   │   ├── machines/       # un fichier par machine, choisi par nom d'hôte
+│   │   └── scripts/        # scripts de la session (atténuation, verrou initial…)
+│   ├── kitty/kitty.conf    # terminal provisoire (L1-18)
+│   └── systemd/user/       # unités de session (nm-applet, surcharge de hypridle)
+├── systeme/etc/            # fichiers système copiés sous /etc par make install (greetd, logind, pacman, systemd)
+├── tokens.toml             # source du thème
 ├── motion.toml             # source du mouvement (L1-23)
+├── energie.toml            # échelle d'inactivité (L1-09)
+├── session.toml            # liste blanche du démarrage de session (D50)
 ├── generate_tokens.py      # point d'entrée ; la logique vit dans dunei_theme/
 ├── dunei_theme/            # color, model, checks, emitters/ (une cible par module)
-├── tests/                  # unittest + instantanés de référence (tests/golden/)
 ├── generate_motion.py      # point d'entrée ; la logique vit dans dunei_motion/
 ├── dunei_motion/           # spring, hyprland, model, checks, emitters/
+├── generate_energie.py     # point d'entrée ; la logique vit dans dunei_energie/
+├── dunei_energie/
 ├── extract_hue.py
-├── deploy.py               # make install : une destination par logiciel (hypr, fontconfig, applis…)
+├── deploy.py               # make install : une destination par logiciel (hypr, fontconfig, applis, bin, maj…)
+├── proto/motion/           # prototypes QML des transitions
+├── tests/                  # unittest + instantanés de référence (tests/golden/)
 ├── Makefile
 └── generated/              # produit, jamais édité
 ```
 
-**Les listes de paquets sont des fichiers, pas des lignes de commande.** C'est ce qui rend la procédure rejouable : la machine suivante installe le même ensemble, et une addition se voit dans un diff.
+**Les paquets sont déclarés dans un fichier, pas tapés en ligne de commande.** C'est ce qui rend la procédure rejouable : la machine suivante installe le même ensemble, et une addition se voit dans un diff. `paquets.toml` est la seule liste (D59) ; un paquet ne s'ajoute jamais par un `pacman -S` seul, car `make paquets` propose de retirer ce qui n'est pas déclaré.
 
 ### Déploiement vers `~/.config`
 
@@ -95,7 +101,7 @@ DuneI/
 `make install` régénère `generated/`, puis lance `deploy.py`. Le script connaît une liste de
 destinations, une par logiciel : `hypr` (`~/.config/hypr`), `fontconfig`
 (`~/.config/fontconfig/conf.d/50-dunei.conf`) et `applis`, qui lie la configuration de chaque
-application à sa place (`~/.config/kitty/kitty.conf`) et exige qu'elle soit installée. Il les vérifie toutes avant d'agir : un fichier qu'il
+application à sa place (`~/.config/kitty/kitty.conf`) et exige qu'elle soit installée. `bin` lie chaque exécutable de `config/bin/` dans `~/.local/bin`, et `maj` exige les outils de mise à jour et active le préchargement (voir « Mises à jour — L1-05 »). Il les vérifie toutes avant d'agir : un fichier qu'il
 n'a pas posé lui-même, ou un lien qui pointe ailleurs, l'arrête avec un message, sans rien modifier
 nulle part. `python3 deploy.py --dry-run` affiche les actions prévues.
 
@@ -155,17 +161,222 @@ n'aurait qu'un ancien `hyprland.conf`, que Hyprland ignorerait au profit du poin
 
 Le mécanisme (D24) : `config/hypr/modules/machine.lua` lit `/etc/hostname` au démarrage de Hyprland — l'API `hl` n'expose pas le nom d'hôte, mais la bibliothèque standard de Lua est chargée — et charge `machines/<nom>.lua` en dernier, pour qu'il l'emporte sur tout ce qui précède. Le nom n'est accepté que s'il ne contient que des lettres, des chiffres et des tirets : un point ou une barre oblique casserait la résolution du module. Une machine sans fichier, ou au nom refusé, applique les seules règles communes. Une erreur dans un fichier machine existant n'est **pas** avalée : elle remonte dans Hyprland, comme toute erreur de configuration. `make install` lie `config/hypr/machines` sous `~/.config/hypr/machines`, comme `modules`.
 
+## Installation — L1-02 à L1-05
+
+L'installation tient en deux phases (D59). La première ne livre qu'un Arch amorçable, chiffré, en réseau,
+avec de quoi cloner le dépôt ; tout le reste vient du dépôt, et la seconde phase se rejoue à volonté.
+`make install` exige les paquets dont il dépend : l'ordre est imposé par ses messages, pas par la mémoire.
+
+### Phase 1, depuis l'ISO — une fois par machine
+
+L'ISO Arch se vérifie avant usage : somme `sha256` conforme, puis signature par `pacman-key -v`, la
+signature `.sig` étant prise sur archlinux.org. Depuis l'ISO démarrée et en réseau :
+
+    curl -fsSLO https://raw.githubusercontent.com/JuNeI23/DuneI/main/setup/archinstall.json
+    archinstall --config archinstall.json
+
+`setup/archinstall.json` (`archinstall` 4.5) préremplit le menu : systemd-boot avec images unifiées,
+noyaux `linux` et `linux-lts`, swap `zram` (`zstd`), `en_US.UTF-8` et clavier `uk`, fuseau `Europe/Paris`,
+miroirs de France, d'Allemagne et de Suisse, NetworkManager, PipeWire, synchronisation de l'heure, et, pour tout
+paquet supplémentaire, `git`, `make` et `python`. Il ne contient ni disque, ni chiffrement, ni nom d'hôte, ni
+utilisateur, ni secret ; le fichier d'identifiants d'`archinstall` n'entre jamais dans le dépôt.
+
+**Ce qu'on choisit au menu :**
+
+| Choix | Valeur |
+| --- | --- |
+| Disque | Le disque interne (NVMe sur `caladan`), entièrement effacé |
+| Disposition | Disposition par défaut : ESP de 1 Go sur `/boot`, le reste en `ext4`, **sans `/home` séparé** (D54) |
+| Chiffrement | LUKS sur la racine. **Le mot de passe de chiffrement (« Encryption password ») est obligatoire** : laissé vide, `archinstall` annonce que le disque n'est pas chiffré et continue sans chiffrer |
+| Nom d'hôte | Lettres, chiffres et tirets seulement (D24) : il choisit `config/hypr/machines/<nom>.lua` et la section `machines.<nom>` de `paquets.toml` |
+| Utilisateur | Le compte de Nicolas, avec les droits d'administration (`sudo`), que toute la phase 2 demande |
+
+Le menu propose le disque et le chiffrement sans que le fichier contienne de `disk_config` : constaté en
+machine virtuelle. Une installation interrompue (machine éteinte pendant l'installation des
+paquets) laisse un système incomplet, sans `fstab` ni fuseau : on la reprend de zéro.
+
+À ce jour, le chiffrement posé par `archinstall` est une phrase de passe ; le déverrouillage par TPM2 et PIN
+est la feature L1-25 (D53).
+
+### Phase 2, depuis le dépôt — rejouable
+
+Après le redémarrage, connecté avec le compte créé :
+
+    git clone https://github.com/JuNeI23/DuneI ~/DuneI && cd ~/DuneI
+    make paquets                                        # paquets.toml → système
+    curl -fsSL https://claude.ai/install.sh | bash      # Claude Code, hors pacman
+    make install                                        # configuration, fichiers système, services
+
+`git clone` prend `main`. `make install` refuse les arbres de travail secondaires : le dépôt vit dans
+`~/DuneI`.
+
+**`make paquets`** (`paquets.py`) lit `paquets.toml`, vérifie tout avant d'agir, puis installe le manquant
+et marque comme explicite ce qui est déclaré mais installé en dépendance, sans question. Il affiche ensuite
+l'excédent et pose deux questions, réponse « non » par défaut : marquer l'excédent requis comme dépendance,
+retirer l'excédent libre et les orphelins. Hors terminal interactif, la réponse est toujours « non ».
+`python3 paquets.py --dry-run` affiche le plan sans rien modifier (`make paquets --dry-run` ne convient pas :
+`make` prendrait l'option pour lui).
+
+Ce qu'il refuse, sans rien modifier : un dépôt configuré autre que `core` et `extra` (D56), un nom inconnu
+de ces dépôts, un groupe `pacman` à la place d'un paquet, un nom déclaré deux fois, une clé inconnue de
+`paquets.toml`. Ce qu'il signale : le matériel détecté, une machine sans section, un fabricant sans liste.
+**Un seul avertissement de détection suffit à supprimer la question de retrait** : une détection incomplète
+ne fait jamais proposer le retrait de pilotes qu'elle n'a pas vus (D59).
+
+**Claude Code** passe par l'installateur officiel d'Anthropic et se met à jour seul (D56). Son binaire se
+vérifie contre le manifeste de sa version, signé par la clé de publication d'Anthropic (documentation
+d'installation de Claude Code, section « Binary integrity and code signing ») :
+
+    curl -fsSL https://downloads.claude.ai/keys/claude-code.asc | gpg --import
+    gpg --fingerprint security@anthropic.com      # attendu : 31DD DE24 DDFA B679 F42D  7BD2 BAA9 29FF 1A7E CACE
+    VERSION=$(claude --version | cut -d' ' -f1)
+    curl -fsSLO "https://downloads.claude.ai/claude-code-releases/$VERSION/manifest.json"
+    curl -fsSLO "https://downloads.claude.ai/claude-code-releases/$VERSION/manifest.json.sig"
+    gpg --verify manifest.json.sig manifest.json  # attendu : « Good signature from "Anthropic Claude Code Release Signing" »
+    sha256sum ~/.local/share/claude/versions/$VERSION
+    grep -A3 '"linux-x64"' manifest.json          # la somme doit être celle de platforms.linux-x64.checksum
+
+Deux vérifications sur `caladan`. Le 2026-10-16, à la bascule vers l'installateur, le binaire 2.1.301 :
+signature GPG du manifeste valide, somme `sha256` conforme. Le 2026-10-17, le binaire 2.1.302, que la mise
+à jour automatique avait installé entre-temps : ces commandes exactement, lancées dans un `GNUPGHOME`
+temporaire, ont rendu l'empreinte attendue et « Good signature from "Anthropic Claude Code Release
+Signing" », et la somme du binaire était celle du champ `checksum` du manifeste. Ce second essai valide
+les commandes telles qu'écrites. La mise à jour automatique change la version : `VERSION` se relit à
+chaque vérification, et le manifeste se télécharge pour cette version.
+
+**Première lecture des actualités.** `informant`, installé par `make paquets`, bloque toute installation ou
+mise à jour tant qu'une actualité Arch n'est pas lue : sur `caladan`, trois restaient non lues juste
+après son installation. La transaction suivante échoue alors, et `make paquets` rappelle la commande. On lit par
+`sudo informant read` — sans `sudo`, la lecture n'est pas enregistrée et le blocage reste — puis on relance.
+`dunei-maj` commence par cette lecture.
+
+**Le `PATH`.** `make install` lie `dunei-maj` dans `~/.local/bin` (`$XDG_BIN_HOME` s'il est défini). Sur une
+machine neuve, ce dossier n'est souvent pas dans le `PATH` : `make install` le signale après son bilan, sans
+bloquer, et on l'ajoute au `PATH` du shell.
+
+### Machine virtuelle de recette
+
+`setup/vm.sh` lance une machine QEMU/KVM avec micrologiciel UEFI (OVMF, sans Secure Boot) et puce TPM2
+simulée par `swtpm` ; `qemu-desktop`, `edk2-ovmf` et `swtpm` sont dans le groupe `outils`. Son état (disque
+de 40 Go, variables UEFI, état du TPM) vit dans `~/.cache/dunei-vm`, jamais dans le dépôt.
+
+    setup/vm.sh ~/.cache/dunei-vm/archlinux-<date>-x86_64.iso   # premier démarrage, sur l'ISO
+    setup/vm.sh                                                  # ensuite, sur le disque
+
+L'ISO reste branchée après la phase 1 : on ferme la fenêtre et on relance `setup/vm.sh` sans argument. Le
+script refuse de démarrer sans KVM, QEMU, `swtpm` ou OVMF, en nommant le paquet à installer, et arrête un
+`swtpm` resté d'une exécution précédente. La feature de chiffrement y répète la procédure avant de toucher
+`caladan`.
+
+### Mises à jour — L1-05
+
+**Une commande : `dunei-maj`** (D57). Elle affiche les actualités Arch non lues (`sudo informant read`),
+lance `sudo pacman -Syu`, liste les `.pacnew` et `.pacsave` par `pacdiff -o` sans rien fusionner (la fusion
+se fait par `sudo pacdiff`), puis écrit « Noyau mis à jour : redémarre. » si le noyau en cours n'a plus ses
+modules. Une étape qui échoue arrête le script avec son code. Aucune mise à jour ne se fait sans
+surveillance.
+
+**Le préchargement.** `dunei-precharge.timer`, posé et activé par `make install`, lance chaque jour
+`dunei-precharge.service`, avec un délai aléatoire d'une heure au plus, et rattrape au démarrage suivant un
+jour manqué. Le service lance `checkupdates -d` à priorité minimale : les mises à jour sont calculées sur une
+base temporaire et téléchargées dans le cache de `pacman`, sans toucher à la base du système. `dunei-maj`
+installe ensuite depuis le cache : 16 s, sur `caladan`, pour la mise à jour qui apportait le noyau 7.2.10. `checkupdates`
+exige `fakeroot`, déclaré dans `socle`.
+
+**Abstention sur connexion mesurée.** Le service ne se lance pas si NetworkManager déclare la connexion
+mesurée ou probablement mesurée (le partage de connexion du téléphone de Nicolas l'est, par estimation de
+NetworkManager) ; le journal dit
+alors « Skipped due to 'exec-condition' ». Pour l'essayer : `nmcli connection modify <connexion>
+connection.metered yes`, puis retour à `unknown`.
+
+**Le cache.** La règle `pacman` `dunei-cache.hook` lance, après chaque transaction, `paccache -rk3` puis
+`paccache -ruk0` : trois versions de chaque paquet installé, aucune d'un paquet retiré. C'est, avec
+`linux-lts`, le retour arrière après une mauvaise mise à jour (D54). Au premier passage sur `caladan`, le
+cache est passé de 2,5 Go à 2,3 Go.
+
+Pour vérifier : `systemctl list-timers dunei-precharge.timer`, `journalctl -u dunei-precharge`,
+`du -sh /var/cache/pacman/pkg`.
+
+### Pare-feu
+
+`ufw` est dans `socle` (D60). Règles d'origine, relevées à la recette par `sudo ufw status verbose` :
+entrant refusé, sortant permis, routage désactivé, journalisation basse, aucune règle. Rien n'est versionné
+tant qu'aucune règle ne s'ajoute.
+
+### Annexe — installation manuelle, si `archinstall` fait défaut
+
+Équivalent de la phase 1, **non exercé** : à relire contre le guide d'installation d'Arch du jour avant
+usage. Le disque `/dev/nvme0n1` est un exemple (`lsblk` pour le vérifier) ; il est entièrement effacé.
+
+    loadkeys uk
+    sgdisk --zap-all /dev/nvme0n1
+    sgdisk -n1:0:+1G -t1:ef00 -c1:ESP -n2:0:0 -t2:8309 -c2:racine /dev/nvme0n1
+    mkfs.fat -F32 /dev/nvme0n1p1
+    cryptsetup luksFormat --type luks2 /dev/nvme0n1p2
+    cryptsetup open /dev/nvme0n1p2 racine
+    mkfs.ext4 /dev/mapper/racine
+    mount /dev/mapper/racine /mnt
+    mount --mkdir /dev/nvme0n1p1 /mnt/boot
+    pacstrap -K /mnt base linux linux-lts linux-firmware mkinitcpio amd-ucode sudo vim \
+        networkmanager zram-generator git make python
+    genfstab -U /mnt >> /mnt/etc/fstab
+    arch-chroot /mnt
+
+Dans le système installé (`amd-ucode` ou `intel-ucode` selon le processeur) :
+
+    ln -sf /usr/share/zoneinfo/Europe/Paris /etc/localtime && hwclock --systohc
+    echo 'en_US.UTF-8 UTF-8' >> /etc/locale.gen && locale-gen
+    echo 'LANG=en_US.UTF-8' > /etc/locale.conf
+    echo 'KEYMAP=uk' > /etc/vconsole.conf
+    echo '<nom-d-hôte>' > /etc/hostname
+    printf '[zram0]\n' > /etc/systemd/zram-generator.conf
+
+- `/etc/mkinitcpio.conf` : ajouter `encrypt` entre `block` et `filesystems` dans `HOOKS`, après `keyboard`
+  et `keymap`, pour que la phrase de passe se tape en `uk` ;
+- `/etc/kernel/cmdline` :
+  `cryptdevice=UUID=<UUID de /dev/nvme0n1p2>:racine root=/dev/mapper/racine rw` (UUID lu par
+  `blkid -s UUID -o value /dev/nvme0n1p2`) ;
+- `/etc/mkinitcpio.d/linux.preset` et `linux-lts.preset` : décommenter `default_uki`, chemin sous
+  `/boot/EFI/Linux/`, et commenter `default_image`.
+
+Puis :
+
+    mkinitcpio -P
+    bootctl install
+    useradd -m -G wheel <utilisateur> && passwd <utilisateur>
+    EDITOR=vim visudo                  # décommenter la ligne %wheel ALL=(ALL:ALL) ALL
+    systemctl enable NetworkManager systemd-timesyncd
+
+systemd-boot trouve seul les images unifiées de `/boot/EFI/Linux/`. On sort du `chroot`, on redémarre, et
+la phase 2 reprend telle quelle.
+
 ## Graphique, énergie, veille et entrée
 
 ### Graphique — L1-06
 
-```
-mesa vulkan-radeon
-```
+**Les pilotes se choisissent d'après le matériel détecté, jamais d'après le nom de la machine** (D58).
+`make paquets` lit le fabricant du processeur dans `/proc/cpuinfo` et celui de chaque carte graphique dans
+`/sys/class/drm/card*/device/vendor`, puis ajoute la liste `materiel.*` correspondante de `paquets.toml` :
 
-Rien d'autre. `libva-mesa-driver` est désormais fourni par `mesa` lui-même : le nommer dans une liste de paquets est redondant. Le pilote est dans le noyau, et le flou, le sheen et les transitions de Hyprland passent sans réserve sur un Radeon intégré de cette génération.
+| Détecté | Identifiant | Paquets |
+| --- | --- | --- |
+| Processeur AMD | `AuthenticAMD` | `amd-ucode` |
+| Processeur Intel | `GenuineIntel` | `intel-ucode` |
+| Carte AMD | `0x1002` | `vulkan-radeon` |
+| Carte Intel | `0x8086` | `vulkan-intel`, `intel-media-driver` |
+| Carte NVIDIA | `0x10de` | aucun : avertissement, aucun pilote n'est décidé |
+| Carte inconnue (machine virtuelle) | autre | rien |
 
-Les listes Intel et NVIDIA restent dans le dépôt pour les machines suivantes. Elles ne s'exécutent pas ici.
+`mesa` est dans `session` : Hyprland en a besoin sur tout matériel. `libva-mesa-driver` est fourni par
+`mesa` lui-même. Les pilotes X (`xf86-video-*`) ne sont installés nulle part : Wayland et XWayland n'en ont
+pas besoin. Une machine à deux cartes reçoit les deux listes. Ce qui ne se détecte pas va dans la section
+`machines.<nom-d-hôte>`, facultative (pour `caladan` : `sof-firmware`, `alsa-utils`, `fprintd`).
+
+Sur `caladan` (Ryzen, Radeon intégré), la détection retient le processeur AMD et la carte AMD. Les pilotes Intel,
+`nouveau` et X ont été retirés le 2026-10-16 ; la session est inchangée, le son de Firefox sort sans
+`gst-plugin-pipewire` ni `pipewire-alsa`, et une fenêtre XWayland reste légèrement floue à l'échelle 1,25,
+comme D25 l'accepte. `libvpl` reste installé en dépendance, `ffmpeg` le requiert. Les listes Intel ne sont
+prouvées sur aucun matériel réel ; la détection l'est par les tests unitaires.
 
 ### Réseau — L1-07
 
@@ -376,7 +587,7 @@ section Audio.
 
 ### Paquets
 
-Propositions — chaque ligne est validée à la feature qui la porte. `greetd` et `greetd-tuigreet` sont validés (L1-10, D49) ; `sddm` est retiré. `foot` est écarté : `kitty` reste le terminal (L1-18, D52).
+Propositions — chaque ligne est validée à la feature qui la porte. `greetd` et `greetd-tuigreet` sont validés (L1-10, D49) ; `sddm` est retiré. `foot` est écarté : `kitty` reste le terminal (L1-18, D52). Depuis L1-02, la liste qui fait foi est le groupe `session` de `paquets.toml` : `qt5-wayland` en est absent et a été retiré de `caladan` (D59).
 
 ```
 hyprland
@@ -654,6 +865,8 @@ processus enfants du compositeur (documentation d'uwsm).
 
 ### Paquets
 
+Depuis L1-02, ces paquets sont déclarés dans `paquets.toml` (D59) ; `fontconfig` y vient en dépendance.
+
 ```
 fontconfig
 noto-fonts noto-fonts-cjk noto-fonts-emoji
@@ -805,7 +1018,7 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 
 | Sujet | Où |
 | --- | --- |
-| Installation d'Arch, disque, amorçage | Fait, et hors du design |
+| Chiffrement de `caladan` par TPM2 et PIN | L1-25, feature suivante |
 | Barre, lanceur, notifications, verrouillage | Lot 2 |
 | Agent d'authentification et trousseau | Lot 2 — **rien ne s'installe depuis l'interface avant** |
 | Conception du chemin biométrique | Lot 5, chapitre des écrans système |
@@ -821,6 +1034,7 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 | Version | Date | Changement |
 | --- | --- | --- |
 | 0.1 | 2026-10-12 | Version initiale |
+| 1.8 | 2026-10-17 | Installation rejouable (L1-02 à L1-06) : « Le dépôt » réécrit selon l'arborescence réelle (`setup/`, `paquets.toml`, `paquets.py`, `config/bin/`, `systeme/`), scripts `setup/0x-*.sh` et listes `packages/*.txt` abandonnés ; section « Installation » : deux phases, choix au menu d'`archinstall` (mot de passe de chiffrement obligatoire), `make paquets`, Claude Code et la vérification de sa signature, première lecture des actualités, `PATH`, machine virtuelle de recette, mises à jour (`dunei-maj`, préchargement, cache, abstention sur connexion mesurée), pare-feu, annexe manuelle ; « Graphique — L1-06 » réécrit autour de la détection ; destinations `bin` et `maj` ; chiffrement de `caladan` renvoyé à L1-25 (D53 à D60) |
 | 1.7 | 2026-10-16 | Terminal (L1-18) : kitty conservé, foot écarté ; `config/kitty/kitty.conf` et destination `applis` de `make install` ; instance unique ; `less` et `man-db` installés (D52) |
 | 1.6 | 2026-10-16 | Session et démarrage (L1-10) : greetd et tuigreet installés, SDDM retiré ; fichiers système, `session.toml`, `nm-applet.service`, `demarrage.lua` et `dunei-verrou-initial` ; ce que fait `make install` ; recette du 2026-10-16 ; recours, modules liés et fichiers générés neufs ; paquets proposés mis à jour (D49 à D51) |
 | 1.5 | 2026-10-16 | `shellcheck` ajouté aux outils de développement, lancé par `make test` (D48) |

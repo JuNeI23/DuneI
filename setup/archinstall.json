@@ -1,0 +1,12 @@
+{
+  "audio_config": {"audio": "pipewire"},
+  "bootloader_config": {"bootloader": "Systemd-boot", "uki": true},
+  "kernels": ["linux", "linux-lts"],
+  "locale_config": {"kb_layout": "uk", "sys_lang": "en_US", "sys_enc": "UTF-8"},
+  "mirror_config": {"mirror_regions": {"France": [], "Germany": [], "Switzerland": []}},
+  "network_config": {"type": "nm"},
+  "ntp": true,
+  "packages": ["git", "make", "python"],
+  "swap": {"enabled": true, "algorithm": "zstd"},
+  "timezone": "Europe/Paris"
+}

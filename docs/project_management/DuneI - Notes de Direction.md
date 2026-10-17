@@ -1,10 +1,10 @@
 # DuneI — Note de direction
 
-Oct 10, 2026 · @Nicolas — révisée le 16 octobre 2026
+Oct 10, 2026 · @Nicolas — révisée le 17 octobre 2026
 
-Version 1.13. Historique en fin de document.
+Version 1.14. Historique en fin de document.
 
-*Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent quarante-trois lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
+*Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent quarante-cinq lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
 
 ## En une phrase
 
@@ -117,7 +117,7 @@ L'ordre découle d'une seule règle : **chaque lot laisse la machine en état de
 | **4 — Accord visuel** | Thématisation Qt et GTK sur cibles réelles, premier lot d'icônes, fond d'écran, panneau de thème, extraction de teinte | Cohérente de bout en bout, bible opposable partout |
 | **5 — Écrans système et voix** | Réglages panneau par panneau, connexion, amorçage, « À propos », catalogue de messages, recette | **1.0** |
 
-Le détail — cent quarante-trois éléments, chacun rattaché à un chantier, un lot et une nature — vit dans le document de périmètre et de backlog. **Cette note ne s'y substitue pas.**
+Le détail — cent quarante-cinq éléments, chacun rattaché à un chantier, un lot et une nature — vit dans le document de périmètre et de backlog. **Cette note ne s'y substitue pas.**
 
 ## Les risques, par ordre de gravité
 
@@ -276,6 +276,24 @@ dépôt n'a pas encore, qui consignent au passage L1-03 à L1-06 —, puis le po
 lot par l'étiquette `lot1` ; la recette avec écran externe de L1-09 reste à faire dès qu'un écran est
 disponible.
 
+**Installation rejouable — 17 octobre 2026.** DuneI s'installe désormais depuis l'ISO, en deux phases
+écrites dans le carnet : `archinstall` avec une configuration versionnée, sans disque ni secret, puis le
+dépôt (`make paquets`, Claude Code, `make install`). Chaque paquet est déclaré une seule fois, dans
+`paquets.toml`, et `make paquets` aligne la machine dessus : il vérifie tout avant d'agir, refuse tout dépôt
+tiers, et ne propose aucun retrait quand la détection du matériel est incomplète. Les pilotes et le
+microcode se choisissent d'après le matériel détecté, plus d'après le nom de la machine. Sur `caladan`,
+`chaotic-aur` est retiré et les paquets explicites passent de 89 à 70, sans changement à l'écran. La mise à
+jour tient en une commande, `dunei-maj`, qui fait lire les actualités Arch avant d'installer ; les paquets
+sont préchargés chaque jour, sauf sur connexion mesurée, et le cache garde trois versions (D53 à D60). La
+recette a passé sur `caladan` et dans une machine virtuelle UEFI munie d'un TPM2 simulé, validée par Nicolas
+en l'état : le chiffrement n'y a pas été exercé, et la seconde phase n'y a pas été confirmée explicitement.
+L1-03 reste ouvert sur un seul point, la racine de `caladan`, toujours en clair.
+Prochaine étape du lot 1 : **L1-25, le chiffrement de `caladan`** — LUKS2 posé sur place, déverrouillé par
+TPM2 et PIN, clé de secours hors de la machine, disposition `uk` dans l'initramfs —, **répété d'abord dans
+la machine virtuelle de recette** (actualité Arch sur `mkinitcpio` 42 à lire avant d'écrire) ; puis le point
+sur L1-21 et la clôture du lot par l'étiquette `lot1`. La recette avec écran externe de L1-09 reste à faire
+dès qu'un écran est disponible.
+
 ## Plan de lecture
 
 | Rôle | À lire |
@@ -293,6 +311,7 @@ disponible.
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-10 | Version initiale |
+| 1.14 | 2026-10-17 | Installation rejouable faite (L1-02 à L1-06, L1-03 sauf le chiffrement) : deux phases, `paquets.toml`, `dunei-maj`, recette sur `caladan` et en machine virtuelle ; backlog à 145 éléments ; prochaine étape : L1-25, chiffrement de `caladan` répété d'abord en machine virtuelle, puis L1-21 et l'étiquette `lot1` (D53 à D60) |
 | 1.13 | 2026-10-16 | Terminal fait (L1-18) : kitty conservé, instance unique, pager installé ; prochaine étape : L1-02 (D52) |
 | 1.12 | 2026-10-16 | Session et démarrage faits (L1-10) : greetd, liste blanche, verrou initial, recette passée, SDDM retiré ; prochaine étape : L1-18 (D49 à D51) |
 | 1.11 | 2026-10-16 | Énergie et veille faites (L1-09), sauf la recette avec écran externe ; décharge en veille mesurée ; backlog à 143 éléments ; prochaine étape : L1-10 (D41 à D46) ; relecture finale : `hypridle` silencieux (D43), dépendance à uwsm consignée, date et historique corrigés |

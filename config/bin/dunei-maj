@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+# dunei-maj — mise à jour de DuneI en une commande.
+# Rôle : lire les actualités Arch, mettre le système à jour, lister les .pacnew et .pacsave, puis signaler
+#   un noyau remplacé. Rien n'est fusionné : la commande de fusion est seulement rappelée.
+# Entrées : aucun argument. $DUNEI_SYSROOT préfixe /usr/lib/modules, pour les tests seulement.
+# Sortie : un message par étape sur la sortie standard ; code 0 si tout passe, sinon le code de l'étape
+#   qui échoue.
+# Erreurs : une étape échouée arrête le script avec un message sur la sortie d'erreur.
+# Dépendances : informant, pacman, pacman-contrib (pacdiff), sudo, uname.
+set -euo pipefail
+
+# echec — nomme l'étape échouée et sort avec le code de sa commande.
+# Entrées : le nom de l'étape, le code. Sortie : aucune (le script se termine avec ce code).
+# Erreurs : message « <étape> a échoué » sur la sortie d'erreur. Dépendances : aucune.
+echec() { echo "dunei-maj : $1 a échoué (code $2)." >&2; exit "$2"; }
+
+# etape — exécute une commande, sur le terminal (elle peut poser des questions).
+# Entrées : le nom de l'étape, puis la commande et ses arguments. Sortie : celle de la commande.
+# Erreurs : voir echec. Dépendances : echec.
+etape() {
+  local nom=$1 code=0
+  shift
+  "$@" || code=$?
+  [ "$code" -eq 0 ] || echec "$nom" "$code"
+}
+
+# capte — exécute une commande et range sa sortie dans la variable $sortie.
+# Entrées : le nom de l'étape, puis la commande et ses arguments. Sortie : $sortie.
+# Erreurs : voir echec. Dépendances : echec.
+capte() {
+  local nom=$1 code=0
+  shift
+  sortie=$("$@") || code=$?
+  [ "$code" -eq 0 ] || echec "$nom" "$code"
+}
+
+echo "== Actualités Arch"
+# informant garde la liste des lues dans un fichier du système : seule la lecture sous sudo l'enregistre.
+capte "la liste des actualités" informant list --unread
+[ -z "$sortie" ] || etape "la lecture des actualités" sudo informant read
+
+echo "== Mise à jour du système"
+etape "la mise à jour" sudo pacman -Syu
+
+echo "== Fichiers .pacnew et .pacsave"
+capte "la liste des .pacnew" pacdiff -o
+if [ -n "$sortie" ]; then
+  echo "$sortie"
+  echo "Rien n'est fusionné. Pour fusionner : sudo pacdiff"
+fi
+
+[ -d "${DUNEI_SYSROOT:-}/usr/lib/modules/$(uname -r)" ] || echo "Noyau mis à jour : redémarre."

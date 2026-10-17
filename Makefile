@@ -2,6 +2,7 @@
 #   make tokens   tokens.toml → generated/
 #   make motion   motion.toml → generated/
 #   make energie  energie.toml → generated/hypridle.conf, generated/energie.lua
+#   make paquets  paquets.toml → système : installe le manquant, marque, propose de retirer l'excédent
 #   make test     tests unitaires et de non-régression
 #   make check    refuse si un fichier de generated/ a été modifié à la main
 #   make golden   régénère les instantanés de référence (changement de sortie VOULU)
@@ -10,7 +11,7 @@
 PY := python3
 GOLDEN_HUES := 0 55 200 265
 
-.PHONY: tokens motion energie test check golden install
+.PHONY: tokens motion energie paquets test check golden install
 
 tokens:
 	$(PY) generate_tokens.py --out generated
@@ -20,6 +21,9 @@ motion:
 
 energie:
 	$(PY) generate_energie.py --out generated
+
+paquets:
+	$(PY) paquets.py
 
 test:
 	$(PY) -m unittest discover -s tests -t .

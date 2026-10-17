@@ -14,6 +14,10 @@ posé lui-même.
 - applis : la configuration de chaque application de DuneI est liée à sa place sous le dossier de
   configuration ; l'application doit être installée. Les autres fichiers de son dossier sont laissés
   en place. Seul kitty, le terminal provisoire, y figure (L1-18).
+- bin : chaque fichier exécutable de config/bin/ est lié dans $XDG_BIN_HOME (~/.local/bin par défaut).
+  Un fichier non exécutable, ou un fichier ou lien étranger à sa place, est refusé.
+- maj : checkupdates, paccache, pacdiff, informant et fakeroot doivent être installés ; le minuteur
+  dunei-precharge.timer, copié par la destination systeme, est activé et démarré avec sudo s'il ne l'est pas.
 - services : hyprlock doit être installé ; les unités et surcharges de config/systemd/user/ sont
   copiées, l'autostart XDG d'uwsm est masqué (liste blanche de session.toml) ; chaque service de la
   liste est activé, démarré, ou redémarré si sa configuration change (daemon-reload d'abord). Un
@@ -71,6 +75,13 @@ VERROUILLEUR = "hyprlock"                                    # Verrouilleur exig
 # Applications configurées par DuneI : exécutable exigé, paquet qui le fournit, fichier du dépôt, lien sous
 # le dossier de configuration.
 APPLIS = (("kitty", "kitty", "config/kitty/kitty.conf", "kitty/kitty.conf"),)  # Terminal provisoire jusqu'à L3-11 (L1-18).
+# Exécutable exigé hors APPLIS → paquet qui le fournit ; paquets.toml doit déclarer chacun de ces paquets.
+PAQUETS = {"greetd": "greetd", "tuigreet": "greetd-tuigreet", "hyprlock": "hyprlock", "hypridle": "hypridle",
+           "checkupdates": "pacman-contrib", "paccache": "pacman-contrib", "pacdiff": "pacman-contrib",
+           "informant": "informant", "fakeroot": "fakeroot"}
+OUTILS_MAJ = ("checkupdates", "paccache", "pacdiff", "informant", "fakeroot")  # Exécutables de la mise à jour, exigés par la destination maj.
+BIN = "config/bin"                                           # Exécutables de l'utilisateur, liés sous bin_home.
+MINUTEUR = "dunei-precharge.timer"                           # Minuteur du préchargement des mises à jour, posé par systeme/.
 
 
 def config_home(env: Mapping[str, str]) -> Path:
@@ -81,6 +92,16 @@ def config_home(env: Mapping[str, str]) -> Path:
     Erreurs : aucune. Dépendances : aucune.
     """
     return Path(env.get("XDG_CONFIG_HOME") or Path(env.get("HOME") or os.path.expanduser("~")) / ".config")
+
+
+def bin_home(env: Mapping[str, str]) -> Path:
+    """Dossier des exécutables de l'utilisateur.
+
+    Entrée : env — environnement, os.environ en usage normal.
+    Sortie : $XDG_BIN_HOME, ou $HOME/.local/bin si la variable est absente ou vide.
+    Erreurs : aucune. Dépendances : aucune.
+    """
+    return Path(env.get("XDG_BIN_HOME") or Path(env.get("HOME") or os.path.expanduser("~")) / ".local" / "bin")
 
 
 def system_root(env: Mapping[str, str]) -> Path:
@@ -236,6 +257,53 @@ def plan_applis(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
         else:
             actions += ([] if link.parent.exists() else [("mkdir", link.parent)]) + [("link", src, link)]
     return actions, err
+
+
+def plan_bin(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
+    """Inspection des exécutables de l'utilisateur, sans aucune modification.
+
+    Entrées : repo — racine du dépôt ; home — dossier de configuration racine, inutilisé ici.
+    Sortie : (création de bin_home si absent, puis lien de chaque fichier de config/bin/ qui en manque ;
+             puis un signalement ("chemin") si bin_home ne figure pas dans $PATH, qui n'empêche rien ; erreurs).
+    Erreurs : aucune exception ; fichier non exécutable, dossier qui n'en est pas un, fichier ou lien
+              étranger à la place du lien deviennent des messages.
+    Dépendances : bin_home, _links_to, os.access, os.environ, BIN.
+    """
+    dest, actions, err = bin_home(os.environ), [], []
+    sources = sorted(p for p in (repo / BIN).glob("*") if p.is_file())
+    if dest.is_symlink() or (dest.exists() and not dest.is_dir()):
+        return [], [f"{dest} existe mais n'est pas un dossier réel"]
+    if sources and not dest.exists():
+        actions.append(("mkdir", dest))
+    for src in sources:
+        link = dest / src.name
+        if not os.access(src, os.X_OK):
+            err.append(f"{src} n'est pas exécutable : chmod 755 {src}")
+        if link.is_symlink() or link.exists():
+            if not _links_to(link, src):
+                err.append(f"{link} existe mais n'est pas un lien vers {src} : le déplacer, puis relancer")
+        else:
+            actions.append(("link", src, link))
+    if sources and str(dest) not in os.environ.get("PATH", "").split(os.pathsep):
+        actions.append(("chemin", dest))
+    return actions, err
+
+
+def plan_maj(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
+    """Inspection de la mise à jour, sans aucune modification (spec 3.6).
+
+    Entrées : repo, home — inutilisés, pour l'interface commune de DESTINATIONS.
+    Sortie : (activation avec sudo de MINUTEUR si systemctl is-enabled ne répond pas « enabled » ; erreurs).
+    Erreurs : aucune exception ; un message par exécutable de OUTILS_MAJ introuvable, avec la commande
+              d'installation de son paquet.
+    Dépendances : shutil.which, subprocess, OUTILS_MAJ, PAQUETS, MINUTEUR.
+    """
+    err = [f"{exe} introuvable : sudo pacman -S --needed {PAQUETS[exe]}" for exe in OUTILS_MAJ if not shutil.which(exe)]
+    try:
+        etat = subprocess.run(["systemctl", "is-enabled", MINUTEUR], capture_output=True, text=True).stdout.strip()
+    except OSError:
+        etat = ""
+    return ([] if etat == "enabled" else [("sudo-enable", MINUTEUR)]), err
 
 
 def plan_systeme(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
@@ -395,8 +463,10 @@ def plan_services(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
     return actions, err
 
 
+NOTES = ("hors-liste", "chemin")  # Signalements affichés après le bilan : ils n'agissent pas et ne bloquent pas.
 DESTINATIONS = {"hypr": plan_hypr, "fontconfig": plan_fontconfig, "applis": plan_applis,
-                "services": plan_services, "systeme": plan_systeme, "connexion": plan_connexion}  # Nom → planification, dans l'ordre d'exécution (sudo en dernier).
+                "bin": plan_bin, "services": plan_services, "systeme": plan_systeme, "maj": plan_maj,
+                "connexion": plan_connexion}  # Nom → planification, dans l'ordre d'exécution (sudo en dernier).
 
 
 def plan(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
@@ -435,11 +505,13 @@ def describe(action: tuple) -> str:
         "sudo-copy": "copier {0} vers {1}, avec sudo",
         "sudo-reload": "recharger {0}, avec sudo",
         "sudo-daemon-reload": "recharger les unités système de systemd, avec sudo",
+        "sudo-enable": "activer et démarrer {0}, avec sudo",
         "sudo-dm": "remplacer le gestionnaire de connexion {0} par {1} au prochain démarrage, avec sudo",
         "daemon-reload": "recharger les unités utilisateur de systemd",
         "start": "démarrer {0}",
         "enable": "activer et démarrer {0}",
         "restart": "redémarrer {0}",
+        "chemin": "{0} ne figure pas dans le PATH : ajouter ce dossier au PATH de ton shell pour joindre dunei-maj",
         "hors-liste": "{0} est accroché à la session sans figurer dans session.toml ; laissé en place",
     }[kind].format(*args)
 
@@ -484,6 +556,8 @@ def apply(actions: list[tuple]) -> None:
             subprocess.run(["sudo", "systemctl", "daemon-reload"], check=True)
         elif kind == "sudo-dm":
             subprocess.run(["sudo", "systemctl", "enable", "--force", args[1]], check=True)
+        elif kind == "sudo-enable":
+            subprocess.run(["sudo", "systemctl", "enable", "--now", args[0]], check=True)
         elif kind == "sudo-reload":
             subprocess.run(["sudo", "systemctl", "reload", args[0]], check=True)
         elif kind == "enable":
@@ -523,8 +597,8 @@ def main() -> int:
                 print("La configuration utilisateur est installée ; seuls les fichiers système restent à poser : "
                       "relancer make install dans un terminal.", file=sys.stderr)
             return 1
-    notes = [a for a in actions if a[0] == "hors-liste"]
-    actions = [a for a in actions if a[0] != "hors-liste"]
+    notes = [a for a in actions if a[0] in NOTES]
+    actions = [a for a in actions if a[0] not in NOTES]
     for a in actions:
         print(f"  {'prévu' if args.dry_run else 'fait'} : {describe(a)}")
     print(f"\n{home} : {len(actions)} action(s) {'prévue(s)' if args.dry_run else 'effectuée(s)'}.")
