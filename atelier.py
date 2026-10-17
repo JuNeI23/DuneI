@@ -274,8 +274,7 @@ def _plugins_presents() -> set[str]:
 def _plugins_a_poser(clone: Path) -> list[str] | None:
     """Plugins à installer, pour l'inspection ; ne lève jamais.
 
-    Entrée : clone — dépôt dunei-atelier. Sortie : identifiants manquants ; liste vide si le
-        settings.json est inutilisable ; None si l'état est inconnu (claude absent du PATH, settings.json inutilisable
+    Entrée : clone — dépôt dunei-atelier. Sortie : identifiants manquants ; None si l'état est inconnu (claude absent du PATH, settings.json inutilisable
         ou liste des plugins impossible à lire : l'application signalera l'échec).
     Erreurs : aucune. Dépendances : _plugins_voulus, _plugins_presents, shutil.
     """
@@ -330,7 +329,7 @@ def _lier(src: Path, dst: Path, neuf: bool) -> None:
     Entrées : src — fichier du clone ; dst — destination ; neuf — vrai si le clone vient d'être créé.
     Sortie : aucune ; ajoute à NOTES_APPLIQUEES atelier-garde (fichier gardé en .avant-dunei, ou .avant-dunei.N si ce nom est pris) ou
         atelier-repris (contenu copié dans src, atomiquement) ; si src avait une modification non validée, elle est d'abord
-        mise de côté sous src.avant-dunei (ou .N), avec la note atelier-repris-garde.
+        mise de côté sous src.avant-dunei (ou .N), avec la note atelier-repris-garde ; il en va de même si git échoue ou si src est ignoré.
     Erreurs : OSError. Dépendances : _libre, os, shutil, subprocess, git.
     """
     dst.parent.mkdir(parents=True, exist_ok=True)
@@ -341,8 +340,8 @@ def _lier(src: Path, dst: Path, neuf: bool) -> None:
             NOTES_APPLIQUEES.append(("atelier-garde", dst, garde))
         else:
             src.parent.mkdir(parents=True, exist_ok=True)
-            if src.exists() and subprocess.run(["git", "-C", str(src.parent), "status", "--porcelain", "--", src.name],
-                                               capture_output=True, text=True).stdout.strip():
+            if src.exists() and ((etat := subprocess.run(["git", "-C", str(src.parent), "status", "--porcelain", "--ignored", "--", src.name],
+                                                        capture_output=True, text=True)).returncode or etat.stdout.strip()):
                 garde = _libre(src)
                 os.replace(src, garde)
                 NOTES_APPLIQUEES.append(("atelier-repris-garde", src, garde))

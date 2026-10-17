@@ -404,6 +404,18 @@ class AtelierTest(unittest.TestCase):
         self.assertEqual(atelier.NOTES_APPLIQUEES, [("atelier-repris-garde", src, garde), ("atelier-repris", dst)])
         self.assertEqual(list(src.parent.glob(".*dunei-tmp")), [])
 
+    def test_reprise_garde_src_si_git_echoue(self):
+        self._tout_poser()
+        src, dst = self.clone / "claude/settings.json", self._dst("claude/settings.json")
+        src.write_text('{"travail": "en cours"}\n', encoding="utf-8")
+        dst.unlink()
+        dst.write_text("réécrit par claude\n", encoding="utf-8")
+        actions = self._plan()[0]
+        with mock.patch.dict(os.environ, {"GIT_DIR": str(self.home / "inexistant")}):
+            for a in actions:
+                appliquer(a)
+        self.assertEqual(src.with_name("settings.json.avant-dunei").read_text(encoding="utf-8"), '{"travail": "en cours"}\n')
+
     def test_settings_invalide_sur_clone_existant_planifie_les_plugins(self):
         self._tout_poser()
         self._regler("pas du json")

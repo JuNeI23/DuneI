@@ -3,8 +3,8 @@
 
 Chaque destination de DESTINATIONS planifie ses propres actions ; toutes sont inspectées avant la
 moindre modification, et une seule erreur suffit à tout refuser. config/ est déployé par lien
-symbolique et generated/ par copie atomique. Le script n'écrase jamais un fichier sans le garder :
-un rtk d'une autre version est remplacé (annoncé), un fichier occupant une destination de l'atelier est
+symbolique et generated/ par copie atomique. Le script n'écrase jamais un fichier sans le garder,
+sauf rtk, qui appartient à DuneI : un rtk d'une autre version est remplacé (annoncé), un fichier occupant une destination de l'atelier est
 mis de côté sous le nom .avant-dunei, et un lien remplacé par un fichier est repris dans le clone.
 
 - hypr : au premier passage, une configuration générique existante est conservée sous le nom
