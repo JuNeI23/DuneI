@@ -3,8 +3,9 @@
 
 Chaque destination de DESTINATIONS planifie ses propres actions ; toutes sont inspectées avant la
 moindre modification, et une seule erreur suffit à tout refuser. config/ est déployé par lien
-symbolique et generated/ par copie atomique. Le script n'écrase jamais un fichier qu'il n'a pas
-posé lui-même.
+symbolique et generated/ par copie atomique. Le script n'écrase jamais un fichier sans le garder :
+un rtk d'une autre version est remplacé (annoncé), un fichier occupant une destination de l'atelier est
+mis de côté sous le nom .avant-dunei, et un lien remplacé par un fichier est repris dans le clone.
 
 - hypr : au premier passage, une configuration générique existante est conservée sous le nom
   generique.lua, puis remplacée de façon atomique par le point d'entrée DuneI. Hyprland recharge seul.
@@ -18,6 +19,11 @@ posé lui-même.
   Un fichier non exécutable, ou un fichier ou lien étranger à sa place, est refusé.
 - maj : checkupdates, paccache, pacdiff, informant et fakeroot doivent être installés ; le minuteur
   dunei-precharge.timer, copié par la destination systeme, est activé et démarré avec sudo s'il ne l'est pas.
+- rtk : l'archive épinglée par atelier.toml est téléchargée et vérifiée pendant l'inspection ; le binaire
+  est posé de façon atomique dans $XDG_BIN_HOME. Une somme fausse refuse tout.
+- atelier : le dépôt privé dunei-atelier est cloné avec gh, ses plugins Claude Code sont installés, puis
+  ses fichiers sont liés sous le dossier personnel ; sans gh, sans accès ou sans clone possible, la
+  destination est sautée avec une note.
 - services : hyprlock doit être installé ; les unités et surcharges de config/systemd/user/ sont
   copiées, l'autostart XDG d'uwsm est masqué (liste blanche de session.toml) ; chaque service de la
   liste est activé, démarré, ou redémarré si sa configuration change (daemon-reload d'abord). Un
@@ -515,6 +521,7 @@ def describe(action: tuple) -> str:
         "atelier-plugins-echec": "plugins Claude Code non installés ({0}) : lancer claude plugin install pour chaque plugin de enabledPlugins, puis relancer make install",
         "atelier-lien": "lier {1} à {0}",
         "atelier-repris": "{0} avait remplacé son lien : son contenu est repris dans le clone (git status le montre) et le lien est remis",
+        "atelier-repris-garde": "{0} avait une modification non validée dans le clone : conservée sous le nom {1} avant la reprise",
         "atelier-garde": "{0} existait déjà : conservé sous le nom {1}, remplacé par le lien de l'atelier",
         "hors-liste": "{0} est accroché à la session sans figurer dans session.toml ; laissé en place",
     }[kind].format(*args)
@@ -580,7 +587,7 @@ def main() -> int:
     Entrée : argument de ligne de commande --dry-run.
     Sortie : code de retour 0 si succès, 1 si la destination est douteuse ou si une opération échoue.
     Erreurs : messages sur la sortie d'erreur ; en cas de refus, rien n'est modifié.
-    Dépendances : config_home, plan, describe, apply.
+    Dépendances : config_home, plan, describe, apply, atelier.
     """
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--dry-run", action="store_true", help="affiche les actions prévues sans les effectuer")
@@ -599,6 +606,8 @@ def main() -> int:
             apply(actions)
         except (OSError, subprocess.CalledProcessError) as e:
             print(f"déploiement interrompu : {e}", file=sys.stderr)
+            for a in atelier.NOTES_APPLIQUEES:
+                print(f"  attention : {describe(a)}", file=sys.stderr)
             if isinstance(e, subprocess.CalledProcessError) and e.cmd[0] == "sudo":
                 print("La configuration utilisateur est installée ; seuls les fichiers système restent à poser : "
                       "relancer make install dans un terminal.", file=sys.stderr)

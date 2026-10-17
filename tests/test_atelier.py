@@ -1,6 +1,7 @@
 """Atelier — lecture de atelier.toml et réglage de mémoire du projet."""
 
 import hashlib
+import http.client
 import io
 import json
 import os
@@ -152,6 +153,32 @@ class RtkTest(unittest.TestCase):
         self.assertEqual(actions, [])
         self.assertTrue(any(f"file://{self.archive}" in e for e in erreurs), erreurs)
 
+    def test_cache_valide_sans_telechargement(self):
+        self.cache.mkdir(parents=True)
+        (self.cache / "rtk-test.tar.gz").write_bytes(self.archive.read_bytes())
+        with mock.patch.object(atelier, "telecharger", side_effect=AssertionError("réseau")):
+            actions, erreurs = plan_rtk(ROOT, Path(self.tmp.name))
+        self.assertEqual((len(actions), erreurs), (1, []))
+
+    def test_erreurs_http_et_valeur_du_telechargement(self):
+        for exc in (http.client.HTTPException("réponse tronquée"), ValueError("adresse inconnue")):
+            with mock.patch.object(atelier, "telecharger", side_effect=exc):
+                actions, erreurs = plan_rtk(ROOT, Path(self.tmp.name))
+            self.assertEqual((actions, len(erreurs)), ([], 1), exc)
+            self.assertIn("non téléchargeable", erreurs[0])
+        self.assertFalse(self.bin.exists())
+
+    def test_archive_sans_membre_rtk(self):
+        sans = self.source / "sans.tar.gz"
+        with tarfile.open(sans, "w:gz") as tar:
+            info = tarfile.TarInfo("LICENSE")
+            tar.addfile(info, io.BytesIO(b""))
+        self._poser_binaire(b"ancien")
+        with self.assertRaises(OSError):
+            appliquer(("rtk-pose", sans, sha256_de(self.binaire), self.bin / "rtk"))
+        self.assertEqual(sorted(p.name for p in self.bin.iterdir()), ["rtk"])
+        self.assertEqual((self.bin / "rtk").read_bytes(), b"ancien")
+
     def test_autre_version_remplacee(self):
         self._poser_binaire(b"ancien")
         actions, erreurs = plan_rtk(ROOT, Path(self.tmp.name))
@@ -179,7 +206,7 @@ class RtkTest(unittest.TestCase):
 # Faux gh : auth status et repo view répondent par $FAKE_GH_AUTH (0 ou 1) ; repo clone <depot> <dest> clone
 # le dépôt nu $FAKE_ATELIER_NU, puis donne à origin l'adresse GitHub du dépôt demandé.
 FAUX_GH = ('#!/bin/sh\ncase "$1 $2" in\n"auth status"|"repo view") exit "${FAKE_GH_AUTH:-0}" ;;\n'
-           '"repo clone") git clone -q "$FAKE_ATELIER_NU" "$4" && git -C "$4" remote set-url origin "https://github.com/$3.git" ;;\n'
+           '"repo clone") [ -z "$FAKE_GH_CLONE_FAIL" ] || exit 1; git clone -q "$FAKE_ATELIER_NU" "$4" && git -C "$4" remote set-url origin "https://github.com/$3.git" ;;\n'
            'esac\n')
 FAUX_CLAUDE = """#!/bin/sh
 echo "$*" >> "$FAKE_CLAUDE_LOG"
@@ -225,6 +252,7 @@ class AtelierTest(unittest.TestCase):
                                                 "FAKE_GH_AUTH": "0", "PATH": f"{fake}:{os.environ['PATH']}"})
         self.env.start()
         atelier.NOTES_APPLIQUEES.clear()
+        atelier._SAUTE = False
 
     def tearDown(self):
         self.env.stop()
@@ -324,11 +352,13 @@ class AtelierTest(unittest.TestCase):
         self.assertEqual(len(erreurs), 1)
         self.assertIn(str(dst), erreurs[0])
 
-    def test_clone_qui_n_est_pas_git_refuse(self):
+    def test_clone_qui_n_est_pas_git_saute(self):
         self.clone.mkdir()
-        erreurs = self._plan()[1]
-        self.assertEqual(len(erreurs), 1)
-        self.assertIn(str(self.clone), erreurs[0])
+        actions, erreurs = self._plan()
+        self.assertEqual(erreurs, [])
+        self.assertEqual([a[0] for a in actions], ["atelier-saute"])
+        self.assertIn("avant-dunei", actions[0][1])
+        self.assertIn("ne pas le supprimer", actions[0][1])
 
     def test_autre_origine_refusee(self):
         self._tout_poser()
@@ -348,6 +378,46 @@ class AtelierTest(unittest.TestCase):
         erreurs = self._plan()[1]
         self.assertEqual(len(erreurs), 1)
         self.assertIn(str(dst), erreurs[0])
+
+    def test_clone_en_echec_saute_tout(self):
+        actions, _ = self._plan()
+        with mock.patch.dict(os.environ, {"FAKE_GH_CLONE_FAIL": "1"}):
+            for a in actions:
+                self.assertTrue(appliquer(a), a)
+        self.assertEqual([n[0] for n in atelier.NOTES_APPLIQUEES], ["atelier-saute"])
+        self.assertFalse(any(self._dst(rel).exists() or self._dst(rel).is_symlink() for rel in LIENS))
+        self.assertEqual(list(self.home.rglob("*.avant-dunei*")), [])
+        self.assertFalse((self.home / ".gitconfig").exists())
+
+    def test_reprise_garde_une_modification_non_validee(self):
+        self._tout_poser()
+        src, dst = self.clone / "claude/settings.json", self._dst("claude/settings.json")
+        src.write_text('{"travail": "en cours"}\n', encoding="utf-8")
+        dst.unlink()
+        dst.write_text("réécrit par claude\n", encoding="utf-8")
+        for a in self._plan()[0]:
+            appliquer(a)
+        atelier.NOTES_APPLIQUEES[:] = [n for n in atelier.NOTES_APPLIQUEES if n[0] != "atelier-plugins-echec"]
+        garde = src.with_name("settings.json.avant-dunei")
+        self.assertEqual(src.read_text(encoding="utf-8"), "réécrit par claude\n")
+        self.assertEqual(garde.read_text(encoding="utf-8"), '{"travail": "en cours"}\n')
+        self.assertEqual(atelier.NOTES_APPLIQUEES, [("atelier-repris-garde", src, garde), ("atelier-repris", dst)])
+        self.assertEqual(list(src.parent.glob(".*dunei-tmp")), [])
+
+    def test_settings_invalide_sur_clone_existant_planifie_les_plugins(self):
+        self._tout_poser()
+        self._regler("pas du json")
+        actions, erreurs = self._plan()
+        self.assertEqual((erreurs, [a[0] for a in actions]), ([], ["atelier-plugins"]))
+
+    def test_delai_de_gh_est_un_echec(self):
+        with mock.patch.object(atelier.subprocess, "run", side_effect=subprocess.TimeoutExpired("gh", 30)):
+            self.assertIn("gh auth login", atelier.gh_accessible("x/y"))
+
+    def test_delai_de_claude_est_un_etat_inconnu(self):
+        self._tout_poser()
+        with mock.patch.object(atelier.subprocess, "run", side_effect=subprocess.TimeoutExpired("claude", 30)):
+            self.assertIsNone(atelier._plugins_a_poser(self.clone))
 
     def _plugins(self, installes: list[str], voulus: dict) -> list[str]:
         """Pose un settings.json voulant `voulus`, simule `installes` et rend les appels faits à claude."""

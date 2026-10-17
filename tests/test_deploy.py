@@ -71,11 +71,12 @@ def faux_atelier(t: Path, somme_archive: str | None = None) -> Path:
 
 
 def run(cfg: Path, *args: str) -> subprocess.CompletedProcess:
-    """Lance deploy.py avec des dossiers temporaires : XDG_CONFIG_HOME, XDG_BIN_HOME, XDG_CACHE_HOME, HOME
-    et un atelier.toml de test (DUNEI_ATELIER_TOML) — ni le réseau ni le vrai ~ ne sont touchés."""
+    """Lance deploy.py avec des dossiers temporaires : XDG_CONFIG_HOME, XDG_BIN_HOME, XDG_CACHE_HOME, HOME,
+    GIT_CONFIG_GLOBAL et GIT_CONFIG_SYSTEM (git ignore la configuration réelle) et un atelier.toml de test (DUNEI_ATELIER_TOML) — ni le réseau ni le vrai ~ ne sont touchés."""
     t = cfg.parent
     env = {**os.environ, "XDG_CONFIG_HOME": str(cfg), "XDG_BIN_HOME": str(t / "local-bin"),
-           "XDG_CACHE_HOME": str(t / "cache"), "HOME": str(t / "home"), "DUNEI_ATELIER_TOML": str(t / "atelier.toml")}
+           "XDG_CACHE_HOME": str(t / "cache"), "HOME": str(t / "home"), "DUNEI_ATELIER_TOML": str(t / "atelier.toml"),
+           "GIT_CONFIG_GLOBAL": "/dev/null", "GIT_CONFIG_SYSTEM": "/dev/null"}
     return subprocess.run([sys.executable, str(ROOT / "deploy.py"), *args],
                           capture_output=True, text=True, cwd=ROOT, env=env)
 
@@ -656,6 +657,26 @@ class DeployTest(unittest.TestCase):
         self.assertIn("rien n'a été modifié", res.stderr)
         self.assertFalse((self.bin / "rtk").exists())
         self.assertEqual(snapshot(self.cfg), before)
+
+    def test_ligne_atelier_du_bilan(self):
+        sortie = io.StringIO()
+        with mock.patch.dict(os.environ, {"XDG_CONFIG_HOME": str(self.cfg)}), \
+                mock.patch.object(sys, "argv", ["deploy.py", "--dry-run"]), \
+                mock.patch.object(deploy.atelier, "etat_atelier", return_value=["2 fichier(s) à envoyer"]), \
+                contextlib.redirect_stdout(sortie):
+            self.assertEqual(deploy.main(), 0)
+        self.assertIn("  atelier : 2 fichier(s) à envoyer", sortie.getvalue())
+
+    def test_interruption_affiche_les_notes_appliquees(self):
+        erreur = io.StringIO()
+        deploy.atelier.NOTES_APPLIQUEES[:] = [("atelier-repris", Path("/x/y"))]
+        self.addCleanup(deploy.atelier.NOTES_APPLIQUEES.clear)
+        with mock.patch.dict(os.environ, {"XDG_CONFIG_HOME": str(self.cfg)}), \
+                mock.patch.object(sys, "argv", ["deploy.py"]), \
+                mock.patch.object(deploy, "apply", side_effect=OSError("disque plein")), \
+                contextlib.redirect_stderr(erreur):
+            self.assertEqual(deploy.main(), 1)
+        self.assertIn("/x/y", erreur.getvalue())
 
     def test_refuses_root(self):
         with mock.patch("os.getuid", return_value=0):

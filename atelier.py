@@ -16,6 +16,7 @@ from __future__ import annotations
 import argparse
 import os
 import hashlib
+import http.client
 import json
 import re
 import shutil
@@ -29,7 +30,9 @@ from pathlib import Path
 ATELIER = "atelier.toml"                      # Fichier déclaratif de l'atelier, à la racine du dépôt.
 CLES_RTK = ("version", "archive", "url", "sha256_archive", "sha256_binaire")
 CLES_ATELIER = ("depot", "clone", "gitconfig")
-NOTES_APPLIQUEES: list[tuple] = []             # Notes nées de l'application (atelier-repris, atelier-garde), lues par deploy.main.
+NOTES_APPLIQUEES: list[tuple] = []             # Notes nées de l'application (atelier-repris, atelier-garde, atelier-saute...), lues par deploy.main.
+_SAUTE = False                                 # Vrai quand le clone a échoué : les actions atelier-* suivantes n'agissent plus.
+DELAI = 30                                     # Secondes accordées à chaque appel de gh et de claude pendant l'inspection.
 SOMMES = ("sha256_archive", "sha256_binaire")  # Clés de rtk qui portent une somme SHA-256.
 
 
@@ -92,10 +95,11 @@ def telecharger(url: str, dest: Path) -> None:
     """Téléchargement d'une adresse vers un fichier ; seul point réseau du module.
 
     Entrées : url — adresse à lire ; dest — fichier à écrire.
-    Sortie : aucune. Erreurs : OSError (dont URLError) si le téléchargement échoue.
-    Dépendances : urllib.request.
+    Sortie : aucune. Erreurs : OSError (dont URLError et le délai de 60 s), http.client.HTTPException ou ValueError si le téléchargement échoue.
+    Dépendances : urllib.request, shutil.
     """
-    urllib.request.urlretrieve(url, dest)
+    with urllib.request.urlopen(url, timeout=60) as reponse, dest.open("wb") as sortie:
+        shutil.copyfileobj(reponse, sortie)
 
 
 def sha256(path: Path) -> str:
@@ -112,7 +116,7 @@ def plan_rtk(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
 
     Entrées : repo — racine du dépôt ; home — inutilisé, pour l'interface commune de DESTINATIONS.
     Sortie : (actions, erreurs). Rien à faire si le binaire de bin_home a la somme épinglée ; sinon
-        ("rtk-pose", archive, somme du binaire attendue, destination), précédé de
+        ("rtk-pose", archive, somme du binaire attendue, destination), suivi de
         ("rtk-remplace", destination, version) quand un autre binaire est présent. Une archive en
         cache de mauvaise somme est supprimée puis retéléchargée une fois.
     Erreurs : atelier.toml invalide, téléchargement impossible (l'adresse est nommée) ou somme de
@@ -139,7 +143,7 @@ def plan_rtk(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
                 part.unlink()
                 return [], [f"archive rtk de somme fausse : attendue {rtk['sha256_archive']}, lue {lue} ({rtk['url']})"]
             os.replace(part, archive)
-        except OSError as e:
+        except (OSError, http.client.HTTPException, ValueError) as e:
             return [], [f"rtk {rtk['version']} non téléchargeable depuis {rtk['url']} : {e}"]
     actions: list[tuple] = [("rtk-pose", archive, rtk["sha256_binaire"], dest)]
     if dest.exists():
@@ -159,8 +163,10 @@ def gh_accessible(depot: str) -> str:
               (["gh", "repo", "view", depot], f"gh n'a pas accès à {depot} : vérifier le compte (gh auth status), puis relancer make install"))
     for commande, cause in causes:
         try:
-            if subprocess.run(commande, capture_output=True).returncode:
+            if subprocess.run(commande, capture_output=True, timeout=DELAI).returncode:
                 return cause
+        except subprocess.TimeoutExpired:
+            return cause
         except OSError:
             return "gh est absent : installer github-cli et lancer gh auth login, puis relancer make install"
     return ""
@@ -190,13 +196,13 @@ def plan_atelier(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
     """Inspection de l'atelier — clone de dunei-atelier et liens de ses fichiers.
 
     Entrées : repo — racine du dépôt ; home — inutilisé, pour l'interface commune de DESTINATIONS.
-    Sortie : (actions, erreurs). Si le clone manque et que gh est inutilisable : seulement
+    Sortie : (actions, erreurs). Si le clone manque et que gh est inutilisable, ou si le dossier du
+        clone existe sans être un dépôt git (la mémoire de Claude Code peut l'avoir créé) : seulement
         ("atelier-saute", cause). Sinon ("atelier-clone", depot, clone) si le clone manque, puis ("atelier-plugins", clone) (si le clone manque ou si un plugin activé manque, ou si claude est absent), puis
         ("atelier-include", gitconfig du clone) si le gitconfig global ne l'inclut pas encore, puis, pour
         chaque destination qui n'est pas déjà le bon lien, ("atelier-lien", src, dst, neuf) où neuf
         est vrai si le clone manquait à l'inspection.
-    Erreurs : atelier.toml invalide ; clone qui n'est pas un dépôt git ou dont origin n'est pas le
-        dépôt attendu ; destination qui est un dossier ; lien vers un autre chemin que le fichier du
+    Erreurs : atelier.toml invalide ; clone dont origin n'est pas le dépôt attendu ; destination qui est un dossier ; lien vers un autre chemin que le fichier du
         clone. Chaque message nomme le chemin.
     Dépendances : lire_atelier, gh_accessible, _plugins_a_poser, _inclusions, subprocess.
     """
@@ -212,7 +218,8 @@ def plan_atelier(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
             return [("atelier-saute", cause)], []
         actions.append(("atelier-clone", cfg["depot"], clone))
     elif subprocess.run(["git", "-C", str(clone), "rev-parse", "--git-dir"], capture_output=True).returncode:
-        return [], [f"{clone} existe sans être un dépôt git : le déplacer ou le supprimer"]
+        return [("atelier-saute", f"{clone} existe sans être un dépôt git (la mémoire de Claude Code l'a peut-être créé) : le déplacer, "
+                 f"par exemple en {clone}.avant-dunei, puis relancer make install ; ne pas le supprimer : il peut contenir la mémoire de Claude")], []
     elif not _origine_ok(clone, cfg["depot"]):
         return [], [f"l'origine de {clone} n'est pas {cfg['depot']} : vérifier avec git -C {clone} remote -v"]
     if neuf or (manquants := _plugins_a_poser(clone)) is None or manquants:
@@ -258,9 +265,9 @@ def _plugins_presents() -> set[str]:
     Dépendances : subprocess, json, claude.
     """
     try:
-        liste = subprocess.run(["claude", "plugin", "list", "--json"], check=True, capture_output=True, text=True).stdout
+        liste = subprocess.run(["claude", "plugin", "list", "--json"], check=True, capture_output=True, text=True, timeout=DELAI).stdout
         return {p["id"] for p in json.loads(liste)}
-    except (subprocess.CalledProcessError, OSError, ValueError, KeyError, TypeError) as e:
+    except (subprocess.SubprocessError, OSError, ValueError, KeyError, TypeError) as e:
         raise ValueError(f"claude plugin list --json a échoué : {e}") from e
 
 
@@ -268,17 +275,14 @@ def _plugins_a_poser(clone: Path) -> list[str] | None:
     """Plugins à installer, pour l'inspection ; ne lève jamais.
 
     Entrée : clone — dépôt dunei-atelier. Sortie : identifiants manquants ; liste vide si le
-        settings.json est inutilisable (l'application le signalera) ; None si l'état est inconnu
-        (claude absent du PATH ou liste des plugins impossible à lire).
+        settings.json est inutilisable ; None si l'état est inconnu (claude absent du PATH, settings.json inutilisable
+        ou liste des plugins impossible à lire : l'application signalera l'échec).
     Erreurs : aucune. Dépendances : _plugins_voulus, _plugins_presents, shutil.
     """
     if shutil.which("claude") is None:
         return None
     try:
         voulus = _plugins_voulus(clone)
-    except ValueError:
-        return []
-    try:
         presents = _plugins_presents()
     except ValueError:
         return None
@@ -307,26 +311,44 @@ def _plugins(clone: Path) -> None:
         NOTES_APPLIQUEES.append(("atelier-plugins-echec", f"claude plugin install a échoué : {e}"))
 
 
+def _libre(chemin: Path) -> Path:
+    """Premier nom <chemin>.avant-dunei, puis .avant-dunei.N, qui ne désigne rien.
+
+    Entrée : chemin — fichier à mettre de côté. Sortie : nom libre, dans le même dossier.
+    Erreurs : aucune. Dépendances : aucune.
+    """
+    garde, n = chemin.with_name(chemin.name + ".avant-dunei"), 0
+    while garde.exists() or garde.is_symlink():
+        n += 1
+        garde = chemin.with_name(f"{chemin.name}.avant-dunei.{n}")
+    return garde
+
+
 def _lier(src: Path, dst: Path, neuf: bool) -> None:
     """Pose du lien dst vers src, en reprenant ou gardant le fichier qui occupe dst.
 
     Entrées : src — fichier du clone ; dst — destination ; neuf — vrai si le clone vient d'être créé.
     Sortie : aucune ; ajoute à NOTES_APPLIQUEES atelier-garde (fichier gardé en .avant-dunei, ou .avant-dunei.N si ce nom est pris) ou
-        atelier-repris (contenu copié dans src). Erreurs : OSError. Dépendances : os, shutil.
+        atelier-repris (contenu copié dans src, atomiquement) ; si src avait une modification non validée, elle est d'abord
+        mise de côté sous src.avant-dunei (ou .N), avec la note atelier-repris-garde.
+    Erreurs : OSError. Dépendances : _libre, os, shutil, subprocess, git.
     """
     dst.parent.mkdir(parents=True, exist_ok=True)
     if dst.exists() and not (src.is_file() and dst.read_bytes() == src.read_bytes()):
         if neuf:
-            garde = dst.with_name(dst.name + ".avant-dunei")
-            n = 0
-            while garde.exists() or garde.is_symlink():
-                n += 1
-                garde = dst.with_name(f"{dst.name}.avant-dunei.{n}")
+            garde = _libre(dst)
             os.replace(dst, garde)
             NOTES_APPLIQUEES.append(("atelier-garde", dst, garde))
         else:
             src.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(dst, src)
+            if src.exists() and subprocess.run(["git", "-C", str(src.parent), "status", "--porcelain", "--", src.name],
+                                               capture_output=True, text=True).stdout.strip():
+                garde = _libre(src)
+                os.replace(src, garde)
+                NOTES_APPLIQUEES.append(("atelier-repris-garde", src, garde))
+            copie = src.with_name(f".{src.name}.dunei-tmp")
+            shutil.copyfile(dst, copie)
+            os.replace(copie, src)
             NOTES_APPLIQUEES.append(("atelier-repris", dst))
     tmp = dst.with_name(f".{dst.name}.dunei-tmp")
     tmp.unlink(missing_ok=True)
@@ -342,12 +364,20 @@ def appliquer(action: tuple) -> bool:
     atelier-clone lance gh repo clone ; atelier-plugins appelle _plugins ; atelier-include ajoute include.path au gitconfig global ; atelier-lien appelle _lier.
     Entrée : action — tuple produit par plan_rtk ou plan_atelier.
     Sortie : True si l'action appartient à l'atelier et a été exécutée, False sinon.
-    Erreurs : subprocess.CalledProcessError si le clone échoue ; OSError si l'archive est illisible ou sans membre rtk, ou si la somme du binaire diffère
+    Un clone qui échoue (CalledProcessError, OSError) ajoute atelier-saute et fait sauter les actions atelier-* suivantes.
+    Erreurs : OSError si l'archive est illisible ou sans membre rtk, ou si la somme du binaire diffère
         (la destination reste intacte). Dépendances : tarfile, sha256, os, subprocess, _lier.
     """
+    global _SAUTE
     kind, *args = action
+    if kind.startswith("atelier-") and _SAUTE:
+        return True
     if kind == "atelier-clone":
-        subprocess.run(["gh", "repo", "clone", args[0], str(args[1])], check=True)
+        try:
+            subprocess.run(["gh", "repo", "clone", args[0], str(args[1])], check=True)
+        except (subprocess.CalledProcessError, OSError) as e:
+            _SAUTE = True
+            NOTES_APPLIQUEES.append(("atelier-saute", f"gh repo clone {args[0]} a échoué ({e}) : vérifier le compte (gh auth status) et le réseau, puis relancer make install"))
         return True
     if kind == "atelier-plugins":
         _plugins(*args)
