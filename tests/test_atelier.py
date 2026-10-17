@@ -481,6 +481,19 @@ class AtelierTest(unittest.TestCase):
         self.assertEqual([n[0] for n in atelier.NOTES_APPLIQUEES], ["atelier-plugins-echec"])
         self.assertIn("claude-plugins-official", atelier.NOTES_APPLIQUEES[0][1])
 
+    def test_plugin_en_echec_ou_en_delai_n_arrete_pas_les_suivants(self):
+        self._regler('{"enabledPlugins": {"a@m": true, "b@m": true}}')
+        for corps in ('exit 1', 'sleep 5'):
+            atelier.NOTES_APPLIQUEES.clear()
+            self._faux_claude('case "$*" in "plugin list"*) echo "[]";; "plugin marketplace list"*) echo \'[{"name":"m"}]\';; '
+                              '"plugin install a@m") ' + corps + ';; "plugin install b@m") echo b >> "$FAKE_CLAUDE_LOG";; esac')
+            self.log.write_text("", encoding="utf-8")
+            with mock.patch.object(atelier, "DELAI_RESEAU", 1):
+                self.assertTrue(appliquer(("atelier-plugins", self.clone)))
+            self.assertEqual(self.log.read_text(encoding="utf-8"), "b\n")
+            self.assertEqual([n[0] for n in atelier.NOTES_APPLIQUEES], ["atelier-plugins-echec"])
+            self.assertIn("a@m", atelier.NOTES_APPLIQUEES[0][1])
+
     def test_liste_des_marches_en_echec_note(self):
         self._regler('{"enabledPlugins": {"a@m": true}}')
         self._faux_claude('[ "$2" = "list" ] && [ "$3" = "--json" ] && echo "[]"; [ "$3" = "list" ] && echo pas json; exit 0')

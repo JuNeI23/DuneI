@@ -32,7 +32,9 @@ CLES_RTK = ("version", "archive", "url", "sha256_archive", "sha256_binaire")
 CLES_ATELIER = ("depot", "clone", "gitconfig")
 NOTES_APPLIQUEES: list[tuple] = []             # Notes nées de l'application (atelier-repris, atelier-garde, atelier-saute...), lues par deploy.main.
 _SAUTE = False                                 # Vrai quand le clone a échoué : les actions atelier-* suivantes n'agissent plus.
-DELAI = 30                                     # Secondes accordées à chaque appel de gh et de claude pendant l'inspection.
+DELAI = 30                                     # Secondes accordées à chaque appel de gh et aux listes de claude (inspection et état).
+DELAI_RESEAU = 300                             # Secondes accordées aux appels réseau de claude à l'application (marketplace add, plugin install).
+SOURCES_MARCHE = {"github": "repo", "git": "url", "url": "url"}  # Clé de extraKnownMarketplaces.source qui porte l'argument de marketplace add.
 SOMMES = ("sha256_archive", "sha256_binaire")  # Clés de rtk qui portent une somme SHA-256.
 
 
@@ -312,13 +314,13 @@ def _declarer_marche(clone: Path, nom: str) -> None:
     """
     try:
         source = json.loads((clone / "claude" / "settings.json").read_text(encoding="utf-8"))["extraKnownMarketplaces"][nom]["source"]
-        cible = source["repo"] if source["source"] == "github" else source["url"] if source["source"] in ("git", "url") else None
+        cible = source[SOURCES_MARCHE[source["source"]]] if source["source"] in SOURCES_MARCHE else None
     except (OSError, ValueError, KeyError, TypeError) as e:
         raise ValueError(f"le marché {nom} n'est pas déclaré dans extraKnownMarketplaces ({e})") from e
     if cible is None:
         raise ValueError(f"le marché {nom} a une source inconnue : {source['source']}")
     try:
-        subprocess.run(["claude", "plugin", "marketplace", "add", cible], check=True, capture_output=True, timeout=DELAI)
+        subprocess.run(["claude", "plugin", "marketplace", "add", cible], check=True, capture_output=True, timeout=DELAI_RESEAU)
     except (subprocess.SubprocessError, OSError) as e:
         raise ValueError(f"claude plugin marketplace add {cible} a échoué : {e}") from e
 
@@ -330,7 +332,7 @@ def _plugins(clone: Path) -> None:
     Sortie : aucune ; enregistre d'abord chaque marché absent des plugins manquants (claude plugin marketplace add), puis lance
         claude plugin install pour chaque plugin manquant. Sans claude dans le PATH, ajoute atelier-sans-claude à NOTES_APPLIQUEES ;
         tout échec (settings.json invalide, liste, marché ou installation en échec) ajoute ("atelier-plugins-echec", cause) et
-        n'interrompt rien : un marché en échec écarte seulement ses plugins.
+        n'interrompt rien : un marché en échec écarte seulement ses plugins, un plugin en échec (note à son nom) n'empêche pas les suivants.
     Erreurs : aucune. Dépendances : _plugins_voulus, _plugins_presents, _marches_presents, _declarer_marche, shutil, subprocess.
     """
     if shutil.which("claude") is None:
@@ -349,11 +351,12 @@ def _plugins(clone: Path) -> None:
                 NOTES_APPLIQUEES.append(("atelier-plugins-echec", str(e)))
                 manquants = [i for i in manquants if i.partition("@")[2] != marche]
         for ident in manquants:
-            subprocess.run(["claude", "plugin", "install", ident], check=True, capture_output=True, timeout=DELAI)
+            try:
+                subprocess.run(["claude", "plugin", "install", ident], check=True, capture_output=True, timeout=DELAI_RESEAU)
+            except (subprocess.SubprocessError, OSError) as e:
+                NOTES_APPLIQUEES.append(("atelier-plugins-echec", f"claude plugin install {ident} a échoué : {e}"))
     except ValueError as e:
         NOTES_APPLIQUEES.append(("atelier-plugins-echec", str(e)))
-    except (subprocess.SubprocessError, OSError) as e:
-        NOTES_APPLIQUEES.append(("atelier-plugins-echec", f"claude plugin install a échoué : {e}"))
 
 
 def _libre(chemin: Path) -> Path:
