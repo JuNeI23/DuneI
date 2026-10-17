@@ -1,0 +1,5 @@
+# services.toml — liste blanche des unités système que DuneI active (L1-25), sur le modèle de session.toml.
+version = "0.1.0"
+
+[systeme]
+unites = ["ufw.service", "power-profiles-daemon.service", "bluetooth.service", "cups.socket", "fstrim.timer"]

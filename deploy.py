@@ -32,6 +32,9 @@ mis de côté sous le nom .avant-dunei, et un lien remplacé par un fichier est 
 - systeme : chaque fichier de systeme/ est copié sous la racine du système, /etc compris, avec sudo, et
   seulement s'il manque ou diffère ; {utilisateur} est rempli par l'utilisateur courant ; un fichier de
   logind.conf.d recharge logind, sans le redémarrer ; un fichier sous etc/systemd/system recharge systemd.
+- socle : chaque unité système de services.toml (liste blanche, sur le modèle de session.toml) est activée
+  et démarrée avec sudo si elle ne l'est pas ; si ufw.service y figure et que etc/ufw/ufw.conf n'indique
+  pas ENABLED=yes, le pare-feu est allumé (ufw --force enable) après l'activation du service (L1-25).
 - connexion : greetd et tuigreet doivent être installés ; si display-manager.service ne désigne pas
   greetd, une seule commande, systemctl enable --force, fait pointer l'alias vers greetd, pour le
   démarrage suivant : aucun instant sans gestionnaire. Refus en root.
@@ -90,6 +93,10 @@ PAQUETS = {"greetd": "greetd", "tuigreet": "greetd-tuigreet", "hyprlock": "hyprl
            "informant": "informant", "fakeroot": "fakeroot"}
 OUTILS_MAJ = ("checkupdates", "paccache", "pacdiff", "informant", "fakeroot")  # Exécutables de la mise à jour, exigés par la destination maj.
 BIN = "config/bin"                                           # Exécutables de l'utilisateur, liés sous bin_home.
+SOCLE = "services.toml"                                      # Liste blanche des unités système activées (L1-25).
+SOCLE_VERSION = "0.1.0"
+SUFFIXES = (".service", ".socket", ".timer")                 # Types d'unité admis dans services.toml.
+UFW_CONF = "etc/ufw/ufw.conf"                                # Configuration d'ufw sous la racine : ENABLED=yes si le pare-feu est allumé.
 MINUTEUR = "dunei-precharge.timer"                           # Minuteur du préchargement des mises à jour, posé par systeme/.
 
 
@@ -462,9 +469,74 @@ def plan_services(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
     return actions, err
 
 
+def lire_services(repo: Path) -> tuple[list[str], list[str]]:
+    """Lecture et contrôle de la liste blanche des unités système.
+
+    Entrée : repo — racine du dépôt.
+    Sortie : (unités de systeme.unites, dans l'ordre ; erreurs). La liste est vide dès qu'une erreur existe.
+    Erreurs : aucune exception ; fichier illisible, version inattendue, liste absente ou vide, nom sans
+              suffixe .service, .socket ou .timer, doublon deviennent des messages. Dépendances : tomllib,
+              SOCLE, SOCLE_VERSION, SUFFIXES.
+    """
+    try:
+        with (repo / SOCLE).open("rb") as fh:
+            raw = tomllib.load(fh)
+    except (OSError, ValueError) as e:
+        return [], [f"{SOCLE} illisible ({e})"]
+    if raw.get("version") != SOCLE_VERSION:
+        return [], [f"{SOCLE} : version « {raw.get('version')} », {SOCLE_VERSION} attendue"]
+    unites = raw.get("systeme", {}).get("unites") if isinstance(raw.get("systeme"), dict) else None
+    if not isinstance(unites, list) or not unites:
+        return [], [f"{SOCLE} : systeme.unites doit être une liste non vide"]
+    err = [f"{SOCLE} : « {u} » n'est pas un nom d'unité {'/'.join(SUFFIXES)}" for u in unites
+           if not (isinstance(u, str) and u.endswith(SUFFIXES) and "/" not in u)]
+    err += [f"{SOCLE} : « {u} » apparaît deux fois" for u in sorted({u for u in unites if isinstance(u, str)})
+            if unites.count(u) > 1]
+    return ([] if err else unites), err
+
+
+def _etat_systeme(unite: str) -> tuple[str, bool]:
+    """État d'une unité système auprès de systemd.
+
+    Entrée : unite — nom d'unité. Sortie : (réponse de is-enabled, vrai si elle tourne) ; ("", False) si
+             systemctl est absent. Erreurs : aucune. Dépendances : systemctl.
+    """
+    try:
+        state = subprocess.run(["systemctl", "is-enabled", unite], capture_output=True, text=True).stdout.strip()
+        active = subprocess.run(["systemctl", "is-active", unite], capture_output=True).returncode == 0
+    except OSError:
+        return "", False
+    return state, active
+
+
+def plan_socle(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
+    """Inspection des services système de services.toml, sans aucune modification (L1-25).
+
+    Entrées : repo — racine du dépôt ; home — dossier de configuration racine, inutilisé ici.
+    Sortie : (activation avec sudo de chaque unité qui n'est pas activée ou ne tourne pas ; puis, si
+             ufw.service figure dans la liste et que UFW_CONF n'a pas ENABLED=yes, ("sudo-ufw",) ; erreurs).
+    Erreurs : aucune exception ; liste fautive, ou unité introuvable (paquet à déclarer dans paquets.toml),
+              devient un message. Dépendances : lire_services, _etat_systeme, system_root, UFW_CONF.
+    """
+    unites, err = lire_services(repo)
+    actions = []
+    for u in unites:
+        state, active = _etat_systeme(u)
+        if state not in ("enabled", "disabled"):
+            err.append(f"{u} introuvable ({state or 'systemctl sans réponse'}) : déclarer le paquet qui le "
+                       "fournit dans paquets.toml, puis l'installer")
+        elif state != "enabled" or not active:
+            actions.append(("sudo-enable", u))
+    conf = system_root(os.environ) / UFW_CONF
+    allume = conf.is_file() and "ENABLED=yes" in conf.read_text(encoding="utf-8", errors="replace").split()
+    if "ufw.service" in unites and not allume:
+        actions.append(("sudo-ufw",))
+    return actions, err
+
+
 NOTES = ("hors-liste", "chemin", "rtk-remplace", "atelier-saute", "atelier-sans-claude", "atelier-plugins-echec")  # Signalements affichés après le bilan : ils n'agissent pas et ne bloquent pas.
 DESTINATIONS = {"hypr": plan_hypr, "fontconfig": plan_fontconfig, "applis": plan_applis,
-                "bin": plan_bin, "rtk": atelier.plan_rtk, "atelier": atelier.plan_atelier, "services": plan_services, "systeme": plan_systeme, "maj": plan_maj,
+                "bin": plan_bin, "rtk": atelier.plan_rtk, "atelier": atelier.plan_atelier, "services": plan_services, "systeme": plan_systeme, "socle": plan_socle, "maj": plan_maj,
                 "connexion": plan_connexion}  # Nom → planification, dans l'ordre d'exécution (sudo en dernier).
 
 
@@ -505,6 +577,7 @@ def describe(action: tuple) -> str:
         "sudo-reload": "recharger {0}, avec sudo",
         "sudo-daemon-reload": "recharger les unités système de systemd, avec sudo",
         "sudo-enable": "activer et démarrer {0}, avec sudo",
+        "sudo-ufw": "allumer le pare-feu ufw, avec sudo",
         "sudo-dm": "remplacer le gestionnaire de connexion {0} par {1} au prochain démarrage, avec sudo",
         "daemon-reload": "recharger les unités utilisateur de systemd",
         "start": "démarrer {0}",
@@ -569,6 +642,8 @@ def apply(actions: list[tuple]) -> None:
             subprocess.run(["sudo", "systemctl", "enable", "--force", args[1]], check=True)
         elif kind == "sudo-enable":
             subprocess.run(["sudo", "systemctl", "enable", "--now", args[0]], check=True)
+        elif kind == "sudo-ufw":
+            subprocess.run(["sudo", "ufw", "--force", "enable"], check=True)
         elif kind == "sudo-reload":
             subprocess.run(["sudo", "systemctl", "reload", args[0]], check=True)
         elif kind == "enable":

@@ -117,6 +117,8 @@ class DeployTest(unittest.TestCase):
         self.env.start()
         (self.root / DM).parent.mkdir(parents=True)
         (self.root / DM).symlink_to("/usr/lib/systemd/system/greetd.service")
+        (self.root / "etc/ufw").mkdir(parents=True)
+        (self.root / "etc/ufw/ufw.conf").write_text("ENABLED=yes\n", encoding="utf-8")  # Pare-feu déjà allumé : socle sans action ufw.
 
     def tearDown(self):
         self.env.stop()
@@ -682,6 +684,66 @@ class DeployTest(unittest.TestCase):
         with mock.patch("os.getuid", return_value=0):
             actions, err = plan(ROOT, self.cfg)
         self.assertTrue(any("root" in e for e in err))
+
+
+class SocleTest(unittest.TestCase):
+    """Services système de services.toml : activation et pare-feu (L1-25), état de systemd simulé."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+        self.env = mock.patch.dict(os.environ, {"DUNEI_SYSROOT": str(self.root)})
+        self.env.start()
+        self.repo = self.root / "depot"
+        self.repo.mkdir()
+        self.ecrire(deploy.SOCLE_VERSION, ["ufw.service", "fstrim.timer", "cups.socket"])
+        self.ufw("yes")
+
+    def tearDown(self):
+        self.env.stop()
+        self.tmp.cleanup()
+
+    def ecrire(self, version, unites):
+        """Écrit services.toml dans le dépôt factice."""
+        liste = ", ".join(f'"{u}"' for u in unites)
+        (self.repo / deploy.SOCLE).write_text(f'version = "{version}"\n[systeme]\nunites = [{liste}]\n', encoding="utf-8")
+
+    def ufw(self, valeur):
+        """Écrit etc/ufw/ufw.conf sous la racine factice."""
+        conf = self.root / "etc/ufw/ufw.conf"
+        conf.parent.mkdir(parents=True, exist_ok=True)
+        conf.write_text(f"ENABLED={valeur}\n", encoding="utf-8")
+
+    def plan(self, etat):
+        """Planifie avec _etat_systeme simulé, qui répond etat pour toute unité."""
+        with mock.patch("deploy._etat_systeme", return_value=etat):
+            return deploy.plan_socle(self.repo, self.root)
+
+    def test_active_unite_inactive(self):
+        actions, err = self.plan(("disabled", False))
+        self.assertEqual(err, [])
+        self.assertIn(("sudo-enable", "fstrim.timer"), actions)
+
+    def test_unite_active_rien(self):
+        self.assertEqual(self.plan(("enabled", True)), ([], []))
+
+    def test_unite_introuvable(self):
+        actions, err = self.plan(("not-found", False))
+        self.assertTrue(any("fstrim.timer" in e and "paquets.toml" in e for e in err))
+
+    def test_pare_feu_eteint(self):
+        self.ufw("no")
+        actions, err = self.plan(("disabled", False))
+        self.assertIn(("sudo-ufw",), actions)
+        self.assertLess(actions.index(("sudo-enable", "ufw.service")), actions.index(("sudo-ufw",)))
+
+    def test_liste_fautive(self):
+        for version, unites in (("9.9.9", ["ufw.service"]), (deploy.SOCLE_VERSION, []),
+                                (deploy.SOCLE_VERSION, ["ufw"]), (deploy.SOCLE_VERSION, ["ufw.service", "ufw.service"])):
+            with self.subTest(version=version, unites=unites):
+                self.ecrire(version, unites)
+                actions, err = self.plan(("disabled", False))
+                self.assertEqual((actions, len(err)), ([], 1))
 
 
 if __name__ == "__main__":
