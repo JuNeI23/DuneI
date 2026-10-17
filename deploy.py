@@ -515,7 +515,7 @@ def describe(action: tuple) -> str:
         "rtk-remplace": "{0} contient déjà un autre rtk ; remplacé par la version épinglée {1}",
         "atelier-saute": "atelier non posé : {0}",
         "atelier-clone": "cloner {0} dans {1}",
-        "atelier-plugins": "installer les plugins Claude Code déclarés dans {0}/claude/settings.json",
+        "atelier-plugins": "déclarer les marchés puis installer les plugins Claude Code de {0}/claude/settings.json",
         "atelier-include": "inclure {0} dans ~/.gitconfig",
         "atelier-sans-claude": "claude est absent du PATH : les plugins ne sont pas installés ; installer Claude Code puis relancer make install",
         "atelier-plugins-echec": "plugins Claude Code non installés ({0}) : lancer claude plugin install pour chaque plugin de enabledPlugins, puis relancer make install",

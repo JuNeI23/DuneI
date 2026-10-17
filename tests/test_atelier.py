@@ -211,6 +211,8 @@ FAUX_GH = ('#!/bin/sh\ncase "$1 $2" in\n"auth status"|"repo view") exit "${FAKE_
 FAUX_CLAUDE = """#!/bin/sh
 echo "$*" >> "$FAKE_CLAUDE_LOG"
 [ "$1 $2" = "plugin list" ] && echo "$FAKE_PLUGINS"
+[ "$1 $2 $3" = "plugin marketplace list" ] && echo "$FAKE_MARCHES"
+[ "$1 $2 $3" = "plugin marketplace add" ] && [ -n "$FAKE_MARCHE_ECHEC" ] && exit 1
 exit 0
 """
 LIENS = {"claude/settings.json": ".claude/settings.json", "claude/CLAUDE.md": ".claude/CLAUDE.md",
@@ -431,20 +433,59 @@ class AtelierTest(unittest.TestCase):
         with mock.patch.object(atelier.subprocess, "run", side_effect=subprocess.TimeoutExpired("claude", 30)):
             self.assertIsNone(atelier._plugins_a_poser(self.clone))
 
-    def _plugins(self, installes: list[str], voulus: dict) -> list[str]:
-        """Pose un settings.json voulant `voulus`, simule `installes` et rend les appels faits à claude."""
+    def _plugins(self, installes: list[str], voulus: dict, marches: list[str] | None = None, declares: dict | None = None, **env) -> list[str]:
+        """Pose un settings.json voulant `voulus` (et déclarant `declares`), simule `installes` et les marchés `marches`
+        (par défaut ceux des plugins voulus), et rend les appels faits à claude."""
         reglages = self.clone / "claude" / "settings.json"
         reglages.parent.mkdir(parents=True, exist_ok=True)
-        reglages.write_text(json.dumps({"enabledPlugins": voulus}), encoding="utf-8")
+        reglages.write_text(json.dumps({"enabledPlugins": voulus, "extraKnownMarketplaces": declares or {}}), encoding="utf-8")
         liste = json.dumps([{"id": i, "version": "1", "scope": "user", "enabled": True} for i in installes])
-        with mock.patch.dict(os.environ, {"FAKE_PLUGINS": liste}):
+        if marches is None:
+            marches = [i.split("@")[1] for i in voulus]
+        noms = json.dumps([{"name": m, "source": "github"} for m in marches])
+        with mock.patch.dict(os.environ, {"FAKE_PLUGINS": liste, "FAKE_MARCHES": noms, **env}):
             self.assertTrue(appliquer(("atelier-plugins", self.clone)))
         return self.log.read_text(encoding="utf-8").splitlines() if self.log.exists() else []
 
     def test_installe_les_plugins_manquants(self):
         appels = self._plugins(["context7@claude-plugins-official"],
                                {"context7@claude-plugins-official": True, "superpowers@claude-plugins-official": True, "off@x": False})
-        self.assertEqual(appels, ["plugin list --json", "plugin install superpowers@claude-plugins-official"])
+        self.assertEqual(appels, ["plugin list --json", "plugin marketplace list --json",
+                                  "plugin install superpowers@claude-plugins-official"])
+
+    OFFICIEL = {"claude-plugins-official": {"source": {"source": "github", "repo": "anthropics/claude-plugins-official"}}}
+
+    def test_marche_absent_et_declare_est_ajoute_avant_l_installation(self):
+        appels = self._plugins([], {"a@claude-plugins-official": True}, marches=["autre"], declares=self.OFFICIEL)
+        self.assertEqual(appels[1:], ["plugin marketplace list --json", "plugin marketplace add anthropics/claude-plugins-official",
+                                      "plugin install a@claude-plugins-official"])
+
+    def test_marche_git_est_ajoute_par_son_url(self):
+        decl = {"m": {"source": {"source": "git", "url": "https://exemple.org/m.git"}}}
+        appels = self._plugins([], {"a@m": True}, marches=[], declares=decl)
+        self.assertIn("plugin marketplace add https://exemple.org/m.git", appels)
+
+    def test_marche_present_aucun_ajout(self):
+        appels = self._plugins([], {"a@claude-plugins-official": True}, declares=self.OFFICIEL)
+        self.assertFalse([a for a in appels if "marketplace add" in a])
+
+    def test_marche_absent_non_declare_note_et_saute_ses_plugins(self):
+        appels = self._plugins([], {"a@inconnu": True, "b@m": True}, marches=["m"])
+        self.assertEqual(appels, ["plugin list --json", "plugin marketplace list --json", "plugin install b@m"])
+        self.assertEqual([n[0] for n in atelier.NOTES_APPLIQUEES], ["atelier-plugins-echec"])
+        self.assertIn("inconnu", atelier.NOTES_APPLIQUEES[0][1])
+
+    def test_ajout_de_marche_en_echec_note_sans_exception(self):
+        appels = self._plugins([], {"a@claude-plugins-official": True}, marches=[], declares=self.OFFICIEL, FAKE_MARCHE_ECHEC="1")
+        self.assertFalse([a for a in appels if "plugin install" in a])
+        self.assertEqual([n[0] for n in atelier.NOTES_APPLIQUEES], ["atelier-plugins-echec"])
+        self.assertIn("claude-plugins-official", atelier.NOTES_APPLIQUEES[0][1])
+
+    def test_liste_des_marches_en_echec_note(self):
+        self._regler('{"enabledPlugins": {"a@m": true}}')
+        self._faux_claude('[ "$2" = "list" ] && [ "$3" = "--json" ] && echo "[]"; [ "$3" = "list" ] && echo pas json; exit 0')
+        self.assertTrue(appliquer(("atelier-plugins", self.clone)))
+        self.assertEqual([n[0] for n in atelier.NOTES_APPLIQUEES], ["atelier-plugins-echec"])
 
     def test_plugins_tous_presents_rien(self):
         appels = self._plugins(["a@m"], {"a@m": True})

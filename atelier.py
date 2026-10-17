@@ -288,25 +288,71 @@ def _plugins_a_poser(clone: Path) -> list[str] | None:
     return [i for i in voulus if i not in presents]
 
 
+def _marches_presents() -> set[str]:
+    """Noms des marchés de plugins déjà enregistrés, d'après claude plugin marketplace list --json.
+
+    Entrée : aucune. Sortie : ensemble de noms.
+    Erreurs : ValueError, cause en une phrase, si la commande échoue ou si sa sortie n'est pas une liste d'objets à name.
+    Dépendances : subprocess, json, claude.
+    """
+    try:
+        liste = subprocess.run(["claude", "plugin", "marketplace", "list", "--json"], check=True, capture_output=True, text=True, timeout=DELAI).stdout
+        return {m["name"] for m in json.loads(liste)}
+    except (subprocess.SubprocessError, OSError, ValueError, KeyError, TypeError) as e:
+        raise ValueError(f"claude plugin marketplace list --json a échoué : {e}") from e
+
+
+def _declarer_marche(clone: Path, nom: str) -> None:
+    """Enregistrement du marché nom, d'après extraKnownMarketplaces du settings.json du clone.
+
+    Entrées : clone — dépôt dunei-atelier ; nom — marché à enregistrer. Sortie : aucune ; lance claude plugin marketplace add
+        avec la clé repo (source github) ou url (source git ou url).
+    Erreurs : ValueError, cause en une phrase, si le marché n'est pas déclaré, si sa source est inconnue ou si l'ajout échoue.
+    Dépendances : json, subprocess, claude.
+    """
+    try:
+        source = json.loads((clone / "claude" / "settings.json").read_text(encoding="utf-8"))["extraKnownMarketplaces"][nom]["source"]
+        cible = source["repo"] if source["source"] == "github" else source["url"] if source["source"] in ("git", "url") else None
+    except (OSError, ValueError, KeyError, TypeError) as e:
+        raise ValueError(f"le marché {nom} n'est pas déclaré dans extraKnownMarketplaces ({e})") from e
+    if cible is None:
+        raise ValueError(f"le marché {nom} a une source inconnue : {source['source']}")
+    try:
+        subprocess.run(["claude", "plugin", "marketplace", "add", cible], check=True, capture_output=True, timeout=DELAI)
+    except (subprocess.SubprocessError, OSError) as e:
+        raise ValueError(f"claude plugin marketplace add {cible} a échoué : {e}") from e
+
+
 def _plugins(clone: Path) -> None:
     """Installation des plugins Claude Code déclarés dans enabledPlugins du clone.
 
     Entrée : clone — dépôt dunei-atelier, lu à l'application.
-    Sortie : aucune ; lance claude plugin install pour chaque plugin manquant. Sans claude dans le
-        PATH, ajoute atelier-sans-claude à NOTES_APPLIQUEES ; tout échec (settings.json invalide, liste
-        ou installation en échec) ajoute ("atelier-plugins-echec", cause) et n'interrompt rien.
-    Erreurs : aucune. Dépendances : _plugins_voulus, _plugins_presents, shutil, subprocess.
+    Sortie : aucune ; enregistre d'abord chaque marché absent des plugins manquants (claude plugin marketplace add), puis lance
+        claude plugin install pour chaque plugin manquant. Sans claude dans le PATH, ajoute atelier-sans-claude à NOTES_APPLIQUEES ;
+        tout échec (settings.json invalide, liste, marché ou installation en échec) ajoute ("atelier-plugins-echec", cause) et
+        n'interrompt rien : un marché en échec écarte seulement ses plugins.
+    Erreurs : aucune. Dépendances : _plugins_voulus, _plugins_presents, _marches_presents, _declarer_marche, shutil, subprocess.
     """
     if shutil.which("claude") is None:
         NOTES_APPLIQUEES.append(("atelier-sans-claude",))
         return
     try:
         presents = _plugins_presents()
-        for ident in (i for i in _plugins_voulus(clone) if i not in presents):
-            subprocess.run(["claude", "plugin", "install", ident], check=True, capture_output=True)
+        manquants = [i for i in _plugins_voulus(clone) if i not in presents]
+        marches = _marches_presents() if manquants else set()
+        for marche in dict.fromkeys(i.partition("@")[2] for i in manquants):
+            if marche in marches:
+                continue
+            try:
+                _declarer_marche(clone, marche)
+            except ValueError as e:
+                NOTES_APPLIQUEES.append(("atelier-plugins-echec", str(e)))
+                manquants = [i for i in manquants if i.partition("@")[2] != marche]
+        for ident in manquants:
+            subprocess.run(["claude", "plugin", "install", ident], check=True, capture_output=True, timeout=DELAI)
     except ValueError as e:
         NOTES_APPLIQUEES.append(("atelier-plugins-echec", str(e)))
-    except (subprocess.CalledProcessError, OSError) as e:
+    except (subprocess.SubprocessError, OSError) as e:
         NOTES_APPLIQUEES.append(("atelier-plugins-echec", f"claude plugin install a échoué : {e}"))
 
 
