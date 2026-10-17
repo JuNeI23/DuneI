@@ -2,9 +2,9 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.14. Historique en fin de document.
+Version 1.15. Historique en fin de document.
 
-La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **143 éléments** répartis en **cinq lots**, sur six chantiers.
+La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **145 éléments** répartis en **cinq lots**, sur six chantiers.
 
 Ce document dit ce qui est attendu, dans quel ordre, et à quelle condition c'est terminé. Il ne dit pas à quoi ça ressemble — c'est le rôle de la bible de design. En cas de contradiction : la bible l'emporte sur l'apparence, ce document l'emporte sur le périmètre.
 
@@ -223,11 +223,11 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | Réf | Ch. | Nature | Élément |
 | --- | --- | --- | --- |
 | L1-01 | A | Configuré | Choisir la distribution de base selon les critères du carnet — **tranché : Arch Linux** |
-| L1-02 | A | Écrit | Rédiger la procédure d'installation rejouable |
-| L1-03 | A | Configuré | Partitionnement, système de fichiers, chiffrement du disque |
-| L1-04 | A | Configuré | Amorçage et gestionnaire de démarrage |
-| L1-05 | A | Configuré | Gestion des paquets et politique de mise à jour |
-| L1-06 | A | Configuré | Pilotes graphiques et accélération matérielle |
+| L1-02 | A | Écrit | Rédiger la procédure d'installation rejouable — **fait (D59)** : deux phases, `archinstall` avec `setup/archinstall.json` (ni disque ni secret), puis `make paquets`, Claude Code par son installateur et `make install` ; `paquets.toml`, source unique des paquets, et `paquets.py`, qui vérifie tout avant d'agir et ne propose aucun retrait sur une détection incomplète ; machine virtuelle de recette `setup/vm.sh` (UEFI, TPM2 simulé) ; recette en machine virtuelle validée par Nicolas, chiffrement non exercé (L1-25) |
+| L1-03 | A | Configuré | Partitionnement, système de fichiers, chiffrement du disque — **fait, sauf l'écart du chiffrement (D53, D54)** : ESP de 1 Go, `ext4` sans `/home` séparé ni instantanés, `zram` seul ; cible du chiffrement fixée (LUKS2, TPM2 et PIN, aucune liaison à l'état d'amorçage) ; la racine de `caladan` reste en clair jusqu'à L1-25 |
+| L1-04 | A | Configuré | Amorçage et gestionnaire de démarrage — **fait (D55)** : existant ratifié, systemd-boot, images unifiées par `mkinitcpio`, `linux` et `linux-lts`, microcode détecté ; `sd-encrypt` renvoyé à L1-25 |
+| L1-05 | A | Configuré | Gestion des paquets et politique de mise à jour — **fait (D56, D57)** : dépôts officiels seuls, `chaotic-aur` retiré, AUR par exception écrite ; `dunei-maj` (actualités par `sudo informant read`, `pacman -Syu`, `.pacnew`, avis de redémarrage) ; préchargement quotidien par `checkupdates -d`, abstention sur connexion mesurée ; cache borné à trois versions ; recette du 2026-10-16 : 89 paquets explicites ramenés à 70 |
+| L1-06 | A | Configuré | Pilotes graphiques et accélération matérielle — **fait (D58)** : pilotes et microcode choisis par la détection du matériel (`materiel.*`), `mesa` dans `session`, plus aucun pilote X ; pilotes Intel, `nouveau` et X retirés de `caladan`, session, son de Firefox et XWayland vérifiés |
 | L1-07 | A | Offert | Service réseau — vérification — **fait (D40)** : NetworkManager et `wpa_supplicant` conservés ; `wireless-regdb` installé, sans effet sur la carte *self-managed* de `caladan` ; connexion au démarrage, reconnexion après coupure et touche mode avion vérifiées |
 | L1-08 | A | Offert | Service audio — vérification — **fait (D38)** : son, micro et haut-parleurs vérifiés ; `alsa-utils` installé, dont `alsactl` exécute l'initialisation UCM qui rattache la diode de sourdine au micro numérique : elle suit toute sourdine, F4 garde `wpctl` seul |
 | L1-09 | A | Offert | Service d'énergie et de veille — vérification — **fait (D41 à D46), sauf la recette avec écran externe, en attente** : `hypridle` et `hyprlock` installés ; échelle d'inactivité à quatre paliers, deux jeux de délais, dans `energie.toml` (`make energie`) ; verrouillage avant toute veille ; couvercle et bouton marche confiés à logind, l'écran interne à `couvercle.lua` ; premier fichier système déployé par `make install` ; rétroéclairage du clavier éteint à l'inactivité (pendant la veille, le pilote `thinkpad_acpi` l'éteint à la mise en veille, `kbdlight_suspend` / `led_classdev_suspend` ; constat visuel à l'écran en attente) ; décharge en veille mesurée à 0,42 % par heure. **En attente, faute d'écran externe** : couvercle fermé avec écran externe (écran interne éteint, pas de veille, retour à la réouverture), veille avec écran externe branché |
@@ -246,6 +246,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L1-22 | C | Écrit | Mettre `generate_tokens.py` et `extract_hue.py` en conformité avec la bible — écarts consignés au journal — **fait (D11)** |
 | L1-23 | C | Écrit | Concevoir et écrire `motion.toml` et `generate_motion.py` — **fait (D14 à D20)** : paquet `dunei_motion/`, cibles Lua et JSON, contrôles bloquants, `make motion` |
 | L1-24 | C | Écrit | Cible Hyprland en Lua pour les deux générateurs — **fait** : `hyprland-tokens.lua` et `motion.lua`, branchés dans la session par le point d'entrée `config/hypr/hyprland.lua` et `make install` (D21) |
+| L1-25 | A | Configuré | Chiffrement de `caladan` (écart de L1-03, D53) : LUKS2 posé sur place sur la racine, déverrouillé par TPM2 et PIN, puce liée à aucun état d'amorçage ; clé de secours conservée hors de la machine ; disposition `uk` chargée dans l'initramfs avant l'invite du PIN ; initramfs à `systemd` (`sd-encrypt`) ; répété d'abord dans la machine virtuelle de recette (`setup/vm.sh`), où le chiffrement n'a pas encore été exercé ; lire avant d'écrire l'actualité Arch du 22 septembre 2026, « Mkinitcpio >=42 requires manual intervention for TPM2-based unlocking of LUKS devices » |
 
 ### Lot 2 — coque vitale
 
@@ -288,6 +289,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L2-35 | B | Écrit | Flou des overlays et de la couche 1 ; ombre de gouttière de la fenêtre active, à étudier (D29, D31) |
 | L2-36 | B | Écrit | Localiser le pointeur — halo autour du pointeur, Ctrl gauche tenu une seconde ; touche réservée en L1-16 (D35) |
 | L2-37 | B | Configuré | Déverrouillage par empreinte — `fprintd` ; lecteur Goodix déjà reconnu, aucun doigt enregistré ; `hyprlock` (désactivé dans `hyprlock.conf` pour l'instant), `sudo` et connexion ; à traiter avec L2-22 et L2-24, la conception de l'interface restant au lot 5 (D46) |
+| L2-38 | B | Écrit | Avis « N mises à jour prêtes » dans la barre — nombre de paquets préchargés par `dunei-precharge` en attente de `dunei-maj` (D57) |
 
 ### Lot 3 — la bascule
 
@@ -369,7 +371,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L5-10 | B | Écrit | Panneau — applications par défaut |
 | L5-11 | B | Écrit | Panneau — date, heure, langue |
 | L5-12 | B | Mixte | Écran de connexion — spectacle, couleur franche ; remplace tuigreet (greetd, `systeme/etc/greetd/dunei.toml`, L1-10, D49) : ReGreet, ou un écran en QML avec Quickshell (`Quickshell.Services.Greetd`) ; ferme la commande libre (F2) de tuigreet, limite acceptée à L1-10 |
-| L5-13 | B | Configuré | Amorçage silencieux |
+| L5-13 | B | Configuré | Amorçage silencieux — habiller aussi l'invite du PIN du chiffrement, écran texte brut à son arrivée (L1-25, D53) |
 | L5-14 | B | Écrit | Fenêtre « À propos » — seul lieu d'apparition de l'identité |
 | L5-15 | F | Écrit | Vérifier l'absence d'identité partout ailleurs |
 | L5-16 | F | Écrit | Catalogue de messages — erreurs |
@@ -388,7 +390,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L5-29 | — | Écrit | Passe de regard complète — étage 3 |
 | L5-30 | — | Écrit | Résorber les points ouverts de l'annexe C |
 
-**Volume total : 143 éléments** — 98 écrits, 38 configurés, 5 offerts, 2 mixtes.
+**Volume total : 145 éléments** — 99 écrits, 39 configurés, 5 offerts, 2 mixtes.
 
 Les deux tiers du travail sont de l'écrit, et les trois quarts de cet écrit se concentrent sur la coque et les écrans système. C'est cohérent avec la stratégie retenue, et c'est là que tout le risque se trouve.
 
@@ -490,6 +492,7 @@ Le choix de la distribution de base et du compositeur, précédemment ouverts, s
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-12 | Version initiale, 137 éléments |
+| 1.15 | 2026-10-17 | L1-02 à L1-06 faits, L1-03 sauf l'écart du chiffrement (D53 à D60) ; ajout de L1-25, chiffrement de `caladan`, au lot 1, et de L2-38, avis de mises à jour prêtes dans la barre, au lot 2 ; L5-13 reçoit l'invite du PIN. 145 éléments |
 | 1.14 | 2026-10-16 | L1-18 fait (D52) : kitty conservé, instance unique, pager installé ; L3-11 note les candidats terminaux. 143 éléments |
 | 1.13 | 2026-10-16 | L1-10 fait (D49 à D51) : greetd, liste blanche du démarrage, verrou initial ; L5-12 note greetd, `dunei.toml`, la piste Quickshell et la fermeture de F2 ; L2-11, L2-24 et L2-27 notent `session.toml`. 143 éléments |
 | 1.12 | 2026-10-16 | L1-09 fait, sauf la recette avec écran externe, en attente ; L2-22 note `SUPER + L` déjà lié, le point de remplacement unique et l'esthétique ouverte ; ajout de L2-37, déverrouillage par empreinte, au lot 2 : il touche le verrouilleur (L2-22), l'agent d'authentification (L2-24) et `sudo`, qui s'écrivent là, alors que la conception visuelle reste au lot 5 (D46) ; relecture finale : dépendance de L1-10 à uwsm, clavier en veille en attente. 143 éléments |

@@ -1,6 +1,6 @@
 # Installation rejouable : procédure en deux phases, paquets déclarés, mises à jour
 
-Version 0.3 · 2026-10-16 · backlog L1-02 à L1-06 · carnet « Le dépôt », « Installation » · statut : validée
+Version 0.4 · 2026-10-17 · backlog L1-02 à L1-06 · carnet « Le dépôt », « Installation » · statut : implémentée, recette passée
 
 ## 1. Objet
 
@@ -105,8 +105,9 @@ Arbitrées avec Nicolas le 2026-10-16, à consigner au journal (D53 et suivantes
 ### 3.1 Les deux phases
 
 ```
-# Phase 1, depuis l'ISO Arch, une fois par machine
-archinstall --config setup/archinstall.json        # disque, chiffrement, hôte, utilisateur : au menu
+# Phase 1, depuis l'ISO Arch, une fois par machine (le dépôt n'y est pas : le fichier se télécharge)
+curl -fsSLO https://raw.githubusercontent.com/JuNeI23/DuneI/main/setup/archinstall.json
+archinstall --config archinstall.json              # disque, chiffrement, hôte, utilisateur : au menu
 
 # Phase 2, depuis le dépôt, rejouable à volonté
 git clone https://github.com/JuNeI23/DuneI ~/DuneI && cd ~/DuneI
@@ -128,15 +129,18 @@ actuelle, vérifié par context7 avant écriture puis par une exécution réelle
 | --- | --- | --- |
 | `bootloader_config` | `Systemd-boot`, `uki: true` | L1-04 ratifié |
 | `kernels` | `linux`, `linux-lts` | Secours après une mise à jour du noyau ratée |
-| `swap` | `true` (`zram`) | Aucun swap sur disque |
+| `swap` | `enabled: true`, `algorithm: zstd` (`zram`) | Aucun swap sur disque |
 | `locale_config` | `en_US.UTF-8`, clavier `uk` | Relevé de `caladan` |
 | `timezone` | `Europe/Paris` | Relevé de `caladan` |
-| `mirror_config` | région France | Relevé de `caladan` |
+| `mirror_config` | régions France, Allemagne, Suisse | Relevé de `caladan`, élargi à la demande de Nicolas |
 | `network_config` | NetworkManager | L1-07 |
 | `audio_config` | PipeWire | L1-08 |
 | `ntp` | `true` | |
 | `packages` | `git`, `make`, `python` | Le strict nécessaire pour la phase 2 |
 | `profile_config` | aucun | Le profil Hyprland d'`archinstall` apporterait sa propre sélection |
+
+Le fichier n'a pas de champ `version` : `archinstall` 4.5 l'écrit lui-même, et l'exemple de sa
+documentation porte une valeur périmée. La recette l'a confirmé.
 
 Ne figurent pas dans le fichier : le disque, le chiffrement, le nom d'hôte, l'utilisateur et tous les
 secrets. Ils sont saisis au menu d'`archinstall`, prérempli par le fichier ; le carnet dit quoi choisir
@@ -147,7 +151,9 @@ dans le dépôt.
 ce qui est monté sous `/mnt/archinstall`. Si le menu ne propose pas alors le choix du disque et du
 chiffrement, le fichier recevra une `disk_config` en mode « disposition par défaut » sans périphérique
 fixé, ou, à défaut, le carnet fera monter les partitions avant de lancer `archinstall`. Le choix retenu
-sera consigné en section 6.
+sera consigné en section 6. **Résultat :** le menu propose le disque et le chiffrement sans `disk_config` ;
+le repli n'a pas servi. Le chiffrement ne s'applique que si le mot de passe de chiffrement est saisi au
+menu (section 6).
 
 Le carnet garde en annexe les commandes manuelles équivalentes (`sgdisk`, `cryptsetup`, `pacstrap`,
 `bootctl`), pour le jour où `archinstall` ferait défaut.
@@ -208,13 +214,19 @@ erreur arrête tout, sans rien modifier.
 
 **Vérifications :**
 
-1. `paquets.toml` lisible, version connue, aucun doublon, aucun nom vide.
+1. `paquets.toml` lisible, version connue, aucun doublon, aucun nom vide ; aucune clé inconnue, au premier
+   niveau (`version`, `depots`, `groupes`, `provisoire`, `materiel`, `machines`) comme sous `materiel`
+   (`processeur`, `graphique`) ; table `groupes` présente et non vide. Une faute de frappe (`[groupe]`)
+   faisait sinon proposer le retrait du noyau.
 2. Dépôts configurés (`pacman-conf --repo-list`) tous dans `depots` ; sinon refus, avec le nom du dépôt
-   fautif et la section de `/etc/pacman.conf` à retirer.
+   fautif et la section de `/etc/pacman.conf` à retirer. `depots` n'est écrit que dans `paquets.toml` :
+   `paquets.py` n'en garde aucune copie, et le test `test_depot_reel` fige `["core", "extra"]` (D56).
 3. Chaque nom déclaré présent dans un dépôt admis (`pacman -Sl <dépôt>`) ; sinon refus, avec la liste des
    noms introuvables (faute de frappe, paquet AUR, paquet renommé).
 
-**Plan calculé** à partir de `pacman -Qq`, `pacman -Qqe` et `pacman -Qqdt` :
+**Plan calculé** à partir de `pacman -Qq`, `pacman -Qqe`, `pacman -Qqett` (explicites qu'aucun paquet ne
+requiert directement, pour séparer l'excédent requis de l'excédent libre) et `pacman -Qqdt`. Un code 1 de `pacman` ne vaut
+« rien trouvé » que si ses deux sorties sont vides ; sinon c'est une erreur :
 
 | Catégorie | Définition | Action |
 | --- | --- | --- |
@@ -229,12 +241,19 @@ affichées, puis une question chacune, réponse « non » par défaut : `Marquer
 dépendances ? [o/N]`, `Retirer ces N paquets ? [o/N]`. Hors terminal interactif, la réponse est toujours
 « non ». `pacman` redemande avant tout retrait.
 
+**Sûreté de la détection.** Tout avertissement de la détection (nom d'hôte absent ou refusé, fabricant
+inconnu, aucune carte, carte NVIDIA sans pilote, machine sans section) supprime la question de retrait
+(`-Rns`), avec un message qui le dit ; `--asdeps`, non destructif, reste proposé. Une détection incomplète
+ferait sinon proposer le retrait des pilotes ou de la section de la machine, à une réponse réflexe près.
+
 **Sortie** : le matériel détecté (`processeur amd, graphique amd`), le plan, puis un rappel des provisoires (`4 paquets provisoires : wofi → L2-16, …`).
 `--dry-run` affiche le plan et s'arrête.
 
 **Erreurs** : chaque message nomme le fichier ou la commande en cause et ce qu'il faut faire. Un
 `pacman` qui échoue (actualité non lue bloquée par `informant`, réseau absent) arrête `make paquets` avec
-son code de sortie, après avoir rappelé `informant read` si l'échec vient de lui.
+son code de sortie, après avoir rappelé `sudo informant read` si l'échec vient de lui. Ctrl-C rend le
+code 130 ; un `pacman` ou un `pacman-conf` introuvable donne un message lisible et le code 1, sans trace
+Python.
 
 **Lien avec `deploy.py`.** Un test vérifie que chaque paquet que `deploy.py` exige (`APPLIS`, gestionnaire
 de connexion, verrouilleur, services) est déclaré dans `paquets.toml`. `deploy.py` n'est pas réécrit.
@@ -244,8 +263,9 @@ de connexion, verrouilleur, services) est déclaré dans `paquets.toml`. `deploy
 **`dunei-maj`**, script `bash` versionné dans `config/bin/`, lié dans `~/.local/bin` par `make install`
 (nouvelle destination `bin`) :
 
-1. actualités : si `informant list --unread` n'est pas vide, `informant read` les affiche une à une ;
-   Nicolas continue ou s'arrête ;
+1. actualités : si `informant list --unread` n'est pas vide, `sudo informant read` les affiche une à une ;
+   Nicolas continue ou s'arrête. `sudo` est nécessaire : `informant` enregistre les lectures dans
+   `/var/lib/informant.dat`, qui appartient à root, et sans cela sa règle `pacman` bloquerait toujours ;
 2. `sudo pacman -Syu` ;
 3. `pacdiff -o` : liste des `.pacnew` et `.pacsave` ; rien n'est fusionné, la commande de fusion est
    rappelée ;
@@ -267,12 +287,22 @@ Chaque étape échouée arrête le script avec un message et le code de sortie d
   « probablement oui ») ;
 - `ExecStart` : `checkupdates -d`, qui calcule les mises à jour sur une copie de la base et range les
   paquets dans le cache, sans toucher à la base synchronisée : aucune mise à jour partielle possible ;
+  `SuccessExitStatus=2`, le code 2 signifiant « rien à mettre à jour ». `checkupdates` exige `fakeroot`
+  sans condition, même en root (`/usr/bin/checkupdates`, ligne 128), alors que `pacman-contrib` ne le
+  déclare qu'en dépendance facultative : `fakeroot` est déclaré dans `socle` ;
 - priorité processeur et disque minimale (`Nice=19`, `IOSchedulingClass=idle`).
 
 **Points à vérifier avant écriture** (documentation la plus récente, puis essai) : le cache utilisé par
 `checkupdates -d` et les droits qu'il demande ; la lecture de la propriété `Metered` de NetworkManager
 (`busctl` ou `nmcli`) ; le nom de la règle `pacman` d'`informant` et son comportement dans un `pacman`
 lancé par un script ; la sortie de `pacdiff -o`.
+
+**Relevé avant écriture :** `checkupdates -d` synchronise une base temporaire (`/tmp/checkup-db-UID`) par
+`fakeroot`, puis lance `pacman -Sw` dans le `CacheDir` réel, ce qui exige root ; la base du système reste
+intacte. La règle d'`informant` est une `PreTransaction` sur `Install` et `Upgrade` : un téléchargement seul
+(`-Sw`) n'est pas bloqué. `pacdiff -o` écrit un chemin par ligne, rien sur une machine propre. La propriété
+`Metered` se lit par `busctl` sous la forme `u N` : 1 vaut « oui », 3 « probablement oui » ; une réponse
+illisible vaut « non mesurée ».
 
 **Hors périmètre** : l'avis « N mises à jour prêtes » dans la barre (ajouté au backlog du lot 2) ;
 `reflector`, tant qu'aucun miroir ne pose problème.
@@ -286,7 +316,10 @@ Trois ajouts, dans les mécanismes existants :
 - les nouveaux fichiers système (`dunei-cache.hook`, `dunei-precharge.service`, `.timer`) passent par
   l'arborescence `systeme/` existante, marque `Posé par DuneI` comprise ;
 - activation de `dunei-precharge.timer`, à côté des activations existantes ; `pacman-contrib` et
-  `informant` exigés comme les autres dépendances.
+  `informant` exigés comme les autres dépendances, ainsi que `fakeroot` (`checkupdates`, `paccache`,
+  `pacdiff`, `informant`, `fakeroot` : destination `maj`) ;
+- un signalement, après le bilan, quand `~/.local/bin` (`$XDG_BIN_HOME`) n'est pas dans le `PATH`, cas d'une
+  machine neuve : il n'agit pas et ne bloque pas.
 
 ### 3.7 Corrections sur `caladan`
 
@@ -308,7 +341,7 @@ Les 89 paquets explicites de `caladan`, plus les nouveaux. Ce tri est la premiè
 **`socle`** : `base`, `linux`, `linux-lts`, `linux-firmware`, `mkinitcpio`, `sudo`, `zram-generator`, `ufw`,
 `networkmanager`, `wpa_supplicant`, `wireless-regdb` (D40), `pipewire`, `pipewire-pulse`, `wireplumber`,
 `power-profiles-daemon`, `git`, `make`, `python-numpy`, `python-pillow` (chaîne de thème), `less`,
-`man-db` (D52), `pacman-contrib`, `informant` (nouveaux).
+`man-db` (D52), `pacman-contrib`, `informant` (nouveaux), `fakeroot` (ajouté à la recette, section 6).
 
 **`session`** : `hyprland`, `mesa` (L1-06), `uwsm`, `xdg-desktop-portal-hyprland`, `qt6-wayland` (D31), `hypridle`,
 `hyprlock` (D41, D42), `greetd`, `greetd-tuigreet` (D49), `kitty` (D52), `brightnessctl` (raccourcis),
@@ -403,12 +436,98 @@ chiffrement.
 
 ## 6. Écarts constatés à l'implémentation et à la recette
 
-À remplir.
+Implémentation du 2026-10-16 au 2026-10-17, commits 51ce84f à 1ccada9. `make test` : 360 tests, tous
+passés sur `caladan`, aucun sauté depuis l'installation de `pacman-contrib`.
+
+**Arbitrages pris à l'implémentation** (reportés en 3.4 à 3.6 et au journal) :
+
+1. Dépôts admis : aucune constante dans `paquets.py`, `paquets.toml` est la seule source ; `test_depot_reel`
+   fige `["core", "extra"]` (D56).
+2. Un code 1 de `pacman` ne vaut « rien trouvé » que si ses deux sorties sont vides.
+3. Tout avertissement de la détection supprime la question de retrait ; `--asdeps` reste proposé. Ce
+   durcissement n'était pas écrit en 3.4.
+4. La lecture de `paquets.toml` refuse toute clé inconnue et une table `groupes` absente ou vide, trouvé à la
+   relecture finale : une faute de frappe (`[groupe]`) faisait proposer le retrait du noyau.
+5. `dunei-maj` lance `sudo informant read`, et le rappel de `make paquets` le dit aussi : `informant`
+   enregistre les lectures dans un fichier de root.
+6. Ctrl-C pendant `make paquets` rend le code 130 ; `pacman` ou `pacman-conf` introuvable donne un message
+   lisible et le code 1.
+7. `make install` avertit, sans bloquer, quand `~/.local/bin` n'est pas dans le `PATH`.
+8. `setup/archinstall.json` n'a pas de champ `version` : `archinstall` 4.5 l'écrit lui-même ; la recette l'a
+   confirmé. `swap` y est un objet (`enabled`, `algorithm: zstd`), forme de la version 4.5.
+9. `setup/vm.sh` vérifie l'ISO avant tout ; il note le pid de `swtpm`, arrête et attend une ancienne
+   instance, retire une socket périmée, attend la nouvelle pendant 5 s au plus, et crée le disque sous un nom
+   provisoire.
+10. Le plan lit aussi `pacman -Qqett`, pour séparer l'excédent requis de l'excédent libre.
+
+**Recette sur `caladan`** (critères 1 à 5 et 7) :
+
+- Relevé avant : cache de 2,5 Go (1618 fichiers), 89 paquets explicites, dépôts `core`, `extra`,
+  `chaotic-aur`. Nicolas a retiré `[chaotic-aur]` de `/etc/pacman.conf` ; `--dry-run` refusait
+  `chaotic-aur` avant ce retrait, avec le code 1 (critère 2).
+- `make paquets` : 5 paquets installés (`pacman-contrib`, `informant`, `qemu-desktop`, `edk2-ovmf`,
+  `swtpm`), `mesa` marqué explicite, 7 passés en dépendance (`ttf-dejavu`, `ttf-liberation`, `libpulse`,
+  `pipewire-jack`, `xdg-utils`, `intel-media-driver`, `libvpl`), 18 retirés (`chaotic-keyring`,
+  `chaotic-mirrorlist`, `efibootmgr`, `gst-plugin-pipewire`, `libva-intel-driver`, `nano`, `pipewire-alsa`,
+  `polkit-kde-agent`, `python-pipx`, `qt5-wayland`, `quickshell`, `rust`, `vpl-gpu-rt`, `vulkan-intel`,
+  `vulkan-nouveau`, `xf86-video-amdgpu`, `xf86-video-ati`, `xf86-video-nouveau`). **Écarts avec le tri de
+  3.8 :** `libvpl` reste installé, en dépendance, car `ffmpeg` le requiert ; `intel-media-driver`, marqué
+  dépendance, est parti avec `vpl-gpu-rt`. `rust`, tranché à l'exécution, est retiré : Nicolas l'avait
+  installé pour compiler `rtk`, dont le binaire est statique.
+- Après : 70 paquets explicites ; `python3 paquets.py --dry-run` affiche un plan vide, code 0 (critère 1).
+  Le critère s'écrit avec `python3 paquets.py --dry-run` : `make paquets --dry-run` passerait l'option à
+  `make`.
+- `make install` : lien `~/.local/bin/dunei-maj`, `dunei-cache.hook` et unités copiés, minuteur activé.
+- **Écart : `fakeroot`.** `checkupdates` l'exige sans condition, même en root, et `pacman-contrib` ne le
+  déclare qu'en dépendance facultative : le préchargement aurait échoué. Correctif 190a626 : `fakeroot`
+  dans `socle`, exigé par `make install`.
+- Critère 3 : sur le partage de connexion du téléphone (`Hotspot_NJ`, `Metered` « u 3 »), le préchargement
+  s'abstient ; sur un Wi-Fi ordinaire (« u 4 »), `checkupdates -d` a rangé `linux` 7.2.10, `llvm-libs` et
+  `cifs-utils` (202,69 Mio) dans le cache, `Result=success` ; connexion forcée mesurée
+  (`connection.metered yes`) : « Skipped due to 'exec-condition' », formulation de systemd là où 4
+  attendait « condition failed ».
+- Critère 5 : `dunei-cache.hook` lancé après chaque transaction ; `paccache -dk3` et `-duk0` n'ont plus rien
+  à élaguer ; cache de 2,3 Go, dont 0,2 Go préchargés, 414,84 Mio libérés au premier passage.
+- Critère 4 : `dunei-maj` de bout en bout : actualités lues, `pacman -Syu` en 16 s depuis le cache
+  préchargé, aucun `.pacnew`, avis de redémarrage (noyau 7.2.9 vers 7.2.10).
+- Critère 7, après redémarrage : son dans Firefox sans `gst-plugin-pipewire` ni `pipewire-alsa` ; une
+  fenêtre XWayland s'ouvre, floue à l'échelle 1,25 (`force_zero_scaling = false`, D25) : flou accepté.
+- Pare-feu (D60) : `ufw` actif, journalisation basse, entrant refusé, sortant permis, routage désactivé,
+  aucune règle.
+
+**Recette en machine virtuelle** (critère 6) :
+
+- ISO `archlinux-2026.10.01-x86_64` : somme `sha256` conforme, signature de Pierre Schmitz valide
+  (`pacman-key -v`, `.sig` prise sur archlinux.org).
+- Phase 1 : le fichier se télécharge depuis GitHub, le dépôt n'étant pas sur l'ISO (3.1 corrigé). Le menu
+  d'`archinstall` propose le disque et le chiffrement sans `disk_config` : le repli de 3.2 n'a pas servi.
+- Une première installation a été interrompue (machine virtuelle remise à zéro pendant l'installation des
+  paquets supplémentaires : verrou `db.lck` resté, `fstab`, fuseau et `ntp` jamais faits) ; elle a été
+  refaite de zéro et s'est déroulée sans accroc. Cet incident ne relève pas de la procédure : aucune ligne
+  n'est ajoutée à la phase 2.
+- L'ISO reste branchée après la phase 1 : on ferme la fenêtre et on relance `setup/vm.sh` sans argument
+  (carnet).
+- **Le chiffrement n'a pas été exercé.** Le mot de passe de chiffrement a été laissé vide ; `archinstall` a
+  annoncé que le disque n'était pas chiffré et a continué. Ce champ est obligatoire pour chiffrer (carnet).
+  La phrase de passe LUKS au démarrage n'a donc pas été constatée.
+- **La phase 2 n'a pas été confirmée explicitement** dans la machine virtuelle, ni la session ouverte puis
+  verrouillée que le critère 6 demande.
+- Nicolas a validé la recette en l'état. Le chiffrement sera répété en machine virtuelle dans la feature
+  suivante (L1-25), qui reprendra le critère 6 entier.
+
+**Pour la feature de chiffrement :** l'actualité Arch du 22 septembre 2026, « Mkinitcpio >=42 requires
+manual intervention for TPM2-based unlocking of LUKS devices », est à lire avant d'écrire ; OVMF est lancé
+sans Secure Boot (`OVMF_CODE.4m.fd`), conforme tant que la puce n'est liée à aucun état d'amorçage.
+
+**Mineurs laissés, non bloquants :** `--dry-run` n'affiche pas le rappel des provisoires ; Ctrl-C pendant
+la lecture de l'état donne une trace Python, sans rien avoir modifié ; `apply` de `deploy.py` ignore un type
+d'action inconnu.
 
 ## Historique des versions
 
 | Version | Date | Changement |
 | --- | --- | --- |
+| 0.4 | 2026-10-17 | Implémentée, recette passée : arbitrages de l'implémentation reportés en 3.1, 3.2, 3.4, 3.5, 3.6 et 3.8 (téléchargement de `archinstall.json` en phase 1, miroirs d'Allemagne et de Suisse, clés inconnues refusées, `-Qqett`, sûreté de la détection, `sudo informant read`, `fakeroot`, avertissement du `PATH`) ; section 6 remplie, chiffrement non exercé en machine virtuelle et phase 2 non confirmée, recette validée par Nicolas en l'état |
 | 0.3 | 2026-10-16 | `qemu-desktop` au lieu de `qemu-base`, sans interface graphique : la session de la machine virtuelle doit se voir à l'écran (critère 6) |
 | 0.2 | 2026-10-16 | Validée : pilotes et microcode choisis par détection du matériel (`materiel.*`), `mesa` dans `session`, section de machine facultative ; compatibilité avec D49 à D51 ; `ufw` dans `socle` ; `rust` tranché à l'exécution |
 | 0.1 | 2026-10-16 | Version initiale, validée section par section |
