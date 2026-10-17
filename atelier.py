@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import os
 import hashlib
+import json
 import re
 import shutil
 import subprocess
@@ -171,18 +172,32 @@ def _origine_ok(clone: Path, depot: str) -> bool:
     return sortie.returncode == 0 and re.fullmatch(forme, sortie.stdout.strip()) is not None
 
 
+def _inclusions() -> list[str]:
+    """Chemins déjà inclus par le gitconfig global (valeurs de include.path).
+
+    Entrée : aucune. Sortie : liste des chemins, vide si aucun ou si git est absent.
+    Erreurs : aucune. Dépendances : subprocess, git.
+    """
+    try:
+        sortie = subprocess.run(["git", "config", "--global", "--get-all", "include.path"], capture_output=True, text=True)
+    except OSError:
+        return []
+    return sortie.stdout.splitlines()
+
+
 def plan_atelier(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
     """Inspection de l'atelier — clone de dunei-atelier et liens de ses fichiers.
 
     Entrées : repo — racine du dépôt ; home — inutilisé, pour l'interface commune de DESTINATIONS.
     Sortie : (actions, erreurs). Si le clone manque et que gh est inutilisable : seulement
-        ("atelier-saute", cause). Sinon ("atelier-clone", depot, clone) si le clone manque, puis, pour
+        ("atelier-saute", cause). Sinon ("atelier-clone", depot, clone) si le clone manque, puis ("atelier-plugins", clone) (si le clone manque ou si un plugin activé manque, ou si claude est absent), puis
+        ("atelier-include", gitconfig du clone) si le gitconfig global ne l'inclut pas encore, puis, pour
         chaque destination qui n'est pas déjà le bon lien, ("atelier-lien", src, dst, neuf) où neuf
         est vrai si le clone manquait à l'inspection.
     Erreurs : atelier.toml invalide ; clone qui n'est pas un dépôt git ou dont origin n'est pas le
         dépôt attendu ; destination qui est un dossier ; lien vers un autre chemin que le fichier du
         clone. Chaque message nomme le chemin.
-    Dépendances : lire_atelier, gh_accessible, subprocess.
+    Dépendances : lire_atelier, gh_accessible, _plugins_manquants, _inclusions, subprocess.
     """
     donnees, erreurs = lire_atelier(repo)
     if erreurs:
@@ -199,7 +214,11 @@ def plan_atelier(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
         return [], [f"{clone} existe sans être un dépôt git : le déplacer ou le supprimer"]
     elif not _origine_ok(clone, cfg["depot"]):
         return [], [f"l'origine de {clone} n'est pas {cfg['depot']} : vérifier avec git -C {clone} remote -v"]
-    # Les actions des plugins et de l'inclusion du gitconfig s'insèrent ici, avant les liens.
+    if neuf or _plugins_manquants(clone) != []:
+        actions.append(("atelier-plugins", clone))
+    inclusion = clone / cfg["gitconfig"]
+    if str(inclusion) not in _inclusions():
+        actions.append(("atelier-include", inclusion))
     for rel, dst in cfg["liens"].items():
         src = clone / rel
         if dst.is_symlink():
@@ -210,6 +229,40 @@ def plan_atelier(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
         else:
             actions.append(("atelier-lien", src, dst, neuf))
     return ([], erreurs) if erreurs else (actions, [])
+
+
+def _plugins_manquants(clone: Path) -> list[str] | None:
+    """Plugins Claude Code activés dans le clone et absents de la machine.
+
+    Entrée : clone — dépôt dunei-atelier, dont claude/settings.json est lu.
+    Sortie : identifiants manquants, liste vide si le fichier est absent, illisible ou sans
+        enabledPlugins ; None si claude est absent du PATH.
+    Erreurs : subprocess.CalledProcessError si claude plugin list échoue. Dépendances : shutil, subprocess, json.
+    """
+    if shutil.which("claude") is None:
+        return None
+    try:
+        voulus = json.loads((clone / "claude" / "settings.json").read_text(encoding="utf-8")).get("enabledPlugins", {})
+    except (OSError, ValueError, AttributeError):
+        return []
+    liste = subprocess.run(["claude", "plugin", "list", "--json"], check=True, capture_output=True, text=True).stdout
+    presents = {p["id"] for p in json.loads(liste)}
+    return [i for i, actif in voulus.items() if actif is True and i not in presents]
+
+
+def _plugins(clone: Path) -> None:
+    """Installation des plugins Claude Code déclarés dans enabledPlugins du clone.
+
+    Entrée : clone — dépôt dunei-atelier, lu à l'application.
+    Sortie : aucune ; lance claude plugin install pour chaque plugin manquant. Sans claude dans le
+        PATH, ajoute atelier-sans-claude à NOTES_APPLIQUEES.
+    Erreurs : subprocess.CalledProcessError si une commande claude échoue. Dépendances : _plugins_manquants, subprocess.
+    """
+    manquants = _plugins_manquants(clone)
+    if manquants is None:
+        NOTES_APPLIQUEES.append(("atelier-sans-claude",))
+    for ident in manquants or []:
+        subprocess.run(["claude", "plugin", "install", ident], check=True)
 
 
 def _lier(src: Path, dst: Path, neuf: bool) -> None:
@@ -244,7 +297,7 @@ def appliquer(action: tuple) -> bool:
 
     Pour rtk-pose, le membre rtk de l'archive est extrait dans un fichier temporaire du dossier cible,
     sa somme est vérifiée, puis il est rendu exécutable et renommé par os.replace.
-    atelier-clone lance gh repo clone ; atelier-lien appelle _lier.
+    atelier-clone lance gh repo clone ; atelier-plugins appelle _plugins ; atelier-include ajoute include.path au gitconfig global ; atelier-lien appelle _lier.
     Entrée : action — tuple produit par plan_rtk ou plan_atelier.
     Sortie : True si l'action appartient à l'atelier et a été exécutée, False sinon.
     Erreurs : subprocess.CalledProcessError si le clone échoue ; OSError si l'archive est illisible ou sans membre rtk, ou si la somme du binaire diffère
@@ -253,6 +306,12 @@ def appliquer(action: tuple) -> bool:
     kind, *args = action
     if kind == "atelier-clone":
         subprocess.run(["gh", "repo", "clone", args[0], str(args[1])], check=True)
+        return True
+    if kind == "atelier-plugins":
+        _plugins(*args)
+        return True
+    if kind == "atelier-include":
+        subprocess.run(["git", "config", "--global", "--add", "include.path", str(args[0])], check=True)
         return True
     if kind == "atelier-lien":
         _lier(*args)

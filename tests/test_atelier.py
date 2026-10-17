@@ -181,6 +181,11 @@ class RtkTest(unittest.TestCase):
 FAUX_GH = ('#!/bin/sh\ncase "$1 $2" in\n"auth status"|"repo view") exit "${FAKE_GH_AUTH:-0}" ;;\n'
            '"repo clone") git clone -q "$FAKE_ATELIER_NU" "$4" && git -C "$4" remote set-url origin "https://github.com/$3.git" ;;\n'
            'esac\n')
+FAUX_CLAUDE = """#!/bin/sh
+echo "$*" >> "$FAKE_CLAUDE_LOG"
+[ "$1 $2" = "plugin list" ] && echo "$FAKE_PLUGINS"
+exit 0
+"""
 LIENS = {"claude/settings.json": ".claude/settings.json", "claude/CLAUDE.md": ".claude/CLAUDE.md",
          "claude/RTK.md": ".claude/RTK.md", "maison/CLAUDE.md": "CLAUDE.md", "rtk/config.toml": ".config/rtk/config.toml"}
 
@@ -207,12 +212,16 @@ class AtelierTest(unittest.TestCase):
         fake.mkdir()
         (fake / "gh").write_text(FAUX_GH, encoding="utf-8")
         (fake / "gh").chmod(0o755)
+        (fake / "claude").write_text(FAUX_CLAUDE, encoding="utf-8")
+        (fake / "claude").chmod(0o755)
+        self.fake, self.log = fake, t / "claude.log"
         liens = "".join(f'"{k}" = "~/{v}"\n' for k, v in LIENS.items())
         toml = t / "atelier.toml"
         toml.write_text('[rtk]\nversion = "1"\narchive = "a"\nurl = "file:///a"\n' + f'sha256_archive = "{"0" * 64}"\nsha256_binaire = "{"0" * 64}"\n'
                         '[atelier]\ndepot = "JuNeI23/dunei-atelier"\nclone = "~/dunei-atelier"\ngitconfig = "git/gitconfig"\n[atelier.liens]\n' + liens,
                         encoding="utf-8")
-        self.env = mock.patch.dict(os.environ, {**git, "DUNEI_ATELIER_TOML": str(toml), "FAKE_ATELIER_NU": str(self.nu),
+        git["GIT_CONFIG_GLOBAL"] = str(self.home / ".gitconfig")
+        self.env = mock.patch.dict(os.environ, {**git, "FAKE_CLAUDE_LOG": str(self.log), "FAKE_PLUGINS": "[]", "DUNEI_ATELIER_TOML": str(toml), "FAKE_ATELIER_NU": str(self.nu),
                                                 "FAKE_GH_AUTH": "0", "PATH": f"{fake}:{os.environ['PATH']}"})
         self.env.start()
         atelier.NOTES_APPLIQUEES.clear()
@@ -339,6 +348,56 @@ class AtelierTest(unittest.TestCase):
         erreurs = self._plan()[1]
         self.assertEqual(len(erreurs), 1)
         self.assertIn(str(dst), erreurs[0])
+
+    def _plugins(self, installes: list[str], voulus: dict) -> list[str]:
+        """Pose un settings.json voulant `voulus`, simule `installes` et rend les appels faits à claude."""
+        reglages = self.clone / "claude" / "settings.json"
+        reglages.parent.mkdir(parents=True, exist_ok=True)
+        reglages.write_text(json.dumps({"enabledPlugins": voulus}), encoding="utf-8")
+        liste = json.dumps([{"id": i, "version": "1", "scope": "user", "enabled": True} for i in installes])
+        with mock.patch.dict(os.environ, {"FAKE_PLUGINS": liste}):
+            self.assertTrue(appliquer(("atelier-plugins", self.clone)))
+        return self.log.read_text(encoding="utf-8").splitlines() if self.log.exists() else []
+
+    def test_installe_les_plugins_manquants(self):
+        appels = self._plugins(["context7@claude-plugins-official"],
+                               {"context7@claude-plugins-official": True, "superpowers@claude-plugins-official": True, "off@x": False})
+        self.assertEqual(appels, ["plugin list --json", "plugin install superpowers@claude-plugins-official"])
+
+    def test_plugins_tous_presents_rien(self):
+        appels = self._plugins(["a@m"], {"a@m": True})
+        self.assertEqual(appels, ["plugin list --json"])
+
+    def test_sans_claude_signale(self):
+        (self.fake / "claude").unlink()
+        sous_path = {"PATH": str(self.fake)}
+        with mock.patch.dict(os.environ, sous_path):
+            self.assertTrue(appliquer(("atelier-plugins", self.clone)))
+        self.assertEqual(atelier.NOTES_APPLIQUEES, [("atelier-sans-claude",)])
+
+    def test_gitconfig_absent_cree_avec_inclusion(self):
+        self._tout_poser()
+        inclusion = str(self.clone / "git/gitconfig")
+        self.assertEqual(self._git_global("--get-all", "include.path"), inclusion + "\n")
+        self.assertEqual((self.home / ".gitconfig").read_text(encoding="utf-8").count("["), 1)
+
+    def test_gitconfig_de_gh_garde(self):
+        gh = '[credential "https://github.com"]\n\thelper = !/usr/bin/gh auth git-credential\n'
+        (self.home / ".gitconfig").write_text(gh, encoding="utf-8")
+        self._tout_poser()
+        texte = (self.home / ".gitconfig").read_text(encoding="utf-8")
+        self.assertTrue(texte.startswith(gh))
+        self.assertEqual(texte.count("path = "), 1)
+        self.assertNotIn("atelier-include", [a[0] for a in self._plan()[0]])
+
+    def test_ordre(self):
+        types = [a[0] for a in self._plan()[0]]
+        self.assertEqual(types[:3], ["atelier-clone", "atelier-plugins", "atelier-include"])
+        self.assertLess(types.index("atelier-include"), types.index("atelier-lien"))
+
+    def _git_global(self, *args: str) -> str:
+        """Lit la configuration git globale du HOME temporaire."""
+        return subprocess.run(["git", "config", "--global", *args], check=True, capture_output=True, text=True).stdout
 
 
 def sha256_de(octets: bytes) -> str:
