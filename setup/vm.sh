@@ -4,7 +4,8 @@
 # Entrées : un argument facultatif, l'ISO Arch à démarrer ; sans argument, la machine redémarre sur son disque.
 #   $XDG_CACHE_HOME (sinon ~/.cache) situe le dossier d'état dunei-vm/.
 # Sortie : la fenêtre de la machine ; dans le dossier d'état, disque.qcow2 (40 Go, créé au premier lancement),
-#   vars.fd (copie des variables OVMF), tpm/ (état de swtpm) et tpm.sock. Rien n'entre dans le dépôt.
+#   vars.fd (copie des variables OVMF), tpm/ (état de swtpm), tpm.sock et qmp.sock, le canal de contrôle QMP
+#   (capture d'écran, frappe au clavier) par lequel Claude pilote la recette. Rien n'entre dans le dépôt.
 # Erreurs : code 1 si l'ISO donnée est introuvable, ou si KVM, QEMU, swtpm ou OVMF manque (message nommant le
 #   paquet à installer) ; dans les deux cas avant toute création. Code 1 aussi si l'ancien swtpm
 #   ne s'arrête pas ou si la socket du nouveau n'apparaît pas.
@@ -60,6 +61,7 @@ args=(-enable-kvm -machine q35 -cpu host -smp 4 -m 4G
   -chardev "socket,id=chrtpm,path=$ETAT/tpm.sock" -tpmdev "emulator,id=tpm0,chardev=chrtpm"
   -device "tpm-tis,tpmdev=tpm0"
   -device virtio-vga-gl -display "gtk,gl=on"
-  -nic "user,model=virtio-net-pci")
+  -nic "user,model=virtio-net-pci"
+  -qmp "unix:$ETAT/qmp.sock,server=on,wait=off")
 [ $# -eq 0 ] || args+=(-cdrom "$1")
 exec qemu-system-x86_64 "${args[@]}"
