@@ -16,6 +16,8 @@ from __future__ import annotations
 import os
 import hashlib
 import re
+import shutil
+import subprocess
 import tarfile
 import tomllib
 import urllib.request
@@ -25,6 +27,7 @@ from pathlib import Path
 ATELIER = "atelier.toml"                      # Fichier déclaratif de l'atelier, à la racine du dépôt.
 CLES_RTK = ("version", "archive", "url", "sha256_archive", "sha256_binaire")
 CLES_ATELIER = ("depot", "clone", "gitconfig")
+NOTES_APPLIQUEES: list[tuple] = []             # Notes nées de l'application (atelier-repris, atelier-garde), lues par deploy.main.
 SOMMES = ("sha256_archive", "sha256_binaire")  # Clés de rtk qui portent une somme SHA-256.
 
 
@@ -142,17 +145,113 @@ def plan_rtk(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
     return actions, []
 
 
+def gh_accessible(depot: str) -> str:
+    """Vérification de l'accès à dunei-atelier par gh.
+
+    Entrée : depot — dépôt GitHub au format propriétaire/nom.
+    Sortie : chaîne vide si gh auth status puis gh repo view réussissent, sinon la cause en une phrase
+        avec la commande à lancer.
+    Erreurs : aucune (gh absent compris). Dépendances : subprocess, gh.
+    """
+    causes = ((["gh", "auth", "status"], "gh n'est pas connecté : lancer gh auth login, puis relancer make install"),
+              (["gh", "repo", "view", depot], f"gh n'a pas accès à {depot} : vérifier le compte (gh auth status), puis relancer make install"))
+    for commande, cause in causes:
+        try:
+            if subprocess.run(commande, capture_output=True).returncode:
+                return cause
+        except OSError:
+            return "gh est absent : installer github-cli et lancer gh auth login, puis relancer make install"
+    return ""
+
+
+def _origine_ok(clone: Path, depot: str) -> bool:
+    """Vrai si l'adresse origin du clone désigne depot (formes https et ssh de GitHub, avec ou sans .git)."""
+    sortie = subprocess.run(["git", "-C", str(clone), "remote", "get-url", "origin"], capture_output=True, text=True)
+    forme = rf"(https://github\.com/|git@github\.com:|ssh://git@github\.com/){re.escape(depot)}(\.git)?/?"
+    return sortie.returncode == 0 and re.fullmatch(forme, sortie.stdout.strip()) is not None
+
+
+def plan_atelier(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
+    """Inspection de l'atelier — clone de dunei-atelier et liens de ses fichiers.
+
+    Entrées : repo — racine du dépôt ; home — inutilisé, pour l'interface commune de DESTINATIONS.
+    Sortie : (actions, erreurs). Si le clone manque et que gh est inutilisable : seulement
+        ("atelier-saute", cause). Sinon ("atelier-clone", depot, clone) si le clone manque, puis, pour
+        chaque destination qui n'est pas déjà le bon lien, ("atelier-lien", src, dst, neuf) où neuf
+        est vrai si le clone manquait à l'inspection.
+    Erreurs : atelier.toml invalide ; clone qui n'est pas un dépôt git ou dont origin n'est pas le
+        dépôt attendu ; destination qui est un dossier ; lien vers un autre chemin que le fichier du
+        clone. Chaque message nomme le chemin.
+    Dépendances : lire_atelier, gh_accessible, subprocess.
+    """
+    donnees, erreurs = lire_atelier(repo)
+    if erreurs:
+        return [], erreurs
+    cfg = donnees["atelier"]
+    clone, neuf = cfg["clone"], not cfg["clone"].exists()
+    actions: list[tuple] = []
+    if neuf:
+        cause = gh_accessible(cfg["depot"])
+        if cause:
+            return [("atelier-saute", cause)], []
+        actions.append(("atelier-clone", cfg["depot"], clone))
+    elif subprocess.run(["git", "-C", str(clone), "rev-parse", "--git-dir"], capture_output=True).returncode:
+        return [], [f"{clone} existe sans être un dépôt git : le déplacer ou le supprimer"]
+    elif not _origine_ok(clone, cfg["depot"]):
+        return [], [f"l'origine de {clone} n'est pas {cfg['depot']} : vérifier avec git -C {clone} remote -v"]
+    # Les actions des plugins et de l'inclusion du gitconfig s'insèrent ici, avant les liens.
+    for rel, dst in cfg["liens"].items():
+        src = clone / rel
+        if dst.is_symlink():
+            if dst.resolve() != src.resolve():
+                erreurs.append(f"{dst} est un lien vers {dst.resolve()}, pas vers {src} : le retirer ou le corriger")
+        elif dst.is_dir():
+            erreurs.append(f"{dst} est un dossier, pas un fichier : le déplacer ou le supprimer")
+        else:
+            actions.append(("atelier-lien", src, dst, neuf))
+    return ([], erreurs) if erreurs else (actions, [])
+
+
+def _lier(src: Path, dst: Path, neuf: bool) -> None:
+    """Pose du lien dst vers src, en reprenant ou gardant le fichier qui occupe dst.
+
+    Entrées : src — fichier du clone ; dst — destination ; neuf — vrai si le clone vient d'être créé.
+    Sortie : aucune ; ajoute à NOTES_APPLIQUEES atelier-garde (fichier gardé en .avant-dunei) ou
+        atelier-repris (contenu copié dans src). Erreurs : OSError. Dépendances : os, shutil.
+    """
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    if dst.exists() and not (src.is_file() and dst.read_bytes() == src.read_bytes()):
+        if neuf:
+            os.replace(dst, dst.with_name(dst.name + ".avant-dunei"))
+            NOTES_APPLIQUEES.append(("atelier-garde", dst))
+        else:
+            src.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(dst, src)
+            NOTES_APPLIQUEES.append(("atelier-repris", dst))
+    tmp = dst.with_name(f".{dst.name}.dunei-tmp")
+    tmp.unlink(missing_ok=True)
+    tmp.symlink_to(src)
+    os.replace(tmp, dst)
+
+
 def appliquer(action: tuple) -> bool:
     """Exécution d'une action propre à l'atelier.
 
     Pour rtk-pose, le membre rtk de l'archive est extrait dans un fichier temporaire du dossier cible,
     sa somme est vérifiée, puis il est rendu exécutable et renommé par os.replace.
-    Entrée : action — tuple produit par plan_rtk.
+    atelier-clone lance gh repo clone ; atelier-lien appelle _lier.
+    Entrée : action — tuple produit par plan_rtk ou plan_atelier.
     Sortie : True si l'action appartient à l'atelier et a été exécutée, False sinon.
-    Erreurs : OSError si l'archive est illisible ou sans membre rtk, ou si la somme du binaire diffère
-        (la destination reste intacte). Dépendances : tarfile, sha256, os.
+    Erreurs : subprocess.CalledProcessError si le clone échoue ; OSError si l'archive est illisible ou sans membre rtk, ou si la somme du binaire diffère
+        (la destination reste intacte). Dépendances : tarfile, sha256, os, subprocess, _lier.
     """
     kind, *args = action
+    if kind == "atelier-clone":
+        subprocess.run(["gh", "repo", "clone", args[0], str(args[1])], check=True)
+        return True
+    if kind == "atelier-lien":
+        _lier(*args)
+        return True
     if kind != "rtk-pose":
         return False
     archive, attendue, dest = args

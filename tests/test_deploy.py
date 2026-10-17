@@ -21,13 +21,14 @@ GENERIC = "-- Configuration générique de test.\n"
 FOREIGN = "<?xml version=\"1.0\"?>\n<fontconfig/>\n"
 # Faux sudo et faux systemctl : chaque appel est consigné dans $FAKE_LOG. sudo exécute la commande telle
 # quelle, sauf si $FAKE_SUDO_FAIL est posé ; systemctl répond à is-enabled par $FAKE_ENABLED et à
-# is-active par $FAKE_ACTIVE (« active » par défaut). hyprlock, greetd, tuigreet, kitty, checkupdates,
+# is-active par $FAKE_ACTIVE (« active » par défaut). gh (non connecté), hyprlock, greetd, tuigreet, kitty, checkupdates,
 # paccache, pacdiff et informant sont de faux exécutables vides.
 FAKES = {
     "sudo": '#!/bin/sh\necho "sudo $*" >> "$FAKE_LOG"\n[ -z "$FAKE_SUDO_FAIL" ] || exit 1\nexec "$@"\n',
     "systemctl": ('#!/bin/sh\necho "systemctl $*" >> "$FAKE_LOG"\n'
                   'case "$*" in *is-enabled*) echo "$FAKE_ENABLED"; [ "$FAKE_ENABLED" = enabled ] ;;\n'
                   '*is-active*) [ "${FAKE_ACTIVE:-active}" = active ] ;; esac\n'),
+    "gh": "#!/bin/sh\nexit 1\n",  # Non connecté : la destination atelier se contente de sa note.
     "hyprlock": "#!/bin/sh\n",
     "greetd": "#!/bin/sh\n",
     "tuigreet": "#!/bin/sh\n",
@@ -188,7 +189,7 @@ class DeployTest(unittest.TestCase):
         res = run(self.cfg)
         self.assertEqual(res.returncode, 0, res.stderr)
         self.assertEqual(snapshot(self.cfg), before)
-        self.assertNotIn("lier", res.stdout)
+        self.assertNotIn("fait : lier", res.stdout)
 
     def test_leftover_temporary_link(self):
         self.generic_machine()

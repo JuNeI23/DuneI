@@ -456,9 +456,9 @@ def plan_services(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
     return actions, err
 
 
-NOTES = ("hors-liste", "chemin", "rtk-remplace")  # Signalements affichés après le bilan : ils n'agissent pas et ne bloquent pas.
+NOTES = ("hors-liste", "chemin", "rtk-remplace", "atelier-saute")  # Signalements affichés après le bilan : ils n'agissent pas et ne bloquent pas.
 DESTINATIONS = {"hypr": plan_hypr, "fontconfig": plan_fontconfig, "applis": plan_applis,
-                "bin": plan_bin, "rtk": atelier.plan_rtk, "services": plan_services, "systeme": plan_systeme, "maj": plan_maj,
+                "bin": plan_bin, "rtk": atelier.plan_rtk, "atelier": atelier.plan_atelier, "services": plan_services, "systeme": plan_systeme, "maj": plan_maj,
                 "connexion": plan_connexion}  # Nom → planification, dans l'ordre d'exécution (sudo en dernier).
 
 
@@ -507,6 +507,11 @@ def describe(action: tuple) -> str:
         "chemin": "{0} ne figure pas dans le PATH : ajouter ce dossier au PATH de ton shell pour joindre dunei-maj",
         "rtk-pose": "poser rtk (archive {0}) dans {2}",
         "rtk-remplace": "{0} contient déjà un autre rtk ; remplacé par la version épinglée {1}",
+        "atelier-saute": "atelier non posé : {0}",
+        "atelier-clone": "cloner {0} dans {1}",
+        "atelier-lien": "lier {1} à {0}",
+        "atelier-repris": "{0} avait remplacé son lien : son contenu est repris dans le clone (git status le montre) et le lien est remis",
+        "atelier-garde": "{0} existait déjà : conservé sous le nom {0}.avant-dunei, remplacé par le lien de l'atelier",
         "hors-liste": "{0} est accroché à la session sans figurer dans session.toml ; laissé en place",
     }[kind].format(*args)
 
@@ -599,7 +604,7 @@ def main() -> int:
     for a in actions:
         print(f"  {'prévu' if args.dry_run else 'fait'} : {describe(a)}")
     print(f"\n{home} : {len(actions)} action(s) {'prévue(s)' if args.dry_run else 'effectuée(s)'}.")
-    for a in notes:
+    for a in notes + atelier.NOTES_APPLIQUEES:
         print(f"  attention : {describe(a)}")
     if any(a[0] == "switch" for a in actions):
         # Hyprland surveille le fichier générique lui-même, qui survit sous un autre nom : la bascule
