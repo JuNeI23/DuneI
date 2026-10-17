@@ -12,7 +12,7 @@ from pathlib import Path
 from unittest import mock
 
 import atelier
-from atelier import appliquer, lire_atelier, plan_atelier, plan_rtk, sha256
+from atelier import appliquer, etat_atelier, lire_atelier, plan_atelier, plan_rtk, sha256
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -433,6 +433,43 @@ class AtelierTest(unittest.TestCase):
     def _git_global(self, *args: str) -> str:
         """Lit la configuration git globale du HOME temporaire."""
         return subprocess.run(["git", "config", "--global", *args], check=True, capture_output=True, text=True).stdout
+
+    def test_etat_sans_clone_vide(self):
+        self.assertEqual(etat_atelier(ROOT), [])
+
+    def test_etat_propre_vide(self):
+        self._tout_poser()
+        self.assertEqual(etat_atelier(ROOT), [])
+
+    def test_etat_modifie(self):
+        self._tout_poser()
+        (self.clone / "claude" / "CLAUDE.md").write_text("changé\n", encoding="utf-8")
+        (self.clone / "neuf.md").write_text("neuf\n", encoding="utf-8")
+        etat = etat_atelier(ROOT)
+        self.assertEqual(len(etat), 1, etat)
+        self.assertIn("2 fichier(s)", etat[0])
+
+    def test_etat_en_avance(self):
+        self._tout_poser()
+        (self.clone / "claude" / "CLAUDE.md").write_text("changé\n", encoding="utf-8")
+        self._git("commit", "-qam", "avance")
+        etat = etat_atelier(ROOT)
+        self.assertEqual(len(etat), 1, etat)
+        self.assertIn("1 commit(s)", etat[0])
+
+    def test_etat_lien_devenu_fichier(self):
+        self._tout_poser()
+        dst = self._dst("claude/CLAUDE.md")
+        dst.unlink()
+        dst.write_text("fichier\n", encoding="utf-8")
+        etat = etat_atelier(ROOT)
+        self.assertEqual(len(etat), 1, etat)
+        self.assertIn(str(dst), etat[0])
+
+    def test_etat_ligne_de_commande(self):
+        self._tout_poser()
+        res = subprocess.run(["python3", str(ROOT / "atelier.py"), "--etat"], capture_output=True, text=True, env=os.environ)
+        self.assertEqual((res.returncode, res.stdout), (0, ""), res.stderr)
 
 
 def sha256_de(octets: bytes) -> str:

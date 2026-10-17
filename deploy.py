@@ -610,6 +610,8 @@ def main() -> int:
     print(f"\n{home} : {len(actions)} action(s) {'prévue(s)' if args.dry_run else 'effectuée(s)'}.")
     for a in notes + atelier.NOTES_APPLIQUEES:
         print(f"  attention : {describe(a)}")
+    for ligne in atelier.etat_atelier(REPO):
+        print(f"  atelier : {ligne}")
     if any(a[0] == "switch" for a in actions):
         # Hyprland surveille le fichier générique lui-même, qui survit sous un autre nom : la bascule
         # ne déclenche donc pas le rechargement automatique. Les passages suivants le déclenchent.

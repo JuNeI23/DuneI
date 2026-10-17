@@ -13,6 +13,7 @@ atelier.toml est la seule source de ces valeurs.
 
 from __future__ import annotations
 
+import argparse
 import os
 import hashlib
 import json
@@ -377,3 +378,52 @@ def appliquer(action: tuple) -> bool:
     finally:
         tmp.unlink(missing_ok=True)
     return True
+
+
+def etat_atelier(repo: Path) -> list[str]:
+    """Relevé des écarts de l'atelier — ce que le clone garde sans l'avoir envoyé.
+
+    Entrée : repo — racine du dépôt DuneI, où se lit atelier.toml.
+    Sortie : une phrase par écart : fichiers modifiés ou non suivis (git status --porcelain), commits
+        en avance sur la branche suivie (git rev-list --count @{u}..HEAD), destination d'un lien
+        devenue fichier ordinaire. Liste vide si tout va bien, si le clone manque ou si atelier.toml
+        est invalide ; sans branche suivie, aucune phrase de commits.
+    Erreurs : aucune ; un échec de git ou son absence n'ajoute aucune phrase. Aucun accès au réseau.
+    Dépendances : lire_atelier, subprocess, git.
+    """
+    donnees, erreurs = lire_atelier(repo)
+    if erreurs or not (cfg := donnees["atelier"])["clone"].is_dir():
+        return []
+    clone, phrases = cfg["clone"], []
+
+    def git(*args: str) -> subprocess.CompletedProcess:
+        return subprocess.run(["git", "-C", str(clone), *args], capture_output=True, text=True)
+
+    try:
+        modifies, avance = git("status", "--porcelain"), git("rev-list", "--count", "@{u}..HEAD")
+    except OSError:
+        return []
+    if modifies.returncode == 0 and (n := len(modifies.stdout.splitlines())):
+        phrases.append(f"{n} fichier(s) modifié(s) ou non suivi(s) dans {clone}, à envoyer")
+    if avance.returncode == 0 and (n := int(avance.stdout.strip() or 0)):
+        phrases.append(f"{n} commit(s) de {clone} pas encore envoyé(s)")
+    phrases += [f"{dst} est devenu un fichier ordinaire : le lien vers {clone / rel} est perdu"
+                for rel, dst in cfg["liens"].items() if dst.is_file() and not dst.is_symlink()]
+    return phrases
+
+
+def main() -> int:
+    """Ligne de commande : --etat imprime le relevé de l'atelier, une phrase par ligne.
+
+    Entrée : argument --etat. Sortie : toujours 0. Erreurs : aucune. Dépendances : etat_atelier.
+    """
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--etat", action="store_true", help="imprime les écarts du clone dunei-atelier, sans réseau")
+    if ap.parse_args().etat:
+        for phrase in etat_atelier(Path(__file__).resolve().parent):
+            print(phrase)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

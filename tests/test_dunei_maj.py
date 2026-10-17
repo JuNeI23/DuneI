@@ -18,6 +18,7 @@ FAKES = {
     "pacman": 'echo "pacman $*" >> "$FAKE_LOG"\nexit "${FAKE_PACMAN:-0}"\n',
     "pacdiff": 'echo "pacdiff $*" >> "$FAKE_LOG"\nprintf "%s" "${FAKE_PACNEW:-}"\nexit "${FAKE_PACDIFF:-0}"\n',
     "uname": 'echo 1.0\n',
+    "python3": 'echo "python3 $*" >> "$FAKE_LOG"\nexit "${FAKE_PYTHON3:-0}"\n',
 }
 
 
@@ -33,7 +34,7 @@ class DuneiMajTest(unittest.TestCase):
             (t / "bin" / name).write_text("#!/bin/sh\n" + body, encoding="utf-8")
             (t / "bin" / name).chmod(0o755)
         # Strict nécessaire : l'interpréteur du script et env pour sa première ligne ; rien d'autre.
-        for name in ("bash", "env"):
+        for name in ("bash", "env", "readlink"):
             (t / "sys" / name).symlink_to(shutil.which(name))
         self.log = t / "log"
         (t / "root" / "usr" / "lib" / "modules").mkdir(parents=True)
@@ -100,6 +101,15 @@ class DuneiMajTest(unittest.TestCase):
         self.assertEqual(res.returncode, 3)
         self.assertIn("la liste des actualités a échoué (code 3)", res.stderr)
         self.assertNotIn("sudo pacman -Syu", self.calls())
+
+    def test_signale_l_atelier(self):
+        res = self.run_script()
+        self.assertEqual(res.returncode, 0, res.stderr)
+        self.assertEqual(self.calls()[-1], f"python3 {ROOT / 'atelier.py'} --etat")
+
+    def test_echec_du_releve_sans_effet(self):
+        self.env["FAKE_PYTHON3"] = "9"
+        self.assertEqual(self.run_script().returncode, 0)
 
 
 if __name__ == "__main__":
