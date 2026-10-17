@@ -1,0 +1,1 @@
+{"keyslots":{"0":{"type":"luks2"},"1":{"type":"luks2"},"2":{"type":"luks2"}},"tokens":{"0":{"type":"systemd-recovery","keyslots":["1"]},"1":{"type":"systemd-tpm2","keyslots":["2"],"tpm2-blob":"AAA","tpm2-pcrs":[],"tpm2-pcr-bank":"sha256","tpm2-primary-alg":"ecc","tpm2-policy-hash":"bb","tpm2-pin":true,"tpm2_srk":"cc","tpm2_salt":"dd"}},"segments":{},"digests":{},"config":{}}
