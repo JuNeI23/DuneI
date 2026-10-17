@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.8. Historique en fin de document.
+Version 1.9. Historique en fin de document.
 
 Socle amorçable.
 
@@ -60,6 +60,9 @@ DuneI/
 │   └── vm.sh               # machine virtuelle de recette : QEMU/KVM, UEFI, TPM2 simulé
 ├── paquets.toml            # chaque paquet déclaré une fois : groupes, provisoires, matériel, machines
 ├── paquets.py              # make paquets : aligne la machine sur paquets.toml
+├── atelier.toml            # rtk épinglé et carte des liens de l'atelier privé (L1-26)
+├── atelier.py              # destinations rtk et atelier de make install, relevé d'état (L1-26)
+├── .claude/settings.json   # mémoire de Claude pour DuneI : ~/dunei-atelier/memoire (L1-26)
 ├── config/                 # écrit à la main, lié par make install
 │   ├── bin/                # exécutables liés dans ~/.local/bin (dunei-maj)
 │   ├── hypr/
@@ -101,7 +104,7 @@ DuneI/
 `make install` régénère `generated/`, puis lance `deploy.py`. Le script connaît une liste de
 destinations, une par logiciel : `hypr` (`~/.config/hypr`), `fontconfig`
 (`~/.config/fontconfig/conf.d/50-dunei.conf`) et `applis`, qui lie la configuration de chaque
-application à sa place (`~/.config/kitty/kitty.conf`) et exige qu'elle soit installée. `bin` lie chaque exécutable de `config/bin/` dans `~/.local/bin`, et `maj` exige les outils de mise à jour et active le préchargement (voir « Mises à jour — L1-05 »). Il les vérifie toutes avant d'agir : un fichier qu'il
+application à sa place (`~/.config/kitty/kitty.conf`) et exige qu'elle soit installée. `bin` lie chaque exécutable de `config/bin/` dans `~/.local/bin`, et `maj` exige les outils de mise à jour et active le préchargement (voir « Mises à jour — L1-05 »). `rtk` et `atelier` posent l'atelier de développement (voir « Atelier de développement — L1-26 »). Il les vérifie toutes avant d'agir : un fichier qu'il
 n'a pas posé lui-même, ou un lien qui pointe ailleurs, l'arrête avec un message, sans rien modifier
 nulle part. `python3 deploy.py --dry-run` affiche les actions prévues.
 
@@ -205,7 +208,9 @@ Après le redémarrage, connecté avec le compte créé :
     git clone https://github.com/JuNeI23/DuneI ~/DuneI && cd ~/DuneI
     make paquets                                        # paquets.toml → système
     curl -fsSL https://claude.ai/install.sh | bash      # Claude Code, hors pacman
-    make install                                        # configuration, fichiers système, services
+    gh auth login                                       # HTTPS, « Yes » à l'identification de git
+    make install                                        # configuration, fichiers système, services, atelier
+    claude                                              # connexion au compte, confiance accordée à ~/DuneI
 
 `git clone` prend `main`. `make install` refuse les arbres de travail secondaires : le dépôt vit dans
 `~/DuneI`.
@@ -254,6 +259,61 @@ après son installation. La transaction suivante échoue alors, et `make paquets
 machine neuve, ce dossier n'est souvent pas dans le `PATH` : `make install` le signale après son bilan, sans
 bloquer, et on l'ajoute au `PATH` du shell.
 
+### Atelier de développement — L1-26
+
+L'atelier qui construit DuneI (Claude Code, ses réglages, rtk, les plugins, la mémoire de Claude) se pose
+par `make install` (D62 à D64). Le dépôt public porte la façon de le poser ; un dépôt **privé**,
+`JuNeI23/dunei-atelier`, porte le contenu.
+
+| Contenu | Dans `dunei-atelier` | Posé à |
+| --- | --- | --- |
+| Réglages globaux de Claude Code | `claude/settings.json` | lien `~/.claude/settings.json` |
+| Instructions globales | `claude/CLAUDE.md`, `claude/RTK.md` | liens sous `~/.claude/` |
+| Instructions du dossier personnel | `maison/CLAUDE.md` | lien `~/CLAUDE.md` |
+| Réglages de rtk | `rtk/config.toml` | lien `~/.config/rtk/config.toml` |
+| Mémoire de Claude pour DuneI | `memoire/` | désignée par `autoMemoryDirectory` dans `.claude/settings.json` de DuneI |
+| Identité git | `git/gitconfig` | inclus par `~/.gitconfig` (`[include] path`) |
+
+Secrets, historique, sessions et caches ne quittent jamais la machine. Les liens donnent aux fichiers les
+droits du clone (0644) au lieu de 0600 : aucun ne contient de secret.
+
+**rtk** est épinglé dans `atelier.toml` (version, archive, somme de l'archive, somme du binaire, D63).
+L'archive est téléchargée dans `~/.cache/dunei/` pendant l'inspection, `--dry-run` compris, et une somme
+fausse refuse tout `make install`. Monter de version : changer les quatre valeurs d'`atelier.toml`, sommes
+relevées sur la publication GitHub, puis `make install`.
+
+**Ce que fait la destination `atelier`.**
+
+- `gh` non connecté, compte sans accès, clone en échec, ou `~/dunei-atelier` qui existe sans être un dépôt
+  git : l'atelier est sauté avec une note qui dit quoi faire, le reste de `make install` continue. Un
+  `~/dunei-atelier` qui n'est pas un dépôt git se **déplace** (par exemple en `~/dunei-atelier.avant-dunei`),
+  ne se supprime pas : il peut contenir la mémoire.
+- Clone absent : `gh repo clone`. Un fichier déjà présent à la place d'un lien (fichier par défaut posé par
+  un outil) est gardé sous `<nom>.avant-dunei`, puis lié.
+- Clone présent et lien devenu fichier : le fichier est repris dans le clone, puis le lien est remis ; une
+  modification non validée du clone est d'abord mise de côté. La différence se lit dans
+  `git -C ~/dunei-atelier status`.
+- Plugins : ceux de `enabledPlugins`, après déclaration de leur marché (`extraKnownMarketplaces`) ; un échec
+  devient une note.
+- `~/.gitconfig` : l'inclusion de `git/gitconfig` est ajoutée si elle manque ; les lignes de `gh` restent.
+
+**Changements non envoyés.** `make install` et `dunei-maj` finissent par le relevé de
+`python3 atelier.py --etat` : fichiers modifiés, commits non envoyés, lien devenu fichier. Claude valide et
+envoie lui-même chaque changement de l'atelier (règle écrite dans `claude/CLAUDE.md` de l'atelier, D64).
+
+**Constats de recette (2026-10-17).**
+
+- Claude Code écrit **à travers** le lien de `settings.json` (`/config` testé sur `caladan`), mais réordonne
+  ses clés à son premier lancement et à l'installation d'un plugin. Après une installation neuve, le
+  relevé signale donc `claude/settings.json` : valider cette réécriture une fois, sans changement de
+  contenu.
+- `claude-plugins-official` n'est connu de Claude Code qu'après son premier lancement interactif : sa
+  déclaration dans `extraKnownMarketplaces` permet de poser les plugins avant.
+- `gh auth login` lance un navigateur et attend qu'il se ferme avant de vérifier le code : valider le code
+  sur une autre machine, puis fermer ce navigateur.
+- La première session de Claude Code dans `~/DuneI` demande la confiance accordée au dossier : sans elle,
+  `autoMemoryDirectory` n'est pas lu.
+
 ### Machine virtuelle de recette
 
 `setup/vm.sh` lance une machine QEMU/KVM avec micrologiciel UEFI (OVMF, sans Secure Boot) et puce TPM2
@@ -267,6 +327,15 @@ L'ISO reste branchée après la phase 1 : on ferme la fenêtre et on relance `se
 script refuse de démarrer sans KVM, QEMU, `swtpm` ou OVMF, en nommant le paquet à installer, et arrête un
 `swtpm` resté d'une exécution précédente. La feature de chiffrement y répète la procédure avant de toucher
 `caladan`.
+
+**Piloter la recette (D65).** `setup/vm.sh` ouvre le canal de contrôle QMP `~/.cache/dunei-vm/qmp.sock`.
+Claude y envoie des touches (`send-key`, codes de touches physiques : la disposition de l'invité compte) et
+lit l'écran en capturant la fenêtre QEMU avec grim. La capture native (`screendump`) ne fonctionne qu'en
+console : en session graphique, l'affichage accéléré répond « no surface ». Pour taper soi-même dans la
+machine virtuelle, Ctrl + Alt + G capture le clavier, raccourcis à `SUPER` compris ; sans capture, ils vont à
+l'Hyprland de `caladan` (`SUPER + C` y ferme la fenêtre QEMU). La machine virtuelle n'ayant pas de fichier
+machine, son clavier est américain ; `hyprctl eval 'hl.config({input={kb_layout=[[gb]]}})'` le passe en
+britannique pour la session (point ouvert du backlog).
 
 ### Mises à jour — L1-05
 
@@ -1018,7 +1087,7 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 
 | Sujet | Où |
 | --- | --- |
-| Chiffrement de `caladan` par TPM2 et PIN | L1-25, feature suivante |
+| Chiffrement de `caladan` par TPM2 et PIN, par réinstallation (D61) | L1-25, feature suivante |
 | Barre, lanceur, notifications, verrouillage | Lot 2 |
 | Agent d'authentification et trousseau | Lot 2 — **rien ne s'installe depuis l'interface avant** |
 | Conception du chemin biométrique | Lot 5, chapitre des écrans système |
@@ -1034,6 +1103,7 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 | Version | Date | Changement |
 | --- | --- | --- |
 | 0.1 | 2026-10-12 | Version initiale |
+| 1.9 | 2026-10-17 | Atelier de développement (L1-26) : `atelier.toml`, `atelier.py`, `.claude/settings.json` dans l'arborescence ; destinations `rtk` et `atelier` ; phase 2 avec `gh auth login` et la première session de Claude ; section « Atelier de développement — L1-26 » et ses constats de recette ; pilotage de la machine virtuelle par QMP ; chiffrement de `caladan` par réinstallation (D61 à D65) |
 | 1.8 | 2026-10-17 | Installation rejouable (L1-02 à L1-06) : « Le dépôt » réécrit selon l'arborescence réelle (`setup/`, `paquets.toml`, `paquets.py`, `config/bin/`, `systeme/`), scripts `setup/0x-*.sh` et listes `packages/*.txt` abandonnés ; section « Installation » : deux phases, choix au menu d'`archinstall` (mot de passe de chiffrement obligatoire), `make paquets`, Claude Code et la vérification de sa signature, première lecture des actualités, `PATH`, machine virtuelle de recette, mises à jour (`dunei-maj`, préchargement, cache, abstention sur connexion mesurée), pare-feu, annexe manuelle ; « Graphique — L1-06 » réécrit autour de la détection ; destinations `bin` et `maj` ; chiffrement de `caladan` renvoyé à L1-25 (D53 à D60) |
 | 1.7 | 2026-10-16 | Terminal (L1-18) : kitty conservé, foot écarté ; `config/kitty/kitty.conf` et destination `applis` de `make install` ; instance unique ; `less` et `man-db` installés (D52) |
 | 1.6 | 2026-10-16 | Session et démarrage (L1-10) : greetd et tuigreet installés, SDDM retiré ; fichiers système, `session.toml`, `nm-applet.service`, `demarrage.lua` et `dunei-verrou-initial` ; ce que fait `make install` ; recette du 2026-10-16 ; recours, modules liés et fichiers générés neufs ; paquets proposés mis à jour (D49 à D51) |

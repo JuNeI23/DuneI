@@ -1,6 +1,6 @@
 # Outillage de développement par IA : l'atelier rejouable
 
-Version 0.2 · 2026-10-17 · backlog L1-26 (nouveau) · carnet « Installation », phase 2 · statut : conception
+Version 0.3 · 2026-10-17 · backlog L1-26 · carnet « Atelier de développement — L1-26 » · statut : implémentée, recette passée
 
 ## 1. Objet
 
@@ -142,7 +142,10 @@ une seule erreur refuse tout, ne jamais écraser un fichier que DuneI n'a pas po
 - Plugins, **avant** les liens : pour chaque clé de `enabledPlugins` du `settings.json` de l'atelier
   absente de `claude plugin list`, `claude plugin install <clé>`. La liste des plugins n'a qu'une source.
   Les versions ne sont pas épinglées : le critère est « actifs », et le marché officiel les tient à jour.
-  *(Choix de Claude.)*
+  Le marché de chaque plugin manquant est d'abord déclaré (`claude plugin marketplace add`) d'après
+  `extraKnownMarketplaces` du même fichier : sur une installation neuve, `claude-plugins-official` n'est
+  connu qu'après le premier lancement interactif (constat de recette). Ces appels réseau ont un délai de
+  300 s, et un plugin en échec n'empêche pas les suivants. *(Choix de Claude.)*
 - Bilan : changements non validés ou non envoyés dans le clone (`git status --porcelain`, commits en
   avance sur `origin`), lien repris, fichier `.avant-dunei` laissé, tout est signalé ; rien n'est envoyé.
 
@@ -216,5 +219,6 @@ absolu dans `settings.json` : ce serait modifier l'atelier. *(Choix de Claude.)*
 
 | Version | Date | Changement |
 | --- | --- | --- |
+| 0.3 | 2026-10-17 | Implémentée et recettée (D61 à D65) : marché déclaré avant les plugins, délai réseau, `~/dunei-atelier` non git sauté au lieu d'une erreur, clone en échec sauté, garde `.avant-dunei.N`, modification non validée du clone mise de côté |
 | 0.2 | 2026-10-17 | Relecture du constructeur : téléchargement de rtk à l'inspection, reprise d'un lien remplacé, fichier par défaut d'une installation neuve, `~/.gitconfig` par inclusion, plugins avant les liens, règle d'envoi dans l'atelier, `PATH` manuel jusqu'à L1-25 |
 | 0.1 | 2026-10-17 | Version initiale |

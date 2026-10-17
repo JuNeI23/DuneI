@@ -170,7 +170,7 @@ gitconfig = "git/gitconfig"           # inclus par ~/.gitconfig, jamais lié
     dossier parent créé ; destination absente → lien ; fichier identique à `src` → lien par
     `os.replace` d'un lien temporaire ; fichier différent et `neuf` → renommé `<nom>.avant-dunei`, puis
     lien ; fichier différent et non `neuf` → contenu copié dans `src`, puis lien. Rend une note
-    `("atelier-repris", dst)` ou `("atelier-garde", dst)` par une liste `atelier.NOTES_APPLIQUEES`, que
+    `("atelier-repris", dst)` ou `("atelier-garde", dst, garde)` par une liste `atelier.NOTES_APPLIQUEES`, que
     `deploy.main` affiche avec les autres notes.
 - Erreurs d'inspection : clone qui existe sans être un dépôt git, ou dont `origin` n'est pas `depot` ;
   destination qui est un dossier ; lien symbolique vers un autre chemin que `src`.
