@@ -46,6 +46,9 @@ import tomllib
 from collections.abc import Mapping
 from pathlib import Path
 
+import atelier
+from atelier import bin_home
+
 REPO = Path(__file__).resolve().parent
 ENTRY = "config/hypr/hyprland.lua"            # Point d'entrée, lié sous hypr/hyprland.lua.
 SCRIPTS = "config/hypr/scripts"               # Scripts lancés par Hyprland : chacun doit être exécutable.
@@ -92,16 +95,6 @@ def config_home(env: Mapping[str, str]) -> Path:
     Erreurs : aucune. Dépendances : aucune.
     """
     return Path(env.get("XDG_CONFIG_HOME") or Path(env.get("HOME") or os.path.expanduser("~")) / ".config")
-
-
-def bin_home(env: Mapping[str, str]) -> Path:
-    """Dossier des exécutables de l'utilisateur.
-
-    Entrée : env — environnement, os.environ en usage normal.
-    Sortie : $XDG_BIN_HOME, ou $HOME/.local/bin si la variable est absente ou vide.
-    Erreurs : aucune. Dépendances : aucune.
-    """
-    return Path(env.get("XDG_BIN_HOME") or Path(env.get("HOME") or os.path.expanduser("~")) / ".local" / "bin")
 
 
 def system_root(env: Mapping[str, str]) -> Path:
@@ -463,9 +456,9 @@ def plan_services(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
     return actions, err
 
 
-NOTES = ("hors-liste", "chemin")  # Signalements affichés après le bilan : ils n'agissent pas et ne bloquent pas.
+NOTES = ("hors-liste", "chemin", "rtk-remplace")  # Signalements affichés après le bilan : ils n'agissent pas et ne bloquent pas.
 DESTINATIONS = {"hypr": plan_hypr, "fontconfig": plan_fontconfig, "applis": plan_applis,
-                "bin": plan_bin, "services": plan_services, "systeme": plan_systeme, "maj": plan_maj,
+                "bin": plan_bin, "rtk": atelier.plan_rtk, "services": plan_services, "systeme": plan_systeme, "maj": plan_maj,
                 "connexion": plan_connexion}  # Nom → planification, dans l'ordre d'exécution (sudo en dernier).
 
 
@@ -512,6 +505,8 @@ def describe(action: tuple) -> str:
         "enable": "activer et démarrer {0}",
         "restart": "redémarrer {0}",
         "chemin": "{0} ne figure pas dans le PATH : ajouter ce dossier au PATH de ton shell pour joindre dunei-maj",
+        "rtk-pose": "poser rtk (archive {0}) dans {2}",
+        "rtk-remplace": "{0} contient déjà un autre rtk ; remplacé par la version épinglée {1}",
         "hors-liste": "{0} est accroché à la session sans figurer dans session.toml ; laissé en place",
     }[kind].format(*args)
 
@@ -566,6 +561,8 @@ def apply(actions: list[tuple]) -> None:
             subprocess.run(["systemctl", "--user", kind, args[0]], check=True)
         elif kind == "daemon-reload":
             subprocess.run(["systemctl", "--user", "daemon-reload"], check=True)
+        elif kind not in NOTES and not atelier.appliquer((kind, *args)):
+            raise OSError(f"action inconnue : {kind}")
 
 
 def main() -> int:
