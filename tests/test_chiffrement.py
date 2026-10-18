@@ -117,6 +117,12 @@ class TestEtape(unittest.TestCase):
     def test_termine(self):
         self.assertEqual(self.e(self.FINI, marque="b1"), "termine")
 
+    def test_puce_sans_marque(self):
+        self.assertEqual(self.e(self.PUCE, marque=None), "incoherent")
+
+    def test_puce_sans_fragment(self):
+        self.assertEqual(self.e(self.PUCE, fragment=False, cmdline=""), "incoherent")
+
     def test_incoherent(self):
         for v in (Voies((0,), (1,), ((1, 2),), False),
                   Voies((0,), (1,), ((1, 2), (2, 3)), True),

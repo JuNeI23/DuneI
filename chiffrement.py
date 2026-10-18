@@ -114,20 +114,24 @@ def etape(v: Voies, fragment: bool, cmdline: str, boot: str, marque: str | None)
     Entrée : v — voies d'accès ; fragment — le fragment mkinitcpio/amorçage est posé ; cmdline — contenu de
              /proc/cmdline ; boot — identifiant du démarrage en cours ; marque — identifiant noté à l'inscription
              de la puce, ou None.
-    Sortie : amorcage, redemarrer-amorcage, secours, verifier-secours, puce, redemarrer-puce, retirer-phrase,
-             termine ou incoherent.
+    Sortie : amorcage, redemarrer-amorcage, secours, verifier-secours, redemarrer-puce, retirer-phrase,
+             termine ou incoherent. « puce » n'est jamais rendue : la commande inscrit la puce dans le même
+             passage, juste après un « verifier-secours » réussi, donc la clé de secours est toujours retapée avant.
+             Puce présente sans marque tant qu'une phrase reste : incoherent.
     Erreurs : aucune exception. Dépendances : aucune.
     """
-    if not fragment:
-        return "amorcage"
-    if not any(t.startswith("rd.luks.name=") for t in cmdline.split()):
-        return "redemarrer-amorcage"
     if len(v.puces) > 1 or (v.puces and not v.puce_conforme) or not (v.phrases or v.secours or v.puces):
         return "incoherent"
+    if not fragment:
+        return "incoherent" if v.puces else "amorcage"
+    if not any(t.startswith("rd.luks.name=") for t in cmdline.split()):
+        return "redemarrer-amorcage"
     if not v.secours:
         return "secours"
     if not v.puces:
         return "verifier-secours"
     if marque == boot:
         return "redemarrer-puce"
-    return "retirer-phrase" if v.phrases else "termine"
+    if not v.phrases:
+        return "termine"
+    return "retirer-phrase" if marque else "incoherent"   # Sans marque, la preuve du second redémarrage manque.
