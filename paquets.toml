@@ -26,6 +26,7 @@ socle = [
     "power-profiles-daemon", # profils d'énergie
     "git",                   # versionnage
     "make",                  # chaîne de génération
+    "python",                # chaîne de génération et commandes du dépôt
     "python-numpy",          # chaîne de thème
     "python-pillow",         # chaîne de thème
     "less",                  # paginateur

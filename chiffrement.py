@@ -361,6 +361,8 @@ def amorcage(racine: Path, e: Etat, v: Voies) -> int:
         if any([lancer(c) for c in retours]):   # Liste, non générateur : les trois retours sont tentés.
             print(f"attention : le retour n'a pas abouti ; relance make chiffrement, et au redémarrage choisis "
                   f"« {de_secours(uki).stem} » au menu si l'entrée par défaut ne démarre pas.", file=sys.stderr)
+        else:   # Bilan après la sortie de mkinitcpio, qui chasse le premier message de l'écran.
+            print("Amorçage systemd non posé, état d'avant rétabli : relance make chiffrement.", file=sys.stderr)
 
     try:
         echec = (lancer(["sudo", "install", "-D", "-m", "644", str(SOURCE), str(fragment)])
@@ -422,7 +424,10 @@ def verifier_secours(racine: Path, e: Etat, v: Voies) -> int:
                 print("Clé retirée. Relance make chiffrement pour en inscrire une nouvelle.")
         return 1
     print("Clé de secours vérifiée.")
-    return 0 if v.puces else puce(racine, e)
+    if v.puces:
+        print(MESSAGES["termine"])
+        return 0
+    return puce(racine, e)
 
 
 def verifier_puce(periph: str, jeton: int) -> bool:
@@ -478,10 +483,11 @@ def retirer_phrase(racine: Path, e: Etat, v: Voies) -> int:
     Erreurs : messages sur la sortie d'erreur. Dépendances : demander, verifier_puce, lancer, image, de_secours.
     """
     # Phrase de puce et phrase d'origine sont la même chaîne : seule l'invite vue au démarrage distingue
-    # l'ouverture par la puce d'un repli sur la phrase d'origine (invites à confirmer en machine virtuelle).
+    # l'ouverture par la puce d'un repli sur la phrase d'origine (invites relevées en machine virtuelle, tâche 5).
     print("Il resterait deux voies : la puce avec ta phrase, et la clé de secours. Au démarrage, la puce "
-          "demande « Please enter TPM2 PIN » ; « Please enter passphrase for disk … » est la phrase d'origine.")
-    if not demander("Au dernier démarrage, l'invite était-elle celle de la puce (TPM2 PIN) ? [o/N] "):
+          f"demande « Please enter LUKS2 token PIN » ; « Please enter passphrase for disk {e.nom} » est la "
+          "phrase d'origine.")
+    if not demander("Au dernier démarrage, l'invite était-elle celle de la puce (LUKS2 token PIN) ? [o/N] "):
         print("Rien n'a été retiré. Si la puce n'a pas ouvert le disque, voir la section chiffrement du carnet.")
         return 0
     if not verifier_puce(e.periph, v.puces[0][0]):
@@ -500,42 +506,56 @@ def retirer_phrase(racine: Path, e: Etat, v: Voies) -> int:
 
 
 def changer_phrase(racine: Path, e: Etat, v: Voies) -> int:
-    """Change la phrase de la puce (§ 5.4) : nouvelle inscription, vérifiée, puis retrait de l'ancienne.
+    """Change la phrase de la puce (§ 5.4), la clé de secours servant de filet.
 
-    Entrées : racine, e, v — v avec exactement une puce (chiffrement terminé).
-    Sortie : 0 si changée ; 1 si la nouvelle n'est pas vérifiée (elle est retirée, l'ancienne reste) ;
-             code de l'échec sinon. Le volume s'ouvre par la puce et l'ancienne phrase, ou, sur demande,
-             par la clé de secours.
+    systemd-cryptenroll 262 retire de lui-même l'inscription TPM2 précédente dès qu'il en inscrit une
+    nouvelle, quel que soit le moyen d'ouverture (relevé en machine virtuelle, tâche 5) : l'ancienne phrase
+    cesse d'ouvrir avant que la nouvelle soit éprouvée. D'où l'ordre : (a) la clé de secours retapée doit
+    ouvrir le volume, sinon rien n'est fait ; (b) inscription de puce + nouvelle phrase (ouverture par la
+    puce, ou sur demande par la clé de secours) ; (c) relecture, retrait de l'ancien emplacement seulement
+    s'il existe encore (systemd plus ancien) ; (d) épreuve du nouveau jeton. Après (b), un échec ne retire
+    rien : il reste une seule puce et la clé de secours, et make phrase se relance.
+    Entrées : racine, e, v — v avec exactement une puce et une clé de secours (chiffrement terminé).
+    Sortie : 0 si changée et éprouvée ; 1 ou le code de la commande en échec sinon.
     Erreurs : messages sur la sortie d'erreur. Dépendances : lancer, demander, lire_etat, voies, verifier_puce, PUCE.
     """
-    ancienne = v.puces[0]
+    ancienne, filet = v.puces[0], "La clé de secours ouvre toujours le disque ; relance make phrase."
+    if len(v.secours) != 1:
+        print("erreur : make phrase exige une clé de secours et une seule ; voir la section chiffrement du "
+              "carnet.", file=sys.stderr)
+        return 1
     if code := lancer(["sudo", "-v"]):
         return code
-    print("Changement de phrase : tape ton ancienne phrase, puis choisis la nouvelle.")
+    print("Retape d'abord la clé de secours rangée dans Bitwarden : l'ancienne phrase cessera d'ouvrir le "
+          "disque dès l'inscription de la nouvelle.")
+    if code := lancer(["sudo", "cryptsetup", "open", "--test-passphrase", "--key-slot", str(v.secours[0]), e.periph]):
+        print("erreur : la clé de secours n'ouvre pas le disque ; rien n'a changé. Inscris-en une nouvelle "
+              "(voir la section chiffrement du carnet) avant de changer la phrase.", file=sys.stderr)
+        return code
+    if code := lancer(["sudo", "-v"]):
+        return code
+    print("Tape ton ancienne phrase, puis choisis la nouvelle.")
     code = lancer(["sudo", "systemd-cryptenroll", "--unlock-tpm2-device=auto", *PUCE, e.periph])
-    if code and demander("Ouvrir plutôt avec la clé de secours ? [o/N] "):
-        code = lancer(["sudo", "systemd-cryptenroll", *PUCE, e.periph])
+    if code and demander("\nOuvrir plutôt avec la clé de secours ? [o/N] "):
+        code = lancer(["sudo", "-v"]) or lancer(["sudo", "systemd-cryptenroll", *PUCE, e.periph])
     if code:
-        print("erreur : aucune nouvelle phrase inscrite ; l'ancienne reste.", file=sys.stderr)
+        print(f"erreur : aucune nouvelle phrase inscrite. {filet}", file=sys.stderr)
         return code
-    nouvelles = [p for p in voies(lire_etat(racine).meta).puces if p != ancienne]
+    puces = voies(lire_etat(racine).meta).puces
+    nouvelles = [p for p in puces if p != ancienne]
     if len(nouvelles) != 1:
-        print("erreur : nouvelle inscription introuvable ; voir la section chiffrement du carnet.", file=sys.stderr)
+        print(f"erreur : nouvelle inscription introuvable. {filet}", file=sys.stderr)
         return 1
-    jeton, slot = nouvelles[0]
-    if not verifier_puce(e.periph, jeton):
-        if lancer(["sudo", "systemd-cryptenroll", f"--wipe-slot={slot}", e.periph]):
-            print(f"erreur : la nouvelle phrase n'a pas été vérifiée ni retirée (emplacement {slot}) ; l'ancienne "
-                  "reste. Voir la section chiffrement du carnet.", file=sys.stderr)
-        else:
-            print("erreur : la nouvelle phrase n'a pas été vérifiée ; elle est retirée, l'ancienne reste.",
-                  file=sys.stderr)
-        return 1
-    if code := lancer(["sudo", "systemd-cryptenroll", f"--wipe-slot={ancienne[1]}", e.periph]):
-        print("erreur : l'ancienne inscription n'a pas été retirée ; voir la section chiffrement du carnet.",
-              file=sys.stderr)
+    if ancienne in puces and (code := lancer(["sudo", "systemd-cryptenroll", f"--wipe-slot={ancienne[1]}",
+                                              e.periph])):
+        print(f"erreur : l'ancienne inscription (emplacement {ancienne[1]}) n'a pas été retirée ; voir la section "
+              "chiffrement du carnet.", file=sys.stderr)
         return code
-    print("Nouvelle phrase inscrite et vérifiée ; l'ancienne est retirée.")
+    if not verifier_puce(e.periph, nouvelles[0][0]):
+        print("erreur : la nouvelle phrase n'a pas été éprouvée, rien n'est retiré ; l'ancienne n'ouvre plus le "
+              f"disque. {filet}", file=sys.stderr)
+        return 1
+    print("Nouvelle phrase inscrite et éprouvée ; l'ancienne n'ouvre plus le disque.")
     return 0
 
 

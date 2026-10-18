@@ -1,5 +1,6 @@
 """Tests de chiffrement.py : lecture de l'état du disque, actions par étape et commande."""
 
+import ast
 import copy
 import io
 import json
@@ -21,7 +22,8 @@ NOUVEAU = "rd.luks.name=U=root"
 
 
 def meta(nom):
-    """Métadonnées LUKS2 d'exemple tests/donnees/luks-<nom>.json."""
+    """Métadonnées LUKS2 tests/donnees/luks-<nom>.json : relevés de la machine virtuelle (tâche 5) à chaque
+    étape (archinstall, apres-secours, apres-puce, termine, apres-phrase), synthétiques pour sans-pin et pcr."""
     return json.loads((DONNEES / f"luks-{nom}.json").read_text())
 
 
@@ -29,8 +31,12 @@ class TestVoies(unittest.TestCase):
     def test_voies_archinstall(self):
         self.assertEqual(chiffrement.voies(meta("archinstall")), Voies((0,), (), (), True))
 
-    def test_voies_complet(self):
-        self.assertEqual(chiffrement.voies(meta("complet")), Voies((0,), (1,), ((1, 2),), True))
+    def test_voies_releves(self):
+        for nom, attendu in (("apres-secours", Voies((0,), (1,), (), True)),
+                             ("apres-puce", Voies((0,), (1,), ((1, 2),), True)),
+                             ("termine", Voies((), (1,), ((1, 2),), True)),
+                             ("apres-phrase", Voies((), (1,), ((2, 0),), True))):
+            self.assertEqual(chiffrement.voies(meta(nom)), attendu, nom)
 
     def test_voies_puce_sans_pin(self):
         self.assertFalse(chiffrement.voies(meta("sans-pin")).puce_conforme)
@@ -40,7 +46,7 @@ class TestVoies(unittest.TestCase):
 
     def test_voies_puce_pcrlock_ou_cle(self):
         for extra in ({"tpm2_pcrlock": True}, {"tpm2_pubkey_pcrs": [11]}, {"tpm2_pubkey": "k"}):
-            m = meta("complet")
+            m = meta("apres-puce")
             m["tokens"]["1"].update(extra)
             self.assertFalse(chiffrement.voies(m).puce_conforme, extra)
 
@@ -140,23 +146,19 @@ class TestEtape(unittest.TestCase):
 
 def fini():
     """Métadonnées d'un chiffrement terminé : clé de secours (emplacement 1) et puce (jeton 1, emplacement 2)."""
-    m = meta("complet")
-    del m["keyslots"]["0"]
-    return m
+    return meta("termine")
 
 
 def secours_seul():
     """Métadonnées après la clé de secours : phrase (emplacement 0), secours (emplacement 1), pas de puce."""
-    m = meta("complet")
-    del m["tokens"]["1"], m["keyslots"]["2"]
-    return m
+    return meta("apres-secours")
 
 
 def avec_puce(m, jeton, slot):
     """Copie de m augmentée d'une puce conforme : jeton `jeton`, emplacement `slot`."""
     m = copy.deepcopy(m)
     m["keyslots"][str(slot)] = {"type": "luks2"}
-    m["tokens"][str(jeton)] = dict(meta("complet")["tokens"]["1"], keyslots=[str(slot)])
+    m["tokens"][str(jeton)] = dict(meta("apres-puce")["tokens"]["1"], keyslots=[str(slot)])
     return m
 
 
@@ -284,14 +286,16 @@ class TestCommande(unittest.TestCase):
         self.assertEqual((self.r / "etc/kernel/cmdline").read_text(), LIGNE + "\n")
         self.assertFalse((self.r / "etc/mkinitcpio.conf.d/10-dunei-chiffrement.conf").exists())
         self.assertEqual(self.cmds.count(["sudo", "mkinitcpio", "-P"]), 2)
+        self.assertIn("le retour n'a pas abouti", out)
 
     def test_amorcage_echec_install(self):
         self.echecs = {f"install -D -m 644 {chiffrement.SOURCE}"}
-        code, _ = self.lance([self.amorce()], reponses=["o"])
+        code, out = self.lance([self.amorce()], reponses=["o"])
         self.assertEqual(code, 1)
         self.assertEqual((self.r / "etc/kernel/cmdline").read_text(), LIGNE + "\n")
         self.assertFalse((self.r / "etc/mkinitcpio.conf.d/10-dunei-chiffrement.conf").exists())
         self.assertEqual(self.cmds.count(["sudo", "mkinitcpio", "-P"]), 1)
+        self.assertTrue(out.rstrip().endswith("état d'avant rétabli : relance make chiffrement."), out)
 
     def test_amorcage_interrompu_restaure(self):
         self.interruption = "mkinitcpio -P"
@@ -306,7 +310,7 @@ class TestCommande(unittest.TestCase):
         self.assertEqual((code, self.cmds), (0, []))
 
     def test_puce_options(self):
-        code, out = self.lance([etat(secours_seul()), etat(meta("complet"))])
+        code, out = self.lance([etat(secours_seul()), etat(meta("apres-puce"))])
         self.assertEqual(code, 0, out)
         inscr = [c for c in self.cmds if "--tpm2-device=auto" in c]
         self.assertEqual(len(inscr), 1)
@@ -323,7 +327,7 @@ class TestCommande(unittest.TestCase):
 
     def test_puce_verification_echouee(self):
         self.echecs = {"--token-only"}
-        code, out = self.lance([etat(secours_seul()), etat(meta("complet"))])
+        code, out = self.lance([etat(secours_seul()), etat(meta("apres-puce"))])
         self.assertEqual((code, self.wipes()), (0, []), out)
         self.assertIn("redémarrage", out)
 
@@ -336,7 +340,7 @@ class TestCommande(unittest.TestCase):
 
     def test_verifier_secours_derniere_voie(self):
         self.echecs = {"--key-slot"}
-        seul = {"keyslots": {"1": {"type": "luks2"}}, "tokens": {"0": meta("complet")["tokens"]["0"]}}
+        seul = {"keyslots": {"1": {"type": "luks2"}}, "tokens": {"0": meta("apres-puce")["tokens"]["0"]}}
         code, out = self.lance([etat(seul)], reponses=["o"])
         self.assertEqual((code, self.wipes()), (1, []))
         self.assertIn("seule voie", out)
@@ -355,10 +359,11 @@ class TestCommande(unittest.TestCase):
         self.assertIn(["sudo", "systemd-cryptenroll", "--recovery-key", "--unlock-tpm2-device=auto", "/dev/vda2"],
                       self.cmds)
         self.assertFalse([c for c in self.cmds if "--tpm2-device=auto" in c], "aucune seconde puce")
+        self.assertIn("Chiffrement terminé", out)
         self.sudo_avant_secrets()
 
     def test_retirer_phrase_non(self):
-        code, _ = self.lance([etat(meta("complet"), marque="b1")], reponses=[""])
+        code, _ = self.lance([etat(meta("apres-puce"), marque="b1")], reponses=[""])
         self.assertEqual((code, self.wipes()), (0, []))
 
     def test_retirer_phrase_oui(self):
@@ -366,18 +371,19 @@ class TestCommande(unittest.TestCase):
         for rel in ("var/lib/dunei/chiffrement-puce", "etc/kernel/cmdline.avant-dunei",
                     "boot/EFI/Linux/arch-linux-avant-dunei.efi"):
             self.pose(rel, "x")
-        code, out = self.lance([etat(meta("complet"), marque="b1")], reponses=["o"])
+        code, out = self.lance([etat(meta("apres-puce"), marque="b1")], reponses=["o"])
         self.assertEqual(code, 0)
         self.assertEqual(self.wipes(), [["sudo", "systemd-cryptenroll", "--wipe-slot=0", "/dev/vda2"]])
         epreuve = ["sudo", "cryptsetup", "open", "--test-passphrase", "--token-only", "--token-id", "1", "/dev/vda2"]
         self.assertLess(self.cmds.index(epreuve), self.cmds.index(self.wipes()[0]))
-        self.assertIn("TPM2 PIN", out)
+        self.assertIn("« Please enter LUKS2 token PIN »", out)
+        self.assertIn("« Please enter passphrase for disk root »", out)
         self.sudo_avant_secrets()
         self.assertEqual([p.name for p in self.r.rglob("*") if p.is_file() and "dunei" in p.name], [])
 
     def test_retirer_phrase_puce_non_eprouvee(self):
         self.echecs = {"--token-only"}
-        code, out = self.lance([etat(meta("complet"), marque="b1")], reponses=["o"])
+        code, out = self.lance([etat(meta("apres-puce"), marque="b1")], reponses=["o"])
         self.assertEqual((code, self.wipes()), (1, []))
         self.assertIn("pas confirmée", out)
 
@@ -386,33 +392,55 @@ class TestCommande(unittest.TestCase):
         self.assertEqual((code, self.cmds), (1, []))
 
     def test_phrase_avant_termine(self):
-        code, _ = self.lance([etat(meta("complet"), marque="b1")], ["--phrase"])
+        code, _ = self.lance([etat(meta("apres-puce"), marque="b1")], ["--phrase"])
         self.assertEqual((code, self.cmds), (1, []))
 
+    CLE = ["sudo", "cryptsetup", "open", "--test-passphrase", "--key-slot", "1", "/dev/vda2"]
+    EPREUVE = ["sudo", "cryptsetup", "open", "--test-passphrase", "--token-only", "--token-id", "2", "/dev/vda2"]
+
+    def inscriptions(self):
+        """Commandes d'inscription de puce enregistrées (--tpm2-device=auto)."""
+        return [c for c in self.cmds if "--tpm2-device=auto" in c]
+
     def test_phrase_verifiee(self):
-        code, out = self.lance([etat(fini()), etat(avec_puce(fini(), 2, 3))], ["--phrase"])
+        """systemd 262 : l'ancienne puce disparaît à l'inscription ; rien à retirer, nouvelle éprouvée."""
+        code, out = self.lance([etat(fini()), etat(meta("apres-phrase"))], ["--phrase"])
         self.assertEqual(code, 0, out)
-        inscr = [c for c in self.cmds if "--tpm2-device=auto" in c]
+        inscr = self.inscriptions()
         self.assertEqual(len(inscr), 1)
         self.assertEqual(inscr[0][:3], ["sudo", "systemd-cryptenroll", "--unlock-tpm2-device=auto"])
         for opt in ("--tpm2-device=auto", "--tpm2-pcrs=", "--tpm2-pcrlock=", "--tpm2-with-pin=yes"):
             self.assertIn(opt, inscr[0])
-        self.assertIn(["sudo", "cryptsetup", "open", "--test-passphrase", "--token-only", "--token-id", "2",
-                       "/dev/vda2"], self.cmds)
-        self.assertEqual(self.wipes(), [["sudo", "systemd-cryptenroll", "--wipe-slot=2", "/dev/vda2"]])
+        self.assertLess(self.cmds.index(self.CLE), self.cmds.index(inscr[0]), "clé de secours éprouvée d'abord")
+        self.assertIn(self.EPREUVE, self.cmds)
+        self.assertEqual(self.wipes(), [])
         self.sudo_avant_secrets()
+
+    def test_phrase_ancienne_restee(self):
+        """systemd plus ancien : l'ancien emplacement existe encore, il est retiré par son numéro."""
+        code, out = self.lance([etat(fini()), etat(avec_puce(fini(), 2, 0))], ["--phrase"])
+        self.assertEqual(code, 0, out)
+        self.assertEqual(self.wipes(), [["sudo", "systemd-cryptenroll", "--wipe-slot=2", "/dev/vda2"]])
 
     def test_phrase_non_verifiee(self):
         self.echecs = {"--token-only"}
-        code, _ = self.lance([etat(fini()), etat(avec_puce(fini(), 2, 3))], ["--phrase"])
-        self.assertEqual(code, 1)
-        self.assertEqual(self.wipes(), [["sudo", "systemd-cryptenroll", "--wipe-slot=3", "/dev/vda2"]])
+        code, out = self.lance([etat(fini()), etat(meta("apres-phrase"))], ["--phrase"])
+        self.assertEqual((code, self.wipes()), (1, []))
+        self.assertIn("clé de secours ouvre toujours", out)
 
-    def test_phrase_retrait_nouvelle_echoue(self):
-        self.echecs = {"--token-only", "--wipe-slot"}
-        code, out = self.lance([etat(fini()), etat(avec_puce(fini(), 2, 3))], ["--phrase"])
+    def test_phrase_cle_secours_refusee(self):
+        self.echecs = {"--key-slot"}
+        code, out = self.lance([etat(fini())], ["--phrase"])
         self.assertEqual(code, 1)
-        self.assertIn("ni retirée (emplacement 3)", out)
+        self.assertEqual((self.inscriptions(), self.wipes()), ([], []))
+        self.assertIn("rien n'a changé", out)
+
+    def test_phrase_retrait_ancienne_echoue(self):
+        self.echecs = {"--wipe-slot"}
+        code, out = self.lance([etat(fini()), etat(avec_puce(fini(), 2, 0))], ["--phrase"])
+        self.assertEqual(code, 1)
+        self.assertIn("emplacement 2", out)
+        self.assertNotIn(self.EPREUVE, self.cmds)
 
     def test_metadonnees_inattendues(self):
         code, out = self.lance([etat({"tokens": {}})])
@@ -420,7 +448,7 @@ class TestCommande(unittest.TestCase):
         self.assertIn("métadonnées LUKS inattendues", out)
 
     def test_incoherent(self):
-        code, out = self.lance([etat(meta("complet"))])
+        code, out = self.lance([etat(meta("apres-puce"))])
         self.assertEqual((code, self.cmds), (1, []))
         self.assertIn("carnet", out)
 
@@ -437,6 +465,17 @@ class TestCommande(unittest.TestCase):
     def test_refus_sortie_redirigee(self):
         code, _ = self.lance([], sortie=io.StringIO)
         self.assertEqual((code, self.cmds), (1, []))
+
+
+class TestMessages(unittest.TestCase):
+    def test_messages_sans_ellipse(self):
+        """La police de la console (default8x16) n'a pas « … » : aucun texte affiché ne la porte."""
+        arbre = ast.parse(Path(chiffrement.__file__).read_text())
+        docs = {id(n.body[0].value) for n in ast.walk(arbre)
+                if isinstance(n, (ast.Module, ast.FunctionDef, ast.ClassDef)) and ast.get_docstring(n) is not None}
+        textes = [n.value for n in ast.walk(arbre)
+                  if isinstance(n, ast.Constant) and isinstance(n.value, str) and id(n) not in docs]
+        self.assertFalse([t for t in textes if "…" in t])
 
 
 class TestLancer(unittest.TestCase):
