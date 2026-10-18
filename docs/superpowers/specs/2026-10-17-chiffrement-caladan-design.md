@@ -1,6 +1,6 @@
 # Chiffrement de `caladan` : réinstallation, TPM2 et phrase de passe
 
-Version 0.3 · 2026-10-18 · backlog L1-25 (écart de L1-03) · carnet « Installation — L1-02 à L1-05 » et « Chiffrement » · statut : implémentée, recette en machine virtuelle passée
+Version 0.4 · 2026-10-18 · backlog L1-25 (écart de L1-03) · carnet « Installation — L1-02 à L1-05 » et « Chiffrement » · statut : implémentée, recette en machine virtuelle passée
 
 ## 1. Objet
 
@@ -138,7 +138,7 @@ terminal interactif.
    l'image ne démarrait pas, aucune clé ne servirait plus (choix de Claude, relevé par la relecture). La
    commande reconnaît au passage suivant que le démarrage a eu lieu sur le nouvel amorçage.
 3. **Clé de secours.** `systemd-cryptenroll --recovery-key` ; elle s'affiche **une fois**, sans être écrite
-   nulle part. Nicolas la range dans Bitwarden, puis la **retape** : la commande vérifie qu'elle ouvre le
+   nulle part. Nicolas la range dans Bitwarden, puis la **retape**, l'écran effacé : la commande vérifie qu'elle ouvre le
    volume avant de continuer.
 4. **Puce + phrase.** `systemd-cryptenroll --tpm2-device=auto --tpm2-with-pin=yes --tpm2-pcrs=
    --tpm2-pcrlock=`. La commande vérifie, sans redémarrer si c'est possible, que la puce et la phrase ouvrent
@@ -148,7 +148,9 @@ terminal interactif.
    (`--wipe-slot=` par numéro d'emplacement). La phrase de la puce et celle d'`archinstall` étant la même
    chaîne, la réponse de Nicolas sur l'invite vue au démarrage ne prouve rien : la commande éprouve d'abord
    la puce par son seul jeton (`cryptsetup open --test-passphrase --token-only`) et refuse si elle échoue
-   (D69). Il reste deux voies : puce + phrase, clé de secours.
+   (D69). Puis elle fait retaper la clé de secours, lue dans Bitwarden : à l'étape 3 elle était encore à
+   l'écran, et seule cette seconde saisie, après un redémarrage, prouve la copie ; tout échec refuse le
+   retrait (D69). Il reste deux voies : puce + phrase, clé de secours.
 
 `python3 chiffrement.py --etat` affiche les voies d'accès inscrites et l'étape atteinte, sans rien modifier.
 
@@ -162,7 +164,8 @@ la clé de secours retapée doit ouvrir le volume, sinon rien n'est fait ; inscr
 phrase avec les mêmes options qu'à l'étape 4 (ouverture par la puce et l'ancienne phrase, ou par la clé de
 secours) ; relecture de l'état et retrait de l'ancien emplacement seulement s'il existe encore ; épreuve de
 la nouvelle puce par son jeton. Après l'inscription, un échec ne retire rien : la clé de secours ouvre
-toujours le disque, et `make phrase` se relance.
+toujours le disque, et `make phrase` se relance. La même branche, par la clé de secours, réinscrit une puce
+remise à zéro.
 
 ### 5.5 Ordre de la feature
 
@@ -198,6 +201,7 @@ toujours le disque, et `make phrase` se relance.
 
 | Version | Date | Changement |
 | --- | --- | --- |
+| 0.4 | 2026-10-18 | Relecture finale : clé de secours retapée avant le retrait de la phrase d'origine (§ 5.3, étape 6), écran effacé avant la première saisie, refus de la clé distingué d'une interruption ; verrouillage de la puce annoncé avant chaque invite ; réinscription d'une puce remise à zéro par `make phrase` (§ 5.4) |
 | 0.3 | 2026-10-18 | Implémentée, recette en machine virtuelle passée : `make phrase` revu (systemd 262 remplace seul l'ancienne puce, la clé de secours éprouvée d'abord sert de filet) ; puce éprouvée par son jeton avant le retrait de la phrase d'origine ; `loadkeys uk` avant `archinstall` et racine à cocher au chiffrement ; relevé de ce qu'`archinstall` pose ; aucun module de la puce à ajouter ; `--etat` |
 | 0.2 | 2026-10-17 | Relecture du constructeur : premier redémarrage après l'amorçage systemd, réglages d'amorçage possédés par la commande seule, changement de phrase (§ 5.4), phrase définitive dès `archinstall`, aucune vérification par PAM |
 | 0.1 | 2026-10-17 | Version initiale |

@@ -1335,10 +1335,18 @@ puce d'un repli sur la phrase. Les invites relevées en machine virtuelle, cité
 enter LUKS2 token PIN » pour la puce, « Please enter passphrase for disk root » pour la phrase d'origine.
 La commande ne retire jamais la dernière voie d'accès.
 
+Juste avant ce retrait, la clé de secours est **retapée une seconde fois**, lue dans Bitwarden : au passage
+2, elle était encore à l'écran, et seule une saisie faite après un redémarrage prouve la copie de Bitwarden
+(relecture finale). Au passage 2 aussi, l'écran est effacé avant la saisie, une fois la clé rangée. Tout
+échec refuse le retrait. Seul le refus de la clé par `cryptsetup` (code 2) est pris pour une clé fausse et
+fait proposer son retrait ; un Ctrl-C ou une autre erreur ne fait rien. Une clé de secours se remplace dans
+le même ordre : la nouvelle inscrite et retapée, puis l'ancienne retirée, jamais l'inverse.
+
 Raison : la feature échoue si le disque peut se retrouver sans voie d'accès que Nicolas sache utiliser ;
 chaque retrait suit donc une preuve que la machine elle-même a vérifiée.
 
-*Touché : chiffrement.py, tests/test_chiffrement.py, carnet.*
+*Touché : chiffrement.py, tests/test_chiffrement.py, carnet (dont « Remplacer la clé de secours »), spec
+§ 5.3.*
 
 ### D70 · Réglages d'amorçage possédés par la seule commande ; image d'origine gardée au menu
 
@@ -1383,10 +1391,16 @@ encore (systemd plus ancien) ; la nouvelle puce est enfin éprouvée par son jet
 relance. La première version, qui retirait la nouvelle inscription sur échec, pouvait laisser la clé de
 secours seule ; elle est corrigée avant toute machine réelle.
 
+La branche par la clé de secours sert aussi à réinscrire une puce remise à zéro : le carnet passe par
+`make phrase` plutôt que par une commande écrite à la main. Les phrases fausses comptent contre la puce,
+qui se bloque après quelques échecs et refuse alors la bonne phrase (relevé en machine virtuelle) : la
+commande le dit avant chaque invite de la puce, et son message d'échec demande d'attendre plutôt que de
+relancer en boucle ; le carnet donne le déblocage.
+
 Raison : la clé de secours éprouvée devient la garantie qu'offrait l'ancienne inscription ; un changement
 de phrase raté oblige au pire à ouvrir le disque par elle.
 
-*Touché : chiffrement.py, tests/test_chiffrement.py, carnet.*
+*Touché : chiffrement.py, tests/test_chiffrement.py, carnet (« Secours », « Verrouillage de la puce »).*
 
 ### D73 · Phase 1 : `loadkeys uk` avant `archinstall`, racine cochée au chiffrement
 
