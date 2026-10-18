@@ -170,7 +170,11 @@ def etat(m, **kw):
 
 
 class Terminal(io.StringIO):
-    """Sortie capturée qui se présente comme un terminal, pour la garde de main."""
+    """Sortie capturée qui se présente comme un terminal, pour la garde de main.
+
+    Entrées et sorties : celles d'io.StringIO ; isatty rend toujours True. Erreurs : aucune.
+    Dépendances : io.
+    """
 
     def isatty(self):
         return True
@@ -188,9 +192,11 @@ class TestCommande(unittest.TestCase):
         self.addCleanup(self.tmp.cleanup)
         self.r = Path(self.tmp.name)
         self.pose("usr/lib/libtss2-esys.so.0")
-        self.cmds, self.echecs, self.reponses, self.interruption = [], set(), [], None
+        self.cmds, self.echecs, self.refus, self.reponses, self.questions = [], set(), set(), [], []
+        self.interruption = None
         for cible, val in (("chiffrement.lancer", self.faux_lancer), ("chiffrement.lire", self.faux_lire),
-                           ("builtins.input", lambda q: self.reponses.pop(0) if self.reponses else ""),
+                           ("builtins.input", lambda q: self.questions.append(q) or
+                            (self.reponses.pop(0) if self.reponses else "")),
                            ("sys.stdin.isatty", lambda: True), ("os.geteuid", lambda: 1000)):
             p = mock.patch(cible, side_effect=val)
             p.start()
@@ -213,7 +219,8 @@ class TestCommande(unittest.TestCase):
     def faux_lancer(self, cmd):
         """Exécuteur simulé, à la place de chiffrement.lancer.
 
-        Entrée : cmd — commande. Sortie : 1 si un fragment de self.echecs figure dans la commande ; sinon le
+        Entrée : cmd — commande. Sortie : 1 si un fragment de self.echecs figure dans la commande (échec ou
+        interruption) ; 2 si c'est un fragment de self.refus (secret refusé, comme cryptsetup) ; sinon le
         code de install / cp / rm joués sans sudo dans le dossier temporaire ; sinon 0.
         Erreurs : KeyboardInterrupt, une fois, si self.interruption figure dans la commande.
         Dépendances : self.cmds (enregistrement), subprocess.
@@ -224,6 +231,8 @@ class TestCommande(unittest.TestCase):
             raise KeyboardInterrupt
         if any(e in " ".join(cmd) for e in self.echecs):
             return 1
+        if any(e in " ".join(cmd) for e in self.refus):
+            return 2
         if cmd[:2] in (["sudo", "install"], ["sudo", "cp"], ["sudo", "rm"]):
             return subprocess.run(cmd[1:]).returncode
         return 0
@@ -256,7 +265,11 @@ class TestCommande(unittest.TestCase):
         return [c for c in self.cmds if any(a.startswith("--wipe-slot") for a in c)]
 
     def sudo_avant_secrets(self):
-        """Chaque commande qui demande un secret suit immédiatement sudo -v."""
+        """Chaque commande qui demande un secret suit immédiatement sudo -v.
+
+        Entrée : aucune. Sortie : aucune ; échec du test sinon. Erreurs : AssertionError.
+        Dépendances : self.cmds.
+        """
         for i, c in enumerate(self.cmds):
             if "--test-passphrase" in c or ("systemd-cryptenroll" in c and not any("--wipe" in a for a in c)):
                 self.assertEqual(self.cmds[i - 1], ["sudo", "-v"], c)
@@ -332,24 +345,50 @@ class TestCommande(unittest.TestCase):
         self.assertIn("redémarrage", out)
 
     def test_verifier_secours_echec(self):
-        self.echecs = {"--key-slot"}
-        code, _ = self.lance([etat(secours_seul())], reponses=["o"])
+        self.refus = {"--key-slot"}
+        code, _ = self.lance([etat(secours_seul())], reponses=["", "o"])
         self.assertEqual(code, 1)
         self.assertEqual(self.wipes(), [["sudo", "systemd-cryptenroll", "--wipe-slot=1", "/dev/vda2"]])
         self.assertFalse([c for c in self.cmds if "--tpm2-device=auto" in c])
 
     def test_verifier_secours_derniere_voie(self):
-        self.echecs = {"--key-slot"}
+        self.refus = {"--key-slot"}
         seul = {"keyslots": {"1": {"type": "luks2"}}, "tokens": {"0": meta("apres-puce")["tokens"]["0"]}}
         code, out = self.lance([etat(seul)], reponses=["o"])
         self.assertEqual((code, self.wipes()), (1, []))
         self.assertIn("seule voie", out)
 
     def test_verifier_secours_retrait_echoue(self):
-        self.echecs = {"--key-slot", "--wipe-slot"}
-        code, out = self.lance([etat(secours_seul())], reponses=["o"])
+        self.refus, self.echecs = {"--key-slot"}, {"--wipe-slot"}
+        code, out = self.lance([etat(secours_seul())], reponses=["", "o"])
         self.assertEqual(code, 1)
         self.assertIn("pas été retirée", out)
+
+    def test_verifier_secours_interrompue(self):
+        """Code autre que 2 (Ctrl-C, erreur) : ni « n'ouvre pas » ni proposition de retrait."""
+        self.echecs = {"--key-slot"}
+        code, out = self.lance([etat(secours_seul())], reponses=["", "o"])
+        self.assertEqual((code, self.wipes()), (1, []))
+        self.assertIn("interrompue ou en échec (code 1)", out)
+        self.assertNotIn("n'ouvre pas", out)
+        self.assertFalse([q for q in self.questions if "Retirer" in q])
+
+    def test_verifier_secours_efface_ecran(self):
+        """La clé s'efface de l'écran avant d'être retapée : c'est la copie de Bitwarden qui est éprouvée."""
+        code, out = self.lance([etat(secours_seul()), etat(meta("apres-puce"))])
+        self.assertEqual(code, 0, out)
+        self.assertTrue([q for q in self.questions if "rangée dans Bitwarden" in q], self.questions)
+        self.assertLess(out.index("\033[H\033[2J\033[3J"), out.index("Retape la clé de secours"))
+
+    def test_verifier_secours_phrase_restante(self):
+        """Clé réinscrite alors que la phrase d'origine et la puce restent : pas de « Chiffrement terminé »."""
+        sans_secours = meta("apres-puce")
+        del sans_secours["tokens"]["0"], sans_secours["keyslots"]["1"]
+        code, out = self.lance([etat(sans_secours, marque="b1"), etat(meta("apres-puce"), marque="b1")],
+                               reponses=["o"])
+        self.assertEqual(code, 0, out)
+        self.assertNotIn("Chiffrement terminé", out)
+        self.assertIn("Relance make chiffrement", out)
 
     def test_secours_puce_seule(self):
         seule = fini()
@@ -360,6 +399,7 @@ class TestCommande(unittest.TestCase):
                       self.cmds)
         self.assertFalse([c for c in self.cmds if "--tpm2-device=auto" in c], "aucune seconde puce")
         self.assertIn("Chiffrement terminé", out)
+        self.assertIn("Chaque phrase fausse compte", out)
         self.sudo_avant_secrets()
 
     def test_retirer_phrase_non(self):
@@ -375,11 +415,27 @@ class TestCommande(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertEqual(self.wipes(), [["sudo", "systemd-cryptenroll", "--wipe-slot=0", "/dev/vda2"]])
         epreuve = ["sudo", "cryptsetup", "open", "--test-passphrase", "--token-only", "--token-id", "1", "/dev/vda2"]
-        self.assertLess(self.cmds.index(epreuve), self.cmds.index(self.wipes()[0]))
+        self.assertLess(self.cmds.index(epreuve), self.cmds.index(self.CLE))
+        self.assertLess(self.cmds.index(self.CLE), self.cmds.index(self.wipes()[0]), "clé retapée avant le retrait")
+        self.assertIn("Chaque phrase fausse compte", out)
         self.assertIn("« Please enter LUKS2 token PIN »", out)
         self.assertIn("« Please enter passphrase for disk root »", out)
         self.sudo_avant_secrets()
         self.assertEqual([p.name for p in self.r.rglob("*") if p.is_file() and "dunei" in p.name], [])
+
+    def test_retirer_phrase_secours_refusee(self):
+        """La clé de Bitwarden n'ouvre pas (code 2) : la phrase d'origine reste."""
+        self.refus = {"--key-slot"}
+        code, out = self.lance([etat(meta("apres-puce"), marque="b1")], reponses=["o"])
+        self.assertEqual((code, self.wipes()), (2, []))
+        self.assertIn("la phrase d'origine reste", out)
+        self.assertIn("Vérifie la clé rangée dans Bitwarden", out)
+
+    def test_retirer_phrase_secours_interrompue(self):
+        self.echecs = {"--key-slot"}
+        code, out = self.lance([etat(meta("apres-puce"), marque="b1")], reponses=["o"])
+        self.assertEqual((code, self.wipes()), (1, []))
+        self.assertIn("interrompue ou en échec (code 1)", out)
 
     def test_retirer_phrase_puce_non_eprouvee(self):
         self.echecs = {"--token-only"}
@@ -415,6 +471,26 @@ class TestCommande(unittest.TestCase):
         self.assertIn(self.EPREUVE, self.cmds)
         self.assertEqual(self.wipes(), [])
         self.sudo_avant_secrets()
+        self.assertIn("1re invite : l'ancienne phrase ; ensuite la nouvelle, deux fois.", out)
+        self.assertIn("Chaque phrase fausse compte", out)
+
+    def test_phrase_par_cle_de_secours(self):
+        """Branche « o » : la puce n'ouvre plus (remise à zéro) ; inscription par la clé de secours, puis épreuve.
+
+        Deux relectures : l'ancienne puce encore listée (retirée par son numéro) ou déjà retirée par systemd.
+        """
+        for apres, wipes in ((avec_puce(fini(), 2, 0), [["sudo", "systemd-cryptenroll", "--wipe-slot=2",
+                                                           "/dev/vda2"]]), (meta("apres-phrase"), [])):
+            with self.subTest(wipes=wipes):
+                self.cmds, self.echecs = [], {"--unlock-tpm2-device=auto"}
+                code, out = self.lance([etat(fini()), etat(apres)], ["--phrase"], reponses=["o"])
+                self.assertEqual(code, 0, out)
+                inscr = self.inscriptions()
+                self.assertEqual(inscr[1], ["sudo", "systemd-cryptenroll", *chiffrement.PUCE, "/dev/vda2"])
+                self.assertEqual(self.wipes(), wipes)
+                self.assertGreater(self.cmds.index(self.EPREUVE), self.cmds.index(inscr[1]))
+                self.sudo_avant_secrets()
+                self.assertIn("1re invite : la clé de secours ; ensuite la nouvelle phrase, deux fois.", out)
 
     def test_phrase_ancienne_restee(self):
         """systemd plus ancien : l'ancien emplacement existe encore, il est retiré par son numéro."""
@@ -427,13 +503,23 @@ class TestCommande(unittest.TestCase):
         code, out = self.lance([etat(fini()), etat(meta("apres-phrase"))], ["--phrase"])
         self.assertEqual((code, self.wipes()), (1, []))
         self.assertIn("clé de secours ouvre toujours", out)
+        self.assertIn("la puce est peut-être bloquée", out)
 
     def test_phrase_cle_secours_refusee(self):
+        self.refus = {"--key-slot"}
+        code, out = self.lance([etat(fini())], ["--phrase"])
+        self.assertEqual(code, 2)
+        self.assertEqual((self.inscriptions(), self.wipes()), ([], []))
+        self.assertIn("rien n'a changé", out)
+        self.assertIn("Vérifie la clé rangée dans Bitwarden et relance make phrase", out)
+
+    def test_phrase_cle_secours_interrompue(self):
         self.echecs = {"--key-slot"}
         code, out = self.lance([etat(fini())], ["--phrase"])
         self.assertEqual(code, 1)
         self.assertEqual((self.inscriptions(), self.wipes()), ([], []))
-        self.assertIn("rien n'a changé", out)
+        self.assertIn("interrompue ou en échec (code 1)", out)
+        self.assertNotIn("n'ouvre pas", out)
 
     def test_phrase_retrait_ancienne_echoue(self):
         self.echecs = {"--wipe-slot"}
@@ -446,6 +532,11 @@ class TestCommande(unittest.TestCase):
         code, out = self.lance([etat({"tokens": {}})])
         self.assertEqual((code, self.cmds), (1, []))
         self.assertIn("métadonnées LUKS inattendues", out)
+
+    def test_exception_d_action_non_masquee(self):
+        """Seule la lecture de l'état se traduit en « métadonnées LUKS inattendues »."""
+        with mock.patch("chiffrement.verifier_puce", side_effect=KeyError("x")), self.assertRaises(KeyError):
+            self.lance([etat(meta("apres-puce"), marque="b1")], reponses=["o"])
 
     def test_incoherent(self):
         code, out = self.lance([etat(meta("apres-puce"))])

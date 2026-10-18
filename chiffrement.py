@@ -43,6 +43,8 @@ CMDLINE = Path("/etc/kernel/cmdline")                 # Ligne de commande du noy
 AVANT = Path("/etc/kernel/cmdline.avant-dunei")       # Ligne d'origine, gardée jusqu'au retrait de la phrase.
 PRESET = Path("/etc/mkinitcpio.d/linux.preset")       # Preset du noyau linux, qui nomme son image unifiée.
 PUCE = ("--tpm2-device=auto", "--tpm2-with-pin=yes", "--tpm2-pcrs=", "--tpm2-pcrlock=")  # Puce + phrase, sans état.
+GARDE = "Chaque phrase fausse compte : la puce se bloque après quelques échecs."   # Avant une invite de la puce.
+EFFACER = "\033[H\033[2J\033[3J"                     # Efface l'écran et son historique (console Linux, kitty).
 MESSAGES = {                                          # Étapes qui n'attendent qu'un redémarrage ou rien.
     "redemarrer-amorcage": "L'amorçage systemd n'a pas encore servi : redémarre en laissant l'entrée par défaut "
                            "du menu, puis relance make chiffrement.",
@@ -126,7 +128,8 @@ def nouvelle_ligne(ligne: str, uuid: str, nom: str) -> str:
 
     Entrée : ligne — ligne actuelle ; uuid — UUID du conteneur LUKS ; nom — nom du volume ouvert.
     Sortie : la ligne sans cryptdevice=, root= ni rd.luks.*, les autres éléments dans l'ordre, puis
-             rd.luks.name, rd.luks.options et root. Idempotente.
+             rd.luks.name, rd.luks.options et root. Idempotente. Hypothèse : un seul volume chiffré, et
+             une ligne sans séparateur « -- » (ce qui le suivrait irait à init, pas au noyau).
     Erreurs : aucune. Dépendances : RETIRES.
     """
     gardés = [t for t in ligne.split() if not t.startswith(RETIRES)]
@@ -302,6 +305,18 @@ def demander(question: str) -> bool:
         return False
 
 
+def attendre(texte: str) -> None:
+    """Attend Entrée.
+
+    Entrée : texte — invite affichée. Sortie : aucune. Erreurs : fin de fichier vaut Entrée ; Ctrl-C lève
+    KeyboardInterrupt, traité par main. Dépendances : input.
+    """
+    try:
+        input(texte)
+    except EOFError:
+        pass
+
+
 def poser(contenu: str, cible: Path) -> int:
     """Écrit un fichier système par sudo install, sans écriture Python en root.
 
@@ -383,7 +398,8 @@ def secours(racine: Path, e: Etat, v: Voies) -> int:
 
     Entrées : racine, e, v. Sortie : 0 si refusé ou si la suite réussit ; code de l'échec sinon.
              Sans phrase restante (puce seule), le volume s'ouvre par la puce (--unlock-tpm2-device=auto).
-    Erreurs : messages sur la sortie d'erreur. Dépendances : demander, lancer, lire_etat, voies, verifier_secours.
+    Erreurs : messages sur la sortie d'erreur. Dépendances : demander, lancer, lire_etat, voies, verifier_secours,
+              GARDE.
     """
     print("Clé de secours : elle s'affiche une seule fois et n'est écrite nulle part. Range-la dans Bitwarden.")
     if not demander("Bitwarden est-il ouvert pour la ranger ? [o/N] "):
@@ -392,6 +408,8 @@ def secours(racine: Path, e: Etat, v: Voies) -> int:
     if code := lancer(["sudo", "-v"]):   # Le mot de passe de sudo d'abord, jamais entre deux secrets.
         return code
     ouvrir = [] if v.phrases else ["--unlock-tpm2-device=auto"]
+    if ouvrir:
+        print(GARDE)
     if code := lancer(["sudo", "systemd-cryptenroll", "--recovery-key", *ouvrir, e.periph]):
         print("erreur : la clé de secours n'a pas été inscrite.", file=sys.stderr)
         return code
@@ -399,21 +417,45 @@ def secours(racine: Path, e: Etat, v: Voies) -> int:
     return verifier_secours(racine, e, voies(e.meta))
 
 
+def eprouver_secours(periph: str, emplacement: int, invite: str) -> int:
+    """Fait retaper la clé de secours, lue dans Bitwarden, et l'éprouve sur son seul emplacement.
+
+    Entrées : periph — périphérique LUKS ; emplacement — emplacement de la clé de secours ; invite — texte
+              affiché juste avant la saisie (après le mot de passe de sudo, jamais entre deux secrets).
+    Sortie : 0 si elle ouvre le volume en test ; 2 si cryptsetup la refuse (clé fausse, après ses trois
+             essais) ; tout autre code (sudo -v en échec, Ctrl-C, erreur de cryptsetup) : vérification
+             interrompue, que l'appelant ne doit jamais prendre pour une clé fausse.
+    Erreurs : message sur la sortie d'erreur pour un code de cryptsetup autre que 0 et 2.
+    Dépendances : lancer, cryptsetup.
+    """
+    if code := lancer(["sudo", "-v"]):
+        return code
+    print(invite)
+    code = lancer(["sudo", "cryptsetup", "open", "--test-passphrase", "--key-slot", str(emplacement), periph])
+    if code not in (0, 2):
+        print(f"erreur : vérification de la clé de secours interrompue ou en échec (code {code}) : rien n'est "
+              "fait.", file=sys.stderr)
+    return code
+
+
 def verifier_secours(racine: Path, e: Etat, v: Voies) -> int:
     """Étape 3 bis : la clé de secours retapée doit ouvrir le volume ; puis la puce, s'il n'y en a pas.
 
-    Entrées : racine, e, v. Sortie : 0 si vérifiée (et puce réussie) ; 1 si elle n'ouvre pas le volume,
-             après avoir proposé de la retirer par son numéro pour en inscrire une autre au passage suivant,
-             jamais quand elle est la dernière voie ; code de sudo -v s'il échoue.
-    Erreurs : messages sur la sortie d'erreur. Dépendances : lancer, demander, puce.
+    Entrées : racine, e, v. Sortie : 0 si vérifiée (et puce réussie) ; 1 si elle n'ouvre pas le volume
+             (code 2 de cryptsetup), après avoir proposé de la retirer par son numéro pour en inscrire une
+             autre au passage suivant, jamais quand elle est la dernière voie ; le code de l'échec si la
+             vérification est interrompue (rien n'est proposé). Avant la saisie, Entrée une fois la clé
+             rangée, puis l'écran est effacé : c'est la copie de Bitwarden qui est éprouvée, pas l'écran.
+    Erreurs : messages sur la sortie d'erreur. Dépendances : attendre, eprouver_secours, demander, lancer, puce,
+              EFFACER, MESSAGES.
     """
     if len(v.secours) != 1:
         print("erreur : plusieurs clés de secours ; voir la section chiffrement du carnet.", file=sys.stderr)
         return 1
-    if code := lancer(["sudo", "-v"]):
-        return code
-    print("Retape la clé de secours rangée dans Bitwarden.")
-    if lancer(["sudo", "cryptsetup", "open", "--test-passphrase", "--key-slot", str(v.secours[0]), e.periph]):
+    attendre("Entrée quand elle est rangée dans Bitwarden ; l'écran sera effacé. ")
+    print(EFFACER, end="", flush=True)
+    code = eprouver_secours(e.periph, v.secours[0], "Retape la clé de secours, en la lisant dans Bitwarden.")
+    if code == 2:
         print("Cette clé n'ouvre pas le disque.", file=sys.stderr)
         if not (v.phrases or v.puces):
             print("C'est la seule voie d'accès : elle reste. Voir la section chiffrement du carnet.", file=sys.stderr)
@@ -423,9 +465,12 @@ def verifier_secours(racine: Path, e: Etat, v: Voies) -> int:
             else:
                 print("Clé retirée. Relance make chiffrement pour en inscrire une nouvelle.")
         return 1
+    if code:
+        return code
     print("Clé de secours vérifiée.")
-    if v.puces:
-        print(MESSAGES["termine"])
+    if v.puces:   # Clé réinscrite : fin seulement si la phrase d'origine est déjà retirée.
+        print(MESSAGES["termine"] if not v.phrases else "Relance make chiffrement : la phrase d'origine reste à "
+              "retirer.")
         return 0
     return puce(racine, e)
 
@@ -436,11 +481,11 @@ def verifier_puce(periph: str, jeton: int) -> bool:
     Entrées : periph — périphérique LUKS ; jeton — id du jeton systemd-tpm2 à éprouver.
     Sortie : True si cryptsetup ouvre le volume en test par ce seul jeton (il demande la phrase) ; False
              aussi si sudo -v échoue.
-    Erreurs : aucune exception. Dépendances : lancer, cryptsetup et son greffon systemd-tpm2.
+    Erreurs : aucune exception. Dépendances : lancer, cryptsetup et son greffon systemd-tpm2, GARDE.
     """
     if lancer(["sudo", "-v"]):
         return False
-    print("Vérification : tape ta phrase de démarrage.")
+    print(f"{GARDE}\nVérification : tape ta phrase de démarrage.")
     return not lancer(["sudo", "cryptsetup", "open", "--test-passphrase", "--token-only", "--token-id", str(jeton),
                        periph])
 
@@ -478,9 +523,13 @@ def retirer_phrase(racine: Path, e: Etat, v: Voies) -> int:
     """Étape 6 : retire la phrase d'origine après un démarrage par la puce, puis ce qui gardait l'origine.
 
     Entrées : racine, e, v. Sortie : 0 si retirée ou si l'utilisateur répond non ; 1 si la puce ne
-             s'éprouve pas sans redémarrer (rien n'est retiré) ; code de l'échec sinon. Retire les
-             emplacements de v.phrases par leurs numéros, puis MARQUE, AVANT et l'image de secours.
-    Erreurs : messages sur la sortie d'erreur. Dépendances : demander, verifier_puce, lancer, image, de_secours.
+             s'éprouve pas sans redémarrer ; 2 si la clé de secours retapée n'ouvre pas le volume ; code de
+             l'échec sinon. Dans les trois cas, rien n'est retiré. La clé de secours est retapée juste avant
+             le retrait : après un redémarrage, elle n'est plus à l'écran, et c'est la vraie preuve de la
+             copie de Bitwarden. Retire ensuite les emplacements de v.phrases par leurs numéros, puis MARQUE,
+             AVANT et l'image de secours.
+    Erreurs : messages sur la sortie d'erreur. Dépendances : demander, verifier_puce, eprouver_secours, lancer,
+              image, de_secours.
     """
     # Phrase de puce et phrase d'origine sont la même chaîne : seule l'invite vue au démarrage distingue
     # l'ouverture par la puce d'un repli sur la phrase d'origine (invites relevées en machine virtuelle, tâche 5).
@@ -494,6 +543,13 @@ def retirer_phrase(racine: Path, e: Etat, v: Voies) -> int:
         print("erreur : la puce et ta phrase n'ont pas ouvert le disque ; l'ouverture par la puce n'est pas "
               "confirmée, la phrase d'origine reste. Voir la section chiffrement du carnet.", file=sys.stderr)
         return 1
+    if code := eprouver_secours(e.periph, v.secours[0], "Retape la clé de secours, en la lisant dans Bitwarden : "
+                                "elle doit ouvrir le disque avant le retrait de la phrase d'origine."):
+        if code == 2:
+            print("erreur : la clé de secours n'ouvre pas le disque ; la phrase d'origine reste. Vérifie la clé "
+                  "rangée dans Bitwarden et relance make chiffrement ; si elle est perdue, voir la section "
+                  "chiffrement du carnet.", file=sys.stderr)
+        return code
     if code := lancer(["sudo", "systemd-cryptenroll", f"--wipe-slot={','.join(map(str, v.phrases))}", e.periph]):
         print("erreur : la phrase d'origine n'a pas été retirée.", file=sys.stderr)
         return code
@@ -514,30 +570,38 @@ def changer_phrase(racine: Path, e: Etat, v: Voies) -> int:
     ouvrir le volume, sinon rien n'est fait ; (b) inscription de puce + nouvelle phrase (ouverture par la
     puce, ou sur demande par la clé de secours) ; (c) relecture, retrait de l'ancien emplacement seulement
     s'il existe encore (systemd plus ancien) ; (d) épreuve du nouveau jeton. Après (b), un échec ne retire
-    rien : il reste une seule puce et la clé de secours, et make phrase se relance.
+    rien : il reste une seule puce et la clé de secours, et make phrase se relance. La branche par la clé de
+    secours sert aussi à réinscrire une puce remise à zéro, qui n'ouvre plus le volume.
     Entrées : racine, e, v — v avec exactement une puce et une clé de secours (chiffrement terminé).
-    Sortie : 0 si changée et éprouvée ; 1 ou le code de la commande en échec sinon.
-    Erreurs : messages sur la sortie d'erreur. Dépendances : lancer, demander, lire_etat, voies, verifier_puce, PUCE.
+    Sortie : 0 si changée et éprouvée ; 2 si la clé de secours est refusée à l'étape (a) ; 1 ou le code de
+             la commande en échec sinon.
+    Erreurs : messages sur la sortie d'erreur. Dépendances : lancer, demander, eprouver_secours, lire_etat, voies,
+              verifier_puce, PUCE, GARDE.
     """
-    ancienne, filet = v.puces[0], "La clé de secours ouvre toujours le disque ; relance make phrase."
+    ancienne = v.puces[0]
+    filet = ("La clé de secours ouvre toujours le disque ; relance make phrase. Si la bonne phrase a été refusée, "
+             "la puce est peut-être bloquée : ouvre par la clé de secours et attends, sans relancer en boucle "
+             "(voir la section chiffrement du carnet).")
     if len(v.secours) != 1:
         print("erreur : make phrase exige une clé de secours et une seule ; voir la section chiffrement du "
               "carnet.", file=sys.stderr)
         return 1
+    if code := eprouver_secours(e.periph, v.secours[0], "Retape d'abord la clé de secours rangée dans Bitwarden : "
+                                "l'ancienne phrase cessera d'ouvrir le disque dès l'inscription de la nouvelle."):
+        if code == 2:
+            print("erreur : la clé de secours n'ouvre pas le disque ; rien n'a changé. Vérifie la clé rangée dans "
+                  "Bitwarden et relance make phrase ; si elle est perdue, voir la section chiffrement du carnet.",
+                  file=sys.stderr)
+        return code
     if code := lancer(["sudo", "-v"]):
         return code
-    print("Retape d'abord la clé de secours rangée dans Bitwarden : l'ancienne phrase cessera d'ouvrir le "
-          "disque dès l'inscription de la nouvelle.")
-    if code := lancer(["sudo", "cryptsetup", "open", "--test-passphrase", "--key-slot", str(v.secours[0]), e.periph]):
-        print("erreur : la clé de secours n'ouvre pas le disque ; rien n'a changé. Inscris-en une nouvelle "
-              "(voir la section chiffrement du carnet) avant de changer la phrase.", file=sys.stderr)
-        return code
-    if code := lancer(["sudo", "-v"]):
-        return code
-    print("Tape ton ancienne phrase, puis choisis la nouvelle.")
+    print(f"Tape ton ancienne phrase, puis choisis la nouvelle.\n1re invite : l'ancienne phrase ; ensuite la "
+          f"nouvelle, deux fois.\n{GARDE}")
     code = lancer(["sudo", "systemd-cryptenroll", "--unlock-tpm2-device=auto", *PUCE, e.periph])
     if code and demander("\nOuvrir plutôt avec la clé de secours ? [o/N] "):
-        code = lancer(["sudo", "-v"]) or lancer(["sudo", "systemd-cryptenroll", *PUCE, e.periph])
+        if not (code := lancer(["sudo", "-v"])):
+            print("1re invite : la clé de secours ; ensuite la nouvelle phrase, deux fois.")
+            code = lancer(["sudo", "systemd-cryptenroll", *PUCE, e.periph])
     if code:
         print(f"erreur : aucune nouvelle phrase inscrite. {filet}", file=sys.stderr)
         return code
@@ -579,8 +643,10 @@ def main(argv: list[str] | None = None) -> int:
              la clé de secours s'affiche sur la sortie, jamais dans un fichier ou un tube ; contrôles, état
              incohérent, --phrase avant la fin) sans rien modifier ; 1 sur métadonnées LUKS inattendues ;
              code de la commande en échec ; 130 sur Ctrl-C.
-    Erreurs : messages sur la sortie d'erreur, sans trace Python. Dépendances : system_root, lire_etat,
-              controles, voies, etape, afficher, ACTIONS, MESSAGES, changer_phrase.
+    Erreurs : messages sur la sortie d'erreur, sans trace Python ; seule la lecture de l'état traduit
+              KeyError, ValueError et TypeError en métadonnées inattendues : une telle exception levée par
+              une action est un défaut, et garde sa trace. Dépendances : system_root, lire_etat, controles,
+              voies, etape, afficher, ACTIONS, MESSAGES, changer_phrase.
     """
     ap = argparse.ArgumentParser(description="Chiffrement de la racine : puce + phrase et clé de secours.")
     g = ap.add_mutually_exclusive_group()
@@ -596,12 +662,17 @@ def main(argv: list[str] | None = None) -> int:
         return 1
     racine = system_root(os.environ)
     try:
-        e = lire_etat(racine)
-        err = controles(racine, e.luks2, e.puce, bool(e.keymap))
+        try:   # Lecture seule : ses erreurs de forme viennent des métadonnées.
+            e = lire_etat(racine)
+            err = controles(racine, e.luks2, e.puce, bool(e.keymap))
+            v = voies(e.meta) if e.luks2 else None
+            et = etape(v, e.fragment, e.cmdline, e.boot, e.marque) if v else None
+        except (KeyError, ValueError, TypeError) as x:
+            print(f"erreur : métadonnées LUKS inattendues ({type(x).__name__} : {x}) ; voir la section "
+                  "chiffrement du carnet.", file=sys.stderr)
+            return 1
         for x in err:
             print(f"erreur : {x}", file=sys.stderr)
-        v = voies(e.meta) if e.luks2 else None
-        et = etape(v, e.fragment, e.cmdline, e.boot, e.marque) if v else None
         if args.etat and v:
             afficher(e, v, et)
         if err or args.etat:
@@ -621,10 +692,6 @@ def main(argv: list[str] | None = None) -> int:
         return 130
     except RuntimeError as x:
         print(f"erreur : {x}", file=sys.stderr)
-        return 1
-    except (KeyError, ValueError, TypeError) as x:
-        print(f"erreur : métadonnées LUKS inattendues ({type(x).__name__} : {x}) ; voir la section chiffrement "
-              "du carnet.", file=sys.stderr)
         return 1
 
 
