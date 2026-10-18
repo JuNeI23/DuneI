@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.9. Historique en fin de document.
+Version 1.10. Historique en fin de document.
 
 Socle amorçable.
 
@@ -60,6 +60,9 @@ DuneI/
 │   └── vm.sh               # machine virtuelle de recette : QEMU/KVM, UEFI, TPM2 simulé
 ├── paquets.toml            # chaque paquet déclaré une fois : groupes, provisoires, matériel, machines
 ├── paquets.py              # make paquets : aligne la machine sur paquets.toml
+├── chiffrement.py          # make chiffrement et make phrase : puce + phrase, clé de secours (L1-25)
+├── chiffrement/            # fragment mkinitcpio de l'amorçage systemd, posé par make chiffrement seul
+├── services.toml           # liste blanche des unités système activées par make install (L1-25)
 ├── atelier.toml            # rtk épinglé et carte des liens de l'atelier privé (L1-26)
 ├── atelier.py              # destinations rtk et atelier de make install, relevé d'état (L1-26)
 ├── .claude/settings.json   # mémoire de Claude pour DuneI : ~/dunei-atelier/memoire (L1-26)
@@ -73,7 +76,7 @@ DuneI/
 │   │   └── scripts/        # scripts de la session (atténuation, verrou initial…)
 │   ├── kitty/kitty.conf    # terminal provisoire (L1-18)
 │   └── systemd/user/       # unités de session (nm-applet, surcharge de hypridle)
-├── systeme/etc/            # fichiers système copiés sous /etc par make install (greetd, logind, pacman, systemd)
+├── systeme/etc/            # fichiers système copiés sous /etc par make install (greetd, logind, pacman, profile.d, systemd)
 ├── tokens.toml             # source du thème
 ├── motion.toml             # source du mouvement (L1-23)
 ├── energie.toml            # échelle d'inactivité (L1-09)
@@ -104,7 +107,7 @@ DuneI/
 `make install` régénère `generated/`, puis lance `deploy.py`. Le script connaît une liste de
 destinations, une par logiciel : `hypr` (`~/.config/hypr`), `fontconfig`
 (`~/.config/fontconfig/conf.d/50-dunei.conf`) et `applis`, qui lie la configuration de chaque
-application à sa place (`~/.config/kitty/kitty.conf`) et exige qu'elle soit installée. `bin` lie chaque exécutable de `config/bin/` dans `~/.local/bin`, et `maj` exige les outils de mise à jour et active le préchargement (voir « Mises à jour — L1-05 »). `rtk` et `atelier` posent l'atelier de développement (voir « Atelier de développement — L1-26 »). Il les vérifie toutes avant d'agir : un fichier qu'il
+application à sa place (`~/.config/kitty/kitty.conf`) et exige qu'elle soit installée. `bin` lie chaque exécutable de `config/bin/` dans `~/.local/bin`, et `maj` exige les outils de mise à jour et active le préchargement (voir « Mises à jour — L1-05 »). `rtk` et `atelier` posent l'atelier de développement (voir « Atelier de développement — L1-26 »). `socle` active les unités système de `services.toml` et allume le pare-feu (voir « Services système »). Il les vérifie toutes avant d'agir : un fichier qu'il
 n'a pas posé lui-même, ou un lien qui pointe ailleurs, l'arrête avec un message, sans rien modifier
 nulle part. `python3 deploy.py --dry-run` affiche les actions prévues.
 
@@ -175,8 +178,17 @@ avec de quoi cloner le dépôt ; tout le reste vient du dépôt, et la seconde p
 L'ISO Arch se vérifie avant usage : somme `sha256` conforme, puis signature par `pacman-key -v`, la
 signature `.sig` étant prise sur archlinux.org. Depuis l'ISO démarrée et en réseau :
 
+    loadkeys uk                                         # d'abord : la console de l'ISO est en disposition américaine
     curl -fsSLO https://raw.githubusercontent.com/JuNeI23/DuneI/main/setup/archinstall.json
     archinstall --config archinstall.json
+
+**`loadkeys uk` avant `archinstall`, sans exception.** Le `kb_layout` du fichier ne règle que la disposition
+du système installé : `archinstall` ne change pas celle de la console de l'ISO, qui reste américaine. Sans
+`loadkeys`, la phrase de chiffrement et le mot de passe saisis au menu sont enregistrés en interprétation
+américaine (`"` et `@` échangés, entre autres), puis refusés au premier démarrage, où la console est en `uk`
+(constaté en machine virtuelle le 2026-10-18, D73). Pour vérifier avant de lancer `archinstall` : taper
+`"@#` à l'invite, sans valider : les caractères affichés doivent être ceux gravés sur les touches ; Ctrl + U
+efface la ligne.
 
 `setup/archinstall.json` (`archinstall` 4.5) préremplit le menu : systemd-boot avec images unifiées,
 noyaux `linux` et `linux-lts`, swap `zram` (`zstd`), `en_US.UTF-8` et clavier `uk`, fuseau `Europe/Paris`,
@@ -188,22 +200,33 @@ utilisateur, ni secret ; le fichier d'identifiants d'`archinstall` n'entre jamai
 
 | Choix | Valeur |
 | --- | --- |
-| Disque | Le disque interne (NVMe sur `caladan`), entièrement effacé |
-| Disposition | Disposition par défaut : ESP de 1 Go sur `/boot`, le reste en `ext4`, **sans `/home` séparé** (D54) |
-| Chiffrement | LUKS sur la racine. **Le mot de passe de chiffrement (« Encryption password ») est obligatoire** : laissé vide, `archinstall` annonce que le disque n'est pas chiffré et continue sans chiffrer |
+| Disque | Disk configuration → Partitioning → « Use a best-effort default partition layout » → le disque interne (NVMe sur `caladan`, coché par la barre d'espace), entièrement effacé |
+| Disposition | Système de fichiers `ext4` : ESP de 1 Go sur `/boot`, le reste en racine, **sans `/home` séparé** (D54) ; pour `ext4`, `archinstall` ne pose pas la question d'un `/home` séparé |
+| Chiffrement | Disk encryption → Encryption type `LUKS` → Encryption password, puis **Partitions : cocher la racine** (barre d'espace, puis Entrée). L'aperçu doit afficher « Partitions: 1 selected », et le résumé final « "LUKS" encryption ». Sans partition cochée, ou sans mot de passe, `archinstall` revient en silence à « No Encryption » et installe en clair (D73). « Iteration time » reste à 10000 ms : le disque met une dizaine de secondes à s'ouvrir avec cette phrase, ce qui ne dure que jusqu'à `make chiffrement` |
+| Phrase de chiffrement | **La phrase définitive**, celle qui ouvrira le disque chaque jour et déverrouillera la session (D74) : une seule phrase pendant toute l'installation |
 | Nom d'hôte | Lettres, chiffres et tirets seulement (D24) : il choisit `config/hypr/machines/<nom>.lua` et la section `machines.<nom>` de `paquets.toml` |
-| Utilisateur | Le compte de Nicolas, avec les droits d'administration (`sudo`), que toute la phase 2 demande |
+| Utilisateur | Authentication : mot de passe root laissé vide ; le compte de Nicolas, superutilisateur « Yes » (les droits `sudo` que toute la phase 2 demande), avec **la même phrase** pour mot de passe |
+| Profil | Laissé vide : la session vient du dépôt |
 
 Le menu propose le disque et le chiffrement sans que le fichier contienne de `disk_config` : constaté en
-machine virtuelle. Une installation interrompue (machine éteinte pendant l'installation des
-paquets) laisse un système incomplet, sans `fstab` ni fuseau : on la reprend de zéro.
+machine virtuelle. Le résumé, avant l'installation, annonce « Bootloader : Systemd-boot, UKI "enabled" ».
+L'installation dure cinq minutes et demie en machine virtuelle. Une installation interrompue (machine
+éteinte pendant l'installation des paquets) laisse un système incomplet, sans `fstab` ni fuseau : on la
+reprend de zéro.
 
-À ce jour, le chiffrement posé par `archinstall` est une phrase de passe ; le déverrouillage par TPM2 et PIN
-est la feature L1-25 (D53).
+**Premier démarrage.** L'invite est celle de l'amorçage d'origine : « A password is required to access the
+root volume: », puis « Enter passphrase for /dev/nvme0n1p2: » (nom de la partition selon le disque). On tape la
+phrase, puis on se connecte en console, `tty1`, avec le compte créé et la même phrase. Ce que pose
+`archinstall`, relevé en machine virtuelle : LUKS2 sur la racine, volume ouvert sous le nom `root`, images
+unifiées `arch-linux.efi` et `arch-linux-lts.efi`, `KEYMAP=uk` dans `/etc/vconsole.conf`.
+
+La phrase d'`archinstall` n'est qu'une première serrure : `make chiffrement`, en fin de phase 2, passe le
+disque à la puce TPM2 avec la phrase, plus une clé de secours, puis retire cette première inscription (voir
+« Chiffrement »).
 
 ### Phase 2, depuis le dépôt — rejouable
 
-Après le redémarrage, connecté avec le compte créé :
+Après le redémarrage, connecté en console avec le compte créé :
 
     git clone https://github.com/JuNeI23/DuneI ~/DuneI && cd ~/DuneI
     make paquets                                        # paquets.toml → système
@@ -211,16 +234,30 @@ Après le redémarrage, connecté avec le compte créé :
     gh auth login                                       # HTTPS, « Yes » à l'identification de git
     make install                                        # configuration, fichiers système, services, atelier
     claude                                              # connexion au compte, confiance accordée à ~/DuneI
+    make chiffrement                                    # puce + phrase, clé de secours : deux redémarrages
 
 `git clone` prend `main`. `make install` refuse les arbres de travail secondaires : le dépôt vit dans
 `~/DuneI`.
 
+**`make chiffrement` vient en dernier**, une fois `claude` quitté, depuis la même console. Rien de la
+phase 2 ne dépend de lui, et la répétition en machine virtuelle l'a lancé sur un système complet, après
+`make install`. Ses deux redémarrages font aussi prendre effet greetd et le `PATH`. Il se relance après
+chaque redémarrage jusqu'à « Chiffrement terminé » : voir « Chiffrement ».
+
 **`make paquets`** (`paquets.py`) lit `paquets.toml`, vérifie tout avant d'agir, puis installe le manquant
-et marque comme explicite ce qui est déclaré mais installé en dépendance, sans question. Il affiche ensuite
+et marque comme explicite ce qui est déclaré mais installé en dépendance. Il affiche ensuite
 l'excédent et pose deux questions, réponse « non » par défaut : marquer l'excédent requis comme dépendance,
 retirer l'excédent libre et les orphelins. Hors terminal interactif, la réponse est toujours « non ».
 `python3 paquets.py --dry-run` affiche le plan sans rien modifier (`make paquets --dry-run` ne convient pas :
 `make` prendrait l'option pour lui).
+
+Sur une installation neuve, `pacman` pose lui-même deux questions pendant l'installation : le fournisseur
+de `qt6-multimedia-backend` (« 1) qt6-multimedia-ffmpeg 2) qt6-multimedia-gstreamer », Entrée choisit le
+premier), puis « Proceed with installation? [Y/n] » (Entrée). La transaction dure plusieurs minutes, et
+`sudo` peut redemander son mot de passe pour les questions qui suivent. L'excédent affiché vient
+d'`archinstall` : en machine virtuelle, `libpulse` en excédent requis, `efibootmgr`, `gst-plugin-pipewire`,
+`pipewire-alsa` et `pipewire-jack` en excédent libre. Répondre « non » ne casse rien, et la question revient
+à chaque `make paquets`.
 
 Ce qu'il refuse, sans rien modifier : un dépôt configuré autre que `core` et `extra` (D56), un nom inconnu
 de ces dépôts, un groupe `pacman` à la place d'un paquet, un nom déclaré deux fois, une clé inconnue de
@@ -255,9 +292,254 @@ après son installation. La transaction suivante échoue alors, et `make paquets
 `sudo informant read` — sans `sudo`, la lecture n'est pas enregistrée et le blocage reste — puis on relance.
 `dunei-maj` commence par cette lecture.
 
-**Le `PATH`.** `make install` lie `dunei-maj` dans `~/.local/bin` (`$XDG_BIN_HOME` s'il est défini). Sur une
-machine neuve, ce dossier n'est souvent pas dans le `PATH` : `make install` le signale après son bilan, sans
-bloquer, et on l'ajoute au `PATH` du shell.
+**Le `PATH`.** `make install` lie `dunei-maj` dans `~/.local/bin` (`$XDG_BIN_HOME` s'il est défini), et pose
+`/etc/profile.d/dunei-bin.sh` (destination `systeme`), qui ajoute ce dossier en fin de `PATH`, une seule
+fois, à chaque connexion (D67). `/etc/profile` le lit en console ; uwsm le reprend pour la session
+graphique, et kitty en hérite. Il prend effet à la connexion suivante : sur une machine neuve,
+`make install` finit par « attention : /home/<utilisateur>/.local/bin n'est pas encore dans le PATH de cette
+session : /etc/profile.d/dunei-bin.sh l'y met à la prochaine connexion », note sans conséquence. Relevé
+en machine virtuelle : le dossier figure une fois dans le `PATH` de kitty et dans celui d'une console.
+
+**Services système.** `services.toml` est la liste blanche des unités système que DuneI active, sur le
+modèle de `session.toml` pour la session (D66) : `ufw.service`, `power-profiles-daemon.service`,
+`bluetooth.service`, `cups.socket` (l'impression démarre à la demande) et `fstrim.timer`. La destination
+`socle` de `make install` active et démarre, par `sudo`, chaque unité qui ne l'est pas, puis allume le
+pare-feu (voir « Pare-feu »). Une unité inconnue de systemd refuse tout `make install`, avec un message qui
+demande de déclarer son paquet dans `paquets.toml`. `bluetooth` reste inactif sur une machine sans
+contrôleur Bluetooth, comme la machine virtuelle : c'est normal. **Ajouter une unité** : une ligne dans
+`unites` (nom en `.service`, `.socket` ou `.timer`), son paquet dans `paquets.toml`, puis `make paquets` et
+`make install`. Retirer une ligne ne désactive rien : `sudo systemctl disable --now <unité>` reste à faire.
+Pour vérifier : `systemctl is-enabled` et `systemctl is-active` suivis des noms de la liste.
+
+### Chiffrement
+
+`make chiffrement` (`chiffrement.py`, L1-25) fait passer la racine de la phrase d'`archinstall` à deux voies
+d'accès : **la puce TPM2 avec la phrase**, chaque jour, et **une clé de secours** rangée dans Bitwarden
+(D68 à D71). La puce n'est liée à aucun état d'amorçage (`--tpm2-pcrs=` vide) : une mise à jour du
+micrologiciel, du noyau, de `mkinitcpio` ou de systemd ne demande jamais la clé de secours. Seules une puce
+remise à zéro ou une autre carte mère la demandent (voir plus bas).
+
+**Une étape par passage.** La commande lit l'état du disque (métadonnées LUKS, ligne de commande du noyau,
+fragment de `mkinitcpio`), fait l'étape suivante, puis s'arrête. Elle se relance sans danger à tout moment,
+même après un Ctrl-C : l'état du disque dit où reprendre. Aucune voie d'accès n'est retirée avant que la
+suivante soit prouvée. `python3 chiffrement.py --etat` affiche les voies et l'étape sans rien modifier :
+
+    disque : /dev/nvme0n1p2 (volume root)
+    phrase d'origine : emplacement(s) 0
+    clé de secours : emplacement(s) aucun
+    puce : aucune
+    étape : amorcage
+
+Dans les commandes de cette section, `<disque>` est le périphérique de la ligne « disque ».
+
+**Où la lancer.** Dans une console texte : la première fois, celle de la phase 2 ; ensuite, depuis la
+session, `Ctrl + Alt + F3`, connexion avec le compte. La console a la disposition de l'invite du démarrage
+(`KEYMAP` de `/etc/vconsole.conf`, `uk`) : la phrase s'y tape comme au démarrage. Jamais en root (`sudo` est
+demandé au besoin), jamais derrière une redirection, ni sous `script` ou un terminal qui enregistre sa
+sortie : la clé de secours ne doit s'écrire nulle part.
+
+**Ce qu'elle vérifie avant d'agir**, sans rien modifier en cas de refus : la racine est en LUKS2, une puce
+TPM2 version 2 est présente, `tpm2-tss` est installé, `/etc/vconsole.conf` définit `KEYMAP`, et aucun fichier
+ne lierait la puce à un état d'amorçage (politique `pcrlock.json`, clé publique de PCR).
+
+#### Les trois passages et les deux redémarrages
+
+**1. Amorçage systemd.** La commande annonce « Amorçage systemd : étapes de l'initramfs, ligne de commande
+du noyau, image refaite. L'image actuelle reste au menu de démarrage sous « arch-linux-avant-dunei ». », puis
+demande « Poser l'amorçage systemd ? [o/N] » : `o`, puis le mot de passe de `sudo`. Elle garde une fois pour
+toutes la ligne d'origine (`/etc/kernel/cmdline.avant-dunei`) et l'image d'origine
+(`/boot/EFI/Linux/arch-linux-avant-dunei.efi`, entrée de secours au menu), pose
+`/etc/mkinitcpio.conf.d/10-dunei-chiffrement.conf` (étapes `systemd`, `sd-vconsole`, `sd-encrypt`), réécrit
+`/etc/kernel/cmdline` (`rd.luks.name=<UUID>=root`, `rd.luks.options=<UUID>=tpm2-device=auto,discard`,
+`root=/dev/mapper/root`), puis refait les deux images par `mkinitcpio -P`, qui annonce « Using drop-in
+configuration file: '10-dunei-chiffrement.conf' ». Fin : « Amorçage systemd posé. Redémarre ; ta phrase est
+demandée en disposition uk. Puis relance make chiffrement. » Un échec ou un Ctrl-C pendant `mkinitcpio`
+déclenche le retour : fragment retiré, ligne d'origine rétablie, images refaites ; la sortie de
+`mkinitcpio` défile, puis « Amorçage systemd non posé, état d'avant rétabli : relance make chiffrement. »
+
+**Premier redémarrage.** Au menu de systemd-boot, **laisser l'entrée par défaut**, la première, surlignée ;
+`arch-linux-avant-dunei` n'est qu'un recours si elle ne démarre pas. L'invite devient « Please enter
+passphrase for disk root: (press TAB for no echo) » : la phrase, en `uk`. Puis greetd ouvre la session,
+verrouillée ; on la déverrouille avec la même phrase, et `Ctrl + Alt + F3`. Relancée avant ce
+redémarrage, ou après un démarrage sur l'entrée de secours, la commande répond seulement : « L'amorçage
+systemd n'a pas encore servi : redémarre en laissant l'entrée par défaut du menu, puis relance make
+chiffrement. »
+
+**2. Clé de secours, puis puce.** Avoir Bitwarden ouvert sur un autre appareil.
+
+1. « Clé de secours : elle s'affiche une seule fois et n'est écrite nulle part. Range-la dans Bitwarden. »,
+   puis « Bitwarden est-il ouvert pour la ranger ? [o/N] » : `o`.
+2. « Please enter current passphrase for disk <disque>: » : la phrase.
+3. La clé s'affiche après « A secret recovery key has been generated for this volume: », suivie de « New
+   recovery key enrolled as key slot 1. ». La recopier dans Bitwarden, caractère par caractère.
+4. « Retape la clé de secours rangée dans Bitwarden. », puis « Enter passphrase for <disque>: » : la taper
+   **en la lisant dans Bitwarden**, pas à l'écran, qui l'affiche encore : c'est la copie de Bitwarden que
+   la vérification doit prouver. Réponse : « Clé de secours vérifiée. »
+5. Sans s'arrêter : « Puce : ouvre avec ta phrase actuelle, puis choisis la phrase de chaque démarrage
+   (tapée en disposition uk). », puis « Please enter current passphrase for disk <disque>: » : la phrase.
+6. « Argon2id benchmark… » (quelques secondes), puis « Please enter TPM2 PIN: » et sa répétition : **la même
+   phrase** (D74). Réponse : « New TPM2 token enrolled as key slot 2. »
+7. « Vérification : tape ta phrase de démarrage. », puis « Token 1 requires PIN. Enter token 1 PIN: » : la
+   phrase. Réponses : « Key slot 2 unlocked. Command successful. », « La puce et ta phrase ouvrent le
+   disque. », puis « La puce est inscrite. Redémarre ; la puce et ta phrase doivent ouvrir le disque. Puis
+   relance make chiffrement. »
+
+Les numéros d'emplacement et de jeton peuvent différer ; seul compte le texte. Une fois la commande
+terminée, `clear` efface la clé de l'écran. Si la clé retapée n'ouvre pas le disque : « Cette clé n'ouvre
+pas le disque. », puis « Retirer cette clé de secours pour en inscrire une nouvelle ? [o/N] » : `o` retire
+la clé fausse, et le passage suivant en inscrit une autre. Si la vérification de la puce échoue, rien n'est
+retiré : « La vérification sans redémarrage n'a pas abouti : le redémarrage fera foi, ta phrase d'origine
+reste en place. »
+
+**Second redémarrage.** L'invite devient **« Please enter LUKS2 token PIN: (press TAB for no echo) »** :
+c'est la puce, qui attend la phrase. Le disque met quelques secondes de plus à s'ouvrir (la phrase est
+durcie par Argon2id ; 2 s de calcul et 1,9 Gio de mémoire en machine virtuelle). Une phrase mal tapée fait
+revenir la même invite. Si l'invite est au contraire « Please enter passphrase for disk root », la puce n'a
+pas ouvert le disque : taper la phrase, démarrer, et répondre « non » au passage suivant.
+
+**3. Retrait de la phrase d'origine.** « Il resterait deux voies : la puce avec ta phrase, et la clé de
+secours. Au démarrage, la puce demande « Please enter LUKS2 token PIN » ; « Please enter passphrase for disk
+root » est la phrase d'origine. », puis « Au dernier démarrage, l'invite était-elle celle de la puce (LUKS2
+token PIN) ? [o/N] » : `o` seulement si c'était le cas. La commande éprouve encore la puce (« Vérification :
+tape ta phrase de démarrage. », « Token 1 requires PIN. Enter token 1 PIN: », la phrase) et refuse de
+continuer si elle n'ouvre pas le disque (D69). Puis « Wiped slot 0. », et la commande retire la marque
+`/var/lib/dunei/chiffrement-puce`, la ligne et l'image d'origine. Fin : « Phrase d'origine retirée.
+Chiffrement terminé : la puce avec ta phrase, ou la clé de secours, ouvrent le disque. Pour changer ta
+phrase : make phrase. » L'entrée `arch-linux-avant-dunei` disparaît du menu au démarrage suivant.
+`python3 chiffrement.py --etat` dit alors « phrase d'origine : emplacement(s) aucun » et « étape :
+termine ».
+
+**Les étapes de `--etat`.**
+
+| Étape | Ce que fait `make chiffrement` |
+| --- | --- |
+| `amorcage` | Passage 1 |
+| `redemarrer-amorcage` | Rien : redémarrer sur l'entrée par défaut |
+| `secours` | Passage 2, depuis l'inscription de la clé de secours |
+| `verifier-secours` | Passage 2, depuis la clé retapée (passage interrompu après l'inscription de la clé) |
+| `redemarrer-puce` | Rien : redémarrer |
+| `retirer-phrase` | Passage 3 |
+| `termine` | Rien : le chiffrement est fini |
+| `incoherent` | Rien : état que la commande ne sait pas poursuivre (voir les refus) |
+
+**Ce que la commande possède.** Le fragment `/etc/mkinitcpio.conf.d/10-dunei-chiffrement.conf` et
+`/etc/kernel/cmdline` n'appartiennent qu'à `make chiffrement` (D70) : `make install` n'y touche pas, et on
+ne les modifie pas à la main. Les mises à jour du noyau refont les images avec eux ; vérifié en machine
+virtuelle par `mkinitcpio -P` suivi d'un redémarrage, sur `linux` comme sur `linux-lts`. Le volume laisse
+passer les *discards*, ce qui donne son effet à `fstrim.timer` (D71) ; avant `make chiffrement`, la racine
+les refuse.
+
+**Ligne rouge au démarrage.** En machine virtuelle, chaque démarrage affiche « [FAILED] Failed to start
+Early TPM SRK Setup. », dès l'amorçage d'origine, avant que DuneI n'y touche : c'est la puce simulée
+(`swtpm`) avec systemd 262, sans effet sur le déverrouillage. À relever sur `caladan` : `systemctl --failed`
+et `journalctl -b -u systemd-tpm2-setup-early`.
+
+#### Changer la phrase — `make phrase`
+
+Quand Nicolas change son mot de passe de session (`passwd`), la phrase du disque ne suit pas : `make phrase`
+la réaligne, une fois le chiffrement terminé (D72). Avec systemd 262, inscrire la nouvelle phrase retire
+d'elle-même l'ancienne : la clé de secours est donc éprouvée d'abord, et sert de filet.
+
+1. « Retape d'abord la clé de secours rangée dans Bitwarden : l'ancienne phrase cessera d'ouvrir le disque
+   dès l'inscription de la nouvelle. », puis « Enter passphrase for <disque>: » : la clé de secours. Si elle
+   n'ouvre pas le disque, rien n'est fait.
+2. « Tape ton ancienne phrase, puis choisis la nouvelle. », « Automatically discovered security TPM2 token
+   unlocks volume. », « Please enter TPM2 PIN: » : **l'ancienne** phrase.
+3. « Argon2id benchmark… », puis « Please enter TPM2 PIN: » et sa répétition : **la nouvelle**. La même
+   invite sert aux deux : la ligne « Argon2id benchmark » les sépare. Réponses : « New TPM2 token enrolled
+   as key slot … », puis « Wiped slot … » : l'ancienne inscription est déjà retirée.
+4. « Vérification : tape ta phrase de démarrage. », « Token … requires PIN. Enter token … PIN: » : la
+   nouvelle. Fin : « Nouvelle phrase inscrite et éprouvée ; l'ancienne n'ouvre plus le disque. »
+
+Si l'ancienne phrase est refusée (ou Ctrl-C à son invite) : « Ouvrir plutôt avec la clé de secours ? [o/N] »
+; `o`, puis « Please enter current passphrase for disk <disque>: » attend la clé de secours, et l'étape 3
+suit. Toute erreur après l'inscription ne retire rien et finit par « La clé de secours ouvre toujours le
+disque ; relance make phrase. » Puis `passwd`, avec la même nouvelle phrase, pour le verrou de session.
+
+#### Secours : la puce ne reconnaît plus le disque
+
+Une mise à jour du BIOS qui efface la puce, un effacement de la puce dans le BIOS (« Clear Security Chip » sur
+un ThinkPad), un changement de carte mère, ou le disque déplacé dans une autre machine. Au démarrage :
+« Please enter LUKS2 token PIN » ; la phrase est refusée. Puis « Please enter TPM2 PIN: » ; refusée encore.
+Puis **« Please enter recovery key for disk root: (press TAB for no echo) »** : la clé de secours, lue dans
+Bitwarden. Le disque s'ouvre ; le journal dit « TPM key integrity check failed. Key enrolled in superblock
+most likely does not belong to this TPM. » Il faut donc deux phrases refusées avant l'invite de la clé.
+
+Réinscrire la puce, depuis une console, puis l'éprouver :
+
+    sudo systemd-cryptenroll --wipe-slot=tpm2 --tpm2-device=auto --tpm2-with-pin=yes --tpm2-pcrs= --tpm2-pcrlock= <disque>
+    python3 ~/DuneI/chiffrement.py --etat     # une seule puce : noter son jeton
+    sudo cryptsetup open --test-passphrase --token-only --token-id <jeton> <disque>
+
+La première commande demande « Please enter current passphrase for disk <disque>: » (la clé de secours,
+puisque la puce ne répond plus), puis la phrase deux fois ; elle inscrit la nouvelle puce et retire
+l'ancienne inscription, jamais la nouvelle. Les options `--tpm2-pcrs=` et `--tpm2-pcrlock=` vides sont
+indispensables : sans elles, la puce serait liée à l'état d'amorçage, et chaque mise à jour du
+micrologiciel redemanderait la clé de secours. La dernière commande demande la phrase et doit répondre
+« Command successful. ». Au redémarrage, « Please enter LUKS2 token PIN » revient.
+
+#### Refus et état incohérent
+
+Chaque refus laisse le disque tel qu'il était. On relit l'état avec `python3 chiffrement.py --etat` et la
+liste des emplacements avec `sudo systemd-cryptenroll <disque>` (types `password`, `recovery`, `tpm2`).
+**Règle de toute intervention à la main : ne retirer un emplacement (`--wipe-slot=<n>`) qu'après avoir
+éprouvé une autre voie** : la phrase ou la clé de secours par
+`sudo cryptsetup open --test-passphrase --key-slot <n> <disque>`, la puce par
+`sudo cryptsetup open --test-passphrase --token-only --token-id <jeton> <disque>`.
+
+| Message | Ce qu'on fait |
+| --- | --- |
+| « la racine n'est pas chiffrée par LUKS » | La partition n'était pas cochée au menu d'`archinstall` : refaire la phase 1 |
+| « la racine est en LUKS1 » | Refaire la phase 1 avec `archinstall` 4.5 ou plus récent, qui pose LUKS2 |
+| « aucune puce TPM2 détectée » | BIOS : Security → Security Chip activé ; `cat /sys/class/tpm/tpm0/tpm_version_major` doit afficher `2` |
+| « tpm2-tss absent » | `make paquets` : il est dans `socle` |
+| « KEYMAP absent de /etc/vconsole.conf » | `sudo localectl set-keymap uk`, puis relancer |
+| « … existe : la puce serait liée à un état d'amorçage » | DuneI ne pose aucun de ces fichiers : `pacman -Qo <fichier>` dit qui l'a posé ; ne le déplacer qu'après l'avoir compris |
+| « image unifiée (default_uki= …), /etc/kernel/cmdline ou UUID LUKS introuvable » | L'installation n'a pas d'images unifiées (« UKI "enabled" » au résumé d'`archinstall`) : refaire la phase 1 |
+| « attention : le retour n'a pas abouti » | Relancer `make chiffrement` ; au redémarrage, choisir `arch-linux-avant-dunei` si l'entrée par défaut ne démarre pas |
+| « plusieurs clés de secours » | Éprouver la clé de Bitwarden sur chaque emplacement de type `recovery` ; garder celui qu'elle ouvre, retirer l'autre |
+| « C'est la seule voie d'accès : elle reste » | Ne pas redémarrer : le système ouvert reste utilisable. Revérifier la copie de Bitwarden ; à défaut, sauvegarder puis réinstaller |
+| « puce introuvable après l'inscription » | La phrase d'origine reste : relancer `make chiffrement` |
+| « Rien n'a été retiré. Si la puce n'a pas ouvert le disque… » (passage 3, réponse « non ») | Éprouver la puce par son jeton, puis redémarrer et regarder l'invite. Si « Please enter passphrase for disk root » revient, retirer l'emplacement de la puce (la phrase d'origine et la clé de secours restent) et relancer : le passage 2 la réinscrit |
+| « la puce et ta phrase n'ont pas ouvert le disque » (passage 3) | Rien n'est retiré. Redémarrer, vérifier l'invite, relancer ; si la puce échoue encore, retirer son emplacement (la phrase d'origine et la clé de secours restent) et relancer : le passage 2 la réinscrit |
+| « l'ancienne inscription (emplacement …) n'a pas été retirée » (`make phrase`) | Éprouver la nouvelle puce, puis `sudo systemd-cryptenroll --wipe-slot=<emplacement> <disque>` |
+| « la clé de secours n'ouvre pas le disque » (`make phrase`) | Revérifier la copie de Bitwarden. Si elle est fausse : retirer la clé (`--wipe-slot=<n>`, la puce reste), puis `make chiffrement` en inscrit une nouvelle (ouverture par la puce : « Please enter TPM2 PIN ») |
+| « métadonnées LUKS inattendues » | Rien n'est modifié : garder la sortie de `--etat` pour une session avec Claude |
+
+**État `incoherent`.** La commande affiche l'état et s'arrête. Quatre causes possibles :
+
+- **Deux puces, ou une puce non conforme** (liée à un état, ou sans phrase) : éprouver la bonne, retirer
+  l'autre par son emplacement ; une puce non conforme se retire dès qu'une autre voie est éprouvée, et
+  `make chiffrement` en réinscrit une conforme.
+- **Une puce sans le fragment ou sans `rd.luks.name` dans `/etc/kernel/cmdline`** : réglages d'amorçage
+  défaits à la main. **Ne pas redémarrer** avant de les rétablir : `sudo install -D -m 644
+  ~/DuneI/chiffrement/10-dunei-chiffrement.conf /etc/mkinitcpio.conf.d/10-dunei-chiffrement.conf` ;
+  `/etc/kernel/cmdline` (`sudoedit`) doit finir par `rd.luks.name=<UUID>=root rd.luks.options=<UUID>=tpm2-device=auto,discard
+  root=/dev/mapper/root`, sans `cryptdevice=` (UUID lu par `sudo cryptsetup luksUUID <disque>`) ; puis
+  `sudo mkinitcpio -P`.
+- **Une puce sans la marque `/var/lib/dunei/chiffrement-puce`, la phrase d'origine encore là** : la marque a
+  été effacée, et la preuve du second redémarrage manque. Redémarrer, constater l'invite « Please enter
+  LUKS2 token PIN », puis `echo redemarre | sudo tee /var/lib/dunei/chiffrement-puce` et relancer : le
+  passage 3 éprouve encore la puce avant tout retrait.
+- **Aucune voie d'accès** : impossible sur un système démarré ; relire `--etat`.
+
+#### Recette
+
+- [x] Répétition complète en machine virtuelle, disque neuf (ISO `archlinux-2026.10.01`, systemd 262) :
+  phase 1, phase 2, trois passages et deux redémarrages, puce remise à zéro puis ouverture par la clé de
+  secours, mise à jour du noyau simulée sur `linux` et `linux-lts` — 2026-10-18
+- [ ] `make phrase` dans sa forme corrigée, en machine virtuelle
+- [ ] `caladan` : phase 1 avec `loadkeys uk` et la racine cochée ; LUKS2 relevé
+- [ ] `caladan` : phase 2 ; `ufw` actif, unités de `services.toml` actives, `~/.local/bin` dans le `PATH`
+- [ ] `caladan` : `make chiffrement` jusqu'à `termine` ; clé de secours dans Bitwarden, retapée ; invites
+  conformes à cette section
+- [ ] `caladan` : `systemctl --failed` relevé, dont « Early TPM SRK Setup »
+- [ ] `caladan` : mise à jour du noyau par `dunei-maj`, puis démarrage par la puce sans clé de secours
+- [ ] `caladan` : `make phrase`, puis démarrage avec la nouvelle phrase
+- [ ] `caladan` : bureau, atelier et paquets retrouvés ; session de Claude restaurée par l'atelier
+
+Non couvert : Secure Boot à ses propres clés (ajout possible plus tard, sans réinstaller, D53) ; l'habillage
+de l'invite (L5-13) ; l'empreinte, qui ne déverrouillera jamais le disque (L2-37).
 
 ### Atelier de développement — L1-26
 
@@ -337,6 +619,12 @@ l'Hyprland de `caladan` (`SUPER + C` y ferme la fenêtre QEMU). La machine virtu
 machine, son clavier est américain ; `hyprctl eval 'hl.config({input={kb_layout=[[gb]]}})'` le passe en
 britannique pour la session (point ouvert du backlog).
 
+Quand l'écran de `caladan` se verrouille, grim ne capture plus que le verrou. La répétition du chiffrement
+(2026-10-18) a donc lancé la machine sans fenêtre, par une copie de `setup/vm.sh` qui ne change que
+l'affichage (`-display egl-headless,rendernode=/dev/dri/renderD128 -vnc 127.0.0.1:5`), l'écran se lisant
+par VNC local ; dans ce mode, QEMU finit par une erreur de segmentation à chaque extinction de l'invité,
+sans conséquence.
+
 ### Mises à jour — L1-05
 
 **Une commande : `dunei-maj`** (D57). Elle affiche les actualités Arch non lues (`sudo informant read`),
@@ -368,9 +656,12 @@ Pour vérifier : `systemctl list-timers dunei-precharge.timer`, `journalctl -u d
 
 ### Pare-feu
 
-`ufw` est dans `socle` (D60). Règles d'origine, relevées à la recette par `sudo ufw status verbose` :
-entrant refusé, sortant permis, routage désactivé, journalisation basse, aucune règle. Rien n'est versionné
-tant qu'aucune règle ne s'ajoute.
+`ufw` est dans `socle` (D60), et `make install` l'allume (D66) : `ufw.service` figure dans `services.toml`,
+et la destination `socle` lance `sudo ufw --force enable` tant que `/etc/ufw/ufw.conf` ne porte pas
+`ENABLED=yes`. Règles d'origine, relevées à la recette par `sudo ufw status verbose` : entrant refusé,
+sortant permis, routage désactivé, journalisation basse, aucune règle ; relevé identique sur une
+installation neuve en machine virtuelle, le 2026-10-18 (« Status: active »). Rien n'est versionné tant
+qu'aucune règle ne s'ajoute.
 
 ### Annexe — installation manuelle, si `archinstall` fait défaut
 
@@ -1087,7 +1378,6 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 
 | Sujet | Où |
 | --- | --- |
-| Chiffrement de `caladan` par TPM2 et PIN, par réinstallation (D61) | L1-25, feature suivante |
 | Barre, lanceur, notifications, verrouillage | Lot 2 |
 | Agent d'authentification et trousseau | Lot 2 — **rien ne s'installe depuis l'interface avant** |
 | Conception du chemin biométrique | Lot 5, chapitre des écrans système |
@@ -1103,6 +1393,7 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 | Version | Date | Changement |
 | --- | --- | --- |
 | 0.1 | 2026-10-12 | Version initiale |
+| 1.10 | 2026-10-18 | Chiffrement (L1-25) : phase 1 avec `loadkeys uk` avant `archinstall`, chemin du menu, racine à cocher dans « Partitions », phrase définitive dès `archinstall`, premier démarrage ; phase 2 avec `make chiffrement` en dernier et les questions de `pacman` ; `PATH` par `/etc/profile.d/dunei-bin.sh` ; « Services système » (`services.toml`) ; section « Chiffrement » : trois passages, deux redémarrages, invites exactes relevées en machine virtuelle, clé de secours dans Bitwarden, `make phrase`, secours par la clé, refus et état incohérent, recette ; pare-feu allumé par `make install` ; `chiffrement.py`, `chiffrement/` et `services.toml` dans l'arborescence (D66 à D74) |
 | 1.9 | 2026-10-17 | Atelier de développement (L1-26) : `atelier.toml`, `atelier.py`, `.claude/settings.json` dans l'arborescence ; destinations `rtk` et `atelier` ; phase 2 avec `gh auth login` et la première session de Claude ; section « Atelier de développement — L1-26 » et ses constats de recette ; pilotage de la machine virtuelle par QMP ; chiffrement de `caladan` par réinstallation (D61 à D65) |
 | 1.8 | 2026-10-17 | Installation rejouable (L1-02 à L1-06) : « Le dépôt » réécrit selon l'arborescence réelle (`setup/`, `paquets.toml`, `paquets.py`, `config/bin/`, `systeme/`), scripts `setup/0x-*.sh` et listes `packages/*.txt` abandonnés ; section « Installation » : deux phases, choix au menu d'`archinstall` (mot de passe de chiffrement obligatoire), `make paquets`, Claude Code et la vérification de sa signature, première lecture des actualités, `PATH`, machine virtuelle de recette, mises à jour (`dunei-maj`, préchargement, cache, abstention sur connexion mesurée), pare-feu, annexe manuelle ; « Graphique — L1-06 » réécrit autour de la détection ; destinations `bin` et `maj` ; chiffrement de `caladan` renvoyé à L1-25 (D53 à D60) |
 | 1.7 | 2026-10-16 | Terminal (L1-18) : kitty conservé, foot écarté ; `config/kitty/kitty.conf` et destination `applis` de `make install` ; instance unique ; `less` et `man-db` installés (D52) |

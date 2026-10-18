@@ -1,6 +1,6 @@
 # Chiffrement de `caladan` : réinstallation, TPM2 et phrase de passe
 
-Version 0.2 · 2026-10-17 · backlog L1-25 (écart de L1-03) · carnet « Installation — L1-02 à L1-05 » · statut : conception
+Version 0.3 · 2026-10-18 · backlog L1-25 (écart de L1-03) · carnet « Installation — L1-02 à L1-05 » et « Chiffrement » · statut : implémentée, recette en machine virtuelle passée
 
 ## 1. Objet
 
@@ -105,6 +105,12 @@ plusieurs `make install`.
 machine virtuelle relève ce qu'il produit réellement : version de LUKS (LUKS2 exigé), étapes de
 `mkinitcpio`, ligne de commande du noyau. La suite s'adapte à ce relevé, pas l'inverse.
 
+Relevé du 2026-10-18 (`archinstall` 4.5) : LUKS2, volume `root`, ligne `cryptdevice=PARTUUID=…:root`, étapes
+non-systemd avec `encrypt`, images unifiées nommées par `default_uki`. Deux vérifications se sont ajoutées
+au carnet (D73) : `loadkeys uk` avant `archinstall`, dont le fichier de configuration ne change pas la
+disposition de la console de l'ISO ; la racine à cocher dans le sous-menu « Partitions » du chiffrement,
+sans quoi `archinstall` installe en clair sans le dire.
+
 ### 5.3 La commande de chiffrement
 
 Nom proposé : `make chiffrement` (script Python à la racine, sur le modèle de `paquets.py`). Elle s'exécute
@@ -119,7 +125,8 @@ terminal interactif.
 
 1. **Amorçage systemd.** Étapes de `mkinitcpio` passées à `systemd`, `sd-vconsole` (disposition `uk` avant
    l'invite) et `sd-encrypt`, ligne de commande du noyau au format `rd.luks.*`, module de la puce dans
-   l'initramfs si l'autodétection ne l'embarque pas, *discards* permis sur le volume (choix de Claude :
+   l'initramfs si l'autodétection ne l'embarque pas (relevé : `tpm_tis` et `tpm_crb` sont intégrés aux noyaux
+   d'Arch, aucun module à ajouter), *discards* permis sur le volume (choix de Claude :
    révèle quels blocs sont occupés, sans en révéler le contenu ; c'est ce qui donne un effet à
    `fstrim.timer`). Les images unifiées sont régénérées. **La commande possède seule ces réglages**
    (fragment de `/etc/mkinitcpio.conf.d/` et ligne de commande) : `make install` n'y touche pas, sans quoi
@@ -138,18 +145,24 @@ terminal interactif.
    le volume.
 5. **Second redémarrage** avec la puce et la phrase. La commande s'arrête ici et le dit.
 6. **Au passage suivant**, après un démarrage réussi par la puce : suppression de la phrase d'`archinstall`
-   (`--wipe-slot=password`). Il reste deux voies : puce + phrase, clé de secours.
+   (`--wipe-slot=` par numéro d'emplacement). La phrase de la puce et celle d'`archinstall` étant la même
+   chaîne, la réponse de Nicolas sur l'invite vue au démarrage ne prouve rien : la commande éprouve d'abord
+   la puce par son seul jeton (`cryptsetup open --test-passphrase --token-only`) et refuse si elle échoue
+   (D69). Il reste deux voies : puce + phrase, clé de secours.
 
-`--status` (ou équivalent) affiche les voies d'accès inscrites et l'étape atteinte, sans rien modifier.
+`python3 chiffrement.py --etat` affiche les voies d'accès inscrites et l'étape atteinte, sans rien modifier.
 
 ### 5.4 Changer la phrase
 
 Quand Nicolas change son mot de passe de session (`passwd`), la phrase du disque ne suit pas d'elle-même.
-Une sous-commande la change : elle ouvre le volume par l'inscription actuelle (puce + ancienne phrase, ou
-clé de secours), inscrit puce + nouvelle phrase avec les mêmes options qu'à l'étape 4, vérifie la nouvelle
-inscription, puis seulement retire l'ancienne. Elle n'est permise qu'une fois le chiffrement terminé
-(étape 6). `make` ne transmet pas les options à la commande (carnet, `make paquets --dry-run`) : la forme
-exacte de l'appel (cible `make` dédiée ou appel direct du script) est au constructeur.
+`make phrase` la change, une fois le chiffrement terminé (étape 6). La répétition a montré que
+`systemd-cryptenroll` 262 retire de lui-même l'inscription TPM2 précédente dès qu'il en inscrit une
+nouvelle : l'ancienne phrase ne peut pas être gardée jusqu'à l'épreuve de la nouvelle (D72). D'où l'ordre :
+la clé de secours retapée doit ouvrir le volume, sinon rien n'est fait ; inscription de puce + nouvelle
+phrase avec les mêmes options qu'à l'étape 4 (ouverture par la puce et l'ancienne phrase, ou par la clé de
+secours) ; relecture de l'état et retrait de l'ancien emplacement seulement s'il existe encore ; épreuve de
+la nouvelle puce par son jeton. Après l'inscription, un échec ne retire rien : la clé de secours ouvre
+toujours le disque, et `make phrase` se relance.
 
 ### 5.5 Ordre de la feature
 
@@ -185,5 +198,6 @@ exacte de l'appel (cible `make` dédiée ou appel direct du script) est au const
 
 | Version | Date | Changement |
 | --- | --- | --- |
+| 0.3 | 2026-10-18 | Implémentée, recette en machine virtuelle passée : `make phrase` revu (systemd 262 remplace seul l'ancienne puce, la clé de secours éprouvée d'abord sert de filet) ; puce éprouvée par son jeton avant le retrait de la phrase d'origine ; `loadkeys uk` avant `archinstall` et racine à cocher au chiffrement ; relevé de ce qu'`archinstall` pose ; aucun module de la puce à ajouter ; `--etat` |
 | 0.2 | 2026-10-17 | Relecture du constructeur : premier redémarrage après l'amorçage systemd, réglages d'amorçage possédés par la commande seule, changement de phrase (§ 5.4), phrase définitive dès `archinstall`, aucune vérification par PAM |
 | 0.1 | 2026-10-17 | Version initiale |
