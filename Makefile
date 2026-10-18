@@ -3,6 +3,8 @@
 #   make motion   motion.toml → generated/
 #   make energie  energie.toml → generated/hypridle.conf, generated/energie.lua
 #   make paquets  paquets.toml → système : installe le manquant, marque, propose de retirer l'excédent
+#   make chiffrement  racine LUKS2 → puce + phrase et clé de secours, une étape par passage (python3 chiffrement.py --etat : l'état seul)
+#   make phrase   change la phrase de la puce, une fois le chiffrement terminé
 #   make test     tests unitaires et de non-régression
 #   make check    refuse si un fichier de generated/ a été modifié à la main
 #   make golden   régénère les instantanés de référence (changement de sortie VOULU)
@@ -11,7 +13,7 @@
 PY := python3
 GOLDEN_HUES := 0 55 200 265
 
-.PHONY: tokens motion energie paquets test check golden install
+.PHONY: tokens motion energie paquets chiffrement phrase test check golden install
 
 tokens:
 	$(PY) generate_tokens.py --out generated
@@ -24,6 +26,12 @@ energie:
 
 paquets:
 	$(PY) paquets.py
+
+chiffrement:
+	$(PY) chiffrement.py
+
+phrase:
+	$(PY) chiffrement.py --phrase
 
 test:
 	$(PY) -m unittest discover -s tests -t .
