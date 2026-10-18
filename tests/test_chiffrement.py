@@ -4,6 +4,7 @@ import copy
 import io
 import json
 import os
+import signal
 import subprocess
 import tempfile
 import unittest
@@ -166,6 +167,13 @@ def etat(m, **kw):
     return chiffrement.Etat(**{**base, **kw})
 
 
+class Terminal(io.StringIO):
+    """Sortie capturée qui se présente comme un terminal, pour la garde de main."""
+
+    def isatty(self):
+        return True
+
+
 class TestCommande(unittest.TestCase):
     """Actions par étape, avec un exécuteur simulé qui enregistre les commandes.
 
@@ -178,7 +186,7 @@ class TestCommande(unittest.TestCase):
         self.addCleanup(self.tmp.cleanup)
         self.r = Path(self.tmp.name)
         self.pose("usr/lib/libtss2-esys.so.0")
-        self.cmds, self.echecs, self.reponses = [], set(), []
+        self.cmds, self.echecs, self.reponses, self.interruption = [], set(), [], None
         for cible, val in (("chiffrement.lancer", self.faux_lancer), ("chiffrement.lire", self.faux_lire),
                            ("builtins.input", lambda q: self.reponses.pop(0) if self.reponses else ""),
                            ("sys.stdin.isatty", lambda: True), ("os.geteuid", lambda: 1000)):
@@ -190,13 +198,28 @@ class TestCommande(unittest.TestCase):
         self.addCleanup(p.stop)
 
     def pose(self, rel, texte=""):
+        """Écrit un fichier sous la racine temporaire.
+
+        Entrées : rel — chemin relatif ; texte — contenu. Sortie : le chemin. Erreurs : OSError.
+        Dépendances : self.r.
+        """
         p = self.r / rel
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_text(texte)
         return p
 
     def faux_lancer(self, cmd):
+        """Exécuteur simulé, à la place de chiffrement.lancer.
+
+        Entrée : cmd — commande. Sortie : 1 si un fragment de self.echecs figure dans la commande ; sinon le
+        code de install / cp / rm joués sans sudo dans le dossier temporaire ; sinon 0.
+        Erreurs : KeyboardInterrupt, une fois, si self.interruption figure dans la commande.
+        Dépendances : self.cmds (enregistrement), subprocess.
+        """
         self.cmds.append(cmd)
+        if self.interruption and self.interruption in " ".join(cmd):
+            self.interruption = None
+            raise KeyboardInterrupt
         if any(e in " ".join(cmd) for e in self.echecs):
             return 1
         if cmd[:2] in (["sudo", "install"], ["sudo", "cp"], ["sudo", "rm"]):
@@ -204,20 +227,37 @@ class TestCommande(unittest.TestCase):
         return 0
 
     def faux_lire(self, cmd):
+        """Lecture simulée, à la place de chiffrement.lire.
+
+        Entrée : cmd — commande. Sortie : CompletedProcess, « U » pour luksUUID, vide sinon.
+        Erreurs : échec du test si une commande à secret (systemd-cryptenroll, open) arrive ici.
+        Dépendances : aucune.
+        """
         self.assertFalse({"systemd-cryptenroll", "open"} & set(cmd), "commande à secret passée par lire")
         return subprocess.CompletedProcess(cmd, 0, "U\n" if "luksUUID" in cmd else "", "")
 
-    def lance(self, etats, argv=(), reponses=()):
+    def lance(self, etats, argv=(), reponses=(), sortie=Terminal):
         """main(argv) avec lire_etat qui rend successivement `etats` ; rend (code, sortie)."""
         self.reponses = list(reponses)
-        out = io.StringIO()
+        out = sortie()
         with mock.patch("chiffrement.lire_etat", side_effect=list(etats)), redirect_stdout(out), \
                 redirect_stderr(out):
             code = chiffrement.main(list(argv))
         return code, out.getvalue()
 
     def wipes(self):
+        """Commandes de retrait enregistrées.
+
+        Entrée : aucune. Sortie : les commandes de self.cmds qui portent --wipe-slot.
+        Erreurs : aucune. Dépendances : self.cmds.
+        """
         return [c for c in self.cmds if any(a.startswith("--wipe-slot") for a in c)]
+
+    def sudo_avant_secrets(self):
+        """Chaque commande qui demande un secret suit immédiatement sudo -v."""
+        for i, c in enumerate(self.cmds):
+            if "--test-passphrase" in c or ("systemd-cryptenroll" in c and not any("--wipe" in a for a in c)):
+                self.assertEqual(self.cmds[i - 1], ["sudo", "-v"], c)
 
     def amorce(self):
         """Pose ligne de commande, preset et image unifiée d'archinstall."""
@@ -245,6 +285,22 @@ class TestCommande(unittest.TestCase):
         self.assertFalse((self.r / "etc/mkinitcpio.conf.d/10-dunei-chiffrement.conf").exists())
         self.assertEqual(self.cmds.count(["sudo", "mkinitcpio", "-P"]), 2)
 
+    def test_amorcage_echec_install(self):
+        self.echecs = {f"install -D -m 644 {chiffrement.SOURCE}"}
+        code, _ = self.lance([self.amorce()], reponses=["o"])
+        self.assertEqual(code, 1)
+        self.assertEqual((self.r / "etc/kernel/cmdline").read_text(), LIGNE + "\n")
+        self.assertFalse((self.r / "etc/mkinitcpio.conf.d/10-dunei-chiffrement.conf").exists())
+        self.assertEqual(self.cmds.count(["sudo", "mkinitcpio", "-P"]), 1)
+
+    def test_amorcage_interrompu_restaure(self):
+        self.interruption = "mkinitcpio -P"
+        code, _ = self.lance([self.amorce()], reponses=["o"])
+        self.assertEqual(code, 130)
+        self.assertEqual((self.r / "etc/kernel/cmdline").read_text(), LIGNE + "\n")
+        self.assertFalse((self.r / "etc/mkinitcpio.conf.d/10-dunei-chiffrement.conf").exists())
+        self.assertEqual(self.cmds.count(["sudo", "mkinitcpio", "-P"]), 2)
+
     def test_amorcage_refuse(self):
         code, _ = self.lance([self.amorce()], reponses=[""])
         self.assertEqual((code, self.cmds), (0, []))
@@ -259,6 +315,7 @@ class TestCommande(unittest.TestCase):
         marque = [i for i, c in enumerate(self.cmds) if c[-1].endswith("var/lib/dunei/chiffrement-puce")]
         self.assertTrue(marque and marque[0] < self.cmds.index(inscr[0]), "marque posée avant l'inscription")
         self.assertEqual((self.r / "var/lib/dunei/chiffrement-puce").read_text().strip(), "b2")
+        self.sudo_avant_secrets()
         self.assertIn(["sudo", "cryptsetup", "open", "--test-passphrase", "--key-slot", "1", "/dev/vda2"], self.cmds)
         self.assertIn(["sudo", "cryptsetup", "open", "--test-passphrase", "--token-only", "--token-id", "1",
                        "/dev/vda2"], self.cmds)
@@ -277,6 +334,19 @@ class TestCommande(unittest.TestCase):
         self.assertEqual(self.wipes(), [["sudo", "systemd-cryptenroll", "--wipe-slot=1", "/dev/vda2"]])
         self.assertFalse([c for c in self.cmds if "--tpm2-device=auto" in c])
 
+    def test_verifier_secours_derniere_voie(self):
+        self.echecs = {"--key-slot"}
+        seul = {"keyslots": {"1": {"type": "luks2"}}, "tokens": {"0": meta("complet")["tokens"]["0"]}}
+        code, out = self.lance([etat(seul)], reponses=["o"])
+        self.assertEqual((code, self.wipes()), (1, []))
+        self.assertIn("seule voie", out)
+
+    def test_verifier_secours_retrait_echoue(self):
+        self.echecs = {"--key-slot", "--wipe-slot"}
+        code, out = self.lance([etat(secours_seul())], reponses=["o"])
+        self.assertEqual(code, 1)
+        self.assertIn("pas été retirée", out)
+
     def test_secours_puce_seule(self):
         seule = fini()
         del seule["tokens"]["0"], seule["keyslots"]["1"]
@@ -285,6 +355,7 @@ class TestCommande(unittest.TestCase):
         self.assertIn(["sudo", "systemd-cryptenroll", "--recovery-key", "--unlock-tpm2-device=auto", "/dev/vda2"],
                       self.cmds)
         self.assertFalse([c for c in self.cmds if "--tpm2-device=auto" in c], "aucune seconde puce")
+        self.sudo_avant_secrets()
 
     def test_retirer_phrase_non(self):
         code, _ = self.lance([etat(meta("complet"), marque="b1")], reponses=[""])
@@ -295,10 +366,20 @@ class TestCommande(unittest.TestCase):
         for rel in ("var/lib/dunei/chiffrement-puce", "etc/kernel/cmdline.avant-dunei",
                     "boot/EFI/Linux/arch-linux-avant-dunei.efi"):
             self.pose(rel, "x")
-        code, _ = self.lance([etat(meta("complet"), marque="b1")], reponses=["o"])
+        code, out = self.lance([etat(meta("complet"), marque="b1")], reponses=["o"])
         self.assertEqual(code, 0)
         self.assertEqual(self.wipes(), [["sudo", "systemd-cryptenroll", "--wipe-slot=0", "/dev/vda2"]])
+        epreuve = ["sudo", "cryptsetup", "open", "--test-passphrase", "--token-only", "--token-id", "1", "/dev/vda2"]
+        self.assertLess(self.cmds.index(epreuve), self.cmds.index(self.wipes()[0]))
+        self.assertIn("TPM2 PIN", out)
+        self.sudo_avant_secrets()
         self.assertEqual([p.name for p in self.r.rglob("*") if p.is_file() and "dunei" in p.name], [])
+
+    def test_retirer_phrase_puce_non_eprouvee(self):
+        self.echecs = {"--token-only"}
+        code, out = self.lance([etat(meta("complet"), marque="b1")], reponses=["o"])
+        self.assertEqual((code, self.wipes()), (1, []))
+        self.assertIn("pas confirmée", out)
 
     def test_phrase_deux_puces(self):
         code, _ = self.lance([etat(avec_puce(fini(), 2, 3), marque="b1")], ["--phrase"])
@@ -311,18 +392,32 @@ class TestCommande(unittest.TestCase):
     def test_phrase_verifiee(self):
         code, out = self.lance([etat(fini()), etat(avec_puce(fini(), 2, 3))], ["--phrase"])
         self.assertEqual(code, 0, out)
-        self.assertEqual(self.cmds[0][:3], ["sudo", "systemd-cryptenroll", "--unlock-tpm2-device=auto"])
+        inscr = [c for c in self.cmds if "--tpm2-device=auto" in c]
+        self.assertEqual(len(inscr), 1)
+        self.assertEqual(inscr[0][:3], ["sudo", "systemd-cryptenroll", "--unlock-tpm2-device=auto"])
         for opt in ("--tpm2-device=auto", "--tpm2-pcrs=", "--tpm2-pcrlock=", "--tpm2-with-pin=yes"):
-            self.assertIn(opt, self.cmds[0])
+            self.assertIn(opt, inscr[0])
         self.assertIn(["sudo", "cryptsetup", "open", "--test-passphrase", "--token-only", "--token-id", "2",
                        "/dev/vda2"], self.cmds)
         self.assertEqual(self.wipes(), [["sudo", "systemd-cryptenroll", "--wipe-slot=2", "/dev/vda2"]])
+        self.sudo_avant_secrets()
 
     def test_phrase_non_verifiee(self):
         self.echecs = {"--token-only"}
         code, _ = self.lance([etat(fini()), etat(avec_puce(fini(), 2, 3))], ["--phrase"])
         self.assertEqual(code, 1)
         self.assertEqual(self.wipes(), [["sudo", "systemd-cryptenroll", "--wipe-slot=3", "/dev/vda2"]])
+
+    def test_phrase_retrait_nouvelle_echoue(self):
+        self.echecs = {"--token-only", "--wipe-slot"}
+        code, out = self.lance([etat(fini()), etat(avec_puce(fini(), 2, 3))], ["--phrase"])
+        self.assertEqual(code, 1)
+        self.assertIn("ni retirée (emplacement 3)", out)
+
+    def test_metadonnees_inattendues(self):
+        code, out = self.lance([etat({"tokens": {}})])
+        self.assertEqual((code, self.cmds), (1, []))
+        self.assertIn("métadonnées LUKS inattendues", out)
 
     def test_incoherent(self):
         code, out = self.lance([etat(meta("complet"))])
@@ -339,6 +434,10 @@ class TestCommande(unittest.TestCase):
             code, _ = self.lance([])
         self.assertEqual((code, self.cmds), (1, []))
 
+    def test_refus_sortie_redirigee(self):
+        code, _ = self.lance([], sortie=io.StringIO)
+        self.assertEqual((code, self.cmds), (1, []))
+
 
 class TestLancer(unittest.TestCase):
     def test_lancer_herite_terminal(self):
@@ -346,6 +445,16 @@ class TestLancer(unittest.TestCase):
         with mock.patch("chiffrement.subprocess.run", return_value=subprocess.CompletedProcess([], 0)) as run:
             self.assertEqual(chiffrement.lancer(["vrai"]), 0)
         self.assertEqual(run.call_args, mock.call(["vrai"]))
+
+    def test_lancer_ctrl_c_vise_la_commande(self):
+        """Pendant la commande, SIGINT n'interrompt pas Python ; le gestionnaire est rendu ensuite."""
+        avant = signal.getsignal(signal.SIGINT)
+        pendant = []
+        run = lambda cmd: pendant.append(signal.getsignal(signal.SIGINT)) or subprocess.CompletedProcess(cmd, 0)
+        with mock.patch("chiffrement.subprocess.run", side_effect=run):
+            chiffrement.lancer(["vrai"])
+        self.assertNotIn(pendant[0], (avant, signal.SIG_IGN, signal.SIG_DFL))
+        self.assertIs(signal.getsignal(signal.SIGINT), avant)
 
 
 class TestLireEtat(unittest.TestCase):
@@ -379,6 +488,16 @@ class TestLireEtat(unittest.TestCase):
             e = chiffrement.lire_etat(self.r)
         self.assertEqual(e, chiffrement.Etat("/dev/vda2", "root", True, meta("archinstall"), True, "uk", False,
                                              LIGNE + "\n", "b2", "b1"))
+
+    def test_fragment_sans_ligne_pas_pose(self):
+        """Fragment resté après un retour incomplet, ligne d'origine : l'amorçage est à refaire."""
+        self.pose("etc/mkinitcpio.conf.d/10-dunei-chiffrement.conf", "HOOKS=()\n")
+        self.pose("etc/kernel/cmdline", LIGNE + "\n")
+        with self.lire({"findmnt": (0, "/dev/nvme0n1p2\n")}):
+            self.assertFalse(chiffrement.lire_etat(self.r).fragment)
+        self.pose("etc/kernel/cmdline", chiffrement.nouvelle_ligne(LIGNE, "U", "root"))
+        with self.lire({"findmnt": (0, "/dev/nvme0n1p2\n")}):
+            self.assertTrue(chiffrement.lire_etat(self.r).fragment)
 
     def test_etat_racine_en_clair(self):
         self.pose("usr/lib/libtss2-esys.so.0", "")

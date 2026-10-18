@@ -20,6 +20,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import signal
 import subprocess
 import sys
 import tempfile
@@ -43,8 +44,8 @@ AVANT = Path("/etc/kernel/cmdline.avant-dunei")       # Ligne d'origine, gardée
 PRESET = Path("/etc/mkinitcpio.d/linux.preset")       # Preset du noyau linux, qui nomme son image unifiée.
 PUCE = ("--tpm2-device=auto", "--tpm2-with-pin=yes", "--tpm2-pcrs=", "--tpm2-pcrlock=")  # Puce + phrase, sans état.
 MESSAGES = {                                          # Étapes qui n'attendent qu'un redémarrage ou rien.
-    "redemarrer-amorcage": "L'amorçage systemd n'a pas encore servi : redémarre sur l'entrée principale du menu "
-                           "(pas « avant-dunei »), puis relance make chiffrement.",
+    "redemarrer-amorcage": "L'amorçage systemd n'a pas encore servi : redémarre en laissant l'entrée par défaut "
+                           "du menu, puis relance make chiffrement.",
     "redemarrer-puce": "La puce est inscrite. Redémarre ; la puce et ta phrase doivent ouvrir le disque. "
                        "Puis relance make chiffrement.",
     "termine": "Chiffrement terminé : la puce avec ta phrase, ou la clé de secours, ouvrent le disque. "
@@ -74,8 +75,9 @@ class Etat:
     periph — périphérique LUKS sous la racine, ou None ; nom — volume ouvert (/dev/mapper/<nom>), ou None ;
     luks2 — None si la racine n'est pas LUKS, False si LUKS1, True si LUKS2 ; meta — métadonnées JSON
     (vide hors LUKS2) ; puce — puce TPM2 version 2 ; keymap — KEYMAP de /etc/vconsole.conf, vide si absent ;
-    fragment — le fragment mkinitcpio est posé ; cmdline — /proc/cmdline ; boot — boot_id en cours ;
-    marque — boot_id noté dans MARQUE, ou None.
+    fragment — le fragment mkinitcpio est posé et /etc/kernel/cmdline porte rd.luks.name (un amorçage
+    interrompu ou à moitié rétabli est ainsi refait, jamais pris pour posé) ; cmdline — /proc/cmdline ;
+    boot — boot_id en cours ; marque — boot_id noté dans MARQUE, ou None.
     """
 
     periph: str | None
@@ -190,13 +192,18 @@ def lancer(cmd: list[str]) -> int:
 
     Entrée : cmd — commande et arguments. Sortie : son code de sortie, 127 si elle est introuvable.
     Erreurs : aucune exception ; message sur la sortie d'erreur si la commande est introuvable.
-    Dépendances : subprocess. Rien n'est capturé : invites, phrases et clé de secours restent au terminal.
+    Dépendances : subprocess, signal. Rien n'est capturé : invites, phrases et clé de secours restent au
+    terminal. Pendant la commande, Ctrl-C ne vise qu'elle : le gestionnaire vide du parent (remis à défaut
+    dans l'enfant à l'exec, contrairement à SIG_IGN) évite que Python tue sudo en pleine écriture.
     """
+    avant = signal.signal(signal.SIGINT, lambda *_: None)
     try:
         return subprocess.run(cmd).returncode
     except OSError as e:
         print(f"erreur : {cmd[0]} introuvable ({e})", file=sys.stderr)
         return 127
+    finally:
+        signal.signal(signal.SIGINT, avant)
 
 
 def lire(cmd: list[str]) -> subprocess.CompletedProcess:
@@ -259,7 +266,7 @@ def lire_etat(racine: Path) -> Etat:
     if nom:
         r = lire(["sudo", "cryptsetup", "status", nom])
         if r.returncode:
-            raise RuntimeError(f"sudo cryptsetup status {nom} a échoué (code {r.returncode})")
+            raise RuntimeError(f"sudo cryptsetup status {nom} a échoué (code {r.returncode}) : {r.stderr.strip()}")
         periph = next((l.split(":", 1)[1].strip() for l in r.stdout.splitlines()
                        if l.strip().startswith("device:")), None)
     if periph and not lire(["sudo", "cryptsetup", "isLuks", periph]).returncode:
@@ -267,13 +274,15 @@ def lire_etat(racine: Path) -> Etat:
     if luks2:
         r = lire(["sudo", "cryptsetup", "luksDump", "--dump-json-metadata", periph])
         if r.returncode:
-            raise RuntimeError(f"sudo cryptsetup luksDump {periph} a échoué (code {r.returncode})")
+            raise RuntimeError(f"sudo cryptsetup luksDump {periph} a échoué (code {r.returncode}) : "
+                               f"{r.stderr.strip()}")
         meta = json.loads(r.stdout)
     keymap = next((l.split("=", 1)[1].strip().strip('"') for l in texte(racine / "etc/vconsole.conf").splitlines()
                    if l.startswith("KEYMAP=")), "")
     return Etat(periph, nom, luks2, meta,
                 texte(racine / "sys/class/tpm/tpm0/tpm_version_major").strip() == "2", keymap,
-                sous(racine, FRAGMENT).exists(), texte(racine / "proc/cmdline"),
+                sous(racine, FRAGMENT).exists() and "rd.luks.name=" in texte(sous(racine, CMDLINE)),
+                texte(racine / "proc/cmdline"),
                 texte(racine / "proc/sys/kernel/random/boot_id").strip(),
                 texte(sous(racine, MARQUE)).strip() or None)
 
@@ -321,8 +330,9 @@ def amorcage(racine: Path, e: Etat, v: Voies) -> int:
     Entrées : racine, e, v — racine, état, voies (v inutilisé, signature commune des étapes).
     Sortie : 0 si posé ou refusé par l'utilisateur ; 1 ou le code d'une copie en échec sinon. Garde la ligne
              d'origine (AVANT) et l'image unifiée d'origine (de_secours, entrée de secours au menu), une seule
-             fois ; pose le fragment et la nouvelle ligne ; sudo mkinitcpio -P. En cas d'échec, retire le
-             fragment, rétablit la ligne et relance mkinitcpio -P.
+             fois ; pose le fragment et la nouvelle ligne ; sudo mkinitcpio -P. En cas d'échec ou
+             d'interruption (Ctrl-C, relancé ensuite), retire le fragment, rétablit la ligne et relance
+             mkinitcpio -P.
     Erreurs : messages sur la sortie d'erreur. Dépendances : image, de_secours, nouvelle_ligne, lire, lancer,
               poser, demander, SOURCE, FRAGMENT, CMDLINE, AVANT.
     """
@@ -342,18 +352,28 @@ def amorcage(racine: Path, e: Etat, v: Voies) -> int:
         for src, dst in ((uki, de_secours(uki)), (cmdline, avant)):
             if code := lancer(["sudo", "cp", "-p", str(src), str(dst)]):
                 return code
-    if not (lancer(["sudo", "install", "-D", "-m", "644", str(SOURCE), str(fragment)])
-            or poser(nouvelle_ligne(ligne, uuid, e.nom) + "\n", cmdline) or lancer(["sudo", "mkinitcpio", "-P"])):
-        print(f"Amorçage systemd posé. Redémarre ; ta phrase est demandée en disposition {e.keymap}. "
-              "Puis relance make chiffrement.")
-        return 0
-    print("erreur : l'amorçage systemd n'a pas pu être posé ; retour à l'état d'avant.", file=sys.stderr)
-    retours = (["sudo", "rm", "-f", str(fragment)], ["sudo", "cp", "-p", str(avant), str(cmdline)],
-               ["sudo", "mkinitcpio", "-P"])
-    if any([lancer(c) for c in retours]):   # Liste, non générateur : les trois retours sont tentés.
-        print(f"attention : le retour n'a pas abouti ; au redémarrage, choisis « {de_secours(uki).stem} » au menu, "
-              "puis voir la section chiffrement du carnet.", file=sys.stderr)
-    return 1
+
+    def retour() -> None:
+        """Rétablit l'état d'avant : fragment retiré, ligne d'origine, image refaite ; les trois sont tentés."""
+        print("erreur : l'amorçage systemd n'a pas été posé ; retour à l'état d'avant.", file=sys.stderr)
+        retours = (["sudo", "rm", "-f", str(fragment)], ["sudo", "cp", "-p", str(avant), str(cmdline)],
+                   ["sudo", "mkinitcpio", "-P"])
+        if any([lancer(c) for c in retours]):   # Liste, non générateur : les trois retours sont tentés.
+            print(f"attention : le retour n'a pas abouti ; relance make chiffrement, et au redémarrage choisis "
+                  f"« {de_secours(uki).stem} » au menu si l'entrée par défaut ne démarre pas.", file=sys.stderr)
+
+    try:
+        echec = (lancer(["sudo", "install", "-D", "-m", "644", str(SOURCE), str(fragment)])
+                 or poser(nouvelle_ligne(ligne, uuid, e.nom) + "\n", cmdline) or lancer(["sudo", "mkinitcpio", "-P"]))
+    except BaseException:
+        retour()
+        raise
+    if echec:
+        retour()
+        return 1
+    print(f"Amorçage systemd posé. Redémarre ; ta phrase est demandée en disposition {e.keymap}. "
+          "Puis relance make chiffrement.")
+    return 0
 
 
 def secours(racine: Path, e: Etat, v: Voies) -> int:
@@ -367,6 +387,8 @@ def secours(racine: Path, e: Etat, v: Voies) -> int:
     if not demander("Bitwarden est-il ouvert pour la ranger ? [o/N] "):
         print("Rien n'a été inscrit.")
         return 0
+    if code := lancer(["sudo", "-v"]):   # Le mot de passe de sudo d'abord, jamais entre deux secrets.
+        return code
     ouvrir = [] if v.phrases else ["--unlock-tpm2-device=auto"]
     if code := lancer(["sudo", "systemd-cryptenroll", "--recovery-key", *ouvrir, e.periph]):
         print("erreur : la clé de secours n'a pas été inscrite.", file=sys.stderr)
@@ -379,18 +401,25 @@ def verifier_secours(racine: Path, e: Etat, v: Voies) -> int:
     """Étape 3 bis : la clé de secours retapée doit ouvrir le volume ; puis la puce, s'il n'y en a pas.
 
     Entrées : racine, e, v. Sortie : 0 si vérifiée (et puce réussie) ; 1 si elle n'ouvre pas le volume,
-             après avoir proposé de la retirer par son numéro pour en inscrire une autre au passage suivant.
+             après avoir proposé de la retirer par son numéro pour en inscrire une autre au passage suivant,
+             jamais quand elle est la dernière voie ; code de sudo -v s'il échoue.
     Erreurs : messages sur la sortie d'erreur. Dépendances : lancer, demander, puce.
     """
     if len(v.secours) != 1:
         print("erreur : plusieurs clés de secours ; voir la section chiffrement du carnet.", file=sys.stderr)
         return 1
+    if code := lancer(["sudo", "-v"]):
+        return code
     print("Retape la clé de secours rangée dans Bitwarden.")
     if lancer(["sudo", "cryptsetup", "open", "--test-passphrase", "--key-slot", str(v.secours[0]), e.periph]):
         print("Cette clé n'ouvre pas le disque.", file=sys.stderr)
-        if demander("Retirer cette clé de secours pour en inscrire une nouvelle ? [o/N] "):
-            lancer(["sudo", "systemd-cryptenroll", f"--wipe-slot={v.secours[0]}", e.periph])
-            print("Relance make chiffrement pour inscrire une nouvelle clé.")
+        if not (v.phrases or v.puces):
+            print("C'est la seule voie d'accès : elle reste. Voir la section chiffrement du carnet.", file=sys.stderr)
+        elif demander("Retirer cette clé de secours pour en inscrire une nouvelle ? [o/N] "):
+            if lancer(["sudo", "systemd-cryptenroll", f"--wipe-slot={v.secours[0]}", e.periph]):
+                print("erreur : la clé de secours n'a pas été retirée.", file=sys.stderr)
+            else:
+                print("Clé retirée. Relance make chiffrement pour en inscrire une nouvelle.")
         return 1
     print("Clé de secours vérifiée.")
     return 0 if v.puces else puce(racine, e)
@@ -400,9 +429,12 @@ def verifier_puce(periph: str, jeton: int) -> bool:
     """La puce et sa phrase ouvrent-elles le volume, sans redémarrer ?
 
     Entrées : periph — périphérique LUKS ; jeton — id du jeton systemd-tpm2 à éprouver.
-    Sortie : True si cryptsetup ouvre le volume en test par ce seul jeton (il demande la phrase).
+    Sortie : True si cryptsetup ouvre le volume en test par ce seul jeton (il demande la phrase) ; False
+             aussi si sudo -v échoue.
     Erreurs : aucune exception. Dépendances : lancer, cryptsetup et son greffon systemd-tpm2.
     """
+    if lancer(["sudo", "-v"]):
+        return False
     print("Vérification : tape ta phrase de démarrage.")
     return not lancer(["sudo", "cryptsetup", "open", "--test-passphrase", "--token-only", "--token-id", str(jeton),
                        periph])
@@ -415,7 +447,7 @@ def puce(racine: Path, e: Etat) -> int:
              l'inscription : une puce sans marque reste ainsi « incoherent », jamais prise pour redémarrée.
     Erreurs : messages sur la sortie d'erreur. Dépendances : poser, lancer, lire_etat, voies, verifier_puce, PUCE.
     """
-    if code := poser(e.boot + "\n", sous(racine, MARQUE)):
+    if code := poser(e.boot + "\n", sous(racine, MARQUE)) or lancer(["sudo", "-v"]):
         return code
     print(f"Puce : ouvre avec ta phrase actuelle, puis choisis la phrase de chaque démarrage "
           f"(tapée en disposition {e.keymap}).")
@@ -440,14 +472,22 @@ def puce(racine: Path, e: Etat) -> int:
 def retirer_phrase(racine: Path, e: Etat, v: Voies) -> int:
     """Étape 6 : retire la phrase d'origine après un démarrage par la puce, puis ce qui gardait l'origine.
 
-    Entrées : racine, e, v. Sortie : 0 si retirée ou si l'utilisateur répond non ; code de l'échec sinon.
-             Retire les emplacements de v.phrases par leurs numéros, puis MARQUE, AVANT et l'image de secours.
-    Erreurs : messages sur la sortie d'erreur. Dépendances : demander, lancer, image, de_secours.
+    Entrées : racine, e, v. Sortie : 0 si retirée ou si l'utilisateur répond non ; 1 si la puce ne
+             s'éprouve pas sans redémarrer (rien n'est retiré) ; code de l'échec sinon. Retire les
+             emplacements de v.phrases par leurs numéros, puis MARQUE, AVANT et l'image de secours.
+    Erreurs : messages sur la sortie d'erreur. Dépendances : demander, verifier_puce, lancer, image, de_secours.
     """
-    print("Il resterait deux voies : la puce avec ta phrase, et la clé de secours.")
-    if not demander("Le disque s'est-il ouvert par la puce et ta phrase ? [o/N] "):
+    # Phrase de puce et phrase d'origine sont la même chaîne : seule l'invite vue au démarrage distingue
+    # l'ouverture par la puce d'un repli sur la phrase d'origine (invites à confirmer en machine virtuelle).
+    print("Il resterait deux voies : la puce avec ta phrase, et la clé de secours. Au démarrage, la puce "
+          "demande « Please enter TPM2 PIN » ; « Please enter passphrase for disk … » est la phrase d'origine.")
+    if not demander("Au dernier démarrage, l'invite était-elle celle de la puce (TPM2 PIN) ? [o/N] "):
         print("Rien n'a été retiré. Si la puce n'a pas ouvert le disque, voir la section chiffrement du carnet.")
         return 0
+    if not verifier_puce(e.periph, v.puces[0][0]):
+        print("erreur : la puce et ta phrase n'ont pas ouvert le disque ; l'ouverture par la puce n'est pas "
+              "confirmée, la phrase d'origine reste. Voir la section chiffrement du carnet.", file=sys.stderr)
+        return 1
     if code := lancer(["sudo", "systemd-cryptenroll", f"--wipe-slot={','.join(map(str, v.phrases))}", e.periph]):
         print("erreur : la phrase d'origine n'a pas été retirée.", file=sys.stderr)
         return code
@@ -469,6 +509,8 @@ def changer_phrase(racine: Path, e: Etat, v: Voies) -> int:
     Erreurs : messages sur la sortie d'erreur. Dépendances : lancer, demander, lire_etat, voies, verifier_puce, PUCE.
     """
     ancienne = v.puces[0]
+    if code := lancer(["sudo", "-v"]):
+        return code
     print("Changement de phrase : tape ton ancienne phrase, puis choisis la nouvelle.")
     code = lancer(["sudo", "systemd-cryptenroll", "--unlock-tpm2-device=auto", *PUCE, e.periph])
     if code and demander("Ouvrir plutôt avec la clé de secours ? [o/N] "):
@@ -482,8 +524,12 @@ def changer_phrase(racine: Path, e: Etat, v: Voies) -> int:
         return 1
     jeton, slot = nouvelles[0]
     if not verifier_puce(e.periph, jeton):
-        lancer(["sudo", "systemd-cryptenroll", f"--wipe-slot={slot}", e.periph])
-        print("erreur : la nouvelle phrase n'a pas été vérifiée ; elle est retirée, l'ancienne reste.", file=sys.stderr)
+        if lancer(["sudo", "systemd-cryptenroll", f"--wipe-slot={slot}", e.periph]):
+            print(f"erreur : la nouvelle phrase n'a pas été vérifiée ni retirée (emplacement {slot}) ; l'ancienne "
+                  "reste. Voir la section chiffrement du carnet.", file=sys.stderr)
+        else:
+            print("erreur : la nouvelle phrase n'a pas été vérifiée ; elle est retirée, l'ancienne reste.",
+                  file=sys.stderr)
         return 1
     if code := lancer(["sudo", "systemd-cryptenroll", f"--wipe-slot={ancienne[1]}", e.periph]):
         print("erreur : l'ancienne inscription n'a pas été retirée ; voir la section chiffrement du carnet.",
@@ -509,8 +555,10 @@ def main(argv: list[str] | None = None) -> int:
     """Fait l'étape suivante du chiffrement, affiche l'état (--etat) ou change la phrase (--phrase).
 
     Entrée : argv — arguments, sys.argv[1:] par défaut.
-    Sortie : 0 en cas de succès ; 1 en cas de refus (root, hors terminal sauf --etat, contrôles, état
-             incohérent, --phrase avant la fin) sans rien modifier ; code de la commande en échec ; 130 sur Ctrl-C.
+    Sortie : 0 en cas de succès ; 1 en cas de refus (root, entrée ou sorties hors terminal sauf --etat :
+             la clé de secours s'affiche sur la sortie, jamais dans un fichier ou un tube ; contrôles, état
+             incohérent, --phrase avant la fin) sans rien modifier ; 1 sur métadonnées LUKS inattendues ;
+             code de la commande en échec ; 130 sur Ctrl-C.
     Erreurs : messages sur la sortie d'erreur, sans trace Python. Dépendances : system_root, lire_etat,
               controles, voies, etape, afficher, ACTIONS, MESSAGES, changer_phrase.
     """
@@ -522,8 +570,9 @@ def main(argv: list[str] | None = None) -> int:
     if os.geteuid() == 0:
         print("erreur : make chiffrement ne se lance pas en root ; sudo est demandé au besoin.", file=sys.stderr)
         return 1
-    if not (args.etat or sys.stdin.isatty()):
-        print("erreur : terminal interactif requis (phrases et clé de secours y sont tapées).", file=sys.stderr)
+    if not (args.etat or all(f.isatty() for f in (sys.stdin, sys.stdout, sys.stderr))):
+        print("erreur : terminal interactif requis, sans redirection (phrases et clé de secours y passent).",
+              file=sys.stderr)
         return 1
     racine = system_root(os.environ)
     try:
@@ -550,8 +599,12 @@ def main(argv: list[str] | None = None) -> int:
     except KeyboardInterrupt:
         print("\ninterrompu : relance make chiffrement, l'état du disque dit où reprendre.", file=sys.stderr)
         return 130
-    except (RuntimeError, ValueError) as x:
+    except RuntimeError as x:
         print(f"erreur : {x}", file=sys.stderr)
+        return 1
+    except (KeyError, ValueError, TypeError) as x:
+        print(f"erreur : métadonnées LUKS inattendues ({type(x).__name__} : {x}) ; voir la section chiffrement "
+              "du carnet.", file=sys.stderr)
         return 1
 
 
