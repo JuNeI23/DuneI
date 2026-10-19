@@ -1,6 +1,6 @@
 # Contrôle de la génération : la chaîne branchée et verrouillée
 
-Version 0.3 · 2026-10-19 · backlog L1-21 · carnet « La chaîne de génération — L1-21 » · statut : implémentée
+Version 0.4 · 2026-10-19 · backlog L1-21 · carnet « La chaîne de génération — L1-21 » · statut : implémentée, recette passée
 
 ## 1. Objet
 
@@ -152,3 +152,4 @@ sortie du lot 1 et étiquette `lot1`), bible (annexe des fichiers, si elle liste
 | 0.1 | 2026-10-19 | Version initiale : options D et contournement 2 retenus par Nicolas |
 | 0.2 | 2026-10-19 | Après relecture : refus mécaniques de `--admin` et des fusions par `gh api` (Nicolas), `--no-verify` permis à Claude (Nicolas), `make check` ne refuse que les fichiers non suivis (Claude) |
 | 0.3 | 2026-10-19 | Implémentée |
+| 0.4 | 2026-10-19 | Recette passée ; `lua` au lieu de `luajit` dans le contrôle |

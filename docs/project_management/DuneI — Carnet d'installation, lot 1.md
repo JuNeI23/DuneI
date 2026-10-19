@@ -1465,6 +1465,14 @@ seulement. Claude ne le fait jamais ; ses réglages (`dunei-atelier`, `claude/se
 `gh pr merge` portant `--admin` et toute commande `gh api` qui contient `merge`. Le motif vaut pour le texte
 entier d'une commande composée : y citer ces mots suffit à la faire refuser.
 
+**Recette du 2026-10-19.** `make install` a posé `core.hooksPath` ; une retouche de `generated/tokens.css`
+a été refusée au commit, `HEAD` inchangé. Le contrôle passe en 46 s (506 tests, 7 sautés). Il a d'abord
+échoué sur 13 tests : il installait `luajit`, sans `math.type` ; il installe `lua` 5.5, l'interpréteur de
+Hyprland. Règle appliquée (identifiant 25405488). Une PR jetable au fichier généré retouché, validée avec
+`--no-verify`, a eu son contrôle rouge et sa fusion refusée (« the base branch policy prohibits the
+merge ») ; un push direct d'un commit vide sur `main` a été refusé (GH013). Les deux refus de Claude Code
+ont arrêté leurs commandes avant tout envoi, essayés sur une PR inexistante.
+
 ## Lecteur d'empreinte — nouveau
 
 Cet élément n'existe dans aucun document du projet. Il est consigné ici parce qu'il s'installe au lot 1, mais **son travail de conception appartient au lot 5**.

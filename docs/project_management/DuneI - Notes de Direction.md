@@ -334,7 +334,8 @@ promettait. Il existe désormais, en deux étages (D77). Au commit, un crochet v
 fichier hors de git. À la fusion, un contrôle GitHub lance `make check` complet dans un conteneur Arch, et
 une règle de `main` refuse toute fusion tant qu'il est rouge, ainsi que tout push direct. Seul Nicolas peut
 passer outre, par `gh pr merge --admin` ; les réglages de Claude Code refusent ce drapeau et toute fusion
-par l'API, puisque Claude travaille avec le même compte GitHub.
+par l'API, puisque Claude travaille avec le même compte GitHub. La recette a éprouvé chaque verrou : commit
+retouché refusé, PR jetable fausse bloquée, push direct sur `main` refusé.
 Prochaine étape du lot 1 : **la recette de sortie du lot**, ses seize lignes, puis l'étiquette `lot1`. La
 recette avec écran externe de L1-09 reste à faire dès qu'un écran est disponible.
 
