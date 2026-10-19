@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.14. Historique en fin de document.
+Version 1.15. Historique en fin de document.
 
 Socle amorçable.
 
@@ -1518,37 +1518,47 @@ La spécification du verrouillage est « registre de spectacle, horloge en grand
 
 ## Recette de sortie du lot 1
 
-Le lot est terminé quand les seize lignes passent. Pas quinze.
+Le lot est terminé quand les dix-sept lignes passent. Pas seize.
+
+**Recette du 2026-10-19**, sur `caladan` réinstallé selon ce carnet. Quinze lignes passent ; deux ne
+passent qu'en partie, faute de matériel, et leur reste est réservé par dérogation (D78) : l'écran externe
+et le changement de sortie audio. L'étiquette `lot1` est posée avec ces deux réserves.
 
 ### Les services
 
-- [ ] Le Wi-Fi se connecte et se reconnecte après redémarrage
-- [ ] Le son sort, et changer de sortie fonctionne
-- [ ] La veille s'endort et se réveille, trois fois, dont une avec écran externe
-- [ ] Décharge en veille mesurée sur quatre heures, jugée acceptable
-- [ ] La fermeture du capot et la réouverture fonctionnent
-- [ ] `power-profiles-daemon` expose ses profils et le changement prend effet
-- [ ] Luminosité, volume et sourdine micro répondent aux touches
-- [ ] La diode de sourdine micro correspond à l'état réel
+- [x] Le Wi-Fi se connecte et se reconnecte après redémarrage — `wlp1s0` réactivé seul 10 s après le démarrage, 2026-10-19
+- [ ] Le son sort, et changer de sortie fonctionne — le son sort ; *réserve* : une seule sortie existe (haut-parleurs), la bascule sera éprouvée par un casque Bluetooth (L3-05, D78)
+- [ ] La veille s'endort et se réveille, trois fois, dont une avec écran externe — trois fois, relevé de L1-09 ; *réserve* : aucun écran externe (D78)
+- [x] Décharge en veille mesurée sur quatre heures, jugée acceptable — 0,42 % par heure, relevé de L1-09 (D43)
+- [x] La fermeture du capot et la réouverture fonctionnent — relevé de L1-09
+- [x] `power-profiles-daemon` expose ses profils et le changement prend effet — trois profils sur `amd_pstate` ; `power-saver`, `performance` et `balanced` changent `platform_profile` et la préférence d'énergie du processeur, 2026-10-19
+- [x] Luminosité, volume et sourdine micro répondent aux touches — Nicolas, 2026-10-19
+- [x] La diode de sourdine micro correspond à l'état réel — Nicolas, 2026-10-19
+
+Les relevés de veille, de décharge et de capot datent du 15 et du 16 octobre, avant la réinstallation
+chiffrée : Nicolas les a gardés sans les refaire (D78).
 
 ### La session
 
-- [ ] Le tuilage fonctionne, gouttière de 8 px en unités logiques
-- [ ] Le rayon est de 12, la fenêtre active se distingue des autres
-- [ ] Aucune application Qt n'affiche sa propre barre de titre
-- [ ] À l'échelle 1,25, le texte d'une application Qt est net — pas flou, pas doublement mis à l'échelle
-- [ ] Les dix bureaux sont atteignables au clavier
-- [ ] Trackpoint et pavé tactile fonctionnent tous les deux
-- [ ] `fc-match` renvoie les deux polices attendues
-- [ ] `git diff --exit-code generated/` est vert après régénération
+- [x] Le tuilage fonctionne, gouttière de 8 px en unités logiques — `gaps_in` 4 et `gaps_out` 8 : 8 px entre deux fenêtres comme au bord de l'écran
+- [x] Le rayon est de 12, la fenêtre active se distingue des autres — rayon de 12, aucune bordure ; le repère de la fenêtre active n'existe pas au lot 1, par décision (D29), il revient à L2-03
+- [x] Aucune application Qt n'affiche sa propre barre de titre — Dolphin, en Wayland natif, 2026-10-19
+- [x] À l'échelle 1,25, le texte d'une application Qt est net — pas flou, pas doublement mis à l'échelle — Dolphin, jugé à l'écran par Nicolas, 2026-10-19
+- [x] Les dix bureaux sont atteignables au clavier — `SUPER + 1` à `SUPER + 0`, Nicolas, 2026-10-19
+- [x] Trackpoint et pavé tactile fonctionnent tous les deux — Nicolas, 2026-10-19
+- [x] `fc-match` renvoie les deux polices attendues — Source Sans 3 et SauceCodePro Nerd Font Mono
+- [x] `git diff --exit-code generated/` est vert après régénération — après `make generes`, 2026-10-19
 
 ### Le matériel à statuer
 
-- [ ] Le lecteur d'empreinte est identifié, et son issue consignée au journal
+- [x] Le lecteur d'empreinte est identifié, et son issue consignée au journal — Goodix `27c6:6594`, reconnu par `fprintd` ; renvoyé à L2-37 (D46)
 
 ### Le critère qui conclut le lot
 
 > **Le dépôt `dunei` est cloné sur la machine, et le lot 2 se développe depuis elle.**
+
+Atteint : `~/DuneI` est cloné sur `caladan` depuis sa réinstallation, et la recette elle-même y a été
+menée.
 
 Une session qui marche au prix de trois commandes non écrites est un échec du lot 1 : la procédure doit être juste, pas seulement le résultat.
 
@@ -1570,6 +1580,7 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 
 | Version | Date | Changement |
 | --- | --- | --- |
+| 1.15 | 2026-10-19 | Recette de sortie du lot 1 : dix-sept lignes et non seize, quinze passées, deux réservées (écran externe, changement de sortie audio) ; relevés de veille d'avant la réinstallation gardés ; ligne de la fenêtre active rapportée à D29 (D78) |
 | 1.14 | 2026-10-19 | Chaîne de génération (L1-21) : `make generes`, crochet `pre-commit` posé par `make install` (`core.hooksPath`), contrôle GitHub `controle` et règle de `main`, commandes `gh api` de la règle, contournement réservé à Nicolas et refus de Claude Code ; arborescence ; `gh auth login -s workflow` et `gh auth refresh` ; crochet jugé sur l'index (D77) |
 | 1.13 | 2026-10-19 | Chiffrement (L1-25) : recette sur `caladan`, valeurs de sa puce (31 échecs, 600 s, `lockoutAuthSet`) ; noyau et `make phrase` non éprouvés sur la machine, couverts en machine virtuelle (D76) |
 | 1.12 | 2026-10-19 | Pièges de la réinstallation de `caladan` : `gh auth setup-git` si `git push` échoue, miroir retiré en tête de liste (D75) |

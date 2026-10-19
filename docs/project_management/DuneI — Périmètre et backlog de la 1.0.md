@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.20. Historique en fin de document.
+Version 1.21. Historique en fin de document.
 
 La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **148 éléments** répartis en **cinq lots**, sur six chantiers.
 
@@ -230,7 +230,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L1-06 | A | Configuré | Pilotes graphiques et accélération matérielle — **fait (D58)** : pilotes et microcode choisis par la détection du matériel (`materiel.*`), `mesa` dans `session`, plus aucun pilote X ; pilotes Intel, `nouveau` et X retirés de `caladan`, session, son de Firefox et XWayland vérifiés |
 | L1-07 | A | Offert | Service réseau — vérification — **fait (D40)** : NetworkManager et `wpa_supplicant` conservés ; `wireless-regdb` installé, sans effet sur la carte *self-managed* de `caladan` ; connexion au démarrage, reconnexion après coupure et touche mode avion vérifiées |
 | L1-08 | A | Offert | Service audio — vérification — **fait (D38)** : son, micro et haut-parleurs vérifiés ; `alsa-utils` installé, dont `alsactl` exécute l'initialisation UCM qui rattache la diode de sourdine au micro numérique : elle suit toute sourdine, F4 garde `wpctl` seul |
-| L1-09 | A | Offert | Service d'énergie et de veille — vérification — **fait (D41 à D46), sauf la recette avec écran externe, en attente** : `hypridle` et `hyprlock` installés ; échelle d'inactivité à quatre paliers, deux jeux de délais, dans `energie.toml` (`make energie`) ; verrouillage avant toute veille ; couvercle et bouton marche confiés à logind, l'écran interne à `couvercle.lua` ; premier fichier système déployé par `make install` ; rétroéclairage du clavier éteint à l'inactivité (pendant la veille, le pilote `thinkpad_acpi` l'éteint à la mise en veille, `kbdlight_suspend` / `led_classdev_suspend` ; constat visuel à l'écran en attente) ; décharge en veille mesurée à 0,42 % par heure. **En attente, faute d'écran externe** : couvercle fermé avec écran externe (écran interne éteint, pas de veille, retour à la réouverture), veille avec écran externe branché |
+| L1-09 | A | Offert | Service d'énergie et de veille — vérification — **fait (D41 à D46), sauf la recette avec écran externe, en attente**, réserve de la sortie du lot 1 (D78) : `hypridle` et `hyprlock` installés ; échelle d'inactivité à quatre paliers, deux jeux de délais, dans `energie.toml` (`make energie`) ; verrouillage avant toute veille ; couvercle et bouton marche confiés à logind, l'écran interne à `couvercle.lua` ; premier fichier système déployé par `make install` ; rétroéclairage du clavier éteint à l'inactivité (pendant la veille, le pilote `thinkpad_acpi` l'éteint à la mise en veille, `kbdlight_suspend` / `led_classdev_suspend` ; constat visuel à l'écran en attente) ; décharge en veille mesurée à 0,42 % par heure. **En attente, faute d'écran externe** : couvercle fermé avec écran externe (écran interne éteint, pas de veille, retour à la réouverture), veille avec écran externe branché |
 | L1-10 | A | Configuré | Gestionnaire de session et démarrage automatique — **fait (D49 à D51)** : greetd et tuigreet remplacent SDDM (`dunei.toml`, surcharge de `greetd.service`) ; connexion automatique une fois par démarrage, écran de connexion après une sortie, menu limité à DuneI ; liste blanche du démarrage de session dans `session.toml` (autostart XDG masqué, `nm-applet` et `hypridle` seuls) ; session verrouillée dès son ouverture, en échec fermé (mode `verrou-initial`, `dunei-verrou-initial`), fond uni `surface-base` ; session lancée par uwsm, dépendance de L1-09 satisfaite. Recette du 2026-10-16 passée, démarrage de 18,3 s contre 18,9 s |
 | L1-11 | B | Configuré | Choisir le compositeur selon les besoins de la bible — **tranché : Hyprland 0.56, configuration Lua** |
 | L1-12 | B | Configuré | Tuilage — couche 1, gouttière 8 px, rayon 12 — **fait (D28)** : dwindle, placement au pointeur, découpes figées |
@@ -301,7 +301,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L3-02 | A | Configuré | Portail de partage d'écran — visioconférence |
 | L3-03 | A | Configuré | Portail de sélection de fichiers |
 | L3-04 | A | Configuré | Portail d'apparence — teinte aux applications en bac à sable |
-| L3-05 | A | Offert | Service Bluetooth — vérification |
+| L3-05 | A | Offert | Service Bluetooth — vérification ; y éprouver le changement de sortie audio par un casque Bluetooth, réserve de la recette de sortie du lot 1 (D78) |
 | L3-06 | A | Offert | Service d'impression — vérification |
 | L3-07 | A | Configuré | Service de montage des volumes amovibles |
 | L3-08 | B | Écrit | Interface de montage et d'éjection des volumes |
@@ -496,6 +496,7 @@ Le choix de la distribution de base et du compositeur, précédemment ouverts, s
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-12 | Version initiale, 137 éléments |
+| 1.21 | 2026-10-19 | Recette de sortie du lot 1 passée, deux réserves (D78) : écran externe (L1-09), changement de sortie audio rattaché à L3-05 |
 | 1.20 | 2026-10-19 | L1-21 fait : crochet, contrôle GitHub et règle de `main` (D77) |
 | 1.19 | 2026-10-19 | L1-25 et L1-03 faits : `caladan` réinstallé, chiffré et recetté (D76) |
 | 1.18 | 2026-10-19 | Ajout de L2-39, tri et vérification des miroirs, au lot 2 (D75). 148 éléments |
