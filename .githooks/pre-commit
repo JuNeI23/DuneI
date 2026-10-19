@@ -1,0 +1,13 @@
+#!/bin/sh
+# Crochet pre-commit de DuneI (L1-21) : refuse un commit dont generated/ diffère d'une génération fraîche.
+# Entrée : aucune ; git le lance à la racine de l'arbre de travail.
+# Sortie : 0 si generated/ égale l'index et ne contient aucun fichier hors de git ; 1 sinon, avec la consigne sur stderr.
+# Dépendances : make (cible generes), git. Activé par make install (core.hooksPath = .githooks).
+make -s generes && exit 0
+cat >&2 <<'MSG'
+commit refusé : generated/ diffère de ce que produisent les sources (L1-21).
+generated/ ne s'édite pas à la main ; il vient d'être régénéré : relire le diff, git add generated/,
+puis recommencer le commit.
+Commit partiel : une source modifiée mais non indexée fausse la comparaison ; l'indexer ou la mettre de côté.
+MSG
+exit 1
