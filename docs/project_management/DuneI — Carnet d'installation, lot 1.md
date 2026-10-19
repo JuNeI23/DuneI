@@ -179,6 +179,7 @@ L'ISO Arch se vérifie avant usage : somme `sha256` conforme, puis signature par
 signature `.sig` étant prise sur archlinux.org. Depuis l'ISO démarrée :
 
     loadkeys uk                                         # d'abord : la console de l'ISO est en disposition américaine
+    iwctl station wlan0 scan                            # Wi-Fi seulement : recherche des réseaux
     iwctl station wlan0 connect "<SSID>"                # Wi-Fi seulement : demande la clé du réseau ; un câble suffit sans rien taper
     curl -fsSLO https://raw.githubusercontent.com/JuNeI23/DuneI/main/setup/archinstall.json
     archinstall --config archinstall.json
@@ -599,8 +600,8 @@ liste des emplacements avec `sudo systemd-cryptenroll <disque>` (types `password
 | « plusieurs clés de secours » | Éprouver la clé de Bitwarden sur chaque emplacement de type `recovery` ; garder celui qu'elle ouvre, retirer l'autre |
 | « C'est la seule voie d'accès : elle reste » | Ne pas redémarrer : le système ouvert reste utilisable. Revérifier la copie de Bitwarden ; à défaut, sauvegarder puis réinstaller |
 | « puce introuvable après l'inscription » | La phrase d'origine reste : relancer `make chiffrement` |
-| « Rien n'a été retiré. Si la puce n'a pas ouvert le disque… » (passage 3, réponse « non ») | Éprouver la puce par son jeton, puis redémarrer et regarder l'invite. Si « Please enter passphrase for disk root » revient, retirer l'emplacement de la puce (la phrase d'origine et la clé de secours restent) et relancer : le passage 2 la réinscrit |
-| « la puce et ta phrase n'ont pas ouvert le disque » (passage 3) | Rien n'est retiré. Redémarrer, vérifier l'invite, relancer ; si la puce échoue encore, retirer son emplacement (la phrase d'origine et la clé de secours restent) et relancer : le passage 2 la réinscrit |
+| « Rien n'a été retiré. Si la puce n'a pas ouvert le disque… » (passage 3, réponse « non ») | D'abord écarter le verrouillage (« Verrouillage de la puce ») : une puce bloquée refuse même la bonne phrase, et la réinscrire ne ferait que recompter les échecs. Éprouver la puce par son jeton, puis redémarrer et regarder l'invite. Si « Please enter passphrase for disk root » revient, retirer l'emplacement de la puce (la phrase d'origine et la clé de secours restent) et relancer : le passage 2 la réinscrit |
+| « la puce et ta phrase n'ont pas ouvert le disque » (passage 3) | Rien n'est retiré. D'abord écarter le verrouillage (« Verrouillage de la puce ») : une puce bloquée refuse même la bonne phrase, et la réinscrire ne ferait que recompter les échecs. Redémarrer, vérifier l'invite, relancer ; si la puce échoue encore, retirer son emplacement (la phrase d'origine et la clé de secours restent) et relancer : le passage 2 la réinscrit |
 | « l'ancienne inscription (emplacement …) n'a pas été retirée » (`make phrase`) | Éprouver la nouvelle puce, puis `sudo systemd-cryptenroll --wipe-slot=<emplacement> <disque>` |
 | « la clé de secours n'ouvre pas le disque » (passage 3 ou `make phrase`) | Rien n'est retiré. Revérifier la copie de Bitwarden et relancer : une faute de frappe est la cause la plus probable. Si la clé est perdue : « Remplacer la clé de secours », jamais en retirant l'ancienne d'abord |
 | « vérification de la clé de secours interrompue ou en échec (code N) » | Rien n'est fait : Ctrl-C ou erreur de `cryptsetup`, pas une clé fausse. Relancer |
@@ -631,8 +632,10 @@ liste des emplacements avec `sudo systemd-cryptenroll <disque>` (types `password
   secours, mise à jour du noyau simulée sur `linux` et `linux-lts` — 2026-10-18
 - [x] `make phrase` dans sa forme corrigée, en machine virtuelle : code 0, l'ancienne phrase refusée au
   démarrage, la nouvelle acceptée ; une clé de secours fausse refusée à l'étape 1 sans rien changer — 2026-10-18
-- [ ] Corrections de la relecture finale, en machine virtuelle : écran effacé avant la clé retapée (passage
+- [x] Corrections de la relecture finale, en machine virtuelle : écran effacé avant la clé retapée (passage
   2), clé de secours retapée au passage 3, `make phrase` par la clé de secours sur une puce remise à zéro
+  — fait le 2026-10-19 : `--unlock-tpm2-device=auto` montre l'invite du PIN avant d'échouer, systemd retire
+  seul l'inscription morte ; seuil de la puce simulée : 3 échecs, 1000 s pour en oublier un
 - [ ] `caladan` : phase 1 avec `loadkeys uk` et la racine cochée ; LUKS2 relevé
 - [ ] `caladan` : phase 2, Wi-Fi par `nmcli` avant `git clone` ; `ufw` actif, unités de `services.toml`
   actives, `~/.local/bin` dans le `PATH`
