@@ -704,8 +704,8 @@ envoie lui-même chaque changement de l'atelier (règle écrite dans `claude/CLA
   déclaration dans `extraKnownMarketplaces` permet de poser les plugins avant.
 - `gh auth login` lance un navigateur et attend qu'il se ferme avant de vérifier le code : valider le code
   sur une autre machine, puis fermer ce navigateur.
-- Sans « Yes » à l'identification de git, `gh auth login` n'écrit rien dans `~/.gitconfig` : le clone
-  et `gh` fonctionnent, mais `git push` échoue (« could not read Username »). `gh auth setup-git` répare
+- Si `gh auth login` n'a rien écrit dans `~/.gitconfig` (identification de git refusée ou sautée), le
+  clone et `gh` fonctionnent, mais `git push` échoue (« could not read Username »). `gh auth setup-git` répare
   (relevé à la réinstallation de `caladan`, le 2026-10-19).
 - Le premier miroir de la liste d'`archinstall` peut avoir été retiré : `pacman -Syu` affiche alors une
   erreur 404 par dépôt puis passe au suivant. Mettre la ligne en commentaire dans
