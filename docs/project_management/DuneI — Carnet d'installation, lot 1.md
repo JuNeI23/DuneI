@@ -1431,15 +1431,19 @@ make install             # régénère, puis generated/ et config/ → ~/.config
 **Un fichier généré retouché à la main, ou une source changée sans sa régénération, n'entre pas dans
 `main`.** Le contrôle a deux étages (D77).
 
-**1. Le crochet, au commit.** `.githooks/pre-commit` lance `make generes` (0,3 s, sans les tests) et
-refuse le commit à la moindre différence :
+**1. Le crochet, au commit.** `.githooks/pre-commit` exporte l'index dans un dossier jetable, y vide
+`generated/`, le régénère depuis les sources indexées, puis compare (0,3 s, sans les tests). Le commit est
+donc jugé sur ce qu'il contient : un commit partiel cohérent passe, une source indexée sans sa
+régénération est refusée, un fichier orphelin de `generated/` apparaît comme supprimé, et l'arbre de
+travail n'est jamais touché. À la moindre différence, il affiche les fichiers en cause puis :
 
 ```
-commit refusé : generated/ diffère de ce que produisent les sources (L1-21).
-generated/ ne s'édite pas à la main ; il vient d'être régénéré : relire le diff, git add generated/,
+commit refusé : generated/ indexé diffère de ce que produisent les sources indexées (L1-21).
+generated/ ne s'édite pas à la main : régénérer (make tokens motion energie), git add generated/,
 puis recommencer le commit.
-Commit partiel : une source modifiée mais non indexée fausse la comparaison ; l'indexer ou la mettre de côté.
 ```
+
+Une génération qui échoue sur les sources indexées est refusée à part, sortie des générateurs à l'appui.
 
 `make install` l'active en posant `core.hooksPath = .githooks` dans la configuration du dépôt ; une autre
 valeur déjà présente est refusée. Le chemin est relatif : les arbres secondaires des sous-agents sont
@@ -1466,7 +1470,8 @@ seulement. Claude ne le fait jamais ; ses réglages (`dunei-atelier`, `claude/se
 entier d'une commande composée : y citer ces mots suffit à la faire refuser.
 
 **Recette du 2026-10-19.** `make install` a posé `core.hooksPath` ; une retouche de `generated/tokens.css`
-a été refusée au commit, `HEAD` inchangé. Le contrôle passe en 46 s (506 tests, 7 sautés). Il a d'abord
+a été refusée au commit, `HEAD` inchangé. La relecture finale a fait juger le crochet sur l'index plutôt que
+sur l'arbre de travail, qui laissait passer un commit dont la source indexée n'était pas régénérée. Le contrôle passe en 46 s (506 tests, 7 sautés). Il a d'abord
 échoué sur 13 tests : il installait `luajit`, sans `math.type` ; il installe `lua` 5.5, l'interpréteur de
 Hyprland. Règle appliquée (identifiant 25405488). Une PR jetable au fichier généré retouché, validée avec
 `--no-verify`, a eu son contrôle rouge et sa fusion refusée (« the base branch policy prohibits the
@@ -1565,7 +1570,7 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 
 | Version | Date | Changement |
 | --- | --- | --- |
-| 1.14 | 2026-10-19 | Chaîne de génération (L1-21) : `make generes`, crochet `pre-commit` posé par `make install` (`core.hooksPath`), contrôle GitHub `controle` et règle de `main`, commandes `gh api` de la règle, contournement réservé à Nicolas et refus de Claude Code ; arborescence ; `gh auth login -s workflow` et `gh auth refresh` (D77) |
+| 1.14 | 2026-10-19 | Chaîne de génération (L1-21) : `make generes`, crochet `pre-commit` posé par `make install` (`core.hooksPath`), contrôle GitHub `controle` et règle de `main`, commandes `gh api` de la règle, contournement réservé à Nicolas et refus de Claude Code ; arborescence ; `gh auth login -s workflow` et `gh auth refresh` ; crochet jugé sur l'index (D77) |
 | 1.13 | 2026-10-19 | Chiffrement (L1-25) : recette sur `caladan`, valeurs de sa puce (31 échecs, 600 s, `lockoutAuthSet`) ; noyau et `make phrase` non éprouvés sur la machine, couverts en machine virtuelle (D76) |
 | 1.12 | 2026-10-19 | Pièges de la réinstallation de `caladan` : `gh auth setup-git` si `git push` échoue, miroir retiré en tête de liste (D75) |
 | 0.1 | 2026-10-12 | Version initiale |

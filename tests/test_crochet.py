@@ -17,7 +17,7 @@ GIT = ["git", "-c", "user.name=essai", "-c", "user.email=essai@dunei.invalid"]
 
 
 class CrochetTest(unittest.TestCase):
-    """Chaque scénario de la recette : propre, retouché, source sans régénération, non suivi, partiel."""
+    """Chaque scénario : propre, retouché, source sans régénération, hors de l'index, orphelin, partiel, génération en échec."""
 
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -58,20 +58,55 @@ class CrochetTest(unittest.TestCase):
         src.write_text(src.read_text(encoding="utf-8").replace("hue = 55 ", "hue = 60 ", 1), encoding="utf-8")
         self.git("add", "tokens.toml", check=True)
         self.assertNotEqual(self.git("commit", "-q", "-m", "essai").returncode, 0)
+        subprocess.run(["make", "-s", "tokens", "motion", "energie"], cwd=self.repo, env=self.env, capture_output=True, check=True)
         self.git("add", "generated/", check=True)
         res = self.git("commit", "-q", "-m", "essai")
         self.assertEqual(res.returncode, 0, res.stderr)
 
-    def test_fichier_non_suivi_refuse(self):
-        (self.repo / "generated/nouveau.txt").write_text("nouveau\n", encoding="utf-8")
-        self.assertNotEqual(self.commit_autre().returncode, 0)
+    def test_fichier_genere_hors_index_refuse(self):
+        self.git("rm", "-q", "--cached", "generated/tokens.css", check=True)
+        res = self.git("commit", "-q", "-m", "essai")
+        self.assertNotEqual(res.returncode, 0)
+        self.assertIn("generated/tokens.css", res.stderr)
 
-    def test_commit_partiel_message(self):
+    def changer_teinte(self):
+        """Change la teinte de tokens.toml dans l'arbre de travail, sans l'indexer."""
         src = self.repo / "tokens.toml"
         src.write_text(src.read_text(encoding="utf-8").replace("hue = 55 ", "hue = 60 ", 1), encoding="utf-8")
+
+    def test_commit_partiel_coherent_accepte(self):
+        self.changer_teinte()
         res = self.commit_autre()
+        self.assertEqual(res.returncode, 0, res.stderr)
+
+    def test_source_indexee_copie_restauree_refuse(self):
+        self.changer_teinte()
+        self.git("add", "tokens.toml", check=True)
+        (self.repo / "tokens.toml").write_bytes(self.git("show", "HEAD:tokens.toml").stdout.encode())
+        self.assertNotEqual(self.git("commit", "-q", "-m", "essai").returncode, 0)
+
+    def test_orphelin_indexe_refuse(self):
+        (self.repo / "generated/orphelin.txt").write_text("orphelin\n", encoding="utf-8")
+        self.git("add", "generated/orphelin.txt", check=True)
+        self.assertNotEqual(self.git("commit", "-q", "-m", "essai").returncode, 0)
+
+    def test_arbre_de_travail_intact(self):
+        with (self.repo / "generated/tokens.css").open("a", encoding="utf-8") as f:
+            f.write("/* retouche */\n")
+        self.git("add", "generated/tokens.css", check=True)
+        self.git("commit", "-q", "-m", "essai")
+        self.assertIn("/* retouche */", (self.repo / "generated/tokens.css").read_text(encoding="utf-8"))
+
+    def test_commit_propre_silencieux(self):
+        res = self.commit_autre()
+        self.assertNotIn("écrit generated", res.stdout + res.stderr)
+
+    def test_generation_en_echec_message(self):
+        (self.repo / "tokens.toml").write_text("[[ invalide\n", encoding="utf-8")
+        self.git("add", "tokens.toml", check=True)
+        res = self.git("commit", "-q", "-m", "essai")
         self.assertNotEqual(res.returncode, 0)
-        self.assertIn("non indexée", res.stderr)
+        self.assertIn("la génération échoue", res.stderr)
 
     def test_make_generes(self):
         make = lambda: subprocess.run(["make", "-s", "generes"], cwd=self.repo, env=self.env, capture_output=True)

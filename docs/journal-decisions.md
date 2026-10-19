@@ -1503,7 +1503,9 @@ contournement (proposé en recommandation, non retenu par Nicolas).
 
 Recette du 2026-10-19 : refus du crochet sur `caladan`, contrôle vert en 46 s, fusion d'une PR jetable
 fausse refusée, push direct sur `main` refusé, refus de Claude Code constatés. Le contrôle installait
-d'abord `luajit`, sans `math.type` : il installe `lua` 5.5, celui de Hyprland.
+d'abord `luajit`, sans `math.type` : il installe `lua` 5.5, celui de Hyprland. La relecture finale a fait
+juger le crochet sur l'index exporté plutôt que sur l'arbre de travail, qui acceptait un commit dont la
+source indexée n'était pas régénérée.
 
 Raison : une valeur recopiée ou oubliée est un défaut au même titre qu'un bogue (bible, ch. 11) ; le
 verrou doit tenir sans reposer sur l'attention de quelqu'un, et le premier étage évite l'aller-retour.

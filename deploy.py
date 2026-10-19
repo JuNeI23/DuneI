@@ -17,6 +17,8 @@ mis de côté sous le nom .avant-dunei, et un lien remplacé par un fichier est 
   en place. Seul kitty, le terminal provisoire, y figure (L1-18).
 - bin : chaque fichier exécutable de config/bin/ est lié dans $XDG_BIN_HOME (~/.local/bin par défaut).
   Un fichier non exécutable, ou un fichier ou lien étranger à sa place, est refusé.
+- crochets : core.hooksPath du dépôt vaut .githooks, pour que le crochet pre-commit refuse un generated/
+  retouché (L1-21). Absent, il est posé ; une autre valeur est refusée.
 - maj : checkupdates, paccache, pacdiff, informant et fakeroot doivent être installés ; le minuteur
   dunei-precharge.timer, copié par la destination systeme, est activé et démarré avec sudo s'il ne l'est pas.
 - rtk : l'archive épinglée par atelier.toml est téléchargée et vérifiée pendant l'inspection ; le binaire

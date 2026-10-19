@@ -1,6 +1,6 @@
 # Contrôle de la génération : la chaîne branchée et verrouillée
 
-Version 0.4 · 2026-10-19 · backlog L1-21 · carnet « La chaîne de génération — L1-21 » · statut : implémentée, recette passée
+Version 0.5 · 2026-10-19 · backlog L1-21 · carnet « La chaîne de génération — L1-21 » · statut : implémentée, recette passée
 
 ## 1. Objet
 
@@ -62,16 +62,16 @@ quand il y en a un : c'est lui qui dit ce qui diffère.
 
 - Fichier versionné `.githooks/pre-commit`, script POSIX `sh`, exécutable, analysé par `shellcheck` comme
   les autres scripts (`tests/test_shellcheck.py` l'ajoute à sa liste).
-- Il régénère (`make -s tokens motion energie`) puis compare `generated/` de l'arbre de travail à l'index :
-  `git diff --exit-code generated/` et aucun fichier non suivi sous `generated/`. Toute différence refuse le
-  commit, avec le diff et la consigne : « `generated/` ne s'édite pas ; régénérer, `git add generated/`,
-  recommencer ».
-- Il ne lance pas les tests (14 s) : c'est le rôle du contrôle GitHub.
-- Il ne fait rien d'autre et ne modifie aucune source ; il réécrit `generated/` comme le fait déjà
-  `make check`.
-- **Limite acceptée** : comme il génère depuis les sources de l'arbre de travail, un changement de source
-  non indexé lors d'un commit partiel fait refuser à tort. Le message le signale ; il suffit d'indexer la
-  source ou de la mettre de côté.
+- Il exporte l'index dans un dossier jetable (`git checkout-index`), y vide `generated/`, le régénère
+  (`make tokens motion energie`), puis compare à l'index (`git --work-tree=<dossier> diff`) et refuse tout
+  fichier produit mais absent de l'index. Le commit est jugé sur ce qu'il contient : un commit partiel
+  cohérent passe, un fichier orphelin apparaît comme supprimé, l'arbre de travail n'est jamais touché.
+  Toute différence refuse le commit, avec les fichiers en cause et la consigne : « `generated/` ne s'édite
+  pas ; régénérer, `git add generated/`, recommencer ». Une génération en échec est refusée à part.
+- Il ne lance pas les tests (14 s) : c'est le rôle du contrôle GitHub. Il n'affiche rien quand il accepte.
+- Version 0.4 et avant : le crochet régénérait depuis l'arbre de travail, ce qui refusait à tort un commit
+  partiel et, pire, en acceptait un incohérent (source indexée, copie de travail restaurée). La relecture
+  finale l'a trouvé ; la limite acceptée alors disparaît.
 
 ### 3.3 Activation par `make install`
 
@@ -153,3 +153,4 @@ sortie du lot 1 et étiquette `lot1`), bible (annexe des fichiers, si elle liste
 | 0.2 | 2026-10-19 | Après relecture : refus mécaniques de `--admin` et des fusions par `gh api` (Nicolas), `--no-verify` permis à Claude (Nicolas), `make check` ne refuse que les fichiers non suivis (Claude) |
 | 0.3 | 2026-10-19 | Implémentée |
 | 0.4 | 2026-10-19 | Recette passée ; `lua` au lieu de `luajit` dans le contrôle |
+| 0.5 | 2026-10-19 | Relecture finale : crochet jugé sur l'index, silencieux quand il accepte, orphelins refusés |
