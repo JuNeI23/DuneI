@@ -1,0 +1,1 @@
+{"keyslots":{"0":{"type":"luks2"},"1":{"type":"luks2"}},"tokens":{"0":{"type":"systemd-tpm2","keyslots":["1"],"tpm2-blob":"AAA","tpm2-pcrs":[],"tpm2-pcr-bank":"sha256","tpm2-primary-alg":"ecc","tpm2-policy-hash":"bb","tpm2-pin":false}},"segments":{},"digests":{},"config":{}}

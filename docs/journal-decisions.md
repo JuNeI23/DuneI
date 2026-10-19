@@ -1259,3 +1259,176 @@ Raison : une recette fidèle ne modifie pas la machine qu'elle teste ; SSH aurai
 l'invité et n'existe pas avant le déverrouillage du disque.
 
 *Touché : setup/vm.sh, carnet.*
+
+## 2026-10-18 — Chiffrement de `caladan` (L1-25)
+
+### D66 · Services système par liste blanche, pare-feu allumé par `make install`
+
+Les unités système que DuneI active sont nommées dans `services.toml`, sur le modèle de `session.toml` pour
+la session (D50) : `ufw.service`, `power-profiles-daemon.service`, `bluetooth.service`, `cups.socket` et
+`fstrim.timer`. La destination `socle` de `make install` active et démarre, par `sudo`, chaque unité qui ne
+l'est pas, et lance `ufw --force enable` tant que `/etc/ufw/ufw.conf` ne porte pas `ENABLED=yes`. Une unité
+inconnue de systemd refuse tout `make install`, en demandant de déclarer son paquet. Retirer une ligne ne
+désactive rien. L'impression démarre à la demande (`cups.socket`) plutôt qu'en service permanent ; un
+service dont le paquet est provisoire (`bluez`, `cups`) est activé tant que le paquet l'est.
+
+Recette en machine virtuelle, installation neuve : `ufw` actif (entrant refusé, sortant permis), les cinq
+unités activées, `bluetooth` inactif faute de contrôleur.
+
+Raison : le relevé du 2026-10-17 a trouvé ces services installés par la procédure mais jamais activés ;
+`caladan` ne les avait que parce qu'ils y avaient été activés à la main. Une liste se relit en un diff, et
+le pare-feu d'un portable doit être allumé dès l'installation.
+
+*Touché : services.toml, deploy.py, tests/test_deploy.py, carnet.*
+
+### D67 · Le `PATH` posé par `/etc/profile.d`
+
+`make install` pose `/etc/profile.d/dunei-bin.sh` (destination `systeme`), qui ajoute
+`${XDG_BIN_HOME:-$HOME/.local/bin}` en fin de `PATH`, une seule fois. `/etc/profile` le lit à toute
+connexion en console, et uwsm le reprend pour la session graphique. Il prend effet à la connexion
+suivante ; `make install` le dit au lieu de demander d'éditer le shell. Écartés au regard de l'exigence
+(kitty **et** console) : un fichier du shell de l'utilisateur, propre à un shell et hors du dépôt, et
+`environment.d`, que la connexion en console ne lit pas.
+
+Recette en machine virtuelle : le dossier figure une fois dans le `PATH` de kitty, ouvert depuis la session,
+et dans celui d'une console.
+
+Raison : `dunei-maj` doit se lancer sur une machine neuve sans geste écrit nulle part ; un seul fichier
+système couvre la console et la session.
+
+*Touché : systeme/etc/profile.d/dunei-bin.sh, deploy.py, tests/test_deploy.py, tests/test_shellcheck.py, carnet.*
+
+### D68 · `make chiffrement` : une étape par passage, l'état lu sur le disque
+
+Le passage de la phrase d'`archinstall` à la puce TPM2 avec phrase et à une clé de secours est une commande
+du dépôt, `make chiffrement` (`chiffrement.py`), et non une suite de commandes du carnet. Elle ne garde
+aucune mémoire hors du disque : elle lit les métadonnées LUKS, la ligne de commande du noyau, le fragment
+de `mkinitcpio` et l'identifiant du démarrage en cours, en déduit l'étape, fait celle-là seule, puis
+s'arrête. Trois passages, séparés par deux redémarrages : amorçage systemd ; clé de secours puis puce ;
+retrait de la phrase d'origine. Le premier redémarrage prouve l'amorçage systemd et la disposition `uk`
+avant toute nouvelle inscription : si l'image ne démarrait pas, aucune clé ne servirait. Le second prouve
+l'ouverture par la puce.
+
+Seule mémoire, la marque `/var/lib/dunei/chiffrement-puce` reçoit l'identifiant du démarrage **avant**
+l'inscription de la puce. Une puce sans marque ne peut alors venir que d'une marque effacée : l'état est
+déclaré incohérent, jamais pris pour redémarré, car retirer la phrase sans preuve du second redémarrage
+romprait la règle. Ce cas se résout à la main, selon le carnet. `python3 chiffrement.py --etat` affiche les
+voies et l'étape sans rien modifier. La commande refuse de tourner en root et hors d'un terminal
+interactif, sortie comprise : la clé de secours ne passe jamais dans un fichier ou un tube. Ses
+dépendances sont déclarées dans `socle` : `tpm2-tss`, que le jeton TPM2 de `cryptsetup` exige, et
+`python`, jusque-là installé par `archinstall` seul.
+
+Raison : une commande versionnée se teste et se rejoue ; une étape par passage, déduite du disque, se
+relance sans danger après un Ctrl-C, une coupure ou un redémarrage, sans état à réparer.
+
+*Touché : chiffrement.py, Makefile, paquets.toml, tests/test_chiffrement.py, tests/donnees/, carnet.*
+
+### D69 · Aucune voie retirée avant que la suivante soit prouvée
+
+La clé de secours s'affiche une fois, sans être écrite nulle part ; Nicolas la range dans Bitwarden, puis la
+**retape** : elle doit ouvrir le volume (`cryptsetup open --test-passphrase`) avant que la puce soit
+inscrite. Avant de retirer la phrase d'origine, la commande éprouve la puce **mécaniquement**
+(`cryptsetup open --test-passphrase --token-only --token-id <jeton>`, qui demande la phrase), et refuse si
+elle échoue. Une réponse « oui » à la question sur l'invite vue au démarrage ne suffit pas : la phrase de la
+puce et celle d'`archinstall` sont la même chaîne, et seule l'épreuve du jeton distingue l'ouverture par la
+puce d'un repli sur la phrase. Les invites relevées en machine virtuelle, citées par la commande : « Please
+enter LUKS2 token PIN » pour la puce, « Please enter passphrase for disk root » pour la phrase d'origine.
+La commande ne retire jamais la dernière voie d'accès.
+
+Juste avant ce retrait, la clé de secours est **retapée une seconde fois**, lue dans Bitwarden : au passage
+2, elle était encore à l'écran, et seule une saisie faite après un redémarrage prouve la copie de Bitwarden
+(relecture finale). Au passage 2 aussi, l'écran est effacé avant la saisie, une fois la clé rangée. Tout
+échec refuse le retrait. Seul le refus de la clé par `cryptsetup` (code 2) est pris pour une clé fausse et
+fait proposer son retrait ; un Ctrl-C ou une autre erreur ne fait rien. Une clé de secours se remplace dans
+le même ordre : la nouvelle inscrite et retapée, puis l'ancienne retirée, jamais l'inverse.
+
+Raison : la feature échoue si le disque peut se retrouver sans voie d'accès que Nicolas sache utiliser ;
+chaque retrait suit donc une preuve que la machine elle-même a vérifiée.
+
+*Touché : chiffrement.py, tests/test_chiffrement.py, carnet (dont « Remplacer la clé de secours »), spec
+§ 5.3.*
+
+### D70 · Réglages d'amorçage possédés par la seule commande ; image d'origine gardée au menu
+
+Le fragment `/etc/mkinitcpio.conf.d/10-dunei-chiffrement.conf` (étapes `systemd`, `sd-vconsole`,
+`sd-encrypt`), versionné dans `chiffrement/`, et la ligne `/etc/kernel/cmdline` (`rd.luks.name`,
+`rd.luks.options`) sont posés par `make chiffrement` seul ; `make install` n'y touche pas. Sinon, une mise
+à jour du noyau entre `make install` et la commande produirait une image dont les étapes ne correspondent
+pas à la ligne. Avant de les poser, la commande garde la ligne d'origine (`cmdline.avant-dunei`) et l'image
+unifiée d'origine (`arch-linux-avant-dunei.efi`), que systemd-boot propose au menu sans en faire l'entrée
+par défaut. Un échec ou un Ctrl-C pendant `mkinitcpio` rétablit l'état d'avant. Les deux copies sont
+retirées avec la phrase d'origine, la seule qu'ouvre l'image d'origine. Aucun module de la puce n'est à
+ajouter : `tpm_tis` et `tpm_crb` sont intégrés aux noyaux `linux` et `linux-lts` d'Arch.
+
+Raison : un seul propriétaire par fichier évite deux sources de vérité sur l'amorçage ; l'image d'origine
+garde un démarrage connu tant que la phrase d'origine existe.
+
+*Touché : chiffrement.py, chiffrement/10-dunei-chiffrement.conf, carnet.*
+
+### D71 · *Discards* permis sur la racine chiffrée
+
+Le volume est ouvert avec `discard` (`rd.luks.options=<UUID>=tpm2-device=auto,discard`). C'est ce qui donne
+un effet à `fstrim.timer` (D66) et garde au SSD ses performances et sa durée de vie. Le prix : un SSD lu
+hors de la machine révèle quels blocs sont occupés, donc la taille approximative des données et le type de
+système de fichiers, sans rien révéler de leur contenu.
+
+Raison : la menace couverte est le vol, machine éteinte (D53) ; la répartition des blocs libres n'en dit
+rien d'utile, alors qu'un SSD sans *discards* se dégrade.
+
+*Touché : chiffrement.py, carnet.*
+
+### D72 · `make phrase` : la clé de secours éprouvée d'abord, systemd remplace la puce
+
+Quand Nicolas change son mot de passe de session, `make phrase` réaligne la phrase de la puce, une fois le
+chiffrement terminé. La répétition en machine virtuelle a montré que `systemd-cryptenroll` 262 retire de
+lui-même l'inscription TPM2 précédente dès qu'il en inscrit une nouvelle, quel que soit le moyen
+d'ouverture, ce que son manuel ne dit pas : l'ancienne phrase cesse d'ouvrir le disque avant que la
+nouvelle soit éprouvée, et la garder n'est pas possible. D'où l'ordre : la clé de secours est retapée et
+doit ouvrir le volume, sinon rien n'est fait ; puis la nouvelle puce est inscrite (ouverture par l'ancienne
+phrase, ou par la clé de secours) ; l'état est relu, et l'ancien emplacement n'est retiré que s'il existe
+encore (systemd plus ancien) ; la nouvelle puce est enfin éprouvée par son jeton. Après l'inscription, un
+échec ne retire rien et dit la vérité : la clé de secours ouvre toujours le disque, `make phrase` se
+relance. La première version, qui retirait la nouvelle inscription sur échec, pouvait laisser la clé de
+secours seule ; elle est corrigée avant toute machine réelle.
+
+La branche par la clé de secours sert aussi à réinscrire une puce remise à zéro : le carnet passe par
+`make phrase` plutôt que par une commande écrite à la main. Les phrases fausses comptent contre la puce,
+qui se bloque après quelques échecs et refuse alors la bonne phrase (relevé en machine virtuelle) : la
+commande le dit avant chaque invite de la puce, et son message d'échec demande d'attendre plutôt que de
+relancer en boucle ; le carnet donne le déblocage.
+
+Raison : la clé de secours éprouvée devient la garantie qu'offrait l'ancienne inscription ; un changement
+de phrase raté oblige au pire à ouvrir le disque par elle.
+
+*Touché : chiffrement.py, tests/test_chiffrement.py, carnet (« Secours », « Verrouillage de la puce »).*
+
+### D73 · Phase 1 : `loadkeys uk` avant `archinstall`, racine cochée au chiffrement
+
+Deux pièges d'`archinstall` 4.5, trouvés à la répétition en machine virtuelle. **Le clavier** :
+`archinstall --config` ne règle que la disposition du système installé ; la console de l'ISO reste
+américaine pendant le menu. La phrase de chiffrement et le mot de passe y sont saisis en interprétation
+américaine, puis refusés au premier démarrage, où l'initramfs et la console sont en `uk`. Le carnet fait
+donc taper `loadkeys uk` avant `archinstall`, et vérifier `"` et `@` à l'invite. **Le chiffrement** : le
+sous-menu « Partitions » de Disk encryption n'a aucune partition cochée par défaut ; sans la racine cochée,
+`archinstall` revient en silence à « No Encryption ». Le carnet nomme le chemin du menu et l'aperçu
+attendu, « Partitions: 1 selected ».
+
+Raison : ni l'un ni l'autre ne se voit avant le premier démarrage ; le premier rendrait `caladan`
+inaccessible, le second l'installerait en clair.
+
+*Touché : carnet.*
+
+### D74 · Phrase du disque et mot de passe de session : une seule phrase, gardées toutes deux
+
+Confirmation de la réserve de D53 : le disque demande la phrase au démarrage, puis la session s'ouvre
+verrouillée (D51), et Nicolas retape la **même** phrase sur le verrou. Le « PIN » de la puce est une phrase
+de passe, tout caractère admis, renforcée par Argon2id avant la puce ; c'est le mot de passe de session. La
+phrase donnée à `archinstall` est déjà la phrase définitive, pour n'en manier qu'une pendant toute
+l'installation. La commande ne vérifie pas que la phrase du disque égale le mot de passe de session
+(aucune dépendance à PAM) : Nicolas en répond, et `make phrase` suit chaque `passwd`. L'empreinte (L2-37)
+pourra remplacer la frappe sur le verrou, jamais l'ouverture du disque.
+
+Raison : l'idéal, l'empreinte seule et une fois, n'est pas possible pour le disque ; un seul secret à
+retenir vaut mieux que deux, et le verrou garde la session si la machine est volée allumée.
+
+*Touché : spec 2026-10-17-chiffrement-caladan, carnet.*

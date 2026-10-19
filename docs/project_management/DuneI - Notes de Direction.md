@@ -1,8 +1,8 @@
 # DuneI — Note de direction
 
-Oct 10, 2026 · @Nicolas — révisée le 17 octobre 2026
+Oct 10, 2026 · @Nicolas — révisée le 18 octobre 2026
 
-Version 1.15. Historique en fin de document.
+Version 1.16. Historique en fin de document.
 
 *Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent quarante-cinq lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
 
@@ -300,13 +300,27 @@ une nouvelle session, `/config` qui écrit à travers le lien) et dans la machin
 désormais par QMP ; elle a trouvé et fait corriger un défaut, le marché des plugins inconnu d'une
 installation neuve (D62 à D65). La décision qui précède : `caladan` sera **réinstallé** selon la procédure
 plutôt que chiffré sur place, rien n'y étant irremplaçable (D61).
-Prochaine étape du lot 1 : **L1-25, la réinstallation chiffrée de `caladan`**. D'abord les écarts de
-procédure relevés le 17 octobre : services installés mais jamais activés (`ufw` en tête, puis
-`power-profiles-daemon`, `bluetooth`, `cups`, `fstrim.timer`) et `PATH` écrit plutôt que signalé ; puis le
-chiffrement (LUKS2, TPM2 et PIN, clé de secours hors de la machine, disposition `uk` dans l'initramfs,
-actualité Arch sur `mkinitcpio` 42 à lire avant d'écrire), **répété de l'ISO à la session dans la machine
-virtuelle**, avant d'effacer `caladan`. Ensuite le point sur L1-21 et la clôture du lot par l'étiquette
-`lot1`. La recette avec écran externe de L1-09 reste à faire dès qu'un écran est disponible.
+
+**Chiffrement de `caladan` — 18 octobre 2026.** La procédure sait désormais livrer une racine chiffrée qui
+s'ouvre par la puce TPM2 et la phrase de Nicolas, avec une clé de secours rangée dans Bitwarden (L1-25).
+D'abord les écarts relevés le 17 octobre : `make install` active les services système nommés dans une liste
+blanche, `services.toml`, pare-feu allumé compris, et le `PATH` est posé par `/etc/profile.d` au lieu d'être
+signalé (D66, D67). Puis `make chiffrement` : une étape par passage, déduite du disque, deux redémarrages,
+et aucune voie d'accès retirée avant que la suivante soit prouvée ; la clé de secours est retapée avant
+l'inscription de la puce, la puce éprouvée par son jeton avant le retrait de la phrase d'`archinstall`, et
+la puce n'est liée à aucun état d'amorçage, si bien qu'aucune mise à jour ne demandera la clé de secours
+(D68 à D71). `make phrase` réaligne la phrase du disque sur le mot de passe de session, une seule phrase
+servant aux deux (D72, D74). La procédure complète a été répétée de l'ISO à la session dans la machine
+virtuelle, puce simulée comprise : deux redémarrages, puce remise à zéro puis ouverture par la clé de
+secours, mise à jour du noyau. Elle a trouvé deux pièges d'`archinstall`, qui auraient rendu `caladan`
+inaccessible ou l'auraient installé en clair (`loadkeys uk` avant le menu, racine à cocher au chiffrement,
+D73), et un défaut de `make phrase` devant systemd 262, corrigé avant toute machine réelle. Le carnet a
+désormais sa section « Chiffrement », écrite pour être suivie seul.
+Prochaine étape du lot 1 : **Nicolas réinstalle `caladan` depuis `main`, avec la clé USB, en suivant le
+carnet**, Claude ne tournant pas pendant l'effacement. Puis une session restaurée par l'atelier fait la
+recette sur `caladan`, clôt L1-25 et L1-03 dans une seconde PR ; ensuite le point sur L1-21 et la clôture
+du lot par l'étiquette `lot1`. La recette avec écran externe de L1-09 reste à faire dès qu'un écran est
+disponible.
 
 ## Plan de lecture
 
@@ -325,6 +339,7 @@ virtuelle**, avant d'effacer `caladan`. Ensuite le point sur L1-21 et la clôtur
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-10 | Version initiale |
+| 1.16 | 2026-10-18 | Chiffrement de `caladan` prêt (L1-25, sauf la réinstallation) : services système par liste blanche, pare-feu allumé, `PATH` par `/etc/profile.d`, `make chiffrement` et `make phrase`, répétition complète en machine virtuelle ; prochaine étape : réinstallation de `caladan` par Nicolas selon le carnet, puis recette, clôture de L1-25 et L1-03, L1-21 et l'étiquette `lot1` (D66 à D74) |
 | 1.15 | 2026-10-17 | Atelier de développement par IA fait (L1-26) : rtk épinglé, dépôt privé `dunei-atelier`, mémoire, plugins, envoi par Claude, machine virtuelle pilotée par QMP ; `caladan` réinstallé plutôt que chiffré sur place ; prochaine étape : L1-25, écarts de procédure puis réinstallation chiffrée répétée en machine virtuelle (D61 à D65) |
 | 1.14 | 2026-10-17 | Installation rejouable faite (L1-02 à L1-06, L1-03 sauf le chiffrement) : deux phases, `paquets.toml`, `dunei-maj`, recette sur `caladan` et en machine virtuelle ; backlog à 145 éléments ; prochaine étape : L1-25, chiffrement de `caladan` répété d'abord en machine virtuelle, puis L1-21 et l'étiquette `lot1` (D53 à D60) |
 | 1.13 | 2026-10-16 | Terminal fait (L1-18) : kitty conservé, instance unique, pager installé ; prochaine étape : L1-02 (D52) |

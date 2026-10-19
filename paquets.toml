@@ -8,6 +8,7 @@ depots = ["core", "extra"]   # dépôts admis ; tout autre dépôt configuré es
 # Démarrer, se connecter, se mettre à jour, construire DuneI.
 [groupes]
 socle = [
+    "tpm2-tss",              # puce TPM2 : déverrouillage du disque (L1-25)
     "base",                  # système minimal
     "linux",                 # noyau principal
     "linux-lts",             # noyau de secours
@@ -25,6 +26,7 @@ socle = [
     "power-profiles-daemon", # profils d'énergie
     "git",                   # versionnage
     "make",                  # chaîne de génération
+    "python",                # chaîne de génération et commandes du dépôt
     "python-numpy",          # chaîne de thème
     "python-pillow",         # chaîne de thème
     "less",                  # paginateur
