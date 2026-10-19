@@ -98,6 +98,7 @@ SOCLE_VERSION = "0.1.0"
 SUFFIXES = (".service", ".socket", ".timer")                 # Types d'unité admis dans services.toml.
 UFW_CONF = "etc/ufw/ufw.conf"                                # Configuration d'ufw sous la racine : ENABLED=yes si le pare-feu est allumé.
 MINUTEUR = "dunei-precharge.timer"                           # Minuteur du préchargement des mises à jour, posé par systeme/.
+CROCHETS = ".githooks"                                       # Crochets git du dépôt (L1-21), valeur relative de core.hooksPath.
 
 
 def config_home(env: Mapping[str, str]) -> Path:
@@ -293,6 +294,27 @@ def plan_bin(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
     if sources and str(dest) not in os.environ.get("PATH", "").split(os.pathsep):
         actions.append(("chemin", dest))
     return actions, err
+
+
+def plan_crochets(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
+    """Inspection des crochets git du dépôt, sans aucune modification (L1-21).
+
+    Entrées : repo — racine du dépôt ; home — dossier de configuration racine, inutilisé ici.
+    Sortie : (activation des crochets si core.hooksPath est absent ; erreurs). Rien si la valeur effective
+             est déjà CROCHETS.
+    Erreurs : aucune exception ; git absent ou une autre valeur de core.hooksPath deviennent un message,
+              qui refuse tout.
+    Dépendances : git, shutil.which, subprocess, CROCHETS.
+    """
+    if not shutil.which("git"):
+        return [], ["git introuvable : pacman -S git"]
+    valeur = subprocess.run(["git", "-C", str(repo), "config", "--get", "core.hooksPath"], capture_output=True, text=True).stdout.strip()
+    if valeur == CROCHETS:
+        return [], []
+    if valeur:
+        return [], [f"core.hooksPath vaut {valeur} : les crochets de DuneI ({CROCHETS}) ne seraient pas lancés ; "
+                    f"git config --local core.hooksPath {CROCHETS}, puis relancer"]
+    return [("crochets", repo)], []
 
 
 def plan_maj(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
@@ -536,7 +558,7 @@ def plan_socle(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
 
 NOTES = ("hors-liste", "chemin", "rtk-remplace", "atelier-saute", "atelier-sans-claude", "atelier-plugins-echec")  # Signalements affichés après le bilan : ils n'agissent pas et ne bloquent pas.
 DESTINATIONS = {"hypr": plan_hypr, "fontconfig": plan_fontconfig, "applis": plan_applis,
-                "bin": plan_bin, "rtk": atelier.plan_rtk, "atelier": atelier.plan_atelier, "services": plan_services, "systeme": plan_systeme, "socle": plan_socle, "maj": plan_maj,
+                "bin": plan_bin, "crochets": plan_crochets, "rtk": atelier.plan_rtk, "atelier": atelier.plan_atelier, "services": plan_services, "systeme": plan_systeme, "socle": plan_socle, "maj": plan_maj,
                 "connexion": plan_connexion}  # Nom → planification, dans l'ordre d'exécution (sudo en dernier).
 
 
@@ -583,6 +605,7 @@ def describe(action: tuple) -> str:
         "start": "démarrer {0}",
         "enable": "activer et démarrer {0}",
         "restart": "redémarrer {0}",
+        "crochets": "activer les crochets du dépôt ({0}/.githooks)",
         "chemin": "{0} n'est pas encore dans le PATH de cette session : /etc/profile.d/dunei-bin.sh l'y met à la prochaine connexion",
         "rtk-pose": "poser rtk (archive {0}) dans {2}",
         "rtk-remplace": "{0} contient déjà un autre rtk ; remplacé par la version épinglée {1}",
@@ -652,6 +675,8 @@ def apply(actions: list[tuple]) -> None:
             subprocess.run(["systemctl", "--user", kind, args[0]], check=True)
         elif kind == "daemon-reload":
             subprocess.run(["systemctl", "--user", "daemon-reload"], check=True)
+        elif kind == "crochets":
+            subprocess.run(["git", "-C", str(args[0]), "config", "--local", "core.hooksPath", CROCHETS], check=True)
         elif kind not in NOTES and not atelier.appliquer((kind, *args)):
             raise OSError(f"action inconnue : {kind}")
 
