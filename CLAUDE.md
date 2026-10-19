@@ -21,11 +21,13 @@ Le reste se lit seulement au besoin.
 # Repères
 - Docs : docs/project_management/ (bible, direction, backlog, carnet), docs/journal-decisions.md,
   docs/superpowers/specs/ et plans/ (AAAA-MM-JJ-<sujet>.md).
-- Chaîne : make tokens | motion | test | check | golden | install. generated/ ne s'édite jamais.
+- Chaîne : make tokens | motion | generes | test | check | golden | install. generated/ ne s'édite jamais :
+  le crochet pre-commit et le contrôle exigé sur main le refusent (D77).
 - Une branche feat/<sujet> par feature, partie de main à jour, une PR. Tu la fusionnes toi-même dès
   que la relecture finale est propre et que j'ai validé à l'écran, par `gh pr merge <n> --merge` seul,
   puis tu appliques la procédure après fusion du carnet (D32). Jamais `--delete-branch` : il bascule
-  l'arbre local sur l'ancien main avant de le tirer.
+  l'arbre local sur l'ancien main avant de le tirer. Jamais `--admin` ni fusion par `gh api` : un contrôle
+  rouge se corrige ou se signale (D77) ; `git commit --no-verify` est permis.
 - make install refuse les arbres git secondaires : travailler dans ~/DuneI.
 - Atelier (L1-26) : ~/dunei-atelier, dépôt privé, porte mes réglages, instructions et mémoire ; tout
   changement y est validé et envoyé aussitôt (D64). rtk est épinglé dans atelier.toml.

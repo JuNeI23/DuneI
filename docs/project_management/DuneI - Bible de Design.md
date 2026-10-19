@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas
 
-Document normatif. Version 0.8. Historique en fin de document.
+Document normatif. Version 0.9. Historique en fin de document.
 
 ## Comment lire ce document
 
@@ -463,7 +463,7 @@ Chaque sous-système exprime les choses dans sa propre unité et sa propre synta
 
 ### Gouvernance
 
-- Les fichiers générés sont versionnés mais **interdits à l'édition**. Une modification manuelle sera écrasée à la génération suivante — et passera inaperçue jusque-là.
+- Les fichiers générés sont versionnés mais **interdits à l'édition**. Une modification manuelle sera écrasée à la génération suivante — et passera inaperçue jusque-là. C'est pourquoi un crochet la refuse au commit, et le contrôle exigé sur `main` à la fusion (D77).
 - **Le versionnage suit les renommages, pas les valeurs.** Ajouter un token est mineur, changer une valeur est correctif, renommer ou supprimer est majeur.
 - Un token retiré reste déclaré et marqué obsolète pendant une version mineure.
 
@@ -725,7 +725,9 @@ Chacun correspond à une erreur observée dans des systèmes existants.
 | `motion.toml` | Développeurs | Source de vérité — mouvement |
 | `generate_tokens.py` | Développeurs | Point d'entrée. Génère CSS, JSON, schéma Qt, GTK 3, GTK 4, portail et modules Lua du compositeur (`hyprland-tokens.lua`, `hyprland-rules.lua`, `hyprland-binds.lua`) |
 | `dunei_theme/` | Développeurs | La logique : couleurs, modèle, contrôles, une cible par module |
-| `Makefile` | Développeurs | `tokens`, `motion`, `test`, `check`, `golden`, `install` |
+| `Makefile` | Développeurs | `tokens`, `motion`, `energie`, `generes`, `test`, `check`, `golden`, `install` |
+| `.githooks/pre-commit` | Développeurs | Refuse un commit dont `generated/` diffère d'une génération fraîche (L1-21) |
+| `.github/workflows/controle.yml` | Développeurs | `make check` sur chaque PR ; la règle de `main` l'exige avant toute fusion (L1-21) |
 | `generate_motion.py` | Développeurs | Génère le module Lua du compositeur et le JSON de la coque, après contrôle des règles du chapitre 6 |
 | `deploy.py` | Développeurs | Installe la configuration dans `~/.config`, destination par destination : Hyprland (liens vers `config/`, copies de `generated/`, bascule depuis la configuration générique) et fontconfig (`conf.d/50-dunei.conf`). Les dossiers `config/hypr/modules`, `config/hypr/machines` et `config/hypr/donnees` sont liés |
 | `config/hypr/modules/ecrans.lua` | Développeurs | Règles d'écran communes : écrans inconnus étendus à droite, XWayland. Aucun matériel nommé |
@@ -822,3 +824,4 @@ Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si 
 | 0.6.3 | 2026-10-14 | Annexe des fichiers : modules `ecrans.lua` et `machine.lua`, dossier `machines/` (D24, D25) ; annexe C, échelle de référence 1,25 (D27) |
 | 0.7 | 2026-10-14 | Fenêtrage : plus de bordure, la fenêtre active se signale par le modificateur `inactive` ; dwindle ; ombre des flottantes à une couche ; rayon plein écran 0 ; annexe C, coins fermés et flou au lot 2 ; annexe D, modules `env`, `fenetres`, `regles` ; ch. 12, palier D sans bordure (D28 à D31) |
 | 0.8 | 2026-10-15 | Clavier : grammaire des raccourcis du système, applications par rôle ; annexe D, modules `entree` et `clavier`, dossier `donnees/`, fragment `hyprland-binds.lua` (D33 à D37) |
+| 0.9 | 2026-10-19 | Gouvernance : édition de `generated/` refusée au commit et à la fusion ; annexe D, crochet, contrôle GitHub et cibles du `Makefile` (D77) |

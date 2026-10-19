@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.13. Historique en fin de document.
+Version 1.14. Historique en fin de document.
 
 Socle amorçable.
 
@@ -57,7 +57,10 @@ DuneI/
 ├── docs/                   # bible, note de direction, backlog, carnet, journal, specs et plans
 ├── setup/
 │   ├── archinstall.json    # phase 1 : configuration d'archinstall, sans disque ni secret (L1-02)
+│   ├── github/regle-main.json  # règle de main : contrôle « controle » exigé avant fusion (L1-21)
 │   └── vm.sh               # machine virtuelle de recette : QEMU/KVM, UEFI, TPM2 simulé
+├── .githooks/pre-commit    # crochet : refuse un commit dont generated/ diffère des sources (L1-21)
+├── .github/workflows/      # contrôle GitHub : make check sur chaque PR (L1-21)
 ├── paquets.toml            # chaque paquet déclaré une fois : groupes, provisoires, matériel, machines
 ├── paquets.py              # make paquets : aligne la machine sur paquets.toml
 ├── chiffrement.py          # make chiffrement et make phrase : puce + phrase, clé de secours (L1-25)
@@ -88,7 +91,7 @@ DuneI/
 ├── generate_energie.py     # point d'entrée ; la logique vit dans dunei_energie/
 ├── dunei_energie/
 ├── extract_hue.py
-├── deploy.py               # make install : une destination par logiciel (hypr, fontconfig, applis, bin, maj…)
+├── deploy.py               # make install : une destination par logiciel (hypr, fontconfig, applis, bin, crochets, maj…)
 ├── proto/motion/           # prototypes QML des transitions
 ├── tests/                  # unittest + instantanés de référence (tests/golden/)
 ├── Makefile
@@ -1410,22 +1413,53 @@ La graisse d'accentuation a été calibrée à l'écran à **550** : 500 était 
 
 ```bash
 make tokens              # tokens.toml  → generated/
-make test                # tests unitaires et de non-régression
-make check               # tokens + motion + test + git diff --exit-code generated/
-make golden              # régénère les instantanés après un changement de sortie VOULU
 make motion              # motion.toml  → generated/
-make install             # generated/ et config/ → ~/.config/hypr, fontconfig et kitty ; bascule au premier passage
+make energie             # energie.toml → generated/
+make generes             # régénère, puis refuse si generated/ diffère de l'index ou contient un fichier hors de git
+make test                # tests unitaires et de non-régression
+make check               # generes + test
+make golden              # régénère les instantanés après un changement de sortie VOULU
+make install             # régénère, puis generated/ et config/ → ~/.config ; pose aussi core.hooksPath
 ```
 
-**Les fichiers de `generated/` sont versionnés et interdits à l'édition.** Ils portent l'avertissement en première ligne, ou en deuxième pour `fonts.conf`, dont la première ligne est la déclaration XML. Les versionner permet de voir dans un diff ce qu'un changement de token produit réellement — la meilleure protection contre une modification de source aux effets inattendus.
+**Les fichiers de `generated/` sont versionnés et interdits à l'édition.** Ils portent l'avertissement en première ligne, ou en deuxième pour `fonts.conf`, dont la première ligne est la déclaration XML. Les versionner permet de voir dans un diff ce qu'un changement de token produit réellement — la meilleure protection contre une modification de source aux effets inattendus. `make install` régénère toujours avant de déployer : aucune valeur n'atteint la session sans passer par les générateurs.
 
-**Un contrôle refuse la validation si un fichier généré a été modifié à la main :**
+**Un fichier généré retouché à la main, ou une source changée sans sa régénération, n'entre pas dans
+`main`.** Le contrôle a deux étages (D77).
+
+**1. Le crochet, au commit.** `.githooks/pre-commit` lance `make generes` (0,3 s, sans les tests) et
+refuse le commit à la moindre différence :
+
+```
+commit refusé : generated/ diffère de ce que produisent les sources (L1-21).
+generated/ ne s'édite pas à la main ; il vient d'être régénéré : relire le diff, git add generated/,
+puis recommencer le commit.
+Commit partiel : une source modifiée mais non indexée fausse la comparaison ; l'indexer ou la mettre de côté.
+```
+
+`make install` l'active en posant `core.hooksPath = .githooks` dans la configuration du dépôt ; une autre
+valeur déjà présente est refusée. Le chemin est relatif : les arbres secondaires des sous-agents sont
+couverts sans geste. Le crochet n'est qu'une alerte précoce : `git commit --no-verify` le saute, et Claude
+y est autorisé.
+
+**2. Le contrôle GitHub, à la fusion.** `.github/workflows/controle.yml` lance `make check` complet sur
+chaque PR vers `main`, dans un conteneur `archlinux:latest`, sous un compte ordinaire (`deploy.py` refuse
+root). Les tests de polices et de session s'y sautent, faute de `fc-match` et de `hyprctl`. La règle de
+`main` (*ruleset*), versionnée dans `setup/github/regle-main.json`, exige la tâche `controle` avant toute
+fusion et refuse tout push direct sur `main` ; les étiquettes ne sont pas visées. Elle vit sur GitHub :
+une réinstallation ne la perd pas. Pour la créer, puis pour la mettre à jour après un changement du
+fichier :
 
 ```bash
-make tokens motion && git diff --exit-code generated/
+gh api -X POST repos/JuNeI23/DuneI/rulesets --input setup/github/regle-main.json
+id=$(gh api repos/JuNeI23/DuneI/rulesets --jq '.[] | select(.name | startswith("main :")) | .id')
+gh api -X PUT "repos/JuNeI23/DuneI/rulesets/$id" --input setup/github/regle-main.json
 ```
 
-Ce contrôle est le premier étage de la recette, et il tourne dès le lot 1. Il ne coûte rien maintenant, et il est très difficile à rattraper plus tard.
+**Passer outre est réservé à Nicolas** : `gh pr merge <n> --merge --admin`, administrateur, par PR
+seulement. Claude ne le fait jamais ; ses réglages (`dunei-atelier`, `claude/settings.json`) refusent
+`gh pr merge` portant `--admin` et toute commande `gh api` qui contient `merge`. Le motif vaut pour le texte
+entier d'une commande composée : y citer ces mots suffit à la faire refuser.
 
 ## Lecteur d'empreinte — nouveau
 
@@ -1519,6 +1553,7 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 
 | Version | Date | Changement |
 | --- | --- | --- |
+| 1.14 | 2026-10-19 | Chaîne de génération (L1-21) : `make generes`, crochet `pre-commit` posé par `make install` (`core.hooksPath`), contrôle GitHub `controle` et règle de `main`, commandes `gh api` de la règle, contournement réservé à Nicolas et refus de Claude Code ; arborescence (D77) |
 | 1.13 | 2026-10-19 | Chiffrement (L1-25) : recette sur `caladan`, valeurs de sa puce (31 échecs, 600 s, `lockoutAuthSet`) ; noyau et `make phrase` non éprouvés sur la machine, couverts en machine virtuelle (D76) |
 | 1.12 | 2026-10-19 | Pièges de la réinstallation de `caladan` : `gh auth setup-git` si `git push` échoue, miroir retiré en tête de liste (D75) |
 | 0.1 | 2026-10-12 | Version initiale |
