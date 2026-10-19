@@ -1450,3 +1450,25 @@ Raison : la liste d'`archinstall` est un instantané qui vieillit ; une procédu
 dépendre de la chance sur le premier miroir.
 
 *Touché : backlog, carnet.*
+
+## 2026-10-19 — Recette de `caladan` (L1-25)
+
+### D76 · `caladan` recetté ; noyau et `make phrase` non forcés sur la machine
+
+Nicolas a réinstallé `caladan` selon le carnet, sans Claude, puis mené `make chiffrement` en trois passages.
+Relevé : racine LUKS2 ouverte par la puce et la phrase, clé de secours rangée dans Bitwarden et retapée deux
+fois, phrase d'`archinstall` retirée, image de secours supprimée, aucune unité en échec, services de
+`services.toml` actifs, paquets alignés sur `paquets.toml` à l'excédent d'`archinstall` près. La puce, une
+Nuvoton, se bloque après 31 phrases fausses, en oublie une toutes les 10 minutes, et son déblocage manuel
+est protégé par le micrologiciel (`lockoutAuthSet`) : seule l'attente la débloque. Au second redémarrage,
+une première phrase a été refusée par la puce, la seconde acceptée.
+
+La mise à jour du noyau et `make phrase` ne sont pas éprouvés sur `caladan` : aucun noyau n'était à mettre
+à jour, aucune phrase à changer, et réinstaller les noyaux d'une machine qui vient de l'être pour cocher la
+ligne a été écarté par Nicolas. Les deux sont prouvés en machine virtuelle ; ils se vérifient à leur
+première occasion réelle. L1-25 et L1-03 sont clos, validés par Nicolas en l'état.
+
+Raison : une recette relève ce que la machine fait réellement ; une opération factice coûte un redémarrage
+et du risque pour une preuve déjà acquise.
+
+*Touché : carnet, backlog, direction, spec 2026-10-17-chiffrement-caladan.*

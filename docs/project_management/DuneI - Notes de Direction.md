@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas — révisée le 18 octobre 2026
 
-Version 1.16. Historique en fin de document.
+Version 1.17. Historique en fin de document.
 
 *Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent quarante-cinq lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
 
@@ -316,11 +316,19 @@ secours, mise à jour du noyau. Elle a trouvé deux pièges d'`archinstall`, qui
 inaccessible ou l'auraient installé en clair (`loadkeys uk` avant le menu, racine à cocher au chiffrement,
 D73), et un défaut de `make phrase` devant systemd 262, corrigé avant toute machine réelle. Le carnet a
 désormais sa section « Chiffrement », écrite pour être suivie seul.
-Prochaine étape du lot 1 : **Nicolas réinstalle `caladan` depuis `main`, avec la clé USB, en suivant le
-carnet**, Claude ne tournant pas pendant l'effacement. Puis une session restaurée par l'atelier fait la
-recette sur `caladan`, clôt L1-25 et L1-03 dans une seconde PR ; ensuite le point sur L1-21 et la clôture
-du lot par l'étiquette `lot1`. La recette avec écran externe de L1-09 reste à faire dès qu'un écran est
-disponible.
+
+**Réinstallation de `caladan` — 19 octobre 2026.** Nicolas a réinstallé `caladan` depuis `main`, seul, en
+suivant le carnet, et `make chiffrement` a mené ses trois passages jusqu'au bout : la racine s'ouvre par la
+puce TPM2 et sa phrase, la clé de secours est dans Bitwarden, la phrase d'`archinstall` est retirée, aucune
+unité n'échoue (L1-25 et L1-03 faits, D76). La puce de `caladan` tolère 31 phrases fausses et en oublie une
+toutes les 10 minutes. Deux lignes de la recette n'ont pas été forcées : la mise à jour du noyau et
+`make phrase` attendent leur première occasion réelle, la machine virtuelle les ayant déjà prouvées. La
+réinstallation a laissé deux pièges au carnet : l'identification de git que `gh auth login` n'avait pas
+posée, et un miroir retiré en tête de la liste d'`archinstall`, qui fait entrer leur tri au backlog
+(L2-39, D75).
+Prochaine étape du lot 1 : **le point sur L1-21**, brancher la génération dans la chaîne de construction,
+puis la recette de sortie du lot et son étiquette `lot1`. La recette avec écran externe de L1-09 reste à
+faire dès qu'un écran est disponible.
 
 ## Plan de lecture
 
@@ -339,6 +347,7 @@ disponible.
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-10 | Version initiale |
+| 1.17 | 2026-10-19 | `caladan` réinstallé, chiffré et recetté (L1-25, L1-03, D76) ; tri des miroirs au backlog (L2-39, D75) ; prochaine étape : L1-21 |
 | 1.16 | 2026-10-18 | Chiffrement de `caladan` prêt (L1-25, sauf la réinstallation) : services système par liste blanche, pare-feu allumé, `PATH` par `/etc/profile.d`, `make chiffrement` et `make phrase`, répétition complète en machine virtuelle ; prochaine étape : réinstallation de `caladan` par Nicolas selon le carnet, puis recette, clôture de L1-25 et L1-03, L1-21 et l'étiquette `lot1` (D66 à D74) |
 | 1.15 | 2026-10-17 | Atelier de développement par IA fait (L1-26) : rtk épinglé, dépôt privé `dunei-atelier`, mémoire, plugins, envoi par Claude, machine virtuelle pilotée par QMP ; `caladan` réinstallé plutôt que chiffré sur place ; prochaine étape : L1-25, écarts de procédure puis réinstallation chiffrée répétée en machine virtuelle (D61 à D65) |
 | 1.14 | 2026-10-17 | Installation rejouable faite (L1-02 à L1-06, L1-03 sauf le chiffrement) : deux phases, `paquets.toml`, `dunei-maj`, recette sur `caladan` et en machine virtuelle ; backlog à 145 éléments ; prochaine étape : L1-25, chiffrement de `caladan` répété d'abord en machine virtuelle, puis L1-21 et l'étiquette `lot1` (D53 à D60) |

@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.12. Historique en fin de document.
+Version 1.13. Historique en fin de document.
 
 Socle amorçable.
 
@@ -536,7 +536,9 @@ virtuelle (voir « Recette »).
 
 La puce compte les phrases fausses, au démarrage comme aux invites de `cryptsetup` et de
 `systemd-cryptenroll` pendant `make chiffrement` et `make phrase` (trois essais par invite). Passé un seuil
-(3 sur la puce simulée de la machine virtuelle ; celui de `caladan` se relève à la recette), elle se bloque,
+(3 sur la puce simulée de la machine virtuelle ; 31 sur `caladan`, une puce Nuvoton qui oublie un échec
+toutes les 10 minutes et dont le déblocage manuel est protégé par le micrologiciel, `lockoutAuthSet` à 1 :
+seule l'attente débloque), elle se bloque,
 et **la bonne phrase est refusée comme une fausse**. Ce n'est ni le disque ni la phrase qui sont cassés.
 Rien ne l'affiche : seul le journal dit « TPM is in dictionary attack lock-out mode ».
 
@@ -636,18 +638,26 @@ liste des emplacements avec `sudo systemd-cryptenroll <disque>` (types `password
   2), clé de secours retapée au passage 3, `make phrase` par la clé de secours sur une puce remise à zéro
   — fait le 2026-10-19 : `--unlock-tpm2-device=auto` montre l'invite du PIN avant d'échouer, systemd retire
   seul l'inscription morte ; seuil de la puce simulée : 3 échecs, 1000 s pour en oublier un
-- [ ] `caladan` : phase 1 avec `loadkeys uk` et la racine cochée ; LUKS2 relevé
-- [ ] `caladan` : phase 2, Wi-Fi par `nmcli` avant `git clone` ; `ufw` actif, unités de `services.toml`
-  actives, `~/.local/bin` dans le `PATH`
-- [ ] `caladan`, avant `make chiffrement` : `sudo tpm2_getcap properties-variable` et `sudo tpm2_getcap
+- [x] `caladan` : phase 1 avec `loadkeys uk` et la racine cochée ; LUKS2 relevé (`Version: 2`) — 2026-10-19
+- [x] `caladan` : phase 2, Wi-Fi par `nmcli` avant `git clone` ; `ufw` actif, unités de `services.toml`
+  actives, `~/.local/bin` dans le `PATH` — 2026-10-19 ; `gh auth login` n'avait pas posé l'identification de
+  git, réparée par `gh auth setup-git` (voir les pièges de l'atelier)
+- [x] `caladan`, avant `make chiffrement` : `sudo tpm2_getcap properties-variable` et `sudo tpm2_getcap
   properties-fixed` relevés (`tpm2-tools` posé le temps du relevé) : seuil `TPM2_PT_MAX_AUTH_FAIL`, délai
-  `TPM2_PT_LOCKOUT_INTERVAL` (en secondes, affiché en hexadécimal), `lockoutAuthSet`, fabricant
-- [ ] `caladan` : `make chiffrement` jusqu'à `termine` ; clé de secours dans Bitwarden, retapée ; invites
-  conformes à cette section
-- [ ] `caladan` : `systemctl --failed` relevé, dont « Early TPM SRK Setup »
-- [ ] `caladan` : mise à jour du noyau par `dunei-maj`, puis démarrage par la puce sans clé de secours
-- [ ] `caladan` : `make phrase`, puis démarrage avec la nouvelle phrase
-- [ ] `caladan` : bureau, atelier et paquets retrouvés ; session de Claude restaurée par l'atelier
+  `TPM2_PT_LOCKOUT_INTERVAL` (en secondes, affiché en hexadécimal), `lockoutAuthSet`, fabricant — relevé
+  après le premier passage, sans effet sur la mesure : seuil `0x1F` (31), intervalle `0x258` (600 s),
+  `TPM2_PT_LOCKOUT_RECOVERY` `0x15180` (24 h), `lockoutAuthSet` 1, fabricant « NTC » (Nuvoton) ; compteur à 0
+- [x] `caladan` : `make chiffrement` jusqu'à `termine` ; clé de secours dans Bitwarden, retapée ; invites
+  conformes à cette section — 2026-10-19 ; au second redémarrage, une première phrase refusée par la puce
+  (« Bad password », erreur TPM `0x98e`), la seconde acceptée ; disque ouvert en 24 s
+- [x] `caladan` : `systemctl --failed` relevé, dont « Early TPM SRK Setup » : aucune unité en échec — 2026-10-19
+- [ ] `caladan` : mise à jour du noyau par `dunei-maj`, puis démarrage par la puce sans clé de secours —
+  non éprouvé : aucun noyau à mettre à jour le jour de la recette ; couvert en machine virtuelle, se vérifie
+  à la première mise à jour réelle (D76)
+- [ ] `caladan` : `make phrase`, puis démarrage avec la nouvelle phrase — non éprouvé : aucune phrase à
+  changer ; couvert en machine virtuelle, se vérifie au premier changement réel (D76)
+- [x] `caladan` : bureau, atelier et paquets retrouvés ; session de Claude restaurée par l'atelier —
+  2026-10-19 ; `paquets.py --dry-run` : rien à installer, l'excédent attendu d'`archinstall` seul
 
 Non couvert : Secure Boot à ses propres clés (ajout possible plus tard, sans réinstaller, D53) ; l'habillage
 de l'invite (L5-13) ; l'empreinte, qui ne déverrouillera jamais le disque (L2-37).
@@ -1509,6 +1519,7 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 
 | Version | Date | Changement |
 | --- | --- | --- |
+| 1.13 | 2026-10-19 | Chiffrement (L1-25) : recette sur `caladan`, valeurs de sa puce (31 échecs, 600 s, `lockoutAuthSet`) ; noyau et `make phrase` non éprouvés sur la machine, couverts en machine virtuelle (D76) |
 | 1.12 | 2026-10-19 | Pièges de la réinstallation de `caladan` : `gh auth setup-git` si `git push` échoue, miroir retiré en tête de liste (D75) |
 | 0.1 | 2026-10-12 | Version initiale |
 | 1.11 | 2026-10-18 | Chiffrement (L1-25), relecture finale : Wi-Fi par `iwctl` sur l'ISO et `nmcli` avant `git clone` ; redémarrage avant `make chiffrement`, lancé depuis `Ctrl + Alt + F3` ; premier démarrage sans invite, phase 1 à refaire ; mot de passe de `sudo` dès la lecture de l'état ; clé retapée après l'effacement de l'écran, puis encore avant le retrait de la phrase d'origine ; refus de la clé distingué d'une interruption ; « Verrouillage de la puce » ; réinscription de la puce par `make phrase` et la clé de secours ; « Remplacer la clé de secours », la nouvelle éprouvée avant le retrait de l'ancienne ; ouverture en une vingtaine de secondes ; recette (`make phrase` corrigé fait, relevé de la puce de `caladan`) (D69, D72) |
