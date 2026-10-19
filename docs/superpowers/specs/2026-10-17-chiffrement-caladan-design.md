@@ -1,6 +1,6 @@
 # Chiffrement de `caladan` : réinstallation, TPM2 et phrase de passe
 
-Version 0.4 · 2026-10-18 · backlog L1-25 (écart de L1-03) · carnet « Installation — L1-02 à L1-05 » et « Chiffrement » · statut : implémentée, recette en machine virtuelle passée
+Version 0.5 · 2026-10-19 · backlog L1-25 (écart de L1-03) · carnet « Installation — L1-02 à L1-05 » et « Chiffrement » · statut : implémentée, recette passée en machine virtuelle et sur `caladan`
 
 ## 1. Objet
 
@@ -201,6 +201,7 @@ remise à zéro.
 
 | Version | Date | Changement |
 | --- | --- | --- |
+| 0.5 | 2026-10-19 | Étapes 5 et 6 du § 5.5 faites : `caladan` réinstallé par Nicolas et recetté ; mise à jour du noyau et changement de phrase non éprouvés sur la machine (D76) |
 | 0.4 | 2026-10-18 | Relecture finale : clé de secours retapée avant le retrait de la phrase d'origine (§ 5.3, étape 6), écran effacé avant la première saisie, refus de la clé distingué d'une interruption ; verrouillage de la puce annoncé avant chaque invite ; réinscription d'une puce remise à zéro par `make phrase` (§ 5.4) |
 | 0.3 | 2026-10-18 | Implémentée, recette en machine virtuelle passée : `make phrase` revu (systemd 262 remplace seul l'ancienne puce, la clé de secours éprouvée d'abord sert de filet) ; puce éprouvée par son jeton avant le retrait de la phrase d'origine ; `loadkeys uk` avant `archinstall` et racine à cocher au chiffrement ; relevé de ce qu'`archinstall` pose ; aucun module de la puce à ajouter ; `--etat` |
 | 0.2 | 2026-10-17 | Relecture du constructeur : premier redémarrage après l'amorçage systemd, réglages d'amorçage possédés par la commande seule, changement de phrase (§ 5.4), phrase définitive dès `archinstall`, aucune vérification par PAM |

@@ -1,6 +1,6 @@
 # Outillage de développement par IA : l'atelier rejouable
 
-Version 0.3 · 2026-10-17 · backlog L1-26 · carnet « Atelier de développement — L1-26 » · statut : implémentée, recette passée
+Version 0.4 · 2026-10-19 · backlog L1-26 · carnet « Atelier de développement — L1-26 » · statut : implémentée, recette passée
 
 ## 1. Objet
 
@@ -17,7 +17,7 @@ Relevé du 2026-10-17 sur `caladan` :
 | Élément | Emplacement | État |
 | --- | --- | --- |
 | Claude Code 2.1.302 | `~/.local/bin/claude` → `~/.local/share/claude/versions/` | Installateur officiel, se met à jour seul (D56) ; déjà dans la procédure |
-| Réglages globaux | `~/.claude/settings.json` | Permissions refusées (`~/.claude/.credentials.json`, `~/.ssh/**`, `~/.gnupg/**`, `**/.env*`, `git push --force*`, `git push -f*`), `defaultMode: auto`, `skipDangerousModePermissionPrompt`, thème sombre, effort `high` pour Opus 5.5, `enabledPlugins` (context7, superpowers), hook `PreToolUse` `rtk hook claude` |
+| Réglages globaux | `~/.claude/settings.json` | Permissions refusées (`~/.claude/.credentials.json`, `~/.ssh/**`, `~/.gnupg/**`, `**/.env*`, `git push --force*`, `git push -f*`), `defaultMode: auto`, `skipDangerousModePermissionPrompt`, thème automatique, effort `high` pour Opus 5.5, `enabledPlugins` (context7, superpowers), hook `PreToolUse` `rtk hook claude` |
 | Instructions globales | `~/.claude/CLAUDE.md` (`@RTK.md`), `~/.claude/RTK.md` | Posées par rtk |
 | Instructions du dossier personnel | `~/CLAUDE.md` | Bloc `rtk-instructions v2`, doublon de `RTK.md` |
 | rtk 1.0.1 | `~/.local/bin/rtk` | Binaire de la publication officielle, édition par défaut, archive `rtk-x86_64-unknown-linux-musl.tar.gz` : somme du binaire identique octet pour octet (vérifié). Aucun paquet ne le possède |
@@ -219,6 +219,7 @@ absolu dans `settings.json` : ce serait modifier l'atelier. *(Choix de Claude.)*
 
 | Version | Date | Changement |
 | --- | --- | --- |
+| 0.4 | 2026-10-19 | Thème de Claude Code passé en automatique par Nicolas |
 | 0.3 | 2026-10-17 | Implémentée et recettée (D61 à D65) : marché déclaré avant les plugins, délai réseau, `~/dunei-atelier` non git sauté au lieu d'une erreur, clone en échec sauté, garde `.avant-dunei.N`, modification non validée du clone mise de côté |
 | 0.2 | 2026-10-17 | Relecture du constructeur : téléchargement de rtk à l'inspection, reprise d'un lien remplacé, fichier par défaut d'une installation neuve, `~/.gitconfig` par inclusion, plugins avant les liens, règle d'envoi dans l'atelier, `PATH` manuel jusqu'à L1-25 |
 | 0.1 | 2026-10-17 | Version initiale |
