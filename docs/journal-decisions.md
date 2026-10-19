@@ -1449,4 +1449,4 @@ vérification des miroirs entrent au backlog (L2-39), l'outil restant à choisir
 Raison : la liste d'`archinstall` est un instantané qui vieillit ; une procédure rejouable ne doit pas
 dépendre de la chance sur le premier miroir.
 
-*Touché : backlog.*
+*Touché : backlog, carnet.*

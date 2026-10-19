@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.11. Historique en fin de document.
+Version 1.12. Historique en fin de document.
 
 Socle amorçable.
 
@@ -704,6 +704,12 @@ envoie lui-même chaque changement de l'atelier (règle écrite dans `claude/CLA
   déclaration dans `extraKnownMarketplaces` permet de poser les plugins avant.
 - `gh auth login` lance un navigateur et attend qu'il se ferme avant de vérifier le code : valider le code
   sur une autre machine, puis fermer ce navigateur.
+- Sans « Yes » à l'identification de git, `gh auth login` n'écrit rien dans `~/.gitconfig` : le clone
+  et `gh` fonctionnent, mais `git push` échoue (« could not read Username »). `gh auth setup-git` répare
+  (relevé à la réinstallation de `caladan`, le 2026-10-19).
+- Le premier miroir de la liste d'`archinstall` peut avoir été retiré : `pacman -Syu` affiche alors une
+  erreur 404 par dépôt puis passe au suivant. Mettre la ligne en commentaire dans
+  `/etc/pacman.d/mirrorlist` en attendant L2-39 (D75).
 - La première session de Claude Code dans `~/DuneI` demande la confiance accordée au dossier : sans elle,
   `autoMemoryDirectory` n'est pas lu.
 
@@ -1503,6 +1509,7 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 
 | Version | Date | Changement |
 | --- | --- | --- |
+| 1.12 | 2026-10-19 | Pièges de la réinstallation de `caladan` : `gh auth setup-git` si `git push` échoue, miroir retiré en tête de liste (D75) |
 | 0.1 | 2026-10-12 | Version initiale |
 | 1.11 | 2026-10-18 | Chiffrement (L1-25), relecture finale : Wi-Fi par `iwctl` sur l'ISO et `nmcli` avant `git clone` ; redémarrage avant `make chiffrement`, lancé depuis `Ctrl + Alt + F3` ; premier démarrage sans invite, phase 1 à refaire ; mot de passe de `sudo` dès la lecture de l'état ; clé retapée après l'effacement de l'écran, puis encore avant le retrait de la phrase d'origine ; refus de la clé distingué d'une interruption ; « Verrouillage de la puce » ; réinscription de la puce par `make phrase` et la clé de secours ; « Remplacer la clé de secours », la nouvelle éprouvée avant le retrait de l'ancienne ; ouverture en une vingtaine de secondes ; recette (`make phrase` corrigé fait, relevé de la puce de `caladan`) (D69, D72) |
 | 1.10 | 2026-10-18 | Chiffrement (L1-25) : phase 1 avec `loadkeys uk` avant `archinstall`, chemin du menu, racine à cocher dans « Partitions », phrase définitive dès `archinstall`, premier démarrage ; phase 2 avec `make chiffrement` en dernier et les questions de `pacman` ; `PATH` par `/etc/profile.d/dunei-bin.sh` ; « Services système » (`services.toml`) ; section « Chiffrement » : trois passages, deux redémarrages, invites exactes relevées en machine virtuelle, clé de secours dans Bitwarden, `make phrase`, secours par la clé, refus et état incohérent, recette ; pare-feu allumé par `make install` ; `chiffrement.py`, `chiffrement/` et `services.toml` dans l'arborescence (D66 à D74) |
