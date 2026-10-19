@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas — révisée le 18 octobre 2026
 
-Version 1.17. Historique en fin de document.
+Version 1.18. Historique en fin de document.
 
 *Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent quarante-cinq lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
 
@@ -326,9 +326,18 @@ toutes les 10 minutes. Deux lignes de la recette n'ont pas été forcées : la m
 réinstallation a laissé deux pièges au carnet : l'identification de git que `gh auth login` n'avait pas
 posée, et un miroir retiré en tête de la liste d'`archinstall`, qui fait entrer leur tri au backlog
 (L2-39, D75).
-Prochaine étape du lot 1 : **le point sur L1-21**, brancher la génération dans la chaîne de construction,
-puis la recette de sortie du lot et son étiquette `lot1`. La recette avec écran externe de L1-09 reste à
-faire dès qu'un écran est disponible.
+
+**Contrôle de la génération — 19 octobre 2026.** Le point sur L1-21 a montré que la génération était déjà
+dans la chaîne : `make install` régénère toujours avant de déployer. Il manquait le verrou que le carnet
+promettait. Il existe désormais, en deux étages (D77). Au commit, un crochet versionné, posé par
+`make install`, régénère et refuse en 0,3 s tout `generated/` qui diffère des sources ou qui contient un
+fichier hors de git. À la fusion, un contrôle GitHub lance `make check` complet dans un conteneur Arch, et
+une règle de `main` refuse toute fusion tant qu'il est rouge, ainsi que tout push direct. Seul Nicolas peut
+passer outre, par `gh pr merge --admin` ; les réglages de Claude Code refusent ce drapeau et toute fusion
+par l'API, puisque Claude travaille avec le même compte GitHub. La recette a éprouvé chaque verrou : commit
+retouché refusé, PR jetable fausse bloquée, push direct sur `main` refusé.
+Prochaine étape du lot 1 : **la recette de sortie du lot**, ses seize lignes, puis l'étiquette `lot1`. La
+recette avec écran externe de L1-09 reste à faire dès qu'un écran est disponible.
 
 ## Plan de lecture
 
@@ -347,6 +356,7 @@ faire dès qu'un écran est disponible.
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-10 | Version initiale |
+| 1.18 | 2026-10-19 | Génération verrouillée (L1-21, D77) : crochet au commit, contrôle GitHub exigé sur `main`, contournement réservé à Nicolas ; prochaine étape : recette de sortie du lot 1 et étiquette `lot1` |
 | 1.17 | 2026-10-19 | `caladan` réinstallé, chiffré et recetté (L1-25, L1-03, D76) ; tri des miroirs au backlog (L2-39, D75) ; prochaine étape : L1-21 |
 | 1.16 | 2026-10-18 | Chiffrement de `caladan` prêt (L1-25, sauf la réinstallation) : services système par liste blanche, pare-feu allumé, `PATH` par `/etc/profile.d`, `make chiffrement` et `make phrase`, répétition complète en machine virtuelle ; prochaine étape : réinstallation de `caladan` par Nicolas selon le carnet, puis recette, clôture de L1-25 et L1-03, L1-21 et l'étiquette `lot1` (D66 à D74) |
 | 1.15 | 2026-10-17 | Atelier de développement par IA fait (L1-26) : rtk épinglé, dépôt privé `dunei-atelier`, mémoire, plugins, envoi par Claude, machine virtuelle pilotée par QMP ; `caladan` réinstallé plutôt que chiffré sur place ; prochaine étape : L1-25, écarts de procédure puis réinstallation chiffrée répétée en machine virtuelle (D61 à D65) |

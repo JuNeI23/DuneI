@@ -1472,3 +1472,44 @@ Raison : une recette relève ce que la machine fait réellement ; une opération
 et du risque pour une preuve déjà acquise.
 
 *Touché : carnet, backlog, direction, spec 2026-10-17-chiffrement-caladan.*
+
+## 2026-10-19 — Contrôle de la génération (L1-21)
+
+### D77 · `generated/` verrouillé en deux étages ; contournement réservé à Nicolas
+
+Le point sur L1-21 a montré que la génération était déjà dans la chaîne (`make install` régénère avant de
+déployer), mais que le contrôle promis par le carnet n'était imposé nulle part : `make check` ne tournait
+que si l'on y pensait, et ne voyait pas un fichier généré jamais ajouté à git. Le risque nommé par Nicolas :
+Claude ou un sous-agent qui retouche `generated/` ou oublie de régénérer, sans que rien ne l'arrête avant
+l'écran.
+
+Retenu, option D sur quatre : un crochet `pre-commit` versionné (`.githooks/`, activé par `make install`
+via `core.hooksPath`), qui régénère et compare en 0,3 s sans lancer les tests ; et un contrôle GitHub,
+`make check` complet dans un conteneur `archlinux`, exigé sur `main` par un *ruleset* versionné
+(`setup/github/regle-main.json`), qui refuse aussi tout push direct. `make check` refuse désormais un
+fichier non suivi de `generated/`, mais pas un fichier correct déjà indexé.
+
+Le rôle administrateur peut passer outre par `gh pr merge --admin`, en PR seulement : ce contournement est
+**réservé à Nicolas**. Comme Claude travaille avec le même compte GitHub, la règle est écrite dans
+`CLAUDE.md` et rendue mécanique par deux refus des réglages de Claude Code (`gh pr merge` portant
+`--admin`, toute commande `gh api` qui contient `merge`), ajoutés à la demande de Nicolas après que la
+relecture de la spécification a trouvé la fusion par l'API. Ces refus arrêtent le réflexe, pas un détour
+délibéré. Le crochet, lui, reste contournable par Claude (`--no-verify`), sur décision de Nicolas : le
+second étage est le verrou.
+
+Écartés : l'outil `pre-commit` (un gestionnaire complet pour un seul contrôle), des crochets locaux seuls
+(un `--no-verify` suffit à passer), le contrôle GitHub seul (l'erreur ne se voit qu'après le push), aucun
+contournement (proposé en recommandation, non retenu par Nicolas).
+
+Recette du 2026-10-19 : refus du crochet sur `caladan`, contrôle vert en 46 s, fusion d'une PR jetable
+fausse refusée, push direct sur `main` refusé, refus de Claude Code constatés. Le contrôle installait
+d'abord `luajit`, sans `math.type` : il installe `lua` 5.5, celui de Hyprland. La relecture finale a fait
+juger le crochet sur l'index exporté plutôt que sur l'arbre de travail, qui acceptait un commit dont la
+source indexée n'était pas régénérée.
+
+Raison : une valeur recopiée ou oubliée est un défaut au même titre qu'un bogue (bible, ch. 11) ; le
+verrou doit tenir sans reposer sur l'attention de quelqu'un, et le premier étage évite l'aller-retour.
+
+*Touché : Makefile, .githooks/pre-commit, deploy.py, .github/workflows/controle.yml,
+setup/github/regle-main.json, tests/, CLAUDE.md, dunei-atelier (claude/settings.json), README, carnet,
+backlog, direction, spec et plan 2026-10-19-controle-generation.*

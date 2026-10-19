@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.19. Historique en fin de document.
+Version 1.20. Historique en fin de document.
 
 La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **148 éléments** répartis en **cinq lots**, sur six chantiers.
 
@@ -242,7 +242,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L1-18 | E | Configuré | Terminal — installation minimale — **fait (D52)** : kitty conservé après repérage (foot écarté), `config/kitty/kitty.conf` lié par `make install` (police canonique, intégration du shell, aucune couleur avant le lot 4) ; rôle en instance unique (`kitty -1`) ; `less` et `man-db` installés |
 | L1-19 | C | Écrit | Polices et indirection de noms — **fait (D22, D23)** : `fonts.conf` généré depuis `tokens.toml`, déployé dans `fontconfig/conf.d`, vérifié par `fc-match` ; graisse d'accentuation 550 |
 | L1-20 | C | Écrit | Chaîne de repli des polices — **fait (D23)** : latin, CJK japonais, emoji, symboles |
-| L1-21 | C | Configuré | Brancher la génération dans la chaîne de construction |
+| L1-21 | C | Configuré | Brancher la génération dans la chaîne de construction — **fait (D77)** : la génération y était déjà (`make install` régénère avant de déployer) ; `make generes` refuse un `generated/` différent des sources ou un fichier hors de git ; crochet `pre-commit` posé par `make install` (`core.hooksPath`) ; contrôle GitHub `controle` (`make check` dans un conteneur Arch) exigé sur `main` par une règle versionnée ; contournement réservé à Nicolas, refusé à Claude par ses réglages |
 | L1-22 | C | Écrit | Mettre `generate_tokens.py` et `extract_hue.py` en conformité avec la bible — écarts consignés au journal — **fait (D11)** |
 | L1-23 | C | Écrit | Concevoir et écrire `motion.toml` et `generate_motion.py` — **fait (D14 à D20)** : paquet `dunei_motion/`, cibles Lua et JSON, contrôles bloquants, `make motion` |
 | L1-24 | C | Écrit | Cible Hyprland en Lua pour les deux générateurs — **fait** : `hyprland-tokens.lua` et `motion.lua`, branchés dans la session par le point d'entrée `config/hypr/hyprland.lua` et `make install` (D21) |
@@ -496,6 +496,7 @@ Le choix de la distribution de base et du compositeur, précédemment ouverts, s
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-12 | Version initiale, 137 éléments |
+| 1.20 | 2026-10-19 | L1-21 fait : crochet, contrôle GitHub et règle de `main` (D77) |
 | 1.19 | 2026-10-19 | L1-25 et L1-03 faits : `caladan` réinstallé, chiffré et recetté (D76) |
 | 1.18 | 2026-10-19 | Ajout de L2-39, tri et vérification des miroirs, au lot 2 (D75). 148 éléments |
 | 1.17 | 2026-10-18 | L1-25 fait, sauf la réinstallation de `caladan` (D66 à D74) : services système par liste blanche, pare-feu allumé, `PATH` par `/etc/profile.d`, `make chiffrement` et `make phrase`, répétition complète en machine virtuelle ; L1-03 reste ouvert sur la racine de `caladan` jusqu'à sa réinstallation ; L1-04 : `sd-encrypt` posé par `make chiffrement` ; point ouvert sur la disposition du clavier précisé par la répétition. 147 éléments |

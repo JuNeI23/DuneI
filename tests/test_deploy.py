@@ -17,6 +17,8 @@ import deploy
 from deploy import COPIES, config_home, lire_session, plan
 
 ROOT = Path(__file__).resolve().parent.parent
+# core.hooksPath déjà effectif par l'environnement : le déploiement n'écrit jamais dans la configuration du vrai dépôt.
+CROCHETS_POSES = {"GIT_CONFIG_COUNT": "1", "GIT_CONFIG_KEY_0": "core.hooksPath", "GIT_CONFIG_VALUE_0": ".githooks"}
 GENERIC = "-- Configuration générique de test.\n"
 FOREIGN = "<?xml version=\"1.0\"?>\n<fontconfig/>\n"
 # Faux sudo et faux systemctl : chaque appel est consigné dans $FAKE_LOG. sudo exécute la commande telle
@@ -72,11 +74,11 @@ def faux_atelier(t: Path, somme_archive: str | None = None) -> Path:
 
 def run(cfg: Path, *args: str) -> subprocess.CompletedProcess:
     """Lance deploy.py avec des dossiers temporaires : XDG_CONFIG_HOME, XDG_BIN_HOME, XDG_CACHE_HOME, HOME,
-    GIT_CONFIG_GLOBAL et GIT_CONFIG_SYSTEM (git ignore la configuration réelle) et un atelier.toml de test (DUNEI_ATELIER_TOML) — ni le réseau ni le vrai ~ ne sont touchés."""
+    GIT_CONFIG_GLOBAL et GIT_CONFIG_SYSTEM (git ignore la configuration réelle), CROCHETS_POSES et un atelier.toml de test (DUNEI_ATELIER_TOML) — ni le réseau ni le vrai ~ ne sont touchés."""
     t = cfg.parent
     env = {**os.environ, "XDG_CONFIG_HOME": str(cfg), "XDG_BIN_HOME": str(t / "local-bin"),
            "XDG_CACHE_HOME": str(t / "cache"), "HOME": str(t / "home"), "DUNEI_ATELIER_TOML": str(t / "atelier.toml"),
-           "GIT_CONFIG_GLOBAL": "/dev/null", "GIT_CONFIG_SYSTEM": "/dev/null"}
+           "GIT_CONFIG_GLOBAL": "/dev/null", "GIT_CONFIG_SYSTEM": "/dev/null", **CROCHETS_POSES}
     return subprocess.run([sys.executable, str(ROOT / "deploy.py"), *args],
                           capture_output=True, text=True, cwd=ROOT, env=env)
 
@@ -113,7 +115,7 @@ class DeployTest(unittest.TestCase):
         self.env = mock.patch.dict(os.environ, {"DUNEI_SYSROOT": str(self.root), "XDG_BIN_HOME": str(self.bin), "FAKE_LOG": str(self.log),
                                                 "XDG_CACHE_HOME": str(t / "cache"), "HOME": str(t / "home"),
                                                 "DUNEI_ATELIER_TOML": str(t / "atelier.toml"),
-                                                "FAKE_ENABLED": "enabled", "PATH": f"{fake}:{os.environ['PATH']}"})
+                                                "FAKE_ENABLED": "enabled", "PATH": f"{fake}:{os.environ['PATH']}", **CROCHETS_POSES})
         self.env.start()
         (self.root / DM).parent.mkdir(parents=True)
         (self.root / DM).symlink_to("/usr/lib/systemd/system/greetd.service")
@@ -760,6 +762,50 @@ class ProfilBinTest(unittest.TestCase):
     def test_profil_bin(self):
         self.assertEqual(self.chemin(), "/usr/bin:/h/.local/bin")
         self.assertEqual(self.chemin(XDG_BIN_HOME="/x"), "/usr/bin:/x")
+
+
+class CrochetsTest(unittest.TestCase):
+    """make install active les crochets du dépôt : core.hooksPath posé, laissé, ou valeur étrangère refusée."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.repo = Path(self.tmp.name)
+        self.env = mock.patch.dict(os.environ, {"GIT_CONFIG_GLOBAL": "/dev/null", "GIT_CONFIG_SYSTEM": "/dev/null"})
+        self.env.start()
+        subprocess.run(["git", "init", "-q", str(self.repo)], check=True)
+
+    def tearDown(self):
+        self.env.stop()
+        self.tmp.cleanup()
+
+    def poser(self, valeur: str):
+        """Écrit core.hooksPath dans la configuration locale du dépôt jetable."""
+        subprocess.run(["git", "-C", str(self.repo), "config", "--local", "core.hooksPath", valeur], check=True)
+
+    def test_absent_pose(self):
+        actions, err = deploy.plan_crochets(self.repo, self.repo)
+        self.assertEqual((actions, err), ([("crochets", self.repo)], []))
+        deploy.apply(actions)
+        lu = subprocess.run(["git", "-C", str(self.repo), "config", "--local", "core.hooksPath"], capture_output=True, text=True)
+        self.assertEqual(lu.stdout.strip(), ".githooks")
+
+    def test_deja_pose_rien(self):
+        self.poser(".githooks")
+        self.assertEqual(deploy.plan_crochets(self.repo, self.repo), ([], []))
+
+    def test_valeur_etrangere_refusee(self):
+        self.poser("/ailleurs")
+        actions, err = deploy.plan_crochets(self.repo, self.repo)
+        self.assertEqual((actions, len(err)), ([], 1))
+        self.assertIn("/ailleurs", err[0])
+        self.assertIn("core.hooksPath", err[0])
+
+    def test_describe(self):
+        self.assertIn(".githooks", deploy.describe(("crochets", self.repo)))
+
+    def test_git_absent_message(self):
+        with mock.patch("deploy.shutil.which", return_value=None):
+            self.assertEqual(deploy.plan_crochets(self.repo, self.repo), ([], ["git introuvable : pacman -S git"]))
 
 
 if __name__ == "__main__":
