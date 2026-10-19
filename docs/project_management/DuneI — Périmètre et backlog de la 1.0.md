@@ -2,9 +2,9 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.17. Historique en fin de document.
+Version 1.18. Historique en fin de document.
 
-La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **147 éléments** répartis en **cinq lots**, sur six chantiers.
+La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **148 éléments** répartis en **cinq lots**, sur six chantiers.
 
 Ce document dit ce qui est attendu, dans quel ordre, et à quelle condition c'est terminé. Il ne dit pas à quoi ça ressemble — c'est le rôle de la bible de design. En cas de contradiction : la bible l'emporte sur l'apparence, ce document l'emporte sur le périmètre.
 
@@ -291,6 +291,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L2-36 | B | Écrit | Localiser le pointeur — halo autour du pointeur, Ctrl gauche tenu une seconde ; touche réservée en L1-16 (D35) |
 | L2-37 | B | Configuré | Déverrouillage par empreinte — `fprintd` ; lecteur Goodix déjà reconnu, aucun doigt enregistré ; `hyprlock` (désactivé dans `hyprlock.conf` pour l'instant), `sudo` et connexion ; à traiter avec L2-22 et L2-24, la conception de l'interface restant au lot 5 (D46) |
 | L2-38 | B | Écrit | Avis « N mises à jour prêtes » dans la barre — nombre de paquets préchargés par `dunei-precharge` en attente de `dunei-maj` (D57) |
+| L2-39 | A | Configuré | Tri et vérification des miroirs — la liste écrite par `archinstall` (France, Allemagne, Suisse) n'est ni triée par vitesse ni purgée des miroirs retirés ; outil à choisir après repérage, `reflector` ou autre (D75) |
 
 ### Lot 3 — la bascule
 
@@ -392,7 +393,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L5-29 | — | Écrit | Passe de regard complète — étage 3 |
 | L5-30 | — | Écrit | Résorber les points ouverts de l'annexe C |
 
-**Volume total : 147 éléments** — 100 écrits, 40 configurés, 5 offerts, 2 mixtes.
+**Volume total : 148 éléments** — 100 écrits, 41 configurés, 5 offerts, 2 mixtes.
 
 Les deux tiers du travail sont de l'écrit, et les trois quarts de cet écrit se concentrent sur la coque et les écrans système. C'est cohérent avec la stratégie retenue, et c'est là que tout le risque se trouve.
 
@@ -495,6 +496,7 @@ Le choix de la distribution de base et du compositeur, précédemment ouverts, s
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-12 | Version initiale, 137 éléments |
+| 1.18 | 2026-10-19 | Ajout de L2-39, tri et vérification des miroirs, au lot 2 (D75). 148 éléments |
 | 1.17 | 2026-10-18 | L1-25 fait, sauf la réinstallation de `caladan` (D66 à D74) : services système par liste blanche, pare-feu allumé, `PATH` par `/etc/profile.d`, `make chiffrement` et `make phrase`, répétition complète en machine virtuelle ; L1-03 reste ouvert sur la racine de `caladan` jusqu'à sa réinstallation ; L1-04 : `sd-encrypt` posé par `make chiffrement` ; point ouvert sur la disposition du clavier précisé par la répétition. 147 éléments |
 | 1.16 | 2026-10-17 | L1-26 fait (D61 à D65) : atelier de développement par IA rejouable ; L1-25 réécrit : réinstallation de `caladan` au lieu du chiffrement sur place, écarts de procédure à corriger d'abord (services non activés, `PATH`) ; ajout de L3-26, améliorer l'atelier ; point ouvert sur la disposition du clavier. 147 éléments |
 | 1.15 | 2026-10-17 | L1-02 à L1-06 faits, L1-03 sauf l'écart du chiffrement (D53 à D60) ; ajout de L1-25, chiffrement de `caladan`, au lot 1, et de L2-38, avis de mises à jour prêtes dans la barre, au lot 2 ; L5-13 reçoit l'invite du PIN. 145 éléments |

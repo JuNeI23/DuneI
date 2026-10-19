@@ -1432,3 +1432,21 @@ Raison : l'idéal, l'empreinte seule et une fois, n'est pas possible pour le dis
 retenir vaut mieux que deux, et le verrou garde la session si la machine est volée allumée.
 
 *Touché : spec 2026-10-17-chiffrement-caladan, carnet.*
+
+## 2026-10-19 — Miroirs (L2-39)
+
+### D75 · Miroirs : un miroir retiré lève la réserve sur leur tri, L2-39 au lot 2
+
+Après la réinstallation de `caladan`, `pacman -Syu` affiche deux erreurs 404 : le premier
+miroir de la liste écrite par `archinstall`, `elda.asgardius.company`, ne sert plus `/archlinux/` et ne
+figure plus dans la liste officielle d'archlinux.org. pacman passe au miroir suivant, la mise à jour se
+fait ; le défaut est le bruit et une requête perdue à chaque synchronisation. La liste, rangée par pays puis
+par ordre alphabétique, n'est ni triée par vitesse ni purgée. Correction immédiate : la ligne mise en
+commentaire dans `/etc/pacman.d/mirrorlist`, par Nicolas. La spec 2026-10-16-installation-rejouable
+écartait `reflector` « tant qu'aucun miroir ne pose problème » : la condition est remplie. Le tri et la
+vérification des miroirs entrent au backlog (L2-39), l'outil restant à choisir après repérage.
+
+Raison : la liste d'`archinstall` est un instantané qui vieillit ; une procédure rejouable ne doit pas
+dépendre de la chance sur le premier miroir.
+
+*Touché : backlog.*
