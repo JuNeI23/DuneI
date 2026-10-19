@@ -89,7 +89,7 @@ couverts sans geste.
 - Exécutée sur `ubuntu-latest` dans le conteneur `archlinux:latest` : la même distribution que les machines
   DuneI, les paquets du dépôt officiel.
 - Installe le strict nécessaire au contrôle (`git`, `make`, `python`, `python-numpy`, `python-pillow`,
-  `luajit`, `shellcheck`) puis lance `make check`. Les tests qui demandent la session (`hyprctl`) ou les
+  `lua`, `shellcheck`) puis lance `make check`. Les tests qui demandent la session (`hyprctl`) ou les
   polices (`fc-match`) se sautent d'eux-mêmes, comme aujourd'hui sans l'outil.
 - Actions épinglées par empreinte de commit, version en commentaire (recommandation de GitHub).
 

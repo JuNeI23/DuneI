@@ -242,7 +242,7 @@ Après le redémarrage, connecté en console avec le compte créé :
     git clone https://github.com/JuNeI23/DuneI ~/DuneI && cd ~/DuneI
     make paquets                                        # paquets.toml → système
     curl -fsSL https://claude.ai/install.sh | bash      # Claude Code, hors pacman
-    gh auth login                                       # HTTPS, « Yes » à l'identification de git
+    gh auth login -s workflow                           # HTTPS, « Yes » à l'identification de git
     make install                                        # configuration, fichiers système, services, atelier
     claude                                              # connexion au compte, confiance accordée à ~/DuneI
     reboot                                              # greetd et le PATH prennent effet ; puis Ctrl + Alt + F3
@@ -720,6 +720,10 @@ envoie lui-même chaque changement de l'atelier (règle écrite dans `claude/CLA
 - Si `gh auth login` n'a rien écrit dans `~/.gitconfig` (identification de git refusée ou sautée), le
   clone et `gh` fonctionnent, mais `git push` échoue (« could not read Username »). `gh auth setup-git` répare
   (relevé à la réinstallation de `caladan`, le 2026-10-19).
+- Sans la permission `workflow`, GitHub refuse tout push qui crée ou modifie un fichier de
+  `.github/workflows/` (« refusing to allow an OAuth App to create or update workflow »). `gh auth login`
+  ne la demande pas d'office, d'où `-s workflow` ; sur un jeton déjà posé, `gh auth refresh -h github.com
+  -s workflow` l'ajoute (relevé le 2026-10-19, L1-21).
 - Le premier miroir de la liste d'`archinstall` peut avoir été retiré : `pacman -Syu` affiche alors une
   erreur 404 par dépôt puis passe au suivant. Mettre la ligne en commentaire dans
   `/etc/pacman.d/mirrorlist` en attendant L2-39 (D75).
@@ -1553,7 +1557,7 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 
 | Version | Date | Changement |
 | --- | --- | --- |
-| 1.14 | 2026-10-19 | Chaîne de génération (L1-21) : `make generes`, crochet `pre-commit` posé par `make install` (`core.hooksPath`), contrôle GitHub `controle` et règle de `main`, commandes `gh api` de la règle, contournement réservé à Nicolas et refus de Claude Code ; arborescence (D77) |
+| 1.14 | 2026-10-19 | Chaîne de génération (L1-21) : `make generes`, crochet `pre-commit` posé par `make install` (`core.hooksPath`), contrôle GitHub `controle` et règle de `main`, commandes `gh api` de la règle, contournement réservé à Nicolas et refus de Claude Code ; arborescence ; `gh auth login -s workflow` et `gh auth refresh` (D77) |
 | 1.13 | 2026-10-19 | Chiffrement (L1-25) : recette sur `caladan`, valeurs de sa puce (31 échecs, 600 s, `lockoutAuthSet`) ; noyau et `make phrase` non éprouvés sur la machine, couverts en machine virtuelle (D76) |
 | 1.12 | 2026-10-19 | Pièges de la réinstallation de `caladan` : `gh auth setup-git` si `git push` échoue, miroir retiré en tête de liste (D75) |
 | 0.1 | 2026-10-12 | Version initiale |
