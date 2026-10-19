@@ -1513,3 +1513,29 @@ verrou doit tenir sans reposer sur l'attention de quelqu'un, et le premier étag
 *Touché : Makefile, .githooks/pre-commit, deploy.py, .github/workflows/controle.yml,
 setup/github/regle-main.json, tests/, CLAUDE.md, dunei-atelier (claude/settings.json), README, carnet,
 backlog, direction, spec et plan 2026-10-19-controle-generation.*
+
+### D78 · Lot 1 fermé avec deux réserves ; relevés de veille d'avant la réinstallation gardés
+
+2026-10-19. La recette de sortie du lot 1 compte dix-sept lignes, et non seize comme l'annonçait le
+carnet : la ligne du lecteur d'empreinte s'était ajoutée sans que le décompte suive. Quinze passent sur
+`caladan` réinstallé. Deux ne passent qu'en partie, faute de matériel, et Nicolas accorde la
+**dérogation** de poser l'étiquette `lot1` sans attendre :
+
+- **Veille avec écran externe** : les trois veilles passent ; aucun écran externe n'est disponible. La
+  réserve rejoint celle de L1-09 et sera levée dès qu'un écran le sera.
+- **Changement de sortie audio** : le son sort, mais la machine n'a qu'une sortie, ses haut-parleurs, et
+  aucun casque filaire n'est disponible. La bascule sera éprouvée par un casque Bluetooth, avec la
+  vérification du service (L3-05).
+
+Les relevés de veille, de décharge et de capot datent du 15 et du 16 octobre (L1-09), avant la
+réinstallation chiffrée du 19. Refaire les trois veilles, le capot et une nuit de décharge a été proposé
+en recommandation ; Nicolas a choisi de garder les relevés. La recette les reprend en le disant.
+
+La ligne « la fenêtre active se distingue des autres » est jugée selon D29 : au lot 1, aucun repère de la
+fenêtre active n'existe, par décision ; ce n'est pas une réserve.
+
+Raison : les deux manques tiennent au matériel absent, pas à la procédure ; aucune ligne ne demande de
+corriger le dépôt, et le lot 2 n'en dépend pas. Bloquer le lot sur l'achat d'un écran ou d'écouteurs
+n'apporterait rien au socle.
+
+*Touché : carnet (recette de sortie), backlog (L1-09, L3-05), direction.*

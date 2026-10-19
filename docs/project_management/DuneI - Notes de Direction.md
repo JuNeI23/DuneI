@@ -1,10 +1,10 @@
 # DuneI — Note de direction
 
-Oct 10, 2026 · @Nicolas — révisée le 18 octobre 2026
+Oct 10, 2026 · @Nicolas — révisée le 19 octobre 2026
 
-Version 1.18. Historique en fin de document.
+Version 1.19. Historique en fin de document.
 
-*Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent quarante-cinq lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
+*Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent quarante-huit lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
 
 ## En une phrase
 
@@ -336,8 +336,16 @@ une règle de `main` refuse toute fusion tant qu'il est rouge, ainsi que tout pu
 passer outre, par `gh pr merge --admin` ; les réglages de Claude Code refusent ce drapeau et toute fusion
 par l'API, puisque Claude travaille avec le même compte GitHub. La recette a éprouvé chaque verrou : commit
 retouché refusé, PR jetable fausse bloquée, push direct sur `main` refusé.
-Prochaine étape du lot 1 : **la recette de sortie du lot**, ses seize lignes, puis l'étiquette `lot1`. La
-recette avec écran externe de L1-09 reste à faire dès qu'un écran est disponible.
+
+**Sortie du lot 1 — 19 octobre 2026.** La recette de sortie compte dix-sept lignes, non seize. Quinze
+passent sur `caladan` réinstallé ; deux ne passent qu'en partie, faute de matériel, et Nicolas a accordé
+la dérogation de fermer le lot sans attendre (D78) : la veille avec écran externe, dès qu'un écran sera
+disponible, et le changement de sortie audio, qui sera éprouvé par un casque Bluetooth avec L3-05. Les
+relevés de veille, de décharge et de capot sont ceux de L1-09, antérieurs à la réinstallation, gardés par
+choix. Le dépôt est cloné sur la machine et le développement s'y fait : le lot 1 est fermé, étiquette
+`lot1`.
+Prochaine étape : **l'ouverture du lot 2**, par le repérage de la technologie de la coque, dont dépendent
+la bibliothèque de composants (L2-01) et toutes les surfaces du lot.
 
 ## Plan de lecture
 
@@ -356,6 +364,7 @@ recette avec écran externe de L1-09 reste à faire dès qu'un écran est dispon
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-10 | Version initiale |
+| 1.19 | 2026-10-19 | Lot 1 fermé (D78) : recette de sortie à dix-sept lignes, quinze passées, deux réservées faute de matériel (écran externe, changement de sortie audio) ; décompte du backlog corrigé (148) ; prochaine étape : ouverture du lot 2, technologie de la coque (L2-01) |
 | 1.18 | 2026-10-19 | Génération verrouillée (L1-21, D77) : crochet au commit, contrôle GitHub exigé sur `main`, contournement réservé à Nicolas ; prochaine étape : recette de sortie du lot 1 et étiquette `lot1` |
 | 1.17 | 2026-10-19 | `caladan` réinstallé, chiffré et recetté (L1-25, L1-03, D76) ; tri des miroirs au backlog (L2-39, D75) ; prochaine étape : L1-21 |
 | 1.16 | 2026-10-18 | Chiffrement de `caladan` prêt (L1-25, sauf la réinstallation) : services système par liste blanche, pare-feu allumé, `PATH` par `/etc/profile.d`, `make chiffrement` et `make phrase`, répétition complète en machine virtuelle ; prochaine étape : réinstallation de `caladan` par Nicolas selon le carnet, puis recette, clôture de L1-25 et L1-03, L1-21 et l'étiquette `lot1` (D66 à D74) |
