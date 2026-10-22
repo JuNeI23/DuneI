@@ -41,6 +41,8 @@ session = [
     "uwsm",                         # gestion de session
     "xdg-desktop-portal-hyprland",  # portails de bureau
     "qt6-wayland",                  # applications Qt sous Wayland (D31)
+    "quickshell",                   # coque (D80)
+    "qt6-shadertools",              # compilation des shaders de la coque, qsb (D80)
     "hypridle",                     # échelle d'inactivité (D41)
     "hyprlock",                     # verrouillage (D41, D42)
     "greetd",                       # gestionnaire de connexion

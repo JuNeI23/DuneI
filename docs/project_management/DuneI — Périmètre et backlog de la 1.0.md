@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.22. Historique en fin de document.
+Version 1.23. Historique en fin de document.
 
 La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **148 éléments** répartis en **cinq lots**, sur six chantiers.
 
@@ -253,12 +253,12 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 
 | Réf | Ch. | Nature | Élément |
 | --- | --- | --- | --- |
-| L2-01 | B | Écrit | Bibliothèque de composants — les primitives de l'annexe E |
+| L2-01 | B | Écrit | Bibliothèque de composants — les primitives de l'annexe E ; écrite en QML sur Quickshell, preuve par la maquette `proto/ilot` (D80) |
 | L2-02 | B | Écrit | Les six états composables, dans l'ordre fixe |
 | L2-03 | B | Écrit | Modificateur `inactive` — chroma à zéro, contenu intact — seul repère de la fenêtre active (D29) |
 | L2-04 | B | Écrit | Modèle d'élévation E0 à E3 — sheen, liseré, ombre |
 | L2-05 | B | Écrit | Dithering par bruit sur tout dégradé de sheen |
-| L2-06 | B | Écrit | Vocabulaire de mouvement — six transitions, interruptibles |
+| L2-06 | B | Écrit | Vocabulaire de mouvement — sept transitions, interruptibles |
 | L2-07 | B | Écrit | Mode mouvement réduit |
 | L2-08 | B | Écrit | Barre système — structure, 32 px, couleur franche du thème |
 | L2-09 | B | Écrit | Barre système — horloge, chiffres tabulaires |
@@ -412,12 +412,13 @@ Relevée à la lecture de la bible v0.4. Aucune n'est bloquante ; toutes sont de
 
 ### Pour un élément écrit
 
-Quatre conditions, vérifiables et non négociables. Un élément qui n'en satisfait pas une n'est pas terminé, quel que soit son état apparent.
+Cinq conditions, vérifiables et non négociables. Un élément qui n'en satisfait pas une n'est pas terminé, quel que soit son état apparent.
 
 1. **Rattaché à une primitive existante.** L'annexe E le dit : si un composant semble réclamer une exception, c'est presque toujours qu'il a été mal rattaché. On n'invente pas de primitive.
 2. **Aucune valeur en dur.** Couleur, durée, dimension : tout vient des sources de vérité. Une valeur recopiée à la main est un défaut, au même titre qu'un bogue.
-3. **Transition nommée** parmi les six du vocabulaire. Inventer une durée est une faute.
+3. **Transition nommée** parmi les sept du vocabulaire. Inventer une durée est une faute.
 4. **Les six états traités**, et pas seulement ceux qu'on a sous la main au moment de coder. Le sélectionné-inactif est celui qu'on oublie systématiquement, et c'est celui qui fait tout le travail en tuilage.
+5. **Sobre en ressources.** Sans budget chiffré, l'usage des ressources est optimisé : une surface qui n'est pas visible en permanence se charge à la demande et se libère à la fermeture, et l'élément est relevé avant sa fusion (processeur au repos, mémoire), pour qu'une dérive se voie à la feature qui la cause (D80).
 
 ### Pour un élément configuré
 
@@ -496,6 +497,7 @@ Le choix de la distribution de base et du compositeur, précédemment ouverts, s
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-12 | Version initiale, 137 éléments |
+| 1.23 | 2026-10-22 | Coque en QML sur Quickshell (D80) : L2-01 précisé, L2-06 compte sept transitions, cinquième condition de la définition de terminé (sobriété en ressources) |
 | 1.22 | 2026-10-22 | L2-30 : capture provisoire par hyprshot, rôle `capture` à trois variantes (D79) |
 | 1.21 | 2026-10-19 | Recette de sortie du lot 1 passée, deux réserves (D78) : écran externe (L1-09), changement de sortie audio rattaché à L3-05 |
 | 1.20 | 2026-10-19 | L1-21 fait : crochet, contrôle GitHub et règle de `main` (D77) |
