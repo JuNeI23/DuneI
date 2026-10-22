@@ -1629,8 +1629,9 @@ sRGB, matière, tailles, états composés, anneau de focus), `make install` le d
 - **`ColorSpring`** : un changement de thème est appliqué d'un bloc, sans animation, pour que tout bascule dans
   la même image (règle de Nicolas) ; un changement d'état s'anime par le ressort `transitions.state`, repris en
   vol depuis la couleur affichée.
-- **Hors périmètre** : `proto/motion` et `proto/ilot` restent des maquettes jetables. `physics.js` est
-  déplacé dans `coque/Theme/` et les maquettes le retrouvent par un lien symbolique.
+- **Hors périmètre** : `proto/ilot` reste une maquette jetable, et `proto/motion` le banc de réglage du
+  mouvement conservé comme outil (D13) ; ni l'un ni l'autre ne passe sur le module `coque/Theme`.
+  `physics.js` est déplacé dans `coque/Theme/` et tous deux le retrouvent par un lien symbolique.
 - **Import.** Quickshell 0.3.2 sert la coque par un système de fichiers virtuel limité à sa racine : un import
   relatif qui en sort n'est pas résolu. Repli : un lien symbolique relatif sous la racine de chaque coque
   (`essai/Theme -> ..`, `planche/Theme -> ../../Theme`) et `import "Theme"`.

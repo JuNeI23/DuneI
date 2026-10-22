@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.17. Historique en fin de document.
+Version 1.18. Historique en fin de document.
 
 Socle amorçable.
 
@@ -1540,6 +1540,11 @@ du bouton d'essai, anneau de focus à l'accent autonome, arêtes nettes à l'éc
 pas pu se faire à l'écran, aucune application GTK n'étant installée ; elle a été faite contre le fond du bureau,
 et les valeurs générées sont identiques (`#120601`, `#1b0e06`, `#a35300`).
 
+Les transitions du bouton d'essai (survol, pression, bascules de sélection et d'activation) ont été validées à
+l'écran par Nicolas. Le cas du fichier corrompu (design, § 9.4) est couvert par un test automatique
+(`test_contenu_corrompu`) et a été vérifié par Claude sur la planche ouverte ; il n'a pas été rejoué par
+Nicolas.
+
 | Relevé (`caladan`, planche ouverte, sans interaction) | Valeur |
 | --- | --- |
 | Processeur au repos, sur 10 s | 0,0 à 0,1 % |
@@ -1554,11 +1559,27 @@ de D80 (sobriété), la planche étant lancée à la demande.
 ### Mineures reportées
 
 À reprendre en passant : `_camel_keys` ne descend pas dans les listes de tables ; `density` est lu sans `?.` ;
-`seen.tokens` de `ColorSpring` peut rester périmé après un changement de thème à couleur identique (un saut
-au changement d'état suivant) ; aucun test automatique « un changement d'état anime encore » ; texte
+dans l'émetteur Quickshell, `_focus` refait à la main le décalage de chroma de `decale` pour `colorMuted`, et
+les quatre branches de sélection des états sont toutes calculées avant que la bonne soit choisie ; dans
+`deploy.py`, la cible `make` conseillée pour une source manquante se déduit du nom `motion.json` et non du
+tuple `COQUE` ; `Theme` ne vérifie que trois groupes de premier niveau (`_generated`, `color`, `states`) : la
+validation complète se réglera avec L2-26, par un numéro de version de schéma écrit par le générateur ; texte
 désactivé et survol de `inactive` et `activeMuted` non testés ; `planche.sh` ne refuse que `generated/` exact,
-pas un sous-dossier ; `mesure.sh` rapproche une cible par sous-chaîne d'identifiant ; l'ombre e3 de la planche
-est approchée. Rien de cela ne bloque L2-01.
+pas un sous-dossier ; `mesure.sh` rapproche une instance par sous-chaîne d'identifiant ; l'ombre e3 de la
+planche est approchée. Rien de cela ne bloque L2-01.
+
+Corrigé à la relecture finale : `seen.tokens` de `ColorSpring` est maintenant rafraîchi un tour de boucle après
+chaque nouvel objet de tokens, de sorte qu'une relecture à contenu identique (chaque `make install`) ne fait
+plus sauter le changement d'état suivant, et qu'un ressort en vol dont la cible ne change pas se pose sur
+elle ; `test_relecture_identique` et `test_relecture_en_vol` le vérifient. `mesure.sh` lit le temps processeur
+après la dernière « ) » de `/proc/<pid>/stat`, un nom de processus pouvant contenir des espaces.
+
+### Points ouverts pour L2-01
+
+- `ColorSpring` prend toujours le ressort `transitions.state.in`. Or `motion.toml` donne à `state` un
+  `exit_ratio` de 0,70, conformément à la bible (« La sortie vaut environ 70 % de l'entrée ») : L2-01 doit
+  décider si le retour au repos (fin de survol, relâchement) est une sortie, servie par le ressort `out`, et
+  donner à `ColorSpring` le moyen de choisir son ressort selon le sens du changement.
 
 ## Lecteur d'empreinte — nouveau
 
@@ -1662,6 +1683,7 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 
 | Version | Date | Changement |
 | --- | --- | --- |
+| 1.18 | 2026-10-22 | Tokens de la coque (L2-34), relecture finale : recette précisée (transitions validées par Nicolas, fichier corrompu couvert par test et vérifié par Claude), mineures reportées complétées, corrections de `ColorSpring` et `mesure.sh`, points ouverts pour L2-01 (ressort de sortie) |
 | 1.17 | 2026-10-22 | Tokens de la coque (L2-34) : fichiers et chemins, `DUNEI_TOKENS_DIR`, schéma, choix d'import, planche de contrôle, recette et relevés (D81) |
 | 1.16 | 2026-10-22 | Capture d'écran provisoire : `Print` et ses deux variantes, rôle `capture` tenu par hyprshot (D79) |
 | 1.15 | 2026-10-19 | Recette de sortie du lot 1 : dix-sept lignes et non seize, quinze passées, deux réservées (écran externe, changement de sortie audio) ; relevés de veille d'avant la réinstallation gardés ; ligne de la fenêtre active rapportée à D29 (D78) |

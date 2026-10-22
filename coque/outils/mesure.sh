@@ -31,8 +31,9 @@ fi
 
 # temps — temps processeur cumulé (utilisateur + système) du processus, en tops d'horloge.
 # Entrée : aucune (lit $pid). Sortie : entier. Erreurs : processus disparu → échec de awk, arrêt par set -e.
-# Dépendances : /proc/<pid>/stat (champs 14 et 15, la commande « (qs) » ne contenant pas d'espace).
-temps() { awk '{print $14 + $15}' "/proc/$pid/stat"; }
+# Dépendances : /proc/<pid>/stat, champs 14 et 15 ; le nom du processus, entre parenthèses, peut contenir
+# des espaces : tout est retiré jusqu'à la dernière « ) », puis ce sont les champs 12 et 13 du reste.
+temps() { awk '{ sub(/.*\) /, ""); print $12 + $13 }' "/proc/$pid/stat"; }
 
 t0=$(temps); sleep "$dur"; t1=$(temps)
 awk -v pid="$pid" -v c=$((t1 - t0)) -v hz="$(getconf CLK_TCK)" -v d="$dur" '

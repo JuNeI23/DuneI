@@ -88,6 +88,16 @@ class CoqueThemeTest(unittest.TestCase):
         shutil.copy(self.tokens(teinte), temp)
         os.replace(temp, self.dir / "coque-tokens.json")
 
+    def ipc(self, *commande: str) -> None:
+        """Appelle une fonction IPC de la coque d'essai.
+
+        Entrée : commande — nom de la fonction (etat, lent) suivi de ses arguments.
+        Sortie : aucune ; la coque journalise l'effet, voir coque/Theme/essai/shell.qml.
+        Erreurs : CalledProcessError si l'appel IPC échoue. Dépendances : qs, lancer.
+        """
+        subprocess.run([QS, "ipc", "--pid", str(self.proc.pid), "call", "essai", *commande],
+                       check=True, capture_output=True, timeout=DELAI)
+
     def lancer(self, dossier: Path) -> None:
         """Démarre la coque d'essai, journal redirigé dans un fichier.
 
@@ -141,6 +151,32 @@ class CoqueThemeTest(unittest.TestCase):
         # Changement de thème : le ressort de couleur se pose d'un coup, comme les couleurs liées directement.
         self.attendre("essai : ressort", 3)
         self.assertEqual(self.journal().count("essai : ressort posé"), 3, self.journal())
+
+    def test_relecture_identique(self):
+        self.installer(55)
+        self.lancer(self.dir)
+        self.attendre("essai : ressort posé")
+        # make install recopie les tokens par renommage même inchangés : un nouvel objet, aucune cible changée.
+        self.remplacer(55)
+        self.attendre("Theme : chargé, teinte 55", 2)
+        self.attendre("essai : ressort", 2)
+        # Le changement d'état suivant doit encore animer, et non se poser comme un changement de thème.
+        self.ipc("etat", "hover")
+        self.attendre("essai : état hover, ressort")
+        self.assertIn("essai : état hover, ressort en vol", self.journal())
+
+    def test_relecture_en_vol(self):
+        self.installer(55)
+        self.lancer(self.dir)
+        self.attendre("essai : ressort posé")
+        self.ipc("lent")
+        self.ipc("etat", "hover")
+        self.attendre("essai : état hover, ressort en vol")
+        # Nouvel objet de tokens, cible inchangée : le ressort en vol se pose sur sa cible, sans finir de
+        # mélanger depuis une origine de l'ancien thème.
+        self.remplacer(55)
+        self.attendre("essai : ressort", 2)
+        self.assertEqual(self.journal().count("essai : ressort posé"), 2, self.journal())
 
     def test_contenu_corrompu(self):
         self.installer(55)

@@ -10,7 +10,9 @@ import "physics.js" as Physics
 //           changements d'état.
 // Sorties : value couleur affichée ; moving vrai tant que le ressort avance.
 // Erreurs : aucune ; avant que Theme soit prêt, au premier chargement et à chaque changement de thème,
-//           value prend target sans animation : tout le thème bascule dans la même image.
+//           value prend target sans animation : tout le thème bascule dans la même image. Un nouvel objet de
+//           tokens qui ne change pas la cible (relecture d'un contenu identique, ou cible de même valeur dans
+//           les deux thèmes) pose aussi un ressort en vol sur sa cible, au tour de boucle suivant.
 // Dépendances : Theme (singleton du module), physics.js (integrate, atRest).
 Item {
     id: spring
@@ -40,6 +42,25 @@ Item {
         origin = value
         st = { x: 0, v: 0, acc: 0 }
         anim.restart()
+    }
+
+    // settle — prend acte d'un nouvel objet de tokens que onTargetChanged n'a pas vu passer.
+    // Rôle : appelé un tour de boucle après Theme.tokensChanged, quand toutes les liaisons sont réévaluées ;
+    //        si la cible n'a pas changé (contenu identique ou même couleur dans les deux thèmes), mémorise le
+    //        nouvel objet, faute de quoi le prochain changement d'état se poserait d'un coup au lieu d'animer,
+    //        et pose sur sa cible un ressort en vol, dont l'origine appartient à l'ancien thème.
+    // Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : Theme.tokens, anim.
+    function settle() {
+        if (seen.tokens === Theme.tokens) return
+        seen.tokens = Theme.tokens
+        anim.stop()
+        value = target
+    }
+
+    // Le délai laisse onTargetChanged, déclenché par la même notification, poser le ressort dans la même image.
+    Connections {
+        target: Theme
+        function onTokensChanged() { Qt.callLater(spring.settle) }
     }
 
     // mix — interpolation linéaire composante par composante entre deux couleurs.

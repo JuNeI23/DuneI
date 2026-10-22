@@ -49,6 +49,8 @@ ShellRoot {
     readonly property var lisere: Theme.hairline(dpr)
 
     // Legende — texte secondaire en petite taille, pour les noms et les valeurs.
+    // Entrées : text, et color pour remplacer la couleur secondaire. Sortie : texte. Erreurs : aucune.
+    // Dépendances : Theme.
     component Legende: Text {
         color: Theme.color.textSecondary
         font.family: Theme.typo.interface
