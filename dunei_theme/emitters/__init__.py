@@ -3,7 +3,7 @@
 Ajouter une cible = écrire un module, puis l'inscrire ici. Rien d'autre ne change.
 """
 
-from . import css, fontconfig, gtk, hyprland, json_, kde, portal
+from . import css, fontconfig, gtk, hyprland, json_, kde, portal, quickshell
 
 TARGETS = {
     "tokens.css": css.emit,
@@ -16,4 +16,5 @@ TARGETS = {
     "hyprland-rules.lua": hyprland.emit_rules,  # règles de fenêtre d'apparence (couche 1, plein écran)
     "hyprland-binds.lua": hyprland.emit_binds,  # valeurs lues par les raccourcis (pas de redimensionnement)
     "fonts.conf": fontconfig.emit,          # indirection des polices, repli, rendu
+    "coque-tokens.json": quickshell.emit,   # coque Quickshell (L2-34)
 }
