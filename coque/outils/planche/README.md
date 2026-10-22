@@ -1,6 +1,6 @@
 # Planche de contrôle des tokens de la coque
 
-Version 0.1 — outil de développement de L2-34, gardé ensuite pour tout travail sur les tokens et la coque.
+Version 0.2 — outil de développement de L2-34, gardé ensuite pour tout travail sur les tokens et la coque.
 
 La planche affiche dans une fenêtre flottante chaque token de `coque-tokens.json` rendu par Quickshell, et un
 bouton d'essai qui parcourt tous ses états. Elle ne lit que le module `coque/Theme` : aucune valeur de design
@@ -16,7 +16,8 @@ coque/outils/planche/planche.sh teinte 200 # planche ouverte : régénère seule
 ```
 
 Le script génère `coque-tokens.json` et `motion.json` (avec les autres cibles du générateur) dans un dossier
-de brouillon, `${XDG_RUNTIME_DIR:-/tmp}/dunei-planche`, que `DUNEI_PLANCHE_DIR` peut remplacer, puis lance
+de brouillon, `${XDG_RUNTIME_DIR:-/tmp}/dunei-planche`, que `DUNEI_PLANCHE_DIR` peut remplacer (jamais par
+`generated/`, refusé), puis lance
 `qs -n -p coque/outils/planche` avec `DUNEI_TOKENS_DIR` pointé vers ce dossier. `generated/` n'est jamais
 touché. Une seconde planche ne s'ouvre pas tant que la première tourne (`qs -n`). Le journal de Quickshell
 reste sur le terminal : chaque lecture appliquée y écrit « Theme : chargé, teinte N », chaque fichier
@@ -50,9 +51,11 @@ posé dans `shell.qml`, et une clé inconnue s'ajoute à la suite.
 - **Import du module.** Quickshell ne résout pas un module situé au-dessus de la racine de la coque lancée :
   le lien `planche/Theme -> ../../Theme` le place sous cette racine, et `shell.qml` l'importe par `import "Theme"`.
 - **Création de la fenêtre.** La fenêtre est créée par un `LazyLoader` en mode `activeAsync` dès que
-  `Theme.ready` passe à vrai. Une création synchrone, déclenchée pendant la notification de `Theme.ready`,
-  trouvait encore indéfinis les raccourcis de groupe (`Theme.color`, `Theme.space`…), qui se réévaluent après.
+  `Theme.ready` passe à vrai : elle se construit hors de la notification, dans le temps libre entre deux images.
   Sans tokens valides au démarrage, aucune fenêtre ne s'ouvre et le journal donne l'erreur de `Theme`.
+- **Liserés.** Bordures et arêtes prennent `Theme.hairline(devicePixelRatio)` de la fenêtre : un pixel physique
+  quand `render.hairlinePhysical` est vrai, donc net à toute mise à l'échelle. Les arêtes sont tracées sans
+  anticrénelage, pour couvrir exactement une rangée de pixels.
 
 ## Mesurer
 
@@ -77,3 +80,4 @@ la PSS lues dans `/proc/<pid>/smaps_rollup`.
 | Version | Date | Changement |
 |---|---|---|
 | 0.1 | 2026-10-22 | Version initiale : nuanciers, états, bouton d'essai, élévations, espacement, rayons, typographie (L2-34). |
+| 0.2 | 2026-10-22 | Après relecture : liserés en pixels physiques, bouton d'essai désactivé en entier, brouillon en chemin absolu. |

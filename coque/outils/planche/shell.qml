@@ -44,6 +44,10 @@ ShellRoot {
     // Erreurs : aucune. Dépendances : noms.
     function nom(cle) { return noms[cle] ?? cle }
 
+    // Épaisseur des liserés en pixels logiques, selon le rapport de pixels de la fenêtre (Theme.hairline).
+    property real dpr: 1
+    readonly property var lisere: Theme.hairline(dpr)
+
     // Legende — texte secondaire en petite taille, pour les noms et les valeurs.
     component Legende: Text {
         color: Theme.color.textSecondary
@@ -79,7 +83,7 @@ ShellRoot {
             radius: Theme.radius.small
             color: parent.teinte
             border.color: Theme.color.borderSubtle
-            border.width: 1
+            border.width: racine.lisere
         }
         Legende { text: parent.nom }
         Legende { text: parent.teinte.toString(); color: Theme.color.textTertiary }
@@ -116,7 +120,7 @@ ShellRoot {
         radius: Theme.radius.control
         color: etat.fill
         border.color: Theme.color.borderDefault
-        border.width: 1
+        border.width: racine.lisere
         Legende { id: texte; anchors.centerIn: parent; color: bascule.etat.text }
         MouseArea {
             id: souris
@@ -132,10 +136,12 @@ ShellRoot {
         activeAsync: Theme.ready
 
         FloatingWindow {
+            id: fenetre
             title: "DuneI — planche de contrôle"
             color: Theme.color.surfaceBase
             implicitWidth: page.implicitWidth + 2 * Theme.space.blockGap
             implicitHeight: page.implicitHeight + 2 * Theme.space.blockGap
+            Binding { target: racine; property: "dpr"; value: fenetre.devicePixelRatio }
 
             Flickable {
                 anchors.fill: parent
@@ -306,7 +312,8 @@ ShellRoot {
                                         implicitHeight: Theme.density.controlHeight
                                         radius: Theme.radius.control
                                         color: fond.value
-                                        activeFocusOnTab: !eteint.coche
+                                        enabled: !eteint.coche
+                                        activeFocusOnTab: true
                                         Keys.onSpacePressed: choisi.coche = !choisi.coche
 
                                         ColorSpring { id: fond; target: essai.etat.fill }
@@ -325,7 +332,6 @@ ShellRoot {
                                             id: zone
                                             anchors.fill: parent
                                             hoverEnabled: true
-                                            enabled: !eteint.coche
                                             onClicked: choisi.coche = !choisi.coche
                                         }
                                         // Anneau de focus : hors du bouton, à l'écart offset, atténué en conteneur inactif.
@@ -378,14 +384,19 @@ ShellRoot {
                                                 shadowBlur: 1
                                                 shadowVerticalOffset: Theme.window.floatingShadow.offsetY
                                             }
+                                            // Arêtes d'un liseré : sans anticrénelage, le rectangle d'un pixel physique
+                                            // couvre exactement une rangée de pixels, quelle que soit sa position.
                                             Rectangle {
                                                 visible: carte.e.edgeLight
-                                                x: carte.radius; width: carte.width - 2 * carte.radius; height: 1
+                                                antialiasing: false
+                                                x: carte.radius; width: carte.width - 2 * carte.radius; height: racine.lisere
                                                 color: Theme.material.edgeLight
                                             }
                                             Rectangle {
                                                 visible: carte.e.edgeLight
-                                                x: carte.radius; y: carte.height - 1; width: carte.width - 2 * carte.radius; height: 1
+                                                antialiasing: false
+                                                x: carte.radius; y: carte.height - height; width: carte.width - 2 * carte.radius
+                                                height: racine.lisere
                                                 color: Theme.material.edgeShadow
                                             }
                                             Column {
@@ -434,7 +445,7 @@ ShellRoot {
                                                 radius: Theme.radius[parent.modelData]
                                                 color: Theme.color.surfaceRaised
                                                 border.color: Theme.color.borderStrong
-                                                border.width: 1
+                                                border.width: racine.lisere
                                             }
                                             Legende { text: parent.modelData + " " + Theme.radius[parent.modelData] }
                                         }

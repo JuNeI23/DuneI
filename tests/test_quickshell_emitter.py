@@ -41,6 +41,10 @@ class QuickshellEmitterTest(unittest.TestCase):
         self.assertEqual(self.out["material"]["edgeLight"], "#14ffffff")
         self.assertTrue(self.out["render"]["scrim"].startswith("#8c"))
 
+    def test_liseres_physiques(self):
+        self.assertEqual(list(self.out["render"]), ["scrim", "neverAnimateBlurRadius", "hairlinePhysical"])
+        self.assertIs(self.out["render"]["hairlinePhysical"], self.data["scaling"]["hairlines_in_physical_pixels"])
+
     def test_elevation(self):
         e = self.out["elevation"]
         self.assertIsNone(e["e1"]["sheenTop"])

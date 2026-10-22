@@ -4,15 +4,17 @@
 # planche en y redirigeant Theme par DUNEI_TOKENS_DIR. generated/ n'est jamais touché.
 # Entrées : `planche.sh [teinte]` génère (avec la teinte machine si aucune n'est donnée) et lance la planche ;
 #           `planche.sh teinte <n>` régénère seulement le brouillon : la planche ouverte bascule d'un bloc.
-#           DUNEI_PLANCHE_DIR remplace le dossier de brouillon, ${XDG_RUNTIME_DIR:-/tmp}/dunei-planche.
+#           DUNEI_PLANCHE_DIR remplace le dossier de brouillon, ${XDG_RUNTIME_DIR:-/tmp}/dunei-planche ; un
+#           chemin relatif part du répertoire courant.
 # Sortie : fenêtre « DuneI — planche de contrôle » et journal de Quickshell sur la sortie standard.
-# Erreurs : qs absent, teinte manquante ou génération refusée → message et code 1 ; une seconde planche ne
-#           s'ouvre pas (qs -n).
+# Erreurs : qs absent, teinte manquante, brouillon égal à generated/ ou génération refusée → message et
+#           code 1 ; une seconde planche ne s'ouvre pas (qs -n).
 # Dépendances : quickshell ≥ 0.3 (qs), python3, generate_tokens.py et generate_motion.py du dépôt.
 set -euo pipefail
 dir="$(dirname "$(realpath "$0")")"
 repo="$(realpath "$dir/../../..")"
-out="${DUNEI_PLANCHE_DIR:-${XDG_RUNTIME_DIR:-/tmp}/dunei-planche}"
+out="$(realpath -m "${DUNEI_PLANCHE_DIR:-${XDG_RUNTIME_DIR:-/tmp}/dunei-planche}")"
+[[ $out != "$repo/generated" ]] || { echo "planche : le brouillon ne peut pas être generated/" >&2; exit 1; }
 
 # genere — écrit les tokens et le mouvement dans le brouillon.
 # Entrées : $1 teinte simulée, facultative. Sortie : fichiers régénérés dans $out.

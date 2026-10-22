@@ -9,7 +9,8 @@ import Quickshell.Io
 // les liaisons se réévaluent dans la même image. Aucune valeur de design n'est écrite ici.
 // Entrées : DUNEI_TOKENS_DIR (dossier redirigé, pour la planche et les essais), sinon
 //           $XDG_CONFIG_HOME/dunei, sinon $HOME/.config/dunei.
-// Sorties : dir, ready, tokens et ses raccourcis par groupe, density (confortable), motion, stateColors().
+// Sorties : dir, ready, tokens et ses raccourcis par groupe, density (confortable), motion, stateColors(),
+//           hairline().
 // Erreurs : fichier absent ou illisible → console.error, ready reste faux ; contenu invalide ou incomplet →
 //           console.warn, valeurs précédentes gardées.
 // Dépendances : Quickshell (env), Quickshell.Io (FileView, FileViewError).
@@ -20,7 +21,11 @@ Singleton {
         || (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config") + "/dunei"
     property var tokens: null
     property var motion: null
-    readonly property bool ready: tokens !== null && motion !== null
+    // ready est posé par affectation, après celle des données, dans chaque onParsed : lié directement à tokens,
+    // il pouvait changer pendant la notification de tokensChanged avant que les raccourcis ci-dessous ne soient
+    // réévalués, et un consommateur réagissant à readyChanged lisait alors Theme.color indéfini.
+    property bool _ready: false
+    readonly property bool ready: _ready
 
     readonly property var color: tokens?.color
     readonly property var states: tokens?.states
@@ -47,6 +52,17 @@ Singleton {
     // Erreurs : aucune. Dépendances : tokens.
     function stateColors(role, selection, interaction) {
         return tokens?.states[role]?.[selection]?.[interaction]
+    }
+
+    // hairline — épaisseur d'un liseré (arête, bordure d'un pixel) en pixels logiques Qt.
+    // Rôle : simple conversion d'unité ; la règle vient de render.hairlinePhysical (tokens.toml,
+    //        scaling.hairlines_in_physical_pixels) : vraie, le liseré occupe un pixel physique quelle que soit
+    //        la mise à l'échelle de l'écran, sans flou.
+    // Entrées : dpr, rapport pixels physiques / logiques de la fenêtre (QsWindow.devicePixelRatio).
+    // Sortie : 1 / dpr si la règle s'applique, sinon 1 ; undefined avant le chargement des tokens.
+    // Erreurs : aucune. Dépendances : tokens.render.
+    function hairline(dpr) {
+        return render ? (render.hairlinePhysical ? 1 / dpr : 1) : undefined
     }
 
     // parse — analyse un fichier lu et vérifie ses clés obligatoires.
@@ -93,6 +109,7 @@ Singleton {
         keys: ["_generated", "color", "states"]
         onParsed: data => {
             root.tokens = data
+            root._ready = root.motion !== null
             console.info("Theme : chargé, teinte " + data.hue)
         }
     }
@@ -102,6 +119,7 @@ Singleton {
         keys: ["_generated", "transitions"]
         onParsed: data => {
             root.motion = data
+            root._ready = root.tokens !== null
             console.info("Theme : mouvement chargé, version " + data.version)
         }
     }

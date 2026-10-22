@@ -308,7 +308,8 @@
   },
   "render": {
     "scrim": "#8c000000",
-    "neverAnimateBlurRadius": true
+    "neverAnimateBlurRadius": true,
+    "hairlinePhysical": true
   },
   "space": {
     "scale": [

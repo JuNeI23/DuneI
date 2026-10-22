@@ -127,7 +127,8 @@ class CoqueThemeTest(unittest.TestCase):
         self.installer(55)
         self.lancer(self.dir)
         self.attendre("Theme : chargé, teinte 55")
-        self.attendre("essai : prêt true")
+        # Theme.ready ne passe à vrai qu'une fois les raccourcis de groupe (Theme.color…) réévalués.
+        self.attendre("essai : prêt true, couleurs définies")
 
     def test_remplacement_par_renommage(self):
         self.installer(55)
