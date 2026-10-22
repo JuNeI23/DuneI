@@ -45,12 +45,79 @@ def _argb(col: Oklch, alpha: float) -> str:
     return f"#{round(alpha * 255):02x}{to_hex(col)[1:]}"
 
 
+def _states(model: dict) -> dict:
+    """Combinaisons d'états précalculées — rôle, sélection, interaction vers fond et texte.
+
+    Règles de la bible (ch. 7), appliquées dans l'ordre base, sélection, survol, pression,
+    désactivé. Le QML n'a ainsi aucune règle de couleur à porter.
+
+    Entrée : model — sortie de model.resolve.
+    Sortie : dict states[rôle][sélection][interaction] = {"fill": "#rrggbb", "text": "#rrggbb"},
+             soit 3 × 4 × 4 entrées. Erreurs : KeyError si une section du TOML manque.
+    Dépendances : color.oklch, color.to_hex.
+    """
+    raw, roles = model["raw"], model["roles"]
+    ceiling, st = raw["theme"]["chroma_ceiling"], raw["states"]
+    acc, texte = model["accent"], roles["text-primary"]
+    muet = st["container_inactive"]["accent_chroma_multiplier"]
+
+    def decale(col, dl=0.0, dc=1.0):
+        """Couleur dont la luminosité est décalée et le chroma multiplié, rabattue dans le gamut.
+
+        Entrées : col — couleur ; dl — décalage de luminosité ; dc — facteur de chroma.
+        Sortie : Oklch. Erreurs : aucune. Dépendances : color.oklch.
+        """
+        return oklch(col.l + dl, col.c * dc, col.h, ceiling)
+
+    def eteint(col, fond):
+        """Couleur désactivée — luminosité rapprochée de celle du fond, chroma atténué.
+
+        Entrées : col — couleur à éteindre ; fond — couleur dont on se rapproche.
+        Sortie : Oklch. Erreurs : aucune. Dépendances : decale.
+        """
+        d = st["disabled"]
+        return decale(col, (fond.l - col.l) * d["lightness_toward_background"], d["chroma_multiplier"])
+
+    def combinaisons(role, selection):
+        """Les quatre interactions d'une sélection sur un rôle de surface.
+
+        Entrées : role — couleur du rôle ; selection — none, active, inactive ou activeMuted.
+        Sortie : dict interaction vers {"fill", "text"}. Erreurs : aucune.
+        Dépendances : decale, eteint, color.to_hex.
+        """
+        fond, txt = {"none": (role, texte), "active": (acc, model["on_accent"]),
+                     "inactive": (model["ramp"][st["selected_inactive"]["lightness_step"]], texte),
+                     "activeMuted": (decale(acc, 0, muet), model["on_accent"])}[selection]
+        fond_off = eteint(fond, role)
+        cols = {"rest": (fond, txt), "hover": (decale(fond, st["hover"]["lightness_delta"]), txt),
+                "pressed": (decale(fond, st["pressed"]["lightness_delta"]), txt),
+                "disabled": (fond_off, eteint(txt, fond_off))}
+        return {k: {"fill": to_hex(f), "text": to_hex(t)} for k, (f, t) in cols.items()}
+
+    return {_camel(r): {s: combinaisons(roles[r], s) for s in ("none", "active", "inactive", "activeMuted")}
+            for r in ("surface-window", "surface-panel", "surface-raised")}
+
+
+def _focus(model: dict) -> dict:
+    """Anneau de focus — couleurs lisibles sur fond sombre, épaisseur et décalages.
+
+    Entrée : model — sortie de model.resolve.
+    Sortie : dict {color, colorMuted, width, offset, rowOffset}.
+    Erreurs : KeyError si `states.focus` manque au TOML. Dépendances : color.oklch, color.to_hex.
+    """
+    f, acc = model["raw"]["states"]["focus"], model["accent_standalone"]
+    muet = model["raw"]["states"]["container_inactive"]["accent_chroma_multiplier"]
+    return {"color": to_hex(acc),
+            "colorMuted": to_hex(oklch(acc.l, acc.c * muet, acc.h, model["raw"]["theme"]["chroma_ceiling"])),
+            "width": f["ring_width"], "offset": f["ring_offset"], "rowOffset": f["ring_offset_row"]}
+
+
 def emit(model: dict) -> str:
-    """Fichier `coque-tokens.json`, hors combinaisons d'états.
+    """Fichier `coque-tokens.json`.
 
     Entrée : model — sortie de model.resolve.
     Sortie : contenu du fichier JSON. Erreurs : KeyError si une section du TOML manque.
-    Dépendances : json, _camel, _camel_keys, _argb, color.oklch, color.to_hex.
+    Dépendances : json, _camel, _camel_keys, _argb, _states, _focus, color.oklch, color.to_hex.
     """
     raw, sem = model["raw"], model["semantic"]
     mat, ceiling = raw["surface_material"], raw["theme"]["chroma_ceiling"]
@@ -85,6 +152,8 @@ def emit(model: dict) -> str:
             **{k: to_hex(sem[k]) for k in ("error", "warning", "success", "info")},
             "categorical": [to_hex(c) for c in model["categorical"]],
         },
+        "states": _states(model),
+        "focus": _focus(model),
         "disabled": {k: raw["states"]["disabled"][k] for k in ("opacity", "shadow")},
         "elevation": levels,
         "material": {

@@ -27,7 +27,7 @@ class QuickshellEmitterTest(unittest.TestCase):
 
     def test_cles_premier_niveau(self):
         self.assertEqual(list(self.out), [
-            "_generated", "hue", "color", "disabled", "elevation", "material", "render",
+            "_generated", "hue", "color", "states", "focus", "disabled", "elevation", "material", "render",
             "space", "density", "radius", "window", "layout", "breakpoints", "typo", "icons"])
 
     def test_roles_en_srgb(self):
@@ -53,6 +53,36 @@ class QuickshellEmitterTest(unittest.TestCase):
         self.assertEqual(o["radius"]["control"], 6)
         self.assertEqual(o["density"]["compact"]["controlHeight"], 24)
         self.assertEqual(o["typo"]["weightMedium"], 550)
+
+    def test_states_complet(self):
+        """Vérifie la présence des 48 combinaisons, chacune avec un fond et un texte."""
+        for r in ("surfaceWindow", "surfacePanel", "surfaceRaised"):
+            for s in ("none", "active", "inactive", "activeMuted"):
+                for i in ("rest", "hover", "pressed", "disabled"):
+                    with self.subTest(r=r, s=s, i=i):
+                        self.assertEqual(set(self.out["states"][r][s][i]), {"fill", "text"})
+
+    def test_states_valeurs(self):
+        """Vérifie les règles de la bible sur la teinte 55 et le rôle surfacePanel."""
+        m, ce = self.model, self.data["theme"]["chroma_ceiling"]
+        st, panel, acc = self.out["states"]["surfacePanel"], m["roles"]["surface-panel"], m["accent"]
+        txt = to_hex(m["roles"]["text-primary"])
+        self.assertEqual(st["none"]["rest"]["fill"], to_hex(panel))
+        self.assertEqual(st["none"]["hover"]["fill"], to_hex(oklch(panel.l + 0.04, panel.c, panel.h, ce)))
+        self.assertEqual(st["active"]["rest"], {"fill": to_hex(acc), "text": to_hex(m["on_accent"])})
+        self.assertEqual(st["active"]["pressed"]["fill"], to_hex(oklch(acc.l - 0.03, acc.c, acc.h, ce)))
+        self.assertEqual(st["activeMuted"]["rest"]["fill"], to_hex(oklch(acc.l, 0, acc.h, ce)))
+        self.assertEqual(st["inactive"]["rest"], {"fill": to_hex(m["ramp"][4]), "text": txt})
+        self.assertEqual(st["none"]["disabled"]["fill"], to_hex(oklch(panel.l, panel.c * 0.15, panel.h, ce)))
+        self.assertEqual(st["active"]["disabled"]["fill"],
+                         to_hex(oklch(acc.l + (panel.l - acc.l) * 0.55, acc.c * 0.15, acc.h, ce)))
+
+    def test_focus(self):
+        """Vérifie l'anneau de focus : couleurs, épaisseur et décalages."""
+        a = self.model["accent_standalone"]
+        self.assertEqual(self.out["focus"], {
+            "color": to_hex(a), "colorMuted": to_hex(oklch(a.l, 0, a.h, self.data["theme"]["chroma_ceiling"])),
+            "width": 2, "offset": 2, "rowOffset": -1})
 
     def test_couleurs_valides(self):
         motif = re.compile(r"^#([0-9a-f]{2})?[0-9a-f]{6}$")
