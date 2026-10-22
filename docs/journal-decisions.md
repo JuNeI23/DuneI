@@ -1558,3 +1558,46 @@ peut donc être une table de variantes, que l'entrée du raccourci nomme par `va
 l'outil reste l'affaire de `roles.lua` seul.
 
 *Touché : carnet (raccourcis), backlog (L2-30), direction.*
+
+### D80 · La coque est écrite en QML sur Quickshell ; sobriété exigée, sans budget chiffré
+
+2026-10-22. La technologie de la coque du lot 2 est **Quickshell** (QML sur Qt 6, version 0.3.2 du dépôt
+`extra`). Toute la coque — barre, lanceur, overlays, écrans système, réglages, bibliothèque de composants —
+s'écrit au-dessus.
+
+Repérage : Quickshell, AGS et Astal, Ignis, Fabric, eww, les voies Rust natives (gtk4-rs et relm4, iced et
+iced_exwlshell, libcosmic, Slint), pleamar et hyprtoolkit ont été comparés sur le rendu et le mouvement,
+l'intégration à Hyprland, la consommation des tokens, la performance et la pérennité. Quickshell est le seul
+à couvrir d'origine les éléments difficiles du lot : agent polkit (L2-24), vignettes de fenêtres (L2-17),
+verrouillage par `ext-session-lock` et PAM (L2-22), shaders pour le dithering (L2-05) et les formes qui
+s'étirent. Il recharge à chaud, ce qui sert la validation à l'écran. AGS et Astal restent l'alternative
+crédible, mais GTK 4 a déprécié les shaders personnalisés et ni le polkit ni la capture de fenêtres n'y sont
+fournis. eww et Fabric sont à l'abandon ou trop jeunes, Slint n'a pas de layer-shell, hyprtoolkit vise les
+petits outils.
+
+**Rust** a été examiné à la demande de Nicolas. Dans une coque, le langage n'est pas le goulot : le coût
+est le rendu et le flou, faits par la carte graphique et par Hyprland, et Quickshell rend déjà en C++
+natif. La voie Rust obligeait à réécrire tous les services, n'offrait que des popups immatures et perdait
+le rechargement à chaud. Elle reste ouverte pour un service précis qui s'avérerait lourd, derrière un
+socket ou D-Bus, comme DankMaterialShell le fait avec un démon Go.
+
+**Preuve par maquette** (`proto/ilot`, jetable). Sur `caladan` : les ressorts de `motion.toml` rendus par
+le ressort du banc L1-23, interruption comprise ; un îlot qui s'étire entre quatre états à 60 images par
+seconde, sans image en retard, même repris en vol toutes les 250 ms ; un corps dessiné en un shader
+(champ de distance, sheen tramé IGN, arête de lumière) compilé par `qsb` ; le flou appliqué par le seul
+protocole `ext-background-effect`, sans règle de couche. Relevés : 0,1 % de processeur au repos, 15 % d'un
+cœur et 30 % de charge GPU en morphing continu, 157 Mio de PSS, dont 111 pour le socle Qt et Mesa qu'une
+barre vide charge déjà ; démarrage en 240 ms. Nicolas a validé le rendu à l'écran.
+
+**Ressources.** La mémoire est le point faible de Qt : Noctalia, grande coque Quickshell, l'a quitté pour
+un rendu C++ maison après une fuite par écran branché. Nicolas ne fixe **pas de budget chiffré**, dans la
+ligne de « aucun budget de rendu » ; il exige en revanche une **optimisation de l'usage des ressources**,
+inscrite à la définition de terminé : toute surface qui n'est pas visible en permanence se charge à la
+demande et se libère à la fermeture, et chaque élément écrit est relevé (processeur au repos, mémoire)
+avant sa fusion, pour qu'une dérive se voie à la feature qui la cause. La réserve sur plusieurs écrans
+sera éprouvée avec l'écran externe (D78).
+
+Écart corrigé au passage : la bible compte sept transitions (`navigate` comprise) ; le backlog en comptait
+six.
+
+*Touché : backlog (L2-01, L2-06, définition de terminé), direction, `paquets.toml`, `proto/ilot`.*
