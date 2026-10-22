@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.16. Historique en fin de document.
+Version 1.17. Historique en fin de document.
 
 Socle amorçable.
 
@@ -1478,6 +1478,88 @@ Hyprland. Règle appliquée (identifiant 25405488). Une PR jetable au fichier g�
 merge ») ; un push direct d'un commit vide sur `main` a été refusé (GH013). Les deux refus de Claude Code
 ont arrêté leurs commandes avant tout envoi, essayés sur une PR inexistante.
 
+## Les tokens de la coque — L2-34
+
+La coque du lot 2 est écrite en QML sur Quickshell (D80). Ses éléments prennent leurs valeurs de design dans
+un fichier généré, jamais dans le QML (D81).
+
+### Fichiers et chemins
+
+| Fichier | Source | Rôle |
+| --- | --- | --- |
+| `generated/coque-tokens.json` | `tokens.toml`, par `make tokens` | couleurs, états, matière, tailles |
+| `generated/motion.json` | `motion.toml`, par `make motion` | ressorts et transitions |
+| `~/.config/dunei/coque-tokens.json`, `motion.json` | `make install` | copies lues par la coque |
+
+`make install` dépose ces deux fichiers (copie atomique par renommage) ; la variable `DUNEI_TOKENS_DIR`
+remplace le dossier de lecture (sinon `$XDG_CONFIG_HOME/dunei`, sinon `~/.config/dunei`). Les fichiers portent
+la marque « GÉNÉRÉ » en deuxième ligne et ne s'éditent jamais.
+
+### Schéma de `coque-tokens.json`
+
+Clés de premier niveau, en camelCase : `hue`, `color` (rôles, accent, sémantiques et catégorielles, en
+hexadécimal sRGB), `states` (rôle de surface, puis sélection `none`, `active`, `inactive`, `activeMuted`, puis
+interaction ; chaque feuille donne `fill` et `text`), `focus` (`color`, `colorMuted`, `width`, `offset`,
+`rowOffset`), `disabled`, `elevation`, `material`, `render` (dont `hairlinePhysical`), `space`, `density`,
+`radius`, `window`, `layout`, `breakpoints`, `typo`, `icons`. `Theme.stateColors(rôle, sélection,
+interaction)` renvoie `{fill, text}`.
+
+### Utilisation depuis le QML
+
+`Theme` est un singleton du module `coque/Theme`. Il surveille les deux fichiers : un renommage atomique les
+remplace et la surveillance continue ; un fichier illisible ou incomplet est ignoré avec un avertissement au
+journal, les valeurs précédentes sont gardées ; un fichier absent donne une erreur lisible et `Theme.ready`
+reste faux. Les objets lus dans `Theme` reviennent avec leurs clés **triées par ordre alphabétique** : un
+consommateur qui veut un ordre (sélections, interactions) le pose lui-même. `Theme.hairline(dpr)` donne
+l'épaisseur d'un liseré, un pixel physique quand `render.hairlinePhysical` est vrai. Un consommateur qui crée
+une fenêtre à `Theme.ready` utilise `LazyLoader` en `activeAsync`.
+
+### Choix d'import
+
+Quickshell 0.3.2 sert la coque par un système de fichiers virtuel limité à sa racine : `import "../"` depuis
+`essai/` laisse `Theme` indéfini. Chaque coque qui consomme `Theme` porte donc un lien symbolique relatif sous
+sa racine (`coque/Theme/essai/Theme -> ..`, `coque/outils/planche/Theme -> ../../Theme`) et écrit
+`import "Theme"`. Le lien de `essai` forme une boucle : `tests/test_crochet.py` copie les liens comme liens.
+
+### Planche de contrôle
+
+```bash
+coque/outils/planche/planche.sh            # teinte de la machine
+coque/outils/planche/planche.sh 265        # teinte simulée
+coque/outils/planche/planche.sh teinte 200 # planche ouverte : la planche bascule
+coque/outils/mesure.sh coque/outils/planche 10   # processeur au repos, RSS et PSS
+```
+
+Elle génère un brouillon (`${XDG_RUNTIME_DIR:-/tmp}/dunei-planche`, `DUNEI_PLANCHE_DIR` pour le changer, jamais
+`generated/`) et lance Quickshell dessus. Détail dans `coque/outils/planche/README.md`.
+
+### Recette du 2026-10-22
+
+Validée à l'écran par Nicolas : couleurs identiques au fond du bureau, bascule de teinte d'un bloc, transitions
+du bouton d'essai, anneau de focus à l'accent autonome, arêtes nettes à l'échelle 1,25. La comparaison à GTK n'a
+pas pu se faire à l'écran, aucune application GTK n'étant installée ; elle a été faite contre le fond du bureau,
+et les valeurs générées sont identiques (`#120601`, `#1b0e06`, `#a35300`).
+
+| Relevé (`caladan`, planche ouverte, sans interaction) | Valeur |
+| --- | --- |
+| Processeur au repos, sur 10 s | 0,0 à 0,1 % |
+| PSS de la planche | 232 Mio (RSS 295 Mio) |
+| PSS de la maquette `proto/ilot` | 157 Mio |
+| PSS de la coque d'essai de `Theme`, sans fenêtre | 114 Mio |
+| Part de l'ombre portée (`MultiEffect`) | environ 6 Mio |
+
+L'écart de 75 Mio entre la planche et la maquette de l'îlot n'a pas de cause trouvée ; il est noté pour le suivi
+de D80 (sobriété), la planche étant lancée à la demande.
+
+### Mineures reportées
+
+À reprendre en passant : `_camel_keys` ne descend pas dans les listes de tables ; `density` est lu sans `?.` ;
+`seen.tokens` de `ColorSpring` peut rester périmé après un changement de thème à couleur identique (un saut
+au changement d'état suivant) ; aucun test automatique « un changement d'état anime encore » ; texte
+désactivé et survol de `inactive` et `activeMuted` non testés ; `planche.sh` ne refuse que `generated/` exact,
+pas un sous-dossier ; `mesure.sh` rapproche une cible par sous-chaîne d'identifiant ; l'ombre e3 de la planche
+est approchée. Rien de cela ne bloque L2-01.
+
 ## Lecteur d'empreinte — nouveau
 
 Cet élément n'existe dans aucun document du projet. Il est consigné ici parce qu'il s'installe au lot 1, mais **son travail de conception appartient au lot 5**.
@@ -1580,6 +1662,7 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 
 | Version | Date | Changement |
 | --- | --- | --- |
+| 1.17 | 2026-10-22 | Tokens de la coque (L2-34) : fichiers et chemins, `DUNEI_TOKENS_DIR`, schéma, choix d'import, planche de contrôle, recette et relevés (D81) |
 | 1.16 | 2026-10-22 | Capture d'écran provisoire : `Print` et ses deux variantes, rôle `capture` tenu par hyprshot (D79) |
 | 1.15 | 2026-10-19 | Recette de sortie du lot 1 : dix-sept lignes et non seize, quinze passées, deux réservées (écran externe, changement de sortie audio) ; relevés de veille d'avant la réinstallation gardés ; ligne de la fenêtre active rapportée à D29 (D78) |
 | 1.14 | 2026-10-19 | Chaîne de génération (L1-21) : `make generes`, crochet `pre-commit` posé par `make install` (`core.hooksPath`), contrôle GitHub `controle` et règle de `main`, commandes `gh api` de la règle, contournement réservé à Nicolas et refus de Claude Code ; arborescence ; `gh auth login -s workflow` et `gh auth refresh` ; crochet jugé sur l'index (D77) |

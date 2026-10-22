@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.23. Historique en fin de document.
+Version 1.24. Historique en fin de document.
 
 La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **148 éléments** répartis en **cinq lots**, sur six chantiers.
 
@@ -286,7 +286,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L2-31 | B | Écrit | Presse-papiers et historique |
 | L2-32 | B | Écrit | Navigation clavier complète, boutons compris |
 | L2-33 | B | Écrit | Barre de défilement superposée — 8 px, 12 au survol |
-| L2-34 | C | Écrit | Brancher les tokens sur la bibliothèque de composants |
+| L2-34 | C | Écrit | Brancher les tokens sur la bibliothèque de composants — **fait (D81)** : `coque-tokens.json` généré (couleurs sRGB, états composés, anneau de focus, matière, tailles), déployé sous `~/.config/dunei/` et surveillé par le module QML `coque/Theme` ; bascule de teinte d'un bloc, ressort de couleur `ColorSpring`, planche de contrôle `coque/outils/planche` (validée à l'écran) |
 | L2-35 | B | Écrit | Flou des overlays et de la couche 1 ; ombre de gouttière de la fenêtre active, à étudier (D29, D31) |
 | L2-36 | B | Écrit | Localiser le pointeur — halo autour du pointeur, Ctrl gauche tenu une seconde ; touche réservée en L1-16 (D35) |
 | L2-37 | B | Configuré | Déverrouillage par empreinte — `fprintd` ; lecteur Goodix déjà reconnu, aucun doigt enregistré ; `hyprlock` (désactivé dans `hyprlock.conf` pour l'instant), `sudo` et connexion ; à traiter avec L2-22 et L2-24, la conception de l'interface restant au lot 5 (D46) |
@@ -497,6 +497,7 @@ Le choix de la distribution de base et du compositeur, précédemment ouverts, s
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-12 | Version initiale, 137 éléments |
+| 1.24 | 2026-10-22 | L2-34 faite : tokens branchés sur Quickshell (D81) |
 | 1.23 | 2026-10-22 | Coque en QML sur Quickshell (D80) : L2-01 précisé, L2-06 compte sept transitions, cinquième condition de la définition de terminé (sobriété en ressources) |
 | 1.22 | 2026-10-22 | L2-30 : capture provisoire par hyprshot, rôle `capture` à trois variantes (D79) |
 | 1.21 | 2026-10-19 | Recette de sortie du lot 1 passée, deux réserves (D78) : écran externe (L1-09), changement de sortie audio rattaché à L3-05 |

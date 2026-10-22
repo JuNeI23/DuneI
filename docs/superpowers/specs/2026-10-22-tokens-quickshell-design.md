@@ -1,6 +1,6 @@
 # Les tokens branchés sur Quickshell
 
-Version 0.2 · 2026-10-22 · backlog L2-34 (prérequis de L2-01) · décision de cadre D80 · statut : conception validée par Nicolas
+Version 0.3 · 2026-10-22 · backlog L2-34 (prérequis de L2-01) · décision de cadre D80 · décisions D81 · statut : implémentée, validée à l'écran
 
 ## 1. Objet et raison
 
@@ -160,3 +160,4 @@ L2-34 est un échec, même si la planche s'affiche, si :
 | --- | --- | --- |
 | 0.1 | 2026-10-22 | Version initiale : bascule simultanée et planche gardée comme outil (Nicolas), tout précalculé et JSON surveillé (Claude) |
 | 0.2 | 2026-10-22 | Après relecture : combinaisons d'états générées et interpolation sRGB mesurée (§ 7.10), `proto/motion` et `proto/ilot` hors périmètre, bouton d'essai sur la planche (Claude) |
+| 0.3 | 2026-10-22 | Implémentée et validée à l'écran par Nicolas : décisions consignées en D81, mode d'emploi et relevés au carnet (Claude) |
