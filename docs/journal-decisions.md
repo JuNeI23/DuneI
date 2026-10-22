@@ -1601,3 +1601,40 @@ sera éprouvée avec l'écran externe (D78).
 six.
 
 *Touché : backlog (L2-01, L2-06, définition de terminé), direction, `paquets.toml`, `proto/ilot`.*
+
+### D81 · Les tokens de la coque : JSON surveillé, états précalculés, bascule d'un bloc
+
+2026-10-22. L2-34 branche les tokens sur Quickshell. Le générateur écrit `coque-tokens.json` (couleurs en
+sRGB, matière, tailles, états composés, anneau de focus), `make install` le dépose avec `motion.json` sous
+`~/.config/dunei/`, et le module QML `coque/Theme` le surveille. Le détail des choix :
+
+- **Combinaisons d'états générées.** Le générateur calcule, pour chaque rôle de surface, chaque sélection et
+  chaque interaction, le fond et le texte résultants ; le QML ne convertit aucune couleur (`color.py` reste
+  l'unique conversion). Entre deux couleurs générées, le QML n'interpole qu'en sRGB, ce qui a été mesuré :
+  ΔE OKLab au plus 0,013 au milieu d'une transition, sur les teintes 0, 55, 200 et 265, sous le seuil de
+  perception d'environ 0,02 ; les couleurs au repos sont exactes.
+- **JSON surveillé, non du QML généré.** Un fichier QML qui change recharge toute la coque ; un JSON qui change
+  ne fait que remplacer les valeurs. C'est ce qui permet la bascule de teinte à chaud, sans recréer de fenêtre.
+- **Emplacement `~/.config/dunei/`**, remplaçable par la variable `DUNEI_TOKENS_DIR` (la planche s'en sert
+  pour son brouillon, sans toucher à `generated/`).
+- **Anneau de focus sur l'accent autonome** (`accent_standalone`), 2 px ; Nicolas a validé la couleur à l'écran
+  (bible, chapitre 7). `ring_offset_row` (−1) est ajouté à `tokens.toml` pour le décalage de l'anneau des
+  rangées, qui n'avait pas de valeur propre.
+- **Liserés physiques.** Le générateur exporte `render.hairlinePhysical` (règle `hairlines_in_physical_pixels`) ;
+  `Theme.hairline(dpr)` n'en tire que la conversion d'unité (1 / facteur d'échelle). La règle reste dans les
+  tokens, pas dans le QML.
+- **`ready` posé après les données.** Défaut d'ordre découvert à la tâche 5 : `ready` pouvait devenir vrai avant
+  que les raccourcis (`Theme.color`, `Theme.space`…) soient réévalués, d'où des centaines d'erreurs chez un
+  consommateur synchrone. `ready` est désormais affecté impérativement après `tokens`, dans `onParsed`.
+- **`ColorSpring`** : un changement de thème est appliqué d'un bloc, sans animation, pour que tout bascule dans
+  la même image (règle de Nicolas) ; un changement d'état s'anime par le ressort `transitions.state`, repris en
+  vol depuis la couleur affichée.
+- **Hors périmètre** : `proto/ilot` reste une maquette jetable, et `proto/motion` le banc de réglage du
+  mouvement conservé comme outil (D13) ; ni l'un ni l'autre ne passe sur le module `coque/Theme`.
+  `physics.js` est déplacé dans `coque/Theme/` et tous deux le retrouvent par un lien symbolique.
+- **Import.** Quickshell 0.3.2 sert la coque par un système de fichiers virtuel limité à sa racine : un import
+  relatif qui en sort n'est pas résolu. Repli : un lien symbolique relatif sous la racine de chaque coque
+  (`essai/Theme -> ..`, `planche/Theme -> ../../Theme`) et `import "Theme"`.
+
+*Touché : carnet (« Les tokens de la coque »), backlog (L2-34), direction, bible (chapitre 7), conception de
+L2-34, `tokens.toml`, `coque/`.*

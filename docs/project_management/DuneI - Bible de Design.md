@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas
 
-Document normatif. Version 0.9. Historique en fin de document.
+Document normatif. Version 0.10. Historique en fin de document.
 
 ## Comment lire ce document
 
@@ -263,7 +263,7 @@ Ils ne sont **pas exclusifs** : une rangée peut être sélectionnée, survolée
 | --- | --- |
 | **Survol** | Surface +0,04 L. Rien ne bouge, rien ne change de taille. Le survol est un signal, pas un événement. |
 | **Pressé** | Surface **sous** sa valeur de repos — c'est ce qui donne l'enfoncement. Aucun déplacement, aucune réduction d'échelle. |
-| **Focus** | **Anneau** 2 px accent sur champs et boutons ; **surbrillance pleine largeur** sur les rangées. Ne modifie jamais le fond, ce qui lui permet de se superposer à tout autre état. |
+| **Focus** | **Anneau 2 px accent autonome** (couleur validée à l'écran, D81) sur champs et boutons ; **surbrillance pleine largeur** sur les rangées. Ne modifie jamais le fond, ce qui lui permet de se superposer à tout autre état. |
 | **Sélectionné actif** | Fond d'accent, texte sur-accent, **icône en variante pleine**. |
 | **Sélectionné inactif** | Fond neutre, sans accent. Indispensable en tuilage : sans lui, cinq panneaux affichent cinq accents et plus rien n'indique où l'on tape. |
 | **Désactivé** | Chroma fortement réduit, luminosité rapprochée du fond, ombre supprimée. |
@@ -825,3 +825,4 @@ Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si 
 | 0.7 | 2026-10-14 | Fenêtrage : plus de bordure, la fenêtre active se signale par le modificateur `inactive` ; dwindle ; ombre des flottantes à une couche ; rayon plein écran 0 ; annexe C, coins fermés et flou au lot 2 ; annexe D, modules `env`, `fenetres`, `regles` ; ch. 12, palier D sans bordure (D28 à D31) |
 | 0.8 | 2026-10-15 | Clavier : grammaire des raccourcis du système, applications par rôle ; annexe D, modules `entree` et `clavier`, dossier `donnees/`, fragment `hyprland-binds.lua` (D33 à D37) |
 | 0.9 | 2026-10-19 | Gouvernance : édition de `generated/` refusée au commit et à la fusion ; annexe D, crochet, contrôle GitHub et cibles du `Makefile` (D77) |
+| 0.10 | 2026-10-22 | Chapitre 7 : l'anneau de focus est précisé, 2 px à l'accent autonome, couleur validée à l'écran (D81) |

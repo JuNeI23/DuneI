@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas — révisée le 22 octobre 2026
 
-Version 1.21. Historique en fin de document.
+Version 1.23. Historique en fin de document.
 
 *Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent quarante-huit lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
 
@@ -359,8 +359,19 @@ les ressorts de `motion.toml`, à 60 images par seconde même interrompu en vol,
 protocole, pour 0,1 % de processeur au repos. La mémoire, 157 Mio dont 111 de socle Qt et Mesa, est le
 point à surveiller : sans budget chiffré, la définition de terminé exige désormais un usage optimisé des
 ressources, avec chargement à la demande et relevé à chaque feature.
-Prochaine étape : **la bibliothèque de composants (L2-01)**, ouverte par le branchement des tokens sur
-Quickshell (L2-34), dont toutes les primitives dépendent.
+
+**Tokens de la coque — 22 octobre 2026.** Les tokens sont branchés sur Quickshell (L2-34, D81). Le générateur
+écrit `coque-tokens.json`, déposé sous `~/.config/dunei/` et surveillé par le module QML `coque/Theme` : les
+états composés sont précalculés, un changement de teinte bascule toute la coque d'un bloc, un changement
+d'état s'anime par un ressort de couleur. Une planche de contrôle, lancée à la demande, montre chaque token et
+un bouton d'essai ; Nicolas l'a validée à l'écran (couleurs identiques au fond du bureau, anneau de focus à
+l'accent autonome, arêtes nettes). Elle consomme 0,0 à 0,1 % de processeur au repos et 232 Mio de PSS, contre
+157 Mio pour la maquette de l'îlot : l'écart n'est pas expliqué et reste à suivre au titre de D80.
+
+Prochaine étape : **la bibliothèque de composants (L2-01)**. Les tokens étant branchés (L2-34 terminée), chaque
+primitive lit ses valeurs dans `Theme`. Une question y reste ouverte : le retour au repos d'un état (fin de
+survol, relâchement) est-il une sortie, servie par le ressort `out`, plus court, plutôt que par le ressort
+`in` que `ColorSpring` prend aujourd'hui pour tout changement d'état ?
 
 ## Plan de lecture
 
@@ -379,6 +390,8 @@ Quickshell (L2-34), dont toutes les primitives dépendent.
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-10 | Version initiale |
+| 1.23 | 2026-10-22 | Prochaine étape reformulée : L2-34 terminée, chaque primitive de L2-01 lit `Theme` ; question ouverte du ressort de sortie au retour au repos |
+| 1.22 | 2026-10-22 | Tokens branchés sur Quickshell (L2-34, D81) ; planche de contrôle validée à l'écran ; prochaine étape : L2-01 |
 | 1.21 | 2026-10-22 | Coque en QML sur Quickshell (D80), prouvée par la maquette `proto/ilot` ; sobriété en ressources sans budget chiffré ; prochaine étape : L2-01, ouverte par L2-34 |
 | 1.20 | 2026-10-22 | Capture d'écran provisoire (D79) ; la prochaine étape reste l'ouverture du lot 2 |
 | 1.19 | 2026-10-19 | Lot 1 fermé (D78) : recette de sortie à dix-sept lignes, quinze passées, deux réservées faute de matériel (écran externe, changement de sortie audio) ; décompte du backlog corrigé (148) ; prochaine étape : ouverture du lot 2, technologie de la coque (L2-01) |

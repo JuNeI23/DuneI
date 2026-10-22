@@ -1,0 +1,407 @@
+{
+  "_generated": "GÉNÉRÉ depuis tokens.toml — NE PAS MODIFIER À LA MAIN",
+  "hue": 0.0,
+  "color": {
+    "surfaceBase": "#120509",
+    "surfaceWindow": "#1c0c11",
+    "surfacePanel": "#25151a",
+    "surfaceRaised": "#301e23",
+    "borderSubtle": "#3d2a30",
+    "borderDefault": "#4d3a3f",
+    "borderStrong": "#604c52",
+    "textDisabled": "#76676b",
+    "textTertiary": "#948488",
+    "textSecondary": "#b3a3a7",
+    "textPrimary": "#f6e4e9",
+    "textEmphasis": "#fff1f5",
+    "accent": "#ad3e68",
+    "accentStandalone": "#f27ca4",
+    "onAccent": "#fefbfc",
+    "error": "#d33a3c",
+    "warning": "#e49e22",
+    "success": "#51bf68",
+    "info": "#44a8e7",
+    "categorical": [
+      "#e983a4",
+      "#ec8a67",
+      "#c1a637",
+      "#50c08b",
+      "#b494ed"
+    ]
+  },
+  "states": {
+    "surfaceWindow": {
+      "none": {
+        "rest": {
+          "fill": "#1c0c11",
+          "text": "#f6e4e9"
+        },
+        "hover": {
+          "fill": "#25151a",
+          "text": "#f6e4e9"
+        },
+        "pressed": {
+          "fill": "#15060b",
+          "text": "#f6e4e9"
+        },
+        "disabled": {
+          "fill": "#131111",
+          "text": "#6a6869"
+        }
+      },
+      "active": {
+        "rest": {
+          "fill": "#ad3e68",
+          "text": "#fefbfc"
+        },
+        "hover": {
+          "fill": "#ba4a74",
+          "text": "#fefbfc"
+        },
+        "pressed": {
+          "fill": "#a33460",
+          "text": "#fefbfc"
+        },
+        "disabled": {
+          "fill": "#423337",
+          "text": "#8a8989"
+        }
+      },
+      "inactive": {
+        "rest": {
+          "fill": "#3d2a30",
+          "text": "#f6e4e9"
+        },
+        "hover": {
+          "fill": "#47353a",
+          "text": "#f6e4e9"
+        },
+        "pressed": {
+          "fill": "#352328",
+          "text": "#f6e4e9"
+        },
+        "disabled": {
+          "fill": "#211e1f",
+          "text": "#747172"
+        }
+      },
+      "activeMuted": {
+        "rest": {
+          "fill": "#6c6c6c",
+          "text": "#fefbfc"
+        },
+        "hover": {
+          "fill": "#777777",
+          "text": "#fefbfc"
+        },
+        "pressed": {
+          "fill": "#636363",
+          "text": "#fefbfc"
+        },
+        "disabled": {
+          "fill": "#373737",
+          "text": "#8a8989"
+        }
+      }
+    },
+    "surfacePanel": {
+      "none": {
+        "rest": {
+          "fill": "#25151a",
+          "text": "#f6e4e9"
+        },
+        "hover": {
+          "fill": "#301e23",
+          "text": "#f6e4e9"
+        },
+        "pressed": {
+          "fill": "#1e0e13",
+          "text": "#f6e4e9"
+        },
+        "disabled": {
+          "fill": "#1c1a1a",
+          "text": "#716e6f"
+        }
+      },
+      "active": {
+        "rest": {
+          "fill": "#ad3e68",
+          "text": "#fefbfc"
+        },
+        "hover": {
+          "fill": "#ba4a74",
+          "text": "#fefbfc"
+        },
+        "pressed": {
+          "fill": "#a33460",
+          "text": "#fefbfc"
+        },
+        "disabled": {
+          "fill": "#47383c",
+          "text": "#8d8d8d"
+        }
+      },
+      "inactive": {
+        "rest": {
+          "fill": "#3d2a30",
+          "text": "#f6e4e9"
+        },
+        "hover": {
+          "fill": "#47353a",
+          "text": "#f6e4e9"
+        },
+        "pressed": {
+          "fill": "#352328",
+          "text": "#f6e4e9"
+        },
+        "disabled": {
+          "fill": "#262324",
+          "text": "#777575"
+        }
+      },
+      "activeMuted": {
+        "rest": {
+          "fill": "#6c6c6c",
+          "text": "#fefbfc"
+        },
+        "hover": {
+          "fill": "#777777",
+          "text": "#fefbfc"
+        },
+        "pressed": {
+          "fill": "#636363",
+          "text": "#fefbfc"
+        },
+        "disabled": {
+          "fill": "#3d3d3d",
+          "text": "#8d8d8d"
+        }
+      }
+    },
+    "surfaceRaised": {
+      "none": {
+        "rest": {
+          "fill": "#301e23",
+          "text": "#f6e4e9"
+        },
+        "hover": {
+          "fill": "#3a282d",
+          "text": "#f6e4e9"
+        },
+        "pressed": {
+          "fill": "#28171c",
+          "text": "#f6e4e9"
+        },
+        "disabled": {
+          "fill": "#262324",
+          "text": "#777575"
+        }
+      },
+      "active": {
+        "rest": {
+          "fill": "#ad3e68",
+          "text": "#fefbfc"
+        },
+        "hover": {
+          "fill": "#ba4a74",
+          "text": "#fefbfc"
+        },
+        "pressed": {
+          "fill": "#a33460",
+          "text": "#fefbfc"
+        },
+        "disabled": {
+          "fill": "#4e3e42",
+          "text": "#919191"
+        }
+      },
+      "inactive": {
+        "rest": {
+          "fill": "#3d2a30",
+          "text": "#f6e4e9"
+        },
+        "hover": {
+          "fill": "#47353a",
+          "text": "#f6e4e9"
+        },
+        "pressed": {
+          "fill": "#352328",
+          "text": "#f6e4e9"
+        },
+        "disabled": {
+          "fill": "#2b2829",
+          "text": "#7b7879"
+        }
+      },
+      "activeMuted": {
+        "rest": {
+          "fill": "#6c6c6c",
+          "text": "#fefbfc"
+        },
+        "hover": {
+          "fill": "#777777",
+          "text": "#fefbfc"
+        },
+        "pressed": {
+          "fill": "#636363",
+          "text": "#fefbfc"
+        },
+        "disabled": {
+          "fill": "#434343",
+          "text": "#919191"
+        }
+      }
+    }
+  },
+  "focus": {
+    "color": "#f27ca4",
+    "colorMuted": "#a8a8a8",
+    "width": 2,
+    "offset": 2,
+    "rowOffset": -1
+  },
+  "disabled": {
+    "opacity": 0.5,
+    "shadow": false
+  },
+  "elevation": {
+    "e0": {
+      "fill": "#120509",
+      "sheen": false,
+      "sheenTop": null,
+      "edgeLight": false,
+      "shadow": false
+    },
+    "e1": {
+      "fill": "#1c0c11",
+      "sheen": false,
+      "sheenTop": null,
+      "edgeLight": false,
+      "shadow": false
+    },
+    "e2": {
+      "fill": "#25151a",
+      "sheen": true,
+      "sheenTop": "#2a1a1f",
+      "edgeLight": true,
+      "shadow": false
+    },
+    "e3": {
+      "fill": "#301e23",
+      "sheen": true,
+      "sheenTop": "#352328",
+      "edgeLight": true,
+      "shadow": true
+    },
+    "field": {
+      "fill": "#120509",
+      "insetShadow": true
+    }
+  },
+  "material": {
+    "dither": "IGN",
+    "sheenMaxHeight": 80,
+    "edgeLight": "#14ffffff",
+    "edgeShadow": "#1f000000",
+    "shade": "#5c000000",
+    "overlayOutline": "#80000000"
+  },
+  "render": {
+    "scrim": "#8c000000",
+    "neverAnimateBlurRadius": true,
+    "hairlinePhysical": true
+  },
+  "space": {
+    "scale": [
+      4,
+      8,
+      12,
+      16,
+      24,
+      32,
+      48,
+      64
+    ],
+    "panelPadding": 12,
+    "sectionGap": 16,
+    "blockGap": 24
+  },
+  "density": {
+    "comfortable": {
+      "multiplier": 1.0,
+      "controlHeight": 28,
+      "rowHeight": 24,
+      "tilingGutter": 8,
+      "tilingMargin": 8
+    },
+    "compact": {
+      "multiplier": 0.92,
+      "controlHeight": 24,
+      "rowHeight": 20,
+      "tilingGutter": 4,
+      "tilingMargin": 4
+    }
+  },
+  "radius": {
+    "window": 12,
+    "panel": 10,
+    "control": 6,
+    "small": 4,
+    "fullscreen": 0
+  },
+  "window": {
+    "borderWidth": 0,
+    "resizeStep": 48,
+    "floatingShadow": {
+      "range": 16,
+      "offsetY": 4,
+      "renderPower": 2
+    }
+  },
+  "layout": {
+    "sidebarDefault": 240,
+    "sidebarMin": 180,
+    "sidebarMax": 400,
+    "windowMinWidth": 320,
+    "systemBarHeight": 32,
+    "readingMeasureMax": 78
+  },
+  "breakpoints": {
+    "compact": 480,
+    "extended": 900
+  },
+  "typo": {
+    "interface": "Source Sans 3",
+    "mono": "Source Code Pro",
+    "baseSize": 13,
+    "scale": [
+      11,
+      12,
+      13,
+      15,
+      18,
+      22,
+      28
+    ],
+    "lineHeightBody": 1.45,
+    "lineHeightHeading": 1.2,
+    "weightRegular": 400,
+    "weightMedium": 550,
+    "tabularNumerals": true
+  },
+  "icons": {
+    "source": "Phosphor",
+    "variants": [
+      "regular",
+      "fill"
+    ],
+    "grid": 24,
+    "stroke": 1.5,
+    "sizes": {
+      "dense": 16,
+      "default": 20,
+      "comfortable": 24
+    },
+    "xdgTheme": "DuneI"
+  }
+}

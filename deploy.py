@@ -12,6 +12,8 @@ mis de côté sous le nom .avant-dunei, et un lien remplacé par un fichier est 
   Un script de config/hypr/scripts/ non exécutable est refusé.
 - fontconfig : generated/fonts.conf est copié vers fontconfig/conf.d/50-dunei.conf. Les applications
   lancées ensuite le lisent ; aucun fc-cache n'est nécessaire.
+- coque : generated/coque-tokens.json et generated/motion.json sont copiés vers dunei/ sous le dossier de
+  configuration ; le singleton Theme de la coque Quickshell les lit et les surveille (L2-34).
 - applis : la configuration de chaque application de DuneI est liée à sa place sous le dossier de
   configuration ; l'application doit être installée. Les autres fichiers de son dossier sont laissés
   en place. Seul kitty, le terminal provisoire, y figure (L1-18).
@@ -73,6 +75,7 @@ TEMP = ".{}.dunei"                            # Nom temporaire, sans extension .
 FONTCONFIG = ("fonts.conf", "conf.d/50-dunei.conf")  # Fichier de generated/ → chemin sous fontconfig/.
 MARK = "GÉNÉRÉ depuis tokens.toml"                    # Avertissement de deuxième ligne : le fichier est à DuneI.
 IDLE = ("hypridle.conf", "GÉNÉRÉ depuis energie.toml")       # Fichier de generated/ copié sous hypr/, et sa marque.
+COQUE = (("coque-tokens.json", "GÉNÉRÉ depuis tokens.toml"), ("motion.json", "GÉNÉRÉ depuis motion.toml"))  # Fichiers de generated/ copiés sous dunei/, et leur marque.
 SYSTEME = "systeme"                                          # Arborescence copiée sous la racine du système.
 SYSTEM_MARK = "Posé par DuneI"                               # Marque de deuxième ligne d'un fichier système.
 SERVICE = "hypridle.service"                                 # Service de l'échelle d'inactivité, redémarré si hypridle.conf change.
@@ -240,6 +243,30 @@ def plan_fontconfig(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
     if dest.is_symlink() or (dest.exists() and not _ours(dest)):
         err.append(f"{dest} existe mais n'a pas été posé par DuneI")
     return actions + [("copy", src, dest)], err
+
+
+def plan_coque(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
+    """Inspection de la destination des tokens de la coque, sans aucune modification (L2-34).
+
+    Entrées : repo — racine du dépôt ; home — dossier de configuration racine.
+    Sortie : (création de dunei/ s'il manque puis copie de chaque fichier de COQUE ; erreurs).
+    Erreurs : aucune exception ; source absente, dunei qui n'est pas un dossier réel, fichier ou lien
+              étranger à la place d'un fichier deviennent des messages.
+    Dépendances : _ours, COQUE.
+    """
+    dossier, actions, err = home / "dunei", [], []
+    if dossier.is_symlink() or (dossier.exists() and not dossier.is_dir()):
+        return actions, [f"{dossier} existe mais n'est pas un dossier réel"]
+    if not dossier.exists():
+        actions.append(("mkdir", dossier))
+    for nom, marque in COQUE:
+        src, dest = repo / "generated" / nom, dossier / nom
+        if not src.exists():
+            err.append(f"source manquante : {src} (lancer make {'motion' if nom == 'motion.json' else 'tokens'})")
+        if dest.is_symlink() or (dest.exists() and not _ours(dest, marque)):
+            err.append(f"{dest} existe mais n'a pas été posé par DuneI")
+        actions.append(("copy", src, dest))
+    return actions, err
 
 
 def plan_applis(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
@@ -559,7 +586,7 @@ def plan_socle(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
 
 
 NOTES = ("hors-liste", "chemin", "rtk-remplace", "atelier-saute", "atelier-sans-claude", "atelier-plugins-echec")  # Signalements affichés après le bilan : ils n'agissent pas et ne bloquent pas.
-DESTINATIONS = {"hypr": plan_hypr, "fontconfig": plan_fontconfig, "applis": plan_applis,
+DESTINATIONS = {"hypr": plan_hypr, "fontconfig": plan_fontconfig, "coque": plan_coque, "applis": plan_applis,
                 "bin": plan_bin, "crochets": plan_crochets, "rtk": atelier.plan_rtk, "atelier": atelier.plan_atelier, "services": plan_services, "systeme": plan_systeme, "socle": plan_socle, "maj": plan_maj,
                 "connexion": plan_connexion}  # Nom → planification, dans l'ordre d'exécution (sudo en dernier).
 

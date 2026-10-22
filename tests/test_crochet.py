@@ -22,7 +22,8 @@ class CrochetTest(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.repo = Path(self.tmp.name) / "depot"
-        shutil.copytree(ROOT, self.repo, ignore=IGNORE)
+        # Liens copiés tels quels : coque/Theme/essai/Theme pointe vers son parent et ne se suit pas.
+        shutil.copytree(ROOT, self.repo, symlinks=True, ignore=IGNORE)
         self.env = {**os.environ, "GIT_CONFIG_GLOBAL": "/dev/null", "GIT_CONFIG_SYSTEM": "/dev/null"}
         for args in (["init", "-q"], ["add", "-A"], ["commit", "-q", "--no-verify", "-m", "départ"],
                      ["config", "core.hooksPath", ".githooks"]):

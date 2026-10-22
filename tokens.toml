@@ -183,7 +183,8 @@ translate = 0                 # aucun déplacement, aucune réduction d'échelle
 
 [states.focus]
 ring_width = 2
-ring_offset = 2               # passe à -1 sur les rangées, pour ne pas déborder
+ring_offset = 2
+ring_offset_row = -1          # décalage de l'anneau sur les rangées, pour ne pas déborder
 uses_accent = true
 modifies_background = false   # se superpose à n'importe quel autre état
 
