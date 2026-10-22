@@ -808,5 +808,52 @@ class CrochetsTest(unittest.TestCase):
             self.assertEqual(deploy.plan_crochets(self.repo, self.repo), ([], ["git introuvable : pacman -S git"]))
 
 
+class CoqueTest(unittest.TestCase):
+    """Les tokens de la coque sont copiés sous <config>/dunei/, où le singleton Theme les lit (L2-34)."""
+
+    def setUp(self):
+        """Prépare un dépôt et un dossier de configuration jetables, avec les deux fichiers générés. Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : tempfile."""
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.repo, self.cfg = Path(self.tmp.name) / "repo", Path(self.tmp.name) / "cfg"
+        (self.repo / "generated").mkdir(parents=True)
+        self.cfg.mkdir()
+        for nom, marque in deploy.COQUE:
+            (self.repo / "generated" / nom).write_text(f'{{\n  "_generated": "{marque}"\n}}\n', encoding="utf-8")
+        self.copies = [("copy", self.repo / "generated" / nom, self.cfg / "dunei" / nom) for nom, _ in deploy.COQUE]
+
+    def test_coque_premier_passage(self):
+        """Le dossier dunei est créé, puis les deux fichiers sont copiés."""
+        self.assertEqual(deploy.plan_coque(self.repo, self.cfg), ([("mkdir", self.cfg / "dunei")] + self.copies, []))
+
+    def test_coque_deja_pose(self):
+        """Un dossier dunei existant et des fichiers à nous donnent deux copies, sans mkdir."""
+        (self.cfg / "dunei").mkdir()
+        for nom, _ in deploy.COQUE:
+            (self.cfg / "dunei" / nom).write_text((self.repo / "generated" / nom).read_text(encoding="utf-8"), encoding="utf-8")
+        self.assertEqual(deploy.plan_coque(self.repo, self.cfg), (self.copies, []))
+
+    def test_coque_source_absente(self):
+        """Une source manquante est signalée avec la commande qui la génère."""
+        (self.repo / "generated" / "motion.json").unlink()
+        err = deploy.plan_coque(self.repo, self.cfg)[1]
+        self.assertEqual(len(err), 1)
+        self.assertIn("make motion", err[0])
+
+    def test_coque_fichier_etranger(self):
+        """Un motion.json sans marque DuneI est refusé."""
+        (self.cfg / "dunei").mkdir()
+        (self.cfg / "dunei" / "motion.json").write_text("{}\n", encoding="utf-8")
+        err = deploy.plan_coque(self.repo, self.cfg)[1]
+        self.assertEqual(len(err), 1)
+        self.assertIn("motion.json", err[0])
+
+    def test_coque_dossier_lien(self):
+        """Un dossier dunei qui est un lien est refusé, sans action."""
+        (self.cfg / "dunei").symlink_to(self.tmp.name)
+        actions, err = deploy.plan_coque(self.repo, self.cfg)
+        self.assertEqual((actions, len(err)), ([], 1))
+
+
 if __name__ == "__main__":
     unittest.main()
