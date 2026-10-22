@@ -137,6 +137,9 @@ class CoqueThemeTest(unittest.TestCase):
         self.attendre("Theme : chargé, teinte 200")
         self.remplacer(265)
         self.attendre("Theme : chargé, teinte 265")
+        # Changement de thème : le ressort de couleur se pose d'un coup, comme les couleurs liées directement.
+        self.attendre("essai : ressort", 3)
+        self.assertEqual(self.journal().count("essai : ressort posé"), 3, self.journal())
 
     def test_contenu_corrompu(self):
         self.installer(55)
@@ -147,7 +150,8 @@ class CoqueThemeTest(unittest.TestCase):
         time.sleep(0.3)
         self.assertIn("valeurs précédentes gardées", self.journal())
         self.assertEqual(self.journal().count("chargé, teinte"), 1)
-        self.remplacer(200)
+        # Réécriture en place, comme le générateur : la lecture suivante réussie s'applique.
+        (self.dir / "coque-tokens.json").write_text(self.tokens(200).read_text(encoding="utf-8"), encoding="utf-8")
         self.attendre("Theme : chargé, teinte 200")
 
     def test_fichier_absent(self):

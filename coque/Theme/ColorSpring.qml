@@ -2,14 +2,15 @@ import QtQuick
 import "physics.js" as Physics
 
 // ColorSpring — couleur affichée qui rejoint une couleur générée par le ressort d'état.
-// Rôle : à chaque nouvelle cible, part de la couleur affichée (une interruption en vol ne saute pas) et
-// avance une progression 0 → 1 selon le ressort transitions.state.in de motion.json ; la couleur affichée
-// est l'interpolation sRGB, composante par composante, entre l'origine et la cible. Aucune couleur n'est
-// calculée ici : origine et cible viennent toujours de Theme.
+// Rôle : à chaque nouvelle cible d'un même thème, part de la couleur affichée (une interruption en vol ne
+// saute pas) et avance une progression 0 → 1 selon le ressort transitions.state.in de motion.json ; la couleur
+// affichée est l'interpolation sRGB, composante par composante, entre l'origine et la cible. Aucune couleur
+// n'est calculée ici : origine et cible viennent toujours de Theme.
 // Entrées : target couleur visée ; params ressort {mass, stiffness, dampening}, par défaut celui des
 //           changements d'état.
 // Sorties : value couleur affichée ; moving vrai tant que le ressort avance.
-// Erreurs : aucune ; jusqu'au premier chargement de Theme inclus, value suit target sans animation.
+// Erreurs : aucune ; avant que Theme soit prêt, au premier chargement et à chaque changement de thème,
+//           value prend target sans animation : tout le thème bascule dans la même image.
 // Dépendances : Theme (singleton du module), physics.js (integrate, atRest).
 Item {
     id: spring
@@ -21,19 +22,21 @@ Item {
     readonly property bool moving: anim.running
     property color origin
     property var st: ({ x: 1, v: 0, acc: 0 })
-    // Armé un tour de boucle après que Theme devient prêt : la cible posée par le premier chargement, dans le
-    // même tour, s'applique sans animation au lieu de partir d'une couleur d'attente.
-    property bool armed: false
+    // Objet de tokens sur lequel repose la couleur affichée : une cible qui change avec un nouvel objet
+    // (premier chargement ou changement de thème) se pose d'un coup, comme les couleurs liées directement.
+    // Il est rangé dans un objet JavaScript : affecté directement à une propriété var, il serait converti et
+    // ne serait plus identique à Theme.tokens.
+    property var seen: ({ tokens: null })
 
-    Component.onCompleted: { value = target; armed = Theme.ready }
-
-    Connections {
-        target: Theme
-        function onReadyChanged() { Qt.callLater(() => spring.armed = Theme.ready) }
-    }
+    Component.onCompleted: { value = target; seen.tokens = Theme.tokens }
 
     onTargetChanged: {
-        if (!armed || !params) { anim.stop(); value = target; return }
+        if (!Theme.ready || !params || Theme.tokens !== seen.tokens) {
+            seen.tokens = Theme.tokens
+            anim.stop()
+            value = target
+            return
+        }
         origin = value
         st = { x: 0, v: 0, acc: 0 }
         anim.restart()
