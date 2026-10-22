@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas — révisée le 19 octobre 2026
 
-Version 1.19. Historique en fin de document.
+Version 1.20. Historique en fin de document.
 
 *Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent quarante-huit lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
 
@@ -344,6 +344,12 @@ disponible, et le changement de sortie audio, qui sera éprouvé par un casque B
 relevés de veille, de décharge et de capot sont ceux de L1-09, antérieurs à la réinstallation, gardés par
 choix. Le dépôt est cloné sur la machine et le développement s'y fait : le lot 1 est fermé, étiquette
 `lot1`.
+
+**Capture provisoire — 22 octobre 2026.** Pour constituer le portfolio d'inspiration de la coque, rangé dans
+l'atelier privé parce que ses images appartiennent à leurs auteurs, `Print` capture désormais une zone,
+`SHIFT + Print` une fenêtre choisie au clic et `CTRL + Print` l'écran actif. L'image va dans
+`~/Images/Captures` et dans le presse-papiers. L'outil, hyprshot, est provisoire : il tient un rôle
+`capture` à trois variantes, que la capture DuneI (L2-30) reprendra (D79).
 Prochaine étape : **l'ouverture du lot 2**, par le repérage de la technologie de la coque, dont dépendent
 la bibliothèque de composants (L2-01) et toutes les surfaces du lot.
 
@@ -364,6 +370,7 @@ la bibliothèque de composants (L2-01) et toutes les surfaces du lot.
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-10 | Version initiale |
+| 1.20 | 2026-10-22 | Capture d'écran provisoire (D79) ; la prochaine étape reste l'ouverture du lot 2 |
 | 1.19 | 2026-10-19 | Lot 1 fermé (D78) : recette de sortie à dix-sept lignes, quinze passées, deux réservées faute de matériel (écran externe, changement de sortie audio) ; décompte du backlog corrigé (148) ; prochaine étape : ouverture du lot 2, technologie de la coque (L2-01) |
 | 1.18 | 2026-10-19 | Génération verrouillée (L1-21, D77) : crochet au commit, contrôle GitHub exigé sur `main`, contournement réservé à Nicolas ; prochaine étape : recette de sortie du lot 1 et étiquette `lot1` |
 | 1.17 | 2026-10-19 | `caladan` réinstallé, chiffré et recetté (L1-25, L1-03, D76) ; tri des miroirs au backlog (L2-39, D75) ; prochaine étape : L1-21 |

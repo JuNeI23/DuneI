@@ -75,6 +75,7 @@ outils = [
 # Paquet = élément du backlog qui le remplacera.
 [provisoire]
 wofi = "L2-16"                      # lanceur
+hyprshot = "L2-30"                  # capture d'écran
 network-manager-applet = "L2-11"    # indicateur réseau
 dunst = "L2-19"                     # notifications
 dolphin = "L3-12"                   # gestionnaire de fichiers

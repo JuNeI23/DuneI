@@ -13,6 +13,16 @@ local GESTES = { workspace = true, special = true }
 -- Nom canonique de chaque modificateur, pour reconnaître deux écritures de la même combinaison.
 local MODS = { SUPER = "SUPER", SHIFT = "SHIFT", CTRL = "CTRL", CONTROL = "CTRL", ALT = "ALT" }
 
+-- commande_role : commande qu'une entrée lance par son rôle, variante comprise.
+-- Entrées : roles — table de donnees/roles.lua ; e — entrée de la table.
+-- Sortie : la commande, ou nil si le rôle est inconnu, si sa variante manque ou n'existe pas, ou si une
+--          variante est demandée à un rôle qui n'en a pas. Erreurs : aucune. Dépendances : aucune.
+local function commande_role(roles, e)
+    local r = roles[e.role]
+    if type(r) == "table" then r = r[e.variante] elseif e.variante ~= nil then r = nil end
+    return type(r) == "string" and r or nil
+end
+
 -- ACTIONS : construction du répartiteur de chaque action.
 -- Entrées : e — entrée de la table ; c — contexte { roles, special, pas }.
 -- Sortie : un répartiteur hl.dsp. Erreurs : celles de hl.dsp. Dépendances : API hl de Hyprland 0.56.
@@ -34,7 +44,7 @@ M.ACTIONS = {
     envoyer        = function(e) return hl.dsp.window.move({ workspace = e.bureau, follow = false }) end,
     special        = function(_, c) return hl.dsp.workspace.toggle_special(c.special) end,
     ranger         = function(_, c) return hl.dsp.window.move({ workspace = "special:" .. c.special, follow = false }) end,
-    role           = function(e, c) return hl.dsp.exec_cmd("uwsm app -- " .. c.roles[e.role]) end,
+    role           = function(e, c) return hl.dsp.exec_cmd("uwsm app -- " .. commande_role(c.roles, e)) end,
     commande       = function(e) return hl.dsp.exec_cmd(e.commande) end,
     recharger      = function() return hl.dsp.exec_cmd("hyprctl reload") end,  -- pas de répartiteur natif en 0.56.2
     glisser        = function() return hl.dsp.window.drag() end,
@@ -60,10 +70,11 @@ end
 -- Entrées : d — table de donnees/raccourcis.lua ; roles — table de donnees/roles.lua.
 -- Sortie : aucune.
 -- Erreurs : error() au premier défaut, avec le numéro et la combinaison de l'entrée : combinaison vide,
---           description manquante, action inconnue, paramètre requis manquant, rôle inconnu, direction
+--           description manquante, action inconnue, paramètre requis manquant, rôle inconnu, variante de
+--           rôle manquante, inconnue ou superflue, direction
 --           inconnue, combinaison déjà prise par une autre entrée (réservations comprises) ; pour un
 --           geste : action inconnue, doigts ou direction invalides, description manquante, geste déjà pris.
--- Dépendances : M.ACTIONS, M.normalise, SENS, REQUIS, GESTES.
+-- Dépendances : M.ACTIONS, M.normalise, commande_role, SENS, REQUIS, GESTES.
 function M.verifier(d, roles)
     local vues = {}
     for i, e in ipairs(d.touches) do
@@ -76,6 +87,9 @@ function M.verifier(d, roles)
             local p = REQUIS[e.action]
             if p and e[p] == nil then error(nom .. " : paramètre « " .. p .. " » manquant", 0) end
             if e.action == "role" and not roles[e.role] then error(nom .. " : rôle inconnu « " .. tostring(e.role) .. " »", 0) end
+            if e.action == "role" and not commande_role(roles, e) then
+                error(nom .. " : variante « " .. tostring(e.variante) .. " » invalide pour le rôle « " .. e.role .. " »", 0)
+            end
             if p == "direction" and not SENS[e.direction] then
                 error(nom .. " : direction inconnue « " .. tostring(e.direction) .. " »", 0)
             end

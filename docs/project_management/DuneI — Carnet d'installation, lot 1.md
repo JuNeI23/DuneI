@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.15. Historique en fin de document.
+Version 1.16. Historique en fin de document.
 
 Socle amorçable.
 
@@ -1338,6 +1338,7 @@ bureau spécial, `accueil`, qui s'affiche par-dessus le bureau courant.
 | `SUPER + Maj + 1…0` | Envoyer la fenêtre au bureau, sans la suivre |
 | `SUPER + S` / `SUPER + Maj + S` | Afficher ou masquer l'accueil / y ranger la fenêtre |
 | `SUPER + Q`, `E`, `F`, `R` | Terminal, fichiers, navigateur, lanceur (kitty, dolphin, firefox, wofi : provisoires) |
+| `Print`, `SHIFT + Print`, `CTRL + Print` | Capturer une zone, une fenêtre choisie au clic, l'écran actif : rôle `capture`, tenu par hyprshot jusqu'à L2-30 ; image dans `~/Images/Captures` et dans le presse-papiers (D79) |
 | `SUPER + L` | Verrouiller : `loginctl lock-session`, verrouilleur provisoire (L1-09, remplacé à L2-22) |
 | `SUPER + Alt + M` | Quitter la session (`uwsm stop`) |
 | `SUPER + Alt + R` | Recharger la configuration (`hyprctl reload`) |
@@ -1346,8 +1347,7 @@ bureau spécial, `accueil`, qui s'affiche par-dessus le bureau courant.
 | Pavé, trois doigts à l'horizontale / vers le bas | Changer de bureau / afficher ou masquer l'accueil |
 
 **Touches réservées**, déclarées sans être liées : `SUPER + /`
-(cheatsheet, L2-28), `Print` (capture d'écran, L2-30), Ctrl gauche tenu une seconde (localiser le
-pointeur, L2-36). Pas de raccourci pour la veille, ni pour éteindre ou redémarrer : le terminal, d'ici
+(cheatsheet, L2-28), Ctrl gauche tenu une seconde (localiser le pointeur, L2-36). Pas de raccourci pour la veille, ni pour éteindre ou redémarrer : le terminal, d'ici
 le menu de déconnexion du lot 2.
 
 **Les applications se lancent par `uwsm app --`**, chacune dans sa propre unité systemd, et non comme
@@ -1580,6 +1580,7 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 
 | Version | Date | Changement |
 | --- | --- | --- |
+| 1.16 | 2026-10-22 | Capture d'écran provisoire : `Print` et ses deux variantes, rôle `capture` tenu par hyprshot (D79) |
 | 1.15 | 2026-10-19 | Recette de sortie du lot 1 : dix-sept lignes et non seize, quinze passées, deux réservées (écran externe, changement de sortie audio) ; relevés de veille d'avant la réinstallation gardés ; ligne de la fenêtre active rapportée à D29 (D78) |
 | 1.14 | 2026-10-19 | Chaîne de génération (L1-21) : `make generes`, crochet `pre-commit` posé par `make install` (`core.hooksPath`), contrôle GitHub `controle` et règle de `main`, commandes `gh api` de la règle, contournement réservé à Nicolas et refus de Claude Code ; arborescence ; `gh auth login -s workflow` et `gh auth refresh` ; crochet jugé sur l'index (D77) |
 | 1.13 | 2026-10-19 | Chiffrement (L1-25) : recette sur `caladan`, valeurs de sa puce (31 échecs, 600 s, `lockoutAuthSet`) ; noyau et `make phrase` non éprouvés sur la machine, couverts en machine virtuelle (D76) |
