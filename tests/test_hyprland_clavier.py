@@ -42,7 +42,8 @@ hl = {
 """
 
 # Rôles d'essai : les logiciels réels sont provisoires, les tests n'en dépendent pas.
-ROLES = '{ terminal = "T", fichiers = "F", navigateur = "N", lanceur = "L" }'
+ROLES = ('{ terminal = "T", fichiers = "F", navigateur = "N", lanceur = "L", '
+         'capture = { zone = "CZ", fenetre = "CF", ecran = "CE" } }')
 
 DIRS = {"left": (-1, 0), "right": (1, 0), "up": (0, -1), "down": (0, 1)}
 HW = {
@@ -75,6 +76,9 @@ def expected() -> dict[str, tuple[str, str]]:
         "SUPER + E": ("dsp.exec_cmd(uwsm app -- F)", "{}"),
         "SUPER + F": ("dsp.exec_cmd(uwsm app -- N)", "{}"),
         "SUPER + R": ("dsp.exec_cmd(uwsm app -- L)", "{}"),
+        "Print": ("dsp.exec_cmd(uwsm app -- CZ)", "{}"),
+        "SHIFT + Print": ("dsp.exec_cmd(uwsm app -- CF)", "{}"),
+        "CTRL + Print": ("dsp.exec_cmd(uwsm app -- CE)", "{}"),
         "SUPER + ALT + M": ("dsp.exec_cmd(uwsm stop)", "{}"),
         "SUPER + ALT + R": ("dsp.exec_cmd(hyprctl reload)", "{}"),
         "SUPER + L": ("dsp.exec_cmd(loginctl lock-session)", "{}"),
@@ -147,13 +151,13 @@ class ClavierTest(unittest.TestCase):
 
     def test_reserved_keys_are_not_bound(self):
         keys = {l[1] for l in self.apply_real() if l[0] == "bind"}
-        for k in ("SUPER + slash", "Print", "Control_L"):
+        for k in ("SUPER + slash", "Control_L"):
             self.assertNotIn(k, keys)
 
     def test_reserved_keys_are_declared(self):
         out = self.lines('for _, e in ipairs(require("donnees.raccourcis").touches) do '
                          'if e.reserve then print(e.touches, e.reserve) end end\n')
-        self.assertEqual(sorted(map(tuple, out)), sorted([("SUPER + slash", "L2-28"), ("Print", "L2-30"), ("Control_L", "L2-36")]))
+        self.assertEqual(sorted(map(tuple, out)), sorted([("SUPER + slash", "L2-28"), ("Control_L", "L2-36")]))
 
     def test_gestures(self):
         gestures = [l[1] for l in self.apply_real() if l[0] == "gesture"]
@@ -194,6 +198,12 @@ class ClavierTest(unittest.TestCase):
             "paramètre « commande » manquant": '{ touches = "SUPER + C", action = "commande", comande = "ls", description = "a" }',
             "paramètre « bureau » manquant": '{ touches = "SUPER + C", action = "envoyer", description = "a" }',
             "paramètre « role » manquant": '{ touches = "SUPER + C", action = "role", description = "a" }',
+            "variante « nil » invalide pour le rôle « capture »":
+                '{ touches = "SUPER + C", action = "role", role = "capture", description = "a" }',
+            "variante « tout » invalide pour le rôle « capture »":
+                '{ touches = "SUPER + C", action = "role", role = "capture", variante = "tout", description = "a" }',
+            "variante « zone » invalide pour le rôle « terminal »":
+                '{ touches = "SUPER + C", action = "role", role = "terminal", variante = "zone", description = "a" }',
         }
         for message, entry in cases.items():
             with self.subTest(message=message):
@@ -205,7 +215,7 @@ class ClavierTest(unittest.TestCase):
         out = self.apply_real()
         unbound = [l[1] for l in out if l[0] == "unbind"]
         first_bind = next(i for i, l in enumerate(out) if l[0] == "bind")
-        self.assertEqual(set(unbound), set(expected()) | {"SUPER + slash", "Print", "Control_L"})
+        self.assertEqual(set(unbound), set(expected()) | {"SUPER + slash", "Control_L"})
         self.assertTrue(all(l[0] == "unbind" for l in out[:first_bind]))
         self.assertEqual(len(unbound), first_bind)
 

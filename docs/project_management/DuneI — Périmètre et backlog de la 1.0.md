@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.21. Historique en fin de document.
+Version 1.22. Historique en fin de document.
 
 La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **148 éléments** répartis en **cinq lots**, sur six chantiers.
 
@@ -282,7 +282,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L2-27 | B | Écrit | Application du fond d'écran — le démon de fond d'écran entrera dans `session.toml` ; d'ici là, le fond uni `surface-base` du compositeur (#120601 à la teinte 55°) est le bureau provisoire validé (L1-10, D51) |
 | L2-28 | B | Mixte | Raccourcis clavier globaux et leur affichage ; touche réservée `SUPER + /` ; lire `hyprctl binds -j`, qui rend les descriptions de la table |
 | L2-29 | B | Écrit | Contrôle de la luminosité |
-| L2-30 | B | Écrit | Capture d'écran ; touche réservée `Print` |
+| L2-30 | B | Écrit | Capture d'écran ; `Print` (zone), `SHIFT + Print` (fenêtre) et `CTRL + Print` (écran) lancent le rôle `capture`, tenu de façon provisoire par hyprshot : le remplacer, c'est changer ses trois variantes dans `roles.lua` et retirer le paquet de `[provisoire]` (D79) |
 | L2-31 | B | Écrit | Presse-papiers et historique |
 | L2-32 | B | Écrit | Navigation clavier complète, boutons compris |
 | L2-33 | B | Écrit | Barre de défilement superposée — 8 px, 12 au survol |
@@ -496,6 +496,7 @@ Le choix de la distribution de base et du compositeur, précédemment ouverts, s
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-12 | Version initiale, 137 éléments |
+| 1.22 | 2026-10-22 | L2-30 : capture provisoire par hyprshot, rôle `capture` à trois variantes (D79) |
 | 1.21 | 2026-10-19 | Recette de sortie du lot 1 passée, deux réserves (D78) : écran externe (L1-09), changement de sortie audio rattaché à L3-05 |
 | 1.20 | 2026-10-19 | L1-21 fait : crochet, contrôle GitHub et règle de `main` (D77) |
 | 1.19 | 2026-10-19 | L1-25 et L1-03 faits : `caladan` réinstallé, chiffré et recetté (D76) |

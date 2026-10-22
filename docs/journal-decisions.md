@@ -1539,3 +1539,22 @@ corriger le dépôt, et le lot 2 n'en dépend pas. Bloquer le lot sur l'achat d'
 n'apporterait rien au socle.
 
 *Touché : carnet (recette de sortie), backlog (L1-09, L3-05), direction.*
+
+### D79 · Capture d'écran provisoire par hyprshot, rôle à variantes
+
+2026-10-22. Nicolas a besoin de capturer l'écran tout de suite, pour réunir les références visuelles de
+la coque, sans attendre la capture DuneI du lot 2 (L2-30). `Print` capture une zone, `SHIFT + Print` une
+fenêtre choisie au clic, `CTRL + Print` l'écran actif ; l'image est enregistrée dans `~/Images/Captures`,
+copiée dans le presse-papiers et annoncée par une notification de `dunst`.
+
+Repérage : hyprshot, du dépôt `extra`, est un script de quelques kilooctets écrit pour Hyprland au-dessus
+de `grim` et `slurp`, déjà installés, et il apporte `wl-clipboard`. Un script maison sur les mêmes outils
+aurait été du code écrit pour être jeté ; satty ajoute l'annotation, dont la collecte n'a pas besoin.
+hyprshot entre dans `[provisoire]`, rattaché à L2-30.
+
+Une touche lance un rôle, jamais un logiciel (L1-16) ; or la capture en demande trois commandes. Un rôle
+peut donc être une table de variantes, que l'entrée du raccourci nomme par `variante`. Le contrôle de
+`clavier.lua` refuse une variante manquante, inconnue, ou demandée à un rôle qui n'en a pas. Remplacer
+l'outil reste l'affaire de `roles.lua` seul.
+
+*Touché : carnet (raccourcis), backlog (L2-30), direction.*

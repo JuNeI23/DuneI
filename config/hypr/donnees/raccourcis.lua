@@ -23,6 +23,9 @@ M.touches = {
     { touches = "SUPER + E", action = "role", role = "fichiers",   description = "Ouvrir le gestionnaire de fichiers" },
     { touches = "SUPER + F", action = "role", role = "navigateur", description = "Ouvrir le navigateur" },
     { touches = "SUPER + R", action = "role", role = "lanceur",    description = "Ouvrir le lanceur" },
+    { touches = "Print",         action = "role", role = "capture", variante = "zone",    description = "Capturer une zone" },
+    { touches = "SHIFT + Print", action = "role", role = "capture", variante = "fenetre", description = "Capturer une fenêtre" },
+    { touches = "CTRL + Print",  action = "role", role = "capture", variante = "ecran",   description = "Capturer l'écran" },
     -- Session
     { touches = "SUPER + ALT + M", action = "commande", commande = "uwsm stop", description = "Quitter la session" },
     { touches = "SUPER + ALT + R", action = "recharger", description = "Recharger la configuration" },
@@ -48,7 +51,6 @@ M.touches = {
       drapeaux = { locked = true, repeating = true }, description = "Monter la luminosité" },
     -- Réservées : la touche est prise, rien n'est lié avant l'élément du backlog
     { touches = "SUPER + slash", reserve = "L2-28", description = "Afficher les raccourcis" },
-    { touches = "Print",         reserve = "L2-30", description = "Capturer l'écran" },
     { touches = "Control_L",     reserve = "L2-36", drapeaux = { long_press = true },
       description = "Montrer le pointeur, Ctrl tenu une seconde" },
 }
