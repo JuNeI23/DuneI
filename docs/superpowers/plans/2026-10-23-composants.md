@@ -313,6 +313,24 @@ la tâche indiquée.
 - [ ] **Étape 4 : valider** : « Planche : page des composants (L2-01) ».
 - [ ] **Étape 5 : validation à l'écran par Nicolas**, qui tranche aussi le retour au repos (`in` ou `out`).
 
+### Tâche 9 bis : formes à la macOS
+
+Ajoutée après la première validation de Nicolas (conception v0.3, § 7.10). Elle suit la correction des deux
+défauts relevés à l'écran (onglet quitté par Shift+Alt+Tab, curseur de texte resté visible).
+
+**Fichiers :** `tokens.toml` (`switch_width` 38, `switch_height` 22, `switch_thumb` 18, `slider_handle` 20 en
+confortable ; 32, 18, 14, 18 en compact), `generated/` et `tests/golden/` par la chaîne ; `coque/Composants/`
+(`Bouton`, `Case`, `Interrupteur`, `Curseur`, `Progression`, `Champ`, `Rangee`, `Liste`, `Overlay`, nouveau
+`Onglets`, `qmldir`) ; `coque/outils/planche/` (`BarreOnglets` remplacé par `Onglets`, page mise à jour) ;
+tests `tests/test_coque_composants.py`, `tests/test_quickshell_emitter.py`.
+
+- [ ] **Étape 1 :** tests qui échouent : nouvelles cotes dans l'émetteur ; `Bouton.principal` donne la
+  sélection `active` ; la pastille de rangée porte le rayon `control` et le retrait choisi ; `Onglets` existe.
+- [ ] **Étape 2 :** appliquer le tableau du § 7.10, élément par élément.
+- [ ] **Étape 3 :** `make test && make check` ; captures par l'IPC de la planche, regardées une à une.
+- [ ] **Étape 4 : valider** : « Formes à la macOS : contrôles, rangées, onglets segmentés (L2-01) ».
+- [ ] **Étape 5 :** nouvelle validation à l'écran par Nicolas.
+
 ### Tâche 10 : décision du retour au repos, documentation
 
 **Fichiers :** `coque/Composants/Etat.qml`, `Reglage.qml` (supprimé), `qmldir`, `PageComposants.qml` ;
@@ -337,3 +355,4 @@ historiques de chaque document ; conception passée au statut « implémentée �
 | Version | Date | Changement |
 | --- | --- | --- |
 | 0.1 | 2026-10-23 | Première rédaction, d'après la conception v0.2 |
+| 0.2 | 2026-10-23 | Tâche 9 bis : formes à la macOS, après la première validation à l'écran |

@@ -1,6 +1,6 @@
 # La bibliothèque de composants de la coque
 
-Version 0.2 · 2026-10-23 · backlog L2-01, avec L2-02 et L2-03 · décisions de cadre D80, D81 · statut : en
+Version 0.3 · 2026-10-23 · backlog L2-01, avec L2-02 et L2-03 · décisions de cadre D80, D81 · statut : en
 relecture
 
 ## 1. Objet et raison
@@ -248,6 +248,29 @@ réglage disparaît et le comportement retenu est fixé.
 coin depuis Qt 6.7). `ClippingRectangle` crée deux textures hors écran : réservé aux images et à l'overlay,
 jamais par rangée.
 
+### 7.10 Formes à la macOS (itération du 2026-10-23)
+
+À la première validation, Nicolas a jugé les contrôles trop basiques : rangées droites, cases et jauges
+plates. Il demande de s'inspirer largement de macOS pour tout le panneau. La passe reprend **les formes et les
+proportions seules** : le liseré et l'ombre restent à L2-04, l'animation des positions (le bouton de
+l'interrupteur qui glisse) à L2-06. Les couleurs viennent toujours des tokens et des états précalculés.
+
+| Élément | Forme retenue |
+| --- | --- |
+| Bouton | Rayon `control`. Nouvelle propriété `principal` : le bouton par défaut d'un dialogue, rempli d'accent (sélection `active`, ou `activeMuted` sous `inactive`), comme le bouton bleu de macOS |
+| Onglets | Contrôle segmenté : une piste en pilule au fond enfoncé, où le segment choisi est une pastille en retrait de 2 px. La logique des sélections (7.5) ne change pas. Le conteneur entre dans la bibliothèque (`Onglets`) |
+| Case | Carré de `check_size` au rayon `small`. Décochée : fond du cran cerné d'un filet `borderDefault`. Cochée : accent plein et coche claire `onAccent` |
+| Interrupteur | Pilule de 38 × 22 et bouton rond clair de 18, à 2 px du bord, clair dans les deux états ; la piste prend l'accent quand il est coché |
+| Curseur | Piste en pilule de 4 px, partie remplie en accent, poignée ronde claire de 20 px (le contraste de la poignée sombre, sous la cible, disparaît) |
+| Progression | Pilule de 4 px, remplissage en pilule |
+| Champ | Rayon `control`, fond enfoncé, filet `borderSubtle` ; l'anneau d'accent au focus ne change pas |
+| Rangées | Sélection en pastille au rayon `control`, en retrait des bords de la liste d'un échelon de `space` ; le contour de focus suit l'arrondi |
+| Menu contextuel | Rayon `panel`, marge interne d'un échelon de `space` ; le survol déplace la sélection (`currentIndex`), qui prend donc l'accent comme dans un menu macOS |
+| Attention | Rayon `window`, comme une feuille d'alerte ; le bouton principal porte `principal` |
+
+La couleur claire des boutons d'interrupteur et des poignées est `textPrimary`, puisque le thème est sombre.
+Un rôle propre (`knob`) sera ajouté si un thème clair apparaît.
+
 ## 8. Laissé au constructeur
 
 - Les noms des types QML et des fichiers, à condition de ne pas masquer un type de `QtQuick` (par exemple
@@ -277,3 +300,4 @@ jamais par rangée.
 | --- | --- | --- |
 | 0.1 | 2026-10-23 | Première rédaction, après le repérage et les arbitrages de Nicolas |
 | 0.2 | 2026-10-23 | Après la relecture du constructeur : contrôles un cran au-dessus (`controlRaised`), `overlay` complète, focus des rangées, logique des sélections |
+| 0.3 | 2026-10-23 | Après la première validation à l'écran : formes à la macOS (7.10), retour au repos `in` |
