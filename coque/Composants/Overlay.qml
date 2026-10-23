@@ -1,14 +1,15 @@
 import QtQuick
 import Quickshell
-import Quickshell.Wayland
 import Quickshell.Hyprland
 import "../Theme"
 
 // Overlay — surface posée au-dessus de tout, construite à l'ouverture et détruite à la fermeture.
 // Rôle : primitive des surfaces passagères de la coque (conception, § 7.7), en deux familles.
-//   - attention (lanceur, sélecteurs, déconnexion, dialogue) : PanelWindow plein écran sur l'écran du moniteur
-//     focalisé d'Hyprland, couche overlay, clavier exclusif, aucun espace réservé ; voile material.shade sur
-//     tout l'écran ; une seule à la fois, par le singleton Overlays ; Échap ou un clic sur le voile la ferment.
+//   - attention (lanceur, sélecteurs, déconnexion, dialogue) : FenetreAttention, PanelWindow plein écran sur
+//     l'écran du moniteur focalisé d'Hyprland, couche overlay, clavier exclusif, aucun espace réservé ; voile
+//     material.shade sur tout l'écran ; une seule à la fois, par le singleton Overlays ; Échap ou un clic sur le
+//     voile la ferment. Elle n'est compilée qu'à l'ouverture d'une attention, si bien que l'Overlay se charge
+//     aussi sous la plateforme offscreen, qui n'a pas de PanelWindow.
 //   - contextuel (menu, popover, liste déroulante) : PopupWindow ancrée sous l'élément ancre, ou sur le point
 //     de clic si point est fourni, retournée puis glissée pour rester dans l'écran ; sans voile ; le clavier
 //     est pris par HyprlandFocusGrab, dont la levée (clic à l'extérieur) ferme, comme Échap ; plusieurs
@@ -26,13 +27,14 @@ import "../Theme"
 //           l'ancre (Qt.point), null par défaut pour s'ancrer sous l'ancre entière ; contenu, propriété par
 //           défaut : l'élément déclaré dans l'Overlay, instancié à chaque ouverture.
 // Sorties : ferme(), émis à chaque fermeture, quelle qu'en soit la cause ; chargeur, le LazyLoader de la
-//           fenêtre, exposé pour les essais et les relevés de mémoire ; fenetreAttention et fenetreContextuel,
-//           les composants de fenêtre que le chargeur instancie, internes à la primitive.
+//           fenêtre, exposé pour les essais et les relevés de mémoire ; fenetreAttention (un porteur de
+//           FenetreAttention) et fenetreContextuel, les composants que le chargeur instancie, internes à la
+//           primitive.
 // Erreurs : aucune ; un contextuel sans ancre affichée ne se montre pas (règle de PopupWindow) ; avant le
 //           chargement des tokens, voile et fond restent transparents et le retrait vaut 0.
-// Dépendances : Quickshell (LazyLoader, PanelWindow, PopupWindow, Edges, PopupAdjustment, ExclusionMode),
-//               Quickshell.Wayland (WlrLayershell), Quickshell.Hyprland (Hyprland, HyprlandFocusGrab), Theme
-//               (material, radius, space), Surface, Overlays.
+// Dépendances : Quickshell (LazyLoader, PopupWindow, Edges, PopupAdjustment), Quickshell.Hyprland (Hyprland,
+//               HyprlandFocusGrab), Theme (radius, space), Surface, Overlays, FenetreAttention (chargée par son
+//               adresse, qui emploie le Cadre déclaré ici).
 // Liste ouverte à la souris : Liste passe focusClavier à vrai dès qu'elle reçoit le focus, ce qui montre le
 // contour de la rangée courante. Si le contenu porte une Liste et que l'Overlay a été ouvert à la souris,
 // l'ouvreur pose focusClavier = false sur cette Liste une fois le focus donné ; l'Overlay ne le détecte pas.
@@ -112,37 +114,13 @@ QtObject {
         component: overlay.famille === "attention" ? overlay.fenetreAttention : overlay.fenetreContextuel
     }
 
-    readonly property Component fenetreAttention: PanelWindow {
-        screen: overlay.ecran
-        anchors { top: true; bottom: true; left: true; right: true }
-        exclusionMode: ExclusionMode.Ignore
-        color: "transparent"
-        WlrLayershell.layer: WlrLayer.Overlay
-        WlrLayershell.keyboardFocus: WlrKeyboardFocus.Exclusive
-
-        // Un clic hors du cadre tombe sur le voile et ferme ; un clic dans le cadre que le contenu n'a pas pris
-        // descend aussi jusqu'ici, et il est ignoré.
-        Rectangle {
-            id: voile
-            anchors.fill: parent
-            color: Theme.material?.shade ?? "transparent"
-
-            MouseArea {
-                anchors.fill: parent
-                onClicked: (m) => {
-                    if (!cadreAttention.contains(cadreAttention.mapFromItem(voile, m.x, m.y))) overlay.ouvert = false
-                }
-            }
-        }
-
-        Cadre {
-            id: cadreAttention
-            anchors.centerIn: parent
-            contenu: overlay.contenu
-            rayon: Theme.radius?.window ?? 0
-            retrait: Theme.space?.scale[2] ?? 0
-            onEchap: overlay.ouvert = false
-        }
+    // La fenêtre d'attention vit dans FenetreAttention.qml, que ce porteur ne compile qu'à l'ouverture d'une
+    // attention (Qt.createComponent, mis en cache par le moteur) : nommer PanelWindow ici empêcherait de charger
+    // l'Overlay sous une plateforme sans dorsale de couches, comme la plateforme offscreen des coques d'essai. Le
+    // porteur est l'objet du chargeur ; la fenêtre, son enfant, est détruite avec lui à la fermeture.
+    readonly property Component fenetreAttention: QtObject {
+        id: porteur
+        readonly property var fenetre: Qt.createComponent("FenetreAttention.qml").createObject(porteur, { overlay })
     }
 
     readonly property Component fenetreContextuel: PopupWindow {

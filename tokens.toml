@@ -283,6 +283,9 @@ slider_track = 4           # épaisseur de la piste du curseur
 slider_handle = 20         # diamètre de la poignée du curseur
 slider_width = 160         # largeur implicite du curseur
 slider_bar = 22            # hauteur de la barre de la jauge, curseur sans disque du Centre de contrôle
+slider_bar_icon = 14       # côté de l'icône posée dans la barre de la jauge
+pastille = 12              # diamètre d'une pastille de fenêtre (fermer, réduire, agrandir)
+stepper_width = 16         # largeur du stepper du compteur, deux demi-boutons empilés
 segment_inset = 2          # retrait du segment coché dans la piste d'une barre d'onglets segmentée
 field_width = 200          # largeur implicite du champ de saisie, fixe : aucun état ne le redimensionne
 
@@ -301,6 +304,9 @@ slider_track = 4           # épaisseur de la piste du curseur
 slider_handle = 18         # diamètre de la poignée du curseur
 slider_width = 140         # largeur implicite du curseur
 slider_bar = 18            # hauteur de la barre de la jauge, curseur sans disque du Centre de contrôle
+slider_bar_icon = 12       # côté de l'icône posée dans la barre de la jauge
+pastille = 12              # diamètre d'une pastille de fenêtre (fermer, réduire, agrandir)
+stepper_width = 14         # largeur du stepper du compteur, deux demi-boutons empilés
 segment_inset = 2          # retrait du segment coché dans la piste d'une barre d'onglets segmentée
 field_width = 180          # largeur implicite du champ de saisie, fixe : aucun état ne le redimensionne
 

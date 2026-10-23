@@ -21,8 +21,9 @@ import "Composants"
 // Erreurs : aucune ; une icône absente du thème laisse sa place vide ; une largeur plus étroite que le plus
 // large bloc (une grille d'états) laisse ce bloc déborder.
 // Dépendances : Theme (space, radius, density, typo, color), module Composants (Surface, Texte, Icone, Bouton,
-// Case, Radio, Interrupteur, Onglet, Onglets, Curseur, Jauge, Champ, Liste, Rangee, Separateur, Progression,
-// AnneauFocus, Overlay, Reglage). Les overlays ne s'ouvrent qu'à la demande de Nicolas, par leurs boutons :
+// Case, Radio, Interrupteur, Onglet, Onglets, Curseur, Jauge, Champ, Pastilles, Compteur, Deroulant, Liste,
+// Rangee, Separateur, Progression, AnneauFocus, Etat, Overlay, Reglage). Le menu du déroulant vivant ne s'ouvre,
+// lui aussi, qu'à la main. Les overlays ne s'ouvrent qu'à la demande de Nicolas, par leurs boutons :
 // l'attention prend le clavier en exclusif.
 Surface {
     id: page
@@ -104,8 +105,8 @@ Surface {
 
         // montreFocus — montre le focus d'un exemplaire sans lui donner le focus : contour de la pastille pour
         // une rangée, anneau autour de l'élément qui le porte d'ordinaire pour un contrôle (cibleFocus si
-        // l'exemplaire la déclare, comme le segment d'une barre d'onglets ; poignée d'un curseur, boîte ou piste
-        // d'une case ou d'un interrupteur ; fond sinon).
+        // l'exemplaire la déclare, comme le fond entier d'un compteur ; poignée d'un curseur, boîte ou piste
+        // d'une case ou d'un interrupteur ; fond sinon, qui est la piste pour une barre d'onglets).
         // Entrées : item, l'exemplaire. Sortie : aucune. Erreurs : aucune.
         // Dépendances : Rangee.forcerContour, AnneauFocus (composant anneau).
         function montreFocus(item) {
@@ -176,17 +177,34 @@ Surface {
     }
 
     // OngletEnBarre — barre Onglets de deux segments, dont le premier tient lieu d'exemplaire dans une Grille.
-    // Rôle : un segment ne se juge que sur sa piste ; cette barre expose l'Etat de son premier segment et ce
-    // segment comme cible de l'anneau de focus, pour que Grille.force agisse sur lui. currentIndex choisit le
-    // segment coché (le premier par défaut) ; enabled faux désactive les deux.
-    // Entrées : currentIndex, enabled et le reste de l'API d'Onglets. Sorties : etat, l'Etat du premier segment ;
-    // cibleFocus, son fond. Erreurs : aucune. Dépendances : Onglets, Onglet.
+    // Rôle : un segment ne se juge que sur sa piste ; cette barre expose l'Etat de son premier segment, pour que
+    // Grille.force agisse sur lui. L'anneau de focus se montre autour de la piste (le fond de la barre), comme
+    // celui d'une barre focalisée au clavier. currentIndex choisit le segment coché (le premier par défaut) ;
+    // enabled faux désactive les deux.
+    // Entrées : currentIndex, enabled et le reste de l'API d'Onglets. Sorties : etat, l'Etat du premier segment.
+    // Erreurs : aucune. Dépendances : Onglets, Onglet.
     component OngletEnBarre: Onglets {
         readonly property alias etat: segment.etat
-        readonly property Item cibleFocus: segment.background
 
         Onglet { id: segment; text: "Onglet" }
         Onglet { text: "Autre" }
+    }
+
+    // CompteurEnGrille — Compteur de 0 à 10 dont le demi-bouton haut tient lieu d'exemplaire dans une Grille.
+    // Rôle : les états d'un compteur se lisent sur son stepper ; ce porteur expose l'Etat du demi-bouton haut,
+    // pour que Grille.force y fige le survol et la pression, et le fond entier du compteur comme cible de
+    // l'anneau de focus, qui entoure l'ensemble. enabled faux désactive tout le compteur.
+    // Entrées : value, la valeur ; enabled. Sorties : etat, l'Etat du demi-bouton haut ; cibleFocus, le fond du
+    // compteur. Erreurs : aucune. Dépendances : Compteur.
+    component CompteurEnGrille: Item {
+        readonly property Etat etat: compteur.etatHaut
+        readonly property Item cibleFocus: compteur.background
+        property alias value: compteur.value
+
+        implicitWidth: compteur.implicitWidth
+        implicitHeight: compteur.implicitHeight
+
+        Compteur { id: compteur; from: 0; to: 10 }
     }
 
     // PanneauEssai — panneau de contrôles courants, pour comparer deux panneaux identiques dont l'un porte
@@ -195,7 +213,7 @@ Surface {
     // fenêtre s'élargit un peu.
     // Entrées : titre ; dnInactive, le modificateur, faux par défaut. Sortie : surface surfacePanel.
     // Erreurs : aucune. Dépendances : Surface, Case, Interrupteur, Curseur, Onglets, Onglet, Bouton, Champ,
-    // Progression, Liste, Rangee, Texte.
+    // Pastilles, Compteur, Deroulant, Progression, Liste, Rangee, Texte.
     component PanneauEssai: Surface {
         id: panneau
 
@@ -237,6 +255,13 @@ Surface {
             }
 
             Champ { text: "Texte saisi" }
+
+            Row {
+                spacing: Theme.space.sectionGap
+                Pastilles { anchors.verticalCenter: parent.verticalCenter }
+                Compteur { from: 0; to: 10; value: 4 }
+                Deroulant { model: ["Premier choix", "Second choix"] }
+            }
 
             Liste {
                 width: 3 * Theme.space.scale[7]
@@ -537,6 +562,52 @@ Surface {
             modele: Component { Champ { placeholderText: "Texte indicatif" } }
             Champ { placeholderText: "Texte indicatif" }
             Champ { text: "Texte saisi" }
+        }
+
+        // Les pastilles n'ont pas d'Etat : leurs états se figent par leurs propriétés (forcer, réservée à la planche,
+        // inactif, reduireActif), en une seule ligne. Le vivant affiche le dernier signal émis.
+        Grille {
+            titre: "Pastilles de fenêtre"
+            etats: ["rest"]
+            variantes: [
+                { libelle: "repos" },
+                { libelle: "survol", proprietes: { forcer: "hover" } },
+                { libelle: "pressé", proprietes: { forcer: "pressed" } },
+                { libelle: "inactive", proprietes: { inactif: true } },
+                { libelle: "réduire désactivé", proprietes: { forcer: "hover", reduireActif: false } }
+            ]
+            modele: Component { Pastilles {} }
+
+            Pastilles {
+                onFermer: signalPastilles.text = "dernier signal : fermer"
+                onReduire: signalPastilles.text = "dernier signal : réduire"
+                onAgrandir: signalPastilles.text = "dernier signal : agrandir"
+            }
+            Legende { id: signalPastilles; text: "dernier signal : aucun" }
+        }
+
+        // Le survol et la pression se figent sur le demi-bouton haut (CompteurEnGrille) ; à la borne haute, il est
+        // désactivé.
+        Grille {
+            titre: "Compteur"
+            variantes: [{ libelle: "valeur 5", proprietes: { value: 5 } },
+                        { libelle: "borne haute", proprietes: { value: 10 } }]
+            modele: Component { CompteurEnGrille {} }
+            Compteur { from: 0; to: 10; value: 3 }
+            Compteur { from: 0; to: 100; value: 42; editable: true }
+        }
+
+        // Le menu du déroulant vivant ne s'ouvre qu'à la main, comme les overlays de l'en-tête.
+        Grille {
+            titre: "Menu déroulant"
+            variantes: [{ libelle: "valeur" }, { libelle: "principal", proprietes: { principal: true } }]
+            modele: Component { Deroulant { model: ["Automatique", "Clair", "Sombre"] } }
+
+            Deroulant {
+                model: ["Automatique", "Clair", "Sombre"]
+                onActivated: (index) => choixDeroulant.text = "activé : " + model[index]
+            }
+            Legende { id: choixDeroulant; text: "activé : aucun" }
         }
 
         Grille {

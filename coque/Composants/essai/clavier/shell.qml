@@ -6,12 +6,12 @@ import "Theme"
 import "Composants"
 
 // Coque d'essai du clavier : parcours de tabulation et curseur de texte, dans une vraie fenêtre.
-// Rôle : ouvre une FloatingWindow (un Bouton « avant », une barre Onglets avec les onglets « tokens » et
-// « composants », ce dernier coché, un Bouton « apres », un Champ, une Jauge, puis deux Liste côte à côte, un
-// menu qui porte selectionSuitSurvol et un témoin qui ne le porte pas) et y synthétise des touches et des
-// mouvements du pointeur par le TestEvent de QtTest, pour que tests/test_coque_composants.py éprouve ce que la
-// coque sans fenêtre ne peut pas exécuter : le focus actif, la tabulation, le clignotement du curseur, la mise en
-// page de la barre (qui attend le polissage d'une fenêtre) et le survol.
+// Rôle : ouvre une FloatingWindow (un Bouton « avant », une barre Onglets avec les onglets « tokens » et « composants
+// », ce dernier coché, un Bouton « apres », un Champ, une Jauge, un Compteur, un Deroulant, des Pastilles, puis deux
+// Liste côte à côte, un menu qui porte selectionSuitSurvol et un témoin qui ne le porte pas) et y synthétise des
+// touches et des mouvements du pointeur par le TestEvent de QtTest, pour que tests/test_coque_composants.py éprouve ce
+// que la coque sans fenêtre ne peut pas exécuter : le focus actif, la tabulation, le clignotement du curseur, la mise
+// en page de la barre (qui attend le polissage d'une fenêtre) et le survol.
 // Garde de plateforme : la coque journalise Qt.platform.pluginName dès son chargement, et son LazyLoader ne
 // construit la fenêtre que sous la plateforme offscreen, où elle ne paraît jamais à l'écran et où ni les touches
 // ni le pointeur n'atteignent le bureau. Lancée sous une autre plateforme (wayland compris), elle n'ouvre donc
@@ -23,7 +23,12 @@ import "Composants"
 // <sélection de tokens> <sélection de composants> <visualFocus> », « essai : curseur <cursorVisible> <délégué
 // visible> <cursorFlashTime> », « essai : onglets <géométrie de la barre et de ses segments> », « essai : menu
 // <rangée courante du menu> <rangée courante du témoin> », « essai : ongletSurvole <interaction> <fond> » et
-// « essai : jauge <valeur> <anneau visible> » ; « essai touche <tab|majtab|gauche|droite> » frappe une touche,
+// « essai : jauge <valeur> <anneau visible> », ainsi que anneauOnglets, compteur, deroulant et pastilles (voir
+// chaque fonction) ; « essai touche <tab|majtab|gauche|droite|haut|bas|espace|entree|echap> » frappe une touche,
+// « essai molette <1|-1> » tourne la molette sur le compteur, « essai cliquerDeroulant » clique le déroulant,
+// « essai pointerRangee <rang> <bool> » pose le pointeur sur une rangée du menu ouvert et l'y clique si demandé,
+// « essai pointerPastille <rang> <bool> » pose le pointeur sur une pastille et l'y clique si demandé, « essai
+// pastillesReduire <bool> » active ou désactive la pastille de réduction,
 // « essai survoler <rang> » pose le pointeur sur une rangée de chaque liste, « essai survolerOnglet » sur
 // l'onglet « tokens » et « essai ongletActif <bool> » active ou désactive l'onglet « composants », sans
 // journaliser.
@@ -64,6 +69,24 @@ ShellRoot {
                 Bouton { objectName: "apres"; text: "Après" }
                 Champ { id: champ; objectName: "champ" }
                 Jauge { id: jaugeEssai; objectName: "jauge"; value: 0.5 }
+                Compteur { id: compteurEssai; objectName: "compteur"; from: 0; to: 3; value: 1 }
+
+                Deroulant {
+                    id: deroulantEssai
+                    property int activations: 0
+                    objectName: "deroulant"
+                    model: ["Un", "Deux", "Trois"]
+                    onActivated: activations++
+                }
+
+                // Pastilles dont chaque signal compte ses émissions ; elles ne sont pas un arrêt de tabulation.
+                Pastilles {
+                    id: pastillesEssai
+                    property var emis: ({ fermer: 0, reduire: 0, agrandir: 0 })
+                    onFermer: emis = Object.assign({}, emis, { fermer: emis.fermer + 1 })
+                    onReduire: emis = Object.assign({}, emis, { reduire: emis.reduire + 1 })
+                    onAgrandir: emis = Object.assign({}, emis, { agrandir: emis.agrandir + 1 })
+                }
 
                 Row {
                     Liste { id: listeMenu; selectionSuitSurvol: true; model: 3; delegate: rangee; width: 100; height: 3 * Theme.density.rowHeight }
@@ -85,12 +108,94 @@ ShellRoot {
                 target: "essai"
 
                 // touche — frappe une touche dans la fenêtre, comme le clavier.
-                // Entrée : nom, "tab", "majtab" (Maj+Tab, reçu comme Backtab), "gauche" ou "droite".
+                // Entrée : nom, "tab", "majtab" (Maj+Tab, reçu comme Backtab), "gauche", "droite", "haut", "bas",
+                // "espace", "entree" ou "echap".
                 // Sortie : aucune. Erreurs : TypeError pour un nom inconnu. Dépendances : clavier (TestEvent).
                 function touche(nom: string): void {
-                    const [cle, mod] = ({ tab: [Qt.Key_Tab, Qt.NoModifier], majtab: [Qt.Key_Backtab, Qt.ShiftModifier],
-                                          gauche: [Qt.Key_Left, Qt.NoModifier], droite: [Qt.Key_Right, Qt.NoModifier] })[nom]
-                    clavier.keyClick(cle, mod, -1)
+                    const cle = ({ tab: Qt.Key_Tab, majtab: Qt.Key_Backtab, gauche: Qt.Key_Left, droite: Qt.Key_Right,
+                                   haut: Qt.Key_Up, bas: Qt.Key_Down, espace: Qt.Key_Space, entree: Qt.Key_Return,
+                                   echap: Qt.Key_Escape })[nom]
+                    clavier.keyClick(cle, nom === "majtab" ? Qt.ShiftModifier : Qt.NoModifier, -1)
+                }
+
+                // anneauOnglets — journalise la visibilité de l'anneau de la barre d'onglets, puis celle de l'anneau
+                // propre au segment « composants ». Entrées : aucune. Sortie : aucune ; « essai : anneauOnglets
+                // <bool> <bool> ». Erreurs : aucune. Dépendances : barre (anneau), composants (anneau), journal.
+                function anneauOnglets(): void {
+                    essai.journal("anneauOnglets", barre.anneau.visible + " " + composants.anneau.visible)
+                }
+
+                // compteur — journalise la valeur du compteur, la visibilité de son anneau, puis l'activation des
+                // demi-boutons haut et bas. Entrées : aucune. Sortie : aucune ; « essai : compteur <valeur> <bool>
+                // <bool> <bool> ». Erreurs : aucune. Dépendances : compteurEssai, journal.
+                function compteur(): void {
+                    const c = compteurEssai
+                    essai.journal("compteur", [c.value, c.anneau.visible, c.up.indicator.enabled,
+                                               c.down.indicator.enabled].join(" "))
+                }
+
+                // molette — fait tourner la molette d'un cran au-dessus du compteur.
+                // Entrée : sens, 1 vers le haut, -1 vers le bas. Sortie : aucune. Erreurs : aucune.
+                // Dépendances : compteurEssai, clavier (TestEvent).
+                function molette(sens: int): void {
+                    const c = compteurEssai
+                    clavier.mouseWheel(c, c.width / 4, c.height / 2, Qt.NoButton, Qt.NoModifier, 0, 120 * sens, -1)
+                }
+
+                // deroulant — journalise le rang et le texte du déroulant, le nombre d'activations, l'état ouvert de
+                // son menu, puis, menu ouvert, la rangée courante de la liste, son drapeau focusClavier et la
+                // visibilité de la coche de chaque rangée. Entrées : aucune. Sortie : aucune ; « essai : deroulant
+                // <rang> <texte> <n> <bool> [<rang> <bool> <bool>…] ». Erreurs : aucune.
+                // Dépendances : deroulantEssai (menu, liste), journal.
+                function deroulant(): void {
+                    const d = deroulantEssai, l = d.liste
+                    const coches = l ? [0, 1, 2].map(i => l.itemAtIndex(i)?.contentItem.children[0].item?.children[0]
+                        .visible) : []
+                    essai.journal("deroulant", [d.currentIndex, d.displayText, d.activations, d.menu.ouvert]
+                        .concat(l ? [l.currentIndex, l.focusClavier] : [], coches).join(" "))
+                }
+
+                // cliquerDeroulant — clique au centre du déroulant, comme la souris.
+                // Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : deroulantEssai, clavier.
+                function cliquerDeroulant(): void {
+                    const d = deroulantEssai
+                    clavier.mouseClick(d, d.width / 2, d.height / 2, Qt.LeftButton, Qt.NoModifier, -1)
+                }
+
+                // pointerRangee — pose le pointeur sur une rangée du menu ouvert du déroulant, et l'y clique si
+                // demandé. Les événements de la souris vont à la fenêtre de la rangée, le menu, même sans focus
+                // clavier. Entrées : rang, rang de la rangée ; clic, vrai pour cliquer. Sortie : aucune. Erreurs :
+                // TypeError si le menu est fermé. Dépendances : deroulantEssai (liste), clavier.
+                function pointerRangee(rang: int, clic: bool): void {
+                    const r = deroulantEssai.liste.itemAtIndex(rang)
+                    clavier.mouseMove(r, r.width / 2, r.height / 2, -1, Qt.NoButton, Qt.NoModifier)
+                    if (clic) clavier.mouseClick(r, r.width / 2, r.height / 2, Qt.LeftButton, Qt.NoModifier, -1)
+                }
+
+                // pastilles — journalise le survol du groupe, la visibilité des trois glyphes et le nombre
+                // d'émissions de fermer, reduire et agrandir. Entrées : aucune. Sortie : aucune ; « essai :
+                // pastilles <bool> <bool> <bool> <bool> <n> <n> <n> ». Erreurs : aucune.
+                // Dépendances : pastillesEssai (survol, disques, emis), journal.
+                function pastilles(): void {
+                    const p = pastillesEssai, e = p.emis
+                    essai.journal("pastilles", [p.survol, ...[0, 1, 2].map(i => p.disques.itemAt(i).trace.visible),
+                                                e.fermer, e.reduire, e.agrandir].join(" "))
+                }
+
+                // pointerPastille — pose le pointeur au centre d'une pastille, et l'y clique si demandé.
+                // Entrées : rang, 0 (fermer), 1 (réduire) ou 2 (agrandir) ; clic, vrai pour cliquer.
+                // Sortie : aucune. Erreurs : TypeError pour un rang absent. Dépendances : pastillesEssai, clavier.
+                function pointerPastille(rang: int, clic: bool): void {
+                    const d = pastillesEssai.disques.itemAt(rang)
+                    clavier.mouseMove(d, d.width / 2, d.height / 2, -1, Qt.NoButton, Qt.NoModifier)
+                    if (clic) clavier.mouseClick(d, d.width / 2, d.height / 2, Qt.LeftButton, Qt.NoModifier, -1)
+                }
+
+                // pastillesReduire — active ou désactive la pastille de réduction.
+                // Entrée : valeur, nouveau reduireActif. Sortie : aucune. Erreurs : aucune.
+                // Dépendances : pastillesEssai.
+                function pastillesReduire(valeur: bool): void {
+                    pastillesEssai.reduireActif = valeur
                 }
 
                 // focus — journalise l'élément qui a le focus actif, l'onglet courant et la sélection des onglets.

@@ -1,6 +1,6 @@
 # Planche de contrôle des tokens de la coque
 
-Version 0.6 — outil de développement de L2-34, gardé ensuite pour tout travail sur les tokens et la coque ; page
+Version 0.7 — outil de développement de L2-34, gardé ensuite pour tout travail sur les tokens et la coque ; page
 des composants ajoutée en L2-01.
 
 La planche affiche dans sa fenêtre (tuilée ou flottante, selon les règles d'Hyprland) deux onglets : « Tokens », chaque token de `coque-tokens.json`
@@ -74,24 +74,31 @@ fenêtre plus large.
   chaque échelon de `Texte` en régulier et moyen ; les icônes `non-starred`, `starred`, `starred` pleine
   (repli de D82) et `object-select` ; `Separateur` horizontal et vertical ; `Progression` à 0, 35 et 100 %.
 - **Une grille par contrôle** (`Bouton`, `Case`, `Radio`, `Interrupteur`, `Onglets`, `Curseur`, `Jauge`,
-  `Champ`, `Rangee`) : en lignes, repos, survol, pressé, désactivé et focus clavier (le champ n'a pas de ligne de
-  focus, puisqu'il n'a pas d'anneau) ; en colonnes, les variantes (bouton texte, avec icône ou principal, case
+  `Champ`, `Pastilles`, `Compteur`, `Deroulant`, `Rangee`) : en lignes, repos, survol, pressé, désactivé et focus
+  clavier (le champ n'a pas de ligne de focus, puisqu'il n'a pas d'anneau ; les pastilles n'ont qu'une ligne,
+  puisqu'elles n'ont pas d'`Etat`) ; en colonnes, les variantes (bouton texte, avec icône ou principal, case
   décochée et cochée, radio décoché et coché, onglet non coché, coché dans une barre focalisée ou sans focus,
-  chacun jugé dans une barre de deux segments, jauge à 0 et à 0,5 avec l'icône `audio-volume-high`, rangée non
-  sélectionnée ou en sélection active ou inactive, champ vide ou rempli), pour que la grille reste étroite. À
-  côté, ou dessous quand la largeur manque, derrière un filet vertical, un exemplaire vivant : pour le radio, un
-  groupe exclusif de trois ; pour la jauge, deux jauges, l'une avec `audio-volume-high`, l'autre avec
-  `display-brightness` ; pour la rangée, une `Liste` de six rangées, un seul arrêt de tabulation.
+  chacun jugé dans une barre de deux segments dont l'anneau de focus entoure toute la piste, jauge à 0 et à 0,5
+  avec l'icône `audio-volume-high`, pastilles au repos, au survol, pressées, inactives et avec la réduction
+  désactivée, compteur à 5 et à sa borne haute, dont le survol et la pression se figent sur le demi-bouton haut,
+  déroulant ordinaire ou principal, rangée non sélectionnée ou en sélection active ou inactive, champ vide ou
+  rempli), pour que la grille reste étroite. À côté, ou dessous quand la largeur manque, derrière un filet
+  vertical, un exemplaire vivant : pour le radio, un groupe exclusif de trois ; pour la jauge, deux jauges, l'une
+  avec `audio-volume-high`, l'autre avec `display-brightness` ; pour les pastilles, un groupe et le dernier signal
+  émis ; pour le compteur, un compteur de 0 à 10 et un compteur éditable de 0 à 100 ; pour le déroulant, un menu
+  de trois choix et le dernier choix activé (son menu ne s'ouvre qu'à la main) ; pour la rangée, une `Liste` de
+  six rangées, un seul arrêt de tabulation.
 - **Modificateur inactive** : deux panneaux identiques (case cochée, radio coché, interrupteur, curseur, barre
-  d'onglets, bouton, champ, progression, liste), le second sous `dnInactive: true`, pour juger l'accent muet
-  (`activeMuted`) et l'anneau atténué.
+  d'onglets, bouton, champ, pastilles, compteur, déroulant, progression, liste), le second sous `dnInactive: true`,
+  pour juger l'accent muet (`activeMuted`) et l'anneau atténué.
 
 Les états figés ne portent aucune valeur de design : `Etat.forcer` (réservée à la planche) remplace
 l'interaction lue par le contrôle, la sélection s'écrit dans l'`Etat` de l'exemplaire, l'anneau de focus est un
 `AnneauFocus` montré autour de l'élément qui le porte, le contour d'une rangée passe par `Rangee.forcerContour`
 (réservée à la planche), et l'état désactivé est un vrai `enabled: false`.
 
-Les overlays ne s'ouvrent qu'à la main : l'attention prend le clavier en exclusif sur tout l'écran.
+Les overlays et le menu du déroulant ne s'ouvrent qu'à la main : l'attention prend le clavier en exclusif sur
+tout l'écran, et un contextuel le prend par `HyprlandFocusGrab`.
 
 ## Commandes IPC
 
@@ -154,3 +161,4 @@ la PSS lues dans `/proc/<pid>/smaps_rollup`.
 | 0.4 | 2026-10-23 | Après relecture : page qui passe à la ligne dans une fenêtre tuilée, états en lignes dans les grilles, commande IPC `onglet` (au lieu de `page`), capture qui signale un échec d'écriture. |
 | 0.5 | 2026-10-23 | Formes à la macOS (L2-01, § 7.10) : barre `Onglets` du module à la place de `BarreOnglets.qml`, grille des onglets jugés dans leur barre, bouton principal, menu dont la sélection suit le pointeur ; capture qui n'applique plus deux fois le rapport de pixels ; filet de l'exemplaire vivant borné à sa hauteur quand il passe sous la grille. |
 | 0.6 | 2026-10-23 | Deuxième itération visuelle (L2-01, § 7.10) : sections `Radio` (grille et groupe exclusif de trois) et `Jauge` (grille et deux jauges à icône), radio coché dans les panneaux du modificateur inactive, grille du champ sans ligne de focus, puisque le champ n'a plus d'anneau. |
+| 0.7 | 2026-10-23 | Troisième itération (L2-01, § 7.10) : sections `Pastilles de fenêtre`, `Compteur` et `Menu déroulant`, ajoutés aussi aux panneaux du modificateur inactive ; anneau de focus des onglets figé autour de la piste. |

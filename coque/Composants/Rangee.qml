@@ -18,8 +18,10 @@ import "etats.js" as Etats
 // courante.
 // Entrées : index, requis, rang dans le modèle (fourni par la ListView) ; text, libellé ; icone, nom
 // freedesktop d'une icône symbolique, vide par défaut (pas d'icône) ; selectionnee, sélection fournie par
-// l'appelant quand la liste ne la fait pas suivre currentIndex ; forcerContour, réservée à la planche de
-// contrôle : montre le contour de focus sans que la liste ait le focus, faux par défaut.
+// l'appelant quand la liste ne la fait pas suivre currentIndex ; accessoire, composant facultatif posé en tête
+// de la rangée, avant l'icône, comme la colonne des coches d'un menu de macOS (le Deroulant y pose sa Coche) ;
+// null par défaut ; forcerContour, réservée à la planche de contrôle : montre le contour de focus sans que la
+// liste ait le focus, faux par défaut.
 // Sorties : etat, l'Etat de la rangée (rôle, interaction, sélection, couleurs) ; signal active(), émis au clic
 // et à Entrée (la Liste l'émet pour sa rangée courante).
 // Erreurs : aucune ; hors d'une ListView, la rangée garde sa largeur implicite, n'est jamais courante ni
@@ -40,13 +42,15 @@ T.ItemDelegate {
     property string icone
     property bool selectionnee: false
     property bool forcerContour: false
+    property Component accessoire: null
 
     readonly property alias etat: etat
     // Les propriétés attachées se lisent ici, dans la portée de la rangée : lues dans un enfant, elles
     // viseraient cet enfant, qui n'est pas le délégué.
     readonly property ListView vue: ListView.view
     readonly property bool courante: ListView.isCurrentItem
-    readonly property bool contourMontre: forcerContour || courante && (vue?.activeFocus ?? false) && (vue?.focusClavier ?? false)
+    readonly property bool contourMontre: forcerContour
+        || courante && (vue?.activeFocus ?? false) && (vue?.focusClavier ?? false)
 
     signal active()
 
@@ -112,6 +116,12 @@ T.ItemDelegate {
 
     contentItem: RowLayout {
         spacing: Theme.space?.scale[1] ?? 0
+
+        Loader {
+            active: rangee.accessoire !== null
+            visible: active
+            sourceComponent: rangee.accessoire
+        }
 
         Icone {
             nom: rangee.icone

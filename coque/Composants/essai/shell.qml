@@ -10,21 +10,22 @@ import "Composants/etats.js" as Etats
 // Coque d'essai du module Composants, sans aucune fenêtre.
 // Rôle : instancie un arbre fixe (une Surface fenêtre contenant une Surface panneau, qui porte la sonde capteur, un
 // contrôle simulé avec son Etat, un Texte, une Icone, les cinq contrôles interactifs (Bouton, Case, Interrupteur,
-// Onglet, Curseur), trois Radio dans un même parent, une Jauge, une Progression, deux Separateur, un Champ, une Liste
-// vide, une Liste de trois Rangee et une cible munie d'un AnneauFocus, plus une Surface inactive à l'écart, deux
-// Overlay fermés, un de chaque famille, et trois objets factices pour le singleton Overlays) pour que
-// tests/test_coque_composants.py éprouve dans un vrai Quickshell les règles d'etats.js, l'héritage par remontée,
-// l'import du Theme, les pièces de base, les contrôles et les listes, en lisant le journal.
-// Entrées : DUNEI_TOKENS_DIR, lu par Theme ; thème d'icônes Adwaita, posé par la directive IconTheme en tête
-// (thème de transition jusqu'à L4-12). Sortie : journal de Theme, plus « essai : prêt <bool> » à chaque
-// changement de Theme.ready, et une ligne « essai : <clé> <valeur> » par commande IPC de lecture (cran,
-// interaction, selection, sonde, naissances, fond, texte, anneau, etat, ressort, image, controles, coches,
-// cotes, glyphes, radios, jauge, progression, separateur, champ, indicatif, tailleIcone, liste, arrets, rangee,
-// bouton, overlays, overlaysFermes) ; « essai decocher », « essai radioCocher <rang> », « essai jaugeActive
-// <bool> », « essai boutonPrincipal <bool> », « essai inactif <bool> », « essai reparenter », « essai texteMoyen »,
-// « essai anneauInactif <bool> », « essai survol <bool> », « essai retour <in|out> », « essai champActif
-// <bool> », « essai champTexte <texte> », « essai selectionLibre », « essai icone <nom> <bool> », « essai
-// ouvrirFactice <A|B|C> » et « essai fermerFactice <A|B|C> » agissent sans journaliser.
+// Onglet, Curseur), trois Radio dans un même parent, une Jauge, une Progression, deux Separateur, un Champ, des
+// Pastilles, un Compteur, un Deroulant, une Liste vide, une Liste de trois Rangee et une cible munie d'un AnneauFocus,
+// plus une Surface inactive à l'écart, deux Overlay fermés, un de chaque famille, et trois objets factices pour le
+// singleton Overlays) pour que tests/test_coque_composants.py éprouve dans un vrai Quickshell les règles d'etats.js,
+// l'héritage par remontée, l'import du Theme, les pièces de base, les contrôles et les listes, en lisant le journal.
+// Entrées : DUNEI_TOKENS_DIR, lu par Theme ; thème d'icônes Adwaita, posé par la directive IconTheme en tête (thème de
+// transition jusqu'à L4-12). Sortie : journal de Theme, plus « essai : prêt <bool> » à chaque changement de
+// Theme.ready, et une ligne « essai : <clé> <valeur> » par commande IPC de lecture (cran, interaction, selection,
+// sonde, naissances, fond, texte, anneau, etat, ressort, image, controles, coches, cotes, glyphes, radios, jauge,
+// progression, separateur, champ, indicatif, tailleIcone, liste, arrets, rangee, bouton, overlays, overlaysFermes,
+// pastilles, compteur, deroulant, fenetreAttention) ; « essai pastillesForcer <état> », « essai pastillesReduire <bool>
+// », « essai compteurValeur <n> », « essai deroulantRang <n> », « essai decocher », « essai radioCocher <rang> », «
+// essai jaugeActive <bool> », « essai boutonPrincipal <bool> », « essai inactif <bool> », « essai reparenter », « essai
+// texteMoyen », « essai anneauInactif <bool> », « essai survol <bool> », « essai retour <in|out> », « essai champActif
+// <bool> », « essai champTexte <texte> », « essai selectionLibre », « essai icone <nom> <bool> », « essai ouvrirFactice
+// <A|B|C> » et « essai fermerFactice <A|B|C> » agissent sans journaliser.
 // Erreurs : celles de Theme et des liaisons, dans le journal. Dépendances : quickshell ≥ 0.3 (Quickshell.Io :
 // IpcHandler), modules coque/Theme et coque/Composants.
 // Import : Quickshell ne résout pas un module situé au-dessus de la racine de la coque lancée ; les liens
@@ -140,6 +141,22 @@ ShellRoot {
                 placeholderText: "Indicatif"
             }
 
+            Pastilles {
+                id: pastillesEssai
+            }
+
+            Compteur {
+                id: compteurEssai
+                from: 0
+                to: 3
+                value: 3
+            }
+
+            Deroulant {
+                id: deroulantEssai
+                model: ["Un", "Deux", "Trois éléments"]
+            }
+
             Liste {
                 id: listeVide
             }
@@ -236,6 +253,14 @@ ShellRoot {
             essai.journal("overlaysFermes", [overlayAttention, overlayContextuel]
                 .map(o => [o.famille, o.chargeur.active, o.chargeur.item === null].join(" "))
                 .concat(Overlays.attention ?? "null").join(" "))
+        }
+
+        // fenetreAttention — compile, sans l'instancier, la fenêtre d'attention qu'un Overlay ne charge qu'à
+        // l'ouverture, et journalise « prête » ou l'erreur de compilation. Entrées : aucune. Sortie : aucune ;
+        // « essai : fenetreAttention <prête|erreur> ». Erreurs : aucune. Dépendances : Qt.createComponent.
+        function fenetreAttention(): void {
+            const c = Qt.createComponent("Composants/FenetreAttention.qml")
+            essai.journal("fenetreAttention", c.status === Component.Ready ? "prête" : c.errorString())
         }
 
         // cran — journalise le cran des quatre rôles, dans l'ordre surfaceWindow, surfacePanel, surfaceRaised,
@@ -410,8 +435,9 @@ ShellRoot {
 
         // jauge — journalise la hauteur, le rayon et le fond de la barre, la largeur de la partie remplie aux
         // valeurs 0 puis 1, la largeur de la barre, la couleur de la partie remplie, le centre horizontal de
-        // l'icône dans la barre et sa couleur ; la valeur 0,5 est rétablie. Entrées : aucune. Sortie : aucune ;
-        // « essai : jauge <h> <rayon> <#fond> <vide> <plein> <largeur> <#remplie> <centre> <#icône> ».
+        // l'icône dans la barre, sa couleur et sa taille ; la valeur 0,5 est rétablie. Entrées : aucune. Sortie :
+        // aucune ; « essai : jauge <h> <rayon> <#fond> <vide> <plein> <largeur> <#remplie> <centre> <#icône>
+        // <taille> ».
         // Erreurs : aucune. Dépendances : jaugeEssai (sorties barre, remplie et symbole).
         function jauge(): void {
             const j = jaugeEssai, b = j.barre, r = []
@@ -420,7 +446,66 @@ ShellRoot {
                 r.push(j.remplie.width)
             }
             essai.journal("jauge", [b.height, b.radius, b.color, r[0], r[1], b.width, j.remplie.color,
-                j.symbole.x + j.symbole.width / 2, j.symbole.couleur].join(" "))
+                j.symbole.x + j.symbole.width / 2, j.symbole.couleur, j.symbole.taille].join(" "))
+        }
+
+        // pastilles — journalise le diamètre du premier disque, l'écart des disques, la couleur peinte de chacun,
+        // la visibilité de chaque glyphe, la couleur des glyphes et la politique de focus d'un disque.
+        // Entrées : aucune. Sortie : aucune ; « essai : pastilles <diamètre> <écart> <#> <#> <#> <bool> <bool>
+        // <bool> <#glyphe> <focusPolicy> ». Erreurs : aucune. Dépendances : pastillesEssai (disques).
+        function pastilles(): void {
+            const d = [0, 1, 2].map(i => pastillesEssai.disques.itemAt(i))
+            essai.journal("pastilles", [d[0].width, pastillesEssai.spacing, ...d.map(x => x.couleur),
+                ...d.map(x => x.trace.visible), d[0].trace.couleur, d[0].focusPolicy].join(" "))
+        }
+
+        // pastillesForcer — force l'état des pastilles d'essai, comme la planche.
+        // Entrée : valeur, "", "hover" ou "pressed". Sortie : aucune. Erreurs : aucune.
+        // Dépendances : pastillesEssai.
+        function pastillesForcer(valeur: string): void {
+            pastillesEssai.forcer = valeur
+        }
+
+        // pastillesReduire — active ou désactive la pastille de réduction.
+        // Entrée : valeur, nouveau reduireActif. Sortie : aucune. Erreurs : aucune. Dépendances : pastillesEssai.
+        function pastillesReduire(valeur: bool): void {
+            pastillesEssai.reduireActif = valeur
+        }
+
+        // compteur — journalise la hauteur du compteur, la largeur du demi-bouton haut, la somme des hauteurs des
+        // deux demi-boutons, les rayons haut gauche et bas gauche du demi-bouton haut puis du demi-bouton bas, le
+        // fond du champ, le rôle du demi-bouton haut, l'interaction des deux demi-boutons, la valeur affichée et
+        // la politique de focus. Entrées : aucune. Sortie : aucune ; « essai : compteur … ». Erreurs : aucune.
+        // Dépendances : compteurEssai (up, down, etatHaut, etatBas, champ).
+        function compteur(): void {
+            const c = compteurEssai, h = c.up.indicator, b = c.down.indicator
+            essai.journal("compteur", [c.height, h.width, h.height + b.height, h.topLeftRadius, h.bottomLeftRadius,
+                b.topLeftRadius, b.bottomLeftRadius, c.champ.color, c.etatHaut.role, c.etatHaut.interaction,
+                c.etatBas.interaction, c.displayText, c.focusPolicy].join(" "))
+        }
+
+        // compteurValeur — règle la valeur du compteur d'essai.
+        // Entrée : valeur, nouvelle valeur. Sortie : aucune. Erreurs : aucune. Dépendances : compteurEssai.
+        function compteurValeur(valeur: int): void {
+            compteurEssai.value = valeur
+        }
+
+        // deroulant — journalise le texte affiché du déroulant d'essai, son rang, le sens de son chevron, le rôle
+        // de son Etat, l'égalité de sa largeur de contenu avec le plus long des choix augmenté de l'écart et du
+        // chevron, l'état ouvert du menu et l'absence de liste. Entrées : aucune. Sortie : aucune ; « essai :
+        // deroulant <texte> <rang> <sens> <rôle> <bool> <bool> <bool> ». Erreurs : aucune.
+        // Dépendances : deroulantEssai (menu, liste, largeurTexte).
+        function deroulant(): void {
+            const d = deroulantEssai, ch = d.contentItem.children.find(e => e.objectName === "chevron")
+            essai.journal("deroulant", [d.displayText, d.currentIndex, ch?.sens, d.etat.role,
+                d.contentItem.implicitWidth === d.largeurTexte + d.spacing + d.chevron && d.largeurTexte > 0,
+                d.menu.ouvert, d.liste === null].join(" "))
+        }
+
+        // deroulantRang — change la valeur du déroulant d'essai par programme.
+        // Entrée : rang, nouveau currentIndex. Sortie : aucune. Erreurs : aucune. Dépendances : deroulantEssai.
+        function deroulantRang(rang: int): void {
+            deroulantEssai.currentIndex = rang
         }
 
         // jaugeActive — active ou désactive la jauge d'essai.

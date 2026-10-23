@@ -396,23 +396,76 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
 
     def test_jauge(self):
         # La jauge est une barre en pilule de density.sliderBar de haut au fond enfoncé (elevation.field.fill) ;
-        # sa partie remplie, claire (texte de controlRaised au repos), ne descend jamais sous un disque : à la
-        # valeur 0, elle a la largeur de la hauteur ; à 1, toute la barre. L'icône, posée dedans, est centrée sur ce
-        # disque minimal et prend la couleur du fond enfoncé. Désactivée, la partie remplie se ternit.
+        # sa partie remplie ne descend jamais sous un disque : à la valeur 0, elle a la largeur de la hauteur ; à 1,
+        # toute la barre. Elle prend l'accent du thème (sélection active de controlRaised), l'icône le sur-accent de
+        # la même sélection, à la taille density.sliderBarIcon, centrée sur le disque minimal. Désactivée, elle
+        # prend les couleurs disabled de l'accent ; sous inactive, l'accent sans chroma (activeMuted).
         self.demarrer()
         tokens = self.tokens55()[0]
-        h, champ = tokens["density"]["comfortable"]["sliderBar"], tokens["elevation"]["field"]["fill"].lower()
-        clair = tokens["states"]["controlRaised"]["none"]["rest"]["text"].lower()
-        hauteur, rayon, fond, vide, plein, largeur, couleur, centre, teinte = self.valeur("jauge").lower().split()
-        self.assertEqual((hauteur, rayon, fond, vide), (str(h), str(h / 2).rstrip("0").rstrip("."), champ, str(h)))
-        self.assertEqual((plein, couleur, centre, teinte), (largeur, clair, str(h / 2).rstrip("0").rstrip("."), champ))
+        d, st = tokens["density"]["comfortable"], tokens["states"]["controlRaised"]
+        h, champ = d["sliderBar"], tokens["elevation"]["field"]["fill"].lower()
+        demi = str(h / 2).rstrip("0").rstrip(".")
+        lu = self.valeur("jauge").lower().split()
+        hauteur, rayon, fond, vide, plein, largeur, remplie, centre, icone, taille = lu
+        self.assertEqual((hauteur, rayon, fond, vide, plein, centre), (str(h), demi, champ, str(h), largeur, demi))
+        self.assertEqual((remplie, icone, taille), (st["active"]["rest"]["fill"].lower(),
+                                                    st["active"]["rest"]["text"].lower(), str(d["sliderBarIcon"])))
         self.ipc("jaugeActive", "false")
-        terne = tokens["states"]["controlRaised"]["none"]["disabled"]["text"].lower()
-        for _ in range(40):  # le ressort de couleur rejoint la cible en quelques dizaines de millisecondes
-            if (lu := self.valeur("jauge").lower().split()[6]) == terne:
-                break
-            time.sleep(0.05)
-        self.assertEqual(lu, terne)
+        self.assertEqual(self.valeur("jauge").lower().split()[6:9:2], [st["active"]["disabled"]["fill"].lower(),
+                                                                        st["active"]["disabled"]["text"].lower()])
+        self.ipc("jaugeActive", "true")
+        self.ipc("inactif", "true")
+        self.assertEqual(self.valeur("jauge").lower().split()[6], st["activeMuted"]["rest"]["fill"].lower())
+
+    def test_pastilles(self):
+        # Trois disques de density.pastille, espacés de space.scale[1], en error, warning et success ; les glyphes
+        # en surfaceBase ne paraissent qu'au survol (forcé ici, comme la planche) ; pressé, un disque est mêlé d'un
+        # quart de surfaceBase ; un disque désactivé, et les trois sous inactive, passent au neutre borderDefault,
+        # sans glyphe. Aucun disque n'accepte le focus (Qt.NoFocus).
+        self.demarrer()
+        tokens = self.tokens55()[0]
+        c = {k: v.lower() for k, v in tokens["color"].items() if isinstance(v, str)}
+        cotes = f'{tokens["density"]["comfortable"]["pastille"]} {tokens["space"]["scale"][1]}'
+        teintes, sombre = f'{c["error"]} {c["warning"]} {c["success"]}', c["surfaceBase"]
+        self.assertEqual(self.valeur("pastilles").lower(), f"{cotes} {teintes} false false false {sombre} 0")
+        self.ipc("pastillesForcer", "hover")
+        self.assertEqual(self.valeur("pastilles").lower(), f"{cotes} {teintes} true true true {sombre} 0")
+        self.ipc("pastillesForcer", "pressed")
+        base = bytes.fromhex(sombre[1:])
+        for lu, nom in zip(self.valeur("pastilles").lower().split()[2:5], ("error", "warning", "success")):
+            attendu = [3 / 4 * x + 1 / 4 * y for x, y in zip(bytes.fromhex(c[nom][1:]), base)]
+            with self.subTest(pastille=nom):
+                self.assertTrue(all(abs(x - y) <= 1 for x, y in zip(bytes.fromhex(lu[1:]), attendu)), lu)
+        self.ipc("pastillesForcer", "hover")
+        self.ipc("pastillesReduire", "false")
+        neutre = c["borderDefault"]
+        self.assertEqual(self.valeur("pastilles").lower().split()[2:8],
+                         [c["error"], neutre, c["success"], "true", "false", "true"])
+        self.ipc("inactif", "true")
+        self.assertEqual(self.valeur("pastilles").lower().split()[2:8], [neutre] * 3 + ["false"] * 3)
+
+    def test_compteur(self):
+        # Le stepper : deux demi-boutons de density.stepperWidth qui prennent ensemble la hauteur du contrôle,
+        # arrondis aux seuls coins extérieurs (radius.control), au rôle un cran au-dessus du panneau ; la valeur
+        # dans un champ enfoncé. Le demi-bouton dont la borne est atteinte est désactivé. Non éditable, le
+        # compteur ne vole pas le focus d'un champ (Qt.TabFocus).
+        self.demarrer()
+        tokens = self.tokens55()[0]
+        d, r = tokens["density"]["comfortable"], tokens["radius"]["control"]
+        debut = f'{d["controlHeight"]} {d["stepperWidth"]} {d["controlHeight"]} {r} 0 0 {r} '
+        champ = tokens["elevation"]["field"]["fill"].lower()
+        self.assertEqual(self.valeur("compteur").lower(), f"{debut}{champ} surfaceraised disabled rest 3 1")
+        self.ipc("compteurValeur", "0")
+        self.assertEqual(self.valeur("compteur").lower(), f"{debut}{champ} surfaceraised rest disabled 0 1")
+
+    def test_deroulant(self):
+        # Le déroulant montre la valeur choisie et un double chevron dessiné ; sa largeur de contenu est celle du
+        # plus long des choix, augmentée de l'écart et du chevron, quel que soit le choix. Son menu reste fermé :
+        # aucune liste n'est construite.
+        self.demarrer()
+        self.assertEqual(self.valeur("deroulant"), "Un 0 double surfaceRaised true false true")
+        self.ipc("deroulantRang", "2")
+        self.assertEqual(self.valeur("deroulant"), "Trois éléments 2 double surfaceRaised true false true")
 
     def test_exclusivite(self):
         # Le singleton Overlays seul, sur trois objets factices qui suivent le protocole d'Overlay (ouvert passe à
@@ -438,6 +491,8 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
         # l'écran, à la tâche 9.
         self.demarrer()
         self.assertEqual(self.valeur("overlaysFermes"), "attention false true contextuel false true null")
+        # La fenêtre d'attention, sortie de l'Overlay pour qu'il se charge sous offscreen, compile sans erreur.
+        self.assertEqual(self.valeur("fenetreAttention"), "prête")
         for erreur in ERREURS + ("Overlay.qml", "Overlays.qml"):
             with self.subTest(erreur=erreur):
                 self.assertNotIn(erreur, self.journal())
@@ -518,22 +573,37 @@ class CoqueClavierTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(self.valeur("focus"), "apres 1 none inactive true")
 
     def test_onglets_segmentes(self):
-        # Onglets est un contrôle segmenté : une piste en pilule au fond enfoncé (elevation.field.fill), de la
-        # hauteur d'un contrôle ; ses segments, de largeurs égales à la plus large de leurs largeurs implicites,
-        # sont en retrait de density.segmentInset, en pilule donc concentriques ; un segment non coché n'a pas de
-        # fond, au repos comme au survol (§ 7.10).
+        # Onglets est un contrôle segmenté : une piste au rayon radius.control, au fond enfoncé
+        # (elevation.field.fill), de la hauteur d'un contrôle ; ses segments, de largeurs égales à la plus large de
+        # leurs largeurs implicites, sont en retrait de density.segmentInset, au rayon radius.control moins ce
+        # retrait, donc concentriques ; un segment non coché n'a pas de fond, au repos comme au survol (§ 7.10).
         self.demarrer()
         tokens = self.tokens55()[0]
         d = tokens["density"]["comfortable"]
         retrait, h0 = d["segmentInset"], d["controlHeight"] - 2 * d["segmentInset"]
         fond, rayon, hauteur, marge, l0, l1, lmax, hs, rs, nu = self.valeur("onglets").split()
         self.assertEqual(fond.lower(), tokens["elevation"]["field"]["fill"].lower())
-        self.assertEqual((rayon, hauteur, marge), (str(d["controlHeight"] // 2), str(d["controlHeight"]), str(retrait)))
+        rc = tokens["radius"]["control"]
+        self.assertEqual((rayon, hauteur, marge), (str(rc), str(d["controlHeight"]), str(retrait)))
         self.assertEqual((l0, l1), (lmax, lmax))
-        self.assertEqual((hs, rs), (str(h0), str(h0 // 2)))
+        self.assertEqual((hs, rs), (str(h0), str(rc - retrait)))
         self.assertEqual(nu, "#00000000")
         self.ipc("survolerOnglet")
         self.assertEqual(self.valeur("ongletSurvole"), "hover #00000000")
+
+    def test_anneau_sur_la_barre(self):
+        # Défaut relevé à l'écran : l'anneau du segment coché chevauchait le segment voisin. La barre étant l'unique
+        # arrêt de tabulation, l'anneau entoure la barre entière, au focus clavier d'un de ses segments, et le
+        # segment n'en montre aucun.
+        self.demarrer()
+        self.assertEqual(self.valeur("anneauOnglets"), "false false")
+        self.ipc("touche", "tab")
+        self.ipc("touche", "tab")
+        self.assertEqual(self.valeur("anneauOnglets"), "true false")
+        self.ipc("touche", "gauche")
+        self.assertEqual(self.valeur("anneauOnglets"), "true false")
+        self.ipc("touche", "majtab")
+        self.assertEqual(self.valeur("anneauOnglets"), "false false")
 
     def test_barre_jamais_sans_arret(self):
         # Quand l'onglet coché est désactivé, il ne peut plus prendre le focus : les autres onglets redeviennent des
@@ -557,6 +627,87 @@ class CoqueClavierTest(EssaiCoque, unittest.TestCase):
         self.ipc("touche", "gauche")
         self.ipc("touche", "gauche")
         self.assertEqual(self.valeur("jauge"), "0.4 true")
+
+    def test_compteur_clavier(self):
+        # Le compteur est un arrêt de tabulation après la jauge, son anneau entoure l'ensemble ; les flèches haut et
+        # bas et la molette changent la valeur entre ses bornes, et le demi-bouton de la borne atteinte se désactive.
+        self.demarrer()
+        for _ in range(6):  # avant, composants, apres, champ, jauge, compteur
+            self.ipc("touche", "tab")
+        self.assertEqual(self.valeur("focus").split()[0], "compteur")
+        self.assertEqual(self.valeur("compteur"), "1 true true true")
+        for _ in range(3):
+            self.ipc("touche", "haut")
+        self.assertEqual(self.valeur("compteur"), "3 true false true")
+        for _ in range(4):
+            self.ipc("touche", "bas")
+        self.assertEqual(self.valeur("compteur"), "0 true true false")
+        self.ipc("molette", "1")
+        self.assertEqual(self.valeur("compteur").split()[0], "1")
+        self.ipc("molette", "-1")
+        self.assertEqual(self.valeur("compteur").split()[0], "0")
+
+    def attendre_valeur(self, cle: str, attendu: str) -> None:
+        """Relit une valeur journalisée jusqu'à ce qu'elle vaille attendu, pour un état qui s'établit en différé.
+
+        Rôle : l'ouverture d'un Overlay passe par un LazyLoader asynchrone, et sa fermeture par la levée du focus.
+        Entrées : cle — nom de la fonction IPC de lecture ; attendu — valeur attendue.
+        Sortie : aucune. Erreurs : échec du test si la valeur n'est pas atteinte en deux secondes.
+        Dépendances : valeur.
+        """
+        for _ in range(40):
+            if (lu := self.valeur(cle)) == attendu:
+                return
+            time.sleep(0.05)
+        self.assertEqual(lu, attendu)
+
+    def test_deroulant_clavier(self):
+        # Fermé, les flèches changent la valeur, bornée au modèle, et émettent activated si elle change. Espace
+        # ouvre le menu au clavier : la rangée courante est la valeur, son contour paraît (focusClavier) et seule
+        # elle porte la coche ; tant que le menu est ouvert, les flèches ne changent plus la valeur sous lui. Un clic
+        # sur une rangée la choisit et ferme. Ouvert à la souris, le menu ne montre pas le contour ; sa sélection
+        # suit le pointeur, la coche reste sur la valeur. Sous offscreen, le menu (une fenêtre surgissante) ne
+        # devient jamais la fenêtre du clavier, et HyprlandFocusGrab est inerte : le choix se fait au pointeur, la
+        # navigation au clavier dans la Liste étant éprouvée par ailleurs.
+        self.demarrer()
+        for _ in range(7):  # avant, composants, apres, champ, jauge, compteur, deroulant
+            self.ipc("touche", "tab")
+        self.assertEqual(self.valeur("focus").split()[0], "deroulant")
+        self.assertEqual(self.valeur("deroulant"), "0 Un 0 false")
+        self.ipc("touche", "bas")
+        self.assertEqual(self.valeur("deroulant"), "1 Deux 1 false")
+        for _ in range(2):
+            self.ipc("touche", "bas")
+        self.assertEqual(self.valeur("deroulant"), "2 Trois 2 false")
+        self.ipc("touche", "haut")
+        self.assertEqual(self.valeur("deroulant"), "1 Deux 3 false")
+        self.ipc("touche", "espace")
+        self.attendre_valeur("deroulant", "1 Deux 3 true 1 true false true false")
+        self.ipc("touche", "bas")
+        self.assertEqual(self.valeur("deroulant"), "1 Deux 3 true 1 true false true false")
+        self.ipc("pointerRangee", "2", "true")
+        self.attendre_valeur("deroulant", "2 Trois 4 false")
+        self.ipc("cliquerDeroulant")
+        self.attendre_valeur("deroulant", "2 Trois 4 true 2 false false false true")
+        self.ipc("pointerRangee", "0", "false")
+        self.assertEqual(self.valeur("deroulant"), "2 Trois 4 true 0 false false false true")
+        self.ipc("pointerRangee", "0", "true")
+        self.attendre_valeur("deroulant", "0 Un 5 false")
+
+    def test_pastilles_souris(self):
+        # Les glyphes paraissent au survol du groupe ; chaque pastille émet son signal au clic ; la pastille de
+        # réduction désactivée ne montre plus de glyphe et ne réagit plus. Les pastilles ne prennent pas le focus.
+        self.demarrer()
+        self.assertEqual(self.valeur("pastilles"), "false false false false 0 0 0")
+        self.ipc("pointerPastille", "0", "false")
+        self.assertEqual(self.valeur("pastilles"), "true true true true 0 0 0")
+        for rang in range(3):
+            self.ipc("pointerPastille", str(rang), "true")
+        self.assertEqual(self.valeur("pastilles"), "true true true true 1 1 1")
+        self.ipc("pastillesReduire", "false")
+        self.ipc("pointerPastille", "1", "true")
+        self.assertEqual(self.valeur("pastilles"), "true true false true 1 1 1")
+        self.assertEqual(self.valeur("focus").split()[0], "aucun")
 
     def test_menu_selection_suit_survol(self):
         # Dans un menu, la Liste porte selectionSuitSurvol : le pointeur posé sur une rangée en fait la rangée

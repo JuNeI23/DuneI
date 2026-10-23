@@ -417,6 +417,9 @@
       "sliderHandle": 20,
       "sliderWidth": 160,
       "sliderBar": 22,
+      "sliderBarIcon": 14,
+      "pastille": 12,
+      "stepperWidth": 16,
       "segmentInset": 2,
       "fieldWidth": 200
     },
@@ -435,6 +438,9 @@
       "sliderHandle": 18,
       "sliderWidth": 140,
       "sliderBar": 18,
+      "sliderBarIcon": 12,
+      "pastille": 12,
+      "stepperWidth": 14,
       "segmentInset": 2,
       "fieldWidth": 180
     }
