@@ -199,7 +199,10 @@ class CoqueThemeTest(EssaiCoque, unittest.TestCase):
         self.ipc("etat", "hover")
         self.ipc("etat", "rest")
         self.ipc("raideur")
-        self.attendre("essai : raideur 1")
+        self.attendre("essai : raideur ")
+        # Lecture exacte de la dernière ligne : une recherche de sous-chaîne accepterait aussi « raideur 1100 ».
+        ligne = [l for l in self.journal().splitlines() if "essai : raideur " in l][-1]
+        self.assertEqual(float(ligne.split("essai : raideur ", 1)[1]), 1, self.journal())
 
     def test_contenu_corrompu(self):
         self.installer(55)
