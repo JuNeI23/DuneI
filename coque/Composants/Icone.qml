@@ -12,12 +12,17 @@ import "../Theme"
 // défaut ; taille, côté en pixels logiques, Theme.icons.sizes.default par défaut.
 // Sorties : celles d'Image (status, source…).
 // Erreurs : aucune ; un nom vide ne charge rien ; avant le chargement des tokens, la taille est nulle et
-// l'icône invisible. Limite connue : le repli par tirets de Qt passe avant celui de Quickshell, si bien
-// qu'une variante pleine absente peut être résolue en une icône plus courte d'un thème hérité
-// (starred-fill-symbolic → starred d'AdwaitaLegacy) au lieu de <nom>-symbolic.
+// l'icône invisible.
+// Limite connue (D82) : le chargeur d'icônes de Qt raccourcit un nom absent par ses tirets avant que le repli
+// de Quickshell n'entre en jeu. Tant qu'aucun thème ne fournit la variante pleine, comme Adwaita pendant la
+// transition, une icône pleine est donc résolue en une icône plus courte d'un thème hérité
+// (starred-fill-symbolic donne starred.png d'AdwaitaLegacy) au lieu de <nom>-symbolic. Le thème DuneI de
+// L4-12 fournira les deux variantes de chaque icône.
+// Thème d'icônes : toute coque qui emploie Icone pose en tête de son shell.qml la directive
+// « //@ pragma IconTheme <thème> » (Adwaita jusqu'à L4-12) ; sans elle, le thème choisi par Qt peut n'avoir
+// aucune symbolique, et iconPath ne trouve rien.
 // Dépendances : QtQuick.Controls.impl (ColorImage, module privé de Qt, enfermé dans ce seul fichier ; repli
-// prévu : un ShaderEffect), Quickshell (iconPath ; thème choisi par la directive IconTheme de la coque),
-// Theme (icons, color).
+// prévu : un ShaderEffect), Quickshell (iconPath), Theme (icons, color).
 ColorImage {
     id: icone
 
