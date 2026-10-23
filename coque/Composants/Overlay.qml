@@ -16,12 +16,15 @@ import "../Theme"
 // Le contenu est posé au centre d'une Surface surfaceRaised (e3), aux coins radius.panel, entourée d'un retrait
 // space.scale[2] (12) ; sa taille est celle du contenu. Sobriété (D80) : la fenêtre et le contenu ne sont
 // construits par le LazyLoader qu'à l'ouverture, entre deux images, et détruits à la fermeture.
-// Entrées : famille, "attention" ou "contextuel" ; ouvert, vrai pour ouvrir, faux pour fermer ; ancre, élément
+// Entrées : famille, "attention" ou "contextuel" ; ouvert, vrai pour ouvrir, faux pour fermer, qui s'affecte et
+//           ne se lie pas : le registre Overlays, Échap, le clic sur le voile et la levée du focus l'écrivent
+//           impérativement, ce qui romprait une liaison ; l'appelant se resynchronise sur ferme() ; ancre, élément
 //           déclencheur d'un contextuel, dans une fenêtre déjà affichée ; point, point de clic dans le repère de
 //           l'ancre (Qt.point), null par défaut pour s'ancrer sous l'ancre entière ; contenu, propriété par
 //           défaut : l'élément déclaré dans l'Overlay, instancié à chaque ouverture.
 // Sorties : ferme(), émis à chaque fermeture, quelle qu'en soit la cause ; chargeur, le LazyLoader de la
-//           fenêtre, exposé pour les essais et les relevés de mémoire.
+//           fenêtre, exposé pour les essais et les relevés de mémoire ; fenetreAttention et fenetreContextuel,
+//           les composants de fenêtre que le chargeur instancie, internes à la primitive.
 // Erreurs : aucune ; un contextuel sans ancre affichée ne se montre pas (règle de PopupWindow) ; avant le
 //           chargement des tokens, voile et fond restent transparents et le retrait vaut 0.
 // Dépendances : Quickshell (LazyLoader, PanelWindow, PopupWindow, Edges, PopupAdjustment, ExclusionMode),
@@ -41,17 +44,24 @@ QtObject {
     signal ferme()
 
     // Cadre — Surface surfaceRaised qui porte le contenu, commune aux deux familles.
-    // Rôle : instancie le contenu dans un Loader, l'entoure du retrait et capte Échap pour fermer l'Overlay ;
+    // Rôle : instancie le contenu dans un Loader, l'entoure du retrait et capte Échap, qu'il signale par echap() ;
     // c'est une FocusScope qui demande le focus, pour que les touches non consommées par le contenu y remontent.
-    // Entrées : aucune ; lit overlay.contenu. Sorties : implicitWidth, implicitHeight, taille du contenu et du
-    // retrait. Erreurs : aucune. Dépendances : Surface, Theme (radius, space).
+    // Ce composant en ligne n'accède à rien hors de lui : son API est explicite, car un composant en ligne ne
+    // partage pas la portée du document qui le déclare.
+    // Entrées : contenu, composant à instancier. Sorties : echap(), émis sur Échap non consommé par le contenu ;
+    // implicitWidth, implicitHeight, taille du contenu et du retrait. Erreurs : aucune.
+    // Dépendances : Surface, Theme (radius, space).
     component Cadre: FocusScope {
+        id: cadre
+
+        property Component contenu
         readonly property real retrait: Theme.space?.scale[2] ?? 0
+        signal echap()
 
         focus: true
         implicitWidth: charge.implicitWidth + 2 * retrait
         implicitHeight: charge.implicitHeight + 2 * retrait
-        Keys.onEscapePressed: overlay.ouvert = false
+        Keys.onEscapePressed: echap()
 
         Surface {
             anchors.fill: parent
@@ -62,7 +72,7 @@ QtObject {
                 id: charge
                 anchors.centerIn: parent
                 focus: true
-                sourceComponent: overlay.contenu
+                sourceComponent: cadre.contenu
             }
         }
     }
@@ -76,8 +86,12 @@ QtObject {
     // Écran de l'attention, figé à l'ouverture pour que la fenêtre ne suive pas le pointeur d'un écran à l'autre.
     property var ecran: null
 
-    // Ouverture : l'attention prend l'écran focalisé et se déclare au registre. Fermeture : elle s'en retire, et
-    // ferme() est émis pour les deux familles.
+    // Ouverture d'une attention : l'écran focalisé est figé dans ecran, puis Overlays.ouvrir retient cet Overlay
+    // et, s'il y en avait une autre, passe son ouvert à faux, ce qui la ferme par ce même gestionnaire. Ouverture
+    // d'un contextuel : rien, il ne passe pas par le registre. Fermeture, pour les deux familles : Overlays.fermer
+    // oublie cet Overlay s'il était l'attention retenue, puis ferme() est émis, registre déjà à jour. Dans tous
+    // les cas, le chargeur suit ouvert par sa liaison. Protocole repris par essai/shell.qml (ouvrirFactice,
+    // fermerFactice).
     onOuvertChanged: {
         if (ouvert && famille === "attention") {
             ecran = ecranFocalise
@@ -90,10 +104,10 @@ QtObject {
 
     readonly property LazyLoader chargeur: LazyLoader {
         activeAsync: overlay.ouvert
-        component: overlay.famille === "attention" ? overlay.attention : overlay.contextuel
+        component: overlay.famille === "attention" ? overlay.fenetreAttention : overlay.fenetreContextuel
     }
 
-    readonly property Component attention: PanelWindow {
+    readonly property Component fenetreAttention: PanelWindow {
         screen: overlay.ecran
         anchors { top: true; bottom: true; left: true; right: true }
         exclusionMode: ExclusionMode.Ignore
@@ -119,10 +133,12 @@ QtObject {
         Cadre {
             id: cadreAttention
             anchors.centerIn: parent
+            contenu: overlay.contenu
+            onEchap: overlay.ouvert = false
         }
     }
 
-    readonly property Component contextuel: PopupWindow {
+    readonly property Component fenetreContextuel: PopupWindow {
         id: popup
         anchor.item: overlay.ancre
         anchor.rect.x: overlay.point?.x ?? 0
@@ -141,6 +157,8 @@ QtObject {
         Cadre {
             id: cadrePopup
             anchors.fill: parent
+            contenu: overlay.contenu
+            onEchap: overlay.ouvert = false
         }
 
         HyprlandFocusGrab {
