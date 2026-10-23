@@ -12,7 +12,8 @@ import "Theme"
 // la couleur d'un ColorSpring a déjà rejoint sa cible ou non. Commande IPC « essai etat <interaction> »
 // (rest, hover, pressed, disabled) : change l'état du ressort et journalise « essai : état <interaction>,
 // ressort posé|en vol » au tour de boucle suivant ; « essai lent » donne au ressort une raideur minime, pour
-// qu'il reste en vol plusieurs secondes.
+// qu'il reste en vol plusieurs secondes ; « essai raideur » journalise « essai : raideur <stiffness> », la
+// raideur du ressort employé.
 // Erreurs : celles de Theme, dans le journal. Dépendances : quickshell ≥ 0.3 (Quickshell.Io : IpcHandler), module coque/Theme.
 // Import : Quickshell ne résout pas un module situé au-dessus de la racine de la coque lancée (import "../"
 // laisse Theme indéfini) ; le lien essai/Theme -> .. le place sous cette racine.
@@ -47,6 +48,13 @@ ShellRoot {
         // Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : spring.
         function lent(): void {
             spring.params = { mass: 1, stiffness: 1, dampening: 2 }
+        }
+
+        // raideur — journalise la raideur du ressort que le ColorSpring emploie à cet instant.
+        // Entrées : aucune. Sortie : aucune ; « essai : raideur <stiffness> ». Erreurs : aucune.
+        // Dépendances : spring.
+        function raideur(): void {
+            console.info("essai : raideur " + spring.ressort?.stiffness)
         }
     }
 

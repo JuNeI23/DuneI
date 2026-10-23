@@ -1,3 +1,4 @@
+//@ pragma IconTheme Adwaita
 import QtQuick
 import Quickshell
 import Quickshell.Io
@@ -6,13 +7,16 @@ import "Composants"
 import "Composants/etats.js" as Etats
 
 // Coque d'essai du module Composants, sans aucune fenêtre.
-// Rôle : instancie un arbre fixe (une Surface fenêtre contenant une Surface panneau contenant la sonde
-// capteur, plus une Surface inactive à l'écart) pour que tests/test_coque_composants.py éprouve dans un vrai
-// Quickshell les règles d'etats.js, l'héritage par remontée et l'import du Theme, en lisant le journal.
-// Entrées : DUNEI_TOKENS_DIR, lu par Theme. Sortie : journal de Theme, plus « essai : prêt <bool> » à chaque
+// Rôle : instancie un arbre fixe (une Surface fenêtre contenant une Surface panneau, qui porte la sonde
+// capteur, un contrôle simulé avec son Etat, un Texte, une Icone et une cible munie d'un AnneauFocus, plus une
+// Surface inactive à l'écart) pour que tests/test_coque_composants.py éprouve dans un vrai Quickshell les
+// règles d'etats.js, l'héritage par remontée, l'import du Theme et les pièces de base, en lisant le journal.
+// Entrées : DUNEI_TOKENS_DIR, lu par Theme ; thème d'icônes Adwaita, posé par la directive IconTheme en tête
+// (thème de transition jusqu'à L4-12). Sortie : journal de Theme, plus « essai : prêt <bool> » à chaque
 // changement de Theme.ready, et une ligne « essai : <clé> <valeur> » par commande IPC de lecture (cran,
-// interaction, selection, sonde, naissances, fond) ; « essai inactif <bool> » et « essai reparenter »
-// agissent sans journaliser.
+// interaction, selection, sonde, naissances, fond, texte, anneau, etat, ressort, image) ; « essai inactif
+// <bool> », « essai reparenter », « essai texteMoyen », « essai anneauInactif <bool> », « essai survol
+// <bool> », « essai retour <in|out> » et « essai icone <nom> <bool> » agissent sans journaliser.
 // Erreurs : celles de Theme et des liaisons, dans le journal. Dépendances : quickshell ≥ 0.3 (Quickshell.Io :
 // IpcHandler), modules coque/Theme et coque/Composants.
 // Import : Quickshell ne résout pas un module situé au-dessus de la racine de la coque lancée ; les liens
@@ -42,6 +46,42 @@ ShellRoot {
                 readonly property string role: Etats.herite(capteur, "dnRole", "surfaceWindow")
                 readonly property bool inactif: Etats.herite(capteur, "dnInactive", false)
                 Component.onCompleted: naissances++
+            }
+
+            // Contrôle simulé : les propriétés que lit Etats.interaction, sans gabarit de QtQuick.Templates.
+            Item {
+                id: controleEssai
+                property bool hovered: false
+                property bool down: false
+
+                Etat {
+                    id: etatEssai
+                    controle: controleEssai
+                }
+            }
+
+            Texte {
+                id: texteEssai
+                text: "essai"
+            }
+
+            Icone {
+                id: iconeEssai
+            }
+
+            Rectangle {
+                id: cible
+                x: 10
+                y: 10
+                width: 100
+                height: 40
+                radius: 6
+
+                AnneauFocus {
+                    id: anneauEssai
+                    cible: cible
+                    montre: true
+                }
             }
         }
     }
@@ -97,6 +137,81 @@ ShellRoot {
         // Dépendances : panneau, dont le premier enfant est le Rectangle de fond déclaré par Surface.qml.
         function fond(): void {
             essai.journal("fond", panneau.children[0].color)
+        }
+
+        // texte — journalise la taille en pixels, la graisse, la couleur et la police du Texte d'essai.
+        // Entrées : aucune. Sortie : aucune ; « essai : texte <px> <graisse> <#rrggbb> <police> ».
+        // Erreurs : aucune. Dépendances : texteEssai.
+        function texte(): void {
+            essai.journal("texte", [texteEssai.font.pixelSize, texteEssai.font.weight, texteEssai.color,
+                texteEssai.font.family].join(" "))
+        }
+
+        // texteMoyen — passe le Texte d'essai à l'échelon 4 en graisse moyenne.
+        // Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : texteEssai.
+        function texteMoyen(): void {
+            texteEssai.echelon = 4
+            texteEssai.moyen = true
+        }
+
+        // anneau — journalise la géométrie et le contour de l'anneau, puis la géométrie de sa cible.
+        // Entrées : aucune. Sortie : aucune ; « essai : anneau <x> <y> <l> <h> <rayon> <épaisseur> <#rrggbb> |
+        // <x> <y> <l> <h> », coordonnées de l'anneau dans le repère du parent de la cible.
+        // Erreurs : aucune. Dépendances : anneauEssai, cible.
+        function anneau(): void {
+            const p = anneauEssai.mapToItem(cible.parent, 0, 0)
+            essai.journal("anneau", [p.x, p.y, anneauEssai.width, anneauEssai.height, anneauEssai.radius,
+                anneauEssai.border.width, anneauEssai.border.color, "|", cible.x, cible.y, cible.width, cible.height].join(" "))
+        }
+
+        // anneauInactif — pose le modificateur inactive sur l'anneau d'essai.
+        // Entrées : valeur, nouveau modificateur. Sortie : aucune. Erreurs : aucune. Dépendances : anneauEssai.
+        function anneauInactif(valeur: bool): void {
+            anneauEssai.inactif = valeur
+        }
+
+        // etat — journalise les sorties de l'Etat du contrôle simulé.
+        // Entrées : aucune. Sortie : aucune ; « essai : etat <rôle> <interaction> <sélection> <inactif> <fond>
+        // <texte> ». Erreurs : aucune. Dépendances : etatEssai.
+        function etat(): void {
+            essai.journal("etat", [etatEssai.role, etatEssai.interaction, etatEssai.selection, etatEssai.inactif,
+                etatEssai.fond, etatEssai.texte].join(" "))
+        }
+
+        // survol — simule le survol du contrôle, ou sa fin.
+        // Entrées : valeur, contrôle survolé. Sortie : aucune. Erreurs : aucune. Dépendances : controleEssai.
+        function survol(valeur: bool): void {
+            controleEssai.hovered = valeur
+        }
+
+        // retour — choisit le ressort du retour au repos dans le réglage provisoire.
+        // Entrées : valeur, "in" ou "out". Sortie : aucune. Erreurs : aucune. Dépendances : Reglage.
+        function retour(valeur: string): void {
+            Reglage.retour = valeur
+        }
+
+        // ressort — journalise la raideur des ressorts employés par l'Etat, pour le fond puis le texte.
+        // Entrées : aucune. Sortie : aucune ; « essai : ressort <raideur> <raideur> ». Erreurs : aucune.
+        // Dépendances : etatEssai, dont les deux premiers enfants sont les ColorSpring déclarés par Etat.qml.
+        function ressort(): void {
+            essai.journal("ressort", etatEssai.children.map(r => r.ressort?.stiffness).join(" "))
+        }
+
+        // icone — change la variante puis le nom de l'Icone d'essai.
+        // Rôle : la variante est posée avant le nom, pour que la seule icône chargée soit celle demandée (le
+        // chargement est synchrone : l'ordre inverse chargerait d'abord la variante précédente).
+        // Entrées : nom, nom freedesktop sans suffixe ; pleine, variante pleine demandée. Sortie : aucune.
+        // Erreurs : aucune. Dépendances : iconeEssai.
+        function icone(nom: string, pleine: bool): void {
+            iconeEssai.pleine = pleine
+            iconeEssai.nom = nom
+        }
+
+        // image — journalise l'état de chargement et l'adresse de l'Icone d'essai.
+        // Entrées : aucune. Sortie : aucune ; « essai : image <Image.status> <source> ». Erreurs : aucune.
+        // Dépendances : iconeEssai.
+        function image(): void {
+            essai.journal("image", iconeEssai.status + " " + iconeEssai.source)
         }
 
         // inactif — pose le modificateur inactive sur la Surface fenêtre, en tête de l'arbre de la sonde.

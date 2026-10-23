@@ -6,9 +6,11 @@ sans session Wayland ou sans Quickshell (contrôle de GitHub), comme tests/test_
 est repris.
 """
 
+import ctypes
 import json
 import os
 import shutil
+import struct
 import time
 import unittest
 from pathlib import Path
@@ -17,6 +19,49 @@ from tests.test_coque_theme import QS, ROOT, EssaiCoque
 
 # Messages d'erreur du moteur JavaScript ou d'une liaison QML qui ne doivent jamais atteindre le journal.
 ERREURS = ("TypeError", "ReferenceError", "Unable to assign")
+
+# Thèmes d'icônes du système, et symbolique d'Adwaita qui n'a pas de variante -fill (thème de transition, L4-12).
+ICONES = Path("/usr/share/icons")
+ETOILE = ICONES / "Adwaita" / "symbolic" / "status" / "starred-symbolic.svg"
+
+
+class Ouvertures:
+    """Relève, par inotify, les fichiers ouverts sous un dossier pendant un bloc with.
+
+    Rôle : prouve quel fichier d'icône Qt a réellement lu, ce que Quickshell.iconPath ne dit pas (il rend une
+    adresse image://icon/<nom>). Entrée : racine — dossier surveillé, sous-dossiers compris.
+    Sortie : fichiers — ensemble des chemins ouverts, rempli à la sortie du bloc.
+    Erreurs : OSError si inotify n'est pas disponible. Dépendances : libc (inotify), Linux.
+    """
+
+    IN_OPEN, IN_NONBLOCK = 0x20, 0o4000
+
+    def __init__(self, racine: Path):
+        self.racine, self.fichiers = racine, set()
+
+    def __enter__(self):
+        self.libc = ctypes.CDLL("libc.so.6", use_errno=True)
+        self.fd = self.libc.inotify_init1(self.IN_NONBLOCK)
+        if self.fd < 0:
+            raise OSError(ctypes.get_errno(), "inotify_init1")
+        self.dossiers = {self.libc.inotify_add_watch(self.fd, str(d).encode(), self.IN_OPEN): d
+                         for d, _, _ in os.walk(self.racine)}
+        return self
+
+    def __exit__(self, *_):
+        try:
+            while lot := os.read(self.fd, 65536):
+                i = 0
+                while i < len(lot):
+                    wd, _, _, n = struct.unpack_from("iIII", lot, i)
+                    nom = lot[i + 16:i + 16 + n].rstrip(b"\0").decode()
+                    if nom:
+                        self.fichiers.add(Path(self.dossiers[wd]) / nom)
+                    i += 16 + n
+        except BlockingIOError:
+            pass
+        finally:
+            os.close(self.fd)
 
 
 @unittest.skipUnless(os.environ.get("WAYLAND_DISPLAY") and QS, "session Wayland et Quickshell requis")
@@ -93,6 +138,84 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
         self.demarrer()
         attendu = json.loads(self.tokens(55).read_text(encoding="utf-8"))["elevation"]["e2"]["fill"]
         self.assertEqual(self.valeur("fond").lower(), attendu.lower())
+
+    def tokens55(self) -> dict:
+        """Tokens de la teinte 55 et mouvement, tels que la coque d'essai les lit.
+
+        Entrées : aucune. Sortie : (tokens, motion), deux dictionnaires.
+        Erreurs : OSError ou JSONDecodeError si un fichier généré manque. Dépendances : tokens, setUpClass.
+        """
+        lire = lambda p: json.loads(p.read_text(encoding="utf-8"))
+        return lire(self.tokens(55)), lire(Path(self.gen.name) / "motion" / "motion.json")
+
+    def test_texte(self):
+        # Texte par défaut : échelon 2 (13 px), graisse régulière, police d'interface, texte primaire.
+        self.demarrer()
+        typo, couleur = self.tokens55()[0]["typo"], self.tokens55()[0]["color"]["textPrimary"]
+        attendu = f"{typo['scale'][2]} {typo['weightRegular']} {couleur} {typo['interface']}"
+        self.assertEqual(self.valeur("texte").lower(), attendu.lower())
+        self.ipc("texteMoyen")
+        attendu = f"{typo['scale'][4]} {typo['weightMedium']} {couleur} {typo['interface']}"
+        self.assertEqual(self.valeur("texte").lower(), attendu.lower())
+
+    def test_anneau(self):
+        # Contour de focus.width à focus.offset hors de la cible, rayon augmenté de l'offset ; cible intacte.
+        self.demarrer()
+        focus = self.tokens55()[0]["focus"]
+        o, w = focus["offset"], focus["width"]
+        attendu = f"{10 - o} {10 - o} {100 + 2 * o} {40 + 2 * o} {6 + o} {w} {focus['color']} | 10 10 100 40"
+        self.assertEqual(self.valeur("anneau").lower(), attendu.lower())
+        self.ipc("anneauInactif", "true")
+        self.assertIn(focus["colorMuted"].lower(), self.valeur("anneau").lower())
+
+    def test_etat(self):
+        # Le contrôle d'essai est posé sur la Surface panneau : il prend le rôle un cran au-dessus.
+        self.demarrer()
+        tokens = self.tokens55()[0]
+        repos = tokens["states"]["surfaceRaised"]["none"]["rest"]
+        self.assertEqual(self.valeur("etat").lower(),
+                         f"surfaceRaised rest none false {repos['fill']} {repos['text']}".lower())
+        self.ipc("survol", "true")
+        survol = tokens["states"]["surfaceRaised"]["none"]["hover"]
+        attendu = f"surfaceRaised hover none false {survol['fill']} {survol['text']}".lower()
+        fin = time.monotonic() + 2
+        while self.valeur("etat").lower() != attendu and time.monotonic() < fin:
+            time.sleep(0.05)
+        self.assertEqual(self.valeur("etat").lower(), attendu)
+
+    def test_etat_retour(self):
+        # Retour réglé sur out : le survol part sur le ressort in, le retour au repos sur le ressort out, pour
+        # le fond comme pour le texte, quel que soit l'ordre dans lequel le moteur réévalue les liaisons.
+        self.demarrer()
+        etat = self.tokens55()[1]["transitions"]["state"]
+        self.ipc("retour", "out")
+        self.ipc("survol", "true")
+        self.assertEqual([float(r) for r in self.valeur("ressort").split()], [etat["in"]["stiffness"]] * 2)
+        self.ipc("survol", "false")
+        self.assertEqual([float(r) for r in self.valeur("ressort").split()], [etat["out"]["stiffness"]] * 2)
+        self.ipc("retour", "in")
+        self.assertEqual([float(r) for r in self.valeur("ressort").split()], [etat["in"]["stiffness"]] * 2)
+
+    @unittest.skipUnless(ETOILE.exists(), "thème Adwaita requis")
+    def test_icone(self):
+        # Sans variante pleine demandée, l'icône lit la symbolique d'Adwaita et se charge.
+        self.demarrer()
+        with Ouvertures(ICONES) as o:
+            self.ipc("icone", "starred", "false")
+            self.assertEqual(self.valeur("image"), "1 image://icon/starred-symbolic?fallback=starred-symbolic")
+        self.assertIn(ETOILE, o.fichiers)
+
+    @unittest.expectedFailure
+    @unittest.skipUnless(ETOILE.exists(), "thème Adwaita requis")
+    def test_icone_repli(self):
+        # Variante pleine absente : l'icône doit retomber sur starred-symbolic.svg. Échec connu : avant le
+        # repli de Quickshell, le repli par tirets de Qt réduit starred-fill-symbolic à starred et charge la
+        # pixmap en couleur d'AdwaitaLegacy (voir le rapport de la tâche 3).
+        self.demarrer()
+        with Ouvertures(ICONES) as o:
+            self.ipc("icone", "starred", "true")
+            self.assertTrue(self.valeur("image").startswith("1 "))
+        self.assertIn(ETOILE, o.fichiers)
 
     def test_aucune_erreur_avant_tokens(self):
         self.lancer(self.dir)

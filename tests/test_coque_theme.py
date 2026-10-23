@@ -190,6 +190,17 @@ class CoqueThemeTest(EssaiCoque, unittest.TestCase):
         self.attendre("essai : ressort", 2)
         self.assertEqual(self.journal().count("essai : ressort posé"), 2, self.journal())
 
+    def test_retour_par_defaut(self):
+        # Sans retour, le retour au repos garde le ressort params (ici le ressort lent), et non paramsRetour.
+        self.installer(55)
+        self.lancer(self.dir)
+        self.attendre("essai : ressort posé")
+        self.ipc("lent")
+        self.ipc("etat", "hover")
+        self.ipc("etat", "rest")
+        self.ipc("raideur")
+        self.attendre("essai : raideur 1")
+
     def test_contenu_corrompu(self):
         self.installer(55)
         self.lancer(self.dir)
