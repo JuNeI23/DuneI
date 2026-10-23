@@ -19,7 +19,8 @@ import "Composants/etats.js" as Etats
 // (thème de transition jusqu'à L4-12). Sortie : journal de Theme, plus « essai : prêt <bool> » à chaque
 // changement de Theme.ready, et une ligne « essai : <clé> <valeur> » par commande IPC de lecture (cran,
 // interaction, selection, sonde, naissances, fond, texte, anneau, etat, ressort, image, controles, coches,
-// cotes, progression, separateur, champ, indicatif, tailleIcone, liste, arrets, rangee, overlays, overlaysFermes) ; « essai inactif <bool> », « essai reparenter », « essai texteMoyen »,
+// cotes, progression, separateur, champ, indicatif, tailleIcone, liste, arrets, rangee, bouton, overlays,
+// overlaysFermes) ; « essai boutonPrincipal <bool> », « essai inactif <bool> », « essai reparenter », « essai texteMoyen »,
 // « essai anneauInactif <bool> », « essai survol <bool> », « essai retour <in|out> », « essai champActif
 // <bool> », « essai champTexte <texte> », « essai selectionLibre », « essai icone <nom> <bool> », « essai ouvrirFactice <A|B|C> » et « essai
 // fermerFactice <A|B|C> » agissent sans journaliser.
@@ -461,14 +462,30 @@ ShellRoot {
         }
 
         // rangee — journalise, pour la rangée 1, le rôle de son Etat, sa hauteur et sa largeur, puis la
-        // géométrie de son contour de focus dans le repère de la rangée, son épaisseur, sa couleur et sa
-        // visibilité. Entrées : aucune. Sortie : aucune ; « essai : rangee <rôle> <h> <l> <x> <y> <l> <h>
-        // <épaisseur> <#rrggbb> <bool> ». Erreurs : aucune. Dépendances : listeEssai ; le contour est le premier
-        // enfant du fond de la rangée.
+        // géométrie et le rayon de sa pastille de sélection, et enfin la géométrie, le rayon, l'épaisseur, la
+        // couleur et la visibilité de son contour de focus, dans le repère de la rangée. Entrées : aucune.
+        // Sortie : aucune ; « essai : rangee <rôle> <h> <l> | <x> <l> <h> <rayon> | <x> <y> <l> <h> <rayon>
+        // <épaisseur> <#rrggbb> <bool> ». Erreurs : aucune. Dépendances : listeEssai ; la pastille est le premier
+        // enfant du fond de la rangée, le contour le premier enfant de la pastille.
         function rangee(): void {
-            const r = listeEssai.itemAtIndex(1), c = r.background.children[0], p = c.mapToItem(r, 0, 0)
-            essai.journal("rangee", [r.etat.role, r.height, r.width, p.x, p.y, c.width, c.height, c.border.width,
-                c.border.color, c.visible].join(" "))
+            const r = listeEssai.itemAtIndex(1), t = r.background.children[0], c = t.children[0]
+            const p = c.mapToItem(r, 0, 0)
+            essai.journal("rangee", [r.etat.role, r.height, r.width, "|", t.mapToItem(r, 0, 0).x, t.width, t.height,
+                t.radius, "|", p.x, p.y, c.width, c.height, c.radius, c.border.width, c.border.color, c.visible].join(" "))
+        }
+
+        // bouton — journalise la propriété principal du bouton d'essai et la sélection de son Etat.
+        // Entrées : aucune. Sortie : aucune ; « essai : bouton <bool> <sélection> ». Erreurs : aucune.
+        // Dépendances : boutonEssai.
+        function bouton(): void {
+            essai.journal("bouton", boutonEssai.principal + " " + boutonEssai.etat.selection)
+        }
+
+        // boutonPrincipal — fait du bouton d'essai le bouton principal d'un dialogue, ou un bouton ordinaire.
+        // Entrées : valeur, nouvelle valeur de principal. Sortie : aucune. Erreurs : aucune.
+        // Dépendances : boutonEssai.
+        function boutonPrincipal(valeur: bool): void {
+            boutonEssai.principal = valeur
         }
 
         // inactif — pose le modificateur inactive sur la Surface fenêtre, en tête de l'arbre de la sonde.

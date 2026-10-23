@@ -5,10 +5,11 @@ import "../Theme"
 import "etats.js" as Etats
 
 // Champ — champ de saisie de la coque, enfoncé dans son conteneur.
-// Rôle : habille le gabarit sans style T.TextField (conception, § 7.1) : fond enfoncé elevation.field.fill,
-// plus sombre que le panneau qui le porte et identique dans tous les états ; son rôle est celui du conteneur,
-// sans cran (§ 7.4). L'anneau de focus paraît dès que le champ a le focus actif (activeFocus, y compris à la
-// souris, § 7.3), en couleur atténuée sous le modificateur inactive. Désactivé, le texte et le texte indicatif
+// Rôle : habille le gabarit sans style T.TextField (conception, § 7.1), à la forme de macOS (§ 7.10) : fond
+// enfoncé elevation.field.fill, plus sombre que le panneau qui le porte et identique dans tous les états, cerné
+// d'un filet d'un pixel physique à color.borderSubtle ; son rôle est celui du conteneur, sans cran (§ 7.4).
+// L'anneau de focus paraît dès que le champ a le focus actif (activeFocus, y compris à la souris, § 7.3), en
+// couleur atténuée sous le modificateur inactive. Désactivé, le texte et le texte indicatif
 // prennent la couleur de l'état disabled. La sélection est à l'accent et le curseur de texte, d'un pixel
 // physique, au texte primaire ; il ne paraît qu'au focus actif et y clignote comme le curseur natif.
 // Entrées : text, placeholderText (texte indicatif, montré tant que le champ est vide), accepted et le reste de
@@ -19,7 +20,8 @@ import "etats.js" as Etats
 // Dépendances : QtQuick.Templates, Quickshell (propriété attachée QsWindow : rapport de pixels de la fenêtre,
 // pour le curseur de texte ; 1 hors de toute fenêtre), Theme (density, elevation, radius, space, color,
 // hairline), Etat, AnneauFocus, Qt.styleHints (cursorFlashTime, cadence du clignotement).
-// Cotes : largeur implicite density.fieldWidth, fixe, hauteur density.controlHeight, rayon radius.control, retrait horizontal space.scale[2] (12).
+// Cotes : largeur implicite density.fieldWidth, fixe, hauteur density.controlHeight, rayon radius.control,
+// filet Theme.hairline, retrait horizontal space.scale[2] (12).
 T.TextField {
     id: champ
 
@@ -50,6 +52,8 @@ T.TextField {
     background: Rectangle {
         radius: Theme.radius?.control ?? 0
         color: Theme.elevation?.field?.fill ?? "transparent"
+        border.width: Theme.hairline(QsWindow.window?.devicePixelRatio ?? 1) ?? 0
+        border.color: Theme.color?.borderSubtle ?? "transparent"
 
         AnneauFocus {
             cible: parent

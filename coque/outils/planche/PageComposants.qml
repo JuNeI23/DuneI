@@ -21,8 +21,8 @@ import "Composants"
 // Erreurs : aucune ; une icône absente du thème laisse sa place vide ; une largeur plus étroite que le plus
 // large bloc (une grille d'états) laisse ce bloc déborder.
 // Dépendances : Theme (space, radius, density, typo, color), module Composants (Surface, Texte, Icone, Bouton,
-// Case, Interrupteur, Onglet, Curseur, Champ, Liste, Rangee, Separateur, Progression, AnneauFocus, Overlay,
-// Reglage), BarreOnglets (fichier voisin). Les overlays ne s'ouvrent qu'à la demande de Nicolas, par leurs
+// Case, Interrupteur, Onglet, Onglets, Curseur, Champ, Liste, Rangee, Separateur, Progression, AnneauFocus,
+// Overlay, Reglage). Les overlays ne s'ouvrent qu'à la demande de Nicolas, par leurs
 // boutons : l'attention prend le clavier en exclusif.
 Surface {
     id: page
@@ -102,9 +102,10 @@ Surface {
             else if (etat !== "rest") item.etat.forcer = etat
         }
 
-        // montreFocus — montre le focus d'un exemplaire sans lui donner le focus : contour pleine largeur pour
-        // une rangée, anneau autour de l'élément qui le porte d'ordinaire pour un contrôle (poignée d'un curseur,
-        // boîte ou piste d'une case ou d'un interrupteur, fond sinon).
+        // montreFocus — montre le focus d'un exemplaire sans lui donner le focus : contour de la pastille pour
+        // une rangée, anneau autour de l'élément qui le porte d'ordinaire pour un contrôle (cibleFocus si
+        // l'exemplaire la déclare, comme le segment d'une barre d'onglets ; poignée d'un curseur, boîte ou piste
+        // d'une case ou d'un interrupteur ; fond sinon).
         // Entrées : item, l'exemplaire. Sortie : aucune. Erreurs : aucune.
         // Dépendances : Rangee.forcerContour, AnneauFocus (composant anneau).
         function montreFocus(item) {
@@ -112,7 +113,7 @@ Surface {
                 item.forcerContour = true
                 return
             }
-            const c = item.handle ?? item.indicator ?? item.background
+            const c = item.cibleFocus ?? item.handle ?? item.indicator ?? item.background
             anneau.createObject(c, { cible: c, montre: true, inactif: Qt.binding(() => item.etat.inactif) })
         }
 
@@ -146,12 +147,15 @@ Surface {
                 }
             }
 
+            // Passé à la ligne sous la grille (y non nul), l'exemplaire vivant n'a plus la grille à côté de lui :
+            // son filet se borne alors à sa propre hauteur.
             Row {
+                id: rangeeVivante
                 spacing: Theme.space.blockGap
 
                 Separateur {
                     vertical: true
-                    height: Math.max(tableau.height, colonneVivante.height)
+                    height: rangeeVivante.y > 0 ? colonneVivante.height : Math.max(tableau.height, colonneVivante.height)
                 }
 
                 Column {
@@ -171,12 +175,26 @@ Surface {
         Component { id: anneau; AnneauFocus {} }
     }
 
+    // OngletEnBarre — barre Onglets de deux segments, dont le premier tient lieu d'exemplaire dans une Grille.
+    // Rôle : un segment ne se juge que sur sa piste ; cette barre expose l'Etat de son premier segment et ce
+    // segment comme cible de l'anneau de focus, pour que Grille.force agisse sur lui. currentIndex choisit le
+    // segment coché (le premier par défaut) ; enabled faux désactive les deux.
+    // Entrées : currentIndex, enabled et le reste de l'API d'Onglets. Sorties : etat, l'Etat du premier segment ;
+    // cibleFocus, son fond. Erreurs : aucune. Dépendances : Onglets, Onglet.
+    component OngletEnBarre: Onglets {
+        readonly property alias etat: segment.etat
+        readonly property Item cibleFocus: segment.background
+
+        Onglet { id: segment; text: "Onglet" }
+        Onglet { text: "Autre" }
+    }
+
     // PanneauEssai — panneau de contrôles courants, pour comparer deux panneaux identiques dont l'un porte
     // dnInactive : accents en activeMuted, anneau en focus.colorMuted, contenu ni terni ni estompé. Ses
     // contrôles sont rangés sur quatre lignes courtes, pour que deux panneaux tiennent côte à côte dès que la
     // fenêtre s'élargit un peu.
     // Entrées : titre ; dnInactive, le modificateur, faux par défaut. Sortie : surface surfacePanel.
-    // Erreurs : aucune. Dépendances : Surface, Case, Interrupteur, Curseur, BarreOnglets, Onglet, Bouton, Champ,
+    // Erreurs : aucune. Dépendances : Surface, Case, Interrupteur, Curseur, Onglets, Onglet, Bouton, Champ,
     // Progression, Liste, Rangee, Texte.
     component PanneauEssai: Surface {
         id: panneau
@@ -210,7 +228,7 @@ Surface {
 
             Row {
                 spacing: Theme.space.sectionGap
-                BarreOnglets {
+                Onglets {
                     Onglet { text: "Premier" }
                     Onglet { text: "Second" }
                 }
@@ -292,13 +310,13 @@ Surface {
                     anchors.right: parent.right
                     spacing: Theme.space.scale[1]
                     Bouton { text: "Annuler"; onClicked: attention.ouvert = false }
-                    Bouton { text: "Valider"; onClicked: attention.ouvert = false }
+                    Bouton { text: "Valider"; principal: true; onClicked: attention.ouvert = false }
                 }
             }
         }
 
-        // Overlay contextuel : un menu de quatre rangées ancré sous son bouton. alaSouris retient que le menu a
-        // été ouvert à la souris : la liste reçoit alors le focus sans montrer le contour de sa rangée courante,
+        // Overlay contextuel : un menu de quatre rangées ancré sous son bouton, dont la sélection suit le pointeur
+        // comme dans un menu de macOS (selectionSuitSurvol). alaSouris retient que le menu a été ouvert à la souris : la liste reçoit alors le focus sans montrer le contour de sa rangée courante,
         // le temps que Liste passe focusClavier à vrai à l'arrivée du focus et que la page le repasse à faux
         // juste après.
         Overlay {
@@ -312,6 +330,7 @@ Surface {
             Liste {
                 id: listeMenu
                 focus: true
+                selectionSuitSurvol: true
                 implicitWidth: 3 * Theme.space.scale[7]
                 implicitHeight: count * Theme.density.rowHeight
                 model: [
@@ -445,7 +464,8 @@ Surface {
 
         Grille {
             titre: "Bouton"
-            variantes: [{ libelle: "texte" }, { libelle: "icône et texte", proprietes: { icone: "document-save" } }]
+            variantes: [{ libelle: "texte" }, { libelle: "icône et texte", proprietes: { icone: "document-save" } },
+                        { libelle: "principal", proprietes: { principal: true } }]
             modele: Component { Bouton { text: "Valider" } }
             Bouton { text: "Valider"; icone: "document-save" }
         }
@@ -464,16 +484,18 @@ Surface {
             Interrupteur { text: "Option" }
         }
 
+        // Les onglets se jugent dans leur barre : chaque exemplaire est une barre de deux segments, dont le premier
+        // porte l'état de la case (OngletEnBarre).
         Grille {
-            titre: "Onglet"
+            titre: "Onglets"
             variantes: [
-                { libelle: "non actif" },
-                { libelle: "actif, barre focalisée", proprietes: { checked: true } },
-                { libelle: "actif, barre sans focus", proprietes: { checked: true }, selection: "inactive" }
+                { libelle: "non coché", proprietes: { currentIndex: 1 } },
+                { libelle: "coché, barre focalisée", selection: "active" },
+                { libelle: "coché, barre sans focus", selection: "inactive" }
             ]
-            modele: Component { Onglet { text: "Onglet" } }
+            modele: Component { OngletEnBarre {} }
 
-            BarreOnglets {
+            Onglets {
                 Onglet { text: "Premier" }
                 Onglet { text: "Second" }
                 Onglet { text: "Troisième" }

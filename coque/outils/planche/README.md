@@ -1,6 +1,6 @@
 # Planche de contrôle des tokens de la coque
 
-Version 0.4 — outil de développement de L2-34, gardé ensuite pour tout travail sur les tokens et la coque ; page
+Version 0.5 — outil de développement de L2-34, gardé ensuite pour tout travail sur les tokens et la coque ; page
 des composants ajoutée en L2-01.
 
 La planche affiche dans sa fenêtre (tuilée ou flottante, selon les règles d'Hyprland) deux onglets : « Tokens », chaque token de `coque-tokens.json`
@@ -30,8 +30,10 @@ ne bouge pas, puis `planche.sh teinte <n>` la rétablit.
 
 ## Onglets
 
-Les onglets en tête sont des `Onglet` du module, alignés par `BarreOnglets.qml` (le gabarit `T.TabBar` n'a pas
-d'élément de contenu ; cette barre rejoindra le module au premier besoin d'une surface de la coque). Chaque page
+Les onglets en tête sont des `Onglet` du module, portés par la barre `Onglets` du module : un contrôle segmenté
+à la manière de macOS, piste au fond enfoncé et pastille sur le segment coché (conception des composants,
+§ 7.10). Elle a remplacé `BarreOnglets.qml`, propre à la planche, quand les formes à la macOS l'ont fait entrer
+dans la bibliothèque. Chaque page
 est chargée à la demande par un `Loader` : seule la page visible existe, et changer d'onglet détruit l'autre
 (sobriété, D80). Le défilement revient en haut à chaque changement.
 
@@ -66,14 +68,16 @@ fenêtre plus large.
 - **En-tête** : l'interrupteur provisoire « Retour au repos : in / out », lié à `Reglage.retour` (conception,
   § 7.8), dont le libellé affiche la valeur courante ; il se juge sur les exemplaires vivants et disparaîtra
   quand le ressort sera tranché. Puis deux boutons : « Ouvrir une attention » (un `Overlay` attention : un champ
-  et deux boutons qui la ferment) et « Ouvrir un menu » (un `Overlay` contextuel ancré sous le bouton : quatre
-  `Rangee` dans une `Liste` ; ouvert à la souris, il ne montre pas le contour de sa rangée courante).
+  et deux boutons qui la ferment, dont « Valider », bouton `principal`) et « Ouvrir un menu » (un `Overlay`
+  contextuel ancré sous le bouton : quatre `Rangee` dans une `Liste` dont la sélection suit le pointeur,
+  `selectionSuitSurvol` ; ouvert à la souris, il ne montre pas le contour de sa rangée courante).
 - **Primitives** : les trois rôles de `Surface` avec un `Bouton` et le rôle qu'il prend un cran au-dessus ;
   chaque échelon de `Texte` en régulier et moyen ; les icônes `non-starred`, `starred`, `starred` pleine
   (repli de D82) et `object-select` ; `Separateur` horizontal et vertical ; `Progression` à 0, 35 et 100 %.
-- **Une grille par contrôle** (`Bouton`, `Case`, `Interrupteur`, `Onglet`, `Curseur`, `Champ`, `Rangee`) : en
-  lignes, repos, survol, pressé, désactivé et focus clavier ; en colonnes, les variantes (décochée et cochée,
-  onglet non actif, actif dans une barre focalisée ou sans focus, rangée non sélectionnée ou en sélection active
+- **Une grille par contrôle** (`Bouton`, `Case`, `Interrupteur`, `Onglets`, `Curseur`, `Champ`, `Rangee`) : en
+  lignes, repos, survol, pressé, désactivé et focus clavier ; en colonnes, les variantes (bouton texte, avec
+  icône ou principal, décochée et cochée, onglet non coché, coché dans une barre focalisée ou sans focus, chacun
+  jugé dans une barre de deux segments, rangée non sélectionnée ou en sélection active
   ou inactive, champ vide ou rempli), pour que la grille reste étroite. À côté, ou dessous quand la largeur
   manque, derrière un filet vertical, un exemplaire vivant, et pour la rangée une `Liste` de six rangées, un
   seul arrêt de tabulation.
@@ -96,7 +100,8 @@ qs ipc -p coque/outils/planche call planche defile 1200       # rend l'ordonnée
 qs ipc -p coque/outils/planche call planche capture /chemin/absolu.png
 ```
 
-`capture` enregistre la page affichée en entier, en pixels physiques, rendue par la fenêtre elle-même : elle ne
+`capture` enregistre la page affichée en entier, en pixels physiques (la largeur logique de la page multipliée
+une seule fois par le rapport de pixels de la fenêtre), rendue par la fenêtre elle-même : elle ne
 dépend ni du défilement ni de ce qui recouvre la fenêtre à l'écran, et sert quand une capture par `grim` est
 impossible sans déranger le bureau. La page Tokens, sans fond propre, sort sur un fond transparent. Un
 échec d'écriture est signalé au journal (« planche : capture non écrite dans <chemin> »).
@@ -146,3 +151,4 @@ la PSS lues dans `/proc/<pid>/smaps_rollup`.
 | 0.2 | 2026-10-22 | Après relecture : liserés en pixels physiques, bouton d'essai désactivé en entier, brouillon en chemin absolu. |
 | 0.3 | 2026-10-23 | Onglets « Tokens » et « Composants », page des composants, interrupteur provisoire du retour au repos, commandes IPC (L2-01). |
 | 0.4 | 2026-10-23 | Après relecture : page qui passe à la ligne dans une fenêtre tuilée, états en lignes dans les grilles, commande IPC `onglet` (au lieu de `page`), capture qui signale un échec d'écriture. |
+| 0.5 | 2026-10-23 | Formes à la macOS (L2-01, § 7.10) : barre `Onglets` du module à la place de `BarreOnglets.qml`, grille des onglets jugés dans leur barre, bouton principal, menu dont la sélection suit le pointeur ; capture qui n'applique plus deux fois le rapport de pixels ; filet de l'exemplaire vivant borné à sa hauteur quand il passe sous la grille. |

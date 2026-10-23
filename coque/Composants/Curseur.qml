@@ -4,10 +4,13 @@ import "../Theme"
 
 // Curseur — curseur horizontal de la coque : une piste, sa partie remplie et une poignée.
 // Rôle : habille le gabarit sans style T.Slider (conception, § 7.1), qui fournit les flèches du clavier et le
-// glissement. La piste est au fond du bureau (elevation.e0, bible : « piste à E0 ») ; la partie remplie, de
-// l'origine au centre de la poignée, est à l'accent, ou à l'accent sans chroma sous le modificateur inactive
-// (§ 7.5) ; la poignée prend le fond de son Etat au rôle controlRaised. L'anneau de focus entoure la poignée,
-// sur visualFocus ; un clic ne vole pas le focus d'un champ (focusPolicy Qt.TabFocus, § 7.3).
+// glissement, à la forme de macOS (§ 7.10). La piste, en pilule, est au fond du bureau (elevation.e0, bible :
+// « piste à E0 ») ; la partie remplie, de l'origine au centre de la poignée, est à l'accent, ou à l'accent sans
+// chroma sous le modificateur inactive (§ 7.5) ; la poignée, ronde et claire, prend le texte de son Etat au rôle
+// controlRaised, sans sélection : color.textPrimary, terni seulement quand le curseur est désactivé. Le thème
+// étant sombre, ce texte est clair ; un rôle propre (knob) viendra si un thème clair apparaît. L'anneau de
+// focus entoure la poignée, sur visualFocus ; un clic ne vole pas le focus d'un champ (focusPolicy
+// Qt.TabFocus, § 7.3).
 // Entrées : value, from, to, stepSize et le reste de l'API de T.Slider ; l'orientation verticale n'est pas
 // habillée.
 // Sorties : etat, l'Etat de la poignée (rôle, interaction, sélection, couleurs) ; down, copie de pressed, que
@@ -58,7 +61,7 @@ T.Slider {
         width: curseur.poignee
         height: width
         radius: width / 2
-        color: etat.fond
+        color: etat.texte
 
         AnneauFocus {
             cible: parent

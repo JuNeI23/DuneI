@@ -346,18 +346,31 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
 
     def test_rangee(self):
         # La rangée prend le rôle de son conteneur (surfacePanel, sans cran), la hauteur density.rowHeight et la
-        # largeur de la liste (200). Son contour de focus couvre toute la largeur, rentré de -focus.rowOffset
-        # pixel de chaque côté, à l'épaisseur et à la couleur de focus ; il reste masqué tant que la liste n'a
-        # pas le focus clavier (sans fenêtre, il ne paraît jamais ici : son affichage sera vérifié à l'écran, à
-        # la tâche 9). Sous le modificateur inactive, il passe en focus.colorMuted.
+        # largeur de la liste (200). Sa pastille de sélection, au rayon radius.control, est en retrait de
+        # space.scale[0] de chaque bord de la liste et garde toute la hauteur. Le contour de focus suit le même
+        # rectangle arrondi, rentré de -focus.rowOffset pixel (rayon diminué d'autant), à l'épaisseur et à la
+        # couleur de focus ; il reste masqué tant que la liste n'a pas le focus clavier (sans fenêtre, il ne paraît
+        # jamais ici : son affichage se vérifie à l'écran). Sous le modificateur inactive, il passe en
+        # focus.colorMuted.
         self.demarrer()
         tokens = self.tokens55()[0]
         focus, h = tokens["focus"], tokens["density"]["comfortable"]["rowHeight"]
-        d = -focus["rowOffset"]
-        attendu = f"surfacePanel {h} 200 {d} {d} {200 - 2 * d} {h - 2 * d} {focus['width']} {focus['color']} false"
+        d, r, rayon = -focus["rowOffset"], tokens["space"]["scale"][0], tokens["radius"]["control"]
+        attendu = (f"surfacePanel {h} 200 | {r} {200 - 2 * r} {h} {rayon} | {r + d} {d} {200 - 2 * r - 2 * d} "
+                   f"{h - 2 * d} {rayon - d} {focus['width']} {focus['color']} false")
         self.assertEqual(self.valeur("rangee").lower(), attendu.lower())
         self.ipc("inactif", "true")
         self.assertIn(focus["colorMuted"].lower(), self.valeur("rangee").lower())
+
+    def test_bouton_principal(self):
+        # Le bouton principal d'un dialogue est sélectionné : l'accent, puis l'accent sans chroma sous le
+        # modificateur inactive ; un bouton ordinaire n'a aucune sélection.
+        self.demarrer()
+        self.assertEqual(self.valeur("bouton"), "false none")
+        self.ipc("boutonPrincipal", "true")
+        self.assertEqual(self.valeur("bouton"), "true active")
+        self.ipc("inactif", "true")
+        self.assertEqual(self.valeur("bouton"), "true activeMuted")
 
     def test_exclusivite(self):
         # Le singleton Overlays seul, sur trois objets factices qui suivent le protocole d'Overlay (ouvert passe à
@@ -413,6 +426,7 @@ class CoqueClavierTest(EssaiCoque, unittest.TestCase):
 
     demarrer = CoqueComposantsTest.demarrer
     valeur = CoqueComposantsTest.valeur
+    tokens55 = CoqueComposantsTest.tokens55
 
     def test_barre_onglets_un_arret(self):
         # Défaut relevé à l'écran : chaque onglet était un arrêt de tabulation, si bien que Maj+Tab depuis l'onglet
@@ -433,6 +447,30 @@ class CoqueClavierTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(self.valeur("focus"), "composants 1 none active true")
         self.ipc("touche", "tab")
         self.assertEqual(self.valeur("focus"), "apres 1 none inactive true")
+
+    def test_onglets_segmentes(self):
+        # Onglets est un contrôle segmenté : une piste au fond enfoncé (elevation.field.fill), au rayon
+        # radius.control, de la hauteur d'un contrôle ; ses segments, de largeurs égales à la plus large de leurs
+        # largeurs implicites, sont en retrait de radius.control - radius.small (règle d'imbrication des
+        # rayons), au rayon radius.small ; un segment non coché au repos n'a pas de fond.
+        self.demarrer()
+        tokens = self.tokens55()[0]
+        rayons, d = tokens["radius"], tokens["density"]["comfortable"]
+        retrait = rayons["control"] - rayons["small"]
+        fond, rayon, hauteur, marge, l0, l1, lmax, h0, r0, nu = self.valeur("onglets").split()
+        self.assertEqual(fond.lower(), tokens["elevation"]["field"]["fill"].lower())
+        self.assertEqual((rayon, hauteur, marge), (str(rayons["control"]), str(d["controlHeight"]), str(retrait)))
+        self.assertEqual((l0, l1), (lmax, lmax))
+        self.assertEqual((h0, r0), (str(d["controlHeight"] - 2 * retrait), str(rayons["small"])))
+        self.assertEqual(nu, "#00000000")
+
+    def test_menu_selection_suit_survol(self):
+        # Dans un menu, la Liste porte selectionSuitSurvol : le pointeur posé sur une rangée en fait la rangée
+        # courante, donc sélectionnée. Sans ce drapeau, une Liste garde sa rangée courante sous le pointeur.
+        self.demarrer()
+        self.assertEqual(self.valeur("menu"), "0 0")
+        self.ipc("survoler", "2")
+        self.assertEqual(self.valeur("menu"), "2 0")
 
     def test_curseur_du_champ(self):
         # Défaut relevé à l'écran : le curseur de texte restait affiché après la perte du focus. TextInput ne

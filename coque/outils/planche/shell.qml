@@ -21,7 +21,7 @@ import "Composants"
 // <chemin> enregistre la page affichée en entier dans un PNG. Elles servent aux captures et aux relevés, sans
 // geste dans la fenêtre.
 // Dépendances : quickshell ≥ 0.3 (FloatingWindow, LazyLoader, IpcHandler), QtQuick.Effects (ombre portée),
-// modules Theme et Composants, BarreOnglets et PageComposants (fichiers voisins).
+// modules Theme et Composants (dont Onglets, la barre d'onglets), PageComposants (fichier voisin).
 // Import : comme pour la coque d'essai, les liens planche/Theme -> ../../Theme et planche/Composants ->
 // ../../Composants placent les deux modules côte à côte sous la racine ; la directive IconTheme en tête choisit
 // Adwaita, sans quoi Icone ne trouve aucune icône symbolique.
@@ -174,16 +174,19 @@ ShellRoot {
                 }
 
                 // capture — enregistre la page affichée en entier dans un PNG, rendue par la fenêtre elle-même, en
-                // pixels physiques (rapport de pixels de la fenêtre), pour que les liserés d'un pixel physique y
-                // paraissent : la capture ne dépend ni du défilement ni de ce qui recouvre la fenêtre. La page Tokens,
+                // pixels physiques, pour que les liserés d'un pixel physique y paraissent : la capture ne dépend ni
+                // du défilement ni de ce qui recouvre la fenêtre. La taille demandée est celle de la page en pixels
+                // logiques : grabToImage la multiplie lui-même par le rapport de pixels de la fenêtre, si bien
+                // qu'une taille déjà multipliée suréchantillonnait l'image d'un second facteur. La page Tokens,
                 // sans fond propre, sort sur un fond transparent.
                 // Entrées : chemin, fichier PNG, absolu. Sortie : "lancée" si le rendu est demandé, "refusée"
                 // sinon ; l'écriture se fait à l'image suivante. Erreurs : un chemin non inscriptible fait échouer
-                // l'écriture, signalée au journal par « planche : capture non écrite dans <chemin> ». Dépendances : chargeur (Item.grabToImage).
+                // l'écriture, signalée au journal par « planche : capture non écrite dans <chemin> ».
+                // Dépendances : chargeur (Item.grabToImage).
                 function capture(chemin: string): string {
-                    const item = chargeur.item, dpr = fenetre.devicePixelRatio
+                    const item = chargeur.item
                     return item?.grabToImage(r => { if (!r.saveToFile(chemin)) console.warn("planche : capture non écrite dans " + chemin) },
-                                             Qt.size(item.width * dpr, item.height * dpr))
+                                             Qt.size(item.width, item.height))
                         ? "lancée" : "refusée"
                 }
             }
@@ -214,7 +217,7 @@ ShellRoot {
 
                     // Onglets en tête : chaque page est chargée à la demande et seule la page visible existe
                     // (sobriété, D80) ; changer d'onglet détruit l'autre page.
-                    BarreOnglets {
+                    Onglets {
                         id: onglets
                         onCurrentIndexChanged: defilement.contentY = 0
                         Onglet { text: "Tokens" }

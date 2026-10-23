@@ -6,19 +6,23 @@ import "Theme"
 import "Composants"
 
 // Coque d'essai du clavier : parcours de tabulation et curseur de texte, dans une vraie fenêtre.
-// Rôle : ouvre une FloatingWindow (un Bouton « avant », la BarreOnglets de la planche avec les onglets « tokens »
-// et « composants », ce dernier coché, un Bouton « apres » et un Champ) et y synthétise des touches par le
-// TestEvent de QtTest, pour que tests/test_coque_composants.py éprouve ce que la coque sans fenêtre ne peut pas
-// exécuter : le focus actif, la tabulation et le clignotement du curseur. Lancée sur la plateforme offscreen par
-// le test : la fenêtre ne paraît jamais à l'écran et aucune touche n'atteint le bureau.
+// Rôle : ouvre une FloatingWindow (un Bouton « avant », une barre Onglets avec les onglets « tokens » et
+// « composants », ce dernier coché, un Bouton « apres », un Champ, puis deux Liste côte à côte, un menu qui porte
+// selectionSuitSurvol et un témoin qui ne le porte pas) et y synthétise des touches et des mouvements du pointeur
+// par le TestEvent de QtTest, pour que tests/test_coque_composants.py éprouve ce que la coque sans fenêtre ne peut
+// pas exécuter : le focus actif, la tabulation, le clignotement du curseur, la mise en page de la barre (qui
+// attend le polissage d'une fenêtre) et le survol. Lancée sur la plateforme offscreen par le test : la fenêtre ne
+// paraît jamais à l'écran, et ni les touches ni le pointeur n'atteignent le bureau.
 // Entrées : DUNEI_TOKENS_DIR, lu par Theme. Sortie : journal de Theme, « essai : prêt true » à l'ouverture de la
 // fenêtre, puis une ligne par commande IPC de lecture : « essai : focus <élément> <onglet courant> <sélection
 // de tokens> <sélection de composants> <visualFocus> » et « essai : curseur <cursorVisible> <délégué visible>
-// <cursorFlashTime> » ; « essai touche <tab|majtab|gauche|droite> » frappe une touche sans journaliser.
+// <cursorFlashTime> », « essai : onglets <géométrie de la barre et de ses segments> » et « essai : menu <rangée
+// courante du menu> <rangée courante du témoin> » ; « essai touche <tab|majtab|gauche|droite> » frappe une touche
+// et « essai survoler <rang> » pose le pointeur sur une rangée de chaque liste, sans journaliser.
 // Erreurs : celles de Theme et des liaisons, dans le journal ; un nom de touche inconnu lève une TypeError.
 // Dépendances : quickshell ≥ 0.3 (FloatingWindow, LazyLoader, IpcHandler), QtTest (TestEvent), modules Theme
-// et Composants, BarreOnglets de la planche. Import : les liens Theme -> ../Theme, Composants -> ../Composants et
-// BarreOnglets.qml les posent sous la racine de cette coque, comme dans la coque d'essai voisine.
+// et Composants. Import : les liens Theme -> ../Theme et Composants -> ../Composants les posent sous la racine de
+// cette coque, comme dans la coque d'essai voisine.
 ShellRoot {
     id: essai
 
@@ -41,14 +45,27 @@ ShellRoot {
                 id: colonne
 
                 Bouton { objectName: "avant"; text: "Avant" }
-                BarreOnglets {
-                    id: onglets
+                Onglets {
+                    id: barre
                     Onglet { id: tokens; objectName: "tokens"; text: "Tokens" }
                     Onglet { id: composants; objectName: "composants"; text: "Composants" }
                     Component.onCompleted: currentIndex = 1
                 }
                 Bouton { objectName: "apres"; text: "Après" }
                 Champ { id: champ; objectName: "champ" }
+
+                Row {
+                    Liste { id: listeMenu; selectionSuitSurvol: true; model: 3; delegate: rangee; width: 100; height: 3 * Theme.density.rowHeight }
+                    Liste { id: listeTemoin; model: 3; delegate: rangee; width: 100; height: 3 * Theme.density.rowHeight }
+                }
+            }
+
+            // Rangée des deux listes, qui sont assez hautes pour les montrer toutes. La plateforme offscreen met
+            // Qt.styleHints.useHoverEffects à faux, ce qui ôte le survol aux gabarits : il est rendu ici, comme
+            // sur un bureau.
+            Component {
+                id: rangee
+                Rangee { text: "Rangée " + index; hoverEnabled: true }
             }
 
             TestEvent { id: clavier }
@@ -67,12 +84,41 @@ ShellRoot {
 
                 // focus — journalise l'élément qui a le focus actif, l'onglet courant et la sélection des onglets.
                 // Entrées : aucune. Sortie : aucune ; « essai : focus … », « aucun » si rien n'a le focus.
-                // Erreurs : aucune. Dépendances : colonne, onglets, journal.
+                // Erreurs : aucune. Dépendances : colonne, barre, journal.
                 function focus(): void {
                     const elus = [...colonne.children, tokens, composants].filter(e => e.activeFocus && e.objectName)
                     const elu = elus[elus.length - 1]
-                    essai.journal("focus", [elu?.objectName ?? "aucun", onglets.currentIndex, tokens.etat.selection,
+                    essai.journal("focus", [elu?.objectName ?? "aucun", barre.currentIndex, tokens.etat.selection,
                                             composants.etat.selection, elu?.visualFocus ?? false].join(" "))
+                }
+
+                // onglets — journalise la géométrie de la barre d'onglets : fond et rayon de la piste, hauteur,
+                // retrait des segments, largeur de chaque segment, plus grande largeur implicite, hauteur et rayon
+                // du premier segment (« tokens », non coché), puis le fond de ce segment au repos.
+                // Entrées : aucune. Sortie : aucune ; « essai : onglets … ». Erreurs : aucune.
+                // Dépendances : barre, tokens, composants, journal.
+                function onglets(): void {
+                    const b = barre.background
+                    essai.journal("onglets", [b.color, b.radius, barre.height, barre.leftPadding, tokens.width,
+                        composants.width, Math.max(tokens.implicitWidth, composants.implicitWidth), tokens.height,
+                        tokens.background.radius, tokens.background.color].join(" "))
+                }
+
+                // survoler — pose le pointeur au centre de la rangée de rang donné du menu, puis du témoin.
+                // Entrée : rang, rang de la rangée. Sortie : aucune. Erreurs : aucune ; un rang absent ne survole
+                // rien. Dépendances : listeMenu, listeTemoin, clavier (TestEvent).
+                function survoler(rang: int): void {
+                    for (const l of [listeMenu, listeTemoin]) {
+                        const r = l.itemAtIndex(rang)
+                        if (r) clavier.mouseMove(r, r.width / 2, r.height / 2, -1, Qt.NoButton, Qt.NoModifier)
+                    }
+                }
+
+                // menu — journalise la rangée courante du menu, puis celle du témoin.
+                // Entrées : aucune. Sortie : aucune ; « essai : menu <index> <index> ». Erreurs : aucune.
+                // Dépendances : listeMenu, listeTemoin, journal.
+                function menu(): void {
+                    essai.journal("menu", listeMenu.currentIndex + " " + listeTemoin.currentIndex)
                 }
 
                 // curseur — journalise l'état du curseur de texte du champ.

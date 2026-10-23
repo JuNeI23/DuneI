@@ -13,8 +13,10 @@ import "../Theme"
 //     de clic si point est fourni, retournée puis glissée pour rester dans l'écran ; sans voile ; le clavier
 //     est pris par HyprlandFocusGrab, dont la levée (clic à l'extérieur) ferme, comme Échap ; plusieurs
 //     peuvent coexister. L'infobulle, qui ne prend jamais le clavier, n'est pas couverte.
-// Le contenu est posé au centre d'une Surface surfaceRaised (e3), aux coins radius.panel, entourée d'un retrait
-// space.scale[2] (12) ; sa taille est celle du contenu. Sobriété (D80) : la fenêtre et le contenu ne sont
+// Le contenu est posé au centre d'une Surface surfaceRaised (e3), entourée d'un retrait ; sa taille est celle du
+// contenu. Les formes suivent macOS (conception, § 7.10) : une attention a les coins radius.window et le retrait
+// space.scale[2] (12), comme une feuille d'alerte ; un contextuel a les coins radius.panel et le retrait
+// space.scale[0] (4), comme un menu, dont la pastille de sélection se tient ainsi près du bord. Sobriété (D80) : la fenêtre et le contenu ne sont
 // construits par le LazyLoader qu'à l'ouverture, entre deux images, et détruits à la fermeture.
 // Entrées : famille, "attention" ou "contextuel" ; ouvert, vrai pour ouvrir, faux pour fermer, qui s'affecte et
 //           ne se lie pas : le registre Overlays, Échap, le clic sur le voile et la levée du focus l'écrivent
@@ -48,14 +50,16 @@ QtObject {
     // c'est une FocusScope qui demande le focus, pour que les touches non consommées par le contenu y remontent.
     // Ce composant en ligne n'accède à rien hors de lui : son API est explicite, car un composant en ligne ne
     // partage pas la portée du document qui le déclare.
-    // Entrées : contenu, composant à instancier. Sorties : echap(), émis sur Échap non consommé par le contenu ;
-    // implicitWidth, implicitHeight, taille du contenu et du retrait. Erreurs : aucune.
-    // Dépendances : Surface, Theme (radius, space).
+    // Entrées : contenu, composant à instancier ; rayon, rayon des coins de la Surface ; retrait, marge entre la
+    // Surface et le contenu. Sorties : echap(), émis sur Échap non consommé par le contenu ; implicitWidth,
+    // implicitHeight, taille du contenu et du retrait. Erreurs : aucune.
+    // Dépendances : Surface.
     component Cadre: FocusScope {
         id: cadre
 
         property Component contenu
-        readonly property real retrait: Theme.space?.scale[2] ?? 0
+        property real rayon
+        property real retrait
         signal echap()
 
         focus: true
@@ -66,7 +70,7 @@ QtObject {
         Surface {
             anchors.fill: parent
             role: "surfaceRaised"
-            radius: Theme.radius?.panel ?? 0
+            radius: cadre.rayon
 
             Loader {
                 id: charge
@@ -134,6 +138,8 @@ QtObject {
             id: cadreAttention
             anchors.centerIn: parent
             contenu: overlay.contenu
+            rayon: Theme.radius?.window ?? 0
+            retrait: Theme.space?.scale[2] ?? 0
             onEchap: overlay.ouvert = false
         }
     }
@@ -158,6 +164,8 @@ QtObject {
             id: cadrePopup
             anchors.fill: parent
             contenu: overlay.contenu
+            rayon: Theme.radius?.panel ?? 0
+            retrait: Theme.space?.scale[0] ?? 0
             onEchap: overlay.ouvert = false
         }
 

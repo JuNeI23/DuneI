@@ -1,1 +1,0 @@
-../../../outils/planche/BarreOnglets.qml

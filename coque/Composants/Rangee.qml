@@ -4,15 +4,18 @@ import QtQuick.Templates as T
 import "../Theme"
 import "etats.js" as Etats
 
-// Rangee — rangée d'une Liste : libellé, icône facultative, sélection et contour de focus pleine largeur.
+// Rangee — rangée d'une Liste : libellé, icône facultative, sélection en pastille et contour de focus.
 // Rôle : habille le gabarit sans style T.ItemDelegate (conception, § 7.1). La rangée prend le rôle de son
 // conteneur, sans cran : non sélectionnée et au repos, elle se confond avec le fond de la liste (§ 7.4). Elle
 // est sélectionnée quand elle est la rangée courante, ou, si la liste ne fait pas suivre la sélection, quand
-// l'appelant pose selectionnee (§ 7.5) ; la sélection prend l'accent quand la liste a le focus. Le focus se
-// montre par un contour sans fond de focus.width, sur toute la largeur, rentré de -focus.rowOffset pixel, et
-// jamais par un anneau ni par un changement de fond (§ 7.3) ; il paraît sur la rangée courante d'une liste
-// qui a le focus obtenu au clavier. La rangée n'accepte aucun focus : la liste est l'unique arrêt. Un clic
-// en fait la rangée courante, donne le focus à la liste sans montrer le contour, puis émet active().
+// l'appelant pose selectionnee (§ 7.5) ; la sélection prend l'accent quand la liste a le focus. Sélection et
+// survol se peignent dans une pastille arrondie en retrait des bords de la liste, à la manière de macOS
+// (§ 7.10). Le focus se montre par un contour sans fond de focus.width, qui suit la pastille rentré de
+// -focus.rowOffset pixel, et jamais par un anneau ni par un changement de fond (§ 7.3) ; il paraît sur la
+// rangée courante d'une liste qui a le focus obtenu au clavier. La rangée n'accepte aucun focus : la liste est
+// l'unique arrêt. Un clic en fait la rangée courante, donne le focus à la liste sans montrer le contour, puis
+// émet active(). Dans une liste qui porte selectionSuitSurvol (un menu), le survol en fait aussi la rangée
+// courante.
 // Entrées : index, requis, rang dans le modèle (fourni par la ListView) ; text, libellé ; icone, nom
 // freedesktop d'une icône symbolique, vide par défaut (pas d'icône) ; selectionnee, sélection fournie par
 // l'appelant quand la liste ne la fait pas suivre currentIndex ; forcerContour, réservée à la planche de
@@ -24,10 +27,12 @@ import "etats.js" as Etats
 // tokens, les cotes sont nulles et les couleurs transparentes. Le clic suppose une Liste : une ListView
 // ordinaire ne déclare pas focusClavier, que le clic écrit.
 // Dépendances : QtQuick.Templates (ItemDelegate), QtQuick.Layouts, propriétés attachées ListView (view,
-// isCurrentItem) et Liste (focusClavier, selectionSuitCourant) ; Theme (density, focus, space), Etat, Texte,
-// Icone, etats.js (herite).
-// Cotes : hauteur density.rowHeight, retrait horizontal space.scale[2] (12), écart entre icône et libellé
-// space.scale[1] (8). Le contour est le premier enfant du fond : la coque d'essai le lit ainsi.
+// isCurrentItem) et Liste (focusClavier, selectionSuitCourant, selectionSuitSurvol) ; Theme (density, focus,
+// radius, space), Etat, Texte, Icone, etats.js (herite).
+// Cotes : hauteur density.rowHeight ; pastille en retrait de space.scale[0] (4) des bords, rayon radius.control ;
+// retrait horizontal du contenu space.scale[2] (12), soit 8 dans la pastille ; écart entre icône et libellé
+// space.scale[1] (8). La pastille est le premier enfant du fond et le contour le premier enfant de la pastille :
+// la coque d'essai les lit ainsi.
 T.ItemDelegate {
     id: rangee
 
@@ -64,6 +69,11 @@ T.ItemDelegate {
         active()
     }
 
+    // survol — dans une liste qui porte selectionSuitSurvol (un menu), fait de la rangée survolée la rangée
+    // courante, donc la rangée sélectionnée. Entrées : aucune. Sortie : aucune. Erreurs : aucune ; ailleurs, et
+    // quand le pointeur quitte la rangée, rien ne se passe. Dépendances : vue (Liste, selectionSuitSurvol).
+    onHoveredChanged: if (hovered && (vue?.selectionSuitSurvol ?? false)) vue.currentIndex = index
+
     // La rangée reste au rôle de son conteneur : pas de cran, donc le dnRole hérité tel quel.
     Etat {
         id: etat
@@ -73,17 +83,30 @@ T.ItemDelegate {
         focusDansGroupe: rangee.vue?.activeFocus ?? true
     }
 
-    background: Rectangle {
-        color: etat.fond
-
-        // Contour de focus : sans fond, pleine largeur, rentré de -rowOffset (−1 donne un pixel vers l'intérieur).
+    // Fond : une pastille de sélection et de survol, premier enfant du fond, en retrait de space.scale[0] de
+    // chaque bord de la liste et sur toute la hauteur, au rayon radius.control, comme la sélection d'une barre
+    // latérale ou d'un menu de macOS (§ 7.10). Son premier enfant est le contour de focus : sans fond, il suit le
+    // même rectangle arrondi, rentré de -rowOffset (−1 donne un pixel vers l'intérieur) et au rayon diminué
+    // d'autant.
+    background: Item {
         Rectangle {
+            id: pastille
             anchors.fill: parent
-            anchors.margins: -(Theme.focus?.rowOffset ?? 0)
-            visible: rangee.contourMontre
-            color: "transparent"
-            border.width: Theme.focus?.width ?? 0
-            border.color: (etat.inactif ? Theme.focus?.colorMuted : Theme.focus?.color) ?? "transparent"
+            anchors.leftMargin: Theme.space?.scale[0] ?? 0
+            anchors.rightMargin: anchors.leftMargin
+            radius: Theme.radius?.control ?? 0
+            color: etat.fond
+
+            Rectangle {
+                readonly property real decalage: Theme.focus?.rowOffset ?? 0
+                anchors.fill: parent
+                anchors.margins: -decalage
+                radius: pastille.radius + decalage
+                visible: rangee.contourMontre
+                color: "transparent"
+                border.width: Theme.focus?.width ?? 0
+                border.color: (etat.inactif ? Theme.focus?.colorMuted : Theme.focus?.color) ?? "transparent"
+            }
         }
     }
 

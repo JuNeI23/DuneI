@@ -6,9 +6,11 @@ import "../Theme"
 // Rôle : habille le gabarit sans style T.AbstractButton (conception, § 7.1) : fond au rôle un cran au-dessus
 // de son conteneur, animé par Etat ; pressé, il descend sous le repos (bible, annexe E) sans se déplacer ni se
 // réduire ; anneau de focus seulement pour un focus venu du clavier (visualFocus). Un clic ne vole pas le focus
-// d'un champ (focusPolicy Qt.TabFocus, § 7.3).
+// d'un champ (focusPolicy Qt.TabFocus, § 7.3). Le bouton principal d'un dialogue, comme le bouton bleu de
+// macOS, est sélectionné : l'accent et le sur-accent, ou l'accent sans chroma sous le modificateur inactive
+// (§ 7.5 et 7.10), sans couleur nouvelle.
 // Entrées : text, clicked et le reste de l'API de T.AbstractButton ; icone, nom freedesktop facultatif, posé
-// avant le texte.
+// avant le texte ; principal, vrai pour le bouton par défaut d'un dialogue, faux par défaut.
 // Sorties : etat, l'Etat du bouton (rôle, interaction, sélection, couleurs), lu par la planche et les essais.
 // Erreurs : aucune ; avant le chargement des tokens, les cotes sont nulles et les couleurs transparentes.
 // Dépendances : QtQuick.Templates, Theme (density, radius, space), Etat, AnneauFocus, Texte, Icone.
@@ -17,6 +19,7 @@ T.AbstractButton {
     id: bouton
 
     property string icone
+    property bool principal: false
     readonly property alias etat: etat
 
     focusPolicy: Qt.TabFocus
@@ -28,6 +31,7 @@ T.AbstractButton {
     Etat {
         id: etat
         controle: bouton
+        selectionne: bouton.principal
     }
 
     background: Rectangle {
