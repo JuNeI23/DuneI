@@ -1,6 +1,6 @@
 # La bibliothèque de composants de la coque
 
-Version 0.5 · 2026-10-23 · backlog L2-01, avec L2-02 et L2-03 · décisions de cadre D80, D81 · statut : en
+Version 0.6 · 2026-10-23 · backlog L2-01, avec L2-02 et L2-03 · décisions de cadre D80, D81 · statut : en
 relecture
 
 ## 1. Objet et raison
@@ -265,17 +265,24 @@ l'interrupteur qui glisse) à L2-06. Les couleurs viennent toujours des tokens e
 | Élément | Forme retenue |
 | --- | --- |
 | Bouton | Rayon `control`. Nouvelle propriété `principal` : le bouton par défaut d'un dialogue, rempli d'accent (sélection `active`, ou `activeMuted` sous `inactive`), comme le bouton bleu de macOS |
-| Onglets | Contrôle segmenté : une piste en pilule au fond enfoncé, où le segment choisi est une pastille en pilule en retrait de 2 px. Le survol ne peint pas les segments, comme sur macOS. La logique des sélections (7.5) ne change pas. Le conteneur entre dans la bibliothèque (`Onglets`) |
+| Onglets | Contrôle segmenté : une piste au rayon `control` et au fond enfoncé, où le segment choisi est un rectangle arrondi en retrait de `segment_inset`, au rayon `control − segment_inset` (règle d'imbrication). Le survol ne peint pas les segments. L'anneau de focus entoure toute la barre, qui est l'unique arrêt de tabulation : il ne chevauche plus le segment voisin (v0.6) |
 | Case | Carré de `check_size` au rayon `small`. Décochée : fond du cran cerné d'un filet `borderDefault`. Cochée : accent plein et coche claire `onAccent`, **dessinée** par un tracé vectoriel et non tirée du thème d'icônes (la coche d'Adwaita ne convient pas) |
 | Radio | Nouveau contrôle (`T.RadioButton`), exclusif dans son groupe. Disque de `check_size`. Décoché : comme la case. Coché : accent plein et point central clair `onAccent` de `radio_dot`, dessiné |
 | Interrupteur | Pilule de 38 × 22 et bouton rond clair de 18, à 2 px du bord, clair dans les deux états ; la piste prend l'accent quand il est coché |
 | Curseur | Piste en pilule de 4 px, partie remplie en accent, poignée ronde claire de 20 px (le contraste de la poignée sombre, sous la cible, disparaît) |
-| Jauge | Variante sans disque du curseur, sur le modèle du Centre de contrôle : barre en pilule de `slider_bar` de haut, au fond enfoncé ; la partie remplie, claire, ne descend jamais sous un disque (sa largeur minimale est la hauteur) ; une icône facultative se pose dedans, à gauche, en couleur du fond enfoncé. On la tire ou on la règle aux flèches ; l'anneau de focus clavier entoure la barre |
+| Jauge | Variante sans disque du curseur, sur le modèle du Centre de contrôle : barre en pilule de `slider_bar` de haut, au fond enfoncé ; la partie remplie prend l'accent du thème (sélection `active`, `activeMuted` sous `inactive`), ne descend jamais sous un disque (sa largeur minimale est la hauteur) ; une icône facultative de `slider_bar_icon` se pose dedans, à gauche, en couleur sur-accent. On la tire ou on la règle aux flèches ; l'anneau de focus clavier entoure la barre |
 | Progression | Pilule de 4 px, remplissage en pilule |
 | Champ | Rayon `control`, fond enfoncé, filet `borderSubtle` ; aucun anneau de focus, le curseur clignotant le remplace |
 | Rangées | Sélection en pastille au rayon `control`, en retrait des bords de la liste d'un échelon de `space` ; le contour de focus suit l'arrondi |
 | Menu contextuel | Rayon `panel`, marge interne d'un échelon de `space` ; le survol déplace la sélection (`currentIndex`), qui prend donc l'accent comme dans un menu macOS |
 | Attention | Rayon `window`, comme une feuille d'alerte ; le bouton principal porte `principal` |
+| Pastilles de fenêtre | Les trois pastilles de macOS : rondes, de `pastille` de diamètre, espacées d'un échelon de `space`, en `error`, `warning` et `success`. Au survol du groupe, chacune montre son glyphe dessiné (croix, tiret, flèches d'agrandissement) en couleur sombre. Sous `inactive`, les trois passent au neutre, comme une fenêtre inactive de macOS. Pas d'arrêt de tabulation. Signaux `fermer`, `reduire`, `agrandir` ; leur rôle sous un gestionnaire en tuiles et leur emplacement se décident avec la décoration des fenêtres (proposition : fermer la fenêtre, l'envoyer au bureau spécial, la passer en plein écran) |
+| Compteur | Nombre entier sur `T.SpinBox` : la valeur dans un champ enfoncé, et à sa droite le stepper de macOS, deux demi-boutons empilés de `stepper_width` de large, aux chevrons dessinés. Flèches haut et bas, molette |
+| Menu déroulant | Bouton contextuel de macOS (`Deroulant`) : l'apparence d'un `Bouton`, la valeur choisie et un double chevron dessiné à droite ; il ouvre un `overlay` contextuel avec une `Liste` dont l'élément choisi porte la coche dessinée de la case, et dont la sélection suit le survol. Espace ou Entrée l'ouvre ; fermé, les flèches changent la valeur |
+| Infobulle | Bulle d'aide après un survol prolongé (`delays.tooltip` du mouvement) : un `overlay` contextuel sans focus, au rayon `small`, au fond `surfaceRaised`, texte d'échelon 1 ; elle se ferme quand le pointeur part |
+| Champ de recherche | Un `Champ` en pilule, une loupe à gauche, un bouton d'effacement à droite tant qu'il y a du texte ; Échap efface |
+| Indicateur d'activité | La roue de macOS : traits rayonnants qui tournent à la période `spinner_period` du mouvement, dessinés. Elle ne tourne que visible ; aucun minuteur au repos (D80). La progression reste déterminée par ailleurs |
+| Section dépliable | Un chevron dessiné et un libellé ; un clic ou Espace déplie ou replie le bloc. Le chevron pivote sans animation jusqu'à L2-06 |
 
 La couleur claire des boutons d'interrupteur et des poignées est `textPrimary`, puisque le thème est sombre.
 Un rôle propre (`knob`) sera ajouté avec les thèmes statiques clair et sombre, que Nicolas a demandés à la même
@@ -314,3 +321,4 @@ puisqu'ils lisent tout dans `Theme`.
 | 0.3 | 2026-10-23 | Après la première validation à l'écran : formes à la macOS (7.10), retour au repos `in` |
 | 0.4 | 2026-10-23 | Barre d'onglets à un seul arrêt de tabulation, curseur de texte qui suit le focus et clignote (7.3) |
 | 0.5 | 2026-10-23 | Deuxième validation : coche dessinée, contrôle radio, jauge sans disque, champ sans anneau, onglets en pilule sans survol ; thèmes statiques renvoyés à une feature suivante |
+| 0.6 | 2026-10-23 | Troisième validation : jauge à l'accent, onglets en rectangles arrondis et anneau sur la barre ; pastilles de fenêtre, compteur, menu déroulant, infobulle, champ de recherche, indicateur d'activité, section dépliable |

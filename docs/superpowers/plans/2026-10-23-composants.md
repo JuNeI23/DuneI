@@ -349,6 +349,36 @@ nouvelle `Jauge`, `Champ`, `Onglets`, `Onglet`, `qmldir`) ; la planche ; les tes
   (L2-01) ».
 - [ ] **Étape 5 :** troisième validation à l'écran par Nicolas.
 
+### Tâche 9 quater : retouches et contrôles de fenêtre
+
+Après la troisième validation de Nicolas (conception v0.6, § 7.10).
+
+**Fichiers :** `tokens.toml` (`slider_bar_icon` 14/12, `pastille` 12/12, `stepper_width` 16/14), la chaîne ;
+`coque/Composants/` (`Jauge`, `Onglets`, `Onglet`, nouveaux `Pastilles`, `Compteur`, `Deroulant`, `qmldir`) ;
+la planche ; les tests.
+
+- [ ] **Étape 1 :** tests qui échouent : jauge remplie à l'accent (et `activeMuted` sous `inactive`) ; anneau
+  des onglets sur la barre ; pastilles neutres sous `inactive`, signaux émis ; compteur borné, flèches ;
+  déroulant : valeur changée aux flèches fermé, élément choisi coché.
+- [ ] **Étape 2 :** retouches de la jauge et des onglets ; `Pastilles`, `Compteur`, `Deroulant`.
+- [ ] **Étape 3 :** `make test && make check` ; captures par l'IPC, regardées une à une.
+- [ ] **Étape 4 : valider** : « Jauge à l'accent, onglets arrondis ; pastilles, compteur, menu déroulant
+  (L2-01) ».
+
+### Tâche 9 quinquies : infobulle, recherche, activité, section dépliable
+
+**Fichiers :** `motion.toml` (`delays.tooltip`, `spinner_period`) et son générateur, la chaîne ;
+`coque/Composants/` (nouveaux `Infobulle`, `Recherche`, `Activite`, `Depliable`, `qmldir`) ; la planche ; les
+tests.
+
+- [ ] **Étape 1 :** tests qui échouent : valeurs de mouvement émises ; infobulle ouverte après le délai et
+  fermée au départ du pointeur (sans fenêtre réelle dans les tests) ; recherche effacée par Échap ; roue
+  arrêtée quand invisible ; section dépliée et repliée au clavier.
+- [ ] **Étape 2 :** les quatre composants.
+- [ ] **Étape 3 :** `make test && make check` ; captures ; relevé `mesure.sh` de la page, roue visible.
+- [ ] **Étape 4 : valider** : « Infobulle, recherche, indicateur d'activité, section dépliable (L2-01) ».
+- [ ] **Étape 5 :** quatrième validation à l'écran par Nicolas.
+
 ### Tâche 10 : décision du retour au repos, documentation
 
 **Fichiers :** `coque/Composants/Etat.qml`, `Reglage.qml` (supprimé), `qmldir`, `PageComposants.qml` ;
@@ -375,3 +405,4 @@ historiques de chaque document ; conception passée au statut « implémentée �
 | 0.1 | 2026-10-23 | Première rédaction, d'après la conception v0.2 |
 | 0.2 | 2026-10-23 | Tâche 9 bis : formes à la macOS, après la première validation à l'écran |
 | 0.3 | 2026-10-23 | Tâche 9 ter : deuxième itération visuelle, après la deuxième validation |
+| 0.4 | 2026-10-23 | Tâches 9 quater et 9 quinquies, après la troisième validation |
