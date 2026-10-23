@@ -15,7 +15,8 @@ import "etats.js" as Etats
 // en fait la rangée courante, donne le focus à la liste sans montrer le contour, puis émet active().
 // Entrées : index, requis, rang dans le modèle (fourni par la ListView) ; text, libellé ; icone, nom
 // freedesktop d'une icône symbolique, vide par défaut (pas d'icône) ; selectionnee, sélection fournie par
-// l'appelant quand la liste ne la fait pas suivre currentIndex.
+// l'appelant quand la liste ne la fait pas suivre currentIndex ; forcerContour, réservée à la planche de
+// contrôle : montre le contour de focus sans que la liste ait le focus, faux par défaut.
 // Sorties : etat, l'Etat de la rangée (rôle, interaction, sélection, couleurs) ; signal active(), émis au clic
 // et à Entrée (la Liste l'émet pour sa rangée courante).
 // Erreurs : aucune ; hors d'une ListView, la rangée garde sa largeur implicite, n'est jamais courante ni
@@ -33,13 +34,14 @@ T.ItemDelegate {
     required property int index
     property string icone
     property bool selectionnee: false
+    property bool forcerContour: false
 
     readonly property alias etat: etat
     // Les propriétés attachées se lisent ici, dans la portée de la rangée : lues dans un enfant, elles
     // viseraient cet enfant, qui n'est pas le délégué.
     readonly property ListView vue: ListView.view
     readonly property bool courante: ListView.isCurrentItem
-    readonly property bool contourMontre: courante && (vue?.activeFocus ?? false) && (vue?.focusClavier ?? false)
+    readonly property bool contourMontre: forcerContour || courante && (vue?.activeFocus ?? false) && (vue?.focusClavier ?? false)
 
     signal active()
 
@@ -88,7 +90,11 @@ T.ItemDelegate {
     contentItem: RowLayout {
         spacing: Theme.space?.scale[1] ?? 0
 
+        // Dans un RowLayout, la taille vient des dimensions implicites, qui sont celles de l'image rendue par le
+        // fournisseur d'icônes et non la taille demandée : la taille préférée la ramène à celle de l'icône.
         Icone {
+            Layout.preferredWidth: taille
+            Layout.preferredHeight: taille
             nom: rangee.icone
             couleur: etat.texte
             visible: nom !== ""

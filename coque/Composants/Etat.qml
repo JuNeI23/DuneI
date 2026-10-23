@@ -9,7 +9,9 @@ import "etats.js" as Etats
 // choisi dans Reglage (conception, § 7.8). Élément non visuel : il ne peint rien lui-même.
 // Entrées : controle, le contrôle observé (enabled, down, hovered, comme un gabarit de QtQuick.Templates),
 // dont les ancêtres portent dnRole et dnInactive ; selectionne ; focusDansGroupe, vrai par défaut ; role, rôle
-// de fond, par défaut le cran au-dessus du dnRole hérité (surfaceWindow à la racine).
+// de fond, par défaut le cran au-dessus du dnRole hérité (surfaceWindow à la racine) ; forcer, réservée à la
+// planche de contrôle : une clé d'interaction ("hover", "pressed"…) qui, non vide, remplace celle que lit le
+// contrôle, pour montrer un état sans geste ; vide par défaut, et jamais posée par une surface de la coque.
 // Sorties : interaction, selection, inactif (clés des tokens) ; fond, texte, couleurs affichées.
 // Erreurs : aucune ; avant le chargement des tokens ou pour une combinaison absente, les couleurs restent
 // transparentes.
@@ -22,9 +24,10 @@ Item {
     required property Item controle
     property bool selectionne: false
     property bool focusDansGroupe: true
+    property string forcer: ""
     property string role: Etats.cran(Etats.herite(controle, "dnRole", "surfaceWindow"))
     readonly property bool inactif: Etats.herite(controle, "dnInactive", false)
-    readonly property string interaction: Etats.interaction(controle)
+    readonly property string interaction: forcer || Etats.interaction(controle)
     readonly property string selection: Etats.selection(selectionne, focusDansGroupe, inactif)
     readonly property var couleurs: Theme.stateColors(role, selection, interaction)
     readonly property color fond: ressortFond.value
