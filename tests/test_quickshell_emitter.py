@@ -63,9 +63,11 @@ class QuickshellEmitterTest(unittest.TestCase):
         d = self.out["density"]["comfortable"]
         self.assertEqual({k: d[k] for k in ("checkSize", "switchWidth", "switchHeight", "switchThumb", "sliderTrack",
                                              "sliderHandle", "sliderWidth", "fieldWidth")},
-                         {"checkSize": 16, "switchWidth": 36, "switchHeight": 20, "switchThumb": 16,
-                          "sliderTrack": 4, "sliderHandle": 16, "sliderWidth": 160, "fieldWidth": 200})
-        self.assertEqual(self.out["density"]["compact"]["sliderWidth"], 140)
+                         {"checkSize": 16, "switchWidth": 38, "switchHeight": 22, "switchThumb": 18,
+                          "sliderTrack": 4, "sliderHandle": 20, "sliderWidth": 160, "fieldWidth": 200})
+        c = self.out["density"]["compact"]
+        self.assertEqual({k: c[k] for k in ("switchWidth", "switchHeight", "switchThumb", "sliderHandle", "sliderWidth")},
+                         {"switchWidth": 32, "switchHeight": 18, "switchThumb": 14, "sliderHandle": 18, "sliderWidth": 140})
         self.assertEqual(self.out["density"]["compact"]["fieldWidth"], 180)
 
     def test_states_complet(self):

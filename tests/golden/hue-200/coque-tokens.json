@@ -409,11 +409,11 @@
       "tilingGutter": 8,
       "tilingMargin": 8,
       "checkSize": 16,
-      "switchWidth": 36,
-      "switchHeight": 20,
-      "switchThumb": 16,
+      "switchWidth": 38,
+      "switchHeight": 22,
+      "switchThumb": 18,
       "sliderTrack": 4,
-      "sliderHandle": 16,
+      "sliderHandle": 20,
       "sliderWidth": 160,
       "fieldWidth": 200
     },
@@ -428,7 +428,7 @@
       "switchHeight": 18,
       "switchThumb": 14,
       "sliderTrack": 4,
-      "sliderHandle": 14,
+      "sliderHandle": 18,
       "sliderWidth": 140,
       "fieldWidth": 180
     }
