@@ -331,6 +331,24 @@ tests `tests/test_coque_composants.py`, `tests/test_quickshell_emitter.py`.
 - [ ] **Étape 4 : valider** : « Formes à la macOS : contrôles, rangées, onglets segmentés (L2-01) ».
 - [ ] **Étape 5 :** nouvelle validation à l'écran par Nicolas.
 
+### Tâche 9 ter : deuxième itération visuelle
+
+Ajoutée après la deuxième validation de Nicolas (conception v0.5, § 7.10 et objectif 3).
+
+**Fichiers :** `tokens.toml` (`radio_dot` 6 et `slider_bar` 22 en confortable ; 6 et 18 en compact), avec
+`generated/` et `tests/golden/` par la chaîne ; `coque/Composants/` (`Case`, nouveau `Radio`, `Curseur` ou
+nouvelle `Jauge`, `Champ`, `Onglets`, `Onglet`, `qmldir`) ; la planche ; les tests.
+
+- [ ] **Étape 1 :** tests qui échouent : cotes nouvelles dans l'émetteur ; `Radio` exclusif dans son groupe et
+  coché = sélection `active` ; la jauge borne sa partie remplie à sa hauteur au minimum ; le champ n'a plus
+  d'anneau ; la piste des onglets est en pilule.
+- [ ] **Étape 2 :** coche de la case et point du radio dessinés (QtQuick.Shapes), sans icône ; `Radio` ;
+  `Jauge` ; champ sans anneau ; onglets en pilule, survol non peint sur les segments.
+- [ ] **Étape 3 :** `make test && make check` ; captures par l'IPC de la planche, regardées une à une.
+- [ ] **Étape 4 : valider** : « Deuxième itération visuelle : coche dessinée, radio, jauge, champ sans anneau
+  (L2-01) ».
+- [ ] **Étape 5 :** troisième validation à l'écran par Nicolas.
+
 ### Tâche 10 : décision du retour au repos, documentation
 
 **Fichiers :** `coque/Composants/Etat.qml`, `Reglage.qml` (supprimé), `qmldir`, `PageComposants.qml` ;
@@ -356,3 +374,4 @@ historiques de chaque document ; conception passée au statut « implémentée �
 | --- | --- | --- |
 | 0.1 | 2026-10-23 | Première rédaction, d'après la conception v0.2 |
 | 0.2 | 2026-10-23 | Tâche 9 bis : formes à la macOS, après la première validation à l'écran |
+| 0.3 | 2026-10-23 | Tâche 9 ter : deuxième itération visuelle, après la deuxième validation |

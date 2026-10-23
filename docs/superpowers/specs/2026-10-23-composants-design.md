@@ -1,6 +1,6 @@
 # La bibliothèque de composants de la coque
 
-Version 0.4 · 2026-10-23 · backlog L2-01, avec L2-02 et L2-03 · décisions de cadre D80, D81 · statut : en
+Version 0.5 · 2026-10-23 · backlog L2-01, avec L2-02 et L2-03 · décisions de cadre D80, D81 · statut : en
 relecture
 
 ## 1. Objet et raison
@@ -56,8 +56,8 @@ chaque surface écrite. C'est pourquoi L2-01 se valide à l'écran, primitive pa
    contrôles de couche 1 qui n'en sont que des assemblages (§ 7.2).
 2. Les six états composés dans l'ordre fixe base → sélection → survol → pression → focus → désactivé, chaque
    combinaison lue dans `Theme.stateColors` et animée par `ColorSpring`. Aucune couleur n'est calculée en QML.
-3. L'anneau de focus n'apparaît que pour un focus venu du clavier (tabulation, raccourci), sauf sur `field`,
-   qui montre son focus même après un clic. Les rangées ne portent jamais d'anneau : surbrillance pleine
+3. L'anneau de focus n'apparaît que pour un focus venu du clavier (tabulation, raccourci). `field` n'en porte
+   aucun : le curseur de texte qui clignote suffit à dire où est le focus (Nicolas, 2026-10-23, v0.5). Les rangées ne portent jamais d'anneau : surbrillance pleine
    largeur, décalage `focus.rowOffset`.
 4. Tout est atteignable à la tabulation par défaut, boutons compris ; une liste ne compte que pour un arrêt,
    puis les flèches s'y déplacent.
@@ -265,18 +265,22 @@ l'interrupteur qui glisse) à L2-06. Les couleurs viennent toujours des tokens e
 | Élément | Forme retenue |
 | --- | --- |
 | Bouton | Rayon `control`. Nouvelle propriété `principal` : le bouton par défaut d'un dialogue, rempli d'accent (sélection `active`, ou `activeMuted` sous `inactive`), comme le bouton bleu de macOS |
-| Onglets | Contrôle segmenté : une piste en pilule au fond enfoncé, où le segment choisi est une pastille en retrait de 2 px. La logique des sélections (7.5) ne change pas. Le conteneur entre dans la bibliothèque (`Onglets`) |
-| Case | Carré de `check_size` au rayon `small`. Décochée : fond du cran cerné d'un filet `borderDefault`. Cochée : accent plein et coche claire `onAccent` |
+| Onglets | Contrôle segmenté : une piste en pilule au fond enfoncé, où le segment choisi est une pastille en pilule en retrait de 2 px. Le survol ne peint pas les segments, comme sur macOS. La logique des sélections (7.5) ne change pas. Le conteneur entre dans la bibliothèque (`Onglets`) |
+| Case | Carré de `check_size` au rayon `small`. Décochée : fond du cran cerné d'un filet `borderDefault`. Cochée : accent plein et coche claire `onAccent`, **dessinée** par un tracé vectoriel et non tirée du thème d'icônes (la coche d'Adwaita ne convient pas) |
+| Radio | Nouveau contrôle (`T.RadioButton`), exclusif dans son groupe. Disque de `check_size`. Décoché : comme la case. Coché : accent plein et point central clair `onAccent` de `radio_dot`, dessiné |
 | Interrupteur | Pilule de 38 × 22 et bouton rond clair de 18, à 2 px du bord, clair dans les deux états ; la piste prend l'accent quand il est coché |
 | Curseur | Piste en pilule de 4 px, partie remplie en accent, poignée ronde claire de 20 px (le contraste de la poignée sombre, sous la cible, disparaît) |
+| Jauge | Variante sans disque du curseur, sur le modèle du Centre de contrôle : barre en pilule de `slider_bar` de haut, au fond enfoncé ; la partie remplie, claire, ne descend jamais sous un disque (sa largeur minimale est la hauteur) ; une icône facultative se pose dedans, à gauche, en couleur du fond enfoncé. On la tire ou on la règle aux flèches ; l'anneau de focus clavier entoure la barre |
 | Progression | Pilule de 4 px, remplissage en pilule |
-| Champ | Rayon `control`, fond enfoncé, filet `borderSubtle` ; l'anneau d'accent au focus ne change pas |
+| Champ | Rayon `control`, fond enfoncé, filet `borderSubtle` ; aucun anneau de focus, le curseur clignotant le remplace |
 | Rangées | Sélection en pastille au rayon `control`, en retrait des bords de la liste d'un échelon de `space` ; le contour de focus suit l'arrondi |
 | Menu contextuel | Rayon `panel`, marge interne d'un échelon de `space` ; le survol déplace la sélection (`currentIndex`), qui prend donc l'accent comme dans un menu macOS |
 | Attention | Rayon `window`, comme une feuille d'alerte ; le bouton principal porte `principal` |
 
 La couleur claire des boutons d'interrupteur et des poignées est `textPrimary`, puisque le thème est sombre.
-Un rôle propre (`knob`) sera ajouté si un thème clair apparaît.
+Un rôle propre (`knob`) sera ajouté avec les thèmes statiques clair et sombre, que Nicolas a demandés à la même
+validation : ils forment une feature distincte, menée juste après L2-01 ; les composants n'en dépendent pas,
+puisqu'ils lisent tout dans `Theme`.
 
 ## 8. Laissé au constructeur
 
@@ -309,3 +313,4 @@ Un rôle propre (`knob`) sera ajouté si un thème clair apparaît.
 | 0.2 | 2026-10-23 | Après la relecture du constructeur : contrôles un cran au-dessus (`controlRaised`), `overlay` complète, focus des rangées, logique des sélections |
 | 0.3 | 2026-10-23 | Après la première validation à l'écran : formes à la macOS (7.10), retour au repos `in` |
 | 0.4 | 2026-10-23 | Barre d'onglets à un seul arrêt de tabulation, curseur de texte qui suit le focus et clignote (7.3) |
+| 0.5 | 2026-10-23 | Deuxième validation : coche dessinée, contrôle radio, jauge sans disque, champ sans anneau, onglets en pilule sans survol ; thèmes statiques renvoyés à une feature suivante |
