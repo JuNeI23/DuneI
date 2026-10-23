@@ -241,6 +241,38 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
                    d["sliderWidth"], d["sliderHandle"], d["sliderTrack"], accent]
         self.assertEqual(self.valeur("cotes").lower(), " ".join(map(str, attendu)).lower())
 
+    def test_champ(self):
+        # Posé sur la Surface panneau, le champ est enfoncé : fond elevation.field.fill, plus sombre que le
+        # panneau, même au focus ; il prend le focus au clic comme à la tabulation (Qt.StrongFocus vaut 11) ;
+        # hauteur et rayon viennent des tokens ; l'anneau paraît sur activeFocus ; désactivé, le texte prend
+        # la couleur de l'état disabled.
+        # Le rôle du champ est celui du conteneur (surfacePanel), sans cran.
+        self.demarrer()
+        tokens = self.tokens55()[0]
+        fond, panneau, politique, hauteur, rayon, anneau, texte = self.valeur("champ").split()
+        luminance = lambda c: sum(int(c[i:i + 2], 16) * k for i, k in ((1, .2126), (3, .7152), (5, .0722)))
+        self.assertEqual(fond.lower(), tokens["elevation"]["field"]["fill"].lower())
+        self.assertLess(luminance(fond), luminance(panneau))
+        self.assertEqual(politique, "11")
+        self.assertEqual((hauteur, rayon), (str(tokens["density"]["comfortable"]["controlHeight"]),
+                                            str(tokens["radius"]["control"])))
+        self.assertEqual(anneau, "false")
+        self.assertEqual(texte.lower(), tokens["color"]["textPrimary"].lower())
+        self.ipc("champFocus", "true")
+        # La coque d'essai n'a aucune fenêtre : activeFocus n'y devient jamais vrai, l'anneau se prouve par sa liaison.
+        source = (ROOT / "coque/Composants/Champ.qml").read_text(encoding="utf-8")
+        self.assertIn("montre: champ.activeFocus", source)
+        # Le curseur de texte n'existe qu'avec le focus : sa largeur d'un pixel physique se prouve de même.
+        self.assertIn("width: Theme.hairline(Screen.devicePixelRatio)", source)
+        self.assertEqual(self.valeur("champ").split()[0].lower(), fond.lower())
+        self.ipc("champActif", "false")
+        attendu = tokens["states"]["surfacePanel"]["none"]["disabled"]["text"].lower()
+        for _ in range(40):  # le ressort de couleur rejoint la cible en quelques dizaines de millisecondes
+            if (lu := self.valeur("champ").split()[6].lower()) == attendu:
+                break
+            time.sleep(0.05)
+        self.assertEqual(lu, attendu)
+
     def test_aucune_erreur_avant_tokens(self):
         self.lancer(self.dir)
         self.attendre("Theme : coque-tokens.json introuvable")

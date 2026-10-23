@@ -98,6 +98,11 @@ ShellRoot {
                 value: 0.5
             }
 
+            Champ {
+                id: champEssai
+                text: "Champ"
+            }
+
             Rectangle {
                 id: cible
                 x: 10
@@ -268,6 +273,31 @@ ShellRoot {
             essai.journal("cotes", [boutonEssai.height, caseEssai.indicator.width, i.width, i.height,
                 i.children[0].width, curseurEssai.implicitWidth, curseurEssai.handle.width,
                 curseurEssai.background.height, curseurEssai.background.children[0].color].join(" "))
+        }
+
+        // champ — journalise le fond du champ et celui du panneau, sa politique de focus, sa hauteur, son rayon,
+        // la présence de l'anneau de focus, puis la couleur du texte.
+        // Entrées : aucune. Sortie : aucune ; « essai : champ <fond> <fond du panneau> <focusPolicy> <hauteur>
+        // <rayon> <anneau> <#rrggbb> ». Erreurs : aucune. Dépendances : champEssai (le fond est son
+        // background, l'anneau le premier enfant de celui-ci), panneau.
+        function champ(): void {
+            const b = champEssai.background
+            essai.journal("champ", [b.color, panneau.children[0].color, champEssai.focusPolicy, champEssai.height,
+                b.radius, b.children[0].visible, champEssai.color].join(" "))
+        }
+
+        // champFocus — donne ou retire le focus actif au champ d'essai.
+        // Entrées : valeur, vrai pour donner le focus. Sortie : aucune. Erreurs : aucune.
+        // Dépendances : champEssai.
+        function champFocus(valeur: bool): void {
+            champEssai.focus = valeur
+            champEssai.forceActiveFocus()
+        }
+
+        // champActif — active ou désactive le champ d'essai.
+        // Entrées : valeur, nouvel état enabled. Sortie : aucune. Erreurs : aucune. Dépendances : champEssai.
+        function champActif(valeur: bool): void {
+            champEssai.enabled = valeur
         }
 
         // inactif — pose le modificateur inactive sur la Surface fenêtre, en tête de l'arbre de la sonde.

@@ -2,6 +2,7 @@ module Composants
 singleton Reglage 1.0 Reglage.qml
 AnneauFocus 1.0 AnneauFocus.qml
 Bouton 1.0 Bouton.qml
+Champ 1.0 Champ.qml
 Case 1.0 Case.qml
 Curseur 1.0 Curseur.qml
 Etat 1.0 Etat.qml
