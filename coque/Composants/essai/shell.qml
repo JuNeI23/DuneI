@@ -10,16 +10,18 @@ import "Composants/etats.js" as Etats
 // Rôle : instancie un arbre fixe (une Surface fenêtre contenant une Surface panneau, qui porte la sonde
 // capteur, un contrôle simulé avec son Etat, un Texte, une Icone, les cinq contrôles interactifs (Bouton, Case,
 // Interrupteur, Onglet, Curseur), une Progression, deux Separateur, un Champ, une Liste vide, une Liste de trois Rangee et une cible munie d'un
-// AnneauFocus, plus une Surface inactive à l'écart) pour que tests/test_coque_composants.py éprouve dans un
+// AnneauFocus, plus une Surface inactive à l'écart, deux Overlay fermés, un de chaque famille, et trois objets
+// factices pour le singleton Overlays) pour que tests/test_coque_composants.py éprouve dans un
 // vrai Quickshell les règles d'etats.js, l'héritage par remontée, l'import du Theme, les pièces de base, les
 // contrôles et les listes, en lisant le journal.
 // Entrées : DUNEI_TOKENS_DIR, lu par Theme ; thème d'icônes Adwaita, posé par la directive IconTheme en tête
 // (thème de transition jusqu'à L4-12). Sortie : journal de Theme, plus « essai : prêt <bool> » à chaque
 // changement de Theme.ready, et une ligne « essai : <clé> <valeur> » par commande IPC de lecture (cran,
 // interaction, selection, sonde, naissances, fond, texte, anneau, etat, ressort, image, controles, coches,
-// cotes, progression, separateur, champ, liste, arrets, rangee) ; « essai inactif <bool> », « essai reparenter », « essai texteMoyen »,
+// cotes, progression, separateur, champ, liste, arrets, rangee, overlays, overlaysFermes) ; « essai inactif <bool> », « essai reparenter », « essai texteMoyen »,
 // « essai anneauInactif <bool> », « essai survol <bool> », « essai retour <in|out> », « essai champActif
-// <bool> », « essai selectionLibre » et « essai icone <nom> <bool> » agissent sans journaliser.
+// <bool> », « essai selectionLibre », « essai icone <nom> <bool> », « essai ouvrirFactice <A|B|C> » et « essai
+// fermerFactice <A|B|C> » agissent sans journaliser.
 // Erreurs : celles de Theme et des liaisons, dans le journal. Dépendances : quickshell ≥ 0.3 (Quickshell.Io :
 // IpcHandler), modules coque/Theme et coque/Composants.
 // Import : Quickshell ne résout pas un module situé au-dessus de la racine de la coque lancée ; les liens
@@ -159,8 +161,64 @@ ShellRoot {
         dnInactive: true
     }
 
+    // Un Overlay de chaque famille, jamais ouvert par les tests : seule leur instanciation fermée est éprouvée.
+    Overlay {
+        id: overlayAttention
+        famille: "attention"
+        Texte { text: "attention" }
+    }
+
+    Overlay {
+        id: overlayContextuel
+        famille: "contextuel"
+        ancre: cible
+        Texte { text: "contextuel" }
+    }
+
+    // Objets factices qui portent famille et ouvert, pour éprouver le singleton Overlays sans aucune fenêtre.
+    QtObject { id: factA; property string famille: "attention"; property bool ouvert: false }
+    QtObject { id: factB; property string famille: "attention"; property bool ouvert: false }
+    QtObject { id: factC; property string famille: "contextuel"; property bool ouvert: false }
+
     IpcHandler {
         target: "essai"
+
+        // ouvrirFactice — ouvre un objet factice comme le ferait Overlay : ouvert à vrai, puis Overlays.ouvrir.
+        // Entrées : nom, "A", "B" ou "C". Sortie : aucune. Erreurs : TypeError au journal pour un nom inconnu.
+        // Dépendances : Overlays, factA, factB, factC.
+        function ouvrirFactice(nom: string): void {
+            const o = { A: factA, B: factB, C: factC }[nom]
+            o.ouvert = true
+            Overlays.ouvrir(o)
+        }
+
+        // fermerFactice — ferme un objet factice comme le ferait Overlay : ouvert à faux, puis Overlays.fermer.
+        // Entrées : nom, "A", "B" ou "C". Sortie : aucune. Erreurs : TypeError au journal pour un nom inconnu.
+        // Dépendances : Overlays, factA, factB, factC.
+        function fermerFactice(nom: string): void {
+            const o = { A: factA, B: factB, C: factC }[nom]
+            o.ouvert = false
+            Overlays.fermer(o)
+        }
+
+        // overlays — journalise le nom de l'attention retenue par Overlays (null si aucune), puis l'état ouvert
+        // des objets factices A, B et C. Entrées : aucune. Sortie : aucune ; « essai : overlays <nom|null>
+        // <bool> <bool> <bool> ». Erreurs : aucune. Dépendances : Overlays, factA, factB, factC.
+        function overlays(): void {
+            const noms = new Map([[factA, "A"], [factB, "B"], [factC, "C"]])
+            essai.journal("overlays", [noms.get(Overlays.attention) ?? "null", factA.ouvert, factB.ouvert,
+                factC.ouvert].join(" "))
+        }
+
+        // overlaysFermes — journalise, pour les deux Overlay d'essai, leur famille, l'activité de leur chargeur
+        // et l'absence de fenêtre construite, puis l'attention retenue par Overlays. Entrées : aucune.
+        // Sortie : aucune ; « essai : overlaysFermes <famille> <bool> <bool> <famille> <bool> <bool> <null> ».
+        // Erreurs : aucune. Dépendances : overlayAttention, overlayContextuel, Overlays.
+        function overlaysFermes(): void {
+            essai.journal("overlaysFermes", [overlayAttention, overlayContextuel]
+                .map(o => [o.famille, o.chargeur.active, o.chargeur.item === null].join(" "))
+                .concat(Overlays.attention ?? "null").join(" "))
+        }
 
         // cran — journalise le cran des quatre rôles, dans l'ordre surfaceWindow, surfacePanel, surfaceRaised,
         // controlRaised. Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : Etats.cran.

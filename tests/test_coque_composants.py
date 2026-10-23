@@ -331,6 +331,34 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
         self.ipc("inactif", "true")
         self.assertIn(focus["colorMuted"].lower(), self.valeur("rangee").lower())
 
+    def test_exclusivite(self):
+        # Le singleton Overlays seul, sur trois objets factices qui suivent le protocole d'Overlay (ouvert passe à
+        # vrai puis Overlays.ouvrir, ouvert passe à faux puis Overlays.fermer) : A et B sont des attentions, C un
+        # contextuel. Aucune fenêtre n'est ouverte. La ligne journalisée donne l'attention retenue, puis l'état
+        # ouvert de A, B et C.
+        self.demarrer()
+        self.assertEqual(self.valeur("overlays"), "null false false false")
+        self.ipc("ouvrirFactice", "A")
+        self.ipc("ouvrirFactice", "A")
+        self.assertEqual(self.valeur("overlays"), "A true false false")
+        self.ipc("ouvrirFactice", "B")
+        self.assertEqual(self.valeur("overlays"), "B false true false")
+        self.ipc("ouvrirFactice", "C")
+        self.assertEqual(self.valeur("overlays"), "B false true true")
+        self.ipc("fermerFactice", "B")
+        self.assertEqual(self.valeur("overlays"), "null false false true")
+
+    def test_overlay_ferme_sans_erreur(self):
+        # Un Overlay de chaque famille, instancié fermé : son chargeur reste inactif et ne porte aucune fenêtre,
+        # aucune attention n'est retenue, et rien n'atteint le journal. L'ouverture réelle n'est jamais faite ici,
+        # car une couche overlay au clavier exclusif prendrait le clavier de la session : elle sera vérifiée à
+        # l'écran, à la tâche 9.
+        self.demarrer()
+        self.assertEqual(self.valeur("overlaysFermes"), "attention false true contextuel false true null")
+        for erreur in ERREURS + ("Overlay.qml", "Overlays.qml"):
+            with self.subTest(erreur=erreur):
+                self.assertNotIn(erreur, self.journal())
+
     def test_aucune_erreur_avant_tokens(self):
         self.lancer(self.dir)
         self.attendre("Theme : coque-tokens.json introuvable")
