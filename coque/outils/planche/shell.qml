@@ -16,8 +16,8 @@ import "Composants"
 // Sortie : fenêtre flottante « DuneI — planche de contrôle », ouverte dès la première lecture valide des tokens.
 // Erreurs : tokens absents ou invalides au démarrage → aucune fenêtre, erreur de Theme dans le journal ; fichier
 //           corrompu ensuite → planche inchangée, avertissement de Theme.
-// IPC : cible « planche » (qs ipc -p coque/outils/planche call planche …) ; page <tokens|composants> change
-// d'onglet ; defile <y> fait défiler la page jusqu'à l'ordonnée y et rend la position atteinte ; capture
+// IPC : cible « planche » (qs ipc -p coque/outils/planche call planche …) ; onglet <tokens|composants>
+// change d'onglet ; defile <y> fait défiler la page jusqu'à l'ordonnée y et rend la position atteinte ; capture
 // <chemin> enregistre la page affichée en entier dans un PNG. Elles servent aux captures et aux relevés, sans
 // geste dans la fenêtre.
 // Dépendances : quickshell ≥ 0.3 (FloatingWindow, LazyLoader, IpcHandler), QtQuick.Effects (ombre portée),
@@ -160,10 +160,10 @@ ShellRoot {
             IpcHandler {
                 target: "planche"
 
-                // page — affiche un onglet de la planche.
+                // onglet — affiche un onglet de la planche.
                 // Entrées : nom, "tokens" ou "composants". Sortie : aucune ; l'autre page est détruite.
                 // Erreurs : aucune ; un nom inconnu affiche la page Tokens. Dépendances : onglets.
-                function page(nom: string): void { onglets.currentIndex = nom === "composants" ? 1 : 0 }
+                function onglet(nom: string): void { onglets.currentIndex = nom === "composants" ? 1 : 0 }
 
                 // defile — fait défiler la page.
                 // Entrées : y, ordonnée visée en pixels logiques, bornée au contenu. Sortie : l'ordonnée atteinte.
@@ -179,10 +179,11 @@ ShellRoot {
                 // sans fond propre, sort sur un fond transparent.
                 // Entrées : chemin, fichier PNG, absolu. Sortie : "lancée" si le rendu est demandé, "refusée"
                 // sinon ; l'écriture se fait à l'image suivante. Erreurs : un chemin non inscriptible fait échouer
-                // l'écriture sans message. Dépendances : chargeur (Item.grabToImage).
+                // l'écriture, signalée au journal par « planche : capture non écrite dans <chemin> ». Dépendances : chargeur (Item.grabToImage).
                 function capture(chemin: string): string {
                     const item = chargeur.item, dpr = fenetre.devicePixelRatio
-                    return item?.grabToImage(r => r.saveToFile(chemin), Qt.size(item.width * dpr, item.height * dpr))
+                    return item?.grabToImage(r => { if (!r.saveToFile(chemin)) console.warn("planche : capture non écrite dans " + chemin) },
+                                             Qt.size(item.width * dpr, item.height * dpr))
                         ? "lancée" : "refusée"
                 }
             }
@@ -524,7 +525,9 @@ ShellRoot {
             // Page « Composants » : la bibliothèque de composants dans ses états (PageComposants.qml).
             Component {
                 id: pageComposants
-                PageComposants {}
+                // La page prend la largeur visible du défilement, moins la marge de la colonne : elle passe à la ligne
+                // au lieu de défiler à l'horizontale.
+                PageComposants { largeur: defilement.width - 2 * Theme.space.blockGap }
             }
         }
     }

@@ -1,9 +1,9 @@
 # Planche de contrôle des tokens de la coque
 
-Version 0.3 — outil de développement de L2-34, gardé ensuite pour tout travail sur les tokens et la coque ; page
+Version 0.4 — outil de développement de L2-34, gardé ensuite pour tout travail sur les tokens et la coque ; page
 des composants ajoutée en L2-01.
 
-La planche affiche dans une fenêtre flottante deux onglets : « Tokens », chaque token de `coque-tokens.json`
+La planche affiche dans sa fenêtre (tuilée ou flottante, selon les règles d'Hyprland) deux onglets : « Tokens », chaque token de `coque-tokens.json`
 rendu par Quickshell avec un bouton d'essai qui parcourt tous ses états, et « Composants », la bibliothèque du
 module `coque/Composants` dans ses états. Elle ne lit que les modules `coque/Theme` et `coque/Composants` : aucune
 valeur de design n'est écrite dans ses fichiers. Quand le fichier de tokens change, toute la planche bascule dans
@@ -58,7 +58,10 @@ posé dans `shell.qml`, et une clé inconnue s'ajoute à la suite.
 ## Page « Composants »
 
 `PageComposants.qml` pose la page sur une `Surface` au rôle `surfaceWindow`, celui que les composants supposent
-à la racine (le fond de la planche est au niveau du bureau, où le champ enfoncé ne se verrait pas).
+à la racine (le fond de la planche est au niveau du bureau, où le champ enfoncé ne se verrait pas). La page prend
+la largeur visible de la fenêtre et ses rangées passent à la ligne (`Flow`) : elle tient sans défilement
+horizontal dans une fenêtre tuilée d'environ 750 pixels de large, et ses blocs se placent côte à côte dans une
+fenêtre plus large.
 
 - **En-tête** : l'interrupteur provisoire « Retour au repos : in / out », lié à `Reglage.retour` (conception,
   § 7.8), dont le libellé affiche la valeur courante ; il se juge sur les exemplaires vivants et disparaîtra
@@ -69,10 +72,11 @@ posé dans `shell.qml`, et une clé inconnue s'ajoute à la suite.
   chaque échelon de `Texte` en régulier et moyen ; les icônes `non-starred`, `starred`, `starred` pleine
   (repli de D82) et `object-select` ; `Separateur` horizontal et vertical ; `Progression` à 0, 35 et 100 %.
 - **Une grille par contrôle** (`Bouton`, `Case`, `Interrupteur`, `Onglet`, `Curseur`, `Champ`, `Rangee`) : en
-  colonnes, repos, survol, pressé, désactivé et focus clavier ; en lignes, les variantes (décochée et cochée,
+  lignes, repos, survol, pressé, désactivé et focus clavier ; en colonnes, les variantes (décochée et cochée,
   onglet non actif, actif dans une barre focalisée ou sans focus, rangée non sélectionnée ou en sélection active
-  ou inactive, champ vide ou rempli). À droite, un exemplaire vivant, et pour la rangée une `Liste` de six
-  rangées, un seul arrêt de tabulation.
+  ou inactive, champ vide ou rempli), pour que la grille reste étroite. À côté, ou dessous quand la largeur
+  manque, derrière un filet vertical, un exemplaire vivant, et pour la rangée une `Liste` de six rangées, un
+  seul arrêt de tabulation.
 - **Modificateur inactive** : deux panneaux identiques (case cochée, interrupteur, curseur, barre d'onglets,
   bouton, champ, progression, liste), le second sous `dnInactive: true`, pour juger l'accent muet
   (`activeMuted`) et l'anneau atténué.
@@ -87,14 +91,15 @@ Les overlays ne s'ouvrent qu'à la main : l'attention prend le clavier en exclus
 ## Commandes IPC
 
 ```sh
-qs ipc -p coque/outils/planche call planche page composants   # ou tokens
+qs ipc -p coque/outils/planche call planche onglet composants # ou tokens
 qs ipc -p coque/outils/planche call planche defile 1200       # rend l'ordonnée atteinte
 qs ipc -p coque/outils/planche call planche capture /chemin/absolu.png
 ```
 
 `capture` enregistre la page affichée en entier, en pixels physiques, rendue par la fenêtre elle-même : elle ne
 dépend ni du défilement ni de ce qui recouvre la fenêtre à l'écran, et sert quand une capture par `grim` est
-impossible sans déranger le bureau. La page Tokens, sans fond propre, sort sur un fond transparent.
+impossible sans déranger le bureau. La page Tokens, sans fond propre, sort sur un fond transparent. Un
+échec d'écriture est signalé au journal (« planche : capture non écrite dans <chemin> »).
 
 ## Mise en œuvre
 
@@ -140,3 +145,4 @@ la PSS lues dans `/proc/<pid>/smaps_rollup`.
 | 0.1 | 2026-10-22 | Version initiale : nuanciers, états, bouton d'essai, élévations, espacement, rayons, typographie (L2-34). |
 | 0.2 | 2026-10-22 | Après relecture : liserés en pixels physiques, bouton d'essai désactivé en entier, brouillon en chemin absolu. |
 | 0.3 | 2026-10-23 | Onglets « Tokens » et « Composants », page des composants, interrupteur provisoire du retour au repos, commandes IPC (L2-01). |
+| 0.4 | 2026-10-23 | Après relecture : page qui passe à la ligne dans une fenêtre tuilée, états en lignes dans les grilles, commande IPC `onglet` (au lieu de `page`), capture qui signale un échec d'écriture. |

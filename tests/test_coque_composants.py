@@ -258,6 +258,10 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
         self.demarrer()
         tokens = self.tokens55()[0]
         dpr, hl, hh, vl, vh, couleur = self.valeur("separateur").split()
+        # Le rapport de pixels se lit sur la fenêtre (QsWindow), pas sur Screen.devicePixelRatio, qui vaut
+        # l'échelle entière de la sortie sous Wayland : hors de toute fenêtre, comme ici, il retombe à 1. La
+        # valeur réelle (1,25 sur caladan) ne se vérifie qu'à l'écran, par une capture de la planche.
+        self.assertEqual(dpr, "1")
         e = 1 / float(dpr) if tokens["render"]["hairlinePhysical"] else 1
         self.assertAlmostEqual(float(hh), e)
         self.assertAlmostEqual(float(vl), e)
@@ -292,6 +296,30 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
                 break
             time.sleep(0.05)
         self.assertEqual(lu, attendu)
+
+    def test_champ_indicatif(self):
+        # T.TextField ne dessine aucun texte indicatif : Champ le pose lui-même, dans la police du champ, visible
+        # seulement quand le champ est vide.
+        self.demarrer()
+        self.assertEqual(self.valeur("indicatif"), "false true Indicatif")
+        self.ipc("champTexte", "")
+        self.assertEqual(self.valeur("indicatif"), "true true Indicatif")
+        self.ipc("champTexte", "rempli")
+        self.assertEqual(self.valeur("indicatif"), "false true Indicatif")
+
+    def test_icone_taille(self):
+        # Une Icone mesure la taille demandée (icons.sizes.default), en dimensions réelles comme en taille
+        # préférée dans un Layout, quelle que soit la taille de l'image rendue par le fournisseur d'icônes, que
+        # portent ses dimensions implicites (en lecture seule).
+        self.demarrer()
+        self.ipc("icone", "starred", "false")
+        for _ in range(40):  # le chargement de l'image, qui pourrait imposer sa taille, est asynchrone
+            if self.valeur("image").startswith("1 "):
+                break
+            time.sleep(0.05)
+        taille = str(self.tokens55()[0]["icons"]["sizes"]["default"])
+        lu = self.valeur("tailleIcone").split()
+        self.assertEqual(lu[:5], [taille] * 5, lu)
 
     def test_selection_liste(self):
         # Une Liste vide garde currentIndex à -1 sans erreur. Dans la liste de trois rangées, la sélection suit

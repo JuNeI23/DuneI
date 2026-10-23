@@ -1,5 +1,6 @@
 //@ pragma IconTheme Adwaita
 import QtQuick
+import QtQuick.Layouts
 import Quickshell
 import Quickshell.Io
 import "Theme"
@@ -18,9 +19,9 @@ import "Composants/etats.js" as Etats
 // (thème de transition jusqu'à L4-12). Sortie : journal de Theme, plus « essai : prêt <bool> » à chaque
 // changement de Theme.ready, et une ligne « essai : <clé> <valeur> » par commande IPC de lecture (cran,
 // interaction, selection, sonde, naissances, fond, texte, anneau, etat, ressort, image, controles, coches,
-// cotes, progression, separateur, champ, liste, arrets, rangee, overlays, overlaysFermes) ; « essai inactif <bool> », « essai reparenter », « essai texteMoyen »,
+// cotes, progression, separateur, champ, indicatif, tailleIcone, liste, arrets, rangee, overlays, overlaysFermes) ; « essai inactif <bool> », « essai reparenter », « essai texteMoyen »,
 // « essai anneauInactif <bool> », « essai survol <bool> », « essai retour <in|out> », « essai champActif
-// <bool> », « essai selectionLibre », « essai icone <nom> <bool> », « essai ouvrirFactice <A|B|C> » et « essai
+// <bool> », « essai champTexte <texte> », « essai selectionLibre », « essai icone <nom> <bool> », « essai ouvrirFactice <A|B|C> » et « essai
 // fermerFactice <A|B|C> » agissent sans journaliser.
 // Erreurs : celles de Theme et des liaisons, dans le journal. Dépendances : quickshell ≥ 0.3 (Quickshell.Io :
 // IpcHandler), modules coque/Theme et coque/Composants.
@@ -120,6 +121,7 @@ ShellRoot {
             Champ {
                 id: champEssai
                 text: "Champ"
+                placeholderText: "Indicatif"
             }
 
             Liste {
@@ -386,7 +388,7 @@ ShellRoot {
         // Erreurs : aucune. Dépendances : separateurEssai, separateurVertical.
         function separateur(): void {
             const h = separateurEssai, v = separateurVertical
-            essai.journal("separateur", [h.Screen.devicePixelRatio, h.implicitWidth, h.implicitHeight,
+            essai.journal("separateur", [h.dpr, h.implicitWidth, h.implicitHeight,
                 v.implicitWidth, v.implicitHeight, h.color].join(" "))
         }
 
@@ -399,6 +401,32 @@ ShellRoot {
             const b = champEssai.background
             essai.journal("champ", [b.color, panneau.children[0].color, champEssai.focusPolicy, champEssai.height,
                 b.radius, b.children[0].visible, champEssai.color, champEssai.implicitWidth].join(" "))
+        }
+
+        // champTexte — remplace le texte du champ d'essai.
+        // Entrées : texte, nouveau contenu (vide pour un champ vide). Sortie : aucune. Erreurs : aucune.
+        // Dépendances : champEssai.
+        function champTexte(texte: string): void {
+            champEssai.text = texte
+        }
+
+        // indicatif — journalise la visibilité du texte indicatif du champ d'essai, son texte et l'égalité de sa
+        // police avec celle du champ (famille, taille et graisse). Entrées : aucune. Sortie : aucune ; « essai : indicatif <visible> <même
+        // police> <texte> ». Erreurs : aucune. Dépendances : champEssai (indicatif).
+        function indicatif(): void {
+            const t = champEssai.indicatif, f = champEssai.font
+            const memePolice = t.font.family === f.family && t.font.pixelSize === f.pixelSize && t.font.weight === f.weight
+            essai.journal("indicatif", [t.visible, memePolice, t.text].join(" "))
+        }
+
+        // tailleIcone — journalise la taille demandée de l'Icone d'essai, ses dimensions réelles, sa taille
+        // préférée dans un Layout, puis ses dimensions implicites (celles de l'image rendue).
+        // Entrées : aucune. Sortie : aucune ; « essai : tailleIcone <taille> <width> <height> <Layout.preferredWidth>
+        // <Layout.preferredHeight> <implicitWidth> <implicitHeight> ». Erreurs : aucune. Dépendances : iconeEssai.
+        function tailleIcone(): void {
+            const i = iconeEssai
+            essai.journal("tailleIcone", [i.taille, i.width, i.height, i.Layout.preferredWidth, i.Layout.preferredHeight,
+                i.implicitWidth, i.implicitHeight].join(" "))
         }
 
         // champActif — active ou désactive le champ d'essai.

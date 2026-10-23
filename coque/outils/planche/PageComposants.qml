@@ -11,10 +11,15 @@ import "Composants"
 // ouvrent un overlay de chaque famille. Les états figés ne passent par aucune valeur de design : Etat.forcer
 // remplace l'interaction lue, la sélection s'écrit dans l'Etat de l'exemplaire, l'anneau de focus est un
 // AnneauFocus montré, le contour de rangée passe par Rangee.forcerContour, et désactivé est un vrai enabled faux.
-// Entrées : aucune ; la page lit Theme, déjà prêt quand la planche la construit.
-// Sorties : la page, une Surface surfaceWindow dont la taille implicite est celle de son contenu et de son
-// retrait ; la fenêtre la fait défiler.
-// Erreurs : aucune ; une icône absente du thème laisse sa place vide.
+// Mise en page : la page prend la largeur qu'on lui donne et ses rangées passent à la ligne (Flow), si bien
+// qu'elle tient sans défilement horizontal dans une fenêtre tuilée d'environ 750 pixels de large, et s'étale
+// côte à côte dans une fenêtre plus large.
+// Entrées : largeur, largeur offerte à la page en pixels logiques (la fenêtre moins ses marges) ; la page lit
+// Theme, déjà prêt quand la planche la construit.
+// Sorties : la page, une Surface surfaceWindow de la largeur offerte, haute de son contenu et de son retrait ;
+// la fenêtre la fait défiler verticalement.
+// Erreurs : aucune ; une icône absente du thème laisse sa place vide ; une largeur plus étroite que le plus
+// large bloc (une grille d'états) laisse ce bloc déborder.
 // Dépendances : Theme (space, radius, density, typo, color), module Composants (Surface, Texte, Icone, Bouton,
 // Case, Interrupteur, Onglet, Curseur, Champ, Liste, Rangee, Separateur, Progression, AnneauFocus, Overlay,
 // Reglage), BarreOnglets (fichier voisin). Les overlays ne s'ouvrent qu'à la demande de Nicolas, par leurs
@@ -22,6 +27,7 @@ import "Composants"
 Surface {
     id: page
 
+    property real largeur
     // Largeur commune des listes de la page, multiple de l'échelle d'espacement.
     readonly property real largeurListe: 4 * Theme.space.scale[7]
 
@@ -30,7 +36,7 @@ Surface {
     // niveau, ne se verrait pas.
     role: "surfaceWindow"
     radius: Theme.radius.window
-    implicitWidth: colonne.implicitWidth + 2 * Theme.space.blockGap
+    implicitWidth: largeur
     implicitHeight: colonne.implicitHeight + 2 * Theme.space.blockGap
 
     // Legende — texte secondaire en petite taille, pour les libellés de la page.
@@ -49,14 +55,17 @@ Surface {
     }
 
     // Grille — section d'un contrôle : ses exemplaires figés dans chaque état, puis un exemplaire vivant.
-    // Rôle : charge le modèle une fois par case, ligne par ligne (une variante : décoché, coché, sélection…) et
-    // colonne par colonne (une interaction, ou le focus), et fige chaque exemplaire par force(). Ce composant en
-    // ligne ne lit rien hors de lui : il ne partage pas la portée de la page.
-    // Entrées : titre ; modele, composant du contrôle, porteur d'etat ; lignes, liste de {libelle, proprietes,
-    //           selection}, où proprietes s'affecte à l'exemplaire et selection ("active" ou "inactive") s'écrit
-    //           dans son Etat ; colonnes, clés d'interaction et "focus" ; l'exemplaire vivant, enfant déclaré.
+    // Rôle : charge le modèle une fois par case, une ligne par état (une interaction, ou le focus) et une
+    // colonne par variante (décoché, coché, sélection…), et fige chaque exemplaire par force(). Les états sont
+    // en lignes pour que la grille reste étroite ; l'exemplaire vivant, précédé d'un filet vertical, passe sous
+    // la grille quand la largeur manque. Ce composant en ligne ne lit rien hors de lui : il ne partage pas la
+    // portée de la page ; sa largeur est celle de son parent.
+    // Entrées : titre ; modele, composant du contrôle, porteur d'etat ; variantes, liste de {libelle,
+    //           proprietes, selection}, où proprietes s'affecte à l'exemplaire et selection ("active" ou
+    //           "inactive") s'écrit dans son Etat ; etats, clés d'interaction et "focus" ; l'exemplaire vivant,
+    //           enfant déclaré.
     // Sortie : colonne titrée. Erreurs : aucune ; une clé de proprietes inconnue du contrôle lève une erreur
-    //          au journal, si bien que les lignes ne nomment que des propriétés du contrôle.
+    //          au journal, si bien que les variantes ne nomment que des propriétés du contrôle.
     // Dépendances : Etat (forcer, selectionne, focusDansGroupe), Rangee (forcerContour), AnneauFocus,
     //               Separateur, Legende, Titre.
     component Grille: Column {
@@ -64,33 +73,33 @@ Surface {
 
         property alias titre: entete.text
         property Component modele
-        property var lignes: [{ libelle: "exemplaire" }]
-        property var colonnes: ["rest", "hover", "pressed", "disabled", "focus"]
+        property var variantes: [{ libelle: "exemplaire" }]
+        property var etats: ["rest", "hover", "pressed", "disabled", "focus"]
         default property alias vivant: zoneVivante.data
         readonly property var noms: ({ rest: "repos", hover: "survol", pressed: "pressé", disabled: "désactivé",
                                        focus: "focus clavier" })
-        // Cases de la grille, ligne après ligne : l'en-tête des colonnes, puis pour chaque ligne son libellé et
-        // un exemplaire par colonne. Aucun libellé n'est vide : Grid saute les éléments de taille nulle, ce qui
-        // décalerait les cases suivantes.
-        readonly property var cases: [{ texte: "variante" }].concat(
-            colonnes.map(c => ({ texte: noms[c] ?? c })),
-            ...lignes.map(l => [{ texte: l.libelle }].concat(colonnes.map(c => ({ ligne: l, colonne: c })))))
+        // Cases de la grille, ligne après ligne : l'en-tête des variantes, puis pour chaque état son libellé et
+        // un exemplaire par variante. Aucun libellé n'est vide : Grid saute les éléments de taille nulle, ce
+        // qui décalerait les cases suivantes.
+        readonly property var cases: [{ texte: "état" }].concat(
+            variantes.map(v => ({ texte: v.libelle })),
+            ...etats.map(e => [{ texte: noms[e] ?? e }].concat(variantes.map(v => ({ variante: v, etat: e })))))
 
         // force — fige un exemplaire de la grille dans l'état de sa case, sans geste ni valeur de design.
-        // Entrées : item, l'exemplaire chargé ; ligne, {libelle, proprietes, selection} ; colonne, "rest",
+        // Entrées : item, l'exemplaire chargé ; variante, {libelle, proprietes, selection} ; etat, "rest",
         //           "hover", "pressed", "disabled" ou "focus".
         // Sortie : aucune ; l'exemplaire est modifié en place, ses liaisons d'état remplacées par des valeurs.
         // Erreurs : aucune hors celle d'une propriété inconnue (voir l'en-tête de Grille).
         // Dépendances : Etat, Rangee.forcerContour, composant anneau.
-        function force(item, ligne, colonne) {
-            for (const cle in ligne.proprietes ?? {}) item[cle] = ligne.proprietes[cle]
-            if (ligne.selection) {
+        function force(item, variante, etat) {
+            for (const cle in variante.proprietes ?? {}) item[cle] = variante.proprietes[cle]
+            if (variante.selection) {
                 item.etat.selectionne = true
-                item.etat.focusDansGroupe = ligne.selection === "active"
+                item.etat.focusDansGroupe = variante.selection === "active"
             }
-            if (colonne === "disabled") item.enabled = false
-            else if (colonne === "focus") montreFocus(item)
-            else if (colonne !== "rest") item.etat.forcer = colonne
+            if (etat === "disabled") item.enabled = false
+            else if (etat === "focus") montreFocus(item)
+            else if (etat !== "rest") item.etat.forcer = etat
         }
 
         // montreFocus — montre le focus d'un exemplaire sans lui donner le focus : contour pleine largeur pour
@@ -107,16 +116,18 @@ Surface {
             anneau.createObject(c, { cible: c, montre: true, inactif: Qt.binding(() => item.etat.inactif) })
         }
 
+        width: parent ? parent.width : implicitWidth
         spacing: Theme.space.sectionGap
 
         Titre { id: entete }
 
-        Row {
+        Flow {
+            width: grille.width
             spacing: Theme.space.blockGap
 
             Grid {
                 id: tableau
-                columns: grille.colonnes.length + 1
+                columns: grille.variantes.length + 1
                 columnSpacing: Theme.space.sectionGap
                 rowSpacing: Theme.space.scale[1]
                 verticalItemAlignment: Grid.AlignVCenter
@@ -126,27 +137,33 @@ Surface {
 
                     Loader {
                         required property var modelData
-                        sourceComponent: modelData.ligne ? grille.modele : etiquette
+                        sourceComponent: modelData.variante ? grille.modele : etiquette
                         onLoaded: {
-                            if (modelData.ligne) grille.force(item, modelData.ligne, modelData.colonne)
+                            if (modelData.variante) grille.force(item, modelData.variante, modelData.etat)
                             else item.text = modelData.texte
                         }
                     }
                 }
             }
 
-            Separateur {
-                vertical: true
-                height: tableau.height
-            }
+            Row {
+                spacing: Theme.space.blockGap
 
-            Column {
-                spacing: Theme.space.scale[1]
-                Legende { text: "vivant" }
+                Separateur {
+                    vertical: true
+                    height: Math.max(tableau.height, colonneVivante.height)
+                }
+
                 Column {
+                    id: colonneVivante
+                    spacing: Theme.space.scale[1]
+                    Legende { text: "vivant" }
+
+                    Column {
                         id: zoneVivante
                         spacing: Theme.space.scale[1]
                     }
+                }
             }
         }
 
@@ -155,7 +172,9 @@ Surface {
     }
 
     // PanneauEssai — panneau de contrôles courants, pour comparer deux panneaux identiques dont l'un porte
-    // dnInactive : accents en activeMuted, anneau en focus.colorMuted, contenu ni terni ni estompé.
+    // dnInactive : accents en activeMuted, anneau en focus.colorMuted, contenu ni terni ni estompé. Ses
+    // contrôles sont rangés sur quatre lignes courtes, pour que deux panneaux tiennent côte à côte dès que la
+    // fenêtre s'élargit un peu.
     // Entrées : titre ; dnInactive, le modificateur, faux par défaut. Sortie : surface surfacePanel.
     // Erreurs : aucune. Dépendances : Surface, Case, Interrupteur, Curseur, BarreOnglets, Onglet, Bouton, Champ,
     // Progression, Liste, Rangee, Texte.
@@ -181,19 +200,24 @@ Surface {
                 spacing: Theme.space.sectionGap
                 Case { text: "Case"; checked: true }
                 Interrupteur { text: "Interrupteur"; checked: true }
-                Curseur { value: 0.6 }
-                BarreOnglets {
-                    Onglet { text: "Premier" }
-                    Onglet { text: "Second" }
-                }
             }
 
             Row {
                 spacing: Theme.space.sectionGap
-                Bouton { text: "Bouton" }
-                Champ { text: "Texte saisi" }
+                Curseur { value: 0.6 }
                 Progression { anchors.verticalCenter: parent.verticalCenter; valeur: 0.6 }
             }
+
+            Row {
+                spacing: Theme.space.sectionGap
+                BarreOnglets {
+                    Onglet { text: "Premier" }
+                    Onglet { text: "Second" }
+                }
+                Bouton { text: "Bouton" }
+            }
+
+            Champ { text: "Texte saisi" }
 
             Liste {
                 width: 3 * Theme.space.scale[7]
@@ -208,13 +232,16 @@ Surface {
         id: colonne
         x: Theme.space.blockGap
         y: Theme.space.blockGap
+        width: page.width - 2 * Theme.space.blockGap
         spacing: Theme.space.blockGap
 
         // En-tête : le réglage provisoire du retour au repos et les deux overlays.
         Column {
+            width: colonne.width
             spacing: Theme.space.scale[1]
 
-            Row {
+            Flow {
+                width: colonne.width
                 spacing: Theme.space.sectionGap
 
                 // Réglage provisoire (conception, § 7.8) : coché, le retour au repos emploie le ressort out.
@@ -243,7 +270,9 @@ Surface {
             }
 
             Legende {
-                text: "Chaque grille fige un contrôle dans ses états ; à droite, un exemplaire vivant à manipuler. "
+                width: colonne.width
+                wrapMode: Text.WordWrap
+                text: "Chaque grille fige un contrôle dans ses états ; à côté, un exemplaire vivant à manipuler. "
                       + "L'interrupteur choisit le ressort du retour au repos, à juger sur les exemplaires vivants."
             }
         }
@@ -268,9 +297,10 @@ Surface {
             }
         }
 
-        // Overlay contextuel : un menu de quatre rangées ancré sous son bouton. alaSouris retient que le menu a été
-        // ouvert à la souris : la liste reçoit alors le focus sans montrer le contour de sa rangée courante, le temps
-        // que Liste passe focusClavier à vrai à l'arrivée du focus et que la page le repasse à faux juste après.
+        // Overlay contextuel : un menu de quatre rangées ancré sous son bouton. alaSouris retient que le menu a
+        // été ouvert à la souris : la liste reçoit alors le focus sans montrer le contour de sa rangée courante,
+        // le temps que Liste passe focusClavier à vrai à l'arrivée du focus et que la page le repasse à faux
+        // juste après.
         Overlay {
             id: menu
 
@@ -302,12 +332,14 @@ Surface {
 
         // Primitives : surfaces et cran des contrôles, texte, icônes, séparateur, progression.
         Column {
+            width: colonne.width
             spacing: Theme.space.sectionGap
 
             Titre { text: "Primitives" }
 
-            Row {
-                spacing: Theme.space.blockGap * 2
+            Flow {
+                width: colonne.width
+                spacing: Theme.space.blockGap
 
                 Column {
                     spacing: Theme.space.scale[1]
@@ -413,28 +445,28 @@ Surface {
 
         Grille {
             titre: "Bouton"
-            lignes: [{ libelle: "texte" }, { libelle: "icône et texte", proprietes: { icone: "document-save" } }]
+            variantes: [{ libelle: "texte" }, { libelle: "icône et texte", proprietes: { icone: "document-save" } }]
             modele: Component { Bouton { text: "Valider" } }
             Bouton { text: "Valider"; icone: "document-save" }
         }
 
         Grille {
             titre: "Case"
-            lignes: [{ libelle: "décochée" }, { libelle: "cochée", proprietes: { checked: true } }]
+            variantes: [{ libelle: "décochée" }, { libelle: "cochée", proprietes: { checked: true } }]
             modele: Component { Case { text: "Option" } }
             Case { text: "Option" }
         }
 
         Grille {
             titre: "Interrupteur"
-            lignes: [{ libelle: "éteint" }, { libelle: "allumé", proprietes: { checked: true } }]
+            variantes: [{ libelle: "éteint" }, { libelle: "allumé", proprietes: { checked: true } }]
             modele: Component { Interrupteur { text: "Option" } }
             Interrupteur { text: "Option" }
         }
 
         Grille {
             titre: "Onglet"
-            lignes: [
+            variantes: [
                 { libelle: "non actif" },
                 { libelle: "actif, barre focalisée", proprietes: { checked: true } },
                 { libelle: "actif, barre sans focus", proprietes: { checked: true }, selection: "inactive" }
@@ -450,15 +482,15 @@ Surface {
 
         Grille {
             titre: "Curseur"
-            lignes: [{ libelle: "valeur 0,5", proprietes: { value: 0.5 } }]
+            variantes: [{ libelle: "valeur 0,5", proprietes: { value: 0.5 } }]
             modele: Component { Curseur {} }
             Curseur { value: 0.5 }
         }
 
         Grille {
             titre: "Champ de saisie"
-            lignes: [{ libelle: "vide" }, { libelle: "rempli", proprietes: { text: "Texte saisi" } }]
-            colonnes: ["rest", "hover", "disabled", "focus"]
+            variantes: [{ libelle: "vide" }, { libelle: "rempli", proprietes: { text: "Texte saisi" } }]
+            etats: ["rest", "hover", "disabled", "focus"]
             modele: Component { Champ { placeholderText: "Texte indicatif" } }
             Champ { placeholderText: "Texte indicatif" }
             Champ { text: "Texte saisi" }
@@ -466,12 +498,12 @@ Surface {
 
         Grille {
             titre: "Rangée et liste"
-            lignes: [
+            variantes: [
                 { libelle: "non sélectionnée" },
                 { libelle: "sélection active", selection: "active" },
                 { libelle: "sélection inactive", selection: "inactive" }
             ]
-            modele: Component { Rangee { index: 0; width: 2 * Theme.space.scale[7]; text: "Rangée"; icone: "folder" } }
+            modele: Component { Rangee { index: 0; width: 5 * Theme.space.scale[5]; text: "Rangée"; icone: "folder" } }
 
             Liste {
                 width: page.largeurListe
@@ -492,14 +524,17 @@ Surface {
             }
         }
 
-        // Modificateur inactive : deux panneaux identiques ; le second porte dnInactive, et ses accents (case cochée,
-        // interrupteur, curseur, onglet actif, rangée sélectionnée) passent en activeMuted.
+        // Modificateur inactive : deux panneaux identiques ; le second porte dnInactive, et ses accents (case
+        // cochée, interrupteur, curseur, onglet actif, rangée sélectionnée) passent en activeMuted. Ils se
+        // tiennent côte à côte quand la largeur le permet, l'un sous l'autre sinon.
         Column {
+            width: colonne.width
             spacing: Theme.space.sectionGap
 
             Titre { text: "Modificateur inactive" }
 
-            Row {
+            Flow {
+                width: colonne.width
                 spacing: Theme.space.blockGap
                 PanneauEssai { titre: "Panneau actif" }
                 PanneauEssai { titre: "Panneau sous dnInactive"; dnInactive: true }

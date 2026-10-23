@@ -90,11 +90,7 @@ T.ItemDelegate {
     contentItem: RowLayout {
         spacing: Theme.space?.scale[1] ?? 0
 
-        // Dans un RowLayout, la taille vient des dimensions implicites, qui sont celles de l'image rendue par le
-        // fournisseur d'icônes et non la taille demandée : la taille préférée la ramène à celle de l'icône.
         Icone {
-            Layout.preferredWidth: taille
-            Layout.preferredHeight: taille
             nom: rangee.icone
             couleur: etat.texte
             visible: nom !== ""

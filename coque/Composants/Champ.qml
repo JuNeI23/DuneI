@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Templates as T
+import Quickshell
 import "../Theme"
 import "etats.js" as Etats
 
@@ -12,15 +13,18 @@ import "etats.js" as Etats
 // physique, au texte primaire.
 // Entrées : text, placeholderText (texte indicatif, montré tant que le champ est vide), accepted et le reste de
 // l'API de T.TextField.
-// Sorties : etat, l'Etat du champ (rôle, interaction, couleurs), lu par les essais.
+// Sorties : etat, l'Etat du champ (rôle, interaction, couleurs) ; indicatif, le texte indicatif ; tous deux lus
+// par les essais.
 // Erreurs : aucune ; avant le chargement des tokens, les cotes sont nulles et les couleurs transparentes.
-// Dépendances : QtQuick.Templates, Theme (density, elevation, radius, space, color, hairline), Etat,
-// AnneauFocus, Texte.
+// Dépendances : QtQuick.Templates, Quickshell (propriété attachée QsWindow : rapport de pixels de la fenêtre,
+// pour le curseur de texte ; 1 hors de toute fenêtre), Theme (density, elevation, radius, space, color,
+// hairline), Etat, AnneauFocus.
 // Cotes : largeur implicite density.fieldWidth, fixe, hauteur density.controlHeight, rayon radius.control, retrait horizontal space.scale[2] (12).
 T.TextField {
     id: champ
 
     readonly property alias etat: etat
+    readonly property alias indicatif: indicatif
 
     focusPolicy: Qt.StrongFocus
     implicitWidth: Theme.density?.fieldWidth ?? 0
@@ -56,7 +60,8 @@ T.TextField {
 
     // Texte indicatif : T.TextField n'en dessine aucun. Il occupe la zone de saisie tant que le champ est vide,
     // dans la police du champ et à placeholderTextColor.
-    Texte {
+    Text {
+        id: indicatif
         x: champ.leftPadding
         width: champ.availableWidth
         height: champ.height
@@ -64,11 +69,12 @@ T.TextField {
         elide: Text.ElideRight
         text: champ.placeholderText
         color: champ.placeholderTextColor
+        font: champ.font
         visible: !champ.length && !champ.preeditText
     }
 
     cursorDelegate: Rectangle {
-        width: Theme.hairline(Screen.devicePixelRatio) ?? 0
+        width: Theme.hairline(QsWindow.window?.devicePixelRatio ?? 1) ?? 0
         color: Theme.color?.textPrimary ?? "transparent"
     }
 }
