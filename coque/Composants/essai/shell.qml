@@ -276,22 +276,14 @@ ShellRoot {
         }
 
         // champ — journalise le fond du champ et celui du panneau, sa politique de focus, sa hauteur, son rayon,
-        // la présence de l'anneau de focus, puis la couleur du texte.
+        // la présence de l'anneau de focus, la couleur du texte, puis la largeur implicite.
         // Entrées : aucune. Sortie : aucune ; « essai : champ <fond> <fond du panneau> <focusPolicy> <hauteur>
-        // <rayon> <anneau> <#rrggbb> ». Erreurs : aucune. Dépendances : champEssai (le fond est son
+        // <rayon> <anneau> <#rrggbb> <largeur> ». Erreurs : aucune. Dépendances : champEssai (le fond est son
         // background, l'anneau le premier enfant de celui-ci), panneau.
         function champ(): void {
             const b = champEssai.background
             essai.journal("champ", [b.color, panneau.children[0].color, champEssai.focusPolicy, champEssai.height,
-                b.radius, b.children[0].visible, champEssai.color].join(" "))
-        }
-
-        // champFocus — donne ou retire le focus actif au champ d'essai.
-        // Entrées : valeur, vrai pour donner le focus. Sortie : aucune. Erreurs : aucune.
-        // Dépendances : champEssai.
-        function champFocus(valeur: bool): void {
-            champEssai.focus = valeur
-            champEssai.forceActiveFocus()
+                b.radius, b.children[0].visible, champEssai.color, champEssai.implicitWidth].join(" "))
         }
 
         // champActif — active ou désactive le champ d'essai.

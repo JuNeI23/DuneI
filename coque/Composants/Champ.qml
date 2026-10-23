@@ -15,14 +15,14 @@ import "etats.js" as Etats
 // Erreurs : aucune ; avant le chargement des tokens, les cotes sont nulles et les couleurs transparentes.
 // Dépendances : QtQuick.Templates, Theme (density, elevation, radius, space, color, hairline), Etat,
 // AnneauFocus, Texte.
-// Cotes : hauteur density.controlHeight, rayon radius.control, retrait horizontal space.scale[2] (12).
+// Cotes : largeur implicite density.fieldWidth, fixe, hauteur density.controlHeight, rayon radius.control, retrait horizontal space.scale[2] (12).
 T.TextField {
     id: champ
 
     readonly property alias etat: etat
 
     focusPolicy: Qt.StrongFocus
-    implicitWidth: Math.max(implicitBackgroundWidth, contentWidth + leftPadding + rightPadding)
+    implicitWidth: Theme.density?.fieldWidth ?? 0
     implicitHeight: Theme.density?.controlHeight ?? 0
     leftPadding: Theme.space?.scale[2] ?? 0
     rightPadding: leftPadding
@@ -43,7 +43,6 @@ T.TextField {
     }
 
     background: Rectangle {
-        implicitWidth: champ.implicitHeight * 5
         radius: Theme.radius?.control ?? 0
         color: Theme.elevation?.field?.fill ?? "transparent"
 
@@ -57,6 +56,5 @@ T.TextField {
     cursorDelegate: Rectangle {
         width: Theme.hairline(Screen.devicePixelRatio) ?? 0
         color: Theme.color?.textPrimary ?? "transparent"
-        visible: champ.activeFocus
     }
 }

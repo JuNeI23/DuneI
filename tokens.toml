@@ -279,6 +279,7 @@ switch_thumb = 16          # diamètre du bouton de l'interrupteur
 slider_track = 4           # épaisseur de la piste du curseur
 slider_handle = 16         # diamètre de la poignée du curseur
 slider_width = 160         # largeur implicite du curseur
+field_width = 200          # largeur implicite du champ de saisie, fixe : aucun état ne le redimensionne
 
 [density.compact]
 multiplier = 0.92
@@ -293,6 +294,7 @@ switch_thumb = 14          # diamètre du bouton de l'interrupteur
 slider_track = 4           # épaisseur de la piste du curseur
 slider_handle = 14         # diamètre de la poignée du curseur
 slider_width = 140         # largeur implicite du curseur
+field_width = 180          # largeur implicite du champ de saisie, fixe : aucun état ne le redimensionne
 
 [radii]
 window  = 12

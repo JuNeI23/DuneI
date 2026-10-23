@@ -414,7 +414,8 @@
       "switchThumb": 16,
       "sliderTrack": 4,
       "sliderHandle": 16,
-      "sliderWidth": 160
+      "sliderWidth": 160,
+      "fieldWidth": 200
     },
     "compact": {
       "multiplier": 0.92,
@@ -428,7 +429,8 @@
       "switchThumb": 14,
       "sliderTrack": 4,
       "sliderHandle": 14,
-      "sliderWidth": 140
+      "sliderWidth": 140,
+      "fieldWidth": 180
     }
   },
   "radius": {
