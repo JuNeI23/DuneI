@@ -53,7 +53,7 @@ def _states(model: dict) -> dict:
 
     Entrée : model — sortie de model.resolve.
     Sortie : dict states[rôle][sélection][interaction] = {"fill": "#rrggbb", "text": "#rrggbb"},
-             soit 3 × 4 × 4 entrées. Erreurs : KeyError si une section du TOML manque.
+             soit 4 × 4 × 4 entrées. Erreurs : KeyError si une section du TOML manque.
     Dépendances : color.oklch, color.to_hex.
     """
     raw, roles = model["raw"], model["roles"]
@@ -95,7 +95,7 @@ def _states(model: dict) -> dict:
         return {k: {"fill": to_hex(f), "text": to_hex(t)} for k, (f, t) in cols.items()}
 
     return {_camel(r): {s: combinaisons(roles[r], s) for s in ("none", "active", "inactive", "activeMuted")}
-            for r in ("surface-window", "surface-panel", "surface-raised")}
+            for r in ("surface-window", "surface-panel", "surface-raised", "control-raised")}
 
 
 def _focus(model: dict) -> dict:

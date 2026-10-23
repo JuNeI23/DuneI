@@ -2,7 +2,7 @@
 
 import unittest
 
-from dunei_theme.checks import check
+from dunei_theme.checks import BODY_PAIRS, check
 from dunei_theme.color import Oklch
 
 
@@ -11,7 +11,7 @@ def model(text_l=0.95, surface_l=0.18, on_accent_l=0.99, offsets=(0, 120, 240), 
     surf = Oklch(surface_l, 0.0, 0.0)
     return {
         "roles": {"text-primary": Oklch(text_l, 0.0, 0.0), "surface-window": surf,
-                  "surface-panel": surf, "surface-raised": surf},
+                  "surface-panel": surf, "surface-raised": surf, "control-raised": surf},
         "accent": Oklch(0.53, 0.0, 0.0),
         "on_accent": Oklch(on_accent_l, 0.0, 0.0),
         "raw": {
@@ -44,6 +44,11 @@ class CheckTest(unittest.TestCase):
         w = check(model(text_l=0.86))
         self.assertTrue(has(w, "text-primary", "surface-window", "cible"))
         self.assertFalse(has(w, "plancher"))
+
+    def test_control_raised_pair(self):
+        """Vérifie que le texte sur le fond des contrôles posés sur E3 est contrôlé en APCA."""
+        self.assertIn(("text-primary", "control-raised"), BODY_PAIRS)
+        self.assertTrue(has(check(model(text_l=0.6)), "text-primary", "control-raised", "plancher"))
 
     def test_on_accent_below_floor(self):
         self.assertTrue(has(check(model(on_accent_l=0.2)), "on_accent", "plancher"))

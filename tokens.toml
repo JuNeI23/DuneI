@@ -99,6 +99,7 @@ text-tertiary    = 8
 text-secondary   = 9
 text-primary     = 10
 text-emphasis    = 11
+control-raised   = 4     # fond des contrôles posés sur E3 ; pas un niveau d'élévation
 
 
 # ===========================================================================

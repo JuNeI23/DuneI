@@ -9,7 +9,7 @@ from __future__ import annotations
 from .color import apca_lc
 
 # Paires (texte, fond) contrôlées en APCA ; noms de rôles du modèle, ou clés de premier niveau.
-BODY_PAIRS = [("text-primary", bg) for bg in ("surface-window", "surface-panel", "surface-raised")]
+BODY_PAIRS = [("text-primary", bg) for bg in ("surface-window", "surface-panel", "surface-raised", "control-raised")]
 
 
 def contrast(model: dict) -> list[str]:

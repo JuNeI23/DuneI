@@ -45,7 +45,8 @@ Singleton {
     readonly property var density: tokens?.density.comfortable
 
     // stateColors — couleurs de fond et de texte d'une combinaison d'états, toutes précalculées.
-    // Entrées : role (surfaceWindow, surfacePanel, surfaceRaised), selection (none, active, inactive,
+    // Entrées : role (surfaceWindow, surfacePanel, surfaceRaised,
+    //           controlRaised), selection (none, active, inactive,
     //           activeMuted), interaction (rest, hover, pressed, disabled).
     // Sortie : objet {fill, text} de couleurs sRGB, ou undefined si la combinaison n'existe pas ou si les
     //          tokens ne sont pas encore chargés.

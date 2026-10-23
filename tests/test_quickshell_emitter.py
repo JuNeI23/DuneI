@@ -59,12 +59,19 @@ class QuickshellEmitterTest(unittest.TestCase):
         self.assertEqual(o["typo"]["weightMedium"], 550)
 
     def test_states_complet(self):
-        """Vérifie la présence des 48 combinaisons, chacune avec un fond et un texte."""
-        for r in ("surfaceWindow", "surfacePanel", "surfaceRaised"):
+        """Vérifie la présence des 64 combinaisons, chacune avec un fond et un texte."""
+        for r in ("surfaceWindow", "surfacePanel", "surfaceRaised", "controlRaised"):
             for s in ("none", "active", "inactive", "activeMuted"):
                 for i in ("rest", "hover", "pressed", "disabled"):
                     with self.subTest(r=r, s=s, i=i):
                         self.assertEqual(set(self.out["states"][r][s][i]), {"fill", "text"})
+
+    def test_control_raised(self):
+        """Vérifie que le rôle des contrôles sur E3 est l'échelon 4 de la rampe, un cran au-dessus de surfaceRaised."""
+        m = self.model
+        self.assertEqual(self.out["color"]["controlRaised"], to_hex(m["ramp"][4]))
+        self.assertEqual(self.out["states"]["controlRaised"]["none"]["rest"]["fill"], to_hex(m["ramp"][4]))
+        self.assertGreater(m["roles"]["control-raised"].l, m["roles"]["surface-raised"].l)
 
     def test_states_valeurs(self):
         """Vérifie les règles de la bible sur la teinte 55 et le rôle surfacePanel."""
