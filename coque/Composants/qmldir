@@ -1,7 +1,12 @@
 module Composants
 singleton Reglage 1.0 Reglage.qml
 AnneauFocus 1.0 AnneauFocus.qml
+Bouton 1.0 Bouton.qml
+Case 1.0 Case.qml
+Curseur 1.0 Curseur.qml
 Etat 1.0 Etat.qml
 Icone 1.0 Icone.qml
+Interrupteur 1.0 Interrupteur.qml
+Onglet 1.0 Onglet.qml
 Surface 1.0 Surface.qml
 Texte 1.0 Texte.qml

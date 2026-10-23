@@ -8,15 +8,17 @@ import "Composants/etats.js" as Etats
 
 // Coque d'essai du module Composants, sans aucune fenêtre.
 // Rôle : instancie un arbre fixe (une Surface fenêtre contenant une Surface panneau, qui porte la sonde
-// capteur, un contrôle simulé avec son Etat, un Texte, une Icone et une cible munie d'un AnneauFocus, plus une
-// Surface inactive à l'écart) pour que tests/test_coque_composants.py éprouve dans un vrai Quickshell les
-// règles d'etats.js, l'héritage par remontée, l'import du Theme et les pièces de base, en lisant le journal.
+// capteur, un contrôle simulé avec son Etat, un Texte, une Icone, les cinq contrôles interactifs (Bouton, Case,
+// Interrupteur, Onglet, Curseur) et une cible munie d'un AnneauFocus, plus une Surface inactive à l'écart)
+// pour que tests/test_coque_composants.py éprouve dans un vrai Quickshell les règles d'etats.js, l'héritage
+// par remontée, l'import du Theme, les pièces de base et les contrôles, en lisant le journal.
 // Entrées : DUNEI_TOKENS_DIR, lu par Theme ; thème d'icônes Adwaita, posé par la directive IconTheme en tête
 // (thème de transition jusqu'à L4-12). Sortie : journal de Theme, plus « essai : prêt <bool> » à chaque
 // changement de Theme.ready, et une ligne « essai : <clé> <valeur> » par commande IPC de lecture (cran,
-// interaction, selection, sonde, naissances, fond, texte, anneau, etat, ressort, image) ; « essai inactif
-// <bool> », « essai reparenter », « essai texteMoyen », « essai anneauInactif <bool> », « essai survol
-// <bool> », « essai retour <in|out> » et « essai icone <nom> <bool> » agissent sans journaliser.
+// interaction, selection, sonde, naissances, fond, texte, anneau, etat, ressort, image, controles, coches,
+// cotes) ; « essai inactif <bool> », « essai reparenter », « essai texteMoyen », « essai anneauInactif
+// <bool> », « essai survol <bool> », « essai retour <in|out> » et « essai icone <nom> <bool> » agissent sans
+// journaliser.
 // Erreurs : celles de Theme et des liaisons, dans le journal. Dépendances : quickshell ≥ 0.3 (Quickshell.Io :
 // IpcHandler), modules coque/Theme et coque/Composants.
 // Import : Quickshell ne résout pas un module situé au-dessus de la racine de la coque lancée ; les liens
@@ -67,6 +69,33 @@ ShellRoot {
 
             Icone {
                 id: iconeEssai
+            }
+
+            Bouton {
+                id: boutonEssai
+                text: "Valider"
+            }
+
+            Case {
+                id: caseEssai
+                text: "Case"
+                checked: true
+            }
+
+            Interrupteur {
+                id: interrupteurEssai
+                checked: true
+            }
+
+            Onglet {
+                id: ongletEssai
+                text: "Onglet"
+                checked: true
+            }
+
+            Curseur {
+                id: curseurEssai
+                value: 0.5
             }
 
             Rectangle {
@@ -212,6 +241,33 @@ ShellRoot {
         // Dépendances : iconeEssai.
         function image(): void {
             essai.journal("image", iconeEssai.status + " " + iconeEssai.source)
+        }
+
+        // controles — journalise, pour le bouton, la case, l'interrupteur, l'onglet et le curseur, le rôle de
+        // leur Etat et leur politique de focus. Entrées : aucune. Sortie : aucune ; « essai : controles <rôle>
+        // <focusPolicy>, … ». Erreurs : aucune. Dépendances : les cinq contrôles d'essai et leur propriété etat.
+        function controles(): void {
+            essai.journal("controles", [boutonEssai, caseEssai, interrupteurEssai, ongletEssai, curseurEssai]
+                .map(c => c.etat.role + " " + c.focusPolicy).join(", "))
+        }
+
+        // coches — journalise la sélection de la case, de l'interrupteur et de l'onglet, cochés tous trois.
+        // Entrées : aucune. Sortie : aucune ; « essai : coches <sélection> <sélection> <sélection> ».
+        // Erreurs : aucune. Dépendances : caseEssai, interrupteurEssai, ongletEssai.
+        function coches(): void {
+            essai.journal("coches", [caseEssai, interrupteurEssai, ongletEssai].map(c => c.etat.selection).join(" "))
+        }
+
+        // cotes — journalise les cotes lues dans les tokens : hauteur du bouton, côté de la boîte de la case,
+        // largeur et hauteur de la piste de l'interrupteur et diamètre de son bouton, largeur implicite du
+        // curseur, diamètre de sa poignée, épaisseur de sa piste, puis la couleur de sa partie remplie.
+        // Entrées : aucune. Sortie : aucune ; « essai : cotes <nombres…> <#rrggbb> ». Erreurs : aucune.
+        // Dépendances : les contrôles d'essai ; la partie remplie est le premier enfant de la piste du curseur.
+        function cotes(): void {
+            const i = interrupteurEssai.indicator
+            essai.journal("cotes", [boutonEssai.height, caseEssai.indicator.width, i.width, i.height,
+                i.children[0].width, curseurEssai.implicitWidth, curseurEssai.handle.width,
+                curseurEssai.background.height, curseurEssai.background.children[0].color].join(" "))
         }
 
         // inactif — pose le modificateur inactive sur la Surface fenêtre, en tête de l'arbre de la sonde.

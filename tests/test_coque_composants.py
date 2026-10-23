@@ -220,6 +220,27 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(self.valeur("image").split(" ", 1)[1],
                          "image://icon/starred-fill-symbolic?fallback=starred-symbolic")
 
+    def test_controles_instancies(self):
+        # Posés sur la Surface panneau, les contrôles prennent le rôle un cran au-dessus ; la poignée du curseur
+        # garde controlRaised. Tous ne prennent le focus qu'à la tabulation (Qt.TabFocus vaut 1).
+        self.demarrer()
+        self.assertEqual(self.valeur("controles"), ", ".join(["surfaceRaised 1"] * 4 + ["controlRaised 1"]))
+        # Case, interrupteur et onglet cochés : l'accent, puis l'accent sans chroma sous le modificateur inactive.
+        self.assertEqual(self.valeur("coches"), "active active active")
+        self.ipc("inactif", "true")
+        self.assertEqual(self.valeur("coches"), "activeMuted activeMuted activeMuted")
+
+    def test_cotes_des_controles(self):
+        # Hauteur du bouton, boîte de la case, piste de l'interrupteur, largeur, poignée et piste du curseur, puis
+        # partie remplie du curseur : toutes lues dans les tokens, à la densité confortable.
+        self.demarrer()
+        tokens = self.tokens55()[0]
+        d = tokens["density"]["comfortable"]
+        accent = tokens["states"]["controlRaised"]["active"]["rest"]["fill"]
+        attendu = [d["controlHeight"], d["checkSize"], d["switchWidth"], d["switchHeight"], d["switchThumb"],
+                   d["sliderWidth"], d["sliderHandle"], d["sliderTrack"], accent]
+        self.assertEqual(self.valeur("cotes").lower(), " ".join(map(str, attendu)).lower())
+
     def test_aucune_erreur_avant_tokens(self):
         self.lancer(self.dir)
         self.attendre("Theme : coque-tokens.json introuvable")
