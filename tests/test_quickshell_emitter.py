@@ -58,6 +58,15 @@ class QuickshellEmitterTest(unittest.TestCase):
         self.assertEqual(o["density"]["compact"]["controlHeight"], 24)
         self.assertEqual(o["typo"]["weightMedium"], 550)
 
+    def test_cotes_des_controles(self):
+        """Vérifie que les cotes de la case, de l'interrupteur et du curseur passent en camelCase dans density."""
+        d = self.out["density"]["comfortable"]
+        self.assertEqual({k: d[k] for k in ("checkSize", "switchWidth", "switchHeight", "switchThumb", "sliderTrack",
+                                             "sliderHandle", "sliderWidth")},
+                         {"checkSize": 16, "switchWidth": 36, "switchHeight": 20, "switchThumb": 16,
+                          "sliderTrack": 4, "sliderHandle": 16, "sliderWidth": 160})
+        self.assertEqual(self.out["density"]["compact"]["sliderWidth"], 140)
+
     def test_states_complet(self):
         """Vérifie la présence des 64 combinaisons, chacune avec un fond et un texte."""
         for r in ("surfaceWindow", "surfacePanel", "surfaceRaised", "controlRaised"):

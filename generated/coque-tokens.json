@@ -407,14 +407,28 @@
       "controlHeight": 28,
       "rowHeight": 24,
       "tilingGutter": 8,
-      "tilingMargin": 8
+      "tilingMargin": 8,
+      "checkSize": 16,
+      "switchWidth": 36,
+      "switchHeight": 20,
+      "switchThumb": 16,
+      "sliderTrack": 4,
+      "sliderHandle": 16,
+      "sliderWidth": 160
     },
     "compact": {
       "multiplier": 0.92,
       "controlHeight": 24,
       "rowHeight": 20,
       "tilingGutter": 4,
-      "tilingMargin": 4
+      "tilingMargin": 4,
+      "checkSize": 14,
+      "switchWidth": 32,
+      "switchHeight": 18,
+      "switchThumb": 14,
+      "sliderTrack": 4,
+      "sliderHandle": 14,
+      "sliderWidth": 140
     }
   },
   "radius": {

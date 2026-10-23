@@ -48,6 +48,13 @@
   --row-height: 24px;
   --tiling-gutter: 8px;
   --tiling-margin: 8px;
+  --check-size: 16px;
+  --switch-width: 36px;
+  --switch-height: 20px;
+  --switch-thumb: 16px;
+  --slider-track: 4px;
+  --slider-handle: 16px;
+  --slider-width: 160px;
   --radius-window: 12px;
   --radius-panel: 10px;
   --radius-control: 6px;

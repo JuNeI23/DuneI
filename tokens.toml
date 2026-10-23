@@ -271,6 +271,14 @@ control_height = 28        # multiple de 4 — entier à tous les facteurs
 row_height = 24
 tiling_gutter = 8
 tiling_margin = 8            # marge = gouttière : le bureau se lit comme une grille
+# Cotes des contrôles, reprises de libadwaita et ramenées à une hauteur de contrôle de 28 (jugées à l'écran en L2-01).
+check_size = 16            # côté de la boîte de la case
+switch_width = 36          # largeur de la piste de l'interrupteur
+switch_height = 20         # hauteur de la piste de l'interrupteur
+switch_thumb = 16          # diamètre du bouton de l'interrupteur
+slider_track = 4           # épaisseur de la piste du curseur
+slider_handle = 16         # diamètre de la poignée du curseur
+slider_width = 160         # largeur implicite du curseur
 
 [density.compact]
 multiplier = 0.92
@@ -278,6 +286,13 @@ control_height = 24
 row_height = 20            # multiple de 4
 tiling_gutter = 4
 tiling_margin = 4
+check_size = 14            # côté de la boîte de la case
+switch_width = 32          # largeur de la piste de l'interrupteur
+switch_height = 18         # hauteur de la piste de l'interrupteur
+switch_thumb = 14          # diamètre du bouton de l'interrupteur
+slider_track = 4           # épaisseur de la piste du curseur
+slider_handle = 14         # diamètre de la poignée du curseur
+slider_width = 140         # largeur implicite du curseur
 
 [radii]
 window  = 12
