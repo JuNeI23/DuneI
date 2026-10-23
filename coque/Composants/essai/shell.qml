@@ -9,16 +9,17 @@ import "Composants/etats.js" as Etats
 // Coque d'essai du module Composants, sans aucune fenêtre.
 // Rôle : instancie un arbre fixe (une Surface fenêtre contenant une Surface panneau, qui porte la sonde
 // capteur, un contrôle simulé avec son Etat, un Texte, une Icone, les cinq contrôles interactifs (Bouton, Case,
-// Interrupteur, Onglet, Curseur) et une cible munie d'un AnneauFocus, plus une Surface inactive à l'écart)
-// pour que tests/test_coque_composants.py éprouve dans un vrai Quickshell les règles d'etats.js, l'héritage
-// par remontée, l'import du Theme, les pièces de base et les contrôles, en lisant le journal.
+// Interrupteur, Onglet, Curseur), un Champ, une Liste vide, une Liste de trois Rangee et une cible munie d'un
+// AnneauFocus, plus une Surface inactive à l'écart) pour que tests/test_coque_composants.py éprouve dans un
+// vrai Quickshell les règles d'etats.js, l'héritage par remontée, l'import du Theme, les pièces de base, les
+// contrôles et les listes, en lisant le journal.
 // Entrées : DUNEI_TOKENS_DIR, lu par Theme ; thème d'icônes Adwaita, posé par la directive IconTheme en tête
 // (thème de transition jusqu'à L4-12). Sortie : journal de Theme, plus « essai : prêt <bool> » à chaque
 // changement de Theme.ready, et une ligne « essai : <clé> <valeur> » par commande IPC de lecture (cran,
 // interaction, selection, sonde, naissances, fond, texte, anneau, etat, ressort, image, controles, coches,
-// cotes) ; « essai inactif <bool> », « essai reparenter », « essai texteMoyen », « essai anneauInactif
-// <bool> », « essai survol <bool> », « essai retour <in|out> » et « essai icone <nom> <bool> » agissent sans
-// journaliser.
+// cotes, champ, liste, arrets, rangee) ; « essai inactif <bool> », « essai reparenter », « essai texteMoyen »,
+// « essai anneauInactif <bool> », « essai survol <bool> », « essai retour <in|out> », « essai champActif
+// <bool> », « essai selectionLibre » et « essai icone <nom> <bool> » agissent sans journaliser.
 // Erreurs : celles de Theme et des liaisons, dans le journal. Dépendances : quickshell ≥ 0.3 (Quickshell.Io :
 // IpcHandler), modules coque/Theme et coque/Composants.
 // Import : Quickshell ne résout pas un module situé au-dessus de la racine de la coque lancée ; les liens
@@ -101,6 +102,22 @@ ShellRoot {
             Champ {
                 id: champEssai
                 text: "Champ"
+            }
+
+            Liste {
+                id: listeVide
+            }
+
+            Liste {
+                id: listeEssai
+                width: 200
+                height: 200
+                model: ["Un", "Deux", "Trois"]
+                currentIndex: 1
+                delegate: Rangee {
+                    required property string modelData
+                    text: modelData
+                }
             }
 
             Rectangle {
@@ -290,6 +307,42 @@ ShellRoot {
         // Entrées : valeur, nouvel état enabled. Sortie : aucune. Erreurs : aucune. Dépendances : champEssai.
         function champActif(valeur: bool): void {
             champEssai.enabled = valeur
+        }
+
+        // liste — journalise le currentIndex de la liste vide, puis la sélection des trois rangées de la liste
+        // d'essai. Entrées : aucune. Sortie : aucune ; « essai : liste <index> <sélection> <sélection>
+        // <sélection> ». Erreurs : aucune ; une rangée non créée journalise undefined. Dépendances : listeVide,
+        // listeEssai.
+        function liste(): void {
+            essai.journal("liste", [listeVide.currentIndex, ...[0, 1, 2].map(i => listeEssai.itemAtIndex(i)?.etat
+                .selection)].join(" "))
+        }
+
+        // selectionLibre — confie la sélection à l'appelant et sélectionne la seule rangée 0.
+        // Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : listeEssai.
+        function selectionLibre(): void {
+            listeEssai.selectionSuitCourant = false
+            listeEssai.itemAtIndex(0).selectionnee = true
+        }
+
+        // arrets — journalise les propriétés de tabulation : activeFocusOnTab et keyNavigationEnabled de la
+        // liste, puis activeFocusOnTab et focusPolicy de chaque rangée. Entrées : aucune. Sortie : aucune ;
+        // « essai : arrets <bool> <bool> <bool> <politique> … ». Erreurs : aucune. Dépendances : listeEssai.
+        function arrets(): void {
+            const r = i => listeEssai.itemAtIndex(i)
+            essai.journal("arrets", [listeEssai.activeFocusOnTab, listeEssai.keyNavigationEnabled, ...[0, 1, 2]
+                .map(i => r(i)?.activeFocusOnTab + " " + r(i)?.focusPolicy)].join(" "))
+        }
+
+        // rangee — journalise, pour la rangée 1, le rôle de son Etat, sa hauteur et sa largeur, puis la
+        // géométrie de son contour de focus dans le repère de la rangée, son épaisseur, sa couleur et sa
+        // visibilité. Entrées : aucune. Sortie : aucune ; « essai : rangee <rôle> <h> <l> <x> <y> <l> <h>
+        // <épaisseur> <#rrggbb> <bool> ». Erreurs : aucune. Dépendances : listeEssai ; le contour est le premier
+        // enfant du fond de la rangée.
+        function rangee(): void {
+            const r = listeEssai.itemAtIndex(1), c = r.background.children[0], p = c.mapToItem(r, 0, 0)
+            essai.journal("rangee", [r.etat.role, r.height, r.width, p.x, p.y, c.width, c.height, c.border.width,
+                c.border.color, c.visible].join(" "))
         }
 
         // inactif — pose le modificateur inactive sur la Surface fenêtre, en tête de l'arbre de la sonde.

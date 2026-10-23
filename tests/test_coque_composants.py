@@ -270,6 +270,44 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
             time.sleep(0.05)
         self.assertEqual(lu, attendu)
 
+    def test_selection_liste(self):
+        # Une Liste vide garde currentIndex à -1 sans erreur. Dans la liste de trois rangées, la sélection suit
+        # currentIndex (1) : la rangée 1 est sélectionnée, en « inactive » puisque la liste n'a pas le focus
+        # (sans fenêtre, activeFocus ne devient jamais vrai), les deux autres ne le sont pas.
+        self.demarrer()
+        self.assertEqual(self.valeur("liste"), "-1 none inactive none")
+        for erreur in ERREURS:
+            with self.subTest(erreur=erreur):
+                self.assertNotIn(erreur, self.journal())
+        # Sélection fournie par l'appelant : la rangée 0 seule, quel que soit currentIndex.
+        self.ipc("selectionLibre")
+        self.assertEqual(self.valeur("liste"), "-1 inactive none none")
+        # Sous le modificateur inactive, la sélection prend l'accent sans chroma.
+        self.ipc("inactif", "true")
+        self.assertEqual(self.valeur("liste"), "-1 activeMuted none none")
+
+    def test_un_arret(self):
+        # La liste est l'unique arrêt de tabulation et navigue au clavier ; ses rangées n'acceptent aucun focus
+        # (Qt.NoFocus vaut 0). Sans fenêtre, la tabulation elle-même ne s'exécute pas : seules les propriétés
+        # qui la gouvernent sont vérifiées ici ; le parcours réel le sera à l'écran, à la tâche 9.
+        self.demarrer()
+        self.assertEqual(self.valeur("arrets"), "true true false 0 false 0 false 0")
+
+    def test_rangee(self):
+        # La rangée prend le rôle de son conteneur (surfacePanel, sans cran), la hauteur density.rowHeight et la
+        # largeur de la liste (200). Son contour de focus couvre toute la largeur, rentré de -focus.rowOffset
+        # pixel de chaque côté, à l'épaisseur et à la couleur de focus ; il reste masqué tant que la liste n'a
+        # pas le focus clavier (sans fenêtre, il ne paraît jamais ici : son affichage sera vérifié à l'écran, à
+        # la tâche 9). Sous le modificateur inactive, il passe en focus.colorMuted.
+        self.demarrer()
+        tokens = self.tokens55()[0]
+        focus, h = tokens["focus"], tokens["density"]["comfortable"]["rowHeight"]
+        d = -focus["rowOffset"]
+        attendu = f"surfacePanel {h} 200 {d} {d} {200 - 2 * d} {h - 2 * d} {focus['width']} {focus['color']} false"
+        self.assertEqual(self.valeur("rangee").lower(), attendu.lower())
+        self.ipc("inactif", "true")
+        self.assertIn(focus["colorMuted"].lower(), self.valeur("rangee").lower())
+
     def test_aucune_erreur_avant_tokens(self):
         self.lancer(self.dir)
         self.attendre("Theme : coque-tokens.json introuvable")
