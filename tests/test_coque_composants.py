@@ -6,6 +6,7 @@ sans session Wayland ou sans Quickshell (contrôle de GitHub), comme tests/test_
 est repris.
 """
 
+import json
 import os
 import shutil
 import time
@@ -86,6 +87,12 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
         # Même objet, mêmes liaisons : la remontée suit le nouveau parent, déclaré inactif au rôle surfaceRaised.
         self.assertEqual(self.valeur("sonde"), "surfaceRaised true")
         self.assertEqual(self.valeur("naissances"), "1")
+
+    def test_fond_selon_role(self):
+        # La Surface panneau ne déclare que son rôle : elle doit peindre elevation.e2, et non e1 ou e0.
+        self.demarrer()
+        attendu = json.loads(self.tokens(55).read_text(encoding="utf-8"))["elevation"]["e2"]["fill"]
+        self.assertEqual(self.valeur("fond").lower(), attendu.lower())
 
     def test_aucune_erreur_avant_tokens(self):
         self.lancer(self.dir)

@@ -11,8 +11,8 @@ import "Composants/etats.js" as Etats
 // Quickshell les règles d'etats.js, l'héritage par remontée et l'import du Theme, en lisant le journal.
 // Entrées : DUNEI_TOKENS_DIR, lu par Theme. Sortie : journal de Theme, plus « essai : prêt <bool> » à chaque
 // changement de Theme.ready, et une ligne « essai : <clé> <valeur> » par commande IPC de lecture (cran,
-// interaction, selection, sonde, naissances) ; « essai inactif <bool> » et « essai reparenter » agissent sans
-// journaliser.
+// interaction, selection, sonde, naissances, fond) ; « essai inactif <bool> » et « essai reparenter »
+// agissent sans journaliser.
 // Erreurs : celles de Theme et des liaisons, dans le journal. Dépendances : quickshell ≥ 0.3 (Quickshell.Io :
 // IpcHandler), modules coque/Theme et coque/Composants.
 // Import : Quickshell ne résout pas un module situé au-dessus de la racine de la coque lancée ; les liens
@@ -31,12 +31,10 @@ ShellRoot {
     Surface {
         id: fenetre
         role: "surfaceWindow"
-        elevation: "e0"
 
         Surface {
             id: panneau
             role: "surfacePanel"
-            elevation: "e1"
 
             Item {
                 id: capteur
@@ -51,7 +49,6 @@ ShellRoot {
     Surface {
         id: inactive
         role: "surfaceRaised"
-        elevation: "e3"
         dnInactive: true
     }
 
@@ -93,6 +90,13 @@ ShellRoot {
         // Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : capteur.
         function naissances(): void {
             essai.journal("naissances", capteur.naissances)
+        }
+
+        // fond — journalise la couleur peinte par la Surface panneau, dont l'élévation vient de son seul rôle.
+        // Entrées : aucune. Sortie : aucune ; « essai : fond <#rrggbb> ». Erreurs : aucune.
+        // Dépendances : panneau, dont le premier enfant est le Rectangle de fond déclaré par Surface.qml.
+        function fond(): void {
+            essai.journal("fond", panneau.children[0].color)
         }
 
         // inactif — pose le modificateur inactive sur la Surface fenêtre, en tête de l'arbre de la sonde.

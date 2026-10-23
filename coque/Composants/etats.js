@@ -14,6 +14,13 @@ const CRANS = {
     controlRaised: "controlRaised"
 }
 
+// Niveau d'élévation peint par chaque rôle de fond (tokens.toml : e0 est le bureau, la fenêtre se tient en e1).
+const NIVEAUX = {
+    surfaceWindow: "e1",
+    surfacePanel: "e2",
+    surfaceRaised: "e3"
+}
+
 // herite — valeur d'une propriété héritée par remontée des parents, comme dnRole ou dnInactive.
 // Rôle : parcourt les ancêtres stricts de item (item.parent, puis ses parents successifs) et rend la propriété
 //        nom du premier qui la déclare. Appelée dans une liaison, elle reste réactive : le moteur enregistre la
@@ -36,6 +43,15 @@ function herite(item, nom, defaut) {
 // Erreurs : aucune. Dépendances : CRANS.
 function cran(role) {
     return CRANS[role]
+}
+
+// niveau — niveau d'élévation d'une surface selon son rôle de fond.
+// Rôle : fournit l'élévation par défaut d'une Surface, pour que rôle et fond peint ne se contredisent pas :
+//        surfaceWindow → e1, surfacePanel → e2, surfaceRaised → e3.
+// Entrées : role, rôle de fond de la surface. Sortie : "e1", "e2" ou "e3" ; e1 pour un rôle inconnu.
+// Erreurs : aucune. Dépendances : NIVEAUX.
+function niveau(role) {
+    return NIVEAUX[role] ?? "e1"
 }
 
 // interaction — état d'interaction d'un contrôle, clé des tokens.
