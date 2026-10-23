@@ -10,7 +10,7 @@ import "etats.js" as Etats
 // sans cran (§ 7.4). L'anneau de focus paraît dès que le champ a le focus actif (activeFocus, y compris à la
 // souris, § 7.3), en couleur atténuée sous le modificateur inactive. Désactivé, le texte et le texte indicatif
 // prennent la couleur de l'état disabled. La sélection est à l'accent et le curseur de texte, d'un pixel
-// physique, au texte primaire.
+// physique, au texte primaire ; il ne paraît qu'au focus actif et y clignote comme le curseur natif.
 // Entrées : text, placeholderText (texte indicatif, montré tant que le champ est vide), accepted et le reste de
 // l'API de T.TextField.
 // Sorties : etat, l'Etat du champ (rôle, interaction, couleurs) ; indicatif, le texte indicatif ; tous deux lus
@@ -18,7 +18,7 @@ import "etats.js" as Etats
 // Erreurs : aucune ; avant le chargement des tokens, les cotes sont nulles et les couleurs transparentes.
 // Dépendances : QtQuick.Templates, Quickshell (propriété attachée QsWindow : rapport de pixels de la fenêtre,
 // pour le curseur de texte ; 1 hors de toute fenêtre), Theme (density, elevation, radius, space, color,
-// hairline), Etat, AnneauFocus.
+// hairline), Etat, AnneauFocus, Qt.styleHints (cursorFlashTime, cadence du clignotement).
 // Cotes : largeur implicite density.fieldWidth, fixe, hauteur density.controlHeight, rayon radius.control, retrait horizontal space.scale[2] (12).
 T.TextField {
     id: champ
@@ -73,8 +73,35 @@ T.TextField {
         visible: !champ.length && !champ.preeditText
     }
 
+    // Curseur de texte. TextInput place le délégué (position, hauteur) mais n'en pilote ni la visibilité ni le
+    // clignotement, réservés à son curseur natif : le délégué suit donc cursorVisible, que TextInput lève au focus
+    // actif hors lecture seule, et clignote lui-même à la demi-période de Qt.styleHints.cursorFlashTime, comme le
+    // curseur natif (aucun clignotement si elle est nulle) ; il se rallume à chaque déplacement du curseur.
     cursorDelegate: Rectangle {
+        id: curseur
+
+        property bool allume: true
+
+        objectName: "curseur"
         width: Theme.hairline(QsWindow.window?.devicePixelRatio ?? 1) ?? 0
         color: Theme.color?.textPrimary ?? "transparent"
+        visible: champ.cursorVisible && allume
+
+        Timer {
+            id: clignotement
+            interval: Qt.styleHints.cursorFlashTime / 2
+            running: champ.cursorVisible && interval > 0
+            repeat: true
+            onTriggered: curseur.allume = !curseur.allume
+            onRunningChanged: curseur.allume = true
+        }
+
+        Connections {
+            target: champ
+            function onCursorPositionChanged() {
+                curseur.allume = true
+                if (clignotement.running) clignotement.restart()
+            }
+        }
     }
 }

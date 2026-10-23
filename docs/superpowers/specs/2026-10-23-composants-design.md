@@ -1,6 +1,6 @@
 # La bibliothèque de composants de la coque
 
-Version 0.3 · 2026-10-23 · backlog L2-01, avec L2-02 et L2-03 · décisions de cadre D80, D81 · statut : en
+Version 0.4 · 2026-10-23 · backlog L2-01, avec L2-02 et L2-03 · décisions de cadre D80, D81 · statut : en
 relecture
 
 ## 1. Objet et raison
@@ -145,6 +145,13 @@ La barre de défilement suivra le premier besoin réel d'une liste qui défile.
 - Listes : `ListView` avec `activeFocusOnTab` et `keyNavigationEnabled` ; un seul arrêt de tabulation, les
   flèches déplacent `currentIndex`. Un groupe se regroupe dans un `FocusScope`. L'ordre de tabulation suit
   l'arbre ; `KeyNavigation.tab` est réservé aux exceptions.
+- Barre d'onglets : un seul arrêt de tabulation aussi, l'onglet coché (les autres sont en `Qt.NoFocus`) ; les
+  flèches gauche et droite cochent l'onglet voisin et y portent un focus clavier. Avec un arrêt par onglet,
+  Maj+Tab depuis l'onglet coché menait à son voisin, dans la même barre : la barre gardait le focus et l'onglet
+  coché l'accent (§ 7.5), ce que Nicolas a lu à l'écran comme une couleur qui ne revient pas. *(Constat de la
+  tâche 9 ; c'est le motif « onglets » usuel, GTK et WAI-ARIA.)*
+- Curseur de texte : `TextInput` ne pilote ni la visibilité ni le clignotement d'un `cursorDelegate` ; le
+  délégué du `field` suit `cursorVisible` et clignote à la demi-période de `Qt.styleHints.cursorFlashTime`.
 - Fenêtres : une `PanelWindow` de Quickshell ne reçoit jamais le clavier par défaut
   (`WlrLayershell.keyboardFocus: None`). Chaque surface déclare son régime (`OnDemand` au clic, `Exclusive`
   pour un overlay d'attention). La planche, fenêtre ordinaire, n'est pas concernée.
@@ -301,3 +308,4 @@ Un rôle propre (`knob`) sera ajouté si un thème clair apparaît.
 | 0.1 | 2026-10-23 | Première rédaction, après le repérage et les arbitrages de Nicolas |
 | 0.2 | 2026-10-23 | Après la relecture du constructeur : contrôles un cran au-dessus (`controlRaised`), `overlay` complète, focus des rangées, logique des sélections |
 | 0.3 | 2026-10-23 | Après la première validation à l'écran : formes à la macOS (7.10), retour au repos `in` |
+| 0.4 | 2026-10-23 | Barre d'onglets à un seul arrêt de tabulation, curseur de texte qui suit le focus et clignote (7.3) |

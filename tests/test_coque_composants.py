@@ -400,5 +400,57 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
                 self.assertNotIn(erreur, self.journal())
 
 
+@unittest.skipUnless(QS, "Quickshell requis")
+class CoqueClavierTest(EssaiCoque, unittest.TestCase):
+    """Lance la coque d'essai du clavier, fenêtre ouverte sur la plateforme offscreen, et y frappe des touches.
+
+    La fenêtre ne paraît jamais à l'écran et les touches, synthétisées dans la coque, n'atteignent pas le bureau.
+    """
+
+    essai = ROOT / "coque" / "Composants" / "essai" / "clavier"
+    teintes = (55,)
+    environnement = {"QT_QPA_PLATFORM": "offscreen"}
+
+    demarrer = CoqueComposantsTest.demarrer
+    valeur = CoqueComposantsTest.valeur
+
+    def test_barre_onglets_un_arret(self):
+        # Défaut relevé à l'écran : chaque onglet était un arrêt de tabulation, si bien que Maj+Tab depuis l'onglet
+        # coché « composants » menait à « tokens », dans la même barre ; la barre gardait le focus et l'onglet
+        # coché, l'accent. La barre n'a plus qu'un arrêt, l'onglet coché ; les flèches changent d'onglet en y
+        # portant un focus clavier (anneau visible).
+        self.demarrer()
+        self.ipc("touche", "tab")
+        self.assertEqual(self.valeur("focus"), "avant 1 none inactive true")
+        self.ipc("touche", "tab")
+        self.assertEqual(self.valeur("focus"), "composants 1 none active true")
+        self.ipc("touche", "majtab")
+        self.assertEqual(self.valeur("focus"), "avant 1 none inactive true")
+        self.ipc("touche", "tab")
+        self.ipc("touche", "gauche")
+        self.assertEqual(self.valeur("focus"), "tokens 0 active none true")
+        self.ipc("touche", "droite")
+        self.assertEqual(self.valeur("focus"), "composants 1 none active true")
+        self.ipc("touche", "tab")
+        self.assertEqual(self.valeur("focus"), "apres 1 none inactive true")
+
+    def test_curseur_du_champ(self):
+        # Défaut relevé à l'écran : le curseur de texte restait affiché après la perte du focus. TextInput ne
+        # pilote ni la visibilité ni le clignotement d'un cursorDelegate : le délégué suit cursorVisible et
+        # clignote à la demi-période de cursorFlashTime, comme le curseur natif.
+        self.demarrer()
+        for _ in range(4):  # avant, composants, apres, champ
+            self.ipc("touche", "tab")
+        flash = int(self.valeur("curseur").split()[2])
+        vus, fin = set(), time.monotonic() + 2 * flash / 1000
+        while time.monotonic() < fin:
+            vus.add(" ".join(self.valeur("curseur").split()[:2]))
+        self.assertEqual(vus, {"true true", "true false"} if flash >= 2 else {"true true"})
+        self.ipc("touche", "majtab")
+        fin = time.monotonic() + flash / 1000
+        while time.monotonic() < fin:
+            self.assertEqual(self.valeur("curseur").split()[:2], ["false", "false"])
+
+
 if __name__ == "__main__":
     unittest.main()

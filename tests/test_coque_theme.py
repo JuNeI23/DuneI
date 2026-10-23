@@ -37,11 +37,13 @@ class EssaiCoque:
 
     Classe à mêler à unittest.TestCase ; elle n'est pas un test elle-même, pour qu'un autre module de tests
     l'importe sans rejouer ces tests-ci. Attributs de classe : essai — dossier de la coque d'essai lancée ;
-    teintes — teintes de référence générées une fois pour la classe.
+    teintes — teintes de référence générées une fois pour la classe ; environnement — variables ajoutées à
+    celles du test au lancement de la coque (QT_QPA_PLATFORM=offscreen pour une coque qui ouvre une fenêtre).
     """
 
     essai = ESSAI
     teintes = (55, 200, 265)
+    environnement = {}
 
     @classmethod
     def setUpClass(cls):
@@ -110,9 +112,9 @@ class EssaiCoque:
 
         Entrée : dossier — valeur de DUNEI_TOKENS_DIR.
         Sortie : aucune ; self.proc tient le processus, tué par tearDown.
-        Erreurs : OSError si qs ne démarre pas. Dépendances : qs, dossier essai de la classe.
+        Erreurs : OSError si qs ne démarre pas. Dépendances : qs, dossier essai et environnement de la classe.
         """
-        env = {**os.environ, "DUNEI_TOKENS_DIR": str(dossier), "NO_COLOR": "1"}
+        env = {**os.environ, **self.environnement, "DUNEI_TOKENS_DIR": str(dossier), "NO_COLOR": "1"}
         with self.log.open("w") as sortie:
             self.proc = subprocess.Popen([QS, "-p", str(self.essai)], env=env, stdout=sortie,
                                          stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL)
