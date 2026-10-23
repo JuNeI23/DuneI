@@ -275,12 +275,14 @@ tiling_margin = 8            # marge = gouttière : le bureau se lit comme une g
 # puis rapprochées des proportions de macOS (conception des composants, § 7.10) : interrupteur et poignée plus
 # pleins, bouton de l'interrupteur à 2 px du bord de sa piste.
 check_size = 16            # côté de la boîte de la case
+radio_dot = 6              # diamètre du point du radio coché
 switch_width = 38          # largeur de la piste de l'interrupteur
 switch_height = 22         # hauteur de la piste de l'interrupteur
 switch_thumb = 18          # diamètre du bouton de l'interrupteur
 slider_track = 4           # épaisseur de la piste du curseur
 slider_handle = 20         # diamètre de la poignée du curseur
 slider_width = 160         # largeur implicite du curseur
+slider_bar = 22            # hauteur de la barre de la jauge, curseur sans disque du Centre de contrôle
 field_width = 200          # largeur implicite du champ de saisie, fixe : aucun état ne le redimensionne
 
 [density.compact]
@@ -290,12 +292,14 @@ row_height = 20            # multiple de 4
 tiling_gutter = 4
 tiling_margin = 4
 check_size = 14            # côté de la boîte de la case
+radio_dot = 6              # diamètre du point du radio coché
 switch_width = 32          # largeur de la piste de l'interrupteur
 switch_height = 18         # hauteur de la piste de l'interrupteur
 switch_thumb = 14          # diamètre du bouton de l'interrupteur
 slider_track = 4           # épaisseur de la piste du curseur
 slider_handle = 18         # diamètre de la poignée du curseur
 slider_width = 140         # largeur implicite du curseur
+slider_bar = 18            # hauteur de la barre de la jauge, curseur sans disque du Centre de contrôle
 field_width = 180          # largeur implicite du champ de saisie, fixe : aucun état ne le redimensionne
 
 [radii]

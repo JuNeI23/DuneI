@@ -1,6 +1,6 @@
 # Planche de contrôle des tokens de la coque
 
-Version 0.5 — outil de développement de L2-34, gardé ensuite pour tout travail sur les tokens et la coque ; page
+Version 0.6 — outil de développement de L2-34, gardé ensuite pour tout travail sur les tokens et la coque ; page
 des composants ajoutée en L2-01.
 
 La planche affiche dans sa fenêtre (tuilée ou flottante, selon les règles d'Hyprland) deux onglets : « Tokens », chaque token de `coque-tokens.json`
@@ -31,11 +31,10 @@ ne bouge pas, puis `planche.sh teinte <n>` la rétablit.
 ## Onglets
 
 Les onglets en tête sont des `Onglet` du module, portés par la barre `Onglets` du module : un contrôle segmenté
-à la manière de macOS, piste au fond enfoncé et pastille sur le segment coché (conception des composants,
-§ 7.10). Elle a remplacé `BarreOnglets.qml`, propre à la planche, quand les formes à la macOS l'ont fait entrer
-dans la bibliothèque. Chaque page
-est chargée à la demande par un `Loader` : seule la page visible existe, et changer d'onglet détruit l'autre
-(sobriété, D80). Le défilement revient en haut à chaque changement.
+à la manière de macOS, piste en pilule au fond enfoncé et pastille en pilule sur le segment coché (conception
+des composants, § 7.10). Elle a remplacé `BarreOnglets.qml`, propre à la planche, quand les formes à la macOS
+l'ont fait entrer dans la bibliothèque. Chaque page est chargée à la demande par un `Loader` : seule la page
+visible existe, et changer d'onglet détruit l'autre (sobriété, D80). Le défilement revient en haut à chaque changement.
 
 ## Page « Tokens »
 
@@ -74,15 +73,17 @@ fenêtre plus large.
 - **Primitives** : les trois rôles de `Surface` avec un `Bouton` et le rôle qu'il prend un cran au-dessus ;
   chaque échelon de `Texte` en régulier et moyen ; les icônes `non-starred`, `starred`, `starred` pleine
   (repli de D82) et `object-select` ; `Separateur` horizontal et vertical ; `Progression` à 0, 35 et 100 %.
-- **Une grille par contrôle** (`Bouton`, `Case`, `Interrupteur`, `Onglets`, `Curseur`, `Champ`, `Rangee`) : en
-  lignes, repos, survol, pressé, désactivé et focus clavier ; en colonnes, les variantes (bouton texte, avec
-  icône ou principal, décochée et cochée, onglet non coché, coché dans une barre focalisée ou sans focus, chacun
-  jugé dans une barre de deux segments, rangée non sélectionnée ou en sélection active
-  ou inactive, champ vide ou rempli), pour que la grille reste étroite. À côté, ou dessous quand la largeur
-  manque, derrière un filet vertical, un exemplaire vivant, et pour la rangée une `Liste` de six rangées, un
-  seul arrêt de tabulation.
-- **Modificateur inactive** : deux panneaux identiques (case cochée, interrupteur, curseur, barre d'onglets,
-  bouton, champ, progression, liste), le second sous `dnInactive: true`, pour juger l'accent muet
+- **Une grille par contrôle** (`Bouton`, `Case`, `Radio`, `Interrupteur`, `Onglets`, `Curseur`, `Jauge`,
+  `Champ`, `Rangee`) : en lignes, repos, survol, pressé, désactivé et focus clavier (le champ n'a pas de ligne de
+  focus, puisqu'il n'a pas d'anneau) ; en colonnes, les variantes (bouton texte, avec icône ou principal, case
+  décochée et cochée, radio décoché et coché, onglet non coché, coché dans une barre focalisée ou sans focus,
+  chacun jugé dans une barre de deux segments, jauge à 0 et à 0,5 avec l'icône `audio-volume-high`, rangée non
+  sélectionnée ou en sélection active ou inactive, champ vide ou rempli), pour que la grille reste étroite. À
+  côté, ou dessous quand la largeur manque, derrière un filet vertical, un exemplaire vivant : pour le radio, un
+  groupe exclusif de trois ; pour la jauge, deux jauges, l'une avec `audio-volume-high`, l'autre avec
+  `display-brightness` ; pour la rangée, une `Liste` de six rangées, un seul arrêt de tabulation.
+- **Modificateur inactive** : deux panneaux identiques (case cochée, radio coché, interrupteur, curseur, barre
+  d'onglets, bouton, champ, progression, liste), le second sous `dnInactive: true`, pour juger l'accent muet
   (`activeMuted`) et l'anneau atténué.
 
 Les états figés ne portent aucune valeur de design : `Etat.forcer` (réservée à la planche) remplace
@@ -152,3 +153,4 @@ la PSS lues dans `/proc/<pid>/smaps_rollup`.
 | 0.3 | 2026-10-23 | Onglets « Tokens » et « Composants », page des composants, interrupteur provisoire du retour au repos, commandes IPC (L2-01). |
 | 0.4 | 2026-10-23 | Après relecture : page qui passe à la ligne dans une fenêtre tuilée, états en lignes dans les grilles, commande IPC `onglet` (au lieu de `page`), capture qui signale un échec d'écriture. |
 | 0.5 | 2026-10-23 | Formes à la macOS (L2-01, § 7.10) : barre `Onglets` du module à la place de `BarreOnglets.qml`, grille des onglets jugés dans leur barre, bouton principal, menu dont la sélection suit le pointeur ; capture qui n'applique plus deux fois le rapport de pixels ; filet de l'exemplaire vivant borné à sa hauteur quand il passe sous la grille. |
+| 0.6 | 2026-10-23 | Deuxième itération visuelle (L2-01, § 7.10) : sections `Radio` (grille et groupe exclusif de trois) et `Jauge` (grille et deux jauges à icône), radio coché dans les panneaux du modificateur inactive, grille du champ sans ligne de focus, puisque le champ n'a plus d'anneau. |

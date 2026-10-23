@@ -49,12 +49,14 @@
   --tiling-gutter: 8px;
   --tiling-margin: 8px;
   --check-size: 16px;
+  --radio-dot: 6px;
   --switch-width: 38px;
   --switch-height: 22px;
   --switch-thumb: 18px;
   --slider-track: 4px;
   --slider-handle: 20px;
   --slider-width: 160px;
+  --slider-bar: 22px;
   --field-width: 200px;
   --radius-window: 12px;
   --radius-panel: 10px;

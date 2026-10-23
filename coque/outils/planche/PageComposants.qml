@@ -21,9 +21,9 @@ import "Composants"
 // Erreurs : aucune ; une icône absente du thème laisse sa place vide ; une largeur plus étroite que le plus
 // large bloc (une grille d'états) laisse ce bloc déborder.
 // Dépendances : Theme (space, radius, density, typo, color), module Composants (Surface, Texte, Icone, Bouton,
-// Case, Interrupteur, Onglet, Onglets, Curseur, Champ, Liste, Rangee, Separateur, Progression, AnneauFocus,
-// Overlay, Reglage). Les overlays ne s'ouvrent qu'à la demande de Nicolas, par leurs
-// boutons : l'attention prend le clavier en exclusif.
+// Case, Radio, Interrupteur, Onglet, Onglets, Curseur, Jauge, Champ, Liste, Rangee, Separateur, Progression,
+// AnneauFocus, Overlay, Reglage). Les overlays ne s'ouvrent qu'à la demande de Nicolas, par leurs boutons :
+// l'attention prend le clavier en exclusif.
 Surface {
     id: page
 
@@ -217,6 +217,7 @@ Surface {
             Row {
                 spacing: Theme.space.sectionGap
                 Case { text: "Case"; checked: true }
+                Radio { text: "Radio"; checked: true }
                 Interrupteur { text: "Interrupteur"; checked: true }
             }
 
@@ -316,9 +317,9 @@ Surface {
         }
 
         // Overlay contextuel : un menu de quatre rangées ancré sous son bouton, dont la sélection suit le pointeur
-        // comme dans un menu de macOS (selectionSuitSurvol). alaSouris retient que le menu a été ouvert à la souris : la liste reçoit alors le focus sans montrer le contour de sa rangée courante,
-        // le temps que Liste passe focusClavier à vrai à l'arrivée du focus et que la page le repasse à faux
-        // juste après.
+        // comme dans un menu de macOS (selectionSuitSurvol). alaSouris retient que le menu a été ouvert à la
+        // souris : la liste reçoit alors le focus sans montrer le contour de sa rangée courante, le temps que
+        // Liste passe focusClavier à vrai à l'arrivée du focus et que la page le repasse à faux juste après.
         Overlay {
             id: menu
 
@@ -477,6 +478,16 @@ Surface {
             Case { text: "Option" }
         }
 
+        // L'exemplaire vivant est un groupe de trois radios : partageant le même parent, ils sont exclusifs.
+        Grille {
+            titre: "Radio"
+            variantes: [{ libelle: "décoché" }, { libelle: "coché", proprietes: { checked: true } }]
+            modele: Component { Radio { text: "Option" } }
+            Radio { text: "Premier"; checked: true }
+            Radio { text: "Deuxième" }
+            Radio { text: "Troisième" }
+        }
+
         Grille {
             titre: "Interrupteur"
             variantes: [{ libelle: "éteint" }, { libelle: "allumé", proprietes: { checked: true } }]
@@ -510,9 +521,19 @@ Surface {
         }
 
         Grille {
+            titre: "Jauge"
+            variantes: [{ libelle: "valeur 0", proprietes: { value: 0, icone: "audio-volume-high" } },
+                        { libelle: "valeur 0,5", proprietes: { value: 0.5, icone: "audio-volume-high" } }]
+            modele: Component { Jauge {} }
+            Jauge { value: 0.6; icone: "audio-volume-high" }
+            Jauge { value: 0.3; icone: "display-brightness" }
+        }
+
+        Grille {
             titre: "Champ de saisie"
             variantes: [{ libelle: "vide" }, { libelle: "rempli", proprietes: { text: "Texte saisi" } }]
-            etats: ["rest", "hover", "disabled", "focus"]
+            // Pas de ligne de focus : le champ n'a pas d'anneau, son curseur clignotant se juge sur le vivant.
+            etats: ["rest", "hover", "disabled"]
             modele: Component { Champ { placeholderText: "Texte indicatif" } }
             Champ { placeholderText: "Texte indicatif" }
             Champ { text: "Texte saisi" }
@@ -547,7 +568,7 @@ Surface {
         }
 
         // Modificateur inactive : deux panneaux identiques ; le second porte dnInactive, et ses accents (case
-        // cochée, interrupteur, curseur, onglet actif, rangée sélectionnée) passent en activeMuted. Ils se
+        // cochée, radio coché, interrupteur, curseur, onglet actif, rangée sélectionnée) passent en activeMuted. Ils se
         // tiennent côte à côte quand la largeur le permet, l'un sous l'autre sinon.
         Column {
             width: colonne.width

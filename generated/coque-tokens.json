@@ -409,12 +409,14 @@
       "tilingGutter": 8,
       "tilingMargin": 8,
       "checkSize": 16,
+      "radioDot": 6,
       "switchWidth": 38,
       "switchHeight": 22,
       "switchThumb": 18,
       "sliderTrack": 4,
       "sliderHandle": 20,
       "sliderWidth": 160,
+      "sliderBar": 22,
       "fieldWidth": 200
     },
     "compact": {
@@ -424,12 +426,14 @@
       "tilingGutter": 4,
       "tilingMargin": 4,
       "checkSize": 14,
+      "radioDot": 6,
       "switchWidth": 32,
       "switchHeight": 18,
       "switchThumb": 14,
       "sliderTrack": 4,
       "sliderHandle": 18,
       "sliderWidth": 140,
+      "sliderBar": 18,
       "fieldWidth": 180
     }
   },

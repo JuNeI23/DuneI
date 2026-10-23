@@ -222,23 +222,25 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
 
     def test_controles_instancies(self):
         # Posés sur la Surface panneau, les contrôles prennent le rôle un cran au-dessus ; la poignée du curseur
-        # garde controlRaised. Tous ne prennent le focus qu'à la tabulation (Qt.TabFocus vaut 1).
+        # et la jauge gardent controlRaised. Tous ne prennent le focus qu'à la tabulation (Qt.TabFocus vaut 1).
         self.demarrer()
-        self.assertEqual(self.valeur("controles"), ", ".join(["surfaceRaised 1"] * 4 + ["controlRaised 1"]))
-        # Case, interrupteur et onglet cochés : l'accent, puis l'accent sans chroma sous le modificateur inactive.
-        self.assertEqual(self.valeur("coches"), "active active active")
+        self.assertEqual(self.valeur("controles"), ", ".join(["surfaceRaised 1"] * 5 + ["controlRaised 1"] * 2))
+        # Case, interrupteur, onglet et radio cochés : l'accent, puis l'accent sans chroma sous le modificateur
+        # inactive.
+        self.assertEqual(self.valeur("coches"), "active active active active")
         self.ipc("inactif", "true")
-        self.assertEqual(self.valeur("coches"), "activeMuted activeMuted activeMuted")
+        self.assertEqual(self.valeur("coches"), "activeMuted activeMuted activeMuted activeMuted")
 
     def test_cotes_des_controles(self):
         # Hauteur du bouton, boîte de la case, piste de l'interrupteur, largeur, poignée et piste du curseur, puis
-        # partie remplie du curseur : toutes lues dans les tokens, à la densité confortable.
+        # partie remplie du curseur, enfin disque et point du radio : toutes lues dans les tokens, à la densité
+        # confortable.
         self.demarrer()
         tokens = self.tokens55()[0]
         d = tokens["density"]["comfortable"]
         accent = tokens["states"]["controlRaised"]["active"]["rest"]["fill"]
         attendu = [d["controlHeight"], d["checkSize"], d["switchWidth"], d["switchHeight"], d["switchThumb"],
-                   d["sliderWidth"], d["sliderHandle"], d["sliderTrack"], accent]
+                   d["sliderWidth"], d["sliderHandle"], d["sliderTrack"], accent, d["checkSize"], d["radioDot"]]
         self.assertEqual(self.valeur("cotes").lower(), " ".join(map(str, attendu)).lower())
 
     def test_progression_bornee(self):
@@ -271,8 +273,8 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
     def test_champ(self):
         # Posé sur la Surface panneau, le champ est enfoncé : fond elevation.field.fill, plus sombre que le
         # panneau, même au focus ; il prend le focus au clic comme à la tabulation (Qt.StrongFocus vaut 11) ;
-        # hauteur et rayon viennent des tokens ; l'anneau paraît sur activeFocus ; désactivé, le texte prend
-        # la couleur de l'état disabled.
+        # hauteur et rayon viennent des tokens ; il n'a aucun anneau de focus, que remplace le curseur de texte
+        # clignotant (§ 7.10) : son fond n'a aucun enfant ; désactivé, le texte prend la couleur de l'état disabled.
         # Le rôle du champ est celui du conteneur (surfacePanel), sans cran.
         self.demarrer()
         tokens = self.tokens55()[0]
@@ -284,10 +286,9 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
         self.assertEqual((hauteur, rayon), (str(tokens["density"]["comfortable"]["controlHeight"]),
                                             str(tokens["radius"]["control"])))
         self.assertEqual(largeur, str(tokens["density"]["comfortable"]["fieldWidth"]))
-        self.assertEqual(anneau, "false")
+        self.assertEqual(anneau, "0")
         self.assertEqual(texte.lower(), tokens["color"]["textPrimary"].lower())
-        # Sans fenêtre, activeFocus ne devient jamais vrai : l'anneau sur activeFocus et la largeur du curseur de
-        # texte ne s'exécutent pas ici ; ils seront vérifiés à l'écran, à la tâche 9.
+        # Sans fenêtre, activeFocus ne devient jamais vrai : la largeur du curseur de texte se vérifie à l'écran.
         self.assertEqual(self.valeur("champ").split()[0].lower(), fond.lower())
         self.ipc("champActif", "false")
         attendu = tokens["states"]["surfacePanel"]["none"]["disabled"]["text"].lower()
@@ -372,6 +373,47 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
         self.ipc("inactif", "true")
         self.assertEqual(self.valeur("bouton"), "true activeMuted")
 
+    def test_coche_dessinee(self):
+        # La coche de la case et le point du radio sont des tracés vectoriels (QtQuick.Shapes), sans aucune icône :
+        # visibles seulement cochés, au texte de l'Etat sélectionné (le sur-accent). La ligne donne, pour chacun,
+        # la présence du tracé, l'absence d'icône, sa visibilité et sa couleur.
+        self.demarrer()
+        sur = self.tokens55()[0]["states"]["surfaceRaised"]["active"]["rest"]["text"].lower()
+        self.assertEqual(self.valeur("glyphes").lower(), f"true true true {sur} | true true true {sur}")
+        self.ipc("decocher")
+        self.assertEqual(self.valeur("glyphes").split()[2], "false")
+        self.assertEqual(self.valeur("glyphes").split()[7], "false")
+
+    def test_radio_exclusif(self):
+        # Trois Radio dans un même parent sont exclusifs (autoExclusive, défaut de Qt) : cocher le troisième
+        # décoche le premier. Le radio coché est sélectionné : l'accent, puis l'accent sans chroma sous inactive.
+        self.demarrer()
+        self.assertEqual(self.valeur("radios"), "true false false active none none")
+        self.ipc("radioCocher", "2")
+        self.assertEqual(self.valeur("radios"), "false false true none none active")
+        self.ipc("inactif", "true")
+        self.assertEqual(self.valeur("radios"), "false false true none none activeMuted")
+
+    def test_jauge(self):
+        # La jauge est une barre en pilule de density.sliderBar de haut au fond enfoncé (elevation.field.fill) ;
+        # sa partie remplie, claire (texte de controlRaised au repos), ne descend jamais sous un disque : à la
+        # valeur 0, elle a la largeur de la hauteur ; à 1, toute la barre. L'icône, posée dedans, est centrée sur ce
+        # disque minimal et prend la couleur du fond enfoncé. Désactivée, la partie remplie se ternit.
+        self.demarrer()
+        tokens = self.tokens55()[0]
+        h, champ = tokens["density"]["comfortable"]["sliderBar"], tokens["elevation"]["field"]["fill"].lower()
+        clair = tokens["states"]["controlRaised"]["none"]["rest"]["text"].lower()
+        hauteur, rayon, fond, vide, plein, largeur, couleur, centre, teinte = self.valeur("jauge").lower().split()
+        self.assertEqual((hauteur, rayon, fond, vide), (str(h), str(h / 2).rstrip("0").rstrip("."), champ, str(h)))
+        self.assertEqual((plein, couleur, centre, teinte), (largeur, clair, str(h / 2).rstrip("0").rstrip("."), champ))
+        self.ipc("jaugeActive", "false")
+        terne = tokens["states"]["controlRaised"]["none"]["disabled"]["text"].lower()
+        for _ in range(40):  # le ressort de couleur rejoint la cible en quelques dizaines de millisecondes
+            if (lu := self.valeur("jauge").lower().split()[6]) == terne:
+                break
+            time.sleep(0.05)
+        self.assertEqual(lu, terne)
+
     def test_exclusivite(self):
         # Le singleton Overlays seul, sur trois objets factices qui suivent le protocole d'Overlay (ouvert passe à
         # vrai puis Overlays.ouvrir, ouvert passe à faux puis Overlays.fermer) : A et B sont des attentions, C un
@@ -424,9 +466,19 @@ class CoqueClavierTest(EssaiCoque, unittest.TestCase):
     teintes = (55,)
     environnement = {"QT_QPA_PLATFORM": "offscreen"}
 
-    demarrer = CoqueComposantsTest.demarrer
     valeur = CoqueComposantsTest.valeur
     tokens55 = CoqueComposantsTest.tokens55
+
+    def demarrer(self) -> None:
+        """Lance la coque d'essai du clavier et vérifie qu'elle tourne sur la plateforme offscreen.
+
+        Rôle : garantit qu'aucun test n'ouvre de vraie fenêtre sur le bureau ; la coque journalise
+        Qt.platform.pluginName avant d'ouvrir sa fenêtre. Entrées : aucune. Sortie : aucune.
+        Erreurs : échec du test si la plateforme n'est pas offscreen, ou si la coque ne se déclare pas prête.
+        Dépendances : CoqueComposantsTest.demarrer, journal.
+        """
+        CoqueComposantsTest.demarrer(self)
+        self.assertIn("essai : plateforme offscreen", self.journal())
 
     def test_barre_onglets_un_arret(self):
         # Défaut relevé à l'écran : chaque onglet était un arrêt de tabulation, si bien que Maj+Tab depuis l'onglet
@@ -449,20 +501,45 @@ class CoqueClavierTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(self.valeur("focus"), "apres 1 none inactive true")
 
     def test_onglets_segmentes(self):
-        # Onglets est un contrôle segmenté : une piste au fond enfoncé (elevation.field.fill), au rayon
-        # radius.control, de la hauteur d'un contrôle ; ses segments, de largeurs égales à la plus large de leurs
-        # largeurs implicites, sont en retrait de radius.control - radius.small (règle d'imbrication des
-        # rayons), au rayon radius.small ; un segment non coché au repos n'a pas de fond.
+        # Onglets est un contrôle segmenté : une piste en pilule au fond enfoncé (elevation.field.fill), de la
+        # hauteur d'un contrôle ; ses segments, de largeurs égales à la plus large de leurs largeurs implicites,
+        # sont en retrait de 2 px, celui du bouton de l'interrupteur dans sa piste ((switchHeight - switchThumb) / 2),
+        # en pilule donc concentriques ; un segment non coché n'a pas de fond, au repos comme au survol (§ 7.10).
         self.demarrer()
         tokens = self.tokens55()[0]
-        rayons, d = tokens["radius"], tokens["density"]["comfortable"]
-        retrait = rayons["control"] - rayons["small"]
+        d = tokens["density"]["comfortable"]
+        retrait = (d["switchHeight"] - d["switchThumb"]) // 2
         fond, rayon, hauteur, marge, l0, l1, lmax, h0, r0, nu = self.valeur("onglets").split()
         self.assertEqual(fond.lower(), tokens["elevation"]["field"]["fill"].lower())
-        self.assertEqual((rayon, hauteur, marge), (str(rayons["control"]), str(d["controlHeight"]), str(retrait)))
+        self.assertEqual((rayon, hauteur, marge), (str(d["controlHeight"] // 2), str(d["controlHeight"]), str(retrait)))
         self.assertEqual((l0, l1), (lmax, lmax))
-        self.assertEqual((h0, r0), (str(d["controlHeight"] - 2 * retrait), str(rayons["small"])))
+        self.assertEqual((h0, r0), (str(d["controlHeight"] - 2 * retrait), str((d["controlHeight"] - 2 * retrait) // 2)))
         self.assertEqual(nu, "#00000000")
+        self.ipc("survolerOnglet")
+        self.assertEqual(self.valeur("ongletSurvole"), "hover #00000000")
+
+    def test_barre_jamais_sans_arret(self):
+        # Quand l'onglet coché est désactivé, il ne peut plus prendre le focus : les autres onglets redeviennent des
+        # arrêts, pour que la barre ne soit jamais sautée par la tabulation.
+        self.demarrer()
+        self.ipc("ongletActif", "false")
+        self.ipc("touche", "tab")
+        self.ipc("touche", "tab")
+        self.assertEqual(self.valeur("focus").split()[0], "tokens")
+
+    def test_jauge_clavier(self):
+        # La jauge est un arrêt de tabulation après le champ ; les flèches la règlent et l'anneau de focus clavier
+        # entoure la barre.
+        self.demarrer()
+        for _ in range(5):  # avant, composants, apres, champ, jauge
+            self.ipc("touche", "tab")
+        self.assertEqual(self.valeur("focus").split()[0], "jauge")
+        self.assertEqual(self.valeur("jauge"), "0.5 true")
+        self.ipc("touche", "droite")
+        self.assertEqual(self.valeur("jauge"), "0.6 true")
+        self.ipc("touche", "gauche")
+        self.ipc("touche", "gauche")
+        self.assertEqual(self.valeur("jauge"), "0.4 true")
 
     def test_menu_selection_suit_survol(self):
         # Dans un menu, la Liste porte selectionSuitSurvol : le pointeur posé sur une rangée en fait la rangée

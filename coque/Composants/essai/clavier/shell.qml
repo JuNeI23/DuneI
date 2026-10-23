@@ -7,18 +7,21 @@ import "Composants"
 
 // Coque d'essai du clavier : parcours de tabulation et curseur de texte, dans une vraie fenêtre.
 // Rôle : ouvre une FloatingWindow (un Bouton « avant », une barre Onglets avec les onglets « tokens » et
-// « composants », ce dernier coché, un Bouton « apres », un Champ, puis deux Liste côte à côte, un menu qui porte
+// « composants », ce dernier coché, un Bouton « apres », un Champ, une Jauge, puis deux Liste côte à côte, un menu qui porte
 // selectionSuitSurvol et un témoin qui ne le porte pas) et y synthétise des touches et des mouvements du pointeur
 // par le TestEvent de QtTest, pour que tests/test_coque_composants.py éprouve ce que la coque sans fenêtre ne peut
 // pas exécuter : le focus actif, la tabulation, le clignotement du curseur, la mise en page de la barre (qui
 // attend le polissage d'une fenêtre) et le survol. Lancée sur la plateforme offscreen par le test : la fenêtre ne
-// paraît jamais à l'écran, et ni les touches ni le pointeur n'atteignent le bureau.
-// Entrées : DUNEI_TOKENS_DIR, lu par Theme. Sortie : journal de Theme, « essai : prêt true » à l'ouverture de la
-// fenêtre, puis une ligne par commande IPC de lecture : « essai : focus <élément> <onglet courant> <sélection
+// paraît jamais à l'écran, et ni les touches ni le pointeur n'atteignent le bureau. La coque journalise sa
+// plateforme dès son chargement, avant d'ouvrir la fenêtre : le test échoue si ce n'est pas offscreen.
+// Entrées : DUNEI_TOKENS_DIR, lu par Theme. Sortie : journal de Theme, « essai : plateforme <nom> » au
+// chargement, « essai : prêt true » à l'ouverture de la fenêtre, puis une ligne par commande IPC de lecture : « essai : focus <élément> <onglet courant> <sélection
 // de tokens> <sélection de composants> <visualFocus> » et « essai : curseur <cursorVisible> <délégué visible>
 // <cursorFlashTime> », « essai : onglets <géométrie de la barre et de ses segments> » et « essai : menu <rangée
-// courante du menu> <rangée courante du témoin> » ; « essai touche <tab|majtab|gauche|droite> » frappe une touche
-// et « essai survoler <rang> » pose le pointeur sur une rangée de chaque liste, sans journaliser.
+// courante du menu> <rangée courante du témoin> », « essai : ongletSurvole <interaction> <fond> » et « essai :
+// jauge <valeur> <anneau visible> » ; « essai touche <tab|majtab|gauche|droite> » frappe une touche, « essai
+// survoler <rang> » pose le pointeur sur une rangée de chaque liste, « essai survolerOnglet » sur l'onglet
+// « tokens » et « essai ongletActif <bool> » active ou désactive l'onglet « composants », sans journaliser.
 // Erreurs : celles de Theme et des liaisons, dans le journal ; un nom de touche inconnu lève une TypeError.
 // Dépendances : quickshell ≥ 0.3 (FloatingWindow, LazyLoader, IpcHandler), QtTest (TestEvent), modules Theme
 // et Composants. Import : les liens Theme -> ../Theme et Composants -> ../Composants les posent sous la racine de
@@ -32,6 +35,8 @@ ShellRoot {
     function journal(cle, valeur) {
         console.info("essai : " + cle + " " + valeur)
     }
+
+    Component.onCompleted: journal("plateforme", Qt.platform.pluginName)
 
     LazyLoader {
         activeAsync: Theme.ready
@@ -47,12 +52,13 @@ ShellRoot {
                 Bouton { objectName: "avant"; text: "Avant" }
                 Onglets {
                     id: barre
-                    Onglet { id: tokens; objectName: "tokens"; text: "Tokens" }
+                    Onglet { id: tokens; objectName: "tokens"; text: "Tokens"; hoverEnabled: true }
                     Onglet { id: composants; objectName: "composants"; text: "Composants" }
                     Component.onCompleted: currentIndex = 1
                 }
                 Bouton { objectName: "apres"; text: "Après" }
                 Champ { id: champ; objectName: "champ" }
+                Jauge { id: jaugeEssai; objectName: "jauge"; value: 0.5 }
 
                 Row {
                     Liste { id: listeMenu; selectionSuitSurvol: true; model: 3; delegate: rangee; width: 100; height: 3 * Theme.density.rowHeight }
@@ -102,6 +108,33 @@ ShellRoot {
                     essai.journal("onglets", [b.color, b.radius, barre.height, barre.leftPadding, tokens.width,
                         composants.width, Math.max(tokens.implicitWidth, composants.implicitWidth), tokens.height,
                         tokens.background.radius, tokens.background.color].join(" "))
+                }
+
+                // survolerOnglet — pose le pointeur au centre de l'onglet « tokens », non coché.
+                // Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : tokens, clavier (TestEvent).
+                function survolerOnglet(): void {
+                    clavier.mouseMove(tokens, tokens.width / 2, tokens.height / 2, -1, Qt.NoButton, Qt.NoModifier)
+                }
+
+                // ongletSurvole — journalise l'interaction de l'onglet « tokens » et la couleur de son fond.
+                // Entrées : aucune. Sortie : aucune ; « essai : ongletSurvole <interaction> <#aarrggbb> ».
+                // Erreurs : aucune. Dépendances : tokens, journal.
+                function ongletSurvole(): void {
+                    essai.journal("ongletSurvole", tokens.etat.interaction + " " + tokens.background.color)
+                }
+
+                // ongletActif — active ou désactive l'onglet coché « composants ».
+                // Entrée : valeur, nouvel état enabled. Sortie : aucune. Erreurs : aucune. Dépendances : composants.
+                function ongletActif(valeur: bool): void {
+                    composants.enabled = valeur
+                }
+
+                // jauge — journalise la valeur de la jauge, arrondie au centième, et la visibilité de son anneau
+                // de focus. Entrées : aucune. Sortie : aucune ; « essai : jauge <valeur> <bool> ».
+                // Erreurs : aucune. Dépendances : jaugeEssai (l'anneau est le dernier enfant de sa barre), journal.
+                function jauge(): void {
+                    const b = jaugeEssai.barre.children
+                    essai.journal("jauge", Math.round(jaugeEssai.value * 100) / 100 + " " + b[b.length - 1].visible)
                 }
 
                 // survoler — pose le pointeur au centre de la rangée de rang donné du menu, puis du témoin.

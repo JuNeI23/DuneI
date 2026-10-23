@@ -9,11 +9,13 @@ Curseur 1.0 Curseur.qml
 Etat 1.0 Etat.qml
 Icone 1.0 Icone.qml
 Interrupteur 1.0 Interrupteur.qml
+Jauge 1.0 Jauge.qml
 Liste 1.0 Liste.qml
 Onglet 1.0 Onglet.qml
 Onglets 1.0 Onglets.qml
 Overlay 1.0 Overlay.qml
 Progression 1.0 Progression.qml
+Radio 1.0 Radio.qml
 Rangee 1.0 Rangee.qml
 Separateur 1.0 Separateur.qml
 Surface 1.0 Surface.qml

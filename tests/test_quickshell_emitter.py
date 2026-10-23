@@ -59,15 +59,18 @@ class QuickshellEmitterTest(unittest.TestCase):
         self.assertEqual(o["typo"]["weightMedium"], 550)
 
     def test_cotes_des_controles(self):
-        """Vérifie que les cotes de la case, de l'interrupteur et du curseur passent en camelCase dans density."""
+        """Vérifie que les cotes de la case, du radio, de l'interrupteur, du curseur et de la jauge passent en camelCase dans density."""
         d = self.out["density"]["comfortable"]
         self.assertEqual({k: d[k] for k in ("checkSize", "switchWidth", "switchHeight", "switchThumb", "sliderTrack",
-                                             "sliderHandle", "sliderWidth", "fieldWidth")},
+                                             "sliderHandle", "sliderWidth", "fieldWidth", "radioDot", "sliderBar")},
                          {"checkSize": 16, "switchWidth": 38, "switchHeight": 22, "switchThumb": 18,
-                          "sliderTrack": 4, "sliderHandle": 20, "sliderWidth": 160, "fieldWidth": 200})
+                          "sliderTrack": 4, "sliderHandle": 20, "sliderWidth": 160, "fieldWidth": 200,
+                          "radioDot": 6, "sliderBar": 22})
         c = self.out["density"]["compact"]
-        self.assertEqual({k: c[k] for k in ("switchWidth", "switchHeight", "switchThumb", "sliderHandle", "sliderWidth")},
-                         {"switchWidth": 32, "switchHeight": 18, "switchThumb": 14, "sliderHandle": 18, "sliderWidth": 140})
+        self.assertEqual({k: c[k] for k in ("switchWidth", "switchHeight", "switchThumb", "sliderHandle", "sliderWidth",
+                                             "radioDot", "sliderBar")},
+                         {"switchWidth": 32, "switchHeight": 18, "switchThumb": 14, "sliderHandle": 18, "sliderWidth": 140,
+                          "radioDot": 6, "sliderBar": 18})
         self.assertEqual(self.out["density"]["compact"]["fieldWidth"], 180)
 
     def test_states_complet(self):

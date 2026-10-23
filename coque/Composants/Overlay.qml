@@ -16,8 +16,9 @@ import "../Theme"
 // Le contenu est posé au centre d'une Surface surfaceRaised (e3), entourée d'un retrait ; sa taille est celle du
 // contenu. Les formes suivent macOS (conception, § 7.10) : une attention a les coins radius.window et le retrait
 // space.scale[2] (12), comme une feuille d'alerte ; un contextuel a les coins radius.panel et le retrait
-// space.scale[0] (4), comme un menu, dont la pastille de sélection se tient ainsi près du bord. Sobriété (D80) : la fenêtre et le contenu ne sont
-// construits par le LazyLoader qu'à l'ouverture, entre deux images, et détruits à la fermeture.
+// space.scale[0] (4), comme un menu, dont la pastille de sélection se tient ainsi près du bord. Sobriété (D80) :
+// la fenêtre et le contenu ne sont construits par le LazyLoader qu'à l'ouverture, entre deux images, et
+// détruits à la fermeture.
 // Entrées : famille, "attention" ou "contextuel" ; ouvert, vrai pour ouvrir, faux pour fermer, qui s'affecte et
 //           ne se lie pas : le registre Overlays, Échap, le clic sur le voile et la levée du focus l'écrivent
 //           impérativement, ce qui romprait une liaison ; l'appelant se resynchronise sur ferme() ; ancre, élément

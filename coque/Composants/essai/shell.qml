@@ -10,8 +10,8 @@ import "Composants/etats.js" as Etats
 // Coque d'essai du module Composants, sans aucune fenêtre.
 // Rôle : instancie un arbre fixe (une Surface fenêtre contenant une Surface panneau, qui porte la sonde
 // capteur, un contrôle simulé avec son Etat, un Texte, une Icone, les cinq contrôles interactifs (Bouton, Case,
-// Interrupteur, Onglet, Curseur), une Progression, deux Separateur, un Champ, une Liste vide, une Liste de trois Rangee et une cible munie d'un
-// AnneauFocus, plus une Surface inactive à l'écart, deux Overlay fermés, un de chaque famille, et trois objets
+// Interrupteur, Onglet, Curseur), trois Radio dans un même parent, une Jauge, une Progression, deux Separateur,
+// un Champ, une Liste vide, une Liste de trois Rangee et une cible munie d'un AnneauFocus, plus une Surface inactive à l'écart, deux Overlay fermés, un de chaque famille, et trois objets
 // factices pour le singleton Overlays) pour que tests/test_coque_composants.py éprouve dans un
 // vrai Quickshell les règles d'etats.js, l'héritage par remontée, l'import du Theme, les pièces de base, les
 // contrôles et les listes, en lisant le journal.
@@ -19,8 +19,9 @@ import "Composants/etats.js" as Etats
 // (thème de transition jusqu'à L4-12). Sortie : journal de Theme, plus « essai : prêt <bool> » à chaque
 // changement de Theme.ready, et une ligne « essai : <clé> <valeur> » par commande IPC de lecture (cran,
 // interaction, selection, sonde, naissances, fond, texte, anneau, etat, ressort, image, controles, coches,
-// cotes, progression, separateur, champ, indicatif, tailleIcone, liste, arrets, rangee, bouton, overlays,
-// overlaysFermes) ; « essai boutonPrincipal <bool> », « essai inactif <bool> », « essai reparenter », « essai texteMoyen »,
+// cotes, glyphes, radios, jauge, progression, separateur, champ, indicatif, tailleIcone, liste, arrets, rangee,
+// bouton, overlays, overlaysFermes) ; « essai decocher », « essai radioCocher <rang> », « essai jaugeActive
+// <bool> », « essai boutonPrincipal <bool> », « essai inactif <bool> », « essai reparenter », « essai texteMoyen »,
 // « essai anneauInactif <bool> », « essai survol <bool> », « essai retour <in|out> », « essai champActif
 // <bool> », « essai champTexte <texte> », « essai selectionLibre », « essai icone <nom> <bool> », « essai ouvrirFactice <A|B|C> » et « essai
 // fermerFactice <A|B|C> » agissent sans journaliser.
@@ -101,6 +102,20 @@ ShellRoot {
             Curseur {
                 id: curseurEssai
                 value: 0.5
+            }
+
+            // Trois Radio dans un même parent : exclusifs par autoExclusive, le premier coché.
+            Item {
+                id: groupeRadios
+                Radio { text: "Un"; checked: true }
+                Radio { text: "Deux" }
+                Radio { text: "Trois" }
+            }
+
+            Jauge {
+                id: jaugeEssai
+                value: 0.5
+                icone: "audio-volume-high"
             }
 
             Progression {
@@ -342,31 +357,89 @@ ShellRoot {
             essai.journal("image", iconeEssai.status + " " + iconeEssai.source)
         }
 
-        // controles — journalise, pour le bouton, la case, l'interrupteur, l'onglet et le curseur, le rôle de
-        // leur Etat et leur politique de focus. Entrées : aucune. Sortie : aucune ; « essai : controles <rôle>
-        // <focusPolicy>, … ». Erreurs : aucune. Dépendances : les cinq contrôles d'essai et leur propriété etat.
+        // controles — journalise, pour le bouton, la case, l'interrupteur, l'onglet, le premier radio, le curseur
+        // et la jauge, le rôle de leur Etat et leur politique de focus. Entrées : aucune. Sortie : aucune ;
+        // « essai : controles <rôle> <focusPolicy>, … ». Erreurs : aucune. Dépendances : les contrôles d'essai et
+        // leur propriété etat.
         function controles(): void {
-            essai.journal("controles", [boutonEssai, caseEssai, interrupteurEssai, ongletEssai, curseurEssai]
-                .map(c => c.etat.role + " " + c.focusPolicy).join(", "))
+            essai.journal("controles", [boutonEssai, caseEssai, interrupteurEssai, ongletEssai,
+                groupeRadios.children[0], curseurEssai, jaugeEssai].map(c => c.etat.role + " " + c.focusPolicy).join(", "))
         }
 
-        // coches — journalise la sélection de la case, de l'interrupteur et de l'onglet, cochés tous trois.
-        // Entrées : aucune. Sortie : aucune ; « essai : coches <sélection> <sélection> <sélection> ».
-        // Erreurs : aucune. Dépendances : caseEssai, interrupteurEssai, ongletEssai.
+        // coches — journalise la sélection de la case, de l'interrupteur, de l'onglet et du premier radio, cochés
+        // tous quatre. Entrées : aucune. Sortie : aucune ; « essai : coches <sélection> × 4 ». Erreurs : aucune.
+        // Dépendances : caseEssai, interrupteurEssai, ongletEssai, groupeRadios.
         function coches(): void {
-            essai.journal("coches", [caseEssai, interrupteurEssai, ongletEssai].map(c => c.etat.selection).join(" "))
+            essai.journal("coches", [caseEssai, interrupteurEssai, ongletEssai, groupeRadios.children[0]]
+                .map(c => c.etat.selection).join(" "))
+        }
+
+        // glyphes — journalise, pour la coche de la case puis le point du premier radio, la présence du tracé
+        // (un élément nommé « glyphe » dans la boîte), l'absence de toute icône (aucun enfant ne porte nom), sa
+        // visibilité et sa couleur de trait ou de remplissage. Entrées : aucune. Sortie : aucune ; « essai :
+        // glyphes <bool> <bool> <bool> <#rrggbb> | … ». Erreurs : aucune. Dépendances : caseEssai, groupeRadios.
+        function glyphes(): void {
+            essai.journal("glyphes", [caseEssai, groupeRadios.children[0]].map(c => {
+                const enfants = c.indicator.children, g = enfants.find(e => e.objectName === "glyphe")
+                return [!!g, !enfants.some(e => e.nom !== undefined), g?.visible, g?.couleur].join(" ")
+            }).join(" | "))
+        }
+
+        // decocher — décoche la case d'essai et le premier radio (un radio ne se décoche pas au clic, mais par
+        // programme). Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : caseEssai, groupeRadios.
+        function decocher(): void {
+            caseEssai.checked = false
+            groupeRadios.children[0].checked = false
+        }
+
+        // radios — journalise l'état coché des trois radios, puis la sélection de leur Etat.
+        // Entrées : aucune. Sortie : aucune ; « essai : radios <bool> × 3 <sélection> × 3 ». Erreurs : aucune.
+        // Dépendances : groupeRadios.
+        function radios(): void {
+            const r = Array.from(groupeRadios.children)
+            essai.journal("radios", r.map(c => c.checked).concat(r.map(c => c.etat.selection)).join(" "))
+        }
+
+        // radioCocher — coche le radio de rang donné, comme un clic.
+        // Entrées : rang, 0 à 2. Sortie : aucune. Erreurs : TypeError au journal pour un rang absent.
+        // Dépendances : groupeRadios.
+        function radioCocher(rang: int): void {
+            groupeRadios.children[rang].checked = true
+        }
+
+        // jauge — journalise la hauteur, le rayon et le fond de la barre, la largeur de la partie remplie aux
+        // valeurs 0 puis 1, la largeur de la barre, la couleur de la partie remplie, le centre horizontal de
+        // l'icône dans la barre et sa couleur ; la valeur 0,5 est rétablie. Entrées : aucune. Sortie : aucune ;
+        // « essai : jauge <h> <rayon> <#fond> <vide> <plein> <largeur> <#remplie> <centre> <#icône> ».
+        // Erreurs : aucune. Dépendances : jaugeEssai (sorties barre, remplie et symbole).
+        function jauge(): void {
+            const j = jaugeEssai, b = j.barre, r = []
+            for (const v of [0, 1, 0.5]) {
+                j.value = v
+                r.push(j.remplie.width)
+            }
+            essai.journal("jauge", [b.height, b.radius, b.color, r[0], r[1], b.width, j.remplie.color,
+                j.symbole.x + j.symbole.width / 2, j.symbole.couleur].join(" "))
+        }
+
+        // jaugeActive — active ou désactive la jauge d'essai.
+        // Entrées : valeur, nouvel état enabled. Sortie : aucune. Erreurs : aucune. Dépendances : jaugeEssai.
+        function jaugeActive(valeur: bool): void {
+            jaugeEssai.enabled = valeur
         }
 
         // cotes — journalise les cotes lues dans les tokens : hauteur du bouton, côté de la boîte de la case,
         // largeur et hauteur de la piste de l'interrupteur et diamètre de son bouton, largeur implicite du
-        // curseur, diamètre de sa poignée, épaisseur de sa piste, puis la couleur de sa partie remplie.
-        // Entrées : aucune. Sortie : aucune ; « essai : cotes <nombres…> <#rrggbb> ». Erreurs : aucune.
+        // curseur, diamètre de sa poignée, épaisseur de sa piste, la couleur de sa partie remplie, puis le diamètre
+        // du disque du premier radio et celui de son point.
+        // Entrées : aucune. Sortie : aucune ; « essai : cotes <nombres…> <#rrggbb> <nombres…> ». Erreurs : aucune.
         // Dépendances : les contrôles d'essai ; la partie remplie est le premier enfant de la piste du curseur.
         function cotes(): void {
             const i = interrupteurEssai.indicator
             essai.journal("cotes", [boutonEssai.height, caseEssai.indicator.width, i.width, i.height,
                 i.children[0].width, curseurEssai.implicitWidth, curseurEssai.handle.width,
-                curseurEssai.background.height, curseurEssai.background.children[0].color].join(" "))
+                curseurEssai.background.height, curseurEssai.background.children[0].color,
+                groupeRadios.children[0].indicator.width, groupeRadios.children[0].point].join(" "))
         }
 
         // progression — journalise la largeur de la piste, la largeur du remplissage pour une valeur de 1,5, puis
@@ -394,14 +467,15 @@ ShellRoot {
         }
 
         // champ — journalise le fond du champ et celui du panneau, sa politique de focus, sa hauteur, son rayon,
-        // la présence de l'anneau de focus, la couleur du texte, puis la largeur implicite.
+        // le nombre d'enfants de son fond (aucun : le champ n'a pas d'anneau de focus), la couleur du texte, puis
+        // la largeur implicite.
         // Entrées : aucune. Sortie : aucune ; « essai : champ <fond> <fond du panneau> <focusPolicy> <hauteur>
-        // <rayon> <anneau> <#rrggbb> <largeur> ». Erreurs : aucune. Dépendances : champEssai (le fond est son
-        // background, l'anneau le premier enfant de celui-ci), panneau.
+        // <rayon> <enfants du fond> <#rrggbb> <largeur> ». Erreurs : aucune. Dépendances : champEssai (le fond
+        // est son background), panneau.
         function champ(): void {
             const b = champEssai.background
             essai.journal("champ", [b.color, panneau.children[0].color, champEssai.focusPolicy, champEssai.height,
-                b.radius, b.children[0].visible, champEssai.color, champEssai.implicitWidth].join(" "))
+                b.radius, b.children.length, champEssai.color, champEssai.implicitWidth].join(" "))
         }
 
         // champTexte — remplace le texte du champ d'essai.
