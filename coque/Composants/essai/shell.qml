@@ -9,7 +9,7 @@ import "Composants/etats.js" as Etats
 // Coque d'essai du module Composants, sans aucune fenêtre.
 // Rôle : instancie un arbre fixe (une Surface fenêtre contenant une Surface panneau, qui porte la sonde
 // capteur, un contrôle simulé avec son Etat, un Texte, une Icone, les cinq contrôles interactifs (Bouton, Case,
-// Interrupteur, Onglet, Curseur), un Champ, une Liste vide, une Liste de trois Rangee et une cible munie d'un
+// Interrupteur, Onglet, Curseur), une Progression, deux Separateur, un Champ, une Liste vide, une Liste de trois Rangee et une cible munie d'un
 // AnneauFocus, plus une Surface inactive à l'écart) pour que tests/test_coque_composants.py éprouve dans un
 // vrai Quickshell les règles d'etats.js, l'héritage par remontée, l'import du Theme, les pièces de base, les
 // contrôles et les listes, en lisant le journal.
@@ -17,7 +17,7 @@ import "Composants/etats.js" as Etats
 // (thème de transition jusqu'à L4-12). Sortie : journal de Theme, plus « essai : prêt <bool> » à chaque
 // changement de Theme.ready, et une ligne « essai : <clé> <valeur> » par commande IPC de lecture (cran,
 // interaction, selection, sonde, naissances, fond, texte, anneau, etat, ressort, image, controles, coches,
-// cotes, champ, liste, arrets, rangee) ; « essai inactif <bool> », « essai reparenter », « essai texteMoyen »,
+// cotes, progression, separateur, champ, liste, arrets, rangee) ; « essai inactif <bool> », « essai reparenter », « essai texteMoyen »,
 // « essai anneauInactif <bool> », « essai survol <bool> », « essai retour <in|out> », « essai champActif
 // <bool> », « essai selectionLibre » et « essai icone <nom> <bool> » agissent sans journaliser.
 // Erreurs : celles de Theme et des liaisons, dans le journal. Dépendances : quickshell ≥ 0.3 (Quickshell.Io :
@@ -97,6 +97,22 @@ ShellRoot {
             Curseur {
                 id: curseurEssai
                 value: 0.5
+            }
+
+            Progression {
+                id: progressionEssai
+                valeur: 0.5
+            }
+
+            Separateur {
+                id: separateurEssai
+                width: 100
+            }
+
+            Separateur {
+                id: separateurVertical
+                vertical: true
+                height: 100
             }
 
             Champ {
@@ -290,6 +306,30 @@ ShellRoot {
             essai.journal("cotes", [boutonEssai.height, caseEssai.indicator.width, i.width, i.height,
                 i.children[0].width, curseurEssai.implicitWidth, curseurEssai.handle.width,
                 curseurEssai.background.height, curseurEssai.background.children[0].color].join(" "))
+        }
+
+        // progression — journalise la largeur de la piste, la largeur du remplissage pour une valeur de 1,5, puis
+        // de -0,2, la hauteur de la piste, sa largeur implicite et la couleur du remplissage à 0,5.
+        // Entrées : aucune. Sortie : aucune ; « essai : progression <piste> <plein> <vide> <hauteur>
+        // <largeur implicite> <#rrggbb> ». Erreurs : aucune. Dépendances : progressionEssai (le remplissage est
+        // son premier enfant).
+        function progression(): void {
+            const p = progressionEssai, r = []
+            for (const v of [1.5, -0.2, 0.5]) {
+                p.valeur = v
+                r.push(p.children[0].width)
+            }
+            essai.journal("progression", [p.width, r[0], r[1], p.height, p.implicitWidth, p.children[0].color].join(" "))
+        }
+
+        // separateur — journalise le rapport de pixels, puis l'épaisseur et les dimensions implicites des
+        // séparateurs horizontal et vertical, et la couleur du premier. Entrées : aucune. Sortie : aucune ;
+        // « essai : separateur <dpr> <h.largeur> <h.hauteur> <v.largeur> <v.hauteur> <#rrggbb> ».
+        // Erreurs : aucune. Dépendances : separateurEssai, separateurVertical.
+        function separateur(): void {
+            const h = separateurEssai, v = separateurVertical
+            essai.journal("separateur", [h.Screen.devicePixelRatio, h.implicitWidth, h.implicitHeight,
+                v.implicitWidth, v.implicitHeight, h.color].join(" "))
         }
 
         // champ — journalise le fond du champ et celui du panneau, sa politique de focus, sa hauteur, son rayon,

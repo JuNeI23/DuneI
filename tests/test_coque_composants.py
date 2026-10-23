@@ -241,6 +241,29 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
                    d["sliderWidth"], d["sliderHandle"], d["sliderTrack"], accent]
         self.assertEqual(self.valeur("cotes").lower(), " ".join(map(str, attendu)).lower())
 
+    def test_progression_bornee(self):
+        # La valeur est bornée à [0, 1] : 1,5 remplit toute la piste, -0,2 ne remplit rien. La piste a la
+        # largeur implicite density.sliderWidth et la hauteur density.sliderTrack ; le remplissage prend l'accent.
+        self.demarrer()
+        tokens = self.tokens55()[0]
+        d = tokens["density"]["comfortable"]
+        piste, plein, vide, hauteur, implicite, couleur = self.valeur("progression").split()
+        self.assertEqual((plein, vide), (piste, "0"))
+        self.assertEqual((piste, implicite, hauteur), (str(d["sliderWidth"]),) * 2 + (str(d["sliderTrack"]),))
+        self.assertEqual(couleur.lower(), tokens["states"]["surfacePanel"]["active"]["rest"]["fill"].lower())
+
+    def test_separateur(self):
+        # L'épaisseur est un liseré (1 / dpr si la règle des pixels physiques s'applique, sinon 1) sur l'axe
+        # court ; l'autre dimension est laissée à l'appelant ; la couleur est color.borderSubtle.
+        self.demarrer()
+        tokens = self.tokens55()[0]
+        dpr, hl, hh, vl, vh, couleur = self.valeur("separateur").split()
+        e = 1 / float(dpr) if tokens["render"]["hairlinePhysical"] else 1
+        self.assertAlmostEqual(float(hh), e)
+        self.assertAlmostEqual(float(vl), e)
+        self.assertEqual((hl, vh), ("0", "0"))
+        self.assertEqual(couleur.lower(), tokens["color"]["borderSubtle"].lower())
+
     def test_champ(self):
         # Posé sur la Surface panneau, le champ est enfoncé : fond elevation.field.fill, plus sombre que le
         # panneau, même au focus ; il prend le focus au clic comme à la tabulation (Qt.StrongFocus vaut 11) ;
