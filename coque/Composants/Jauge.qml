@@ -14,12 +14,13 @@ import "../Theme"
 // disque minimal, prend la couleur du fond enfoncé et se lit donc en creux sur la partie remplie. L'anneau de
 // focus entoure la barre, sur visualFocus ; un clic ne vole pas le focus d'un champ (focusPolicy Qt.TabFocus,
 // § 7.3). Sans sélection, la jauge n'a pas d'accent : le modificateur inactive n'atténue que son anneau.
-// Entrées : value, from, to, stepSize et le reste de l'API de T.Slider (les flèches avancent de stepSize, d'un
-// dixième de l'étendue s'il est nul) ; icone, nom freedesktop de l'icône, vide par défaut (aucune icône).
+// Entrées : value, from, to, stepSize et le reste de l'API de T.Slider ; stepSize vaut par défaut un dixième de
+// l'étendue, pas des flèches (T.Slider avancerait sinon de 0,1 en valeur absolue, quelle que soit l'étendue) ;
+// icone, nom freedesktop de l'icône, vide par défaut (aucune icône).
 // L'orientation verticale n'est pas habillée.
 // Sorties : etat, l'Etat de la jauge (rôle, interaction, couleurs) ; down, copie de pressed, que lit
-// Etats.interaction (T.Slider n'a pas de down) ; barre, remplie et symbole, la barre, sa partie remplie et
-// l'icône, lues par les essais.
+// Etats.interaction (T.Slider n'a pas de down) ; barre, remplie, symbole et anneau, la barre, sa partie remplie,
+// l'icône et l'anneau de focus, lus par les essais.
 // Erreurs : aucune ; avant le chargement des tokens, les cotes sont nulles et les couleurs transparentes ; un nom
 // d'icône introuvable ne peint rien.
 // Dépendances : QtQuick.Templates, Theme (density, elevation, icons), Etat, AnneauFocus, Icone.
@@ -35,8 +36,10 @@ T.Slider {
     readonly property alias barre: barre
     readonly property alias remplie: remplie
     readonly property alias symbole: symbole
+    readonly property alias anneau: anneau
 
     focusPolicy: Qt.TabFocus
+    stepSize: (to - from) / 10
     implicitWidth: Theme.density?.sliderWidth ?? 0
     implicitHeight: Theme.density?.controlHeight ?? 0
 
@@ -75,6 +78,7 @@ T.Slider {
         }
 
         AnneauFocus {
+            id: anneau
             cible: parent
             montre: jauge.visualFocus
             inactif: etat.inactif

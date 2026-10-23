@@ -8,13 +8,13 @@ import "Composants"
 import "Composants/etats.js" as Etats
 
 // Coque d'essai du module Composants, sans aucune fenêtre.
-// Rôle : instancie un arbre fixe (une Surface fenêtre contenant une Surface panneau, qui porte la sonde
-// capteur, un contrôle simulé avec son Etat, un Texte, une Icone, les cinq contrôles interactifs (Bouton, Case,
-// Interrupteur, Onglet, Curseur), trois Radio dans un même parent, une Jauge, une Progression, deux Separateur,
-// un Champ, une Liste vide, une Liste de trois Rangee et une cible munie d'un AnneauFocus, plus une Surface inactive à l'écart, deux Overlay fermés, un de chaque famille, et trois objets
-// factices pour le singleton Overlays) pour que tests/test_coque_composants.py éprouve dans un
-// vrai Quickshell les règles d'etats.js, l'héritage par remontée, l'import du Theme, les pièces de base, les
-// contrôles et les listes, en lisant le journal.
+// Rôle : instancie un arbre fixe (une Surface fenêtre contenant une Surface panneau, qui porte la sonde capteur, un
+// contrôle simulé avec son Etat, un Texte, une Icone, les cinq contrôles interactifs (Bouton, Case, Interrupteur,
+// Onglet, Curseur), trois Radio dans un même parent, une Jauge, une Progression, deux Separateur, un Champ, une Liste
+// vide, une Liste de trois Rangee et une cible munie d'un AnneauFocus, plus une Surface inactive à l'écart, deux
+// Overlay fermés, un de chaque famille, et trois objets factices pour le singleton Overlays) pour que
+// tests/test_coque_composants.py éprouve dans un vrai Quickshell les règles d'etats.js, l'héritage par remontée,
+// l'import du Theme, les pièces de base, les contrôles et les listes, en lisant le journal.
 // Entrées : DUNEI_TOKENS_DIR, lu par Theme ; thème d'icônes Adwaita, posé par la directive IconTheme en tête
 // (thème de transition jusqu'à L4-12). Sortie : journal de Theme, plus « essai : prêt <bool> » à chaque
 // changement de Theme.ready, et une ligne « essai : <clé> <valeur> » par commande IPC de lecture (cran,
@@ -23,8 +23,8 @@ import "Composants/etats.js" as Etats
 // bouton, overlays, overlaysFermes) ; « essai decocher », « essai radioCocher <rang> », « essai jaugeActive
 // <bool> », « essai boutonPrincipal <bool> », « essai inactif <bool> », « essai reparenter », « essai texteMoyen »,
 // « essai anneauInactif <bool> », « essai survol <bool> », « essai retour <in|out> », « essai champActif
-// <bool> », « essai champTexte <texte> », « essai selectionLibre », « essai icone <nom> <bool> », « essai ouvrirFactice <A|B|C> » et « essai
-// fermerFactice <A|B|C> » agissent sans journaliser.
+// <bool> », « essai champTexte <texte> », « essai selectionLibre », « essai icone <nom> <bool> », « essai
+// ouvrirFactice <A|B|C> » et « essai fermerFactice <A|B|C> » agissent sans journaliser.
 // Erreurs : celles de Theme et des liaisons, dans le journal. Dépendances : quickshell ≥ 0.3 (Quickshell.Io :
 // IpcHandler), modules coque/Theme et coque/Composants.
 // Import : Quickshell ne résout pas un module situé au-dessus de la racine de la coque lancée ; les liens
@@ -363,7 +363,8 @@ ShellRoot {
         // leur propriété etat.
         function controles(): void {
             essai.journal("controles", [boutonEssai, caseEssai, interrupteurEssai, ongletEssai,
-                groupeRadios.children[0], curseurEssai, jaugeEssai].map(c => c.etat.role + " " + c.focusPolicy).join(", "))
+                groupeRadios.children[0], curseurEssai, jaugeEssai]
+                .map(c => c.etat.role + " " + c.focusPolicy).join(", "))
         }
 
         // coches — journalise la sélection de la case, de l'interrupteur, de l'onglet et du premier radio, cochés

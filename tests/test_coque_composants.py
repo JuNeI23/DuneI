@@ -470,15 +470,32 @@ class CoqueClavierTest(EssaiCoque, unittest.TestCase):
     tokens55 = CoqueComposantsTest.tokens55
 
     def demarrer(self) -> None:
-        """Lance la coque d'essai du clavier et vérifie qu'elle tourne sur la plateforme offscreen.
+        """Lance la coque d'essai du clavier, vérifie sa plateforme, puis attend qu'elle soit prête.
 
-        Rôle : garantit qu'aucun test n'ouvre de vraie fenêtre sur le bureau ; la coque journalise
-        Qt.platform.pluginName avant d'ouvrir sa fenêtre. Entrées : aucune. Sortie : aucune.
-        Erreurs : échec du test si la plateforme n'est pas offscreen, ou si la coque ne se déclare pas prête.
-        Dépendances : CoqueComposantsTest.demarrer, journal.
+        Rôle : la coque journalise Qt.platform.pluginName dès son chargement et n'ouvre sa fenêtre que sous
+        offscreen ; la plateforme est vérifiée avant d'attendre « prêt », pour qu'un lancement hors offscreen
+        échoue en la nommant, au lieu d'expirer sur une fenêtre qui ne viendra jamais.
+        Entrées : aucune. Sortie : aucune.
+        Erreurs : échec du test si la plateforme n'est pas offscreen, ou si la coque ne journalise pas sa
+        plateforme ou ne se déclare pas prête dans le délai.
+        Dépendances : installer, lancer, attendre, journal.
         """
-        CoqueComposantsTest.demarrer(self)
-        self.assertIn("essai : plateforme offscreen", self.journal())
+        self.installer(55)
+        self.lancer(self.dir)
+        self.attendre("essai : plateforme ")
+        plateforme = self.journal().split("essai : plateforme ", 1)[1].split()[0]
+        self.assertEqual(plateforme, "offscreen", f"coque d'essai du clavier hors offscreen : {plateforme}")
+        self.attendre("essai : prêt true")
+
+    def test_garde_hors_offscreen(self):
+        # Contre-épreuve de la garde : sous la plateforme minimal, inoffensive (aucun affichage), demarrer échoue
+        # en nommant la plateforme, et la coque, Theme pourtant chargé, n'ouvre jamais sa fenêtre.
+        self.environnement = {"QT_QPA_PLATFORM": "minimal"}
+        with self.assertRaisesRegex(AssertionError, "hors offscreen : minimal"):
+            self.demarrer()
+        self.attendre("Theme : chargé")
+        time.sleep(0.5)
+        self.assertNotIn("essai : prêt", self.journal())
 
     def test_barre_onglets_un_arret(self):
         # Défaut relevé à l'écran : chaque onglet était un arrêt de tabulation, si bien que Maj+Tab depuis l'onglet
@@ -503,17 +520,17 @@ class CoqueClavierTest(EssaiCoque, unittest.TestCase):
     def test_onglets_segmentes(self):
         # Onglets est un contrôle segmenté : une piste en pilule au fond enfoncé (elevation.field.fill), de la
         # hauteur d'un contrôle ; ses segments, de largeurs égales à la plus large de leurs largeurs implicites,
-        # sont en retrait de 2 px, celui du bouton de l'interrupteur dans sa piste ((switchHeight - switchThumb) / 2),
-        # en pilule donc concentriques ; un segment non coché n'a pas de fond, au repos comme au survol (§ 7.10).
+        # sont en retrait de density.segmentInset, en pilule donc concentriques ; un segment non coché n'a pas de
+        # fond, au repos comme au survol (§ 7.10).
         self.demarrer()
         tokens = self.tokens55()[0]
         d = tokens["density"]["comfortable"]
-        retrait = (d["switchHeight"] - d["switchThumb"]) // 2
-        fond, rayon, hauteur, marge, l0, l1, lmax, h0, r0, nu = self.valeur("onglets").split()
+        retrait, h0 = d["segmentInset"], d["controlHeight"] - 2 * d["segmentInset"]
+        fond, rayon, hauteur, marge, l0, l1, lmax, hs, rs, nu = self.valeur("onglets").split()
         self.assertEqual(fond.lower(), tokens["elevation"]["field"]["fill"].lower())
         self.assertEqual((rayon, hauteur, marge), (str(d["controlHeight"] // 2), str(d["controlHeight"]), str(retrait)))
         self.assertEqual((l0, l1), (lmax, lmax))
-        self.assertEqual((h0, r0), (str(d["controlHeight"] - 2 * retrait), str((d["controlHeight"] - 2 * retrait) // 2)))
+        self.assertEqual((hs, rs), (str(h0), str(h0 // 2)))
         self.assertEqual(nu, "#00000000")
         self.ipc("survolerOnglet")
         self.assertEqual(self.valeur("ongletSurvole"), "hover #00000000")

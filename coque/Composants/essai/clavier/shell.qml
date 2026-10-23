@@ -7,21 +7,26 @@ import "Composants"
 
 // Coque d'essai du clavier : parcours de tabulation et curseur de texte, dans une vraie fenêtre.
 // Rôle : ouvre une FloatingWindow (un Bouton « avant », une barre Onglets avec les onglets « tokens » et
-// « composants », ce dernier coché, un Bouton « apres », un Champ, une Jauge, puis deux Liste côte à côte, un menu qui porte
-// selectionSuitSurvol et un témoin qui ne le porte pas) et y synthétise des touches et des mouvements du pointeur
-// par le TestEvent de QtTest, pour que tests/test_coque_composants.py éprouve ce que la coque sans fenêtre ne peut
-// pas exécuter : le focus actif, la tabulation, le clignotement du curseur, la mise en page de la barre (qui
-// attend le polissage d'une fenêtre) et le survol. Lancée sur la plateforme offscreen par le test : la fenêtre ne
-// paraît jamais à l'écran, et ni les touches ni le pointeur n'atteignent le bureau. La coque journalise sa
-// plateforme dès son chargement, avant d'ouvrir la fenêtre : le test échoue si ce n'est pas offscreen.
-// Entrées : DUNEI_TOKENS_DIR, lu par Theme. Sortie : journal de Theme, « essai : plateforme <nom> » au
-// chargement, « essai : prêt true » à l'ouverture de la fenêtre, puis une ligne par commande IPC de lecture : « essai : focus <élément> <onglet courant> <sélection
-// de tokens> <sélection de composants> <visualFocus> » et « essai : curseur <cursorVisible> <délégué visible>
-// <cursorFlashTime> », « essai : onglets <géométrie de la barre et de ses segments> » et « essai : menu <rangée
-// courante du menu> <rangée courante du témoin> », « essai : ongletSurvole <interaction> <fond> » et « essai :
-// jauge <valeur> <anneau visible> » ; « essai touche <tab|majtab|gauche|droite> » frappe une touche, « essai
-// survoler <rang> » pose le pointeur sur une rangée de chaque liste, « essai survolerOnglet » sur l'onglet
-// « tokens » et « essai ongletActif <bool> » active ou désactive l'onglet « composants », sans journaliser.
+// « composants », ce dernier coché, un Bouton « apres », un Champ, une Jauge, puis deux Liste côte à côte, un
+// menu qui porte selectionSuitSurvol et un témoin qui ne le porte pas) et y synthétise des touches et des
+// mouvements du pointeur par le TestEvent de QtTest, pour que tests/test_coque_composants.py éprouve ce que la
+// coque sans fenêtre ne peut pas exécuter : le focus actif, la tabulation, le clignotement du curseur, la mise en
+// page de la barre (qui attend le polissage d'une fenêtre) et le survol.
+// Garde de plateforme : la coque journalise Qt.platform.pluginName dès son chargement, et son LazyLoader ne
+// construit la fenêtre que sous la plateforme offscreen, où elle ne paraît jamais à l'écran et où ni les touches
+// ni le pointeur n'atteignent le bureau. Lancée sous une autre plateforme (wayland compris), elle n'ouvre donc
+// aucune fenêtre et ne se déclare jamais prête ; le test lit la ligne de plateforme avant d'attendre « prêt » et
+// échoue en la nommant.
+// Entrées : DUNEI_TOKENS_DIR, lu par Theme ; QT_QPA_PLATFORM, posé à offscreen par le test.
+// Sortie : journal de Theme, « essai : plateforme <nom> » au chargement, « essai : prêt true » à l'ouverture de
+// la fenêtre, puis une ligne par commande IPC de lecture : « essai : focus <élément> <onglet courant>
+// <sélection de tokens> <sélection de composants> <visualFocus> », « essai : curseur <cursorVisible> <délégué
+// visible> <cursorFlashTime> », « essai : onglets <géométrie de la barre et de ses segments> », « essai : menu
+// <rangée courante du menu> <rangée courante du témoin> », « essai : ongletSurvole <interaction> <fond> » et
+// « essai : jauge <valeur> <anneau visible> » ; « essai touche <tab|majtab|gauche|droite> » frappe une touche,
+// « essai survoler <rang> » pose le pointeur sur une rangée de chaque liste, « essai survolerOnglet » sur
+// l'onglet « tokens » et « essai ongletActif <bool> » active ou désactive l'onglet « composants », sans
+// journaliser.
 // Erreurs : celles de Theme et des liaisons, dans le journal ; un nom de touche inconnu lève une TypeError.
 // Dépendances : quickshell ≥ 0.3 (FloatingWindow, LazyLoader, IpcHandler), QtTest (TestEvent), modules Theme
 // et Composants. Import : les liens Theme -> ../Theme et Composants -> ../Composants les posent sous la racine de
@@ -39,7 +44,7 @@ ShellRoot {
     Component.onCompleted: journal("plateforme", Qt.platform.pluginName)
 
     LazyLoader {
-        activeAsync: Theme.ready
+        activeAsync: Theme.ready && Qt.platform.pluginName === "offscreen"
 
         FloatingWindow {
             implicitWidth: colonne.implicitWidth
@@ -131,10 +136,9 @@ ShellRoot {
 
                 // jauge — journalise la valeur de la jauge, arrondie au centième, et la visibilité de son anneau
                 // de focus. Entrées : aucune. Sortie : aucune ; « essai : jauge <valeur> <bool> ».
-                // Erreurs : aucune. Dépendances : jaugeEssai (l'anneau est le dernier enfant de sa barre), journal.
+                // Erreurs : aucune. Dépendances : jaugeEssai (sortie anneau), journal.
                 function jauge(): void {
-                    const b = jaugeEssai.barre.children
-                    essai.journal("jauge", Math.round(jaugeEssai.value * 100) / 100 + " " + b[b.length - 1].visible)
+                    essai.journal("jauge", Math.round(jaugeEssai.value * 100) / 100 + " " + jaugeEssai.anneau.visible)
                 }
 
                 // survoler — pose le pointeur au centre de la rangée de rang donné du menu, puis du témoin.
