@@ -207,8 +207,10 @@ shadow = false
 # 12 px (conception des composants, § 7.10). L'émetteur de la coque en précalcule les variantes, en OKLCH.
 [pastilles]
 hover_lightness_delta = 0.06    # survol : la teinte s'éclaircit
-pressed_lightness_delta = -0.08 # pression : la teinte fonce nettement ; au-delà, le glyphe sombre passerait sous
-                                # 3:1 sur error (3,0:1 à -0,08), et error sortirait du gamut sRGB
+pressed_lightness_delta = -0.075 # pression : la teinte fonce nettement. Borne : le glyphe sombre (surface-base)
+                                 # doit garder 3:1 sur error pressé à toutes les teintes (3,07 à 3,09:1 ici ; il
+                                 # passe sous 3:1 dès -0,08 aux teintes 200 et 265). warning pressé sort un peu du
+                                 # gamut sRGB et s'écrête : c'est assumé, l'écart reste net à l'œil.
 
 # Modificateur de conteneur, en cascade sur tous les descendants.
 # Le contenu n'est NI terni NI estompé : seule la couleur disparaît.

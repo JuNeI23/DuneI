@@ -14,8 +14,8 @@ import "../Theme"
 // visualFocus.
 // Entrées : icone, nom freedesktop du glyphe ; text, libellé facultatif ; checked, toggled et le reste de l'API de
 // T.Button.
-// Sorties : avecLibelle, vrai si text n'est pas vide ; etat, l'Etat de la bascule ; disque, glyphe, libelle et anneau, lus par les essais ; cibleFocus (le
-// disque), que la planche entoure de l'anneau.
+// Sorties : avecLibelle, vrai si text n'est pas vide ; etat, l'Etat de la bascule ; disque, glyphe, libelle et anneau,
+// lus par les essais ; cibleFocus (le disque), que la planche entoure de l'anneau.
 // Erreurs : aucune ; un glyphe absent du thème laisse le disque vide ; avant le chargement des tokens, les cotes sont
 // nulles et les couleurs transparentes.
 // Dépendances : QtQuick.Templates, Theme (density, icons, space, stateColors), Etat, AnneauFocus, Icone, Texte.

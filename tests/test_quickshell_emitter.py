@@ -123,6 +123,25 @@ class QuickshellEmitterTest(unittest.TestCase):
         self.assertGreater(p["hover_lightness_delta"], self.data["states"]["hover"]["lightness_delta"])
         self.assertLess(p["pressed_lightness_delta"], self.data["states"]["pressed"]["lightness_delta"])
 
+    def test_glyphes_des_pastilles_lisibles(self):
+        """Vérifie, à chaque teinte de référence, que le glyphe des pastilles (color.surfaceBase) garde un contraste
+        d'au moins 3:1, celui demandé à un élément graphique, sur chaque teinte au repos, survolée et pressée."""
+
+        def luminance(hexa: str) -> float:
+            """Luminance relative WCAG d'une couleur #rrggbb. Entrée : hexa. Sortie : réel de 0 à 1.
+            Erreurs : ValueError sur une chaîne mal formée. Dépendances : aucune."""
+            lin = [(v / 12.92 if v <= 0.04045 else ((v + 0.055) / 1.055) ** 2.4)
+                   for v in (int(hexa[i:i + 2], 16) / 255 for i in (1, 3, 5))]
+            return 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2]
+
+        for hue in GOLDEN_HUES:
+            c = json.loads(emit(resolve(self.data, float(hue))))["color"]
+            fond = luminance(c["surfaceBase"])
+            for k in ("error", "warning", "success"):
+                for suffixe in ("", "Hover", "Pressed"):
+                    with self.subTest(teinte=hue, couleur=k + suffixe):
+                        self.assertGreaterEqual((luminance(c[k + suffixe]) + 0.05) / (fond + 0.05), 3)
+
     def test_focus(self):
         """Vérifie l'anneau de focus : couleurs, épaisseur et décalages."""
         a = self.model["accent_standalone"]

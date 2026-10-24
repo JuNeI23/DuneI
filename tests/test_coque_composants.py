@@ -519,7 +519,10 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
                          ("true", str(intervalle), str(cote), str(n), accent, cote / 8))
         respire = lambda k: round(float(creux) + (1 - float(creux)) * (1 + math.cos(2 * math.pi * k / n)) / 2, 3)
         self.assertEqual(float(opacite), respire(int(pas)))
-        self.assertLess(float(creux), 1)
+        # Le creux documenté vaut 0,35 ; avec un nombre impair de pas, le plus bas atteint reste à un pas du
+        # demi-cycle, soit un peu au-dessus (environ 0,37 pour neuf pas).
+        self.assertEqual(float(creux), 0.35)
+        self.assertAlmostEqual(min(respire(k) for k in range(n)), 0.35, delta=0.03)
         time.sleep(3 * intervalle / 1000)
         self.assertNotEqual(self.valeur("activite").split()[2], pas)
         for visible, running in (("false", "true"), ("true", "false"), ("false", "false")):
@@ -552,7 +555,8 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(self.valeur("depliable"), f"true 0 true 1 {h}")
         # L'en-tête laisse à l'anneau de focus, posé sur son fond, un retrait de space.scale[1] de chaque côté du
         # contenu : le libellé ne touche plus l'anneau. Le bloc reste aligné sur le libellé.
-        marge, chevron, ecart = tokens["space"]["scale"][1], tokens["icons"]["sizes"]["dense"], tokens["space"]["scale"][0]
+        marge, ecart = tokens["space"]["scale"][1], tokens["space"]["scale"][0]
+        chevron = tokens["icons"]["sizes"]["dense"]
         gauche, droite, bloc = self.valeur("depliableCotes").split()
         self.assertEqual((float(gauche), float(droite), float(bloc)), (marge, marge, marge + chevron + ecart))
 
@@ -586,7 +590,8 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
                 time.sleep(0.05)
             return lu
 
-        for coche, selection, couleurs in (("true", "active", st["active"]["rest"]), ("false", "none", st["none"]["rest"]),
+        for coche, selection, couleurs in (("true", "active", st["active"]["rest"]),
+                                           ("false", "none", st["none"]["rest"]),
                                            ("true", "activemuted", st["activeMuted"]["rest"])):
             with self.subTest(coche=coche, selection=selection):
                 if selection == "activemuted":

@@ -33,8 +33,9 @@ import "etats.js" as Etats
 // radius, space), Etat, Texte, Icone, etats.js (herite).
 // Cotes : hauteur density.rowHeight ; pastille en retrait de space.scale[0] (4) des bords, rayon radius.control ;
 // retrait horizontal du contenu space.scale[2] (12), soit 8 dans la pastille ; écart entre icône et libellé
-// space.scale[1] (8) ; icône de icons.sizes.dense (16), centrée dans la hauteur par la mise en page (§ 7.10, v0.7). La pastille est le premier enfant du fond et le contour le premier enfant de la pastille :
-// la coque d'essai les lit ainsi.
+// space.scale[1] (8) ; icône de icons.sizes.dense (16), centrée dans la hauteur par la mise en page (§ 7.10, v0.7). La
+// pastille est le premier enfant du fond et le contour le premier enfant de la pastille : la coque d'essai les lit
+// ainsi.
 T.ItemDelegate {
     id: rangee
 
