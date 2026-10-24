@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.20. Historique en fin de document.
+Version 1.21. Historique en fin de document.
 
 Socle amorçable.
 
@@ -1697,13 +1697,24 @@ Composants a gagné environ 50 Mio de PSS entre les deux relevés de la planche,
 le chargement à la demande en plafonne le pic, mais l'allocateur ne rend pas au système la mémoire libérée
 (D82).
 
+### Relevé d'un overlay d'attention
+
+Planche sur la page Composants, `mesure.sh` sur 10 s, le 2026-10-24. Nicolas a ouvert l'attention puis l'a fermée
+par Échap ; l'ouverture depuis `FenetreAttention.qml` et la fermeture du déroulant par un nouveau clic sur son
+bouton sont validées à l'écran.
+
+| Attention | Processeur | PSS |
+| --- | --- | --- |
+| Fermée | 0,0 % | 294,0 Mio |
+| Ouverte | 0,8 % | 295,8 Mio |
+| Refermée | 0,0 % | 291,6 Mio |
+
+La fenêtre construite à l'ouverture est bien détruite à la fermeture : la mémoire revient sous son niveau de
+départ. Le flou et l'opacité du voile restent à L2-35.
+
 ### Ce qui reste à voir à l'écran
 
-- L'ouverture d'une attention depuis la planche depuis que sa fenêtre vit dans `FenetreAttention.qml` : le
-  composant compile dans les tests, l'ouverture réelle n'a pas été rejouée.
-- Le relevé de mémoire d'un overlay fermé, ouvert puis refermé, que la conception (§ 9) demandait.
-- Le clic sur le déroulant quand son menu est ouvert ; le glyphe d'agrandissement à 12 px ; le curseur natif du
-  compteur éditable.
+- Le glyphe d'agrandissement à 12 px ; le curseur natif du compteur éditable.
 - La bascule éteinte pressée, qui se fond dans son fond ; le chevron de la section dépliable en retrait de 8.
 - Le contour d'une liste, qui pourrait réapparaître quand sa fenêtre redevient active (Qt 6.12 ne donne pas la
   raison du focus).
@@ -1810,6 +1821,7 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 
 | Version | Date | Changement |
 | --- | --- | --- |
+| 1.21 | 2026-10-24 | Bibliothèque de composants (L2-01) : relevé d'un overlay d'attention fermé, ouvert, refermé ; ouverture de l'attention et fermeture du déroulant validées à l'écran |
 | 1.20 | 2026-10-24 | Bibliothèque de composants (L2-01), relecture finale : infobulle en troisième famille d'overlay, `Etat` qui fige les couleurs non peintes, tests du clavier qui n'exigent que Quickshell, section `[spinner]` de `motion.toml` ; points tranchés retirés de « Ce qui reste à voir » (texte de `controlRaised` éclairci en `text-emphasis`, infobulle à 500 ms) |
 | 1.19 | 2026-10-24 | Bibliothèque de composants (L2-01) : inventaire du module, import côte à côte, planche à deux onglets et commandes IPC, tests et coques d'essai offscreen, relevés, ce qui reste à voir à l'écran ; point ouvert du retour au repos tranché (`in`, D82) |
 | 1.18 | 2026-10-22 | Tokens de la coque (L2-34), relecture finale : recette précisée (transitions validées par Nicolas, fichier corrompu couvert par test et vérifié par Claude), mineures reportées complétées, corrections de `ColorSpring` et `mesure.sh`, points ouverts pour L2-01 (ressort de sortie) |
