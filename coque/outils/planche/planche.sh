@@ -4,10 +4,12 @@
 # planche en y redirigeant Theme par DUNEI_TOKENS_DIR. generated/ n'est jamais touché.
 # Entrées : `planche.sh [teinte]` génère (avec la teinte machine si aucune n'est donnée) et lance la planche ;
 #           `planche.sh teinte <n>` régénère seulement le brouillon : la planche ouverte bascule d'un bloc.
+#           `planche.sh theme <famille> <moment>` choisit le thème : appelle config/bin/dunei-theme avec
+#           DUNEI_TOKENS_DIR sur le brouillon, la planche ouverte bascule d'un bloc (le brouillon doit exister).
 #           DUNEI_PLANCHE_DIR remplace le dossier de brouillon, ${XDG_RUNTIME_DIR:-/tmp}/dunei-planche ; un
 #           chemin relatif part du répertoire courant.
 # Sortie : fenêtre « DuneI — planche de contrôle » et journal de Quickshell sur la sortie standard.
-# Erreurs : qs absent, teinte manquante, brouillon égal à generated/ ou génération refusée → message et
+# Erreurs : qs absent, teinte, famille ou moment manquant ou inconnu, brouillon égal à generated/ ou génération refusée → message et
 #           code 1 ; une seconde planche ne s'ouvre pas (qs -n).
 # Dépendances : quickshell ≥ 0.3 (qs), python3, generate_tokens.py et generate_motion.py du dépôt.
 set -euo pipefail
@@ -27,6 +29,11 @@ genere() {
 if [[ ${1:-} == teinte ]]; then
     [[ -n ${2:-} ]] || { echo "usage : planche.sh teinte <n>" >&2; exit 1; }
     genere "$2"; echo "planche : teinte $2 écrite dans $out"; exit 0
+fi
+if [[ ${1:-} == theme ]]; then
+    [[ -n ${2:-} && -n ${3:-} ]] || { echo "usage : planche.sh theme <famille> <moment>" >&2; exit 1; }
+    DUNEI_TOKENS_DIR="$out" "$repo/config/bin/dunei-theme" "$3" >/dev/null && DUNEI_TOKENS_DIR="$out" "$repo/config/bin/dunei-theme" famille "$2"
+    exit $?
 fi
 command -v qs >/dev/null || { echo "quickshell (qs) introuvable" >&2; exit 1; }
 genere "${1:-}"
