@@ -6,17 +6,17 @@ import "../Theme"
 // Rôle : habille le gabarit sans style T.Slider (conception, § 7.1), qui fournit les flèches du clavier et le
 // glissement, à la forme de macOS (§ 7.10). La piste, en pilule, est au fond du bureau (elevation.e0, bible :
 // « piste à E0 ») ; la partie remplie, de l'origine au centre de la poignée, est à l'accent, ou à l'accent sans
-// chroma sous le modificateur inactive (§ 7.5) ; la poignée, ronde et claire, prend le texte de son Etat au rôle
-// controlRaised, sans sélection : color.textEmphasis, terni seulement quand le curseur est désactivé. Le thème
-// étant sombre, ce texte est clair ; un rôle propre (knob) viendra si un thème clair apparaît. L'anneau de
-// focus entoure la poignée, sur visualFocus ; un clic ne vole pas le focus d'un champ (focusPolicy
+// chroma sous le modificateur inactive (§ 7.5) ; la poignée, ronde et claire, prend le rôle color.knob du thème
+// actif, et knob.disabled, précalculé par l'émetteur, quand le curseur est désactivé. L'anneau de focus entoure
+// la poignée, sur visualFocus ; un clic ne vole pas le focus d'un champ (focusPolicy
 // Qt.TabFocus, § 7.3).
 // Entrées : value, from, to, stepSize et le reste de l'API de T.Slider ; l'orientation verticale n'est pas
 // habillée.
 // Sorties : etat, l'Etat de la poignée (rôle, interaction, sélection, couleurs) ; down, copie de pressed, que
 // lit Etats.interaction (T.Slider n'a pas de down) ; poignee, diamètre de la poignée.
 // Erreurs : aucune ; avant le chargement des tokens, les cotes sont nulles et les couleurs transparentes.
-// Dépendances : QtQuick.Templates, Theme (density, elevation, stateColors), Etat, AnneauFocus.
+// Dépendances : QtQuick.Templates, Theme (density, elevation, stateColors, color.knob, knob.disabled), Etat,
+// AnneauFocus.
 // Cotes : largeur implicite density.sliderWidth, piste de density.sliderTrack d'épaisseur, poignée de
 // density.sliderHandle ; rayons en demi-hauteur.
 T.Slider {
@@ -61,7 +61,7 @@ T.Slider {
         width: curseur.poignee
         height: width
         radius: width / 2
-        color: etat.texte
+        color: (etat.interaction === "disabled" ? Theme.knob?.disabled : Theme.color?.knob) ?? "transparent"
 
         AnneauFocus {
             cible: parent

@@ -4,6 +4,7 @@ Ignoré sans session Wayland ou sans Quickshell (contrôle de GitHub) : la coque
 bon, car c'est le comportement de FileView face au disque qui est vérifié.
 """
 
+import json
 import os
 import shutil
 import subprocess
@@ -96,6 +97,32 @@ class EssaiCoque:
         temp = self.dir / ".coque-tokens.json.tmp"
         shutil.copy(self.tokens(teinte), temp)
         os.replace(temp, self.dir / "coque-tokens.json")
+
+    def vue(self, teinte: int, famille: str | None = None, moment: str | None = None) -> dict:
+        """Vue d'un thème des tokens générés, telle que Theme.tokens l'expose.
+
+        Entrées : teinte — 55, 200 ou 265 ; famille, moment — le thème voulu, ou None pour celui du défaut
+                  déclaré par les tokens.
+        Sortie : dictionnaire des clés partagées du fichier (sans themes) et de la branche themes[famille][moment].
+        Erreurs : KeyError si le thème n'existe pas ; OSError ou JSONDecodeError si le fichier manque.
+        Dépendances : tokens.
+        """
+        fichier = json.loads(self.tokens(teinte).read_text(encoding="utf-8"))
+        defaut = fichier["defaut"]
+        branche = fichier.pop("themes")[famille or defaut["famille"]][moment or defaut["moment"]]
+        return {**fichier, **branche}
+
+    def choisir(self, famille: str, moment: str) -> None:
+        """Écrit le choix du thème comme la commande dunei-theme : fichier temporaire, puis renommage.
+
+        Entrées : famille, moment — valeurs écrites telles quelles, même inconnues.
+        Sortie : aucune ; theme.json remplacé d'un coup dans le dossier surveillé.
+        Erreurs : OSError si l'écriture échoue. Dépendances : aucune.
+        """
+        fd, temp = tempfile.mkstemp(dir=self.dir, prefix=".theme.json.")
+        with os.fdopen(fd, "w", encoding="utf-8") as sortie:
+            json.dump({"famille": famille, "moment": moment}, sortie)
+        os.replace(temp, self.dir / "theme.json")
 
     def ipc(self, *commande: str) -> None:
         """Appelle une fonction IPC de la coque d'essai.
@@ -218,6 +245,69 @@ class CoqueThemeTest(EssaiCoque, unittest.TestCase):
         # Réécriture en place, comme le générateur : la lecture suivante réussie s'applique.
         (self.dir / "coque-tokens.json").write_text(self.tokens(200).read_text(encoding="utf-8"), encoding="utf-8")
         self.attendre("Theme : chargé, teinte 200")
+
+    def test_bascule_jour(self):
+        # Point de vigilance 2 : theme.json, absent au lancement, paraît puis change par renommage, comme
+        # l'écrit dunei-theme ; FileView doit voir les deux renommages. Chaque bascule pose le ressort d'un
+        # coup (D81) : un nouvel objet de tokens, sans animation.
+        self.installer(55)
+        self.lancer(self.dir)
+        nuit = self.vue(55)["color"]["surfacePanel"].lower()
+        self.attendre(f"essai : thème thematisee/nuit {nuit} teinte 55")
+        self.choisir("dominante", "jour")
+        jour = self.vue(55, "dominante", "jour")["color"]["surfacePanel"].lower()
+        self.assertNotEqual(jour, nuit)
+        self.attendre(f"essai : thème dominante/jour {jour} teinte 55")
+        self.choisir("thematisee", "nuit")
+        self.attendre(f"essai : thème thematisee/nuit {nuit} teinte 55", 2)
+        self.attendre("essai : ressort", 3)
+        self.assertEqual(self.journal().count("essai : ressort posé"), 3, self.journal())
+
+    def test_choix_absent(self):
+        # Point de vigilance 1 : sans theme.json, le défaut des tokens s'applique en silence.
+        self.installer(55)
+        self.lancer(self.dir)
+        self.attendre(f"essai : thème thematisee/nuit {self.vue(55)['color']['surfacePanel'].lower()}")
+        time.sleep(0.3)
+        self.assertNotIn(" ERROR ", self.journal())
+        self.assertNotIn(" WARN ", self.journal())
+
+    def test_choix_inconnu(self):
+        # Point de vigilance 1 : un nom inconnu donne le défaut et un seul avertissement, jamais d'erreur ; la
+        # relecture des tokens (make install) ne le répète pas.
+        self.installer(55)
+        self.choisir("verre", "nuit")
+        self.lancer(self.dir)
+        self.attendre("essai : thème thematisee/nuit")
+        self.attendre("inconnu")
+        self.remplacer(55)
+        self.attendre("Theme : chargé, teinte 55", 2)
+        time.sleep(0.3)
+        self.assertEqual(self.journal().count("inconnu"), 1, self.journal())
+        self.assertIn("Theme : thème verre/nuit inconnu ; défaut thematisee/nuit appliqué", self.journal())
+        self.assertNotIn(" ERROR ", self.journal())
+
+    def test_choix_vide(self):
+        # Point de vigilance 1 : un theme.json vide vaut le défaut, signalé une fois, sans erreur.
+        self.installer(55)
+        self.choisir("dominante", "jour")
+        (self.dir / "theme.json").write_text("")
+        self.lancer(self.dir)
+        self.attendre("essai : thème thematisee/nuit")
+        self.attendre("theme.json ignoré")
+        time.sleep(0.3)
+        self.assertEqual(self.journal().count(" WARN "), 1, self.journal())
+        self.assertNotIn(" ERROR ", self.journal())
+
+    def test_teinte_garde_le_jour(self):
+        # Point de vigilance 3 : régénérer la teinte pendant un thème de jour garde le jour.
+        self.installer(55)
+        self.choisir("dominante", "jour")
+        self.lancer(self.dir)
+        self.attendre("essai : thème dominante/jour")
+        self.remplacer(200)
+        jour = self.vue(200, "dominante", "jour")["color"]["surfacePanel"].lower()
+        self.attendre(f"essai : thème dominante/jour {jour} teinte 200")
 
     def test_fichier_absent(self):
         self.lancer(self.dir)

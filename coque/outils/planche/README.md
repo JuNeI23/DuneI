@@ -1,6 +1,6 @@
 # Planche de contrôle des tokens de la coque
 
-Version 0.12 — outil de développement de L2-34, gardé ensuite pour tout travail sur les tokens et la coque ; page
+Version 0.13 — outil de développement de L2-34, gardé ensuite pour tout travail sur les tokens et la coque ; page
 des composants ajoutée en L2-01.
 
 La planche affiche dans sa fenêtre (tuilée ou flottante, selon les règles d'Hyprland) deux onglets : « Tokens »,
@@ -22,8 +22,9 @@ de brouillon, `${XDG_RUNTIME_DIR:-/tmp}/dunei-planche`, que `DUNEI_PLANCHE_DIR` 
 `generated/`, refusé), puis lance
 `qs -n -p coque/outils/planche` avec `DUNEI_TOKENS_DIR` pointé vers ce dossier. `generated/` n'est jamais
 touché. Une seconde planche ne s'ouvre pas tant que la première tourne (`qs -n`). Le journal de Quickshell
-reste sur le terminal : chaque lecture appliquée y écrit « Theme : chargé, teinte N », chaque fichier
-invalide un avertissement, la planche gardant alors ses valeurs.
+reste sur le terminal : chaque lecture appliquée y écrit « Theme : chargé, teinte N, thème F/M », chaque
+fichier invalide un avertissement, la planche gardant alors ses valeurs. La légende de la planche nomme le thème
+actif (famille/moment) ; un `theme.json` posé dans le brouillon le choisit, comme sur la machine.
 
 Pour éprouver un fichier corrompu : écrire n'importe quoi dans `coque-tokens.json` du brouillon ; la planche
 ne bouge pas, puis `planche.sh teinte <n>` la rétablit.
@@ -193,3 +194,4 @@ dessin. D'où la règle D80 : un indicateur ne tourne que visible et en marche.
 | 0.10 | 2026-10-24 | Indicateur d'activité en trois formes au choix (`arc`, `grains`, `sable`), animées en continu sur le fil de rendu : grille figée à mi-cycle, trois vivants nommés et arrêtés par défaut, chacun avec son interrupteur ; relevés de l'indicateur dans une petite fenêtre ; bascule à glyphe agrandie (40 px, glyphe de 20). |
 | 0.11 | 2026-10-24 | Cinquième validation : indicateur d'activité réduit aux trois grains (grille arrêtée et à mi-cycle, vivant arrêté par défaut) ; interrupteur provisoire du retour au repos retiré, le retour est figé sur `in`. |
 | 0.12 | 2026-10-24 | Relecture finale de L2-01 : onglets décrits tels qu'ils sont (piste au rayon `control`, segment au rayon `control − segment_inset`), délai de l'infobulle (500 ms), paragraphes trop longs rejoints. |
+| 0.13 | 2026-10-24 | Thèmes statiques (L2-40) : la légende nomme le thème actif (famille/moment), le journal aussi ; un `theme.json` posé dans le brouillon choisit le thème. |

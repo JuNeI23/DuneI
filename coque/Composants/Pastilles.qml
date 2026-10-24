@@ -6,21 +6,22 @@ import "etats.js" as Etats
 
 // Pastilles — les trois pastilles de fenêtre de macOS : fermer, réduire, agrandir.
 // Rôle : une rangée de trois disques de density.pastille de diamètre, espacés de space.scale[1] (8), aux couleurs
-// color.error, color.warning et color.success (conception, § 7.10). Au survol du groupe, chaque disque montre son
-// glyphe dessiné (QtQuick.Shapes) : une croix, un tiret, et les deux flèches d'agrandissement de macOS (deux triangles
-// pleins pointés vers les coins opposés). Les glyphes sont en color.surfaceBase, la couleur la plus sombre du thème :
-// le contraste le plus fort qu'offre Theme sur les trois teintes (4,2:1 sur error, 8,8:1 sur warning et 8,6:1 sur
-// success à la teinte 55), au-dessus des 3:1 demandés à un élément graphique. Le disque survolé s'éclaircit et le
-// disque pressé fonce franchement : il prend la variante de survol (color.errorHover, warningHover, successHover) ou la
-// variante pressée (errorPressed…) de sa teinte, précalculées par l'émetteur dans l'espace perceptif du thème avec les
-// écarts propres aux pastilles (tokens.toml, section pastilles), plus marqués que ceux des états ; le QML ne dérive
-// aucune couleur, et le repos garde la teinte. Sous le modificateur inactive hérité, comme une fenêtre inactive de
-// macOS, les trois disques passent au neutre color.borderDefault et ne montrent plus de glyphe ; un disque désactivé
-// (reduireActif ou agrandirActif faux) prend ce même neutre, sans glyphe ni réaction. Les pastilles ne sont pas un
-// arrêt de tabulation (focusPolicy Qt.NoFocus) : la fenêtre se ferme, se réduit et s'agrandit aussi au clavier, par
-// Hyprland. Leur rôle sous un gestionnaire en tuiles et leur emplacement se décideront avec la décoration des fenêtres
-// (proposition : fermer la fenêtre, l'envoyer au bureau spécial, la passer en plein écran) ; ce composant n'émet que
-// des signaux.
+// pastilles.error, pastilles.warning et pastilles.success (conception, § 7.10). Ces couleurs forment un petit jeu de
+// tokens propre, identique dans les quatre thèmes : comme sur macOS, les pastilles ne suivent pas le moment. Au survol
+// du groupe, chaque disque montre son glyphe dessiné (QtQuick.Shapes) : une croix, un tiret, et les deux flèches
+// d'agrandissement de macOS (deux triangles pleins pointés vers les coins opposés). Les glyphes sont en
+// pastilles.glyph, le surfaceBase de la nuit : le contraste le plus fort sur les trois teintes (4,2:1 sur error, 8,8:1
+// sur warning et 8,6:1 sur success à la teinte 55), au-dessus des 3:1 demandés à un élément graphique. Le disque
+// survolé s'éclaircit et le disque pressé fonce franchement : il prend la variante de survol (pastilles.errorHover,
+// warningHover, successHover) ou la variante pressée (errorPressed…) de sa teinte, précalculées par l'émetteur dans
+// l'espace perceptif du thème avec les écarts propres aux pastilles (tokens.toml, section pastilles), plus marqués que
+// ceux des états ; le QML ne dérive aucune couleur, et le repos garde la teinte. Sous le modificateur inactive hérité,
+// comme une fenêtre inactive de macOS, les trois disques passent au neutre color.borderDefault du thème actif et ne
+// montrent plus de glyphe ; un disque désactivé (reduireActif ou agrandirActif faux) prend ce même neutre, sans glyphe
+// ni réaction. Les pastilles ne sont pas un arrêt de tabulation (focusPolicy Qt.NoFocus) : la fenêtre se ferme, se
+// réduit et s'agrandit aussi au clavier, par Hyprland. Leur rôle sous un gestionnaire en tuiles et leur emplacement se
+// décideront avec la décoration des fenêtres (proposition : fermer la fenêtre, l'envoyer au bureau spécial, la passer
+// en plein écran) ; ce composant n'émet que des signaux.
 // Entrées : reduireActif, agrandirActif, vrais par défaut ; inactif, le modificateur inactive, hérité par défaut
 // (dnInactive) ; forcer, réservée à la planche de contrôle : "hover" montre les glyphes et la variante de survol des
 // trois disques sans geste, "pressed" leur variante pressée ; vide par défaut, et jamais posée par une surface de la
@@ -30,8 +31,8 @@ import "etats.js" as Etats
 // disque expose couleur, la couleur peinte, et trace, son glyphe.
 // Erreurs : aucune ; avant le chargement des tokens, les cotes sont nulles et les couleurs transparentes.
 // Dépendances : QtQuick.Shapes (moteur CurveRenderer), QtQuick.Templates (AbstractButton : clic, pression),
-// Theme (density, space, color), etats.js (herite) ; HoverHandler, qui suit le survol du groupe, intervalles
-// compris, et celui de chaque disque, quel que soit Qt.styleHints.useHoverEffects.
+// Theme (density, space, pastilles, color.borderDefault), etats.js (herite) ; HoverHandler, qui suit le survol du
+// groupe, intervalles compris, et celui de chaque disque, quel que soit Qt.styleHints.useHoverEffects.
 // Cotes : diamètre density.pastille, écart space.scale[1] ; les glyphes sont décrits dans le carré unité et mis à
 // l'échelle du diamètre : leurs points et leur trait (un dixième du diamètre) sont des fractions, non des cotes.
 Row {
@@ -69,12 +70,12 @@ Row {
 
             required property var modelData
             required property int index
-            readonly property color base: Theme.color?.surfaceBase ?? "transparent"
+            readonly property color base: Theme.pastilles?.glyph ?? "transparent"
             readonly property bool neutre: !enabled || pastilles.inactif
             readonly property bool enfonce: pressed || pastilles.forcer === "pressed"
             readonly property bool survole: survolDisque.hovered || pastilles.forcer === "hover"
             readonly property color couleur: (neutre ? Theme.color?.borderDefault
-                : Theme.color?.[modelData.teinte + (enfonce ? "Pressed" : survole ? "Hover" : "")]) ?? "transparent"
+                : Theme.pastilles?.[modelData.teinte + (enfonce ? "Pressed" : survole ? "Hover" : "")]) ?? "transparent"
             readonly property alias trace: trace
 
             focusPolicy: Qt.NoFocus
