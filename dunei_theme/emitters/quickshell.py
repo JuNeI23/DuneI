@@ -11,7 +11,7 @@ import json
 import re
 
 from ..color import Oklch, oklch, to_hex
-from ..model import defaut, resolve, role_text, theme_data, themes
+from ..model import accent_muet, defaut, resolve, role_text, theme_data, themes
 
 _BLANC = Oklch(1, 0, 0)
 
@@ -69,14 +69,11 @@ def _states(model: dict) -> dict:
     Entrée : model — sortie de model.resolve.
     Sortie : dict states[rôle][sélection][interaction] = {"fill": "#rrggbb", "text": "#rrggbb"},
              soit 5 × 4 × 4 entrées (controlOff : piste éteinte et rail d'onglets). Erreurs : KeyError si une section du TOML manque.
-    Dépendances : color.oklch, color.to_hex, model.role_text.
+    Dépendances : color.oklch, color.to_hex, model.accent_muet, model.role_text.
     """
     raw, roles = model["raw"], model["roles"]
     ceiling, st = raw["theme"]["chroma_ceiling"], raw["states"]
     acc = model["accent"]
-    muet = st["container_inactive"]["accent_chroma_multiplier"]
-    # L'accent muet garde la luminosité de l'accent, sauf si le thème lui en donne une (fill_lightness, au jour).
-    muet_l = st["container_inactive"].get("fill_lightness", acc.l)
 
     def decale(col, dl=0.0, dc=1.0):
         """Couleur dont la luminosité est décalée et le chroma multiplié, rabattue dans le gamut.
@@ -94,7 +91,7 @@ def _states(model: dict) -> dict:
         """
         return _eteint(model, col, fond)
 
-    muet_fond = oklch(muet_l, acc.c * muet, acc.h, ceiling)
+    muet_fond = accent_muet(model)
 
     def combinaisons(nom, selection):
         """Les quatre interactions d'une sélection sur un rôle de surface.
@@ -216,11 +213,11 @@ def _theme(model: dict) -> dict:
 def _pastilles(model: dict) -> dict:
     """Couleurs des pastilles de fenêtre, indépendantes du thème.
 
-    Le glyphe est le fond de base du thème par défaut ; les variantes de survol et de pression des teintes
-    sémantiques montent ou descendent la luminosité des écarts de la section pastilles, en OKLCH, sans plafond de
+    Le glyphe est le fond de base de la nuit de la famille par défaut ; les variantes de survol et de pression
+    des teintes sémantiques montent ou descendent la luminosité des écarts de la section pastilles, en OKLCH, sans plafond de
     chroma, que la teinte de base ne subit pas non plus.
 
-    Entrée : model — sortie de model.resolve sur le thème par défaut.
+    Entrée : model — sortie de model.resolve sur la nuit de la famille par défaut.
     Sortie : dict {glyph, error, errorHover, errorPressed, warning, …, success, …}.
     Erreurs : KeyError si une section du TOML manque. Dépendances : color.Oklch, color.to_hex.
     """
@@ -235,7 +232,8 @@ def emit(model: dict) -> str:
     """Fichier `coque-tokens.json` : les quatre thèmes, les pastilles et les cotes partagées.
 
     Entrée : model — sortie de model.resolve ; seuls `raw` et `hue` servent, chaque thème étant résolu ici.
-    Sortie : contenu du fichier JSON. Erreurs : KeyError si une section du TOML manque.
+    Sortie : contenu du fichier JSON. Erreurs : KeyError si une section du TOML manque ou si le moment « nuit » n'existe pas
+             (les pastilles en dérivent).
     Dépendances : json, _camel_keys, _theme, _pastilles, model.themes, model.defaut, model.theme_data, model.resolve.
     """
     raw, hue = model["raw"], model["hue"]
@@ -257,6 +255,6 @@ def emit(model: dict) -> str:
         "moments": list(raw["moments"]),
         "defaut": {"famille": fam, "moment": mom},
         "themes": {f: {m: _theme(resolus[(f, m)]) for g, m in resolus if g == f} for f in raw["familles"]},
-        "pastilles": _pastilles(resolus[(fam, mom)]),
+        "pastilles": _pastilles(resolus[(fam, "nuit")]),
     }
     return json.dumps(out, indent=2, ensure_ascii=False) + "\n"

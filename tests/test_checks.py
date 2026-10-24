@@ -17,7 +17,7 @@ def model(text_l=0.95, surface_l=0.18, on_accent_l=0.99, offsets=(0, 120, 240), 
     grey = lambda l: Oklch(l, 0.0, 0.0)
     keys = ["text-disabled", "text-tertiary", "text-secondary", "text-primary", "text-emphasis", "border-subtle",
             "border-default", "border-strong", "control-raised-text", "accent-standalone", "error", "warning",
-            "success", "info", "categorical", "knob-accent", "knob-off"]
+            "success", "info", "categorical", "knob-accent", "knob-off", "on-accent-muted"]
     return {
         "roles": {"text-primary": grey(text_l), "text-emphasis": grey(emphasis_l), "text-secondary": grey(secondary_l),
                   "text-tertiary": grey(tertiary_l), "text-disabled": grey(disabled_l),
@@ -35,6 +35,7 @@ def model(text_l=0.95, surface_l=0.18, on_accent_l=0.99, offsets=(0, 120, 240), 
         "raw": {
             "meta": {"contrast_target_body": 90, "contrast_floor": 75, "planchers": {k: 0 for k in keys} | (floors or {})},
             "theme": {"accent_chroma": 0.1, "chroma_ceiling": 0.16},
+            "states": {"container_inactive": {"accent_chroma_multiplier": 0.5}},
             "categorical": {"min_angular_separation": 30, "hue_offsets": list(offsets)},
             "scaling": {"height_multiple": 4},
             "density": {"normal": {"control_height": heights[0], "row_height": heights[1]}},
@@ -91,6 +92,13 @@ class CheckTest(unittest.TestCase):
         self.assertEqual(planchers(m), [])
         m["roles"]["control-off"] = Oklch(0.96, 0.0, 0.0)
         self.assertTrue(has(planchers(m), "knob-off", "plancher"))
+
+    def test_on_accent_muted(self):
+        """Le sur-accent sur un accent muet trop clair franchit le plancher on-accent-muted."""
+        m = model(floors={"on-accent-muted": 30})
+        self.assertEqual(planchers(m), [])
+        m["raw"]["states"]["container_inactive"]["fill_lightness"] = 0.95
+        self.assertTrue(has(planchers(m), "on-accent-muted", "plancher"))
 
     def test_ordre_inverse(self):
         """text-tertiary plus contrasté que text-secondary renverse l'ordre des rôles."""

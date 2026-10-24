@@ -31,6 +31,20 @@ def role_text(data: dict, role: str) -> str:
     return data.get("role_text", {}).get(role, "text-primary")
 
 
+def accent_muet(model: dict) -> Oklch:
+    """Fond de l'accent muet (sélection inactive d'un groupe qui a perdu le focus).
+
+    Rôle : chroma de l'accent multiplié par states.container_inactive.accent_chroma_multiplier, à la luminosité
+      states.container_inactive.fill_lightness quand le thème la donne (le jour), celle de l'accent sinon.
+    Entrée : model — sortie de resolve.
+    Sortie : Oklch rabattu dans le gamut. Erreurs : KeyError si states.container_inactive manque.
+    Dépendances : color.oklch.
+    """
+    raw, acc = model["raw"], model["accent"]
+    ci = raw["states"]["container_inactive"]
+    return oklch(ci.get("fill_lightness", acc.l), acc.c * ci["accent_chroma_multiplier"], acc.h, raw["theme"]["chroma_ceiling"])
+
+
 def themes(data: dict) -> list[tuple[str, str]]:
     """Liste des thèmes composables.
 
@@ -108,9 +122,10 @@ def resolve(data: dict, hue_override: float | None = None) -> dict:
     steps, acc, cat = data["lightness"]["steps"], data["accent"], data["categorical"]
 
     # Neutres : chroma majoré sous L 0.45, la perception y est plus faible.
-    # neutral_profile (facultatif) remplace ce facteur échelon par échelon.
+    # neutral_profile (facultatif) remplace ce facteur échelon par échelon ; il doit avoir autant de facteurs que
+    # d'échelons, sinon zip(strict=True) lève ValueError.
     profil = data["lightness"].get("neutral_profile") or [th["dark_chroma_boost"] if l < 0.45 else 1 for l in steps]
-    ramp = [oklch(l, th["neutral_chroma"] * scale * f, hue, ceiling) for l, f in zip(steps, profil)]
+    ramp = [oklch(l, th["neutral_chroma"] * scale * f, hue, ceiling) for l, f in zip(steps, profil, strict=True)]
 
     def accent(step, lightness=None):
         """Accent à un échelon de l'échelle de luminosité, ou à une luminosité explicite.

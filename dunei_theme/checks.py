@@ -7,7 +7,7 @@ sur la vigilance de quelqu'un.
 from __future__ import annotations
 
 from .color import apca_lc
-from .model import role_text
+from .model import accent_muet, role_text
 
 # Fonds dont le corps de texte est contrôlé en APCA, chacun avec le texte que lui donne model.role_text.
 BODY_SURFACES = ("surface-window", "surface-panel", "surface-raised", "control-raised")
@@ -61,9 +61,9 @@ def mesures(model: dict) -> dict[str, float]:
     Sortie : {clé: Lc minimal}. Clés : chaque rôle text-* et border-* sur les trois surfaces ;
              control-raised-text (role_text sur control-raised) ; accent-standalone, error, warning, success,
              info et categorical (toutes les catégorielles) sur les trois surfaces ; knob-accent (knob sur accent) ;
-             knob-off (knob sur la piste éteinte, rôle control-off).
+             knob-off (knob sur la piste éteinte, rôle control-off) ; on-accent-muted (on_accent sur l'accent muet).
     Erreurs : KeyError si un rôle, une sémantique ou raw["role_text"] manque.
-    Dépendances : _lc, model.role_text, SURFACES.
+    Dépendances : _lc, model.role_text, model.accent_muet, SURFACES.
     """
     roles, out = model["roles"], {}
     for name in (n for n in roles if n.startswith(("text-", "border-"))):
@@ -75,6 +75,7 @@ def mesures(model: dict) -> dict[str, float]:
         out[name] = min(_lc(c, roles[bg]) for c in cs for bg in SURFACES)
     out["knob-accent"] = _lc(model["knob"], model["accent"])
     out["knob-off"] = _lc(model["knob"], roles["control-off"])
+    out["on-accent-muted"] = _lc(model["on_accent"], accent_muet(model))
     return out
 
 
@@ -108,8 +109,9 @@ def ordre(model: dict) -> list[str]:
             warn.append(f"ordre des textes sur {bg} : les Lc ne croissent pas strictement de text-disabled à text-primary")
         if lc["text-emphasis"] < lc["text-primary"]:
             warn.append(f"ordre des textes sur {bg} : text-emphasis est sous text-primary")
-        if lc["text-disabled"] <= max(lc[n] for n in BORDURES):
-            warn.append(f"ordre sur {bg} : text-disabled ne dépasse pas border-strong")
+        forte = max(BORDURES, key=lambda n: (lc[n], BORDURES.index(n)))  # à égalité, la plus forte
+        if lc["text-disabled"] <= lc[forte]:
+            warn.append(f"ordre sur {bg} : text-disabled ne dépasse pas {forte}")
     return warn
 
 

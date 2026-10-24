@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas
 
-Document normatif. Version 0.13. Historique en fin de document.
+Document normatif. Version 0.14. Historique en fin de document.
 
 ## Comment lire ce document
 
@@ -159,6 +159,7 @@ Usages autorisés : bureaux virtuels, étiquettes, coloration syntaxique, série
 - Plancher de rejet : **Lc 75**.
 - Au-dessus de la cible et du plancher, **chaque rôle a son plancher propre** (D83) : le plus petit Lc que tient la nuit thématisée sur ses fonds de référence, tenu dans les quatre thèmes et aux quatre teintes de référence (0, 55, 200, 265). L'ordre des rôles est contrôlé : chaque texte plus contrasté que le précédent, tout texte plus contrasté que toute bordure.
 - **Exception, une seule : le jour thématisé** (D84). Sa base colorée, voulue par Nicolas pour que ce thème « tire tout l'avantage d'avoir des couleurs », ramène le corps de texte à Lc 69 à 76 : sous la cible de 90 et, par endroits, sous le plancher de rejet de 75. Ce thème porte donc ses propres seuils, égaux aux minima mesurés (`contrast_target_body` et `contrast_floor` à 69, planchers par rôle propres). Aucun autre thème n'en bénéficie, et aucune autre dérogation n'est permise sans une entrée au journal.
+- **Seconde dérogation, bornée : l'état inactif au jour** (D83). Le texte sur-accent posé sur l'accent muet de la sélection inactive (luminosité 0,78, validée à l'écran par Nicolas) ne tient que Lc 41 dans les deux thèmes de jour : un état inactif, volontairement atténué, hors du corps de texte. Elle est bornée par le plancher `on-accent-muted` de ce moment (41), contre 79 la nuit.
 - WCAG 2 conservé comme filet réglementaire, jamais comme critère de conception.
 
 ## 3. Dimensions
@@ -885,3 +886,4 @@ Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si 
 | 0.11 | 2026-10-24 | Chapitre 7 : focus des rangées en contour intérieur, champ sans anneau, cran des contrôles et rôle `controlRaised`, un seul arrêt par liste et par barre d'onglets, formes à la manière de macOS ; annexe E : rangée, champ, bouton, case, interrupteur et onglets précisés, radio, jauge, bascule à glyphe, compteur, menu déroulant, champ de recherche, section dépliable, pastilles de fenêtre et indicateur d'activité ajoutés ; écart du délai de l'infobulle signalé (D82) |
 | 0.12 | 2026-10-24 | Chapitre 7 : texte de `controlRaised` en `text-emphasis` (Lc ≥ 90) ; annexe E : infobulle à 500 ms, écart refermé, et pastilles de fenêtre sans transition `state`, puisqu'elles n'ont pas d'`Etat` |
 | 0.13 | 2026-10-25 | Chapitre 2 : contrat révisé, une famille et un moment, planchers de contraste par rôle, deux échelles (nuit, jour de la dominante et jour thématisé), sémantiques par moment, chroma de la nuit thématisée à 0,014, exception du corps de texte dans le jour thématisé ; chapitre 5 : ombre au jour ; chapitre 7 : rôles `knob` et `control-off`, contour des contrôles blancs du jour, pastilles hors du moment (D83, D84) |
+| 0.14 | 2026-10-25 | Chapitre 2 : seconde dérogation, bornée, du contraste (texte sur l'accent muet de l'état inactif au jour, Lc 41, plancher `on-accent-muted`) (D83) |

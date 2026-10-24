@@ -19,7 +19,9 @@ contrast_target_body = 90  # Lc — corps 13px/400 sur fond sombre
 contrast_floor = 75        # Lc — plancher de rejet
 
 # Planchers de contraste par rôle (Lc), mesurés sur la nuit thématisée aux teintes 0, 55, 200 et 265, arrondis à
-# l'entier inférieur. Tous les thèmes les respectent ; le jour est calibré pour les atteindre (conception § 5.2).
+# l'entier inférieur. Tous les thèmes les respectent, hormis les planchers propres à un moment ou à un couple
+# (knob-off et on-accent-muted au jour ; le jour thématisé, D84), qui ne peuvent que les borner par leur minimum mesuré
+# (conception § 5.2).
 # Pour les remesurer après une révision de la nuit : python3 mesure_planchers.py
 [meta.planchers]
 "border-subtle" = 0
@@ -39,6 +41,7 @@ contrast_floor = 75        # Lc — plancher de rejet
 "info" = 48
 "knob-accent" = 73
 "knob-off" = 98
+"on-accent-muted" = 79   # texte sur-accent sur l'accent muet de la sélection inactive (états)
 
 
 # ===========================================================================
@@ -85,7 +88,7 @@ assumed_color_depth = 8
 # Défaut système. hue et chroma_scale sont les SEULES valeurs du fichier
 # surchargeables à chaud, par le panneau de thème ; la famille et le moment se
 # choisissent parmi [familles.*] et [moments.*], tables de surcharges fusionnées
-# sur la base dans cet ordre : base, moment, famille. La teinte propre à chaque
+# sur la base dans cet ordre : base, moment, famille, puis la surcharge croisée du couple. La teinte propre à chaque
 # machine (caladan…) vit dans la surcharge, jamais ici (L4-08).
 hue = 55                   # 0–360, quantifiée par pas de 5°
 chroma_scale = 1.0         # 0.8–1.2, borné
@@ -486,7 +489,7 @@ never_animate_blur_radius = true   # fondu croisé net/flouté : c'est une règl
 # ===========================================================================
 # THÈMES STATIQUES — surcharges de la base, qui décrit la nuit thématisée
 # ===========================================================================
-# Ordre de fusion : base, moment, famille (model.theme_data).
+# Ordre de fusion : base, moment, famille, puis surcharge croisée du couple (model.theme_data).
 
 # Contrôles blancs : traitement des contrôles qui n'ont pas de filet propre (bouton, onglet, déroulant, disque de
 # l'interrupteur et de la bascule, poignée du curseur). La nuit n'en a aucun ; le jour, où ces contrôles sont blancs
@@ -518,7 +521,8 @@ steps = [0.925, 0.968, 0.98, 1.0, 0.89, 0.85, 0.76, 0.68, 0.60, 0.50, 0.25, 0.18
 # Facteur de chroma neutre par échelon, sur la chroma neutre du jour thématisé (0,020, surcharge croisée plus bas) :
 # 0,025 sur le bureau, la fenêtre et le panneau, pour que la teinte s'y sente ; 0,012 entre L 0,8 et 0,9 ; 0,020
 # au-dessous, majoré sous L 0,45 ; blanc pur à E3. La dominante, à chroma neutre nulle, reste strictement neutre.
-# Le jour thématisé a sa propre échelle et ses propres facteurs (surcharge croisée plus bas).
+# Le jour thématisé a sa propre échelle et ses propres facteurs (surcharge croisée plus bas) : ce profil n'agit donc
+# plus sur aucun thème (la dominante, à chroma neutre nulle, l'ignore) ; il reste comme valeur de repli du moment.
 neutral_profile = [1.25, 1.25, 1.25, 0.0, 0.6, 0.6, 1.0, 1.0, 1.0, 1.0, 1.4, 1.4]
 
 [moments.jour.roles]
@@ -531,8 +535,10 @@ off_track = true
 shadow_opacity = 0.20
 
 # Le knob blanc sur la piste éteinte grise : un plancher propre au jour (la nuit mesure Lc 98, sur un fond sombre).
+# Le sur-accent blanc sur l'accent muet (0,78) y tient Lc 41, un état inactif volontairement atténué (D83).
 [moments.jour.meta.planchers]
 "knob-off" = 15
+"on-accent-muted" = 41
 
 [moments.jour.elevation.e2]
 sheen = false
@@ -577,7 +583,8 @@ lightness_step = 2
 
 # Modificateur inactive du jour : l'accent sans chroma à la luminosité de l'accent (0,53) assombrissait tout le
 # panneau ; il remonte dans la gamme claire (L 0,78, validé à l'écran par Nicolas), au-dessus de la piste éteinte
-# grise. Le sur-accent blanc y garde Lc 55.
+# grise. Le sur-accent blanc n'y tient plus que Lc 41 (Lc 55 à 0,70, valeur d'avant) : un état inactif volontairement
+# atténué, dérogation consignée en D83 et bornée par le plancher on-accent-muted de ce moment.
 [moments.jour.states.container_inactive]
 fill_lightness = 0.78
 

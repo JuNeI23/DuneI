@@ -1866,9 +1866,9 @@ détail ; voici le contrat révisé, les choix et leur raison. Il remplace le co
 - **Les pastilles de fenêtre** ne dépendent pas du moment, comme sur macOS : leurs fonds restent les couleurs
   sémantiques de nuit et leur glyphe le `surface-base` de nuit, identiques dans les quatre thèmes.
 - **Le fichier du choix.** `~/.config/dunei/theme.json` (`{ "famille": …, "moment": … }`) appartient à la
-  machine, pas à la chaîne : `make install` ne l'écrit ni ne l'écrase, il n'entre pas dans le dépôt. Absent,
-  vide ou portant un nom inconnu, il vaut le défaut (`thematisee`, `nuit`), signalé une fois au journal de
-  Quickshell. `dunei-theme` l'écrit par fichier temporaire et renommage. La bascule s'applique d'un bloc, sans
+  machine, pas à la chaîne : `make install` ne l'écrit ni ne l'écrase, il n'entre pas dans le dépôt. Absent
+  (alors en silence), vide ou portant un nom inconnu (alors signalé une fois au journal de Quickshell), il vaut
+  le défaut (`thematisee`, `nuit`). `dunei-theme` l'écrit par fichier temporaire et renommage. La bascule s'applique d'un bloc, sans
   animation : `ColorSpring` reconnaît un changement de thème à l'identité de l'objet des tokens.
 - **Valeurs tranchées à l'écran par Nicolas.** Chaque valeur de jour de la conception était un point de départ ;
   six passes l'ont corrigé.
@@ -1882,6 +1882,10 @@ détail ; voici le contrat révisé, les choix et leur raison. Il remplace le co
     écrase l'accent allumé.
   - *Jour, accent muet du modificateur `inactive` à 0,78* : à 0,53 (la luminosité de l'accent), il assombrissait
     tout le panneau ; l'accent muet est resté dans la gamme claire (0,70 d'abord, puis 0,78).
+    **Seconde dérogation à la bible, bornée, valant pour les deux thèmes de jour** : le sur-accent blanc y tient
+    Lc 41 (Lc 55 à 0,70, 79 la nuit), un état inactif volontairement atténué. La valeur reste celle de Nicolas ;
+    la mesure `on-accent-muted` la borne par un plancher de 79 (base, nuit) et de 41
+    (`[moments.jour.meta.planchers]`), de sorte qu'un réglage qui la ferait descendre rend `make check` rouge.
   - *Jour, contrôles blancs cernés*, d'après la remarque de Nicolas : « le tout blanc fonctionne sur des items où
     il y a un contour ». Le radio, la case et le champ, déjà cernés, étaient « très joli » ; les boutons,
     l'interrupteur éteint, l'onglet coché et la poignée ne l'étaient pas.
@@ -1910,7 +1914,9 @@ détail ; voici le contrat révisé, les choix et leur raison. Il remplace le co
 2026-10-25. **Dérogation accordée par Nicolas, à l'écran, propre à un seul thème** : la famille thématisée au
 moment du jour. La bible (chapitre 2, « Contraste ») fixe la cible du corps de texte à Lc 90 et le plancher de
 rejet à Lc 75. Dans ce thème, le corps de texte (`text-primary`, `text-emphasis`) tient Lc 69 à 76 selon la
-teinte et le fond. Les trois autres thèmes gardent la règle.
+teinte et le fond. Les trois autres thèmes gardent la règle (au seul écart près de l'état inactif, voir D83) ; un test
+(`test_seuils_de_la_bible_hors_jour_thematise`) interdit à tout autre thème d'abaisser sa cible, son plancher ou
+un plancher de rôle hors des dérogations listées.
 
 - **Raison.** Sur un fond presque blanc, la chroma ne se voit pas : le jour thématisé était indiscernable de la
   dominante, malgré une chroma relevée de 0,006 à 0,015. Nicolas a demandé que le jour thématisé « tire tout

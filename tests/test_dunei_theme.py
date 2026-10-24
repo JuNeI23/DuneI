@@ -2,6 +2,7 @@
 
 import json
 import os
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -70,6 +71,26 @@ class DuneiThemeTest(unittest.TestCase):
         avant = set(self.dir.iterdir())
         self.lance("jour")
         self.assertEqual(set(self.dir.iterdir()) - avant, {self.choix})
+
+    def test_deux_noms_une_ecriture(self):
+        """<famille> <moment> choisit les deux d'un coup ; un nom inconnu n'écrit rien."""
+        res = self.lance("dominante", "jour")
+        self.assertEqual((res.returncode, res.stdout), (0, "dominante jour\n"))
+        avant = self.choix.read_text()
+        for args in (("rose", "nuit"), ("thematisee", "aube")):
+            self.assertEqual(self.lance(*args).returncode, 2, args)
+        self.assertEqual(self.choix.read_text(), avant)
+
+    def test_sans_jq(self):
+        """Sans jq dans le PATH, message clair et code 1, rien d'écrit."""
+        bin_ = self.dir / "bin"
+        bin_.mkdir()
+        (bin_ / "bash").symlink_to(shutil.which("bash"))
+        env = {**os.environ, "DUNEI_TOKENS_DIR": str(self.dir), "PATH": str(bin_)}
+        res = subprocess.run([str(SCRIPT), "jour"], capture_output=True, text=True, env=env)
+        self.assertEqual(res.returncode, 1)
+        self.assertIn("jq est introuvable", res.stderr)
+        self.assertFalse(self.choix.exists())
 
     def test_json_valide(self):
         self.lance("jour")

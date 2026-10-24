@@ -26,6 +26,37 @@ class ModelTest(unittest.TestCase):
                 with self.subTest(famille=f, moment=m, hue=h):
                     self.assertEqual(check(resolve(theme_data(self.data, f, m), h)), [])
 
+    # Planchers qui diffèrent légitimement de la base, par moment, chacun consigné : sans cette liste blanche, une
+    # surcharge de meta glissée dans un autre thème abaisserait la règle de la bible sans que rien ne le voie.
+    DEROGATIONS = {
+        "jour": {
+            "knob-off": "le knob blanc sur la piste éteinte grise du jour : la nuit, sur fond sombre, mesure Lc 98 (D83)",
+            "on-accent-muted": "accent muet du jour validé à 0,78 par Nicolas : état inactif volontairement atténué (D83)",
+        },
+    }
+
+    def test_seuils_de_la_bible_hors_jour_thematise(self):
+        """Hors du jour thématisé (D84), un thème garde la cible, le plancher absolu et les planchers de la base ;
+        seules les dérogations listées ci-dessus, propres à un moment, peuvent s'en écarter."""
+        base = self.data["meta"]
+        for f, m in themes(self.data):
+            if (f, m) == ("thematisee", "jour"):
+                continue
+            meta = theme_data(self.data, f, m)["meta"]
+            with self.subTest(famille=f, moment=m):
+                self.assertEqual(meta["contrast_target_body"], base["contrast_target_body"])
+                self.assertEqual(meta["contrast_floor"], base["contrast_floor"])
+                permis = set(self.DEROGATIONS.get(m, {}))
+                ecarts = {k for k in base["planchers"] if meta["planchers"].get(k) != base["planchers"][k]}
+                self.assertLessEqual(ecarts, permis, "plancher abaissé hors dérogation consignée")
+                self.assertEqual(set(meta["planchers"]), set(base["planchers"]))
+
+    def test_profil_de_mauvaise_longueur(self):
+        """Un neutral_profile qui n'a pas autant de facteurs que d'échelons est refusé, jamais tronqué."""
+        data = {**self.data, "lightness": {**self.data["lightness"], "neutral_profile": [1.0, 1.0]}}
+        with self.assertRaises(ValueError):
+            resolve(data, 55)
+
     def test_accent_steps(self):
         acc = self.data["accent"]
         for h, m in self.models.items():
