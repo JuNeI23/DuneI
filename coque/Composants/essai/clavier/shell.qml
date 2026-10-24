@@ -8,9 +8,9 @@ import "Composants"
 // Coque d'essai du clavier : parcours de tabulation et curseur de texte, dans une vraie fenêtre.
 // Rôle : ouvre une FloatingWindow (un Bouton « avant », une barre Onglets avec les onglets « tokens » et « composants
 // », ce dernier coché, un Bouton « apres », un Champ, une Jauge, un Compteur, un Deroulant, des Pastilles, une
-// Recherche, une Depliable, une Bascule, les trois formes d'une Activite, un Bouton « bulle » qui porte une Infobulle
-// sans texte (jamais de fenêtre), puis deux Liste côte à côte, un menu qui porte selectionSuitSurvol et un témoin qui
-// ne le porte pas) et y synthétise des touches et des mouvements du pointeur par le TestEvent de QtTest, pour que
+// Recherche, une Depliable, une Bascule, une Activite, un Bouton « bulle » qui porte une Infobulle sans texte (jamais
+// de fenêtre), puis deux Liste côte à côte, un menu qui porte selectionSuitSurvol et un témoin qui ne le porte pas) et
+// y synthétise des touches et des mouvements du pointeur par le TestEvent de QtTest, pour que
 // tests/test_coque_composants.py éprouve ce que la coque sans fenêtre ne peut pas exécuter : le focus actif, la
 // tabulation, le clignotement du curseur, la mise en page de la barre (qui attend le polissage d'une fenêtre) et le
 // survol.
@@ -27,16 +27,16 @@ import "Composants"
 // du menu> <rangée courante du témoin> », « essai : ongletSurvole <interaction> <fond> » et « essai : jauge <valeur>
 // <anneau visible> », ainsi que attention, anneauOnglets, compteur, deroulant, pastilles, pastillesCouleurs, bascule et
 // activite (voir chaque fonction) ; « essai touche <tab|majtab|gauche|droite|haut|bas|espace|entree|echap> » frappe une
-// touche, « essai activiteMarche <bool> » lance ou arrête les trois formes de l'indicateur, « essai molette <1|-1> »
-// tourne la molette sur le compteur, « essai cliquerDeroulant » clique le déroulant, « essai ouvrirAttention » ouvre
-// l'Overlay d'attention, « essai pointerRangee <rang> <bool> » pose le pointeur sur une rangée du menu ouvert et l'y
-// clique si demandé, « essai pointerPastille <rang> <bool> » pose le pointeur sur une pastille et l'y clique si
-// demandé, « essai appuyerPastille <rang> <bool> » enfonce ou relâche le bouton sur une pastille, « essai
-// pastillesReduire <bool> » active ou désactive la pastille de réduction, « essai rechercheTexte <texte> » remplit la
-// recherche, « essai cliquerEffacer » clique son bouton d'effacement, « essai cliquerDepliable » clique l'en-tête de la
-// section, « essai survolerBulle », « essai quitterBulle » et « essai appuyerBulle » posent le pointeur sur le bouton «
-// bulle », l'en retirent ou l'y cliquent ; « essai cibleNouvelle », « essai cibleDetruire » et « essai survolerMobile »
-// créent, détruisent ou survolent la cible de l'infobulle mobile ; recherche, depliable, bulle, survolerBulle et mobile
+// touche, « essai activiteMarche <bool> » lance ou arrête l'indicateur d'activité, « essai molette <1|-1> » tourne la
+// molette sur le compteur, « essai cliquerDeroulant » clique le déroulant, « essai ouvrirAttention » ouvre l'Overlay
+// d'attention, « essai pointerRangee <rang> <bool> » pose le pointeur sur une rangée du menu ouvert et l'y clique si
+// demandé, « essai pointerPastille <rang> <bool> » pose le pointeur sur une pastille et l'y clique si demandé, « essai
+// appuyerPastille <rang> <bool> » enfonce ou relâche le bouton sur une pastille, « essai pastillesReduire <bool> »
+// active ou désactive la pastille de réduction, « essai rechercheTexte <texte> » remplit la recherche, « essai
+// cliquerEffacer » clique son bouton d'effacement, « essai cliquerDepliable » clique l'en-tête de la section, « essai
+// survolerBulle », « essai quitterBulle » et « essai appuyerBulle » posent le pointeur sur le bouton « bulle », l'en
+// retirent ou l'y cliquent ; « essai cibleNouvelle », « essai cibleDetruire » et « essai survolerMobile » créent,
+// détruisent ou survolent la cible de l'infobulle mobile ; recherche, depliable, bulle, survolerBulle et mobile
 // journalisent (voir chaque fonction), « essai survoler <rang> » pose le pointeur sur une rangée de chaque liste, «
 // essai survolerOnglet » sur l'onglet « tokens » et « essai ongletActif <bool> » active ou désactive l'onglet «
 // composants », sans journaliser. Erreurs : celles de Theme et des liaisons, dans le journal ; un nom de touche inconnu
@@ -107,14 +107,8 @@ ShellRoot {
 
                 Bascule { id: basculeEssai; objectName: "bascule"; icone: "network-wireless"; text: "Wi-Fi" }
 
-                // Les trois formes de l'indicateur d'activité, arrêtées : « essai activiteMarche » les lance.
-                Row {
-                    id: activites
-                    property bool marche: false
-                    Activite { forme: "arc"; running: activites.marche }
-                    Activite { forme: "grains"; running: activites.marche }
-                    Activite { forme: "sable"; running: activites.marche }
-                }
+                // L'indicateur d'activité, arrêté : « essai activiteMarche » le lance.
+                Activite { id: activiteEssai; running: false }
 
                 // Bouton qui porte l'infobulle et compte ses clics. L'infobulle n'a pas de texte : son délai et sa
                 // fermeture s'éprouvent sans qu'aucune fenêtre ne s'ouvre.
@@ -313,18 +307,18 @@ ShellRoot {
                     pastillesEssai.reduireActif = valeur
                 }
 
-                // activite — journalise l'état en marche de l'animation de chaque forme de l'indicateur (le premier
-                // grain pour les grains), dans l'ordre arc, grains, sable. Entrées : aucune. Sortie : aucune ; «
-                // essai : activite <bool> <bool> <bool> ». Erreurs : aucune. Dépendances : activites, journal.
+                // activite — journalise l'état en marche de l'animation de chacun des trois grains de l'indicateur.
+                // Entrées : aucune. Sortie : aucune ; « essai : activite <bool> <bool> <bool> ». Erreurs : aucune.
+                // Dépendances : activiteEssai (repeteur), journal.
                 function activite(): void {
-                    essai.journal("activite", Array.from(activites.children, a => (a.dessin.animation
-                        ?? a.dessin.repeteur.itemAt(0).animation).running).join(" "))
+                    essai.journal("activite", [0, 1, 2].map(i => activiteEssai.repeteur.itemAt(i).animation.running)
+                                                     .join(" "))
                 }
 
-                // activiteMarche — lance ou arrête les trois formes de l'indicateur.
-                // Entrée : valeur, nouvelle marche. Sortie : aucune. Erreurs : aucune. Dépendances : activites.
+                // activiteMarche — lance ou arrête l'indicateur.
+                // Entrée : valeur, nouvelle marche. Sortie : aucune. Erreurs : aucune. Dépendances : activiteEssai.
                 function activiteMarche(valeur: bool): void {
-                    activites.marche = valeur
+                    activiteEssai.running = valeur
                 }
 
                 // recherche — journalise le texte de la recherche, entre chevrons, et la visibilité de son bouton

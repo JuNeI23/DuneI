@@ -54,7 +54,7 @@ ShellRoot {
         // Entrées : aucune. Sortie : aucune ; « essai : raideur <stiffness> ». Erreurs : aucune.
         // Dépendances : spring.
         function raideur(): void {
-            console.info("essai : raideur " + spring.ressort?.stiffness)
+            console.info("essai : raideur " + spring.params?.stiffness)
         }
     }
 

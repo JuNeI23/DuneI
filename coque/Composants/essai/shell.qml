@@ -11,11 +11,11 @@ import "Composants/etats.js" as Etats
 // Rôle : instancie un arbre fixe (une Surface fenêtre contenant une Surface panneau, qui porte la sonde capteur, un
 // contrôle simulé avec son Etat, un Texte, une Icone, les cinq contrôles interactifs (Bouton, Case, Interrupteur,
 // Onglet, Curseur), trois Radio dans un même parent, une Jauge, une Progression, deux Separateur, un Champ, des
-// Pastilles, un Compteur, un Deroulant, une Recherche, trois Activite (une par forme), une Depliable, une Bascule, une
-// Liste vide, une Liste de trois Rangee et une cible munie d'un AnneauFocus, plus une Surface inactive à l'écart, deux
-// Overlay fermés, un de chaque famille, et trois objets factices pour le singleton Overlays) pour que
-// tests/test_coque_composants.py éprouve dans un vrai Quickshell les règles d'etats.js, l'héritage par remontée,
-// l'import du Theme, les pièces de base, les contrôles et les listes, en lisant le journal.
+// Pastilles, un Compteur, un Deroulant, une Recherche, une Activite, une Depliable, une Bascule, une Liste vide, une
+// Liste de trois Rangee et une cible munie d'un AnneauFocus, plus une Surface inactive à l'écart, deux Overlay fermés,
+// un de chaque famille, et trois objets factices pour le singleton Overlays) pour que tests/test_coque_composants.py
+// éprouve dans un vrai Quickshell les règles d'etats.js, l'héritage par remontée, l'import du Theme, les pièces de
+// base, les contrôles et les listes, en lisant le journal.
 // Entrées : DUNEI_TOKENS_DIR, lu par Theme ; thème d'icônes Adwaita, posé par la directive IconTheme en tête (thème de
 // transition jusqu'à L4-12). Sortie : journal de Theme, plus « essai : prêt <bool> » à chaque changement de
 // Theme.ready, et une ligne « essai : <clé> <valeur> » par commande IPC de lecture (cran, interaction, selection,
@@ -23,13 +23,13 @@ import "Composants/etats.js" as Etats
 // progression, separateur, champ, indicatif, tailleIcone, liste, arrets, rangee, bouton, overlays, overlaysFermes,
 // pastilles, compteur, compteurLargeur, deroulant, recherche, rechercheCouleurs, activite, depliable, depliableCotes,
 // iconesControles, bascule, fenetreAttention) ; « essai rechercheTexte <texte> », « essai rechercheActive <bool> », «
-// essai activiteEtat <forme> <visible> <running> », « essai activitePhase <forme> <phase> », « essai activiteAncetre
-// <bool> », « essai depliableOuvrir <bool> », « essai basculeCocher <bool> », « essai pastillesForcer <état> », « essai
-// pastillesReduire <bool> », « essai compteurValeur <n> », « essai deroulantRang <n> », « essai decocher », « essai
-// radioCocher <rang> », « essai jaugeActive <bool> », « essai boutonPrincipal <bool> », « essai inactif <bool> », «
-// essai reparenter », « essai texteMoyen », « essai anneauInactif <bool> », « essai survol <bool> », « essai retour
-// <in|out> », « essai champActif <bool> », « essai champTexte <texte> », « essai selectionLibre », « essai icone <nom>
-// <bool> », « essai ouvrirFactice <A|B|C> » et « essai fermerFactice <A|B|C> » agissent sans journaliser.
+// essai activiteEtat <visible> <running> », « essai activitePhase <phase> », « essai activiteAncetre <bool> », « essai
+// depliableOuvrir <bool> », « essai basculeCocher <bool> », « essai pastillesForcer <état> », « essai pastillesReduire
+// <bool> », « essai compteurValeur <n> », « essai deroulantRang <n> », « essai decocher », « essai radioCocher <rang>
+// », « essai jaugeActive <bool> », « essai boutonPrincipal <bool> », « essai inactif <bool> », « essai reparenter », «
+// essai texteMoyen », « essai anneauInactif <bool> », « essai survol <bool> », « essai champActif <bool> », « essai
+// champTexte <texte> », « essai selectionLibre », « essai icone <nom> <bool> », « essai ouvrirFactice <A|B|C> » et «
+// essai fermerFactice <A|B|C> » agissent sans journaliser.
 // Erreurs : celles de Theme et des liaisons, dans le journal. Dépendances : quickshell ≥ 0.3 (Quickshell.Io :
 // IpcHandler), modules coque/Theme et coque/Composants.
 // Import : Quickshell ne résout pas un module situé au-dessus de la racine de la coque lancée ; les liens
@@ -170,13 +170,10 @@ ShellRoot {
                 id: rechercheEssai
             }
 
-            // Les trois formes de l'indicateur sont portées par un Item qu'on peut masquer, pour éprouver l'arrêt
-            // sous un ancêtre invisible.
+            // L'indicateur est porté par un Item qu'on peut masquer, pour éprouver l'arrêt sous un ancêtre invisible.
             Item {
                 id: porteActivite
-                Activite { id: activiteArc; forme: "arc" }
-                Activite { id: activiteGrains; forme: "grains" }
-                Activite { id: activiteSable; forme: "sable" }
+                Activite { id: activiteEssai }
             }
 
             Depliable {
@@ -387,17 +384,11 @@ ShellRoot {
             controleEssai.hovered = valeur
         }
 
-        // retour — choisit le ressort du retour au repos dans le réglage provisoire.
-        // Entrées : valeur, "in" ou "out". Sortie : aucune. Erreurs : aucune. Dépendances : Reglage.
-        function retour(valeur: string): void {
-            Reglage.retour = valeur
-        }
-
         // ressort — journalise la raideur des ressorts employés par l'Etat, pour le fond puis le texte.
         // Entrées : aucune. Sortie : aucune ; « essai : ressort <raideur> <raideur> ». Erreurs : aucune.
         // Dépendances : etatEssai, dont les deux premiers enfants sont les ColorSpring déclarés par Etat.qml.
         function ressort(): void {
-            essai.journal("ressort", etatEssai.children.map(r => r.ressort?.stiffness).join(" "))
+            essai.journal("ressort", etatEssai.children.map(r => r.params?.stiffness).join(" "))
         }
 
         // icone — change la variante puis le nom de l'Icone d'essai.
@@ -646,48 +637,35 @@ ShellRoot {
             rechercheEssai.text = texte
         }
 
-        // activite — journalise une forme de l'indicateur d'activité : sa forme, son état anime, l'état en marche de
-        // chacune de ses animations, ses cotes, sa couleur, puis des détails propres à la forme. Arc : épaisseur du
-        // trait, balayage, rotation, durée et boucles du tour. Grains : diamètre d'un point, pose « échelle/opacité »
-        // de chacun des trois, durée d'une étape et boucles. Sable : couleur de la piste, largeur et abscisse de la
-        // pastille, durée d'une traversée et boucles. Les nombres sont arrondis au millième.
-        // Entrée : forme, "arc", "grains" ou "sable". Sortie : aucune ; « essai : activite <forme> <bool>
-        // <bool,…> <largeur> <hauteur> <couleur> <détails…> ». Erreurs : une forme inconnue lève une TypeError.
-        // Dépendances : activiteArc, activiteGrains, activiteSable (dessin), journal.
-        function activite(forme: string): void {
-            const a = { arc: activiteArc, grains: activiteGrains, sable: activiteSable }[forme], d = a.dessin
-            const r = v => Math.round(v * 1000) / 1000
-            const grains = forme === "grains" ? [0, 1, 2].map(i => d.repeteur.itemAt(i)) : []
-            const animations = { arc: [d.animation], grains: grains.map(g => g.animation), sable: [d.animation] }[forme]
-            const details = {
-                arc: () => [r(d.trace.strokeWidth), d.courbe.sweepAngle, r(d.rotation)],
-                grains: () => [r(grains[0].width)].concat(grains.map(g => r(g.scale) + "/" + r(g.opacity))),
-                sable: () => [d.color, r(d.pastille.width), r(d.pastille.x)]
-            }[forme]()
-            const pas = forme === "grains" ? animations[0].animations[0].animations[0] : animations[0]
-            const tour = forme === "sable" ? pas.animations[0] : pas
-            essai.journal("activite", [forme, a.anime, animations.map(x => x.running).join(","), r(a.width),
-                                       r(a.height), a.accent].concat(details, [r(tour.duration), animations[0].loops])
-                                      .join(" "))
+        // activite — journalise l'indicateur d'activité : son état anime, l'état en marche de l'animation de
+        // chacun des trois grains, ses cotes, sa couleur, le diamètre d'un grain, la pose « échelle/opacité » de
+        // chacun, la durée d'une étape et les boucles. Les nombres sont arrondis au millième.
+        // Entrées : aucune. Sortie : aucune ; « essai : activite <bool> <bool,bool,bool> <largeur> <hauteur>
+        // <couleur> <diamètre> <pose> <pose> <pose> <durée> <boucles> ». Erreurs : aucune.
+        // Dépendances : activiteEssai (repeteur), journal.
+        function activite(): void {
+            const a = activiteEssai, r = v => Math.round(v * 1000) / 1000
+            const grains = [0, 1, 2].map(i => a.repeteur.itemAt(i)), cycle = grains[0].animation
+            essai.journal("activite", [a.anime, grains.map(g => g.animation.running).join(","), r(a.width),
+                r(a.height), a.accent, r(grains[0].width)].concat(grains.map(g => r(g.scale) + "/" + r(g.opacity)),
+                [r(cycle.animations[0].animations[0].duration), cycle.loops]).join(" "))
         }
 
-        // activiteEtat — montre ou cache une forme de l'indicateur d'essai et la met en marche ou à l'arrêt.
-        // Entrées : forme ; visible, nouvelle visibilité ; running, nouvelle marche. Sortie : aucune.
-        // Erreurs : une forme inconnue lève une TypeError. Dépendances : activiteArc, activiteGrains, activiteSable.
-        function activiteEtat(forme: string, visible: bool, running: bool): void {
-            const a = { arc: activiteArc, grains: activiteGrains, sable: activiteSable }[forme]
-            a.visible = visible
-            a.running = running
+        // activiteEtat — montre ou cache l'indicateur d'essai et le met en marche ou à l'arrêt.
+        // Entrées : visible, nouvelle visibilité ; running, nouvelle marche. Sortie : aucune. Erreurs : aucune.
+        // Dépendances : activiteEssai.
+        function activiteEtat(visible: bool, running: bool): void {
+            activiteEssai.visible = visible
+            activiteEssai.running = running
         }
 
-        // activitePhase — fixe la phase de la pose arrêtée d'une forme de l'indicateur d'essai.
-        // Entrées : forme ; phase, fraction du cycle. Sortie : aucune. Erreurs : une forme inconnue lève une
-        // TypeError. Dépendances : activiteArc, activiteGrains, activiteSable.
-        function activitePhase(forme: string, phase: real): void {
-            ({ arc: activiteArc, grains: activiteGrains, sable: activiteSable })[forme].phase = phase
+        // activitePhase — fixe la phase de la pose arrêtée de l'indicateur d'essai.
+        // Entrée : phase, fraction du cycle. Sortie : aucune. Erreurs : aucune. Dépendances : activiteEssai.
+        function activitePhase(phase: real): void {
+            activiteEssai.phase = phase
         }
 
-        // activiteAncetre — montre ou cache l'Item qui porte les indicateurs d'essai, sans toucher aux indicateurs.
+        // activiteAncetre — montre ou cache l'Item qui porte l'indicateur d'essai, sans toucher à l'indicateur.
         // Entrée : visible, nouvelle visibilité de l'ancêtre. Sortie : aucune. Erreurs : aucune.
         // Dépendances : porteActivite.
         function activiteAncetre(visible: bool): void {

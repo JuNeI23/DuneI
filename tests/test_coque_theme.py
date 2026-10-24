@@ -193,7 +193,7 @@ class CoqueThemeTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(self.journal().count("essai : ressort posé"), 2, self.journal())
 
     def test_retour_par_defaut(self):
-        # Sans retour, le retour au repos garde le ressort params (ici le ressort lent), et non paramsRetour.
+        # Le retour au repos emploie le ressort params (ici le ressort lent), comme tout changement d'état.
         self.installer(55)
         self.lancer(self.dir)
         self.attendre("essai : ressort posé")

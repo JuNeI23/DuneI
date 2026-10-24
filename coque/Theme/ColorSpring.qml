@@ -7,27 +7,21 @@ import "physics.js" as Physics
 // l'interpolation sRGB, composante par composante, entre l'origine et la cible. Aucune couleur n'est calculée
 // ici : origine et cible viennent toujours de Theme.
 // Entrées : target couleur visée ; params ressort {mass, stiffness, dampening}, par défaut celui des
-//           changements d'état (transitions.state.in de motion.json) ; retour vrai quand la cible est l'état de
-//           repos, faux par défaut ; paramsRetour ressort du retour au repos, par défaut transitions.state.in.
-// Sorties : value couleur affichée ; moving vrai tant que le ressort avance ; ressort, le ressort employé,
-//           paramsRetour si retour (params si paramsRetour est indéfini), params sinon.
+//           changements d'état (transitions.state.in de motion.json), employé aussi pour le retour au repos
+//           (conception, § 7.8).
+// Sorties : value couleur affichée ; moving vrai tant que le ressort avance.
 // Erreurs : aucune ; avant que Theme soit prêt, au premier chargement et à chaque changement de thème,
 //           value prend target sans animation : tout le thème bascule dans la même image. Un nouvel objet de
 //           tokens qui ne change pas la cible (relecture d'un contenu identique, ou cible de même valeur dans
 //           les deux thèmes) pose aussi un ressort en vol sur sa cible, au tour de boucle suivant.
 // Dépendances : Theme (singleton du module), physics.js (integrate, atRest).
-// Ordre des liaisons : retour et target dépendent souvent de la même interaction, et le moteur QML ne garantit
-// pas l'ordre dans lequel il les réévalue ; onTargetChanged peut donc voir retour périmé. Le ressort n'est
-// pas figé au changement de cible : chaque image de l'animation lit ressort, à jour dès la première image.
+// Le ressort n'est pas figé au changement de cible : chaque image de l'animation lit params.
 Item {
     id: spring
     visible: false
 
     property color target
     property var params: Theme.motion?.transitions.state.in
-    property bool retour: false
-    property var paramsRetour: Theme.motion?.transitions.state.in
-    readonly property var ressort: retour && paramsRetour ? paramsRetour : params
     property color value
     readonly property bool moving: anim.running
     property color origin
@@ -41,7 +35,7 @@ Item {
     Component.onCompleted: { value = target; seen.tokens = Theme.tokens }
 
     onTargetChanged: {
-        if (!Theme.ready || !ressort || Theme.tokens !== seen.tokens) {
+        if (!Theme.ready || !params || Theme.tokens !== seen.tokens) {
             seen.tokens = Theme.tokens
             anim.stop()
             value = target
@@ -81,7 +75,7 @@ Item {
     FrameAnimation {
         id: anim
         onTriggered: {
-            const r = spring.ressort
+            const r = spring.params
             Physics.integrate(spring.st, 1, r.mass, r.stiffness, r.dampening, frameTime)
             const done = Physics.atRest(spring.st, 1)
             spring.value = done ? spring.target : spring.mix(spring.origin, spring.target, spring.st.x)

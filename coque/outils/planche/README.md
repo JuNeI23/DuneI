@@ -1,6 +1,6 @@
 # Planche de contrôle des tokens de la coque
 
-Version 0.10 — outil de développement de L2-34, gardé ensuite pour tout travail sur les tokens et la coque ; page
+Version 0.11 — outil de développement de L2-34, gardé ensuite pour tout travail sur les tokens et la coque ; page
 des composants ajoutée en L2-01.
 
 La planche affiche dans sa fenêtre (tuilée ou flottante, selon les règles d'Hyprland) deux onglets : « Tokens », chaque token de `coque-tokens.json`
@@ -64,9 +64,7 @@ la largeur visible de la fenêtre et ses rangées passent à la ligne (`Flow`) :
 horizontal dans une fenêtre tuilée d'environ 750 pixels de large, et ses blocs se placent côte à côte dans une
 fenêtre plus large.
 
-- **En-tête** : l'interrupteur provisoire « Retour au repos : in / out », lié à `Reglage.retour` (conception,
-  § 7.8), dont le libellé affiche la valeur courante ; il se juge sur les exemplaires vivants et disparaîtra
-  quand le ressort sera tranché. Puis deux boutons : « Ouvrir une attention » (un `Overlay` attention : un champ
+- **En-tête** : deux boutons : « Ouvrir une attention » (un `Overlay` attention : un champ
   et deux boutons qui la ferment, dont « Valider », bouton `principal`) et « Ouvrir un menu » (un `Overlay`
   contextuel ancré sous le bouton : quatre `Rangee` dans une `Liste` dont la sélection suit le pointeur,
   `selectionSuitSurvol` ; ouvert à la souris, il ne montre pas le contour de sa rangée courante).
@@ -90,9 +88,8 @@ fenêtre plus large.
   six rangées, un seul arrêt de tabulation.
 - **Compléments à la macOS** (§ 7.10) : une grille `Recherche` (vide et remplie, sans ligne de focus, comme le
   champ ; vivant : un champ de recherche, qu'Échap ou son bouton d'effacement vident) ; une grille `Activite` d'une
-  seule ligne, où chacune des trois formes en concours (`arc`, `grains`, `sable`) est arrêtée et figée à mi-cycle
-  (phase 0,5) ; vivant : les trois formes côte à côte, chacune sous son nom et au-dessus de son interrupteur « En
-  marche », arrêtées par défaut pour que la page ne coûte rien au repos ; une grille `Depliable` (repliée et dépliée, en repos,
+  seule ligne, les trois grains arrêtés au début de leur cycle puis figés à mi-cycle (phase 0,5) ; vivant : les
+  trois grains, arrêtés par défaut pour que la page ne coûte rien au repos, et l'interrupteur « En marche » ; une grille `Depliable` (repliée et dépliée, en repos,
   survol, désactivé et focus clavier, l'anneau entourant l'en-tête, en retrait du chevron et du libellé ; vivant :
   une section qui porte une case et un interrupteur) ; une grille `Bascule à glyphe` (éteinte et allumée, en
   repos, survol, pressé, désactivé et focus clavier, l'anneau rond autour du disque ; vivant : trois bascules à
@@ -163,7 +160,9 @@ la PSS lues dans `/proc/<pid>/smaps_rollup`.
 | Page Composants (après bascule depuis Tokens) | 0,0 % | 356,8 Mio | 240,3 Mio |
 
 L'indicateur d'activité se mesure à part, dans une coque jetable qui ouvre une fenêtre flottante de 320 × 200,
-représentative d'un popover, et n'y montre qu'une forme ; relevé 2 s après l'ouverture, sur 10 s, deux passes.
+représentative d'un popover, et n'y montre qu'une forme ; relevé 2 s après l'ouverture, sur 10 s, deux passes. Les
+formes `arc` et `sable`, alors en concours, ont été retirées au profit des trois grains ; leurs relevés restent pour
+mémoire.
 
 | Relevé (caladan, 2026-10-24, eDP-1 à 60 Hz, échelle 1,25) | Processeur sur 10 s | RSS | PSS |
 |---|---|---|---|
@@ -173,7 +172,7 @@ représentative d'un popover, et n'y montre qu'une forme ; relevé 2 s après l'
 | `sable` en marche | 4,1 à 4,2 % | 267 à 268 Mio | 132 à 133 Mio |
 | Planche, page Composants, indicateurs arrêtés | 0,0 % | 405 Mio | 291 Mio |
 
-Les trois formes coûtent autant : le prix est celui d'une fenêtre qui produit 60 images par seconde, non celui du
+Les trois formes coûtaient autant : le prix est celui d'une fenêtre qui produit 60 images par seconde, non celui du
 dessin. D'où la règle D80 : un indicateur ne tourne que visible et en marche.
 
 ## Historique des versions
@@ -190,3 +189,4 @@ dessin. D'où la règle D80 : un indicateur ne tourne que visible et en marche.
 | 0.8 | 2026-10-24 | Compléments à la macOS (L2-01, § 7.10) : sections `Champ de recherche`, `Indicateur d'activité` (roue figée, vivant arrêté par défaut), `Section dépliable` et `Infobulle`. |
 | 0.9 | 2026-10-24 | Quatrième itération (L2-01, § 7.10, v0.7) : indicateur d'activité en anneau qui respire (arrêté dans la grille et par défaut au vivant), section `Bascule à glyphe`, bascule allumée dans les panneaux du modificateur inactive ; pastilles survolées et pressées aux variantes propres, plus contrastées. |
 | 0.10 | 2026-10-24 | Indicateur d'activité en trois formes au choix (`arc`, `grains`, `sable`), animées en continu sur le fil de rendu : grille figée à mi-cycle, trois vivants nommés et arrêtés par défaut, chacun avec son interrupteur ; relevés de l'indicateur dans une petite fenêtre ; bascule à glyphe agrandie (40 px, glyphe de 20). |
+| 0.11 | 2026-10-24 | Cinquième validation : indicateur d'activité réduit aux trois grains (grille arrêtée et à mi-cycle, vivant arrêté par défaut) ; interrupteur provisoire du retour au repos retiré, le retour est figé sur `in`. |

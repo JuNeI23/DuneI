@@ -1,6 +1,5 @@
 module Composants
 singleton Overlays 1.0 Overlays.qml
-singleton Reglage 1.0 Reglage.qml
 Activite 1.0 Activite.qml
 AnneauFocus 1.0 AnneauFocus.qml
 Bascule 1.0 Bascule.qml

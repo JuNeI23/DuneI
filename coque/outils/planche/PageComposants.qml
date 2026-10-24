@@ -4,16 +4,15 @@ import "Composants"
 
 // PageComposants — page « Composants » de la planche de contrôle : la bibliothèque du module Composants rendue
 // dans ses états, pour la juger à l'écran (conception des composants, § 9).
-// Rôle : pour chaque primitive et chaque contrôle, une grille d'exemplaires figés dans leurs états (repos,
-// survol, pressé, désactivé, focus, croisés avec la sélection quand le contrôle en a une) à côté d'un exemplaire
-// vivant qu'on manipule ; deux panneaux identiques, dont l'un porte dnInactive, pour juger le modificateur
-// inactive et l'accent muet ; l'interrupteur provisoire du retour au repos (Reglage.retour) ; deux boutons qui
-// ouvrent un overlay de chaque famille. Les états figés ne passent par aucune valeur de design : Etat.forcer
-// remplace l'interaction lue, la sélection s'écrit dans l'Etat de l'exemplaire, l'anneau de focus est un
-// AnneauFocus montré, le contour de rangée passe par Rangee.forcerContour, et désactivé est un vrai enabled faux.
-// Mise en page : la page prend la largeur qu'on lui donne et ses rangées passent à la ligne (Flow), si bien
-// qu'elle tient sans défilement horizontal dans une fenêtre tuilée d'environ 750 pixels de large, et s'étale
-// côte à côte dans une fenêtre plus large.
+// Rôle : pour chaque primitive et chaque contrôle, une grille d'exemplaires figés dans leurs états (repos, survol,
+// pressé, désactivé, focus, croisés avec la sélection quand le contrôle en a une) à côté d'un exemplaire vivant qu'on
+// manipule ; deux panneaux identiques, dont l'un porte dnInactive, pour juger le modificateur inactive et l'accent muet
+// ; deux boutons qui ouvrent un overlay de chaque famille. Les états figés ne passent par aucune valeur de design :
+// Etat.forcer remplace l'interaction lue, la sélection s'écrit dans l'Etat de l'exemplaire, l'anneau de focus est un
+// AnneauFocus montré, le contour de rangée passe par Rangee.forcerContour, et désactivé est un vrai enabled faux. Mise
+// en page : la page prend la largeur qu'on lui donne et ses rangées passent à la ligne (Flow), si bien qu'elle tient
+// sans défilement horizontal dans une fenêtre tuilée d'environ 750 pixels de large, et s'étale côte à côte dans une
+// fenêtre plus large.
 // Entrées : largeur, largeur offerte à la page en pixels logiques (la fenêtre moins ses marges) ; la page lit
 // Theme, déjà prêt quand la planche la construit.
 // Sorties : la page, une Surface surfaceWindow de la largeur offerte, haute de son contenu et de son retrait ;
@@ -22,7 +21,7 @@ import "Composants"
 // large bloc (une grille d'états) laisse ce bloc déborder.
 // Dépendances : Theme (space, radius, density, typo, color), module Composants (Surface, Texte, Icone, Bouton, Bascule,
 // Case, Radio, Interrupteur, Onglet, Onglets, Curseur, Jauge, Champ, Pastilles, Compteur, Deroulant, Recherche,
-// Activite, Depliable, Infobulle, Liste, Rangee, Separateur, Progression, AnneauFocus, Etat, Overlay, Reglage). Le menu
+// Activite, Depliable, Infobulle, Liste, Rangee, Separateur, Progression, AnneauFocus, Etat, Overlay). Le menu
 // du déroulant vivant ne s'ouvre, lui aussi, qu'à la main, comme l'infobulle, au survol. Les overlays ne s'ouvrent qu'à
 // la demande de Nicolas, par leurs boutons : l'attention prend le clavier en exclusif.
 Surface {
@@ -280,7 +279,7 @@ Surface {
         width: page.width - 2 * Theme.space.blockGap
         spacing: Theme.space.blockGap
 
-        // En-tête : le réglage provisoire du retour au repos et les deux overlays.
+        // En-tête : les deux overlays.
         Column {
             width: colonne.width
             spacing: Theme.space.scale[1]
@@ -288,15 +287,6 @@ Surface {
             Flow {
                 width: colonne.width
                 spacing: Theme.space.sectionGap
-
-                // Réglage provisoire (conception, § 7.8) : coché, le retour au repos emploie le ressort out.
-                Interrupteur {
-                    text: "Retour au repos : " + Reglage.retour
-                    checked: Reglage.retour === "out"
-                    onToggled: Reglage.retour = checked ? "out" : "in"
-                }
-
-                Separateur { vertical: true; height: Theme.density.controlHeight }
 
                 Bouton {
                     text: "Ouvrir une attention"
@@ -317,8 +307,7 @@ Surface {
             Legende {
                 width: colonne.width
                 wrapMode: Text.WordWrap
-                text: "Chaque grille fige un contrôle dans ses états ; à côté, un exemplaire vivant à manipuler. "
-                      + "L'interrupteur choisit le ressort du retour au repos, à juger sur les exemplaires vivants."
+                text: "Chaque grille fige un contrôle dans ses états ; à côté, un exemplaire vivant à manipuler."
             }
         }
 
@@ -620,41 +609,20 @@ Surface {
             Recherche {}
         }
 
-        // L'indicateur n'a ni état ni focus : une seule ligne, où chaque forme est figée à mi-cycle (phase 0,5).
-        // Au repos, la page ne doit rien coûter (D80) : les exemplaires de la grille sont arrêtés, et les trois
-        // vivants, côte à côte et nommés, arrêtés par défaut, se mettent en marche chacun par son interrupteur.
+        // L'indicateur n'a ni état ni focus : une seule ligne, arrêté au début de son cycle puis figé à mi-cycle
+        // (phase 0,5). Au repos, la page ne doit rien coûter (D80) : le vivant, arrêté par défaut, se met en marche
+        // par son interrupteur.
         Grille {
             titre: "Indicateur d'activité"
             etats: ["rest"]
-            variantes: ["arc", "grains", "sable"].map(f => ({ libelle: f + ", mi-cycle",
-                                                              proprietes: { forme: f, running: false, phase: 0.5 } }))
+            variantes: [{ libelle: "arrêté", proprietes: { running: false } },
+                        { libelle: "mi-cycle", proprietes: { running: false, phase: 0.5 } }]
             modele: Component { Activite {} }
 
             Row {
-                spacing: Theme.space.blockGap
-
-                Repeater {
-                    model: ["arc", "grains", "sable"]
-
-                    Column {
-                        id: vivantActivite
-                        required property string modelData
-                        spacing: Theme.space.scale[1]
-                        Legende { text: vivantActivite.modelData }
-                        // Une case de la hauteur d'une icône, pour que les trois interrupteurs restent alignés.
-                        Item {
-                            implicitWidth: activiteVivante.implicitWidth
-                            implicitHeight: Theme.icons.sizes.default
-                            Activite {
-                                id: activiteVivante
-                                anchors.verticalCenter: parent.verticalCenter
-                                forme: vivantActivite.modelData
-                                running: marcheActivite.checked
-                            }
-                        }
-                        Interrupteur { id: marcheActivite; text: "En marche" }
-                    }
-                }
+                spacing: Theme.space.scale[2]
+                Activite { running: marcheActivite.checked; anchors.verticalCenter: parent.verticalCenter }
+                Interrupteur { id: marcheActivite; text: "En marche" }
             }
         }
 

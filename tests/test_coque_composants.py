@@ -185,17 +185,14 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(self.valeur("etat").lower(), attendu)
 
     def test_etat_retour(self):
-        # Retour réglé sur out : le survol part sur le ressort in, le retour au repos sur le ressort out, pour
-        # le fond comme pour le texte, quel que soit l'ordre dans lequel le moteur réévalue les liaisons.
+        # Retour au repos figé sur in (conception, § 7.8) : le survol et le retour au repos emploient tous deux le
+        # ressort transitions.state.in, pour le fond comme pour le texte.
         self.demarrer()
-        etat = self.tokens55()[1]["transitions"]["state"]
-        self.ipc("retour", "out")
-        self.ipc("survol", "true")
-        self.assertEqual([float(r) for r in self.valeur("ressort").split()], [etat["in"]["stiffness"]] * 2)
-        self.ipc("survol", "false")
-        self.assertEqual([float(r) for r in self.valeur("ressort").split()], [etat["out"]["stiffness"]] * 2)
-        self.ipc("retour", "in")
-        self.assertEqual([float(r) for r in self.valeur("ressort").split()], [etat["in"]["stiffness"]] * 2)
+        raideur = self.tokens55()[1]["transitions"]["state"]["in"]["stiffness"]
+        for survol in ("true", "false"):
+            with self.subTest(survol=survol):
+                self.ipc("survol", survol)
+                self.assertEqual([float(r) for r in self.valeur("ressort").split()], [raideur] * 2)
 
     @unittest.skipUnless(ETOILE.exists(), "thème Adwaita requis")
     def test_icone(self):
@@ -501,88 +498,42 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
         self.assertEqual((loupe, effacer), (texte, texte))
         self.assertNotEqual(effacer.lower(), c["textSecondary"].lower())
 
-    def activite(self, forme: str) -> list[str]:
-        """Lit l'indicateur d'activité d'essai d'une forme.
-
-        Entrée : forme — "arc", "grains" ou "sable".
-        Sortie : [forme, anime, marches, largeur, hauteur, couleur, détails…], où marches liste, séparés par des
-                 virgules, les états en marche des animations de la forme ; les détails sont propres à la forme
-                 (voir la fonction activite de la coque d'essai).
-        Erreurs : celles de valeur. Dépendances : valeur.
-        """
-        return self.valeur("activite", forme).split()
-
-    def verifier_activite(self, forme: str, cotes: tuple, details: list, mi_cycle: list) -> None:
-        """Règles communes aux trois formes de l'indicateur d'activité.
-
-        Rôle : la forme se dessine à l'accent du rôle de son conteneur (sélection active, activeMuted sous
-        inactive) ; ses animations tournent tant qu'elle est visible et en marche, et s'arrêtent sinon, ancêtre
-        masqué compris (D80) ; arrêtée, elle tient la pose de sa phase, et la phase 0,5 la fige à mi-cycle.
-        Entrées : forme ; cotes — (largeur, hauteur) attendues ; details — détails attendus à la phase 0 ;
-                  mi_cycle — détails attendus à la phase 0,5.
-        Sortie : aucune. Erreurs : échec du test. Dépendances : demarrer, tokens55, activite, ipc.
-        """
+    def test_activite(self):
+        # Les trois grains : points d'un tiers de c = icons.sizes.default, espacés d'un demi-point, sur une hauteur
+        # c, à l'accent du rôle de leur conteneur (sélection active, activeMuted sous inactive). Chacun monte,
+        # descend puis se repose, un tiers de periods.spinner par étape, décalé d'une étape sur son voisin, en
+        # boucle (Animation.Infinite vaut -1). La pose est donnée « échelle/opacité » : au repos 0,6 et 0,35, au
+        # sommet 1 et 1 ; à la phase 0, le troisième grain est au sommet. Les animations tournent tant que
+        # l'indicateur est visible et en marche, et s'arrêtent sinon, ancêtre masqué compris (D80) ; arrêté, il
+        # tient la pose de sa phase, et la phase 0,5 le fige à mi-cycle.
         self.demarrer()
-        tokens = self.tokens55()[0]
+        tokens, motion = self.tokens55()
         st = tokens["states"]["surfacePanel"]
-        lu = self.activite(forme)
-        marches = lu[2].split(",")
-        self.assertEqual(lu[:2] + [set(marches)] + lu[3:5] + [lu[5].lower()],
-                         [forme, "true", {"true"}, *map(str, cotes), st["active"]["rest"]["fill"].lower()])
-        self.assertEqual(lu[6:], details)
-        for visible, running in (("false", "true"), ("true", "false"), ("false", "false")):
-            with self.subTest(visible=visible, running=running):
-                self.ipc("activiteEtat", forme, visible, running)
-                lu = self.activite(forme)
-                self.assertEqual((lu[1], lu[2]), ("false", ",".join(["false"] * len(marches))))
-                self.assertEqual(lu[6:], details)
-        self.ipc("activiteEtat", forme, "true", "true")
-        self.assertEqual(self.activite(forme)[1:3], ["true", ",".join(["true"] * len(marches))])
-        # Un ancêtre masqué rend la forme invisible : ses animations s'arrêtent, puis repartent quand il reparaît.
-        self.ipc("activiteAncetre", "false")
-        self.assertEqual(self.activite(forme)[2], ",".join(["false"] * len(marches)))
-        self.ipc("activiteAncetre", "true")
-        self.assertEqual(self.activite(forme)[2], ",".join(["true"] * len(marches)))
-        # Arrêtée à la phase 0,5, la forme se fige à mi-cycle.
-        self.ipc("activiteEtat", forme, "true", "false")
-        self.ipc("activitePhase", forme, "0.5")
-        self.assertEqual(self.activite(forme)[6:], mi_cycle)
-        # Sous le modificateur inactive, la forme prend l'accent sans chroma.
-        self.ipc("inactif", "true")
-        self.assertEqual(self.activite(forme)[5].lower(), st["activeMuted"]["rest"]["fill"].lower())
-
-    def test_activite_arc(self):
-        # L'arc : un carré de icons.sizes.default ; un anneau ouvert aux trois quarts (balayage de 270°), d'un trait
-        # du dixième du côté, qui fait un tour par periods.spinner, en boucle (Animation.Infinite vaut -1).
-        tokens, motion = self.tokens55()
-        c, periode = tokens["icons"]["sizes"]["default"], motion["periods"]["spinner"]
-        self.verifier_activite("arc", (c, c), [f"{c / 10:g}", "270", "0", str(periode), "-1"],
-                               [f"{c / 10:g}", "270", "180", str(periode), "-1"])
-
-    def test_activite_grains(self):
-        # Les grains : trois points d'un tiers du côté c = icons.sizes.default, espacés d'un demi-point, sur une
-        # hauteur c ; chacun monte, descend puis se repose, un tiers de periods.spinner par étape, décalé d'une
-        # étape sur son voisin. La pose est donnée « échelle/opacité » : au repos 0,6 et 0,35, au sommet 1 et 1.
-        tokens, motion = self.tokens55()
         c, periode = tokens["icons"]["sizes"]["default"], motion["periods"]["spinner"]
         d = c / 3
-        cotes = (round(4 * d, 3), c)
-        tiers = f"{periode / 3:g}"
         bas, haut, milieu = "0.6/0.35", "1/1", "0.8/0.675"
-        self.verifier_activite("grains", tuple(f"{v:g}" for v in cotes),
-                               [f"{round(d, 3):g}", bas, bas, haut, tiers, "-1"],
-                               [f"{round(d, 3):g}", milieu, milieu, bas, tiers, "-1"])
-
-    def test_activite_sable(self):
-        # Le sable : une piste enfoncée (elevation.field.fill) de density.sliderWidth sur density.sliderTrack, et
-        # une pastille du quart de la piste, qui la traverse en une période de periods.spinner, aller puis
-        # retour, en boucle ; au départ à gauche, à mi-cycle au milieu.
-        tokens, motion = self.tokens55()
-        d, periode = tokens["density"]["comfortable"], motion["periods"]["spinner"]
-        w, h = d["sliderWidth"], d["sliderTrack"]
-        piste = tokens["elevation"]["field"]["fill"].lower()
-        self.verifier_activite("sable", (w, h), [piste, f"{w / 4:g}", "0", str(periode), "-1"],
-                               [piste, f"{w / 4:g}", f"{(w - w / 4) / 2:g}", str(periode), "-1"])
+        fixe = [f"{round(4 * d, 3):g}", f"{c:g}", st["active"]["rest"]["fill"].lower(), f"{round(d, 3):g}"]
+        fin = [f"{periode / 3:g}", "-1"]
+        lire = lambda: self.valeur("activite").lower().split()
+        self.assertEqual(lire(), ["true", "true,true,true"] + fixe + [bas, bas, haut] + fin)
+        for visible, running in (("false", "true"), ("true", "false"), ("false", "false")):
+            with self.subTest(visible=visible, running=running):
+                self.ipc("activiteEtat", visible, running)
+                self.assertEqual(lire(), ["false", "false,false,false"] + fixe + [bas, bas, haut] + fin)
+        self.ipc("activiteEtat", "true", "true")
+        self.assertEqual(lire()[:2], ["true", "true,true,true"])
+        # Un ancêtre masqué rend l'indicateur invisible : ses animations s'arrêtent, puis repartent quand il reparaît.
+        self.ipc("activiteAncetre", "false")
+        self.assertEqual(lire()[1], "false,false,false")
+        self.ipc("activiteAncetre", "true")
+        self.assertEqual(lire()[1], "true,true,true")
+        # Arrêté à la phase 0,5, l'indicateur se fige à mi-cycle : les deux premiers grains à mi-hauteur.
+        self.ipc("activiteEtat", "true", "false")
+        self.ipc("activitePhase", "0.5")
+        self.assertEqual(lire()[6:9], [milieu, milieu, bas])
+        # Sous le modificateur inactive, les grains prennent l'accent sans chroma.
+        self.ipc("inactif", "true")
+        self.assertEqual(lire()[4], st["activeMuted"]["rest"]["fill"].lower())
 
     def test_depliable(self):
         # Repliée, la section cache son contenu et son chevron pointe à droite (rotation -90 du chevron bas) ;
@@ -915,7 +866,7 @@ class CoqueClavierTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(self.valeur("bascule").split()[0], "false")
 
     def test_activite_fenetre(self):
-        # Dans une vraie fenêtre, les Animators des trois formes de l'indicateur partent et tiennent, puis s'arrêtent
+        # Dans une vraie fenêtre, les Animators des trois grains de l'indicateur partent et tiennent, puis s'arrêtent
         # avec lui. La course au chargement du mouvement (un Animator parti sur une durée nulle s'arrête dès la
         # première image) ne se reproduit pas sous offscreen : elle a été relevée sous Wayland (tâche 9 septies).
         self.demarrer()

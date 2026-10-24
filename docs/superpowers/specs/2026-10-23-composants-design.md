@@ -1,6 +1,6 @@
 # La bibliothèque de composants de la coque
 
-Version 0.7 · 2026-10-24 · backlog L2-01, avec L2-02 et L2-03 · décisions de cadre D80, D81 · statut : en
+Version 0.8 · 2026-10-24 · backlog L2-01, avec L2-02 et L2-03 · décisions de cadre D80, D81 · statut : en
 relecture
 
 ## 1. Objet et raison
@@ -63,7 +63,7 @@ chaque surface écrite. C'est pourquoi L2-01 se valide à l'écran, primitive pa
    puis les flèches s'y déplacent.
 5. Le modificateur `inactive` se propage à toute une sous-arborescence : chroma des accents à zéro (sélection
    `activeMuted`, anneau `focus.colorMuted`), contenu ni terni ni estompé.
-6. Une planche étendue qui montre tout cela, avec l'interrupteur du retour au repos.
+6. Une planche étendue qui montre tout cela.
 7. Des relevés de ressources par primitive, consignés au carnet.
 
 ## 4. Hors périmètre
@@ -245,9 +245,9 @@ fait pas redescendre la mémoire résidente. Ce constat est consigné au journal
 
 ### 7.8 Le ressort du retour au repos
 
-`ColorSpring` prend aujourd'hui `transitions.state.in` pour tout changement. Il reçoit un réglage qui choisit
-le ressort du retour au repos (`in` ou `out`) ; la planche le bascule à chaud. Une fois Nicolas décidé, le
-réglage disparaît et le comportement retenu est fixé.
+Nicolas a tranché pour `in` (v0.8) : le retour au repos emploie le même ressort que tout changement d'état,
+`transitions.state.in`. `ColorSpring` n'a plus qu'un ressort, `params` ; le réglage provisoire `Reglage`, que la
+planche basculait à chaud, est retiré avec son interrupteur.
 
 ### 7.9 Widgets de Quickshell réutilisés
 
@@ -281,9 +281,9 @@ l'interrupteur qui glisse) à L2-06. Les couleurs viennent toujours des tokens e
 | Menu déroulant | Bouton contextuel de macOS (`Deroulant`) : l'apparence d'un `Bouton`, la valeur choisie et un double chevron dessiné à droite ; il ouvre un `overlay` contextuel avec une `Liste` dont l'élément choisi porte la coche dessinée de la case, et dont la sélection suit le survol. Espace ou Entrée l'ouvre ; fermé, les flèches changent la valeur |
 | Infobulle | Bulle d'aide après un survol prolongé (`delays.tooltip` du mouvement) : un `overlay` contextuel sans focus, au rayon `small`, au fond `surfaceRaised`, texte d'échelon 1 ; elle se ferme quand le pointeur part |
 | Champ de recherche | Un `Champ` en pilule, une loupe à gauche, un bouton d'effacement à droite tant qu'il y a du texte ; Échap efface |
-| Indicateur d'activité | Un anneau fin en accent qui respire : son opacité monte et descend lentement, en pas discrets : `cadences.spinner` changements par seconde (6), sur une respiration de `periods.spinner` (1500 ms), deux réglages du mouvement ; l'opacité suit un cosinus, pleine au repos du cycle, au creux (0,35) à mi-cycle. La roue à traits, jugée chère et peu élégante, est abandonnée (v0.7). Elle ne respire que visible ; aucun minuteur au repos (D80) |
+| Indicateur d'activité | Trois grains en accent sur une ligne de texte (diamètre du tiers de `icons.sizes.default`, espacés d'un demi-grain), qui grossissent et s'éclairent tour à tour en vague continue, de gauche à droite : le cycle d'un grain, de `periods.spinner` (1200 ms), enchaîne une montée, une descente et un repos d'un tiers chacun, décalé d'un tiers sur son voisin ; au repos, échelle 0,6 et opacité 0,35. Fluides sur le fil de rendu (`ScaleAnimator` et `OpacityAnimator`, courbe InOutSine), sans pas discrets. Ils ne s'animent que visibles et en marche, ancêtre masqué compris (D80). Relevé dans une fenêtre de popover (320 × 200, 60 Hz) : environ 4 % d'un cœur en marche, 0 % à l'arrêt ; le coût est celui des images produites, non du dessin. L'anneau qui respirait, puis l'arc tournant et la pastille en va-et-vient essayés ensuite, sont écartés (v0.8). L'indicateur dit « ça travaille » dans sa zone ; il ne remplace pas le curseur de la souris |
 | Section dépliable | Un chevron dessiné et un libellé, en retrait d'un échelon de `space` (8) de chaque côté de l'en-tête pour que l'anneau de focus ne les touche pas (v0.7) ; un clic ou Espace déplie ou replie le bloc. Le chevron pivote sans animation jusqu'à L2-06 |
-| Bascule à glyphe | Le gros bouton rond du Centre de contrôle (Wi-Fi, Bluetooth) : disque de `toggle_size`, glyphe de `icons.sizes.dense` au centre, libellé facultatif dessous. Éteint : fond du cran, glyphe en texte primaire ; allumé : accent plein, glyphe sur-accent (`activeMuted` sous `inactive`). Arrêt de tabulation, anneau rond au clavier, Espace bascule |
+| Bascule à glyphe | Le gros bouton rond du Centre de contrôle (Wi-Fi, Bluetooth) : disque de `toggle_size` (40 px, 36 en compact), glyphe de `icons.sizes.default` (20 px) au centre, libellé facultatif dessous. Éteint : fond du cran, glyphe en texte primaire ; allumé : accent plein, glyphe sur-accent (`activeMuted` sous `inactive`). Arrêt de tabulation, anneau rond au clavier, Espace bascule |
 | Icônes des contrôles | Dans les boutons, les rangées et les listes, l'icône prend `icons.sizes.dense` (16) au lieu de `default` (20), jugée un peu grande à côté de la jauge (v0.7) |
 
 La couleur claire des boutons d'interrupteur et des poignées est `textPrimary`, puisque le thème est sombre.
@@ -325,3 +325,4 @@ puisqu'ils lisent tout dans `Theme`.
 | 0.5 | 2026-10-23 | Deuxième validation : coche dessinée, contrôle radio, jauge sans disque, champ sans anneau, onglets en pilule sans survol ; thèmes statiques renvoyés à une feature suivante |
 | 0.6 | 2026-10-23 | Troisième validation : jauge à l'accent, onglets en rectangles arrondis et anneau sur la barre ; pastilles de fenêtre, compteur, menu déroulant, infobulle, champ de recherche, indicateur d'activité, section dépliable |
 | 0.7 | 2026-10-24 | Quatrième validation : indicateur d'activité en anneau qui respire, pastilles plus contrastées, bascule à glyphe, icônes des contrôles en 16 px, en-tête de la section dépliable en retrait de l'anneau ; matière et texture renvoyées à un élément lié à L2-04 et L2-05 |
+| 0.8 | 2026-10-24 | Cinquième validation : indicateur d'activité en trois grains fluides, bascules de 40 px ; retour au repos figé sur `in` |
