@@ -73,8 +73,42 @@ class ModelTest(unittest.TestCase):
                     self.assertEqual(got[cle], ref[cle])
 
     def test_themes_et_defaut(self):
-        self.assertEqual(themes(self.data), [("thematisee", "nuit"), ("dominante", "nuit")])
+        self.assertEqual(themes(self.data), [("thematisee", "nuit"), ("thematisee", "jour"),
+                                             ("dominante", "nuit"), ("dominante", "jour")])
         self.assertEqual(defaut(self.data), ("thematisee", "nuit"))
+
+    def _jour(self, famille, h=55):
+        """Modèle résolu du jour pour une famille, à une teinte."""
+        return resolve(theme_data(self.data, famille, "jour"), h)
+
+    def test_jour_monte_vers_le_blanc(self):
+        for f in ("thematisee", "dominante"):
+            e = self._jour(f)["elevation"]
+            with self.subTest(famille=f):
+                self.assertTrue(e["e0"].l < e["e1"].l < e["e2"].l < e["e3"].l)
+                self.assertEqual((e["e3"].l, e["e3"].c), (1.0, 0))
+
+    def test_jour_controle_blanc(self):
+        for f in ("thematisee", "dominante"):
+            with self.subTest(famille=f):
+                self.assertEqual(self._jour(f)["roles"]["control-raised"].l, 1.0)
+
+    def test_knob_jour(self):
+        for f in ("thematisee", "dominante"):
+            with self.subTest(famille=f):
+                k = self._jour(f)["knob"]
+                self.assertEqual((k.l, k.c), (1.0, 0))
+
+    def test_semantiques_par_moment(self):
+        nuit = resolve(theme_data(self.data, "thematisee", "nuit"), 55)["semantic"]
+        for f, h in (("thematisee", 55), ("dominante", 55), ("thematisee", 200)):
+            jour = self._jour(f, h)["semantic"]
+            for k, c in nuit.items():
+                with self.subTest(famille=f, hue=h, k=k):
+                    self.assertAlmostEqual(jour[k].h, c.h, places=6)
+                    self.assertAlmostEqual(jour[k].c, c.c, places=6)
+                    self.assertLess(jour[k].l, c.l)
+        self.assertEqual(self._jour("thematisee")["semantic"], self._jour("dominante")["semantic"])
 
     def test_dominante_neutres(self):
         m = resolve(theme_data(self.data, "dominante", "nuit"), 55)

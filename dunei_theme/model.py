@@ -115,7 +115,8 @@ def resolve(data: dict, hue_override: float | None = None) -> dict:
 
     roles = {name: ramp[i] for name, i in data["roles"].items()}
     kn = data["knob"]
-    knob = roles[kn["role"]] if "role" in kn else oklch(kn["lightness"], 0, hue, ceiling)
+    # Une luminosité explicite l'emporte sur le rôle : un moment surcharge ainsi le rôle de la base sans pouvoir le retirer.
+    knob = oklch(kn["lightness"], 0, hue, ceiling) if "lightness" in kn else roles[kn["role"]]
 
     return {
         "hue": hue,

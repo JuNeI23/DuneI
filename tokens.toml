@@ -486,9 +486,65 @@ never_animate_blur_radius = true   # fondu croisé net/flouté : c'est une règl
 # Ordre de fusion : base, moment, famille (model.theme_data).
 
 [knob]
-role = "text-emphasis"   # nuit : la couleur qu'ont aujourd'hui le disque et la poignée
+role = "text-emphasis"   # nuit : la couleur qu'ont aujourd'hui le disque et la poignée ; une clé lightness l'emporte sur role
 
 [moments.nuit]           # la base : aucune surcharge
+
+# Le jour : l'élévation monte vers le blanc, l'ombre porte le relief (conception § 5.2 à 5.4). Valeurs de départ,
+# calibrées par les planchers et l'ordre (checks.py) ; Nicolas les tranche à l'écran.
+[moments.jour]
+[moments.jour.meta]
+mode = "light"
+
+[moments.jour.lightness]
+# Écart à la conception : surface-window 0,965 (départ 0,955) et surface-panel 0,98 (départ 0,975). Sur 0,955, aucun
+# texte ne dépasse Lc 97 : le plancher de text-emphasis (98) n'est atteignable qu'avec une fenêtre plus claire.
+steps = [0.925, 0.965, 0.98, 1.0, 0.89, 0.85, 0.76, 0.68, 0.60, 0.50, 0.25, 0.18]
+# Facteur de chroma neutre par échelon : 0,006 au-dessus de L 0,9, 0,012 entre 0,8 et 0,9, 0,020 au-dessous,
+# majoré sous L 0,45 ; blanc pur à E3.
+neutral_profile = [0.3, 0.3, 0.3, 0.0, 0.6, 0.6, 1.0, 1.0, 1.0, 1.0, 1.4, 1.4]
+
+[moments.jour.roles]
+control-raised = 3       # blanc, comme E3 : l'ombre et le liseré le détachent
+
+[moments.jour.elevation.e2]
+sheen = false
+edge_light = false
+shadow = true
+
+[moments.jour.elevation.e3]
+sheen = false
+edge_light = false
+shadow = true
+
+[moments.jour.elevation.field]
+step = 3
+inset_shadow = false
+
+[moments.jour.surface_material]
+edge_light_opacity = 0.0
+
+[moments.jour.accent]
+fill_lightness = 0.53
+standalone_lightness = 0.47
+
+[moments.jour.categorical]
+lightness = 0.50
+
+[moments.jour.semantic]
+error   = { l = 0.43 }
+warning = { l = 0.60 }
+success = { l = 0.57 }
+info    = { l = 0.55 }
+
+[moments.jour.states.hover]
+lightness_delta = -0.03
+
+[moments.jour.states.pressed]
+lightness_delta = -0.06
+
+[moments.jour.knob]
+lightness = 1.0
 
 [familles.thematisee]    # la base : aucune surcharge
 
