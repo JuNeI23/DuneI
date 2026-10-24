@@ -97,8 +97,8 @@ fenêtre plus large.
   autour du disque ; vivant : trois bascules à libellé, `network-wireless` allumée, `bluetooth-active` et
   `night-light`) ; enfin la section `Infobulle`, un bouton qui en porte une : elle paraît après `delays.tooltip`
   (500 ms) de survol continu et se ferme au départ du pointeur ou au clic. Elle ne se fige pas et ne s'ouvre qu'à la
-  main. - **Modificateur inactive** : deux panneaux identiques (case cochée, radio coché, interrupteur, curseur,
-  barre
+  main.
+- **Modificateur inactive** : deux panneaux identiques (case cochée, radio coché, interrupteur, curseur, barre
   d'onglets, bouton, bascule allumée, champ, pastilles, compteur, déroulant, progression, liste), le second sous
   `dnInactive: true`, pour juger l'accent muet (`activeMuted`) et l'anneau atténué.
 

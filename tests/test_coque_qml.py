@@ -4,6 +4,8 @@ import re
 import unittest
 from pathlib import Path
 
+from dunei_motion.checks import EASINGS
+
 ROOT = Path(__file__).resolve().parent.parent
 COQUE = ROOT / "coque"
 
@@ -63,6 +65,15 @@ class CoqueQmlTest(unittest.TestCase):
         self.assertIsNotNone(motif.search("fill: '#fff'"))
         self.assertIsNone(motif.search("// étape #1 du plan"))
         self.assertIsNone(motif.search("ancre#facade"))
+
+    def test_courbes_de_l_indicateur(self):
+        # Les courbes que l'indicateur d'activité sait suivre (courbes, dans Activite.qml) sont exactement celles
+        # que dunei_motion/checks.py accepte pour spinner.easing (EASINGS) : une courbe acceptée sans formule
+        # retomberait sur Linear, une formule sans courbe acceptée serait du code mort.
+        texte = (COQUE / "Composants" / "Activite.qml").read_text(encoding="utf-8")
+        bloc = re.search(r"property var courbes: \(\{(.*?)\}\)", texte, re.DOTALL)
+        self.assertIsNotNone(bloc, "courbes introuvable dans Activite.qml")
+        self.assertEqual(set(re.findall(r"^\s*(\w+):\s*\{", bloc.group(1), re.MULTILINE)), set(EASINGS))
 
 
 if __name__ == "__main__":
