@@ -180,6 +180,7 @@ lightness_delta = 0.04
 
 [states.pressed]
 lightness_delta = -0.03       # descend sous le repos : sensation d'enfoncement
+                              # (même écart pour error, warning et success pressés : pastilles de fenêtre)
 translate = 0                 # aucun déplacement, aucune réduction d'échelle
 
 [states.focus]

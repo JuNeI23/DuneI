@@ -399,7 +399,8 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
         # sa partie remplie ne descend jamais sous un disque : à la valeur 0, elle a la largeur de la hauteur ; à 1,
         # toute la barre. Elle prend l'accent du thème (sélection active de controlRaised), l'icône le sur-accent de
         # la même sélection, à la taille density.sliderBarIcon, centrée sur le disque minimal. Désactivée, elle
-        # prend les couleurs disabled de l'accent ; sous inactive, l'accent sans chroma (activeMuted).
+        # prend les couleurs disabled de l'accent ; sous inactive, l'accent sans chroma (activeMuted). Ces couleurs
+        # passent par l'Etat de la jauge, toujours sélectionné, donc par ses ressorts : les changements s'attendent.
         self.demarrer()
         tokens = self.tokens55()[0]
         d, st = tokens["density"]["comfortable"], tokens["states"]["controlRaised"]
@@ -408,20 +409,32 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
         lu = self.valeur("jauge").lower().split()
         hauteur, rayon, fond, vide, plein, largeur, remplie, centre, icone, taille = lu
         self.assertEqual((hauteur, rayon, fond, vide, plein, centre), (str(h), demi, champ, str(h), largeur, demi))
-        self.assertEqual((remplie, icone, taille), (st["active"]["rest"]["fill"].lower(),
-                                                    st["active"]["rest"]["text"].lower(), str(d["sliderBarIcon"])))
+        self.assertEqual(taille, str(d["sliderBarIcon"]))
+        self.attendre_jauge([st["active"]["rest"]["fill"].lower(), st["active"]["rest"]["text"].lower()])
         self.ipc("jaugeActive", "false")
-        self.assertEqual(self.valeur("jauge").lower().split()[6:9:2], [st["active"]["disabled"]["fill"].lower(),
-                                                                        st["active"]["disabled"]["text"].lower()])
+        self.attendre_jauge([st["active"]["disabled"]["fill"].lower(), st["active"]["disabled"]["text"].lower()])
         self.ipc("jaugeActive", "true")
         self.ipc("inactif", "true")
-        self.assertEqual(self.valeur("jauge").lower().split()[6], st["activeMuted"]["rest"]["fill"].lower())
+        self.attendre_jauge([st["activeMuted"]["rest"]["fill"].lower(), st["activeMuted"]["rest"]["text"].lower()])
+
+    def attendre_jauge(self, attendu: list) -> None:
+        """Relit la couleur de la partie remplie et celle de l'icône de la jauge jusqu'à ce qu'elles valent attendu.
+
+        Rôle : ces couleurs viennent de l'Etat de la jauge, dont les ressorts rejoignent la cible en quelques
+        dizaines de millisecondes. Entrée : attendu — [#remplie, #icône] en minuscules. Sortie : aucune.
+        Erreurs : échec du test si les couleurs ne sont pas atteintes en deux secondes. Dépendances : valeur.
+        """
+        for _ in range(40):
+            if (lu := self.valeur("jauge").lower().split()[6:9:2]) == attendu:
+                return
+            time.sleep(0.05)
+        self.assertEqual(lu, attendu)
 
     def test_pastilles(self):
-        # Trois disques de density.pastille, espacés de space.scale[1], en error, warning et success ; les glyphes
-        # en surfaceBase ne paraissent qu'au survol (forcé ici, comme la planche) ; pressé, un disque est mêlé d'un
-        # quart de surfaceBase ; un disque désactivé, et les trois sous inactive, passent au neutre borderDefault,
-        # sans glyphe. Aucun disque n'accepte le focus (Qt.NoFocus).
+        # Trois disques de density.pastille, espacés de space.scale[1], en error, warning et success ; les glyphes en
+        # surfaceBase ne paraissent qu'au survol (forcé ici, comme la planche) ; pressé, un disque prend la variante
+        # pressée de sa teinte, précalculée par l'émetteur ; un disque désactivé, et les trois sous inactive, passent au
+        # neutre borderDefault, sans glyphe. Aucun disque n'accepte le focus (Qt.NoFocus).
         self.demarrer()
         tokens = self.tokens55()[0]
         c = {k: v.lower() for k, v in tokens["color"].items() if isinstance(v, str)}
@@ -431,11 +444,8 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
         self.ipc("pastillesForcer", "hover")
         self.assertEqual(self.valeur("pastilles").lower(), f"{cotes} {teintes} true true true {sombre} 0")
         self.ipc("pastillesForcer", "pressed")
-        base = bytes.fromhex(sombre[1:])
-        for lu, nom in zip(self.valeur("pastilles").lower().split()[2:5], ("error", "warning", "success")):
-            attendu = [3 / 4 * x + 1 / 4 * y for x, y in zip(bytes.fromhex(c[nom][1:]), base)]
-            with self.subTest(pastille=nom):
-                self.assertTrue(all(abs(x - y) <= 1 for x, y in zip(bytes.fromhex(lu[1:]), attendu)), lu)
+        self.assertEqual(self.valeur("pastilles").lower().split()[2:5],
+                         [c["errorPressed"], c["warningPressed"], c["successPressed"]])
         self.ipc("pastillesForcer", "hover")
         self.ipc("pastillesReduire", "false")
         neutre = c["borderDefault"]
@@ -457,6 +467,8 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(self.valeur("compteur").lower(), f"{debut}{champ} surfaceraised disabled rest 3 1")
         self.ipc("compteurValeur", "0")
         self.assertEqual(self.valeur("compteur").lower(), f"{debut}{champ} surfaceraised rest disabled 0 1")
+        # La largeur réservée au texte tient pour toute valeur, mesurée avec le chiffre le plus large.
+        self.assertEqual(self.valeur("compteurLargeur"), "true")
 
     def test_deroulant(self):
         # Le déroulant montre la valeur choisie et un double chevron dessiné ; sa largeur de contenu est celle du
@@ -817,6 +829,15 @@ class CoqueClavierTest(EssaiCoque, unittest.TestCase):
         self.ipc("pointerPastille", "1", "true")
         self.assertEqual(self.valeur("pastilles"), "true true false true 1 1 1")
         self.assertEqual(self.valeur("focus").split()[0], "aucun")
+
+    def test_attention_sans_fenetre(self):
+        # Si la fenêtre d'attention ne peut se construire (ici, la plateforme offscreen n'a pas de PanelWindow),
+        # l'Overlay journalise l'échec et se referme, et le registre Overlays ne retient aucune attention fantôme.
+        self.demarrer()
+        self.assertEqual(self.valeur("attention"), "false null")
+        self.ipc("ouvrirAttention")
+        self.attendre("Overlay : fenêtre d'attention non construite.")
+        self.attendre_valeur("attention", "false null")
 
     def test_menu_selection_suit_survol(self):
         # Dans un menu, la Liste porte selectionSuitSurvol : le pointeur posé sur une rangée en fait la rangée

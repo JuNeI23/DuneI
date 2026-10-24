@@ -6,9 +6,9 @@ import "Theme"
 import "Composants"
 
 // Coque d'essai du clavier : parcours de tabulation et curseur de texte, dans une vraie fenêtre.
-// Rôle : ouvre une FloatingWindow (un Bouton « avant », une barre Onglets avec les onglets « tokens » et « composants
-// », ce dernier coché, un Bouton « apres », un Champ, une Jauge, un Compteur, un Deroulant, des Pastilles, une
-// Recherche, une Depliable, un Bouton « bulle » qui porte une Infobulle sans texte (jamais de fenêtre), puis deux
+// Rôle : ouvre une FloatingWindow (un Bouton « avant », une barre Onglets avec les onglets « tokens » et
+// « composants », ce dernier coché, un Bouton « apres », un Champ, une Jauge, un Compteur, un Deroulant, des Pastilles,
+// une Recherche, une Depliable, un Bouton « bulle » qui porte une Infobulle sans texte (jamais de fenêtre), puis deux
 // Liste côte à côte, un menu qui porte selectionSuitSurvol et un témoin qui ne le porte pas) et y synthétise des
 // touches et des mouvements du pointeur par le TestEvent de QtTest, pour que tests/test_coque_composants.py éprouve ce
 // que la coque sans fenêtre ne peut pas exécuter : le focus actif, la tabulation, le clignotement du curseur, la mise
@@ -19,23 +19,22 @@ import "Composants"
 // aucune fenêtre et ne se déclare jamais prête ; le test lit la ligne de plateforme avant d'attendre « prêt » et
 // échoue en la nommant.
 // Entrées : DUNEI_TOKENS_DIR, lu par Theme ; QT_QPA_PLATFORM, posé à offscreen par le test.
-// Sortie : journal de Theme, « essai : plateforme <nom> » au chargement, « essai : prêt true » à l'ouverture de
-// la fenêtre, puis une ligne par commande IPC de lecture : « essai : focus <élément> <onglet courant>
-// <sélection de tokens> <sélection de composants> <visualFocus> », « essai : curseur <cursorVisible> <délégué
-// visible> <cursorFlashTime> », « essai : onglets <géométrie de la barre et de ses segments> », « essai : menu
-// <rangée courante du menu> <rangée courante du témoin> », « essai : ongletSurvole <interaction> <fond> » et
-// « essai : jauge <valeur> <anneau visible> », ainsi que anneauOnglets, compteur, deroulant et pastilles (voir
-// chaque fonction) ; « essai touche <tab|majtab|gauche|droite|haut|bas|espace|entree|echap> » frappe une touche,
-// « essai molette <1|-1> » tourne la molette sur le compteur, « essai cliquerDeroulant » clique le déroulant,
-// « essai pointerRangee <rang> <bool> » pose le pointeur sur une rangée du menu ouvert et l'y clique si demandé,
-// « essai pointerPastille <rang> <bool> » pose le pointeur sur une pastille et l'y clique si demandé, « essai
-// pastillesReduire <bool> » active ou désactive la pastille de réduction, « essai rechercheTexte <texte> » remplit
-// la recherche, « essai cliquerEffacer » clique son bouton d'effacement, « essai cliquerDepliable » clique l'en-tête
-// de la section, « essai survolerBulle », « essai quitterBulle » et « essai appuyerBulle » posent le pointeur sur
-// le bouton « bulle », l'en retirent ou l'y cliquent ; recherche, depliable et bulle journalisent (voir chaque
-// fonction),
-// « essai survoler <rang> » pose le pointeur sur une rangée de chaque liste, « essai survolerOnglet » sur
-// l'onglet « tokens » et « essai ongletActif <bool> » active ou désactive l'onglet « composants », sans
+// Sortie : journal de Theme, « essai : plateforme <nom> » au chargement, « essai : prêt true » à l'ouverture de la
+// fenêtre, puis une ligne par commande IPC de lecture : « essai : focus <élément> <onglet courant> <sélection de
+// tokens> <sélection de composants> <visualFocus> », « essai : curseur <cursorVisible> <délégué visible>
+// <cursorFlashTime> », « essai : onglets <géométrie de la barre et de ses segments> », « essai : menu <rangée courante
+// du menu> <rangée courante du témoin> », « essai : ongletSurvole <interaction> <fond> » et « essai : jauge <valeur>
+// <anneau visible> », ainsi que attention, anneauOnglets, compteur, deroulant et pastilles (voir chaque fonction) ;
+// « essai touche <tab|majtab|gauche|droite|haut|bas|espace|entree|echap> » frappe une touche, « essai molette <1|-1> »
+// tourne la molette sur le compteur, « essai cliquerDeroulant » clique le déroulant, « essai ouvrirAttention » ouvre
+// l'Overlay d'attention, « essai pointerRangee <rang> <bool> » pose le pointeur sur une rangée du menu ouvert et l'y
+// clique si demandé, « essai pointerPastille <rang> <bool> » pose le pointeur sur une pastille et l'y clique si
+// demandé, « essai pastillesReduire <bool> » active ou désactive la pastille de réduction, « essai rechercheTexte
+// <texte> » remplit la recherche, « essai cliquerEffacer » clique son bouton d'effacement, « essai cliquerDepliable »
+// clique l'en-tête de la section, « essai survolerBulle », « essai quitterBulle » et « essai appuyerBulle » posent le
+// pointeur sur le bouton « bulle », l'en retirent ou l'y cliquent ; recherche, depliable et bulle journalisent (voir
+// chaque fonction), « essai survoler <rang> » pose le pointeur sur une rangée de chaque liste, « essai survolerOnglet »
+// sur l'onglet « tokens » et « essai ongletActif <bool> » active ou désactive l'onglet « composants », sans
 // journaliser.
 // Erreurs : celles de Theme et des liaisons, dans le journal ; un nom de touche inconnu lève une TypeError.
 // Dépendances : quickshell ≥ 0.3 (FloatingWindow, LazyLoader, IpcHandler), QtTest (TestEvent), modules Theme
@@ -127,6 +126,14 @@ ShellRoot {
                 Rangee { text: "Rangée " + index; hoverEnabled: true }
             }
 
+            // Overlay d'attention : sous offscreen, sa fenêtre (PanelWindow) ne peut pas se construire, ce qui éprouve
+            // le repli de l'Overlay (échec journalisé, ouvert rendu à faux, registre vidé).
+            Overlay {
+                id: attentionEssai
+                famille: "attention"
+                Texte { text: "attention" }
+            }
+
             TestEvent { id: clavier }
 
             IpcHandler {
@@ -141,6 +148,21 @@ ShellRoot {
                                    haut: Qt.Key_Up, bas: Qt.Key_Down, espace: Qt.Key_Space, entree: Qt.Key_Return,
                                    echap: Qt.Key_Escape })[nom]
                     clavier.keyClick(cle, nom === "majtab" ? Qt.ShiftModifier : Qt.NoModifier, -1)
+                }
+
+                // ouvrirAttention — ouvre l'Overlay d'attention d'essai. Entrées : aucune. Sortie : aucune.
+                // Erreurs : aucune ; l'échec de construction de la fenêtre est journalisé par l'Overlay.
+                // Dépendances : attentionEssai.
+                function ouvrirAttention(): void {
+                    attentionEssai.ouvert = true
+                }
+
+                // attention — journalise l'état ouvert de l'Overlay d'attention d'essai et l'attention retenue par le
+                // registre (null si aucune). Entrées : aucune. Sortie : aucune ; « essai : attention <bool>
+                // <null|retenue> ». Erreurs : aucune. Dépendances : attentionEssai, Overlays, journal.
+                function attention(): void {
+                    essai.journal("attention", attentionEssai.ouvert + " "
+                        + (Overlays.attention === null ? "null" : "retenue"))
                 }
 
                 // anneauOnglets — journalise la visibilité de l'anneau de la barre d'onglets, puis celle de l'anneau
@@ -174,8 +196,11 @@ ShellRoot {
                 // Dépendances : deroulantEssai (menu, liste), journal.
                 function deroulant(): void {
                     const d = deroulantEssai, l = d.liste
-                    const coches = l ? [0, 1, 2].map(i => l.itemAtIndex(i)?.contentItem.children[0].item?.children[0]
-                        .visible) : []
+                    // La coche d'une rangée se trouve par son objectName (« glyphe », celui de Coche), à toute
+                    // profondeur.
+                    const glyphe = e => e?.objectName === "glyphe" ? e
+                        : Array.from(e?.children ?? []).map(glyphe).find(g => g) ?? null
+                    const coches = l ? [0, 1, 2].map(i => glyphe(l.itemAtIndex(i))?.visible) : []
                     essai.journal("deroulant", [d.currentIndex, d.displayText, d.activations, d.menu.ouvert]
                         .concat(l ? [l.currentIndex, l.focusClavier] : [], coches).join(" "))
                 }

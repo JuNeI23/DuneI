@@ -21,9 +21,12 @@ import "../Theme"
 // contenu. Les formes suivent macOS (conception, § 7.10) : une attention a les coins radius.window et le retrait
 // space.scale[2] (12), comme une feuille d'alerte ; un contextuel a les coins radius.panel et le retrait
 // space.scale[0] (4), comme un menu, dont la pastille de sélection se tient ainsi près du bord ; une infobulle a
-// les coins radius.small et le même retrait (conception, § 7.10). Sobriété (D80) :
-// la fenêtre et le contenu ne sont construits par le LazyLoader qu'à l'ouverture, entre deux images, et
-// détruits à la fermeture.
+// les coins radius.small et le même retrait (conception, § 7.10). Sobriété (D80) : la fenêtre et le contenu ne
+// sont construits qu'à l'ouverture et sont détruits à la fermeture ; ceux d'un contextuel ou d'une infobulle sont
+// incubés par le LazyLoader entre deux images, alors que la fenêtre d'attention, créée par le porteur que le
+// LazyLoader incube, se construit d'un bloc. Si elle ne peut l'être (fichier en erreur, plateforme sans dorsale
+// de couches), l'échec est journalisé et l'Overlay se referme, pour que le registre Overlays ne retienne pas une
+// attention sans fenêtre.
 // Entrées : famille, "attention", "contextuel" ou "infobulle" ; ouvert, vrai pour ouvrir, faux pour fermer, qui
 //           s'affecte et ne se lie pas : le registre Overlays, Échap, le clic sur le voile et la levée du focus
 //           l'écrivent impérativement, ce qui romprait une liaison ; l'appelant se resynchronise sur ferme() ; ancre,
@@ -122,10 +125,20 @@ QtObject {
     // La fenêtre d'attention vit dans FenetreAttention.qml, que ce porteur ne compile qu'à l'ouverture d'une
     // attention (Qt.createComponent, mis en cache par le moteur) : nommer PanelWindow ici empêcherait de charger
     // l'Overlay sous une plateforme sans dorsale de couches, comme la plateforme offscreen des coques d'essai. Le
-    // porteur est l'objet du chargeur ; la fenêtre, son enfant, est détruite avec lui à la fermeture.
+    // porteur est l'objet du chargeur ; la fenêtre, son enfant, est détruite avec lui à la fermeture. Si le
+    // composant n'est pas prêt, ou si la création échoue, l'échec est journalisé et ouvert repasse à faux, après la
+    // fin de l'incubation du porteur (Qt.callLater), ce qui ferme l'Overlay et le retire du registre.
     readonly property Component fenetreAttention: QtObject {
         id: porteur
-        readonly property var fenetre: Qt.createComponent("FenetreAttention.qml").createObject(porteur, { overlay })
+        readonly property Component composant: Qt.createComponent("FenetreAttention.qml")
+        readonly property var fenetre: composant.status === Component.Ready
+            ? composant.createObject(porteur, { overlay }) : null
+
+        Component.onCompleted: {
+            if (fenetre) return
+            console.warn("Overlay : fenêtre d'attention non construite. " + composant.errorString())
+            Qt.callLater(() => overlay.ouvert = false)
+        }
     }
 
     readonly property Component fenetreContextuel: PopupWindow {

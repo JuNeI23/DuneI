@@ -5,7 +5,7 @@ import re
 import unittest
 from pathlib import Path
 
-from dunei_theme.color import oklch, to_hex
+from dunei_theme.color import Oklch, oklch, to_hex
 from dunei_theme.emitters.quickshell import emit
 from dunei_theme.model import load, resolve
 
@@ -107,6 +107,16 @@ class QuickshellEmitterTest(unittest.TestCase):
         self.assertEqual(st["none"]["disabled"]["fill"], to_hex(oklch(panel.l, panel.c * 0.15, panel.h, ce)))
         self.assertEqual(st["active"]["disabled"]["fill"],
                          to_hex(oklch(acc.l + (panel.l - acc.l) * 0.55, acc.c * 0.15, acc.h, ce)))
+
+    def test_semantiques_pressees(self):
+        """Vérifie les variantes pressées d'error, warning et success : la luminosité descend de l'écart de pression
+        des états (states.pressed.lightness_delta), en OKLCH, chroma et teinte inchangés."""
+        dl = self.data["states"]["pressed"]["lightness_delta"]
+        for k in ("error", "warning", "success"):
+            s = self.model["semantic"][k]
+            with self.subTest(teinte=k):
+                self.assertEqual(self.out["color"][f"{k}Pressed"], to_hex(Oklch(round(s.l + dl, 3), s.c, s.h)))
+                self.assertNotEqual(self.out["color"][f"{k}Pressed"], self.out["color"][k])
 
     def test_focus(self):
         """Vérifie l'anneau de focus : couleurs, épaisseur et décalages."""

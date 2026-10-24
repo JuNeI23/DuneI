@@ -7,18 +7,18 @@ import "etats.js" as Etats
 // Pastilles — les trois pastilles de fenêtre de macOS : fermer, réduire, agrandir.
 // Rôle : une rangée de trois disques de density.pastille de diamètre, espacés de space.scale[1] (8), aux couleurs
 // color.error, color.warning et color.success (conception, § 7.10). Au survol du groupe, chaque disque montre son
-// glyphe dessiné (QtQuick.Shapes) : une croix, un tiret, et les deux flèches d'agrandissement de macOS (deux
-// triangles pleins pointés vers les coins opposés). Les glyphes sont en color.surfaceBase, la couleur la plus
-// sombre du thème : le contraste le plus fort qu'offre Theme sur les trois teintes (4,2:1 sur error, 8,8:1 sur
-// warning et 8,6:1 sur success à la teinte 55), au-dessus des 3:1 demandés à un élément graphique. Pressé, un disque
-// fonce : sa couleur est mêlée d'un quart de color.surfaceBase, qui garde la chaleur du thème. Sous le
+// glyphe dessiné (QtQuick.Shapes) : une croix, un tiret, et les deux flèches d'agrandissement de macOS (deux triangles
+// pleins pointés vers les coins opposés). Les glyphes sont en color.surfaceBase, la couleur la plus sombre du thème :
+// le contraste le plus fort qu'offre Theme sur les trois teintes (4,2:1 sur error, 8,8:1 sur warning et 8,6:1 sur
+// success à la teinte 55), au-dessus des 3:1 demandés à un élément graphique. Pressé, un disque fonce : il prend la
+// variante pressée de sa teinte (color.errorPressed, warningPressed, successPressed), précalculée par l'émetteur dans
+// l'espace perceptif du thème avec l'écart de pression des états ; le QML ne dérive aucune couleur. Sous le
 // modificateur inactive hérité, comme une fenêtre inactive de macOS, les trois disques passent au neutre
-// color.borderDefault et ne montrent plus de glyphe ; un disque désactivé (reduireActif ou agrandirActif faux)
-// prend ce même neutre, sans glyphe ni réaction. Les pastilles ne sont pas un arrêt de tabulation
-// (focusPolicy Qt.NoFocus) : la fenêtre se ferme, se réduit et s'agrandit aussi au clavier, par Hyprland.
-// Leur rôle sous un gestionnaire en tuiles et leur emplacement se décideront avec la décoration des fenêtres
-// (proposition : fermer la fenêtre, l'envoyer au bureau spécial, la passer en plein écran) ; ce composant n'émet
-// que des signaux.
+// color.borderDefault et ne montrent plus de glyphe ; un disque désactivé (reduireActif ou agrandirActif faux) prend ce
+// même neutre, sans glyphe ni réaction. Les pastilles ne sont pas un arrêt de tabulation (focusPolicy Qt.NoFocus) : la
+// fenêtre se ferme, se réduit et s'agrandit aussi au clavier, par Hyprland. Leur rôle sous un gestionnaire en tuiles et
+// leur emplacement se décideront avec la décoration des fenêtres (proposition : fermer la fenêtre, l'envoyer au bureau
+// spécial, la passer en plein écran) ; ce composant n'émet que des signaux.
 // Entrées : reduireActif, agrandirActif, vrais par défaut ; inactif, le modificateur inactive, hérité par défaut
 // (dnInactive) ; forcer, réservée à la planche de contrôle : "hover" montre les glyphes sans geste, "pressed"
 // fonce en plus les trois disques ; vide par défaut, et jamais posée par une surface de la coque.
@@ -68,10 +68,9 @@ Row {
             required property int index
             readonly property color base: Theme.color?.surfaceBase ?? "transparent"
             readonly property bool neutre: !enabled || pastilles.inactif
-            readonly property color couleur: neutre ? Theme.color?.borderDefault ?? "transparent"
-                : pressed || pastilles.forcer === "pressed"
-                    ? Qt.tint(Theme.color?.[modelData.teinte] ?? "transparent", Qt.rgba(base.r, base.g, base.b, 1 / 4))
-                    : Theme.color?.[modelData.teinte] ?? "transparent"
+            readonly property bool enfonce: pressed || pastilles.forcer === "pressed"
+            readonly property color couleur: (neutre ? Theme.color?.borderDefault
+                : Theme.color?.[modelData.teinte + (enfonce ? "Pressed" : "")]) ?? "transparent"
             readonly property alias trace: trace
 
             focusPolicy: Qt.NoFocus

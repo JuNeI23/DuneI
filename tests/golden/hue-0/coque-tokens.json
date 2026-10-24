@@ -22,6 +22,9 @@
     "warning": "#e49e22",
     "success": "#51bf68",
     "info": "#44a8e7",
+    "errorPressed": "#c92f33",
+    "warningPressed": "#da950b",
+    "successPressed": "#46b55f",
     "categorical": [
       "#e983a4",
       "#ec8a67",

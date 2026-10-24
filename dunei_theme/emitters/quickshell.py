@@ -150,6 +150,11 @@ def emit(model: dict) -> str:
             "accentStandalone": to_hex(model["accent_standalone"]),
             "onAccent": to_hex(model["on_accent"]),
             **{k: to_hex(sem[k]) for k in ("error", "warning", "success", "info")},
+            # Variantes pressées des teintes sémantiques (pastilles de fenêtre) : la luminosité descend de l'écart
+            # de pression des états, en OKLCH, sans plafond de chroma, que la teinte de base ne subit pas non plus.
+            **{f"{k}Pressed": to_hex(Oklch(round(sem[k].l + raw["states"]["pressed"]["lightness_delta"], 3), sem[k].c,
+                                           sem[k].h))
+               for k in ("error", "warning", "success")},
             "categorical": [to_hex(c) for c in model["categorical"]],
         },
         "states": _states(model),

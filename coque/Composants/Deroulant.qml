@@ -18,8 +18,8 @@ import "../Theme"
 // reste de l'API de Bouton (enabled, principal…), hors text, que displayText remplit.
 // Sorties : displayText, le texte de la valeur choisie (vide hors du modèle) ; signal activated(index), émis quand
 // l'utilisateur choisit un élément, au menu ou aux flèches ; menu, l'Overlay ; liste, la Liste du menu ouvert,
-// null fermé ; auClavier, vrai si la dernière ouverture vient du clavier ; ces trois dernières sont lues par les
-// essais.
+// null fermé ; auClavier, vrai si la dernière ouverture vient du clavier ; ces trois dernières, en lecture seule,
+// sont lues par les essais.
 // Erreurs : aucune ; un modèle vide montre un bouton sans texte, dont le menu est vide ; avant le chargement des
 // tokens, les cotes sont nulles et les couleurs transparentes.
 // Dépendances : Bouton (fond, états, anneau), Overlay (famille contextuel), Liste, Rangee (accessoire), Coche,
@@ -31,8 +31,8 @@ Bouton {
 
     property var model: []
     property int currentIndex: 0
-    property bool auClavier: false
-    property Item liste: null
+    readonly property alias auClavier: interne.auClavier
+    readonly property alias liste: interne.liste
     readonly property string displayText: model[currentIndex] ?? ""
     readonly property alias menu: menu
     readonly property real chevron: Theme.icons?.sizes.dense ?? 0
@@ -55,9 +55,9 @@ Bouton {
 
     // ouvrir — ouvre le menu des choix sous le bouton.
     // Entrée : clavier, vrai si l'ouverture vient du clavier (le contour de la rangée courante sera montré).
-    // Sortie : aucune. Erreurs : aucune. Dépendances : menu (Overlay), auClavier.
+    // Sortie : aucune. Erreurs : aucune. Dépendances : menu (Overlay), interne (auClavier).
     function ouvrir(clavier: bool): void {
-        auClavier = clavier
+        interne.auClavier = clavier
         menu.ouvert = true
     }
 
@@ -78,6 +78,13 @@ Bouton {
             currentIndex = i
             activated(i)
         }
+    }
+
+    // État interne, exposé en lecture seule par auClavier et liste : seuls ouvrir() et la Liste du menu l'écrivent.
+    QtObject {
+        id: interne
+        property bool auClavier: false
+        property Item liste: null
     }
 
     FontMetrics {
@@ -122,10 +129,14 @@ Bouton {
             implicitWidth: deroulant.width
             implicitHeight: count * (Theme.density?.rowHeight ?? 0)
             model: deroulant.model
-            Component.onCompleted: deroulant.liste = choix
-            Component.onDestruction: deroulant.liste = null
+            Component.onCompleted: interne.liste = choix
+            Component.onDestruction: interne.liste = null
             onActiveFocusChanged: {
-                if (activeFocus && !deroulant.auClavier) Qt.callLater(() => choix.focusClavier = false)
+                // La liste peut être détruite avant l'appel différé, si le menu se ferme aussitôt : interne.liste
+                // vaut alors null et rien n'est touché.
+                if (activeFocus && !deroulant.auClavier) Qt.callLater(() => {
+                    if (interne.liste) interne.liste.focusClavier = false
+                })
             }
 
             delegate: Rangee {

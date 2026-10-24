@@ -15,13 +15,15 @@ import "etats.js" as Etats
 // leurs pendants pour down) ; T.SpinBox désactive le demi-bouton dont la borne est atteinte, qui prend alors
 // l'état désactivé. L'anneau de focus clavier entoure l'ensemble, sur visualFocus. Le champ garde le rôle du
 // conteneur, sans cran (§ 7.4), et son texte se ternit quand le compteur est désactivé.
-// Largeur : fixe, celle du plus long des textes de from et de to, pour qu'aucune valeur ne redimensionne le
-// contrôle.
+// Largeur : fixe, celle du plus long des textes de from et de to écrits avec le chiffre le plus large de la police,
+// pour qu'aucune valeur ne redimensionne le contrôle ni ne déborde du champ, que les chiffres de la police soient
+// tabulaires ou non.
 // Entrées : value, from, to, stepSize, editable, textFromValue, valueFromText et le reste de l'API de T.SpinBox ;
 // wheelEnabled vaut vrai par défaut. Un compteur non éditable ne vole pas le focus d'un champ (Qt.TabFocus,
 // § 7.3) ; éditable, il le prend au clic, comme un champ (Qt.StrongFocus).
 // Sorties : etat, l'Etat du champ (rôle, interaction, couleurs) ; etatHaut et etatBas, ceux des deux
-// demi-boutons ; champ et anneau, le fond du champ et l'anneau de focus, lus par les essais.
+// demi-boutons ; largeurTexte, la largeur réservée au texte ; champ et anneau, le fond du champ et l'anneau de
+// focus, lus par les essais.
 // Erreurs : aucune ; avant le chargement des tokens, les cotes sont nulles et les couleurs transparentes.
 // Dépendances : QtQuick.Templates (SpinBox), Quickshell (propriété attachée QsWindow : rapport de pixels de la
 // fenêtre, pour le filet), Theme (density, elevation, radius, space, typo, color, hairline), Etat, AnneauFocus,
@@ -38,10 +40,19 @@ T.SpinBox {
     readonly property alias anneau: anneau
     readonly property real stepper: Theme.density?.stepperWidth ?? 0
     readonly property real retrait: Theme.space?.scale[1] ?? 0
+    // Largeur du texte, valable pour toute valeur : chaque chiffre des textes des deux bornes est remplacé par le
+    // chiffre le plus large de la police, puis le plus large des deux est mesuré. Aucune valeur comprise entre les
+    // bornes n'a plus de chiffres que la plus longue d'entre elles. La lecture de la taille de police lie le
+    // calcul aux changements de police.
+    readonly property real largeurTexte: {
+        if (!(metriques.font.pixelSize > 0)) return 0
+        const large = [..."0123456789"].reduce((a, b) => metriques.advanceWidth(b) > metriques.advanceWidth(a) ? b : a)
+        return Math.max(...[from, to].map(v => metriques.advanceWidth(textFromValue(v, locale).replace(/\d/g, large))))
+    }
 
     focusPolicy: editable ? Qt.StrongFocus : Qt.TabFocus
     wheelEnabled: true
-    implicitWidth: leftPadding + mesure.advanceWidth + rightPadding
+    implicitWidth: leftPadding + largeurTexte + rightPadding
     implicitHeight: Theme.density?.controlHeight ?? 0
     leftPadding: retrait
     rightPadding: retrait + (Theme.space?.scale[0] ?? 0) + stepper
@@ -49,12 +60,9 @@ T.SpinBox {
     font.pixelSize: Theme.typo?.scale[2] ?? Qt.application.font.pixelSize
     font.weight: Theme.typo?.weightRegular ?? Font.Normal
 
-    // Le plus long des textes des deux bornes fixe la largeur du champ.
-    TextMetrics {
-        id: mesure
+    FontMetrics {
+        id: metriques
         font: compteur.font
-        text: [compteur.from, compteur.to].map(v => compteur.textFromValue(v, compteur.locale))
-            .reduce((a, b) => b.length > a.length ? b : a)
     }
 
     // Le champ reste au rôle de son conteneur : pas de cran, donc le dnRole hérité tel quel.

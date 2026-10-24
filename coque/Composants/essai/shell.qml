@@ -21,14 +21,14 @@ import "Composants/etats.js" as Etats
 // Theme.ready, et une ligne « essai : <clé> <valeur> » par commande IPC de lecture (cran, interaction, selection,
 // sonde, naissances, fond, texte, anneau, etat, ressort, image, controles, coches, cotes, glyphes, radios, jauge,
 // progression, separateur, champ, indicatif, tailleIcone, liste, arrets, rangee, bouton, overlays, overlaysFermes,
-// pastilles, compteur, deroulant, recherche, rechercheCouleurs, activite, depliable, fenetreAttention) ; « essai
-// rechercheTexte <texte> », « essai rechercheActive <bool> », « essai activiteEtat <visible> <running> », « essai
-// depliableOuvrir <bool> », « essai pastillesForcer <état> », « essai pastillesReduire <bool> », « essai compteurValeur
-// <n> », « essai deroulantRang <n> », « essai decocher », « essai radioCocher <rang> », « essai jaugeActive <bool> », «
-// essai boutonPrincipal <bool> », « essai inactif <bool> », « essai reparenter », « essai texteMoyen », « essai
-// anneauInactif <bool> », « essai survol <bool> », « essai retour <in|out> », « essai champActif <bool> », « essai
-// champTexte <texte> », « essai selectionLibre », « essai icone <nom> <bool> », « essai ouvrirFactice <A|B|C> » et «
-// essai fermerFactice <A|B|C> » agissent sans journaliser.
+// pastilles, compteur, compteurLargeur, deroulant, recherche, rechercheCouleurs, activite, depliable, fenetreAttention)
+// ; « essai rechercheTexte <texte> », « essai rechercheActive <bool> », « essai activiteEtat <visible> <running> »,
+// « essai depliableOuvrir <bool> », « essai pastillesForcer <état> », « essai pastillesReduire <bool> », « essai
+// compteurValeur <n> », « essai deroulantRang <n> », « essai decocher », « essai radioCocher <rang> », « essai
+// jaugeActive <bool> », « essai boutonPrincipal <bool> », « essai inactif <bool> », « essai reparenter », « essai
+// texteMoyen », « essai anneauInactif <bool> », « essai survol <bool> », « essai retour <in|out> », « essai champActif
+// <bool> », « essai champTexte <texte> », « essai selectionLibre », « essai icone <nom> <bool> », « essai ouvrirFactice
+// <A|B|C> » et « essai fermerFactice <A|B|C> » agissent sans journaliser.
 // Erreurs : celles de Theme et des liaisons, dans le journal. Dépendances : quickshell ≥ 0.3 (Quickshell.Io :
 // IpcHandler), modules coque/Theme et coque/Composants.
 // Import : Quickshell ne résout pas un module situé au-dessus de la racine de la coque lancée ; les liens
@@ -153,6 +153,11 @@ ShellRoot {
                 from: 0
                 to: 3
                 value: 3
+            }
+
+            FontMetrics {
+                id: mesureEssai
+                font: compteurEssai.font
             }
 
             Deroulant {
@@ -499,6 +504,23 @@ ShellRoot {
             essai.journal("compteur", [c.height, h.width, h.height + b.height, h.topLeftRadius, h.bottomLeftRadius,
                 b.topLeftRadius, b.bottomLeftRadius, c.champ.color, c.etatHaut.role, c.etatHaut.interaction,
                 c.etatBas.interaction, c.displayText, c.focusPolicy].join(" "))
+        }
+
+        // compteurLargeur — journalise si la largeur réservée au texte du compteur contient le texte de toute valeur
+        // entière de -20 à 1999, bornes posées le temps de la mesure puis rétablies (0 à 3, valeur 3).
+        // Entrées : aucune. Sortie : aucune ; « essai : compteurLargeur <bool> ». Erreurs : aucune.
+        // Dépendances : compteurEssai (largeurTexte, textFromValue), mesureEssai (FontMetrics).
+        function compteurLargeur(): void {
+            const c = compteurEssai
+            c.from = -20
+            c.to = 1999
+            let tient = c.largeurTexte > 0
+            for (let v = c.from; v <= c.to; v++)
+                tient = tient && mesureEssai.advanceWidth(c.textFromValue(v, c.locale)) <= c.largeurTexte
+            c.from = 0
+            c.to = 3
+            c.value = 3
+            essai.journal("compteurLargeur", tient)
         }
 
         // compteurValeur — règle la valeur du compteur d'essai.
