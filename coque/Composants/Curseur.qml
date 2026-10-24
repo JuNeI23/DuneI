@@ -7,7 +7,7 @@ import "../Theme"
 // glissement, à la forme de macOS (§ 7.10). La piste, en pilule, est au fond du bureau (elevation.e0, bible :
 // « piste à E0 ») ; la partie remplie, de l'origine au centre de la poignée, est à l'accent, ou à l'accent sans
 // chroma sous le modificateur inactive (§ 7.5) ; la poignée, ronde et claire, prend le texte de son Etat au rôle
-// controlRaised, sans sélection : color.textPrimary, terni seulement quand le curseur est désactivé. Le thème
+// controlRaised, sans sélection : color.textEmphasis, terni seulement quand le curseur est désactivé. Le thème
 // étant sombre, ce texte est clair ; un rôle propre (knob) viendra si un thème clair apparaît. L'anneau de
 // focus entoure la poignée, sur visualFocus ; un clic ne vole pas le focus d'un champ (focusPolicy
 // Qt.TabFocus, § 7.3).

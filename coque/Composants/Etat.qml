@@ -11,8 +11,12 @@ import "etats.js" as Etats
 // dont les ancêtres portent dnRole et dnInactive ; selectionne ; focusDansGroupe, vrai par défaut ; role, rôle
 // de fond, par défaut le cran au-dessus du dnRole hérité (surfaceWindow à la racine) ; forcer, réservée à la
 // planche de contrôle : une clé d'interaction ("hover", "pressed"…) qui, non vide, remplace celle que lit le
-// contrôle, pour montrer un état sans geste ; vide par défaut, et jamais posée par une surface de la coque.
-// Sorties : interaction, selection, inactif (clés des tokens) ; fond, texte, couleurs affichées.
+// contrôle, pour montrer un état sans geste ; vide par défaut, et jamais posée par une surface de la coque ;
+// peintFond et peintTexte, vrais par défaut : faux quand le contrôle ne peint pas cette couleur, qui reste alors
+// transparente, si bien que son ressort ne démarre jamais (sobriété, D80).
+// Sorties : interaction, selection, inactif (clés des tokens) ; fond, texte, couleurs affichées ; texteNeutre, le
+// texte du même rôle et de la même interaction sans sélection, sans ressort, pour un libellé posé à côté d'une
+// marque sélectionnable (case, radio, interrupteur, bascule) ou d'un en-tête sans fond (section dépliable).
 // Erreurs : aucune ; avant le chargement des tokens ou pour une combinaison absente, les couleurs restent
 // transparentes.
 // Dépendances : Theme (stateColors, motion), ColorSpring (module Theme), etats.js (herite, cran,
@@ -25,6 +29,8 @@ Item {
     property bool selectionne: false
     property bool focusDansGroupe: true
     property string forcer: ""
+    property bool peintFond: true
+    property bool peintTexte: true
     property string role: Etats.cran(Etats.herite(controle, "dnRole", "surfaceWindow"))
     readonly property bool inactif: Etats.herite(controle, "dnInactive", false)
     readonly property string interaction: forcer || Etats.interaction(controle)
@@ -32,16 +38,17 @@ Item {
     readonly property var couleurs: Theme.stateColors(role, selection, interaction)
     readonly property color fond: ressortFond.value
     readonly property color texte: ressortTexte.value
+    readonly property color texteNeutre: Theme.stateColors(role, "none", interaction)?.text ?? "transparent"
 
     visible: false
 
     ColorSpring {
         id: ressortFond
-        target: etat.couleurs?.fill ?? "transparent"
+        target: etat.peintFond ? (etat.couleurs?.fill ?? "transparent") : "transparent"
     }
 
     ColorSpring {
         id: ressortTexte
-        target: etat.couleurs?.text ?? "transparent"
+        target: etat.peintTexte ? (etat.couleurs?.text ?? "transparent") : "transparent"
     }
 }

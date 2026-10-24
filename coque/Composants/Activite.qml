@@ -4,16 +4,16 @@ import "etats.js" as Etats
 
 // Activite — indicateur d'activité indéterminée de la coque : il dit « ça travaille » dans l'interface.
 // Rôle : se pose là où un travail sans durée connue est en cours (une recherche de réseaux dans un popover, un
-// chargement dans un panneau), à côté de ce qu'il concerne. Il ne remplace pas le curseur de la souris : le
-// curseur d'attente reste l'affaire du système et des applications, l'indicateur ne parle que de sa zone. Une
-// progression mesurable prend la Progression. Trois grains en ligne grossissent et s'éclairent tour à tour, en
-// vague continue de gauche à droite (conception, § 7.10) : le cycle d'un grain, d'une période, enchaîne une
-// montée, une descente et un repos d'un tiers chacun, décalé d'un tiers sur son voisin. Chaque étape est un Pas,
-// un ScaleAnimator et un OpacityAnimator sur le fil de rendu, image par image, sans pas discrets, selon la courbe
-// InOutSine, que douceur() reproduit pour les poses. La couleur est l'accent du rôle de son conteneur (sélection
-// active), ou activeMuted sous le modificateur inactive hérité (§ 7.5). Sobriété (D80) : les animations ne
-// tournent que si l'indicateur est visible, ancêtre masqué compris, et en marche ; arrêté, il reprend aussitôt la
-// pose de sa phase et ne coûte rien.
+// chargement dans un panneau), à côté de ce qu'il concerne. Il ne remplace pas le curseur de la souris : le curseur
+// d'attente reste l'affaire du système et des applications, l'indicateur ne parle que de sa zone. Une progression
+// mesurable prend la Progression. Trois grains en ligne grossissent et s'éclairent tour à tour, en vague continue de
+// gauche à droite (conception, § 7.10) : le cycle d'un grain, d'une période, enchaîne une montée, une descente et un
+// repos d'un tiers chacun, décalé d'un tiers sur son voisin. Chaque étape est un Pas, un ScaleAnimator et un
+// OpacityAnimator sur le fil de rendu, image par image, sans pas discrets, selon la courbe spinner.easing du mouvement
+// (InOutSine), que douceur() reproduit pour les poses. La couleur est l'accent du rôle de son conteneur (sélection
+// active), ou activeMuted sous le modificateur inactive hérité (§ 7.5). Sobriété (D80) : les animations ne tournent que
+// si l'indicateur est visible, ancêtre masqué compris, et en marche ; arrêté, il reprend aussitôt la pose de sa phase
+// et ne coûte rien.
 // Entrées : running, vrai par défaut ; phase, fraction du cycle que montre la pose arrêtée (0 par défaut ; la
 //           planche fige ainsi l'indicateur à mi-cycle), sans effet en marche, où la vague part toujours du début
 //           de son cycle ; visible.
@@ -22,10 +22,12 @@ import "etats.js" as Etats
 //           les essais.
 // Erreurs : aucune ; avant le chargement des tokens et du mouvement, les cotes sont nulles, les couleurs
 //           transparentes et rien ne s'anime.
-// Dépendances : Theme (icons.sizes, stateColors, motion.periods), etats.js (herite) ; le rôle (dnRole) et le
-//               modificateur (dnInactive) viennent de la Surface englobante.
+// Dépendances : Theme (icons.sizes, stateColors, motion.periods, motion.spinner), etats.js (herite) ; le rôle
+//               (dnRole) et le modificateur (dnInactive) viennent de la Surface englobante.
 // Cotes : grains du tiers de icons.sizes.default, espacés d'un demi-grain, sur la hauteur icons.sizes.default. Au
-//         repos, un grain tombe à l'échelle 0,6 et à l'opacité 0,35 : des proportions du dessin, non des cotes.
+//         repos, un grain tombe à l'échelle spinner.rest_scale (0,6) et à l'opacité spinner.rest_opacity (0,35) du
+//         mouvement ; il vaut 1 et 1 au sommet. Le tiers et le demi-grain restent ici : ce sont des proportions du
+//         dessin, alors que les valeurs de mouvement viennent de motion.toml (D82).
 Item {
     id: activite
 
@@ -37,19 +39,27 @@ Item {
     property bool marche: false
     readonly property real periode: Theme.motion?.periods?.spinner ?? 0
     readonly property real diametre: (Theme.icons?.sizes.default ?? 0) / 3
-    readonly property real bas: 0.6
-    readonly property real creux: 0.35
+    readonly property real bas: Theme.motion?.spinner?.rest_scale ?? 0
+    readonly property real creux: Theme.motion?.spinner?.rest_opacity ?? 0
+    // Courbes que l'indicateur sait suivre, sous le nom que leur donne motion.toml (spinner.easing) : le type Easing
+    // des Animators, et sa formule f, qui reproduit les poses. dunei_motion/checks.py n'accepte que ces noms.
+    readonly property var courbes: ({
+        Linear: { type: Easing.Linear, f: t => t },
+        InOutSine: { type: Easing.InOutSine, f: t => (1 - Math.cos(Math.PI * t)) / 2 },
+        InOutQuad: { type: Easing.InOutQuad, f: t => t < 0.5 ? 2 * t * t : 1 - 2 * (1 - t) * (1 - t) }
+    })
+    readonly property var courbe: courbes[Theme.motion?.spinner?.easing] ?? courbes.Linear
     readonly property string role: Etats.herite(activite, "dnRole", "surfaceWindow")
     readonly property bool inactif: Etats.herite(activite, "dnInactive", false)
     readonly property color accent: Theme.stateColors(role, inactif ? "activeMuted" : "active", "rest")?.fill
                                     ?? "transparent"
     readonly property alias repeteur: repeteur
 
-    // douceur — avancée adoucie d'une étape, la courbe InOutSine des Animators.
+    // douceur — avancée adoucie d'une étape, selon la courbe des Animators.
     // Entrée : t, fraction de l'étape écoulée, de 0 à 1. Sortie : fraction du chemin parcouru, de 0 à 1.
-    // Erreurs : aucune. Dépendances : aucune.
+    // Erreurs : aucune. Dépendances : courbe.
     function douceur(t: real): real {
-        return (1 - Math.cos(Math.PI * t)) / 2
+        return courbe.f(t)
     }
 
     // vague — hauteur d'un grain dans sa vague : 0 au repos, 1 au sommet. Son cycle enchaîne une montée, une
@@ -76,10 +86,10 @@ Item {
         required property var a
         required property real duree
         ScaleAnimator {
-            target: pas.cible; from: pas.de[0]; to: pas.a[0]; duration: pas.duree; easing.type: Easing.InOutSine
+            target: pas.cible; from: pas.de[0]; to: pas.a[0]; duration: pas.duree; easing.type: activite.courbe.type
         }
         OpacityAnimator {
-            target: pas.cible; from: pas.de[1]; to: pas.a[1]; duration: pas.duree; easing.type: Easing.InOutSine
+            target: pas.cible; from: pas.de[1]; to: pas.a[1]; duration: pas.duree; easing.type: activite.courbe.type
         }
     }
 

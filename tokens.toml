@@ -101,6 +101,10 @@ text-primary     = 10
 text-emphasis    = 11
 control-raised   = 4     # fond des contrôles posés sur E3 ; pas un niveau d'élévation
 
+# Texte des états d'un rôle de fond, quand ce n'est pas text-primary (sélections none et inactive).
+[role_text]
+control-raised = "text-emphasis"   # text-primary n'y atteint que Lc 88 ; text-emphasis tient Lc ≥ 92,9, survol compris.
+
 
 # ===========================================================================
 # ACCENT — deux versions, échelons explicites

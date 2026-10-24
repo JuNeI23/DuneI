@@ -5,7 +5,7 @@ import "../Theme"
 // Bascule — bascule à glyphe de la coque : le gros bouton rond du Centre de contrôle de macOS (Wi-Fi, Bluetooth).
 // Rôle : habille le gabarit sans style T.Button, rendu cochable (conception, § 7.10). Un disque porte un glyphe
 // symbolique en son centre, et un libellé facultatif se tient dessous. Le disque prend le fond de son Etat :
-// éteinte, le fond du cran au-dessus du conteneur et le glyphe au texte primaire ; allumée, la bascule est
+// éteinte, le fond du cran au-dessus du conteneur et le glyphe au texte de son rôle ; allumée, la bascule est
 // sélectionnée, d'où l'accent et le sur-accent, ou l'accent sans chroma sous le modificateur inactive (§ 7.5), sans
 // couleur nouvelle. Survol et pression viennent de l'Etat ; pressée, elle descend sous le repos sans se déplacer ni se
 // réduire (bible, annexe E). Le libellé se tient sur le conteneur, hors du disque : il prend le texte non sélectionné
@@ -18,7 +18,7 @@ import "../Theme"
 // lus par les essais ; cibleFocus (le disque), que la planche entoure de l'anneau.
 // Erreurs : aucune ; un glyphe absent du thème laisse le disque vide ; avant le chargement des tokens, les cotes sont
 // nulles et les couleurs transparentes.
-// Dépendances : QtQuick.Templates, Theme (density, icons, space, stateColors), Etat, AnneauFocus, Icone, Texte.
+// Dépendances : QtQuick.Templates, Theme (density, icons, space), Etat, AnneauFocus, Icone, Texte.
 // Cotes : disque de density.toggleSize (40, 36 en compact), glyphe de icons.sizes.default (20) ; écart entre le disque
 // et le libellé space.scale[0] (4) ; libellé d'échelon 1.
 T.Button {
@@ -82,7 +82,7 @@ T.Button {
             visible: bascule.avecLibelle
             echelon: 1
             text: bascule.text
-            color: Theme.stateColors(etat.role, "none", etat.interaction)?.text ?? "transparent"
+            color: etat.texteNeutre
         }
     }
 }

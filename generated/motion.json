@@ -14,10 +14,15 @@
     "reduced_fade_ms": 100
   },
   "delays": {
-    "tooltip": 700
+    "tooltip": 500
   },
   "periods": {
     "spinner": 1200
+  },
+  "spinner": {
+    "rest_scale": 0.6,
+    "rest_opacity": 0.35,
+    "easing": "InOutSine"
   },
   "transitions": {
     "state": {

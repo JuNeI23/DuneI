@@ -5,7 +5,7 @@ import re
 import unittest
 from pathlib import Path
 
-from dunei_theme.color import Oklch, oklch, to_hex
+from dunei_theme.color import Oklch, apca_lc, from_srgb255, oklch, to_hex
 from dunei_theme.emitters.quickshell import emit
 from dunei_theme.model import load, resolve
 
@@ -93,6 +93,24 @@ class QuickshellEmitterTest(unittest.TestCase):
         self.assertEqual(self.out["color"]["controlRaised"], to_hex(m["ramp"][4]))
         self.assertEqual(self.out["states"]["controlRaised"]["none"]["rest"]["fill"], to_hex(m["ramp"][4]))
         self.assertGreater(m["roles"]["control-raised"].l, m["roles"]["surface-raised"].l)
+
+    def test_control_raised_texte(self):
+        """Vérifie que le texte des contrôles posés sur E3 est text-emphasis et atteint la cible APCA du corps de
+        texte (Lc 90) sur controlRaised au repos, au survol et à la pression, sélection inactive comprise, à
+        chaque teinte des instantanés. text-primary n'y atteignait que Lc 88,1."""
+        cible, hexa = self.data["meta"]["contrast_target_body"], lambda h: from_srgb255(*bytes.fromhex(h[1:]))
+        for hue in GOLDEN_HUES:
+            m = resolve(self.data, float(hue))
+            st = json.loads(emit(m))["states"]["controlRaised"]
+            for s in ("none", "inactive"):
+                for i in ("rest", "hover", "pressed"):
+                    with self.subTest(hue=hue, s=s, i=i):
+                        c = st[s][i]
+                        self.assertEqual(c["text"], to_hex(m["roles"]["text-emphasis"]))
+                        self.assertGreaterEqual(abs(apca_lc(hexa(c["text"]), hexa(c["fill"]))), cible)
+        # Les autres rôles gardent text-primary.
+        self.assertEqual(self.out["states"]["surfaceRaised"]["none"]["rest"]["text"],
+                         to_hex(self.model["roles"]["text-primary"]))
 
     def test_states_valeurs(self):
         """Vérifie les règles de la bible sur la teinte 55 et le rôle surfacePanel."""

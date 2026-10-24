@@ -18,8 +18,8 @@ import "etats.js" as Etats
 // par les essais.
 // Erreurs : aucune ; avant le chargement des tokens, les cotes sont nulles et les couleurs transparentes.
 // Dépendances : QtQuick.Templates, Quickshell (propriété attachée QsWindow : rapport de pixels de la fenêtre,
-// pour le curseur de texte ; 1 hors de toute fenêtre), Theme (density, elevation, radius, space, color,
-// hairline), Etat, Qt.styleHints (cursorFlashTime, cadence du clignotement).
+// pour le curseur de texte ; 1 hors de toute fenêtre), Theme (density, elevation, radius, space, police,
+// color, hairline), Etat, Qt.styleHints (cursorFlashTime, cadence du clignotement).
 // Cotes : largeur implicite density.fieldWidth, fixe, hauteur density.controlHeight, rayon radius.control par défaut,
 // filet Theme.hairline, retrait horizontal space.scale[2] (12).
 T.TextField {
@@ -35,19 +35,19 @@ T.TextField {
     leftPadding: Theme.space?.scale[2] ?? 0
     rightPadding: leftPadding
     verticalAlignment: TextInput.AlignVCenter
-    font.family: Theme.typo?.interface ?? Qt.application.font.family
-    font.pixelSize: Theme.typo?.scale[2] ?? Qt.application.font.pixelSize
-    font.weight: Theme.typo?.weightRegular ?? Font.Normal
+    font: Theme.police(2, false)
     color: etat.texte
     placeholderTextColor: enabled ? (Theme.color?.textTertiary ?? "transparent") : etat.texte
     selectionColor: Theme.color?.accent ?? "transparent"
     selectedTextColor: Theme.color?.onAccent ?? "transparent"
 
-    // Le champ reste au rôle de son conteneur : pas de cran, donc le dnRole hérité tel quel.
+    // Le champ reste au rôle de son conteneur : pas de cran, donc le dnRole hérité tel quel. Son fond enfoncé est
+    // fixe : l'Etat ne peint que le texte, et son ressort de fond ne démarre jamais.
     Etat {
         id: etat
         controle: champ
         role: Etats.herite(champ, "dnRole", "surfaceWindow")
+        peintFond: false
     }
 
     background: Rectangle {

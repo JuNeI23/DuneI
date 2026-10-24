@@ -263,19 +263,19 @@
       "none": {
         "rest": {
           "fill": "#3d2a30",
-          "text": "#f6e4e9"
+          "text": "#fff1f5"
         },
         "hover": {
           "fill": "#47353a",
-          "text": "#f6e4e9"
+          "text": "#fff1f5"
         },
         "pressed": {
           "fill": "#352328",
-          "text": "#f6e4e9"
+          "text": "#fff1f5"
         },
         "disabled": {
           "fill": "#322f30",
-          "text": "#7f7d7d"
+          "text": "#848182"
         }
       },
       "active": {
@@ -299,19 +299,19 @@
       "inactive": {
         "rest": {
           "fill": "#3d2a30",
-          "text": "#f6e4e9"
+          "text": "#fff1f5"
         },
         "hover": {
           "fill": "#47353a",
-          "text": "#f6e4e9"
+          "text": "#fff1f5"
         },
         "pressed": {
           "fill": "#352328",
-          "text": "#f6e4e9"
+          "text": "#fff1f5"
         },
         "disabled": {
           "fill": "#322f30",
-          "text": "#7f7d7d"
+          "text": "#848182"
         }
       },
       "activeMuted": {

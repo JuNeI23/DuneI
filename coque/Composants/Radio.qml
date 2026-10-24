@@ -22,7 +22,7 @@ import "../Theme"
 // Erreurs : aucune ; avant le chargement des tokens, les cotes sont nulles et les couleurs transparentes.
 // Dépendances : QtQuick.Templates, QtQuick.Shapes (moteur CurveRenderer, lissé sans multiéchantillonnage),
 // Quickshell (propriété attachée QsWindow : rapport de pixels de la fenêtre, pour le filet ; 1 hors de toute
-// fenêtre), Theme (density, space, stateColors, color, hairline), Etat, AnneauFocus, Texte.
+// fenêtre), Theme (density, space, color, hairline), Etat, AnneauFocus, Texte.
 // Cotes : disque de density.checkSize, point de density.radioDot, filet Theme.hairline ; écart entre le disque
 // et le libellé space.scale[1] (8).
 T.RadioButton {
@@ -88,7 +88,7 @@ T.RadioButton {
     contentItem: Texte {
         leftPadding: radio.indicator.width + (radio.text ? radio.spacing : 0)
         text: radio.text
-        color: Theme.stateColors(etat.role, "none", etat.interaction)?.text ?? "transparent"
+        color: etat.texteNeutre
         verticalAlignment: Text.AlignVCenter
     }
 }

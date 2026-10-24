@@ -11,6 +11,7 @@ import json
 import re
 
 from ..color import Oklch, oklch, to_hex
+from ..model import role_text
 
 _BLANC = Oklch(1, 0, 0)
 
@@ -49,16 +50,17 @@ def _states(model: dict) -> dict:
     """Combinaisons d'états précalculées — rôle, sélection, interaction vers fond et texte.
 
     Règles de la bible (ch. 7), appliquées dans l'ordre base, sélection, survol, pression,
-    désactivé. Le QML n'a ainsi aucune règle de couleur à porter.
+    désactivé. Le QML n'a ainsi aucune règle de couleur à porter. Le texte des sélections sans
+    accent est celui du rôle de fond ([role_text], text-primary par défaut).
 
     Entrée : model — sortie de model.resolve.
     Sortie : dict states[rôle][sélection][interaction] = {"fill": "#rrggbb", "text": "#rrggbb"},
              soit 4 × 4 × 4 entrées. Erreurs : KeyError si une section du TOML manque.
-    Dépendances : color.oklch, color.to_hex.
+    Dépendances : color.oklch, color.to_hex, model.role_text.
     """
     raw, roles = model["raw"], model["roles"]
     ceiling, st = raw["theme"]["chroma_ceiling"], raw["states"]
-    acc, texte = model["accent"], roles["text-primary"]
+    acc = model["accent"]
     muet = st["container_inactive"]["accent_chroma_multiplier"]
 
     def decale(col, dl=0.0, dc=1.0):
@@ -78,13 +80,14 @@ def _states(model: dict) -> dict:
         d = st["disabled"]
         return decale(col, (fond.l - col.l) * d["lightness_toward_background"], d["chroma_multiplier"])
 
-    def combinaisons(role, selection):
+    def combinaisons(nom, selection):
         """Les quatre interactions d'une sélection sur un rôle de surface.
 
-        Entrées : role — couleur du rôle ; selection — none, active, inactive ou activeMuted.
+        Entrées : nom — nom du rôle ; selection — none, active, inactive ou activeMuted.
         Sortie : dict interaction vers {"fill", "text"}. Erreurs : aucune.
-        Dépendances : decale, eteint, color.to_hex.
+        Dépendances : decale, eteint, color.to_hex, model.role_text.
         """
+        role, texte = roles[nom], roles[role_text(raw, nom)]
         fond, txt = {"none": (role, texte), "active": (acc, model["on_accent"]),
                      "inactive": (model["ramp"][st["selected_inactive"]["lightness_step"]], texte),
                      "activeMuted": (decale(acc, 0, muet), model["on_accent"])}[selection]
@@ -94,7 +97,7 @@ def _states(model: dict) -> dict:
                 "disabled": (fond_off, eteint(txt, fond_off))}
         return {k: {"fill": to_hex(f), "text": to_hex(t)} for k, (f, t) in cols.items()}
 
-    return {_camel(r): {s: combinaisons(roles[r], s) for s in ("none", "active", "inactive", "activeMuted")}
+    return {_camel(r): {s: combinaisons(r, s) for s in ("none", "active", "inactive", "activeMuted")}
             for r in ("surface-window", "surface-panel", "surface-raised", "control-raised")}
 
 

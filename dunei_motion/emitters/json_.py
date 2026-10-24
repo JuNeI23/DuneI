@@ -6,7 +6,8 @@ import json
 
 
 def emit(model: dict) -> str:
-    """Ressorts d'entrée, de sortie et réduit, avec leurs grandeurs indicatives, puis délais et périodes.
+    """Ressorts d'entrée, de sortie et réduit, avec leurs grandeurs indicatives, puis délais, périodes
+    et pose de l'indicateur d'activité.
 
     JSON n'a pas de commentaires : l'avertissement « généré » est la clé `_generated`, placée en tête.
     Entrée : model — sortie de model.resolve.
@@ -18,6 +19,7 @@ def emit(model: dict) -> str:
         "rules": model["rules"],
         "delays": model["delays"],
         "periods": model["periods"],
+        "spinner": model["spinner"],
         "transitions": model["transitions"],
         "reduced": model["reduced"],
     }

@@ -1,9 +1,10 @@
 """Socle du module QML Composants — états, héritage par remontée et Surface, éprouvés dans un vrai Quickshell.
 
 La coque d'essai coque/Composants/essai n'ouvre aucune fenêtre : elle instancie un arbre fixe (une Surface
-fenêtre contenant une Surface panneau contenant une sonde) et répond par le journal aux appels IPC. Ignoré
-sans session Wayland ou sans Quickshell (contrôle de GitHub), comme tests/test_coque_theme.py dont le harnais
-est repris.
+fenêtre contenant une Surface panneau contenant une sonde) et répond par le journal aux appels IPC. Ses tests
+sont ignorés sans session Wayland ou sans Quickshell, comme tests/test_coque_theme.py dont le harnais est
+repris ; ceux du clavier, dont la fenêtre est offscreen, n'exigent que Quickshell. Le contrôle de GitHub, sans
+Quickshell, les ignore tous.
 """
 
 import ctypes
@@ -499,19 +500,20 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
         self.assertNotEqual(effacer.lower(), c["textSecondary"].lower())
 
     def test_activite(self):
-        # Les trois grains : points d'un tiers de c = icons.sizes.default, espacés d'un demi-point, sur une hauteur
-        # c, à l'accent du rôle de leur conteneur (sélection active, activeMuted sous inactive). Chacun monte,
-        # descend puis se repose, un tiers de periods.spinner par étape, décalé d'une étape sur son voisin, en
-        # boucle (Animation.Infinite vaut -1). La pose est donnée « échelle/opacité » : au repos 0,6 et 0,35, au
-        # sommet 1 et 1 ; à la phase 0, le troisième grain est au sommet. Les animations tournent tant que
-        # l'indicateur est visible et en marche, et s'arrêtent sinon, ancêtre masqué compris (D80) ; arrêté, il
-        # tient la pose de sa phase, et la phase 0,5 le fige à mi-cycle.
+        # Les trois grains : points d'un tiers de c = icons.sizes.default, espacés d'un demi-point, sur une hauteur c, à
+        # l'accent du rôle de leur conteneur (sélection active, activeMuted sous inactive). Chacun monte, descend puis
+        # se repose, un tiers de periods.spinner par étape, décalé d'une étape sur son voisin, en boucle
+        # (Animation.Infinite vaut -1). La pose est donnée « échelle/opacité » : au repos spinner.rest_scale et
+        # spinner.rest_opacity du mouvement, au sommet 1 et 1 ; à la phase 0, le troisième grain est au sommet. Les
+        # animations tournent tant que l'indicateur est visible et en marche, et s'arrêtent sinon, ancêtre masqué
+        # compris (D80) ; arrêté, il tient la pose de sa phase, et la phase 0,5 le fige à mi-cycle.
         self.demarrer()
         tokens, motion = self.tokens55()
         st = tokens["states"]["surfacePanel"]
         c, periode = tokens["icons"]["sizes"]["default"], motion["periods"]["spinner"]
-        d = c / 3
-        bas, haut, milieu = "0.6/0.35", "1/1", "0.8/0.675"
+        d, e, o = c / 3, motion["spinner"]["rest_scale"], motion["spinner"]["rest_opacity"]
+        # À mi-étape, toute courbe symétrique a parcouru la moitié du chemin : le grain est à mi-hauteur.
+        bas, haut, milieu = f"{e:g}/{o:g}", "1/1", f"{round((1 + e) / 2, 3):g}/{round((1 + o) / 2, 3):g}"
         fixe = [f"{round(4 * d, 3):g}", f"{c:g}", st["active"]["rest"]["fill"].lower(), f"{round(d, 3):g}"]
         fin = [f"{periode / 3:g}", "-1"]
         lire = lambda: self.valeur("activite").lower().split()
@@ -534,6 +536,13 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
         # Sous le modificateur inactive, les grains prennent l'accent sans chroma.
         self.ipc("inactif", "true")
         self.assertEqual(lire()[4], st["activeMuted"]["rest"]["fill"].lower())
+
+    def test_ressorts_figes(self):
+        # Sobriété (D80) : le champ et le compteur ne peignent pas le fond de leur Etat, la section dépliable ni son
+        # fond ni son texte. Au survol forcé, leurs ressorts restent à l'arrêt, alors que celui du fond du contrôle
+        # simulé, qui le peint, démarre (contre-épreuve). Le texte ne change pas au survol : son ressort reste arrêté.
+        self.demarrer()
+        self.assertEqual(self.valeur("ressortsFiges"), "true/false false/false false/false false/false")
 
     def test_depliable(self):
         # Repliée, la section cache son contenu et son chevron pointe à droite (rotation -90 du chevron bas) ;

@@ -3,17 +3,16 @@ import QtQuick.Templates as T
 import "../Theme"
 
 // Jauge — curseur sans disque de la coque, sur le modèle du Centre de contrôle de macOS.
-// Rôle : habille le gabarit sans style T.Slider (conception, § 7.1 et 7.10), qui fournit le glissement, le
-// clic sur la barre et les flèches du clavier. C'est un composant distinct du Curseur, et non un de ses modes :
-// la barre remplace la piste et la poignée, et les deux fichiers restent simples. La barre est une pilule au
-// fond enfoncé (elevation.field.fill), comme le champ ; la partie remplie part de son bord gauche et ne descend
-// jamais sous un disque : sa largeur minimale est la hauteur de la barre, si bien qu'à la valeur 0 elle montre
-// encore un disque, où se pose l'icône. La partie remplie prend l'accent du thème : son Etat, au rôle
-// controlRaised, est toujours sélectionné, si bien qu'il donne l'accent, ou l'accent sans chroma sous le
-// modificateur inactive (§ 7.5), à l'interaction de la jauge (survol, pression, et désactivé, qui la ternit), par
-// les ressorts de couleur de l'Etat. L'icône facultative, centrée dans le disque minimal, prend le texte de ce même
-// Etat, le sur-accent : elle se lit sur l'accent comme la coche
-// d'une case. L'anneau de focus entoure la barre, sur visualFocus ; un clic ne vole pas le focus d'un champ
+// Rôle : habille le gabarit sans style T.Slider (conception, § 7.1 et 7.10), qui fournit le glissement, le clic sur la
+// barre et les flèches du clavier. C'est un composant distinct du Curseur, et non un de ses modes : la barre remplace
+// la piste et la poignée, et les deux fichiers restent simples. La barre est une pilule au fond enfoncé
+// (elevation.field.fill), comme le champ ; la partie remplie part de son bord gauche et ne descend jamais sous un
+// disque : sa largeur minimale est la hauteur de la barre, si bien qu'à la valeur 0 elle montre encore un disque, où se
+// pose l'icône. La partie remplie prend l'accent du thème : son Etat, au rôle controlRaised, est toujours sélectionné,
+// si bien qu'il donne l'accent, ou l'accent sans chroma sous le modificateur inactive (§ 7.5), à l'interaction de la
+// jauge (survol, pression, et désactivé, qui la ternit), par les ressorts de couleur de l'Etat. L'icône facultative,
+// centrée dans le disque minimal, prend le texte de ce même Etat, le sur-accent : elle se lit sur l'accent comme la
+// coche d'une case. L'anneau de focus entoure la barre, sur visualFocus ; un clic ne vole pas le focus d'un champ
 // (focusPolicy Qt.TabFocus, § 7.3).
 // Entrées : value, from, to, stepSize et le reste de l'API de T.Slider ; stepSize vaut par défaut un dixième de
 // l'étendue, pas des flèches (T.Slider avancerait sinon de 0,1 en valeur absolue, quelle que soit l'étendue) ;

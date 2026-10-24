@@ -49,6 +49,7 @@ T.TabButton {
         barre.setCurrentIndex(Math.max(0, Math.min(barre.count - 1, barre.currentIndex + pas)))
         barre.currentItem.forceActiveFocus(Qt.TabFocusReason)
     }
+
     implicitWidth: implicitContentWidth + leftPadding + rightPadding
     implicitHeight: Theme.density?.controlHeight ?? 0
     horizontalPadding: Theme.space?.scale[2] ?? 0

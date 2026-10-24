@@ -23,8 +23,8 @@ import "../Theme"
 // Thème d'icônes : toute coque qui emploie Icone pose en tête de son shell.qml la directive
 // « //@ pragma IconTheme <thème> » (Adwaita jusqu'à L4-12) ; sans elle, le thème choisi par Qt peut n'avoir
 // aucune symbolique, et iconPath ne trouve rien.
-// Dépendances : QtQuick.Layouts (taille préférée), QtQuick.Controls.impl (ColorImage, module privé de Qt, enfermé dans ce seul fichier ; repli
-// prévu : un ShaderEffect), Quickshell (iconPath), Theme (icons, color).
+// Dépendances : QtQuick.Layouts (taille préférée), QtQuick.Controls.impl (ColorImage, module privé de Qt, enfermé dans
+// ce seul fichier ; repli prévu : un ShaderEffect), Quickshell (iconPath), Theme (icons, color).
 ColorImage {
     id: icone
 

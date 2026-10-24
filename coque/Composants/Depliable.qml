@@ -14,7 +14,7 @@ import "../Theme"
 // Sorties : etat, l'Etat de l'en-tête ; entete (objectName « entete »), chevron, bloc, anneau, et cibleFocus (le
 // fond de l'en-tête, que la planche entoure de l'anneau), lus par les essais et la planche.
 // Erreurs : aucune ; avant le chargement des tokens, les cotes sont nulles et les couleurs transparentes.
-// Dépendances : QtQuick.Templates, Theme (density, icons, space, radius, color, stateColors), Etat, Chevron, Texte,
+// Dépendances : QtQuick.Templates, Theme (density, icons, space, radius, color), Etat, Chevron, Texte,
 // AnneauFocus.
 // Cotes : en-tête de density.rowHeight de haut, au rayon radius.small ; le contenu y est en retrait de space.scale[1]
 // (8) à gauche et à droite, pour que l'anneau de focus, posé autour du fond, ne touche ni le chevron ni la fin du
@@ -47,9 +47,13 @@ Column {
         Keys.onReturnPressed: depliable.ouvert = !depliable.ouvert
         Keys.onEnterPressed: depliable.ouvert = !depliable.ouvert
 
+        // L'en-tête n'a pas de fond et son libellé prend Etat.texteNeutre : l'Etat ne peint rien, et ses ressorts ne
+        // démarrent jamais.
         Etat {
             id: etat
             controle: entete
+            peintFond: false
+            peintTexte: false
         }
 
         background: Rectangle {
@@ -82,7 +86,7 @@ Column {
                 anchors.verticalCenter: parent.verticalCenter
                 text: entete.text
                 moyen: true
-                color: Theme.stateColors(etat.role, "none", etat.interaction)?.text ?? "transparent"
+                color: etat.texteNeutre
             }
         }
     }

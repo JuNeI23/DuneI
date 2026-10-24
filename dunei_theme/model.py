@@ -20,6 +20,16 @@ def load(src: Path) -> dict:
         return tomllib.load(fh)
 
 
+def role_text(data: dict, role: str) -> str:
+    """Rôle du texte posé sur un rôle de fond, dans ses états sans accent.
+
+    Entrées : data — TOML brut ; role — nom du rôle de fond, par exemple control-raised.
+    Sortie : le rôle de texte que nomme [role_text], sinon text-primary.
+    Erreurs : aucune ; une table [role_text] absente laisse text-primary partout. Dépendances : aucune.
+    """
+    return data.get("role_text", {}).get(role, "text-primary")
+
+
 def resolve(data: dict, hue_override: float | None = None) -> dict:
     """Résolution — applique les deux variables du thème à l'échelle invariante.
 

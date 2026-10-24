@@ -17,19 +17,21 @@ import "Composants/etats.js" as Etats
 // éprouve dans un vrai Quickshell les règles d'etats.js, l'héritage par remontée, l'import du Theme, les pièces de
 // base, les contrôles et les listes, en lisant le journal.
 // Entrées : DUNEI_TOKENS_DIR, lu par Theme ; thème d'icônes Adwaita, posé par la directive IconTheme en tête (thème de
-// transition jusqu'à L4-12). Sortie : journal de Theme, plus « essai : prêt <bool> » à chaque changement de
-// Theme.ready, et une ligne « essai : <clé> <valeur> » par commande IPC de lecture (cran, interaction, selection,
-// sonde, naissances, fond, texte, anneau, etat, ressort, image, controles, coches, cotes, glyphes, radios, jauge,
-// progression, separateur, champ, indicatif, tailleIcone, liste, arrets, rangee, bouton, overlays, overlaysFermes,
-// pastilles, compteur, compteurLargeur, deroulant, recherche, rechercheCouleurs, activite, depliable, depliableCotes,
-// iconesControles, bascule, fenetreAttention) ; « essai rechercheTexte <texte> », « essai rechercheActive <bool> », «
-// essai activiteEtat <visible> <running> », « essai activitePhase <phase> », « essai activiteAncetre <bool> », « essai
-// depliableOuvrir <bool> », « essai basculeCocher <bool> », « essai pastillesForcer <état> », « essai pastillesReduire
-// <bool> », « essai compteurValeur <n> », « essai deroulantRang <n> », « essai decocher », « essai radioCocher <rang>
-// », « essai jaugeActive <bool> », « essai boutonPrincipal <bool> », « essai inactif <bool> », « essai reparenter », «
-// essai texteMoyen », « essai anneauInactif <bool> », « essai survol <bool> », « essai champActif <bool> », « essai
-// champTexte <texte> », « essai selectionLibre », « essai icone <nom> <bool> », « essai ouvrirFactice <A|B|C> » et «
-// essai fermerFactice <A|B|C> » agissent sans journaliser.
+// transition jusqu'à L4-12).
+// Sortie : journal de Theme, plus « essai : prêt <bool> » à chaque changement de Theme.ready, et une ligne « essai :
+// <clé> <valeur> » par commande IPC de lecture (cran, interaction, selection, sonde, naissances, fond, texte, anneau,
+// etat, ressort, ressortsFiges, image, controles, coches, cotes, glyphes, radios, jauge, progression, separateur,
+// champ, indicatif, tailleIcone, liste, arrets, rangee, bouton, overlays, overlaysFermes, pastilles, compteur,
+// compteurLargeur, deroulant, recherche, rechercheCouleurs, activite, depliable, depliableCotes, iconesControles,
+// bascule, fenetreAttention).
+// Commandes sans journal : « essai rechercheTexte <texte> », « essai rechercheActive <bool> », « essai activiteEtat
+// <visible> <running> », « essai activitePhase <phase> », « essai activiteAncetre <bool> », « essai depliableOuvrir
+// <bool> », « essai basculeCocher <bool> », « essai pastillesForcer <état> », « essai pastillesReduire <bool> »,
+// « essai compteurValeur <n> », « essai deroulantRang <n> », « essai decocher », « essai radioCocher <rang> », « essai
+// jaugeActive <bool> », « essai boutonPrincipal <bool> », « essai inactif <bool> », « essai reparenter », « essai
+// texteMoyen », « essai anneauInactif <bool> », « essai survol <bool> », « essai champActif <bool> », « essai
+// champTexte <texte> », « essai selectionLibre », « essai icone <nom> <bool> », « essai ouvrirFactice <A|B|C> » et
+// « essai fermerFactice <A|B|C> ».
 // Erreurs : celles de Theme et des liaisons, dans le journal. Dépendances : quickshell ≥ 0.3 (Quickshell.Io :
 // IpcHandler), modules coque/Theme et coque/Composants.
 // Import : Quickshell ne résout pas un module situé au-dessus de la racine de la coque lancée ; les liens
@@ -389,6 +391,24 @@ ShellRoot {
         // Dépendances : etatEssai, dont les deux premiers enfants sont les ColorSpring déclarés par Etat.qml.
         function ressort(): void {
             essai.journal("ressort", etatEssai.children.map(r => r.params?.stiffness).join(" "))
+        }
+
+        // ressortsFiges — force le survol sur l'Etat du contrôle simulé, du champ, du compteur et de la section
+        // dépliable, journalise aussitôt si leurs ressorts de fond et de texte démarrent, puis rend l'interaction lue.
+        // Rôle : le changement de cible lance le ressort dans la même instruction ; une couleur que le composant ne
+        // peint pas (peintFond, peintTexte) reste constante, et son ressort ne démarre pas.
+        // Entrées : aucune. Sortie : aucune ; « essai : ressortsFiges <fond>/<texte> ×4 », dans cet ordre.
+        // Erreurs : aucune. Dépendances : etatEssai, champEssai, compteurEssai, depliableEssai (etat, dont les deux
+        // premiers enfants sont les ColorSpring du fond et du texte).
+        function ressortsFiges(): void {
+            const etats = [etatEssai, champEssai.etat, compteurEssai.etat, depliableEssai.etat]
+            const lus = etats.map(e => {
+                e.forcer = "hover"
+                const r = e.children[0].moving + "/" + e.children[1].moving
+                e.forcer = ""
+                return r
+            })
+            essai.journal("ressortsFiges", lus.join(" "))
         }
 
         // icone — change la variante puis le nom de l'Icone d'essai.

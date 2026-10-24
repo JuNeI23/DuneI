@@ -25,7 +25,9 @@ class GenerateTest(unittest.TestCase):
             self.assertEqual(res.returncode, 0, res.stderr)
             data = json.loads((Path(tmp) / "motion.json").read_text(encoding="utf-8"))
             self.assertEqual(data["transitions"]["navigate"]["in"]["settle_ms"], 186)
-            self.assertEqual((data["delays"], data["periods"]), ({"tooltip": 700}, {"spinner": 1200}))
+            self.assertEqual((data["delays"], data["periods"]), ({"tooltip": 500}, {"spinner": 1200}))
+            # La pose de repos et la courbe de l'indicateur d'activité viennent du mouvement, non du QML.
+            self.assertEqual(data["spinner"], {"rest_scale": 0.6, "rest_opacity": 0.35, "easing": "InOutSine"})
             # L'indicateur d'activité s'anime en continu sur le fil de rendu : plus aucune cadence par pas.
             self.assertNotIn("cadences", data)
             lua = (Path(tmp) / "motion.lua").read_text(encoding="utf-8")

@@ -6,13 +6,13 @@ import "Composants"
 // dans ses états, pour la juger à l'écran (conception des composants, § 9).
 // Rôle : pour chaque primitive et chaque contrôle, une grille d'exemplaires figés dans leurs états (repos, survol,
 // pressé, désactivé, focus, croisés avec la sélection quand le contrôle en a une) à côté d'un exemplaire vivant qu'on
-// manipule ; deux panneaux identiques, dont l'un porte dnInactive, pour juger le modificateur inactive et l'accent muet
-// ; deux boutons qui ouvrent un overlay de chaque famille. Les états figés ne passent par aucune valeur de design :
-// Etat.forcer remplace l'interaction lue, la sélection s'écrit dans l'Etat de l'exemplaire, l'anneau de focus est un
-// AnneauFocus montré, le contour de rangée passe par Rangee.forcerContour, et désactivé est un vrai enabled faux. Mise
-// en page : la page prend la largeur qu'on lui donne et ses rangées passent à la ligne (Flow), si bien qu'elle tient
-// sans défilement horizontal dans une fenêtre tuilée d'environ 750 pixels de large, et s'étale côte à côte dans une
-// fenêtre plus large.
+// manipule ; deux panneaux identiques, dont l'un porte dnInactive, pour juger le modificateur inactive et l'accent
+// muet ; deux boutons qui ouvrent un overlay de chaque famille. Les états figés ne passent par aucune valeur de
+// design : Etat.forcer remplace l'interaction lue, la sélection s'écrit dans l'Etat de l'exemplaire, l'anneau de focus
+// est un AnneauFocus montré, le contour de rangée passe par Rangee.forcerContour, et désactivé est un vrai enabled
+// faux. Mise en page : la page prend la largeur qu'on lui donne et ses rangées passent à la ligne (Flow), si bien
+// qu'elle tient sans défilement horizontal dans une fenêtre tuilée d'environ 750 pixels de large, et s'étale côte à
+// côte dans une fenêtre plus large.
 // Entrées : largeur, largeur offerte à la page en pixels logiques (la fenêtre moins ses marges) ; la page lit
 // Theme, déjà prêt quand la planche la construit.
 // Sorties : la page, une Surface surfaceWindow de la largeur offerte, haute de son contenu et de son retrait ;

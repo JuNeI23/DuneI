@@ -9,15 +9,13 @@ import "../Theme"
 // Sorties : celles de Text.
 // Erreurs : aucune ; avant le chargement des tokens, police, taille et graisse restent celles de
 // l'application et la couleur est transparente.
-// Dépendances : Theme (typo, color). Import : "../Theme", le même singleton que celui de la coque.
+// Dépendances : Theme (police, color). Import : "../Theme", le même singleton que celui de la coque.
 Text {
     id: texte
 
     property int echelon: 2
     property bool moyen: false
 
-    font.family: Theme.typo?.interface ?? Qt.application.font.family
-    font.pixelSize: Theme.typo?.scale[echelon] ?? Qt.application.font.pixelSize
-    font.weight: (moyen ? Theme.typo?.weightMedium : Theme.typo?.weightRegular) ?? Font.Normal
+    font: Theme.police(echelon, moyen)
     color: Theme.color?.textPrimary ?? "transparent"
 }
