@@ -44,6 +44,37 @@ class ErrorsTest(unittest.TestCase):
         r = raw(); del r["rules"]["stagger_cap"]
         self.check(r, "rules", "stagger_cap")
 
+    def test_timings(self):
+        """Le délai d'infobulle et la période de l'indicateur d'activité sont exigés, numériques et strictement
+        positifs."""
+        for section, key in (("delays", "tooltip"), ("periods", "spinner")):
+            with self.subTest(section=section):
+                r = raw(); del r[section][key]
+                self.check(r, section, key, "manquante")
+                r = raw(); r[section][key] = 0
+                self.check(r, section, key, "strictement")
+                r = raw(); r[section][key] = "700"
+                self.check(r, section, key, "type")
+                r = raw(); r[section]["tooltipp"] = 1
+                self.check(r, section, "tooltipp", "inconnue")
+
+    def test_spinner(self):
+        """La pose de repos de l'indicateur d'activité est exigée, entre 0 et 1 exclus, et sa courbe est l'une de
+        celles que l'indicateur sait reproduire."""
+        for key in ("rest_scale", "rest_opacity", "easing"):
+            with self.subTest(key=key):
+                r = raw(); del r["spinner"][key]
+                self.check(r, "spinner", key, "manquante")
+        for key in ("rest_scale", "rest_opacity"):
+            for v in (0, 1, 1.2):
+                with self.subTest(key=key, v=v):
+                    r = raw(); r["spinner"][key] = v
+                    self.check(r, "spinner", key, "exclus")
+        r = raw(); r["spinner"]["easing"] = "OutBounce"
+        self.check(r, "spinner", "OutBounce", "inconnu")
+        r = raw(); r["spinner"]["easing"] = 1
+        self.check(r, "spinner", "easing", "type")
+
     def test_nonpositive_reduced_fade(self):
         r = raw(); r["rules"]["reduced_fade_ms"] = 0
         self.check(r, "reduced_fade_ms", "strictement")

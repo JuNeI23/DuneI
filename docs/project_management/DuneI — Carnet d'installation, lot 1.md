@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.18. Historique en fin de document.
+Version 1.21. Historique en fin de document.
 
 Socle amorçable.
 
@@ -1579,7 +1579,145 @@ après la dernière « ) » de `/proc/<pid>/stat`, un nom de processus pouvant c
 - `ColorSpring` prend toujours le ressort `transitions.state.in`. Or `motion.toml` donne à `state` un
   `exit_ratio` de 0,70, conformément à la bible (« La sortie vaut environ 70 % de l'entrée ») : L2-01 doit
   décider si le retour au repos (fin de survol, relâchement) est une sortie, servie par le ressort `out`, et
-  donner à `ColorSpring` le moyen de choisir son ressort selon le sens du changement.
+  donner à `ColorSpring` le moyen de choisir son ressort selon le sens du changement. *Tranché par Nicolas à
+  l'écran : le retour au repos prend le ressort `in` (D82).*
+
+## La bibliothèque de composants — L2-01
+
+Toute la coque s'assemble à partir du module QML `coque/Composants`, voisin de `coque/Theme` : les sept
+primitives de la bible (chapitre 7), les six états composables (L2-02), le modificateur `inactive` (L2-03), les
+contrôles de couche 1 qui en sont des assemblages et les compléments à la manière de macOS que Nicolas a
+demandés à l'écran. Aucune valeur de design n'y est écrite : tout se lit dans `Theme` (D81, D82). La conception
+est `docs/superpowers/specs/2026-10-23-composants-design.md`.
+
+### Inventaire du module
+
+| Rôle | Fichiers |
+| --- | --- |
+| Règles d'états, sans état ni singleton | `etats.js` : héritage par remontée, cran des contrôles, lecture de l'interaction et de la sélection, niveau d'élévation d'un rôle |
+| Moteur d'état d'un contrôle | `Etat` : clés de `Theme.stateColors`, fond et texte animés par deux `ColorSpring` au ressort `transitions.state.in`, figés quand le contrôle ne les peint pas (`peintFond`, `peintTexte`) ; `texteNeutre`, le texte sans sélection des libellés |
+| `surface` | `Surface` : fond d'un conteneur, source de `dnRole` et de `dnInactive` pour ses descendants ; `Separateur` ; `Progression` (déterminée) |
+| `text`, `icon` | `Texte` ; `Icone` (symboliques recolorées par `ColorImage`, seul fichier à importer `QtQuick.Controls.impl`) |
+| `interactive` | `Bouton` (avec `principal`), `Case`, `Radio`, `Interrupteur`, `Onglet` et sa barre `Onglets`, `Curseur`, `Jauge`, `Bascule` (bascule à glyphe) |
+| `field` | `Champ` ; `Recherche` (champ en pilule, loupe, effacement) ; `Compteur` (nombre et stepper) |
+| `row` | `Rangee` ; `Liste` (un seul arrêt de tabulation, flèches à l'intérieur) |
+| `overlay` | `Overlay`, en trois familles : attention, contextuel et infobulle (sans focus, fermée au départ du pointeur ou au clic) ; `Overlays`, singleton qui garde une seule attention ouverte ; `FenetreAttention`, interne, absente de `qmldir` ; `Deroulant`, bâti sur un overlay contextuel, et `Infobulle`, sur un overlay de la famille infobulle |
+| Autres compléments | `Pastilles` (fermer, réduire, agrandir), `Activite` (indicateur en trois grains), `Depliable` (section dépliable) |
+| Formes dessinées et focus | `Coche`, `Chevron` (tracés `QtQuick.Shapes`) ; `AnneauFocus` (anneau extérieur, réservé au clavier) |
+
+`qmldir` exporte trente types, dont le singleton `Overlays`. Chaque fichier ouvre par un en-tête qui donne son
+rôle, ses entrées, ses sorties, ses erreurs et ses dépendances.
+
+### Importer la bibliothèque
+
+Quickshell ne résout pas un module situé au-dessus de la racine de la coque lancée. Une coque qui consomme la
+bibliothèque porte donc deux liens symboliques relatifs sous sa racine, côte à côte, puis les importe par leur
+nom ; les fichiers de `Composants` importent `"../Theme"`, si bien qu'il n'existe qu'un seul singleton `Theme`.
+
+```bash
+# Depuis la racine de la coque, par exemple coque/outils/planche :
+ln -s ../../Theme Theme
+ln -s ../../Composants Composants
+```
+
+```qml
+//@ pragma IconTheme Adwaita
+import "Theme"
+import "Composants"
+```
+
+La directive `IconTheme` choisit le thème d'icônes, Adwaita jusqu'à L4-12 ; sans elle, `Icone` ne trouve aucune
+symbolique. La racine d'une surface est une `Surface` qui déclare son `role` (`surfaceWindow`, `surfacePanel`,
+`surfaceRaised`) : les contrôles en déduisent le leur, un cran au-dessus (`controlRaised` sur un conteneur
+E3), et l'on ne déclare jamais de rôle à la main sur un contrôle. Un conteneur passe ses descendants en
+inactif par `dnInactive: true`. Une `PanelWindow` ne reçoit pas le clavier par défaut : chaque surface déclare
+son régime (`OnDemand` au clic, `Exclusive` pour une attention).
+
+### La planche
+
+La planche de contrôle de L2-34 porte désormais deux onglets, « Tokens » et « Composants ». La page Composants
+montre chaque primitive et chaque contrôle dans une grille d'états (repos, survol, pressé, désactivé, focus
+clavier) à côté d'un exemplaire vivant, puis deux panneaux identiques, le second sous `dnInactive`. Seule la
+page visible existe ; l'indicateur d'activité vivant est arrêté par défaut ; les overlays, le menu du
+déroulant et l'infobulle ne s'ouvrent qu'à la main. Le détail est dans `coque/outils/planche/README.md`.
+
+```bash
+coque/outils/planche/planche.sh                                    # ouvre la planche
+qs ipc -p coque/outils/planche call planche onglet composants      # ou tokens
+qs ipc -p coque/outils/planche call planche defile 1200            # rend l'ordonnée atteinte
+qs ipc -p coque/outils/planche call planche capture /chemin/absolu.png
+coque/outils/mesure.sh coque/outils/planche 10                     # processeur au repos, RSS et PSS
+```
+
+`capture` enregistre la page entière, rendue par la fenêtre elle-même, en pixels physiques : elle ne dépend ni
+du défilement ni de ce qui recouvre la fenêtre. C'est la voie à prendre plutôt que `grim` quand une capture
+d'écran saisirait le bureau de Nicolas.
+
+### Les tests et leurs coques d'essai
+
+| Fichier | Ce qu'il éprouve |
+| --- | --- |
+| `tests/test_coque_composants.py` | 58 tests dans un vrai Quickshell : règles d'états, héritage et reparentage, cran, import d'un seul `Theme`, ressorts figés des couleurs non peintes, chaque contrôle, listes, exclusivité de l'attention, overlays fermés sans erreur, puis, au clavier, tabulation, barre d'onglets à un arrêt, curseur de texte, jauge, compteur, déroulant, recherche, dépliable, bascule, infobulle et pastilles |
+| `tests/test_coque_qml.py` | aucune valeur de design dans le QML, ni couleur construite ou dérivée (`Qt.tint`, `Qt.darker`, `Qt.lighter`…), `ColorSpring` seul exempté |
+| `tests/test_quickshell_emitter.py` | cotes des contrôles dans les deux densités, rôle `controlRaised` et son texte `text-emphasis` à Lc ≥ 90 au repos, au survol et à la pression, variantes des pastilles et contraste de leur glyphe |
+| `tests/test_motion_checks.py`, `tests/test_motion_generate.py` | sections `[delays]`, `[periods]` et `[spinner]` de `motion.toml` |
+
+Deux coques d'essai servent ces tests et restent dans le dépôt. `coque/Composants/essai` instancie la
+bibliothèque sans aucune fenêtre et répond aux appels IPC par le journal. `coque/Composants/essai/clavier`
+ouvre une vraie fenêtre sous la plateforme `offscreen`, invisible, et y synthétise touches et mouvements du
+pointeur par le `TestEvent` de QtTest. Elle journalise sa plateforme dès son chargement et ne construit sa
+fenêtre que sous `offscreen` : lancée ailleurs, elle n'ouvre rien, et le test échoue en nommant la plateforme
+(`test_garde_hors_offscreen`). Aucune touche synthétique n'atteint ainsi le bureau. Comme ceux de `Theme`, les
+tests de la bibliothèque (`CoqueComposantsTest`) sont ignorés sans session Wayland ou sans Quickshell ; ceux du
+clavier (`CoqueClavierTest`), dont la fenêtre est offscreen, n'exigent que Quickshell. Le contrôle GitHub, qui
+n'a pas Quickshell, les ignore tous.
+
+```bash
+make test                                              # toute la suite
+python -m unittest tests.test_coque_composants         # la bibliothèque seule
+```
+
+### Relevés
+
+Relevés par `coque/outils/mesure.sh` sur `caladan` (eDP-1 à 60 Hz, échelle 1,25), sans interaction, processeur
+sur 10 s.
+
+| Relevé | Processeur | RSS | PSS |
+| --- | --- | --- | --- |
+| Planche relancée, page Tokens (2026-10-23) | 0,0 % | 321,7 Mio | 205,3 Mio |
+| Planche, page Composants (2026-10-23) | 0,0 % | 356,8 Mio | 240,3 Mio |
+| Planche, page Composants complète, indicateurs arrêtés (2026-10-24) | 0,0 % | 404,6 Mio | 290,7 Mio |
+| Indicateur d'activité dans une fenêtre de popover (320 × 200), arrêté | 0,0 à 0,1 % | 271 Mio | 134 Mio |
+| Même fenêtre, trois grains en marche | 4,2 % | 268 Mio | 133 Mio |
+
+L'indicateur coûte environ 4 % d'un cœur en marche, quelle que soit sa forme : c'est le prix d'une fenêtre qui
+produit soixante images par seconde, non celui du dessin. La roue d'une première version en coûtait 5,8 à
+6,6 % sur la planche. D'où la règle : un indicateur ne s'anime que visible et en marche (D80). La page
+Composants a gagné environ 50 Mio de PSS entre les deux relevés de la planche, avec les compléments à la macOS ;
+le chargement à la demande en plafonne le pic, mais l'allocateur ne rend pas au système la mémoire libérée
+(D82).
+
+### Relevé d'un overlay d'attention
+
+Planche sur la page Composants, `mesure.sh` sur 10 s, le 2026-10-24. Nicolas a ouvert l'attention puis l'a fermée
+par Échap ; l'ouverture depuis `FenetreAttention.qml` et la fermeture du déroulant par un nouveau clic sur son
+bouton sont validées à l'écran.
+
+| Attention | Processeur | PSS |
+| --- | --- | --- |
+| Fermée | 0,0 % | 294,0 Mio |
+| Ouverte | 0,8 % | 295,8 Mio |
+| Refermée | 0,0 % | 291,6 Mio |
+
+La fenêtre construite à l'ouverture est bien détruite à la fermeture : la mémoire revient sous son niveau de
+départ. Le flou et l'opacité du voile restent à L2-35.
+
+### Ce qui reste à voir à l'écran
+
+- Le glyphe d'agrandissement à 12 px ; le curseur natif du compteur éditable.
+- La bascule éteinte pressée, qui se fond dans son fond ; le chevron de la section dépliable en retrait de 8.
+- Le contour d'une liste, qui pourrait réapparaître quand sa fenêtre redevient active (Qt 6.12 ne donne pas la
+  raison du focus).
 
 ## Lecteur d'empreinte — nouveau
 
@@ -1683,6 +1821,9 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 
 | Version | Date | Changement |
 | --- | --- | --- |
+| 1.21 | 2026-10-24 | Bibliothèque de composants (L2-01) : relevé d'un overlay d'attention fermé, ouvert, refermé ; ouverture de l'attention et fermeture du déroulant validées à l'écran |
+| 1.20 | 2026-10-24 | Bibliothèque de composants (L2-01), relecture finale : infobulle en troisième famille d'overlay, `Etat` qui fige les couleurs non peintes, tests du clavier qui n'exigent que Quickshell, section `[spinner]` de `motion.toml` ; points tranchés retirés de « Ce qui reste à voir » (texte de `controlRaised` éclairci en `text-emphasis`, infobulle à 500 ms) |
+| 1.19 | 2026-10-24 | Bibliothèque de composants (L2-01) : inventaire du module, import côte à côte, planche à deux onglets et commandes IPC, tests et coques d'essai offscreen, relevés, ce qui reste à voir à l'écran ; point ouvert du retour au repos tranché (`in`, D82) |
 | 1.18 | 2026-10-22 | Tokens de la coque (L2-34), relecture finale : recette précisée (transitions validées par Nicolas, fichier corrompu couvert par test et vérifié par Claude), mineures reportées complétées, corrections de `ColorSpring` et `mesure.sh`, points ouverts pour L2-01 (ressort de sortie) |
 | 1.17 | 2026-10-22 | Tokens de la coque (L2-34) : fichiers et chemins, `DUNEI_TOKENS_DIR`, schéma, choix d'import, planche de contrôle, recette et relevés (D81) |
 | 1.16 | 2026-10-22 | Capture d'écran provisoire : `Print` et ses deux variantes, rôle `capture` tenu par hyprshot (D79) |

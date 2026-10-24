@@ -32,15 +32,24 @@ def generer(sortie: Path, teinte: int | None = None) -> None:
     subprocess.run(["python3", *cmd], cwd=ROOT, check=True, capture_output=True)
 
 
-@unittest.skipUnless(os.environ.get("WAYLAND_DISPLAY") and QS, "session Wayland et Quickshell requis")
-class CoqueThemeTest(unittest.TestCase):
-    """Lance la coque d'essai sur un dossier de tokens temporaire et lit son journal."""
+class EssaiCoque:
+    """Harnais d'une coque d'essai : tokens générés, lancement sans fenêtre, IPC et lecture du journal.
+
+    Classe à mêler à unittest.TestCase ; elle n'est pas un test elle-même, pour qu'un autre module de tests
+    l'importe sans rejouer ces tests-ci. Attributs de classe : essai — dossier de la coque d'essai lancée ;
+    teintes — teintes de référence générées une fois pour la classe ; environnement — variables ajoutées à
+    celles du test au lancement de la coque (QT_QPA_PLATFORM=offscreen pour une coque qui ouvre une fenêtre).
+    """
+
+    essai = ESSAI
+    teintes = (55, 200, 265)
+    environnement = {}
 
     @classmethod
     def setUpClass(cls):
         cls.gen = tempfile.TemporaryDirectory()
         base = Path(cls.gen.name)
-        for teinte in (55, 200, 265):
+        for teinte in cls.teintes:
             generer(base / str(teinte), teinte)
         generer(base / "motion")
 
@@ -91,8 +100,8 @@ class CoqueThemeTest(unittest.TestCase):
     def ipc(self, *commande: str) -> None:
         """Appelle une fonction IPC de la coque d'essai.
 
-        Entrée : commande — nom de la fonction (etat, lent) suivi de ses arguments.
-        Sortie : aucune ; la coque journalise l'effet, voir coque/Theme/essai/shell.qml.
+        Entrée : commande — nom de la fonction suivi de ses arguments.
+        Sortie : aucune ; la coque journalise l'effet, voir le shell.qml de la coque d'essai.
         Erreurs : CalledProcessError si l'appel IPC échoue. Dépendances : qs, lancer.
         """
         subprocess.run([QS, "ipc", "--pid", str(self.proc.pid), "call", "essai", *commande],
@@ -103,11 +112,11 @@ class CoqueThemeTest(unittest.TestCase):
 
         Entrée : dossier — valeur de DUNEI_TOKENS_DIR.
         Sortie : aucune ; self.proc tient le processus, tué par tearDown.
-        Erreurs : OSError si qs ne démarre pas. Dépendances : qs, coque/Theme/essai.
+        Erreurs : OSError si qs ne démarre pas. Dépendances : qs, dossier essai et environnement de la classe.
         """
-        env = {**os.environ, "DUNEI_TOKENS_DIR": str(dossier), "NO_COLOR": "1"}
+        env = {**os.environ, **self.environnement, "DUNEI_TOKENS_DIR": str(dossier), "NO_COLOR": "1"}
         with self.log.open("w") as sortie:
-            self.proc = subprocess.Popen([QS, "-p", str(ESSAI)], env=env, stdout=sortie,
+            self.proc = subprocess.Popen([QS, "-p", str(self.essai)], env=env, stdout=sortie,
                                          stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL)
 
     def journal(self) -> str:
@@ -132,6 +141,11 @@ class CoqueThemeTest(unittest.TestCase):
             self.assertIsNone(self.proc.poll(), f"la coque d'essai s'est arrêtée :\n{self.journal()}")
             time.sleep(0.05)
         self.fail(f"« {texte} » attendu {fois} fois :\n{self.journal()}")
+
+
+@unittest.skipUnless(os.environ.get("WAYLAND_DISPLAY") and QS, "session Wayland et Quickshell requis")
+class CoqueThemeTest(EssaiCoque, unittest.TestCase):
+    """Lance la coque d'essai du Theme sur un dossier de tokens temporaire et lit son journal."""
 
     def test_chargement(self):
         self.installer(55)
@@ -177,6 +191,20 @@ class CoqueThemeTest(unittest.TestCase):
         self.remplacer(55)
         self.attendre("essai : ressort", 2)
         self.assertEqual(self.journal().count("essai : ressort posé"), 2, self.journal())
+
+    def test_retour_par_defaut(self):
+        # Le retour au repos emploie le ressort params (ici le ressort lent), comme tout changement d'état.
+        self.installer(55)
+        self.lancer(self.dir)
+        self.attendre("essai : ressort posé")
+        self.ipc("lent")
+        self.ipc("etat", "hover")
+        self.ipc("etat", "rest")
+        self.ipc("raideur")
+        self.attendre("essai : raideur ")
+        # Lecture exacte de la dernière ligne : une recherche de sous-chaîne accepterait aussi « raideur 1100 ».
+        ligne = [l for l in self.journal().splitlines() if "essai : raideur " in l][-1]
+        self.assertEqual(float(ligne.split("essai : raideur ", 1)[1]), 1, self.journal())
 
     def test_contenu_corrompu(self):
         self.installer(55)

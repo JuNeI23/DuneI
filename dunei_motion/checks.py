@@ -13,7 +13,7 @@ from .model import reduced_animation
 from .spring import critical_spring, exit_spring, spring, unit_mass, zeta
 
 VERSION = "0.1.0"
-SECTIONS = ("meta", "rules", "transitions", "hyprland", "hyprland_reduced")
+SECTIONS = ("meta", "rules", "delays", "periods", "spinner", "transitions", "hyprland", "hyprland_reduced")
 REDUCED_FLOOR_MS = 100   # Plancher du fondu réduit fixé par la bible.
 
 # Types acceptés, désignés par leur nom dans les messages d'erreur.
@@ -28,6 +28,12 @@ KINDS = {
 META_KEYS = {"name": "texte", "prefix": "texte"}
 RULE_KEYS = {"exit_ratio": "nombre", "exit_tolerance": "nombre", "overshoot_allowed": "liste de textes",
              "stagger_allowed": "liste de textes", "stagger_cap": "nombre", "reduced_fade_ms": "nombre"}
+DELAY_KEYS = {"tooltip": "nombre"}     # Attentes de l'interface, en millisecondes.
+PERIOD_KEYS = {"spinner": "nombre"}    # Cycles des mouvements continus, en millisecondes.
+# Pose de repos et courbe de la vague de l'indicateur d'activité.
+SPINNER_KEYS = {"rest_scale": "nombre", "rest_opacity": "nombre", "easing": "texte"}
+# Courbes que l'indicateur sait reproduire pour sa pose arrêtée (Activite.qml, courbes) ; les deux listes vont ensemble.
+EASINGS = ("Linear", "InOutSine", "InOutQuad")
 TRANSITION_KEYS = {"usage": "texte", "mass": "nombre", "stiffness": "nombre", "dampening": "nombre",
                    "exit_ratio": "nombre", "overshoot": "booléen", "symmetric": "booléen", "stagger_ms": "nombre"}
 HYPRLAND_KEYS = {"use": "texte", "phase": "texte", "style": "texte", "enabled": "booléen"}
@@ -170,6 +176,9 @@ def errors(raw: dict) -> list[str]:
     err += _table("meta", raw["meta"], META_KEYS) + _table("rules", raw["rules"], RULE_KEYS)
     err += [f"meta : clé « {k} » manquante" for k in META_KEYS if k not in raw["meta"]]
     err += [f"rules : clé « {k} » manquante" for k in RULE_KEYS if k not in raw["rules"]]
+    for section, schema in (("delays", DELAY_KEYS), ("periods", PERIOD_KEYS), ("spinner", SPINNER_KEYS)):
+        err += _table(section, raw[section], schema)
+        err += [f"{section} : clé « {k} » manquante" for k in schema if k not in raw[section]]
     for section, schema in (("transitions", TRANSITION_KEYS), ("hyprland", HYPRLAND_KEYS),
                             ("hyprland_reduced", REDUCED_KEYS)):
         for name, t in raw[section].items():
@@ -180,6 +189,12 @@ def errors(raw: dict) -> list[str]:
         err.append("rules : reduced_fade_ms doit être strictement positif")
     else:
         err += _bounds("rules : ressort réduit", critical_spring(raw["rules"]["reduced_fade_ms"]))
+    err += [f"{section} : {k} doit être strictement positif" for section in ("delays", "periods")
+            for k, v in raw[section].items() if v <= 0]
+    err += [f"spinner : {k} doit être compris entre 0 et 1 exclus" for k in ("rest_scale", "rest_opacity")
+            if not 0 < raw["spinner"][k] < 1]
+    if raw["spinner"]["easing"] not in EASINGS:
+        err.append(f"spinner : easing « {raw['spinner']['easing']} » inconnu (attendu : {', '.join(EASINGS)})")
     return err + _transitions(raw) + _hyprland(raw) + _reduced(raw)
 
 

@@ -3,17 +3,19 @@ import "physics.js" as Physics
 
 // ColorSpring — couleur affichée qui rejoint une couleur générée par le ressort d'état.
 // Rôle : à chaque nouvelle cible d'un même thème, part de la couleur affichée (une interruption en vol ne
-// saute pas) et avance une progression 0 → 1 selon le ressort transitions.state.in de motion.json ; la couleur
-// affichée est l'interpolation sRGB, composante par composante, entre l'origine et la cible. Aucune couleur
-// n'est calculée ici : origine et cible viennent toujours de Theme.
+// saute pas) et avance une progression 0 → 1 selon le ressort employé ; la couleur affichée est
+// l'interpolation sRGB, composante par composante, entre l'origine et la cible. Aucune couleur n'est calculée
+// ici : origine et cible viennent toujours de Theme.
 // Entrées : target couleur visée ; params ressort {mass, stiffness, dampening}, par défaut celui des
-//           changements d'état.
+//           changements d'état (transitions.state.in de motion.json), employé aussi pour le retour au repos
+//           (conception, § 7.8).
 // Sorties : value couleur affichée ; moving vrai tant que le ressort avance.
 // Erreurs : aucune ; avant que Theme soit prêt, au premier chargement et à chaque changement de thème,
 //           value prend target sans animation : tout le thème bascule dans la même image. Un nouvel objet de
 //           tokens qui ne change pas la cible (relecture d'un contenu identique, ou cible de même valeur dans
 //           les deux thèmes) pose aussi un ressort en vol sur sa cible, au tour de boucle suivant.
 // Dépendances : Theme (singleton du module), physics.js (integrate, atRest).
+// Le ressort n'est pas figé au changement de cible : chaque image de l'animation lit params.
 Item {
     id: spring
     visible: false
@@ -73,7 +75,8 @@ Item {
     FrameAnimation {
         id: anim
         onTriggered: {
-            Physics.integrate(spring.st, 1, spring.params.mass, spring.params.stiffness, spring.params.dampening, frameTime)
+            const r = spring.params
+            Physics.integrate(spring.st, 1, r.mass, r.stiffness, r.dampening, frameTime)
             const done = Physics.atRest(spring.st, 1)
             spring.value = done ? spring.target : spring.mix(spring.origin, spring.target, spring.st.x)
             if (done) stop()

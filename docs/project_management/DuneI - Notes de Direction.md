@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas — révisée le 22 octobre 2026
 
-Version 1.23. Historique en fin de document.
+Version 1.24. Historique en fin de document.
 
 *Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent quarante-huit lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
 
@@ -27,7 +27,7 @@ Ces exclusions sont explicites. Aucune n'est un oubli, et aucune ne se rediscute
 | Le jeu comme usage de premier plan — pilotes dédiés, couche de compatibilité, manettes | 1.1. En 1.0, un jeu est une fenêtre flottante de couche 2, palier D |
 | Le provisionnement de flotte — plusieurs machines, identités multiples | 1.1 |
 | La création visuelle — retouche, montage, 3D, production sonore | Non planifié |
-| Le mode clair | Non planifié. La bible garantit qu'il reste possible sans réécriture |
+| Le mode clair | Révisé le 2026-10-23 : des thèmes statiques clair et sombre entrent au lot 2 (L2-40), à la demande de Nicolas. La bible garantissait qu'il reste possible sans réécriture |
 | Une image d'installation utilisable par un tiers | Non planifié |
 | Toute application originale hors de la coque | Non planifié |
 
@@ -118,7 +118,7 @@ L'ordre découle d'une seule règle : **chaque lot laisse la machine en état de
 | **4 — Accord visuel** | Thématisation Qt et GTK sur cibles réelles, premier lot d'icônes, fond d'écran, panneau de thème, extraction de teinte | Cohérente de bout en bout, bible opposable partout |
 | **5 — Écrans système et voix** | Réglages panneau par panneau, connexion, amorçage, « À propos », catalogue de messages, recette | **1.0** |
 
-Le détail — cent quarante-cinq éléments, chacun rattaché à un chantier, un lot et une nature — vit dans le document de périmètre et de backlog. **Cette note ne s'y substitue pas.**
+Le détail — cent cinquante-deux éléments, chacun rattaché à un chantier, un lot et une nature — vit dans le document de périmètre et de backlog. **Cette note ne s'y substitue pas.**
 
 ## Les risques, par ordre de gravité
 
@@ -368,10 +368,26 @@ un bouton d'essai ; Nicolas l'a validée à l'écran (couleurs identiques au fon
 l'accent autonome, arêtes nettes). Elle consomme 0,0 à 0,1 % de processeur au repos et 232 Mio de PSS, contre
 157 Mio pour la maquette de l'îlot : l'écart n'est pas expliqué et reste à suivre au titre de D80.
 
-Prochaine étape : **la bibliothèque de composants (L2-01)**. Les tokens étant branchés (L2-34 terminée), chaque
-primitive lit ses valeurs dans `Theme`. Une question y reste ouverte : le retour au repos d'un état (fin de
-survol, relâchement) est-il une sortie, servie par le ressort `out`, plus court, plutôt que par le ressort
-`in` que `ColorSpring` prend aujourd'hui pour tout changement d'état ?
+**Bibliothèque de composants — 24 octobre 2026.** Toute la coque s'assemble désormais à partir du module
+`coque/Composants` (L2-01, avec les six états de L2-02 et le modificateur `inactive` de L2-03, D82). Les sept
+primitives reposent sur les gabarits sans style de Qt, qui réservent l'anneau de focus au clavier ; chaque
+contrôle prend son rôle un cran au-dessus de son conteneur, `controlRaised` sur un dialogue ou un popover ; une
+liste ou une barre d'onglets ne compte que pour un arrêt de tabulation ; l'overlay est complète, hors flou et
+transitions, et se charge à la demande. Nicolas a validé la bibliothèque à l'écran en cinq passes, qui l'ont
+menée vers les formes de macOS : coche et radio dessinés, jauge du Centre de contrôle, champ sans anneau,
+contrôle segmenté, pastilles de fenêtre, compteur, menu déroulant, infobulle, recherche, section dépliable,
+bascule à glyphe, et un indicateur d'activité en trois grains. Il a tranché la question du retour au repos :
+le ressort `in`. La planche reste à 0,0 % de processeur au repos ; un indicateur en marche coûte environ 4 %
+d'un cœur dans une fenêtre de popover, d'où la règle qu'il ne s'anime que visible. La mémoire résidente ne
+redescend pas après un déchargement, l'allocateur gardant la mémoire libérée : c'est le point de D80 à suivre.
+Les validations ont fait naître quatre éléments au lot 2 : thèmes statiques clair et sombre (L2-40), matière et
+texture (L2-41), décoration des fenêtres (L2-42) et thème de curseurs (L2-43) ; le mode clair quitte donc les
+exclusions de la 1.0.
+
+Prochaine étape : **les thèmes statiques clair et sombre (L2-40)**, que Nicolas a voulus juste après L2-01. Les
+couleurs brun-orange de la colorisation desservent les contrôles : il s'agit d'offrir, en plus de la colorisation
+par la teinte, deux thèmes à gris neutres, et d'ajouter un rôle `knob` pour les boutons d'interrupteur et les
+poignées. Les composants n'en dépendent pas : ils lisent tout dans `Theme`, et basculeront d'un bloc.
 
 ## Plan de lecture
 
@@ -390,6 +406,7 @@ survol, relâchement) est-il une sortie, servie par le ressort `out`, plus court
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-10 | Version initiale |
+| 1.24 | 2026-10-24 | Bibliothèque de composants (L2-01 à L2-03, D82) validée à l'écran en cinq passes, retour au repos sur `in` ; mode clair retiré des exclusions ; décompte du backlog porté à cent cinquante-deux ; prochaine étape : thèmes statiques clair et sombre (L2-40) |
 | 1.23 | 2026-10-22 | Prochaine étape reformulée : L2-34 terminée, chaque primitive de L2-01 lit `Theme` ; question ouverte du ressort de sortie au retour au repos |
 | 1.22 | 2026-10-22 | Tokens branchés sur Quickshell (L2-34, D81) ; planche de contrôle validée à l'écran ; prochaine étape : L2-01 |
 | 1.21 | 2026-10-22 | Coque en QML sur Quickshell (D80), prouvée par la maquette `proto/ilot` ; sobriété en ressources sans budget chiffré ; prochaine étape : L2-01, ouverte par L2-34 |

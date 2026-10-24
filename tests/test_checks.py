@@ -2,16 +2,17 @@
 
 import unittest
 
-from dunei_theme.checks import check
+from dunei_theme.checks import BODY_SURFACES, check
 from dunei_theme.color import Oklch
 
 
-def model(text_l=0.95, surface_l=0.18, on_accent_l=0.99, offsets=(0, 120, 240), heights=(32, 28)):
+def model(text_l=0.95, surface_l=0.18, on_accent_l=0.99, offsets=(0, 120, 240), heights=(32, 28), emphasis_l=0.97):
     """Modèle minimal conforme par défaut ; chaque paramètre permet d'introduire un défaut."""
     surf = Oklch(surface_l, 0.0, 0.0)
     return {
-        "roles": {"text-primary": Oklch(text_l, 0.0, 0.0), "surface-window": surf,
-                  "surface-panel": surf, "surface-raised": surf},
+        "roles": {"text-primary": Oklch(text_l, 0.0, 0.0), "text-emphasis": Oklch(emphasis_l, 0.0, 0.0),
+                  "surface-window": surf,
+                  "surface-panel": surf, "surface-raised": surf, "control-raised": surf},
         "accent": Oklch(0.53, 0.0, 0.0),
         "on_accent": Oklch(on_accent_l, 0.0, 0.0),
         "raw": {
@@ -21,6 +22,7 @@ def model(text_l=0.95, surface_l=0.18, on_accent_l=0.99, offsets=(0, 120, 240), 
             "scaling": {"height_multiple": 4},
             "density": {"normal": {"control_height": heights[0], "row_height": heights[1]}},
             "surface_material": {"sheen_max_height": 60},
+            "role_text": {"control-raised": "text-emphasis"},
         },
     }
 
@@ -44,6 +46,13 @@ class CheckTest(unittest.TestCase):
         w = check(model(text_l=0.86))
         self.assertTrue(has(w, "text-primary", "surface-window", "cible"))
         self.assertFalse(has(w, "plancher"))
+
+    def test_control_raised_pair(self):
+        """Vérifie que le texte sur le fond des contrôles posés sur E3 est contrôlé en APCA, avec le texte que lui
+        donne [role_text] : text-emphasis, et non text-primary."""
+        self.assertIn("control-raised", BODY_SURFACES)
+        self.assertTrue(has(check(model(emphasis_l=0.6)), "text-emphasis", "control-raised", "plancher"))
+        self.assertFalse(has(check(model(text_l=0.6)), "control-raised"))
 
     def test_on_accent_below_floor(self):
         self.assertTrue(has(check(model(on_accent_l=0.2)), "on_accent", "plancher"))

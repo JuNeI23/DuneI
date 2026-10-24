@@ -10,7 +10,7 @@ import Quickshell.Io
 // Entrées : DUNEI_TOKENS_DIR (dossier redirigé, pour la planche et les essais), sinon
 //           $XDG_CONFIG_HOME/dunei, sinon $HOME/.config/dunei.
 // Sorties : dir, ready, tokens et ses raccourcis par groupe, density (confortable), motion, stateColors(),
-//           hairline().
+//           hairline(), police().
 // Erreurs : fichier absent ou illisible → console.error, ready reste faux ; contenu invalide ou incomplet →
 //           console.warn, valeurs précédentes gardées.
 // Dépendances : Quickshell (env), Quickshell.Io (FileView, FileViewError).
@@ -45,13 +45,24 @@ Singleton {
     readonly property var density: tokens?.density.comfortable
 
     // stateColors — couleurs de fond et de texte d'une combinaison d'états, toutes précalculées.
-    // Entrées : role (surfaceWindow, surfacePanel, surfaceRaised), selection (none, active, inactive,
+    // Entrées : role (surfaceWindow, surfacePanel, surfaceRaised, controlRaised), selection (none, active, inactive,
     //           activeMuted), interaction (rest, hover, pressed, disabled).
     // Sortie : objet {fill, text} de couleurs sRGB, ou undefined si la combinaison n'existe pas ou si les
     //          tokens ne sont pas encore chargés.
     // Erreurs : aucune. Dépendances : tokens.
     function stateColors(role, selection, interaction) {
         return tokens?.states[role]?.[selection]?.[interaction]
+    }
+
+    // police — police d'interface à un échelon de l'échelle typographique, celle de Texte, de Champ et de Compteur.
+    // Entrées : echelon, indice dans typo.scale ; moyen, graisse weightMedium au lieu de weightRegular.
+    // Sortie : une valeur font ; avant le chargement des tokens, la famille et la taille de l'application, graisse
+    //          normale.
+    // Erreurs : aucune. Dépendances : typo.
+    function police(echelon, moyen) {
+        return Qt.font({ family: typo?.interface ?? Qt.application.font.family,
+                         pixelSize: typo?.scale[echelon] ?? Qt.application.font.pixelSize,
+                         weight: (moyen ? typo?.weightMedium : typo?.weightRegular) ?? Font.Normal })
     }
 
     // hairline — épaisseur d'un liseré (arête, bordure d'un pixel) en pixels logiques Qt.

@@ -5,7 +5,7 @@ import re
 import unittest
 from pathlib import Path
 
-from dunei_theme.color import oklch, to_hex
+from dunei_theme.color import Oklch, apca_lc, from_srgb255, oklch, to_hex
 from dunei_theme.emitters.quickshell import emit
 from dunei_theme.model import load, resolve
 
@@ -58,13 +58,59 @@ class QuickshellEmitterTest(unittest.TestCase):
         self.assertEqual(o["density"]["compact"]["controlHeight"], 24)
         self.assertEqual(o["typo"]["weightMedium"], 550)
 
+    def test_cotes_des_controles(self):
+        """Vérifie que les cotes des contrôles (case, radio, interrupteur, curseur, jauge, onglets, pastilles,
+        compteur, bascule) passent en camelCase dans density."""
+        d = self.out["density"]["comfortable"]
+        self.assertEqual({k: d[k] for k in ("checkSize", "switchWidth", "switchHeight", "switchThumb", "sliderTrack",
+                                             "sliderHandle", "sliderWidth", "fieldWidth", "radioDot", "sliderBar",
+                                             "segmentInset", "sliderBarIcon", "pastille", "stepperWidth",
+                                             "toggleSize")},
+                         {"checkSize": 16, "switchWidth": 38, "switchHeight": 22, "switchThumb": 18,
+                          "sliderTrack": 4, "sliderHandle": 20, "sliderWidth": 160, "fieldWidth": 200,
+                          "radioDot": 6, "sliderBar": 22, "segmentInset": 2, "sliderBarIcon": 14, "pastille": 12,
+                          "stepperWidth": 16, "toggleSize": 40})
+        c = self.out["density"]["compact"]
+        self.assertEqual({k: c[k] for k in ("switchWidth", "switchHeight", "switchThumb", "sliderHandle", "sliderWidth",
+                                             "radioDot", "sliderBar", "segmentInset", "sliderBarIcon", "pastille",
+                                             "stepperWidth", "toggleSize")},
+                         {"switchWidth": 32, "switchHeight": 18, "switchThumb": 14, "sliderHandle": 18,
+                          "sliderWidth": 140, "radioDot": 6, "sliderBar": 18, "segmentInset": 2, "sliderBarIcon": 12,
+                          "pastille": 12, "stepperWidth": 14, "toggleSize": 36})
+        self.assertEqual(self.out["density"]["compact"]["fieldWidth"], 180)
+
     def test_states_complet(self):
-        """Vérifie la présence des 48 combinaisons, chacune avec un fond et un texte."""
-        for r in ("surfaceWindow", "surfacePanel", "surfaceRaised"):
+        """Vérifie la présence des 64 combinaisons, chacune avec un fond et un texte."""
+        for r in ("surfaceWindow", "surfacePanel", "surfaceRaised", "controlRaised"):
             for s in ("none", "active", "inactive", "activeMuted"):
                 for i in ("rest", "hover", "pressed", "disabled"):
                     with self.subTest(r=r, s=s, i=i):
                         self.assertEqual(set(self.out["states"][r][s][i]), {"fill", "text"})
+
+    def test_control_raised(self):
+        """Vérifie que le rôle des contrôles sur E3 est l'échelon 4 de la rampe, un cran au-dessus de surfaceRaised."""
+        m = self.model
+        self.assertEqual(self.out["color"]["controlRaised"], to_hex(m["ramp"][4]))
+        self.assertEqual(self.out["states"]["controlRaised"]["none"]["rest"]["fill"], to_hex(m["ramp"][4]))
+        self.assertGreater(m["roles"]["control-raised"].l, m["roles"]["surface-raised"].l)
+
+    def test_control_raised_texte(self):
+        """Vérifie que le texte des contrôles posés sur E3 est text-emphasis et atteint la cible APCA du corps de
+        texte (Lc 90) sur controlRaised au repos, au survol et à la pression, sélection inactive comprise, à
+        chaque teinte des instantanés. text-primary n'y atteignait que Lc 88,1."""
+        cible, hexa = self.data["meta"]["contrast_target_body"], lambda h: from_srgb255(*bytes.fromhex(h[1:]))
+        for hue in GOLDEN_HUES:
+            m = resolve(self.data, float(hue))
+            st = json.loads(emit(m))["states"]["controlRaised"]
+            for s in ("none", "inactive"):
+                for i in ("rest", "hover", "pressed"):
+                    with self.subTest(hue=hue, s=s, i=i):
+                        c = st[s][i]
+                        self.assertEqual(c["text"], to_hex(m["roles"]["text-emphasis"]))
+                        self.assertGreaterEqual(abs(apca_lc(hexa(c["text"]), hexa(c["fill"]))), cible)
+        # Les autres rôles gardent text-primary.
+        self.assertEqual(self.out["states"]["surfaceRaised"]["none"]["rest"]["text"],
+                         to_hex(self.model["roles"]["text-primary"]))
 
     def test_states_valeurs(self):
         """Vérifie les règles de la bible sur la teinte 55 et le rôle surfacePanel."""
@@ -80,6 +126,39 @@ class QuickshellEmitterTest(unittest.TestCase):
         self.assertEqual(st["none"]["disabled"]["fill"], to_hex(oklch(panel.l, panel.c * 0.15, panel.h, ce)))
         self.assertEqual(st["active"]["disabled"]["fill"],
                          to_hex(oklch(acc.l + (panel.l - acc.l) * 0.55, acc.c * 0.15, acc.h, ce)))
+
+    def test_semantiques_pastilles(self):
+        """Vérifie les variantes de survol et de pression d'error, warning et success, propres aux pastilles de
+        fenêtre : la luminosité monte ou descend des écarts de la section pastilles (et non de ceux des états), en
+        OKLCH, chroma et teinte inchangés ; les trois teintes d'une même pastille restent distinctes."""
+        p = self.data["pastilles"]
+        for k in ("error", "warning", "success"):
+            s, c = self.model["semantic"][k], self.out["color"]
+            with self.subTest(teinte=k):
+                for suffixe, dl in (("Hover", p["hover_lightness_delta"]), ("Pressed", p["pressed_lightness_delta"])):
+                    self.assertEqual(c[f"{k}{suffixe}"], to_hex(Oklch(round(s.l + dl, 3), s.c, s.h)))
+                self.assertEqual(len({c[k], c[f"{k}Hover"], c[f"{k}Pressed"]}), 3)
+        self.assertGreater(p["hover_lightness_delta"], self.data["states"]["hover"]["lightness_delta"])
+        self.assertLess(p["pressed_lightness_delta"], self.data["states"]["pressed"]["lightness_delta"])
+
+    def test_glyphes_des_pastilles_lisibles(self):
+        """Vérifie, à chaque teinte de référence, que le glyphe des pastilles (color.surfaceBase) garde un contraste
+        d'au moins 3:1, celui demandé à un élément graphique, sur chaque teinte au repos, survolée et pressée."""
+
+        def luminance(hexa: str) -> float:
+            """Luminance relative WCAG d'une couleur #rrggbb. Entrée : hexa. Sortie : réel de 0 à 1.
+            Erreurs : ValueError sur une chaîne mal formée. Dépendances : aucune."""
+            lin = [(v / 12.92 if v <= 0.04045 else ((v + 0.055) / 1.055) ** 2.4)
+                   for v in (int(hexa[i:i + 2], 16) / 255 for i in (1, 3, 5))]
+            return 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2]
+
+        for hue in GOLDEN_HUES:
+            c = json.loads(emit(resolve(self.data, float(hue))))["color"]
+            fond = luminance(c["surfaceBase"])
+            for k in ("error", "warning", "success"):
+                for suffixe in ("", "Hover", "Pressed"):
+                    with self.subTest(teinte=hue, couleur=k + suffixe):
+                        self.assertGreaterEqual((luminance(c[k + suffixe]) + 0.05) / (fond + 0.05), 3)
 
     def test_focus(self):
         """Vérifie l'anneau de focus : couleurs, épaisseur et décalages."""

@@ -18,6 +18,18 @@ stagger_allowed   = ["reveal"]    # Seules ces transitions peuvent échelonner l
 stagger_cap       = 5             # Nombre maximal d'éléments échelonnés dans une cascade.
 reduced_fade_ms   = 100           # Durée du fondu qui remplace tout mouvement en mode réduit.
 
+[delays]                          # Attentes avant une réaction de l'interface, en millisecondes.
+tooltip = 500                     # Survol continu avant l'ouverture d'une infobulle (bible, annexe E ; L2-21).
+
+[periods]                         # Durée d'un cycle des mouvements continus, en millisecondes.
+spinner = 1200                    # Un cycle de la vague des trois grains de l'indicateur d'activité.
+
+[spinner]                         # Pose et courbe de la vague des trois grains de l'indicateur d'activité.
+rest_scale   = 0.6                # Échelle d'un grain au repos, entre 0 et 1 exclus ; il vaut 1 au sommet de la vague.
+rest_opacity = 0.35               # Opacité d'un grain au repos, entre 0 et 1 exclus ; elle vaut 1 au sommet.
+easing       = "InOutSine"        # Courbe de chaque étape, nommée comme le type Easing de Qt (Linear, InOutSine,
+                                  # InOutQuad : les seules que l'indicateur sait reproduire pour sa pose arrêtée).
+
 [transitions.state]
 usage      = "Changement d'état sur place : survol, focus, pression, sélection."
 mass       = 0.50

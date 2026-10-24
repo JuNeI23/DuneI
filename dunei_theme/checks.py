@@ -7,9 +7,10 @@ sur la vigilance de quelqu'un.
 from __future__ import annotations
 
 from .color import apca_lc
+from .model import role_text
 
-# Paires (texte, fond) contrôlées en APCA ; noms de rôles du modèle, ou clés de premier niveau.
-BODY_PAIRS = [("text-primary", bg) for bg in ("surface-window", "surface-panel", "surface-raised")]
+# Fonds dont le corps de texte est contrôlé en APCA, chacun avec le texte que lui donne model.role_text.
+BODY_SURFACES = ("surface-window", "surface-panel", "surface-raised", "control-raised")
 
 
 def contrast(model: dict) -> list[str]:
@@ -20,11 +21,11 @@ def contrast(model: dict) -> list[str]:
              on_accent sur accent sous le plancher.
     Erreurs : KeyError si un rôle ou raw["meta"] (contrast_floor,
               contrast_target_body) manque.
-    Dépendances : color.apca_lc.
+    Dépendances : color.apca_lc, model.role_text, BODY_SURFACES.
     """
     meta, roles, warn = model["raw"]["meta"], model["roles"], []
     floor, target = meta["contrast_floor"], meta["contrast_target_body"]
-    for text, bg in BODY_PAIRS:
+    for text, bg in ((role_text(model["raw"], bg), bg) for bg in BODY_SURFACES):
         lc = int(abs(apca_lc(roles[text], roles[bg])) * 10) / 10  # tronqué : jamais « Lc 75.0 sous le plancher 75 »
         if lc < floor:
             warn.append(f"contraste APCA {text} sur {bg} : Lc {lc} sous le plancher Lc {floor}")

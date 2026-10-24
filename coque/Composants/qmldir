@@ -1,0 +1,31 @@
+module Composants
+singleton Overlays 1.0 Overlays.qml
+Activite 1.0 Activite.qml
+AnneauFocus 1.0 AnneauFocus.qml
+Bascule 1.0 Bascule.qml
+Bouton 1.0 Bouton.qml
+Case 1.0 Case.qml
+Champ 1.0 Champ.qml
+Chevron 1.0 Chevron.qml
+Coche 1.0 Coche.qml
+Compteur 1.0 Compteur.qml
+Curseur 1.0 Curseur.qml
+Depliable 1.0 Depliable.qml
+Deroulant 1.0 Deroulant.qml
+Etat 1.0 Etat.qml
+Icone 1.0 Icone.qml
+Infobulle 1.0 Infobulle.qml
+Interrupteur 1.0 Interrupteur.qml
+Jauge 1.0 Jauge.qml
+Liste 1.0 Liste.qml
+Onglet 1.0 Onglet.qml
+Onglets 1.0 Onglets.qml
+Overlay 1.0 Overlay.qml
+Pastilles 1.0 Pastilles.qml
+Progression 1.0 Progression.qml
+Radio 1.0 Radio.qml
+Rangee 1.0 Rangee.qml
+Recherche 1.0 Recherche.qml
+Separateur 1.0 Separateur.qml
+Surface 1.0 Surface.qml
+Texte 1.0 Texte.qml
