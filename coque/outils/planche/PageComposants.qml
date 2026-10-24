@@ -20,11 +20,11 @@ import "Composants"
 // la fenêtre la fait défiler verticalement.
 // Erreurs : aucune ; une icône absente du thème laisse sa place vide ; une largeur plus étroite que le plus
 // large bloc (une grille d'états) laisse ce bloc déborder.
-// Dépendances : Theme (space, radius, density, typo, color), module Composants (Surface, Texte, Icone, Bouton,
-// Case, Radio, Interrupteur, Onglet, Onglets, Curseur, Jauge, Champ, Pastilles, Compteur, Deroulant, Liste,
-// Rangee, Separateur, Progression, AnneauFocus, Etat, Overlay, Reglage). Le menu du déroulant vivant ne s'ouvre,
-// lui aussi, qu'à la main. Les overlays ne s'ouvrent qu'à la demande de Nicolas, par leurs boutons :
-// l'attention prend le clavier en exclusif.
+// Dépendances : Theme (space, radius, density, typo, color), module Composants (Surface, Texte, Icone, Bouton, Case,
+// Radio, Interrupteur, Onglet, Onglets, Curseur, Jauge, Champ, Pastilles, Compteur, Deroulant, Recherche, Activite,
+// Depliable, Infobulle, Liste, Rangee, Separateur, Progression, AnneauFocus, Etat, Overlay, Reglage). Le menu du
+// déroulant vivant ne s'ouvre, lui aussi, qu'à la main, comme l'infobulle, au survol. Les overlays ne s'ouvrent qu'à la
+// demande de Nicolas, par leurs boutons : l'attention prend le clavier en exclusif.
 Surface {
     id: page
 
@@ -608,6 +608,73 @@ Surface {
                 onActivated: (index) => choixDeroulant.text = "activé : " + model[index]
             }
             Legende { id: choixDeroulant; text: "activé : aucun" }
+        }
+
+        Grille {
+            titre: "Champ de recherche"
+            variantes: [{ libelle: "vide" }, { libelle: "rempli", proprietes: { text: "Planche" } }]
+            // Comme le champ : pas d'anneau, le curseur clignotant se juge sur le vivant.
+            etats: ["rest", "hover", "disabled"]
+            modele: Component { Recherche {} }
+            Recherche {}
+        }
+
+        // La roue n'a ni état ni focus : une seule ligne, en marche et arrêtée. Le vivant se met en marche ou
+        // s'arrête par son interrupteur ; arrêtée, elle n'a plus de minuteur.
+        Grille {
+            titre: "Indicateur d'activité"
+            etats: ["rest"]
+            variantes: [{ libelle: "en marche" }, { libelle: "arrêtée", proprietes: { running: false } }]
+            modele: Component { Activite {} }
+
+            Row {
+                spacing: Theme.space.scale[2]
+                Activite { id: roueVivante; running: marcheRoue.checked; anchors.verticalCenter: parent.verticalCenter }
+                Interrupteur { id: marcheRoue; text: "En marche"; checked: true }
+            }
+        }
+
+        // L'état de l'en-tête se fige par son Etat (etat) et son anneau entoure son fond (cibleFocus).
+        Grille {
+            titre: "Section dépliable"
+            etats: ["rest", "hover", "disabled", "focus"]
+            variantes: [{ libelle: "repliée" }, { libelle: "dépliée", proprietes: { ouvert: true } }]
+            modele: Component {
+                Depliable {
+                    text: "Options avancées"
+                    Legende { text: "Contenu de la section" }
+                }
+            }
+
+            Depliable {
+                text: "Options avancées"
+                Case { text: "Afficher les fichiers cachés" }
+                Interrupteur { text: "Aperçus" }
+            }
+        }
+
+        // L'infobulle ne se fige pas : elle paraît après delays.tooltip de survol continu du bouton qui la porte,
+        // et se ferme quand le pointeur part ou au clic. Elle ne s'ouvre qu'à la main de Nicolas.
+        Column {
+            width: colonne.width
+            spacing: Theme.space.sectionGap
+
+            Titre { text: "Infobulle" }
+
+            Row {
+                spacing: Theme.space.scale[2]
+
+                Bouton {
+                    id: boutonBulle
+                    text: "Survolez-moi"
+                    Infobulle { cible: boutonBulle; texte: "Une aide brève sur ce bouton" }
+                }
+
+                Legende {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "la bulle paraît après un survol continu, et se ferme au départ du pointeur ou au clic"
+                }
+            }
         }
 
         Grille {

@@ -44,6 +44,19 @@ class ErrorsTest(unittest.TestCase):
         r = raw(); del r["rules"]["stagger_cap"]
         self.check(r, "rules", "stagger_cap")
 
+    def test_timings(self):
+        """Le délai d'infobulle et la période de la roue sont exigés, numériques et strictement positifs."""
+        for section, key in (("delays", "tooltip"), ("periods", "spinner")):
+            with self.subTest(section=section):
+                r = raw(); del r[section][key]
+                self.check(r, section, key, "manquante")
+                r = raw(); r[section][key] = 0
+                self.check(r, section, key, "strictement")
+                r = raw(); r[section][key] = "700"
+                self.check(r, section, key, "type")
+                r = raw(); r[section]["tooltipp"] = 1
+                self.check(r, section, "tooltipp", "inconnue")
+
     def test_nonpositive_reduced_fade(self):
         r = raw(); r["rules"]["reduced_fade_ms"] = 0
         self.check(r, "reduced_fade_ms", "strictement")

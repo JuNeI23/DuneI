@@ -7,7 +7,8 @@ import "Composants"
 
 // Coque d'essai du clavier : parcours de tabulation et curseur de texte, dans une vraie fenêtre.
 // Rôle : ouvre une FloatingWindow (un Bouton « avant », une barre Onglets avec les onglets « tokens » et « composants
-// », ce dernier coché, un Bouton « apres », un Champ, une Jauge, un Compteur, un Deroulant, des Pastilles, puis deux
+// », ce dernier coché, un Bouton « apres », un Champ, une Jauge, un Compteur, un Deroulant, des Pastilles, une
+// Recherche, une Depliable, un Bouton « bulle » qui porte une Infobulle sans texte (jamais de fenêtre), puis deux
 // Liste côte à côte, un menu qui porte selectionSuitSurvol et un témoin qui ne le porte pas) et y synthétise des
 // touches et des mouvements du pointeur par le TestEvent de QtTest, pour que tests/test_coque_composants.py éprouve ce
 // que la coque sans fenêtre ne peut pas exécuter : le focus actif, la tabulation, le clignotement du curseur, la mise
@@ -28,7 +29,11 @@ import "Composants"
 // « essai molette <1|-1> » tourne la molette sur le compteur, « essai cliquerDeroulant » clique le déroulant,
 // « essai pointerRangee <rang> <bool> » pose le pointeur sur une rangée du menu ouvert et l'y clique si demandé,
 // « essai pointerPastille <rang> <bool> » pose le pointeur sur une pastille et l'y clique si demandé, « essai
-// pastillesReduire <bool> » active ou désactive la pastille de réduction,
+// pastillesReduire <bool> » active ou désactive la pastille de réduction, « essai rechercheTexte <texte> » remplit
+// la recherche, « essai cliquerEffacer » clique son bouton d'effacement, « essai cliquerDepliable » clique l'en-tête
+// de la section, « essai survolerBulle », « essai quitterBulle » et « essai appuyerBulle » posent le pointeur sur
+// le bouton « bulle », l'en retirent ou l'y cliquent ; recherche, depliable et bulle journalisent (voir chaque
+// fonction),
 // « essai survoler <rang> » pose le pointeur sur une rangée de chaque liste, « essai survolerOnglet » sur
 // l'onglet « tokens » et « essai ongletActif <bool> » active ou désactive l'onglet « composants », sans
 // journaliser.
@@ -87,6 +92,26 @@ ShellRoot {
                     onReduire: emis = Object.assign({}, emis, { reduire: emis.reduire + 1 })
                     onAgrandir: emis = Object.assign({}, emis, { agrandir: emis.agrandir + 1 })
                 }
+
+                Recherche { id: rechercheEssai; objectName: "recherche" }
+
+                Depliable {
+                    id: depliableEssai
+                    text: "Section"
+                    Texte { text: "Contenu" }
+                }
+
+                // Bouton qui porte l'infobulle et compte ses clics. L'infobulle n'a pas de texte : son délai et sa
+                // fermeture s'éprouvent sans qu'aucune fenêtre ne s'ouvre.
+                Bouton {
+                    id: boutonBulle
+                    property int clics: 0
+                    objectName: "bulle"
+                    text: "Bulle"
+                    onClicked: clics++
+                }
+
+                Infobulle { id: infobulleEssai; cible: boutonBulle }
 
                 Row {
                     Liste { id: listeMenu; selectionSuitSurvol: true; model: 3; delegate: rangee; width: 100; height: 3 * Theme.density.rowHeight }
@@ -198,11 +223,76 @@ ShellRoot {
                     pastillesEssai.reduireActif = valeur
                 }
 
+                // recherche — journalise le texte de la recherche, entre chevrons, et la visibilité de son bouton
+                // d'effacement. Entrées : aucune. Sortie : aucune ; « essai : recherche «<texte>» <bool> ».
+                // Erreurs : aucune. Dépendances : rechercheEssai (effacer), journal.
+                function recherche(): void {
+                    essai.journal("recherche", "«" + rechercheEssai.text + "» " + rechercheEssai.effacer.visible)
+                }
+
+                // rechercheTexte — remplace le texte de la recherche.
+                // Entrée : texte, nouveau contenu. Sortie : aucune. Erreurs : aucune. Dépendances : rechercheEssai.
+                function rechercheTexte(texte: string): void {
+                    rechercheEssai.text = texte
+                }
+
+                // cliquerEffacer — clique au centre du bouton d'effacement de la recherche, comme la souris.
+                // Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : rechercheEssai, clavier.
+                function cliquerEffacer(): void {
+                    const e = rechercheEssai.effacer
+                    clavier.mouseClick(e, e.width / 2, e.height / 2, Qt.LeftButton, Qt.NoModifier, -1)
+                }
+
+                // depliable — journalise l'état de la section : ouverte, bloc de contenu visible, anneau visible.
+                // Entrées : aucune. Sortie : aucune ; « essai : depliable <bool> <bool> <bool> ». Erreurs : aucune.
+                // Dépendances : depliableEssai (bloc, anneau), journal.
+                function depliable(): void {
+                    const d = depliableEssai
+                    essai.journal("depliable", [d.ouvert, d.bloc.visible, d.anneau.visible].join(" "))
+                }
+
+                // cliquerDepliable — clique au centre de l'en-tête de la section, comme la souris.
+                // Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : depliableEssai, clavier.
+                function cliquerDepliable(): void {
+                    const e = depliableEssai.entete
+                    clavier.mouseClick(e, e.width / 2, e.height / 2, Qt.LeftButton, Qt.NoModifier, -1)
+                }
+
+                // bulle — journalise l'état de l'infobulle (délai armé, délai écoulé, overlay ouvert) et le nombre
+                // de clics reçus par le bouton qui la porte. Entrées : aucune. Sortie : aucune ; « essai : bulle
+                // <bool> <bool> <bool> <n> ». Erreurs : aucune. Dépendances : infobulleEssai, boutonBulle, journal.
+                function bulle(): void {
+                    const i = infobulleEssai
+                    essai.journal("bulle", [i.armee, i.due, i.bulle.ouvert, boutonBulle.clics].join(" "))
+                }
+
+                // survolerBulle — pose le pointeur au centre du bouton « bulle ».
+                // Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : boutonBulle, clavier.
+                function survolerBulle(): void {
+                    clavier.mouseMove(boutonBulle, boutonBulle.width / 2, boutonBulle.height / 2, -1, Qt.NoButton,
+                                      Qt.NoModifier)
+                }
+
+                // quitterBulle — retire le pointeur du bouton « bulle » en le posant sur la recherche.
+                // Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : rechercheEssai, clavier.
+                function quitterBulle(): void {
+                    clavier.mouseMove(rechercheEssai, rechercheEssai.width / 2, rechercheEssai.height / 2, -1,
+                                      Qt.NoButton, Qt.NoModifier)
+                }
+
+                // appuyerBulle — clique au centre du bouton « bulle », comme la souris.
+                // Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : boutonBulle, clavier.
+                function appuyerBulle(): void {
+                    clavier.mouseClick(boutonBulle, boutonBulle.width / 2, boutonBulle.height / 2, Qt.LeftButton,
+                                       Qt.NoModifier, -1)
+                }
+
                 // focus — journalise l'élément qui a le focus actif, l'onglet courant et la sélection des onglets.
                 // Entrées : aucune. Sortie : aucune ; « essai : focus … », « aucun » si rien n'a le focus.
                 // Erreurs : aucune. Dépendances : colonne, barre, journal.
                 function focus(): void {
-                    const elus = [...colonne.children, tokens, composants].filter(e => e.activeFocus && e.objectName)
+                    const elus = [...colonne.children, tokens, composants, depliableEssai.entete]
+                        .filter(e => e.activeFocus && e.objectName)
                     const elu = elus[elus.length - 1]
                     essai.journal("focus", [elu?.objectName ?? "aucun", barre.currentIndex, tokens.etat.selection,
                                             composants.etat.selection, elu?.visualFocus ?? false].join(" "))

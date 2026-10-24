@@ -64,8 +64,9 @@ def resolve(raw: dict) -> dict:
     """Résolution complète d'un motion.toml déjà validé par checks.errors.
 
     Entrée : raw — sortie de load.
-    Sortie : {version, prefix, rules, transitions, reduced, curves, animations, reduced_animations}
-             (le détail est donné dans le plan, tâche 3).
+    Sortie : {version, prefix, rules, delays, periods, transitions, reduced, curves, animations,
+             reduced_animations} (le détail est donné dans le plan, tâche 3) ; delays et periods sont recopiés
+             tels quels, en millisecondes.
     Erreurs : KeyError si raw n'a pas été validé et qu'une clé manque.
     Dépendances : spring, unit_mass, describe, _animation, reduced_animation.
     """
@@ -84,6 +85,7 @@ def resolve(raw: dict) -> dict:
     hyp, overrides = raw["hyprland"], raw["hyprland_reduced"]
     return {
         "version": raw["version"], "prefix": prefix, "rules": rules,
+        "delays": raw["delays"], "periods": raw["periods"],
         "transitions": transitions, "reduced": describe(reduced),
         "curves": dict(sorted(curves.items())),
         "animations": [_animation(leaf, e, prefix) for leaf, e in hyp.items()],

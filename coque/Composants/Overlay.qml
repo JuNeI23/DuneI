@@ -13,23 +13,27 @@ import "../Theme"
 //   - contextuel (menu, popover, liste déroulante) : PopupWindow ancrée sous l'élément ancre, ou sur le point
 //     de clic si point est fourni, retournée puis glissée pour rester dans l'écran ; sans voile ; le clavier
 //     est pris par HyprlandFocusGrab, dont la levée (clic à l'extérieur) ferme, comme Échap ; plusieurs
-//     peuvent coexister. L'infobulle, qui ne prend jamais le clavier, n'est pas couverte.
+//     peuvent coexister.
+//   - infobulle : la même PopupWindow, centrée sous l'ancre, ou au-dessus s'il n'y a pas la place, à un échelon
+//     de space (space.scale[0]) de son bord ; sans voile ni HyprlandFocusGrab : elle ne prend jamais le clavier
+//     et seule son ouvreuse, l'Infobulle, la ferme.
 // Le contenu est posé au centre d'une Surface surfaceRaised (e3), entourée d'un retrait ; sa taille est celle du
 // contenu. Les formes suivent macOS (conception, § 7.10) : une attention a les coins radius.window et le retrait
 // space.scale[2] (12), comme une feuille d'alerte ; un contextuel a les coins radius.panel et le retrait
-// space.scale[0] (4), comme un menu, dont la pastille de sélection se tient ainsi près du bord. Sobriété (D80) :
+// space.scale[0] (4), comme un menu, dont la pastille de sélection se tient ainsi près du bord ; une infobulle a
+// les coins radius.small et le même retrait (conception, § 7.10). Sobriété (D80) :
 // la fenêtre et le contenu ne sont construits par le LazyLoader qu'à l'ouverture, entre deux images, et
 // détruits à la fermeture.
-// Entrées : famille, "attention" ou "contextuel" ; ouvert, vrai pour ouvrir, faux pour fermer, qui s'affecte et
-//           ne se lie pas : le registre Overlays, Échap, le clic sur le voile et la levée du focus l'écrivent
-//           impérativement, ce qui romprait une liaison ; l'appelant se resynchronise sur ferme() ; ancre, élément
-//           déclencheur d'un contextuel, dans une fenêtre déjà affichée ; point, point de clic dans le repère de
-//           l'ancre (Qt.point), null par défaut pour s'ancrer sous l'ancre entière ; contenu, propriété par
-//           défaut : l'élément déclaré dans l'Overlay, instancié à chaque ouverture.
+// Entrées : famille, "attention", "contextuel" ou "infobulle" ; ouvert, vrai pour ouvrir, faux pour fermer, qui
+//           s'affecte et ne se lie pas : le registre Overlays, Échap, le clic sur le voile et la levée du focus
+//           l'écrivent impérativement, ce qui romprait une liaison ; l'appelant se resynchronise sur ferme() ; ancre,
+//           élément déclencheur d'un contextuel ou d'une infobulle, dans une fenêtre déjà affichée ; point, point de
+//           clic dans le repère de l'ancre (Qt.point), null par défaut pour s'ancrer sous l'ancre entière ; contenu,
+//           propriété par défaut : l'élément déclaré dans l'Overlay, instancié à chaque ouverture.
 // Sorties : ferme(), émis à chaque fermeture, quelle qu'en soit la cause ; chargeur, le LazyLoader de la
 //           fenêtre, exposé pour les essais et les relevés de mémoire ; fenetreAttention (un porteur de
 //           FenetreAttention) et fenetreContextuel, les composants que le chargeur instancie, internes à la
-//           primitive.
+//           primitive ; bulle, vrai pour la famille infobulle. La fenêtre d'une infobulle est fenetreContextuel.
 // Erreurs : aucune ; un contextuel sans ancre affichée ne se montre pas (règle de PopupWindow) ; avant le
 //           chargement des tokens, voile et fond restent transparents et le retrait vaut 0.
 // Dépendances : Quickshell (LazyLoader, PopupWindow, Edges, PopupAdjustment), Quickshell.Hyprland (Hyprland,
@@ -47,6 +51,7 @@ QtObject {
     property var point: null
     default property Component contenu
     signal ferme()
+    readonly property bool bulle: famille === "infobulle"
 
     // Cadre — Surface surfaceRaised qui porte le contenu, commune aux deux familles.
     // Rôle : instancie le contenu dans un Loader, l'entoure du retrait et capte Échap, qu'il signale par echap() ;
@@ -127,12 +132,16 @@ QtObject {
         id: popup
         anchor.item: overlay.ancre
         anchor.rect.x: overlay.point?.x ?? 0
-        anchor.rect.y: overlay.point?.y ?? 0
+        // L'infobulle s'ancre sur l'ancre agrandie de l'écart en haut et en bas, pour s'en tenir à distance des
+        // deux côtés, qu'elle soit posée dessous ou retournée au-dessus.
+        readonly property real ecart: overlay.bulle ? Theme.space?.scale[0] ?? 0 : 0
+        anchor.rect.y: overlay.point?.y ?? -ecart
         anchor.rect.width: overlay.point ? 1 : overlay.ancre?.width ?? 1
-        anchor.rect.height: overlay.point ? 1 : overlay.ancre?.height ?? 1
-        // Sous l'ancre, ou à partir du point de clic, en s'étendant vers le bas et la droite.
-        anchor.edges: Edges.Left | (overlay.point ? Edges.Top : Edges.Bottom)
-        anchor.gravity: Edges.Bottom | Edges.Right
+        anchor.rect.height: overlay.point ? 1 : (overlay.ancre?.height ?? 1) + 2 * ecart
+        // Contextuel : sous l'ancre, ou à partir du point de clic, en s'étendant vers le bas et la droite.
+        // Infobulle : centrée sous l'ancre, retournée au-dessus s'il n'y a pas la place.
+        anchor.edges: overlay.bulle ? Edges.Bottom : Edges.Left | (overlay.point ? Edges.Top : Edges.Bottom)
+        anchor.gravity: overlay.bulle ? Edges.Bottom : Edges.Bottom | Edges.Right
         anchor.adjustment: PopupAdjustment.Flip | PopupAdjustment.Slide
         implicitWidth: cadrePopup.implicitWidth
         implicitHeight: cadrePopup.implicitHeight
@@ -143,14 +152,14 @@ QtObject {
             id: cadrePopup
             anchors.fill: parent
             contenu: overlay.contenu
-            rayon: Theme.radius?.panel ?? 0
+            rayon: (overlay.bulle ? Theme.radius?.small : Theme.radius?.panel) ?? 0
             retrait: Theme.space?.scale[0] ?? 0
             onEchap: overlay.ouvert = false
         }
 
         HyprlandFocusGrab {
             windows: [popup]
-            active: overlay.ouvert
+            active: overlay.ouvert && !overlay.bulle
             onCleared: overlay.ouvert = false
         }
     }

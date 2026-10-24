@@ -467,6 +467,58 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
         self.ipc("deroulantRang", "2")
         self.assertEqual(self.valeur("deroulant"), "Trois éléments 2 double surfaceRaised true false true")
 
+    def test_recherche(self):
+        # La recherche est un Champ en pilule (rayon de la moitié de sa hauteur), avec la loupe system-search à
+        # gauche ; le bouton d'effacement edit-clear n'est visible que s'il y a du texte. Les deux icônes se
+        # résolvent dans Adwaita (Image.Ready vaut 1).
+        self.demarrer()
+        h = self.tokens55()[0]["density"]["comfortable"]["controlHeight"]
+        self.assertEqual(self.valeur("recherche"), f"{h} {h / 2:g} system-search 1 false edit-clear 1")
+        self.ipc("rechercheTexte", "abc")
+        self.assertEqual(self.valeur("recherche"), f"{h} {h / 2:g} system-search 1 true edit-clear 1")
+        # Le bouton d'effacement est au texte secondaire ; désactivé, il prend la couleur désactivée du champ, comme
+        # la loupe et le texte, au lieu de rester vif.
+        c = self.tokens55()[0]["color"]
+        self.assertEqual(self.valeur("rechercheCouleurs").lower().split()[:2], [c["textTertiary"].lower(),
+                                                                                c["textSecondary"].lower()])
+        self.ipc("rechercheActive", "false")
+        loupe, effacer, texte = self.valeur("rechercheCouleurs").split()
+        self.assertEqual((loupe, effacer), (texte, texte))
+        self.assertNotEqual(effacer.lower(), c["textSecondary"].lower())
+
+    def test_activite(self):
+        # La roue : huit traits au texte secondaire, d'opacités décroissantes derrière le trait de tête (pas), dans un
+        # carré d'icons.sizes.default. Son minuteur avance d'un pas tous les huitièmes de periods.spinner, et ne
+        # tourne que si la roue est visible et en marche : aucun minuteur au repos (D80).
+        self.demarrer()
+        tokens, motion = self.tokens55()
+        intervalle = motion["periods"]["spinner"] // 8
+        marche, inter, pas, cote, couleur, opacites = self.valeur("activite").split()
+        self.assertEqual((marche, inter, cote), ("true", str(intervalle), str(tokens["icons"]["sizes"]["default"])))
+        self.assertEqual(couleur.lower(), tokens["color"]["textSecondary"].lower())
+        attendu = [1 - ((int(pas) - i) % 8) / 8 for i in range(8)]
+        self.assertEqual([float(o) for o in opacites.split(",")], attendu)
+        time.sleep(3 * intervalle / 1000)
+        self.assertNotEqual(self.valeur("activite").split()[2], pas)
+        for visible, running in (("false", "true"), ("true", "false"), ("false", "false")):
+            with self.subTest(visible=visible, running=running):
+                self.ipc("activiteEtat", visible, running)
+                arret = self.valeur("activite").split()[2]
+                time.sleep(3 * intervalle / 1000)
+                self.assertEqual(self.valeur("activite").split()[:3], ["false", str(intervalle), arret])
+        self.ipc("activiteEtat", "true", "true")
+        self.assertEqual(self.valeur("activite").split()[0], "true")
+
+    def test_depliable(self):
+        # Repliée, la section cache son contenu et son chevron pointe à droite (rotation -90 du chevron bas) ;
+        # dépliée, le contenu paraît et le chevron pointe en bas, sans animation. L'en-tête, de la hauteur d'une
+        # rangée, ne prend le focus qu'à la tabulation (Qt.TabFocus vaut 1).
+        self.demarrer()
+        h = self.tokens55()[0]["density"]["comfortable"]["rowHeight"]
+        self.assertEqual(self.valeur("depliable"), f"false -90 false 1 {h}")
+        self.ipc("depliableOuvrir", "true")
+        self.assertEqual(self.valeur("depliable"), f"true 0 true 1 {h}")
+
     def test_exclusivite(self):
         # Le singleton Overlays seul, sur trois objets factices qui suivent le protocole d'Overlay (ouvert passe à
         # vrai puis Overlays.ouvrir, ouvert passe à faux puis Overlays.fermer) : A et B sont des attentions, C un
@@ -693,6 +745,63 @@ class CoqueClavierTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(self.valeur("deroulant"), "2 Trois 4 true 0 false false false true")
         self.ipc("pointerRangee", "0", "true")
         self.attendre_valeur("deroulant", "0 Un 5 false")
+
+    def test_recherche_clavier(self):
+        # La recherche est un arrêt de tabulation après le déroulant ; Échap efface son texte, et laisse le focus ;
+        # le bouton d'effacement, visible tant qu'il y a du texte, efface au clic.
+        self.demarrer()
+        for _ in range(8):  # avant, composants, apres, champ, jauge, compteur, deroulant, recherche
+            self.ipc("touche", "tab")
+        self.assertEqual(self.valeur("focus").split()[0], "recherche")
+        self.ipc("rechercheTexte", "abc")
+        self.assertEqual(self.valeur("recherche"), "«abc» true")
+        self.ipc("touche", "echap")
+        self.assertEqual(self.valeur("recherche"), "«» false")
+        self.ipc("touche", "echap")
+        self.assertEqual(self.valeur("focus").split()[0], "recherche")
+        self.ipc("rechercheTexte", "xyz")
+        self.ipc("cliquerEffacer")
+        self.assertEqual(self.valeur("recherche"), "«» false")
+
+    def test_depliable_clavier(self):
+        # L'en-tête de la section est un arrêt de tabulation après la recherche, entouré de l'anneau au clavier ;
+        # Espace et Entrée basculent la section, le clic aussi.
+        self.demarrer()
+        for _ in range(9):  # … deroulant, recherche, en-tête de la section
+            self.ipc("touche", "tab")
+        self.assertEqual(self.valeur("focus").split()[0], "entete")
+        self.assertEqual(self.valeur("depliable"), "false false true")
+        self.ipc("touche", "espace")
+        self.assertEqual(self.valeur("depliable"), "true true true")
+        self.ipc("touche", "entree")
+        self.assertEqual(self.valeur("depliable"), "false false true")
+        self.ipc("cliquerDepliable")
+        self.assertEqual(self.valeur("depliable").split()[:2], ["true", "true"])
+
+    def test_infobulle_delai(self):
+        # Le délai de l'infobulle est armé dès que le pointeur entre sur la cible, et échoit après delays.tooltip de
+        # survol continu ; le départ du pointeur le désarme et la referme. Un clic la masque jusqu'à ce que le
+        # pointeur reparte, sans prendre le clic au bouton. L'infobulle d'essai n'a pas de texte : due, elle
+        # n'ouvre aucune fenêtre (troisième champ).
+        self.demarrer()
+        delai = self.tokens55()[1]["delays"]["tooltip"] / 1000
+        self.assertEqual(self.valeur("bulle"), "false false false 0")
+        self.ipc("survolerBulle")
+        self.assertEqual(self.valeur("bulle"), "true false false 0")
+        time.sleep(delai / 2)
+        self.assertEqual(self.valeur("bulle"), "true false false 0")
+        time.sleep(delai)
+        self.assertEqual(self.valeur("bulle"), "false true false 0")
+        self.ipc("quitterBulle")
+        self.assertEqual(self.valeur("bulle"), "false false false 0")
+        self.ipc("survolerBulle")
+        self.ipc("appuyerBulle")
+        self.assertEqual(self.valeur("bulle"), "false false false 1")
+        time.sleep(1.5 * delai)
+        self.assertEqual(self.valeur("bulle"), "false false false 1")
+        self.ipc("quitterBulle")
+        self.ipc("survolerBulle")
+        self.assertEqual(self.valeur("bulle"), "true false false 1")
 
     def test_pastilles_souris(self):
         # Les glyphes paraissent au survol du groupe ; chaque pastille émet son signal au clic ; la pastille de

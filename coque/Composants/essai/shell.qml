@@ -11,21 +11,24 @@ import "Composants/etats.js" as Etats
 // Rôle : instancie un arbre fixe (une Surface fenêtre contenant une Surface panneau, qui porte la sonde capteur, un
 // contrôle simulé avec son Etat, un Texte, une Icone, les cinq contrôles interactifs (Bouton, Case, Interrupteur,
 // Onglet, Curseur), trois Radio dans un même parent, une Jauge, une Progression, deux Separateur, un Champ, des
-// Pastilles, un Compteur, un Deroulant, une Liste vide, une Liste de trois Rangee et une cible munie d'un AnneauFocus,
-// plus une Surface inactive à l'écart, deux Overlay fermés, un de chaque famille, et trois objets factices pour le
-// singleton Overlays) pour que tests/test_coque_composants.py éprouve dans un vrai Quickshell les règles d'etats.js,
-// l'héritage par remontée, l'import du Theme, les pièces de base, les contrôles et les listes, en lisant le journal.
+// Pastilles, un Compteur, un Deroulant, une Recherche, une Activite, une Depliable, une Liste vide, une Liste de trois
+// Rangee et une cible munie d'un AnneauFocus, plus une Surface inactive à l'écart, deux Overlay fermés, un de chaque
+// famille, et trois objets factices pour le singleton Overlays) pour que tests/test_coque_composants.py éprouve dans un
+// vrai Quickshell les règles d'etats.js, l'héritage par remontée, l'import du Theme, les pièces de base, les contrôles
+// et les listes, en lisant le journal.
 // Entrées : DUNEI_TOKENS_DIR, lu par Theme ; thème d'icônes Adwaita, posé par la directive IconTheme en tête (thème de
 // transition jusqu'à L4-12). Sortie : journal de Theme, plus « essai : prêt <bool> » à chaque changement de
 // Theme.ready, et une ligne « essai : <clé> <valeur> » par commande IPC de lecture (cran, interaction, selection,
 // sonde, naissances, fond, texte, anneau, etat, ressort, image, controles, coches, cotes, glyphes, radios, jauge,
 // progression, separateur, champ, indicatif, tailleIcone, liste, arrets, rangee, bouton, overlays, overlaysFermes,
-// pastilles, compteur, deroulant, fenetreAttention) ; « essai pastillesForcer <état> », « essai pastillesReduire <bool>
-// », « essai compteurValeur <n> », « essai deroulantRang <n> », « essai decocher », « essai radioCocher <rang> », «
-// essai jaugeActive <bool> », « essai boutonPrincipal <bool> », « essai inactif <bool> », « essai reparenter », « essai
-// texteMoyen », « essai anneauInactif <bool> », « essai survol <bool> », « essai retour <in|out> », « essai champActif
-// <bool> », « essai champTexte <texte> », « essai selectionLibre », « essai icone <nom> <bool> », « essai ouvrirFactice
-// <A|B|C> » et « essai fermerFactice <A|B|C> » agissent sans journaliser.
+// pastilles, compteur, deroulant, recherche, rechercheCouleurs, activite, depliable, fenetreAttention) ; « essai
+// rechercheTexte <texte> », « essai rechercheActive <bool> », « essai activiteEtat <visible> <running> », « essai
+// depliableOuvrir <bool> », « essai pastillesForcer <état> », « essai pastillesReduire <bool> », « essai compteurValeur
+// <n> », « essai deroulantRang <n> », « essai decocher », « essai radioCocher <rang> », « essai jaugeActive <bool> », «
+// essai boutonPrincipal <bool> », « essai inactif <bool> », « essai reparenter », « essai texteMoyen », « essai
+// anneauInactif <bool> », « essai survol <bool> », « essai retour <in|out> », « essai champActif <bool> », « essai
+// champTexte <texte> », « essai selectionLibre », « essai icone <nom> <bool> », « essai ouvrirFactice <A|B|C> » et «
+// essai fermerFactice <A|B|C> » agissent sans journaliser.
 // Erreurs : celles de Theme et des liaisons, dans le journal. Dépendances : quickshell ≥ 0.3 (Quickshell.Io :
 // IpcHandler), modules coque/Theme et coque/Composants.
 // Import : Quickshell ne résout pas un module situé au-dessus de la racine de la coque lancée ; les liens
@@ -155,6 +158,20 @@ ShellRoot {
             Deroulant {
                 id: deroulantEssai
                 model: ["Un", "Deux", "Trois éléments"]
+            }
+
+            Recherche {
+                id: rechercheEssai
+            }
+
+            Activite {
+                id: activiteEssai
+            }
+
+            Depliable {
+                id: depliableEssai
+                text: "Section"
+                Texte { text: "Contenu" }
             }
 
             Liste {
@@ -562,6 +579,70 @@ ShellRoot {
             const b = champEssai.background
             essai.journal("champ", [b.color, panneau.children[0].color, champEssai.focusPolicy, champEssai.height,
                 b.radius, b.children.length, champEssai.color, champEssai.implicitWidth].join(" "))
+        }
+
+        // recherche — journalise la hauteur du champ de recherche et le rayon de son fond, le nom de la loupe et
+        // son chargement, la visibilité du bouton d'effacement, son nom et son chargement.
+        // Entrées : aucune. Sortie : aucune ; « essai : recherche <hauteur> <rayon> <nom> <statut> <bool> <nom>
+        // <statut> ». Erreurs : aucune. Dépendances : rechercheEssai (loupe, effacer), journal.
+        function recherche(): void {
+            const r = rechercheEssai
+            essai.journal("recherche", [r.height, r.background.radius, r.loupe.nom, r.loupe.status,
+                                        r.effacer.visible, r.effacer.nom, r.effacer.status].join(" "))
+        }
+
+        // rechercheCouleurs — journalise la couleur de la loupe, celle du bouton d'effacement, puis celle du texte du
+        // champ de recherche. Entrées : aucune. Sortie : aucune ; « essai : rechercheCouleurs <#> <#> <#> ».
+        // Erreurs : aucune. Dépendances : rechercheEssai (loupe, effacer, etat), journal.
+        function rechercheCouleurs(): void {
+            const r = rechercheEssai
+            essai.journal("rechercheCouleurs", [r.loupe.couleur, r.effacer.couleur, r.etat.texte].join(" "))
+        }
+
+        // rechercheActive — active ou désactive le champ de recherche d'essai.
+        // Entrée : valeur, nouvel état enabled. Sortie : aucune. Erreurs : aucune. Dépendances : rechercheEssai.
+        function rechercheActive(valeur: bool): void {
+            rechercheEssai.enabled = valeur
+        }
+
+        // rechercheTexte — remplace le texte du champ de recherche d'essai.
+        // Entrée : texte, nouveau contenu. Sortie : aucune. Erreurs : aucune. Dépendances : rechercheEssai.
+        function rechercheTexte(texte: string): void {
+            rechercheEssai.text = texte
+        }
+
+        // activite — journalise l'état du minuteur de la roue (en marche, intervalle), le pas courant, le côté de
+        // la roue, la couleur et l'opacité de chacun de ses traits.
+        // Entrées : aucune. Sortie : aucune ; « essai : activite <bool> <intervalle> <pas> <côté> <couleur>
+        // <opacité,…> ». Erreurs : aucune. Dépendances : activiteEssai (minuteur, rayons), journal.
+        function activite(): void {
+            const a = activiteEssai, traits = [...Array(a.rayons.count).keys()].map(i => a.rayons.itemAt(i))
+            essai.journal("activite", [a.minuteur.running, a.minuteur.interval, a.pas, a.width, traits[0].color,
+                                       traits.map(t => Math.round(t.opacity * 1000) / 1000).join(",")].join(" "))
+        }
+
+        // activiteEtat — montre ou cache la roue d'essai et la met en marche ou à l'arrêt.
+        // Entrées : visible, nouvelle visibilité ; running, nouvelle marche. Sortie : aucune. Erreurs : aucune.
+        // Dépendances : activiteEssai.
+        function activiteEtat(visible: bool, running: bool): void {
+            activiteEssai.visible = visible
+            activiteEssai.running = running
+        }
+
+        // depliable — journalise l'état de la section dépliable : ouverte, rotation du chevron, visibilité du
+        // bloc de contenu, politique de focus et hauteur de l'en-tête.
+        // Entrées : aucune. Sortie : aucune ; « essai : depliable <bool> <angle> <bool> <politique> <hauteur> ».
+        // Erreurs : aucune. Dépendances : depliableEssai (chevron, bloc, entete), journal.
+        function depliable(): void {
+            const d = depliableEssai
+            essai.journal("depliable", [d.ouvert, d.chevron.rotation, d.bloc.visible, d.entete.focusPolicy,
+                                        d.entete.height].join(" "))
+        }
+
+        // depliableOuvrir — ouvre ou ferme la section dépliable d'essai par programme.
+        // Entrée : valeur, nouvel ouvert. Sortie : aucune. Erreurs : aucune. Dépendances : depliableEssai.
+        function depliableOuvrir(valeur: bool): void {
+            depliableEssai.ouvert = valeur
         }
 
         // champTexte — remplace le texte du champ d'essai.

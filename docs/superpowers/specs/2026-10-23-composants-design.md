@@ -281,7 +281,7 @@ l'interrupteur qui glisse) à L2-06. Les couleurs viennent toujours des tokens e
 | Menu déroulant | Bouton contextuel de macOS (`Deroulant`) : l'apparence d'un `Bouton`, la valeur choisie et un double chevron dessiné à droite ; il ouvre un `overlay` contextuel avec une `Liste` dont l'élément choisi porte la coche dessinée de la case, et dont la sélection suit le survol. Espace ou Entrée l'ouvre ; fermé, les flèches changent la valeur |
 | Infobulle | Bulle d'aide après un survol prolongé (`delays.tooltip` du mouvement) : un `overlay` contextuel sans focus, au rayon `small`, au fond `surfaceRaised`, texte d'échelon 1 ; elle se ferme quand le pointeur part |
 | Champ de recherche | Un `Champ` en pilule, une loupe à gauche, un bouton d'effacement à droite tant qu'il y a du texte ; Échap efface |
-| Indicateur d'activité | La roue de macOS : traits rayonnants qui tournent à la période `spinner_period` du mouvement, dessinés. Elle ne tourne que visible ; aucun minuteur au repos (D80). La progression reste déterminée par ailleurs |
+| Indicateur d'activité | La roue de macOS : traits rayonnants qui tournent à la période `periods.spinner` du mouvement (huit pas par tour), dessinés. Elle ne tourne que visible ; aucun minuteur au repos (D80). La progression reste déterminée par ailleurs |
 | Section dépliable | Un chevron dessiné et un libellé ; un clic ou Espace déplie ou replie le bloc. Le chevron pivote sans animation jusqu'à L2-06 |
 
 La couleur claire des boutons d'interrupteur et des poignées est `textPrimary`, puisque le thème est sombre.

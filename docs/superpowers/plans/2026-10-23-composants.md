@@ -367,7 +367,7 @@ la planche ; les tests.
 
 ### Tâche 9 quinquies : infobulle, recherche, activité, section dépliable
 
-**Fichiers :** `motion.toml` (`delays.tooltip`, `spinner_period`) et son générateur, la chaîne ;
+**Fichiers :** `motion.toml` (`delays.tooltip`, `periods.spinner`) et son générateur, la chaîne ;
 `coque/Composants/` (nouveaux `Infobulle`, `Recherche`, `Activite`, `Depliable`, `qmldir`) ; la planche ; les
 tests.
 

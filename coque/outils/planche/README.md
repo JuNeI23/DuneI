@@ -1,6 +1,6 @@
 # Planche de contrôle des tokens de la coque
 
-Version 0.7 — outil de développement de L2-34, gardé ensuite pour tout travail sur les tokens et la coque ; page
+Version 0.8 — outil de développement de L2-34, gardé ensuite pour tout travail sur les tokens et la coque ; page
 des composants ajoutée en L2-01.
 
 La planche affiche dans sa fenêtre (tuilée ou flottante, selon les règles d'Hyprland) deux onglets : « Tokens », chaque token de `coque-tokens.json`
@@ -88,6 +88,13 @@ fenêtre plus large.
   émis ; pour le compteur, un compteur de 0 à 10 et un compteur éditable de 0 à 100 ; pour le déroulant, un menu
   de trois choix et le dernier choix activé (son menu ne s'ouvre qu'à la main) ; pour la rangée, une `Liste` de
   six rangées, un seul arrêt de tabulation.
+- **Compléments à la macOS** (§ 7.10) : une grille `Recherche` (vide et remplie, sans ligne de focus, comme le
+  champ ; vivant : un champ de recherche, qu'Échap ou son bouton d'effacement vident) ; une grille `Activite` d'une
+  seule ligne (roue en marche et arrêtée ; vivant : une roue et l'interrupteur qui la met en marche ou l'arrête) ;
+  une grille `Depliable` (repliée et dépliée, en repos, survol, désactivé et focus clavier, l'anneau entourant
+  l'en-tête ; vivant : une section qui porte une case et un interrupteur) ; enfin la section `Infobulle`, un bouton
+  qui en porte une : elle paraît après `delays.tooltip` de survol continu et se ferme au départ du pointeur ou au
+  clic. Elle ne se fige pas et ne s'ouvre qu'à la main.
 - **Modificateur inactive** : deux panneaux identiques (case cochée, radio coché, interrupteur, curseur, barre
   d'onglets, bouton, champ, pastilles, compteur, déroulant, progression, liste), le second sous `dnInactive: true`,
   pour juger l'accent muet (`activeMuted`) et l'anneau atténué.
@@ -97,8 +104,8 @@ l'interaction lue par le contrôle, la sélection s'écrit dans l'`Etat` de l'ex
 `AnneauFocus` montré autour de l'élément qui le porte, le contour d'une rangée passe par `Rangee.forcerContour`
 (réservée à la planche), et l'état désactivé est un vrai `enabled: false`.
 
-Les overlays et le menu du déroulant ne s'ouvrent qu'à la main : l'attention prend le clavier en exclusif sur
-tout l'écran, et un contextuel le prend par `HyprlandFocusGrab`.
+Les overlays, le menu du déroulant et l'infobulle ne s'ouvrent qu'à la main : l'attention prend le clavier en
+exclusif sur tout l'écran, un contextuel le prend par `HyprlandFocusGrab`, et l'infobulle ne le prend jamais.
 
 ## Commandes IPC
 
@@ -162,3 +169,4 @@ la PSS lues dans `/proc/<pid>/smaps_rollup`.
 | 0.5 | 2026-10-23 | Formes à la macOS (L2-01, § 7.10) : barre `Onglets` du module à la place de `BarreOnglets.qml`, grille des onglets jugés dans leur barre, bouton principal, menu dont la sélection suit le pointeur ; capture qui n'applique plus deux fois le rapport de pixels ; filet de l'exemplaire vivant borné à sa hauteur quand il passe sous la grille. |
 | 0.6 | 2026-10-23 | Deuxième itération visuelle (L2-01, § 7.10) : sections `Radio` (grille et groupe exclusif de trois) et `Jauge` (grille et deux jauges à icône), radio coché dans les panneaux du modificateur inactive, grille du champ sans ligne de focus, puisque le champ n'a plus d'anneau. |
 | 0.7 | 2026-10-23 | Troisième itération (L2-01, § 7.10) : sections `Pastilles de fenêtre`, `Compteur` et `Menu déroulant`, ajoutés aussi aux panneaux du modificateur inactive ; anneau de focus des onglets figé autour de la piste. |
+| 0.8 | 2026-10-24 | Compléments à la macOS (L2-01, § 7.10) : sections `Champ de recherche`, `Indicateur d'activité`, `Section dépliable` et `Infobulle`. |
