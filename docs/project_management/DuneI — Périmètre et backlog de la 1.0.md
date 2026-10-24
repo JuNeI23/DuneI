@@ -2,9 +2,9 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.24. Historique en fin de document.
+Version 1.25. Historique en fin de document.
 
-La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **148 éléments** répartis en **cinq lots**, sur six chantiers.
+La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **152 éléments** répartis en **cinq lots**, sur six chantiers.
 
 Ce document dit ce qui est attendu, dans quel ordre, et à quelle condition c'est terminé. Il ne dit pas à quoi ça ressemble — c'est le rôle de la bible de design. En cas de contradiction : la bible l'emporte sur l'apparence, ce document l'emporte sur le périmètre.
 
@@ -29,7 +29,7 @@ Ces exclusions sont explicites. Aucune n'est un oubli, et aucune ne se rediscute
 | Le jeu comme usage de premier plan — pilotes dédiés, couche de compatibilité, manettes | 1.1. En 1.0, un jeu est une fenêtre flottante de couche 2, palier D |
 | Le provisionnement de flotte — plusieurs machines, identités multiples | 1.1 |
 | La création visuelle — retouche, montage, 3D, production sonore | Non planifié |
-| Le mode clair | Non planifié. La bible garantit qu'il reste possible sans réécriture |
+| Le mode clair | Révisé le 2026-10-23 : des thèmes statiques clair et sombre entrent au lot 2 (L2-40), à la demande de Nicolas. La bible garantissait qu'il reste possible sans réécriture |
 | Une image d'installation utilisable par un tiers | Non planifié |
 | Toute application originale hors de la coque | Non planifié |
 | Un budget de rendu et des paliers matériels | Annulé. Les effets visuels ne se restreignent pas pour des raisons de performance |
@@ -253,9 +253,9 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 
 | Réf | Ch. | Nature | Élément |
 | --- | --- | --- | --- |
-| L2-01 | B | Écrit | Bibliothèque de composants — les primitives de l'annexe E ; écrite en QML sur Quickshell, preuve par la maquette `proto/ilot` (D80) |
-| L2-02 | B | Écrit | Les six états composables, dans l'ordre fixe |
-| L2-03 | B | Écrit | Modificateur `inactive` — chroma à zéro, contenu intact — seul repère de la fenêtre active (D29) |
+| L2-01 | B | Écrit | Bibliothèque de composants — les primitives de l'annexe E ; écrite en QML sur Quickshell, preuve par la maquette `proto/ilot` (D80) — **fait (D82)** : module `coque/Composants`, sept primitives sur `QtQuick.Templates`, contrôles de couche 1 et compléments à la manière de macOS (radio, jauge, pastilles de fenêtre, compteur, menu déroulant, infobulle, recherche, indicateur d'activité, section dépliable, bascule à glyphe), rôle `controlRaised` pour les contrôles posés sur E3, overlays des deux familles chargés à la demande ; planche à deux onglets validée à l'écran en cinq passes |
+| L2-02 | B | Écrit | Les six états composables, dans l'ordre fixe — **fait (D82)** : composés par `Etat` dans les combinaisons précalculées de `Theme.stateColors`, animés au ressort `transitions.state.in`, retour au repos compris ; anneau réservé au clavier (`visualFocus`), contour intérieur sur les rangées, un seul arrêt de tabulation par liste et par barre d'onglets |
+| L2-03 | B | Écrit | Modificateur `inactive` — chroma à zéro, contenu intact — seul repère de la fenêtre active (D29) — **fait (D82)** : `dnInactive` hérité par remontée des parents, réactif au reparentage ; accents en `activeMuted`, anneau en `focus.colorMuted`, contenu ni terni ni estompé |
 | L2-04 | B | Écrit | Modèle d'élévation E0 à E3 — sheen, liseré, ombre |
 | L2-05 | B | Écrit | Dithering par bruit sur tout dégradé de sheen |
 | L2-06 | B | Écrit | Vocabulaire de mouvement — sept transitions, interruptibles |
@@ -271,7 +271,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L2-16 | B | Écrit | Lanceur — voile, flou par instantané, focus clavier ; touche `SUPER + R`, tenue par wofi au lot 1 |
 | L2-17 | B | Écrit | Sélecteur de fenêtres — vignettes en neutre pur |
 | L2-18 | B | Écrit | Sélecteur de bureaux — une teinte catégorielle par bureau |
-| L2-19 | B | Écrit | Notifications — couleurs sémantiques invariantes |
+| L2-19 | B | Écrit | Notifications — couleurs sémantiques invariantes ; référence visuelle : `~/dunei-atelier/inspiration/Shoddyconfection962/notifications.jpg`. Consigne de Nicolas : en haut à droite, classique et bien dessinée ; la notification ne naît pas de l'îlot (conception de L2-01, § 2) |
 | L2-20 | B | Écrit | Menu contextuel du bureau — part du point de clic |
 | L2-21 | B | Écrit | Infobulles — délai de 500 ms |
 | L2-22 | B | Écrit | Verrouillage — registre de spectacle ; `SUPER + L` est déjà lié à `loginctl lock-session` (L1-09, D41) ; le verrouilleur provisoire, `hyprlock`, ne se nomme qu'à un endroit, `verrouilleur` dans `energie.toml`, et c'est le seul point à remplacer ; l'esthétique du verrouillage reste ouverte, Nicolas acceptant d'y investir de la ressource machine |
@@ -292,6 +292,10 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L2-37 | B | Configuré | Déverrouillage par empreinte — `fprintd` ; lecteur Goodix déjà reconnu, aucun doigt enregistré ; `hyprlock` (désactivé dans `hyprlock.conf` pour l'instant), `sudo` et connexion ; à traiter avec L2-22 et L2-24, la conception de l'interface restant au lot 5 (D46) |
 | L2-38 | B | Écrit | Avis « N mises à jour prêtes » dans la barre — nombre de paquets préchargés par `dunei-precharge` en attente de `dunei-maj` (D57) |
 | L2-39 | A | Configuré | Tri et vérification des miroirs — la liste écrite par `archinstall` (France, Allemagne, Suisse) n'est ni triée par vitesse ni purgée des miroirs retirés ; outil à choisir après repérage, `reflector` ou autre (D75) |
+| L2-40 | C | Écrit | Thèmes statiques clair et sombre — à mener juste après L2-01, en plus de la colorisation par la teinte : des gris neutres, sans la teinte brun-orange qui dessert les contrôles ; rôle `knob` pour les boutons d'interrupteur et les poignées, aujourd'hui en `textPrimary` (D82) |
+| L2-41 | B | Écrit | Matière et texture — grain, sable, pierre, dégradés, dans l'esprit des films de Villeneuve ; à brainstormer avec L2-04 et L2-05, et à confronter au principe du silence visuel (D82) |
+| L2-42 | B | Écrit | Décoration des fenêtres — rôle et emplacement des pastilles de fenêtre sous tuilage ; proposition : fermer la fenêtre, l'envoyer au bureau spécial, la passer en plein écran ; le composant `Pastilles` n'expose que des signaux (D82) |
+| L2-43 | D | Configuré | Thème de curseurs — repérage : Bibata, celui de Linux Mint, face à d'autres, au format hyprcursor (D82) |
 
 ### Lot 3 — la bascule
 
@@ -393,7 +397,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L5-29 | — | Écrit | Passe de regard complète — étage 3 |
 | L5-30 | — | Écrit | Résorber les points ouverts de l'annexe C |
 
-**Volume total : 148 éléments** — 100 écrits, 41 configurés, 5 offerts, 2 mixtes.
+**Volume total : 152 éléments** — 103 écrits, 42 configurés, 5 offerts, 2 mixtes.
 
 Les deux tiers du travail sont de l'écrit, et les trois quarts de cet écrit se concentrent sur la coque et les écrans système. C'est cohérent avec la stratégie retenue, et c'est là que tout le risque se trouve.
 
@@ -497,6 +501,7 @@ Le choix de la distribution de base et du compositeur, précédemment ouverts, s
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-12 | Version initiale, 137 éléments |
+| 1.25 | 2026-10-24 | L2-01, L2-02 et L2-03 faits : bibliothèque de composants (D82) ; L2-19 reçoit sa référence visuelle ; ajout de L2-40 (thèmes statiques clair et sombre), L2-41 (matière et texture), L2-42 (décoration des fenêtres) et L2-43 (thème de curseurs) au lot 2 ; le mode clair quitte les exclusions. 152 éléments |
 | 1.24 | 2026-10-22 | L2-34 faite : tokens branchés sur Quickshell (D81) |
 | 1.23 | 2026-10-22 | Coque en QML sur Quickshell (D80) : L2-01 précisé, L2-06 compte sept transitions, cinquième condition de la définition de terminé (sobriété en ressources) |
 | 1.22 | 2026-10-22 | L2-30 : capture provisoire par hyprshot, rôle `capture` à trois variantes (D79) |

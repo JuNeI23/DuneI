@@ -1638,3 +1638,173 @@ sRGB, matière, tailles, états composés, anneau de focus), `make install` le d
 
 *Touché : carnet (« Les tokens de la coque »), backlog (L2-34), direction, bible (chapitre 7), conception de
 L2-34, `tokens.toml`, `coque/`.*
+
+## 2026-10-24 — Bibliothèque de composants (L2-01)
+
+### D82 · La bibliothèque de composants : gabarits sans style, états hérités, formes à la macOS
+
+2026-10-24. L2-01, avec L2-02 et L2-03, livre le module QML `coque/Composants`, voisin de `coque/Theme` : les
+sept primitives de la bible, les six états composables, le modificateur `inactive`, les contrôles de couche 1
+qui en sont des assemblages et les compléments que Nicolas a demandés au fil de cinq validations à l'écran. La
+conception (`docs/superpowers/specs/2026-10-23-composants-design.md`, v0.8) porte le détail ; voici les choix
+et leur raison.
+
+- **Base `QtQuick.Templates`.** Les contrôles reposent sur les gabarits sans style de Qt (`T.AbstractButton`,
+  `T.CheckBox`, `T.RadioButton`, `T.Switch`, `T.TabButton`, `T.TabBar`, `T.Slider`, `T.SpinBox`,
+  `T.ItemDelegate`, `T.TextField`). Ils fournissent survol, pression, coche, touches Espace et Entrée, rôles
+  d'accessibilité, et surtout `visualFocus`, vrai seulement pour un focus venu du clavier : c'est, en Qt 6.12,
+  le seul moyen de réserver l'anneau de focus au clavier, la raison du focus n'étant pas lisible depuis QML.
+  Mesures du repérage (300 instances rendues hors écran, mémoire résidente maximale) : éléments nus 60,3 Mo,
+  Templates 63,0 Mo (2,4 Mo à l'import, une instance ne pesant pas plus qu'un élément nu), Controls Basic
+  68,6 Mo. Les éléments nus obligeaient à tout réécrire, sans `visualFocus` ; Controls Basic est un style
+  qu'il aurait fallu écraser.
+- **Import côte à côte.** Quickshell ne résout pas un module situé au-dessus de la racine de la coque lancée
+  (D81). Chaque coque qui consomme la bibliothèque porte donc deux liens symboliques relatifs sous sa racine,
+  `Theme` et `Composants` (`coque/outils/planche/Composants -> ../../Composants`), et importe `"Theme"` et
+  `"Composants"` ; les fichiers de `Composants` importent `"../Theme"`, qui désigne le même dossier. Il n'existe
+  ainsi qu'**un seul singleton** `Theme` : deux auraient lu deux fois les tokens et pu diverger au changement de
+  teinte. `test_un_seul_theme` le vérifie dans un vrai Quickshell (un seul « Theme : chargé » au journal).
+- **Rôle `controlRaised` et cran des contrôles.** Un contrôle est un cran au-dessus de son conteneur, comme le
+  veut l'annexe E (« E3 rel. ») : un bouton sur une fenêtre prend `surfacePanel`, sur un panneau
+  `surfaceRaised`. Sur un conteneur déjà à `surfaceRaised` (dialogue, popover), il n'existe pas de rôle
+  au-dessus : le générateur calcule `controlRaised`, à l'échelon 4 de luminosité (`control-raised = 4` dans
+  `tokens.toml`), avec ses seize combinaisons d'états. Ce n'est pas un cinquième niveau d'élévation : ni sheen,
+  ni liseré, ni ombre, seulement un fond. Il partage l'échelon de `border-subtle`, ce qui est sans conséquence,
+  un contrôle n'ayant pas de bordure par défaut. Le contrôle APCA du générateur, étendu à ce rôle, avertit :
+  `text-primary` sur `control-raised` atteint Lc 88,1, sous la cible de 90 du texte courant ; l'avertissement
+  est accepté, le libellé d'un contrôle n'étant pas du texte courant, et l'échelon étant fixé par la conception.
+  Une rangée et un champ, eux, prennent le rôle de leur conteneur : une rangée non sélectionnée se confond avec
+  sa liste, un champ s'enfonce sous son fond.
+- **Élévation déduite du rôle.** Une `Surface` déclare son rôle de fond (`role`, publié en `dnRole`) ; son
+  élévation par défaut en découle (fenêtre e1, panneau e2, relevé e3, par `Etats.niveau`). Deux propriétés
+  indépendantes pouvaient diverger : une surface déclarée panneau aurait peint le fond d'un autre niveau, et
+  ses contrôles auraient pris un cran faux. Une surface au rôle détaché de son fond surcharge `elevation`.
+- **Héritage par remontée.** Le rôle de fond et le modificateur `inactive` se lisent en remontant les parents
+  jusqu'au premier qui les déclare ; le moteur QML enregistre la dépendance sur chaque `parent`, si bien que la
+  valeur reste réactive, reparentage compris. Une propriété attachée qui se propage aurait exigé un greffon
+  C++, un singleton ne descend qu'à la fenêtre et non au panneau.
+- **Rapport de pixels lu sur la fenêtre.** Le séparateur et le curseur de texte lisent
+  `QsWindow.window?.devicePixelRatio`, et non `Screen.devicePixelRatio` : sous Wayland, avec une échelle
+  fractionnaire (1,25 sur `caladan`), le rapport de l'écran n'est pas celui de la surface où l'élément est
+  rendu, et un liseré d'un pixel physique en sortait flou ou doublé. Le repli vaut 1 hors de toute fenêtre.
+- **Focus des rangées en contour intérieur.** Une rangée ne porte jamais l'anneau extérieur des contrôles
+  (annexe E). Son focus est un contour de `focus.color`, d'épaisseur `focus.width`, sur toute la largeur, tracé
+  vers l'intérieur selon `focus.rowOffset` (−1) et qui suit l'arrondi de la pastille de sélection. Le fond ne
+  change pas, ce qui permet au focus de se cumuler avec la sélection et le survol, comme la bible l'exige. Une
+  `ListView` n'ayant pas de `visualFocus`, la liste retient la dernière façon dont on l'a atteinte : une touche
+  montre le contour, un clic le masque.
+- **Un seul arrêt de tabulation par liste et par barre d'onglets.** Une liste prend le focus à la tabulation et
+  ses flèches déplacent `currentIndex`. La barre d'onglets fait de même : seul l'onglet coché est un arrêt, les
+  flèches gauche et droite cochent le voisin. Avec un arrêt par onglet, Maj+Tab depuis l'onglet coché menait à
+  son voisin, dans la même barre, qui gardait donc le focus et son accent : Nicolas l'a lu à l'écran comme une
+  couleur qui ne revenait pas. C'est le motif usuel des onglets (GTK, WAI-ARIA) et du contrôle segmenté de
+  macOS. L'anneau de focus entoure toute la barre, ce qui supprime son chevauchement avec le segment voisin.
+- **Logique des sélections.** Trois sélections, en plus de `none` : `active` (fond d'accent, la sélection d'une
+  liste ou d'une barre qui a le focus, en elle ou dans un descendant), `inactive` (fond neutre teinté, la même
+  sélection sans le focus, indispensable en tuilage) et `activeMuted` (l'accent sans chroma, qui remplace tout
+  accent restant sous le modificateur `inactive` ; l'anneau prend alors `focus.colorMuted`). Dans une liste, la
+  sélection suit `currentIndex`, comme dans une barre latérale de macOS ; dans un menu, elle suit aussi le
+  survol (`selectionSuitSurvol`), comme dans un menu de macOS.
+- **`overlay` complète, `FenetreAttention` extraite.** La primitive porte tout son comportement dès L2-01, hors
+  flou et transitions : les deux familles de l'annexe E, la fermeture par Échap et par clic extérieur, la prise
+  du clavier (`Exclusive` pour une attention, `HyprlandFocusGrab` pour un contextuel, jamais pour une
+  infobulle), l'exclusivité de l'attention par le singleton `Overlays`, l'ancrage du contextuel. Une attention
+  s'ouvre sur l'écran du moniteur qu'Hyprland dit focalisé, repli sur le premier écran, pour rester agnostique
+  de la machine. Les fenêtres se chargent à la demande (`LazyLoader`). La fenêtre d'attention vit dans son
+  propre fichier, `FenetreAttention.qml`, créé à l'ouverture : une `PanelWindow` déclarée dans `Overlay`
+  empêchait tout le composant de se charger sous la plateforme `offscreen` des tests, et donc d'éprouver la
+  primitive fermée.
+- **`ColorImage` et la limite du suffixe `-fill-symbolic`.** `Icone` recolore les symboliques par `ColorImage`
+  de `QtQuick.Controls.impl`, qui teint la petite image sans passe graphique supplémentaire ; ce module privé
+  est enfermé dans le seul fichier `Icone.qml`, avec un repli connu (un `ShaderEffect` compilé par `qsb`) si
+  une mise à jour de Qt le retire. La variante pleine demande `<base>-fill-symbolic`, suffixe **provisoire**
+  jusqu'à L4-12. Limite constatée sous Adwaita, qui n'a pas de variante `-fill` : le chargeur d'icônes de Qt
+  raccourcit le nom par tirets (`starred-fill-symbolic`, puis `starred-fill`, puis `starred`) et trouve une
+  image dans le thème hérité AdwaitaLegacy avant que le repli de Quickshell n'intervienne. `Icone` reste telle
+  quelle, le test vérifie l'adresse demandée, et les contrôles cochés n'emploient pas d'icône pleine : la coche
+  et le point du radio sont dessinés, la position du bouton de l'interrupteur porte l'indice non coloré.
+- **Formes à la macOS, au fil des validations.** À la première validation, Nicolas a jugé les contrôles trop
+  basiques et demandé de s'inspirer largement de macOS ; la passe reprend les formes et les proportions seules,
+  le liseré et l'ombre restant à L2-04, l'animation des positions à L2-06 (conception, § 7.10).
+  - *Première validation* : rangées en pastille arrondie, en retrait des bords ; bouton `principal`, rempli
+    d'accent comme le bouton par défaut de macOS ; case, interrupteur et curseur aux proportions de macOS ;
+    onglets en contrôle segmenté. Deux défauts relevés à la même validation sont corrigés : la barre d'onglets à
+    un seul arrêt (ci-dessus), et le curseur de texte, qui suit désormais le focus et clignote, ce que Qt 6.12 ne
+    fait pas pour un délégué de curseur.
+  - *Deuxième* : la coche d'Adwaita ne convenait pas, elle est **dessinée** par un tracé vectoriel
+    (`QtQuick.Shapes`), comme le point du nouveau contrôle **radio** ; **jauge** sans disque, sur le modèle du
+    Centre de contrôle ; **champ sans anneau** de focus, le curseur clignotant suffisant à dire où est le focus.
+    Les couleurs brun-orange desservant les contrôles, Nicolas demande des thèmes statiques clair et sombre, en
+    feature distincte menée juste après (L2-40).
+  - *Troisième* : jauge à l'accent du thème, onglets en rectangles arrondis au lieu de la pilule, anneau de focus
+    autour de toute la barre ; ajouts des **pastilles** de fenêtre, du **compteur** (stepper de macOS), du **menu
+    déroulant**, de l'**infobulle**, du **champ de recherche**, de l'**indicateur d'activité** et de la
+    **section dépliable**. Le déroulant est bâti sur `Bouton`, un `overlay` contextuel et une `Liste`, non sur
+    `T.ComboBox`, dont la liste reste prisonnière de sa fenêtre. L'infobulle crée ses gestionnaires de survol
+    par cible, pour survivre à la destruction de l'une ou de l'autre ; un `HoverHandler` posé dans un
+    `QtObject` faisait planter Quickshell 0.3.2.
+  - *Quatrième* : pastilles plus contrastées entre repos, survol et pression ; icônes des boutons et des
+    rangées ramenées à 16 px ; en-tête de la section dépliable en retrait de l'anneau ; **bascule à glyphe** du
+    Centre de contrôle ajoutée.
+  - *Cinquième* : l'indicateur d'activité, d'abord roue, puis anneau qui respire, puis trois formes en
+    concours (arc, grains, sable), devient **trois grains** fluides, animés sur le fil de rendu (`ScaleAnimator`,
+    `OpacityAnimator`) et non par pas discrets ; bascules agrandies à 40 px.
+
+  Le rôle et l'emplacement des pastilles sous un gestionnaire en tuiles se décident avec la décoration des
+  fenêtres : le composant n'expose que des signaux (`fermer`, `reduire`, `agrandir`).
+- **Cotes ajoutées aux tokens et au mouvement.** Toute valeur manquante passe par `tokens.toml` ou
+  `motion.toml` et par l'émetteur, jamais par le QML (D77, D81) :
+  - sous `[density.comfortable]` et `[density.compact]` : `check_size` (16 / 14, côté de la case),
+    `radio_dot` (6, point du radio), `switch_width`, `switch_height`, `switch_thumb` (38 × 22 et bouton de 18,
+    à 2 px du bord, proportions de macOS ; 32 × 18 et 14 en compact), `slider_track` (4), `slider_handle`
+    (20 / 18, poignée assez pleine pour se lire), `slider_width` (160 / 140), `slider_bar` et
+    `slider_bar_icon` (22 et 14 / 18 et 12, barre et icône de la jauge), `pastille` (12, diamètre des pastilles
+    de macOS), `stepper_width` (16 / 14), `segment_inset` (2, retrait du segment coché, dont le rayon suit la
+    règle d'imbrication), `field_width` (200 / 180, largeur fixe du champ : aucun état ne redimensionne) et
+    `toggle_size` (40 / 36, disque de la bascule à glyphe). Les valeurs de libadwaita ont servi de départ,
+    ramenées à une hauteur de contrôle de 28, puis rapprochées de macOS à l'écran ;
+  - `control-raised = 4` sous les rôles, pour la raison donnée plus haut ;
+  - `[pastilles]` : `hover_lightness_delta` (+0,06) et `pressed_lightness_delta` (−0,075), écarts de
+    luminosité propres aux pastilles, plus francs que ceux d'un fond de contrôle, pour que repos, survol et
+    pression se distinguent sur un disque de 12 px ;
+  - dans `motion.toml`, `[delays]` `tooltip` (700 ms de survol continu avant une infobulle, comme sous macOS) et
+    `[periods]` `spinner` (1 200 ms, un cycle de l'indicateur d'activité). Ce ne sont pas des ressorts, donc ni
+    des `transitions` ni des `rules` ; `dunei_motion/checks.py` les exige, typées et strictement positives.
+    **Écart ouvert** : l'annexe E de la bible et L2-21 donnent 500 ms à l'infobulle ; la valeur retenue ici est
+    celle de macOS, et Nicolas doit trancher entre les deux.
+- **Garde des couleurs dérivées.** Une première version des pastilles éclaircissait la teinte pressée en QML
+  (`Qt.tint`). `tests/test_coque_qml.py` refuse désormais toute couleur construite ou dérivée dans le QML
+  (`Qt.rgba`, `Qt.hsla`, `Qt.hsva`, `Qt.tint`, `Qt.darker`, `Qt.lighter`), et non plus les seuls littéraux ;
+  `ColorSpring` en est seul exempté, parce qu'il interpole entre deux couleurs lues dans `Theme` sans créer de
+  teinte.
+- **Variantes des pastilles précalculées.** L'émetteur de la coque calcule en OKLCH `errorHover`,
+  `errorPressed`, `warningHover`, `warningPressed`, `successHover` et `successPressed`. L'écart de pression est
+  borné par le glyphe sombre, qui doit garder un contraste de 3:1 sur `error` pressé à toutes les teintes : il
+  atteint 3,07 à 3,09:1 à −0,075, et passe sous 3:1 dès −0,08 aux teintes 200 et 265 ; un test de l'émetteur le
+  vérifie. `warning` pressé sort un peu du gamut sRGB et s'écrête ; c'est assumé, l'écart restant net à l'œil.
+- **Retour au repos sur `in`.** La bible dit que la sortie vaut environ 70 % de l'entrée, sans dire si la fin
+  d'un survol ou le relâchement d'une pression est une sortie (point ouvert de L2-34). La planche a porté un
+  interrupteur entre les ressorts `in` et `out` de `transitions.state` ; Nicolas a choisi **`in`** à l'œil, le
+  23 octobre. `ColorSpring` n'a plus qu'un ressort, `params`, et le réglage provisoire `Reglage` est retiré avec
+  son interrupteur.
+- **Constat mémoire et processeur.** Le chargement à la demande plafonne le pic, il ne fait pas redescendre la
+  mémoire résidente : avec 2 000 éléments, 49 Mo au départ, 80 Mo chargés, 80 Mo encore après destruction et
+  ramasse-miettes, 80 Mo au rechargement ; les objets sont détruits et leur mémoire réutilisée, mais
+  l'allocateur ne la rend pas au système. Le réglage `glibc.malloc.trim_threshold` reste une piste à mesurer,
+  hors périmètre. Relevés sur `caladan` : planche au repos à 0,0 % de processeur ; page Composants
+  0,0 %, PSS 240 Mio le 23 octobre, 291 Mio le 24 avec tous les ajouts ; indicateur d'activité, dans une
+  fenêtre de la taille d'un popover (320 × 200, 60 Hz), 0,0 à 0,1 % arrêté et environ 4 % d'un cœur en marche,
+  quelle que soit la forme : le coût est celui des images produites, non du dessin. D'où la règle tenue par
+  l'indicateur : il ne s'anime que visible et en marche, ancêtre masqué compris (D80), et la planche le laisse
+  arrêté par défaut.
+- **Coques d'essai offscreen gardées.** `coque/Composants/essai` instancie la bibliothèque sans aucune fenêtre
+  et répond aux appels IPC par le journal ; `coque/Composants/essai/clavier` ouvre une vraie fenêtre sous la
+  plateforme `offscreen` et y synthétise touches et mouvements du pointeur par le `TestEvent` de QtTest, pour
+  éprouver focus, tabulation, clignotement et survol. Celle-ci journalise sa plateforme dès son chargement et ne
+  construit sa fenêtre que sous `offscreen` : lancée ailleurs, elle n'ouvre rien, et le test échoue en nommant
+  la plateforme, pour qu'aucune touche synthétique n'atteigne jamais le bureau de Nicolas. Les deux restent
+  comme outils de non-régression de la coque.
+
+*Touché : carnet (« La bibliothèque de composants »), backlog (L2-01, L2-02, L2-03, L2-19, ajout de L2-40 à
+L2-43), direction, bible (chapitre 7, annexe E), conception et plan de L2-01, `tokens.toml`, `motion.toml`,
+`dunei_theme/`, `dunei_motion/`, `coque/`, `tests/`.*

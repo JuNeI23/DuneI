@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas
 
-Document normatif. Version 0.10. Historique en fin de document.
+Document normatif. Version 0.11. Historique en fin de document.
 
 ## Comment lire ce document
 
@@ -263,10 +263,14 @@ Ils ne sont **pas exclusifs** : une rangée peut être sélectionnée, survolée
 | --- | --- |
 | **Survol** | Surface +0,04 L. Rien ne bouge, rien ne change de taille. Le survol est un signal, pas un événement. |
 | **Pressé** | Surface **sous** sa valeur de repos — c'est ce qui donne l'enfoncement. Aucun déplacement, aucune réduction d'échelle. |
-| **Focus** | **Anneau 2 px accent autonome** (couleur validée à l'écran, D81) sur champs et boutons ; **surbrillance pleine largeur** sur les rangées. Ne modifie jamais le fond, ce qui lui permet de se superposer à tout autre état. |
+| **Focus** | **Anneau 2 px accent autonome** (couleur validée à l'écran, D81) autour des boutons et des autres contrôles, pour un focus venu du clavier seulement : un clic ne le montre jamais. **Aucun anneau sur un champ** : le curseur qui clignote dit où est le focus. Sur les rangées, **contour intérieur pleine largeur**, de la même couleur et de la même épaisseur, tracé vers l'intérieur (`focus.rowOffset`, −1) et qui suit l'arrondi de la sélection. Ne modifie jamais le fond, ce qui lui permet de se superposer à tout autre état (D82). |
 | **Sélectionné actif** | Fond d'accent, texte sur-accent, **icône en variante pleine**. |
 | **Sélectionné inactif** | Fond neutre, sans accent. Indispensable en tuilage : sans lui, cinq panneaux affichent cinq accents et plus rien n'indique où l'on tape. |
 | **Désactivé** | Chroma fortement réduit, luminosité rapprochée du fond, ombre supprimée. |
+
+### Le cran des contrôles
+
+Un contrôle est **un cran au-dessus de son conteneur** : visible et rempli au repos, il ne se confond pas avec son fond. Sur une fenêtre, il prend le fond d'un panneau ; sur un panneau, celui d'une surface relevée. Sur une surface déjà à E3 (dialogue, popover), il prend `controlRaised`, un échelon de luminosité au-dessus de E3, avec ses combinaisons d'états. **`controlRaised` n'est pas un cinquième niveau d'élévation** : ni sheen, ni liseré, ni ombre, seulement un fond. Le rôle se lit en remontant les conteneurs, jamais à la main. Une rangée et un champ, eux, prennent le rôle de leur conteneur : la rangée se confond avec sa liste, le champ s'enfonce sous son fond (D82).
 
 ### Modificateur de conteneur `inactive`
 
@@ -282,11 +286,17 @@ S'applique en cascade et met à zéro le chroma des accents.
 
 **Tout est atteignable à la tabulation, boutons compris, par défaut** — sans réglage d'accessibilité à activer. Principe 7.
 
+**Une liste et une barre d'onglets ne comptent que pour un arrêt de tabulation** ; les flèches s'y déplacent. Dans une barre d'onglets, l'arrêt est l'onglet choisi, et les flèches choisissent le voisin ; l'anneau entoure toute la barre (D82).
+
 **Grammaire des raccourcis du système.** `SUPER` agit ou va ; `SUPER + Maj` emporte la fenêtre active
 (la même action, la fenêtre suit) ; `SUPER + Ctrl` redimensionne ; `SUPER + Alt` porte les actions rares
 ou système, que la touche supplémentaire protège d'un appui accidentel. Un raccourci qui déroge à cette
 grammaire est une dérogation, consignée au journal. Une application se lance par son rôle (terminal,
 fichiers, navigateur, lanceur), jamais par le nom d'un logiciel.
+
+### Formes
+
+Les contrôles reprennent **les formes et les proportions de macOS**, à la demande de Nicolas : coche et point de radio dessinés, et non tirés du thème d'icônes ; interrupteur en pilule ; jauge sans disque à la manière du Centre de contrôle ; onglets en contrôle segmenté ; sélection des rangées en pastille arrondie ; pastilles de fenêtre ; stepper du compteur ; bouton principal rempli d'accent. Seules les formes sont empruntées : les couleurs restent celles des tokens, et le liseré, l'ombre et le mouvement des positions relèvent du chapitre 5 et du chapitre 6. Le détail, élément par élément, est dans la conception de la bibliothèque de composants, § 7.10 (`docs/superpowers/specs/2026-10-23-composants-design.md`).
 
 ## 8. Fenêtrage et grille
 
@@ -776,13 +786,22 @@ Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si 
 | Barre système | E2 | `surface` + `text` + `interactive` | `state` | 32px. Sheen + liseré, pas d'ombre. Porte la couleur franche du thème machine |
 | Barre latérale | E2 | `surface` + `row` | `state` | 240px, redimensionnable 180–400 par pas de 4. Sous 480px de conteneur → icônes seules |
 | En-tête de panneau | E2 | `surface` + `text` | — | Sheen autorisé : hauteur sous 80px |
-| Rangée de liste | — | `row` | `state` | Focus = **surbrillance pleine largeur**, décalage −1. Jamais d'anneau |
-| Champ de saisie | field | `field` | `state` | **S'enfonce** : L 0.14 dans un panneau à 0.22. Focus = anneau |
-| Bouton | E3 rel. | `interactive` + `text` | `state` | Pressé = descend sous le repos. Aucun déplacement, aucune réduction d'échelle |
-| Case, interrupteur | — | `interactive` + `icon` | `state` | Coché = accent + icône `fill`. Jamais la couleur seule |
-| Onglets | E2 | `interactive` + `text` | `state` | Actif = accent sur l'onglet, pas sur le conteneur |
+| Rangée de liste | — | `row` | `state` | Sélection en pastille arrondie, en retrait des bords. Focus = **contour intérieur pleine largeur**, décalage −1, qui suit l'arrondi. Jamais d'anneau. La liste est un seul arrêt de tabulation |
+| Champ de saisie | field | `field` | `state` | **S'enfonce** : L 0.14 dans un panneau à 0.22. **Aucun anneau** : le curseur clignotant porte le focus |
+| Bouton | E3 rel. | `interactive` + `text` | `state` | Un cran au-dessus du conteneur, `controlRaised` sur E3. Pressé = descend sous le repos. Aucun déplacement, aucune réduction d'échelle. Le bouton principal d'un dialogue est rempli d'accent |
+| Case, radio | — | `interactive` | `state` | Coché = accent + coche ou point **dessinés**. Jamais la couleur seule |
+| Interrupteur | — | `interactive` | `state` | Pilule ; coché = piste d'accent + bouton déplacé. Jamais la couleur seule |
+| Onglets | E2 | `interactive` + `text` | `state` | Contrôle segmenté : actif = accent sur le segment, pas sur la piste. Un seul arrêt de tabulation, anneau autour de la barre |
 | Curseur (slider) | — | `interactive` | `state` | Piste à E0, poignée à E3. Focus = anneau sur la poignée |
-| Barre de progression | — | `surface` | — | Indéterminée : animation en boucle, seule exception à l'interdiction de la boucle |
+| Jauge | — | `interactive` + `icon` | `state` | Curseur sans disque, comme le Centre de contrôle : barre enfoncée, partie remplie en accent, icône facultative dedans. Focus = anneau sur la barre |
+| Bascule à glyphe | E3 rel. | `interactive` + `icon` + `text` | `state` | Disque ; allumée = accent plein. Focus = anneau rond |
+| Compteur | field | `field` + `interactive` | `state` | Valeur dans un champ enfoncé, stepper à deux demi-boutons. Flèches et molette |
+| Menu déroulant | E3 rel. | `interactive` + `overlay` + `row` | `state` | Apparence d'un bouton, double chevron ; ouvre un overlay contextuel |
+| Champ de recherche | field | `field` + `icon` + `interactive` | `state` | Champ en pilule, loupe, effacement ; Échap efface |
+| Section dépliable | — | `interactive` + `text` | `state` | Chevron et libellé ; le chevron pivote sans animation jusqu'à L2-06 |
+| Pastilles de fenêtre | — | `interactive` | `state` | Fermer, réduire, agrandir, en couleurs sémantiques ; neutres sous `inactive`. Aucun arrêt de tabulation. Rôle et emplacement sous tuilage : L2-42 |
+| Barre de progression | — | `surface` | — | Indéterminée : animation en boucle, exception à l'interdiction de la boucle, partagée avec l'indicateur d'activité |
+| Indicateur d'activité | — | `surface` | — | Trois grains en vague continue, période `periods.spinner`. Ne s'anime que visible et en marche |
 | Séparateur | — | `surface` | — | `border-subtle`. Jamais deux séparateurs adjacents : c'est un défaut d'espacement |
 | Barre de défilement | — | `interactive` | `state` | Superposée, 8px au repos, 12px au survol. S'efface après 800 ms d'inactivité |
 
@@ -807,7 +826,7 @@ Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si 
 | Verrouillage / connexion | attention | E0 | `overlay` + `text` + `field` | `spectacle` | Registre de spectacle. Horloge en grand corps, poids léger |
 | Menu contextuel | contextuel | E3 | `surface` + `row` | `reveal` | **Ni voile ni flou.** Part du point de clic |
 | Popover, liste déroulante | contextuel | E3 | `surface` + `row` | `reveal` | Part de son élément déclencheur |
-| Infobulle | contextuel | E3 | `surface` + `text` | `reveal` | Délai de 500 ms avant apparition. Ne prend jamais le focus |
+| Infobulle | contextuel | E3 | `surface` + `text` | `reveal` | Délai de 500 ms avant apparition (écart ouvert : `delays.tooltip` vaut 700 ms, D82). Ne prend jamais le focus |
 | Notification | contextuel | E3 | `surface` + `text` + `icon` | `reveal` | Couleurs sémantiques fixes, hors thème. Décalage limité à 5 |
 
 ## Historique des versions
@@ -826,3 +845,4 @@ Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si 
 | 0.8 | 2026-10-15 | Clavier : grammaire des raccourcis du système, applications par rôle ; annexe D, modules `entree` et `clavier`, dossier `donnees/`, fragment `hyprland-binds.lua` (D33 à D37) |
 | 0.9 | 2026-10-19 | Gouvernance : édition de `generated/` refusée au commit et à la fusion ; annexe D, crochet, contrôle GitHub et cibles du `Makefile` (D77) |
 | 0.10 | 2026-10-22 | Chapitre 7 : l'anneau de focus est précisé, 2 px à l'accent autonome, couleur validée à l'écran (D81) |
+| 0.11 | 2026-10-24 | Chapitre 7 : focus des rangées en contour intérieur, champ sans anneau, cran des contrôles et rôle `controlRaised`, un seul arrêt par liste et par barre d'onglets, formes à la manière de macOS ; annexe E : rangée, champ, bouton, case, interrupteur et onglets précisés, radio, jauge, bascule à glyphe, compteur, menu déroulant, champ de recherche, section dépliable, pastilles de fenêtre et indicateur d'activité ajoutés ; écart du délai de l'infobulle signalé (D82) |

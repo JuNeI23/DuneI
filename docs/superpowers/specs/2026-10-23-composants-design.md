@@ -1,7 +1,7 @@
 # La bibliothèque de composants de la coque
 
-Version 0.8 · 2026-10-24 · backlog L2-01, avec L2-02 et L2-03 · décisions de cadre D80, D81 · statut : en
-relecture
+Version 0.9 · 2026-10-24 · backlog L2-01, avec L2-02 et L2-03 · décisions de cadre D80, D81, D82 · statut :
+implémentée
 
 ## 1. Objet et raison
 
@@ -326,3 +326,4 @@ puisqu'ils lisent tout dans `Theme`.
 | 0.6 | 2026-10-23 | Troisième validation : jauge à l'accent, onglets en rectangles arrondis et anneau sur la barre ; pastilles de fenêtre, compteur, menu déroulant, infobulle, champ de recherche, indicateur d'activité, section dépliable |
 | 0.7 | 2026-10-24 | Quatrième validation : indicateur d'activité en anneau qui respire, pastilles plus contrastées, bascule à glyphe, icônes des contrôles en 16 px, en-tête de la section dépliable en retrait de l'anneau ; matière et texture renvoyées à un élément lié à L2-04 et L2-05 |
 | 0.8 | 2026-10-24 | Cinquième validation : indicateur d'activité en trois grains fluides, bascules de 40 px ; retour au repos figé sur `in` |
+| 0.9 | 2026-10-24 | Statut : implémentée ; décisions consignées en D82 |

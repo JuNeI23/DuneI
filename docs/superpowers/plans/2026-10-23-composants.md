@@ -423,3 +423,4 @@ historiques de chaque document ; conception passée au statut « implémentée �
 | 0.3 | 2026-10-23 | Tâche 9 ter : deuxième itération visuelle, après la deuxième validation |
 | 0.4 | 2026-10-23 | Tâches 9 quater et 9 quinquies, après la troisième validation |
 | 0.5 | 2026-10-24 | Tâche 9 sexies, après la quatrième validation |
+| 0.6 | 2026-10-24 | Tâche 10 : l'étape 1 (retour au repos figé sur `in`, `Reglage` et son interrupteur retirés) a été faite avec le retrait de la tâche 9 septies ; les étapes 2 à 5, la documentation, suivent |
