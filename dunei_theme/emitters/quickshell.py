@@ -156,8 +156,9 @@ def _theme(model: dict) -> dict:
     levels["field"] = {"fill": to_hex(model["elevation"]["field"]),
                        "insetShadow": raw["elevation"]["field"]["inset_shadow"]}
 
-    # Le désactivé du knob suit celui de control-raised sans sélection, dont il se rapproche.
-    fond_off = _eteint(model, model["roles"]["control-raised"], model["roles"]["control-raised"])
+    # Le désactivé du knob se rapproche du rôle `knob.disabled_toward`, lui-même éteint comme un fond désactivé.
+    cible = model["roles"][raw["knob"]["disabled_toward"]]
+    fond_off = _eteint(model, cible, cible)
     out = {
         "color": {
             **{_camel(k): to_hex(v) for k, v in model["roles"].items()},

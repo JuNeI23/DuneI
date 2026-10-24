@@ -573,7 +573,7 @@
                 "text": "#2c1e15"
               },
               "pressed": {
-                "fill": "#e3dfdc",
+                "fill": "#e6e2df",
                 "text": "#2c1e15"
               },
               "disabled": {
@@ -591,7 +591,7 @@
                 "text": "#fefbf9"
               },
               "pressed": {
-                "fill": "#8b4500",
+                "fill": "#8f4800",
                 "text": "#fefbf9"
               },
               "disabled": {
@@ -601,20 +601,20 @@
             },
             "inactive": {
               "rest": {
-                "fill": "#e1d9d3",
+                "fill": "#fcf7f5",
                 "text": "#2c1e15"
               },
               "hover": {
-                "fill": "#d8cfca",
+                "fill": "#f2edeb",
                 "text": "#2c1e15"
               },
               "pressed": {
-                "fill": "#cec5c0",
+                "fill": "#ebe7e4",
                 "text": "#2c1e15"
               },
               "disabled": {
-                "fill": "#e9e8e7",
-                "text": "#8a8785"
+                "fill": "#f6f5f5",
+                "text": "#908e8c"
               }
             },
             "activeMuted": {
@@ -627,7 +627,7 @@
                 "text": "#fefbf9"
               },
               "pressed": {
-                "fill": "#5b5b5b",
+                "fill": "#5d5d5d",
                 "text": "#fefbf9"
               },
               "disabled": {
@@ -647,7 +647,7 @@
                 "text": "#2c1e15"
               },
               "pressed": {
-                "fill": "#e8e4e1",
+                "fill": "#ebe7e4",
                 "text": "#2c1e15"
               },
               "disabled": {
@@ -665,7 +665,7 @@
                 "text": "#fefbf9"
               },
               "pressed": {
-                "fill": "#8b4500",
+                "fill": "#8f4800",
                 "text": "#fefbf9"
               },
               "disabled": {
@@ -675,20 +675,20 @@
             },
             "inactive": {
               "rest": {
-                "fill": "#e1d9d3",
+                "fill": "#fcf7f5",
                 "text": "#2c1e15"
               },
               "hover": {
-                "fill": "#d8cfca",
+                "fill": "#f2edeb",
                 "text": "#2c1e15"
               },
               "pressed": {
-                "fill": "#cec5c0",
+                "fill": "#ebe7e4",
                 "text": "#2c1e15"
               },
               "disabled": {
-                "fill": "#ecebea",
-                "text": "#8b8886"
+                "fill": "#f9f8f8",
+                "text": "#928f8d"
               }
             },
             "activeMuted": {
@@ -701,7 +701,7 @@
                 "text": "#fefbf9"
               },
               "pressed": {
-                "fill": "#5b5b5b",
+                "fill": "#5d5d5d",
                 "text": "#fefbf9"
               },
               "disabled": {
@@ -721,7 +721,7 @@
                 "text": "#2c1e15"
               },
               "pressed": {
-                "fill": "#ebebeb",
+                "fill": "#eeeeee",
                 "text": "#2c1e15"
               },
               "disabled": {
@@ -739,7 +739,7 @@
                 "text": "#fefbf9"
               },
               "pressed": {
-                "fill": "#8b4500",
+                "fill": "#8f4800",
                 "text": "#fefbf9"
               },
               "disabled": {
@@ -749,20 +749,20 @@
             },
             "inactive": {
               "rest": {
-                "fill": "#e1d9d3",
+                "fill": "#fcf7f5",
                 "text": "#2c1e15"
               },
               "hover": {
-                "fill": "#d8cfca",
+                "fill": "#f2edeb",
                 "text": "#2c1e15"
               },
               "pressed": {
-                "fill": "#cec5c0",
+                "fill": "#ebe7e4",
                 "text": "#2c1e15"
               },
               "disabled": {
-                "fill": "#f0eeee",
-                "text": "#8d8a88"
+                "fill": "#fdfcfb",
+                "text": "#94918f"
               }
             },
             "activeMuted": {
@@ -775,7 +775,7 @@
                 "text": "#fefbf9"
               },
               "pressed": {
-                "fill": "#5b5b5b",
+                "fill": "#5d5d5d",
                 "text": "#fefbf9"
               },
               "disabled": {
@@ -795,7 +795,7 @@
                 "text": "#1b0e06"
               },
               "pressed": {
-                "fill": "#ebebeb",
+                "fill": "#eeeeee",
                 "text": "#1b0e06"
               },
               "disabled": {
@@ -813,7 +813,7 @@
                 "text": "#fefbf9"
               },
               "pressed": {
-                "fill": "#8b4500",
+                "fill": "#8f4800",
                 "text": "#fefbf9"
               },
               "disabled": {
@@ -823,20 +823,20 @@
             },
             "inactive": {
               "rest": {
-                "fill": "#e1d9d3",
+                "fill": "#fcf7f5",
                 "text": "#1b0e06"
               },
               "hover": {
-                "fill": "#d8cfca",
+                "fill": "#f2edeb",
                 "text": "#1b0e06"
               },
               "pressed": {
-                "fill": "#cec5c0",
+                "fill": "#ebe7e4",
                 "text": "#1b0e06"
               },
               "disabled": {
-                "fill": "#f0eeee",
-                "text": "#83817f"
+                "fill": "#fdfcfb",
+                "text": "#8a8785"
               }
             },
             "activeMuted": {
@@ -849,7 +849,7 @@
                 "text": "#fefbf9"
               },
               "pressed": {
-                "fill": "#5b5b5b",
+                "fill": "#5d5d5d",
                 "text": "#fefbf9"
               },
               "disabled": {
@@ -919,7 +919,7 @@
         },
         "knob": {
           "rest": "#ffffff",
-          "disabled": "#ffffff"
+          "disabled": "#e3e3e3"
         }
       }
     },
@@ -1359,7 +1359,7 @@
                 "text": "#222222"
               },
               "pressed": {
-                "fill": "#dfdfdf",
+                "fill": "#e3e3e3",
                 "text": "#222222"
               },
               "disabled": {
@@ -1377,7 +1377,7 @@
                 "text": "#fefbf9"
               },
               "pressed": {
-                "fill": "#8b4500",
+                "fill": "#8f4800",
                 "text": "#fefbf9"
               },
               "disabled": {
@@ -1387,20 +1387,20 @@
             },
             "inactive": {
               "rest": {
-                "fill": "#dbdbdb",
+                "fill": "#f8f8f8",
                 "text": "#222222"
               },
               "hover": {
-                "fill": "#d1d1d1",
+                "fill": "#eeeeee",
                 "text": "#222222"
               },
               "pressed": {
-                "fill": "#c7c7c7",
+                "fill": "#e8e8e8",
                 "text": "#222222"
               },
               "disabled": {
-                "fill": "#e8e8e8",
-                "text": "#878787"
+                "fill": "#f6f6f6",
+                "text": "#8e8e8e"
               }
             },
             "activeMuted": {
@@ -1413,7 +1413,7 @@
                 "text": "#fefbf9"
               },
               "pressed": {
-                "fill": "#5b5b5b",
+                "fill": "#5d5d5d",
                 "text": "#fefbf9"
               },
               "disabled": {
@@ -1433,7 +1433,7 @@
                 "text": "#222222"
               },
               "pressed": {
-                "fill": "#e4e4e4",
+                "fill": "#e8e8e8",
                 "text": "#222222"
               },
               "disabled": {
@@ -1451,7 +1451,7 @@
                 "text": "#fefbf9"
               },
               "pressed": {
-                "fill": "#8b4500",
+                "fill": "#8f4800",
                 "text": "#fefbf9"
               },
               "disabled": {
@@ -1461,20 +1461,20 @@
             },
             "inactive": {
               "rest": {
-                "fill": "#dbdbdb",
+                "fill": "#f8f8f8",
                 "text": "#222222"
               },
               "hover": {
-                "fill": "#d1d1d1",
+                "fill": "#eeeeee",
                 "text": "#222222"
               },
               "pressed": {
-                "fill": "#c7c7c7",
+                "fill": "#e8e8e8",
                 "text": "#222222"
               },
               "disabled": {
-                "fill": "#ebebeb",
-                "text": "#898989"
+                "fill": "#f8f8f8",
+                "text": "#8f8f8f"
               }
             },
             "activeMuted": {
@@ -1487,7 +1487,7 @@
                 "text": "#fefbf9"
               },
               "pressed": {
-                "fill": "#5b5b5b",
+                "fill": "#5d5d5d",
                 "text": "#fefbf9"
               },
               "disabled": {
@@ -1507,7 +1507,7 @@
                 "text": "#222222"
               },
               "pressed": {
-                "fill": "#ebebeb",
+                "fill": "#eeeeee",
                 "text": "#222222"
               },
               "disabled": {
@@ -1525,7 +1525,7 @@
                 "text": "#fefbf9"
               },
               "pressed": {
-                "fill": "#8b4500",
+                "fill": "#8f4800",
                 "text": "#fefbf9"
               },
               "disabled": {
@@ -1535,20 +1535,20 @@
             },
             "inactive": {
               "rest": {
-                "fill": "#dbdbdb",
+                "fill": "#f8f8f8",
                 "text": "#222222"
               },
               "hover": {
-                "fill": "#d1d1d1",
+                "fill": "#eeeeee",
                 "text": "#222222"
               },
               "pressed": {
-                "fill": "#c7c7c7",
+                "fill": "#e8e8e8",
                 "text": "#222222"
               },
               "disabled": {
-                "fill": "#efefef",
-                "text": "#8b8b8b"
+                "fill": "#fcfcfc",
+                "text": "#919191"
               }
             },
             "activeMuted": {
@@ -1561,7 +1561,7 @@
                 "text": "#fefbf9"
               },
               "pressed": {
-                "fill": "#5b5b5b",
+                "fill": "#5d5d5d",
                 "text": "#fefbf9"
               },
               "disabled": {
@@ -1581,7 +1581,7 @@
                 "text": "#121212"
               },
               "pressed": {
-                "fill": "#ebebeb",
+                "fill": "#eeeeee",
                 "text": "#121212"
               },
               "disabled": {
@@ -1599,7 +1599,7 @@
                 "text": "#fefbf9"
               },
               "pressed": {
-                "fill": "#8b4500",
+                "fill": "#8f4800",
                 "text": "#fefbf9"
               },
               "disabled": {
@@ -1609,20 +1609,20 @@
             },
             "inactive": {
               "rest": {
-                "fill": "#dbdbdb",
+                "fill": "#f8f8f8",
                 "text": "#121212"
               },
               "hover": {
-                "fill": "#d1d1d1",
+                "fill": "#eeeeee",
                 "text": "#121212"
               },
               "pressed": {
-                "fill": "#c7c7c7",
+                "fill": "#e8e8e8",
                 "text": "#121212"
               },
               "disabled": {
-                "fill": "#efefef",
-                "text": "#818181"
+                "fill": "#fcfcfc",
+                "text": "#888888"
               }
             },
             "activeMuted": {
@@ -1635,7 +1635,7 @@
                 "text": "#fefbf9"
               },
               "pressed": {
-                "fill": "#5b5b5b",
+                "fill": "#5d5d5d",
                 "text": "#fefbf9"
               },
               "disabled": {
@@ -1705,7 +1705,7 @@
         },
         "knob": {
           "rest": "#ffffff",
-          "disabled": "#ffffff"
+          "disabled": "#e3e3e3"
         }
       }
     }

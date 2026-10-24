@@ -486,6 +486,7 @@ never_animate_blur_radius = true   # fondu croisé net/flouté : c'est une règl
 # Ordre de fusion : base, moment, famille (model.theme_data).
 
 [knob]
+disabled_toward = "control-raised"   # rôle dont le bouton éteint se rapproche (même règle que states.disabled)
 role = "text-emphasis"   # nuit : la couleur qu'ont aujourd'hui le disque et la poignée ; une clé lightness l'emporte sur role
 
 [moments.nuit]           # la base : aucune surcharge
@@ -541,10 +542,18 @@ info    = { l = 0.55 }
 lightness_delta = -0.03
 
 [moments.jour.states.pressed]
-lightness_delta = -0.06
+lightness_delta = -0.05
+
+# Sélection inactive du jour : l'échelon 2 (0,98) garde, sous le texte, le Lc 90 du corps sur controlRaised au repos
+# et au survol ; l'échelon 4 de la nuit (0,89) n'en donnait que 73. La pression à -0,05 (départ -0,06) garde Lc 90 en bas.
+[moments.jour.states.selected_inactive]
+lightness_step = 2
 
 [moments.jour.knob]
 lightness = 1.0
+# Le contrôle du jour est blanc comme le bouton : éteint vers lui, le bouton ne changerait pas. Il se rapproche donc
+# de la bordure par défaut, un gris clair, comme le fait le désactivé des autres couleurs.
+disabled_toward = "border-default"
 
 [familles.thematisee]    # la base : aucune surcharge
 

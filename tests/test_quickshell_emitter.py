@@ -49,13 +49,13 @@ class QuickshellEmitterTest(unittest.TestCase):
                 self.assertFalse([k for k in t["color"] if k.endswith(("Hover", "Pressed"))])
 
     def test_knob(self):
-        """Vérifie le knob blanc au jour et son désactivé distinct du repos."""
+        """Vérifie le knob blanc au jour et, dans les quatre thèmes, son désactivé distinct du repos."""
         for f in self.out["themes"].values():
             self.assertEqual(f["jour"]["color"]["knob"], "#ffffff")
             for t in f.values():
                 self.assertEqual(t["knob"]["rest"], t["color"]["knob"])
-            # Au jour, control-raised est blanc : le knob éteint se rapproche d'un fond de même luminosité.
-            self.assertNotEqual(f["nuit"]["knob"]["disabled"], f["nuit"]["knob"]["rest"])
+            for t in f.values():
+                self.assertNotEqual(t["knob"]["disabled"], t["knob"]["rest"])
 
     def test_roles_en_srgb(self):
         c, m = self.nuit["color"], self.model
@@ -131,9 +131,7 @@ class QuickshellEmitterTest(unittest.TestCase):
             for f, mo in themes(self.data):
                 st = json.loads(emit(m))["themes"][f][mo]["states"]["controlRaised"]
                 emph = to_hex(resolve(theme_data(self.data, f, mo), float(hue))["roles"]["text-emphasis"])
-                # Au jour, la sélection inactive (échelon sombre de la rampe sur un contrôle blanc) n'atteint que Lc 73 :
-                # elle sort de la cible, signalée dans le rapport de la tâche 4.
-                for s in ("none",) if mo == "jour" else ("none", "inactive"):
+                for s in ("none", "inactive"):
                     for i in ("rest", "hover", "pressed"):
                         with self.subTest(hue=hue, theme=(f, mo), s=s, i=i):
                             c = st[s][i]
