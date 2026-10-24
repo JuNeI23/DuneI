@@ -379,6 +379,22 @@ tests.
 - [ ] **Étape 4 : valider** : « Infobulle, recherche, indicateur d'activité, section dépliable (L2-01) ».
 - [ ] **Étape 5 :** quatrième validation à l'écran par Nicolas.
 
+### Tâche 9 sexies : quatrième itération
+
+Après la quatrième validation de Nicolas (conception v0.7, § 7.10).
+
+**Fichiers :** `tokens.toml` (`toggle_size` 32/28 ; section `[pastilles]` avec `hover_lightness_delta` et
+`pressed_lightness_delta`), `motion.toml` si la période change, la chaîne ; `coque/Composants/` (`Activite`,
+`Pastilles`, `Depliable`, `Bouton`, `Rangee`, nouveau `Bascule`, `qmldir`) ; la planche ; les tests.
+
+- [ ] **Étape 1 :** tests qui échouent : anneau qui respire à l'arrêt quand invisible ; pastilles aux trois
+  teintes distinctes par état ; icônes de 16 dans les boutons et rangées ; bascule allumée à l'accent.
+- [ ] **Étape 2 :** les cinq changements, et la collision de la section dépliable repliée avec l'anneau.
+- [ ] **Étape 3 :** `make test && make check` ; captures ; relevé `mesure.sh`, anneau en marche.
+- [ ] **Étape 4 : valider** : « Quatrième itération : anneau d'activité, pastilles contrastées, bascule à
+  glyphe (L2-01) ».
+- [ ] **Étape 5 :** cinquième validation à l'écran par Nicolas.
+
 ### Tâche 10 : décision du retour au repos, documentation
 
 **Fichiers :** `coque/Composants/Etat.qml`, `Reglage.qml` (supprimé), `qmldir`, `PageComposants.qml` ;
@@ -406,3 +422,4 @@ historiques de chaque document ; conception passée au statut « implémentée �
 | 0.2 | 2026-10-23 | Tâche 9 bis : formes à la macOS, après la première validation à l'écran |
 | 0.3 | 2026-10-23 | Tâche 9 ter : deuxième itération visuelle, après la deuxième validation |
 | 0.4 | 2026-10-23 | Tâches 9 quater et 9 quinquies, après la troisième validation |
+| 0.5 | 2026-10-24 | Tâche 9 sexies, après la quatrième validation |

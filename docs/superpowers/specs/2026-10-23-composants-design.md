@@ -1,6 +1,6 @@
 # La bibliothèque de composants de la coque
 
-Version 0.6 · 2026-10-23 · backlog L2-01, avec L2-02 et L2-03 · décisions de cadre D80, D81 · statut : en
+Version 0.7 · 2026-10-24 · backlog L2-01, avec L2-02 et L2-03 · décisions de cadre D80, D81 · statut : en
 relecture
 
 ## 1. Objet et raison
@@ -276,13 +276,15 @@ l'interrupteur qui glisse) à L2-06. Les couleurs viennent toujours des tokens e
 | Rangées | Sélection en pastille au rayon `control`, en retrait des bords de la liste d'un échelon de `space` ; le contour de focus suit l'arrondi |
 | Menu contextuel | Rayon `panel`, marge interne d'un échelon de `space` ; le survol déplace la sélection (`currentIndex`), qui prend donc l'accent comme dans un menu macOS |
 | Attention | Rayon `window`, comme une feuille d'alerte ; le bouton principal porte `principal` |
-| Pastilles de fenêtre | Les trois pastilles de macOS : rondes, de `pastille` de diamètre, espacées d'un échelon de `space`, en `error`, `warning` et `success`. Au survol du groupe, chacune montre son glyphe dessiné (croix, tiret, flèches d'agrandissement) en couleur sombre. Sous `inactive`, les trois passent au neutre, comme une fenêtre inactive de macOS. Pas d'arrêt de tabulation. Signaux `fermer`, `reduire`, `agrandir` ; leur rôle sous un gestionnaire en tuiles et leur emplacement se décident avec la décoration des fenêtres (proposition : fermer la fenêtre, l'envoyer au bureau spécial, la passer en plein écran) |
+| Pastilles de fenêtre | Les trois pastilles de macOS : rondes, de `pastille` de diamètre, espacées d'un échelon de `space`, en `error`, `warning` et `success`. Repos, survol et pression se distinguent franchement : écarts de luminosité propres aux pastilles (`pastilles.hover_lightness_delta`, `pastilles.pressed_lightness_delta`), précalculés par l'émetteur. Au survol du groupe, chacune montre son glyphe dessiné (croix, tiret, flèches d'agrandissement) en couleur sombre. Sous `inactive`, les trois passent au neutre, comme une fenêtre inactive de macOS. Pas d'arrêt de tabulation. Signaux `fermer`, `reduire`, `agrandir` ; leur rôle sous un gestionnaire en tuiles et leur emplacement se décident avec la décoration des fenêtres (proposition : fermer la fenêtre, l'envoyer au bureau spécial, la passer en plein écran) |
 | Compteur | Nombre entier sur `T.SpinBox` : la valeur dans un champ enfoncé, et à sa droite le stepper de macOS, deux demi-boutons empilés de `stepper_width` de large, aux chevrons dessinés. Flèches haut et bas, molette |
 | Menu déroulant | Bouton contextuel de macOS (`Deroulant`) : l'apparence d'un `Bouton`, la valeur choisie et un double chevron dessiné à droite ; il ouvre un `overlay` contextuel avec une `Liste` dont l'élément choisi porte la coche dessinée de la case, et dont la sélection suit le survol. Espace ou Entrée l'ouvre ; fermé, les flèches changent la valeur |
 | Infobulle | Bulle d'aide après un survol prolongé (`delays.tooltip` du mouvement) : un `overlay` contextuel sans focus, au rayon `small`, au fond `surfaceRaised`, texte d'échelon 1 ; elle se ferme quand le pointeur part |
 | Champ de recherche | Un `Champ` en pilule, une loupe à gauche, un bouton d'effacement à droite tant qu'il y a du texte ; Échap efface |
-| Indicateur d'activité | La roue de macOS : traits rayonnants qui tournent à la période `periods.spinner` du mouvement (huit pas par tour), dessinés. Elle ne tourne que visible ; aucun minuteur au repos (D80). La progression reste déterminée par ailleurs |
+| Indicateur d'activité | Un anneau fin en accent qui respire : son opacité monte et descend lentement, en pas discrets (6 changements par seconde, période `periods.spinner` du mouvement). La roue à traits, jugée chère et peu élégante, est abandonnée (v0.7). Elle ne respire que visible ; aucun minuteur au repos (D80) |
 | Section dépliable | Un chevron dessiné et un libellé ; un clic ou Espace déplie ou replie le bloc. Le chevron pivote sans animation jusqu'à L2-06 |
+| Bascule à glyphe | Le gros bouton rond du Centre de contrôle (Wi-Fi, Bluetooth) : disque de `toggle_size`, glyphe de `icons.sizes.dense` au centre, libellé facultatif dessous. Éteint : fond du cran, glyphe en texte primaire ; allumé : accent plein, glyphe sur-accent (`activeMuted` sous `inactive`). Arrêt de tabulation, anneau rond au clavier, Espace bascule |
+| Icônes des contrôles | Dans les boutons, les rangées et les listes, l'icône prend `icons.sizes.dense` (16) au lieu de `default` (20), jugée un peu grande à côté de la jauge (v0.7) |
 
 La couleur claire des boutons d'interrupteur et des poignées est `textPrimary`, puisque le thème est sombre.
 Un rôle propre (`knob`) sera ajouté avec les thèmes statiques clair et sombre, que Nicolas a demandés à la même
@@ -322,3 +324,4 @@ puisqu'ils lisent tout dans `Theme`.
 | 0.4 | 2026-10-23 | Barre d'onglets à un seul arrêt de tabulation, curseur de texte qui suit le focus et clignote (7.3) |
 | 0.5 | 2026-10-23 | Deuxième validation : coche dessinée, contrôle radio, jauge sans disque, champ sans anneau, onglets en pilule sans survol ; thèmes statiques renvoyés à une feature suivante |
 | 0.6 | 2026-10-23 | Troisième validation : jauge à l'accent, onglets en rectangles arrondis et anneau sur la barre ; pastilles de fenêtre, compteur, menu déroulant, infobulle, champ de recherche, indicateur d'activité, section dépliable |
+| 0.7 | 2026-10-24 | Quatrième validation : indicateur d'activité en anneau qui respire, pastilles plus contrastées, bascule à glyphe, icônes des contrôles en 16 px ; matière et texture renvoyées à un élément lié à L2-04 et L2-05 |
