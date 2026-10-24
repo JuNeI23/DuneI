@@ -22,7 +22,10 @@ reduced_fade_ms   = 100           # Durée du fondu qui remplace tout mouvement 
 tooltip = 700                     # Survol continu avant l'ouverture d'une infobulle, comme sous macOS.
 
 [periods]                         # Durée d'un cycle des mouvements continus, en millisecondes.
-spinner = 1000                    # Un tour complet de la roue de l'indicateur d'activité.
+spinner = 1500                    # Une respiration complète de l'anneau de l'indicateur d'activité.
+
+[cadences]                        # Changements par seconde d'un mouvement continu rendu par pas discrets.
+spinner = 6                       # L'anneau change d'opacité six fois par seconde, et non à chaque image.
 
 [transitions.state]
 usage      = "Changement d'état sur place : survol, focus, pression, sélection."

@@ -25,7 +25,8 @@ class GenerateTest(unittest.TestCase):
             self.assertEqual(res.returncode, 0, res.stderr)
             data = json.loads((Path(tmp) / "motion.json").read_text(encoding="utf-8"))
             self.assertEqual(data["transitions"]["navigate"]["in"]["settle_ms"], 186)
-            self.assertEqual((data["delays"], data["periods"]), ({"tooltip": 700}, {"spinner": 1000}))
+            self.assertEqual((data["delays"], data["periods"], data["cadences"]),
+                             ({"tooltip": 700}, {"spinner": 1500}, {"spinner": 6}))
             lua = (Path(tmp) / "motion.lua").read_text(encoding="utf-8")
             self.assertIn('["dunei-state-out"] = { type = "spring", mass = 1, stiffness = 4489.8, dampening = 142.86 },', lua)
             self.assertIn('{ leaf = "borderangle", enabled = false },', lua)

@@ -11,24 +11,25 @@ import "Composants/etats.js" as Etats
 // Rôle : instancie un arbre fixe (une Surface fenêtre contenant une Surface panneau, qui porte la sonde capteur, un
 // contrôle simulé avec son Etat, un Texte, une Icone, les cinq contrôles interactifs (Bouton, Case, Interrupteur,
 // Onglet, Curseur), trois Radio dans un même parent, une Jauge, une Progression, deux Separateur, un Champ, des
-// Pastilles, un Compteur, un Deroulant, une Recherche, une Activite, une Depliable, une Liste vide, une Liste de trois
-// Rangee et une cible munie d'un AnneauFocus, plus une Surface inactive à l'écart, deux Overlay fermés, un de chaque
-// famille, et trois objets factices pour le singleton Overlays) pour que tests/test_coque_composants.py éprouve dans un
-// vrai Quickshell les règles d'etats.js, l'héritage par remontée, l'import du Theme, les pièces de base, les contrôles
-// et les listes, en lisant le journal.
+// Pastilles, un Compteur, un Deroulant, une Recherche, une Activite, une Depliable, une Bascule, une Liste vide, une
+// Liste de trois Rangee et une cible munie d'un AnneauFocus, plus une Surface inactive à l'écart, deux Overlay fermés,
+// un de chaque famille, et trois objets factices pour le singleton Overlays) pour que tests/test_coque_composants.py
+// éprouve dans un vrai Quickshell les règles d'etats.js, l'héritage par remontée, l'import du Theme, les pièces de
+// base, les contrôles et les listes, en lisant le journal.
 // Entrées : DUNEI_TOKENS_DIR, lu par Theme ; thème d'icônes Adwaita, posé par la directive IconTheme en tête (thème de
 // transition jusqu'à L4-12). Sortie : journal de Theme, plus « essai : prêt <bool> » à chaque changement de
 // Theme.ready, et une ligne « essai : <clé> <valeur> » par commande IPC de lecture (cran, interaction, selection,
 // sonde, naissances, fond, texte, anneau, etat, ressort, image, controles, coches, cotes, glyphes, radios, jauge,
 // progression, separateur, champ, indicatif, tailleIcone, liste, arrets, rangee, bouton, overlays, overlaysFermes,
-// pastilles, compteur, compteurLargeur, deroulant, recherche, rechercheCouleurs, activite, depliable, fenetreAttention)
-// ; « essai rechercheTexte <texte> », « essai rechercheActive <bool> », « essai activiteEtat <visible> <running> », «
-// essai activiteAncetre <bool> », « essai depliableOuvrir <bool> », « essai pastillesForcer <état> », « essai
-// pastillesReduire <bool> », « essai compteurValeur <n> », « essai deroulantRang <n> », « essai decocher », « essai
-// radioCocher <rang> », « essai jaugeActive <bool> », « essai boutonPrincipal <bool> », « essai inactif <bool> », «
-// essai reparenter », « essai texteMoyen », « essai anneauInactif <bool> », « essai survol <bool> », « essai retour
-// <in|out> », « essai champActif <bool> », « essai champTexte <texte> », « essai selectionLibre », « essai icone <nom>
-// <bool> », « essai ouvrirFactice <A|B|C> » et « essai fermerFactice <A|B|C> » agissent sans journaliser.
+// pastilles, compteur, compteurLargeur, deroulant, recherche, rechercheCouleurs, activite, depliable, depliableCotes,
+// iconesControles, bascule, fenetreAttention) ; « essai rechercheTexte <texte> », « essai rechercheActive <bool> », «
+// essai activiteEtat <visible> <running> », « essai activiteAncetre <bool> », « essai depliableOuvrir <bool> », « essai
+// basculeCocher <bool> », « essai pastillesForcer <état> », « essai pastillesReduire <bool> », « essai compteurValeur
+// <n> », « essai deroulantRang <n> », « essai decocher », « essai radioCocher <rang> », « essai jaugeActive <bool> », «
+// essai boutonPrincipal <bool> », « essai inactif <bool> », « essai reparenter », « essai texteMoyen », « essai
+// anneauInactif <bool> », « essai survol <bool> », « essai retour <in|out> », « essai champActif <bool> », « essai
+// champTexte <texte> », « essai selectionLibre », « essai icone <nom> <bool> », « essai ouvrirFactice <A|B|C> » et «
+// essai fermerFactice <A|B|C> » agissent sans journaliser.
 // Erreurs : celles de Theme et des liaisons, dans le journal. Dépendances : quickshell ≥ 0.3 (Quickshell.Io :
 // IpcHandler), modules coque/Theme et coque/Composants.
 // Import : Quickshell ne résout pas un module situé au-dessus de la racine de la coque lancée ; les liens
@@ -169,7 +170,7 @@ ShellRoot {
                 id: rechercheEssai
             }
 
-            // La roue est portée par un Item qu'on peut masquer, pour éprouver l'arrêt sous un ancêtre invisible.
+            // L'anneau est porté par un Item qu'on peut masquer, pour éprouver l'arrêt sous un ancêtre invisible.
             Item {
                 id: porteRoue
                 Activite {
@@ -181,6 +182,13 @@ ShellRoot {
                 id: depliableEssai
                 text: "Section"
                 Texte { text: "Contenu" }
+            }
+
+            Bascule {
+                id: basculeEssai
+                icone: "network-wireless"
+                text: "Wi-Fi"
+                checked: true
             }
 
             Liste {
@@ -637,17 +645,19 @@ ShellRoot {
             rechercheEssai.text = texte
         }
 
-        // activite — journalise l'état du minuteur de la roue (en marche, intervalle), le pas courant, le côté de
-        // la roue, la couleur et l'opacité de chacun de ses traits.
+        // activite — journalise l'état du minuteur de l'anneau (en marche, intervalle), le pas courant, le côté de
+        // l'anneau, la couleur et l'épaisseur de son trait, son opacité, le nombre de pas d'un cycle et le creux.
         // Entrées : aucune. Sortie : aucune ; « essai : activite <bool> <intervalle> <pas> <côté> <couleur>
-        // <opacité,…> ». Erreurs : aucune. Dépendances : activiteEssai (minuteur, rayons), journal.
+        // <épaisseur> <opacité> <pas par cycle> <creux> ». Erreurs : aucune.
+        // Dépendances : activiteEssai (minuteur, anneau), journal.
         function activite(): void {
-            const a = activiteEssai, traits = [...Array(a.rayons.count).keys()].map(i => a.rayons.itemAt(i))
-            essai.journal("activite", [a.minuteur.running, a.minuteur.interval, a.pas, a.width, traits[0].color,
-                                       traits.map(t => Math.round(t.opacity * 1000) / 1000).join(",")].join(" "))
+            const a = activiteEssai
+            essai.journal("activite", [a.minuteur.running, a.minuteur.interval, a.pas, a.width, a.anneau.border.color,
+                                       a.anneau.border.width, Math.round(a.anneau.opacity * 1000) / 1000,
+                                       a.pasParCycle, a.creux].join(" "))
         }
 
-        // activiteEtat — montre ou cache la roue d'essai et la met en marche ou à l'arrêt.
+        // activiteEtat — montre ou cache l'anneau d'essai et la met en marche ou à l'arrêt.
         // Entrées : visible, nouvelle visibilité ; running, nouvelle marche. Sortie : aucune. Erreurs : aucune.
         // Dépendances : activiteEssai.
         function activiteEtat(visible: bool, running: bool): void {
@@ -655,7 +665,7 @@ ShellRoot {
             activiteEssai.running = running
         }
 
-        // activiteAncetre — montre ou cache l'Item qui porte la roue d'essai, sans toucher à la roue.
+        // activiteAncetre — montre ou cache l'Item qui porte l'anneau d'essai, sans toucher à l'anneau.
         // Entrée : visible, nouvelle visibilité de l'ancêtre. Sortie : aucune. Erreurs : aucune.
         // Dépendances : porteRoue.
         function activiteAncetre(visible: bool): void {
@@ -676,6 +686,45 @@ ShellRoot {
         // Entrée : valeur, nouvel ouvert. Sortie : aucune. Erreurs : aucune. Dépendances : depliableEssai.
         function depliableOuvrir(valeur: bool): void {
             depliableEssai.ouvert = valeur
+        }
+
+        // depliableCotes — journalise les retraits gauche et droit de l'en-tête de la section d'essai, qui écartent
+        // le contenu de l'anneau de focus posé sur le fond, puis le retrait du bloc de contenu.
+        // Entrées : aucune. Sortie : aucune ; « essai : depliableCotes <gauche> <droite> <bloc> ». Erreurs : aucune.
+        // Dépendances : depliableEssai (entete, bloc), journal.
+        function depliableCotes(): void {
+            const e = depliableEssai.entete, c = e.contentItem
+            essai.journal("depliableCotes", [c.x, e.width - c.x - c.width, depliableEssai.bloc.leftPadding].join(" "))
+        }
+
+        // iconesControles — journalise la taille demandée et la largeur réelle de l'icône du bouton d'essai, puis la
+        // taille demandée, la largeur réelle et la taille préférée de l'icône de la rangée 1 de la liste d'essai.
+        // Entrées : aucune. Sortie : aucune ; « essai : iconesControles <taille> <l> <taille> <l> <préférée> ».
+        // Erreurs : aucune. Dépendances : boutonEssai (l'icône, premier enfant de la rangée centrée de son
+        // contenu), listeEssai (l'icône, deuxième enfant du contenu d'une rangée, après l'accessoire), journal.
+        function iconesControles(): void {
+            const b = boutonEssai.contentItem.children[0].children[0]
+            const r = listeEssai.itemAtIndex(1).contentItem.children[1]
+            essai.journal("iconesControles", [b.taille, b.width, r.taille, r.width, r.Layout.preferredWidth].join(" "))
+        }
+
+        // bascule — journalise la bascule d'essai : rôle de son Etat, politique de focus, checkable, checked,
+        // sélection, côté, rayon et couleur du disque, taille et couleur du glyphe, échelon du libellé, et la
+        // position du libellé sous le disque.
+        // Entrées : aucune. Sortie : aucune ; « essai : bascule <rôle> <politique> <bool> <bool> <sélection> <côté>
+        // <rayon> <#fond> <taille> <#glyphe> <échelon> <bool> ». Erreurs : aucune.
+        // Dépendances : basculeEssai (etat, disque, glyphe, libelle), journal.
+        function bascule(): void {
+            const b = basculeEssai
+            essai.journal("bascule", [b.etat.role, b.focusPolicy, b.checkable, b.checked, b.etat.selection,
+                b.disque.width, b.disque.radius, b.disque.color, b.glyphe.taille, b.glyphe.couleur, b.libelle.echelon,
+                b.libelle.mapToItem(b, 0, 0).y >= b.disque.mapToItem(b, 0, 0).y + b.disque.height].join(" "))
+        }
+
+        // basculeCocher — allume ou éteint la bascule d'essai par programme.
+        // Entrée : valeur, nouveau checked. Sortie : aucune. Erreurs : aucune. Dépendances : basculeEssai.
+        function basculeCocher(valeur: bool): void {
+            basculeEssai.checked = valeur
         }
 
         // champTexte — remplace le texte du champ d'essai.

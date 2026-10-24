@@ -22,9 +22,12 @@
     "warning": "#e49e22",
     "success": "#51bf68",
     "info": "#44a8e7",
-    "errorPressed": "#c92f33",
-    "warningPressed": "#da950b",
-    "successPressed": "#46b55f",
+    "errorHover": "#e9504d",
+    "errorPressed": "#b71824",
+    "warningHover": "#f9b13e",
+    "warningPressed": "#c78600",
+    "successHover": "#66d37a",
+    "successPressed": "#33a550",
     "categorical": [
       "#7fa5fa",
       "#bb92e9",
@@ -424,7 +427,8 @@
       "pastille": 12,
       "stepperWidth": 16,
       "segmentInset": 2,
-      "fieldWidth": 200
+      "fieldWidth": 200,
+      "toggleSize": 32
     },
     "compact": {
       "multiplier": 0.92,
@@ -445,7 +449,8 @@
       "pastille": 12,
       "stepperWidth": 14,
       "segmentInset": 2,
-      "fieldWidth": 180
+      "fieldWidth": 180,
+      "toggleSize": 28
     }
   },
   "radius": {

@@ -16,8 +16,10 @@ import "../Theme"
 // Erreurs : aucune ; avant le chargement des tokens, les cotes sont nulles et les couleurs transparentes.
 // Dépendances : QtQuick.Templates, Theme (density, icons, space, radius, color, stateColors), Etat, Chevron, Texte,
 // AnneauFocus.
-// Cotes : en-tête de density.rowHeight de haut, au rayon radius.small ; chevron de icons.sizes.dense ; écart entre le
-// chevron et le libellé space.scale[0] (4) ; le bloc est en retrait du chevron et de cet écart.
+// Cotes : en-tête de density.rowHeight de haut, au rayon radius.small ; le contenu y est en retrait de space.scale[1]
+// (8) à gauche et à droite, pour que l'anneau de focus, posé autour du fond, ne touche ni le chevron ni la fin du
+// libellé (v0.7) ; chevron de icons.sizes.dense ; écart entre le chevron et le libellé space.scale[0] (4) ; le bloc
+// est en retrait de ce retrait, du chevron et de cet écart, donc aligné sur le libellé.
 Column {
     id: depliable
 
@@ -36,8 +38,9 @@ Column {
 
         objectName: "entete"
         focusPolicy: Qt.TabFocus
-        implicitWidth: implicitContentWidth
+        implicitWidth: implicitContentWidth + leftPadding + rightPadding
         implicitHeight: Theme.density?.rowHeight ?? 0
+        horizontalPadding: Theme.space?.scale[1] ?? 0
         spacing: Theme.space?.scale[0] ?? 0
         text: depliable.text
         onClicked: depliable.ouvert = !depliable.ouvert
@@ -86,7 +89,7 @@ Column {
 
     Column {
         id: bloc
-        leftPadding: chevron.width + entete.spacing
+        leftPadding: entete.leftPadding + chevron.width + entete.spacing
         visible: depliable.ouvert
     }
 }

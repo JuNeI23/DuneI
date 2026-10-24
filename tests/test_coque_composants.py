@@ -8,6 +8,7 @@ est repris.
 
 import ctypes
 import json
+import math
 import os
 import shutil
 import struct
@@ -431,10 +432,11 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(lu, attendu)
 
     def test_pastilles(self):
-        # Trois disques de density.pastille, espacés de space.scale[1], en error, warning et success ; les glyphes en
-        # surfaceBase ne paraissent qu'au survol (forcé ici, comme la planche) ; pressé, un disque prend la variante
-        # pressée de sa teinte, précalculée par l'émetteur ; un disque désactivé, et les trois sous inactive, passent au
-        # neutre borderDefault, sans glyphe. Aucun disque n'accepte le focus (Qt.NoFocus).
+        # Trois disques de density.pastille, espacés de space.scale[1], en error, warning et success au repos ; les
+        # glyphes en surfaceBase ne paraissent qu'au survol (forcé ici, comme la planche), où chaque disque prend la
+        # variante de survol de sa teinte ; pressé, la variante pressée. Ces variantes, propres aux pastilles, sont
+        # précalculées par l'émetteur ; un disque désactivé, et les trois sous inactive, passent au neutre
+        # borderDefault, sans glyphe. Aucun disque n'accepte le focus (Qt.NoFocus).
         self.demarrer()
         tokens = self.tokens55()[0]
         c = {k: v.lower() for k, v in tokens["color"].items() if isinstance(v, str)}
@@ -442,7 +444,8 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
         teintes, sombre = f'{c["error"]} {c["warning"]} {c["success"]}', c["surfaceBase"]
         self.assertEqual(self.valeur("pastilles").lower(), f"{cotes} {teintes} false false false {sombre} 0")
         self.ipc("pastillesForcer", "hover")
-        self.assertEqual(self.valeur("pastilles").lower(), f"{cotes} {teintes} true true true {sombre} 0")
+        survol = f'{c["errorHover"]} {c["warningHover"]} {c["successHover"]}'
+        self.assertEqual(self.valeur("pastilles").lower(), f"{cotes} {survol} true true true {sombre} 0")
         self.ipc("pastillesForcer", "pressed")
         self.assertEqual(self.valeur("pastilles").lower().split()[2:5],
                          [c["errorPressed"], c["warningPressed"], c["successPressed"]])
@@ -450,7 +453,7 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
         self.ipc("pastillesReduire", "false")
         neutre = c["borderDefault"]
         self.assertEqual(self.valeur("pastilles").lower().split()[2:8],
-                         [c["error"], neutre, c["success"], "true", "false", "true"])
+                         [c["errorHover"], neutre, c["successHover"], "true", "false", "true"])
         self.ipc("inactif", "true")
         self.assertEqual(self.valeur("pastilles").lower().split()[2:8], [neutre] * 3 + ["false"] * 3)
 
@@ -499,42 +502,99 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
         self.assertNotEqual(effacer.lower(), c["textSecondary"].lower())
 
     def test_activite(self):
-        # La roue : huit traits au texte secondaire, d'opacités décroissantes derrière le trait de tête (pas), dans un
-        # carré d'icons.sizes.default. Son minuteur avance d'un pas tous les huitièmes de periods.spinner, et ne
-        # tourne que si la roue est visible et en marche : aucun minuteur au repos (D80).
+        # L'anneau qui respire : un cercle d'icons.sizes.default, cerné d'un huitième de son côté, à l'accent du rôle
+        # de son conteneur (sélection active, activeMuted sous inactive). Son opacité respire en pas discrets : un
+        # cycle de periods.spinner compte round(période × cadences.spinner / 1000) pas, si bien que le minuteur
+        # change l'opacité cadences.spinner fois par seconde ; elle suit un cosinus de creux (au demi-cycle) à 1 (au
+        # pas 0). Le minuteur ne court que si l'anneau est visible et en marche (D80) ; arrêté, il revient au pas 0,
+        # pleinement opaque.
         self.demarrer()
         tokens, motion = self.tokens55()
-        intervalle = motion["periods"]["spinner"] // 8
-        marche, inter, pas, cote, couleur, opacites = self.valeur("activite").split()
-        self.assertEqual((marche, inter, cote), ("true", str(intervalle), str(tokens["icons"]["sizes"]["default"])))
-        self.assertEqual(couleur.lower(), tokens["color"]["textSecondary"].lower())
-        attendu = [1 - ((int(pas) - i) % 8) / 8 for i in range(8)]
-        self.assertEqual([float(o) for o in opacites.split(",")], attendu)
+        periode = motion["periods"]["spinner"]
+        n = round(periode * motion["cadences"]["spinner"] / 1000)
+        intervalle, cote = int(periode / n), tokens["icons"]["sizes"]["default"]
+        accent = tokens["states"]["surfacePanel"]["active"]["rest"]["fill"].lower()
+        marche, inter, pas, lu_cote, couleur, epaisseur, opacite, lu_n, creux = self.valeur("activite").split()
+        self.assertEqual((marche, inter, lu_cote, lu_n, couleur.lower(), float(epaisseur)),
+                         ("true", str(intervalle), str(cote), str(n), accent, cote / 8))
+        respire = lambda k: round(float(creux) + (1 - float(creux)) * (1 + math.cos(2 * math.pi * k / n)) / 2, 3)
+        self.assertEqual(float(opacite), respire(int(pas)))
+        self.assertLess(float(creux), 1)
         time.sleep(3 * intervalle / 1000)
         self.assertNotEqual(self.valeur("activite").split()[2], pas)
         for visible, running in (("false", "true"), ("true", "false"), ("false", "false")):
             with self.subTest(visible=visible, running=running):
                 self.ipc("activiteEtat", visible, running)
-                arret = self.valeur("activite").split()[2]
                 time.sleep(3 * intervalle / 1000)
-                self.assertEqual(self.valeur("activite").split()[:3], ["false", str(intervalle), arret])
+                lu = self.valeur("activite").split()
+                self.assertEqual(lu[:3] + lu[6:7], ["false", str(intervalle), "0", "1"])
         self.ipc("activiteEtat", "true", "true")
         self.assertEqual(self.valeur("activite").split()[0], "true")
-        # Un ancêtre masqué rend la roue invisible : son minuteur s'arrête, puis repart quand l'ancêtre reparaît.
+        # Un ancêtre masqué rend l'anneau invisible : son minuteur s'arrête, puis repart quand l'ancêtre reparaît.
         self.ipc("activiteAncetre", "false")
         self.assertEqual(self.valeur("activite").split()[0], "false")
         self.ipc("activiteAncetre", "true")
         self.assertEqual(self.valeur("activite").split()[0], "true")
+        # Sous le modificateur inactive, l'anneau prend l'accent sans chroma.
+        self.ipc("inactif", "true")
+        muet = tokens["states"]["surfacePanel"]["activeMuted"]["rest"]["fill"].lower()
+        self.assertEqual(self.valeur("activite").split()[4].lower(), muet)
 
     def test_depliable(self):
         # Repliée, la section cache son contenu et son chevron pointe à droite (rotation -90 du chevron bas) ;
         # dépliée, le contenu paraît et le chevron pointe en bas, sans animation. L'en-tête, de la hauteur d'une
         # rangée, ne prend le focus qu'à la tabulation (Qt.TabFocus vaut 1).
         self.demarrer()
-        h = self.tokens55()[0]["density"]["comfortable"]["rowHeight"]
+        tokens = self.tokens55()[0]
+        h = tokens["density"]["comfortable"]["rowHeight"]
         self.assertEqual(self.valeur("depliable"), f"false -90 false 1 {h}")
         self.ipc("depliableOuvrir", "true")
         self.assertEqual(self.valeur("depliable"), f"true 0 true 1 {h}")
+        # L'en-tête laisse à l'anneau de focus, posé sur son fond, un retrait de space.scale[1] de chaque côté du
+        # contenu : le libellé ne touche plus l'anneau. Le bloc reste aligné sur le libellé.
+        marge, chevron, ecart = tokens["space"]["scale"][1], tokens["icons"]["sizes"]["dense"], tokens["space"]["scale"][0]
+        gauche, droite, bloc = self.valeur("depliableCotes").split()
+        self.assertEqual((float(gauche), float(droite), float(bloc)), (marge, marge, marge + chevron + ecart))
+
+    def test_icones_des_controles(self):
+        # Dans le bouton et la rangée (donc les listes, le menu et le déroulant), l'icône prend icons.sizes.dense,
+        # en dimensions réelles comme en taille préférée dans la mise en page de la rangée.
+        self.demarrer()
+        dense = str(self.tokens55()[0]["icons"]["sizes"]["dense"])
+        self.assertEqual(self.valeur("iconesControles").split(), [dense] * 5)
+
+    def test_bascule(self):
+        # La bascule à glyphe du Centre de contrôle : un disque de density.toggleSize, au rôle un cran au-dessus du
+        # panneau ; allumée, l'accent et le glyphe sur-accent de icons.sizes.dense ; éteinte, le fond du cran et le
+        # glyphe au texte primaire ; sous inactive, l'accent sans chroma. Elle se coche (checkable) et ne prend le
+        # focus qu'à la tabulation (Qt.TabFocus vaut 1). Son libellé, d'échelon 1, se tient sous le disque. Les
+        # couleurs rejoignent leur cible par les ressorts de l'Etat : elles sont relues jusqu'à la cible.
+        self.demarrer()
+        tokens = self.tokens55()[0]
+        d, st = tokens["density"]["comfortable"], tokens["states"]["surfaceRaised"]
+        dense, cote = str(tokens["icons"]["sizes"]["dense"]), str(d["toggleSize"])
+
+        def lire(attendu: list[str]) -> list[str]:
+            """Relit la bascule d'essai jusqu'à ce qu'elle vaille attendu, ou pendant deux secondes au plus.
+
+            Entrée : attendu — valeurs journalisées attendues, en minuscules. Sortie : la dernière lecture.
+            Erreurs : aucune. Dépendances : valeur, time.
+            """
+            for _ in range(40):
+                if (lu := self.valeur("bascule").lower().split()) == attendu:
+                    break
+                time.sleep(0.05)
+            return lu
+
+        for coche, selection, couleurs in (("true", "active", st["active"]["rest"]), ("false", "none", st["none"]["rest"]),
+                                           ("true", "activemuted", st["activeMuted"]["rest"])):
+            with self.subTest(coche=coche, selection=selection):
+                if selection == "activemuted":
+                    self.ipc("inactif", "true")
+                self.ipc("basculeCocher", coche)
+                attendu = ["surfaceraised", "1", "true", coche, selection, cote, str(d["toggleSize"] // 2),
+                           couleurs["fill"].lower(), dense, couleurs["text"].lower(), "1", "true"]
+                self.assertEqual(lire(attendu), attendu)
 
     def test_exclusivite(self):
         # Le singleton Overlays seul, sur trois objets factices qui suivent le protocole d'Overlay (ouvert passe à
@@ -795,6 +855,19 @@ class CoqueClavierTest(EssaiCoque, unittest.TestCase):
         self.ipc("cliquerDepliable")
         self.assertEqual(self.valeur("depliable").split()[:2], ["true", "true"])
 
+    def test_bascule_clavier(self):
+        # La bascule est un arrêt de tabulation après l'en-tête de la section, entourée d'un anneau rond au clavier
+        # (visualFocus) ; Espace l'allume puis l'éteint, et allumée elle prend l'accent.
+        self.demarrer()
+        for _ in range(10):  # … recherche, en-tête de la section, bascule
+            self.ipc("touche", "tab")
+        self.assertEqual(self.valeur("focus").split()[0], "bascule")
+        self.assertEqual(self.valeur("bascule"), "false none true true")
+        self.ipc("touche", "espace")
+        self.assertEqual(self.valeur("bascule"), "true active true true")
+        self.ipc("touche", "espace")
+        self.assertEqual(self.valeur("bascule").split()[0], "false")
+
     def test_infobulle_delai(self):
         # Le délai de l'infobulle est armé dès que le pointeur entre sur la cible, et échoit après delays.tooltip de
         # survol continu ; le départ du pointeur le désarme et la referme. Un clic la masque jusqu'à ce que le
@@ -877,6 +950,16 @@ class CoqueClavierTest(EssaiCoque, unittest.TestCase):
         self.ipc("pointerPastille", "1", "true")
         self.assertEqual(self.valeur("pastilles"), "true true false true 1 1 1")
         self.assertEqual(self.valeur("focus").split()[0], "aucun")
+        # Seul le disque survolé prend la variante de survol de sa teinte, et seul le disque pressé la variante
+        # pressée ; les autres restent au repos.
+        c = {k: v.lower() for k, v in self.tokens55()[0]["color"].items() if isinstance(v, str)}
+        self.ipc("pointerPastille", "0", "false")
+        self.assertEqual(self.valeur("pastillesCouleurs").lower().split(),
+                         [c["errorHover"], c["borderDefault"], c["success"]])
+        self.ipc("appuyerPastille", "2", "true")
+        self.assertEqual(self.valeur("pastillesCouleurs").lower().split(),
+                         [c["error"], c["borderDefault"], c["successPressed"]])
+        self.ipc("appuyerPastille", "2", "false")
 
     def test_attention_sans_fenetre(self):
         # Si la fenêtre d'attention ne peut se construire (ici, la plateforme offscreen n'a pas de PanelWindow),

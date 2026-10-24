@@ -1,64 +1,66 @@
 import QtQuick
 import "../Theme"
+import "etats.js" as Etats
 
-// Activite — indicateur d'activité indéterminée de la coque : la roue de macOS.
-// Rôle : huit traits rayonnants, dessinés (rectangles aux bouts arrondis, pivotés autour du centre), au texte
-// secondaire. Le trait de tête (pas) est opaque et les suivants s'estompent d'un huitième chacun dans le sens
-// inverse de la rotation ; la tête avance d'un trait, dans le sens horaire, à chaque huitième de
-// motion.periods.spinner, si bien qu'un tour complet dure cette période (conception, § 7.10). La roue tourne par pas
-// et non en continu : un minuteur réveille la coque huit fois par tour, sans animation à chaque image. Sobriété
-// (D80) : le minuteur ne court que si la roue est visible et en marche ; arrêtée, elle reste affichée, immobile, et
-// ne coûte rien. La progression déterminée est la Progression.
+// Activite — indicateur d'activité indéterminée de la coque : un anneau fin qui respire.
+// Rôle : un cercle sans fond, cerné d'un trait à l'accent du rôle de son conteneur (sélection active, ou activeMuted
+// sous le modificateur inactive hérité, § 7.5), dont l'opacité monte et descend lentement (conception, § 7.10). La
+// respiration se fait par pas discrets : un cycle de motion.periods.spinner compte pasParCycle pas, arrondi de
+// période × motion.cadences.spinner / 1000, si bien qu'un minuteur change l'opacité cadences.spinner fois par seconde
+// (6), et non à chaque image comme le ferait une animation continue. L'opacité suit un cosinus : pleine au pas 0,
+// au creux au demi-cycle. Sobriété (D80) : le minuteur ne court que si l'anneau est visible et en marche ; arrêté,
+// il revient au pas 0 et reste affiché, pleinement opaque et immobile, sans rien coûter. La roue à traits de la
+// version précédente, jugée chère et peu élégante, est abandonnée (v0.7). La progression déterminée est la
+// Progression.
 // Entrées : running, vrai par défaut ; visible.
-// Sorties : pas, rang du trait de tête ; minuteur et rayons (le Repeater des traits), lus par les essais.
-// Erreurs : aucune ; avant le chargement des tokens et du mouvement, la roue est de taille nulle et le minuteur ne
-// s'arme pas.
-// Dépendances : Theme (icons.sizes, color, motion.periods).
-// Cotes : carré de icons.sizes.default ; chaque trait, fraction du côté c, va de c / 4 à c / 2 du centre et a une
-// épaisseur de c / 8.
+// Sorties : pas, rang du pas courant dans le cycle ; pasParCycle ; creux, opacité minimale ; minuteur et anneau
+// (le cercle dessiné), lus par les essais.
+// Erreurs : aucune ; avant le chargement des tokens et du mouvement, l'anneau est de taille nulle, transparent, et le
+// minuteur ne s'arme pas.
+// Dépendances : Theme (icons.sizes, stateColors, motion.periods, motion.cadences), etats.js (herite) ; le rôle
+// (dnRole) et le modificateur (dnInactive) viennent de la Surface englobante.
+// Cotes : carré de icons.sizes.default ; le trait est une fraction du côté c, c / 8, et le creux de la respiration
+// un facteur d'opacité, 0,35 : des proportions du dessin, non des cotes.
 Item {
     id: activite
 
     property bool running: true
     property int pas: 0
-    readonly property int traits: 8
-    readonly property real c: Math.min(width, height)
+    readonly property real creux: 0.35
+    readonly property real periode: Theme.motion?.periods?.spinner ?? 0
+    readonly property int pasParCycle: Math.round(periode * (Theme.motion?.cadences?.spinner ?? 0) / 1000)
+    readonly property string role: Etats.herite(activite, "dnRole", "surfaceWindow")
+    readonly property bool inactif: Etats.herite(activite, "dnInactive", false)
     readonly property alias minuteur: minuteur
-    readonly property alias rayons: rayons
+    readonly property alias anneau: anneau
 
     implicitWidth: Theme.icons?.sizes.default ?? 0
     implicitHeight: implicitWidth
 
-    Repeater {
-        id: rayons
-        model: activite.traits
+    Rectangle {
+        id: anneau
 
-        // Trait de rang index, posé au-dessus du centre puis pivoté de index huitièmes de tour ; son retard sur la
-        // tête, en traits, fixe son opacité.
-        Rectangle {
-            id: trait
-            required property int index
+        readonly property real c: Math.min(activite.width, activite.height)
 
-            x: (activite.width - width) / 2
-            y: activite.height / 2 - activite.c / 2
-            width: activite.c / 8
-            height: activite.c / 4
-            radius: width / 2
-            color: Theme.color?.textSecondary ?? "transparent"
-            opacity: 1 - ((activite.pas - index + activite.traits) % activite.traits) / activite.traits
-            transform: Rotation {
-                origin.x: trait.width / 2
-                origin.y: activite.c / 2
-                angle: trait.index * 360 / activite.traits
-            }
-        }
+        anchors.centerIn: parent
+        width: c
+        height: c
+        radius: c / 2
+        color: "transparent"
+        border.width: c / 8
+        border.color: Theme.stateColors(activite.role, activite.inactif ? "activeMuted" : "active", "rest")?.fill
+                      ?? "transparent"
+        opacity: activite.pasParCycle > 0 ? activite.creux + (1 - activite.creux)
+                 * (1 + Math.cos(2 * Math.PI * activite.pas / activite.pasParCycle)) / 2 : 1
     }
 
+    // Le minuteur avance d'un pas par intervalle ; à l'arrêt, il ramène l'anneau au pas 0, pleinement opaque.
     Timer {
         id: minuteur
-        interval: (Theme.motion?.periods?.spinner ?? 0) / activite.traits
+        interval: activite.pasParCycle > 0 ? activite.periode / activite.pasParCycle : 0
         running: activite.visible && activite.running && interval > 0
         repeat: true
-        onTriggered: activite.pas = (activite.pas + 1) % activite.traits
+        onTriggered: activite.pas = (activite.pas + 1) % activite.pasParCycle
+        onRunningChanged: if (!running) activite.pas = 0
     }
 }

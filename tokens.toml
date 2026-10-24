@@ -180,7 +180,6 @@ lightness_delta = 0.04
 
 [states.pressed]
 lightness_delta = -0.03       # descend sous le repos : sensation d'enfoncement
-                              # (même écart pour error, warning et success pressés : pastilles de fenêtre)
 translate = 0                 # aucun déplacement, aucune réduction d'échelle
 
 [states.focus]
@@ -202,6 +201,14 @@ chroma_multiplier = 0.15
 lightness_toward_background = 0.55
 opacity = 0.50                # opacité d'un élément désactivé (libadwaita)
 shadow = false
+
+# Pastilles de fenêtre (fermer, réduire, agrandir) : leurs teintes error, warning et success changent plus
+# franchement que le fond d'un contrôle, pour que repos, survol et pression se distinguent à l'œil sur un disque de
+# 12 px (conception des composants, § 7.10). L'émetteur de la coque en précalcule les variantes, en OKLCH.
+[pastilles]
+hover_lightness_delta = 0.06    # survol : la teinte s'éclaircit
+pressed_lightness_delta = -0.08 # pression : la teinte fonce nettement ; au-delà, le glyphe sombre passerait sous
+                                # 3:1 sur error (3,0:1 à -0,08), et error sortirait du gamut sRGB
 
 # Modificateur de conteneur, en cascade sur tous les descendants.
 # Le contenu n'est NI terni NI estompé : seule la couleur disparaît.
@@ -289,6 +296,7 @@ pastille = 12              # diamètre d'une pastille de fenêtre (fermer, rédu
 stepper_width = 16         # largeur du stepper du compteur, deux demi-boutons empilés
 segment_inset = 2          # retrait du segment coché dans la piste d'une barre d'onglets segmentée
 field_width = 200          # largeur implicite du champ de saisie, fixe : aucun état ne le redimensionne
+toggle_size = 32           # diamètre du disque d'une bascule à glyphe, comme le Centre de contrôle de macOS
 
 [density.compact]
 multiplier = 0.92
@@ -310,6 +318,7 @@ pastille = 12              # diamètre d'une pastille de fenêtre (fermer, rédu
 stepper_width = 14         # largeur du stepper du compteur, deux demi-boutons empilés
 segment_inset = 2          # retrait du segment coché dans la piste d'une barre d'onglets segmentée
 field_width = 180          # largeur implicite du champ de saisie, fixe : aucun état ne le redimensionne
+toggle_size = 28           # diamètre du disque d'une bascule à glyphe, comme le Centre de contrôle de macOS
 
 [radii]
 window  = 12

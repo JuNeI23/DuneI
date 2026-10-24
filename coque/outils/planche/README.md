@@ -1,6 +1,6 @@
 # Planche de contrôle des tokens de la coque
 
-Version 0.8 — outil de développement de L2-34, gardé ensuite pour tout travail sur les tokens et la coque ; page
+Version 0.9 — outil de développement de L2-34, gardé ensuite pour tout travail sur les tokens et la coque ; page
 des composants ajoutée en L2-01.
 
 La planche affiche dans sa fenêtre (tuilée ou flottante, selon les règles d'Hyprland) deux onglets : « Tokens », chaque token de `coque-tokens.json`
@@ -90,15 +90,17 @@ fenêtre plus large.
   six rangées, un seul arrêt de tabulation.
 - **Compléments à la macOS** (§ 7.10) : une grille `Recherche` (vide et remplie, sans ligne de focus, comme le
   champ ; vivant : un champ de recherche, qu'Échap ou son bouton d'effacement vident) ; une grille `Activite` d'une
-  seule ligne (une roue figée ; vivant : une roue arrêtée par défaut, pour que la page ne coûte rien au repos, et
-  l'interrupteur qui la met en marche) ;
-  une grille `Depliable` (repliée et dépliée, en repos, survol, désactivé et focus clavier, l'anneau entourant
-  l'en-tête ; vivant : une section qui porte une case et un interrupteur) ; enfin la section `Infobulle`, un bouton
+  seule ligne (un anneau arrêté ; vivant : un anneau qui respire, arrêté par défaut pour que la page ne coûte rien
+  au repos, et l'interrupteur qui le met en marche) ; une grille `Depliable` (repliée et dépliée, en repos,
+  survol, désactivé et focus clavier, l'anneau entourant l'en-tête, en retrait du chevron et du libellé ; vivant :
+  une section qui porte une case et un interrupteur) ; une grille `Bascule à glyphe` (éteinte et allumée, en
+  repos, survol, pressé, désactivé et focus clavier, l'anneau rond autour du disque ; vivant : trois bascules à
+  libellé, `network-wireless` allumée, `bluetooth-active` et `night-light`) ; enfin la section `Infobulle`, un bouton
   qui en porte une : elle paraît après `delays.tooltip` de survol continu et se ferme au départ du pointeur ou au
   clic. Elle ne se fige pas et ne s'ouvre qu'à la main.
 - **Modificateur inactive** : deux panneaux identiques (case cochée, radio coché, interrupteur, curseur, barre
-  d'onglets, bouton, champ, pastilles, compteur, déroulant, progression, liste), le second sous `dnInactive: true`,
-  pour juger l'accent muet (`activeMuted`) et l'anneau atténué.
+  d'onglets, bouton, bascule allumée, champ, pastilles, compteur, déroulant, progression, liste), le second sous
+  `dnInactive: true`, pour juger l'accent muet (`activeMuted`) et l'anneau atténué.
 
 Les états figés ne portent aucune valeur de design : `Etat.forcer` (réservée à la planche) remplace
 l'interaction lue par le contrôle, la sélection s'écrit dans l'`Etat` de l'exemplaire, l'anneau de focus est un
@@ -171,3 +173,4 @@ la PSS lues dans `/proc/<pid>/smaps_rollup`.
 | 0.6 | 2026-10-23 | Deuxième itération visuelle (L2-01, § 7.10) : sections `Radio` (grille et groupe exclusif de trois) et `Jauge` (grille et deux jauges à icône), radio coché dans les panneaux du modificateur inactive, grille du champ sans ligne de focus, puisque le champ n'a plus d'anneau. |
 | 0.7 | 2026-10-23 | Troisième itération (L2-01, § 7.10) : sections `Pastilles de fenêtre`, `Compteur` et `Menu déroulant`, ajoutés aussi aux panneaux du modificateur inactive ; anneau de focus des onglets figé autour de la piste. |
 | 0.8 | 2026-10-24 | Compléments à la macOS (L2-01, § 7.10) : sections `Champ de recherche`, `Indicateur d'activité` (roue figée, vivant arrêté par défaut), `Section dépliable` et `Infobulle`. |
+| 0.9 | 2026-10-24 | Quatrième itération (L2-01, § 7.10, v0.7) : indicateur d'activité en anneau qui respire (arrêté dans la grille et par défaut au vivant), section `Bascule à glyphe`, bascule allumée dans les panneaux du modificateur inactive ; pastilles survolées et pressées aux variantes propres, plus contrastées. |

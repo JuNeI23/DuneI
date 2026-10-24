@@ -6,13 +6,13 @@ import "Theme"
 import "Composants"
 
 // Coque d'essai du clavier : parcours de tabulation et curseur de texte, dans une vraie fenêtre.
-// Rôle : ouvre une FloatingWindow (un Bouton « avant », une barre Onglets avec les onglets « tokens » et
-// « composants », ce dernier coché, un Bouton « apres », un Champ, une Jauge, un Compteur, un Deroulant, des Pastilles,
-// une Recherche, une Depliable, un Bouton « bulle » qui porte une Infobulle sans texte (jamais de fenêtre), puis deux
-// Liste côte à côte, un menu qui porte selectionSuitSurvol et un témoin qui ne le porte pas) et y synthétise des
-// touches et des mouvements du pointeur par le TestEvent de QtTest, pour que tests/test_coque_composants.py éprouve ce
-// que la coque sans fenêtre ne peut pas exécuter : le focus actif, la tabulation, le clignotement du curseur, la mise
-// en page de la barre (qui attend le polissage d'une fenêtre) et le survol.
+// Rôle : ouvre une FloatingWindow (un Bouton « avant », une barre Onglets avec les onglets « tokens » et « composants
+// », ce dernier coché, un Bouton « apres », un Champ, une Jauge, un Compteur, un Deroulant, des Pastilles, une
+// Recherche, une Depliable, une Bascule, un Bouton « bulle » qui porte une Infobulle sans texte (jamais de fenêtre),
+// puis deux Liste côte à côte, un menu qui porte selectionSuitSurvol et un témoin qui ne le porte pas) et y synthétise
+// des touches et des mouvements du pointeur par le TestEvent de QtTest, pour que tests/test_coque_composants.py éprouve
+// ce que la coque sans fenêtre ne peut pas exécuter : le focus actif, la tabulation, le clignotement du curseur, la
+// mise en page de la barre (qui attend le polissage d'une fenêtre) et le survol.
 // Garde de plateforme : la coque journalise Qt.platform.pluginName dès son chargement, et son LazyLoader ne
 // construit la fenêtre que sous la plateforme offscreen, où elle ne paraît jamais à l'écran et où ni les touches
 // ni le pointeur n'atteignent le bureau. Lancée sous une autre plateforme (wayland compris), elle n'ouvre donc
@@ -24,19 +24,20 @@ import "Composants"
 // tokens> <sélection de composants> <visualFocus> », « essai : curseur <cursorVisible> <délégué visible>
 // <cursorFlashTime> », « essai : onglets <géométrie de la barre et de ses segments> », « essai : menu <rangée courante
 // du menu> <rangée courante du témoin> », « essai : ongletSurvole <interaction> <fond> » et « essai : jauge <valeur>
-// <anneau visible> », ainsi que attention, anneauOnglets, compteur, deroulant et pastilles (voir chaque fonction) ; «
-// essai touche <tab|majtab|gauche|droite|haut|bas|espace|entree|echap> » frappe une touche, « essai molette <1|-1> »
-// tourne la molette sur le compteur, « essai cliquerDeroulant » clique le déroulant, « essai ouvrirAttention » ouvre
-// l'Overlay d'attention, « essai pointerRangee <rang> <bool> » pose le pointeur sur une rangée du menu ouvert et l'y
-// clique si demandé, « essai pointerPastille <rang> <bool> » pose le pointeur sur une pastille et l'y clique si
-// demandé, « essai pastillesReduire <bool> » active ou désactive la pastille de réduction, « essai rechercheTexte
-// <texte> » remplit la recherche, « essai cliquerEffacer » clique son bouton d'effacement, « essai cliquerDepliable »
-// clique l'en-tête de la section, « essai survolerBulle », « essai quitterBulle » et « essai appuyerBulle » posent le
-// pointeur sur le bouton « bulle », l'en retirent ou l'y cliquent ; « essai cibleNouvelle », « essai cibleDetruire » et
-// « essai survolerMobile » créent, détruisent ou survolent la cible de l'infobulle mobile ; recherche, depliable,
-// bulle, survolerBulle et mobile journalisent (voir chaque fonction), « essai survoler <rang> » pose le pointeur sur
-// une rangée de chaque liste, « essai survolerOnglet » sur l'onglet « tokens » et « essai ongletActif <bool> » active
-// ou désactive l'onglet « composants », sans journaliser.
+// <anneau visible> », ainsi que attention, anneauOnglets, compteur, deroulant, pastilles, pastillesCouleurs et bascule
+// (voir chaque fonction) ; « essai touche <tab|majtab|gauche|droite|haut|bas|espace|entree|echap> » frappe une touche,
+// « essai molette <1|-1> » tourne la molette sur le compteur, « essai cliquerDeroulant » clique le déroulant, « essai
+// ouvrirAttention » ouvre l'Overlay d'attention, « essai pointerRangee <rang> <bool> » pose le pointeur sur une rangée
+// du menu ouvert et l'y clique si demandé, « essai pointerPastille <rang> <bool> » pose le pointeur sur une pastille et
+// l'y clique si demandé, « essai appuyerPastille <rang> <bool> » enfonce ou relâche le bouton sur une pastille, « essai
+// pastillesReduire <bool> » active ou désactive la pastille de réduction, « essai rechercheTexte <texte> » remplit la
+// recherche, « essai cliquerEffacer » clique son bouton d'effacement, « essai cliquerDepliable » clique l'en-tête de la
+// section, « essai survolerBulle », « essai quitterBulle » et « essai appuyerBulle » posent le pointeur sur le bouton «
+// bulle », l'en retirent ou l'y cliquent ; « essai cibleNouvelle », « essai cibleDetruire » et « essai survolerMobile »
+// créent, détruisent ou survolent la cible de l'infobulle mobile ; recherche, depliable, bulle, survolerBulle et mobile
+// journalisent (voir chaque fonction), « essai survoler <rang> » pose le pointeur sur une rangée de chaque liste, «
+// essai survolerOnglet » sur l'onglet « tokens » et « essai ongletActif <bool> » active ou désactive l'onglet «
+// composants », sans journaliser.
 // Erreurs : celles de Theme et des liaisons, dans le journal ; un nom de touche inconnu lève une TypeError.
 // Dépendances : quickshell ≥ 0.3 (FloatingWindow, LazyLoader, IpcHandler), QtTest (TestEvent), modules Theme
 // et Composants. Import : les liens Theme -> ../Theme et Composants -> ../Composants les posent sous la racine de
@@ -101,6 +102,8 @@ ShellRoot {
                     text: "Section"
                     Texte { text: "Contenu" }
                 }
+
+                Bascule { id: basculeEssai; objectName: "bascule"; icone: "network-wireless"; text: "Wi-Fi" }
 
                 // Bouton qui porte l'infobulle et compte ses clics. L'infobulle n'a pas de texte : son délai et sa
                 // fermeture s'éprouvent sans qu'aucune fenêtre ne s'ouvre.
@@ -253,6 +256,34 @@ ShellRoot {
                     const p = pastillesEssai, e = p.emis
                     essai.journal("pastilles", [p.survol, ...[0, 1, 2].map(i => p.disques.itemAt(i).trace.visible),
                                                 e.fermer, e.reduire, e.agrandir].join(" "))
+                }
+
+                // pastillesCouleurs — journalise la couleur peinte de chacune des trois pastilles.
+                // Entrées : aucune. Sortie : aucune ; « essai : pastillesCouleurs <#> <#> <#> ». Erreurs : aucune.
+                // Dépendances : pastillesEssai (disques), journal.
+                function pastillesCouleurs(): void {
+                    essai.journal("pastillesCouleurs", [0, 1, 2].map(i => pastillesEssai.disques.itemAt(i).couleur)
+                        .join(" "))
+                }
+
+                // appuyerPastille — pose le pointeur au centre d'une pastille, comme la souris qui s'y déplace, puis
+                // y enfonce le bouton gauche, ou l'y relâche.
+                // Entrées : rang, 0, 1 ou 2 ; appui, vrai pour enfoncer, faux pour relâcher. Sortie : aucune.
+                // Erreurs : TypeError pour un rang absent. Dépendances : pastillesEssai, clavier (TestEvent).
+                function appuyerPastille(rang: int, appui: bool): void {
+                    const d = pastillesEssai.disques.itemAt(rang)
+                    clavier.mouseMove(d, d.width / 2, d.height / 2, -1, Qt.NoButton, Qt.NoModifier)
+                    if (appui) clavier.mousePress(d, d.width / 2, d.height / 2, Qt.LeftButton, Qt.NoModifier, -1)
+                    else clavier.mouseRelease(d, d.width / 2, d.height / 2, Qt.LeftButton, Qt.NoModifier, -1)
+                }
+
+                // bascule — journalise la bascule d'essai : allumée, sélection de son Etat, focus clavier, anneau
+                // visible et rond (son rayon suit celui du disque). Entrées : aucune. Sortie : aucune ; « essai :
+                // bascule <bool> <sélection> <bool> <bool> ». Erreurs : aucune. Dépendances : basculeEssai, journal.
+                function bascule(): void {
+                    const b = basculeEssai, a = b.anneau
+                    essai.journal("bascule", [b.checked, b.etat.selection, b.visualFocus,
+                                              a.visible && a.radius === b.disque.radius + a.decalage].join(" "))
                 }
 
                 // pointerPastille — pose le pointeur au centre d'une pastille, et l'y clique si demandé.

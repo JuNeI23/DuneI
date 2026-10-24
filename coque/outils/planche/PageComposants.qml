@@ -20,11 +20,11 @@ import "Composants"
 // la fenêtre la fait défiler verticalement.
 // Erreurs : aucune ; une icône absente du thème laisse sa place vide ; une largeur plus étroite que le plus
 // large bloc (une grille d'états) laisse ce bloc déborder.
-// Dépendances : Theme (space, radius, density, typo, color), module Composants (Surface, Texte, Icone, Bouton, Case,
-// Radio, Interrupteur, Onglet, Onglets, Curseur, Jauge, Champ, Pastilles, Compteur, Deroulant, Recherche, Activite,
-// Depliable, Infobulle, Liste, Rangee, Separateur, Progression, AnneauFocus, Etat, Overlay, Reglage). Le menu du
-// déroulant vivant ne s'ouvre, lui aussi, qu'à la main, comme l'infobulle, au survol. Les overlays ne s'ouvrent qu'à la
-// demande de Nicolas, par leurs boutons : l'attention prend le clavier en exclusif.
+// Dépendances : Theme (space, radius, density, typo, color), module Composants (Surface, Texte, Icone, Bouton, Bascule,
+// Case, Radio, Interrupteur, Onglet, Onglets, Curseur, Jauge, Champ, Pastilles, Compteur, Deroulant, Recherche,
+// Activite, Depliable, Infobulle, Liste, Rangee, Separateur, Progression, AnneauFocus, Etat, Overlay, Reglage). Le menu
+// du déroulant vivant ne s'ouvre, lui aussi, qu'à la main, comme l'infobulle, au survol. Les overlays ne s'ouvrent qu'à
+// la demande de Nicolas, par leurs boutons : l'attention prend le clavier en exclusif.
 Surface {
     id: page
 
@@ -212,7 +212,7 @@ Surface {
     // contrôles sont rangés sur quatre lignes courtes, pour que deux panneaux tiennent côte à côte dès que la
     // fenêtre s'élargit un peu.
     // Entrées : titre ; dnInactive, le modificateur, faux par défaut. Sortie : surface surfacePanel.
-    // Erreurs : aucune. Dépendances : Surface, Case, Interrupteur, Curseur, Onglets, Onglet, Bouton, Champ,
+    // Erreurs : aucune. Dépendances : Surface, Case, Interrupteur, Curseur, Onglets, Onglet, Bouton, Bascule, Champ,
     // Pastilles, Compteur, Deroulant, Progression, Liste, Rangee, Texte.
     component PanneauEssai: Surface {
         id: panneau
@@ -252,6 +252,7 @@ Surface {
                     Onglet { text: "Second" }
                 }
                 Bouton { text: "Bouton" }
+                Bascule { icone: "network-wireless"; checked: true }
             }
 
             Champ { text: "Texte saisi" }
@@ -619,18 +620,18 @@ Surface {
             Recherche {}
         }
 
-        // La roue n'a ni état ni focus : une seule ligne. Au repos, la page ne doit rien coûter (D80) : la grille
-        // fige une roue arrêtée, et le vivant, arrêté par défaut, se met en marche par son interrupteur.
+        // L'anneau n'a ni état ni focus : une seule ligne. Au repos, la page ne doit rien coûter (D80) : la grille
+        // fige un anneau arrêté, et le vivant, arrêté par défaut, se met à respirer par son interrupteur.
         Grille {
             titre: "Indicateur d'activité"
             etats: ["rest"]
-            variantes: [{ libelle: "figée", proprietes: { running: false } }]
+            variantes: [{ libelle: "arrêté", proprietes: { running: false } }]
             modele: Component { Activite {} }
 
             Row {
                 spacing: Theme.space.scale[2]
-                Activite { running: marcheRoue.checked; anchors.verticalCenter: parent.verticalCenter }
-                Interrupteur { id: marcheRoue; text: "En marche" }
+                Activite { running: marcheAnneau.checked; anchors.verticalCenter: parent.verticalCenter }
+                Interrupteur { id: marcheAnneau; text: "En marche" }
             }
         }
 
@@ -650,6 +651,21 @@ Surface {
                 text: "Options avancées"
                 Case { text: "Afficher les fichiers cachés" }
                 Interrupteur { text: "Aperçus" }
+            }
+        }
+
+        // La bascule à glyphe du Centre de contrôle : éteinte, allumée, et chaque état ; le vivant en aligne trois,
+        // à libellé, comme une rangée du Centre de contrôle.
+        Grille {
+            titre: "Bascule à glyphe"
+            variantes: [{ libelle: "éteinte" }, { libelle: "allumée", proprietes: { checked: true } }]
+            modele: Component { Bascule { icone: "network-wireless" } }
+
+            Row {
+                spacing: Theme.space.sectionGap
+                Bascule { icone: "network-wireless"; text: "Wi-Fi"; checked: true }
+                Bascule { icone: "bluetooth-active"; text: "Bluetooth" }
+                Bascule { icone: "night-light"; text: "Nuit" }
             }
         }
 

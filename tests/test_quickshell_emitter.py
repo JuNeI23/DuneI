@@ -60,22 +60,23 @@ class QuickshellEmitterTest(unittest.TestCase):
 
     def test_cotes_des_controles(self):
         """Vérifie que les cotes des contrôles (case, radio, interrupteur, curseur, jauge, onglets, pastilles,
-        compteur) passent en camelCase dans density."""
+        compteur, bascule) passent en camelCase dans density."""
         d = self.out["density"]["comfortable"]
         self.assertEqual({k: d[k] for k in ("checkSize", "switchWidth", "switchHeight", "switchThumb", "sliderTrack",
                                              "sliderHandle", "sliderWidth", "fieldWidth", "radioDot", "sliderBar",
-                                             "segmentInset", "sliderBarIcon", "pastille", "stepperWidth")},
+                                             "segmentInset", "sliderBarIcon", "pastille", "stepperWidth",
+                                             "toggleSize")},
                          {"checkSize": 16, "switchWidth": 38, "switchHeight": 22, "switchThumb": 18,
                           "sliderTrack": 4, "sliderHandle": 20, "sliderWidth": 160, "fieldWidth": 200,
                           "radioDot": 6, "sliderBar": 22, "segmentInset": 2, "sliderBarIcon": 14, "pastille": 12,
-                          "stepperWidth": 16})
+                          "stepperWidth": 16, "toggleSize": 32})
         c = self.out["density"]["compact"]
         self.assertEqual({k: c[k] for k in ("switchWidth", "switchHeight", "switchThumb", "sliderHandle", "sliderWidth",
                                              "radioDot", "sliderBar", "segmentInset", "sliderBarIcon", "pastille",
-                                             "stepperWidth")},
+                                             "stepperWidth", "toggleSize")},
                          {"switchWidth": 32, "switchHeight": 18, "switchThumb": 14, "sliderHandle": 18,
                           "sliderWidth": 140, "radioDot": 6, "sliderBar": 18, "segmentInset": 2, "sliderBarIcon": 12,
-                          "pastille": 12, "stepperWidth": 14})
+                          "pastille": 12, "stepperWidth": 14, "toggleSize": 28})
         self.assertEqual(self.out["density"]["compact"]["fieldWidth"], 180)
 
     def test_states_complet(self):
@@ -108,15 +109,19 @@ class QuickshellEmitterTest(unittest.TestCase):
         self.assertEqual(st["active"]["disabled"]["fill"],
                          to_hex(oklch(acc.l + (panel.l - acc.l) * 0.55, acc.c * 0.15, acc.h, ce)))
 
-    def test_semantiques_pressees(self):
-        """Vérifie les variantes pressées d'error, warning et success : la luminosité descend de l'écart de pression
-        des états (states.pressed.lightness_delta), en OKLCH, chroma et teinte inchangés."""
-        dl = self.data["states"]["pressed"]["lightness_delta"]
+    def test_semantiques_pastilles(self):
+        """Vérifie les variantes de survol et de pression d'error, warning et success, propres aux pastilles de
+        fenêtre : la luminosité monte ou descend des écarts de la section pastilles (et non de ceux des états), en
+        OKLCH, chroma et teinte inchangés ; les trois teintes d'une même pastille restent distinctes."""
+        p = self.data["pastilles"]
         for k in ("error", "warning", "success"):
-            s = self.model["semantic"][k]
+            s, c = self.model["semantic"][k], self.out["color"]
             with self.subTest(teinte=k):
-                self.assertEqual(self.out["color"][f"{k}Pressed"], to_hex(Oklch(round(s.l + dl, 3), s.c, s.h)))
-                self.assertNotEqual(self.out["color"][f"{k}Pressed"], self.out["color"][k])
+                for suffixe, dl in (("Hover", p["hover_lightness_delta"]), ("Pressed", p["pressed_lightness_delta"])):
+                    self.assertEqual(c[f"{k}{suffixe}"], to_hex(Oklch(round(s.l + dl, 3), s.c, s.h)))
+                self.assertEqual(len({c[k], c[f"{k}Hover"], c[f"{k}Pressed"]}), 3)
+        self.assertGreater(p["hover_lightness_delta"], self.data["states"]["hover"]["lightness_delta"])
+        self.assertLess(p["pressed_lightness_delta"], self.data["states"]["pressed"]["lightness_delta"])
 
     def test_focus(self):
         """Vérifie l'anneau de focus : couleurs, épaisseur et décalages."""

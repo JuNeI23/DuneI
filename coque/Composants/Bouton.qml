@@ -14,7 +14,8 @@ import "../Theme"
 // Sorties : etat, l'Etat du bouton (rôle, interaction, sélection, couleurs), lu par la planche et les essais.
 // Erreurs : aucune ; avant le chargement des tokens, les cotes sont nulles et les couleurs transparentes.
 // Dépendances : QtQuick.Templates, Theme (density, radius, space), Etat, AnneauFocus, Texte, Icone.
-// Cotes : retrait horizontal space.scale[2] (12), écart entre l'icône et le texte space.scale[0] (4).
+// Cotes : retrait horizontal space.scale[2] (12), écart entre l'icône et le texte space.scale[0] (4) ; icône de
+// icons.sizes.dense (16), plus petite que la taille par défaut, à côté du texte (conception, § 7.10, v0.7).
 T.AbstractButton {
     id: bouton
 
@@ -59,6 +60,7 @@ T.AbstractButton {
                 anchors.verticalCenter: parent.verticalCenter
                 visible: bouton.icone !== ""
                 nom: bouton.icone
+                taille: Theme.icons?.sizes.dense ?? 0
                 couleur: etat.texte
             }
 
