@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Templates as T
+import Quickshell
 import "../Theme"
 
 // Curseur — curseur horizontal de la coque : une piste, sa partie remplie et une poignée.
@@ -15,8 +16,10 @@ import "../Theme"
 // Sorties : etat, l'Etat de la poignée (rôle, interaction, sélection, couleurs) ; down, copie de pressed, que
 // lit Etats.interaction (T.Slider n'a pas de down) ; poignee, diamètre de la poignée.
 // Erreurs : aucune ; avant le chargement des tokens, les cotes sont nulles et les couleurs transparentes.
-// Dépendances : QtQuick.Templates, Theme (density, elevation, stateColors, color.knob, knob.disabled), Etat,
-// AnneauFocus.
+// Quand le thème traite les contrôles blancs (au jour), la poignée est cernée du contour controls.outline et porte
+// l'ombre controls.shadow, qui la détachent de la piste et du fond.
+// Dépendances : QtQuick.Templates, Quickshell (QsWindow : rapport de pixels, pour le filet), Theme (density,
+// elevation, stateColors, color.knob, knob.disabled, controls, hairline), Etat, AnneauFocus, OmbreControle.
 // Cotes : largeur implicite density.sliderWidth, piste de density.sliderTrack d'épaisseur, poignée de
 // density.sliderHandle ; rayons en demi-hauteur.
 T.Slider {
@@ -62,6 +65,12 @@ T.Slider {
         height: width
         radius: width / 2
         color: (etat.interaction === "disabled" ? Theme.knob?.disabled : Theme.color?.knob) ?? "transparent"
+        border.width: Theme.controls?.outline ? Theme.hairline(QsWindow.window?.devicePixelRatio ?? 1) ?? 0 : 0
+        border.color: Theme.controls?.outline ?? "transparent"
+
+        OmbreControle {
+            cible: parent
+        }
 
         AnneauFocus {
             cible: parent

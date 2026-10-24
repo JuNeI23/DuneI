@@ -68,7 +68,7 @@ def _states(model: dict) -> dict:
 
     Entrée : model — sortie de model.resolve.
     Sortie : dict states[rôle][sélection][interaction] = {"fill": "#rrggbb", "text": "#rrggbb"},
-             soit 4 × 4 × 4 entrées. Erreurs : KeyError si une section du TOML manque.
+             soit 5 × 4 × 4 entrées (controlOff : piste éteinte et rail d'onglets). Erreurs : KeyError si une section du TOML manque.
     Dépendances : color.oklch, color.to_hex, model.role_text.
     """
     raw, roles = model["raw"], model["roles"]
@@ -114,7 +114,7 @@ def _states(model: dict) -> dict:
         return {k: {"fill": to_hex(f), "text": to_hex(t)} for k, (f, t) in cols.items()}
 
     return {_camel(r): {s: combinaisons(r, s) for s in ("none", "active", "inactive", "activeMuted")}
-            for r in ("surface-window", "surface-panel", "surface-raised", "control-raised")}
+            for r in ("surface-window", "surface-panel", "surface-raised", "control-raised", "control-off")}
 
 
 def _focus(model: dict) -> dict:
@@ -131,13 +131,31 @@ def _focus(model: dict) -> dict:
             "width": f["ring_width"], "offset": f["ring_offset"], "rowOffset": f["ring_offset_row"]}
 
 
+def _controles(model: dict) -> dict:
+    """Traitement des contrôles blancs : contour, piste éteinte et ombre (section [controls]).
+
+    Entrée : model — sortie de model.resolve.
+    Sortie : dict {outline, offTrack, shadow, shadowBlur, shadowOffsetY} ; outline est la couleur du rôle nommé
+             par controls.outline, None si ce nom est vide ; shadow est la couleur des ombres (`#AArrggbb`) à
+             l'opacité controls.shadow_opacity, None à l'opacité nulle.
+    Erreurs : KeyError si [controls], [surface_material] ou le rôle nommé manque.
+    Dépendances : _argb, color.Oklch, color.to_hex.
+    """
+    c = model["raw"]["controls"]
+    ombre = Oklch(**model["raw"]["surface_material"]["shadow_color"])
+    return {"outline": to_hex(model["roles"][c["outline"]]) if c["outline"] else None,
+            "offTrack": c["off_track"],
+            "shadow": _argb(ombre, c["shadow_opacity"]) if c["shadow_opacity"] else None,
+            "shadowBlur": c["shadow_blur"], "shadowOffsetY": c["shadow_offset_y"]}
+
+
 def _theme(model: dict) -> dict:
     """Branche d'un thème — couleurs, états, focus, désactivé, élévation, matière et rendu.
 
     Entrée : model — sortie de model.resolve sur les données d'un thème (model.theme_data).
-    Sortie : dict {color, states, focus, disabled, elevation, material, render}, `color.knob` et `knob` compris.
+    Sortie : dict {color, states, focus, disabled, elevation, material, render, knob, controls}, `color.knob` compris.
     Erreurs : KeyError si une section du TOML manque.
-    Dépendances : _camel, _argb, _states, _focus, _eteint, color.oklch, color.to_hex.
+    Dépendances : _camel, _argb, _states, _focus, _eteint, _controles, color.oklch, color.to_hex.
     """
     raw, sem = model["raw"], model["semantic"]
     mat, ceiling = raw["surface_material"], raw["theme"]["chroma_ceiling"]
@@ -190,6 +208,7 @@ def _theme(model: dict) -> dict:
                    "neverAnimateBlurRadius": raw["render"]["never_animate_blur_radius"],
                    "hairlinePhysical": raw["scaling"]["hairlines_in_physical_pixels"]},
         "knob": {"rest": to_hex(model["knob"]), "disabled": to_hex(_eteint(model, model["knob"], fond_off))},
+        "controls": _controles(model),
     }
     return out
 

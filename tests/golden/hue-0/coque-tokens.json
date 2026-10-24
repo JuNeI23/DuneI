@@ -153,6 +153,7 @@
           "textPrimary": "#f2e6e9",
           "textEmphasis": "#fef1f5",
           "controlRaised": "#392c30",
+          "controlOff": "#2c2024",
           "accent": "#ad3e68",
           "accentStandalone": "#f27ca4",
           "onAccent": "#fefbfc",
@@ -465,6 +466,80 @@
                 "text": "#959595"
               }
             }
+          },
+          "controlOff": {
+            "none": {
+              "rest": {
+                "fill": "#2c2024",
+                "text": "#f2e6e9"
+              },
+              "hover": {
+                "fill": "#362a2d",
+                "text": "#f2e6e9"
+              },
+              "pressed": {
+                "fill": "#25191c",
+                "text": "#f2e6e9"
+              },
+              "disabled": {
+                "fill": "#252324",
+                "text": "#777575"
+              }
+            },
+            "active": {
+              "rest": {
+                "fill": "#ad3e68",
+                "text": "#fefbfc"
+              },
+              "hover": {
+                "fill": "#ba4a74",
+                "text": "#fefbfc"
+              },
+              "pressed": {
+                "fill": "#a33460",
+                "text": "#fefbfc"
+              },
+              "disabled": {
+                "fill": "#4e3e42",
+                "text": "#919191"
+              }
+            },
+            "inactive": {
+              "rest": {
+                "fill": "#392c30",
+                "text": "#f2e6e9"
+              },
+              "hover": {
+                "fill": "#44363a",
+                "text": "#f2e6e9"
+              },
+              "pressed": {
+                "fill": "#312528",
+                "text": "#f2e6e9"
+              },
+              "disabled": {
+                "fill": "#2b2929",
+                "text": "#7a7979"
+              }
+            },
+            "activeMuted": {
+              "rest": {
+                "fill": "#6c6c6c",
+                "text": "#fefbfc"
+              },
+              "hover": {
+                "fill": "#777777",
+                "text": "#fefbfc"
+              },
+              "pressed": {
+                "fill": "#636363",
+                "text": "#fefbfc"
+              },
+              "disabled": {
+                "fill": "#434343",
+                "text": "#919191"
+              }
+            }
           }
         },
         "focus": {
@@ -528,6 +603,13 @@
         "knob": {
           "rest": "#fef1f5",
           "disabled": "#838282"
+        },
+        "controls": {
+          "outline": null,
+          "offTrack": false,
+          "shadow": null,
+          "shadowBlur": 4,
+          "shadowOffsetY": 1
         }
       },
       "jour": {
@@ -545,6 +627,7 @@
           "textPrimary": "#2d1c21",
           "textEmphasis": "#1c0c11",
           "controlRaised": "#ffffff",
+          "controlOff": "#d5cbcd",
           "accent": "#ad3e68",
           "accentStandalone": "#992b57",
           "onAccent": "#fefbfc",
@@ -857,6 +940,80 @@
                 "text": "#e5e5e5"
               }
             }
+          },
+          "controlOff": {
+            "none": {
+              "rest": {
+                "fill": "#d5cbcd",
+                "text": "#2d1c21"
+              },
+              "hover": {
+                "fill": "#cbc1c4",
+                "text": "#2d1c21"
+              },
+              "pressed": {
+                "fill": "#c5bbbd",
+                "text": "#2d1c21"
+              },
+              "disabled": {
+                "fill": "#cfcdcd",
+                "text": "#7d797a"
+              }
+            },
+            "active": {
+              "rest": {
+                "fill": "#ad3e68",
+                "text": "#fefbfc"
+              },
+              "hover": {
+                "fill": "#a33460",
+                "text": "#fefbfc"
+              },
+              "pressed": {
+                "fill": "#9c2e5a",
+                "text": "#fefbfc"
+              },
+              "disabled": {
+                "fill": "#ad9ba0",
+                "text": "#c9c8c8"
+              }
+            },
+            "inactive": {
+              "rest": {
+                "fill": "#fff6f8",
+                "text": "#2d1c21"
+              },
+              "hover": {
+                "fill": "#f8ebee",
+                "text": "#2d1c21"
+              },
+              "pressed": {
+                "fill": "#f1e4e7",
+                "text": "#2d1c21"
+              },
+              "disabled": {
+                "fill": "#e2e0e0",
+                "text": "#868383"
+              }
+            },
+            "activeMuted": {
+              "rest": {
+                "fill": "#9e9e9e",
+                "text": "#fefbfc"
+              },
+              "hover": {
+                "fill": "#959595",
+                "text": "#fefbfc"
+              },
+              "pressed": {
+                "fill": "#8f8f8f",
+                "text": "#fefbfc"
+              },
+              "disabled": {
+                "fill": "#b8b8b8",
+                "text": "#d6d6d6"
+              }
+            }
           }
         },
         "focus": {
@@ -920,6 +1077,13 @@
         "knob": {
           "rest": "#ffffff",
           "disabled": "#e3e3e3"
+        },
+        "controls": {
+          "outline": "#d5cbcd",
+          "offTrack": true,
+          "shadow": "#33000000",
+          "shadowBlur": 4,
+          "shadowOffsetY": 1
         }
       }
     },
@@ -939,6 +1103,7 @@
           "textPrimary": "#e9e9e9",
           "textEmphasis": "#f5f5f5",
           "controlRaised": "#292929",
+          "controlOff": "#1d1d1d",
           "accent": "#ad3e68",
           "accentStandalone": "#f27ca4",
           "onAccent": "#fefbfc",
@@ -1251,6 +1416,80 @@
                 "text": "#939293"
               }
             }
+          },
+          "controlOff": {
+            "none": {
+              "rest": {
+                "fill": "#1d1d1d",
+                "text": "#e9e9e9"
+              },
+              "hover": {
+                "fill": "#262626",
+                "text": "#e9e9e9"
+              },
+              "pressed": {
+                "fill": "#161616",
+                "text": "#e9e9e9"
+              },
+              "disabled": {
+                "fill": "#1d1d1d",
+                "text": "#717171"
+              }
+            },
+            "active": {
+              "rest": {
+                "fill": "#ad3e68",
+                "text": "#fefbfc"
+              },
+              "hover": {
+                "fill": "#ba4a74",
+                "text": "#fefbfc"
+              },
+              "pressed": {
+                "fill": "#a33460",
+                "text": "#fefbfc"
+              },
+              "disabled": {
+                "fill": "#493a3e",
+                "text": "#8e8e8e"
+              }
+            },
+            "inactive": {
+              "rest": {
+                "fill": "#292929",
+                "text": "#e9e9e9"
+              },
+              "hover": {
+                "fill": "#333333",
+                "text": "#e9e9e9"
+              },
+              "pressed": {
+                "fill": "#222222",
+                "text": "#e9e9e9"
+              },
+              "disabled": {
+                "fill": "#222222",
+                "text": "#747474"
+              }
+            },
+            "activeMuted": {
+              "rest": {
+                "fill": "#6c6c6c",
+                "text": "#fefbfc"
+              },
+              "hover": {
+                "fill": "#777777",
+                "text": "#fefbfc"
+              },
+              "pressed": {
+                "fill": "#636363",
+                "text": "#fefbfc"
+              },
+              "disabled": {
+                "fill": "#3e3e3e",
+                "text": "#8e8e8e"
+              }
+            }
           }
         },
         "focus": {
@@ -1314,6 +1553,13 @@
         "knob": {
           "rest": "#f5f5f5",
           "disabled": "#7d7d7d"
+        },
+        "controls": {
+          "outline": null,
+          "offTrack": false,
+          "shadow": null,
+          "shadowBlur": 4,
+          "shadowOffsetY": 1
         }
       },
       "jour": {
@@ -1331,6 +1577,7 @@
           "textPrimary": "#222222",
           "textEmphasis": "#121212",
           "controlRaised": "#ffffff",
+          "controlOff": "#cecece",
           "accent": "#ad3e68",
           "accentStandalone": "#992b57",
           "onAccent": "#fefbfc",
@@ -1643,6 +1890,80 @@
                 "text": "#e5e5e5"
               }
             }
+          },
+          "controlOff": {
+            "none": {
+              "rest": {
+                "fill": "#cecece",
+                "text": "#222222"
+              },
+              "hover": {
+                "fill": "#c4c4c4",
+                "text": "#222222"
+              },
+              "pressed": {
+                "fill": "#bebebe",
+                "text": "#222222"
+              },
+              "disabled": {
+                "fill": "#cecece",
+                "text": "#7a7a7a"
+              }
+            },
+            "active": {
+              "rest": {
+                "fill": "#ad3e68",
+                "text": "#fefbfc"
+              },
+              "hover": {
+                "fill": "#a33460",
+                "text": "#fefbfc"
+              },
+              "pressed": {
+                "fill": "#9c2e5a",
+                "text": "#fefbfc"
+              },
+              "disabled": {
+                "fill": "#ad9ba0",
+                "text": "#c9c8c8"
+              }
+            },
+            "inactive": {
+              "rest": {
+                "fill": "#f8f8f8",
+                "text": "#222222"
+              },
+              "hover": {
+                "fill": "#eeeeee",
+                "text": "#222222"
+              },
+              "pressed": {
+                "fill": "#e8e8e8",
+                "text": "#222222"
+              },
+              "disabled": {
+                "fill": "#e0e0e0",
+                "text": "#848484"
+              }
+            },
+            "activeMuted": {
+              "rest": {
+                "fill": "#9e9e9e",
+                "text": "#fefbfc"
+              },
+              "hover": {
+                "fill": "#959595",
+                "text": "#fefbfc"
+              },
+              "pressed": {
+                "fill": "#8f8f8f",
+                "text": "#fefbfc"
+              },
+              "disabled": {
+                "fill": "#b8b8b8",
+                "text": "#d6d6d6"
+              }
+            }
           }
         },
         "focus": {
@@ -1706,6 +2027,13 @@
         "knob": {
           "rest": "#ffffff",
           "disabled": "#e3e3e3"
+        },
+        "controls": {
+          "outline": "#cecece",
+          "offTrack": true,
+          "shadow": "#33000000",
+          "shadowBlur": 4,
+          "shadowOffsetY": 1
         }
       }
     }

@@ -1,6 +1,8 @@
 import QtQuick
 import QtQuick.Templates as T
+import Quickshell
 import "../Theme"
+import "etats.js" as Etats
 
 // Onglet — onglet d'une barre d'onglets, l'accent sur l'onglet actif et non sur la barre.
 // Rôle : habille le gabarit sans style T.TabButton (conception, § 7.1). Dans une barre Onglets, c'est un segment
@@ -18,13 +20,17 @@ import "../Theme"
 // la barre n'est jamais privée d'arrêt. Hors d'une barre, l'onglet est un arrêt ordinaire. Dans une barre,
 // l'anneau de focus clavier entoure la barre entière (Onglets), et non le segment ; hors d'une barre, il entoure
 // l'onglet, sur visualFocus. Un clic ne vole pas le focus d'un champ (Qt.TabFocus).
+// Quand le thème traite les contrôles blancs (au jour), un fond peint hors accent est cerné du contour
+// controls.outline, et le segment coché d'une barre porte en plus l'ombre controls.shadow : blanc sur le rail gris,
+// il se lit d'un coup d'œil, comme le contrôle segmenté de macOS.
 // Entrées : text, checked et le reste de l'API de T.TabButton.
 // Sorties : etat, l'Etat de l'onglet (rôle, interaction, sélection, couleurs) ; barre, la T.TabBar qui le
 // porte, null hors d'une barre ; focusDansGroupe, vrai quand la barre a le focus ou que l'onglet n'est dans
 // aucune barre ; anneau, l'anneau de focus propre à l'onglet, jamais montré dans une barre.
 // Erreurs : aucune ; avant le chargement des tokens, les cotes sont nulles et les couleurs transparentes.
-// Dépendances : QtQuick.Templates (TabButton, propriété attachée TabBar.tabBar), Theme (density, radius,
-// space), Etat, AnneauFocus, Texte ; Onglets comme barre, dont la piste et le retrait encadrent le segment.
+// Dépendances : QtQuick.Templates (TabButton, propriété attachée TabBar.tabBar), Quickshell (QsWindow : rapport de
+// pixels, pour le filet), Theme (density, radius, space, controls, hairline), etats.js (contoure), Etat,
+// AnneauFocus, OmbreControle, Texte ; Onglets comme barre, dont la piste et le retrait encadrent le segment.
 // Cotes : retrait horizontal space.scale[2] (12), comme le bouton ; rayon radius.control hors d'une barre,
 // diminué du retrait de la barre (Onglets.retrait) dans une barre.
 T.TabButton {
@@ -64,7 +70,15 @@ T.TabButton {
     // Un segment non coché d'une barre n'a de fond qu'à la pression : au repos comme au survol, la piste se lit.
     background: Rectangle {
         radius: (Theme.radius?.control ?? 0) - (onglet.barre?.retrait ?? 0)
-        color: !onglet.barre || onglet.checked || etat.interaction === "pressed" ? etat.fond : "transparent"
+        readonly property bool peint: !onglet.barre || onglet.checked || etat.interaction === "pressed"
+        color: peint ? etat.fond : "transparent"
+        border.width: peint && Theme.controls?.outline && Etats.contoure(etat.selection) ? Theme.hairline(QsWindow.window?.devicePixelRatio ?? 1) ?? 0 : 0
+        border.color: Theme.controls?.outline ?? "transparent"
+
+        OmbreControle {
+            cible: parent
+            montre: !!onglet.barre && onglet.checked
+        }
 
         AnneauFocus {
             id: anneau

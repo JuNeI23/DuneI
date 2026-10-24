@@ -15,12 +15,14 @@ import "etats.js" as Etats
 // (Onglet) : l'anneau de focus clavier entoure donc toute la piste, dès qu'un de ses segments a visualFocus, et
 // non le segment, dont l'anneau chevaucherait le segment voisin (v0.6) ; il passe en focus.colorMuted sous le
 // modificateur inactive.
+// Quand le thème traite les contrôles blancs (controls.offTrack, au jour), la piste prend le gris plein
+// color.controlOff, sur lequel le segment coché, blanc, cerné et ombré, se détache (Onglet).
 // Entrées : les Onglet déclarés comme enfants ; currentIndex et le reste de l'API de T.TabBar.
 // Sorties : currentIndex, l'onglet coché ; retrait, retrait des segments dans la piste ; largeurSegment,
 // largeur commune des segments ; anneau, l'anneau de focus de la barre, lu par les essais.
 // Erreurs : aucune ; avant le chargement des tokens, les cotes sont nulles et la piste transparente.
 // Dépendances : QtQuick.Templates (TabBar, qui donne à chaque segment la largeur de la rangée partagée en parts
-// égales et la hauteur contentHeight), Theme (density, elevation, radius), AnneauFocus, etats.js (herite), Onglet
+// égales et la hauteur contentHeight), Theme (density, elevation, radius, controls, color.controlOff), AnneauFocus, etats.js (herite), Onglet
 // comme enfants.
 T.TabBar {
     id: barre
@@ -37,7 +39,7 @@ T.TabBar {
 
     background: Rectangle {
         radius: Theme.radius?.control ?? 0
-        color: Theme.elevation?.field?.fill ?? "transparent"
+        color: (Theme.controls?.offTrack ? Theme.color?.controlOff : Theme.elevation?.field?.fill) ?? "transparent"
 
         AnneauFocus {
             id: anneau

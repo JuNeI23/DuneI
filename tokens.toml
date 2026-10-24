@@ -38,6 +38,7 @@ contrast_floor = 75        # Lc — plancher de rejet
 "success" = 53
 "info" = 48
 "knob-accent" = 73
+"knob-off" = 98
 
 
 # ===========================================================================
@@ -128,6 +129,8 @@ text-secondary   = 9
 text-primary     = 10
 text-emphasis    = 11
 control-raised   = 4     # fond des contrôles posés sur E3 ; pas un niveau d'élévation
+control-off      = 3     # piste éteinte (interrupteur, bascule) et rail d'onglets quand [controls] off_track est vrai ;
+                         # à la nuit, la couleur de la piste éteinte posée sur un panneau, mais la nuit ne s'en sert pas
 
 # Texte des états d'un rôle de fond, quand ce n'est pas text-primary (sélections none et inactive).
 [role_text]
@@ -485,6 +488,16 @@ never_animate_blur_radius = true   # fondu croisé net/flouté : c'est une règl
 # ===========================================================================
 # Ordre de fusion : base, moment, famille (model.theme_data).
 
+# Contrôles blancs : traitement des contrôles qui n'ont pas de filet propre (bouton, onglet, déroulant, disque de
+# l'interrupteur et de la bascule, poignée du curseur). La nuit n'en a aucun ; le jour, où ces contrôles sont blancs
+# sur des surfaces presque blanches, les détache (L2-40, 7b).
+[controls]
+outline = ""            # rôle du contour d'un pixel physique, celui de la case ; vide : aucun contour
+off_track = false       # vrai : piste éteinte et rail d'onglets au rôle control-off ; faux : fond de l'Etat
+shadow_opacity = 0.0    # ombre de la poignée du curseur et de l'onglet coché, en noir ; 0 : aucune ombre
+shadow_blur = 4         # px logiques, portée du flou de cette ombre
+shadow_offset_y = 1     # px logiques, décalage de cette ombre vers le bas
+
 [knob]
 disabled_toward = "control-raised"   # rôle dont le bouton éteint se rapproche (même règle que states.disabled)
 role = "text-emphasis"   # nuit : la couleur qu'ont aujourd'hui le disque et la poignée ; une clé lightness l'emporte sur role
@@ -509,6 +522,16 @@ neutral_profile = [0.75, 0.75, 0.75, 0.0, 0.6, 0.6, 1.0, 1.0, 1.0, 1.0, 1.4, 1.4
 
 [moments.jour.roles]
 control-raised = 3       # blanc, comme E3 : l'ombre et le liseré le détachent
+control-off = 5          # gris moyen plein (L 0,85), comme la piste éteinte de macOS : le disque blanc s'y détache
+
+[moments.jour.controls]
+outline = "border-default"
+off_track = true
+shadow_opacity = 0.20
+
+# Le knob blanc sur la piste éteinte grise : un plancher propre au jour (la nuit mesure Lc 98, sur un fond sombre).
+[moments.jour.meta.planchers]
+"knob-off" = 15
 
 [moments.jour.elevation.e2]
 sheen = false

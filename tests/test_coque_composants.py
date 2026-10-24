@@ -486,6 +486,25 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
             self.ipc("knobsActifs", "false")
             self.assertEqual(self.lire_jusqua("knobs", f"{eteint} {eteint}"), f"{eteint} {eteint}".lower())
 
+    def test_controles_blancs(self):
+        # À la nuit, aucun contour ni ombre, et la piste éteinte garde le fond de son Etat (surfaceRaised sur le
+        # panneau) : la nuit ne change pas. Au jour, le contour d'un pixel cerne le bouton, le disque, la poignée
+        # et le disque éteint de la bascule, mais pas l'onglet coché hors barre, à l'accent ; la poignée porte son
+        # ombre ; la piste éteinte et le disque éteint prennent controlOff.
+        self.demarrer()
+        self.ipc("interrupteurCocher", "false")
+        self.ipc("basculeCocher", "false")
+        for famille, moment in ((None, None), ("thematisee", "jour")):
+            if famille:
+                self.choisir(famille, moment)
+            vue = self.vue(55, famille, moment)
+            jour = moment == "jour"
+            piste = (vue["color"]["controlOff"] if jour else vue["states"]["surfaceRaised"]["none"]["rest"]["fill"])
+            n = "1" if jour else "0"
+            attendu = f'{n} {n} {n} 0 {n} {str(jour).lower()} {piste} {piste}'
+            with self.subTest(moment=moment or "nuit"):
+                self.assertEqual(self.lire_jusqua("contours", attendu), attendu.lower())
+
     def test_pastilles_hors_moment(self):
         # Les pastilles ne dépendent pas du moment : au jour, les mêmes teintes et le même glyphe qu'à la nuit.
         self.demarrer()

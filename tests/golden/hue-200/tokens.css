@@ -27,6 +27,7 @@
   --text-primary: oklch(0.935 0.0140 200);
   --text-emphasis: oklch(0.970 0.0140 200);
   --control-raised: oklch(0.310 0.0196 200);
+  --control-off: oklch(0.260 0.0196 200);
 
   --accent: oklch(0.530 0.1500 200);
   --accent-standalone: oklch(0.730 0.1500 200);

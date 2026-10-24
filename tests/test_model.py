@@ -3,7 +3,7 @@
 import unittest
 from pathlib import Path
 
-from dunei_theme.checks import check
+from dunei_theme.checks import check, mesures
 from dunei_theme.model import defaut, load, resolve, theme_data, themes
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -139,7 +139,7 @@ class ModelTest(unittest.TestCase):
         th, do = (resolve(theme_data(self.data, f, "nuit"), 55)["roles"] for f in ("thematisee", "dominante"))
         for r in th:
             with self.subTest(role=r):
-                ecart = 0.03 if r.startswith("surface-") or r in ("control-raised", "border-subtle") else 0
+                ecart = 0.03 if r.startswith("surface-") or r in ("control-raised", "control-off", "border-subtle") else 0
                 self.assertAlmostEqual(do[r].l, th[r].l - ecart, places=6)
         jt, jd = self._jour("thematisee")["roles"], self._jour("dominante")["roles"]
         self.assertEqual({r: c.l for r, c in jt.items()}, {r: c.l for r, c in jd.items()})
@@ -154,6 +154,19 @@ class ModelTest(unittest.TestCase):
                     self.assertGreaterEqual(r[s].c, 0.012)
                 self.assertEqual((r["surface-raised"].c, r["control-raised"].c), (0, 0))
                 self.assertTrue(all(c.c == 0 for c in self._jour("dominante", h)["ramp"]))
+
+    def test_piste_eteinte(self):
+        """Vérifie le rôle control-off : à la nuit, la piste éteinte d'aujourd'hui sur un panneau (surface-raised) ;
+        au jour, un gris moyen (L 0,80 à 0,85) sur lequel le knob blanc se détache (|Lc| ≥ 15)."""
+        for f in ("thematisee", "dominante"):
+            nuit = resolve(theme_data(self.data, f, "nuit"), 55)
+            with self.subTest(famille=f):
+                self.assertEqual(nuit["roles"]["control-off"], nuit["roles"]["surface-raised"])
+                for h in HUES:
+                    jour = self._jour(f, h)
+                    self.assertTrue(0.80 <= jour["roles"]["control-off"].l <= 0.85)
+                    self.assertEqual(check(jour), [])
+                    self.assertGreaterEqual(mesures(jour)["knob-off"], 15)
 
     def test_theme_inconnu(self):
         with self.assertRaisesRegex(KeyError, "famille inconnue : verre"):

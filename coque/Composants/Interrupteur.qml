@@ -1,6 +1,8 @@
 import QtQuick
 import QtQuick.Templates as T
+import Quickshell
 import "../Theme"
+import "etats.js" as Etats
 
 // Interrupteur — interrupteur de la coque : une piste en pilule et son bouton, suivis d'un libellé facultatif.
 // Rôle : habille le gabarit sans style T.Switch (conception, § 7.1), à la forme de macOS (§ 7.10). La piste prend le
@@ -13,7 +15,10 @@ import "../Theme"
 // Entrées : text, checked et le reste de l'API de T.Switch.
 // Sorties : etat, l'Etat de l'interrupteur (rôle, interaction, sélection, couleurs).
 // Erreurs : aucune ; avant le chargement des tokens, les cotes sont nulles et les couleurs transparentes.
-// Dépendances : QtQuick.Templates, Theme (density, space, color.knob, knob.disabled), Etat, AnneauFocus, Texte.
+// Quand le thème traite les contrôles blancs (au jour), la piste prend le rôle controlOff, gris plein sur lequel le
+// bouton blanc se détache éteint (controls.offTrack), et le bouton est cerné du contour controls.outline.
+// Dépendances : QtQuick.Templates, Quickshell (QsWindow : rapport de pixels, pour le filet), Theme (density, space,
+// color.knob, knob.disabled, controls, hairline), etats.js (cran, herite), Etat, AnneauFocus, Texte.
 // Cotes : piste de density.switchWidth sur density.switchHeight, bouton de density.switchThumb, centré dans
 // la hauteur de la piste, donc à (switchHeight - switchThumb) / 2 de son bord (2 px) ; rayons en
 // demi-hauteur ; écart entre la piste et le libellé space.scale[1] (8).
@@ -31,6 +36,7 @@ T.Switch {
         id: etat
         controle: interrupteur
         selectionne: interrupteur.checked
+        role: Theme.controls?.offTrack ? "controlOff" : Etats.cran(Etats.herite(interrupteur, "dnRole", "surfaceWindow"))
     }
 
     indicator: Rectangle {
@@ -52,6 +58,8 @@ T.Switch {
             height: width
             radius: height / 2
             color: (etat.interaction === "disabled" ? Theme.knob?.disabled : Theme.color?.knob) ?? "transparent"
+            border.width: Theme.controls?.outline ? Theme.hairline(QsWindow.window?.devicePixelRatio ?? 1) ?? 0 : 0
+            border.color: Theme.controls?.outline ?? "transparent"
         }
 
         AnneauFocus {

@@ -17,14 +17,15 @@ def model(text_l=0.95, surface_l=0.18, on_accent_l=0.99, offsets=(0, 120, 240), 
     grey = lambda l: Oklch(l, 0.0, 0.0)
     keys = ["text-disabled", "text-tertiary", "text-secondary", "text-primary", "text-emphasis", "border-subtle",
             "border-default", "border-strong", "control-raised-text", "accent-standalone", "error", "warning",
-            "success", "info", "categorical", "knob-accent"]
+            "success", "info", "categorical", "knob-accent", "knob-off"]
     return {
         "roles": {"text-primary": grey(text_l), "text-emphasis": grey(emphasis_l), "text-secondary": grey(secondary_l),
                   "text-tertiary": grey(tertiary_l), "text-disabled": grey(disabled_l),
                   "border-subtle": grey(border_l - 0.06), "border-default": grey(border_l - 0.03),
                   "border-strong": grey(border_l),
                   "surface-window": surf,
-                  "surface-panel": surf, "surface-raised": surf, "control-raised": surf},
+                  "surface-panel": surf, "surface-raised": surf, "control-raised": surf,
+                  "control-off": grey(0.50)},
         "accent": Oklch(0.53, 0.0, 0.0),
         "accent_standalone": grey(0.80),
         "knob": grey(0.97),
@@ -83,6 +84,13 @@ class CheckTest(unittest.TestCase):
         self.assertTrue(has(w, "text-secondary", "plancher"))
         self.assertTrue(has(check(m), "text-secondary", "plancher"))
         self.assertIn("text-secondary", mesures(m))
+
+    def test_knob_sur_piste_eteinte(self):
+        """Le knob trop proche de la piste éteinte franchit le plancher knob-off."""
+        m = model(floors={"knob-off": 15})
+        self.assertEqual(planchers(m), [])
+        m["roles"]["control-off"] = Oklch(0.96, 0.0, 0.0)
+        self.assertTrue(has(planchers(m), "knob-off", "plancher"))
 
     def test_ordre_inverse(self):
         """text-tertiary plus contrasté que text-secondary renverse l'ordre des rôles."""

@@ -60,7 +60,8 @@ def mesures(model: dict) -> dict[str, float]:
     Entrée : model — sortie de model.resolve.
     Sortie : {clé: Lc minimal}. Clés : chaque rôle text-* et border-* sur les trois surfaces ;
              control-raised-text (role_text sur control-raised) ; accent-standalone, error, warning, success,
-             info et categorical (toutes les catégorielles) sur les trois surfaces ; knob-accent (knob sur accent).
+             info et categorical (toutes les catégorielles) sur les trois surfaces ; knob-accent (knob sur accent) ;
+             knob-off (knob sur la piste éteinte, rôle control-off).
     Erreurs : KeyError si un rôle, une sémantique ou raw["role_text"] manque.
     Dépendances : _lc, model.role_text, SURFACES.
     """
@@ -73,6 +74,7 @@ def mesures(model: dict) -> dict[str, float]:
     for name, cs in couleurs.items():
         out[name] = min(_lc(c, roles[bg]) for c in cs for bg in SURFACES)
     out["knob-accent"] = _lc(model["knob"], model["accent"])
+    out["knob-off"] = _lc(model["knob"], roles["control-off"])
     return out
 
 

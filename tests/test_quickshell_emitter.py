@@ -31,7 +31,7 @@ class QuickshellEmitterTest(unittest.TestCase):
             "_generated", "hue", "space", "density", "radius", "window", "layout", "breakpoints", "typo", "icons",
             "familles", "moments", "defaut", "themes", "pastilles"])
         self.assertEqual(list(self.nuit), ["color", "states", "focus", "disabled", "elevation", "material", "render",
-                                           "knob"])
+                                           "knob", "controls"])
 
     def test_quatre_themes(self):
         """Vérifie les deux familles, leurs deux moments et le thème par défaut."""
@@ -56,6 +56,22 @@ class QuickshellEmitterTest(unittest.TestCase):
                 self.assertEqual(t["knob"]["rest"], t["color"]["knob"])
             for t in f.values():
                 self.assertNotEqual(t["knob"]["disabled"], t["knob"]["rest"])
+
+    def test_controles_blancs(self):
+        """Vérifie la branche controls : à la nuit, ni contour, ni piste éteinte propre, ni ombre (la nuit ne change
+        pas à l'écran) ; au jour, le contour au rôle de la bordure de la case, la piste éteinte au rôle control-off,
+        une ombre translucide ; et les états du rôle controlOff dans les quatre thèmes."""
+        for f in ("thematisee", "dominante"):
+            nuit, jour = self.out["themes"][f]["nuit"], self.out["themes"][f]["jour"]
+            with self.subTest(famille=f):
+                self.assertEqual(nuit["controls"], {"outline": None, "offTrack": False, "shadow": None,
+                                                    "shadowBlur": nuit["controls"]["shadowBlur"],
+                                                    "shadowOffsetY": nuit["controls"]["shadowOffsetY"]})
+                self.assertEqual(jour["controls"]["outline"], jour["color"]["borderDefault"])
+                self.assertTrue(jour["controls"]["offTrack"])
+                self.assertRegex(jour["controls"]["shadow"], r"^#[0-9a-f]{8}$")
+                for t in (nuit, jour):
+                    self.assertEqual(t["states"]["controlOff"]["none"]["rest"]["fill"], t["color"]["controlOff"])
 
     def test_roles_en_srgb(self):
         c, m = self.nuit["color"], self.model

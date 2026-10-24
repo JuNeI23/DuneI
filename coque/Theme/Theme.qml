@@ -13,7 +13,7 @@ import Quickshell.Io
 // Entrées : DUNEI_TOKENS_DIR (dossier redirigé, pour la planche et les essais), sinon
 //           $XDG_CONFIG_HOME/dunei, sinon $HOME/.config/dunei ; dans ce dossier, theme.json
 //           {famille, moment}, facultatif.
-// Sorties : dir, ready, famille, moment, tokens et ses raccourcis par groupe (pastilles et knob compris),
+// Sorties : dir, ready, famille, moment, tokens et ses raccourcis par groupe (pastilles, knob et controls compris),
 //           density (confortable), motion, stateColors(), hairline(), police().
 // Erreurs : tokens ou mouvement absents ou illisibles → console.error, ready reste faux ; contenu invalide ou
 //           incomplet → console.warn, valeurs précédentes gardées. theme.json absent → défaut des tokens, en
@@ -51,6 +51,9 @@ Singleton {
     readonly property var elevation: tokens?.elevation
     readonly property var material: tokens?.material
     readonly property var render: tokens?.render
+    // Contrôles blancs du thème actif : contour (outline, couleur ou null), piste éteinte au rôle controlOff
+    // (offTrack), ombre de la poignée et de l'onglet coché (shadow, couleur ou null ; shadowBlur, shadowOffsetY).
+    readonly property var controls: tokens?.controls
     readonly property var space: tokens?.space
     readonly property var radius: tokens?.radius
     readonly property var window: tokens?.window

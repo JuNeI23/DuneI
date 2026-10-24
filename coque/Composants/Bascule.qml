@@ -1,6 +1,8 @@
 import QtQuick
 import QtQuick.Templates as T
+import Quickshell
 import "../Theme"
+import "etats.js" as Etats
 
 // Bascule — bascule à glyphe de la coque : le gros bouton rond du Centre de contrôle de macOS (Wi-Fi, Bluetooth).
 // Rôle : habille le gabarit sans style T.Button, rendu cochable (conception, § 7.10). Un disque porte un glyphe
@@ -18,7 +20,10 @@ import "../Theme"
 // lus par les essais ; cibleFocus (le disque), que la planche entoure de l'anneau.
 // Erreurs : aucune ; un glyphe absent du thème laisse le disque vide ; avant le chargement des tokens, les cotes sont
 // nulles et les couleurs transparentes.
-// Dépendances : QtQuick.Templates, Theme (density, icons, space), Etat, AnneauFocus, Icone, Texte.
+// Quand le thème traite les contrôles blancs (au jour), le disque éteint prend le rôle controlOff, gris plein
+// (controls.offTrack), et le disque non sélectionné est cerné du contour controls.outline.
+// Dépendances : QtQuick.Templates, Quickshell (QsWindow : rapport de pixels, pour le filet), Theme (density, icons,
+// space, controls, hairline), etats.js (cran, herite, contoure), Etat, AnneauFocus, Icone, Texte.
 // Cotes : disque de density.toggleSize (40, 36 en compact), glyphe de icons.sizes.default (20) ; écart entre le disque
 // et le libellé space.scale[0] (4) ; libellé d'échelon 1.
 T.Button {
@@ -43,6 +48,7 @@ T.Button {
         id: etat
         controle: bascule
         selectionne: bascule.checked
+        role: Theme.controls?.offTrack ? "controlOff" : Etats.cran(Etats.herite(bascule, "dnRole", "surfaceWindow"))
     }
 
     // Le disque, centré en haut, et dessous le libellé, posés à la main et non par un Column : leur position ne
@@ -58,6 +64,8 @@ T.Button {
             height: width
             radius: width / 2
             color: etat.fond
+            border.width: Theme.controls?.outline && Etats.contoure(etat.selection) ? Theme.hairline(QsWindow.window?.devicePixelRatio ?? 1) ?? 0 : 0
+            border.color: Theme.controls?.outline ?? "transparent"
 
             Icone {
                 id: glyphe
