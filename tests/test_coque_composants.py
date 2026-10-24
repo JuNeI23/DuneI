@@ -138,17 +138,18 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
     def test_fond_selon_role(self):
         # La Surface panneau ne déclare que son rôle : elle doit peindre elevation.e2, et non e1 ou e0.
         self.demarrer()
-        attendu = json.loads(self.tokens(55).read_text(encoding="utf-8"))["elevation"]["e2"]["fill"]
+        attendu = self.tokens55()[0]["elevation"]["e2"]["fill"]
         self.assertEqual(self.valeur("fond").lower(), attendu.lower())
 
     def tokens55(self) -> dict:
-        """Tokens de la teinte 55 et mouvement, tels que la coque d'essai les lit.
+        """Tokens de la teinte 55 au thème par défaut et mouvement, tels que la coque d'essai les lit.
 
-        Entrées : aucune. Sortie : (tokens, motion), deux dictionnaires.
-        Erreurs : OSError ou JSONDecodeError si un fichier généré manque. Dépendances : tokens, setUpClass.
+        Entrées : aucune. Sortie : (tokens, motion), deux dictionnaires ; tokens est la vue du thème par défaut,
+                  comme Theme.tokens sans theme.json.
+        Erreurs : OSError ou JSONDecodeError si un fichier généré manque. Dépendances : vue, setUpClass.
         """
-        lire = lambda p: json.loads(p.read_text(encoding="utf-8"))
-        return lire(self.tokens(55)), lire(Path(self.gen.name) / "motion" / "motion.json")
+        motion = json.loads((Path(self.gen.name) / "motion" / "motion.json").read_text(encoding="utf-8"))
+        return self.vue(55), motion
 
     def test_texte(self):
         # Texte par défaut : échelon 2 (13 px), graisse régulière, police d'interface, texte primaire.
@@ -271,7 +272,8 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
 
     def test_champ(self):
         # Posé sur la Surface panneau, le champ est enfoncé : fond elevation.field.fill, plus sombre que le
-        # panneau, même au focus ; il prend le focus au clic comme à la tabulation (Qt.StrongFocus vaut 11) ;
+        # panneau à la nuit (le thème par défaut ; au jour, l'enfoncement se lit autrement), même au focus ; il
+        # prend le focus au clic comme à la tabulation (Qt.StrongFocus vaut 11) ;
         # hauteur et rayon viennent des tokens ; il n'a aucun anneau de focus, que remplace le curseur de texte
         # clignotant (§ 7.10) : son fond n'a aucun enfant ; désactivé, le texte prend la couleur de l'état disabled.
         # Le rôle du champ est celui du conteneur (surfacePanel), sans cran.
@@ -280,7 +282,8 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
         fond, panneau, politique, hauteur, rayon, anneau, texte, largeur = self.valeur("champ").split()
         luminance = lambda c: sum(int(c[i:i + 2], 16) * k for i, k in ((1, .2126), (3, .7152), (5, .0722)))
         self.assertEqual(fond.lower(), tokens["elevation"]["field"]["fill"].lower())
-        self.assertLess(luminance(fond), luminance(panneau))
+        if self.vue(55)["defaut"]["moment"] == "nuit":
+            self.assertLess(luminance(fond), luminance(panneau))
         self.assertEqual(politique, "11")
         self.assertEqual((hauteur, rayon), (str(tokens["density"]["comfortable"]["controlHeight"]),
                                             str(tokens["radius"]["control"])))
@@ -430,16 +433,17 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(lu, attendu)
 
     def test_pastilles(self):
-        # Trois disques de density.pastille, espacés de space.scale[1], en error, warning et success au repos ; les
-        # glyphes en surfaceBase ne paraissent qu'au survol (forcé ici, comme la planche), où chaque disque prend la
-        # variante de survol de sa teinte ; pressé, la variante pressée. Ces variantes, propres aux pastilles, sont
-        # précalculées par l'émetteur ; un disque désactivé, et les trois sous inactive, passent au neutre
-        # borderDefault, sans glyphe. Aucun disque n'accepte le focus (Qt.NoFocus).
+        # Trois disques de density.pastille, espacés de space.scale[1], en pastilles.error, warning et success au
+        # repos ; les glyphes en pastilles.glyph ne paraissent qu'au survol (forcé ici, comme la planche), où chaque
+        # disque prend la variante de survol de sa teinte ; pressé, la variante pressée. Ces variantes, propres aux
+        # pastilles, sont précalculées par l'émetteur ; un disque désactivé, et les trois sous inactive, passent au
+        # neutre borderDefault, sans glyphe. Aucun disque n'accepte le focus (Qt.NoFocus).
         self.demarrer()
         tokens = self.tokens55()[0]
-        c = {k: v.lower() for k, v in tokens["color"].items() if isinstance(v, str)}
+        c = {k: v.lower() for k, v in tokens["pastilles"].items()}
+        c["borderDefault"] = tokens["color"]["borderDefault"].lower()
         cotes = f'{tokens["density"]["comfortable"]["pastille"]} {tokens["space"]["scale"][1]}'
-        teintes, sombre = f'{c["error"]} {c["warning"]} {c["success"]}', c["surfaceBase"]
+        teintes, sombre = f'{c["error"]} {c["warning"]} {c["success"]}', c["glyph"]
         self.assertEqual(self.valeur("pastilles").lower(), f"{cotes} {teintes} false false false {sombre} 0")
         self.ipc("pastillesForcer", "hover")
         survol = f'{c["errorHover"]} {c["warningHover"]} {c["successHover"]}'
@@ -454,6 +458,62 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
                          [c["errorHover"], neutre, c["successHover"], "true", "false", "true"])
         self.ipc("inactif", "true")
         self.assertEqual(self.valeur("pastilles").lower().split()[2:8], [neutre] * 3 + ["false"] * 3)
+
+    def lire_jusqua(self, cle: str, attendu: str) -> str:
+        """Relit une valeur journalisée jusqu'à ce qu'elle vaille l'attendu, ou que le délai expire.
+
+        Entrées : cle — fonction IPC de lecture ; attendu — valeur visée, comparée sans casse.
+        Sortie : la dernière valeur lue, en minuscules ; le test la compare à l'attendu.
+        Erreurs : celles de valeur. Dépendances : valeur.
+        """
+        for _ in range(100):  # le changement de thème suit le renommage de theme.json de quelques millisecondes
+            if (lu := self.valeur(cle).lower()) == attendu.lower():
+                break
+            time.sleep(0.05)
+        return lu
+
+    def test_knob(self):
+        # Le disque de l'interrupteur et la poignée du curseur prennent color.knob, et knob.disabled désactivés,
+        # dans le thème actif : au jour, le knob blanc du jour.
+        self.demarrer()
+        for famille, moment in ((None, None), ("dominante", "jour")):
+            if famille:
+                self.choisir(famille, moment)
+            vue = self.vue(55, famille, moment)
+            actif, eteint = vue["color"]["knob"], vue["knob"]["disabled"]
+            self.ipc("knobsActifs", "true")
+            self.assertEqual(self.lire_jusqua("knobs", f"{actif} {actif}"), f"{actif} {actif}".lower())
+            self.ipc("knobsActifs", "false")
+            self.assertEqual(self.lire_jusqua("knobs", f"{eteint} {eteint}"), f"{eteint} {eteint}".lower())
+
+    def test_controles_blancs(self):
+        # À la nuit, aucun contour ni ombre, et la piste éteinte garde le fond de son Etat (surfaceRaised sur le
+        # panneau) : la nuit ne change pas. Au jour, le contour d'un pixel cerne le bouton, le disque, la poignée
+        # et le disque éteint de la bascule, mais pas l'onglet coché hors barre, à l'accent ; la poignée porte son
+        # ombre ; la piste éteinte et le disque éteint prennent controlOff.
+        self.demarrer()
+        self.ipc("interrupteurCocher", "false")
+        self.ipc("basculeCocher", "false")
+        for famille, moment in ((None, None), ("thematisee", "jour")):
+            if famille:
+                self.choisir(famille, moment)
+            vue = self.vue(55, famille, moment)
+            jour = moment == "jour"
+            piste = (vue["color"]["controlOff"] if jour else vue["states"]["surfaceRaised"]["none"]["rest"]["fill"])
+            n = "1" if jour else "0"
+            attendu = f'{n} {n} {n} 0 {n} {str(jour).lower()} {piste} {piste}'
+            with self.subTest(moment=moment or "nuit"):
+                self.assertEqual(self.lire_jusqua("contours", attendu), attendu.lower())
+
+    def test_pastilles_hors_moment(self):
+        # Les pastilles ne dépendent pas du moment : au jour, les mêmes teintes et le même glyphe qu'à la nuit.
+        self.demarrer()
+        nuit = self.valeur("pastilles").lower()
+        p = {k: v.lower() for k, v in self.vue(55)["pastilles"].items()}
+        self.assertIn(f'{p["error"]} {p["warning"]} {p["success"]}', nuit)
+        self.choisir("dominante", "jour")
+        self.attendre("Theme : thème dominante/jour appliqué")
+        self.assertEqual(self.valeur("pastilles").lower(), nuit)
 
     def test_compteur(self):
         # Le stepper : deux demi-boutons de density.stepperWidth qui prennent ensemble la hauteur du contrôle,
@@ -973,7 +1033,9 @@ class CoqueClavierTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(self.valeur("focus").split()[0], "aucun")
         # Seul le disque survolé prend la variante de survol de sa teinte, et seul le disque pressé la variante
         # pressée ; les autres restent au repos.
-        c = {k: v.lower() for k, v in self.tokens55()[0]["color"].items() if isinstance(v, str)}
+        tokens = self.tokens55()[0]
+        c = {k: v.lower() for k, v in tokens["pastilles"].items()}
+        c["borderDefault"] = tokens["color"]["borderDefault"].lower()
         self.ipc("pointerPastille", "0", "false")
         self.assertEqual(self.valeur("pastillesCouleurs").lower().split(),
                          [c["errorHover"], c["borderDefault"], c["success"]])

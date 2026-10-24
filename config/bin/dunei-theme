@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+# dunei-theme — choix du thème de la coque (famille et moment).
+# Rôle : afficher ou changer le thème actif en écrivant {"famille":…, "moment":…} dans theme.json, que la
+#   coque surveille et applique à chaud. Les noms valides viennent de coque-tokens.json, jamais d'une liste ici.
+# Entrées : [jour|nuit|bascule|famille <nom>|<famille> <moment>] (la dernière forme choisit les deux d'un seul coup
+#   et d'une seule écriture, noms validés avant d'écrire) ; sans argument, affiche seulement l'état. Le dossier est
+#   $DUNEI_TOKENS_DIR, sinon ${XDG_CONFIG_HOME:-$HOME/.config}/dunei. Sans theme.json, l'état est le défaut des tokens.
+# Sortie : « <famille> <moment> » sur la sortie standard après chaque appel réussi.
+# Erreurs : code 1 si coque-tokens.json est introuvable ou illisible (rien n'est écrit) ; code 2 pour un
+#   argument ou un nom inconnu (usage sur la sortie d'erreur, theme.json inchangé) ; code 1 aussi si jq manque.
+# Dépendances : jq (paquet déclaré dans paquets.toml), mktemp, mv.
+set -euo pipefail
+
+if ! command -v jq > /dev/null; then
+  echo "dunei-theme : jq est introuvable ; installe-le (pacman -S jq) ou lance make paquets." >&2
+  exit 1
+fi
+
+dir=${DUNEI_TOKENS_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/dunei}
+tokens=$dir/coque-tokens.json
+choix=$dir/theme.json
+
+# usage — signale un appel invalide.
+# Entrées : le motif, en clair. Sortie : aucune (le script se termine avec le code 2).
+# Erreurs : motif et usage sur la sortie d'erreur. Dépendances : aucune.
+usage() { echo "dunei-theme : $1
+Usage : dunei-theme [jour|nuit|bascule|famille <nom>|<famille> <moment>]" >&2; exit 2; }
+
+# existe — teste l'appartenance d'un nom à une liste des tokens.
+# Entrées : la clé de la liste (familles ou moments), le nom. Sortie : aucune ; code 0 si le nom y figure.
+# Erreurs : aucune. Dépendances : jq.
+existe() { jq -e --arg n "$2" ".$1 | index(\$n)" "$tokens" > /dev/null; }
+
+if ! { [ -r "$tokens" ] && jq -e '.familles and .moments and .defaut' "$tokens" > /dev/null 2>&1; }; then
+  echo "dunei-theme : coque-tokens.json est introuvable ou illisible dans $dir ; lance make install." >&2
+  exit 1
+fi
+
+# Un theme.json absent ou invalide retombe sur le défaut des tokens, comme la coque.
+famille=$(jq -r '.defaut.famille' "$tokens")
+moment=$(jq -r '.defaut.moment' "$tokens")
+if [ -r "$choix" ] && lu=$(jq -r '[.famille, .moment] | @tsv' "$choix" 2> /dev/null); then
+  f=${lu%%$'\t'*} m=${lu##*$'\t'}
+  if existe familles "$f" && existe moments "$m"; then famille=$f moment=$m; fi
+fi
+
+case "${1:-}" in
+  "") echo "$famille $moment"; exit 0 ;;
+  famille) if ! { [ $# -eq 2 ] && existe familles "$2"; }; then usage "famille inconnue ou absente."; fi; famille=$2 ;;
+  bascule) [ $# -eq 1 ] || usage "bascule ne prend pas d'argument."
+    moment=$(jq -r --arg m "$moment" '.moments | map(select(. != $m)) | first' "$tokens") ;;
+  *) if [ $# -eq 2 ]; then
+       if ! { existe familles "$1" && existe moments "$2"; }; then usage "famille ou moment inconnu : $1 $2."; fi
+       famille=$1 moment=$2
+     else
+       if ! { [ $# -eq 1 ] && existe moments "$1"; }; then usage "argument inconnu : $1."; fi; moment=$1
+     fi ;;
+esac
+
+mkdir -p "$dir"
+tmp=$(mktemp "$dir/.theme.json.XXXXXX")
+trap 'rm -f "$tmp"' EXIT  # sans effet après le mv (le temporaire n'existe plus), utile si jq ou mv échoue
+jq -n --arg f "$famille" --arg m "$moment" '{famille: $f, moment: $m}' > "$tmp"
+mv "$tmp" "$choix"
+echo "$famille $moment"

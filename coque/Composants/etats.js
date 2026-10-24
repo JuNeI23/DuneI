@@ -73,3 +73,12 @@ function interaction(c) {
 function selection(selectionne, focusDansGroupe, inactif) {
     return !selectionne ? "none" : inactif ? "activeMuted" : focusDansGroupe ? "active" : "inactive"
 }
+
+// contoure — le fond d'un contrôle dans cette sélection est-il blanc au jour, donc à cerner d'un contour ?
+// Rôle : un contrôle sans sélection ou en sélection inactive garde le fond clair de son rôle ; sélectionné à
+//        l'accent (active) ou à l'accent muet (activeMuted), il porte un fond coloré qui se détache seul.
+// Entrée : selection, clé de sélection ("none", "active", "inactive" ou "activeMuted").
+// Sortie : vrai pour "none" et "inactive". Erreurs : aucune. Dépendances : aucune.
+function contoure(selection) {
+    return selection === "none" || selection === "inactive"
+}

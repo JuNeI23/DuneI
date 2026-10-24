@@ -12,11 +12,36 @@
 name = "DuneI"
 prefix = "dunei"             # préfixe de paquets, session, ~/.config/dunei/
 version = "0.4.1"          # mineure : [window], radii.fullscreen (D29 à D31) ; 0.4 majeure : [fleet] supprimée, accent découplé de [categorical]
-mode = "dark"          # le mode clair viendra plus tard, sans renommage
+mode = "dark"          # mode de la base (la nuit) ; le jour est un moment, une table de surcharges [moments.jour]
 base_unit = 4          # px — toutes les dimensions en sont des multiples
 contrast_method = "APCA"   # WCAG 2 est peu fiable en mode sombre
 contrast_target_body = 90  # Lc — corps 13px/400 sur fond sombre
 contrast_floor = 75        # Lc — plancher de rejet
+
+# Planchers de contraste par rôle (Lc), mesurés sur la nuit thématisée aux teintes 0, 55, 200 et 265, arrondis à
+# l'entier inférieur. Tous les thèmes les respectent, hormis les planchers propres à un moment ou à un couple
+# (knob-off et on-accent-muted au jour ; le jour thématisé, D84), qui ne peuvent que les borner par leur minimum mesuré
+# (conception § 5.2).
+# Pour les remesurer après une révision de la nuit : python3 mesure_planchers.py
+[meta.planchers]
+"border-subtle" = 0
+"border-default" = 0
+"border-strong" = 12
+"text-disabled" = 22
+"text-tertiary" = 36
+"text-secondary" = 51
+"text-primary" = 90
+"text-emphasis" = 98
+"control-raised-text" = 95
+"accent-standalone" = 49
+"categorical" = 49
+"error" = 27
+"warning" = 54
+"success" = 53
+"info" = 48
+"knob-accent" = 73
+"knob-off" = 98
+"on-accent-muted" = 79   # texte sur-accent sur l'accent muet de la sélection inactive (états)
 
 
 # ===========================================================================
@@ -61,11 +86,13 @@ assumed_color_depth = 8
 
 [theme]
 # Défaut système. hue et chroma_scale sont les SEULES valeurs du fichier
-# surchargeables à chaud, par le panneau de thème. La teinte propre à chaque
+# surchargeables à chaud, par le panneau de thème ; la famille et le moment se
+# choisissent parmi [familles.*] et [moments.*], tables de surcharges fusionnées
+# sur la base dans cet ordre : base, moment, famille, puis la surcharge croisée du couple. La teinte propre à chaque
 # machine (caladan…) vit dans la surcharge, jamais ici (L4-08).
 hue = 55                   # 0–360, quantifiée par pas de 5°
 chroma_scale = 1.0         # 0.8–1.2, borné
-neutral_chroma = 0.020     # infusion de la teinte dans les gris
+neutral_chroma = 0.014     # infusion de la teinte dans les gris (0,020 jusqu'à L2-40 ; le jour thématisé garde 0,020)
 dark_chroma_boost = 1.4    # majoration sous L 0.45 : perception réduite en basse lumière
 accent_chroma = 0.15
 chroma_ceiling = 0.16      # plafond gamut sRGB sur toute la plage de teintes
@@ -73,6 +100,11 @@ chroma_ceiling = 0.16      # plafond gamut sRGB sur toute la plage de teintes
 # Repli quand le fond d'écran est achromatique.
 # Jamais de teinte tirée au hasard sur du bruit.
 fallback_hue = 255         # Giedi Prime, achromatique, tombera ici
+
+# Thème choisi tant que l'utilisateur n'a rien demandé.
+[theme.defaut]
+famille = "thematisee"
+moment = "nuit"
 
 
 # ===========================================================================
@@ -100,6 +132,8 @@ text-secondary   = 9
 text-primary     = 10
 text-emphasis    = 11
 control-raised   = 4     # fond des contrôles posés sur E3 ; pas un niveau d'élévation
+control-off      = 3     # piste éteinte (interrupteur, bascule) et rail d'onglets quand [controls] off_track est vrai ;
+                         # à la nuit, la couleur de la piste éteinte posée sur un panneau, mais la nuit ne s'en sert pas
 
 # Texte des états d'un rôle de fond, quand ce n'est pas text-primary (sélections none et inactive).
 [role_text]
@@ -450,3 +484,170 @@ on_accent_monochrome = true
 scrim_opacity = 0.55
 never_animate_blur_radius = true   # fondu croisé net/flouté : c'est une règle
                                    # d'apparence, pas d'optimisation
+
+
+# ===========================================================================
+# THÈMES STATIQUES — surcharges de la base, qui décrit la nuit thématisée
+# ===========================================================================
+# Ordre de fusion : base, moment, famille, puis surcharge croisée du couple (model.theme_data).
+
+# Contrôles blancs : traitement des contrôles qui n'ont pas de filet propre (bouton, onglet, déroulant, disque de
+# l'interrupteur et de la bascule, poignée du curseur). La nuit n'en a aucun ; le jour, où ces contrôles sont blancs
+# sur des surfaces presque blanches, les détache (L2-40, 7b).
+[controls]
+outline = ""            # rôle du contour d'un pixel physique, celui de la case ; vide : aucun contour
+off_track = false       # vrai : piste éteinte et rail d'onglets au rôle control-off ; faux : fond de l'Etat
+shadow_opacity = 0.0    # ombre de la poignée du curseur et de l'onglet coché, en noir ; 0 : aucune ombre
+shadow_blur = 4         # px logiques, portée du flou de cette ombre
+shadow_offset_y = 1     # px logiques, décalage de cette ombre vers le bas
+
+[knob]
+disabled_toward = "control-raised"   # rôle dont le bouton éteint se rapproche (même règle que states.disabled)
+role = "text-emphasis"   # nuit : la couleur qu'ont aujourd'hui le disque et la poignée ; une clé lightness l'emporte sur role
+
+[moments.nuit]           # la base : aucune surcharge
+
+# Le jour : l'élévation monte vers le blanc, l'ombre porte le relief (conception § 5.2 à 5.4). Valeurs de départ,
+# calibrées par les planchers et l'ordre (checks.py) ; Nicolas les tranche à l'écran.
+[moments.jour]
+[moments.jour.meta]
+mode = "light"
+
+[moments.jour.lightness]
+# Écart à la conception : surface-window 0,968 (départ 0,955) et surface-panel 0,98 (départ 0,975). Sur 0,955, aucun
+# texte ne dépasse Lc 97 : le plancher de text-emphasis (98) n'est atteignable qu'avec une fenêtre plus claire. La
+# fenêtre est passée de 0,965 à 0,968 quand sa chroma a monté (L2-40, 7b) : elle garde ainsi Lc 98,3 pour text-emphasis.
+steps = [0.925, 0.968, 0.98, 1.0, 0.89, 0.85, 0.76, 0.68, 0.60, 0.50, 0.25, 0.18]
+# Facteur de chroma neutre par échelon, sur la chroma neutre du jour thématisé (0,020, surcharge croisée plus bas) :
+# 0,025 sur le bureau, la fenêtre et le panneau, pour que la teinte s'y sente ; 0,012 entre L 0,8 et 0,9 ; 0,020
+# au-dessous, majoré sous L 0,45 ; blanc pur à E3. La dominante, à chroma neutre nulle, reste strictement neutre.
+# Le jour thématisé a sa propre échelle et ses propres facteurs (surcharge croisée plus bas) : ce profil n'agit donc
+# plus sur aucun thème (la dominante, à chroma neutre nulle, l'ignore) ; il reste comme valeur de repli du moment.
+neutral_profile = [1.25, 1.25, 1.25, 0.0, 0.6, 0.6, 1.0, 1.0, 1.0, 1.0, 1.4, 1.4]
+
+[moments.jour.roles]
+control-raised = 3       # blanc, comme E3 : l'ombre et le liseré le détachent
+control-off = 4          # gris clair plein (L 0,89, tranché à l'écran par Nicolas), comme la piste éteinte de macOS : le disque blanc s'y détache
+
+[moments.jour.controls]
+outline = "border-default"
+off_track = true
+shadow_opacity = 0.20
+
+# Le knob blanc sur la piste éteinte grise : un plancher propre au jour (la nuit mesure Lc 98, sur un fond sombre).
+# Le sur-accent blanc sur l'accent muet (0,78) y tient Lc 41, un état inactif volontairement atténué (D83).
+[moments.jour.meta.planchers]
+"knob-off" = 15
+"on-accent-muted" = 41
+
+[moments.jour.elevation.e2]
+sheen = false
+edge_light = false
+shadow = true
+
+[moments.jour.elevation.e3]
+sheen = false
+edge_light = false
+shadow = true
+
+[moments.jour.elevation.field]
+step = 3
+inset_shadow = false
+
+[moments.jour.surface_material]
+edge_light_opacity = 0.0
+
+[moments.jour.accent]
+fill_lightness = 0.53
+standalone_lightness = 0.47
+
+[moments.jour.categorical]
+lightness = 0.50
+
+[moments.jour.semantic]
+error   = { l = 0.43 }
+warning = { l = 0.60 }
+success = { l = 0.57 }
+info    = { l = 0.55 }
+
+[moments.jour.states.hover]
+lightness_delta = -0.03
+
+[moments.jour.states.pressed]
+lightness_delta = -0.05
+
+# Sélection inactive du jour : l'échelon 2 (0,98) garde, sous le texte, le Lc 90 du corps sur controlRaised au repos
+# et au survol ; l'échelon 4 de la nuit (0,89) n'en donnait que 73. La pression à -0,05 (départ -0,06) garde Lc 90 en bas.
+[moments.jour.states.selected_inactive]
+lightness_step = 2
+
+# Modificateur inactive du jour : l'accent sans chroma à la luminosité de l'accent (0,53) assombrissait tout le
+# panneau ; il remonte dans la gamme claire (L 0,78, validé à l'écran par Nicolas), au-dessus de la piste éteinte
+# grise. Le sur-accent blanc n'y tient plus que Lc 41 (Lc 55 à 0,70, valeur d'avant) : un état inactif volontairement
+# atténué, dérogation consignée en D83 et bornée par le plancher on-accent-muted de ce moment.
+[moments.jour.states.container_inactive]
+fill_lightness = 0.78
+
+[moments.jour.knob]
+lightness = 1.0
+# Le contrôle du jour est blanc comme le bouton : éteint vers lui, le bouton ne changerait pas. Il se rapproche donc
+# de la bordure par défaut, un gris clair, comme le fait le désactivé des autres couleurs.
+disabled_toward = "border-default"
+
+[familles.thematisee]    # la base : aucune surcharge
+
+# Surcharges croisées famille × moment, fusionnées en dernier (model.theme_data).
+# Le jour thématisé garde la chroma neutre d'avant L2-40 : la nuit seule descend à 0,014.
+[familles.thematisee.moments.jour.theme]
+neutral_chroma = 0.020
+
+# Le jour thématisé repose sur une base colorée (Nicolas, validation à l'écran) : sur un fond presque blanc la
+# chroma ne se voit pas, donc tous les gris sont teintés. Le bureau, la fenêtre, le panneau et E3 descendent à
+# 0,79, 0,82, 0,845 et 0,88 et portent une chroma neutre bien plus forte (facteurs 7,5 à 6,0 sur 0,020, soit 0,15 à
+# 0,12, avant écrêtage à la gamme), dégressifs jusqu'aux textes. Les contrôles blancs de [moments.jour] n'y subsistent pas : E3 et control-raised
+# sont à 0,88 et teintés. La dominante de jour garde les fonds blancs de [moments.jour].
+[familles.thematisee.moments.jour.lightness]
+steps = [0.79, 0.82, 0.845, 0.88, 0.75, 0.70, 0.60, 0.52, 0.44, 0.36, 0.13, 0.07]
+neutral_profile = [7.5, 7.5, 7.0, 6.0, 5.0, 4.5, 3.5, 3.0, 2.5, 2.5, 2.0, 1.5]
+
+# Les sémantiques descendent de 0,05 à 0,07 sous celles du jour, pour tenir leurs planchers sur ces fonds plus sombres.
+[familles.thematisee.moments.jour.semantic]
+error   = { l = 0.38 }
+warning = { l = 0.50 }
+success = { l = 0.48 }
+info    = { l = 0.50 }
+
+# Décision explicite de Nicolas, prise à l'écran et propre à ce thème : le corps de texte y tombe à Lc 69 à 76, sous
+# la règle de la bible de design (cible 90, plancher absolu 75). Les trois autres thèmes gardent ces règles. Ici la
+# cible, le plancher absolu et les planchers par rôle valent les minima mesurés aux teintes 0, 55, 200 et 265,
+# arrondis à l'entier inférieur ; remonter la fenêtre vers 0,86 rétablirait des textes plus contrastés.
+[familles.thematisee.moments.jour.meta]
+contrast_target_body = 69
+contrast_floor = 69
+
+[familles.thematisee.moments.jour.meta.planchers]
+"border-subtle" = 9
+"border-default" = 16
+"border-strong" = 31
+"text-disabled" = 41
+"text-tertiary" = 50
+"text-secondary" = 58
+"text-primary" = 69
+"text-emphasis" = 69
+"control-raised-text" = 80
+"accent-standalone" = 48
+"categorical" = 41
+"error" = 55
+"warning" = 43
+"success" = 43
+"info" = 42
+"knob-accent" = 79
+"knob-off" = 46
+
+[familles.dominante.theme]
+neutral_chroma = 0.0     # gris strictement neutres ; l'accent garde sa teinte
+
+# La nuit dominante descend ses surfaces et son contrôle (échelons 0 à 4) de 0,03 ; les textes ne bougent pas.
+# L'échelon 4 porte aussi border-subtle, qui descend avec le contrôle et garde son écart aux surfaces.
+[familles.dominante.moments.nuit.lightness]
+steps = [0.11, 0.15, 0.19, 0.23, 0.28, 0.37, 0.44, 0.53, 0.63, 0.73, 0.935, 0.97]

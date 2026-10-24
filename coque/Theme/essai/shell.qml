@@ -8,8 +8,9 @@ import "Theme"
 // le chargement, la surveillance et le repli des fichiers générés, en lisant le journal.
 // Entrées : DUNEI_TOKENS_DIR, lu par Theme. Sortie : journal de Theme, plus « essai : prêt <bool>, couleurs
 // définies|indéfinies » à chaque changement de Theme.ready (les raccourcis de groupe doivent déjà être à
-// jour), et « essai : ressort posé|en vol » deux tours de boucle après chaque nouvel objet de tokens, selon que
-// la couleur d'un ColorSpring a déjà rejoint sa cible ou non. Commande IPC « essai etat <interaction> »
+// jour), « essai : thème <famille>/<moment> <color.surfacePanel> teinte <hue> » à chaque nouvel objet de tokens,
+// et « essai : ressort posé|en vol » deux tours de boucle après, selon que la couleur d'un ColorSpring a déjà
+// rejoint sa cible ou non. Commande IPC « essai etat <interaction> »
 // (rest, hover, pressed, disabled) : change l'état du ressort et journalise « essai : état <interaction>,
 // ressort posé|en vol » au tour de boucle suivant ; « essai lent » donne au ressort une raideur minime, pour
 // qu'il reste en vol plusieurs secondes ; « essai raideur » journalise « essai : raideur <stiffness> », la
@@ -64,6 +65,8 @@ ShellRoot {
             console.info("essai : prêt " + Theme.ready + ", couleurs " + (Theme.color ? "définies" : "indéfinies"))
         }
         function onTokensChanged() {
+            console.info("essai : thème " + Theme.famille + "/" + Theme.moment + " " + Theme.color?.surfacePanel
+                + " teinte " + Theme.tokens?.hue)
             // Deux tours de boucle : le ressort prend acte du nouvel objet de tokens au premier.
             Qt.callLater(() => Qt.callLater(() => console.info("essai : ressort " + essai.posture())))
         }

@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.21. Historique en fin de document.
+Version 1.22. Historique en fin de document.
 
 Socle amorçable.
 
@@ -70,7 +70,7 @@ DuneI/
 ├── atelier.py              # destinations rtk et atelier de make install, relevé d'état (L1-26)
 ├── .claude/settings.json   # mémoire de Claude pour DuneI : ~/dunei-atelier/memoire (L1-26)
 ├── config/                 # écrit à la main, lié par make install
-│   ├── bin/                # exécutables liés dans ~/.local/bin (dunei-maj)
+│   ├── bin/                # exécutables liés dans ~/.local/bin (dunei-maj, dunei-theme)
 │   ├── hypr/
 │   │   ├── hyprland.lua    # point d'entrée : ne fait que des require (L1-24)
 │   │   ├── modules/        # un module par feature (clavier, écrans, couvercle, démarrage…)
@@ -1719,6 +1719,61 @@ départ. Le flou et l'opacité du voile restent à L2-35.
 - Le contour d'une liste, qui pourrait réapparaître quand sa fenêtre redevient active (Qt 6.12 ne donne pas la
   raison du focus).
 
+## Les thèmes statiques — L2-40
+
+La coque offre quatre thèmes : une **famille** (*thématisée*, dont les gris portent la teinte du fond d'écran, ou
+*dominante*, dont les gris sont neutres) et un **moment** (*nuit* ou *jour*). Ils sont tous précalculés dans
+`coque-tokens.json` ; en choisir un ne demande ni Python ni le dépôt. Le contrat est au journal (D83, D84) et la
+conception est `docs/superpowers/specs/2026-10-24-themes-statiques-design.md`.
+
+### Où vit le choix
+
+Le thème actif est dans `~/.config/dunei/theme.json` (ou `$DUNEI_TOKENS_DIR/theme.json`) :
+`{ "famille": "dominante", "moment": "jour" }`. Ce fichier appartient à la machine : `make install` ne l'écrit ni ne
+l'écrase, et il n'entre pas dans le dépôt. Absent, vide ou portant un nom inconnu, il vaut le défaut,
+`thematisee` et `nuit` ; la coque le signale une fois dans le journal de Quickshell et ne plante pas. La coque
+surveille ce fichier et bascule d'un bloc, sans animation.
+
+### La commande `dunei-theme`
+
+Liée dans `~/.local/bin` par `make install`, comme `dunei-maj`. Elle valide les noms contre les familles et
+moments de `coque-tokens.json` (lus avec `jq`) et écrit `theme.json` par un fichier temporaire puis un renommage.
+
+| Appel | Effet |
+| --- | --- |
+| `dunei-theme` | affiche « famille moment » actifs |
+| `dunei-theme jour` / `nuit` | change de moment, garde la famille |
+| `dunei-theme bascule` | passe au moment opposé |
+| `dunei-theme famille <nom>` | change de famille (`thematisee`, `dominante`), garde le moment |
+
+Codes de sortie : 0 en cas de succès ; 2 pour un argument ou un nom inconnu (`theme.json` reste intact) ; 1 si
+`coque-tokens.json` est introuvable, auquel cas il faut lancer `make install` (rien n'est écrit). La teinte reste
+une affaire de régénération (`make tokens`, `make install`) ; le thème n'en est pas une.
+
+### La planche
+
+`coque/outils/planche/planche.sh theme <famille> <moment>` appelle `dunei-theme` sur le brouillon de la planche
+(`$XDG_RUNTIME_DIR/dunei-planche`) sans toucher `~/.config/dunei/theme.json` : la planche ouverte bascule d'un
+bloc. Le brouillon doit exister (`planche.sh <teinte>` d'abord) ; `planche.sh teinte 200` change la teinte à
+chaud, l'onglet se choisit par `qs ipc -p coque/outils/planche call planche onglet composants`. Elle ne montre
+plus les couleurs des pastilles, qui ne dépendent d'aucun thème.
+
+### Relevés
+
+- Bascule d'un thème à l'autre sur la planche : environ 5 ticks de processeur (0,05 s) ; le processus `qs` revient
+  à 0 tick au repos, avant comme après (D80). Mémoire résidente : 402 Mo, planche entière.
+- Suite de tests : 645, `make check` vert. `make golden` : la nuit thématisée a changé une fois, volontairement,
+  quand Nicolas a fait descendre sa chroma neutre de 0,020 à 0,014 (les cibles des applications suivent).
+- Validé à l'écran par Nicolas en six passes, sur la teinte 55 de `caladan` : valeurs et raisons au journal.
+
+### Ce qui reste à voir
+
+- Les reliquats du backlog (L2-44) : `Compteur` et piste de la `Jauge` sans contour au jour, sélection inactive
+  d'une liste presque invisible au jour, texte des contrôles du jour thématisé jusqu'à Lc 65 au survol et à la
+  pression, disque et poignée désactivés qui ne s'animent plus.
+- Aucun test ne couvre la suppression de `theme.json` pendant l'exécution de la coque.
+- Le bouton jour/nuit et l'écran de paramètres, qui appelleront `dunei-theme`, sont hors de cette feature.
+
 ## Lecteur d'empreinte — nouveau
 
 Cet élément n'existe dans aucun document du projet. Il est consigné ici parce qu'il s'installe au lot 1, mais **son travail de conception appartient au lot 5**.
@@ -1821,6 +1876,7 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 
 | Version | Date | Changement |
 | --- | --- | --- |
+| 1.22 | 2026-10-25 | Les thèmes statiques (L2-40) : où vit `theme.json`, mode d'emploi de `dunei-theme`, bascule sur la planche (`planche.sh theme`), relevés, ce qui reste à voir (D83, D84) |
 | 1.21 | 2026-10-24 | Bibliothèque de composants (L2-01) : relevé d'un overlay d'attention fermé, ouvert, refermé ; ouverture de l'attention et fermeture du déroulant validées à l'écran |
 | 1.20 | 2026-10-24 | Bibliothèque de composants (L2-01), relecture finale : infobulle en troisième famille d'overlay, `Etat` qui fige les couleurs non peintes, tests du clavier qui n'exigent que Quickshell, section `[spinner]` de `motion.toml` ; points tranchés retirés de « Ce qui reste à voir » (texte de `controlRaised` éclairci en `text-emphasis`, infobulle à 500 ms) |
 | 1.19 | 2026-10-24 | Bibliothèque de composants (L2-01) : inventaire du module, import côte à côte, planche à deux onglets et commandes IPC, tests et coques d'essai offscreen, relevés, ce qui reste à voir à l'écran ; point ouvert du retour au repos tranché (`in`, D82) |

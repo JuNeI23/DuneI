@@ -212,7 +212,7 @@ ShellRoot {
                             font.pixelSize: Theme.typo.scale[5]
                             font.weight: Theme.typo.weightMedium
                         }
-                        Legende { text: "teinte " + Theme.tokens.hue + "°  ·  mouvement " + Theme.motion.version + "  ·  " + Theme.dir }
+                        Legende { text: "thème " + Theme.famille + "/" + Theme.moment + "  ·  teinte " + Theme.tokens.hue + "°  ·  mouvement " + Theme.motion.version + "  ·  " + Theme.dir }
                     }
 
                     // Onglets en tête : chaque page est chargée à la demande et seule la page visible existe

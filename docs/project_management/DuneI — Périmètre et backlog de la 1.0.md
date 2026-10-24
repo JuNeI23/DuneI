@@ -2,9 +2,9 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.25. Historique en fin de document.
+Version 1.26. Historique en fin de document.
 
-La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **152 éléments** répartis en **cinq lots**, sur six chantiers.
+La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **153 éléments** répartis en **cinq lots**, sur six chantiers.
 
 Ce document dit ce qui est attendu, dans quel ordre, et à quelle condition c'est terminé. Il ne dit pas à quoi ça ressemble — c'est le rôle de la bible de design. En cas de contradiction : la bible l'emporte sur l'apparence, ce document l'emporte sur le périmètre.
 
@@ -292,10 +292,11 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L2-37 | B | Configuré | Déverrouillage par empreinte — `fprintd` ; lecteur Goodix déjà reconnu, aucun doigt enregistré ; `hyprlock` (désactivé dans `hyprlock.conf` pour l'instant), `sudo` et connexion ; à traiter avec L2-22 et L2-24, la conception de l'interface restant au lot 5 (D46) |
 | L2-38 | B | Écrit | Avis « N mises à jour prêtes » dans la barre — nombre de paquets préchargés par `dunei-precharge` en attente de `dunei-maj` (D57) |
 | L2-39 | A | Configuré | Tri et vérification des miroirs — la liste écrite par `archinstall` (France, Allemagne, Suisse) n'est ni triée par vitesse ni purgée des miroirs retirés ; outil à choisir après repérage, `reflector` ou autre (D75) |
-| L2-40 | C | Écrit | Thèmes statiques clair et sombre — à mener juste après L2-01, en plus de la colorisation par la teinte : des gris neutres, sans la teinte brun-orange qui dessert les contrôles ; rôle `knob` pour les boutons d'interrupteur et les poignées, aujourd'hui en `textPrimary` (D82) |
+| L2-40 | C | Écrit | Thèmes statiques clair et sombre — à mener juste après L2-01, en plus de la colorisation par la teinte : des gris neutres, sans la teinte brun-orange qui dessert les contrôles ; rôle `knob` pour les boutons d'interrupteur et les poignées, aujourd'hui en `textPrimary` (D82) | — **fait (D83, D84)** : quatre thèmes, famille (thématisée, dominante) × moment (nuit, jour), précalculés dans `coque-tokens.json` et choisis à chaud par la commande `dunei-theme` (fichier `~/.config/dunei/theme.json`) ; rôles `knob` et `control-off`, planchers de contraste par rôle, contours des contrôles blancs du jour ; jour thématisé sur base colorée, dérogation au corps de texte accordée par Nicolas (D84). Le futur bouton jour/nuit de la coque et l'écran de paramètres appelleront `dunei-theme bascule` et `dunei-theme famille <nom>` ; ils ne sont pas dans cette tâche
 | L2-41 | B | Écrit | Matière et texture — grain, sable, pierre, dégradés, dans l'esprit des films de Villeneuve ; à brainstormer avec L2-04 et L2-05, et à confronter au principe du silence visuel (D82) |
 | L2-42 | B | Écrit | Décoration des fenêtres — rôle et emplacement des pastilles de fenêtre sous tuilage ; proposition : fermer la fenêtre, l'envoyer au bureau spécial, la passer en plein écran ; le composant `Pastilles` n'expose que des signaux (D82) |
 | L2-43 | D | Configuré | Thème de curseurs — repérage : Bibata, celui de Linux Mint, face à d'autres, au format hyprcursor (D82) |
+| L2-44 | C | Écrit | Reliquats des thèmes statiques (L2-40) — au jour, `Compteur` et piste de la `Jauge` sans contour, sélection inactive d'une liste presque invisible ; texte des contrôles du jour thématisé descendu à Lc 65 au survol et à la pression, sans plancher ; disque du `knob` et poignée désactivés qui ne s'animent plus (hors `ColorSpring`) ; la planche ne montre plus les couleurs des pastilles ; test de la suppression de `theme.json` pendant l'exécution (D83) |
 
 ### Lot 3 — la bascule
 
@@ -397,7 +398,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L5-29 | — | Écrit | Passe de regard complète — étage 3 |
 | L5-30 | — | Écrit | Résorber les points ouverts de l'annexe C |
 
-**Volume total : 152 éléments** — 103 écrits, 42 configurés, 5 offerts, 2 mixtes.
+**Volume total : 153 éléments** — 104 écrits, 42 configurés, 5 offerts, 2 mixtes.
 
 Les deux tiers du travail sont de l'écrit, et les trois quarts de cet écrit se concentrent sur la coque et les écrans système. C'est cohérent avec la stratégie retenue, et c'est là que tout le risque se trouve.
 
@@ -501,6 +502,7 @@ Le choix de la distribution de base et du compositeur, précédemment ouverts, s
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-12 | Version initiale, 137 éléments |
+| 1.26 | 2026-10-25 | L2-40 fait : thèmes statiques, famille et moment (D83, D84) ; le bouton jour/nuit et les paramètres appelleront `dunei-theme` ; ajout de L2-44, reliquats des thèmes (contours du compteur et de la jauge, sélection inactive du jour, états du texte du jour thématisé, animation du knob désactivé, pastilles de la planche, test de `theme.json` supprimé). 153 éléments |
 | 1.25 | 2026-10-24 | L2-01, L2-02 et L2-03 faits : bibliothèque de composants (D82) ; L2-19 reçoit sa référence visuelle ; ajout de L2-40 (thèmes statiques clair et sombre), L2-41 (matière et texture), L2-42 (décoration des fenêtres) et L2-43 (thème de curseurs) au lot 2 ; le mode clair quitte les exclusions. 152 éléments |
 | 1.24 | 2026-10-22 | L2-34 faite : tokens branchés sur Quickshell (D81) |
 | 1.23 | 2026-10-22 | Coque en QML sur Quickshell (D80) : L2-01 précisé, L2-06 compte sept transitions, cinquième condition de la définition de terminé (sobriété en ressources) |

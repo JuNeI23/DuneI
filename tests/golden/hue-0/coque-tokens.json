@@ -1,397 +1,6 @@
 {
   "_generated": "GÉNÉRÉ depuis tokens.toml — NE PAS MODIFIER À LA MAIN",
   "hue": 0.0,
-  "color": {
-    "surfaceBase": "#120509",
-    "surfaceWindow": "#1c0c11",
-    "surfacePanel": "#25151a",
-    "surfaceRaised": "#301e23",
-    "borderSubtle": "#3d2a30",
-    "borderDefault": "#4d3a3f",
-    "borderStrong": "#604c52",
-    "textDisabled": "#76676b",
-    "textTertiary": "#948488",
-    "textSecondary": "#b3a3a7",
-    "textPrimary": "#f6e4e9",
-    "textEmphasis": "#fff1f5",
-    "controlRaised": "#3d2a30",
-    "accent": "#ad3e68",
-    "accentStandalone": "#f27ca4",
-    "onAccent": "#fefbfc",
-    "error": "#d33a3c",
-    "warning": "#e49e22",
-    "success": "#51bf68",
-    "info": "#44a8e7",
-    "errorHover": "#e9504d",
-    "errorPressed": "#b91b25",
-    "warningHover": "#f9b13e",
-    "warningPressed": "#c98800",
-    "successHover": "#66d37a",
-    "successPressed": "#35a751",
-    "categorical": [
-      "#e983a4",
-      "#ec8a67",
-      "#c1a637",
-      "#50c08b",
-      "#b494ed"
-    ]
-  },
-  "states": {
-    "surfaceWindow": {
-      "none": {
-        "rest": {
-          "fill": "#1c0c11",
-          "text": "#f6e4e9"
-        },
-        "hover": {
-          "fill": "#25151a",
-          "text": "#f6e4e9"
-        },
-        "pressed": {
-          "fill": "#15060b",
-          "text": "#f6e4e9"
-        },
-        "disabled": {
-          "fill": "#131111",
-          "text": "#6a6869"
-        }
-      },
-      "active": {
-        "rest": {
-          "fill": "#ad3e68",
-          "text": "#fefbfc"
-        },
-        "hover": {
-          "fill": "#ba4a74",
-          "text": "#fefbfc"
-        },
-        "pressed": {
-          "fill": "#a33460",
-          "text": "#fefbfc"
-        },
-        "disabled": {
-          "fill": "#423337",
-          "text": "#8a8989"
-        }
-      },
-      "inactive": {
-        "rest": {
-          "fill": "#3d2a30",
-          "text": "#f6e4e9"
-        },
-        "hover": {
-          "fill": "#47353a",
-          "text": "#f6e4e9"
-        },
-        "pressed": {
-          "fill": "#352328",
-          "text": "#f6e4e9"
-        },
-        "disabled": {
-          "fill": "#211e1f",
-          "text": "#747172"
-        }
-      },
-      "activeMuted": {
-        "rest": {
-          "fill": "#6c6c6c",
-          "text": "#fefbfc"
-        },
-        "hover": {
-          "fill": "#777777",
-          "text": "#fefbfc"
-        },
-        "pressed": {
-          "fill": "#636363",
-          "text": "#fefbfc"
-        },
-        "disabled": {
-          "fill": "#373737",
-          "text": "#8a8989"
-        }
-      }
-    },
-    "surfacePanel": {
-      "none": {
-        "rest": {
-          "fill": "#25151a",
-          "text": "#f6e4e9"
-        },
-        "hover": {
-          "fill": "#301e23",
-          "text": "#f6e4e9"
-        },
-        "pressed": {
-          "fill": "#1e0e13",
-          "text": "#f6e4e9"
-        },
-        "disabled": {
-          "fill": "#1c1a1a",
-          "text": "#716e6f"
-        }
-      },
-      "active": {
-        "rest": {
-          "fill": "#ad3e68",
-          "text": "#fefbfc"
-        },
-        "hover": {
-          "fill": "#ba4a74",
-          "text": "#fefbfc"
-        },
-        "pressed": {
-          "fill": "#a33460",
-          "text": "#fefbfc"
-        },
-        "disabled": {
-          "fill": "#47383c",
-          "text": "#8d8d8d"
-        }
-      },
-      "inactive": {
-        "rest": {
-          "fill": "#3d2a30",
-          "text": "#f6e4e9"
-        },
-        "hover": {
-          "fill": "#47353a",
-          "text": "#f6e4e9"
-        },
-        "pressed": {
-          "fill": "#352328",
-          "text": "#f6e4e9"
-        },
-        "disabled": {
-          "fill": "#262324",
-          "text": "#777575"
-        }
-      },
-      "activeMuted": {
-        "rest": {
-          "fill": "#6c6c6c",
-          "text": "#fefbfc"
-        },
-        "hover": {
-          "fill": "#777777",
-          "text": "#fefbfc"
-        },
-        "pressed": {
-          "fill": "#636363",
-          "text": "#fefbfc"
-        },
-        "disabled": {
-          "fill": "#3d3d3d",
-          "text": "#8d8d8d"
-        }
-      }
-    },
-    "surfaceRaised": {
-      "none": {
-        "rest": {
-          "fill": "#301e23",
-          "text": "#f6e4e9"
-        },
-        "hover": {
-          "fill": "#3a282d",
-          "text": "#f6e4e9"
-        },
-        "pressed": {
-          "fill": "#28171c",
-          "text": "#f6e4e9"
-        },
-        "disabled": {
-          "fill": "#262324",
-          "text": "#777575"
-        }
-      },
-      "active": {
-        "rest": {
-          "fill": "#ad3e68",
-          "text": "#fefbfc"
-        },
-        "hover": {
-          "fill": "#ba4a74",
-          "text": "#fefbfc"
-        },
-        "pressed": {
-          "fill": "#a33460",
-          "text": "#fefbfc"
-        },
-        "disabled": {
-          "fill": "#4e3e42",
-          "text": "#919191"
-        }
-      },
-      "inactive": {
-        "rest": {
-          "fill": "#3d2a30",
-          "text": "#f6e4e9"
-        },
-        "hover": {
-          "fill": "#47353a",
-          "text": "#f6e4e9"
-        },
-        "pressed": {
-          "fill": "#352328",
-          "text": "#f6e4e9"
-        },
-        "disabled": {
-          "fill": "#2b2829",
-          "text": "#7b7879"
-        }
-      },
-      "activeMuted": {
-        "rest": {
-          "fill": "#6c6c6c",
-          "text": "#fefbfc"
-        },
-        "hover": {
-          "fill": "#777777",
-          "text": "#fefbfc"
-        },
-        "pressed": {
-          "fill": "#636363",
-          "text": "#fefbfc"
-        },
-        "disabled": {
-          "fill": "#434343",
-          "text": "#919191"
-        }
-      }
-    },
-    "controlRaised": {
-      "none": {
-        "rest": {
-          "fill": "#3d2a30",
-          "text": "#fff1f5"
-        },
-        "hover": {
-          "fill": "#47353a",
-          "text": "#fff1f5"
-        },
-        "pressed": {
-          "fill": "#352328",
-          "text": "#fff1f5"
-        },
-        "disabled": {
-          "fill": "#322f30",
-          "text": "#848182"
-        }
-      },
-      "active": {
-        "rest": {
-          "fill": "#ad3e68",
-          "text": "#fefbfc"
-        },
-        "hover": {
-          "fill": "#ba4a74",
-          "text": "#fefbfc"
-        },
-        "pressed": {
-          "fill": "#a33460",
-          "text": "#fefbfc"
-        },
-        "disabled": {
-          "fill": "#554549",
-          "text": "#959595"
-        }
-      },
-      "inactive": {
-        "rest": {
-          "fill": "#3d2a30",
-          "text": "#fff1f5"
-        },
-        "hover": {
-          "fill": "#47353a",
-          "text": "#fff1f5"
-        },
-        "pressed": {
-          "fill": "#352328",
-          "text": "#fff1f5"
-        },
-        "disabled": {
-          "fill": "#322f30",
-          "text": "#848182"
-        }
-      },
-      "activeMuted": {
-        "rest": {
-          "fill": "#6c6c6c",
-          "text": "#fefbfc"
-        },
-        "hover": {
-          "fill": "#777777",
-          "text": "#fefbfc"
-        },
-        "pressed": {
-          "fill": "#636363",
-          "text": "#fefbfc"
-        },
-        "disabled": {
-          "fill": "#4a4a4a",
-          "text": "#959595"
-        }
-      }
-    }
-  },
-  "focus": {
-    "color": "#f27ca4",
-    "colorMuted": "#a8a8a8",
-    "width": 2,
-    "offset": 2,
-    "rowOffset": -1
-  },
-  "disabled": {
-    "opacity": 0.5,
-    "shadow": false
-  },
-  "elevation": {
-    "e0": {
-      "fill": "#120509",
-      "sheen": false,
-      "sheenTop": null,
-      "edgeLight": false,
-      "shadow": false
-    },
-    "e1": {
-      "fill": "#1c0c11",
-      "sheen": false,
-      "sheenTop": null,
-      "edgeLight": false,
-      "shadow": false
-    },
-    "e2": {
-      "fill": "#25151a",
-      "sheen": true,
-      "sheenTop": "#2a1a1f",
-      "edgeLight": true,
-      "shadow": false
-    },
-    "e3": {
-      "fill": "#301e23",
-      "sheen": true,
-      "sheenTop": "#352328",
-      "edgeLight": true,
-      "shadow": true
-    },
-    "field": {
-      "fill": "#120509",
-      "insetShadow": true
-    }
-  },
-  "material": {
-    "dither": "IGN",
-    "sheenMaxHeight": 80,
-    "edgeLight": "#14ffffff",
-    "edgeShadow": "#1f000000",
-    "shade": "#5c000000",
-    "overlayOutline": "#80000000"
-  },
-  "render": {
-    "scrim": "#8c000000",
-    "neverAnimateBlurRadius": true,
-    "hairlinePhysical": true
-  },
   "space": {
     "scale": [
       4,
@@ -514,5 +123,1931 @@
       "comfortable": 24
     },
     "xdgTheme": "DuneI"
+  },
+  "familles": [
+    "thematisee",
+    "dominante"
+  ],
+  "moments": [
+    "nuit",
+    "jour"
+  ],
+  "defaut": {
+    "famille": "thematisee",
+    "moment": "nuit"
+  },
+  "themes": {
+    "thematisee": {
+      "nuit": {
+        "color": {
+          "surfaceBase": "#100609",
+          "surfaceWindow": "#190e11",
+          "surfacePanel": "#22171a",
+          "surfaceRaised": "#2c2024",
+          "borderSubtle": "#392c30",
+          "borderDefault": "#493c3f",
+          "borderStrong": "#5c4e52",
+          "textDisabled": "#73696b",
+          "textTertiary": "#918689",
+          "textSecondary": "#b0a4a7",
+          "textPrimary": "#f2e6e9",
+          "textEmphasis": "#fef1f5",
+          "controlRaised": "#392c30",
+          "controlOff": "#2c2024",
+          "accent": "#ad3e68",
+          "accentStandalone": "#f27ca4",
+          "onAccent": "#fefbfc",
+          "knob": "#fef1f5",
+          "error": "#d33a3c",
+          "warning": "#e49e22",
+          "success": "#51bf68",
+          "info": "#44a8e7",
+          "categorical": [
+            "#e983a4",
+            "#ec8a67",
+            "#c1a637",
+            "#50c08b",
+            "#b494ed"
+          ]
+        },
+        "states": {
+          "surfaceWindow": {
+            "none": {
+              "rest": {
+                "fill": "#190e11",
+                "text": "#f2e6e9"
+              },
+              "hover": {
+                "fill": "#22171a",
+                "text": "#f2e6e9"
+              },
+              "pressed": {
+                "fill": "#12080b",
+                "text": "#f2e6e9"
+              },
+              "disabled": {
+                "fill": "#131111",
+                "text": "#6a6869"
+              }
+            },
+            "active": {
+              "rest": {
+                "fill": "#ad3e68",
+                "text": "#fefbfc"
+              },
+              "hover": {
+                "fill": "#ba4a74",
+                "text": "#fefbfc"
+              },
+              "pressed": {
+                "fill": "#a33460",
+                "text": "#fefbfc"
+              },
+              "disabled": {
+                "fill": "#423337",
+                "text": "#8a8989"
+              }
+            },
+            "inactive": {
+              "rest": {
+                "fill": "#392c30",
+                "text": "#f2e6e9"
+              },
+              "hover": {
+                "fill": "#44363a",
+                "text": "#f2e6e9"
+              },
+              "pressed": {
+                "fill": "#312528",
+                "text": "#f2e6e9"
+              },
+              "disabled": {
+                "fill": "#201e1f",
+                "text": "#737272"
+              }
+            },
+            "activeMuted": {
+              "rest": {
+                "fill": "#6c6c6c",
+                "text": "#fefbfc"
+              },
+              "hover": {
+                "fill": "#777777",
+                "text": "#fefbfc"
+              },
+              "pressed": {
+                "fill": "#636363",
+                "text": "#fefbfc"
+              },
+              "disabled": {
+                "fill": "#373737",
+                "text": "#8a8989"
+              }
+            }
+          },
+          "surfacePanel": {
+            "none": {
+              "rest": {
+                "fill": "#22171a",
+                "text": "#f2e6e9"
+              },
+              "hover": {
+                "fill": "#2c2024",
+                "text": "#f2e6e9"
+              },
+              "pressed": {
+                "fill": "#1b1013",
+                "text": "#f2e6e9"
+              },
+              "disabled": {
+                "fill": "#1c1a1a",
+                "text": "#706f6f"
+              }
+            },
+            "active": {
+              "rest": {
+                "fill": "#ad3e68",
+                "text": "#fefbfc"
+              },
+              "hover": {
+                "fill": "#ba4a74",
+                "text": "#fefbfc"
+              },
+              "pressed": {
+                "fill": "#a33460",
+                "text": "#fefbfc"
+              },
+              "disabled": {
+                "fill": "#47383c",
+                "text": "#8d8d8d"
+              }
+            },
+            "inactive": {
+              "rest": {
+                "fill": "#392c30",
+                "text": "#f2e6e9"
+              },
+              "hover": {
+                "fill": "#44363a",
+                "text": "#f2e6e9"
+              },
+              "pressed": {
+                "fill": "#312528",
+                "text": "#f2e6e9"
+              },
+              "disabled": {
+                "fill": "#252424",
+                "text": "#777575"
+              }
+            },
+            "activeMuted": {
+              "rest": {
+                "fill": "#6c6c6c",
+                "text": "#fefbfc"
+              },
+              "hover": {
+                "fill": "#777777",
+                "text": "#fefbfc"
+              },
+              "pressed": {
+                "fill": "#636363",
+                "text": "#fefbfc"
+              },
+              "disabled": {
+                "fill": "#3d3d3d",
+                "text": "#8d8d8d"
+              }
+            }
+          },
+          "surfaceRaised": {
+            "none": {
+              "rest": {
+                "fill": "#2c2024",
+                "text": "#f2e6e9"
+              },
+              "hover": {
+                "fill": "#362a2d",
+                "text": "#f2e6e9"
+              },
+              "pressed": {
+                "fill": "#25191c",
+                "text": "#f2e6e9"
+              },
+              "disabled": {
+                "fill": "#252324",
+                "text": "#777575"
+              }
+            },
+            "active": {
+              "rest": {
+                "fill": "#ad3e68",
+                "text": "#fefbfc"
+              },
+              "hover": {
+                "fill": "#ba4a74",
+                "text": "#fefbfc"
+              },
+              "pressed": {
+                "fill": "#a33460",
+                "text": "#fefbfc"
+              },
+              "disabled": {
+                "fill": "#4e3e42",
+                "text": "#919191"
+              }
+            },
+            "inactive": {
+              "rest": {
+                "fill": "#392c30",
+                "text": "#f2e6e9"
+              },
+              "hover": {
+                "fill": "#44363a",
+                "text": "#f2e6e9"
+              },
+              "pressed": {
+                "fill": "#312528",
+                "text": "#f2e6e9"
+              },
+              "disabled": {
+                "fill": "#2b2929",
+                "text": "#7a7979"
+              }
+            },
+            "activeMuted": {
+              "rest": {
+                "fill": "#6c6c6c",
+                "text": "#fefbfc"
+              },
+              "hover": {
+                "fill": "#777777",
+                "text": "#fefbfc"
+              },
+              "pressed": {
+                "fill": "#636363",
+                "text": "#fefbfc"
+              },
+              "disabled": {
+                "fill": "#434343",
+                "text": "#919191"
+              }
+            }
+          },
+          "controlRaised": {
+            "none": {
+              "rest": {
+                "fill": "#392c30",
+                "text": "#fef1f5"
+              },
+              "hover": {
+                "fill": "#44363a",
+                "text": "#fef1f5"
+              },
+              "pressed": {
+                "fill": "#312528",
+                "text": "#fef1f5"
+              },
+              "disabled": {
+                "fill": "#323030",
+                "text": "#838282"
+              }
+            },
+            "active": {
+              "rest": {
+                "fill": "#ad3e68",
+                "text": "#fefbfc"
+              },
+              "hover": {
+                "fill": "#ba4a74",
+                "text": "#fefbfc"
+              },
+              "pressed": {
+                "fill": "#a33460",
+                "text": "#fefbfc"
+              },
+              "disabled": {
+                "fill": "#554549",
+                "text": "#959595"
+              }
+            },
+            "inactive": {
+              "rest": {
+                "fill": "#392c30",
+                "text": "#fef1f5"
+              },
+              "hover": {
+                "fill": "#44363a",
+                "text": "#fef1f5"
+              },
+              "pressed": {
+                "fill": "#312528",
+                "text": "#fef1f5"
+              },
+              "disabled": {
+                "fill": "#323030",
+                "text": "#838282"
+              }
+            },
+            "activeMuted": {
+              "rest": {
+                "fill": "#6c6c6c",
+                "text": "#fefbfc"
+              },
+              "hover": {
+                "fill": "#777777",
+                "text": "#fefbfc"
+              },
+              "pressed": {
+                "fill": "#636363",
+                "text": "#fefbfc"
+              },
+              "disabled": {
+                "fill": "#4a4a4a",
+                "text": "#959595"
+              }
+            }
+          },
+          "controlOff": {
+            "none": {
+              "rest": {
+                "fill": "#2c2024",
+                "text": "#f2e6e9"
+              },
+              "hover": {
+                "fill": "#362a2d",
+                "text": "#f2e6e9"
+              },
+              "pressed": {
+                "fill": "#25191c",
+                "text": "#f2e6e9"
+              },
+              "disabled": {
+                "fill": "#252324",
+                "text": "#777575"
+              }
+            },
+            "active": {
+              "rest": {
+                "fill": "#ad3e68",
+                "text": "#fefbfc"
+              },
+              "hover": {
+                "fill": "#ba4a74",
+                "text": "#fefbfc"
+              },
+              "pressed": {
+                "fill": "#a33460",
+                "text": "#fefbfc"
+              },
+              "disabled": {
+                "fill": "#4e3e42",
+                "text": "#919191"
+              }
+            },
+            "inactive": {
+              "rest": {
+                "fill": "#392c30",
+                "text": "#f2e6e9"
+              },
+              "hover": {
+                "fill": "#44363a",
+                "text": "#f2e6e9"
+              },
+              "pressed": {
+                "fill": "#312528",
+                "text": "#f2e6e9"
+              },
+              "disabled": {
+                "fill": "#2b2929",
+                "text": "#7a7979"
+              }
+            },
+            "activeMuted": {
+              "rest": {
+                "fill": "#6c6c6c",
+                "text": "#fefbfc"
+              },
+              "hover": {
+                "fill": "#777777",
+                "text": "#fefbfc"
+              },
+              "pressed": {
+                "fill": "#636363",
+                "text": "#fefbfc"
+              },
+              "disabled": {
+                "fill": "#434343",
+                "text": "#919191"
+              }
+            }
+          }
+        },
+        "focus": {
+          "color": "#f27ca4",
+          "colorMuted": "#a8a8a8",
+          "width": 2,
+          "offset": 2,
+          "rowOffset": -1
+        },
+        "disabled": {
+          "opacity": 0.5,
+          "shadow": false
+        },
+        "elevation": {
+          "e0": {
+            "fill": "#100609",
+            "sheen": false,
+            "sheenTop": null,
+            "edgeLight": false,
+            "shadow": false
+          },
+          "e1": {
+            "fill": "#190e11",
+            "sheen": false,
+            "sheenTop": null,
+            "edgeLight": false,
+            "shadow": false
+          },
+          "e2": {
+            "fill": "#22171a",
+            "sheen": true,
+            "sheenTop": "#271b1f",
+            "edgeLight": true,
+            "shadow": false
+          },
+          "e3": {
+            "fill": "#2c2024",
+            "sheen": true,
+            "sheenTop": "#312528",
+            "edgeLight": true,
+            "shadow": true
+          },
+          "field": {
+            "fill": "#100609",
+            "insetShadow": true
+          }
+        },
+        "material": {
+          "dither": "IGN",
+          "sheenMaxHeight": 80,
+          "edgeLight": "#14ffffff",
+          "edgeShadow": "#1f000000",
+          "shade": "#5c000000",
+          "overlayOutline": "#80000000"
+        },
+        "render": {
+          "scrim": "#8c000000",
+          "neverAnimateBlurRadius": true,
+          "hairlinePhysical": true
+        },
+        "knob": {
+          "rest": "#fef1f5",
+          "disabled": "#838282"
+        },
+        "controls": {
+          "outline": null,
+          "offTrack": false,
+          "shadow": null,
+          "shadowBlur": 4,
+          "shadowOffsetY": 1
+        }
+      },
+      "jour": {
+        "color": {
+          "surfaceBase": "#ff95b7",
+          "surfaceWindow": "#ffa6c1",
+          "surfacePanel": "#ffb3ca",
+          "surfaceRaised": "#ffc5d5",
+          "borderSubtle": "#e293ab",
+          "borderDefault": "#cd879c",
+          "borderStrong": "#a36f7e",
+          "textDisabled": "#865a67",
+          "textTertiary": "#6a4751",
+          "textSecondary": "#53323c",
+          "textPrimary": "#130207",
+          "textEmphasis": "#040001",
+          "controlRaised": "#ffc5d5",
+          "controlOff": "#e293ab",
+          "accent": "#ad3e68",
+          "accentStandalone": "#992b57",
+          "onAccent": "#fefbfc",
+          "knob": "#ffffff",
+          "error": "#810010",
+          "warning": "#865900",
+          "success": "#00722a",
+          "info": "#006a9d",
+          "categorical": [
+            "#9c3e60",
+            "#9e4421",
+            "#766200",
+            "#00764c",
+            "#6f4fa1"
+          ]
+        },
+        "states": {
+          "surfaceWindow": {
+            "none": {
+              "rest": {
+                "fill": "#ffa6c1",
+                "text": "#130207"
+              },
+              "hover": {
+                "fill": "#ff95b7",
+                "text": "#130207"
+              },
+              "pressed": {
+                "fill": "#ff89b0",
+                "text": "#130207"
+              },
+              "disabled": {
+                "fill": "#d1bec3",
+                "text": "#696566"
+              }
+            },
+            "active": {
+              "rest": {
+                "fill": "#ad3e68",
+                "text": "#fefbfc"
+              },
+              "hover": {
+                "fill": "#a33460",
+                "text": "#fefbfc"
+              },
+              "pressed": {
+                "fill": "#9c2e5a",
+                "text": "#fefbfc"
+              },
+              "disabled": {
+                "fill": "#a8969b",
+                "text": "#c6c5c5"
+              }
+            },
+            "inactive": {
+              "rest": {
+                "fill": "#ffb3ca",
+                "text": "#130207"
+              },
+              "hover": {
+                "fill": "#ffa3bf",
+                "text": "#130207"
+              },
+              "pressed": {
+                "fill": "#ff98b9",
+                "text": "#130207"
+              },
+              "disabled": {
+                "fill": "#d4c2c7",
+                "text": "#6b6667"
+              }
+            },
+            "activeMuted": {
+              "rest": {
+                "fill": "#b7b7b7",
+                "text": "#fefbfc"
+              },
+              "hover": {
+                "fill": "#aeaeae",
+                "text": "#fefbfc"
+              },
+              "pressed": {
+                "fill": "#a8a8a8",
+                "text": "#fefbfc"
+              },
+              "disabled": {
+                "fill": "#bebebe",
+                "text": "#dad9da"
+              }
+            }
+          },
+          "surfacePanel": {
+            "none": {
+              "rest": {
+                "fill": "#ffb3ca",
+                "text": "#130207"
+              },
+              "hover": {
+                "fill": "#ffa3bf",
+                "text": "#130207"
+              },
+              "pressed": {
+                "fill": "#ff98b9",
+                "text": "#130207"
+              },
+              "disabled": {
+                "fill": "#d9c7cb",
+                "text": "#6d6869"
+              }
+            },
+            "active": {
+              "rest": {
+                "fill": "#ad3e68",
+                "text": "#fefbfc"
+              },
+              "hover": {
+                "fill": "#a33460",
+                "text": "#fefbfc"
+              },
+              "pressed": {
+                "fill": "#9c2e5a",
+                "text": "#fefbfc"
+              },
+              "disabled": {
+                "fill": "#ac9a9f",
+                "text": "#c8c8c8"
+              }
+            },
+            "inactive": {
+              "rest": {
+                "fill": "#ffb3ca",
+                "text": "#130207"
+              },
+              "hover": {
+                "fill": "#ffa3bf",
+                "text": "#130207"
+              },
+              "pressed": {
+                "fill": "#ff98b9",
+                "text": "#130207"
+              },
+              "disabled": {
+                "fill": "#d9c7cb",
+                "text": "#6d6869"
+              }
+            },
+            "activeMuted": {
+              "rest": {
+                "fill": "#b7b7b7",
+                "text": "#fefbfc"
+              },
+              "hover": {
+                "fill": "#aeaeae",
+                "text": "#fefbfc"
+              },
+              "pressed": {
+                "fill": "#a8a8a8",
+                "text": "#fefbfc"
+              },
+              "disabled": {
+                "fill": "#c3c3c3",
+                "text": "#dcdcdc"
+              }
+            }
+          },
+          "surfaceRaised": {
+            "none": {
+              "rest": {
+                "fill": "#ffc5d5",
+                "text": "#130207"
+              },
+              "hover": {
+                "fill": "#ffb6cb",
+                "text": "#130207"
+              },
+              "pressed": {
+                "fill": "#ffabc4",
+                "text": "#130207"
+              },
+              "disabled": {
+                "fill": "#e2d3d7",
+                "text": "#726e6f"
+              }
+            },
+            "active": {
+              "rest": {
+                "fill": "#ad3e68",
+                "text": "#fefbfc"
+              },
+              "hover": {
+                "fill": "#a33460",
+                "text": "#fefbfc"
+              },
+              "pressed": {
+                "fill": "#9c2e5a",
+                "text": "#fefbfc"
+              },
+              "disabled": {
+                "fill": "#b2a0a5",
+                "text": "#cccbcb"
+              }
+            },
+            "inactive": {
+              "rest": {
+                "fill": "#ffb3ca",
+                "text": "#130207"
+              },
+              "hover": {
+                "fill": "#ffa3bf",
+                "text": "#130207"
+              },
+              "pressed": {
+                "fill": "#ff98b9",
+                "text": "#130207"
+              },
+              "disabled": {
+                "fill": "#dfcdd2",
+                "text": "#706b6d"
+              }
+            },
+            "activeMuted": {
+              "rest": {
+                "fill": "#b7b7b7",
+                "text": "#fefbfc"
+              },
+              "hover": {
+                "fill": "#aeaeae",
+                "text": "#fefbfc"
+              },
+              "pressed": {
+                "fill": "#a8a8a8",
+                "text": "#fefbfc"
+              },
+              "disabled": {
+                "fill": "#c9c9c9",
+                "text": "#e0dfdf"
+              }
+            }
+          },
+          "controlRaised": {
+            "none": {
+              "rest": {
+                "fill": "#ffc5d5",
+                "text": "#040001"
+              },
+              "hover": {
+                "fill": "#ffb6cb",
+                "text": "#040001"
+              },
+              "pressed": {
+                "fill": "#ffabc4",
+                "text": "#040001"
+              },
+              "disabled": {
+                "fill": "#e2d3d7",
+                "text": "#6a6768"
+              }
+            },
+            "active": {
+              "rest": {
+                "fill": "#ad3e68",
+                "text": "#fefbfc"
+              },
+              "hover": {
+                "fill": "#a33460",
+                "text": "#fefbfc"
+              },
+              "pressed": {
+                "fill": "#9c2e5a",
+                "text": "#fefbfc"
+              },
+              "disabled": {
+                "fill": "#b2a0a5",
+                "text": "#cccbcb"
+              }
+            },
+            "inactive": {
+              "rest": {
+                "fill": "#ffb3ca",
+                "text": "#040001"
+              },
+              "hover": {
+                "fill": "#ffa3bf",
+                "text": "#040001"
+              },
+              "pressed": {
+                "fill": "#ff98b9",
+                "text": "#040001"
+              },
+              "disabled": {
+                "fill": "#dfcdd2",
+                "text": "#686465"
+              }
+            },
+            "activeMuted": {
+              "rest": {
+                "fill": "#b7b7b7",
+                "text": "#fefbfc"
+              },
+              "hover": {
+                "fill": "#aeaeae",
+                "text": "#fefbfc"
+              },
+              "pressed": {
+                "fill": "#a8a8a8",
+                "text": "#fefbfc"
+              },
+              "disabled": {
+                "fill": "#c9c9c9",
+                "text": "#e0dfdf"
+              }
+            }
+          },
+          "controlOff": {
+            "none": {
+              "rest": {
+                "fill": "#e293ab",
+                "text": "#130207"
+              },
+              "hover": {
+                "fill": "#d88aa2",
+                "text": "#130207"
+              },
+              "pressed": {
+                "fill": "#d2849c",
+                "text": "#130207"
+              },
+              "disabled": {
+                "fill": "#b7aaad",
+                "text": "#5e5a5b"
+              }
+            },
+            "active": {
+              "rest": {
+                "fill": "#ad3e68",
+                "text": "#fefbfc"
+              },
+              "hover": {
+                "fill": "#a33460",
+                "text": "#fefbfc"
+              },
+              "pressed": {
+                "fill": "#9c2e5a",
+                "text": "#fefbfc"
+              },
+              "disabled": {
+                "fill": "#9c8a8f",
+                "text": "#bfbfbf"
+              }
+            },
+            "inactive": {
+              "rest": {
+                "fill": "#ffb3ca",
+                "text": "#130207"
+              },
+              "hover": {
+                "fill": "#ffa3bf",
+                "text": "#130207"
+              },
+              "pressed": {
+                "fill": "#ff98b9",
+                "text": "#130207"
+              },
+              "disabled": {
+                "fill": "#c8b6bb",
+                "text": "#656062"
+              }
+            },
+            "activeMuted": {
+              "rest": {
+                "fill": "#b7b7b7",
+                "text": "#fefbfc"
+              },
+              "hover": {
+                "fill": "#aeaeae",
+                "text": "#fefbfc"
+              },
+              "pressed": {
+                "fill": "#a8a8a8",
+                "text": "#fefbfc"
+              },
+              "disabled": {
+                "fill": "#b2b2b2",
+                "text": "#d3d3d3"
+              }
+            }
+          }
+        },
+        "focus": {
+          "color": "#992b57",
+          "colorMuted": "#5b5b5b",
+          "width": 2,
+          "offset": 2,
+          "rowOffset": -1
+        },
+        "disabled": {
+          "opacity": 0.5,
+          "shadow": false
+        },
+        "elevation": {
+          "e0": {
+            "fill": "#ff95b7",
+            "sheen": false,
+            "sheenTop": null,
+            "edgeLight": false,
+            "shadow": false
+          },
+          "e1": {
+            "fill": "#ffa6c1",
+            "sheen": false,
+            "sheenTop": null,
+            "edgeLight": false,
+            "shadow": false
+          },
+          "e2": {
+            "fill": "#ffb3ca",
+            "sheen": false,
+            "sheenTop": null,
+            "edgeLight": false,
+            "shadow": true
+          },
+          "e3": {
+            "fill": "#ffc5d5",
+            "sheen": false,
+            "sheenTop": null,
+            "edgeLight": false,
+            "shadow": true
+          },
+          "field": {
+            "fill": "#ffc5d5",
+            "insetShadow": false
+          }
+        },
+        "material": {
+          "dither": "IGN",
+          "sheenMaxHeight": 80,
+          "edgeLight": "#00ffffff",
+          "edgeShadow": "#1f000000",
+          "shade": "#5c000000",
+          "overlayOutline": "#80000000"
+        },
+        "render": {
+          "scrim": "#8c000000",
+          "neverAnimateBlurRadius": true,
+          "hairlinePhysical": true
+        },
+        "knob": {
+          "rest": "#ffffff",
+          "disabled": "#c9c9c9"
+        },
+        "controls": {
+          "outline": "#cd879c",
+          "offTrack": true,
+          "shadow": "#33000000",
+          "shadowBlur": 4,
+          "shadowOffsetY": 1
+        }
+      }
+    },
+    "dominante": {
+      "nuit": {
+        "color": {
+          "surfaceBase": "#040404",
+          "surfaceWindow": "#0b0b0b",
+          "surfacePanel": "#141414",
+          "surfaceRaised": "#1d1d1d",
+          "borderSubtle": "#292929",
+          "borderDefault": "#404040",
+          "borderStrong": "#525252",
+          "textDisabled": "#6c6c6c",
+          "textTertiary": "#898989",
+          "textSecondary": "#a8a8a8",
+          "textPrimary": "#e9e9e9",
+          "textEmphasis": "#f5f5f5",
+          "controlRaised": "#292929",
+          "controlOff": "#1d1d1d",
+          "accent": "#ad3e68",
+          "accentStandalone": "#f27ca4",
+          "onAccent": "#fefbfc",
+          "knob": "#f5f5f5",
+          "error": "#d33a3c",
+          "warning": "#e49e22",
+          "success": "#51bf68",
+          "info": "#44a8e7",
+          "categorical": [
+            "#e983a4",
+            "#ec8a67",
+            "#c1a637",
+            "#50c08b",
+            "#b494ed"
+          ]
+        },
+        "states": {
+          "surfaceWindow": {
+            "none": {
+              "rest": {
+                "fill": "#0b0b0b",
+                "text": "#e9e9e9"
+              },
+              "hover": {
+                "fill": "#141414",
+                "text": "#e9e9e9"
+              },
+              "pressed": {
+                "fill": "#060606",
+                "text": "#e9e9e9"
+              },
+              "disabled": {
+                "fill": "#0b0b0b",
+                "text": "#646464"
+              }
+            },
+            "active": {
+              "rest": {
+                "fill": "#ad3e68",
+                "text": "#fefbfc"
+              },
+              "hover": {
+                "fill": "#ba4a74",
+                "text": "#fefbfc"
+              },
+              "pressed": {
+                "fill": "#a33460",
+                "text": "#fefbfc"
+              },
+              "disabled": {
+                "fill": "#3d2e33",
+                "text": "#878687"
+              }
+            },
+            "inactive": {
+              "rest": {
+                "fill": "#292929",
+                "text": "#e9e9e9"
+              },
+              "hover": {
+                "fill": "#333333",
+                "text": "#e9e9e9"
+              },
+              "pressed": {
+                "fill": "#222222",
+                "text": "#e9e9e9"
+              },
+              "disabled": {
+                "fill": "#181818",
+                "text": "#6d6d6d"
+              }
+            },
+            "activeMuted": {
+              "rest": {
+                "fill": "#6c6c6c",
+                "text": "#fefbfc"
+              },
+              "hover": {
+                "fill": "#777777",
+                "text": "#fefbfc"
+              },
+              "pressed": {
+                "fill": "#636363",
+                "text": "#fefbfc"
+              },
+              "disabled": {
+                "fill": "#333333",
+                "text": "#878687"
+              }
+            }
+          },
+          "surfacePanel": {
+            "none": {
+              "rest": {
+                "fill": "#141414",
+                "text": "#e9e9e9"
+              },
+              "hover": {
+                "fill": "#1d1d1d",
+                "text": "#e9e9e9"
+              },
+              "pressed": {
+                "fill": "#0d0d0d",
+                "text": "#e9e9e9"
+              },
+              "disabled": {
+                "fill": "#141414",
+                "text": "#6a6a6a"
+              }
+            },
+            "active": {
+              "rest": {
+                "fill": "#ad3e68",
+                "text": "#fefbfc"
+              },
+              "hover": {
+                "fill": "#ba4a74",
+                "text": "#fefbfc"
+              },
+              "pressed": {
+                "fill": "#a33460",
+                "text": "#fefbfc"
+              },
+              "disabled": {
+                "fill": "#433438",
+                "text": "#8b8a8a"
+              }
+            },
+            "inactive": {
+              "rest": {
+                "fill": "#292929",
+                "text": "#e9e9e9"
+              },
+              "hover": {
+                "fill": "#333333",
+                "text": "#e9e9e9"
+              },
+              "pressed": {
+                "fill": "#222222",
+                "text": "#e9e9e9"
+              },
+              "disabled": {
+                "fill": "#1d1d1d",
+                "text": "#717171"
+              }
+            },
+            "activeMuted": {
+              "rest": {
+                "fill": "#6c6c6c",
+                "text": "#fefbfc"
+              },
+              "hover": {
+                "fill": "#777777",
+                "text": "#fefbfc"
+              },
+              "pressed": {
+                "fill": "#636363",
+                "text": "#fefbfc"
+              },
+              "disabled": {
+                "fill": "#393939",
+                "text": "#8b8a8a"
+              }
+            }
+          },
+          "surfaceRaised": {
+            "none": {
+              "rest": {
+                "fill": "#1d1d1d",
+                "text": "#e9e9e9"
+              },
+              "hover": {
+                "fill": "#262626",
+                "text": "#e9e9e9"
+              },
+              "pressed": {
+                "fill": "#161616",
+                "text": "#e9e9e9"
+              },
+              "disabled": {
+                "fill": "#1d1d1d",
+                "text": "#717171"
+              }
+            },
+            "active": {
+              "rest": {
+                "fill": "#ad3e68",
+                "text": "#fefbfc"
+              },
+              "hover": {
+                "fill": "#ba4a74",
+                "text": "#fefbfc"
+              },
+              "pressed": {
+                "fill": "#a33460",
+                "text": "#fefbfc"
+              },
+              "disabled": {
+                "fill": "#493a3e",
+                "text": "#8e8e8e"
+              }
+            },
+            "inactive": {
+              "rest": {
+                "fill": "#292929",
+                "text": "#e9e9e9"
+              },
+              "hover": {
+                "fill": "#333333",
+                "text": "#e9e9e9"
+              },
+              "pressed": {
+                "fill": "#222222",
+                "text": "#e9e9e9"
+              },
+              "disabled": {
+                "fill": "#222222",
+                "text": "#747474"
+              }
+            },
+            "activeMuted": {
+              "rest": {
+                "fill": "#6c6c6c",
+                "text": "#fefbfc"
+              },
+              "hover": {
+                "fill": "#777777",
+                "text": "#fefbfc"
+              },
+              "pressed": {
+                "fill": "#636363",
+                "text": "#fefbfc"
+              },
+              "disabled": {
+                "fill": "#3e3e3e",
+                "text": "#8e8e8e"
+              }
+            }
+          },
+          "controlRaised": {
+            "none": {
+              "rest": {
+                "fill": "#292929",
+                "text": "#f5f5f5"
+              },
+              "hover": {
+                "fill": "#333333",
+                "text": "#f5f5f5"
+              },
+              "pressed": {
+                "fill": "#222222",
+                "text": "#f5f5f5"
+              },
+              "disabled": {
+                "fill": "#292929",
+                "text": "#7d7d7d"
+              }
+            },
+            "active": {
+              "rest": {
+                "fill": "#ad3e68",
+                "text": "#fefbfc"
+              },
+              "hover": {
+                "fill": "#ba4a74",
+                "text": "#fefbfc"
+              },
+              "pressed": {
+                "fill": "#a33460",
+                "text": "#fefbfc"
+              },
+              "disabled": {
+                "fill": "#514145",
+                "text": "#939293"
+              }
+            },
+            "inactive": {
+              "rest": {
+                "fill": "#292929",
+                "text": "#f5f5f5"
+              },
+              "hover": {
+                "fill": "#333333",
+                "text": "#f5f5f5"
+              },
+              "pressed": {
+                "fill": "#222222",
+                "text": "#f5f5f5"
+              },
+              "disabled": {
+                "fill": "#292929",
+                "text": "#7d7d7d"
+              }
+            },
+            "activeMuted": {
+              "rest": {
+                "fill": "#6c6c6c",
+                "text": "#fefbfc"
+              },
+              "hover": {
+                "fill": "#777777",
+                "text": "#fefbfc"
+              },
+              "pressed": {
+                "fill": "#636363",
+                "text": "#fefbfc"
+              },
+              "disabled": {
+                "fill": "#464646",
+                "text": "#939293"
+              }
+            }
+          },
+          "controlOff": {
+            "none": {
+              "rest": {
+                "fill": "#1d1d1d",
+                "text": "#e9e9e9"
+              },
+              "hover": {
+                "fill": "#262626",
+                "text": "#e9e9e9"
+              },
+              "pressed": {
+                "fill": "#161616",
+                "text": "#e9e9e9"
+              },
+              "disabled": {
+                "fill": "#1d1d1d",
+                "text": "#717171"
+              }
+            },
+            "active": {
+              "rest": {
+                "fill": "#ad3e68",
+                "text": "#fefbfc"
+              },
+              "hover": {
+                "fill": "#ba4a74",
+                "text": "#fefbfc"
+              },
+              "pressed": {
+                "fill": "#a33460",
+                "text": "#fefbfc"
+              },
+              "disabled": {
+                "fill": "#493a3e",
+                "text": "#8e8e8e"
+              }
+            },
+            "inactive": {
+              "rest": {
+                "fill": "#292929",
+                "text": "#e9e9e9"
+              },
+              "hover": {
+                "fill": "#333333",
+                "text": "#e9e9e9"
+              },
+              "pressed": {
+                "fill": "#222222",
+                "text": "#e9e9e9"
+              },
+              "disabled": {
+                "fill": "#222222",
+                "text": "#747474"
+              }
+            },
+            "activeMuted": {
+              "rest": {
+                "fill": "#6c6c6c",
+                "text": "#fefbfc"
+              },
+              "hover": {
+                "fill": "#777777",
+                "text": "#fefbfc"
+              },
+              "pressed": {
+                "fill": "#636363",
+                "text": "#fefbfc"
+              },
+              "disabled": {
+                "fill": "#3e3e3e",
+                "text": "#8e8e8e"
+              }
+            }
+          }
+        },
+        "focus": {
+          "color": "#f27ca4",
+          "colorMuted": "#a8a8a8",
+          "width": 2,
+          "offset": 2,
+          "rowOffset": -1
+        },
+        "disabled": {
+          "opacity": 0.5,
+          "shadow": false
+        },
+        "elevation": {
+          "e0": {
+            "fill": "#040404",
+            "sheen": false,
+            "sheenTop": null,
+            "edgeLight": false,
+            "shadow": false
+          },
+          "e1": {
+            "fill": "#0b0b0b",
+            "sheen": false,
+            "sheenTop": null,
+            "edgeLight": false,
+            "shadow": false
+          },
+          "e2": {
+            "fill": "#141414",
+            "sheen": true,
+            "sheenTop": "#181818",
+            "edgeLight": true,
+            "shadow": false
+          },
+          "e3": {
+            "fill": "#1d1d1d",
+            "sheen": true,
+            "sheenTop": "#222222",
+            "edgeLight": true,
+            "shadow": true
+          },
+          "field": {
+            "fill": "#040404",
+            "insetShadow": true
+          }
+        },
+        "material": {
+          "dither": "IGN",
+          "sheenMaxHeight": 80,
+          "edgeLight": "#14ffffff",
+          "edgeShadow": "#1f000000",
+          "shade": "#5c000000",
+          "overlayOutline": "#80000000"
+        },
+        "render": {
+          "scrim": "#8c000000",
+          "neverAnimateBlurRadius": true,
+          "hairlinePhysical": true
+        },
+        "knob": {
+          "rest": "#f5f5f5",
+          "disabled": "#7d7d7d"
+        },
+        "controls": {
+          "outline": null,
+          "offTrack": false,
+          "shadow": null,
+          "shadowBlur": 4,
+          "shadowOffsetY": 1
+        }
+      },
+      "jour": {
+        "color": {
+          "surfaceBase": "#e6e6e6",
+          "surfaceWindow": "#f4f4f4",
+          "surfacePanel": "#f8f8f8",
+          "surfaceRaised": "#ffffff",
+          "borderSubtle": "#dbdbdb",
+          "borderDefault": "#cecece",
+          "borderStrong": "#b1b1b1",
+          "textDisabled": "#989898",
+          "textTertiary": "#808080",
+          "textSecondary": "#636363",
+          "textPrimary": "#222222",
+          "textEmphasis": "#121212",
+          "controlRaised": "#ffffff",
+          "controlOff": "#dbdbdb",
+          "accent": "#ad3e68",
+          "accentStandalone": "#992b57",
+          "onAccent": "#fefbfc",
+          "knob": "#ffffff",
+          "error": "#990016",
+          "warning": "#ac7300",
+          "success": "#108f3b",
+          "info": "#0079b3",
+          "categorical": [
+            "#9c3e60",
+            "#9e4421",
+            "#766200",
+            "#00764c",
+            "#6f4fa1"
+          ]
+        },
+        "states": {
+          "surfaceWindow": {
+            "none": {
+              "rest": {
+                "fill": "#f4f4f4",
+                "text": "#222222"
+              },
+              "hover": {
+                "fill": "#eaeaea",
+                "text": "#222222"
+              },
+              "pressed": {
+                "fill": "#e4e4e4",
+                "text": "#222222"
+              },
+              "disabled": {
+                "fill": "#f4f4f4",
+                "text": "#8d8d8d"
+              }
+            },
+            "active": {
+              "rest": {
+                "fill": "#ad3e68",
+                "text": "#fefbfc"
+              },
+              "hover": {
+                "fill": "#a33460",
+                "text": "#fefbfc"
+              },
+              "pressed": {
+                "fill": "#9c2e5a",
+                "text": "#fefbfc"
+              },
+              "disabled": {
+                "fill": "#c2afb4",
+                "text": "#d4d4d4"
+              }
+            },
+            "inactive": {
+              "rest": {
+                "fill": "#f8f8f8",
+                "text": "#222222"
+              },
+              "hover": {
+                "fill": "#eeeeee",
+                "text": "#222222"
+              },
+              "pressed": {
+                "fill": "#e8e8e8",
+                "text": "#222222"
+              },
+              "disabled": {
+                "fill": "#f6f6f6",
+                "text": "#8e8e8e"
+              }
+            },
+            "activeMuted": {
+              "rest": {
+                "fill": "#b7b7b7",
+                "text": "#fefbfc"
+              },
+              "hover": {
+                "fill": "#aeaeae",
+                "text": "#fefbfc"
+              },
+              "pressed": {
+                "fill": "#a8a8a8",
+                "text": "#fefbfc"
+              },
+              "disabled": {
+                "fill": "#d8d8d8",
+                "text": "#e8e8e8"
+              }
+            }
+          },
+          "surfacePanel": {
+            "none": {
+              "rest": {
+                "fill": "#f8f8f8",
+                "text": "#222222"
+              },
+              "hover": {
+                "fill": "#eeeeee",
+                "text": "#222222"
+              },
+              "pressed": {
+                "fill": "#e8e8e8",
+                "text": "#222222"
+              },
+              "disabled": {
+                "fill": "#f8f8f8",
+                "text": "#8f8f8f"
+              }
+            },
+            "active": {
+              "rest": {
+                "fill": "#ad3e68",
+                "text": "#fefbfc"
+              },
+              "hover": {
+                "fill": "#a33460",
+                "text": "#fefbfc"
+              },
+              "pressed": {
+                "fill": "#9c2e5a",
+                "text": "#fefbfc"
+              },
+              "disabled": {
+                "fill": "#c4b1b6",
+                "text": "#d5d5d5"
+              }
+            },
+            "inactive": {
+              "rest": {
+                "fill": "#f8f8f8",
+                "text": "#222222"
+              },
+              "hover": {
+                "fill": "#eeeeee",
+                "text": "#222222"
+              },
+              "pressed": {
+                "fill": "#e8e8e8",
+                "text": "#222222"
+              },
+              "disabled": {
+                "fill": "#f8f8f8",
+                "text": "#8f8f8f"
+              }
+            },
+            "activeMuted": {
+              "rest": {
+                "fill": "#b7b7b7",
+                "text": "#fefbfc"
+              },
+              "hover": {
+                "fill": "#aeaeae",
+                "text": "#fefbfc"
+              },
+              "pressed": {
+                "fill": "#a8a8a8",
+                "text": "#fefbfc"
+              },
+              "disabled": {
+                "fill": "#dbdbdb",
+                "text": "#eae9e9"
+              }
+            }
+          },
+          "surfaceRaised": {
+            "none": {
+              "rest": {
+                "fill": "#ffffff",
+                "text": "#222222"
+              },
+              "hover": {
+                "fill": "#f5f5f5",
+                "text": "#222222"
+              },
+              "pressed": {
+                "fill": "#eeeeee",
+                "text": "#222222"
+              },
+              "disabled": {
+                "fill": "#ffffff",
+                "text": "#939393"
+              }
+            },
+            "active": {
+              "rest": {
+                "fill": "#ad3e68",
+                "text": "#fefbfc"
+              },
+              "hover": {
+                "fill": "#a33460",
+                "text": "#fefbfc"
+              },
+              "pressed": {
+                "fill": "#9c2e5a",
+                "text": "#fefbfc"
+              },
+              "disabled": {
+                "fill": "#c7b4b9",
+                "text": "#d7d7d7"
+              }
+            },
+            "inactive": {
+              "rest": {
+                "fill": "#f8f8f8",
+                "text": "#222222"
+              },
+              "hover": {
+                "fill": "#eeeeee",
+                "text": "#222222"
+              },
+              "pressed": {
+                "fill": "#e8e8e8",
+                "text": "#222222"
+              },
+              "disabled": {
+                "fill": "#fcfcfc",
+                "text": "#919191"
+              }
+            },
+            "activeMuted": {
+              "rest": {
+                "fill": "#b7b7b7",
+                "text": "#fefbfc"
+              },
+              "hover": {
+                "fill": "#aeaeae",
+                "text": "#fefbfc"
+              },
+              "pressed": {
+                "fill": "#a8a8a8",
+                "text": "#fefbfc"
+              },
+              "disabled": {
+                "fill": "#dedede",
+                "text": "#ecebeb"
+              }
+            }
+          },
+          "controlRaised": {
+            "none": {
+              "rest": {
+                "fill": "#ffffff",
+                "text": "#121212"
+              },
+              "hover": {
+                "fill": "#f5f5f5",
+                "text": "#121212"
+              },
+              "pressed": {
+                "fill": "#eeeeee",
+                "text": "#121212"
+              },
+              "disabled": {
+                "fill": "#ffffff",
+                "text": "#898989"
+              }
+            },
+            "active": {
+              "rest": {
+                "fill": "#ad3e68",
+                "text": "#fefbfc"
+              },
+              "hover": {
+                "fill": "#a33460",
+                "text": "#fefbfc"
+              },
+              "pressed": {
+                "fill": "#9c2e5a",
+                "text": "#fefbfc"
+              },
+              "disabled": {
+                "fill": "#c7b4b9",
+                "text": "#d7d7d7"
+              }
+            },
+            "inactive": {
+              "rest": {
+                "fill": "#f8f8f8",
+                "text": "#121212"
+              },
+              "hover": {
+                "fill": "#eeeeee",
+                "text": "#121212"
+              },
+              "pressed": {
+                "fill": "#e8e8e8",
+                "text": "#121212"
+              },
+              "disabled": {
+                "fill": "#fcfcfc",
+                "text": "#888888"
+              }
+            },
+            "activeMuted": {
+              "rest": {
+                "fill": "#b7b7b7",
+                "text": "#fefbfc"
+              },
+              "hover": {
+                "fill": "#aeaeae",
+                "text": "#fefbfc"
+              },
+              "pressed": {
+                "fill": "#a8a8a8",
+                "text": "#fefbfc"
+              },
+              "disabled": {
+                "fill": "#dedede",
+                "text": "#ecebeb"
+              }
+            }
+          },
+          "controlOff": {
+            "none": {
+              "rest": {
+                "fill": "#dbdbdb",
+                "text": "#222222"
+              },
+              "hover": {
+                "fill": "#d1d1d1",
+                "text": "#222222"
+              },
+              "pressed": {
+                "fill": "#cacaca",
+                "text": "#222222"
+              },
+              "disabled": {
+                "fill": "#dbdbdb",
+                "text": "#818181"
+              }
+            },
+            "active": {
+              "rest": {
+                "fill": "#ad3e68",
+                "text": "#fefbfc"
+              },
+              "hover": {
+                "fill": "#a33460",
+                "text": "#fefbfc"
+              },
+              "pressed": {
+                "fill": "#9c2e5a",
+                "text": "#fefbfc"
+              },
+              "disabled": {
+                "fill": "#b4a2a6",
+                "text": "#cdcccc"
+              }
+            },
+            "inactive": {
+              "rest": {
+                "fill": "#f8f8f8",
+                "text": "#222222"
+              },
+              "hover": {
+                "fill": "#eeeeee",
+                "text": "#222222"
+              },
+              "pressed": {
+                "fill": "#e8e8e8",
+                "text": "#222222"
+              },
+              "disabled": {
+                "fill": "#e8e8e8",
+                "text": "#878787"
+              }
+            },
+            "activeMuted": {
+              "rest": {
+                "fill": "#b7b7b7",
+                "text": "#fefbfc"
+              },
+              "hover": {
+                "fill": "#aeaeae",
+                "text": "#fefbfc"
+              },
+              "pressed": {
+                "fill": "#a8a8a8",
+                "text": "#fefbfc"
+              },
+              "disabled": {
+                "fill": "#cbcbcb",
+                "text": "#e1e0e0"
+              }
+            }
+          }
+        },
+        "focus": {
+          "color": "#992b57",
+          "colorMuted": "#5b5b5b",
+          "width": 2,
+          "offset": 2,
+          "rowOffset": -1
+        },
+        "disabled": {
+          "opacity": 0.5,
+          "shadow": false
+        },
+        "elevation": {
+          "e0": {
+            "fill": "#e6e6e6",
+            "sheen": false,
+            "sheenTop": null,
+            "edgeLight": false,
+            "shadow": false
+          },
+          "e1": {
+            "fill": "#f4f4f4",
+            "sheen": false,
+            "sheenTop": null,
+            "edgeLight": false,
+            "shadow": false
+          },
+          "e2": {
+            "fill": "#f8f8f8",
+            "sheen": false,
+            "sheenTop": null,
+            "edgeLight": false,
+            "shadow": true
+          },
+          "e3": {
+            "fill": "#ffffff",
+            "sheen": false,
+            "sheenTop": null,
+            "edgeLight": false,
+            "shadow": true
+          },
+          "field": {
+            "fill": "#ffffff",
+            "insetShadow": false
+          }
+        },
+        "material": {
+          "dither": "IGN",
+          "sheenMaxHeight": 80,
+          "edgeLight": "#00ffffff",
+          "edgeShadow": "#1f000000",
+          "shade": "#5c000000",
+          "overlayOutline": "#80000000"
+        },
+        "render": {
+          "scrim": "#8c000000",
+          "neverAnimateBlurRadius": true,
+          "hairlinePhysical": true
+        },
+        "knob": {
+          "rest": "#ffffff",
+          "disabled": "#e3e3e3"
+        },
+        "controls": {
+          "outline": "#cecece",
+          "offTrack": true,
+          "shadow": "#33000000",
+          "shadowBlur": 4,
+          "shadowOffsetY": 1
+        }
+      }
+    }
+  },
+  "pastilles": {
+    "glyph": "#100609",
+    "error": "#d33a3c",
+    "errorHover": "#e9504d",
+    "errorPressed": "#b91b25",
+    "warning": "#e49e22",
+    "warningHover": "#f9b13e",
+    "warningPressed": "#c98800",
+    "success": "#51bf68",
+    "successHover": "#66d37a",
+    "successPressed": "#35a751"
   }
 }

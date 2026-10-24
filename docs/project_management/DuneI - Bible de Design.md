@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas
 
-Document normatif. Version 0.12. Historique en fin de document.
+Document normatif. Version 0.14. Historique en fin de document.
 
 ## Comment lire ce document
 
@@ -37,15 +37,21 @@ Ils sont ordonnés. En cas de conflit, le plus haut l'emporte.
 
 ### Le contrat
 
-> **Un thème est une fonction à deux variables : une teinte, et un facteur d'échelle de chroma borné. Rien d'autre.**
+> **Un thème est une famille et un moment, colorés par une teinte et un facteur d'échelle de chroma borné. Rien d'autre.**
+>
+> **Chaque rôle a un plancher de contraste, tenu dans les quatre thèmes et à toutes les teintes** : un thème peut être plus contrasté que la nuit thématisée pour un rôle, jamais moins (D83).
 
-Sont **invariants par construction** : l'échelle de luminosité, l'espacement, les rayons, la typographie, les durées et courbes, la densité, les couleurs sémantiques. Aucun d'eux ne prend le fond d'écran en paramètre.
+La **famille** règle l'infusion des gris : *thématisée*, ils portent la teinte du fond d'écran ; *dominante*, ils sont strictement neutres et seul l'accent garde la teinte. Le **moment** est *nuit* ou *jour* : il règle l'échelle de luminosité. Les quatre thèmes sont précalculés ; l'utilisateur en choisit un (commande `dunei-theme`), la teinte et le facteur de chroma restant ses deux seules valeurs réglables.
+
+Sont **invariants par construction** : l'espacement, les rayons, la typographie, les durées et courbes, la densité, les couleurs sémantiques de la famille et de la teinte (elles ne dépendent que du moment). L'échelle de luminosité est fixe **à l'intérieur d'un moment** : le choix de la famille ne la fait jamais bouger, et ne peut donc jamais faire tomber un contraste. Aucun de ces invariants ne prend le fond d'écran en paramètre.
 
 ### L'échelle de luminosité
 
-Douze échelons fixes en OKLCH. **La luminosité ne bouge jamais** ; seuls la teinte et le chroma varient.
+Douze échelons fixes en OKLCH, **deux échelles, une par moment**. Dans un moment, la luminosité ne bouge jamais ; seuls la teinte et le chroma varient.
 
-C'est ce qui garantit le contraste par construction : si le texte est à l'échelon 10 sur un fond à l'échelon 2, le rapport est identique quel que soit le thème. Trente thèmes, aucun audit d'accessibilité à refaire.
+C'est ce qui garantit le contraste par construction : si le texte est à l'échelon 10 sur un fond à l'échelon 2, le rapport est identique quelle que soit la teinte. Trente teintes, aucun audit d'accessibilité à refaire. D'un moment à l'autre, un contraste strictement égal est impossible (les surfaces de jour sont bien plus étalées en Lc que celles de nuit) : d'où les planchers par rôle, mesurés sur la nuit thématisée et contrôlés dans les quatre thèmes.
+
+L'échelle de **nuit** (ci-dessous) est celle de la famille thématisée ; la dominante de nuit descend ses échelons 0 à 4 de 0,03.
 
 | Échelon | L | Rôle |
 | --- | --- | --- |
@@ -62,7 +68,26 @@ C'est ce qui garantit le contraste par construction : si le texte est à l'éche
 | 10 | 0,935 | `text-primary` |
 | 11 | 0,97 | `text-emphasis` |
 
-Chroma des neutres : 0,020, majoré de 40 % sous L 0,45 — la perception du chroma s'affaiblit en basse lumière. Plafond de gamut : 0,16.
+Chroma des neutres de la nuit thématisée : 0,014 (0,020 avant L2-40, jugé trop infusé à l'écran), majoré de 40 % sous L 0,45 — la perception du chroma s'affaiblit en basse lumière. Plafond de gamut : 0,16.
+
+**L'échelle de jour.** En clair, l'élévation monte vers le blanc : la fenêtre est grise, les contrôles et les surfaces surélevées sont blancs, et l'ombre porte le relief. Elle a deux variantes (D83, D84) :
+
+| Échelon | Rôle | Jour, dominante | Jour, thématisée |
+| --- | --- | --- | --- |
+| 0 | `surface-base` | 0,925 | 0,79 |
+| 1 | `surface-window` | 0,968 | 0,82 |
+| 2 | `surface-panel` | 0,98 | 0,845 |
+| 3 | `surface-raised` | 1,000 | 0,88 |
+| 4 | `border-subtle` | 0,89 | 0,75 |
+| 5 | `border-default` | 0,85 | 0,70 |
+| 6 | `border-strong` | 0,76 | 0,60 |
+| 7 | `text-disabled` | 0,68 | 0,52 |
+| 8 | `text-tertiary` | 0,60 | 0,44 |
+| 9 | `text-secondary` | 0,50 | 0,36 |
+| 10 | `text-primary` | 0,25 | 0,13 |
+| 11 | `text-emphasis` | 0,18 | 0,07 |
+
+Le jour dominant a des gris strictement neutres et un E3 blanc pur. Le jour thématisé repose sur une base colorée : tous ses gris sont teintés (chroma 0,020 multipliée par un facteur de 7,5 sur le bureau et la fenêtre jusqu'à 1,5 sur le texte), et son E3 n'est pas blanc.
 
 **Le rabattement dans le gamut sRGB se fait échelon par échelon, en préservant la teinte.** Sans cette précaution, la majoration en basse lumière peut décaler la teinte au rabattement.
 
@@ -120,7 +145,7 @@ Usages autorisés : bureaux virtuels, étiquettes, coloration syntaxique, série
 
 ### Invariants — ce qui ne recolore jamais
 
-- Couleurs sémantiques : erreur, avertissement, succès. **Elles ne servent jamais de fond à du texte** — texte, bordure, icône seulement : aucun texte n'atteint le plancher sur `warning`, `success` ou `info` (Lc 59 au mieux). Une action destructrice s'écrit en texte et bordure `error` sur une surface neutre. **Hors plafond de chroma** : leur valeur est écrite telle quelle, et seulement rabattue dans le gamut à la conversion, à teinte préservée.
+- Couleurs sémantiques : erreur, avertissement, succès. Leur luminosité dépend du moment (plus basse au jour, fixée par les planchers), jamais de la famille ni de la teinte. **Elles ne servent jamais de fond à du texte** — texte, bordure, icône seulement : aucun texte n'atteint le plancher sur `warning`, `success` ou `info` (Lc 59 au mieux). Une action destructrice s'écrit en texte et bordure `error` sur une surface neutre. **Hors plafond de chroma** : leur valeur est écrite telle quelle, et seulement rabattue dans le gamut à la conversion, à teinte préservée.
 - Bleu d'information — teinte bloquée, et distinction renforcée par la forme, à cause de la collision avec un thème bleu.
 - Zones de jugement colorimétrique : pourtour de canevas, visionneuse, aperçu vidéo. **Neutre pur obligatoire** — un gris teinté fausse la perception des couleurs de l'utilisateur.
 - Indicateurs critiques : batterie faible, enregistrement, chiffrement, connexion non sécurisée.
@@ -132,6 +157,9 @@ Usages autorisés : bureaux virtuels, étiquettes, coloration syntaxique, série
 
 - Cible pour le corps de texte : **Lc 90**.
 - Plancher de rejet : **Lc 75**.
+- Au-dessus de la cible et du plancher, **chaque rôle a son plancher propre** (D83) : le plus petit Lc que tient la nuit thématisée sur ses fonds de référence, tenu dans les quatre thèmes et aux quatre teintes de référence (0, 55, 200, 265). L'ordre des rôles est contrôlé : chaque texte plus contrasté que le précédent, tout texte plus contrasté que toute bordure.
+- **Exception, une seule : le jour thématisé** (D84). Sa base colorée, voulue par Nicolas pour que ce thème « tire tout l'avantage d'avoir des couleurs », ramène le corps de texte à Lc 69 à 76 : sous la cible de 90 et, par endroits, sous le plancher de rejet de 75. Ce thème porte donc ses propres seuils, égaux aux minima mesurés (`contrast_target_body` et `contrast_floor` à 69, planchers par rôle propres). Aucun autre thème n'en bénéficie, et aucune autre dérogation n'est permise sans une entrée au journal.
+- **Seconde dérogation, bornée : l'état inactif au jour** (D83). Le texte sur-accent posé sur l'accent muet de la sélection inactive (luminosité 0,78, validée à l'écran par Nicolas) ne tient que Lc 41 dans les deux thèmes de jour : un état inactif, volontairement atténué, hors du corps de texte. Elle est bornée par le plancher `on-accent-muted` de ce moment (41), contre 79 la nuit.
 - WCAG 2 conservé comme filet réglementaire, jamais comme critère de conception.
 
 ## 3. Dimensions
@@ -200,6 +228,7 @@ En mode sombre, **la profondeur se lit par la luminosité, pas par l'ombre.** Su
 
 - **`field` s'enfonce** sous son conteneur, à E0 dans un panneau à E2. Ce qui reçoit du contenu se creuse ; ce qui flotte s'élève. Un champ plus clair que son panneau donne une impression de bricolage sans qu'on sache dire pourquoi.
 - **Aucune ombre en couche 1.** Voir une ombre doit signifier que l'élément flotte réellement.
+- **Au jour, l'ombre porte le relief** : la profondeur monte vers le blanc, sheen et liseré n'ont pas de sens sur du blanc et sont nuls, E2 et E3 portent une ombre (D83).
 - **Jamais de cinquième niveau.** Si un assemblage en réclame un, c'est la hiérarchie qui est trop profonde, pas l'échelle qui est trop courte.
 
 ### Les trois tokens de matière
@@ -273,6 +302,13 @@ Ils ne sont **pas exclusifs** : une rangée peut être sélectionnée, survolée
 Un contrôle est **un cran au-dessus de son conteneur** : visible et rempli au repos, il ne se confond pas avec son fond. Sur une fenêtre, il prend le fond d'un panneau ; sur un panneau, celui d'une surface relevée. Sur une surface déjà à E3 (dialogue, popover), il prend `controlRaised`, un échelon de luminosité au-dessus de E3, avec ses combinaisons d'états. **`controlRaised` n'est pas un cinquième niveau d'élévation** : ni sheen, ni liseré, ni ombre, seulement un fond. Le rôle se lit en remontant les conteneurs, jamais à la main. Une rangée et un champ, eux, prennent le rôle de leur conteneur : la rangée se confond avec sa liste, le champ s'enfonce sous son fond (D82).
 
 Sur `controlRaised`, le texte est `text-emphasis` : `text-primary` y restait à Lc 88, sous la cible de 90 (D82).
+
+### Les rôles `knob`, `control-off` et le contour des contrôles blancs
+
+- **`knob`** : un seul rôle pour le disque de l'interrupteur et la poignée du curseur. En nuit, `text-emphasis` du thème ; au jour, blanc pur, et son état désactivé se rapproche de `border-default`. Son contraste est contrôlé contre l'accent (`knob-accent`) et contre la piste éteinte (`knob-off`) (D83).
+- **`control-off`** : le gris plein de la piste éteinte d'un interrupteur, de la bascule éteinte et du rail d'une barre d'onglets, pour qu'un disque blanc s'y détache. Au jour, L 0,89 ; en nuit, défini mais non employé.
+- **Au jour, un contrôle blanc est cerné** : un pixel physique à la couleur de `border-default`, et une ombre noire à 20 % sur la poignée du curseur et le segment coché d'une barre d'onglets. Un blanc sans contour se confond avec un fond clair ; en nuit, aucun contour ni ombre. Le contour et l'ombre sont des tokens du moment (`[controls]`), jamais déduits dans le QML.
+- **Les pastilles de fenêtre** ne dépendent pas du moment : mêmes fonds sémantiques de nuit et même glyphe dans les quatre thèmes.
 
 ### Modificateur de conteneur `inactive`
 
@@ -849,3 +885,5 @@ Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si 
 | 0.10 | 2026-10-22 | Chapitre 7 : l'anneau de focus est précisé, 2 px à l'accent autonome, couleur validée à l'écran (D81) |
 | 0.11 | 2026-10-24 | Chapitre 7 : focus des rangées en contour intérieur, champ sans anneau, cran des contrôles et rôle `controlRaised`, un seul arrêt par liste et par barre d'onglets, formes à la manière de macOS ; annexe E : rangée, champ, bouton, case, interrupteur et onglets précisés, radio, jauge, bascule à glyphe, compteur, menu déroulant, champ de recherche, section dépliable, pastilles de fenêtre et indicateur d'activité ajoutés ; écart du délai de l'infobulle signalé (D82) |
 | 0.12 | 2026-10-24 | Chapitre 7 : texte de `controlRaised` en `text-emphasis` (Lc ≥ 90) ; annexe E : infobulle à 500 ms, écart refermé, et pastilles de fenêtre sans transition `state`, puisqu'elles n'ont pas d'`Etat` |
+| 0.13 | 2026-10-25 | Chapitre 2 : contrat révisé, une famille et un moment, planchers de contraste par rôle, deux échelles (nuit, jour de la dominante et jour thématisé), sémantiques par moment, chroma de la nuit thématisée à 0,014, exception du corps de texte dans le jour thématisé ; chapitre 5 : ombre au jour ; chapitre 7 : rôles `knob` et `control-off`, contour des contrôles blancs du jour, pastilles hors du moment (D83, D84) |
+| 0.14 | 2026-10-25 | Chapitre 2 : seconde dérogation, bornée, du contraste (texte sur l'accent muet de l'état inactif au jour, Lc 41, plancher `on-accent-muted`) (D83) |

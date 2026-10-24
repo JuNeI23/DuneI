@@ -5,14 +5,20 @@ import Quickshell.Io
 
 // Theme — source unique des valeurs de design de la coque.
 // Rôle : lit coque-tokens.json et motion.json, produits par make tokens et make motion et déployés par
-// deploy.py, les surveille sur disque et remplace d'un bloc l'objet exposé à chaque lecture valide : toutes
-// les liaisons se réévaluent dans la même image. Aucune valeur de design n'est écrite ici.
+// deploy.py, ainsi que theme.json, le choix du thème écrit par dunei-theme ; les surveille sur disque et
+// remplace d'un bloc l'objet exposé à chaque lecture valide : toutes les liaisons se réévaluent dans la même
+// image. coque-tokens.json porte les quatre thèmes (themes[famille][moment]) ; tokens est la vue du thème
+// actif, un objet neuf à chaque lecture, fait des clés partagées du fichier et de la branche choisie, ce qui
+// fait basculer ColorSpring d'un coup, sans animation (D81). Aucune valeur de design n'est écrite ici.
 // Entrées : DUNEI_TOKENS_DIR (dossier redirigé, pour la planche et les essais), sinon
-//           $XDG_CONFIG_HOME/dunei, sinon $HOME/.config/dunei.
-// Sorties : dir, ready, tokens et ses raccourcis par groupe, density (confortable), motion, stateColors(),
-//           hairline(), police().
-// Erreurs : fichier absent ou illisible → console.error, ready reste faux ; contenu invalide ou incomplet →
-//           console.warn, valeurs précédentes gardées.
+//           $XDG_CONFIG_HOME/dunei, sinon $HOME/.config/dunei ; dans ce dossier, theme.json
+//           {famille, moment}, facultatif.
+// Sorties : dir, ready, famille, moment, tokens et ses raccourcis par groupe (pastilles, knob et controls compris),
+//           density (confortable), motion, stateColors(), hairline(), police().
+// Erreurs : tokens ou mouvement absents ou illisibles → console.error, ready reste faux ; contenu invalide ou
+//           incomplet → console.warn, valeurs précédentes gardées. theme.json absent → défaut des tokens, en
+//           silence ; theme.json invalide ou thème inconnu → défaut des tokens et un seul console.warn ;
+//           theme.json illisible (droits) → console.error et défaut des tokens.
 // Dépendances : Quickshell (env), Quickshell.Io (FileView, FileViewError).
 Singleton {
     id: root
@@ -21,6 +27,17 @@ Singleton {
         || (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config") + "/dunei"
     property var tokens: null
     property var motion: null
+    // Contenus bruts : fichier, coque-tokens.json entier ; choix, theme.json validé ({famille, moment}) ou null
+    // pour le défaut. Seul composer() les combine en tokens.
+    property var fichier: null
+    property var choix: null
+    // Thème inconnu déjà signalé, pour ne l'écrire qu'une fois au journal même si les tokens sont relus.
+    property string signale: ""
+    // famille et moment sont posés par composer() avant tokens : un consommateur de tokensChanged les lit à jour.
+    property string _famille: ""
+    property string _moment: ""
+    readonly property string famille: _famille
+    readonly property string moment: _moment
     // ready est posé par affectation, après celle des données, dans chaque onParsed : lié directement à tokens,
     // il pouvait changer pendant la notification de tokensChanged avant que les raccourcis ci-dessous ne soient
     // réévalués, et un consommateur réagissant à readyChanged lisait alors Theme.color indéfini.
@@ -34,6 +51,9 @@ Singleton {
     readonly property var elevation: tokens?.elevation
     readonly property var material: tokens?.material
     readonly property var render: tokens?.render
+    // Contrôles blancs du thème actif : contour (outline, couleur ou null), piste éteinte au rôle controlOff
+    // (offTrack), ombre de la poignée et de l'onglet coché (shadow, couleur ou null ; shadowBlur, shadowOffsetY).
+    readonly property var controls: tokens?.controls
     readonly property var space: tokens?.space
     readonly property var radius: tokens?.radius
     readonly property var window: tokens?.window
@@ -41,6 +61,8 @@ Singleton {
     readonly property var breakpoints: tokens?.breakpoints
     readonly property var typo: tokens?.typo
     readonly property var icons: tokens?.icons
+    readonly property var pastilles: tokens?.pastilles
+    readonly property var knob: tokens?.knob
     // La préférence de densité viendra de L2-26 ; d'ici là, la densité confortable s'applique.
     readonly property var density: tokens?.density.comfortable
 
@@ -76,52 +98,111 @@ Singleton {
         return render ? (render.hairlinePhysical ? 1 / dpr : 1) : undefined
     }
 
+    // composer — construit la vue du thème actif et la publie d'un bloc.
+    // Rôle : choisit la branche themes[famille][moment] désignée par choix, ou le défaut des tokens si choix est
+    //        nul ou nomme une famille ou un moment que les tokens ne déclarent pas, puis remplace tokens par un
+    //        objet neuf : les clés partagées du fichier, sans themes, et celles de la branche.
+    // Entrées : aucune ; lit fichier et choix. Sortie : aucune ; pose famille, moment puis tokens. Sans tokens
+    //           lus, ne fait rien.
+    // Erreurs : thème inconnu → console.warn « Theme : thème <f>/<m> inconnu ; défaut <f>/<m> appliqué », une
+    //           seule fois par nom inconnu.
+    // Dépendances : fichier (defaut, familles, moments, themes), choix.
+    function composer() {
+        if (!fichier) return
+        const d = fichier.defaut
+        let f = choix?.famille ?? d.famille, m = choix?.moment ?? d.moment
+        if (!fichier.familles.includes(f) || !fichier.moments.includes(m)) {
+            if (signale !== f + "/" + m)
+                console.warn("Theme : thème " + f + "/" + m + " inconnu ; défaut " + d.famille + "/" + d.moment
+                    + " appliqué")
+            signale = f + "/" + m
+            f = d.famille
+            m = d.moment
+        } else signale = ""
+        const vue = Object.assign({}, fichier, fichier.themes[f][m])
+        delete vue.themes
+        _famille = f
+        _moment = m
+        tokens = vue
+    }
+
     // parse — analyse un fichier lu et vérifie ses clés obligatoires.
     // Entrées : text contenu du fichier ; name nom du fichier, pour le journal ; keys clés de premier niveau
-    //           exigées.
+    //           exigées ; suite, ce qui s'applique à la place, pour le journal.
     // Sortie : l'objet analysé, ou null s'il est illisible ou incomplet.
-    // Erreurs : console.warn « Theme : <fichier> ignoré, <raison> ; valeurs précédentes gardées ».
+    // Erreurs : console.warn « Theme : <fichier> ignoré, <raison> ; <suite> ».
     // Dépendances : aucune.
-    function parse(text, name, keys) {
+    function parse(text, name, keys, suite) {
         let data = null, reason = ""
         try { data = JSON.parse(text) } catch (e) { reason = "JSON illisible (" + e.message + ")" }
         const missing = data instanceof Object ? keys.filter(k => !(k in data)) : keys
         if (!reason && missing.length) reason = "clés absentes : " + missing.join(", ")
         if (!reason) return data
-        console.warn("Theme : " + name + " ignoré, " + reason + " ; valeurs précédentes gardées")
+        console.warn("Theme : " + name + " ignoré, " + reason + " ; " + suite)
         return null
     }
 
-    // Source — un fichier généré, surveillé sur disque et relu à chaque changement.
-    // Entrées : name nom du fichier dans dir ; keys clés exigées. Sortie : signal parsed(data) à chaque
-    // lecture valide. Erreurs : chargement impossible → console.error ; contenu invalide → voir parse.
+    // Source — un fichier surveillé sur disque et relu à chaque changement, renommage compris.
+    // Entrées : name nom du fichier dans dir ; keys clés exigées ; optional, vrai pour un fichier dont l'absence
+    // est normale ; suite, ce qui s'applique quand le contenu est invalide, pour le journal.
+    // Sortie : signal parsed(data) à chaque lecture valide ; signal rejected() à chaque lecture invalide, ou
+    // impossible pour un fichier facultatif.
+    // Erreurs : chargement impossible → console.error, sauf l'absence d'un fichier facultatif, silencieuse ;
+    // contenu invalide → voir parse.
     // Dépendances : FileView, parse.
     component Source: FileView {
         id: source
         required property string name
         required property var keys
+        property bool optional: false
+        property string suite: "valeurs précédentes gardées"
         signal parsed(var data)
+        signal rejected()
 
         path: root.dir + "/" + name
         watchChanges: true
         printErrors: false
         onFileChanged: reload()
         onLoaded: {
-            const data = root.parse(text(), name, keys)
-            if (data) parsed(data)
+            const data = root.parse(text(), name, keys, suite)
+            data ? parsed(data) : rejected()
         }
-        onLoadFailed: error => console.error("Theme : " + name
-            + (error === FileViewError.FileNotFound ? " introuvable" : " illisible") + " dans " + root.dir
-            + " (" + FileViewError.toString(error) + ")")
+        onLoadFailed: error => {
+            if (optional) rejected()
+            if (!optional || error !== FileViewError.FileNotFound)
+                console.error("Theme : " + name
+                    + (error === FileViewError.FileNotFound ? " introuvable" : " illisible") + " dans " + root.dir
+                    + " (" + FileViewError.toString(error) + ")")
+        }
     }
 
     Source {
         name: "coque-tokens.json"
-        keys: ["_generated", "color", "states"]
+        keys: ["_generated", "defaut", "familles", "moments", "themes"]
         onParsed: data => {
-            root.tokens = data
+            root.fichier = data
+            root.composer()
             root._ready = root.motion !== null
-            console.info("Theme : chargé, teinte " + data.hue)
+            console.info("Theme : chargé, teinte " + data.hue + ", thème " + root.famille + "/" + root.moment)
+        }
+    }
+
+    // Le choix du thème : absent, invalide ou supprimé, il vaut le défaut des tokens. Un choix déjà nul ne
+    // recompose pas, pour qu'un theme.json absent au lancement ne publie pas un second objet de tokens.
+    Source {
+        name: "theme.json"
+        keys: ["famille", "moment"]
+        optional: true
+        suite: "défaut des tokens appliqué"
+        onParsed: data => {
+            root.choix = data
+            root.composer()
+            if (root.fichier) console.info("Theme : thème " + root.famille + "/" + root.moment + " appliqué")
+        }
+        onRejected: {
+            if (root.choix === null) return
+            root.choix = null
+            root.composer()
         }
     }
 

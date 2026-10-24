@@ -17,7 +17,7 @@ from pathlib import Path
 
 from dunei_theme.checks import check
 from dunei_theme.emitters import TARGETS
-from dunei_theme.model import load, resolve
+from dunei_theme.model import defaut, load, resolve, theme_data, themes
 
 
 def main() -> int:
@@ -27,7 +27,7 @@ def main() -> int:
     Sortie : code de retour 0 si succès, 1 si la source est introuvable ou si une cible refuse une valeur.
     Erreurs : « source introuvable » ou le message de la cible sur stderr, sans rien écrire ;
               avertissements de check sur stderr.
-    Dépendances : dunei_theme (model, checks, emitters).
+    Dépendances : dunei_theme (model, checks, emitters) ; contrôle chaque thème de model.themes.
     """
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--src", default=Path("tokens.toml"), type=Path)
@@ -39,9 +39,11 @@ def main() -> int:
         print(f"source introuvable : {args.src}", file=sys.stderr)
         return 1
 
-    model = resolve(load(args.src), args.hue)
-    for w in check(model):
-        print(f"  avertissement : {w}", file=sys.stderr)
+    data = load(args.src)
+    for famille, moment in themes(data):
+        for w in check(resolve(theme_data(data, famille, moment), args.hue)):
+            print(f"  avertissement : [{famille}/{moment}] {w}", file=sys.stderr)
+    model = resolve(theme_data(data, *defaut(data)), args.hue)
 
     try:
         outputs = {filename: emitter(model) for filename, emitter in TARGETS.items()}

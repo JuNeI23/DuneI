@@ -23,15 +23,15 @@ import "Composants/etats.js" as Etats
 // etat, ressort, ressortsFiges, image, controles, coches, cotes, glyphes, radios, jauge, progression, separateur,
 // champ, indicatif, tailleIcone, liste, arrets, rangee, bouton, overlays, overlaysFermes, pastilles, compteur,
 // compteurLargeur, deroulant, recherche, rechercheCouleurs, activite, depliable, depliableCotes, iconesControles,
-// bascule, fenetreAttention).
+// bascule, fenetreAttention, knobs, contours).
 // Commandes sans journal : « essai rechercheTexte <texte> », « essai rechercheActive <bool> », « essai activiteEtat
 // <visible> <running> », « essai activitePhase <phase> », « essai activiteAncetre <bool> », « essai depliableOuvrir
 // <bool> », « essai basculeCocher <bool> », « essai pastillesForcer <état> », « essai pastillesReduire <bool> »,
-// « essai compteurValeur <n> », « essai deroulantRang <n> », « essai decocher », « essai radioCocher <rang> », « essai
-// jaugeActive <bool> », « essai boutonPrincipal <bool> », « essai inactif <bool> », « essai reparenter », « essai
-// texteMoyen », « essai anneauInactif <bool> », « essai survol <bool> », « essai champActif <bool> », « essai
-// champTexte <texte> », « essai selectionLibre », « essai icone <nom> <bool> », « essai ouvrirFactice <A|B|C> » et
-// « essai fermerFactice <A|B|C> ».
+// « essai knobsActifs <bool> », « essai interrupteurCocher <bool> », « essai compteurValeur <n> », « essai deroulantRang <n> », « essai decocher »,
+// « essai radioCocher <rang> », « essai jaugeActive <bool> », « essai boutonPrincipal <bool> », « essai inactif
+// <bool> », « essai reparenter », « essai texteMoyen », « essai anneauInactif <bool> », « essai survol <bool> »,
+// « essai champActif <bool> », « essai champTexte <texte> », « essai selectionLibre », « essai icone <nom> <bool> »,
+// « essai ouvrirFactice <A|B|C> » et « essai fermerFactice <A|B|C> ».
 // Erreurs : celles de Theme et des liaisons, dans le journal. Dépendances : quickshell ≥ 0.3 (Quickshell.Io :
 // IpcHandler), modules coque/Theme et coque/Composants.
 // Import : Quickshell ne résout pas un module situé au-dessus de la racine de la coque lancée ; les liens
@@ -589,6 +589,42 @@ ShellRoot {
                 i.children[0].width, curseurEssai.implicitWidth, curseurEssai.handle.width,
                 curseurEssai.background.height, curseurEssai.background.children[0].color,
                 groupeRadios.children[0].indicator.width, groupeRadios.children[0].point].join(" "))
+        }
+
+        // knobs — journalise la couleur du disque de l'interrupteur, puis celle de la poignée du curseur.
+        // Entrées : aucune. Sortie : aucune ; « essai : knobs <#disque> <#poignée> ». Erreurs : aucune.
+        // Dépendances : interrupteurEssai (le disque est le premier enfant de la piste), curseurEssai.
+        function knobs(): void {
+            essai.journal("knobs", [interrupteurEssai.indicator.children[0].color,
+                curseurEssai.handle.color].join(" "))
+        }
+
+        // contours — journalise le traitement des contrôles blancs : épaisseur du contour du bouton, du disque de
+        // l'interrupteur, de la poignée du curseur, de l'onglet et du disque de la bascule ; visibilité de l'ombre
+        // de la poignée ; couleur de la piste de l'interrupteur et du disque de la bascule.
+        // Entrées : aucune. Sortie : aucune ; « essai : contours <n> × 5 <bool> <#piste> <#disque> ».
+        // Erreurs : aucune. Dépendances : boutonEssai, interrupteurEssai (le disque est le premier enfant de la
+        // piste), curseurEssai (l'ombre est le premier enfant de la poignée), ongletEssai, basculeEssai.
+        function contours(): void {
+            essai.journal("contours", [boutonEssai.background.border.width,
+                interrupteurEssai.indicator.children[0].border.width, curseurEssai.handle.border.width,
+                ongletEssai.background.border.width, basculeEssai.disque.border.width,
+                curseurEssai.handle.children[0].visible, interrupteurEssai.indicator.color,
+                basculeEssai.disque.color].join(" "))
+        }
+
+        // interrupteurCocher — allume ou éteint l'interrupteur d'essai par programme.
+        // Entrée : valeur, nouveau checked. Sortie : aucune. Erreurs : aucune. Dépendances : interrupteurEssai.
+        function interrupteurCocher(valeur: bool): void {
+            interrupteurEssai.checked = valeur
+        }
+
+        // knobsActifs — active ou désactive ensemble l'interrupteur et le curseur d'essai.
+        // Entrée : valeur, nouvel enabled. Sortie : aucune. Erreurs : aucune.
+        // Dépendances : interrupteurEssai, curseurEssai.
+        function knobsActifs(valeur: bool): void {
+            interrupteurEssai.enabled = valeur
+            curseurEssai.enabled = valeur
         }
 
         // progression — journalise la largeur de la piste, la largeur du remplissage pour une valeur de 1,5, puis
