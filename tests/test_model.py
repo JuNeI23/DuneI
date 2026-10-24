@@ -120,6 +120,41 @@ class ModelTest(unittest.TestCase):
         self.assertEqual(theme_data(data, "f", "m")["a"], {"x": 3, "y": 2})
         self.assertEqual(data["a"], {"x": 1, "y": 2})
 
+    def test_fusion_croisee(self):
+        """Vérifie l'ordre base, moment, famille, famille × moment ; la table croisée ne vaut que pour son moment
+        et ne se fusionne pas dans [moments]."""
+        data = {"a": {"x": 1, "y": 1, "z": 1}, "moments": {"m": {"a": {"x": 2, "y": 2}}, "n": {}},
+                "familles": {"f": {"a": {"y": 3}, "moments": {"m": {"a": {"y": 5, "z": 4}}}}}}
+        self.assertEqual(theme_data(data, "f", "m")["a"], {"x": 2, "y": 5, "z": 4})
+        self.assertEqual(theme_data(data, "f", "n")["a"], {"x": 1, "y": 3, "z": 1})
+        self.assertEqual(theme_data(data, "f", "m")["moments"], data["moments"])
+        data["familles"]["f"]["moments"]["aube"] = {}
+        with self.assertRaisesRegex(KeyError, "moment inconnu : aube"):
+            theme_data(data, "f", "n")
+
+    def test_dominante_nuit_plus_sombre(self):
+        """Vérifie que la dominante de nuit descend ses surfaces et son contrôle de 0,03 (border-subtle, au même échelon
+        que le contrôle, les suit) sans toucher aux textes, et
+        que la dominante de jour garde les luminosités du jour thématisé."""
+        th, do = (resolve(theme_data(self.data, f, "nuit"), 55)["roles"] for f in ("thematisee", "dominante"))
+        for r in th:
+            with self.subTest(role=r):
+                ecart = 0.03 if r.startswith("surface-") or r in ("control-raised", "border-subtle") else 0
+                self.assertAlmostEqual(do[r].l, th[r].l - ecart, places=6)
+        jt, jd = self._jour("thematisee")["roles"], self._jour("dominante")["roles"]
+        self.assertEqual({r: c.l for r, c in jt.items()}, {r: c.l for r, c in jd.items()})
+
+    def test_jour_thematise_infuse(self):
+        """Vérifie que les surfaces claires du jour thématisé portent la teinte (chroma ≥ 0,012), que E3 et le
+        contrôle restent blancs, et que la dominante de jour reste strictement neutre."""
+        for h in HUES:
+            r = self._jour("thematisee", h)["roles"]
+            with self.subTest(hue=h):
+                for s in ("surface-base", "surface-window", "surface-panel"):
+                    self.assertGreaterEqual(r[s].c, 0.012)
+                self.assertEqual((r["surface-raised"].c, r["control-raised"].c), (0, 0))
+                self.assertTrue(all(c.c == 0 for c in self._jour("dominante", h)["ramp"]))
+
     def test_theme_inconnu(self):
         with self.assertRaisesRegex(KeyError, "famille inconnue : verre"):
             theme_data(self.data, "verre", "nuit")

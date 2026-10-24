@@ -18,6 +18,6 @@ return {
         },
     },
     misc = {
-        background_color = "rgba(120601ff)",
+        background_color = "rgba(0f0703ff)",
     },
 }

@@ -26,7 +26,7 @@ contrast_floor = 75        # Lc — plancher de rejet
 "border-default" = 0
 "border-strong" = 12
 "text-disabled" = 22
-"text-tertiary" = 35
+"text-tertiary" = 36
 "text-secondary" = 51
 "text-primary" = 90
 "text-emphasis" = 98
@@ -88,7 +88,7 @@ assumed_color_depth = 8
 # machine (caladan…) vit dans la surcharge, jamais ici (L4-08).
 hue = 55                   # 0–360, quantifiée par pas de 5°
 chroma_scale = 1.0         # 0.8–1.2, borné
-neutral_chroma = 0.020     # infusion de la teinte dans les gris
+neutral_chroma = 0.014     # infusion de la teinte dans les gris (0,020 jusqu'à L2-40 ; le jour thématisé garde 0,020)
 dark_chroma_boost = 1.4    # majoration sous L 0.45 : perception réduite en basse lumière
 accent_chroma = 0.15
 chroma_ceiling = 0.16      # plafond gamut sRGB sur toute la plage de teintes
@@ -498,12 +498,14 @@ role = "text-emphasis"   # nuit : la couleur qu'ont aujourd'hui le disque et la 
 mode = "light"
 
 [moments.jour.lightness]
-# Écart à la conception : surface-window 0,965 (départ 0,955) et surface-panel 0,98 (départ 0,975). Sur 0,955, aucun
-# texte ne dépasse Lc 97 : le plancher de text-emphasis (98) n'est atteignable qu'avec une fenêtre plus claire.
-steps = [0.925, 0.965, 0.98, 1.0, 0.89, 0.85, 0.76, 0.68, 0.60, 0.50, 0.25, 0.18]
-# Facteur de chroma neutre par échelon : 0,006 au-dessus de L 0,9, 0,012 entre 0,8 et 0,9, 0,020 au-dessous,
-# majoré sous L 0,45 ; blanc pur à E3.
-neutral_profile = [0.3, 0.3, 0.3, 0.0, 0.6, 0.6, 1.0, 1.0, 1.0, 1.0, 1.4, 1.4]
+# Écart à la conception : surface-window 0,968 (départ 0,955) et surface-panel 0,98 (départ 0,975). Sur 0,955, aucun
+# texte ne dépasse Lc 97 : le plancher de text-emphasis (98) n'est atteignable qu'avec une fenêtre plus claire. La
+# fenêtre est passée de 0,965 à 0,968 quand sa chroma a monté (L2-40, 7b) : elle garde ainsi Lc 98,3 pour text-emphasis.
+steps = [0.925, 0.968, 0.98, 1.0, 0.89, 0.85, 0.76, 0.68, 0.60, 0.50, 0.25, 0.18]
+# Facteur de chroma neutre par échelon, sur la chroma neutre du jour thématisé (0,020, surcharge croisée plus bas) :
+# 0,015 sur le bureau, la fenêtre et le panneau, pour que la teinte s'y sente ; 0,012 entre L 0,8 et 0,9 ; 0,020
+# au-dessous, majoré sous L 0,45 ; blanc pur à E3. La dominante, à chroma neutre nulle, reste strictement neutre.
+neutral_profile = [0.75, 0.75, 0.75, 0.0, 0.6, 0.6, 1.0, 1.0, 1.0, 1.0, 1.4, 1.4]
 
 [moments.jour.roles]
 control-raised = 3       # blanc, comme E3 : l'ombre et le liseré le détachent
@@ -549,6 +551,11 @@ lightness_delta = -0.05
 [moments.jour.states.selected_inactive]
 lightness_step = 2
 
+# Modificateur inactive du jour : l'accent sans chroma à la luminosité de l'accent (0,53) assombrissait tout le
+# panneau ; il remonte dans la gamme claire, au-dessus de la piste éteinte grise. Le sur-accent blanc y garde Lc 55.
+[moments.jour.states.container_inactive]
+fill_lightness = 0.70
+
 [moments.jour.knob]
 lightness = 1.0
 # Le contrôle du jour est blanc comme le bouton : éteint vers lui, le bouton ne changerait pas. Il se rapproche donc
@@ -557,5 +564,15 @@ disabled_toward = "border-default"
 
 [familles.thematisee]    # la base : aucune surcharge
 
+# Surcharges croisées famille × moment, fusionnées en dernier (model.theme_data).
+# Le jour thématisé garde la chroma neutre d'avant L2-40 : la nuit seule descend à 0,014.
+[familles.thematisee.moments.jour.theme]
+neutral_chroma = 0.020
+
 [familles.dominante.theme]
 neutral_chroma = 0.0     # gris strictement neutres ; l'accent garde sa teinte
+
+# La nuit dominante descend ses surfaces et son contrôle (échelons 0 à 4) de 0,03 ; les textes ne bougent pas.
+# L'échelon 4 porte aussi border-subtle, qui descend avec le contrôle et garde son écart aux surfaces.
+[familles.dominante.moments.nuit.lightness]
+steps = [0.11, 0.15, 0.19, 0.23, 0.28, 0.37, 0.44, 0.53, 0.63, 0.73, 0.935, 0.97]

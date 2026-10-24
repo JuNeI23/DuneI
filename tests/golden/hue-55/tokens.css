@@ -1,32 +1,32 @@
 /* GÉNÉRÉ depuis tokens.toml — NE PAS MODIFIER À LA MAIN */
 :root {
   /* thème : teinte 55.0° */
-  --l-0: oklch(0.140 0.0280 55);
-  --l-1: oklch(0.180 0.0280 55);
-  --l-2: oklch(0.220 0.0280 55);
-  --l-3: oklch(0.260 0.0280 55);
-  --l-4: oklch(0.310 0.0280 55);
-  --l-5: oklch(0.370 0.0280 55);
-  --l-6: oklch(0.440 0.0280 55);
-  --l-7: oklch(0.530 0.0200 55);
-  --l-8: oklch(0.630 0.0200 55);
-  --l-9: oklch(0.730 0.0200 55);
-  --l-10: oklch(0.935 0.0200 55);
-  --l-11: oklch(0.970 0.0200 55);
+  --l-0: oklch(0.140 0.0196 55);
+  --l-1: oklch(0.180 0.0196 55);
+  --l-2: oklch(0.220 0.0196 55);
+  --l-3: oklch(0.260 0.0196 55);
+  --l-4: oklch(0.310 0.0196 55);
+  --l-5: oklch(0.370 0.0196 55);
+  --l-6: oklch(0.440 0.0196 55);
+  --l-7: oklch(0.530 0.0140 55);
+  --l-8: oklch(0.630 0.0140 55);
+  --l-9: oklch(0.730 0.0140 55);
+  --l-10: oklch(0.935 0.0140 55);
+  --l-11: oklch(0.970 0.0140 55);
 
-  --surface-base: oklch(0.140 0.0280 55);
-  --surface-window: oklch(0.180 0.0280 55);
-  --surface-panel: oklch(0.220 0.0280 55);
-  --surface-raised: oklch(0.260 0.0280 55);
-  --border-subtle: oklch(0.310 0.0280 55);
-  --border-default: oklch(0.370 0.0280 55);
-  --border-strong: oklch(0.440 0.0280 55);
-  --text-disabled: oklch(0.530 0.0200 55);
-  --text-tertiary: oklch(0.630 0.0200 55);
-  --text-secondary: oklch(0.730 0.0200 55);
-  --text-primary: oklch(0.935 0.0200 55);
-  --text-emphasis: oklch(0.970 0.0200 55);
-  --control-raised: oklch(0.310 0.0280 55);
+  --surface-base: oklch(0.140 0.0196 55);
+  --surface-window: oklch(0.180 0.0196 55);
+  --surface-panel: oklch(0.220 0.0196 55);
+  --surface-raised: oklch(0.260 0.0196 55);
+  --border-subtle: oklch(0.310 0.0196 55);
+  --border-default: oklch(0.370 0.0196 55);
+  --border-strong: oklch(0.440 0.0196 55);
+  --text-disabled: oklch(0.530 0.0140 55);
+  --text-tertiary: oklch(0.630 0.0140 55);
+  --text-secondary: oklch(0.730 0.0140 55);
+  --text-primary: oklch(0.935 0.0140 55);
+  --text-emphasis: oklch(0.970 0.0140 55);
+  --control-raised: oklch(0.310 0.0196 55);
 
   --accent: oklch(0.530 0.1500 55);
   --accent-standalone: oklch(0.730 0.1500 55);

@@ -156,6 +156,19 @@ class QuickshellEmitterTest(unittest.TestCase):
         self.assertEqual(st["active"]["disabled"]["fill"],
                          to_hex(oklch(acc.l + (panel.l - acc.l) * 0.55, acc.c * 0.15, acc.h, ce)))
 
+    def test_accent_muet_du_jour(self):
+        """Vérifie que, au jour, l'accent sans chroma du modificateur inactive prend la luminosité de
+        states.container_inactive.fill_lightness, dans la gamme claire, et qu'il reste gris ; à la nuit, il garde
+        celle de l'accent (test_states_valeurs)."""
+        cible = theme_data(self.data, "thematisee", "jour")["states"]["container_inactive"]["fill_lightness"]
+        for f in ("thematisee", "dominante"):
+            m = resolve(theme_data(self.data, f, "jour"), 55.0)
+            acc, ce = m["accent"], self.data["theme"]["chroma_ceiling"]
+            with self.subTest(famille=f):
+                self.assertGreater(cible, acc.l)
+                self.assertEqual(self.out["themes"][f]["jour"]["states"]["surfacePanel"]["activeMuted"]["rest"]["fill"],
+                                 to_hex(oklch(cible, 0, acc.h, ce)))
+
     def test_semantiques_pastilles(self):
         """Vérifie les variantes de survol et de pression d'error, warning et success, propres aux pastilles de
         fenêtre : la luminosité monte ou descend des écarts de la section pastilles (et non de ceux des états), en

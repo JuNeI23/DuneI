@@ -66,19 +66,27 @@ def _fusion(base: dict, surcharge: dict) -> None:
 
 
 def theme_data(data: dict, famille: str, moment: str) -> dict:
-    """Données d'un thème : la base, puis les surcharges du moment, puis celles de la famille.
+    """Données d'un thème : la base, puis les surcharges du moment, puis celles de la famille, puis la surcharge
+    croisée [familles.<famille>.moments.<moment>], propre à ce couple.
 
     Entrées : data — TOML brut (jamais modifié) ; famille, moment — noms des tables de surcharge.
-    Sortie : copie profonde de data, fusionnée, que resolve() sait résoudre.
-    Erreurs : KeyError « famille inconnue : <f> » ou « moment inconnu : <m> ».
+    Sortie : copie profonde de data, fusionnée, que resolve() sait résoudre ; la table [moments] n'y reçoit pas
+             les surcharges croisées.
+    Erreurs : KeyError « famille inconnue : <f> » ou « moment inconnu : <m> », y compris pour un moment nommé par
+              une surcharge croisée de la famille.
     Dépendances : copy.
     """
     for table, nom, libelle in (("familles", famille, "famille"), ("moments", moment, "moment")):
         if nom not in data.get(table, {}):
             raise KeyError(f"{libelle} inconnu{'e' if libelle == 'famille' else ''} : {nom}")
+    fam = dict(data["familles"][famille])
+    croisees = fam.pop("moments", {})
+    for nom in croisees:
+        if nom not in data["moments"]:
+            raise KeyError(f"moment inconnu : {nom}")
     out = copy.deepcopy(data)
-    _fusion(out, data["moments"][moment])
-    _fusion(out, data["familles"][famille])
+    for surcharge in (data["moments"][moment], fam, croisees.get(moment, {})):
+        _fusion(out, surcharge)
     return out
 
 

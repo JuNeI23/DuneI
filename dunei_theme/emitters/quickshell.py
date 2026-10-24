@@ -63,7 +63,8 @@ def _states(model: dict) -> dict:
 
     Règles de la bible (ch. 7), appliquées dans l'ordre base, sélection, survol, pression,
     désactivé. Le QML n'a ainsi aucune règle de couleur à porter. Le texte des sélections sans
-    accent est celui du rôle de fond ([role_text], text-primary par défaut).
+    accent est celui du rôle de fond ([role_text], text-primary par défaut). L'accent muet (activeMuted) prend la
+    luminosité de states.container_inactive.fill_lightness quand le thème la donne, celle de l'accent sinon.
 
     Entrée : model — sortie de model.resolve.
     Sortie : dict states[rôle][sélection][interaction] = {"fill": "#rrggbb", "text": "#rrggbb"},
@@ -74,6 +75,8 @@ def _states(model: dict) -> dict:
     ceiling, st = raw["theme"]["chroma_ceiling"], raw["states"]
     acc = model["accent"]
     muet = st["container_inactive"]["accent_chroma_multiplier"]
+    # L'accent muet garde la luminosité de l'accent, sauf si le thème lui en donne une (fill_lightness, au jour).
+    muet_l = st["container_inactive"].get("fill_lightness", acc.l)
 
     def decale(col, dl=0.0, dc=1.0):
         """Couleur dont la luminosité est décalée et le chroma multiplié, rabattue dans le gamut.
@@ -91,6 +94,8 @@ def _states(model: dict) -> dict:
         """
         return _eteint(model, col, fond)
 
+    muet_fond = oklch(muet_l, acc.c * muet, acc.h, ceiling)
+
     def combinaisons(nom, selection):
         """Les quatre interactions d'une sélection sur un rôle de surface.
 
@@ -101,7 +106,7 @@ def _states(model: dict) -> dict:
         role, texte = roles[nom], roles[role_text(raw, nom)]
         fond, txt = {"none": (role, texte), "active": (acc, model["on_accent"]),
                      "inactive": (model["ramp"][st["selected_inactive"]["lightness_step"]], texte),
-                     "activeMuted": (decale(acc, 0, muet), model["on_accent"])}[selection]
+                     "activeMuted": (muet_fond, model["on_accent"])}[selection]
         fond_off = eteint(fond, role)
         cols = {"rest": (fond, txt), "hover": (decale(fond, st["hover"]["lightness_delta"]), txt),
                 "pressed": (decale(fond, st["pressed"]["lightness_delta"]), txt),
