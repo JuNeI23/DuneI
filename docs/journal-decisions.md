@@ -1819,3 +1819,118 @@ et leur raison.
 *Touché : carnet (« La bibliothèque de composants »), backlog (L2-01, L2-02, L2-03, L2-19, ajout de L2-40 à
 L2-43), direction, bible (chapitre 7, annexe E), conception et plan de L2-01, `tokens.toml`, `motion.toml`,
 `dunei_theme/`, `dunei_motion/`, `coque/`, `tests/`.*
+
+## 2026-10-25 — Thèmes statiques (L2-40)
+
+### D83 · Le contrat du thème révisé : une famille et un moment, des planchers de contraste par rôle
+
+2026-10-25. L2-40 livre quatre thèmes précalculés dans `coque-tokens.json` et choisis à chaud par la commande
+`dunei-theme`. La conception (`docs/superpowers/specs/2026-10-24-themes-statiques-design.md`, v0.3) porte le
+détail ; voici le contrat révisé, les choix et leur raison. Il remplace le contrat du chapitre 2 de la bible
+(« une teinte et un facteur de chroma, la luminosité ne bouge jamais »).
+
+- **Le contrat.** Un thème est une **famille** (thématisée, dont les gris sont infusés de la teinte, ou
+  dominante, dont les gris sont neutres) et un **moment** (nuit ou jour), colorés par une teinte et un facteur de
+  chroma. La luminosité de chaque rôle reste fixe, mais à l'intérieur d'un moment et d'une famille donnés :
+  la teinte et le chroma demeurent les deux seules valeurs réglables par l'utilisateur. Raison : un contraste
+  strictement égal d'un moment à l'autre est impossible, les surfaces de jour étant bien plus étalées en Lc que
+  celles de nuit ; le contrat parle donc de planchers.
+- **Les planchers, par rôle.** Chaque rôle a un plancher de contraste, tenu dans les quatre thèmes et aux quatre
+  teintes de référence (0, 55, 200, 265) : un thème peut être plus contrasté que la nuit thématisée pour un rôle,
+  jamais moins. Le plancher est mesuré sur la nuit thématisée (`mesure_planchers.py` redonne la table inscrite
+  dans `[meta.planchers]`), et un thème peut porter les siens (`[moments.jour.meta.planchers]`, ou la surcharge
+  croisée) quand son échelle l'impose : c'est le cas de `knob-off`, 98 en nuit et 15 en jour, et du jour
+  thématisé (D84). L'ordre des rôles est contrôlé au jour comme en nuit : chaque rôle de texte plus contrasté que
+  le précédent, et tout texte plus contrasté que toute bordure.
+- **La composition.** `model.theme_data` fusionne, dans cet ordre, la base (la nuit thématisée), le moment
+  (`[moments.<m>]`), la famille (`[familles.<f>]`) puis la surcharge croisée `[familles.<f>.moments.<m>]`,
+  ajoutée en cours de route pour que le jour thématisé ait sa propre échelle sans toucher la dominante de jour.
+  `resolve()` reste la seule résolution des couleurs. Ajouter un moment ou une famille ne demande qu'un bloc TOML.
+- **Le rôle `knob`.** Un seul rôle pour le disque de l'interrupteur et la poignée du curseur. En nuit, il prend
+  `text-emphasis` : le disque de nuit change donc légèrement (`#f5e6dd` devient `#fff2ea` ; désactivé `#777574`
+  devient `#848280`), la poignée ne change pas. Arbitrage du contrôleur, soumis à Nicolas à l'écran et accepté :
+  un rôle unique valait mieux que deux rôles qui divergent. En jour, il est blanc pur (`knob.lightness`, qui
+  l'emporte sur `knob.role`) et son état désactivé se rapproche de `border-default`, faute de quoi un bouton
+  blanc éteint vers un contrôle blanc ne changerait pas.
+- **Le rôle `control-off`.** Gris plein de la piste éteinte, de la bascule éteinte et du rail d'onglets. Il
+  répond au point de vigilance de la conception : un blanc pur sur un gris à L 0,925 ne donne que Lc 14, et
+  l'interrupteur éteint au jour était quasi invisible. Au jour, échelon 4 (L 0,89, tranché à l'écran) ; en nuit,
+  défini (`surface-raised`) mais inutilisé, la coque gardant le fond de l'`Etat`. Le contraste du `knob` contre
+  la piste éteinte devient un contrôle (`knob-off`), en plus de `knob` contre l'accent (`knob-accent`).
+- **Les contours et l'ombre du jour (`[controls]`).** Tout contrôle blanc sans contour disparaît sur un fond
+  clair. Au jour, un contour d'un pixel physique, à la couleur de `border-default` (celle de la case et du
+  radio), cerne les boutons, déroulants, onglets, la poignée du curseur et le disque de l'interrupteur et de la
+  bascule ; une ombre noire discrète (opacité 0,20, flou 4, décalage 1) porte la poignée du curseur et le segment
+  coché d'une barre d'onglets. En nuit, `outline` est vide et l'opacité nulle : rien ne change. Les clés
+  (`outline`, `off_track`, `shadow_*`) sont des tokens par moment, jamais déduites dans le QML.
+- **Les pastilles de fenêtre** ne dépendent pas du moment, comme sur macOS : leurs fonds restent les couleurs
+  sémantiques de nuit et leur glyphe le `surface-base` de nuit, identiques dans les quatre thèmes.
+- **Le fichier du choix.** `~/.config/dunei/theme.json` (`{ "famille": …, "moment": … }`) appartient à la
+  machine, pas à la chaîne : `make install` ne l'écrit ni ne l'écrase, il n'entre pas dans le dépôt. Absent,
+  vide ou portant un nom inconnu, il vaut le défaut (`thematisee`, `nuit`), signalé une fois au journal de
+  Quickshell. `dunei-theme` l'écrit par fichier temporaire et renommage. La bascule s'applique d'un bloc, sans
+  animation : `ColorSpring` reconnaît un changement de thème à l'identité de l'objet des tokens.
+- **Valeurs tranchées à l'écran par Nicolas.** Chaque valeur de jour de la conception était un point de départ ;
+  six passes l'ont corrigé.
+  - *Nuit thématisée, chroma neutre 0,020 puis 0,014* : les surfaces étaient trop thématisées, la dominante
+    brun-orange desservant les contrôles. Nicolas a levé pour cela la contrainte « la nuit au bit près » de la
+    conception : les cibles des applications (GTK, KDE, terminal, Hyprland, CSS) suivent la nuit thématisée,
+    puisqu'elles en dérivent, et restent cohérentes avec la coque. Coût si faux : revenir à 0,020 et régénérer.
+  - *Nuit dominante, surfaces et contrôle descendus de 0,03* (échelons 0 à 4, textes inchangés) : la dominante de
+    nuit était trop claire à côté de la thématisée.
+  - *Jour, piste éteinte à 0,89 (échelon 4)*, seule valeur où le disque blanc se détache sans que la piste
+    écrase l'accent allumé.
+  - *Jour, accent muet du modificateur `inactive` à 0,78* : à 0,53 (la luminosité de l'accent), il assombrissait
+    tout le panneau ; l'accent muet est resté dans la gamme claire (0,70 d'abord, puis 0,78).
+  - *Jour, contrôles blancs cernés*, d'après la remarque de Nicolas : « le tout blanc fonctionne sur des items où
+    il y a un contour ». Le radio, la case et le champ, déjà cernés, étaient « très joli » ; les boutons,
+    l'interrupteur éteint, l'onglet coché et la poignée ne l'étaient pas.
+  - *Jour, fenêtre à 0,968 et panneau à 0,98* (départ 0,955 et 0,975) : sur 0,955 aucun texte ne dépasse Lc 97,
+    le plancher de `text-emphasis` (98) est inatteignable ; la fenêtre est la surface la plus sombre et borne le
+    Lc. Elle est passée de 0,965 à 0,968 quand sa chroma a monté.
+  - *Jour thématisé sur base colorée* : voir D84.
+- **Écarts à la conception, consignés.** Le rôle `knob` de nuit a changé (voir plus haut) ; le `knob` n'est plus
+  contrôlé contre la piste éteinte par le seul plancher du Lc 15, mais par `knob-off`, propre à chaque moment ;
+  la sélection inactive du jour est à l'échelon 2 (0,98) pour garder le corps de texte à Lc 90 (l'échelon 4 de
+  la nuit n'en donnait que 73) ; la pression du jour est à −0,05 (départ −0,06) et le survol à −0,03.
+- **Restes ouverts**, versés au backlog (L2-44) : le `Compteur` et la piste de la `Jauge` restent sans contour
+  au jour ; la sélection inactive d'une liste reste presque invisible au jour ; le texte des contrôles du jour
+  thématisé descend à Lc 65 au survol et à la pression, sans plancher ; le disque et la poignée désactivés ne
+  s'animent plus (ils sont hors `ColorSpring`) ; la planche ne montre plus les couleurs des pastilles ; aucun
+  test ne couvre la suppression de `theme.json` pendant l'exécution.
+- **Relevés.** Bascule d'un thème à l'autre : environ 5 ticks de processeur (0,05 s), soit un instant ; la coque
+  revient à 0 tick au repos avant comme après (D80). 645 tests, `make check` vert.
+
+*Touché : conception des thèmes statiques (v0.3) et son plan (v0.2), bible (chapitres 2, 5 et 7), backlog
+(L2-40 fait, L2-44), carnet (« Les thèmes statiques »), direction, `tokens.toml`, `dunei_theme/`, `coque/`,
+`config/bin/dunei-theme`, planche, `tests/`.*
+
+### D84 · Le jour thématisé déroge à la règle du corps de texte : Lc 69 à 76, sur une base colorée
+
+2026-10-25. **Dérogation accordée par Nicolas, à l'écran, propre à un seul thème** : la famille thématisée au
+moment du jour. La bible (chapitre 2, « Contraste ») fixe la cible du corps de texte à Lc 90 et le plancher de
+rejet à Lc 75. Dans ce thème, le corps de texte (`text-primary`, `text-emphasis`) tient Lc 69 à 76 selon la
+teinte et le fond. Les trois autres thèmes gardent la règle.
+
+- **Raison.** Sur un fond presque blanc, la chroma ne se voit pas : le jour thématisé était indiscernable de la
+  dominante, malgré une chroma relevée de 0,006 à 0,015. Nicolas a demandé que le jour thématisé « tire tout
+  l'avantage d'avoir des couleurs ». La seule façon de le faire sans trahir la famille est une base colorée : la
+  fenêtre passe de 0,968 à 0,82 (`#ffaf78` à la teinte 55), le bureau à 0,79, le panneau à 0,845 et E3 à 0,88, et
+  chaque gris est teinté (facteurs de chroma de 7,5 à 1,5 sur 0,020, avant rabattement dans la gamme). Plus le
+  fond est sombre, moins le texte peut s'en détacher : à cette luminosité, atteindre Lc 90 ramène au blanc.
+- **Ce qu'elle coûte.** Le corps de texte y est moins contrasté que partout ailleurs dans DuneI, et que la règle
+  de la bible ; les sémantiques ont dû descendre de 0,05 à 0,07 sous celles du jour pour tenir leurs planchers
+  sur ces fonds plus sombres. Le texte des contrôles blancs, au survol et à la pression, descend jusqu'à
+  Lc 65 sans plancher propre (reste ouvert, L2-44). Les contrôles blancs du jour de la dominante, eux, ne sont pas
+  concernés : E3 et `control-raised` y restent blancs purs.
+- **Comment c'est borné.** Ce thème porte ses propres seuils, égaux aux **minima mesurés** aux teintes 0, 55, 200
+  et 265, arrondis à l'entier inférieur : `contrast_target_body = 69`, `contrast_floor = 69` (sans lui, `check()`
+  refusait `text-primary` sous le plancher absolu de 75) et une table de planchers par rôle dans
+  `[familles.thematisee.moments.jour.meta.planchers]`. La dérogation est donc contrôlée, non libre : un
+  changement qui ferait baisser un rôle sous sa mesure rend `make check` rouge.
+- **Coût si faux.** Remonter la fenêtre vers 0,86 rétablit des textes plus contrastés au prix d'une base moins
+  colorée ; ce sont les seules clés `steps` et `neutral_profile` de la surcharge croisée, puis `make tokens` et
+  `make golden`.
+
+*Touché : bible (chapitre 2, « Contraste »), conception des thèmes statiques (§ 5.2), `tokens.toml`
+(`[familles.thematisee.moments.jour]`), `tests/`.*

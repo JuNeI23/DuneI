@@ -1,6 +1,6 @@
 # Les thèmes statiques — plan d'implémentation
 
-Version 0.1 · 2026-10-24 · backlog L2-40
+Version 0.2 · 2026-10-25 · backlog L2-40
 
 > **Pour les agents :** sous-compétence requise : superpowers:subagent-driven-development (recommandée) ou
 > superpowers:executing-plans, tâche par tâche. Les étapes se cochent (`- [ ]`).
@@ -67,7 +67,7 @@ la première tâche.
   et 1 au-dessus), `accent.fill_lightness` et `accent.standalone_lightness` (absentes, l'échelon fait foi),
   `categorical.lightness` (idem), `knob.role` ou `knob.lightness` (cette dernière donne un neutre de chroma 0).
 
-- [ ] **Étape 1 : écrire les tests qui échouent**, dans `tests/test_model.py` :
+- [x] **Étape 1 : écrire les tests qui échouent**, dans `tests/test_model.py` :
   - `test_nuit_thematisee_identique` : `resolve(theme_data(data, "thematisee", "nuit"), h)` égale
     `resolve(data, h)` pour h dans (0, 55, 200, 265), sur `ramp`, `roles`, `elevation`, `accent`,
     `accent_standalone`, `on_accent`, `categorical`, `semantic`.
@@ -82,10 +82,10 @@ la première tâche.
     « famille inconnue : verre ».
   - `test_knob_nuit` : `model["knob"]` égale `model["roles"]["text-emphasis"]` dans les deux familles de nuit.
 
-- [ ] **Étape 2 : lancer et voir échouer** : `python3 -m unittest tests.test_model -v` → `ImportError` ou
+- [x] **Étape 2 : lancer et voir échouer** : `python3 -m unittest tests.test_model -v` → `ImportError` ou
   `AttributeError` sur `theme_data`.
 
-- [ ] **Étape 3 : implémenter** dans `model.py` les trois fonctions et les lectures facultatives de `resolve`, et
+- [x] **Étape 3 : implémenter** dans `model.py` les trois fonctions et les lectures facultatives de `resolve`, et
   ajouter à `tokens.toml` :
   ```toml
   [theme.defaut]
@@ -105,10 +105,10 @@ la première tâche.
   Mettre à jour le commentaire de `[theme]` (« hue et chroma_scale sont les SEULES valeurs surchargeables à
   chaud… ») pour mentionner la famille et le moment, et celui de `[meta] mode`.
 
-- [ ] **Étape 4 : lancer et voir passer** : `python3 -m unittest tests.test_model -v` → OK ; puis `make check` →
+- [x] **Étape 4 : lancer et voir passer** : `python3 -m unittest tests.test_model -v` → OK ; puis `make check` →
   OK, `generated/` inchangé (les cibles lisent le défaut, égal à la base).
 
-- [ ] **Étape 5 : valider** : `git commit -m "Thèmes : composition par famille et moment, rôle knob (L2-40)"`.
+- [x] **Étape 5 : valider** : `git commit -m "Thèmes : composition par famille et moment, rôle knob (L2-40)"`.
 
 ### Tâche 2 : les planchers de contraste et l'ordre des rôles
 
@@ -137,7 +137,7 @@ la première tâche.
     aux teintes 0, 55, 200 et 265, chaque valeur arrondie à l'entier inférieur. Code 0. Sert une fois, puis à
     chaque révision de la nuit.
 
-- [ ] **Étape 1 : écrire les tests qui échouent** :
+- [x] **Étape 1 : écrire les tests qui échouent** :
   - `tests/test_checks.py` : `test_plancher_franchi` (modèle fabriqué dont `text-secondary` est sous son plancher
     → un avertissement qui nomme `text-secondary`) ; `test_ordre_inverse` (`text-tertiary` plus contrasté que
     `text-secondary` → un avertissement) ; `test_texte_sous_bordure` (plus faible texte égal à la plus forte
@@ -145,17 +145,17 @@ la première tâche.
   - `tests/test_model.py` : `test_themes_conformes` : pour h dans (0, 55, 200, 265) et chaque couple de
     `themes(data)`, `check(resolve(theme_data(data, f, m), h)) == []`.
 
-- [ ] **Étape 2 : lancer et voir échouer** : `python3 -m unittest tests.test_checks tests.test_model -v` →
+- [x] **Étape 2 : lancer et voir échouer** : `python3 -m unittest tests.test_checks tests.test_model -v` →
   `AttributeError` sur `mesures` ou `planchers`.
 
-- [ ] **Étape 3 : implémenter** `mesures`, `planchers`, `ordre` et le contrôle par thème de `generate_tokens.py`.
+- [x] **Étape 3 : implémenter** `mesures`, `planchers`, `ordre` et le contrôle par thème de `generate_tokens.py`.
   Écrire `mesure_planchers.py`, le lancer, coller sa sortie dans `tokens.toml` sous `[meta.planchers]`, avec un
   commentaire qui dit d'où viennent les valeurs et comment les remesurer.
 
-- [ ] **Étape 4 : lancer et voir passer** : les deux modules de tests → OK ; `make check` → OK, `generated/`
+- [x] **Étape 4 : lancer et voir passer** : les deux modules de tests → OK ; `make check` → OK, `generated/`
   inchangé ; `python3 generate_tokens.py --out "$(mktemp -d)"` n'imprime aucun avertissement.
 
-- [ ] **Étape 5 : valider** : `git commit -m "Contrôles : planchers de contraste par rôle et ordre des rôles, pour
+- [x] **Étape 5 : valider** : `git commit -m "Contrôles : planchers de contraste par rôle et ordre des rôles, pour
   chaque thème (L2-40)"`.
 
 ### Tâche 3 : le moment de jour
@@ -168,7 +168,7 @@ la première tâche.
 - Consomme : les clés facultatives de la tâche 1, les contrôles de la tâche 2.
 - Produit : `[moments.jour]`, dont la tâche 4 émet le résultat.
 
-- [ ] **Étape 1 : écrire les tests qui échouent**, dans `tests/test_model.py` :
+- [x] **Étape 1 : écrire les tests qui échouent**, dans `tests/test_model.py` :
   - `test_themes_et_defaut` passe à la liste complète des quatre couples (voir tâche 1).
   - `test_jour_monte_vers_le_blanc` : au jour, `elevation` e0 < e1 < e2 < e3 en luminosité, `e3.l == 1.0` et
     `e3.c == 0`, dans les deux familles.
@@ -178,10 +178,10 @@ la première tâche.
     elles sont identiques dans les deux familles.
   - `test_themes_conformes` (tâche 2) couvre désormais les quatre thèmes.
 
-- [ ] **Étape 2 : lancer et voir échouer** : `python3 -m unittest tests.test_model -v` → échec de
+- [x] **Étape 2 : lancer et voir échouer** : `python3 -m unittest tests.test_model -v` → échec de
   `test_themes_et_defaut` et des tests du jour.
 
-- [ ] **Étape 3 : écrire `[moments.jour]`** avec les valeurs de départ de la conception (§ 5.2 à 5.4) :
+- [x] **Étape 3 : écrire `[moments.jour]`** avec les valeurs de départ de la conception (§ 5.2 à 5.4) :
   - `lightness.steps = [0.925, 0.955, 0.975, 1.0, 0.89, 0.85, 0.76, 0.68, 0.60, 0.50, 0.25, 0.18]` ;
   - `lightness.neutral_profile = [0.3, 0.3, 0.3, 0.0, 0.6, 0.6, 1.0, 1.0, 1.0, 1.0, 1.4, 1.4]` (chroma 0,006
     au-dessus de L 0,9, 0,012 entre 0,8 et 0,9, 0,020 au-dessous, majoré sous L 0,45 ; blanc pur à E3) ;
@@ -197,10 +197,10 @@ la première tâche.
   Si un plancher ou l'ordre résiste, ajuster d'abord le rôle de texte concerné, jamais un plancher ; consigner
   chaque écart à la conception dans le message de validation.
 
-- [ ] **Étape 4 : lancer et voir passer** : `python3 -m unittest tests.test_model tests.test_checks -v` → OK ;
+- [x] **Étape 4 : lancer et voir passer** : `python3 -m unittest tests.test_model tests.test_checks -v` → OK ;
   `make check` → OK, `generated/` inchangé.
 
-- [ ] **Étape 5 : valider** : `git commit -m "Thèmes : le moment de jour, valeurs de départ (L2-40)"`.
+- [x] **Étape 5 : valider** : `git commit -m "Thèmes : le moment de jour, valeurs de départ (L2-40)"`.
 
 ### Tâche 4 : l'émetteur Quickshell à quatre thèmes
 
@@ -222,10 +222,10 @@ la première tâche.
     thème par défaut, identique pour les quatre.
 - `emit(model)` garde sa signature : il résout lui-même les quatre thèmes depuis `model["raw"]` et `model["hue"]`.
 
-- [ ] **Étape 1 : relever l'existant** : copier `tests/golden/hue-55/coque-tokens.json` dans le brouillon de
+- [x] **Étape 1 : relever l'existant** : copier `tests/golden/hue-55/coque-tokens.json` dans le brouillon de
   session (`$TMPDIR` ou le dossier scratchpad) sous le nom `avant.json`, pour l'étape 4.
 
-- [ ] **Étape 2 : écrire les tests qui échouent**, dans `tests/test_quickshell_emitter.py` : adapter les lectures
+- [x] **Étape 2 : écrire les tests qui échouent**, dans `tests/test_quickshell_emitter.py` : adapter les lectures
   existantes à `themes.thematisee.nuit` ; ajouter :
   - `test_quatre_themes` : `themes` a les clés `thematisee` et `dominante`, chacune `nuit` et `jour`, et
     `defaut == {"famille": "thematisee", "moment": "nuit"}` ;
@@ -236,18 +236,18 @@ la première tâche.
   - rendre propres à la nuit les assertions d'ordre sombre (`control-raised.l > surface-raised.l`, l. 95) et le
     `sheenTop` (l. 48-52) ; le test APCA sur `controlRaised` (l. 97-113) porte sur les quatre thèmes.
 
-- [ ] **Étape 3 : lancer et voir échouer** : `python3 -m unittest tests.test_quickshell_emitter -v`.
+- [x] **Étape 3 : lancer et voir échouer** : `python3 -m unittest tests.test_quickshell_emitter -v`.
 
-- [ ] **Étape 4 : implémenter**, puis vérifier la contrainte globale : `make tokens && make golden`, puis
+- [x] **Étape 4 : implémenter**, puis vérifier la contrainte globale : `make tokens && make golden`, puis
   `git diff --stat tests/golden` ne montre que les `coque-tokens.json` ; et
   `jq --slurpfile a avant.json '.themes.thematisee.nuit as $n | [$a[0].color | to_entries[] | select(.key |
   test("Hover|Pressed") | not) | select($n.color[.key] != .value)] | length' tests/golden/hue-55/coque-tokens.json`
   imprime `0` ; même comparaison, entière, pour `states`, `focus`, `elevation`, `material` et `render`.
 
-- [ ] **Étape 5 : lancer et voir passer** : `python3 -m unittest tests.test_quickshell_emitter tests.test_golden -v`
+- [x] **Étape 5 : lancer et voir passer** : `python3 -m unittest tests.test_quickshell_emitter tests.test_golden -v`
   → OK ; `make check` → OK.
 
-- [ ] **Étape 6 : valider** : `git commit -m "Émetteur Quickshell : les quatre thèmes, le knob et les pastilles
+- [x] **Étape 6 : valider** : `git commit -m "Émetteur Quickshell : les quatre thèmes, le knob et les pastilles
   hors du moment (L2-40)"`.
 
 ### Tâche 5 : le module `Theme` et les composants
@@ -270,7 +270,7 @@ la première tâche.
     `console.error` (le `onLoadFailed` de cette source ne signale que l'illisible). Nom inconnu : défaut et
     `console.warn("Theme : thème <f>/<m> inconnu ; défaut <f>/<m> appliqué")`.
 
-- [ ] **Étape 1 : écrire les tests qui échouent** :
+- [x] **Étape 1 : écrire les tests qui échouent** :
   - `tests/test_coque_theme.py`, dans la coque d'essai : `test_bascule_jour` (écrire
     `{"famille": "dominante", "moment": "jour"}` par fichier temporaire puis `os.replace`, comme la commande ;
     `Theme.color.surfacePanel` devient la valeur `themes.dominante.jour.color.surfacePanel` du JSON, et
@@ -282,16 +282,16 @@ la première tâche.
     `Theme.color.knob` (`Theme.knob.disabled` désactivés) ; la pastille prend `Theme.pastilles` ; l'assertion
     « champ plus sombre que le panneau » (l. 283) devient propre à la nuit.
 
-- [ ] **Étape 2 : lancer et voir échouer** : `python3 -m unittest tests.test_coque_theme tests.test_coque_composants -v`
+- [x] **Étape 2 : lancer et voir échouer** : `python3 -m unittest tests.test_coque_theme tests.test_coque_composants -v`
   (session Wayland requise ; sans elle, les tests sont ignorés et l'exécutant le signale).
 
-- [ ] **Étape 3 : implémenter** `Theme.qml`, puis les trois composants ; retirer des en-têtes d'`Interrupteur` et
+- [x] **Étape 3 : implémenter** `Theme.qml`, puis les trois composants ; retirer des en-têtes d'`Interrupteur` et
   de `Curseur` la mention « un rôle propre (knob) viendra si un thème clair apparaît ». La légende de la planche
   affiche aussi `Theme.famille + "/" + Theme.moment`.
 
-- [ ] **Étape 4 : lancer et voir passer** : même commande → OK ; `make check` → OK.
+- [x] **Étape 4 : lancer et voir passer** : même commande → OK ; `make check` → OK.
 
-- [ ] **Étape 5 : valider** : `git commit -m "Coque : thème actif choisi par theme.json, knob et pastilles
+- [x] **Étape 5 : valider** : `git commit -m "Coque : thème actif choisi par theme.json, knob et pastilles
   (L2-40)"`.
 
 ### Tâche 6 : la commande `dunei-theme`
@@ -307,21 +307,21 @@ la première tâche.
   défaut. Sortie standard : `<famille> <moment>` après chaque appel. Codes : 0, 1 (tokens introuvables ou
   illisibles), 2 (argument ou nom inconnu, usage sur la sortie d'erreur).
 
-- [ ] **Étape 1 : écrire les tests qui échouent** (dossier temporaire, `DUNEI_TOKENS_DIR`, tokens générés par
+- [x] **Étape 1 : écrire les tests qui échouent** (dossier temporaire, `DUNEI_TOKENS_DIR`, tokens générés par
   `generate_tokens.py --out`) : `test_etat_par_defaut` (`thematisee nuit`, aucun fichier écrit) ;
   `test_jour_garde_la_famille` ; `test_bascule_aller_retour` ; `test_famille` ; `test_nom_inconnu` (code 2,
   `theme.json` inchangé) ; `test_sans_tokens` (code 1, rien d'écrit) ; `test_ecriture_atomique` (aucun fichier
   temporaire ne reste dans le dossier) ; `test_json_valide` (le fichier relu par `json.loads` a exactement les
   clés `famille` et `moment`).
 
-- [ ] **Étape 2 : lancer et voir échouer** : `python3 -m unittest tests.test_dunei_theme -v`.
+- [x] **Étape 2 : lancer et voir échouer** : `python3 -m unittest tests.test_dunei_theme -v`.
 
-- [ ] **Étape 3 : écrire le script** : bash, `set -euo pipefail`, en-tête du dépôt comme `dunei-maj` ; lecture
+- [x] **Étape 3 : écrire le script** : bash, `set -euo pipefail`, en-tête du dépôt comme `dunei-maj` ; lecture
   par `jq`, écriture par `mktemp` dans le même dossier puis `mv`.
 
-- [ ] **Étape 4 : lancer et voir passer** : même commande → OK ; `make check` → OK.
+- [x] **Étape 4 : lancer et voir passer** : même commande → OK ; `make check` → OK.
 
-- [ ] **Étape 5 : valider** : `git commit -m "dunei-theme : choisir la famille et le moment de la coque (L2-40)"`.
+- [x] **Étape 5 : valider** : `git commit -m "dunei-theme : choisir la famille et le moment de la coque (L2-40)"`.
 
 ### Tâche 7 : la planche et la validation à l'écran
 
@@ -333,14 +333,14 @@ la première tâche.
 - Produit : `planche.sh theme <famille> <moment>`, qui appelle `config/bin/dunei-theme` avec
   `DUNEI_TOKENS_DIR` sur le brouillon ; l'en-tête du script le documente.
 
-- [ ] **Étape 1 : ajouter la sous-commande** ; vérifier : planche ouverte, `planche.sh theme dominante jour` la
+- [x] **Étape 1 : ajouter la sous-commande** ; vérifier : planche ouverte, `planche.sh theme dominante jour` la
   bascule d'un bloc (capture grim de la fenêtre visée par son adresse Hyprland).
-- [ ] **Étape 2 : passes de validation avec Nicolas**, dans une vraie fenêtre : les quatre thèmes aux teintes 55
+- [x] **Étape 2 : passes de validation avec Nicolas**, dans une vraie fenêtre : les quatre thèmes aux teintes 55
   (`caladan`), 200 et 265. Points soumis à chaque passe : la hiérarchie des textes, l'élévation au jour (ombres),
   l'interrupteur éteint (point de vigilance 5), l'accent autonome et l'anneau de focus, les couleurs sémantiques,
   l'infusion du thématisé de jour. Chaque changement de valeur repasse par `make check` et `make golden`.
-- [ ] **Étape 3 : relever** le processeur au repos de la planche, avant et après une bascule (règle de D80).
-- [ ] **Étape 4 : valider** : `git commit -m "Planche : bascule de thème ; valeurs du jour validées à l'écran
+- [x] **Étape 3 : relever** le processeur au repos de la planche, avant et après une bascule (règle de D80).
+- [x] **Étape 4 : valider** : `git commit -m "Planche : bascule de thème ; valeurs du jour validées à l'écran
   (L2-40)"`.
 
 ### Tâche 8 : la documentation
@@ -352,12 +352,12 @@ la première tâche.
   (version 0.3, statut implémentée), ce plan (cases cochées). Chaque document : version en tête et ligne
   d'historique.
 
-- [ ] **Étape 1 : écrire** D83 : le contrat révisé (famille et moment, planchers par rôle), les choix de la
+- [x] **Étape 1 : écrire** D83 : le contrat révisé (famille et moment, planchers par rôle), les choix de la
   conception marqués « décision de Claude », les valeurs retenues à l'écran.
-- [ ] **Étape 2 : mettre à jour** les autres documents ; la bible reprend le tableau des deux échelles et le
+- [x] **Étape 2 : mettre à jour** les autres documents ; la bible reprend le tableau des deux échelles et le
   rôle `knob`.
-- [ ] **Étape 3 : vérifier** : `make check` → OK.
-- [ ] **Étape 4 : valider** : `git commit -m "Documentation des thèmes statiques : D83, bible, carnet, backlog,
+- [x] **Étape 3 : vérifier** : `make check` → OK.
+- [x] **Étape 4 : valider** : `git commit -m "Documentation des thèmes statiques : D83, bible, carnet, backlog,
   direction (L2-40)"`.
 
 ## Historique des versions
@@ -365,3 +365,4 @@ la première tâche.
 | Version | Date | Changement |
 | --- | --- | --- |
 | 0.1 | 2026-10-24 | Version initiale, d'après la conception 0.2 |
+| 0.2 | 2026-10-25 | Plan exécuté et cases cochées ; ajouts de la tâche 7 : 7b (surcharge croisée `[familles.<f>.moments.<m>]`, rôle `control-off`, `[controls]`, `knob-off`, nuit thématisée à 0,014, nuit dominante −0,03) et 7c (jour thématisé sur base colorée, dérogation D84, nettoyage) ; documentation D83 et D84 |

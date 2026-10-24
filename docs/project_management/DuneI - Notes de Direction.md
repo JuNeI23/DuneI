@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas — révisée le 22 octobre 2026
 
-Version 1.24. Historique en fin de document.
+Version 1.25. Historique en fin de document.
 
 *Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent quarante-huit lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
 
@@ -384,10 +384,27 @@ Les validations ont fait naître quatre éléments au lot 2 : thèmes statiques 
 texture (L2-41), décoration des fenêtres (L2-42) et thème de curseurs (L2-43) ; le mode clair quitte donc les
 exclusions de la 1.0.
 
-Prochaine étape : **les thèmes statiques clair et sombre (L2-40)**, que Nicolas a voulus juste après L2-01. Les
-couleurs brun-orange de la colorisation desservent les contrôles : il s'agit d'offrir, en plus de la colorisation
-par la teinte, deux thèmes à gris neutres, et d'ajouter un rôle `knob` pour les boutons d'interrupteur et les
-poignées. Les composants n'en dépendent pas : ils lisent tout dans `Theme`, et basculeront d'un bloc.
+**Thèmes statiques — 25 octobre 2026.** La coque offre quatre thèmes (L2-40, D83, D84) : une famille, thématisée
+ou dominante, et un moment, nuit ou jour. Ils sont précalculés dans `coque-tokens.json` et choisis à chaud par la
+commande `dunei-theme`, qui écrit `~/.config/dunei/theme.json` ; la coque le surveille et bascule d'un bloc, pour
+environ 0,05 s de processeur et zéro au repos. Le contrat du thème est révisé : le contraste est garanti par des
+planchers par rôle, mesurés sur la nuit thématisée et tenus dans les quatre thèmes, au lieu d'une luminosité
+invariante ; la bible le dit désormais au chapitre 2. Un rôle `knob` unique sert le disque de l'interrupteur et la
+poignée du curseur ; un rôle `control-off` donne au jour une piste éteinte grise ; les contrôles blancs du jour sont
+cernés d'un pixel et ombrés, parce que « le tout blanc fonctionne sur des items où il y a un contour ». Nicolas a
+validé en six passes à l'écran : la nuit thématisée moins infusée (chroma neutre 0,014, au prix de la contrainte
+« nuit au bit près », les cibles des applications suivant), la nuit dominante plus sombre, et un jour thématisé sur
+base colorée (fenêtre `#ffaf78` à la teinte 55). Ce dernier déroge à la règle du corps de texte de la bible (Lc 69
+à 76 au lieu de 90) : décision explicite de Nicolas, bornée par des planchers propres, consignée en D84. Restent
+des reliquats mineurs, regroupés en L2-44 (contour du compteur et de la jauge, sélection inactive du jour, états
+du texte du jour thématisé, animation du knob désactivé, pastilles de la planche, test de `theme.json`
+supprimé). Le bouton jour/nuit et l'écran de paramètres, qui appelleront `dunei-theme`, n'en font pas partie.
+
+Prochaine étape : **choisir dans le backlog du lot 2 l'élément suivant, avec Nicolas.** Le backlog (lot 2, coque
+vitale) tient ce qui reste : L2-04 et L2-05 d'abord, la matière et le relief des contrôles que la bibliothèque a
+laissés aux formes (relief de macOS reporté à L2-04), puis la barre système et ses indicateurs (L2-08 à L2-13), qui
+accueillera le futur bouton jour/nuit. L2-44 se traite en passant, quand un composant touché par ses reliquats
+est rouvert. Quelle que soit l'étape retenue, elle commence par l'enjeu et par un repérage, jamais par du code.
 
 ## Plan de lecture
 
@@ -406,6 +423,7 @@ poignées. Les composants n'en dépendent pas : ils lisent tout dans `Theme`, et
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-10 | Version initiale |
+| 1.25 | 2026-10-25 | Thèmes statiques (L2-40, D83, D84) validés à l'écran en six passes : famille et moment, `dunei-theme`, planchers de contraste par rôle, dérogation du corps de texte dans le jour thématisé ; reliquats regroupés en L2-44 ; décompte du backlog porté à cent cinquante-trois ; prochaine étape : choisir l'élément suivant du lot 2 dans le backlog |
 | 1.24 | 2026-10-24 | Bibliothèque de composants (L2-01 à L2-03, D82) validée à l'écran en cinq passes, retour au repos sur `in` ; mode clair retiré des exclusions ; décompte du backlog porté à cent cinquante-deux ; prochaine étape : thèmes statiques clair et sombre (L2-40) |
 | 1.23 | 2026-10-22 | Prochaine étape reformulée : L2-34 terminée, chaque primitive de L2-01 lit `Theme` ; question ouverte du ressort de sortie au retour au repos |
 | 1.22 | 2026-10-22 | Tokens branchés sur Quickshell (L2-34, D81) ; planche de contrôle validée à l'écran ; prochaine étape : L2-01 |

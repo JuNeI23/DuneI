@@ -1,6 +1,6 @@
 # Les thèmes statiques : deux familles, le jour et la nuit
 
-Version 0.2 · 2026-10-24 · backlog L2-40 · s'appuie sur D81 (tokens de la coque) et D82 (composants) · statut : conception, à valider
+Version 0.3 · 2026-10-25 · backlog L2-40 · s'appuie sur D81 (tokens de la coque) et D82 (composants) ; consignée en D83 et D84 · statut : implémentée, validée à l'écran par Nicolas
 
 ## 1. Objet et raison
 
@@ -90,43 +90,53 @@ Les valeurs qui dépendent du moment ou de la famille quittent leurs sections ac
   d'états (survol, pression), le modèle d'élévation et la matière (`surface_material`).
 - `[familles.thematisee]` et `[familles.dominante]` : l'infusion des neutres, c'est-à-dire leur chroma par
   moment. La dominante vaut 0 dans les deux moments.
+- `[familles.<f>.moments.<m>]` (ajoutée en cours de route) : la surcharge croisée, fusionnée en dernier (base ←
+  moment ← famille ← famille × moment). Elle donne au jour thématisé sa propre échelle sans toucher celle de
+  la dominante de jour (§ 5.2).
 - `[theme] defaut = { famille = "thematisee", moment = "nuit" }` : le thème quand aucun choix n'a été fait.
   C'est le thème actuel, et celui que suivent les cibles des applications (§ 3).
 
 Les clés de `[theme]` qui ne dépendent ni du moment ni de la famille (teinte, `chroma_scale`, `accent_chroma`,
 plafond de gamut, repli achromatique) y restent. Une section commune à tous les thèmes reste à sa place. Le
 nom des clés et le découpage fin sont laissés au constructeur, sous deux conditions : la nuit thématisée
-générée doit garder **au bit près** les valeurs actuelles (les cibles des applications ne changent pas ; dans
-`coque-tokens.json`, seule la forme change, la branche nuit thématisée porte les mêmes valeurs), et ajouter un troisième moment ou une troisième famille ne doit demander
+générée devait garder **au bit près** les valeurs actuelles (condition tenue jusqu'à la validation à l'écran,
+qui l'a levée pour la seule chroma neutre de la nuit thématisée : 0,020 devenu 0,014, les cibles des
+applications suivant, D83), et ajouter un troisième moment ou une troisième famille ne doit demander
 qu'un bloc TOML.
 
 ### 5.2 L'échelle de jour
 
 Toutes les références relevées (Radix Colors, libadwaita 1.6, macOS, Material 3) renversent l'échelle, mais
 en clair **l'élévation monte vers le blanc** : la fenêtre est grise, les vues, cartes, popovers et contrôles
-sont blancs, et l'ombre porte le relief. Proposition de départ, à calibrer (rôles dans l'ordre actuel) :
+sont blancs, et l'ombre porte le relief. Les valeurs ci-dessous sont celles qui ont été retenues, après
+calibrage à l'écran ; le départ de la v0.2 figure en regard. Le jour a **deux échelles** : celle de la
+dominante (et du moment, base de la composition) et celle, plus sombre et colorée, de la thématisée.
 
-| Rôle | Nuit (inchangé) | Jour, départ |
-| --- | --- | --- |
-| `surface-base` | 0,14 | 0,925 |
-| `surface-window` | 0,18 | 0,955 |
-| `surface-panel` | 0,22 | 0,975 |
-| `surface-raised` | 0,26 | 1,000 |
-| `border-subtle` | 0,31 | 0,89 |
-| `border-default` | 0,37 | 0,85 |
-| `border-strong` | 0,44 | 0,76 |
-| `text-disabled` | 0,53 | 0,68 |
-| `text-tertiary` | 0,63 | 0,60 |
-| `text-secondary` | 0,73 | 0,50 |
-| `text-primary` | 0,935 | 0,25 |
-| `text-emphasis` | 0,97 | 0,18 |
+| Rôle | Nuit | Jour, départ | Jour, dominante | Jour, thématisée |
+| --- | --- | --- | --- | --- |
+| `surface-base` | 0,14 | 0,925 | 0,925 | 0,79 |
+| `surface-window` | 0,18 | 0,955 | 0,968 | 0,82 |
+| `surface-panel` | 0,22 | 0,975 | 0,98 | 0,845 |
+| `surface-raised` | 0,26 | 1,000 | 1,000 | 0,88 |
+| `border-subtle` | 0,31 | 0,89 | 0,89 | 0,75 |
+| `border-default` | 0,37 | 0,85 | 0,85 | 0,70 |
+| `border-strong` | 0,44 | 0,76 | 0,76 | 0,60 |
+| `text-disabled` | 0,53 | 0,68 | 0,68 | 0,52 |
+| `text-tertiary` | 0,63 | 0,60 | 0,60 | 0,44 |
+| `text-secondary` | 0,73 | 0,50 | 0,50 | 0,36 |
+| `text-primary` | 0,935 | 0,25 | 0,25 | 0,13 |
+| `text-emphasis` | 0,97 | 0,18 | 0,18 | 0,07 |
+
+La nuit dominante descend en outre ses échelons 0 à 4 de 0,03 (0,11, 0,15, 0,19, 0,23, 0,28) : validée à
+l'écran, elle était trop claire à côté de la thématisée. La nuit thématisée garde l'échelle ci-dessus.
 
 **Règle de calibrage (décision de Claude).** Elle tient en trois exigences, par ordre de priorité :
 
 1. **Les planchers.** Le plancher d'un rôle est le plus petit Lc que tient aujourd'hui la nuit thématisée pour
    ce rôle, sur ses fonds de référence (E1 à E3 et `control-raised` pour le texte), aux teintes de référence.
-   Le corps de texte garde en plus le plancher de la bible, Lc ≥ 90 sur E1 à E3. Le constructeur mesure ces
-   planchers une fois et les inscrit dans `tokens.toml`, à côté des seuils existants (`[meta]`).
+   Le corps de texte garde en plus le plancher de la bible, Lc ≥ 90 sur E1 à E3, **sauf dans le jour
+   thématisé** (D84). Le constructeur a mesuré ces planchers et les a inscrits dans `tokens.toml`, à côté des
+   seuils existants (`[meta.planchers]`) ; un moment ou un thème peut porter les siens.
 2. **L'ordre des rôles.** Au jour comme en nuit, chaque rôle de texte reste plus contrasté que le précédent
    (`disabled` < `tertiary` < `secondary` < `primary` < `emphasis`), et tout texte reste plus contrasté que
    toute bordure.
@@ -134,21 +144,33 @@ sont blancs, et l'ombre porte le relief. Proposition de départ, à calibrer (r�
    la nuit, pour que le passage de l'un à l'autre ne change pas la hiérarchie à l'œil. Ce n'est pas une règle
    testée : Nicolas tranche à l'écran.
 
-Le tableau ci-dessus tient déjà les planchers ; le calibrage à l'écran peut resserrer les surfaces de jour si
-l'écart entre fenêtre et surface surélevée se voit trop.
+**Écarts au départ.** Sur une fenêtre à 0,955, aucun texte ne dépasse Lc 97 : le plancher de `text-emphasis`
+(98) n'est atteignable que sur une fenêtre plus claire, la fenêtre étant la surface la plus sombre et bornant le
+Lc. La fenêtre passe donc à 0,965 puis à 0,968 (marge de `text-emphasis` : 98,3 pour 98, quand sa chroma a
+monté), et le panneau à 0,98 pour garder l'écart entre E1 et E2. Les bordures du jour mesurent, en Lc brut non
+écrêté, 12 à 19 (`border-subtle`), 19 à 27 (`border-default`) et 35 à 42 (`border-strong`), contre 1 à 3, 6 à 8
+et 12 à 14 en nuit : elles sont nettement plus marquées, et leurs planchers (0, 0 et 12) ne protègent rien au
+jour. L'écart se juge à l'écran.
 
-**Infusion de jour.** À 0,020, les gris clairs sortent du gamut près de L 1 et le teint se voit trop. La
-famille thématisée de jour prend un chroma décroissant vers le blanc : environ 0,006 au-dessus de L 0,9, 0,012
-entre 0,8 et 0,9, 0,020 au-dessous. Les valeurs exactes se règlent à l'écran avec Nicolas. `surface-raised`
-reste blanc pur (chroma 0) dans les deux familles, comme chez macOS et libadwaita.
+**Infusion de jour.** À 0,020, les gris clairs sortent du gamut près de L 1 et le teint se voit trop ; mais
+à 0,006 la teinte ne se voit plus, et le jour thématisé était indiscernable de la dominante. Le profil de chroma
+est un facteur par échelon (`neutral_profile`) sur la chroma neutre du thème. Le jour de la dominante garde
+une chroma nulle, strictement neutre ; E3 y est blanc pur, comme chez macOS et libadwaita. Le jour thématisé,
+lui, repose sur une **base colorée** (D84) : le bureau, la fenêtre, le panneau et E3 descendent à 0,79, 0,82,
+0,845 et 0,88 (fenêtre `#ffaf78` à la teinte 55) et portent des facteurs de 7,5, 7,5, 7,0 et 6,0 sur 0,020,
+dégressifs jusqu'à 1,5 pour le texte ; chaque gris y est teinté, E3 et `control-raised` ne sont plus blancs.
+Le prix est un corps de texte à Lc 69 à 76 dans ce seul thème, sous la règle de la bible, dérogation
+accordée par Nicolas et bornée par des planchers propres (D84). La nuit thématisée descend, elle, à une
+chroma neutre de 0,014 (D83).
 
 ### 5.3 Les rôles qui changent de sens au jour
 
 Le modèle sombre suppose qu'un niveau plus haut est plus clair. Au jour, plusieurs règles s'inversent ; chacune
 est déclarée par moment dans les tokens, jamais déduite dans le QML :
 
-- **`control-raised`** : en nuit, un cran au-dessus de E3 (L 0,31). En jour, le contrôle est blanc et se
-  détache par un liseré `border-subtle` et une ombre fine. Le test qui exige
+- **`control-raised`** : en nuit, un cran au-dessus de E3 (L 0,31). En jour, le contrôle est blanc (E3 dans le jour
+  thématisé, qui n'a pas de blanc) et se détache par un contour d'un pixel physique à la couleur de
+  `border-default`, retenu à l'écran à la place du liseré `border-subtle`, et par une ombre fine (`[controls]`). Le test qui exige
   `control-raised.l > surface-raised.l` devient propre à la nuit.
 - **Le champ** (`elevation.field`) : en nuit, il s'enfonce (step 0). En jour, il est blanc et bordé, à la
   manière d'un champ de macOS. Le test qui exige un champ plus sombre que le panneau devient propre à la nuit.
@@ -176,11 +198,26 @@ est déclarée par moment dans les tokens, jamais déduite dans le QML :
   jamais de la famille ni de la teinte. Les pastilles de fenêtre ne les suivent pas (§ 5.3).
 - **Couleurs catégorielles** : elles suivent la même règle ; leur échelon (`lightness_step`) devient une valeur
   du moment.
-- **`knob`** (décision de Claude) : en nuit, il prend la couleur qu'ont aujourd'hui le disque et la poignée,
-  `text-emphasis` du thème (infusé dans la famille thématisée, neutre dans la dominante), pour ne rien changer
-  à l'écran. Au jour, il est blanc pur, avec l'ombre fine de la matière. Ses états (désactivé compris) sont
-  générés comme ceux des autres rôles, sans opacité dans le QML. Le contraste d'un élément non textuel
-  (Lc ≥ 15) est vérifié contre la piste éteinte et contre l'accent.
+- **`knob`** (décision de Claude, corrigée par la validation) : un rôle unique pour le disque de l'interrupteur
+  et la poignée du curseur. En nuit, il prend `text-emphasis` du thème (infusé dans la famille thématisée, neutre
+  dans la dominante). La v0.2 voulait le laisser identique à l'écran actuel, mais le disque et la poignée
+  différaient d'une nuance : un seul rôle les oblige à s'accorder, et le **disque de nuit change légèrement**
+  (`#f5e6dd` devient `#fff2ea`, désactivé `#777574` devient `#848280`), la poignée ne bougeant pas (D83). Au
+  jour, il est blanc pur (`knob.lightness`, qui l'emporte sur `knob.role`) ; son état désactivé se rapproche de
+  `border-default`, car un bouton blanc éteint vers un contrôle blanc ne changerait pas. Ses états sont générés
+  comme ceux des autres rôles, sans opacité dans le QML.
+- **La piste éteinte et le rôle `control-off`.** La v0.2 contrôlait le `knob` contre la piste éteinte par un
+  Lc ≥ 15, sans rôle propre à la piste : au jour, un blanc pur sur un gris à L 0,925 ne donne que Lc 14, et
+  l'interrupteur éteint était quasi invisible dans les deux familles. Le rôle **`control-off`** est désormais le
+  gris plein de la piste éteinte, de la bascule éteinte et du rail d'onglets : échelon 4 (L 0,89) au jour,
+  tranché à l'écran. Le contrôle devient **`knob-off`**, un plancher par moment (98 en nuit, 15 au jour, où il
+  mesure 29,6 à 30 ; 46 dans le jour thématisé), à côté de `knob-accent` (le `knob` contre l'accent).
+- **Les contrôles blancs du jour** (`[controls]`, par moment) : sans contour, un contrôle blanc se confond avec
+  un fond clair. Au jour, un contour d'un pixel physique cerne les boutons, onglets, la poignée du curseur et le
+  disque ; une ombre noire (opacité 0,20, flou 4, décalage 1) porte la poignée et le segment coché d'une barre.
+  En nuit, aucun contour et aucune ombre.
+- **L'accent muet** du modificateur `inactive` n'est plus l'accent sans chroma à la luminosité de l'accent (0,53),
+  qui assombrissait tout le panneau au jour : sa luminosité est une clé du moment (`fill_lightness`), 0,78 au jour.
 
 ## 6. Le mécanisme de bascule
 
@@ -271,3 +308,4 @@ au jour se fait dans ces passes : les valeurs du § 5 sont un point de départ, 
 | --- | --- | --- |
 | 0.1 | 2026-10-24 | Version initiale : quatre thèmes en deux familles et deux moments, bascule par commande, `knob` presque blanc (Nicolas) ; contraste invariant par rôle, tout précalculé, fichier du choix hors de la chaîne (Claude) |
 | 0.2 | 2026-10-24 | Après relecture : planchers de contraste au lieu d'un contraste égal, impossible entre les deux moments ; accent autonome, sémantiques et catégorielles sous la même règle ; pastilles hors du moment ; `knob` de nuit identique à l'écran actuel (Claude) |
+| 0.3 | 2026-10-25 | Après implémentation et validation à l'écran : échelles de jour retenues et jour thématisé sur base colorée (D84) ; surcharge croisée famille × moment ; `knob` de nuit identique pour le disque et la poignée, rôle `control-off` et plancher `knob-off`, contours et ombre des contrôles du jour ; nuit thématisée à 0,014, nuit dominante −0,03 (D83) (Claude, valeurs de Nicolas) |
