@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas
 
-Document normatif. Version 0.11. Historique en fin de document.
+Document normatif. Version 0.12. Historique en fin de document.
 
 ## Comment lire ce document
 
@@ -271,6 +271,8 @@ Ils ne sont **pas exclusifs** : une rangée peut être sélectionnée, survolée
 ### Le cran des contrôles
 
 Un contrôle est **un cran au-dessus de son conteneur** : visible et rempli au repos, il ne se confond pas avec son fond. Sur une fenêtre, il prend le fond d'un panneau ; sur un panneau, celui d'une surface relevée. Sur une surface déjà à E3 (dialogue, popover), il prend `controlRaised`, un échelon de luminosité au-dessus de E3, avec ses combinaisons d'états. **`controlRaised` n'est pas un cinquième niveau d'élévation** : ni sheen, ni liseré, ni ombre, seulement un fond. Le rôle se lit en remontant les conteneurs, jamais à la main. Une rangée et un champ, eux, prennent le rôle de leur conteneur : la rangée se confond avec sa liste, le champ s'enfonce sous son fond (D82).
+
+Sur `controlRaised`, le texte est `text-emphasis` : `text-primary` y restait à Lc 88, sous la cible de 90 (D82).
 
 ### Modificateur de conteneur `inactive`
 
@@ -799,7 +801,7 @@ Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si 
 | Menu déroulant | E3 rel. | `interactive` + `overlay` + `row` | `state` | Apparence d'un bouton, double chevron ; ouvre un overlay contextuel |
 | Champ de recherche | field | `field` + `icon` + `interactive` | `state` | Champ en pilule, loupe, effacement ; Échap efface |
 | Section dépliable | — | `interactive` + `text` | `state` | Chevron et libellé ; le chevron pivote sans animation jusqu'à L2-06 |
-| Pastilles de fenêtre | — | `interactive` | `state` | Fermer, réduire, agrandir, en couleurs sémantiques ; neutres sous `inactive`. Aucun arrêt de tabulation. Rôle et emplacement sous tuilage : L2-42 |
+| Pastilles de fenêtre | — | `interactive` | — | Fermer, réduire, agrandir, en couleurs sémantiques ; neutres sous `inactive`. Sans `Etat` ni transition : survol et pression posent d'un coup leurs variantes précalculées (`errorHover`, `errorPressed`…). Aucun arrêt de tabulation. Rôle et emplacement sous tuilage : L2-42 |
 | Barre de progression | — | `surface` | — | Indéterminée : animation en boucle, exception à l'interdiction de la boucle, partagée avec l'indicateur d'activité |
 | Indicateur d'activité | — | `surface` | — | Trois grains en vague continue, période `periods.spinner`. Ne s'anime que visible et en marche |
 | Séparateur | — | `surface` | — | `border-subtle`. Jamais deux séparateurs adjacents : c'est un défaut d'espacement |
@@ -826,7 +828,7 @@ Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si 
 | Verrouillage / connexion | attention | E0 | `overlay` + `text` + `field` | `spectacle` | Registre de spectacle. Horloge en grand corps, poids léger |
 | Menu contextuel | contextuel | E3 | `surface` + `row` | `reveal` | **Ni voile ni flou.** Part du point de clic |
 | Popover, liste déroulante | contextuel | E3 | `surface` + `row` | `reveal` | Part de son élément déclencheur |
-| Infobulle | contextuel | E3 | `surface` + `text` | `reveal` | Délai de 500 ms avant apparition (écart ouvert : `delays.tooltip` vaut 700 ms, D82). Ne prend jamais le focus |
+| Infobulle | contextuel | E3 | `surface` + `text` | `reveal` | Délai de 500 ms avant apparition (`delays.tooltip`, D82). Ne prend jamais le focus |
 | Notification | contextuel | E3 | `surface` + `text` + `icon` | `reveal` | Couleurs sémantiques fixes, hors thème. Décalage limité à 5 |
 
 ## Historique des versions
@@ -846,3 +848,4 @@ Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si 
 | 0.9 | 2026-10-19 | Gouvernance : édition de `generated/` refusée au commit et à la fusion ; annexe D, crochet, contrôle GitHub et cibles du `Makefile` (D77) |
 | 0.10 | 2026-10-22 | Chapitre 7 : l'anneau de focus est précisé, 2 px à l'accent autonome, couleur validée à l'écran (D81) |
 | 0.11 | 2026-10-24 | Chapitre 7 : focus des rangées en contour intérieur, champ sans anneau, cran des contrôles et rôle `controlRaised`, un seul arrêt par liste et par barre d'onglets, formes à la manière de macOS ; annexe E : rangée, champ, bouton, case, interrupteur et onglets précisés, radio, jauge, bascule à glyphe, compteur, menu déroulant, champ de recherche, section dépliable, pastilles de fenêtre et indicateur d'activité ajoutés ; écart du délai de l'infobulle signalé (D82) |
+| 0.12 | 2026-10-24 | Chapitre 7 : texte de `controlRaised` en `text-emphasis` (Lc ≥ 90) ; annexe E : infobulle à 500 ms, écart refermé, et pastilles de fenêtre sans transition `state`, puisqu'elles n'ont pas d'`Etat` |

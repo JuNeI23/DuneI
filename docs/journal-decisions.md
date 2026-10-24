@@ -1646,7 +1646,7 @@ L2-34, `tokens.toml`, `coque/`.*
 2026-10-24. L2-01, avec L2-02 et L2-03, livre le module QML `coque/Composants`, voisin de `coque/Theme` : les
 sept primitives de la bible, les six états composables, le modificateur `inactive`, les contrôles de couche 1
 qui en sont des assemblages et les compléments que Nicolas a demandés au fil de cinq validations à l'écran. La
-conception (`docs/superpowers/specs/2026-10-23-composants-design.md`, v0.8) porte le détail ; voici les choix
+conception (`docs/superpowers/specs/2026-10-23-composants-design.md`, v0.10) porte le détail ; voici les choix
 et leur raison.
 
 - **Base `QtQuick.Templates`.** Les contrôles reposent sur les gabarits sans style de Qt (`T.AbstractButton`,
@@ -1670,11 +1670,14 @@ et leur raison.
   au-dessus : le générateur calcule `controlRaised`, à l'échelon 4 de luminosité (`control-raised = 4` dans
   `tokens.toml`), avec ses seize combinaisons d'états. Ce n'est pas un cinquième niveau d'élévation : ni sheen,
   ni liseré, ni ombre, seulement un fond. Il partage l'échelon de `border-subtle`, ce qui est sans conséquence,
-  un contrôle n'ayant pas de bordure par défaut. Le contrôle APCA du générateur, étendu à ce rôle, avertit :
-  `text-primary` sur `control-raised` atteint Lc 88,1, sous la cible de 90 du texte courant ; l'avertissement
-  est accepté, le libellé d'un contrôle n'étant pas du texte courant, et l'échelon étant fixé par la conception.
-  Une rangée et un champ, eux, prennent le rôle de leur conteneur : une rangée non sélectionnée se confond avec
-  sa liste, un champ s'enfonce sous son fond.
+  un contrôle n'ayant pas de bordure par défaut. Le contrôle APCA du générateur, étendu à ce rôle, mesurait
+  `text-primary` sur `control-raised` à Lc 88,1, sous la cible de 90 du texte courant. Nicolas a choisi
+  d'éclaircir le texte plutôt que de bouger l'échelon : la table `[role_text]` de `tokens.toml` donne
+  `text-emphasis` au texte des états sans accent de ce rôle, et `dunei_theme/checks.py` contrôle chaque fond
+  avec le texte qu'elle lui donne. Sur les quatre teintes des instantanés, il atteint au moins Lc 95,7 au repos,
+  92,9 au survol et 97,3 à la pression ; l'avertissement a disparu. Une rangée et un champ, eux, prennent le
+  rôle de leur conteneur : une rangée non sélectionnée se confond avec sa liste, un champ s'enfonce sous son
+  fond.
 - **Élévation déduite du rôle.** Une `Surface` déclare son rôle de fond (`role`, publié en `dnRole`) ; son
   élévation par défaut en découle (fenêtre e1, panneau e2, relevé e3, par `Etats.niveau`). Deux propriétés
   indépendantes pouvaient diverger : une surface déclarée panneau aurait peint le fond d'un autre niveau, et
@@ -1706,14 +1709,15 @@ et leur raison.
   sélection suit `currentIndex`, comme dans une barre latérale de macOS ; dans un menu, elle suit aussi le
   survol (`selectionSuitSurvol`), comme dans un menu de macOS.
 - **`overlay` complète, `FenetreAttention` extraite.** La primitive porte tout son comportement dès L2-01, hors
-  flou et transitions : les deux familles de l'annexe E, la fermeture par Échap et par clic extérieur, la prise
-  du clavier (`Exclusive` pour une attention, `HyprlandFocusGrab` pour un contextuel, jamais pour une
-  infobulle), l'exclusivité de l'attention par le singleton `Overlays`, l'ancrage du contextuel. Une attention
-  s'ouvre sur l'écran du moniteur qu'Hyprland dit focalisé, repli sur le premier écran, pour rester agnostique
-  de la machine. Les fenêtres se chargent à la demande (`LazyLoader`). La fenêtre d'attention vit dans son
-  propre fichier, `FenetreAttention.qml`, créé à l'ouverture : une `PanelWindow` déclarée dans `Overlay`
-  empêchait tout le composant de se charger sous la plateforme `offscreen` des tests, et donc d'éprouver la
-  primitive fermée.
+  flou et transitions : trois familles, les deux de l'annexe E (attention et contextuel) et l'infobulle, à part,
+  qui ne prend jamais le clavier et que seule son ouvreuse ferme, au départ du pointeur ou au clic, jamais par
+  Échap ni par un clic extérieur ; la fermeture par Échap et par clic extérieur des deux autres, la prise du
+  clavier (`Exclusive` pour une attention, `HyprlandFocusGrab` pour un contextuel), l'exclusivité de l'attention
+  par le singleton `Overlays`, l'ancrage du contextuel. Une attention s'ouvre sur l'écran du moniteur
+  qu'Hyprland dit focalisé, repli sur le premier écran, pour rester agnostique de la machine. Les fenêtres se
+  chargent à la demande (`LazyLoader`). La fenêtre d'attention vit dans son propre fichier,
+  `FenetreAttention.qml`, créé à l'ouverture : une `PanelWindow` déclarée dans `Overlay` empêchait tout le
+  composant de se charger sous la plateforme `offscreen` des tests, et donc d'éprouver la primitive fermée.
 - **`ColorImage` et la limite du suffixe `-fill-symbolic`.** `Icone` recolore les symboliques par `ColorImage`
   de `QtQuick.Controls.impl`, qui teint la petite image sans passe graphique supplémentaire ; ce module privé
   est enfermé dans le seul fichier `Icone.qml`, avec un repli connu (un `ShaderEffect` compilé par `qsb`) si
@@ -1767,11 +1771,16 @@ et leur raison.
   - `[pastilles]` : `hover_lightness_delta` (+0,06) et `pressed_lightness_delta` (−0,075), écarts de
     luminosité propres aux pastilles, plus francs que ceux d'un fond de contrôle, pour que repos, survol et
     pression se distinguent sur un disque de 12 px ;
-  - dans `motion.toml`, `[delays]` `tooltip` (700 ms de survol continu avant une infobulle, comme sous macOS) et
-    `[periods]` `spinner` (1 200 ms, un cycle de l'indicateur d'activité). Ce ne sont pas des ressorts, donc ni
-    des `transitions` ni des `rules` ; `dunei_motion/checks.py` les exige, typées et strictement positives.
-    **Écart ouvert** : l'annexe E de la bible et L2-21 donnent 500 ms à l'infobulle ; la valeur retenue ici est
-    celle de macOS, et Nicolas doit trancher entre les deux.
+  - dans `motion.toml`, `[delays]` `tooltip` (500 ms de survol continu avant une infobulle, la valeur de
+    l'annexe E de la bible et de L2-21 : Nicolas l'a préférée aux 700 ms de macOS d'abord retenues), `[periods]`
+    `spinner` (1 200 ms, un cycle de la vague des trois grains de l'indicateur d'activité) et `[spinner]`, la
+    pose de repos d'un grain (`rest_scale` 0,6, `rest_opacity` 0,35) et la courbe de chaque étape (`easing`,
+    InOutSine, écrite par son nom). Ce ne sont pas des ressorts, donc ni des `transitions` ni des `rules` ;
+    `dunei_motion/checks.py` les exige, typés : délais et périodes strictement positifs, pose entre 0 et 1
+    exclus, courbe parmi celles que l'indicateur sait reproduire pour sa pose arrêtée (Linear, InOutSine,
+    InOutQuad). La règle qui sépare le QML du mouvement : les proportions de tracé des glyphes (Coche c/8,
+    Chevron c/10, Pastilles 1/10…) restent dans les composants, car ce sont des données de dessin ; les valeurs
+    de mouvement vont dans `motion.toml`.
 - **Garde des couleurs dérivées.** Une première version des pastilles éclaircissait la teinte pressée en QML
   (`Qt.tint`). `tests/test_coque_qml.py` refuse désormais toute couleur construite ou dérivée dans le QML
   (`Qt.rgba`, `Qt.hsla`, `Qt.hsva`, `Qt.tint`, `Qt.darker`, `Qt.lighter`), et non plus les seuls littéraux ;
@@ -1791,12 +1800,14 @@ et leur raison.
   mémoire résidente : avec 2 000 éléments, 49 Mo au départ, 80 Mo chargés, 80 Mo encore après destruction et
   ramasse-miettes, 80 Mo au rechargement ; les objets sont détruits et leur mémoire réutilisée, mais
   l'allocateur ne la rend pas au système. Le réglage `glibc.malloc.trim_threshold` reste une piste à mesurer,
-  hors périmètre. Relevés sur `caladan` : planche au repos à 0,0 % de processeur ; page Composants
-  0,0 %, PSS 240 Mio le 23 octobre, 291 Mio le 24 avec tous les ajouts ; indicateur d'activité, dans une
-  fenêtre de la taille d'un popover (320 × 200, 60 Hz), 0,0 à 0,1 % arrêté et environ 4 % d'un cœur en marche,
-  quelle que soit la forme : le coût est celui des images produites, non du dessin. D'où la règle tenue par
-  l'indicateur : il ne s'anime que visible et en marche, ancêtre masqué compris (D80), et la planche le laisse
-  arrêté par défaut.
+  hors périmètre. Relevés sur `caladan` : planche au repos à 0,0 % de processeur ; page Composants 0,0 %, PSS
+  240 Mio le 23 octobre, 291 Mio le 24 avec tous les ajouts ; indicateur d'activité, dans une fenêtre de la
+  taille d'un popover (320 × 200, 60 Hz), 0,0 à 0,1 % arrêté et environ 4 % d'un cœur en marche, quelle que soit
+  la forme : le coût est celui des images produites, non du dessin. D'où la règle tenue par l'indicateur : il ne
+  s'anime que visible et en marche, ancêtre masqué compris (D80), et la planche le laisse arrêté par défaut.
+  Dans le même esprit, un `Etat` fige les couleurs que son composant ne peint pas (`peintFond`, `peintTexte` :
+  le fond du champ et du compteur, le fond et le texte de l'en-tête de la section dépliable), si bien que leur
+  ressort ne démarre jamais au survol.
 - **Coques d'essai offscreen gardées.** `coque/Composants/essai` instancie la bibliothèque sans aucune fenêtre
   et répond aux appels IPC par le journal ; `coque/Composants/essai/clavier` ouvre une vraie fenêtre sous la
   plateforme `offscreen` et y synthétise touches et mouvements du pointeur par le `TestEvent` de QtTest, pour

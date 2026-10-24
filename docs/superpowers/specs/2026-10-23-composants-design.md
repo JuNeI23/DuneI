@@ -1,6 +1,6 @@
 # La bibliothèque de composants de la coque
 
-Version 0.9 · 2026-10-24 · backlog L2-01, avec L2-02 et L2-03 · décisions de cadre D80, D81, D82 · statut :
+Version 0.10 · 2026-10-24 · backlog L2-01, avec L2-02 et L2-03 · décisions de cadre D80, D81, D82 · statut :
 implémentée
 
 ## 1. Objet et raison
@@ -141,7 +141,8 @@ La barre de défilement suivra le premier besoin réel d'une liste qui défile.
 
 - Boutons et autres `interactive` : `focusPolicy: Qt.TabFocus`, pour qu'un clic ne vole pas le focus d'un
   champ ; anneau lié à `visualFocus`.
-- `field` : `focusPolicy: Qt.StrongFocus` ; anneau lié à `activeFocus`.
+- `field` : `focusPolicy: Qt.StrongFocus` ; **aucun** anneau de focus : le curseur de texte clignotant dit seul
+  où est le focus (§ 7.10, v0.5).
 - Listes : `ListView` avec `activeFocusOnTab` et `keyNavigationEnabled` ; un seul arrêt de tabulation, les
   flèches déplacent `currentIndex`. Un groupe se regroupe dans un `FocusScope`. L'ordre de tabulation suit
   l'arbre ; `KeyNavigation.tab` est réservé aux exceptions.
@@ -176,7 +177,9 @@ d'élévation). Les primitives le lisent en remontant leurs parents, par le mêm
   générateur calcule alors un rôle de contrôle propre, `controlRaised`, un échelon de luminosité au-dessus de
   `surfaceRaised`, avec ses combinaisons d'états. Ce n'est pas un cinquième niveau d'élévation : il n'a ni
   sheen, ni liseré, ni ombre propres, seulement un fond. Sa valeur s'ajoute à `tokens.toml` et à l'émetteur,
-  et passe les contrôles APCA du générateur.
+  et passe les contrôles APCA du générateur. Son texte est `text-emphasis` (table `[role_text]` de
+  `tokens.toml`) : `text-primary` n'y atteignait que Lc 88,1, sous la cible de 90 du corps de texte ;
+  `text-emphasis` y tient au moins Lc 95,7 au repos et 92,9 au survol sur les quatre teintes des instantanés (v0.10).
 
 ### 7.5 La sélection et le modificateur `inactive`
 
@@ -216,14 +219,14 @@ le détournement de `palette` (fragile).
 
 La primitive est complète, hors flou et transitions (choix de Nicolas). Elle prend une famille :
 
-| | Attention | Contextuel |
-| --- | --- | --- |
-| Exemples | lanceur, sélecteurs, déconnexion, dialogue | menu, popover, liste déroulante, infobulle |
-| Fenêtre | `PanelWindow` couche overlay, plein écran | `PopupWindow` ancrée sur son déclencheur |
-| Voile | `material.shade` sur tout l'écran | aucun |
-| Clavier | `Exclusive` dès l'ouverture | focus pris par `HyprlandFocusGrab` (l'infobulle ne le prend jamais) |
-| Fermeture | Échap, clic sur le voile | Échap, clic à l'extérieur |
-| Coexistence | une seule à la fois : ouvrir la seconde ferme la première | plusieurs possibles |
+| | Attention | Contextuel | Infobulle |
+| --- | --- | --- | --- |
+| Exemples | lanceur, sélecteurs, déconnexion, dialogue | menu, popover, liste déroulante | bulle d'aide d'un contrôle |
+| Fenêtre | `PanelWindow` couche overlay, plein écran | `PopupWindow` ancrée sur son déclencheur | la même `PopupWindow`, centrée sous l'ancre, ou au-dessus faute de place |
+| Voile | `material.shade` sur tout l'écran | aucun | aucun |
+| Clavier | `Exclusive` dès l'ouverture | focus pris par `HyprlandFocusGrab` | jamais : ni focus ni `HyprlandFocusGrab` |
+| Fermeture | Échap, clic sur le voile | Échap, clic à l'extérieur | départ du pointeur ou clic, par son ouvreuse `Infobulle` ; ni Échap ni clic extérieur |
+| Coexistence | une seule à la fois : ouvrir la seconde ferme la première | plusieurs possibles | une par cible survolée |
 
 - L'exclusivité de l'attention passe par un petit singleton qui retient l'overlay ouvert.
 - Le dialogue modal voile sa seule fenêtre parente (annexe E) : ce cas suivra la première application qui en a
@@ -232,8 +235,8 @@ La primitive est complète, hors flou et transitions (choix de Nicolas). Elle pr
   (menu contextuel), et reste dans l'écran.
 - L'ombre de E3 et le flou par instantané relèvent de L2-04 et de L2-06 : la surface est dessinée simplement,
   au niveau `surfaceRaised`.
-- La planche ouvre un overlay de chaque famille par-dessus l'écran ; le relevé de mémoire se prend fermé,
-  ouvert, puis refermé.
+- La planche ouvre une attention et un contextuel par-dessus l'écran, et porte une infobulle sur un bouton ; le
+  relevé de mémoire se prend fermé, ouvert, puis refermé.
 
 Chargement : `LazyLoader` de Quickshell pour une surface qui est une fenêtre (`activeAsync` pour construire entre
 deux images, `active: false` pour détruire) ; `Loader` pour un élément dans une fenêtre existante. La mesure du
@@ -279,14 +282,15 @@ l'interrupteur qui glisse) à L2-06. Les couleurs viennent toujours des tokens e
 | Pastilles de fenêtre | Les trois pastilles de macOS : rondes, de `pastille` de diamètre, espacées d'un échelon de `space`, en `error`, `warning` et `success`. Repos, survol et pression se distinguent franchement : écarts de luminosité propres aux pastilles (`pastilles.hover_lightness_delta`, `pastilles.pressed_lightness_delta`), précalculés par l'émetteur. Au survol du groupe, chacune montre son glyphe dessiné (croix, tiret, flèches d'agrandissement) en couleur sombre. Sous `inactive`, les trois passent au neutre, comme une fenêtre inactive de macOS. Pas d'arrêt de tabulation. Signaux `fermer`, `reduire`, `agrandir` ; leur rôle sous un gestionnaire en tuiles et leur emplacement se décident avec la décoration des fenêtres (proposition : fermer la fenêtre, l'envoyer au bureau spécial, la passer en plein écran) |
 | Compteur | Nombre entier sur `T.SpinBox` : la valeur dans un champ enfoncé, et à sa droite le stepper de macOS, deux demi-boutons empilés de `stepper_width` de large, aux chevrons dessinés. Flèches haut et bas, molette |
 | Menu déroulant | Bouton contextuel de macOS (`Deroulant`) : l'apparence d'un `Bouton`, la valeur choisie et un double chevron dessiné à droite ; il ouvre un `overlay` contextuel avec une `Liste` dont l'élément choisi porte la coche dessinée de la case, et dont la sélection suit le survol. Espace ou Entrée l'ouvre ; fermé, les flèches changent la valeur |
-| Infobulle | Bulle d'aide après un survol prolongé (`delays.tooltip` du mouvement) : un `overlay` contextuel sans focus, au rayon `small`, au fond `surfaceRaised`, texte d'échelon 1 ; elle se ferme quand le pointeur part |
+| Infobulle | Bulle d'aide après un survol prolongé (`delays.tooltip` du mouvement, 500 ms, v0.10) : un `overlay` de la famille infobulle, sans focus, au rayon `small`, au fond `surfaceRaised`, texte d'échelon 1 ; elle se ferme quand le pointeur part |
 | Champ de recherche | Un `Champ` en pilule, une loupe à gauche, un bouton d'effacement à droite tant qu'il y a du texte ; Échap efface |
-| Indicateur d'activité | Trois grains en accent sur une ligne de texte (diamètre du tiers de `icons.sizes.default`, espacés d'un demi-grain), qui grossissent et s'éclairent tour à tour en vague continue, de gauche à droite : le cycle d'un grain, de `periods.spinner` (1200 ms), enchaîne une montée, une descente et un repos d'un tiers chacun, décalé d'un tiers sur son voisin ; au repos, échelle 0,6 et opacité 0,35. Fluides sur le fil de rendu (`ScaleAnimator` et `OpacityAnimator`, courbe InOutSine), sans pas discrets. Ils ne s'animent que visibles et en marche, ancêtre masqué compris (D80). Relevé dans une fenêtre de popover (320 × 200, 60 Hz) : environ 4 % d'un cœur en marche, 0 % à l'arrêt ; le coût est celui des images produites, non du dessin. L'anneau qui respirait, puis l'arc tournant et la pastille en va-et-vient essayés ensuite, sont écartés (v0.8). L'indicateur dit « ça travaille » dans sa zone ; il ne remplace pas le curseur de la souris |
+| Indicateur d'activité | Trois grains en accent sur une ligne de texte (diamètre du tiers de `icons.sizes.default`, espacés d'un demi-grain), qui grossissent et s'éclairent tour à tour en vague continue, de gauche à droite : le cycle d'un grain, de `periods.spinner` (1200 ms), enchaîne une montée, une descente et un repos d'un tiers chacun, décalé d'un tiers sur son voisin ; au repos, échelle `spinner.rest_scale` (0,6) et opacité `spinner.rest_opacity` (0,35). Fluides sur le fil de rendu (`ScaleAnimator` et `OpacityAnimator`, courbe `spinner.easing`, InOutSine), sans pas discrets ; pose et courbe vivent dans `motion.toml` (v0.10). Ils ne s'animent que visibles et en marche, ancêtre masqué compris (D80). Relevé dans une fenêtre de popover (320 × 200, 60 Hz) : environ 4 % d'un cœur en marche, 0 % à l'arrêt ; le coût est celui des images produites, non du dessin. L'anneau qui respirait, puis l'arc tournant et la pastille en va-et-vient essayés ensuite, sont écartés (v0.8). L'indicateur dit « ça travaille » dans sa zone ; il ne remplace pas le curseur de la souris |
 | Section dépliable | Un chevron dessiné et un libellé, en retrait d'un échelon de `space` (8) de chaque côté de l'en-tête pour que l'anneau de focus ne les touche pas (v0.7) ; un clic ou Espace déplie ou replie le bloc. Le chevron pivote sans animation jusqu'à L2-06 |
 | Bascule à glyphe | Le gros bouton rond du Centre de contrôle (Wi-Fi, Bluetooth) : disque de `toggle_size` (40 px, 36 en compact), glyphe de `icons.sizes.default` (20 px) au centre, libellé facultatif dessous. Éteint : fond du cran, glyphe en texte primaire ; allumé : accent plein, glyphe sur-accent (`activeMuted` sous `inactive`). Arrêt de tabulation, anneau rond au clavier, Espace bascule |
 | Icônes des contrôles | Dans les boutons, les rangées et les listes, l'icône prend `icons.sizes.dense` (16) au lieu de `default` (20), jugée un peu grande à côté de la jauge (v0.7) |
 
-La couleur claire des boutons d'interrupteur et des poignées est `textPrimary`, puisque le thème est sombre.
+La couleur claire des boutons d'interrupteur et des poignées est le texte de leur rôle sans sélection,
+`textPrimary`, ou `textEmphasis` sur `controlRaised` (§ 7.4), puisque le thème est sombre.
 Un rôle propre (`knob`) sera ajouté avec les thèmes statiques clair et sombre, que Nicolas a demandés à la même
 validation : ils forment une feature distincte, menée juste après L2-01 ; les composants n'en dépendent pas,
 puisqu'ils lisent tout dans `Theme`.
@@ -310,7 +314,7 @@ puisqu'ils lisent tout dans `Theme`.
    puis inactive ; Nicolas la parcourt à la souris et à la tabulation et valide à l'écran.
 3. Nicolas tranche le ressort du retour au repos ; le choix est consigné au journal.
 4. Une bascule de teinte (`planche.sh teinte <n>`) change toute la planche d'un bloc.
-5. Un overlay de chaque famille s'ouvre par-dessus l'écran depuis la planche et se ferme par Échap et par clic
+5. Une attention et un contextuel s'ouvrent par-dessus l'écran depuis la planche et se ferment par Échap et par clic
    extérieur ; un second overlay d'attention ferme le premier.
 6. Relevés par primitive (processeur au repos, mémoire) consignés au carnet, l'overlay fermé, ouvert, refermé.
 
@@ -327,3 +331,4 @@ puisqu'ils lisent tout dans `Theme`.
 | 0.7 | 2026-10-24 | Quatrième validation : indicateur d'activité en anneau qui respire, pastilles plus contrastées, bascule à glyphe, icônes des contrôles en 16 px, en-tête de la section dépliable en retrait de l'anneau ; matière et texture renvoyées à un élément lié à L2-04 et L2-05 |
 | 0.8 | 2026-10-24 | Cinquième validation : indicateur d'activité en trois grains fluides, bascules de 40 px ; retour au repos figé sur `in` |
 | 0.9 | 2026-10-24 | Statut : implémentée ; décisions consignées en D82 |
+| 0.10 | 2026-10-24 | Relecture finale : infobulle en famille d'overlay à part (7.7), `field` sans anneau (7.3), texte de `controlRaised` en `text-emphasis` (7.4), infobulle à 500 ms, pose et courbe de l'indicateur dans `motion.toml` |

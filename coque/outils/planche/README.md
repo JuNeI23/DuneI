@@ -1,13 +1,13 @@
 # Planche de contrôle des tokens de la coque
 
-Version 0.11 — outil de développement de L2-34, gardé ensuite pour tout travail sur les tokens et la coque ; page
+Version 0.12 — outil de développement de L2-34, gardé ensuite pour tout travail sur les tokens et la coque ; page
 des composants ajoutée en L2-01.
 
-La planche affiche dans sa fenêtre (tuilée ou flottante, selon les règles d'Hyprland) deux onglets : « Tokens », chaque token de `coque-tokens.json`
-rendu par Quickshell avec un bouton d'essai qui parcourt tous ses états, et « Composants », la bibliothèque du
-module `coque/Composants` dans ses états. Elle ne lit que les modules `coque/Theme` et `coque/Composants` : aucune
-valeur de design n'est écrite dans ses fichiers. Quand le fichier de tokens change, toute la planche bascule dans
-la même image, sans recréer sa fenêtre.
+La planche affiche dans sa fenêtre (tuilée ou flottante, selon les règles d'Hyprland) deux onglets : « Tokens »,
+chaque token de `coque-tokens.json` rendu par Quickshell avec un bouton d'essai qui parcourt tous ses états, et
+« Composants », la bibliothèque du module `coque/Composants` dans ses états. Elle ne lit que les modules
+`coque/Theme` et `coque/Composants` : aucune valeur de design n'est écrite dans ses fichiers. Quand le fichier de
+tokens change, toute la planche bascule dans la même image, sans recréer sa fenêtre.
 
 ## Lancer
 
@@ -30,11 +30,12 @@ ne bouge pas, puis `planche.sh teinte <n>` la rétablit.
 
 ## Onglets
 
-Les onglets en tête sont des `Onglet` du module, portés par la barre `Onglets` du module : un contrôle segmenté
-à la manière de macOS, piste en pilule au fond enfoncé et pastille en pilule sur le segment coché (conception
-des composants, § 7.10). Elle a remplacé `BarreOnglets.qml`, propre à la planche, quand les formes à la macOS
-l'ont fait entrer dans la bibliothèque. Chaque page est chargée à la demande par un `Loader` : seule la page
-visible existe, et changer d'onglet détruit l'autre (sobriété, D80). Le défilement revient en haut à chaque changement.
+Les onglets en tête sont des `Onglet` du module, portés par la barre `Onglets` du module, un contrôle segmenté à la
+manière de macOS : une piste au rayon `control` et au fond enfoncé, et le segment coché en retrait de
+`segment_inset`, au rayon `control − segment_inset` (conception des composants, § 7.10). Elle a remplacé
+`BarreOnglets.qml`, propre à la planche, quand les formes à la macOS l'ont fait entrer dans la bibliothèque. Chaque
+page est chargée à la demande par un `Loader` : seule la page visible existe, et changer d'onglet détruit l'autre
+(sobriété, D80). Le défilement revient en haut à chaque changement.
 
 ## Page « Tokens »
 
@@ -89,14 +90,15 @@ fenêtre plus large.
 - **Compléments à la macOS** (§ 7.10) : une grille `Recherche` (vide et remplie, sans ligne de focus, comme le
   champ ; vivant : un champ de recherche, qu'Échap ou son bouton d'effacement vident) ; une grille `Activite` d'une
   seule ligne, les trois grains arrêtés au début de leur cycle puis figés à mi-cycle (phase 0,5) ; vivant : les
-  trois grains, arrêtés par défaut pour que la page ne coûte rien au repos, et l'interrupteur « En marche » ; une grille `Depliable` (repliée et dépliée, en repos,
-  survol, désactivé et focus clavier, l'anneau entourant l'en-tête, en retrait du chevron et du libellé ; vivant :
-  une section qui porte une case et un interrupteur) ; une grille `Bascule à glyphe` (éteinte et allumée, en
-  repos, survol, pressé, désactivé et focus clavier, l'anneau rond autour du disque ; vivant : trois bascules à
-  libellé, `network-wireless` allumée, `bluetooth-active` et `night-light`) ; enfin la section `Infobulle`, un bouton
-  qui en porte une : elle paraît après `delays.tooltip` de survol continu et se ferme au départ du pointeur ou au
-  clic. Elle ne se fige pas et ne s'ouvre qu'à la main.
-- **Modificateur inactive** : deux panneaux identiques (case cochée, radio coché, interrupteur, curseur, barre
+  trois grains, arrêtés par défaut pour que la page ne coûte rien au repos, et l'interrupteur « En marche » ; une
+  grille `Depliable` (repliée et dépliée, en repos, survol, désactivé et focus clavier, l'anneau entourant
+  l'en-tête, en retrait du chevron et du libellé ; vivant : une section qui porte une case et un interrupteur) ; une
+  grille `Bascule à glyphe` (éteinte et allumée, en repos, survol, pressé, désactivé et focus clavier, l'anneau rond
+  autour du disque ; vivant : trois bascules à libellé, `network-wireless` allumée, `bluetooth-active` et
+  `night-light`) ; enfin la section `Infobulle`, un bouton qui en porte une : elle paraît après `delays.tooltip`
+  (500 ms) de survol continu et se ferme au départ du pointeur ou au clic. Elle ne se fige pas et ne s'ouvre qu'à la
+  main. - **Modificateur inactive** : deux panneaux identiques (case cochée, radio coché, interrupteur, curseur,
+  barre
   d'onglets, bouton, bascule allumée, champ, pastilles, compteur, déroulant, progression, liste), le second sous
   `dnInactive: true`, pour juger l'accent muet (`activeMuted`) et l'anneau atténué.
 
@@ -190,3 +192,4 @@ dessin. D'où la règle D80 : un indicateur ne tourne que visible et en marche.
 | 0.9 | 2026-10-24 | Quatrième itération (L2-01, § 7.10, v0.7) : indicateur d'activité en anneau qui respire (arrêté dans la grille et par défaut au vivant), section `Bascule à glyphe`, bascule allumée dans les panneaux du modificateur inactive ; pastilles survolées et pressées aux variantes propres, plus contrastées. |
 | 0.10 | 2026-10-24 | Indicateur d'activité en trois formes au choix (`arc`, `grains`, `sable`), animées en continu sur le fil de rendu : grille figée à mi-cycle, trois vivants nommés et arrêtés par défaut, chacun avec son interrupteur ; relevés de l'indicateur dans une petite fenêtre ; bascule à glyphe agrandie (40 px, glyphe de 20). |
 | 0.11 | 2026-10-24 | Cinquième validation : indicateur d'activité réduit aux trois grains (grille arrêtée et à mi-cycle, vivant arrêté par défaut) ; interrupteur provisoire du retour au repos retiré, le retour est figé sur `in`. |
+| 0.12 | 2026-10-24 | Relecture finale de L2-01 : onglets décrits tels qu'ils sont (piste au rayon `control`, segment au rayon `control − segment_inset`), délai de l'infobulle (500 ms), paragraphes trop longs rejoints. |

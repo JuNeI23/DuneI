@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.19. Historique en fin de document.
+Version 1.20. Historique en fin de document.
 
 Socle amorçable.
 
@@ -1595,13 +1595,13 @@ est `docs/superpowers/specs/2026-10-23-composants-design.md`.
 | Rôle | Fichiers |
 | --- | --- |
 | Règles d'états, sans état ni singleton | `etats.js` : héritage par remontée, cran des contrôles, lecture de l'interaction et de la sélection, niveau d'élévation d'un rôle |
-| Moteur d'état d'un contrôle | `Etat` : clés de `Theme.stateColors`, fond et texte animés par deux `ColorSpring` au ressort `transitions.state.in` |
+| Moteur d'état d'un contrôle | `Etat` : clés de `Theme.stateColors`, fond et texte animés par deux `ColorSpring` au ressort `transitions.state.in`, figés quand le contrôle ne les peint pas (`peintFond`, `peintTexte`) ; `texteNeutre`, le texte sans sélection des libellés |
 | `surface` | `Surface` : fond d'un conteneur, source de `dnRole` et de `dnInactive` pour ses descendants ; `Separateur` ; `Progression` (déterminée) |
 | `text`, `icon` | `Texte` ; `Icone` (symboliques recolorées par `ColorImage`, seul fichier à importer `QtQuick.Controls.impl`) |
 | `interactive` | `Bouton` (avec `principal`), `Case`, `Radio`, `Interrupteur`, `Onglet` et sa barre `Onglets`, `Curseur`, `Jauge`, `Bascule` (bascule à glyphe) |
 | `field` | `Champ` ; `Recherche` (champ en pilule, loupe, effacement) ; `Compteur` (nombre et stepper) |
 | `row` | `Rangee` ; `Liste` (un seul arrêt de tabulation, flèches à l'intérieur) |
-| `overlay` | `Overlay` (attention ou contextuel) ; `Overlays`, singleton qui garde une seule attention ouverte ; `FenetreAttention`, interne, absente de `qmldir` ; `Deroulant` et `Infobulle`, bâtis sur un overlay contextuel |
+| `overlay` | `Overlay`, en trois familles : attention, contextuel et infobulle (sans focus, fermée au départ du pointeur ou au clic) ; `Overlays`, singleton qui garde une seule attention ouverte ; `FenetreAttention`, interne, absente de `qmldir` ; `Deroulant`, bâti sur un overlay contextuel, et `Infobulle`, sur un overlay de la famille infobulle |
 | Autres compléments | `Pastilles` (fermer, réduire, agrandir), `Activite` (indicateur en trois grains), `Depliable` (section dépliable) |
 | Formes dessinées et focus | `Coche`, `Chevron` (tracés `QtQuick.Shapes`) ; `AnneauFocus` (anneau extérieur, réservé au clavier) |
 
@@ -1657,18 +1657,20 @@ d'écran saisirait le bureau de Nicolas.
 
 | Fichier | Ce qu'il éprouve |
 | --- | --- |
-| `tests/test_coque_composants.py` | 57 tests dans un vrai Quickshell : règles d'états, héritage et reparentage, cran, import d'un seul `Theme`, chaque contrôle, listes, exclusivité de l'attention, overlays fermés sans erreur, puis, au clavier, tabulation, barre d'onglets à un arrêt, curseur de texte, jauge, compteur, déroulant, recherche, dépliable, bascule, infobulle et pastilles |
+| `tests/test_coque_composants.py` | 58 tests dans un vrai Quickshell : règles d'états, héritage et reparentage, cran, import d'un seul `Theme`, ressorts figés des couleurs non peintes, chaque contrôle, listes, exclusivité de l'attention, overlays fermés sans erreur, puis, au clavier, tabulation, barre d'onglets à un arrêt, curseur de texte, jauge, compteur, déroulant, recherche, dépliable, bascule, infobulle et pastilles |
 | `tests/test_coque_qml.py` | aucune valeur de design dans le QML, ni couleur construite ou dérivée (`Qt.tint`, `Qt.darker`, `Qt.lighter`…), `ColorSpring` seul exempté |
-| `tests/test_quickshell_emitter.py` | cotes des contrôles dans les deux densités, rôle `controlRaised`, variantes des pastilles et contraste de leur glyphe |
-| `tests/test_motion_checks.py`, `tests/test_motion_generate.py` | sections `[delays]` et `[periods]` de `motion.toml` |
+| `tests/test_quickshell_emitter.py` | cotes des contrôles dans les deux densités, rôle `controlRaised` et son texte `text-emphasis` à Lc ≥ 90 au repos, au survol et à la pression, variantes des pastilles et contraste de leur glyphe |
+| `tests/test_motion_checks.py`, `tests/test_motion_generate.py` | sections `[delays]`, `[periods]` et `[spinner]` de `motion.toml` |
 
 Deux coques d'essai servent ces tests et restent dans le dépôt. `coque/Composants/essai` instancie la
 bibliothèque sans aucune fenêtre et répond aux appels IPC par le journal. `coque/Composants/essai/clavier`
 ouvre une vraie fenêtre sous la plateforme `offscreen`, invisible, et y synthétise touches et mouvements du
 pointeur par le `TestEvent` de QtTest. Elle journalise sa plateforme dès son chargement et ne construit sa
 fenêtre que sous `offscreen` : lancée ailleurs, elle n'ouvre rien, et le test échoue en nommant la plateforme
-(`test_garde_hors_offscreen`). Aucune touche synthétique n'atteint ainsi le bureau. Comme celles de `Theme`,
-ces tests sont ignorés sans session Wayland ou sans Quickshell, donc sur le contrôle GitHub.
+(`test_garde_hors_offscreen`). Aucune touche synthétique n'atteint ainsi le bureau. Comme ceux de `Theme`, les
+tests de la bibliothèque (`CoqueComposantsTest`) sont ignorés sans session Wayland ou sans Quickshell ; ceux du
+clavier (`CoqueClavierTest`), dont la fenêtre est offscreen, n'exigent que Quickshell. Le contrôle GitHub, qui
+n'a pas Quickshell, les ignore tous.
 
 ```bash
 make test                                              # toute la suite
@@ -1705,8 +1707,6 @@ le chargement à la demande en plafonne le pic, mais l'allocateur ne rend pas au
 - La bascule éteinte pressée, qui se fond dans son fond ; le chevron de la section dépliable en retrait de 8.
 - Le contour d'une liste, qui pourrait réapparaître quand sa fenêtre redevient active (Qt 6.12 ne donne pas la
   raison du focus).
-- Le libellé `text-primary` sur `controlRaised`, à Lc 88,1, sous la cible APCA de 90 du texte courant.
-- Le délai de l'infobulle : 700 ms dans `motion.toml`, 500 ms dans la bible ; Nicolas tranche.
 
 ## Lecteur d'empreinte — nouveau
 
@@ -1810,6 +1810,7 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 
 | Version | Date | Changement |
 | --- | --- | --- |
+| 1.20 | 2026-10-24 | Bibliothèque de composants (L2-01), relecture finale : infobulle en troisième famille d'overlay, `Etat` qui fige les couleurs non peintes, tests du clavier qui n'exigent que Quickshell, section `[spinner]` de `motion.toml` ; points tranchés retirés de « Ce qui reste à voir » (texte de `controlRaised` éclairci en `text-emphasis`, infobulle à 500 ms) |
 | 1.19 | 2026-10-24 | Bibliothèque de composants (L2-01) : inventaire du module, import côte à côte, planche à deux onglets et commandes IPC, tests et coques d'essai offscreen, relevés, ce qui reste à voir à l'écran ; point ouvert du retour au repos tranché (`in`, D82) |
 | 1.18 | 2026-10-22 | Tokens de la coque (L2-34), relecture finale : recette précisée (transitions validées par Nicolas, fichier corrompu couvert par test et vérifié par Claude), mineures reportées complétées, corrections de `ColorSpring` et `mesure.sh`, points ouverts pour L2-01 (ressort de sortie) |
 | 1.17 | 2026-10-22 | Tokens de la coque (L2-34) : fichiers et chemins, `DUNEI_TOKENS_DIR`, schéma, choix d'import, planche de contrôle, recette et relevés (D81) |
