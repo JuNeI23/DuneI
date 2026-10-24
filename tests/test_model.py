@@ -3,7 +3,7 @@
 import unittest
 from pathlib import Path
 
-from dunei_theme.model import load, resolve
+from dunei_theme.model import defaut, load, resolve, theme_data, themes
 
 ROOT = Path(__file__).resolve().parent.parent
 HUES = (0, 55, 200, 265)
@@ -55,6 +55,40 @@ class ModelTest(unittest.TestCase):
         for name, lvl in self.data["elevation"].items():
             with self.subTest(level=name):
                 self.assertEqual(self.models[55]["elevation"][name], self.models[55]["ramp"][lvl["step"]])
+
+    def test_nuit_thematisee_identique(self):
+        for h in HUES:
+            ref, got = resolve(self.data, h), resolve(theme_data(self.data, "thematisee", "nuit"), h)
+            for cle in ("ramp", "roles", "elevation", "accent", "accent_standalone", "on_accent",
+                        "categorical", "semantic"):
+                with self.subTest(hue=h, cle=cle):
+                    self.assertEqual(got[cle], ref[cle])
+
+    def test_themes_et_defaut(self):
+        self.assertEqual(themes(self.data), [("thematisee", "nuit"), ("dominante", "nuit")])
+        self.assertEqual(defaut(self.data), ("thematisee", "nuit"))
+
+    def test_dominante_neutres(self):
+        m = resolve(theme_data(self.data, "dominante", "nuit"), 55)
+        self.assertTrue(all(c.c == 0 for c in m["ramp"]))
+        self.assertEqual(m["accent"], self.models[55]["accent"])
+
+    def test_fusion_profonde(self):
+        data = {"a": {"x": 1, "y": 2}, "moments": {"m": {"a": {"x": 3}}}, "familles": {"f": {}}}
+        self.assertEqual(theme_data(data, "f", "m")["a"], {"x": 3, "y": 2})
+        self.assertEqual(data["a"], {"x": 1, "y": 2})
+
+    def test_theme_inconnu(self):
+        with self.assertRaisesRegex(KeyError, "famille inconnue : verre"):
+            theme_data(self.data, "verre", "nuit")
+        with self.assertRaisesRegex(KeyError, "moment inconnu : aube"):
+            theme_data(self.data, "thematisee", "aube")
+
+    def test_knob_nuit(self):
+        for famille in ("thematisee", "dominante"):
+            m = resolve(theme_data(self.data, famille, "nuit"), 55)
+            with self.subTest(famille=famille):
+                self.assertEqual(m["knob"], m["roles"]["text-emphasis"])
 
 
 if __name__ == "__main__":

@@ -32,5 +32,6 @@ def emit(model: dict) -> str:
     Sortie : contenu de tokens.json. Erreurs : aucune. Dépendances : json, _serial.
     """
     out = {"_generated": "GÉNÉRÉ depuis tokens.toml — NE PAS MODIFIER À LA MAIN"}
-    out |= {k: v for k, v in model.items() if k != "raw"}
+    # knob ne concerne que la coque : tokens.json garde sa forme (cibles des applications inchangées).
+    out |= {k: v for k, v in model.items() if k not in ("raw", "knob")}
     return json.dumps(_serial(out), indent=2, ensure_ascii=False) + "\n"
