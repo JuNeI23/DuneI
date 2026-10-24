@@ -8,7 +8,6 @@ est repris.
 
 import ctypes
 import json
-import math
 import os
 import shutil
 import struct
@@ -83,17 +82,18 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
         self.lancer(self.dir)
         self.attendre("essai : prêt true")
 
-    def valeur(self, cle: str) -> str:
+    def valeur(self, cle: str, *arguments: str) -> str:
         """Appelle une fonction IPC de lecture et rend la valeur qu'elle journalise.
 
-        Entrée : cle — nom de la fonction IPC, qui journalise « essai : <cle> <valeur> ».
+        Entrées : cle — nom de la fonction IPC, qui journalise « essai : <cle> <valeur> » ; arguments — ceux de
+                  la fonction, s'il y en a.
         Sortie : la valeur de la ligne écrite par cet appel.
         Erreurs : échec du test si la ligne n'arrive pas dans le délai ; CalledProcessError si l'appel échoue.
         Dépendances : ipc, attendre, journal.
         """
         prefixe = f"essai : {cle} "
         avant = self.journal().count(prefixe)
-        self.ipc(cle)
+        self.ipc(cle, *arguments)
         self.attendre(prefixe, avant + 1)
         return [ligne for ligne in self.journal().splitlines() if prefixe in ligne][-1].split(prefixe, 1)[1]
 
@@ -501,47 +501,88 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
         self.assertEqual((loupe, effacer), (texte, texte))
         self.assertNotEqual(effacer.lower(), c["textSecondary"].lower())
 
-    def test_activite(self):
-        # L'anneau qui respire : un cercle d'icons.sizes.default, cerné d'un huitième de son côté, à l'accent du rôle
-        # de son conteneur (sélection active, activeMuted sous inactive). Son opacité respire en pas discrets : un
-        # cycle de periods.spinner compte round(période × cadences.spinner / 1000) pas, si bien que le minuteur
-        # change l'opacité cadences.spinner fois par seconde ; elle suit un cosinus de creux (au demi-cycle) à 1 (au
-        # pas 0). Le minuteur ne court que si l'anneau est visible et en marche (D80) ; arrêté, il revient au pas 0,
-        # pleinement opaque.
+    def activite(self, forme: str) -> list[str]:
+        """Lit l'indicateur d'activité d'essai d'une forme.
+
+        Entrée : forme — "arc", "grains" ou "sable".
+        Sortie : [forme, anime, marches, largeur, hauteur, couleur, détails…], où marches liste, séparés par des
+                 virgules, les états en marche des animations de la forme ; les détails sont propres à la forme
+                 (voir la fonction activite de la coque d'essai).
+        Erreurs : celles de valeur. Dépendances : valeur.
+        """
+        return self.valeur("activite", forme).split()
+
+    def verifier_activite(self, forme: str, cotes: tuple, details: list, mi_cycle: list) -> None:
+        """Règles communes aux trois formes de l'indicateur d'activité.
+
+        Rôle : la forme se dessine à l'accent du rôle de son conteneur (sélection active, activeMuted sous
+        inactive) ; ses animations tournent tant qu'elle est visible et en marche, et s'arrêtent sinon, ancêtre
+        masqué compris (D80) ; arrêtée, elle tient la pose de sa phase, et la phase 0,5 la fige à mi-cycle.
+        Entrées : forme ; cotes — (largeur, hauteur) attendues ; details — détails attendus à la phase 0 ;
+                  mi_cycle — détails attendus à la phase 0,5.
+        Sortie : aucune. Erreurs : échec du test. Dépendances : demarrer, tokens55, activite, ipc.
+        """
         self.demarrer()
-        tokens, motion = self.tokens55()
-        periode = motion["periods"]["spinner"]
-        n = round(periode * motion["cadences"]["spinner"] / 1000)
-        intervalle, cote = int(periode / n), tokens["icons"]["sizes"]["default"]
-        accent = tokens["states"]["surfacePanel"]["active"]["rest"]["fill"].lower()
-        marche, inter, pas, lu_cote, couleur, epaisseur, opacite, lu_n, creux = self.valeur("activite").split()
-        self.assertEqual((marche, inter, lu_cote, lu_n, couleur.lower(), float(epaisseur)),
-                         ("true", str(intervalle), str(cote), str(n), accent, cote / 8))
-        respire = lambda k: round(float(creux) + (1 - float(creux)) * (1 + math.cos(2 * math.pi * k / n)) / 2, 3)
-        self.assertEqual(float(opacite), respire(int(pas)))
-        # Le creux documenté vaut 0,35 ; avec un nombre impair de pas, le plus bas atteint reste à un pas du
-        # demi-cycle, soit un peu au-dessus (environ 0,37 pour neuf pas).
-        self.assertEqual(float(creux), 0.35)
-        self.assertAlmostEqual(min(respire(k) for k in range(n)), 0.35, delta=0.03)
-        time.sleep(3 * intervalle / 1000)
-        self.assertNotEqual(self.valeur("activite").split()[2], pas)
+        tokens = self.tokens55()[0]
+        st = tokens["states"]["surfacePanel"]
+        lu = self.activite(forme)
+        marches = lu[2].split(",")
+        self.assertEqual(lu[:2] + [set(marches)] + lu[3:5] + [lu[5].lower()],
+                         [forme, "true", {"true"}, *map(str, cotes), st["active"]["rest"]["fill"].lower()])
+        self.assertEqual(lu[6:], details)
         for visible, running in (("false", "true"), ("true", "false"), ("false", "false")):
             with self.subTest(visible=visible, running=running):
-                self.ipc("activiteEtat", visible, running)
-                time.sleep(3 * intervalle / 1000)
-                lu = self.valeur("activite").split()
-                self.assertEqual(lu[:3] + lu[6:7], ["false", str(intervalle), "0", "1"])
-        self.ipc("activiteEtat", "true", "true")
-        self.assertEqual(self.valeur("activite").split()[0], "true")
-        # Un ancêtre masqué rend l'anneau invisible : son minuteur s'arrête, puis repart quand l'ancêtre reparaît.
+                self.ipc("activiteEtat", forme, visible, running)
+                lu = self.activite(forme)
+                self.assertEqual((lu[1], lu[2]), ("false", ",".join(["false"] * len(marches))))
+                self.assertEqual(lu[6:], details)
+        self.ipc("activiteEtat", forme, "true", "true")
+        self.assertEqual(self.activite(forme)[1:3], ["true", ",".join(["true"] * len(marches))])
+        # Un ancêtre masqué rend la forme invisible : ses animations s'arrêtent, puis repartent quand il reparaît.
         self.ipc("activiteAncetre", "false")
-        self.assertEqual(self.valeur("activite").split()[0], "false")
+        self.assertEqual(self.activite(forme)[2], ",".join(["false"] * len(marches)))
         self.ipc("activiteAncetre", "true")
-        self.assertEqual(self.valeur("activite").split()[0], "true")
-        # Sous le modificateur inactive, l'anneau prend l'accent sans chroma.
+        self.assertEqual(self.activite(forme)[2], ",".join(["true"] * len(marches)))
+        # Arrêtée à la phase 0,5, la forme se fige à mi-cycle.
+        self.ipc("activiteEtat", forme, "true", "false")
+        self.ipc("activitePhase", forme, "0.5")
+        self.assertEqual(self.activite(forme)[6:], mi_cycle)
+        # Sous le modificateur inactive, la forme prend l'accent sans chroma.
         self.ipc("inactif", "true")
-        muet = tokens["states"]["surfacePanel"]["activeMuted"]["rest"]["fill"].lower()
-        self.assertEqual(self.valeur("activite").split()[4].lower(), muet)
+        self.assertEqual(self.activite(forme)[5].lower(), st["activeMuted"]["rest"]["fill"].lower())
+
+    def test_activite_arc(self):
+        # L'arc : un carré de icons.sizes.default ; un anneau ouvert aux trois quarts (balayage de 270°), d'un trait
+        # du dixième du côté, qui fait un tour par periods.spinner, en boucle (Animation.Infinite vaut -1).
+        tokens, motion = self.tokens55()
+        c, periode = tokens["icons"]["sizes"]["default"], motion["periods"]["spinner"]
+        self.verifier_activite("arc", (c, c), [f"{c / 10:g}", "270", "0", str(periode), "-1"],
+                               [f"{c / 10:g}", "270", "180", str(periode), "-1"])
+
+    def test_activite_grains(self):
+        # Les grains : trois points d'un tiers du côté c = icons.sizes.default, espacés d'un demi-point, sur une
+        # hauteur c ; chacun monte, descend puis se repose, un tiers de periods.spinner par étape, décalé d'une
+        # étape sur son voisin. La pose est donnée « échelle/opacité » : au repos 0,6 et 0,35, au sommet 1 et 1.
+        tokens, motion = self.tokens55()
+        c, periode = tokens["icons"]["sizes"]["default"], motion["periods"]["spinner"]
+        d = c / 3
+        cotes = (round(4 * d, 3), c)
+        tiers = f"{periode / 3:g}"
+        bas, haut, milieu = "0.6/0.35", "1/1", "0.8/0.675"
+        self.verifier_activite("grains", tuple(f"{v:g}" for v in cotes),
+                               [f"{round(d, 3):g}", bas, bas, haut, tiers, "-1"],
+                               [f"{round(d, 3):g}", milieu, milieu, bas, tiers, "-1"])
+
+    def test_activite_sable(self):
+        # Le sable : une piste enfoncée (elevation.field.fill) de density.sliderWidth sur density.sliderTrack, et
+        # une pastille du quart de la piste, qui la traverse en une période de periods.spinner, aller puis
+        # retour, en boucle ; au départ à gauche, à mi-cycle au milieu.
+        tokens, motion = self.tokens55()
+        d, periode = tokens["density"]["comfortable"], motion["periods"]["spinner"]
+        w, h = d["sliderWidth"], d["sliderTrack"]
+        piste = tokens["elevation"]["field"]["fill"].lower()
+        self.verifier_activite("sable", (w, h), [piste, f"{w / 4:g}", "0", str(periode), "-1"],
+                               [piste, f"{w / 4:g}", f"{(w - w / 4) / 2:g}", str(periode), "-1"])
 
     def test_depliable(self):
         # Repliée, la section cache son contenu et son chevron pointe à droite (rotation -90 du chevron bas) ;
@@ -569,14 +610,14 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
 
     def test_bascule(self):
         # La bascule à glyphe du Centre de contrôle : un disque de density.toggleSize, au rôle un cran au-dessus du
-        # panneau ; allumée, l'accent et le glyphe sur-accent de icons.sizes.dense ; éteinte, le fond du cran et le
+        # panneau ; allumée, l'accent et le glyphe sur-accent de icons.sizes.default ; éteinte, le fond du cran et le
         # glyphe au texte primaire ; sous inactive, l'accent sans chroma. Elle se coche (checkable) et ne prend le
         # focus qu'à la tabulation (Qt.TabFocus vaut 1). Son libellé, d'échelon 1, se tient sous le disque. Les
         # couleurs rejoignent leur cible par les ressorts de l'Etat : elles sont relues jusqu'à la cible.
         self.demarrer()
         tokens = self.tokens55()[0]
         d, st = tokens["density"]["comfortable"], tokens["states"]["surfaceRaised"]
-        dense, cote = str(tokens["icons"]["sizes"]["dense"]), str(d["toggleSize"])
+        glyphe, cote = str(tokens["icons"]["sizes"]["default"]), str(d["toggleSize"])
 
         def lire(attendu: list[str]) -> list[str]:
             """Relit la bascule d'essai jusqu'à ce qu'elle vaille attendu, ou pendant deux secondes au plus.
@@ -598,7 +639,7 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
                     self.ipc("inactif", "true")
                 self.ipc("basculeCocher", coche)
                 attendu = ["surfaceraised", "1", "true", coche, selection, cote, str(d["toggleSize"] // 2),
-                           couleurs["fill"].lower(), dense, couleurs["text"].lower(), "1", "true"]
+                           couleurs["fill"].lower(), glyphe, couleurs["text"].lower(), "1", "true"]
                 self.assertEqual(lire(attendu), attendu)
 
     def test_exclusivite(self):
@@ -872,6 +913,18 @@ class CoqueClavierTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(self.valeur("bascule"), "true active true true")
         self.ipc("touche", "espace")
         self.assertEqual(self.valeur("bascule").split()[0], "false")
+
+    def test_activite_fenetre(self):
+        # Dans une vraie fenêtre, les Animators des trois formes de l'indicateur partent et tiennent, puis s'arrêtent
+        # avec lui. La course au chargement du mouvement (un Animator parti sur une durée nulle s'arrête dès la
+        # première image) ne se reproduit pas sous offscreen : elle a été relevée sous Wayland (tâche 9 septies).
+        self.demarrer()
+        self.assertEqual(self.valeur("activite"), "false false false")
+        self.ipc("activiteMarche", "true")
+        time.sleep(0.5)
+        self.assertEqual(self.valeur("activite"), "true true true")
+        self.ipc("activiteMarche", "false")
+        self.assertEqual(self.valeur("activite"), "false false false")
 
     def test_infobulle_delai(self):
         # Le délai de l'infobulle est armé dès que le pointeur entre sur la cible, et échoit après delays.tooltip de

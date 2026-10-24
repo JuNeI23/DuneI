@@ -620,18 +620,41 @@ Surface {
             Recherche {}
         }
 
-        // L'anneau n'a ni état ni focus : une seule ligne. Au repos, la page ne doit rien coûter (D80) : la grille
-        // fige un anneau arrêté, et le vivant, arrêté par défaut, se met à respirer par son interrupteur.
+        // L'indicateur n'a ni état ni focus : une seule ligne, où chaque forme est figée à mi-cycle (phase 0,5).
+        // Au repos, la page ne doit rien coûter (D80) : les exemplaires de la grille sont arrêtés, et les trois
+        // vivants, côte à côte et nommés, arrêtés par défaut, se mettent en marche chacun par son interrupteur.
         Grille {
             titre: "Indicateur d'activité"
             etats: ["rest"]
-            variantes: [{ libelle: "arrêté", proprietes: { running: false } }]
+            variantes: ["arc", "grains", "sable"].map(f => ({ libelle: f + ", mi-cycle",
+                                                              proprietes: { forme: f, running: false, phase: 0.5 } }))
             modele: Component { Activite {} }
 
             Row {
-                spacing: Theme.space.scale[2]
-                Activite { running: marcheAnneau.checked; anchors.verticalCenter: parent.verticalCenter }
-                Interrupteur { id: marcheAnneau; text: "En marche" }
+                spacing: Theme.space.blockGap
+
+                Repeater {
+                    model: ["arc", "grains", "sable"]
+
+                    Column {
+                        id: vivantActivite
+                        required property string modelData
+                        spacing: Theme.space.scale[1]
+                        Legende { text: vivantActivite.modelData }
+                        // Une case de la hauteur d'une icône, pour que les trois interrupteurs restent alignés.
+                        Item {
+                            implicitWidth: activiteVivante.implicitWidth
+                            implicitHeight: Theme.icons.sizes.default
+                            Activite {
+                                id: activiteVivante
+                                anchors.verticalCenter: parent.verticalCenter
+                                forme: vivantActivite.modelData
+                                running: marcheActivite.checked
+                            }
+                        }
+                        Interrupteur { id: marcheActivite; text: "En marche" }
+                    }
+                }
             }
         }
 

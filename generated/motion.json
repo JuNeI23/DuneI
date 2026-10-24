@@ -17,10 +17,7 @@
     "tooltip": 700
   },
   "periods": {
-    "spinner": 1500
-  },
-  "cadences": {
-    "spinner": 6
+    "spinner": 1200
   },
   "transitions": {
     "state": {

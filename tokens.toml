@@ -298,7 +298,7 @@ pastille = 12              # diamètre d'une pastille de fenêtre (fermer, rédu
 stepper_width = 16         # largeur du stepper du compteur, deux demi-boutons empilés
 segment_inset = 2          # retrait du segment coché dans la piste d'une barre d'onglets segmentée
 field_width = 200          # largeur implicite du champ de saisie, fixe : aucun état ne le redimensionne
-toggle_size = 32           # diamètre du disque d'une bascule à glyphe, comme le Centre de contrôle de macOS
+toggle_size = 40           # diamètre du disque d'une bascule à glyphe, comme le Centre de contrôle de macOS
 
 [density.compact]
 multiplier = 0.92
@@ -320,7 +320,7 @@ pastille = 12              # diamètre d'une pastille de fenêtre (fermer, rédu
 stepper_width = 14         # largeur du stepper du compteur, deux demi-boutons empilés
 segment_inset = 2          # retrait du segment coché dans la piste d'une barre d'onglets segmentée
 field_width = 180          # largeur implicite du champ de saisie, fixe : aucun état ne le redimensionne
-toggle_size = 28           # diamètre du disque d'une bascule à glyphe, comme le Centre de contrôle de macOS
+toggle_size = 36           # diamètre du disque d'une bascule à glyphe, comme le Centre de contrôle de macOS
 
 [radii]
 window  = 12

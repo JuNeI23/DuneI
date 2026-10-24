@@ -19,7 +19,7 @@ import "../Theme"
 // Erreurs : aucune ; un glyphe absent du thème laisse le disque vide ; avant le chargement des tokens, les cotes sont
 // nulles et les couleurs transparentes.
 // Dépendances : QtQuick.Templates, Theme (density, icons, space, stateColors), Etat, AnneauFocus, Icone, Texte.
-// Cotes : disque de density.toggleSize (32, 28 en compact), glyphe de icons.sizes.dense (16) ; écart entre le disque
+// Cotes : disque de density.toggleSize (40, 36 en compact), glyphe de icons.sizes.default (20) ; écart entre le disque
 // et le libellé space.scale[0] (4) ; libellé d'échelon 1.
 T.Button {
     id: bascule
@@ -63,7 +63,7 @@ T.Button {
                 id: glyphe
                 anchors.centerIn: parent
                 nom: bascule.icone
-                taille: Theme.icons?.sizes.dense ?? 0
+                taille: Theme.icons?.sizes.default ?? 0
                 couleur: etat.texte
             }
 

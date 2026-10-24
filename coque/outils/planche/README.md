@@ -1,6 +1,6 @@
 # Planche de contrôle des tokens de la coque
 
-Version 0.9 — outil de développement de L2-34, gardé ensuite pour tout travail sur les tokens et la coque ; page
+Version 0.10 — outil de développement de L2-34, gardé ensuite pour tout travail sur les tokens et la coque ; page
 des composants ajoutée en L2-01.
 
 La planche affiche dans sa fenêtre (tuilée ou flottante, selon les règles d'Hyprland) deux onglets : « Tokens », chaque token de `coque-tokens.json`
@@ -90,8 +90,9 @@ fenêtre plus large.
   six rangées, un seul arrêt de tabulation.
 - **Compléments à la macOS** (§ 7.10) : une grille `Recherche` (vide et remplie, sans ligne de focus, comme le
   champ ; vivant : un champ de recherche, qu'Échap ou son bouton d'effacement vident) ; une grille `Activite` d'une
-  seule ligne (un anneau arrêté ; vivant : un anneau qui respire, arrêté par défaut pour que la page ne coûte rien
-  au repos, et l'interrupteur qui le met en marche) ; une grille `Depliable` (repliée et dépliée, en repos,
+  seule ligne, où chacune des trois formes en concours (`arc`, `grains`, `sable`) est arrêtée et figée à mi-cycle
+  (phase 0,5) ; vivant : les trois formes côte à côte, chacune sous son nom et au-dessus de son interrupteur « En
+  marche », arrêtées par défaut pour que la page ne coûte rien au repos ; une grille `Depliable` (repliée et dépliée, en repos,
   survol, désactivé et focus clavier, l'anneau entourant l'en-tête, en retrait du chevron et du libellé ; vivant :
   une section qui porte une case et un interrupteur) ; une grille `Bascule à glyphe` (éteinte et allumée, en
   repos, survol, pressé, désactivé et focus clavier, l'anneau rond autour du disque ; vivant : trois bascules à
@@ -161,6 +162,20 @@ la PSS lues dans `/proc/<pid>/smaps_rollup`.
 | Page Tokens | 0,0 % | 321,7 Mio | 205,3 Mio |
 | Page Composants (après bascule depuis Tokens) | 0,0 % | 356,8 Mio | 240,3 Mio |
 
+L'indicateur d'activité se mesure à part, dans une coque jetable qui ouvre une fenêtre flottante de 320 × 200,
+représentative d'un popover, et n'y montre qu'une forme ; relevé 2 s après l'ouverture, sur 10 s, deux passes.
+
+| Relevé (caladan, 2026-10-24, eDP-1 à 60 Hz, échelle 1,25) | Processeur sur 10 s | RSS | PSS |
+|---|---|---|---|
+| Référence : même fenêtre, indicateur arrêté | 0,0 à 0,1 % | 271 Mio | 134 Mio |
+| `arc` en marche | 3,9 à 4,1 % | 269 Mio | 132 Mio |
+| `grains` en marche | 4,2 % | 268 Mio | 133 Mio |
+| `sable` en marche | 4,1 à 4,2 % | 267 à 268 Mio | 132 à 133 Mio |
+| Planche, page Composants, indicateurs arrêtés | 0,0 % | 405 Mio | 291 Mio |
+
+Les trois formes coûtent autant : le prix est celui d'une fenêtre qui produit 60 images par seconde, non celui du
+dessin. D'où la règle D80 : un indicateur ne tourne que visible et en marche.
+
 ## Historique des versions
 
 | Version | Date | Changement |
@@ -174,3 +189,4 @@ la PSS lues dans `/proc/<pid>/smaps_rollup`.
 | 0.7 | 2026-10-23 | Troisième itération (L2-01, § 7.10) : sections `Pastilles de fenêtre`, `Compteur` et `Menu déroulant`, ajoutés aussi aux panneaux du modificateur inactive ; anneau de focus des onglets figé autour de la piste. |
 | 0.8 | 2026-10-24 | Compléments à la macOS (L2-01, § 7.10) : sections `Champ de recherche`, `Indicateur d'activité` (roue figée, vivant arrêté par défaut), `Section dépliable` et `Infobulle`. |
 | 0.9 | 2026-10-24 | Quatrième itération (L2-01, § 7.10, v0.7) : indicateur d'activité en anneau qui respire (arrêté dans la grille et par défaut au vivant), section `Bascule à glyphe`, bascule allumée dans les panneaux du modificateur inactive ; pastilles survolées et pressées aux variantes propres, plus contrastées. |
+| 0.10 | 2026-10-24 | Indicateur d'activité en trois formes au choix (`arc`, `grains`, `sable`), animées en continu sur le fil de rendu : grille figée à mi-cycle, trois vivants nommés et arrêtés par défaut, chacun avec son interrupteur ; relevés de l'indicateur dans une petite fenêtre ; bascule à glyphe agrandie (40 px, glyphe de 20). |

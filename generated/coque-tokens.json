@@ -428,7 +428,7 @@
       "stepperWidth": 16,
       "segmentInset": 2,
       "fieldWidth": 200,
-      "toggleSize": 32
+      "toggleSize": 40
     },
     "compact": {
       "multiplier": 0.92,
@@ -450,7 +450,7 @@
       "stepperWidth": 14,
       "segmentInset": 2,
       "fieldWidth": 180,
-      "toggleSize": 28
+      "toggleSize": 36
     }
   },
   "radius": {
