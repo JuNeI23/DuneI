@@ -57,6 +57,7 @@ ShellRoot {
         activeAsync: Theme.ready && Qt.platform.pluginName === "offscreen"
 
         FloatingWindow {
+            id: fenetre
             implicitWidth: colonne.implicitWidth
             implicitHeight: colonne.implicitHeight
             Component.onCompleted: essai.journal("prêt", true)
@@ -137,6 +138,17 @@ ShellRoot {
                 id: attentionEssai
                 famille: "attention"
                 Texte { text: "attention" }
+            }
+
+            // Infobulle créée et détruite à la demande sur le bouton « bulle », qui lui survit ; ses gestionnaires sont
+            // gardés dans des propriétés typées, que le moteur remet à null quand ils sont détruits.
+            property Infobulle jetable: null
+            property HoverHandler gardeSurvol: null
+            property TapHandler gardeAppui: null
+
+            Component {
+                id: modeleInfobulle
+                Infobulle { cible: boutonBulle }
             }
 
             // Cible créée à la demande dans le contenu de la fenêtre, pour l'infobulle mobile.
@@ -333,6 +345,28 @@ ShellRoot {
                 function survolerMobile(): void {
                     const c = infobulleMobile.cible
                     clavier.mouseMove(c, c.width / 2, c.height / 2, -1, Qt.NoButton, Qt.NoModifier)
+                }
+
+                // infobulleJetable — crée une Infobulle sur le bouton « bulle » et garde ses deux gestionnaires.
+                // Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : modeleInfobulle, fenêtre d'essai.
+                function infobulleJetable(): void {
+                    fenetre.jetable = modeleInfobulle.createObject(fenetre)
+                    fenetre.gardeSurvol = fenetre.jetable.survol
+                    fenetre.gardeAppui = fenetre.jetable.appui
+                }
+
+                // detruireInfobulle — détruit l'Infobulle jetable, sans toucher au bouton « bulle ».
+                // Entrées : aucune. Sortie : aucune. Erreurs : aucune ; sans Infobulle, rien. Dépendances : fenêtre.
+                function detruireInfobulle(): void {
+                    fenetre.jetable?.destroy()
+                }
+
+                // jetable — journalise la présence de l'Infobulle jetable, puis celle de ses deux gestionnaires.
+                // Entrées : aucune. Sortie : aucune ; « essai : jetable <bool> <bool> <bool> ». Erreurs : aucune.
+                // Dépendances : fenêtre, journal.
+                function jetable(): void {
+                    essai.journal("jetable", [fenetre.jetable !== null, fenetre.gardeSurvol !== null,
+                                              fenetre.gardeAppui !== null].join(" "))
                 }
 
                 // mobile — journalise l'état de l'infobulle mobile : cible présente, gestionnaires posés sur elle,

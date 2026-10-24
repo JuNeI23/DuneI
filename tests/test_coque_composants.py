@@ -845,6 +845,24 @@ class CoqueClavierTest(EssaiCoque, unittest.TestCase):
             with self.subTest(erreur=erreur):
                 self.assertNotIn(erreur, self.journal())
 
+    def test_infobulle_detruite_avant_sa_cible(self):
+        # Détruite alors que sa cible survit, l'Infobulle retire les gestionnaires qu'elle avait posés sur la cible :
+        # un survol et un clic ultérieurs sur la cible ne lèvent aucune erreur de référence, et le bouton reçoit
+        # toujours son clic.
+        self.demarrer()
+        self.ipc("infobulleJetable")
+        self.assertEqual(self.valeur("jetable"), "true true true")
+        self.ipc("detruireInfobulle")
+        time.sleep(0.2)
+        self.assertEqual(self.valeur("jetable"), "false false false")
+        self.ipc("survolerBulle")
+        self.ipc("appuyerBulle")
+        self.ipc("quitterBulle")
+        self.assertEqual(self.valeur("bulle").split()[3], "1")
+        for erreur in ERREURS + ("Cannot read property",):
+            with self.subTest(erreur=erreur):
+                self.assertNotIn(erreur, self.journal())
+
     def test_pastilles_souris(self):
         # Les glyphes paraissent au survol du groupe ; chaque pastille émet son signal au clic ; la pastille de
         # réduction désactivée ne montre plus de glyphe et ne réagit plus. Les pastilles ne prennent pas le focus.

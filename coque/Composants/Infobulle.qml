@@ -89,6 +89,12 @@ QtObject {
     }
 
     Component.onCompleted: poser()
+    // Les gestionnaires sont enfants de la cible, qui peut survivre à l'infobulle : ils partent avec elle, sans quoi
+    // un survol ou un clic ultérieur sur la cible appellerait une infobulle disparue.
+    Component.onDestruction: {
+        survol?.destroy()
+        appui?.destroy()
+    }
     onCibleChanged: poser()
     // Le pointeur parti, la bulle se referme et le masquage du clic prend fin.
     onSurvoleeChanged: if (!survolee) {
