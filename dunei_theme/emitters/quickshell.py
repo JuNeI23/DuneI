@@ -11,7 +11,7 @@ import json
 import re
 
 from ..color import Oklch, oklch, to_hex
-from ..model import role_text
+from ..model import defaut, resolve, role_text, theme_data, themes
 
 _BLANC = Oklch(1, 0, 0)
 
@@ -46,6 +46,18 @@ def _argb(col: Oklch, alpha: float) -> str:
     return f"#{round(alpha * 255):02x}{to_hex(col)[1:]}"
 
 
+def _eteint(model: dict, col: Oklch, fond: Oklch) -> Oklch:
+    """Couleur désactivée — luminosité rapprochée de celle du fond, chroma atténué.
+
+    Entrées : model — sortie de model.resolve ; col — couleur à éteindre ; fond — couleur dont on se rapproche.
+    Sortie : Oklch rabattu dans le gamut. Erreurs : KeyError si `states.disabled` manque au TOML.
+    Dépendances : color.oklch.
+    """
+    d = model["raw"]["states"]["disabled"]
+    return oklch(col.l + (fond.l - col.l) * d["lightness_toward_background"], col.c * d["chroma_multiplier"], col.h,
+                 model["raw"]["theme"]["chroma_ceiling"])
+
+
 def _states(model: dict) -> dict:
     """Combinaisons d'états précalculées — rôle, sélection, interaction vers fond et texte.
 
@@ -72,13 +84,12 @@ def _states(model: dict) -> dict:
         return oklch(col.l + dl, col.c * dc, col.h, ceiling)
 
     def eteint(col, fond):
-        """Couleur désactivée — luminosité rapprochée de celle du fond, chroma atténué.
+        """Couleur désactivée de ce thème.
 
         Entrées : col — couleur à éteindre ; fond — couleur dont on se rapproche.
-        Sortie : Oklch. Erreurs : aucune. Dépendances : decale.
+        Sortie : Oklch. Erreurs : aucune. Dépendances : _eteint.
         """
-        d = st["disabled"]
-        return decale(col, (fond.l - col.l) * d["lightness_toward_background"], d["chroma_multiplier"])
+        return _eteint(model, col, fond)
 
     def combinaisons(nom, selection):
         """Les quatre interactions d'une sélection sur un rôle de surface.
@@ -115,12 +126,13 @@ def _focus(model: dict) -> dict:
             "width": f["ring_width"], "offset": f["ring_offset"], "rowOffset": f["ring_offset_row"]}
 
 
-def emit(model: dict) -> str:
-    """Fichier `coque-tokens.json`.
+def _theme(model: dict) -> dict:
+    """Branche d'un thème — couleurs, états, focus, désactivé, élévation, matière et rendu.
 
-    Entrée : model — sortie de model.resolve.
-    Sortie : contenu du fichier JSON. Erreurs : KeyError si une section du TOML manque.
-    Dépendances : json, _camel, _camel_keys, _argb, _states, _focus, color.oklch, color.to_hex.
+    Entrée : model — sortie de model.resolve sur les données d'un thème (model.theme_data).
+    Sortie : dict {color, states, focus, disabled, elevation, material, render}, `color.knob` et `knob` compris.
+    Erreurs : KeyError si une section du TOML manque.
+    Dépendances : _camel, _argb, _states, _focus, _eteint, color.oklch, color.to_hex.
     """
     raw, sem = model["raw"], model["semantic"]
     mat, ceiling = raw["surface_material"], raw["theme"]["chroma_ceiling"]
@@ -144,21 +156,16 @@ def emit(model: dict) -> str:
     levels["field"] = {"fill": to_hex(model["elevation"]["field"]),
                        "insetShadow": raw["elevation"]["field"]["inset_shadow"]}
 
+    # Le désactivé du knob suit celui de control-raised sans sélection, dont il se rapproche.
+    fond_off = _eteint(model, model["roles"]["control-raised"], model["roles"]["control-raised"])
     out = {
-        "_generated": "GÉNÉRÉ depuis tokens.toml — NE PAS MODIFIER À LA MAIN",
-        "hue": model["hue"],
         "color": {
             **{_camel(k): to_hex(v) for k, v in model["roles"].items()},
             "accent": to_hex(model["accent"]),
             "accentStandalone": to_hex(model["accent_standalone"]),
             "onAccent": to_hex(model["on_accent"]),
+            "knob": to_hex(model["knob"]),
             **{k: to_hex(sem[k]) for k in ("error", "warning", "success", "info")},
-            # Variantes de survol et de pression des teintes sémantiques, propres aux pastilles de fenêtre : la
-            # luminosité monte ou descend des écarts de la section pastilles, en OKLCH, sans plafond de chroma, que la
-            # teinte de base ne subit pas non plus.
-            **{f"{k}{suffixe}": to_hex(Oklch(round(sem[k].l + raw["pastilles"][cle], 3), sem[k].c, sem[k].h))
-               for k in ("error", "warning", "success")
-               for suffixe, cle in (("Hover", "hover_lightness_delta"), ("Pressed", "pressed_lightness_delta"))},
             "categorical": [to_hex(c) for c in model["categorical"]],
         },
         "states": _states(model),
@@ -176,6 +183,42 @@ def emit(model: dict) -> str:
         "render": {"scrim": _argb(shadow, raw["render"]["scrim_opacity"]),
                    "neverAnimateBlurRadius": raw["render"]["never_animate_blur_radius"],
                    "hairlinePhysical": raw["scaling"]["hairlines_in_physical_pixels"]},
+        "knob": {"rest": to_hex(model["knob"]), "disabled": to_hex(_eteint(model, model["knob"], fond_off))},
+    }
+    return out
+
+
+def _pastilles(model: dict) -> dict:
+    """Couleurs des pastilles de fenêtre, indépendantes du thème.
+
+    Le glyphe est le fond de base du thème par défaut ; les variantes de survol et de pression des teintes
+    sémantiques montent ou descendent la luminosité des écarts de la section pastilles, en OKLCH, sans plafond de
+    chroma, que la teinte de base ne subit pas non plus.
+
+    Entrée : model — sortie de model.resolve sur le thème par défaut.
+    Sortie : dict {glyph, error, errorHover, errorPressed, warning, …, success, …}.
+    Erreurs : KeyError si une section du TOML manque. Dépendances : color.Oklch, color.to_hex.
+    """
+    sem, p = model["semantic"], model["raw"]["pastilles"]
+    return {"glyph": to_hex(model["roles"]["surface-base"]),
+            **{f"{k}{suf}": to_hex(sem[k] if not suf else Oklch(round(sem[k].l + p[cle], 3), sem[k].c, sem[k].h))
+               for k in ("error", "warning", "success")
+               for suf, cle in (("", None), ("Hover", "hover_lightness_delta"), ("Pressed", "pressed_lightness_delta"))}}
+
+
+def emit(model: dict) -> str:
+    """Fichier `coque-tokens.json` : les quatre thèmes, les pastilles et les cotes partagées.
+
+    Entrée : model — sortie de model.resolve ; seuls `raw` et `hue` servent, chaque thème étant résolu ici.
+    Sortie : contenu du fichier JSON. Erreurs : KeyError si une section du TOML manque.
+    Dépendances : json, _camel_keys, _theme, _pastilles, model.themes, model.defaut, model.theme_data, model.resolve.
+    """
+    raw, hue = model["raw"], model["hue"]
+    resolus = {(f, m): resolve(theme_data(raw, f, m), hue) for f, m in themes(raw)}
+    fam, mom = defaut(raw)
+    out = {
+        "_generated": "GÉNÉRÉ depuis tokens.toml — NE PAS MODIFIER À LA MAIN",
+        "hue": hue,
         "space": _camel_keys(raw["spacing"]),
         "density": _camel_keys(raw["density"]),
         "radius": _camel_keys(raw["radii"]),
@@ -185,5 +228,10 @@ def emit(model: dict) -> str:
         "typo": _camel_keys({k: v for k, v in raw["type"].items() if k != "fallback_chain" and not isinstance(v, dict)}),
         "icons": {**{k: raw["icons"][k] for k in ("source", "variants", "grid", "stroke", "sizes")},
                   "xdgTheme": raw["icons"]["xdg_theme"]},
+        "familles": list(raw["familles"]),
+        "moments": list(raw["moments"]),
+        "defaut": {"famille": fam, "moment": mom},
+        "themes": {f: {m: _theme(resolus[(f, m)]) for g, m in resolus if g == f} for f in raw["familles"]},
+        "pastilles": _pastilles(resolus[(fam, mom)]),
     }
     return json.dumps(out, indent=2, ensure_ascii=False) + "\n"
