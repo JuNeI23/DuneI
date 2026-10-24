@@ -515,7 +515,10 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
         # À mi-étape, toute courbe symétrique a parcouru la moitié du chemin : le grain est à mi-hauteur.
         bas, haut, milieu = f"{e:g}/{o:g}", "1/1", f"{round((1 + e) / 2, 3):g}/{round((1 + o) / 2, 3):g}"
         fixe = [f"{round(4 * d, 3):g}", f"{c:g}", st["active"]["rest"]["fill"].lower(), f"{round(d, 3):g}"]
-        fin = [f"{periode / 3:g}", "-1"]
+        # Courbe d'une étape : spinner.easing, converti par son nom (QEasingCurve : Linear 0, InOutQuad 3,
+        # InOutSine 19).
+        courbe = {"Linear": "0", "InOutQuad": "3", "InOutSine": "19"}[motion["spinner"]["easing"]]
+        fin = [f"{periode / 3:g}", "-1", courbe]
         lire = lambda: self.valeur("activite").lower().split()
         self.assertEqual(lire(), ["true", "true,true,true"] + fixe + [bas, bas, haut] + fin)
         for visible, running in (("false", "true"), ("true", "false"), ("false", "false")):

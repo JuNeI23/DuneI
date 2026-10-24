@@ -659,16 +659,18 @@ ShellRoot {
 
         // activite — journalise l'indicateur d'activité : son état anime, l'état en marche de l'animation de
         // chacun des trois grains, ses cotes, sa couleur, le diamètre d'un grain, la pose « échelle/opacité » de
-        // chacun, la durée d'une étape et les boucles. Les nombres sont arrondis au millième.
+        // chacun, la durée d'une étape, les boucles et le type d'Easing d'une étape. Les nombres sont arrondis au
+        // millième.
         // Entrées : aucune. Sortie : aucune ; « essai : activite <bool> <bool,bool,bool> <largeur> <hauteur>
-        // <couleur> <diamètre> <pose> <pose> <pose> <durée> <boucles> ». Erreurs : aucune.
+        // <couleur> <diamètre> <pose> <pose> <pose> <durée> <boucles> <easing> ». Erreurs : aucune.
         // Dépendances : activiteEssai (repeteur), journal.
         function activite(): void {
             const a = activiteEssai, r = v => Math.round(v * 1000) / 1000
             const grains = [0, 1, 2].map(i => a.repeteur.itemAt(i)), cycle = grains[0].animation
             essai.journal("activite", [a.anime, grains.map(g => g.animation.running).join(","), r(a.width),
                 r(a.height), a.accent, r(grains[0].width)].concat(grains.map(g => r(g.scale) + "/" + r(g.opacity)),
-                [r(cycle.animations[0].animations[0].duration), cycle.loops]).join(" "))
+                [r(cycle.animations[0].animations[0].duration), cycle.loops,
+                 cycle.animations[0].animations[0].easing.type]).join(" "))
         }
 
         // activiteEtat — montre ou cache l'indicateur d'essai et le met en marche ou à l'arrêt.
