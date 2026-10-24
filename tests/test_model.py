@@ -86,12 +86,18 @@ class ModelTest(unittest.TestCase):
             e = self._jour(f)["elevation"]
             with self.subTest(famille=f):
                 self.assertTrue(e["e0"].l < e["e1"].l < e["e2"].l < e["e3"].l)
-                self.assertEqual((e["e3"].l, e["e3"].c), (1.0, 0))
+                # Le jour thématisé a une base colorée : E3 y est teinté et plus sombre que le blanc pur.
+                if f == "dominante":
+                    self.assertEqual((e["e3"].l, e["e3"].c), (1.0, 0))
+                else:
+                    self.assertGreater(e["e3"].c, 0)
 
     def test_jour_controle_blanc(self):
         for f in ("thematisee", "dominante"):
             with self.subTest(famille=f):
-                self.assertEqual(self._jour(f)["roles"]["control-raised"].l, 1.0)
+                # Seule la thématisée de jour, à base colorée, n'a pas de contrôle blanc : il suit E3 (0,88).
+                attendu = 1.0 if f == "dominante" else self._jour(f)["elevation"]["e3"].l
+                self.assertEqual(self._jour(f)["roles"]["control-raised"].l, attendu)
 
     def test_knob_jour(self):
         for f in ("thematisee", "dominante"):
@@ -108,7 +114,12 @@ class ModelTest(unittest.TestCase):
                     self.assertAlmostEqual(jour[k].h, c.h, places=6)
                     self.assertAlmostEqual(jour[k].c, c.c, places=6)
                     self.assertLess(jour[k].l, c.l)
-        self.assertEqual(self._jour("thematisee")["semantic"], self._jour("dominante")["semantic"])
+        # Le jour thématisé descend ses sémantiques (fonds colorés plus sombres) : même teinte et chroma, L plus bas.
+        jt, jd = self._jour("thematisee")["semantic"], self._jour("dominante")["semantic"]
+        for k in jd:
+            with self.subTest(k=k):
+                self.assertEqual((jt[k].c, jt[k].h), (jd[k].c, jd[k].h))
+                self.assertLess(jt[k].l, jd[k].l)
 
     def test_dominante_neutres(self):
         m = resolve(theme_data(self.data, "dominante", "nuit"), 55)
@@ -141,30 +152,35 @@ class ModelTest(unittest.TestCase):
             with self.subTest(role=r):
                 ecart = 0.03 if r.startswith("surface-") or r in ("control-raised", "control-off", "border-subtle") else 0
                 self.assertAlmostEqual(do[r].l, th[r].l - ecart, places=6)
+        # Le jour thématisé a sa propre échelle (base colorée) ; la dominante de jour garde celle de [moments.jour].
         jt, jd = self._jour("thematisee")["roles"], self._jour("dominante")["roles"]
-        self.assertEqual({r: c.l for r, c in jt.items()}, {r: c.l for r, c in jd.items()})
+        self.assertNotEqual({r: c.l for r, c in jt.items()}, {r: c.l for r, c in jd.items()})
 
     def test_jour_thematise_infuse(self):
         """Vérifie que les surfaces claires du jour thématisé portent la teinte (chroma ≥ 0,012), que E3 et le
-        contrôle restent blancs, et que la dominante de jour reste strictement neutre."""
+        contrôle sont teintés eux aussi (base colorée, aucun gris neutre), et que la dominante de jour reste
+        strictement neutre."""
         for h in HUES:
             r = self._jour("thematisee", h)["roles"]
             with self.subTest(hue=h):
                 for s in ("surface-base", "surface-window", "surface-panel"):
                     self.assertGreaterEqual(r[s].c, 0.012)
-                self.assertEqual((r["surface-raised"].c, r["control-raised"].c), (0, 0))
+                self.assertGreater(r["surface-raised"].c, 0)
+                self.assertGreater(r["control-raised"].c, 0)
                 self.assertTrue(all(c.c == 0 for c in self._jour("dominante", h)["ramp"]))
 
     def test_piste_eteinte(self):
         """Vérifie le rôle control-off : à la nuit, la piste éteinte d'aujourd'hui sur un panneau (surface-raised) ;
-        au jour, un gris moyen (L 0,80 à 0,85) sur lequel le knob blanc se détache (|Lc| ≥ 15)."""
+        au jour, un gris clair tranché à l'écran par Nicolas (L 0,80 à 0,90 ; 0,70 à 0,80 sur la base colorée du jour
+        thématisé) sur lequel le knob blanc se détache (|Lc| ≥ 15)."""
         for f in ("thematisee", "dominante"):
             nuit = resolve(theme_data(self.data, f, "nuit"), 55)
             with self.subTest(famille=f):
                 self.assertEqual(nuit["roles"]["control-off"], nuit["roles"]["surface-raised"])
                 for h in HUES:
                     jour = self._jour(f, h)
-                    self.assertTrue(0.80 <= jour["roles"]["control-off"].l <= 0.85)
+                    bas, haut = (0.70, 0.80) if f == "thematisee" else (0.80, 0.90)
+                    self.assertTrue(bas <= jour["roles"]["control-off"].l <= haut)
                     self.assertEqual(check(jour), [])
                     self.assertGreaterEqual(mesures(jour)["knob-off"], 15)
 

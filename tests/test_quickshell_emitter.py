@@ -7,6 +7,7 @@ from pathlib import Path
 
 from dunei_theme.color import Oklch, apca_lc, from_srgb255, oklch, to_hex
 from dunei_theme.emitters.quickshell import emit
+from dunei_theme.checks import check
 from dunei_theme.model import load, resolve, theme_data, themes
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -152,7 +153,13 @@ class QuickshellEmitterTest(unittest.TestCase):
                         with self.subTest(hue=hue, theme=(f, mo), s=s, i=i):
                             c = st[s][i]
                             self.assertEqual(c["text"], emph)
+                            if (f, mo) == ("thematisee", "jour"):
+                                continue  # exemption ci-dessous : ce thème a ses propres planchers (décision de Nicolas)
                             self.assertGreaterEqual(abs(apca_lc(hexa(c["text"]), hexa(c["fill"]))), cible)
+                # Le jour thématisé, à base colorée, a un corps de texte sous Lc 90 par décision de Nicolas (tokens.toml) :
+                # il doit seulement tenir ses propres planchers, les trois autres thèmes gardent la cible du corps.
+                if (f, mo) == ("thematisee", "jour"):
+                    self.assertEqual(check(resolve(theme_data(self.data, f, mo), float(hue))), [])
         # Les autres rôles gardent text-primary.
         self.assertEqual(self.nuit["states"]["surfaceRaised"]["none"]["rest"]["text"],
                          to_hex(self.model["roles"]["text-primary"]))

@@ -516,13 +516,14 @@ mode = "light"
 # fenêtre est passée de 0,965 à 0,968 quand sa chroma a monté (L2-40, 7b) : elle garde ainsi Lc 98,3 pour text-emphasis.
 steps = [0.925, 0.968, 0.98, 1.0, 0.89, 0.85, 0.76, 0.68, 0.60, 0.50, 0.25, 0.18]
 # Facteur de chroma neutre par échelon, sur la chroma neutre du jour thématisé (0,020, surcharge croisée plus bas) :
-# 0,015 sur le bureau, la fenêtre et le panneau, pour que la teinte s'y sente ; 0,012 entre L 0,8 et 0,9 ; 0,020
+# 0,025 sur le bureau, la fenêtre et le panneau, pour que la teinte s'y sente ; 0,012 entre L 0,8 et 0,9 ; 0,020
 # au-dessous, majoré sous L 0,45 ; blanc pur à E3. La dominante, à chroma neutre nulle, reste strictement neutre.
-neutral_profile = [0.75, 0.75, 0.75, 0.0, 0.6, 0.6, 1.0, 1.0, 1.0, 1.0, 1.4, 1.4]
+# Le jour thématisé a sa propre échelle et ses propres facteurs (surcharge croisée plus bas).
+neutral_profile = [1.25, 1.25, 1.25, 0.0, 0.6, 0.6, 1.0, 1.0, 1.0, 1.0, 1.4, 1.4]
 
 [moments.jour.roles]
 control-raised = 3       # blanc, comme E3 : l'ombre et le liseré le détachent
-control-off = 5          # gris moyen plein (L 0,85), comme la piste éteinte de macOS : le disque blanc s'y détache
+control-off = 4          # gris clair plein (L 0,89, tranché à l'écran par Nicolas), comme la piste éteinte de macOS : le disque blanc s'y détache
 
 [moments.jour.controls]
 outline = "border-default"
@@ -575,9 +576,10 @@ lightness_delta = -0.05
 lightness_step = 2
 
 # Modificateur inactive du jour : l'accent sans chroma à la luminosité de l'accent (0,53) assombrissait tout le
-# panneau ; il remonte dans la gamme claire, au-dessus de la piste éteinte grise. Le sur-accent blanc y garde Lc 55.
+# panneau ; il remonte dans la gamme claire (L 0,78, validé à l'écran par Nicolas), au-dessus de la piste éteinte
+# grise. Le sur-accent blanc y garde Lc 55.
 [moments.jour.states.container_inactive]
-fill_lightness = 0.70
+fill_lightness = 0.78
 
 [moments.jour.knob]
 lightness = 1.0
@@ -591,6 +593,49 @@ disabled_toward = "border-default"
 # Le jour thématisé garde la chroma neutre d'avant L2-40 : la nuit seule descend à 0,014.
 [familles.thematisee.moments.jour.theme]
 neutral_chroma = 0.020
+
+# Le jour thématisé repose sur une base colorée (Nicolas, validation à l'écran) : sur un fond presque blanc la
+# chroma ne se voit pas, donc tous les gris sont teintés. Le bureau, la fenêtre, le panneau et E3 descendent à
+# 0,79, 0,82, 0,845 et 0,88 et portent une chroma neutre bien plus forte (facteurs 7,5 à 6,0 sur 0,020, soit 0,15 à
+# 0,12, avant écrêtage à la gamme), dégressifs jusqu'aux textes. Les contrôles blancs de [moments.jour] n'y subsistent pas : E3 et control-raised
+# sont à 0,88 et teintés. La dominante de jour garde les fonds blancs de [moments.jour].
+[familles.thematisee.moments.jour.lightness]
+steps = [0.79, 0.82, 0.845, 0.88, 0.75, 0.70, 0.60, 0.52, 0.44, 0.36, 0.13, 0.07]
+neutral_profile = [7.5, 7.5, 7.0, 6.0, 5.0, 4.5, 3.5, 3.0, 2.5, 2.5, 2.0, 1.5]
+
+# Les sémantiques descendent de 0,05 à 0,07 sous celles du jour, pour tenir leurs planchers sur ces fonds plus sombres.
+[familles.thematisee.moments.jour.semantic]
+error   = { l = 0.38 }
+warning = { l = 0.50 }
+success = { l = 0.48 }
+info    = { l = 0.50 }
+
+# Décision explicite de Nicolas, prise à l'écran et propre à ce thème : le corps de texte y tombe à Lc 69 à 76, sous
+# la règle de la bible de design (cible 90, plancher absolu 75). Les trois autres thèmes gardent ces règles. Ici la
+# cible, le plancher absolu et les planchers par rôle valent les minima mesurés aux teintes 0, 55, 200 et 265,
+# arrondis à l'entier inférieur ; remonter la fenêtre vers 0,86 rétablirait des textes plus contrastés.
+[familles.thematisee.moments.jour.meta]
+contrast_target_body = 69
+contrast_floor = 69
+
+[familles.thematisee.moments.jour.meta.planchers]
+"border-subtle" = 9
+"border-default" = 16
+"border-strong" = 31
+"text-disabled" = 41
+"text-tertiary" = 50
+"text-secondary" = 58
+"text-primary" = 69
+"text-emphasis" = 69
+"control-raised-text" = 80
+"accent-standalone" = 48
+"categorical" = 41
+"error" = 55
+"warning" = 43
+"success" = 43
+"info" = 42
+"knob-accent" = 79
+"knob-off" = 46
 
 [familles.dominante.theme]
 neutral_chroma = 0.0     # gris strictement neutres ; l'accent garde sa teinte
