@@ -22,13 +22,13 @@ import "Composants/etats.js" as Etats
 // sonde, naissances, fond, texte, anneau, etat, ressort, image, controles, coches, cotes, glyphes, radios, jauge,
 // progression, separateur, champ, indicatif, tailleIcone, liste, arrets, rangee, bouton, overlays, overlaysFermes,
 // pastilles, compteur, compteurLargeur, deroulant, recherche, rechercheCouleurs, activite, depliable, fenetreAttention)
-// ; « essai rechercheTexte <texte> », « essai rechercheActive <bool> », « essai activiteEtat <visible> <running> »,
-// « essai depliableOuvrir <bool> », « essai pastillesForcer <état> », « essai pastillesReduire <bool> », « essai
-// compteurValeur <n> », « essai deroulantRang <n> », « essai decocher », « essai radioCocher <rang> », « essai
-// jaugeActive <bool> », « essai boutonPrincipal <bool> », « essai inactif <bool> », « essai reparenter », « essai
-// texteMoyen », « essai anneauInactif <bool> », « essai survol <bool> », « essai retour <in|out> », « essai champActif
-// <bool> », « essai champTexte <texte> », « essai selectionLibre », « essai icone <nom> <bool> », « essai ouvrirFactice
-// <A|B|C> » et « essai fermerFactice <A|B|C> » agissent sans journaliser.
+// ; « essai rechercheTexte <texte> », « essai rechercheActive <bool> », « essai activiteEtat <visible> <running> », «
+// essai activiteAncetre <bool> », « essai depliableOuvrir <bool> », « essai pastillesForcer <état> », « essai
+// pastillesReduire <bool> », « essai compteurValeur <n> », « essai deroulantRang <n> », « essai decocher », « essai
+// radioCocher <rang> », « essai jaugeActive <bool> », « essai boutonPrincipal <bool> », « essai inactif <bool> », «
+// essai reparenter », « essai texteMoyen », « essai anneauInactif <bool> », « essai survol <bool> », « essai retour
+// <in|out> », « essai champActif <bool> », « essai champTexte <texte> », « essai selectionLibre », « essai icone <nom>
+// <bool> », « essai ouvrirFactice <A|B|C> » et « essai fermerFactice <A|B|C> » agissent sans journaliser.
 // Erreurs : celles de Theme et des liaisons, dans le journal. Dépendances : quickshell ≥ 0.3 (Quickshell.Io :
 // IpcHandler), modules coque/Theme et coque/Composants.
 // Import : Quickshell ne résout pas un module situé au-dessus de la racine de la coque lancée ; les liens
@@ -169,8 +169,12 @@ ShellRoot {
                 id: rechercheEssai
             }
 
-            Activite {
-                id: activiteEssai
+            // La roue est portée par un Item qu'on peut masquer, pour éprouver l'arrêt sous un ancêtre invisible.
+            Item {
+                id: porteRoue
+                Activite {
+                    id: activiteEssai
+                }
             }
 
             Depliable {
@@ -649,6 +653,13 @@ ShellRoot {
         function activiteEtat(visible: bool, running: bool): void {
             activiteEssai.visible = visible
             activiteEssai.running = running
+        }
+
+        // activiteAncetre — montre ou cache l'Item qui porte la roue d'essai, sans toucher à la roue.
+        // Entrée : visible, nouvelle visibilité de l'ancêtre. Sortie : aucune. Erreurs : aucune.
+        // Dépendances : porteRoue.
+        function activiteAncetre(visible: bool): void {
+            porteRoue.visible = visible
         }
 
         // depliable — journalise l'état de la section dépliable : ouverte, rotation du chevron, visibilité du

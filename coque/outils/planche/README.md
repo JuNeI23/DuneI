@@ -90,7 +90,8 @@ fenêtre plus large.
   six rangées, un seul arrêt de tabulation.
 - **Compléments à la macOS** (§ 7.10) : une grille `Recherche` (vide et remplie, sans ligne de focus, comme le
   champ ; vivant : un champ de recherche, qu'Échap ou son bouton d'effacement vident) ; une grille `Activite` d'une
-  seule ligne (roue en marche et arrêtée ; vivant : une roue et l'interrupteur qui la met en marche ou l'arrête) ;
+  seule ligne (une roue figée ; vivant : une roue arrêtée par défaut, pour que la page ne coûte rien au repos, et
+  l'interrupteur qui la met en marche) ;
   une grille `Depliable` (repliée et dépliée, en repos, survol, désactivé et focus clavier, l'anneau entourant
   l'en-tête ; vivant : une section qui porte une case et un interrupteur) ; enfin la section `Infobulle`, un bouton
   qui en porte une : elle paraît après `delays.tooltip` de survol continu et se ferme au départ du pointeur ou au
@@ -169,4 +170,4 @@ la PSS lues dans `/proc/<pid>/smaps_rollup`.
 | 0.5 | 2026-10-23 | Formes à la macOS (L2-01, § 7.10) : barre `Onglets` du module à la place de `BarreOnglets.qml`, grille des onglets jugés dans leur barre, bouton principal, menu dont la sélection suit le pointeur ; capture qui n'applique plus deux fois le rapport de pixels ; filet de l'exemplaire vivant borné à sa hauteur quand il passe sous la grille. |
 | 0.6 | 2026-10-23 | Deuxième itération visuelle (L2-01, § 7.10) : sections `Radio` (grille et groupe exclusif de trois) et `Jauge` (grille et deux jauges à icône), radio coché dans les panneaux du modificateur inactive, grille du champ sans ligne de focus, puisque le champ n'a plus d'anneau. |
 | 0.7 | 2026-10-23 | Troisième itération (L2-01, § 7.10) : sections `Pastilles de fenêtre`, `Compteur` et `Menu déroulant`, ajoutés aussi aux panneaux du modificateur inactive ; anneau de focus des onglets figé autour de la piste. |
-| 0.8 | 2026-10-24 | Compléments à la macOS (L2-01, § 7.10) : sections `Champ de recherche`, `Indicateur d'activité`, `Section dépliable` et `Infobulle`. |
+| 0.8 | 2026-10-24 | Compléments à la macOS (L2-01, § 7.10) : sections `Champ de recherche`, `Indicateur d'activité` (roue figée, vivant arrêté par défaut), `Section dépliable` et `Infobulle`. |

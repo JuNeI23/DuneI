@@ -619,18 +619,18 @@ Surface {
             Recherche {}
         }
 
-        // La roue n'a ni état ni focus : une seule ligne, en marche et arrêtée. Le vivant se met en marche ou
-        // s'arrête par son interrupteur ; arrêtée, elle n'a plus de minuteur.
+        // La roue n'a ni état ni focus : une seule ligne. Au repos, la page ne doit rien coûter (D80) : la grille
+        // fige une roue arrêtée, et le vivant, arrêté par défaut, se met en marche par son interrupteur.
         Grille {
             titre: "Indicateur d'activité"
             etats: ["rest"]
-            variantes: [{ libelle: "en marche" }, { libelle: "arrêtée", proprietes: { running: false } }]
+            variantes: [{ libelle: "figée", proprietes: { running: false } }]
             modele: Component { Activite {} }
 
             Row {
                 spacing: Theme.space.scale[2]
-                Activite { id: roueVivante; running: marcheRoue.checked; anchors.verticalCenter: parent.verticalCenter }
-                Interrupteur { id: marcheRoue; text: "En marche"; checked: true }
+                Activite { running: marcheRoue.checked; anchors.verticalCenter: parent.verticalCenter }
+                Interrupteur { id: marcheRoue; text: "En marche" }
             }
         }
 

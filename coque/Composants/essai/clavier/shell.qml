@@ -24,18 +24,19 @@ import "Composants"
 // tokens> <sélection de composants> <visualFocus> », « essai : curseur <cursorVisible> <délégué visible>
 // <cursorFlashTime> », « essai : onglets <géométrie de la barre et de ses segments> », « essai : menu <rangée courante
 // du menu> <rangée courante du témoin> », « essai : ongletSurvole <interaction> <fond> » et « essai : jauge <valeur>
-// <anneau visible> », ainsi que attention, anneauOnglets, compteur, deroulant et pastilles (voir chaque fonction) ;
-// « essai touche <tab|majtab|gauche|droite|haut|bas|espace|entree|echap> » frappe une touche, « essai molette <1|-1> »
+// <anneau visible> », ainsi que attention, anneauOnglets, compteur, deroulant et pastilles (voir chaque fonction) ; «
+// essai touche <tab|majtab|gauche|droite|haut|bas|espace|entree|echap> » frappe une touche, « essai molette <1|-1> »
 // tourne la molette sur le compteur, « essai cliquerDeroulant » clique le déroulant, « essai ouvrirAttention » ouvre
 // l'Overlay d'attention, « essai pointerRangee <rang> <bool> » pose le pointeur sur une rangée du menu ouvert et l'y
 // clique si demandé, « essai pointerPastille <rang> <bool> » pose le pointeur sur une pastille et l'y clique si
 // demandé, « essai pastillesReduire <bool> » active ou désactive la pastille de réduction, « essai rechercheTexte
 // <texte> » remplit la recherche, « essai cliquerEffacer » clique son bouton d'effacement, « essai cliquerDepliable »
 // clique l'en-tête de la section, « essai survolerBulle », « essai quitterBulle » et « essai appuyerBulle » posent le
-// pointeur sur le bouton « bulle », l'en retirent ou l'y cliquent ; recherche, depliable et bulle journalisent (voir
-// chaque fonction), « essai survoler <rang> » pose le pointeur sur une rangée de chaque liste, « essai survolerOnglet »
-// sur l'onglet « tokens » et « essai ongletActif <bool> » active ou désactive l'onglet « composants », sans
-// journaliser.
+// pointeur sur le bouton « bulle », l'en retirent ou l'y cliquent ; « essai cibleNouvelle », « essai cibleDetruire » et
+// « essai survolerMobile » créent, détruisent ou survolent la cible de l'infobulle mobile ; recherche, depliable,
+// bulle, survolerBulle et mobile journalisent (voir chaque fonction), « essai survoler <rang> » pose le pointeur sur
+// une rangée de chaque liste, « essai survolerOnglet » sur l'onglet « tokens » et « essai ongletActif <bool> » active
+// ou désactive l'onglet « composants », sans journaliser.
 // Erreurs : celles de Theme et des liaisons, dans le journal ; un nom de touche inconnu lève une TypeError.
 // Dépendances : quickshell ≥ 0.3 (FloatingWindow, LazyLoader, IpcHandler), QtTest (TestEvent), modules Theme
 // et Composants. Import : les liens Theme -> ../Theme et Composants -> ../Composants les posent sous la racine de
@@ -112,6 +113,10 @@ ShellRoot {
 
                 Infobulle { id: infobulleEssai; cible: boutonBulle }
 
+                // Infobulle sans texte dont la cible, un Bouton « mobile » créé et détruit à la demande, change en
+                // cours de vie.
+                Infobulle { id: infobulleMobile }
+
                 Row {
                     Liste { id: listeMenu; selectionSuitSurvol: true; model: 3; delegate: rangee; width: 100; height: 3 * Theme.density.rowHeight }
                     Liste { id: listeTemoin; model: 3; delegate: rangee; width: 100; height: 3 * Theme.density.rowHeight }
@@ -132,6 +137,12 @@ ShellRoot {
                 id: attentionEssai
                 famille: "attention"
                 Texte { text: "attention" }
+            }
+
+            // Cible créée à la demande dans le contenu de la fenêtre, pour l'infobulle mobile.
+            Component {
+                id: modeleCible
+                Bouton { objectName: "mobile"; text: "Mobile" }
             }
 
             TestEvent { id: clavier }
@@ -291,11 +302,46 @@ ShellRoot {
                     essai.journal("bulle", [i.armee, i.due, i.bulle.ouvert, boutonBulle.clics].join(" "))
                 }
 
-                // survolerBulle — pose le pointeur au centre du bouton « bulle ».
-                // Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : boutonBulle, clavier.
+                // survolerBulle — pose le pointeur au centre du bouton « bulle », puis journalise aussitôt, dans le
+                // même appel, l'état de l'infobulle, pour que la lecture ne coure pas après le délai.
+                // Entrées : aucune. Sortie : aucune ; « essai : survolerBulle <bool> <bool> <bool> <n> », comme bulle.
+                // Erreurs : aucune. Dépendances : boutonBulle, infobulleEssai, clavier, journal.
                 function survolerBulle(): void {
                     clavier.mouseMove(boutonBulle, boutonBulle.width / 2, boutonBulle.height / 2, -1, Qt.NoButton,
                                       Qt.NoModifier)
+                    const i = infobulleEssai
+                    essai.journal("survolerBulle", [i.armee, i.due, i.bulle.ouvert, boutonBulle.clics].join(" "))
+                }
+
+                // cibleNouvelle — crée un Bouton « mobile » dans le contenu de la fenêtre, en haut à gauche, par-dessus
+                // la colonne (posé au bas de la colonne, il tomberait hors de la fenêtre, qui ne s'agrandit pas
+                // aussitôt), et en fait la cible de l'infobulle mobile. Entrées : aucune. Sortie : aucune.
+                // Erreurs : aucune. Dépendances : modeleCible, colonne, infobulleMobile.
+                function cibleNouvelle(): void {
+                    infobulleMobile.cible = modeleCible.createObject(colonne.parent)
+                }
+
+                // cibleDetruire — détruit la cible courante de l'infobulle mobile, sans la retirer de l'infobulle.
+                // Entrées : aucune. Sortie : aucune. Erreurs : aucune ; sans cible, rien.
+                // Dépendances : infobulleMobile.
+                function cibleDetruire(): void {
+                    infobulleMobile.cible?.destroy()
+                }
+
+                // survolerMobile — pose le pointeur au centre de la cible de l'infobulle mobile.
+                // Entrées : aucune. Sortie : aucune. Erreurs : TypeError sans cible. Dépendances : infobulleMobile.
+                function survolerMobile(): void {
+                    const c = infobulleMobile.cible
+                    clavier.mouseMove(c, c.width / 2, c.height / 2, -1, Qt.NoButton, Qt.NoModifier)
+                }
+
+                // mobile — journalise l'état de l'infobulle mobile : cible présente, gestionnaires posés sur elle,
+                // délai armé, délai écoulé, survol. Entrées : aucune. Sortie : aucune ; « essai : mobile <bool> × 5 ».
+                // Erreurs : aucune. Dépendances : infobulleMobile, journal.
+                function mobile(): void {
+                    const i = infobulleMobile, c = i.cible
+                    const poses = c !== null && i.survol?.parent === c && i.appui?.parent === c
+                    essai.journal("mobile", [c !== null, poses, i.armee, i.due, i.survolee].join(" "))
                 }
 
                 // quitterBulle — retire le pointeur du bouton « bulle » en le posant sur la recherche.

@@ -520,6 +520,11 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
                 self.assertEqual(self.valeur("activite").split()[:3], ["false", str(intervalle), arret])
         self.ipc("activiteEtat", "true", "true")
         self.assertEqual(self.valeur("activite").split()[0], "true")
+        # Un ancêtre masqué rend la roue invisible : son minuteur s'arrête, puis repart quand l'ancêtre reparaît.
+        self.ipc("activiteAncetre", "false")
+        self.assertEqual(self.valeur("activite").split()[0], "false")
+        self.ipc("activiteAncetre", "true")
+        self.assertEqual(self.valeur("activite").split()[0], "true")
 
     def test_depliable(self):
         # Repliée, la section cache son contenu et son chevron pointe à droite (rotation -90 du chevron bas) ;
@@ -794,26 +799,51 @@ class CoqueClavierTest(EssaiCoque, unittest.TestCase):
         # Le délai de l'infobulle est armé dès que le pointeur entre sur la cible, et échoit après delays.tooltip de
         # survol continu ; le départ du pointeur le désarme et la referme. Un clic la masque jusqu'à ce que le
         # pointeur reparte, sans prendre le clic au bouton. L'infobulle d'essai n'a pas de texte : due, elle
-        # n'ouvre aucune fenêtre (troisième champ).
+        # n'ouvre aucune fenêtre (troisième champ). L'état suivant un survol est lu dans le même appel que le survol
+        # (survolerBulle), pour que la lecture ne coure pas après le délai.
         self.demarrer()
         delai = self.tokens55()[1]["delays"]["tooltip"] / 1000
         self.assertEqual(self.valeur("bulle"), "false false false 0")
-        self.ipc("survolerBulle")
-        self.assertEqual(self.valeur("bulle"), "true false false 0")
+        self.assertEqual(self.valeur("survolerBulle"), "true false false 0")
         time.sleep(delai / 2)
         self.assertEqual(self.valeur("bulle"), "true false false 0")
         time.sleep(delai)
         self.assertEqual(self.valeur("bulle"), "false true false 0")
         self.ipc("quitterBulle")
         self.assertEqual(self.valeur("bulle"), "false false false 0")
-        self.ipc("survolerBulle")
+        self.assertEqual(self.valeur("survolerBulle"), "true false false 0")
         self.ipc("appuyerBulle")
         self.assertEqual(self.valeur("bulle"), "false false false 1")
         time.sleep(1.5 * delai)
         self.assertEqual(self.valeur("bulle"), "false false false 1")
         self.ipc("quitterBulle")
-        self.ipc("survolerBulle")
-        self.assertEqual(self.valeur("bulle"), "true false false 1")
+        self.assertEqual(self.valeur("survolerBulle"), "true false false 1")
+
+    def test_infobulle_cible_detruite(self):
+        # Les gestionnaires de l'infobulle naissent dans sa cible et meurent avec elle. Cible détruite pendant que la
+        # bulle est due : l'infobulle n'a plus de cible, cesse d'être due et ne lève aucune erreur ; une nouvelle
+        # cible reçoit ses propres gestionnaires, qui arment de nouveau le délai.
+        self.demarrer()
+        delai = self.tokens55()[1]["delays"]["tooltip"] / 1000
+        self.assertEqual(self.valeur("mobile"), "false false false false false")
+        # Le pointeur est d'abord posé ailleurs (sur la recherche), loin du coin où la cible va naître.
+        self.ipc("quitterBulle")
+        self.ipc("cibleNouvelle")
+        self.assertEqual(self.valeur("mobile"), "true true false false false")
+        self.ipc("survolerMobile")
+        self.assertEqual(self.valeur("mobile"), "true true true false true")
+        time.sleep(1.5 * delai)
+        self.assertEqual(self.valeur("mobile"), "true true false true true")
+        self.ipc("cibleDetruire")
+        time.sleep(0.2)
+        self.assertEqual(self.valeur("mobile"), "false false false false false")
+        # La nouvelle cible naît sous le pointeur, au même endroit : ses gestionnaires la voient survolée.
+        self.ipc("cibleNouvelle")
+        self.ipc("survolerMobile")
+        self.assertEqual(self.valeur("mobile"), "true true true false true")
+        for erreur in ERREURS + ("Cannot read property",):
+            with self.subTest(erreur=erreur):
+                self.assertNotIn(erreur, self.journal())
 
     def test_pastilles_souris(self):
         # Les glyphes paraissent au survol du groupe ; chaque pastille émet son signal au clic ; la pastille de

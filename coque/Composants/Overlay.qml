@@ -4,7 +4,7 @@ import Quickshell.Hyprland
 import "../Theme"
 
 // Overlay — surface posée au-dessus de tout, construite à l'ouverture et détruite à la fermeture.
-// Rôle : primitive des surfaces passagères de la coque (conception, § 7.7), en deux familles.
+// Rôle : primitive des surfaces passagères de la coque (conception, § 7.7), en trois familles.
 //   - attention (lanceur, sélecteurs, déconnexion, dialogue) : FenetreAttention, PanelWindow plein écran sur
 //     l'écran du moniteur focalisé d'Hyprland, couche overlay, clavier exclusif, aucun espace réservé ; voile
 //     material.shade sur tout l'écran ; une seule à la fois, par le singleton Overlays ; Échap ou un clic sur le
@@ -56,7 +56,7 @@ QtObject {
     signal ferme()
     readonly property bool bulle: famille === "infobulle"
 
-    // Cadre — Surface surfaceRaised qui porte le contenu, commune aux deux familles.
+    // Cadre — Surface surfaceRaised qui porte le contenu, commune aux trois familles.
     // Rôle : instancie le contenu dans un Loader, l'entoure du retrait et capte Échap, qu'il signale par echap() ;
     // c'est une FocusScope qui demande le focus, pour que les touches non consommées par le contenu y remontent.
     // Ce composant en ligne n'accède à rien hors de lui : son API est explicite, car un composant en ligne ne
@@ -101,11 +101,11 @@ QtObject {
     // Écran de l'attention, figé à l'ouverture pour que la fenêtre ne suive pas le pointeur d'un écran à l'autre.
     property var ecran: null
 
-    // Ouverture d'une attention : l'écran focalisé est figé dans ecran, puis Overlays.ouvrir retient cet Overlay
-    // et, s'il y en avait une autre, passe son ouvert à faux, ce qui la ferme par ce même gestionnaire. Ouverture
-    // d'un contextuel : rien, il ne passe pas par le registre. Fermeture, pour les deux familles : Overlays.fermer
-    // oublie cet Overlay s'il était l'attention retenue, puis ferme() est émis, registre déjà à jour. Dans tous
-    // les cas, le chargeur suit ouvert par sa liaison. Protocole repris par essai/shell.qml (ouvrirFactice,
+    // Ouverture d'une attention : l'écran focalisé est figé dans ecran, puis Overlays.ouvrir retient cet Overlay et,
+    // s'il y en avait une autre, passe son ouvert à faux, ce qui la ferme par ce même gestionnaire. Ouverture d'un
+    // contextuel ou d'une infobulle : rien, ils ne passent pas par le registre. Fermeture, pour les trois familles :
+    // Overlays.fermer oublie cet Overlay s'il était l'attention retenue, puis ferme() est émis, registre déjà à jour.
+    // Dans tous les cas, le chargeur suit ouvert par sa liaison. Protocole repris par essai/shell.qml (ouvrirFactice,
     // fermerFactice).
     onOuvertChanged: {
         if (ouvert && famille === "attention") {
