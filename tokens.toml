@@ -18,6 +18,27 @@ contrast_method = "APCA"   # WCAG 2 est peu fiable en mode sombre
 contrast_target_body = 90  # Lc — corps 13px/400 sur fond sombre
 contrast_floor = 75        # Lc — plancher de rejet
 
+# Planchers de contraste par rôle (Lc), mesurés sur la nuit thématisée aux teintes 0, 55, 200 et 265, arrondis à
+# l'entier inférieur. Tous les thèmes les respectent ; le jour est calibré pour les atteindre (conception § 5.2).
+# Pour les remesurer après une révision de la nuit : python3 mesure_planchers.py
+[meta.planchers]
+"border-subtle" = 0
+"border-default" = 0
+"border-strong" = 12
+"text-disabled" = 22
+"text-tertiary" = 35
+"text-secondary" = 51
+"text-primary" = 90
+"text-emphasis" = 98
+"control-raised-text" = 95
+"accent-standalone" = 49
+"categorical" = 49
+"error" = 27
+"warning" = 54
+"success" = 53
+"info" = 48
+"knob-accent" = 73
+
 
 # ===========================================================================
 # ÉCHELLE — indépendante de tout matériel

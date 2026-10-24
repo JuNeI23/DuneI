@@ -3,6 +3,7 @@
 import unittest
 from pathlib import Path
 
+from dunei_theme.checks import check
 from dunei_theme.model import defaut, load, resolve, theme_data, themes
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -17,6 +18,13 @@ class ModelTest(unittest.TestCase):
         cls.data = load(ROOT / "tokens.toml")
         cls.steps = cls.data["lightness"]["steps"]
         cls.models = {h: resolve(cls.data, h) for h in HUES}
+
+    def test_themes_conformes(self):
+        """Chaque thème, à chaque teinte de référence, passe tous les contrôles (planchers et ordre compris)."""
+        for f, m in themes(self.data):
+            for h in HUES:
+                with self.subTest(famille=f, moment=m, hue=h):
+                    self.assertEqual(check(resolve(theme_data(self.data, f, m), h)), [])
 
     def test_accent_steps(self):
         acc = self.data["accent"]

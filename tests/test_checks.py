@@ -2,21 +2,37 @@
 
 import unittest
 
-from dunei_theme.checks import BODY_SURFACES, check
+from dunei_theme.checks import BODY_SURFACES, check, mesures, ordre, planchers
 from dunei_theme.color import Oklch
 
 
-def model(text_l=0.95, surface_l=0.18, on_accent_l=0.99, offsets=(0, 120, 240), heights=(32, 28), emphasis_l=0.97):
-    """Modèle minimal conforme par défaut ; chaque paramètre permet d'introduire un défaut."""
+def model(text_l=0.95, surface_l=0.18, on_accent_l=0.99, offsets=(0, 120, 240), heights=(32, 28), emphasis_l=0.97,
+          secondary_l=0.80, tertiary_l=0.65, disabled_l=0.50, border_l=0.35, floors=None):
+    """Modèle minimal conforme par défaut ; chaque paramètre permet d'introduire un défaut.
+
+    Les luminosités des textes décroissent de text-emphasis à text-disabled, toutes au-dessus des bordures ;
+    floors remplace les planchers par clé (par défaut, ceux-ci sont à 0 : seules les mesures voulues les franchissent).
+    """
     surf = Oklch(surface_l, 0.0, 0.0)
+    grey = lambda l: Oklch(l, 0.0, 0.0)
+    keys = ["text-disabled", "text-tertiary", "text-secondary", "text-primary", "text-emphasis", "border-subtle",
+            "border-default", "border-strong", "control-raised-text", "accent-standalone", "error", "warning",
+            "success", "info", "categorical", "knob-accent"]
     return {
-        "roles": {"text-primary": Oklch(text_l, 0.0, 0.0), "text-emphasis": Oklch(emphasis_l, 0.0, 0.0),
+        "roles": {"text-primary": grey(text_l), "text-emphasis": grey(emphasis_l), "text-secondary": grey(secondary_l),
+                  "text-tertiary": grey(tertiary_l), "text-disabled": grey(disabled_l),
+                  "border-subtle": grey(border_l - 0.06), "border-default": grey(border_l - 0.03),
+                  "border-strong": grey(border_l),
                   "surface-window": surf,
                   "surface-panel": surf, "surface-raised": surf, "control-raised": surf},
         "accent": Oklch(0.53, 0.0, 0.0),
+        "accent_standalone": grey(0.80),
+        "knob": grey(0.97),
+        "categorical": [grey(0.80), grey(0.78)],
+        "semantic": {k: grey(0.80) for k in ("error", "warning", "success", "info")},
         "on_accent": Oklch(on_accent_l, 0.0, 0.0),
         "raw": {
-            "meta": {"contrast_target_body": 90, "contrast_floor": 75},
+            "meta": {"contrast_target_body": 90, "contrast_floor": 75, "planchers": {k: 0 for k in keys} | (floors or {})},
             "theme": {"accent_chroma": 0.1, "chroma_ceiling": 0.16},
             "categorical": {"min_angular_separation": 30, "hue_offsets": list(offsets)},
             "scaling": {"height_multiple": 4},
@@ -56,6 +72,29 @@ class CheckTest(unittest.TestCase):
 
     def test_on_accent_below_floor(self):
         self.assertTrue(has(check(model(on_accent_l=0.2)), "on_accent", "plancher"))
+
+    def test_plancher_franchi(self):
+        """Un rôle sous son plancher est nommé ; la mesure est tronquée au dixième avant la comparaison."""
+        m = model(floors={"text-secondary": 60})
+        self.assertEqual(planchers(m), [])
+        m["raw"]["meta"]["planchers"]["text-secondary"] = 200
+        w = planchers(m)
+        self.assertEqual(len(w), 1)
+        self.assertTrue(has(w, "text-secondary", "plancher"))
+        self.assertTrue(has(check(m), "text-secondary", "plancher"))
+        self.assertIn("text-secondary", mesures(m))
+
+    def test_ordre_inverse(self):
+        """text-tertiary plus contrasté que text-secondary renverse l'ordre des rôles."""
+        self.assertEqual(ordre(model()), [])
+        self.assertEqual(len(ordre(model(tertiary_l=0.85))), 3)  # un avertissement par surface
+        self.assertTrue(has(ordre(model(emphasis_l=0.90)), "text-emphasis", "text-primary"))
+
+    def test_texte_sous_bordure(self):
+        """Le plus faible texte doit dépasser strictement la plus forte bordure."""
+        w = ordre(model(disabled_l=0.35, border_l=0.35))
+        self.assertTrue(has(w, "text-disabled", "border-strong"))
+        self.assertEqual(ordre(model(disabled_l=0.50, border_l=0.35)), [])
 
     def test_height_multiple(self):
         self.assertTrue(has(check(model(heights=(30, 28))), "control_height", "multiple de 4"))
