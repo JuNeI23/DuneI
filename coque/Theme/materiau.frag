@@ -59,9 +59,11 @@ void main() {
     float couverture = clamp(0.5 - distanceArrondie(p - 0.5 * t, 0.5 * t, min(rayon * dpr, 0.5 * min(t.x, t.y))), 0.0, 1.0);
     vec4 c = reflet > 0.5 ? mix(refletHaut, fond, p.y / t.y) : fond;
     c = surimpression(ombreInterne * creux * clamp(1.0 - p.y / max(profondeur * dpr, 1.0), 0.0, 1.0), c);
-    float rangee = floor(p.y);
-    if (rangee == 0.0) c = surimpression(liserClair, c);
-    else if (rangee == ceil(t.y) - 1.0) c = surimpression(liserSombre, c);
+    // Liserés : p.y est pris au centre du pixel. La première rangée a son centre à moins d'un pixel du haut ; la
+    // dernière rangée dessinée, à moins d'un pixel du bas, même quand t.y n'est pas entier (33 × 1,25 = 41,25 :
+    // centre 40,5, rangée 40).
+    if (p.y < 1.0) c = surimpression(liserClair, c);
+    else if (p.y >= t.y - 1.0) c = surimpression(liserSombre, c);
     // Bruit IGN centré, d'un pas de quantification 8 bits, ajouté à la couleur non prémultipliée : il est
     // multiplié par l'alpha pour rester dans l'espace prémultiplié.
     if (reflet > 0.5) c.rgb += c.a * (fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715)))) - 0.5) / 255.0;

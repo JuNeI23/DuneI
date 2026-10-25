@@ -54,5 +54,5 @@ golden:
 	$(PY) generate_motion.py --out tests/golden/motion >/dev/null
 	$(PY) generate_energie.py --out tests/golden/energie >/dev/null
 
-install: tokens motion energie shaders
+install: tokens motion energie
 	$(PY) deploy.py
