@@ -22,8 +22,8 @@ import "Composants"
 //           sans le shader compilé, le verre retombe sur un aplat (Materiau).
 // Commande : « qs -p coque/outils/verre ipc call verre basculer <menu|droite|popover|bulle> » ouvre ou ferme un overlay
 // sans geste, pour une capture.
-// Dépendances : quickshell ≥ 0.3 (PanelWindow, WlrLayershell, IpcHandler), modules Theme et Composants (Surface, Bouton,
-// Overlay, Liste, Rangee, Texte).
+// Dépendances : quickshell ≥ 0.3 (PanelWindow, WlrLayershell, IpcHandler), modules Theme et Composants (Surface,
+// Bouton, Overlay, Liste, Rangee, Texte).
 // Import : comme pour la planche, les liens verre/Theme -> ../../Theme et verre/Composants -> ../../Composants
 // placent les deux modules côte à côte sous la racine ; la directive IconTheme en tête choisit Adwaita.
 // Rendu du texte : la directive Env en tête force l'anticrénelage du texte en niveaux de gris

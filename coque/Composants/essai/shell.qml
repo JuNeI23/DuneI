@@ -874,8 +874,9 @@ ShellRoot {
 
         // pastillesRangees — journalise l'opacité de la pastille des rangées 0 (au repos) et 1 (courante, donc
         // sélectionnée) de la liste d'essai, puis celle de la couleur visée par le ressort de fond de la rangée 0
-        // forcée au survol, et enfin celle de sa couleur visée rendue au repos. Entrées : aucune. Sortie : aucune ;
-        // « essai : pastillesRangees <a0> <a1> <survol> <repos> ». Erreurs : aucune.
+        // forcée au survol, celle de sa couleur visée rendue au repos, et enfin celle de sa couleur visée une fois
+        // désactivée, puis réactivée. Entrées : aucune. Sortie : aucune ; « essai : pastillesRangees <a0> <a1>
+        // <survol> <repos> <désactivée> ». Erreurs : aucune.
         // Dépendances : listeEssai, Rangee (pastille, premier enfant du fond), Etat (ressort de fond, premier
         // enfant), journal.
         function pastillesRangees(): void {
@@ -884,7 +885,11 @@ ShellRoot {
             r0.etat.forcer = "hover"
             const survol = r0.etat.children[0].target.a
             r0.etat.forcer = ""
-            essai.journal("pastillesRangees", [a(r0), a(r1), survol, r0.etat.children[0].target.a].join(" "))
+            const repos = r0.etat.children[0].target.a
+            r0.enabled = false
+            const desactivee = r0.etat.children[0].target.a
+            r0.enabled = true
+            essai.journal("pastillesRangees", [a(r0), a(r1), survol, repos, desactivee].join(" "))
         }
 
         // serrage — journalise, pour des fenêtres et des cadres fictifs sur un écran de 1536 px, l'origine des

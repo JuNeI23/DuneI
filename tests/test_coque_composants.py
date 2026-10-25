@@ -384,10 +384,12 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
 
     def test_rangee_transparente_au_repos(self):
         # Défaut relevé à l'écran : sur le verre d'un menu, chaque rangée au repos peignait la couleur opaque de sa
-        # surface et formait une plaque distincte. Au repos, ni survolée, ni pressée, ni sélectionnée, la pastille
-        # est transparente ; sélectionnée ou survolée, elle garde sa couleur d'état, opaque.
+        # surface et formait une plaque distincte. Ni survolée, ni pressée, ni sélectionnée, la pastille est
+        # transparente, désactivée comprise (une entrée grisée d'un menu) ; sélectionnée ou survolée, elle garde sa
+        # couleur d'état, opaque.
         self.demarrer()
-        repos, choisie, survol, retour = map(float, self.valeur("pastillesRangees").split())
+        repos, choisie, survol, retour, desactivee = map(float, self.valeur("pastillesRangees").split())
+        self.assertEqual(desactivee, 0)
         self.assertEqual(repos, 0)
         self.assertEqual(choisie, 1)
         self.assertEqual(survol, 1)

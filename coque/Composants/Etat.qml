@@ -14,7 +14,7 @@ import "etats.js" as Etats
 // contrôle, pour montrer un état sans geste ; vide par défaut, et jamais posée par une surface de la coque ;
 // peintFond et peintTexte, vrais par défaut : faux quand le contrôle ne peint pas cette couleur, qui reste alors
 // transparente, si bien que son ressort ne démarre jamais (sobriété, D80) ; fondReposTransparent, faux par
-// défaut : vrai, le fond au repos (ni survolé, ni pressé, ni sélectionné) vise la couleur de repos rendue
+// défaut : vrai, le fond ni survolé, ni pressé, ni sélectionné (au repos ou désactivé) vise sa couleur rendue
 // transparente, pour un élément qui ne se distingue pas de son conteneur au repos (une rangée) et ne doit pas en
 // repeindre la couleur opaque, qui se détacherait d'une surface de verre. L'opacité seule change : le ressort
 // fond la couleur d'état depuis sa propre teinte, sans passer par le noir.
@@ -50,7 +50,8 @@ Item {
     ColorSpring {
         id: ressortFond
         readonly property color plein: etat.peintFond ? (etat.couleurs?.fill ?? "transparent") : "transparent"
-        target: etat.fondReposTransparent && etat.interaction === "rest" && etat.selection === "none"
+        target: etat.fondReposTransparent && etat.selection === "none"
+            && (etat.interaction === "rest" || etat.interaction === "disabled")
             ? Qt.alpha(plein, 0) : plein
     }
 

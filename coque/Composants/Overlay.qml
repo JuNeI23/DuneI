@@ -18,9 +18,9 @@ import "ancrage.js" as Ancrage
 //     n'a qu'une correction exacte par sens, voir fenetreContextuel) ; sans voile ; le clavier
 //     est pris par HyprlandFocusGrab, dont la levée (clic à l'extérieur) ferme, comme Échap ; plusieurs
 //     peuvent coexister.
-//   - infobulle : la même PopupWindow, centrée sous l'ancre et serrée dans l'écran comme un contextuel, à un
-//     échelon de space (space.scale[0]) de son bord, sans retournement vertical (elle glisse faute de place) ; sans voile ni HyprlandFocusGrab : elle ne prend jamais le clavier
-//     et seule son ouvreuse, l'Infobulle, la ferme.
+//   - infobulle : la même PopupWindow, centrée sous l'ancre et serrée dans l'écran comme un contextuel, à un échelon
+//     de space (space.scale[0]) de son bord, sans retournement vertical (elle glisse faute de place) ; sans voile ni
+//     HyprlandFocusGrab : elle ne prend jamais le clavier et seule son ouvreuse, l'Infobulle, la ferme.
 // Le contenu est posé au centre d'une Surface surfaceRaised (e3), entourée d'un retrait ; sa taille est celle du
 // contenu. Les formes suivent macOS (conception, § 7.10) : une attention a les coins radius.window et le retrait
 // space.scale[2] (12), comme une feuille d'alerte ; un contextuel a les coins radius.panel et le retrait
@@ -186,8 +186,10 @@ QtObject {
         readonly property real origine: Ancrage.origine(fenetreAncre)
         readonly property bool serre: !isNaN(origine)
         readonly property real ancreX: serre && overlay.ancre ? origine + overlay.ancre.mapToItem(null, 0, 0).x : 0
-        readonly property real gaucheCadre: serre ? Ancrage.gaucheCadre(overlay.bulle, ancreX, overlay.ancre?.width ?? 0,
-            overlay.point?.x ?? null, cadrePopup.implicitWidth, fenetreAncre.screen.width) - ancreX : 0
+        readonly property real gaucheCadre: serre
+            ? Ancrage.gaucheCadre(overlay.bulle, ancreX, overlay.ancre?.width ?? 0, overlay.point?.x ?? null,
+                                  cadrePopup.implicitWidth, fenetreAncre.screen.width) - ancreX
+            : 0
         anchor.rect.x: serre ? gaucheCadre - marge : (overlay.point?.x ?? 0) - marge
         anchor.rect.y: overlay.point ? overlay.point.y - marge : (overlay.ancre?.height ?? 1) + ecart - marge - 1
         anchor.rect.width: serre ? 1 : (overlay.point ? 1 : overlay.ancre?.width ?? 1) + 2 * marge

@@ -6,18 +6,17 @@ import "etats.js" as Etats
 
 // Rangee — rangée d'une Liste : libellé, icône facultative, sélection en pastille et contour de focus.
 // Rôle : habille le gabarit sans style T.ItemDelegate (conception, § 7.1). La rangée prend le rôle de son
-// conteneur, sans cran : non sélectionnée et au repos, sa pastille est transparente et laisse voir le fond de
-// la liste (§ 7.4), opaque ou de verre, au lieu d'en repeindre la couleur. Elle
-// est sélectionnée quand elle est la rangée courante, ou, si la liste ne fait pas suivre la sélection, quand
-// l'appelant pose selectionnee (§ 7.5) ; la sélection prend l'accent quand la liste a le focus. Sélection et
-// survol se peignent dans une pastille arrondie en retrait des bords de la liste, à la manière de macOS
-// (§ 7.10). Le focus se montre par un contour sans fond de focus.width, qui suit la pastille rentré de
-// -focus.rowOffset pixel, et jamais par un anneau ni par un changement de fond (§ 7.3) ; il paraît sur la
-// rangée courante d'une liste qui a le focus obtenu au clavier, sauf dans un menu (selectionSuitSurvol) : la
-// pastille de sélection y suffit, comme sur macOS, et le contour ne paraît jamais, même au clavier. La rangée n'accepte aucun focus : la liste est
-// l'unique arrêt. Un clic en fait la rangée courante, donne le focus à la liste sans montrer le contour, puis
-// émet active(). Dans une liste qui porte selectionSuitSurvol (un menu), le survol en fait aussi la rangée
-// courante.
+// conteneur, sans cran : ni survolée, ni pressée, ni sélectionnée, désactivée comprise, sa pastille est transparente
+// et laisse voir le fond de la liste (§ 7.4), opaque ou de verre, au lieu d'en repeindre la couleur. Elle est
+// sélectionnée quand elle est la rangée courante, ou, si la liste ne fait pas suivre la sélection, quand l'appelant
+// pose selectionnee (§ 7.5) ; la sélection prend l'accent quand la liste a le focus. Sélection et survol se peignent
+// dans une pastille arrondie en retrait des bords de la liste, à la manière de macOS (§ 7.10). Le focus se montre par
+// un contour sans fond de focus.width, qui suit la pastille rentré de -focus.rowOffset pixel, et jamais par un anneau
+// ni par un changement de fond (§ 7.3) ; il paraît sur la rangée courante d'une liste qui a le focus obtenu au
+// clavier, sauf dans un menu (selectionSuitSurvol) : la pastille de sélection y suffit, comme sur macOS, et le
+// contour ne paraît jamais, même au clavier. La rangée n'accepte aucun focus : la liste est l'unique arrêt. Un clic
+// en fait la rangée courante, donne le focus à la liste sans montrer le contour, puis émet active(). Dans une liste
+// qui porte selectionSuitSurvol (un menu), le survol en fait aussi la rangée courante.
 // Entrées : index, requis, rang dans le modèle (fourni par la ListView) ; text, libellé ; icone, nom
 // freedesktop d'une icône symbolique, vide par défaut (pas d'icône) ; selectionnee, sélection fournie par
 // l'appelant quand la liste ne la fait pas suivre currentIndex ; accessoire, composant facultatif posé en tête

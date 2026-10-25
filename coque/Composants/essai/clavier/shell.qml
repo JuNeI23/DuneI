@@ -23,24 +23,25 @@ import "Composants"
 // Sortie : journal de Theme, « essai : plateforme <nom> » au chargement, « essai : prêt true » à l'ouverture de la
 // fenêtre, puis une ligne par commande IPC de lecture : « essai : focus <élément> <onglet courant> <sélection de
 // tokens> <sélection de composants> <visualFocus> », « essai : curseur <cursorVisible> <délégué visible>
-// <cursorFlashTime> », « essai : onglets <géométrie de la barre et de ses segments> », « essai : menu <rangée courante
-// du menu> <rangée courante du témoin> », « essai : ongletSurvole <interaction> <fond> » et « essai : jauge <valeur>
-// <anneau visible> », ainsi que contours, attention, anneauOnglets, compteur, deroulant, pastilles, pastillesCouleurs, bascule,
-// activite, materiauDpr, contextuel et ancrage (voir chaque fonction) ; « essai touche <tab|majtab|gauche|droite|haut|bas|espace|entree|echap> » frappe une
-// touche, « essai activiteMarche <bool> » lance ou arrête l'indicateur d'activité, « essai molette <1|-1> » tourne la
-// molette sur le compteur, « essai cliquerDeroulant » clique le déroulant, « essai ouvrirAttention » ouvre l'Overlay
-// d'attention, « essai ouvrirContextuel » celui du contextuel, « essai pointerRangee <rang> <bool> » pose le pointeur sur une rangée du menu ouvert et l'y clique si
-// demandé, « essai pointerPastille <rang> <bool> » pose le pointeur sur une pastille et l'y clique si demandé, « essai
-// appuyerPastille <rang> <bool> » enfonce ou relâche le bouton sur une pastille, « essai pastillesReduire <bool> »
-// active ou désactive la pastille de réduction, « essai rechercheTexte <texte> » remplit la recherche, « essai
-// cliquerEffacer » clique son bouton d'effacement, « essai cliquerDepliable » clique l'en-tête de la section, « essai
-// survolerBulle », « essai quitterBulle » et « essai appuyerBulle » posent le pointeur sur le bouton « bulle », l'en
-// retirent ou l'y cliquent ; « essai cibleNouvelle », « essai cibleDetruire » et « essai survolerMobile » créent,
-// détruisent ou survolent la cible de l'infobulle mobile ; recherche, depliable, bulle, survolerBulle et mobile
-// journalisent (voir chaque fonction), « essai survoler <rang> » pose le pointeur sur une rangée de chaque liste, «
-// essai survolerOnglet » sur l'onglet « tokens » et « essai ongletActif <bool> » active ou désactive l'onglet «
-// composants », sans journaliser. Erreurs : celles de Theme et des liaisons, dans le journal ; un nom de touche inconnu
-// lève une TypeError.
+// <cursorFlashTime> », « essai : onglets <géométrie de la barre et de ses segments> », « essai : menu <rangée
+// courante du menu> <rangée courante du témoin> », « essai : ongletSurvole <interaction> <fond> » et « essai : jauge
+// <valeur> <anneau visible> », ainsi que contours, attention, anneauOnglets, compteur, deroulant, pastilles,
+// pastillesCouleurs, bascule, activite, materiauDpr, contextuel et ancrage (voir chaque fonction) ; « essai touche
+// <tab|majtab|gauche|droite|haut|bas|espace|entree|echap> » frappe une touche, « essai activiteMarche <bool> » lance
+// ou arrête l'indicateur d'activité, « essai molette <1|-1> » tourne la molette sur le compteur, « essai
+// cliquerDeroulant » clique le déroulant, « essai ouvrirAttention » ouvre l'Overlay d'attention, « essai
+// ouvrirContextuel » celui du contextuel, « essai pointerRangee <rang> <bool> » pose le pointeur sur une rangée du
+// menu ouvert et l'y clique si demandé, « essai pointerPastille <rang> <bool> » pose le pointeur sur une pastille et
+// l'y clique si demandé, « essai appuyerPastille <rang> <bool> » enfonce ou relâche le bouton sur une pastille, «
+// essai pastillesReduire <bool> » active ou désactive la pastille de réduction, « essai rechercheTexte <texte> »
+// remplit la recherche, « essai cliquerEffacer » clique son bouton d'effacement, « essai cliquerDepliable » clique
+// l'en-tête de la section, « essai survolerBulle », « essai quitterBulle » et « essai appuyerBulle » posent le
+// pointeur sur le bouton « bulle », l'en retirent ou l'y cliquent ; « essai cibleNouvelle », « essai cibleDetruire »
+// et « essai survolerMobile » créent, détruisent ou survolent la cible de l'infobulle mobile ; recherche, depliable,
+// bulle, survolerBulle et mobile journalisent (voir chaque fonction), « essai survoler <rang> » pose le pointeur sur
+// une rangée de chaque liste, « essai survolerOnglet » sur l'onglet « tokens » et « essai ongletActif <bool> » active
+// ou désactive l'onglet « composants », sans journaliser. Erreurs : celles de Theme et des liaisons, dans le
+// journal ; un nom de touche inconnu lève une TypeError.
 // Dépendances : quickshell ≥ 0.3 (FloatingWindow, LazyLoader, IpcHandler), QtTest (TestEvent), modules Theme
 // et Composants. Import : les liens Theme -> ../Theme et Composants -> ../Composants les posent sous la racine de
 // cette coque, comme dans la coque d'essai voisine.
