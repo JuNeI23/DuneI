@@ -2,12 +2,15 @@
 #   make tokens   tokens.toml → generated/
 #   make motion   motion.toml → generated/
 #   make energie  energie.toml → generated/hypridle.conf, generated/energie.lua
-#   make shaders  coque/Theme/materiau.frag → generated/materiau.frag.qsb (qsb de qt6-shadertools)
+#   make shaders  coque/Theme/materiau.frag → generated/materiau.frag.qsb (qsb de qt6-shadertools) et son empreinte
+#                 generated/materiau.frag.sha256 ; ne recompile que si la source ne répond plus à l'empreinte, car les
+#                 octets du .qsb changent avec la version de qsb (D85)
 #   make paquets  paquets.toml → système : installe le manquant, marque, propose de retirer l'excédent
 #   make chiffrement  racine LUKS2 → puce + phrase et clé de secours, une étape par passage (python3 chiffrement.py --etat : l'état seul)
 #   make phrase   change la phrase de la puce, une fois le chiffrement terminé
 #   make test     tests unitaires et de non-régression
-#   make generes  refuse si generated/ diffère d'une génération fraîche ou contient un fichier hors de git
+#   make generes  refuse si generated/ diffère d'une génération fraîche (le .qsb, par son empreinte) ou contient un
+#                 fichier hors de git
 #   make check    generes, puis les tests
 #   make golden   régénère les instantanés de référence (changement de sortie VOULU)
 #   make install  generated/ et config/ → ~/.config/hypr, ~/.config/fontconfig, ~/.config/dunei (tokens et shader de la coque) et ~/.config/kitty ; active les services de session.toml et masque l'autostart XDG ; systeme/ → /etc (sudo, seulement si un fichier diffère) ; greetd remplace le gestionnaire de connexion au démarrage suivant ; bascule depuis la configuration générique au premier passage ; pose rtk (version épinglée dans atelier.toml) ; clone dunei-atelier, installe ses plugins Claude Code et en lie les fichiers ; pose core.hooksPath (crochets du dépôt)
@@ -29,7 +32,9 @@ energie:
 	$(PY) generate_energie.py --out generated
 
 shaders:
-	$(QSB) --qt6 -o generated/materiau.frag.qsb coque/Theme/materiau.frag
+	@[ -f generated/materiau.frag.qsb ] && sha256sum --status -c generated/materiau.frag.sha256 2>/dev/null || { \
+	$(QSB) --qt6 -o generated/materiau.frag.qsb coque/Theme/materiau.frag && \
+	sha256sum coque/Theme/materiau.frag > generated/materiau.frag.sha256; }
 
 paquets:
 	$(PY) paquets.py

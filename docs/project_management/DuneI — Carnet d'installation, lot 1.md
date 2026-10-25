@@ -1419,7 +1419,7 @@ La graisse d'accentuation a été calibrée à l'écran à **550** : 500 était 
 make tokens              # tokens.toml  → generated/
 make motion              # motion.toml  → generated/
 make energie             # energie.toml → generated/
-make shaders             # coque/Theme/materiau.frag → generated/materiau.frag.qsb (qsb de qt6-shadertools)
+make shaders             # coque/Theme/materiau.frag → generated/materiau.frag.qsb et son empreinte, si la source a changé
 make generes             # tokens, motion, energie et shaders, puis refuse si generated/ diffère de l'index ou contient un fichier hors de git
 make test                # tests unitaires et de non-régression
 make check               # generes + test
@@ -1788,14 +1788,25 @@ coins et ses liserés, ou le creux d'un champ, par le fragment shader `coque/The
 forme compilée (`.qsb`) :
 
 ```bash
-make shaders     # /usr/lib/qt6/bin/qsb --qt6 -o generated/materiau.frag.qsb coque/Theme/materiau.frag
+make shaders     # /usr/lib/qt6/bin/qsb --qt6 -o generated/materiau.frag.qsb coque/Theme/materiau.frag, puis
+                 # sha256sum coque/Theme/materiau.frag > generated/materiau.frag.sha256
 ```
 
 - `qsb` vient de `qt6-shadertools` (déclaré dans `paquets.toml` et installé par le contrôle GitHub) ; il est hors du
   `PATH`, d'où son chemin complet dans le `Makefile`.
-- Le `.qsb` est **versionné dans `generated/`** : `make shaders` fait partie de `make generes`, et le crochet comme le
-  contrôle sur `main` refusent un `.qsb` qui diffère de sa source compilée (`tests/test_shader.py`). `make install`
-  ne dépend pas de `make shaders` : une machine sans `qt6-shadertools` s'installe avec le `.qsb` versionné.
+- Le `.qsb` est **versionné dans `generated/`**, avec l'empreinte SHA-256 de sa source
+  (`generated/materiau.frag.sha256`). `make shaders` fait partie de `make generes` mais **ne recompile que si la
+  source ne répond plus à l'empreinte** : les octets du `.qsb` (SPIR-V et traductions) changent avec la version de
+  `qt6-shadertools`, et le contrôle sur `main` installe celle du jour, qui peut devancer celle de caladan. Le crochet
+  et le contrôle jugent donc le `.qsb` par l'empreinte, jamais par ses octets ; `tests/test_shader.py` vérifie en
+  plus que la source compile avec le `qsb` du poste et que la réflexion (`qsb --dump` : entrées, sorties, uniformes)
+  est celle du `.qsb` versionné (D85). `make install` ne dépend pas de `make shaders` : une machine sans
+  `qt6-shadertools` s'installe avec le `.qsb` versionné.
+- **Après une retouche de `materiau.frag`** : `make shaders`, qui recompile et réécrit l'empreinte, puis
+  `git add coque/Theme/materiau.frag generated/materiau.frag.qsb generated/materiau.frag.sha256`. Sans cela, le
+  crochet refuse le commit (l'empreinte indexée ne répond plus à la source). Une mise à jour de `qt6-shadertools`
+  seule n'exige rien : le `.qsb` versionné reste valable tant que sa réflexion ne change pas ; pour l'aligner quand
+  même sur la nouvelle version, supprimer `generated/materiau.frag.sha256`, puis `make shaders`.
 - `deploy.py` copie `generated/materiau.frag.qsb` vers `~/.config/dunei/`, à côté de `coque-tokens.json` ;
   `Materiau.qml` le charge par `Theme.fichier("materiau.frag.qsb")`. La planche et le banc du verre le copient dans
   leur brouillon. Un shader absent se signale au chargement, dans le journal de Quickshell.
@@ -1968,7 +1979,7 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 
 | Version | Date | Changement |
 | --- | --- | --- |
-| 1.23 | 2026-10-25 | L'élévation (L2-04, L2-05) : shader du matériau et sa compilation (`make shaders`, `.qsb` versionné), règles de calque du verre (`generated/hyprland-layers.lua`, `regles.lua`), texte de la coque en niveaux de gris, banc d'essai du verre, relevés ; chaîne de génération et message du crochet complétés par `shaders` (D85 à D88) |
+| 1.23 | 2026-10-25 | L'élévation (L2-04, L2-05) : shader du matériau et sa compilation (`make shaders`, `.qsb` versionné), règles de calque du verre (`generated/hyprland-layers.lua`, `regles.lua`), texte de la coque en niveaux de gris, banc d'essai du verre, relevés ; chaîne de génération et message du crochet complétés par `shaders` ; `.qsb` jugé par l'empreinte de sa source et non par ses octets, recompilation après une retouche du shader (D85 à D88) |
 | 1.22 | 2026-10-25 | Les thèmes statiques (L2-40) : où vit `theme.json`, mode d'emploi de `dunei-theme`, bascule sur la planche (`planche.sh theme`), relevés, ce qui reste à voir (D83, D84) |
 | 1.21 | 2026-10-24 | Bibliothèque de composants (L2-01) : relevé d'un overlay d'attention fermé, ouvert, refermé ; ouverture de l'attention et fermeture du déroulant validées à l'écran |
 | 1.20 | 2026-10-24 | Bibliothèque de composants (L2-01), relecture finale : infobulle en troisième famille d'overlay, `Etat` qui fige les couleurs non peintes, tests du clavier qui n'exigent que Quickshell, section `[spinner]` de `motion.toml` ; points tranchés retirés de « Ce qui reste à voir » (texte de `controlRaised` éclairci en `text-emphasis`, infobulle à 500 ms) |

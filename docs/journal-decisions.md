@@ -1976,6 +1976,15 @@ en-tête E2 dessiné dans une fenêtre opaque n'a rien à flouter.
   pixel physique posé à une position non entière bave sur deux pixels ; calculés sur `gl_FragCoord`, bruit et
   liserés tombent sur les pixels physiques. Le `.qsb` est compilé par `make shaders` (dans `make generes`) et
   versionné dans `generated/`, si bien que l'installation ne dépend pas de `qt6-shadertools`.
+- **Le `.qsb` jugé par l'empreinte de sa source, non par ses octets.** Le SPIR-V et les traductions qu'il contient
+  changent avec la version de `qt6-shadertools` ; le contrôle sur `main` installe celle du jour, caladan la sienne.
+  Une comparaison d'octets aurait rendu le contrôle exigé rouge pour toute PR à la première mise à jour de Qt sur
+  Arch, sans que D77 permette de passer outre. `make shaders` enregistre donc l'empreinte SHA-256 de
+  `materiau.frag` à côté du `.qsb` (`generated/materiau.frag.sha256`) et ne recompile que si la source n'y répond
+  plus ; le crochet suit la même règle. `tests/test_shader.py` compare l'empreinte à la source, puis exige qu'une
+  compilation fraîche réussisse avec la même réflexion (`qsb --dump` : entrées, sorties, uniformes) que le `.qsb`
+  versionné. Coût : un `.qsb` retouché à la main, empreinte intacte et réflexion identique, passerait ; `generated/`
+  ne s'édite jamais à la main (D77).
 - **L'opacité du verre portée par `opacity`.** Le shader la reçoit en `qt_Opacity` et l'applique à toute la
   matière, liserés et reflet compris, au lieu de l'alpha de la couleur de fond : le test des composants interdit de
   composer une couleur en QML. Coût : un matériau de verre ne porte pas d'enfants, qui hériteraient de l'opacité.
