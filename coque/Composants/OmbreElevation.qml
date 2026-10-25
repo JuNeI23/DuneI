@@ -17,9 +17,10 @@ import "../Theme"
 RectangularShadow {
     required property Item cible
     property string niveau: "e3"
-    readonly property real marge: visible ? blur + Math.abs(offset.y) : 0
+    readonly property bool ombree: !!Theme.elevation?.[niveau]?.shadow
+    readonly property real marge: ombree ? blur + Math.abs(offset.y) : 0
 
-    visible: !!Theme.elevation?.[niveau]?.shadow
+    visible: ombree
     anchors.fill: cible
     z: -1
     radius: cible.radius ?? 0

@@ -822,6 +822,25 @@ class CoqueClavierTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(marge, m["shadowBlur"] + m["shadowOffsetY"])
         self.assertEqual((lf, hf), (lc + 2 * marge, hc + 2 * marge))
 
+    def test_cadre_a_sa_place_malgre_la_marge(self):
+        # La marge de l'ombre agrandit la fenêtre mais ne doit pas déplacer le cadre visible : le contextuel garde son
+        # coin haut gauche au coin bas gauche de l'ancre, l'infobulle reste centrée à un écart (space.scale[0]) sous
+        # l'ancre, comme avant la marge. L'ancrage est lu sur le rectangle d'ancrage de la fenêtre, car la plateforme
+        # offscreen ne positionne pas les popups. Une marge nulle est le même cas, la correction étant alors nulle ;
+        # l'essai n'a pas de niveau sans ombre à ouvrir.
+        self.demarrer()
+        self.ipc("ouvrirContextuel")
+        ecart = self.vue(55)["space"]["scale"][0]
+        for nom, dy_attendu in (("contextuel", 0), ("bulle", ecart)):
+            for _ in range(100):
+                if "absent" not in self.valeur("ancrage", nom):
+                    break
+                time.sleep(0.05)
+            with self.subTest(nom=nom):
+                _, dx, dy, marge = self.valeur("ancrage", nom).split()
+                self.assertGreater(float(marge), 0)
+                self.assertEqual((float(dx), float(dy)), (0, dy_attendu))
+
     def test_garde_hors_offscreen(self):
         # Contre-épreuve de la garde : sous la plateforme minimal, inoffensive (aucun affichage), demarrer échoue
         # en nommant la plateforme, et la coque, Theme pourtant chargé, n'ouvre jamais sa fenêtre.

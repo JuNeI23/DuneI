@@ -24,7 +24,7 @@ import "../Theme"
 //           de verre ne porte donc pas d'enfants : ils hériteraient de l'opacité (Surface charge le sien à part).
 // Erreurs : aucune ; avant le chargement des tokens ou pour un niveau inconnu, les couleurs sont transparentes et
 //           rien n'est peint. Un shader absent du dossier des tokens se signale au chargement, dans le journal de Qt.
-// Dépendances : Theme (elevation, material, glass, space, fichier), Quickshell (propriété attachée QsWindow),
+// Dépendances : Theme (elevation, material, glass, fichier), Quickshell (propriété attachée QsWindow),
 //               materiau.frag.qsb, déployé à côté des tokens (make shaders, deploy.py, planche.sh, essais).
 ShaderEffect {
     id: materiau

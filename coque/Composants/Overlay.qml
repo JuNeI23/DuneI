@@ -154,13 +154,22 @@ QtObject {
     readonly property Component fenetreContextuel: PopupWindow {
         id: popup
         anchor.item: overlay.ancre
-        anchor.rect.x: overlay.point?.x ?? 0
         // L'infobulle s'ancre sur l'ancre agrandie de l'écart en haut et en bas, pour s'en tenir à distance des
         // deux côtés, qu'elle soit posée dessous ou retournée au-dessus.
         readonly property real ecart: overlay.bulle ? Theme.space?.scale[0] ?? 0 : 0
-        anchor.rect.y: overlay.point?.y ?? -ecart
-        anchor.rect.width: overlay.point ? 1 : overlay.ancre?.width ?? 1
-        anchor.rect.height: overlay.point ? 1 : (overlay.ancre?.height ?? 1) + 2 * ecart
+        // Le cadre est en retrait de la marge de l'ombre dans la fenêtre : le rectangle d'ancrage est corrigé pour que
+        // le cadre visible tombe là où il tomberait sans marge. Horizontalement et, pour un point de clic, aussi
+        // verticalement, le rectangle s'élargit de la marge de chaque côté ; verticalement sous une ancre, il se
+        // rétrécit de la marge de chaque côté autour de son centre (la fenêtre se pose sous son bord bas, ou
+        // au-dessus de son bord haut une fois retournée), sans devenir négatif : sous deux marges de haut, la
+        // correction est partielle.
+        readonly property real marge: cadrePopup.marge
+        readonly property real hauteurAncre: (overlay.ancre?.height ?? 1) + 2 * ecart
+        readonly property real hauteurRect: Math.max(hauteurAncre - 2 * marge, 0)
+        anchor.rect.x: (overlay.point?.x ?? 0) - marge
+        anchor.rect.y: overlay.point ? overlay.point.y - marge : -ecart + (hauteurAncre - hauteurRect) / 2
+        anchor.rect.width: (overlay.point ? 1 : overlay.ancre?.width ?? 1) + 2 * marge
+        anchor.rect.height: overlay.point ? 1 + 2 * marge : hauteurRect
         // Contextuel : sous l'ancre, ou à partir du point de clic, en s'étendant vers le bas et la droite.
         // Infobulle : centrée sous l'ancre, retournée au-dessus s'il n'y a pas la place.
         anchor.edges: overlay.bulle ? Edges.Bottom : Edges.Left | (overlay.point ? Edges.Top : Edges.Bottom)

@@ -26,7 +26,7 @@ import "Composants"
 // <cursorFlashTime> », « essai : onglets <géométrie de la barre et de ses segments> », « essai : menu <rangée courante
 // du menu> <rangée courante du témoin> », « essai : ongletSurvole <interaction> <fond> » et « essai : jauge <valeur>
 // <anneau visible> », ainsi que attention, anneauOnglets, compteur, deroulant, pastilles, pastillesCouleurs, bascule,
-// activite, materiauDpr et contextuel (voir chaque fonction) ; « essai touche <tab|majtab|gauche|droite|haut|bas|espace|entree|echap> » frappe une
+// activite, materiauDpr, contextuel et ancrage (voir chaque fonction) ; « essai touche <tab|majtab|gauche|droite|haut|bas|espace|entree|echap> » frappe une
 // touche, « essai activiteMarche <bool> » lance ou arrête l'indicateur d'activité, « essai molette <1|-1> » tourne la
 // molette sur le compteur, « essai cliquerDeroulant » clique le déroulant, « essai ouvrirAttention » ouvre l'Overlay
 // d'attention, « essai ouvrirContextuel » celui du contextuel, « essai pointerRangee <rang> <bool> » pose le pointeur sur une rangée du menu ouvert et l'y clique si
@@ -157,6 +157,12 @@ ShellRoot {
                 Texte { text: "contextuel" }
             }
 
+            // Ancre haute (80 px, plus de deux marges), sur laquelle se posent un contextuel et une infobulle d'essai
+            // pour éprouver l'ancrage sans que la correction soit bornée.
+            Item { id: ancreHaute; width: 100; height: 80 }
+            Overlay { id: contextuelAncre; famille: "contextuel"; ancre: ancreHaute; Texte { text: "contextuel" } }
+            Overlay { id: bulleAncree; famille: "infobulle"; ancre: ancreHaute; Texte { text: "bulle" } }
+
             // Infobulle créée et détruite à la demande sur le bouton « bulle », qui lui survit ; ses gestionnaires sont
             // gardés dans des propriétés typées, que le moteur remet à null quand ils sont détruits.
             property Infobulle jetable: null
@@ -209,6 +215,8 @@ ShellRoot {
                 // Erreurs : aucune. Dépendances : contextuelEssai.
                 function ouvrirContextuel(): void {
                     contextuelEssai.ouvert = true
+                    contextuelAncre.ouvert = true
+                    bulleAncree.ouvert = true
                 }
 
                 // contextuel — journalise la largeur et la hauteur de la fenêtre du contextuel, celles de son cadre,
@@ -218,6 +226,22 @@ ShellRoot {
                 function contextuel(): void {
                     const f = contextuelEssai.chargeur.item
                     essai.journal("contextuel", f ? [f.width, f.height, f.cadre.width, f.cadre.height, f.cadre.marge].join(" ") : "absent")
+                }
+
+                // ancrage — journalise où l'ancrage de la fenêtre d'un Overlay d'essai (« contextuel » ou « bulle »)
+                // posera le cadre visible, d'après le modèle d'xdg_popup : la fenêtre se pose sous le bord bas du
+                // rectangle d'ancrage, alignée sur son bord gauche (contextuel) ou centrée sur lui (bulle), et le
+                // cadre est en retrait de la marge. Entrée : nom. Sortie : aucune ; « essai : ancrage <nom> <dx> <dy>
+                // <marge> », décalage du coin haut gauche du cadre (contextuel) ou de son centre horizontal (bulle) au
+                // coin bas gauche de l'ancre d'essai, puis, pour la bulle, l'écart attendu en plus ; « absent » tant que
+                // la fenêtre n'est pas construite. Erreurs : aucune. Dépendances : contextuelAncre, journal.
+                function ancrage(nom: string): void {
+                    const o = nom === "bulle" ? bulleAncree : contextuelAncre
+                    const f = o.chargeur.item
+                    if (!f) return essai.journal("ancrage", nom + " absent")
+                    const r = f.anchor.rect, m = f.cadre.marge, h = ancreHaute.height
+                    const dx = nom === "bulle" ? r.x + r.width / 2 - ancreHaute.width / 2 : r.x + m
+                    essai.journal("ancrage", [nom, dx, r.y + r.height + m - h, m].join(" "))
                 }
 
                 // anneauOnglets — journalise la visibilité de l'anneau de la barre d'onglets, puis celle de l'anneau
