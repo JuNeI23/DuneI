@@ -865,8 +865,7 @@ class CoqueClavierTest(EssaiCoque, unittest.TestCase):
 
     def test_cadre_a_sa_place_malgre_la_marge(self):
         # La marge de l'ombre agrandit la fenêtre mais ne doit pas déplacer le cadre visible : le contextuel garde son
-        # coin haut gauche au coin bas gauche de l'ancre, l'infobulle reste centrée à un écart (space.scale[0]) sous
-        # l'ancre, comme avant la marge, que l'ancre soit haute (80 px) ou courte (28 px, moins de deux marges).
+        # bord haut à un écart (space.scale[0]) sous l'ancre, comme l'infobulle, qui reste en outre centrée sur elle, que l'ancre soit haute (80 px) ou courte (28 px, moins de deux marges).
         # Sous une ancre, la fenêtre ne se retourne pas verticalement (elle glisse), car aucun rectangle d'ancrage
         # ne serait exact dans les deux sens. L'ancrage est lu sur le rectangle d'ancrage de la fenêtre, car la
         # plateforme offscreen ne positionne pas les popups. Une marge nulle est le même cas, la correction étant
@@ -874,7 +873,7 @@ class CoqueClavierTest(EssaiCoque, unittest.TestCase):
         self.demarrer()
         self.ipc("ouvrirContextuel")
         ecart = self.vue(55)["space"]["scale"][0]
-        for nom, dy_attendu in (("contextuel", 0), ("bulle", ecart), ("contextuelCourt", 0), ("bulleCourte", ecart)):
+        for nom, dy_attendu in (("contextuel", ecart), ("bulle", ecart), ("contextuelCourt", ecart), ("bulleCourte", ecart)):
             for _ in range(100):
                 if "absent" not in self.valeur("ancrage", nom):
                     break

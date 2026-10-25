@@ -11,15 +11,16 @@ import "ancrage.js" as Ancrage
 //     material.shade sur tout l'écran ; une seule à la fois, par le singleton Overlays ; Échap ou un clic sur le
 //     voile la ferment. Elle n'est compilée qu'à l'ouverture d'une attention, si bien que l'Overlay se charge
 //     aussi sous la plateforme offscreen, qui n'a pas de PanelWindow.
-//   - contextuel (menu, popover, liste déroulante) : PopupWindow ancrée sous l'élément ancre, ou sur le point
-//     de clic si point est fourni ; horizontalement, la coque serre le cadre dans l'écran quand l'ancre est dans
+//   - contextuel (menu, popover, liste déroulante) : PopupWindow ancrée sous l'élément ancre, à un écart de
+//     space.scale[0] de son bord bas, ou sur le point de clic (sans écart) si point est fourni ;
+//     horizontalement, la coque serre le cadre dans l'écran quand l'ancre est dans
 //     un calque (ancrage.js), le compositeur retourne et glisse la fenêtre sinon ; verticalement, elle est
 //     retournée puis glissée (sous une ancre, elle ne se retourne pas et glisse : la marge d'ombre de la fenêtre
 //     n'a qu'une correction exacte par sens, voir fenetreContextuel) ; sans voile ; le clavier
 //     est pris par HyprlandFocusGrab, dont la levée (clic à l'extérieur) ferme, comme Échap ; plusieurs
 //     peuvent coexister.
-//   - infobulle : la même PopupWindow, centrée sous l'ancre et serrée dans l'écran comme un contextuel, à un échelon
-//     de space (space.scale[0]) de son bord, sans retournement vertical (elle glisse faute de place) ; sans voile ni
+//   - infobulle : la même PopupWindow, centrée sous l'ancre et serrée dans l'écran comme un contextuel, au même
+//     écart de son bord, sans retournement vertical (elle glisse faute de place) ; sans voile ni
 //     HyprlandFocusGrab : elle ne prend jamais le clavier et seule son ouvreuse, l'Infobulle, la ferme.
 // Le contenu est posé au centre d'une Surface surfaceRaised (e3), entourée d'un retrait ; sa taille est celle du
 // contenu. Les formes suivent macOS (conception, § 7.10) : une attention a les coins radius.window et le retrait
@@ -160,13 +161,14 @@ QtObject {
     readonly property Component fenetreContextuel: PopupWindow {
         id: popup
         anchor.item: overlay.ancre
-        // L'infobulle se tient à un écart sous son ancre.
-        readonly property real ecart: overlay.bulle ? Theme.space?.scale[0] ?? 0 : 0
+        // Tout overlay ancré à un élément (contextuel et infobulle) se tient à un écart sous lui, comme sur macOS ;
+        // un contextuel ouvert au point de clic n'en a pas.
+        readonly property real ecart: overlay.point ? 0 : Theme.space?.scale[0] ?? 0
         // Le cadre est en retrait de la marge de l'ombre dans la fenêtre : le rectangle d'ancrage est corrigé pour que
         // le cadre visible tombe là où il tomberait sans marge. Sous une ancre, la fenêtre se pose sous le bord bas
         // du rectangle, alignée sur son bord gauche (contextuel) ou centrée sur lui (infobulle) : le rectangle est
         // donc réduit à une ligne de 1 px, la hauteur minimale de PopupAnchor, dont le bord bas est remonté de la
-        // marge au-dessus du bord bas de l'ancre (agrandie de l'écart pour l'infobulle), et il est élargi de la
+        // marge au-dessus du bord bas de l'ancre (agrandie de l'écart, sauf à un point de clic), et il est élargi de la
         // marge de chaque côté. Pour un point de clic, le rectangle est élargi de la marge de chaque côté, dans les
         // deux sens, ce qui reste exact aussi une fois retourné. Sous une ancre, la fenêtre ne se retourne pas
         // verticalement mais glisse : retournée, elle aurait demandé un rectangle différent, et PopupAnchor ne
