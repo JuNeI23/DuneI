@@ -12,7 +12,8 @@ import "../Theme"
 // plateforme offscreen des coques d'essai n'en a pas), et l'Overlay reste ainsi chargeable partout, ce qui permet
 // d'éprouver les contextuels hors écran.
 // Entrées : overlay, l'Overlay qui la porte (ecran, contenu, ouvert), requis.
-// Sorties : aucune autre que celles de PanelWindow.
+// Sorties : aucune autre que celles de PanelWindow ; son calque porte le namespace « dunei-attention », que
+// [glass].namespaces de tokens.toml déclare flouté (le voile material.shade, sous ignore_alpha, reste net).
 // Erreurs : aucune ; avant le chargement des tokens, voile et fond restent transparents et le retrait vaut 0.
 // Dépendances : Quickshell (PanelWindow, ExclusionMode), Quickshell.Wayland (WlrLayershell), Theme (material,
 // radius, space), Overlay (son composant en ligne Cadre).
@@ -24,6 +25,7 @@ PanelWindow {
     exclusionMode: ExclusionMode.Ignore
     color: "transparent"
     WlrLayershell.layer: WlrLayer.Overlay
+    WlrLayershell.namespace: "dunei-attention"
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.Exclusive
 
     // Un clic hors du cadre tombe sur le voile et ferme ; un clic dans le cadre que le contenu n'a pas pris
