@@ -12,8 +12,9 @@ mis de côté sous le nom .avant-dunei, et un lien remplacé par un fichier est 
   Un script de config/hypr/scripts/ non exécutable est refusé.
 - fontconfig : generated/fonts.conf est copié vers fontconfig/conf.d/50-dunei.conf. Les applications
   lancées ensuite le lisent ; aucun fc-cache n'est nécessaire.
-- coque : generated/coque-tokens.json et generated/motion.json sont copiés vers dunei/ sous le dossier de
-  configuration ; le singleton Theme de la coque Quickshell les lit et les surveille (L2-34).
+- coque : generated/coque-tokens.json, generated/motion.json et generated/materiau.frag.qsb sont copiés vers
+  dunei/ sous le dossier de configuration ; le singleton Theme de la coque Quickshell lit et surveille les deux
+  premiers, le matériau charge le shader compilé (L2-34, L2-04).
 - applis : la configuration de chaque application de DuneI est liée à sa place sous le dossier de
   configuration ; l'application doit être installée. Les autres fichiers de son dossier sont laissés
   en place. Seul kitty, le terminal provisoire, y figure (L1-18).
@@ -75,7 +76,10 @@ TEMP = ".{}.dunei"                            # Nom temporaire, sans extension .
 FONTCONFIG = ("fonts.conf", "conf.d/50-dunei.conf")  # Fichier de generated/ → chemin sous fontconfig/.
 MARK = "GÉNÉRÉ depuis tokens.toml"                    # Avertissement de deuxième ligne : le fichier est à DuneI.
 IDLE = ("hypridle.conf", "GÉNÉRÉ depuis energie.toml")       # Fichier de generated/ copié sous hypr/, et sa marque.
-COQUE = (("coque-tokens.json", "GÉNÉRÉ depuis tokens.toml"), ("motion.json", "GÉNÉRÉ depuis motion.toml"))  # Fichiers de generated/ copiés sous dunei/, et leur marque.
+# Fichiers de generated/ copiés sous dunei/ : nom, marque de deuxième ligne et cible make qui le produit. Le shader
+# compilé est binaire et n'a pas de marque (None) : dans dunei/, dossier propre à DuneI, son nom suffit.
+COQUE = (("coque-tokens.json", "GÉNÉRÉ depuis tokens.toml", "tokens"), ("motion.json", "GÉNÉRÉ depuis motion.toml", "motion"),
+         ("materiau.frag.qsb", None, "shaders"))
 SYSTEME = "systeme"                                          # Arborescence copiée sous la racine du système.
 SYSTEM_MARK = "Posé par DuneI"                               # Marque de deuxième ligne d'un fichier système.
 SERVICE = "hypridle.service"                                 # Service de l'échelle d'inactivité, redémarré si hypridle.conf change.
@@ -251,7 +255,7 @@ def plan_coque(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
     Entrées : repo — racine du dépôt ; home — dossier de configuration racine.
     Sortie : (création de dunei/ s'il manque puis copie de chaque fichier de COQUE ; erreurs).
     Erreurs : aucune exception ; source absente, dunei qui n'est pas un dossier réel, fichier ou lien
-              étranger à la place d'un fichier deviennent des messages.
+              étranger à la place d'un fichier marqué, ou lien à la place du shader, deviennent des messages.
     Dépendances : _ours, COQUE.
     """
     dossier, actions, err = home / "dunei", [], []
@@ -259,11 +263,11 @@ def plan_coque(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
         return actions, [f"{dossier} existe mais n'est pas un dossier réel"]
     if not dossier.exists():
         actions.append(("mkdir", dossier))
-    for nom, marque in COQUE:
+    for nom, marque, cible in COQUE:
         src, dest = repo / "generated" / nom, dossier / nom
         if not src.exists():
-            err.append(f"source manquante : {src} (lancer make {'motion' if nom == 'motion.json' else 'tokens'})")
-        if dest.is_symlink() or (dest.exists() and not _ours(dest, marque)):
+            err.append(f"source manquante : {src} (lancer make {cible})")
+        if dest.is_symlink() or (marque and dest.exists() and not _ours(dest, marque)):
             err.append(f"{dest} existe mais n'a pas été posé par DuneI")
         actions.append(("copy", src, dest))
     return actions, err

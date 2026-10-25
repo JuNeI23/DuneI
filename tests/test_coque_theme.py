@@ -82,12 +82,14 @@ class EssaiCoque:
         return Path(self.gen.name) / str(teinte) / "coque-tokens.json"
 
     def installer(self, teinte: int) -> None:
-        """Pose les tokens d'une teinte et le mouvement dans le dossier surveillé, avant le lancement.
+        """Pose les tokens d'une teinte, le mouvement et le shader du matériau dans le dossier surveillé, avant le lancement.
 
-        Entrée : teinte. Sortie : aucune. Erreurs : OSError si la copie échoue. Dépendances : tokens.
+        Entrée : teinte. Sortie : aucune. Erreurs : OSError si la copie échoue.
+        Dépendances : tokens, generated/materiau.frag.qsb (make shaders).
         """
         shutil.copy(self.tokens(teinte), self.dir / "coque-tokens.json")
         shutil.copy(Path(self.gen.name) / "motion" / "motion.json", self.dir / "motion.json")
+        shutil.copy(ROOT / "generated" / "materiau.frag.qsb", self.dir / "materiau.frag.qsb")
 
     def remplacer(self, teinte: int) -> None:
         """Remplace les tokens par renommage, comme la copie atomique de deploy.py.

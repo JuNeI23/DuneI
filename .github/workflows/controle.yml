@@ -17,7 +17,7 @@ jobs:
     steps:
       # git avant checkout : sans lui, l'action télécharge une archive sans dépôt, et git diff n'a rien à comparer.
       - name: Paquets du contrôle
-        run: pacman -Syu --noconfirm --needed git make python python-numpy python-pillow lua shellcheck jq
+        run: pacman -Syu --noconfirm --needed git make python python-numpy python-pillow lua shellcheck jq qt6-shadertools
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
       - name: make check, hors root
         run: |

@@ -17,7 +17,7 @@ GIT = ["git", "-c", "user.name=essai", "-c", "user.email=essai@dunei.invalid"]
 
 
 class CrochetTest(unittest.TestCase):
-    """Chaque scénario : propre, retouché, source sans régénération, hors de l'index, orphelin, partiel, génération en échec."""
+    """Chaque scénario : propre, retouché, source ou shader sans régénération, hors de l'index, orphelin, partiel, génération en échec."""
 
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -109,8 +109,17 @@ class CrochetTest(unittest.TestCase):
         self.assertNotEqual(res.returncode, 0)
         self.assertIn("la génération échoue", res.stderr)
 
+    def test_shader_sans_recompilation_refuse(self):
+        src = self.repo / "coque/Theme/materiau.frag"
+        src.write_text(src.read_text(encoding="utf-8").replace("/ 255.0", "/ 128.0", 1), encoding="utf-8")
+        self.git("add", "coque/Theme/materiau.frag", check=True)
+        res = self.git("commit", "-q", "-m", "essai")
+        self.assertNotEqual(res.returncode, 0)
+        self.assertIn("materiau.frag.qsb", res.stderr)
+
     def test_make_generes(self):
         make = lambda: subprocess.run(["make", "-s", "generes"], cwd=self.repo, env=self.env, capture_output=True)
+        (self.repo / "generated/materiau.frag.qsb").unlink()
         self.assertEqual(make().returncode, 0)
         (self.repo / "generated/nouveau.txt").write_text("nouveau\n", encoding="utf-8")
         self.assertNotEqual(make().returncode, 0)

@@ -809,27 +809,27 @@ class CrochetsTest(unittest.TestCase):
 
 
 class CoqueTest(unittest.TestCase):
-    """Les tokens de la coque sont copiés sous <config>/dunei/, où le singleton Theme les lit (L2-34)."""
+    """Les tokens et le shader de la coque sont copiés sous <config>/dunei/, où la coque les lit (L2-34, L2-04)."""
 
     def setUp(self):
-        """Prépare un dépôt et un dossier de configuration jetables, avec les deux fichiers générés. Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : tempfile."""
+        """Prépare un dépôt et un dossier de configuration jetables, avec les fichiers générés de COQUE. Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : tempfile."""
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         self.repo, self.cfg = Path(self.tmp.name) / "repo", Path(self.tmp.name) / "cfg"
         (self.repo / "generated").mkdir(parents=True)
         self.cfg.mkdir()
-        for nom, marque in deploy.COQUE:
+        for nom, marque, _ in deploy.COQUE:
             (self.repo / "generated" / nom).write_text(f'{{\n  "_generated": "{marque}"\n}}\n', encoding="utf-8")
-        self.copies = [("copy", self.repo / "generated" / nom, self.cfg / "dunei" / nom) for nom, _ in deploy.COQUE]
+        self.copies = [("copy", self.repo / "generated" / nom, self.cfg / "dunei" / nom) for nom, _, _ in deploy.COQUE]
 
     def test_coque_premier_passage(self):
-        """Le dossier dunei est créé, puis les deux fichiers sont copiés."""
+        """Le dossier dunei est créé, puis chaque fichier de COQUE est copié."""
         self.assertEqual(deploy.plan_coque(self.repo, self.cfg), ([("mkdir", self.cfg / "dunei")] + self.copies, []))
 
     def test_coque_deja_pose(self):
-        """Un dossier dunei existant et des fichiers à nous donnent deux copies, sans mkdir."""
+        """Un dossier dunei existant et des fichiers à nous donnent les seules copies, sans mkdir."""
         (self.cfg / "dunei").mkdir()
-        for nom, _ in deploy.COQUE:
+        for nom, _, _ in deploy.COQUE:
             (self.cfg / "dunei" / nom).write_text((self.repo / "generated" / nom).read_text(encoding="utf-8"), encoding="utf-8")
         self.assertEqual(deploy.plan_coque(self.repo, self.cfg), (self.copies, []))
 
@@ -847,6 +847,27 @@ class CoqueTest(unittest.TestCase):
         err = deploy.plan_coque(self.repo, self.cfg)[1]
         self.assertEqual(len(err), 1)
         self.assertIn("motion.json", err[0])
+
+    def test_coque_shader_absent(self):
+        """Un shader compilé manquant est signalé avec make shaders."""
+        (self.repo / "generated" / "materiau.frag.qsb").unlink()
+        err = deploy.plan_coque(self.repo, self.cfg)[1]
+        self.assertEqual(len(err), 1)
+        self.assertIn("make shaders", err[0])
+
+    def test_coque_shader_binaire_remplace(self):
+        """Le shader compilé déjà posé, binaire et sans marque, est remplacé sans refus."""
+        (self.cfg / "dunei").mkdir()
+        (self.cfg / "dunei" / "materiau.frag.qsb").write_bytes(b"\x00\xff qsb")
+        self.assertEqual(deploy.plan_coque(self.repo, self.cfg)[1], [])
+
+    def test_coque_shader_lien(self):
+        """Un lien à la place du shader compilé est refusé."""
+        (self.cfg / "dunei").mkdir()
+        (self.cfg / "dunei" / "materiau.frag.qsb").symlink_to(self.tmp.name)
+        err = deploy.plan_coque(self.repo, self.cfg)[1]
+        self.assertEqual(len(err), 1)
+        self.assertIn("materiau.frag.qsb", err[0])
 
     def test_coque_dossier_lien(self):
         """Un dossier dunei qui est un lien est refusé, sans action."""

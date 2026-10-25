@@ -7,7 +7,7 @@
 # Sortie : 0 et rien d'affiché si generated/ indexé égale la génération ; 1 sinon, avec la différence et la
 #          consigne sur stderr.
 # Erreurs : génération en échec sur les sources indexées (sortie des générateurs, puis refus).
-# Dépendances : git, make (cibles tokens, motion, energie), mktemp, realpath. Activé par make install
+# Dépendances : git, make (cibles tokens, motion, energie, shaders), mktemp, realpath. Activé par make install
 # (core.hooksPath = .githooks).
 # GIT_INDEX_FILE absolu : relatif, il serait résolu depuis le dossier jetable et lirait un index vide.
 GIT_INDEX_FILE=$(realpath "${GIT_INDEX_FILE:-$(git rev-parse --git-path index)}") || exit 1
@@ -15,7 +15,7 @@ export GIT_INDEX_FILE
 t=$(mktemp -d) || exit 1
 trap 'rm -rf "$t"' EXIT
 git checkout-index -a --prefix="$t/" && rm -rf "$t/generated" || exit 1
-if ! sortie=$(make -s -C "$t" tokens motion energie 2>&1); then
+if ! sortie=$(make -s -C "$t" tokens motion energie shaders 2>&1); then
     printf '%s\ncommit refusé : la génération échoue sur les sources indexées (L1-21).\n' "$sortie" >&2
     exit 1
 fi
@@ -24,7 +24,7 @@ git --work-tree="$t" diff --exit-code --stat -- generated/ >&2 && [ -z "$nouveau
 [ -z "$nouveaux" ] || printf 'produits par les générateurs, absents de l'"'"'index :\n%s\n' "$nouveaux" >&2
 cat >&2 <<'MSG'
 commit refusé : generated/ indexé diffère de ce que produisent les sources indexées (L1-21).
-generated/ ne s'édite pas à la main : régénérer (make tokens motion energie), git add generated/,
+generated/ ne s'édite pas à la main : régénérer (make tokens motion energie shaders), git add generated/,
 puis recommencer le commit.
 MSG
 exit 1
