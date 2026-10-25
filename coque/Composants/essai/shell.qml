@@ -12,8 +12,8 @@ import "Composants/etats.js" as Etats
 // contrôle simulé avec son Etat, un Texte, une Icone, les cinq contrôles interactifs (Bouton, Case, Interrupteur,
 // Onglet, Curseur), trois Radio dans un même parent, une Jauge, une Progression, deux Separateur, un Champ, des
 // Pastilles, un Compteur, un Deroulant, une Recherche, une Activite, une Depliable, une Bascule, une Liste vide, une
-// Liste de trois Rangee et une cible munie d'un AnneauFocus, plus une Surface inactive à l'écart, deux Overlay fermés,
-// un de chaque famille, et trois objets factices pour le singleton Overlays) pour que tests/test_coque_composants.py
+// Liste de trois Rangee et une cible munie d'un AnneauFocus, plus une Surface inactive et une Surface de verre à
+// l'écart, deux Overlay fermés, un de chaque famille, et trois objets factices pour le singleton Overlays) pour que tests/test_coque_composants.py
 // éprouve dans un vrai Quickshell les règles d'etats.js, l'héritage par remontée, l'import du Theme, les pièces de
 // base, les contrôles et les listes, en lisant le journal.
 // Entrées : DUNEI_TOKENS_DIR, lu par Theme ; thème d'icônes Adwaita, posé par la directive IconTheme en tête (thème de
@@ -23,7 +23,7 @@ import "Composants/etats.js" as Etats
 // etat, ressort, ressortsFiges, image, controles, coches, cotes, glyphes, radios, jauge, progression, separateur,
 // champ, indicatif, tailleIcone, liste, arrets, rangee, bouton, overlays, overlaysFermes, pastilles, compteur,
 // compteurLargeur, deroulant, recherche, rechercheCouleurs, activite, depliable, depliableCotes, iconesControles,
-// bascule, fenetreAttention, knobs, contours).
+// bascule, fenetreAttention, knobs, contours, materiauSurfaces, verre, champMateriau).
 // Commandes sans journal : « essai rechercheTexte <texte> », « essai rechercheActive <bool> », « essai activiteEtat
 // <visible> <running> », « essai activitePhase <phase> », « essai activiteAncetre <bool> », « essai depliableOuvrir
 // <bool> », « essai basculeCocher <bool> », « essai pastillesForcer <état> », « essai pastillesReduire <bool> »,
@@ -31,7 +31,7 @@ import "Composants/etats.js" as Etats
 // « essai radioCocher <rang> », « essai jaugeActive <bool> », « essai boutonPrincipal <bool> », « essai inactif
 // <bool> », « essai reparenter », « essai texteMoyen », « essai anneauInactif <bool> », « essai survol <bool> »,
 // « essai champActif <bool> », « essai champTexte <texte> », « essai selectionLibre », « essai icone <nom> <bool> »,
-// « essai ouvrirFactice <A|B|C> » et « essai fermerFactice <A|B|C> ».
+// « essai ouvrirFactice <A|B|C> », « essai fermerFactice <A|B|C> » et « essai materiauHauteur <px> ».
 // Erreurs : celles de Theme et des liaisons, dans le journal. Dépendances : quickshell ≥ 0.3 (Quickshell.Io :
 // IpcHandler), modules coque/Theme et coque/Composants.
 // Import : Quickshell ne résout pas un module situé au-dessus de la racine de la coque lancée ; les liens
@@ -230,6 +230,15 @@ ShellRoot {
         dnInactive: true
     }
 
+    // Surface de verre, comme le cadre d'un overlay : sa hauteur est posée par materiauHauteur.
+    Surface {
+        id: verreEssai
+        role: "surfaceRaised"
+        verre: true
+        width: 100
+        height: 32
+    }
+
     // Un Overlay de chaque famille, jamais ouvert par les tests : seule leur instanciation fermée est éprouvée.
     Overlay {
         id: overlayAttention
@@ -336,9 +345,9 @@ ShellRoot {
 
         // fond — journalise la couleur peinte par la Surface panneau, dont l'élévation vient de son seul rôle.
         // Entrées : aucune. Sortie : aucune ; « essai : fond <#rrggbb> ». Erreurs : aucune.
-        // Dépendances : panneau, dont le premier enfant est le Rectangle de fond déclaré par Surface.qml.
+        // Dépendances : panneau (peinture, le Materiau de son fond, dont couleur est la couleur opaque).
         function fond(): void {
-            essai.journal("fond", panneau.children[0].color)
+            essai.journal("fond", panneau.peinture.couleur)
         }
 
         // texte — journalise la taille en pixels, la graisse, la couleur et la police du Texte d'essai.
@@ -655,12 +664,13 @@ ShellRoot {
         // le nombre d'enfants de son fond (aucun : le champ n'a pas d'anneau de focus), la couleur du texte, puis
         // la largeur implicite.
         // Entrées : aucune. Sortie : aucune ; « essai : champ <fond> <fond du panneau> <focusPolicy> <hauteur>
-        // <rayon> <enfants du fond> <#rrggbb> <largeur> ». Erreurs : aucune. Dépendances : champEssai (le fond
-        // est son background), panneau.
+        // <rayon> <enfants du fond hors filet> <#rrggbb> <largeur> ». Erreurs : aucune. Dépendances : champEssai
+        // (le fond est son background, un Materiau qui porte le filet « bordure »), panneau.
         function champ(): void {
             const b = champEssai.background
-            essai.journal("champ", [b.color, panneau.children[0].color, champEssai.focusPolicy, champEssai.height,
-                b.radius, b.children.length, champEssai.color, champEssai.implicitWidth].join(" "))
+            essai.journal("champ", [b.couleur, panneau.peinture.couleur, champEssai.focusPolicy, champEssai.height,
+                b.rayon, b.children.filter(e => e.objectName !== "bordure").length, champEssai.color,
+                champEssai.implicitWidth].join(" "))
         }
 
         // recherche — journalise la hauteur du champ de recherche et le rayon de son fond, le nom de la loupe et
@@ -669,7 +679,7 @@ ShellRoot {
         // <statut> ». Erreurs : aucune. Dépendances : rechercheEssai (loupe, effacer), journal.
         function recherche(): void {
             const r = rechercheEssai
-            essai.journal("recherche", [r.height, r.background.radius, r.loupe.nom, r.loupe.status,
+            essai.journal("recherche", [r.height, r.background.rayon, r.loupe.nom, r.loupe.status,
                                         r.effacer.visible, r.effacer.nom, r.effacer.status].join(" "))
         }
 
@@ -867,6 +877,41 @@ ShellRoot {
         // Dépendances : boutonEssai.
         function boutonPrincipal(valeur: bool): void {
             boutonEssai.principal = valeur
+        }
+
+        // estMateriau — dit si un élément est un Materiau, d'après le nom de type que rend son toString.
+        // Entrée : e, élément ou null. Sortie : booléen. Erreurs : aucune. Dépendances : aucune.
+        function estMateriau(e: var): bool {
+            return String(e).startsWith("Materiau")
+        }
+
+        // materiauSurfaces — journalise si le fond de la Surface panneau (e2), puis celui de la Surface fenêtre
+        // (e1), est un Materiau. Entrées : aucune. Sortie : aucune ; « essai : materiauSurfaces <bool> <bool> ».
+        // Erreurs : aucune. Dépendances : panneau, fenetre, estMateriau.
+        function materiauSurfaces(): void {
+            essai.journal("materiauSurfaces", estMateriau(panneau.peinture) + " " + estMateriau(fenetre.peinture))
+        }
+
+        // verre — journalise l'opacité du Materiau de la Surface de verre, celle du Materiau du panneau (sans
+        // verre), puis si le reflet de la Surface de verre est actif. Entrées : aucune. Sortie : aucune ;
+        // « essai : verre <opacité> <opacité> <bool> ». Erreurs : aucune. Dépendances : verreEssai, panneau.
+        function verre(): void {
+            const m = verreEssai.peinture
+            essai.journal("verre", [m.opacite, panneau.peinture.opacite, m.refletActif].join(" "))
+        }
+
+        // materiauHauteur — pose la hauteur de la Surface de verre. Entrée : hauteur, en pixels logiques.
+        // Sortie : aucune. Erreurs : aucune. Dépendances : verreEssai.
+        function materiauHauteur(hauteur: int): void {
+            verreEssai.height = hauteur
+        }
+
+        // champMateriau — journalise si le fond du champ est un Materiau, son niveau, puis son uniforme creux.
+        // Entrées : aucune. Sortie : aucune ; « essai : champMateriau <bool> <niveau> <0|1> ». Erreurs : aucune.
+        // Dépendances : champEssai, estMateriau.
+        function champMateriau(): void {
+            const b = champEssai.background
+            essai.journal("champMateriau", [estMateriau(b), b.niveau, b.creux].join(" "))
         }
 
         // inactif — pose le modificateur inactive sur la Surface fenêtre, en tête de l'arbre de la sonde.

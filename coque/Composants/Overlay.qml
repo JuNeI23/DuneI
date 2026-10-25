@@ -56,7 +56,8 @@ QtObject {
     signal ferme()
     readonly property bool bulle: famille === "infobulle"
 
-    // Cadre — Surface surfaceRaised qui porte le contenu, commune aux trois familles.
+    // Cadre — Surface surfaceRaised qui porte le contenu, commune aux trois familles ; seule surface de la fenêtre
+    // de l'overlay, elle porte le verre.
     // Rôle : instancie le contenu dans un Loader, l'entoure du retrait et capte Échap, qu'il signale par echap() ;
     // c'est une FocusScope qui demande le focus, pour que les touches non consommées par le contenu y remontent.
     // Ce composant en ligne n'accède à rien hors de lui : son API est explicite, car un composant en ligne ne
@@ -82,6 +83,7 @@ QtObject {
             anchors.fill: parent
             role: "surfaceRaised"
             radius: cadre.rayon
+            verre: true
 
             Loader {
                 id: charge

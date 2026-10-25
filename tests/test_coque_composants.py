@@ -515,6 +515,53 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
         self.attendre("Theme : thème dominante/jour appliqué")
         self.assertEqual(self.valeur("pastilles").lower(), nuit)
 
+    def test_materiau_sur_e2_e3(self):
+        # Le fond d'une Surface E2 ou E3 est le Materiau (shader du verre, du reflet et des liserés) ; celui d'une
+        # Surface E1 reste un aplat.
+        self.demarrer()
+        self.assertEqual(self.valeur("materiauSurfaces"), "true false")
+
+    def test_verre_opacite(self):
+        # Le verre n'est posé que sur une fenêtre de coque : une Surface surfaceRaised munie de verre prend
+        # l'opacité glass.e3 ; la Surface panneau, sans verre, reste opaque.
+        self.demarrer()
+        opacite, panneau, _ = self.valeur("verre").split()
+        self.assertEqual(float(opacite), self.vue(55)["glass"]["e3"])
+        self.assertEqual(float(opacite), 0.88)
+        self.assertEqual(float(panneau), 1)
+
+    def test_reflet_borne(self):
+        # Le reflet est réservé au chrome de moins de material.sheenMaxHeight (80 px) : un menu de 32 px le
+        # porte la nuit, un menu de 120 px garde verre et liserés mais perd le reflet.
+        self.demarrer()
+        self.ipc("materiauHauteur", "32")
+        self.assertEqual(self.valeur("verre").split()[2], "true")
+        self.ipc("materiauHauteur", "120")
+        self.assertEqual(self.valeur("verre").split()[2], "false")
+
+    def test_materiau_suit_le_moment(self):
+        # Bascule à chaud vers le jour : le reflet s'éteint (sheen faux au jour) et l'opacité suit glass du jour,
+        # sans redémarrer la coque.
+        self.demarrer()
+        self.ipc("materiauHauteur", "32")
+        self.assertEqual(self.valeur("verre").split()[2], "true")
+        famille = self.vue(55)["defaut"]["famille"]
+        self.choisir(famille, "jour")
+        self.attendre(f"Theme : thème {famille}/jour appliqué")
+        opacite, _, reflet = self.valeur("verre").split()
+        self.assertEqual(reflet, "false")
+        self.assertEqual(float(opacite), self.vue(55, famille, "jour")["glass"]["e3"])
+
+    def test_champ_creux(self):
+        # Le fond d'un Champ est un Materiau de niveau field, creusé (ombre interne) la nuit comme le jour.
+        self.demarrer()
+        famille = self.vue(55)["defaut"]["famille"]
+        for moment in ("nuit", "jour"):
+            self.choisir(famille, moment)
+            self.attendre(f"Theme : thème {famille}/{moment} appliqué")
+            with self.subTest(moment=moment):
+                self.assertEqual(self.valeur("champMateriau"), "true field 1")
+
     def test_compteur(self):
         # Le stepper : deux demi-boutons de density.stepperWidth qui prennent ensemble la hauteur du contrôle,
         # arrondis aux seuls coins extérieurs (radius.control), au rôle un cran au-dessus du panneau ; la valeur
@@ -739,6 +786,13 @@ class CoqueClavierTest(EssaiCoque, unittest.TestCase):
         plateforme = self.journal().split("essai : plateforme ", 1)[1].split()[0]
         self.assertEqual(plateforme, "offscreen", f"coque d'essai du clavier hors offscreen : {plateforme}")
         self.attendre("essai : prêt true")
+
+    def test_dpr_transmis(self):
+        # Facteur d'échelle fractionnaire : le Materiau du champ reçoit le rapport de pixels de sa fenêtre, pour
+        # tracer ses liserés sur un pixel physique.
+        self.environnement = {"QT_QPA_PLATFORM": "offscreen", "QT_SCALE_FACTOR": "1.5"}
+        self.demarrer()
+        self.assertEqual(self.valeur("materiauDpr"), "1.5")
 
     def test_garde_hors_offscreen(self):
         # Contre-épreuve de la garde : sous la plateforme minimal, inoffensive (aucun affichage), demarrer échoue

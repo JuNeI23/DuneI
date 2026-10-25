@@ -25,8 +25,8 @@ import "Composants"
 // tokens> <sélection de composants> <visualFocus> », « essai : curseur <cursorVisible> <délégué visible>
 // <cursorFlashTime> », « essai : onglets <géométrie de la barre et de ses segments> », « essai : menu <rangée courante
 // du menu> <rangée courante du témoin> », « essai : ongletSurvole <interaction> <fond> » et « essai : jauge <valeur>
-// <anneau visible> », ainsi que attention, anneauOnglets, compteur, deroulant, pastilles, pastillesCouleurs, bascule et
-// activite (voir chaque fonction) ; « essai touche <tab|majtab|gauche|droite|haut|bas|espace|entree|echap> » frappe une
+// <anneau visible> », ainsi que attention, anneauOnglets, compteur, deroulant, pastilles, pastillesCouleurs, bascule,
+// activite et materiauDpr (voir chaque fonction) ; « essai touche <tab|majtab|gauche|droite|haut|bas|espace|entree|echap> » frappe une
 // touche, « essai activiteMarche <bool> » lance ou arrête l'indicateur d'activité, « essai molette <1|-1> » tourne la
 // molette sur le compteur, « essai cliquerDeroulant » clique le déroulant, « essai ouvrirAttention » ouvre l'Overlay
 // d'attention, « essai pointerRangee <rang> <bool> » pose le pointeur sur une rangée du menu ouvert et l'y clique si
@@ -201,6 +201,13 @@ ShellRoot {
                 // <bool> <bool> ». Erreurs : aucune. Dépendances : barre (anneau), composants (anneau), journal.
                 function anneauOnglets(): void {
                     essai.journal("anneauOnglets", barre.anneau.visible + " " + composants.anneau.visible)
+                }
+
+                // materiauDpr — journalise le rapport de pixels que reçoit le Materiau du fond du champ, celui de la
+                // fenêtre (QT_SCALE_FACTOR compris). Entrées : aucune. Sortie : aucune ; « essai : materiauDpr <dpr> ».
+                // Erreurs : aucune. Dépendances : champ (background, un Materiau), journal.
+                function materiauDpr(): void {
+                    essai.journal("materiauDpr", champ.background.dpr)
                 }
 
                 // compteur — journalise la valeur du compteur, la visibilité de son anneau, puis l'activation des
