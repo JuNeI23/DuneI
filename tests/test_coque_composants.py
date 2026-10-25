@@ -1165,6 +1165,14 @@ class CoqueClavierTest(EssaiCoque, unittest.TestCase):
         self.ipc("survoler", "2")
         self.assertEqual(self.valeur("menu"), "2 0")
 
+    def test_menu_sans_contour(self):
+        # Défaut relevé à l'écran : à l'ouverture d'un menu à la souris, la rangée courante portait le contour de
+        # focus, le focus donné à la liste passant pour une navigation au clavier. Dans un menu (selectionSuitSurvol),
+        # la pastille de sélection suffit, comme sur macOS : pas de contour, même focusClavier vrai ; une liste
+        # ordinaire focalisée au clavier garde le sien.
+        self.demarrer()
+        self.assertEqual(self.valeur("contours"), "false true")
+
     def test_curseur_du_champ(self):
         # Défaut relevé à l'écran : le curseur de texte restait affiché après la perte du focus. TextInput ne
         # pilote ni la visibilité ni le clignotement d'un cursorDelegate : le délégué suit cursorVisible et

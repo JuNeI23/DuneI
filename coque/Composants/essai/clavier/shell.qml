@@ -25,7 +25,7 @@ import "Composants"
 // tokens> <sélection de composants> <visualFocus> », « essai : curseur <cursorVisible> <délégué visible>
 // <cursorFlashTime> », « essai : onglets <géométrie de la barre et de ses segments> », « essai : menu <rangée courante
 // du menu> <rangée courante du témoin> », « essai : ongletSurvole <interaction> <fond> » et « essai : jauge <valeur>
-// <anneau visible> », ainsi que attention, anneauOnglets, compteur, deroulant, pastilles, pastillesCouleurs, bascule,
+// <anneau visible> », ainsi que contours, attention, anneauOnglets, compteur, deroulant, pastilles, pastillesCouleurs, bascule,
 // activite, materiauDpr, contextuel et ancrage (voir chaque fonction) ; « essai touche <tab|majtab|gauche|droite|haut|bas|espace|entree|echap> » frappe une
 // touche, « essai activiteMarche <bool> » lance ou arrête l'indicateur d'activité, « essai molette <1|-1> » tourne la
 // molette sur le compteur, « essai cliquerDeroulant » clique le déroulant, « essai ouvrirAttention » ouvre l'Overlay
@@ -571,6 +571,19 @@ ShellRoot {
                 // Dépendances : listeMenu, listeTemoin, journal.
                 function menu(): void {
                     essai.journal("menu", listeMenu.currentIndex + " " + listeTemoin.currentIndex)
+                }
+
+                // contours — donne le focus au menu, puis au témoin, chacun avec focusClavier vrai, et journalise
+                // chaque fois la visibilité du contour de sa rangée courante. Entrées : aucune. Sortie : aucune ;
+                // « essai : contours <menu> <témoin> ». Erreurs : aucune. Dépendances : listeMenu, listeTemoin,
+                // journal.
+                function contours(): void {
+                    const vus = [listeMenu, listeTemoin].map(l => {
+                        l.forceActiveFocus()
+                        l.focusClavier = true
+                        return l.activeFocus && l.currentItem.contourMontre
+                    })
+                    essai.journal("contours", vus.join(" "))
                 }
 
                 // curseur — journalise l'état du curseur de texte du champ.

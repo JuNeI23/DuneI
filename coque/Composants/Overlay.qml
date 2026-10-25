@@ -44,9 +44,10 @@ import "../Theme"
 // Dépendances : Quickshell (LazyLoader, PopupWindow, Edges, PopupAdjustment), Quickshell.Hyprland (Hyprland,
 //               HyprlandFocusGrab), Theme (radius, space), Surface, Overlays, FenetreAttention (chargée par son
 //               adresse, qui emploie le Cadre déclaré ici).
-// Liste ouverte à la souris : Liste passe focusClavier à vrai dès qu'elle reçoit le focus, ce qui montre le
-// contour de la rangée courante. Si le contenu porte une Liste et que l'Overlay a été ouvert à la souris,
-// l'ouvreur pose focusClavier = false sur cette Liste une fois le focus donné ; l'Overlay ne le détecte pas.
+// Liste ouverte à la souris : Liste passe focusClavier à vrai dès qu'elle reçoit le focus. Un menu
+// (selectionSuitSurvol) ne montre jamais le contour de sa rangée courante ; une autre Liste le montrerait, et
+// l'ouvreur d'un Overlay ouvert à la souris pose alors focusClavier = false sur elle une fois le focus donné ;
+// l'Overlay ne le détecte pas.
 QtObject {
     id: overlay
 

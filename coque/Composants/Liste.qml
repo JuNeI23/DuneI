@@ -6,7 +6,8 @@ import QtQuick
 // suit currentIndex par défaut (§ 7.5) ; Entrée active la rangée courante. Comme une ListView n'a pas de
 // visualFocus, la liste retient la dernière façon dont on l'a atteinte dans focusClavier : une touche reçue ou
 // l'arrivée du focus le passent à vrai, un clic dans une rangée le repasse à faux (Rangee s'en charge), et le
-// contour de focus de la rangée courante n'est montré que sous ce drapeau.
+// contour de focus de la rangée courante n'est montré que sous ce drapeau, jamais dans un menu
+// (selectionSuitSurvol), où la pastille de sélection suffit.
 // Entrées : model, delegate (une Rangee) et le reste de l'API de ListView ; selectionSuitCourant, vrai par
 // défaut : la rangée courante est la rangée sélectionnée ; faux, chaque rangée lit sa propriété selectionnee,
 // fournie par l'appelant ; selectionSuitSurvol, faux par défaut : vrai, la rangée survolée devient la rangée

@@ -12,7 +12,8 @@ import "etats.js" as Etats
 // survol se peignent dans une pastille arrondie en retrait des bords de la liste, à la manière de macOS
 // (§ 7.10). Le focus se montre par un contour sans fond de focus.width, qui suit la pastille rentré de
 // -focus.rowOffset pixel, et jamais par un anneau ni par un changement de fond (§ 7.3) ; il paraît sur la
-// rangée courante d'une liste qui a le focus obtenu au clavier. La rangée n'accepte aucun focus : la liste est
+// rangée courante d'une liste qui a le focus obtenu au clavier, sauf dans un menu (selectionSuitSurvol) : la
+// pastille de sélection y suffit, comme sur macOS, et le contour ne paraît jamais, même au clavier. La rangée n'accepte aucun focus : la liste est
 // l'unique arrêt. Un clic en fait la rangée courante, donne le focus à la liste sans montrer le contour, puis
 // émet active(). Dans une liste qui porte selectionSuitSurvol (un menu), le survol en fait aussi la rangée
 // courante.
@@ -50,8 +51,8 @@ T.ItemDelegate {
     // viseraient cet enfant, qui n'est pas le délégué.
     readonly property ListView vue: ListView.view
     readonly property bool courante: ListView.isCurrentItem
-    readonly property bool contourMontre: forcerContour
-        || courante && (vue?.activeFocus ?? false) && (vue?.focusClavier ?? false)
+    readonly property bool contourMontre: forcerContour || courante && !(vue?.selectionSuitSurvol ?? false)
+        && (vue?.activeFocus ?? false) && (vue?.focusClavier ?? false)
 
     signal active()
 
