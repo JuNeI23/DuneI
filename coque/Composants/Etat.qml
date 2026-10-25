@@ -13,7 +13,11 @@ import "etats.js" as Etats
 // planche de contrôle : une clé d'interaction ("hover", "pressed"…) qui, non vide, remplace celle que lit le
 // contrôle, pour montrer un état sans geste ; vide par défaut, et jamais posée par une surface de la coque ;
 // peintFond et peintTexte, vrais par défaut : faux quand le contrôle ne peint pas cette couleur, qui reste alors
-// transparente, si bien que son ressort ne démarre jamais (sobriété, D80).
+// transparente, si bien que son ressort ne démarre jamais (sobriété, D80) ; fondReposTransparent, faux par
+// défaut : vrai, le fond au repos (ni survolé, ni pressé, ni sélectionné) vise la couleur de repos rendue
+// transparente, pour un élément qui ne se distingue pas de son conteneur au repos (une rangée) et ne doit pas en
+// repeindre la couleur opaque, qui se détacherait d'une surface de verre. L'opacité seule change : le ressort
+// fond la couleur d'état depuis sa propre teinte, sans passer par le noir.
 // Sorties : interaction, selection, inactif (clés des tokens) ; fond, texte, couleurs affichées ; texteNeutre, le
 // texte du même rôle et de la même interaction sans sélection, sans ressort, pour un libellé posé à côté d'une
 // marque sélectionnable (case, radio, interrupteur, bascule) ou d'un en-tête sans fond (section dépliable).
@@ -31,6 +35,7 @@ Item {
     property string forcer: ""
     property bool peintFond: true
     property bool peintTexte: true
+    property bool fondReposTransparent: false
     property string role: Etats.cran(Etats.herite(controle, "dnRole", "surfaceWindow"))
     readonly property bool inactif: Etats.herite(controle, "dnInactive", false)
     readonly property string interaction: forcer || Etats.interaction(controle)
@@ -44,7 +49,9 @@ Item {
 
     ColorSpring {
         id: ressortFond
-        target: etat.peintFond ? (etat.couleurs?.fill ?? "transparent") : "transparent"
+        readonly property color plein: etat.peintFond ? (etat.couleurs?.fill ?? "transparent") : "transparent"
+        target: etat.fondReposTransparent && etat.interaction === "rest" && etat.selection === "none"
+            ? Qt.alpha(plein, 0) : plein
     }
 
     ColorSpring {

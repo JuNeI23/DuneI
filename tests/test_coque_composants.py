@@ -365,6 +365,17 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
         self.ipc("inactif", "true")
         self.assertIn(focus["colorMuted"].lower(), self.valeur("rangee").lower())
 
+    def test_rangee_transparente_au_repos(self):
+        # Défaut relevé à l'écran : sur le verre d'un menu, chaque rangée au repos peignait la couleur opaque de sa
+        # surface et formait une plaque distincte. Au repos, ni survolée, ni pressée, ni sélectionnée, la pastille
+        # est transparente ; sélectionnée ou survolée, elle garde sa couleur d'état, opaque.
+        self.demarrer()
+        repos, choisie, survol, retour = map(float, self.valeur("pastillesRangees").split())
+        self.assertEqual(repos, 0)
+        self.assertEqual(choisie, 1)
+        self.assertEqual(survol, 1)
+        self.assertEqual(retour, 0)
+
     def test_bouton_principal(self):
         # Le bouton principal d'un dialogue est sélectionné : l'accent, puis l'accent sans chroma sous le
         # modificateur inactive ; un bouton ordinaire n'a aucune sélection.

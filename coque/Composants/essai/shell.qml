@@ -871,6 +871,21 @@ ShellRoot {
                 t.radius, "|", p.x, p.y, c.width, c.height, c.radius, c.border.width, c.border.color, c.visible].join(" "))
         }
 
+        // pastillesRangees — journalise l'opacité de la pastille des rangées 0 (au repos) et 1 (courante, donc
+        // sélectionnée) de la liste d'essai, puis celle de la couleur visée par le ressort de fond de la rangée 0
+        // forcée au survol, et enfin celle de sa couleur visée rendue au repos. Entrées : aucune. Sortie : aucune ;
+        // « essai : pastillesRangees <a0> <a1> <survol> <repos> ». Erreurs : aucune.
+        // Dépendances : listeEssai, Rangee (pastille, premier enfant du fond), Etat (ressort de fond, premier
+        // enfant), journal.
+        function pastillesRangees(): void {
+            const r0 = listeEssai.itemAtIndex(0), r1 = listeEssai.itemAtIndex(1)
+            const a = r => r.background.children[0].color.a
+            r0.etat.forcer = "hover"
+            const survol = r0.etat.children[0].target.a
+            r0.etat.forcer = ""
+            essai.journal("pastillesRangees", [a(r0), a(r1), survol, r0.etat.children[0].target.a].join(" "))
+        }
+
         // bouton — journalise la propriété principal du bouton d'essai et la sélection de son Etat.
         // Entrées : aucune. Sortie : aucune ; « essai : bouton <bool> <sélection> ». Erreurs : aucune.
         // Dépendances : boutonEssai.

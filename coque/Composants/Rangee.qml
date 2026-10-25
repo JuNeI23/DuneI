@@ -6,7 +6,8 @@ import "etats.js" as Etats
 
 // Rangee — rangée d'une Liste : libellé, icône facultative, sélection en pastille et contour de focus.
 // Rôle : habille le gabarit sans style T.ItemDelegate (conception, § 7.1). La rangée prend le rôle de son
-// conteneur, sans cran : non sélectionnée et au repos, elle se confond avec le fond de la liste (§ 7.4). Elle
+// conteneur, sans cran : non sélectionnée et au repos, sa pastille est transparente et laisse voir le fond de
+// la liste (§ 7.4), opaque ou de verre, au lieu d'en repeindre la couleur. Elle
 // est sélectionnée quand elle est la rangée courante, ou, si la liste ne fait pas suivre la sélection, quand
 // l'appelant pose selectionnee (§ 7.5) ; la sélection prend l'accent quand la liste a le focus. Sélection et
 // survol se peignent dans une pastille arrondie en retrait des bords de la liste, à la manière de macOS
@@ -87,6 +88,7 @@ T.ItemDelegate {
         role: Etats.herite(rangee, "dnRole", "surfaceWindow")
         selectionne: (rangee.vue?.selectionSuitCourant ?? true) ? rangee.courante : rangee.selectionnee
         focusDansGroupe: rangee.vue?.activeFocus ?? true
+        fondReposTransparent: true
     }
 
     // Fond : une pastille de sélection et de survol, premier enfant du fond, en retrait de space.scale[0] de
