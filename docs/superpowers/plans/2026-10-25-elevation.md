@@ -17,6 +17,13 @@ les ombres portées passent par `RectangularShadow`.
 **Spec :** `docs/superpowers/specs/2026-10-25-elevation-design.md` (v1.1). Le plan s'en déduit ; l'exécutant lit
 les deux.
 
+**Écarts à l'exécution**, consignés dans la spec v1.2 et au journal (D85 à D88) : l'opacité du verre est portée par
+`opacity` (`qt_Opacity`), non par l'alpha de `fond`, qui reste opaque ; le verre vaut 1,0 la nuit et 0,85 et 0,88 le
+jour (`[moments.jour.glass]`) ; la profondeur du creux a son jeton `material.insetDepth` ; les popups ancrés à un
+élément ne se retournent plus verticalement, la coque serre leur cadre dans l'écran (`ancrage.js`) et les pose à
+`space.scale[0]` sous l'ancre ; le texte de la coque est rendu en niveaux de gris ; les rangées d'un menu sont
+transparentes au repos et sans contour de focus.
+
 ## Contraintes globales
 
 - Toute valeur vient des tokens ; aucune couleur littérale dans un `*.qml` hors `essai/` (`tests/test_coque_qml.py`).

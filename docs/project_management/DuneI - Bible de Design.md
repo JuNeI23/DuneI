@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas
 
-Document normatif. Version 0.14. Historique en fin de document.
+Document normatif. Version 0.15. Historique en fin de document.
 
 ## Comment lire ce document
 
@@ -215,6 +215,8 @@ Dans toute zone de lecture continue : **78 caractères maximum**. C'est la seule
 
 **Chaîne de repli** à déclarer, faute de quoi carrés vides à la première ouverture d'un fichier en japonais.
 
+**Le texte de la coque est anticrénelé en niveaux de gris.** L'anticrénelage sous-pixel suppose un fond opaque ; sur une fenêtre translucide, il produit des franges bleues et orange qui donnent au texte un faux relief. Chaque coque Quickshell le force donc en niveaux de gris pour elle seule, par la directive `//@ pragma Env QSG_DISTANCEFIELD_ANTIALIASING=gray` en tête de son `shell.qml` ; les applications n'en sont pas touchées (D85).
+
 ## 5. Matière et élévation
 
 En mode sombre, **la profondeur se lit par la luminosité, pas par l'ombre.** Sur un fond à 0,14, une ombre portée est presque invisible. L'ombre change donc de rôle : elle ne dit plus la hauteur, elle sépare ce qui flotte réellement de ce qui est posé.
@@ -226,7 +228,8 @@ En mode sombre, **la profondeur se lit par la luminosité, pas par l'ombre.** Su
 | E2 | Barres, panneaux, en-têtes | oui | oui | non |
 | E3 | Menus, popovers, dialogues, overlays | oui | oui | oui |
 
-- **`field` s'enfonce** sous son conteneur, à E0 dans un panneau à E2. Ce qui reçoit du contenu se creuse ; ce qui flotte s'élève. Un champ plus clair que son panneau donne une impression de bricolage sans qu'on sache dire pourquoi.
+- **`field` s'enfonce** sous son conteneur, à E0 dans un panneau à E2. Ce qui reçoit du contenu se creuse ; ce qui flotte s'élève. Un champ plus clair que son panneau donne une impression de bricolage sans qu'on sache dire pourquoi. **Cette règle vaut pour les fonds sombres.**
+- **En mode clair, le champ est clair et creusé par une ombre interne** : il prend l'échelon 3 et s'enfonce par une ombre intérieure (`inset_shadow_opacity`, profondeur `material.insetDepth`), à la manière de macOS. Sur un fond clair, un champ plus sombre que son conteneur paraît sale ; c'est l'ombre, non la luminosité, qui dit le creux. La nuit, le champ garde aussi son ombre interne, en plus de sa luminosité plus basse (D87).
 - **Aucune ombre en couche 1.** Voir une ombre doit signifier que l'élément flotte réellement.
 - **Au jour, l'ombre porte le relief** : la profondeur monte vers le blanc, sheen et liseré n'ont pas de sens sur du blanc et sont nuls, E2 et E3 portent une ombre (D83).
 - **Jamais de cinquième niveau.** Si un assemblage en réclame un, c'est la hiérarchie qui est trop profonde, pas l'échelle qui est trop courte.
@@ -243,6 +246,20 @@ Ils agissent ensemble ; isolément, aucun ne fait grand-chose.
 
 - Le sheen est réservé au **chrome court, moins de 80 px de hauteur**. Au-delà, le banding devient visible en 8 bits. Les grandes zones de contenu restent plates.
 - **Dithering par bruit obligatoire** sur tout dégradé de sheen. 0,020 L sur fond sombre en 8 bits est précisément la zone de banding.
+
+**La matière est tracée par un shader**, jamais par des rectangles empilés ni par les dégradés natifs de QML, qui ne savent pas tramer. Un seul shader, le matériau, peint en une passe le fond, le sheen tramé par bruit IGN, les coins et les deux liserés, calculés sur les pixels physiques : un liseré fait exactement un pixel physique, quel que soit le facteur d'échelle. Le même shader peint le creux du champ. Les ombres portées sont des ombres analytiques (`RectangularShadow`), sans couche hors écran (D85).
+
+**Aucune texture visible.** Ni grain, ni sable, ni pierre : la matière naît de la hiérarchie des couleurs, des liserés, des ombres et du flou. Le bruit du tramage existe, mais il est invisible et ne sert qu'à effacer le banding. Un effet de flou n'est pas du bruit (D86).
+
+### Le verre de la coque
+
+**Le jour, les surfaces E2 et E3 de la coque sont en verre dépoli ; la nuit, elles sont opaques** (D85). Sur fond clair, le verre allège ; sur fond sombre, les surfaces opaques sont plus belles.
+
+- **La translucidité appartient à la fenêtre de coque, pas au niveau.** Seul le compositeur floute ce qu'il y a derrière une surface Wayland : seules la barre, les panneaux, les overlays de la coque et la fenêtre d'attention peuvent être de verre. Un en-tête E2 dessiné à l'intérieur d'une fenêtre opaque reste opaque. Les fenêtres d'applications (E1) restent opaques.
+- **Le verre est teinté par le thème** : la couleur de l'échelon domine (0,85 en E2, 0,88 en E3), le bureau ne fait que transparaître, flouté. Sans cette teinte, le verre prend la couleur délavée du fond d'écran et jure avec les fenêtres.
+- **La nuit, l'opacité du verre vaut 1** : la surface garde son sheen, ses liserés et, en E3, son ombre, comme le veut le tableau ci-dessus. Le jour, ni sheen ni liseré, une ombre en E2 et E3.
+- **Rien d'opaque ne se pose sur le verre au repos.** Une rangée de menu au repos — ni survolée, ni pressée, ni sélectionnée, désactivée comprise — est transparente ; sinon chaque rangée forme une plaque distincte sur le fond translucide.
+- Le verre dépoli n'est pas le « flou » des overlays d'attention : celui-là floute tout l'écran derrière un voile, celui-ci ne touche que le fond de la surface qui le porte.
 
 ## 6. Mouvement
 
@@ -292,7 +309,7 @@ Ils ne sont **pas exclusifs** : une rangée peut être sélectionnée, survolée
 | --- | --- |
 | **Survol** | Surface +0,04 L. Rien ne bouge, rien ne change de taille. Le survol est un signal, pas un événement. |
 | **Pressé** | Surface **sous** sa valeur de repos — c'est ce qui donne l'enfoncement. Aucun déplacement, aucune réduction d'échelle. |
-| **Focus** | **Anneau 2 px accent autonome** (couleur validée à l'écran, D81) autour des boutons et des autres contrôles, pour un focus venu du clavier seulement : un clic ne le montre jamais. **Aucun anneau sur un champ** : le curseur qui clignote dit où est le focus. Sur les rangées, **contour intérieur pleine largeur**, de la même couleur et de la même épaisseur, tracé vers l'intérieur (`focus.rowOffset`, −1) et qui suit l'arrondi de la sélection. Ne modifie jamais le fond, ce qui lui permet de se superposer à tout autre état (D82). |
+| **Focus** | **Anneau 2 px accent autonome** (couleur validée à l'écran, D81) autour des boutons et des autres contrôles, pour un focus venu du clavier seulement : un clic ne le montre jamais. **Aucun anneau sur un champ** : le curseur qui clignote dit où est le focus. Sur les rangées, **contour intérieur pleine largeur**, de la même couleur et de la même épaisseur, tracé vers l'intérieur (`focus.rowOffset`, −1) et qui suit l'arrondi de la sélection. Ne modifie jamais le fond, ce qui lui permet de se superposer à tout autre état (D82). **Dans un menu, aucun contour** : la rangée courante, que la sélection suit au survol, se lit déjà par sa surbrillance, comme sur macOS (D88). |
 | **Sélectionné actif** | Fond d'accent, texte sur-accent, **icône en variante pleine**. |
 | **Sélectionné inactif** | Fond neutre, sans accent. Indispensable en tuilage : sans lui, cinq panneaux affichent cinq accents et plus rien n'indique où l'on tape. |
 | **Désactivé** | Chroma fortement réduit, luminosité rapprochée du fond, ombre supprimée. |
@@ -811,7 +828,9 @@ La distinction correcte porte sur **ce que l'overlay demande à l'utilisateur** 
 
 **Overlay d'attention** — il suspend le travail et attend une décision. Lanceur, sélecteur de fenêtres, sélecteur de bureaux, menu de déconnexion, dialogue modal, verrouillage. → Voile + flou par instantané + `overlay`. Un seul à la fois.
 
-**Overlay contextuel** — il prolonge une action en cours sans l'interrompre. Menu contextuel, popover, liste déroulante, infobulle, notification. → Ombre seule. **Ni voile ni flou.** Peut coexister avec un autre.
+**Overlay contextuel** — il prolonge une action en cours sans l'interrompre. Menu contextuel, popover, liste déroulante, infobulle, notification. → Ombre seule. **Ni voile ni flou.** Peut coexister avec un autre. Le flou proscrit ici est celui de l'écran ; le verre dépoli du jour, propre à la surface de l'overlay (§ 5), reste permis.
+
+**Placement d'un overlay contextuel.** Ancré à un élément, il se tient à un écart de `space.scale[0]` sous lui, comme sur macOS ; ouvert au point de clic, il part du point, sans écart. Il ne se retourne pas verticalement : près du bas de l'écran, il glisse. Son cadre visible reste dans l'écran au pixel près ; seule la marge transparente de son ombre peut en sortir (D88).
 
 Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si oui, pas de voile.
 
@@ -821,11 +840,11 @@ Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si 
 | --- | --- | --- | --- | --- |
 | Bureau | E0 | `surface` | `spectacle` | Registre de spectacle |
 | Fenêtre tuilée | E1 | `surface` | `reflow` | **Aucune ombre, aucune bordure.** Gouttière 8px, rayon 12. Fenêtre active : les autres portent le modificateur `container_inactive` |
-| Barre système | E2 | `surface` + `text` + `interactive` | `state` | 32px. Sheen + liseré, pas d'ombre. Porte la couleur franche du thème machine |
+| Barre système | E2 | `surface` + `text` + `interactive` | `state` | 32px. La nuit : opaque, sheen + liseré, pas d'ombre. Le jour : verre dépoli et ombre (D83, D85). Porte la couleur franche du thème machine |
 | Barre latérale | E2 | `surface` + `row` | `state` | 240px, redimensionnable 180–400 par pas de 4. Sous 480px de conteneur → icônes seules |
 | En-tête de panneau | E2 | `surface` + `text` | — | Sheen autorisé : hauteur sous 80px |
-| Rangée de liste | — | `row` | `state` | Sélection en pastille arrondie, en retrait des bords. Focus = **contour intérieur pleine largeur**, décalage −1, qui suit l'arrondi. Jamais d'anneau. La liste est un seul arrêt de tabulation |
-| Champ de saisie | field | `field` | `state` | **S'enfonce** : L 0.14 dans un panneau à 0.22. **Aucun anneau** : le curseur clignotant porte le focus |
+| Rangée de liste | — | `row` | `state` | Transparente au repos. Sélection en pastille arrondie, en retrait des bords. Focus = **contour intérieur pleine largeur**, décalage −1, qui suit l'arrondi. Jamais d'anneau. La liste est un seul arrêt de tabulation |
+| Champ de saisie | field | `field` | `state` | **S'enfonce** : la nuit, L 0.14 dans un panneau à 0.22, avec ombre interne ; le jour, clair (échelon 3) et creusé par l'ombre interne (D87). **Aucun anneau** : le curseur clignotant porte le focus |
 | Bouton | E3 rel. | `interactive` + `text` | `state` | Un cran au-dessus du conteneur, `controlRaised` sur E3. Pressé = descend sous le repos. Aucun déplacement, aucune réduction d'échelle. Le bouton principal d'un dialogue est rempli d'accent |
 | Case, radio | — | `interactive` | `state` | Coché = accent + coche ou point **dessinés**. Jamais la couleur seule |
 | Interrupteur | — | `interactive` | `state` | Pilule ; coché = piste d'accent + bouton déplacé. Jamais la couleur seule |
@@ -862,8 +881,8 @@ Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si 
 | Sélecteur de bureaux | attention | E3 | `overlay` + `row` | `overlay` | Chaque bureau porte une teinte de la palette catégorielle |
 | Menu de déconnexion | attention | E3 | `overlay` + `interactive` | `overlay` | Action destructrice en `error`, jamais en accent |
 | Verrouillage / connexion | attention | E0 | `overlay` + `text` + `field` | `spectacle` | Registre de spectacle. Horloge en grand corps, poids léger |
-| Menu contextuel | contextuel | E3 | `surface` + `row` | `reveal` | **Ni voile ni flou.** Part du point de clic |
-| Popover, liste déroulante | contextuel | E3 | `surface` + `row` | `reveal` | Part de son élément déclencheur |
+| Menu contextuel | contextuel | E3 | `surface` + `row` | `reveal` | **Ni voile ni flou** de l'écran ; verre dépoli le jour, opaque la nuit (D85). Part du point de clic, sans écart. Aucun contour de focus sur ses rangées (D88) |
+| Popover, liste déroulante | contextuel | E3 | `surface` + `row` | `reveal` | Part de son élément déclencheur, à `space.scale[0]` sous lui ; glisse au lieu de se retourner (D88) |
 | Infobulle | contextuel | E3 | `surface` + `text` | `reveal` | Délai de 500 ms avant apparition (`delays.tooltip`, D82). Ne prend jamais le focus |
 | Notification | contextuel | E3 | `surface` + `text` + `icon` | `reveal` | Couleurs sémantiques fixes, hors thème. Décalage limité à 5 |
 
@@ -887,3 +906,4 @@ Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si 
 | 0.12 | 2026-10-24 | Chapitre 7 : texte de `controlRaised` en `text-emphasis` (Lc ≥ 90) ; annexe E : infobulle à 500 ms, écart refermé, et pastilles de fenêtre sans transition `state`, puisqu'elles n'ont pas d'`Etat` |
 | 0.13 | 2026-10-25 | Chapitre 2 : contrat révisé, une famille et un moment, planchers de contraste par rôle, deux échelles (nuit, jour de la dominante et jour thématisé), sémantiques par moment, chroma de la nuit thématisée à 0,014, exception du corps de texte dans le jour thématisé ; chapitre 5 : ombre au jour ; chapitre 7 : rôles `knob` et `control-off`, contour des contrôles blancs du jour, pastilles hors du moment (D83, D84) |
 | 0.14 | 2026-10-25 | Chapitre 2 : seconde dérogation, bornée, du contraste (texte sur l'accent muet de l'état inactif au jour, Lc 41, plancher `on-accent-muted`) (D83) |
+| 0.15 | 2026-10-25 | Chapitre 4 : texte de la coque en niveaux de gris ; chapitre 5 : matière tracée par un shader, aucune texture visible, verre de la coque (verre dépoli le jour, opaque la nuit, translucidité propre à la fenêtre de coque, rien d'opaque sur le verre au repos), champ clair et creusé par une ombre interne en mode clair ; chapitre 7 : aucun contour de focus dans un menu ; annexe E : placement des overlays contextuels, barre, rangée, champ, menu contextuel et popover précisés (D85 à D88) |
