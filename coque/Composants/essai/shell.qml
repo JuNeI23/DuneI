@@ -6,6 +6,7 @@ import Quickshell.Io
 import "Theme"
 import "Composants"
 import "Composants/etats.js" as Etats
+import "Composants/ancrage.js" as Ancrage
 
 // Coque d'essai du module Composants, sans aucune fenêtre.
 // Rôle : instancie un arbre fixe (une Surface fenêtre contenant une Surface panneau, qui porte la sonde capteur, un
@@ -884,6 +885,31 @@ ShellRoot {
             const survol = r0.etat.children[0].target.a
             r0.etat.forcer = ""
             essai.journal("pastillesRangees", [a(r0), a(r1), survol, r0.etat.children[0].target.a].join(" "))
+        }
+
+        // serrage — journalise, pour des fenêtres et des cadres fictifs sur un écran de 1536 px, l'origine des
+        // fenêtres (barre ancrée des deux côtés, calque ancré à droite à 300 px du bord, calque centré, fenêtre
+        // flottante), puis le bord gauche du cadre : menu sous une ancre à 12 px du bord gauche, menu sous une ancre
+        // près du bord droit, infobulle centrée près du bord droit, menu au point de clic avec et sans place à droite,
+        // cadre plus large que l'écran. Entrées : aucune. Sortie : aucune ; « essai : serrage <valeurs> ».
+        // Erreurs : aucune. Dépendances : Ancrage, journal.
+        function serrage(): void {
+            const ecran = { width: 1536 }
+            const fenetres = [
+                { anchors: { left: true, right: true }, margins: { left: 0, right: 0 }, width: 1536, screen: ecran },
+                { anchors: { left: false, right: true }, margins: { left: 0, right: 300 }, width: 40, screen: ecran },
+                { anchors: { left: false, right: false }, margins: { left: 9, right: 9 }, width: 500, screen: ecran },
+                { width: 500, screen: ecran }
+            ]
+            const cadres = [
+                Ancrage.gaucheCadre(false, 12, 53, null, 200, 1536),
+                Ancrage.gaucheCadre(false, 1450, 60, null, 200, 1536),
+                Ancrage.gaucheCadre(true, 1500, 30, null, 100, 1536),
+                Ancrage.gaucheCadre(false, 1000, 50, 20, 200, 1536),
+                Ancrage.gaucheCadre(false, 1400, 50, 20, 200, 1536),
+                Ancrage.gaucheCadre(false, 12, 53, null, 2000, 1536)
+            ]
+            essai.journal("serrage", fenetres.map(Ancrage.origine).concat(cadres).join(" "))
         }
 
         // bouton — journalise la propriété principal du bouton d'essai et la sélection de son Etat.

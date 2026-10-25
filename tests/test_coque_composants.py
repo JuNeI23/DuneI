@@ -393,6 +393,17 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(survol, 1)
         self.assertEqual(retour, 0)
 
+    def test_serrage_du_cadre(self):
+        # Défaut relevé à l'écran : près du bord gauche, le menu tombait 12 px à droite de son bouton, la fenêtre
+        # (cadre et marge d'ombre) glissée par le compositeur. Le serrage se fait sur le cadre seul : il reste sous
+        # son ancre tant qu'il tient dans l'écran (bord gauche du cadre = bord gauche de l'ancre, 12), et se serre
+        # au bord droit sans marge sinon (1536 - 200) ; une infobulle centrée est serrée de même (1436). Au point
+        # de clic, le cadre part du point (1020) ou, sans place, finit au point (1420 + 1 - 200 = 1221). L'origine
+        # d'un calque se déduit de ses ancrages et marges ; celle d'une fenêtre flottante est inconnue (NaN).
+        self.demarrer()
+        self.assertEqual(self.valeur("serrage").split(),
+                         ["0", "1196", "518", "NaN", "12", "1336", "1436", "1020", "1221", "0"])
+
     def test_bouton_principal(self):
         # Le bouton principal d'un dialogue est sélectionné : l'accent, puis l'accent sans chroma sous le
         # modificateur inactive ; un bouton ordinaire n'a aucune sélection.

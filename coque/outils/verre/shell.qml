@@ -12,14 +12,15 @@ import "Composants"
 // bureau : un PanelWindow ancré en haut, de 32 px, qui réserve 32 px, au namespace « dunei-barre » que les règles
 // de calque générées (generated/hyprland-layers.lua) floutent, et que peint une Surface surfaceWindow-verre.
 // Trois boutons ouvrent par Overlay un menu, un popover et une infobulle, pour juger leur verre et l'ombre de
-// leur marge, ainsi que le clic qui traverse cette marge. Le banc et la barre portent le même namespace et ne
+// leur marge, ainsi que le clic qui traverse cette marge ; un quatrième, contre le bord droit, ouvre un menu plus
+// large que lui, pour juger le serrage du cadre au bord de l'écran. Le banc et la barre portent le même namespace et ne
 // tournent donc pas en même temps.
 // Entrées : DUNEI_TOKENS_DIR, posé par verre.sh vers son dossier de brouillon (tokens et shader du matériau).
 // Sortie : une fenêtre de calque « dunei-barre » en haut de chaque écran, visible dès la première lecture valide
 //          des tokens.
 // Erreurs : tokens absents ou invalides au démarrage → barre transparente, erreur de Theme dans le journal ;
 //           sans le shader compilé, le verre retombe sur un aplat (Materiau).
-// Commande : « qs -p coque/outils/verre ipc call verre basculer <menu|popover|bulle> » ouvre ou ferme un overlay
+// Commande : « qs -p coque/outils/verre ipc call verre basculer <menu|droite|popover|bulle> » ouvre ou ferme un overlay
 // sans geste, pour une capture.
 // Dépendances : quickshell ≥ 0.3 (PanelWindow, WlrLayershell, IpcHandler), modules Theme et Composants (Surface, Bouton,
 // Overlay, Liste, Rangee, Texte).
@@ -55,6 +56,16 @@ ShellRoot {
                 Bouton { id: boutonPopover; text: "Popover"; onClicked: popover.ouvert = true }
                 Bouton { id: boutonBulle; text: "Infobulle"; onClicked: bulle.ouvert = !bulle.ouvert }
             }
+
+            // Bouton posé contre le bord droit : son menu, plus large que lui, doit se serrer au bord de l'écran.
+            Bouton {
+                id: boutonDroite
+                anchors.verticalCenter: parent.verticalCenter
+                anchors.right: parent.right
+                anchors.rightMargin: Theme.space?.panelPadding ?? 0
+                text: "Droite"
+                onClicked: menuDroite.ouvert = true
+            }
         }
 
         // Menu contextuel de trois rangées, ancré sous son bouton ; une rangée ou Échap le ferme.
@@ -73,6 +84,26 @@ ShellRoot {
                     required property var modelData
                     text: modelData.texte
                     onActive: menu.ouvert = false
+                }
+            }
+        }
+
+        // Menu du bouton de droite, le même que le premier, pour juger le serrage au bord droit de l'écran.
+        Overlay {
+            id: menuDroite
+            famille: "contextuel"
+            ancre: boutonDroite
+
+            Liste {
+                focus: true
+                selectionSuitSurvol: true
+                implicitWidth: 3 * Theme.space.scale[7]
+                implicitHeight: count * Theme.density.rowHeight
+                model: [{ texte: "Ouvrir" }, { texte: "Copier" }]
+                delegate: Rangee {
+                    required property var modelData
+                    text: modelData.texte
+                    onActive: menuDroite.ouvert = false
                 }
             }
         }
@@ -107,10 +138,10 @@ ShellRoot {
         target: "verre"
 
         // basculer — ouvre l'overlay nommé s'il est fermé, le ferme sinon.
-        // Entrée : nom, "menu", "popover" ou "bulle". Sortie : aucune.
-        // Erreurs : TypeError pour un nom inconnu. Dépendances : menu, popover, bulle.
+        // Entrée : nom, "menu", "droite", "popover" ou "bulle". Sortie : aucune.
+        // Erreurs : TypeError pour un nom inconnu. Dépendances : menu, menuDroite, popover, bulle.
         function basculer(nom: string): void {
-            const o = ({ menu, popover, bulle })[nom]
+            const o = ({ menu, droite: menuDroite, popover, bulle })[nom]
             o.ouvert = !o.ouvert
         }
     }

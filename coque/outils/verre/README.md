@@ -1,11 +1,12 @@
 # Banc d'essai du verre
 
-Version 0.2 — outil de développement de L2-04 (élévation), gardé pour juger le flou des surfaces de la coque.
+Version 0.3 — outil de développement de L2-04 (élévation), gardé pour juger le flou des surfaces de la coque.
 
 Le banc ouvre une barre factice de 32 px en haut de l'écran, au namespace `dunei-barre` (celui de la future
 barre, L2-08), peinte par une `Surface` de rôle `surfacePanel` en verre. Les règles de calque générées
 (`generated/hyprland-layers.lua`) floutent ce namespace : le bureau doit transparaître, flouté, à travers la
-barre. Trois boutons ouvrent un menu, un popover et une infobulle, pour juger le verre de leurs fenêtres. Le
+barre. Trois boutons ouvrent un menu, un popover et une infobulle, pour juger le verre de leurs fenêtres ; un
+quatrième, contre le bord droit, ouvre un menu qui doit se serrer au bord de l'écran. Le
 banc et la barre portent le même namespace et ne tournent donc pas en même temps. Tant qu'il tourne, il réserve
 32 px en haut de l'écran : ne pas le laisser ouvert.
 
@@ -24,7 +25,7 @@ Un second banc ne s'ouvre pas tant que le premier tourne (`qs -n`).
 Pour une capture sans geste, un overlay s'ouvre et se ferme par IPC :
 
 ```sh
-qs -p coque/outils/verre ipc call verre basculer menu      # ou popover, bulle
+qs -p coque/outils/verre ipc call verre basculer menu      # ou droite, popover, bulle
 ```
 
 Le menu et le popover prennent le clavier tant qu'ils sont ouverts (HyprlandFocusGrab) : les refermer aussitôt.
@@ -45,3 +46,4 @@ Le menu et le popover prennent le clavier tant qu'ils sont ouverts (HyprlandFocu
 | --- | --- | --- |
 | 0.1 | 2026-10-25 | Création du banc, L2-04. |
 | 0.2 | 2026-10-25 | Commande IPC `basculer`, texte en niveaux de gris. |
+| 0.3 | 2026-10-25 | Bouton et menu contre le bord droit, pour le serrage du cadre. |

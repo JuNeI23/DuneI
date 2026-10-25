@@ -2,6 +2,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Hyprland
 import "../Theme"
+import "ancrage.js" as Ancrage
 
 // Overlay — surface posée au-dessus de tout, construite à l'ouverture et détruite à la fermeture.
 // Rôle : primitive des surfaces passagères de la coque (conception, § 7.7), en trois familles.
@@ -11,13 +12,14 @@ import "../Theme"
 //     voile la ferment. Elle n'est compilée qu'à l'ouverture d'une attention, si bien que l'Overlay se charge
 //     aussi sous la plateforme offscreen, qui n'a pas de PanelWindow.
 //   - contextuel (menu, popover, liste déroulante) : PopupWindow ancrée sous l'élément ancre, ou sur le point
-//     de clic si point est fourni, retournée puis glissée pour rester dans l'écran (sous une ancre, elle ne se retourne
-//     pas verticalement et glisse : la marge d'ombre de la fenêtre n'a qu'une correction exacte par sens, voir
-//     fenetreContextuel) ; sans voile ; le clavier
+//     de clic si point est fourni ; horizontalement, la coque serre le cadre dans l'écran quand l'ancre est dans
+//     un calque (ancrage.js), le compositeur retourne et glisse la fenêtre sinon ; verticalement, elle est
+//     retournée puis glissée (sous une ancre, elle ne se retourne pas et glisse : la marge d'ombre de la fenêtre
+//     n'a qu'une correction exacte par sens, voir fenetreContextuel) ; sans voile ; le clavier
 //     est pris par HyprlandFocusGrab, dont la levée (clic à l'extérieur) ferme, comme Échap ; plusieurs
 //     peuvent coexister.
-//   - infobulle : la même PopupWindow, centrée sous l'ancre, à un échelon de space (space.scale[0]) de son
-//     bord, sans retournement vertical (elle glisse faute de place) ; sans voile ni HyprlandFocusGrab : elle ne prend jamais le clavier
+//   - infobulle : la même PopupWindow, centrée sous l'ancre et serrée dans l'écran comme un contextuel, à un
+//     échelon de space (space.scale[0]) de son bord, sans retournement vertical (elle glisse faute de place) ; sans voile ni HyprlandFocusGrab : elle ne prend jamais le clavier
 //     et seule son ouvreuse, l'Infobulle, la ferme.
 // Le contenu est posé au centre d'une Surface surfaceRaised (e3), entourée d'un retrait ; sa taille est celle du
 // contenu. Les formes suivent macOS (conception, § 7.10) : une attention a les coins radius.window et le retrait
@@ -41,7 +43,8 @@ import "../Theme"
 //           primitive ; bulle, vrai pour la famille infobulle. La fenêtre d'une infobulle est fenetreContextuel.
 // Erreurs : aucune ; un contextuel sans ancre affichée ne se montre pas (règle de PopupWindow) ; avant le
 //           chargement des tokens, voile et fond restent transparents et le retrait vaut 0.
-// Dépendances : Quickshell (LazyLoader, PopupWindow, Edges, PopupAdjustment), Quickshell.Hyprland (Hyprland,
+// Dépendances : Quickshell (LazyLoader, PopupWindow, QsWindow, Edges, PopupAdjustment), ancrage.js (origine,
+//               gaucheCadre), Quickshell.Hyprland (Hyprland,
 //               HyprlandFocusGrab), Theme (radius, space), Surface, Overlays, FenetreAttention (chargée par son
 //               adresse, qui emploie le Cadre déclaré ici).
 // Liste ouverte à la souris : Liste passe focusClavier à vrai dès qu'elle reçoit le focus. Un menu
@@ -171,15 +174,32 @@ QtObject {
         // l'écran, dont les menus s'ouvrent vers le bas.
         readonly property real marge: cadrePopup.marge
         readonly property bool surAncre: !overlay.point
-        anchor.rect.x: (overlay.point?.x ?? 0) - marge
+        // Serrage horizontal : le compositeur garde dans l'écran la fenêtre entière, marge comprise ; près d'un bord,
+        // il la déplacerait dès que la seule marge transparente déborde, et le cadre avec elle. Quand la fenêtre de
+        // l'ancre est un calque (PanelWindow), dont la position sur l'écran se déduit (ancrage.js, origine), la
+        // coque place elle-même le bord gauche du cadre (gaucheCadre) et ne demande aucun ajustement horizontal : le
+        // rectangle d'ancrage est une colonne de 1 px à la marge à gauche de ce bord, et la marge peut sortir de
+        // l'écran. La position de l'ancre dans sa fenêtre est lue à la construction de la fenêtre de l'overlay, qui
+        // a lieu à chaque ouverture. Sinon (fenêtre flottante), le rectangle reste élargi de la marge et l'ajustement
+        // horizontal revient au compositeur.
+        readonly property var fenetreAncre: overlay.ancre?.QsWindow.window ?? null
+        readonly property real origine: Ancrage.origine(fenetreAncre)
+        readonly property bool serre: !isNaN(origine)
+        readonly property real ancreX: serre && overlay.ancre ? origine + overlay.ancre.mapToItem(null, 0, 0).x : 0
+        readonly property real gaucheCadre: serre ? Ancrage.gaucheCadre(overlay.bulle, ancreX, overlay.ancre?.width ?? 0,
+            overlay.point?.x ?? null, cadrePopup.implicitWidth, fenetreAncre.screen.width) - ancreX : 0
+        anchor.rect.x: serre ? gaucheCadre - marge : (overlay.point?.x ?? 0) - marge
         anchor.rect.y: overlay.point ? overlay.point.y - marge : (overlay.ancre?.height ?? 1) + ecart - marge - 1
-        anchor.rect.width: (overlay.point ? 1 : overlay.ancre?.width ?? 1) + 2 * marge
+        anchor.rect.width: serre ? 1 : (overlay.point ? 1 : overlay.ancre?.width ?? 1) + 2 * marge
         anchor.rect.height: overlay.point ? 1 + 2 * marge : 1
-        // Contextuel : sous l'ancre, ou à partir du point de clic, en s'étendant vers le bas et la droite.
-        // Infobulle : centrée sous l'ancre. Sous une ancre, retournement horizontal et glissement seulement.
-        anchor.edges: overlay.bulle ? Edges.Bottom : Edges.Left | (overlay.point ? Edges.Top : Edges.Bottom)
-        anchor.gravity: overlay.bulle ? Edges.Bottom : Edges.Bottom | Edges.Right
-        anchor.adjustment: surAncre ? PopupAdjustment.FlipX | PopupAdjustment.Slide : PopupAdjustment.Flip | PopupAdjustment.Slide
+        // Serré : la fenêtre part du bord gauche du rectangle vers la droite, sous lui (ancre) ou à partir du point
+        // de clic, vers le bas ; seul le sens vertical s'ajuste (glissement sous une ancre, retournement puis
+        // glissement à un point de clic). Sinon : contextuel sous l'ancre ou à partir du point de clic, vers le bas et
+        // la droite ; infobulle centrée sous l'ancre ; sous une ancre, retournement horizontal et glissement.
+        anchor.edges: serre || !overlay.bulle ? Edges.Left | (overlay.point ? Edges.Top : Edges.Bottom) : Edges.Bottom
+        anchor.gravity: serre || !overlay.bulle ? Edges.Bottom | Edges.Right : Edges.Bottom
+        anchor.adjustment: serre ? (surAncre ? PopupAdjustment.SlideY : PopupAdjustment.FlipY | PopupAdjustment.SlideY)
+            : surAncre ? PopupAdjustment.FlipX | PopupAdjustment.Slide : PopupAdjustment.Flip | PopupAdjustment.Slide
         // La fenêtre dépasse le cadre de la marge de l'ombre de chaque côté ; seul le cadre reçoit les clics, la
         // marge les laisse passer à la fenêtre dessous.
         readonly property Item cadre: cadrePopup
