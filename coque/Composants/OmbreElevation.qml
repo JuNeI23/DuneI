@@ -8,8 +8,8 @@ import "../Theme"
 // pour que les overlays de la coque aient la même ombre que les fenêtres flottantes que dessine Hyprland. Le
 // niveau qui ne donne pas d'ombre (elevation.<niveau>.shadow faux : e2 la nuit) ne dessine rien ; marge vaut
 // alors 0. OmbreControle reste l'ombre des contrôles blancs.
-// Entrées : cible, élément ombré, dont l'ombre est un enfant : elle le recouvre et passe dessous (z négatif) ;
-// niveau, niveau d'élévation qui décide de l'ombre, "e3" par défaut.
+// Entrées : cible, élément ombré, dont l'ombre est un enfant ou une sœur : elle le recouvre et passe dessous
+// (z négatif) ; niveau, niveau d'élévation qui décide de l'ombre, "e3" par défaut.
 // Sorties : marge, espace que l'ombre déborde de la cible de chaque côté (portée plus décalage, 0 si l'ombre est
 // invisible), à réserver autour de la cible dans une fenêtre qui la porte ; sinon celles de RectangularShadow.
 // Erreurs : aucune ; avant le chargement des tokens, l'ombre est invisible et la marge nulle.

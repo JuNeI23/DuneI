@@ -44,10 +44,10 @@ import "ancrage.js" as Ancrage
 //           primitive ; bulle, vrai pour la famille infobulle. La fenêtre d'une infobulle est fenetreContextuel.
 // Erreurs : aucune ; un contextuel sans ancre affichée ne se montre pas (règle de PopupWindow) ; avant le
 //           chargement des tokens, voile et fond restent transparents et le retrait vaut 0.
-// Dépendances : Quickshell (LazyLoader, PopupWindow, QsWindow, Edges, PopupAdjustment), ancrage.js (origine,
-//               gaucheCadre), Quickshell.Hyprland (Hyprland,
-//               HyprlandFocusGrab), Theme (radius, space), Surface, Overlays, FenetreAttention (chargée par son
-//               adresse, qui emploie le Cadre déclaré ici).
+// Dépendances : Quickshell (LazyLoader, PopupWindow, QsWindow, Edges, PopupAdjustment, Region pour le masque
+//               des clics), Quickshell.Hyprland (Hyprland, HyprlandFocusGrab), ancrage.js (origine, gaucheCadre),
+//               Theme (radius, space), Surface, OmbreElevation, Overlays, FenetreAttention (chargée par son adresse,
+//               qui emploie le Cadre déclaré ici).
 // Liste ouverte à la souris : Liste passe focusClavier à vrai dès qu'elle reçoit le focus. Un menu
 // (selectionSuitSurvol) ne montre jamais le contour de sa rangée courante ; une autre Liste le montrerait, et
 // l'ouvreur d'un Overlay ouvert à la souris pose alors focusClavier = false sur elle une fois le focus donné ;
@@ -71,8 +71,9 @@ QtObject {
     // partage pas la portée du document qui le déclare.
     // Entrées : contenu, composant à instancier ; rayon, rayon des coins de la Surface ; retrait, marge entre la
     // Surface et le contenu. Sorties : echap(), émis sur Échap non consommé par le contenu ; implicitWidth,
-    // implicitHeight, taille du contenu et du retrait. Erreurs : aucune.
-    // Dépendances : Surface.
+    // implicitHeight, taille du contenu et du retrait ; marge, débord de l'ombre autour de la Surface, que la
+    // fenêtre réserve. Erreurs : aucune.
+    // Dépendances : Surface, OmbreElevation (niveau e3, sœur de la Surface).
     component Cadre: FocusScope {
         id: cadre
 

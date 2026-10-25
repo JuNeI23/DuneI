@@ -155,7 +155,7 @@ générés avec les autres tokens Hyprland, dans `generated/hyprland-tokens.lua`
 ### 5.2 La matière : un shader unique
 
 Un seul `ShaderEffect`, le **matériau** (`coque/Composants/Materiau.qml`, source `coque/Theme/materiau.frag`),
-dessine en une passe le fond d'une surface E2 ou E3 : la couleur de l'échelon à l'opacité du verre, le reflet (+0,020 L, interpolé en OKLCH, écrit en sRGB), le bruit IGN ajouté avant
+dessine en une passe le fond d'une surface E2 ou E3 : la couleur de l'échelon à l'opacité du verre, le reflet (+0,020 L ; bornes calculées en OKLCH par le générateur, interpolées en sRGB prémultiplié par le shader, écart invisible sur 0,020 L), le bruit IGN ajouté avant
 quantification, les coins par fonction de distance, et les deux liserés. Le même shader, en mode « creux »,
 dessine l'ombre interne du champ.
 
@@ -294,4 +294,4 @@ la coque (point 6) n'a pas été relevée en chiffres ; la conception l'assure (
 | --- | --- | --- |
 | 1.0 | 2026-10-25 | Première version, issue de la séance de conception et du repérage technique |
 | 1.1 | 2026-10-25 | Relecture du constructeur : popups floutés seulement sous un calque, `.qsb` versionné dans `generated/`, banc d'essai du verre |
-| 1.2 | 2026-10-25 | État livré après les deux recettes à l'écran : opaque la nuit, verre le jour ; `ignore_alpha` à 0,6 ; opacité du verre par `qt_Opacity` ; overlays à un écart sous l'ancre, sans retournement vertical, serrés dans l'écran par la coque ; texte en niveaux de gris ; menus sans anneau de focus, rangées transparentes au repos ; jeton `material.insetDepth` |
+| 1.2 | 2026-10-25 | État livré après les deux recettes à l'écran : opaque la nuit, verre le jour ; `ignore_alpha` à 0,6 ; opacité du verre par `qt_Opacity` ; overlays à un écart sous l'ancre, sans retournement vertical, serrés dans l'écran par la coque ; texte en niveaux de gris ; menus sans anneau de focus, rangées transparentes au repos ; jeton `material.insetDepth` ; reflet aux bornes calculées en OKLCH et interpolées en sRGB |
