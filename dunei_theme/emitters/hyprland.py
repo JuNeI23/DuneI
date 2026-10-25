@@ -63,12 +63,13 @@ def _validate_glass(raw: dict) -> None:
     Sortie : aucune.
     Erreurs : ValueError si glass.ignore_alpha ne dépasse pas l'ombrage d'élévation ni le voile
               (render.scrim_opacity), qui ne doivent jamais être floutés, si elle atteint l'opacité
-              minimale du verre, ou si glass.xray nomme un calque absent de glass.namespaces.
+              minimale du verre sur tous les moments (la config Hyprland est unique), ou si glass.xray nomme un calque absent de glass.namespaces.
     Dépendances : aucune.
     """
     g = raw["glass"]
     plancher = max(raw["surface_material"]["shade_opacity"], raw["render"]["scrim_opacity"])
-    plafond = min(g["e2_opacity"], g["e3_opacity"])
+    plafond = min(min(m.get("glass", {}).get(k, g[k]) for m in (raw.get("moments") or {}).values() for k in
+                      ("e2_opacity", "e3_opacity")), g["e2_opacity"], g["e3_opacity"])
     if not plancher < g["ignore_alpha"] < plafond:
         raise ValueError(f"glass.ignore_alpha = {g['ignore_alpha']} : doit dépasser {plancher} (ombre, voile) "
                          f"et rester sous {plafond} (verre)")

@@ -221,6 +221,13 @@ class LayerRulesTest(unittest.TestCase):
             with self.subTest(ignore_alpha=value), self.assertRaisesRegex(ValueError, "ignore_alpha"):
                 self.layers(ignore_alpha=value)
 
+    def test_ignore_alpha_borne_par_le_jour(self):
+        """Une surcharge de jour sous le seuil est refusée : la config Hyprland est unique."""
+        alt = copy.deepcopy(self.data)
+        alt["moments"]["jour"].setdefault("glass", {})["e2_opacity"] = 0.55
+        with self.assertRaisesRegex(ValueError, "ignore_alpha"):
+            emit_layer_rules(resolve(alt))
+
     def test_xray_hors_namespaces(self):
         with self.assertRaisesRegex(ValueError, "xray"):
             self.layers(xray=["dunei-inconnu"])

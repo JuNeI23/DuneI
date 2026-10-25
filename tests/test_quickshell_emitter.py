@@ -35,10 +35,11 @@ class QuickshellEmitterTest(unittest.TestCase):
                                            "knob", "controls"])
 
     def test_verre(self):
-        """Les opacités du verre E2 et E3 sont lues des jetons, pour les quatre thèmes."""
+        """Le verre est opaque la nuit (1,0) et translucide le jour (0,85 et 0,88), pour les deux familles."""
+        attendu = {"nuit": {"e2": 1.0, "e3": 1.0}, "jour": {"e2": 0.85, "e3": 0.88}}
         for f in self.out["themes"].values():
-            for t in f.values():
-                self.assertEqual(t["glass"], {"e2": 0.85, "e3": 0.88})
+            for moment, t in f.items():
+                self.assertEqual(t["glass"], attendu[moment], moment)
 
     def test_ombre_flottante_et_profondeur_du_creux(self):
         """La matière expose la portée et le décalage de l'ombre flottante, et la profondeur du creux (jetons)."""

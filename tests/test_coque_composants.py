@@ -564,11 +564,11 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
 
     def test_verre_opacite(self):
         # Le verre n'est posé que sur une fenêtre de coque : une Surface surfaceRaised munie de verre prend
-        # l'opacité glass.e3 ; la Surface panneau, sans verre, reste opaque.
+        # l'opacité glass.e3 (opaque à la nuit, 1,0) ; la Surface panneau, sans verre, reste opaque.
         self.demarrer()
         opacite, panneau, _ = self.valeur("verre").split()
         self.assertEqual(float(opacite), self.vue(55)["glass"]["e3"])
-        self.assertEqual(float(opacite), 0.88)
+        self.assertEqual(float(opacite), 1.0)
         self.assertEqual(float(panneau), 1)
 
     def test_reflet_borne(self):

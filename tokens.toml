@@ -312,8 +312,8 @@ xray = ["dunei-barre"]       # flou du seul fond ; jamais un calque qui porte de
 ignore_alpha = 0.6           # > shade_opacity et scrim (jamais floutés), < opacité minimale du verre
 blur_size = 8
 blur_passes = 2
-e2_opacity = 0.85            # opacité du verre de l'élévation 2
-e3_opacity = 0.88            # opacité du verre de l'élévation 3
+e2_opacity = 1.0             # opacité du verre de l'élévation 2 (la nuit : opaque, plus beau sur fonds sombres)
+e3_opacity = 1.0             # opacité du verre de l'élévation 3 (le jour la surcharge : [moments.jour.glass])
 
 
 # ===========================================================================
@@ -525,6 +525,11 @@ role = "text-emphasis"   # nuit : la couleur qu'ont aujourd'hui le disque et la 
 [moments.jour]
 [moments.jour.meta]
 mode = "light"
+
+# Le jour garde le verre : sur fonds clairs, Nicolas le préfère aux surfaces opaques (recette 2 de L2-04).
+[moments.jour.glass]
+e2_opacity = 0.85
+e3_opacity = 0.88
 
 [moments.jour.lightness]
 # Écart à la conception : surface-window 0,968 (départ 0,955) et surface-panel 0,98 (départ 0,975). Sur 0,955, aucun
