@@ -593,7 +593,15 @@
           "edgeLight": "#14ffffff",
           "edgeShadow": "#1f000000",
           "shade": "#5c000000",
-          "overlayOutline": "#80000000"
+          "overlayOutline": "#80000000",
+          "insetShadow": "#38000000",
+          "insetDepth": 4,
+          "shadowBlur": 16,
+          "shadowOffsetY": 4
+        },
+        "glass": {
+          "e2": 1.0,
+          "e3": 1.0
         },
         "render": {
           "scrim": "#8c000000",
@@ -1058,7 +1066,7 @@
           },
           "field": {
             "fill": "#ffcba9",
-            "insetShadow": false
+            "insetShadow": true
           }
         },
         "material": {
@@ -1067,7 +1075,15 @@
           "edgeLight": "#00ffffff",
           "edgeShadow": "#1f000000",
           "shade": "#5c000000",
-          "overlayOutline": "#80000000"
+          "overlayOutline": "#80000000",
+          "insetShadow": "#38000000",
+          "insetDepth": 4,
+          "shadowBlur": 16,
+          "shadowOffsetY": 4
+        },
+        "glass": {
+          "e2": 0.85,
+          "e3": 0.88
         },
         "render": {
           "scrim": "#8c000000",
@@ -1543,7 +1559,15 @@
           "edgeLight": "#14ffffff",
           "edgeShadow": "#1f000000",
           "shade": "#5c000000",
-          "overlayOutline": "#80000000"
+          "overlayOutline": "#80000000",
+          "insetShadow": "#38000000",
+          "insetDepth": 4,
+          "shadowBlur": 16,
+          "shadowOffsetY": 4
+        },
+        "glass": {
+          "e2": 1.0,
+          "e3": 1.0
         },
         "render": {
           "scrim": "#8c000000",
@@ -2008,7 +2032,7 @@
           },
           "field": {
             "fill": "#ffffff",
-            "insetShadow": false
+            "insetShadow": true
           }
         },
         "material": {
@@ -2017,7 +2041,15 @@
           "edgeLight": "#00ffffff",
           "edgeShadow": "#1f000000",
           "shade": "#5c000000",
-          "overlayOutline": "#80000000"
+          "overlayOutline": "#80000000",
+          "insetShadow": "#38000000",
+          "insetDepth": 4,
+          "shadowBlur": 16,
+          "shadowOffsetY": 4
+        },
+        "glass": {
+          "e2": 0.85,
+          "e3": 0.88
         },
         "render": {
           "scrim": "#8c000000",

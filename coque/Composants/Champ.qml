@@ -6,8 +6,9 @@ import "etats.js" as Etats
 
 // Champ — champ de saisie de la coque, enfoncé dans son conteneur.
 // Rôle : habille le gabarit sans style T.TextField (conception, § 7.1), à la forme de macOS (§ 7.10) : fond
-// enfoncé elevation.field.fill, plus sombre que le panneau qui le porte et identique dans tous les états, cerné
-// d'un filet d'un pixel physique à color.borderSubtle ; son rôle est celui du conteneur, sans cran (§ 7.4).
+// enfoncé elevation.field.fill, peint par le Materiau de niveau field avec son ombre interne (L2-04), plus sombre
+// que le panneau qui le porte et identique dans tous les états, cerné d'un filet d'un pixel physique à
+// color.borderSubtle ; son rôle est celui du conteneur, sans cran (§ 7.4).
 // Il n'a aucun anneau de focus : le curseur de texte clignotant dit seul que le champ a le focus (§ 7.10).
 // Désactivé, le texte et le texte indicatif prennent la couleur de l'état disabled. La sélection est à l'accent
 // et le curseur de texte, d'un pixel physique, au texte primaire ; il ne paraît qu'au focus actif et y clignote
@@ -19,7 +20,7 @@ import "etats.js" as Etats
 // Erreurs : aucune ; avant le chargement des tokens, les cotes sont nulles et les couleurs transparentes.
 // Dépendances : QtQuick.Templates, Quickshell (propriété attachée QsWindow : rapport de pixels de la fenêtre,
 // pour le curseur de texte ; 1 hors de toute fenêtre), Theme (density, elevation, radius, space, police,
-// color, hairline), Etat, Qt.styleHints (cursorFlashTime, cadence du clignotement).
+// color, hairline), Etat, Materiau, Qt.styleHints (cursorFlashTime, cadence du clignotement).
 // Cotes : largeur implicite density.fieldWidth, fixe, hauteur density.controlHeight, rayon radius.control par défaut,
 // filet Theme.hairline, retrait horizontal space.scale[2] (12).
 T.TextField {
@@ -50,11 +51,20 @@ T.TextField {
         peintFond: false
     }
 
-    background: Rectangle {
-        radius: champ.rayon
-        color: Theme.elevation?.field?.fill ?? "transparent"
-        border.width: Theme.hairline(QsWindow.window?.devicePixelRatio ?? 1) ?? 0
-        border.color: Theme.color?.borderSubtle ?? "transparent"
+    // Fond creusé : le Materiau de niveau field peint elevation.field.fill et, si elevation.field.insetShadow est
+    // vrai, l'ombre interne ; le filet d'un pixel physique le cerne par-dessus.
+    background: Materiau {
+        niveau: "field"
+        rayon: champ.rayon
+
+        Rectangle {
+            objectName: "bordure"
+            anchors.fill: parent
+            radius: champ.rayon
+            color: "transparent"
+            border.width: Theme.hairline(parent.dpr) ?? 0
+            border.color: Theme.color?.borderSubtle ?? "transparent"
+        }
     }
 
     // Texte indicatif : T.TextField n'en dessine aucun. Il occupe la zone de saisie tant que le champ est vide,

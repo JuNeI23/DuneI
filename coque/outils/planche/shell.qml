@@ -1,4 +1,5 @@
 //@ pragma IconTheme Adwaita
+//@ pragma Env QSG_DISTANCEFIELD_ANTIALIASING=gray
 import QtQuick
 import QtQuick.Effects
 import Quickshell
@@ -25,6 +26,9 @@ import "Composants"
 // Import : comme pour la coque d'essai, les liens planche/Theme -> ../../Theme et planche/Composants ->
 // ../../Composants placent les deux modules côte à côte sous la racine ; la directive IconTheme en tête choisit
 // Adwaita, sans quoi Icone ne trouve aucune icône symbolique.
+// Rendu du texte : la directive Env en tête force l'anticrénelage du texte en niveaux de gris
+// (QSG_DISTANCEFIELD_ANTIALIASING=gray), pour cette coque seule : sans elle, Qt Quick le rend en sous-pixel
+// d'après l'écran, malgré le rgba=none de fontconfig, ce qui frange de couleur les lettres sur le verre.
 ShellRoot {
     id: racine
 

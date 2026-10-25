@@ -56,6 +56,27 @@ def _validate(raw: dict) -> None:
                          f"spacing.scale {raw['spacing']['scale']}")
 
 
+def _validate_glass(raw: dict) -> None:
+    """Contrôles bloquants des jetons du verre.
+
+    Entrée : raw — TOML brut du modèle.
+    Sortie : aucune.
+    Erreurs : ValueError si glass.ignore_alpha ne dépasse pas l'ombrage d'élévation ni le voile
+              (render.scrim_opacity), qui ne doivent jamais être floutés, si elle atteint l'opacité
+              minimale du verre sur tous les moments (la config Hyprland est unique), ou si glass.xray nomme un calque absent de glass.namespaces.
+    Dépendances : aucune.
+    """
+    g = raw["glass"]
+    plancher = max(raw["surface_material"]["shade_opacity"], raw["render"]["scrim_opacity"])
+    plafond = min(min(m.get("glass", {}).get(k, g[k]) for m in (raw.get("moments") or {}).values() for k in
+                      ("e2_opacity", "e3_opacity")), g["e2_opacity"], g["e3_opacity"])
+    if not plancher < g["ignore_alpha"] < plafond:
+        raise ValueError(f"glass.ignore_alpha = {g['ignore_alpha']} : doit dépasser {plancher} (ombre, voile) "
+                         f"et rester sous {plafond} (verre)")
+    if horsliste := [n for n in g["xray"] if n not in g["namespaces"]]:
+        raise ValueError(f"glass.xray = {horsliste} : calques absents de glass.namespaces {g['namespaces']}")
+
+
 def emit(model: dict) -> str:
     """Module Lua des options `general`, `decoration` et `misc` de Hyprland.
 
@@ -66,6 +87,7 @@ def emit(model: dict) -> str:
     """
     raw = model["raw"]
     _validate(raw)
+    g = raw["glass"]
     d, s, mat = raw["density"]["comfortable"], raw["window"]["floating_shadow"], raw["surface_material"]
     return "\n".join([
         "-- GÉNÉRÉ depuis tokens.toml — NE PAS MODIFIER À LA MAIN",
@@ -87,6 +109,14 @@ def emit(model: dict) -> str:
         f"            render_power = {s['render_power']},",
         f"            offset       = {{ 0, {s['offset_y']} }},",
         f"            color        = \"{_rgba(Oklch(**mat['shadow_color']), mat['shade_opacity'])}\",",
+        "        },",
+        # Flou du verre de la coque ; les popups des applications ne sont jamais floutés.
+        "        blur = {",
+        "            enabled           = true,",
+        f"            size              = {g['blur_size']},",
+        f"            passes            = {g['blur_passes']},",
+        "            popups            = false,",
+        "            new_optimizations = true,",
         "        },",
         "    },",
         "    misc = {",
@@ -119,6 +149,30 @@ def emit_rules(model: dict) -> str:
     return "\n".join([
         "-- GÉNÉRÉ depuis tokens.toml — NE PAS MODIFIER À LA MAIN",
         "-- Usage : for _, r in ipairs(require(\"generated.hyprland-rules\")) do hl.window_rule(r) end",
+        "return {",
+        *rules,
+        "}",
+    ]) + "\n"
+
+
+def emit_layer_rules(model: dict) -> str:
+    """Module Lua des règles de calque du verre dépoli de la coque.
+
+    Entrée : model — sortie de model.resolve.
+    Sortie : contenu de hyprland-layers.lua (une liste Lua retournée, appliquée par modules/regles.lua),
+             une règle par calque de glass.namespaces : flou, flou des popups, seuil d'alpha ignoré
+             et, pour les calques de glass.xray seulement, flou du fond seul.
+    Erreurs : KeyError si le TOML brut manque ; ValueError transmise par _validate_glass.
+    Dépendances : _validate_glass.
+    """
+    g = model["raw"]["glass"]
+    _validate_glass(model["raw"])
+    rules = [f'    {{ name = "dunei-verre-{ns}", match = {{ namespace = "^{ns}$" }}, blur = true, '
+             f'blur_popups = true, ignore_alpha = {g["ignore_alpha"]}, xray = {str(ns in g["xray"]).lower()} }},'
+             for ns in g["namespaces"]]
+    return "\n".join([
+        "-- GÉNÉRÉ depuis tokens.toml — NE PAS MODIFIER À LA MAIN",
+        "-- Usage : for _, r in ipairs(require(\"generated.hyprland-layers\")) do hl.layer_rule(r) end",
         "return {",
         *rules,
         "}",

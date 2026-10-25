@@ -1940,3 +1940,134 @@ un plancher de rôle hors des dérogations listées.
 
 *Touché : bible (chapitre 2, « Contraste »), conception des thèmes statiques (§ 5.2), `tokens.toml`
 (`[familles.thematisee.moments.jour]`), `tests/`.*
+
+### D85 · La matière de la coque : verre dépoli le jour, opaque la nuit, tracée par un shader
+
+2026-10-25. **Les surfaces E2 et E3 de la coque sont en verre dépoli le jour, opaques la nuit.** Le jour, la
+barre, les panneaux et les overlays de la coque laissent deviner le bureau, flouté, sous la teinte de leur échelon
+(opacité 0,85 en E2, 0,88 en E3), avec une ombre en E2 et E3 et ni sheen ni liseré (D83). La nuit, l'opacité du
+verre vaut 1,0 : les surfaces sont opaques et gardent sheen, liserés et, en E3, ombre portée, comme le veut la bible.
+Les fenêtres d'applications (E1) restent opaques dans tous les cas. La translucidité est une propriété de la
+fenêtre de coque, pas du niveau : seul le compositeur floute ce qui se trouve derrière une surface Wayland, et un
+en-tête E2 dessiné dans une fenêtre opaque n'a rien à flouter.
+
+- **Raison.** En séance de conception, Nicolas avait retenu le verre sur E2 et E3 (option C), contre le tout opaque
+  (A) et le flou sur E3 seulement (B). À la recette, après avoir comparé à l'écran les deux rendus dans chaque
+  moment, il a tranché : « sur des fonds sombres, les surfaces opaques sont plus belles ; sur des fonds clairs, je
+  préfère le verre ». Le verre est teinté par le thème parce que, sans teinte, il prenait la couleur délavée du fond
+  d'écran et jurait avec la fenêtre abricot du jour thématisé.
+- **Le flou par les règles de calque de Hyprland.** Chaque fenêtre de coque qui est un calque porte un namespace
+  explicite (`dunei-barre`, `dunei-attention`) ; une règle générée par namespace (`generated/hyprland-layers.lua`,
+  appliquée par une boucle dans `config/hypr/modules/regles.lua`) y active `blur`, `blur_popups` et
+  `ignore_alpha`, plus `xray` sur la barre seule. Le flou suit l'alpha au pixel près, donc les coins arrondis sont
+  exacts sans code dans la coque, pour le coût du flou kawase de Hyprland. Écartés : un flou calculé dans
+  Quickshell (capture d'écran continue, retard d'une image) ; `BackgroundEffect` (`ext-background-effect-v1`), gardé
+  en repli. Les popups (menus, popovers, infobulles) sont floutés par `blur_popups` sous un calque de la coque ;
+  `decoration:blur:popups` reste éteint, car il toucherait les popups des applications. Les règles restent actives
+  la nuit : une surface opaque ne laisse rien voir du flou, et Hyprland n'a qu'une configuration pour tous les
+  moments.
+- **`ignore_alpha` à 0,6.** Le seuil doit dépasser l'alpha de tout ce que la coque dessine de translucide hors du
+  verre, qui ne doit pas être flouté — l'ombre et le voile `material.shade` (0,36), le voile `render.scrim` (0,55) —
+  et rester sous l'opacité minimale du verre sur tous les moments (0,85, celle du jour). La valeur de départ, 0,5,
+  était sous `render.scrim`. Le générateur vérifie l'encadrement sur la base et sur chaque moment et échoue sinon.
+- **Un shader unique pour la matière.** `Materiau.qml` et `coque/Theme/materiau.frag` peignent en une passe le
+  fond, le sheen tramé par bruit IGN, les coins et les deux liserés, et, en mode creux, l'ombre interne du champ.
+  Les dégradés natifs de QML ne savent pas tramer (banding garanti à 0,020 L sur fond sombre) et un rectangle d'un
+  pixel physique posé à une position non entière bave sur deux pixels ; calculés sur `gl_FragCoord`, bruit et
+  liserés tombent sur les pixels physiques. Le `.qsb` est compilé par `make shaders` (dans `make generes`) et
+  versionné dans `generated/`, si bien que l'installation ne dépend pas de `qt6-shadertools`.
+- **Le `.qsb` jugé par l'empreinte de sa source, non par ses octets.** Le SPIR-V et les traductions qu'il contient
+  changent avec la version de `qt6-shadertools` ; le contrôle sur `main` installe celle du jour, caladan la sienne.
+  Une comparaison d'octets aurait rendu le contrôle exigé rouge pour toute PR à la première mise à jour de Qt sur
+  Arch, sans que D77 permette de passer outre. `make shaders` enregistre donc l'empreinte SHA-256 de
+  `materiau.frag` à côté du `.qsb` (`generated/materiau.frag.sha256`) et ne recompile que si la source n'y répond
+  plus ; le crochet suit la même règle. `tests/test_shader.py` compare l'empreinte à la source, puis exige qu'une
+  compilation fraîche réussisse avec la même réflexion (`qsb --dump` : entrées, sorties, uniformes) que le `.qsb`
+  versionné. Coût : un `.qsb` retouché à la main, empreinte intacte et réflexion identique, passerait ; `generated/`
+  ne s'édite jamais à la main (D77).
+- **L'opacité du verre portée par `opacity`.** Le shader la reçoit en `qt_Opacity` et l'applique à toute la
+  matière, liserés et reflet compris, au lieu de l'alpha de la couleur de fond : le test des composants interdit de
+  composer une couleur en QML. Coût : un matériau de verre ne porte pas d'enfants, qui hériteraient de l'opacité.
+- **Les ombres par `RectangularShadow`.** `OmbreElevation.qml` dessine une ombre analytique, sans couche hors écran,
+  aux valeurs de l'ombre des fenêtres flottantes ; la fenêtre d'un overlay déborde de son cadre de la marge d'ombre,
+  et un `mask` empêche cette marge de capter les clics. Écartés : `MultiEffect` (une couche hors écran par élément)
+  et l'ombre de Hyprland, qui ne vise pas les calques.
+- **Le texte de la coque en niveaux de gris.** Sur le verre, le texte montrait des franges bleues et orange
+  (« texte en relief ») : le texte de Qt Quick, rendu par champs de distance, choisit l'anticrénelage sous-pixel
+  d'après l'écran sans lire le `rgba=none` de fontconfig, et `QT_SUBPIXEL_AA_TYPE=none` n'y change rien (mesuré).
+  Chaque coque porte en tête de son `shell.qml` la directive `//@ pragma Env QSG_DISTANCEFIELD_ANTIALIASING=gray`,
+  qui ne touche que son processus ; un test l'exige de toute coque future, dont la barre de L2-08.
+- **Rien d'opaque sur le verre au repos.** Une rangée au repos, désactivée comprise, est transparente
+  (`Etat.fondReposTransparent`) : elle peignait la couleur opaque de son conteneur et formait une plaque sur le
+  verre. Ce fond transparent prend la teinte du fond plein, alpha nul (`Qt.alpha(plein, 0)`), pour que le ressort
+  de couleur ne passe pas par le noir du « transparent » en allumant la rangée. C'est une couleur dérivée dans le
+  QML, que le test des composants interdit ; `Composants/Etat.qml` en est exempté, comme `ColorSpring.qml`, parce
+  qu'il ne crée aucune teinte visible. La garde nomme désormais `Qt.alpha`, qui lui échappait.
+- **Le banc d'essai du verre** (`coque/outils/verre/`, `verre.sh`) reste après L2-08, comme outil de
+  développement, pour régler le verre sans toucher à la vraie barre.
+- **Coût si faux.** Rendre le verre à la nuit ou l'ôter au jour : les clés `e2_opacity` et `e3_opacity` de `[glass]`
+  et de `[moments.jour.glass]`, puis `make tokens` et `make golden`, sans toucher au code.
+
+*Touché : conception de l'élévation (v1.2) et son plan, bible (chapitres 4 et 5, annexe E), backlog (L2-04, L2-05),
+carnet (« L'élévation »), direction, `tokens.toml` (`[glass]`, `[moments.jour.glass]`, `[surface_material]`),
+`dunei_theme/`, `Makefile`, `config/hypr/modules/regles.lua`, `coque/`, `tests/`.*
+
+### D86 · L2-41 n'est pas retenu : aucune texture visible
+
+2026-10-25. **Ni grain, ni sable, ni pierre sur les surfaces.** L2-41 proposait une texture de surface pour donner
+de la matière ; il est fermé comme non retenu. Le tramage de L2-05 reste, parce qu'il est invisible et ne sert qu'à
+effacer le banding du sheen.
+
+- **Raison.** Nicolas attend « un système pro et joli, les jeux de couleur sont bien organisés, pas de bruit ». La
+  matière naît de la hiérarchie des couleurs, des liserés, des ombres et du flou, jamais d'une texture. Le verre
+  dépoli ne contredit pas ce refus : « un effet de flou n'est pas du bruit ».
+- **Coût si faux.** Une texture se rouvrirait comme un élément du lot 3 ; le shader du matériau, qui porte déjà un
+  bruit indexé sur les pixels, en serait le support naturel.
+
+*Touché : conception de l'élévation (§ 2), bible (chapitre 5), backlog (L2-41).*
+
+### D87 · En mode clair, le champ est clair et creusé par une ombre interne
+
+2026-10-25. **La règle « un champ est plus sombre que son conteneur » vaut pour les fonds sombres.** En mode clair,
+le champ de saisie prend l'échelon 3, clair, et s'enfonce par une ombre interne (`inset_shadow = true` dans
+`[moments.jour.elevation.field]`), à la manière de macOS. La nuit, il reste à E0 et porte aussi l'ombre interne,
+que Nicolas a jugée réussie (« top »). L'ombre interne reprend la teinte des ombres ; sa force
+(`inset_shadow_opacity`, 0,22) et sa profondeur (`inset_shadow_depth`, 4 px logiques, `material.insetDepth`) sont des
+jetons de `[surface_material]` : la profondeur a son jeton propre, car un jeton d'espacement ne doit pas porter une
+ombre.
+
+- **Raison.** Nicolas a choisi sur maquettes la variante claire et creusée, contre un champ plus sombre que son
+  panneau : sur un fond clair, l'assombrissement paraît sale, et c'est l'ombre qui dit le creux. Le jeton de jour
+  `field.step = 3` existait déjà : ce choix ne revient pas sur les commits de L2-40.
+- **Coût si faux.** `inset_shadow` à faux dans `[moments.jour.elevation.field]` et un `step` plus bas, puis
+  `make tokens` et `make golden`.
+
+*Touché : bible (chapitre 5, annexe E), conception de l'élévation (§ 2 et 4), `tokens.toml`, `coque/Composants/Champ.qml`.*
+
+### D88 · Placement des overlays contextuels, et menus sans contour de focus
+
+2026-10-25. **Un overlay ancré à un élément se tient à `space.scale[0]` sous lui ; il glisse au lieu de se
+retourner ; la coque le serre elle-même dans l'écran.** Un menu contextuel ouvert au point de clic n'a pas d'écart.
+Dans un menu, la rangée courante ne montre jamais de contour de focus.
+
+- **L'écart.** À la recette, menu et popover touchaient leur bouton, l'infobulle seule s'en écartait. Nicolas a
+  demandé le même écart pour tous, comme sur macOS.
+- **Glissement plutôt que retournement vertical.** La fenêtre d'un overlay déborde de son cadre de la marge
+  d'ombre ; pour que le cadre visible, et non la fenêtre, tombe à sa place, le rectangle d'ancrage compense cette
+  marge. `PopupAnchor` n'ayant pas de décalage propre, ce placement exact n'est pas compatible avec le retournement
+  (`Flip`) d'xdg_positioner : un popup ancré à un élément glisse (`Slide`) seulement. Coût : près du bas de
+  l'écran, un menu glisse et peut recouvrir son ancre au lieu de s'ouvrir au-dessus.
+- **Serrage horizontal par la coque.** Près d'un bord, le compositeur repoussait la fenêtre entière dès que sa seule
+  marge transparente débordait, ce qui décalait le menu de son bouton (défaut constaté à la recette). La coque
+  calcule donc la position du cadre sur l'écran depuis celle de l'ancre (`coque/Composants/ancrage.js`) et le serre
+  entre les bords au pixel près ; la marge peut sortir de l'écran. Limite : une ancre dans une fenêtre flottante,
+  dont la position est inconnue, garde l'ajustement du compositeur.
+- **Menus sans contour de focus.** À l'ouverture d'un menu à la souris, le focus donné à la liste allumait le
+  contour de la rangée courante, pris pour une navigation au clavier. Dans une liste `selectionSuitSurvol`, la
+  surbrillance de sélection dit déjà où l'on est, comme sur macOS : le contour n'y est jamais montré, au clavier non
+  plus. Les autres listes gardent leur contour de focus clavier (D82).
+- **Coût si faux.** L'écart est la propriété `ecart` d'`Overlay.qml` ; le contour, la condition
+  `contourMontre` de `Rangee.qml`.
+
+*Touché : bible (chapitre 7, annexe E), conception de l'élévation (§ 2 et 5.3), `coque/Composants/` (`Overlay.qml`,
+`ancrage.js`, `Rangee.qml`, `Etat.qml`), `tests/`.*

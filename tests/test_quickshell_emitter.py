@@ -31,8 +31,30 @@ class QuickshellEmitterTest(unittest.TestCase):
         self.assertEqual(list(self.out), [
             "_generated", "hue", "space", "density", "radius", "window", "layout", "breakpoints", "typo", "icons",
             "familles", "moments", "defaut", "themes", "pastilles"])
-        self.assertEqual(list(self.nuit), ["color", "states", "focus", "disabled", "elevation", "material", "render",
+        self.assertEqual(list(self.nuit), ["color", "states", "focus", "disabled", "elevation", "material", "glass", "render",
                                            "knob", "controls"])
+
+    def test_verre(self):
+        """Le verre est opaque la nuit (1,0) et translucide le jour (0,85 et 0,88), pour les deux familles."""
+        attendu = {"nuit": {"e2": 1.0, "e3": 1.0}, "jour": {"e2": 0.85, "e3": 0.88}}
+        for f in self.out["themes"].values():
+            for moment, t in f.items():
+                self.assertEqual(t["glass"], attendu[moment], moment)
+
+    def test_ombre_flottante_et_profondeur_du_creux(self):
+        """La matière expose la portée et le décalage de l'ombre flottante, et la profondeur du creux (jetons)."""
+        for f in self.out["themes"].values():
+            for t in f.values():
+                self.assertEqual(t["material"]["shadowBlur"], self.data["window"]["floating_shadow"]["range"])
+                self.assertEqual(t["material"]["shadowOffsetY"], self.data["window"]["floating_shadow"]["offset_y"])
+                self.assertEqual(t["material"]["insetDepth"], self.data["surface_material"]["inset_shadow_depth"])
+
+    def test_creux_du_champ(self):
+        """Le creux du champ existe au jour comme à la nuit, avec une ombre intérieure noire à 22 %."""
+        for m in ("jour", "nuit"):
+            t = self.out["themes"]["thematisee"][m]
+            self.assertTrue(t["elevation"]["field"]["insetShadow"])
+            self.assertEqual(t["material"]["insetShadow"], "#38000000")
 
     def test_quatre_themes(self):
         """Vérifie les deux familles, leurs deux moments et le thème par défaut."""

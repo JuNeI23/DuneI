@@ -13,8 +13,8 @@ import Quickshell.Io
 // Entrées : DUNEI_TOKENS_DIR (dossier redirigé, pour la planche et les essais), sinon
 //           $XDG_CONFIG_HOME/dunei, sinon $HOME/.config/dunei ; dans ce dossier, theme.json
 //           {famille, moment}, facultatif.
-// Sorties : dir, ready, famille, moment, tokens et ses raccourcis par groupe (pastilles, knob et controls compris),
-//           density (confortable), motion, stateColors(), hairline(), police().
+// Sorties : dir, ready, famille, moment, tokens et ses raccourcis par groupe (pastilles, knob, controls et glass
+//           compris), density (confortable), motion, stateColors(), hairline(), police(), fichier().
 // Erreurs : tokens ou mouvement absents ou illisibles → console.error, ready reste faux ; contenu invalide ou
 //           incomplet → console.warn, valeurs précédentes gardées. theme.json absent → défaut des tokens, en
 //           silence ; theme.json invalide ou thème inconnu → défaut des tokens et un seul console.warn ;
@@ -27,9 +27,9 @@ Singleton {
         || (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config") + "/dunei"
     property var tokens: null
     property var motion: null
-    // Contenus bruts : fichier, coque-tokens.json entier ; choix, theme.json validé ({famille, moment}) ou null
+    // Contenus bruts : brut, coque-tokens.json entier ; choix, theme.json validé ({famille, moment}) ou null
     // pour le défaut. Seul composer() les combine en tokens.
-    property var fichier: null
+    property var brut: null
     property var choix: null
     // Thème inconnu déjà signalé, pour ne l'écrire qu'une fois au journal même si les tokens sont relus.
     property string signale: ""
@@ -50,6 +50,8 @@ Singleton {
     readonly property var disabled: tokens?.disabled
     readonly property var elevation: tokens?.elevation
     readonly property var material: tokens?.material
+    // Opacité du verre des fenêtres de coque, par niveau d'élévation (e2, e3), lue par Materiau.
+    readonly property var glass: tokens?.glass
     readonly property var render: tokens?.render
     // Contrôles blancs du thème actif : contour (outline, couleur ou null), piste éteinte au rôle controlOff
     // (offTrack), ombre de la poignée et de l'onglet coché (shadow, couleur ou null ; shadowBlur, shadowOffsetY).
@@ -98,20 +100,30 @@ Singleton {
         return render ? (render.hairlinePhysical ? 1 / dpr : 1) : undefined
     }
 
+    // fichier — URL d'un fichier déployé à côté des tokens, comme le shader compilé du matériau.
+    // Rôle : désigne nom dans dir, le dossier de coque-tokens.json ; évite Qt.resolvedUrl, que les liens
+    //        symboliques de la planche et des coques d'essai feraient résoudre ailleurs.
+    // Entrées : nom, nom du fichier dans dir (par exemple « materiau.frag.qsb »).
+    // Sortie : URL file:// du fichier ; son existence n'est pas vérifiée.
+    // Erreurs : aucune ; un fichier absent se signale au chargement par son consommateur. Dépendances : dir.
+    function fichier(nom) {
+        return "file://" + dir + "/" + nom
+    }
+
     // composer — construit la vue du thème actif et la publie d'un bloc.
     // Rôle : choisit la branche themes[famille][moment] désignée par choix, ou le défaut des tokens si choix est
     //        nul ou nomme une famille ou un moment que les tokens ne déclarent pas, puis remplace tokens par un
     //        objet neuf : les clés partagées du fichier, sans themes, et celles de la branche.
-    // Entrées : aucune ; lit fichier et choix. Sortie : aucune ; pose famille, moment puis tokens. Sans tokens
+    // Entrées : aucune ; lit brut et choix. Sortie : aucune ; pose famille, moment puis tokens. Sans tokens
     //           lus, ne fait rien.
     // Erreurs : thème inconnu → console.warn « Theme : thème <f>/<m> inconnu ; défaut <f>/<m> appliqué », une
     //           seule fois par nom inconnu.
-    // Dépendances : fichier (defaut, familles, moments, themes), choix.
+    // Dépendances : brut (defaut, familles, moments, themes), choix.
     function composer() {
-        if (!fichier) return
-        const d = fichier.defaut
+        if (!brut) return
+        const d = brut.defaut
         let f = choix?.famille ?? d.famille, m = choix?.moment ?? d.moment
-        if (!fichier.familles.includes(f) || !fichier.moments.includes(m)) {
+        if (!brut.familles.includes(f) || !brut.moments.includes(m)) {
             if (signale !== f + "/" + m)
                 console.warn("Theme : thème " + f + "/" + m + " inconnu ; défaut " + d.famille + "/" + d.moment
                     + " appliqué")
@@ -119,7 +131,7 @@ Singleton {
             f = d.famille
             m = d.moment
         } else signale = ""
-        const vue = Object.assign({}, fichier, fichier.themes[f][m])
+        const vue = Object.assign({}, brut, brut.themes[f][m])
         delete vue.themes
         _famille = f
         _moment = m
@@ -180,7 +192,7 @@ Singleton {
         name: "coque-tokens.json"
         keys: ["_generated", "defaut", "familles", "moments", "themes"]
         onParsed: data => {
-            root.fichier = data
+            root.brut = data
             root.composer()
             root._ready = root.motion !== null
             console.info("Theme : chargé, teinte " + data.hue + ", thème " + root.famille + "/" + root.moment)
@@ -197,7 +209,7 @@ Singleton {
         onParsed: data => {
             root.choix = data
             root.composer()
-            if (root.fichier) console.info("Theme : thème " + root.famille + "/" + root.moment + " appliqué")
+            if (root.brut) console.info("Theme : thème " + root.famille + "/" + root.moment + " appliqué")
         }
         onRejected: {
             if (root.choix === null) return

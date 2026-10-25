@@ -23,24 +23,25 @@ import "Composants"
 // Sortie : journal de Theme, « essai : plateforme <nom> » au chargement, « essai : prêt true » à l'ouverture de la
 // fenêtre, puis une ligne par commande IPC de lecture : « essai : focus <élément> <onglet courant> <sélection de
 // tokens> <sélection de composants> <visualFocus> », « essai : curseur <cursorVisible> <délégué visible>
-// <cursorFlashTime> », « essai : onglets <géométrie de la barre et de ses segments> », « essai : menu <rangée courante
-// du menu> <rangée courante du témoin> », « essai : ongletSurvole <interaction> <fond> » et « essai : jauge <valeur>
-// <anneau visible> », ainsi que attention, anneauOnglets, compteur, deroulant, pastilles, pastillesCouleurs, bascule et
-// activite (voir chaque fonction) ; « essai touche <tab|majtab|gauche|droite|haut|bas|espace|entree|echap> » frappe une
-// touche, « essai activiteMarche <bool> » lance ou arrête l'indicateur d'activité, « essai molette <1|-1> » tourne la
-// molette sur le compteur, « essai cliquerDeroulant » clique le déroulant, « essai ouvrirAttention » ouvre l'Overlay
-// d'attention, « essai pointerRangee <rang> <bool> » pose le pointeur sur une rangée du menu ouvert et l'y clique si
-// demandé, « essai pointerPastille <rang> <bool> » pose le pointeur sur une pastille et l'y clique si demandé, « essai
-// appuyerPastille <rang> <bool> » enfonce ou relâche le bouton sur une pastille, « essai pastillesReduire <bool> »
-// active ou désactive la pastille de réduction, « essai rechercheTexte <texte> » remplit la recherche, « essai
-// cliquerEffacer » clique son bouton d'effacement, « essai cliquerDepliable » clique l'en-tête de la section, « essai
-// survolerBulle », « essai quitterBulle » et « essai appuyerBulle » posent le pointeur sur le bouton « bulle », l'en
-// retirent ou l'y cliquent ; « essai cibleNouvelle », « essai cibleDetruire » et « essai survolerMobile » créent,
-// détruisent ou survolent la cible de l'infobulle mobile ; recherche, depliable, bulle, survolerBulle et mobile
-// journalisent (voir chaque fonction), « essai survoler <rang> » pose le pointeur sur une rangée de chaque liste, «
-// essai survolerOnglet » sur l'onglet « tokens » et « essai ongletActif <bool> » active ou désactive l'onglet «
-// composants », sans journaliser. Erreurs : celles de Theme et des liaisons, dans le journal ; un nom de touche inconnu
-// lève une TypeError.
+// <cursorFlashTime> », « essai : onglets <géométrie de la barre et de ses segments> », « essai : menu <rangée
+// courante du menu> <rangée courante du témoin> », « essai : ongletSurvole <interaction> <fond> » et « essai : jauge
+// <valeur> <anneau visible> », ainsi que contours, attention, anneauOnglets, compteur, deroulant, pastilles,
+// pastillesCouleurs, bascule, activite, materiauDpr, contextuel et ancrage (voir chaque fonction) ; « essai touche
+// <tab|majtab|gauche|droite|haut|bas|espace|entree|echap> » frappe une touche, « essai activiteMarche <bool> » lance
+// ou arrête l'indicateur d'activité, « essai molette <1|-1> » tourne la molette sur le compteur, « essai
+// cliquerDeroulant » clique le déroulant, « essai ouvrirAttention » ouvre l'Overlay d'attention, « essai
+// ouvrirContextuel » celui du contextuel, « essai pointerRangee <rang> <bool> » pose le pointeur sur une rangée du
+// menu ouvert et l'y clique si demandé, « essai pointerPastille <rang> <bool> » pose le pointeur sur une pastille et
+// l'y clique si demandé, « essai appuyerPastille <rang> <bool> » enfonce ou relâche le bouton sur une pastille, «
+// essai pastillesReduire <bool> » active ou désactive la pastille de réduction, « essai rechercheTexte <texte> »
+// remplit la recherche, « essai cliquerEffacer » clique son bouton d'effacement, « essai cliquerDepliable » clique
+// l'en-tête de la section, « essai survolerBulle », « essai quitterBulle » et « essai appuyerBulle » posent le
+// pointeur sur le bouton « bulle », l'en retirent ou l'y cliquent ; « essai cibleNouvelle », « essai cibleDetruire »
+// et « essai survolerMobile » créent, détruisent ou survolent la cible de l'infobulle mobile ; recherche, depliable,
+// bulle, survolerBulle et mobile journalisent (voir chaque fonction), « essai survoler <rang> » pose le pointeur sur
+// une rangée de chaque liste, « essai survolerOnglet » sur l'onglet « tokens » et « essai ongletActif <bool> » active
+// ou désactive l'onglet « composants », sans journaliser. Erreurs : celles de Theme et des liaisons, dans le
+// journal ; un nom de touche inconnu lève une TypeError.
 // Dépendances : quickshell ≥ 0.3 (FloatingWindow, LazyLoader, IpcHandler), QtTest (TestEvent), modules Theme
 // et Composants. Import : les liens Theme -> ../Theme et Composants -> ../Composants les posent sous la racine de
 // cette coque, comme dans la coque d'essai voisine.
@@ -148,6 +149,24 @@ ShellRoot {
                 Texte { text: "attention" }
             }
 
+            // Overlay contextuel, ancré sur le bouton « bulle » : « essai ouvrirContextuel » l'ouvre, pour mesurer sa
+            // fenêtre et la marge de son ombre.
+            Overlay {
+                id: contextuelEssai
+                famille: "contextuel"
+                ancre: boutonBulle
+                Texte { text: "contextuel" }
+            }
+
+            // Ancres haute (80 px) et courte (28 px, la hauteur d'un bouton de la coque), sur lesquelles se posent un
+            // contextuel et une infobulle d'essai pour éprouver l'ancrage.
+            Item { id: ancreHaute; width: 100; height: 80 }
+            Overlay { id: contextuelAncre; famille: "contextuel"; ancre: ancreHaute; Texte { text: "contextuel" } }
+            Overlay { id: bulleAncree; famille: "infobulle"; ancre: ancreHaute; Texte { text: "bulle" } }
+            Item { id: ancreCourte; width: 100; height: 28 }
+            Overlay { id: contextuelCourte; famille: "contextuel"; ancre: ancreCourte; Texte { text: "contextuel" } }
+            Overlay { id: bulleCourteAncree; famille: "infobulle"; ancre: ancreCourte; Texte { text: "bulle" } }
+
             // Infobulle créée et détruite à la demande sur le bouton « bulle », qui lui survit ; ses gestionnaires sont
             // gardés dans des propriétés typées, que le moteur remet à null quand ils sont détruits.
             property Infobulle jetable: null
@@ -196,11 +215,58 @@ ShellRoot {
                         + (Overlays.attention === null ? "null" : "retenue"))
                 }
 
+                // ouvrirContextuel — ouvre l'Overlay contextuel d'essai. Entrées : aucune. Sortie : aucune.
+                // Erreurs : aucune. Dépendances : contextuelEssai.
+                function ouvrirContextuel(): void {
+                    contextuelEssai.ouvert = true
+                    contextuelAncre.ouvert = true
+                    bulleAncree.ouvert = true
+                    contextuelCourte.ouvert = true
+                    bulleCourteAncree.ouvert = true
+                }
+
+                // contextuel — journalise la largeur et la hauteur de la fenêtre du contextuel, celles de son cadre,
+                // puis la marge de son ombre. Entrées : aucune. Sortie : aucune ; « essai : contextuel <l> <h> <l> <h>
+                // <marge> » ; « absent » tant que la fenêtre n'est pas construite. Erreurs : aucune.
+                // Dépendances : contextuelEssai (chargeur, fenêtre, cadre), journal.
+                function contextuel(): void {
+                    const f = contextuelEssai.chargeur.item
+                    essai.journal("contextuel", f ? [f.width, f.height, f.cadre.width, f.cadre.height, f.cadre.marge].join(" ") : "absent")
+                }
+
+                // ancrage — journalise où l'ancrage de la fenêtre d'un Overlay d'essai posera le cadre visible, d'après
+                // le modèle d'xdg_popup : la fenêtre se pose sous le bord bas du rectangle d'ancrage, alignée sur son
+                // bord gauche (contextuel) ou centrée sur lui (infobulle), et le cadre est en retrait de la marge.
+                // Entrée : nom, "contextuel", "bulle", "contextuelCourt" ou "bulleCourte" (ancre haute de 80 px ou
+                // courte de 28 px). Sortie : aucune ; « essai : ancrage <nom> <dx> <dy> <marge> <flipY> », où dx est
+                // le décalage du coin haut gauche du cadre (contextuel) ou de son centre horizontal (infobulle) au
+                // coin bas gauche de l'ancre, dy celui de son bord haut au bord bas de l'ancre, et flipY vrai si
+                // l'ajustement contient le retournement vertical ; « absent » tant que la fenêtre n'est pas
+                // construite. Erreurs : aucune. Dépendances : les Overlay d'ancrage, journal.
+                function ancrage(nom: string): void {
+                    const o = ({ contextuel: contextuelAncre, bulle: bulleAncree, contextuelCourt: contextuelCourte,
+                                 bulleCourte: bulleCourteAncree })[nom]
+                    const ancre = o.ancre
+                    const f = o.chargeur.item
+                    if (!f) return essai.journal("ancrage", nom + " absent")
+                    const r = f.anchor.rect, m = f.cadre.marge
+                    const dx = nom.startsWith("bulle") ? r.x + r.width / 2 - ancre.width / 2 : r.x + m
+                    const flipY = (f.anchor.adjustment & PopupAdjustment.FlipY) !== 0
+                    essai.journal("ancrage", [nom, dx, r.y + r.height + m - ancre.height, m, flipY].join(" "))
+                }
+
                 // anneauOnglets — journalise la visibilité de l'anneau de la barre d'onglets, puis celle de l'anneau
                 // propre au segment « composants ». Entrées : aucune. Sortie : aucune ; « essai : anneauOnglets
                 // <bool> <bool> ». Erreurs : aucune. Dépendances : barre (anneau), composants (anneau), journal.
                 function anneauOnglets(): void {
                     essai.journal("anneauOnglets", barre.anneau.visible + " " + composants.anneau.visible)
+                }
+
+                // materiauDpr — journalise le rapport de pixels que reçoit le Materiau du fond du champ, celui de la
+                // fenêtre (QT_SCALE_FACTOR compris). Entrées : aucune. Sortie : aucune ; « essai : materiauDpr <dpr> ».
+                // Erreurs : aucune. Dépendances : champ (background, un Materiau), journal.
+                function materiauDpr(): void {
+                    essai.journal("materiauDpr", champ.background.dpr)
                 }
 
                 // compteur — journalise la valeur du compteur, la visibilité de son anneau, puis l'activation des
@@ -506,6 +572,19 @@ ShellRoot {
                 // Dépendances : listeMenu, listeTemoin, journal.
                 function menu(): void {
                     essai.journal("menu", listeMenu.currentIndex + " " + listeTemoin.currentIndex)
+                }
+
+                // contours — donne le focus au menu, puis au témoin, chacun avec focusClavier vrai, et journalise
+                // chaque fois la visibilité du contour de sa rangée courante. Entrées : aucune. Sortie : aucune ;
+                // « essai : contours <menu> <témoin> ». Erreurs : aucune. Dépendances : listeMenu, listeTemoin,
+                // journal.
+                function contours(): void {
+                    const vus = [listeMenu, listeTemoin].map(l => {
+                        l.forceActiveFocus()
+                        l.focusClavier = true
+                        return l.activeFocus && l.currentItem.contourMontre
+                    })
+                    essai.journal("contours", vus.join(" "))
                 }
 
                 // curseur — journalise l'état du curseur de texte du champ.

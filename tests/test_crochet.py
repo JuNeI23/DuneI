@@ -17,7 +17,7 @@ GIT = ["git", "-c", "user.name=essai", "-c", "user.email=essai@dunei.invalid"]
 
 
 class CrochetTest(unittest.TestCase):
-    """Chaque scénario : propre, retouché, source sans régénération, hors de l'index, orphelin, partiel, génération en échec."""
+    """Chaque scénario : propre, retouché, source ou shader sans régénération, hors de l'index, orphelin, partiel, génération en échec."""
 
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -109,8 +109,43 @@ class CrochetTest(unittest.TestCase):
         self.assertNotEqual(res.returncode, 0)
         self.assertIn("la génération échoue", res.stderr)
 
+    def test_shader_sans_recompilation_refuse(self):
+        src = self.repo / "coque/Theme/materiau.frag"
+        src.write_text(src.read_text(encoding="utf-8").replace("/ 255.0", "/ 128.0", 1), encoding="utf-8")
+        self.git("add", "coque/Theme/materiau.frag", check=True)
+        res = self.git("commit", "-q", "-m", "essai")
+        self.assertNotEqual(res.returncode, 0)
+        self.assertIn("materiau.frag.qsb", res.stderr)
+
+    def test_shader_recompile_accepte(self):
+        src = self.repo / "coque/Theme/materiau.frag"
+        src.write_text(src.read_text(encoding="utf-8").replace("/ 255.0", "/ 128.0", 1), encoding="utf-8")
+        subprocess.run(["make", "-s", "shaders"], cwd=self.repo, env=self.env, capture_output=True, check=True)
+        self.git("add", "coque/Theme/materiau.frag", "generated/", check=True)
+        res = self.git("commit", "-q", "-m", "essai")
+        self.assertEqual(res.returncode, 0, res.stderr)
+
+    def qsb_d_une_autre_version(self):
+        """Indexe un .qsb aux octets différents, sa source inchangée : celui qu'aurait produit un autre qsb."""
+        with (self.repo / "generated/materiau.frag.qsb").open("ab") as f:
+            f.write(b"\0")
+        self.git("add", "generated/materiau.frag.qsb", check=True)
+
+    def test_qsb_d_une_autre_version_accepte(self):
+        # L'empreinte de la source fait foi, non les octets du .qsb : un poste à une autre version de
+        # qt6-shadertools ne doit pas refuser un commit dont le shader n'a pas changé.
+        self.qsb_d_une_autre_version()
+        res = self.git("commit", "-q", "-m", "essai")
+        self.assertEqual(res.returncode, 0, res.stderr)
+
+    def test_make_generes_qsb_d_une_autre_version(self):
+        self.qsb_d_une_autre_version()
+        res = subprocess.run(["make", "-s", "generes"], cwd=self.repo, env=self.env, capture_output=True, text=True)
+        self.assertEqual(res.returncode, 0, res.stdout + res.stderr)
+
     def test_make_generes(self):
         make = lambda: subprocess.run(["make", "-s", "generes"], cwd=self.repo, env=self.env, capture_output=True)
+        (self.repo / "generated/materiau.frag.qsb").unlink()
         self.assertEqual(make().returncode, 0)
         (self.repo / "generated/nouveau.txt").write_text("nouveau\n", encoding="utf-8")
         self.assertNotEqual(make().returncode, 0)

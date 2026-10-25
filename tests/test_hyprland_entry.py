@@ -33,6 +33,7 @@ hl = {
     exec_cmd = function() note("exec") end,
     env = function(k) note("env:" .. k) end,
     window_rule = function(t) note("rule:" .. t.name) end,
+    layer_rule = function(t) note("layer:" .. t.name) end,
 }
 require("modules.machine").file = HOST
 require("modules.couvercle").etat = "echo 'b false'"
@@ -57,7 +58,7 @@ class EntryTest(unittest.TestCase):
             hypr = Path(tmp) / "hypr"
             (hypr / "generated").mkdir(parents=True)
             (hypr / "machines").mkdir()
-            for name in ("hyprland-tokens.lua", "hyprland-rules.lua", "hyprland-binds.lua", "motion.lua", "energie.lua"):
+            for name in ("hyprland-tokens.lua", "hyprland-rules.lua", "hyprland-layers.lua", "hyprland-binds.lua", "motion.lua", "energie.lua"):
                 shutil.copy(ROOT / "generated" / name, hypr / "generated" / name)
             (hypr / "modules").symlink_to(ROOT / "config" / "hypr" / "modules")
             (hypr / "donnees").symlink_to(ROOT / "config" / "hypr" / "donnees")
@@ -73,7 +74,7 @@ class EntryTest(unittest.TestCase):
             return subprocess.run([LUA, "-e", script], capture_output=True, text=True, check=True).stdout.split()
 
     MODULES = ("env:QT_WAYLAND_DISABLE_WINDOWDECORATION,config:dunei,rule:couche-1-sans-ombre,"
-               "rule:plein-ecran-nu,rule:sans-agrandissement,rule:glisser-xwayland")
+               "rule:plein-ecran-nu,layer:dunei-verre-dunei-barre,layer:dunei-verre-dunei-attention,rule:sans-agrandissement,rule:glisser-xwayland")
 
     DEMARRAGE = "config:dunei,submap,bind,on:hyprland.start"
     COUVERCLE = "bind,on:monitor.added,on:monitor.removed"

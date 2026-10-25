@@ -301,6 +301,19 @@ edge_shadow_opacity = 0.12   # 1px noir, arête inférieure
 shadow_color = { l = 0.0, c = 0.0, h = 0 }   # noir — teinte de toutes les ombres
 shade_opacity = 0.36         # ombrage d'élévation : ombre portée E3, ombrage sous les barres E2
 overlay_outline_opacity = 0.50   # contour d'un élément superposé au contenu
+inset_shadow_opacity = 0.22      # ombre intérieure du creux (primitive `field`), en noir
+inset_shadow_depth = 4           # px logiques — profondeur de l'ombre intérieure du creux, multiple de 4
+
+# Verre dépoli des surfaces de la coque (L2-04). Hyprland n'a qu'un thème : flou et règles de calque
+# ne varient pas avec le moment ; seules les opacités du verre, lues par la coque, le peuvent.
+[glass]
+namespaces = ["dunei-barre", "dunei-attention"]   # calques de la coque floutés
+xray = ["dunei-barre"]       # flou du seul fond ; jamais un calque qui porte de l'E3
+ignore_alpha = 0.6           # > shade_opacity et scrim (jamais floutés), < opacité minimale du verre
+blur_size = 8
+blur_passes = 2
+e2_opacity = 1.0             # opacité du verre de l'élévation 2 (la nuit : opaque, plus beau sur fonds sombres)
+e3_opacity = 1.0             # opacité du verre de l'élévation 3 (le jour la surcharge : [moments.jour.glass])
 
 
 # ===========================================================================
@@ -513,6 +526,11 @@ role = "text-emphasis"   # nuit : la couleur qu'ont aujourd'hui le disque et la 
 [moments.jour.meta]
 mode = "light"
 
+# Le jour garde le verre : sur fonds clairs, Nicolas le préfère aux surfaces opaques (recette 2 de L2-04).
+[moments.jour.glass]
+e2_opacity = 0.85
+e3_opacity = 0.88
+
 [moments.jour.lightness]
 # Écart à la conception : surface-window 0,968 (départ 0,955) et surface-panel 0,98 (départ 0,975). Sur 0,955, aucun
 # texte ne dépasse Lc 97 : le plancher de text-emphasis (98) n'est atteignable qu'avec une fenêtre plus claire. La
@@ -552,7 +570,7 @@ shadow = true
 
 [moments.jour.elevation.field]
 step = 3
-inset_shadow = false
+inset_shadow = true
 
 [moments.jour.surface_material]
 edge_light_opacity = 0.0

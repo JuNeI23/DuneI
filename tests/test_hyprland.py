@@ -9,7 +9,7 @@ import unittest
 from pathlib import Path
 
 from dunei_theme.color import Oklch, to_srgb255
-from dunei_theme.emitters.hyprland import emit, emit_binds, emit_rules
+from dunei_theme.emitters.hyprland import emit, emit_binds, emit_layer_rules, emit_rules
 from dunei_theme.model import load, resolve
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -35,6 +35,8 @@ def expected(model: dict) -> dict:
         "range": str(s["range"]),
         "render_power": str(s["render_power"]),
         "offset": f"{{ 0, {s['offset_y']} }}",
+        "size": str(raw["glass"]["blur_size"]),
+        "passes": str(raw["glass"]["blur_passes"]),
         "color": f'"rgba({r:02x}{g:02x}{b:02x}{round(mat["shade_opacity"] * 255):02x})"',
         "background_color": '"rgba({:02x}{:02x}{:02x}ff)"'.format(*to_srgb255(model["roles"]["surface-base"])),
     }
@@ -76,6 +78,13 @@ class HyprlandTest(unittest.TestCase):
             with self.subTest(hue=m["hue"]):
                 self.assertTrue(literals)
                 self.assertEqual(set(literals) - allowed, set())
+
+    def test_blur_popups_global_inactif(self):
+        """Le flou global reste actif pour le verre, mais jamais pour les popups des applications."""
+        for m in self.models:
+            lua = emit(m)
+            self.assertRegex(lua, r"popups\s*=\s*false")
+            self.assertRegex(lua, r"blur\s*=\s*\{\s*enabled\s*=\s*true")
 
     def bad(self, **shadow) -> dict:
         """Modèle dont l'ombre flottante est altérée. Entrée : clés de floating_shadow. Sortie : modèle résolu."""
@@ -175,6 +184,53 @@ class RulesTest(unittest.TestCase):
             probe = f't = dofile("{fh.name}"); for _, r in ipairs(t) do print(r.name) end'
             out = subprocess.run([LUA, "-e", probe], capture_output=True, text=True, check=True).stdout.split()
         self.assertEqual(out, ["couche-1-sans-ombre", "plein-ecran-nu"])
+
+
+class LayerRulesTest(unittest.TestCase):
+    """Règles de calque du verre : une par namespace, jamais de flou sur l'ombre ni sur le voile."""
+
+    def setUp(self):
+        self.data = load(ROOT / "tokens.toml")
+
+    def layers(self, **glass) -> str:
+        """Règles émises pour un verre altéré. Entrée : clés de [glass]. Sortie : texte Lua."""
+        alt = copy.deepcopy(self.data)
+        alt["glass"].update(glass)
+        return emit_layer_rules(resolve(alt))
+
+    def probe(self, field: str) -> list[str]:
+        """Champ de chaque règle, lu par Lua. Entrée : field — clé Lua. Sortie : valeurs imprimées."""
+        with tempfile.NamedTemporaryFile("w", suffix=".lua", encoding="utf-8") as fh:
+            fh.write(self.layers())
+            fh.flush()
+            lua = f't = dofile("{fh.name}"); for _, r in ipairs(t) do print({field}) end'
+            return subprocess.run([LUA, "-e", lua], capture_output=True, text=True, check=True).stdout.split()
+
+    @unittest.skipUnless(LUA, "aucun interpréteur Lua")
+    def test_une_regle_par_namespace(self):
+        self.assertEqual(self.probe("r.match.namespace"), ["^dunei-barre$", "^dunei-attention$"])
+        self.assertEqual(self.probe("tostring(r.blur) .. tostring(r.blur_popups) .. r.ignore_alpha"),
+                         ["truetrue0.6"] * 2)
+
+    @unittest.skipUnless(LUA, "aucun interpréteur Lua")
+    def test_xray_sur_la_barre_seule(self):
+        self.assertEqual(self.probe("tostring(r.xray)"), ["true", "false"])
+
+    def test_ignore_alpha_borne(self):
+        for value in (0.5, 0.9):
+            with self.subTest(ignore_alpha=value), self.assertRaisesRegex(ValueError, "ignore_alpha"):
+                self.layers(ignore_alpha=value)
+
+    def test_ignore_alpha_borne_par_le_jour(self):
+        """Une surcharge de jour sous le seuil est refusée : la config Hyprland est unique."""
+        alt = copy.deepcopy(self.data)
+        alt["moments"]["jour"].setdefault("glass", {})["e2_opacity"] = 0.55
+        with self.assertRaisesRegex(ValueError, "ignore_alpha"):
+            emit_layer_rules(resolve(alt))
+
+    def test_xray_hors_namespaces(self):
+        with self.assertRaisesRegex(ValueError, "xray"):
+            self.layers(xray=["dunei-inconnu"])
 
 
 class BindsTest(unittest.TestCase):

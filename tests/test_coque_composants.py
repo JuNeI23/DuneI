@@ -65,6 +65,23 @@ class Ouvertures:
             os.close(self.fd)
 
 
+class CoqueRenduTexteTest(unittest.TestCase):
+    """Vérifie, sans Quickshell, que chaque coque qui ouvre des fenêtres rend son texte en niveaux de gris."""
+
+    PRAGMA = "//@ pragma Env QSG_DISTANCEFIELD_ANTIALIASING=gray"
+
+    def test_texte_en_niveaux_de_gris(self):
+        # Défaut relevé à l'écran : franges bleues et orange sur les lettres des surfaces de verre. Le texte de Qt
+        # Quick (rendu par champs de distance) prend l'anticrénelage sous-pixel d'après l'écran, sans égard au
+        # rgba=none de fontconfig, ce qui est faux sur une fenêtre translucide. Chaque coque qui ouvre des fenêtres
+        # (hors coques d'essai, sans rendu jugé) pose la pragma qui le force en niveaux de gris, pour elle seule.
+        racines = [p for p in (ROOT / "coque").rglob("shell.qml") if "essai" not in p.parts]
+        self.assertTrue(racines)
+        for racine in racines:
+            with self.subTest(coque=str(racine.relative_to(ROOT))):
+                self.assertTrue(self.PRAGMA in racine.read_text().splitlines(), "pragma absente")
+
+
 @unittest.skipUnless(os.environ.get("WAYLAND_DISPLAY") and QS, "session Wayland et Quickshell requis")
 class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
     """Lance la coque d'essai du module Composants et lit les valeurs qu'elle journalise."""
@@ -365,6 +382,30 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
         self.ipc("inactif", "true")
         self.assertIn(focus["colorMuted"].lower(), self.valeur("rangee").lower())
 
+    def test_rangee_transparente_au_repos(self):
+        # Défaut relevé à l'écran : sur le verre d'un menu, chaque rangée au repos peignait la couleur opaque de sa
+        # surface et formait une plaque distincte. Ni survolée, ni pressée, ni sélectionnée, la pastille est
+        # transparente, désactivée comprise (une entrée grisée d'un menu) ; sélectionnée ou survolée, elle garde sa
+        # couleur d'état, opaque.
+        self.demarrer()
+        repos, choisie, survol, retour, desactivee = map(float, self.valeur("pastillesRangees").split())
+        self.assertEqual(desactivee, 0)
+        self.assertEqual(repos, 0)
+        self.assertEqual(choisie, 1)
+        self.assertEqual(survol, 1)
+        self.assertEqual(retour, 0)
+
+    def test_serrage_du_cadre(self):
+        # Défaut relevé à l'écran : près du bord gauche, le menu tombait 12 px à droite de son bouton, la fenêtre
+        # (cadre et marge d'ombre) glissée par le compositeur. Le serrage se fait sur le cadre seul : il reste sous
+        # son ancre tant qu'il tient dans l'écran (bord gauche du cadre = bord gauche de l'ancre, 12), et se serre
+        # au bord droit sans marge sinon (1536 - 200) ; une infobulle centrée est serrée de même (1436). Au point
+        # de clic, le cadre part du point (1020) ou, sans place, finit au point (1420 + 1 - 200 = 1221). L'origine
+        # d'un calque se déduit de ses ancrages et marges ; celle d'une fenêtre flottante est inconnue (NaN).
+        self.demarrer()
+        self.assertEqual(self.valeur("serrage").split(),
+                         ["0", "1196", "518", "NaN", "12", "1336", "1436", "1020", "1221", "0"])
+
     def test_bouton_principal(self):
         # Le bouton principal d'un dialogue est sélectionné : l'accent, puis l'accent sans chroma sous le
         # modificateur inactive ; un bouton ordinaire n'a aucune sélection.
@@ -514,6 +555,67 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
         self.choisir("dominante", "jour")
         self.attendre("Theme : thème dominante/jour appliqué")
         self.assertEqual(self.valeur("pastilles").lower(), nuit)
+
+    def test_materiau_sur_e2_e3(self):
+        # Le fond d'une Surface E2 ou E3 est le Materiau (shader du verre, du reflet et des liserés) ; celui d'une
+        # Surface E1 reste un aplat.
+        self.demarrer()
+        self.assertEqual(self.valeur("materiauSurfaces"), "true false")
+
+    def test_verre_opacite(self):
+        # Le verre n'est posé que sur une fenêtre de coque : une Surface surfaceRaised munie de verre prend
+        # l'opacité glass.e3 (opaque à la nuit, 1,0) ; la Surface panneau, sans verre, reste opaque.
+        self.demarrer()
+        opacite, panneau, _ = self.valeur("verre").split()
+        self.assertEqual(float(opacite), self.vue(55)["glass"]["e3"])
+        self.assertEqual(float(opacite), 1.0)
+        self.assertEqual(float(panneau), 1)
+
+    def test_reflet_borne(self):
+        # Le reflet est réservé au chrome de moins de material.sheenMaxHeight (80 px) : un menu de 32 px le
+        # porte la nuit, un menu de 120 px garde verre et liserés mais perd le reflet.
+        self.demarrer()
+        self.ipc("materiauHauteur", "32")
+        self.assertEqual(self.valeur("verre").split()[2], "true")
+        self.ipc("materiauHauteur", "120")
+        self.assertEqual(self.valeur("verre").split()[2], "false")
+
+    def test_materiau_suit_le_moment(self):
+        # Bascule à chaud vers le jour : le reflet s'éteint (sheen faux au jour) et l'opacité suit glass du jour,
+        # sans redémarrer la coque.
+        self.demarrer()
+        self.ipc("materiauHauteur", "32")
+        self.assertEqual(self.valeur("verre").split()[2], "true")
+        famille = self.vue(55)["defaut"]["famille"]
+        self.choisir(famille, "jour")
+        self.attendre(f"Theme : thème {famille}/jour appliqué")
+        opacite, _, reflet = self.valeur("verre").split()
+        self.assertEqual(reflet, "false")
+        self.assertEqual(float(opacite), self.vue(55, famille, "jour")["glass"]["e3"])
+
+    def test_ombre_e3_seulement_la_nuit(self):
+        # L'ombre d'élévation suit elevation.<niveau>.shadow : la nuit, e2 n'en a pas et e3 en a une ; le jour, les
+        # deux en ont une. La marge de l'ombre visible est la portée plus le décalage de l'ombre flottante.
+        self.demarrer()
+        famille = self.vue(55)["defaut"]["famille"]
+        for moment, attendu in (("nuit", "false true"), ("jour", "true true")):
+            self.choisir(famille, moment)
+            self.attendre(f"Theme : thème {famille}/{moment} appliqué")
+            with self.subTest(moment=moment):
+                visibles, marge = self.valeur("ombres").rsplit(" ", 1)
+                self.assertEqual(visibles, attendu)
+                m = self.vue(55, famille, moment)["material"]
+                self.assertEqual(float(marge), m["shadowBlur"] + m["shadowOffsetY"])
+
+    def test_champ_creux(self):
+        # Le fond d'un Champ est un Materiau de niveau field, creusé (ombre interne) la nuit comme le jour.
+        self.demarrer()
+        famille = self.vue(55)["defaut"]["famille"]
+        for moment in ("nuit", "jour"):
+            self.choisir(famille, moment)
+            self.attendre(f"Theme : thème {famille}/{moment} appliqué")
+            with self.subTest(moment=moment):
+                self.assertEqual(self.valeur("champMateriau"), "true field 1")
 
     def test_compteur(self):
         # Le stepper : deux demi-boutons de density.stepperWidth qui prennent ensemble la hauteur du contrôle,
@@ -739,6 +841,48 @@ class CoqueClavierTest(EssaiCoque, unittest.TestCase):
         plateforme = self.journal().split("essai : plateforme ", 1)[1].split()[0]
         self.assertEqual(plateforme, "offscreen", f"coque d'essai du clavier hors offscreen : {plateforme}")
         self.attendre("essai : prêt true")
+
+    def test_dpr_transmis(self):
+        # Facteur d'échelle fractionnaire : le Materiau du champ reçoit le rapport de pixels de sa fenêtre, pour
+        # tracer ses liserés sur un pixel physique.
+        self.environnement = {"QT_QPA_PLATFORM": "offscreen", "QT_SCALE_FACTOR": "1.5"}
+        self.demarrer()
+        self.assertEqual(self.valeur("materiauDpr"), "1.5")
+
+    def test_marge_du_contextuel(self):
+        # La fenêtre d'un contextuel est plus grande que son cadre de 2 * marge dans chaque dimension, pour que
+        # l'ombre ne soit pas rognée ; la marge est celle de l'ombre e3.
+        self.demarrer()
+        self.ipc("ouvrirContextuel")
+        for _ in range(100):
+            if "absent" not in self.valeur("contextuel"):
+                break
+            time.sleep(0.05)
+        lf, hf, lc, hc, marge = map(float, self.valeur("contextuel").split())
+        m = self.vue(55)["material"]
+        self.assertEqual(marge, m["shadowBlur"] + m["shadowOffsetY"])
+        self.assertEqual((lf, hf), (lc + 2 * marge, hc + 2 * marge))
+
+    def test_cadre_a_sa_place_malgre_la_marge(self):
+        # La marge de l'ombre agrandit la fenêtre mais ne doit pas déplacer le cadre visible : le contextuel garde son
+        # bord haut à un écart (space.scale[0]) sous l'ancre, comme l'infobulle, qui reste en outre centrée sur elle, que l'ancre soit haute (80 px) ou courte (28 px, moins de deux marges).
+        # Sous une ancre, la fenêtre ne se retourne pas verticalement (elle glisse), car aucun rectangle d'ancrage
+        # ne serait exact dans les deux sens. L'ancrage est lu sur le rectangle d'ancrage de la fenêtre, car la
+        # plateforme offscreen ne positionne pas les popups. Une marge nulle est le même cas, la correction étant
+        # alors nulle ; l'essai n'a pas de niveau sans ombre à ouvrir.
+        self.demarrer()
+        self.ipc("ouvrirContextuel")
+        ecart = self.vue(55)["space"]["scale"][0]
+        for nom, dy_attendu in (("contextuel", ecart), ("bulle", ecart), ("contextuelCourt", ecart), ("bulleCourte", ecart)):
+            for _ in range(100):
+                if "absent" not in self.valeur("ancrage", nom):
+                    break
+                time.sleep(0.05)
+            with self.subTest(nom=nom):
+                _, dx, dy, marge, flip_y = self.valeur("ancrage", nom).split()
+                self.assertGreater(float(marge), 0)
+                self.assertEqual((float(dx), float(dy)), (0, dy_attendu))
+                self.assertEqual(flip_y, "false")
 
     def test_garde_hors_offscreen(self):
         # Contre-épreuve de la garde : sous la plateforme minimal, inoffensive (aucun affichage), demarrer échoue
@@ -1060,6 +1204,14 @@ class CoqueClavierTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(self.valeur("menu"), "0 0")
         self.ipc("survoler", "2")
         self.assertEqual(self.valeur("menu"), "2 0")
+
+    def test_menu_sans_contour(self):
+        # Défaut relevé à l'écran : à l'ouverture d'un menu à la souris, la rangée courante portait le contour de
+        # focus, le focus donné à la liste passant pour une navigation au clavier. Dans un menu (selectionSuitSurvol),
+        # la pastille de sélection suffit, comme sur macOS : pas de contour, même focusClavier vrai ; une liste
+        # ordinaire focalisée au clavier garde le sien.
+        self.demarrer()
+        self.assertEqual(self.valeur("contours"), "false true")
 
     def test_curseur_du_champ(self):
         # Défaut relevé à l'écran : le curseur de texte restait affiché après la perte du focus. TextInput ne

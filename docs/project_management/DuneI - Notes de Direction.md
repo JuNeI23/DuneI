@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas — révisée le 22 octobre 2026
 
-Version 1.25. Historique en fin de document.
+Version 1.26. Historique en fin de document.
 
 *Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent quarante-huit lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
 
@@ -400,11 +400,25 @@ des reliquats mineurs, regroupés en L2-44 (contour du compteur et de la jauge, 
 du texte du jour thématisé, animation du knob désactivé, pastilles de la planche, test de `theme.json`
 supprimé). Le bouton jour/nuit et l'écran de paramètres, qui appelleront `dunei-theme`, n'en font pas partie.
 
-Prochaine étape : **choisir dans le backlog du lot 2 l'élément suivant, avec Nicolas.** Le backlog (lot 2, coque
-vitale) tient ce qui reste : L2-04 et L2-05 d'abord, la matière et le relief des contrôles que la bibliothèque a
-laissés aux formes (relief de macOS reporté à L2-04), puis la barre système et ses indicateurs (L2-08 à L2-13), qui
-accueillera le futur bouton jour/nuit. L2-44 se traite en passant, quand un composant touché par ses reliquats
-est rouvert. Quelle que soit l'étape retenue, elle commence par l'enjeu et par un repérage, jamais par du code.
+**L'élévation — 25 octobre 2026.** Les surfaces de la coque ont désormais une matière (L2-04, L2-05, D85 à D88).
+Un shader unique, compilé par `make shaders` et versionné dans `generated/`, peint le sheen tramé par bruit IGN, les
+liserés d'un pixel physique et le creux du champ ; les ombres sont analytiques (`RectangularShadow`). Le jour, la
+barre et tout ce qui flotte sont en verre dépoli, teinté par le thème et flouté par des règles de calque Hyprland
+générées ; la nuit, ces surfaces sont opaques. C'est le choix de Nicolas après avoir comparé les deux rendus à
+l'écran : sur fonds sombres, l'opaque est plus beau ; sur fonds clairs, il préfère le verre. Le champ se creuse par
+une ombre interne, clair au jour : la bible gagne une règle propre aux modes clairs. Deux recettes à l'écran ont
+réglé le reste à la manière de macOS : overlays à un écart sous leur ancre, qui glissent au lieu de se retourner et
+que la coque serre elle-même dans l'écran ; menus sans contour de focus ; rangées transparentes au repos sur le
+verre ; texte de la coque en niveaux de gris, l'anticrénelage sous-pixel donnant un faux relief sur le verre. L2-41
+est fermé sans suite : aucune texture visible, « un effet de flou n'est pas du bruit ». Le banc d'essai du verre
+(`coque/outils/verre/`) reste comme outil de développement. Les reliquats mineurs sont regroupés en L2-45, dont la
+mesure chiffrée de la consommation de la coque avec le verre.
+
+Prochaine étape : **choisir avec Nicolas l'élément suivant du lot 2.** Le candidat naturel est la barre système et
+ses indicateurs (L2-08 à L2-13), qui accueillera le futur bouton jour/nuit : ce sera le premier vrai usage du verre,
+au namespace `dunei-barre` déjà déclaré, et sa coque devra porter la directive du texte en niveaux de gris, que le
+test exigera. L2-44 et L2-45 se traitent en passant, quand un composant touché par leurs reliquats est rouvert.
+Quelle que soit l'étape retenue, elle commence par l'enjeu et par un repérage, jamais par du code.
 
 ## Plan de lecture
 
@@ -423,6 +437,7 @@ est rouvert. Quelle que soit l'étape retenue, elle commence par l'enjeu et par 
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-10 | Version initiale |
+| 1.26 | 2026-10-25 | L'élévation (L2-04, L2-05, D85 à D88) validée à l'écran en deux recettes : verre dépoli le jour, opaque la nuit, matière par shader, champ creusé, placement des overlays, menus sans contour, texte en niveaux de gris ; L2-41 non retenu ; reliquats en L2-45 ; prochaine étape : choisir l'élément suivant du lot 2, la barre système en candidate |
 | 1.25 | 2026-10-25 | Thèmes statiques (L2-40, D83, D84) validés à l'écran en six passes : famille et moment, `dunei-theme`, planchers de contraste par rôle, dérogation du corps de texte dans le jour thématisé ; reliquats regroupés en L2-44 ; décompte du backlog porté à cent cinquante-trois ; prochaine étape : choisir l'élément suivant du lot 2 dans le backlog |
 | 1.24 | 2026-10-24 | Bibliothèque de composants (L2-01 à L2-03, D82) validée à l'écran en cinq passes, retour au repos sur `in` ; mode clair retiré des exclusions ; décompte du backlog porté à cent cinquante-deux ; prochaine étape : thèmes statiques clair et sombre (L2-40) |
 | 1.23 | 2026-10-22 | Prochaine étape reformulée : L2-34 terminée, chaque primitive de L2-01 lit `Theme` ; question ouverte du ressort de sortie au retour au repos |

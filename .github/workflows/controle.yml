@@ -1,8 +1,9 @@
 # Contrôle de DuneI (L1-21) : make check complet sur chaque PR vers main — generated/ identique à une
 # génération fraîche, sans fichier hors de git, et tous les tests. La règle de main (setup/github/regle-main.json)
 # exige la tâche « controle » avant toute fusion.
-# Conteneur Arch : la distribution des machines DuneI, paquets du dépôt officiel. make check tourne sous un
-# compte ordinaire, parce que deploy.py refuse root et que ses tests le lancent.
+# Conteneur Arch : la distribution des machines DuneI, paquets du dépôt officiel. Son qt6-shadertools peut devancer
+# celui du poste : le .qsb versionné est jugé par l'empreinte de sa source et par sa réflexion, non par ses octets
+# (D85). make check tourne sous un compte ordinaire, parce que deploy.py refuse root et que ses tests le lancent.
 name: controle
 
 on:
@@ -17,7 +18,7 @@ jobs:
     steps:
       # git avant checkout : sans lui, l'action télécharge une archive sans dépôt, et git diff n'a rien à comparer.
       - name: Paquets du contrôle
-        run: pacman -Syu --noconfirm --needed git make python python-numpy python-pillow lua shellcheck jq
+        run: pacman -Syu --noconfirm --needed git make python python-numpy python-pillow lua shellcheck jq qt6-shadertools
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
       - name: make check, hors root
         run: |
