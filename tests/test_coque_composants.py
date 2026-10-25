@@ -825,21 +825,24 @@ class CoqueClavierTest(EssaiCoque, unittest.TestCase):
     def test_cadre_a_sa_place_malgre_la_marge(self):
         # La marge de l'ombre agrandit la fenêtre mais ne doit pas déplacer le cadre visible : le contextuel garde son
         # coin haut gauche au coin bas gauche de l'ancre, l'infobulle reste centrée à un écart (space.scale[0]) sous
-        # l'ancre, comme avant la marge. L'ancrage est lu sur le rectangle d'ancrage de la fenêtre, car la plateforme
-        # offscreen ne positionne pas les popups. Une marge nulle est le même cas, la correction étant alors nulle ;
-        # l'essai n'a pas de niveau sans ombre à ouvrir.
+        # l'ancre, comme avant la marge, que l'ancre soit haute (80 px) ou courte (28 px, moins de deux marges).
+        # Sous une ancre, la fenêtre ne se retourne pas verticalement (elle glisse), car aucun rectangle d'ancrage
+        # ne serait exact dans les deux sens. L'ancrage est lu sur le rectangle d'ancrage de la fenêtre, car la
+        # plateforme offscreen ne positionne pas les popups. Une marge nulle est le même cas, la correction étant
+        # alors nulle ; l'essai n'a pas de niveau sans ombre à ouvrir.
         self.demarrer()
         self.ipc("ouvrirContextuel")
         ecart = self.vue(55)["space"]["scale"][0]
-        for nom, dy_attendu in (("contextuel", 0), ("bulle", ecart)):
+        for nom, dy_attendu in (("contextuel", 0), ("bulle", ecart), ("contextuelCourt", 0), ("bulleCourte", ecart)):
             for _ in range(100):
                 if "absent" not in self.valeur("ancrage", nom):
                     break
                 time.sleep(0.05)
             with self.subTest(nom=nom):
-                _, dx, dy, marge = self.valeur("ancrage", nom).split()
+                _, dx, dy, marge, flip_y = self.valeur("ancrage", nom).split()
                 self.assertGreater(float(marge), 0)
                 self.assertEqual((float(dx), float(dy)), (0, dy_attendu))
+                self.assertEqual(flip_y, "false")
 
     def test_garde_hors_offscreen(self):
         # Contre-épreuve de la garde : sous la plateforme minimal, inoffensive (aucun affichage), demarrer échoue

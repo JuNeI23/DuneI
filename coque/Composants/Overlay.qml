@@ -11,11 +11,13 @@ import "../Theme"
 //     voile la ferment. Elle n'est compilée qu'à l'ouverture d'une attention, si bien que l'Overlay se charge
 //     aussi sous la plateforme offscreen, qui n'a pas de PanelWindow.
 //   - contextuel (menu, popover, liste déroulante) : PopupWindow ancrée sous l'élément ancre, ou sur le point
-//     de clic si point est fourni, retournée puis glissée pour rester dans l'écran ; sans voile ; le clavier
+//     de clic si point est fourni, retournée puis glissée pour rester dans l'écran (sous une ancre, elle ne se retourne
+//     pas verticalement et glisse : la marge d'ombre de la fenêtre n'a qu'une correction exacte par sens, voir
+//     fenetreContextuel) ; sans voile ; le clavier
 //     est pris par HyprlandFocusGrab, dont la levée (clic à l'extérieur) ferme, comme Échap ; plusieurs
 //     peuvent coexister.
-//   - infobulle : la même PopupWindow, centrée sous l'ancre, ou au-dessus s'il n'y a pas la place, à un échelon
-//     de space (space.scale[0]) de son bord ; sans voile ni HyprlandFocusGrab : elle ne prend jamais le clavier
+//   - infobulle : la même PopupWindow, centrée sous l'ancre, à un échelon de space (space.scale[0]) de son
+//     bord, sans retournement vertical (elle glisse faute de place) ; sans voile ni HyprlandFocusGrab : elle ne prend jamais le clavier
 //     et seule son ouvreuse, l'Infobulle, la ferme.
 // Le contenu est posé au centre d'une Surface surfaceRaised (e3), entourée d'un retrait ; sa taille est celle du
 // contenu. Les formes suivent macOS (conception, § 7.10) : une attention a les coins radius.window et le retrait
@@ -154,27 +156,29 @@ QtObject {
     readonly property Component fenetreContextuel: PopupWindow {
         id: popup
         anchor.item: overlay.ancre
-        // L'infobulle s'ancre sur l'ancre agrandie de l'écart en haut et en bas, pour s'en tenir à distance des
-        // deux côtés, qu'elle soit posée dessous ou retournée au-dessus.
+        // L'infobulle se tient à un écart sous son ancre.
         readonly property real ecart: overlay.bulle ? Theme.space?.scale[0] ?? 0 : 0
         // Le cadre est en retrait de la marge de l'ombre dans la fenêtre : le rectangle d'ancrage est corrigé pour que
-        // le cadre visible tombe là où il tomberait sans marge. Horizontalement et, pour un point de clic, aussi
-        // verticalement, le rectangle s'élargit de la marge de chaque côté ; verticalement sous une ancre, il se
-        // rétrécit de la marge de chaque côté autour de son centre (la fenêtre se pose sous son bord bas, ou
-        // au-dessus de son bord haut une fois retournée), sans devenir négatif : sous deux marges de haut, la
-        // correction est partielle.
+        // le cadre visible tombe là où il tomberait sans marge. Sous une ancre, la fenêtre se pose sous le bord bas
+        // du rectangle, alignée sur son bord gauche (contextuel) ou centrée sur lui (infobulle) : le rectangle est
+        // donc réduit à une ligne de 1 px, la hauteur minimale de PopupAnchor, dont le bord bas est remonté de la
+        // marge au-dessus du bord bas de l'ancre (agrandie de l'écart pour l'infobulle), et il est élargi de la
+        // marge de chaque côté. Pour un point de clic, le rectangle est élargi de la marge de chaque côté, dans les
+        // deux sens, ce qui reste exact aussi une fois retourné. Sous une ancre, la fenêtre ne se retourne pas
+        // verticalement mais glisse : retournée, elle aurait demandé un rectangle différent, et PopupAnchor ne
+        // connaît aucun décalage qui permette de satisfaire les deux sens ; la coque est une barre en haut de
+        // l'écran, dont les menus s'ouvrent vers le bas.
         readonly property real marge: cadrePopup.marge
-        readonly property real hauteurAncre: (overlay.ancre?.height ?? 1) + 2 * ecart
-        readonly property real hauteurRect: Math.max(hauteurAncre - 2 * marge, 0)
+        readonly property bool surAncre: !overlay.point
         anchor.rect.x: (overlay.point?.x ?? 0) - marge
-        anchor.rect.y: overlay.point ? overlay.point.y - marge : -ecart + (hauteurAncre - hauteurRect) / 2
+        anchor.rect.y: overlay.point ? overlay.point.y - marge : (overlay.ancre?.height ?? 1) + ecart - marge - 1
         anchor.rect.width: (overlay.point ? 1 : overlay.ancre?.width ?? 1) + 2 * marge
-        anchor.rect.height: overlay.point ? 1 + 2 * marge : hauteurRect
+        anchor.rect.height: overlay.point ? 1 + 2 * marge : 1
         // Contextuel : sous l'ancre, ou à partir du point de clic, en s'étendant vers le bas et la droite.
-        // Infobulle : centrée sous l'ancre, retournée au-dessus s'il n'y a pas la place.
+        // Infobulle : centrée sous l'ancre. Sous une ancre, retournement horizontal et glissement seulement.
         anchor.edges: overlay.bulle ? Edges.Bottom : Edges.Left | (overlay.point ? Edges.Top : Edges.Bottom)
         anchor.gravity: overlay.bulle ? Edges.Bottom : Edges.Bottom | Edges.Right
-        anchor.adjustment: PopupAdjustment.Flip | PopupAdjustment.Slide
+        anchor.adjustment: surAncre ? PopupAdjustment.FlipX | PopupAdjustment.Slide : PopupAdjustment.Flip | PopupAdjustment.Slide
         // La fenêtre dépasse le cadre de la marge de l'ombre de chaque côté ; seul le cadre reçoit les clics, la
         // marge les laisse passer à la fenêtre dessous.
         readonly property Item cadre: cadrePopup

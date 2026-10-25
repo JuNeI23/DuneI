@@ -157,11 +157,14 @@ ShellRoot {
                 Texte { text: "contextuel" }
             }
 
-            // Ancre haute (80 px, plus de deux marges), sur laquelle se posent un contextuel et une infobulle d'essai
-            // pour éprouver l'ancrage sans que la correction soit bornée.
+            // Ancres haute (80 px) et courte (28 px, la hauteur d'un bouton de la coque), sur lesquelles se posent un
+            // contextuel et une infobulle d'essai pour éprouver l'ancrage.
             Item { id: ancreHaute; width: 100; height: 80 }
             Overlay { id: contextuelAncre; famille: "contextuel"; ancre: ancreHaute; Texte { text: "contextuel" } }
             Overlay { id: bulleAncree; famille: "infobulle"; ancre: ancreHaute; Texte { text: "bulle" } }
+            Item { id: ancreCourte; width: 100; height: 28 }
+            Overlay { id: contextuelCourte; famille: "contextuel"; ancre: ancreCourte; Texte { text: "contextuel" } }
+            Overlay { id: bulleCourteAncree; famille: "infobulle"; ancre: ancreCourte; Texte { text: "bulle" } }
 
             // Infobulle créée et détruite à la demande sur le bouton « bulle », qui lui survit ; ses gestionnaires sont
             // gardés dans des propriétés typées, que le moteur remet à null quand ils sont détruits.
@@ -217,6 +220,8 @@ ShellRoot {
                     contextuelEssai.ouvert = true
                     contextuelAncre.ouvert = true
                     bulleAncree.ouvert = true
+                    contextuelCourte.ouvert = true
+                    bulleCourteAncree.ouvert = true
                 }
 
                 // contextuel — journalise la largeur et la hauteur de la fenêtre du contextuel, celles de son cadre,
@@ -228,20 +233,25 @@ ShellRoot {
                     essai.journal("contextuel", f ? [f.width, f.height, f.cadre.width, f.cadre.height, f.cadre.marge].join(" ") : "absent")
                 }
 
-                // ancrage — journalise où l'ancrage de la fenêtre d'un Overlay d'essai (« contextuel » ou « bulle »)
-                // posera le cadre visible, d'après le modèle d'xdg_popup : la fenêtre se pose sous le bord bas du
-                // rectangle d'ancrage, alignée sur son bord gauche (contextuel) ou centrée sur lui (bulle), et le
-                // cadre est en retrait de la marge. Entrée : nom. Sortie : aucune ; « essai : ancrage <nom> <dx> <dy>
-                // <marge> », décalage du coin haut gauche du cadre (contextuel) ou de son centre horizontal (bulle) au
-                // coin bas gauche de l'ancre d'essai, puis, pour la bulle, l'écart attendu en plus ; « absent » tant que
-                // la fenêtre n'est pas construite. Erreurs : aucune. Dépendances : contextuelAncre, journal.
+                // ancrage — journalise où l'ancrage de la fenêtre d'un Overlay d'essai posera le cadre visible, d'après
+                // le modèle d'xdg_popup : la fenêtre se pose sous le bord bas du rectangle d'ancrage, alignée sur son
+                // bord gauche (contextuel) ou centrée sur lui (infobulle), et le cadre est en retrait de la marge.
+                // Entrée : nom, "contextuel", "bulle", "contextuelCourt" ou "bulleCourte" (ancre haute de 80 px ou
+                // courte de 28 px). Sortie : aucune ; « essai : ancrage <nom> <dx> <dy> <marge> <flipY> », où dx est
+                // le décalage du coin haut gauche du cadre (contextuel) ou de son centre horizontal (infobulle) au
+                // coin bas gauche de l'ancre, dy celui de son bord haut au bord bas de l'ancre, et flipY vrai si
+                // l'ajustement contient le retournement vertical ; « absent » tant que la fenêtre n'est pas
+                // construite. Erreurs : aucune. Dépendances : les Overlay d'ancrage, journal.
                 function ancrage(nom: string): void {
-                    const o = nom === "bulle" ? bulleAncree : contextuelAncre
+                    const o = ({ contextuel: contextuelAncre, bulle: bulleAncree, contextuelCourt: contextuelCourte,
+                                 bulleCourte: bulleCourteAncree })[nom]
+                    const ancre = o.ancre
                     const f = o.chargeur.item
                     if (!f) return essai.journal("ancrage", nom + " absent")
-                    const r = f.anchor.rect, m = f.cadre.marge, h = ancreHaute.height
-                    const dx = nom === "bulle" ? r.x + r.width / 2 - ancreHaute.width / 2 : r.x + m
-                    essai.journal("ancrage", [nom, dx, r.y + r.height + m - h, m].join(" "))
+                    const r = f.anchor.rect, m = f.cadre.marge
+                    const dx = nom.startsWith("bulle") ? r.x + r.width / 2 - ancre.width / 2 : r.x + m
+                    const flipY = (f.anchor.adjustment & PopupAdjustment.FlipY) !== 0
+                    essai.journal("ancrage", [nom, dx, r.y + r.height + m - ancre.height, m, flipY].join(" "))
                 }
 
                 // anneauOnglets — journalise la visibilité de l'anneau de la barre d'onglets, puis celle de l'anneau
