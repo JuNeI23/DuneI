@@ -20,7 +20,29 @@ RGBA = {"unknown": 0, "rgb": 1, "bgr": 2, "vrgb": 3, "vbgr": 4, "none": 5}  # Co
 HIRAGANA, EMOJI, SYMBOL = 0x3042, 0x1F600, 0x1FB00
 
 
-@unittest.skipUnless(FC_MATCH and FC_LIST, "fontconfig absent")
+def missing_families() -> list[str]:
+    """Familles de tokens.toml absentes du système.
+
+    Rôle : décider si le test d'intégration a un sens sur cette machine (CI sans polices DuneI).
+    Entrées : aucune (lit tokens.toml et interroge fc-list). Sortie : liste triée des familles
+    introuvables, vide si tout est installé ; ["fontconfig"] si fc-list manque.
+    Erreurs : aucune levée, un échec de fc-list compte comme famille absente. Dépendances : subprocess, dunei_theme.
+    """
+    if not (FC_MATCH and FC_LIST):
+        return ["fontconfig"]
+    t = resolve(load(ROOT / "tokens.toml"))["raw"]["type"]
+    absent = set()
+    for fam in [*t["installed"].values(), *t["fallback_chain"]]:
+        out = subprocess.run([FC_LIST, fam, "family"], capture_output=True, text=True)
+        if not out.stdout.strip():
+            absent.add(fam)
+    return sorted(absent)
+
+
+MISSING = missing_families()
+
+
+@unittest.skipIf(MISSING, f"polices DuneI non installées (test d'intégration des polices réelles) : {', '.join(MISSING)}")
 class FontconfigMatchTest(unittest.TestCase):
     """Les critères 1 à 3 de la spec, mesurés sur les polices réellement installées."""
 
