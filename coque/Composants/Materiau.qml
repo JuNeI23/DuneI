@@ -18,7 +18,7 @@ import "../Theme"
 //           interne est dessinée.
 // Uniformes (noms imposés par le shader) : fond et refletHaut, couleurs opaques des tokens, de même alpha, pour que
 //           le mélange du reflet, fait sur des couleurs prémultipliées, garde une opacité constante ; reflet,
-//           liserClair, liserSombre, taille, creux, ombreInterne, profondeur (space.scale[0], 4 px logiques).
+//           liserClair, liserSombre, taille, creux, ombreInterne, profondeur (material.insetDepth, 4 px logiques).
 // Verre : l'opacité du verre passe par opacity, que le shader reçoit en qt_Opacity et applique à toute la matière,
 //           liserés compris ; aucune couleur n'est construite dans le QML (tests/test_coque_qml.py). Un Materiau
 //           de verre ne porte donc pas d'enfants : ils hériteraient de l'opacité (Surface charge le sien à part).
@@ -52,7 +52,7 @@ ShaderEffect {
     readonly property size taille: Qt.size(width, height)
     readonly property real creux: creuse ? 1 : 0
     readonly property color ombreInterne: Theme.material?.insetShadow ?? "transparent"
-    readonly property real profondeur: Theme.space?.scale[0] ?? 0
+    readonly property real profondeur: Theme.material?.insetDepth ?? 0
 
     fragmentShader: Theme.fichier("materiau.frag.qsb")
 }

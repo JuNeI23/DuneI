@@ -26,10 +26,10 @@ import "Composants"
 // <cursorFlashTime> », « essai : onglets <géométrie de la barre et de ses segments> », « essai : menu <rangée courante
 // du menu> <rangée courante du témoin> », « essai : ongletSurvole <interaction> <fond> » et « essai : jauge <valeur>
 // <anneau visible> », ainsi que attention, anneauOnglets, compteur, deroulant, pastilles, pastillesCouleurs, bascule,
-// activite et materiauDpr (voir chaque fonction) ; « essai touche <tab|majtab|gauche|droite|haut|bas|espace|entree|echap> » frappe une
+// activite, materiauDpr et contextuel (voir chaque fonction) ; « essai touche <tab|majtab|gauche|droite|haut|bas|espace|entree|echap> » frappe une
 // touche, « essai activiteMarche <bool> » lance ou arrête l'indicateur d'activité, « essai molette <1|-1> » tourne la
 // molette sur le compteur, « essai cliquerDeroulant » clique le déroulant, « essai ouvrirAttention » ouvre l'Overlay
-// d'attention, « essai pointerRangee <rang> <bool> » pose le pointeur sur une rangée du menu ouvert et l'y clique si
+// d'attention, « essai ouvrirContextuel » celui du contextuel, « essai pointerRangee <rang> <bool> » pose le pointeur sur une rangée du menu ouvert et l'y clique si
 // demandé, « essai pointerPastille <rang> <bool> » pose le pointeur sur une pastille et l'y clique si demandé, « essai
 // appuyerPastille <rang> <bool> » enfonce ou relâche le bouton sur une pastille, « essai pastillesReduire <bool> »
 // active ou désactive la pastille de réduction, « essai rechercheTexte <texte> » remplit la recherche, « essai
@@ -148,6 +148,15 @@ ShellRoot {
                 Texte { text: "attention" }
             }
 
+            // Overlay contextuel, ancré sur le bouton « bulle » : « essai ouvrirContextuel » l'ouvre, pour mesurer sa
+            // fenêtre et la marge de son ombre.
+            Overlay {
+                id: contextuelEssai
+                famille: "contextuel"
+                ancre: boutonBulle
+                Texte { text: "contextuel" }
+            }
+
             // Infobulle créée et détruite à la demande sur le bouton « bulle », qui lui survit ; ses gestionnaires sont
             // gardés dans des propriétés typées, que le moteur remet à null quand ils sont détruits.
             property Infobulle jetable: null
@@ -194,6 +203,21 @@ ShellRoot {
                 function attention(): void {
                     essai.journal("attention", attentionEssai.ouvert + " "
                         + (Overlays.attention === null ? "null" : "retenue"))
+                }
+
+                // ouvrirContextuel — ouvre l'Overlay contextuel d'essai. Entrées : aucune. Sortie : aucune.
+                // Erreurs : aucune. Dépendances : contextuelEssai.
+                function ouvrirContextuel(): void {
+                    contextuelEssai.ouvert = true
+                }
+
+                // contextuel — journalise la largeur et la hauteur de la fenêtre du contextuel, celles de son cadre,
+                // puis la marge de son ombre. Entrées : aucune. Sortie : aucune ; « essai : contextuel <l> <h> <l> <h>
+                // <marge> » ; « absent » tant que la fenêtre n'est pas construite. Erreurs : aucune.
+                // Dépendances : contextuelEssai (chargeur, fenêtre, cadre), journal.
+                function contextuel(): void {
+                    const f = contextuelEssai.chargeur.item
+                    essai.journal("contextuel", f ? [f.width, f.height, f.cadre.width, f.cadre.height, f.cadre.marge].join(" ") : "absent")
                 }
 
                 // anneauOnglets — journalise la visibilité de l'anneau de la barre d'onglets, puis celle de l'anneau

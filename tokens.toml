@@ -302,6 +302,7 @@ shadow_color = { l = 0.0, c = 0.0, h = 0 }   # noir — teinte de toutes les omb
 shade_opacity = 0.36         # ombrage d'élévation : ombre portée E3, ombrage sous les barres E2
 overlay_outline_opacity = 0.50   # contour d'un élément superposé au contenu
 inset_shadow_opacity = 0.22      # ombre intérieure du creux (primitive `field`), en noir
+inset_shadow_depth = 4           # px logiques — profondeur de l'ombre intérieure du creux, multiple de 4
 
 # Verre dépoli des surfaces de la coque (L2-04). Hyprland n'a qu'un thème : flou et règles de calque
 # ne varient pas avec le moment ; seules les opacités du verre, lues par la coque, le peuvent.

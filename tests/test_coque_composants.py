@@ -552,6 +552,20 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(reflet, "false")
         self.assertEqual(float(opacite), self.vue(55, famille, "jour")["glass"]["e3"])
 
+    def test_ombre_e3_seulement_la_nuit(self):
+        # L'ombre d'élévation suit elevation.<niveau>.shadow : la nuit, e2 n'en a pas et e3 en a une ; le jour, les
+        # deux en ont une. La marge de l'ombre visible est la portée plus le décalage de l'ombre flottante.
+        self.demarrer()
+        famille = self.vue(55)["defaut"]["famille"]
+        for moment, attendu in (("nuit", "false true"), ("jour", "true true")):
+            self.choisir(famille, moment)
+            self.attendre(f"Theme : thème {famille}/{moment} appliqué")
+            with self.subTest(moment=moment):
+                visibles, marge = self.valeur("ombres").rsplit(" ", 1)
+                self.assertEqual(visibles, attendu)
+                m = self.vue(55, famille, moment)["material"]
+                self.assertEqual(float(marge), m["shadowBlur"] + m["shadowOffsetY"])
+
     def test_champ_creux(self):
         # Le fond d'un Champ est un Materiau de niveau field, creusé (ombre interne) la nuit comme le jour.
         self.demarrer()
@@ -793,6 +807,20 @@ class CoqueClavierTest(EssaiCoque, unittest.TestCase):
         self.environnement = {"QT_QPA_PLATFORM": "offscreen", "QT_SCALE_FACTOR": "1.5"}
         self.demarrer()
         self.assertEqual(self.valeur("materiauDpr"), "1.5")
+
+    def test_marge_du_contextuel(self):
+        # La fenêtre d'un contextuel est plus grande que son cadre de 2 * marge dans chaque dimension, pour que
+        # l'ombre ne soit pas rognée ; la marge est celle de l'ombre e3.
+        self.demarrer()
+        self.ipc("ouvrirContextuel")
+        for _ in range(100):
+            if "absent" not in self.valeur("contextuel"):
+                break
+            time.sleep(0.05)
+        lf, hf, lc, hc, marge = map(float, self.valeur("contextuel").split())
+        m = self.vue(55)["material"]
+        self.assertEqual(marge, m["shadowBlur"] + m["shadowOffsetY"])
+        self.assertEqual((lf, hf), (lc + 2 * marge, hc + 2 * marge))
 
     def test_garde_hors_offscreen(self):
         # Contre-épreuve de la garde : sous la plateforme minimal, inoffensive (aucun affichage), demarrer échoue

@@ -23,7 +23,7 @@ import "Composants/etats.js" as Etats
 // etat, ressort, ressortsFiges, image, controles, coches, cotes, glyphes, radios, jauge, progression, separateur,
 // champ, indicatif, tailleIcone, liste, arrets, rangee, bouton, overlays, overlaysFermes, pastilles, compteur,
 // compteurLargeur, deroulant, recherche, rechercheCouleurs, activite, depliable, depliableCotes, iconesControles,
-// bascule, fenetreAttention, knobs, contours, materiauSurfaces, verre, champMateriau).
+// bascule, fenetreAttention, knobs, contours, materiauSurfaces, verre, champMateriau, ombres).
 // Commandes sans journal : « essai rechercheTexte <texte> », « essai rechercheActive <bool> », « essai activiteEtat
 // <visible> <running> », « essai activitePhase <phase> », « essai activiteAncetre <bool> », « essai depliableOuvrir
 // <bool> », « essai basculeCocher <bool> », « essai pastillesForcer <état> », « essai pastillesReduire <bool> »,
@@ -237,6 +237,12 @@ ShellRoot {
         verre: true
         width: 100
         height: 32
+    }
+
+    // Ombres d'élévation e2 et e3 de la Surface de verre.
+    Item {
+        OmbreElevation { id: ombreE2; cible: verreEssai; niveau: "e2" }
+        OmbreElevation { id: ombreE3; cible: verreEssai; niveau: "e3" }
     }
 
     // Un Overlay de chaque famille, jamais ouvert par les tests : seule leur instanciation fermée est éprouvée.
@@ -912,6 +918,13 @@ ShellRoot {
         function champMateriau(): void {
             const b = champEssai.background
             essai.journal("champMateriau", [estMateriau(b), b.niveau, b.creux].join(" "))
+        }
+
+        // ombres — journalise la visibilité de l'ombre e2, celle de l'ombre e3, puis la marge de l'ombre e3.
+        // Entrées : aucune. Sortie : aucune ; « essai : ombres <bool> <bool> <marge> ». Erreurs : aucune.
+        // Dépendances : ombreE2, ombreE3, journal.
+        function ombres(): void {
+            essai.journal("ombres", [ombreE2.visible, ombreE3.visible, ombreE3.marge].join(" "))
         }
 
         // inactif — pose le modificateur inactive sur la Surface fenêtre, en tête de l'arbre de la sonde.

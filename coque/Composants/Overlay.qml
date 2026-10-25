@@ -57,7 +57,7 @@ QtObject {
     readonly property bool bulle: famille === "infobulle"
 
     // Cadre — Surface surfaceRaised qui porte le contenu, commune aux trois familles ; seule surface de la fenêtre
-    // de l'overlay, elle porte le verre.
+    // de l'overlay, elle porte le verre et l'ombre d'élévation e3.
     // Rôle : instancie le contenu dans un Loader, l'entoure du retrait et capte Échap, qu'il signale par echap() ;
     // c'est une FocusScope qui demande le focus, pour que les touches non consommées par le contenu y remontent.
     // Ce composant en ligne n'accède à rien hors de lui : son API est explicite, car un composant en ligne ne
@@ -73,13 +73,21 @@ QtObject {
         property real rayon
         property real retrait
         signal echap()
+        readonly property real marge: ombre.marge
 
         focus: true
         implicitWidth: charge.implicitWidth + 2 * retrait
         implicitHeight: charge.implicitHeight + 2 * retrait
         Keys.onEscapePressed: echap()
 
+        OmbreElevation {
+            id: ombre
+            cible: corps
+            niveau: "e3"
+        }
+
         Surface {
+            id: corps
             anchors.fill: parent
             role: "surfaceRaised"
             radius: cadre.rayon
@@ -158,14 +166,19 @@ QtObject {
         anchor.edges: overlay.bulle ? Edges.Bottom : Edges.Left | (overlay.point ? Edges.Top : Edges.Bottom)
         anchor.gravity: overlay.bulle ? Edges.Bottom : Edges.Bottom | Edges.Right
         anchor.adjustment: PopupAdjustment.Flip | PopupAdjustment.Slide
-        implicitWidth: cadrePopup.implicitWidth
-        implicitHeight: cadrePopup.implicitHeight
+        // La fenêtre dépasse le cadre de la marge de l'ombre de chaque côté ; seul le cadre reçoit les clics, la
+        // marge les laisse passer à la fenêtre dessous.
+        readonly property Item cadre: cadrePopup
+        implicitWidth: cadrePopup.implicitWidth + 2 * cadrePopup.marge
+        implicitHeight: cadrePopup.implicitHeight + 2 * cadrePopup.marge
         color: "transparent"
         visible: true
+        mask: Region { item: cadrePopup }
 
         Cadre {
             id: cadrePopup
             anchors.fill: parent
+            anchors.margins: marge
             contenu: overlay.contenu
             rayon: (overlay.bulle ? Theme.radius?.small : Theme.radius?.panel) ?? 0
             retrait: Theme.space?.scale[0] ?? 0

@@ -594,7 +594,10 @@
           "edgeShadow": "#1f000000",
           "shade": "#5c000000",
           "overlayOutline": "#80000000",
-          "insetShadow": "#38000000"
+          "insetShadow": "#38000000",
+          "insetDepth": 4,
+          "shadowBlur": 16,
+          "shadowOffsetY": 4
         },
         "glass": {
           "e2": 0.85,
@@ -1073,7 +1076,10 @@
           "edgeShadow": "#1f000000",
           "shade": "#5c000000",
           "overlayOutline": "#80000000",
-          "insetShadow": "#38000000"
+          "insetShadow": "#38000000",
+          "insetDepth": 4,
+          "shadowBlur": 16,
+          "shadowOffsetY": 4
         },
         "glass": {
           "e2": 0.85,
@@ -1554,7 +1560,10 @@
           "edgeShadow": "#1f000000",
           "shade": "#5c000000",
           "overlayOutline": "#80000000",
-          "insetShadow": "#38000000"
+          "insetShadow": "#38000000",
+          "insetDepth": 4,
+          "shadowBlur": 16,
+          "shadowOffsetY": 4
         },
         "glass": {
           "e2": 0.85,
@@ -2033,7 +2042,10 @@
           "edgeShadow": "#1f000000",
           "shade": "#5c000000",
           "overlayOutline": "#80000000",
-          "insetShadow": "#38000000"
+          "insetShadow": "#38000000",
+          "insetDepth": 4,
+          "shadowBlur": 16,
+          "shadowOffsetY": 4
         },
         "glass": {
           "e2": 0.85,

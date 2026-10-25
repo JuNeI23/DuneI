@@ -40,6 +40,14 @@ class QuickshellEmitterTest(unittest.TestCase):
             for t in f.values():
                 self.assertEqual(t["glass"], {"e2": 0.85, "e3": 0.88})
 
+    def test_ombre_flottante_et_profondeur_du_creux(self):
+        """La matière expose la portée et le décalage de l'ombre flottante, et la profondeur du creux (jetons)."""
+        for f in self.out["themes"].values():
+            for t in f.values():
+                self.assertEqual(t["material"]["shadowBlur"], self.data["window"]["floating_shadow"]["range"])
+                self.assertEqual(t["material"]["shadowOffsetY"], self.data["window"]["floating_shadow"]["offset_y"])
+                self.assertEqual(t["material"]["insetDepth"], self.data["surface_material"]["inset_shadow_depth"])
+
     def test_creux_du_champ(self):
         """Le creux du champ existe au jour comme à la nuit, avec une ombre intérieure noire à 22 %."""
         for m in ("jour", "nuit"):
