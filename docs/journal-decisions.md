@@ -1990,7 +1990,10 @@ en-tête E2 dessiné dans une fenêtre opaque n'a rien à flouter.
   qui ne touche que son processus ; un test l'exige de toute coque future, dont la barre de L2-08.
 - **Rien d'opaque sur le verre au repos.** Une rangée au repos, désactivée comprise, est transparente
   (`Etat.fondReposTransparent`) : elle peignait la couleur opaque de son conteneur et formait une plaque sur le
-  verre.
+  verre. Ce fond transparent prend la teinte du fond plein, alpha nul (`Qt.alpha(plein, 0)`), pour que le ressort
+  de couleur ne passe pas par le noir du « transparent » en allumant la rangée. C'est une couleur dérivée dans le
+  QML, que le test des composants interdit ; `Composants/Etat.qml` en est exempté, comme `ColorSpring.qml`, parce
+  qu'il ne crée aucune teinte visible. La garde nomme désormais `Qt.alpha`, qui lui échappait.
 - **Le banc d'essai du verre** (`coque/outils/verre/`, `verre.sh`) reste après L2-08, comme outil de
   développement, pour régler le verre sans toucher à la vraie barre.
 - **Coût si faux.** Rendre le verre à la nuit ou l'ôter au jour : les clés `e2_opacity` et `e3_opacity` de `[glass]`
