@@ -65,6 +65,23 @@ class Ouvertures:
             os.close(self.fd)
 
 
+class CoqueRenduTexteTest(unittest.TestCase):
+    """Vérifie, sans Quickshell, que chaque coque qui ouvre des fenêtres rend son texte en niveaux de gris."""
+
+    PRAGMA = "//@ pragma Env QSG_DISTANCEFIELD_ANTIALIASING=gray"
+
+    def test_texte_en_niveaux_de_gris(self):
+        # Défaut relevé à l'écran : franges bleues et orange sur les lettres des surfaces de verre. Le texte de Qt
+        # Quick (rendu par champs de distance) prend l'anticrénelage sous-pixel d'après l'écran, sans égard au
+        # rgba=none de fontconfig, ce qui est faux sur une fenêtre translucide. Chaque coque qui ouvre des fenêtres
+        # (hors coques d'essai, sans rendu jugé) pose la pragma qui le force en niveaux de gris, pour elle seule.
+        racines = [p for p in (ROOT / "coque").rglob("shell.qml") if "essai" not in p.parts]
+        self.assertTrue(racines)
+        for racine in racines:
+            with self.subTest(coque=str(racine.relative_to(ROOT))):
+                self.assertTrue(self.PRAGMA in racine.read_text().splitlines(), "pragma absente")
+
+
 @unittest.skipUnless(os.environ.get("WAYLAND_DISPLAY") and QS, "session Wayland et Quickshell requis")
 class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
     """Lance la coque d'essai du module Composants et lit les valeurs qu'elle journalise."""

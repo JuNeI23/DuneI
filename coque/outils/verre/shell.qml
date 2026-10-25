@@ -1,6 +1,8 @@
 //@ pragma IconTheme Adwaita
+//@ pragma Env QSG_DISTANCEFIELD_ANTIALIASING=gray
 import QtQuick
 import Quickshell
+import Quickshell.Io
 import Quickshell.Wayland
 import "Theme"
 import "Composants"
@@ -17,10 +19,15 @@ import "Composants"
 //          des tokens.
 // Erreurs : tokens absents ou invalides au démarrage → barre transparente, erreur de Theme dans le journal ;
 //           sans le shader compilé, le verre retombe sur un aplat (Materiau).
-// Dépendances : quickshell ≥ 0.3 (PanelWindow, WlrLayershell), modules Theme et Composants (Surface, Bouton,
+// Commande : « qs -p coque/outils/verre ipc call verre basculer <menu|popover|bulle> » ouvre ou ferme un overlay
+// sans geste, pour une capture.
+// Dépendances : quickshell ≥ 0.3 (PanelWindow, WlrLayershell, IpcHandler), modules Theme et Composants (Surface, Bouton,
 // Overlay, Liste, Rangee, Texte).
 // Import : comme pour la planche, les liens verre/Theme -> ../../Theme et verre/Composants -> ../../Composants
 // placent les deux modules côte à côte sous la racine ; la directive IconTheme en tête choisit Adwaita.
+// Rendu du texte : la directive Env en tête force l'anticrénelage du texte en niveaux de gris
+// (QSG_DISTANCEFIELD_ANTIALIASING=gray), pour cette coque seule : sans elle, Qt Quick le rend en sous-pixel
+// d'après l'écran, malgré le rgba=none de fontconfig, ce qui frange de couleur les lettres sur le verre.
 ShellRoot {
     PanelWindow {
         id: barre
@@ -92,6 +99,19 @@ ShellRoot {
             ancre: boutonBulle
 
             Texte { text: "Une infobulle" }
+        }
+    }
+
+    // Commandes du banc, pour ouvrir et fermer un overlay sans geste, le temps d'une capture.
+    IpcHandler {
+        target: "verre"
+
+        // basculer — ouvre l'overlay nommé s'il est fermé, le ferme sinon.
+        // Entrée : nom, "menu", "popover" ou "bulle". Sortie : aucune.
+        // Erreurs : TypeError pour un nom inconnu. Dépendances : menu, popover, bulle.
+        function basculer(nom: string): void {
+            const o = ({ menu, popover, bulle })[nom]
+            o.ouvert = !o.ouvert
         }
     }
 }
