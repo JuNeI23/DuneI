@@ -31,8 +31,21 @@ class QuickshellEmitterTest(unittest.TestCase):
         self.assertEqual(list(self.out), [
             "_generated", "hue", "space", "density", "radius", "window", "layout", "breakpoints", "typo", "icons",
             "familles", "moments", "defaut", "themes", "pastilles"])
-        self.assertEqual(list(self.nuit), ["color", "states", "focus", "disabled", "elevation", "material", "render",
+        self.assertEqual(list(self.nuit), ["color", "states", "focus", "disabled", "elevation", "material", "glass", "render",
                                            "knob", "controls"])
+
+    def test_verre(self):
+        """Les opacités du verre E2 et E3 sont lues des jetons, pour les quatre thèmes."""
+        for f in self.out["themes"].values():
+            for t in f.values():
+                self.assertEqual(t["glass"], {"e2": 0.85, "e3": 0.88})
+
+    def test_creux_du_champ(self):
+        """Le creux du champ existe au jour comme à la nuit, avec une ombre intérieure noire à 22 %."""
+        for m in ("jour", "nuit"):
+            t = self.out["themes"]["thematisee"][m]
+            self.assertTrue(t["elevation"]["field"]["insetShadow"])
+            self.assertEqual(t["material"]["insetShadow"], "#38000000")
 
     def test_quatre_themes(self):
         """Vérifie les deux familles, leurs deux moments et le thème par défaut."""

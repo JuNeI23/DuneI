@@ -69,7 +69,7 @@ LINKS = ("config/hypr/modules", "config/hypr/machines", "config/hypr/donnees",
          SCRIPTS, "config/hypr/hyprlock.conf")   # Écrits à la main, liés sous hypr/ à leur nom.
 # Fichiers de generated/ lus par Hyprland. energie.lua d'abord : un module en dépend, et une recharge
 # déclenchée par une autre copie le trouve ainsi déjà en place.
-COPIES = ("energie.lua", "hyprland-tokens.lua", "hyprland-rules.lua", "hyprland-binds.lua", "motion.lua")
+COPIES = ("energie.lua", "hyprland-tokens.lua", "hyprland-rules.lua", "hyprland-layers.lua", "hyprland-binds.lua", "motion.lua")
 GENERIC = "generique.lua"                     # Nom donné à la configuration générique de la machine.
 TEMP = ".{}.dunei"                            # Nom temporaire, sans extension .lua, invisible pour require.
 FONTCONFIG = ("fonts.conf", "conf.d/50-dunei.conf")  # Fichier de generated/ → chemin sous fontconfig/.

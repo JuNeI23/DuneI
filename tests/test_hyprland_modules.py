@@ -24,6 +24,7 @@ hl = {
         end
     end,
     window_rule = function(r) print("rule", r.name) end,
+    layer_rule = function(r) print("layer", r.name) end,
 }
 """
 
@@ -41,7 +42,8 @@ class ModulesTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             hypr = Path(tmp)
             (hypr / "generated").mkdir()
-            shutil.copy(ROOT / "generated" / "hyprland-rules.lua", hypr / "generated")
+            for f in ("hyprland-rules.lua", "hyprland-layers.lua"):
+                shutil.copy(ROOT / "generated" / f, hypr / "generated")
             (hypr / "modules").symlink_to(ROOT / "config" / "hypr" / "modules")
             script = f'package.path = "{hypr}/?.lua"\n' + FAKE + f'require("modules.{name}").apply()\n'
             return subprocess.run([LUA, "-e", script], capture_output=True, text=True, check=True).stdout.splitlines()
@@ -56,8 +58,10 @@ class ModulesTest(unittest.TestCase):
         # La disposition dépend du clavier physique : elle vit dans le fichier machine, pas ici.
         self.assertEqual(self.run_module("entree"), ["input\tcompose:ralt\ttrue\ttrue\tnil"])
 
-    def test_regles_generated_then_behaviour(self):
+    def test_regles_generated_layers_then_behaviour(self):
         self.assertEqual(self.run_module("regles"), ["rule\tcouche-1-sans-ombre", "rule\tplein-ecran-nu",
+                                                     "layer\tdunei-verre-dunei-barre",
+                                                     "layer\tdunei-verre-dunei-attention",
                                                      "rule\tsans-agrandissement", "rule\tglisser-xwayland"])
 
     def test_verrouillage(self):

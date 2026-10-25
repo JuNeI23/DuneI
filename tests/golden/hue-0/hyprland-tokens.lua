@@ -16,6 +16,13 @@ return {
             offset       = { 0, 4 },
             color        = "rgba(0000005c)",
         },
+        blur = {
+            enabled           = true,
+            size              = 8,
+            passes            = 2,
+            popups            = false,
+            new_optimizations = true,
+        },
     },
     misc = {
         background_color = "rgba(100609ff)",

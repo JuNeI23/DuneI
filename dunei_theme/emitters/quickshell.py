@@ -147,10 +147,10 @@ def _controles(model: dict) -> dict:
 
 
 def _theme(model: dict) -> dict:
-    """Branche d'un thème — couleurs, états, focus, désactivé, élévation, matière et rendu.
+    """Branche d'un thème — couleurs, états, focus, désactivé, élévation, matière, verre et rendu.
 
     Entrée : model — sortie de model.resolve sur les données d'un thème (model.theme_data).
-    Sortie : dict {color, states, focus, disabled, elevation, material, render, knob, controls}, `color.knob` compris.
+    Sortie : dict {color, states, focus, disabled, elevation, material, glass, render, knob, controls}, `color.knob` compris.
     Erreurs : KeyError si une section du TOML manque.
     Dépendances : _camel, _argb, _states, _focus, _eteint, _controles, color.oklch, color.to_hex.
     """
@@ -200,7 +200,9 @@ def _theme(model: dict) -> dict:
             "edgeShadow": _argb(shadow, mat["edge_shadow_opacity"]),
             "shade": _argb(shadow, mat["shade_opacity"]),
             "overlayOutline": _argb(shadow, mat["overlay_outline_opacity"]),
+            "insetShadow": _argb(shadow, mat["inset_shadow_opacity"]),
         },
+        "glass": {"e2": raw["glass"]["e2_opacity"], "e3": raw["glass"]["e3_opacity"]},
         "render": {"scrim": _argb(shadow, raw["render"]["scrim_opacity"]),
                    "neverAnimateBlurRadius": raw["render"]["never_animate_blur_radius"],
                    "hairlinePhysical": raw["scaling"]["hairlines_in_physical_pixels"]},
