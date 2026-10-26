@@ -10,7 +10,8 @@ import "../Theme"
 // en couleur (applications, zone de notification) passent par IconImage de Quickshell, pas par ici.
 // Entrées : nom, nom freedesktop sans suffixe ; pleine, demande la variante pleine <nom>-fill-symbolic, avec
 // repli sur <nom>-symbolic (suffixe provisoire, tranché en L4-12) ; couleur, teinte, le texte primaire par
-// défaut ; taille, côté en pixels logiques, Theme.icons.sizes.default par défaut.
+// défaut ; image, url d'une image à recolorer à la place de l'icône nommée (le logo de la barre), prioritaire
+// sur nom ; taille, côté en pixels logiques, Theme.icons.sizes.default par défaut.
 // Sorties : celles d'Image (status, source…). La taille réelle et la taille préférée dans un Layout valent
 // taille ; la taille implicite, en lecture seule, reste celle de l'image rendue par le fournisseur d'icônes.
 // Erreurs : aucune ; un nom vide ne charge rien ; avant le chargement des tokens, la taille est nulle et
@@ -29,6 +30,7 @@ ColorImage {
     id: icone
 
     property string nom
+    property url image
     property bool pleine: false
     property color couleur: Theme.color?.textPrimary ?? "transparent"
     property int taille: Theme.icons?.sizes.default ?? 0
@@ -42,5 +44,5 @@ ColorImage {
     Layout.preferredHeight: taille
     sourceSize: Qt.size(taille, taille)
     color: couleur
-    source: nom ? Quickshell.iconPath(nom + (pleine ? "-fill-symbolic" : "-symbolic"), nom + "-symbolic") : ""
+    source: image != "" ? image : nom ? Quickshell.iconPath(nom + (pleine ? "-fill-symbolic" : "-symbolic"), nom + "-symbolic") : ""
 }

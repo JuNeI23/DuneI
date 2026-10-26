@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas
 
-Document normatif. Version 0.15. Historique en fin de document.
+Document normatif. Version 0.16. Historique en fin de document.
 
 ## Comment lire ce document
 
@@ -255,7 +255,7 @@ Ils agissent ensemble ; isolément, aucun ne fait grand-chose.
 
 **Le jour, les surfaces E2 et E3 de la coque sont en verre dépoli ; la nuit, elles sont opaques** (D85). Sur fond clair, le verre allège ; sur fond sombre, les surfaces opaques sont plus belles.
 
-- **La translucidité appartient à la fenêtre de coque, pas au niveau.** Seul le compositeur floute ce qu'il y a derrière une surface Wayland : seules la barre, les panneaux, les overlays de la coque et la fenêtre d'attention peuvent être de verre. Un en-tête E2 dessiné à l'intérieur d'une fenêtre opaque reste opaque. Les fenêtres d'applications (E1) restent opaques.
+- **La translucidité appartient à la fenêtre de coque, pas au niveau.** Seul le compositeur floute ce qu'il y a derrière une surface Wayland : seuls les panneaux, les overlays de la coque (les popovers de la barre compris) et la fenêtre d'attention peuvent être de verre ; la barre système, elle, est transparente et n'a pas de matière (D89). Un en-tête E2 dessiné à l'intérieur d'une fenêtre opaque reste opaque. Les fenêtres d'applications (E1) restent opaques.
 - **Le verre est teinté par le thème** : la couleur de l'échelon domine (0,85 en E2, 0,88 en E3), le bureau ne fait que transparaître, flouté. Sans cette teinte, le verre prend la couleur délavée du fond d'écran et jure avec les fenêtres.
 - **La nuit, l'opacité du verre vaut 1** : la surface garde son sheen, ses liserés et, en E3, son ombre, comme le veut le tableau ci-dessus. Le jour, ni sheen ni liseré, une ombre en E2 et E3.
 - **Rien d'opaque ne se pose sur le verre au repos.** Une rangée de menu au repos — ni survolée, ni pressée, ni sélectionnée, désactivée comprise — est transparente ; sinon chaque rangée forme une plaque distincte sur le fond translucide.
@@ -840,7 +840,7 @@ Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si 
 | --- | --- | --- | --- | --- |
 | Bureau | E0 | `surface` | `spectacle` | Registre de spectacle |
 | Fenêtre tuilée | E1 | `surface` | `reflow` | **Aucune ombre, aucune bordure.** Gouttière 8px, rayon 12. Fenêtre active : les autres portent le modificateur `container_inactive` |
-| Barre système | E2 | `surface` + `text` + `interactive` | `state` | 32px. La nuit : opaque, sheen + liseré, pas d'ombre. Le jour : verre dépoli et ombre (D83, D85). Porte la couleur franche du thème machine |
+| Barre système | aucune (transparente) | `text` + `interactive` | `state` | 28px, zone exclusive de 28px. Aucun fond, aucun verre, aucune capsule, de nuit comme de jour (D89). Texte et icônes posés sur le bureau, d'un clair ou d'un foncé choisi d'après le fond réel (`bureau.json`, D90) ; survol un peu plus sombre ou plus clair, appui et menu ouvert à `accentStandalone` (D92). Icônes à 16px, logo à 20px, texte à l'échelon 3 (D95). Fonctions coupées : forme barrée (D91) |
 | Barre latérale | E2 | `surface` + `row` | `state` | 240px, redimensionnable 180–400 par pas de 4. Sous 480px de conteneur → icônes seules |
 | En-tête de panneau | E2 | `surface` + `text` | — | Sheen autorisé : hauteur sous 80px |
 | Rangée de liste | — | `row` | `state` | Transparente au repos. Sélection en pastille arrondie, en retrait des bords. Focus = **contour intérieur pleine largeur**, décalage −1, qui suit l'arrondi. Jamais d'anneau. La liste est un seul arrêt de tabulation |
@@ -907,3 +907,4 @@ Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si 
 | 0.13 | 2026-10-25 | Chapitre 2 : contrat révisé, une famille et un moment, planchers de contraste par rôle, deux échelles (nuit, jour de la dominante et jour thématisé), sémantiques par moment, chroma de la nuit thématisée à 0,014, exception du corps de texte dans le jour thématisé ; chapitre 5 : ombre au jour ; chapitre 7 : rôles `knob` et `control-off`, contour des contrôles blancs du jour, pastilles hors du moment (D83, D84) |
 | 0.14 | 2026-10-25 | Chapitre 2 : seconde dérogation, bornée, du contraste (texte sur l'accent muet de l'état inactif au jour, Lc 41, plancher `on-accent-muted`) (D83) |
 | 0.15 | 2026-10-25 | Chapitre 4 : texte de la coque en niveaux de gris ; chapitre 5 : matière tracée par un shader, aucune texture visible, verre de la coque (verre dépoli le jour, opaque la nuit, translucidité propre à la fenêtre de coque, rien d'opaque sur le verre au repos), champ clair et creusé par une ombre interne en mode clair ; chapitre 7 : aucun contour de focus dans un menu ; annexe E : placement des overlays contextuels, barre, rangée, champ, menu contextuel et popover précisés (D85 à D88) |
+| 0.16 | 2026-10-26 | Annexe E : la barre système est transparente, sans matière ni couleur franche, texte sur bureau, 28 px (D89 à D92, D95) ; chapitre 5 : la translucidité ne cite plus la barre |

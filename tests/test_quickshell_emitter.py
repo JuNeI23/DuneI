@@ -6,6 +6,7 @@ import unittest
 from pathlib import Path
 
 from dunei_theme.color import Oklch, apca_lc, from_srgb255, oklch, to_hex
+from dunei_theme.emitters.hyprland import emit as emit_hyprland
 from dunei_theme.emitters.quickshell import emit
 from dunei_theme.checks import check
 from dunei_theme.model import load, resolve, theme_data, themes
@@ -30,7 +31,7 @@ class QuickshellEmitterTest(unittest.TestCase):
     def test_cles_premier_niveau(self):
         self.assertEqual(list(self.out), [
             "_generated", "hue", "space", "density", "radius", "window", "layout", "breakpoints", "typo", "icons",
-            "familles", "moments", "defaut", "themes", "pastilles"])
+            "familles", "moments", "defaut", "themes", "pastilles", "bureau"])
         self.assertEqual(list(self.nuit), ["color", "states", "focus", "disabled", "elevation", "material", "glass", "render",
                                            "knob", "controls"])
 
@@ -62,6 +63,28 @@ class QuickshellEmitterTest(unittest.TestCase):
         for f in self.out["themes"]:
             self.assertEqual(set(self.out["themes"][f]), {"nuit", "jour"})
         self.assertEqual(self.out["defaut"], {"famille": "thematisee", "moment": "nuit"})
+
+    @staticmethod
+    def luminance(hexa: str) -> float:
+        """Luminance relative WCAG d'une couleur `#rrggbb`. Entrée : hexa. Sortie : flottant dans [0, 1]."""
+        r, g, b = (int(hexa[i:i + 2], 16) / 255 for i in (1, 3, 5))
+        lin = [c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4 for c in (r, g, b)]
+        return 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2]
+
+    def test_bureau_fond_egal_au_fond_hyprland(self):
+        """Le fond du bureau émis égale, en hex, le `background_color` de Hyprland pour la teinte 55."""
+        rgba = re.search(r'background_color = "rgba\(([0-9a-f]{6})ff\)"', emit_hyprland(self.model))[1]
+        self.assertEqual(self.out["bureau"]["fond"], "#" + rgba)
+
+    def test_bureau_cles(self):
+        """Les sept clés existent, les couleurs sont en `#rrggbb`, le seuil est dans ]0, 1[ et les survols s'inversent."""
+        b = self.out["bureau"]
+        self.assertEqual(list(b), ["fond", "texteClair", "texteClairSurvol", "texteFonce", "texteFonceSurvol", "seuil", "logo"])
+        for k in ("fond", "texteClair", "texteClairSurvol", "texteFonce", "texteFonceSurvol"):
+            self.assertRegex(b[k], r"^#[0-9a-f]{6}$")
+        self.assertTrue(0 < b["seuil"] < 1)
+        self.assertLess(self.luminance(b["texteClairSurvol"]), self.luminance(b["texteClair"]))
+        self.assertGreater(self.luminance(b["texteFonceSurvol"]), self.luminance(b["texteFonce"]))
 
     def test_pastilles_hors_moment(self):
         """Vérifie que les pastilles sont au premier niveau, que le glyphe est le fond de base de la nuit

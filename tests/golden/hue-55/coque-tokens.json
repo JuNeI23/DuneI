@@ -2081,5 +2081,14 @@
     "success": "#51bf68",
     "successHover": "#66d37a",
     "successPressed": "#35a751"
+  },
+  "bureau": {
+    "fond": "#0f0703",
+    "texteClair": "#f5f5f5",
+    "texteClairSurvol": "#bebebe",
+    "texteFonce": "#161616",
+    "texteFonceSurvol": "#484848",
+    "seuil": 0.18,
+    "logo": "/usr/share/pixmaps/archlinux-logo.svg"
   }
 }

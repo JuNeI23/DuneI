@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.23. Historique en fin de document.
+Version 1.24. Historique en fin de document.
 
 Socle amorçable.
 
@@ -1877,6 +1877,66 @@ Les reliquats du backlog (L2-45) : liserés qui ne suivent pas l'arc des coins e
 (échelle 1,25), ombre E3 qui transparaît sous le verre du jour, champ du `Compteur` sans ombre interne, ancre qui
 bouge pendant l'ouverture, serrage vertical laissé au compositeur, tests et robustesse du générateur.
 
+## La barre système et la coque de session — L2-08, L2-09
+
+La première pièce de la coque que Nicolas voit en permanence : une barre transparente, sans fond ni capsule, sur le
+modèle de la barre des menus de macOS. Les raisons sont au journal (D89 à D95) ; la conception est
+`docs/superpowers/specs/2026-10-26-barre-systeme-design.md` (v1.2).
+
+### Ce que fait `make install`
+
+| Fichier du dépôt | Destination | Rôle |
+| --- | --- | --- |
+| `config/systemd/user/dunei-coque.service` | `~/.config/systemd/user/` | Unité de la coque de session : `qs -n -c dunei`, rattachée à `graphical-session.target`, relancée en cas d'échec (D94) |
+| `session.toml` | lu par `deploy.py` | Ligne `dunei-coque.service` ajoutée à la liste blanche de la session (D50), après `nm-applet.service` |
+| `coque/` | `~/.config/quickshell/dunei` (lien) | Dossier de la coque, que `qs -c dunei` retrouve par son nom de configuration |
+| `tokens.toml`, table `[bureau]` | `generated/coque-tokens.json` | Jeux de texte clair et foncé, seuil de luminance, logo ; `make tokens` les régénère |
+| (écrit par `deploy.py`) | `~/.config/dunei/bureau.json` | État du fond du bureau : `{ "origine", "fond" }` (D90) |
+
+- `deploy.py` écrit `bureau.json` avec l'origine `theme` et la valeur de `tokens.bureau.fond` (`#0f0703`), et le
+  réécrit tant que l'origine reste `theme`. Avec l'origine `fond`, que posera l'outil de fond d'écran de L2-27, il le
+  laisse intact. Un fichier illisible ou écrit par un tiers fait refuser `make install` avec un message, sans rien
+  écraser ; la coque retombe alors sur `tokens.bureau.fond`.
+- La coque se recharge d'elle-même quand `bureau.json` ou `theme.json` change (surveillance de fichier). Rien n'est
+  sondé : le texte de la barre ne coûte aucun calcul au repos.
+- Chaque `shell.qml` hors `essai/` porte `//@ pragma IconTheme Adwaita` et
+  `//@ pragma Env QSG_DISTANCEFIELD_ANTIALIASING=gray` ; `tests/test_coque_qml.py` l'exige.
+
+### Mode d'emploi
+
+```bash
+make install                                    # pose l'unité, le lien et bureau.json, active la coque
+systemctl --user status dunei-coque.service     # active (running)
+systemctl --user restart dunei-coque.service    # recharge la coque après une modification de coque/
+journalctl --user -u dunei-coque.service -e     # erreurs QML éventuelles
+```
+
+- La barre fait 28 px et réserve 28 px : les fenêtres tuilées commencent dessous. De droite à gauche dans la rangée :
+  paramètres, Bluetooth, VPN (seulement connecté), Wi-Fi, jour/nuit, batterie, notifications ; à gauche, le logo Arch
+  et la date « lun. 26 oct. 14:32 ». Le centre est vide et transparent aux clics, en attendant la presqu'île.
+- Seul le bouton jour/nuit réagit au clic (`dunei-theme bascule`). Un état coupé (notifications en « ne pas déranger »,
+  Wi-Fi ou Bluetooth éteints) prend une forme barrée.
+- Les bancs d'essai de `coque/Barre/essai/` et de `coque/outils/verre/` se lancent à la main. Le banc du verre partage
+  le namespace `dunei-barre` : `verre.sh` refuse de démarrer tant que la coque de session tourne
+  (`systemctl --user stop dunei-coque.service` d'abord).
+
+### Pièges rencontrés
+
+- **UPower** donne `percentage` sur 0–1 ; la barre normalise les deux échelles.
+- **`font.features` posé sur une instance de `Texte`** supplante la liaison `font: Theme.police(…)` du composant : le
+  texte retombe à 12 px. On passe par l'entrée `tabulaire` (D95).
+- **dunst** tient `org.freedesktop.Notifications` : la coque ne doit jamais instancier de `NotificationServer`.
+
+### Relevés
+
+- Avant : aucune coque ne tournait. Après, au repos sur 30 s (`coque/outils/mesure.sh`) : `qs` à 0,0 % de processeur,
+  PSS 158,8 Mio (RSS 303,8 Mio) ; `nmcli monitor` 2,9 Mio, `dbus-monitor` 0,3 Mio. Repère de D80 : 111 Mio pour une
+  barre vide.
+- Recette à l'écran validée par Nicolas le 2026-10-26 : survol et appui du bouton jour/nuit (foncé au survol, orange
+  d'accent à l'appui), bascule du thème, Wi-Fi et Bluetooth coupés puis rétablis, secteur débranché, « ne pas
+  déranger » de dunst. Rendu jugé « parfait ».
+- **Non couvert : le VPN.** Aucun VPN n'est configuré sur caladan ; à éprouver quand il en existera un.
+
 ## Lecteur d'empreinte — nouveau
 
 Cet élément n'existe dans aucun document du projet. Il est consigné ici parce qu'il s'installe au lot 1, mais **son travail de conception appartient au lot 5**.
@@ -1979,6 +2039,7 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 
 | Version | Date | Changement |
 | --- | --- | --- |
+| 1.24 | 2026-10-26 | La barre système et la coque de session (L2-08, L2-09) : unité `dunei-coque.service`, lien `~/.config/quickshell/dunei`, `bureau.json`, mode d'emploi, pièges, relevés et réserve sur le VPN (D89 à D95) |
 | 1.23 | 2026-10-25 | L'élévation (L2-04, L2-05) : shader du matériau et sa compilation (`make shaders`, `.qsb` versionné), règles de calque du verre (`generated/hyprland-layers.lua`, `regles.lua`), texte de la coque en niveaux de gris, banc d'essai du verre, relevés ; chaîne de génération et message du crochet complétés par `shaders` ; `.qsb` jugé par l'empreinte de sa source et non par ses octets, recompilation après une retouche du shader (D85 à D88) |
 | 1.22 | 2026-10-25 | Les thèmes statiques (L2-40) : où vit `theme.json`, mode d'emploi de `dunei-theme`, bascule sur la planche (`planche.sh theme`), relevés, ce qui reste à voir (D83, D84) |
 | 1.21 | 2026-10-24 | Bibliothèque de composants (L2-01) : relevé d'un overlay d'attention fermé, ouvert, refermé ; ouverture de l'attention et fermeture du déroulant validées à l'écran |

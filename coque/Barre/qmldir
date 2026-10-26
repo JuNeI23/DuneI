@@ -1,0 +1,13 @@
+module Barre
+ElementBarre 1.0 ElementBarre.qml
+Relance 1.0 Relance.qml
+Horloge 1.0 Horloge.qml
+Logo 1.0 Logo.qml
+Notifications 1.0 Notifications.qml
+Batterie 1.0 Batterie.qml
+JourNuit 1.0 JourNuit.qml
+Wifi 1.0 Wifi.qml
+Vpn 1.0 Vpn.qml
+Bluetooth 1.0 Bluetooth.qml
+Parametres 1.0 Parametres.qml
+Barre 1.0 Barre.qml

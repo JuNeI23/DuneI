@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas — révisée le 22 octobre 2026
 
-Version 1.26. Historique en fin de document.
+Version 1.27. Historique en fin de document.
 
 *Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent quarante-huit lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
 
@@ -414,11 +414,25 @@ est fermé sans suite : aucune texture visible, « un effet de flou n'est pas du
 (`coque/outils/verre/`) reste comme outil de développement. Les reliquats mineurs sont regroupés en L2-45, dont la
 mesure chiffrée de la consommation de la coque avec le verre.
 
-Prochaine étape : **choisir avec Nicolas l'élément suivant du lot 2.** Le candidat naturel est la barre système et
-ses indicateurs (L2-08 à L2-13), qui accueillera le futur bouton jour/nuit : ce sera le premier vrai usage du verre,
-au namespace `dunei-barre` déjà déclaré, et sa coque devra porter la directive du texte en niveaux de gris, que le
-test exigera. L2-44 et L2-45 se traitent en passant, quand un composant touché par leurs reliquats est rouvert.
-Quelle que soit l'étape retenue, elle commence par l'enjeu et par un repérage, jamais par du code.
+**La barre système — 26 octobre 2026.** La coque tourne enfin dans la session de Nicolas (L2-08, L2-09, D89 à D95). La
+barre est transparente, sans fond, sans verre et sans capsule, sur le modèle de la barre des menus de macOS : elle
+remplace la ligne de la bible qui la voulait opaque la nuit et en verre le jour. À gauche, le logo Arch et la date ; à
+droite, notifications, batterie, jour/nuit, Wi-Fi, VPN, Bluetooth et paramètres. Le texte suit la luminance du fond
+réel du bureau, lue dans `~/.config/dunei/bureau.json` et recalculée sur événement seulement ; au survol un élément
+cliquable s'assombrit un peu, appuyé il prend l'orange d'accent. Un état coupé prend une forme barrée ; le VPN n'apparaît
+que connecté ; ce qui manque à la machine disparaît sans trou. Seul le bouton jour/nuit répond au clic. La recette à
+l'écran a ramené la barre de 32 à 28 px et réglé les tailles (icônes à 16 px, logo à 20 px, texte à 15 px) ; elle a
+aussi fait trouver un défaut utile à retenir : poser une sous-propriété de `font` sur une instance supplante la liaison
+du composant (D95). La coque démarre par `dunei-coque.service`, déclarée dans `session.toml` ; elle pèse 158,8 Mio de
+mémoire proportionnelle et 0,0 % de processeur au repos. Le VPN n'est pas éprouvé, aucun n'étant configuré sur
+caladan. L'indicateur de bureaux virtuels (L2-10) quitte la barre pour la presqu'île, nouvelle ligne L2-46, dont le
+namespace est déjà réservé.
+
+Prochaine étape : **choisir avec Nicolas l'élément suivant du lot 2.** Deux candidats naturels : la presqu'île (L2-46,
+qui reprend L2-10), seconde surface de la coque et premier usage du mouvement ; ou le premier popover, celui du réseau
+(L2-11), qui trancherait le sort de `nm-applet` et fournirait au VPN son interrupteur. L2-44 et L2-45 se traitent en
+passant, quand un composant touché par leurs reliquats est rouvert. Quelle que soit l'étape retenue, elle commence par
+l'enjeu et par un repérage, jamais par du code.
 
 ## Plan de lecture
 
@@ -437,6 +451,7 @@ Quelle que soit l'étape retenue, elle commence par l'enjeu et par un repérage,
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-10 | Version initiale |
+| 1.27 | 2026-10-26 | La barre système (L2-08, L2-09, D89 à D95) validée à l'écran : barre transparente de 28 px, texte sur bureau, neuf indicateurs, coque de session ; VPN non éprouvé ; L2-10 déplacé vers la presqu'île (L2-46) ; prochaine étape : choisir entre la presqu'île et le popover réseau |
 | 1.26 | 2026-10-25 | L'élévation (L2-04, L2-05, D85 à D88) validée à l'écran en deux recettes : verre dépoli le jour, opaque la nuit, matière par shader, champ creusé, placement des overlays, menus sans contour, texte en niveaux de gris ; L2-41 non retenu ; reliquats en L2-45 ; prochaine étape : choisir l'élément suivant du lot 2, la barre système en candidate |
 | 1.25 | 2026-10-25 | Thèmes statiques (L2-40, D83, D84) validés à l'écran en six passes : famille et moment, `dunei-theme`, planchers de contraste par rôle, dérogation du corps de texte dans le jour thématisé ; reliquats regroupés en L2-44 ; décompte du backlog porté à cent cinquante-trois ; prochaine étape : choisir l'élément suivant du lot 2 dans le backlog |
 | 1.24 | 2026-10-24 | Bibliothèque de composants (L2-01 à L2-03, D82) validée à l'écran en cinq passes, retour au repos sur `in` ; mode clair retiré des exclusions ; décompte du backlog porté à cent cinquante-deux ; prochaine étape : thèmes statiques clair et sombre (L2-40) |

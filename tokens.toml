@@ -307,13 +307,25 @@ inset_shadow_depth = 4           # px logiques — profondeur de l'ombre intéri
 # Verre dépoli des surfaces de la coque (L2-04). Hyprland n'a qu'un thème : flou et règles de calque
 # ne varient pas avec le moment ; seules les opacités du verre, lues par la coque, le peuvent.
 [glass]
-namespaces = ["dunei-barre", "dunei-attention"]   # calques de la coque floutés
+namespaces = ["dunei-barre", "dunei-attention", "dunei-presquile"]   # calques de la coque floutés
 xray = ["dunei-barre"]       # flou du seul fond ; jamais un calque qui porte de l'E3
 ignore_alpha = 0.6           # > shade_opacity et scrim (jamais floutés), < opacité minimale du verre
 blur_size = 8
 blur_passes = 2
 e2_opacity = 1.0             # opacité du verre de l'élévation 2 (la nuit : opaque, plus beau sur fonds sombres)
 e3_opacity = 1.0             # opacité du verre de l'élévation 3 (le jour la surcharge : [moments.jour.glass])
+
+
+# Bureau : texte posé directement sur le fond d'écran, sans capsule (barre système, L2-08). Le fond du
+# bureau est `surface-base` du thème par défaut ; la coque choisit entre texte clair et texte foncé selon
+# la luminance du fond réel. Valeurs de départ, à régler à l'écran.
+[bureau]
+texte_clair = { l = 0.97, c = 0.0, h = 0 }          # texte au repos sur un fond sombre
+texte_clair_survol = { l = 0.80, c = 0.0, h = 0 }   # texte survolé sur un fond sombre (plus sombre)
+texte_fonce = { l = 0.20, c = 0.0, h = 0 }          # texte au repos sur un fond clair
+texte_fonce_survol = { l = 0.40, c = 0.0, h = 0 }   # texte survolé sur un fond clair (plus clair)
+seuil = 0.18                 # luminance relative (WCAG) sous laquelle le fond est jugé sombre
+logo = "/usr/share/pixmaps/archlinux-logo.svg"   # logo de la distribution, affiché à gauche de la barre
 
 
 # ===========================================================================

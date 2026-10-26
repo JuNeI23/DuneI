@@ -2071,3 +2071,153 @@ Dans un menu, la rangée courante ne montre jamais de contour de focus.
 
 *Touché : bible (chapitre 7, annexe E), conception de l'élévation (§ 2 et 5.3), `coque/Composants/` (`Overlay.qml`,
 `ancrage.js`, `Rangee.qml`, `Etat.qml`), `tests/`.*
+
+### D89 · La barre système est transparente : ni fond, ni verre, ni couleur franche
+
+2026-10-26. **La barre n'a aucun fond, de nuit comme de jour, dans les deux familles de thèmes. Elle ne porte plus la
+couleur franche du thème machine.** Elle remplace la ligne de la bible qui la voulait opaque la nuit, en verre le jour.
+
+- **Raison.** La référence de Nicolas est la barre des menus de macOS Tahoe : « on reprend la barre macOS :
+  transparente ». Sur les maquettes `barre-v1.html` et `barre-v2.html`, le fond coloré et le verre alourdissaient
+  la rangée ; le texte posé sur le bureau est plus léger et suit la direction « macOS » voulue pour la coque.
+- **Conséquence pour la matière.** La barre ne pose donc pas d'`OmbreElevation` : l'ombre E2 de la barre sous le
+  verre du jour, jamais vue (L2-45), devient sans objet.
+- **Le flou du namespace `dunei-barre` est conservé.** Sur un bureau uni il ne laisse aucun artefact derrière les
+  glyphes, et la règle servira aux popovers (`blur_popups`) de L2-11 et suivants. Le retirer obligerait à le
+  rétablir au premier popover.
+- **Coût si faux.** Revenir à un fond ne touche que `Barre.qml` (l'ajout d'une `Materiau`) et la ligne de la bible.
+
+*Touché : bible (annexe E, ligne « Barre système »), conception de la barre système (§ 2 et 7), `coque/Barre/Barre.qml`,
+backlog (L2-45).*
+
+### D90 · Le texte de la barre suit le fond réel du bureau, lu dans `bureau.json`
+
+2026-10-26. **La couleur du texte et des icônes au repos dépend de la luminance du fond du bureau, non du moment du
+thème ; la coque la lit dans `~/.config/dunei/bureau.json`, qu'elle surveille.** Aucun échantillonnage de l'écran,
+aucune minuterie.
+
+- **Raison.** Comme sur macOS, le texte doit rester lisible quel que soit le fond. Nicolas a posé la condition d'un
+  recalcul sur événement (« via des hooks ou autres »), sans coût continu.
+- **Un fichier d'état réinscriptible, hors de `generated/`.** `generated/` ne s'édite jamais (D77) et `make install`
+  le recopie : le fond du bureau y serait écrasé. `bureau.json` porte `{ "origine", "fond" }`. `deploy.py` l'écrit
+  avec l'origine `theme`, depuis la valeur générée pour Hyprland (`tokens.bureau.fond`, `#0f0703`), et le réécrit tant
+  que l'origine reste `theme`, pour qu'il ne diverge jamais de Hyprland. Avec l'origine `fond`, que posera l'outil de
+  fond d'écran de L2-27, il le laisse intact. *Choix de Claude, sur la relecture du constructeur.*
+- **Deux jeux prédéfinis**, dans la table `[bureau]` de `tokens.toml` : texte clair (`l` 0,97) sur fond sombre, texte
+  foncé (`l` 0,20) sur fond clair ; survol à 0,80 et 0,40. Le seuil de luminance relative (WCAG) est de 0,18. Les
+  valeurs se règlent à l'écran.
+- **Un fichier corrompu ne plante rien.** `make install` refuse avec un message, sans écraser le fichier ; la coque
+  retombe sur `tokens.bureau.fond`.
+- **Aujourd'hui** le fond est partout `surface-base` : le jeu clair s'applique en permanence. Le jeu foncé et l'origine
+  `fond` ne seront éprouvés qu'avec L2-27, qui calculera une seule fois la luminance moyenne de l'image en
+  l'appliquant.
+- **Coût si faux.** Les seuils et les jeux sont des jetons ; la lecture est confinée à `Theme.qml`
+  (`bureau`, `texteBureau`, `texteBureauSurvol`, `luminance()`).
+
+*Touché : `tokens.toml`, `deploy.py`, `coque/Theme/Theme.qml`, `generated/coque-tokens.json`, carnet du lot 1,
+conception de la barre système (§ 4).*
+
+### D91 · Fonctions coupées : deux régimes
+
+2026-10-26. **Notifications, batterie, jour/nuit, Wi-Fi, Bluetooth et paramètres sont toujours affichés ; le VPN
+n'apparaît que connecté. Un état coupé prend une forme barrée, jamais grisée. Ce qui manque physiquement à la machine
+ne s'affiche pas.**
+
+- **Raison.** Un indicateur qui disparaît quand on coupe la fonction ferait croire qu'elle n'existe pas, et la rangée
+  se déplacerait sous le doigt ; la forme barrée dit l'état sans bouger. Le VPN, lui, ne sert que connecté, et
+  s'activera depuis le popover réseau (L2-11). Une machine sans batterie, sans carte Wi-Fi ou sans adaptateur
+  Bluetooth n'a rien à montrer : l'élément est `visible: false` et la rangée se referme sans trou.
+- **Un VPN hors NetworkManager reste invisible** (wg-quick, tailscale) : limite acceptée. Le module `Networking` de
+  Quickshell ne connaissant pas les VPN, la coque tient `nmcli monitor` ouvert dans un `Process` et relit les
+  connexions actives à chaque ligne émise.
+- **Un processus de veille qui meurt ne fige rien.** `nmcli monitor` et `dbus-monitor` (pour « ne pas déranger » de
+  dunst) sont tenus par le composant `Relance`, qui les relance à leur sortie (NetworkManager ou dunst redémarrés).
+- **Pas de serveur de notifications dans la coque** : dunst tient `org.freedesktop.Notifications`, une seconde
+  instance lui disputerait le nom. La cloche n'affiche aucun compteur, dunst ne distinguant pas les notifications
+  non lues ; un compte honnête attend L2-19.
+- **Coût si faux.** Le régime est une propriété `visible` par indicateur, dans `coque/Barre/`.
+
+*Touché : `coque/Barre/` (indicateurs, `Relance.qml`, `icones.js`), conception de la barre système (§ 2 et 5),
+`tests/test_barre.py`.*
+
+### D92 · Survol et appui sans capsule : un décalage de luminosité, puis l'accent autonome
+
+2026-10-26. **Aucun élément de la barre n'a de capsule. Au survol, un élément cliquable devient un peu plus sombre
+(jeu clair) ou plus clair (jeu foncé) ; appuyé, puis tant que son menu est ouvert, il prend `accentStandalone`.**
+Seul le bouton jour/nuit est cliquable (il appelle `dunei-theme bascule`).
+
+- **Raison.** Nicolas a écarté la capsule, « pas très joli », sur les maquettes. Le survol sans changement de teinte
+  garde le texte du bureau neutre ; l'appui à l'orange d'accent (`#ee8b3e` la nuit) dit sans ambiguïté qu'un élément
+  est actif. Les transitions suivent le ressort d'état existant (`transitions.state.in`) par `ColorSpring`.
+- **Seuls les cliquables réagissent.** Les autres indicateurs ne changent ni au survol ni à l'appui, pour ne pas
+  promettre un clic qui n'existe pas. Le masque de clic de la barre ne couvre donc que le bouton jour/nuit ; ailleurs,
+  et au centre en particulier, les clics traversent.
+- **Aucune couleur écrite dans le QML** hors `Theme/ColorSpring.qml` et `Composants/Etat.qml`, ce que
+  `tests/test_coque_qml.py` vérifie.
+- **Validé à l'écran** le 2026-10-26 : foncé au survol, orange d'accent à l'appui.
+- **Coût si faux.** Le pas de survol est un jeton (`texte_clair_survol`, `texte_fonce_survol`) ; la teinte d'appui,
+  une ligne d'`ElementBarre.qml`.
+
+*Touché : `coque/Barre/ElementBarre.qml`, `tokens.toml`, bible (annexe E), conception de la barre système (§ 4).*
+
+### D93 · La presqu'île est une surface séparée ; L2-10 la rejoint
+
+2026-10-26. **La forme centrale qui s'étire à la manière de l'îlot dynamique sera une seconde surface, distincte de la
+barre. L'indicateur de bureaux virtuels (L2-10) quitte la barre et s'y affichera, au changement de bureau. Le namespace
+`dunei-presquile` est réservé dès maintenant.**
+
+- **Raison.** Plus haute que la barre, elle passe par-dessus le haut des fenêtres sans les pousser : ni zone exclusive
+  (`exclusionMode: ExclusionMode.Ignore`, sinon le compositeur la placerait sous la barre), ni masque autre que sa
+  forme visible. Une barre unique porterait l'un ou l'autre régime, pas les deux. Sa couche (haute ou overlay)
+  lui appartient.
+- **Ce qui est livré.** Le namespace dans `tokens.toml`, donc sa règle de flou dans `generated/hyprland-layers.lua`, et
+  le point d'accueil du `Variants` de `shell.qml` ; aucun code de presqu'île.
+- **Backlog.** L2-10 est rattaché à une nouvelle ligne, L2-46 (la presqu'île).
+- **Coût si faux.** Réunir les deux surfaces reviendrait à retirer le namespace et à étendre le masque de `Barre.qml`.
+
+*Touché : `tokens.toml`, `generated/hyprland-layers.lua`, backlog (L2-10, L2-46), conception de la barre système
+(§ 7).*
+
+### D94 · La coque de session démarre par `dunei-coque.service`
+
+2026-10-26. **Une unité utilisateur `dunei-coque.service`, rattachée à la session graphique, lance
+`qs -n -c dunei`. Elle est déclarée dans `session.toml`, sur le modèle de `nm-applet.service`, et `deploy.py` lie
+`~/.config/quickshell/dunei` au dossier `coque/` du dépôt.**
+
+- **Raison.** D50 interdit l'`exec-once` de Hyprland : le démarrage passe par la liste blanche de `session.toml` et
+  des unités. L'unité porte `PartOf` et `After=graphical-session.target`, `ConditionEnvironment=WAYLAND_DISPLAY`
+  (comme celle de hypridle), `Restart=on-failure` et la tranche `app-graphical.slice`. Une seule coque porte la
+  barre et, plus tard, la presqu'île.
+- **Le banc du verre ne tourne pas avec la coque.** Il partage le namespace `dunei-barre` : `verre.sh` refuse de
+  démarrer si la coque de session tourne, et reste lancé à la main seulement.
+- **Ressources mesurées** (`coque/outils/mesure.sh`, définition de terminé de D80). Avant : aucune coque ne tournait.
+  Après, au repos sur 30 s : `qs` à 0,0 % de processeur, PSS 158,8 Mio (RSS 303,8 Mio) ; processus de veille
+  `nmcli monitor` 2,9 Mio et `dbus-monitor` 0,3 Mio. Le repère de D80 était de 111 Mio pour une barre vide.
+- **Relevés à l'exécution.** Le `percentage` de UPower est sur 0–1 (la barre normalise les deux échelles, pour ne
+  jamais afficher « 1 % » ni « 7800 % ») ; la liste `networks` du Wi-Fi est peuplée sans scan.
+- **Coût si faux.** Retirer la ligne de `session.toml` et l'unité (D40).
+
+*Touché : `config/systemd/user/dunei-coque.service`, `session.toml`, `deploy.py`, `coque/outils/verre/verre.sh`, carnet
+du lot 1 (session), conception de la barre système (§ 7 et 8).*
+
+### D95 · Réglages de la recette : 28 px, icônes à 16 px, texte à l'échelon 3 ; et la leçon de `font.features`
+
+2026-10-26. **La barre passe de 32 à 28 px (hauteur et zone exclusive). Les icônes nommées sont à 16 px
+(`icons.sizes.dense`), le logo Arch à 20 px (`sizes.default`), le texte à l'échelon 3 (15 px).**
+
+- **Raison.** À la recette, Nicolas a voulu rapprocher les fenêtres du haut de l'écran. Le dessin du logo Arch laisse
+  du vide : à 20 px il rend environ 16 px d'encre, comme les autres glyphes. Le texte de 15 px s'accorde à ces icônes.
+  La bible et la spec fixaient 32 px : ils sont corrigés.
+- **Défaut trouvé et corrigé : une sous-propriété de `font` supplantait la liaison.** Poser `font.features` sur une
+  instance de `Texte` remplaçait la liaison `font: Theme.police(…)` du composant, et le texte retombait sur la police
+  de l'application (12 px). La correction est `Theme.police(echelon, moyen, tabulaire)` et l'entrée `tabulaire` de
+  `Texte` ; `Icone` gagne l'entrée `image` pour le logo. **Règle : ne jamais poser une sous-propriété de `font` sur
+  une instance dont le composant lie `font` en entier** ; passer par une entrée du composant.
+- **Recette à l'écran validée par Nicolas le 2026-10-26** : survol et appui du bouton jour/nuit, bascule du thème,
+  Wi-Fi et Bluetooth coupés puis rétablis (forme barrée), secteur débranché, « ne pas déranger » de dunst. Rendu jugé
+  « parfait ». **Le VPN n'est pas éprouvé** : aucun VPN n'est configuré sur caladan. Non couvert, à éprouver quand
+  un VPN existera (recette sans artifice).
+- **Coût si faux.** La hauteur et les tailles sont des jetons ou des constantes de `Barre.qml`.
+
+*Touché : `coque/Barre/`, `coque/Composants/Icone.qml` et `Texte.qml`, `coque/Theme/Theme.qml`, bible (annexe E),
+conception de la barre système (v1.2).*

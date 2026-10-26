@@ -233,13 +233,28 @@ def _pastilles(model: dict) -> dict:
                for suf, cle in (("", None), ("Hover", "hover_lightness_delta"), ("Pressed", "pressed_lightness_delta"))}}
 
 
+def _bureau(model: dict) -> dict:
+    """Jetons du bureau : fond du compositeur, couleurs de texte posé dessus, seuil de luminance et logo.
+
+    Entrée : model — sortie de model.resolve (thème par défaut) ; `raw["bureau"]` fournit les valeurs.
+    Sortie : dict {fond, texteClair, texteClairSurvol, texteFonce, texteFonceSurvol, seuil, logo} ; `fond` est
+             `surface-base`, la valeur exacte de `misc.background_color` de Hyprland.
+    Erreurs : KeyError si la table [bureau] ou une de ses clés manque. Dépendances : color.Oklch, color.to_hex.
+    """
+    b = model["raw"]["bureau"]
+    return {"fond": to_hex(model["roles"]["surface-base"]),
+            **{_camel(k): to_hex(Oklch(**b[k])) for k in ("texte_clair", "texte_clair_survol", "texte_fonce", "texte_fonce_survol")},
+            "seuil": b["seuil"], "logo": b["logo"]}
+
+
 def emit(model: dict) -> str:
     """Fichier `coque-tokens.json` : les quatre thèmes, les pastilles et les cotes partagées.
 
-    Entrée : model — sortie de model.resolve ; seuls `raw` et `hue` servent, chaque thème étant résolu ici.
+    Entrée : model — sortie de model.resolve ; `raw` et `hue` servent à résoudre chaque thème ici, `roles` à la clé
+             `bureau` (via _bureau).
     Sortie : contenu du fichier JSON. Erreurs : KeyError si une section du TOML manque ou si le moment « nuit » n'existe pas
              (les pastilles en dérivent).
-    Dépendances : json, _camel_keys, _theme, _pastilles, model.themes, model.defaut, model.theme_data, model.resolve.
+    Dépendances : json, _camel_keys, _theme, _pastilles, _bureau, model.themes, model.defaut, model.theme_data, model.resolve.
     """
     raw, hue = model["raw"], model["hue"]
     resolus = {(f, m): resolve(theme_data(raw, f, m), hue) for f, m in themes(raw)}
@@ -261,5 +276,6 @@ def emit(model: dict) -> str:
         "defaut": {"famille": fam, "moment": mom},
         "themes": {f: {m: _theme(resolus[(f, m)]) for g, m in resolus if g == f} for f in raw["familles"]},
         "pastilles": _pastilles(resolus[(fam, "nuit")]),
+        "bureau": _bureau(model),
     }
     return json.dumps(out, indent=2, ensure_ascii=False) + "\n"

@@ -62,6 +62,7 @@ class ModulesTest(unittest.TestCase):
         self.assertEqual(self.run_module("regles"), ["rule\tcouche-1-sans-ombre", "rule\tplein-ecran-nu",
                                                      "layer\tdunei-verre-dunei-barre",
                                                      "layer\tdunei-verre-dunei-attention",
+                                                     "layer\tdunei-verre-dunei-presquile",
                                                      "rule\tsans-agrandissement", "rule\tglisser-xwayland"])
 
     def test_verrouillage(self):
