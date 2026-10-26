@@ -10,7 +10,7 @@ import "../Composants"
 // Entrées : icone, nom d'icône sans « -symbolic » ; source, image recolorée à la place d'une icône nommée (le
 // logo) ; texte ; cliquable, faux par défaut (un élément d'affichage ne réagit ni au survol ni à l'appui) ;
 // ouvert, vrai tant que le menu de l'élément est ouvert ; taille, côté de l'icône en pixels logiques,
-// Theme.icons.sizes.dense par défaut (le logo la fixe à Theme.icons.sizes.default). Le texte suit l'échelon 3
+// Theme.icons.sizes.dense par défaut (le logo la fixe à Theme.icons.sizes.default). Le texte suit l'échelon 4
 // de l'échelle typographique.
 // Sorties : celles de T.AbstractButton (clicked, hovered, down). L'élément est invisible, et donc absent de la
 // rangée, quand ni icône, ni image, ni texte ne sont fournis (matériel absent).
@@ -55,7 +55,7 @@ T.AbstractButton {
         Texte {
             anchors.verticalCenter: parent.verticalCenter
             visible: element.texte !== ""
-            echelon: 3
+            echelon: 4
             text: element.texte
             color: ressort.value
             font.features: Theme.typo?.tabularNumerals ? { "tnum": 1 } : ({})
