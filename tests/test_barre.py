@@ -4,6 +4,7 @@ Ignoré sans session Wayland ou sans Quickshell pour la partie qui lance qs ; la
 que le thème Adwaita.
 """
 
+import json
 import os
 import re
 import subprocess
@@ -108,11 +109,13 @@ class IconesTest(BarreIpc, unittest.TestCase):
         self.assertNotIn("WARN", self.journal())
 
     def test_police_du_texte_appliquee(self):
-        """Le texte de l'élément suit l'échelon 4 et demande les chiffres tabulaires (régression : font.features
-        supplantait la liaison de police de Texte, qui retombait sur la police de l'application)."""
+        """Le texte de l'élément suit l'échelon 3 de typo.scale et demande les chiffres tabulaires
+        (régression : font.features supplantait la liaison de police de Texte, qui retombait sur la police de
+        l'application)."""
         self.appeler("regler", "", "lun. 26 oct. 22:48")
         taille, tnum = self.appeler("policeTexte").split(";")
-        self.assertEqual(taille, "18")
+        echelle = json.loads((ROOT / "generated" / "coque-tokens.json").read_text(encoding="utf-8"))["typo"]["scale"]
+        self.assertEqual(taille, str(echelle[3]))
         self.assertEqual(tnum, "1")
 
 
