@@ -16,6 +16,8 @@ from tests.test_coque_theme import DELAI, QS, ROOT, EssaiCoque
 
 ESSAI = ROOT / "coque" / "Barre" / "essai"
 ADWAITA = Path("/usr/share/icons/Adwaita")
+# Condition de saut commune aux tests qui vérifient des icônes dans Adwaita (absent du conteneur de CI).
+SANS_ADWAITA = unittest.skipUnless(ADWAITA.is_dir(), "thème Adwaita absent")
 # Toutes les icônes que icones.js peut renvoyer, énumérées d'après ses règles.
 NIVEAUX = [f"battery-level-{n}{s}" for n in range(0, 101, 10) for s in ("", "-charging") if (n, s) != (100, "-charging")]
 ICONES = (NIVEAUX + ["battery-level-100-charged", "network-wireless-disabled", "network-wireless-offline",
@@ -24,7 +26,7 @@ ICONES = (NIVEAUX + ["battery-level-100-charged", "network-wireless-disabled", "
           + [f"network-wireless-signal-{p}" for p in ("none", "weak", "ok", "good", "excellent")])
 
 
-@unittest.skipUnless(ADWAITA.is_dir(), "thème Adwaita absent")
+@SANS_ADWAITA
 class BarreStatiqueTest(unittest.TestCase):
     """Chaque nom d'icône de la barre existe en variante symbolique dans Adwaita."""
 
@@ -157,6 +159,7 @@ class IndicateursStatiqueTest(unittest.TestCase):
             if nom != "JourNuit":
                 self.assertNotIn("cliquable: true", qml[f"{nom}.qml"], nom)
 
+    @SANS_ADWAITA
     def test_icones_fixes_existent(self):
         for nom in ("emblem-system", "network-vpn"):
             self.assertTrue(any(ADWAITA.glob(f"symbolic/*/{nom}-symbolic.svg")), nom)
