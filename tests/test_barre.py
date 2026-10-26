@@ -215,8 +215,8 @@ class BarreStructureTest(unittest.TestCase):
         cls.barre = (ROOT / "coque" / "Barre" / "Barre.qml").read_text(encoding="utf-8")
 
     def test_geometrie_et_calque(self):
-        self.assertRegex(self.barre, r"implicitHeight:\s*32\b")
-        self.assertRegex(self.barre, r"exclusiveZone:\s*32\b")
+        self.assertRegex(self.barre, r"implicitHeight:\s*28\b")
+        self.assertRegex(self.barre, r"exclusiveZone:\s*28\b")
         self.assertIn('namespace: "dunei-barre"', self.barre)
         self.assertIn('color: "transparent"', self.barre)
         self.assertIn("WlrKeyboardFocus.None", self.barre)

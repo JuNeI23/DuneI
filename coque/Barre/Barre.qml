@@ -5,7 +5,7 @@ import Quickshell.Wayland
 import "../Theme"
 
 // Barre — barre système de DuneI, posée en haut de chaque écran (L2-08, L2-09).
-// Rôle : fenêtre de calque de 32 px, transparente, qui réserve 32 px en haut de l'écran ; à gauche le logo et
+// Rôle : fenêtre de calque de 28 px, transparente, qui réserve 28 px en haut de l'écran ; à gauche le logo et
 // l'horloge, à droite les indicateurs, au centre rien. Aucun fond ni capsule : les éléments se posent sur le
 // bureau. Le masque de saisie ne couvre que l'interrupteur jour/nuit, seul élément cliquable : partout ailleurs
 // les clics traversent la barre jusqu'au bureau. Elle ne prend jamais le focus clavier.
@@ -24,8 +24,8 @@ PanelWindow {
 
     screen: modelData
     anchors { top: true; left: true; right: true }
-    implicitHeight: 32
-    exclusiveZone: 32
+    implicitHeight: 28
+    exclusiveZone: 28
     color: "transparent"
     mask: Region { item: jourNuit }
     WlrLayershell.namespace: "dunei-barre"

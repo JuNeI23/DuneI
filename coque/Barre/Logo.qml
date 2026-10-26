@@ -3,8 +3,9 @@ import "../Theme"
 
 // Logo — logo de la distribution, à gauche de la barre.
 // Rôle : affiche l'image Theme.bureau.logo (chemin absolu des jetons), recolorée comme le texte.
-// Entrées : aucune. Sorties : aucune. Erreurs : sans jeton, l'élément est invisible.
+// Entrées : aucune ; la taille de l'icône est fixée à Theme.icons.sizes.default. Sorties : aucune. Erreurs : sans jeton, l'élément est invisible.
 // Dépendances : ElementBarre, Theme (bureau.logo).
 ElementBarre {
+    taille: Theme.icons?.sizes.default ?? 0
     source: Theme.bureau?.logo ? "file://" + Theme.bureau.logo : ""
 }

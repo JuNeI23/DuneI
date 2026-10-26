@@ -9,7 +9,9 @@ import "../Composants"
 // Theme.color.accentStandalone, chaque changement lissé par un ColorSpring.
 // Entrées : icone, nom d'icône sans « -symbolic » ; source, image recolorée à la place d'une icône nommée (le
 // logo) ; texte ; cliquable, faux par défaut (un élément d'affichage ne réagit ni au survol ni à l'appui) ;
-// ouvert, vrai tant que le menu de l'élément est ouvert.
+// ouvert, vrai tant que le menu de l'élément est ouvert ; taille, côté de l'icône en pixels logiques,
+// Theme.icons.sizes.dense par défaut (le logo la fixe à Theme.icons.sizes.default). Le texte suit l'échelon 3
+// de l'échelle typographique.
 // Sorties : celles de T.AbstractButton (clicked, hovered, down). L'élément est invisible, et donc absent de la
 // rangée, quand ni icône, ni image, ni texte ne sont fournis (matériel absent).
 // Erreurs : aucune ; avant le chargement des jetons, la couleur est transparente.
@@ -22,6 +24,7 @@ T.AbstractButton {
     property string texte
     property bool cliquable: false
     property bool ouvert: false
+    property int taille: Theme.icons?.sizes.dense ?? 0
 
     focusPolicy: Qt.NoFocus
     hoverEnabled: true
@@ -43,6 +46,7 @@ T.AbstractButton {
         Icone {
             anchors.verticalCenter: parent.verticalCenter
             visible: element.icone !== "" || element.source != ""
+            taille: element.taille
             nom: element.icone
             image: element.source
             couleur: ressort.value
@@ -51,6 +55,7 @@ T.AbstractButton {
         Texte {
             anchors.verticalCenter: parent.verticalCenter
             visible: element.texte !== ""
+            echelon: 3
             text: element.texte
             color: ressort.value
             font.features: Theme.typo?.tabularNumerals ? { "tnum": 1 } : ({})
