@@ -19,26 +19,26 @@ function normaliserPourcent(p) {
 // iconeBatterie — icône de batterie.
 // Entrées : presente, une batterie existe ; pourcent, entier 0–100 ; enCharge ; pleine.
 // Sortie : "" sans batterie, "battery-level-100-charged" si pleine, sinon "battery-level-N" (N arrondi à la
-// dizaine) suivi de "-charging" en charge ; Adwaita n'a pas de niveau 100 en charge, la dizaine 100 donne donc
-// "battery-level-100-charged". Erreurs : aucune.
+// dizaine) suivi de "-charging" en charge ; Adwaita n'a pas de niveau 100 en charge : en charge à la dizaine 100,
+// le nom est "battery-level-100-charged", et hors charge "battery-level-100". Erreurs : aucune.
 function iconeBatterie(presente, pourcent, enCharge, pleine) {
     if (!presente) return ""
-    if (pleine) return "battery-level-100-charged"
     const dizaine = Math.round(pourcent / 10) * 10
-    return dizaine === 100 ? "battery-level-100-charged" : "battery-level-" + dizaine + (enCharge ? "-charging" : "")
+    if (pleine || (enCharge && dizaine === 100)) return "battery-level-100-charged"
+    return "battery-level-" + dizaine + (enCharge ? "-charging" : "")
 }
 
 // iconeWifi — icône du Wi-Fi.
 // Entrées : carte, une carte Wi-Fi existe ; actif, la radio est allumée ; connecte, un réseau est joint ;
 // force, qualité du signal de 0 à 1. Sortie : "" sans carte, "network-wireless-disabled" coupé,
 // "network-wireless-offline" déconnecté, sinon "network-wireless-signal-" + none, weak, ok, good ou
-// excellent (seuils 0,2 ; 0,4 ; 0,6 ; 0,8). Erreurs : aucune.
+// excellent (seuils 0,2 ; 0,4 ; 0,6 ; 0,8). Erreurs : aucune ; une force non numérique donne « none ».
 function iconeWifi(carte, actif, connecte, force) {
     if (!carte) return ""
     if (!actif) return "network-wireless-disabled"
     if (!connecte) return "network-wireless-offline"
     const palier = ["none", "weak", "ok", "good", "excellent"]
-    return "network-wireless-signal-" + palier[Math.max(0, Math.min(4, Math.floor(force * 5)))]
+    return "network-wireless-signal-" + palier[Math.max(0, Math.min(4, (Math.floor(force * 5) || 0)))]
 }
 
 // iconeBluetooth — icône du Bluetooth.

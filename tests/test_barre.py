@@ -69,6 +69,7 @@ class IconesTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(self.appeler("iconeBatterie", True, 100, True, True), "battery-level-100-charged")
         self.assertEqual(self.appeler("iconeBatterie", False, 78, False, False), "")
         self.assertEqual(self.appeler("iconeBatterie", True, 97, True, False), "battery-level-100-charged")
+        self.assertEqual(self.appeler("iconeBatterie", True, 97, False, False), "battery-level-100")
         self.assertEqual(self.appeler("texteBatterie", 78), "78 %")
 
     def test_wifi(self):
@@ -77,6 +78,9 @@ class IconesTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(self.appeler("iconeWifi", True, True, False, 0.9), "network-wireless-offline")
         for force, palier in ((0.1, "none"), (0.3, "weak"), (0.5, "ok"), (0.7, "good"), (0.9, "excellent"), (1, "excellent")):
             self.assertEqual(self.appeler("iconeWifi", True, True, True, force), f"network-wireless-signal-{palier}", force)
+
+    def test_wifi_force_non_numerique(self):
+        self.assertEqual(self.appeler("iconeWifi", True, True, True, "NaN"), "network-wireless-signal-none")
 
     def test_bluetooth_notifications_moment(self):
         self.assertEqual(self.appeler("iconeBluetooth", False, True), "")

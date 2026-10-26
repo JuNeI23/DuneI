@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick.Controls.impl
 import QtQuick.Templates as T
 import "../Theme"
 import "../Composants"
@@ -14,7 +13,7 @@ import "../Composants"
 // Sorties : celles de T.AbstractButton (clicked, hovered, down). L'élément est invisible, et donc absent de la
 // rangée, quand ni icône, ni image, ni texte ne sont fournis (matériel absent).
 // Erreurs : aucune ; avant le chargement des jetons, la couleur est transparente.
-// Dépendances : Theme (texteBureau, color, typo, icons), Composants (Icone, Texte), ColorSpring.
+// Dépendances : Theme (texteBureau, color, typo), Composants (Icone, qui porte l'image recolorée, et Texte), ColorSpring.
 T.AbstractButton {
     id: element
 
@@ -25,6 +24,7 @@ T.AbstractButton {
     property bool ouvert: false
 
     focusPolicy: Qt.NoFocus
+    hoverEnabled: true
     enabled: cliquable
     visible: icone !== "" || source != "" || texte !== ""
     implicitWidth: rangee.implicitWidth
@@ -42,19 +42,10 @@ T.AbstractButton {
 
         Icone {
             anchors.verticalCenter: parent.verticalCenter
-            visible: element.icone !== ""
+            visible: element.icone !== "" || element.source != ""
             nom: element.icone
+            image: element.source
             couleur: ressort.value
-        }
-
-        ColorImage {
-            anchors.verticalCenter: parent.verticalCenter
-            visible: element.source != ""
-            source: element.source
-            color: ressort.value
-            sourceSize: Qt.size(width, height)
-            width: Theme.icons?.sizes.default ?? 0
-            height: width
         }
 
         Texte {
