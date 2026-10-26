@@ -821,19 +821,33 @@ class CoqueTest(unittest.TestCase):
         (self.repo / "generated").mkdir(parents=True)
         self.cfg.mkdir()
         for nom, marque, _ in deploy.COQUE:
-            (self.repo / "generated" / nom).write_text(f'{{\n  "_generated": "{marque}"\n}}\n', encoding="utf-8")
+            (self.repo / "generated" / nom).write_text(f'{{\n  "_generated": "{marque}",\n  "bureau": {{"fond": "#0f0703"}}\n}}\n', encoding="utf-8")
+        (self.repo / "coque").mkdir()
         self.copies = [("copy", self.repo / "generated" / nom, self.cfg / "dunei" / nom) for nom, _, _ in deploy.COQUE]
+        self.bureau = self.cfg / "dunei" / "bureau.json"
+        self.ecrire = ("ecrire", self.bureau, '{"origine": "theme", "fond": "#0f0703"}\n')
+        self.lien = [("mkdir", self.cfg / "quickshell"), ("link", self.repo / "coque", self.cfg / "quickshell" / "dunei")]
+
+    def poser_bureau(self, texte):
+        """Pose un bureau.json sous dunei/ (créé au besoin). Entrée : texte brut. Sortie : aucune. Erreurs : aucune. Dépendances : pathlib."""
+        self.bureau.parent.mkdir(exist_ok=True)
+        self.bureau.write_text(texte, encoding="utf-8")
+
+    def actions(self):
+        """Actions de plan_coque après le dossier dunei/ et les copies. Entrée : aucune. Sortie : liste d'actions. Erreurs : aucune. Dépendances : plan_coque."""
+        return deploy.plan_coque(self.repo, self.cfg)[0][len(self.copies):]
 
     def test_coque_premier_passage(self):
         """Le dossier dunei est créé, puis chaque fichier de COQUE est copié."""
-        self.assertEqual(deploy.plan_coque(self.repo, self.cfg), ([("mkdir", self.cfg / "dunei")] + self.copies, []))
+        self.assertEqual(deploy.plan_coque(self.repo, self.cfg),
+                         ([("mkdir", self.cfg / "dunei")] + self.copies + [self.ecrire] + self.lien, []))
 
     def test_coque_deja_pose(self):
         """Un dossier dunei existant et des fichiers à nous donnent les seules copies, sans mkdir."""
         (self.cfg / "dunei").mkdir()
         for nom, _, _ in deploy.COQUE:
             (self.cfg / "dunei" / nom).write_text((self.repo / "generated" / nom).read_text(encoding="utf-8"), encoding="utf-8")
-        self.assertEqual(deploy.plan_coque(self.repo, self.cfg), (self.copies, []))
+        self.assertEqual(deploy.plan_coque(self.repo, self.cfg), (self.copies + [self.ecrire] + self.lien, []))
 
     def test_coque_source_absente(self):
         """Une source manquante est signalée avec la commande qui la génère."""
@@ -876,6 +890,71 @@ class CoqueTest(unittest.TestCase):
         (self.cfg / "dunei").symlink_to(self.tmp.name)
         actions, err = deploy.plan_coque(self.repo, self.cfg)
         self.assertEqual((actions, len(err)), ([], 1))
+
+    def test_bureau_cree(self):
+        """Un bureau.json absent est écrit avec l'origine « theme » et le fond des tokens."""
+        (self.cfg / "dunei").mkdir()
+        self.assertEqual(self.actions()[0], self.ecrire)
+
+    def test_bureau_suit_le_theme(self):
+        """Un bureau.json d'origine « theme » au fond périmé est réécrit."""
+        self.poser_bureau('{"origine": "theme", "fond": "#000000"}')
+        self.assertEqual(self.actions()[0], self.ecrire)
+
+    def test_bureau_inchange(self):
+        """Un bureau.json identique ne donne aucune action d'écriture."""
+        self.poser_bureau(self.ecrire[2])
+        self.assertEqual(self.actions(), self.lien)
+
+    def test_bureau_fond_preserve(self):
+        """Un bureau.json d'origine « fond » est préservé, quel que soit son fond."""
+        self.poser_bureau('{"origine": "fond", "fond": "#123456"}')
+        self.assertEqual(self.actions(), self.lien)
+
+    def test_bureau_illisible_refuse(self):
+        """Un JSON invalide, non-objet ou d'origine inconnue est refusé, sans écriture."""
+        for texte in ("pas du json", "[1]", '{"origine": "autre"}', "{}"):
+            with self.subTest(texte=texte):
+                self.poser_bureau(texte)
+                actions, err = deploy.plan_coque(self.repo, self.cfg)
+                self.assertEqual(len(err), 1)
+                self.assertIn("bureau.json", err[0])
+                self.assertNotIn("ecrire", [a[0] for a in actions])
+
+    def test_bureau_sans_fond_dans_les_tokens(self):
+        """Des tokens sans bureau.fond sont une erreur de plan."""
+        (self.repo / "generated" / "coque-tokens.json").write_text('{\n  "_generated": "GÉNÉRÉ depuis tokens.toml"\n}\n', encoding="utf-8")
+        err = deploy.plan_coque(self.repo, self.cfg)[1]
+        self.assertEqual(len(err), 1)
+        self.assertIn("bureau.fond", err[0])
+
+    def test_lien_coque(self):
+        """Le lien quickshell/dunei est créé, avec quickshell/ au besoin ; déjà correct, il ne donne rien."""
+        self.assertEqual(self.actions()[-2:], self.lien)
+        (self.cfg / "quickshell").mkdir()
+        (self.cfg / "quickshell" / "dunei").symlink_to(self.repo / "coque")
+        self.assertNotIn("link", [a[0] for a in self.actions()])
+        self.assertEqual(deploy.plan_coque(self.repo, self.cfg)[1], [])
+
+    def test_lien_coque_etranger(self):
+        """Un lien étranger ou un dossier réel à la place du lien est refusé."""
+        (self.cfg / "quickshell").mkdir()
+        lien = self.cfg / "quickshell" / "dunei"
+        lien.symlink_to(self.tmp.name)
+        self.assertEqual(len(deploy.plan_coque(self.repo, self.cfg)[1]), 1)
+        lien.unlink()
+        lien.mkdir()
+        err = deploy.plan_coque(self.repo, self.cfg)[1]
+        self.assertEqual(len(err), 1)
+        self.assertIn("quickshell/dunei", err[0])
+
+    def test_ecrire_applique_et_decrit(self):
+        """L'action ecrire pose le texte de façon atomique et se décrit."""
+        (self.cfg / "dunei").mkdir()
+        deploy.apply([self.ecrire])
+        self.assertEqual(self.bureau.read_text(encoding="utf-8"), self.ecrire[2])
+        self.assertEqual(list((self.cfg / "dunei").iterdir()), [self.bureau])
+        self.assertIn("bureau.json", deploy.describe(self.ecrire))
 
 
 if __name__ == "__main__":

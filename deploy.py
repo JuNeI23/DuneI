@@ -14,7 +14,10 @@ mis de côté sous le nom .avant-dunei, et un lien remplacé par un fichier est 
   lancées ensuite le lisent ; aucun fc-cache n'est nécessaire.
 - coque : generated/coque-tokens.json, generated/motion.json et generated/materiau.frag.qsb sont copiés vers
   dunei/ sous le dossier de configuration ; le singleton Theme de la coque Quickshell lit et surveille les deux
-  premiers, le matériau charge le shader compilé (L2-34, L2-04).
+  premiers, le matériau charge le shader compilé (L2-34, L2-04). dunei/bureau.json, JSON pur
+  {"origine", "fond"}, dit le fond du bureau : posé avec origine « theme » (réécrit si le thème change),
+  préservé avec origine « fond », refusé sous toute autre forme. Le lien quickshell/dunei pointe vers
+  coque/ du dépôt : la coque de session se lance par qs -c dunei (L2-08).
 - applis : la configuration de chaque application de DuneI est liée à sa place sous le dossier de
   configuration ; l'application doit être installée. Les autres fichiers de son dossier sont laissés
   en place. Seul kitty, le terminal provisoire, y figure (L1-18).
@@ -50,6 +53,7 @@ mis de côté sous le nom .avant-dunei, et un lien remplacé par un fichier est 
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import pwd
 import shutil
@@ -82,6 +86,8 @@ IDLE = ("hypridle.conf", "GÉNÉRÉ depuis energie.toml")       # Fichier de gen
 # compilé est binaire et n'a pas de marque (None) : dans dunei/, dossier propre à DuneI, son nom suffit.
 COQUE = (("coque-tokens.json", "GÉNÉRÉ depuis tokens.toml", "tokens"), ("motion.json", "GÉNÉRÉ depuis motion.toml", "motion"),
          ("materiau.frag.qsb", None, "shaders"))
+BUREAU = "bureau.json"                                       # État du fond du bureau lu par la coque, sous dunei/ (L2-08).
+BUREAU_ORIGINES = ("theme", "fond")                          # Origines reconnues : suit le thème, ou fond choisi (préservé).
 SYSTEME = "systeme"                                          # Arborescence copiée sous la racine du système.
 SYSTEM_MARK = "Posé par DuneI"                               # Marque de deuxième ligne d'un fichier système.
 SERVICE = "hypridle.service"                                 # Service de l'échelle d'inactivité, redémarré si hypridle.conf change.
@@ -251,14 +257,48 @@ def plan_fontconfig(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
     return actions + [("copy", src, dest)], err
 
 
+def _plan_bureau(repo: Path, dossier: Path) -> tuple[list[tuple], list[str]]:
+    """Inspection de bureau.json, l'état du fond du bureau que lit la coque (L2-08).
+
+    Entrées : repo — racine du dépôt ; dossier — dossier dunei/ sous la configuration (déjà validé).
+    Sortie : (une action ("ecrire", chemin, texte) si le fichier manque ou suit le thème avec un autre
+             fond, sinon aucune ; erreurs). Un fichier d'origine « fond » est préservé tel quel.
+    Erreurs : aucune exception ; tokens absents ou sans bureau.fond (l'absence seule est déjà signalée
+              par COQUE), fichier présent illisible, non-objet ou d'origine inconnue deviennent des messages.
+    Dépendances : json, BUREAU, BUREAU_ORIGINES.
+    """
+    src, dest = repo / "generated" / "coque-tokens.json", dossier / BUREAU
+    try:
+        fond = json.loads(src.read_text(encoding="utf-8"))["bureau"]["fond"]
+    except FileNotFoundError:
+        return [], []
+    except (OSError, ValueError, KeyError, TypeError):
+        return [], [f"{src} ne porte pas bureau.fond (lancer make tokens)"]
+    texte = json.dumps({"origine": "theme", "fond": fond}, ensure_ascii=False) + "\n"
+    if dest.is_symlink() or dest.is_dir():
+        return [], [f"{dest} existe mais n'est pas un fichier réel"]
+    if not dest.exists():
+        return [("ecrire", dest, texte)], []
+    try:
+        actuel = json.loads(dest.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        actuel = None
+    if not isinstance(actuel, dict) or actuel.get("origine") not in BUREAU_ORIGINES:
+        return [], [f"{dest} existe mais n'a pas été posé par DuneI (JSON illisible ou origine inconnue)"]
+    return ([] if actuel.get("origine") == "fond" or actuel == json.loads(texte) else [("ecrire", dest, texte)]), []
+
+
 def plan_coque(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
-    """Inspection de la destination des tokens de la coque, sans aucune modification (L2-34).
+    """Inspection de la destination de la coque, sans aucune modification (L2-34, L2-08).
 
     Entrées : repo — racine du dépôt ; home — dossier de configuration racine.
-    Sortie : (création de dunei/ s'il manque puis copie de chaque fichier de COQUE ; erreurs).
-    Erreurs : aucune exception ; source absente, dunei qui n'est pas un dossier réel, fichier ou lien
-              étranger à la place d'un fichier marqué, ou lien à la place du shader, deviennent des messages.
-    Dépendances : _ours, COQUE.
+    Sortie : (création de dunei/ s'il manque, copie de chaque fichier de COQUE, écriture éventuelle de
+             bureau.json, puis lien quickshell/dunei vers repo/coque, après création de quickshell/ ;
+             erreurs).
+    Erreurs : aucune exception ; source absente, dunei ou quickshell qui n'est pas un dossier réel, fichier
+              ou lien étranger à la place d'un fichier marqué, d'un lien ou de bureau.json, ou lien à la
+              place du shader, deviennent des messages.
+    Dépendances : _ours, _links_to, _plan_bureau, COQUE.
     """
     dossier, actions, err = home / "dunei", [], []
     if dossier.is_symlink() or (dossier.exists() and not dossier.is_dir()):
@@ -272,6 +312,16 @@ def plan_coque(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
         if dest.is_symlink() or (marque and dest.exists() and not _ours(dest, marque)):
             err.append(f"{dest} existe mais n'a pas été posé par DuneI")
         actions.append(("copy", src, dest))
+    a, e = _plan_bureau(repo, dossier)
+    actions, err = actions + a, err + e
+    qs, src, link = home / "quickshell", repo / "coque", home / "quickshell" / "dunei"
+    if qs.is_symlink() or (qs.exists() and not qs.is_dir()):
+        err.append(f"{qs} existe mais n'est pas un dossier réel")
+    elif link.is_symlink() or link.exists():
+        if not _links_to(link, src):
+            err.append(f"{link} existe mais n'est pas un lien vers {src} : le déplacer, puis relancer")
+    else:
+        actions += ([] if qs.exists() else [("mkdir", qs)]) + [("link", src, link)]
     return actions, err
 
 
@@ -629,6 +679,7 @@ def describe(action: tuple) -> str:
         "mkdir": "créer le dossier {0}",
         "copy": "copier {0} vers {1}",
         "link": "lier {1} à {0}",
+        "ecrire": "écrire {0}",
         "switch": "conserver {1} sous le nom {2}, puis lier {1} à {0}",
         "sudo-copy": "copier {0} vers {1}, avec sudo",
         "sudo-reload": "recharger {0}, avec sudo",
@@ -661,7 +712,7 @@ def describe(action: tuple) -> str:
 def apply(actions: list[tuple]) -> None:
     """Exécution des actions, dans l'ordre fourni par plan.
 
-    Les copies passent par un fichier temporaire renommé par os.replace ; la bascule donne un
+    Les copies et les écritures de texte (ecrire) passent par un fichier temporaire renommé par os.replace ; la bascule donne un
     second nom au fichier générique (os.link), puis remplace hyprland.lua par un lien temporaire
     renommé par os.replace. hyprland.lua existe ainsi à chaque instant. Les actions système passent par
     sudo, les services par systemctl --user. La bascule du gestionnaire de connexion est une seule
@@ -679,6 +730,11 @@ def apply(actions: list[tuple]) -> None:
             src, dst = args
             tmp = dst.with_name(TEMP.format(dst.name))
             tmp.write_bytes(src.read_bytes())
+            os.replace(tmp, dst)
+        elif kind == "ecrire":
+            dst = args[0]
+            tmp = dst.with_name(TEMP.format(dst.name))
+            tmp.write_text(args[1], encoding="utf-8")
             os.replace(tmp, dst)
         elif kind == "link":
             args[1].symlink_to(args[0])
