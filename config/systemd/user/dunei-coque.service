@@ -1,0 +1,18 @@
+# Coque de session de DuneI : la barre système (L2-08, L2-09) et, plus tard, la presqu'île, dans un seul Quickshell.
+# Posé par DuneI depuis config/ — NE PAS MODIFIER À LA MAIN : make install le remplace.
+# Modèle d'unité graphique d'uwsm : liée à graphical-session.target, arrêtée avant le compositeur.
+[Unit]
+Description=Coque de session DuneI (Quickshell)
+PartOf=graphical-session.target
+After=graphical-session.target
+# Hors session graphique, la coque ne démarre pas (comme l'unité de hypridle).
+ConditionEnvironment=WAYLAND_DISPLAY
+
+[Service]
+Type=exec
+ExecStart=/usr/bin/qs -n -c dunei
+Restart=on-failure
+Slice=app-graphical.slice
+
+[Install]
+WantedBy=graphical-session.target

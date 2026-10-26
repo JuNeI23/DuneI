@@ -205,3 +205,42 @@ class RelanceTest(BarreIpc, unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class BarreStructureTest(unittest.TestCase):
+    """La barre, la coque de session et son unité respectent les contraintes de la spec (texte seul)."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.barre = (ROOT / "coque" / "Barre" / "Barre.qml").read_text(encoding="utf-8")
+
+    def test_geometrie_et_calque(self):
+        self.assertRegex(self.barre, r"implicitHeight:\s*32\b")
+        self.assertRegex(self.barre, r"exclusiveZone:\s*32\b")
+        self.assertIn('namespace: "dunei-barre"', self.barre)
+        self.assertIn('color: "transparent"', self.barre)
+        self.assertIn("WlrKeyboardFocus.None", self.barre)
+
+    def test_masque_ne_nomme_que_jour_nuit(self):
+        masque = re.search(r"mask:\s*Region\s*\{([^}]*)\}", self.barre)
+        self.assertIsNotNone(masque)
+        self.assertEqual(re.findall(r"item:\s*(\w+)", masque.group(1)), ["jourNuit"])
+        self.assertRegex(self.barre, r"JourNuit\s*\{\s*id:\s*jourNuit\b")
+
+    def test_ordre_des_indicateurs(self):
+        droite = ["Notifications", "Batterie", "JourNuit", "Wifi", "Vpn", "Bluetooth", "Parametres"]
+        trouves = re.findall(r"\b(Logo|Horloge|Notifications|Batterie|JourNuit|Wifi|Vpn|Bluetooth|Parametres)\s*\{",
+                             self.barre)
+        self.assertEqual(trouves, ["Logo", "Horloge"] + droite)
+
+    def test_coque_et_unite(self):
+        shell = (ROOT / "coque" / "shell.qml").read_text(encoding="utf-8")
+        for pragma in ("//@ pragma IconTheme Adwaita", "//@ pragma Env QSG_DISTANCEFIELD_ANTIALIASING=gray"):
+            self.assertIn(pragma, shell)
+        self.assertIn("Variants", shell)
+        self.assertIn("Presquile", shell)
+        unite = (ROOT / "config" / "systemd" / "user" / "dunei-coque.service").read_text(encoding="utf-8")
+        for ligne in ("ExecStart=/usr/bin/qs -n -c dunei", "PartOf=graphical-session.target", "Restart=on-failure"):
+            self.assertIn(ligne, unite)
+        self.assertEqual(unite.splitlines()[1].split("—")[0].strip(), "# Posé par DuneI depuis config/")
+        self.assertIn("dunei-coque.service", (ROOT / "session.toml").read_text(encoding="utf-8"))

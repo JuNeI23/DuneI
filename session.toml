@@ -7,4 +7,4 @@
 version = "0.1.0"
 
 [demarrage]
-services = ["hypridle.service", "nm-applet.service"]   # nm-applet : son sort se décide à L2-11.
+services = ["hypridle.service", "nm-applet.service", "dunei-coque.service"]   # nm-applet : son sort se décide à L2-11.

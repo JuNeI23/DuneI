@@ -11,9 +11,9 @@
 #           relatif part du répertoire courant.
 # Sortie : barre factice de 32 px en haut de l'écran et journal de Quickshell sur la sortie standard.
 # Erreurs : qs absent, famille ou moment manquant ou inconnu, brouillon égal à generated/ ou génération refusée
-#           → message et code 1 ; un second banc ne s'ouvre pas (qs -n).
+#           ou coque de session active (avertissement) → message et code 1 ; un second banc ne s'ouvre pas (qs -n).
 # Dépendances : quickshell ≥ 0.3 (qs), python3, generate_tokens.py et generate_motion.py du dépôt,
-#               generated/materiau.frag.qsb.
+#               generated/materiau.frag.qsb, systemctl (contrôle de dunei-coque.service).
 set -euo pipefail
 dir="$(dirname "$(realpath "$0")")"
 repo="$(realpath "$dir/../../..")"
@@ -34,6 +34,11 @@ if [[ ${1:-} == theme ]]; then
     [[ -n ${2:-} && -n ${3:-} ]] || { echo "usage : verre.sh theme <famille> <moment>" >&2; exit 1; }
     DUNEI_TOKENS_DIR="$out" "$repo/config/bin/dunei-theme" "$2" "$3" >/dev/null || { echo "verre : thème refusé (famille ou moment inconnu, ou brouillon absent)" >&2; exit 1; }
     exit 0
+fi
+# La coque de session porte déjà « dunei-barre » : le banc et la barre ne tournent pas en même temps.
+if systemctl --user is-active --quiet dunei-coque.service; then
+    echo "verre : la coque de session (dunei-coque.service) tourne déjà et porte le namespace dunei-barre ; arrêtez-la (systemctl --user stop dunei-coque.service) avant de lancer le banc" >&2
+    exit 1
 fi
 command -v qs >/dev/null || { echo "quickshell (qs) introuvable" >&2; exit 1; }
 genere
