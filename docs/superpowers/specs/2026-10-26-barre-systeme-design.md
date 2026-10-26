@@ -1,6 +1,6 @@
 # La barre système : socle transparent à la manière de macOS
 
-Version 1.1 — 2026-10-26. Éléments du backlog : L2-08, L2-09 ; L2-10 déplacé vers la presqu'île.
+Version 1.2 — 2026-10-26. Éléments du backlog : L2-08, L2-09 ; L2-10 déplacé vers la presqu'île.
 
 ## 1. Objet et raison
 
@@ -46,11 +46,10 @@ Arbitrages pris en séance du 2026-10-26, sur les maquettes `.superpowers/previe
 
 ## 3. Disposition et mesures
 
-- Hauteur 32 px, ancrée en haut, sur toute la largeur de chaque écran. Zone exclusive de 32 px : les fenêtres
+- Hauteur 28 px (ramenée de 32 à la recette, pour rapprocher les fenêtres), ancrée en haut, sur toute la largeur de chaque écran. Zone exclusive de 28 px : les fenêtres
   tuilées commencent sous la barre, à l'écart de tuilage habituel.
-- Éléments de 24 px de haut, centrés verticalement ; icônes de 17 à 18 px (taille de barre d'outils de la bible
-  ajustée à l'œil sur la maquette) ; marge latérale de 10 px.
-- Date et heure au format français « lun. 26 oct. 14:32 », chiffres tabulaires.
+- Éléments de 24 px de haut, centrés verticalement ; icônes nommées à 16 px (`icons.sizes.dense`), logo Arch à 20 px (`sizes.default`, son dessin laisse du vide et rend 16 px d'encre) ; marge latérale de 10 px.
+- Date et heure au format français « lun. 26 oct. 14:32 », chiffres tabulaires, texte à l'échelon 3 (15 px) par `Theme.police(echelon, moyen, tabulaire)` (D95).
 - Batterie : icône suivie du pourcentage, « 78 % » avec espace insécable, sur une ligne.
 - Le centre reste vide et transparent aux clics.
 
@@ -121,7 +120,7 @@ aujourd'hui le bouton jour/nuit ; le masque de clic de la barre couvre donc auss
   (`Variants` sur `Quickshell.screens`), un composant `Barre`. La future `Presquile` s'instanciera dans le même
   `Variants`.
 - **La barre** est un `PanelWindow` transparent, couche haute, namespace `dunei-barre`, sans prise de focus
-  clavier, zone exclusive de 32 px. Son `mask` ne couvre que les éléments cliquables (aujourd'hui le seul bouton
+  clavier, zone exclusive de 28 px. Son `mask` ne couvre que les éléments cliquables (aujourd'hui le seul bouton
   jour/nuit) : partout ailleurs, et au centre en particulier, les clics traversent.
 - **La presqu'île**, plus tard : une seconde surface ancrée en haut, sans zone exclusive
   (`exclusionMode: ExclusionMode.Ignore`, sinon le compositeur la placerait sous la barre), masque limité à sa
@@ -129,9 +128,8 @@ aujourd'hui le bouton jour/nuit ; le masque de clic de la barre couvre donc auss
   (haute ou overlay) lui appartient.
 - **Indicateurs modulaires** : chaque indicateur est un composant autonome qui lit sa source et expose son icône.
   La barre se contente de les ranger. En ajouter, en retirer ou en réordonner ne touche qu'une liste.
-- **Le flou du namespace `dunei-barre`** devient sans objet sur une barre sans fond. Il ne doit laisser aucun
-  artefact derrière les glyphes ; la règle générée se revoit en conséquence, en gardant la possibilité de
-  flouter les popovers de L2-11 et suivants.
+- **Le flou du namespace `dunei-barre`** est conservé (livré) : sans artefact visible derrière les glyphes sur le
+  bureau uni, il servira aux popovers (`blur_popups`) de L2-11 et suivants.
 - **Démarrage** selon D50 : une unité utilisateur `dunei-coque.service` (modèle : `nm-applet.service`),
   rattachée à la session graphique, relancée en cas d'échec, déclarée dans `session.toml`, et le dossier de la
   coque posé par `deploy.py`. Pas d'`exec-once` de Hyprland.
@@ -179,3 +177,4 @@ et de Wi-Fi ; le sort exact de la règle de flou de `dunei-barre`.
 | --- | --- | --- |
 | 1.0 | 2026-10-26 | Première version, issue de la séance de conception et du repérage technique |
 | 1.1 | 2026-10-26 | Relecture du constructeur : fond du bureau dans un fichier d'état réinscriptible ; teinte d'accent à l'appui et luminosité au survol à la place de la capsule |
+| 1.2 | 2026-10-26 | État livré : 28 px de hauteur et de zone exclusive, icônes à 16 px, logo à 20 px, texte à l'échelon 3, police par `Theme.police`, flou du namespace conservé, recette validée (VPN non éprouvé) |
