@@ -2,6 +2,8 @@
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import Quickshell.Services.UPower
+import Quickshell.Networking
 import "Theme"
 import "Barre"
 import "Barre/icones.js" as Icones
@@ -21,6 +23,17 @@ ShellRoot {
         ElementBarre {
             id: element
         }
+
+        // Indicateurs de la tâche 5 ; les deux processus résidents ne démarrent que sur ordre de l'essai.
+        Horloge { id: horloge }
+        Logo { id: logo }
+        Batterie { id: batterie }
+        JourNuit { id: jourNuit }
+        Wifi { id: wifi }
+        Bluetooth { id: bluetooth }
+        Parametres { id: parametres }
+        Vpn { id: vpn; actif: false }
+        Notifications { id: notifications; actif: false }
     }
 
     IpcHandler {
@@ -45,5 +58,40 @@ ShellRoot {
         // elementVisible — lit la visibilité de l'ElementBarre d'essai.
         // Entrées : aucune. Sortie : vrai s'il est visible. Erreurs : aucune. Dépendances : element.
         function elementVisible(): bool { return element.visible }
+
+        // surveillerVpn — remplace la surveillance du Vpn par « sh -c <commande> » et la démarre ; la lecture
+        // devient « true ». Entrée : commande. Sortie : aucune. Erreurs : aucune. Dépendances : vpn.
+        function surveillerVpn(commande: string): void {
+            vpn.surveille = ["sh", "-c", commande]; vpn.lecture = ["true"]; vpn.actif = true
+        }
+
+        // relancesVpn — nombre de démarrages de la surveillance du Vpn. Sortie : entier. Dépendances : vpn.
+        function relancesVpn(): int { return vpn.relances }
+
+        // surveillerNotifications — comme surveillerVpn, avec la lecture « echo <lecture> » pour fixer l'état
+        // lu par Notifications. Entrées : commande, lecture. Sortie : aucune. Dépendances : notifications.
+        function surveillerNotifications(commande: string, lecture: string): void {
+            notifications.surveille = ["sh", "-c", commande]; notifications.lecture = ["echo", lecture]
+            notifications.actif = true
+        }
+
+        // etat — relevé des indicateurs en texte « clé=valeur » séparé par des « ; » : visibilité, texte, icône.
+        // Entrée : nom de l'indicateur (horloge, logo, batterie, jourNuit, wifi, bluetooth, parametres, notifications).
+        // Sortie : texte. Erreurs : nom inconnu, chaîne vide. Dépendances : les indicateurs ci-dessus.
+        function etat(nom: string): string {
+            const e = {horloge, logo, batterie, jourNuit, wifi, bluetooth, parametres, notifications, vpn}[nom]
+            return e ? `visible=${e.visible};icone=${e.icone};texte=${e.texte};cliquable=${e.cliquable}` : ""
+        }
+
+        // releve — relevé brut des sources matérielles, pour la note du commit : percentage de UPower brut,
+        // état, et nombre de cartes Wi-Fi, de réseaux sans scan et de réseaux joints. Sortie : texte.
+        function releve(): string {
+            const d = UPower.displayDevice
+            const cartes = Array.from(Networking.devices.values).filter(c => c.type === DeviceType.Wifi)
+            const reseaux = cartes.reduce((t, c) => t.concat(Array.from(c.networks.values)), [])
+            return `percentage=${d.percentage};etat=${d.state};laptop=${d.isLaptopBattery};cartes=${cartes.length};`
+                 + `reseaux=${reseaux.length};joints=${reseaux.filter(n => n.connected).length};`
+                 + `force=${reseaux.filter(n => n.connected).map(n => n.signalStrength)}`
+        }
     }
 }

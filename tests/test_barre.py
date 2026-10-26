@@ -7,6 +7,7 @@ que le thème Adwaita.
 import os
 import re
 import subprocess
+import time
 import unittest
 from pathlib import Path
 
@@ -36,8 +37,8 @@ class BarreStatiqueTest(unittest.TestCase):
 
 
 @unittest.skipUnless(os.environ.get("WAYLAND_DISPLAY") and QS, "session Wayland et Quickshell requis")
-class IconesTest(EssaiCoque, unittest.TestCase):
-    """Appelle chaque fonction de icones.js par l'IPC de la coque d'essai de la barre."""
+class BarreIpc(EssaiCoque):
+    """Base des tests qui pilotent la coque d'essai de la barre par IPC (sans fenêtre)."""
 
     essai = ESSAI
     teintes = (55,)
@@ -58,6 +59,10 @@ class IconesTest(EssaiCoque, unittest.TestCase):
         sortie = subprocess.run([QS, "ipc", "--pid", str(self.proc.pid), "call", "barre", *args],
                                 check=True, capture_output=True, text=True, timeout=DELAI)
         return sortie.stdout.strip()
+
+
+class IconesTest(BarreIpc, unittest.TestCase):
+    """Appelle chaque fonction de icones.js par l'IPC de la coque d'essai de la barre."""
 
     def test_normaliser_pourcent(self):
         for entree, attendu in ((0.78, "78"), (78, "78"), (1, "100"), (0, "0"), (100, "100"), (130, "100")):
@@ -101,6 +106,74 @@ class IconesTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(self.appeler("elementVisible"), "true")
         self.assertNotIn("ERROR", self.journal())
         self.assertNotIn("WARN", self.journal())
+
+
+INDICATEURS = ("Horloge", "Logo", "Notifications", "Batterie", "JourNuit", "Wifi", "Vpn", "Bluetooth", "Parametres")
+
+
+class IndicateursStatiqueTest(unittest.TestCase):
+    """Règles lisibles dans le texte QML des indicateurs : aucun sondage, aucun serveur de notifications."""
+
+    def qml(self):
+        return {f.name: f.read_text(encoding="utf-8") for f in (ROOT / "coque" / "Barre").glob("*.qml")}
+
+    def test_neuf_indicateurs_inscrits(self):
+        qmldir = (ROOT / "coque" / "Barre" / "qmldir").read_text(encoding="utf-8")
+        for nom in INDICATEURS:
+            self.assertIn(f"{nom} 1.0 {nom}.qml", qmldir)
+            self.assertTrue((ROOT / "coque" / "Barre" / f"{nom}.qml").is_file())
+
+    def test_aucun_sondage(self):
+        for nom, texte in self.qml().items():
+            self.assertNotRegex(texte, r"repeat:\s*true", nom)
+            if "Timer" in texte:  # seule la minuterie de relance, à un coup, est permise
+                self.assertRegex(texte, r"repeat:\s*false", nom)
+            self.assertNotIn("NotificationServer", texte, nom)
+
+    def test_horloge_en_francais(self):
+        texte = self.qml()["Horloge.qml"]
+        self.assertIn("ddd d MMM HH:mm", texte)
+        self.assertIn("fr_FR", texte)
+
+    def test_chiffres_tabulaires_dans_element(self):
+        self.assertIn("tabularNumerals", self.qml()["ElementBarre.qml"])
+
+    def test_jour_nuit_seul_cliquable(self):
+        qml = self.qml()
+        self.assertIn("cliquable: true", qml["JourNuit.qml"])
+        self.assertIn('["dunei-theme", "bascule"]', qml["JourNuit.qml"])
+        for nom in INDICATEURS:
+            if nom != "JourNuit":
+                self.assertNotIn("cliquable: true", qml[f"{nom}.qml"], nom)
+
+    def test_icones_fixes_existent(self):
+        for nom in ("emblem-system", "network-vpn"):
+            self.assertTrue(any(ADWAITA.glob(f"symbolic/*/{nom}-symbolic.svg")), nom)
+
+
+@unittest.skipUnless(os.environ.get("WAYLAND_DISPLAY") and QS, "session Wayland et Quickshell requis")
+class RelanceTest(BarreIpc, unittest.TestCase):
+    """Les processus résidents sont relancés après leur sortie ; la lecture suit chaque ligne."""
+
+    def test_relance_apres_sortie(self):
+        compte = Path(self.tmp.name) / "compte"
+        self.appeler("surveillerVpn", f"echo x >> {compte}; exit 0")
+        time.sleep(3.2)
+        self.assertGreaterEqual(len(compte.read_text().split()), 2)
+        self.assertGreaterEqual(int(self.appeler("relancesVpn")), 2)
+
+    def test_notifications_lit_apres_ligne(self):
+        self.appeler("surveillerNotifications", "echo ligne; sleep 5", "true")
+        time.sleep(1)
+        self.assertIn("icone=notifications-disabled", self.appeler("etat", "notifications"))
+
+    def test_indicateurs_sans_erreur(self):
+        for nom in ("horloge", "logo", "batterie", "jourNuit", "wifi", "bluetooth", "parametres"):
+            self.assertIn("visible=", self.appeler("etat", nom))
+        self.assertIn("cliquable=true", self.appeler("etat", "jourNuit"))
+        self.assertRegex(self.appeler("etat", "horloge"), r"texte=\w+\.? \d+ \w+\.? \d\d:\d\d")
+        self.assertIn("icone=emblem-system", self.appeler("etat", "parametres"))
+        self.assertNotIn("ERROR", self.journal())
 
 
 if __name__ == "__main__":
