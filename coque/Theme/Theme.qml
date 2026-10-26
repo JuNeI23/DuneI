@@ -95,14 +95,18 @@ Singleton {
     }
 
     // police — police d'interface à un échelon de l'échelle typographique, celle de Texte, de Champ et de Compteur.
-    // Entrées : echelon, indice dans typo.scale ; moyen, graisse weightMedium au lieu de weightRegular.
+    // Entrées : echelon, indice dans typo.scale ; moyen, graisse weightMedium au lieu de weightRegular ;
+    //           tabulaire, vrai pour demander les chiffres tabulaires (« tnum ») quand typo.tabularNumerals l'autorise.
+    //           Les chiffres tabulaires se portent ici et non par « font.features » sur l'instance : affecter une
+    //           sous-propriété de font supplante la liaison entière et la police de l'application s'applique.
     // Sortie : une valeur font ; avant le chargement des tokens, la famille et la taille de l'application, graisse
     //          normale.
     // Erreurs : aucune. Dépendances : typo.
-    function police(echelon, moyen) {
+    function police(echelon, moyen, tabulaire) {
         return Qt.font({ family: typo?.interface ?? Qt.application.font.family,
                          pixelSize: typo?.scale[echelon] ?? Qt.application.font.pixelSize,
-                         weight: (moyen ? typo?.weightMedium : typo?.weightRegular) ?? Font.Normal })
+                         weight: (moyen ? typo?.weightMedium : typo?.weightRegular) ?? Font.Normal,
+                         features: tabulaire && typo?.tabularNumerals ? { "tnum": 1 } : ({}) })
     }
 
     // luminance — luminance relative WCAG d'une couleur.

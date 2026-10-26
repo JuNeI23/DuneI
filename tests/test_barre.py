@@ -107,6 +107,14 @@ class IconesTest(BarreIpc, unittest.TestCase):
         self.assertNotIn("ERROR", self.journal())
         self.assertNotIn("WARN", self.journal())
 
+    def test_police_du_texte_appliquee(self):
+        """Le texte de l'élément suit l'échelon 4 et demande les chiffres tabulaires (régression : font.features
+        supplantait la liaison de police de Texte, qui retombait sur la police de l'application)."""
+        self.appeler("regler", "", "lun. 26 oct. 22:48")
+        taille, tnum = self.appeler("policeTexte").split(";")
+        self.assertEqual(taille, "18")
+        self.assertEqual(tnum, "1")
+
 
 INDICATEURS = ("Horloge", "Logo", "Notifications", "Batterie", "JourNuit", "Wifi", "Vpn", "Bluetooth", "Parametres")
 
@@ -136,7 +144,7 @@ class IndicateursStatiqueTest(unittest.TestCase):
         self.assertIn("fr_FR", texte)
 
     def test_chiffres_tabulaires_dans_element(self):
-        self.assertIn("tabularNumerals", self.qml()["ElementBarre.qml"])
+        self.assertIn("tabulaire: true", self.qml()["ElementBarre.qml"])
 
     def test_jour_nuit_seul_cliquable(self):
         qml = self.qml()

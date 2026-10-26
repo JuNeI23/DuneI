@@ -11,7 +11,7 @@ import "../Composants"
 // logo) ; texte ; cliquable, faux par défaut (un élément d'affichage ne réagit ni au survol ni à l'appui) ;
 // ouvert, vrai tant que le menu de l'élément est ouvert ; taille, côté de l'icône en pixels logiques,
 // Theme.icons.sizes.dense par défaut (le logo la fixe à Theme.icons.sizes.default). Le texte suit l'échelon 4
-// de l'échelle typographique.
+// de l'échelle typographique, en chiffres tabulaires.
 // Sorties : celles de T.AbstractButton (clicked, hovered, down). L'élément est invisible, et donc absent de la
 // rangée, quand ni icône, ni image, ni texte ne sont fournis (matériel absent).
 // Erreurs : aucune ; avant le chargement des jetons, la couleur est transparente.
@@ -56,9 +56,9 @@ T.AbstractButton {
             anchors.verticalCenter: parent.verticalCenter
             visible: element.texte !== ""
             echelon: 4
+            tabulaire: true
             text: element.texte
             color: ressort.value
-            font.features: Theme.typo?.tabularNumerals ? { "tnum": 1 } : ({})
         }
     }
 }

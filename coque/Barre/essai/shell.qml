@@ -13,7 +13,8 @@ import "Barre/icones.js" as Icones
 // pilote, pour que tests/test_barre.py éprouve les correspondances dans un vrai Quickshell.
 // Entrées : DUNEI_TOKENS_DIR, lu par Theme. Commandes IPC : normaliserPourcent, iconeBatterie, iconeWifi,
 // iconeBluetooth, iconeNotifications, iconeMoment, texteBatterie (chacune retourne son résultat), et
-// regler <icone> <texte> qui règle l'élément, puis elementVisible qui retourne sa visibilité.
+// regler <icone> <texte> qui règle l'élément, puis elementVisible qui retourne sa visibilité et policeTexte
+// qui retourne la taille et les chiffres tabulaires de son texte.
 // Sortie : le résultat de chaque appel IPC, sur la sortie de « qs ipc call ». Erreurs : celles de Theme, dans
 // le journal. Dépendances : quickshell ≥ 0.3 (Quickshell.Io), modules Theme, Composants et Barre.
 // Import : liens essai/Theme, essai/Composants et essai/Barre, comme dans les autres coques d'essai.
@@ -58,6 +59,14 @@ ShellRoot {
         // elementVisible — lit la visibilité de l'ElementBarre d'essai.
         // Entrées : aucune. Sortie : vrai s'il est visible. Erreurs : aucune. Dépendances : element.
         function elementVisible(): bool { return element.visible }
+
+        // policeTexte — relevé de la police du texte de l'ElementBarre d'essai : « taille;tnum ».
+        // Entrées : aucune. Sortie : texte, tnum vide si la police ne demande pas de chiffres tabulaires.
+        // Erreurs : aucune. Dépendances : element (le Texte est le second enfant de sa rangée).
+        function policeTexte(): string {
+            const f = element.contentItem.children[1].font
+            return `${f.pixelSize};${f.features?.tnum ?? ""}`
+        }
 
         // surveillerVpn — remplace la surveillance et la lecture du Vpn par « sh -c » et les démarre.
         // Entrées : commande (surveillance), lecture. Sortie : aucune. Erreurs : aucune. Dépendances : vpn.
