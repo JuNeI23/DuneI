@@ -1,5 +1,4 @@
 import QtQuick
-import "../Theme"
 import "icones.js" as Icones
 
 // Notifications — état « ne pas déranger » de dunst.

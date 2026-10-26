@@ -157,14 +157,41 @@ class RelanceTest(BarreIpc, unittest.TestCase):
 
     def test_relance_apres_sortie(self):
         compte = Path(self.tmp.name) / "compte"
-        self.appeler("surveillerVpn", f"echo x >> {compte}; exit 0")
+        self.appeler("surveillerVpn", f"echo x >> {compte}; exit 0", "true")
         time.sleep(3.2)
         self.assertGreaterEqual(len(compte.read_text().split()), 2)
         self.assertGreaterEqual(int(self.appeler("relancesVpn")), 2)
 
+    def valeur_apres_ligne(self, surveiller, etat, avant, apres, lecture, attente, indice):
+        """Vérifie qu'une ligne de surveillance déclenche une nouvelle lecture, distincte de la lecture initiale.
+
+        Entrées : surveiller, fonction IPC ; etat, indicateur lu ; avant et apres, contenus successifs du fichier
+        lu par la lecture ; lecture, préfixe de la commande de lecture ; attente, durée laissée ; indice, texte de
+        etat attendu à la fin. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : appeler.
+        """
+        fichier = Path(self.tmp.name) / f"etat-{etat}"
+        fichier.write_text(avant)
+        self.appeler(surveiller, f"sleep 0.7; echo {apres} > {fichier}; echo ligne; sleep 5", f"{lecture}{fichier}")
+        time.sleep(0.4)
+        self.assertNotIn(indice, self.appeler("etat", etat), "la lecture initiale ne doit pas donner la valeur finale")
+        time.sleep(attente)
+        self.assertIn(indice, self.appeler("etat", etat))
+
     def test_notifications_lit_apres_ligne(self):
-        self.appeler("surveillerNotifications", "echo ligne; sleep 5", "true")
-        time.sleep(1)
+        self.valeur_apres_ligne("surveillerNotifications", "notifications", "false", "true", "cat ", 1.5,
+                                "icone=notifications-disabled")
+
+    def test_vpn_lit_apres_ligne(self):
+        self.valeur_apres_ligne("surveillerVpn", "vpn", "", "wireguard", "cat ", 1.5, "visible=true")
+
+    def test_ligne_pendant_lecture_non_perdue(self):
+        """Deux lignes rapprochées, lecture lente : l'état final reflète la seconde valeur."""
+        fichier = Path(self.tmp.name) / "etat-rafale"
+        fichier.write_text("false")
+        self.appeler("surveillerNotifications",
+                     f"sleep 0.8; echo ligne; sleep 0.2; echo true > {fichier}; echo ligne; sleep 5",
+                     f"cat {fichier}; sleep 0.5")
+        time.sleep(2.5)
         self.assertIn("icone=notifications-disabled", self.appeler("etat", "notifications"))
 
     def test_indicateurs_sans_erreur(self):

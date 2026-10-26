@@ -59,19 +59,18 @@ ShellRoot {
         // Entrées : aucune. Sortie : vrai s'il est visible. Erreurs : aucune. Dépendances : element.
         function elementVisible(): bool { return element.visible }
 
-        // surveillerVpn — remplace la surveillance du Vpn par « sh -c <commande> » et la démarre ; la lecture
-        // devient « true ». Entrée : commande. Sortie : aucune. Erreurs : aucune. Dépendances : vpn.
-        function surveillerVpn(commande: string): void {
-            vpn.surveille = ["sh", "-c", commande]; vpn.lecture = ["true"]; vpn.actif = true
+        // surveillerVpn — remplace la surveillance et la lecture du Vpn par « sh -c » et les démarre.
+        // Entrées : commande (surveillance), lecture. Sortie : aucune. Erreurs : aucune. Dépendances : vpn.
+        function surveillerVpn(commande: string, lecture: string): void {
+            vpn.surveille = ["sh", "-c", commande]; vpn.lecture = ["sh", "-c", lecture]; vpn.actif = true
         }
 
         // relancesVpn — nombre de démarrages de la surveillance du Vpn. Sortie : entier. Dépendances : vpn.
         function relancesVpn(): int { return vpn.relances }
 
-        // surveillerNotifications — comme surveillerVpn, avec la lecture « echo <lecture> » pour fixer l'état
-        // lu par Notifications. Entrées : commande, lecture. Sortie : aucune. Dépendances : notifications.
+        // surveillerNotifications — comme surveillerVpn, pour Notifications. Entrées : commande, lecture. Sortie : aucune. Dépendances : notifications.
         function surveillerNotifications(commande: string, lecture: string): void {
-            notifications.surveille = ["sh", "-c", commande]; notifications.lecture = ["echo", lecture]
+            notifications.surveille = ["sh", "-c", commande]; notifications.lecture = ["sh", "-c", lecture]
             notifications.actif = true
         }
 
