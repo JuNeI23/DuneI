@@ -15,7 +15,8 @@ import "../Composants"
 // Sorties : celles de T.AbstractButton (clicked, hovered, down). L'élément est invisible, et donc absent de la
 // rangée, quand ni icône, ni image, ni texte ne sont fournis (matériel absent).
 // Erreurs : aucune ; avant le chargement des jetons, la couleur est transparente.
-// Dépendances : Theme (texteBureau, color, typo), Composants (Icone, qui porte l'image recolorée, et Texte), ColorSpring.
+// Dépendances : Theme (texteBureau, color, typo), Composants (Icone, qui porte l'image recolorée, et Texte),
+// ColorSpring.
 T.AbstractButton {
     id: element
 

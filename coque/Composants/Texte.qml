@@ -11,7 +11,8 @@ import "../Theme"
 // Erreurs : aucune ; avant le chargement des tokens, police, taille et graisse restent celles de
 // l'application et la couleur est transparente.
 // Dépendances : Theme (police, color). La police se règle par ces entrées, jamais par « font.xxx » sur l'instance,
-// qui supplanterait la liaison et ferait retomber le texte sur la police de l'application. Import : "../Theme", le même singleton que celui de la coque.
+// qui supplanterait la liaison et ferait retomber le texte sur la police de l'application. Import : "../Theme",
+// le même singleton que celui de la coque.
 // Rendu : le texte se rend en niveaux de gris, jamais en sous-pixel, faux sur une fenêtre translucide ; ce réglage
 // est celui du processus, posé par la directive « //@ pragma Env QSG_DISTANCEFIELD_ANTIALIASING=gray » en tête
 // de chaque coque (tests/test_coque_composants.py le vérifie), et vaut aussi pour Champ et Compteur.

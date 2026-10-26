@@ -66,5 +66,5 @@ function iconeMoment(moment) {
 // texteBatterie — pourcentage affiché à côté de l'icône de batterie.
 // Entrée : pourcent, entier 0–100. Sortie : par exemple « 78 % ». Erreurs : aucune.
 function texteBatterie(pourcent) {
-    return pourcent + " %"
+    return pourcent + " %"
 }

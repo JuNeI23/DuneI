@@ -76,7 +76,7 @@ class IconesTest(BarreIpc, unittest.TestCase):
         self.assertEqual(self.appeler("iconeBatterie", False, 78, False, False), "")
         self.assertEqual(self.appeler("iconeBatterie", True, 97, True, False), "battery-level-100-charged")
         self.assertEqual(self.appeler("iconeBatterie", True, 97, False, False), "battery-level-100")
-        self.assertEqual(self.appeler("texteBatterie", 78), "78 %")
+        self.assertEqual(self.appeler("texteBatterie", 78), "78\u00a0%")
 
     def test_wifi(self):
         self.assertEqual(self.appeler("iconeWifi", False, True, True, 0.9), "")
@@ -214,10 +214,6 @@ class RelanceTest(BarreIpc, unittest.TestCase):
         self.assertNotIn("ERROR", self.journal())
 
 
-if __name__ == "__main__":
-    unittest.main()
-
-
 class BarreStructureTest(unittest.TestCase):
     """La barre, la coque de session et son unité respectent les contraintes de la spec (texte seul)."""
 
@@ -255,3 +251,7 @@ class BarreStructureTest(unittest.TestCase):
             self.assertIn(ligne, unite)
         self.assertEqual(unite.splitlines()[1].split("—")[0].strip(), "# Posé par DuneI depuis config/")
         self.assertIn("dunei-coque.service", (ROOT / "session.toml").read_text(encoding="utf-8"))
+
+
+if __name__ == "__main__":
+    unittest.main()

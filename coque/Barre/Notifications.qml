@@ -5,7 +5,8 @@ import "icones.js" as Icones
 // Rôle : affiche une cloche, barrée quand dunst est en pause. dbus-monitor signale chaque changement de
 // propriété de org.freedesktop.Notifications et déclenche une lecture de « dunstctl is-paused ».
 // Entrées : surveille (commande du processus résident, remplaçable par un test), lecture. Sorties : enPause.
-// Erreurs : sans dunstctl, l'état reste « actif » ; la surveillance est relancée toutes les secondes.
+// Erreurs : sans dunstctl, la lecture échoue et la cloche reste non barrée ; dbus-monitor, lui, continue de
+// tourner et chaque signal relance la lecture.
 // Dépendances : ElementBarre, Relance, icones.js.
 ElementBarre {
     id: element

@@ -1,6 +1,6 @@
 # La barre système : socle transparent à la manière de macOS
 
-Version 1.2 — 2026-10-26. Éléments du backlog : L2-08, L2-09 ; L2-10 déplacé vers la presqu'île.
+Version 1.3 — 2026-10-26. Éléments du backlog : L2-08, L2-09 ; L2-10 déplacé vers la presqu'île.
 
 ## 1. Objet et raison
 
@@ -90,8 +90,8 @@ aujourd'hui le bouton jour/nuit ; le masque de clic de la barre couvre donc auss
 | Jour/nuit | `Theme.moment` | soleil ou lune selon le moment courant | `dunei-theme bascule` |
 | Wi-Fi | `Quickshell.Networking` | force du signal par paliers ; déconnecté ; coupé (barré) ; absent sans carte Wi-Fi | aucun |
 | VPN | NetworkManager, connexions actives de type vpn ou wireguard | affiché seulement si connecté | aucun |
-| Bluetooth | `Quickshell.Bluetooth`, `defaultAdapter` | allumé, appareil connecté, éteint ou bloqué (barré) ; absent sans adaptateur | aucun |
-| Paramètres | — | icône fixe | aucun |
+| Bluetooth | `Quickshell.Bluetooth`, `defaultAdapter` | `bluetooth-active` allumé, appareil connecté ou non, comme macOS ; `bluetooth-disabled` éteint ; absent sans adaptateur (seul `enabled` est lu) | aucun |
+| Paramètres | — | icône fixe (`emblem-system`) | aucun |
 
 - Les notifications n'affichent aucun compteur : dunst ne sait pas distinguer les notifications non lues, et
   aucun compte honnête n'est possible avant L2-19. La coque ne doit pas instancier de serveur de notifications,
@@ -108,7 +108,7 @@ aujourd'hui le bouton jour/nuit ; le masque de clic de la barre couvre donc auss
 - Symboliques d'Adwaita, résolues par le composant existant `Icone` (noms freedesktop, recoloration). Les noms
   utiles existent : `battery-level-N[-charging]`, `battery-level-100-charged`, `weather-clear`,
   `weather-clear-night`, `network-wireless-signal-*`, `network-wireless-disabled`, `network-vpn`,
-  `bluetooth-active`, `bluetooth-disabled`, `preferences-system`, et une cloche (à choisir parmi celles
+  `bluetooth-active`, `bluetooth-disabled`, `emblem-system`, et une cloche (à choisir parmi celles
   qu'Adwaita fournit, sa variante barrée comprise).
 - L'allure de macOS viendra du jeu Phosphor prévu en L4-12, qui reprendra ces mêmes noms : la barre n'aura rien
   à changer. Nicolas en est informé.
@@ -178,3 +178,4 @@ et de Wi-Fi ; le sort exact de la règle de flou de `dunei-barre`.
 | 1.0 | 2026-10-26 | Première version, issue de la séance de conception et du repérage technique |
 | 1.1 | 2026-10-26 | Relecture du constructeur : fond du bureau dans un fichier d'état réinscriptible ; teinte d'accent à l'appui et luminosité au survol à la place de la capsule |
 | 1.2 | 2026-10-26 | État livré : 28 px de hauteur et de zone exclusive, icônes à 16 px, logo à 20 px, texte à l'échelon 3, police par `Theme.police`, flou du namespace conservé, recette validée (VPN non éprouvé) |
+| 1.3 | 2026-10-26 | Alignement sur le livré : Bluetooth (`bluetooth-active` allumé, connecté ou non ; `bluetooth-disabled` éteint ; seul `enabled` est lu), icône des paramètres `emblem-system`, pourcentage de batterie à espace insécable |

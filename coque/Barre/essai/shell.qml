@@ -77,7 +77,8 @@ ShellRoot {
         // relancesVpn — nombre de démarrages de la surveillance du Vpn. Sortie : entier. Dépendances : vpn.
         function relancesVpn(): int { return vpn.relances }
 
-        // surveillerNotifications — comme surveillerVpn, pour Notifications. Entrées : commande, lecture. Sortie : aucune. Dépendances : notifications.
+        // surveillerNotifications — comme surveillerVpn, pour Notifications.
+        // Entrées : commande, lecture. Sortie : aucune. Dépendances : notifications.
         function surveillerNotifications(commande: string, lecture: string): void {
             notifications.surveille = ["sh", "-c", commande]; notifications.lecture = ["sh", "-c", lecture]
             notifications.actif = true

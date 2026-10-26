@@ -3,7 +3,8 @@
 # Rôle : génère coque-tokens.json et motion.json dans un dossier de brouillon et y copie le shader compilé du
 #        matériau (generated/materiau.frag.qsb, lu seulement), puis démarre Quickshell sur le banc en y
 #        redirigeant Theme par DUNEI_TOKENS_DIR. generated/ n'est jamais touché. Le banc réserve 32 px en haut de
-#        l'écran tant qu'il tourne : ne pas le laisser ouvert (il porte le namespace de la future barre).
+#        l'écran tant qu'il tourne : ne pas le laisser ouvert (il porte le namespace de la barre ; le script refuse de
+#        démarrer si dunei-coque.service est active).
 # Entrées : `verre.sh` génère (teinte de la machine) et lance le banc ;
 #           `verre.sh theme <famille> <moment>` choisit le thème : appelle config/bin/dunei-theme avec
 #           DUNEI_TOKENS_DIR sur le brouillon, le banc ouvert bascule d'un bloc (le brouillon doit exister).

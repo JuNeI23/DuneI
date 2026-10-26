@@ -250,10 +250,11 @@ def _bureau(model: dict) -> dict:
 def emit(model: dict) -> str:
     """Fichier `coque-tokens.json` : les quatre thèmes, les pastilles et les cotes partagées.
 
-    Entrée : model — sortie de model.resolve ; seuls `raw` et `hue` servent, chaque thème étant résolu ici.
+    Entrée : model — sortie de model.resolve ; `raw` et `hue` servent à résoudre chaque thème ici, `roles` à la clé
+             `bureau` (via _bureau).
     Sortie : contenu du fichier JSON. Erreurs : KeyError si une section du TOML manque ou si le moment « nuit » n'existe pas
              (les pastilles en dérivent).
-    Dépendances : json, _camel_keys, _theme, _pastilles, model.themes, model.defaut, model.theme_data, model.resolve.
+    Dépendances : json, _camel_keys, _theme, _pastilles, _bureau, model.themes, model.defaut, model.theme_data, model.resolve.
     """
     raw, hue = model["raw"], model["hue"]
     resolus = {(f, m): resolve(theme_data(raw, f, m), hue) for f, m in themes(raw)}
