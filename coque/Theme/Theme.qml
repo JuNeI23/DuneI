@@ -10,15 +10,20 @@ import Quickshell.Io
 // image. coque-tokens.json porte les quatre thèmes (themes[famille][moment]) ; tokens est la vue du thème
 // actif, un objet neuf à chaque lecture, fait des clés partagées du fichier et de la branche choisie, ce qui
 // fait basculer ColorSpring d'un coup, sans animation (D81). Aucune valeur de design n'est écrite ici.
+// Le texte posé directement sur le bureau (la barre) se règle d'après bureau.json, que deploy.py écrit et que
+// L2-27 réécrira : texteBureau est le texte clair ou foncé des jetons du bureau, selon la luminance relative
+// du fond effectif comparée au seuil des jetons.
 // Entrées : DUNEI_TOKENS_DIR (dossier redirigé, pour la planche et les essais), sinon
 //           $XDG_CONFIG_HOME/dunei, sinon $HOME/.config/dunei ; dans ce dossier, theme.json
-//           {famille, moment}, facultatif.
+//           {famille, moment}, facultatif, et bureau.json {origine, fond}, facultatif.
 // Sorties : dir, ready, famille, moment, tokens et ses raccourcis par groupe (pastilles, knob, controls et glass
-//           compris), density (confortable), motion, stateColors(), hairline(), police(), fichier().
+//           compris), bureau (jetons du bureau), texteBureau, texteBureauSurvol, density (confortable), motion,
+//           stateColors(), hairline(), luminance(), police(), fichier().
 // Erreurs : tokens ou mouvement absents ou illisibles → console.error, ready reste faux ; contenu invalide ou
 //           incomplet → console.warn, valeurs précédentes gardées. theme.json absent → défaut des tokens, en
 //           silence ; theme.json invalide ou thème inconnu → défaut des tokens et un seul console.warn ;
-//           theme.json illisible (droits) → console.error et défaut des tokens.
+//           theme.json illisible (droits) → console.error et défaut des tokens. bureau.json absent, illisible ou
+//           sans fond valide (#rrggbb) → fond des jetons du bureau (console.warn si invalide, silence si absent).
 // Dépendances : Quickshell (env), Quickshell.Io (FileView, FileViewError).
 Singleton {
     id: root
@@ -65,6 +70,17 @@ Singleton {
     readonly property var icons: tokens?.icons
     readonly property var pastilles: tokens?.pastilles
     readonly property var knob: tokens?.knob
+    // Jetons du bureau : fond par défaut, textes clair et foncé (repos, survol), seuil de luminance, logo.
+    readonly property var bureau: tokens?.bureau
+    // Fond du bureau lu dans bureau.json, ou null (absent, illisible ou invalide) : le fond effectif vaut alors
+    // celui des jetons.
+    property var fondFichier: null
+    readonly property color fondBureau: fondFichier ?? bureau?.fond ?? "transparent"
+    readonly property bool bureauClair: luminance(fondBureau) >= (bureau?.seuil ?? 0)
+    // Texte posé sur le bureau, au repos et au survol : clair sur un fond sombre, foncé sur un fond clair.
+    readonly property color texteBureau: (bureauClair ? bureau?.texteFonce : bureau?.texteClair) ?? "transparent"
+    readonly property color texteBureauSurvol: (bureauClair ? bureau?.texteFonceSurvol : bureau?.texteClairSurvol)
+        ?? "transparent"
     // La préférence de densité viendra de L2-26 ; d'ici là, la densité confortable s'applique.
     readonly property var density: tokens?.density.comfortable
 
@@ -87,6 +103,15 @@ Singleton {
         return Qt.font({ family: typo?.interface ?? Qt.application.font.family,
                          pixelSize: typo?.scale[echelon] ?? Qt.application.font.pixelSize,
                          weight: (moyen ? typo?.weightMedium : typo?.weightRegular) ?? Font.Normal })
+    }
+
+    // luminance — luminance relative WCAG d'une couleur.
+    // Entrée : c, couleur dont les composantes .r .g .b sont des sRGB dans [0, 1].
+    // Sortie : 0,2126 R + 0,7152 G + 0,0722 B sur les composantes linéarisées, dans [0, 1].
+    // Erreurs : aucune. Dépendances : aucune.
+    function luminance(c) {
+        const l = v => v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4)
+        return 0.2126 * l(c.r) + 0.7152 * l(c.g) + 0.0722 * l(c.b)
     }
 
     // hairline — épaisseur d'un liseré (arête, bordure d'un pixel) en pixels logiques Qt.
@@ -226,5 +251,19 @@ Singleton {
             root._ready = root.tokens !== null
             console.info("Theme : mouvement chargé, version " + data.version)
         }
+    }
+
+    // Le fond du bureau : absent, illisible ou sans fond #rrggbb, il vaut celui des jetons.
+    Source {
+        name: "bureau.json"
+        keys: ["origine", "fond"]
+        optional: true
+        suite: "fond des jetons du bureau appliqué"
+        onParsed: data => {
+            const valide = typeof data.fond === "string" && /^#[0-9a-fA-F]{6}$/.test(data.fond)
+            if (!valide) console.warn("Theme : bureau.json ignoré, fond invalide ; fond des jetons du bureau appliqué")
+            root.fondFichier = valide ? data.fond : null
+        }
+        onRejected: root.fondFichier = null
     }
 }

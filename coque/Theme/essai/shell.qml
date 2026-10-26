@@ -14,7 +14,8 @@ import "Theme"
 // (rest, hover, pressed, disabled) : change l'état du ressort et journalise « essai : état <interaction>,
 // ressort posé|en vol » au tour de boucle suivant ; « essai lent » donne au ressort une raideur minime, pour
 // qu'il reste en vol plusieurs secondes ; « essai raideur » journalise « essai : raideur <stiffness> », la
-// raideur du ressort employé.
+// raideur du ressort employé. « essai : texte bureau <texteBureau> survol <texteBureauSurvol> » à chaque
+// changement de l'un ou de l'autre (couleurs au format #rrggbb).
 // Erreurs : celles de Theme, dans le journal. Dépendances : quickshell ≥ 0.3 (Quickshell.Io : IpcHandler), module coque/Theme.
 // Import : Quickshell ne résout pas un module situé au-dessus de la racine de la coque lancée (import "../"
 // laisse Theme indéfini) ; le lien essai/Theme -> .. le place sous cette racine.
@@ -32,6 +33,13 @@ ShellRoot {
     ColorSpring {
         id: spring
         target: Theme.stateColors("surfacePanel", "none", essai.interaction)?.fill ?? "transparent"
+    }
+
+    // texteBureau — journalise la couleur du texte sur bureau, au repos et au survol.
+    // Entrées : aucune. Sortie : « essai : texte bureau <couleur> survol <couleur> ». Erreurs : aucune.
+    // Dépendances : Theme.
+    function texteBureau() {
+        console.info("essai : texte bureau " + Theme.texteBureau + " survol " + Theme.texteBureauSurvol)
     }
 
     IpcHandler {
@@ -64,6 +72,8 @@ ShellRoot {
         function onReadyChanged() {
             console.info("essai : prêt " + Theme.ready + ", couleurs " + (Theme.color ? "définies" : "indéfinies"))
         }
+        function onTexteBureauChanged() { essai.texteBureau() }
+        function onTexteBureauSurvolChanged() { essai.texteBureau() }
         function onTokensChanged() {
             console.info("essai : thème " + Theme.famille + "/" + Theme.moment + " " + Theme.color?.surfacePanel
                 + " teinte " + Theme.tokens?.hue)

@@ -324,6 +324,58 @@ class CoqueThemeTest(EssaiCoque, unittest.TestCase):
         self.attendre("Theme : coque-tokens.json introuvable")
         self.assertIsNone(self.proc.poll())
 
+    def ecrire_bureau(self, contenu: str) -> None:
+        """Écrit bureau.json comme deploy.py : fichier temporaire, puis renommage.
+
+        Entrée : contenu — texte écrit tel quel, même invalide. Sortie : aucune.
+        Erreurs : OSError si l'écriture échoue. Dépendances : aucune.
+        """
+        temp = self.dir / ".bureau.json.tmp"
+        temp.write_text(contenu, encoding="utf-8")
+        os.replace(temp, self.dir / "bureau.json")
+
+    def jetons_bureau(self) -> dict:
+        """Jetons du bureau des tokens générés (teinte 55).
+
+        Entrées : aucune. Sortie : le dictionnaire tokens.bureau. Erreurs : KeyError si absent.
+        Dépendances : vue.
+        """
+        return self.vue(55)["bureau"]
+
+    def test_texte_bureau_sombre(self):
+        b = self.jetons_bureau()
+        self.installer(55)
+        self.ecrire_bureau(json.dumps({"origine": "theme", "fond": "#0f0703"}))
+        self.lancer(self.dir)
+        self.attendre(f"essai : texte bureau {b['texteClair']} survol {b['texteClairSurvol']}")
+
+    def test_texte_bureau_suit_le_fichier(self):
+        b = self.jetons_bureau()
+        self.installer(55)
+        self.ecrire_bureau(json.dumps({"origine": "theme", "fond": "#0f0703"}))
+        self.lancer(self.dir)
+        self.attendre(f"essai : texte bureau {b['texteClair']}")
+        self.ecrire_bureau(json.dumps({"origine": "fond", "fond": "#f0f0f0"}))
+        self.attendre(f"essai : texte bureau {b['texteFonce']} survol {b['texteFonceSurvol']}")
+
+    def test_texte_bureau_sans_fichier(self):
+        b = self.jetons_bureau()
+        self.installer(55)
+        self.lancer(self.dir)
+        self.attendre(f"essai : texte bureau {b['texteClair']} survol {b['texteClairSurvol']}")
+
+    def test_texte_bureau_illisible(self):
+        b = self.jetons_bureau()
+        self.installer(55)
+        for contenu in ("pas du json", json.dumps({"origine": "theme", "fond": "rouge"})):
+            with self.subTest(contenu=contenu):
+                self.ecrire_bureau(contenu)
+                self.lancer(self.dir)
+                self.attendre(f"essai : texte bureau {b['texteClair']} survol {b['texteClairSurvol']}")
+                self.attendre("Theme : bureau.json ignoré")
+                self.proc.kill()
+                self.proc.wait(timeout=DELAI)
+
 
 if __name__ == "__main__":
     unittest.main()
