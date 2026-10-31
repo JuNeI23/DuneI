@@ -112,7 +112,7 @@
   "icons": {
     "source": "Phosphor",
     "variants": [
-      "regular",
+      "bold",
       "fill"
     ],
     "grid": 24,
