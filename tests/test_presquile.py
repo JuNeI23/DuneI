@@ -6,6 +6,7 @@ Ignoré sans session Wayland ou sans Quickshell, comme les essais de la barre.
 
 import json
 import os
+import re
 import subprocess
 import time
 import unittest
@@ -14,6 +15,40 @@ from tests.test_coque_composants import ERREURS
 from tests.test_coque_theme import DELAI, QS, ROOT, EssaiCoque
 
 ESSAI = ROOT / "coque" / "Presquile" / "essai"
+
+
+class PresquileStructureTest(unittest.TestCase):
+    """La surface de la presqu'île et son entrée dans la coque respectent la conception (lecture du source)."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.surface = (ROOT / "coque" / "Presquile" / "Presquile.qml").read_text(encoding="utf-8")
+
+    def test_calque(self):
+        for ligne in ('WlrLayershell.namespace: "dunei-presquile"', "WlrLayershell.layer: WlrLayer.Top",
+                      "WlrLayershell.keyboardFocus: WlrKeyboardFocus.None", "exclusionMode: ExclusionMode.Ignore",
+                      'color: "transparent"'):
+            with self.subTest(ligne=ligne):
+                self.assertIn(ligne, self.surface)
+
+    def test_ancrage_haut_seul(self):
+        ancrage = re.search(r"anchors\s*\{([^}]*)\}", self.surface).group(1)
+        self.assertEqual(re.findall(r"(\w+):\s*true", ancrage), ["top"])
+
+    def test_masque_sur_le_corps(self):
+        masque = re.search(r"mask:\s*Region\s*\{([^}]*)\}", self.surface)
+        self.assertIsNotNone(masque)
+        self.assertEqual(re.findall(r"item:\s*([\w.]+)", masque.group(1)), ["encoche.corps"])
+
+    def test_module_et_ressort(self):
+        self.assertRegex(self.surface, r"property Component module:\s*Component\s*\{\s*Bureaux\b")
+        self.assertIn('transition: "window"', self.surface)
+
+    def test_qmldir_et_coque(self):
+        self.assertIn("Presquile 1.0 Presquile.qml", (ROOT / "coque" / "Presquile" / "qmldir").read_text("utf-8"))
+        shell = (ROOT / "coque" / "shell.qml").read_text(encoding="utf-8")
+        self.assertRegex(shell, r"(?s)delegate:\s*Scope\s*\{.*Barre\s*\{.*Presquile\s*\{")
+        self.assertIn('import "Presquile"', shell)
 
 
 @unittest.skipUnless(os.environ.get("WAYLAND_DISPLAY") and QS, "session Wayland et Quickshell requis")
