@@ -92,6 +92,16 @@ ShellRoot {
             t.triggered.connect(() => console.info("essai : neuf " + r.value + " " + r.moving))
         }
 
+        // pose — crée un Ressort de cible 0, le recible, puis le pose.
+        // Entrées : n cible. Sortie : « essai : pose <v> <mobile> » (valeur égale à n, mouvement faux).
+        // Erreurs : aucune. Dépendances : Ressort, Theme.
+        function pose(n: real): void {
+            const r = Qt.createQmlObject('import QtQuick\nimport "Theme"\nRessort { cible: 0 }', essai, "pose.qml")
+            r.cible = n
+            r.poser()
+            console.info("essai : pose " + r.value + " " + r.moving)
+        }
+
         // etat — change l'interaction simulée du ressort, comme un survol ou une pression.
         // Entrées : interaction (rest, hover, pressed, disabled). Sortie : aucune ; journal un tour plus tard.
         // Erreurs : aucune ; une interaction inconnue donne une cible transparente. Dépendances : posture.

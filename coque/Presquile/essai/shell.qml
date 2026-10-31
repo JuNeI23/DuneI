@@ -66,6 +66,16 @@ ShellRoot {
             return JSON.stringify(Bureaux.commandesClic(id, idActif, special))
         }
 
+        // montage — rejoue le montage de la surface : un Ressort « window » créé avant son module, dont la cible suit
+        // la taille du module, est posé dès que le module existe. Entrées : n largeur du module.
+        // Sortie : JSON {valeur, mobile} lu aussitôt. Erreurs : aucune. Dépendances : Ressort, Item.
+        function montage(n: real): string {
+            const r = Qt.createQmlObject('import QtQuick\nimport "Theme"\nRessort { property Item c: null; transition: "window"; cible: c?.implicitWidth ?? 0 }', essaiEncoche, "montage.qml")
+            r.c = Qt.createQmlObject('import QtQuick\nItem { implicitWidth: ' + n + ' }', essaiEncoche, "module.qml")
+            r.poser()
+            return JSON.stringify({ valeur: r.value, mobile: r.moving })
+        }
+
         // encoche — géométrie de l'Encoche sans fenêtre. Sortie : JSON {largeur, hauteur, corpsX, corpsLargeur,
         // corpsHauteur, trace}. Erreurs : aucune. Dépendances : Encoche.
         function encoche(): string {

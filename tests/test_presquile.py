@@ -46,7 +46,7 @@ class PresquileStructureTest(unittest.TestCase):
 
     def test_qmldir_et_coque(self):
         self.assertIn("Presquile 1.0 Presquile.qml", (ROOT / "coque" / "Presquile" / "qmldir").read_text("utf-8"))
-        shell = (ROOT / "coque" / "shell.qml").read_text(encoding="utf-8")
+        shell = re.sub(r"//[^\n]*", "", (ROOT / "coque" / "shell.qml").read_text(encoding="utf-8"))
         self.assertRegex(shell, r"(?s)delegate:\s*Scope\s*\{.*Barre\s*\{.*Presquile\s*\{")
         self.assertIn('import "Presquile"', shell)
 
@@ -164,6 +164,18 @@ class BureauxModuleTest(PresquileIpc, unittest.TestCase):
 
 # Tracé de la variante D de la planche forme.html (132 × 34, évasement 13), validée à l'écran par Nicolas.
 TRACE_PLANCHE = "M0 0 H132 C124 0 120 3 119 12 V20 C119 29 115 34 105 34 H27 C17 34 13 29 13 20 V12 C12 3 8 0 0 0 Z"
+
+
+class MontageTest(PresquileIpc, unittest.TestCase):
+    """Premier montage de la surface : l'encoche prend sa taille d'un coup, sans partir de zéro."""
+
+    def test_taille_immediate(self):
+        self.assertEqual(self.json("montage", 95), {"valeur": 95, "mobile": False})
+
+    def test_surface_pose_au_montage(self):
+        source = (ROOT / "coque" / "Presquile" / "Presquile.qml").read_text(encoding="utf-8")
+        self.assertIn("largeur.poser(); hauteur.poser()", source)
+        self.assertRegex(source, r"implicitWidth: Math\.max\(largeur\.value, largeur\.cible\)")
 
 
 class EncocheTest(PresquileIpc, unittest.TestCase):

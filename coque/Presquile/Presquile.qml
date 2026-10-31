@@ -26,8 +26,10 @@ PanelWindow {
 
     screen: modelData
     anchors { top: true }
-    implicitWidth: encoche.implicitWidth + 2 * encoche.marge
-    implicitHeight: encoche.implicitHeight + encoche.marge
+    // La fenêtre se dimensionne sur la cible (ou sur la valeur courante si elle est plus grande, pour ne rien couper
+    // pendant un rétrécissement) : elle n'est donc pas reconfigurée à chaque image, seule la forme s'anime.
+    implicitWidth: Math.max(largeur.value, largeur.cible) + 2 * (encoche.evasement + encoche.marge)
+    implicitHeight: Math.max(hauteur.value, hauteur.cible) + encoche.marge
     exclusionMode: ExclusionMode.Ignore
     color: "transparent"
     mask: Region { item: encoche.corps }
@@ -44,7 +46,7 @@ PanelWindow {
 
     Encoche {
         id: encoche
-        x: encoche.marge
+        x: (surface.implicitWidth - implicitWidth) / 2
         largeurCorps: largeur.value
         hauteur: hauteur.value
 
@@ -55,14 +57,18 @@ PanelWindow {
     }
 
     // monter — instancie le module de contenu pour l'écran, centré dans le corps de l'encoche.
-    // Entrées : aucune (lit module et modelData). Sortie : met à jour contenu. Erreurs : un composant sans Item
-    // valide laisse contenu nul et se lit au journal de Quickshell. Dépendances : module, encoche.
+    // Entrées : aucune (lit module et modelData). Sortie : met à jour contenu ; au premier montage, pose les ressorts de taille sur leur cible. Erreurs : un composant sans Item
+    // valide laisse contenu nul et se lit au journal de Quickshell. Dépendances : module, encoche, Ressort.poser.
     function monter() {
+        const premier = !contenu
         contenu?.destroy()
-        contenu = module.createObject(montage, { ecran: modelData })
-        if (!contenu) return
-        contenu.x = Qt.binding(() => encoche.evasement + (encoche.largeurCorps - contenu.implicitWidth) / 2)
-        contenu.y = Qt.binding(() => (encoche.hauteur - contenu.implicitHeight) / 2)
+        const m = module.createObject(montage, { ecran: modelData })
+        contenu = m
+        if (!m) return
+        m.x = Qt.binding(() => encoche.evasement + (encoche.largeurCorps - m.implicitWidth) / 2)
+        m.y = Qt.binding(() => (encoche.hauteur - m.implicitHeight) / 2)
+        // Au premier montage, l'encoche prend sa taille d'un coup : elle ne naît pas de la largeur nulle.
+        if (premier) { largeur.poser(); hauteur.poser() }
     }
 
     onModuleChanged: monter()

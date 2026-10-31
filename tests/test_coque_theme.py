@@ -292,6 +292,16 @@ class CoqueThemeTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(lignes[0], ["13", "false"], self.journal())
         self.assertEqual(lignes[1], ["13", "false"], self.journal())
 
+    def test_ressort_poser(self):
+        # Recibler puis poser : la valeur égale la cible aussitôt et rien ne bouge.
+        self.installer(55)
+        self.lancer(self.dir)
+        self.attendre("essai : prêt true")
+        self.ipc("pose", "95")
+        self.attendre("essai : pose ")
+        ligne = [l for l in self.journal().splitlines() if "essai : pose " in l][-1]
+        self.assertEqual(ligne.split("essai : pose ", 1)[1].split(), ["95", "false"], self.journal())
+
     def test_ressort_revient_au_repos(self):
         self.installer(55)
         self.lancer(self.dir)

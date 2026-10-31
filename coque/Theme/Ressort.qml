@@ -7,7 +7,8 @@ import "physics.js" as Physics
 // de la coque (largeur d'une pastille, taille de la presqu'île). Les paramètres viennent toujours de
 // motion.json : `in` quand la cible est supérieure à la valeur affichée, `out` quand elle est inférieure.
 // Entrées : transition nom d'une transition de motion.json (défaut « navigate ») ; cible valeur visée.
-// Sorties : value valeur affichée ; moving vrai tant que le ressort avance ; vitesse() vitesse courante.
+// Sorties : value valeur affichée ; moving vrai tant que le ressort avance ; vitesse() vitesse courante ; poser()
+//          pose le ressort sur sa cible sans animation.
 // Erreurs : aucune ; avant que Theme soit prêt, ou si la transition est inconnue, value prend cible sans
 //           animation, ainsi qu'à la création : la cible initiale se pose d'un coup. Le mouvement réduit n'a pas encore de bascule dans la coque : il n'est pas lu ici.
 // Dépendances : Theme (singleton du module), physics.js (integrate, atRest).
@@ -30,6 +31,15 @@ Item {
     // vitesse — vitesse courante du ressort, en unités de valeur par seconde.
     // Entrées : aucune. Sortie : réel, nul au repos. Erreurs : aucune. Dépendances : _st.
     function vitesse() { return _st.v }
+
+    // poser — pose le ressort sur sa cible d'un coup, sans animation ni vitesse résiduelle.
+    // Entrées : aucune. Sortie : aucune ; value égale cible et moving est faux aussitôt. Erreurs : aucune.
+    // Dépendances : anim, _st. Sert à la première valeur d'une grandeur dont la cible n'est connue qu'après la création.
+    function poser() {
+        anim.stop()
+        _st = { x: cible, v: 0, acc: 0 }
+        _x = cible
+    }
 
     onCibleChanged: {
         if (!_pret) return
