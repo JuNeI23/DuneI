@@ -235,6 +235,60 @@ class CoqueThemeTest(EssaiCoque, unittest.TestCase):
         ligne = [l for l in self.journal().splitlines() if "essai : raideur " in l][-1]
         self.assertEqual(float(ligne.split("essai : raideur ", 1)[1]), 1, self.journal())
 
+    def lire_course(self) -> dict:
+        """Interroge le Ressort numérique de la coque d'essai et lit sa réponse dans le journal.
+
+        Entrées : aucune. Sortie : dictionnaire {valeur, pic, mobile} de la dernière ligne « essai : course ».
+        Erreurs : échec du test si la réponse n'arrive pas. Dépendances : ipc, attendre, journal.
+        """
+        avant = self.journal().count("essai : course")
+        self.ipc("course")
+        self.attendre("essai : course", avant + 1)
+        champs = [l for l in self.journal().splitlines() if "essai : course" in l][-1].split("essai : course ", 1)[1].split()
+        return {"valeur": float(champs[1]), "pic": float(champs[3]), "mobile": champs[5] == "true"}
+
+    def test_ressort_atteint_sa_cible(self):
+        self.installer(55)
+        self.lancer(self.dir)
+        self.attendre("essai : prêt true")
+        self.ipc("cible", "22")
+        # Marge large devant les 186 ms de navigate : la machine peut être chargée.
+        fin = time.monotonic() + 3
+        etat = self.lire_course()
+        while etat["mobile"] and time.monotonic() < fin:
+            time.sleep(0.05)
+            etat = self.lire_course()
+        self.assertEqual(etat["valeur"], 22, self.journal())
+        self.assertFalse(etat["mobile"], self.journal())
+        # navigate n'a aucun dépassement : la valeur ne franchit jamais la cible.
+        self.assertLessEqual(etat["pic"], 22, self.journal())
+
+    def test_ressort_sans_saut_en_vol(self):
+        self.installer(55)
+        self.lancer(self.dir)
+        self.attendre("essai : prêt true")
+        self.ipc("cible", "22")
+        time.sleep(0.05)
+        self.ipc("saut", "7")
+        self.attendre("essai : saut avant ")
+        ligne = [l for l in self.journal().splitlines() if "essai : saut avant " in l][-1].split("essai : saut avant ", 1)[1].split()
+        self.assertLess(abs(float(ligne[2]) - float(ligne[0])), 1, self.journal())
+
+    def test_ressort_revient_au_repos(self):
+        self.installer(55)
+        self.lancer(self.dir)
+        self.attendre("essai : prêt true")
+        self.ipc("cible", "22")
+        time.sleep(0.05)
+        self.ipc("cible", "7")
+        fin = time.monotonic() + 3
+        etat = self.lire_course()
+        while etat["mobile"] and time.monotonic() < fin:
+            time.sleep(0.05)
+            etat = self.lire_course()
+        self.assertEqual(etat["valeur"], 7, self.journal())
+        self.assertFalse(etat["mobile"], self.journal())
+
     def test_contenu_corrompu(self):
         self.installer(55)
         self.lancer(self.dir)
