@@ -31,6 +31,8 @@ FAKES = {
                   'case "$*" in *is-enabled*) echo "$FAKE_ENABLED"; [ "$FAKE_ENABLED" = enabled ] ;;\n'
                   '*is-active*) [ "${FAKE_ACTIVE:-active}" = active ] ;; esac\n'),
     "gh": "#!/bin/sh\nexit 1\n",  # Non connecté : la destination atelier se contente de sa note.
+    # gsettings : get répond toujours 'Adwaita' ; set est consigné dans $FAKE_LOG.gsettings, jamais exécuté pour de bon.
+    "gsettings": '#!/bin/sh\n[ "$1" = get ] && echo "\'Adwaita\'" || echo "gsettings $*" >> "$FAKE_LOG.gsettings"\n',
     "hyprlock": "#!/bin/sh\n",
     "greetd": "#!/bin/sh\n",
     "tuigreet": "#!/bin/sh\n",
@@ -956,6 +958,98 @@ class CoqueTest(unittest.TestCase):
         self.assertEqual(self.bureau.read_text(encoding="utf-8"), self.ecrire[2])
         self.assertEqual(list((self.cfg / "dunei").iterdir()), [self.bureau])
         self.assertIn("bureau.json", deploy.describe(self.ecrire))
+
+
+class IconesTest(unittest.TestCase):
+    """Déploiement du thème d'icônes : lien, settings.ini GTK et gsettings simulé (L4-12)."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        t = Path(self.tmp.name)
+        self.repo, self.cfg, self.data = t / "depot", t / "cfg", t / "data"
+        (self.repo / "generated" / "icons" / "DuneI").mkdir(parents=True)
+        (self.repo / "tokens.toml").write_text('[icons]\nxdg_theme = "DuneI"\n', encoding="utf-8")
+        for rel in deploy.GTK_SETTINGS:
+            (self.cfg / rel).parent.mkdir(parents=True)
+        self.valeur = "'Adwaita'"  # Valeur que rend le faux gsettings get.
+        self.appels = []
+        patches = [mock.patch.dict(os.environ, {"XDG_DATA_HOME": str(self.data)}),
+                   mock.patch("deploy.shutil.which", lambda exe: "/faux/" + exe),
+                   mock.patch("deploy.subprocess.run", self.faux_run)]
+        for p in patches:
+            p.start()
+            self.addCleanup(p.stop)
+        self.addCleanup(self.tmp.cleanup)
+
+    def faux_run(self, cmd, **kw):
+        """Faux subprocess.run de gsettings : get rend self.valeur, set la remplace. Entrées : cmd, kw. Sortie : CompletedProcess. Erreurs : AssertionError si la commande n'est pas gsettings. Dépendances : subprocess."""
+        assert cmd[0] == "gsettings", cmd
+        self.appels.append(cmd)
+        if cmd[1] == "set":
+            self.valeur = f"'{cmd[4]}'"
+        return subprocess.CompletedProcess(cmd, 0, stdout=self.valeur + "\n")
+
+    def plan(self):
+        """plan_icones sur la maison temporaire. Entrée : aucune. Sortie : (actions, erreurs). Erreurs : aucune. Dépendances : plan_icones."""
+        return deploy.plan_icones(self.repo, self.cfg)
+
+    def test_icones_premier_passage(self):
+        """Dossier icons/, lien, deux settings.ini marqués, puis gsettings."""
+        actions, err = self.plan()
+        self.assertEqual(err, [])
+        texte = actions[2][2]
+        self.assertEqual(actions, [("mkdir", self.data / "icons"),
+                                   ("link", self.repo / "generated" / "icons" / "DuneI", self.data / "icons" / "DuneI"),
+                                   ("ecrire", self.cfg / "gtk-3.0" / "settings.ini", texte),
+                                   ("ecrire", self.cfg / "gtk-4.0" / "settings.ini", texte),
+                                   ("gsettings", "org.gnome.desktop.interface", "icon-theme", "DuneI")])
+        self.assertIn("[Settings]\ngtk-icon-theme-name=DuneI\n", texte)
+        self.assertIn(deploy.MARK, texte.splitlines()[1])
+        self.assertEqual(deploy.describe(actions[-1]), "régler org.gnome.desktop.interface icon-theme à DuneI")
+
+    def test_icones_dossiers_gtk_manquants(self):
+        """Un dossier gtk-3.0 absent est créé avant l'écriture de son settings.ini."""
+        (self.cfg / "gtk-3.0").rmdir()
+        actions = self.plan()[0]
+        self.assertEqual(actions[2:4], [("mkdir", self.cfg / "gtk-3.0"), ("ecrire", self.cfg / "gtk-3.0" / "settings.ini", actions[3][2])])
+
+    def test_icones_idempotent(self):
+        """Une fois appliqué, le plan est vide, et gsettings n'a reçu qu'un seul set."""
+        deploy.apply(self.plan()[0])
+        self.assertEqual(self.plan(), ([], []))
+        self.assertEqual([c[1] for c in self.appels].count("set"), 1)
+
+    def test_icones_xdg_data_home(self):
+        """Le lien va sous $XDG_DATA_HOME, pas sous ~/.local/share."""
+        self.assertIn(self.data / "icons" / "DuneI", [a[2] for a in self.plan()[0] if a[0] == "link"])
+
+    def test_icones_settings_etranger(self):
+        """Un settings.ini sans la marque est refusé par un message qui le nomme, jamais écrasé."""
+        ini = self.cfg / "gtk-3.0" / "settings.ini"
+        ini.write_text("[Settings]\ngtk-theme-name=Autre\n", encoding="utf-8")
+        actions, err = self.plan()
+        self.assertEqual(len(err), 1)
+        self.assertIn(str(ini), err[0])
+        self.assertNotIn(ini, [a[1] for a in actions if a[0] == "ecrire"])
+
+    def test_icones_lien_etranger(self):
+        """Un dossier réel, ou un lien étranger, à la place du lien est refusé."""
+        lien = self.data / "icons" / "DuneI"
+        lien.mkdir(parents=True)
+        err = self.plan()[1]
+        self.assertEqual(len(err), 1)
+        self.assertIn(str(lien), err[0])
+        lien.rmdir()
+        lien.symlink_to(self.tmp.name)
+        self.assertEqual(len(self.plan()[1]), 1)
+
+    def test_icones_sans_gsettings(self):
+        """Sans gsettings, une note remplace le réglage et rien ne bloque."""
+        with mock.patch("deploy.shutil.which", lambda exe: None):
+            actions, err = self.plan()
+        self.assertEqual((err, actions[-1]), ([], ("gsettings-absent", "DuneI")))
+        self.assertIn("gsettings-absent", deploy.NOTES)
+        self.assertIn("DuneI", deploy.describe(actions[-1]))
 
 
 if __name__ == "__main__":

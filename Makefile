@@ -17,7 +17,7 @@
 #                 fichier hors de git
 #   make check    generes, puis les tests
 #   make golden   régénère les instantanés de référence (changement de sortie VOULU)
-#   make install  generated/ et config/ → ~/.config/hypr, ~/.config/fontconfig, ~/.config/dunei (tokens et shader de la coque) et ~/.config/kitty ; active les services de session.toml et masque l'autostart XDG ; systeme/ → /etc (sudo, seulement si un fichier diffère) ; greetd remplace le gestionnaire de connexion au démarrage suivant ; bascule depuis la configuration générique au premier passage ; pose rtk (version épinglée dans atelier.toml) ; clone dunei-atelier, installe ses plugins Claude Code et en lie les fichiers ; pose core.hooksPath (crochets du dépôt)
+#   make install  generated/ et config/ → ~/.config/hypr, ~/.config/fontconfig, ~/.config/dunei (tokens et shader de la coque) et ~/.config/kitty ; thème d'icônes DuneI lié sous ~/.local/share/icons/DuneI et déclaré à GTK (settings.ini, gsettings) ; active les services de session.toml et masque l'autostart XDG ; systeme/ → /etc (sudo, seulement si un fichier diffère) ; greetd remplace le gestionnaire de connexion au démarrage suivant ; bascule depuis la configuration générique au premier passage ; pose rtk (version épinglée dans atelier.toml) ; clone dunei-atelier, installe ses plugins Claude Code et en lie les fichiers ; pose core.hooksPath (crochets du dépôt)
 
 PY := python3
 GOLDEN_HUES := 0 55 200 265
