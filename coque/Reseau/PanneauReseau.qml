@@ -56,7 +56,13 @@ Item {
         function onProfilDemandeChanged() { panneau.remplir() }
     }
     onCleFacturesChanged: if (cleFactures !== "") lectureFactures.running = true
-    Component.onCompleted: { remplir(); liste.forceActiveFocus() }
+    // La liste reçoit le focus à l'ouverture, pour les flèches, sans montrer le contour de focus : il n'appartient
+    // qu'au focus venu du clavier (Liste.focusClavier).
+    Component.onCompleted: {
+        remplir()
+        liste.forceActiveFocus()
+        liste.focusClavier = false
+    }
 
     // remplir — reconstruit le modèle de la liste si les rangées ont changé, choisit le profil demandé par
     // etat.profilDemande (uuid ou nom) s'il figure dans la liste, puis consomme la demande, et garde sinon un profil

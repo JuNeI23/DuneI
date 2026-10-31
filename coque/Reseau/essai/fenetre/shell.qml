@@ -34,11 +34,11 @@ ShellRoot {
     // nomme — descendant de la fiche par son objectName. Entrée : nom. Sortie : l'Item, ou null.
     function nomme(nom) { return trouver(fenetre.panneau?.fiche, o => o.objectName === nom) }
 
-    // selection — clé de sélection et graisse de la rangée choisie de la liste. Entrées : aucune. Sortie : [clé de
-    // sélection, gras], ou [] sans rangée choisie. Erreurs : aucune. Dépendances : fenetre.panneau (Liste, Rangee).
+    // selection — clé de sélection, graisse et contour de la rangée choisie. Entrées : aucune. Sortie : [clé de
+    // sélection, gras, contour montré], ou [] sans rangée choisie. Erreurs : aucune. Dépendances : fenetre.panneau (Liste, Rangee).
     function selection() {
         const r = trouver(fenetre.panneau, o => o.gras !== undefined && o.etat?.selectionne)
-        return r ? [r.etat.selection, r.gras] : []
+        return r ? [r.etat.selection, r.gras, r.contourMontre] : []
     }
 
     // lireCopie — retour de copie d'un libellé du détail (vide : « Tout copier »). Entrée : cle. Sortie : JSON

@@ -787,7 +787,7 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(e["detail"], {"IPv4": "192.168.1.42/24", "IPv6": "fe80::1/64", "Passerelle": "192.168.1.1",
                                        "DNS": "192.168.1.1", "Adresse matérielle": "A4:C3:F0:5B:1E:72"})
         # Colonne de navigation : la rangée choisie a le fond neutre de la sélection et un nom en graisse moyenne.
-        self.assertEqual(e["selection"], ["inactive", True])
+        self.assertEqual(e["selection"], ["inactive", True, False])
         self.ipc("essai", "fermer")
         e = self.jusqua(lambda e: not e["fenetre"], "fenêtre détruite")
         self.assertFalse(e["demandee"])
@@ -865,7 +865,7 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
         self.assertIn("connection add type wifi con-name Ouvert ssid Ouvert", self.appels())
         self.ipc("essai", "cliquerNouveau", "annuler")
         e = self.jusqua(lambda e: not e["nouvelle"].get("visible", False), "fiche refermée")
-        self.assertEqual((e["fiche"]["uuid"], e["selection"]), ("wifi-1", ["inactive", True]))
+        self.assertEqual((e["fiche"]["uuid"], e["selection"]), ("wifi-1", ["inactive", True, False]))
 
     def test_profil_demande(self):
         # « Détails… » du popover : la fenêtre s'ouvre sur le profil demandé (par uuid ou par nom), et la demande est
