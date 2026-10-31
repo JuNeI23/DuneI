@@ -271,8 +271,26 @@ class CoqueThemeTest(EssaiCoque, unittest.TestCase):
         time.sleep(0.05)
         self.ipc("saut", "7")
         self.attendre("essai : saut avant ")
-        ligne = [l for l in self.journal().splitlines() if "essai : saut avant " in l][-1].split("essai : saut avant ", 1)[1].split()
-        self.assertLess(abs(float(ligne[2]) - float(ligne[0])), 1, self.journal())
+        ligne = [l for l in self.journal().splitlines() if "essai : saut avant " in l][-1]
+        avant, apres = ligne.split("essai : saut avant ", 1)[1].split(" après ")
+        (x0, v0, m0), (x1, v1, m1) = avant.split(), apres.split()
+        # En vol au moment du recible, faute de quoi le test ne prouverait rien.
+        self.assertEqual((m0, m1), ("true", "true"), self.journal())
+        self.assertGreater(abs(float(v0)), 1, self.journal())
+        # Ni saut de position, ni remise à zéro de la vitesse : l'état est repris tel quel.
+        self.assertLess(abs(float(x1) - float(x0)), 1, self.journal())
+        self.assertEqual(float(v1), float(v0), self.journal())
+
+    def test_ressort_cree_pret_est_pose(self):
+        self.installer(55)
+        self.lancer(self.dir)
+        self.attendre("essai : prêt true")
+        self.ipc("neuf", "13")
+        self.attendre("essai : neuf ", 2)
+        lignes = [l.split("essai : neuf ", 1)[1].split() for l in self.journal().splitlines() if "essai : neuf " in l]
+        # À la création, puis après 150 ms : posé sur sa cible, sans animation depuis zéro.
+        self.assertEqual(lignes[0], ["13", "false"], self.journal())
+        self.assertEqual(lignes[1], ["13", "false"], self.journal())
 
     def test_ressort_revient_au_repos(self):
         self.installer(55)

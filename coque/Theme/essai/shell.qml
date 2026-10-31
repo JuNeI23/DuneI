@@ -18,7 +18,8 @@ import "Theme"
 // changement de l'un ou de l'autre (couleurs au format #rrggbb). Un Ressort numérique, de cible initiale 7 et
 // de transition navigate : « essai cible <n> » le recible ; « essai course » journalise « essai : course
 // valeur <v> pic <p> mobile <bool> » (pic : plus grande valeur vue depuis le dernier recible) ; « essai saut
-// <n> » le recible et journalise « essai : saut avant <v> après <v> », lues dans le même tour de boucle.
+// <n> » le recible et journalise valeur, vitesse et mouvement avant et après, dans le même tour de boucle ;
+// « essai neuf <n> » crée un Ressort de cible n et journalise son état aussitôt puis 150 ms après.
 // Erreurs : celles de Theme, dans le journal. Dépendances : quickshell ≥ 0.3 (Quickshell.Io : IpcHandler), module coque/Theme.
 // Import : Quickshell ne résout pas un module situé au-dessus de la racine de la coque lancée (import "../"
 // laisse Theme indéfini) ; le lien essai/Theme -> .. le place sous cette racine.
@@ -70,13 +71,25 @@ ShellRoot {
             console.info("essai : course valeur " + nombre.value + " pic " + nombre.pic + " mobile " + nombre.moving)
         }
 
-        // saut — recible le Ressort numérique en lisant la valeur juste avant et juste après, sans rendre la main.
-        // Entrées : n nouvelle cible. Sortie : « essai : saut avant <v> après <v> ». Erreurs : aucune.
+        // saut — recible le Ressort numérique en lisant valeur, vitesse et mouvement juste avant et juste après,
+        // sans rendre la main.
+        // Entrées : n nouvelle cible.
+        // Sortie : « essai : saut avant <v> <vitesse> <mobile> après <v> <vitesse> <mobile> ». Erreurs : aucune.
         // Dépendances : nombre.
         function saut(n: real): void {
-            const avant = nombre.value
+            const avant = nombre.value + " " + nombre.vitesse() + " " + nombre.moving
             nombre.cible = n
-            console.info("essai : saut avant " + avant + " après " + nombre.value)
+            console.info("essai : saut avant " + avant + " après " + nombre.value + " " + nombre.vitesse() + " " + nombre.moving)
+        }
+
+        // neuf — crée un Ressort après que Theme est prêt, puis journalise son état à la création et plus tard.
+        // Entrées : n cible initiale. Sortie : « essai : neuf <v> <mobile> » aussitôt, puis 150 ms après.
+        // Erreurs : aucune. Dépendances : Ressort, Theme.
+        function neuf(n: real): void {
+            const r = Qt.createQmlObject('import QtQuick\nimport "Theme"\nRessort { cible: ' + n + ' }', essai, "neuf.qml")
+            console.info("essai : neuf " + r.value + " " + r.moving)
+            const t = Qt.createQmlObject('import QtQuick\nTimer { interval: 150; running: true }', essai, "minuteur.qml")
+            t.triggered.connect(() => console.info("essai : neuf " + r.value + " " + r.moving))
         }
 
         // etat — change l'interaction simulée du ressort, comme un survol ou une pression.
