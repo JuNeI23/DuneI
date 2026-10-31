@@ -1,0 +1,15 @@
+# Garde du réveil de DuneI (L1-09, D99) : le bouton marche est ignoré une dizaine de secondes après la reprise.
+# Posé par DuneI depuis systeme/ — NE PAS MODIFIER À LA MAIN : make install le remplace.
+# Sur le ThinkPad T14s Gen 3 AMD (s2idle), l'appui qui réveille la machine est rapporté à logind une seconde
+# fois, une à sept secondes après la reprise ; HandlePowerKey=suspend la rendormait aussitôt, en boucle.
+# Démarrée par sleep.target (sleep.target.d/10-dunei.conf), elle tient le verrou bas niveau handle-power-key,
+# que logind respecte toujours : le bouton reste sans effet tant qu'il est tenu. L'horloge monotone de sleep
+# s'arrête pendant la veille ; des treize secondes, environ trois passent avant l'entrée en veille
+# (verrouillage, délai de hypridle) et dix après la reprise.
+[Unit]
+Description=Garde du bouton marche au réveil
+Before=sleep.target
+
+[Service]
+Type=exec
+ExecStart=/usr/bin/systemd-inhibit --what=handle-power-key --mode=block --who=DuneI --why="Appui fantôme au réveil" /usr/bin/sleep 13

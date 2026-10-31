@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.25. Historique en fin de document.
+Version 1.26. Historique en fin de document.
 
 Socle amorçable.
 
@@ -978,6 +978,21 @@ Une vidéo en lecture plein écran suspend l'échelle : Firefox demande le bloca
 
 **Piège consigné (2026-10-15).** Toute valeur inconnue de `hl.dsp.dpms({ action = ... })` fait basculer l'écran : Hyprland 0.56.2 passe par `parseToggleStr`, et une sonde `action = "zzz"` a éteint l'écran. Ne jamais sonder la session réelle avec un répartiteur ; lire le code source.
 
+**Garde du bouton marche au réveil** (D99, 2026-10-31). Au réveil par le bouton marche, cette machine (`s2idle`) envoie parfois à logind un second « Power key pressed short », 1 à 7 s après la reprise, sans aucun geste ; `HandlePowerKey=suspend` la rendort alors, parfois pendant la saisie du mot de passe, et en boucle. `HoldoffTimeoutSec=` de logind ne couvre que le couvercle. Deux fichiers système, déployés comme le fichier logind par `make install` (copie puis `systemctl daemon-reload`), posent une garde :
+
+- `systeme/etc/systemd/system/dunei-garde-reveil.service` : `Type=exec`, `Before=sleep.target`, lance `systemd-inhibit --what=handle-power-key --mode=block --who=DuneI --why="Appui fantôme au réveil" sleep 13`. logind respecte toujours ce verrou bas niveau : pendant la garde, il journalise l'appui mais ne met pas en veille.
+- `systeme/etc/systemd/system/sleep.target.d/10-dunei.conf` : `Wants=dunei-garde-reveil.service`, si bien que chaque mise en veille, quelle qu'en soit l'origine, démarre la garde juste avant de dormir.
+
+L'horloge monotone de `sleep` s'arrête pendant la veille : la garde de 13 s, démarrée quelques secondes avant le sommeil, couvre environ 10 s après la reprise (relevé avec 10 s : garde relâchée 7 s après la reprise). Coût accepté : un appui volontaire dans ces 10 s reste sans effet ; fermer le couvercle reste possible. Pour vérifier :
+
+```
+systemctl show sleep.target -p Wants          # contient dunei-garde-reveil.service
+systemd-inhibit --list                        # pendant la garde : DuneI, handle-power-key, block
+journalctl -b -u systemd-logind -u dunei-garde-reveil.service --since -10min
+```
+
+Au réveil, un « Power key pressed short » sans « Suspending... » à la suite, pendant la garde, prouve qu'un fantôme a été absorbé.
+
 **Vérification** (échelle jouée avec une source temporaire aux délais courts, jamais commitée).
 
 - [x] Paquets installés ; `hypridle.service` actif (« found 7 rules ») — 2026-10-15
@@ -988,6 +1003,8 @@ Une vidéo en lecture plein écran suspend l'échelle : Firefox demande le bloca
 - [x] Bascule secteur vers batterie pendant l'inactivité — validée par Nicolas, 2026-10-16
 - [x] Vidéo plein écran : aucune action de l'échelle pendant la lecture ; reprise après pause constatée par Nicolas — 2026-10-16
 - [x] Veille puis réveil par le bouton marche (2026-10-15 et 2026-10-16) et par le couvercle (2026-10-15) : retour sur `hyprlock`, sans image du bureau
+- [x] Garde du réveil : verrou `handle-power-key` tenu, un appui réel pendant la garde est journalisé sans mise en veille — 2026-10-31
+- [ ] Garde du réveil : au prochain appui fantôme, « Power key pressed short » sans « Suspending... » (version à 13 s, à réinstaller par `make install` dans un vrai terminal) — *en attente*
 - [ ] Couvercle fermé avec un écran externe : écran interne éteint, pas de veille, retour à la réouverture, débranchement capot fermé — *en attente* (aucun écran externe)
 - [ ] Comportement de `hl.on` et des liaisons au rechargement de Hyprland, couvercle fermé — *en attente* (aucun écran externe)
 
@@ -2056,6 +2073,7 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 
 | Version | Date | Changement |
 | --- | --- | --- |
+| 1.26 | 2026-10-31 | Énergie (L1-09) : garde du bouton marche au réveil, `dunei-garde-reveil.service` et `sleep.target.d/10-dunei.conf`, vérification et recette en attente (D99) |
 | 1.25 | 2026-10-31 | La presqu'île (L2-46, L2-10) : quatre bureaux, raccourcis `SUPER + 1…4`, geste sans création de bureau, section de la presqu'île, relevés (D96 à D98) |
 | 1.24 | 2026-10-26 | La barre système et la coque de session (L2-08, L2-09) : unité `dunei-coque.service`, lien `~/.config/quickshell/dunei`, `bureau.json`, mode d'emploi, pièges, relevés et réserve sur le VPN (D89 à D95) |
 | 1.23 | 2026-10-25 | L'élévation (L2-04, L2-05) : shader du matériau et sa compilation (`make shaders`, `.qsb` versionné), règles de calque du verre (`generated/hyprland-layers.lua`, `regles.lua`), texte de la coque en niveaux de gris, banc d'essai du verre, relevés ; chaîne de génération et message du crochet complétés par `shaders` ; `.qsb` jugé par l'empreinte de sa source et non par ses octets, recompilation après une retouche du shader (D85 à D88) |
