@@ -22,11 +22,11 @@ import "nmcli.js" as Nmcli
 // erreurs, objet clé → message (autoconnect, priorite, facture, methode, adresse, passerelle, dns, psk, connexion,
 // oublier, profil) ; fixe, vrai si la section IPv4 montre la configuration fixe ; confirmer, vrai pendant la
 // demande de confirmation de l'oubli ; secret, le ChampSecret ; detail, libellé → valeur du détail de la connexion
-// active, vide pour un autre profil ; signaux relu(uuid, profil) après chaque lecture et oublie() après la
+// active, vide pour un autre profil et pour un profil actif dont l'appareil n'est pas celui que lit EtatReseau ; signaux relu(uuid, profil) après chaque lecture et oublie() après la
 // suppression du profil.
 // Erreurs : un échec de lecture du profil s'affiche en tête de fiche (erreurs.profil). Une réponse de nmcli qui
 // arrive après un changement de profil ou la destruction de la fiche est ignorée (garde).
-// Dépendances : EtatReseau (executer, ip4, ip6, passerelle, dns, mac, connectivite), nmcli.js (CHAMPS_PROFIL,
+// Dépendances : EtatReseau (executer, appareil, ip4, ip6, passerelle, dns, mac, connectivite), nmcli.js (CHAMPS_PROFIL,
 // lireProfil, argsModifier, champs, liste), Theme, Surface, Texte, Icone, Bouton, Interrupteur, Champ, ChampSecret,
 // Onglets, Onglet, Separateur.
 // Cotes : contenu en retrait de space.blockGap (24) à gauche et à droite, sections espacées de space.scale[1] (8) ;
@@ -47,6 +47,8 @@ ColumnLayout {
     property string secretLu: ""
     // Uuid dont la lecture est en cours : une seconde demande pour le même profil est ignorée.
     property string enLecture: ""
+    // Vrai quand une relecture a été demandée pendant la lecture en cours.
+    property bool relectureAttendue: false
     // Garde des réponses de nmcli : marquée morte au changement de profil et à la destruction.
     property var garde: ({mort: false})
     readonly property bool lu: profil !== null
@@ -54,7 +56,8 @@ ColumnLayout {
     readonly property alias secret: secret
     readonly property real cote: Theme.space?.scale[2] ?? 0
     readonly property var detail: {
-        if (!(rangee?.actif ?? false)) return {}
+        // Seul l'appareil lu par EtatReseau a son détail : le filaire l'emporte quand le Wi-Fi est actif aussi.
+        if (!(rangee?.actif ?? false) || rangee.appareil === "" || rangee.appareil !== etat.appareil) return {}
         const d = {"IPv4": etat.ip4.join(", "), "IPv6": etat.ip6.join(", "), "Passerelle": etat.passerelle,
                    "DNS": etat.dns.join(", "), "Adresse matérielle": etat.mac}
         // Object.fromEntries manque au moteur JavaScript de Qt : le filtre passe par reduce.
@@ -70,6 +73,7 @@ ColumnLayout {
         garde.mort = true
         garde = {mort: false}
         enLecture = ""
+        relectureAttendue = false
         profil = null; erreurs = {}; confirmer = false
         secret.text = ""; secret.revele = false; secretLu = ""
         lire()
@@ -79,19 +83,27 @@ ColumnLayout {
 
     // lire — lit les réglages du profil, puis restaure les contrôles sur eux.
     // Entrées : aucune. Sortie : aucune ; profil, valeurs et contrôles mis à jour, relu émis ; une demande pour le
-    // profil dont la lecture est déjà en cours est ignorée.
+    // profil dont la lecture est déjà en cours est notée, et rejouée à la fin de celle-ci : une modification
+    // achevée pendant la lecture n'y figure peut-être pas.
     // Erreurs : un code non nul s'affiche en tête de fiche. Dépendances : etat.executer, Nmcli, restaurer.
     function lire() {
-        if (uuid === "" || enLecture === uuid) return
+        if (uuid === "") return
+        if (enLecture === uuid) return relectureAttendue = true
         const g = garde, u = uuid
         enLecture = u
         etat.executer(["-t", "-f", Nmcli.CHAMPS_PROFIL, "connection", "show", u], (code, sortie) => {
             if (g.mort) return
             enLecture = ""
-            if (code !== 0) return erreur("profil", sortie, code)
-            profil = Nmcli.lireProfil(sortie)
-            restaurer()
-            relu(u, profil)
+            if (code !== 0) erreur("profil", sortie, code)
+            else {
+                profil = Nmcli.lireProfil(sortie)
+                restaurer()
+                relu(u, profil)
+            }
+            if (relectureAttendue) {
+                relectureAttendue = false
+                lire()
+            }
         })
     }
 

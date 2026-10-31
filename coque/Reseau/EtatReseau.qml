@@ -16,7 +16,8 @@ import "../Barre/icones.js" as Icones
 // actif, suspend le moniteur si faux ; recherche, vrai tant qu'un popover demande un balayage Wi-Fi ; fenetre,
 // vrai pour demander la fenêtre Réseau (posé par « Réglages réseau… » du popover, lu par la fenêtre).
 // Sorties (lecture seule) : carte, radio, filaire, connecte, connectivite (« unknown », « none », « portal »,
-// « limited » ou « full »), reseauActif (WifiNetwork ou null), nomActif, force (0 à 1), facture, ip4, ip6,
+// « limited » ou « full »), reseauActif (WifiNetwork ou null), nomActif, force (0 à 1), facture, appareil
+// (l'interface dont la lecture donne les adresses : le filaire actif, sinon le Wi-Fi), ip4, ip6,
 // passerelle, dns, mac (adresse matérielle de l'appareil actif), profils, vpnActif, icone, reseaux (WifiNetwork
 // de toutes les cartes, non triés) ; relances, nombre de démarrages du moniteur.
 // Fonctions : relire, copierIp, verifier, executer, allumer, ouvrirPortail.
@@ -53,6 +54,7 @@ Singleton {
 
     // Valeurs de la lecture nmcli (voir lu).
     property bool facture: false
+    property string appareil: ""
     property var ip4: []
     property var ip6: []
     property string mac: ""
@@ -107,10 +109,10 @@ Singleton {
         const parts = [[], [], []]
         let i = 0
         for (const l of texte.split("\n")) l === "--" ? i = Math.min(i + 1, 2) : parts[i].push(l)
-        const [actives, appareil, profilsTexte] = parts.map(p => p.join("\n"))
-        const a = Nmcli.lireAppareil(appareil)
+        const [actives, texteAppareil, profilsTexte] = parts.map(p => p.join("\n"))
+        const a = Nmcli.lireAppareil(texteAppareil)
         vpnActif = Nmcli.lignes(actives).some(l => ["vpn", "wireguard"].includes(l[0].trim()))
-        ip4 = a.ip4; ip6 = a.ip6; mac = a.mac; passerelle = a.passerelle; dns = a.dns; facture = a.facture
+        etat.appareil = a.appareil; ip4 = a.ip4; ip6 = a.ip6; mac = a.mac; passerelle = a.passerelle; dns = a.dns; facture = a.facture
         profils = Nmcli.lireProfils(profilsTexte)
     }
 
@@ -121,7 +123,7 @@ Singleton {
         lecture: ["sh", "-c", `a=$(nmcli -t -f TYPE,DEVICE connection show --active)
             printf '%s\\n--\\n' "$a"
             d=$(printf '%s\\n' "$a" | awk -F: '$1=="802-3-ethernet"{e=$2} $1=="802-11-wireless"{w=$2} END{print e?e:w}')
-            [ -n "$d" ] && nmcli -t -f IP4.ADDRESS,IP4.GATEWAY,IP4.DNS,IP6.ADDRESS,GENERAL.HWADDR,GENERAL.METERED device show "$d"
+            [ -n "$d" ] && nmcli -t -f GENERAL.DEVICE,IP4.ADDRESS,IP4.GATEWAY,IP4.DNS,IP6.ADDRESS,GENERAL.HWADDR,GENERAL.METERED device show "$d"
             printf '%s\\n' --
             nmcli -t -f NAME,UUID,TYPE,DEVICE,ACTIVE connection show`]
         onLu: texte => etat.lu(texte)

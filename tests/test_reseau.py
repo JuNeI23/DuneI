@@ -48,17 +48,17 @@ class NmcliTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(self.appeler("champs", "a::b"), ["a", "", "b"])
 
     def test_lire_appareil(self):
-        texte = ("IP4.ADDRESS[1]:192.168.1.42/24\nIP4.ADDRESS[2]:10.0.0.7/8\nIP4.GATEWAY:192.168.1.1\n"
+        texte = ("GENERAL.DEVICE:wlan0\nIP4.ADDRESS[1]:192.168.1.42/24\nIP4.ADDRESS[2]:10.0.0.7/8\nIP4.GATEWAY:192.168.1.1\n"
                  "IP4.DNS[1]:1.1.1.1\nIP4.DNS[2]:8.8.8.8\nIP6.ADDRESS[1]:fe80\\:\\:7a2c\\:41ff\\:fe0b\\:9d10/64\n"
                  "GENERAL.HWADDR:A4\\:C3\\:F0\\:5B\\:1E\\:72\nGENERAL.METERED:yes (guessed)\n")
         r = self.appeler("lireAppareil", texte)
-        self.assertEqual(r, {"ip4": ["192.168.1.42/24", "10.0.0.7/8"], "ip6": ["fe80::7a2c:41ff:fe0b:9d10/64"],
+        self.assertEqual(r, {"appareil": "wlan0", "ip4": ["192.168.1.42/24", "10.0.0.7/8"], "ip6": ["fe80::7a2c:41ff:fe0b:9d10/64"],
                              "mac": "A4:C3:F0:5B:1E:72", "passerelle": "192.168.1.1",
                              "dns": ["1.1.1.1", "8.8.8.8"], "facture": True})
         self.assertTrue(self.appeler("lireAppareil", "GENERAL.METERED:yes\n")["facture"])
         self.assertFalse(self.appeler("lireAppareil", "GENERAL.METERED:no (guessed)\n")["facture"])
         self.assertEqual(self.appeler("lireAppareil", ""),
-                         {"ip4": [], "ip6": [], "mac": "", "passerelle": "", "dns": [], "facture": False})
+                         {"appareil": "", "ip4": [], "ip6": [], "mac": "", "passerelle": "", "dns": [], "facture": False})
 
     def test_lire_profils(self):
         texte = (f"Wifi_TRIADES:{UUID}:802-11-wireless:wlan0:yes\n"
@@ -233,7 +233,7 @@ class EtatReseauTest(EssaiCoque, unittest.TestCase):
         self.ipc("etat", "injecter", commande, lecture)
 
     def test_lecture_publiee(self):
-        sortie = (f"vpn:wg0\n802-11-wireless:wlan0\n--\nIP4.ADDRESS[1]:192.168.1.42/24\nIP4.GATEWAY:192.168.1.1\n"
+        sortie = (f"vpn:wg0\n802-11-wireless:wlan0\n--\nGENERAL.DEVICE:wlan0\nIP4.ADDRESS[1]:192.168.1.42/24\nIP4.GATEWAY:192.168.1.1\n"
                   f"IP4.DNS[1]:1.1.1.1\nIP6.ADDRESS[1]:fe80\\:\\:1/64\nGENERAL.HWADDR:A4\\:C3\nGENERAL.METERED:yes\n--\nWifi_TRIADES:{UUID}:802-11-wireless:wlan0:yes\n")
         fichier = Path(self.tmp.name) / "sortie"
         fichier.write_text(sortie)
@@ -242,7 +242,7 @@ class EtatReseauTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(self.valeur("ip4"), ["192.168.1.42/24"])
         self.assertEqual(self.valeur("passerelle"), "192.168.1.1")
         self.assertEqual(self.valeur("dns"), ["1.1.1.1"])
-        self.assertEqual((self.valeur("ip6"), self.valeur("mac")), (["fe80::1/64"], "A4:C3"))
+        self.assertEqual((self.valeur("ip6"), self.valeur("mac"), self.valeur("appareil")), (["fe80::1/64"], "A4:C3", "wlan0"))
         self.assertTrue(self.valeur("facture"))
         self.assertTrue(self.valeur("vpnActif"))
         self.assertEqual(self.valeur("profils")[0]["nom"], "Wifi_TRIADES")
@@ -490,17 +490,24 @@ d=$(dirname "$0")
 printf '%s\n' "$*" >> "$d/appels"
 case "$*" in
     monitor) exec sleep 30 ;;
-    "-t -f TYPE,DEVICE connection show --active") echo "802-11-wireless:wlan0" ;;
-    "-t -f IP4.ADDRESS"*) printf 'IP4.ADDRESS[1]:192.168.1.42/24\nIP4.GATEWAY:192.168.1.1\nIP4.DNS[1]:192.168.1.1\nIP6.ADDRESS[1]:fe80\\:\\:1/64\nGENERAL.HWADDR:A4\\:C3\\:F0\\:5B\\:1E\\:72\nGENERAL.METERED:no\n' ;;
+    "-t -f TYPE,DEVICE connection show --active")
+        echo "802-11-wireless:wlan0"
+        [ -f "$d/filaire" ] && echo "802-3-ethernet:eth0" ;;
+    "-t -f GENERAL.DEVICE,"*" device show eth0") printf 'GENERAL.DEVICE:eth0\nIP4.ADDRESS[1]:10.0.0.2/24\nGENERAL.METERED:no\n' ;;
+    "-t -f GENERAL.DEVICE,"*) printf 'GENERAL.DEVICE:wlan0\nIP4.ADDRESS[1]:192.168.1.42/24\nIP4.GATEWAY:192.168.1.1\nIP4.DNS[1]:192.168.1.1\nIP6.ADDRESS[1]:fe80\\:\\:1/64\nGENERAL.HWADDR:A4\\:C3\\:F0\\:5B\\:1E\\:72\nGENERAL.METERED:no\n' ;;
     "-t -f NAME,UUID,TYPE,DEVICE,ACTIVE connection show")
         printf 'Wifi_TRIADES:wifi-1:802-11-wireless:wlan0:yes\nTelephone_Essai:hotspot-1:802-11-wireless::no\n'
-        printf 'Connexion filaire 1:filaire-1:802-3-ethernet::no\nlo:lo-1:loopback:lo:yes\n' ;;
+        if [ -f "$d/filaire" ]; then printf 'Connexion filaire 1:filaire-1:802-3-ethernet:eth0:yes\n'
+        else printf 'Connexion filaire 1:filaire-1:802-3-ethernet::no\n'; fi
+        printf 'lo:lo-1:loopback:lo:yes\n' ;;
     "-g connection.metered connection show hotspot-1") echo yes ;;
     "-g connection.metered connection show "*) echo unknown ;;
     "-s -g 802-11-wireless-security.psk connection show hotspot-1") echo "SECRET" ;;
     "-t -f connection.autoconnect,"*" connection show hotspot-1")
-        printf 'connection.autoconnect:yes\nconnection.autoconnect-priority:9\nconnection.metered:yes\nipv4.method:auto\n'
-        printf 'ipv4.addresses:\nipv4.gateway:\nipv4.dns:\n802-11-wireless.ssid:Telephone_Essai\n802-11-wireless-security.key-mgmt:wpa-psk\n' ;;
+        printf 'connection.autoconnect:yes\nconnection.autoconnect-priority:%s\nconnection.metered:yes\nipv4.method:auto\n' "$(cat "$d/priorite" 2>/dev/null || echo 9)"
+        printf 'ipv4.addresses:\nipv4.gateway:\nipv4.dns:\n802-11-wireless.ssid:Telephone_Essai\n802-11-wireless-security.key-mgmt:wpa-psk\n'
+        # Lecture lente : la sortie est déjà écrite, le processus ne finit qu'après le délai.
+        [ -f "$d/lent" ] && sleep 0.6 ;;
     "-t -f connection.autoconnect,"*" connection show wifi-1")
         printf 'connection.autoconnect:yes\nconnection.autoconnect-priority:0\nconnection.metered:unknown\nipv4.method:auto\n'
         printf 'ipv4.addresses:\nipv4.gateway:\nipv4.dns:\n802-11-wireless.ssid:Wifi_TRIADES\n' ;;
@@ -511,7 +518,8 @@ case "$*" in
         if [ -f "$d/refus" ]; then
             echo "Error: Failed to modify connection 'Telephone_Essai': Insufficient privileges: Not authorized to modify connections" >&2
             exit 4
-        fi ;;
+        fi
+        case "$*" in *"hotspot-1 connection.autoconnect-priority "*) for v; do :; done; echo "$v" > "$d/priorite" ;; esac ;;
 esac
 exit 0
 """
@@ -538,6 +546,7 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
         nmcli.chmod(0o755)
         self.fichier_appels = bin_ / "appels"
         self.refus = bin_ / "refus"
+        self.bin = bin_
         self.environnement = {"QT_QPA_PLATFORM": "offscreen", "PATH": f"{bin_}:{os.environ['PATH']}"}
         self.installer(55)
         self.lancer(self.dir)
@@ -661,3 +670,29 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
         while "connection delete hotspot-1" not in self.appels():
             self.assertLess(time.monotonic(), fin, self.appels())
             time.sleep(0.05)
+
+    def test_modifications_rapprochees(self):
+        # La seconde modification finit pendant la relecture lancée par la première : sa relecture est rejouée à
+        # la fin de celle en cours, et la fiche montre la dernière valeur enregistrée.
+        self.ouvrir("hotspot-1")
+        (self.bin / "lent").touch()
+        lecture = [a for a in self.appels() if a.endswith("connection show hotspot-1") and a.startswith("-t -f")]
+        self.ipc("essai", "cliquer", "plus")
+        fin = time.monotonic() + DELAI
+        while len([a for a in self.appels() if a.endswith("connection show hotspot-1") and a.startswith("-t -f")]) \
+                <= len(lecture):
+            self.assertLess(time.monotonic(), fin, self.appels())
+            time.sleep(0.02)
+        self.ipc("essai", "cliquer", "plus")
+        time.sleep(2)
+        e = self.etat()
+        self.assertEqual(e["fiche"]["priorite"], 11, self.appels())
+
+    def test_detail_de_l_appareil_du_profil(self):
+        # Wi-Fi et filaire actifs ensemble : EtatReseau lit le filaire ; seule sa fiche montre le détail.
+        (self.bin / "filaire").touch()
+        e = self.ouvrir()
+        self.assertEqual(e["detail"], {})
+        self.ipc("essai", "choisir", "filaire-1")
+        e = self.jusqua(lambda e: e["fiche"]["uuid"] == "filaire-1" and e["fiche"]["lu"], "profil filaire lu")
+        self.assertEqual(e["detail"].get("IPv4"), "10.0.0.2/24")

@@ -51,14 +51,15 @@ function liste(v) {
 }
 
 // lireAppareil — état IP d'un appareil.
-// Entrée : texte, sortie de « nmcli -t -f IP4.ADDRESS,IP4.GATEWAY,IP4.DNS,IP6.ADDRESS,GENERAL.HWADDR,
-// GENERAL.METERED device show <iface> ».
-// Sortie : {ip4: string[], ip6: string[], passerelle: string, dns: string[], mac: string, facture: bool} ; facture
+// Entrée : texte, sortie de « nmcli -t -f GENERAL.DEVICE,IP4.ADDRESS,IP4.GATEWAY,IP4.DNS,IP6.ADDRESS,
+// GENERAL.HWADDR,GENERAL.METERED device show <iface> ».
+// Sortie : {appareil: string (l'interface lue), ip4: string[], ip6: string[], passerelle: string, dns: string[], mac: string, facture: bool} ; facture
 // est vrai pour « yes » et « yes (guessed) ». Une sortie vide donne des valeurs vides. Erreurs : aucune.
 // Dépendances : valeurs.
 function lireAppareil(texte) {
     const v = valeurs(texte)
     return {
+        appareil: (v["GENERAL.DEVICE"] || [""])[0],
         ip4: (v["IP4.ADDRESS"] || []).filter(x => x !== ""),
         ip6: (v["IP6.ADDRESS"] || []).filter(x => x !== ""),
         mac: (v["GENERAL.HWADDR"] || [""])[0],
@@ -120,7 +121,7 @@ function lireFactures(texte) {
 // profilsFenetre — rangées de la liste des profils de la fenêtre Réseau.
 // Entrées : profils, sortie de lireProfils ; portee, noms des réseaux Wi-Fi du dernier balayage ; factures, objet
 // uuid → facturation (lireFactures) ; factureActif, vrai si le lien actif est facturé, même deviné (EtatReseau).
-// Sortie : tableau de {groupe: "Wi-Fi"|"Filaire", nom, uuid, wifi: bool, actif: bool, etat, icone}, les profils
+// Sortie : tableau de {groupe: "Wi-Fi"|"Filaire", nom, uuid, appareil, wifi: bool, actif: bool, etat, icone}, les profils
 // Wi-Fi d'abord, puis les filaires, chaque groupe avec le profil actif en tête puis dans l'ordre alphabétique ; etat
 // vaut « Connecté », « À portée » ou « Hors de portée » pour le Wi-Fi (un profil est à portée quand son nom figure
 // au balayage), « Connecté » ou « Débranché » pour le filaire ; icone est network-wireless-hotspot pour un profil
@@ -137,7 +138,7 @@ function profilsFenetre(profils, portee, factures, factureActif) {
             const facture = factures[p.uuid] === "yes" || p.actif && factureActif
             const icone = !wifi ? "network-wired" : facture ? "network-wireless-hotspot"
                 : "network-wireless-signal-" + ({"Connecté": "excellent", "À portée": "good"}[etat] ?? "none")
-            return {groupe: types[p.type], nom: p.nom, uuid: p.uuid, wifi, actif: p.actif, etat, icone}
+            return {groupe: types[p.type], nom: p.nom, uuid: p.uuid, appareil: p.appareil, wifi, actif: p.actif, etat, icone}
         })
 }
 
