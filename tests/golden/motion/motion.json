@@ -15,7 +15,8 @@
   },
   "delays": {
     "tooltip": 500,
-    "scan": 6000
+    "scan": 6000,
+    "copied": 1500
   },
   "periods": {
     "spinner": 1200
