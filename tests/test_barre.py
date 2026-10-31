@@ -8,8 +8,8 @@ import json
 import os
 import re
 import subprocess
-import tomllib
 import time
+import tomllib
 import unittest
 from pathlib import Path
 
@@ -20,8 +20,8 @@ ESSAI = ROOT / "coque" / "Barre" / "essai"
 SYMBOLIQUES = ROOT / "generated" / "icons" / "DuneI" / "symbolic"
 # Nom du thème d'icônes, lu dans les tokens (jamais écrit en dur).
 THEME = tomllib.loads((ROOT / "tokens.toml").read_text(encoding="utf-8"))["icons"]["xdg_theme"]
-# Icônes fixes, posées par des éléments QML plutôt que par icones.js.
-FIXES = ("emblem-system", "network-vpn", "system-search", "edit-clear")
+# Noms d'icône littéraux des QML de production (propriétés icone: et nom:), hors bancs d'essai et planche.
+LITTERAUX_QML = re.compile(r'(?:icone|nom):[^\n]*?"([a-z0-9-]+)"')
 # Toutes les icônes que icones.js peut renvoyer, énumérées d'après ses règles.
 NIVEAUX = [f"battery-level-{n}{s}" for n in range(0, 101, 10) for s in ("", "-charging") if (n, s) != (100, "-charging")]
 ICONES = (NIVEAUX + ["battery-level-100-charged", "network-wireless-disabled", "network-wireless-offline",
@@ -42,10 +42,15 @@ class BarreStatiqueTest(unittest.TestCase):
         # Tout littéral rendu par les fonctions d'icône de icones.js, plus les icônes fixes, figure dans la table.
         texte = (ROOT / "coque" / "Barre" / "icones.js").read_text(encoding="utf-8")
         corps = "".join(re.findall(r"^function icone\w+.*?^}", texte, re.S | re.M))
+        # Ne sont pas des noms d'icône : « nuit » (argument d'iconeMoment), les cinq paliers du Wi-Fi et les
+        # préfixes ou suffixes que les fonctions concatènent (les noms complets viennent de ICONES).
         litteraux = set(re.findall(r'"([a-z0-9-]+)"', corps)) - {"nuit", "none", "weak", "ok", "good", "excellent"}
         litteraux -= {"network-wireless-signal-", "battery-level-", "-charging"}
+        fixes = {n for dossier in ("Barre", "Composants") for q in (ROOT / "coque" / dossier).glob("*.qml")
+                 for n in LITTERAUX_QML.findall(q.read_text(encoding="utf-8"))}
+        self.assertGreaterEqual(fixes, {"emblem-system", "network-vpn", "system-search", "edit-clear"})
         table = charger(ROOT / "icones" / "correspondances.toml")[1]
-        manquants = sorted((litteraux | set(ICONES) | set(FIXES)) - set(table))
+        manquants = sorted((litteraux | set(ICONES) | fixes) - set(table))
         self.assertEqual(manquants, [])
 
     def test_aucune_couleur_dans_icones_js(self):
