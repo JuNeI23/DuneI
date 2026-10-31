@@ -37,7 +37,10 @@ import "ancrage.js" as Ancrage
 //           l'écrivent impérativement, ce qui romprait une liaison ; l'appelant se resynchronise sur ferme() ; ancre,
 //           élément déclencheur d'un contextuel ou d'une infobulle, dans une fenêtre déjà affichée ; point, point de
 //           clic dans le repère de l'ancre (Qt.point), null par défaut pour s'ancrer sous l'ancre entière ; contenu,
-//           propriété par défaut : l'élément déclaré dans l'Overlay, instancié à chaque ouverture.
+//           propriété par défaut : l'élément déclaré dans l'Overlay, instancié à chaque ouverture ; associees,
+//           fenêtres ajoutées à la prise du clavier d'un contextuel (HyprlandFocusGrab), vide par défaut : un clic
+//           dans l'une d'elles ne lève pas la prise, si bien que l'ouvreur, posé dans la barre, ferme lui-même le
+//           contextuel au lieu de le voir fermé à l'appui puis rouvert au relâchement.
 // Sorties : ferme(), émis à chaque fermeture, quelle qu'en soit la cause ; chargeur, le LazyLoader de la
 //           fenêtre, exposé pour les essais et les relevés de mémoire ; fenetreAttention (un porteur de
 //           FenetreAttention) et fenetreContextuel, les composants que le chargeur instancie, internes à la
@@ -60,6 +63,7 @@ QtObject {
     property Item ancre: null
     property var point: null
     default property Component contenu
+    property list<QtObject> associees
     signal ferme()
     readonly property bool bulle: famille === "infobulle"
 
@@ -225,7 +229,7 @@ QtObject {
         }
 
         HyprlandFocusGrab {
-            windows: [popup]
+            windows: [popup, ...Array.from(overlay.associees)]
             active: overlay.ouvert && !overlay.bulle
             onCleared: overlay.ouvert = false
         }

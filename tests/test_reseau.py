@@ -143,6 +143,43 @@ class NmcliTest(EssaiCoque, unittest.TestCase):
                              "nomActif": "Caf\u00e9"})
 
 
+    def test_trier_reseaux(self):
+        # Le réseau joint en tête, puis les réseaux connus, puis la force décroissante ; un nom vide (réseau caché)
+        # n'est pas listé.
+        r = self.appeler("trierReseaux", [
+            {"name": "Faible", "connected": False, "known": False, "signalStrength": 0.2},
+            {"name": "", "connected": False, "known": False, "signalStrength": 0.9},
+            {"name": "Fort", "connected": False, "known": False, "signalStrength": 0.8},
+            {"name": "Connu", "connected": False, "known": True, "signalStrength": 0.1},
+            {"name": "Joint", "connected": True, "known": True, "signalStrength": 0.5},
+        ])
+        self.assertEqual([x["name"] for x in r], ["Joint", "Connu", "Fort", "Faible"])
+        self.assertEqual(self.appeler("trierReseaux", []), [])
+
+    def resume(self, **e):
+        """Résumé d'un état. Entrées : champs de l'état, complétés par un Wi-Fi joint à internet. Sortie : dict."""
+        base = {"carte": True, "radio": True, "filaire": False, "connecte": True, "connectivite": "full",
+                "facture": False, "nomActif": "Wifi_TRIADES"}
+        return self.appeler("resume", {**base, **e})
+
+    def test_resume(self):
+        self.assertEqual(self.resume(), {"titre": "Wifi_TRIADES", "etat": "Connecté", "alerte": False})
+        self.assertEqual(self.resume(connectivite="unknown")["etat"], "Connecté")
+        self.assertEqual(self.resume(connectivite="limited"),
+                         {"titre": "Wifi_TRIADES", "etat": "Connecté sans internet", "alerte": True})
+        self.assertEqual(self.resume(connectivite="none")["etat"], "Connecté sans internet")
+        self.assertEqual(self.resume(connectivite="portal"),
+                         {"titre": "Wifi_TRIADES", "etat": "Portail de connexion", "alerte": True})
+        self.assertEqual(self.resume(facture=True)["etat"], "Partage du téléphone")
+        self.assertEqual(self.resume(connecte=False, nomActif=""),
+                         {"titre": "Wi-Fi", "etat": "Non connecté", "alerte": False})
+        self.assertEqual(self.resume(radio=False, connecte=False, nomActif="")["etat"], "Wi-Fi désactivé")
+        self.assertEqual(self.resume(carte=False, filaire=True, nomActif="enp3s0"),
+                         {"titre": "Réseau filaire", "etat": "Connecté", "alerte": False})
+        self.assertEqual(self.resume(filaire=True, facture=True, nomActif="enp3s0")["etat"], "Connecté")
+        self.assertEqual(self.resume(carte=False, connecte=False, nomActif=""),
+                         {"titre": "Réseau", "etat": "Aucune carte réseau", "alerte": False})
+
 @unittest.skipUnless(os.environ.get("WAYLAND_DISPLAY") and QS, "session Wayland et Quickshell requis")
 class EtatReseauTest(EssaiCoque, unittest.TestCase):
     """Le singleton EtatReseau, éprouvé avec un moniteur et une lecture factices."""
@@ -230,3 +267,142 @@ class EtatReseauTest(EssaiCoque, unittest.TestCase):
         self.attendre("etat : fin 0 nmcli tool")
         self.assertNotIn("ERROR", self.journal())
 
+
+
+@unittest.skipUnless(os.environ.get("WAYLAND_DISPLAY") and QS, "session Wayland et Quickshell requis")
+class PopoverTest(EssaiCoque, unittest.TestCase):
+    """Le popover réseau, ouvert dans une fenêtre offscreen sur un état et des réseaux factices.
+
+    La coque d'essai remplace EtatReseau par un objet factice (aucune action réelle sur le réseau) et les réseaux
+    par des objets qui journalisent leurs appels, sans jamais le texte d'un mot de passe.
+    """
+
+    essai = ESSAI / "popover"
+    teintes = (55,)
+    environnement = {"QT_QPA_PLATFORM": "offscreen"}
+    SECRET = "s3cret-jamais-journalise"
+
+    def setUp(self):
+        super().setUp()
+        self.installer(55)
+        self.lancer(self.dir)
+        self.attendre("essai : prêt")
+
+    def ipc(self, fonction: str, *args: str) -> str:
+        """Appelle une fonction IPC de la coque d'essai du popover.
+
+        Entrées : fonction, args (chaînes). Sortie : la sortie standard. Erreurs : CalledProcessError.
+        Dépendances : qs.
+        """
+        return subprocess.run([QS, "ipc", "--pid", str(self.proc.pid), "call", "popover", fonction, *args],
+                              check=True, capture_output=True, text=True, timeout=DELAI).stdout.strip()
+
+    def panneau(self) -> dict:
+        """État du panneau du popover, décodé ; {} quand il n'est pas construit. Dépendances : ipc."""
+        return json.loads(self.ipc("panneau"))
+
+    def ouvrir(self) -> dict:
+        """Ouvre le popover et attend la construction de son panneau. Sortie : l'état du panneau."""
+        self.ipc("ouvrir", "true")
+        fin = time.monotonic() + DELAI
+        while not (p := self.panneau()) and time.monotonic() < fin:
+            time.sleep(0.05)
+        self.assertTrue(p, self.journal())
+        return p
+
+    def recherche(self) -> bool:
+        """Valeur de recherche de l'état factice. Dépendances : ipc."""
+        return json.loads(self.ipc("recherche"))
+
+    def test_recherche_suit_ouverture(self):
+        self.assertFalse(self.recherche())
+        self.ouvrir()
+        self.assertTrue(self.recherche())
+        self.ipc("ouvrir", "false")
+        self.assertFalse(self.recherche())
+        self.ouvrir()
+        self.assertTrue(self.recherche())
+        self.ipc("detruire")
+        self.assertFalse(self.recherche())
+
+    def test_contenu(self):
+        p = self.ouvrir()
+        self.assertEqual((p["titre"], p["etat"]), ("Wifi_TRIADES", "Connecté"))
+        self.assertTrue(p["interrupteur"])
+        self.assertEqual(p["reseaux"], ["Wifi_TRIADES", "Connu", "Inconnu", "Ouvert"])
+        self.assertEqual(p["deplie"], "")
+        self.assertFalse(p["portail"])
+
+    def test_portail(self):
+        self.ipc("connectivite", "portal")
+        p = self.ouvrir()
+        self.assertEqual(p["etat"], "Portail de connexion")
+        self.assertTrue(p["portail"])
+        self.ipc("activer", "portail")
+        self.attendre("essai : ouvrirPortail")
+        self.assertEqual(self.panneau(), {})
+
+    def test_inconnu_securise_deplie_sans_erreur(self):
+        self.ouvrir()
+        self.ipc("choisir", "Inconnu")
+        p = self.panneau()
+        self.assertEqual((p["deplie"], p["erreur"]), ("Inconnu", ""))
+        self.assertNotIn("essai : connect Inconnu", self.journal())
+        self.ipc("saisir", self.SECRET)
+        self.ipc("activer", "rejoindre")
+        self.attendre(f"essai : connectWithPsk Inconnu {len(self.SECRET)}")
+        self.assertNotIn(self.SECRET, self.journal())
+
+    def test_echec_deplie_mot_de_passe(self):
+        # Un réseau connu dont le secret enregistré est refusé : connect, puis connectionFailed → la ligne de mot
+        # de passe se déplie avec « Mot de passe refusé ».
+        self.ouvrir()
+        self.ipc("choisir", "Connu")
+        self.attendre("essai : connect Connu")
+        self.assertEqual(self.panneau()["deplie"], "")
+        self.ipc("echouer", "Connu")
+        p = self.panneau()
+        self.assertEqual(p["deplie"], "Connu")
+        self.assertIn("Mot de passe refusé", p["erreur"])
+
+    def test_echec_tardif_ne_rouvre_rien(self):
+        self.ouvrir()
+        self.ipc("choisir", "Connu")
+        self.attendre("essai : connect Connu")
+        self.ipc("ouvrir", "false")
+        self.assertEqual(self.panneau(), {})
+        self.ipc("echouer", "Connu")
+        time.sleep(0.5)
+        self.assertEqual(self.panneau(), {})
+        self.assertFalse(json.loads(self.ipc("ouvert")))
+        self.assertNotRegex(self.journal(), r"TypeError|ReferenceError")
+
+    def test_sans_carte(self):
+        # Sans carte Wi-Fi : ni interrupteur ni liste, seulement l'état filaire.
+        self.ipc("sansCarte")
+        p = self.ouvrir()
+        self.assertEqual((p["titre"], p["etat"]), ("Réseau filaire", "Connecté"))
+        self.assertFalse(p["interrupteur"])
+        self.assertEqual(p["reseaux"], [])
+        self.assertFalse(p["autre"])
+
+    def test_autre_reseau(self):
+        # Réseau caché : nmcli device wifi connect <nom> password <mdp> hidden yes, par executer ; le factice
+        # journalise les arguments, mot de passe masqué.
+        self.ouvrir()
+        self.ipc("activer", "autre")
+        self.assertEqual(self.panneau()["deplie"], "<autre>")
+        self.ipc("saisirNom", "Maison:Cachée")
+        self.ipc("saisir", self.SECRET)
+        self.ipc("activer", "rejoindre")
+        self.attendre("essai : executer ")
+        ligne = [l for l in self.journal().splitlines() if "essai : executer " in l][-1]
+        self.assertEqual(json.loads(ligne.split("essai : executer ", 1)[1]),
+                         ["device", "wifi", "connect", "Maison:Cachée", "password", "<masqué>", "hidden", "yes"])
+        self.assertNotIn(self.SECRET, self.journal())
+
+    def test_reglages(self):
+        self.ouvrir()
+        self.ipc("activer", "reglages")
+        self.assertTrue(json.loads(self.ipc("fenetre")))
+        self.assertEqual(self.panneau(), {})

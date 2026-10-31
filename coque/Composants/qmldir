@@ -6,6 +6,7 @@ Bascule 1.0 Bascule.qml
 Bouton 1.0 Bouton.qml
 Case 1.0 Case.qml
 Champ 1.0 Champ.qml
+ChampSecret 1.0 ChampSecret.qml
 Chevron 1.0 Chevron.qml
 Coche 1.0 Coche.qml
 Compteur 1.0 Compteur.qml

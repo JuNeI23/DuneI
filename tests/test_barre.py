@@ -49,8 +49,10 @@ class BarreStatiqueTest(unittest.TestCase):
         litteraux = set(re.findall(r'"([a-z0-9-]+)"', corps)) - {"nuit", "none", "weak", "ok", "good", "excellent", "limited", "portal"}
         litteraux -= {"network-wireless-signal-", "battery-level-", "-charging"}
         fixes = {n for dossier in ("Barre", "Composants") for q in (ROOT / "coque" / dossier).glob("*.qml")
-                 for n in LITTERAUX_QML.findall(q.read_text(encoding="utf-8"))}
-        self.assertGreaterEqual(fixes, {"emblem-system", "network-vpn", "system-search", "edit-clear"})
+                 for n in LITTERAUX_QML.findall(q.read_text(encoding="utf-8"))} \
+            | {n for q in (ROOT / "coque" / "Reseau").glob("*.qml") for n in LITTERAUX_QML.findall(q.read_text(encoding="utf-8"))}
+        self.assertGreaterEqual(fixes, {"emblem-system", "network-vpn", "system-search", "edit-clear",
+                                        "view-conceal", "dialog-warning", "web-browser", "network-wireless-encrypted"})
         table = charger(ROOT / "icones" / "correspondances.toml")[1]
         manquants = sorted((litteraux | set(ICONES) | fixes) - set(table))
         self.assertEqual(manquants, [])
@@ -208,9 +210,18 @@ class IndicateursStatiqueTest(unittest.TestCase):
         self.assertIn('["dunei-theme", "bascule"]', qml["JourNuit.qml"])
         cliquables = sorted(nom for nom in INDICATEURS if "cliquable: true" in qml[f"{nom}.qml"])
         self.assertEqual(cliquables, ["JourNuit", "Reseau"])
-        # Sans popover encore, un clic bascule seulement « ouvert » ; l'icône vient du singleton.
+        # Un clic bascule « ouvert », que la barre reporte sur le PopoverReseau (voir test_popover_accroche) ;
+        # l'icône vient du singleton.
         self.assertRegex(qml["Reseau.qml"], r"onClicked:\s*ouvert\s*=\s*!ouvert")
         self.assertIn("EtatReseau.icone", qml["Reseau.qml"])
+
+    def test_popover_accroche(self):
+        # Le popover du réseau est ancré sous l'indicateur ; « ouvert » s'affecte dans les deux sens, et la barre est
+        # associée à sa prise du clavier pour qu'un clic sur l'indicateur le ferme sans le rouvrir.
+        barre = self.qml()["Barre.qml"]
+        self.assertRegex(barre, r"PopoverReseau \{\s*id: popoverReseau\s*ancre: reseau\s*associees: \[barre\]\s*"
+                                r"onFerme: reseau\.ouvert = false")
+        self.assertIn("onOuvertChanged: popoverReseau.ouvert = ouvert", barre)
 
     def test_reseau_disparait_sans_materiel(self):
         # Ni carte ni filaire : l'icône est vide, donc l'élément (sans icône, image ni texte) est invisible.

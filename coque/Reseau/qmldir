@@ -1,2 +1,3 @@
 module Reseau
 singleton EtatReseau 1.0 EtatReseau.qml
+PopoverReseau 1.0 PopoverReseau.qml

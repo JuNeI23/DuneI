@@ -20,7 +20,7 @@ import "Composants"
 // Erreurs : aucune ; une icône absente du thème laisse sa place vide ; une largeur plus étroite que le plus
 // large bloc (une grille d'états) laisse ce bloc déborder.
 // Dépendances : Theme (space, radius, density, typo, color), module Composants (Surface, Texte, Icone, Bouton, Bascule,
-// Case, Radio, Interrupteur, Onglet, Onglets, Curseur, Jauge, Champ, Pastilles, Compteur, Deroulant, Recherche,
+// Case, Radio, Interrupteur, Onglet, Onglets, Curseur, Jauge, Champ, Pastilles, Compteur, Deroulant, Recherche, ChampSecret,
 // Activite, Depliable, Infobulle, Liste, Rangee, Separateur, Progression, AnneauFocus, Etat, Overlay). Le menu
 // du déroulant vivant ne s'ouvre, lui aussi, qu'à la main, comme l'infobulle, au survol. Les overlays ne s'ouvrent qu'à
 // la demande de Nicolas, par leurs boutons : l'attention prend le clavier en exclusif.
@@ -607,6 +607,16 @@ Surface {
             etats: ["rest", "hover", "disabled"]
             modele: Component { Recherche {} }
             Recherche {}
+        }
+
+        Grille {
+            titre: "Champ secret"
+            variantes: [{ libelle: "vide" }, { libelle: "masqué", proprietes: { text: "Planche" } },
+                        { libelle: "révélé", proprietes: { text: "Planche", revele: true } }]
+            // Comme le champ : pas d'anneau ; l'œil bascule la révélation sur le vivant.
+            etats: ["rest", "hover", "disabled"]
+            modele: Component { ChampSecret { placeholderText: "Mot de passe" } }
+            ChampSecret { placeholderText: "Mot de passe" }
         }
 
         // L'indicateur n'a ni état ni focus : une seule ligne, arrêté au début de son cycle puis figé à mi-cycle

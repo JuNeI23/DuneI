@@ -21,7 +21,9 @@ import "etats.js" as Etats
 // freedesktop d'une icône symbolique, vide par défaut (pas d'icône) ; selectionnee, sélection fournie par
 // l'appelant quand la liste ne la fait pas suivre currentIndex ; accessoire, composant facultatif posé en tête
 // de la rangée, avant l'icône, comme la colonne des coches d'un menu de macOS (le Deroulant y pose sa Coche) ;
-// null par défaut ; forcerContour, réservée à la planche de contrôle : montre le contour de focus sans que la
+// null par défaut ; suffixe, composant facultatif posé en fin de rangée, après le libellé (le popover réseau y pose
+// le cadenas, la coche ou le chevron), null par défaut ; accentue, libellé à l'accent autonome et en graisse
+// moyenne, comme le réseau joint du popover, faux par défaut ; forcerContour, réservée à la planche de contrôle : montre le contour de focus sans que la
 // liste ait le focus, faux par défaut.
 // Sorties : etat, l'Etat de la rangée (rôle, interaction, sélection, couleurs) ; signal active(), émis au clic
 // et à Entrée (la Liste l'émet pour sa rangée courante).
@@ -45,6 +47,8 @@ T.ItemDelegate {
     property bool selectionnee: false
     property bool forcerContour: false
     property Component accessoire: null
+    property Component suffixe: null
+    property bool accentue: false
 
     readonly property alias etat: etat
     // Les propriétés attachées se lisent ici, dans la portée de la rangée : lues dans un enfant, elles
@@ -136,9 +140,16 @@ T.ItemDelegate {
         Texte {
             Layout.fillWidth: true
             text: rangee.text
-            color: etat.texte
+            moyen: rangee.accentue
+            color: rangee.accentue ? Theme.color?.accentStandalone ?? "transparent" : etat.texte
             elide: Text.ElideRight
             verticalAlignment: Text.AlignVCenter
+        }
+
+        Loader {
+            active: rangee.suffixe !== null
+            visible: active
+            sourceComponent: rangee.suffixe
         }
     }
 }

@@ -644,6 +644,26 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
         self.ipc("deroulantRang", "2")
         self.assertEqual(self.valeur("deroulant"), "Trois éléments 2 double surfaceRaised true false true")
 
+    def test_champ_secret(self):
+        # Masqué par défaut (echoMode Password, 2) avec l'œil view-reveal ; un clic sur l'œil révèle (echoMode
+        # Normal, 0, et l'œil barré view-conceal), un second masque. Avec un secret à lire et un texte vide, le clic
+        # demande la révélation au parent sans rien basculer. Les deux icônes se résolvent dans le thème DuneI.
+        # Le texte n'atteint jamais le journal.
+        self.demarrer()
+        secret = "s3cret-jamais-journalise"
+        self.ipc("secretTexte", secret)
+        self.assertEqual(self.valeur("secret"), f"2 false view-reveal 1 {len(secret)}")
+        self.ipc("secretOeil")
+        self.assertEqual(self.valeur("secret"), f"0 true view-conceal 1 {len(secret)}")
+        self.ipc("secretOeil")
+        self.assertEqual(self.valeur("secret"), f"2 false view-reveal 1 {len(secret)}")
+        self.ipc("secretTexte", "")
+        self.ipc("secretALire", "true")
+        self.ipc("secretOeil")
+        self.attendre("essai : revelationDemandee")
+        self.assertEqual(self.valeur("secret"), "2 false view-reveal 1 0")
+        self.assertNotIn(secret, self.journal())
+
     def test_recherche(self):
         # La recherche est un Champ en pilule (rayon de la moitié de sa hauteur), avec la loupe system-search à
         # gauche ; le bouton d'effacement edit-clear n'est visible que s'il y a du texte. Les deux icônes se

@@ -1,6 +1,7 @@
 .pragma library
 
-// nmcli.js — analyse des sorties « nmcli -t » et construction des arguments de modification.
+// nmcli.js — analyse des sorties « nmcli -t », construction des arguments de modification et fonctions pures
+// du popover (tri des réseaux, résumé de l'état).
 // Rôle : transforme le texte de NetworkManager en objets simples pour le panneau réseau, sans jamais lancer
 // nmcli lui-même (les processus restent dans les singletons QML). Une seule logique d'échappement pour tout le
 // module : « nmcli -t » écrit « \: » pour un deux-points et « \\ » pour une barre oblique inverse dans une
@@ -139,4 +140,31 @@ function etatAppareils(appareils, typeWifi, typeFilaire) {
         connecte: reseauActif !== null || cables.length > 0,
         nomActif: cables.length > 0 ? cables[0].name : (reseauActif?.name ?? ""),
     }
+}
+
+// trierReseaux — ordre de la liste des réseaux du popover.
+// Entrée : reseaux, tableau d'objets {name, connected, known, signalStrength} (des WifiNetwork de
+// Quickshell.Networking ou des factices). Sortie : nouveau tableau, le réseau joint en tête, puis les réseaux
+// connus, puis la force décroissante ; un nom vide (réseau caché, qu'on rejoint par « Autre réseau… ») est écarté.
+// Erreurs : aucune. Dépendances : aucune.
+function trierReseaux(reseaux) {
+    const rang = r => (r.connected ? 0 : 2) + (r.known ? 0 : 1)
+    return reseaux.filter(r => r.name !== "").sort((a, b) => rang(a) - rang(b) || b.signalStrength - a.signalStrength)
+}
+
+// resume — titre et état affichés en tête du popover réseau.
+// Entrée : e, objet {carte, radio, filaire, connecte, connectivite, facture, nomActif}, valeurs de EtatReseau.
+// Sortie : {titre, etat, alerte} ; titre, le nom du réseau joint, « Réseau filaire », « Wi-Fi » ou « Réseau » ;
+// etat, « Connecté », « Connecté sans internet » (connectivité « limited » ou « none »), « Portail de connexion »,
+// « Partage du téléphone » (Wi-Fi facturé à l'usage), « Non connecté », « Wi-Fi désactivé » ou « Aucune carte
+// réseau » ; alerte, vrai sans internet ou derrière un portail. Le filaire l'emporte sur le Wi-Fi, comme pour
+// l'icône de la barre. Erreurs : aucune. Dépendances : aucune.
+function resume(e) {
+    if (!e.carte && !e.filaire) return {titre: "Réseau", etat: "Aucune carte réseau", alerte: false}
+    if (!e.filaire && !e.radio) return {titre: "Wi-Fi", etat: "Wi-Fi désactivé", alerte: false}
+    if (!e.connecte) return {titre: "Wi-Fi", etat: "Non connecté", alerte: false}
+    const titre = e.filaire ? "Réseau filaire" : e.nomActif
+    if (e.connectivite === "portal") return {titre, etat: "Portail de connexion", alerte: true}
+    if (e.connectivite === "limited" || e.connectivite === "none") return {titre, etat: "Connecté sans internet", alerte: true}
+    return {titre, etat: !e.filaire && e.facture ? "Partage du téléphone" : "Connecté", alerte: false}
 }

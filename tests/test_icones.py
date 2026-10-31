@@ -24,7 +24,7 @@ ATTENDUS = (
     + ["network-wireless-no-route", "network-wireless-acquiring", "network-wireless-hotspot",
        "network-wireless-encrypted", "network-wired", "network-wired-acquiring", "network-wired-disconnected",
        "network-wired-offline", "network-wired-no-route", "view-refresh", "network-vpn-disabled",
-       "view-reveal", "view-conceal", "edit-copy", "list-add", "go-next"]
+       "view-reveal", "view-conceal", "edit-copy", "list-add", "go-next", "dialog-warning", "web-browser"]
 )
 
 

@@ -13,11 +13,13 @@ import "../Barre/icones.js" as Icones
 // le popover, la fenêtre et les notifications lisent tous ce singleton. Aucun minuteur au repos : la lecture ne
 // s'exécute qu'au démarrage et en réponse à une ligne du moniteur.
 // Entrées (réglables) : surveille et lecture, commandes du moniteur et de la lecture (remplaçables par un test) ;
-// actif, suspend le moniteur si faux ; recherche, vrai tant qu'un popover demande un balayage Wi-Fi.
+// actif, suspend le moniteur si faux ; recherche, vrai tant qu'un popover demande un balayage Wi-Fi ; fenetre,
+// vrai pour demander la fenêtre Réseau (posé par « Réglages réseau… » du popover, lu par la fenêtre).
 // Sorties (lecture seule) : carte, radio, filaire, connecte, connectivite (« unknown », « none », « portal »,
 // « limited » ou « full »), reseauActif (WifiNetwork ou null), nomActif, force (0 à 1), facture, ip4, passerelle,
-// dns, profils, vpnActif, icone ; relances, nombre de démarrages du moniteur.
-// Fonctions : relire, copierIp, verifier, executer.
+// dns, profils, vpnActif, icone, reseaux (WifiNetwork de toutes les cartes, non triés) ; relances, nombre de
+// démarrages du moniteur.
+// Fonctions : relire, copierIp, verifier, executer, allumer, ouvrirPortail.
 // Erreurs : sans nmcli ou sans NetworkManager, les valeurs nmcli restent vides et le moniteur est relancé
 // toutes les secondes (voir Relance) ; la sortie d'une lecture partielle est lue au mieux.
 // Dépendances : Relance, nmcli.js, icones.js, Quickshell.Networking, Quickshell.Io.
@@ -29,6 +31,7 @@ Singleton {
     property alias actif: relance.actif
     property alias relances: relance.relances
     property bool recherche: false
+    property bool fenetre: false
     // Nombre de processus nmcli de executer encore vivants (utile aux tests).
     property int processus: 0
 
@@ -46,6 +49,7 @@ Singleton {
         [NetworkConnectivity.Limited]: "limited", [NetworkConnectivity.Full]: "full",
     })[Networking.connectivity] ?? "unknown"
     readonly property real force: reseauActif?.signalStrength ?? 0
+    readonly property var reseaux: [].concat(...cartes.map(c => Array.from(c.networks.values)))
 
     // Valeurs de la lecture nmcli (voir lu).
     property bool facture: false
@@ -78,6 +82,16 @@ Singleton {
         fabrique.createObject(etat, {command: ["nmcli", ...args], fin})
     }
 
+    // allumer — allume ou coupe la radio Wi-Fi.
+    // Entrée : actif, vrai pour allumer. Sortie : aucune. Erreurs : radio bloquée par le matériel, sans effet.
+    // Dépendances : Quickshell.Networking.
+    function allumer(actif) { Networking.wifiEnabled = actif }
+
+    // ouvrirPortail — ouvre la page de connexion d'un portail captif dans le navigateur, puis, à la sortie de
+    // xdg-open, demande un contrôle de connectivité. Entrées : aucune. Sortie : aucune.
+    // Erreurs : sans xdg-open, seul le contrôle a lieu. Dépendances : portail (Process), verifier.
+    function ouvrirPortail() { portail.running = true }
+
     // appliquerRecherche — reporte recherche sur le balayage de chaque carte Wi-Fi.
     // Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : cartes, recherche.
     function appliquerRecherche() { cartes.forEach(c => c.scannerEnabled = recherche) }
@@ -109,6 +123,14 @@ Singleton {
             printf '%s\\n' --
             nmcli -t -f NAME,UUID,TYPE,DEVICE,ACTIVE connection show`]
         onLu: texte => etat.lu(texte)
+    }
+
+    // Navigateur sur une page en HTTP simple, que le portail captif intercepte ; xdg-open rend la main dès que le
+    // navigateur a reçu l'adresse, et le contrôle suit (seul contrôle de connectivité demandé par la coque).
+    Process {
+        id: portail
+        command: ["xdg-open", "http://ping.archlinux.org"]
+        onExited: etat.verifier()
     }
 
     // Fabrique de processus nmcli à la demande : chacun se détruit à sa sortie.

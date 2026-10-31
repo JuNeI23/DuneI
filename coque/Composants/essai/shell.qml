@@ -12,7 +12,7 @@ import "Composants/ancrage.js" as Ancrage
 // Rôle : instancie un arbre fixe (une Surface fenêtre contenant une Surface panneau, qui porte la sonde capteur, un
 // contrôle simulé avec son Etat, un Texte, une Icone, les cinq contrôles interactifs (Bouton, Case, Interrupteur,
 // Onglet, Curseur), trois Radio dans un même parent, une Jauge, une Progression, deux Separateur, un Champ, des
-// Pastilles, un Compteur, un Deroulant, une Recherche, une Activite, une Depliable, une Bascule, une Liste vide, une
+// Pastilles, un Compteur, un Deroulant, une Recherche, un ChampSecret, une Activite, une Depliable, une Bascule, une Liste vide, une
 // Liste de trois Rangee et une cible munie d'un AnneauFocus, plus une Surface inactive et une Surface de verre à
 // l'écart, deux Overlay fermés, un de chaque famille, et trois objets factices pour le singleton Overlays) pour que tests/test_coque_composants.py
 // éprouve dans un vrai Quickshell les règles d'etats.js, l'héritage par remontée, l'import du Theme, les pièces de
@@ -22,9 +22,11 @@ import "Composants/ancrage.js" as Ancrage
 // <clé> <valeur> » par commande IPC de lecture (cran, interaction, selection, sonde, naissances, fond, texte, anneau,
 // etat, ressort, ressortsFiges, image, controles, coches, cotes, glyphes, radios, jauge, progression, separateur,
 // champ, indicatif, tailleIcone, liste, arrets, rangee, bouton, overlays, overlaysFermes, pastilles, compteur,
-// compteurLargeur, deroulant, recherche, rechercheCouleurs, activite, depliable, depliableCotes, iconesControles,
+// compteurLargeur, deroulant, recherche, rechercheCouleurs, secret, activite, depliable, depliableCotes, iconesControles,
 // bascule, fenetreAttention, knobs, contours, materiauSurfaces, verre, champMateriau, ombres).
-// Commandes sans journal : « essai rechercheTexte <texte> », « essai rechercheActive <bool> », « essai activiteEtat
+// Commandes sans journal : « essai rechercheTexte <texte> », « essai secretTexte <texte> », « essai secretALire
+// <bool> », « essai secretOeil » (qui journalise « essai : revelationDemandee true » si le parent doit lire le
+// secret), « essai rechercheActive <bool> », « essai activiteEtat
 // <visible> <running> », « essai activitePhase <phase> », « essai activiteAncetre <bool> », « essai depliableOuvrir
 // <bool> », « essai basculeCocher <bool> », « essai pastillesForcer <état> », « essai pastillesReduire <bool> »,
 // « essai knobsActifs <bool> », « essai interrupteurCocher <bool> », « essai compteurValeur <n> », « essai deroulantRang <n> », « essai decocher »,
@@ -170,6 +172,11 @@ ShellRoot {
 
             Recherche {
                 id: rechercheEssai
+            }
+
+            ChampSecret {
+                id: secretEssai
+                onRevelationDemandee: essai.journal("revelationDemandee", true)
             }
 
             // L'indicateur est porté par un Item qu'on peut masquer, pour éprouver l'arrêt sous un ancêtre invisible.
@@ -707,6 +714,32 @@ ShellRoot {
         // Entrée : texte, nouveau contenu. Sortie : aucune. Erreurs : aucune. Dépendances : rechercheEssai.
         function rechercheTexte(texte: string): void {
             rechercheEssai.text = texte
+        }
+
+        // secret — journalise le champ secret sans jamais son texte : echoMode, revele, nom et statut de l'œil,
+        // longueur du texte. Entrées : aucune. Sortie : aucune ; « essai : secret <mode> <bool> <nom> <statut> <n> ».
+        // Erreurs : aucune. Dépendances : secretEssai (oeil), journal.
+        function secret(): void {
+            const s = secretEssai
+            essai.journal("secret", [s.echoMode, s.revele, s.oeil.nom, s.oeil.status, s.length].join(" "))
+        }
+
+        // secretTexte — remplace le texte du champ secret. Entrée : texte. Sortie : aucune. Erreurs : aucune.
+        // Dépendances : secretEssai.
+        function secretTexte(texte: string): void {
+            secretEssai.text = texte
+        }
+
+        // secretALire — pose secretALire sur le champ secret. Entrée : valeur. Sortie : aucune. Erreurs : aucune.
+        // Dépendances : secretEssai.
+        function secretALire(valeur: bool): void {
+            secretEssai.secretALire = valeur
+        }
+
+        // secretOeil — clique l'œil du champ secret, comme son TapHandler. Entrées : aucune. Sortie : aucune.
+        // Erreurs : aucune. Dépendances : secretEssai.
+        function secretOeil(): void {
+            secretEssai.basculer()
         }
 
         // activite — journalise l'indicateur d'activité : son état anime, l'état en marche de l'animation de
