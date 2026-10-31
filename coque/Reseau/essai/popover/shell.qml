@@ -96,6 +96,7 @@ ShellRoot {
             }
 
             IpcHandler {
+                id: ipc
                 target: "popover"
 
                 // ouvrir — ouvre ou ferme le popover. Entrée : valeur. Sortie : aucune. Dépendances : porteur.
@@ -143,7 +144,8 @@ ShellRoot {
                 // deplie, mode, erreur, portail, ip (une adresse est-elle affichée), autre (« Autre réseau… »
                 // affiché), chevron (« Réglages réseau… » porte un suffixe), balayage, activite (indicateur de la
                 // recherche visible), infobulle (texte de l'infobulle de la recherche), connexion (noms des lignes
-                // « Connexion… »), glisse (une ligne glisse), lignes (nom → {depliage, deplieEnCours, charge}),
+                // « Connexion… »), glisse (une ligne glisse), lignes (nom → {depliage, deplieEnCours, charge, y,
+                // apparition, apparitionEnCours}),
                 // margeEcran (du popover), saisie (longueur du mot de passe de la ligne dépliée, -1 sans ligne)}.
                 // Erreurs : aucune.
                 function panneau(): string {
@@ -153,7 +155,10 @@ ShellRoot {
                     const bascule = objet("bascule")
                     const delegues = Object.values(p.delegues)
                     const lignes = {}
-                    for (const d of delegues) lignes[d.cle] = { depliage: d.depliage.value, deplieEnCours: d.depliage.moving, charge: d.bloc !== null || d.depliage.value > 0 }
+                    for (const d of delegues) lignes[d.cle] = {
+                        depliage: d.depliage.value, deplieEnCours: d.depliage.moving, charge: d.bloc !== null || d.depliage.value > 0,
+                        y: d.y, apparition: d.apparition.value, apparitionEnCours: d.apparition.moving,
+                    }
                     return JSON.stringify({
                         titre: p.resume.titre, etat: p.resume.etat,
                         bascule: { visible: bascule.visible, actif: bascule.enabled, allumee: bascule.checked },
@@ -170,6 +175,20 @@ ShellRoot {
                         margeEcran: porteur.item.margeEcran,
                         saisie: p.bloc ? p.bloc.secret.length : -1,
                     })
+                }
+
+                // puisLire — appelle une fonction de cette cible puis rend l'état du panneau dans la même passe,
+                // avant toute image : un état en plein mouvement se lit sans dépendre de la charge de la machine.
+                // Entrées : fonction, son nom ; argument, passé tel quel (ignoré par une fonction sans argument).
+                // Sortie : texte JSON, voir panneau. Erreurs : fonction inconnue, TypeError au journal.
+                function puisLire(fonction: string, argument: string): string {
+                    ipc[fonction](argument)
+                    return panneau()
+                }
+                // profilActif — l'état factice porte un profil Wi-Fi actif lu, d'uuid donné, au nom du réseau joint.
+                // Entrée : uuid. Sortie : aucune.
+                function profilActif(uuid: string): void {
+                    faux.profils = [{ nom: faux.nomActif, uuid, type: "802-11-wireless", actif: true }]
                 }
 
                 // choisir — clic sur le réseau nommé. Entrée : nom. Sortie : aucune.

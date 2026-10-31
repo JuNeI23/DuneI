@@ -7,9 +7,9 @@ import "../Barre/icones.js" as Icones
 import "nmcli.js" as Nmcli
 
 // PopoverReseau — popover du réseau, ancré sous l'indicateur réseau de la barre (L2-11).
-// Rôle : un Overlay contextuel, construit à l'ouverture et détruit à la fermeture (D80), tenu à la marge de tuilage
-// des bords de l'écran, qui porte, de haut en bas : l'en-tête, dont la bascule à glyphe allume ou coupe le Wi-Fi
-// (accent plein allumée, neutre éteinte), avec le nom du réseau et son état (« Connecté », « Connecté sans
+// Rôle : un Overlay contextuel, construit à l'ouverture et détruit à la fermeture (D80), tenu à la marge d'écran
+// des overlays ancrés à la barre (Overlay.margeEcran), qui porte, de haut en bas : l'en-tête, dont la bascule à
+// glyphe allume ou coupe le Wi-Fi (accent plein allumée, neutre éteinte), avec le nom du réseau et son état (« Connecté », « Connecté sans
 // internet », « Portail de connexion », « Partage du téléphone »…) ; derrière un portail captif, « Ouvrir la page de
 // connexion » ; la liste des réseaux à proximité (le réseau joint en tête, puis les connus, puis la force
 // décroissante ; cadenas si sécurisé, coche sur le réseau joint) avec le bouton de nouvelle recherche, que
@@ -18,8 +18,9 @@ import "nmcli.js" as Nmcli
 // un clic sur un réseau sécurisé inconnu, ou un échec de connexion, y déplie la ligne de mot de passe ; un second
 // clic replie. Le dépliage et le repli animent la hauteur (transition reveal) ; un réseau en cours de connexion
 // montre « Connexion… » et l'indicateur d'activité ; quand l'ordre de la liste change (le réseau rejoint remonte en
-// tête), chaque ligne glisse de son ancienne place à la nouvelle (transition reflow). Durées et courbes viennent
-// toutes de motion.json, par Ressort. Sans carte Wi-Fi, la bascule est désactivée et la liste absente : seulement
+// tête), chaque ligne glisse de son ancienne place à la nouvelle (transition reflow) ; une ligne qui paraît au
+// balayage s'ouvre, une ligne qui le quitte se referme (hauteur et fondu, transition reveal), et ses voisines
+// suivent sa hauteur sans sauter. Durées et courbes viennent toutes de motion.json, par Ressort. Sans carte Wi-Fi, la bascule est désactivée et la liste absente : seulement
 // l'état filaire. Tant qu'il est ouvert, il demande le balayage Wi-Fi (etat.recherche), rendu à faux à la fermeture
 // comme à la destruction d'un popover ouvert ; ouvert derrière un portail, il demande un contrôle de connectivité
 // ponctuel (etat.verifier). La liste ne se retrie pas tant qu'une ligne de mot de passe est dépliée, pour ne pas en
@@ -45,7 +46,6 @@ Overlay {
     property Item panneau: null
 
     famille: "contextuel"
-    margeEcran: Theme.density?.tilingMargin ?? 0
     // À l'ouverture derrière un portail, un contrôle de connectivité ponctuel (aucun minuteur) : la page de connexion
     // a pu être validée depuis la dernière ouverture.
     onOuvertChanged: {
@@ -157,6 +157,11 @@ Overlay {
         // les noms, qui restent lisibles même quand un WifiNetwork de la liste figée a été détruit.
         property var reseaux: []
         property var ordre: []
+        // Ordre d'affichage : ordre, plus les lignes qui sortent (leur réseau a quitté le tri), gardées à leur ancien
+        // rang le temps de se refermer, pour que les lignes voisines suivent leur hauteur au lieu de sauter.
+        property var disposition: []
+        // Faux pendant le premier tri : les lignes de l'ouverture paraissent d'emblée, seules les suivantes entrent.
+        property bool trie: false
         // Réseaux présents au dernier balayage, suivis même liste figée : un réseau de la liste figée qui n'y figure
         // plus est masqué et ne peut plus être choisi ni rejoint (son WifiNetwork peut avoir été détruit).
         property var presents: Array.from(etat.reseaux ?? [])
@@ -171,13 +176,13 @@ Overlay {
         // Nom → délégué de la liste, tenu par les délégués eux-mêmes.
         property var delegues: ({})
         // Nom → ordonnée de la ligne dans la liste, sans glissement : la somme des hauteurs des lignes qui la
-        // précèdent dans ordre (une ligne masquée a une hauteur nulle) ; « » donne la hauteur de la liste. Calculée
+        // précèdent dans disposition (une ligne refermée a une hauteur nulle) ; « » donne la hauteur de la liste. Calculée
         // ici d'un seul tenant, et non de proche en proche par chaque ligne, pour qu'un nouvel ordre ne forme
         // jamais de boucle entre deux lignes qui échangent leur place.
         readonly property var bases: {
             const b = {}
             let y = 0
-            for (const nom of ordre) {
+            for (const nom of disposition) {
                 b[nom] = y
                 y += delegues[nom]?.height ?? 0
             }
@@ -193,22 +198,41 @@ Overlay {
         Component.onCompleted: { trier(); popover.panneau = panneau }
         Component.onDestruction: if (popover.panneau === panneau) popover.panneau = null
 
-        // trier — fige l'ordre de la liste et met le modèle des lignes à jour : un nom nouveau y est ajouté, un nom
-        // disparu retiré, les autres lignes restent et glissent de leur place d'avant à la nouvelle. Tant qu'une
-        // ligne de mot de passe est dépliée, rien ne change, pour ne perdre ni la saisie ni le message d'erreur ; le
-        // tri reprend dès qu'elle se replie. Entrées : aucune. Sortie : aucune. Erreurs : aucune.
-        // Dépendances : nmcli.js (trierReseaux), etat.reseaux, deplie, mode, modele, delegues (glisser).
-        function trier(): void {
+        // releve — ordonnées affichées des lignes, à relever avant tout changement qui les déplace.
+        // Entrées : aucune. Sortie : tableau de [nom, ordonnée]. Erreurs : aucune. Dépendances : delegues.
+        function releve(): var { return Object.entries(delegues).map(([nom, d]) => [nom, d.y]) }
+
+        // trier — fige l'ordre de la liste et met le modèle des lignes à jour : un nom nouveau y est ajouté (sa
+        // ligne entre en s'ouvrant, sauf au premier tri), un nom disparu reste à son ancien rang dans disposition le
+        // temps que sa ligne se referme (elle se retire elle-même ensuite, voir retirer), les autres lignes glissent
+        // de leur place relevée à la nouvelle. Tant qu'une ligne de mot de passe est dépliée, rien ne change, pour ne
+        // perdre ni la saisie ni le message d'erreur ; le tri reprend dès qu'elle se replie.
+        // Entrée : avant, ordonnées relevées avant le changement qui provoque le tri (releve() par défaut).
+        // Sortie : aucune. Erreurs : aucune.
+        // Dépendances : nmcli.js (trierReseaux), etat.reseaux, deplie, mode, modele, disposition, delegues (glisser).
+        function trier(avant = releve()): void {
             if (deplie !== "" && mode === "mdp") return
-            const avant = Object.entries(delegues).map(([nom, d]) => [nom, d.y])
             reseaux = Nmcli.trierReseaux(Array.from(etat.reseaux ?? []))
             ordre = reseaux.map(r => r.name)
-            for (let i = modele.count - 1; i >= 0; i--) if (!ordre.includes(modele.get(i).cle)) modele.remove(i)
             const connus = Array.from({ length: modele.count }, (_, i) => modele.get(i).cle)
-            for (const nom of ordre) if (!connus.includes(nom)) modele.append({ cle: nom })
+            const d = ordre.slice()
+            for (const [i, nom] of disposition.entries())
+                if (!ordre.includes(nom) && connus.includes(nom)) d.splice(Math.min(i, d.length), 0, nom)
+            disposition = d
+            for (const nom of ordre) if (!connus.includes(nom)) modele.append({ cle: nom, entre: trie })
+            trie = true
             for (const [nom, y] of avant) delegues[nom]?.glisser(y)
         }
         onDeplieChanged: trier()
+
+        // retirer — ôte du modèle et de disposition la ligne d'un nom qui a quitté le tri, une fois refermée ; un nom
+        // revenu au tri entre-temps est gardé. Entrée : nom. Sortie : aucune. Erreurs : aucune.
+        // Dépendances : modele, ordre, disposition.
+        function retirer(nom: string): void {
+            if (ordre.includes(nom)) return
+            for (let i = modele.count - 1; i >= 0; i--) if (modele.get(i).cle === nom) modele.remove(i)
+            disposition = disposition.filter(n => n !== nom)
+        }
 
         // inscrire, desinscrire — tiennent la table delegues à la construction et à la destruction d'une ligne.
         // Entrées : nom, la clé de la ligne ; d, son délégué. Sortie : aucune. Erreurs : aucune ; desinscrire
@@ -313,11 +337,12 @@ Overlay {
         }
 
         // rechercher — relance le balayage (« nmcli device wifi rescan ») et montre l'indicateur d'activité jusqu'au
-        // retour de la liste, au plus finBalayage.interval. Entrées : aucune. Sortie : aucune. Erreurs : aucune.
+        // retour de la liste, au plus finBalayage.interval (motion.delays.scan ; sans mouvement chargé, jusqu'au
+        // retour de la liste). Entrées : aucune. Sortie : aucune. Erreurs : aucune.
         // Dépendances : etat.executer, finBalayage.
         function rechercher(): void {
             balayage = true
-            finBalayage.restart()
+            if (finBalayage.interval > 0) finBalayage.restart()
             etat.executer(["device", "wifi", "rescan"])
         }
 
@@ -338,12 +363,14 @@ Overlay {
         }
         Connections {
             target: panneau.etat
+            // Les ordonnées sont relevées avant tout changement : présents, repli et tri déplacent les lignes.
             function onReseauxChanged() {
+                const avant = panneau.releve()
                 panneau.balayage = false
                 finBalayage.stop()
                 panneau.presents = Array.from(panneau.etat.reseaux ?? [])
                 panneau.replierAbsent()
-                panneau.trier()
+                panneau.trier(avant)
             }
             // Le réseau joint a changé : ses actions dépliées n'ont plus d'objet.
             function onNomActifChanged() {
@@ -351,8 +378,9 @@ Overlay {
                 panneau.trier()
             }
         }
-        // Borne du retour visuel de la recherche quand le balayage ne change pas la liste ; armé par le seul clic.
-        Timer { id: finBalayage; interval: 6000; onTriggered: panneau.balayage = false }
+        // Borne du retour visuel de la recherche quand le balayage ne change pas la liste (motion.delays.scan) ;
+        // armée par le seul clic.
+        Timer { id: finBalayage; interval: Theme.motion?.delays?.scan ?? 0; onTriggered: panneau.balayage = false }
         // Une entrée par nom de réseau ; l'ordre affiché vient de ordre, pas du modèle.
         ListModel { id: modele }
 
@@ -447,6 +475,8 @@ Overlay {
                         delegate: Item {
                             id: ligne
                             required property string cle
+                            // Vrai pour une ligne ajoutée après le premier tri : elle entre en s'ouvrant.
+                            required property bool entre
                             readonly property int rang: panneau.ordre.indexOf(cle)
                             // Lectures sûres : le WifiNetwork d'une liste figée peut avoir été détruit (null).
                             readonly property var modelData: panneau.reseaux[rang] ?? null
@@ -461,14 +491,26 @@ Overlay {
                             readonly property Item bloc: ouverte && modeCharge === "mdp" ? charge.item : null
                             readonly property alias depliage: depliage
                             readonly property alias decalage: decalage
+                            readonly property alias apparition: apparition
+                            // Faux le temps d'une passe pour une ligne qui entre : son ressort part ainsi de zéro.
+                            property bool posee: !entre
+                            // Refermée et sortie du tri : la ligne se retire du modèle.
+                            readonly property bool partie: rang < 0 && apparition.value === 0 && !apparition.moving
 
                             width: lignes.width
-                            height: montre ? rangee.height + depliage.value : 0
-                            visible: montre
+                            // La ligne s'ouvre et se referme en hauteur et en fondu (reveal), sans glisser de côté.
+                            height: (rangee.height + depliage.value) * apparition.value
+                            opacity: apparition.value
+                            visible: apparition.value > 0
+                            clip: true
                             y: base + decalage.value
-                            Component.onCompleted: panneau.inscrire(cle, ligne)
+                            Component.onCompleted: {
+                                panneau.inscrire(cle, ligne)
+                                if (!posee) Qt.callLater(() => posee = true)
+                            }
                             Component.onDestruction: panneau.desinscrire(cle, ligne)
                             onOuverteChanged: if (ouverte) modeCharge = panneau.mode
+                            onPartieChanged: if (partie) Qt.callLater(panneau.retirer, cle)
 
                             // glisser — fait partir la ligne de sa place d'avant un nouveau tri vers la nouvelle,
                             // par le ressort reflow, depuis sa position courante même en plein glissement.
@@ -483,6 +525,9 @@ Overlay {
                             }
 
                             Ressort { id: decalage; transition: "reflow"; cible: 0 }
+                            // Présence de la ligne, de 0 (refermée) à 1 (ouverte) : entrée par le ressort reveal
+                            // d'entrée, sortie par celui de sortie (environ 70 % de l'entrée, motion.json).
+                            Ressort { id: apparition; transition: "reveal"; cible: ligne.posee && ligne.montre ? 1 : 0 }
                             Ressort {
                                 id: depliage
                                 transition: "reveal"
@@ -491,6 +536,7 @@ Overlay {
 
                             Rangee {
                                 id: rangee
+                                // Hors d'une ListView, l'index de la rangée ne sert à rien (Rangee l'exige).
                                 index: 0
                                 width: parent.width
                                 implicitHeight: panneau.hauteurLigne
@@ -578,7 +624,8 @@ Overlay {
                 hoverEnabled: true
                 icone: "emblem-system"
                 text: "Réglages réseau…"
-                onActive: { panneau.etat.fenetre = true; panneau.fermer() }
+                // Une demande de profil restée sans suite ne détourne pas cette ouverture.
+                onActive: { panneau.etat.profilDemande = ""; panneau.etat.fenetre = true; panneau.fermer() }
             }
         }
     }

@@ -410,27 +410,45 @@ class PopoverTest(EssaiCoque, unittest.TestCase):
         self.assertFalse(p["balayage"] or p["activite"])
 
     def test_recherche_bornee(self):
-        # Un balayage qui ne change pas la liste ne laisse pas l'indicateur tourner : il s'arrête de lui-même.
+        # Un balayage qui ne change pas la liste ne laisse pas l'indicateur tourner : il s'arrête de lui-même, au
+        # bout de motion.delays.scan, ici ramené à 300 ms dans le mouvement de l'essai (rechargé à chaud).
+        mouvement = self.dir / "motion.json"
+        donnees = json.loads(mouvement.read_text())
+        donnees["delays"]["scan"] = 300
+        charges = self.journal().count("Theme : mouvement chargé")
+        temp = self.dir / ".motion.json.tmp"
+        temp.write_text(json.dumps(donnees))
+        os.replace(temp, mouvement)
+        fin = time.monotonic() + DELAI
+        while self.journal().count("Theme : mouvement chargé") == charges and time.monotonic() < fin:
+            time.sleep(0.05)
         self.ouvrir()
-        self.ipc("activer", "rechercher")
-        self.assertTrue(self.panneau()["activite"])
+        self.assertTrue(self.puis_lire("activer", "rechercher")["activite"])
         fin = time.monotonic() + DELAI
         while self.panneau()["activite"] and time.monotonic() < fin:
-            time.sleep(0.2)
+            time.sleep(0.05)
         self.assertFalse(self.panneau()["activite"])
 
-    def attendre_repos(self, nom: str) -> dict:
-        """Attend que la ligne nommée ait fini de se déplier ou de se replier, et qu'aucune ligne ne glisse.
+    def puis_lire(self, fonction: str, argument: str = "") -> dict:
+        """Appelle une fonction de la coque d'essai et lit l'état du panneau dans la même passe, avant toute image.
 
-        Entrée : nom. Sortie : l'état du panneau au repos. Erreurs : échec du test au délai. Dépendances : panneau.
+        Entrées : fonction, argument. Sortie : l'état du panneau, décodé. Dépendances : ipc (puisLire).
+        """
+        return json.loads(self.ipc("puisLire", fonction, argument))
+
+    def attendre_repos(self) -> dict:
+        """Attend qu'aucune ligne ne glisse, ne se déplie, ne se replie, n'entre ni ne sorte.
+
+        Entrées : aucune. Sortie : l'état du panneau au repos. Erreurs : échec du test au délai.
+        Dépendances : panneau.
         """
         fin = time.monotonic() + DELAI
         while time.monotonic() < fin:
             p = self.panneau()
-            if not p["glisse"] and not p["lignes"].get(nom, {}).get("deplieEnCours"):
+            if not p["glisse"] and not any(l["deplieEnCours"] or l["apparitionEnCours"] for l in p["lignes"].values()):
                 return p
             time.sleep(0.05)
-        self.fail(f"{nom} toujours en mouvement\n{p}")
+        self.fail(f"lignes toujours en mouvement\n{p}")
 
     def test_actions_du_reseau_joint(self):
         # Un clic sur le réseau joint déplie « Se déconnecter » et « Détails… » ; un second clic replie ; « Se
@@ -441,54 +459,85 @@ class PopoverTest(EssaiCoque, unittest.TestCase):
         self.assertEqual((p["deplie"], p["mode"], p["saisie"]), ("Wifi_TRIADES", "actions", -1))
         self.ipc("choisir", "Wifi_TRIADES")
         self.assertEqual(self.panneau()["deplie"], "")
-        self.attendre_repos("Wifi_TRIADES")
+        self.attendre_repos()
         self.ipc("choisir", "Wifi_TRIADES")
-        self.attendre_repos("Wifi_TRIADES")
+        self.attendre_repos()
         self.ipc("activer", "deconnecter")
         self.attendre("essai : disconnect Wifi_TRIADES")
         self.assertEqual(self.panneau()["deplie"], "")
         self.assertNotIn("essai : connect Wifi_TRIADES", self.journal())
 
     def test_details(self):
-        # « Détails… » demande la fenêtre Réseau sur le profil du réseau joint (sans profil lu, par son nom) et
-        # ferme le popover.
-        self.ouvrir()
-        self.ipc("choisir", "Wifi_TRIADES")
-        self.attendre_repos("Wifi_TRIADES")
-        self.ipc("activer", "details")
-        self.assertTrue(json.loads(self.ipc("fenetre")))
-        self.assertEqual(json.loads(self.ipc("profilDemande")), "Wifi_TRIADES")
-        self.assertEqual(self.panneau(), {})
+        # « Détails… » demande la fenêtre Réseau sur le profil du réseau joint, par son nom sans profil lu, par
+        # l'uuid du profil Wi-Fi actif sinon, et ferme le popover.
+        for uuid, attendu in (("", "Wifi_TRIADES"), ("wifi-1", "wifi-1")):
+            with self.subTest(attendu=attendu):
+                if uuid:
+                    self.ipc("profilActif", uuid)
+                self.ouvrir()
+                self.ipc("choisir", "Wifi_TRIADES")
+                self.attendre_repos()
+                self.ipc("activer", "details")
+                self.assertTrue(json.loads(self.ipc("fenetre")))
+                self.assertEqual(json.loads(self.ipc("profilDemande")), attendu)
+                self.assertEqual(self.panneau(), {})
 
     def test_depliage_anime(self):
         # La ligne de mot de passe se déplie en animant sa hauteur, et, repliée, reste construite le temps de
-        # replier (rien ne disparaît d'un coup), puis est détruite.
+        # replier (rien ne disparaît d'un coup), puis est détruite. L'état en vol est lu dans la passe du clic.
         self.ouvrir()
-        self.ipc("choisir", "Inconnu")
-        p = self.attendre_repos("Inconnu")
+        p = self.puis_lire("choisir", "Inconnu")
+        self.assertTrue(p["lignes"]["Inconnu"]["deplieEnCours"], "le dépliage s'anime")
+        p = self.attendre_repos()
         self.assertGreater(p["lignes"]["Inconnu"]["depliage"], 40)
-        self.ipc("choisir", "Inconnu")
-        p = self.panneau()
+        p = self.puis_lire("choisir", "Inconnu")
         self.assertEqual(p["deplie"], "")
         self.assertTrue(p["lignes"]["Inconnu"]["charge"], "la ligne se replie, elle ne disparaît pas")
-        self.assertGreater(p["lignes"]["Inconnu"]["depliage"], 0)
-        p = self.attendre_repos("Inconnu")
-        self.assertEqual(p["lignes"]["Inconnu"], {"depliage": 0, "deplieEnCours": False, "charge": False})
+        self.assertGreater(p["lignes"]["Inconnu"]["depliage"], 40)
+        self.assertTrue(p["lignes"]["Inconnu"]["deplieEnCours"])
+        l = self.attendre_repos()["lignes"]["Inconnu"]
+        self.assertEqual((l["depliage"], l["charge"]), (0, False))
         self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read|Unable to assign|Binding loop")
 
     def test_connexion_puis_glissement(self):
         # Le réseau choisi montre « Connexion… » ; rejoint, il remonte en tête et les lignes glissent jusqu'à leur
-        # nouvelle place au lieu d'y sauter.
+        # nouvelle place au lieu d'y sauter : dans la passe du changement, chaque ligne est encore à sa place
+        # d'avant, puis elle rejoint la nouvelle.
         self.ouvrir()
+        avant = self.attendre_repos()["lignes"]
         self.ipc("choisir", "Connu")
         self.attendre("essai : connect Connu")
         self.assertEqual(self.panneau()["connexion"], ["Connu"])
-        self.ipc("joindre", "Connu")
-        p = self.panneau()
+        p = self.puis_lire("joindre", "Connu")
         self.assertEqual(p["connexion"], [])
         self.assertEqual(p["reseaux"], ["Connu", "Wifi_TRIADES", "Inconnu", "Ouvert"])
         self.assertTrue(p["glisse"], "les lignes glissent vers leur nouvelle place")
-        self.assertFalse(self.attendre_repos("Connu")["glisse"])
+        self.assertEqual({n: l["y"] for n, l in p["lignes"].items()}, {n: l["y"] for n, l in avant.items()})
+        apres = self.attendre_repos()["lignes"]
+        self.assertEqual((apres["Connu"]["y"], apres["Wifi_TRIADES"]["y"]), (avant["Wifi_TRIADES"]["y"], avant["Connu"]["y"]))
+        self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read|Unable to assign|Binding loop")
+
+    def test_ligne_qui_sort_puis_ligne_qui_entre(self):
+        # Un réseau qui quitte le balayage : sa ligne se referme (hauteur et fondu) au lieu de disparaître, et la
+        # ligne suivante ne saute pas, elle suit sa hauteur. Un réseau qui paraît : sa ligne s'ouvre à partir de
+        # rien, sans pousser d'un coup les suivantes. Les états en vol sont lus dans la passe du changement.
+        self.ouvrir()
+        avant = self.attendre_repos()["lignes"]
+        h = avant["Inconnu"]["y"] - avant["Connu"]["y"]
+        p = self.puis_lire("retirerReseau", "Connu")
+        self.assertEqual(p["reseaux"], ["Wifi_TRIADES", "Inconnu", "Ouvert"])
+        self.assertTrue(p["lignes"]["Connu"]["apparitionEnCours"], "la ligne sortante se referme")
+        self.assertEqual(p["lignes"]["Connu"]["apparition"], 1)
+        self.assertEqual(p["lignes"]["Inconnu"]["y"], avant["Inconnu"]["y"], "la ligne suivante ne saute pas")
+        p = self.attendre_repos()
+        self.assertNotIn("Connu", p["lignes"])
+        self.assertEqual(p["lignes"]["Inconnu"]["y"], avant["Inconnu"]["y"] - h)
+        p = self.puis_lire("ajouterReseau")
+        self.assertEqual(p["lignes"]["Nouveau"]["apparition"], 0, "la ligne entrante part de rien")
+        self.assertEqual(p["lignes"]["Inconnu"]["y"], avant["Connu"]["y"], "les suivantes ne sautent pas")
+        p = self.attendre_repos()
+        self.assertEqual(p["lignes"]["Nouveau"]["apparition"], 1)
+        self.assertEqual(p["lignes"]["Inconnu"]["y"], avant["Inconnu"]["y"])
         self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read|Unable to assign|Binding loop")
 
     def test_portail(self):

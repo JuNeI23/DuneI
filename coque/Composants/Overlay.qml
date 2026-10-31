@@ -40,10 +40,11 @@ import "ancrage.js" as Ancrage
 //           propriété par défaut : l'élément déclaré dans l'Overlay, instancié à chaque ouverture ; associees,
 //           fenêtres ajoutées à la prise du clavier d'un contextuel (HyprlandFocusGrab), vide par défaut : un clic
 //           dans l'une d'elles ne lève pas la prise, si bien que l'ouvreur, posé dans la barre, ferme lui-même le
-//           contextuel au lieu de le voir fermé à l'appui puis rouvert au relâchement ; margeEcran, écart gardé
-//           entre le cadre d'un contextuel ou d'une infobulle serré dans l'écran et chaque bord de l'écran, 0 par
-//           défaut (le popover réseau y met la marge de tuilage, comme les fenêtres).
-// Sorties : ferme(), émis à chaque fermeture, quelle qu'en soit la cause ; chargeur, le LazyLoader de la
+//           contextuel au lieu de le voir fermé à l'appui puis rouvert au relâchement.
+// Sorties : ferme(), émis à chaque fermeture, quelle qu'en soit la cause ; margeEcran, écart que garde le cadre
+//           d'un overlay ancré dans un calque (la barre) avec chaque bord de l'écran quand il y est serré,
+//           space.scale[1] (8), à la demande de Nicolas (L2-11 : le popover réseau ne colle plus au bord droit) ;
+//           sous une fenêtre flottante, le compositeur garde la fenêtre dans l'écran sans marge ; chargeur, le LazyLoader de la
 //           fenêtre, exposé pour les essais et les relevés de mémoire ; fenetreAttention (un porteur de
 //           FenetreAttention) et fenetreContextuel, les composants que le chargeur instancie, internes à la
 //           primitive ; bulle, vrai pour la famille infobulle. La fenêtre d'une infobulle est fenetreContextuel.
@@ -66,7 +67,7 @@ QtObject {
     property var point: null
     default property Component contenu
     property list<QtObject> associees
-    property real margeEcran: 0
+    readonly property real margeEcran: Theme.space?.scale[1] ?? 0
     signal ferme()
     readonly property bool bulle: famille === "infobulle"
 
