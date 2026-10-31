@@ -76,11 +76,12 @@ Overlay {
         TapHandler { onTapped: boutonIcone.clique() }
     }
 
-    // Cadre — cadre d'une ligne dépliée, au fond du panneau et au filet subtil, comme la maquette.
-    // Rôle : empile son contenu en colonne, en retrait de space.scale[1] (8) de chaque bord.
+    // Encadre — cadre d'une ligne dépliée, au fond du panneau et au filet subtil, comme la maquette.
+    // Rôle : empile son contenu en colonne, en retrait de space.scale[1] (8) de chaque bord. Nommé autrement que
+    // le Cadre interne de l'Overlay, dont le popover hérite.
     // Entrées : contenu, propriété par défaut, les éléments de la colonne. Sorties : aucune. Erreurs : aucune.
     // Dépendances : Theme.
-    component Cadre: Rectangle {
+    component Encadre: Rectangle {
         id: cadre
         default property alias contenu: colonneCadre.data
         readonly property real marge: Theme.space?.scale[1] ?? 0
@@ -103,8 +104,8 @@ Overlay {
     // Bloc — ligne de mot de passe dépliée : en-tête, mot de passe, erreur, boutons ; il prend le focus à sa
     // construction. Entrées : nom, le réseau visé ; erreur, message affiché sous le champ ; occupe, vrai pendant la
     // connexion, qui désactive « Rejoindre ». Sorties : secret (ChampSecret) ; signaux rejoindre() et annuler().
-    // Erreurs : aucune. Dépendances : Cadre, ChampSecret, Bouton, Texte, Theme.
-    component Bloc: Cadre {
+    // Erreurs : aucune. Dépendances : Encadre, ChampSecret, Bouton, Texte, Theme.
+    component Bloc: Encadre {
         id: bloc
         property string nom
         property string erreur
@@ -392,7 +393,7 @@ Overlay {
             }
 
             // Portail captif : la page de connexion s'ouvre dans le navigateur, et la connectivité est revérifiée.
-            Cadre {
+            Encadre {
                 visible: panneau.etat.connectivite === "portal"
                 Layout.fillWidth: true
                 Layout.leftMargin: Theme.space?.scale[1] ?? 0
@@ -554,7 +555,7 @@ Overlay {
                             }
                             Component {
                                 id: actions
-                                Cadre {
+                                Encadre {
                                     RowLayout {
                                         Layout.alignment: Qt.AlignRight
                                         spacing: Theme.space?.scale[1] ?? 0
