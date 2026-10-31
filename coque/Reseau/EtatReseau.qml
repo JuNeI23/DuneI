@@ -29,6 +29,8 @@ Singleton {
     property alias actif: relance.actif
     property alias relances: relance.relances
     property bool recherche: false
+    // Nombre de processus nmcli de executer encore vivants (utile aux tests).
+    property int processus: 0
 
     readonly property var appareils: Array.from(Networking.devices.values)
     readonly property var cartes: appareils.filter(d => d.type === DeviceType.Wifi)
@@ -115,11 +117,13 @@ Singleton {
         Process {
             property var fin
             running: true
+            Component.onCompleted: etat.processus++
+            Component.onDestruction: etat.processus--
             stdout: StdioCollector { id: sortie }
             stderr: StdioCollector { id: erreur }
             onExited: code => {
                 try { if (fin) fin(code, code === 0 ? sortie.text : erreur.text) }
-                finally { etat.relire(); destroy() }
+                finally { try { etat.relire() } finally { destroy() } }
             }
         }
     }

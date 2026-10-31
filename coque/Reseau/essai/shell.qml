@@ -49,12 +49,14 @@ ShellRoot {
         function visibles(): string { return `${wifi.visible};${vpn.visible}` }
 
         // executer — lance EtatReseau.executer et attend la fin par le journal.
-        // Entrées : args, JSON {"args": [...]} ; mode, « sans » (pas de fin), « leve » (fin qui lève) ou autre. Sortie : aucune ; journalise « etat : fin <code> <sortie> ».
+        // Entrées : args, JSON {"args": [...]} ; mode, « sans » (fin réellement
+        // undefined), « leve » (fin qui lève) ou autre. Sortie : aucune ; journalise « etat : fin <code> <sortie> ».
         // Erreurs : JSON invalide. Dépendances : EtatReseau.
         function executer(argumentsJson: string, mode: string): void {
-            const fin = {sans: undefined, leve: () => { throw new Error("fin factice") }}[mode]
-                ?? ((code, sortie) => console.log("etat : fin " + code + " " + sortie.split("\n")[0]))
-            EtatReseau.executer(JSON.parse(argumentsJson).args, fin)
+            const args = JSON.parse(argumentsJson).args
+            if (mode === "sans") EtatReseau.executer(args, undefined)
+            else if (mode === "leve") EtatReseau.executer(args, () => { throw new Error("fin factice") })
+            else EtatReseau.executer(args, (code, sortie) => console.log("etat : fin " + code + " " + sortie.split("\n")[0]))
         }
     }
 

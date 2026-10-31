@@ -218,6 +218,10 @@ class EtatReseauTest(EssaiCoque, unittest.TestCase):
             self.ipc("etat", "executer", json.dumps({"args": ["-v"]}), mode)
             time.sleep(1)
             self.assertEqual(len(compte.read_text().split()), n + i, mode)
+            self.assertEqual(self.valeur("processus"), 0, f"processus détruit ({mode})")
+        journal = self.journal()
+        self.assertNotIn("TypeError", journal, "fin absente : jamais appelée")
+        self.assertIn("fin factice", journal)
 
     def test_executer(self):
         self.ipc("etat", "executer", json.dumps({"args": ["bidon"]}), "normal")
