@@ -75,8 +75,10 @@ Arbitrages pris en séance du 2026-10-30 et du 2026-10-31, sur les planches
 
 ### 4.3 Souris
 
-- **Clic** sur un point : aller à ce bureau. La zone de clic d'un point est le quart de la largeur utile de la
-  presqu'île, pas le seul point de 7 px. *Choix du rédacteur.*
+- **Clic** sur un point : aller à ce bureau. La zone de clic d'un point couvre le point et la moitié de l'espace
+  qui le sépare de chacun de ses voisins ; le premier et le dernier y ajoutent la marge latérale de la presqu'île.
+  Les zones se touchent et suivent la largeur de la capsule : elles ne valent un quart exact que si l'espacement est égal.
+  *Choix du rédacteur, revu à la relecture finale.*
 - **Molette** sur la presqu'île : bureau suivant ou précédent, bornée à 1 et 4, sans boucler. *Choix du
   rédacteur.*
 - **Survol** d'un point : léger éclaircissement, sans capsule, comme la barre (D92).
@@ -171,4 +173,4 @@ rôles de couleur ; les tests automatiques.
 | 1.0 | 2026-10-31 | Première rédaction, après la séance de conception. |
 | 1.1 | 2026-10-31 | Relecture du constructeur : bureau spécial et souris, plusieurs écrans, borne des quatre bureaux, source unique du nombre de bureaux. |
 | 1.2 | 2026-10-31 | Recette à l'écran : hauteur ramenée de 34 à 28 px, celle de la barre (§ 4.1, D97). |
-| 1.3 | 2026-10-31 | Relecture finale : le mouvement réduit est reporté à L2-47 (§ 4.2). |
+| 1.3 | 2026-10-31 | Relecture finale : le mouvement réduit est reporté à L2-47 (§ 4.2) ; § 4.3 aligné sur les zones de clic qui suivent chaque point. |

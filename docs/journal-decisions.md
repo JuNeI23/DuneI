@@ -2255,7 +2255,7 @@ est la couche haute, sa matière est E3.**
   121 avec les évasements).
 - **Couche et matière.** Couche haute : le plein écran la recouvre, ce qui tranche la question ouverte de D93.
   Matière E3, l'ombre suit la courbe. Le masque d'entrée est le corps rectangulaire (accepté).
-- **Souris.** Zones de clic d'un quart de la largeur ; molette bornée ; survol en `textTertiary` selon D92,
+- **Souris.** Zones de clic couvrant chaque point et la moitié de l'espace qui le sépare de ses voisins (marge latérale aux extrémités) ; molette bornée ; survol en `textTertiary` selon D92,
   lisible sur la surface E3 quel que soit le fond d'écran.
 - **Plusieurs écrans.** Chaque presqu'île suit le bureau actif et l'état du spécial de son propre écran ; les clics
   passent par les bureaux globaux de Hyprland (sur deux écrans, rejoindre le bureau n peut déplacer vers l'écran qui
