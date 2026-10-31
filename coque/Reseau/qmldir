@@ -1,3 +1,6 @@
 module Reseau
 singleton EtatReseau 1.0 EtatReseau.qml
 PopoverReseau 1.0 PopoverReseau.qml
+PanneauReseau 1.0 PanneauReseau.qml
+FicheProfil 1.0 FicheProfil.qml
+FenetreReseau 1.0 FenetreReseau.qml

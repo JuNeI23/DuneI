@@ -1,7 +1,7 @@
 .pragma library
 
 // nmcli.js — analyse des sorties « nmcli -t », construction des arguments de modification et fonctions pures
-// du popover (tri des réseaux, résumé de l'état).
+// du popover (tri des réseaux, résumé de l'état) et de la fenêtre Réseau (rangées des profils).
 // Rôle : transforme le texte de NetworkManager en objets simples pour le panneau réseau, sans jamais lancer
 // nmcli lui-même (les processus restent dans les singletons QML). Une seule logique d'échappement pour tout le
 // module : « nmcli -t » écrit « \: » pour un deux-points et « \\ » pour une barre oblique inverse dans une
@@ -51,13 +51,17 @@ function liste(v) {
 }
 
 // lireAppareil — état IP d'un appareil.
-// Entrée : texte, sortie de « nmcli -t -f IP4.ADDRESS,IP4.GATEWAY,IP4.DNS,GENERAL.METERED device show <iface> ».
-// Sortie : {ip4: string[], passerelle: string, dns: string[], facture: bool} ; facture est vrai pour « yes » et
-// « yes (guessed) ». Une sortie vide donne des valeurs vides. Erreurs : aucune. Dépendances : valeurs.
+// Entrée : texte, sortie de « nmcli -t -f IP4.ADDRESS,IP4.GATEWAY,IP4.DNS,IP6.ADDRESS,GENERAL.HWADDR,
+// GENERAL.METERED device show <iface> ».
+// Sortie : {ip4: string[], ip6: string[], passerelle: string, dns: string[], mac: string, facture: bool} ; facture
+// est vrai pour « yes » et « yes (guessed) ». Une sortie vide donne des valeurs vides. Erreurs : aucune.
+// Dépendances : valeurs.
 function lireAppareil(texte) {
     const v = valeurs(texte)
     return {
         ip4: (v["IP4.ADDRESS"] || []).filter(x => x !== ""),
+        ip6: (v["IP6.ADDRESS"] || []).filter(x => x !== ""),
+        mac: (v["GENERAL.HWADDR"] || [""])[0],
         passerelle: (v["IP4.GATEWAY"] || [""])[0],
         dns: (v["IP4.DNS"] || []).filter(x => x !== ""),
         facture: /^yes\b/.test((v["GENERAL.METERED"] || [""])[0]),
@@ -75,13 +79,19 @@ function lireProfils(texte) {
     }))
 }
 
+// Champs lus par lireProfil, à passer tels quels à « nmcli -t -f <CHAMPS_PROFIL> connection show <uuid> » ; nmcli
+// omet sans erreur les sections absentes du profil (pas de section Wi-Fi pour un profil filaire, pas de sécurité
+// pour un réseau ouvert).
+const CHAMPS_PROFIL = "connection.autoconnect,connection.autoconnect-priority,connection.metered,ipv4.method,"
+    + "ipv4.addresses,ipv4.gateway,ipv4.dns,802-11-wireless.ssid,802-11-wireless-security.key-mgmt"
+
 // lireProfil — réglages d'un profil.
-// Entrée : texte, sortie de « nmcli -t -f connection.autoconnect,connection.autoconnect-priority,
-// connection.metered,ipv4.method,ipv4.addresses,ipv4.gateway,ipv4.dns,802-11-wireless.ssid connection show <uuid> ».
+// Entrée : texte, sortie de « nmcli -t -f <CHAMPS_PROFIL> connection show <uuid> ».
 // Sortie : {autoconnect: bool, priorite: int, facture: string, methode: "auto"|"manual", adresse: string (la
-// première), passerelle, dns: string[], ssid}. facture garde la valeur de nmcli (« yes », « no », « unknown ») ;
-// toute méthode autre que « manual » se lit « auto ». Une clé absente prend sa valeur neutre. Erreurs : aucune.
-// Dépendances : valeurs, liste.
+// première), passerelle, dns: string[], ssid, securite: string}. facture garde la valeur de nmcli (« yes », « no »,
+// « unknown ») ; toute méthode autre que « manual » se lit « auto » ; securite est la gestion des clés
+// (« wpa-psk », « sae »…), vide pour un réseau ouvert ou un profil filaire. Une clé absente prend sa valeur neutre.
+// Erreurs : aucune. Dépendances : valeurs, liste.
 function lireProfil(texte) {
     const v = valeurs(texte)
     const un = (cle, defaut) => (v[cle] && v[cle][0] !== "") ? v[cle][0] : defaut
@@ -94,7 +104,41 @@ function lireProfil(texte) {
         passerelle: un("ipv4.gateway", ""),
         dns: liste(un("ipv4.dns", "")),
         ssid: un("802-11-wireless.ssid", ""),
+        securite: un("802-11-wireless-security.key-mgmt", ""),
     }
+}
+
+// lireFactures — facturation de plusieurs profils, lue d'un seul processus.
+// Entrée : texte, lignes « <uuid>:<valeur de connection.metered> ». Sortie : objet uuid → valeur (« yes », « no »,
+// « unknown ») ; une ligne sans valeur est ignorée. Erreurs : aucune. Dépendances : lignes.
+function lireFactures(texte) {
+    const sortie = {}
+    for (const l of lignes(texte)) if (l.length >= 2 && l[1] !== "") sortie[l[0]] = l[1]
+    return sortie
+}
+
+// profilsFenetre — rangées de la liste des profils de la fenêtre Réseau.
+// Entrées : profils, sortie de lireProfils ; portee, noms des réseaux Wi-Fi du dernier balayage ; factures, objet
+// uuid → facturation (lireFactures) ; factureActif, vrai si le lien actif est facturé, même deviné (EtatReseau).
+// Sortie : tableau de {groupe: "Wi-Fi"|"Filaire", nom, uuid, wifi: bool, actif: bool, etat, icone}, les profils
+// Wi-Fi d'abord, puis les filaires, chaque groupe avec le profil actif en tête puis dans l'ordre alphabétique ; etat
+// vaut « Connecté », « À portée » ou « Hors de portée » pour le Wi-Fi (un profil est à portée quand son nom figure
+// au balayage), « Connecté » ou « Débranché » pour le filaire ; icone est network-wireless-hotspot pour un profil
+// Wi-Fi facturé (le partage du téléphone), sinon le Wi-Fi au signal plein (connecté), moyen (à portée) ou nul, ou
+// network-wired. Les autres types (boucle locale, VPN, pont) sont écartés. Erreurs : aucune. Dépendances : aucune.
+function profilsFenetre(profils, portee, factures, factureActif) {
+    const types = {"802-11-wireless": "Wi-Fi", "802-3-ethernet": "Filaire"}
+    const rang = p => (p.type === "802-11-wireless" ? 0 : 2) + (p.actif ? 0 : 1)
+    return profils.filter(p => p.type in types)
+        .sort((a, b) => rang(a) - rang(b) || a.nom.localeCompare(b.nom))
+        .map(p => {
+            const wifi = p.type === "802-11-wireless"
+            const etat = p.actif ? "Connecté" : !wifi ? "Débranché" : portee.includes(p.nom) ? "À portée" : "Hors de portée"
+            const facture = factures[p.uuid] === "yes" || p.actif && factureActif
+            const icone = !wifi ? "network-wired" : facture ? "network-wireless-hotspot"
+                : "network-wireless-signal-" + ({"Connecté": "excellent", "À portée": "good"}[etat] ?? "none")
+            return {groupe: types[p.type], nom: p.nom, uuid: p.uuid, wifi, actif: p.actif, etat, icone}
+        })
 }
 
 // Correspondance entre les clés de modification de l'interface et les propriétés de nmcli.

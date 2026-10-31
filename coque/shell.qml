@@ -3,12 +3,15 @@
 import Quickshell
 import "Barre"
 import "Presquile"
+import "Reseau"
 
 // Coque de session de DuneI — racine chargée par « qs -c dunei » (unité dunei-coque.service).
-// Rôle : pose sur chaque écran une barre système et la presqu'île, dans le même Variants.
-// Entrées : aucune ; l'écran de chaque barre vient de Quickshell.screens. Sortie : deux fenêtres de calque par écran.
+// Rôle : pose sur chaque écran une barre système et la presqu'île, dans le même Variants, et, une seule fois hors
+// de Variants, la fenêtre Réseau, construite seulement à sa demande.
+// Entrées : aucune ; l'écran de chaque barre vient de Quickshell.screens. Sortie : deux fenêtres de calque par écran ;
+// la fenêtre Réseau quand elle est ouverte (IPC « reseau ouvrir » ou « Réglages réseau… »).
 // Erreurs : tokens absents ou invalides → barre et presqu'île transparentes, erreur de Theme dans le journal de Quickshell.
-// Dépendances : quickshell ≥ 0.3, modules Barre (Barre) et Presquile (Presquile).
+// Dépendances : quickshell ≥ 0.3, modules Barre (Barre), Presquile (Presquile) et Reseau (FenetreReseau).
 // Rendu du texte : la directive Env force l'anticrénelage en niveaux de gris, comme dans le banc du verre.
 ShellRoot {
     Variants {
@@ -22,4 +25,6 @@ ShellRoot {
             Presquile { modelData: ecran.modelData }
         }
     }
+
+    FenetreReseau {}
 }

@@ -49,14 +49,16 @@ class NmcliTest(EssaiCoque, unittest.TestCase):
 
     def test_lire_appareil(self):
         texte = ("IP4.ADDRESS[1]:192.168.1.42/24\nIP4.ADDRESS[2]:10.0.0.7/8\nIP4.GATEWAY:192.168.1.1\n"
-                 "IP4.DNS[1]:1.1.1.1\nIP4.DNS[2]:8.8.8.8\nGENERAL.METERED:yes (guessed)\n")
+                 "IP4.DNS[1]:1.1.1.1\nIP4.DNS[2]:8.8.8.8\nIP6.ADDRESS[1]:fe80\\:\\:7a2c\\:41ff\\:fe0b\\:9d10/64\n"
+                 "GENERAL.HWADDR:A4\\:C3\\:F0\\:5B\\:1E\\:72\nGENERAL.METERED:yes (guessed)\n")
         r = self.appeler("lireAppareil", texte)
-        self.assertEqual(r, {"ip4": ["192.168.1.42/24", "10.0.0.7/8"], "passerelle": "192.168.1.1",
+        self.assertEqual(r, {"ip4": ["192.168.1.42/24", "10.0.0.7/8"], "ip6": ["fe80::7a2c:41ff:fe0b:9d10/64"],
+                             "mac": "A4:C3:F0:5B:1E:72", "passerelle": "192.168.1.1",
                              "dns": ["1.1.1.1", "8.8.8.8"], "facture": True})
         self.assertTrue(self.appeler("lireAppareil", "GENERAL.METERED:yes\n")["facture"])
         self.assertFalse(self.appeler("lireAppareil", "GENERAL.METERED:no (guessed)\n")["facture"])
         self.assertEqual(self.appeler("lireAppareil", ""),
-                         {"ip4": [], "passerelle": "", "dns": [], "facture": False})
+                         {"ip4": [], "ip6": [], "mac": "", "passerelle": "", "dns": [], "facture": False})
 
     def test_lire_profils(self):
         texte = (f"Wifi_TRIADES:{UUID}:802-11-wireless:wlan0:yes\n"
@@ -75,16 +77,36 @@ class NmcliTest(EssaiCoque, unittest.TestCase):
     def test_lire_profil(self):
         texte = ("connection.autoconnect:yes\nconnection.autoconnect-priority:-5\nconnection.metered:unknown\n"
                  "ipv4.method:manual\nipv4.addresses:192.168.1.50/24\nipv4.gateway:192.168.1.1\n"
-                 "ipv4.dns:1.1.1.1,8.8.8.8\n802-11-wireless.ssid:Caf\\:é\n")
+                 "ipv4.dns:1.1.1.1,8.8.8.8\n802-11-wireless.ssid:Caf\\:é\n802-11-wireless-security.key-mgmt:wpa-psk\n")
         self.assertEqual(self.appeler("lireProfil", texte),
                          {"autoconnect": True, "priorite": -5, "facture": "unknown", "methode": "manual",
                           "adresse": "192.168.1.50/24", "passerelle": "192.168.1.1", "dns": ["1.1.1.1", "8.8.8.8"],
-                          "ssid": "Caf:é"})
+                          "ssid": "Caf:é", "securite": "wpa-psk"})
         self.assertEqual(self.appeler("lireProfil", ""),
                          {"autoconnect": False, "priorite": 0, "facture": "unknown", "methode": "auto",
-                          "adresse": "", "passerelle": "", "dns": [], "ssid": ""})
+                          "adresse": "", "passerelle": "", "dns": [], "ssid": "", "securite": ""})
         auto = self.appeler("lireProfil", "ipv4.method:auto\nipv4.addresses:\nipv4.dns:\nconnection.autoconnect:no\n")
         self.assertEqual((auto["methode"], auto["adresse"], auto["dns"], auto["autoconnect"]), ("auto", "", [], False))
+
+    def test_lire_factures(self):
+        self.assertEqual(self.appeler("lireFactures", f"{UUID}:yes\nautre:unknown\nvide:\n"),
+                         {UUID: "yes", "autre": "unknown"})
+
+    def test_profils_fenetre(self):
+        # Wi-Fi puis filaire, l'actif en tête de son groupe, puis l'ordre alphabétique ; la boucle locale écartée.
+        profils = [{"nom": n, "uuid": u, "type": t, "appareil": "", "actif": a} for n, u, t, a in (
+            ("Filaire", "f", "802-3-ethernet", False), ("lo", "l", "loopback", True), ("wifinp", "w", "802-11-wireless", False),
+            ("Hotspot_NJ", "h", "802-11-wireless", False), ("Wifi_TRIADES", "t", "802-11-wireless", True),
+            ("Café", "c", "802-11-wireless", False))]
+        r = self.appeler("profilsFenetre", profils, ["wifinp"], {"h": "yes"}, False)
+        self.assertEqual([(x["groupe"], x["nom"], x["etat"], x["icone"]) for x in r], [
+            ("Wi-Fi", "Wifi_TRIADES", "Connecté", "network-wireless-signal-excellent"),
+            ("Wi-Fi", "Café", "Hors de portée", "network-wireless-signal-none"),
+            ("Wi-Fi", "Hotspot_NJ", "Hors de portée", "network-wireless-hotspot"),
+            ("Wi-Fi", "wifinp", "À portée", "network-wireless-signal-good"),
+            ("Filaire", "Filaire", "Débranché", "network-wired")])
+        # Le lien actif facturé (même deviné) fait du profil actif le partage du téléphone.
+        self.assertEqual(self.appeler("profilsFenetre", profils, [], {}, True)[0]["icone"], "network-wireless-hotspot")
 
     def test_args_modifier(self):
         self.assertEqual(
@@ -212,7 +234,7 @@ class EtatReseauTest(EssaiCoque, unittest.TestCase):
 
     def test_lecture_publiee(self):
         sortie = (f"vpn:wg0\n802-11-wireless:wlan0\n--\nIP4.ADDRESS[1]:192.168.1.42/24\nIP4.GATEWAY:192.168.1.1\n"
-                  f"IP4.DNS[1]:1.1.1.1\nGENERAL.METERED:yes\n--\nWifi_TRIADES:{UUID}:802-11-wireless:wlan0:yes\n")
+                  f"IP4.DNS[1]:1.1.1.1\nIP6.ADDRESS[1]:fe80\\:\\:1/64\nGENERAL.HWADDR:A4\\:C3\nGENERAL.METERED:yes\n--\nWifi_TRIADES:{UUID}:802-11-wireless:wlan0:yes\n")
         fichier = Path(self.tmp.name) / "sortie"
         fichier.write_text(sortie)
         self.injecter(f"cat {fichier}")
@@ -220,6 +242,7 @@ class EtatReseauTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(self.valeur("ip4"), ["192.168.1.42/24"])
         self.assertEqual(self.valeur("passerelle"), "192.168.1.1")
         self.assertEqual(self.valeur("dns"), ["1.1.1.1"])
+        self.assertEqual((self.valeur("ip6"), self.valeur("mac")), (["fe80::1/64"], "A4:C3"))
         self.assertTrue(self.valeur("facture"))
         self.assertTrue(self.valeur("vpnActif"))
         self.assertEqual(self.valeur("profils")[0]["nom"], "Wifi_TRIADES")
@@ -458,3 +481,183 @@ class PopoverTest(EssaiCoque, unittest.TestCase):
         self.ipc("activer", "reglages")
         self.assertTrue(json.loads(self.ipc("fenetre")))
         self.assertEqual(self.panneau(), {})
+
+
+# nmcli factice de la fenêtre Réseau : journalise chaque appel dans « appels » (à côté du script) et rend des
+# sorties fixes ; un fichier « refus » à côté du script fait échouer toute modification comme un refus de polkit.
+NMCLI_FACTICE = r"""#!/bin/sh
+d=$(dirname "$0")
+printf '%s\n' "$*" >> "$d/appels"
+case "$*" in
+    monitor) exec sleep 30 ;;
+    "-t -f TYPE,DEVICE connection show --active") echo "802-11-wireless:wlan0" ;;
+    "-t -f IP4.ADDRESS"*) printf 'IP4.ADDRESS[1]:192.168.1.42/24\nIP4.GATEWAY:192.168.1.1\nIP4.DNS[1]:192.168.1.1\nIP6.ADDRESS[1]:fe80\\:\\:1/64\nGENERAL.HWADDR:A4\\:C3\\:F0\\:5B\\:1E\\:72\nGENERAL.METERED:no\n' ;;
+    "-t -f NAME,UUID,TYPE,DEVICE,ACTIVE connection show")
+        printf 'Wifi_TRIADES:wifi-1:802-11-wireless:wlan0:yes\nTelephone_Essai:hotspot-1:802-11-wireless::no\n'
+        printf 'Connexion filaire 1:filaire-1:802-3-ethernet::no\nlo:lo-1:loopback:lo:yes\n' ;;
+    "-g connection.metered connection show hotspot-1") echo yes ;;
+    "-g connection.metered connection show "*) echo unknown ;;
+    "-s -g 802-11-wireless-security.psk connection show hotspot-1") echo "SECRET" ;;
+    "-t -f connection.autoconnect,"*" connection show hotspot-1")
+        printf 'connection.autoconnect:yes\nconnection.autoconnect-priority:9\nconnection.metered:yes\nipv4.method:auto\n'
+        printf 'ipv4.addresses:\nipv4.gateway:\nipv4.dns:\n802-11-wireless.ssid:Telephone_Essai\n802-11-wireless-security.key-mgmt:wpa-psk\n' ;;
+    "-t -f connection.autoconnect,"*" connection show wifi-1")
+        printf 'connection.autoconnect:yes\nconnection.autoconnect-priority:0\nconnection.metered:unknown\nipv4.method:auto\n'
+        printf 'ipv4.addresses:\nipv4.gateway:\nipv4.dns:\n802-11-wireless.ssid:Wifi_TRIADES\n' ;;
+    "-t -f connection.autoconnect,"*" connection show filaire-1")
+        printf 'connection.autoconnect:yes\nconnection.autoconnect-priority:0\nconnection.metered:unknown\nipv4.method:manual\n'
+        printf 'ipv4.addresses:10.0.0.2/24\nipv4.gateway:10.0.0.1\nipv4.dns:10.0.0.1\n' ;;
+    "connection modify "*)
+        if [ -f "$d/refus" ]; then
+            echo "Error: Failed to modify connection 'Telephone_Essai': Insufficient privileges: Not authorized to modify connections" >&2
+            exit 4
+        fi ;;
+esac
+exit 0
+"""
+
+
+@unittest.skipUnless(os.environ.get("WAYLAND_DISPLAY") and QS, "session Wayland et Quickshell requis")
+class FenetreTest(EssaiCoque, unittest.TestCase):
+    """La fenêtre Réseau, ouverte dans une coque offscreen sur le vrai EtatReseau et un nmcli factice.
+
+    Le nmcli factice, en tête du PATH de la coque d'essai, journalise ses arguments et rend des profils fixes :
+    aucune commande ne touche le réseau réel. Le secret qu'il rend ne doit jamais paraître au journal de la coque.
+    """
+
+    essai = ESSAI / "fenetre"
+    teintes = (55,)
+    SECRET = "s3cret-factice-jamais-journalise"
+
+    def setUp(self):
+        super().setUp()
+        bin_ = Path(self.tmp.name) / "bin"
+        bin_.mkdir()
+        nmcli = bin_ / "nmcli"
+        nmcli.write_text(NMCLI_FACTICE.replace("SECRET", self.SECRET))
+        nmcli.chmod(0o755)
+        self.fichier_appels = bin_ / "appels"
+        self.refus = bin_ / "refus"
+        self.environnement = {"QT_QPA_PLATFORM": "offscreen", "PATH": f"{bin_}:{os.environ['PATH']}"}
+        self.installer(55)
+        self.lancer(self.dir)
+        self.attendre("essai : prêt")
+
+    def ipc(self, cible: str, fonction: str, *args: str) -> str:
+        """Appelle une fonction IPC de la coque d'essai.
+
+        Entrées : cible, fonction, args (chaînes). Sortie : la sortie standard. Erreurs : CalledProcessError.
+        Dépendances : qs.
+        """
+        return subprocess.run([QS, "ipc", "--pid", str(self.proc.pid), "call", cible, fonction, *args],
+                              check=True, capture_output=True, text=True, timeout=DELAI).stdout.strip()
+
+    def etat(self) -> dict:
+        """État de la fenêtre et de sa fiche, décodé (voir la coque d'essai). Dépendances : ipc."""
+        return json.loads(self.ipc("essai", "etat"))
+
+    def jusqua(self, condition, message: str = ""):
+        """Attend qu'une condition sur l'état devienne vraie.
+
+        Entrées : condition, fonction(état) → bool ; message, ajouté à l'échec. Sortie : l'état qui la vérifie.
+        Erreurs : échec du test au délai, avec l'état et le journal. Dépendances : etat.
+        """
+        fin = time.monotonic() + DELAI
+        while time.monotonic() < fin:
+            e = self.etat()
+            if condition(e):
+                return e
+            time.sleep(0.05)
+        self.fail(f"{message}\n{e}\n{self.journal()}")
+
+    def appels(self) -> list[str]:
+        """Appels reçus par le nmcli factice, un par ligne. Dépendances : nmcli factice."""
+        return self.fichier_appels.read_text().splitlines() if self.fichier_appels.exists() else []
+
+    def ouvrir(self, uuid: str = "") -> dict:
+        """Ouvre la fenêtre par l'IPC réelle « reseau ouvrir », attend sa fiche, puis choisit un profil.
+
+        Entrée : uuid, le profil à choisir, aucun par défaut (le profil actif). Sortie : l'état, fiche lue.
+        """
+        self.ipc("reseau", "ouvrir")
+        self.jusqua(lambda e: e["fenetre"] and e["fiche"].get("lu"), "fenêtre construite et fiche lue")
+        if uuid:
+            self.ipc("essai", "choisir", uuid)
+        return self.jusqua(lambda e: e["fiche"].get("uuid") == (uuid or "wifi-1") and e["fiche"]["lu"], "profil lu")
+
+    def test_ouvrir_et_fermer(self):
+        self.assertFalse(self.etat()["fenetre"])
+        e = self.ouvrir()
+        self.assertEqual(e["rangees"], [
+            ["Wi-Fi", "Wifi_TRIADES", "Connecté", "network-wireless-signal-excellent"],
+            ["Wi-Fi", "Telephone_Essai", "Hors de portée", "network-wireless-hotspot"],
+            ["Filaire", "Connexion filaire 1", "Débranché", "network-wired"]])
+        self.assertEqual(e["detail"], {"IPv4": "192.168.1.42/24", "IPv6": "fe80::1/64", "Passerelle": "192.168.1.1",
+                                       "DNS": "192.168.1.1", "Adresse matérielle": "A4:C3:F0:5B:1E:72"})
+        self.ipc("essai", "fermer")
+        e = self.jusqua(lambda e: not e["fenetre"], "fenêtre détruite")
+        self.assertFalse(e["demandee"])
+        self.ouvrir()
+        self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
+
+    def test_priorite(self):
+        self.ouvrir("hotspot-1")
+        self.ipc("essai", "cliquer", "plus")
+        fin = time.monotonic() + DELAI
+        while "connection modify hotspot-1 connection.autoconnect-priority 10" not in self.appels():
+            self.assertLess(time.monotonic(), fin, self.appels())
+            time.sleep(0.05)
+
+    def test_refus_restaure(self):
+        e = self.ouvrir("hotspot-1")
+        self.assertEqual((e["fiche"]["priorite"], e["fiche"]["facture"]), (9, True))
+        self.refus.touch()
+        self.ipc("essai", "cliquer", "plus")
+        e = self.jusqua(lambda e: "priorite" in e["fiche"]["erreurs"], "erreur sous la priorité")
+        self.assertIn("Not authorized", e["fiche"]["erreurs"]["priorite"])
+        self.assertEqual(e["fiche"]["priorite"], 9)
+        self.ipc("essai", "cliquer", "facture")
+        e = self.jusqua(lambda e: "facture" in e["fiche"]["erreurs"], "erreur sous la facturation")
+        self.assertTrue(e["fiche"]["facture"])
+
+    def test_ip_fixe(self):
+        # Passer en Fixe n'écrit rien tant que l'adresse manque ; l'adresse validée écrit méthode et adresse.
+        self.ouvrir()
+        self.ipc("essai", "cliquer", "fixe")
+        self.ipc("essai", "saisir", "adresse", "192.168.1.50/24")
+        fin = time.monotonic() + DELAI
+        attendu = "connection modify wifi-1 ipv4.method manual ipv4.addresses 192.168.1.50/24"
+        while attendu not in self.appels():
+            self.assertLess(time.monotonic(), fin, self.appels())
+            time.sleep(0.05)
+        self.assertEqual(sum("modify" in a for a in self.appels()), 1, self.appels())
+
+    def test_secret(self):
+        self.ouvrir("hotspot-1")
+        self.ipc("essai", "cliquer", "oeil")
+        e = self.jusqua(lambda e: e["fiche"]["secret"] == len(self.SECRET), "secret lu")
+        self.assertTrue(e["fiche"]["revele"])
+        self.ipc("essai", "cliquer", "oeil")
+        self.assertFalse(self.etat()["fiche"]["revele"])
+        self.ipc("essai", "cliquer", "oeil")
+        self.assertTrue(self.etat()["fiche"]["revele"])
+        lecture = "-s -g 802-11-wireless-security.psk connection show hotspot-1"
+        self.assertEqual(self.appels().count(lecture), 1)
+        # Changer de profil efface le secret ; la fermeture détruit la fiche.
+        self.ipc("essai", "choisir", "wifi-1")
+        e = self.jusqua(lambda e: e["fiche"]["uuid"] == "wifi-1", "autre profil")
+        self.assertEqual((e["fiche"]["secret"], e["fiche"]["revele"]), (0, False))
+        self.ipc("essai", "fermer")
+        self.jusqua(lambda e: not e["fenetre"], "fenêtre détruite")
+        self.assertNotIn(self.SECRET, self.journal())
+
+    def test_oublier(self):
+        self.ouvrir("hotspot-1")
+        self.ipc("essai", "cliquer", "oublier")
+        self.assertTrue(self.etat()["fiche"]["confirmer"])
+        self.assertFalse(any("delete" in a for a in self.appels()))
+        self.ipc("essai", "cliquer", "confirmer")
+        fin = time.monotonic() + DELAI
+        while "connection delete hotspot-1" not in self.appels():
+            self.assertLess(time.monotonic(), fin, self.appels())
+            time.sleep(0.05)
