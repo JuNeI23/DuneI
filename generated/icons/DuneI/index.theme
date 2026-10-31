@@ -1,0 +1,11 @@
+[Icon Theme]
+Name=DuneI
+Comment=Pictogrammes Phosphor du thème DuneI
+Inherits=Adwaita,breeze-dark,hicolor
+Directories=symbolic
+
+[symbolic]
+Size=16
+MinSize=8
+MaxSize=512
+Type=Scalable
