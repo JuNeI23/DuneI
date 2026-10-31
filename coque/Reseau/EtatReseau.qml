@@ -32,18 +32,17 @@ Singleton {
 
     readonly property var appareils: Array.from(Networking.devices.values)
     readonly property var cartes: appareils.filter(d => d.type === DeviceType.Wifi)
-    readonly property bool carte: cartes.length > 0
     readonly property bool radio: Networking.wifiEnabled
-    readonly property var cablees: appareils.filter(d => d.type === DeviceType.Wired && d.connected)
-    readonly property bool filaire: cablees.length > 0
-    readonly property var reseauActif: cartes.reduce((tous, c) => tous.concat(Array.from(c.networks.values)), [])
-                                             .find(n => n.connected) ?? null
-    readonly property bool connecte: reseauActif !== null || filaire
+    readonly property var deduit: Nmcli.etatAppareils(appareils, DeviceType.Wifi, DeviceType.Wired)
+    readonly property bool carte: deduit.carte
+    readonly property bool filaire: deduit.filaire
+    readonly property var reseauActif: deduit.reseauActif
+    readonly property bool connecte: deduit.connecte
+    readonly property string nomActif: deduit.nomActif
     readonly property string connectivite: ({
         [NetworkConnectivity.None]: "none", [NetworkConnectivity.Portal]: "portal",
         [NetworkConnectivity.Limited]: "limited", [NetworkConnectivity.Full]: "full",
     })[Networking.connectivity] ?? "unknown"
-    readonly property string nomActif: filaire ? cablees[0].name : (reseauActif?.name ?? "")
     readonly property real force: reseauActif?.signalStrength ?? 0
 
     // Valeurs de la lecture nmcli (voir lu).
@@ -71,7 +70,7 @@ Singleton {
 
     // executer — lance nmcli avec les arguments donnés, puis relit l'état.
     // Entrées : args, tableau d'arguments (sans « nmcli ») ; fin, fonction(code, sortie) appelée à la fin.
-    // Sortie : aucune ; fin reçoit le code de sortie et la sortie standard (code 0) ou la sortie d'erreur (sinon).
+    // Sortie : aucune ; fin, facultative, reçoit le code de sortie et la sortie standard (code 0) ou la sortie d'erreur (sinon) ; qu'elle manque ou lève, l'état est relu et le processus détruit.
     // Erreurs : un nmcli absent donne un code non nul à fin. Dépendances : fabrique, relire.
     function executer(args, fin) {
         fabrique.createObject(etat, {command: ["nmcli", ...args], fin})
@@ -119,9 +118,8 @@ Singleton {
             stdout: StdioCollector { id: sortie }
             stderr: StdioCollector { id: erreur }
             onExited: code => {
-                fin(code, code === 0 ? sortie.text : erreur.text)
-                etat.relire()
-                destroy()
+                try { if (fin) fin(code, code === 0 ? sortie.text : erreur.text) }
+                finally { etat.relire(); destroy() }
             }
         }
     }

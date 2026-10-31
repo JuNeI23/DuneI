@@ -108,6 +108,40 @@ class NmcliTest(EssaiCoque, unittest.TestCase):
         self.assertTrue(r.startswith("erreur"), r)
         self.assertIn("bidon", r)
 
+    @staticmethod
+    def wifi(*reseaux):
+        """Carte Wi-Fi factice. Entrée : reseaux, couples (nom, joint). Sortie : appareil."""
+        return {"type": 1, "connected": any(j for _, j in reseaux), "name": "wlan0",
+                "networks": {"values": [{"name": n, "connected": j} for n, j in reseaux]}}
+
+    def etat(self, *appareils):
+        """État dérivé. Entrée : appareils. Sortie : dictionnaire sans reseauActif détaillé."""
+        r = self.appeler("etatAppareils", list(appareils), 1, 2)
+        return {**r, "reseauActif": (r["reseauActif"] or {}).get("name")}
+
+    def test_aucun_appareil(self):
+        self.assertEqual(self.etat(), {"carte": False, "filaire": False, "reseauActif": None,
+                                       "connecte": False, "nomActif": ""})
+
+    def test_filaire_seul(self):
+        r = self.etat({"type": 2, "connected": True, "name": "enp3s0", "networks": {"values": []}})
+        self.assertEqual(r, {"carte": False, "filaire": True, "reseauActif": None, "connecte": True,
+                             "nomActif": "enp3s0"})
+
+    def test_filaire_non_connecte(self):
+        r = self.etat({"type": 2, "connected": False, "name": "enp3s0", "networks": {"values": []}})
+        self.assertEqual((r["filaire"], r["connecte"]), (False, False))
+
+    def test_wifi_non_joint_et_filaire(self):
+        r = self.etat(self.wifi(("A", False)), {"type": 2, "connected": True, "name": "enp3s0", "networks": {"values": []}})
+        self.assertEqual(r, {"carte": True, "filaire": True, "reseauActif": None, "connecte": True,
+                             "nomActif": "enp3s0"})
+
+    def test_wifi_joint(self):
+        r = self.etat(self.wifi(("A", False), ("Caf\u00e9", True)))
+        self.assertEqual(r, {"carte": True, "filaire": False, "reseauActif": "Caf\u00e9", "connecte": True,
+                             "nomActif": "Caf\u00e9"})
+
 
 @unittest.skipUnless(os.environ.get("WAYLAND_DISPLAY") and QS, "session Wayland et Quickshell requis")
 class EtatReseauTest(EssaiCoque, unittest.TestCase):
@@ -174,9 +208,21 @@ class EtatReseauTest(EssaiCoque, unittest.TestCase):
         self.assertIn(self.valeur("connectivite"), ["unknown", "none", "portal", "limited", "full"])
         self.assertIsInstance(self.valeur("icone"), str)
 
+    def test_executer_fin_absente_ou_qui_leve(self):
+        """Sans fin, ou avec une fin qui lève, l'état est quand même relu."""
+        compte = Path(self.tmp.name) / "compte"
+        self.injecter(f"echo x >> {compte}")
+        time.sleep(0.8)
+        n = len(compte.read_text().split())
+        for i, mode in enumerate(("sans", "leve"), 1):
+            self.ipc("etat", "executer", json.dumps({"args": ["-v"]}), mode)
+            time.sleep(1)
+            self.assertEqual(len(compte.read_text().split()), n + i, mode)
+
     def test_executer(self):
-        self.ipc("etat", "executer", json.dumps({"args": ["bidon"]}))
+        self.ipc("etat", "executer", json.dumps({"args": ["bidon"]}), "normal")
         self.attendre("etat : fin 2 Error")
-        self.ipc("etat", "executer", json.dumps({"args": ["-v"]}))
+        self.ipc("etat", "executer", json.dumps({"args": ["-v"]}), "normal")
         self.attendre("etat : fin 0 nmcli tool")
         self.assertNotIn("ERROR", self.journal())
+

@@ -121,3 +121,22 @@ function argsModifier(uuid, changes) {
     }
     return args
 }
+
+// etatAppareils — dérive l'état de connexion de la liste des appareils de Quickshell.Networking.
+// Entrées : appareils, tableau d'appareils (type, connected, name, networks.values) ; typeWifi et typeFilaire,
+// valeurs de DeviceType.Wifi et DeviceType.Wired. Sortie : {carte: bool (une carte Wi-Fi existe), filaire: bool
+// (un appareil filaire est connecté), reseauActif (le premier réseau Wi-Fi joint, ou null), connecte: bool (Wi-Fi
+// joint ou filaire connecté), nomActif: string (nom de l'appareil filaire connecté, sinon du réseau Wi-Fi joint,
+// sinon "")}. Une liste vide donne carte, filaire et connecte faux. Erreurs : aucune.
+// Dépendances : aucune.
+function etatAppareils(appareils, typeWifi, typeFilaire) {
+    const cartes = appareils.filter(d => d.type === typeWifi)
+    const cables = appareils.filter(d => d.type === typeFilaire && d.connected)
+    const reseauActif = cartes.reduce((tous, c) => tous.concat(Array.from(c.networks.values)), [])
+                              .find(n => n.connected) ?? null
+    return {
+        carte: cartes.length > 0, filaire: cables.length > 0, reseauActif,
+        connecte: reseauActif !== null || cables.length > 0,
+        nomActif: cables.length > 0 ? cables[0].name : (reseauActif?.name ?? ""),
+    }
+}
