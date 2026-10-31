@@ -86,8 +86,8 @@ class IconesTest(unittest.TestCase):
             for nom, phosphor in self.noms.items():
                 self.assertTrue((Path(d) / "DuneI" / "symbolic" / f"{nom}-symbolic.svg").is_file())
                 plein = (Path(d) / "DuneI" / "symbolic" / f"{nom}-fill-symbolic.svg").read_text(encoding="utf-8")
-                brut = (SVG / "fill" / nom_fichier(phosphor, "fill")).read_text(encoding="utf-8")
-                self.assertEqual(plein, recolorable(brut))
+                bruts = [(SVG / "fill" / nom_fichier(g, "fill")).read_text(encoding="utf-8") for g in glyphes(phosphor)]
+                self.assertEqual(plein, recolorable(composer(*bruts) if len(bruts) == 2 else bruts[0]))
 
     def test_source_manquante(self):
         with tempfile.TemporaryDirectory() as d:
