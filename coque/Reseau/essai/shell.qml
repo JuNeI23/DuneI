@@ -7,7 +7,7 @@ import "Reseau"
 
 // Coque d'essai du module Reseau, sans aucune fenêtre.
 // Rôle : expose par IPC (cible « reseau ») les fonctions pures de nmcli.js, et le singleton EtatReseau (cible
-// « etat »), avec les indicateurs Wifi et Vpn de la barre qui le lisent, pour que tests/test_reseau.py les
+// « etat »), avec les indicateurs Reseau et Vpn de la barre qui le lisent, pour que tests/test_reseau.py les
 // éprouve dans un vrai Quickshell.
 // Entrées : commande IPC appeler <fonction> <{"args": [...]} en JSON>. Sortie : le résultat encodé en JSON, ou
 // « erreur : <message> » si la fonction lève. Erreurs : nom de fonction inconnu, JSON invalide (même forme de
@@ -18,7 +18,7 @@ ShellRoot {
 
     // Les deux lecteurs de EtatReseau : un seul moniteur doit tourner quand ils sont tous deux instanciés.
     Item {
-        Wifi { id: wifi }
+        Reseau { id: reseau }
         Vpn { id: vpn }
     }
 
@@ -45,8 +45,8 @@ ShellRoot {
         // Dépendances : EtatReseau.
         function valeur(nom: string): string { return JSON.stringify(EtatReseau[nom] ?? null) }
 
-        // visibles — visibilité de Wifi et de Vpn, « wifi;vpn ». Sortie : texte. Dépendances : wifi, vpn.
-        function visibles(): string { return `${wifi.visible};${vpn.visible}` }
+        // visibles — visibilité de Reseau et de Vpn, « reseau;vpn ». Sortie : texte. Dépendances : reseau, vpn.
+        function visibles(): string { return `${reseau.visible};${vpn.visible}` }
 
         // executer — lance EtatReseau.executer et attend la fin par le journal.
         // Entrées : args, JSON {"args": [...]} ; mode, « sans » (fin réellement

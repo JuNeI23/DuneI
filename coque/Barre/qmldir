@@ -6,7 +6,7 @@ Logo 1.0 Logo.qml
 Notifications 1.0 Notifications.qml
 Batterie 1.0 Batterie.qml
 JourNuit 1.0 JourNuit.qml
-Wifi 1.0 Wifi.qml
+Reseau 1.0 Reseau.qml
 Vpn 1.0 Vpn.qml
 Bluetooth 1.0 Bluetooth.qml
 Parametres 1.0 Parametres.qml

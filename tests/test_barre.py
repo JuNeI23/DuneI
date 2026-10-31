@@ -172,7 +172,7 @@ class IconesTest(BarreIpc, unittest.TestCase):
         self.assertEqual(tnum, "1")
 
 
-INDICATEURS = ("Horloge", "Logo", "Notifications", "Batterie", "JourNuit", "Wifi", "Vpn", "Bluetooth", "Parametres")
+INDICATEURS = ("Horloge", "Logo", "Notifications", "Batterie", "JourNuit", "Reseau", "Vpn", "Bluetooth", "Parametres")
 
 
 class IndicateursStatiqueTest(unittest.TestCase):
@@ -202,13 +202,20 @@ class IndicateursStatiqueTest(unittest.TestCase):
     def test_chiffres_tabulaires_dans_element(self):
         self.assertIn("tabulaire: true", self.qml()["ElementBarre.qml"])
 
-    def test_jour_nuit_seul_cliquable(self):
+    def test_cliquables(self):
         qml = self.qml()
         self.assertIn("cliquable: true", qml["JourNuit.qml"])
         self.assertIn('["dunei-theme", "bascule"]', qml["JourNuit.qml"])
-        for nom in INDICATEURS:
-            if nom != "JourNuit":
-                self.assertNotIn("cliquable: true", qml[f"{nom}.qml"], nom)
+        cliquables = sorted(nom for nom in INDICATEURS if "cliquable: true" in qml[f"{nom}.qml"])
+        self.assertEqual(cliquables, ["JourNuit", "Reseau"])
+        # Sans popover encore, un clic bascule seulement « ouvert » ; l'icône vient du singleton.
+        self.assertRegex(qml["Reseau.qml"], r"onClicked:\s*ouvert\s*=\s*!ouvert")
+        self.assertIn("EtatReseau.icone", qml["Reseau.qml"])
+
+    def test_reseau_disparait_sans_materiel(self):
+        # Ni carte ni filaire : l'icône est vide, donc l'élément (sans icône, image ni texte) est invisible.
+        # iconeReseau rend une chaîne vide sans carte ni filaire : voir test_reseau_sans_carte_filaire et test_reseau.
+        self.assertNotRegex(self.qml()["Reseau.qml"], r"\bvisible:\s*true")
 
     def test_icones_fixes_existent(self):
         for nom in ("emblem-system", "network-vpn"):
@@ -260,9 +267,10 @@ class RelanceTest(BarreIpc, unittest.TestCase):
         self.assertIn("icone=notifications-disabled", self.appeler("etat", "notifications"))
 
     def test_indicateurs_sans_erreur(self):
-        for nom in ("horloge", "logo", "batterie", "jourNuit", "wifi", "bluetooth", "parametres"):
+        for nom in ("horloge", "logo", "batterie", "jourNuit", "reseau", "bluetooth", "parametres"):
             self.assertIn("visible=", self.appeler("etat", nom))
         self.assertIn("cliquable=true", self.appeler("etat", "jourNuit"))
+        self.assertIn("cliquable=true", self.appeler("etat", "reseau"))
         self.assertRegex(self.appeler("etat", "horloge"), r"texte=\w+\.? \d+ \w+\.? \d\d:\d\d")
         self.assertIn("icone=emblem-system", self.appeler("etat", "parametres"))
         self.assertNotIn("ERROR", self.journal())
@@ -282,18 +290,24 @@ class BarreStructureTest(unittest.TestCase):
         self.assertIn('color: "transparent"', self.barre)
         self.assertIn("WlrKeyboardFocus.None", self.barre)
 
-    def test_masque_ne_couvre_que_jour_nuit(self):
-        masque = re.search(r"mask:\s*Region\s*\{([^}]*)\}", self.barre)
+    def test_masque_ne_couvre_que_jour_nuit_et_reseau(self):
+        masque = re.search(r"mask:\s*Region\s*\{([^{}]*)Region\s*\{([^{}]*)\}\s*\}", self.barre)
         self.assertIsNotNone(masque)
-        corps = masque.group(1)
+        regions = masque.groups()
+        # Deux régions : l'interrupteur et l'indicateur réseau, chacune suivant sa position dans la rangée.
+        self.assertEqual(len(regions), 2)
+        self.assertNotRegex(self.barre, r"\bitem:")
         # Une Region qui nomme un item ne suit que ses déplacements dans son parent : le masque se calcule par
         # rangée, pour suivre aussi le glissement de la rangée quand une icône apparaît à droite (D100).
-        self.assertNotRegex(corps, r"\bitem:")
-        self.assertRegex(corps, r"x:\s*rangee\.x\s*\+\s*droite\.x\s*\+\s*jourNuit\.x\b")
-        self.assertRegex(corps, r"y:\s*rangee\.y\s*\+\s*droite\.y\s*\+\s*jourNuit\.y\b")
-        self.assertRegex(corps, r"width:\s*jourNuit\.width\b")
-        self.assertRegex(corps, r"height:\s*jourNuit\.height\b")
+        for corps, nom in zip(regions, ("jourNuit", "reseau")):
+            self.assertRegex(corps, rf"x:\s*rangee\.x\s*\+\s*droite\.x\s*\+\s*{nom}\.x\b")
+            self.assertRegex(corps, rf"y:\s*rangee\.y\s*\+\s*droite\.y\s*\+\s*{nom}\.y\b")
+            self.assertRegex(corps, rf"height:\s*{nom}\.height\b")
+        self.assertRegex(regions[0], r"width:\s*jourNuit\.width\b")
+        # Invisible (matériel absent), l'indicateur garde sa largeur : le masque ne doit alors rien couvrir.
+        self.assertRegex(regions[1], r"width:\s*reseau\.visible\s*\?\s*reseau\.width\s*:\s*0\b")
         self.assertRegex(self.barre, r"JourNuit\s*\{\s*id:\s*jourNuit\b")
+        self.assertRegex(self.barre, r"Reseau\s*\{\s*id:\s*reseau\b")
         self.assertRegex(self.barre, r"RowLayout\s*\{\s*id:\s*rangee\b")
         self.assertRegex(self.barre, r"RowLayout\s*\{\s*id:\s*droite\b")
 
@@ -302,8 +316,8 @@ class BarreStructureTest(unittest.TestCase):
         self.assertIn("element.cliquable && element.hovered", element)
 
     def test_ordre_des_indicateurs(self):
-        droite = ["Notifications", "Batterie", "JourNuit", "Wifi", "Vpn", "Bluetooth", "Parametres"]
-        trouves = re.findall(r"\b(Logo|Horloge|Notifications|Batterie|JourNuit|Wifi|Vpn|Bluetooth|Parametres)\s*\{",
+        droite = ["Notifications", "Batterie", "JourNuit", "Reseau", "Vpn", "Bluetooth", "Parametres"]
+        trouves = re.findall(r"\b(Logo|Horloge|Notifications|Batterie|JourNuit|Reseau|Vpn|Bluetooth|Parametres)\s*\{",
                              self.barre)
         self.assertEqual(trouves, ["Logo", "Horloge"] + droite)
 

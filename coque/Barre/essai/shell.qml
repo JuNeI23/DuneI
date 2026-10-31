@@ -31,7 +31,7 @@ ShellRoot {
         Logo { id: logo }
         Batterie { id: batterie }
         JourNuit { id: jourNuit }
-        Wifi { id: wifi }
+        Reseau { id: reseau }
         Bluetooth { id: bluetooth }
         Parametres { id: parametres }
         Vpn { id: vpn }
@@ -99,10 +99,10 @@ ShellRoot {
         }
 
         // etat — relevé des indicateurs en texte « clé=valeur » séparé par des « ; » : visibilité, texte, icône.
-        // Entrée : nom de l'indicateur (horloge, logo, batterie, jourNuit, wifi, bluetooth, parametres, notifications).
+        // Entrée : nom de l'indicateur (horloge, logo, batterie, jourNuit, reseau, bluetooth, parametres, notifications).
         // Sortie : texte. Erreurs : nom inconnu, chaîne vide. Dépendances : les indicateurs ci-dessus.
         function etat(nom: string): string {
-            const e = {horloge, logo, batterie, jourNuit, wifi, bluetooth, parametres, notifications, vpn}[nom]
+            const e = {horloge, logo, batterie, jourNuit, reseau, bluetooth, parametres, notifications, vpn}[nom]
             return e ? `visible=${e.visible};icone=${e.icone};texte=${e.texte};cliquable=${e.cliquable}` : ""
         }
 
