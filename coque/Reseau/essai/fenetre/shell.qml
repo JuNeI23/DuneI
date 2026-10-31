@@ -90,6 +90,26 @@ ShellRoot {
             o.editingFinished()
         }
 
+        // pastilles — éprouve les PastillesFenetre de la fenêtre sans rien envoyer à Hyprland : pose une adresse
+        // factice, puis rend en JSON {reduire, agrandir, inconnue} (les expressions de commande), et trouve
+        // (adresses rendues par trouver sur des fenêtres factices : une active et une inactive homonymes, une
+        // d'une autre classe, une d'un autre titre ; puis sans l'active ; puis aucune), visible et y.
+        // Entrée : adresse. Sortie : texte JSON. Erreurs : fenêtre fermée, TypeError au journal.
+        function pastilles(adresse: string): string {
+            const p = fenetre.pastilles
+            p.adresse = adresse
+            const f = (titre, appId, active, adr) => ({title: titre, wayland: {appId: appId}, activated: active, address: adr})
+            const l = [f("Réseau", "org.quickshell", false, "a"), f("Réseau", "org.quickshell", true, "b"),
+                       f("Réseau", "firefox", true, "c"), f("Autre", "org.quickshell", true, "d")]
+            const t = x => p.trouver(x, "Réseau", "org.quickshell")?.address ?? null
+            return JSON.stringify({reduire: p.commande("reduire"), agrandir: p.commande("agrandir"),
+                                   inconnue: p.commande("autre"), trouve: [t(l), t(l.filter(x => x.address !== "b")), t([])],
+                                   visible: p.visible, y: p.y})
+        }
+
+        // fermerPastille — clic sur la pastille rouge, sans geste. Entrées : aucune. Sortie : aucune.
+        function fermerPastille(): void { fenetre.pastilles.fermer() }
+
         // fermer — ferme la fenêtre comme le compositeur. Entrées : aucune. Sortie : aucune.
         function fermer(): void { fenetre.fermer() }
     }

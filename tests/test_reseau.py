@@ -771,6 +771,26 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
         self.ouvrir()
         self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
 
+    def test_pastilles(self):
+        # Rouge ferme la fenêtre ; orange l'envoie au bureau spécial lu dans la configuration de Hyprland, vert
+        # bascule le plein écran, toujours sur l'adresse de la fenêtre, jamais sur la fenêtre active. Aucune commande
+        # n'est envoyée ici : seules les expressions sont lues.
+        self.ouvrir()
+        p = json.loads(self.ipc("essai", "pastilles", "55ab12"))
+        fenetre = '"address:0x55ab12"'
+        self.assertEqual(p["reduire"], f'hl.dsp.window.move({{ window = {fenetre}, workspace = "special:" .. '
+                                       'require("donnees.raccourcis").special, follow = false })')
+        self.assertEqual(p["agrandir"], f'hl.dsp.window.fullscreen({{ window = {fenetre}, mode = "fullscreen", '
+                                        'action = "toggle" })')
+        self.assertEqual(p["inconnue"], "")
+        self.assertEqual(p["trouve"], ["b", "a", None])
+        self.assertTrue(p["visible"])
+        self.assertEqual(json.loads(self.ipc("essai", "pastilles", "0x55ab12"))["agrandir"], p["agrandir"])
+        self.assertEqual(json.loads(self.ipc("essai", "pastilles", ""))["reduire"], "")
+        self.ipc("essai", "fermerPastille")
+        e = self.jusqua(lambda e: not e["fenetre"], "fenêtre détruite par la pastille rouge")
+        self.assertFalse(e["demandee"])
+
     def test_profil_demande(self):
         # « Détails… » du popover : la fenêtre s'ouvre sur le profil demandé (par uuid ou par nom), et la demande est
         # consommée ; une demande faite fenêtre ouverte est suivie aussitôt.

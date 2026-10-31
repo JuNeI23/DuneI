@@ -16,7 +16,9 @@ import "nmcli.js" as Nmcli
 // les flèches de la liste, en choisissent un autre, dont la FicheProfil occupe la droite, dans une zone qui défile.
 // La facturation de chaque profil Wi-Fi est lue d'un seul processus quand la liste des profils change, puis tenue à
 // jour par les lectures de la fiche ; aucun minuteur.
-// Entrées : etat, la source de l'état et des actions, EtatReseau par défaut ; choisi, uuid du profil affiché.
+// Entrées : etat, la source de l'état et des actions, EtatReseau par défaut ; choisi, uuid du profil affiché ;
+// enTete, hauteur réservée en haut de la barre latérale, au-dessus de son titre (les pastilles d'une fenêtre), 0 par
+// défaut.
 // Sorties : rangees, les rangées de la liste (nmcli.profilsFenetre) ; fiche, la FicheProfil ; factures, uuid →
 // facturation lue.
 // Erreurs : sans profil, la fiche est vide et « Aucun profil enregistré. » s'affiche ; un échec de la lecture des
@@ -30,6 +32,7 @@ Item {
 
     property var etat: EtatReseau
     property string choisi: ""
+    property real enTete: 0
     property var factures: ({})
     readonly property var rangees: Nmcli.profilsFenetre(etat.profils, etat.reseaux.map(r => r.name), factures, etat.facture)
     readonly property alias fiche: fiche
@@ -92,7 +95,7 @@ Item {
         Texte {
             id: titre
             x: Theme.space?.scale[3] ?? 0
-            y: Theme.space?.scale[2] ?? 0
+            y: panneau.enTete + (Theme.space?.scale[2] ?? 0)
             text: "Réseau"
             echelon: 4
             moyen: true
