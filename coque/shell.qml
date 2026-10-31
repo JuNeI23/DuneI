@@ -1,4 +1,4 @@
-//@ pragma IconTheme Adwaita
+//@ pragma IconTheme DuneI
 //@ pragma Env QSG_DISTANCEFIELD_ANTIALIASING=gray
 import Quickshell
 import "Barre"

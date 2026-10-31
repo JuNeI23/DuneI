@@ -429,7 +429,7 @@ Surface {
 
                     Column {
                         spacing: Theme.space.scale[1]
-                        Legende { text: "Icônes (Adwaita en attendant L4-12)" }
+                        Legende { text: "Icônes (thème DuneI)" }
 
                         Row {
                             spacing: Theme.space.sectionGap

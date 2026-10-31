@@ -1,4 +1,4 @@
-//@ pragma IconTheme Adwaita
+//@ pragma IconTheme DuneI
 //@ pragma Env QSG_DISTANCEFIELD_ANTIALIASING=gray
 import QtQuick
 import Quickshell
@@ -27,7 +27,7 @@ import "Composants"
 // Dépendances : quickshell ≥ 0.3 (PanelWindow, WlrLayershell, IpcHandler), modules Theme et Composants (Surface,
 // Bouton, Overlay, Liste, Rangee, Texte).
 // Import : comme pour la planche, les liens verre/Theme -> ../../Theme et verre/Composants -> ../../Composants
-// placent les deux modules côte à côte sous la racine ; la directive IconTheme en tête choisit Adwaita.
+// placent les deux modules côte à côte sous la racine ; la directive IconTheme en tête choisit DuneI.
 // Rendu du texte : la directive Env en tête force l'anticrénelage du texte en niveaux de gris
 // (QSG_DISTANCEFIELD_ANTIALIASING=gray), pour cette coque seule : sans elle, Qt Quick le rend en sous-pixel
 // d'après l'écran, malgré le rgba=none de fontconfig, ce qui frange de couleur les lettres sur le verre.

@@ -1,4 +1,4 @@
-//@ pragma IconTheme Adwaita
+//@ pragma IconTheme DuneI
 import QtQuick
 import Quickshell
 import Quickshell.Io

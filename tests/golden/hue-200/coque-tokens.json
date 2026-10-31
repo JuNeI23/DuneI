@@ -112,11 +112,11 @@
   "icons": {
     "source": "Phosphor",
     "variants": [
-      "regular",
+      "bold",
       "fill"
     ],
     "grid": 24,
-    "stroke": 1.5,
+    "stroke": 2.25,
     "sizes": {
       "dense": 16,
       "default": 20,

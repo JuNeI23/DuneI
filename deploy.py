@@ -18,6 +18,11 @@ mis de côté sous le nom .avant-dunei, et un lien remplacé par un fichier est 
   {"origine", "fond"}, dit le fond du bureau : posé avec origine « theme » (réécrit si le thème change),
   préservé avec origine « fond », refusé sous toute autre forme. Le lien quickshell/dunei pointe vers
   coque/ du dépôt : la coque de session se lance par qs -c dunei (L2-08).
+- icones : generated/icons/<thème> (nom lu dans tokens.toml, [icons].xdg_theme) est lié sous
+  $XDG_DATA_HOME/icons (~/.local/share/icons par défaut) ; gtk-3.0/settings.ini et gtk-4.0/settings.ini, sous
+  le dossier de configuration, nomment ce thème (marqués DuneI ; un fichier étranger est refusé, jamais
+  écrasé) et org.gnome.desktop.interface icon-theme est réglé par gsettings s'il diffère. Sans gsettings,
+  une note le signale (L4-12).
 - applis : la configuration de chaque application de DuneI est liée à sa place sous le dossier de
   configuration ; l'application doit être installée. Les autres fichiers de son dossier sont laissés
   en place. Seul kitty, le terminal provisoire, y figure (L1-18).
@@ -115,6 +120,8 @@ SOCLE_VERSION = "0.1.0"
 SUFFIXES = (".service", ".socket", ".timer")                 # Types d'unité admis dans services.toml.
 UFW_CONF = "etc/ufw/ufw.conf"                                # Configuration d'ufw sous la racine : ENABLED=yes si le pare-feu est allumé.
 MINUTEUR = "dunei-precharge.timer"                           # Minuteur du préchargement des mises à jour, posé par systeme/.
+GTK_SETTINGS = ("gtk-3.0/settings.ini", "gtk-4.0/settings.ini")  # Réglages GTK, sous le dossier de configuration, qui nomment le thème d'icônes.
+GSETTINGS = ("org.gnome.desktop.interface", "icon-theme")    # Schéma et clé GSettings du thème d'icônes (lus par GTK sous portail).
 CROCHETS = ".githooks"                                       # Crochets git du dépôt (L1-21), valeur relative de core.hooksPath.
 
 
@@ -126,6 +133,16 @@ def config_home(env: Mapping[str, str]) -> Path:
     Erreurs : aucune. Dépendances : aucune.
     """
     return Path(env.get("XDG_CONFIG_HOME") or Path(env.get("HOME") or os.path.expanduser("~")) / ".config")
+
+
+def data_home(env: Mapping[str, str]) -> Path:
+    """Dossier de données racine de l'utilisateur.
+
+    Entrée : env — environnement, os.environ en usage normal.
+    Sortie : $XDG_DATA_HOME, ou ~/.local/share si la variable est absente ou vide.
+    Erreurs : aucune. Dépendances : aucune.
+    """
+    return Path(env.get("XDG_DATA_HOME") or Path(env.get("HOME") or os.path.expanduser("~")) / ".local" / "share")
 
 
 def system_root(env: Mapping[str, str]) -> Path:
@@ -322,6 +339,52 @@ def plan_coque(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
             err.append(f"{link} existe mais n'est pas un lien vers {src} : le déplacer, puis relancer")
     else:
         actions += ([] if qs.exists() else [("mkdir", qs)]) + [("link", src, link)]
+    return actions, err
+
+
+def plan_icones(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
+    """Inspection du déploiement du thème d'icônes DuneI, sans aucune modification (L4-12).
+
+    Entrées : repo — racine du dépôt ; home — dossier de configuration racine.
+    Sortie : (création de icons/ sous le dossier de données s'il manque, lien icons/<thème> vers
+             generated/icons/<thème>, création des dossiers GTK manquants, écriture de chaque settings.ini
+             GTK s'il manque ou diffère, puis réglage GSettings si sa valeur diffère ; erreurs). Sans
+             gsettings, ou s'il ne répond pas, une note gsettings-absent remplace le réglage.
+    Erreurs : aucune exception ; nom de thème illisible dans tokens.toml, source manquante, lien étranger ou
+              dossier réel à la place du lien, dossier GTK qui n'est pas un dossier réel, settings.ini
+              sans la marque de DuneI, deviennent des messages.
+    Dépendances : tomllib, data_home, _links_to, _ours, shutil.which, subprocess, MARK, GTK_SETTINGS, GSETTINGS.
+    """
+    try:
+        with (repo / "tokens.toml").open("rb") as fh:
+            nom = tomllib.load(fh)["icons"]["xdg_theme"]
+    except (OSError, tomllib.TOMLDecodeError, KeyError):
+        return [], [f"{repo / 'tokens.toml'} ne donne pas [icons].xdg_theme"]
+    src, icons = repo / "generated" / "icons" / nom, data_home(os.environ) / "icons"
+    link, actions, err = icons / nom, [], []
+    if not src.is_dir():
+        err.append(f"source manquante : {src} (lancer make icones)")
+    if icons.is_symlink() or (icons.exists() and not icons.is_dir()):
+        err.append(f"{icons} existe mais n'est pas un dossier réel")
+    elif link.is_symlink() or link.exists():
+        if not _links_to(link, src):
+            err.append(f"{link} existe mais n'est pas un lien vers {src} : le déplacer, puis relancer")
+    else:
+        actions += ([] if icons.exists() else [("mkdir", icons)]) + [("link", src, link)]
+    texte = f"# DuneI — thème d'icônes GTK\n# {MARK} — NE PAS MODIFIER À LA MAIN\n[Settings]\ngtk-icon-theme-name={nom}\n"
+    for rel in GTK_SETTINGS:
+        ini = home / rel
+        if ini.parent.is_symlink() or (ini.parent.exists() and not ini.parent.is_dir()):
+            err.append(f"{ini.parent} existe mais n'est pas un dossier réel")
+        elif ini.is_symlink() or (ini.exists() and not _ours(ini)):
+            err.append(f"{ini} existe mais n'a pas été posé par DuneI")
+        elif not ini.exists() or ini.read_text(encoding="utf-8") != texte:
+            actions += ([] if ini.parent.exists() else [("mkdir", ini.parent)]) + [("ecrire", ini, texte)]
+    lu = subprocess.run(["gsettings", "get", *GSETTINGS], capture_output=True, text=True) if shutil.which("gsettings") else None
+    if lu is None or lu.returncode:
+        actions.append(("gsettings-absent", nom))
+    elif lu.stdout.strip() != f"'{nom}'":
+        actions.append(("gsettings", *GSETTINGS, nom))
     return actions, err
 
 
@@ -641,8 +704,8 @@ def plan_socle(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
     return actions, err
 
 
-NOTES = ("hors-liste", "chemin", "rtk-remplace", "atelier-saute", "atelier-sans-claude", "atelier-plugins-echec")  # Signalements affichés après le bilan : ils n'agissent pas et ne bloquent pas.
-DESTINATIONS = {"hypr": plan_hypr, "fontconfig": plan_fontconfig, "coque": plan_coque, "applis": plan_applis,
+NOTES = ("hors-liste", "chemin", "rtk-remplace", "atelier-saute", "atelier-sans-claude", "atelier-plugins-echec", "gsettings-absent")  # Signalements affichés après le bilan : ils n'agissent pas et ne bloquent pas.
+DESTINATIONS = {"hypr": plan_hypr, "fontconfig": plan_fontconfig, "coque": plan_coque, "icones": plan_icones, "applis": plan_applis,
                 "bin": plan_bin, "crochets": plan_crochets, "rtk": atelier.plan_rtk, "atelier": atelier.plan_atelier, "services": plan_services, "systeme": plan_systeme, "socle": plan_socle, "maj": plan_maj,
                 "connexion": plan_connexion}  # Nom → planification, dans l'ordre d'exécution (sudo en dernier).
 
@@ -680,6 +743,8 @@ def describe(action: tuple) -> str:
         "copy": "copier {0} vers {1}",
         "link": "lier {1} à {0}",
         "ecrire": "écrire {0}",
+        "gsettings": "régler {0} {1} à {2}",
+        "gsettings-absent": "gsettings introuvable ou muet : le thème d'icônes {0} n'est pas déclaré à GSettings (les settings.ini GTK le déclarent déjà)",
         "switch": "conserver {1} sous le nom {2}, puis lier {1} à {0}",
         "sudo-copy": "copier {0} vers {1}, avec sudo",
         "sudo-reload": "recharger {0}, avec sudo",
@@ -736,6 +801,8 @@ def apply(actions: list[tuple]) -> None:
             tmp = dst.with_name(TEMP.format(dst.name))
             tmp.write_text(args[1], encoding="utf-8")
             os.replace(tmp, dst)
+        elif kind == "gsettings":
+            subprocess.run(["gsettings", "set", *args], check=True)
         elif kind == "link":
             args[1].symlink_to(args[0])
         elif kind == "switch":

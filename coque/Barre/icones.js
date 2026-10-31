@@ -1,7 +1,7 @@
 .pragma library
 
 // icones.js — correspondances pures entre l'état d'un service et le nom d'icône de la barre.
-// Rôle : traduit un état (batterie, Wi-Fi, Bluetooth, notifications, moment du jour) en nom d'icône Adwaita
+// Rôle : traduit un état (batterie, Wi-Fi, Bluetooth, notifications, moment du jour) en nom d'icône freedesktop
 // sans suffixe « -symbolic ». Un nom vide signifie que la chose manque physiquement : l'élément de barre
 // qui le reçoit disparaît (visible: false) sans laisser de trou dans la rangée.
 // Dépendances : aucune (bibliothèque sans état, importable depuis tout QML ou depuis la coque d'essai).
@@ -19,7 +19,7 @@ function normaliserPourcent(p) {
 // iconeBatterie — icône de batterie.
 // Entrées : presente, une batterie existe ; pourcent, entier 0–100 ; enCharge ; pleine.
 // Sortie : "" sans batterie, "battery-level-100-charged" si pleine, sinon "battery-level-N" (N arrondi à la
-// dizaine) suivi de "-charging" en charge ; Adwaita n'a pas de niveau 100 en charge : en charge à la dizaine 100,
+// dizaine) suivi de "-charging" en charge ; le thème n'a pas de niveau 100 en charge : en charge à la dizaine 100,
 // le nom est "battery-level-100-charged", et hors charge "battery-level-100". Erreurs : aucune.
 function iconeBatterie(presente, pourcent, enCharge, pleine) {
     if (!presente) return ""

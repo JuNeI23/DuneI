@@ -2,9 +2,9 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.31. Historique en fin de document.
+Version 1.32. Historique en fin de document.
 
-La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **157 éléments** répartis en **cinq lots**, sur six chantiers.
+La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **158 éléments** répartis en **cinq lots**, sur six chantiers.
 
 Ce document dit ce qui est attendu, dans quel ordre, et à quelle condition c'est terminé. Il ne dit pas à quoi ça ressemble — c'est le rôle de la bible de design. En cas de contradiction : la bible l'emporte sur l'apparence, ce document l'emporte sur le périmètre.
 
@@ -301,6 +301,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L2-46 | B | Écrit | Presqu'île — surface séparée au centre du haut de l'écran, plus haute que la barre, qui s'étire à la manière de l'îlot dynamique, sans zone exclusive ni masque autre que sa forme (D93) — **fait (D96 à D98)** : encoche continue de 28 px en couche haute, matière E3, trois parties indépendantes (surface, forme, modules), module des bureaux (quatre bureaux, souris, bureau spécial) ; recette du 2026-10-31 validée à l'écran |
 | L2-47 | B | Écrit | Mouvement réduit dans la coque — l'interrupteur du mode (L2-07) n'est lu par aucun composant ; `Ressort` et `ColorSpring` devraient le respecter |
 | L2-48 | B | Écrit | Presqu'île — transitions d'apparition et de disparition (plein écran, démarrage, changement de module), à concevoir avec le premier module qui change sa forme (D98) |
+| L2-49 | B | Écrit | Thème de plateforme Qt pour toute la session — `QT_QPA_PLATFORMTHEME` : icônes DuneI (D101), mais aussi polices, couleurs et dialogues ; Dolphin est la seule application Qt ; à traiter après repérage (voie large voulue par Nicolas, D101) |
 
 ### Lot 3 — la bascule
 
@@ -350,7 +351,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L4-09 | C | Écrit | Rechargement à chaud vérifié sur session vivante |
 | L4-10 | C | Écrit | Palette catégorielle — génération et écart angulaire vérifié |
 | L4-11 | B | Écrit | Panneau de thème — aperçu à chaud, écrit dans la surcharge |
-| L4-12 | D | Écrit | Thème d'icônes et chaîne d'héritage, noms freedesktop |
+| L4-12 | D | Écrit | Thème d'icônes et chaîne d'héritage, noms freedesktop — **en cours (D101)** : première tranche faite, avancée avant L2-11 pour que le popover réseau soit dessiné avec ses vraies icônes ; thème XDG « DuneI » (`generated/icons/DuneI`, héritage lu dans `tokens.toml`), 50 noms freedesktop en `-symbolic` et `-fill-symbolic`, table `icones/correspondances.toml` (groupes `[barre]` et `[reseau]`), SVG Phosphor 2.1.1 (MIT) en bold et fill versionnés sous `icones/phosphor/`, `make phosphor` (rafraîchissement manuel) et `make icones`, destination `icones` de `deploy.py` (lien, `settings.ini` GTK 3 et 4, `gsettings`), `//@ pragma IconTheme DuneI` dans les cinq coques ; graisse bold retenue à l'écran ; reste : icônes-objet bicolores, premier lot par fréquence d'apparition, Qt (L2-49) |
 | L4-13 | D | Écrit | Icônes-objet — dossiers et variantes |
 | L4-14 | D | Écrit | Icônes-objet — types de fichiers génériques |
 | L4-15 | D | Écrit | Icônes-objet — disques, périphériques, paquets, corbeille |
@@ -402,7 +403,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L5-29 | — | Écrit | Passe de regard complète — étage 3 |
 | L5-30 | — | Écrit | Résorber les points ouverts de l'annexe C |
 
-**Volume total : 157 éléments** — 108 écrits, 42 configurés, 5 offerts, 2 mixtes.
+**Volume total : 158 éléments** — 109 écrits, 42 configurés, 5 offerts, 2 mixtes.
 
 Les deux tiers du travail sont de l'écrit, et les trois quarts de cet écrit se concentrent sur la coque et les écrans système. C'est cohérent avec la stratégie retenue, et c'est là que tout le risque se trouve.
 
@@ -506,6 +507,7 @@ Le choix de la distribution de base et du compositeur, précédemment ouverts, s
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-12 | Version initiale, 137 éléments |
+| 1.32 | 2026-10-31 | L4-12 en cours : première tranche du thème d'icônes DuneI (Phosphor bold) avancée avant L2-11 (D101) ; ajout de L2-49 (thème de plateforme Qt) ; 158 éléments |
 | 1.31 | 2026-10-31 | L2-08 reçoit le correctif du masque de saisie de la barre, qui restait sur le Wi-Fi après un réveil, et le survol réservé aux éléments cliquables (D100) |
 | 1.30 | 2026-10-31 | L1-09 reçoit la garde du bouton marche au réveil, contre l'appui fantôme qui rendormait la machine (D99) |
 | 1.29 | 2026-10-31 | L2-46 et L2-10 faits : la presqu'île, quatre bureaux (D96 à D98) ; ajout de L2-47 (mouvement réduit dans la coque) et de L2-48 (transitions de la presqu'île) ; 157 éléments |

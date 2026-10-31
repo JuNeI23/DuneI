@@ -1,4 +1,4 @@
-//@ pragma IconTheme Adwaita
+//@ pragma IconTheme DuneI
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
@@ -17,8 +17,7 @@ import "Composants/ancrage.js" as Ancrage
 // l'écart, deux Overlay fermés, un de chaque famille, et trois objets factices pour le singleton Overlays) pour que tests/test_coque_composants.py
 // éprouve dans un vrai Quickshell les règles d'etats.js, l'héritage par remontée, l'import du Theme, les pièces de
 // base, les contrôles et les listes, en lisant le journal.
-// Entrées : DUNEI_TOKENS_DIR, lu par Theme ; thème d'icônes Adwaita, posé par la directive IconTheme en tête (thème de
-// transition jusqu'à L4-12).
+// Entrées : DUNEI_TOKENS_DIR, lu par Theme ; thème d'icônes DuneI, posé par la directive IconTheme en tête.
 // Sortie : journal de Theme, plus « essai : prêt <bool> » à chaque changement de Theme.ready, et une ligne « essai :
 // <clé> <valeur> » par commande IPC de lecture (cran, interaction, selection, sonde, naissances, fond, texte, anneau,
 // etat, ressort, ressortsFiges, image, controles, coches, cotes, glyphes, radios, jauge, progression, separateur,

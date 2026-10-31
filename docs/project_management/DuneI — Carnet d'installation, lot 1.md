@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.27. Historique en fin de document.
+Version 1.28. Historique en fin de document.
 
 Socle amorçable.
 
@@ -1978,6 +1978,35 @@ aucune étape.
 - Relevés, au repos sur 30 s : `qs` à 0,0 % de processeur, PSS 178,3 Mio (RSS 349,8 Mio), soit environ 19,5 Mio de plus
   que la barre seule. Recette à l'écran validée par Nicolas le 2026-10-31 (D97).
 
+## Le thème d'icônes DuneI — L4-12, première tranche
+
+Rien à lancer à la main : `make install` régénère le thème (`make icones`) puis le déploie, sans accès au réseau.
+
+- **Ce qu'il installe.** Un lien `$XDG_DATA_HOME/icons/DuneI` (par défaut `~/.local/share/icons/DuneI`) vers
+  `generated/icons/DuneI` ; la ligne `gtk-icon-theme-name=DuneI` dans `~/.config/gtk-3.0/settings.ini` et
+  `~/.config/gtk-4.0/settings.ini`, marqués comme écrits par DuneI ; et `gsettings set org.gnome.desktop.interface
+  icon-theme DuneI`. Un `settings.ini` déjà écrit par Nicolas ou par une application est refusé avec un message, jamais
+  écrasé. Les cinq coques portent `//@ pragma IconTheme DuneI`.
+- **D'où viennent les icônes.** `icones/correspondances.toml` (groupes `[barre]` et `[reseau]`) fait correspondre 50 noms
+  freedesktop à des icônes Phosphor ; `generate_icones.py` lit les SVG versionnés sous `icones/phosphor/{bold,fill}/`
+  et écrit chaque nom en `-symbolic` et `-fill-symbolic`. Nom du thème et héritage (`Adwaita,breeze-dark,hicolor`)
+  viennent de `tokens.toml`. La graisse est commandée par `[source].graisse` de la table ; `[icons].variants` de
+  `tokens.toml` n'en est que le reflet pour la coque, et un test les tient d'accord.
+- **Rafraîchir ou étendre les sources.** Ajouter une ligne à la table, puis `make phosphor` (seul accès au réseau :
+  télécharge l'archive npm `@phosphor-icons/core` 2.1.1, vérifiée par son sha256, et recopie les SVG utiles), puis
+  `make icones`. Un nom de la table absent des SVG, dans l'une des deux graisses, fait échouer le générateur en nommant
+  le fichier. Les tests refusent tout nom demandé par `icones.js` ou par un QML de production et absent de la table.
+- **Retour arrière.** `gsettings set org.gnome.desktop.interface icon-theme Adwaita` remet l'ancien thème ; `make
+  install` remet DuneI. Éprouvé le 2026-10-31.
+- **Piège rencontré.** Avant correctif, un test de bout en bout a posé le vrai lien `~/.local/share/icons/DuneI` : les
+  tests de déploiement isolent désormais `XDG_DATA_HOME`.
+- **Relevés**, au repos sur 30 s (`coque/outils/mesure.sh`) : `qs` à 0,1 % de processeur, PSS 186,4 Mio (RSS 224,1 Mio),
+  contre 178,3 Mio au relevé de la presqu'île.
+- **Recette à l'écran du 2026-10-31**, validée par Nicolas : la barre (graisse bold retenue après comparaison
+  regular, bold et fill) et le sélecteur de fichiers GTK de Firefox (« c'est nickel »). Le trait n'est pas calé au
+  pixel aux tailles de la barre : écart accepté (D101).
+- **Non couvert : Qt.** Dolphin garde ses icônes ; le thème de plateforme Qt est la ligne L2-49 du backlog.
+
 ## Lecteur d'empreinte — nouveau
 
 Cet élément n'existe dans aucun document du projet. Il est consigné ici parce qu'il s'installe au lot 1, mais **son travail de conception appartient au lot 5**.
@@ -2080,6 +2109,7 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 
 | Version | Date | Changement |
 | --- | --- | --- |
+| 1.28 | 2026-10-31 | Le thème d'icônes DuneI (L4-12, première tranche) : déploiement, table de correspondance, `make phosphor`, retour arrière, relevés et recette (D101) |
 | 1.27 | 2026-10-31 | La barre système (L2-08) : piège du masque `Region { item: … }` qui ne suit pas ses ancêtres, et vérification du masque de saisie par la position réelle du curseur (D100) |
 | 1.26 | 2026-10-31 | Énergie (L1-09) : garde du bouton marche au réveil, `dunei-garde-reveil.service` et `sleep.target.d/10-dunei.conf`, vérification et recette en attente (D99) |
 | 1.25 | 2026-10-31 | La presqu'île (L2-46, L2-10) : quatre bureaux, raccourcis `SUPER + 1…4`, geste sans création de bureau, section de la presqu'île, relevés (D96 à D98) |

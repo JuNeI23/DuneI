@@ -130,7 +130,7 @@ impossible sans déranger le bureau. La page Tokens, sans fond propre, sort sur 
 - **Import des modules.** Quickshell ne résout pas un module situé au-dessus de la racine de la coque lancée :
   les liens `planche/Theme -> ../../Theme` et `planche/Composants -> ../../Composants` les placent côte à côte
   sous cette racine, et `shell.qml` les importe par `import "Theme"` et `import "Composants"` ; les fichiers de
-  `Composants` importent `"../Theme"`, donc le même singleton. La directive `//@ pragma IconTheme Adwaita` en
+  `Composants` importent `"../Theme"`, donc le même singleton. La directive `//@ pragma IconTheme DuneI` en
   tête de `shell.qml` choisit le thème d'icônes, sans quoi `Icone` ne trouve aucune symbolique.
 - **Création de la fenêtre.** La fenêtre est créée par un `LazyLoader` en mode `activeAsync` dès que
   `Theme.ready` passe à vrai : elle se construit hors de la notification, dans le temps libre entre deux images.

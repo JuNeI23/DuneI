@@ -1,7 +1,7 @@
 """Module QML Barre — correspondances d'icônes (icones.js) éprouvées dans un vrai Quickshell sans fenêtre.
 
 Ignoré sans session Wayland ou sans Quickshell pour la partie qui lance qs ; la partie statique ne demande
-que le thème Adwaita.
+que le thème DuneI généré.
 """
 
 import json
@@ -9,15 +9,19 @@ import os
 import re
 import subprocess
 import time
+import tomllib
 import unittest
 from pathlib import Path
 
+from phosphor import charger
 from tests.test_coque_theme import DELAI, QS, ROOT, EssaiCoque
 
 ESSAI = ROOT / "coque" / "Barre" / "essai"
-ADWAITA = Path("/usr/share/icons/Adwaita")
-# Condition de saut commune aux tests qui vérifient des icônes dans Adwaita (absent du conteneur de CI).
-SANS_ADWAITA = unittest.skipUnless(ADWAITA.is_dir(), "thème Adwaita absent")
+SYMBOLIQUES = ROOT / "generated" / "icons" / "DuneI" / "symbolic"
+# Nom du thème d'icônes, lu dans les tokens (jamais écrit en dur).
+THEME = tomllib.loads((ROOT / "tokens.toml").read_text(encoding="utf-8"))["icons"]["xdg_theme"]
+# Noms d'icône littéraux des QML de production (propriétés icone: et nom:), hors bancs d'essai et planche.
+LITTERAUX_QML = re.compile(r'(?:icone|nom):[^\n]*?"([a-z0-9-]+)"')
 # Toutes les icônes que icones.js peut renvoyer, énumérées d'après ses règles.
 NIVEAUX = [f"battery-level-{n}{s}" for n in range(0, 101, 10) for s in ("", "-charging") if (n, s) != (100, "-charging")]
 ICONES = (NIVEAUX + ["battery-level-100-charged", "network-wireless-disabled", "network-wireless-offline",
@@ -26,13 +30,28 @@ ICONES = (NIVEAUX + ["battery-level-100-charged", "network-wireless-disabled", "
           + [f"network-wireless-signal-{p}" for p in ("none", "weak", "ok", "good", "excellent")])
 
 
-@SANS_ADWAITA
 class BarreStatiqueTest(unittest.TestCase):
-    """Chaque nom d'icône de la barre existe en variante symbolique dans Adwaita."""
+    """Chaque nom d'icône de la barre existe, en deux variantes, dans le thème DuneI généré."""
 
     def test_icones_existent(self):
-        manquantes = [n for n in ICONES if not any(ADWAITA.glob(f"symbolic/*/{n}-symbolic.svg"))]
+        manquantes = [f"{n}{s}-symbolic.svg" for n in ICONES for s in ("", "-fill")
+                      if not (SYMBOLIQUES / f"{n}{s}-symbolic.svg").is_file()]
         self.assertEqual(manquantes, [])
+
+    def test_icones_js_couvertes(self):
+        # Tout littéral rendu par les fonctions d'icône de icones.js, plus les icônes fixes, figure dans la table.
+        texte = (ROOT / "coque" / "Barre" / "icones.js").read_text(encoding="utf-8")
+        corps = "".join(re.findall(r"^function icone\w+.*?^}", texte, re.S | re.M))
+        # Ne sont pas des noms d'icône : « nuit » (argument d'iconeMoment), les cinq paliers du Wi-Fi et les
+        # préfixes ou suffixes que les fonctions concatènent (les noms complets viennent de ICONES).
+        litteraux = set(re.findall(r'"([a-z0-9-]+)"', corps)) - {"nuit", "none", "weak", "ok", "good", "excellent"}
+        litteraux -= {"network-wireless-signal-", "battery-level-", "-charging"}
+        fixes = {n for dossier in ("Barre", "Composants") for q in (ROOT / "coque" / dossier).glob("*.qml")
+                 for n in LITTERAUX_QML.findall(q.read_text(encoding="utf-8"))}
+        self.assertGreaterEqual(fixes, {"emblem-system", "network-vpn", "system-search", "edit-clear"})
+        table = charger(ROOT / "icones" / "correspondances.toml")[1]
+        manquants = sorted((litteraux | set(ICONES) | fixes) - set(table))
+        self.assertEqual(manquants, [])
 
     def test_aucune_couleur_dans_icones_js(self):
         texte = (ROOT / "coque" / "Barre" / "icones.js").read_text(encoding="utf-8")
@@ -159,10 +178,10 @@ class IndicateursStatiqueTest(unittest.TestCase):
             if nom != "JourNuit":
                 self.assertNotIn("cliquable: true", qml[f"{nom}.qml"], nom)
 
-    @SANS_ADWAITA
     def test_icones_fixes_existent(self):
         for nom in ("emblem-system", "network-vpn"):
-            self.assertTrue(any(ADWAITA.glob(f"symbolic/*/{nom}-symbolic.svg")), nom)
+            for suffixe in ("", "-fill"):
+                self.assertTrue((SYMBOLIQUES / f"{nom}{suffixe}-symbolic.svg").is_file(), nom)
 
 
 @unittest.skipUnless(os.environ.get("WAYLAND_DISPLAY") and QS, "session Wayland et Quickshell requis")
@@ -258,8 +277,11 @@ class BarreStructureTest(unittest.TestCase):
 
     def test_coque_et_unite(self):
         shell = (ROOT / "coque" / "shell.qml").read_text(encoding="utf-8")
-        for pragma in ("//@ pragma IconTheme Adwaita", "//@ pragma Env QSG_DISTANCEFIELD_ANTIALIASING=gray"):
+        for pragma in (f"//@ pragma IconTheme {THEME}", "//@ pragma Env QSG_DISTANCEFIELD_ANTIALIASING=gray"):
             self.assertIn(pragma, shell)
+        for chemin in ("coque/Barre/essai", "coque/Composants/essai", "coque/outils/planche", "coque/outils/verre"):
+            self.assertIn(f"//@ pragma IconTheme {THEME}",
+                          (ROOT / chemin / "shell.qml").read_text(encoding="utf-8"), chemin)
         self.assertIn("Variants", shell)
         self.assertIn("Presquile", shell)
         unite = (ROOT / "config" / "systemd" / "user" / "dunei-coque.service").read_text(encoding="utf-8")

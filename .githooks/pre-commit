@@ -19,7 +19,7 @@ git checkout-index -a --prefix="$t/" && rm -rf "$t/generated" || exit 1
 # Le shader compilé et son empreinte sont rendus au dossier jetable : make shaders ne recompile que si la source
 # indexée ne répond plus à l'empreinte indexée, car les octets du .qsb dépendent de la version de qsb (D85).
 git checkout-index -q --prefix="$t/" -- generated/materiau.frag.qsb generated/materiau.frag.sha256 2>/dev/null
-if ! sortie=$(make -s -C "$t" tokens motion energie shaders 2>&1); then
+if ! sortie=$(make -s -C "$t" tokens motion energie icones shaders 2>&1); then
     printf '%s\ncommit refusé : la génération échoue sur les sources indexées (L1-21).\n' "$sortie" >&2
     exit 1
 fi
@@ -28,7 +28,7 @@ git --work-tree="$t" diff --exit-code --stat -- generated/ >&2 && [ -z "$nouveau
 [ -z "$nouveaux" ] || printf 'produits par les générateurs, absents de l'"'"'index :\n%s\n' "$nouveaux" >&2
 cat >&2 <<'MSG'
 commit refusé : generated/ indexé diffère de ce que produisent les sources indexées (L1-21).
-generated/ ne s'édite pas à la main : régénérer (make tokens motion energie shaders), git add generated/,
+generated/ ne s'édite pas à la main : régénérer (make tokens motion energie icones shaders), git add generated/,
 puis recommencer le commit.
 MSG
 exit 1

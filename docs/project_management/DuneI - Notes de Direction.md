@@ -2,9 +2,9 @@
 
 Oct 10, 2026 · @Nicolas — révisée le 22 octobre 2026
 
-Version 1.30. Historique en fin de document.
+Version 1.31. Historique en fin de document.
 
-*Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent quarante-huit lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
+*Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent cinquante-huit lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
 
 ## En une phrase
 
@@ -118,7 +118,7 @@ L'ordre découle d'une seule règle : **chaque lot laisse la machine en état de
 | **4 — Accord visuel** | Thématisation Qt et GTK sur cibles réelles, premier lot d'icônes, fond d'écran, panneau de thème, extraction de teinte | Cohérente de bout en bout, bible opposable partout |
 | **5 — Écrans système et voix** | Réglages panneau par panneau, connexion, amorçage, « À propos », catalogue de messages, recette | **1.0** |
 
-Le détail — cent cinquante-deux éléments, chacun rattaché à un chantier, un lot et une nature — vit dans le document de périmètre et de backlog. **Cette note ne s'y substitue pas.**
+Le détail — cent cinquante-huit éléments, chacun rattaché à un chantier, un lot et une nature — vit dans le document de périmètre et de backlog. **Cette note ne s'y substitue pas.**
 
 ## Les risques, par ordre de gravité
 
@@ -450,17 +450,31 @@ et restait posé sur le Wi-Fi. Il se calcule désormais rangée par rangée, et 
 cliquables. Les deux bugs relevés ce jour-là sont corrigés ; il reste à les constater, l'un au prochain appui
 fantôme, l'autre après un vrai réveil.
 
-Prochaine étape : **choisir avec Nicolas entre le popover du réseau (L2-11) et le prochain module de la presqu'île.**
-Le premier trancherait le sort de `nm-applet` et fournirait au VPN son interrupteur ; le second serait le premier
-contenu à changer la forme de la presqu'île, donc à régler L2-48. L2-44 et L2-45 se traitent en passant, quand un
-composant touché par leurs reliquats est rouvert. Quel que soit le choix, il commence par l'enjeu et par un repérage,
-jamais par du code.
+Le même jour, une première tranche de L4-12 (D101) a été avancée avant L2-11, parce que Nicolas voulait que le
+popover réseau soit dessiné avec ses vraies icônes. Le thème d'icônes DuneI est livré : 50 noms freedesktop en deux
+variantes (`-symbolic` et `-fill-symbolic`), tirés de Phosphor 2.1.1 (MIT) par une table de correspondance, avec les SVG
+versionnés dans le dépôt (`make phosphor` les rafraîchit, seul accès au réseau), déployés pour GTK 3, GTK 4 et
+`gsettings`, et lus par les cinq coques. MacTahoe, thème façon macOS, a été envisagé puis écarté par Nicolas : Phosphor
+suffit et suit la bible ; SF Symbols est exclu par sa licence. Nicolas a jugé la graisse regular trop fine face aux
+boutons pleins et a retenu bold à l'écran, pour toutes les tailles ; le trait n'est pas calé au pixel aux tailles de la
+barre, écart qu'il a accepté. La barre et le sélecteur de fichiers GTK de Firefox sont validés ; la coque pèse 186,4 Mio
+de mémoire proportionnelle (178,3 Mio au relevé précédent) et 0,1 % de processeur au repos. Qt reste hors périmètre :
+Nicolas veut à terme un thème de plateforme Qt pour toute la session, nouvelle ligne L2-49.
+
+Prochaine étape : **L2-11, l'indicateur réseau et son popover.** Nicolas bascule souvent sur le partage de connexion de
+son téléphone quand le Wi-Fi local est « connecté sans internet », sans qu'aucune notification ne le dise : il veut une
+icône distincte pour cet état. Il change aujourd'hui de réseau par `nmtui` (dans un terminal : activer une connexion,
+relancer la recherche), complet mais lourd et laid, et il tient au bouton qui force la recherche. Il aime les
+notifications « connexion établie » et « connexion perdue ». Le sort de `nm-applet` reste à trancher. L2-44 et L2-45 se
+traitent en passant, quand un composant touché par leurs reliquats est rouvert. La feature commence par l'enjeu et par
+un repérage, jamais par du code.
 
 ## Historique des versions
 
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-10 | Version initiale |
+| 1.31 | 2026-10-31 | Première tranche du thème d'icônes DuneI (L4-12, D101) livrée et validée à l'écran, graisse bold ; L2-49 ajoutée (thème de plateforme Qt) ; prochaine étape : L2-11, l'indicateur réseau et son popover |
 | 1.30 | 2026-10-31 | Masque de saisie de la barre calculé rangée par rangée (L2-08, D100) : les deux bugs de la coque sont corrigés ; prochaine étape : popover du réseau ou prochain module de la presqu'île |
 | 1.29 | 2026-10-31 | Garde du bouton marche au réveil (L1-09, D99) contre l'appui fantôme ; prochaine étape : le bug 2 de la coque (barre inerte au survol et au clic gauche après un réveil), puis le popover du réseau ou le prochain module |
 | 1.28 | 2026-10-31 | La presqu'île (L2-46, L2-10, D96 à D98) livrée et validée à l'écran : quatre bureaux, forme, modules ; prochaine étape : popover du réseau ou prochain module |

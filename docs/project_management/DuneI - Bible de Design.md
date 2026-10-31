@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas
 
-Document normatif. Version 0.18. Historique en fin de document.
+Document normatif. Version 0.19. Historique en fin de document.
 
 ## Comment lire ce document
 
@@ -392,7 +392,7 @@ La distinction n'est pas décorative : elle détermine si l'icône suit le thèm
 
 #### 1. Symboliques d'action
 
-Contour monochrome, trait 1,5 px, suffixe `-symbolic`. Flèches, commandes d'édition, réglages, états, indicateurs.
+Contour monochrome, trait 2,25 px (Phosphor bold, retenu par Nicolas à l'écran, D101 ; la règle initiale était de 1,5 px), suffixe `-symbolic`. Flèches, commandes d'édition, réglages, états, indicateurs.
 
 - **Recolorées automatiquement** par la boîte à outils → suivent le thème.
 - Contour au repos, **variante pleine à l'état actif** — l'état est ainsi signalé par la forme et pas seulement par la couleur.
@@ -414,7 +414,7 @@ Icônes d'applications installées. **Intouchables**, conformément à la liste 
 
 ### Construction
 
-- Grille 24 × 24, trait 1,5 px, terminaisons et jonctions arrondies.
+- Grille 24 × 24, trait 2,25 px (Phosphor bold, retenu par Nicolas à l'écran, D101 ; la règle initiale était de 1,5 px), terminaisons et jonctions arrondies.
 - Alignement optique, pas mathématique.
 - **Le trait ne se met pas à l'échelle en glissant** : à chaque taille de rendu il est calé sur un nombre entier de pixels, sinon flou à 16 px.
 - Tailles : 16 px en liste dense · 20 px en panneau et barre d'outils · 24 px en dialogue · 48 px et plus dans les moments de spectacle.
@@ -432,6 +432,18 @@ Inherits=Adwaita,breeze-dark,hicolor
 `Adwaita` couvre l'essentiel côté GTK, `breeze-dark` complète côté Qt, `hicolor` est le filet de sécurité normalisé. **Couverture totale dès le premier jour**, qualité croissante à chaque icône ajoutée. C'est le même principe que « on ne dessine pas 400 icônes », appliqué au niveau du système.
 
 Le nom du thème dépend du chapitre identité, encore ouvert.
+
+#### État de la première tranche (D101)
+
+Le thème est livré sous le nom provisoire **DuneI** (`generated/icons/DuneI`, héritage lu dans `tokens.toml`). Sa source
+unique est la table `icones/correspondances.toml` (groupes `[barre]` et `[reseau]`), qui fait correspondre 50 noms
+freedesktop à des icônes Phosphor ; les SVG de Phosphor 2.1.1 (MIT) sont versionnés sous `icones/phosphor/` et se
+rafraîchissent par `make phosphor`. Chaque nom existe en `-symbolic` et en `-fill-symbolic`, recolorables par GTK et KDE.
+**La graisse retenue est bold, pour toutes les tailles** : Nicolas a jugé regular trop fine face aux boutons et aux
+reliefs pleins. Le principe « contour au repos, plein à l'état actif » demeure, avec un trait plus épais. **Écart de
+calage :** le trait de Phosphor n'est pas calé sur un nombre entier de pixels aux tailles de la barre (les contours
+sont aplatis à l'échelle libre), contrairement à la règle de construction ci-dessus ; l'écart a été accepté par Nicolas
+après validation à l'écran.
 
 ### Premier lot — par fréquence d'apparition
 
@@ -911,3 +923,4 @@ Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si 
 | 0.16 | 2026-10-26 | Annexe E : la barre système est transparente, sans matière ni couleur franche, texte sur bureau, 28 px (D89 à D92, D95) ; chapitre 5 : la translucidité ne cite plus la barre |
 | 0.17 | 2026-10-31 | Annexe E : la presqu'île (encoche continue de 28px, matière E3, couche haute, rôle `accent-discret`) et les quatre bureaux (D96 à D98) |
 | 0.18 | 2026-10-31 | Annexe E, barre système : survol réservé aux éléments cliquables (D100) |
+| 0.19 | 2026-10-31 | Chapitre 9 : première tranche du thème d'icônes DuneI, table de correspondance et sources Phosphor, graisse bold retenue, écart de calage au pixel accepté (D101) |
