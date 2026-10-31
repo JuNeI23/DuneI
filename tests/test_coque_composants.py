@@ -21,7 +21,8 @@ from tests.test_coque_theme import QS, ROOT, EssaiCoque
 # Messages d'erreur du moteur JavaScript ou d'une liaison QML qui ne doivent jamais atteindre le journal.
 ERREURS = ("TypeError", "ReferenceError", "Unable to assign")
 
-# Thèmes d'icônes du système, et symbolique d'Adwaita qui n'a pas de variante -fill (thème de transition, L4-12).
+# Thèmes d'icônes du système, et symbolique d'Adwaita : starred n'est pas dans DuneI, donc les tests de l'étoile
+# éprouvent l'héritage vers Adwaita (L4-12).
 ICONES = Path("/usr/share/icons")
 ETOILE = ICONES / "Adwaita" / "symbolic" / "status" / "starred-symbolic.svg"
 
@@ -215,7 +216,7 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
 
     @unittest.skipUnless(ETOILE.exists(), "thème Adwaita requis")
     def test_icone(self):
-        # Sans variante pleine demandée, l'icône lit la symbolique d'Adwaita et se charge.
+        # Sans variante pleine demandée, l'icône absente de DuneI est lue par héritage dans la symbolique d'Adwaita.
         self.demarrer()
         with Ouvertures(ICONES) as o:
             self.ipc("icone", "starred", "false")
@@ -225,10 +226,11 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
     def test_icone_repli(self):
         # L'adresse produite par Icone vise <nom>-symbolic sans variante pleine, et demande <nom>-fill-symbolic
         # avec <nom>-symbolic pour repli quand la variante pleine est voulue. Ce test ne vérifie que l'adresse.
-        # Limite constatée avec Adwaita (D82) : le chargeur d'icônes de Qt raccourcit le nom par ses tirets
+        # Limite constatée sur l'héritage vers Adwaita (D82) : le chargeur d'icônes de Qt raccourcit le nom par ses tirets
         # (starred-fill-symbolic, puis starred-fill, puis starred) avant que le repli de Quickshell n'entre en
         # jeu ; il ouvre donc la pixmap starred.png d'AdwaitaLegacy tant qu'aucun thème ne fournit la variante
-        # pleine. Le thème DuneI de L4-12 fournira les deux variantes de chaque icône, ce qui lève la limite.
+        # pleine. DuneI fournit les deux variantes de ses icônes ; seul un nom absent de DuneI, comme starred, subit
+        # encore cette limite, et c'est ce que ce test éprouve.
         self.demarrer()
         self.ipc("icone", "starred", "false")
         self.assertEqual(self.valeur("image").split(" ", 1)[1],
@@ -645,7 +647,7 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
     def test_recherche(self):
         # La recherche est un Champ en pilule (rayon de la moitié de sa hauteur), avec la loupe system-search à
         # gauche ; le bouton d'effacement edit-clear n'est visible que s'il y a du texte. Les deux icônes se
-        # résolvent dans Adwaita (Image.Ready vaut 1).
+        # résolvent dans le thème DuneI (Image.Ready vaut 1).
         self.demarrer()
         h = self.tokens55()[0]["density"]["comfortable"]["controlHeight"]
         self.assertEqual(self.valeur("recherche"), f"{h} {h / 2:g} system-search 1 false edit-clear 1")
