@@ -2362,3 +2362,53 @@ couleur de survol que si `element.cliquable && element.hovered`.
 
 *Touché : `coque/Barre/Barre.qml`, `coque/Barre/ElementBarre.qml`, `tests/test_barre.py`, carnet (§ La barre système —
 L2-08, L2-09), backlog (L2-08), bible (catalogue, barre système), notes de direction.*
+
+### D101 · Thème d'icônes DuneI : première tranche Phosphor, avancée avant L2-11
+
+2026-10-31. **Une première tranche de L4-12 est livrée avant L2-11 : un thème XDG « DuneI » de 50 noms freedesktop,
+tiré de Phosphor 2.1.1 en graisse bold.** `generated/icons/DuneI` est produit par `make icones`
+(`generate_icones.py`) à partir de la table `icones/correspondances.toml` (groupes `[barre]` et `[reseau]`) et des
+SVG Phosphor versionnés sous `icones/phosphor/` (dossiers `bold` et `fill`, avec leur `LICENSE`). Chaque nom est fourni
+sous `<nom>-symbolic.svg` et `<nom>-fill-symbolic.svg`, soit 100 fichiers. Le nom du thème et son héritage
+(`Adwaita,breeze-dark,hicolor`) sont lus dans `tokens.toml` (`[icons]`), jamais écrits en dur ailleurs.
+
+- **Raison.** Nicolas voulait que le popover réseau (L2-11) soit dessiné avec ses vraies icônes, et non avec celles
+  d'Adwaita à remplacer ensuite. La partie de L4-12 qui sert la coque passe donc avant L2-11 ; le reste de L4-12
+  (objets bicolores, grand lot par fréquence d'apparition, Qt) demeure au backlog.
+- **Sources.** `@phosphor-icons/core` 2.1.1, licence MIT, archive npm épinglée par sha256. Les SVG sont versionnés
+  dans le dépôt : `make install` ne touche jamais au réseau. Seul `make phosphor`, lancé à la main, télécharge et
+  rafraîchit `icones/phosphor/`. Les SVG sont recolorables par GTK et KDE (convention `ColorScheme-Text` et
+  `currentColor`).
+- **Correspondances partagées.** La batterie tient sur cinq paliers Phosphor, le Wi-Fi sur quatre (les niveaux
+  `none` et `weak` se confondent) ; `wifi-x` sert l'état hors ligne et l'état sans route ; `device-mobile` figure le
+  partage de connexion, `shield-check` le VPN, `network` le filaire, `arrow-clockwise` la relance de la recherche.
+- **Branchement.** `deploy.py` gagne la destination `icones` : lien `$XDG_DATA_HOME/icons/DuneI` vers
+  `generated/icons/DuneI`, `settings.ini` de GTK 3 et de GTK 4 marqués et jamais écrasés s'ils sont étrangers, et
+  `gsettings` `org.gnome.desktop.interface icon-theme DuneI`. Les cinq coques portent `//@ pragma IconTheme DuneI`. La
+  chaîne `make generes`, `make install` et le crochet pre-commit régénèrent le thème. Les tests vérifient que chaque
+  nom demandé par `icones.js` et par les QML de production a sa ligne dans la table : un nom oublié fait échouer
+  `make test` au lieu de retomber en silence sur Adwaita.
+- **Graisse.** Nicolas a jugé la graisse regular « creuse et fine » face aux boutons et aux reliefs pleins de la
+  coque. Une comparaison regular, bold et fill a été faite à l'écran ; il a retenu **bold pour toutes les tailles**
+  (`tokens.toml`, `variants = ["bold", "fill"]`). Le principe de la bible, contour au repos et plein à l'état actif,
+  est conservé avec un trait plus épais. Le trait de Phosphor n'est pas calé sur un nombre entier de pixels aux
+  tailles de la barre (les contours sont aplatis à l'échelle libre, `snap_stroke_to_pixel` ne s'y applique pas) :
+  écart accepté par Nicolas après validation à l'écran.
+- **Écarté.** MacTahoe, thème façon macOS (GPL-3.0), envisagé puis écarté par Nicolas : Phosphor suffit et suit la
+  bible. SF Symbols est exclu par sa licence.
+- **Hors périmètre : Qt.** Nicolas veut à terme la voie large, un thème de plateforme Qt pour toute la session
+  (`QT_QPA_PLATFORMTHEME`, qui touche aussi polices, couleurs et dialogues ; Dolphin est la seule application Qt).
+  Elle est reportée à la ligne L2-49 du backlog ; aucun paquet n'est ajouté.
+- **Vérifié.** Recette du 2026-10-31 : barre validée à l'écran par Nicolas, sélecteur de fichiers GTK de Firefox
+  validé (« c'est nickel »). Retour arrière éprouvé : `gsettings` remis sur Adwaita, puis `make install` remet DuneI.
+  Au repos sur 30 s, la coque consomme 0,1 % de processeur et 186,4 Mio de PSS (RSS 224,1 Mio), contre 178,3 Mio au
+  dernier relevé (D100).
+- **Incident de développement.** Avant correctif, un test de bout en bout a posé le vrai lien
+  `~/.local/share/icons/DuneI`. Les tests de déploiement isolent désormais `XDG_DATA_HOME`.
+- **Coût si faux.** Une table incomplète ou une graisse mal choisie se corrige en une ligne de `tokens.toml` ou de la
+  table, puis `make phosphor` et `make icones` ; aucun QML n'est à retoucher, car la coque ne connaît que des noms
+  freedesktop. Le seul vrai engagement est la dépendance à Phosphor, MIT, versionné dans le dépôt.
+
+*Touché : `icones/`, `generate_icones.py`, `phosphor.py`, `deploy.py`, `tokens.toml`, `Makefile`, `coque/` (directives
+`IconTheme`), `tests/`, carnet (§ Le thème d'icônes — L4-12), backlog (L4-12, L2-49), bible (chapitre 9), notes de
+direction.*

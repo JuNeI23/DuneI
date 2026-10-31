@@ -72,7 +72,7 @@ Quickshell, GTK 3 et 4 (`settings.ini`, `gsettings`).
 - Produit : SVG sous `icones/phosphor/<graisse>/<nom>.svg` et `icones/phosphor/fill/<nom>-fill.svg`, noms tels que
   dans l'archive (`assets/<graisse>/…`, `assets/fill/…`).
 
-- [ ] **Étape 1 : écrire les tests qui échouent** dans `tests/test_icones.py` :
+- [x] **Étape 1 : écrire les tests qui échouent** dans `tests/test_icones.py` :
   - `test_table_complete` : la table contient exactement les noms du § 5 de la conception (liste écrite dans le
     test : 11 `battery-level-N`, 10 `-charging`, `battery-level-100-charged`, 7 `network-wireless-*` de la barre,
     `bluetooth-active`, `bluetooth-disabled`, `preferences-system-notifications`, `notifications-disabled`,
@@ -82,15 +82,15 @@ Quickshell, GTK 3 et 4 (`settings.ini`, `gsettings`).
     `icones/phosphor/fill/<v>-fill.svg` existent.
   - `test_aucun_svg_orphelin` : aucun SVG versionné n'est absent de la table.
   - `test_doublon_refuse` : `charger` sur une table temporaire où un nom figure dans deux groupes lève `ValueError`.
-- [ ] **Étape 2 : lancer** `python3 -m unittest tests.test_icones -v` ; attendu : échec (module ou table absents).
-- [ ] **Étape 3 : écrire `phosphor.py`** : `charger` (ci-dessus) et `rafraichir(repo: Path) -> list[str]`
+- [x] **Étape 2 : lancer** `python3 -m unittest tests.test_icones -v` ; attendu : échec (module ou table absents).
+- [x] **Étape 3 : écrire `phosphor.py`** : `charger` (ci-dessus) et `rafraichir(repo: Path) -> list[str]`
   (télécharge l'archive par `urllib`, vérifie la somme, refuse sinon ; vide `icones/phosphor/<graisse>/` et
   `fill/`, y extrait les seuls SVG nommés par la table et `LICENSE` ; rend la liste des fichiers écrits). Lancer une
   première fois avec une somme vide qui fait afficher la somme réelle, la recopier dans la table après l'avoir
   vérifiée face à `npm view @phosphor-icons/core@2.1.1 dist.integrity` ou au registre. Cible
   `phosphor: ; $(PY) phosphor.py` dans le `Makefile`, documentée en tête.
-- [ ] **Étape 4 : lancer** `make phosphor`, puis les tests ; attendu : tout passe.
-- [ ] **Étape 5 : valider** `git add icones phosphor.py Makefile tests/test_icones.py` et commit.
+- [x] **Étape 4 : lancer** `make phosphor`, puis les tests ; attendu : tout passe.
+- [x] **Étape 5 : valider** `git add icones phosphor.py Makefile tests/test_icones.py` et commit.
 
 ### Tâche 2 : générateur du thème
 
@@ -111,7 +111,7 @@ Quickshell, GTK 3 et 4 (`settings.ini`, `gsettings`).
 - `recolorable` : sur la racine `<svg>`, `fill="currentColor"` et `class="ColorScheme-Text"`, puis une feuille
   `<style>.ColorScheme-Text{color:#bebebe}</style>` en premier enfant ; tout autre attribut et le dessin intacts.
 
-- [ ] **Étape 1 : écrire les tests qui échouent** :
+- [x] **Étape 1 : écrire les tests qui échouent** :
   - `test_index_theme` : `index_theme("DuneI", ["Adwaita","breeze-dark","hicolor"])` contient
     `Inherits=Adwaita,breeze-dark,hicolor`, `Directories=symbolic`, `Type=Scalable`.
   - `test_recolorable` : sur `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M0 0"/></svg>`,
@@ -122,12 +122,12 @@ Quickshell, GTK 3 et 4 (`settings.ini`, `gsettings`).
   - `test_source_manquante` : avec une table temporaire qui nomme un SVG absent, `FileNotFoundError` dont le message
     contient le chemin.
   - `test_genere_a_jour` : `generated/icons/DuneI/` égale une génération fraîche dans un dossier temporaire.
-- [ ] **Étape 2 : lancer** les tests ; attendu : échec.
-- [ ] **Étape 3 : écrire `generate_icones.py`** (interface ci-dessus, `--out generated` comme les autres
+- [x] **Étape 2 : lancer** les tests ; attendu : échec.
+- [x] **Étape 3 : écrire `generate_icones.py`** (interface ci-dessus, `--out generated` comme les autres
   générateurs ; `nom` et `herite` lus dans `tokens.toml` `[icons]`) ; `generer` vide `sortie/DuneI` avant d'écrire.
   Cible `icones: ; $(PY) generate_icones.py --out generated`, ajoutée aux dépendances de `generes` et `install`.
-- [ ] **Étape 4 : lancer** `make icones && make check` ; attendu : tout passe, `generated/icons/DuneI` suivi par git.
-- [ ] **Étape 5 : valider** et commit (le crochet pre-commit accepte `generated/` régénéré).
+- [x] **Étape 4 : lancer** `make icones && make check` ; attendu : tout passe, `generated/icons/DuneI` suivi par git.
+- [x] **Étape 5 : valider** et commit (le crochet pre-commit accepte `generated/` régénéré).
 
 ### Tâche 3 : déploiement et déclaration à GTK
 
@@ -150,7 +150,7 @@ Quickshell, GTK 3 et 4 (`settings.ini`, `gsettings`).
   3. `gsettings` sur `org.gnome.desktop.interface icon-theme DuneI` si `gsettings get` rend une autre valeur ;
      rien si `gsettings` est absent (signalement dans `NOTES`).
 
-- [ ] **Étape 1 : écrire les tests qui échouent** dans `tests/test_deploy.py`, sur une maison temporaire :
+- [x] **Étape 1 : écrire les tests qui échouent** dans `tests/test_deploy.py`, sur une maison temporaire :
   - `test_icones_premier_passage` : actions `mkdir`, `link`, deux `ecrire`, `gsettings` (gsettings simulé, valeur
     `'Adwaita'`) ;
   - `test_icones_idempotent` : après application, plan vide ;
@@ -158,10 +158,10 @@ Quickshell, GTK 3 et 4 (`settings.ini`, `gsettings`).
   - `test_icones_settings_etranger` : un `settings.ini` sans la marque donne une erreur qui le nomme, et aucune
     action `ecrire` sur lui ;
   - `test_icones_lien_etranger` : un dossier réel à `data_home/icons/DuneI` donne une erreur.
-- [ ] **Étape 2 : lancer** `python3 -m unittest tests.test_deploy -v` ; attendu : échec sur ces seuls tests.
-- [ ] **Étape 3 : écrire** `data_home`, `plan_icones` et l'action `gsettings` (description et exécution).
-- [ ] **Étape 4 : lancer** `make check` ; attendu : tout passe.
-- [ ] **Étape 5 : valider** et commit.
+- [x] **Étape 2 : lancer** `python3 -m unittest tests.test_deploy -v` ; attendu : échec sur ces seuls tests.
+- [x] **Étape 3 : écrire** `data_home`, `plan_icones` et l'action `gsettings` (description et exécution).
+- [x] **Étape 4 : lancer** `make check` ; attendu : tout passe.
+- [x] **Étape 5 : valider** et commit.
 
 ### Tâche 4 : la coque lit DuneI
 
@@ -175,7 +175,7 @@ Quickshell, GTK 3 et 4 (`settings.ini`, `gsettings`).
 **Interfaces :**
 - Consomme : `generated/icons/DuneI/symbolic/` (tâche 2), `phosphor.charger` (tâche 1).
 
-- [ ] **Étape 1 : adapter les tests**, qui doivent échouer :
+- [x] **Étape 1 : adapter les tests**, qui doivent échouer :
   - `test_barre.py` : `test_icones_existent` et `test_icones_fixes_existent` cherchent `<nom>-symbolic.svg` et
     `<nom>-fill-symbolic.svg` dans `generated/icons/DuneI/symbolic/`, sans saut conditionnel ; nouveau
     `test_icones_js_couvertes` : tout littéral `"[a-z0-9-]+"` rendu par les fonctions d'icône de
@@ -185,41 +185,41 @@ Quickshell, GTK 3 et 4 (`settings.ini`, `gsettings`).
   - `test_coque_composants.py` : `test_recherche` garde son assertion (les icônes se chargent), commentaire mis à
     DuneI ; les tests de l'étoile (`ETOILE`, ligne 216) restent sur Adwaita : ils éprouvent l'héritage, puisque
     `starred` n'est pas dans DuneI ; leur commentaire le dit.
-- [ ] **Étape 2 : lancer** `make test` ; attendu : échec du test de directive.
-- [ ] **Étape 3 : changer les cinq directives** et les commentaires.
-- [ ] **Étape 4 : lancer** `make check`, puis `make install` et `systemctl --user restart dunei-coque.service` ;
+- [x] **Étape 2 : lancer** `make test` ; attendu : échec du test de directive.
+- [x] **Étape 3 : changer les cinq directives** et les commentaires.
+- [x] **Étape 4 : lancer** `make check`, puis `make install` et `systemctl --user restart dunei-coque.service` ;
   attendu : tests verts, `journalctl --user -u dunei-coque -n 50` sans avertissement d'icône introuvable.
-- [ ] **Étape 5 : valider** et commit.
+- [x] **Étape 5 : valider** et commit.
 
 ### Tâche 5 : recette à l'écran avec Nicolas
 
 Aucun code ; ce qui est constaté va dans le carnet.
 
-- [ ] **Étape 1 : mesure** `coque/outils/mesure.sh` avant (sur `main`) et après ; relever PSS et processeur.
-- [ ] **Étape 2 : barre au jour et à la nuit**, capturée avec grim à l'échelle réelle (région de la barre), en
+- [x] **Étape 1 : mesure** `coque/outils/mesure.sh` avant (sur `main`) et après ; relever PSS et processeur.
+- [x] **Étape 2 : barre au jour et à la nuit**, capturée avec grim à l'échelle réelle (région de la barre), en
   `regular` ; puis, pour comparer, `graisse = "light"` et `"bold"` dans la table, `make phosphor icones install`,
   redémarrage de la coque, capture ; trois captures côte à côte montrées à Nicolas. Il choisit ; la table garde son
   choix, `make phosphor icones` remet le dépôt à cette seule graisse.
-- [ ] **Étape 3 : GTK** : sélecteur de fichiers de Firefox (Ctrl+O), capturé ; loupe et effacement viennent de DuneI,
+- [x] **Étape 3 : GTK** : sélecteur de fichiers de Firefox (Ctrl+O), capturé ; loupe et effacement viennent de DuneI,
   dossiers d'Adwaita, aucun carré vide.
-- [ ] **Étape 4 : retour arrière** : `gsettings set org.gnome.desktop.interface icon-theme Adwaita`, constater dans
+- [x] **Étape 4 : retour arrière** : `gsettings set org.gnome.desktop.interface icon-theme Adwaita`, constater dans
   Firefox, puis `make install` remet DuneI.
-- [ ] **Étape 5 : validation** de Nicolas à l'écran, notée telle quelle.
+- [x] **Étape 5 : validation** de Nicolas à l'écran, notée telle quelle.
 
 ### Tâche 6 : documentation
 
 **Fichiers :** `docs/journal-decisions.md` (D101), backlog, bible (chapitre 9), carnet, notes de direction ; table
 « Historique des versions » et numéro de version de chacun.
 
-- [ ] **Étape 1 : D101** : première tranche Phosphor avancée avant L2-11 ; MacTahoe écarté ; SVG versionnés et
+- [x] **Étape 1 : D101** : première tranche Phosphor avancée avant L2-11 ; MacTahoe écarté ; SVG versionnés et
   `make phosphor` hors ligne de l'installation ; correspondances partagées (batterie, Wi-Fi, `wifi-x`) ; graisse
   retenue à l'écran ; Qt reporté ; coût si faux.
-- [ ] **Étape 2 : backlog** : L4-12 « en cours (D101) », première tranche décrite ; nouvelle ligne pour le thème de
+- [x] **Étape 2 : backlog** : L4-12 « en cours (D101) », première tranche décrite ; nouvelle ligne pour le thème de
   plateforme Qt de toute la session (`QT_QPA_PLATFORMTHEME`, polices, couleurs, dialogues ; Dolphin), au numéro
   libre suivant du lot 2 ; décompte d'éléments mis à jour.
-- [ ] **Étape 3 : bible, chapitre 9** : trait de Phosphor non calé au pixel sous 24 px, si Nicolas l'a accepté ;
+- [x] **Étape 3 : bible, chapitre 9** : trait de Phosphor non calé au pixel sous 24 px, si Nicolas l'a accepté ;
   emplacement de la table et des sources.
-- [ ] **Étape 4 : carnet** : section de la feature, mesures, captures, recette ; **notes de direction** : paragraphe
+- [x] **Étape 4 : carnet** : section de la feature, mesures, captures, recette ; **notes de direction** : paragraphe
   du jour, dernier paragraphe « Prochaine étape : L2-11 », en rappelant ce que Nicolas a dit de `nmtui`, du partage
   de connexion et des notifications.
 - [ ] **Étape 5 : valider**, pousser la branche, ouvrir la PR.

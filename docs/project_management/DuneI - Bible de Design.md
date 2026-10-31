@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas
 
-Document normatif. Version 0.18. Historique en fin de document.
+Document normatif. Version 0.19. Historique en fin de document.
 
 ## Comment lire ce document
 
@@ -432,6 +432,18 @@ Inherits=Adwaita,breeze-dark,hicolor
 `Adwaita` couvre l'essentiel côté GTK, `breeze-dark` complète côté Qt, `hicolor` est le filet de sécurité normalisé. **Couverture totale dès le premier jour**, qualité croissante à chaque icône ajoutée. C'est le même principe que « on ne dessine pas 400 icônes », appliqué au niveau du système.
 
 Le nom du thème dépend du chapitre identité, encore ouvert.
+
+#### État de la première tranche (D101)
+
+Le thème est livré sous le nom provisoire **DuneI** (`generated/icons/DuneI`, héritage lu dans `tokens.toml`). Sa source
+unique est la table `icones/correspondances.toml` (groupes `[barre]` et `[reseau]`), qui fait correspondre 50 noms
+freedesktop à des icônes Phosphor ; les SVG de Phosphor 2.1.1 (MIT) sont versionnés sous `icones/phosphor/` et se
+rafraîchissent par `make phosphor`. Chaque nom existe en `-symbolic` et en `-fill-symbolic`, recolorables par GTK et KDE.
+**La graisse retenue est bold, pour toutes les tailles** : Nicolas a jugé regular trop fine face aux boutons et aux
+reliefs pleins. Le principe « contour au repos, plein à l'état actif » demeure, avec un trait plus épais. **Écart de
+calage :** le trait de Phosphor n'est pas calé sur un nombre entier de pixels aux tailles de la barre (les contours
+sont aplatis à l'échelle libre), contrairement à la règle de construction ci-dessus ; l'écart a été accepté par Nicolas
+après validation à l'écran.
 
 ### Premier lot — par fréquence d'apparition
 
@@ -910,4 +922,5 @@ Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si 
 | 0.15 | 2026-10-25 | Chapitre 4 : texte de la coque en niveaux de gris ; chapitre 5 : matière tracée par un shader, aucune texture visible, verre de la coque (verre dépoli le jour, opaque la nuit, translucidité propre à la fenêtre de coque, rien d'opaque sur le verre au repos), champ clair et creusé par une ombre interne en mode clair ; chapitre 7 : aucun contour de focus dans un menu ; annexe E : placement des overlays contextuels, barre, rangée, champ, menu contextuel et popover précisés (D85 à D88) |
 | 0.16 | 2026-10-26 | Annexe E : la barre système est transparente, sans matière ni couleur franche, texte sur bureau, 28 px (D89 à D92, D95) ; chapitre 5 : la translucidité ne cite plus la barre |
 | 0.17 | 2026-10-31 | Annexe E : la presqu'île (encoche continue de 28px, matière E3, couche haute, rôle `accent-discret`) et les quatre bureaux (D96 à D98) |
+| 0.19 | 2026-10-31 | Chapitre 9 : première tranche du thème d'icônes DuneI, table de correspondance et sources Phosphor, graisse bold retenue, écart de calage au pixel accepté (D101) |
 | 0.18 | 2026-10-31 | Annexe E, barre système : survol réservé aux éléments cliquables (D100) |
