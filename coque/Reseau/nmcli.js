@@ -168,6 +168,27 @@ function argsModifier(uuid, changes) {
     return args
 }
 
+// argsAjouter — arguments de « nmcli connection add » pour un nouveau profil Wi-Fi (« Nouveau réseau » de la fenêtre).
+// Entrée : r, objet {nom (SSID, aussi nom du profil), securise (bool : WPA2-WPA3 personnel), mdp (mot de passe, lu
+// seulement si securise), cache (bool : réseau qui ne diffuse pas son nom)}.
+// Sortie : tableau d'arguments (sans « nmcli ») ; chaque valeur est un argument entier, jamais interprété par un
+// shell. Erreurs : aucune ; nmcli refuse lui-même un nom vide ou un mot de passe invalide. Dépendances : aucune.
+function argsAjouter(r) {
+    return ["connection", "add", "type", "wifi", "con-name", r.nom, "ssid", r.nom,
+            ...(r.securise ? ["wifi-sec.key-mgmt", "wpa-psk", "wifi-sec.psk", r.mdp] : []),
+            ...(r.cache ? ["802-11-wireless.hidden", "yes"] : [])]
+}
+
+// uuidAjoute — uuid du profil que vient de créer « nmcli connection add ».
+// Entrée : sortie, la sortie standard de nmcli (« Connection 'nom' (uuid) successfully added. », ou sa traduction).
+// Sortie : le dernier uuid entre parenthèses de la sortie (le nom du profil peut en contenir), "" s'il manque.
+// Erreurs : aucune. Dépendances : aucune.
+function uuidAjoute(sortie) {
+    // String.matchAll manque au moteur JavaScript de Qt : match avec le drapeau g rend les correspondances entières.
+    const l = sortie.match(/\([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\)/gi) ?? []
+    return l.length ? l[l.length - 1].slice(1, -1) : ""
+}
+
 // etatAppareils — dérive l'état de connexion de la liste des appareils de Quickshell.Networking.
 // Entrées : appareils, tableau d'appareils (type, connected, name, networks.values) ; typeWifi et typeFilaire,
 // valeurs de DeviceType.Wifi et DeviceType.Wired. Sortie : {carte: bool (une carte Wi-Fi existe), filaire: bool

@@ -124,6 +124,20 @@ class NmcliTest(EssaiCoque, unittest.TestCase):
             self.appeler("argsModifier", UUID, {"methode": "auto", "adresse": "1.2.3.4/24"}),
             ["connection", "modify", UUID, "ipv4.method", "auto", "ipv4.addresses", "", "ipv4.gateway", ""])
 
+    def test_args_ajouter(self):
+        # Réseau ouvert et visible : ni sécurité ni « hidden » ; un nom hostile passe tel quel, en un seul argument.
+        self.assertEqual(self.appeler("argsAjouter", {"nom": "Café: \\x", "securise": False, "mdp": "", "cache": False}),
+                         ["connection", "add", "type", "wifi", "con-name", "Café: \\x", "ssid", "Café: \\x"])
+        # Réseau sécurisé et caché : WPA2-WPA3 personnel (wpa-psk) et son mot de passe, puis « hidden yes ».
+        self.assertEqual(self.appeler("argsAjouter", {"nom": "Maison", "securise": True, "mdp": "m0t de passe",
+                                                      "cache": True}),
+                         ["connection", "add", "type", "wifi", "con-name", "Maison", "ssid", "Maison",
+                          "wifi-sec.key-mgmt", "wpa-psk", "wifi-sec.psk", "m0t de passe", "802-11-wireless.hidden", "yes"])
+
+    def test_uuid_ajoute(self):
+        self.assertEqual(self.appeler("uuidAjoute", f"Connection 'Maison (2)' ({UUID}) successfully added.\n"), UUID)
+        self.assertEqual(self.appeler("uuidAjoute", ""), "")
+
     def test_args_modifier_cle_inconnue(self):
         r = self.appeler("argsModifier", UUID, {"bidon": "x"})
         self.assertIsInstance(r, str)
