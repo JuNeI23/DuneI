@@ -159,7 +159,7 @@ class BureauxModuleTest(PresquileIpc, unittest.TestCase):
     def test_largeur_implicite(self):
         # 4 × 7 + (22 − 7) + 3 × 8 + 2 × 14 = 95, sur la hauteur de la presqu'île.
         etat = self.etat(1)
-        self.assertEqual((etat["largeur"], etat["hauteur"]), (95, 34))
+        self.assertEqual((etat["largeur"], etat["hauteur"]), (95, 28))
 
 
 # Tracé de la variante D de la planche forme.html (132 × 34, évasement 13), validée à l'écran par Nicolas.
@@ -182,11 +182,11 @@ class EncocheTest(PresquileIpc, unittest.TestCase):
     """Forme de l'encoche continue : dimensions, corps servant de masque, tracé paramétrique et capture."""
 
     def test_dimensions(self):
-        # Corps 96 × 34 et évasement 13 : 96 + 2 × 13 = 122 de large, le corps commence après l'évasement gauche.
+        # Corps 96 × 28 (hauteur des jetons) et évasement 13 : 96 + 2 × 13 = 122 de large, le corps commence après l'évasement gauche.
         geometrie = self.json("encoche")
         geometrie.pop("trace")
-        self.assertEqual(geometrie, {"largeur": 122, "hauteur": 34, "corpsX": 13, "corpsLargeur": 96,
-                                     "corpsHauteur": 34})
+        self.assertEqual(geometrie, {"largeur": 122, "hauteur": 28, "corpsX": 13, "corpsLargeur": 96,
+                                     "corpsHauteur": 28})
 
     def test_etirement(self):
         # Porter le corps à 140 redessine la forme sans autre intervention ni erreur au journal.
@@ -196,8 +196,9 @@ class EncocheTest(PresquileIpc, unittest.TestCase):
                 self.assertNotIn(erreur, self.journal())
 
     def test_trace_planche(self):
-        # Au corps de la planche (106), le tracé paramétrique redonne exactement celui de la variante D.
-        self.assertEqual(self.json("etirerEncoche", 106)["trace"], TRACE_PLANCHE)
+        # Aux dimensions de la planche (106 × 34, évasement 13, rayon 10), le tracé paramétrique redonne exactement
+        # celui de la variante D, quelle que soit la hauteur des jetons.
+        self.assertEqual(self.appeler("tracerEncoche", 106, 34, 13, 10), TRACE_PLANCHE)
 
     def test_capture(self):
         # La vitrine, rendue hors écran, s'enregistre en PNG : de quoi comparer la forme à la planche.

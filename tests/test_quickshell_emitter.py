@@ -37,7 +37,7 @@ class QuickshellEmitterTest(unittest.TestCase):
 
     def test_presquile(self):
         """Vérifie les sept dimensions de la presqu'île, en pixels logiques."""
-        self.assertEqual(self.out["presquile"], {"hauteur": 34, "evasement": 13, "rayon": 10, "point": 7,
+        self.assertEqual(self.out["presquile"], {"hauteur": 28, "evasement": 13, "rayon": 10, "point": 7,
                                                  "pilule": 22, "ecart": 8, "marge": 14})
 
     def test_accent_discret(self):

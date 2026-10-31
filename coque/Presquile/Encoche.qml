@@ -14,7 +14,7 @@ import "../Composants"
 // Le tracé est une liaison : changer largeurCorps ou hauteur le redessine sans autre intervention (étirement par
 // ressorts, conception § 5). Rien ne s'anime de soi-même : la texture et le flou ne se recalculent qu'au changement.
 // Entrées : largeurCorps, largeur du corps sans les évasements, 0 par défaut ; hauteur, evasement, rayon, lus dans
-//           Theme.tokens.presquile par défaut (34, 13 et 10 px logiques) ; verre, vrai pour la forme d'une fenêtre de
+//           Theme.tokens.presquile par défaut (28, 13 et 10 px logiques) ; verre, vrai pour la forme d'une fenêtre de
 //           coque, que le compositeur floute, vrai par défaut comme les autres surfaces de coque.
 // Sorties : implicitWidth, largeurCorps + 2 × evasement ; implicitHeight, hauteur ; corps, rectangle du corps sans
 //           les évasements, masque de saisie de la surface ; trace, tracé SVG de la forme, lu par les essais ; marge,

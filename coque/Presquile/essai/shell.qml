@@ -88,6 +88,13 @@ ShellRoot {
         // Sortie : la géométrie, comme encoche. Erreurs : aucune. Dépendances : encoche, Encoche.
         function etirerEncoche(l: real): string { essaiEncoche.largeurCorps = l; return encoche() }
 
+        // tracerEncoche — tracé d'une Encoche éphémère aux dimensions explicites, indépendante des jetons.
+        // Entrées : l, largeur du corps ; h, hauteur ; e, évasement ; r, rayon (px logiques).
+        // Sortie : le tracé SVG. Erreurs : aucune. Dépendances : Encoche.
+        function tracerEncoche(l: real, h: real, e: real, r: real): string {
+            return essaiEncoche.tracer(l, h, e, r)
+        }
+
         // bureauxEtat — pose idActif et special du module des bureaux d'essai (jamais Hyprland) et rend son état.
         // Entrées : idActif ; special, nom du spécial ouvert ou « - » pour aucun ; survol, index du point survolé ou −1.
         // Sortie : JSON {largeurs, couleurs, accentDiscret, textTertiary, largeur, hauteur} : largeurs et couleurs cibles de chaque point, et dimensions implicites.
