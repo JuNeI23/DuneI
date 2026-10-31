@@ -15,6 +15,8 @@ function M.apply()
             kb_options = "compose:ralt",
             touchpad = { natural_scroll = true, clickfinger_behavior = true },
         },
+        -- Un balayage depuis le dernier bureau ne doit pas en créer un nouveau : leur nombre est fixé par les jetons.
+        gestures = { workspace_swipe_create_new = false },
     })
 end
 

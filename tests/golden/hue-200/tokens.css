@@ -31,6 +31,7 @@
 
   --accent: oklch(0.530 0.1500 200);
   --accent-standalone: oklch(0.730 0.1500 200);
+  --accent-discret: oklch(0.680 0.0900 200);
   --on-accent: oklch(0.990 0.0040 200);
 
   --cat-0: oklch(0.730 0.1300 200);

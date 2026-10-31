@@ -156,6 +156,7 @@
           "controlOff": "#192728",
           "accent": "#007b80",
           "accentStandalone": "#00bfc6",
+          "accentDiscret": "#49a9ae",
           "onAccent": "#f9fdfd",
           "knob": "#ebf8f9",
           "error": "#d33a3c",
@@ -638,6 +639,7 @@
           "controlOff": "#53c1c7",
           "accent": "#007b80",
           "accentStandalone": "#00686c",
+          "accentDiscret": "#49a9ae",
           "onAccent": "#f9fdfd",
           "knob": "#ffffff",
           "error": "#810010",
@@ -1122,6 +1124,7 @@
           "controlOff": "#1d1d1d",
           "accent": "#007b80",
           "accentStandalone": "#00bfc6",
+          "accentDiscret": "#49a9ae",
           "onAccent": "#f9fdfd",
           "knob": "#f5f5f5",
           "error": "#d33a3c",
@@ -1604,6 +1607,7 @@
           "controlOff": "#dbdbdb",
           "accent": "#007b80",
           "accentStandalone": "#00686c",
+          "accentDiscret": "#49a9ae",
           "onAccent": "#f9fdfd",
           "knob": "#ffffff",
           "error": "#990016",
@@ -2090,5 +2094,17 @@
     "texteFonceSurvol": "#484848",
     "seuil": 0.18,
     "logo": "/usr/share/pixmaps/archlinux-logo.svg"
+  },
+  "bureauxVirtuels": {
+    "nombre": 4
+  },
+  "presquile": {
+    "hauteur": 28,
+    "evasement": 13,
+    "rayon": 10,
+    "point": 7,
+    "pilule": 22,
+    "ecart": 8,
+    "marge": 14
   }
 }

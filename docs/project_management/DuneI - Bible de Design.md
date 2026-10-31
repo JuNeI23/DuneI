@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas
 
-Document normatif. Version 0.16. Historique en fin de document.
+Document normatif. Version 0.17. Historique en fin de document.
 
 ## Comment lire ce document
 
@@ -841,6 +841,7 @@ Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si 
 | Bureau | E0 | `surface` | `spectacle` | Registre de spectacle |
 | Fenêtre tuilée | E1 | `surface` | `reflow` | **Aucune ombre, aucune bordure.** Gouttière 8px, rayon 12. Fenêtre active : les autres portent le modificateur `container_inactive` |
 | Barre système | aucune (transparente) | `text` + `interactive` | `state` | 28px, zone exclusive de 28px. Aucun fond, aucun verre, aucune capsule, de nuit comme de jour (D89). Texte et icônes posés sur le bureau, d'un clair ou d'un foncé choisi d'après le fond réel (`bureau.json`, D90) ; survol un peu plus sombre ou plus clair, appui et menu ouvert à `accentStandalone` (D92). Icônes à 16px, logo à 20px, texte à l'échelon 3 (D95). Fonctions coupées : forme barrée (D91) |
+| Presqu'île | E3 | `state` | `state` | Encoche continue au centre du haut de l'écran, 28px de haut comme la barre, couche haute : le plein écran la recouvre (D97). Elle montre les quatre bureaux de DuneI (D96) : points identiques en `textDisabled`, pilule d'accent discret (`accentDiscret`, identique de jour et de nuit) sur le bureau courant ; pilule grisée tant que le bureau spécial est ouvert. Survol en `textTertiary` (D92). Surface, forme et modules de contenu sont indépendants (D98) |
 | Barre latérale | E2 | `surface` + `row` | `state` | 240px, redimensionnable 180–400 par pas de 4. Sous 480px de conteneur → icônes seules |
 | En-tête de panneau | E2 | `surface` + `text` | — | Sheen autorisé : hauteur sous 80px |
 | Rangée de liste | — | `row` | `state` | Transparente au repos. Sélection en pastille arrondie, en retrait des bords. Focus = **contour intérieur pleine largeur**, décalage −1, qui suit l'arrondi. Jamais d'anneau. La liste est un seul arrêt de tabulation |
@@ -908,3 +909,4 @@ Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si 
 | 0.14 | 2026-10-25 | Chapitre 2 : seconde dérogation, bornée, du contraste (texte sur l'accent muet de l'état inactif au jour, Lc 41, plancher `on-accent-muted`) (D83) |
 | 0.15 | 2026-10-25 | Chapitre 4 : texte de la coque en niveaux de gris ; chapitre 5 : matière tracée par un shader, aucune texture visible, verre de la coque (verre dépoli le jour, opaque la nuit, translucidité propre à la fenêtre de coque, rien d'opaque sur le verre au repos), champ clair et creusé par une ombre interne en mode clair ; chapitre 7 : aucun contour de focus dans un menu ; annexe E : placement des overlays contextuels, barre, rangée, champ, menu contextuel et popover précisés (D85 à D88) |
 | 0.16 | 2026-10-26 | Annexe E : la barre système est transparente, sans matière ni couleur franche, texte sur bureau, 28 px (D89 à D92, D95) ; chapitre 5 : la translucidité ne cite plus la barre |
+| 0.17 | 2026-10-31 | Annexe E : la presqu'île (encoche continue de 28px, matière E3, couche haute, rôle `accent-discret`) et les quatre bureaux (D96 à D98) |

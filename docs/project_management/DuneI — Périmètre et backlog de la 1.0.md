@@ -2,9 +2,9 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.28. Historique en fin de document.
+Version 1.29. Historique en fin de document.
 
-La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **155 éléments** répartis en **cinq lots**, sur six chantiers.
+La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **157 éléments** répartis en **cinq lots**, sur six chantiers.
 
 Ce document dit ce qui est attendu, dans quel ordre, et à quelle condition c'est terminé. Il ne dit pas à quoi ça ressemble — c'est le rôle de la bible de design. En cas de contradiction : la bible l'emporte sur l'apparence, ce document l'emporte sur le périmètre.
 
@@ -262,7 +262,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L2-07 | B | Écrit | Mode mouvement réduit |
 | L2-08 | B | Écrit | Barre système — structure, 32 px, couleur franche du thème — **fait (D89 à D92, D94, D95)** : barre transparente sans fond ni couleur franche, 28 px (ramenée de 32 à la recette), texte sur bureau choisi d'après `bureau.json`, survol et appui sans capsule, neuf indicateurs (logo, horloge, notifications, batterie, jour/nuit, Wi-Fi, VPN, Bluetooth, paramètres), coque de session `dunei-coque.service` ; recette validée à l'écran le 2026-10-26, **VPN non couvert, à éprouver quand un VPN existera** |
 | L2-09 | B | Écrit | Barre système — horloge, chiffres tabulaires — **fait (D95)** : « lun. 26 oct. 14:32 » en français, chiffres tabulaires par `Theme.police(echelon, moyen, tabulaire)`, précision à la minute |
-| L2-10 | B | Écrit | Barre système — indicateur de bureaux virtuels — **déplacé (D93)** : l'indicateur quitte la barre et rejoint la presqu'île (L2-46) |
+| L2-10 | B | Écrit | Barre système — indicateur de bureaux virtuels — **fait (D96, D97)** : déplacé dans la presqu'île (D93, L2-46), quatre points identiques et pilule d'accent discret sur le bureau courant |
 | L2-11 | B | Écrit | Indicateur réseau et son popover ; décider du sort de `nm-applet`, qui passe désormais par `session.toml` et son unité `nm-applet.service` (L1-10, D50) : le garder, ou le remplacer et retirer alors sa ligne et son unité (D40) |
 | L2-12 | B | Écrit | Indicateur audio et son popover — volume, sorties ; niveau du micro numérique, qui sature à 100 % (relevé du 2026-10-15, D38) |
 | L2-13 | B | Écrit | Indicateur d'énergie et son popover |
@@ -298,7 +298,9 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L2-43 | D | Configuré | Thème de curseurs — repérage : Bibata, celui de Linux Mint, face à d'autres, au format hyprcursor (D82) |
 | L2-44 | C | Écrit | Reliquats des thèmes statiques (L2-40) — au jour, `Compteur` et piste de la `Jauge` sans contour, sélection inactive d'une liste presque invisible ; texte des contrôles du jour thématisé descendu à Lc 65 au survol et à la pression, sans plancher ; disque du `knob` et poignée désactivés qui ne s'animent plus (hors `ColorSpring`) ; la planche ne montre plus les couleurs des pastilles ; test de la suppression de `theme.json` pendant l'exécution (D83) |
 | L2-45 | C | Écrit | Reliquats de l'élévation (L2-04) — **à juger à l'écran** : liserés en rangées droites qui ne suivent pas l'arc des coins, liseré clair à 75 % de couverture sur une surface décalée d'un quart de pixel (échelle 1,25), ombre E3 qui transparaît d'environ 4 % sous le verre du jour, champ du `Compteur` sans ombre interne alors que `Champ` en porte une, ombre E2 du jour sous la barre sans objet (la barre de L2-08 est transparente et ne porte aucune matière, D89 ; le point 3 de la recette n'a été vu que sur les overlays) ; **placement** : position de l'ancre lue à l'ouverture, qui ne suit pas une ancre qui bouge ; serrage vertical laissé au compositeur ; **tests** : liserés transparents au jour non testés, verre du jour testé en E2 seulement, câblage d'`Overlay` sur `ancrage.js` prouvé par captures seulement, gardes statiques (pragma du texte, namespaces lus comme littéraux, namespace de la fenêtre d'attention), `test_blur_popups_global_inactif` textuel, `expected()` de `test_hyprland` qui admet les littéraux 8 et 2 (ils viennent des jetons), tests du crochet qui exigent `qsb` sans saut ; **robustesse** : `blur_size` et `blur_passes` non validés, `glass` surchargé dans `familles.<f>.moments.<m>` qui échapperait au contrôle d'`ignore_alpha`, `min()` sur des moments vides (erreur opaque dans `hyprland.py`), `Theme.fichier` qui n'encode pas le chemin de son URL, bascule du banc du verre qui lève une erreur pour un nom inconnu ; **outillage** : `verre.sh` qui duplique la garde et la génération de `planche.sh`, `estMateriau` de la coque d'essai fondé sur `toString()` ; consommation de la coque avec le verre non relevée en chiffres (D80) ; **forme** : docstring de `hyprland.emit` incomplète, lignes de plus de 120 colonnes (`deploy.py`, `hyprland.py`, tests, coques d'essai) |
-| L2-46 | B | Écrit | Presqu'île — surface séparée au centre du haut de l'écran, plus haute que la barre, qui s'étire à la manière de l'îlot dynamique, sans zone exclusive ni masque autre que sa forme (D93) ; elle reprend L2-10 (indicateur de bureaux virtuels, au changement de bureau) ; namespace `dunei-presquile` déjà réservé dans `tokens.toml` ; choix de sa couche (haute ou overlay) à faire à son repérage |
+| L2-46 | B | Écrit | Presqu'île — surface séparée au centre du haut de l'écran, plus haute que la barre, qui s'étire à la manière de l'îlot dynamique, sans zone exclusive ni masque autre que sa forme (D93) — **fait (D96 à D98)** : encoche continue de 28 px en couche haute, matière E3, trois parties indépendantes (surface, forme, modules), module des bureaux (quatre bureaux, souris, bureau spécial) ; recette du 2026-10-31 validée à l'écran |
+| L2-47 | B | Écrit | Mouvement réduit dans la coque — l'interrupteur du mode (L2-07) n'est lu par aucun composant ; `Ressort` et `ColorSpring` devraient le respecter |
+| L2-48 | B | Écrit | Presqu'île — transitions d'apparition et de disparition (plein écran, démarrage, changement de module), à concevoir avec le premier module qui change sa forme (D98) |
 
 ### Lot 3 — la bascule
 
@@ -400,7 +402,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L5-29 | — | Écrit | Passe de regard complète — étage 3 |
 | L5-30 | — | Écrit | Résorber les points ouverts de l'annexe C |
 
-**Volume total : 155 éléments** — 106 écrits, 42 configurés, 5 offerts, 2 mixtes.
+**Volume total : 157 éléments** — 108 écrits, 42 configurés, 5 offerts, 2 mixtes.
 
 Les deux tiers du travail sont de l'écrit, et les trois quarts de cet écrit se concentrent sur la coque et les écrans système. C'est cohérent avec la stratégie retenue, et c'est là que tout le risque se trouve.
 
@@ -504,6 +506,7 @@ Le choix de la distribution de base et du compositeur, précédemment ouverts, s
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-12 | Version initiale, 137 éléments |
+| 1.29 | 2026-10-31 | L2-46 et L2-10 faits : la presqu'île, quatre bureaux (D96 à D98) ; ajout de L2-47 (mouvement réduit dans la coque) et de L2-48 (transitions de la presqu'île) ; 157 éléments |
 | 1.28 | 2026-10-26 | L2-08 et L2-09 faits : barre système transparente, texte sur bureau, neuf indicateurs, coque de session (D89 à D95) ; L2-10 déplacé vers la presqu'île, nouvelle ligne L2-46 ; correction de `#120601` en `#0f0703` dans L2-27 ; ombre E2 de la barre sans objet (L2-45) ; VPN non éprouvé faute de VPN sur caladan. 155 éléments |
 | 1.27 | 2026-10-25 | L2-04 et L2-05 faits : élévation, verre dépoli le jour et opaque la nuit, matière par shader, tramage IGN (D85, D87, D88) ; L2-41 fermé, non retenu (D86) ; ajout de L2-45, reliquats de l'élévation (rendu des liserés et de l'ombre sous le verre, placement des overlays, tests, robustesse du générateur et des outils, consommation non relevée, ombre E2 de la barre non vue, littéraux admis par `test_hyprland`). 154 éléments |
 | 1.26 | 2026-10-25 | L2-40 fait : thèmes statiques, famille et moment (D83, D84) ; le bouton jour/nuit et les paramètres appelleront `dunei-theme` ; ajout de L2-44, reliquats des thèmes (contours du compteur et de la jauge, sélection inactive du jour, états du texte du jour thématisé, animation du knob désactivé, pastilles de la planche, test de `theme.json` supprimé). 153 éléments |

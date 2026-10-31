@@ -235,6 +235,88 @@ class CoqueThemeTest(EssaiCoque, unittest.TestCase):
         ligne = [l for l in self.journal().splitlines() if "essai : raideur " in l][-1]
         self.assertEqual(float(ligne.split("essai : raideur ", 1)[1]), 1, self.journal())
 
+    def lire_course(self) -> dict:
+        """Interroge le Ressort numérique de la coque d'essai et lit sa réponse dans le journal.
+
+        Entrées : aucune. Sortie : dictionnaire {valeur, pic, mobile} de la dernière ligne « essai : course ».
+        Erreurs : échec du test si la réponse n'arrive pas. Dépendances : ipc, attendre, journal.
+        """
+        avant = self.journal().count("essai : course")
+        self.ipc("course")
+        self.attendre("essai : course", avant + 1)
+        champs = [l for l in self.journal().splitlines() if "essai : course" in l][-1].split("essai : course ", 1)[1].split()
+        return {"valeur": float(champs[1]), "pic": float(champs[3]), "mobile": champs[5] == "true"}
+
+    def test_ressort_atteint_sa_cible(self):
+        self.installer(55)
+        self.lancer(self.dir)
+        self.attendre("essai : prêt true")
+        self.ipc("cible", "22")
+        # Marge large devant les 186 ms de navigate : la machine peut être chargée.
+        fin = time.monotonic() + 3
+        etat = self.lire_course()
+        while etat["mobile"] and time.monotonic() < fin:
+            time.sleep(0.05)
+            etat = self.lire_course()
+        self.assertEqual(etat["valeur"], 22, self.journal())
+        self.assertFalse(etat["mobile"], self.journal())
+        # navigate n'a aucun dépassement : la valeur ne franchit jamais la cible.
+        self.assertLessEqual(etat["pic"], 22, self.journal())
+
+    def test_ressort_sans_saut_en_vol(self):
+        self.installer(55)
+        self.lancer(self.dir)
+        self.attendre("essai : prêt true")
+        self.ipc("cible", "22")
+        time.sleep(0.05)
+        self.ipc("saut", "7")
+        self.attendre("essai : saut avant ")
+        ligne = [l for l in self.journal().splitlines() if "essai : saut avant " in l][-1]
+        avant, apres = ligne.split("essai : saut avant ", 1)[1].split(" après ")
+        (x0, v0, m0), (x1, v1, m1) = avant.split(), apres.split()
+        # En vol au moment du recible, faute de quoi le test ne prouverait rien.
+        self.assertEqual((m0, m1), ("true", "true"), self.journal())
+        self.assertGreater(abs(float(v0)), 1, self.journal())
+        # Ni saut de position, ni remise à zéro de la vitesse : l'état est repris tel quel.
+        self.assertLess(abs(float(x1) - float(x0)), 1, self.journal())
+        self.assertEqual(float(v1), float(v0), self.journal())
+
+    def test_ressort_cree_pret_est_pose(self):
+        self.installer(55)
+        self.lancer(self.dir)
+        self.attendre("essai : prêt true")
+        self.ipc("neuf", "13")
+        self.attendre("essai : neuf ", 2)
+        lignes = [l.split("essai : neuf ", 1)[1].split() for l in self.journal().splitlines() if "essai : neuf " in l]
+        # À la création, puis après 150 ms : posé sur sa cible, sans animation depuis zéro.
+        self.assertEqual(lignes[0], ["13", "false"], self.journal())
+        self.assertEqual(lignes[1], ["13", "false"], self.journal())
+
+    def test_ressort_poser(self):
+        # Recibler puis poser : la valeur égale la cible aussitôt et rien ne bouge.
+        self.installer(55)
+        self.lancer(self.dir)
+        self.attendre("essai : prêt true")
+        self.ipc("pose", "95")
+        self.attendre("essai : pose ")
+        ligne = [l for l in self.journal().splitlines() if "essai : pose " in l][-1]
+        self.assertEqual(ligne.split("essai : pose ", 1)[1].split(), ["95", "false"], self.journal())
+
+    def test_ressort_revient_au_repos(self):
+        self.installer(55)
+        self.lancer(self.dir)
+        self.attendre("essai : prêt true")
+        self.ipc("cible", "22")
+        time.sleep(0.05)
+        self.ipc("cible", "7")
+        fin = time.monotonic() + 3
+        etat = self.lire_course()
+        while etat["mobile"] and time.monotonic() < fin:
+            time.sleep(0.05)
+            etat = self.lire_course()
+        self.assertEqual(etat["valeur"], 7, self.journal())
+        self.assertFalse(etat["mobile"], self.journal())
+
     def test_contenu_corrompu(self):
         self.installer(55)
         self.lancer(self.dir)

@@ -15,7 +15,11 @@ import "Theme"
 // ressort posé|en vol » au tour de boucle suivant ; « essai lent » donne au ressort une raideur minime, pour
 // qu'il reste en vol plusieurs secondes ; « essai raideur » journalise « essai : raideur <stiffness> », la
 // raideur du ressort employé. « essai : texte bureau <texteBureau> survol <texteBureauSurvol> » à chaque
-// changement de l'un ou de l'autre (couleurs au format #rrggbb).
+// changement de l'un ou de l'autre (couleurs au format #rrggbb). Un Ressort numérique, de cible initiale 7 et
+// de transition navigate : « essai cible <n> » le recible ; « essai course » journalise « essai : course
+// valeur <v> pic <p> mobile <bool> » (pic : plus grande valeur vue depuis le dernier recible) ; « essai saut
+// <n> » le recible et journalise valeur, vitesse et mouvement avant et après, dans le même tour de boucle ;
+// « essai neuf <n> » crée un Ressort de cible n et journalise son état aussitôt puis 150 ms après.
 // Erreurs : celles de Theme, dans le journal. Dépendances : quickshell ≥ 0.3 (Quickshell.Io : IpcHandler), module coque/Theme.
 // Import : Quickshell ne résout pas un module situé au-dessus de la racine de la coque lancée (import "../"
 // laisse Theme indéfini) ; le lien essai/Theme -> .. le place sous cette racine.
@@ -42,8 +46,61 @@ ShellRoot {
         console.info("essai : texte bureau " + Theme.texteBureau + " survol " + Theme.texteBureauSurvol)
     }
 
+    // Ressort numérique éprouvé par les commandes cible, course et saut ; pic retient sa plus grande valeur.
+    Ressort {
+        id: nombre
+        cible: 7
+        property real pic: 7
+        onValueChanged: pic = Math.max(pic, value)
+    }
+
     IpcHandler {
         target: "essai"
+
+        // cible — recible le Ressort numérique et remet son pic à la valeur courante.
+        // Entrées : n nouvelle cible. Sortie : aucune. Erreurs : aucune. Dépendances : nombre.
+        function cible(n: real): void {
+            nombre.pic = nombre.value
+            nombre.cible = n
+        }
+
+        // course — journalise l'état du Ressort numérique.
+        // Entrées : aucune. Sortie : « essai : course valeur <v> pic <p> mobile <bool> ». Erreurs : aucune.
+        // Dépendances : nombre.
+        function course(): void {
+            console.info("essai : course valeur " + nombre.value + " pic " + nombre.pic + " mobile " + nombre.moving)
+        }
+
+        // saut — recible le Ressort numérique en lisant valeur, vitesse et mouvement juste avant et juste après,
+        // sans rendre la main.
+        // Entrées : n nouvelle cible.
+        // Sortie : « essai : saut avant <v> <vitesse> <mobile> après <v> <vitesse> <mobile> ». Erreurs : aucune.
+        // Dépendances : nombre.
+        function saut(n: real): void {
+            const avant = nombre.value + " " + nombre.vitesse() + " " + nombre.moving
+            nombre.cible = n
+            console.info("essai : saut avant " + avant + " après " + nombre.value + " " + nombre.vitesse() + " " + nombre.moving)
+        }
+
+        // neuf — crée un Ressort après que Theme est prêt, puis journalise son état à la création et plus tard.
+        // Entrées : n cible initiale. Sortie : « essai : neuf <v> <mobile> » aussitôt, puis 150 ms après.
+        // Erreurs : aucune. Dépendances : Ressort, Theme.
+        function neuf(n: real): void {
+            const r = Qt.createQmlObject('import QtQuick\nimport "Theme"\nRessort { cible: ' + n + ' }', essai, "neuf.qml")
+            console.info("essai : neuf " + r.value + " " + r.moving)
+            const t = Qt.createQmlObject('import QtQuick\nTimer { interval: 150; running: true }', essai, "minuteur.qml")
+            t.triggered.connect(() => console.info("essai : neuf " + r.value + " " + r.moving))
+        }
+
+        // pose — crée un Ressort de cible 0, le recible, puis le pose.
+        // Entrées : n cible. Sortie : « essai : pose <v> <mobile> » (valeur égale à n, mouvement faux).
+        // Erreurs : aucune. Dépendances : Ressort, Theme.
+        function pose(n: real): void {
+            const r = Qt.createQmlObject('import QtQuick\nimport "Theme"\nRessort { cible: 0 }', essai, "pose.qml")
+            r.cible = n
+            r.poser()
+            console.info("essai : pose " + r.value + " " + r.moving)
+        }
 
         // etat — change l'interaction simulée du ressort, comme un survol ou une pression.
         // Entrées : interaction (rest, hover, pressed, disabled). Sortie : aucune ; journal un tour plus tard.

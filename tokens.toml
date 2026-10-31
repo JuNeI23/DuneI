@@ -153,6 +153,10 @@ standalone_step = 9        # autonome — texte accentué, liens, sur fond sombr
 # Chroma faible : 0.004 est le maximum dans le gamut sRGB à L 0.99, toutes teintes.
 on_lightness = 0.99
 on_chroma = 0.004
+# Accent discret : marque d'accent posée sur une surface E3, comme la pilule de la presqu'île. Même teinte que
+# l'accent, mais moins saturé (chroma = ratio × chroma de l'accent) pour rester une marque et non un voyant.
+discret_lightness = 0.68     # luminosité validée sur la planche (nuit) ; le jour la reprend telle quelle
+discret_chroma_ratio = 0.6   # fraction de la chroma d'accent
 
 
 # ===========================================================================
@@ -401,6 +405,18 @@ resize_step = 48             # px logiques, pas de SUPER + Ctrl + flèche ; memb
 range = 16                   # px logiques, multiple de 4
 offset_y = 4                 # px logiques vers le bas, multiple de 4
 render_power = 2             # dégradé, de 1 (doux) à 4 (rapide), bornes de Hyprland
+
+[presquile]                  # surface séparée de la barre, au bord haut de l'écran (L2-46) ; px logiques
+hauteur = 28                 # hauteur de la presqu'île : celle de la barre, arrêtée à la recette du 2026-10-31
+evasement = 13               # largeur de l'évasement qui la raccorde au bord de l'écran
+rayon = 10                   # rayon des angles du bas
+point = 7                    # diamètre d'un point de bureau
+pilule = 22                  # largeur de la pilule du bureau actif
+ecart = 8                    # espace entre deux marques de bureau
+marge = 14                   # marge intérieure, de part et d'autre du contenu
+
+[bureaux_virtuels]
+nombre = 4                   # bureaux 1 à n, liés à SUPER + 1…n ; le bureau spécial (accueil) n'est pas compté
 
 [layout]
 sidebar_default = 240

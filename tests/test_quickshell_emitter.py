@@ -31,9 +31,24 @@ class QuickshellEmitterTest(unittest.TestCase):
     def test_cles_premier_niveau(self):
         self.assertEqual(list(self.out), [
             "_generated", "hue", "space", "density", "radius", "window", "layout", "breakpoints", "typo", "icons",
-            "familles", "moments", "defaut", "themes", "pastilles", "bureau"])
+            "familles", "moments", "defaut", "themes", "pastilles", "bureau", "bureauxVirtuels", "presquile"])
         self.assertEqual(list(self.nuit), ["color", "states", "focus", "disabled", "elevation", "material", "glass", "render",
                                            "knob", "controls"])
+
+    def test_presquile(self):
+        """Vérifie les sept dimensions de la presqu'île, en pixels logiques."""
+        self.assertEqual(self.out["presquile"], {"hauteur": 28, "evasement": 13, "rayon": 10, "point": 7,
+                                                 "pilule": 22, "ecart": 8, "marge": 14})
+
+    def test_accent_discret(self):
+        """Vérifie que l'accent discret émis de chaque thème est celui du modèle, au format `#rrggbb`."""
+        for fam, mom in themes(self.data):
+            with self.subTest(famille=fam, moment=mom):
+                attendu = resolve(theme_data(self.data, fam, mom), 55.0)["accent_discret"]
+                self.assertEqual(self.out["themes"][fam][mom]["color"]["accentDiscret"], to_hex(attendu))
+
+    def test_bureaux_virtuels(self):
+        self.assertEqual(self.out["bureauxVirtuels"], {"nombre": 4})
 
     def test_verre(self):
         """Le verre est opaque la nuit (1,0) et translucide le jour (0,85 et 0,88), pour les deux familles."""

@@ -11,7 +11,7 @@ import json
 import re
 
 from ..color import Oklch, oklch, to_hex
-from ..model import accent_muet, defaut, resolve, role_text, theme_data, themes
+from ..model import accent_muet, bureaux, defaut, resolve, role_text, theme_data, themes
 
 _BLANC = Oklch(1, 0, 0)
 
@@ -184,6 +184,7 @@ def _theme(model: dict) -> dict:
             **{_camel(k): to_hex(v) for k, v in model["roles"].items()},
             "accent": to_hex(model["accent"]),
             "accentStandalone": to_hex(model["accent_standalone"]),
+            "accentDiscret": to_hex(model["accent_discret"]),
             "onAccent": to_hex(model["on_accent"]),
             "knob": to_hex(model["knob"]),
             **{k: to_hex(sem[k]) for k in ("error", "warning", "success", "info")},
@@ -253,8 +254,8 @@ def emit(model: dict) -> str:
     Entrée : model — sortie de model.resolve ; `raw` et `hue` servent à résoudre chaque thème ici, `roles` à la clé
              `bureau` (via _bureau).
     Sortie : contenu du fichier JSON. Erreurs : KeyError si une section du TOML manque ou si le moment « nuit » n'existe pas
-             (les pastilles en dérivent).
-    Dépendances : json, _camel_keys, _theme, _pastilles, _bureau, model.themes, model.defaut, model.theme_data, model.resolve.
+             (les pastilles en dérivent) ; ValueError si bureaux_virtuels.nombre est absent, non entier ou hors de 1 à 10.
+    Dépendances : json, _camel_keys, model.bureaux, _theme, _pastilles, _bureau, model.themes, model.defaut, model.theme_data, model.resolve.
     """
     raw, hue = model["raw"], model["hue"]
     resolus = {(f, m): resolve(theme_data(raw, f, m), hue) for f, m in themes(raw)}
@@ -277,5 +278,7 @@ def emit(model: dict) -> str:
         "themes": {f: {m: _theme(resolus[(f, m)]) for g, m in resolus if g == f} for f in raw["familles"]},
         "pastilles": _pastilles(resolus[(fam, "nuit")]),
         "bureau": _bureau(model),
+        "bureauxVirtuels": {"nombre": bureaux(raw)},
+        "presquile": _camel_keys(raw["presquile"]),
     }
     return json.dumps(out, indent=2, ensure_ascii=False) + "\n"

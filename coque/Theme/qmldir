@@ -1,3 +1,4 @@
 module Theme
 singleton Theme 1.0 Theme.qml
 ColorSpring 1.0 ColorSpring.qml
+Ressort 1.0 Ressort.qml

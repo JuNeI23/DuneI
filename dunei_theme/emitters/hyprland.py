@@ -10,6 +10,7 @@ fichier se vérifie avec un interpréteur Lua nu, sans Hyprland.
 from __future__ import annotations
 
 from ..color import Oklch, to_srgb255
+from ..model import bureaux
 
 
 def _rgba(col: Oklch, alpha: float) -> str:
@@ -184,8 +185,8 @@ def emit_binds(model: dict) -> str:
 
     Entrée : model — sortie de model.resolve.
     Sortie : contenu de hyprland-binds.lua (une table Lua retournée, lue par modules/clavier.lua).
-    Erreurs : KeyError si le TOML brut manque ; ValueError transmise par _validate.
-    Dépendances : _validate.
+    Erreurs : KeyError si le TOML brut manque ; ValueError transmise par _validate ou model.bureaux (nombre de bureaux invalide).
+    Dépendances : _validate, model.bureaux.
     """
     raw = model["raw"]
     _validate(raw)
@@ -194,5 +195,6 @@ def emit_binds(model: dict) -> str:
         "-- Usage : local pas = require(\"generated.hyprland-binds\").resize_step",
         "return {",
         f"    resize_step = {raw['window']['resize_step']},",
+        f"    bureaux = {bureaux(raw)},",
         "}",
     ]) + "\n"

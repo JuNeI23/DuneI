@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.24. Historique en fin de document.
+Version 1.25. Historique en fin de document.
 
 Socle amorçable.
 
@@ -1320,7 +1320,7 @@ redimensionnement vient du jeton `window.resize_step` (48), par `generated/hyprl
 **Grammaire** (bible, ch. 7) : `SUPER` agit ou va ; `SUPER + Maj` emporte la fenêtre active ;
 `SUPER + Ctrl` redimensionne ; `SUPER + Alt` porte les actions rares ou système.
 
-Dix bureaux, sans nom au lot 1 — la palette catégorielle qui les distingue arrive avec L2-18 — et un
+Quatre bureaux (D96), sans nom au lot 1 — la palette catégorielle qui les distingue arrive avec L2-18 — et un
 bureau spécial, `accueil`, qui s'affiche par-dessus le bureau courant.
 
 | Raccourci | Action |
@@ -1334,8 +1334,8 @@ bureau spécial, `accueil`, qui s'affiche par-dessus le bureau courant.
 | `SUPER + Tab` | Fenêtre suivante |
 | `SUPER + Maj + flèches` | Déplacer la fenêtre |
 | `SUPER + Ctrl + flèches` | Redimensionner, par pas de 48 px logiques |
-| `SUPER + 1…0` | Aller au bureau 1 à 10 |
-| `SUPER + Maj + 1…0` | Envoyer la fenêtre au bureau, sans la suivre |
+| `SUPER + 1…4` | Aller au bureau 1 à 4 |
+| `SUPER + Maj + 1…4` | Envoyer la fenêtre au bureau, sans la suivre |
 | `SUPER + S` / `SUPER + Maj + S` | Afficher ou masquer l'accueil / y ranger la fenêtre |
 | `SUPER + Q`, `E`, `F`, `R` | Terminal, fichiers, navigateur, lanceur (kitty, dolphin, firefox, wofi : provisoires) |
 | `Print`, `SHIFT + Print`, `CTRL + Print` | Capturer une zone, une fenêtre choisie au clic, l'écran actif : rôle `capture`, tenu par hyprshot jusqu'à L2-30 ; image dans `~/Images/Captures` et dans le presse-papiers (D79) |
@@ -1343,8 +1343,11 @@ bureau spécial, `accueil`, qui s'affiche par-dessus le bureau courant.
 | `SUPER + Alt + M` | Quitter la session (`uwsm stop`) |
 | `SUPER + Alt + R` | Recharger la configuration (`hyprctl reload`) |
 | `SUPER + clic gauche / droit` glissé | Déplacer / redimensionner à la souris |
-| `SUPER + molette` | Bureau occupé suivant ou précédent |
+| `SUPER + molette` | Bureau occupé suivant ou précédent, sans jamais en créer un cinquième |
 | Pavé, trois doigts à l'horizontale / vers le bas | Changer de bureau / afficher ou masquer l'accueil |
+
+Le nombre de bureaux vient de `[bureaux_virtuels] nombre` dans `tokens.toml`. Le balayage à trois doigts ne crée pas de
+bureau au-delà du dernier : `gestures.workspace_swipe_create_new = false` dans `modules/entree.lua`.
 
 **Touches réservées**, déclarées sans être liées : `SUPER + /`
 (cheatsheet, L2-28), Ctrl gauche tenu une seconde (localiser le pointeur, L2-36). Pas de raccourci pour la veille, ni pour éteindre ou redémarrer : le terminal, d'ici
@@ -1913,7 +1916,7 @@ journalctl --user -u dunei-coque.service -e     # erreurs QML éventuelles
 
 - La barre fait 28 px et réserve 28 px : les fenêtres tuilées commencent dessous. De droite à gauche dans la rangée :
   paramètres, Bluetooth, VPN (seulement connecté), Wi-Fi, jour/nuit, batterie, notifications ; à gauche, le logo Arch
-  et la date « lun. 26 oct. 14:32 ». Le centre est vide et transparent aux clics, en attendant la presqu'île.
+  et la date « lun. 26 oct. 14:32 ». Le centre est occupé par la presqu'île (voir plus bas).
 - Seul le bouton jour/nuit réagit au clic (`dunei-theme bascule`). Un état coupé (notifications en « ne pas déranger »,
   Wi-Fi ou Bluetooth éteints) prend une forme barrée.
 - Les bancs d'essai de `coque/Barre/essai/` et de `coque/outils/verre/` se lancent à la main. Le banc du verre partage
@@ -1936,6 +1939,20 @@ journalctl --user -u dunei-coque.service -e     # erreurs QML éventuelles
   d'accent à l'appui), bascule du thème, Wi-Fi et Bluetooth coupés puis rétablis, secteur débranché, « ne pas
   déranger » de dunst. Rendu jugé « parfait ».
 - **Non couvert : le VPN.** Aucun VPN n'est configuré sur caladan ; à éprouver quand il en existera un.
+
+### La presqu'île — L2-46, L2-10
+
+Rien de plus à installer : la presqu'île est dans la même coque (`dunei-coque.service`), et `make install` n'ajoute
+aucune étape.
+
+- Elle occupe le centre du haut de l'écran : une encoche continue de 28 px, en couche haute, qui montre les quatre
+  bureaux (points identiques, pilule d'accent discret sur le bureau courant). Le plein écran la masque avec la barre.
+- Souris : clic sur un quart de sa largeur pour rejoindre le bureau, molette pour passer au suivant ou au précédent
+  (bornée de 1 à 4, sans rebouclage). Pendant que le bureau spécial est ouvert, la pilule reste en place et grise ;
+  un clic dessus ferme le spécial, un clic sur un autre point le ferme puis rejoint ce bureau.
+- Les bancs d'essai de `coque/Presquile/` passent par un essai de coque en IPC qui ne touche jamais au vrai bureau.
+- Relevés, au repos sur 30 s : `qs` à 0,0 % de processeur, PSS 178,3 Mio (RSS 349,8 Mio), soit environ 19,5 Mio de plus
+  que la barre seule. Recette à l'écran validée par Nicolas le 2026-10-31 (D97).
 
 ## Lecteur d'empreinte — nouveau
 
@@ -2003,7 +2020,7 @@ chiffrée : Nicolas les a gardés sans les refaire (D78).
 - [x] Le rayon est de 12, la fenêtre active se distingue des autres — rayon de 12, aucune bordure ; le repère de la fenêtre active n'existe pas au lot 1, par décision (D29), il revient à L2-03
 - [x] Aucune application Qt n'affiche sa propre barre de titre — Dolphin, en Wayland natif, 2026-10-19
 - [x] À l'échelle 1,25, le texte d'une application Qt est net — pas flou, pas doublement mis à l'échelle — Dolphin, jugé à l'écran par Nicolas, 2026-10-19
-- [x] Les dix bureaux sont atteignables au clavier — `SUPER + 1` à `SUPER + 0`, Nicolas, 2026-10-19
+- [x] Les quatre bureaux sont atteignables au clavier — `SUPER + 1` à `SUPER + 4` (dix bureaux, `SUPER + 1` à `SUPER + 0`, jusqu'à D96), Nicolas, 2026-10-19 puis 2026-10-31 ; `SUPER + 5` est inerte
 - [x] Trackpoint et pavé tactile fonctionnent tous les deux — Nicolas, 2026-10-19
 - [x] `fc-match` renvoie les deux polices attendues — Source Sans 3 et SauceCodePro Nerd Font Mono
 - [x] `git diff --exit-code generated/` est vert après régénération — après `make generes`, 2026-10-19
@@ -2039,6 +2056,7 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 
 | Version | Date | Changement |
 | --- | --- | --- |
+| 1.25 | 2026-10-31 | La presqu'île (L2-46, L2-10) : quatre bureaux, raccourcis `SUPER + 1…4`, geste sans création de bureau, section de la presqu'île, relevés (D96 à D98) |
 | 1.24 | 2026-10-26 | La barre système et la coque de session (L2-08, L2-09) : unité `dunei-coque.service`, lien `~/.config/quickshell/dunei`, `bureau.json`, mode d'emploi, pièges, relevés et réserve sur le VPN (D89 à D95) |
 | 1.23 | 2026-10-25 | L'élévation (L2-04, L2-05) : shader du matériau et sa compilation (`make shaders`, `.qsb` versionné), règles de calque du verre (`generated/hyprland-layers.lua`, `regles.lua`), texte de la coque en niveaux de gris, banc d'essai du verre, relevés ; chaîne de génération et message du crochet complétés par `shaders` ; `.qsb` jugé par l'empreinte de sa source et non par ses octets, recompilation après une retouche du shader (D85 à D88) |
 | 1.22 | 2026-10-25 | Les thèmes statiques (L2-40) : où vit `theme.json`, mode d'emploi de `dunei-theme`, bascule sur la planche (`planche.sh theme`), relevés, ce qui reste à voir (D83, D84) |
