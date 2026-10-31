@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas — révisée le 22 octobre 2026
 
-Version 1.28. Historique en fin de document.
+Version 1.29. Historique en fin de document.
 
 *Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent quarante-huit lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
 
@@ -439,7 +439,13 @@ ressort numérique, `Ressort`. Les transitions d'apparition et le mouvement réd
 L2-48). La recette à l'écran du 2026-10-31 a tout validé et n'a demandé que la hauteur, ramenée de 34 à 28 px. La coque
 pèse désormais 178,3 Mio de mémoire proportionnelle (environ 19,5 Mio de plus) et 0,0 % de processeur au repos.
 
-Prochaine étape : **choisir avec Nicolas entre le popover du réseau (L2-11) et le prochain module de la presqu'île.**
+Le 2026-10-31, un correctif de L1-09 (D99) a mis fin aux rendormissements en boucle après un réveil par le bouton
+marche : la machine reçoit parfois un appui fantôme quelques secondes après la reprise, et une garde,
+`dunei-garde-reveil.service`, tirée par chaque mise en veille, bloque désormais le bouton marche pendant environ 10 s
+après le réveil ; la recette attend le prochain fantôme constaté.
+
+Prochaine étape : **corriger le bug 2 de la coque : après un réveil, la barre ne réagit plus au survol ni au clic
+gauche.** Ensuite, **choisir avec Nicolas entre le popover du réseau (L2-11) et le prochain module de la presqu'île.**
 Le premier trancherait le sort de `nm-applet` et fournirait au VPN son interrupteur ; le second serait le premier
 contenu à changer la forme de la presqu'île, donc à régler L2-48. L2-44 et L2-45 se traitent en passant, quand un
 composant touché par leurs reliquats est rouvert. Quel que soit le choix, il commence par l'enjeu et par un repérage,
@@ -450,6 +456,7 @@ jamais par du code.
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-10 | Version initiale |
+| 1.29 | 2026-10-31 | Garde du bouton marche au réveil (L1-09, D99) contre l'appui fantôme ; prochaine étape : le bug 2 de la coque (barre inerte au survol et au clic gauche après un réveil), puis le popover du réseau ou le prochain module |
 | 1.28 | 2026-10-31 | La presqu'île (L2-46, L2-10, D96 à D98) livrée et validée à l'écran : quatre bureaux, forme, modules ; prochaine étape : popover du réseau ou prochain module |
 | 1.27 | 2026-10-26 | La barre système (L2-08, L2-09, D89 à D95) validée à l'écran : barre transparente de 28 px, texte sur bureau, neuf indicateurs, coque de session ; VPN non éprouvé ; L2-10 déplacé vers la presqu'île (L2-46) ; prochaine étape : choisir entre la presqu'île et le popover réseau |
 | 1.26 | 2026-10-25 | L'élévation (L2-04, L2-05, D85 à D88) validée à l'écran en deux recettes : verre dépoli le jour, opaque la nuit, matière par shader, champ creusé, placement des overlays, menus sans contour, texte en niveaux de gris ; L2-41 non retenu ; reliquats en L2-45 ; prochaine étape : choisir l'élément suivant du lot 2, la barre système en candidate |

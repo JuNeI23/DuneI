@@ -790,6 +790,8 @@ Hyprland avec le couvercle. Le module est couvert par des tests sur un `hl` simu
 
 **Piège de développement.** Une sonde `hyprctl dispatch 'hl.dsp.dpms({ action = "zzz" })'` a éteint
 l'écran de Nicolas : Hyprland 0.56.2 fait basculer l'écran sur toute valeur inconnue (`parseToggleStr`).
+
+*Complété par D99 (garde du bouton marche au réveil).*
 Règle : ne jamais sonder la session réelle avec un répartiteur ; lire le code source.
 
 Raison : une seule autorité par fonction, et la veille doit survivre à l'absence de session.
@@ -2291,3 +2293,34 @@ un `Item` qui reçoit `ecran` et déclare `implicitWidth` et `implicitHeight` ; 
 
 *Touché : `coque/Presquile/`, `coque/Theme/Ressort.qml`, conception de la presqu'île (§ 4),
 backlog (L2-46).*
+
+### D99 · Garde du bouton marche au réveil
+
+2026-10-31. **Chaque mise en veille démarre `dunei-garde-reveil.service`, qui bloque le bouton marche auprès de logind
+pendant environ 10 s après la reprise.** L'unité (`Type=exec`, `Before=sleep.target`) lance
+`systemd-inhibit --what=handle-power-key --mode=block --who=DuneI --why="Appui fantôme au réveil" sleep 13` ;
+`sleep.target.d/10-dunei.conf` la tire par `Wants=`. D44 reste entière : l'appui court met toujours en veille, hors
+de la garde.
+
+- **Raison.** Au réveil par le bouton marche (T14s Gen 3 AMD, `s2idle`), logind reçoit parfois un second « Power key
+  pressed short » 1 à 7 s après la reprise, sans geste de Nicolas ; `HandlePowerKey=suspend` rendort alors la
+  machine, parfois pendant la saisie du mot de passe dans `hyprlock`, en boucle. `HoldoffTimeoutSec=` de logind ne
+  couvre que le couvercle (`man logind.conf`, systemd 262), alors que le verrou bas niveau `handle-power-key` est
+  toujours respecté.
+- **Constaté.** Le 2026-10-31, de 08:13:21 à 08:14:08, huit appuis rapportés, chacun quelques secondes après une
+  reprise ; à 08:35:13 une reprise, à 08:35:14 un appui ; à 08:35:18 la saisie du mot de passe coupée, à 08:35:23 un
+  appui ; essai contrôlé à 10:42:53 (reprise après un appui unique), puis appui fantôme à 10:42:58 et nouvelle veille.
+  Le fantôme n'est pas systématique : aucun à 10:44 (couvercle) ni à 10:56.
+- **Durée.** L'horloge monotone de `sleep` s'arrête pendant la veille : avec 10 s, la garde démarrée à 10:55:56 a été
+  relâchée à 10:56:31, 7 s seulement après la reprise de 10:56:24. D'où 13 s, soit environ 10 s après la reprise.
+- **Vérifié.** À 11:06:11, verrou tenu ; un appui réel est journalisé par logind (« Power key pressed short ») sans
+  mise en veille.
+- **Écarté.** Le bouton marche qui verrouille au lieu de mettre en veille : il renonce à la veille par le bouton pour
+  un défaut rare. Laisser Hyprland décider de l'appui : contredit D44 et ne vaut pas hors session.
+- **Coût accepté.** Un appui volontaire dans les quelque 10 s qui suivent un réveil reste sans effet ; fermer le
+  couvercle reste possible.
+- **Recette restante.** Constater, au prochain fantôme, un « Power key pressed short » sans « Suspending... » pendant
+  la garde, après avoir réinstallé la version à 13 s par `make install` dans un vrai terminal.
+
+*Touché : `systeme/etc/systemd/system/dunei-garde-reveil.service`, `systeme/etc/systemd/system/sleep.target.d/10-dunei.conf`,
+`tests/test_garde_reveil.py`, carnet (§ Énergie — L1-09), backlog (L1-09), notes de direction.*
