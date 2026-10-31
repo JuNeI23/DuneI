@@ -658,7 +658,8 @@ class PopoverTest(EssaiCoque, unittest.TestCase):
 
 
 # nmcli factice de la fenêtre Réseau : journalise chaque appel dans « appels » (à côté du script) et rend des
-# sorties fixes ; un fichier « refus » à côté du script fait échouer toute modification comme un refus de polkit.
+# sorties fixes ; un fichier « refus » à côté du script fait échouer toute modification ou tout ajout comme un refus de
+# polkit ; un ajout réussi pose « ajoute », et la liste des profils montre alors le profil créé.
 NMCLI_FACTICE = r"""#!/bin/sh
 d=$(dirname "$0")
 printf '%s\n' "$*" >> "$d/appels"
@@ -673,6 +674,7 @@ case "$*" in
         printf 'Wifi_TRIADES:wifi-1:802-11-wireless:wlan0:yes\nTelephone_Essai:hotspot-1:802-11-wireless::no\n'
         if [ -f "$d/filaire" ]; then printf 'Connexion filaire 1:filaire-1:802-3-ethernet:eth0:yes\n'
         else printf 'Connexion filaire 1:filaire-1:802-3-ethernet::no\n'; fi
+        [ -f "$d/ajoute" ] && printf 'Nouveau\\: essai:aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee:802-11-wireless::no\n'
         printf 'lo:lo-1:loopback:lo:yes\n' ;;
     "-g connection.metered connection show hotspot-1") echo yes ;;
     "-g connection.metered connection show "*) echo unknown ;;
@@ -688,6 +690,13 @@ case "$*" in
     "-t -f connection.autoconnect,"*" connection show filaire-1")
         printf 'connection.autoconnect:yes\nconnection.autoconnect-priority:0\nconnection.metered:unknown\nipv4.method:manual\n'
         printf 'ipv4.addresses:10.0.0.2/24\nipv4.gateway:10.0.0.1\nipv4.dns:10.0.0.1\n' ;;
+    "connection add "*)
+        if [ -f "$d/refus" ]; then
+            echo "Error: Failed to add 'Nouveau: essai' connection: Insufficient privileges" >&2
+            exit 4
+        fi
+        touch "$d/ajoute"
+        echo "Connection 'Nouveau: essai' (aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee) successfully added." ;;
     "connection modify "*)
         if [ -f "$d/refus" ]; then
             echo "Error: Failed to modify connection 'Telephone_Essai': Insufficient privileges: Not authorized to modify connections" >&2
@@ -822,6 +831,41 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
                                       "DNS : 192.168.1.1\nAdresse matérielle : A4:C3:F0:5B:1E:72")
         self.assertEqual((c["copie"], c["texte"]), ("*", "Copié"))
         self.jusqua(lambda e: json.loads(self.ipc("essai", "copie", ""))["texte"] == "Tout copier", "bouton revenu")
+
+    def test_nouveau_reseau(self):
+        # « + » au pied de la colonne ouvre la fiche « Nouveau réseau » ; aucune rangée n'est alors sélectionnée.
+        # « Ajouter » passe par nmcli connection add (arguments, jamais de shell), puis le profil créé est choisi.
+        self.ouvrir()
+        self.ipc("essai", "nouveau")
+        e = self.jusqua(lambda e: e["nouvelle"].get("visible"), "fiche Nouveau réseau")
+        self.assertEqual(e["selection"], [])
+        self.assertEqual((e["nouvelle"]["securise"], e["nouvelle"]["valide"]), (True, False))
+        self.ipc("essai", "remplirNouveau", "Nouveau: essai", "true", "m0t-de-passe", "true")
+        self.assertTrue(self.etat()["nouvelle"]["valide"])
+        self.ipc("essai", "cliquerNouveau", "ajouter")
+        e = self.jusqua(lambda e: e["fiche"].get("uuid") == "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee", "profil créé choisi")
+        self.assertIn("connection add type wifi con-name Nouveau: essai ssid Nouveau: essai wifi-sec.key-mgmt wpa-psk "
+                      "wifi-sec.psk m0t-de-passe 802-11-wireless.hidden yes", self.appels())
+        self.assertFalse(e["nouvelle"].get("visible", False))
+        self.assertEqual(self.ipc("essai", "demande"), "")
+        self.assertNotIn("m0t-de-passe", self.journal())
+
+    def test_nouveau_reseau_ouvert_refuse(self):
+        # Réseau ouvert : ni sécurité ni « hidden ». Un refus de nmcli s'affiche sous le formulaire, qui reste ouvert ;
+        # « Annuler » revient au profil choisi.
+        self.ouvrir()
+        self.ipc("essai", "nouveau")
+        self.jusqua(lambda e: e["nouvelle"].get("visible"), "fiche Nouveau réseau")
+        self.ipc("essai", "remplirNouveau", "Ouvert", "false", "", "false")
+        self.assertTrue(self.etat()["nouvelle"]["valide"])
+        self.refus.touch()
+        self.ipc("essai", "cliquerNouveau", "ajouter")
+        e = self.jusqua(lambda e: e["nouvelle"].get("erreur"), "erreur sous le formulaire")
+        self.assertIn("Insufficient privileges", e["nouvelle"]["erreur"])
+        self.assertIn("connection add type wifi con-name Ouvert ssid Ouvert", self.appels())
+        self.ipc("essai", "cliquerNouveau", "annuler")
+        e = self.jusqua(lambda e: not e["nouvelle"].get("visible", False), "fiche refermée")
+        self.assertEqual((e["fiche"]["uuid"], e["selection"]), ("wifi-1", ["inactive", True]))
 
     def test_profil_demande(self):
         # « Détails… » du popover : la fenêtre s'ouvre sur le profil demandé (par uuid ou par nom), et la demande est

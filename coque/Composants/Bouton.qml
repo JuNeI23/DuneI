@@ -13,7 +13,8 @@ import "etats.js" as Etats
 // (§ 7.5 et 7.10), sans couleur nouvelle. Quand le thème donne un contour aux contrôles blancs (controls.outline,
 // au jour), le bouton non sélectionné en est cerné d'un filet d'un pixel physique, comme la case.
 // Entrées : text, clicked et le reste de l'API de T.AbstractButton ; icone, nom freedesktop facultatif, posé
-// avant le texte ; principal, vrai pour le bouton par défaut d'un dialogue, faux par défaut.
+// avant le texte (seule, sans text, le bouton est réduit à son icône) ; principal, vrai pour le bouton par défaut
+// d'un dialogue, faux par défaut.
 // Sorties : etat, l'Etat du bouton (rôle, interaction, sélection, couleurs), lu par la planche et les essais.
 // Erreurs : aucune ; avant le chargement des tokens, les cotes sont nulles et les couleurs transparentes.
 // Dépendances : QtQuick.Templates, Quickshell (QsWindow : rapport de pixels, pour le filet), Theme (density,
@@ -70,8 +71,10 @@ T.AbstractButton {
                 couleur: etat.texte
             }
 
+            // Un bouton réduit à son icône n'a pas de texte : l'écart ne le décentre pas.
             Texte {
                 anchors.verticalCenter: parent.verticalCenter
+                visible: text !== ""
                 text: bouton.text
                 color: etat.texte
             }

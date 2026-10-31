@@ -14,18 +14,25 @@ import "nmcli.js" as Nmcli
 // « Détails… » du popover), sinon le profil actif, est choisi à l'ouverture ; une demande faite fenêtre ouverte est
 // suivie aussitôt, et toute demande est consommée (remise à vide) dès que son profil est sélectionné ; un clic, ou
 // les flèches de la liste, en choisissent un autre, dont la FicheProfil occupe la droite, dans une zone qui défile.
+// Le bouton « + » au pied de la colonne ouvre à droite la fiche « Nouveau réseau » (FicheNouveau, construite à
+// l'ouverture et détruite à la fermeture) ; aucune rangée n'est alors sélectionnée ; le profil ajouté est choisi
+// dès que la lecture des profils le montre (etat.profilDemande), « Annuler » ou un clic dans la liste referment la
+// fiche.
 // La facturation de chaque profil Wi-Fi est lue d'un seul processus quand la liste des profils change, puis tenue à
 // jour par les lectures de la fiche ; aucun minuteur.
 // Entrées : etat, la source de l'état et des actions, EtatReseau par défaut ; choisi, uuid du profil affiché ;
 // enTete, hauteur réservée en haut de la barre latérale, au-dessus de son titre (les pastilles d'une fenêtre), 0 par
-// défaut.
-// Sorties : rangees, les rangées de la liste (nmcli.profilsFenetre) ; fiche, la FicheProfil ; factures, uuid →
+// défaut ; nouveau, vrai quand la fiche « Nouveau réseau » occupe la droite.
+// Sorties : rangees, les rangées de la liste (nmcli.profilsFenetre) ; fiche, la FicheProfil ; nouvelle, la
+// FicheNouveau ouverte, null sinon ; factures, uuid →
 // facturation lue.
 // Erreurs : sans profil, la fiche est vide et « Aucun profil enregistré. » s'affiche ; un échec de la lecture des
 // factures laisse les icônes Wi-Fi ordinaires.
 // Dépendances : EtatReseau (profils, reseaux, facture, profilDemande), FicheProfil, nmcli.js (profilsFenetre,
-// lireFactures), Liste, Rangee, Surface, Separateur, Icone, Texte, Theme, Quickshell.Io (Process, StdioCollector).
-// Cotes : barre latérale de 236 px, au fond de panneau, séparée par un filet ; rangées de profil de 40 px ; fiche en
+// lireFactures), FicheNouveau, Liste, Rangee, Bouton, Infobulle, Surface, Separateur, Icone, Texte, Theme,
+// Quickshell.Io (Process, StdioCollector).
+// Cotes : barre latérale de 236 px, au fond de panneau, séparée par un filet ; rangées de profil de 40 px ; « + » à
+// space.scale[2] (12) du coin bas gauche ; fiche en
 // retrait de space.scale[3] (16) en haut et space.blockGap (24) sur les côtés.
 Item {
     id: panneau
@@ -33,6 +40,8 @@ Item {
     property var etat: EtatReseau
     property string choisi: ""
     property real enTete: 0
+    property bool nouveau: false
+    readonly property var nouvelle: chargeurNouveau.item
     property var factures: ({})
     readonly property var rangees: Nmcli.profilsFenetre(etat.profils, etat.reseaux.map(r => r.name), factures, etat.facture)
     readonly property alias fiche: fiche
@@ -76,6 +85,15 @@ Item {
         choisi = (autres.find(r => r.actif) ?? autres[0])?.uuid ?? ""
     }
 
+    // ajoute — referme la fiche « Nouveau réseau » et demande le profil créé, choisi dès que la lecture des profils le
+    // montre. Entrées : uuid, celui que nmcli a donné (vide s'il manque) ; nom, le nom du profil. Sortie : aucune.
+    // Erreurs : aucune. Dépendances : etat.profilDemande, remplir.
+    function ajoute(uuid, nom) {
+        nouveau = false
+        etat.profilDemande = uuid || nom
+        remplir()
+    }
+
     ListModel { id: modele }
 
     // Facturation des profils Wi-Fi, une ligne « uuid:valeur » par profil, d'un seul processus.
@@ -106,7 +124,8 @@ Item {
             id: liste
             anchors.top: titre.bottom
             anchors.topMargin: Theme.space?.scale[1] ?? 0
-            anchors.bottom: parent.bottom
+            anchors.bottom: plus.top
+            anchors.bottomMargin: Theme.space?.scale[1] ?? 0
             width: parent.width
             clip: true
             model: modele
@@ -115,7 +134,10 @@ Item {
             // moyenne, jamais le fond d'accent.
             navigation: true
             // Au clavier, la sélection suit les flèches, comme une barre latérale de macOS.
-            onCurrentIndexChanged: if (focusClavier && currentIndex >= 0) panneau.choisi = modele.get(currentIndex).uuid
+            onCurrentIndexChanged: if (focusClavier && currentIndex >= 0) {
+                panneau.nouveau = false
+                panneau.choisi = modele.get(currentIndex).uuid
+            }
 
             section.property: "groupe"
             section.delegate: Texte {
@@ -137,12 +159,16 @@ Item {
                 required property string statut
                 required property string symbole
                 required property bool actif
-                readonly property bool choisie: uuid === panneau.choisi
+                // Pendant la saisie d'un nouveau réseau, aucune rangée n'est sélectionnée.
+                readonly property bool choisie: uuid === panneau.choisi && !panneau.nouveau
                 readonly property color secondaire: (choisie ? rangee.etat.texte : Theme.color?.textTertiary) ?? "transparent"
 
                 implicitHeight: 40
                 selectionnee: choisie
-                onActive: panneau.choisi = uuid
+                onActive: {
+                    panneau.nouveau = false
+                    panneau.choisi = uuid
+                }
 
                 contentItem: RowLayout {
                     spacing: Theme.space?.scale[1] ?? 0
@@ -179,6 +205,18 @@ Item {
                 }
             }
         }
+
+        // Ajouter un réseau : ouvre la fiche « Nouveau réseau » à droite.
+        Bouton {
+            id: plus
+            objectName: "ajouterReseau"
+            anchors.left: parent.left
+            anchors.bottom: parent.bottom
+            anchors.margins: Theme.space?.scale[2] ?? 0
+            icone: "list-add"
+            onClicked: panneau.nouveau = true
+            Infobulle { cible: plus; texte: "Ajouter un réseau" }
+        }
     }
     Separateur { vertical: true; x: laterale.width; height: parent.height }
 
@@ -188,11 +226,12 @@ Item {
         anchors.right: parent.right
         height: parent.height
         clip: true
-        contentHeight: fiche.implicitHeight + 2 * (Theme.space?.scale[3] ?? 0)
+        contentHeight: (panneau.nouveau ? chargeurNouveau.implicitHeight : fiche.implicitHeight) + 2 * (Theme.space?.scale[3] ?? 0)
         boundsBehavior: Flickable.StopAtBounds
 
         FicheProfil {
             id: fiche
+            visible: !panneau.nouveau
             x: Theme.space?.blockGap ?? 0
             y: Theme.space?.scale[3] ?? 0
             width: defilement.width - 2 * x
@@ -202,10 +241,23 @@ Item {
             onRelu: (u, p) => panneau.factures = Object.assign({}, panneau.factures, {[u]: p.facture})
             onOublie: panneau.apresOubli(uuid)
         }
+
+        Loader {
+            id: chargeurNouveau
+            active: panneau.nouveau
+            x: fiche.x
+            y: fiche.y
+            width: fiche.width
+            sourceComponent: FicheNouveau {
+                etat: panneau.etat
+                onAjoute: (uuid, nom) => panneau.ajoute(uuid, nom)
+                onAnnule: panneau.nouveau = false
+            }
+        }
     }
 
     Texte {
-        visible: panneau.rangees.length === 0
+        visible: panneau.rangees.length === 0 && !panneau.nouveau
         anchors.centerIn: defilement
         text: "Aucun profil enregistré."
         color: Theme.color?.textSecondary ?? "transparent"

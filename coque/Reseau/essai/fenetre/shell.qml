@@ -65,6 +65,8 @@ ShellRoot {
                 rangees: (p?.rangees ?? []).map(r => [r.groupe, r.nom, r.etat, r.icone]),
                 detail: f?.detail ?? {},
                 selection: essai.selection(),
+                nouvelle: !p?.nouvelle ? {} : {visible: p.nouvelle.visible, securise: p.nouvelle.securise,
+                                                valide: p.nouvelle.valide, erreur: p.nouvelle.erreur},
                 fiche: !f ? {} : {
                     uuid: f.uuid, lu: f.lu, priorite: f.valeurs.priorite, autoconnect: f.valeurs.autoconnect,
                     facture: f.valeurs.facture === "yes", fixe: f.fixe, erreurs: f.erreurs,
@@ -126,6 +128,25 @@ ShellRoot {
         }
         // copie — lit le retour de copie d'un libellé, sans geste. Entrée : cle. Sortie : voir lireCopie.
         function copie(cle: string): string { return essai.lireCopie(cle) }
+
+        // nouveau — clic sur « + » au pied de la colonne. Entrées : aucune. Sortie : aucune.
+        function nouveau(): void { essai.trouver(fenetre.panneau, o => o.objectName === "ajouterReseau").clicked() }
+
+        // remplirNouveau — remplit la fiche « Nouveau réseau ». Entrées : nom ; securise, « true » pour WPA2-WPA3 ;
+        // mdp, le mot de passe (jamais journalisé) ; cache, « true » pour un réseau caché. Sortie : aucune.
+        function remplirNouveau(nom: string, securise: string, mdp: string, cache: string): void {
+            const n = fenetre.panneau.nouvelle
+            const o = x => essai.trouver(n, i => i.objectName === x)
+            o("nom").text = nom
+            o("securite").currentIndex = securise === "true" ? 1 : 0
+            o("mdp").text = mdp
+            o("cache").checked = cache === "true"
+        }
+
+        // cliquerNouveau — clic sur « ajouter » ou « annuler » de la fiche « Nouveau réseau ». Entrée : nom.
+        function cliquerNouveau(nom: string): void {
+            essai.trouver(fenetre.panneau.nouvelle, i => i.objectName === nom).clicked()
+        }
 
         // fermerPastille — clic sur la pastille rouge, sans geste. Entrées : aucune. Sortie : aucune.
         function fermerPastille(): void { fenetre.pastilles.fermer() }
