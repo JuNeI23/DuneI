@@ -28,20 +28,7 @@ function iconeBatterie(presente, pourcent, enCharge, pleine) {
     return "battery-level-" + dizaine + (enCharge ? "-charging" : "")
 }
 
-// iconeWifi — icône du Wi-Fi.
-// Entrées : carte, une carte Wi-Fi existe ; actif, la radio est allumée ; connecte, un réseau est joint ;
-// force, qualité du signal de 0 à 1. Sortie : "" sans carte, "network-wireless-disabled" coupé,
-// "network-wireless-offline" déconnecté, sinon "network-wireless-signal-" + none, weak, ok, good ou
-// excellent (seuils 0,2 ; 0,4 ; 0,6 ; 0,8). Erreurs : aucune ; une force non numérique donne « none ».
-function iconeWifi(carte, actif, connecte, force) {
-    if (!carte) return ""
-    if (!actif) return "network-wireless-disabled"
-    if (!connecte) return "network-wireless-offline"
-    const palier = ["none", "weak", "ok", "good", "excellent"]
-    return "network-wireless-signal-" + palier[Math.max(0, Math.min(4, (Math.floor(force * 5) || 0)))]
-}
-
-// iconeReseau — icône du réseau (Wi-Fi et filaire), qui remplacera iconeWifi.
+// iconeReseau — icône du réseau (Wi-Fi et filaire).
 // Entrée : e, objet {carte, radio, filaire, connecte, connectivite, facture, force} : une carte Wi-Fi existe ;
 // sa radio est allumée ; un lien filaire est connecté ; le Wi-Fi est joint ; connectivité NetworkManager (« full »,
 // « limited », « portal », « none » ou « unknown ») ; la connexion est facturée à l'usage ; qualité du signal de

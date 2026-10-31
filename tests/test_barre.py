@@ -101,13 +101,6 @@ class IconesTest(BarreIpc, unittest.TestCase):
         self.assertEqual(self.appeler("iconeBatterie", True, 97, False, False), "battery-level-100")
         self.assertEqual(self.appeler("texteBatterie", 78), "78\u00a0%")
 
-    def test_wifi(self):
-        self.assertEqual(self.appeler("iconeWifi", False, True, True, 0.9), "")
-        self.assertEqual(self.appeler("iconeWifi", True, False, True, 0.9), "network-wireless-disabled")
-        self.assertEqual(self.appeler("iconeWifi", True, True, False, 0.9), "network-wireless-offline")
-        for force, palier in ((0.1, "none"), (0.3, "weak"), (0.5, "ok"), (0.7, "good"), (0.9, "excellent"), (1, "excellent")):
-            self.assertEqual(self.appeler("iconeWifi", True, True, True, force), f"network-wireless-signal-{palier}", force)
-
     def reseau(self, carte=True, radio=True, filaire=False, connecte=True, connectivite="full", facture=False, force=0.9):
         """Appelle iconeReseau avec un état par défaut « Wi-Fi joint, excellent signal, internet joignable ».
 
@@ -147,9 +140,6 @@ class IconesTest(BarreIpc, unittest.TestCase):
         self.assertEqual(self.reseau(carte=False, filaire=True), "network-wired")
         self.assertEqual(self.reseau(carte=False, filaire=True, connecte=False), "network-wired")
         self.assertEqual(self.reseau(carte=False, filaire=True, connectivite="limited"), "network-wired-no-route")
-
-    def test_wifi_force_non_numerique(self):
-        self.assertEqual(self.appeler("iconeWifi", True, True, True, "NaN"), "network-wireless-signal-none")
 
     def test_bluetooth_notifications_moment(self):
         self.assertEqual(self.appeler("iconeBluetooth", False, True), "")

@@ -1,16 +1,10 @@
 import QtQuick
-import Quickshell.Networking
-import "icones.js" as Icones
+import "../Reseau"
 
-// Wifi — état du Wi-Fi : coupé, déconnecté ou force du signal en cinq paliers.
-// Rôle : lit Networking (radio, cartes) et le réseau joint par la première carte Wi-Fi qui en a un.
-// Entrées : aucune. Sorties : aucune. Erreurs : sans carte Wi-Fi, l'élément disparaît.
-// Dépendances : ElementBarre, icones.js, Quickshell.Networking.
+// Wifi — état du réseau dans la barre : coupé, déconnecté, filaire ou force du signal en cinq paliers.
+// Rôle : affiche EtatReseau.icone, calculée à partir de Quickshell.Networking par le singleton.
+// Entrées : aucune. Sorties : aucune. Erreurs : sans carte Wi-Fi ni lien filaire, l'élément disparaît.
+// Dépendances : ElementBarre, EtatReseau.
 ElementBarre {
-    // Cartes Wi-Fi présentes.
-    readonly property var cartes: Array.from(Networking.devices.values).filter(d => d.type === DeviceType.Wifi)
-    // Réseau joint, ou undefined.
-    readonly property var joint: cartes.reduce((tous, c) => tous.concat(Array.from(c.networks.values)), []).find(n => n.connected)
-
-    icone: Icones.iconeWifi(cartes.length > 0, Networking.wifiEnabled, joint !== undefined, joint?.signalStrength ?? 0)
+    icone: EtatReseau.icone
 }

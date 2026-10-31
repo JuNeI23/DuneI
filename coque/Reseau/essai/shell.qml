@@ -2,16 +2,60 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import "nmcli.js" as Nmcli
+import "Barre"
+import "Reseau"
 
-// Coque d'essai de la bibliothèque nmcli.js, sans aucune fenêtre.
-// Rôle : expose par IPC (cible « reseau ») les fonctions pures de nmcli.js, pour que tests/test_reseau.py les
+// Coque d'essai du module Reseau, sans aucune fenêtre.
+// Rôle : expose par IPC (cible « reseau ») les fonctions pures de nmcli.js, et le singleton EtatReseau (cible
+// « etat »), avec les indicateurs Wifi et Vpn de la barre qui le lisent, pour que tests/test_reseau.py les
 // éprouve dans un vrai Quickshell.
 // Entrées : commande IPC appeler <fonction> <{"args": [...]} en JSON>. Sortie : le résultat encodé en JSON, ou
 // « erreur : <message> » si la fonction lève. Erreurs : nom de fonction inconnu, JSON invalide (même forme de
 // retour). Dépendances : quickshell ≥ 0.3 (Quickshell.Io), nmcli.js (lien essai/nmcli.js, car Quickshell ne
-// suit pas les imports hors du dossier de la coque).
+// suit pas les imports hors du dossier de la coque ; liens essai/Barre et essai/Reseau pour la même raison).
 ShellRoot {
     Component.onCompleted: console.log("reseau : prêt")
+
+    // Les deux lecteurs de EtatReseau : un seul moniteur doit tourner quand ils sont tous deux instanciés.
+    Item {
+        Wifi { id: wifi }
+        Vpn { id: vpn }
+    }
+
+    // Réactive EtatReseau peu après son arrêt : le moniteur réel, tué par l'arrêt, ne doit pas se voir relancé
+    // par sa sortie tardive sur l'état « actif » déjà rétabli.
+    Timer {
+        id: reprise
+        interval: 300
+        onTriggered: EtatReseau.actif = true
+    }
+
+    IpcHandler {
+        target: "etat"
+
+        // injecter — remplace le moniteur et la lecture de EtatReseau par « sh -c » et les redémarre.
+        // Entrées : commande (moniteur), lecture. Sortie : aucune. Erreurs : aucune. Dépendances : EtatReseau.
+        function injecter(commande: string, lecture: string): void {
+            EtatReseau.actif = false; EtatReseau.relances = 0
+            EtatReseau.surveille = ["sh", "-c", commande]; EtatReseau.lecture = ["sh", "-c", lecture]
+            reprise.start()
+        }
+
+        // valeur — propriété de EtatReseau, en JSON. Entrée : nom. Sortie : JSON. Erreurs : nom inconnu, « null ».
+        // Dépendances : EtatReseau.
+        function valeur(nom: string): string { return JSON.stringify(EtatReseau[nom] ?? null) }
+
+        // visibles — visibilité de Wifi et de Vpn, « wifi;vpn ». Sortie : texte. Dépendances : wifi, vpn.
+        function visibles(): string { return `${wifi.visible};${vpn.visible}` }
+
+        // executer — lance EtatReseau.executer et attend la fin par le journal.
+        // Entrée : args, JSON {"args": [...]}. Sortie : aucune ; journalise « etat : fin <code> <sortie> ».
+        // Erreurs : JSON invalide. Dépendances : EtatReseau.
+        function executer(argumentsJson: string): void {
+            EtatReseau.executer(JSON.parse(argumentsJson).args, (code, sortie) =>
+                console.log("etat : fin " + code + " " + sortie.split("\n")[0]))
+        }
+    }
 
     IpcHandler {
         target: "reseau"

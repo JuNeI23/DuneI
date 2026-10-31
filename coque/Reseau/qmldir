@@ -1,1 +1,2 @@
 module Reseau
+singleton EtatReseau 1.0 EtatReseau.qml

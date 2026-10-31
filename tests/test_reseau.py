@@ -7,7 +7,9 @@ moteur de Quickshell, jamais dans un interpréteur de substitution.
 import json
 import os
 import subprocess
+import time
 import unittest
+from pathlib import Path
 
 from tests.test_coque_theme import DELAI, QS, ROOT, EssaiCoque
 
@@ -105,3 +107,76 @@ class NmcliTest(EssaiCoque, unittest.TestCase):
         self.assertIsInstance(r, str)
         self.assertTrue(r.startswith("erreur"), r)
         self.assertIn("bidon", r)
+
+
+@unittest.skipUnless(os.environ.get("WAYLAND_DISPLAY") and QS, "session Wayland et Quickshell requis")
+class EtatReseauTest(EssaiCoque, unittest.TestCase):
+    """Le singleton EtatReseau, éprouvé avec un moniteur et une lecture factices."""
+
+    essai = ESSAI
+    teintes = (55,)
+
+    def setUp(self):
+        super().setUp()
+        self.installer(55)
+        self.lancer(self.dir)
+        self.attendre("Theme : chargé, teinte 55")
+
+    def ipc(self, cible: str, fonction: str, *args) -> str:
+        """Appelle une fonction IPC de la coque d'essai.
+
+        Entrées : cible, fonction, args (chaînes). Sortie : la sortie standard. Erreurs : CalledProcessError.
+        Dépendances : qs.
+        """
+        return subprocess.run([QS, "ipc", "--pid", str(self.proc.pid), "call", cible, fonction, *args],
+                              check=True, capture_output=True, text=True, timeout=DELAI).stdout.strip()
+
+    def valeur(self, nom: str):
+        """Valeur décodée d'une propriété de EtatReseau. Entrée : nom. Sortie : valeur JSON. Dépendances : ipc."""
+        return json.loads(self.ipc("etat", "valeur", nom))
+
+    def injecter(self, lecture: str, commande: str = "sleep 0.3; echo ligne; sleep 30"):
+        """Remplace le moniteur et la lecture par des commandes factices. Entrées : lecture, commande."""
+        self.ipc("etat", "injecter", commande, lecture)
+
+    def test_lecture_publiee(self):
+        sortie = (f"vpn:wg0\n802-11-wireless:wlan0\n--\nIP4.ADDRESS[1]:192.168.1.42/24\nIP4.GATEWAY:192.168.1.1\n"
+                  f"IP4.DNS[1]:1.1.1.1\nGENERAL.METERED:yes\n--\nWifi_TRIADES:{UUID}:802-11-wireless:wlan0:yes\n")
+        fichier = Path(self.tmp.name) / "sortie"
+        fichier.write_text(sortie)
+        self.injecter(f"cat {fichier}")
+        time.sleep(1.2)
+        self.assertEqual(self.valeur("ip4"), ["192.168.1.42/24"])
+        self.assertEqual(self.valeur("passerelle"), "192.168.1.1")
+        self.assertEqual(self.valeur("dns"), ["1.1.1.1"])
+        self.assertTrue(self.valeur("facture"))
+        self.assertTrue(self.valeur("vpnActif"))
+        self.assertEqual(self.valeur("profils")[0]["nom"], "Wifi_TRIADES")
+        self.assertEqual(self.ipc("etat", "visibles").split(";")[1], "true")
+
+    def test_une_seule_surveillance(self):
+        self.injecter("true")
+        time.sleep(1.2)
+        self.assertEqual(self.valeur("relances"), 1)
+
+    def test_lecture_apres_ligne_seulement(self):
+        """Pas de minuteur : la lecture suit la ligne du moniteur, puis plus rien."""
+        compte = Path(self.tmp.name) / "compte"
+        self.injecter(f"echo x >> {compte}", "sleep 0.5; echo ligne; sleep 30")
+        time.sleep(0.6)
+        self.assertEqual(len(compte.read_text().split()), 1)
+        time.sleep(1.5)
+        self.assertEqual(len(compte.read_text().split()), 2)
+        time.sleep(2)
+        self.assertEqual(len(compte.read_text().split()), 2)
+
+    def test_propriete_derivees(self):
+        self.assertIn(self.valeur("connectivite"), ["unknown", "none", "portal", "limited", "full"])
+        self.assertIsInstance(self.valeur("icone"), str)
+
+    def test_executer(self):
+        self.ipc("etat", "executer", json.dumps({"args": ["bidon"]}))
+        self.attendre("etat : fin 2 Error")
+        self.ipc("etat", "executer", json.dumps({"args": ["-v"]}))
+        self.attendre("etat : fin 0 nmcli tool")
+        self.assertNotIn("ERROR", self.journal())
