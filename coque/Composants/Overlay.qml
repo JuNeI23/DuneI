@@ -40,7 +40,9 @@ import "ancrage.js" as Ancrage
 //           propriété par défaut : l'élément déclaré dans l'Overlay, instancié à chaque ouverture ; associees,
 //           fenêtres ajoutées à la prise du clavier d'un contextuel (HyprlandFocusGrab), vide par défaut : un clic
 //           dans l'une d'elles ne lève pas la prise, si bien que l'ouvreur, posé dans la barre, ferme lui-même le
-//           contextuel au lieu de le voir fermé à l'appui puis rouvert au relâchement.
+//           contextuel au lieu de le voir fermé à l'appui puis rouvert au relâchement ; margeEcran, écart gardé
+//           entre le cadre d'un contextuel ou d'une infobulle serré dans l'écran et chaque bord de l'écran, 0 par
+//           défaut (le popover réseau y met la marge de tuilage, comme les fenêtres).
 // Sorties : ferme(), émis à chaque fermeture, quelle qu'en soit la cause ; chargeur, le LazyLoader de la
 //           fenêtre, exposé pour les essais et les relevés de mémoire ; fenetreAttention (un porteur de
 //           FenetreAttention) et fenetreContextuel, les composants que le chargeur instancie, internes à la
@@ -64,6 +66,7 @@ QtObject {
     property var point: null
     default property Component contenu
     property list<QtObject> associees
+    property real margeEcran: 0
     signal ferme()
     readonly property bool bulle: famille === "infobulle"
 
@@ -195,7 +198,7 @@ QtObject {
         readonly property real ancreX: serre && overlay.ancre ? origine + overlay.ancre.mapToItem(null, 0, 0).x : 0
         readonly property real gaucheCadre: serre
             ? Ancrage.gaucheCadre(overlay.bulle, ancreX, overlay.ancre?.width ?? 0, overlay.point?.x ?? null,
-                                  cadrePopup.implicitWidth, fenetreAncre.screen.width) - ancreX
+                                  cadrePopup.implicitWidth, fenetreAncre.screen.width, overlay.margeEcran) - ancreX
             : 0
         anchor.rect.x: serre ? gaucheCadre - marge : (overlay.point?.x ?? 0) - marge
         anchor.rect.y: overlay.point ? overlay.point.y - marge : (overlay.ancre?.height ?? 1) + ecart - marge - 1

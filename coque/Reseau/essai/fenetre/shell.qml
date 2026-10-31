@@ -56,6 +56,12 @@ ShellRoot {
             })
         }
 
+        // demander — demande la fenêtre sur un profil, comme « Détails… » du popover. Entrée : cle, uuid ou nom.
+        // Sortie : aucune. Erreurs : aucune.
+        function demander(cle: string): void { EtatReseau.profilDemande = cle; EtatReseau.fenetre = true }
+        // demande — profil demandé encore en attente (EtatReseau.profilDemande). Sortie : texte.
+        function demande(): string { return EtatReseau.profilDemande }
+
         // choisir — sélectionne le profil d'un uuid, comme un clic dans la liste. Entrée : uuid. Sortie : aucune.
         function choisir(uuid: string): void { fenetre.panneau.choisi = uuid }
 

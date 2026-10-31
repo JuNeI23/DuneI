@@ -9,7 +9,9 @@ import "nmcli.js" as Nmcli
 // Rôle : un Item sans fenêtre, que FenetreReseau pose dans sa FloatingWindow et que l'écran de réglages (L5-01)
 // reprendra tel quel comme premier panneau. La barre latérale, au titre « Réseau », liste tous les profils Wi-Fi
 // puis filaires, y compris hors de portée (nmcli.profilsFenetre) : icône (partage du téléphone pour un profil
-// facturé), nom, état, pastille verte sur le profil actif. Le profil actif est choisi à l'ouverture ; un clic, ou
+// facturé), nom, état, pastille verte sur le profil actif. Le profil demandé (etat.profilDemande, posé par
+// « Détails… » du popover), sinon le profil actif, est choisi à l'ouverture ; une demande faite fenêtre ouverte est
+// suivie aussitôt, et toute demande est consommée (remise à vide) dès que son profil est sélectionné ; un clic, ou
 // les flèches de la liste, en choisissent un autre, dont la FicheProfil occupe la droite, dans une zone qui défile.
 // La facturation de chaque profil Wi-Fi est lue d'un seul processus quand la liste des profils change, puis tenue à
 // jour par les lectures de la fiche ; aucun minuteur.
@@ -18,8 +20,8 @@ import "nmcli.js" as Nmcli
 // facturation lue.
 // Erreurs : sans profil, la fiche est vide et « Aucun profil enregistré. » s'affiche ; un échec de la lecture des
 // factures laisse les icônes Wi-Fi ordinaires.
-// Dépendances : EtatReseau (profils, reseaux, facture), FicheProfil, nmcli.js (profilsFenetre, lireFactures), Liste,
-// Rangee, Surface, Separateur, Icone, Texte, Theme, Quickshell.Io (Process, StdioCollector).
+// Dépendances : EtatReseau (profils, reseaux, facture, profilDemande), FicheProfil, nmcli.js (profilsFenetre,
+// lireFactures), Liste, Rangee, Surface, Separateur, Icone, Texte, Theme, Quickshell.Io (Process, StdioCollector).
 // Cotes : barre latérale de 236 px, au fond de panneau, séparée par un filet ; rangées de profil de 40 px ; fiche en
 // retrait de space.scale[3] (16) en haut et space.blockGap (24) sur les côtés.
 Item {
@@ -36,12 +38,17 @@ Item {
     property string empreinte: ""
 
     onRangeesChanged: remplir()
+    Connections {
+        target: panneau.etat
+        function onProfilDemandeChanged() { panneau.remplir() }
+    }
     onCleFacturesChanged: if (cleFactures !== "") lectureFactures.running = true
     Component.onCompleted: { remplir(); liste.forceActiveFocus() }
 
-    // remplir — reconstruit le modèle de la liste si les rangées ont changé, et garde un profil choisi valide (le
-    // profil actif, sinon le premier). Entrées : aucune. Sortie : aucune. Erreurs : aucune.
-    // Dépendances : rangees, modele.
+    // remplir — reconstruit le modèle de la liste si les rangées ont changé, choisit le profil demandé par
+    // etat.profilDemande (uuid ou nom) s'il figure dans la liste, puis consomme la demande, et garde sinon un profil
+    // choisi valide (le profil actif, sinon le premier). Entrées : aucune. Sortie : aucune. Erreurs : aucune ; une
+    // demande dont le profil n'est pas (encore) lu attend la lecture suivante. Dépendances : rangees, modele, etat.
     function remplir() {
         const e = JSON.stringify(rangees)
         if (e !== empreinte) {
@@ -50,7 +57,12 @@ Item {
             for (const r of rangees) modele.append({groupe: r.groupe, nom: r.nom, uuid: r.uuid, statut: r.etat,
                                                     symbole: r.icone, actif: r.actif})
         }
-        if (!rangees.some(r => r.uuid === choisi)) choisi = (rangees.find(r => r.actif) ?? rangees[0])?.uuid ?? ""
+        const demande = etat.profilDemande === "" ? null
+            : rangees.find(r => r.uuid === etat.profilDemande || r.nom === etat.profilDemande)
+        if (demande) {
+            choisi = demande.uuid
+            etat.profilDemande = ""
+        } else if (!rangees.some(r => r.uuid === choisi)) choisi = (rangees.find(r => r.actif) ?? rangees[0])?.uuid ?? ""
     }
 
     // apresOubli — choisit un autre profil après l'oubli du profil affiché. Entrée : oublie, son uuid.

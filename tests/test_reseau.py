@@ -167,15 +167,17 @@ class NmcliTest(EssaiCoque, unittest.TestCase):
 
     def test_trier_reseaux(self):
         # Le réseau joint en tête, puis les réseaux connus, puis la force décroissante ; un nom vide (réseau caché)
-        # n'est pas listé.
+        # n'est pas listé ; un nom vu deux fois (deux cartes, deux bandes) ne l'est qu'une fois, à son meilleur rang.
         r = self.appeler("trierReseaux", [
+            {"name": "Fort", "connected": False, "known": False, "signalStrength": 0.3},
             {"name": "Faible", "connected": False, "known": False, "signalStrength": 0.2},
             {"name": "", "connected": False, "known": False, "signalStrength": 0.9},
             {"name": "Fort", "connected": False, "known": False, "signalStrength": 0.8},
             {"name": "Connu", "connected": False, "known": True, "signalStrength": 0.1},
             {"name": "Joint", "connected": True, "known": True, "signalStrength": 0.5},
         ])
-        self.assertEqual([x["name"] for x in r], ["Joint", "Connu", "Fort", "Faible"])
+        self.assertEqual([(x["name"], x["signalStrength"]) for x in r],
+                         [("Joint", 0.5), ("Connu", 0.1), ("Fort", 0.8), ("Faible", 0.2)])
         self.assertEqual(self.appeler("trierReseaux", []), [])
 
     def resume(self, **e):
@@ -255,14 +257,30 @@ class EtatReseauTest(EssaiCoque, unittest.TestCase):
 
     def test_lecture_apres_ligne_seulement(self):
         """Pas de minuteur : la lecture suit la ligne du moniteur, puis plus rien."""
-        compte = Path(self.tmp.name) / "compte"
-        self.injecter(f"echo x >> {compte}", "sleep 0.5; echo ligne; sleep 30")
-        time.sleep(0.6)
-        self.assertEqual(len(compte.read_text().split()), 1)
-        time.sleep(1.5)
-        self.assertEqual(len(compte.read_text().split()), 2)
+        # Le moniteur factice n'émet sa ligne qu'à l'apparition du fichier « signal », que le test pose lui-même :
+        # aucune fenêtre de temps ne dépend de la charge de la machine.
+        compte, signal = Path(self.tmp.name) / "compte", Path(self.tmp.name) / "signal"
+        lectures = lambda: len(compte.read_text().split()) if compte.exists() else 0
+        self.injecter(f"echo x >> {compte}", f"while [ ! -e {signal} ]; do sleep 0.05; done; echo ligne; sleep 30")
+        self.jusqua(lambda: lectures() >= 1, "première lecture")
+        time.sleep(1)
+        self.assertEqual(lectures(), 1, "aucune lecture sans ligne du moniteur")
+        signal.touch()
+        self.jusqua(lambda: lectures() >= 2, "lecture après la ligne")
         time.sleep(2)
-        self.assertEqual(len(compte.read_text().split()), 2)
+        self.assertEqual(lectures(), 2)
+
+    def jusqua(self, condition, message: str):
+        """Attend, au plus DELAI secondes, qu'une condition devienne vraie.
+
+        Entrées : condition, fonction sans argument → bool ; message, ajouté à l'échec. Sortie : aucune.
+        Erreurs : échec du test au délai, avec le journal de la coque. Dépendances : aucune.
+        """
+        fin = time.monotonic() + DELAI
+        while not condition():
+            if time.monotonic() > fin:
+                self.fail(f"{message}\n{self.journal()}")
+            time.sleep(0.05)
 
     def test_propriete_derivees(self):
         self.assertIn(self.valeur("connectivite"), ["unknown", "none", "portal", "limited", "full"])
@@ -357,12 +375,121 @@ class PopoverTest(EssaiCoque, unittest.TestCase):
         self.assertTrue(self.recherche())
 
     def test_contenu(self):
+        # Retours de Nicolas : la bascule à glyphe remplace l'interrupteur (allumée, radio en marche) ; plus d'IP
+        # ni d'« Autre réseau… » ; « Réglages réseau… » sans chevron ; le cadre se tient à la marge de tuilage du
+        # bord de l'écran ; la recherche porte son infobulle.
         p = self.ouvrir()
         self.assertEqual((p["titre"], p["etat"]), ("Wifi_TRIADES", "Connecté"))
-        self.assertTrue(p["interrupteur"])
+        self.assertEqual(p["bascule"], {"visible": True, "actif": True, "allumee": True})
         self.assertEqual(p["reseaux"], ["Wifi_TRIADES", "Connu", "Inconnu", "Ouvert"])
         self.assertEqual(p["deplie"], "")
         self.assertFalse(p["portail"])
+        self.assertFalse(p["ip"], "aucune adresse IP dans le popover")
+        self.assertFalse(p["autre"], "« Autre réseau… » est parti dans la fenêtre Réseau")
+        self.assertFalse(p["chevron"], "« Réglages réseau… » sans chevron")
+        self.assertEqual(p["margeEcran"], 8)
+        self.assertEqual(p["infobulle"], "Rechercher les réseaux")
+        self.assertFalse(p["activite"])
+
+    def test_bascule_coupe_et_rallume(self):
+        # Un clic sur la bascule coupe le Wi-Fi ; la bascule suit ensuite la radio réelle (ici, factice, inchangée).
+        self.ouvrir()
+        self.ipc("activer", "bascule")
+        self.attendre("essai : allumer false")
+        self.assertTrue(self.panneau()["bascule"]["allumee"], "la bascule se relie à la radio")
+
+    def test_recherche_montre_l_activite(self):
+        # Pendant un balayage relancé, l'indicateur d'activité remplace l'icône, jusqu'au retour de la liste.
+        self.ouvrir()
+        self.ipc("activer", "rechercher")
+        self.attendre('essai : executer ["device","wifi","rescan"]')
+        p = self.panneau()
+        self.assertTrue(p["balayage"] and p["activite"])
+        self.ipc("ajouterReseau")
+        p = self.panneau()
+        self.assertFalse(p["balayage"] or p["activite"])
+
+    def test_recherche_bornee(self):
+        # Un balayage qui ne change pas la liste ne laisse pas l'indicateur tourner : il s'arrête de lui-même.
+        self.ouvrir()
+        self.ipc("activer", "rechercher")
+        self.assertTrue(self.panneau()["activite"])
+        fin = time.monotonic() + DELAI
+        while self.panneau()["activite"] and time.monotonic() < fin:
+            time.sleep(0.2)
+        self.assertFalse(self.panneau()["activite"])
+
+    def attendre_repos(self, nom: str) -> dict:
+        """Attend que la ligne nommée ait fini de se déplier ou de se replier, et qu'aucune ligne ne glisse.
+
+        Entrée : nom. Sortie : l'état du panneau au repos. Erreurs : échec du test au délai. Dépendances : panneau.
+        """
+        fin = time.monotonic() + DELAI
+        while time.monotonic() < fin:
+            p = self.panneau()
+            if not p["glisse"] and not p["lignes"].get(nom, {}).get("deplieEnCours"):
+                return p
+            time.sleep(0.05)
+        self.fail(f"{nom} toujours en mouvement\n{p}")
+
+    def test_actions_du_reseau_joint(self):
+        # Un clic sur le réseau joint déplie « Se déconnecter » et « Détails… » ; un second clic replie ; « Se
+        # déconnecter » déconnecte ce réseau et replie.
+        self.ouvrir()
+        self.ipc("choisir", "Wifi_TRIADES")
+        p = self.panneau()
+        self.assertEqual((p["deplie"], p["mode"], p["saisie"]), ("Wifi_TRIADES", "actions", -1))
+        self.ipc("choisir", "Wifi_TRIADES")
+        self.assertEqual(self.panneau()["deplie"], "")
+        self.attendre_repos("Wifi_TRIADES")
+        self.ipc("choisir", "Wifi_TRIADES")
+        self.attendre_repos("Wifi_TRIADES")
+        self.ipc("activer", "deconnecter")
+        self.attendre("essai : disconnect Wifi_TRIADES")
+        self.assertEqual(self.panneau()["deplie"], "")
+        self.assertNotIn("essai : connect Wifi_TRIADES", self.journal())
+
+    def test_details(self):
+        # « Détails… » demande la fenêtre Réseau sur le profil du réseau joint (sans profil lu, par son nom) et
+        # ferme le popover.
+        self.ouvrir()
+        self.ipc("choisir", "Wifi_TRIADES")
+        self.attendre_repos("Wifi_TRIADES")
+        self.ipc("activer", "details")
+        self.assertTrue(json.loads(self.ipc("fenetre")))
+        self.assertEqual(json.loads(self.ipc("profilDemande")), "Wifi_TRIADES")
+        self.assertEqual(self.panneau(), {})
+
+    def test_depliage_anime(self):
+        # La ligne de mot de passe se déplie en animant sa hauteur, et, repliée, reste construite le temps de
+        # replier (rien ne disparaît d'un coup), puis est détruite.
+        self.ouvrir()
+        self.ipc("choisir", "Inconnu")
+        p = self.attendre_repos("Inconnu")
+        self.assertGreater(p["lignes"]["Inconnu"]["depliage"], 40)
+        self.ipc("choisir", "Inconnu")
+        p = self.panneau()
+        self.assertEqual(p["deplie"], "")
+        self.assertTrue(p["lignes"]["Inconnu"]["charge"], "la ligne se replie, elle ne disparaît pas")
+        self.assertGreater(p["lignes"]["Inconnu"]["depliage"], 0)
+        p = self.attendre_repos("Inconnu")
+        self.assertEqual(p["lignes"]["Inconnu"], {"depliage": 0, "deplieEnCours": False, "charge": False})
+        self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read|Unable to assign|Binding loop")
+
+    def test_connexion_puis_glissement(self):
+        # Le réseau choisi montre « Connexion… » ; rejoint, il remonte en tête et les lignes glissent jusqu'à leur
+        # nouvelle place au lieu d'y sauter.
+        self.ouvrir()
+        self.ipc("choisir", "Connu")
+        self.attendre("essai : connect Connu")
+        self.assertEqual(self.panneau()["connexion"], ["Connu"])
+        self.ipc("joindre", "Connu")
+        p = self.panneau()
+        self.assertEqual(p["connexion"], [])
+        self.assertEqual(p["reseaux"], ["Connu", "Wifi_TRIADES", "Inconnu", "Ouvert"])
+        self.assertTrue(p["glisse"], "les lignes glissent vers leur nouvelle place")
+        self.assertFalse(self.attendre_repos("Connu")["glisse"])
+        self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read|Unable to assign|Binding loop")
 
     def test_portail(self):
         self.ipc("connectivite", "portal")
@@ -453,28 +580,12 @@ class PopoverTest(EssaiCoque, unittest.TestCase):
         self.assertNotRegex(self.journal(), r"TypeError|ReferenceError")
 
     def test_sans_carte(self):
-        # Sans carte Wi-Fi : ni interrupteur ni liste, seulement l'état filaire.
+        # Sans carte Wi-Fi : la bascule désactivée montre le lien filaire, pas de liste.
         self.ipc("sansCarte")
         p = self.ouvrir()
         self.assertEqual((p["titre"], p["etat"]), ("Réseau filaire", "Connecté"))
-        self.assertFalse(p["interrupteur"])
+        self.assertEqual(p["bascule"], {"visible": True, "actif": False, "allumee": True})
         self.assertEqual(p["reseaux"], [])
-        self.assertFalse(p["autre"])
-
-    def test_autre_reseau(self):
-        # Réseau caché : nmcli device wifi connect <nom> password <mdp> hidden yes, par executer ; le factice
-        # journalise les arguments, mot de passe masqué.
-        self.ouvrir()
-        self.ipc("activer", "autre")
-        self.assertEqual(self.panneau()["deplie"], "<autre>")
-        self.ipc("saisirNom", "Maison:Cachée")
-        self.ipc("saisir", self.SECRET)
-        self.ipc("activer", "rejoindre")
-        self.attendre("essai : executer ")
-        ligne = [l for l in self.journal().splitlines() if "essai : executer " in l][-1]
-        self.assertEqual(json.loads(ligne.split("essai : executer ", 1)[1]),
-                         ["device", "wifi", "connect", "Maison:Cachée", "password", "<masqué>", "hidden", "yes"])
-        self.assertNotIn(self.SECRET, self.journal())
 
     def test_reglages(self):
         self.ouvrir()
@@ -608,6 +719,16 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
         self.assertFalse(e["demandee"])
         self.ouvrir()
         self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
+
+    def test_profil_demande(self):
+        # « Détails… » du popover : la fenêtre s'ouvre sur le profil demandé (par uuid ou par nom), et la demande est
+        # consommée ; une demande faite fenêtre ouverte est suivie aussitôt.
+        self.ipc("essai", "demander", "hotspot-1")
+        self.jusqua(lambda e: e["fiche"].get("uuid") == "hotspot-1" and e["fiche"]["lu"], "profil demandé lu")
+        self.assertEqual(self.ipc("essai", "demande"), "")
+        self.ipc("essai", "demander", "Wifi_TRIADES")
+        self.jusqua(lambda e: e["fiche"].get("uuid") == "wifi-1", "demande suivie fenêtre ouverte")
+        self.assertEqual(self.ipc("essai", "demande"), "")
 
     def test_priorite(self):
         self.ouvrir("hotspot-1")

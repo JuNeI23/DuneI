@@ -190,11 +190,14 @@ function etatAppareils(appareils, typeWifi, typeFilaire) {
 // trierReseaux — ordre de la liste des réseaux du popover.
 // Entrée : reseaux, tableau d'objets {name, connected, known, signalStrength} (des WifiNetwork de
 // Quickshell.Networking ou des factices). Sortie : nouveau tableau, le réseau joint en tête, puis les réseaux
-// connus, puis la force décroissante ; un nom vide (réseau caché, qu'on rejoint par « Autre réseau… ») est écarté.
+// connus, puis la force décroissante ; un nom vide (réseau caché, qu'on rejoint depuis la fenêtre Réseau) est
+// écarté, et un nom vu plusieurs fois (deux cartes, deux bandes) ne garde que son premier rang : le nom est la clé
+// des rangées du popover.
 // Erreurs : aucune. Dépendances : aucune.
 function trierReseaux(reseaux) {
     const rang = r => (r.connected ? 0 : 2) + (r.known ? 0 : 1)
     return reseaux.filter(r => r.name !== "").sort((a, b) => rang(a) - rang(b) || b.signalStrength - a.signalStrength)
+        .filter((r, i, tries) => tries.findIndex(x => x.name === r.name) === i)
 }
 
 // resume — titre et état affichés en tête du popover réseau.

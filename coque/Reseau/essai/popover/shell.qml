@@ -9,14 +9,15 @@ import "Reseau"
 // Coque d'essai du popover réseau, dans une fenêtre offscreen.
 // Rôle : ouvre une FloatingWindow qui porte une ancre de la taille d'un indicateur de la barre, et un
 // PopoverReseau, dans un Loader pour pouvoir le détruire, branché sur un état factice : aucune action ne touche
-// le réseau réel. Les réseaux factices journalisent leurs appels (connect, connectWithPsk avec la seule longueur
-// du mot de passe), executer journalise ses arguments, mot de passe masqué. tests/test_reseau.py (PopoverTest) les
+// le réseau réel. Les réseaux factices journalisent leurs appels (connect, disconnect, connectWithPsk avec la seule
+// longueur du mot de passe), executer journalise ses arguments, mot de passe masqué. tests/test_reseau.py (PopoverTest) les
 // pilote par IPC (cible « popover »).
 // Garde de plateforme : la fenêtre n'est construite que sous offscreen, où elle ne paraît jamais à l'écran.
 // Entrées : DUNEI_TOKENS_DIR, lu par Theme ; QT_QPA_PLATFORM=offscreen, posé par le test.
 // Sortie : « essai : prêt » à l'ouverture de la fenêtre, et les lignes « essai : connect <nom> », « essai :
-// connectWithPsk <nom> <longueur> », « essai : executer <arguments JSON> », « essai : ouvrirPortail », « essai : verifier ». Commandes : voir chaque fonction de l'IpcHandler
-// (ajouterReseau et retirerReseau imitent le balayage).
+// disconnect <nom> », « essai : connectWithPsk <nom> <longueur> », « essai : executer <arguments JSON> », « essai :
+// allumer <bool> », « essai : ouvrirPortail », « essai : verifier ». Commandes : voir chaque fonction de
+// l'IpcHandler (ajouterReseau et retirerReseau imitent le balayage, joindre la réussite d'une connexion).
 // Erreurs : celles de Theme et des liaisons, dans le journal. Dépendances : quickshell ≥ 0.3 (FloatingWindow,
 // LazyLoader, IpcHandler), Quickshell.Networking (énumérations), modules Theme et Reseau, par les liens
 // Theme, Composants, Reseau et Barre posés sous cette racine.
@@ -35,6 +36,7 @@ ShellRoot {
         property int security: WifiSecurityType.Wpa2Psk
         signal connectionFailed(int reason)
         function connect() { essai.journal("connect", name) }
+        function disconnect() { essai.journal("disconnect", name) }
         function connectWithPsk(psk) { essai.journal("connectWithPsk", name + " " + psk.length) }
     }
 
@@ -67,8 +69,9 @@ ShellRoot {
         property string icone: "network-wireless-signal-excellent"
         property bool recherche: false
         property bool fenetre: false
+        property string profilDemande: ""
+        property var profils: []
         property var reseaux: []
-        function copierIp() { essai.journal("copierIp", true) }
         function allumer(actif) { essai.journal("allumer", actif) }
         function ouvrirPortail() { essai.journal("ouvrirPortail", true) }
         function verifier() { essai.journal("verifier", true) }
@@ -104,6 +107,8 @@ ShellRoot {
                 // recherche, fenetre — valeurs de l'état factice, en JSON. Sortie : texte.
                 function recherche(): string { return JSON.stringify(faux.recherche) }
                 function fenetre(): string { return JSON.stringify(faux.fenetre) }
+                // profilDemande — profil demandé à la fenêtre par « Détails… », en JSON. Sortie : texte.
+                function profilDemande(): string { return JSON.stringify(faux.profilDemande) }
                 // connectivite — change la connectivité factice. Entrée : valeur. Sortie : aucune.
                 function connectivite(valeur: string): void { faux.connectivite = valeur }
                 // sansCarte — machine en filaire seul, sans carte Wi-Fi. Entrées : aucune. Sortie : aucune.
@@ -123,18 +128,46 @@ ShellRoot {
                     faux.reseaux = faux.reseaux.filter(x => x !== r)
                     r.destroy()
                 }
+                // joindre — la connexion au réseau nommé réussit : il devient le réseau joint (et connu), l'ancien
+                // ne l'est plus, comme le rapporte Quickshell. Entrée : nom. Sortie : aucune.
+                function joindre(nom: string): void {
+                    essai.tous.forEach(r => { if (r) r.connected = false })
+                    const r = essai.reseau(nom)
+                    r.known = true
+                    r.connected = true
+                    faux.nomActif = nom
+                }
 
                 // panneau — état du panneau construit, en JSON, sans aucun texte saisi ; {} s'il n'existe pas.
-                // Sortie : {titre, etat, interrupteur, reseaux (rangées montrées), deplie, erreur, portail, autre, saisie (longueur du
-                // mot de passe de la ligne dépliée, -1 sans ligne)}. Erreurs : aucune.
+                // Sortie : {titre, etat, bascule {visible, actif, allumee}, reseaux (rangées montrées, dans l'ordre),
+                // deplie, mode, erreur, portail, ip (une adresse est-elle affichée), autre (« Autre réseau… »
+                // affiché), chevron (« Réglages réseau… » porte un suffixe), balayage, activite (indicateur de la
+                // recherche visible), infobulle (texte de l'infobulle de la recherche), connexion (noms des lignes
+                // « Connexion… »), glisse (une ligne glisse), lignes (nom → {depliage, deplieEnCours, charge}),
+                // margeEcran (du popover), saisie (longueur du mot de passe de la ligne dépliée, -1 sans ligne)}.
+                // Erreurs : aucune.
                 function panneau(): string {
                     const p = porteur.item?.panneau
                     if (!p) return "{}"
-                    const visible = nom => essai.trouver(p, o => o.objectName === nom)?.visible ?? false
+                    const objet = nom => essai.trouver(p, o => o.objectName === nom)
+                    const bascule = objet("bascule")
+                    const delegues = Object.values(p.delegues)
+                    const lignes = {}
+                    for (const d of delegues) lignes[d.cle] = { depliage: d.depliage.value, deplieEnCours: d.depliage.moving, charge: d.bloc !== null || d.depliage.value > 0 }
                     return JSON.stringify({
-                        titre: p.resume.titre, etat: p.resume.etat, interrupteur: visible("interrupteur"),
-                        reseaux: p.listeVisible ? p.reseaux.filter(r => p.present(r)).map(r => r.name) : [], deplie: p.deplie, erreur: p.erreur,
-                        portail: p.etat.connectivite === "portal", autre: p.listeVisible,
+                        titre: p.resume.titre, etat: p.resume.etat,
+                        bascule: { visible: bascule.visible, actif: bascule.enabled, allumee: bascule.checked },
+                        reseaux: p.listeVisible ? p.ordre.filter((n, i) => p.present(p.reseaux[i])) : [],
+                        deplie: p.deplie, mode: p.mode, erreur: p.erreur,
+                        portail: p.etat.connectivite === "portal",
+                        ip: essai.trouver(p, o => o.visible && String(o.text ?? "").includes("192.168")) !== null,
+                        autre: essai.trouver(p, o => o.text === "Autre réseau…") !== null,
+                        chevron: essai.trouver(p, o => o.text === "Réglages réseau…").suffixe !== null,
+                        balayage: p.balayage, activite: objet("activiteRecherche").visible,
+                        infobulle: Array.from(objet("recherche").data).find(o => o.objectName === "infobulleRecherche")?.texte ?? "",
+                        connexion: delegues.filter(d => d.enConnexion).map(d => d.cle),
+                        glisse: delegues.some(d => d.decalage.moving), lignes,
+                        margeEcran: porteur.item.margeEcran,
                         saisie: p.bloc ? p.bloc.secret.length : -1,
                     })
                 }
@@ -142,22 +175,30 @@ ShellRoot {
                 // choisir — clic sur le réseau nommé. Entrée : nom. Sortie : aucune.
                 function choisir(nom: string): void {
                     const p = porteur.item.panneau
-                    p.choisir(p.reseaux.find(r => r.name === nom))
+                    p.choisir(p.reseaux.find(r => r?.name === nom))
                 }
                 // echouer — émet connectionFailed (secrets absents) sur le réseau factice nommé. Entrée : nom.
                 function echouer(nom: string): void {
                     essai.reseau(nom).connectionFailed(ConnectionFailReason.NoSecrets)
                 }
-                // saisir, saisirNom — remplissent le mot de passe ou le nom de la ligne dépliée. Entrée : texte.
+                // saisir — remplit le mot de passe de la ligne dépliée. Entrée : texte.
                 function saisir(texte: string): void { porteur.item.panneau.bloc.secret.text = texte }
-                function saisirNom(texte: string): void { porteur.item.panneau.bloc.champNom.text = texte }
-                // activer — action nommée : rejoindre, autre (« Autre réseau… »), reglages, portail. Entrée : cle.
+                // activer — action nommée : rejoindre, reglages, portail, bascule (clic sur la bascule du Wi-Fi),
+                // rechercher (bouton de recherche), deconnecter et details (actions du réseau joint). Entrée : cle.
                 function activer(cle: string): void {
                     const p = porteur.item.panneau
+                    const texte = t => essai.trouver(p, o => o.text === t && o.visible)
                     if (cle === "rejoindre") p.rejoindre()
-                    else if (cle === "autre") essai.trouver(p, o => o.text === "Autre réseau…").active()
-                    else if (cle === "reglages") essai.trouver(p, o => o.text === "Réglages réseau…").active()
-                    else if (cle === "portail") essai.trouver(p, o => o.text === "Ouvrir la page de connexion").clicked()
+                    else if (cle === "reglages") texte("Réglages réseau…").active()
+                    else if (cle === "portail") texte("Ouvrir la page de connexion").clicked()
+                    else if (cle === "bascule") {
+                        const b = essai.trouver(p, o => o.objectName === "bascule")
+                        b.toggle()
+                        b.toggled()
+                    }
+                    else if (cle === "rechercher") essai.trouver(p, o => o.nom === "view-refresh").clique()
+                    else if (cle === "deconnecter") texte("Se déconnecter").clicked()
+                    else if (cle === "details") texte("Détails…").clicked()
                 }
             }
         }

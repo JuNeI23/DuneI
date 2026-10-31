@@ -14,13 +14,15 @@ import "../Barre/icones.js" as Icones
 // s'exécute qu'au démarrage et en réponse à une ligne du moniteur.
 // Entrées (réglables) : surveille et lecture, commandes du moniteur et de la lecture (remplaçables par un test) ;
 // actif, suspend le moniteur si faux ; recherche, vrai tant qu'un popover demande un balayage Wi-Fi ; fenetre,
-// vrai pour demander la fenêtre Réseau (posé par « Réglages réseau… » du popover, lu par la fenêtre).
+// vrai pour demander la fenêtre Réseau (posé par « Réglages réseau… » du popover, lu par la fenêtre) ;
+// profilDemande, uuid ou nom du profil que la fenêtre doit montrer (posé par « Détails… » du popover, consommé et
+// remis à vide par le panneau Réseau qui le sélectionne), vide par défaut.
 // Sorties (lecture seule) : carte, radio, filaire, connecte, connectivite (« unknown », « none », « portal »,
 // « limited » ou « full »), reseauActif (WifiNetwork ou null), nomActif, force (0 à 1), facture, appareil
 // (l'interface dont la lecture donne les adresses : le filaire actif, sinon le Wi-Fi), ip4, ip6,
 // passerelle, dns, mac (adresse matérielle de l'appareil actif), profils, vpnActif, icone, reseaux (WifiNetwork
 // de toutes les cartes, non triés) ; relances, nombre de démarrages du moniteur.
-// Fonctions : relire, copierIp, verifier, executer, allumer, ouvrirPortail.
+// Fonctions : relire, verifier, executer, allumer, ouvrirPortail.
 // Erreurs : sans nmcli ou sans NetworkManager, les valeurs nmcli restent vides et le moniteur est relancé
 // toutes les secondes (voir Relance) ; la sortie d'une lecture partielle est lue au mieux.
 // Dépendances : Relance, nmcli.js, icones.js, Quickshell.Networking, Quickshell.Io.
@@ -33,6 +35,7 @@ Singleton {
     property alias relances: relance.relances
     property bool recherche: false
     property bool fenetre: false
+    property string profilDemande: ""
     // Nombre de processus nmcli de executer encore vivants (utile aux tests).
     property int processus: 0
 
@@ -68,10 +71,6 @@ Singleton {
     // relire — demande une lecture nmcli. Rôle : rafraîchit les valeurs nmcli sans attendre le moniteur.
     // Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : relance.
     function relire() { relance.lire() }
-
-    // copierIp — copie l'adresse IPv4 du lien actif, sans son préfixe, dans le presse-papiers.
-    // Entrées : aucune. Sortie : aucune. Erreurs : sans adresse, ne fait rien. Dépendances : Quickshell.
-    function copierIp() { if (ip4.length > 0) Quickshell.clipboardText = ip4[0].split("/")[0] }
 
     // verifier — demande à NetworkManager un contrôle de connectivité immédiat.
     // Entrées : aucune. Sortie : aucune. Erreurs : sans contrôle disponible, ne fait rien.

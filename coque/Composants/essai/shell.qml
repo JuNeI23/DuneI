@@ -928,7 +928,8 @@ ShellRoot {
         // fenêtres (barre ancrée des deux côtés, calque ancré à droite à 300 px du bord, calque centré, fenêtre
         // flottante), puis le bord gauche du cadre : menu sous une ancre à 12 px du bord gauche, menu sous une ancre
         // près du bord droit, infobulle centrée près du bord droit, menu au point de clic avec et sans place à droite,
-        // cadre plus large que l'écran. Entrées : aucune. Sortie : aucune ; « essai : serrage <valeurs> ».
+        // cadre plus large que l'écran, puis un menu près de chaque bord, serré à une marge de 8 px.
+        // Entrées : aucune. Sortie : aucune ; « essai : serrage <valeurs> ».
         // Erreurs : aucune. Dépendances : Ancrage, journal.
         function serrage(): void {
             const ecran = { width: 1536 }
@@ -944,7 +945,9 @@ ShellRoot {
                 Ancrage.gaucheCadre(true, 1500, 30, null, 100, 1536),
                 Ancrage.gaucheCadre(false, 1000, 50, 20, 200, 1536),
                 Ancrage.gaucheCadre(false, 1400, 50, 20, 200, 1536),
-                Ancrage.gaucheCadre(false, 12, 53, null, 2000, 1536)
+                Ancrage.gaucheCadre(false, 12, 53, null, 2000, 1536),
+                Ancrage.gaucheCadre(false, 1450, 60, null, 200, 1536, 8),
+                Ancrage.gaucheCadre(false, 2, 53, null, 200, 1536, 8)
             ]
             essai.journal("serrage", fenetres.map(Ancrage.origine).concat(cadres).join(" "))
         }

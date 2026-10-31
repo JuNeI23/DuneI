@@ -52,7 +52,7 @@ class BarreStatiqueTest(unittest.TestCase):
                  for n in LITTERAUX_QML.findall(q.read_text(encoding="utf-8"))} \
             | {n for q in (ROOT / "coque" / "Reseau").glob("*.qml") for n in LITTERAUX_QML.findall(q.read_text(encoding="utf-8"))}
         self.assertGreaterEqual(fixes, {"emblem-system", "network-vpn", "system-search", "edit-clear",
-                                        "view-conceal", "dialog-warning", "web-browser", "network-wireless-encrypted"})
+                                        "view-conceal", "web-browser", "network-wireless-encrypted"})
         table = charger(ROOT / "icones" / "correspondances.toml")[1]
         manquants = sorted((litteraux | set(ICONES) | fixes) - set(table))
         self.assertEqual(manquants, [])
