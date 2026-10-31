@@ -41,6 +41,15 @@ ShellRoot {
         return r ? [r.etat.selection, r.gras] : []
     }
 
+    // lireCopie — retour de copie d'un libellé du détail (vide : « Tout copier »). Entrée : cle. Sortie : JSON
+    // {presse (Quickshell.clipboardText), copie (fiche.copie), texte (de la cellule ou du bouton), minuteur (vrai s'il
+    // tourne)}. Erreurs : libellé absent, TypeError au journal. Dépendances : fenetre.panneau.fiche, nomme.
+    function lireCopie(cle) {
+        const f = fenetre.panneau.fiche
+        const o = nomme(cle === "" ? "toutCopier" : "copier:" + cle)
+        return JSON.stringify({presse: Quickshell.clipboardText, copie: f.copie, texte: o.text, minuteur: f.finCopie.running})
+    }
+
     IpcHandler {
         target: "essai"
 
@@ -106,6 +115,17 @@ ShellRoot {
                                    inconnue: p.commande("autre"), trouve: [t(l), t(l.filter(x => x.address !== "b")), t([])],
                                    visible: p.visible, y: p.y})
         }
+
+        // copier — clic sur la valeur du détail d'un libellé (vide : « Tout copier »), puis lit le retour.
+        // Entrée : cle. Sortie : voir lireCopie. Erreurs : libellé absent, TypeError au journal.
+        function copier(cle: string): string {
+            const o = essai.nomme(cle === "" ? "toutCopier" : "copier:" + cle)
+            if (cle === "") o.clicked()
+            else fenetre.panneau.fiche.copier(o.cle)
+            return essai.lireCopie(cle)
+        }
+        // copie — lit le retour de copie d'un libellé, sans geste. Entrée : cle. Sortie : voir lireCopie.
+        function copie(cle: string): string { return essai.lireCopie(cle) }
 
         // fermerPastille — clic sur la pastille rouge, sans geste. Entrées : aucune. Sortie : aucune.
         function fermerPastille(): void { fenetre.pastilles.fermer() }

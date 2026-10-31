@@ -791,6 +791,24 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
         e = self.jusqua(lambda e: not e["fenetre"], "fenêtre détruite par la pastille rouge")
         self.assertFalse(e["demandee"])
 
+    def test_copier(self):
+        # Un clic sur une valeur la copie et montre « Copié » à sa place, puis la valeur revient après
+        # motion.delays.copied ; « Tout copier » copie le bloc, une ligne « Libellé : valeur » par paramètre.
+        # Le minuteur ne tourne qu'après une copie.
+        self.ouvrir()
+        self.assertFalse(json.loads(self.ipc("essai", "copie", "IPv4"))["minuteur"])
+        c = json.loads(self.ipc("essai", "copier", "IPv4"))
+        self.assertEqual((c["presse"], c["copie"], c["texte"], c["minuteur"]), ("192.168.1.42/24", "IPv4", "Copié", True))
+        self.jusqua(lambda e: json.loads(self.ipc("essai", "copie", "IPv4"))["texte"] == "192.168.1.42/24",
+                    "valeur revenue")
+        c = json.loads(self.ipc("essai", "copie", "IPv4"))
+        self.assertEqual((c["copie"], c["minuteur"]), ("", False))
+        c = json.loads(self.ipc("essai", "copier", ""))
+        self.assertEqual(c["presse"], "IPv4 : 192.168.1.42/24\nIPv6 : fe80::1/64\nPasserelle : 192.168.1.1\n"
+                                      "DNS : 192.168.1.1\nAdresse matérielle : A4:C3:F0:5B:1E:72")
+        self.assertEqual((c["copie"], c["texte"]), ("*", "Copié"))
+        self.jusqua(lambda e: json.loads(self.ipc("essai", "copie", ""))["texte"] == "Tout copier", "bouton revenu")
+
     def test_profil_demande(self):
         # « Détails… » du popover : la fenêtre s'ouvre sur le profil demandé (par uuid ou par nom), et la demande est
         # consommée ; une demande faite fenêtre ouverte est suivie aussitôt.

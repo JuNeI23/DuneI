@@ -45,9 +45,9 @@ class ErrorsTest(unittest.TestCase):
         self.check(r, "rules", "stagger_cap")
 
     def test_timings(self):
-        """Le délai d'infobulle, la borne de la recherche de réseaux et la période de l'indicateur d'activité sont
-        exigés, numériques et strictement positifs."""
-        for section, key in (("delays", "tooltip"), ("delays", "scan"), ("periods", "spinner")):
+        """Le délai d'infobulle, la borne de la recherche de réseaux, la tenue du retour « Copié » et la période de
+        l'indicateur d'activité sont exigés, numériques et strictement positifs."""
+        for section, key in (("delays", "tooltip"), ("delays", "scan"), ("delays", "copied"), ("periods", "spinner")):
             with self.subTest(section=section):
                 r = raw(); del r[section][key]
                 self.check(r, section, key, "manquante")

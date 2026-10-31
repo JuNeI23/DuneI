@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import Quickshell
 import "../Theme"
 import "../Composants"
 import "nmcli.js" as Nmcli
@@ -10,7 +11,9 @@ import "nmcli.js" as Nmcli
 // l'œil révèle ; la connexion automatique, la priorité en − / +, la connexion facturée ; la section IPv4
 // (Automatique ou Fixe, adresse, passerelle en Fixe, DNS) ; pour le profil actif, le détail de la connexion active
 // (IPv4, IPv6, passerelle, DNS, adresse matérielle) ; enfin « Oublier ce réseau », qui demande confirmation dans la
-// fiche. Chaque réglage s'applique à sa validation (bascule, clic, Entrée ou sortie d'un champ), sans bouton global
+// fiche. Un clic sur une valeur du détail la copie dans le presse-papiers et montre « Copié » à sa place ; « Tout
+// copier » copie le bloc entier, une ligne « Libellé : valeur » par paramètre. Le retour « Copié » s'efface après
+// motion.delays.copied, par un minuteur à un coup armé seulement par la copie. Chaque réglage s'applique à sa validation (bascule, clic, Entrée ou sortie d'un champ), sans bouton global
 // « Enregistrer » : la valeur affichée change aussitôt, puis la fiche relit le profil ; un refus de nmcli affiche
 // sa sortie d'erreur sous le réglage et restaure les valeurs lues. Passer en Fixe n'écrit rien tant que
 // l'adresse manque : NetworkManager refuse la méthode manuelle sans adresse.
@@ -20,13 +23,14 @@ import "nmcli.js" as Nmcli
 // nom, wifi, actif, etat, icone) ; etat, la source de l'état et des actions, EtatReseau par défaut.
 // Sorties : profil, réglages lus (null avant lecture) ; lu, vrai une fois lus ; valeurs, réglages affichés ;
 // erreurs, objet clé → message (autoconnect, priorite, facture, methode, adresse, passerelle, dns, psk, connexion,
-// oublier, profil) ; fixe, vrai si la section IPv4 montre la configuration fixe ; confirmer, vrai pendant la
+// oublier, profil) ; copie, le libellé de la valeur dont « Copié » tient la place, « * » pour « Tout copier », vide
+// sinon ; finCopie, le minuteur du retour « Copié » ; fixe, vrai si la section IPv4 montre la configuration fixe ; confirmer, vrai pendant la
 // demande de confirmation de l'oubli ; secret, le ChampSecret ; detail, libellé → valeur du détail de la connexion
 // active, vide pour un autre profil et pour un profil actif dont l'appareil n'est pas celui que lit EtatReseau ; signaux relu(uuid, profil) après chaque lecture et oublie() après la
 // suppression du profil.
 // Erreurs : un échec de lecture du profil s'affiche en tête de fiche (erreurs.profil). Une réponse de nmcli qui
 // arrive après un changement de profil ou la destruction de la fiche est ignorée (garde).
-// Dépendances : EtatReseau (executer, appareil, ip4, ip6, passerelle, dns, mac, connectivite), nmcli.js (CHAMPS_PROFIL,
+// Dépendances : Quickshell (clipboardText), EtatReseau (executer, appareil, ip4, ip6, passerelle, dns, mac, connectivite), nmcli.js (CHAMPS_PROFIL,
 // lireProfil, argsModifier, champs, liste), Theme, Surface, Texte, Icone, Bouton, Interrupteur, Champ, ChampSecret,
 // Onglets, Onglet, Separateur.
 // Cotes : contenu en retrait de space.blockGap (24) à gauche et à droite, sections espacées de space.scale[1] (8) ;
@@ -43,6 +47,7 @@ ColumnLayout {
     property var erreurs: ({})
     property bool fixe: false
     property bool confirmer: false
+    property string copie: ""
     // Dernier secret lu ou enregistré : la validation d'un texte identique n'écrit rien.
     property string secretLu: ""
     // Uuid dont la lecture est en cours : une seconde demande pour le même profil est ignorée.
@@ -54,6 +59,7 @@ ColumnLayout {
     readonly property bool lu: profil !== null
     readonly property bool wifi: rangee?.wifi ?? false
     readonly property alias secret: secret
+    readonly property alias finCopie: finCopie
     readonly property real cote: Theme.space?.scale[2] ?? 0
     readonly property var detail: {
         // Seul l'appareil lu par EtatReseau a son détail : le filaire l'emporte quand le Wi-Fi est actif aussi.
@@ -75,6 +81,7 @@ ColumnLayout {
         enLecture = ""
         relectureAttendue = false
         profil = null; erreurs = {}; confirmer = false
+        copie = ""; finCopie.stop()
         secret.text = ""; secret.revele = false; secretLu = ""
         lire()
     }
@@ -231,6 +238,25 @@ ColumnLayout {
             else erreur("oublier", sortie, code)
         })
     }
+
+    // texteDetail — le détail de la connexion active en texte, une ligne « Libellé : valeur » par paramètre.
+    // Entrées : aucune. Sortie : le texte, vide sans détail. Erreurs : aucune. Dépendances : detail.
+    function texteDetail() {
+        return Object.keys(detail).map(k => `${k} : ${detail[k]}`).join("\n")
+    }
+
+    // copier — copie une valeur du détail, ou le détail entier, dans le presse-papiers, puis montre « Copié » à sa
+    // place jusqu'à la fin du minuteur. Entrée : cle, le libellé de la valeur, vide pour tout le bloc.
+    // Sortie : aucune. Erreurs : aucune ; sous Wayland, le presse-papiers n'est rempli que si une fenêtre de la coque a
+    // le focus, ce qu'assure le clic. Dépendances : Quickshell.clipboardText, detail, texteDetail, finCopie.
+    function copier(cle) {
+        Quickshell.clipboardText = cle === "" ? texteDetail() : detail[cle]
+        copie = cle === "" ? "*" : cle
+        finCopie.restart()
+    }
+
+    // Tenue du retour « Copié » : un seul coup, armé par copier, jamais au repos.
+    Timer { id: finCopie; interval: Theme.motion?.delays?.copied ?? 0; onTriggered: fiche.copie = "" }
 
     // Groupe — carte de réglages : surface de panneau arrondie, au filet subtil, dont les Ligne s'empilent.
     // Entrées : les Ligne déclarées comme enfants. Sortie : aucune. Erreurs : aucune. Dépendances : Surface, Theme.
@@ -506,7 +532,17 @@ ColumnLayout {
         }
     }
 
-    Section { visible: Object.keys(fiche.detail).length > 0; text: "DÉTAIL DE LA CONNEXION ACTIVE" }
+    RowLayout {
+        visible: Object.keys(fiche.detail).length > 0
+        Layout.fillWidth: true
+        Section { Layout.fillWidth: true; Layout.alignment: Qt.AlignBottom; text: "DÉTAIL DE LA CONNEXION ACTIVE" }
+        Bouton {
+            objectName: "toutCopier"
+            icone: "edit-copy"
+            text: fiche.copie === "*" ? "Copié" : "Tout copier"
+            onClicked: fiche.copier("")
+        }
+    }
     Groupe {
         visible: Object.keys(fiche.detail).length > 0
         GridLayout {
@@ -517,15 +553,24 @@ ColumnLayout {
             rowSpacing: Theme.space?.scale[0] ?? 0
             Repeater {
                 model: Object.keys(fiche.detail).reduce((l, k) => l.concat([k, fiche.detail[k]]), [])
+                // Libellés et valeurs en alternance ; un clic sur une valeur la copie, et « Copié » prend sa place.
                 delegate: Text {
+                    id: cellule
                     required property string modelData
                     required property int index
-                    Layout.fillWidth: index % 2 === 1
-                    text: modelData
+                    readonly property bool valeur: index % 2 === 1
+                    readonly property string cle: Object.keys(fiche.detail)[Math.floor(index / 2)] ?? ""
+                    readonly property bool copiee: valeur && fiche.copie === cle
+                    objectName: valeur ? "copier:" + cle : ""
+                    Layout.fillWidth: valeur
+                    text: copiee ? "Copié" : modelData
                     elide: Text.ElideRight
-                    font.family: index % 2 ? Theme.typo?.mono ?? "" : Theme.typo?.interface ?? ""
+                    font.family: valeur && !copiee ? Theme.typo?.mono ?? "" : Theme.typo?.interface ?? ""
                     font.pixelSize: Theme.typo?.scale[1] ?? 12
-                    color: (index % 2 ? Theme.color?.textPrimary : Theme.color?.textTertiary) ?? "transparent"
+                    color: (copiee ? Theme.color?.success : valeur ? Theme.color?.textPrimary : Theme.color?.textTertiary)
+                        ?? "transparent"
+                    HoverHandler { enabled: cellule.valeur; cursorShape: Qt.PointingHandCursor }
+                    TapHandler { enabled: cellule.valeur; onTapped: fiche.copier(cellule.cle) }
                 }
             }
         }
