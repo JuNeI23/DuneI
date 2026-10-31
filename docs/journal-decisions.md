@@ -2324,3 +2324,41 @@ de la garde.
 
 *Touché : `systeme/etc/systemd/system/dunei-garde-reveil.service`, `systeme/etc/systemd/system/sleep.target.d/10-dunei.conf`,
 `tests/test_garde_reveil.py`, carnet (§ Énergie — L1-09), backlog (L1-09), notes de direction.*
+
+### D100 · Masque de la barre calculé rangée par rangée
+
+2026-10-31. **Le masque de saisie de la barre se calcule à coordonnées cumulées, rangée par rangée, au lieu de nommer
+l'interrupteur jour/nuit.** `coque/Barre/Barre.qml` portait `mask: Region { item: jourNuit }` ; il porte désormais une
+`Region` à `x: rangee.x + droite.x + jourNuit.x`, `y: rangee.y + droite.y + jourNuit.y`, de la largeur et de la
+hauteur de l'interrupteur (ids `rangee` et `droite` ajoutés). Dans le même correctif, `ElementBarre.qml` ne prend la
+couleur de survol que si `element.cliquable && element.hovered`.
+
+- **Raison.** Dans Quickshell 0.3.2 (`src/core/region.cpp`, inchangé sur la branche principale amont), une `Region` qui
+  nomme un item ne se recalcule que sur `xChanged`, `yChanged`, `widthChanged` et `heightChanged` de cet item, alors
+  que son calcul le place par `mapToScene` : le déplacement d'un ancêtre ne la recalcule pas. L'interrupteur est dans
+  la rangée droite, alignée à droite et suivie du Wi-Fi, du VPN, du Bluetooth et des paramètres. Quand l'icône du
+  Wi-Fi apparaît après le calcul du masque (au lancement de la coque, ou au réveil, NetworkManager rendant la carte
+  `wlp1s0`), la rangée glisse d'une case vers la gauche et le masque reste une case trop à droite, sur le Wi-Fi. Il ne
+  se recale qu'au prochain changement de géométrie propre de l'interrupteur, par exemple quand le texte de la
+  batterie voisine change : d'où la barre qui « recommence à fonctionner » au bout d'un moment.
+- **Constaté.** Nicolas rapporte une barre inerte au survol et au clic gauche, surtout après un réveil, où seul le
+  Wi-Fi semble « détecté ». Au réveil de 10:56:24, NetworkManager fait passer `wlp1s0` de « unmanaged » à
+  « unavailable ». À 11:22, la position réelle du curseur (`hyprctl cursorpos`) enregistrée pendant une capture
+  `grim` de la zone droite (eDP-1, 1920 × 1200, échelle 1,25) : lune en x logique 1439 à 1452, Wi-Fi 1462 à 1477 ; le
+  seul changement d'apparence survient quand le curseur est sur le Wi-Fi (x 1456 à 1487), jamais sur la lune. Aucun
+  autre calque ne couvre la barre (`hyprctl layers`).
+- **Second défaut.** Le Wi-Fi s'éclairait au survol alors qu'il n'est pas cliquable, contre la règle écrite dans
+  `ElementBarre.qml` : un `T.AbstractButton` désactivé reçoit tout de même le survol. La couleur de survol est donc
+  conditionnée à `cliquable`.
+- **Vérification.** Un balayage par `hyprctl dispatch movecursor` ne déclenche aucun survol : la méthode ne vaut pas
+  pour tester un survol. Validé à l'écran par Nicolas après un redémarrage de la coque, situation qui reproduisait le
+  défaut : la lune s'allume au survol.
+- **Écarté.** Garder `item:` et forcer le recalcul sur `xChanged` de la rangée, en émettant un signal de la `Region`
+  depuis le QML : dépend d'un détail interne de Quickshell.
+- **À surveiller.** `Presquile.qml` (`Region { item: encoche.corps }`) et `Composants/Overlay.qml`
+  (`Region { item: cadrePopup }`) emploient la même forme ; leurs ancêtres ne bougent pas aujourd'hui. Si l'un d'eux
+  vient à bouger, le masque doit passer aux coordonnées cumulées.
+- **Recette restante.** Constater, après un vrai réveil, que la lune s'allume au survol et bascule le thème au clic.
+
+*Touché : `coque/Barre/Barre.qml`, `coque/Barre/ElementBarre.qml`, `tests/test_barre.py`, carnet (§ La barre système —
+L2-08, L2-09), backlog (L2-08), bible (catalogue, barre système), notes de direction.*
