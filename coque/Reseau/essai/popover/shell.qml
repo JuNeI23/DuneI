@@ -15,7 +15,7 @@ import "Reseau"
 // Garde de plateforme : la fenêtre n'est construite que sous offscreen, où elle ne paraît jamais à l'écran.
 // Entrées : DUNEI_TOKENS_DIR, lu par Theme ; QT_QPA_PLATFORM=offscreen, posé par le test.
 // Sortie : « essai : prêt » à l'ouverture de la fenêtre, et les lignes « essai : connect <nom> », « essai :
-// connectWithPsk <nom> <longueur> », « essai : executer <arguments JSON> », « essai : ouvrirPortail ».
+// connectWithPsk <nom> <longueur> », « essai : executer <arguments JSON> », « essai : ouvrirPortail », « essai : verifier ».
 // Erreurs : celles de Theme et des liaisons, dans le journal. Dépendances : quickshell ≥ 0.3 (FloatingWindow,
 // LazyLoader, IpcHandler), Quickshell.Networking (énumérations), modules Theme et Reseau, par les liens
 // Theme, Composants, Reseau et Barre posés sous cette racine.
@@ -40,6 +40,7 @@ ShellRoot {
     FauxReseau { id: triades; name: "Wifi_TRIADES"; signalStrength: 0.9; connected: true; known: true }
     FauxReseau { id: connu; name: "Connu"; signalStrength: 0.3; known: true }
     FauxReseau { id: inconnu; name: "Inconnu"; signalStrength: 0.7 }
+    FauxReseau { id: nouveau; name: "Nouveau"; signalStrength: 0.95 }
     FauxReseau { id: ouvert; name: "Ouvert"; signalStrength: 0.5; security: WifiSecurityType.Open }
 
     // État factice : les propriétés et les fonctions de EtatReseau qu'emploie le popover.
@@ -60,6 +61,7 @@ ShellRoot {
         function copierIp() { essai.journal("copierIp", true) }
         function allumer(actif) { essai.journal("allumer", actif) }
         function ouvrirPortail() { essai.journal("ouvrirPortail", true) }
+        function verifier() { essai.journal("verifier", true) }
         function executer(args, fin) {
             essai.journal("executer", JSON.stringify(args.map((a, i) => args[i - 1] === "password" ? "<masqué>" : a)))
         }
@@ -100,8 +102,14 @@ ShellRoot {
                     faux.icone = "network-wired"
                 }
 
+                // forcerRecherche — pose recherche à vrai, comme un popover ouvert sur un autre écran.
+                function forcerRecherche(): void { faux.recherche = true }
+                // ajouterReseau — fait paraître un réseau, comme le balayage. Entrées : aucune. Sortie : aucune.
+                function ajouterReseau(): void { faux.reseaux = faux.reseaux.concat([nouveau]) }
+
                 // panneau — état du panneau construit, en JSON, sans aucun texte saisi ; {} s'il n'existe pas.
-                // Sortie : {titre, etat, interrupteur, reseaux, deplie, erreur, portail, autre}. Erreurs : aucune.
+                // Sortie : {titre, etat, interrupteur, reseaux, deplie, erreur, portail, autre, saisie (longueur du
+                // mot de passe de la ligne dépliée, -1 sans ligne)}. Erreurs : aucune.
                 function panneau(): string {
                     const p = porteur.item?.panneau
                     if (!p) return "{}"
@@ -110,6 +118,7 @@ ShellRoot {
                         titre: p.resume.titre, etat: p.resume.etat, interrupteur: visible("interrupteur"),
                         reseaux: p.listeVisible ? p.reseaux.map(r => r.name) : [], deplie: p.deplie, erreur: p.erreur,
                         portail: p.etat.connectivite === "portal", autre: p.listeVisible,
+                        saisie: p.bloc ? p.bloc.secret.length : -1,
                     })
                 }
 

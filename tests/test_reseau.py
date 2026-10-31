@@ -325,6 +325,14 @@ class PopoverTest(EssaiCoque, unittest.TestCase):
         self.ipc("detruire")
         self.assertFalse(self.recherche())
 
+    def test_destruction_ferme_ne_coupe_pas_la_recherche(self):
+        # Un popover fermé qu'on détruit (écran débranché) ne rend pas le balayage d'un autre popover ouvert.
+        self.ouvrir()
+        self.ipc("ouvrir", "false")
+        self.ipc("forcerRecherche")
+        self.ipc("detruire")
+        self.assertTrue(self.recherche())
+
     def test_contenu(self):
         p = self.ouvrir()
         self.assertEqual((p["titre"], p["etat"]), ("Wifi_TRIADES", "Connecté"))
@@ -341,6 +349,32 @@ class PopoverTest(EssaiCoque, unittest.TestCase):
         self.ipc("activer", "portail")
         self.attendre("essai : ouvrirPortail")
         self.assertEqual(self.panneau(), {})
+
+    def test_portail_verifie_a_l_ouverture(self):
+        # Ouvert derrière un portail, le popover demande un contrôle de connectivité ponctuel ; sinon, aucun.
+        self.ouvrir()
+        self.ipc("ouvrir", "false")
+        self.assertNotIn("essai : verifier", self.journal())
+        self.ipc("connectivite", "portal")
+        self.ouvrir()
+        self.attendre("essai : verifier")
+
+    def test_saisie_survit_au_balayage(self):
+        # Un réseau qui paraît pendant la saisie ne reconstruit pas la ligne dépliée : le mot de passe et le message
+        # d'erreur restent ; la liste se retrie dès que la ligne se replie.
+        self.ouvrir()
+        self.ipc("choisir", "Connu")
+        self.attendre("essai : connect Connu")
+        self.ipc("echouer", "Connu")
+        self.ipc("saisir", self.SECRET)
+        self.ipc("ajouterReseau")
+        p = self.panneau()
+        self.assertEqual((p["deplie"], p["saisie"]), ("Connu", len(self.SECRET)))
+        self.assertIn("Mot de passe refusé", p["erreur"])
+        self.assertNotIn("Nouveau", p["reseaux"])
+        self.ipc("choisir", "Inconnu")
+        self.ipc("choisir", "Inconnu")
+        self.assertEqual(self.panneau()["reseaux"], ["Wifi_TRIADES", "Connu", "Nouveau", "Inconnu", "Ouvert"])
 
     def test_inconnu_securise_deplie_sans_erreur(self):
         self.ouvrir()

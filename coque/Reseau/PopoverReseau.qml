@@ -15,7 +15,9 @@ import "nmcli.js" as Nmcli
 // réseau sécurisé inconnu, ou après un échec de connexion, la ligne de mot de passe dépliée ; « Autre réseau… »
 // (réseau caché : nom et mot de passe) ; « Réglages réseau… », qui demande la fenêtre Réseau. Sans carte Wi-Fi, ni
 // interrupteur, ni liste, ni « Autre réseau… » : seulement l'état filaire. Tant qu'il est ouvert, il demande le
-// balayage Wi-Fi (etat.recherche), rendu à faux à la fermeture comme à la destruction. Une connexion suivie
+// balayage Wi-Fi (etat.recherche), rendu à faux à la fermeture comme à la destruction d'un popover ouvert ; ouvert
+// derrière un portail, il demande un contrôle de connectivité ponctuel (etat.verifier). La liste ne se retrie pas
+// tant qu'une ligne de mot de passe est dépliée, pour ne pas en perdre la saisie. Une connexion suivie
 // (enCours) appartient au panneau : fermé, il est détruit, et un connectionFailed tardif ne rouvre rien.
 // Entrées : ancre, l'indicateur de la barre ; ouvert, à affecter (voir Overlay) ; associees, voir Overlay ; etat,
 // la source de l'état et des actions, EtatReseau par défaut (la coque d'essai y met un factice).
@@ -37,8 +39,15 @@ Overlay {
     property Item panneau: null
 
     famille: "contextuel"
-    onOuvertChanged: etat.recherche = ouvert
-    Component.onDestruction: etat.recherche = false
+    // À l'ouverture derrière un portail, un contrôle de connectivité ponctuel (aucun minuteur) : la page de connexion
+    // a pu être validée depuis la dernière ouverture.
+    onOuvertChanged: {
+        etat.recherche = ouvert
+        if (ouvert && etat.connectivite === "portal") etat.verifier()
+    }
+    // Seul un popover ouvert rend le balayage : la destruction d'un popover fermé (écran débranché) ne coupe pas
+    // celui d'un popover ouvert ailleurs.
+    Component.onDestruction: if (ouvert) etat.recherche = false
 
     // BoutonIcone — bouton réduit à une icône, sans fond, comme les boutons d'outil de macOS.
     // Rôle : icône au texte secondaire, au texte primaire survolée ; le clic émet clique().
@@ -143,9 +152,12 @@ Overlay {
         Component.onCompleted: { trier(); popover.panneau = panneau }
         Component.onDestruction: if (popover.panneau === panneau) popover.panneau = null
 
-        // trier — fige l'ordre de la liste des réseaux. Entrées : aucune. Sortie : aucune. Erreurs : aucune.
-        // Dépendances : nmcli.js (trierReseaux), etat.reseaux.
-        function trier(): void { reseaux = Nmcli.trierReseaux(Array.from(etat.reseaux ?? [])) }
+        // trier — fige l'ordre de la liste des réseaux. Tant qu'une ligne de mot de passe est dépliée, rien ne change :
+        // remplacer le modèle du Repeater détruirait la ligne, et avec elle la saisie et le message d'erreur ; le tri
+        // reprend dès qu'elle se replie. Entrées : aucune. Sortie : aucune. Erreurs : aucune.
+        // Dépendances : nmcli.js (trierReseaux), etat.reseaux, deplie.
+        function trier(): void { if (deplie === "") reseaux = Nmcli.trierReseaux(Array.from(etat.reseaux ?? [])) }
+        onDeplieChanged: trier()
 
         // securise — un réseau demande-t-il un mot de passe ? Entrée : r, un réseau. Sortie : vrai sauf ouvert,
         // OWE ou sécurité inconnue (essayés sans secret). Erreurs : aucune. Dépendances : WifiSecurityType.
