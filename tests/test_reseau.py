@@ -763,6 +763,8 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
             ["Filaire", "Connexion filaire 1", "Débranché", "network-wired"]])
         self.assertEqual(e["detail"], {"IPv4": "192.168.1.42/24", "IPv6": "fe80::1/64", "Passerelle": "192.168.1.1",
                                        "DNS": "192.168.1.1", "Adresse matérielle": "A4:C3:F0:5B:1E:72"})
+        # Colonne de navigation : la rangée choisie a le fond neutre de la sélection et un nom en graisse moyenne.
+        self.assertEqual(e["selection"], ["inactive", True])
         self.ipc("essai", "fermer")
         e = self.jusqua(lambda e: not e["fenetre"], "fenêtre détruite")
         self.assertFalse(e["demandee"])

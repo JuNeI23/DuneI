@@ -359,6 +359,19 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
         self.ipc("inactif", "true")
         self.assertEqual(self.valeur("liste"), "-1 activeMuted none none")
 
+    def test_liste_de_navigation(self):
+        # Colonne de navigation : la rangée sélectionnée ne prend jamais l'accent, mais le fond neutre de la
+        # sélection inactive, même sous le modificateur inactive (pas d'accent muet), et son libellé passe en
+        # graisse moyenne ; les autres rangées gardent la graisse régulière.
+        self.demarrer()
+        typo = self.tokens55()[0]["typo"]
+        self.ipc("navigation")
+        self.assertEqual(self.valeur("liste"), "-1 none inactive none")
+        self.assertEqual(self.valeur("graisses"), f"false {typo['weightRegular']} true {typo['weightMedium']} "
+                                                  f"false {typo['weightRegular']}")
+        self.ipc("inactif", "true")
+        self.assertEqual(self.valeur("liste"), "-1 none inactive none")
+
     def test_un_arret(self):
         # La liste est l'unique arrêt de tabulation et navigue au clavier ; ses rangées n'acceptent aucun focus
         # (Qt.NoFocus vaut 0). Sans fenêtre, la tabulation elle-même ne s'exécute pas : seules les propriétés

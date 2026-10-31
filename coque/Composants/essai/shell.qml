@@ -875,6 +875,18 @@ ShellRoot {
                 .selection)].join(" "))
         }
 
+        // navigation — fait de la liste d'essai une colonne de navigation (Liste.navigation).
+        // Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : listeEssai.
+        function navigation(): void { listeEssai.navigation = true }
+
+        // graisses — journalise, pour chaque rangée de la liste d'essai, son drapeau gras et la graisse de son
+        // libellé. Entrées : aucune. Sortie : aucune ; « essai : graisses <gras> <graisse> … ». Erreurs : aucune.
+        // Dépendances : listeEssai, Rangee (gras, libelle).
+        function graisses(): void {
+            essai.journal("graisses", [0, 1, 2].map(i => listeEssai.itemAtIndex(i))
+                .map(r => r.gras + " " + r.libelle.font.weight).join(" "))
+        }
+
         // selectionLibre — confie la sélection à l'appelant et sélectionne la seule rangée 0.
         // Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : listeEssai.
         function selectionLibre(): void {

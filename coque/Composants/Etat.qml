@@ -12,7 +12,8 @@ import "etats.js" as Etats
 // de fond, par défaut le cran au-dessus du dnRole hérité (surfaceWindow à la racine) ; forcer, réservée à la
 // planche de contrôle : une clé d'interaction ("hover", "pressed"…) qui, non vide, remplace celle que lit le
 // contrôle, pour montrer un état sans geste ; vide par défaut, et jamais posée par une surface de la coque ;
-// peintFond et peintTexte, vrais par défaut : faux quand le contrôle ne peint pas cette couleur, qui reste alors
+// selectionNeutre, faux par défaut : vrai, une sélection prend toujours la clé « inactive » (fond neutre, sans
+// accent ni accent muet), pour la rangée d'une colonne de navigation ; peintFond et peintTexte, vrais par défaut : faux quand le contrôle ne peint pas cette couleur, qui reste alors
 // transparente, si bien que son ressort ne démarre jamais (sobriété, D80) ; fondReposTransparent, faux par
 // défaut : vrai, le fond ni survolé, ni pressé, ni sélectionné (au repos ou désactivé) vise sa couleur rendue
 // transparente, pour un élément qui ne se distingue pas de son conteneur au repos (une rangée) et ne doit pas en
@@ -36,10 +37,12 @@ Item {
     property bool peintFond: true
     property bool peintTexte: true
     property bool fondReposTransparent: false
+    property bool selectionNeutre: false
     property string role: Etats.cran(Etats.herite(controle, "dnRole", "surfaceWindow"))
     readonly property bool inactif: Etats.herite(controle, "dnInactive", false)
     readonly property string interaction: forcer || Etats.interaction(controle)
-    readonly property string selection: Etats.selection(selectionne, focusDansGroupe, inactif)
+    readonly property string selection: selectionNeutre && selectionne ? "inactive"
+        : Etats.selection(selectionne, focusDansGroupe, inactif)
     readonly property var couleurs: Theme.stateColors(role, selection, interaction)
     readonly property color fond: ressortFond.value
     readonly property color texte: ressortTexte.value

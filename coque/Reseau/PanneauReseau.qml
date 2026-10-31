@@ -9,7 +9,8 @@ import "nmcli.js" as Nmcli
 // Rôle : un Item sans fenêtre, que FenetreReseau pose dans sa FloatingWindow et que l'écran de réglages (L5-01)
 // reprendra tel quel comme premier panneau. La barre latérale, au titre « Réseau », liste tous les profils Wi-Fi
 // puis filaires, y compris hors de portée (nmcli.profilsFenetre) : icône (partage du téléphone pour un profil
-// facturé), nom, état, pastille verte sur le profil actif. Le profil demandé (etat.profilDemande, posé par
+// facturé), nom, état, pastille verte sur le profil actif. C'est une colonne de navigation (Liste.navigation) : le
+// profil choisi prend le fond neutre de la sélection et un nom en graisse moyenne, jamais le fond d'accent. Le profil demandé (etat.profilDemande, posé par
 // « Détails… » du popover), sinon le profil actif, est choisi à l'ouverture ; une demande faite fenêtre ouverte est
 // suivie aussitôt, et toute demande est consommée (remise à vide) dès que son profil est sélectionné ; un clic, ou
 // les flèches de la liste, en choisissent un autre, dont la FicheProfil occupe la droite, dans une zone qui défile.
@@ -107,6 +108,9 @@ Item {
             clip: true
             model: modele
             selectionSuitCourant: false
+            // Colonne de navigation : la rangée choisie prend le fond neutre de la sélection et un nom en graisse
+            // moyenne, jamais le fond d'accent.
+            navigation: true
             // Au clavier, la sélection suit les flèches, comme une barre latérale de macOS.
             onCurrentIndexChanged: if (focusClavier && currentIndex >= 0) panneau.choisi = modele.get(currentIndex).uuid
 
@@ -149,6 +153,7 @@ Item {
                         Texte {
                             Layout.fillWidth: true
                             text: rangee.nom
+                            moyen: rangee.gras
                             elide: Text.ElideRight
                             color: rangee.statut === "Hors de portée" && !rangee.choisie ? rangee.secondaire : rangee.etat.texte
                         }

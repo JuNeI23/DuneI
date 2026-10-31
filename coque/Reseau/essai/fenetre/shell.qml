@@ -34,6 +34,13 @@ ShellRoot {
     // nomme — descendant de la fiche par son objectName. Entrée : nom. Sortie : l'Item, ou null.
     function nomme(nom) { return trouver(fenetre.panneau?.fiche, o => o.objectName === nom) }
 
+    // selection — clé de sélection et graisse de la rangée choisie de la liste. Entrées : aucune. Sortie : [clé de
+    // sélection, gras], ou [] sans rangée choisie. Erreurs : aucune. Dépendances : fenetre.panneau (Liste, Rangee).
+    function selection() {
+        const r = trouver(fenetre.panneau, o => o.gras !== undefined && o.etat?.selectionne)
+        return r ? [r.etat.selection, r.gras] : []
+    }
+
     IpcHandler {
         target: "essai"
 
@@ -48,6 +55,7 @@ ShellRoot {
                 fenetre: p !== null, demandee: EtatReseau.fenetre,
                 rangees: (p?.rangees ?? []).map(r => [r.groupe, r.nom, r.etat, r.icone]),
                 detail: f?.detail ?? {},
+                selection: essai.selection(),
                 fiche: !f ? {} : {
                     uuid: f.uuid, lu: f.lu, priorite: f.valeurs.priorite, autoconnect: f.valeurs.autoconnect,
                     facture: f.valeurs.facture === "yes", fixe: f.fixe, erreurs: f.erreurs,

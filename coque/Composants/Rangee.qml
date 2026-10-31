@@ -9,7 +9,9 @@ import "etats.js" as Etats
 // conteneur, sans cran : ni survolée, ni pressée, ni sélectionnée, désactivée comprise, sa pastille est transparente
 // et laisse voir le fond de la liste (§ 7.4), opaque ou de verre, au lieu d'en repeindre la couleur. Elle est
 // sélectionnée quand elle est la rangée courante, ou, si la liste ne fait pas suivre la sélection, quand l'appelant
-// pose selectionnee (§ 7.5) ; la sélection prend l'accent quand la liste a le focus. Sélection et survol se peignent
+// pose selectionnee (§ 7.5) ; la sélection prend l'accent quand la liste a le focus, sauf dans une colonne de
+// navigation (Liste.navigation) : elle y garde le fond neutre de la sélection inactive et son libellé passe en
+// graisse moyenne. Sélection et survol se peignent
 // dans une pastille arrondie en retrait des bords de la liste, à la manière de macOS (§ 7.10). Le focus se montre par
 // un contour sans fond de focus.width, qui suit la pastille rentré de -focus.rowOffset pixel, et jamais par un anneau
 // ni par un changement de fond (§ 7.3) ; il paraît sur la rangée courante d'une liste qui a le focus obtenu au
@@ -25,14 +27,16 @@ import "etats.js" as Etats
 // le cadenas, la coche ou le chevron), null par défaut ; accentue, libellé à l'accent autonome et en graisse
 // moyenne, comme le réseau joint du popover, faux par défaut ; forcerContour, réservée à la planche de contrôle : montre le contour de focus sans que la
 // liste ait le focus, faux par défaut.
-// Sorties : etat, l'Etat de la rangée (rôle, interaction, sélection, couleurs) ; signal active(), émis au clic
+// Sorties : etat, l'Etat de la rangée (rôle, interaction, sélection, couleurs) ; gras, vrai quand le libellé est
+// en graisse moyenne (accentue, ou rangée sélectionnée d'une colonne de navigation), que suit un contentItem
+// remplacé ; libelle, le Texte du libellé par défaut ; signal active(), émis au clic
 // et à Entrée (la Liste l'émet pour sa rangée courante).
 // Erreurs : aucune ; hors d'une ListView, la rangée garde sa largeur implicite, n'est jamais courante ni
 // sélectionnée par currentIndex, et se comporte comme si son groupe avait le focus ; avant le chargement des
 // tokens, les cotes sont nulles et les couleurs transparentes. Le clic suppose une Liste : une ListView
 // ordinaire ne déclare pas focusClavier, que le clic écrit.
 // Dépendances : QtQuick.Templates (ItemDelegate), QtQuick.Layouts, propriétés attachées ListView (view,
-// isCurrentItem) et Liste (focusClavier, selectionSuitCourant, selectionSuitSurvol) ; Theme (density, focus,
+// isCurrentItem) et Liste (focusClavier, selectionSuitCourant, selectionSuitSurvol, navigation) ; Theme (density, focus,
 // radius, space), Etat, Texte, Icone, etats.js (herite).
 // Cotes : hauteur density.rowHeight ; pastille en retrait de space.scale[0] (4) des bords, rayon radius.control ;
 // retrait horizontal du contenu space.scale[2] (12), soit 8 dans la pastille ; écart entre icône et libellé
@@ -51,6 +55,8 @@ T.ItemDelegate {
     property bool accentue: false
 
     readonly property alias etat: etat
+    readonly property bool gras: accentue || (vue?.navigation ?? false) && etat.selectionne
+    readonly property alias libelle: libelle
     // Les propriétés attachées se lisent ici, dans la portée de la rangée : lues dans un enfant, elles
     // viseraient cet enfant, qui n'est pas le délégué.
     readonly property ListView vue: ListView.view
@@ -92,6 +98,7 @@ T.ItemDelegate {
         selectionne: (rangee.vue?.selectionSuitCourant ?? true) ? rangee.courante : rangee.selectionnee
         focusDansGroupe: rangee.vue?.activeFocus ?? true
         fondReposTransparent: true
+        selectionNeutre: rangee.vue?.navigation ?? false
     }
 
     // Fond : une pastille de sélection et de survol, premier enfant du fond, en retrait de space.scale[0] de
@@ -138,9 +145,10 @@ T.ItemDelegate {
         }
 
         Texte {
+            id: libelle
             Layout.fillWidth: true
             text: rangee.text
-            moyen: rangee.accentue
+            moyen: rangee.gras
             color: rangee.accentue ? Theme.color?.accentStandalone ?? "transparent" : etat.texte
             elide: Text.ElideRight
             verticalAlignment: Text.AlignVCenter
