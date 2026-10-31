@@ -14,7 +14,7 @@ import "Presquile/bureaux.js" as Bureaux
 // Entrées : DUNEI_TOKENS_DIR, lu par Theme ; QT_QPA_PLATFORM, posé à offscreen par le test ; QT_SCALE_FACTOR, pour
 // une capture agrandie ; QT_QUICK_BACKEND=rhi et QSG_RHI_BACKEND=opengl pour une capture fidèle (la plateforme
 // offscreen choisit sinon le rendu logiciel, qui ne peint ni shader ni remplissage par texture). Commandes IPC :
-// indexPilule, pasMolette, cibleMolette, lireSpecial, commandesClic, commandeBureau, encoche, etirerEncoche,
+// indexPilule, pasMolette, cibleMolette, lireSpecial, commandesClic, commandeBureau, bureauxEtat, encoche, etirerEncoche,
 // capturer (les listes et objets sont rendus en JSON, le reste en texte).
 // Sortie : le résultat de chaque appel IPC, sur la sortie de « qs ipc call ». Erreurs : celles de Theme, dans
 // le journal ; capturer sans vitrine (hors offscreen) journalise « presquile : aucune vitrine ».
@@ -27,6 +27,10 @@ ShellRoot {
 
     // Encoche sans fenêtre, de corps 96 : sa géométrie seule est éprouvée.
     Encoche { id: essaiEncoche; largeurCorps: 96 }
+
+    // Module des bureaux sans fenêtre et sans Hyprland : idActif et special, écrits par l'IPC, remplacent leurs
+    // liaisons par défaut dès la création, et rien ici n'appelle Hyprland.dispatch.
+    Bureaux { id: essaiBureaux; ecran: null; idActif: 0; special: "" }
 
     LazyLoader {
         id: vitrine
@@ -73,6 +77,19 @@ ShellRoot {
         // etirerEncoche — porte le corps de l'Encoche sans fenêtre à une largeur. Entrée : l, px logiques.
         // Sortie : la géométrie, comme encoche. Erreurs : aucune. Dépendances : encoche, Encoche.
         function etirerEncoche(l: real): string { essaiEncoche.largeurCorps = l; return encoche() }
+
+        // bureauxEtat — pose idActif et special du module des bureaux d'essai (jamais Hyprland) et rend son état.
+        // Entrées : idActif ; special, nom du spécial ouvert ou « - » pour aucun. Sortie : JSON {largeurs, couleurs,
+        // accentDiscret, largeur, hauteur} : largeurs et couleurs cibles de chaque point, et dimensions implicites.
+        // Erreurs : aucune. Dépendances : Bureaux.
+        function bureauxEtat(idActif: int, special: string): string {
+            const b = essaiBureaux, p = Array.from({ length: b.nombre }, (_, i) => b.points.itemAt(i))
+            b.idActif = idActif
+            b.special = special === "-" ? "" : special
+            return JSON.stringify({ largeurs: p.map(x => x.largeurCible), couleurs: p.map(x => String(x.couleurCible)),
+                                    accentDiscret: String(Theme.color.accentDiscret), largeur: b.implicitWidth,
+                                    hauteur: b.implicitHeight })
+        }
 
         // capturer — enregistre la vitrine en PNG, de façon asynchrone. Entrée : chemin, fichier à écrire.
         // Sortie : aucune ; le fichier paraît une fois l'image saisie. Erreurs : « presquile : aucune vitrine » au

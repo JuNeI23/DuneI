@@ -82,6 +82,37 @@ class BureauxTest(PresquileIpc, unittest.TestCase):
                          ['hl.dsp.workspace.toggle_special("accueil")', FOCUS3])
 
 
+class BureauxModuleTest(PresquileIpc, unittest.TestCase):
+    """Module « bureaux » de la presqu'île, éprouvé sans Hyprland : l'essai écrit idActif et special directement."""
+
+    def etat(self, idActif, special=""):
+        """Pose idActif et special sur le module d'essai et rend son état. Sortie : JSON de bureauxEtat."""
+        return self.json("bureauxEtat", idActif, special or "-")
+
+    def test_nombre_de_points(self):
+        self.assertEqual(len(self.etat(2)["largeurs"]), 4)
+
+    def test_pilule_sur_le_bureau_actif(self):
+        # Bureau 2 actif : le point 1 (index 1) vise la pilule de 22, les autres le point de 7.
+        self.assertEqual(self.etat(2)["largeurs"], [7, 22, 7, 7])
+
+    def test_aucune_pilule_hors_plage(self):
+        self.assertEqual(self.etat(7)["largeurs"], [7, 7, 7, 7])
+
+    def test_pilule_grisee_sous_un_special(self):
+        # Spécial ouvert : la pilule prend la couleur des points inactifs ; fermé, elle prend l'accent discret.
+        ouvert = self.etat(2, "special:accueil")
+        self.assertEqual(ouvert["couleurs"][1], ouvert["couleurs"][0])
+        ferme = self.etat(2)
+        self.assertEqual(ferme["couleurs"][1], ferme["accentDiscret"])
+        self.assertNotEqual(ferme["couleurs"][1], ferme["couleurs"][0])
+
+    def test_largeur_implicite(self):
+        # 4 × 7 + (22 − 7) + 3 × 8 + 2 × 14 = 95, sur la hauteur de la presqu'île.
+        etat = self.etat(1)
+        self.assertEqual((etat["largeur"], etat["hauteur"]), (95, 34))
+
+
 # Tracé de la variante D de la planche forme.html (132 × 34, évasement 13), validée à l'écran par Nicolas.
 TRACE_PLANCHE = "M0 0 H132 C124 0 120 3 119 12 V20 C119 29 115 34 105 34 H27 C17 34 13 29 13 20 V12 C12 3 8 0 0 0 Z"
 
