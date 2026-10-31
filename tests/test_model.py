@@ -98,10 +98,24 @@ class ModelTest(unittest.TestCase):
     def test_nuit_thematisee_identique(self):
         for h in HUES:
             ref, got = resolve(self.data, h), resolve(theme_data(self.data, "thematisee", "nuit"), h)
-            for cle in ("ramp", "roles", "elevation", "accent", "accent_standalone", "on_accent",
-                        "categorical", "semantic"):
+            for cle in ("ramp", "roles", "elevation", "accent", "accent_standalone", "accent_discret",
+                        "on_accent", "categorical", "semantic"):
                 with self.subTest(hue=h, cle=cle):
                     self.assertEqual(got[cle], ref[cle])
+
+    def test_accent_discret(self):
+        """L'accent discret garde la teinte de l'accent, avec 0,6 fois sa chroma et la luminosité de [accent]."""
+        for h in HUES:
+            m = self.models[h]
+            with self.subTest(hue=h):
+                self.assertEqual(m["accent_discret"].l, self.data["accent"]["discret_lightness"])
+                self.assertAlmostEqual(m["accent_discret"].c, m["accent"].c * 0.6)
+                self.assertEqual(m["accent_discret"].h, m["accent"].h)
+
+    def test_accent_discret_css(self):
+        """La feuille CSS publie --accent-discret avec la valeur du modèle."""
+        from dunei_theme.emitters import css
+        self.assertIn(f"--accent-discret: {self.models[55]['accent_discret'].css()};", css.emit(self.models[55]))
 
     def test_themes_et_defaut(self):
         self.assertEqual(themes(self.data), [("thematisee", "nuit"), ("thematisee", "jour"),

@@ -153,6 +153,10 @@ standalone_step = 9        # autonome — texte accentué, liens, sur fond sombr
 # Chroma faible : 0.004 est le maximum dans le gamut sRGB à L 0.99, toutes teintes.
 on_lightness = 0.99
 on_chroma = 0.004
+# Accent discret : marque d'accent posée sur une surface E3, comme la pilule de la presqu'île. Même teinte que
+# l'accent, mais moins saturé (chroma = ratio × chroma de l'accent) pour rester une marque et non un voyant.
+discret_lightness = 0.68     # luminosité validée sur la planche (nuit) ; le jour la reprend telle quelle
+discret_chroma_ratio = 0.6   # fraction de la chroma d'accent
 
 
 # ===========================================================================
@@ -396,6 +400,15 @@ fullscreen = 0               # plein écran : aucun effet, coins compris (bible,
 [window]
 border_width = 0             # aucune bordure de fenêtre ; la fenêtre active se signale au lot 2 (L2-03, D29)
 resize_step = 48             # px logiques, pas de SUPER + Ctrl + flèche ; membre de spacing.scale
+
+[presquile]                  # îlot de la barre système (L2-46) ; px logiques
+hauteur = 34                 # hauteur de la presqu'île
+evasement = 13               # largeur de l'évasement qui la raccorde au bord de l'écran
+rayon = 10                   # rayon des angles du bas
+point = 7                    # diamètre d'un point de bureau
+pilule = 22                  # largeur de la pilule du bureau actif
+ecart = 8                    # espace entre deux marques de bureau
+marge = 14                   # marge intérieure, de part et d'autre du contenu
 
 [bureaux_virtuels]
 nombre = 4                   # bureaux 1 à n, liés à SUPER + 1…n ; le bureau spécial (accueil) n'est pas compté

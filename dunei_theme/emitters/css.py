@@ -21,6 +21,7 @@ def emit(model: dict) -> str:
     out.append("")
     out.append(f"  --accent: {model['accent'].css()};")
     out.append(f"  --accent-standalone: {model['accent_standalone'].css()};")
+    out.append(f"  --accent-discret: {model['accent_discret'].css()};")
     out.append(f"  --on-accent: {model['on_accent'].css()};")
     out.append("")
     out += [f"  --cat-{i}: {v.css()};" for i, v in enumerate(model["categorical"])]

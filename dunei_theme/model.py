@@ -108,7 +108,7 @@ def resolve(data: dict, hue_override: float | None = None) -> dict:
     """Résolution — applique les deux variables du thème à l'échelle invariante.
 
     Entrées : data — TOML brut ; hue_override — teinte simulée (sans toucher la source).
-    Sortie : modèle {hue, ramp, roles, elevation, accent, accent_standalone, on_accent,
+    Sortie : modèle {hue, ramp, roles, elevation, accent, accent_standalone, accent_discret, on_accent,
              categorical, semantic, knob, raw}, couleurs de type Oklch.
     Erreurs : KeyError si une section attendue manque dans le TOML ;
               IndexError si un échelon dépasse l'échelle de luminosité.
@@ -127,14 +127,14 @@ def resolve(data: dict, hue_override: float | None = None) -> dict:
     profil = data["lightness"].get("neutral_profile") or [th["dark_chroma_boost"] if l < 0.45 else 1 for l in steps]
     ramp = [oklch(l, th["neutral_chroma"] * scale * f, hue, ceiling) for l, f in zip(steps, profil, strict=True)]
 
-    def accent(step, lightness=None):
+    def accent(step, lightness=None, chroma_ratio=1.0):
         """Accent à un échelon de l'échelle de luminosité, ou à une luminosité explicite.
 
         Entrées : step — index d'échelon ; lightness — luminosité qui l'emporte si elle est donnée.
         Sortie : Oklch à la teinte du thème.
         Erreurs : IndexError si l'échelon n'existe pas. Dépendances : color.oklch.
         """
-        return oklch(steps[step] if lightness is None else lightness, th["accent_chroma"] * scale, hue, ceiling)
+        return oklch(steps[step] if lightness is None else lightness, th["accent_chroma"] * scale * chroma_ratio, hue, ceiling)
 
     roles = {name: ramp[i] for name, i in data["roles"].items()}
     kn = data["knob"]
@@ -148,6 +148,7 @@ def resolve(data: dict, hue_override: float | None = None) -> dict:
         "elevation": {name: ramp[lvl["step"]] for name, lvl in data["elevation"].items()},
         "accent": accent(acc["fill_step"], acc.get("fill_lightness")),
         "accent_standalone": accent(acc["standalone_step"], acc.get("standalone_lightness")),
+        "accent_discret": accent(acc["standalone_step"], acc["discret_lightness"], acc["discret_chroma_ratio"]),
         "knob": knob,
         "on_accent": oklch(acc["on_lightness"], acc["on_chroma"], hue, ceiling),
         "categorical": [oklch(cat.get("lightness", steps[cat["lightness_step"]]), cat["chroma"] * scale, (hue + off) % 360, ceiling)

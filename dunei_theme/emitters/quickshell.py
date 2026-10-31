@@ -185,6 +185,7 @@ def _theme(model: dict) -> dict:
             **{_camel(k): to_hex(v) for k, v in model["roles"].items()},
             "accent": to_hex(model["accent"]),
             "accentStandalone": to_hex(model["accent_standalone"]),
+            "accentDiscret": to_hex(model["accent_discret"]),
             "onAccent": to_hex(model["on_accent"]),
             "knob": to_hex(model["knob"]),
             **{k: to_hex(sem[k]) for k in ("error", "warning", "success", "info")},
@@ -279,5 +280,6 @@ def emit(model: dict) -> str:
         "pastilles": _pastilles(resolus[(fam, "nuit")]),
         "bureau": _bureau(model),
         "bureauxVirtuels": {"nombre": _bureaux(raw)},
+        "presquile": _camel_keys(raw["presquile"]),
     }
     return json.dumps(out, indent=2, ensure_ascii=False) + "\n"

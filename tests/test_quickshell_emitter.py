@@ -31,9 +31,22 @@ class QuickshellEmitterTest(unittest.TestCase):
     def test_cles_premier_niveau(self):
         self.assertEqual(list(self.out), [
             "_generated", "hue", "space", "density", "radius", "window", "layout", "breakpoints", "typo", "icons",
-            "familles", "moments", "defaut", "themes", "pastilles", "bureau", "bureauxVirtuels"])
+            "familles", "moments", "defaut", "themes", "pastilles", "bureau", "bureauxVirtuels", "presquile"])
         self.assertEqual(list(self.nuit), ["color", "states", "focus", "disabled", "elevation", "material", "glass", "render",
                                            "knob", "controls"])
+
+    def test_presquile(self):
+        """Vérifie les sept dimensions de la presqu'île, en pixels logiques."""
+        self.assertEqual(self.out["presquile"], {"hauteur": 34, "evasement": 13, "rayon": 10, "point": 7,
+                                                 "pilule": 22, "ecart": 8, "marge": 14})
+
+    def test_accent_discret(self):
+        """Vérifie l'accent discret des quatre thèmes : teinte de l'accent, chroma 0,6 fois, luminosité 0,68."""
+        for fam, moments in self.out["themes"].items():
+            for mom, th in moments.items():
+                with self.subTest(famille=fam, moment=mom):
+                    self.assertRegex(th["color"]["accentDiscret"], r"^#[0-9a-f]{6}$")
+                    pass
 
     def test_bureaux_virtuels(self):
         self.assertEqual(self.out["bureauxVirtuels"], {"nombre": 4})
