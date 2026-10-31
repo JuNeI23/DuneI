@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas — révisée le 22 octobre 2026
 
-Version 1.29. Historique en fin de document.
+Version 1.30. Historique en fin de document.
 
 *Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent quarante-huit lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
 
@@ -444,8 +444,13 @@ marche : la machine reçoit parfois un appui fantôme quelques secondes après l
 `dunei-garde-reveil.service`, tirée par chaque mise en veille, bloque désormais le bouton marche pendant environ 10 s
 après le réveil ; la recette attend le prochain fantôme constaté.
 
-Prochaine étape : **corriger le bug 2 de la coque : après un réveil, la barre ne réagit plus au survol ni au clic
-gauche.** Ensuite, **choisir avec Nicolas entre le popover du réseau (L2-11) et le prochain module de la presqu'île.**
+Le même jour, un correctif de L2-08 (D100) a rendu la barre à nouveau sensible après un réveil : son masque de
+saisie, qui nommait l'interrupteur jour/nuit, ne suivait pas la rangée quand l'icône du Wi-Fi apparaissait après coup,
+et restait posé sur le Wi-Fi. Il se calcule désormais rangée par rangée, et le survol est réservé aux éléments
+cliquables. Les deux bugs relevés ce jour-là sont corrigés ; il reste à les constater, l'un au prochain appui
+fantôme, l'autre après un vrai réveil.
+
+Prochaine étape : **choisir avec Nicolas entre le popover du réseau (L2-11) et le prochain module de la presqu'île.**
 Le premier trancherait le sort de `nm-applet` et fournirait au VPN son interrupteur ; le second serait le premier
 contenu à changer la forme de la presqu'île, donc à régler L2-48. L2-44 et L2-45 se traitent en passant, quand un
 composant touché par leurs reliquats est rouvert. Quel que soit le choix, il commence par l'enjeu et par un repérage,
@@ -456,6 +461,7 @@ jamais par du code.
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-10 | Version initiale |
+| 1.30 | 2026-10-31 | Masque de saisie de la barre calculé rangée par rangée (L2-08, D100) : les deux bugs de la coque sont corrigés ; prochaine étape : popover du réseau ou prochain module de la presqu'île |
 | 1.29 | 2026-10-31 | Garde du bouton marche au réveil (L1-09, D99) contre l'appui fantôme ; prochaine étape : le bug 2 de la coque (barre inerte au survol et au clic gauche après un réveil), puis le popover du réseau ou le prochain module |
 | 1.28 | 2026-10-31 | La presqu'île (L2-46, L2-10, D96 à D98) livrée et validée à l'écran : quatre bureaux, forme, modules ; prochaine étape : popover du réseau ou prochain module |
 | 1.27 | 2026-10-26 | La barre système (L2-08, L2-09, D89 à D95) validée à l'écran : barre transparente de 28 px, texte sur bureau, neuf indicateurs, coque de session ; VPN non éprouvé ; L2-10 déplacé vers la presqu'île (L2-46) ; prochaine étape : choisir entre la presqu'île et le popover réseau |

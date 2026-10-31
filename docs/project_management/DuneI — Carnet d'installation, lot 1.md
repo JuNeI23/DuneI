@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.26. Historique en fin de document.
+Version 1.27. Historique en fin de document.
 
 Socle amorçable.
 
@@ -1946,6 +1946,9 @@ journalctl --user -u dunei-coque.service -e     # erreurs QML éventuelles
 - **`font.features` posé sur une instance de `Texte`** supplante la liaison `font: Theme.police(…)` du composant : le
   texte retombe à 12 px. On passe par l'entrée `tabulaire` (D95).
 - **dunst** tient `org.freedesktop.Notifications` : la coque ne doit jamais instancier de `NotificationServer`.
+- **Un masque `Region { item: … }` ne suit pas ses ancêtres** (Quickshell 0.3.2) : il ne se recalcule que sur la
+  géométrie propre de l'item. Quand le Wi-Fi apparaît après coup, la rangée droite glisse et le masque reste sur le
+  Wi-Fi : la barre semble inerte. Le masque se calcule donc à coordonnées cumulées, rangée par rangée (D100).
 
 ### Relevés
 
@@ -1955,6 +1958,10 @@ journalctl --user -u dunei-coque.service -e     # erreurs QML éventuelles
 - Recette à l'écran validée par Nicolas le 2026-10-26 : survol et appui du bouton jour/nuit (foncé au survol, orange
   d'accent à l'appui), bascule du thème, Wi-Fi et Bluetooth coupés puis rétablis, secteur débranché, « ne pas
   déranger » de dunst. Rendu jugé « parfait ».
+- Masque de saisie (D100), vérifié le 2026-10-31 par la position réelle du curseur (`hyprctl cursorpos`) relevée
+  pendant des captures `grim` de la zone droite : le survol doit allumer la lune, et elle seule. Un balayage par
+  `hyprctl dispatch movecursor` ne déclenche aucun survol et ne vaut pas pour ce test ; la vérification se fait à la
+  main, curseur posé par Nicolas. Validé après un redémarrage de la coque ; **à constater après un vrai réveil**.
 - **Non couvert : le VPN.** Aucun VPN n'est configuré sur caladan ; à éprouver quand il en existera un.
 
 ### La presqu'île — L2-46, L2-10
@@ -2073,6 +2080,7 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 
 | Version | Date | Changement |
 | --- | --- | --- |
+| 1.27 | 2026-10-31 | La barre système (L2-08) : piège du masque `Region { item: … }` qui ne suit pas ses ancêtres, et vérification du masque de saisie par la position réelle du curseur (D100) |
 | 1.26 | 2026-10-31 | Énergie (L1-09) : garde du bouton marche au réveil, `dunei-garde-reveil.service` et `sleep.target.d/10-dunei.conf`, vérification et recette en attente (D99) |
 | 1.25 | 2026-10-31 | La presqu'île (L2-46, L2-10) : quatre bureaux, raccourcis `SUPER + 1…4`, geste sans création de bureau, section de la presqu'île, relevés (D96 à D98) |
 | 1.24 | 2026-10-26 | La barre système et la coque de session (L2-08, L2-09) : unité `dunei-coque.service`, lien `~/.config/quickshell/dunei`, `bureau.json`, mode d'emploi, pièges, relevés et réserve sur le VPN (D89 à D95) |

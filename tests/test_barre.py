@@ -231,11 +231,24 @@ class BarreStructureTest(unittest.TestCase):
         self.assertIn('color: "transparent"', self.barre)
         self.assertIn("WlrKeyboardFocus.None", self.barre)
 
-    def test_masque_ne_nomme_que_jour_nuit(self):
+    def test_masque_ne_couvre_que_jour_nuit(self):
         masque = re.search(r"mask:\s*Region\s*\{([^}]*)\}", self.barre)
         self.assertIsNotNone(masque)
-        self.assertEqual(re.findall(r"item:\s*(\w+)", masque.group(1)), ["jourNuit"])
+        corps = masque.group(1)
+        # Une Region qui nomme un item ne suit que ses déplacements dans son parent : le masque se calcule par
+        # rangée, pour suivre aussi le glissement de la rangée quand une icône apparaît à droite (D100).
+        self.assertNotRegex(corps, r"\bitem:")
+        self.assertRegex(corps, r"x:\s*rangee\.x\s*\+\s*droite\.x\s*\+\s*jourNuit\.x\b")
+        self.assertRegex(corps, r"y:\s*rangee\.y\s*\+\s*droite\.y\s*\+\s*jourNuit\.y\b")
+        self.assertRegex(corps, r"width:\s*jourNuit\.width\b")
+        self.assertRegex(corps, r"height:\s*jourNuit\.height\b")
         self.assertRegex(self.barre, r"JourNuit\s*\{\s*id:\s*jourNuit\b")
+        self.assertRegex(self.barre, r"RowLayout\s*\{\s*id:\s*rangee\b")
+        self.assertRegex(self.barre, r"RowLayout\s*\{\s*id:\s*droite\b")
+
+    def test_survol_reserve_aux_cliquables(self):
+        element = (ROOT / "coque" / "Barre" / "ElementBarre.qml").read_text(encoding="utf-8")
+        self.assertIn("element.cliquable && element.hovered", element)
 
     def test_ordre_des_indicateurs(self):
         droite = ["Notifications", "Batterie", "JourNuit", "Wifi", "Vpn", "Bluetooth", "Parametres"]

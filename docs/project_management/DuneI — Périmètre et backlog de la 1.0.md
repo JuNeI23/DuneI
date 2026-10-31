@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.30. Historique en fin de document.
+Version 1.31. Historique en fin de document.
 
 La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **157 éléments** répartis en **cinq lots**, sur six chantiers.
 
@@ -260,7 +260,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L2-05 | B | Écrit | Dithering par bruit sur tout dégradé de sheen — **fait (D85)** : bruit IGN indexé sur `gl_FragCoord`, ajouté avant quantification dans le shader du matériau |
 | L2-06 | B | Écrit | Vocabulaire de mouvement — sept transitions, interruptibles |
 | L2-07 | B | Écrit | Mode mouvement réduit |
-| L2-08 | B | Écrit | Barre système — structure, 32 px, couleur franche du thème — **fait (D89 à D92, D94, D95)** : barre transparente sans fond ni couleur franche, 28 px (ramenée de 32 à la recette), texte sur bureau choisi d'après `bureau.json`, survol et appui sans capsule, neuf indicateurs (logo, horloge, notifications, batterie, jour/nuit, Wi-Fi, VPN, Bluetooth, paramètres), coque de session `dunei-coque.service` ; recette validée à l'écran le 2026-10-26, **VPN non couvert, à éprouver quand un VPN existera** |
+| L2-08 | B | Écrit | Barre système — structure, 32 px, couleur franche du thème — **fait (D89 à D92, D94, D95)** : barre transparente sans fond ni couleur franche, 28 px (ramenée de 32 à la recette), texte sur bureau choisi d'après `bureau.json`, survol et appui sans capsule, neuf indicateurs (logo, horloge, notifications, batterie, jour/nuit, Wi-Fi, VPN, Bluetooth, paramètres), coque de session `dunei-coque.service` ; recette validée à l'écran le 2026-10-26, **VPN non couvert, à éprouver quand un VPN existera** ; masque de saisie calculé rangée par rangée, pour suivre l'interrupteur jour/nuit quand le Wi-Fi apparaît à sa droite, et survol réservé aux éléments cliquables (D100) |
 | L2-09 | B | Écrit | Barre système — horloge, chiffres tabulaires — **fait (D95)** : « lun. 26 oct. 14:32 » en français, chiffres tabulaires par `Theme.police(echelon, moyen, tabulaire)`, précision à la minute |
 | L2-10 | B | Écrit | Barre système — indicateur de bureaux virtuels — **fait (D96, D97)** : déplacé dans la presqu'île (D93, L2-46), quatre points identiques et pilule d'accent discret sur le bureau courant |
 | L2-11 | B | Écrit | Indicateur réseau et son popover ; décider du sort de `nm-applet`, qui passe désormais par `session.toml` et son unité `nm-applet.service` (L1-10, D50) : le garder, ou le remplacer et retirer alors sa ligne et son unité (D40) |
@@ -506,6 +506,7 @@ Le choix de la distribution de base et du compositeur, précédemment ouverts, s
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-12 | Version initiale, 137 éléments |
+| 1.31 | 2026-10-31 | L2-08 reçoit le correctif du masque de saisie de la barre, qui restait sur le Wi-Fi après un réveil, et le survol réservé aux éléments cliquables (D100) |
 | 1.30 | 2026-10-31 | L1-09 reçoit la garde du bouton marche au réveil, contre l'appui fantôme qui rendormait la machine (D99) |
 | 1.29 | 2026-10-31 | L2-46 et L2-10 faits : la presqu'île, quatre bureaux (D96 à D98) ; ajout de L2-47 (mouvement réduit dans la coque) et de L2-48 (transitions de la presqu'île) ; 157 éléments |
 | 1.28 | 2026-10-26 | L2-08 et L2-09 faits : barre système transparente, texte sur bureau, neuf indicateurs, coque de session (D89 à D95) ; L2-10 déplacé vers la presqu'île, nouvelle ligne L2-46 ; correction de `#120601` en `#0f0703` dans L2-27 ; ombre E2 de la barre sans objet (L2-45) ; VPN non éprouvé faute de VPN sur caladan. 155 éléments |

@@ -37,7 +37,7 @@ T.AbstractButton {
     ColorSpring {
         id: ressort
         target: element.down || element.ouvert ? Theme.color?.accentStandalone ?? "transparent"
-              : element.hovered ? Theme.texteBureauSurvol : Theme.texteBureau
+              : element.cliquable && element.hovered ? Theme.texteBureauSurvol : Theme.texteBureau
     }
 
     contentItem: Row {
