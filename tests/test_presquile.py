@@ -85,9 +85,9 @@ class BureauxTest(PresquileIpc, unittest.TestCase):
 class BureauxModuleTest(PresquileIpc, unittest.TestCase):
     """Module « bureaux » de la presqu'île, éprouvé sans Hyprland : l'essai écrit idActif et special directement."""
 
-    def etat(self, idActif, special=""):
-        """Pose idActif et special sur le module d'essai et rend son état. Sortie : JSON de bureauxEtat."""
-        return self.json("bureauxEtat", idActif, special or "-")
+    def etat(self, idActif, special="", survol=-1):
+        """Pose idActif, special et le point survolé sur le module d'essai et rend son état (JSON de bureauxEtat)."""
+        return self.json("bureauxEtat", idActif, special or "-", survol)
 
     def test_nombre_de_points(self):
         self.assertEqual(len(self.etat(2)["largeurs"]), 4)
@@ -106,6 +106,20 @@ class BureauxModuleTest(PresquileIpc, unittest.TestCase):
         ferme = self.etat(2)
         self.assertEqual(ferme["couleurs"][1], ferme["accentDiscret"])
         self.assertNotEqual(ferme["couleurs"][1], ferme["couleurs"][0])
+
+    def test_survol(self):
+        # Le point survolé prend textTertiary, rôle de la rampe du thème, et se distingue des points inactifs.
+        etat = self.etat(2, survol=0)
+        self.assertEqual(etat["couleurs"][0], etat["textTertiary"])
+        self.assertNotEqual(etat["couleurs"][0], etat["couleurs"][2])
+        # La pilule survolée garde l'accent discret, hors bureau spécial.
+        self.assertEqual(self.etat(2, survol=1)["couleurs"][1], etat["accentDiscret"])
+
+    def test_survol_pilule_grisee(self):
+        # Sous un spécial ouvert, la pilule grisée réagit au survol, puisqu'un clic la referme.
+        etat = self.etat(2, "special:accueil", survol=1)
+        self.assertEqual(etat["couleurs"][1], etat["textTertiary"])
+        self.assertNotEqual(etat["couleurs"][1], etat["couleurs"][0])
 
     def test_largeur_implicite(self):
         # 4 × 7 + (22 − 7) + 3 × 8 + 2 × 14 = 95, sur la hauteur de la presqu'île.

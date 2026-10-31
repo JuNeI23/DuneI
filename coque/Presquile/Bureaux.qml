@@ -9,25 +9,30 @@ import "bureaux.js" as Logique
 // point a un Ressort (transition « navigate ») sur sa largeur et un ColorSpring sur sa couleur : au changement de
 // bureau, l'ancienne pilule redevient un point et la nouvelle s'allonge, une interruption en vol repartant de la
 // position courante. Points inactifs en Theme.color.textDisabled ; pilule en Theme.color.accentDiscret, ou, sous
-// un bureau spécial ouvert, dans la couleur des points inactifs. Survol (D92) : le point visé prend
-// Theme.texteBureauSurvol, sans capsule. Une zone de clic par point, d'un nombre-ième de la largeur utile (sans les
+// un bureau spécial ouvert, dans la couleur des points inactifs. Survol (D92) : le point visé passe à
+// Theme.color.textTertiary, un cran d'emphase de la rampe du thème, lue sur la surface de la coque (et non le texte
+// du bureau, choisi sur la luminance du fond d'écran), sans capsule ; la pilule grisée par un spécial réagit de même,
+// puisqu'un clic la referme. Une zone de clic par point, d'un nombre-ième de la largeur utile (sans les
 // marges) ; la molette passe par pasMolette puis cibleMolette, le clic par commandesClic. Aucun minuteur.
 // Entrées : ecran, écran de la presqu'île (obligatoire) ; idActif, identifiant du bureau actif, lié par défaut au
 //           bureau actif du moniteur de l'écran (0 si inconnu) ; special, nom du bureau spécial ouvert
-//           (« special:… ») ou "", tenu à jour par Hyprland.rawEvent (activespecial) pour le moniteur de l'écran.
+//           (« special:… ») ou "", lu une fois au démarrage sur le moniteur de l'écran (specialWorkspace), puis tenu à
+//           jour par Hyprland.rawEvent (activespecial).
 //           L'essai écrit idActif et special directement : leurs liaisons par défaut se remplacent sans effet.
 // Sorties : implicitWidth, nombre × point + (pilule − point) + (nombre − 1) × écart + 2 × marge ; implicitHeight,
 //           hauteur de la presqu'île (contrat de tout module de contenu, seule chose que Presquile lit) ; points,
 //           le répéteur des points, dont chaque délégué porte largeurCible et couleurCible (lus par les essais).
 // Erreurs : aucune ; avant le chargement des jetons, les dimensions sont nulles et rien n'est peint. Une commande
 //           Hyprland refusée se lit au journal de Quickshell.
-// Dépendances : Theme (tokens, color, texteBureauSurvol), Ressort, ColorSpring, bureaux.js, Quickshell.Hyprland.
+// Dépendances : Theme (tokens, color), Ressort, ColorSpring, bureaux.js, Quickshell.Hyprland.
 Item {
     id: bureaux
 
     required property var ecran
     property int idActif: Hyprland.monitorFor(ecran)?.activeWorkspace?.id ?? 0
     property string special: ""
+    readonly property var moniteur: ecran ? Hyprland.monitorFor(ecran) : null
+    property bool amorce: false
 
     readonly property var gabarit: Theme.tokens?.presquile
     readonly property int nombre: Theme.tokens?.bureauxVirtuels?.nombre ?? 0
@@ -40,19 +45,34 @@ Item {
         + Math.max(0, nombre - 1) * (gabarit?.ecart ?? 0) + 2 * (gabarit?.marge ?? 0)
     implicitHeight: gabarit?.hauteur ?? 0
 
+    // Amorce : lit une seule fois le bureau spécial déjà ouvert au démarrage, sur l'état du moniteur (specialWorkspace
+    // de lastIpcObject), sans sondage ; un événement activespecial reçu avant fait foi. Inerte sans écran (essai).
+    Component.onCompleted: if (ecran) Hyprland.refreshMonitors()
+    Connections {
+        target: bureaux.moniteur
+        function onLastIpcObjectChanged() {
+            if (bureaux.amorce) return
+            bureaux.amorce = true
+            bureaux.special = bureaux.moniteur.lastIpcObject?.specialWorkspace?.name ?? ""
+        }
+    }
+
     // Suit le bureau spécial ouvert sur le moniteur de cet écran : « special:<nom>,<moniteur> », nom vide à la
     // fermeture ; les autres moniteurs et les autres événements sont ignorés.
     Connections {
         target: Hyprland
         function onRawEvent(event) {
-            if (event.name === "activespecial" && event.data.split(",")[1] === Hyprland.monitorFor(bureaux.ecran)?.name)
+            if (event.name === "activespecial" && event.data.split(",")[1] === bureaux.moniteur?.name) {
+                bureaux.amorce = true
                 bureaux.special = Logique.lireSpecial(event.data)
+            }
         }
     }
 
-    // Les points, centrés ; la largeur de chacun est portée par un Ressort, sa couleur par un ColorSpring.
+    // Les points, alignés depuis la marge (la rangée ne glisse pas quand la pilule apparaît ou disparaît) ; la largeur de chacun est portée par un Ressort, sa couleur par un ColorSpring.
     Row {
-        anchors.centerIn: parent
+        anchors.verticalCenter: parent.verticalCenter
+        x: bureaux.gabarit?.marge ?? 0
         spacing: bureaux.gabarit?.ecart ?? 0
 
         Repeater {
@@ -64,10 +84,10 @@ Item {
                 required property int index
                 readonly property bool pilule: index === bureaux.indexActif
                 readonly property color repos: Theme.color?.textDisabled ?? "transparent"
+                readonly property color emphase: bureaux.survol === index ? Theme.color?.textTertiary ?? "transparent" : repos
                 readonly property real largeurCible: pilule ? bureaux.gabarit?.pilule ?? 0 : bureaux.gabarit?.point ?? 0
-                readonly property color couleurCible: pilule ? (bureaux.special !== "" ? repos
-                    : Theme.color?.accentDiscret ?? "transparent")
-                    : bureaux.survol === index ? Theme.texteBureauSurvol : repos
+                readonly property color couleurCible: pilule ? (bureaux.special === "" ? Theme.color?.accentDiscret ?? "transparent" : emphase)
+                    : emphase
 
                 width: etirement.value
                 height: bureaux.gabarit?.point ?? 0
@@ -101,7 +121,7 @@ Item {
                 hoverEnabled: true
                 onEntered: bureaux.survol = index
                 onExited: if (bureaux.survol === index) bureaux.survol = -1
-                onClicked: Logique.commandesClic(index + 1, bureaux.idActif, bureaux.special).forEach(Hyprland.dispatch)
+                onClicked: Logique.commandesClic(index + 1, bureaux.idActif, bureaux.special).forEach(c => Hyprland.dispatch(c))
             }
         }
     }

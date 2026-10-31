@@ -79,15 +79,17 @@ ShellRoot {
         function etirerEncoche(l: real): string { essaiEncoche.largeurCorps = l; return encoche() }
 
         // bureauxEtat — pose idActif et special du module des bureaux d'essai (jamais Hyprland) et rend son état.
-        // Entrées : idActif ; special, nom du spécial ouvert ou « - » pour aucun. Sortie : JSON {largeurs, couleurs,
-        // accentDiscret, largeur, hauteur} : largeurs et couleurs cibles de chaque point, et dimensions implicites.
+        // Entrées : idActif ; special, nom du spécial ouvert ou « - » pour aucun ; survol, index du point survolé ou −1.
+        // Sortie : JSON {largeurs, couleurs, accentDiscret, textTertiary, largeur, hauteur} : largeurs et couleurs cibles de chaque point, et dimensions implicites.
         // Erreurs : aucune. Dépendances : Bureaux.
-        function bureauxEtat(idActif: int, special: string): string {
+        function bureauxEtat(idActif: int, special: string, survol: int): string {
             const b = essaiBureaux, p = Array.from({ length: b.nombre }, (_, i) => b.points.itemAt(i))
             b.idActif = idActif
             b.special = special === "-" ? "" : special
+            b.survol = survol
             return JSON.stringify({ largeurs: p.map(x => x.largeurCible), couleurs: p.map(x => String(x.couleurCible)),
-                                    accentDiscret: String(Theme.color.accentDiscret), largeur: b.implicitWidth,
+                                    accentDiscret: String(Theme.color.accentDiscret),
+                                    textTertiary: String(Theme.color.textTertiary), largeur: b.implicitWidth,
                                     hauteur: b.implicitHeight })
         }
 
