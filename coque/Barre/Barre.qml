@@ -27,11 +27,20 @@ PanelWindow {
     implicitHeight: 28
     exclusiveZone: 28
     color: "transparent"
-    mask: Region { item: jourNuit }
+    // Masque de saisie posé sur l'interrupteur, ses coordonnées cumulées rangée par rangée (D100) : une Region qui
+    // nomme un item ne suit que ses déplacements dans son parent, et l'apparition d'une icône à sa droite (le Wi-Fi
+    // au lancement ou au réveil) faisait glisser la rangée sans déplacer le masque, laissé sur l'icône voisine.
+    mask: Region {
+        x: rangee.x + droite.x + jourNuit.x
+        y: rangee.y + droite.y + jourNuit.y
+        width: jourNuit.width
+        height: jourNuit.height
+    }
     WlrLayershell.namespace: "dunei-barre"
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
 
     RowLayout {
+        id: rangee
         anchors { fill: parent; leftMargin: barre.marge; rightMargin: barre.marge }
         spacing: 0
 
@@ -46,6 +55,7 @@ PanelWindow {
         Item { Layout.fillWidth: true }
 
         RowLayout {
+            id: droite
             Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
             spacing: Theme.space?.scale[1] ?? 0
 
