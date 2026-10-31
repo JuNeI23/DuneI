@@ -134,6 +134,15 @@ class IconesTest(BarreIpc, unittest.TestCase):
             self.assertEqual(self.reseau(force=force), f"network-wireless-signal-{palier}", force)
         self.assertEqual(self.reseau(force="NaN"), "network-wireless-signal-none")
 
+    def test_reseau_filaire_l_emporte(self):
+        # Le lien filaire l'emporte sur tout l'état du Wi-Fi, carte présente.
+        for radio, connecte in ((False, False), (True, False), (False, True)):
+            self.assertEqual(self.reseau(filaire=True, radio=radio, connecte=connecte), "network-wired")
+            self.assertEqual(self.reseau(filaire=True, radio=radio, connecte=connecte, connectivite="limited"),
+                             "network-wired-no-route")
+            self.assertEqual(self.reseau(filaire=True, radio=radio, connecte=connecte, connectivite="portal"),
+                             "network-wired-no-route")
+
     def test_reseau_sans_carte_filaire(self):
         self.assertEqual(self.reseau(carte=False, filaire=True), "network-wired")
         self.assertEqual(self.reseau(carte=False, filaire=True, connecte=False), "network-wired")

@@ -109,10 +109,6 @@ class IconesTest(unittest.TestCase):
             for p in frais:
                 self.assertEqual((Path(d) / p).read_bytes(), (ROOT / "generated" / "icons" / p).read_bytes(), str(p))
 
-
-if __name__ == "__main__":
-    unittest.main()
-
     def test_glyphes(self):
         self.assertEqual(glyphes("bell"), ["bell"])
         self.assertEqual(glyphes("wifi-high+warning-circle"), ["wifi-high", "warning-circle"])
@@ -141,3 +137,7 @@ if __name__ == "__main__":
                     self.assertEqual(svg.count("<svg"), 1, nom)
                     self.assertIn("<mask", svg)
                     self.assertIn('class="ColorScheme-Text"', svg)
+
+
+if __name__ == "__main__":
+    unittest.main()

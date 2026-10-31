@@ -43,18 +43,18 @@ function iconeWifi(carte, actif, connecte, force) {
 
 // iconeReseau — icône du réseau (Wi-Fi et filaire), qui remplacera iconeWifi.
 // Entrée : e, objet {carte, radio, filaire, connecte, connectivite, facture, force} : une carte Wi-Fi existe ;
-// sa radio est allumée ; un lien filaire est actif ; le Wi-Fi est joint ; connectivité NetworkManager (« full »,
+// sa radio est allumée ; un lien filaire est connecté ; le Wi-Fi est joint ; connectivité NetworkManager (« full »,
 // « limited », « portal », « none » ou « unknown ») ; la connexion est facturée à l'usage ; qualité du signal de
-// 0 à 1. Sortie, par ordre de priorité : "" sans carte ni filaire ; « network-wired » pour un lien filaire actif
-// (la carte Wi-Fi absente ou déconnectée n'y change rien), avec « -no-route » si la connectivité est « limited »
-// ou « portal » ; « network-wireless-disabled » radio coupée ; « network-wireless-offline » non joint ;
+// 0 à 1 ; filaire signifie « lien filaire connecté ». Sortie, par ordre de priorité : "" sans carte ni filaire ;
+// « network-wired » dès que filaire est vrai (l'état de la carte Wi-Fi, présente ou non, n'y change rien),
+// avec « -no-route » si la connectivité est « limited » ou « portal » ; « network-wireless-disabled » radio coupée ; « network-wireless-offline » non joint ;
 // « network-wireless-no-route » sans internet ou derrière un portail captif ; « network-wireless-hotspot »
 // facturé ; sinon les cinq paliers de signal (seuils 0,2 ; 0,4 ; 0,6 ; 0,8).
 // Erreurs : aucune ; une force non numérique donne « none ». Dépendances : aucune.
 function iconeReseau(e) {
     if (!e.carte && !e.filaire) return ""
     const sansInternet = e.connectivite === "limited" || e.connectivite === "portal"
-    if (e.filaire && (e.connecte || !e.carte)) return sansInternet ? "network-wired-no-route" : "network-wired"
+    if (e.filaire) return sansInternet ? "network-wired-no-route" : "network-wired"
     if (!e.radio) return "network-wireless-disabled"
     if (!e.connecte) return "network-wireless-offline"
     if (sansInternet) return "network-wireless-no-route"
