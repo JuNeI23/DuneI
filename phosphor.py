@@ -26,7 +26,8 @@ DEST = Path("icones/phosphor")
 def charger(chemin: Path) -> tuple[dict, dict[str, str]]:
     """Lecture de la table de correspondance.
 
-    Entrée : chemin — fichier TOML avec une section [source] et des groupes nom freedesktop → nom Phosphor.
+    Entrée : chemin — fichier TOML avec une section [source] et des groupes nom freedesktop → nom Phosphor
+              (ou « base+pastille », voir glyphes).
     Sortie : (section source, dictionnaire fusionné de tous les autres groupes).
     Erreurs : ValueError si un nom freedesktop figure dans deux groupes, ou si la section [source] manque ;
               OSError si le fichier est illisible.
@@ -44,6 +45,15 @@ def charger(chemin: Path) -> tuple[dict, dict[str, str]]:
                 raise ValueError(f"{chemin} : le nom « {nom} » figure dans deux groupes")
             noms[nom] = phosphor
     return brut["source"], noms
+
+
+def glyphes(valeur: str) -> list[str]:
+    """Glyphes Phosphor d'une entrée de la table.
+
+    Entrée : valeur — nom Phosphor, ou « base+pastille » pour une icône composée de deux glyphes.
+    Sortie : liste des noms Phosphor, la base d'abord. Erreurs : aucune. Dépendances : aucune.
+    """
+    return valeur.split("+")
 
 
 def nom_fichier(nom: str, graisse: str) -> str:
@@ -73,7 +83,7 @@ def rafraichir(repo: Path) -> list[str]:
         raise ValueError(f"somme sha256 inattendue : {somme} (table : {source.get('sha256') or 'vide'})")
     graisse = source["graisse"]
     voulus = {"LICENSE": "LICENSE"}
-    for phosphor in sorted(set(noms.values())):
+    for phosphor in sorted({g for v in noms.values() for g in glyphes(v)}):
         for g in (graisse, "fill"):
             f = nom_fichier(phosphor, g)
             voulus[f"assets/{g}/{f}"] = f"{g}/{f}"

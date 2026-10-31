@@ -41,6 +41,28 @@ function iconeWifi(carte, actif, connecte, force) {
     return "network-wireless-signal-" + palier[Math.max(0, Math.min(4, (Math.floor(force * 5) || 0)))]
 }
 
+// iconeReseau — icône du réseau (Wi-Fi et filaire), qui remplacera iconeWifi.
+// Entrée : e, objet {carte, radio, filaire, connecte, connectivite, facture, force} : une carte Wi-Fi existe ;
+// sa radio est allumée ; un lien filaire est actif ; le Wi-Fi est joint ; connectivité NetworkManager (« full »,
+// « limited », « portal », « none » ou « unknown ») ; la connexion est facturée à l'usage ; qualité du signal de
+// 0 à 1. Sortie, par ordre de priorité : "" sans carte ni filaire ; « network-wired » pour un lien filaire actif
+// (la carte Wi-Fi absente ou déconnectée n'y change rien), avec « -no-route » si la connectivité est « limited »
+// ou « portal » ; « network-wireless-disabled » radio coupée ; « network-wireless-offline » non joint ;
+// « network-wireless-no-route » sans internet ou derrière un portail captif ; « network-wireless-hotspot »
+// facturé ; sinon les cinq paliers de signal (seuils 0,2 ; 0,4 ; 0,6 ; 0,8).
+// Erreurs : aucune ; une force non numérique donne « none ». Dépendances : aucune.
+function iconeReseau(e) {
+    if (!e.carte && !e.filaire) return ""
+    const sansInternet = e.connectivite === "limited" || e.connectivite === "portal"
+    if (e.filaire && (e.connecte || !e.carte)) return sansInternet ? "network-wired-no-route" : "network-wired"
+    if (!e.radio) return "network-wireless-disabled"
+    if (!e.connecte) return "network-wireless-offline"
+    if (sansInternet) return "network-wireless-no-route"
+    if (e.facture) return "network-wireless-hotspot"
+    const palier = ["none", "weak", "ok", "good", "excellent"]
+    return "network-wireless-signal-" + palier[Math.max(0, Math.min(4, (Math.floor(e.force * 5) || 0)))]
+}
+
 // iconeBluetooth — icône du Bluetooth.
 // Entrées : adaptateur, un adaptateur existe ; allume, il est allumé. Sortie : "" sans adaptateur,
 // "bluetooth-disabled" éteint, "bluetooth-active" allumé, qu'un appareil soit connecté ou non (comme macOS).

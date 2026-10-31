@@ -11,7 +11,7 @@ import "Barre/icones.js" as Icones
 // Coque d'essai du module Barre, sans aucune fenêtre.
 // Rôle : expose par IPC (cible « barre ») les fonctions pures de icones.js, et porte un ElementBarre que le test
 // pilote, pour que tests/test_barre.py éprouve les correspondances dans un vrai Quickshell.
-// Entrées : DUNEI_TOKENS_DIR, lu par Theme. Commandes IPC : normaliserPourcent, iconeBatterie, iconeWifi,
+// Entrées : DUNEI_TOKENS_DIR, lu par Theme. Commandes IPC : normaliserPourcent, iconeBatterie, iconeWifi, iconeReseau,
 // iconeBluetooth, iconeNotifications, iconeMoment, texteBatterie (chacune retourne son résultat), et
 // regler <icone> <texte> qui règle l'élément, puis elementVisible qui retourne sa visibilité et policeTexte
 // qui retourne la taille et les chiffres tabulaires de son texte.
@@ -46,6 +46,10 @@ ShellRoot {
         }
         function iconeWifi(carte: bool, actif: bool, connecte: bool, force: real): string {
             return Icones.iconeWifi(carte, actif, connecte, force)
+        }
+        function iconeReseau(carte: bool, radio: bool, filaire: bool, connecte: bool, connectivite: string,
+                             facture: bool, force: real): string {
+            return Icones.iconeReseau({carte, radio, filaire, connecte, connectivite, facture, force})
         }
         function iconeBluetooth(adaptateur: bool, allume: bool): string { return Icones.iconeBluetooth(adaptateur, allume) }
         function iconeNotifications(enPause: bool): string { return Icones.iconeNotifications(enPause) }

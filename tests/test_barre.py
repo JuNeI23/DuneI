@@ -27,7 +27,8 @@ NIVEAUX = [f"battery-level-{n}{s}" for n in range(0, 101, 10) for s in ("", "-ch
 ICONES = (NIVEAUX + ["battery-level-100-charged", "network-wireless-disabled", "network-wireless-offline",
                      "bluetooth-disabled", "bluetooth-active", "notifications-disabled",
                      "preferences-system-notifications", "weather-clear-night", "weather-clear"]
-          + [f"network-wireless-signal-{p}" for p in ("none", "weak", "ok", "good", "excellent")])
+          + [f"network-wireless-signal-{p}" for p in ("none", "weak", "ok", "good", "excellent")]
+         + ["network-wireless-no-route", "network-wireless-hotspot", "network-wired", "network-wired-no-route"])
 
 
 class BarreStatiqueTest(unittest.TestCase):
@@ -105,6 +106,37 @@ class IconesTest(BarreIpc, unittest.TestCase):
         self.assertEqual(self.appeler("iconeWifi", True, True, False, 0.9), "network-wireless-offline")
         for force, palier in ((0.1, "none"), (0.3, "weak"), (0.5, "ok"), (0.7, "good"), (0.9, "excellent"), (1, "excellent")):
             self.assertEqual(self.appeler("iconeWifi", True, True, True, force), f"network-wireless-signal-{palier}", force)
+
+    def reseau(self, carte=True, radio=True, filaire=False, connecte=True, connectivite="full", facture=False, force=0.9):
+        """Appelle iconeReseau avec un état par défaut « Wi-Fi joint, excellent signal, internet joignable ».
+
+        Entrées : les champs de l'état, tous nommés. Sortie : le nom d'icône. Erreurs : CalledProcessError.
+        Dépendances : appeler.
+        """
+        return self.appeler("iconeReseau", carte, radio, filaire, connecte, connectivite, facture, force)
+
+    def test_reseau(self):
+        # Priorité : rien, filaire, radio coupée, déconnecté, sans internet, facturé, puis les cinq paliers.
+        self.assertEqual(self.reseau(carte=False), "")
+        self.assertEqual(self.reseau(filaire=True), "network-wired")
+        self.assertEqual(self.reseau(filaire=True, connectivite="limited"), "network-wired-no-route")
+        self.assertEqual(self.reseau(filaire=True, connectivite="portal"), "network-wired-no-route")
+        self.assertEqual(self.reseau(filaire=True, radio=False), "network-wired")
+        self.assertEqual(self.reseau(radio=False), "network-wireless-disabled")
+        self.assertEqual(self.reseau(connecte=False), "network-wireless-offline")
+        self.assertEqual(self.reseau(connecte=False, connectivite="limited"), "network-wireless-offline")
+        self.assertEqual(self.reseau(connectivite="limited"), "network-wireless-no-route")
+        self.assertEqual(self.reseau(connectivite="portal", facture=True), "network-wireless-no-route")
+        self.assertEqual(self.reseau(facture=True), "network-wireless-hotspot")
+        self.assertEqual(self.reseau(connectivite="unknown"), "network-wireless-signal-excellent")
+        for force, palier in ((0.1, "none"), (0.3, "weak"), (0.5, "ok"), (0.7, "good"), (0.9, "excellent"), (1, "excellent")):
+            self.assertEqual(self.reseau(force=force), f"network-wireless-signal-{palier}", force)
+        self.assertEqual(self.reseau(force="NaN"), "network-wireless-signal-none")
+
+    def test_reseau_sans_carte_filaire(self):
+        self.assertEqual(self.reseau(carte=False, filaire=True), "network-wired")
+        self.assertEqual(self.reseau(carte=False, filaire=True, connecte=False), "network-wired")
+        self.assertEqual(self.reseau(carte=False, filaire=True, connectivite="limited"), "network-wired-no-route")
 
     def test_wifi_force_non_numerique(self):
         self.assertEqual(self.appeler("iconeWifi", True, True, True, "NaN"), "network-wireless-signal-none")

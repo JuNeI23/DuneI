@@ -1,0 +1,107 @@
+"""Bibliothèque nmcli.js — analyse des sorties de nmcli, éprouvée dans un vrai Quickshell sans fenêtre.
+
+Ignoré sans session Wayland ou sans Quickshell (comme les autres tests de coque) : le JavaScript tourne dans le
+moteur de Quickshell, jamais dans un interpréteur de substitution.
+"""
+
+import json
+import os
+import subprocess
+import unittest
+
+from tests.test_coque_theme import DELAI, QS, ROOT, EssaiCoque
+
+ESSAI = ROOT / "coque" / "Reseau" / "essai"
+UUID = "11111111-2222-3333-4444-555555555555"
+
+
+@unittest.skipUnless(os.environ.get("WAYLAND_DISPLAY") and QS, "session Wayland et Quickshell requis")
+class NmcliTest(EssaiCoque, unittest.TestCase):
+    """Appelle chaque fonction de nmcli.js par l'IPC de la coque d'essai du réseau."""
+
+    essai = ESSAI
+    teintes = (55,)
+
+    def setUp(self):
+        super().setUp()
+        self.lancer(self.dir)
+        self.attendre("reseau : prêt")
+
+    def appeler(self, fonction: str, *args):
+        """Appelle une fonction de nmcli.js et rend sa valeur décodée.
+
+        Entrées : fonction — nom exporté par nmcli.js ; args — ses arguments, transmis en JSON dans {"args": [...]}
+        (un tableau nu serait déformé par la ligne de commande de qs ipc).
+        Sortie : la valeur retournée (décodée du JSON), ou la chaîne « erreur : <message> » si elle lève.
+        Erreurs : CalledProcessError si l'appel IPC échoue. Dépendances : qs, lancer.
+        """
+        sortie = subprocess.run([QS, "ipc", "--pid", str(self.proc.pid), "call", "reseau", "appeler", fonction,
+                                 json.dumps({"args": list(args)})], check=True, capture_output=True, text=True,
+                                timeout=DELAI).stdout.strip()
+        return sortie if sortie.startswith("erreur") else json.loads(sortie)
+
+    def test_champs_echappes(self):
+        self.assertEqual(self.appeler("champs", "Caf\\:é\\\\x:abc:wifi"), ["Caf:é\\x", "abc", "wifi"])
+        self.assertEqual(self.appeler("champs", ""), [""])
+        self.assertEqual(self.appeler("champs", "a::b"), ["a", "", "b"])
+
+    def test_lire_appareil(self):
+        texte = ("IP4.ADDRESS[1]:192.168.1.42/24\nIP4.ADDRESS[2]:10.0.0.7/8\nIP4.GATEWAY:192.168.1.1\n"
+                 "IP4.DNS[1]:1.1.1.1\nIP4.DNS[2]:8.8.8.8\nGENERAL.METERED:yes (guessed)\n")
+        r = self.appeler("lireAppareil", texte)
+        self.assertEqual(r, {"ip4": ["192.168.1.42/24", "10.0.0.7/8"], "passerelle": "192.168.1.1",
+                             "dns": ["1.1.1.1", "8.8.8.8"], "facture": True})
+        self.assertTrue(self.appeler("lireAppareil", "GENERAL.METERED:yes\n")["facture"])
+        self.assertFalse(self.appeler("lireAppareil", "GENERAL.METERED:no (guessed)\n")["facture"])
+        self.assertEqual(self.appeler("lireAppareil", ""),
+                         {"ip4": [], "passerelle": "", "dns": [], "facture": False})
+
+    def test_lire_profils(self):
+        texte = (f"Wifi_TRIADES:{UUID}:802-11-wireless:wlan0:yes\n"
+                 "Caf\\:é\\\\Le Duc:aaaaaaaa-0000-0000-0000-000000000001:802-11-wireless::no\n"
+                 ":aaaaaaaa-0000-0000-0000-000000000002:802-11-wireless::no\n"
+                 "Filaire:aaaaaaaa-0000-0000-0000-000000000003:802-3-ethernet:enp3s0:yes\n\n")
+        r = self.appeler("lireProfils", texte)
+        self.assertEqual(r[0], {"nom": "Wifi_TRIADES", "uuid": UUID, "type": "802-11-wireless",
+                                "appareil": "wlan0", "actif": True})
+        self.assertEqual((r[1]["nom"], r[1]["appareil"], r[1]["actif"]), ("Caf:é\\Le Duc", "", False))
+        self.assertEqual(r[2]["nom"], "")
+        self.assertEqual((r[3]["type"], r[3]["actif"]), ("802-3-ethernet", True))
+        self.assertEqual(len(r), 4)
+        self.assertEqual(self.appeler("lireProfils", ""), [])
+
+    def test_lire_profil(self):
+        texte = ("connection.autoconnect:yes\nconnection.autoconnect-priority:-5\nconnection.metered:unknown\n"
+                 "ipv4.method:manual\nipv4.addresses:192.168.1.50/24\nipv4.gateway:192.168.1.1\n"
+                 "ipv4.dns:1.1.1.1,8.8.8.8\n802-11-wireless.ssid:Caf\\:é\n")
+        self.assertEqual(self.appeler("lireProfil", texte),
+                         {"autoconnect": True, "priorite": -5, "facture": "unknown", "methode": "manual",
+                          "adresse": "192.168.1.50/24", "passerelle": "192.168.1.1", "dns": ["1.1.1.1", "8.8.8.8"],
+                          "ssid": "Caf:é"})
+        self.assertEqual(self.appeler("lireProfil", ""),
+                         {"autoconnect": False, "priorite": 0, "facture": "unknown", "methode": "auto",
+                          "adresse": "", "passerelle": "", "dns": [], "ssid": ""})
+        auto = self.appeler("lireProfil", "ipv4.method:auto\nipv4.addresses:\nipv4.dns:\nconnection.autoconnect:no\n")
+        self.assertEqual((auto["methode"], auto["adresse"], auto["dns"], auto["autoconnect"]), ("auto", "", [], False))
+
+    def test_args_modifier(self):
+        self.assertEqual(
+            self.appeler("argsModifier", UUID, {"methode": "manual", "adresse": "192.168.1.50/24",
+                                                "passerelle": "192.168.1.1"}),
+            ["connection", "modify", UUID, "ipv4.method", "manual", "ipv4.addresses", "192.168.1.50/24",
+             "ipv4.gateway", "192.168.1.1"])
+        self.assertEqual(
+            self.appeler("argsModifier", UUID, {"autoconnect": False, "priorite": 3, "facture": "yes",
+                                                "dns": ["1.1.1.1", "8.8.8.8"], "psk": "secret"}),
+            ["connection", "modify", UUID, "connection.autoconnect", "no", "connection.autoconnect-priority", "3",
+             "connection.metered", "yes", "ipv4.dns", "1.1.1.1,8.8.8.8", "802-11-wireless-security.psk", "secret"])
+        # Retour en automatique : l'adresse et la passerelle sont vidées, même si l'appelant les redonne.
+        self.assertEqual(
+            self.appeler("argsModifier", UUID, {"methode": "auto", "adresse": "1.2.3.4/24"}),
+            ["connection", "modify", UUID, "ipv4.method", "auto", "ipv4.addresses", "", "ipv4.gateway", ""])
+
+    def test_args_modifier_cle_inconnue(self):
+        r = self.appeler("argsModifier", UUID, {"bidon": "x"})
+        self.assertIsInstance(r, str)
+        self.assertTrue(r.startswith("erreur"), r)
+        self.assertIn("bidon", r)

@@ -51,7 +51,9 @@ graisse = "bold"
 
 # Noms du popover réseau (L2-11).
 [reseau]
-"network-wireless-no-route" = "wifi-x"
+# Une valeur « base+pastille » compose deux glyphes en un SVG unique (pastille en bas à droite, épaissie) :
+# « sans internet » et portail captif = le Wi-Fi (ou le filaire) avec une pastille d'avertissement.
+"network-wireless-no-route" = "wifi-high+warning-circle"
 "network-wireless-acquiring" = "wifi-low"
 "network-wireless-hotspot" = "device-mobile"
 "network-wireless-encrypted" = "lock-simple"
@@ -59,6 +61,11 @@ graisse = "bold"
 "network-wired-acquiring" = "network"
 "network-wired-disconnected" = "network-slash"
 "network-wired-offline" = "network-slash"
-"network-wired-no-route" = "network-x"
+"network-wired-no-route" = "network+warning-circle"
 "view-refresh" = "arrow-clockwise"
 "network-vpn-disabled" = "shield-slash"
+"view-reveal" = "eye"
+"view-conceal" = "eye-slash"
+"edit-copy" = "copy"
+"list-add" = "plus"
+"go-next" = "caret-right"
