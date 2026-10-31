@@ -57,11 +57,17 @@ Item {
     }
     onCleFacturesChanged: if (cleFactures !== "") lectureFactures.running = true
     // La liste reçoit le focus à l'ouverture, pour les flèches, sans montrer le contour de focus : il n'appartient
-    // qu'au focus venu du clavier (Liste.focusClavier).
-    Component.onCompleted: {
-        remplir()
-        liste.forceActiveFocus()
-        liste.focusClavier = false
+    // qu'au focus venu du clavier (Liste.focusClavier). Le focus n'arrive qu'à l'activation de la fenêtre, après la
+    // construction : sa première arrivée est donc effacée au passage.
+    property bool premierFocus: true
+    Component.onCompleted: { remplir(); liste.forceActiveFocus() }
+    Connections {
+        target: liste
+        function onActiveFocusChanged() {
+            if (!liste.activeFocus || !panneau.premierFocus) return
+            panneau.premierFocus = false
+            liste.focusClavier = false
+        }
     }
 
     // remplir — reconstruit le modèle de la liste si les rangées ont changé, choisit le profil demandé par
