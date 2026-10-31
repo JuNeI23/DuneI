@@ -484,7 +484,7 @@ rgba = "none"
 source = "Phosphor"
 variants = ["bold", "fill"]
 grid = 24
-stroke = 1.5
+stroke = 2.25  # bold de Phosphor sur la grille de 24 (D101)
 sizes = { dense = 16, default = 20, comfortable = 24 }
 snap_stroke_to_pixel = true  # sinon flou à 16px
 

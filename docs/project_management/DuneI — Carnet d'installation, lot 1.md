@@ -1990,7 +1990,8 @@ Rien à lancer à la main : `make install` régénère le thème (`make icones`)
 - **D'où viennent les icônes.** `icones/correspondances.toml` (groupes `[barre]` et `[reseau]`) fait correspondre 50 noms
   freedesktop à des icônes Phosphor ; `generate_icones.py` lit les SVG versionnés sous `icones/phosphor/{bold,fill}/`
   et écrit chaque nom en `-symbolic` et `-fill-symbolic`. Nom du thème et héritage (`Adwaita,breeze-dark,hicolor`)
-  viennent de `tokens.toml`.
+  viennent de `tokens.toml`. La graisse est commandée par `[source].graisse` de la table ; `[icons].variants` de
+  `tokens.toml` n'en est que le reflet pour la coque, et un test les tient d'accord.
 - **Rafraîchir ou étendre les sources.** Ajouter une ligne à la table, puis `make phosphor` (seul accès au réseau :
   télécharge l'archive npm `@phosphor-icons/core` 2.1.1, vérifiée par son sha256, et recopie les SVG utiles), puis
   `make icones`. Un nom de la table absent des SVG, dans l'une des deux graisses, fait échouer le générateur en nommant

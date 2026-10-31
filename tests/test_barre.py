@@ -279,6 +279,9 @@ class BarreStructureTest(unittest.TestCase):
         shell = (ROOT / "coque" / "shell.qml").read_text(encoding="utf-8")
         for pragma in (f"//@ pragma IconTheme {THEME}", "//@ pragma Env QSG_DISTANCEFIELD_ANTIALIASING=gray"):
             self.assertIn(pragma, shell)
+        for chemin in ("coque/Barre/essai", "coque/Composants/essai", "coque/outils/planche", "coque/outils/verre"):
+            self.assertIn(f"//@ pragma IconTheme {THEME}",
+                          (ROOT / chemin / "shell.qml").read_text(encoding="utf-8"), chemin)
         self.assertIn("Variants", shell)
         self.assertIn("Presquile", shell)
         unite = (ROOT / "config" / "systemd" / "user" / "dunei-coque.service").read_text(encoding="utf-8")

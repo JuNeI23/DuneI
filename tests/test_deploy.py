@@ -75,7 +75,7 @@ def faux_atelier(t: Path, somme_archive: str | None = None) -> Path:
 
 
 def run(cfg: Path, *args: str) -> subprocess.CompletedProcess:
-    """Lance deploy.py avec des dossiers temporaires : XDG_CONFIG_HOME, XDG_BIN_HOME, XDG_CACHE_HOME, HOME,
+    """Lance deploy.py avec des dossiers temporaires : XDG_CONFIG_HOME, XDG_BIN_HOME, XDG_DATA_HOME, XDG_CACHE_HOME, HOME,
     GIT_CONFIG_GLOBAL et GIT_CONFIG_SYSTEM (git ignore la configuration réelle), CROCHETS_POSES et un atelier.toml de test (DUNEI_ATELIER_TOML) — ni le réseau ni le vrai ~ ne sont touchés."""
     t = cfg.parent
     env = {**os.environ, "XDG_CONFIG_HOME": str(cfg), "XDG_BIN_HOME": str(t / "local-bin"),

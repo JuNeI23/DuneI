@@ -2378,7 +2378,8 @@ sous `<nom>-symbolic.svg` et `<nom>-fill-symbolic.svg`, soit 100 fichiers. Le no
 - **Sources.** `@phosphor-icons/core` 2.1.1, licence MIT, archive npm épinglée par sha256. Les SVG sont versionnés
   dans le dépôt : `make install` ne touche jamais au réseau. Seul `make phosphor`, lancé à la main, télécharge et
   rafraîchit `icones/phosphor/`. Les SVG sont recolorables par GTK et KDE (convention `ColorScheme-Text` et
-  `currentColor`).
+  `currentColor`). `recolorable` pose `fill="currentColor"` et la classe `ColorScheme-Text` sur la racine `<svg>`, et
+  non sur chaque forme : éprouvé pour GTK et pour la coque, non éprouvé pour KDE et Qt (L2-49).
 - **Correspondances partagées.** La batterie tient sur cinq paliers Phosphor, le Wi-Fi sur quatre (les niveaux
   `none` et `weak` se confondent) ; `wifi-x` sert l'état hors ligne et l'état sans route ; `device-mobile` figure le
   partage de connexion, `shield-check` le VPN, `network` le filaire, `arrow-clockwise` la relance de la recherche.
@@ -2390,7 +2391,10 @@ sous `<nom>-symbolic.svg` et `<nom>-fill-symbolic.svg`, soit 100 fichiers. Le no
   `make test` au lieu de retomber en silence sur Adwaita.
 - **Graisse.** Nicolas a jugé la graisse regular « creuse et fine » face aux boutons et aux reliefs pleins de la
   coque. Une comparaison regular, bold et fill a été faite à l'écran ; il a retenu **bold pour toutes les tailles**
-  (`tokens.toml`, `variants = ["bold", "fill"]`). Le principe de la bible, contour au repos et plein à l'état actif,
+  : la graisse est écrite à un seul endroit qui commande, `[source].graisse` de `icones/correspondances.toml`
+  (lue par `phosphor.py` et `generate_icones.py`). `tokens.toml` (`[icons].variants = ["bold", "fill"]`) n'en est que le
+  reflet pour la coque, et le test `test_variants_suivent_la_graisse` les tient d'accord. Le trait de `[icons]` passe
+  à 2,25 px, soit la valeur du bold de Phosphor sur la grille de 24. Le principe de la bible, contour au repos et plein à l'état actif,
   est conservé avec un trait plus épais. Le trait de Phosphor n'est pas calé sur un nombre entier de pixels aux
   tailles de la barre (les contours sont aplatis à l'échelle libre, `snap_stroke_to_pixel` ne s'y applique pas) :
   écart accepté par Nicolas après validation à l'écran.
@@ -2405,8 +2409,8 @@ sous `<nom>-symbolic.svg` et `<nom>-fill-symbolic.svg`, soit 100 fichiers. Le no
   dernier relevé (D100).
 - **Incident de développement.** Avant correctif, un test de bout en bout a posé le vrai lien
   `~/.local/share/icons/DuneI`. Les tests de déploiement isolent désormais `XDG_DATA_HOME`.
-- **Coût si faux.** Une table incomplète ou une graisse mal choisie se corrige en une ligne de `tokens.toml` ou de la
-  table, puis `make phosphor` et `make icones` ; aucun QML n'est à retoucher, car la coque ne connaît que des noms
+- **Coût si faux.** Une table incomplète ou une graisse mal choisie se corrige en changeant `[source].graisse` dans la
+  table (et `[icons].variants` de `tokens.toml`, que le test tient d'accord), puis `make phosphor` et `make icones` ; aucun QML n'est à retoucher, car la coque ne connaît que des noms
   freedesktop. Le seul vrai engagement est la dépendance à Phosphor, MIT, versionné dans le dépôt.
 
 *Touché : `icones/`, `generate_icones.py`, `phosphor.py`, `deploy.py`, `tokens.toml`, `Makefile`, `coque/` (directives

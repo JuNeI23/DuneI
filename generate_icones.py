@@ -70,7 +70,10 @@ def generer(repo: Path, sortie: Path) -> list[Path]:
     Erreurs : FileNotFoundError dont le message nomme le SVG source manquant ; OSError, ValueError (table,
               tokens.toml) en cas de lecture impossible. Dépendances : phosphor.charger, phosphor.nom_fichier.
     """
-    icones = tomllib.loads((repo / "tokens.toml").read_text(encoding="utf-8"))["icons"]
+    icones = tomllib.loads((repo / "tokens.toml").read_text(encoding="utf-8")).get("icons", {})
+    manquantes = [k for k in ("xdg_theme", "xdg_inherits") if k not in icones]
+    if manquantes:
+        raise ValueError(f"tokens.toml : section [icons] absente ou incomplète, clé(s) manquante(s) : {', '.join(manquantes)}")
     nom = icones["xdg_theme"]
     source, noms = charger(repo / TABLE)
     graisse = source["graisse"]

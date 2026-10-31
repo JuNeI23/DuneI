@@ -4,7 +4,7 @@ Oct 10, 2026 · @Nicolas — révisée le 22 octobre 2026
 
 Version 1.31. Historique en fin de document.
 
-*Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent quarante-huit lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
+*Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent cinquante-huit lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
 
 ## En une phrase
 
@@ -118,7 +118,7 @@ L'ordre découle d'une seule règle : **chaque lot laisse la machine en état de
 | **4 — Accord visuel** | Thématisation Qt et GTK sur cibles réelles, premier lot d'icônes, fond d'écran, panneau de thème, extraction de teinte | Cohérente de bout en bout, bible opposable partout |
 | **5 — Écrans système et voix** | Réglages panneau par panneau, connexion, amorçage, « À propos », catalogue de messages, recette | **1.0** |
 
-Le détail — cent cinquante-deux éléments, chacun rattaché à un chantier, un lot et une nature — vit dans le document de périmètre et de backlog. **Cette note ne s'y substitue pas.**
+Le détail — cent cinquante-huit éléments, chacun rattaché à un chantier, un lot et une nature — vit dans le document de périmètre et de backlog. **Cette note ne s'y substitue pas.**
 
 ## Les risques, par ordre de gravité
 

@@ -392,7 +392,7 @@ La distinction n'est pas décorative : elle détermine si l'icône suit le thèm
 
 #### 1. Symboliques d'action
 
-Contour monochrome, trait 1,5 px, suffixe `-symbolic`. Flèches, commandes d'édition, réglages, états, indicateurs.
+Contour monochrome, trait 2,25 px (Phosphor bold, retenu par Nicolas à l'écran, D101 ; la règle initiale était de 1,5 px), suffixe `-symbolic`. Flèches, commandes d'édition, réglages, états, indicateurs.
 
 - **Recolorées automatiquement** par la boîte à outils → suivent le thème.
 - Contour au repos, **variante pleine à l'état actif** — l'état est ainsi signalé par la forme et pas seulement par la couleur.
@@ -414,7 +414,7 @@ Icônes d'applications installées. **Intouchables**, conformément à la liste 
 
 ### Construction
 
-- Grille 24 × 24, trait 1,5 px, terminaisons et jonctions arrondies.
+- Grille 24 × 24, trait 2,25 px (Phosphor bold, retenu par Nicolas à l'écran, D101 ; la règle initiale était de 1,5 px), terminaisons et jonctions arrondies.
 - Alignement optique, pas mathématique.
 - **Le trait ne se met pas à l'échelle en glissant** : à chaque taille de rendu il est calé sur un nombre entier de pixels, sinon flou à 16 px.
 - Tailles : 16 px en liste dense · 20 px en panneau et barre d'outils · 24 px en dialogue · 48 px et plus dans les moments de spectacle.
@@ -922,5 +922,5 @@ Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si 
 | 0.15 | 2026-10-25 | Chapitre 4 : texte de la coque en niveaux de gris ; chapitre 5 : matière tracée par un shader, aucune texture visible, verre de la coque (verre dépoli le jour, opaque la nuit, translucidité propre à la fenêtre de coque, rien d'opaque sur le verre au repos), champ clair et creusé par une ombre interne en mode clair ; chapitre 7 : aucun contour de focus dans un menu ; annexe E : placement des overlays contextuels, barre, rangée, champ, menu contextuel et popover précisés (D85 à D88) |
 | 0.16 | 2026-10-26 | Annexe E : la barre système est transparente, sans matière ni couleur franche, texte sur bureau, 28 px (D89 à D92, D95) ; chapitre 5 : la translucidité ne cite plus la barre |
 | 0.17 | 2026-10-31 | Annexe E : la presqu'île (encoche continue de 28px, matière E3, couche haute, rôle `accent-discret`) et les quatre bureaux (D96 à D98) |
-| 0.19 | 2026-10-31 | Chapitre 9 : première tranche du thème d'icônes DuneI, table de correspondance et sources Phosphor, graisse bold retenue, écart de calage au pixel accepté (D101) |
 | 0.18 | 2026-10-31 | Annexe E, barre système : survol réservé aux éléments cliquables (D100) |
+| 0.19 | 2026-10-31 | Chapitre 9 : première tranche du thème d'icônes DuneI, table de correspondance et sources Phosphor, graisse bold retenue, écart de calage au pixel accepté (D101) |

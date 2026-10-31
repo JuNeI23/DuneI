@@ -1,10 +1,10 @@
 """Sources Phosphor versionnées et table de correspondance (jamais de réseau)."""
 
+import shutil
 import tempfile
+import tomllib
 import unittest
 from pathlib import Path
-
-import shutil
 
 from generate_icones import generer, index_theme, recolorable
 from phosphor import charger, nom_fichier
@@ -40,6 +40,15 @@ class IconesTest(unittest.TestCase):
         for v in set(self.noms.values()):
             for g in (self.graisse, "fill"):
                 self.assertTrue((SVG / g / nom_fichier(v, g)).is_file(), f"{g}/{v}")
+
+    def test_variants_suivent_la_graisse(self):
+        icones = tomllib.loads((ROOT / "tokens.toml").read_text(encoding="utf-8"))["icons"]
+        self.assertEqual(icones["variants"], [self.graisse, "fill"])
+
+    def test_licence_phosphor(self):
+        licence = SVG / "LICENSE"
+        self.assertTrue(licence.is_file())
+        self.assertIn("MIT", licence.read_text(encoding="utf-8"))
 
     def test_aucun_svg_orphelin(self):
         voulus = {(g, nom_fichier(v, g)) for v in self.noms.values() for g in (self.graisse, "fill")}
