@@ -79,7 +79,7 @@ def run(cfg: Path, *args: str) -> subprocess.CompletedProcess:
     GIT_CONFIG_GLOBAL et GIT_CONFIG_SYSTEM (git ignore la configuration réelle), CROCHETS_POSES et un atelier.toml de test (DUNEI_ATELIER_TOML) — ni le réseau ni le vrai ~ ne sont touchés."""
     t = cfg.parent
     env = {**os.environ, "XDG_CONFIG_HOME": str(cfg), "XDG_BIN_HOME": str(t / "local-bin"),
-           "XDG_CACHE_HOME": str(t / "cache"), "HOME": str(t / "home"), "DUNEI_ATELIER_TOML": str(t / "atelier.toml"),
+           "XDG_DATA_HOME": str(t / "data"), "XDG_CACHE_HOME": str(t / "cache"), "HOME": str(t / "home"), "DUNEI_ATELIER_TOML": str(t / "atelier.toml"),
            "GIT_CONFIG_GLOBAL": "/dev/null", "GIT_CONFIG_SYSTEM": "/dev/null", **CROCHETS_POSES}
     return subprocess.run([sys.executable, str(ROOT / "deploy.py"), *args],
                           capture_output=True, text=True, cwd=ROOT, env=env)
@@ -115,6 +115,7 @@ class DeployTest(unittest.TestCase):
         self.fake = fake
         faux_atelier(t)
         self.env = mock.patch.dict(os.environ, {"DUNEI_SYSROOT": str(self.root), "XDG_BIN_HOME": str(self.bin), "FAKE_LOG": str(self.log),
+                                                "XDG_DATA_HOME": str(t / "data"),
                                                 "XDG_CACHE_HOME": str(t / "cache"), "HOME": str(t / "home"),
                                                 "DUNEI_ATELIER_TOML": str(t / "atelier.toml"),
                                                 "FAKE_ENABLED": "enabled", "PATH": f"{fake}:{os.environ['PATH']}", **CROCHETS_POSES})
