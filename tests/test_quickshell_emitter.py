@@ -31,9 +31,12 @@ class QuickshellEmitterTest(unittest.TestCase):
     def test_cles_premier_niveau(self):
         self.assertEqual(list(self.out), [
             "_generated", "hue", "space", "density", "radius", "window", "layout", "breakpoints", "typo", "icons",
-            "familles", "moments", "defaut", "themes", "pastilles", "bureau"])
+            "familles", "moments", "defaut", "themes", "pastilles", "bureau", "bureauxVirtuels"])
         self.assertEqual(list(self.nuit), ["color", "states", "focus", "disabled", "elevation", "material", "glass", "render",
                                            "knob", "controls"])
+
+    def test_bureaux_virtuels(self):
+        self.assertEqual(self.out["bureauxVirtuels"], {"nombre": 4})
 
     def test_verre(self):
         """Le verre est opaque la nuit (1,0) et translucide le jour (0,85 et 0,88), pour les deux familles."""

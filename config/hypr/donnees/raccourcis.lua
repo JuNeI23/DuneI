@@ -65,8 +65,9 @@ for _, d in ipairs({ { "left", "la gauche" }, { "right", "la droite" }, { "up", 
                   description = "Redimensionner la fenêtre vers " .. d[2] }
 end
 
--- Dix bureaux ; la touche 0 mène au bureau 10. Envoyer ne suit pas la fenêtre.
-for i = 1, 10 do
+-- Autant de bureaux que les jetons le déclarent (generated/hyprland-binds.lua, au plus dix) ; la touche 0
+-- mène au bureau 10. Envoyer ne suit pas la fenêtre.
+for i = 1, require("generated.hyprland-binds").bureaux do
     local t, k = M.touches, tostring(i % 10)
     t[#t + 1] = { touches = "SUPER + " .. k, action = "bureau", bureau = i, description = "Aller au bureau " .. i }
     t[#t + 1] = { touches = "SUPER + SHIFT + " .. k, action = "envoyer", bureau = i,

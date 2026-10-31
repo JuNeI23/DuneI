@@ -11,6 +11,7 @@ import json
 import re
 
 from ..color import Oklch, oklch, to_hex
+from .hyprland import _bureaux
 from ..model import accent_muet, defaut, resolve, role_text, theme_data, themes
 
 _BLANC = Oklch(1, 0, 0)
@@ -254,7 +255,7 @@ def emit(model: dict) -> str:
              `bureau` (via _bureau).
     Sortie : contenu du fichier JSON. Erreurs : KeyError si une section du TOML manque ou si le moment « nuit » n'existe pas
              (les pastilles en dérivent).
-    Dépendances : json, _camel_keys, _theme, _pastilles, _bureau, model.themes, model.defaut, model.theme_data, model.resolve.
+    Dépendances : json, _camel_keys, _bureaux, _theme, _pastilles, _bureau, model.themes, model.defaut, model.theme_data, model.resolve.
     """
     raw, hue = model["raw"], model["hue"]
     resolus = {(f, m): resolve(theme_data(raw, f, m), hue) for f, m in themes(raw)}
@@ -277,5 +278,6 @@ def emit(model: dict) -> str:
         "themes": {f: {m: _theme(resolus[(f, m)]) for g, m in resolus if g == f} for f in raw["familles"]},
         "pastilles": _pastilles(resolus[(fam, "nuit")]),
         "bureau": _bureau(model),
+        "bureauxVirtuels": {"nombre": _bureaux(raw)},
     }
     return json.dumps(out, indent=2, ensure_ascii=False) + "\n"

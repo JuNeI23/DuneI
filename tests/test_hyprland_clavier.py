@@ -93,7 +93,7 @@ def expected() -> dict[str, tuple[str, str]]:
         e[f"SUPER + {d}"] = (f"dsp.focus({{direction={d}}})", "{}")
         e[f"SUPER + SHIFT + {d}"] = (f"dsp.window.move({{direction={d}}})", "{}")
         e[f"SUPER + CTRL + {d}"] = (f"dsp.window.resize({{relative=true,x={x * STEP},y={y * STEP}}})", "{}")
-    for i in range(1, 11):
+    for i in range(1, 5):
         e[f"SUPER + {i % 10}"] = (f"dsp.focus({{workspace={i}}})", "{}")
         e[f"SUPER + SHIFT + {i % 10}"] = (f"dsp.window.move({{follow=false,workspace={i}}})", "{}")
     return e
@@ -142,6 +142,10 @@ class ClavierTest(unittest.TestCase):
     def test_real_table_binds_as_specified(self):
         bound = {l[1]: (l[2], l[3]) for l in self.apply_real() if l[0] == "bind"}
         self.assertEqual(bound, expected())
+
+    def test_binds_bureaux(self):
+        """Le fragment généré annonce quatre bureaux, nombre que la boucle de raccourcis.lua suit."""
+        self.assertEqual(self.lines('print(require("generated.hyprland-binds").bureaux)\n'), [["4"]])
 
     def test_every_bind_has_description(self):
         for l in self.apply_real():

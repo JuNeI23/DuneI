@@ -2090,5 +2090,8 @@
     "texteFonceSurvol": "#484848",
     "seuil": 0.18,
     "logo": "/usr/share/pixmaps/archlinux-logo.svg"
+  },
+  "bureauxVirtuels": {
+    "nombre": 4
   }
 }

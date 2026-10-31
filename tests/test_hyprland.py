@@ -265,6 +265,22 @@ class BindsTest(unittest.TestCase):
             with self.subTest(step=step), self.assertRaisesRegex(ValueError, "resize_step"):
                 self.binds(step)
 
+    def test_bureaux_follow_token(self):
+        alt = copy.deepcopy(self.data)
+        alt["bureaux_virtuels"]["nombre"] = 6
+        self.assertIn("bureaux = 6,", emit_binds(resolve(alt)))
+
+    def test_rejects_bad_desktop_count(self):
+        for nombre in (0, 11, -1, 4.0, True, "4", None):
+            with self.subTest(nombre=nombre), self.assertRaisesRegex(ValueError, "bureaux_virtuels.nombre"):
+                alt = copy.deepcopy(self.data)
+                alt["bureaux_virtuels"]["nombre"] = nombre
+                emit_binds(resolve(alt))
+        alt = copy.deepcopy(self.data)
+        del alt["bureaux_virtuels"]["nombre"]
+        with self.assertRaisesRegex(ValueError, "bureaux_virtuels.nombre"):
+            emit_binds(resolve(alt))
+
     @unittest.skipUnless(LUA, "aucun interpréteur Lua")
     def test_binds_load_as_table(self):
         with tempfile.NamedTemporaryFile("w", suffix=".lua", encoding="utf-8") as fh:

@@ -17,6 +17,7 @@ hl = {
         if t.input then
             print("input", t.input.kb_options, tostring(t.input.touchpad.natural_scroll),
                   tostring(t.input.touchpad.clickfinger_behavior), tostring(t.input.kb_layout))
+            if t.gestures then print("gestures", tostring(t.gestures.workspace_swipe_create_new)) end
         elseif t.misc then
             print("misc", tostring(t.misc.allow_session_lock_restore))
         else
@@ -56,7 +57,8 @@ class ModulesTest(unittest.TestCase):
 
     def test_entree(self):
         # La disposition dépend du clavier physique : elle vit dans le fichier machine, pas ici.
-        self.assertEqual(self.run_module("entree"), ["input\tcompose:ralt\ttrue\ttrue\tnil"])
+        self.assertEqual(self.run_module("entree"), ["input\tcompose:ralt\ttrue\ttrue\tnil",
+                                                    "gestures\tfalse"])
 
     def test_regles_generated_layers_then_behaviour(self):
         self.assertEqual(self.run_module("regles"), ["rule\tcouche-1-sans-ombre", "rule\tplein-ecran-nu",
