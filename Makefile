@@ -5,6 +5,8 @@
 #   make shaders  coque/Theme/materiau.frag → generated/materiau.frag.qsb (qsb de qt6-shadertools) et son empreinte
 #                 generated/materiau.frag.sha256 ; ne recompile que si la source ne répond plus à l'empreinte, car les
 #                 octets du .qsb changent avec la version de qsb (D85)
+#   make phosphor icones/correspondances.toml → icones/phosphor/ : télécharge l'archive Phosphor épinglée (sha256), seule
+#                 cible qui touche au réseau, et n'en extrait que les SVG de la table
 #   make paquets  paquets.toml → système : installe le manquant, marque, propose de retirer l'excédent
 #   make chiffrement  racine LUKS2 → puce + phrase et clé de secours, une étape par passage (python3 chiffrement.py --etat : l'état seul)
 #   make phrase   change la phrase de la puce, une fois le chiffrement terminé
@@ -20,7 +22,7 @@ GOLDEN_HUES := 0 55 200 265
 # qsb est hors du PATH : appelé par son chemin.
 QSB := /usr/lib/qt6/bin/qsb
 
-.PHONY: tokens motion energie shaders paquets chiffrement phrase test generes check golden install
+.PHONY: tokens motion energie shaders phosphor paquets chiffrement phrase test generes check golden install
 
 tokens:
 	$(PY) generate_tokens.py --out generated
@@ -35,6 +37,9 @@ shaders:
 	@[ -f generated/materiau.frag.qsb ] && sha256sum --status -c generated/materiau.frag.sha256 2>/dev/null || { \
 	$(QSB) --qt6 -o generated/materiau.frag.qsb coque/Theme/materiau.frag && \
 	sha256sum coque/Theme/materiau.frag > generated/materiau.frag.sha256; }
+
+phosphor:
+	$(PY) phosphor.py
 
 paquets:
 	$(PY) paquets.py
