@@ -31,9 +31,8 @@ import "nmcli.js" as Nmcli
 // Erreurs : un échec de lecture du profil s'affiche en tête de fiche (erreurs.profil). Une réponse de nmcli qui
 // arrive après un changement de profil ou la destruction de la fiche est ignorée (garde).
 // Dépendances : Quickshell (clipboardText), EtatReseau (executer, appareil, ip4, ip6, passerelle, dns, mac,
-// connectivite), nmcli.js (CHAMPS_PROFIL,
-// lireProfil, argsModifier, champs, liste), Groupe, Ligne, Section, Theme, Texte, Icone, Bouton, Interrupteur, Champ, ChampSecret,
-// Onglets, Onglet.
+// connectivite), nmcli.js (CHAMPS_PROFIL, lireProfil, argsModifier, champs, liste), Groupe, Ligne, Section, Theme,
+// Texte, Icone, Bouton, Interrupteur, Champ, ChampSecret, Onglets, Onglet.
 // Cotes : contenu en retrait de space.blockGap (24) à gauche et à droite, sections espacées de space.scale[1] (8) ;
 // groupes au rayon radius.panel ; rangées d'au moins 44 px, contenu à space.scale[2] (12) du bord ; champs de
 // 290 px ; pastille d'en-tête de 44 px.
