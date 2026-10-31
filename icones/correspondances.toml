@@ -5,7 +5,7 @@
 version = "2.1.1"
 url = "https://registry.npmjs.org/@phosphor-icons/core/-/core-2.1.1.tgz"
 sha256 = "313332be6190b724da24107addd781799b48bf76b13963f24501112ffe1baadd"
-graisse = "regular"
+graisse = "bold"
 
 # Noms demandés par la coque de production : nom freedesktop = nom Phosphor.
 [barre]

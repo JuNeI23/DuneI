@@ -482,7 +482,7 @@ rgba = "none"
 
 [icons]
 source = "Phosphor"
-variants = ["regular", "fill"]
+variants = ["bold", "fill"]
 grid = 24
 stroke = 1.5
 sizes = { dense = 16, default = 20, comfortable = 24 }
