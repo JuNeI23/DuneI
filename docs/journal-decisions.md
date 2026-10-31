@@ -2221,3 +2221,73 @@ du lot 1 (session), conception de la barre système (§ 7 et 8).*
 
 *Touché : `coque/Barre/`, `coque/Composants/Icone.qml` et `Texte.qml`, `coque/Theme/Theme.qml`, bible (annexe E),
 conception de la barre système (v1.2).*
+
+### D96 · Quatre bureaux, pas un de plus
+
+2026-10-31. **DuneI compte quatre bureaux en tout. La source unique est `[bureaux_virtuels] nombre = 4` dans
+`tokens.toml`, émise dans `generated/hyprland-binds.lua` (`bureaux`) et dans `coque-tokens.json`
+(`bureauxVirtuels`). Seuls `Super+1` à `Super+4` et `Super+Shift+1` à `Super+Shift+4` existent ;
+`gestures.workspace_swipe_create_new = false` dans `modules/entree.lua` ; la molette `e+1` / `e-1` ne crée jamais de
+bureau.**
+
+- **Raison.** Nicolas change de bureau très souvent et veut une presqu'île petite et fixe : quatre points, toujours
+  les mêmes. Un cinquième bureau, créé par un geste ou par la molette, la ferait grandir sans qu'il l'ait demandé.
+- **Ce qui est livré.** Le jeton, les deux fichiers générés, le réglage du geste, et la bascule bornée de la molette
+  (de 1 à 4, sans rebouclage). Recette du 2026-10-31 : `Super+5` est inerte, le balayage ne crée aucun bureau.
+- **Coût si faux.** Changer le nombre dans `tokens.toml` puis `make generes && make golden` ; la presqu'île suit.
+
+*Touché : `tokens.toml`, `generated/hyprland-binds.lua`, `generated/coque-tokens.json`, `modules/entree.lua`, carnet
+du lot 1 (raccourcis des bureaux), bible (§ coque).*
+
+### D97 · Contenu et forme de la presqu'île
+
+2026-10-31. **La presqu'île montre toujours la vue des bureaux : quatre points identiques, vides ou occupés, et une
+pilule sur le bureau courant, d'un accent discret. Sa taille est fixe, sa forme est une encoche continue, sa couche
+est la couche haute, sa matière est E3.**
+
+- **Contenu.** Le rôle `accent-discret` est nouveau (L 0,68, chroma de 0,6 × l'accent, identique de jour et de
+  nuit : le modèle n'a pas de règle de jour pour lui). Les points sont en `textDisabled`, la pilule en
+  `accentDiscret`. Le bureau spécial n'est pas compté ; tant qu'il est ouvert, la pilule reste en place et passe à
+  la couleur inactive, le survol l'éclaircit, un clic sur elle ferme le spécial, un clic sur un autre point le ferme
+  puis rejoint ce bureau.
+- **Forme.** Encoche continue (variante D de `.superpowers/preview/presquile/forme.html`), tracée par un chemin
+  paramétrique. Hauteur ramenée de 34 à 28 px à la recette, comme la barre ; largeur conservée (corps de 95 px,
+  121 avec les évasements).
+- **Couche et matière.** Couche haute : le plein écran la recouvre, ce qui tranche la question ouverte de D93.
+  Matière E3, l'ombre suit la courbe. Le masque d'entrée est le corps rectangulaire (accepté).
+- **Souris.** Zones de clic d'un quart de la largeur ; molette bornée ; survol en `textTertiary` selon D92,
+  lisible sur la surface E3 quel que soit le fond d'écran.
+- **Plusieurs écrans.** Chaque presqu'île suit le bureau actif et l'état du spécial de son propre écran ; les clics
+  passent par les bureaux globaux de Hyprland (sur deux écrans, rejoindre le bureau n peut déplacer vers l'écran qui
+  le porte). Accepté : caladan n'a qu'un écran.
+- **Recette du 2026-10-31, validée à l'écran par Nicolas** : forme, couleurs lisibles de jour, mouvement de la
+  pilule y compris en rafale, courbes, raccourcis, bureau spécial, clic, molette, survol, plein écran (la presqu'île
+  disparaît avec la barre), spécial déjà ouvert au démarrage de la coque. Seul réglage demandé : la hauteur.
+- **Ressources, au repos sur 30 s.** `qs` à 0,0 % de processeur, PSS 178,3 Mio (RSS 349,8 Mio) ; repère de D94 et
+  D95 : PSS 158,8 Mio (RSS 303,8 Mio). La presqu'île ajoute environ 19,5 Mio de PSS.
+- **Coût si faux.** Le contenu est un module (D98) ; la forme, la hauteur et la couche sont des constantes de
+  `coque/Presquile/`.
+
+*Touché : `coque/Presquile/`, `tokens.toml`, `generated/coque-tokens.json`, bible (§ coque), conception de la
+presqu'île (v1.2), backlog (L2-10, L2-46).*
+
+### D98 · Trois parties indépendantes : surface, forme, modules de contenu
+
+2026-10-31. **La presqu'île se compose de trois parties qui s'ignorent : la surface `Presquile` (fenêtre de calque,
+qui ne connaît rien du contenu), la forme `Encoche` (paramétrique, étirable) et des modules de contenu. Un module est
+un `Item` qui reçoit `ecran` et déclare `implicitWidth` et `implicitHeight` ; `Presquile.module` est un `Component`,
+`Bureaux` par défaut.**
+
+- **Raison.** La presqu'île accueillera d'autres contenus (réseau, musique, minuteur…) : chacun doit pouvoir s'y
+  brancher sans toucher la surface ni la forme.
+- **Taille.** Elle suit un ressort numérique, `Ressort` (nouveau, `coque/Theme/Ressort.qml`), qui lit les transitions
+  de `motion.toml` et se pose sans animation au premier montage.
+- **Logique pure.** `coque/Presquile/bureaux.js` est éprouvée par un essai de coque via IPC, qui ne touche jamais au
+  vrai bureau.
+- **Reporté.** Les transitions d'apparition et de disparition, et la règle qui choisit entre plusieurs modules,
+  attendent le premier module qui en a besoin.
+- **Coût si faux.** Le contrat tient en deux propriétés de taille et une entrée ; le resserrer ou l'élargir ne
+  touche que `Presquile.qml`.
+
+*Touché : `coque/Presquile/`, `coque/Theme/Ressort.qml`, `coque/outils/`, conception de la presqu'île (§ 4),
+backlog (L2-46).*

@@ -1,6 +1,6 @@
 # La presqu'île : vue des bureaux dans une encoche continue
 
-Version 1.1 — 2026-10-31. Éléments du backlog : L2-46 (la presqu'île), L2-10 (indicateur de bureaux, rattaché par D93).
+Version 1.2 — 2026-10-31. Éléments du backlog : L2-46 (la presqu'île), L2-10 (indicateur de bureaux, rattaché par D93).
 
 ## 1. Objet et raison
 
@@ -56,8 +56,9 @@ Arbitrages pris en séance du 2026-10-30 et du 2026-10-31, sur les planches
   forme visible, de sorte que les clics à côté atteignent la barre ou les fenêtres. Aucun focus clavier.
 - Couche haute (`top`), comme la barre : une fenêtre en plein écran la recouvre, et elle disparaît donc avec la
   barre. *Choix du rédacteur*, qui tranche la question de couche laissée ouverte par D93.
-- Plus haute que la barre de 28 px : la planche retenue mesure 34 px de haut. Elle passe par-dessus le haut des
-  fenêtres sans les pousser.
+- La planche retenue mesurait 34 px de haut, plus que la barre de 28 px. **À la recette du 2026-10-31, Nicolas a
+  ramené la hauteur à 28 px, celle de la barre** (D97) ; la largeur est conservée (corps de 95 px, 121 avec les
+  évasements). Elle passe par-dessus le haut des fenêtres sans les pousser.
 
 ### 4.2 Contenu « bureaux »
 
@@ -168,3 +169,4 @@ rôles de couleur ; les tests automatiques.
 | --- | --- | --- |
 | 1.0 | 2026-10-31 | Première rédaction, après la séance de conception. |
 | 1.1 | 2026-10-31 | Relecture du constructeur : bureau spécial et souris, plusieurs écrans, borne des quatre bureaux, source unique du nombre de bureaux. |
+| 1.2 | 2026-10-31 | Recette à l'écran : hauteur ramenée de 34 à 28 px, celle de la barre (§ 4.1, D97). |

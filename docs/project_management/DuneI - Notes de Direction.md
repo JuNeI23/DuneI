@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas — révisée le 22 octobre 2026
 
-Version 1.27. Historique en fin de document.
+Version 1.28. Historique en fin de document.
 
 *Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent quarante-huit lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
 
@@ -428,29 +428,29 @@ mémoire proportionnelle et 0,0 % de processeur au repos. Le VPN n'est pas épro
 caladan. L'indicateur de bureaux virtuels (L2-10) quitte la barre pour la presqu'île, nouvelle ligne L2-46, dont le
 namespace est déjà réservé.
 
-Prochaine étape : **choisir avec Nicolas l'élément suivant du lot 2.** Deux candidats naturels : la presqu'île (L2-46,
-qui reprend L2-10), seconde surface de la coque et premier usage du mouvement ; ou le premier popover, celui du réseau
-(L2-11), qui trancherait le sort de `nm-applet` et fournirait au VPN son interrupteur. L2-44 et L2-45 se traitent en
-passant, quand un composant touché par leurs reliquats est rouvert. Quelle que soit l'étape retenue, elle commence par
-l'enjeu et par un repérage, jamais par du code.
+**La presqu'île — 31 octobre 2026.** La seconde surface de la coque est livrée (L2-46, L2-10, D96 à D98). C'est une
+encoche continue au centre du haut de l'écran, de 28 px comme la barre, en couche haute (le plein écran la recouvre), en
+matière E3. Elle montre quatre points identiques, un par bureau, et une pilule d'accent discret sur le bureau courant ;
+la pilule se déplace à ressort, y compris en rafale, grise quand le bureau spécial est ouvert, et la souris la pilote
+(clic par quart de largeur, molette bornée, survol). DuneI n'a plus que quatre bureaux : le nombre vient d'un jeton
+unique, `Super+5` est inerte, et ni le balayage ni la molette n'en créent un cinquième. La presqu'île se compose de trois
+parties indépendantes : la surface, la forme et des modules de contenu, dont `Bureaux` est le premier ; sa taille suit un
+ressort numérique, `Ressort`. Les transitions d'apparition et le mouvement réduit de la coque sont reportés (L2-47,
+L2-48). La recette à l'écran du 2026-10-31 a tout validé et n'a demandé que la hauteur, ramenée de 34 à 28 px. La coque
+pèse désormais 178,3 Mio de mémoire proportionnelle (environ 19,5 Mio de plus) et 0,0 % de processeur au repos.
 
-## Plan de lecture
-
-| Rôle | À lire |
-| --- | --- |
-| Chef de projet | Cette note, puis le document de périmètre et de backlog |
-| Développeur shell | Bible, chapitres 1 à 8 et annexes A et E ; backlog, lots 2 et 5 |
-| Développeur applications | Bible, chapitres 10 et 12 ; backlog, lot 3 |
-| Designer | Bible en entier |
-| Intégrateur | Carnet d'installation ; backlog, lots 1 et 3 |
-
-**Le journal des décisions** conserve l'historique des arbitrages et leur raison. Il ne sert pas à travailler, mais à comprendre pourquoi une règle existe le jour où quelqu'un voudra la changer. **Il accueille aussi les dérogations accordées** — c'est ce qui les rend visibles.
+Prochaine étape : **choisir avec Nicolas entre le popover du réseau (L2-11) et le prochain module de la presqu'île.**
+Le premier trancherait le sort de `nm-applet` et fournirait au VPN son interrupteur ; le second serait le premier
+contenu à changer la forme de la presqu'île, donc à régler L2-48. L2-44 et L2-45 se traitent en passant, quand un
+composant touché par leurs reliquats est rouvert. Quel que soit le choix, il commence par l'enjeu et par un repérage,
+jamais par du code.
 
 ## Historique des versions
 
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-10 | Version initiale |
+| 1.28 | 2026-10-31 | La presqu'île (L2-46, L2-10, D96 à D98) livrée et validée à l'écran : quatre bureaux, forme, modules ; prochaine étape : popover du réseau ou prochain module |
 | 1.27 | 2026-10-26 | La barre système (L2-08, L2-09, D89 à D95) validée à l'écran : barre transparente de 28 px, texte sur bureau, neuf indicateurs, coque de session ; VPN non éprouvé ; L2-10 déplacé vers la presqu'île (L2-46) ; prochaine étape : choisir entre la presqu'île et le popover réseau |
 | 1.26 | 2026-10-25 | L'élévation (L2-04, L2-05, D85 à D88) validée à l'écran en deux recettes : verre dépoli le jour, opaque la nuit, matière par shader, champ creusé, placement des overlays, menus sans contour, texte en niveaux de gris ; L2-41 non retenu ; reliquats en L2-45 ; prochaine étape : choisir l'élément suivant du lot 2, la barre système en candidate |
 | 1.25 | 2026-10-25 | Thèmes statiques (L2-40, D83, D84) validés à l'écran en six passes : famille et moment, `dunei-theme`, planchers de contraste par rôle, dérogation du corps de texte dans le jour thématisé ; reliquats regroupés en L2-44 ; décompte du backlog porté à cent cinquante-trois ; prochaine étape : choisir l'élément suivant du lot 2 dans le backlog |
