@@ -10,6 +10,7 @@ fichier se vérifie avec un interpréteur Lua nu, sans Hyprland.
 from __future__ import annotations
 
 from ..color import Oklch, to_srgb255
+from ..model import bureaux
 
 
 def _rgba(col: Oklch, alpha: float) -> str:
@@ -137,8 +138,8 @@ def emit_rules(model: dict) -> str:
              une tuile (D31, suite du 2026-10-15). Le plein écran vient en
              dernier, pour qu'une règle de plein écran l'emporte sur toute règle plus générale qui
              poserait une valeur contraire (aujourd'hui, les deux retirent l'ombre).
-    Erreurs : KeyError si le TOML brut manque ; ValueError transmise par _validate ou _bureaux.
-    Dépendances : _validate, _bureaux.
+    Erreurs : KeyError si le TOML brut manque ; ValueError transmise par _validate.
+    Dépendances : _validate.
     """
     raw = model["raw"]
     _validate(raw)
@@ -179,28 +180,13 @@ def emit_layer_rules(model: dict) -> str:
     ]) + "\n"
 
 
-def _bureaux(raw: dict) -> int:
-    """Nombre de bureaux virtuels, validé.
-
-    Entrée : raw — TOML brut du modèle.
-    Sortie : bureaux_virtuels.nombre, entier de 1 à 10.
-    Erreurs : ValueError si la valeur est absente, non entière (un booléen est refusé) ou hors de 1 à 10
-              (la touche 0 mène au bureau 10, il n'y a pas de onzième touche).
-    Dépendances : aucune.
-    """
-    n = raw.get("bureaux_virtuels", {}).get("nombre")
-    if type(n) is not int or not 1 <= n <= 10:
-        raise ValueError(f"bureaux_virtuels.nombre = {n!r} : entier de 1 à 10 attendu")
-    return n
-
-
 def emit_binds(model: dict) -> str:
     """Module Lua des valeurs lues par les raccourcis.
 
     Entrée : model — sortie de model.resolve.
     Sortie : contenu de hyprland-binds.lua (une table Lua retournée, lue par modules/clavier.lua).
-    Erreurs : KeyError si le TOML brut manque ; ValueError transmise par _validate ou _bureaux.
-    Dépendances : _validate, _bureaux.
+    Erreurs : KeyError si le TOML brut manque ; ValueError transmise par _validate ou model.bureaux (nombre de bureaux invalide).
+    Dépendances : _validate, model.bureaux.
     """
     raw = model["raw"]
     _validate(raw)
@@ -209,6 +195,6 @@ def emit_binds(model: dict) -> str:
         "-- Usage : local pas = require(\"generated.hyprland-binds\").resize_step",
         "return {",
         f"    resize_step = {raw['window']['resize_step']},",
-        f"    bureaux = {_bureaux(raw)},",
+        f"    bureaux = {bureaux(raw)},",
         "}",
     ]) + "\n"

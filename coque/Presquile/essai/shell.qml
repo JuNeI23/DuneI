@@ -97,17 +97,27 @@ ShellRoot {
 
         // bureauxEtat — pose idActif et special du module des bureaux d'essai (jamais Hyprland) et rend son état.
         // Entrées : idActif ; special, nom du spécial ouvert ou « - » pour aucun ; survol, index du point survolé ou −1.
-        // Sortie : JSON {largeurs, couleurs, accentDiscret, textTertiary, largeur, hauteur} : largeurs et couleurs cibles de chaque point, et dimensions implicites.
+        // Sortie : JSON {largeurs, couleurs, accentDiscret, textTertiary, largeur, hauteur} : largeurs et couleurs cibles de chaque point, et dimensions implicites, largeurs réelles (ressorts), zones de clic [début, fin] et centres de chaque point dans le module (déduits des largeurs réelles).
         // Erreurs : aucune. Dépendances : Bureaux.
         function bureauxEtat(idActif: int, special: string, survol: int): string {
             const b = essaiBureaux, p = Array.from({ length: b.nombre }, (_, i) => b.points.itemAt(i))
             b.idActif = idActif
             b.special = special === "-" ? "" : special
             b.survol = survol
+            // Positions déduites des largeurs réelles (la rangée se replace au passage de mise en page, absent hors écran).
+            let x = b.gabarit.marge
+            const zones = [], centres = []
+            p.forEach(pt => {
+                zones.push([x + pt.zoneClic.x, x + pt.zoneClic.x + pt.zoneClic.width])
+                centres.push(x + pt.width / 2)
+                x += pt.width + b.gabarit.ecart
+            })
             return JSON.stringify({ largeurs: p.map(x => x.largeurCible), couleurs: p.map(x => String(x.couleurCible)),
                                     accentDiscret: String(Theme.color.accentDiscret),
                                     textTertiary: String(Theme.color.textTertiary), largeur: b.implicitWidth,
-                                    hauteur: b.implicitHeight })
+                                    hauteur: b.implicitHeight,
+                                    reelles: p.map(x => x.width),
+                                    zones: zones, centres: centres })
         }
 
         // capturer — enregistre la vitrine en PNG, de façon asynchrone. Entrée : chemin, fichier à écrire.

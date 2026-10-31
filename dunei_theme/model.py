@@ -104,6 +104,21 @@ def theme_data(data: dict, famille: str, moment: str) -> dict:
     return out
 
 
+def bureaux(raw: dict) -> int:
+    """Nombre de bureaux virtuels, validé.
+
+    Entrée : raw — TOML brut du modèle.
+    Sortie : bureaux_virtuels.nombre, entier de 1 à 10.
+    Erreurs : ValueError si la valeur est absente, non entière (un booléen est refusé) ou hors de 1 à 10
+              (la touche 0 mène au bureau 10, il n'y a pas de onzième touche).
+    Dépendances : aucune.
+    """
+    n = raw.get("bureaux_virtuels", {}).get("nombre")
+    if type(n) is not int or not 1 <= n <= 10:
+        raise ValueError(f"bureaux_virtuels.nombre = {n!r} : entier de 1 à 10 attendu")
+    return n
+
+
 def resolve(data: dict, hue_override: float | None = None) -> dict:
     """Résolution — applique les deux variables du thème à l'échelle invariante.
 

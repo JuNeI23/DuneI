@@ -57,8 +57,10 @@ PanelWindow {
     }
 
     // monter — instancie le module de contenu pour l'écran, centré dans le corps de l'encoche.
-    // Entrées : aucune (lit module et modelData). Sortie : met à jour contenu ; au premier montage, pose les ressorts de taille sur leur cible. Erreurs : un composant sans Item
-    // valide laisse contenu nul et se lit au journal de Quickshell. Dépendances : module, encoche, Ressort.poser.
+    // Entrées : aucune (lit module et modelData).
+    // Sortie : met à jour contenu ; au premier montage, pose les ressorts de taille sur leur cible.
+    // Erreurs : un composant sans Item valide laisse contenu nul et se lit au journal de Quickshell.
+    // Dépendances : module, encoche, Ressort.poser.
     function monter() {
         const premier = !contenu
         contenu?.destroy()

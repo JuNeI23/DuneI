@@ -161,6 +161,29 @@ class BureauxModuleTest(PresquileIpc, unittest.TestCase):
         etat = self.etat(1)
         self.assertEqual((etat["largeur"], etat["hauteur"]), (95, 28))
 
+    def regle(self, idActif):
+        """Pose idActif et attend que les ressorts de largeur aient rejoint leur cible et que la rangée soit replacée ; rend l'état réglé."""
+        for _ in range(100):
+            etat = self.etat(idActif)
+            # La rangée se replace à son prochain passage de mise en page : on attend aussi que la dernière zone touche le bord.
+            if etat["reelles"] == etat["largeurs"] and abs(etat["zones"][-1][1] - etat["largeur"]) < 0.01:
+                return etat
+            time.sleep(0.05)
+        self.fail("les ressorts de largeur n'ont pas rejoint leur cible")
+
+    def test_zones_de_clic(self):
+        # Pour chaque bureau actif, le centre de chaque point est dans sa zone, les zones se touchent et couvrent
+        # toute la largeur du module.
+        for actif in (1, 2, 3, 4):
+            etat = self.regle(actif)
+            zones, centres = etat["zones"], etat["centres"]
+            for i, (debut, fin) in enumerate(zones):
+                self.assertTrue(debut < centres[i] < fin, (actif, i, zones, centres))
+            self.assertAlmostEqual(zones[0][0], 0)
+            self.assertAlmostEqual(zones[-1][1], etat["largeur"])
+            for (_, fin), (debut, _) in zip(zones, zones[1:]):
+                self.assertAlmostEqual(fin, debut)
+
 
 # Tracé de la variante D de la planche forme.html (132 × 34, évasement 13), validée à l'écran par Nicolas.
 TRACE_PLANCHE = "M0 0 H132 C124 0 120 3 119 12 V20 C119 29 115 34 105 34 H27 C17 34 13 29 13 20 V12 C12 3 8 0 0 0 Z"

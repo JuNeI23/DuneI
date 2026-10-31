@@ -10,7 +10,8 @@ import "physics.js" as Physics
 // Sorties : value valeur affichée ; moving vrai tant que le ressort avance ; vitesse() vitesse courante ; poser()
 //          pose le ressort sur sa cible sans animation.
 // Erreurs : aucune ; avant que Theme soit prêt, ou si la transition est inconnue, value prend cible sans
-//           animation, ainsi qu'à la création : la cible initiale se pose d'un coup. Le mouvement réduit n'a pas encore de bascule dans la coque : il n'est pas lu ici.
+//           animation, ainsi qu'à la création : la cible initiale se pose d'un coup. Le mouvement réduit n'a pas encore de bascule dans la
+//           coque : il n'est pas lu ici.
 // Dépendances : Theme (singleton du module), physics.js (integrate, atRest).
 // L'animation ne tourne que tant que le ressort avance, pour rester à 0 % de processeur au repos.
 Item {

@@ -12,8 +12,8 @@ import "bureaux.js" as Logique
 // un bureau spécial ouvert, dans la couleur des points inactifs. Survol (D92) : le point visé passe à
 // Theme.color.textTertiary, un cran d'emphase de la rampe du thème, lue sur la surface de la coque (et non le texte
 // du bureau, choisi sur la luminance du fond d'écran), sans capsule ; la pilule grisée par un spécial réagit de même,
-// puisqu'un clic la referme. Une zone de clic par point, d'un nombre-ième de la largeur utile (sans les
-// marges) ; la molette passe par pasMolette puis cibleMolette, le clic par commandesClic. Aucun minuteur.
+// puisqu'un clic la referme. Une zone de clic par point, contiguë aux voisines (un demi-écart de chaque côté, la marge aux
+// extrémités) ; la molette passe par pasMolette puis cibleMolette, le clic par commandesClic. Aucun minuteur.
 // Entrées : ecran, écran de la presqu'île (obligatoire) ; idActif, identifiant du bureau actif, lié par défaut au
 //           bureau actif du moniteur de l'écran (0 si inconnu) ; special, nom du bureau spécial ouvert
 //           (« special:… ») ou "", lu une fois au démarrage sur le moniteur de l'écran (specialWorkspace), puis tenu à
@@ -40,6 +40,8 @@ Item {
     readonly property Repeater points: repeteur
     property int survol: -1
     property real cumul: 0
+    property int viseEmise: 0
+    onIdActifChanged: viseEmise = 0
 
     implicitWidth: nombre * (gabarit?.point ?? 0) + ((gabarit?.pilule ?? 0) - (gabarit?.point ?? 0))
         + Math.max(0, nombre - 1) * (gabarit?.ecart ?? 0) + 2 * (gabarit?.marge ?? 0)
@@ -69,7 +71,8 @@ Item {
         }
     }
 
-    // Les points, alignés depuis la marge (la rangée ne glisse pas quand la pilule apparaît ou disparaît) ; la largeur de chacun est portée par un Ressort, sa couleur par un ColorSpring.
+    // Les points, alignés depuis la marge (la rangée ne glisse pas quand la pilule apparaît ou disparaît) ;
+    // la largeur de chacun est portée par un Ressort, sa couleur par un ColorSpring.
     Row {
         anchors.verticalCenter: parent.verticalCenter
         x: bureaux.gabarit?.marge ?? 0
@@ -93,6 +96,8 @@ Item {
                 height: bureaux.gabarit?.point ?? 0
                 anchors.verticalCenter: parent.verticalCenter
 
+                readonly property Item zoneClic: zone
+
                 Ressort { id: etirement; transition: "navigate"; cible: point.largeurCible }
                 ColorSpring { id: teinte; target: point.couleurCible }
 
@@ -101,40 +106,41 @@ Item {
                     radius: height / 2
                     color: teinte.value
                 }
+
+                // Zone de clic et de survol du point : toute la hauteur du module, étendue d'un demi-écart de chaque côté
+                // (de la marge pour le premier et le dernier point), de sorte que les zones se touchent, suivent le
+                // ressort et que le centre de chaque point reste dans la sienne.
+                MouseArea {
+                    id: zone
+                    readonly property real avant: point.index === 0 ? bureaux.gabarit?.marge ?? 0 : (bureaux.gabarit?.ecart ?? 0) / 2
+                    readonly property real apres: point.index === bureaux.nombre - 1 ? bureaux.gabarit?.marge ?? 0 : (bureaux.gabarit?.ecart ?? 0) / 2
+                    x: -avant
+                    width: point.width + avant + apres
+                    height: bureaux.height
+                    anchors.verticalCenter: parent.verticalCenter
+                    hoverEnabled: true
+                    onEntered: bureaux.survol = point.index
+                    onExited: if (bureaux.survol === point.index) bureaux.survol = -1
+                    onClicked: Logique.commandesClic(point.index + 1, bureaux.idActif, bureaux.special).forEach(c => Hyprland.dispatch(c))
+                }
             }
         }
     }
 
-    // Zones de clic, une par point, chacune d'un nombre-ième de la largeur utile ; le survol et la molette y passent.
-    Row {
-        x: bureaux.gabarit?.marge ?? 0
-        width: bureaux.width - 2 * (bureaux.gabarit?.marge ?? 0)
-        height: parent.height
-
-        Repeater {
-            model: bureaux.nombre
-
-            MouseArea {
-                required property int index
-                width: parent.width / bureaux.nombre
-                height: parent.height
-                hoverEnabled: true
-                onEntered: bureaux.survol = index
-                onExited: if (bureaux.survol === index) bureaux.survol = -1
-                onClicked: Logique.commandesClic(index + 1, bureaux.idActif, bureaux.special).forEach(c => Hyprland.dispatch(c))
-            }
-        }
-    }
-
-    // Molette sur toute la presqu'île : bureau suivant ou précédent, borné, en partant du bureau actif (celui qui
-    // est sous le bureau spécial éventuel).
+    // Molette sur toute la presqu'île : bureau suivant ou précédent, borné, en partant du dernier bureau visé tant
+    // que Hyprland n'a pas confirmé le changement (plusieurs pas peuvent précéder la mise à jour de idActif), sinon
+    // du bureau actif (celui qui est sous le bureau spécial éventuel).
     WheelHandler {
         acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
         onWheel: event => {
             const r = Logique.pasMolette(bureaux.cumul, event.angleDelta.y)
             bureaux.cumul = r.reste
-            const cible = Logique.cibleMolette(bureaux.idActif, r.pas, bureaux.nombre)
-            if (cible > 0) Hyprland.dispatch(Logique.commandeBureau(cible))
+            const depart = bureaux.viseEmise > 0 ? bureaux.viseEmise : bureaux.idActif
+            const cible = Logique.cibleMolette(depart, r.pas, bureaux.nombre)
+            if (cible > 0) {
+                bureaux.viseEmise = cible
+                Hyprland.dispatch(Logique.commandeBureau(cible))
+            }
         }
     }
 }

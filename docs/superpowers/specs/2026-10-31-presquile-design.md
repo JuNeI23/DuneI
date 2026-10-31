@@ -1,6 +1,6 @@
 # La presqu'île : vue des bureaux dans une encoche continue
 
-Version 1.2 — 2026-10-31. Éléments du backlog : L2-46 (la presqu'île), L2-10 (indicateur de bureaux, rattaché par D93).
+Version 1.3 — 2026-10-31. Éléments du backlog : L2-46 (la presqu'île), L2-10 (indicateur de bureaux, rattaché par D93).
 
 ## 1. Objet et raison
 
@@ -69,7 +69,8 @@ Arbitrages pris en séance du 2026-10-30 et du 2026-10-31, sur les planches
   au besoin, et suivent le thème.
 - Au changement de bureau, l'ancienne pilule redevient un point et le nouveau point s'allonge, par les ressorts
   de `motion.toml`. La transition `navigate` (« changement de bureau ») est le candidat naturel ; le mouvement
-  réduit est respecté. L'animation doit rester juste lors de changements en rafale (interruption en vol).
+  réduit est reporté à L2-47 (la coque n'a pas encore de bascule de mouvement réduit : ni Ressort ni ColorSpring ne
+  la lisent). L'animation doit rester juste lors de changements en rafale (interruption en vol).
 - Bureau spécial ouvert : la pilule ne bouge pas et prend la couleur des points inactifs (§ 2, point 6).
 
 ### 4.3 Souris
@@ -170,3 +171,4 @@ rôles de couleur ; les tests automatiques.
 | 1.0 | 2026-10-31 | Première rédaction, après la séance de conception. |
 | 1.1 | 2026-10-31 | Relecture du constructeur : bureau spécial et souris, plusieurs écrans, borne des quatre bureaux, source unique du nombre de bureaux. |
 | 1.2 | 2026-10-31 | Recette à l'écran : hauteur ramenée de 34 à 28 px, celle de la barre (§ 4.1, D97). |
+| 1.3 | 2026-10-31 | Relecture finale : le mouvement réduit est reporté à L2-47 (§ 4.2). |

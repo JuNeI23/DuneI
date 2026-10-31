@@ -2265,8 +2265,8 @@ est la couche haute, sa matière est E3.**
   disparaît avec la barre), spécial déjà ouvert au démarrage de la coque. Seul réglage demandé : la hauteur.
 - **Ressources, au repos sur 30 s.** `qs` à 0,0 % de processeur, PSS 178,3 Mio (RSS 349,8 Mio) ; repère de D94 et
   D95 : PSS 158,8 Mio (RSS 303,8 Mio). La presqu'île ajoute environ 19,5 Mio de PSS.
-- **Coût si faux.** Le contenu est un module (D98) ; la forme, la hauteur et la couche sont des constantes de
-  `coque/Presquile/`.
+- **Coût si faux.** Le contenu est un module (D98) ; la hauteur et les dimensions sont des jetons de `tokens.toml` [presquile] ; la forme et la couche sont des
+  constantes de `coque/Presquile/`.
 
 *Touché : `coque/Presquile/`, `tokens.toml`, `generated/coque-tokens.json`, bible (§ coque), conception de la
 presqu'île (v1.2), backlog (L2-10, L2-46).*
@@ -2289,5 +2289,5 @@ un `Item` qui reçoit `ecran` et déclare `implicitWidth` et `implicitHeight` ; 
 - **Coût si faux.** Le contrat tient en deux propriétés de taille et une entrée ; le resserrer ou l'élargir ne
   touche que `Presquile.qml`.
 
-*Touché : `coque/Presquile/`, `coque/Theme/Ressort.qml`, `coque/outils/`, conception de la presqu'île (§ 4),
+*Touché : `coque/Presquile/`, `coque/Theme/Ressort.qml`, conception de la presqu'île (§ 4),
 backlog (L2-46).*
