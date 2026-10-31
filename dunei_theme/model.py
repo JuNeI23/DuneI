@@ -130,11 +130,13 @@ def resolve(data: dict, hue_override: float | None = None) -> dict:
     def accent(step, lightness=None, chroma_ratio=1.0):
         """Accent à un échelon de l'échelle de luminosité, ou à une luminosité explicite.
 
-        Entrées : step — index d'échelon ; lightness — luminosité qui l'emporte si elle est donnée.
+        Entrées : step — index d'échelon ; lightness — luminosité qui l'emporte si elle est donnée ;
+                  chroma_ratio — facteur appliqué à la chroma d'accent, 1,0 par défaut.
         Sortie : Oklch à la teinte du thème.
         Erreurs : IndexError si l'échelon n'existe pas. Dépendances : color.oklch.
         """
-        return oklch(steps[step] if lightness is None else lightness, th["accent_chroma"] * scale * chroma_ratio, hue, ceiling)
+        return oklch(steps[step] if lightness is None else lightness,
+                     th["accent_chroma"] * scale * chroma_ratio, hue, ceiling)
 
     roles = {name: ramp[i] for name, i in data["roles"].items()}
     kn = data["knob"]

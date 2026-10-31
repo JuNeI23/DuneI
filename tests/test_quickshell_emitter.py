@@ -41,12 +41,11 @@ class QuickshellEmitterTest(unittest.TestCase):
                                                  "pilule": 22, "ecart": 8, "marge": 14})
 
     def test_accent_discret(self):
-        """Vérifie l'accent discret des quatre thèmes : teinte de l'accent, chroma 0,6 fois, luminosité 0,68."""
-        for fam, moments in self.out["themes"].items():
-            for mom, th in moments.items():
-                with self.subTest(famille=fam, moment=mom):
-                    self.assertRegex(th["color"]["accentDiscret"], r"^#[0-9a-f]{6}$")
-                    pass
+        """Vérifie que l'accent discret émis de chaque thème est celui du modèle, au format `#rrggbb`."""
+        for fam, mom in themes(self.data):
+            with self.subTest(famille=fam, moment=mom):
+                attendu = resolve(theme_data(self.data, fam, mom), 55.0)["accent_discret"]
+                self.assertEqual(self.out["themes"][fam][mom]["color"]["accentDiscret"], to_hex(attendu))
 
     def test_bureaux_virtuels(self):
         self.assertEqual(self.out["bureauxVirtuels"], {"nombre": 4})
