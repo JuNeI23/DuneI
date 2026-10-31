@@ -30,9 +30,10 @@ import "nmcli.js" as Nmcli
 // suppression du profil.
 // Erreurs : un échec de lecture du profil s'affiche en tête de fiche (erreurs.profil). Une réponse de nmcli qui
 // arrive après un changement de profil ou la destruction de la fiche est ignorée (garde).
-// Dépendances : Quickshell (clipboardText), EtatReseau (executer, appareil, ip4, ip6, passerelle, dns, mac, connectivite), nmcli.js (CHAMPS_PROFIL,
-// lireProfil, argsModifier, champs, liste), Theme, Surface, Texte, Icone, Bouton, Interrupteur, Champ, ChampSecret,
-// Onglets, Onglet, Separateur.
+// Dépendances : Quickshell (clipboardText), EtatReseau (executer, appareil, ip4, ip6, passerelle, dns, mac,
+// connectivite), nmcli.js (CHAMPS_PROFIL,
+// lireProfil, argsModifier, champs, liste), Groupe, Ligne, Section, Theme, Texte, Icone, Bouton, Interrupteur, Champ, ChampSecret,
+// Onglets, Onglet.
 // Cotes : contenu en retrait de space.blockGap (24) à gauche et à droite, sections espacées de space.scale[1] (8) ;
 // groupes au rayon radius.panel ; rangées d'au moins 44 px, contenu à space.scale[2] (12) du bord ; champs de
 // 290 px ; pastille d'en-tête de 44 px.
@@ -258,74 +259,6 @@ ColumnLayout {
     // Tenue du retour « Copié » : un seul coup, armé par copier, jamais au repos.
     Timer { id: finCopie; interval: Theme.motion?.delays?.copied ?? 0; onTriggered: fiche.copie = "" }
 
-    // Groupe — carte de réglages : surface de panneau arrondie, au filet subtil, dont les Ligne s'empilent.
-    // Entrées : les Ligne déclarées comme enfants. Sortie : aucune. Erreurs : aucune. Dépendances : Surface, Theme.
-    component Groupe: Surface {
-        default property alias lignes: colonne.data
-        role: "surfacePanel"
-        radius: Theme.radius?.panel ?? 0
-        Layout.fillWidth: true
-        implicitHeight: colonne.implicitHeight
-
-        ColumnLayout { id: colonne; width: parent.width; spacing: 0 }
-        Rectangle {
-            anchors.fill: parent
-            radius: parent.radius
-            color: "transparent"
-            border.width: Theme.hairline(1) ?? 0
-            border.color: Theme.color?.borderSubtle ?? "transparent"
-        }
-    }
-
-    // Ligne — rangée de réglage : libellé et aide à gauche, contrôle à droite, erreur dessous, filet au-dessus.
-    // Entrées : libelle, aide (facultative), erreur (facultative), filet (vrai sauf pour la première), et le
-    // contrôle déclaré comme enfant. Sortie : aucune. Erreurs : aucune. Dépendances : Texte, Separateur, Theme.
-    component Ligne: ColumnLayout {
-        id: ligne
-        property string libelle
-        property string aide
-        property string erreur
-        property bool filet: true
-        default property alias controle: emplacement.data
-        Layout.fillWidth: true
-        spacing: 0
-
-        Separateur { visible: ligne.filet; Layout.fillWidth: true }
-        RowLayout {
-            Layout.fillWidth: true
-            Layout.minimumHeight: 44
-            Layout.leftMargin: fiche.cote
-            Layout.rightMargin: fiche.cote
-            spacing: fiche.cote
-            ColumnLayout {
-                Layout.fillWidth: true
-                spacing: 0
-                // Un Layout ne s'étire pas plus que ses enfants : le libellé s'étire, même sans aide.
-                Texte { Layout.fillWidth: true; text: ligne.libelle }
-                Texte {
-                    visible: ligne.aide !== ""
-                    Layout.fillWidth: true
-                    text: ligne.aide
-                    echelon: 0
-                    wrapMode: Text.Wrap
-                    color: Theme.color?.textTertiary ?? "transparent"
-                }
-            }
-            RowLayout { id: emplacement; spacing: Theme.space?.scale[1] ?? 0 }
-        }
-        Texte {
-            visible: ligne.erreur !== ""
-            Layout.fillWidth: true
-            Layout.leftMargin: fiche.cote
-            Layout.rightMargin: fiche.cote
-            Layout.bottomMargin: Theme.space?.scale[1] ?? 0
-            text: ligne.erreur
-            echelon: 1
-            wrapMode: Text.Wrap
-            color: Theme.color?.error ?? "transparent"
-        }
-    }
-
     // Pas — bouton − ou + de la priorité, réduit à son icône. Entrées : nom, l'icône. Sorties : signal clicked().
     // Erreurs : aucune. Dépendances : Icone, Theme.
     component Pas: Item {
@@ -342,15 +275,6 @@ ColumnLayout {
         }
         HoverHandler { id: survol }
         TapHandler { onTapped: pas.clicked() }
-    }
-
-    // Section — titre de section en petites capitales, au texte tertiaire. Entrée : text. Dépendances : Texte.
-    component Section: Texte {
-        Layout.topMargin: Theme.space?.scale[1] ?? 0
-        Layout.leftMargin: Theme.space?.scale[0] ?? 0
-        echelon: 0
-        moyen: true
-        color: Theme.color?.textTertiary ?? "transparent"
     }
 
     // En-tête : pastille, nom et état, action de connexion.

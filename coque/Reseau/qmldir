@@ -4,3 +4,6 @@ PopoverReseau 1.0 PopoverReseau.qml
 PanneauReseau 1.0 PanneauReseau.qml
 FicheProfil 1.0 FicheProfil.qml
 FenetreReseau 1.0 FenetreReseau.qml
+Groupe 1.0 Groupe.qml
+Ligne 1.0 Ligne.qml
+Section 1.0 Section.qml
