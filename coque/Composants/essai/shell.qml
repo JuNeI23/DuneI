@@ -887,6 +887,14 @@ ShellRoot {
                 .map(r => r.gras + " " + r.libelle.font.weight).join(" "))
         }
 
+        // fondNavigation — journalise les couleurs visées (fond, texte) de la rangée 1 de la liste d'essai.
+        // Entrées : aucune. Sortie : aucune ; « essai : fondNavigation <fond> <texte> ». Erreurs : aucune.
+        // Dépendances : listeEssai, Etat (couleurs).
+        function fondNavigation(): void {
+            const c = listeEssai.itemAtIndex(1).etat.couleurs
+            essai.journal("fondNavigation", c.fill + " " + c.text)
+        }
+
         // selectionLibre — confie la sélection à l'appelant et sélectionne la seule rangée 0.
         // Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : listeEssai.
         function selectionLibre(): void {

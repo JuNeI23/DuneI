@@ -14,9 +14,9 @@ import QtQuick
 // courante, comme dans un menu de macOS où la sélection suit le pointeur ; focusClavier, que l'appelant peut
 // aussi écrire, par exemple pour masquer le contour après avoir donné le focus à la liste à la suite d'un clic ;
 // navigation, faux par défaut : vrai, la liste est une colonne de navigation (la barre latérale de la fenêtre Réseau,
-// celle de l'écran de réglages) et sa rangée sélectionnée ne prend jamais l'accent, mais le fond neutre de la
-// sélection inactive, avec un libellé en graisse moyenne ; c'est une exception bornée à la règle
-// « Sélectionné actif » de la bible.
+// celle de l'écran de réglages) et sa rangée sélectionnée ne prend jamais l'accent, mais un fond neutre levé d'un
+// cran (controlRaised, voir Etat.selectionNeutre), avec un libellé en graisse moyenne ; c'est une exception bornée
+// à la règle « Sélectionné actif » de la bible.
 // Sorties : focusClavier, vrai quand le focus a été obtenu ou utilisé au clavier.
 // Erreurs : aucune ; Entrée sur une liste vide, ou dont le délégué n'est pas une Rangee, n'active rien.
 // Dépendances : QtQuick (ListView, Keys), Rangee comme délégué.

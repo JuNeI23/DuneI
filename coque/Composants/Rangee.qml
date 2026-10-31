@@ -10,8 +10,8 @@ import "etats.js" as Etats
 // et laisse voir le fond de la liste (§ 7.4), opaque ou de verre, au lieu d'en repeindre la couleur. Elle est
 // sélectionnée quand elle est la rangée courante, ou, si la liste ne fait pas suivre la sélection, quand l'appelant
 // pose selectionnee (§ 7.5) ; la sélection prend l'accent quand la liste a le focus, sauf dans une colonne de
-// navigation (Liste.navigation) : elle y garde le fond neutre de la sélection inactive et son libellé passe en
-// graisse moyenne. Sélection et survol se peignent
+// navigation (Liste.navigation) : elle y prend un fond neutre levé d'un cran (controlRaised, Etat.selectionNeutre)
+// et son libellé passe en graisse moyenne. Sélection et survol se peignent
 // dans une pastille arrondie en retrait des bords de la liste, à la manière de macOS (§ 7.10). Le focus se montre par
 // un contour sans fond de focus.width, qui suit la pastille rentré de -focus.rowOffset pixel, et jamais par un anneau
 // ni par un changement de fond (§ 7.3) ; il paraît sur la rangée courante d'une liste qui a le focus obtenu au
