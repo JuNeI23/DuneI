@@ -376,6 +376,24 @@ class PopoverTest(EssaiCoque, unittest.TestCase):
         self.ipc("choisir", "Inconnu")
         self.assertEqual(self.panneau()["reseaux"], ["Wifi_TRIADES", "Connu", "Nouveau", "Inconnu", "Ouvert"])
 
+    def test_reseau_disparu_pendant_la_saisie(self):
+        # Pendant une saisie, un autre réseau quitte le balayage et son objet est détruit : il disparaît de la liste,
+        # la ligne et sa saisie restent. Puis le réseau déplié disparaît à son tour : la ligne se replie. Aucune
+        # erreur au journal.
+        self.ouvrir()
+        self.ipc("choisir", "Inconnu")
+        self.ipc("saisir", self.SECRET)
+        self.ipc("retirerReseau", "Ouvert")
+        p = self.panneau()
+        self.assertEqual((p["deplie"], p["saisie"]), ("Inconnu", len(self.SECRET)))
+        self.assertEqual(p["reseaux"], ["Wifi_TRIADES", "Connu", "Inconnu"])
+        self.ipc("retirerReseau", "Inconnu")
+        p = self.panneau()
+        self.assertEqual((p["deplie"], p["saisie"]), ("", -1))
+        self.assertEqual(p["reseaux"], ["Wifi_TRIADES", "Connu"])
+        self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
+        self.assertNotIn(self.SECRET, self.journal())
+
     def test_inconnu_securise_deplie_sans_erreur(self):
         self.ouvrir()
         self.ipc("choisir", "Inconnu")

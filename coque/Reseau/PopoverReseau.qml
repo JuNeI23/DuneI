@@ -139,6 +139,9 @@ Overlay {
         // Réseaux triés, figés jusqu'au prochain changement de la liste ou du réseau joint : un tri lié suivrait
         // chaque variation de force et reconstruirait les rangées sous le pointeur et sous la saisie.
         property var reseaux: []
+        // Réseaux présents au dernier balayage, suivis même liste figée : un réseau de la liste figée qui n'y figure
+        // plus est masqué et ne peut plus être choisi ni rejoint (son WifiNetwork peut avoir été détruit).
+        property var presents: Array.from(etat.reseaux ?? [])
         // Nom du réseau dont la ligne de mot de passe est dépliée, « <autre> » pour un réseau caché, vide sinon.
         property string deplie: ""
         property string erreur: ""
@@ -152,24 +155,39 @@ Overlay {
         Component.onCompleted: { trier(); popover.panneau = panneau }
         Component.onDestruction: if (popover.panneau === panneau) popover.panneau = null
 
-        // trier — fige l'ordre de la liste des réseaux. Tant qu'une ligne de mot de passe est dépliée, rien ne change :
-        // remplacer le modèle du Repeater détruirait la ligne, et avec elle la saisie et le message d'erreur ; le tri
-        // reprend dès qu'elle se replie. Entrées : aucune. Sortie : aucune. Erreurs : aucune.
+        // trier — fige l'ordre de la liste des réseaux. Tant qu'une ligne de mot de passe est dépliée, sous un
+        // réseau ou sous « Autre réseau… » (qui gèle aussi le tri, par simplicité, bien que sa ligne soit hors du
+        // Repeater), rien ne change : remplacer le modèle du Repeater détruirait la ligne, et avec elle la saisie et
+        // le message d'erreur ; le tri reprend dès qu'elle se replie. Entrées : aucune. Sortie : aucune. Erreurs : aucune.
         // Dépendances : nmcli.js (trierReseaux), etat.reseaux, deplie.
         function trier(): void { if (deplie === "") reseaux = Nmcli.trierReseaux(Array.from(etat.reseaux ?? [])) }
         onDeplieChanged: trier()
 
+        // present — le réseau figure-t-il encore au balayage ? Entrée : r, un réseau, éventuellement null (objet
+        // détruit). Sortie : bool. Erreurs : aucune. Dépendances : presents.
+        function present(r): bool { return !!r && presents.includes(r) }
+
+        // replierAbsent — replie la ligne dépliée si son réseau a quitté le balayage ; le repli relance le tri.
+        // Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : deplie, presents.
+        function replierAbsent(): void {
+            if (deplie !== "" && deplie !== "<autre>" && !presents.some(r => r.name === deplie)) {
+                deplie = ""
+                erreur = ""
+            }
+        }
+
         // securise — un réseau demande-t-il un mot de passe ? Entrée : r, un réseau. Sortie : vrai sauf ouvert,
         // OWE ou sécurité inconnue (essayés sans secret). Erreurs : aucune. Dépendances : WifiSecurityType.
         function securise(r): bool {
-            return ![WifiSecurityType.Owe, WifiSecurityType.Open, WifiSecurityType.Unknown].includes(r.security)
+            return ![WifiSecurityType.Owe, WifiSecurityType.Open, WifiSecurityType.Unknown].includes(r?.security)
         }
 
         // choisir — clic sur un réseau : rien s'il est joint ; connexion directe s'il est connu ou ouvert ; sinon
-        // déplie (ou replie) sa ligne de mot de passe. Entrée : r, le réseau. Sortie : aucune. Erreurs : un échec
-        // arrive par connectionFailed (voir Connections). Dépendances : securise, enCours, deplie.
+        // déplie (ou replie) sa ligne de mot de passe. Entrée : r, le réseau. Sortie : aucune. Erreurs : un réseau
+        // qui n'est plus au balayage est ignoré ; un échec arrive par connectionFailed (voir Connections).
+        // Dépendances : present, securise, enCours, deplie.
         function choisir(r): void {
-            if (r.connected) return
+            if (!present(r) || r.connected) return
             erreur = ""
             if (r.known || !securise(r)) {
                 deplie = ""
@@ -180,8 +198,8 @@ Overlay {
 
         // rejoindre — valide la ligne dépliée : connectWithPsk pour un réseau de la liste ; pour un réseau caché,
         // « nmcli device wifi connect <nom> [password <mdp>] hidden yes » par etat.executer, dont l'échec s'affiche
-        // sous le champ. Entrées : aucune. Sortie : aucune. Erreurs : nom caché vide, rien n'est lancé.
-        // Dépendances : bloc, reseaux, etat.executer.
+        // sous le champ. Entrées : aucune. Sortie : aucune. Erreurs : nom caché vide, rien n'est lancé ; réseau qui
+        // n'est plus au balayage, la ligne se replie. Dépendances : bloc, presents, etat.executer.
         function rejoindre(): void {
             if (!bloc) return
             const mdp = bloc.secret.text
@@ -195,8 +213,9 @@ Overlay {
                     try { if (code === 0) deplie = ""; else erreur = sortie.trim() || "Connexion impossible." } catch (e) {}
                 })
             } else {
-                enCours = reseaux.find(r => r.name === deplie) ?? null
-                enCours?.connectWithPsk(mdp)
+                enCours = presents.find(r => r.name === deplie) ?? null
+                if (enCours) enCours.connectWithPsk(mdp)
+                else deplie = ""
             }
         }
 
@@ -230,7 +249,11 @@ Overlay {
         }
         Connections {
             target: panneau.etat
-            function onReseauxChanged() { panneau.trier() }
+            function onReseauxChanged() {
+                panneau.presents = Array.from(panneau.etat.reseaux ?? [])
+                panneau.replierAbsent()
+                panneau.trier()
+            }
             function onNomActifChanged() { panneau.trier() }
         }
         Timer { id: copieFinie; interval: 1500; onTriggered: panneau.copie = false }
@@ -383,16 +406,20 @@ Overlay {
                             id: ligne
                             required property var modelData
                             required property int index
+                            // Lectures sûres : le WifiNetwork d'une liste figée peut avoir été détruit (null).
+                            readonly property string nom: modelData?.name ?? ""
+                            readonly property bool joint: modelData?.connected ?? false
                             width: lignes.width
+                            visible: panneau.present(modelData)
 
                             Rangee {
                                 index: ligne.index
                                 width: parent.width
                                 implicitHeight: panneau.hauteurLigne
                                 hoverEnabled: true
-                                icone: panneau.iconeSignal(ligne.modelData.signalStrength)
-                                text: ligne.modelData.name
-                                accentue: ligne.modelData.connected
+                                icone: panneau.iconeSignal(ligne.modelData?.signalStrength ?? 0)
+                                text: ligne.nom
+                                accentue: ligne.joint
                                 onActive: panneau.choisir(ligne.modelData)
                                 suffixe: Component {
                                     Row {
@@ -404,7 +431,7 @@ Overlay {
                                             couleur: Theme.color?.textTertiary ?? "transparent"
                                         }
                                         Coche {
-                                            visible: ligne.modelData.connected
+                                            visible: ligne.joint
                                             width: Theme.icons?.sizes.dense ?? 0
                                             height: width
                                             couleur: Theme.color?.accentStandalone ?? "transparent"
@@ -413,7 +440,7 @@ Overlay {
                                 }
                             }
                             Loader {
-                                active: panneau.deplie === ligne.modelData.name
+                                active: panneau.deplie === ligne.nom
                                 visible: active
                                 x: Theme.space?.scale[1] ?? 0
                                 width: parent.width - 2 * x

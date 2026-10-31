@@ -15,7 +15,8 @@ import "Reseau"
 // Garde de plateforme : la fenêtre n'est construite que sous offscreen, où elle ne paraît jamais à l'écran.
 // Entrées : DUNEI_TOKENS_DIR, lu par Theme ; QT_QPA_PLATFORM=offscreen, posé par le test.
 // Sortie : « essai : prêt » à l'ouverture de la fenêtre, et les lignes « essai : connect <nom> », « essai :
-// connectWithPsk <nom> <longueur> », « essai : executer <arguments JSON> », « essai : ouvrirPortail », « essai : verifier ».
+// connectWithPsk <nom> <longueur> », « essai : executer <arguments JSON> », « essai : ouvrirPortail », « essai : verifier ». Commandes : voir chaque fonction de l'IpcHandler
+// (ajouterReseau et retirerReseau imitent le balayage).
 // Erreurs : celles de Theme et des liaisons, dans le journal. Dépendances : quickshell ≥ 0.3 (FloatingWindow,
 // LazyLoader, IpcHandler), Quickshell.Networking (énumérations), modules Theme et Reseau, par les liens
 // Theme, Composants, Reseau et Barre posés sous cette racine.
@@ -37,11 +38,20 @@ ShellRoot {
         function connectWithPsk(psk) { essai.journal("connectWithPsk", name + " " + psk.length) }
     }
 
-    FauxReseau { id: triades; name: "Wifi_TRIADES"; signalStrength: 0.9; connected: true; known: true }
-    FauxReseau { id: connu; name: "Connu"; signalStrength: 0.3; known: true }
-    FauxReseau { id: inconnu; name: "Inconnu"; signalStrength: 0.7 }
-    FauxReseau { id: nouveau; name: "Nouveau"; signalStrength: 0.95 }
-    FauxReseau { id: ouvert; name: "Ouvert"; signalStrength: 0.5; security: WifiSecurityType.Open }
+    // Réseaux factices, créés dynamiquement pour que retirerReseau puisse les détruire comme le fait Quickshell
+    // quand un réseau quitte le balayage. « Nouveau » n'est montré que par ajouterReseau.
+    Component { id: fabriqueReseau; FauxReseau {} }
+    property var tous: []
+    // reseau — réseau factice par son nom. Entrée : nom. Sortie : l'objet, ou undefined (absent ou détruit).
+    function reseau(nom) { return tous.find(r => r?.name === nom) }
+    Component.onCompleted: {
+        const c = proprietes => fabriqueReseau.createObject(essai, proprietes)
+        tous = [c({ name: "Wifi_TRIADES", signalStrength: 0.9, connected: true, known: true }),
+                c({ name: "Connu", signalStrength: 0.3, known: true }), c({ name: "Inconnu", signalStrength: 0.7 }),
+                c({ name: "Nouveau", signalStrength: 0.95 }),
+                c({ name: "Ouvert", signalStrength: 0.5, security: WifiSecurityType.Open })]
+        faux.reseaux = ["Connu", "Ouvert", "Wifi_TRIADES", "Inconnu"].map(reseau)
+    }
 
     // État factice : les propriétés et les fonctions de EtatReseau qu'emploie le popover.
     QtObject {
@@ -57,7 +67,7 @@ ShellRoot {
         property string icone: "network-wireless-signal-excellent"
         property bool recherche: false
         property bool fenetre: false
-        property var reseaux: [connu, ouvert, triades, inconnu]
+        property var reseaux: []
         function copierIp() { essai.journal("copierIp", true) }
         function allumer(actif) { essai.journal("allumer", actif) }
         function ouvrirPortail() { essai.journal("ouvrirPortail", true) }
@@ -105,10 +115,17 @@ ShellRoot {
                 // forcerRecherche — pose recherche à vrai, comme un popover ouvert sur un autre écran.
                 function forcerRecherche(): void { faux.recherche = true }
                 // ajouterReseau — fait paraître un réseau, comme le balayage. Entrées : aucune. Sortie : aucune.
-                function ajouterReseau(): void { faux.reseaux = faux.reseaux.concat([nouveau]) }
+                function ajouterReseau(): void { faux.reseaux = faux.reseaux.concat([essai.reseau("Nouveau")]) }
+                // retirerReseau — le réseau nommé quitte le balayage, puis son objet est détruit, comme sous
+                // Quickshell. Entrée : nom. Sortie : aucune.
+                function retirerReseau(nom: string): void {
+                    const r = essai.reseau(nom)
+                    faux.reseaux = faux.reseaux.filter(x => x !== r)
+                    r.destroy()
+                }
 
                 // panneau — état du panneau construit, en JSON, sans aucun texte saisi ; {} s'il n'existe pas.
-                // Sortie : {titre, etat, interrupteur, reseaux, deplie, erreur, portail, autre, saisie (longueur du
+                // Sortie : {titre, etat, interrupteur, reseaux (rangées montrées), deplie, erreur, portail, autre, saisie (longueur du
                 // mot de passe de la ligne dépliée, -1 sans ligne)}. Erreurs : aucune.
                 function panneau(): string {
                     const p = porteur.item?.panneau
@@ -116,7 +133,7 @@ ShellRoot {
                     const visible = nom => essai.trouver(p, o => o.objectName === nom)?.visible ?? false
                     return JSON.stringify({
                         titre: p.resume.titre, etat: p.resume.etat, interrupteur: visible("interrupteur"),
-                        reseaux: p.listeVisible ? p.reseaux.map(r => r.name) : [], deplie: p.deplie, erreur: p.erreur,
+                        reseaux: p.listeVisible ? p.reseaux.filter(r => p.present(r)).map(r => r.name) : [], deplie: p.deplie, erreur: p.erreur,
                         portail: p.etat.connectivite === "portal", autre: p.listeVisible,
                         saisie: p.bloc ? p.bloc.secret.length : -1,
                     })
@@ -129,8 +146,7 @@ ShellRoot {
                 }
                 // echouer — émet connectionFailed (secrets absents) sur le réseau factice nommé. Entrée : nom.
                 function echouer(nom: string): void {
-                    faux.reseaux.concat([triades, connu, inconnu, ouvert]).find(r => r.name === nom)
-                        .connectionFailed(ConnectionFailReason.NoSecrets)
+                    essai.reseau(nom).connectionFailed(ConnectionFailReason.NoSecrets)
                 }
                 // saisir, saisirNom — remplissent le mot de passe ou le nom de la ligne dépliée. Entrée : texte.
                 function saisir(texte: string): void { porteur.item.panneau.bloc.secret.text = texte }
