@@ -2,12 +2,14 @@
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import QtTest
 import "Reseau"
 
 // Coque d'essai de la fenêtre Réseau, sous la plateforme offscreen.
 // Rôle : instancie FenetreReseau sur le vrai EtatReseau ; le test place un nmcli factice en tête du PATH, si bien
 // qu'aucune commande ne touche le réseau réel. La fenêtre s'ouvre par l'IPC réelle (« reseau ouvrir ») ; la cible
-// « essai » lit son état et y joue les gestes de l'utilisateur. tests/test_reseau.py (FenetreTest) la pilote.
+// « essai » lit son état et y joue les gestes de l'utilisateur (dont les touches, par un TestEvent de QtTest posé sur
+// le panneau). tests/test_reseau.py (FenetreTest) la pilote.
 // Entrées : DUNEI_TOKENS_DIR, lu par Theme ; QT_QPA_PLATFORM=offscreen et PATH, posés par le test.
 // Sortie : « essai : prêt » au démarrage ; voir chaque fonction de l'IpcHandler. Le texte d'un secret n'est jamais
 // rendu ni journalisé, seulement sa longueur.
@@ -19,6 +21,14 @@ ShellRoot {
     Component.onCompleted: console.info("essai : prêt")
 
     FenetreReseau { id: fenetre }
+
+    // touche — frappe une touche dans la fenêtre du panneau, comme le clavier. Entrée : cle, un Qt.Key_*. Sortie :
+    // aucune. Erreurs : fenêtre fermée, TypeError au journal. Dépendances : QtTest (TestEvent).
+    function touche(cle) {
+        const e = Qt.createQmlObject("import QtTest; TestEvent {}", fenetre.panneau)
+        e.keyClick(cle, Qt.NoModifier, -1)
+        e.destroy()
+    }
 
     // trouver — premier descendant visuel qui vérifie un prédicat, en profondeur.
     // Entrées : racine, Item ; test, fonction(Item) → bool. Sortie : l'Item, ou null. Erreurs : aucune.
@@ -54,8 +64,9 @@ ShellRoot {
         target: "essai"
 
         // etat — état de la fenêtre, en JSON : {fenetre (construite), demandee (EtatReseau.fenetre), rangees
-        // ([groupe, nom, état, icône] de la liste), detail (libellé → valeur du détail de la connexion active),
-        // fiche: {uuid, lu, priorite, autoconnect, facture, fixe, erreurs, secret (longueur), revele, confirmer}}.
+        // ([groupe, nom, état, icône] des profils), detail (libellé → valeur du détail de la connexion active),
+        // onglet et sousPage (ceux du panneau), onglets ([clé, nom, état] des trois onglets), defilement ([contentY,
+        // contentHeight, height]), fiche: {uuid, lu, priorite, autoconnect, facture, fixe, erreurs, secret (longueur), revele, confirmer}}.
         // Entrées : aucune. Sortie : texte JSON. Erreurs : aucune ; fenêtre fermée, rangees, detail et fiche vides.
         function etat(): string {
             const p = fenetre.panneau
@@ -65,7 +76,9 @@ ShellRoot {
                 rangees: (p?.rangees ?? []).map(r => [r.groupe, r.nom, r.etat, r.icone]),
                 detail: f?.detail ?? {},
                 selection: essai.selection(),
-                hauteur: p ? [p.height, p.defilement.contentHeight] : [],
+                onglet: p?.onglet ?? "", sousPage: p?.sousPage ?? "",
+                onglets: (p?.onglets ?? []).map(o => [o.cle, o.nom, o.etat]),
+                defilement: p ? [p.defilement.contentY, p.defilement.contentHeight, p.defilement.height] : [],
                 toutCopier: f && essai.nomme("toutCopier") ? essai.nomme("toutCopier").width : 0,
                 nouvelle: !p?.nouvelle ? {} : {visible: p.nouvelle.visible, securise: p.nouvelle.securise,
                                                 valide: p.nouvelle.valide, erreur: p.nouvelle.erreur},
@@ -83,8 +96,31 @@ ShellRoot {
         // demande — profil demandé encore en attente (EtatReseau.profilDemande). Sortie : texte.
         function demande(): string { return EtatReseau.profilDemande }
 
-        // choisir — sélectionne le profil d'un uuid, comme un clic dans la liste. Entrée : uuid. Sortie : aucune.
-        function choisir(uuid: string): void { fenetre.panneau.choisi = uuid }
+        // choisir — ouvre la sous-page du profil d'un uuid, comme un clic sur sa rangée. Entrée : uuid. Sortie : aucune.
+        function choisir(uuid: string): void { fenetre.panneau.ouvrirProfil(uuid) }
+
+        // onglet — choisit un onglet, comme un clic sur sa rangée. Entrée : cle (wifi, filaire, vpn). Sortie : aucune.
+        function onglet(cle: string): void { fenetre.panneau.liste.itemAtIndex(fenetre.panneau.onglets.findIndex(o => o.cle === cle)).clicked() }
+
+        // retour — clic sur la rangée de retour de la sous-page. Entrées : aucune. Sortie : aucune.
+        function retour(): void { essai.trouver(fenetre.panneau, o => o.objectName === "retour").clicked() }
+
+        // echap — frappe Échap. Entrées : aucune. Sortie : aucune. Dépendances : touche.
+        function echap(): void { essai.touche(Qt.Key_Escape) }
+
+        // haut, bas — frappe la flèche du clavier. Entrées : aucune. Sortie : aucune. Dépendances : touche.
+        function bas(): void { essai.touche(Qt.Key_Down) }
+        function haut(): void { essai.touche(Qt.Key_Up) }
+
+        // defiler — pose le défilement des pages à y pixels. Entrée : y. Sortie : aucune.
+        function defiler(y: int): void { fenetre.panneau.defilement.contentY = y }
+
+        // rangeeProfil — clic sur la rangée du profil d'un uuid dans la page d'onglet courante. Entrée : uuid.
+        // Sortie : aucune. Erreurs : rangée absente, TypeError au journal.
+        function rangeeProfil(uuid: string): void {
+            const l = essai.trouver(fenetre.panneau, o => o.modelData?.uuid === uuid && o.clique !== undefined)
+            l.clique()
+        }
 
         // cliquer — geste sur un contrôle de la fiche : plus, moins, facture, auto, fixe, automatique, oeil,
         // oublier, confirmer. Entrée : nom. Sortie : aucune. Erreurs : nom inconnu, TypeError au journal.
@@ -131,8 +167,8 @@ ShellRoot {
         // copie — lit le retour de copie d'un libellé, sans geste. Entrée : cle. Sortie : voir lireCopie.
         function copie(cle: string): string { return essai.lireCopie(cle) }
 
-        // nouveau — clic sur « + » au pied de la colonne. Entrées : aucune. Sortie : aucune.
-        function nouveau(): void { essai.trouver(fenetre.panneau, o => o.objectName === "ajouterReseau").clicked() }
+        // nouveau — clic sur « Autre réseau… » de la page Wi-Fi. Entrées : aucune. Sortie : aucune.
+        function nouveau(): void { essai.trouver(fenetre.panneau, o => o.libelle === "Autre réseau…").clique() }
 
         // remplirNouveau — remplit la fiche « Nouveau réseau ». Entrées : nom ; securise, « true » pour WPA2-WPA3 ;
         // mdp, le mot de passe (jamais journalisé) ; cache, « true » pour un réseau caché. Sortie : aucune.

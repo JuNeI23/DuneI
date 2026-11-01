@@ -790,16 +790,15 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
         """Appels reçus par le nmcli factice, un par ligne. Dépendances : nmcli factice."""
         return self.fichier_appels.read_text().splitlines() if self.fichier_appels.exists() else []
 
-    def ouvrir(self, uuid: str = "") -> dict:
-        """Ouvre la fenêtre par l'IPC réelle « reseau ouvrir », attend sa fiche, puis choisit un profil.
+    def ouvrir(self, uuid: str = "wifi-1") -> dict:
+        """Ouvre la fenêtre par l'IPC réelle « reseau ouvrir », puis ouvre la sous-page d'un profil.
 
-        Entrée : uuid, le profil à choisir, aucun par défaut (le profil actif). Sortie : l'état, fiche lue.
+        Entrée : uuid, le profil à ouvrir, « wifi-1 » (le profil actif) par défaut. Sortie : l'état, fiche lue.
         """
         self.ipc("reseau", "ouvrir")
-        self.jusqua(lambda e: e["fenetre"] and e["fiche"].get("lu"), "fenêtre construite et fiche lue")
-        if uuid:
-            self.ipc("essai", "choisir", uuid)
-        return self.jusqua(lambda e: e["fiche"].get("uuid") == (uuid or "wifi-1") and e["fiche"]["lu"], "profil lu")
+        self.jusqua(lambda e: e["fenetre"] and e["rangees"], "fenêtre construite et profils lus")
+        self.ipc("essai", "choisir", uuid)
+        return self.jusqua(lambda e: e["fiche"].get("uuid") == uuid and e["fiche"]["lu"], "profil lu")
 
     def test_ouvrir_et_fermer(self):
         self.assertFalse(self.etat()["fenetre"])
@@ -810,10 +809,9 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
             ["Filaire", "Connexion filaire 1", "Débranché", "network-wired"]])
         self.assertEqual(e["detail"], {"IPv4": "192.168.1.42/24", "IPv6": "fe80::1/64", "Passerelle": "192.168.1.1",
                                        "DNS": "192.168.1.1", "Adresse matérielle": "A4:C3:F0:5B:1E:72"})
-        # La fiche du profil actif, détail compris, tient dans la fenêtre à sa taille d'ouverture, sans défiler.
-        self.assertGreaterEqual(e["hauteur"][0], e["hauteur"][1], e["hauteur"])
-        # Colonne de navigation : la rangée choisie a le fond neutre de la sélection et un nom en graisse moyenne.
+        # Colonne de navigation : l'onglet choisi a le fond neutre de la sélection et un nom en graisse moyenne.
         self.assertEqual(e["selection"], ["inactive", True, False])
+        self.assertEqual((e["onglet"], e["sousPage"]), ("wifi", "wifi-1"))
         self.ipc("essai", "fermer")
         e = self.jusqua(lambda e: not e["fenetre"], "fenêtre détruite")
         self.assertFalse(e["demandee"])
@@ -861,12 +859,13 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
         self.jusqua(lambda e: json.loads(self.ipc("essai", "copie", ""))["texte"] == "Tout copier", "bouton revenu")
 
     def test_nouveau_reseau(self):
-        # « + » au pied de la colonne ouvre la fiche « Nouveau réseau » ; aucune rangée n'est alors sélectionnée.
-        # « Ajouter » passe par nmcli connection add (arguments, jamais de shell), puis le profil créé est choisi.
-        self.ouvrir()
+        # « Autre réseau… » de la page Wi-Fi ouvre la sous-page « nouveau » ; l'onglet Wi-Fi reste choisi.
+        # « Ajouter » passe par nmcli connection add (arguments, jamais de shell), puis le profil créé s'ouvre.
+        self.ipc("reseau", "ouvrir")
+        self.jusqua(lambda e: e["fenetre"] and e["rangees"], "fenêtre construite")
         self.ipc("essai", "nouveau")
         e = self.jusqua(lambda e: e["nouvelle"].get("visible"), "fiche Nouveau réseau")
-        self.assertEqual(e["selection"], [])
+        self.assertEqual((e["onglet"], e["sousPage"], e["selection"]), ("wifi", "nouveau", ["inactive", True, False]))
         self.assertEqual((e["nouvelle"]["securise"], e["nouvelle"]["valide"]), (True, False))
         self.ipc("essai", "remplirNouveau", "Nouveau: essai", "true", "m0t-de-passe", "true")
         self.assertTrue(self.etat()["nouvelle"]["valide"])
@@ -880,8 +879,9 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
 
     def test_nouveau_reseau_ouvert_refuse(self):
         # Réseau ouvert : ni sécurité ni « hidden ». Un refus de nmcli s'affiche sous le formulaire, qui reste ouvert ;
-        # « Annuler » revient au profil choisi.
-        self.ouvrir()
+        # « Annuler » revient à la page d'onglet.
+        self.ipc("reseau", "ouvrir")
+        self.jusqua(lambda e: e["fenetre"] and e["rangees"], "fenêtre construite")
         self.ipc("essai", "nouveau")
         self.jusqua(lambda e: e["nouvelle"].get("visible"), "fiche Nouveau réseau")
         self.ipc("essai", "remplirNouveau", "Ouvert", "false", "", "false")
@@ -893,17 +893,72 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
         self.assertIn("connection add type wifi con-name Ouvert ssid Ouvert", self.appels())
         self.ipc("essai", "cliquerNouveau", "annuler")
         e = self.jusqua(lambda e: not e["nouvelle"].get("visible", False), "fiche refermée")
-        self.assertEqual((e["fiche"]["uuid"], e["selection"]), ("wifi-1", ["inactive", True, False]))
+        self.assertEqual((e["sousPage"], e["fiche"], e["selection"]), ("", {}, ["inactive", True, False]))
 
     def test_profil_demande(self):
         # « Détails… » du popover : la fenêtre s'ouvre sur le profil demandé (par uuid ou par nom), et la demande est
         # consommée ; une demande faite fenêtre ouverte est suivie aussitôt.
         self.ipc("essai", "demander", "hotspot-1")
-        self.jusqua(lambda e: e["fiche"].get("uuid") == "hotspot-1" and e["fiche"]["lu"], "profil demandé lu")
+        e = self.jusqua(lambda e: e["fiche"].get("uuid") == "hotspot-1" and e["fiche"]["lu"], "profil demandé lu")
+        self.assertEqual((e["onglet"], e["sousPage"]), ("wifi", "hotspot-1"))
         self.assertEqual(self.ipc("essai", "demande"), "")
         self.ipc("essai", "demander", "Wifi_TRIADES")
         self.jusqua(lambda e: e["fiche"].get("uuid") == "wifi-1", "demande suivie fenêtre ouverte")
         self.assertEqual(self.ipc("essai", "demande"), "")
+        # Un profil filaire choisit l'onglet Filaire.
+        self.ipc("essai", "demander", "filaire-1")
+        e = self.jusqua(lambda e: e["fiche"].get("uuid") == "filaire-1", "profil filaire demandé")
+        self.assertEqual((e["onglet"], e["sousPage"]), ("filaire", "filaire-1"))
+        self.assertEqual(self.ipc("essai", "demande"), "")
+
+    def test_onglets(self):
+        # Trois onglets, avec leur état : le Wi-Fi dit « Désactivé » ou « Non connecté » (ou le réseau joint), le
+        # Filaire l'état du câble, le VPN « Non connecté ». Le Wi-Fi est l'onglet d'ouverture, sans sous-page.
+        self.ipc("reseau", "ouvrir")
+        e = self.jusqua(lambda e: e["fenetre"] and e["rangees"], "fenêtre construite")
+        self.assertEqual([o[:2] for o in e["onglets"]], [["wifi", "Wi-Fi"], ["filaire", "Filaire"], ["vpn", "VPN"]])
+        self.assertTrue(e["onglets"][0][2])
+        self.assertIn(e["onglets"][1][2], ("Connecté", "Câble débranché", "Aucune carte"))
+        self.assertEqual(e["onglets"][2][2], "Non connecté")
+        self.assertEqual((e["onglet"], e["sousPage"]), ("wifi", ""))
+        self.assertEqual(e["selection"], ["inactive", True, False])
+
+    def test_changer_d_onglet(self):
+        # Changer d'onglet ferme la sous-page et remet le défilement en haut, comme le retour ; les flèches du
+        # clavier passent d'un onglet à l'autre.
+        e = self.ouvrir()
+        self.assertGreater(e["defilement"][1], e["defilement"][2], "la sous-page du profil actif défile")
+        self.ipc("essai", "defiler", "40")
+        self.assertEqual(self.etat()["defilement"][0], 40)
+        self.ipc("essai", "onglet", "filaire")
+        e = self.jusqua(lambda e: e["onglet"] == "filaire", "onglet Filaire")
+        self.assertEqual((e["sousPage"], e["defilement"][0], e["fiche"]), ("", 0, {}))
+        self.ipc("essai", "bas")
+        e = self.jusqua(lambda e: e["onglet"] == "vpn", "flèche bas")
+        self.ipc("essai", "haut")
+        self.jusqua(lambda e: e["onglet"] == "filaire", "flèche haut")
+
+    def test_sous_page_et_retour(self):
+        # Un clic sur un profil de la page d'onglet ouvre sa sous-page ; la rangée de retour et Échap la referment
+        # et remettent le défilement en haut. La fiche n'existe que sous sa sous-page.
+        self.ipc("reseau", "ouvrir")
+        self.jusqua(lambda e: e["fenetre"] and e["rangees"], "fenêtre construite")
+        self.ipc("essai", "rangeeProfil", "hotspot-1")
+        e = self.jusqua(lambda e: e["fiche"].get("uuid") == "hotspot-1" and e["fiche"]["lu"], "sous-page ouverte")
+        self.assertEqual((e["onglet"], e["sousPage"]), ("wifi", "hotspot-1"))
+        self.ipc("essai", "defiler", "20")
+        self.ipc("essai", "retour")
+        e = self.jusqua(lambda e: e["sousPage"] == "", "retour")
+        self.assertEqual((e["fiche"], e["defilement"][0]), ({}, 0))
+        self.ipc("essai", "choisir", "wifi-1")
+        self.jusqua(lambda e: e["fiche"].get("uuid") == "wifi-1", "autre sous-page")
+        self.ipc("essai", "echap")
+        e = self.jusqua(lambda e: e["sousPage"] == "", "Échap")
+        self.assertEqual(e["fiche"], {})
+        # Sans sous-page, Échap ne change rien.
+        self.ipc("essai", "echap")
+        self.assertEqual(self.etat()["onglet"], "wifi")
+        self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
 
     def test_priorite(self):
         self.ouvrir("hotspot-1")

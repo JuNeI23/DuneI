@@ -9,9 +9,12 @@ import "../Composants"
 // Entrées : icone, facultative, icône d'un Medaillon à gauche ; libelle ; aide, facultative, sous le libellé, en
 // texte secondaire ; erreur, facultative, sous la rangée, à la couleur d'erreur ; filet, vrai sauf pour la première
 // ligne d'un groupe, en retrait à reglages.textColumn avec une icône, à space.scale[2] sans, et à space.scale[3]
-// du bord droit (bible, « Rangées de liste ») ; et le contrôle déclaré comme enfant.
-// Sortie : aucune. Erreurs : aucune ; avant le chargement des tokens, les retraits sont nuls.
-// Dépendances : Medaillon, Texte, Separateur, Theme (reglages, space, color), QtQuick.Layouts.
+// du bord droit (bible, « Rangées de liste ») ; cliquable, faux par défaut : vrai, la rangée entière réagit au clic
+// (curseur en main, signal clique) ; et le contrôle déclaré comme enfant.
+// Sortie : signal clique(), émis au clic d'une rangée cliquable.
+// Erreurs : aucune ; avant le chargement des tokens, les retraits sont nuls.
+// Dépendances : Medaillon, Texte, Separateur, Theme (reglages, space, color), QtQuick.Layouts, TapHandler et
+// HoverHandler (QtQuick).
 // Cotes : au moins reglages.row de haut ; contenu à space.scale[2] (12) des bords.
 ColumnLayout {
     id: ligne
@@ -21,10 +24,16 @@ ColumnLayout {
     property string icone
     property bool iconeActive: false
     property bool filet: true
+    property bool cliquable: false
     default property alias controle: emplacement.data
     readonly property real cote: Theme.space?.scale[2] ?? 0
     Layout.fillWidth: true
     spacing: 0
+
+    signal clique()
+
+    TapHandler { enabled: ligne.cliquable; onTapped: ligne.clique() }
+    HoverHandler { enabled: ligne.cliquable; cursorShape: Qt.PointingHandCursor }
 
     Separateur {
         visible: ligne.filet

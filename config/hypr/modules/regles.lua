@@ -11,7 +11,7 @@ M.behaviour = {
     -- Correctif du glisser-déposer XWayland : les fenêtres de transfert, sans classe ni titre, ne prennent pas le focus.
     { name = "glisser-xwayland", no_focus = true,
       match = { class = "^$", title = "^$", xwayland = true, float = true, fullscreen = false, pin = false } },
-    -- La fenêtre Réseau de la coque (L2-11) flotte, centrée, à la taille que la coque lui demande (860 × 720).
+    -- La fenêtre Réseau de la coque (L2-11) flotte, centrée, à la taille que la coque lui demande (840 × 640).
     { name = "fenetre-reseau", match = { class = "^org\\.quickshell$", title = "^Réseau$" }, float = true, center = true },
 }
 

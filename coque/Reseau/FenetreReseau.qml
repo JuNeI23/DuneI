@@ -11,17 +11,17 @@ import "../Composants"
 // contrôle : une création synchrone, pendant la notification de Theme.ready, verrait les raccourcis de groupe
 // encore indéfinis.
 // Entrées : aucune ; EtatReseau.fenetre commande la construction.
-// La fenêtre porte en tête, au-dessus du titre de la barre latérale, ses pastilles (PastillesFenetre) : fermer la
+// La fenêtre porte en tête, au sommet du plateau de la barre latérale (bible, « Pastilles de fenêtre »), ses pastilles (PastillesFenetre) : fermer la
 // détruit, réduire l'envoie au bureau spécial, agrandir bascule le plein écran. Une règle Hyprland
 // (config/hypr/modules/regles.lua, « fenetre-reseau ») la fait flotter, centrée, à sa taille implicite.
 // Sorties : panneau, le PanneauReseau de la fenêtre construite, null fermée ; pastilles, ses PastillesFenetre ;
 // fonction fermer ; IPC « reseau ouvrir ».
 // Erreurs : aucune ; avant le chargement des tokens, la fenêtre n'est pas construite.
 // Dépendances : quickshell ≥ 0.3 (LazyLoader, FloatingWindow, IpcHandler), Theme, Surface, PastillesFenetre,
-// PanneauReseau, EtatReseau.
-// Cotes : 860 × 720 px par défaut (la maquette en donnait 608, où la fiche d'un profil actif, haute de 646 px, se
-// coupait au bas de « Oublier ce réseau »), et au moins 720 × 480 px ; la fiche défile au-delà ; pastilles à space.scale[3] (16) du
-// coin haut gauche.
+// PanneauReseau, EtatReseau, Theme (reglages, space).
+// Cotes : 840 × 640 px par défaut (direction D4) et au moins 720 × 480 px ; la sous-page d'un profil défile
+// au-delà ; pastilles au sommet du plateau latéral, à reglages.sidebarInset plus space.scale[2] (12) du coin haut
+// gauche de la fenêtre, dont l'angle reste radius.window (la règle Hyprland ne change pas).
 Scope {
     id: racine
 
@@ -41,8 +41,8 @@ Scope {
             readonly property alias pastilles: pastilles
             title: "Réseau"
             color: Theme.color?.surfaceWindow ?? "transparent"
-            implicitWidth: 860
-            implicitHeight: 720
+            implicitWidth: 840
+            implicitHeight: 640
             minimumSize: Qt.size(720, 480)
             onClosed: racine.fermer()
             onVisibleChanged: if (!visible) racine.fermer()
@@ -57,7 +57,7 @@ Scope {
                 }
                 PastillesFenetre {
                     id: pastilles
-                    x: Theme.space?.scale[3] ?? 0
+                    x: (Theme.reglages?.sidebarInset ?? 0) + (Theme.space?.scale[2] ?? 0)
                     y: x
                     titre: "Réseau"
                     onFermer: racine.fermer()

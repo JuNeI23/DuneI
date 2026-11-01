@@ -5,59 +5,126 @@ import "../Theme"
 import "../Composants"
 import "nmcli.js" as Nmcli
 
-// PanneauReseau — panneau Réseau : les profils enregistrés à gauche, la fiche du profil choisi à droite (L2-11).
+// PanneauReseau — panneau Réseau : une barre latérale à trois onglets (Wi-Fi, Filaire, VPN) et une pile de pages à
+// droite, page d'onglet puis sous-page d'un profil (L2-11, direction D4).
 // Rôle : un Item sans fenêtre, que FenetreReseau pose dans sa FloatingWindow et que l'écran de réglages (L5-01)
-// reprendra tel quel comme premier panneau. La barre latérale, au titre « Réseau », liste tous les profils Wi-Fi
-// puis filaires, y compris hors de portée (nmcli.profilsFenetre) : icône (partage du téléphone pour un profil
-// facturé), nom, état, pastille verte sur le profil actif. C'est une colonne de navigation (Liste.navigation) : le
-// profil choisi prend un fond neutre levé d'un cran et un nom en graisse moyenne, jamais le fond d'accent. Le profil
-// demandé (etat.profilDemande, posé par « Détails… » du popover), sinon le profil actif, est choisi à l'ouverture ; une demande faite fenêtre ouverte est
-// suivie aussitôt, et toute demande est consommée (remise à vide) dès que son profil est sélectionné ; un clic, ou
-// les flèches de la liste, en choisissent un autre, dont la FicheProfil occupe la droite, dans une zone qui défile.
-// Le bouton « + » au pied de la colonne ouvre à droite la fiche « Nouveau réseau » (FicheNouveau, construite à
-// l'ouverture et détruite à la fermeture) ; aucune rangée n'est alors sélectionnée ; le profil ajouté est choisi
-// dès que la lecture des profils le montre (etat.profilDemande), « Annuler » ou un clic dans la liste referment la
-// fiche.
+// reprendra tel quel comme premier panneau. À gauche, un plateau surfacePanel au rayon radius.panel, détaché du bord
+// de reglages.sidebarInset (bible, « Formes »), large de layout.sidebarDefault moins ce retrait ; les pastilles de
+// la fenêtre (bible, « Pastilles de fenêtre ») se posent à son sommet, dans la hauteur enTete réservée. Dessous,
+// les trois onglets de reglages.tabHeight : médaillon (à l'accent pour l'onglet choisi), nom en échelon 2 (graisse
+// moyenne pour l'onglet choisi) et état en échelon 0 au texte secondaire (Wi-Fi : réseau joint, « Désactivé » ou
+// « Non connecté » ; Filaire : « Connecté », « Câble débranché » ou « Aucune carte » ; VPN : « Non connecté » pour
+// l'instant). La barre est une colonne de navigation (Liste.navigation, bible, « Sélectionné inactif ») : l'onglet
+// choisi prend la plaque neutre controlRaised et un nom en graisse moyenne, jamais le fond d'accent ; les
+// flèches haut et bas passent d'un onglet à l'autre, et le contour de focus (bible, « Focus clavier ») n'orne que la
+// rangée courante, jamais un anneau.
+// À droite, une zone qui défile, en retrait de space.blockGap, porte la page de l'onglet (PageWifi, PageFilaire,
+// PageVpn) ; une sous-page la remplace : la rangée de retour « ‹ Wi-Fi » (ou le nom de l'onglet courant), puis la
+// FicheProfil du profil (sousPage = son uuid) ou la FicheNouveau (sousPage = « nouveau »). Changer d'onglet, ouvrir
+// une sous-page ou revenir remet le défilement en haut ; Échap, tant qu'une sous-page est ouverte, revient à la page
+// d'onglet. La FicheProfil n'existe que sous sa sous-page : le secret qu'elle a lu disparaît au retour.
+// Le profil demandé (etat.profilDemande, posé par « Détails… » du popover) ouvre sa sous-page et choisit son onglet
+// (Wi-Fi pour un profil 802-11-wireless, Filaire pour un profil ethernet) ; une demande faite fenêtre ouverte est
+// suivie aussitôt, et toute demande est consommée (remise à vide) dès que son profil est lu. Sans demande, la fenêtre
+// s'ouvre sur la page de l'onglet Wi-Fi.
 // La facturation de chaque profil Wi-Fi est lue d'un seul processus quand la liste des profils change, puis tenue à
 // jour par les lectures de la fiche ; aucun minuteur.
-// Entrées : etat, la source de l'état et des actions, EtatReseau par défaut ; choisi, uuid du profil affiché ;
-// enTete, hauteur réservée en haut de la barre latérale, au-dessus de son titre (les pastilles d'une fenêtre), 0 par
-// défaut ; nouveau, vrai quand la fiche « Nouveau réseau » occupe la droite.
-// Sorties : rangees, les rangées de la liste (nmcli.profilsFenetre) ; fiche, la FicheProfil ; defilement, le
-// Flickable de la fiche ; nouvelle, la
-// FicheNouveau ouverte, null sinon ; factures, uuid →
-// facturation lue.
-// Erreurs : sans profil, la fiche est vide et « Aucun profil enregistré. » s'affiche ; un échec de la lecture des
-// factures laisse les icônes Wi-Fi ordinaires.
-// Dépendances : EtatReseau (profils, reseaux, facture, profilDemande), FicheProfil, nmcli.js (profilsFenetre,
-// lireFactures), FicheNouveau, Liste, Rangee, Bouton, Infobulle, Surface, Separateur, Icone, Texte, Theme,
-// Quickshell.Io (Process, StdioCollector).
-// Cotes : barre latérale de 236 px, au fond de panneau, séparée par un filet ; rangées de profil de 40 px ; « + » à
-// space.scale[2] (12) du coin bas gauche ; fiche en
-// retrait de space.scale[3] (16) en haut et space.blockGap (24) sur les côtés.
+// Entrées : etat, la source de l'état et des actions, EtatReseau par défaut ; onglet, « wifi » (défaut), « filaire »
+// ou « vpn » ; sousPage, l'uuid du profil ouvert, « nouveau » pour la fiche d'un autre réseau, vide pour la page
+// d'onglet ; enTete, hauteur réservée en haut de la barre latérale pour les pastilles d'une fenêtre, 0 par défaut.
+// Sorties : onglets, [{cle, nom, etat, icone}] des trois onglets ; rangees, les profils (nmcli.profilsFenetre) ;
+// fiche, la FicheProfil ouverte, null sinon ; nouvelle, la FicheNouveau ouverte, null sinon ; defilement, le
+// Flickable des pages ; liste, la Liste des onglets ; factures, uuid → facturation lue. Fonctions : choisirOnglet,
+// ouvrirProfil, ouvrirNouveau, retour, ajoute, remplir.
+// Erreurs : un échec de la lecture des factures laisse les icônes Wi-Fi ordinaires ; une sous-page dont le profil
+// disparaît (supprimé ailleurs) se referme.
+// Dépendances : EtatReseau (profils, reseaux, facture, profilDemande, radio, reseauActif, filaire, carteFilaire),
+// PageWifi, PageFilaire, PageVpn, FicheProfil, FicheNouveau, nmcli.js (profilsFenetre, lireFactures), Liste, Rangee,
+// Medaillon, Bouton, Texte, Theme, Quickshell.Io (Process, StdioCollector).
+// Cotes : plateau détaché de reglages.sidebarInset (8) sur ses quatre côtés, de largeur layout.sidebarDefault
+// moins ce retrait, au rayon radius.panel ; onglets de reglages.tabHeight (48), séparés de space.scale[0] (4) ;
+// pages en retrait de space.blockGap (24) de la zone qui défile.
 Item {
     id: panneau
 
+    // Le panneau lui-même, pour les pages dont la propriété panneau masque l'identifiant du même nom.
+    readonly property Item soi: panneau
     property var etat: EtatReseau
-    property string choisi: ""
+    property string onglet: "wifi"
+    property string sousPage: ""
     property real enTete: 0
-    property bool nouveau: false
-    readonly property var nouvelle: chargeurNouveau.item
     property var factures: ({})
     readonly property var rangees: Nmcli.profilsFenetre(etat.profils, etat.reseaux.map(r => r.name), factures, etat.facture)
-    readonly property alias fiche: fiche
+    readonly property var onglets: [
+        {cle: "wifi", nom: "Wi-Fi", icone: etat.reseauActif ? "network-wireless-signal-excellent" : "network-wireless-offline",
+         etat: !etat.radio ? "Désactivé" : etat.reseauActif ? etat.reseauActif.name : "Non connecté"},
+        {cle: "filaire", nom: "Filaire", icone: etat.filaire ? "network-wired" : "network-wired-disconnected",
+         etat: etat.filaire ? "Connecté" : etat.carteFilaire ? "Câble débranché" : "Aucune carte"},
+        {cle: "vpn", nom: "VPN", icone: "network-vpn", etat: "Non connecté"}
+    ]
+    readonly property string nomOnglet: onglets.find(o => o.cle === onglet)?.nom ?? ""
+    readonly property bool sousPageProfil: sousPage !== "" && sousPage !== "nouveau"
+    readonly property var fiche: chargeurFiche.item
+    readonly property var nouvelle: chargeurNouveau.item
     readonly property alias defilement: defilement
+    readonly property alias liste: liste
     // Uuid des profils Wi-Fi : la facturation est relue quand cette liste change, et seulement alors.
     readonly property string cleFactures: rangees.filter(r => r.wifi).map(r => r.uuid).join(" ")
-    // Empreinte des rangées : le modèle de la liste n'est reconstruit que si elle change.
-    property string empreinte: ""
 
+    // choisirOnglet — affiche la page d'un onglet, en refermant toute sous-page. Entrée : cle, « wifi », « filaire »
+    // ou « vpn ». Sortie : aucune. Erreurs : aucune. Dépendances : onglet, retour.
+    function choisirOnglet(cle) { onglet = cle; retour() }
+
+    // ouvrirProfil — ouvre la sous-page d'un profil. Entrée : uuid. Sortie : aucune. Erreurs : un uuid inconnu
+    // referme aussitôt la sous-page à la lecture suivante (remplir). Dépendances : sousPage.
+    function ouvrirProfil(uuid) { sousPage = uuid }
+
+    // ouvrirNouveau — ouvre la fiche « Nouveau réseau » (« Autre réseau… »). Entrées : aucune. Sortie : aucune.
+    // Erreurs : aucune. Dépendances : sousPage.
+    function ouvrirNouveau() { sousPage = "nouveau" }
+
+    // retour — revient de la sous-page à la page d'onglet. Entrées : aucune. Sortie : aucune. Erreurs : aucune.
+    // Dépendances : sousPage.
+    function retour() { sousPage = "" }
+
+    // ajoute — referme la fiche « Nouveau réseau » et demande le profil créé, dont la sous-page s'ouvre dès que la
+    // lecture des profils le montre. Entrées : uuid, celui que nmcli a donné (vide s'il manque) ; nom, le nom du
+    // profil. Sortie : aucune. Erreurs : aucune. Dépendances : etat.profilDemande, retour, remplir.
+    function ajoute(uuid, nom) {
+        retour()
+        etat.profilDemande = uuid || nom
+        remplir()
+    }
+
+    // remplir — ouvre la sous-page du profil demandé par etat.profilDemande (uuid ou nom) s'il figure parmi les
+    // rangées, après avoir choisi son onglet, puis consomme la demande ; referme une sous-page dont le profil n'existe
+    // plus. Entrées : aucune. Sortie : aucune. Erreurs : aucune ; une demande dont le profil n'est pas (encore) lu
+    // attend la lecture suivante. Dépendances : rangees, etat.profilDemande, choisirOnglet, ouvrirProfil.
+    function remplir() {
+        const demande = etat.profilDemande === "" ? null
+            : rangees.find(r => r.uuid === etat.profilDemande || r.nom === etat.profilDemande)
+        if (demande) {
+            choisirOnglet(demande.wifi ? "wifi" : "filaire")
+            ouvrirProfil(demande.uuid)
+            etat.profilDemande = ""
+        } else if (sousPageProfil && rangees.length > 0 && !rangees.some(r => r.uuid === sousPage)) retour()
+    }
+
+    // Retour au haut de la zone qui défile à chaque changement de page.
+    onOngletChanged: { sousPage = ""; defilement.contentY = 0 }
+    onSousPageChanged: defilement.contentY = 0
     onRangeesChanged: remplir()
     Connections {
         target: panneau.etat
         function onProfilDemandeChanged() { panneau.remplir() }
     }
     onCleFacturesChanged: if (cleFactures !== "") lectureFactures.running = true
+    // Échap quitte la sous-page ; sans sous-page, la touche poursuit son chemin.
+    Keys.onEscapePressed: event => {
+        event.accepted = sousPage !== ""
+        retour()
+    }
+
     // La liste reçoit le focus à l'ouverture, pour les flèches, sans montrer le contour de focus : il n'appartient
     // qu'au focus venu du clavier (Liste.focusClavier). Le focus n'arrive qu'à l'activation de la fenêtre, après la
     // construction : sa première arrivée est donc effacée au passage.
@@ -71,44 +138,18 @@ Item {
             liste.focusClavier = false
         }
     }
-
-    // remplir — reconstruit le modèle de la liste si les rangées ont changé, choisit le profil demandé par
-    // etat.profilDemande (uuid ou nom) s'il figure dans la liste, puis consomme la demande, et garde sinon un profil
-    // choisi valide (le profil actif, sinon le premier). Entrées : aucune. Sortie : aucune. Erreurs : aucune ; une
-    // demande dont le profil n'est pas (encore) lu attend la lecture suivante. Dépendances : rangees, modele, etat.
-    function remplir() {
-        const e = JSON.stringify(rangees)
-        if (e !== empreinte) {
-            empreinte = e
-            modele.clear()
-            for (const r of rangees) modele.append({groupe: r.groupe, nom: r.nom, uuid: r.uuid, statut: r.etat,
-                                                    symbole: r.icone, actif: r.actif})
-        }
-        const demande = etat.profilDemande === "" ? null
-            : rangees.find(r => r.uuid === etat.profilDemande || r.nom === etat.profilDemande)
-        if (demande) {
-            choisi = demande.uuid
-            etat.profilDemande = ""
-        } else if (!rangees.some(r => r.uuid === choisi)) choisi = (rangees.find(r => r.actif) ?? rangees[0])?.uuid ?? ""
+    Connections {
+        target: panneau
+        // L'onglet choisi autrement qu'au clic (une demande de profil) déplace aussi la rangée courante.
+        function onOngletChanged() { liste.currentIndex = panneau.onglets.findIndex(o => o.cle === panneau.onglet) }
     }
 
-    // apresOubli — choisit un autre profil après l'oubli du profil affiché. Entrée : oublie, son uuid.
-    // Sortie : aucune. Erreurs : aucune. Dépendances : rangees.
-    function apresOubli(oublie) {
-        const autres = rangees.filter(r => r.uuid !== oublie)
-        choisi = (autres.find(r => r.actif) ?? autres[0])?.uuid ?? ""
+    ListModel {
+        id: modele
+        ListElement { cle: "wifi" }
+        ListElement { cle: "filaire" }
+        ListElement { cle: "vpn" }
     }
-
-    // ajoute — referme la fiche « Nouveau réseau » et demande le profil créé, choisi dès que la lecture des profils le
-    // montre. Entrées : uuid, celui que nmcli a donné (vide s'il manque) ; nom, le nom du profil. Sortie : aucune.
-    // Erreurs : aucune. Dépendances : etat.profilDemande, remplir.
-    function ajoute(uuid, nom) {
-        nouveau = false
-        etat.profilDemande = uuid || nom
-        remplir()
-    }
-
-    ListModel { id: modele }
 
     // Facturation des profils Wi-Fi, une ligne « uuid:valeur » par profil, d'un seul processus.
     Process {
@@ -118,164 +159,123 @@ Item {
         stdout: StdioCollector { onStreamFinished: panneau.factures = Nmcli.lireFactures(text) }
     }
 
-    Surface {
-        id: laterale
-        role: "surfacePanel"
-        width: 236
-        height: parent.height
-
-        Texte {
-            id: titre
-            x: Theme.space?.scale[3] ?? 0
-            y: panneau.enTete + (Theme.space?.scale[2] ?? 0)
-            text: "Réseau"
-            echelon: 4
-            moyen: true
-            color: Theme.color?.textEmphasis ?? "transparent"
-        }
+    // Plateau de la barre latérale (bible, « Formes ») : surfacePanel opaque, détaché des bords de la fenêtre.
+    Rectangle {
+        id: plateau
+        readonly property string dnRole: "surfacePanel"
+        x: Theme.reglages?.sidebarInset ?? 0
+        y: x
+        width: (Theme.layout?.sidebarDefault ?? 0) - x
+        height: parent.height - 2 * x
+        radius: Theme.radius?.panel ?? 0
+        color: Theme.color?.surfacePanel ?? "transparent"
 
         Liste {
             id: liste
-            anchors.top: titre.bottom
-            anchors.topMargin: Theme.space?.scale[1] ?? 0
-            anchors.bottom: plus.top
-            anchors.bottomMargin: Theme.space?.scale[1] ?? 0
-            width: parent.width
-            clip: true
+            x: Theme.space?.scale[1] ?? 0
+            y: Math.max(panneau.enTete - plateau.y, 0) + (Theme.space?.scale[2] ?? 0)
+            width: parent.width - 2 * x
+            height: count * (Theme.reglages?.tabHeight ?? 0) + (count - 1) * spacing
+            spacing: Theme.space?.scale[0] ?? 0
+            interactive: false
             model: modele
             selectionSuitCourant: false
-            // Colonne de navigation : la rangée choisie prend un fond neutre levé d'un cran et un nom en graisse
-            // moyenne, jamais le fond d'accent.
+            // Colonne de navigation : l'onglet choisi prend la plaque neutre et un nom en graisse moyenne, jamais le
+            // fond d'accent.
             navigation: true
             // Au clavier, la sélection suit les flèches, comme une barre latérale de macOS.
-            onCurrentIndexChanged: if (focusClavier && currentIndex >= 0) {
-                panneau.nouveau = false
-                panneau.choisi = modele.get(currentIndex).uuid
-            }
-
-            section.property: "groupe"
-            section.delegate: Texte {
-                required property string section
-                width: ListView.view.width
-                leftPadding: Theme.space?.scale[3] ?? 0
-                topPadding: Theme.space?.scale[1] ?? 0
-                bottomPadding: Theme.space?.scale[0] ?? 0
-                text: section.toUpperCase()
-                echelon: 0
-                moyen: true
-                color: Theme.color?.textTertiary ?? "transparent"
-            }
+            onCurrentIndexChanged: if (focusClavier && currentIndex >= 0 && modele.get(currentIndex).cle !== panneau.onglet)
+                panneau.choisirOnglet(modele.get(currentIndex).cle)
 
             delegate: Rangee {
                 id: rangee
-                required property string nom
-                required property string uuid
-                required property string statut
-                required property string symbole
-                required property bool actif
-                // Pendant la saisie d'un nouveau réseau, aucune rangée n'est sélectionnée.
-                readonly property bool choisie: uuid === panneau.choisi && !panneau.nouveau
-                readonly property color secondaire: (choisie ? rangee.etat.texte : Theme.color?.textTertiary) ?? "transparent"
+                required property string cle
+                readonly property var resume: panneau.onglets.find(o => o.cle === cle)
 
-                implicitHeight: 40
-                selectionnee: choisie
-                onActive: {
-                    panneau.nouveau = false
-                    panneau.choisi = uuid
-                }
+                implicitHeight: Theme.reglages?.tabHeight ?? 0
+                selectionnee: cle === panneau.onglet
+                onActive: panneau.choisirOnglet(cle)
 
                 contentItem: RowLayout {
                     spacing: Theme.space?.scale[1] ?? 0
-                    Icone {
-                        nom: rangee.symbole
-                        // Un profil hors de portée garde son icône, en ton atténué comme son nom.
-                        couleur: (rangee.choisie ? rangee.etat.texte : rangee.statut === "Hors de portée"
-                            ? Theme.color?.textTertiary : Theme.color?.textSecondary) ?? "transparent"
-                    }
+                    Medaillon { nom: rangee.resume.icone; actif: rangee.selectionnee }
                     ColumnLayout {
                         Layout.fillWidth: true
                         spacing: 0
+                        Texte { Layout.fillWidth: true; text: rangee.resume.nom; moyen: rangee.gras; elide: Text.ElideRight; color: rangee.etat.texte }
                         Texte {
                             Layout.fillWidth: true
-                            text: rangee.nom
-                            moyen: rangee.gras
-                            elide: Text.ElideRight
-                            color: rangee.statut === "Hors de portée" && !rangee.choisie ? rangee.secondaire : rangee.etat.texte
-                        }
-                        Texte {
-                            Layout.fillWidth: true
-                            text: rangee.statut
+                            text: rangee.resume.etat
                             echelon: 0
                             elide: Text.ElideRight
-                            color: rangee.secondaire
-                            opacity: rangee.choisie ? 0.8 : 1
+                            color: Theme.color?.textSecondary ?? "transparent"
                         }
-                    }
-                    Rectangle {
-                        visible: rangee.actif
-                        implicitWidth: 8
-                        implicitHeight: 8
-                        radius: 4
-                        color: Theme.color?.success ?? "transparent"
                     }
                 }
             }
         }
-
-        // Ajouter un réseau : ouvre la fiche « Nouveau réseau » à droite.
-        Bouton {
-            id: plus
-            objectName: "ajouterReseau"
-            anchors.left: parent.left
-            anchors.bottom: parent.bottom
-            anchors.margins: Theme.space?.scale[2] ?? 0
-            icone: "list-add"
-            onClicked: panneau.nouveau = true
-            Infobulle { cible: plus; texte: "Ajouter un réseau" }
-        }
     }
-    Separateur { vertical: true; x: laterale.width; height: parent.height }
 
     Flickable {
         id: defilement
-        anchors.left: laterale.right
-        anchors.right: parent.right
+        x: Theme.layout?.sidebarDefault ?? 0
+        width: parent.width - x
         height: parent.height
         clip: true
-        contentHeight: (panneau.nouveau ? chargeurNouveau.implicitHeight : fiche.implicitHeight) + 2 * (Theme.space?.scale[3] ?? 0)
+        contentHeight: pages.implicitHeight + 2 * (Theme.space?.blockGap ?? 0)
         boundsBehavior: Flickable.StopAtBounds
 
-        FicheProfil {
-            id: fiche
-            visible: !panneau.nouveau
+        ColumnLayout {
+            id: pages
             x: Theme.space?.blockGap ?? 0
-            y: Theme.space?.scale[3] ?? 0
+            y: x
             width: defilement.width - 2 * x
-            uuid: panneau.choisi
-            rangee: panneau.rangees.find(r => r.uuid === panneau.choisi) ?? null
-            etat: panneau.etat
-            onRelu: (u, p) => panneau.factures = Object.assign({}, panneau.factures, {[u]: p.facture})
-            onOublie: panneau.apresOubli(uuid)
-        }
+            spacing: Theme.space?.scale[1] ?? 0
 
-        Loader {
-            id: chargeurNouveau
-            active: panneau.nouveau
-            x: fiche.x
-            y: fiche.y
-            width: fiche.width
-            sourceComponent: FicheNouveau {
-                etat: panneau.etat
-                onAjoute: (uuid, nom) => panneau.ajoute(uuid, nom)
-                onAnnule: panneau.nouveau = false
+            // Retour de la sous-page, nommé d'après l'onglet courant.
+            Bouton {
+                objectName: "retour"
+                visible: panneau.sousPage !== ""
+                text: "‹ " + panneau.nomOnglet
+                onClicked: panneau.retour()
+            }
+
+            Loader {
+                id: chargeurPage
+                visible: panneau.sousPage === ""
+                Layout.fillWidth: true
+                sourceComponent: panneau.onglet === "filaire" ? pageFilaire : panneau.onglet === "vpn" ? pageVpn : pageWifi
+            }
+            Loader {
+                id: chargeurFiche
+                active: panneau.sousPageProfil
+                visible: active
+                Layout.fillWidth: true
+                sourceComponent: FicheProfil {
+                    width: chargeurFiche.width
+                    uuid: panneau.sousPage
+                    rangee: panneau.rangees.find(r => r.uuid === panneau.sousPage) ?? null
+                    etat: panneau.etat
+                    onRelu: (u, p) => panneau.factures = Object.assign({}, panneau.factures, {[u]: p.facture})
+                    onOublie: panneau.retour()
+                }
+            }
+            Loader {
+                id: chargeurNouveau
+                active: panneau.sousPage === "nouveau"
+                visible: active
+                Layout.fillWidth: true
+                sourceComponent: FicheNouveau {
+                    width: chargeurNouveau.width
+                    etat: panneau.etat
+                    onAjoute: (uuid, nom) => panneau.ajoute(uuid, nom)
+                    onAnnule: panneau.retour()
+                }
             }
         }
     }
 
-    Texte {
-        visible: panneau.rangees.length === 0 && !panneau.nouveau
-        anchors.centerIn: defilement
-        text: "Aucun profil enregistré."
-        color: Theme.color?.textSecondary ?? "transparent"
-    }
+    Component { id: pageWifi; PageWifi { width: chargeurPage.width; panneau: soi; etat: panneau.etat } }
+    Component { id: pageFilaire; PageFilaire { width: chargeurPage.width; panneau: soi; etat: panneau.etat } }
+    Component { id: pageVpn; PageVpn { width: chargeurPage.width; panneau: soi; etat: panneau.etat } }
 }

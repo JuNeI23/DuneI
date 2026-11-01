@@ -17,7 +17,9 @@ import "../Barre/icones.js" as Icones
 // vrai pour demander la fenêtre Réseau (posé par « Réglages réseau… » du popover, lu par la fenêtre) ;
 // profilDemande, uuid ou nom du profil que la fenêtre doit montrer (posé par « Détails… » du popover, consommé et
 // remis à vide par le panneau Réseau qui le sélectionne), vide par défaut.
-// Sorties (lecture seule) : veille (vrai de la ligne « asleep » du moniteur jusqu'à l'état suivant), carte, radio, filaire, connecte, connectivite (« unknown », « none », « portal »,
+// Sorties (lecture seule) : veille (vrai de la ligne « asleep » du moniteur jusqu'à l'état suivant), carte, radio, filaire,
+// carteFilaire (vrai si une carte filaire existe, branchée ou non : l'onglet Filaire distingue « Câble débranché » de
+// « Aucune carte »), connecte, connectivite (« unknown », « none », « portal »,
 // « limited » ou « full »), reseauActif (WifiNetwork ou null), nomActif, force (0 à 1), facture, appareil
 // (l'interface dont la lecture donne les adresses : le filaire actif, sinon le Wi-Fi), ip4, ip6,
 // passerelle, dns, mac (adresse matérielle de l'appareil actif), profils, vpnActif, icone, reseaux (WifiNetwork
@@ -47,6 +49,7 @@ Singleton {
     readonly property var deduit: Nmcli.etatAppareils(appareils, DeviceType.Wifi, DeviceType.Wired)
     readonly property bool carte: deduit.carte
     readonly property bool filaire: deduit.filaire
+    readonly property bool carteFilaire: appareils.some(d => d.type === DeviceType.Wired)
     readonly property var reseauActif: deduit.reseauActif
     readonly property bool connecte: deduit.connecte
     readonly property string nomActif: deduit.nomActif

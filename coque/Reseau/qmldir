@@ -9,3 +9,8 @@ Ligne 1.0 Ligne.qml
 Section 1.0 Section.qml
 FicheNouveau 1.0 FicheNouveau.qml
 NotificationsReseau 1.0 NotificationsReseau.qml
+TitrePage 1.0 TitrePage.qml
+GroupeProfils 1.0 GroupeProfils.qml
+PageWifi 1.0 PageWifi.qml
+PageFilaire 1.0 PageFilaire.qml
+PageVpn 1.0 PageVpn.qml
