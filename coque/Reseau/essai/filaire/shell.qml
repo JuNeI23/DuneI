@@ -51,6 +51,7 @@ ShellRoot {
             {groupe: "Wi-Fi", nom: "Wifi_TRIADES", uuid: "wifi-1", appareil: "wlan0", wifi: true, actif: true, etat: "Connecté", icone: "network-wireless-signal-excellent"}
         ]
         property string sousPage: ""
+        property string onglet: "filaire"
         function ouvrirProfil(uuid) { essai.journal("ouvrirProfil", uuid) }
     }
 

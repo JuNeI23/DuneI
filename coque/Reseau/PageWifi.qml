@@ -72,6 +72,13 @@ ColumnLayout {
         if (noms.join("\n") !== ordre.join("\n")) ordre = noms
     }
     onDeplieChanged: trier()
+    // Page cachée (autre onglet ou sous-page, la page restant vivante) : aucun secret ne survit, ni le mot de passe
+    // lu et révélé de la fiche du réseau joint, ni celui saisi dans un bloc déplié.
+    onVisibleChanged: if (!visible) {
+        fiche?.masquerSecret()
+        deplie = ""
+        erreur = ""
+    }
     Component.onCompleted: trier()
 
     // iconeSignal — icône de force d'un réseau, aux mêmes paliers que la barre. Entrée : force, de 0 à 1.

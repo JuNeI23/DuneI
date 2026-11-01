@@ -10,7 +10,8 @@ import "../Composants"
 // chacun ouvrant sa sous-page « ‹ Filaire » ; « Aucun profil filaire. » sans profil) et, pour le profil filaire actif,
 // « Adresses » en lecture seule et copiables (CarteAdresses, seulement si l'appareil du profil est celui qu'EtatReseau
 // lit), précédées de la méthode IPv4 du profil (« Automatique » ou « Fixe »), lue une fois par « nmcli -g
-// ipv4.method » au changement de profil actif et au retour de la sous-page. Aucun réglage ici : ils sont dans la sous-page (FicheProfil).
+// ipv4.method » au changement de profil actif et au retour de la sous-page de l'onglet. Aucun réglage ici : ils sont
+// dans la sous-page (FicheProfil).
 // Clavier : les profils sont des Ligne cliquables (tabulation, Entrée, Espace, contour de focus : bible, « Clavier »).
 // Entrées : panneau, le PanneauReseau (rangees, ouvrirProfil) ; etat, la source de l'état, EtatReseau par défaut
 // (filaire, carteFilaire, appareilFilaire, appareil).
@@ -48,12 +49,12 @@ ColumnLayout {
         })
     }
     // Relue au changement de profil actif (l'uuid, une chaîne : les relectures de la liste ne la relancent pas) et à
-    // la fermeture d'une sous-page, où la méthode a pu changer ; jamais à un simple changement d'onglet : la page
-    // reste vivante et garde sa dernière valeur, relue en place sans retarder son affichage.
+    // la fermeture d'une sous-page de l'onglet Filaire, où la méthode a pu changer ; jamais à un simple changement
+    // d'onglet : la page reste vivante et garde sa dernière valeur, relue en place sans retarder son affichage.
     onUuidActifChanged: { methode = ""; lireMethode() }
     Connections {
         target: page.panneau
-        function onSousPageChanged() { if (page.panneau.sousPage === "") page.lireMethode() }
+        function onSousPageChanged() { if (page.panneau.sousPage === "" && page.panneau.onglet === "filaire") page.lireMethode() }
     }
     Component.onCompleted: lireMethode()
 

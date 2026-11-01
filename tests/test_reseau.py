@@ -918,6 +918,25 @@ class PageWifiTest(EssaiCoque, unittest.TestCase):
         self.assertEqual((p["erreur"], p["revele"], p["deplie"]), ("Mot de passe refusé. Vérifiez-le et réessayez.", True, "Inconnu"))
         self.assertNotIn(self.SECRET, self.journal())
 
+    def test_aucun_secret_ne_survit_au_changement_d_onglet(self):
+        # La page reste vivante quand on change d'onglet : le mot de passe révélé de la fiche du réseau joint et celui
+        # saisi dans un bloc déplié disparaissent à son masquage, sans nouvelle lecture de la fiche.
+        psk = "psk-enregistre-jamais-journalise"
+        self.ipc("reveler")
+        p = self.jusqua(lambda p: p["ficheSecret"] == [len(psk), True], "mot de passe lu et révélé")
+        self.ipc("choisir", "Inconnu")
+        self.jusqua(lambda p: p["saisie"] == 0, "bloc déplié")
+        self.ipc("saisir", self.SECRET)
+        self.jusqua(lambda p: p["saisie"] == len(self.SECRET), "mot de passe saisi")
+        lectures = self.journal().count("essai : executer")
+        self.ipc("masquer", "true")
+        self.ipc("masquer", "false")
+        p = self.jusqua(lambda p: p["ficheSecret"] == [0, False], "fiche masquée et vidée")
+        self.assertEqual((p["deplie"], p["saisie"]), ("", -1))
+        self.assertEqual(self.journal().count("essai : executer"), lectures, "la fiche a été relue")
+        self.assertNotIn(self.SECRET, self.journal())
+        self.assertNotIn(psk, self.journal())
+
     def test_adresses_de_l_appareil_lu_seulement(self):
         # Filaire actif aussi : EtatReseau lit alors l'appareil filaire, dont les adresses ne sont pas celles du Wi-Fi joint.
         self.assertTrue(self.page()["adressesVisible"])
@@ -1533,6 +1552,19 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
         time.sleep(0.5)
         self.assertEqual(len(self.appels()), appels, "une lecture nmcli a suivi un changement d'onglet")
         print("\nMESURE_BASCULE (ms)", mesures)
+
+    def test_contour_de_focus_apres_une_touche_seulement(self):
+        # Fenêtre ouverte à la souris (comme depuis le popover) : la liste des onglets a le focus pour les flèches, mais
+        # sans contour, même si le focus part puis revient ; une flèche le montre.
+        self.ipc("reseau", "ouvrir")
+        e = self.jusqua(lambda e: e["fenetre"] and e["rangees"], "fenêtre construite")
+        self.assertEqual(self.ipc("essai", "listeFocus"), "true")
+        self.assertFalse(e["selection"][2])
+        self.ipc("essai", "refocaliser")
+        self.assertEqual(self.ipc("essai", "listeFocus"), "true")
+        self.assertFalse(self.etat()["selection"][2], "contour montré au retour du focus sans touche")
+        self.ipc("essai", "bas")
+        self.jusqua(lambda e: e["onglet"] == "filaire" and e["selection"][2], "contour après une flèche")
 
     def test_changer_d_onglet(self):
         # Changer d'onglet ferme la sous-page et remet le défilement en haut, comme le retour ; les flèches du

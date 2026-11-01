@@ -98,7 +98,7 @@ ColumnLayout {
         relectureAttendue = false
         profil = null; erreurs = {}; confirmer = false
         copie = ""; finCopie.stop()
-        secret.text = ""; secret.revele = false; secretLu = ""
+        masquerSecret()
         lire()
     }
     Component.onCompleted: lire()
@@ -186,6 +186,11 @@ ColumnLayout {
             if ("psk" in changes) secret.text = secretLu
         })
     }
+
+    // masquerSecret — vide et masque le mot de passe : champ vidé, œil refermé, secret lu oublié. La fiche reste
+    // lue : aucune relecture n'a lieu. Appelée quand la fiche change de profil ou que sa page se cache.
+    // Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : secret, secretLu.
+    function masquerSecret() { secret.text = ""; secret.revele = false; secretLu = "" }
 
     // reveler — lit le secret enregistré du profil Wi-Fi, puis le montre (demandé par l'œil du champ vide).
     // Entrées : aucune. Sortie : aucune ; secret.text rempli et révélé. Erreurs : celles de nmcli, sous le champ.

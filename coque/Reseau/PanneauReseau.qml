@@ -37,8 +37,8 @@ import "../Barre/icones.js" as Icones
 // Sorties : onglets, [{cle, nom, etat, icone}] des trois onglets ; rangees, les profils (nmcli.profilsFenetre) ;
 // fiche, la FicheProfil ouverte, null sinon ; nouvelle, la FicheNouveau ouverte, null sinon ; defilement, le
 // Flickable des pages ; liste, la Liste des onglets ; pageWifi, pageFilaire, pageVpn, les trois pages d'onglet,
-// instanciées une fois et gardées (seule leur visibilité change d'un onglet à l'autre) ; factures, uuid → facturation lue. Fonctions : choisirOnglet,
-// ouvrirProfil, ouvrirNouveau, retour, ajoute, remplir.
+// instanciées une fois et gardées (seule leur visibilité change d'un onglet à l'autre) ; factures, uuid →
+// facturation lue. Fonctions : choisirOnglet, ouvrirProfil, ouvrirNouveau, retour, ajoute, remplir.
 // Erreurs : un échec de la lecture des factures laisse les icônes Wi-Fi ordinaires ; une sous-page dont le profil
 // disparaît (supprimé ailleurs) se referme.
 // Dépendances : EtatReseau (profils, reseaux, facture, profilDemande, radio, carte, reseauActif, force, connectivite, filaire,
@@ -141,9 +141,13 @@ Item {
     }
 
     // La liste reçoit le focus à l'ouverture, pour les flèches, sans montrer le contour de focus : il n'appartient
-    // qu'au focus venu du clavier (Liste.focusClavier). Le focus n'arrive qu'à l'activation de la fenêtre, après la
-    // construction : sa première arrivée est donc effacée au passage.
-    property bool premierFocus: true
+    // qu'au focus venu du clavier (Liste.focusClavier). Le focus peut arriver, voire revenir, à l'activation de la
+    // fenêtre (par exemple quand le popover qui l'a ouverte rend le focus) : tant qu'aucune touche n'a été frappée
+    // dans la fenêtre (clavierUtilise), chaque arrivée du focus sur la liste est donc effacée au passage. Les touches
+    // que la liste consomme (flèches) lui sont relayées par Keys.forwardTo, les autres remontent jusqu'au panneau.
+    property bool clavierUtilise: false
+    Keys.onPressed: event => { clavierUtilise = true; event.accepted = false }
+    Item { id: capteurTouches; Keys.onPressed: event => { panneau.clavierUtilise = true; event.accepted = false } }
     Component.onCompleted: { remplir(); liste.forceActiveFocus(); demandeBalayage = true }
     Component.onDestruction: etat.rechercheFenetre = false
 
@@ -163,9 +167,7 @@ Item {
     Connections {
         target: liste
         function onActiveFocusChanged() {
-            if (!liste.activeFocus || !panneau.premierFocus) return
-            panneau.premierFocus = false
-            liste.focusClavier = false
+            if (liste.activeFocus && !panneau.clavierUtilise) liste.focusClavier = false
         }
     }
 
@@ -207,6 +209,7 @@ Item {
             // Colonne de navigation : l'onglet choisi prend la plaque neutre et un nom en graisse moyenne, jamais le
             // fond d'accent.
             navigation: true
+            Keys.forwardTo: [capteurTouches]
             // Au clavier, la sélection suit les flèches, comme une barre latérale de macOS.
             onCurrentIndexChanged: if (focusClavier && currentIndex >= 0 && modele.get(currentIndex).cle !== panneau.onglet)
                 panneau.choisirOnglet(modele.get(currentIndex).cle)

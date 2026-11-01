@@ -125,6 +125,11 @@ ShellRoot {
         // onglet — choisit un onglet, comme un clic sur sa rangée. Entrée : cle (wifi, filaire, vpn). Sortie : aucune.
         function onglet(cle: string): void { fenetre.panneau.liste.itemAtIndex(fenetre.panneau.onglets.findIndex(o => o.cle === cle)).clicked() }
 
+        // refocaliser — fait perdre puis reprendre le focus à la liste des onglets, comme une fenêtre qui se réactive.
+        // Entrées et sortie : aucune. Erreurs : fenêtre fermée, TypeError au journal.
+        function refocaliser(): void { fenetre.panneau.liste.focus = false; fenetre.panneau.liste.forceActiveFocus() }
+        // listeFocus — vrai si la liste des onglets a le focus actif. Sortie : texte « true » ou « false ».
+        function listeFocus(): string { return String(fenetre.panneau.liste.activeFocus) }
         // bascule — chronomètre un changement d'onglet : pose l'onglet, puis note le temps écoulé jusqu'à la prochaine
         // synchronisation de la scène (page visible et mise en page faite). Entrée : cle. Sortie : aucune ; le résultat
         // se lit par mesure(). Erreurs : fenêtre fermée, TypeError au journal. Dépendances : Window (afterSynchronizing).

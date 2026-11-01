@@ -22,6 +22,9 @@ import "Reseau"
 ShellRoot {
     id: essai
 
+    // Mot de passe enregistré que rend le faux « nmcli -s » ; il ne doit jamais paraître au journal.
+    readonly property string secretFiche: "psk-enregistre-jamais-journalise"
+
     // journal — écrit une ligne lisible par le test. Entrées : cle, valeur. Sortie : aucune. Erreurs : aucune.
     function journal(cle, valeur) { console.info("essai : " + cle + " " + valeur) }
 
@@ -70,6 +73,7 @@ ShellRoot {
         function allumer(actif) { essai.journal("allumer", actif); radio = actif }
         function executer(args, fin) {
             essai.journal("executer", JSON.stringify(args))
+            if (args[0] === "-s") return fin(0, essai.secretFiche + "\n")
             if (args[0] === "-t" && args.includes("show")) fin(0, "connection.autoconnect:yes\nconnection.autoconnect-priority:5\nconnection.metered:unknown\nipv4.method:auto\nipv4.addresses:\nipv4.gateway:\nipv4.dns:\n802-11-wireless.ssid:Wifi_TRIADES\n802-11-wireless-security.key-mgmt:wpa-psk\n")
         }
     }
@@ -190,6 +194,7 @@ ShellRoot {
                         balayage: p.balayage, activite: objet("activiteRecherche")?.visible ?? false,
                         rechercher: objet("rechercher")?.visible ?? false, radio: faux.radio, balayageEtat: faux.balayage,
                         recherche: faux.recherche, rechercheFenetre: faux.rechercheFenetre,
+                        ficheSecret: f ? [f.secret.length, f.secret.revele] : null,
                         priorite: f ? essai.trouver(f, o => o.objectName === "priorite")?.value ?? null : null,
                         disponiblesVisible: objet("disponibles").visible,
                         titres: essai.tous_(p, o => o.text !== undefined && o.moyen === true && o.echelon === 0 && o.visible).map(o => o.text),
@@ -254,6 +259,8 @@ ShellRoot {
                 // popover — le popover (autre demandeur) pose ou lâche sa demande de balayage. Entrée : valeur.
                 function popover(valeur: bool): void { faux.recherche = valeur }
                 // masquer, detruire — la page devient invisible (autre sous-page) ou est détruite. Entrées : aucune.
+                // reveler — clic sur l'œil de la fiche du réseau joint : lit le secret factice et le montre. Entrées et sortie : aucune.
+                function reveler(): void { porteur.item.fiche.reveler() }
                 function masquer(valeur: bool): void { porteur.visible = !valeur }
                 function detruire(): void { porteur.active = false }
                 // priorite — pas du Compteur de priorité. Entrée : pas (+1 ou -1).
