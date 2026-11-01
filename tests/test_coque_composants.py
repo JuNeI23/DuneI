@@ -808,6 +808,49 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
                            couleurs["fill"].lower(), glyphe, couleurs["text"].lower(), "1", "true"]
                 self.assertEqual(lire(attendu), attendu)
 
+    def test_reglages(self):
+        # Carte et rangées de réglage de la fenêtre Réseau : la rangée à aide prend reglages.rowHelp (erreur en
+        # plus), la simple reglages.row ; le texte s'aligne sur reglages.textColumn ; la carte ajoute deux gardes de
+        # space.scale[0] ; le médaillon prend reglages.medallion et radius.panel ; actif, il porte l'accent plein et
+        # la variante pleine de l'icône ; inactif, la sélection neutre (controlRaised au repos) et l'icône
+        # ordinaire ; la rangée hérite du rôle surfaceRaised de la carte.
+        self.demarrer()
+        tokens = self.tokens55()[0]
+        r, garde = tokens["reglages"], tokens["space"]["scale"][0]
+        lu = self.valeur("reglages").split()
+        erreur = int(lu[1]) - r["rowHelp"]  # la ligne d'erreur s'ajoute sous la rangée à aide
+        self.assertGreater(erreur, 0)
+        self.assertEqual([int(lu[0]), int(lu[2])], [r["rowHelp"] + erreur + r["row"] + r["medallion"] + 2 * garde, r["row"]])
+        self.assertEqual(lu[3:6], [str(r["textColumn"]), str(r["medallion"]), str(tokens["radius"]["panel"])])
+        self.assertEqual(lu[6:8], [tokens["color"]["accent"].lower(), tokens["states"]["controlRaised"]["none"]["rest"]["fill"].lower()])
+        self.assertEqual(lu[8:], ["true", "false", "surfaceRaised"])
+
+    def test_valeur_copie(self):
+        # Valeur : le clic (ici l'appel de copier) remplit le presse-papiers, fait passer « Copié » devant la valeur
+        # en fondu, puis le minuteur de motion.delays.copied remet la valeur ; au repos, rien n'est copié.
+        self.demarrer()
+        motion = self.tokens55()[1]["delays"]["copied"]
+        self.assertEqual(self.valeur("valeur").split()[:4], ["192.168.1.2", "false", "1", "0"])
+        self.ipc("valeurCopier")
+        copie = self.lire_jusqua_valeur("valeur", lambda l: l[1] == "true" and l[2] == "0" and l[3] == "1")
+        self.assertEqual(copie[4], "192.168.1.2")
+        fin = self.lire_jusqua_valeur("valeur", lambda l: l[1] == "false" and l[2] == "1" and l[3] == "0", motion / 1000 + 3)
+        self.assertEqual(fin[1:4], ["false", "1", "0"])
+
+    def lire_jusqua_valeur(self, cle: str, ok, delai: float = 3.0) -> list[str]:
+        """Relit une mesure jusqu'à ce que ok la satisfasse, ou pendant delai secondes au plus.
+
+        Entrées : cle — mesure IPC ; ok — prédicat sur la liste des mots lus ; delai — durée maximale en secondes.
+        Sortie : la dernière lecture, en mots. Erreurs : aucune (le test compare ensuite). Dépendances : valeur.
+        """
+        fin, lu = time.monotonic() + delai, []
+        while time.monotonic() < fin:
+            lu = self.valeur(cle).split()
+            if ok(lu):
+                break
+            time.sleep(0.1)
+        return lu
+
     def test_exclusivite(self):
         # Le singleton Overlays seul, sur trois objets factices qui suivent le protocole d'Overlay (ouvert passe à
         # vrai puis Overlays.ouvrir, ouvert passe à faux puis Overlays.fermer) : A et B sont des attentions, C un

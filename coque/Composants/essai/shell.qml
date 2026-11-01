@@ -23,12 +23,12 @@ import "Composants/ancrage.js" as Ancrage
 // etat, ressort, ressortsFiges, image, controles, coches, cotes, glyphes, radios, jauge, progression, separateur,
 // champ, indicatif, tailleIcone, liste, arrets, rangee, bouton, overlays, overlaysFermes, pastilles, compteur,
 // compteurLargeur, deroulant, recherche, rechercheCouleurs, secret, activite, depliable, depliableCotes, iconesControles,
-// bascule, fenetreAttention, knobs, contours, materiauSurfaces, verre, champMateriau, ombres).
+// bascule, reglages, valeur, fenetreAttention, knobs, contours, materiauSurfaces, verre, champMateriau, ombres).
 // Commandes sans journal : « essai rechercheTexte <texte> », « essai secretTexte <texte> », « essai secretALire
 // <bool> », « essai secretOeil » (qui journalise « essai : revelationDemandee true » si le parent doit lire le
 // secret), « essai rechercheActive <bool> », « essai activiteEtat
 // <visible> <running> », « essai activitePhase <phase> », « essai activiteAncetre <bool> », « essai depliableOuvrir
-// <bool> », « essai basculeCocher <bool> », « essai pastillesForcer <état> », « essai pastillesReduire <bool> »,
+// <bool> », « essai basculeCocher <bool> », « essai valeurCopier », « essai pastillesForcer <état> », « essai pastillesReduire <bool> »,
 // « essai knobsActifs <bool> », « essai interrupteurCocher <bool> », « essai compteurValeur <n> », « essai deroulantRang <n> », « essai decocher »,
 // « essai radioCocher <rang> », « essai jaugeActive <bool> », « essai boutonPrincipal <bool> », « essai inactif
 // <bool> », « essai reparenter », « essai texteMoyen », « essai anneauInactif <bool> », « essai survol <bool> »,
@@ -197,6 +197,24 @@ ShellRoot {
                 text: "Wi-Fi"
                 checked: true
             }
+
+            Carte {
+                id: carteEssai
+                width: 300
+                ReglageLigne {
+                    id: reglageEssai
+                    width: parent.width
+                    titre: "Titre"
+                    aide: "Aide"
+                    erreur: "Erreur"
+                    icone: "network-wireless"
+                    iconeActive: true
+                }
+                ReglageLigne { id: reglageSimple; width: parent.width; titre: "Simple"; plaque: true }
+                Medaillon { id: medaillonInactif; nom: "network-wireless" }
+            }
+
+            Valeur { id: valeurEssai; text: "192.168.1.2" }
 
             Liste {
                 id: listeVide
@@ -840,6 +858,37 @@ ShellRoot {
         // Entrée : valeur, nouveau checked. Sortie : aucune. Erreurs : aucune. Dépendances : basculeEssai.
         function basculeCocher(valeur: bool): void {
             basculeEssai.checked = valeur
+        }
+
+        // reglages — journalise la carte, les rangées de réglage et les médaillons d'essai : hauteur de la carte,
+        // hauteurs de la rangée à aide et erreur puis de la rangée simple, abscisse du texte de la première rangée,
+        // côté, rayon et couleur du médaillon actif (celui de la première rangée), couleur du médaillon inactif,
+        // variante pleine du médaillon actif puis de l'inactif, puis rôle hérité d'une rangée.
+        // Entrées : aucune. Sortie : aucune ; « essai : reglages <h> <h1> <h2> <x> <côté> <rayon> <#fond> <#inactif>
+        // <bool> <bool> <rôle> ». Erreurs : aucune. Dépendances : carteEssai, reglageEssai, reglageSimple,
+        // medaillonInactif, journal.
+        function reglages(): void {
+            const a = reglageEssai.children.find(e => e.nom !== undefined && e.actif !== undefined)
+            const icone = m => m.children[0].pleine
+            carteEssai.children[1].forceLayout()  // sans fenêtre, aucun polissage ne dispose la colonne
+            essai.journal("reglages", [carteEssai.height, reglageEssai.height, reglageSimple.height, reglageEssai.texteX,
+                a.width, a.radius, a.color, medaillonInactif.color, icone(a), icone(medaillonInactif),
+                Etats.herite(reglageEssai, "dnRole", "")].join(" "))
+        }
+
+        // valeur — journalise la valeur d'essai : texte, copie en cours, opacité de la valeur puis de « Copié »,
+        // texte du presse-papiers. Entrées : aucune. Sortie : aucune ; « essai : valeur <texte> <bool> <o1> <o2>
+        // <presse-papiers> ». Erreurs : aucune. Dépendances : valeurEssai, Quickshell.clipboardText.
+        function valeur(): void {
+            const v = valeurEssai
+            essai.journal("valeur", [v.text, v.copie, v.children[0].opacity, v.children[1].opacity,
+                Quickshell.clipboardText].join(" "))
+        }
+
+        // valeurCopier — déclenche la copie de la valeur d'essai, comme un clic. Entrée et sortie : aucune.
+        // Erreurs : aucune. Dépendances : valeurEssai.
+        function valeurCopier(): void {
+            valeurEssai.copier()
         }
 
         // champTexte — remplace le texte du champ d'essai.

@@ -3,26 +3,10 @@ import QtQuick.Layouts
 import "../Theme"
 import "../Composants"
 
-// Groupe — carte de réglages de la fenêtre Réseau : surface de panneau arrondie, au filet subtil, dont les Ligne
-// s'empilent.
-// Rôle : regroupe les réglages d'une fiche (FicheProfil, FicheNouveau) en une carte, à la manière des réglages de
-// macOS.
+// Groupe — carte de réglages de la fenêtre Réseau : la Carte D4 (surfaceRaised, radius.panel, sans contour, gardes
+// de space.scale[0]) dont les Ligne s'empilent.
+// Rôle : regroupe les réglages d'une fiche (FicheProfil, FicheNouveau) en une carte ; n'ajoute à Carte que
+// l'étirement dans une mise en page, si bien qu'aucune logique n'est dupliquée.
 // Entrées : les Ligne (ou tout autre élément) déclarées comme enfants. Sortie : aucune.
-// Erreurs : aucune ; avant le chargement des tokens, rayon et filet sont nuls. Dépendances : Surface, Theme
-// (radius.panel, hairline, color.borderSubtle), QtQuick.Layouts.
-Surface {
-    default property alias lignes: colonne.data
-    role: "surfacePanel"
-    radius: Theme.radius?.panel ?? 0
-    Layout.fillWidth: true
-    implicitHeight: colonne.implicitHeight
-
-    ColumnLayout { id: colonne; width: parent.width; spacing: 0 }
-    Rectangle {
-        anchors.fill: parent
-        radius: parent.radius
-        color: "transparent"
-        border.width: Theme.hairline(1) ?? 0
-        border.color: Theme.color?.borderSubtle ?? "transparent"
-    }
-}
+// Erreurs : aucune. Dépendances : Carte, QtQuick.Layouts.
+Carte { Layout.fillWidth: true }
