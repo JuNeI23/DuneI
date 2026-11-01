@@ -25,7 +25,9 @@ ShellRoot {
     // deux-points) et un executer qui refuse ou qui réussit.
     QtObject {
         id: faux
-        property bool refus: false
+        property string refus: ""
+        property bool retient: false
+        property var retenu: null
         property var profils: [
             {nom: "Bureau", uuid: "bureau-1", type: "wireguard", appareil: "wg0", actif: true},
             {nom: "Maison: OpenVPN", uuid: "maison-1", type: "vpn", appareil: "", actif: false},
@@ -35,7 +37,8 @@ ShellRoot {
         // fin. Sortie : aucune.
         function executer(args, fin) {
             essai.journal("executer", JSON.stringify(args))
-            if (refus) { if (fin) fin(1, "Error: Secrets were required, but not provided.\n"); return }
+            if (retient) { retenu = () => fin(0, ""); profils = profils.map(p => p.uuid === args[args.length - 1] ? Object.assign({}, p, {actif: args.includes("up")}) : p); return }
+            if (refus) { if (fin) fin(1, refus === "vide" ? "" : "Error: Secrets were required, but not provided.\n"); return }
             const monter = args.includes("up"), u = args[args.length - 1]
             profils = profils.map(p => p.uuid === u ? Object.assign({}, p, {actif: monter}) : p)
             if (fin) fin(0, "")
@@ -106,21 +109,26 @@ ShellRoot {
                     return JSON.stringify({
                         titres: essai.tous_(page, o => o.text !== undefined && o.moyen === true && o.echelon === 0 && o.visible).map(o => o.text),
                         vpns: rangees.map(r => ({nom: r.libelle, aide: r.aide, actif: r.iconeActive, erreur: r.erreur,
-                            coche: essai.trouver(r, o => o.objectName === "interrupteur").checked})),
+                            coche: essai.trouver(r, o => o.objectName === "interrupteur").checked, libre: essai.trouver(r, o => o.objectName === "interrupteur").enabled})),
                         aucun: essai.trouver(page, o => o.text === "Aucune connexion VPN." && o.visible) !== null,
                         aide: essai.trouver(page, o => o.text === "L'ajout d'une connexion VPN viendra plus tard." && o.visible) !== null,
                     })
                 }
-                // refuser — fait refuser (ou accepter) les commandes suivantes. Entrée : oui, « oui » ou « non ». Sortie : aucune.
-                function refuser(oui: string): void { faux.refus = oui === "oui" }
+                // refuser — fait refuser les commandes suivantes. Entrée : mode, « oui » (message de nmcli), « vide » (refus sans message) ou « non ». Sortie : aucune.
+                function refuser(mode: string): void { faux.refus = mode === "non" ? "" : mode }
                 // sans — retire tous les profils. Entrées : aucune. Sortie : aucune.
                 function sans(): void { faux.profils = [] }
                 // basculer — clique l'interrupteur de la rangée nommée. Entrée : nom. Sortie : aucune.
                 function basculer(nom: string): void {
                     const c = essai.trouver(essai.tous_(page, o => o.objectName === "vpn" && o.libelle === nom)[0], o => o.objectName === "interrupteur")
+                    // toggle() change l'état coché sans émettre toggled (réservé à l'utilisateur) : on l'émet comme le ferait un clic.
                     c.toggle()
                     c.toggled()
                 }
+                // retenir, liberer — retiennent la fin de la prochaine commande (nmcli encore au travail, l'état réel change déjà),
+                // puis la rendent. Entrée de retenir : oui, « oui » ou « non ». Sortie : aucune.
+                function retenir(oui: string): void { faux.retient = oui === "oui" }
+                function liberer(): void { faux.retient = false; faux.retenu() }
                 // tab, espace — frappent Tab et Espace. Entrées : aucune. Sortie : aucune.
                 function tab(): void { essai.touche(page, Qt.Key_Tab, Qt.NoModifier) }
                 function espace(): void { essai.touche(page, Qt.Key_Space, Qt.NoModifier) }

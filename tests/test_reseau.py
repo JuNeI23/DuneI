@@ -1106,8 +1106,8 @@ class PageVpnTest(EssaiCoque, unittest.TestCase):
         p = self.page()
         self.assertEqual(p["titres"], ["Connexions"])
         self.assertEqual(p["vpns"], [
-            {"nom": "Bureau", "aide": "WireGuard", "actif": True, "erreur": "", "coche": True},
-            {"nom": "Maison: OpenVPN", "aide": "VPN", "actif": False, "erreur": "", "coche": False}])
+            {"nom": "Bureau", "aide": "WireGuard", "actif": True, "erreur": "", "coche": True, "libre": True},
+            {"nom": "Maison: OpenVPN", "aide": "VPN", "actif": False, "erreur": "", "coche": False, "libre": True}])
         self.assertFalse(p["aucun"] or p["aide"])
         self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
 
@@ -1131,11 +1131,33 @@ class PageVpnTest(EssaiCoque, unittest.TestCase):
         p = self.jusqua(lambda p: p["vpns"][1]["erreur"], "erreur montrée")
         self.assertIn("Secrets were required", p["vpns"][1]["erreur"])
         self.assertEqual((p["vpns"][1]["actif"], p["vpns"][1]["coche"]), (False, False))
+        self.assertEqual(self.journal().count("essai : executer"), 1)
         # Un essai réussi efface le message.
         self.ipc("refuser", "non")
         self.ipc("basculer", "Maison: OpenVPN")
         p = self.jusqua(lambda p: p["vpns"][1]["coche"], "connexion montée")
         self.assertEqual(p["vpns"][1]["erreur"], "")
+
+    def test_refus_sans_message(self):
+        self.ipc("refuser", "vide")
+        self.ipc("basculer", "Maison: OpenVPN")
+        p = self.jusqua(lambda p: p["vpns"][1]["erreur"], "erreur montrée")
+        self.assertEqual(p["vpns"][1]["erreur"], "La connexion a échoué.")
+
+    def test_action_en_cours(self):
+        # Tant que nmcli travaille : l'interrupteur est inactif et montre l'état voulu, une seconde demande est ignorée
+        # (une seule commande journalisée) ; à la fin il suit l'état réel.
+        self.ipc("retenir", "oui")
+        self.ipc("basculer", "Maison: OpenVPN")
+        p = self.jusqua(lambda p: not p["vpns"][1]["libre"], "interrupteur inactif")
+        self.assertTrue(p["vpns"][1]["coche"])
+        self.ipc("basculer", "Maison: OpenVPN")
+        self.assertEqual(self.journal().count("essai : executer"), 1)
+        self.assertTrue(self.page()["vpns"][1]["coche"])
+        self.ipc("liberer")
+        p = self.jusqua(lambda p: p["vpns"][1]["libre"], "interrupteur rendu")
+        self.assertEqual((p["vpns"][1]["actif"], p["vpns"][1]["coche"]), (True, True))
+        self.assertEqual(self.journal().count("essai : executer"), 1)
 
     def test_clavier(self):
         # Tab atteint chaque interrupteur dans l'ordre, Espace bascule celui qui a le focus et le focus survit à la relecture.

@@ -17,7 +17,7 @@ import "nmcli.js" as Nmcli
 // Clavier : chaque interrupteur s'atteint à la tabulation et bascule à Espace, avec le contour de focus de la bible
 // (« Clavier » et « Interrupteur »).
 // Entrées : panneau, le PanneauReseau ; etat, la source de l'état, EtatReseau par défaut (profils, executer).
-// Sorties : connexions, les VPN lus (nmcli.js, vpns) ; erreurs, objet uuid → message de nmcli pour les refus
+// Sorties : connexions, les VPN lus (nmcli.js, vpns) ; enCours, les actions non terminées (uuid → état voulu) ; erreurs, objet uuid → message de nmcli pour les refus
 // affichés. Erreurs : un échec de nmcli se montre sous la rangée et remet l'interrupteur à l'état réel.
 // Dépendances : TitrePage, Section, Groupe, Ligne, Interrupteur, Texte, Theme, nmcli.js, EtatReseau.
 ColumnLayout {
@@ -31,6 +31,8 @@ ColumnLayout {
     // aux relectures de l'état, qui renouvellent le tableau des profils à chaque fois.
     property var uuids: []
     property var erreurs: ({})
+    // Les actions en cours : uuid → état voulu. Pendant ce temps l'interrupteur de la rangée est inactif et montre l'état voulu.
+    property var enCours: ({})
     onConnexionsChanged: {
         const u = connexions.map(c => c.uuid)
         if (JSON.stringify(u) !== JSON.stringify(uuids)) uuids = u
@@ -40,12 +42,19 @@ ColumnLayout {
     spacing: 0
 
     // basculer — monte ou descend une connexion VPN. Entrées : uuid, celui de la connexion ; voulu, vrai pour la
-    // monter. Sortie : aucune ; erreurs[uuid] reçoit le message de nmcli en cas de refus et est effacé sinon.
+    // monter. Sortie : aucune ; enCours[uuid] vaut voulu jusqu'à la fin de nmcli (une seconde demande pour la même
+    // connexion est ignorée), puis l'interrupteur suit l'état réel ; erreurs[uuid] reçoit le message de nmcli en cas
+    // de refus (« La connexion a échoué. » si nmcli n'en donne aucun) et est effacé sinon.
     // Erreurs : un code non nul garde le message. Dépendances : etat.executer.
     function basculer(uuid, voulu) {
+        if (uuid in enCours) return
         const e = Object.assign({}, erreurs); delete e[uuid]; erreurs = e
+        enCours = Object.assign({}, enCours, {[uuid]: voulu})
         etat.executer(voulu ? ["-w", "30", "connection", "up", "uuid", uuid] : ["-w", "10", "connection", "down", "uuid", uuid],
-            (code, sortie) => { if (code !== 0) erreurs = Object.assign({}, erreurs, {[uuid]: sortie.trim()}) })
+            (code, sortie) => {
+                if (code !== 0) erreurs = Object.assign({}, erreurs, {[uuid]: sortie.trim() || "La connexion a échoué."})
+                const r = Object.assign({}, enCours); delete r[uuid]; enCours = r
+            })
     }
 
     TitrePage { text: "VPN" }
@@ -68,8 +77,9 @@ ColumnLayout {
                 erreur: page.erreurs[modelData] ?? ""
                 Interrupteur {
                     objectName: "interrupteur"
-                    checked: c.actif
-                    onToggled: { page.basculer(modelData, checked); checked = Qt.binding(() => c.actif) }
+                    enabled: !(modelData in page.enCours)
+                    checked: page.enCours[modelData] ?? c.actif
+                    onToggled: { page.basculer(modelData, checked); checked = Qt.binding(() => page.enCours[modelData] ?? c.actif) }
                 }
             }
         }
