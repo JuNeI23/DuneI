@@ -141,7 +141,7 @@ ShellRoot {
 
                 // panneau — état du panneau construit, en JSON, sans aucun texte saisi ; {} s'il n'existe pas.
                 // Sortie : {titre, etat, bascule {visible, actif, allumee}, reseaux (rangées montrées, dans l'ordre),
-                // deplie, mode, erreur, portail, ip (une adresse est-elle affichée), autre (« Autre réseau… »
+                // deplie, erreur, portail, ip (une adresse est-elle affichée), autre (« Autre réseau… »
                 // affiché), chevron (« Réglages réseau… » porte un suffixe), balayage, activite (indicateur de la
                 // recherche visible), infobulle (texte de l'infobulle de la recherche), connexion (noms des lignes
                 // « Connexion… »), glisse (une ligne glisse), lignes (nom → {depliage, deplieEnCours, charge, y,
@@ -163,7 +163,7 @@ ShellRoot {
                         titre: p.resume.titre, etat: p.resume.etat,
                         bascule: { visible: bascule.visible, actif: bascule.enabled, allumee: bascule.checked },
                         reseaux: p.listeVisible ? p.ordre.filter((n, i) => p.present(p.reseaux[i])) : [],
-                        deplie: p.deplie, mode: p.mode, erreur: p.erreur,
+                        deplie: p.deplie, erreur: p.erreur,
                         portail: p.etat.connectivite === "portal",
                         ip: essai.trouver(p, o => o.visible && String(o.text ?? "").includes("192.168")) !== null,
                         autre: essai.trouver(p, o => o.text === "Autre réseau…") !== null,
@@ -203,7 +203,7 @@ ShellRoot {
                 // saisir — remplit le mot de passe de la ligne dépliée. Entrée : texte.
                 function saisir(texte: string): void { porteur.item.panneau.bloc.secret.text = texte }
                 // activer — action nommée : rejoindre, reglages, portail, bascule (clic sur la bascule du Wi-Fi),
-                // rechercher (bouton de recherche), deconnecter et details (actions du réseau joint). Entrée : cle.
+                // rechercher (bouton de recherche), deconnecter (« Se déconnecter » du pied). Entrée : cle.
                 function activer(cle: string): void {
                     const p = porteur.item.panneau
                     const texte = t => essai.trouver(p, o => o.text === t && o.visible)
@@ -216,8 +216,7 @@ ShellRoot {
                         b.toggled()
                     }
                     else if (cle === "rechercher") essai.trouver(p, o => o.nom === "view-refresh").clique()
-                    else if (cle === "deconnecter") texte("Se déconnecter").clicked()
-                    else if (cle === "details") texte("Détails…").clicked()
+                    else if (cle === "deconnecter") texte("Se déconnecter").active()
                 }
             }
         }

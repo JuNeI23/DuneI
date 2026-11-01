@@ -6,7 +6,9 @@ import "../Composants"
 // ElementBarre — élément générique de la barre système : une icône ou une image, et un texte, sans fond.
 // Rôle : affiche un état ou une action de la barre. Sans fond ni capsule, la couleur porte tout l'état : repos
 // Theme.texteBureau, survol (éléments cliquables seuls) Theme.texteBureauSurvol, appui ou menu ouvert
-// Theme.color.accentStandalone, chaque changement lissé par un ColorSpring.
+// Theme.color.accentStandalone, chaque changement lissé par un ColorSpring. Tant que le menu de l'élément est ouvert,
+// l'icône passe aussi à sa variante pleine, en fondu enchaîné (transition state), pour lier la barre au popover
+// qu'elle a ouvert (D103).
 // Entrées : icone, nom d'icône sans « -symbolic » ; source, image recolorée à la place d'une icône nommée (le
 // logo) ; texte ; cliquable, faux par défaut (un élément d'affichage ne réagit ni au survol ni à l'appui) ;
 // ouvert, vrai tant que le menu de l'élément est ouvert ; taille, côté de l'icône en pixels logiques,
@@ -16,7 +18,7 @@ import "../Composants"
 // rangée, quand ni icône, ni image, ni texte ne sont fournis (matériel absent).
 // Erreurs : aucune ; avant le chargement des jetons, la couleur est transparente.
 // Dépendances : Theme (texteBureau, color, typo), Composants (Icone, qui porte l'image recolorée, et Texte),
-// ColorSpring.
+// ColorSpring, Ressort.
 T.AbstractButton {
     id: element
 
@@ -44,13 +46,31 @@ T.AbstractButton {
         id: rangee
         spacing: Theme.space?.scale[0] ?? 0
 
-        Icone {
+        // Icône creuse et icône pleine superposées ; le ressort plein va de 0 (creuse) à 1 (pleine, menu ouvert).
+        Item {
             anchors.verticalCenter: parent.verticalCenter
             visible: element.icone !== "" || element.source != ""
-            taille: element.taille
-            nom: element.icone
-            image: element.source
-            couleur: ressort.value
+            implicitWidth: element.taille
+            implicitHeight: element.taille
+
+            Ressort { id: plein; transition: "state"; cible: element.ouvert && element.icone !== "" ? 1 : 0 }
+            Icone {
+                anchors.fill: parent
+                opacity: 1 - plein.value
+                taille: element.taille
+                nom: element.icone
+                image: element.source
+                couleur: ressort.value
+            }
+            Icone {
+                anchors.fill: parent
+                visible: plein.value > 0
+                opacity: plein.value
+                taille: element.taille
+                nom: element.icone
+                pleine: true
+                couleur: ressort.value
+            }
         }
 
         Texte {

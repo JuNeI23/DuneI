@@ -410,7 +410,7 @@ class PopoverTest(EssaiCoque, unittest.TestCase):
         p = self.ouvrir()
         self.assertEqual((p["titre"], p["etat"]), ("Wifi_TRIADES", "Connecté"))
         self.assertEqual(p["bascule"], {"visible": True, "actif": True, "allumee": True})
-        self.assertEqual(p["reseaux"], ["Wifi_TRIADES", "Connu", "Inconnu", "Ouvert"])
+        self.assertEqual(p["reseaux"], ["Connu", "Inconnu", "Ouvert"], "le réseau joint n'est que dans l'en-tête")
         self.assertEqual(p["deplie"], "")
         self.assertFalse(p["portail"])
         self.assertFalse(p["ip"], "aucune adresse IP dans le popover")
@@ -479,37 +479,14 @@ class PopoverTest(EssaiCoque, unittest.TestCase):
             time.sleep(0.05)
         self.fail(f"lignes toujours en mouvement\n{p}")
 
-    def test_actions_du_reseau_joint(self):
-        # Un clic sur le réseau joint déplie « Se déconnecter » et « Détails… » ; un second clic replie ; « Se
-        # déconnecter » déconnecte ce réseau et replie.
+    def test_se_deconnecter(self):
+        # « Se déconnecter », au pied du popover (essai D5), déconnecte le réseau joint et ferme le popover ; un clic
+        # sur une ligne de la liste ne vise jamais le réseau joint, qui n'y figure pas.
         self.ouvrir()
-        self.ipc("choisir", "Wifi_TRIADES")
-        p = self.panneau()
-        self.assertEqual((p["deplie"], p["mode"], p["saisie"]), ("Wifi_TRIADES", "actions", -1))
-        self.ipc("choisir", "Wifi_TRIADES")
-        self.assertEqual(self.panneau()["deplie"], "")
-        self.attendre_repos()
-        self.ipc("choisir", "Wifi_TRIADES")
-        self.attendre_repos()
         self.ipc("activer", "deconnecter")
         self.attendre("essai : disconnect Wifi_TRIADES")
-        self.assertEqual(self.panneau()["deplie"], "")
+        self.assertEqual(self.panneau(), {})
         self.assertNotIn("essai : connect Wifi_TRIADES", self.journal())
-
-    def test_details(self):
-        # « Détails… » demande la fenêtre Réseau sur le profil du réseau joint, par son nom sans profil lu, par
-        # l'uuid du profil Wi-Fi actif sinon, et ferme le popover.
-        for uuid, attendu in (("", "Wifi_TRIADES"), ("wifi-1", "wifi-1")):
-            with self.subTest(attendu=attendu):
-                if uuid:
-                    self.ipc("profilActif", uuid)
-                self.ouvrir()
-                self.ipc("choisir", "Wifi_TRIADES")
-                self.attendre_repos()
-                self.ipc("activer", "details")
-                self.assertTrue(json.loads(self.ipc("fenetre")))
-                self.assertEqual(json.loads(self.ipc("profilDemande")), attendu)
-                self.assertEqual(self.panneau(), {})
 
     def test_depliage_anime(self):
         # La ligne de mot de passe se déplie en animant sa hauteur, et, repliée, reste construite le temps de
@@ -529,9 +506,9 @@ class PopoverTest(EssaiCoque, unittest.TestCase):
         self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read|Unable to assign|Binding loop")
 
     def test_connexion_puis_glissement(self):
-        # Le réseau choisi montre « Connexion… » ; rejoint, il remonte en tête et les lignes glissent jusqu'à leur
-        # nouvelle place au lieu d'y sauter : dans la passe du changement, chaque ligne est encore à sa place
-        # d'avant, puis elle rejoint la nouvelle.
+        # Le réseau choisi montre « Connexion… » ; rejoint, il quitte la liste pour l'en-tête et l'ancien réseau joint
+        # y revient : la ligne rejointe se referme et l'ancienne s'ouvre (reveal) au lieu de sauter, et, dans la passe
+        # du changement, les autres lignes sont encore à leur place d'avant, puis elles rejoignent la nouvelle.
         self.ouvrir()
         avant = self.attendre_repos()["lignes"]
         self.ipc("choisir", "Connu")
@@ -539,11 +516,14 @@ class PopoverTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(self.panneau()["connexion"], ["Connu"])
         p = self.puis_lire("joindre", "Connu")
         self.assertEqual(p["connexion"], [])
-        self.assertEqual(p["reseaux"], ["Connu", "Wifi_TRIADES", "Inconnu", "Ouvert"])
-        self.assertTrue(p["glisse"], "les lignes glissent vers leur nouvelle place")
-        self.assertEqual({n: l["y"] for n, l in p["lignes"].items()}, {n: l["y"] for n, l in avant.items()})
+        self.assertEqual(p["reseaux"], ["Wifi_TRIADES", "Inconnu", "Ouvert"])
+        self.assertEqual(p["lignes"]["Wifi_TRIADES"]["apparition"], 0, "l'ancien réseau joint entre à partir de rien")
+        self.assertTrue(p["lignes"]["Connu"]["apparitionEnCours"], "le réseau rejoint se referme")
+        self.assertEqual(p["lignes"]["Inconnu"]["y"], avant["Inconnu"]["y"], "les autres lignes ne sautent pas")
         apres = self.attendre_repos()["lignes"]
-        self.assertEqual((apres["Connu"]["y"], apres["Wifi_TRIADES"]["y"]), (avant["Wifi_TRIADES"]["y"], avant["Connu"]["y"]))
+        self.assertNotIn("Connu", apres)
+        self.assertEqual(apres["Wifi_TRIADES"]["y"], avant["Connu"]["y"])
+        self.assertEqual(apres["Inconnu"]["y"], avant["Inconnu"]["y"])
         self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read|Unable to assign|Binding loop")
 
     def test_ligne_qui_sort_puis_ligne_qui_entre(self):
@@ -554,7 +534,7 @@ class PopoverTest(EssaiCoque, unittest.TestCase):
         avant = self.attendre_repos()["lignes"]
         h = avant["Inconnu"]["y"] - avant["Connu"]["y"]
         p = self.puis_lire("retirerReseau", "Connu")
-        self.assertEqual(p["reseaux"], ["Wifi_TRIADES", "Inconnu", "Ouvert"])
+        self.assertEqual(p["reseaux"], ["Inconnu", "Ouvert"])
         self.assertTrue(p["lignes"]["Connu"]["apparitionEnCours"], "la ligne sortante se referme")
         self.assertEqual(p["lignes"]["Connu"]["apparition"], 1)
         self.assertEqual(p["lignes"]["Inconnu"]["y"], avant["Inconnu"]["y"], "la ligne suivante ne saute pas")
@@ -602,7 +582,7 @@ class PopoverTest(EssaiCoque, unittest.TestCase):
         self.assertNotIn("Nouveau", p["reseaux"])
         self.ipc("choisir", "Inconnu")
         self.ipc("choisir", "Inconnu")
-        self.assertEqual(self.panneau()["reseaux"], ["Wifi_TRIADES", "Connu", "Nouveau", "Inconnu", "Ouvert"])
+        self.assertEqual(self.panneau()["reseaux"], ["Connu", "Nouveau", "Inconnu", "Ouvert"])
 
     def test_reseau_disparu_pendant_la_saisie(self):
         # Pendant une saisie, un autre réseau quitte le balayage et son objet est détruit : il disparaît de la liste,
@@ -614,11 +594,11 @@ class PopoverTest(EssaiCoque, unittest.TestCase):
         self.ipc("retirerReseau", "Ouvert")
         p = self.panneau()
         self.assertEqual((p["deplie"], p["saisie"]), ("Inconnu", len(self.SECRET)))
-        self.assertEqual(p["reseaux"], ["Wifi_TRIADES", "Connu", "Inconnu"])
+        self.assertEqual(p["reseaux"], ["Connu", "Inconnu"])
         self.ipc("retirerReseau", "Inconnu")
         p = self.panneau()
         self.assertEqual((p["deplie"], p["saisie"]), ("", -1))
-        self.assertEqual(p["reseaux"], ["Wifi_TRIADES", "Connu"])
+        self.assertEqual(p["reseaux"], ["Connu"])
         self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
         self.assertNotIn(self.SECRET, self.journal())
 

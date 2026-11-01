@@ -6,36 +6,40 @@ import "../Composants"
 import "../Barre/icones.js" as Icones
 import "nmcli.js" as Nmcli
 
-// PopoverReseau — popover du réseau, ancré sous l'indicateur réseau de la barre (L2-11).
+// PopoverReseau — popover du réseau, ancré sous l'indicateur réseau de la barre (L2-11, direction D5 des essais).
 // Rôle : un Overlay contextuel, construit à l'ouverture et détruit à la fermeture (D80), tenu à la marge d'écran
-// des overlays ancrés à la barre (Overlay.margeEcran), qui porte, de haut en bas : l'en-tête, dont la bascule à
-// glyphe allume ou coupe le Wi-Fi (accent plein allumée, neutre éteinte), avec le nom du réseau et son état (« Connecté », « Connecté sans
-// internet », « Portail de connexion », « Partage du téléphone »…) ; derrière un portail captif, « Ouvrir la page de
-// connexion » ; la liste des réseaux à proximité (le réseau joint en tête, puis les connus, puis la force
-// décroissante ; cadenas si sécurisé, coche sur le réseau joint) avec le bouton de nouvelle recherche, que
-// l'indicateur d'activité remplace tant que le balayage relancé n'a pas rendu sa liste ; « Réglages réseau… », qui
-// demande la fenêtre Réseau. Un clic sur le réseau joint déplie sous sa ligne « Se déconnecter » et « Détails… » ;
-// un clic sur un réseau sécurisé inconnu, ou un échec de connexion, y déplie la ligne de mot de passe ; un second
-// clic replie. Le dépliage et le repli animent la hauteur (transition reveal) ; un réseau en cours de connexion
-// montre « Connexion… » et l'indicateur d'activité ; quand l'ordre de la liste change (le réseau rejoint remonte en
-// tête), chaque ligne glisse de son ancienne place à la nouvelle (transition reflow) ; une ligne qui paraît au
-// balayage s'ouvre, une ligne qui le quitte se referme (hauteur et fondu, transition reveal), et ses voisines
-// suivent sa hauteur sans sauter. Durées et courbes viennent toutes de motion.json, par Ressort. Sans carte Wi-Fi, la bascule est désactivée et la liste absente : seulement
-// l'état filaire. Tant qu'il est ouvert, il demande le balayage Wi-Fi (etat.recherche), rendu à faux à la fermeture
-// comme à la destruction d'un popover ouvert ; ouvert derrière un portail, il demande un contrôle de connectivité
-// ponctuel (etat.verifier). La liste ne se retrie pas tant qu'une ligne de mot de passe est dépliée, pour ne pas en
-// perdre la saisie. Une connexion suivie (enCours) appartient au panneau : fermé, il est détruit, et un
-// connectionFailed tardif ne rouvre rien.
+// des overlays ancrés à la barre (Overlay.margeEcran). Il suit les popovers sobres d'inspiration/anhphong : compact,
+// carré, sur le verre de E3 (D103), il porte de haut en bas : l'en-tête, dont la bascule à glyphe allume ou coupe le
+// Wi-Fi (accent plein allumée, neutre éteinte), avec le nom du réseau joint et son état (« Connecté », « Connecté
+// sans internet », « Portail de connexion », « Partage du téléphone »…) ; derrière un portail captif, « Ouvrir la
+// page de connexion » ; « Réseaux à proximité », petite étiquette au texte secondaire avec le bouton de nouvelle
+// recherche, que l'indicateur d'activité remplace tant que le balayage relancé n'a pas rendu sa liste ; la liste des
+// réseaux à proximité, une ligne chacun (signal, nom, cadenas si sécurisé), les connus puis la force décroissante,
+// sans le réseau joint, que l'en-tête nomme déjà ; sous un filet translucide (material.glassLine), les actions en
+// texte seul, à la manière d'un menu : « Se déconnecter » tant qu'un réseau Wi-Fi est joint, et « Réglages
+// réseau… », qui demande la fenêtre Réseau. Un clic sur un réseau sécurisé inconnu, ou un échec de connexion, déplie
+// sous sa ligne le mot de passe, sans plaque ; un second clic replie. Le dépliage et le repli animent la hauteur
+// (transition reveal) ; un réseau en cours de connexion montre « Connexion… » et l'indicateur d'activité ; quand
+// l'ordre de la liste change, chaque ligne glisse de son ancienne place à la nouvelle (transition reflow) ; une ligne
+// qui paraît au balayage s'ouvre, une ligne qui le quitte se referme (hauteur et fondu, transition reveal), et ses
+// voisines suivent sa hauteur sans sauter : ainsi le réseau qu'on vient de rejoindre quitte la liste pour l'en-tête,
+// et l'ancien réseau joint y revient. Durées et courbes viennent toutes de motion.json, par Ressort. Sans carte
+// Wi-Fi, la bascule est désactivée et la liste absente : seulement l'état filaire. Tant qu'il est ouvert, il demande
+// le balayage Wi-Fi (etat.recherche), rendu à faux à la fermeture comme à la destruction d'un popover ouvert ;
+// ouvert derrière un portail, il demande un contrôle de connectivité ponctuel (etat.verifier). La liste ne se retrie
+// pas tant qu'une ligne de mot de passe est dépliée, pour ne pas en perdre la saisie. Une connexion suivie (enCours)
+// appartient au panneau : fermé, il est détruit, et un connectionFailed tardif ne rouvre rien.
 // Entrées : ancre, l'indicateur de la barre ; ouvert, à affecter (voir Overlay) ; associees, voir Overlay ; etat,
 // la source de l'état et des actions, EtatReseau par défaut (la coque d'essai y met un factice).
 // Sorties : ferme(), voir Overlay ; panneau, le contenu construit, null fermé, lu par les essais.
 // Erreurs : un connectionFailed déplie la ligne de mot de passe avec « Mot de passe refusé » (raison
 // d'authentification) ou « Connexion impossible ». Le texte d'un mot de passe ne passe jamais au journal.
 // Dépendances : Overlay (famille contextuel), Bascule, Activite, Infobulle, Rangee, Bouton, ChampSecret, Separateur,
-// Icone, Texte, Coche, Theme (density, motion par Ressort), Ressort, EtatReseau, nmcli.js (trierReseaux, resume),
-// icones.js (iconeReseau), Quickshell.Networking (ConnectionFailReason, ConnectionState, WifiSecurityType).
-// Cotes : surface de 350 px de large comme la maquette (panneau de 342 px dans le retrait de l'Overlay) ; contenu à
-// space.scale[2] (12) du bord du panneau, rangées sur toute sa largeur ; rangées de 32 px.
+// Icone, Texte, Theme (density, space, material, motion par Ressort), Ressort, EtatReseau, nmcli.js (trierReseaux,
+// resume), icones.js (iconeReseau), Quickshell.Networking (ConnectionFailReason, ConnectionState, WifiSecurityType).
+// Cotes : surface de 72 × space.scale[0] (288 px) de large comme l'essai D5, panneau de 280 px dans le retrait de
+// l'Overlay ; contenu à space.scale[2] (12) du bord du panneau, rangées sur toute sa largeur ; rangées de
+// density.controlHeight plus space.scale[0] (32 px).
 // Mouvement réduit : la coque n'a pas encore de bascule (voir Ressort) ; les animations passent toutes par Ressort,
 // qui la suivra.
 Overlay {
@@ -76,7 +80,7 @@ Overlay {
         TapHandler { onTapped: boutonIcone.clique() }
     }
 
-    // Encadre — cadre d'une ligne dépliée, au fond du panneau et au filet subtil, comme la maquette.
+    // Encadre — cadre de l'avis de portail captif, au fond du panneau et au filet subtil.
     // Rôle : empile son contenu en colonne, en retrait de space.scale[1] (8) de chaque bord. Nommé autrement que
     // le Cadre interne de l'Overlay, dont le popover hérite.
     // Entrées : contenu, propriété par défaut, les éléments de la colonne. Sorties : aucune. Erreurs : aucune.
@@ -101,46 +105,43 @@ Overlay {
         }
     }
 
-    // Bloc — ligne de mot de passe dépliée : en-tête, mot de passe, erreur, boutons ; il prend le focus à sa
-    // construction. Entrées : nom, le réseau visé ; erreur, message affiché sous le champ ; occupe, vrai pendant la
-    // connexion, qui désactive « Rejoindre ». Sorties : secret (ChampSecret) ; signaux rejoindre() et annuler().
-    // Erreurs : aucune. Dépendances : Encadre, ChampSecret, Bouton, Texte, Theme.
-    component Bloc: Encadre {
+    // Bloc — ligne de mot de passe dépliée, sans plaque (essai D5) : le mot de passe, l'erreur, puis « Annuler » et
+    // « Rejoindre » à droite ; il prend le focus à sa construction. Entrées : erreur, message affiché sous le champ ;
+    // occupe, vrai pendant la connexion, qui désactive « Rejoindre ». Sorties : secret (ChampSecret) ; signaux
+    // rejoindre() et annuler() ; implicitHeight, hauteur du contenu et de ses marges. Erreurs : aucune.
+    // Dépendances : ChampSecret, Bouton, Texte, Theme.
+    component Bloc: Item {
         id: bloc
-        property string nom
         property string erreur
         property bool occupe: false
         readonly property alias secret: secret
+        readonly property real marge: Theme.space?.scale[1] ?? 0
         signal rejoindre()
         signal annuler()
 
+        implicitHeight: colonneBloc.implicitHeight + 2 * marge
         Component.onCompleted: secret.forceActiveFocus()
 
-        RowLayout {
-            spacing: 0
-            Texte { text: bloc.nom; echelon: 1; moyen: true; elide: Text.ElideRight; Layout.maximumWidth: bloc.width / 2 }
+        ColumnLayout {
+            id: colonneBloc
+            y: bloc.marge
+            width: bloc.width
+            spacing: bloc.marge
+            ChampSecret { id: secret; Layout.fillWidth: true; placeholderText: "Mot de passe"; onAccepted: if (!bloc.occupe) bloc.rejoindre() }
             Texte {
+                visible: bloc.erreur !== ""
                 Layout.fillWidth: true
-                text: " · réseau protégé"
+                text: bloc.erreur
                 echelon: 1
-                color: Theme.color?.textSecondary ?? "transparent"
-                elide: Text.ElideRight
+                wrapMode: Text.Wrap
+                color: Theme.color?.error ?? "transparent"
             }
-        }
-        ChampSecret { id: secret; Layout.fillWidth: true; placeholderText: "Mot de passe"; onAccepted: if (!bloc.occupe) bloc.rejoindre() }
-        Texte {
-            visible: bloc.erreur !== ""
-            Layout.fillWidth: true
-            text: bloc.erreur
-            echelon: 1
-            wrapMode: Text.Wrap
-            color: Theme.color?.error ?? "transparent"
-        }
-        RowLayout {
-            Layout.alignment: Qt.AlignRight
-            spacing: Theme.space?.scale[1] ?? 0
-            Bouton { text: "Annuler"; onClicked: bloc.annuler() }
-            Bouton { text: "Rejoindre"; principal: true; enabled: !bloc.occupe; onClicked: bloc.rejoindre() }
+            RowLayout {
+                Layout.alignment: Qt.AlignRight
+                spacing: bloc.marge
+                Bouton { text: "Annuler"; onClicked: bloc.annuler() }
+                Bouton { text: "Rejoindre"; principal: true; enabled: !bloc.occupe; onClicked: bloc.rejoindre() }
+            }
         }
     }
 
@@ -165,10 +166,8 @@ Overlay {
         // Réseaux présents au dernier balayage, suivis même liste figée : un réseau de la liste figée qui n'y figure
         // plus est masqué et ne peut plus être choisi ni rejoint (son WifiNetwork peut avoir été détruit).
         property var presents: Array.from(etat.reseaux ?? [])
-        // Nom du réseau dont la ligne est dépliée, vide sinon ; mode, ce qu'elle porte : « actions » sous le réseau
-        // joint, « mdp » (mot de passe) sous un autre.
+        // Nom du réseau dont la ligne de mot de passe est dépliée, vide sinon.
         property string deplie: ""
-        property string mode: "mdp"
         property string erreur: ""
         property var enCours: null
         // Vrai entre un clic sur la recherche et le retour de la liste, borné par finBalayage.
@@ -189,11 +188,13 @@ Overlay {
             b[""] = y
             return b
         }
+        // Réseau Wi-Fi joint, que « Se déconnecter » vise ; null sans lui.
+        readonly property var joint: presents.find(r => r.connected) ?? null
         // Ligne de mot de passe de la ligne dépliée, null sans elle (ni pendant le repli d'une autre).
         readonly property Item bloc: delegues[deplie]?.bloc ?? null
 
         focus: true
-        implicitWidth: 342
+        implicitWidth: 70 * (Theme.space?.scale[0] ?? 0)
         implicitHeight: colonne.implicitHeight + 2 * (Theme.space?.scale[1] ?? 0)
         Component.onCompleted: { trier(); popover.panneau = panneau }
         Component.onDestruction: if (popover.panneau === panneau) popover.panneau = null
@@ -205,14 +206,15 @@ Overlay {
         // trier — fige l'ordre de la liste et met le modèle des lignes à jour : un nom nouveau y est ajouté (sa
         // ligne entre en s'ouvrant, sauf au premier tri), un nom disparu reste à son ancien rang dans disposition le
         // temps que sa ligne se referme (elle se retire elle-même ensuite, voir retirer), les autres lignes glissent
-        // de leur place relevée à la nouvelle. Tant qu'une ligne de mot de passe est dépliée, rien ne change, pour ne
-        // perdre ni la saisie ni le message d'erreur ; le tri reprend dès qu'elle se replie.
+        // de leur place relevée à la nouvelle. Le réseau joint n'y figure pas : l'en-tête le nomme. Tant qu'une ligne
+        // de mot de passe est dépliée, rien ne change, pour ne perdre ni la saisie ni le message d'erreur ; le tri
+        // reprend dès qu'elle se replie.
         // Entrée : avant, ordonnées relevées avant le changement qui provoque le tri (releve() par défaut).
         // Sortie : aucune. Erreurs : aucune.
-        // Dépendances : nmcli.js (trierReseaux), etat.reseaux, deplie, mode, modele, disposition, delegues (glisser).
+        // Dépendances : nmcli.js (trierReseaux), etat.reseaux, deplie, modele, disposition, delegues (glisser).
         function trier(avant = releve()): void {
-            if (deplie !== "" && mode === "mdp") return
-            reseaux = Nmcli.trierReseaux(Array.from(etat.reseaux ?? []))
+            if (deplie !== "") return
+            reseaux = Nmcli.trierReseaux(Array.from(etat.reseaux ?? []).filter(r => !r.connected))
             ordre = reseaux.map(r => r.name)
             const connus = Array.from({ length: modele.count }, (_, i) => modele.get(i).cle)
             const d = ordre.slice()
@@ -264,29 +266,18 @@ Overlay {
             return ![WifiSecurityType.Owe, WifiSecurityType.Open, WifiSecurityType.Unknown].includes(r?.security)
         }
 
-        // deplier — déplie la ligne d'un réseau dans un mode, ou la replie si elle l'était déjà.
-        // Entrées : nom, le réseau ; m, « actions » ou « mdp ». Sortie : aucune. Erreurs : aucune.
-        // Dépendances : deplie, mode.
-        function deplier(nom: string, m: string): void {
-            const replier = deplie === nom
-            mode = m
-            deplie = replier ? "" : nom
-        }
-
-        // choisir — clic sur un réseau : sous le réseau joint, déplie (ou replie) ses actions ; un réseau connu ou
-        // ouvert se rejoint directement ; sous un autre, déplie (ou replie) la ligne de mot de passe ; un réseau
-        // déjà en cours de connexion est ignoré. Entrée : r, le réseau. Sortie : aucune. Erreurs : un réseau qui
-        // n'est plus au balayage est ignoré ; un échec arrive par connectionFailed (voir Connections).
-        // Dépendances : present, securise, deplier, enCours.
+        // choisir — clic sur un réseau : un réseau connu ou ouvert se rejoint directement ; un autre déplie (ou
+        // replie) sa ligne de mot de passe ; un réseau déjà en cours de connexion est ignoré. Entrée : r, le réseau.
+        // Sortie : aucune. Erreurs : un réseau qui n'est plus au balayage est ignoré ; un échec arrive par
+        // connectionFailed (voir Connections). Dépendances : present, securise, deplie, enCours.
         function choisir(r): void {
             if (!present(r) || r === enCours) return
             erreur = ""
-            if (r.connected) deplier(r.name, "actions")
-            else if (r.known || !securise(r)) {
+            if (r.known || !securise(r)) {
                 deplie = ""
                 enCours = r
                 r.connect()
-            } else deplier(r.name, "mdp")
+            } else deplie = deplie === r.name ? "" : r.name
         }
 
         // rejoindre — valide la ligne de mot de passe dépliée par connectWithPsk ; la ligne reste dépliée pendant
@@ -304,20 +295,10 @@ Overlay {
             r.connectWithPsk(bloc.secret.text)
         }
 
-        // deconnecter — « Se déconnecter » sous le réseau joint : replie ses actions et le déconnecte.
-        // Entrée : r, le réseau. Sortie : aucune. Erreurs : réseau détruit, rien n'est fait. Dépendances : deplie.
-        function deconnecter(r): void {
-            deplie = ""
-            r?.disconnect()
-        }
-
-        // details — « Détails… » sous le réseau joint : demande la fenêtre Réseau sur son profil (l'uuid du profil
-        // Wi-Fi actif, sinon le nom du réseau), puis ferme le popover. Entrée : r, le réseau. Sortie : aucune.
-        // Erreurs : aucune. Dépendances : etat (profils, profilDemande, fenetre), fermer.
-        function details(r): void {
-            etat.profilDemande = (etat.profils ?? []).find(p => p.actif && p.type === "802-11-wireless")?.uuid
-                ?? r?.name ?? ""
-            etat.fenetre = true
+        // deconnecter — « Se déconnecter » du pied : déconnecte le réseau Wi-Fi joint et ferme le popover.
+        // Entrées : aucune. Sortie : aucune. Erreurs : sans réseau joint, rien n'est fait. Dépendances : joint, fermer.
+        function deconnecter(): void {
+            joint?.disconnect()
             fermer()
         }
 
@@ -329,7 +310,6 @@ Overlay {
         function echec(raison): void {
             const refus = [ConnectionFailReason.NoSecrets, ConnectionFailReason.WifiClientDisconnected,
                            ConnectionFailReason.WifiClientFailed, ConnectionFailReason.WifiAuthTimeout]
-            mode = "mdp"
             deplie = enCours.name
             enCours = null
             erreur = refus.includes(raison) ? "Mot de passe refusé. Vérifiez-le et réessayez." : "Connexion impossible."
@@ -372,11 +352,8 @@ Overlay {
                 panneau.replierAbsent()
                 panneau.trier(avant)
             }
-            // Le réseau joint a changé : ses actions dépliées n'ont plus d'objet.
-            function onNomActifChanged() {
-                if (panneau.mode === "actions") panneau.deplie = ""
-                panneau.trier()
-            }
+            // Le réseau joint a changé : il quitte la liste, et l'ancien y revient.
+            function onNomActifChanged() { panneau.trier() }
         }
         // Borne du retour visuel de la recherche quand le balayage ne change pas la liste (motion.delays.scan) ;
         // armée par le seul clic.
@@ -410,7 +387,7 @@ Overlay {
                 ColumnLayout {
                     Layout.fillWidth: true
                     spacing: 0
-                    Texte { Layout.fillWidth: true; text: panneau.resume.titre; echelon: 3; moyen: true; elide: Text.ElideRight; color: Theme.color?.textEmphasis ?? "transparent" }
+                    Texte { Layout.fillWidth: true; text: panneau.resume.titre; echelon: 2; moyen: true; elide: Text.ElideRight; color: Theme.color?.textEmphasis ?? "transparent" }
                     Texte {
                         Layout.fillWidth: true
                         text: panneau.resume.etat
@@ -436,13 +413,11 @@ Overlay {
                 }
             }
 
-            Separateur { visible: panneau.listeVisible; Layout.fillWidth: true; Layout.topMargin: Theme.space?.scale[0] ?? 0 }
-
             RowLayout {
                 visible: panneau.listeVisible
                 Layout.leftMargin: panneau.marge
                 Layout.rightMargin: Theme.space?.scale[1] ?? 0
-                Texte { Layout.fillWidth: true; text: "RÉSEAUX À PROXIMITÉ"; echelon: 0; moyen: true; color: Theme.color?.textTertiary ?? "transparent" }
+                Texte { Layout.fillWidth: true; text: "Réseaux à proximité"; echelon: 0; moyen: true; color: Theme.color?.textSecondary ?? "transparent" }
                 // Recherche : l'icône, ou l'indicateur d'activité pendant un balayage relancé.
                 Item {
                     id: recherche
@@ -480,15 +455,12 @@ Overlay {
                             readonly property int rang: panneau.ordre.indexOf(cle)
                             // Lectures sûres : le WifiNetwork d'une liste figée peut avoir été détruit (null).
                             readonly property var modelData: panneau.reseaux[rang] ?? null
-                            readonly property bool joint: modelData?.connected ?? false
                             readonly property bool montre: panneau.present(modelData)
                             readonly property bool ouverte: panneau.deplie === cle
                             readonly property bool enConnexion: panneau.enCours !== null && panneau.enCours === modelData
                                 || modelData?.state === ConnectionState.Connecting
                             readonly property real base: panneau.bases[cle] ?? 0
-                            // Mode retenu à l'ouverture : il reste pendant le repli, même si une autre ligne se déplie.
-                            property string modeCharge: "mdp"
-                            readonly property Item bloc: ouverte && modeCharge === "mdp" ? charge.item : null
+                            readonly property Item bloc: ouverte ? charge.item : null
                             readonly property alias depliage: depliage
                             readonly property alias decalage: decalage
                             readonly property alias apparition: apparition
@@ -509,7 +481,6 @@ Overlay {
                                 if (!posee) Qt.callLater(() => posee = true)
                             }
                             Component.onDestruction: panneau.desinscrire(cle, ligne)
-                            onOuverteChanged: if (ouverte) modeCharge = panneau.mode
                             onPartieChanged: if (partie) Qt.callLater(panneau.retirer, cle)
 
                             // glisser — fait partir la ligne de sa place d'avant un nouveau tri vers la nouvelle,
@@ -543,7 +514,6 @@ Overlay {
                                 hoverEnabled: true
                                 icone: panneau.iconeSignal(ligne.modelData?.signalStrength ?? 0)
                                 text: ligne.cle
-                                accentue: ligne.joint
                                 onActive: panneau.choisir(ligne.modelData)
                                 suffixe: Component {
                                     Row {
@@ -563,13 +533,6 @@ Overlay {
                                             taille: Theme.icons?.sizes.dense ?? 0
                                             couleur: Theme.color?.textTertiary ?? "transparent"
                                         }
-                                        Coche {
-                                            anchors.verticalCenter: parent.verticalCenter
-                                            visible: ligne.joint
-                                            width: Theme.icons?.sizes.dense ?? 0
-                                            height: width
-                                            couleur: Theme.color?.accentStandalone ?? "transparent"
-                                        }
                                     }
                                 }
                             }
@@ -585,29 +548,17 @@ Overlay {
                                     active: ligne.ouverte || depliage.value > 0
                                     x: Theme.space?.scale[1] ?? 0
                                     width: parent.width - 2 * x
-                                    sourceComponent: ligne.modeCharge === "actions" ? actions : mdp
+                                    sourceComponent: mdp
                                 }
                             }
 
                             Component {
                                 id: mdp
                                 Bloc {
-                                    nom: ligne.cle
                                     erreur: ligne.ouverte ? panneau.erreur : ""
                                     occupe: ligne.enConnexion
                                     onRejoindre: panneau.rejoindre()
                                     onAnnuler: { panneau.deplie = ""; panneau.erreur = "" }
-                                }
-                            }
-                            Component {
-                                id: actions
-                                Encadre {
-                                    RowLayout {
-                                        Layout.alignment: Qt.AlignRight
-                                        spacing: Theme.space?.scale[1] ?? 0
-                                        Bouton { text: "Se déconnecter"; onClicked: panneau.deconnecter(ligne.modelData) }
-                                        Bouton { text: "Détails…"; onClicked: panneau.details(ligne.modelData) }
-                                    }
                                 }
                             }
                         }
@@ -615,14 +566,30 @@ Overlay {
                 }
             }
 
-            Separateur { Layout.fillWidth: true; Layout.topMargin: Theme.space?.scale[0] ?? 0 }
-
+            // Pied : filet translucide en retrait (material.glassLine, D103 : un filet opaque se lisait comme un
+            // trait blanc sur le verre), puis les actions en texte seul.
+            Separateur {
+                Layout.fillWidth: true
+                Layout.leftMargin: panneau.marge
+                Layout.rightMargin: panneau.marge
+                Layout.topMargin: Theme.space?.scale[0] ?? 0
+                Layout.bottomMargin: Theme.space?.scale[0] ?? 0
+                color: Theme.material?.glassLine ?? "transparent"
+            }
+            Rangee {
+                index: 0
+                visible: panneau.joint !== null
+                Layout.fillWidth: true
+                implicitHeight: panneau.hauteurLigne
+                hoverEnabled: true
+                text: "Se déconnecter"
+                onActive: panneau.deconnecter()
+            }
             Rangee {
                 index: 0
                 Layout.fillWidth: true
                 implicitHeight: panneau.hauteurLigne
                 hoverEnabled: true
-                icone: "emblem-system"
                 text: "Réglages réseau…"
                 // Une demande de profil restée sans suite ne détourne pas cette ouverture.
                 onActive: { panneau.etat.profilDemande = ""; panneau.etat.fenetre = true; panneau.fermer() }

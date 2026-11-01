@@ -81,7 +81,7 @@ QtObject {
     // Surface et le contenu. Sorties : echap(), émis sur Échap non consommé par le contenu ; implicitWidth,
     // implicitHeight, taille du contenu et du retrait ; marge, débord de l'ombre autour de la Surface, que la
     // fenêtre réserve. Erreurs : aucune.
-    // Dépendances : Surface, OmbreElevation (niveau e3, sœur de la Surface).
+    // Dépendances : Surface, OmbreElevation (niveau e3, sœur de la Surface, évidée sous le verre, D103).
     component Cadre: FocusScope {
         id: cadre
 
@@ -100,6 +100,7 @@ QtObject {
             id: ombre
             cible: corps
             niveau: "e3"
+            evidee: true
         }
 
         Surface {
