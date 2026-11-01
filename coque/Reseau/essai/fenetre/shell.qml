@@ -96,6 +96,14 @@ ShellRoot {
         // demande — profil demandé encore en attente (EtatReseau.profilDemande). Sortie : texte.
         function demande(): string { return EtatReseau.profilDemande }
 
+        // balayage — demandeurs du balayage Wi-Fi d'EtatReseau, en JSON : {recherche (popover), fenetre (page Wi-Fi),
+        // balayage (l'un ou l'autre)}. Sortie : texte JSON. Erreurs : aucune.
+        function balayage(): string {
+            return JSON.stringify({recherche: EtatReseau.recherche, fenetre: EtatReseau.rechercheFenetre, balayage: EtatReseau.balayage})
+        }
+        // popover — pose la demande de balayage du popover, qu'il écrit dans EtatReseau.recherche. Entrée : valeur.
+        function popover(valeur: bool): void { EtatReseau.recherche = valeur }
+
         // choisir — ouvre la sous-page du profil d'un uuid, comme un clic sur sa rangée. Entrée : uuid. Sortie : aucune.
         function choisir(uuid: string): void { fenetre.panneau.ouvrirProfil(uuid) }
 

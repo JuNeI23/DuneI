@@ -4,6 +4,7 @@ import Quickshell
 import "../Theme"
 import "../Composants"
 import "nmcli.js" as Nmcli
+import "../Barre/icones.js" as Icones
 
 // FicheProfil — fiche d'un profil de connexion enregistré, à droite de la fenêtre Réseau (L2-11).
 // Rôle : lit les réglages du profil (nmcli.lireProfil) à chaque sélection, puis montre, de haut en bas : l'en-tête
@@ -19,8 +20,14 @@ import "nmcli.js" as Nmcli
 // l'adresse manque : NetworkManager refuse la méthode manuelle sans adresse.
 // Secret : lu seulement au clic sur l'œil (nmcli -s -g 802-11-wireless-security.psk), jamais journalisé ni rendu ;
 // il est effacé quand la fiche change de profil et disparaît avec elle à la fermeture de la fenêtre.
+// Mode résumé (resume vrai) : la page Wi-Fi y pose la carte du réseau joint, sans dupliquer la logique de la fiche.
+// Seules restent la rangée de tête (médaillon d'accent à la force du signal, nom, « Connecté · » et l'état de la
+// connectivité, coche), le mot de passe à l'œil, la connexion automatique, la priorité (Compteur, bible « Compteur »),
+// la connexion facturée et une rangée « Détails… » qui ouvre la fiche complète (panneau.ouvrirProfil) ; l'en-tête, les
+// sections IPv4 et de détail et l'oubli sont masqués. La fiche complète n'est pas modifiée par ce mode.
 // Entrées : uuid, le profil affiché (vide : fiche vide) ; rangee, sa rangée de la liste (nmcli.profilsFenetre :
-// nom, wifi, actif, etat, icone) ; etat, la source de l'état et des actions, EtatReseau par défaut.
+// nom, wifi, actif, etat, icone) ; etat, la source de l'état et des actions, EtatReseau par défaut ; resume, faux par
+// défaut, voir ci-dessus ; panneauHote, le PanneauReseau dont « Détails… » ouvre la sous-page (mode résumé seulement).
 // Sorties : profil, réglages lus (null avant lecture) ; lu, vrai une fois lus ; valeurs, réglages affichés ;
 // erreurs, objet clé → message (autoconnect, priorite, facture, methode, adresse, passerelle, dns, psk, connexion,
 // oublier, profil) ; copie, le libellé de la valeur dont « Copié » tient la place, « * » pour « Tout copier », vide
@@ -41,6 +48,8 @@ ColumnLayout {
 
     property string uuid
     property var rangee: null
+    property bool resume: false
+    property var panneauHote: null
     property var etat: EtatReseau
     property var profil: null
     property var valeurs: ({})
@@ -56,6 +65,8 @@ ColumnLayout {
     property bool relectureAttendue: false
     // Garde des réponses de nmcli : marquée morte au changement de profil et à la destruction.
     property var garde: ({mort: false})
+    // Icône de force du réseau joint (rangée de tête du mode résumé), aux paliers de la barre.
+    readonly property string iconeForce: Icones.iconeReseau({carte: true, radio: true, connecte: true, connectivite: "full", force: etat?.force ?? 0})
     readonly property bool lu: profil !== null
     readonly property bool wifi: rangee?.wifi ?? false
     readonly property alias secret: secret
@@ -278,6 +289,7 @@ ColumnLayout {
 
     // En-tête : pastille, nom et état, action de connexion.
     RowLayout {
+        visible: !fiche.resume
         Layout.fillWidth: true
         spacing: fiche.cote
 
@@ -330,9 +342,27 @@ ColumnLayout {
 
     Groupe {
         visible: fiche.lu
+        // Rangée de tête du mode résumé (bible, « Rangées de liste ») : médaillon d'accent à la force du signal, nom,
+        // état de la connexion et coche à l'accent autonome.
+        Ligne {
+            objectName: "tete"
+            visible: fiche.resume
+            filet: false
+            hauteur: Theme.reglages?.rowLead ?? 0
+            icone: fiche.iconeForce
+            iconeActive: true
+            libelle: fiche.rangee?.nom ?? ""
+            aide: "Connecté" + (({full: " · internet disponible", limited: " · sans internet", none: " · sans internet",
+                                  portal: " · portail de connexion"})[fiche.etat.connectivite] ?? "")
+            Coche {
+                width: Theme.icons?.sizes.dense ?? 0
+                height: width
+                couleur: Theme.color?.accentStandalone ?? "transparent"
+            }
+        }
         Ligne {
             visible: fiche.wifi
-            filet: false
+            filet: fiche.resume
             libelle: "Mot de passe"
             aide: ({"": "", "wpa-psk": "WPA2 personnel", "sae": "WPA3 personnel", "none": "WEP"})[fiche.valeurs.securite ?? ""]
                   ?? fiche.valeurs.securite ?? ""
@@ -354,7 +384,7 @@ ColumnLayout {
             }
         }
         Ligne {
-            filet: fiche.wifi
+            filet: fiche.wifi || fiche.resume
             libelle: "Connexion automatique"
             aide: fiche.wifi ? "Rejoindre dès que le réseau est à portée" : "Se connecter dès que le câble est branché"
             erreur: fiche.erreurs.autoconnect ?? ""
@@ -368,7 +398,19 @@ ColumnLayout {
             libelle: "Priorité"
             aide: "Plus haut = préféré"
             erreur: fiche.erreurs.priorite ?? ""
+            // Mode résumé : le Compteur de la coque (champ et stepper, bible « Compteur »), borné comme NetworkManager.
+            Compteur {
+                id: compteurPriorite
+                objectName: "priorite"
+                visible: fiche.resume
+                from: -999
+                to: 999
+                editable: true
+                onValueModified: fiche.priorite(value - (fiche.valeurs.priorite ?? 0))
+                Binding { target: compteurPriorite; property: "value"; value: fiche.valeurs.priorite ?? 0; restoreMode: Binding.RestoreNone }
+            }
             Rectangle {
+                visible: !fiche.resume
                 implicitWidth: rangeePas.implicitWidth
                 implicitHeight: Theme.density?.controlHeight ?? 0
                 radius: Theme.radius?.control ?? 0
@@ -400,11 +442,20 @@ ColumnLayout {
                 onToggled: fiche.appliquer("facture", {facture: checked ? "yes" : "no"})
             }
         }
+        // Mode résumé : ouvre la fiche complète du profil (IPv4 fixe, oubli).
+        Ligne {
+            objectName: "details"
+            visible: fiche.resume
+            libelle: "Détails…"
+            cliquable: true
+            onClique: fiche.panneauHote?.ouvrirProfil(fiche.uuid)
+            Icone { nom: "go-next"; taille: Theme.icons?.sizes.dense ?? 0; couleur: Theme.color?.textTertiary ?? "transparent" }
+        }
     }
 
-    Section { visible: fiche.lu; text: "IPV4" }
+    Section { visible: fiche.lu && !fiche.resume; text: "IPV4" }
     Groupe {
-        visible: fiche.lu
+        visible: fiche.lu && !fiche.resume
         Ligne {
             filet: false
             libelle: "Configuration"
@@ -456,7 +507,7 @@ ColumnLayout {
     }
 
     RowLayout {
-        visible: Object.keys(fiche.detail).length > 0
+        visible: !fiche.resume && Object.keys(fiche.detail).length > 0
         Layout.fillWidth: true
         Section { Layout.fillWidth: true; Layout.alignment: Qt.AlignBottom; text: "DÉTAIL DE LA CONNEXION ACTIVE" }
         // Les deux libellés du bouton, mesurés : sa largeur est celle du plus long, pour que « Copié » ne la change pas.
@@ -472,7 +523,7 @@ ColumnLayout {
         }
     }
     Groupe {
-        visible: Object.keys(fiche.detail).length > 0
+        visible: !fiche.resume && Object.keys(fiche.detail).length > 0
         GridLayout {
             Layout.fillWidth: true
             Layout.margins: fiche.cote
@@ -507,7 +558,7 @@ ColumnLayout {
     // Oubli, avec sa confirmation dans la fiche.
     Bouton {
         objectName: "oublier"
-        visible: fiche.lu && !fiche.confirmer
+        visible: fiche.lu && !fiche.confirmer && !fiche.resume
         Layout.topMargin: Theme.space?.scale[1] ?? 0
         text: "Oublier ce réseau"
         onClicked: fiche.confirmer = true
@@ -533,7 +584,7 @@ ColumnLayout {
         }
     }
     Groupe {
-        visible: fiche.confirmer
+        visible: fiche.confirmer && !fiche.resume
         Layout.topMargin: Theme.space?.scale[1] ?? 0
         Ligne {
             filet: false

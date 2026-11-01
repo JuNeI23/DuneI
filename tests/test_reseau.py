@@ -704,6 +704,164 @@ exit 0
 """
 
 
+@unittest.skipUnless(os.environ.get("WAYLAND_DISPLAY") and QS, "session Wayland et Quickshell requis")
+class PageWifiTest(EssaiCoque, unittest.TestCase):
+    """La page Wi-Fi de la fenêtre Réseau, éprouvée sur un état, un panneau et des réseaux factices.
+
+    La coque d'essai pose une PageWifi dans une fenêtre offscreen ; les réseaux factices journalisent leurs appels,
+    sans jamais le texte d'un mot de passe, et le panneau factice journalise l'ouverture des sous-pages.
+    """
+
+    essai = ESSAI / "wifi"
+    teintes = (55,)
+    environnement = {"QT_QPA_PLATFORM": "offscreen"}
+    SECRET = "s3cret-jamais-journalise"
+
+    def setUp(self):
+        super().setUp()
+        self.installer(55)
+        self.lancer(self.dir)
+        self.attendre("essai : prêt")
+        self.jusqua(lambda p: p["existe"] and p["joint"] and p["rangeesJoint"], "page construite et profil lu")
+
+    def ipc(self, fonction: str, *args: str) -> str:
+        """Appelle une fonction IPC de la coque d'essai de la page Wi-Fi. Entrées : fonction, args. Sortie : stdout."""
+        return subprocess.run([QS, "ipc", "--pid", str(self.proc.pid), "call", "wifi", fonction, *args],
+                              check=True, capture_output=True, text=True, timeout=DELAI).stdout.strip()
+
+    def page(self) -> dict:
+        """État de la page, décodé (voir la coque d'essai). Dépendances : ipc."""
+        return json.loads(self.ipc("page"))
+
+    def jusqua(self, condition, message: str = ""):
+        """Attend qu'une condition sur l'état de la page devienne vraie. Sortie : l'état qui la vérifie."""
+        fin = time.monotonic() + DELAI
+        while time.monotonic() < fin:
+            p = self.page()
+            if condition(p):
+                return p
+            time.sleep(0.05)
+        self.fail(f"{message}\n{p}\n{self.journal()}")
+
+    def test_cartes(self):
+        p = self.page()
+        # Réseau joint : rangée de tête puis mot de passe, connexion automatique, priorité, facturation, détails.
+        self.assertEqual((p["tete"], p["aideTete"]), ("Wifi_TRIADES", "Connecté · internet disponible"))
+        self.assertEqual(p["rangeesJoint"], ["Wifi_TRIADES", "Mot de passe", "Connexion automatique", "Priorité",
+                                             "Connexion facturée", "Détails…"])
+        self.assertEqual(p["priorite"], 5)
+        # Disponibles : triés (connus d'abord, puis la force), sans le réseau joint ; cadenas des seuls sécurisés.
+        self.assertEqual(p["reseaux"], ["Connu", "Inconnu", "Ouvert"])
+        self.assertEqual(p["serrures"], ["Connu", "Inconnu"])
+        # Hors de portée : seuls les profils absents du balayage, puis « Autre réseau… ».
+        self.assertEqual(p["hors"], ["Telephone_Essai", "Cafe"])
+        self.assertTrue(p["autre"])
+        # Adresses, en lecture seule.
+        self.assertEqual(p["adresses"], {"Configuration IPv4": "Automatique", "Adresse IPv4": "192.168.1.42/24",
+                                         "Passerelle": "192.168.1.1", "DNS": "192.168.1.1", "IPv6": "fe80::1/64"})
+        self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
+
+    def test_reseau_connu_ou_ouvert_se_rejoint(self):
+        self.ipc("choisir", "Connu")
+        self.attendre("essai : connect Connu")
+        p = self.jusqua(lambda p: p["connexion"] == ["Connu"], "« Connexion… » sur la rangée")
+        self.assertEqual(p["deplie"], "")
+        self.ipc("choisir", "Ouvert")
+        self.attendre("essai : connect Ouvert")
+
+    def test_inconnu_securise_deplie_et_rejoint(self):
+        self.ipc("choisir", "Inconnu")
+        p = self.jusqua(lambda p: p["deplie"] == "Inconnu" and p["saisie"] == 0, "mot de passe déplié")
+        self.assertNotIn("essai : connect Inconnu", self.journal())
+        # Un second clic replie.
+        self.ipc("choisir", "Inconnu")
+        self.jusqua(lambda p: p["deplie"] == "" and p["saisie"] == -1, "mot de passe replié")
+        self.ipc("choisir", "Inconnu")
+        self.jusqua(lambda p: p["deplie"] == "Inconnu" and p["saisie"] == 0, "mot de passe redéplié")
+        self.ipc("saisir", self.SECRET)
+        self.ipc("rejoindre")
+        self.attendre(f"essai : connectWithPsk Inconnu {len(self.SECRET)}")
+        self.assertNotIn(self.SECRET, self.journal())
+
+    def test_echec_deplie_avec_le_message(self):
+        self.ipc("choisir", "Connu")
+        self.attendre("essai : connect Connu")
+        self.ipc("echouer", "Connu")
+        p = self.jusqua(lambda p: p["deplie"] == "Connu", "rangée dépliée")
+        self.assertEqual(p["erreur"], "Mot de passe refusé. Vérifiez-le et réessayez.")
+        self.ipc("choisir", "Connu")
+        self.ipc("choisir", "Connu")
+        self.ipc("echouer", "Connu")
+        self.assertEqual(self.page()["connexion"], [])
+        # Un autre échec que le refus du mot de passe.
+        self.ipc("echouerAutrement", "Connu")
+        self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
+
+    def test_profil_hors_de_portee_et_autre_reseau(self):
+        self.ipc("hors", "cafe-1")
+        self.attendre("essai : ouvrirProfil cafe-1")
+        self.ipc("autre")
+        self.attendre("essai : ouvrirNouveau")
+        self.ipc("details")
+        self.attendre("essai : ouvrirProfil wifi-1")
+
+    def test_wifi_coupe(self):
+        self.ipc("basculer")
+        self.attendre("essai : allumer false")
+        p = self.jusqua(lambda p: not p["radio"] and not p["disponiblesVisible"], "radio coupée")
+        self.assertFalse(p["joint"])
+        self.assertEqual(p["adresses"], {})
+        self.assertEqual(p["hors"], ["Telephone_Essai", "Cafe"])
+        self.ipc("basculer")
+        self.attendre("essai : allumer true")
+        self.jusqua(lambda p: p["radio"] and p["disponiblesVisible"] and p["joint"], "radio rallumée")
+
+    def test_priorite_par_le_compteur(self):
+        self.ipc("priorite", "1")
+        self.attendre('essai : executer ["connection","modify","wifi-1","connection.autoconnect-priority","6"]')
+
+    def test_balayage_demande_puis_rendu(self):
+        # La page visible demande le balayage ; le popover (autre demandeur) ne l'annule pas en se fermant.
+        p = self.jusqua(lambda p: p["rechercheFenetre"], "balayage demandé par la page")
+        self.ipc("popover", "true")
+        self.ipc("popover", "false")
+        p = self.page()
+        self.assertTrue(p["balayageEtat"])
+        self.ipc("masquer", "true")
+        p = self.jusqua(lambda p: not p["rechercheFenetre"], "balayage rendu à l'invisibilité")
+        self.assertFalse(p["balayageEtat"])
+        self.ipc("popover", "true")
+        self.assertTrue(self.page()["balayageEtat"])
+        self.ipc("popover", "false")
+        self.ipc("masquer", "false")
+        self.jusqua(lambda p: p["rechercheFenetre"], "balayage redemandé")
+        self.ipc("detruire")
+        p = self.jusqua(lambda p: not p["existe"], "page détruite")
+        self.assertFalse(p["rechercheFenetre"])
+
+    def test_rechercher_montre_l_activite_puis_rend_la_liste(self):
+        p = self.page()
+        self.assertTrue(p["rechercher"])
+        self.assertFalse(p["activite"])
+        self.ipc("rechercher")
+        self.attendre('essai : executer ["device","wifi","rescan"]')
+        p = self.jusqua(lambda p: p["balayage"], "recherche en cours")
+        self.assertTrue(p["activite"])
+        self.assertFalse(p["rechercher"])
+        self.ipc("balayer")
+        p = self.jusqua(lambda p: not p["balayage"], "liste rendue")
+        self.assertTrue(p["rechercher"])
+        self.assertFalse(p["activite"])
+
+    def test_recherche_bornee(self):
+        # Sans retour de liste, « Rechercher » revient au plus tard à motion.delays.scan.
+        self.ipc("rechercher")
+        self.jusqua(lambda p: p["balayage"], "recherche en cours")
+        debut = time.monotonic()
+        self.jusqua(lambda p: not p["balayage"], "recherche bornée")
+        self.assertLess(time.monotonic() - debut, 8)
+
+
 @unittest.skipUnless(QS, "Quickshell requis")
 class GroupeTest(EssaiCoque, unittest.TestCase):
     """Groupe et Ligne, éprouvés dans une coque d'essai sans fenêtre : largeurs, contrôle à droite, filets en retrait."""
@@ -819,6 +977,37 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
         self.ouvrir()
         self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
 
+    def test_balayage_de_la_page_wifi(self):
+        # La page Wi-Fi visible demande le balayage (rechercheFenetre) ; le popover écrit une autre propriété, si bien
+        # que sa fermeture ne coupe pas la demande de la fenêtre, ni l'inverse ; la sous-page et la fermeture la
+        # rendent.
+        lire = lambda: json.loads(self.ipc("essai", "balayage"))
+        self.assertEqual(lire(), {"recherche": False, "fenetre": False, "balayage": False})
+        self.ipc("reseau", "ouvrir")
+        self.jusqua(lambda e: e["fenetre"] and e["rangees"], "fenêtre construite")
+        fin = time.monotonic() + DELAI
+        while not lire()["fenetre"] and time.monotonic() < fin:
+            time.sleep(0.05)
+        self.assertEqual(lire(), {"recherche": False, "fenetre": True, "balayage": True})
+        self.ipc("essai", "popover", "true")
+        self.ipc("essai", "popover", "false")
+        self.assertEqual(lire(), {"recherche": False, "fenetre": True, "balayage": True})
+        self.ipc("essai", "choisir", "wifi-1")
+        self.jusqua(lambda e: e["sousPage"] == "wifi-1", "sous-page ouverte")
+        self.assertEqual(lire(), {"recherche": False, "fenetre": False, "balayage": False})
+        self.ipc("essai", "retour")
+        self.jusqua(lambda e: e["sousPage"] == "", "retour")
+        fin = time.monotonic() + DELAI
+        while not lire()["fenetre"] and time.monotonic() < fin:
+            time.sleep(0.05)
+        self.assertTrue(lire()["balayage"])
+        self.ipc("essai", "onglet", "filaire")
+        self.assertFalse(lire()["fenetre"])
+        self.ipc("essai", "onglet", "wifi")
+        self.ipc("essai", "fermer")
+        self.jusqua(lambda e: not e["fenetre"], "fenêtre détruite")
+        self.assertEqual(lire(), {"recherche": False, "fenetre": False, "balayage": False})
+
     def test_pastilles(self):
         # Rouge ferme la fenêtre ; orange l'envoie au bureau spécial lu dans la configuration de Hyprland, vert
         # bascule le plein écran, toujours sur l'adresse de la fenêtre, jamais sur la fenêtre active. Aucune commande
@@ -931,29 +1120,44 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
         self.ipc("essai", "cliquer", "plus")
         self.jusqua(lambda e: e["onglets"][2][2] == "Connecté", "VPN connecté")
 
+    def tabuler_jusqu_a(self, libelle: str):
+        """Frappe Tab jusqu'à ce que le focus soit sur la Ligne de ce libellé (quarante frappes au plus).
+
+        Entrée : libelle. Sortie : aucune. Erreurs : échec du test si le focus n'y arrive pas. Dépendances : ipc.
+        """
+        vus = []
+        for _ in range(40):
+            self.ipc("essai", "tab")
+            vus.append(self.ipc("essai", "focus"))
+            if vus[-1] == libelle:
+                return
+        self.fail(f"focus sur « {libelle} » jamais atteint : {vus}")
+
     def test_clavier_des_rangees(self):
-        # Bible, « Clavier » : Tab atteint les rangées cliquables de la page, Entrée les active. Première rangée :
-        # le profil actif ; « Autre réseau… » vient après les deux profils Wi-Fi.
+        # Bible, « Clavier » : Tab atteint les rangées cliquables de la page, Entrée les active. La page Wi-Fi porte
+        # d'abord l'interrupteur de la radio et la carte du réseau joint (« Détails… » en fait partie), puis les
+        # réseaux disponibles (ceux du système), enfin les profils hors de portée et « Autre réseau… ».
         self.ipc("reseau", "ouvrir")
         self.jusqua(lambda e: e["fenetre"] and e["rangees"], "fenêtre construite")
-        self.ipc("essai", "tab")
-        self.assertEqual(self.ipc("essai", "focus"), "Wifi_TRIADES")
+        self.tabuler_jusqu_a("Détails…")
         self.ipc("essai", "entree")
-        e = self.jusqua(lambda e: e["sousPage"] == "wifi-1", "Entrée ouvre la sous-page")
+        self.jusqua(lambda e: e["sousPage"] == "wifi-1", "Entrée ouvre la sous-page du profil joint")
         self.ipc("essai", "echap")
         self.jusqua(lambda e: e["sousPage"] == "", "retour")
-        self.ipc("essai", "tab")
-        self.assertEqual(self.ipc("essai", "focus"), "Telephone_Essai")
-        self.ipc("essai", "tab")
-        self.assertEqual(self.ipc("essai", "focus"), "Autre réseau…")
+        self.tabuler_jusqu_a("Telephone_Essai")
+        self.ipc("essai", "entree")
+        self.jusqua(lambda e: e["sousPage"] == "hotspot-1", "Entrée ouvre le profil hors de portée")
+        self.ipc("essai", "echap")
+        self.jusqua(lambda e: e["sousPage"] == "", "retour")
+        self.tabuler_jusqu_a("Autre réseau…")
         self.ipc("essai", "entree")
         self.jusqua(lambda e: e["sousPage"] == "nouveau", "Entrée ouvre « nouveau »")
 
     def test_changer_d_onglet(self):
         # Changer d'onglet ferme la sous-page et remet le défilement en haut, comme le retour ; les flèches du
         # clavier passent d'un onglet à l'autre.
-        e = self.ouvrir()
-        self.assertGreater(e["defilement"][1], e["defilement"][2], "la sous-page du profil actif défile")
+        self.ouvrir()
+        self.jusqua(lambda e: e["defilement"][1] > e["defilement"][2], "la sous-page du profil actif défile")
         self.ipc("essai", "defiler", "40")
         self.assertEqual(self.etat()["defilement"][0], 40)
         self.ipc("essai", "onglet", "filaire")

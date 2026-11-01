@@ -13,7 +13,9 @@ import "../Barre/icones.js" as Icones
 // le popover, la fenêtre et les notifications lisent tous ce singleton. Aucun minuteur au repos : la lecture ne
 // s'exécute qu'au démarrage et en réponse à une ligne du moniteur.
 // Entrées (réglables) : surveille et lecture, commandes du moniteur et de la lecture (remplaçables par un test) ;
-// actif, suspend le moniteur si faux ; recherche, vrai tant qu'un popover demande un balayage Wi-Fi ; fenetre,
+// actif, suspend le moniteur si faux ; recherche, vrai tant qu'un popover demande un balayage Wi-Fi, et
+// rechercheFenetre, vrai tant que la page Wi-Fi visible de la fenêtre Réseau en demande un : deux demandeurs,
+// deux propriétés, si bien que la fermeture de l'un ne coupe pas le balayage que l'autre réclame encore ; fenetre,
 // vrai pour demander la fenêtre Réseau (posé par « Réglages réseau… » du popover, lu par la fenêtre) ;
 // profilDemande, uuid ou nom du profil que la fenêtre doit montrer (posé par « Détails… » du popover, consommé et
 // remis à vide par le panneau Réseau qui le sélectionne), vide par défaut.
@@ -36,6 +38,9 @@ Singleton {
     property alias actif: relance.actif
     property alias relances: relance.relances
     property bool recherche: false
+    property bool rechercheFenetre: false
+    // Vrai tant qu'un demandeur au moins réclame le balayage : seule valeur reportée sur les cartes.
+    readonly property bool balayage: recherche || rechercheFenetre
     property bool fenetre: false
     property string profilDemande: ""
     // Nombre de processus nmcli de executer encore vivants (utile aux tests).
@@ -100,10 +105,10 @@ Singleton {
     // Erreurs : sans xdg-open, seul le contrôle a lieu. Dépendances : portail (Process), verifier.
     function ouvrirPortail() { portail.running = true }
 
-    // appliquerRecherche — reporte recherche sur le balayage de chaque carte Wi-Fi.
-    // Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : cartes, recherche.
-    function appliquerRecherche() { cartes.forEach(c => c.scannerEnabled = recherche) }
-    onRechercheChanged: appliquerRecherche()
+    // appliquerRecherche — reporte balayage (recherche ou rechercheFenetre) sur le balayage de chaque carte Wi-Fi.
+    // Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : cartes, balayage.
+    function appliquerRecherche() { cartes.forEach(c => c.scannerEnabled = balayage) }
+    onBalayageChanged: appliquerRecherche()
     onCartesChanged: appliquerRecherche()
 
     // lu — publie la sortie de la lecture unique : trois sections séparées par une ligne « -- » (connexions

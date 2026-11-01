@@ -14,6 +14,7 @@ import "../Composants/etats.js" as Etats
 // (curseur en main, signal clique), s'atteint à la tabulation et s'active par Entrée ou Espace (bible, « Clavier »),
 // se peint d'une plaque de survol un cran au-dessus de son conteneur, comme ReglageLigne (bible, « Survol »), et montre
 // le contour de focus (focus.width, jamais un anneau ni un changement de fond) quand le focus lui vient du clavier ;
+// hauteur, hauteur minimale de la rangée, reglages.row par défaut (reglages.rowLead pour une rangée de tête) ;
 // et le contrôle déclaré comme enfant.
 // Sortie : signal clique(), émis au clic, à Entrée ou à Espace d'une rangée cliquable ; hovered, down (lus par Etat).
 // Erreurs : aucune ; avant le chargement des tokens, les retraits sont nuls.
@@ -29,6 +30,7 @@ ColumnLayout {
     property bool iconeActive: false
     property bool filet: true
     property bool cliquable: false
+    property real hauteur: Theme.reglages?.row ?? 0
     default property alias controle: emplacement.data
     readonly property real cote: Theme.space?.scale[2] ?? 0
     Layout.fillWidth: true
@@ -58,7 +60,7 @@ ColumnLayout {
     // le contenu.
     Item {
         Layout.fillWidth: true
-        Layout.minimumHeight: Theme.reglages?.row ?? 0
+        Layout.minimumHeight: ligne.hauteur
         implicitHeight: contenu.implicitHeight
 
         Rectangle {
