@@ -125,8 +125,8 @@ function lireFactures(texte) {
 // Wi-Fi d'abord, puis les filaires, chaque groupe avec le profil actif en tête puis dans l'ordre alphabétique ; etat
 // vaut « Connecté », « À portée » ou « Hors de portée » pour le Wi-Fi (un profil est à portée quand son nom figure
 // au balayage), « Connecté » ou « Débranché » pour le filaire ; icone est network-wireless-hotspot pour un profil
-// Wi-Fi facturé (le partage du téléphone), sinon le Wi-Fi au signal plein (connecté), moyen (à portée) ou nul, ou
-// network-wired. Les autres types (boucle locale, VPN, pont) sont écartés. Erreurs : aucune. Dépendances : aucune.
+// Wi-Fi facturé (le partage du téléphone), sinon le Wi-Fi au signal moyen pour un profil à portée et plein sinon
+// (connecté, ou hors de portée : le palier nul ne montre qu'un point, et la fenêtre l'atténue), ou network-wired. Les autres types (boucle locale, VPN, pont) sont écartés. Erreurs : aucune. Dépendances : aucune.
 function profilsFenetre(profils, portee, factures, factureActif) {
     const types = {"802-11-wireless": "Wi-Fi", "802-3-ethernet": "Filaire"}
     const rang = p => (p.type === "802-11-wireless" ? 0 : 2) + (p.actif ? 0 : 1)
@@ -137,7 +137,7 @@ function profilsFenetre(profils, portee, factures, factureActif) {
             const etat = p.actif ? "Connecté" : !wifi ? "Débranché" : portee.includes(p.nom) ? "À portée" : "Hors de portée"
             const facture = factures[p.uuid] === "yes" || p.actif && factureActif
             const icone = !wifi ? "network-wired" : facture ? "network-wireless-hotspot"
-                : "network-wireless-signal-" + ({"Connecté": "excellent", "À portée": "good"}[etat] ?? "none")
+                : "network-wireless-signal-" + (etat === "À portée" ? "good" : "excellent")
             return {groupe: types[p.type], nom: p.nom, uuid: p.uuid, appareil: p.appareil, wifi, actif: p.actif, etat, icone}
         })
 }

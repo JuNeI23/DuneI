@@ -23,7 +23,8 @@ import "nmcli.js" as Nmcli
 // Entrées : etat, la source de l'état et des actions, EtatReseau par défaut ; choisi, uuid du profil affiché ;
 // enTete, hauteur réservée en haut de la barre latérale, au-dessus de son titre (les pastilles d'une fenêtre), 0 par
 // défaut ; nouveau, vrai quand la fiche « Nouveau réseau » occupe la droite.
-// Sorties : rangees, les rangées de la liste (nmcli.profilsFenetre) ; fiche, la FicheProfil ; nouvelle, la
+// Sorties : rangees, les rangées de la liste (nmcli.profilsFenetre) ; fiche, la FicheProfil ; defilement, le
+// Flickable de la fiche ; nouvelle, la
 // FicheNouveau ouverte, null sinon ; factures, uuid →
 // facturation lue.
 // Erreurs : sans profil, la fiche est vide et « Aucun profil enregistré. » s'affiche ; un échec de la lecture des
@@ -45,6 +46,7 @@ Item {
     property var factures: ({})
     readonly property var rangees: Nmcli.profilsFenetre(etat.profils, etat.reseaux.map(r => r.name), factures, etat.facture)
     readonly property alias fiche: fiche
+    readonly property alias defilement: defilement
     // Uuid des profils Wi-Fi : la facturation est relue quand cette liste change, et seulement alors.
     readonly property string cleFactures: rangees.filter(r => r.wifi).map(r => r.uuid).join(" ")
     // Empreinte des rangées : le modèle de la liste n'est reconstruit que si elle change.
@@ -186,7 +188,9 @@ Item {
                     spacing: Theme.space?.scale[1] ?? 0
                     Icone {
                         nom: rangee.symbole
-                        couleur: (rangee.choisie ? rangee.etat.texte : Theme.color?.textSecondary) ?? "transparent"
+                        // Un profil hors de portée garde son icône, en ton atténué comme son nom.
+                        couleur: (rangee.choisie ? rangee.etat.texte : rangee.statut === "Hors de portée"
+                            ? Theme.color?.textTertiary : Theme.color?.textSecondary) ?? "transparent"
                     }
                     ColumnLayout {
                         Layout.fillWidth: true

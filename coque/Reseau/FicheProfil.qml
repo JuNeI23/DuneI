@@ -459,9 +459,14 @@ ColumnLayout {
         visible: Object.keys(fiche.detail).length > 0
         Layout.fillWidth: true
         Section { Layout.fillWidth: true; Layout.alignment: Qt.AlignBottom; text: "DÉTAIL DE LA CONNEXION ACTIVE" }
+        // Les deux libellés du bouton, mesurés : sa largeur est celle du plus long, pour que « Copié » ne la change pas.
+        TextMetrics { id: mesureTout; font: Theme.police(2, false, false); text: "Tout copier" }
+        TextMetrics { id: mesureCopie; font: Theme.police(2, false, false); text: "Copié" }
         Bouton {
             objectName: "toutCopier"
             icone: "edit-copy"
+            Layout.preferredWidth: leftPadding + rightPadding + (Theme.icons?.sizes.dense ?? 0) + spacing
+                + Math.ceil(Math.max(mesureTout.advanceWidth, mesureCopie.advanceWidth))
             text: fiche.copie === "*" ? "Copié" : "Tout copier"
             onClicked: fiche.copier("")
         }

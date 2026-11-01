@@ -19,7 +19,8 @@ import "../Composants"
 // Erreurs : aucune ; avant le chargement des tokens, la fenêtre n'est pas construite.
 // Dépendances : quickshell ≥ 0.3 (LazyLoader, FloatingWindow, IpcHandler), Theme, Surface, PastillesFenetre,
 // PanneauReseau, EtatReseau.
-// Cotes : 860 × 608 px par défaut, comme la maquette, et au moins 720 × 480 px ; pastilles à space.scale[3] (16) du
+// Cotes : 860 × 720 px par défaut (la maquette en donnait 608, où la fiche d'un profil actif, haute de 646 px, se
+// coupait au bas de « Oublier ce réseau »), et au moins 720 × 480 px ; la fiche défile au-delà ; pastilles à space.scale[3] (16) du
 // coin haut gauche.
 Scope {
     id: racine
@@ -41,7 +42,7 @@ Scope {
             title: "Réseau"
             color: Theme.color?.surfaceWindow ?? "transparent"
             implicitWidth: 860
-            implicitHeight: 608
+            implicitHeight: 720
             minimumSize: Qt.size(720, 480)
             onClosed: racine.fermer()
             onVisibleChanged: if (!visible) racine.fermer()

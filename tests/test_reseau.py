@@ -101,7 +101,7 @@ class NmcliTest(EssaiCoque, unittest.TestCase):
         r = self.appeler("profilsFenetre", profils, ["wifinp"], {"h": "yes"}, False)
         self.assertEqual([(x["groupe"], x["nom"], x["etat"], x["icone"]) for x in r], [
             ("Wi-Fi", "Wifi_TRIADES", "Connecté", "network-wireless-signal-excellent"),
-            ("Wi-Fi", "Café", "Hors de portée", "network-wireless-signal-none"),
+            ("Wi-Fi", "Café", "Hors de portée", "network-wireless-signal-excellent"),
             ("Wi-Fi", "Hotspot_NJ", "Hors de portée", "network-wireless-hotspot"),
             ("Wi-Fi", "wifinp", "À portée", "network-wireless-signal-good"),
             ("Filaire", "Filaire", "Débranché", "network-wired")])
@@ -786,6 +786,8 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
             ["Filaire", "Connexion filaire 1", "Débranché", "network-wired"]])
         self.assertEqual(e["detail"], {"IPv4": "192.168.1.42/24", "IPv6": "fe80::1/64", "Passerelle": "192.168.1.1",
                                        "DNS": "192.168.1.1", "Adresse matérielle": "A4:C3:F0:5B:1E:72"})
+        # La fiche du profil actif, détail compris, tient dans la fenêtre à sa taille d'ouverture, sans défiler.
+        self.assertGreaterEqual(e["hauteur"][0], e["hauteur"][1], e["hauteur"])
         # Colonne de navigation : la rangée choisie a le fond neutre de la sélection et un nom en graisse moyenne.
         self.assertEqual(e["selection"], ["inactive", True, False])
         self.ipc("essai", "fermer")
@@ -818,7 +820,7 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
         # Un clic sur une valeur la copie et montre « Copié » à sa place, puis la valeur revient après
         # motion.delays.copied ; « Tout copier » copie le bloc, une ligne « Libellé : valeur » par paramètre.
         # Le minuteur ne tourne qu'après une copie.
-        self.ouvrir()
+        largeur = self.ouvrir()["toutCopier"]
         self.assertFalse(json.loads(self.ipc("essai", "copie", "IPv4"))["minuteur"])
         c = json.loads(self.ipc("essai", "copier", "IPv4"))
         self.assertEqual((c["presse"], c["copie"], c["texte"], c["minuteur"]), ("192.168.1.42/24", "IPv4", "Copié", True))
@@ -830,6 +832,8 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(c["presse"], "IPv4 : 192.168.1.42/24\nIPv6 : fe80::1/64\nPasserelle : 192.168.1.1\n"
                                       "DNS : 192.168.1.1\nAdresse matérielle : A4:C3:F0:5B:1E:72")
         self.assertEqual((c["copie"], c["texte"]), ("*", "Copié"))
+        # « Tout copier » garde sa largeur quand il montre « Copié » : la ligne ne saute pas.
+        self.assertEqual(self.etat()["toutCopier"], largeur)
         self.jusqua(lambda e: json.loads(self.ipc("essai", "copie", ""))["texte"] == "Tout copier", "bouton revenu")
 
     def test_nouveau_reseau(self):

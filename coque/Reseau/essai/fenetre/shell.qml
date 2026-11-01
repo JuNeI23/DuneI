@@ -65,6 +65,8 @@ ShellRoot {
                 rangees: (p?.rangees ?? []).map(r => [r.groupe, r.nom, r.etat, r.icone]),
                 detail: f?.detail ?? {},
                 selection: essai.selection(),
+                hauteur: p ? [p.height, p.defilement.contentHeight] : [],
+                toutCopier: f && essai.nomme("toutCopier") ? essai.nomme("toutCopier").width : 0,
                 nouvelle: !p?.nouvelle ? {} : {visible: p.nouvelle.visible, securise: p.nouvelle.securise,
                                                 valide: p.nouvelle.valide, erreur: p.nouvelle.erreur},
                 fiche: !f ? {} : {
