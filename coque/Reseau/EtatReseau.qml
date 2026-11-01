@@ -14,7 +14,7 @@ import "../Barre/icones.js" as Icones
 // s'exécute qu'au démarrage et en réponse à une ligne du moniteur.
 // Entrées (réglables) : surveille et lecture, commandes du moniteur et de la lecture (remplaçables par un test) ;
 // actif, suspend le moniteur si faux ; recherche, vrai tant qu'un popover demande un balayage Wi-Fi, et
-// rechercheFenetre, vrai tant que la page Wi-Fi visible de la fenêtre Réseau en demande un : deux demandeurs,
+// rechercheFenetre, vrai pendant toute la vie de la fenêtre Réseau (posé par son PanneauReseau après la première image, rendu à sa destruction), quel que soit l'onglet : deux demandeurs,
 // deux propriétés, si bien que la fermeture de l'un ne coupe pas le balayage que l'autre réclame encore ; fenetre,
 // vrai pour demander la fenêtre Réseau (posé par « Réglages réseau… » du popover, lu par la fenêtre) ;
 // profilDemande, uuid ou nom du profil que la fenêtre doit montrer (posé par « Détails… » du popover, consommé et

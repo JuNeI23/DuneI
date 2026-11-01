@@ -20,8 +20,8 @@ import "nmcli.js" as Nmcli
 // tant qu'une rangée est dépliée, pour ne perdre ni la saisie ni l'erreur. « Rechercher » (accent autonome, plaque
 // de survol arrondie) relance « nmcli device wifi rescan » ; l'Activite et « Recherche… » la remplacent jusqu'au
 // retour de la liste, au plus motion.delays.scan.
-// Balayage : tant que la page est visible dans une fenêtre visible, elle demande le balayage Wi-Fi par
-// etat.rechercheFenetre (après l'image qui la montre ou la cache), qu'elle rend à faux à sa destruction ; le popover
+// Balayage : le balayage Wi-Fi est demandé par
+// etat.rechercheFenetre : elle n'y touche plus, c'est le PanneauReseau qui la pose pour toute la vie de la fenêtre ; le popover
 // écrit etat.recherche, une autre propriété : EtatReseau balaye tant que l'une des deux est vraie, si bien que la
 // fermeture du popover ne coupe pas la demande de la fenêtre, ni l'inverse (voir EtatReseau.balayage).
 // Clavier : toutes les rangées cliquables sont des Ligne, et « Rechercher » prend la tabulation, Entrée et Espace avec
@@ -61,25 +61,6 @@ ColumnLayout {
 
     spacing: 0
 
-    // Demande de balayage de la fenêtre : vrai tant que la page est visible dans une fenêtre visible. Elle est portée
-    // à etat.rechercheFenetre après l'image qui montre (ou cache) la page, jamais avant : l'écriture de scannerEnabled
-    // bloque le fil graphique d'une demi-seconde environ et retarderait l'affichage du changement d'onglet. Une
-    // fenêtre qui se cache ne produit plus d'image : la demande est alors rendue sur-le-champ. La page libère elle-même
-    // sa demande à sa destruction.
-    readonly property bool veutBalayer: visible && (Window.window?.visible ?? false)
-    property bool balayageEnAttente: false
-    onVeutBalayerChanged: {
-        if (veutBalayer || (Window.window?.visible ?? false)) balayageEnAttente = true
-        else etat.rechercheFenetre = false
-    }
-    Connections {
-        target: page.balayageEnAttente ? page.Window.window : null
-        function onFrameSwapped() {
-            page.balayageEnAttente = false
-            page.etat.rechercheFenetre = page.veutBalayer
-        }
-    }
-    Component.onDestruction: etat.rechercheFenetre = false
 
     // trier — fige l'ordre des réseaux disponibles : le réseau joint en est exclu ; rien ne change tant qu'une
     // rangée de mot de passe est dépliée, pour ne perdre ni la saisie ni le message d'erreur. L'ordre n'est

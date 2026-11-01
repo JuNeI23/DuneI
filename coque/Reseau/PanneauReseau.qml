@@ -27,6 +27,8 @@ import "../Barre/icones.js" as Icones
 // (Wi-Fi pour un profil 802-11-wireless, Filaire pour un profil ethernet) ; une demande faite fenêtre ouverte est
 // suivie aussitôt, et toute demande est consommée (remise à vide) dès que son profil est lu. Sans demande, la fenêtre
 // s'ouvre sur la page de l'onglet Wi-Fi.
+// Le panneau demande le balayage Wi-Fi (etat.rechercheFenetre) pour toute la vie de la fenêtre et le rend à sa
+// destruction ; changer d'onglet ou de sous-page n'y touche jamais.
 // La facturation de chaque profil Wi-Fi est lue d'un seul processus quand la liste des profils change, puis tenue à
 // jour par les lectures de la fiche ; aucun minuteur.
 // Entrées : etat, la source de l'état et des actions, EtatReseau par défaut ; onglet, « wifi » (défaut), « filaire »
@@ -142,7 +144,22 @@ Item {
     // qu'au focus venu du clavier (Liste.focusClavier). Le focus n'arrive qu'à l'activation de la fenêtre, après la
     // construction : sa première arrivée est donc effacée au passage.
     property bool premierFocus: true
-    Component.onCompleted: { remplir(); liste.forceActiveFocus() }
+    Component.onCompleted: { remplir(); liste.forceActiveFocus(); demandeBalayage = true }
+    Component.onDestruction: etat.rechercheFenetre = false
+
+    // Balayage Wi-Fi : demandé à etat.rechercheFenetre pour toute la vie du panneau, donc de la fenêtre, quel que soit
+    // l'onglet ou la sous-page, et rendu à sa destruction. L'écriture de scannerEnabled bloquant le fil graphique
+    // d'une demi-seconde environ, elle suit la première image de la fenêtre (frameSwapped), qu'elle ne retarde pas ;
+    // sans fenêtre, elle est immédiate.
+    property bool demandeBalayage: false
+    Connections {
+        target: panneau.demandeBalayage ? panneau.Window.window : null
+        function onFrameSwapped() {
+            panneau.demandeBalayage = false
+            panneau.etat.rechercheFenetre = true
+        }
+    }
+    onDemandeBalayageChanged: if (demandeBalayage && !Window.window) { demandeBalayage = false; etat.rechercheFenetre = true }
     Connections {
         target: liste
         function onActiveFocusChanged() {

@@ -967,24 +967,19 @@ class PageWifiTest(EssaiCoque, unittest.TestCase):
         self.ipc("priorite", "1")
         self.attendre('essai : executer ["connection","modify","wifi-1","connection.autoconnect-priority","6"]')
 
-    def test_balayage_demande_puis_rendu(self):
-        # La page visible demande le balayage ; le popover (autre demandeur) ne l'annule pas en se fermant.
-        p = self.jusqua(lambda p: p["rechercheFenetre"], "balayage demandé par la page")
-        self.ipc("popover", "true")
-        self.ipc("popover", "false")
-        p = self.page()
-        self.assertTrue(p["balayageEtat"])
+    def test_balayage_non_demande_par_la_page(self):
+        # La page n'écrit plus rechercheFenetre (le panneau la pose pour la vie de la fenêtre) : visible, masquée ou
+        # détruite, elle la laisse à faux ; le popover reste un demandeur distinct.
+        time.sleep(0.5)
+        self.assertFalse(self.page()["rechercheFenetre"])
         self.ipc("masquer", "true")
-        p = self.jusqua(lambda p: not p["rechercheFenetre"], "balayage rendu à l'invisibilité")
-        self.assertFalse(p["balayageEtat"])
+        self.ipc("masquer", "false")
+        time.sleep(0.5)
+        self.assertFalse(self.page()["rechercheFenetre"])
         self.ipc("popover", "true")
         self.assertTrue(self.page()["balayageEtat"])
         self.ipc("popover", "false")
-        self.ipc("masquer", "false")
-        self.jusqua(lambda p: p["rechercheFenetre"], "balayage redemandé")
-        self.ipc("detruire")
-        p = self.jusqua(lambda p: not p["existe"], "page détruite")
-        self.assertFalse(p["rechercheFenetre"])
+        self.assertFalse(self.page()["balayageEtat"])
 
     def test_rechercher_montre_l_activite_puis_rend_la_liste(self):
         p = self.page()
@@ -1315,36 +1310,35 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
         self.ouvrir()
         self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
 
-    def test_balayage_de_la_page_wifi(self):
-        # La page Wi-Fi visible demande le balayage (rechercheFenetre) ; le popover écrit une autre propriété, si bien
-        # que sa fermeture ne coupe pas la demande de la fenêtre, ni l'inverse ; la sous-page et la fermeture la
-        # rendent.
+    def test_balayage_a_la_vie_de_la_fenetre(self):
+        # Le panneau demande le balayage (rechercheFenetre) pour toute la vie de la fenêtre, sur n'importe quel onglet et
+        # sous-page ; le popover écrit une autre propriété, si bien que sa fermeture ne coupe pas la demande de la
+        # fenêtre, ni l'inverse ; la fermeture la rend. Un changement d'onglet ne l'écrit jamais.
         lire = lambda: json.loads(self.ipc("essai", "balayage"))
+        def jusqua_fenetre(valeur):
+            fin = time.monotonic() + DELAI
+            while lire()["fenetre"] != valeur and time.monotonic() < fin:
+                time.sleep(0.05)
+            self.assertEqual(lire()["fenetre"], valeur)
         self.assertEqual(lire(), {"recherche": False, "fenetre": False, "balayage": False})
         self.ipc("reseau", "ouvrir")
         self.jusqua(lambda e: e["fenetre"] and e["rangees"], "fenêtre construite")
-        fin = time.monotonic() + DELAI
-        while not lire()["fenetre"] and time.monotonic() < fin:
-            time.sleep(0.05)
+        jusqua_fenetre(True)
         self.assertEqual(lire(), {"recherche": False, "fenetre": True, "balayage": True})
         self.ipc("essai", "popover", "true")
         self.ipc("essai", "popover", "false")
         self.assertEqual(lire(), {"recherche": False, "fenetre": True, "balayage": True})
+        # Ni sous-page ni onglet ne la touchent.
         self.ipc("essai", "choisir", "wifi-1")
         self.jusqua(lambda e: e["sousPage"] == "wifi-1", "sous-page ouverte")
-        self.assertEqual(lire(), {"recherche": False, "fenetre": False, "balayage": False})
+        self.assertTrue(lire()["fenetre"])
         self.ipc("essai", "retour")
         self.jusqua(lambda e: e["sousPage"] == "", "retour")
-        fin = time.monotonic() + DELAI
-        while not lire()["fenetre"] and time.monotonic() < fin:
-            time.sleep(0.05)
-        self.assertTrue(lire()["balayage"])
-        self.ipc("essai", "onglet", "filaire")
-        fin = time.monotonic() + DELAI
-        while lire()["fenetre"] and time.monotonic() < fin:
-            time.sleep(0.05)
-        self.assertFalse(lire()["fenetre"])
-        self.ipc("essai", "onglet", "wifi")
+        for cle in ("filaire", "vpn", "wifi"):
+            self.ipc("essai", "onglet", cle)
+            self.jusqua(lambda e: e["onglet"] == cle, cle)
+            time.sleep(0.3)
+            self.assertTrue(lire()["fenetre"], f"balayage coupé au passage à {cle}")
         self.ipc("essai", "fermer")
         self.jusqua(lambda e: not e["fenetre"], "fenêtre détruite")
         self.assertEqual(lire(), {"recherche": False, "fenetre": False, "balayage": False})
