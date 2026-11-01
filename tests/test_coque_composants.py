@@ -1137,6 +1137,21 @@ class CoqueClavierTest(EssaiCoque, unittest.TestCase):
         self.ipc("cliquerEffacer")
         self.assertEqual(self.valeur("recherche"), "«» false")
 
+    def test_bouton_entree(self):
+        # Entrée active le Bouton qui a le focus une seule fois (Espace aussi) ; le Déroulant, qui gère déjà Entrée
+        # lui-même, l'ouvre sans activation supplémentaire.
+        self.demarrer()
+        self.ipc("focaliser", "bulle")
+        self.ipc("touche", "entree")
+        self.assertEqual(self.valeur("bulle").split()[-1], "1")
+        self.ipc("touche", "espace")
+        self.assertEqual(self.valeur("bulle").split()[-1], "2")
+        self.ipc("focaliser", "deroulant")
+        self.ipc("touche", "entree")
+        v = self.valeur("deroulant").split()
+        self.assertEqual((v[2], v[3]), ("0", "true"))
+        self.assertEqual(self.valeur("bulle").split()[-1], "2")
+
     def test_depliable_clavier(self):
         # L'en-tête de la section est un arrêt de tabulation après la recherche, entouré de l'anneau au clavier ;
         # Espace et Entrée basculent la section, le clic aussi.

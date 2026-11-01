@@ -41,6 +41,12 @@ ShellRoot {
         return null
     }
 
+    // reperable — vrai pour les éléments que focus() nomme : une Ligne (libellé), une Valeur copiable (« copier: » ou « valeur: ») ou
+    // l'un des boutons de la sous-page. Entrée : o, un Item. Sortie : booléen. Erreurs : aucune.
+    function reperable(o) {
+        return !!o.libelle || ["retour", "connexion", "toutCopier"].includes(o.objectName) || /^(copier|valeur):/.test(String(o.objectName))
+    }
+
     // nomme — descendant de la fiche par son objectName. Entrée : nom. Sortie : l'Item, ou null.
     function nomme(nom) { return trouver(fenetre.panneau?.fiche, o => o.objectName === nom) }
 
@@ -52,15 +58,18 @@ ShellRoot {
     }
 
     // lireCopie — retour de copie d'un libellé du détail (vide : « Tout copier »). Entrée : cle. Sortie : JSON
-    // {presse (Quickshell.clipboardText), copie (le libellé dont « Copié » tient la place, « * » pour « Tout copier »,
-    // vide sinon), texte (« Copié » ou la valeur, ou le texte du bouton), minuteur (vrai s'il tourne)}. Une Valeur
+    // {presse (Quickshell.clipboardText), copie (le libellé dont « Copié » est le texte opaque, « * » pour « Tout copier »,
+    // vide sinon), texte (le texte opaque de la Valeur, ou celui du bouton), minuteur (vrai s'il tourne)}. Une Valeur
     // porte son retour et son minuteur (copie, fin) ; « Tout copier » ceux de la fiche. Erreurs : libellé absent,
     // TypeError au journal. Dépendances : fenetre.panneau.fiche, nomme.
     function lireCopie(cle) {
         const f = fenetre.panneau.fiche
         const o = nomme(cle === "" ? "toutCopier" : "copier:" + cle)
         if (cle === "") return JSON.stringify({presse: Quickshell.clipboardText, copie: f.copie, texte: o.text, minuteur: f.finCopie.running})
-        return JSON.stringify({presse: Quickshell.clipboardText, copie: o.copie ? cle : "", texte: o.copie ? "Copié" : o.text, minuteur: o.fin.running})
+        // Ce que la Valeur montre : son texte, ou « Copié », celui des deux Text de la Valeur qui est le plus opaque.
+        const montre = Array.from(o.children).filter(t => t.text !== undefined).sort((x, y) => y.opacity - x.opacity)[0]
+        return JSON.stringify({presse: Quickshell.clipboardText, copie: montre?.text === "Copié" ? cle : "", texte: montre?.text ?? "",
+                               minuteur: o.fin.running})
     }
 
     IpcHandler {
@@ -69,7 +78,7 @@ ShellRoot {
         // etat — état de la fenêtre, en JSON : {fenetre (construite), demandee (EtatReseau.fenetre), rangees
         // ([groupe, nom, état, icône] des profils), detail (libellé → valeur du détail de la connexion active),
         // onglet et sousPage (ceux du panneau), onglets ([clé, nom, état] des trois onglets), defilement ([contentY,
-        // contentHeight, height]), fiche: {uuid, lu, priorite, autoconnect, facture, fixe, erreurs, secret (longueur), revele, confirmer, occupe (une lecture du profil est en cours)}}.
+        // contentHeight, height]), fiche: {uuid, lu, priorite, autoconnect, facture, fixe, erreurs, secret (longueur), revele, confirmer}}.
         // Entrées : aucune. Sortie : texte JSON. Erreurs : aucune ; fenêtre fermée, rangees, detail et fiche vides.
         function etat(): string {
             const p = fenetre.panneau
@@ -89,7 +98,6 @@ ShellRoot {
                     uuid: f.uuid, lu: f.lu, priorite: f.valeurs.priorite, autoconnect: f.valeurs.autoconnect,
                     facture: f.valeurs.facture === "yes", fixe: f.fixe, erreurs: f.erreurs,
                     secret: f.secret.length, revele: f.secret.revele, confirmer: f.confirmer,
-                    occupe: f.enLecture !== "",
                 },
             })
         }
@@ -144,7 +152,7 @@ ShellRoot {
 
         // focus — libellé de la Ligne (ou objectName du contrôle, comme « retour » ou « connexion ») qui a le focus actif de la fenêtre, vide si c'est autre chose. Entrées :
         // aucune. Sortie : texte. Erreurs : fenêtre fermée, TypeError au journal.
-        function focus(): string { let o = fenetre.panneau.Window.window.activeFocusItem; while (o && !o.libelle && !o.objectName) o = o.parent; return o?.libelle || o?.objectName || "" }
+        function focus(): string { let o = fenetre.panneau.Window.window.activeFocusItem; while (o && !essai.reperable(o)) o = o.parent; return o?.libelle || o?.objectName || "" }
 
         // defiler — pose le défilement des pages à y pixels. Entrée : y. Sortie : aucune.
         function defiler(y: int): void { fenetre.panneau.defilement.contentY = y }

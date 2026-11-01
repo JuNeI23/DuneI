@@ -706,7 +706,8 @@ exit 0
 
 # Ordre de tabulation de la page Wi-Fi sur l'état factice (voir test_ordre_de_tabulation).
 SEQUENCE_TAB = ["radio", "secret", "auto", "priorite", "facture", "Détails…", "rechercher", "Connu", "Inconnu",
-                "Ouvert", "Telephone_Essai", "Cafe", "Autre réseau…"]
+                "Ouvert", "Telephone_Essai", "Cafe", "Autre réseau…", "valeur:Adresse IPv4", "valeur:Passerelle", "valeur:DNS",
+                "valeur:IPv6"]
 
 
 @unittest.skipUnless(os.environ.get("WAYLAND_DISPLAY") and QS, "session Wayland et Quickshell requis")
@@ -905,6 +906,21 @@ class PageWifiTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(self.ipc("connexion"), "Se déconnecter")
         self.attendre('essai : executer ["connection","down","wifi-1"]')
 
+    def test_profil_filaire_inactif_se_connecte(self):
+        # Un profil filaire inactif propose « Se connecter » tant qu'une carte filaire existe (l'état de la liste ne dit
+        # pas si le câble est branché) ; sans carte, le bouton disparaît.
+        self.ipc("ouvrirFiche", "filaire-1")
+        fin = time.monotonic() + DELAI
+        while True:
+            texte = self.ipc("connexion")
+            if texte or time.monotonic() > fin:
+                break
+            time.sleep(0.05)
+        self.assertEqual(texte, "Se connecter")
+        self.attendre('essai : executer ["connection","up","filaire-1"]')
+        self.ipc("carteFilaire", "false")
+        self.assertEqual(self.ipc("connexion"), "")
+
     def test_priorite_par_le_compteur(self):
         self.ipc("priorite", "1")
         self.attendre('essai : executer ["connection","modify","wifi-1","connection.autoconnect-priority","6"]')
@@ -995,8 +1011,10 @@ class PageFilaireTest(EssaiCoque, unittest.TestCase):
         self.assertEqual((p["appareil"], p["aide"], p["actif"]), ("Ethernet (enp3s0)", "Connecté", True))
         self.assertEqual(p["materiel"], "8C:16:45:2E:71:B0")
         self.assertEqual(p["profils"], ["Bureau", "Atelier"])
-        self.assertEqual(p["adresses"], {"Adresse IPv4": "10.0.0.2/24", "Passerelle": "10.0.0.1", "DNS": "10.0.0.1",
-                                         "IPv6": "fe80::2/64"})
+        p = self.jusqua(lambda p: "Configuration IPv4" in p["adresses"], "méthode IPv4 lue")
+        self.assertEqual(p["adresses"], {"Configuration IPv4": "Automatique", "Adresse IPv4": "10.0.0.2/24",
+                                         "Passerelle": "10.0.0.1", "DNS": "10.0.0.1", "IPv6": "fe80::2/64"})
+        self.attendre('essai : executer ["-g","ipv4.method","connection","show","bureau-1"]')
         self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
 
     def test_cable_debranche(self):
@@ -1022,6 +1040,11 @@ class PageFilaireTest(EssaiCoque, unittest.TestCase):
         self.assertTrue(self.page()["adressesVisible"])
         self.ipc("appareil", "wlan0")
         self.jusqua(lambda p: not p["adressesVisible"], "adresses masquées")
+
+    def test_methode_fixe(self):
+        # Une méthode manuelle se dit « Fixe » ; elle est relue au retour sur la page.
+        self.ipc("methode", "manual")
+        self.jusqua(lambda p: p["adresses"].get("Configuration IPv4") == "Fixe", "méthode fixe")
 
     def test_profil_ouvre_sa_sous_page(self):
         self.ipc("choisir", "atelier-1")
@@ -1203,7 +1226,13 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
         # Le minuteur ne tourne qu'après une copie.
         largeur = self.ouvrir()["toutCopier"]
         self.assertFalse(json.loads(self.ipc("essai", "copie", "IPv4"))["minuteur"])
-        c = json.loads(self.ipc("essai", "copier", "IPv4"))
+        self.ipc("essai", "copier", "IPv4")
+        # Le fondu rend « Copié » opaque en quelques images : le texte montré est lu jusqu'à ce qu'il soit « Copié ».
+        fin = time.monotonic() + DELAI
+        while json.loads(self.ipc("essai", "copie", "IPv4"))["texte"] != "Copié":
+            self.assertLess(time.monotonic(), fin)
+            time.sleep(0.02)
+        c = json.loads(self.ipc("essai", "copie", "IPv4"))
         self.assertEqual((c["presse"], c["copie"], c["texte"], c["minuteur"]), ("192.168.1.42/24", "IPv4", "Copié", True))
         self.jusqua(lambda e: json.loads(self.ipc("essai", "copie", "IPv4"))["texte"] == "192.168.1.42/24",
                     "valeur revenue")
@@ -1289,15 +1318,15 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
         self.ipc("essai", "cliquer", "plus")
         self.jusqua(lambda e: e["onglets"][2][2] == "Connecté", "VPN connecté")
 
-    def tabuler_jusqu_a(self, libelle: str):
-        """Frappe Tab jusqu'à ce que le focus soit sur la Ligne de ce libellé (douze frappes au plus).
+    def tabuler_jusqu_a(self, libelle: str, essais: int = 12):
+        """Frappe Tab jusqu'à ce que le focus soit sur la Ligne de ce libellé (douze frappes au plus par défaut).
 
-        Entrée : libelle. Sortie : aucune. Erreurs : échec du test si le focus n'y arrive pas. Dépendances : ipc.
+        Entrées : libelle ; essais, le nombre de frappes au plus. Sortie : aucune. Erreurs : échec du test si le focus n'y arrive pas. Dépendances : ipc.
         Les arrêts qui précèdent la liste des réseaux du système sont seuls atteints ainsi : cette liste, réelle et
         qui grossit au balayage, a une longueur imprévisible.
         """
         vus = []
-        for _ in range(12):
+        for _ in range(essais):
             self.ipc("essai", "tab")
             vus.append(self.ipc("essai", "focus"))
             if vus[-1] == libelle:
@@ -1320,7 +1349,12 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
         self.ipc("reseau", "ouvrir")
         self.jusqua(lambda e: e["fenetre"] and e["rangees"], "fenêtre construite")
         time.sleep(0.5)
-        self.ipc("essai", "retourArriere")
+        # Le dernier arrêt de la page dépend des adresses de la machine (les valeurs copiables suivent « Autre réseau… ») :
+        # on remonte jusqu'à « Autre réseau… », en quelques frappes au plus.
+        for _ in range(8):
+            self.ipc("essai", "retourArriere")
+            if self.ipc("essai", "focus") == "Autre réseau…":
+                break
         self.assertEqual(self.ipc("essai", "focus"), "Autre réseau…")
         self.ipc("essai", "entree")
         self.jusqua(lambda e: e["sousPage"] == "nouveau", "Entrée ouvre « nouveau »")
@@ -1460,23 +1494,43 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
             time.sleep(0.05)
 
     def test_modifications_rapprochees(self):
-        # La seconde modification finit pendant la relecture lancée par la première : sa relecture est rejouée à
-        # la fin de celle en cours, et la fiche montre la dernière valeur enregistrée.
+        # Course éprouvée : les lectures sont lentes (nmcli factice), si bien que la lecture lancée à l'ouverture, ou
+        # celle qu'a demandée la première modification, répond après la seconde. Une lecture lancée avant la dernière
+        # écriture est périmée : elle n'écrase pas la valeur affichée, le second pas part de 10 et écrit 11, et la
+        # fiche finit sur la dernière valeur enregistrée.
         self.ouvrir("hotspot-1")
-        # La lecture rejouée à l'ouverture doit être finie : sa réponse tardive restaurerait la priorité entre les deux clics.
-        self.jusqua(lambda e: not e["fiche"]["occupe"], "lectures d'ouverture terminées")
         (self.bin / "lent").touch()
-        lecture = [a for a in self.appels() if a.endswith("connection show hotspot-1") and a.startswith("-t -f")]
+        lectures = lambda: len([a for a in self.appels() if a.endswith("connection show hotspot-1") and a.startswith("-t -f")])
+        avant = lectures()
         self.ipc("essai", "cliquer", "plus")
         fin = time.monotonic() + DELAI
-        while len([a for a in self.appels() if a.endswith("connection show hotspot-1") and a.startswith("-t -f")]) \
-                <= len(lecture):
+        while lectures() <= avant:
             self.assertLess(time.monotonic(), fin, self.appels())
             time.sleep(0.02)
         self.ipc("essai", "cliquer", "plus")
-        time.sleep(2)
-        e = self.etat()
-        self.assertEqual(e["fiche"]["priorite"], 11, self.appels())
+        e = self.jusqua(lambda e: e["fiche"]["priorite"] == 11 and "connection modify hotspot-1 connection.autoconnect-priority 11"
+                        in self.appels(), "priorité 11 écrite et affichée")
+        self.assertEqual(self.appels().count("connection modify hotspot-1 connection.autoconnect-priority 10"), 1,
+                         self.appels())
+
+    def test_pas_rapproches_sans_attente(self):
+        # Deux pas enchaînés sans laisser une lecture finir : le second part de la valeur affichée, jamais d'une
+        # lecture périmée.
+        self.ouvrir("hotspot-1")
+        (self.bin / "lent").touch()
+        self.ipc("essai", "cliquer", "plus")
+        self.ipc("essai", "cliquer", "plus")
+        self.jusqua(lambda e: "connection modify hotspot-1 connection.autoconnect-priority 11" in self.appels(),
+                    "second pas écrit 11")
+
+    def test_valeur_au_clavier(self):
+        # Les valeurs du détail sont des arrêts de tabulation : Entrée copie celle qui a le focus.
+        self.ouvrir()
+        self.tabuler_jusqu_a("copier:IPv4", 40)
+        self.ipc("essai", "entree")
+        c = self.jusqua(lambda e: json.loads(self.ipc("essai", "copie", "IPv4"))["copie"] == "IPv4", "valeur copiée")
+        c = json.loads(self.ipc("essai", "copie", "IPv4"))
+        self.assertEqual((c["presse"], c["texte"]), ("192.168.1.42/24", "Copié"))
 
     def test_detail_de_l_appareil_du_profil(self):
         # Wi-Fi et filaire actifs ensemble : EtatReseau lit le filaire ; seule sa fiche montre le détail.

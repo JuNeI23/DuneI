@@ -62,6 +62,7 @@ ShellRoot {
         property string passerelle: "192.168.1.1"
         property var dns: ["192.168.1.1"]
         property string mac: "A4:C3:F0:5B:1E:72"
+        property bool carteFilaire: true
         property bool recherche: false
         property bool rechercheFenetre: false
         readonly property bool balayage: recherche || rechercheFenetre
@@ -81,7 +82,8 @@ ShellRoot {
             {groupe: "Wi-Fi", nom: "Wifi_TRIADES", uuid: "wifi-1", appareil: "wlan0", wifi: true, actif: true, etat: "Connecté", icone: "network-wireless-signal-excellent"},
             {groupe: "Wi-Fi", nom: "Connu", uuid: "connu-1", appareil: "", wifi: true, actif: false, etat: "À portée", icone: "network-wireless-signal-good"},
             {groupe: "Wi-Fi", nom: "Telephone_Essai", uuid: "hotspot-1", appareil: "", wifi: true, actif: false, etat: "Hors de portée", icone: "network-wireless-hotspot"},
-            {groupe: "Wi-Fi", nom: "Cafe", uuid: "cafe-1", appareil: "", wifi: true, actif: false, etat: "Hors de portée", icone: "network-wireless-signal-excellent"}
+            {groupe: "Wi-Fi", nom: "Cafe", uuid: "cafe-1", appareil: "", wifi: true, actif: false, etat: "Hors de portée", icone: "network-wireless-signal-excellent"},
+            {groupe: "Filaire", nom: "Bureau", uuid: "filaire-1", appareil: "", wifi: false, actif: false, etat: "Débranché", icone: "network-wired"}
         ]
         function ouvrirProfil(uuid) { essai.journal("ouvrirProfil", uuid) }
         function ouvrirNouveau() { essai.journal("ouvrirNouveau", true) }
@@ -140,6 +142,8 @@ ShellRoot {
 
                 // ouvrirFiche — ouvre la FicheProfil complète d'un profil du panneau factice. Entrée : uuid. Sortie : aucune.
                 function ouvrirFiche(uuid: string): void { sousPage.uuid = uuid }
+                // carteFilaire — pose la présence d'une carte filaire dans l'état factice. Entrée : valeur. Sortie : aucune.
+                function carteFilaire(valeur: bool): void { faux.carteFilaire = valeur }
                 // connexion — clique « Se connecter » ou « Se déconnecter » de la carte de tête de la sous-page. Entrées :
                 // aucune. Sortie : le texte du bouton avant le clic, vide s'il est masqué. Erreurs : sous-page fermée.
                 function connexion(): string {

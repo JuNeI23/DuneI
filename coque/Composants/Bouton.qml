@@ -29,10 +29,11 @@ T.AbstractButton {
     readonly property alias etat: etat
 
     focusPolicy: Qt.TabFocus
-    // Clavier (bible, « Clavier ») : Espace est géré par le gabarit ; Entrée active aussi le bouton qui a le focus.
+    // Clavier (bible, « Clavier ») : Espace est géré par le gabarit ; Entrée active aussi le bouton qui a le focus,
+    // une fois par frappe (la répétition automatique est absorbée).
     Keys.onPressed: event => {
         event.accepted = [Qt.Key_Return, Qt.Key_Enter].includes(event.key)
-        if (event.accepted) click()
+        if (event.accepted && !event.isAutoRepeat) click()
     }
     implicitWidth: implicitContentWidth + leftPadding + rightPadding
     implicitHeight: Theme.density?.controlHeight ?? 0

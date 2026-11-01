@@ -51,7 +51,7 @@ ColumnLayout {
                 }
                 ReglageLigne {
                     titre: modelData.titre
-                    Valeur { visible: modelData.copiable; text: modelData.valeur }
+                    Valeur { objectName: "valeur:" + modelData.titre; visible: modelData.copiable; text: modelData.valeur }
                     Texte { visible: !modelData.copiable; text: modelData.valeur; color: Theme.color?.textSecondary ?? "transparent" }
                 }
             }

@@ -34,6 +34,12 @@ ShellRoot {
         property string passerelle: "10.0.0.1"
         property var dns: ["10.0.0.1"]
         property string mac: "8C:16:45:2E:71:B0"
+        property string methode: "auto"
+        // executer — journalise les arguments et rend la méthode IPv4 factice. Entrées : args, fin. Sortie : aucune.
+        function executer(args, fin) {
+            essai.journal("executer", JSON.stringify(args))
+            if (fin) fin(0, methode + "\n")
+        }
     }
 
     // Panneau factice : les profils filaires (un actif, un débranché) et l'ouverture d'une sous-page.
@@ -116,6 +122,9 @@ ShellRoot {
                 }
                 // sansProfils — retire les profils filaires du panneau. Entrées : aucune. Sortie : aucune.
                 function sansProfils(): void { panneauFaux.rangees = panneauFaux.rangees.filter(r => r.wifi) }
+                // methode — change la méthode IPv4 que rend le faux nmcli (« auto » ou « manual »), puis relit en
+                // rendant la page invisible puis visible. Entrée : nom. Sortie : aucune.
+                function methode(nom: string): void { faux.methode = nom; page.visible = false; page.visible = true }
                 // appareil — change l'appareil que lit l'état (le Wi-Fi quand le filaire est inactif). Entrée : nom.
                 function appareil(nom: string): void { faux.appareil = nom }
                 // choisir — clic sur le profil d'un uuid. Entrée : uuid. Sortie : aucune.

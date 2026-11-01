@@ -69,6 +69,8 @@ ColumnLayout {
     property bool relectureAttendue: false
     // Garde des réponses de nmcli : marquée morte au changement de profil et à la destruction.
     property var garde: ({mort: false})
+    // Génération des écritures : une lecture lancée avant la dernière écriture est périmée (voir lire et appliquer).
+    property int ecritures: 0
     // Icône de force du réseau joint (rangée de tête du mode résumé), aux paliers de la barre.
     readonly property string iconeForce: Icones.iconeReseau({carte: true, radio: true, connecte: true, connectivite: "full", force: etat?.force ?? 0})
     readonly property bool lu: profil !== null
@@ -105,17 +107,21 @@ ColumnLayout {
     // lire — lit les réglages du profil, puis restaure les contrôles sur eux.
     // Entrées : aucune. Sortie : aucune ; profil, valeurs et contrôles mis à jour, relu émis ; une demande pour le
     // profil dont la lecture est déjà en cours est notée, et rejouée à la fin de celle-ci : une modification
-    // achevée pendant la lecture n'y figure peut-être pas.
+    // achevée pendant la lecture n'y figure peut-être pas. Une lecture lancée avant la dernière écriture (appliquer)
+    // est périmée : sa réponse n'écrase ni les valeurs affichées ni le profil lu, et la relecture demandée prend le
+    // relais (sans quoi deux pas rapprochés de la priorité repartiraient de la valeur périmée).
     // Erreurs : un code non nul s'affiche en tête de fiche. Dépendances : etat.executer, Nmcli, restaurer.
     function lire() {
         if (uuid === "") return
         if (enLecture === uuid) return relectureAttendue = true
-        const g = garde, u = uuid
+        const g = garde, u = uuid, ecriture = ecritures
         enLecture = u
         etat.executer(["-t", "-f", Nmcli.CHAMPS_PROFIL, "connection", "show", u], (code, sortie) => {
             if (g.mort) return
             enLecture = ""
-            if (code !== 0) erreur("profil", sortie, code)
+            // Lecture périmée : une écriture a eu lieu depuis son lancement, la relecture qu'elle a demandée suit.
+            if (ecriture !== ecritures && profil !== null) relectureAttendue = true
+            else if (code !== 0) erreur("profil", sortie, code)
             else {
                 profil = Nmcli.lireProfil(sortie)
                 restaurer()
@@ -165,6 +171,7 @@ ColumnLayout {
     function appliquer(cle, changes) {
         const g = garde
         effacer(cle)
+        ecritures++
         const visibles = Object.assign({}, changes)
         delete visibles.psk
         valeurs = Object.assign({}, valeurs, visibles)
@@ -288,7 +295,7 @@ ColumnLayout {
             erreur: fiche.erreurs.connexion ?? ""
             Bouton {
                 objectName: "connexion"
-                visible: fiche.rangee !== null && (fiche.rangee.actif || fiche.rangee.etat === "À portée")
+                visible: fiche.rangee !== null && (fiche.rangee.actif || fiche.rangee.etat === "À portée" || (!fiche.wifi && fiche.etat.carteFilaire))
                 text: fiche.rangee?.actif ? "Se déconnecter" : "Se connecter"
                 principal: !(fiche.rangee?.actif ?? true)
                 onClicked: fiche.connecter()
