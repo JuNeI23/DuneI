@@ -51,11 +51,18 @@ class QuickshellEmitterTest(unittest.TestCase):
         self.assertEqual(self.out["bureauxVirtuels"], {"nombre": 4})
 
     def test_verre(self):
-        """Le verre est opaque la nuit (1,0) et translucide le jour (0,85 et 0,88), pour les deux familles."""
-        attendu = {"nuit": {"e2": 1.0, "e3": 1.0}, "jour": {"e2": 0.85, "e3": 0.88}}
+        """E2 est opaque la nuit (1,0) et translucide le jour (0,85) ; E3 est à 0,60 aux deux moments (D103)."""
+        attendu = {"nuit": {"e2": 1.0, "e3": 0.60}, "jour": {"e2": 0.85, "e3": 0.60}}
         for f in self.out["themes"].values():
             for moment, t in f.items():
                 self.assertEqual(t["glass"], attendu[moment], moment)
+
+    def test_filet_du_verre(self):
+        """glassLine est text-primary à glass_line_opacity : foncé le jour, clair la nuit, translucide (D103)."""
+        alpha = f"#{round(self.data['surface_material']['glass_line_opacity'] * 255):02x}"
+        for f in self.out["themes"].values():
+            for t in f.values():
+                self.assertEqual(t["material"]["glassLine"], alpha + t["color"]["textPrimary"][1:])
 
     def test_ombre_flottante_et_profondeur_du_creux(self):
         """La matière expose la portée et le décalage de l'ombre flottante, et la profondeur du creux (jetons)."""

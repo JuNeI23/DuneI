@@ -210,7 +210,7 @@ class LayerRulesTest(unittest.TestCase):
     def test_une_regle_par_namespace(self):
         self.assertEqual(self.probe("r.match.namespace"), ["^dunei-barre$", "^dunei-attention$", "^dunei-presquile$"])
         self.assertEqual(self.probe("tostring(r.blur) .. tostring(r.blur_popups) .. r.ignore_alpha"),
-                         ["truetrue0.6"] * 3)
+                         ["truetrue0.58"] * 3)
 
     @unittest.skipUnless(LUA, "aucun interpréteur Lua")
     def test_xray_sur_la_barre_seule(self):

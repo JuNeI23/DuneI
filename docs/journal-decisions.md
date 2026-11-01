@@ -2432,3 +2432,30 @@ de thème et l'extraction de teinte, s'il trouve alors une palette juste.
   tests) est porté par L2-50.
 
 *Touché : journal, backlog (L2-50).*
+
+### D103 · Le verre de E3 à 60 %, jour et nuit, et ce qui s'y pose
+
+2026-11-01. **Les surfaces E3 de la coque (popovers, menus, presqu'île) sont en verre à 60 % d'opacité, le jour comme
+la nuit, sans sheen ni liseré.** La nuit n'est plus opaque pour E3 (dérogation à D85, qui reste vraie pour E2).
+
+- **Raison.** La refonte du popover réseau (L2-11) part des deux popovers du dossier d'inspiration `anhphong` :
+  « info sobre, ne prend pas bcp de place et est carré », un peu transparents. Nicolas a demandé le verre aux deux
+  moments, puis l'a fait descendre de 85 à 70, puis à 60 %. Le liseré clair du haut de E3, la nuit, se lisait sur le
+  verre comme un éclat (« l'effet bizarre sur le haut ») : E3 perd liseré et sheen la nuit, comme le jour.
+- **Seuil du flou.** `glass.ignore_alpha` passe de 0,6 à 0,58 : il doit rester au-dessus du voile (0,55) et de
+  l'ombre, qui ne sont jamais floutés, et sous l'opacité minimale du verre.
+- **Filet sur le verre.** Le filet `borderSubtle` se lisait comme un trait blanc le jour, et `borderStrong` encore :
+  sur un verre posé devant un fond sombre, la surface devient plus foncée que tout gris opaque. Nouveau jeton
+  `material.glassLine` (`surface_material.glass_line_opacity = 0.12`), la couleur de `text-primary` en translucide :
+  il fonce ou éclaircit ce qui est dessous, quel que soit le fond. Les textes d'appoint sur le verre montent d'un ton
+  (`text-secondary` au lieu de `text-tertiary`), sur la remarque de Nicolas : « si c'est très pâle, tu prends un
+  ton au-dessus dans les tokens ».
+- **Ombre évidée.** Sous un verre translucide, l'ombre portée dessinée sous toute la surface transparaît et
+  l'assombrit ; l'ombre tirée de la silhouette floutée formait de plus une bande uniforme coupée net sous le popover.
+  L'ombre retenue est celle d'`OmbreElevation` (RectangularShadow), évidée sous la forme. L'essai le fait ; la coque
+  le fera dans la refonte de L2-11 (popovers et presqu'île).
+- **Lien à la barre.** Accepté pour la refonte : tant qu'un popover est ouvert, l'icône de la barre qui l'a ouvert
+  prend l'accent et sa variante pleine (bible, chapitre 9 : contour au repos, plein à l'état actif), en fondu.
+
+*Touché : `tokens.toml`, `dunei_theme/emitters/quickshell.py`, `generated/`, `tests/` (golden, verre, reflet,
+règles de calque, filet), coque d'essai des composants, bible (chapitre 5, annexe E, v0.20).*

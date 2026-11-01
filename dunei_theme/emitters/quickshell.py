@@ -201,6 +201,7 @@ def _theme(model: dict) -> dict:
             "edgeShadow": _argb(shadow, mat["edge_shadow_opacity"]),
             "shade": _argb(shadow, mat["shade_opacity"]),
             "overlayOutline": _argb(shadow, mat["overlay_outline_opacity"]),
+            "glassLine": _argb(model["roles"]["text-primary"], mat["glass_line_opacity"]),
             "insetShadow": _argb(shadow, mat["inset_shadow_opacity"]),
             "insetDepth": mat["inset_shadow_depth"],
             "shadowBlur": raw["window"]["floating_shadow"]["range"],

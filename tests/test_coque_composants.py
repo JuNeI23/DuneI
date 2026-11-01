@@ -585,32 +585,32 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
 
     def test_verre_opacite(self):
         # Le verre n'est posé que sur une fenêtre de coque : une Surface surfaceRaised munie de verre prend
-        # l'opacité glass.e3 (opaque à la nuit, 1,0) ; la Surface panneau, sans verre, reste opaque.
+        # l'opacité glass.e3 (translucide la nuit aussi depuis D103) ; la Surface panneau, sans verre, reste opaque.
         self.demarrer()
-        opacite, panneau, _ = self.valeur("verre").split()
+        opacite, panneau, _, _ = self.valeur("verre").split()
         self.assertEqual(float(opacite), self.vue(55)["glass"]["e3"])
-        self.assertEqual(float(opacite), 1.0)
+        self.assertLess(float(opacite), 1.0)
         self.assertEqual(float(panneau), 1)
 
     def test_reflet_borne(self):
-        # Le reflet est réservé au chrome de moins de material.sheenMaxHeight (80 px) : un menu de 32 px le
-        # porte la nuit, un menu de 120 px garde verre et liserés mais perd le reflet.
+        # Le reflet est réservé au chrome de moins de material.sheenMaxHeight (80 px) : une surface E2 de 32 px le
+        # porte la nuit, une de 120 px le perd. E3 n'en porte plus la nuit (D103), quelle que soit sa hauteur.
         self.demarrer()
         self.ipc("materiauHauteur", "32")
-        self.assertEqual(self.valeur("verre").split()[2], "true")
+        self.assertEqual(self.valeur("verre").split()[2:], ["false", "true"])
         self.ipc("materiauHauteur", "120")
-        self.assertEqual(self.valeur("verre").split()[2], "false")
+        self.assertEqual(self.valeur("verre").split()[2:], ["false", "false"])
 
     def test_materiau_suit_le_moment(self):
-        # Bascule à chaud vers le jour : le reflet s'éteint (sheen faux au jour) et l'opacité suit glass du jour,
-        # sans redémarrer la coque.
+        # Bascule à chaud vers le jour : le reflet de E2 s'éteint (sheen faux au jour) et l'opacité suit glass du
+        # jour, sans redémarrer la coque.
         self.demarrer()
         self.ipc("materiauHauteur", "32")
-        self.assertEqual(self.valeur("verre").split()[2], "true")
+        self.assertEqual(self.valeur("verre").split()[3], "true")
         famille = self.vue(55)["defaut"]["famille"]
         self.choisir(famille, "jour")
         self.attendre(f"Theme : thème {famille}/jour appliqué")
-        opacite, _, reflet = self.valeur("verre").split()
+        opacite, _, _, reflet = self.valeur("verre").split()
         self.assertEqual(reflet, "false")
         self.assertEqual(float(opacite), self.vue(55, famille, "jour")["glass"]["e3"])
 

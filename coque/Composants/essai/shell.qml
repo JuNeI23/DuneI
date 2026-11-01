@@ -246,6 +246,14 @@ ShellRoot {
         height: 32
     }
 
+    // Surface E2 de hauteur réglable, pour le reflet : E3 n'en porte plus la nuit (D103), E2 en garde un.
+    Surface {
+        id: refletEssai
+        role: "surfacePanel"
+        width: 100
+        height: 32
+    }
+
     // Ombres d'élévation e2 et e3 de la Surface de verre.
     Item {
         OmbreElevation { id: ombreE2; cible: verreEssai; niveau: "e2" }
@@ -1000,17 +1008,19 @@ ShellRoot {
         }
 
         // verre — journalise l'opacité du Materiau de la Surface de verre, celle du Materiau du panneau (sans
-        // verre), puis si le reflet de la Surface de verre est actif. Entrées : aucune. Sortie : aucune ;
-        // « essai : verre <opacité> <opacité> <bool> ». Erreurs : aucune. Dépendances : verreEssai, panneau.
+        // verre), si le reflet de la Surface de verre (E3) est actif, puis celui de la Surface E2 de reflet.
+        // Entrées : aucune. Sortie : aucune ; « essai : verre <opacité> <opacité> <bool> <bool> ». Erreurs : aucune.
+        // Dépendances : verreEssai, panneau, refletEssai.
         function verre(): void {
             const m = verreEssai.peinture
-            essai.journal("verre", [m.opacite, panneau.peinture.opacite, m.refletActif].join(" "))
+            essai.journal("verre", [m.opacite, panneau.peinture.opacite, m.refletActif, refletEssai.peinture.refletActif].join(" "))
         }
 
-        // materiauHauteur — pose la hauteur de la Surface de verre. Entrée : hauteur, en pixels logiques.
-        // Sortie : aucune. Erreurs : aucune. Dépendances : verreEssai.
+        // materiauHauteur — pose la hauteur de la Surface de verre et de la Surface E2 de reflet. Entrée : hauteur,
+        // en pixels logiques. Sortie : aucune. Erreurs : aucune. Dépendances : verreEssai, refletEssai.
         function materiauHauteur(hauteur: int): void {
             verreEssai.height = hauteur
+            refletEssai.height = hauteur
         }
 
         // champMateriau — journalise si le fond du champ est un Materiau, son niveau, puis son uniforme creux.

@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas
 
-Document normatif. Version 0.19. Historique en fin de document.
+Document normatif. Version 0.20. Historique en fin de document.
 
 ## Comment lire ce document
 
@@ -253,11 +253,13 @@ Ils agissent ensemble ; isolément, aucun ne fait grand-chose.
 
 ### Le verre de la coque
 
-**Le jour, les surfaces E2 et E3 de la coque sont en verre dépoli ; la nuit, elles sont opaques** (D85). Sur fond clair, le verre allège ; sur fond sombre, les surfaces opaques sont plus belles.
+**Les surfaces E3 de la coque (popovers, menus, presqu'île) sont en verre dépoli le jour comme la nuit, à 60 % ; les surfaces E2 le sont le jour seulement** (D85, D103). Le verre allège la surface et la rattache au bureau ; un popover se lit comme une feuille posée, non comme une plaque.
 
 - **La translucidité appartient à la fenêtre de coque, pas au niveau.** Seul le compositeur floute ce qu'il y a derrière une surface Wayland : seuls les panneaux, les overlays de la coque (les popovers de la barre compris) et la fenêtre d'attention peuvent être de verre ; la barre système, elle, est transparente et n'a pas de matière (D89). Un en-tête E2 dessiné à l'intérieur d'une fenêtre opaque reste opaque. Les fenêtres d'applications (E1) restent opaques.
-- **Le verre est teinté par le thème** : la couleur de l'échelon domine (0,85 en E2, 0,88 en E3), le bureau ne fait que transparaître, flouté. Sans cette teinte, le verre prend la couleur délavée du fond d'écran et jure avec les fenêtres.
-- **La nuit, l'opacité du verre vaut 1** : la surface garde son sheen, ses liserés et, en E3, son ombre, comme le veut le tableau ci-dessus. Le jour, ni sheen ni liseré, une ombre en E2 et E3.
+- **Le verre est teinté par le thème** : la couleur de l'échelon domine (0,85 en E2 le jour, 0,60 en E3), le bureau transparaît, flouté. Sans cette teinte, le verre prend la couleur délavée du fond d'écran et jure avec les fenêtres.
+- **La nuit, E2 reste opaque** et garde son sheen et ses liserés. **E3 n'a ni sheen ni liseré, à aucun moment** : sur le verre, le liseré clair du haut se lisait comme un éclat parasite (D103). Le jour, ni sheen ni liseré, une ombre en E2 et E3.
+- **L'ombre s'arrête au bord de la surface.** Sous un verre, une ombre portée dessinée sous toute la surface transparaît et l'assombrit : elle est évidée sous la forme et ne se voit qu'au dehors (D103).
+- **Un filet sur le verre est translucide** : rôle `material.glassLine`, la couleur de `text-primary` à 12 %. Un gris opaque se lit en blanc sur un verre posé devant un fond sombre, ou disparaît sur un fond clair ; le filet translucide fonce ou éclaircit ce qu'il y a dessous, quel que soit le fond (D103). Les textes d'appoint posés sur le verre montent d'un ton (`text-secondary` plutôt que `text-tertiary`), car le verre les pâlit.
 - **Rien d'opaque ne se pose sur le verre au repos.** Une rangée de menu au repos — ni survolée, ni pressée, ni sélectionnée, désactivée comprise — est transparente ; sinon chaque rangée forme une plaque distincte sur le fond translucide.
 - Le verre dépoli n'est pas le « flou » des overlays d'attention : celui-là floute tout l'écran derrière un voile, celui-ci ne touche que le fond de la surface qui le porte.
 
@@ -894,7 +896,7 @@ Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si 
 | Sélecteur de bureaux | attention | E3 | `overlay` + `row` | `overlay` | Chaque bureau porte une teinte de la palette catégorielle |
 | Menu de déconnexion | attention | E3 | `overlay` + `interactive` | `overlay` | Action destructrice en `error`, jamais en accent |
 | Verrouillage / connexion | attention | E0 | `overlay` + `text` + `field` | `spectacle` | Registre de spectacle. Horloge en grand corps, poids léger |
-| Menu contextuel | contextuel | E3 | `surface` + `row` | `reveal` | **Ni voile ni flou** de l'écran ; verre dépoli le jour, opaque la nuit (D85). Part du point de clic, sans écart. Aucun contour de focus sur ses rangées (D88) |
+| Menu contextuel | contextuel | E3 | `surface` + `row` | `reveal` | **Ni voile ni flou** de l'écran ; verre dépoli le jour comme la nuit (D85, D103). Part du point de clic, sans écart. Aucun contour de focus sur ses rangées (D88) |
 | Popover, liste déroulante | contextuel | E3 | `surface` + `row` | `reveal` | Part de son élément déclencheur, à `space.scale[0]` sous lui ; glisse au lieu de se retourner (D88) |
 | Infobulle | contextuel | E3 | `surface` + `text` | `reveal` | Délai de 500 ms avant apparition (`delays.tooltip`, D82). Ne prend jamais le focus |
 | Notification | contextuel | E3 | `surface` + `text` + `icon` | `reveal` | Couleurs sémantiques fixes, hors thème. Décalage limité à 5 |
@@ -924,3 +926,4 @@ Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si 
 | 0.17 | 2026-10-31 | Annexe E : la presqu'île (encoche continue de 28px, matière E3, couche haute, rôle `accent-discret`) et les quatre bureaux (D96 à D98) |
 | 0.18 | 2026-10-31 | Annexe E, barre système : survol réservé aux éléments cliquables (D100) |
 | 0.19 | 2026-10-31 | Chapitre 9 : première tranche du thème d'icônes DuneI, table de correspondance et sources Phosphor, graisse bold retenue, écart de calage au pixel accepté (D101) |
+| 0.20 | 2026-11-01 | Chapitre 5, verre de la coque : E3 en verre à 60 % le jour comme la nuit, sans sheen ni liseré ; ombre évidée sous la surface ; filet translucide `glassLine` et textes d'appoint d'un ton plus soutenus sur le verre (D103) |
