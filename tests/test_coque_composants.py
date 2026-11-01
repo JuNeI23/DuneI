@@ -820,7 +820,7 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
         lu = self.valeur("reglages").split()
         erreur = int(lu[1]) - r["rowHelp"]  # la ligne d'erreur s'ajoute sous la rangée à aide
         self.assertGreater(erreur, 0)
-        self.assertEqual([int(lu[0]), int(lu[2])], [r["rowHelp"] + erreur + r["row"] + r["medallion"] + 2 * garde, r["row"]])
+        self.assertEqual([lu[0], int(lu[2])], [f"{garde}/{2 * garde}", r["row"]])
         self.assertEqual(lu[3:6], [str(r["textColumn"]), str(r["medallion"]), str(tokens["radius"]["panel"])])
         self.assertEqual(lu[6:8], [tokens["color"]["accent"].lower(), tokens["states"]["controlRaised"]["none"]["rest"]["fill"].lower()])
         self.assertEqual(lu[8:], ["true", "false", "surfaceRaised"])

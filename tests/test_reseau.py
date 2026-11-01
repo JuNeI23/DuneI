@@ -703,6 +703,35 @@ exit 0
 """
 
 
+@unittest.skipUnless(QS, "Quickshell requis")
+class GroupeTest(EssaiCoque, unittest.TestCase):
+    """Groupe et Ligne, éprouvés dans une coque d'essai sans fenêtre : largeurs, contrôle à droite, filets en retrait."""
+
+    essai = ESSAI / "groupe"
+    teintes = (55,)
+    environnement = {"QT_QPA_PLATFORM": "offscreen"}
+
+    def test_lignes_pleine_largeur(self):
+        # Les Ligne d'un Groupe prennent la largeur de la carte (et non leur largeur implicite) ; le contrôle est
+        # à space.scale[2] du bord droit ; le filet d'une Ligne à icône commence à reglages.textColumn, celui d'une
+        # Ligne sans icône à space.scale[2], et il s'arrête à space.scale[3] du bord droit ; l'erreur est à la
+        # largeur de la rangée moins deux fois space.scale[2], donc renvoyée à la ligne ; l'aide est en textSecondary.
+        self.installer(55)
+        self.lancer(self.dir)
+        self.attendre("essai : prêt")
+        jetons = self.vue(55)
+        scale, textColumn = jetons["space"]["scale"], jetons["reglages"]["textColumn"]
+        m = json.loads(subprocess.run([QS, "ipc", "--pid", str(self.proc.pid), "call", "essai", "mesure"],
+                                      check=True, capture_output=True, text=True, timeout=DELAI).stdout)
+        self.assertEqual(m["lignes"], [m["groupe"]] * 3)
+        self.assertEqual(m["droites"], [scale[2]] * 3)
+        self.assertEqual(m["filets"], [[textColumn, m["groupe"] - textColumn - scale[3]],
+                                       [scale[2], m["groupe"] - scale[2] - scale[3]]])
+        self.assertEqual(m["erreur"][0], m["groupe"] - 2 * scale[2])
+        self.assertGreater(m["erreur"][1], jetons["typo"]["scale"][1] * 1.5)
+        self.assertEqual(m["aide"].lower(), jetons["color"]["textSecondary"].lower())
+
+
 @unittest.skipUnless(os.environ.get("WAYLAND_DISPLAY") and QS, "session Wayland et Quickshell requis")
 class FenetreTest(EssaiCoque, unittest.TestCase):
     """La fenêtre Réseau, ouverte dans une coque offscreen sur le vrai EtatReseau et un nmcli factice.

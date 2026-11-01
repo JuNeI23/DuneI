@@ -6,9 +6,9 @@ import "../Theme"
 // Separateur — filet de séparation de la coque, horizontal par défaut.
 // Rôle : trace une arête d'un pixel physique (Theme.hairline) à la couleur color.borderSubtle, pour séparer
 // deux groupes de contrôles sans les déplacer ni les redimensionner.
-// Entrées : vertical, vrai pour un filet vertical ; retraitGauche et retraitDroit, retraits du filet à ses extrémités
-// (0 par défaut), pris comme marges de Layout : ils valent donc dans une mise en page, pas par ancres ; la longueur est laissée à l'appelant (width ou height,
-// ancres, Layout).
+// Entrées : vertical, vrai pour un filet vertical ; retraitGauche et retraitDroit, retraits du filet à ses
+// extrémités (0 par défaut), pris comme marges de Layout : ils valent dans une mise en page, pas par ancres ; la
+// longueur est laissée à l'appelant (width ou height, ancres, Layout).
 // Sorties : epaisseur, épaisseur du filet, égale à implicitHeight (horizontal) ou à implicitWidth (vertical) ;
 // dpr, rapport de pixels de la fenêtre qui porte le filet, 1 hors de toute fenêtre.
 // Rapport de pixels : il se lit sur la fenêtre (QsWindow.window), jamais sur Screen.devicePixelRatio, qui vaut

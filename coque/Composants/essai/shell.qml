@@ -860,7 +860,8 @@ ShellRoot {
             basculeEssai.checked = valeur
         }
 
-        // reglages — journalise la carte, les rangées de réglage et les médaillons d'essai : hauteur de la carte,
+        // reglages — journalise la carte, les rangées de réglage et les médaillons d'essai : garde en haut puis en bas de la
+        // carte (sans fenêtre, aucune mise en page n'est calculée : les largeurs sont éprouvées par la coque d'essai de Groupe),
         // hauteurs de la rangée à aide et erreur puis de la rangée simple, abscisse du texte de la première rangée,
         // côté, rayon et couleur du médaillon actif (celui de la première rangée), couleur du médaillon inactif,
         // variante pleine du médaillon actif puis de l'inactif, puis rôle hérité d'une rangée.
@@ -870,8 +871,7 @@ ShellRoot {
         function reglages(): void {
             const a = reglageEssai.children.find(e => e.nom !== undefined && e.actif !== undefined)
             const icone = m => m.children[0].pleine
-            carteEssai.children[1].forceLayout()  // sans fenêtre, aucun polissage ne dispose la colonne
-            essai.journal("reglages", [carteEssai.height, reglageEssai.height, reglageSimple.height, reglageEssai.texteX,
+            essai.journal("reglages", [carteEssai.children[1].y + "/" + (carteEssai.implicitHeight - carteEssai.children[1].implicitHeight), reglageEssai.height, reglageSimple.height, reglageEssai.texteX,
                 a.width, a.radius, a.color, medaillonInactif.color, icone(a), icone(medaillonInactif),
                 Etats.herite(reglageEssai, "dnRole", "")].join(" "))
         }

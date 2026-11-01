@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Layouts
 import "../Theme"
 import "etats.js" as Etats
 
@@ -11,8 +12,9 @@ import "etats.js" as Etats
 // des jetons.
 // Entrées : titre ; aide ; icone et iconeActive, transmis au Medaillon ; erreur, ligne d'erreur sous la rangée ;
 // plaque, vrai pour peindre la plaque de survol (faux par défaut) ; le contrôle, déclaré comme enfant.
-// Sorties : texteX, abscisse de la colonne de texte ; base, hauteur sans l'erreur ; survole. Hauteur : reglages.row, ou reglages.rowHelp avec une
-// aide ; l'erreur s'ajoute dessous. Le texte sans médaillon reste sur la même colonne (rangée alignée).
+// Sorties : texteX, abscisse de la colonne de texte ; base, hauteur sans l'erreur ; survole. Hauteur :
+// reglages.row, ou reglages.rowHelp avec une aide ; l'erreur s'ajoute dessous. Le texte sans médaillon reste sur
+// la même colonne (rangée alignée). La rangée remplit la largeur de sa Carte (Layout.fillWidth).
 // Erreurs : aucune ; avant le chargement des tokens, les cotes sont nulles.
 // Dépendances : Medaillon, Texte, Etat, Theme (reglages, space, color, radius), etats.js.
 Item {
@@ -30,6 +32,8 @@ Item {
     readonly property bool hovered: survol.hovered
     readonly property bool down: false
     default property alias controle: emplacement.data
+
+    Layout.fillWidth: true
 
     readonly property real base: (aide !== "" ? Theme.reglages?.rowHelp : Theme.reglages?.row) ?? 0
 
