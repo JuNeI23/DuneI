@@ -34,9 +34,9 @@ Medaillon, Pas, Valeur, Oeil), décisions D102 et D103, arbitrages de Nicolas du
   restent en lecture seule, copiables.
 - Un réseau disponible inconnu se rejoint depuis la fenêtre comme depuis le popover : le mot de passe se déplie
   sous sa rangée.
-- Le rayon de 20 de la fenêtre est dessiné par Hyprland (règle « fenetre-reseau » : rounding 20 et
-  rounding_power pour l'angle continu), qui garde ainsi l'ombre et le flou des fenêtres ; les autres fenêtres
-  restent à radius.window (12).
+- L'angle de la fenêtre reste radius.window (12), comme toutes les fenêtres (Nicolas, 2026-11-01) : aucune règle
+  Hyprland nouvelle. Le plateau latéral et les cartes prennent radius.panel (10), qui reste sous l'angle de la
+  fenêtre ; aucun jeton de rayon n'est ajouté.
 
 ## Report du VPN complet (Nicolas, 2026-11-01)
 
@@ -71,24 +71,20 @@ gardés dans le profil ou demandés par un agent de secrets de la coque.
 
 ### Tâche 1 : jetons des formes D4 (D104)
 
-**Fichiers :** `tokens.toml` (`[radius]`, nouvelle section `[reglages]`), `dunei_theme/emitters/quickshell.py`,
+**Fichiers :** `tokens.toml` (nouvelle section `[reglages]`), `dunei_theme/emitters/quickshell.py`,
 `tests/test_quickshell_emitter.py`, goldens, `docs/journal-decisions.md` (D104), bible (chapitre des formes).
 
-- `radius.shellWindow = 20` (fenêtre de la coque), `radius.card = 14` (carte et plateau latéral).
 - `[reglages]` : `row = 44`, `row_help = 52`, `row_lead = 60` (réseau joint), `medallion = 32`,
   `medallion_glyph = 18`, `text_column = 56` (colonne du texte et retrait du filet), `sidebar_inset = 8`
   (plateau détaché), `tab_height = 48`.
-- Émis sous `Theme.radius.shellWindow`, `Theme.radius.card`, `Theme.reglages.*` ; test de l'émetteur, `make golden`.
-- Règle Hyprland « fenetre-reseau » : `rounding = radius.shellWindow` et `rounding_power` (valeur relevée à
-  l'écran pour approcher l'angle continu de l'Encoche ; documentation Hyprland par context7) ; test de la règle
-  émise.
+- Émis sous `Theme.reglages.*` ; test de l'émetteur, `make golden`.
 
 ### Tâche 2 : composants de réglage
 
 **Fichiers :** `coque/Composants/{Carte,Medaillon,ReglageLigne,Valeur}.qml`, `Separateur` (retrait gauche),
 `coque/Reseau/{Groupe,Ligne,Section}.qml` restylés sur eux, coque d'essai des composants et ses tests.
 
-- Carte : surfaceRaised, `radius.card`, sans contour, garde `space.scale[0]` en haut et en bas.
+- Carte : surfaceRaised, `radius.panel`, sans contour, garde `space.scale[0]` en haut et en bas.
 - Medaillon : `reglages.medallion`, rayon `radius.panel`, actif à l'accent plein et glyphe sur-accent, sinon
   sélection neutre du conteneur.
 - ReglageLigne : médaillon facultatif, titre et aide alignés sur `reglages.text_column`, contrôle à droite,
@@ -102,7 +98,7 @@ gardés dans le profil ou demandés par un agent de secrets de la coque.
 **Fichiers :** `FenetreReseau.qml` (840 × 640, minimum 720 × 480), `PanneauReseau.qml`, essai de la fenêtre,
 `tests/test_reseau.py`.
 
-- Plateau surfacePanel `radius.card`, détaché de `reglages.sidebar_inset`, de `layout.sidebarDefault` de large,
+- Plateau surfacePanel `radius.panel`, détaché de `reglages.sidebar_inset`, de `layout.sidebarDefault` de large,
   pastilles en tête ; trois onglets (Wi-Fi, Filaire, VPN) de `reglages.tab_height`, médaillon à l'accent pour
   l'onglet choisi, nom et état (réseau joint, état du câble, VPN actif) lus d'EtatReseau.
 - Contenu : une pile page d'onglet puis sous-page, qui défile ; `etat.profilDemande` ouvre la sous-page du profil
@@ -144,4 +140,5 @@ gardés dans le profil ou demandés par un agent de secrets de la coque.
 | Version | Date | Changement |
 |---|---|---|
 | 0.1 | 2026-11-01 | Première rédaction, après les arbitrages de Nicolas sur la sous-page, le VPN et les formes. |
+| 0.3 | 2026-11-01 | L'angle de la fenêtre reste à 12 ; plateau et cartes à radius.panel, sans jeton de rayon nouveau. |
 | 0.2 | 2026-11-01 | VPN ramené à une page minimale ; import et identifiants reportés au backlog. |
