@@ -74,6 +74,18 @@ class NmcliTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(len(r), 4)
         self.assertEqual(self.appeler("lireProfils", ""), [])
 
+    def test_vpns(self):
+        # Seuls les profils vpn et wireguard restent, dans l'ordre alphabétique ; un nom à deux-points revient tel quel.
+        texte = (f"Wifi_TRIADES:{UUID}:802-11-wireless:wlan0:yes\n"
+                 "Maison\\: OpenVPN:aaaaaaaa-0000-0000-0000-000000000001:vpn::no\n"
+                 "Bureau:aaaaaaaa-0000-0000-0000-000000000002:wireguard:wg0:yes\n"
+                 "Filaire:aaaaaaaa-0000-0000-0000-000000000003:802-3-ethernet:enp3s0:yes\n")
+        r = self.appeler("vpns", self.appeler("lireProfils", texte))
+        self.assertEqual(r, [
+            {"nom": "Bureau", "uuid": "aaaaaaaa-0000-0000-0000-000000000002", "type": "WireGuard", "actif": True},
+            {"nom": "Maison: OpenVPN", "uuid": "aaaaaaaa-0000-0000-0000-000000000001", "type": "VPN", "actif": False}])
+        self.assertEqual(self.appeler("vpns", []), [])
+
     def test_lire_profil(self):
         texte = ("connection.autoconnect:yes\nconnection.autoconnect-priority:-5\nconnection.metered:unknown\n"
                  "ipv4.method:manual\nipv4.addresses:192.168.1.50/24\nipv4.gateway:192.168.1.1\n"
@@ -1052,6 +1064,91 @@ class PageFilaireTest(EssaiCoque, unittest.TestCase):
 
 
 @unittest.skipUnless(QS, "Quickshell requis")
+class PageVpnTest(EssaiCoque, unittest.TestCase):
+    """La page VPN de la fenêtre Réseau, éprouvée sur un état factice.
+
+    La coque d'essai pose une PageVpn dans une fenêtre offscreen, sur un état dont executer journalise les arguments
+    de nmcli puis refuse ou réussit : aucune commande de la machine n'entre en jeu.
+    """
+
+    essai = ESSAI / "vpn"
+    teintes = (55,)
+    environnement = {"QT_QPA_PLATFORM": "offscreen"}
+
+    def setUp(self):
+        super().setUp()
+        self.installer(55)
+        self.lancer(self.dir)
+        self.attendre("essai : prêt")
+        self.jusqua(lambda p: p["vpns"], "page construite")
+
+    def ipc(self, fonction: str, *args: str) -> str:
+        """Appelle une fonction IPC de la coque d'essai de la page VPN. Entrées : fonction, args. Sortie : stdout."""
+        return subprocess.run([QS, "ipc", "--pid", str(self.proc.pid), "call", "vpn", fonction, *args],
+                              check=True, capture_output=True, text=True, timeout=DELAI).stdout.strip()
+
+    def page(self) -> dict:
+        """État de la page, décodé (voir la coque d'essai). Dépendances : ipc."""
+        return json.loads(self.ipc("page"))
+
+    def jusqua(self, condition, message: str = ""):
+        """Attend qu'une condition sur l'état de la page devienne vraie. Sortie : l'état qui la vérifie."""
+        fin = time.monotonic() + DELAI
+        while time.monotonic() < fin:
+            p = self.page()
+            if condition(p):
+                return p
+            time.sleep(0.05)
+        self.fail(f"{message}\n{p}\n{self.journal()}")
+
+    def test_liste(self):
+        # Deux VPN dans l'ordre alphabétique (le profil Wi-Fi est ignoré), le type en aide.
+        p = self.page()
+        self.assertEqual(p["titres"], ["Connexions"])
+        self.assertEqual(p["vpns"], [
+            {"nom": "Bureau", "aide": "WireGuard", "actif": True, "erreur": "", "coche": True},
+            {"nom": "Maison: OpenVPN", "aide": "VPN", "actif": False, "erreur": "", "coche": False}])
+        self.assertFalse(p["aucun"] or p["aide"])
+        self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
+
+    def test_sans_connexion(self):
+        self.ipc("sans")
+        p = self.jusqua(lambda p: p["aucun"], "message sans connexion")
+        self.assertEqual((p["vpns"], p["titres"], p["aide"]), ([], [], True))
+
+    def test_monter_puis_descendre(self):
+        self.ipc("basculer", "Maison: OpenVPN")
+        self.attendre('essai : executer ["-w","30","connection","up","uuid","maison-1"]')
+        p = self.jusqua(lambda p: p["vpns"][1]["actif"] and p["vpns"][1]["coche"], "connexion montée")
+        self.assertEqual(p["vpns"][1]["erreur"], "")
+        self.ipc("basculer", "Bureau")
+        self.attendre('essai : executer ["-w","10","connection","down","uuid","bureau-1"]')
+        self.jusqua(lambda p: not p["vpns"][0]["actif"] and not p["vpns"][0]["coche"], "connexion descendue")
+
+    def test_refus_restaure_l_interrupteur(self):
+        self.ipc("refuser", "oui")
+        self.ipc("basculer", "Maison: OpenVPN")
+        p = self.jusqua(lambda p: p["vpns"][1]["erreur"], "erreur montrée")
+        self.assertIn("Secrets were required", p["vpns"][1]["erreur"])
+        self.assertEqual((p["vpns"][1]["actif"], p["vpns"][1]["coche"]), (False, False))
+        # Un essai réussi efface le message.
+        self.ipc("refuser", "non")
+        self.ipc("basculer", "Maison: OpenVPN")
+        p = self.jusqua(lambda p: p["vpns"][1]["coche"], "connexion montée")
+        self.assertEqual(p["vpns"][1]["erreur"], "")
+
+    def test_clavier(self):
+        # Tab atteint chaque interrupteur dans l'ordre, Espace bascule celui qui a le focus et le focus survit à la relecture.
+        self.ipc("tab")
+        self.assertEqual(self.ipc("focus"), "interrupteur:Bureau")
+        self.ipc("tab")
+        self.assertEqual(self.ipc("focus"), "interrupteur:Maison: OpenVPN")
+        self.ipc("espace")
+        self.attendre('essai : executer ["-w","30","connection","up","uuid","maison-1"]')
+        self.jusqua(lambda p: p["vpns"][1]["actif"], "connexion montée")
+        self.assertEqual(self.ipc("focus"), "interrupteur:Maison: OpenVPN")
+
+
 class GroupeTest(EssaiCoque, unittest.TestCase):
     """Groupe et Ligne, éprouvés dans une coque d'essai sans fenêtre : largeurs, contrôle à droite, filets en retrait."""
 

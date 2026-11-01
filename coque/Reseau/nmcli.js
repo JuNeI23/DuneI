@@ -80,6 +80,17 @@ function lireProfils(texte) {
     }))
 }
 
+// vpns — connexions VPN parmi les profils.
+// Entrée : profils, sortie de lireProfils. Sortie : tableau de {nom, uuid, type, actif: bool} pour les seuls profils
+// de type « vpn » ou « wireguard », dans l'ordre alphabétique ; type est « WireGuard » pour un profil wireguard et
+// « VPN » pour un profil vpn (le greffon, OpenVPN ou autre, ne se lit qu'avec une lecture de plus par profil, que la
+// page minimale s'épargne). Erreurs : aucune. Dépendances : aucune.
+function vpns(profils) {
+    return profils.filter(p => p.type === "vpn" || p.type === "wireguard")
+        .map(p => ({nom: p.nom, uuid: p.uuid, type: p.type === "wireguard" ? "WireGuard" : "VPN", actif: p.actif}))
+        .sort((a, b) => a.nom.localeCompare(b.nom))
+}
+
 // Champs lus par lireProfil, à passer tels quels à « nmcli -t -f <CHAMPS_PROFIL> connection show <uuid> » ; nmcli
 // omet sans erreur les sections absentes du profil (pas de section Wi-Fi pour un profil filaire, pas de sécurité
 // pour un réseau ouvert).

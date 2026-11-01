@@ -2,9 +2,9 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.32. Historique en fin de document.
+Version 1.33. Historique en fin de document.
 
-La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **158 éléments** répartis en **cinq lots**, sur six chantiers.
+La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **159 éléments** répartis en **cinq lots**, sur six chantiers.
 
 Ce document dit ce qui est attendu, dans quel ordre, et à quelle condition c'est terminé. Il ne dit pas à quoi ça ressemble — c'est le rôle de la bible de design. En cas de contradiction : la bible l'emporte sur l'apparence, ce document l'emporte sur le périmètre.
 
@@ -303,6 +303,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L2-48 | B | Écrit | Presqu'île — transitions d'apparition et de disparition (plein écran, démarrage, changement de module), à concevoir avec le premier module qui change sa forme (D98) |
 | L2-49 | B | Écrit | Thème de plateforme Qt pour toute la session — `QT_QPA_PLATFORMTHEME` : icônes DuneI (D101), mais aussi polices, couleurs et dialogues ; Dolphin est la seule application Qt ; à traiter après repérage (voie large voulue par Nicolas, D101) |
 | L2-50 | C | Écrit | Retrait du jour thématisé jusqu'au lot 4 (D102) — trois thèmes seulement : dominante jour, dominante nuit, thématisée nuit ; `coque-tokens.json`, `dunei-theme` (une demande « thématisée jour » se replie sur dominante jour), planche et tests ; la dérogation au corps de texte de D84 tombe avec lui |
+| L2-51 | C | Écrit | VPN complet de la fenêtre Réseau — l'onglet VPN minimal (liste et interrupteur par connexion, `nmcli connection up|down uuid`) est fait ; reste : import d'un fichier (`.conf` WireGuard, `.ovpn` OpenVPN) par `nmcli connection import`, sélecteur de fichiers par le portail FileChooser (`xdg-desktop-portal-gtk` à ajouter) ou champ de saisie avec dépôt, identifiants (gardés dans le profil ou confiés à un agent de secrets de la coque), sous-page d'un VPN (réglages, adresses), lecture du greffon (OpenVPN) pour l'aide de la rangée, paquets `networkmanager-vpn-plugin-openvpn` et `wireguard-tools` ; reporté à la demande de Nicolas (2026-11-01) faute d'accès VPN pour tester |
 
 ### Lot 3 — la bascule
 
@@ -404,7 +405,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L5-29 | — | Écrit | Passe de regard complète — étage 3 |
 | L5-30 | — | Écrit | Résorber les points ouverts de l'annexe C |
 
-**Volume total : 158 éléments** — 109 écrits, 42 configurés, 5 offerts, 2 mixtes.
+**Volume total : 159 éléments** — 110 écrits, 42 configurés, 5 offerts, 2 mixtes.
 
 Les deux tiers du travail sont de l'écrit, et les trois quarts de cet écrit se concentrent sur la coque et les écrans système. C'est cohérent avec la stratégie retenue, et c'est là que tout le risque se trouve.
 
@@ -508,6 +509,7 @@ Le choix de la distribution de base et du compositeur, précédemment ouverts, s
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-12 | Version initiale, 137 éléments |
+| 1.33 | 2026-11-01 | Ajout de L2-51 (VPN complet de la fenêtre Réseau : import, identifiants, sous-page), reporté après l'onglet VPN minimal ; 159 éléments |
 | 1.32 | 2026-10-31 | L4-12 en cours : première tranche du thème d'icônes DuneI (Phosphor bold) avancée avant L2-11 (D101) ; ajout de L2-49 (thème de plateforme Qt) ; 158 éléments |
 | 1.31 | 2026-10-31 | L2-08 reçoit le correctif du masque de saisie de la barre, qui restait sur le Wi-Fi après un réveil, et le survol réservé aux éléments cliquables (D100) |
 | 1.30 | 2026-10-31 | L1-09 reçoit la garde du bouton marche au réveil, contre l'appui fantôme qui rendormait la machine (D99) |
