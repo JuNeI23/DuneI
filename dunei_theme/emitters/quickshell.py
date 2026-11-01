@@ -269,6 +269,7 @@ def emit(model: dict) -> str:
         "radius": _camel_keys(raw["radii"]),
         "window": _camel_keys(raw["window"]),
         "layout": _camel_keys(raw["layout"]),
+        "reglages": _camel_keys(raw["reglages"]),
         "breakpoints": _camel_keys(raw["breakpoints"]),
         "typo": _camel_keys({k: v for k, v in raw["type"].items() if k != "fallback_chain" and not isinstance(v, dict)}),
         "icons": {**{k: raw["icons"][k] for k in ("source", "variants", "grid", "stroke", "sizes")},

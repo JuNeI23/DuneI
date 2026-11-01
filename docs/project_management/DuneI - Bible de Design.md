@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas
 
-Document normatif. Version 0.20. Historique en fin de document.
+Document normatif. Version 0.21. Historique en fin de document.
 
 ## Comment lire ce document
 
@@ -354,6 +354,8 @@ fichiers, navigateur, lanceur), jamais par le nom d'un logiciel.
 ### Formes
 
 Les contrôles reprennent **les formes et les proportions de macOS**, à la demande de Nicolas : coche et point de radio dessinés, et non tirés du thème d'icônes ; interrupteur en pilule ; jauge sans disque à la manière du Centre de contrôle ; onglets en contrôle segmenté ; sélection des rangées en pastille arrondie ; pastilles de fenêtre ; stepper du compteur ; bouton principal rempli d'accent. Seules les formes sont empruntées : les couleurs restent celles des tokens, et le liseré, l'ombre et le mouvement des positions relèvent du chapitre 5 et du chapitre 6. Le détail, élément par élément, est dans la conception de la bibliothèque de composants, § 7.10 (`docs/superpowers/specs/2026-10-23-composants-design.md`).
+
+**Fenêtres de réglages (D104).** Les formes validées à l'écran pour la fenêtre Réseau valent pour toutes les fenêtres de réglages et sont émises sous `Theme.reglages.*` : ligne simple de 44 px, ligne avec aide de 52 px, ligne de tête de 60 px ; médaillon d'icône de 32 px portant un glyphe de 18 px ; colonne du texte à 56 px, qui fixe aussi le retrait du filet de séparation ; barre d'onglets de 48 px ; plateau détaché de la barre latérale, retiré de 8 px. La fenêtre garde `radius.window` (12) comme toutes les fenêtres ; le plateau de la barre latérale et les cartes prennent `radius.panel` (10), pour rester sous le coin de la fenêtre (règle d'imbrication) : aucun nouveau rayon.
 
 ## 8. Fenêtrage et grille
 
@@ -927,3 +929,4 @@ Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si 
 | 0.18 | 2026-10-31 | Annexe E, barre système : survol réservé aux éléments cliquables (D100) |
 | 0.19 | 2026-10-31 | Chapitre 9 : première tranche du thème d'icônes DuneI, table de correspondance et sources Phosphor, graisse bold retenue, écart de calage au pixel accepté (D101) |
 | 0.20 | 2026-11-01 | Chapitre 5, verre de la coque : E3 en verre à 60 % le jour comme la nuit, sans sheen ni liseré ; ombre évidée sous la surface ; filet translucide `glassLine` et textes d'appoint d'un ton plus soutenus sur le verre (D103) |
+| 0.21 | 2026-11-01 | Chapitre 7, formes : formes des fenêtres de réglages, jetons `reglages` (D104) |

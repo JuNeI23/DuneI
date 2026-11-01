@@ -65,6 +65,8 @@ Singleton {
     readonly property var radius: tokens?.radius
     readonly property var window: tokens?.window
     readonly property var layout: tokens?.layout
+    // Formes des fenêtres de réglages (D104) : hauteurs de lignes, médaillon, colonne du texte, plateau, onglets.
+    readonly property var reglages: tokens?.reglages
     readonly property var breakpoints: tokens?.breakpoints
     readonly property var typo: tokens?.typo
     readonly property var icons: tokens?.icons

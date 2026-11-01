@@ -420,6 +420,16 @@ marge = 14                   # marge intérieure, de part et d'autre du contenu
 [bureaux_virtuels]
 nombre = 4                   # bureaux 1 à n, liés à SUPER + 1…n ; le bureau spécial (accueil) n'est pas compté
 
+[reglages]                    # formes des fenêtres de réglages (D104) ; px logiques, lus sous Theme.reglages.*
+row = 44                      # hauteur d'une ligne de réglage simple
+row_help = 52                 # hauteur d'une ligne avec texte d'aide
+row_lead = 60                 # hauteur d'une ligne de tête (réseau joint)
+medallion = 32                # diamètre du médaillon d'icône de tête de ligne
+medallion_glyph = 18          # taille du glyphe dans le médaillon
+text_column = 56              # colonne du texte, et retrait du filet de séparation
+sidebar_inset = 8             # retrait du plateau détaché de la barre latérale
+tab_height = 48               # hauteur de la barre d'onglets
+
 [layout]
 sidebar_default = 240
 sidebar_min = 180

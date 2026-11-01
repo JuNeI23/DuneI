@@ -86,6 +86,16 @@
     "systemBarHeight": 32,
     "readingMeasureMax": 78
   },
+  "reglages": {
+    "row": 44,
+    "rowHelp": 52,
+    "rowLead": 60,
+    "medallion": 32,
+    "medallionGlyph": 18,
+    "textColumn": 56,
+    "sidebarInset": 8,
+    "tabHeight": 48
+  },
   "breakpoints": {
     "compact": 480,
     "extended": 900

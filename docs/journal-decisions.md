@@ -2459,3 +2459,13 @@ la nuit, sans sheen ni liseré.** La nuit n'est plus opaque pour E3 (dérogation
 
 *Touché : `tokens.toml`, `dunei_theme/emitters/quickshell.py`, `generated/`, `tests/` (golden, verre, reflet,
 règles de calque, filet), coque d'essai des composants, bible (chapitre 5, annexe E, v0.20).*
+
+### D104 · Les formes de la fenêtre Réseau deviennent des jetons
+
+2026-11-01. **Les formes de la fenêtre Réseau (direction D4), validées à l'écran le 2026-11-01, deviennent la section `[reglages]` de `tokens.toml`, émise sous `Theme.reglages.*`.** Elles valent pour toutes les fenêtres de réglages.
+
+- **Raison.** Les hauteurs de ligne, le médaillon et le plateau de la barre latérale se retrouveront dans chaque fenêtre de réglages : les écrire une fois en jetons évite des cotes dispersées dans les composants.
+- **Valeurs.** `row = 44` (ligne simple), `row_help = 52` (ligne avec texte d'aide), `row_lead = 60` (ligne de tête, réseau joint), `medallion = 32` (diamètre du médaillon d'icône), `medallion_glyph = 18` (glyphe du médaillon), `text_column = 56` (colonne du texte et retrait du filet), `sidebar_inset = 8` (retrait du plateau détaché), `tab_height = 48` (barre d'onglets).
+- **Rayons.** Décision de Nicolas : la fenêtre garde `radius.window` (12) comme toutes les fenêtres. Le plateau de la barre latérale et les cartes prennent le `radius.panel` (10) existant, pour rester sous le coin de la fenêtre (règle d'imbrication). Aucun jeton de rayon nouveau.
+
+*Touché : `tokens.toml`, `dunei_theme/emitters/quickshell.py`, `coque/Theme/Theme.qml`, `generated/`, `tests/` (émetteur, golden), bible (chapitre 7, formes, v0.21).*
