@@ -1089,3 +1089,28 @@ class NotificationsTest(EssaiCoque, unittest.TestCase):
         self.attendre_n(1)
         self.assertEqual(self.ipc("essai", "armee"), "false")
         self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
+
+    def test_veille_detectee_a_l_horloge_murale(self):
+        # La machine dort pendant le délai d'une coupure : la coupure n'est pas notifiée, l'état est réappris en
+        # silence, et le retour de la connexion qui suit ne l'est pas non plus.
+        self.regler(False, "none")
+        self.ipc("essai", "dormir", "60000000")
+        self.jusqua(lambda: self.ipc("essai", "stable") == "" and self.ipc("essai", "armee") == "true", "état oublié, réapprentissage armé")
+        self.regler(True, "full", "Maison")
+        self.jusqua(lambda: self.ipc("essai", "stable") == "etablie", "état réappris")
+        self.regler(False, "unknown")
+        self.assertEqual([n[1] for n in self.attendre_n(1)], ["Connexion perdue"])
+
+    def test_demarrage_lent_de_networking(self):
+        # Appareils pas encore peuplés : « perdue » n'est pas appris ; le premier état réel l'est, sans notification.
+        self.proc.kill(); self.proc.wait(timeout=DELAI)
+        self.environnement = {**self.environnement, "NOTIF_CONNUS": "0"}
+        self.lancer(self.dir)
+        self.attendre("essai : prêt")
+        self.regler(False, "unknown")
+        self.assertEqual(self.ipc("essai", "armee"), "false", "rien à apprendre avant le premier état réel")
+        self.ipc("essai", "connaitre")
+        self.regler(True, "full")
+        self.jusqua(lambda: self.ipc("essai", "stable") == "etablie", "premier état réel appris")
+        self.regler(False, "unknown")
+        self.assertEqual([n[1] for n in self.attendre_n(1)], ["Connexion perdue"])
