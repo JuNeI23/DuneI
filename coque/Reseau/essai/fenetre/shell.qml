@@ -116,6 +116,13 @@ ShellRoot {
         // echap — frappe Échap. Entrées : aucune. Sortie : aucune. Dépendances : touche.
         function echap(): void { essai.touche(Qt.Key_Escape) }
 
+        // retourArriere — frappe Maj+Tab. Entrées : aucune. Sortie : aucune. Dépendances : touche.
+        function retourArriere(): void {
+            const e = Qt.createQmlObject("import QtTest; TestEvent {}", fenetre.panneau)
+            e.keyClick(Qt.Key_Backtab, Qt.ShiftModifier, -1)
+            e.destroy()
+        }
+
         // haut, bas — frappe la flèche du clavier. Entrées : aucune. Sortie : aucune. Dépendances : touche.
         function bas(): void { essai.touche(Qt.Key_Down) }
         function haut(): void { essai.touche(Qt.Key_Up) }
@@ -126,7 +133,7 @@ ShellRoot {
 
         // focus — libellé de la Ligne qui a le focus actif de la fenêtre, vide si c'est autre chose. Entrées :
         // aucune. Sortie : texte. Erreurs : fenêtre fermée, TypeError au journal.
-        function focus(): string { return fenetre.panneau.Window.window.activeFocusItem?.libelle ?? "" }
+        function focus(): string { let o = fenetre.panneau.Window.window.activeFocusItem; while (o && !o.libelle) o = o.parent; return o?.libelle ?? "" }
 
         // defiler — pose le défilement des pages à y pixels. Entrée : y. Sortie : aucune.
         function defiler(y: int): void { fenetre.panneau.defilement.contentY = y }

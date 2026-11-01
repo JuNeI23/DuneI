@@ -23,7 +23,7 @@ import "../Barre/icones.js" as Icones
 // Mode résumé (resume vrai) : la page Wi-Fi y pose la carte du réseau joint, sans dupliquer la logique de la fiche.
 // Seules restent la rangée de tête (médaillon d'accent à la force du signal, nom, « Connecté · » et l'état de la
 // connectivité, coche), le mot de passe à l'œil, la connexion automatique, la priorité (Compteur, bible « Compteur »),
-// la connexion facturée et une rangée « Détails… » qui ouvre la fiche complète (panneau.ouvrirProfil) ; l'en-tête, les
+// la connexion facturée et une rangée « Détails… » qui ouvre la fiche complète (panneauHote.ouvrirProfil) ; l'en-tête, les
 // sections IPv4 et de détail et l'oubli sont masqués. La fiche complète n'est pas modifiée par ce mode.
 // Entrées : uuid, le profil affiché (vide : fiche vide) ; rangee, sa rangée de la liste (nmcli.profilsFenetre :
 // nom, wifi, actif, etat, icone) ; etat, la source de l'état et des actions, EtatReseau par défaut ; resume, faux par

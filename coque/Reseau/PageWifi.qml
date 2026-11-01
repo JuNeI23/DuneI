@@ -1,6 +1,5 @@
 import QtQuick
 import QtQuick.Layouts
-import Quickshell.Networking
 import "../Theme"
 import "../Composants"
 import "../Barre/icones.js" as Icones
@@ -11,7 +10,8 @@ import "nmcli.js" as Nmcli
 // (la FicheProfil en mode résumé, qui porte la rangée de tête, le mot de passe à l'œil, la connexion automatique, la
 // priorité, la facturation et « Détails… » ; aucune logique nmcli n'est dupliquée ici), les réseaux disponibles,
 // les profils enregistrés hors de portée suivis d'« Autre réseau… », et les adresses du réseau joint en lecture
-// seule, copiables (Valeur). Radio coupée : le titre et la carte des profils enregistrés seuls.
+// seule, copiables (Valeur). Radio coupée : le titre et la carte des profils enregistrés, s'il y en a, seuls (ni « Autre réseau… » ni adresses).
+// Les adresses ne sont montrées que si l'appareil du profil joint est celui qu'EtatReseau lit (etat.appareil).
 // Réseaux disponibles : ceux d'etat.reseaux, triés par Nmcli.trierReseaux, sans le réseau joint. Un clic rejoint
 // un réseau connu ou ouvert (« Connexion… » et l'Activite sur la rangée) ; sur un réseau inconnu et sécurisé, il
 // déplie sous la rangée le BlocSecret (partagé avec le popover), qu'un second clic replie. Un connectionFailed
@@ -24,7 +24,8 @@ import "nmcli.js" as Nmcli
 // etat.rechercheFenetre, qu'elle rend à faux à sa destruction ; le popover
 // écrit etat.recherche, une autre propriété : EtatReseau balaye tant que l'une des deux est vraie, si bien que la
 // fermeture du popover ne coupe pas la demande de la fenêtre, ni l'inverse (voir EtatReseau.balayage).
-// Clavier : toutes les rangées cliquables sont des Ligne (tabulation, Entrée, Espace, contour de focus, plaque de
+// Clavier : toutes les rangées cliquables sont des Ligne, et « Rechercher » prend la tabulation, Entrée et Espace avec
+// le même contour de focus (tabulation, Entrée, Espace, contour de focus, plaque de
 // survol : bible, « Clavier » et « Survol »). Interrupteur : bible, « Interrupteur ». Priorité : Compteur (bible,
 // « Compteur »). Formes : jetons Theme.reglages seuls (bible, « Formes »).
 // Entrées : panneau, le PanneauReseau (rangees, factures, ouvrirProfil, ouvrirNouveau) ; etat, la source de l'état
@@ -35,9 +36,9 @@ import "nmcli.js" as Nmcli
 // du réseau joint (null sans elle).
 // Erreurs : un échec nmcli du résumé s'affiche dans la carte du réseau joint (FicheProfil) ; un réseau qui quitte le
 // balayage est masqué et ne peut plus être choisi.
-// Dépendances : TitrePage, Section, Groupe, Ligne, FicheProfil, BlocSecret, Interrupteur, Activite, Icone, Texte,
+// Dépendances : TitrePage, Section, Groupe, Ligne, FicheProfil, BlocSecret, Jonction, Interrupteur, Activite, Icone, Texte,
 // Valeur, ReglageLigne, Separateur, Carte, Theme (reglages, space, color, icons, motion), nmcli.js (trierReseaux),
-// icones.js (iconeReseau), Quickshell.Networking (WifiSecurityType, ConnectionFailReason), PanneauReseau, EtatReseau.
+// icones.js (iconeReseau), PanneauReseau, EtatReseau.
 ColumnLayout {
     id: page
 
@@ -47,12 +48,17 @@ ColumnLayout {
     readonly property var joint: panneau.rangees.find(r => r.wifi && r.actif) ?? null
     readonly property var hors: panneau.rangees.filter(r => r.wifi && !r.actif && r.etat === "Hors de portée")
     readonly property var fiche: chargeurJoint.item
-    // Réseaux présents au dernier balayage, suivis même liste figée ; ordre en garde les noms triés.
-    property var presents: Array.from(etat.reseaux ?? [])
+    // Les adresses d'EtatReseau sont celles de etat.appareil (le filaire s'il est actif aussi) : elles ne sont
+    // montrées que pour le réseau Wi-Fi joint si c'est bien son appareil, comme le détail de FicheProfil.
+    readonly property bool adressesLues: etat.radio && joint !== null && joint.appareil !== "" && joint.appareil === etat.appareil
+    // Logique de connexion partagée avec le popover (voir Jonction) ; ordre garde les noms des réseaux disponibles triés.
+    property alias presents: jonction.presents
+    property alias deplie: jonction.deplie
+    property alias erreur: jonction.erreur
+    property alias enCours: jonction.enCours
     property var ordre: []
-    property string deplie: ""
-    property string erreur: ""
-    property var enCours: null
+    // Le bloc de mot de passe actuellement déplié, null sans lui (tenu par le bloc lui-même).
+    property Item bloc: null
     property bool balayage: false
     readonly property real cote: Theme.space?.scale[2] ?? 0
 
@@ -70,66 +76,21 @@ ColumnLayout {
     Component.onDestruction: etat.rechercheFenetre = false
 
     // trier — fige l'ordre des réseaux disponibles : le réseau joint en est exclu ; rien ne change tant qu'une
-    // rangée de mot de passe est dépliée, pour ne perdre ni la saisie ni le message d'erreur.
+    // rangée de mot de passe est dépliée, pour ne perdre ni la saisie ni le message d'erreur. L'ordre n'est
+    // réaffecté que si les noms diffèrent, pour que le focus clavier et le survol traversent un balayage.
     // Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : nmcli.js (trierReseaux), presents, deplie.
     function trier() {
-        if (deplie === "") ordre = Nmcli.trierReseaux(presents.filter(r => !r.connected)).map(r => r.name)
+        if (deplie !== "") return
+        const noms = Nmcli.trierReseaux(presents.filter(r => !r.connected)).map(r => r.name)
+        if (noms.join("\n") !== ordre.join("\n")) ordre = noms
     }
     onDeplieChanged: trier()
     Component.onCompleted: trier()
-
-    // present — le réseau figure-t-il encore au balayage ? Entrée : r, un réseau, éventuellement null. Sortie : bool.
-    // Erreurs : aucune. Dépendances : presents.
-    function present(r) { return !!r && presents.includes(r) }
-
-    // securise — un réseau demande-t-il un mot de passe ? Entrée : r, un réseau. Sortie : vrai sauf ouvert, OWE ou
-    // sécurité inconnue (essayés sans secret). Erreurs : aucune. Dépendances : WifiSecurityType.
-    function securise(r) {
-        return ![WifiSecurityType.Owe, WifiSecurityType.Open, WifiSecurityType.Unknown].includes(r?.security)
-    }
 
     // iconeSignal — icône de force d'un réseau, aux mêmes paliers que la barre. Entrée : force, de 0 à 1.
     // Sortie : nom « network-wireless-signal-… ». Erreurs : aucune. Dépendances : icones.js (iconeReseau).
     function iconeSignal(force) {
         return Icones.iconeReseau({carte: true, radio: true, connecte: true, connectivite: "full", force})
-    }
-
-    // choisir — clic sur un réseau : un réseau connu ou ouvert se rejoint ; un autre déplie (ou replie) son mot de
-    // passe ; un réseau déjà en cours de connexion est ignoré. Entrée : r, le réseau. Sortie : aucune.
-    // Erreurs : un réseau qui a quitté le balayage est ignoré ; un échec arrive par connectionFailed.
-    // Dépendances : present, securise, deplie, enCours.
-    function choisir(r) {
-        if (!present(r) || r === enCours) return
-        erreur = ""
-        if (r.known || !securise(r)) {
-            deplie = ""
-            enCours = r
-            r.connect()
-        } else deplie = deplie === r.name ? "" : r.name
-    }
-
-    // rejoindre — rejoint le réseau déplié avec le mot de passe saisi (connectWithPsk) ; la rangée reste dépliée
-    // pendant la connexion, qui la replie à son succès. Entrée : secret, le mot de passe, jamais journalisé.
-    // Sortie : aucune. Erreurs : un réseau qui a quitté le balayage replie la rangée. Dépendances : presents.
-    function rejoindre(secret) {
-        const r = presents.find(x => x.name === deplie) ?? null
-        if (!r) {
-            deplie = ""
-            return
-        }
-        erreur = ""
-        enCours = r
-        r.connectWithPsk(secret)
-    }
-
-    // echec — connectionFailed du réseau suivi : déplie sa rangée avec le message de la raison. Entrée : raison,
-    // ConnectionFailReason. Sortie : aucune. Erreurs : aucune. Dépendances : enCours, ConnectionFailReason.
-    function echec(raison) {
-        const refus = [ConnectionFailReason.NoSecrets, ConnectionFailReason.WifiClientDisconnected,
-                       ConnectionFailReason.WifiClientFailed, ConnectionFailReason.WifiAuthTimeout]
-        deplie = enCours.name
-        enCours = null
-        erreur = refus.includes(raison) ? "Mot de passe refusé. Vérifiez-le et réessayez." : "Connexion impossible."
     }
 
     // rechercher — relance « nmcli device wifi rescan » et montre l'Activite jusqu'au retour de la liste, au plus
@@ -141,21 +102,18 @@ ColumnLayout {
         etat.executer(["device", "wifi", "rescan"])
     }
 
-    Connections {
-        target: page.enCours
-        function onConnectionFailed(raison) { page.echec(raison) }
-        function onConnectedChanged() { if (page.enCours?.connected) { page.deplie = ""; page.enCours = null } }
+    // Logique de connexion ; un refus révèle le mot de passe saisi dans le bloc déplié, comme le popover.
+    Jonction {
+        id: jonction
+        etat: page.etat
+        onRefuse: if (page.bloc) page.bloc.secret.revele = true
     }
     Connections {
         target: page.etat
         function onReseauxChanged() {
             page.balayage = false
             finBalayage.stop()
-            page.presents = Array.from(page.etat.reseaux ?? [])
-            if (page.deplie !== "" && !page.presents.some(r => r.name === page.deplie)) {
-                page.deplie = ""
-                page.erreur = ""
-            }
+            jonction.actualiser()
             page.trier()
         }
         // Le réseau joint a changé : il quitte la liste, et l'ancien y revient.
@@ -173,7 +131,7 @@ ColumnLayout {
         }
     }
 
-    Section { visible: page.etat.radio && page.joint !== null; text: "Réseau joint" }
+    Section { visible: page.etat.radio && page.fiche?.lu === true; text: "Réseau joint" }
     Loader {
         id: chargeurJoint
         objectName: "joint"
@@ -219,7 +177,24 @@ ColumnLayout {
                 anchors.right: parent.right
                 implicitWidth: rangRelance.implicitWidth + 2 * page.cote
                 height: parent.height
-                radius: height / 2
+                radius: Theme.radius?.control ?? 0
+                // Clavier (bible, « Clavier ») : Tab l'atteint, Entrée et Espace l'activent ; le contour de focus
+                // n'apparaît que pour le focus venu du clavier (un clic ne prend pas le focus).
+                activeFocusOnTab: visible
+                Keys.onPressed: event => {
+                    event.accepted = [Qt.Key_Return, Qt.Key_Enter, Qt.Key_Space].includes(event.key)
+                    if (event.accepted) relance.clique()
+                }
+                Rectangle {
+                    readonly property real decalage: Theme.focus?.rowOffset ?? 0
+                    anchors.fill: parent
+                    anchors.margins: -decalage
+                    radius: relance.radius + decalage
+                    visible: relance.activeFocus
+                    color: "transparent"
+                    border.width: Theme.focus?.width ?? 0
+                    border.color: Theme.focus?.color ?? "transparent"
+                }
                 color: survolRelance.hovered ? Theme.stateColors("surfaceWindow", "none", tapeRelance.pressed ? "pressed" : "hover")?.fill ?? "transparent" : "transparent"
                 signal clique()
                 onClique: page.rechercher()
@@ -255,15 +230,15 @@ ColumnLayout {
 
                 Ligne {
                     objectName: "ligne"
-                    filet: page.ordre.slice(0, dispo.index).some(n => page.present(page.presents.find(x => x.name === n)))
+                    filet: page.ordre.slice(0, dispo.index).some(n => jonction.present(page.presents.find(x => x.name === n)))
                     icone: page.iconeSignal(dispo.r?.signalStrength ?? 0)
                     libelle: dispo.modelData
                     aide: dispo.enConnexion ? "Connexion…" : ""
                     cliquable: true
-                    onClique: page.choisir(dispo.r)
+                    onClique: jonction.choisir(dispo.r)
                     Activite { visible: dispo.enConnexion }
                     Icone {
-                        visible: !dispo.enConnexion && page.securise(dispo.r)
+                        visible: !dispo.enConnexion && jonction.securise(dispo.r)
                         nom: "network-wireless-encrypted"
                         taille: Theme.icons?.sizes.dense ?? 0
                         couleur: Theme.color?.textTertiary ?? "transparent"
@@ -277,12 +252,14 @@ ColumnLayout {
                     Layout.leftMargin: Theme.reglages?.textColumn ?? 0
                     Layout.rightMargin: page.cote
                     sourceComponent: BlocSecret {
+                        id: blocSecret
                         erreur: page.erreur
                         occupe: dispo.enConnexion
                         // Comme le popover, un refus montre le mot de passe saisi.
-                        Component.onCompleted: if (page.erreur !== "") secret.revele = true
-                        onRejoindre: page.rejoindre(secret.text)
-                        onAnnuler: { page.deplie = ""; page.erreur = "" }
+                        Component.onCompleted: { page.bloc = blocSecret; if (page.erreur !== "") secret.revele = true }
+                        Component.onDestruction: if (page.bloc === blocSecret) page.bloc = null
+                        onRejoindre: jonction.rejoindre(secret.text)
+                        onAnnuler: { jonction.deplie = ""; jonction.erreur = "" }
                     }
                 }
             }
@@ -293,6 +270,7 @@ ColumnLayout {
     Section { visible: page.hors.length > 0; text: page.etat.radio ? "Enregistrés, hors de portée" : "Réseaux enregistrés" }
     Groupe {
         objectName: "enregistres"
+        visible: page.hors.length > 0 || page.etat.radio
         Repeater {
             model: page.hors
 
@@ -310,6 +288,7 @@ ColumnLayout {
         }
         Ligne {
             objectName: "autre"
+            visible: page.etat.radio
             filet: page.hors.length > 0
             icone: "list-add"
             libelle: "Autre réseau…"
@@ -320,10 +299,10 @@ ColumnLayout {
 
     // Adresses du réseau joint, en lecture seule ; la méthode IPv4 vient du profil lu par la fiche résumée, et la
     // modification d'une adresse fixe reste dans la sous-page. Une valeur vide n'a pas de rangée.
-    Section { visible: page.etat.radio && page.joint !== null; text: "Adresses" }
+    Section { visible: page.adressesLues; text: "Adresses" }
     Carte {
         objectName: "adresses"
-        visible: page.etat.radio && page.joint !== null
+        visible: page.adressesLues
         Layout.fillWidth: true
         Repeater {
             model: [

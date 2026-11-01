@@ -125,11 +125,11 @@ Overlay {
         property bool trie: false
         // Réseaux présents au dernier balayage, suivis même liste figée : un réseau de la liste figée qui n'y figure
         // plus est masqué et ne peut plus être choisi ni rejoint (son WifiNetwork peut avoir été détruit).
-        property var presents: Array.from(etat.reseaux ?? [])
+        property alias presents: jonction.presents
         // Nom du réseau dont la ligne de mot de passe est dépliée, vide sinon.
-        property string deplie: ""
-        property string erreur: ""
-        property var enCours: null
+        property alias deplie: jonction.deplie
+        property alias erreur: jonction.erreur
+        property alias enCours: jonction.enCours
         // Vrai entre un clic sur la recherche et le retour de la liste, borné par finBalayage.
         property bool balayage: false
         // Nom → délégué de la liste, tenu par les délégués eux-mêmes.
@@ -207,73 +207,20 @@ Overlay {
             delegues = reste
         }
 
-        // present — le réseau figure-t-il encore au balayage ? Entrée : r, un réseau, éventuellement null (objet
-        // détruit). Sortie : bool. Erreurs : aucune. Dépendances : presents.
-        function present(r): bool { return !!r && presents.includes(r) }
+        // present, choisir, securise — délèguent à la Jonction (logique partagée avec la page Wi-Fi de la fenêtre) ; voir Jonction.
+        function present(r): bool { return jonction.present(r) }
+        function choisir(r): void { jonction.choisir(r) }
+        function securise(r): bool { return jonction.securise(r) }
 
-        // replierAbsent — replie la ligne dépliée si son réseau a quitté le balayage ; le repli relance le tri.
-        // Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : deplie, presents.
-        function replierAbsent(): void {
-            if (deplie !== "" && !presents.some(r => r.name === deplie)) {
-                deplie = ""
-                erreur = ""
-            }
-        }
-
-        // securise — un réseau demande-t-il un mot de passe ? Entrée : r, un réseau. Sortie : vrai sauf ouvert,
-        // OWE ou sécurité inconnue (essayés sans secret). Erreurs : aucune. Dépendances : WifiSecurityType.
-        function securise(r): bool {
-            return ![WifiSecurityType.Owe, WifiSecurityType.Open, WifiSecurityType.Unknown].includes(r?.security)
-        }
-
-        // choisir — clic sur un réseau : un réseau connu ou ouvert se rejoint directement ; un autre déplie (ou
-        // replie) sa ligne de mot de passe ; un réseau déjà en cours de connexion est ignoré. Entrée : r, le réseau.
-        // Sortie : aucune. Erreurs : un réseau qui n'est plus au balayage est ignoré ; un échec arrive par
-        // connectionFailed (voir Connections). Dépendances : present, securise, deplie, enCours.
-        function choisir(r): void {
-            if (!present(r) || r === enCours) return
-            erreur = ""
-            if (r.known || !securise(r)) {
-                deplie = ""
-                enCours = r
-                r.connect()
-            } else deplie = deplie === r.name ? "" : r.name
-        }
-
-        // rejoindre — valide la ligne de mot de passe dépliée par connectWithPsk ; la ligne reste dépliée pendant
-        // la connexion, qui la replie à son succès. Entrées : aucune. Sortie : aucune. Erreurs : réseau qui n'est
-        // plus au balayage, la ligne se replie. Dépendances : bloc, presents, enCours.
-        function rejoindre(): void {
-            if (!bloc) return
-            const r = presents.find(x => x.name === deplie) ?? null
-            if (!r) {
-                deplie = ""
-                return
-            }
-            erreur = ""
-            enCours = r
-            r.connectWithPsk(bloc.secret.text)
-        }
+        // rejoindre — valide la ligne de mot de passe dépliée par la Jonction ; sans ligne dépliée, ne fait rien.
+        // Entrées : aucune. Sortie : aucune. Erreurs : voir Jonction.rejoindre. Dépendances : bloc, jonction.
+        function rejoindre(): void { if (bloc) jonction.rejoindre(bloc.secret.text) }
 
         // deconnecter — « Se déconnecter » du pied : déconnecte le réseau Wi-Fi joint et ferme le popover.
         // Entrées : aucune. Sortie : aucune. Erreurs : sans réseau joint, rien n'est fait. Dépendances : joint, fermer.
         function deconnecter(): void {
             joint?.disconnect()
             fermer()
-        }
-
-        // echec — connectionFailed du réseau suivi : déplie sa ligne de mot de passe avec le message de la raison,
-        // secret révélé comme sur la maquette. Entrée : raison, ConnectionFailReason : secrets absents ou refusés,
-        // client déconnecté, échec ou délai d'authentification donnent « Mot de passe refusé », les autres
-        // « Connexion impossible ». Sortie : aucune. Erreurs : aucune. Dépendances : enCours, bloc,
-        // ConnectionFailReason.
-        function echec(raison): void {
-            const refus = [ConnectionFailReason.NoSecrets, ConnectionFailReason.WifiClientDisconnected,
-                           ConnectionFailReason.WifiClientFailed, ConnectionFailReason.WifiAuthTimeout]
-            deplie = enCours.name
-            enCours = null
-            erreur = refus.includes(raison) ? "Mot de passe refusé. Vérifiez-le et réessayez." : "Connexion impossible."
-            if (bloc) bloc.secret.revele = true
         }
 
         // rechercher — relance le balayage (« nmcli device wifi rescan ») et montre l'indicateur d'activité jusqu'au
@@ -296,10 +243,11 @@ Overlay {
         // fermer — referme le popover après une action qui ouvre autre chose. Entrées : aucune. Sortie : aucune.
         function fermer(): void { popover.ouvert = false }
 
-        Connections {
-            target: panneau.enCours
-            function onConnectionFailed(raison) { panneau.echec(raison) }
-            function onConnectedChanged() { if (panneau.enCours?.connected) { panneau.deplie = ""; panneau.enCours = null } }
+        // Logique de connexion partagée avec la page Wi-Fi ; un refus révèle le mot de passe saisi, comme sur la maquette.
+        Jonction {
+            id: jonction
+            etat: popover.etat
+            onRefuse: if (panneau.bloc) panneau.bloc.secret.revele = true
         }
         Connections {
             target: panneau.etat
@@ -308,8 +256,7 @@ Overlay {
                 const avant = panneau.releve()
                 panneau.balayage = false
                 finBalayage.stop()
-                panneau.presents = Array.from(panneau.etat.reseaux ?? [])
-                panneau.replierAbsent()
+                jonction.actualiser()
                 panneau.trier(avant)
             }
             // Le réseau joint a changé : il quitte la liste, et l'ancien y revient.

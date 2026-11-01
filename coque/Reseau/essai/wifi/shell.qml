@@ -87,6 +87,25 @@ ShellRoot {
         function ouvrirNouveau() { essai.journal("ouvrirNouveau", true) }
     }
 
+    // touche — frappe une touche dans la fenêtre de la page, comme le clavier. Entrées : cible, un Item de la fenêtre ;
+    // cle, un Qt.Key_* ; modif, un Qt.KeyboardModifier. Sortie : aucune. Erreurs : page détruite, TypeError au
+    // journal. Dépendances : QtTest.
+    function touche(cible, cle, modif) {
+        const e = Qt.createQmlObject("import QtTest; TestEvent {}", cible)
+        e.keyClick(cle, modif, -1)
+        e.destroy()
+    }
+
+    // nomDe — nom lisible d'un élément du focus : le libellé de la Ligne ou l'objectName du contrôle, cherchés en
+    // remontant les parents (le focus d'un champ est dans son TextInput). Entrée : item. Sortie : texte, vide sinon.
+    function nomDe(item) {
+        for (let o = item; o; o = o.parent) {
+            if (o.libelle) return o.libelle
+            if (o.objectName) return o.objectName
+        }
+        return ""
+    }
+
     LazyLoader {
         activeAsync: Theme.ready && Qt.platform.pluginName === "offscreen"
 
@@ -137,7 +156,8 @@ ShellRoot {
                         serrures: reseaux.filter(o => essai.trouver(o, i => i.nom === "network-wireless-encrypted" && i.visible)).map(o => o.objectName.slice(7)),
                         hors: essai.tous_(objet("enregistres"), o => String(o.objectName).startsWith("hors:") && o.visible).map(o => o.libelle),
                         autre: essai.trouver(objet("enregistres"), o => o.objectName === "autre" && o.visible) !== null,
-                        adresses, deplie: p.deplie, erreur: p.erreur, saisie: bloc ? bloc.secret.length : -1,
+                        adresses, adressesVisible: objet("adresses").visible, enregistresVisible: objet("enregistres").visible,
+                        revele: bloc ? bloc.secret.revele : null, deplie: p.deplie, erreur: p.erreur, saisie: bloc ? bloc.secret.length : -1,
                         connexion: reseaux.filter(o => essai.trouver(o, i => i.objectName === "ligne")?.aide === "Connexion…").map(o => o.objectName.slice(7)),
                         balayage: p.balayage, activite: objet("activiteRecherche")?.visible ?? false,
                         rechercher: objet("rechercher")?.visible ?? false, radio: faux.radio, balayageEtat: faux.balayage,
@@ -147,6 +167,17 @@ ShellRoot {
                         titres: essai.tous_(p, o => o.text !== undefined && o.moyen === true && o.echelon === 0 && o.visible).map(o => o.text),
                     })
                 }
+
+                // tab, retourArriere, entree — frappent Tab, Maj+Tab et Entrée. Entrées : aucune. Sortie : aucune.
+                function tab(): void { essai.touche(porteur.item, Qt.Key_Tab, Qt.NoModifier) }
+                function retourArriere(): void { essai.touche(porteur.item, Qt.Key_Backtab, Qt.ShiftModifier) }
+                function entree(): void { essai.touche(porteur.item, Qt.Key_Return, Qt.NoModifier) }
+                // focus — nom de l'élément qui a le focus actif de la fenêtre (voir nomDe), vide sans focus. Sortie : texte.
+                function focus(): string { return essai.nomDe(porteur.item.Window.window?.activeFocusItem) }
+                // appareil — change l'appareil que lit l'état (le filaire actif l'emporte sur le Wi-Fi). Entrée : nom.
+                function appareil(nom: string): void { faux.appareil = nom }
+                // sansHors — retire les profils hors de portée du panneau factice. Entrées : aucune. Sortie : aucune.
+                function sansHors(): void { panneauFaux.rangees = panneauFaux.rangees.filter(r => r.etat !== "Hors de portée") }
 
                 // choisir — clic sur le réseau disponible nommé. Entrée : nom. Sortie : aucune.
                 function choisir(nom: string): void { essai.trouver(porteur.item, o => o.objectName === "reseau:" + nom && o.visible).children[0].clique() }

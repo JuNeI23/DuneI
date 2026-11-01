@@ -704,6 +704,11 @@ exit 0
 """
 
 
+# Ordre de tabulation de la page Wi-Fi sur l'état factice (voir test_ordre_de_tabulation).
+SEQUENCE_TAB = ["radio", "secret", "auto", "priorite", "facture", "Détails…", "rechercher", "Connu", "Inconnu",
+                "Ouvert", "Telephone_Essai", "Cafe", "Autre réseau…"]
+
+
 @unittest.skipUnless(os.environ.get("WAYLAND_DISPLAY") and QS, "session Wayland et Quickshell requis")
 class PageWifiTest(EssaiCoque, unittest.TestCase):
     """La page Wi-Fi de la fenêtre Réseau, éprouvée sur un état, un panneau et des réseaux factices.
@@ -812,9 +817,77 @@ class PageWifiTest(EssaiCoque, unittest.TestCase):
         self.assertFalse(p["joint"])
         self.assertEqual(p["adresses"], {})
         self.assertEqual(p["hors"], ["Telephone_Essai", "Cafe"])
+        self.assertFalse(p["autre"])
         self.ipc("basculer")
         self.attendre("essai : allumer true")
         self.jusqua(lambda p: p["radio"] and p["disponiblesVisible"] and p["joint"], "radio rallumée")
+
+    def sequence_tab(self, n: int, sens: str = "tab") -> list[str]:
+        """Frappe n fois Tab (ou Maj+Tab) et rend les noms des éléments qui prennent le focus. Dépendances : ipc."""
+        vus = []
+        for _ in range(n):
+            self.ipc(sens)
+            vus.append(self.ipc("focus"))
+        return vus
+
+    def test_ordre_de_tabulation(self):
+        # Ordre complet, sur l'état factice : interrupteur de la radio, carte du réseau joint, « Rechercher », réseaux
+        # disponibles, profils hors de portée, « Autre réseau… » ; puis retour au début.
+        attendu = SEQUENCE_TAB
+        self.assertEqual(self.sequence_tab(len(attendu)), attendu)
+        self.assertEqual(self.sequence_tab(1), [attendu[0]])
+        self.assertEqual(self.sequence_tab(1, "retourArriere"), [attendu[-1]])
+
+    def test_rechercher_au_clavier(self):
+        self.ipc("rechercher")
+        self.jusqua(lambda p: p["balayage"], "recherche lancée")
+        self.ipc("balayer")
+        self.jusqua(lambda p: not p["balayage"], "liste rendue")
+        for _ in range(len(SEQUENCE_TAB)):
+            self.ipc("tab")
+            if self.ipc("focus") == "rechercher":
+                break
+        else:
+            self.fail("« Rechercher » n'a pas pris le focus")
+        self.ipc("entree")
+        self.attendre('essai : executer ["device","wifi","rescan"]')
+        self.jusqua(lambda p: p["balayage"] and p["activite"], "Entrée relance la recherche")
+
+    def test_focus_traverse_un_balayage(self):
+        # Un balayage qui ne change pas les noms ne recrée pas les rangées : le focus clavier reste sur « Inconnu ».
+        for _ in range(len(SEQUENCE_TAB)):
+            self.ipc("tab")
+            if self.ipc("focus") == "Inconnu":
+                break
+        self.ipc("balayer")
+        time.sleep(0.3)
+        self.assertEqual(self.ipc("focus"), "Inconnu")
+
+    def test_refus_revele_le_secret_deja_saisi(self):
+        # Un mot de passe refusé après saisie dans le bloc déjà déplié est révélé, comme dans le popover.
+        self.ipc("choisir", "Inconnu")
+        self.jusqua(lambda p: p["saisie"] == 0 and p["revele"] is False, "bloc déplié, masqué")
+        self.ipc("saisir", self.SECRET)
+        self.ipc("rejoindre")
+        self.attendre(f"essai : connectWithPsk Inconnu {len(self.SECRET)}")
+        self.ipc("echouer", "Inconnu")
+        p = self.jusqua(lambda p: p["erreur"] != "", "refus")
+        self.assertEqual((p["erreur"], p["revele"], p["deplie"]), ("Mot de passe refusé. Vérifiez-le et réessayez.", True, "Inconnu"))
+        self.assertNotIn(self.SECRET, self.journal())
+
+    def test_adresses_de_l_appareil_lu_seulement(self):
+        # Filaire actif aussi : EtatReseau lit alors l'appareil filaire, dont les adresses ne sont pas celles du Wi-Fi joint.
+        self.assertTrue(self.page()["adressesVisible"])
+        self.ipc("appareil", "eth0")
+        p = self.jusqua(lambda p: not p["adressesVisible"], "adresses masquées")
+        self.assertEqual(p["adresses"], {})
+
+    def test_wifi_coupe_sans_profils_hors_de_portee(self):
+        self.ipc("sansHors")
+        self.ipc("basculer")
+        p = self.jusqua(lambda p: not p["radio"], "radio coupée")
+        self.assertFalse(p["enregistresVisible"])
+        self.assertFalse(p["autre"])
 
     def test_priorite_par_le_compteur(self):
         self.ipc("priorite", "1")
@@ -1002,6 +1075,9 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
             time.sleep(0.05)
         self.assertTrue(lire()["balayage"])
         self.ipc("essai", "onglet", "filaire")
+        fin = time.monotonic() + DELAI
+        while lire()["fenetre"] and time.monotonic() < fin:
+            time.sleep(0.05)
         self.assertFalse(lire()["fenetre"])
         self.ipc("essai", "onglet", "wifi")
         self.ipc("essai", "fermer")
@@ -1121,12 +1197,14 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
         self.jusqua(lambda e: e["onglets"][2][2] == "Connecté", "VPN connecté")
 
     def tabuler_jusqu_a(self, libelle: str):
-        """Frappe Tab jusqu'à ce que le focus soit sur la Ligne de ce libellé (quarante frappes au plus).
+        """Frappe Tab jusqu'à ce que le focus soit sur la Ligne de ce libellé (douze frappes au plus).
 
         Entrée : libelle. Sortie : aucune. Erreurs : échec du test si le focus n'y arrive pas. Dépendances : ipc.
+        Les arrêts qui précèdent la liste des réseaux du système sont seuls atteints ainsi : cette liste, réelle et
+        qui grossit au balayage, a une longueur imprévisible.
         """
         vus = []
-        for _ in range(40):
+        for _ in range(12):
             self.ipc("essai", "tab")
             vus.append(self.ipc("essai", "focus"))
             if vus[-1] == libelle:
@@ -1134,22 +1212,23 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
         self.fail(f"focus sur « {libelle} » jamais atteint : {vus}")
 
     def test_clavier_des_rangees(self):
-        # Bible, « Clavier » : Tab atteint les rangées cliquables de la page, Entrée les active. La page Wi-Fi porte
-        # d'abord l'interrupteur de la radio et la carte du réseau joint (« Détails… » en fait partie), puis les
-        # réseaux disponibles (ceux du système), enfin les profils hors de portée et « Autre réseau… ».
+        # Bible, « Clavier » : Tab atteint les rangées cliquables de la page, Entrée les active. Les arrêts avant la liste
+        # des réseaux du système (« Détails… » du réseau joint) se comptent à la tabulation ; la fin de la page
+        # (« Autre réseau… »), derrière cette liste réelle de longueur imprévisible, s'atteint à rebours : Maj+Tab sans
+        # focus boucle sur le dernier arrêt. L'ordre complet, sur un état factice, est éprouvé par
+        # PageWifiTest.test_ordre_de_tabulation.
         self.ipc("reseau", "ouvrir")
         self.jusqua(lambda e: e["fenetre"] and e["rangees"], "fenêtre construite")
         self.tabuler_jusqu_a("Détails…")
         self.ipc("essai", "entree")
         self.jusqua(lambda e: e["sousPage"] == "wifi-1", "Entrée ouvre la sous-page du profil joint")
-        self.ipc("essai", "echap")
-        self.jusqua(lambda e: e["sousPage"] == "", "retour")
-        self.tabuler_jusqu_a("Telephone_Essai")
-        self.ipc("essai", "entree")
-        self.jusqua(lambda e: e["sousPage"] == "hotspot-1", "Entrée ouvre le profil hors de portée")
-        self.ipc("essai", "echap")
-        self.jusqua(lambda e: e["sousPage"] == "", "retour")
-        self.tabuler_jusqu_a("Autre réseau…")
+
+    def test_clavier_fin_de_page(self):
+        self.ipc("reseau", "ouvrir")
+        self.jusqua(lambda e: e["fenetre"] and e["rangees"], "fenêtre construite")
+        time.sleep(0.5)
+        self.ipc("essai", "retourArriere")
+        self.assertEqual(self.ipc("essai", "focus"), "Autre réseau…")
         self.ipc("essai", "entree")
         self.jusqua(lambda e: e["sousPage"] == "nouveau", "Entrée ouvre « nouveau »")
 
