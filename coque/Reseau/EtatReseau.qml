@@ -17,7 +17,7 @@ import "../Barre/icones.js" as Icones
 // vrai pour demander la fenêtre Réseau (posé par « Réglages réseau… » du popover, lu par la fenêtre) ;
 // profilDemande, uuid ou nom du profil que la fenêtre doit montrer (posé par « Détails… » du popover, consommé et
 // remis à vide par le panneau Réseau qui le sélectionne), vide par défaut.
-// Sorties (lecture seule) : carte, radio, filaire, connecte, connectivite (« unknown », « none », « portal »,
+// Sorties (lecture seule) : veille (vrai de la ligne « asleep » du moniteur jusqu'à l'état suivant), carte, radio, filaire, connecte, connectivite (« unknown », « none », « portal »,
 // « limited » ou « full »), reseauActif (WifiNetwork ou null), nomActif, force (0 à 1), facture, appareil
 // (l'interface dont la lecture donne les adresses : le filaire actif, sinon le Wi-Fi), ip4, ip6,
 // passerelle, dns, mac (adresse matérielle de l'appareil actif), profils, vpnActif, icone, reseaux (WifiNetwork
@@ -38,6 +38,8 @@ Singleton {
     property string profilDemande: ""
     // Nombre de processus nmcli de executer encore vivants (utile aux tests).
     property int processus: 0
+    // Vrai tant que NetworkManager est endormi (la machine est en veille) ; tiré des lignes du moniteur.
+    property bool veille: false
 
     readonly property var appareils: Array.from(Networking.devices.values)
     readonly property var cartes: appareils.filter(d => d.type === DeviceType.Wifi)
@@ -115,9 +117,19 @@ Singleton {
         profils = Nmcli.lireProfils(profilsTexte)
     }
 
+    // lireVeille — met veille à jour d'après une ligne du moniteur « NetworkManager is now in the '<état>' state ».
+    // Entrée : texte, une ligne du moniteur (en anglais : la surveillance impose LC_ALL=C). Sortie : aucune.
+    // Erreurs : une autre ligne est ignorée. Dépendances : aucune.
+    function lireVeille(texte) {
+        const m = /is now in the '([^']*)' state/.exec(texte)
+        if (m) veille = m[1] === "asleep"
+    }
+
     Relance {
         id: relance
         surveille: ["nmcli", "monitor"]
+        environnement: ({LC_ALL: "C"})
+        onLigne: texte => etat.lireVeille(texte)
         // Active en premier lieu l'appareil filaire s'il existe, sinon le Wi-Fi, pour la section IP.
         lecture: ["sh", "-c", `a=$(nmcli -t -f TYPE,DEVICE connection show --active)
             printf '%s\\n--\\n' "$a"

@@ -18,7 +18,7 @@ ShellRoot {
     property string connectivite: "full"
     property string nom: "Maison"
     property bool connus: Quickshell.env("NOTIF_CONNUS") !== "0"
-    property double saut: 0
+    property bool veille: false
 
     Component.onCompleted: console.info("essai : prêt")
 
@@ -28,7 +28,7 @@ ShellRoot {
         connectivite: essai.connectivite
         nom: essai.nom
         connus: essai.connus
-        horloge: () => Date.now() + essai.saut
+        veille: essai.veille
         commande: (icone, titre, corps) => ["sh", "-c", 'printf "%s|%s|%s\\n" "$1" "$2" "$3" >> "$4"', "x",
                                             icone, titre, corps, Quickshell.env("NOTIF_JOURNAL")]
     }
@@ -46,8 +46,8 @@ ShellRoot {
         // connaitre — déclare les appareils de Networking peuplés. Sortie : aucune. Dépendances : racine.
         function connaitre(): void { essai.connus = true }
 
-        // dormir — avance l'horloge murale injectée de ms millisecondes (simule une suspension). Entrée : ms.
-        function dormir(ms: int): void { essai.saut += ms }
+        // veiller — fixe l'état de veille de la machine. Entrée : « true » ou « false ». Sortie : aucune.
+        function veiller(v: string): void { essai.veille = v === "true" }
 
         // stable — état stable appris par NotificationsReseau (« » tant qu'aucun n'est appris).
         // Sortie : texte. Erreurs : aucune. Dépendances : notifications.

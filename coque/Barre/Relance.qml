@@ -9,8 +9,9 @@ import Quickshell.Io
 // (NetworkManager ou dunst relancé, outil absent), elle est relancée une seconde plus tard par une minuterie à
 // un coup, sans tourner en boucle serrée.
 // Entrées : surveille, commande du processus résident (propriété, pour qu'un test injecte une commande
-// factice) ; lecture, commande de la lecture ponctuelle ; actif, vrai par défaut, suspend tout si faux.
-// Sorties : signal lu(texte), sortie standard de la lecture ; propriété relances, nombre de démarrages de la
+// factice) ; lecture, commande de la lecture ponctuelle ; actif, vrai par défaut, suspend tout si faux ;
+// environnement, variables ajoutées à celles du processus de surveillance (vide par défaut).
+// Sorties : signal lu(texte), sortie standard de la lecture ; signal ligne(texte), chaque ligne de la surveillance ; propriété relances, nombre de démarrages de la
 // surveillance (utile aux tests).
 // Erreurs : un outil absent ou une commande qui échoue ne produit aucun lu et relance la surveillance sans fin
 // à la cadence d'une seconde ; rien n'est journalisé de plus que ce que Quickshell journalise.
@@ -22,8 +23,10 @@ Item {
     property var lecture: []
     property bool actif: true
     property int relances: 0
+    property var environnement: ({})
 
     signal lu(string texte)
+    signal ligne(string texte)
 
     // true quand une ligne est arrivée pendant une lecture : la lecture est refaite dès qu'elle se termine.
     property bool relire: false
@@ -52,7 +55,8 @@ Item {
     Process {
         id: veilleur
         command: racine.surveille
-        stdout: SplitParser { onRead: racine.lire() }
+        environment: racine.environnement
+        stdout: SplitParser { onRead: texte => { racine.ligne(texte); racine.lire() } }
         onRunningChanged: if (running) racine.relances++
         onExited: if (racine.actif) delai.start()
     }

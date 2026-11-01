@@ -8,13 +8,13 @@ import "../Theme"
 // de stabilité. Le minuteur est à un coup et n'est armé que sur une transition : aucun au repos (D80). Le premier
 // état appris, au démarrage de la coque, ne produit aucune notification ; une coupure plus courte que le délai, ou
 // une connectivité encore « unknown » (reprise après veille), ne produit rien. L'apprentissage silencieux ne commence
-// qu'au premier état réel : appareils connus de Networking et connectivité différente de « unknown ». Une suspension
-// de la machine est détectée à l'horloge murale (les minuteurs de Qt sont monotones et ne comptent pas la veille) :
-// si le délai a duré plus du double de sa valeur, l'état est réappris en silence, comme au démarrage. Jamais de
+// qu'au premier état réel : appareils connus de Networking et connectivité différente de « unknown ». La veille est
+// annoncée par NetworkManager (EtatReseau.veille) : à son entrée l'état appris est oublié et le minuteur arrêté ;
+// au réveil l'état est réappris en silence, comme au démarrage, et une coupure ou une reconnexion lente qui suit
+// ne produit rien : tant que l'état n'est pas redevenu connecté, « perdue » n'est pas appris. Jamais de
 // bascule automatique.
 // Entrées (réglables) : connecte, connectivite et nom, par défaut ceux de EtatReseau (remplaçables par un test) ;
-// connus, vrai quand Networking a peuplé ses appareils ; horloge, fonction() → millisecondes murales (Date.now() par
-// défaut, remplaçable par un test) ; commande, fonction(icone, titre, corps) qui rend le tableau d'arguments à lancer (notify-send par défaut, avec
+// connus, vrai quand Networking a peuplé ses appareils ; veille, vrai pendant la veille de la machine ; commande, fonction(icone, titre, corps) qui rend le tableau d'arguments à lancer (notify-send par défaut, avec
 // l'étiquette de remplacement « reseau » pour que dunst remplace la notification précédente).
 // Sorties (lecture seule) : stable, dernier état notifié ou appris (vide avant le premier) ; armee, vrai tant que
 // le minuteur de stabilité court.
@@ -29,7 +29,7 @@ Scope {
     property string connectivite: EtatReseau.connectivite
     property string nom: EtatReseau.nomActif
     property bool connus: EtatReseau.appareils.length > 0
-    property var horloge: () => Date.now()
+    property bool veille: EtatReseau.veille
     property var commande: (icone, titre, corps) => ["notify-send", "-a", "DuneI", "-i", icone,
         "-h", "string:x-dunst-stack-tag:reseau", titre, corps]
 
@@ -49,17 +49,24 @@ Scope {
         : connectivite === "portal" ? "portail"
         : connectivite === "unknown" ? "" : "sans-internet"
 
-    // Instant mural de l'armement du minuteur (millisecondes).
-    property double depuis: 0
+    // Vrai du réveil jusqu'au premier état connecté réappris : « perdue » n'est alors pas appris.
+    property bool apresVeille: false
+    onVeilleChanged: {
+        if (veille) { stable = ""; apresVeille = true }
+        armer()
+    }
+    onStableChanged: if (stable !== "") apresVeille = false
 
     // armer — arme ou désarme le minuteur de stabilité selon l'état déduit.
-    // Rôle : un état déjà stable ou encore inconnu désarme ; tant que rien n'est appris, l'apprentissage attend
-    // aussi un premier état réel (appareils connus, connectivité connue) ; tout autre état relance le délai.
-    // Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : etat, stable, connus, connectivite, delai,
-    // horloge, minuteur.
+    // Rôle : un état déjà stable, inconnu ou en veille désarme ; tant que rien n'est appris, l'apprentissage attend
+    // aussi un premier état réel (appareils connus, connectivité connue, et non « perdue » au réveil) ; tout autre
+    // état relance le délai.
+    // Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : etat, stable, veille, apresVeille, connus,
+    // connectivite, delai, minuteur.
     function armer() {
-        if (etat === "" || etat === stable || delai <= 0 || (stable === "" && !(connus && connectivite !== "unknown"))) minuteur.stop()
-        else { depuis = horloge(); minuteur.restart() }
+        const apprenable = connus && connectivite !== "unknown" && !(apresVeille && etat === "perdue")
+        if (veille || etat === "" || etat === stable || delai <= 0 || (stable === "" && !apprenable)) minuteur.stop()
+        else minuteur.restart()
     }
     onEtatChanged: armer()
     onDelaiChanged: armer()
@@ -81,17 +88,14 @@ Scope {
     }
 
     // Minuteur à un coup : à son terme l'état déduit est resté le même, il devient l'état stable ; le premier
-    // état appris (stable vide) l'est sans notification. Si l'horloge murale a avancé de plus du double du délai,
-    // la machine a dormi : rien n'est notifié, l'état est oublié et réappris en silence (nouvel armement).
+    // état appris (stable vide) l'est sans notification.
     Timer {
         id: minuteur
         interval: notifications.delai
         onTriggered: {
-            const veille = notifications.horloge() - notifications.depuis > 2 * notifications.delai
             const premier = notifications.stable === ""
-            notifications.stable = veille ? "" : notifications.etat
-            if (veille) notifications.armer()
-            else if (!premier) notifications.notifier(notifications.etat)
+            notifications.stable = notifications.etat
+            if (!premier) notifications.notifier(notifications.etat)
         }
     }
 

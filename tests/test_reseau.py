@@ -269,6 +269,21 @@ class EtatReseauTest(EssaiCoque, unittest.TestCase):
         time.sleep(1.2)
         self.assertEqual(self.valeur("relances"), 1)
 
+    def test_veille_lue_du_moniteur(self):
+        """Les lignes « asleep » puis un autre état du moniteur (en anglais, LC_ALL=C) font passer veille."""
+        base = Path(self.tmp.name)
+        locale, asleep, reveil = base / "locale", base / "asleep", base / "reveil"
+        self.injecter("true", f"printf '%s\\n' \"$LC_ALL\" > {locale}; while [ ! -e {asleep} ]; do sleep 0.05; done; "
+                              f"echo \"NetworkManager is now in the 'asleep' state\"; "
+                              f"while [ ! -e {reveil} ]; do sleep 0.05; done; "
+                              f"echo \"NetworkManager is now in the 'connected' state\"; sleep 30")
+        self.jusqua(lambda: locale.exists() and locale.read_text() == "C\n", "moniteur lancé avec LC_ALL=C")
+        self.assertFalse(self.valeur("veille"))
+        asleep.touch()
+        self.jusqua(lambda: self.valeur("veille") is True, "veille après la ligne asleep")
+        reveil.touch()
+        self.jusqua(lambda: self.valeur("veille") is False, "réveil à l'état suivant")
+
     def test_lecture_apres_ligne_seulement(self):
         """Pas de minuteur : la lecture suit la ligne du moniteur, puis plus rien."""
         # Le moniteur factice n'émet sa ligne qu'à l'apparition du fichier « signal », que le test pose lui-même :
@@ -1090,12 +1105,14 @@ class NotificationsTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(self.ipc("essai", "armee"), "false")
         self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
 
-    def test_veille_detectee_a_l_horloge_murale(self):
-        # La machine dort pendant le délai d'une coupure : la coupure n'est pas notifiée, l'état est réappris en
-        # silence, et le retour de la connexion qui suit ne l'est pas non plus.
+    def test_veille_puis_reconnexion_lente(self):
+        # Connecté et stable, la machine dort : NetworkManager coupe puis reconnecte plus lentement que le délai.
+        # Ni la coupure ni le retour ne sont notifiés ; l'état est réappris en silence.
+        self.ipc("essai", "veiller", "true")
+        self.assertEqual(self.ipc("essai", "stable"), "")
         self.regler(False, "none")
-        self.ipc("essai", "dormir", "60000000")
-        self.jusqua(lambda: self.ipc("essai", "stable") == "" and self.ipc("essai", "armee") == "true", "état oublié, réapprentissage armé")
+        self.ipc("essai", "veiller", "false")
+        self.assertEqual(self.ipc("essai", "armee"), "false", "« perdue » n'est pas appris au réveil")
         self.regler(True, "full", "Maison")
         self.jusqua(lambda: self.ipc("essai", "stable") == "etablie", "état réappris")
         self.regler(False, "unknown")
