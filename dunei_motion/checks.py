@@ -28,7 +28,7 @@ KINDS = {
 META_KEYS = {"name": "texte", "prefix": "texte"}
 RULE_KEYS = {"exit_ratio": "nombre", "exit_tolerance": "nombre", "overshoot_allowed": "liste de textes",
              "stagger_allowed": "liste de textes", "stagger_cap": "nombre", "reduced_fade_ms": "nombre"}
-DELAY_KEYS = {"tooltip": "nombre", "scan": "nombre", "copied": "nombre"}     # Attentes de l'interface, en millisecondes.
+DELAY_KEYS = {"tooltip": "nombre", "scan": "nombre", "copied": "nombre", "stable": "nombre"}     # Attentes de l'interface, en millisecondes.
 PERIOD_KEYS = {"spinner": "nombre"}    # Cycles des mouvements continus, en millisecondes.
 # Pose de repos et courbe de la vague de l'indicateur d'activité.
 SPINNER_KEYS = {"rest_scale": "nombre", "rest_opacity": "nombre", "easing": "texte"}
