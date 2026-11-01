@@ -19,10 +19,11 @@ ColumnLayout {
 
     TitrePage { text: "Wi-Fi" }
     GroupeProfils {
+        id: profils
         panneau: page.panneau
         type: "Wi-Fi"
         Ligne {
-            filet: page.panneau.rangees.some(r => r.groupe === "Wi-Fi")
+            filet: profils.profils.length > 0
             icone: "list-add"
             libelle: "Autre réseau…"
             cliquable: true

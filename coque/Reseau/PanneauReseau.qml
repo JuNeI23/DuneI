@@ -4,6 +4,7 @@ import Quickshell.Io
 import "../Theme"
 import "../Composants"
 import "nmcli.js" as Nmcli
+import "../Barre/icones.js" as Icones
 
 // PanneauReseau — panneau Réseau : une barre latérale à trois onglets (Wi-Fi, Filaire, VPN) et une pile de pages à
 // droite, page d'onglet puis sous-page d'un profil (L2-11, direction D4).
@@ -13,8 +14,7 @@ import "nmcli.js" as Nmcli
 // la fenêtre (bible, « Pastilles de fenêtre ») se posent à son sommet, dans la hauteur enTete réservée. Dessous,
 // les trois onglets de reglages.tabHeight : médaillon (à l'accent pour l'onglet choisi), nom en échelon 2 (graisse
 // moyenne pour l'onglet choisi) et état en échelon 0 au texte secondaire (Wi-Fi : réseau joint, « Désactivé » ou
-// « Non connecté » ; Filaire : « Connecté », « Câble débranché » ou « Aucune carte » ; VPN : « Non connecté » pour
-// l'instant). La barre est une colonne de navigation (Liste.navigation, bible, « Sélectionné inactif ») : l'onglet
+// « Non connecté » ; Filaire : « Connecté », « Câble débranché » ou « Aucune carte » ; VPN : « Connecté » ou « Non connecté »). La barre est une colonne de navigation (Liste.navigation, bible, « Sélectionné inactif ») : l'onglet
 // choisi prend la plaque neutre controlRaised et un nom en graisse moyenne, jamais le fond d'accent ; les
 // flèches haut et bas passent d'un onglet à l'autre, et le contour de focus (bible, « Focus clavier ») n'orne que la
 // rangée courante, jamais un anneau.
@@ -38,9 +38,10 @@ import "nmcli.js" as Nmcli
 // ouvrirProfil, ouvrirNouveau, retour, ajoute, remplir.
 // Erreurs : un échec de la lecture des factures laisse les icônes Wi-Fi ordinaires ; une sous-page dont le profil
 // disparaît (supprimé ailleurs) se referme.
-// Dépendances : EtatReseau (profils, reseaux, facture, profilDemande, radio, reseauActif, filaire, carteFilaire),
+// Dépendances : EtatReseau (profils, reseaux, facture, profilDemande, radio, carte, reseauActif, force, connectivite, filaire,
+// carteFilaire, vpnActif),
 // PageWifi, PageFilaire, PageVpn, FicheProfil, FicheNouveau, nmcli.js (profilsFenetre, lireFactures), Liste, Rangee,
-// Medaillon, Bouton, Texte, Theme, Quickshell.Io (Process, StdioCollector).
+// Medaillon, Bouton, Surface, Texte, icones.js, Theme, Quickshell.Io (Process, StdioCollector).
 // Cotes : plateau détaché de reglages.sidebarInset (8) sur ses quatre côtés, de largeur layout.sidebarDefault
 // moins ce retrait, au rayon radius.panel ; onglets de reglages.tabHeight (48), séparés de space.scale[0] (4) ;
 // pages en retrait de space.blockGap (24) de la zone qui défile.
@@ -56,11 +57,14 @@ Item {
     property var factures: ({})
     readonly property var rangees: Nmcli.profilsFenetre(etat.profils, etat.reseaux.map(r => r.name), factures, etat.facture)
     readonly property var onglets: [
-        {cle: "wifi", nom: "Wi-Fi", icone: etat.reseauActif ? "network-wireless-signal-excellent" : "network-wireless-offline",
+        {cle: "wifi", nom: "Wi-Fi", icone: Icones.iconeReseau({carte: etat.carte, radio: etat.radio, filaire: false,
+            connecte: etat.reseauActif !== null, connectivite: etat.connectivite, facture: etat.facture, force: etat.force})
+            || "network-wireless-offline",
          etat: !etat.radio ? "Désactivé" : etat.reseauActif ? etat.reseauActif.name : "Non connecté"},
         {cle: "filaire", nom: "Filaire", icone: etat.filaire ? "network-wired" : "network-wired-disconnected",
          etat: etat.filaire ? "Connecté" : etat.carteFilaire ? "Câble débranché" : "Aucune carte"},
-        {cle: "vpn", nom: "VPN", icone: "network-vpn", etat: "Non connecté"}
+        {cle: "vpn", nom: "VPN", icone: etat.vpnActif ? "network-vpn" : "network-vpn-disabled",
+         etat: etat.vpnActif ? "Connecté" : "Non connecté"}
     ]
     readonly property string nomOnglet: onglets.find(o => o.cle === onglet)?.nom ?? ""
     readonly property bool sousPageProfil: sousPage !== "" && sousPage !== "nouveau"
@@ -73,7 +77,7 @@ Item {
 
     // choisirOnglet — affiche la page d'un onglet, en refermant toute sous-page. Entrée : cle, « wifi », « filaire »
     // ou « vpn ». Sortie : aucune. Erreurs : aucune. Dépendances : onglet, retour.
-    function choisirOnglet(cle) { onglet = cle; retour() }
+    function choisirOnglet(cle) { if (cle === onglet) retour(); else onglet = cle }
 
     // ouvrirProfil — ouvre la sous-page d'un profil. Entrée : uuid. Sortie : aucune. Erreurs : un uuid inconnu
     // referme aussitôt la sous-page à la lecture suivante (remplir). Dépendances : sousPage.
@@ -110,8 +114,13 @@ Item {
         } else if (sousPageProfil && rangees.length > 0 && !rangees.some(r => r.uuid === sousPage)) retour()
     }
 
-    // Retour au haut de la zone qui défile à chaque changement de page.
-    onOngletChanged: { sousPage = ""; defilement.contentY = 0 }
+    // Un seul gestionnaire pour tout changement d'onglet : la sous-page se referme, le défilement remonte et la rangée
+    // courante de la barre suit (l'onglet a pu changer autrement qu'au clic, par une demande de profil).
+    onOngletChanged: {
+        sousPage = ""
+        defilement.contentY = 0
+        liste.currentIndex = onglets.findIndex(o => o.cle === onglet)
+    }
     onSousPageChanged: defilement.contentY = 0
     onRangeesChanged: remplir()
     Connections {
@@ -138,11 +147,6 @@ Item {
             liste.focusClavier = false
         }
     }
-    Connections {
-        target: panneau
-        // L'onglet choisi autrement qu'au clic (une demande de profil) déplace aussi la rangée courante.
-        function onOngletChanged() { liste.currentIndex = panneau.onglets.findIndex(o => o.cle === panneau.onglet) }
-    }
 
     ListModel {
         id: modele
@@ -160,15 +164,14 @@ Item {
     }
 
     // Plateau de la barre latérale (bible, « Formes ») : surfacePanel opaque, détaché des bords de la fenêtre.
-    Rectangle {
+    Surface {
         id: plateau
-        readonly property string dnRole: "surfacePanel"
+        role: "surfacePanel"
         x: Theme.reglages?.sidebarInset ?? 0
         y: x
         width: (Theme.layout?.sidebarDefault ?? 0) - x
         height: parent.height - 2 * x
         radius: Theme.radius?.panel ?? 0
-        color: Theme.color?.surfacePanel ?? "transparent"
 
         Liste {
             id: liste

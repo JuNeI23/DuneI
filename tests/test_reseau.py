@@ -662,6 +662,7 @@ case "$*" in
     monitor) exec sleep 30 ;;
     "-t -f TYPE,DEVICE connection show --active")
         echo "802-11-wireless:wlan0"
+        [ -f "$d/vpn" ] && echo "vpn:wg0"
         [ -f "$d/filaire" ] && echo "802-3-ethernet:eth0" ;;
     "-t -f GENERAL.DEVICE,"*" device show eth0") printf 'GENERAL.DEVICE:eth0\nIP4.ADDRESS[1]:10.0.0.2/24\nGENERAL.METERED:no\n' ;;
     "-t -f GENERAL.DEVICE,"*) printf 'GENERAL.DEVICE:wlan0\nIP4.ADDRESS[1]:192.168.1.42/24\nIP4.GATEWAY:192.168.1.1\nIP4.DNS[1]:192.168.1.1\nIP6.ADDRESS[1]:fe80\\:\\:1/64\nGENERAL.HWADDR:A4\\:C3\\:F0\\:5B\\:1E\\:72\nGENERAL.METERED:no\n' ;;
@@ -922,6 +923,31 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(e["onglets"][2][2], "Non connecté")
         self.assertEqual((e["onglet"], e["sousPage"]), ("wifi", ""))
         self.assertEqual(e["selection"], ["inactive", True, False])
+
+    def test_onglet_vpn_connecte(self):
+        # Un VPN actif lu par EtatReseau passe l'état de l'onglet de « Non connecté » à « Connecté ».
+        (self.bin / "vpn").touch()
+        self.ouvrir("hotspot-1")
+        self.ipc("essai", "cliquer", "plus")
+        self.jusqua(lambda e: e["onglets"][2][2] == "Connecté", "VPN connecté")
+
+    def test_clavier_des_rangees(self):
+        # Bible, « Clavier » : Tab atteint les rangées cliquables de la page, Entrée les active. Première rangée :
+        # le profil actif ; « Autre réseau… » vient après les deux profils Wi-Fi.
+        self.ipc("reseau", "ouvrir")
+        self.jusqua(lambda e: e["fenetre"] and e["rangees"], "fenêtre construite")
+        self.ipc("essai", "tab")
+        self.assertEqual(self.ipc("essai", "focus"), "Wifi_TRIADES")
+        self.ipc("essai", "entree")
+        e = self.jusqua(lambda e: e["sousPage"] == "wifi-1", "Entrée ouvre la sous-page")
+        self.ipc("essai", "echap")
+        self.jusqua(lambda e: e["sousPage"] == "", "retour")
+        self.ipc("essai", "tab")
+        self.assertEqual(self.ipc("essai", "focus"), "Telephone_Essai")
+        self.ipc("essai", "tab")
+        self.assertEqual(self.ipc("essai", "focus"), "Autre réseau…")
+        self.ipc("essai", "entree")
+        self.jusqua(lambda e: e["sousPage"] == "nouveau", "Entrée ouvre « nouveau »")
 
     def test_changer_d_onglet(self):
         # Changer d'onglet ferme la sous-page et remet le défilement en haut, comme le retour ; les flèches du

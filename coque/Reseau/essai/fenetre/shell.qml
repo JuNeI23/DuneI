@@ -112,6 +112,14 @@ ShellRoot {
         function bas(): void { essai.touche(Qt.Key_Down) }
         function haut(): void { essai.touche(Qt.Key_Up) }
 
+        // tab, entree — frappent Tab et Entrée. Entrées : aucune. Sortie : aucune. Dépendances : touche.
+        function tab(): void { essai.touche(Qt.Key_Tab) }
+        function entree(): void { essai.touche(Qt.Key_Return) }
+
+        // focus — libellé de la Ligne qui a le focus actif de la fenêtre, vide si c'est autre chose. Entrées :
+        // aucune. Sortie : texte. Erreurs : fenêtre fermée, TypeError au journal.
+        function focus(): string { return fenetre.panneau.Window.window.activeFocusItem?.libelle ?? "" }
+
         // defiler — pose le défilement des pages à y pixels. Entrée : y. Sortie : aucune.
         function defiler(y: int): void { fenetre.panneau.defilement.contentY = y }
 
