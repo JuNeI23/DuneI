@@ -889,6 +889,22 @@ class PageWifiTest(EssaiCoque, unittest.TestCase):
         self.assertFalse(p["enregistresVisible"])
         self.assertFalse(p["autre"])
 
+    def test_sous_page_se_connecter_et_se_deconnecter(self):
+        # La carte de tête de la sous-page porte l'action de connexion : « Se connecter » pour un réseau à portée,
+        # « Se déconnecter » pour le profil actif ; chacune appelle l'action nmcli correspondante sur l'uuid du profil.
+        self.ipc("ouvrirFiche", "connu-1")
+        fin = time.monotonic() + DELAI
+        while True:
+            texte = self.ipc("connexion")
+            if texte or time.monotonic() > fin:
+                break
+            time.sleep(0.05)
+        self.assertEqual(texte, "Se connecter")
+        self.attendre('essai : executer ["connection","up","connu-1"]')
+        self.ipc("ouvrirFiche", "wifi-1")
+        self.assertEqual(self.ipc("connexion"), "Se déconnecter")
+        self.attendre('essai : executer ["connection","down","wifi-1"]')
+
     def test_priorite_par_le_compteur(self):
         self.ipc("priorite", "1")
         self.attendre('essai : executer ["connection","modify","wifi-1","connection.autoconnect-priority","6"]')
@@ -933,6 +949,83 @@ class PageWifiTest(EssaiCoque, unittest.TestCase):
         debut = time.monotonic()
         self.jusqua(lambda p: not p["balayage"], "recherche bornée")
         self.assertLess(time.monotonic() - debut, 8)
+
+
+@unittest.skipUnless(os.environ.get("WAYLAND_DISPLAY") and QS, "session Wayland et Quickshell requis")
+class PageFilaireTest(EssaiCoque, unittest.TestCase):
+    """La page Filaire de la fenêtre Réseau, éprouvée sur un état et un panneau factices.
+
+    La coque d'essai pose une PageFilaire dans une fenêtre offscreen, sur un état qui simule le câble branché,
+    débranché ou l'absence de carte : aucun appareil ni aucune commande de la machine n'entre en jeu.
+    """
+
+    essai = ESSAI / "filaire"
+    teintes = (55,)
+    environnement = {"QT_QPA_PLATFORM": "offscreen"}
+
+    def setUp(self):
+        super().setUp()
+        self.installer(55)
+        self.lancer(self.dir)
+        self.attendre("essai : prêt")
+        self.jusqua(lambda p: p["profils"], "page construite")
+
+    def ipc(self, fonction: str, *args: str) -> str:
+        """Appelle une fonction IPC de la coque d'essai de la page Filaire. Entrées : fonction, args. Sortie : stdout."""
+        return subprocess.run([QS, "ipc", "--pid", str(self.proc.pid), "call", "filaire", fonction, *args],
+                              check=True, capture_output=True, text=True, timeout=DELAI).stdout.strip()
+
+    def page(self) -> dict:
+        """État de la page, décodé (voir la coque d'essai). Dépendances : ipc."""
+        return json.loads(self.ipc("page"))
+
+    def jusqua(self, condition, message: str = ""):
+        """Attend qu'une condition sur l'état de la page devienne vraie. Sortie : l'état qui la vérifie."""
+        fin = time.monotonic() + DELAI
+        while time.monotonic() < fin:
+            p = self.page()
+            if condition(p):
+                return p
+            time.sleep(0.05)
+        self.fail(f"{message}\n{p}\n{self.journal()}")
+
+    def test_cable_branche(self):
+        p = self.page()
+        self.assertEqual(p["titres"], ["Ethernet", "Profils", "Adresses"])
+        self.assertEqual((p["appareil"], p["aide"], p["actif"]), ("Ethernet (enp3s0)", "Connecté", True))
+        self.assertEqual(p["materiel"], "8C:16:45:2E:71:B0")
+        self.assertEqual(p["profils"], ["Bureau", "Atelier"])
+        self.assertEqual(p["adresses"], {"Adresse IPv4": "10.0.0.2/24", "Passerelle": "10.0.0.1", "DNS": "10.0.0.1",
+                                         "IPv6": "fe80::2/64"})
+        self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
+
+    def test_cable_debranche(self):
+        # Carte sans câble : l'état le dit, l'adresse matérielle reste lisible, et les adresses (celles du Wi-Fi que
+        # lit alors l'état) ne sont pas montrées pour le profil filaire.
+        self.ipc("mode", "debranche")
+        p = self.jusqua(lambda p: p["aide"] == "Câble débranché", "câble débranché")
+        self.assertEqual((p["appareil"], p["actif"], p["materiel"]), ("Ethernet (enp3s0)", False, "8C:16:45:2E:71:B0"))
+        self.assertFalse(p["adressesVisible"])
+
+    def test_aucune_carte(self):
+        self.ipc("mode", "aucune")
+        p = self.jusqua(lambda p: p["aide"] == "Aucune carte", "aucune carte")
+        self.assertEqual((p["appareil"], p["actif"], p["materiel"]), ("Ethernet", False, ""))
+
+    def test_sans_profil(self):
+        self.ipc("sansProfils")
+        p = self.jusqua(lambda p: p["aucun"], "message sans profil")
+        self.assertEqual((p["profils"], p["titres"]), ([], ["Ethernet"]))
+
+    def test_adresses_de_l_appareil_lu_seulement(self):
+        # Le Wi-Fi actif seul : EtatReseau lit wlan0, dont les adresses ne sont pas celles du profil filaire.
+        self.assertTrue(self.page()["adressesVisible"])
+        self.ipc("appareil", "wlan0")
+        self.jusqua(lambda p: not p["adressesVisible"], "adresses masquées")
+
+    def test_profil_ouvre_sa_sous_page(self):
+        self.ipc("choisir", "atelier-1")
+        self.attendre("essai : ouvrirProfil atelier-1")
 
 
 @unittest.skipUnless(QS, "Quickshell requis")
@@ -1269,6 +1362,41 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(self.etat()["onglet"], "wifi")
         self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
 
+    def test_retour_au_clavier(self):
+        # La rangée de retour de la sous-page prend la tabulation et se referme à Entrée ; elle porte le nom de
+        # l'onglet (« ‹ Wi-Fi »), et celui de l'onglet Filaire pour un profil filaire.
+        self.ouvrir()
+        self.assertEqual(self.ipc("essai", "retourTexte"), "‹ Wi-Fi")
+        self.tabuler_jusqu_a("retour")
+        self.ipc("essai", "entree")
+        self.jusqua(lambda e: e["sousPage"] == "", "Entrée referme la sous-page")
+        self.assertEqual(self.ipc("essai", "retourTexte"), "")
+        self.ipc("essai", "choisir", "filaire-1")
+        self.jusqua(lambda e: e["fiche"].get("uuid") == "filaire-1", "sous-page filaire")
+        self.assertEqual(self.ipc("essai", "retourTexte"), "‹ Wi-Fi")
+
+    def test_sous_page_filaire_porte_le_nom_de_l_onglet(self):
+        # Un profil filaire ouvert depuis l'onglet Filaire donne la rangée de retour « ‹ Filaire ».
+        self.ouvrir()
+        self.ipc("essai", "onglet", "filaire")
+        self.jusqua(lambda e: e["onglet"] == "filaire", "onglet Filaire")
+        self.ipc("essai", "rangeeProfil", "filaire-1")
+        self.jusqua(lambda e: e["fiche"].get("uuid") == "filaire-1" and e["fiche"]["lu"], "sous-page filaire")
+        self.assertEqual(self.ipc("essai", "retourTexte"), "‹ Filaire")
+        self.tabuler_jusqu_a("retour")
+        self.ipc("essai", "entree")
+        self.jusqua(lambda e: e["sousPage"] == "", "retour à l'onglet")
+        self.assertEqual(self.etat()["onglet"], "filaire")
+
+    def test_se_deconnecter_de_la_carte_de_tete(self):
+        # « Se déconnecter » de la carte de tête du profil actif appelle « connection down » sur son uuid.
+        self.ouvrir()
+        self.ipc("essai", "cliquer", "connexion")
+        fin = time.monotonic() + DELAI
+        while "connection down wifi-1" not in self.appels():
+            self.assertLess(time.monotonic(), fin, self.appels())
+            time.sleep(0.05)
+
     def test_priorite(self):
         self.ouvrir("hotspot-1")
         self.ipc("essai", "cliquer", "plus")
@@ -1335,6 +1463,8 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
         # La seconde modification finit pendant la relecture lancée par la première : sa relecture est rejouée à
         # la fin de celle en cours, et la fiche montre la dernière valeur enregistrée.
         self.ouvrir("hotspot-1")
+        # La lecture rejouée à l'ouverture doit être finie : sa réponse tardive restaurerait la priorité entre les deux clics.
+        self.jusqua(lambda e: not e["fiche"]["occupe"], "lectures d'ouverture terminées")
         (self.bin / "lent").touch()
         lecture = [a for a in self.appels() if a.endswith("connection show hotspot-1") and a.startswith("-t -f")]
         self.ipc("essai", "cliquer", "plus")

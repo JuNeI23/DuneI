@@ -12,6 +12,7 @@ NotificationsReseau 1.0 NotificationsReseau.qml
 TitrePage 1.0 TitrePage.qml
 GroupeProfils 1.0 GroupeProfils.qml
 PageWifi 1.0 PageWifi.qml
+CarteAdresses 1.0 CarteAdresses.qml
 PageFilaire 1.0 PageFilaire.qml
 PageVpn 1.0 PageVpn.qml
 BlocSecret 1.0 BlocSecret.qml

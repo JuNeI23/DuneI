@@ -6,32 +6,36 @@ import "../Composants"
 import "nmcli.js" as Nmcli
 import "../Barre/icones.js" as Icones
 
-// FicheProfil — fiche d'un profil de connexion enregistré, à droite de la fenêtre Réseau (L2-11).
-// Rôle : lit les réglages du profil (nmcli.lireProfil) à chaque sélection, puis montre, de haut en bas : l'en-tête
-// (pastille, nom, état, « Se connecter » ou « Se déconnecter ») ; pour un profil Wi-Fi, le mot de passe, masqué, que
-// l'œil révèle ; la connexion automatique, la priorité en − / +, la connexion facturée ; la section IPv4
-// (Automatique ou Fixe, adresse, passerelle en Fixe, DNS) ; pour le profil actif, le détail de la connexion active
-// (IPv4, IPv6, passerelle, DNS, adresse matérielle) ; enfin « Oublier ce réseau », qui demande confirmation dans la
-// fiche. Un clic sur une valeur du détail la copie dans le presse-papiers et montre « Copié » à sa place ; « Tout
-// copier » copie le bloc entier, une ligne « Libellé : valeur » par paramètre. Le retour « Copié » s'efface après
-// motion.delays.copied, par un minuteur à un coup armé seulement par la copie. Chaque réglage s'applique à sa validation (bascule, clic, Entrée ou sortie d'un champ), sans bouton global
+// FicheProfil — réglages d'un profil de connexion enregistré : sous-page « ‹ Wi-Fi » ou « ‹ Filaire » de la fenêtre
+// Réseau (L2-11, direction D4), ou carte du réseau joint de la page Wi-Fi en mode résumé.
+// Rôle : lit les réglages du profil (nmcli.lireProfil) à chaque sélection, puis montre, en cartes D4 de haut en bas :
+// la carte de tête (rangée de tête : médaillon, nom, état, et « Se connecter » ou « Se déconnecter » à droite, en
+// Bouton) ; pour un profil Wi-Fi, le mot de passe, masqué, que l'œil révèle ; la connexion automatique (Interrupteur,
+// bible « Interrupteur »), la priorité (Compteur, bible « Compteur »), la connexion facturée ; la section « IPv4 »
+// (Automatique ou Fixe en Onglets, bible « Onglets » ; adresse, passerelle en Fixe, DNS) ; pour le profil actif, la
+// section « Détail de la connexion » (IPv4, IPv6, passerelle, DNS, adresse matérielle, chacune en Valeur, copiable) ;
+// enfin la carte « Oublier ce réseau », en texte color.error, qui demande confirmation dans la fiche. « Tout copier »
+// copie le bloc entier, une ligne « Libellé : valeur » par paramètre, et montre « Copié » à sa place jusqu'à la fin de
+// motion.delays.copied, par un minuteur à un coup armé seulement par la copie ; chaque Valeur a son propre retour.
+// Chaque réglage s'applique à sa validation (bascule, clic, Entrée ou sortie d'un champ), sans bouton global
 // « Enregistrer » : la valeur affichée change aussitôt, puis la fiche relit le profil ; un refus de nmcli affiche
 // sa sortie d'erreur sous le réglage et restaure les valeurs lues. Passer en Fixe n'écrit rien tant que
 // l'adresse manque : NetworkManager refuse la méthode manuelle sans adresse.
 // Secret : lu seulement au clic sur l'œil (nmcli -s -g 802-11-wireless-security.psk), jamais journalisé ni rendu ;
 // il est effacé quand la fiche change de profil et disparaît avec elle à la fermeture de la fenêtre.
+// Clavier : toutes les rangées cliquables sont des Ligne (tabulation, Entrée, Espace, contour de focus : bible,
+// « Clavier ») ; les Bouton prennent la tabulation, Entrée et Espace.
 // Mode résumé (resume vrai) : la page Wi-Fi y pose la carte du réseau joint, sans dupliquer la logique de la fiche.
 // Seules restent la rangée de tête (médaillon d'accent à la force du signal, nom, « Connecté · » et l'état de la
 // connectivité, coche), le mot de passe à l'œil, la connexion automatique, la priorité (Compteur, bible « Compteur »),
-// la connexion facturée et une rangée « Détails… » qui ouvre la fiche complète (panneauHote.ouvrirProfil) ; l'en-tête, les
-// sections IPv4 et de détail et l'oubli sont masqués. La fiche complète n'est pas modifiée par ce mode.
+// la connexion facturée et une rangée « Détails… » qui ouvre la fiche complète (panneauHote.ouvrirProfil) ; la carte de tête
+// pleine, les sections IPv4 et de détail et l'oubli sont masqués. La fiche complète n'est pas modifiée par ce mode.
 // Entrées : uuid, le profil affiché (vide : fiche vide) ; rangee, sa rangée de la liste (nmcli.profilsFenetre :
 // nom, wifi, actif, etat, icone) ; etat, la source de l'état et des actions, EtatReseau par défaut ; resume, faux par
 // défaut, voir ci-dessus ; panneauHote, le PanneauReseau dont « Détails… » ouvre la sous-page (mode résumé seulement).
 // Sorties : profil, réglages lus (null avant lecture) ; lu, vrai une fois lus ; valeurs, réglages affichés ;
 // erreurs, objet clé → message (autoconnect, priorite, facture, methode, adresse, passerelle, dns, psk, connexion,
-// oublier, profil) ; copie, le libellé de la valeur dont « Copié » tient la place, « * » pour « Tout copier », vide
-// sinon ; finCopie, le minuteur du retour « Copié » ; fixe, vrai si la section IPv4 montre la configuration fixe ; confirmer, vrai pendant la
+// oublier, profil) ; copie, « * » tant que « Copié » tient la place de « Tout copier », vide sinon ; finCopie, le minuteur du retour « Copié » de « Tout copier » ; fixe, vrai si la section IPv4 montre la configuration fixe ; confirmer, vrai pendant la
 // demande de confirmation de l'oubli ; secret, le ChampSecret ; detail, libellé → valeur du détail de la connexion
 // active, vide pour un autre profil et pour un profil actif dont l'appareil n'est pas celui que lit EtatReseau ; signaux relu(uuid, profil) après chaque lecture et oublie() après la
 // suppression du profil.
@@ -39,10 +43,10 @@ import "../Barre/icones.js" as Icones
 // arrive après un changement de profil ou la destruction de la fiche est ignorée (garde).
 // Dépendances : Quickshell (clipboardText), EtatReseau (executer, appareil, ip4, ip6, passerelle, dns, mac,
 // connectivite), nmcli.js (CHAMPS_PROFIL, lireProfil, argsModifier, champs, liste), Groupe, Ligne, Section, Theme,
-// Texte, Icone, Bouton, Interrupteur, Champ, ChampSecret, Onglets, Onglet.
+// Texte, Icone, Bouton, Interrupteur, Compteur, Valeur, Champ, ChampSecret, Onglets, Onglet.
 // Cotes : contenu en retrait de space.blockGap (24) à gauche et à droite, sections espacées de space.scale[1] (8) ;
-// groupes au rayon radius.panel ; rangées d'au moins 44 px, contenu à space.scale[2] (12) du bord ; champs de
-// 290 px ; pastille d'en-tête de 44 px.
+// cartes au rayon radius.panel ; rangées d'au moins reglages.row, la rangée de tête de reglages.rowLead, contenu à
+// space.scale[2] (12) du bord ; champs de 290 px.
 ColumnLayout {
     id: fiche
 
@@ -71,7 +75,6 @@ ColumnLayout {
     readonly property bool wifi: rangee?.wifi ?? false
     readonly property alias secret: secret
     readonly property alias finCopie: finCopie
-    readonly property real cote: Theme.space?.scale[2] ?? 0
     readonly property var detail: {
         // Seul l'appareil lu par EtatReseau a son détail : le filaire l'emporte quand le Wi-Fi est actif aussi.
         if (!(rangee?.actif ?? false) || rangee.appareil === "" || rangee.appareil !== etat.appareil) return {}
@@ -256,85 +259,46 @@ ColumnLayout {
         return Object.keys(detail).map(k => `${k} : ${detail[k]}`).join("\n")
     }
 
-    // copier — copie une valeur du détail, ou le détail entier, dans le presse-papiers, puis montre « Copié » à sa
-    // place jusqu'à la fin du minuteur. Entrée : cle, le libellé de la valeur, vide pour tout le bloc.
-    // Sortie : aucune. Erreurs : aucune ; sous Wayland, le presse-papiers n'est rempli que si une fenêtre de la coque a
-    // le focus, ce qu'assure le clic. Dépendances : Quickshell.clipboardText, detail, texteDetail, finCopie.
-    function copier(cle) {
-        Quickshell.clipboardText = cle === "" ? texteDetail() : detail[cle]
-        copie = cle === "" ? "*" : cle
+    // copierTout — copie le détail entier dans le presse-papiers, puis montre « Copié » à la place de « Tout copier »
+    // jusqu'à la fin du minuteur. Entrées : aucune. Sortie : aucune. Erreurs : aucune ; sous Wayland, le presse-papiers
+    // n'est rempli que si une fenêtre de la coque a le focus, ce qu'assure le clic.
+    // Dépendances : Quickshell.clipboardText, texteDetail, finCopie.
+    function copierTout() {
+        Quickshell.clipboardText = texteDetail()
+        copie = "*"
         finCopie.restart()
     }
 
     // Tenue du retour « Copié » : un seul coup, armé par copier, jamais au repos.
     Timer { id: finCopie; interval: Theme.motion?.delays?.copied ?? 0; onTriggered: fiche.copie = "" }
 
-    // Pas — bouton − ou + de la priorité, réduit à son icône. Entrées : nom, l'icône. Sorties : signal clicked().
-    // Erreurs : aucune. Dépendances : Icone, Theme.
-    component Pas: Item {
-        id: pas
-        property string nom
-        signal clicked()
-        implicitWidth: Theme.density?.controlHeight ?? 0
-        implicitHeight: implicitWidth
-        Icone {
-            anchors.centerIn: parent
-            nom: pas.nom
-            taille: Theme.icons?.sizes.dense ?? 0
-            couleur: (survol.hovered ? Theme.color?.textPrimary : Theme.color?.textSecondary) ?? "transparent"
-        }
-        HoverHandler { id: survol }
-        TapHandler { onTapped: pas.clicked() }
-    }
-
-    // En-tête : pastille, nom et état, action de connexion.
-    RowLayout {
+    // Carte de tête de la sous-page : médaillon d'accent quand le profil est actif, nom, état (et internet quand il
+    // est disponible), puis l'action de connexion à droite (bible, « Rangées de liste »). Un refus de nmcli s'affiche
+    // sous la rangée.
+    Groupe {
         visible: !fiche.resume
-        Layout.fillWidth: true
-        spacing: fiche.cote
-
-        Rectangle {
-            implicitWidth: 44
-            implicitHeight: 44
-            radius: 22
-            color: Theme.color?.accent ?? "transparent"
-            Icone {
-                anchors.centerIn: parent
-                nom: fiche.rangee?.icone ?? ""
-                taille: Theme.icons?.sizes.default ?? 0
-                couleur: Theme.color?.onAccent ?? "transparent"
+        Ligne {
+            objectName: "enTete"
+            filet: false
+            hauteur: Theme.reglages?.rowLead ?? 0
+            icone: fiche.rangee?.icone ?? ""
+            iconeActive: fiche.rangee?.actif ?? false
+            libelle: fiche.rangee?.nom ?? ""
+            aide: (fiche.rangee?.etat ?? "") + ((fiche.rangee?.actif ?? false) && fiche.etat.connectivite === "full" ? " · internet disponible" : "")
+            erreur: fiche.erreurs.connexion ?? ""
+            Bouton {
+                objectName: "connexion"
+                visible: fiche.rangee !== null && (fiche.rangee.actif || fiche.rangee.etat === "À portée")
+                text: fiche.rangee?.actif ? "Se déconnecter" : "Se connecter"
+                principal: !(fiche.rangee?.actif ?? true)
+                onClicked: fiche.connecter()
             }
-        }
-        ColumnLayout {
-            Layout.fillWidth: true
-            spacing: 0
-            Texte {
-                Layout.fillWidth: true
-                text: fiche.rangee?.nom ?? ""
-                echelon: 5
-                moyen: true
-                elide: Text.ElideRight
-                color: Theme.color?.textEmphasis ?? "transparent"
-            }
-            Texte {
-                readonly property bool internet: (fiche.rangee?.actif ?? false) && fiche.etat.connectivite === "full"
-                text: (fiche.rangee?.etat ?? "") + (internet ? " · internet disponible" : "")
-                echelon: 1
-                color: (internet ? Theme.color?.success : Theme.color?.textSecondary) ?? "transparent"
-            }
-        }
-        Bouton {
-            objectName: "connexion"
-            visible: fiche.rangee !== null && (fiche.rangee.actif || fiche.rangee.etat === "À portée")
-            text: fiche.rangee?.actif ? "Se déconnecter" : "Se connecter"
-            principal: !(fiche.rangee?.actif ?? true)
-            onClicked: fiche.connecter()
         }
     }
     Texte {
         visible: text !== ""
         Layout.fillWidth: true
-        text: fiche.erreurs.connexion ?? fiche.erreurs.profil ?? ""
+        text: fiche.erreurs.profil ?? ""
         echelon: 1
         wrapMode: Text.Wrap
         color: Theme.color?.error ?? "transparent"
@@ -398,38 +362,15 @@ ColumnLayout {
             libelle: "Priorité"
             aide: "Plus haut = préféré"
             erreur: fiche.erreurs.priorite ?? ""
-            // Mode résumé : le Compteur de la coque (champ et stepper, bible « Compteur »), borné comme NetworkManager.
+            // Le Compteur de la coque (champ et stepper, bible « Compteur »), borné comme NetworkManager.
             Compteur {
                 id: compteurPriorite
                 objectName: "priorite"
-                visible: fiche.resume
                 from: -999
                 to: 999
                 editable: true
                 onValueModified: fiche.priorite(value - (fiche.valeurs.priorite ?? 0))
                 Binding { target: compteurPriorite; property: "value"; value: fiche.valeurs.priorite ?? 0; restoreMode: Binding.RestoreNone }
-            }
-            Rectangle {
-                visible: !fiche.resume
-                implicitWidth: rangeePas.implicitWidth
-                implicitHeight: Theme.density?.controlHeight ?? 0
-                radius: Theme.radius?.control ?? 0
-                color: Theme.color?.controlRaised ?? "transparent"
-                border.width: Theme.hairline(1) ?? 0
-                border.color: Theme.color?.borderSubtle ?? "transparent"
-                RowLayout {
-                    id: rangeePas
-                    anchors.fill: parent
-                    spacing: 0
-                    Pas { objectName: "moins"; nom: "list-remove"; onClicked: fiche.priorite(-1) }
-                    Texte {
-                        Layout.preferredWidth: 32
-                        horizontalAlignment: Text.AlignHCenter
-                        text: fiche.valeurs.priorite ?? 0
-                        tabulaire: true
-                    }
-                    Pas { objectName: "plus"; nom: "list-add"; onClicked: fiche.priorite(1) }
-                }
             }
         }
         Ligne {
@@ -453,7 +394,7 @@ ColumnLayout {
         }
     }
 
-    Section { visible: fiche.lu && !fiche.resume; text: "IPV4" }
+    Section { visible: fiche.lu && !fiche.resume; text: "IPv4" }
     Groupe {
         visible: fiche.lu && !fiche.resume
         Ligne {
@@ -506,10 +447,12 @@ ColumnLayout {
         }
     }
 
+    // Détail de la connexion active : le titre et « Tout copier », puis une rangée par paramètre, sa valeur copiable
+    // (Valeur : le clic la copie et « Copié » la remplace en fondu).
     RowLayout {
         visible: !fiche.resume && Object.keys(fiche.detail).length > 0
         Layout.fillWidth: true
-        Section { Layout.fillWidth: true; Layout.alignment: Qt.AlignBottom; text: "DÉTAIL DE LA CONNEXION ACTIVE" }
+        Section { Layout.fillWidth: true; Layout.alignment: Qt.AlignBottom; text: "Détail de la connexion" }
         // Les deux libellés du bouton, mesurés : sa largeur est celle du plus long, pour que « Copié » ne la change pas.
         TextMetrics { id: mesureTout; font: Theme.police(2, false, false); text: "Tout copier" }
         TextMetrics { id: mesureCopie; font: Theme.police(2, false, false); text: "Copié" }
@@ -519,68 +462,34 @@ ColumnLayout {
             Layout.preferredWidth: leftPadding + rightPadding + (Theme.icons?.sizes.dense ?? 0) + spacing
                 + Math.ceil(Math.max(mesureTout.advanceWidth, mesureCopie.advanceWidth))
             text: fiche.copie === "*" ? "Copié" : "Tout copier"
-            onClicked: fiche.copier("")
+            onClicked: fiche.copierTout()
         }
     }
     Groupe {
         visible: !fiche.resume && Object.keys(fiche.detail).length > 0
-        GridLayout {
-            Layout.fillWidth: true
-            Layout.margins: fiche.cote
-            columns: 2
-            columnSpacing: Theme.space?.scale[3] ?? 0
-            rowSpacing: Theme.space?.scale[0] ?? 0
-            Repeater {
-                model: Object.keys(fiche.detail).reduce((l, k) => l.concat([k, fiche.detail[k]]), [])
-                // Libellés et valeurs en alternance ; un clic sur une valeur la copie, et « Copié » prend sa place.
-                delegate: Text {
-                    id: cellule
-                    required property string modelData
-                    required property int index
-                    readonly property bool valeur: index % 2 === 1
-                    readonly property string cle: Object.keys(fiche.detail)[Math.floor(index / 2)] ?? ""
-                    readonly property bool copiee: valeur && fiche.copie === cle
-                    objectName: valeur ? "copier:" + cle : ""
-                    Layout.fillWidth: valeur
-                    text: copiee ? "Copié" : modelData
-                    elide: Text.ElideRight
-                    font.family: valeur && !copiee ? Theme.typo?.mono ?? "" : Theme.typo?.interface ?? ""
-                    font.pixelSize: Theme.typo?.scale[1] ?? 12
-                    color: (copiee ? Theme.color?.success : valeur ? Theme.color?.textPrimary : Theme.color?.textTertiary)
-                        ?? "transparent"
-                    HoverHandler { enabled: cellule.valeur; cursorShape: Qt.PointingHandCursor }
-                    TapHandler { enabled: cellule.valeur; onTapped: fiche.copier(cellule.cle) }
-                }
+        Repeater {
+            model: Object.keys(fiche.detail)
+            delegate: Ligne {
+                required property string modelData
+                required property int index
+                filet: index > 0
+                libelle: modelData
+                Valeur { objectName: "copier:" + modelData; text: fiche.detail[modelData] }
             }
         }
     }
 
-    // Oubli, avec sa confirmation dans la fiche.
-    Bouton {
-        objectName: "oublier"
+    // Oubli, avec sa confirmation dans la fiche : une carte à part, dont l'unique rangée est en color.error.
+    Groupe {
         visible: fiche.lu && !fiche.confirmer && !fiche.resume
         Layout.topMargin: Theme.space?.scale[1] ?? 0
-        text: "Oublier ce réseau"
-        onClicked: fiche.confirmer = true
-        contentItem: Item {
-            implicitWidth: contenuOubli.implicitWidth
-            implicitHeight: contenuOubli.implicitHeight
-            Row {
-                id: contenuOubli
-                anchors.centerIn: parent
-                spacing: Theme.space?.scale[0] ?? 0
-                Icone {
-                    anchors.verticalCenter: parent.verticalCenter
-                    nom: "user-trash"
-                    taille: Theme.icons?.sizes.dense ?? 0
-                    couleur: Theme.color?.error ?? "transparent"
-                }
-                Texte {
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: "Oublier ce réseau"
-                    color: Theme.color?.error ?? "transparent"
-                }
-            }
+        Ligne {
+            objectName: "oublier"
+            filet: false
+            libelle: "Oublier ce réseau"
+            couleurLibelle: Theme.color?.error ?? "transparent"
+            cliquable: true
+            onClique: fiche.confirmer = true
         }
     }
     Groupe {

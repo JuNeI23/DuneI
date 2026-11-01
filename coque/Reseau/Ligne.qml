@@ -15,6 +15,7 @@ import "../Composants/etats.js" as Etats
 // se peint d'une plaque de survol un cran au-dessus de son conteneur, comme ReglageLigne (bible, « Survol »), et montre
 // le contour de focus (focus.width, jamais un anneau ni un changement de fond) quand le focus lui vient du clavier ;
 // hauteur, hauteur minimale de la rangée, reglages.row par défaut (reglages.rowLead pour une rangée de tête) ;
+// couleurLibelle, couleur du libellé, texte principal par défaut (une action destructrice y met color.error) ;
 // et le contrôle déclaré comme enfant.
 // Sortie : signal clique(), émis au clic, à Entrée ou à Espace d'une rangée cliquable ; hovered, down (lus par Etat).
 // Erreurs : aucune ; avant le chargement des tokens, les retraits sont nuls.
@@ -31,6 +32,7 @@ ColumnLayout {
     property bool filet: true
     property bool cliquable: false
     property real hauteur: Theme.reglages?.row ?? 0
+    property color couleurLibelle: Theme.color?.textPrimary ?? "transparent"
     default property alias controle: emplacement.data
     readonly property real cote: Theme.space?.scale[2] ?? 0
     Layout.fillWidth: true
@@ -107,7 +109,7 @@ ColumnLayout {
                 Layout.fillWidth: true
                 spacing: 0
                 // Un Layout ne s'étire pas plus que ses enfants : le libellé s'étire, même sans aide.
-                Texte { Layout.fillWidth: true; text: ligne.libelle }
+                Texte { Layout.fillWidth: true; text: ligne.libelle; color: ligne.couleurLibelle }
                 Texte {
                     visible: ligne.aide !== ""
                     Layout.fillWidth: true

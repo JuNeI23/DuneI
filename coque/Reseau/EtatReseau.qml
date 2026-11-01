@@ -21,7 +21,8 @@ import "../Barre/icones.js" as Icones
 // remis à vide par le panneau Réseau qui le sélectionne), vide par défaut.
 // Sorties (lecture seule) : veille (vrai de la ligne « asleep » du moniteur jusqu'à l'état suivant), carte, radio, filaire,
 // carteFilaire (vrai si une carte filaire existe, branchée ou non : l'onglet Filaire distingue « Câble débranché » de
-// « Aucune carte »), connecte, connectivite (« unknown », « none », « portal »,
+// « Aucune carte »), appareilFilaire (le premier appareil filaire de Quickshell.Networking, avec son nom et son
+// adresse matérielle, ou null sans carte filaire), connecte, connectivite (« unknown », « none », « portal »,
 // « limited » ou « full »), reseauActif (WifiNetwork ou null), nomActif, force (0 à 1), facture, appareil
 // (l'interface dont la lecture donne les adresses : le filaire actif, sinon le Wi-Fi), ip4, ip6,
 // passerelle, dns, mac (adresse matérielle de l'appareil actif), profils, vpnActif, icone, reseaux (WifiNetwork
@@ -55,6 +56,7 @@ Singleton {
     readonly property bool carte: deduit.carte
     readonly property bool filaire: deduit.filaire
     readonly property bool carteFilaire: appareils.some(d => d.type === DeviceType.Wired)
+    readonly property var appareilFilaire: appareils.find(d => d.type === DeviceType.Wired) ?? null
     readonly property var reseauActif: deduit.reseauActif
     readonly property bool connecte: deduit.connecte
     readonly property string nomActif: deduit.nomActif

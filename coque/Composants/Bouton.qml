@@ -29,6 +29,11 @@ T.AbstractButton {
     readonly property alias etat: etat
 
     focusPolicy: Qt.TabFocus
+    // Clavier (bible, « Clavier ») : Espace est géré par le gabarit ; Entrée active aussi le bouton qui a le focus.
+    Keys.onPressed: event => {
+        event.accepted = [Qt.Key_Return, Qt.Key_Enter].includes(event.key)
+        if (event.accepted) click()
+    }
     implicitWidth: implicitContentWidth + leftPadding + rightPadding
     implicitHeight: Theme.density?.controlHeight ?? 0
     horizontalPadding: Theme.space?.scale[2] ?? 0

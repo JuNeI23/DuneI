@@ -36,7 +36,7 @@ import "nmcli.js" as Nmcli
 // du réseau joint (null sans elle).
 // Erreurs : un échec nmcli du résumé s'affiche dans la carte du réseau joint (FicheProfil) ; un réseau qui quitte le
 // balayage est masqué et ne peut plus être choisi.
-// Dépendances : TitrePage, Section, Groupe, Ligne, FicheProfil, BlocSecret, Jonction, Interrupteur, Activite, Icone, Texte,
+// Dépendances : TitrePage, Section, Groupe, Ligne, FicheProfil, CarteAdresses, BlocSecret, Jonction, Interrupteur, Activite, Icone, Texte,
 // Valeur, ReglageLigne, Separateur, Carte, Theme (reglages, space, color, icons, motion), nmcli.js (trierReseaux),
 // icones.js (iconeReseau), PanneauReseau, EtatReseau.
 ColumnLayout {
@@ -48,9 +48,6 @@ ColumnLayout {
     readonly property var joint: panneau.rangees.find(r => r.wifi && r.actif) ?? null
     readonly property var hors: panneau.rangees.filter(r => r.wifi && !r.actif && r.etat === "Hors de portée")
     readonly property var fiche: chargeurJoint.item
-    // Les adresses d'EtatReseau sont celles de etat.appareil (le filaire s'il est actif aussi) : elles ne sont
-    // montrées que pour le réseau Wi-Fi joint si c'est bien son appareil, comme le détail de FicheProfil.
-    readonly property bool adressesLues: etat.radio && joint !== null && joint.appareil !== "" && joint.appareil === etat.appareil
     // Logique de connexion partagée avec le popover (voir Jonction) ; ordre garde les noms des réseaux disponibles triés.
     property alias presents: jonction.presents
     property alias deplie: jonction.deplie
@@ -297,39 +294,11 @@ ColumnLayout {
         }
     }
 
-    // Adresses du réseau joint, en lecture seule ; la méthode IPv4 vient du profil lu par la fiche résumée, et la
-    // modification d'une adresse fixe reste dans la sous-page. Une valeur vide n'a pas de rangée.
-    Section { visible: page.adressesLues; text: "Adresses" }
-    Carte {
-        objectName: "adresses"
-        visible: page.adressesLues
-        Layout.fillWidth: true
-        Repeater {
-            model: [
-                {titre: "Configuration IPv4", valeur: page.fiche?.profil ? (page.fiche.fixe ? "Fixe" : "Automatique") : "", copiable: false},
-                {titre: "Adresse IPv4", valeur: page.etat.ip4.join(", "), copiable: true},
-                {titre: "Passerelle", valeur: page.etat.passerelle, copiable: true},
-                {titre: "DNS", valeur: page.etat.dns.join(", "), copiable: true},
-                {titre: "IPv6", valeur: page.etat.ip6.join(", "), copiable: true},
-            ].filter(a => a.valeur !== "")
-
-            ColumnLayout {
-                required property var modelData
-                required property int index
-                Layout.fillWidth: true
-                spacing: 0
-                Separateur {
-                    visible: index > 0
-                    Layout.fillWidth: true
-                    retraitGauche: Theme.reglages?.textColumn ?? 0
-                    retraitDroit: Theme.space?.scale[3] ?? 0
-                }
-                ReglageLigne {
-                    titre: modelData.titre
-                    Valeur { visible: modelData.copiable; text: modelData.valeur }
-                    Texte { visible: !modelData.copiable; text: modelData.valeur; color: Theme.color?.textSecondary ?? "transparent" }
-                }
-            }
-        }
+    // Adresses du réseau joint, en lecture seule (CarteAdresses) ; la méthode IPv4 vient du profil lu par la fiche
+    // résumée, et la modification d'une adresse fixe reste dans la sous-page.
+    CarteAdresses {
+        etat: page.etat
+        rangee: page.etat.radio ? page.joint : null
+        methode: page.fiche?.profil ? (page.fiche.fixe ? "Fixe" : "Automatique") : ""
     }
 }

@@ -122,9 +122,33 @@ ShellRoot {
                 sourceComponent: Component { PageWifi { width: fenetre.width; panneau: panneauFaux; etat: faux } }
             }
 
+            // Sous-page d'un profil (FicheProfil complète) sur l'état factice, ouverte à la demande de l'IPC.
+            Loader {
+                id: sousPage
+                property string uuid
+                y: 0
+                width: fenetre.width
+                active: uuid !== ""
+                sourceComponent: Component {
+                    FicheProfil { width: fenetre.width; uuid: sousPage.uuid; rangee: panneauFaux.rangees.find(r => r.uuid === sousPage.uuid) ?? null; etat: faux }
+                }
+            }
+
             IpcHandler {
                 id: ipc
                 target: "wifi"
+
+                // ouvrirFiche — ouvre la FicheProfil complète d'un profil du panneau factice. Entrée : uuid. Sortie : aucune.
+                function ouvrirFiche(uuid: string): void { sousPage.uuid = uuid }
+                // connexion — clique « Se connecter » ou « Se déconnecter » de la carte de tête de la sous-page. Entrées :
+                // aucune. Sortie : le texte du bouton avant le clic, vide s'il est masqué. Erreurs : sous-page fermée.
+                function connexion(): string {
+                    const b = essai.trouver(sousPage.item, o => o.objectName === "connexion")
+                    if (!b.visible) return ""
+                    const t = b.text
+                    b.clicked()
+                    return t
+                }
 
                 // page — état de la page, en JSON, sans aucun texte saisi. Sortie : {existe, joint (la carte du réseau
                 // joint existe), tete (libellé de sa rangée de tête), aideTete, rangeesJoint (libellés des rangées de la

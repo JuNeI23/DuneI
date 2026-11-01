@@ -52,12 +52,15 @@ ShellRoot {
     }
 
     // lireCopie — retour de copie d'un libellé du détail (vide : « Tout copier »). Entrée : cle. Sortie : JSON
-    // {presse (Quickshell.clipboardText), copie (fiche.copie), texte (de la cellule ou du bouton), minuteur (vrai s'il
-    // tourne)}. Erreurs : libellé absent, TypeError au journal. Dépendances : fenetre.panneau.fiche, nomme.
+    // {presse (Quickshell.clipboardText), copie (le libellé dont « Copié » tient la place, « * » pour « Tout copier »,
+    // vide sinon), texte (« Copié » ou la valeur, ou le texte du bouton), minuteur (vrai s'il tourne)}. Une Valeur
+    // porte son retour et son minuteur (copie, fin) ; « Tout copier » ceux de la fiche. Erreurs : libellé absent,
+    // TypeError au journal. Dépendances : fenetre.panneau.fiche, nomme.
     function lireCopie(cle) {
         const f = fenetre.panneau.fiche
         const o = nomme(cle === "" ? "toutCopier" : "copier:" + cle)
-        return JSON.stringify({presse: Quickshell.clipboardText, copie: f.copie, texte: o.text, minuteur: f.finCopie.running})
+        if (cle === "") return JSON.stringify({presse: Quickshell.clipboardText, copie: f.copie, texte: o.text, minuteur: f.finCopie.running})
+        return JSON.stringify({presse: Quickshell.clipboardText, copie: o.copie ? cle : "", texte: o.copie ? "Copié" : o.text, minuteur: o.fin.running})
     }
 
     IpcHandler {
@@ -66,7 +69,7 @@ ShellRoot {
         // etat — état de la fenêtre, en JSON : {fenetre (construite), demandee (EtatReseau.fenetre), rangees
         // ([groupe, nom, état, icône] des profils), detail (libellé → valeur du détail de la connexion active),
         // onglet et sousPage (ceux du panneau), onglets ([clé, nom, état] des trois onglets), defilement ([contentY,
-        // contentHeight, height]), fiche: {uuid, lu, priorite, autoconnect, facture, fixe, erreurs, secret (longueur), revele, confirmer}}.
+        // contentHeight, height]), fiche: {uuid, lu, priorite, autoconnect, facture, fixe, erreurs, secret (longueur), revele, confirmer, occupe (une lecture du profil est en cours)}}.
         // Entrées : aucune. Sortie : texte JSON. Erreurs : aucune ; fenêtre fermée, rangees, detail et fiche vides.
         function etat(): string {
             const p = fenetre.panneau
@@ -86,6 +89,7 @@ ShellRoot {
                     uuid: f.uuid, lu: f.lu, priorite: f.valeurs.priorite, autoconnect: f.valeurs.autoconnect,
                     facture: f.valeurs.facture === "yes", fixe: f.fixe, erreurs: f.erreurs,
                     secret: f.secret.length, revele: f.secret.revele, confirmer: f.confirmer,
+                    occupe: f.enLecture !== "",
                 },
             })
         }
@@ -113,6 +117,13 @@ ShellRoot {
         // retour — clic sur la rangée de retour de la sous-page. Entrées : aucune. Sortie : aucune.
         function retour(): void { essai.trouver(fenetre.panneau, o => o.objectName === "retour").clicked() }
 
+        // retourTexte — texte de la rangée de retour de la sous-page (« ‹ Wi-Fi » ou « ‹ Filaire »), vide sans sous-page.
+        // Entrées : aucune. Sortie : texte. Erreurs : aucune.
+        function retourTexte(): string {
+            const r = essai.trouver(fenetre.panneau, o => o.objectName === "retour")
+            return r && r.visible ? r.text : ""
+        }
+
         // echap — frappe Échap. Entrées : aucune. Sortie : aucune. Dépendances : touche.
         function echap(): void { essai.touche(Qt.Key_Escape) }
 
@@ -131,9 +142,9 @@ ShellRoot {
         function tab(): void { essai.touche(Qt.Key_Tab) }
         function entree(): void { essai.touche(Qt.Key_Return) }
 
-        // focus — libellé de la Ligne qui a le focus actif de la fenêtre, vide si c'est autre chose. Entrées :
+        // focus — libellé de la Ligne (ou objectName du contrôle, comme « retour » ou « connexion ») qui a le focus actif de la fenêtre, vide si c'est autre chose. Entrées :
         // aucune. Sortie : texte. Erreurs : fenêtre fermée, TypeError au journal.
-        function focus(): string { let o = fenetre.panneau.Window.window.activeFocusItem; while (o && !o.libelle) o = o.parent; return o?.libelle ?? "" }
+        function focus(): string { let o = fenetre.panneau.Window.window.activeFocusItem; while (o && !o.libelle && !o.objectName) o = o.parent; return o?.libelle || o?.objectName || "" }
 
         // defiler — pose le défilement des pages à y pixels. Entrée : y. Sortie : aucune.
         function defiler(y: int): void { fenetre.panneau.defilement.contentY = y }
@@ -145,12 +156,15 @@ ShellRoot {
             l.clique()
         }
 
-        // cliquer — geste sur un contrôle de la fiche : plus, moins, facture, auto, fixe, automatique, oeil,
-        // oublier, confirmer. Entrée : nom. Sortie : aucune. Erreurs : nom inconnu, TypeError au journal.
+        // cliquer — geste sur un contrôle de la fiche : plus et moins (pas du Compteur de priorité), facture, auto,
+        // fixe, automatique, oeil, connexion, oublier (rangée cliquable), confirmer. Entrée : nom. Sortie : aucune.
+        // Erreurs : nom inconnu, TypeError au journal.
         function cliquer(nom: string): void {
-            const o = essai.nomme(nom === "oeil" ? "secret" : nom)
+            const o = essai.nomme(nom === "oeil" ? "secret" : nom === "plus" || nom === "moins" ? "priorite" : nom)
             if (nom === "oeil") o.basculer()
+            else if (nom === "plus" || nom === "moins") { nom === "plus" ? o.increase() : o.decrease(); o.valueModified() }
             else if (nom === "facture" || nom === "auto") { o.toggle(); o.toggled() }
+            else if (nom === "oublier") o.clique()
             else o.clicked()
         }
 
@@ -184,7 +198,7 @@ ShellRoot {
         function copier(cle: string): string {
             const o = essai.nomme(cle === "" ? "toutCopier" : "copier:" + cle)
             if (cle === "") o.clicked()
-            else fenetre.panneau.fiche.copier(o.cle)
+            else o.copier()
             return essai.lireCopie(cle)
         }
         // copie — lit le retour de copie d'un libellé, sans geste. Entrée : cle. Sortie : voir lireCopie.
