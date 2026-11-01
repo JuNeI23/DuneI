@@ -21,7 +21,7 @@ import "nmcli.js" as Nmcli
 // de survol arrondie) relance « nmcli device wifi rescan » ; l'Activite et « Recherche… » la remplacent jusqu'au
 // retour de la liste, au plus motion.delays.scan.
 // Balayage : tant que la page est visible dans une fenêtre visible, elle demande le balayage Wi-Fi par
-// etat.rechercheFenetre, qu'elle rend à faux à sa destruction ; le popover
+// etat.rechercheFenetre (après l'image qui la montre ou la cache), qu'elle rend à faux à sa destruction ; le popover
 // écrit etat.recherche, une autre propriété : EtatReseau balaye tant que l'une des deux est vraie, si bien que la
 // fermeture du popover ne coupe pas la demande de la fenêtre, ni l'inverse (voir EtatReseau.balayage).
 // Clavier : toutes les rangées cliquables sont des Ligne, et « Rechercher » prend la tabulation, Entrée et Espace avec
@@ -61,15 +61,24 @@ ColumnLayout {
 
     spacing: 0
 
-    // Demande de balayage de la fenêtre : vrai tant que la page est visible dans une fenêtre visible ; rendue à sa
-    // valeur initiale (faux) à la destruction de la page.
-    Binding {
-        target: page.etat
-        property: "rechercheFenetre"
-        value: page.visible && (page.Window.window?.visible ?? false)
-        restoreMode: Binding.RestoreNone
+    // Demande de balayage de la fenêtre : vrai tant que la page est visible dans une fenêtre visible. Elle est portée
+    // à etat.rechercheFenetre après l'image qui montre (ou cache) la page, jamais avant : l'écriture de scannerEnabled
+    // bloque le fil graphique d'une demi-seconde environ et retarderait l'affichage du changement d'onglet. Une
+    // fenêtre qui se cache ne produit plus d'image : la demande est alors rendue sur-le-champ. La page libère elle-même
+    // sa demande à sa destruction.
+    readonly property bool veutBalayer: visible && (Window.window?.visible ?? false)
+    property bool balayageEnAttente: false
+    onVeutBalayerChanged: {
+        if (veutBalayer || (Window.window?.visible ?? false)) balayageEnAttente = true
+        else etat.rechercheFenetre = false
     }
-    // La Binding ne rend pas la valeur à la destruction : la page libère elle-même sa demande.
+    Connections {
+        target: page.balayageEnAttente ? page.Window.window : null
+        function onFrameSwapped() {
+            page.balayageEnAttente = false
+            page.etat.rechercheFenetre = page.veutBalayer
+        }
+    }
     Component.onDestruction: etat.rechercheFenetre = false
 
     // trier — fige l'ordre des réseaux disponibles : le réseau joint en est exclu ; rien ne change tant qu'une

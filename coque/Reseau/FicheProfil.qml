@@ -326,8 +326,9 @@ ColumnLayout {
             aide: "Connecté" + (({full: " · internet disponible", limited: " · sans internet", none: " · sans internet",
                                   portal: " · portail de connexion"})[fiche.etat.connectivite] ?? "")
             Coche {
-                width: Theme.icons?.sizes.dense ?? 0
-                height: width
+                objectName: "coche"
+                Layout.preferredWidth: Theme.icons?.sizes.dense ?? 0
+                Layout.preferredHeight: Theme.icons?.sizes.dense ?? 0
                 couleur: Theme.color?.accentStandalone ?? "transparent"
             }
         }

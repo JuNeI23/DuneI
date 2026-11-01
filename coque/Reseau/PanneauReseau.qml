@@ -34,7 +34,8 @@ import "../Barre/icones.js" as Icones
 // d'onglet ; enTete, hauteur réservée en haut de la barre latérale pour les pastilles d'une fenêtre, 0 par défaut.
 // Sorties : onglets, [{cle, nom, etat, icone}] des trois onglets ; rangees, les profils (nmcli.profilsFenetre) ;
 // fiche, la FicheProfil ouverte, null sinon ; nouvelle, la FicheNouveau ouverte, null sinon ; defilement, le
-// Flickable des pages ; liste, la Liste des onglets ; factures, uuid → facturation lue. Fonctions : choisirOnglet,
+// Flickable des pages ; liste, la Liste des onglets ; pageWifi, pageFilaire, pageVpn, les trois pages d'onglet,
+// instanciées une fois et gardées (seule leur visibilité change d'un onglet à l'autre) ; factures, uuid → facturation lue. Fonctions : choisirOnglet,
 // ouvrirProfil, ouvrirNouveau, retour, ajoute, remplir.
 // Erreurs : un échec de la lecture des factures laisse les icônes Wi-Fi ordinaires ; une sous-page dont le profil
 // disparaît (supprimé ailleurs) se referme.
@@ -72,6 +73,9 @@ Item {
     readonly property var nouvelle: chargeurNouveau.item
     readonly property alias defilement: defilement
     readonly property alias liste: liste
+    readonly property alias pageWifi: pageWifi
+    readonly property alias pageFilaire: pageFilaire
+    readonly property alias pageVpn: pageVpn
     // Uuid des profils Wi-Fi : la facturation est relue quand cette liste change, et seulement alors.
     readonly property string cleFactures: rangees.filter(r => r.wifi).map(r => r.uuid).join(" ")
 
@@ -243,11 +247,28 @@ Item {
                 onClicked: panneau.retour()
             }
 
-            Loader {
-                id: chargeurPage
-                visible: panneau.sousPage === ""
+            // Les trois pages d'onglet sont instanciées une fois, à la construction du panneau, et gardées : un
+            // changement d'onglet n'en bascule que la visibilité. Une page masquée ne pèse pas dans la pile.
+            PageWifi {
+                id: pageWifi
+                visible: panneau.sousPage === "" && panneau.onglet === "wifi"
                 Layout.fillWidth: true
-                sourceComponent: panneau.onglet === "filaire" ? pageFilaire : panneau.onglet === "vpn" ? pageVpn : pageWifi
+                panneau: soi
+                etat: panneau.etat
+            }
+            PageFilaire {
+                id: pageFilaire
+                visible: panneau.sousPage === "" && panneau.onglet === "filaire"
+                Layout.fillWidth: true
+                panneau: soi
+                etat: panneau.etat
+            }
+            PageVpn {
+                id: pageVpn
+                visible: panneau.sousPage === "" && panneau.onglet === "vpn"
+                Layout.fillWidth: true
+                panneau: soi
+                etat: panneau.etat
             }
             Loader {
                 id: chargeurFiche
@@ -277,8 +298,4 @@ Item {
             }
         }
     }
-
-    Component { id: pageWifi; PageWifi { width: chargeurPage.width; panneau: soi; etat: panneau.etat } }
-    Component { id: pageFilaire; PageFilaire { width: chargeurPage.width; panneau: soi; etat: panneau.etat } }
-    Component { id: pageVpn; PageVpn { width: chargeurPage.width; panneau: soi; etat: panneau.etat } }
 }

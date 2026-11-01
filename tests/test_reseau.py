@@ -779,6 +779,36 @@ class PageWifiTest(EssaiCoque, unittest.TestCase):
                                          "Passerelle": "192.168.1.1", "DNS": "192.168.1.1", "IPv6": "fe80::1/64"})
         self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
 
+    def test_adresses_multiples_une_par_ligne(self):
+        # Trois adresses IPv6 : une Valeur par adresse, aucune ne déborde de la carte, la rangée grandit.
+        avant = json.loads(self.ipc("geometrie"))
+        self.assertEqual(len(avant["ip6"]), 1)
+        self.ipc("plusieursIp6")
+        g = self.jusqua_geometrie(lambda g: len(g["ip6"]) == 3)
+        self.assertEqual([v[0] for v in g["ip6"]][0], "fe80::7a2c:41ff:fe0b:9d10/64")
+        for texte, gauche, droite in g["ip6"]:
+            self.assertGreaterEqual(gauche, 0, texte)
+            self.assertLessEqual(droite, g["carte"], texte)
+        # Calées à droite : tous les bords droits coïncident.
+        self.assertEqual(len({round(v[2], 1) for v in g["ip6"]}), 1)
+
+    def jusqua_geometrie(self, condition):
+        """Attend que la géométrie des adresses vérifie une condition. Entrée : condition(g). Sortie : g. Échec au délai."""
+        fin = time.monotonic() + DELAI
+        while time.monotonic() < fin:
+            g = json.loads(self.ipc("geometrie"))
+            if condition(g):
+                time.sleep(0.2)
+                return json.loads(self.ipc("geometrie"))
+            time.sleep(0.05)
+        self.fail(f"géométrie inattendue : {g}")
+
+    def test_coche_de_la_rangee_de_tete(self):
+        # La coche de la rangée de tête garde sa taille dense (elle est dans un emplacement de Layout).
+        g = json.loads(self.ipc("geometrie"))
+        dense = json.loads((ROOT / "generated" / "coque-tokens.json").read_text())["icons"]["sizes"]["dense"]
+        self.assertEqual(g["coche"], [dense, dense])
+
     def test_reseau_connu_ou_ouvert_se_rejoint(self):
         self.ipc("choisir", "Connu")
         self.attendre("essai : connect Connu")
@@ -1477,6 +1507,38 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(self.ipc("essai", "focus"), "Autre réseau…")
         self.ipc("essai", "entree")
         self.jusqua(lambda e: e["sousPage"] == "nouveau", "Entrée ouvre « nouveau »")
+
+    def mesure_bascule(self, cle: str) -> int:
+        """Chronomètre un changement d'onglet de la coque d'essai, de l'ordre à la scène synchronisée.
+
+        Entrée : cle, l'onglet visé. Sortie : durée en millisecondes. Erreurs : échec au délai. Dépendances : ipc.
+        """
+        self.ipc("essai", "bascule", cle)
+        fin = time.monotonic() + DELAI
+        while time.monotonic() < fin:
+            d = int(self.ipc("essai", "mesure"))
+            if d >= 0:
+                return d
+            time.sleep(0.02)
+        self.fail("bascule non mesurée")
+
+    def test_pages_gardees_vivantes(self):
+        # Les trois pages d'onglet sont instanciées une fois : un changement d'onglet n'en recrée aucune (mêmes objets)
+        # et ne lance aucune lecture nmcli ; seul le balayage suit la visibilité de la page Wi-Fi. La durée de chaque
+        # bascule est mesurée (affichée, non bornée : la vraie mesure se fait à l'écran).
+        self.ipc("reseau", "ouvrir")
+        self.jusqua(lambda e: e["fenetre"] and e["rangees"], "fenêtre construite")
+        time.sleep(1)
+        pages = self.ipc("essai", "pages")
+        self.assertEqual(len(set(json.loads(pages))), 3)
+        appels = len(self.appels())
+        mesures = []
+        for cle in ("filaire", "vpn", "wifi") * 3:
+            mesures.append((cle, self.mesure_bascule(cle)))
+            self.assertEqual(self.ipc("essai", "pages"), pages, f"page recréée au passage à {cle}")
+        time.sleep(0.5)
+        self.assertEqual(len(self.appels()), appels, "une lecture nmcli a suivi un changement d'onglet")
+        print("\nMESURE_BASCULE (ms)", mesures)
 
     def test_changer_d_onglet(self):
         # Changer d'onglet ferme la sous-page et remet le défilement en haut, comme le retour ; les flèches du

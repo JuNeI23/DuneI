@@ -12,8 +12,10 @@ import "etats.js" as Etats
 // des jetons.
 // Entrées : titre ; aide ; icone et iconeActive, transmis au Medaillon ; erreur, ligne d'erreur sous la rangée ;
 // plaque, vrai pour peindre la plaque de survol (faux par défaut) ; le contrôle, déclaré comme enfant.
-// Sorties : texteX, abscisse de la colonne de texte ; base, hauteur sans l'erreur ; survole. Hauteur :
-// reglages.row, ou reglages.rowHelp avec une aide ; l'erreur s'ajoute dessous. Le texte sans médaillon reste sur
+// Sorties : texteX, abscisse de la colonne de texte ; base, hauteur sans l'erreur ; corps, hauteur du corps (base,
+// ou celle d'un contrôle plus haut, bordée de space.scale[1]) ; largeurLibre, largeur laissée au contrôle ; survole.
+// Hauteur : reglages.row, ou reglages.rowHelp avec une aide, ou celle du contrôle s'il est plus haut ; l'erreur
+// s'ajoute dessous. Le texte sans médaillon reste sur
 // la même colonne (rangée alignée). La rangée remplit la largeur de sa Carte (Layout.fillWidth).
 // Erreurs : aucune ; avant le chargement des tokens, les cotes sont nulles.
 // Dépendances : Medaillon, Texte, Etat, Theme (reglages, space, color, radius), etats.js.
@@ -37,7 +39,12 @@ Item {
 
     readonly property real base: (aide !== "" ? Theme.reglages?.rowHelp : Theme.reglages?.row) ?? 0
 
-    implicitHeight: base + (erreur !== "" ? messageErreur.height : 0)
+    // Hauteur du corps de la rangée : base, ou celle d'un contrôle plus haut (valeurs empilées) bordée de space.scale[1].
+    readonly property real corps: Math.max(base, emplacement.height + 2 * (Theme.space?.scale[1] ?? 0))
+    // Largeur laissée au contrôle : celle de la rangée moins la colonne du libellé, son titre et les retraits.
+    readonly property real largeurLibre: width - texteX - titreColonne.width - 2 * gauche
+
+    implicitHeight: corps + (erreur !== "" ? messageErreur.height : 0)
 
     HoverHandler { id: survol }
     Etat {
@@ -64,6 +71,7 @@ Item {
         actif: ligne.iconeActive
     }
     Column {
+        id: titreColonne
         x: ligne.texteX
         y: (ligne.base - height) / 2
         Texte { text: ligne.titre; echelon: 2; moyen: true }
@@ -78,14 +86,14 @@ Item {
         id: emplacement
         anchors.right: parent.right
         anchors.rightMargin: ligne.gauche
-        y: (ligne.base - height) / 2
+        y: (ligne.corps - height) / 2
         width: childrenRect.width
         height: childrenRect.height
     }
     Texte {
         id: messageErreur
         x: ligne.texteX
-        y: ligne.base
+        y: ligne.corps
         width: ligne.width - ligne.texteX - ligne.gauche
         visible: ligne.erreur !== ""
         text: ligne.erreur

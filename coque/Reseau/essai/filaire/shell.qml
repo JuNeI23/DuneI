@@ -50,6 +50,7 @@ ShellRoot {
             {groupe: "Filaire", nom: "Atelier", uuid: "atelier-1", appareil: "", wifi: false, actif: false, etat: "Débranché", icone: "network-wired"},
             {groupe: "Wi-Fi", nom: "Wifi_TRIADES", uuid: "wifi-1", appareil: "wlan0", wifi: true, actif: true, etat: "Connecté", icone: "network-wireless-signal-excellent"}
         ]
+        property string sousPage: ""
         function ouvrirProfil(uuid) { essai.journal("ouvrirProfil", uuid) }
     }
 
@@ -123,8 +124,8 @@ ShellRoot {
                 // sansProfils — retire les profils filaires du panneau. Entrées : aucune. Sortie : aucune.
                 function sansProfils(): void { panneauFaux.rangees = panneauFaux.rangees.filter(r => r.wifi) }
                 // methode — change la méthode IPv4 que rend le faux nmcli (« auto » ou « manual »), puis relit en
-                // rendant la page invisible puis visible. Entrée : nom. Sortie : aucune.
-                function methode(nom: string): void { faux.methode = nom; page.visible = false; page.visible = true }
+                // simulant l'ouverture puis la fermeture d'une sous-page. Entrée : nom. Sortie : aucune.
+                function methode(nom: string): void { faux.methode = nom; panneauFaux.sousPage = "x"; panneauFaux.sousPage = "" }
                 // appareil — change l'appareil que lit l'état (le Wi-Fi quand le filaire est inactif). Entrée : nom.
                 function appareil(nom: string): void { faux.appareil = nom }
                 // choisir — clic sur le profil d'un uuid. Entrée : uuid. Sortie : aucune.

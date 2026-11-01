@@ -47,10 +47,14 @@ ColumnLayout {
             methode = code !== 0 ? "" : m === "manual" ? "Fixe" : m === "auto" ? "Automatique" : ""
         })
     }
-    // Relue au changement de profil actif (l'uuid, une chaîne : les relectures de la liste ne la relancent pas) et au
-    // retour de la sous-page, où la méthode a pu changer.
+    // Relue au changement de profil actif (l'uuid, une chaîne : les relectures de la liste ne la relancent pas) et à
+    // la fermeture d'une sous-page, où la méthode a pu changer ; jamais à un simple changement d'onglet : la page
+    // reste vivante et garde sa dernière valeur, relue en place sans retarder son affichage.
     onUuidActifChanged: { methode = ""; lireMethode() }
-    onVisibleChanged: if (visible) lireMethode()
+    Connections {
+        target: page.panneau
+        function onSousPageChanged() { if (page.panneau.sousPage === "") page.lireMethode() }
+    }
     Component.onCompleted: lireMethode()
 
     TitrePage { text: "Filaire" }

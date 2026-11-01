@@ -207,6 +207,24 @@ ShellRoot {
                 // sansHors — retire les profils hors de portée du panneau factice. Entrées : aucune. Sortie : aucune.
                 function sansHors(): void { panneauFaux.rangees = panneauFaux.rangees.filter(r => r.etat !== "Hors de portée") }
 
+                // plusieursIp6 — donne à l'état trois adresses IPv6 (une de lien local), dont une très longue, pour éprouver
+                // le renvoi à la ligne de la carte « Adresses ». Entrées et sortie : aucune.
+                function plusieursIp6(): void {
+                    faux.ip6 = ["fe80::7a2c:41ff:fe0b:9d10/64", "2a01:cb04:1234:5678:9abc:def0:1234:5678/64",
+                                "2a01:cb04:1234:5678:aaaa:bbbb:cccc:dddd/128"]
+                }
+                // geometrie — largeur de la carte « Adresses » et, par Valeur d'IPv6, son texte et ses bords gauche et droit
+                // dans la carte ; taille de la coche de la rangée de tête. Sortie : JSON {carte, ip6: [[texte, gauche, droite]],
+                // coche: [largeur, hauteur]}. Erreurs : page absente, TypeError au journal.
+                function geometrie(): string {
+                    const carte = essai.trouver(porteur.item, o => o.objectName === "adresses")
+                    const vs = essai.tous_(carte, o => o.objectName === "valeur:IPv6" && o.visible)
+                    const coche = essai.trouver(porteur.item.fiche, o => o.objectName === "coche")
+                    return JSON.stringify({carte: carte.width,
+                        ip6: vs.map(v => [v.text, v.mapToItem(carte, 0, 0).x, v.mapToItem(carte, v.width, 0).x]),
+                        coche: [coche.width, coche.height]})
+                }
+
                 // choisir — clic sur le réseau disponible nommé. Entrée : nom. Sortie : aucune.
                 function choisir(nom: string): void { essai.trouver(porteur.item, o => o.objectName === "reseau:" + nom && o.visible).children[0].clique() }
                 // saisir — remplit le mot de passe de la rangée dépliée. Entrée : texte (jamais journalisé).

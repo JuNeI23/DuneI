@@ -20,6 +20,9 @@ ShellRoot {
 
     Component.onCompleted: console.info("essai : prêt")
 
+    // Durée de la dernière bascule d'onglet (ms), -1 tant qu'elle court.
+    property int dureeBascule: -1
+
     FenetreReseau { id: fenetre }
 
     // touche — frappe une touche dans la fenêtre du panneau, comme le clavier. Entrée : cle, un Qt.Key_*. Sortie :
@@ -121,6 +124,26 @@ ShellRoot {
 
         // onglet — choisit un onglet, comme un clic sur sa rangée. Entrée : cle (wifi, filaire, vpn). Sortie : aucune.
         function onglet(cle: string): void { fenetre.panneau.liste.itemAtIndex(fenetre.panneau.onglets.findIndex(o => o.cle === cle)).clicked() }
+
+        // bascule — chronomètre un changement d'onglet : pose l'onglet, puis note le temps écoulé jusqu'à la prochaine
+        // synchronisation de la scène (page visible et mise en page faite). Entrée : cle. Sortie : aucune ; le résultat
+        // se lit par mesure(). Erreurs : fenêtre fermée, TypeError au journal. Dépendances : Window (afterSynchronizing).
+        function bascule(cle: string): void {
+            const w = fenetre.panneau.Window.window
+            const debut = Date.now()
+            essai.dureeBascule = -1
+            const fin = () => { essai.dureeBascule = Date.now() - debut; w.afterSynchronizing.disconnect(fin) }
+            w.afterSynchronizing.connect(fin)
+            fenetre.panneau.liste.itemAtIndex(fenetre.panneau.onglets.findIndex(o => o.cle === cle)).clicked()
+        }
+        // mesure — durée en millisecondes de la dernière bascule, -1 tant qu'elle n'est pas finie. Sortie : texte.
+        function mesure(): string { return String(essai.dureeBascule) }
+        // pages — identité (type et adresse) des trois pages d'onglet, en JSON, pour vérifier qu'elles survivent aux
+        // changements d'onglet. Sortie : texte JSON. Erreurs : fenêtre fermée, TypeError au journal.
+        function pages(): string {
+            const p = fenetre.panneau
+            return JSON.stringify([p.pageWifi, p.pageFilaire, p.pageVpn].map(String))
+        }
 
         // retour — clic sur la rangée de retour de la sous-page. Entrées : aucune. Sortie : aucune.
         function retour(): void { essai.trouver(fenetre.panneau, o => o.objectName === "retour").clicked() }
