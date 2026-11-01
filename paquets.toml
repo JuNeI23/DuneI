@@ -80,7 +80,7 @@ outils = [
 [provisoire]
 wofi = "L2-16"                      # lanceur
 hyprshot = "L2-30"                  # capture d'écran
-network-manager-applet = "L2-11"    # indicateur réseau
+network-manager-applet = "recours nm-connection-editor"   # éditeur de connexions de secours ; son applet est retirée (L2-11)
 dunst = "L2-19"                     # notifications
 dolphin = "L3-12"                   # gestionnaire de fichiers
 firefox = "L3-20"                   # navigateur
