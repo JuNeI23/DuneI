@@ -3,7 +3,8 @@
 # exige la tâche « controle » avant toute fusion.
 # Conteneur Arch : la distribution des machines DuneI, paquets du dépôt officiel. Son qt6-shadertools peut devancer
 # celui du poste : le .qsb versionné est jugé par l'empreinte de sa source et par sa réflexion, non par ses octets
-# (D85). make check tourne sous un compte ordinaire, parce que deploy.py refuse root et que ses tests le lancent.
+# (D85). make check tourne sous un compte ordinaire, parce que deploy.py refuse root et que ses tests le lancent ;
+# ce compte appartient à wheel, que deploy.py exige (polkit, L2-11).
 name: controle
 
 on:
@@ -22,6 +23,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
       - name: make check, hors root
         run: |
-          useradd -m controle
+          getent group wheel >/dev/null || groupadd wheel
+          useradd -m -G wheel controle
           chown -R controle: "$GITHUB_WORKSPACE"
           runuser -u controle -- env HOME=/home/controle make -C "$GITHUB_WORKSPACE" check

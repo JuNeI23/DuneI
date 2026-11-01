@@ -501,13 +501,25 @@ def plan_maj(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
     return ([] if etat == "enabled" else [("sudo-enable", MINUTEUR)]), err
 
 
+def _systeme_actif(unite: str) -> bool:
+    """Indique si une unité système tourne.
+
+    Entrée : unite — nom d'unité. Sortie : vrai si systemctl is-active répond 0 ; faux si l'unité est
+    arrêtée, inconnue, ou si systemctl est absent. Erreurs : aucune. Dépendances : systemctl.
+    """
+    try:
+        return subprocess.run(["systemctl", "is-active", "--quiet", unite]).returncode == 0
+    except OSError:
+        return False
+
+
 def plan_systeme(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
     """Inspection des fichiers système, sans aucune modification.
 
     Entrées : repo — racine du dépôt ; home — dossier de configuration racine, inutilisé ici.
     Sortie : (copies avec sudo des fichiers absents ou différents, une fois {utilisateur} rempli ; puis
              rechargement de logind si l'un d'eux est sous logind.conf.d, de NetworkManager s'il est sous
-             etc/NetworkManager, et daemon-reload si l'un d'eux est sous etc/systemd/system ; erreurs). Aucune action si tout est identique.
+             etc/NetworkManager et actif (sinon il lira le fichier à son démarrage), et daemon-reload si l'un d'eux est sous etc/systemd/system ; erreurs). Aucune action si tout est identique.
     Erreurs : KeyError (par utilisateur) si l'uid n'a pas de compte ; sinon aucune exception, un fichier ou
               un lien étranger à la place d'un fichier de DuneI devient un message. Dépendances : system_root, utilisateur, _ours, SYSTEME, SYSTEM_MARK, CHAMP.
     """
@@ -523,7 +535,7 @@ def plan_systeme(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
     rels = [a[2].relative_to(root).parts for a in actions]
     if any("logind.conf.d" in p for p in rels):
         actions.append(("sudo-reload", "systemd-logind"))
-    if any(p[:2] == ("etc", "NetworkManager") for p in rels):
+    if any(p[:2] == ("etc", "NetworkManager") for p in rels) and _systeme_actif("NetworkManager"):
         actions.append(("sudo-reload", "NetworkManager"))
     if any(p[:3] == ("etc", "systemd", "system") for p in rels):
         actions.append(("sudo-daemon-reload",))

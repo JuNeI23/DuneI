@@ -586,6 +586,17 @@ class DeployTest(unittest.TestCase):
         run(self.cfg)
         self.assertNotIn("sudo systemctl reload NetworkManager", self.journal())
 
+    def test_networkmanager_arrete_sans_rechargement(self):
+        with mock.patch.dict(os.environ, {"FAKE_ABSENTES": "nm-applet.service NetworkManager"}):
+            res = run(self.cfg)
+        self.assertEqual(res.returncode, 0, res.stderr)
+        self.assertTrue((self.root / "etc/NetworkManager/conf.d/50-dunei-connectivite.conf").exists())
+        self.assertNotIn("sudo systemctl reload NetworkManager", self.journal())
+
+    def test_controle_github_dans_wheel(self):
+        flux = (ROOT / ".github/workflows/controle.yml").read_text(encoding="utf-8")
+        self.assertIn("useradd -m -G wheel controle", flux)
+
     def test_connectivite_a_30_secondes(self):
         lignes = (ROOT / "systeme/etc/NetworkManager/conf.d/50-dunei-connectivite.conf").read_text(encoding="utf-8").splitlines()
         self.assertIn("Posé par DuneI", lignes[1])
