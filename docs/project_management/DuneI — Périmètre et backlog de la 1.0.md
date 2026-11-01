@@ -2,9 +2,9 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.33. Historique en fin de document.
+Version 1.34. Historique en fin de document.
 
-La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **159 éléments** répartis en **cinq lots**, sur six chantiers.
+La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **160 éléments** répartis en **cinq lots**, sur six chantiers.
 
 Ce document dit ce qui est attendu, dans quel ordre, et à quelle condition c'est terminé. Il ne dit pas à quoi ça ressemble — c'est le rôle de la bible de design. En cas de contradiction : la bible l'emporte sur l'apparence, ce document l'emporte sur le périmètre.
 
@@ -263,7 +263,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L2-08 | B | Écrit | Barre système — structure, 32 px, couleur franche du thème — **fait (D89 à D92, D94, D95)** : barre transparente sans fond ni couleur franche, 28 px (ramenée de 32 à la recette), texte sur bureau choisi d'après `bureau.json`, survol et appui sans capsule, neuf indicateurs (logo, horloge, notifications, batterie, jour/nuit, Wi-Fi, VPN, Bluetooth, paramètres), coque de session `dunei-coque.service` ; recette validée à l'écran le 2026-10-26, **VPN non couvert, à éprouver quand un VPN existera** ; masque de saisie calculé rangée par rangée, pour suivre l'interrupteur jour/nuit quand le Wi-Fi apparaît à sa droite, et survol réservé aux éléments cliquables (D100) |
 | L2-09 | B | Écrit | Barre système — horloge, chiffres tabulaires — **fait (D95)** : « lun. 26 oct. 14:32 » en français, chiffres tabulaires par `Theme.police(echelon, moyen, tabulaire)`, précision à la minute |
 | L2-10 | B | Écrit | Barre système — indicateur de bureaux virtuels — **fait (D96, D97)** : déplacé dans la presqu'île (D93, L2-46), quatre points identiques et pilule d'accent discret sur le bureau courant |
-| L2-11 | B | Écrit | Indicateur réseau et son popover ; décider du sort de `nm-applet`, qui passe désormais par `session.toml` et son unité `nm-applet.service` (L1-10, D50) : le garder, ou le remplacer et retirer alors sa ligne et son unité (D40) |
+| L2-11 | B | Écrit | Indicateur réseau et son popover ; décider du sort de `nm-applet`, qui passe désormais par `session.toml` et son unité `nm-applet.service` (L1-10, D50) : le garder, ou le remplacer et retirer alors sa ligne et son unité (D40) — **fait, en attente de fusion (D103 à D105)** : popover D5 (288 px, verre de E3, réseau joint dans l'en-tête, mot de passe sans plaque, actions en texte seul, icône de la barre pleine tant qu'il est ouvert) ; fenêtre Réseau D4 en trois onglets (Wi-Fi, Filaire, VPN), cartes de réglages et sous-page par profil, validée à l'écran le 2026-11-01 ; **VPN minimal** (liste et interrupteur), le reste en L2-51 ; sort de `nm-applet` : à constater à la recette de sortie |
 | L2-12 | B | Écrit | Indicateur audio et son popover — volume, sorties ; niveau du micro numérique, qui sature à 100 % (relevé du 2026-10-15, D38) |
 | L2-13 | B | Écrit | Indicateur d'énergie et son popover |
 | L2-14 | B | Écrit | Indicateur Bluetooth et son popover |
@@ -304,6 +304,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L2-49 | B | Écrit | Thème de plateforme Qt pour toute la session — `QT_QPA_PLATFORMTHEME` : icônes DuneI (D101), mais aussi polices, couleurs et dialogues ; Dolphin est la seule application Qt ; à traiter après repérage (voie large voulue par Nicolas, D101) |
 | L2-50 | C | Écrit | Retrait du jour thématisé jusqu'au lot 4 (D102) — trois thèmes seulement : dominante jour, dominante nuit, thématisée nuit ; `coque-tokens.json`, `dunei-theme` (une demande « thématisée jour » se replie sur dominante jour), planche et tests ; la dérogation au corps de texte de D84 tombe avec lui |
 | L2-51 | C | Écrit | VPN complet de la fenêtre Réseau — l'onglet VPN minimal (liste et interrupteur par connexion, `nmcli connection up` ou `down` par uuid) est fait ; reste : import d'un fichier (`.conf` WireGuard, `.ovpn` OpenVPN) par `nmcli connection import`, sélecteur de fichiers par le portail FileChooser (`xdg-desktop-portal-gtk` à ajouter) ou champ de saisie avec dépôt, identifiants (gardés dans le profil ou confiés à un agent de secrets de la coque), sous-page d'un VPN (réglages, adresses), lecture du greffon (OpenVPN) pour l'aide de la rangée, paquets `networkmanager-vpn-plugin-openvpn` et `wireguard-tools` ; reporté à la demande de Nicolas (2026-11-01) faute d'accès VPN pour tester |
+| L2-52 | C | Écrit | Popover thème et luminosité — idée de Nicolas (2026-11-01) : un popover dédié, ancré à la barre, qui réunit le thème (famille et moment : jour, nuit) et la luminosité ; à peser avec L2-29 (contrôle de la luminosité), dont il peut devenir la forme, et avec L2-50 (retrait du jour thématisé), qui fixe d'abord ce que « moment » veut dire ; suit le motif du popover de réglage rapide (bible, D105) |
 
 ### Lot 3 — la bascule
 
@@ -405,7 +406,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L5-29 | — | Écrit | Passe de regard complète — étage 3 |
 | L5-30 | — | Écrit | Résorber les points ouverts de l'annexe C |
 
-**Volume total : 159 éléments** — 110 écrits, 42 configurés, 5 offerts, 2 mixtes.
+**Volume total : 160 éléments** — 111 écrits, 42 configurés, 5 offerts, 2 mixtes.
 
 Les deux tiers du travail sont de l'écrit, et les trois quarts de cet écrit se concentrent sur la coque et les écrans système. C'est cohérent avec la stratégie retenue, et c'est là que tout le risque se trouve.
 
@@ -509,6 +510,7 @@ Le choix de la distribution de base et du compositeur, précédemment ouverts, s
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-12 | Version initiale, 137 éléments |
+| 1.34 | 2026-11-01 | L2-11 fait (popover D5, fenêtre Réseau D4, VPN minimal), en attente de fusion ; ajout de L2-52 (popover thème et luminosité) ; 160 éléments |
 | 1.33 | 2026-11-01 | Ajout de L2-51 (VPN complet de la fenêtre Réseau : import, identifiants, sous-page), reporté après l'onglet VPN minimal ; 159 éléments |
 | 1.32 | 2026-10-31 | L4-12 en cours : première tranche du thème d'icônes DuneI (Phosphor bold) avancée avant L2-11 (D101) ; ajout de L2-49 (thème de plateforme Qt) ; 158 éléments |
 | 1.31 | 2026-10-31 | L2-08 reçoit le correctif du masque de saisie de la barre, qui restait sur le Wi-Fi après un réveil, et le survol réservé aux éléments cliquables (D100) |

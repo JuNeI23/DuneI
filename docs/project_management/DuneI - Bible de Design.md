@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas
 
-Document normatif. Version 0.21. Historique en fin de document.
+Document normatif. Version 0.22. Historique en fin de document.
 
 ## Comment lire ce document
 
@@ -356,6 +356,18 @@ fichiers, navigateur, lanceur), jamais par le nom d'un logiciel.
 Les contrôles reprennent **les formes et les proportions de macOS**, à la demande de Nicolas : coche et point de radio dessinés, et non tirés du thème d'icônes ; interrupteur en pilule ; jauge sans disque à la manière du Centre de contrôle ; onglets en contrôle segmenté ; sélection des rangées en pastille arrondie ; pastilles de fenêtre ; stepper du compteur ; bouton principal rempli d'accent. Seules les formes sont empruntées : les couleurs restent celles des tokens, et le liseré, l'ombre et le mouvement des positions relèvent du chapitre 5 et du chapitre 6. Le détail, élément par élément, est dans la conception de la bibliothèque de composants, § 7.10 (`docs/superpowers/specs/2026-10-23-composants-design.md`).
 
 **Fenêtres de réglages (D104).** Les formes validées à l'écran pour la fenêtre Réseau valent pour toutes les fenêtres de réglages et sont émises sous `Theme.reglages.*` : ligne simple de 44 px, ligne avec aide de 52 px, ligne de tête de 60 px ; médaillon d'icône de 32 px portant un glyphe de 18 px ; colonne du texte à 56 px, qui fixe aussi le retrait du filet de séparation ; barre d'onglets de 48 px ; plateau détaché de la barre latérale, retiré de 8 px. La fenêtre garde `radius.window` (12) comme toutes les fenêtres ; le plateau de la barre latérale et les cartes prennent `radius.panel` (10), pour rester sous le coin de la fenêtre (règle d'imbrication) : aucun nouveau rayon.
+
+**Le motif de la fenêtre de réglages (D105).** Toute fenêtre de réglages se construit comme la fenêtre Réseau :
+
+- **Barre latérale à onglets.** Un plateau détaché (`radius.panel`, retiré de `reglages.sidebarInset`), colonne de navigation au sens de la liste (« Sélectionné inactif ») : chaque onglet porte un médaillon, son nom et une ligne d'état en texte secondaire ; l'onglet choisi prend la plaque neutre `controlRaised` et un nom en graisse moyenne, jamais le fond d'accent. Les flèches haut et bas passent d'un onglet à l'autre. Le contour de focus n'orne la rangée courante qu'une fois une touche frappée dans la fenêtre : une ouverture à la souris ne montre aucun anneau.
+- **Page.** Un titre de page, puis des cartes précédées d'étiquettes de section à l'accent. La zone de page défile et se remet en haut à chaque changement d'onglet ou de sous-page. Les pages d'onglet sont construites une fois et gardées en vie tant que la fenêtre est ouverte : une bascule d'onglet ne fait que montrer la page ; tout secret saisi ou lu s'efface quand sa page se cache.
+- **Carte.** Aplat opaque `surfaceRaised`, `radius.panel`. Les rangées qu'elle porte sont séparées par un filet `borderSubtle` en retrait, qui part de `reglages.textColumn` (sous le texte, jamais sous le médaillon).
+- **Rangée.** Hauteur `reglages.row` (simple), `reglages.rowHelp` (avec texte d'aide en `textSecondary`) ou `reglages.rowLead` (rangée de tête). Elle reçoit au besoin un médaillon (`Medaillon`, disque de `reglages.medallion` portant un glyphe de `reglages.medallionGlyph`), un contrôle à droite (interrupteur, compteur, bouton, valeur) et, si elle est cliquable, un chevron ; elle se lit au clavier (tabulation, Entrée) et au survol comme une rangée de liste.
+- **Valeur copiable.** Texte à chasse fixe, calé à droite, tronqué au milieu s'il dépasse. Un clic ou Entrée la copie et la rangée annonce « Copié » un instant, en fondu. **Un champ multiple (adresses IPv4, IPv6, DNS) met une valeur par ligne**, chacune copiable : rien ne déborde de la carte, la rangée grandit.
+- **Sous-page.** Un réglage dense s'ouvre sur une sous-page qui remplace la page d'onglet, avec en tête la rangée de retour « ‹ » suivie du nom de l'onglet ; Échap revient. Aucune saisie en cours n'est gardée au retour.
+- **Priorité.** Un nombre à régler reste un Compteur de la bible (champ et stepper), jamais une pastille faite pour l'occasion.
+
+**Le motif du popover de réglage rapide (D105).** Le popover de la barre (réseau, et ceux qui suivront) tient en 288 px de large et suit les popovers sobres d'inspiration : carré, sur le verre de E3 (D103). Il porte de haut en bas l'en-tête (bascule à glyphe, nom de l'élément joint, état), la liste, puis, sous un filet `material.glassLine`, les actions en texte seul, sans bouton plein. L'élément joint ne paraît que dans l'en-tête, jamais dans la liste. Un mot de passe se déplie sous sa ligne, sans plaque. Tant que le popover est ouvert, l'icône de la barre qui l'a ouvert prend l'accent et sa variante pleine.
 
 ## 8. Fenêtrage et grille
 
@@ -877,6 +889,9 @@ Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si 
 | Barre de progression | — | `surface` | — | Indéterminée : animation en boucle, exception à l'interdiction de la boucle, partagée avec l'indicateur d'activité |
 | Indicateur d'activité | — | `surface` | — | Trois grains en vague continue, période `periods.spinner`. Ne s'anime que visible et en marche |
 | Séparateur | — | `surface` | — | `border-subtle`. Jamais deux séparateurs adjacents : c'est un défaut d'espacement |
+| Carte de réglages | E1 (fenêtre opaque) | `surface` + `row` | — | Aplat `surfaceRaised`, `radius.panel`, rangées séparées par un filet `border-subtle` qui part de `reglages.textColumn` (D105) |
+| Rangée de réglage | — | `row` + `interactive` + `text` | `state` | Hauteur `reglages.row`, `rowHelp` ou `rowLead` ; médaillon facultatif, contrôle à droite, chevron si elle ouvre une sous-page ; au clavier comme une rangée de liste (D105) |
+| Valeur copiable | — | `text` | `state` | Chasse fixe, calée à droite, tronquée au milieu ; clic ou Entrée la copie, « Copié » en fondu ; une valeur par ligne pour un champ multiple (D105) |
 | Barre de défilement | — | `interactive` | `state` | Superposée, 8px au repos, 12px au survol. S'efface après 800 ms d'inactivité |
 
 ### Couche 2 — le flottant applicatif
@@ -884,6 +899,7 @@ Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si 
 | Composant | Élév. | Primitives | Transition | Règles particulières |
 | --- | --- | --- | --- | --- |
 | Fenêtre flottante | E1 | `surface` | `window` | Une ombre : portée 16, décalage 4, noir à 36 %. Seul dépassement autorisé du système |
+| Fenêtre de réglages | E1 | `surface` + `row` + `interactive` | `window` | Barre latérale à onglets sur un plateau détaché, page à cartes, sous-page « ‹ onglet » fermée par Échap ; angle `radius.window`, plateau et cartes `radius.panel` (D104, D105) |
 | Dialogue modal | E3 | `overlay` + `surface` + `field` + `interactive` | `overlay` | Attention : voile **sur sa fenêtre parente seulement**, pas sur l'écran |
 | Palette flottante | E3 | `surface` + `interactive` | `window` | Contextuel : ombre seule, pas de voile |
 | Média plein écran | E0 | `surface` | `spectacle` | Tous effets désactivés : rayon 0, aucune ombre. Neutre colorimétrique pur |
@@ -899,7 +915,7 @@ Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si 
 | Menu de déconnexion | attention | E3 | `overlay` + `interactive` | `overlay` | Action destructrice en `error`, jamais en accent |
 | Verrouillage / connexion | attention | E0 | `overlay` + `text` + `field` | `spectacle` | Registre de spectacle. Horloge en grand corps, poids léger |
 | Menu contextuel | contextuel | E3 | `surface` + `row` | `reveal` | **Ni voile ni flou** de l'écran ; verre dépoli le jour comme la nuit (D85, D103). Part du point de clic, sans écart. Aucun contour de focus sur ses rangées (D88) |
-| Popover, liste déroulante | contextuel | E3 | `surface` + `row` | `reveal` | Part de son élément déclencheur, à `space.scale[0]` sous lui ; glisse au lieu de se retourner (D88) |
+| Popover, liste déroulante | contextuel | E3 | `surface` + `row` | `reveal` | Part de son élément déclencheur, à `space.scale[0]` sous lui ; glisse au lieu de se retourner (D88) ; popover de réglage rapide : 288 px, élément joint dans l'en-tête seulement, mot de passe sans plaque, actions en texte seul sous `glassLine`, icône de la barre à l'accent et pleine tant qu'il est ouvert (D105) |
 | Infobulle | contextuel | E3 | `surface` + `text` | `reveal` | Délai de 500 ms avant apparition (`delays.tooltip`, D82). Ne prend jamais le focus |
 | Notification | contextuel | E3 | `surface` + `text` + `icon` | `reveal` | Couleurs sémantiques fixes, hors thème. Décalage limité à 5 |
 
@@ -930,3 +946,4 @@ Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si 
 | 0.19 | 2026-10-31 | Chapitre 9 : première tranche du thème d'icônes DuneI, table de correspondance et sources Phosphor, graisse bold retenue, écart de calage au pixel accepté (D101) |
 | 0.20 | 2026-11-01 | Chapitre 5, verre de la coque : E3 en verre à 60 % le jour comme la nuit, sans sheen ni liseré ; ombre évidée sous la surface ; filet translucide `glassLine` et textes d'appoint d'un ton plus soutenus sur le verre (D103) |
 | 0.21 | 2026-11-01 | Chapitre 7, formes : formes des fenêtres de réglages, jetons `reglages` (D104) |
+| 0.22 | 2026-11-01 | Chapitre 7 : motif de la fenêtre de réglages (barre latérale à onglets, cartes, rangées, valeur copiable, sous-page) et du popover de réglage rapide ; annexe E : carte, rangée, valeur copiable, fenêtre de réglages (D105) |

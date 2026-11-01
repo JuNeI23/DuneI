@@ -17,8 +17,9 @@ import "nmcli.js" as Nmcli
 // Clavier : chaque interrupteur s'atteint à la tabulation et bascule à Espace, avec le contour de focus de la bible
 // (« Clavier » et « Interrupteur »).
 // Entrées : panneau, le PanneauReseau ; etat, la source de l'état, EtatReseau par défaut (profils, executer).
-// Sorties : connexions, les VPN lus (nmcli.js, vpns) ; enCours, les actions non terminées (uuid → état voulu) ; erreurs, objet uuid → message de nmcli pour les refus
-// affichés. Erreurs : un échec de nmcli se montre sous la rangée et remet l'interrupteur à l'état réel.
+// Sorties : connexions, les VPN lus (nmcli.js, vpns) ; enCours, les actions non terminées (uuid → état voulu) ;
+// erreurs, objet uuid → message de nmcli pour les refus affichés. Erreurs : un échec de nmcli se montre sous la rangée
+// et remet l'interrupteur à l'état réel.
 // Dépendances : TitrePage, Section, Groupe, Ligne, Interrupteur, Texte, Theme, nmcli.js, EtatReseau.
 ColumnLayout {
     id: page
@@ -27,11 +28,12 @@ ColumnLayout {
     property var etat: EtatReseau
 
     readonly property var connexions: Nmcli.vpns(etat.profils)
-    // Les uuid des connexions, remplacés seulement quand la liste change : les rangées (et le focus du clavier) survivent
-    // aux relectures de l'état, qui renouvellent le tableau des profils à chaque fois.
+    // Les uuid des connexions, remplacés seulement quand la liste change : les rangées (et le focus du clavier)
+    // survivent aux relectures de l'état, qui renouvellent le tableau des profils à chaque fois.
     property var uuids: []
     property var erreurs: ({})
-    // Les actions en cours : uuid → état voulu. Pendant ce temps l'interrupteur de la rangée est inactif et montre l'état voulu.
+    // Les actions en cours : uuid → état voulu. Pendant ce temps l'interrupteur de la rangée est inactif et montre
+    // l'état voulu.
     property var enCours: ({})
     onConnexionsChanged: {
         const u = connexions.map(c => c.uuid)

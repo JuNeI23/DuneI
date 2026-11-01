@@ -18,8 +18,8 @@ import "../Composants"
 // Sorties : actif, la rangée du profil filaire actif (null sans lui) ; nomAppareil, le nom de l'interface filaire,
 // vide sans carte ; adresseMaterielle, l'adresse matérielle de l'appareil filaire, vide si elle est inconnue ;
 // etatCable, l'état affiché ; methode, la méthode IPv4 lue du profil actif (vide avant la lecture). Erreurs : un échec
-// de la lecture laisse la méthode vide, la rangée est alors omise (EtatReseau.executer). Dépendances : TitrePage, Section, Groupe, Ligne, Valeur, GroupeProfils,
-// CarteAdresses, Texte, Theme, PanneauReseau, EtatReseau.
+// de la lecture laisse la méthode vide, la rangée est alors omise (EtatReseau.executer). Dépendances : TitrePage,
+// Section, Groupe, Ligne, Valeur, GroupeProfils, CarteAdresses, Texte, Theme, PanneauReseau, EtatReseau.
 ColumnLayout {
     id: page
 

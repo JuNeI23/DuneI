@@ -15,18 +15,18 @@ import "../Barre/icones.js" as Icones
 // Entrées (réglables) : surveille et lecture, commandes du moniteur et de la lecture (remplaçables par un test) ;
 // actif, suspend le moniteur si faux ; recherche, vrai tant qu'un popover demande un balayage Wi-Fi, et
 // rechercheFenetre, vrai pendant toute la vie de la fenêtre Réseau (posé par son PanneauReseau après la première
-// image, rendu à sa destruction), quel que soit l'onglet : deux demandeurs, deux propriétés, si bien que la fermeture de l'un ne coupe pas le balayage que l'autre réclame encore ; fenetre,
-// vrai pour demander la fenêtre Réseau (posé par « Réglages réseau… » du popover, lu par la fenêtre) ;
-// profilDemande, uuid ou nom du profil que la fenêtre doit montrer (posé par « Détails… » du popover, consommé et
-// remis à vide par le panneau Réseau qui le sélectionne), vide par défaut.
-// Sorties (lecture seule) : veille (vrai de la ligne « asleep » du moniteur jusqu'à l'état suivant), carte, radio, filaire,
-// carteFilaire (vrai si une carte filaire existe, branchée ou non : l'onglet Filaire distingue « Câble débranché » de
-// « Aucune carte »), appareilFilaire (le premier appareil filaire de Quickshell.Networking, avec son nom et son
-// adresse matérielle, ou null sans carte filaire), connecte, connectivite (« unknown », « none », « portal »,
-// « limited » ou « full »), reseauActif (WifiNetwork ou null), nomActif, force (0 à 1), facture, appareil
-// (l'interface dont la lecture donne les adresses : le filaire actif, sinon le Wi-Fi), ip4, ip6,
-// passerelle, dns, mac (adresse matérielle de l'appareil actif), profils, vpnActif, icone, reseaux (WifiNetwork
-// de toutes les cartes, non triés) ; relances, nombre de démarrages du moniteur.
+// image, rendu à sa destruction), quel que soit l'onglet : deux demandeurs, deux propriétés, si bien que la fermeture
+// de l'un ne coupe pas le balayage que l'autre réclame encore ; fenetre, vrai pour demander la fenêtre Réseau (posé par
+// « Réglages réseau… » du popover, lu par la fenêtre) ; profilDemande, uuid ou nom du profil que la fenêtre doit
+// montrer (posé par « Détails… » du popover, consommé et remis à vide par le panneau Réseau qui le sélectionne), vide
+// par défaut. Sorties (lecture seule) : veille (vrai de la ligne « asleep » du moniteur jusqu'à l'état suivant), carte,
+// radio, filaire, carteFilaire (vrai si une carte filaire existe, branchée ou non : l'onglet Filaire distingue « Câble
+// débranché » de « Aucune carte »), appareilFilaire (le premier appareil filaire de Quickshell.Networking, avec son nom
+// et son adresse matérielle, ou null sans carte filaire), connecte, connectivite (« unknown », « none », « portal », «
+// limited » ou « full »), reseauActif (WifiNetwork ou null), nomActif, force (0 à 1), facture, appareil (l'interface
+// dont la lecture donne les adresses : le filaire actif, sinon le Wi-Fi), ip4, ip6, passerelle, dns, mac (adresse
+// matérielle de l'appareil actif), profils, vpnActif, icone, reseaux (WifiNetwork de toutes les cartes, non triés) ;
+// relances, nombre de démarrages du moniteur.
 // Fonctions : relire, verifier, executer, allumer, ouvrirPortail.
 // Erreurs : sans nmcli ou sans NetworkManager, les valeurs nmcli restent vides et le moniteur est relancé
 // toutes les secondes (voir Relance) ; la sortie d'une lecture partielle est lue au mieux.
@@ -91,7 +91,8 @@ Singleton {
 
     // executer — lance nmcli avec les arguments donnés, puis relit l'état.
     // Entrées : args, tableau d'arguments (sans « nmcli ») ; fin, fonction(code, sortie) appelée à la fin.
-    // Sortie : aucune ; fin, facultative, reçoit le code de sortie et la sortie standard (code 0) ou la sortie d'erreur (sinon) ; qu'elle manque ou lève, l'état est relu et le processus détruit.
+    // Sortie : aucune ; fin, facultative, reçoit le code de sortie et la sortie standard (code 0) ou la sortie d'erreur
+    // (sinon) ; qu'elle manque ou lève, l'état est relu et le processus détruit.
     // Erreurs : un nmcli absent donne un code non nul à fin. Dépendances : fabrique, relire.
     function executer(args, fin) {
         fabrique.createObject(etat, {command: ["nmcli", ...args], fin})

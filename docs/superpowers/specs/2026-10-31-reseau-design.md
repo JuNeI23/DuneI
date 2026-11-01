@@ -1,6 +1,6 @@
 # Conception — L2-11, panneau réseau
 
-Version 1.1 · 2026-10-31
+Version 1.2 · 2026-11-01
 
 ## Intention
 
@@ -126,9 +126,18 @@ Constaté sur caladan : Quickshell 0.3.2, NetworkManager 1.58.1, contrôle de co
   `read()` renvoie le dictionnaire NetworkManager brut.
 - Détection du partage par `METERED` : prouvée pour Android, à constater avec le vrai téléphone ; repli manuel.
 
+## Suite : popover D5 et fenêtre D4
+
+La conception de départ a été reprise en deux temps, le 2026-11-01. Le popover suit l'essai D5 (verre de E3 à 60 %, ombre
+évidée, icône pleine de la barre tant qu'il est ouvert : D103). La fenêtre Réseau suit l'essai D4 : trois onglets (Wi-Fi,
+Filaire, VPN), cartes de réglages, sous-page par profil, VPN minimal, complet reporté en L2-51 (D104 pour les jetons de
+forme, D105 pour l'ensemble). Le plan de mise en œuvre est `docs/superpowers/plans/2026-11-01-fenetre-reseau-d4.md`.
+Là où cette section et le reste du document diffèrent, la section l'emporte.
+
 ## Historique des versions
 
 | Version | Date | Changement |
 |---|---|---|
 | 1.0 | 2026-10-31 | Première rédaction, après échange avec Nicolas et repérage technique |
 | 1.1 | 2026-10-31 | Relecture du constructeur : contrôle de connectivité à 30 s, mot de passe révélé par l'œil, prérequis `wheel`, paquet `network-manager-applet` gardé, réseaux cachés, IP fixe en IPv4 seulement |
+| 1.2 | 2026-11-01 | Section « Suite : popover D5 et fenêtre D4 » (D103 à D105) |

@@ -14,23 +14,22 @@ import "../Barre/icones.js" as Icones
 // la fenêtre (bible, « Pastilles de fenêtre ») se posent à son sommet, dans la hauteur enTete réservée. Dessous,
 // les trois onglets de reglages.tabHeight : médaillon (à l'accent pour l'onglet choisi), nom en échelon 2 (graisse
 // moyenne pour l'onglet choisi) et état en échelon 0 au texte secondaire (Wi-Fi : réseau joint, « Désactivé » ou
-// « Non connecté » ; Filaire : « Connecté », « Câble débranché » ou « Aucune carte » ; VPN : « Connecté » ou « Non connecté »). La barre est une colonne de navigation (Liste.navigation, bible, « Sélectionné inactif ») : l'onglet
-// choisi prend la plaque neutre controlRaised et un nom en graisse moyenne, jamais le fond d'accent ; les
-// flèches haut et bas passent d'un onglet à l'autre, et le contour de focus (bible, « Focus clavier ») n'orne que la
-// rangée courante, jamais un anneau.
-// À droite, une zone qui défile, en retrait de space.blockGap, porte la page de l'onglet (PageWifi, PageFilaire,
-// PageVpn) ; une sous-page la remplace : la rangée de retour « ‹ Wi-Fi » (ou le nom de l'onglet courant), puis la
-// FicheProfil du profil (sousPage = son uuid) ou la FicheNouveau (sousPage = « nouveau »). Changer d'onglet, ouvrir
-// une sous-page ou revenir remet le défilement en haut ; Échap, tant qu'une sous-page est ouverte, revient à la page
-// d'onglet. La FicheProfil n'existe que sous sa sous-page : le secret qu'elle a lu disparaît au retour.
-// Le profil demandé (etat.profilDemande, posé par « Détails… » du popover) ouvre sa sous-page et choisit son onglet
-// (Wi-Fi pour un profil 802-11-wireless, Filaire pour un profil ethernet) ; une demande faite fenêtre ouverte est
-// suivie aussitôt, et toute demande est consommée (remise à vide) dès que son profil est lu. Sans demande, la fenêtre
-// s'ouvre sur la page de l'onglet Wi-Fi.
-// Le panneau demande le balayage Wi-Fi (etat.rechercheFenetre) pour toute la vie de la fenêtre et le rend à sa
-// destruction ; changer d'onglet ou de sous-page n'y touche jamais.
-// La facturation de chaque profil Wi-Fi est lue d'un seul processus quand la liste des profils change, puis tenue à
-// jour par les lectures de la fiche ; aucun minuteur.
+// « Non connecté » ; Filaire : « Connecté », « Câble débranché » ou « Aucune carte » ; VPN : « Connecté » ou « Non
+// connecté »). La barre est une colonne de navigation (Liste.navigation, bible, « Sélectionné inactif ») : l'onglet
+// choisi prend la plaque neutre controlRaised et un nom en graisse moyenne, jamais le fond d'accent ; les flèches haut
+// et bas passent d'un onglet à l'autre, et le contour de focus (bible, « Focus clavier ») n'orne que la rangée
+// courante, jamais un anneau. À droite, une zone qui défile, en retrait de space.blockGap, porte la page de l'onglet
+// (PageWifi, PageFilaire, PageVpn) ; une sous-page la remplace : la rangée de retour « ‹ Wi-Fi » (ou le nom de l'onglet
+// courant), puis la FicheProfil du profil (sousPage = son uuid) ou la FicheNouveau (sousPage = « nouveau »). Changer
+// d'onglet, ouvrir une sous-page ou revenir remet le défilement en haut ; Échap, tant qu'une sous-page est ouverte,
+// revient à la page d'onglet. La FicheProfil n'existe que sous sa sous-page : le secret qu'elle a lu disparaît au
+// retour. Le profil demandé (etat.profilDemande, posé par « Détails… » du popover) ouvre sa sous-page et choisit son
+// onglet (Wi-Fi pour un profil 802-11-wireless, Filaire pour un profil ethernet) ; une demande faite fenêtre ouverte
+// est suivie aussitôt, et toute demande est consommée (remise à vide) dès que son profil est lu. Sans demande, la
+// fenêtre s'ouvre sur la page de l'onglet Wi-Fi. Le panneau demande le balayage Wi-Fi (etat.rechercheFenetre) pour
+// toute la vie de la fenêtre et le rend à sa destruction ; changer d'onglet ou de sous-page n'y touche jamais. La
+// facturation de chaque profil Wi-Fi est lue d'un seul processus quand la liste des profils change, puis tenue à jour
+// par les lectures de la fiche ; aucun minuteur.
 // Entrées : etat, la source de l'état et des actions, EtatReseau par défaut ; onglet, « wifi » (défaut), « filaire »
 // ou « vpn » ; sousPage, l'uuid du profil ouvert, « nouveau » pour la fiche d'un autre réseau, vide pour la page
 // d'onglet ; enTete, hauteur réservée en haut de la barre latérale pour les pastilles d'une fenêtre, 0 par défaut.
@@ -41,13 +40,12 @@ import "../Barre/icones.js" as Icones
 // facturation lue. Fonctions : choisirOnglet, ouvrirProfil, ouvrirNouveau, retour, ajoute, remplir.
 // Erreurs : un échec de la lecture des factures laisse les icônes Wi-Fi ordinaires ; une sous-page dont le profil
 // disparaît (supprimé ailleurs) se referme.
-// Dépendances : EtatReseau (profils, reseaux, facture, profilDemande, radio, carte, reseauActif, force, connectivite, filaire,
-// carteFilaire, vpnActif),
-// PageWifi, PageFilaire, PageVpn, FicheProfil, FicheNouveau, nmcli.js (profilsFenetre, lireFactures), Liste, Rangee,
-// Medaillon, Bouton, Surface, Texte, icones.js, Theme, Quickshell.Io (Process, StdioCollector).
-// Cotes : plateau détaché de reglages.sidebarInset (8) sur ses quatre côtés, de largeur layout.sidebarDefault
-// moins ce retrait, au rayon radius.panel ; onglets de reglages.tabHeight (48), séparés de space.scale[0] (4) ;
-// pages en retrait de space.blockGap (24) de la zone qui défile.
+// Dépendances : EtatReseau (profils, reseaux, facture, profilDemande, radio, carte, reseauActif, force, connectivite,
+// filaire, carteFilaire, vpnActif), PageWifi, PageFilaire, PageVpn, FicheProfil, FicheNouveau, nmcli.js
+// (profilsFenetre, lireFactures), Liste, Rangee, Medaillon, Bouton, Surface, Texte, icones.js, Theme, Quickshell.Io
+// (Process, StdioCollector). Cotes : plateau détaché de reglages.sidebarInset (8) sur ses quatre côtés, de largeur
+// layout.sidebarDefault moins ce retrait, au rayon radius.panel ; onglets de reglages.tabHeight (48), séparés de
+// space.scale[0] (4) ; pages en retrait de space.blockGap (24) de la zone qui défile.
 Item {
     id: panneau
 

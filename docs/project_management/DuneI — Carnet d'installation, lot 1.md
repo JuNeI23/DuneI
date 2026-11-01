@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.28. Historique en fin de document.
+Version 1.29. Historique en fin de document.
 
 Socle amorçable.
 
@@ -2007,6 +2007,44 @@ Rien à lancer à la main : `make install` régénère le thème (`make icones`)
   pixel aux tailles de la barre : écart accepté (D101).
 - **Non couvert : Qt.** Dolphin garde ses icônes ; le thème de plateforme Qt est la ligne L2-49 du backlog.
 
+## Le réseau : popover et fenêtre — L2-11
+
+Rien de plus à installer : le popover et la fenêtre sont dans la même coque (`dunei-coque.service`), et `make install`
+n'ajoute aucune étape. Le réseau repose sur NetworkManager (nmcli) et sur `Quickshell.Networking` ; `nm-applet` reste à
+trancher à la recette de sortie.
+
+- **Le popover (D103, direction D5).** Un clic sur l'icône réseau de la barre l'ouvre : 288 px de large, sur le verre de
+  E3. L'en-tête porte la bascule du Wi-Fi, le nom du réseau joint et son état ; dessous, les réseaux à proximité (le
+  réseau joint n'y figure pas) avec le bouton de nouvelle recherche, puis, sous un filet translucide, les actions en
+  texte : « Se déconnecter » et « Réglages réseau… ». Un réseau sécurisé inconnu déplie son mot de passe sous sa ligne.
+  Tant qu'il est ouvert, l'icône de la barre prend l'accent et sa variante pleine.
+- **La fenêtre (D105, direction D4).** Une fenêtre flottante, créée à l'ouverture et détruite à la fermeture (D80). À
+  gauche, un plateau détaché à trois onglets : **Wi-Fi** (réseau joint en carte avec ses réglages fréquents et
+  « Détails… », réseaux disponibles, « Autre réseau… », profils enregistrés), **Filaire** (état du câble, méthode IPv4,
+  adresses copiables, profils filaires, « Se connecter ») et **VPN** (connexions `vpn` et `wireguard` connues de
+  NetworkManager, un interrupteur chacune ; import, identifiants et sous-page restent à faire, L2-51). Un clic sur un
+  profil enregistré ouvre sa sous-page « ‹ Wi-Fi » (mot de passe, connexion automatique, priorité, facturation, IPv4
+  fixe, Se connecter, Oublier) ; Échap revient.
+- **L'ouvrir.** « Réglages réseau… » du popover, ou, depuis un terminal, `qs ipc call reseau ouvrir`. Une fenêtre déjà
+  ouverte garde son onglet courant. « Détails… » du popover ouvre directement la sous-page du profil demandé.
+- **Au clavier.** Les flèches haut et bas passent d'un onglet à l'autre ; le contour de focus n'apparaît qu'après une
+  première touche. Tabulation et Entrée parcourent et activent les rangées ; Entrée ou un clic sur une adresse la copie
+  (« Copié »). Chaque adresse d'un champ multiple (IPv6, DNS) occupe sa ligne.
+- **Les tests.** `python3 -m unittest tests.test_reseau` (nmcli, état, popover, trois pages, groupes, fenêtre,
+  notifications) et `python3 -m unittest tests.test_reglages` (jetons et composants de réglage) ; la suite complète est
+  `make test`. Les coques d'essai tournent en `QT_QPA_PLATFORM=offscreen` et ne touchent jamais au vrai bureau.
+- **Recette validée à l'écran par Nicolas le 2026-11-01.** (1) Ouvrir la fenêtre depuis le popover : l'onglet Wi-Fi paraît,
+  sans contour de focus à l'ouverture à la souris. (2) Passer de Wi-Fi à Filaire puis à VPN, à la souris et aux flèches :
+  la bascule est immédiate (moins de 10 ms mesurées, contre 300 à 600 ms avant la correction). (3) Wi-Fi : le réseau joint
+  porte sa coche pleine, « Détails… » ouvre sa sous-page, un réseau enregistré aussi ; Échap revient. (4) Filaire :
+  adresses copiables, une par ligne, aucune ne déborde de la carte. (5) VPN : la liste et l'interrupteur de chaque
+  connexion. (6) Une fenêtre réduite à 720 × 480 défile sans couper une carte. **Reporté, non validé ici :** les couleurs et
+  le jour thématisé, renvoyés au lot 4 (D102, L2-50) ; le VPN n'a pas été éprouvé avec une vraie connexion, Nicolas n'en
+  ayant pas encore.
+- **Pièges rencontrés.** Écrire `Networking.wifiDevices[i].scannerEnabled` gèle l'interface environ 0,5 s : la fenêtre
+  demande donc le balayage une fois, après sa première image, et pour toute sa vie (D105). Un `Coche` dans un `Layout`
+  est écrasé s'il n'a pas de taille préférée.
+
 ## Lecteur d'empreinte — nouveau
 
 Cet élément n'existe dans aucun document du projet. Il est consigné ici parce qu'il s'installe au lot 1, mais **son travail de conception appartient au lot 5**.
@@ -2109,6 +2147,7 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 
 | Version | Date | Changement |
 | --- | --- | --- |
+| 1.29 | 2026-11-01 | Le réseau (L2-11) : popover, fenêtre en onglets, ouverture, tests et recette validée à l'écran (D103 à D105) |
 | 1.28 | 2026-10-31 | Le thème d'icônes DuneI (L4-12, première tranche) : déploiement, table de correspondance, `make phosphor`, retour arrière, relevés et recette (D101) |
 | 1.27 | 2026-10-31 | La barre système (L2-08) : piège du masque `Region { item: … }` qui ne suit pas ses ancêtres, et vérification du masque de saisie par la position réelle du curseur (D100) |
 | 1.26 | 2026-10-31 | Énergie (L1-09) : garde du bouton marche au réveil, `dunei-garde-reveil.service` et `sleep.target.d/10-dunei.conf`, vérification et recette en attente (D99) |

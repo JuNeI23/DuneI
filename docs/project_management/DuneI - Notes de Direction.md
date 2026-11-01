@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas — révisée le 22 octobre 2026
 
-Version 1.31. Historique en fin de document.
+Version 1.32. Historique en fin de document.
 
 *Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent cinquante-huit lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
 
@@ -461,19 +461,26 @@ barre, écart qu'il a accepté. La barre et le sélecteur de fichiers GTK de Fir
 de mémoire proportionnelle (178,3 Mio au relevé précédent) et 0,1 % de processeur au repos. Qt reste hors périmètre :
 Nicolas veut à terme un thème de plateforme Qt pour toute la session, nouvelle ligne L2-49.
 
-Prochaine étape : **L2-11, l'indicateur réseau et son popover.** Nicolas bascule souvent sur le partage de connexion de
-son téléphone quand le Wi-Fi local est « connecté sans internet », sans qu'aucune notification ne le dise : il veut une
-icône distincte pour cet état. Il change aujourd'hui de réseau par `nmtui` (dans un terminal : activer une connexion,
-relancer la recherche), complet mais lourd et laid, et il tient au bouton qui force la recherche. Il aime les
-notifications « connexion établie » et « connexion perdue ». Le sort de `nm-applet` reste à trancher. L2-44 et L2-45 se
-traitent en passant, quand un composant touché par leurs reliquats est rouvert. La feature commence par l'enjeu et par
-un repérage, jamais par du code.
+Le 2026-11-01, L2-11 est livrée et validée à l'écran (D103 à D105). Le popover réseau suit l'essai D5 : 288 px, sur
+le verre de E3 à 60 % jour et nuit, réseau joint dans l'en-tête, mot de passe sans plaque, actions en texte seul, icône
+de la barre pleine tant qu'il est ouvert. La fenêtre Réseau est refaite sur la direction D4 : une barre latérale à trois
+onglets (Wi-Fi, Filaire, VPN), des cartes de réglages, une sous-page par profil enregistré, et un onglet VPN minimal
+(liste et interrupteur par connexion) ; l'import d'un fichier, les identifiants et la sous-page d'un VPN sont reportés
+en L2-51, faute d'accès VPN pour tester. Les formes sont des jetons (`Theme.reglages.*`, D104) et le motif entre dans la
+bible comme modèle de toute fenêtre de réglages. Le changement d'onglet est passé de 300 à 600 ms à moins de 10 ms
+(pages gardées vivantes, balayage Wi-Fi demandé une fois pour toute la vie de la fenêtre). Le jour thématisé et les
+couleurs de la fenêtre restent renvoyés au lot 4 (D102) ; Nicolas a ajouté l'idée d'un popover dédié au thème et à la
+luminosité (L2-52, à peser avec L2-29 et L2-50). Le sort de `nm-applet` se tranche à la recette de sortie.
+
+Prochaine étape : **fusionner L2-11** (la PR de `feat/reseau`, après la relecture finale de la branche), puis, à la
+demande de Nicolas, **L2-50, le retrait du jour thématisé**, dans sa propre branche, aussitôt après la fusion.
 
 ## Historique des versions
 
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-10 | Version initiale |
+| 1.32 | 2026-11-01 | L2-11 livrée et validée à l'écran (popover D5, fenêtre Réseau D4, VPN minimal ; D103 à D105) ; L2-52 ajoutée ; prochaine étape : fusion de L2-11, puis L2-50 en branche à part |
 | 1.31 | 2026-10-31 | Première tranche du thème d'icônes DuneI (L4-12, D101) livrée et validée à l'écran, graisse bold ; L2-49 ajoutée (thème de plateforme Qt) ; prochaine étape : L2-11, l'indicateur réseau et son popover |
 | 1.30 | 2026-10-31 | Masque de saisie de la barre calculé rangée par rangée (L2-08, D100) : les deux bugs de la coque sont corrigés ; prochaine étape : popover du réseau ou prochain module de la presqu'île |
 | 1.29 | 2026-10-31 | Garde du bouton marche au réveil (L1-09, D99) contre l'appui fantôme ; prochaine étape : le bug 2 de la coque (barre inerte au survol et au clic gauche après un réveil), puis le popover du réseau ou le prochain module |

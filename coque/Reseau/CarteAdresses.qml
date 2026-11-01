@@ -7,8 +7,9 @@ import "../Composants"
 // Rôle : partagée par PageWifi (réseau joint) et PageFilaire (profil filaire actif) : le titre, puis une carte (D4)
 // d'une rangée par champ non vide, chaque valeur d'un champ multiple (IPv4, DNS, IPv6) sur sa propre ligne, calée à
 // droite, tronquée au milieu si elle dépasse la largeur libre, et la rangée grandit avec elles (Valeur : un clic la
-// copie), précédée de la méthode IPv4 quand on la donne. Les adresses d'EtatReseau sont celles de etat.appareil (le filaire s'il
-// est actif aussi) : la section n'est montrée que si l'appareil du profil donné est celui qu'EtatReseau lit, comme le détail de FicheProfil.
+// copie), précédée de la méthode IPv4 quand on la donne. Les adresses d'EtatReseau sont celles de etat.appareil (le
+// filaire s'il est actif aussi) : la section n'est montrée que si l'appareil du profil donné est celui qu'EtatReseau
+// lit, comme le détail de FicheProfil.
 // Entrées : etat, la source de l'état, EtatReseau par défaut ; rangee, la rangée du profil actif concerné
 // (nmcli.profilsFenetre : appareil), null sans profil ; methode, « Automatique », « Fixe » ou vide si elle n'est pas
 // lue encore.
