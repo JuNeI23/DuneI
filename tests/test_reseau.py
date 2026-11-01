@@ -968,3 +968,124 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
         self.ipc("essai", "choisir", "filaire-1")
         e = self.jusqua(lambda e: e["fiche"]["uuid"] == "filaire-1" and e["fiche"]["lu"], "profil filaire lu")
         self.assertEqual(e["detail"].get("IPv4"), "10.0.0.2/24")
+
+
+@unittest.skipUnless(os.environ.get("WAYLAND_DISPLAY") and QS, "session Wayland et Quickshell requis")
+class NotificationsTest(EssaiCoque, unittest.TestCase):
+    """Les notifications de connexion, éprouvées avec des entrées fixées par le test et une commande factice.
+
+    Le délai de stabilité (motion.delays.stable) est ramené à 1,5 s dans le mouvement de l'essai, avant le lancement.
+    Chaque test prouve l'absence d'une notification par la suite : une transition franche, attendue, après quoi le
+    journal ne doit contenir que ce qui est attendu, sans fenêtre de temps à deviner.
+    """
+
+    essai = ESSAI / "notifications"
+    teintes = (55,)
+    STABLE = 1500
+
+    def setUp(self):
+        super().setUp()
+        bin_ = Path(self.tmp.name) / "bin"
+        bin_.mkdir()
+        # Aucun nmcli réel : le moniteur dort, la lecture ne rend rien.
+        nmcli = bin_ / "nmcli"
+        nmcli.write_text('#!/bin/sh\n[ "$1" = monitor ] && exec sleep 600\nexit 0\n')
+        nmcli.chmod(0o755)
+        self.notifs = Path(self.tmp.name) / "notifs"
+        self.environnement = {"QT_QPA_PLATFORM": "offscreen", "PATH": f"{bin_}:{os.environ['PATH']}",
+                              "NOTIF_JOURNAL": str(self.notifs)}
+        self.installer(55)
+        mouvement = self.dir / "motion.json"
+        donnees = json.loads(mouvement.read_text())
+        donnees["delays"]["stable"] = self.STABLE
+        mouvement.write_text(json.dumps(donnees))
+        self.lancer(self.dir)
+        self.attendre("essai : prêt")
+        # Le premier état est appris sans bruit, au bout du délai : aucune notification au démarrage.
+        self.jusqua(lambda: self.ipc("essai", "stable") == "etablie", "état initial appris")
+        self.assertEqual(self.recues(), [])
+
+    def ipc(self, cible: str, fonction: str, *args: str) -> str:
+        """Appelle une fonction IPC de la coque d'essai. Entrées : cible, fonction, args. Sortie : la sortie standard."""
+        return subprocess.run([QS, "ipc", "--pid", str(self.proc.pid), "call", cible, fonction, *args],
+                              check=True, capture_output=True, text=True, timeout=DELAI).stdout.strip()
+
+    def jusqua(self, condition, message: str):
+        """Attend, au plus DELAI secondes, qu'une condition devienne vraie.
+
+        Entrées : condition, fonction sans argument → bool ; message, ajouté à l'échec. Sortie : aucune.
+        Erreurs : échec du test au délai, avec le journal de la coque. Dépendances : aucune.
+        """
+        fin = time.monotonic() + DELAI
+        while not condition():
+            if time.monotonic() > fin:
+                self.fail(f"{message}\n{self.recues()}\n{self.journal()}")
+            time.sleep(0.05)
+
+    def recues(self) -> list[list[str]]:
+        """Notifications reçues par la commande factice, une liste [icône, titre, corps] chacune."""
+        return [l.split("|") for l in self.notifs.read_text().splitlines()] if self.notifs.exists() else []
+
+    def regler(self, connecte: bool, connectivite: str, nom: str = "Maison"):
+        """Fixe les entrées de l'état du réseau. Entrées : connecte, connectivite, nom. Dépendances : ipc."""
+        self.ipc("essai", "regler", str(connecte).lower(), connectivite, nom)
+
+    def attendre_n(self, n: int) -> list[list[str]]:
+        """Attend la n-ième notification et rend toutes celles reçues. Entrée : n. Dépendances : jusqua, recues."""
+        self.jusqua(lambda: len(self.recues()) >= n, f"{n} notification(s) attendue(s)")
+        return self.recues()
+
+    def test_perdue(self):
+        self.regler(False, "unknown")
+        self.assertEqual(self.attendre_n(1), [["network-wireless-offline", "Connexion perdue", "Maison"]])
+
+    def test_sans_internet(self):
+        self.regler(True, "limited", "Telephone")
+        self.assertEqual(self.attendre_n(1), [[
+            "network-wireless-no-route", "Connecté sans internet", "Telephone ne donne pas accès à internet"]])
+
+    def test_portail(self):
+        self.regler(True, "portal", "Hotel")
+        self.assertEqual(self.attendre_n(1), [[
+            "network-wireless-no-route", "Connexion à valider", "Hotel demande de passer par sa page d'accueil"]])
+
+    def test_etablie_apres_perdue(self):
+        # Retour de la connexion : l'icône est celle de l'état courant de EtatReseau.
+        self.regler(False, "unknown")
+        self.attendre_n(1)
+        self.regler(True, "full", "Bureau")
+        n = self.attendre_n(2)
+        self.assertEqual(n[1][1:], ["Connexion établie", "Bureau"])
+        self.assertTrue(n[1][0].startswith("network-"), n[1])
+
+    def test_coupure_courte_ne_produit_rien(self):
+        # Coupure rétablie avant le délai : rien. La transition franche qui suit est la seule notification.
+        self.regler(False, "unknown")
+        self.regler(True, "full")
+        self.assertEqual(self.ipc("essai", "armee"), "false", "retour à l'état stable : minuteur arrêté")
+        self.regler(True, "limited")
+        self.assertEqual([n[1] for n in self.attendre_n(1)], ["Connecté sans internet"])
+        self.regler(True, "full")
+        self.assertEqual([n[1] for n in self.attendre_n(2)], ["Connecté sans internet", "Connexion établie"])
+
+    def test_bascules_rapides_une_seule_notification(self):
+        for etat in ((False, "unknown"), (True, "limited"), (True, "full"), (False, "unknown"), (True, "limited")):
+            self.regler(*etat)
+        self.attendre_n(1)
+        self.regler(False, "unknown")
+        self.assertEqual([n[1] for n in self.attendre_n(2)], ["Connecté sans internet", "Connexion perdue"])
+
+    def test_connectivite_inconnue_ignoree(self):
+        # Après une veille, la connectivité repasse par « unknown » connecté : ni minuteur ni notification.
+        self.regler(True, "unknown")
+        self.assertEqual(self.ipc("essai", "armee"), "false")
+        self.regler(False, "unknown")
+        self.assertEqual([n[1] for n in self.attendre_n(1)], ["Connexion perdue"])
+
+    def test_pas_de_minuteur_au_repos(self):
+        self.assertEqual(self.ipc("essai", "armee"), "false")
+        self.regler(False, "unknown")
+        self.assertEqual(self.ipc("essai", "armee"), "true")
+        self.attendre_n(1)
+        self.assertEqual(self.ipc("essai", "armee"), "false")
+        self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
