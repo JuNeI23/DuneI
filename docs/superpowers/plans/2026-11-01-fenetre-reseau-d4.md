@@ -140,5 +140,5 @@ gardés dans le profil ou demandés par un agent de secrets de la coque.
 | Version | Date | Changement |
 |---|---|---|
 | 0.1 | 2026-11-01 | Première rédaction, après les arbitrages de Nicolas sur la sous-page, le VPN et les formes. |
-| 0.3 | 2026-11-01 | L'angle de la fenêtre reste à 12 ; plateau et cartes à radius.panel, sans jeton de rayon nouveau. |
 | 0.2 | 2026-11-01 | VPN ramené à une page minimale ; import et identifiants reportés au backlog. |
+| 0.3 | 2026-11-01 | L'angle de la fenêtre reste à 12 ; plateau et cartes à radius.panel, sans jeton de rayon nouveau. |
