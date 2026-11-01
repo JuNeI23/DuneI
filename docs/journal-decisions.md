@@ -2416,3 +2416,19 @@ sous `<nom>-symbolic.svg` et `<nom>-fill-symbolic.svg`, soit 100 fichiers. Le no
 *Touché : `icones/`, `generate_icones.py`, `phosphor.py`, `deploy.py`, `tokens.toml`, `Makefile`, `coque/` (directives
 `IconTheme`), `tests/`, carnet (§ Le thème d'icônes — L4-12), backlog (L4-12, L2-49), bible (chapitre 9), notes de
 direction.*
+
+### D102 · Le jour thématisé est retiré jusqu'au lot 4
+
+2026-11-01. **La coque ne garde que trois thèmes : dominante jour, dominante nuit et thématisée nuit.** Le jour
+thématisé (D84), surface colorée par la teinte du fond, est retiré jusqu'au lot 4 ; il y reviendra avec le panneau
+de thème et l'extraction de teinte, s'il trouve alors une palette juste.
+
+- **Raison.** Les essais de la refonte visuelle du réseau (L2-11) ont montré que le jour thématisé ne tient pas :
+  `surfaceRaised` et `controlRaised` y valent tous deux la couleur de E3, si bien qu'une carte posée sur un
+  popover disparaît, et aucune sélection neutre n'y est visible. Nicolas a jugé ces rendus « immondes » et préfère ne
+  pas arbitrer une palette qu'il ne maîtrise pas encore : « Theme dominante jour fera l'affaire ».
+- **Conséquences.** Les composants n'ont plus à être éprouvés que sur trois thèmes. La dérogation au corps de texte
+  accordée en D84 pour le jour thématisé tombe avec lui. Le retrait lui-même (jetons, `dunei-theme`, planche,
+  tests) est porté par L2-50.
+
+*Touché : journal, backlog (L2-50).*

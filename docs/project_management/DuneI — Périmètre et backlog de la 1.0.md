@@ -302,6 +302,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L2-47 | B | Écrit | Mouvement réduit dans la coque — l'interrupteur du mode (L2-07) n'est lu par aucun composant ; `Ressort` et `ColorSpring` devraient le respecter |
 | L2-48 | B | Écrit | Presqu'île — transitions d'apparition et de disparition (plein écran, démarrage, changement de module), à concevoir avec le premier module qui change sa forme (D98) |
 | L2-49 | B | Écrit | Thème de plateforme Qt pour toute la session — `QT_QPA_PLATFORMTHEME` : icônes DuneI (D101), mais aussi polices, couleurs et dialogues ; Dolphin est la seule application Qt ; à traiter après repérage (voie large voulue par Nicolas, D101) |
+| L2-50 | C | Écrit | Retrait du jour thématisé jusqu'au lot 4 (D102) — trois thèmes seulement : dominante jour, dominante nuit, thématisée nuit ; `coque-tokens.json`, `dunei-theme` (une demande « thématisée jour » se replie sur dominante jour), planche et tests ; la dérogation au corps de texte de D84 tombe avec lui |
 
 ### Lot 3 — la bascule
 
