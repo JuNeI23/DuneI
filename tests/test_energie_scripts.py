@@ -99,5 +99,56 @@ class ScriptsTest(unittest.TestCase):
                 self.assertIn("usage", res.stderr)
 
 
+class BoutonMarcheTest(unittest.TestCase):
+    """Double appui du bouton marche (D106) : seul un second appui dans la seconde met en veille."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        t = Path(self.tmp.name)
+        (t / "bin").mkdir()
+        (t / "run").mkdir()
+        (t / "bin" / "systemctl").write_text('#!/bin/sh\necho "$*" >> "$FAKE_LOG"\n', encoding="utf-8")
+        (t / "bin" / "systemctl").chmod(0o755)
+        self.log, self.horloge = t / "log", t / "uptime"
+        self.env = {**os.environ, "PATH": f"{t / 'bin'}:{os.environ['PATH']}", "FAKE_LOG": str(self.log),
+                    "XDG_RUNTIME_DIR": str(t / "run"), "DUNEI_HORLOGE": str(self.horloge)}
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def appui(self, secondes: str) -> int:
+        """Simule un appui à l'instant donné (format de /proc/uptime) ; sortie : code du script."""
+        self.horloge.write_text(f"{secondes} 1.00\n", encoding="utf-8")
+        return subprocess.run([str(SCRIPTS / "dunei-bouton-marche")], env=self.env).returncode
+
+    def veilles(self) -> list[str]:
+        """Appels de systemctl, dans l'ordre."""
+        return self.log.read_text().splitlines() if self.log.exists() else []
+
+    def test_appui_isole(self):
+        self.assertEqual(self.appui("5000.00"), 0)
+        self.assertEqual(self.veilles(), [])
+
+    def test_double_appui(self):
+        self.appui("5000.00")
+        self.appui("5000.60")
+        self.assertEqual(self.veilles(), ["suspend"])
+
+    def test_appuis_espaces(self):
+        self.appui("5000.00")
+        self.appui("5002.00")
+        self.assertEqual(self.veilles(), [])
+
+    def test_triple_appui_une_seule_veille(self):
+        for t in ("5000.00", "5000.40", "5000.80"):
+            self.appui(t)
+        self.assertEqual(self.veilles(), ["suspend"])
+
+    def test_service_de_session(self):
+        unite = (ROOT / "config" / "systemd" / "user" / "dunei-bouton-marche.service").read_text(encoding="utf-8")
+        self.assertIn("ExecStart=/usr/bin/systemd-inhibit --what=handle-power-key --mode=block ", unite)
+        self.assertIn("PartOf=graphical-session.target", unite)
+
+
 if __name__ == "__main__":
     unittest.main()

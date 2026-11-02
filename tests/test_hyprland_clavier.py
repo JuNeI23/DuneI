@@ -53,6 +53,7 @@ HW = {
     "XF86AudioMicMute": ("wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle", "{locked=true,submap_universal=true}"),
     "XF86MonBrightnessDown": ("brightnessctl -e4 -n2 set 5%-", "{locked=true,repeating=true,submap_universal=true}"),
     "XF86MonBrightnessUp": ("brightnessctl -e4 -n2 set 5%+", "{locked=true,repeating=true,submap_universal=true}"),
+    "XF86PowerOff": ('"${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/dunei-bouton-marche"', "{locked=true,submap_universal=true}"),
 }
 
 

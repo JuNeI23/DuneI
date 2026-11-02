@@ -49,6 +49,9 @@ M.touches = {
       drapeaux = { locked = true, repeating = true }, description = "Baisser la luminosité" },
     { touches = "XF86MonBrightnessUp", action = "commande", commande = "brightnessctl -e4 -n2 set 5%+",
       drapeaux = { locked = true, repeating = true }, description = "Monter la luminosité" },
+    { touches = "XF86PowerOff", action = "commande",
+      commande = '"${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/dunei-bouton-marche"',
+      drapeaux = { locked = true }, description = "Mettre en veille par un double appui du bouton marche" },   -- D106
     -- Réservées : la touche est prise, rien n'est lié avant l'élément du backlog
     { touches = "SUPER + slash", reserve = "L2-28", description = "Afficher les raccourcis" },
     { touches = "Control_L",     reserve = "L2-36", drapeaux = { long_press = true },
