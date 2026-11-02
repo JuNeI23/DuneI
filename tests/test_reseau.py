@@ -140,7 +140,7 @@ class NmcliTest(EssaiCoque, unittest.TestCase):
         # Réseau ouvert et visible : ni sécurité ni « hidden » ; un nom hostile passe tel quel, en un seul argument.
         self.assertEqual(self.appeler("argsAjouter", {"nom": "Café: \\x", "securise": False, "mdp": "", "cache": False}),
                          ["connection", "add", "type", "wifi", "con-name", "Café: \\x", "ssid", "Café: \\x"])
-        # Réseau sécurisé et caché : WPA2-WPA3 personnel (wpa-psk) et son mot de passe, puis « hidden yes ».
+        # Réseau sécurisé et caché : WPA2 personnel (wpa-psk) et son mot de passe, puis « hidden yes ».
         self.assertEqual(self.appeler("argsAjouter", {"nom": "Maison", "securise": True, "mdp": "m0t de passe",
                                                       "cache": True}),
                          ["connection", "add", "type", "wifi", "con-name", "Maison", "ssid", "Maison",
@@ -777,6 +777,18 @@ class PageWifiTest(EssaiCoque, unittest.TestCase):
         # Adresses, en lecture seule.
         self.assertEqual(p["adresses"], {"Configuration IPv4": "Automatique", "Adresse IPv4": "192.168.1.42/24",
                                          "Passerelle": "192.168.1.1", "DNS": "192.168.1.1", "IPv6": "fe80::1/64"})
+        self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
+
+    def test_retour_de_sous_page_relit_le_resume(self):
+        # Les pages restent vivantes : la carte du réseau joint est relue au retour d'une sous-page de l'onglet Wi-Fi,
+        # pour montrer ce que « Détails… » a modifié, ici la priorité.
+        self.assertEqual(self.page()["priorite"], 5)
+        self.ipc("sousPage", "wifi-1")
+        self.ipc("prioriteLue", "8")
+        time.sleep(0.3)
+        self.assertEqual(self.page()["priorite"], 5)
+        self.ipc("sousPage", "")
+        self.jusqua(lambda p: p["priorite"] == 8, "priorité relue au retour")
         self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
 
     def test_adresses_multiples_une_par_ligne(self):

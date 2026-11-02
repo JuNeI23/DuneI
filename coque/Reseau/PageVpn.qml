@@ -18,8 +18,8 @@ import "nmcli.js" as Nmcli
 // (« Clavier » et « Interrupteur »).
 // Entrées : panneau, le PanneauReseau ; etat, la source de l'état, EtatReseau par défaut (profils, executer).
 // Sorties : connexions, les VPN lus (nmcli.js, vpns) ; enCours, les actions non terminées (uuid → état voulu) ;
-// erreurs, objet uuid → message de nmcli pour les refus affichés. Erreurs : un échec de nmcli se montre sous la rangée
-// et remet l'interrupteur à l'état réel.
+// erreurs, objet uuid → message de nmcli pour les refus affichés.
+// Erreurs : un échec de nmcli se montre sous la rangée et remet l'interrupteur à l'état réel.
 // Dépendances : TitrePage, Section, Groupe, Ligne, Interrupteur, Texte, Theme, nmcli.js, EtatReseau.
 ColumnLayout {
     id: page
@@ -40,6 +40,10 @@ ColumnLayout {
         if (JSON.stringify(u) !== JSON.stringify(uuids)) uuids = u
     }
     Component.onCompleted: uuids = connexions.map(c => c.uuid)
+    // Garde des réponses de nmcli : marquée morte à la destruction, pour qu'un retour tardif après la fermeture de la
+    // fenêtre n'écrive plus rien.
+    property var garde: ({mort: false})
+    Component.onDestruction: garde.mort = true
 
     spacing: 0
 
@@ -47,13 +51,16 @@ ColumnLayout {
     // monter. Sortie : aucune ; enCours[uuid] vaut voulu jusqu'à la fin de nmcli (une seconde demande pour la même
     // connexion est ignorée), puis l'interrupteur suit l'état réel ; erreurs[uuid] reçoit le message de nmcli en cas
     // de refus (« La connexion a échoué. » si nmcli n'en donne aucun) et est effacé sinon.
-    // Erreurs : un code non nul garde le message. Dépendances : etat.executer.
+    // Erreurs : un code non nul garde le message ; une réponse arrivée après la destruction de la page est ignorée
+    // (garde). Dépendances : etat.executer.
     function basculer(uuid, voulu) {
         if (uuid in enCours) return
         const e = Object.assign({}, erreurs); delete e[uuid]; erreurs = e
         enCours = Object.assign({}, enCours, {[uuid]: voulu})
+        const g = garde
         etat.executer(voulu ? ["-w", "30", "connection", "up", "uuid", uuid] : ["-w", "10", "connection", "down", "uuid", uuid],
             (code, sortie) => {
+                if (g.mort) return
                 if (code !== 0) erreurs = Object.assign({}, erreurs, {[uuid]: sortie.trim() || "La connexion a échoué."})
                 const r = Object.assign({}, enCours); delete r[uuid]; enCours = r
             })

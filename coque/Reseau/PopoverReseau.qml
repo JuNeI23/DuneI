@@ -34,9 +34,9 @@ import "nmcli.js" as Nmcli
 // Sorties : ferme(), voir Overlay ; panneau, le contenu construit, null fermé, lu par les essais.
 // Erreurs : un connectionFailed déplie la ligne de mot de passe avec « Mot de passe refusé » (raison
 // d'authentification) ou « Connexion impossible ». Le texte d'un mot de passe ne passe jamais au journal.
-// Dépendances : Overlay (famille contextuel), Bascule, Activite, Infobulle, Rangee, Bouton, ChampSecret, Separateur,
+// Dépendances : Overlay (famille contextuel), Bascule, Activite, Infobulle, Rangee, Bouton, BlocSecret, Jonction, Separateur,
 // Icone, Texte, Theme (density, space, material, motion par Ressort), Ressort, EtatReseau, nmcli.js (trierReseaux,
-// resume), icones.js (iconeReseau), Quickshell.Networking (ConnectionFailReason, ConnectionState, WifiSecurityType).
+// resume), icones.js (iconeForce), Quickshell.Networking (ConnectionFailReason, ConnectionState, WifiSecurityType).
 // Cotes : surface de 72 × space.scale[0] (288 px) de large comme l'essai D5, panneau de 280 px dans le retrait de
 // l'Overlay ; contenu à space.scale[2] (12) du bord du panneau, rangées sur toute sa largeur ; rangées de
 // density.controlHeight plus space.scale[0] (32 px).
@@ -233,13 +233,6 @@ Overlay {
             etat.executer(["device", "wifi", "rescan"])
         }
 
-        // iconeSignal — icône de force d'un réseau de la liste, aux mêmes paliers que la barre.
-        // Entrée : force, de 0 à 1. Sortie : nom « network-wireless-signal-… ». Erreurs : aucune.
-        // Dépendances : icones.js (iconeReseau).
-        function iconeSignal(force: real): string {
-            return Icones.iconeReseau({ carte: true, radio: true, connecte: true, connectivite: "full", force })
-        }
-
         // fermer — referme le popover après une action qui ouvre autre chose. Entrées : aucune. Sortie : aucune.
         function fermer(): void { popover.ouvert = false }
 
@@ -419,7 +412,7 @@ Overlay {
                                 width: parent.width
                                 implicitHeight: panneau.hauteurLigne
                                 hoverEnabled: true
-                                icone: panneau.iconeSignal(ligne.modelData?.signalStrength ?? 0)
+                                icone: Icones.iconeForce(ligne.modelData?.signalStrength ?? 0)
                                 text: ligne.cle
                                 onActive: panneau.choisir(ligne.modelData)
                                 suffixe: Component {

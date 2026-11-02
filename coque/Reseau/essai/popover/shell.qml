@@ -108,7 +108,7 @@ ShellRoot {
                 // recherche, fenetre — valeurs de l'état factice, en JSON. Sortie : texte.
                 function recherche(): string { return JSON.stringify(faux.recherche) }
                 function fenetre(): string { return JSON.stringify(faux.fenetre) }
-                // profilDemande — profil demandé à la fenêtre par « Détails… », en JSON. Sortie : texte.
+                // profilDemande — profil demandé à la fenêtre (le popover ne le pose plus : il le vide), en JSON. Sortie : texte.
                 function profilDemande(): string { return JSON.stringify(faux.profilDemande) }
                 // connectivite — change la connectivité factice. Entrée : valeur. Sortie : aucune.
                 function connectivite(valeur: string): void { faux.connectivite = valeur }

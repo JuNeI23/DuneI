@@ -43,10 +43,10 @@ class BarreStatiqueTest(unittest.TestCase):
         # Tout littéral rendu par les fonctions d'icône de icones.js, plus les icônes fixes, figure dans la table.
         texte = (ROOT / "coque" / "Barre" / "icones.js").read_text(encoding="utf-8")
         corps = "".join(re.findall(r"^function icone\w+.*?^}", texte, re.S | re.M))
-        # Ne sont pas des noms d'icône : « nuit » (argument d'iconeMoment), les cinq paliers du Wi-Fi, les deux états de
-        # connectivité d'iconeReseau (« limited », « portal ») et les
+        # Ne sont pas des noms d'icône : « nuit » (argument d'iconeMoment), les cinq paliers du Wi-Fi, les états de
+        # connectivité d'iconeReseau et d'iconeForce (« limited », « portal », « full ») et les
         # préfixes ou suffixes que les fonctions concatènent (les noms complets viennent de ICONES).
-        litteraux = set(re.findall(r'"([a-z0-9-]+)"', corps)) - {"nuit", "none", "weak", "ok", "good", "excellent", "limited", "portal"}
+        litteraux = set(re.findall(r'"([a-z0-9-]+)"', corps)) - {"nuit", "none", "weak", "ok", "good", "excellent", "limited", "portal", "full"}
         litteraux -= {"network-wireless-signal-", "battery-level-", "-charging"}
         fixes = {n for dossier in ("Barre", "Composants") for q in (ROOT / "coque" / dossier).glob("*.qml")
                  for n in LITTERAUX_QML.findall(q.read_text(encoding="utf-8"))} \
@@ -122,6 +122,7 @@ class IconesTest(BarreIpc, unittest.TestCase):
         self.assertEqual(self.reseau(connecte=False), "network-wireless-offline")
         self.assertEqual(self.reseau(connecte=False, connectivite="limited"), "network-wireless-offline")
         self.assertEqual(self.reseau(connectivite="limited"), "network-wireless-no-route")
+        self.assertEqual(self.reseau(connectivite="none"), "network-wireless-no-route")
         self.assertEqual(self.reseau(connectivite="portal", facture=True), "network-wireless-no-route")
         self.assertEqual(self.reseau(facture=True), "network-wireless-hotspot")
         self.assertEqual(self.reseau(connectivite="unknown"), "network-wireless-signal-excellent")

@@ -2,43 +2,44 @@ import QtQuick
 import QtQuick.Layouts
 import "../Theme"
 import "../Composants"
+import "../Composants/etats.js" as Etats
 import "../Barre/icones.js" as Icones
 import "nmcli.js" as Nmcli
 
 // PageWifi — page de l'onglet Wi-Fi de la fenêtre Réseau (direction D4).
-// Rôle : le titre « Wi-Fi » avec l'interrupteur de la radio, puis, radio allumée, quatre cartes : le réseau joint
-// (la FicheProfil en mode résumé, qui porte la rangée de tête, le mot de passe à l'œil, la connexion automatique, la
-// priorité, la facturation et « Détails… » ; aucune logique nmcli n'est dupliquée ici), les réseaux disponibles,
-// les profils enregistrés hors de portée suivis d'« Autre réseau… », et les adresses du réseau joint en lecture
-// seule, copiables (Valeur). Radio coupée : le titre et la carte des profils enregistrés, s'il y en a, seuls (ni « Autre réseau… » ni adresses).
-// Les adresses ne sont montrées que si l'appareil du profil joint est celui qu'EtatReseau lit (etat.appareil).
-// Réseaux disponibles : ceux d'etat.reseaux, triés par Nmcli.trierReseaux, sans le réseau joint. Un clic rejoint
-// un réseau connu ou ouvert (« Connexion… » et l'Activite sur la rangée) ; sur un réseau inconnu et sécurisé, il
-// déplie sous la rangée le BlocSecret (partagé avec le popover), qu'un second clic replie. Un connectionFailed
-// déplie la rangée avec « Mot de passe refusé. Vérifiez-le et réessayez. » (secrets absents, refusés, délai
-// d'authentification, client déconnecté) ou « Connexion impossible. », comme le popover. Comme lui, l'ordre est figé
-// tant qu'une rangée est dépliée, pour ne perdre ni la saisie ni l'erreur. « Rechercher » (accent autonome, plaque
-// de survol arrondie) relance « nmcli device wifi rescan » ; l'Activite et « Recherche… » la remplacent jusqu'au
-// retour de la liste, au plus motion.delays.scan.
-// Balayage : le balayage Wi-Fi est demandé par
-// etat.rechercheFenetre : elle n'y touche plus, c'est le PanneauReseau qui la pose pour toute la vie de la fenêtre ; le popover
-// écrit etat.recherche, une autre propriété : EtatReseau balaye tant que l'une des deux est vraie, si bien que la
-// fermeture du popover ne coupe pas la demande de la fenêtre, ni l'inverse (voir EtatReseau.balayage).
+// Rôle : le titre « Wi-Fi » avec l'interrupteur de la radio, puis, radio allumée, quatre cartes : le réseau joint (la
+// FicheProfil en mode résumé, qui porte la rangée de tête, le mot de passe à l'œil, la connexion automatique, la
+// priorité, la facturation et « Détails… » ; aucune logique nmcli n'est dupliquée ici), les réseaux disponibles, les
+// profils enregistrés hors de portée suivis d'« Autre réseau… », et les adresses du réseau joint en lecture seule,
+// copiables (Valeur). Radio coupée : le titre et la carte des profils enregistrés, s'il y en a, seuls (ni « Autre
+// réseau… » ni adresses). Les adresses ne sont montrées que si l'appareil du profil joint est celui qu'EtatReseau lit
+// (etat.appareil). Réseaux disponibles : ceux d'etat.reseaux, triés par Nmcli.trierReseaux, sans le réseau joint. Un
+// clic rejoint un réseau connu ou ouvert (« Connexion… » et l'Activite sur la rangée) ; sur un réseau inconnu et
+// sécurisé, il déplie sous la rangée le BlocSecret (partagé avec le popover), qu'un second clic replie. Un
+// connectionFailed déplie la rangée avec « Mot de passe refusé. Vérifiez-le et réessayez. » (secrets absents, refusés,
+// délai d'authentification, client déconnecté) ou « Connexion impossible. », comme le popover. Comme lui, l'ordre est
+// figé tant qu'une rangée est dépliée, pour ne perdre ni la saisie ni l'erreur. « Rechercher » (accent autonome, plaque
+// de survol arrondie) relance « nmcli device wifi rescan » ; l'Activite et « Recherche… » la remplacent jusqu'au retour
+// de la liste, au plus motion.delays.scan.
+// Balayage : le balayage Wi-Fi est demandé par etat.rechercheFenetre : elle n'y touche plus, c'est le PanneauReseau qui
+// la pose pour toute la vie de la fenêtre ; le popover écrit etat.recherche, une autre propriété : EtatReseau balaye
+// tant que l'une des deux est vraie, si bien que la fermeture du popover ne coupe pas la demande de la fenêtre, ni
+// l'inverse (voir EtatReseau.balayage).
 // Clavier : toutes les rangées cliquables sont des Ligne, et « Rechercher » prend la tabulation, Entrée et Espace avec
-// le même contour de focus (tabulation, Entrée, Espace, contour de focus, plaque de
-// survol : bible, « Clavier » et « Survol »). Interrupteur : bible, « Interrupteur ». Priorité : Compteur (bible,
-// « Compteur »). Formes : jetons Theme.reglages seuls (bible, « Formes »).
-// Entrées : panneau, le PanneauReseau (rangees, factures, ouvrirProfil, ouvrirNouveau) ; etat, la source de l'état
-// et des actions, EtatReseau par défaut.
-// Sorties : joint, la rangée du profil Wi-Fi actif (null sans lui) ; hors, les rangées des profils enregistrés hors
-// de portée ; ordre, les noms des réseaux disponibles dans l'ordre affiché ; deplie, le nom de la rangée dépliée ;
-// erreur, le message sous son champ ; balayage, vrai pendant la recherche relancée ; fiche, la FicheProfil résumée
-// du réseau joint (null sans elle).
+// le même contour de focus (tabulation, Entrée, Espace, contour de focus, plaque de survol : bible, « Clavier » et
+// « Survol »). Interrupteur : bible, « Interrupteur ». Priorité : Compteur (bible, « Compteur »). Formes : jetons
+// Theme.reglages seuls (bible, « Formes »).
+// Entrées : panneau, le PanneauReseau (rangees, factures, ouvrirProfil, ouvrirNouveau) ; etat, la source de l'état et
+// des actions, EtatReseau par défaut.
+// Sorties : joint, la rangée du profil Wi-Fi actif (null sans lui) ; hors, les rangées des profils enregistrés hors de
+// portée ; ordre, les noms des réseaux disponibles dans l'ordre affiché ; deplie, le nom de la rangée dépliée ; erreur,
+// le message sous son champ ; balayage, vrai pendant la recherche relancée ; fiche, la FicheProfil résumée du réseau
+// joint (null sans elle).
 // Erreurs : un échec nmcli du résumé s'affiche dans la carte du réseau joint (FicheProfil) ; un réseau qui quitte le
 // balayage est masqué et ne peut plus être choisi.
-// Dépendances : TitrePage, Section, Groupe, Ligne, FicheProfil, CarteAdresses, BlocSecret, Jonction, Interrupteur, Activite, Icone, Texte,
-// Valeur, ReglageLigne, Separateur, Carte, Theme (reglages, space, color, icons, motion), nmcli.js (trierReseaux),
-// icones.js (iconeReseau), PanneauReseau, EtatReseau.
+// Dépendances : TitrePage, Section, Groupe, Ligne, FicheProfil, CarteAdresses, BlocSecret, Jonction, Interrupteur,
+// Activite, Icone, Texte, Valeur, ReglageLigne, Separateur, Carte, Theme (reglages, space, color, icons, motion),
+// nmcli.js (trierReseaux), icones.js (iconeForce), PanneauReseau, EtatReseau.
 ColumnLayout {
     id: page
 
@@ -48,7 +49,8 @@ ColumnLayout {
     readonly property var joint: panneau.rangees.find(r => r.wifi && r.actif) ?? null
     readonly property var hors: panneau.rangees.filter(r => r.wifi && !r.actif && r.etat === "Hors de portée")
     readonly property var fiche: chargeurJoint.item
-    // Logique de connexion partagée avec le popover (voir Jonction) ; ordre garde les noms des réseaux disponibles triés.
+    // Logique de connexion partagée avec le popover (voir Jonction) ; ordre garde les noms des réseaux disponibles
+    // triés.
     property alias presents: jonction.presents
     property alias deplie: jonction.deplie
     property alias erreur: jonction.erreur
@@ -81,12 +83,6 @@ ColumnLayout {
     }
     Component.onCompleted: trier()
 
-    // iconeSignal — icône de force d'un réseau, aux mêmes paliers que la barre. Entrée : force, de 0 à 1.
-    // Sortie : nom « network-wireless-signal-… ». Erreurs : aucune. Dépendances : icones.js (iconeReseau).
-    function iconeSignal(force) {
-        return Icones.iconeReseau({carte: true, radio: true, connecte: true, connectivite: "full", force})
-    }
-
     // rechercher — relance « nmcli device wifi rescan » et montre l'Activite jusqu'au retour de la liste, au plus
     // finBalayage.interval (motion.delays.scan). Entrées : aucune. Sortie : aucune. Erreurs : aucune.
     // Dépendances : etat.executer, finBalayage.
@@ -112,6 +108,12 @@ ColumnLayout {
         }
         // Le réseau joint a changé : il quitte la liste, et l'ancien y revient.
         function onNomActifChanged() { page.trier() }
+    }
+    // Retour d'une sous-page de l'onglet Wi-Fi : la page restant vivante, la fiche résumée du réseau joint est relue,
+    // car « Détails… » a pu changer la connexion automatique, la priorité, la facturation ou l'IPv4.
+    Connections {
+        target: page.panneau
+        function onSousPageChanged() { if (page.panneau.sousPage === "" && page.panneau.onglet === "wifi") page.fiche?.lire() }
     }
     // Borne du retour visuel de la recherche quand le balayage ne change pas la liste ; armée par le seul clic.
     Timer { id: finBalayage; interval: Theme.motion?.delays?.scan ?? 0; onTriggered: page.balayage = false }
@@ -189,7 +191,7 @@ ColumnLayout {
                     border.width: Theme.focus?.width ?? 0
                     border.color: Theme.focus?.color ?? "transparent"
                 }
-                color: survolRelance.hovered ? Theme.stateColors("surfaceWindow", "none", tapeRelance.pressed ? "pressed" : "hover")?.fill ?? "transparent" : "transparent"
+                color: survolRelance.hovered ? Theme.stateColors(Etats.herite(relance, "dnRole", "surfaceWindow"), "none", tapeRelance.pressed ? "pressed" : "hover")?.fill ?? "transparent" : "transparent"
                 signal clique()
                 onClique: page.rechercher()
                 Row {
@@ -225,7 +227,7 @@ ColumnLayout {
                 Ligne {
                     objectName: "ligne"
                     filet: page.ordre.slice(0, dispo.index).some(n => jonction.present(page.presents.find(x => x.name === n)))
-                    icone: page.iconeSignal(dispo.r?.signalStrength ?? 0)
+                    icone: Icones.iconeForce(dispo.r?.signalStrength ?? 0)
                     libelle: dispo.modelData
                     aide: dispo.enConnexion ? "Connexion…" : ""
                     cliquable: true

@@ -8,28 +8,28 @@ import "../Barre"
 import "../Barre/icones.js" as Icones
 
 // EtatReseau — source unique de l'état du réseau pour toute la coque.
-// Rôle : réunit Quickshell.Networking (radio, cartes, réseau joint, lien filaire, connectivité) et une lecture
-// nmcli (adresse, passerelle, DNS, facturation, profils, VPN) relancée par un seul « nmcli monitor » ; l'indicateur,
-// le popover, la fenêtre et les notifications lisent tous ce singleton. Aucun minuteur au repos : la lecture ne
-// s'exécute qu'au démarrage et en réponse à une ligne du moniteur.
-// Entrées (réglables) : surveille et lecture, commandes du moniteur et de la lecture (remplaçables par un test) ;
-// actif, suspend le moniteur si faux ; recherche, vrai tant qu'un popover demande un balayage Wi-Fi, et
-// rechercheFenetre, vrai pendant toute la vie de la fenêtre Réseau (posé par son PanneauReseau après la première
-// image, rendu à sa destruction), quel que soit l'onglet : deux demandeurs, deux propriétés, si bien que la fermeture
-// de l'un ne coupe pas le balayage que l'autre réclame encore ; fenetre, vrai pour demander la fenêtre Réseau (posé par
-// « Réglages réseau… » du popover, lu par la fenêtre) ; profilDemande, uuid ou nom du profil que la fenêtre doit
-// montrer (posé par « Détails… » du popover, consommé et remis à vide par le panneau Réseau qui le sélectionne), vide
-// par défaut. Sorties (lecture seule) : veille (vrai de la ligne « asleep » du moniteur jusqu'à l'état suivant), carte,
-// radio, filaire, carteFilaire (vrai si une carte filaire existe, branchée ou non : l'onglet Filaire distingue « Câble
-// débranché » de « Aucune carte »), appareilFilaire (le premier appareil filaire de Quickshell.Networking, avec son nom
-// et son adresse matérielle, ou null sans carte filaire), connecte, connectivite (« unknown », « none », « portal », «
-// limited » ou « full »), reseauActif (WifiNetwork ou null), nomActif, force (0 à 1), facture, appareil (l'interface
-// dont la lecture donne les adresses : le filaire actif, sinon le Wi-Fi), ip4, ip6, passerelle, dns, mac (adresse
-// matérielle de l'appareil actif), profils, vpnActif, icone, reseaux (WifiNetwork de toutes les cartes, non triés) ;
-// relances, nombre de démarrages du moniteur.
+// Rôle : réunit Quickshell.Networking (radio, cartes, réseau joint, lien filaire, connectivité) et une lecture nmcli
+// (adresse, passerelle, DNS, facturation, profils, VPN) relancée par un seul « nmcli monitor » ; l'indicateur, le
+// popover, la fenêtre et les notifications lisent tous ce singleton. Aucun minuteur au repos : la lecture ne s'exécute
+// qu'au démarrage et en réponse à une ligne du moniteur. Entrées (réglables) : surveille et lecture, commandes du
+// moniteur et de la lecture (remplaçables par un test) ; actif, suspend le moniteur si faux ; recherche, vrai tant
+// qu'un popover demande un balayage Wi-Fi, et rechercheFenetre, vrai pendant toute la vie de la fenêtre Réseau (posé
+// par son PanneauReseau après la première image, rendu à sa destruction), quel que soit l'onglet : deux demandeurs,
+// deux propriétés, si bien que la fermeture de l'un ne coupe pas le balayage que l'autre réclame encore ; fenetre, vrai
+// pour demander la fenêtre Réseau (posé par « Réglages réseau… » du popover, lu par la fenêtre) ; profilDemande, uuid
+// ou nom du profil que la fenêtre doit montrer (posé par le seul PanneauReseau.ajoute, à la création d'un profil,
+// consommé et remis à vide par le panneau qui le sélectionne ; le popover le vide en ouvrant la fenêtre, et la
+// fermeture de la fenêtre le vide aussi), vide par défaut. Sorties (lecture seule) : veille (vrai de la ligne
+// « asleep » du moniteur jusqu'à l'état suivant), carte, radio, filaire, carteFilaire (vrai si une carte filaire
+// existe, branchée ou non : l'onglet Filaire distingue « Câble débranché » de « Aucune carte »), appareilFilaire (le
+// premier appareil filaire de Quickshell.Networking, avec son nom et son adresse matérielle, ou null sans carte
+// filaire), connecte, connectivite (« unknown », « none », « portal », « limited » ou « full »), reseauActif
+// (WifiNetwork ou null), nomActif, force (0 à 1), facture, appareil (l'interface dont la lecture donne les adresses :
+// le filaire actif, sinon le Wi-Fi), ip4, ip6, passerelle, dns, mac (adresse matérielle de l'appareil actif), profils,
+// vpnActif, icone, reseaux (WifiNetwork de toutes les cartes, non triés) ; relances, nombre de démarrages du moniteur.
 // Fonctions : relire, verifier, executer, allumer, ouvrirPortail.
-// Erreurs : sans nmcli ou sans NetworkManager, les valeurs nmcli restent vides et le moniteur est relancé
-// toutes les secondes (voir Relance) ; la sortie d'une lecture partielle est lue au mieux.
+// Erreurs : sans nmcli ou sans NetworkManager, les valeurs nmcli restent vides et le moniteur est relancé toutes les
+// secondes (voir Relance) ; la sortie d'une lecture partielle est lue au mieux.
 // Dépendances : Relance, nmcli.js, icones.js, Quickshell.Networking, Quickshell.Io.
 Singleton {
     id: etat
@@ -109,8 +109,10 @@ Singleton {
     function ouvrirPortail() { portail.running = true }
 
     // appliquerRecherche — reporte balayage (recherche ou rechercheFenetre) sur le balayage de chaque carte Wi-Fi.
+    // Une carte n'est écrite que si sa valeur diffère : chaque écriture de scannerEnabled bloque le fil graphique
+    // environ une demi-seconde (mesuré en 7a), même quand elle ne change rien.
     // Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : cartes, balayage.
-    function appliquerRecherche() { cartes.forEach(c => c.scannerEnabled = balayage) }
+    function appliquerRecherche() { cartes.forEach(c => { if (c.scannerEnabled !== balayage) c.scannerEnabled = balayage }) }
     onBalayageChanged: appliquerRecherche()
     onCartesChanged: appliquerRecherche()
 

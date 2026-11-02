@@ -94,7 +94,12 @@
     "medallionGlyph": 18,
     "textColumn": 56,
     "sidebarInset": 8,
-    "tabHeight": 48
+    "tabHeight": 48,
+    "fieldWidth": 290,
+    "windowWidth": 840,
+    "windowHeight": 640,
+    "windowMinWidth": 720,
+    "windowMinHeight": 480
   },
   "breakpoints": {
     "compact": 480,

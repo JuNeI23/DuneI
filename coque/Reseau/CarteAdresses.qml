@@ -11,8 +11,8 @@ import "../Composants"
 // filaire s'il est actif aussi) : la section n'est montrée que si l'appareil du profil donné est celui qu'EtatReseau
 // lit, comme le détail de FicheProfil.
 // Entrées : etat, la source de l'état, EtatReseau par défaut ; rangee, la rangée du profil actif concerné
-// (nmcli.profilsFenetre : appareil), null sans profil ; methode, « Automatique », « Fixe » ou vide si elle n'est pas
-// lue encore.
+// (nmcli.profilsFenetre : appareil), null sans profil ; methode, « Automatique », « Fixe » ou vide si elle n'est pas lue
+// encore.
 // Sorties : lues, vrai si la section est montrée ; la Carte porte l'objectName « adresses ». Erreurs : aucune.
 // Dépendances : Section, Carte, ReglageLigne, Valeur, Separateur, Texte, Theme (reglages, space, color).
 ColumnLayout {

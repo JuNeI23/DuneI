@@ -180,7 +180,7 @@ function argsModifier(uuid, changes) {
 }
 
 // argsAjouter — arguments de « nmcli connection add » pour un nouveau profil Wi-Fi (« Nouveau réseau » de la fenêtre).
-// Entrée : r, objet {nom (SSID, aussi nom du profil), securise (bool : WPA2-WPA3 personnel), mdp (mot de passe, lu
+// Entrée : r, objet {nom (SSID, aussi nom du profil), securise (bool : WPA2 personnel), mdp (mot de passe, lu
 // seulement si securise), cache (bool : réseau qui ne diffuse pas son nom)}.
 // Sortie : tableau d'arguments (sans « nmcli ») ; chaque valeur est un argument entier, jamais interprété par un
 // shell. Erreurs : aucune ; nmcli refuse lui-même un nom vide ou un mot de passe invalide. Dépendances : aucune.

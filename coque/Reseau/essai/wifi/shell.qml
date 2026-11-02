@@ -70,11 +70,13 @@ ShellRoot {
         property bool rechercheFenetre: false
         readonly property bool balayage: recherche || rechercheFenetre
         property var reseaux: []
+        // Priorité que rend la lecture du profil ; changée par l'IPC « prioriteLue » pour simuler la sous-page.
+        property int prioriteLue: 5
         function allumer(actif) { essai.journal("allumer", actif); radio = actif }
         function executer(args, fin) {
             essai.journal("executer", JSON.stringify(args))
             if (args[0] === "-s") return fin(0, essai.secretFiche + "\n")
-            if (args[0] === "-t" && args.includes("show")) fin(0, "connection.autoconnect:yes\nconnection.autoconnect-priority:5\nconnection.metered:unknown\nipv4.method:auto\nipv4.addresses:\nipv4.gateway:\nipv4.dns:\n802-11-wireless.ssid:Wifi_TRIADES\n802-11-wireless-security.key-mgmt:wpa-psk\n")
+            if (args[0] === "-t" && args.includes("show")) fin(0, "connection.autoconnect:yes\nconnection.autoconnect-priority:" + prioriteLue + "\nconnection.metered:unknown\nipv4.method:auto\nipv4.addresses:\nipv4.gateway:\nipv4.dns:\n802-11-wireless.ssid:Wifi_TRIADES\n802-11-wireless-security.key-mgmt:wpa-psk\n")
         }
     }
 
@@ -82,6 +84,9 @@ ShellRoot {
     QtObject {
         id: panneauFaux
         property var factures: ({})
+        // Onglet et sous-page courants, que lit la page pour relire sa fiche au retour d'une sous-page.
+        property string onglet: "wifi"
+        property string sousPage: ""
         property var rangees: [
             {groupe: "Wi-Fi", nom: "Wifi_TRIADES", uuid: "wifi-1", appareil: "wlan0", wifi: true, actif: true, etat: "Connecté", icone: "network-wireless-signal-excellent"},
             {groupe: "Wi-Fi", nom: "Connu", uuid: "connu-1", appareil: "", wifi: true, actif: false, etat: "À portée", icone: "network-wireless-signal-good"},
@@ -146,6 +151,10 @@ ShellRoot {
 
                 // ouvrirFiche — ouvre la FicheProfil complète d'un profil du panneau factice. Entrée : uuid. Sortie : aucune.
                 function ouvrirFiche(uuid: string): void { sousPage.uuid = uuid }
+                // prioriteLue, sousPage — simulent une modification faite dans la sous-page « Détails… » (nouvelle priorité
+                // enregistrée) puis l'ouverture ou la fermeture de la sous-page. Entrées : valeur. Sortie : aucune.
+                function prioriteLue(valeur: int): void { faux.prioriteLue = valeur }
+                function sousPage(valeur: string): void { panneauFaux.sousPage = valeur }
                 // carteFilaire — pose la présence d'une carte filaire dans l'état factice. Entrée : valeur. Sortie : aucune.
                 function carteFilaire(valeur: bool): void { faux.carteFilaire = valeur }
                 // connexion — clique « Se connecter » ou « Se déconnecter » de la carte de tête de la sous-page. Entrées :

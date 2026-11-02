@@ -36,10 +36,11 @@ class QuickshellEmitterTest(unittest.TestCase):
                                            "knob", "controls"])
 
     def test_reglages(self):
-        """Vérifie les huit formes des fenêtres de réglages (D104), émises en camelCase sous reglages."""
+        """Vérifie les treize formes des fenêtres de réglages (D104, D105), émises en camelCase sous reglages."""
         self.assertEqual(self.out["reglages"], {"row": 44, "rowHelp": 52, "rowLead": 60, "medallion": 32,
                                                 "medallionGlyph": 18, "textColumn": 56, "sidebarInset": 8,
-                                                "tabHeight": 48})
+                                                "tabHeight": 48, "fieldWidth": 290, "windowWidth": 840,
+                                                "windowHeight": 640, "windowMinWidth": 720, "windowMinHeight": 480})
 
     def test_presquile(self):
         """Vérifie les sept dimensions de la presqu'île, en pixels logiques."""

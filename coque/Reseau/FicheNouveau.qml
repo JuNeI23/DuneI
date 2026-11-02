@@ -6,14 +6,15 @@ import "nmcli.js" as Nmcli
 
 // FicheNouveau — fiche « Nouveau réseau » de la fenêtre Réseau : enregistre un profil Wi-Fi saisi à la main (L2-11).
 // Rôle : remplace « Autre réseau… », retiré du popover. Le formulaire demande le nom du réseau (SSID, aussi nom du
-// profil), la sécurité (Aucune, ou WPA2-WPA3 personnel, par défaut), le mot de passe si le réseau est sécurisé, et
-// s'il est caché. « Ajouter » lance « nmcli connection add » par EtatReseau.executer (nmcli.argsAjouter : des
-// arguments, jamais un shell) ; au succès, ajoute(uuid, nom) est émis pour que le panneau choisisse le profil créé ; un
-// refus affiche la sortie d'erreur de nmcli sous le formulaire, qui reste rempli. Le mot de passe n'est jamais
-// journalisé ; la fiche est détruite à sa fermeture, et lui avec.
+// profil), la sécurité (Aucune, ou WPA2 personnel, par défaut ; le WPA3 seul (SAE) n'est pas encore proposé : le profil
+// écrit « wpa-psk »), le mot de passe si le réseau est sécurisé, et s'il est caché. « Ajouter » lance « nmcli
+// connection add » par EtatReseau.executer (nmcli.argsAjouter : des arguments, jamais un shell) ; au succès,
+// ajoute(uuid, nom) est émis pour que le panneau choisisse le profil créé ; un refus affiche la sortie d'erreur de
+// nmcli sous le formulaire, qui reste rempli. Le mot de passe n'est jamais journalisé ; la fiche est détruite à sa
+// fermeture, et lui avec.
 // Entrées : etat, la source des actions, EtatReseau par défaut.
-// Sorties : securise, vrai si WPA2-WPA3 personnel est choisi ; valide, vrai quand le nom (et le mot de passe d'un
-// réseau sécurisé) est saisi ; enCours, vrai pendant l'ajout ; erreur, la sortie d'erreur du dernier refus ; signaux
+// Sorties : securise, vrai si WPA2 personnel est choisi ; valide, vrai quand le nom (et le mot de passe d'un réseau
+// sécurisé) est saisi ; enCours, vrai pendant l'ajout ; erreur, la sortie d'erreur du dernier refus ; signaux
 // ajoute(uuid, nom), uuid vide si nmcli ne l'a pas donné, et annule().
 // Erreurs : celles de nmcli, sous le formulaire ; une réponse arrivée après la destruction de la fiche est ignorée.
 // Dépendances : EtatReseau (executer), nmcli.js (argsAjouter, uuidAjoute), Groupe, Ligne, Texte, Champ, ChampSecret,
@@ -77,7 +78,7 @@ ColumnLayout {
             Champ {
                 id: nom
                 objectName: "nom"
-                Layout.preferredWidth: 290
+                Layout.preferredWidth: Theme.reglages?.fieldWidth ?? 0
                 placeholderText: "Nom du réseau"
                 onAccepted: fiche.ajouter()
             }
@@ -89,7 +90,7 @@ ColumnLayout {
                 objectName: "securite"
                 currentIndex: 1
                 Onglet { text: "Aucune" }
-                Onglet { text: "WPA2-WPA3 personnel" }
+                Onglet { text: "WPA2 personnel" }
             }
         }
         Ligne {
@@ -98,7 +99,7 @@ ColumnLayout {
             ChampSecret {
                 id: mdp
                 objectName: "mdp"
-                Layout.preferredWidth: 290
+                Layout.preferredWidth: Theme.reglages?.fieldWidth ?? 0
                 placeholderText: "Mot de passe"
                 onAccepted: fiche.ajouter()
             }

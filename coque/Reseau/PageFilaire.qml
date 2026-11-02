@@ -5,21 +5,22 @@ import "../Composants"
 
 // PageFilaire — page de l'onglet Filaire de la fenêtre Réseau (direction D4).
 // Rôle : le titre « Filaire », puis trois cartes : « Ethernet » (la rangée de tête de l'appareil : médaillon, nom de
-// l'interface et état du câble, « Connecté », « Câble débranché » ou « Aucune carte » ; puis son adresse
-// matérielle en Valeur copiable, quand elle est connue), « Profils » (les profils filaires enregistrés, GroupeProfils,
-// chacun ouvrant sa sous-page « ‹ Filaire » ; « Aucun profil filaire. » sans profil) et, pour le profil filaire actif,
-// « Adresses » en lecture seule et copiables (CarteAdresses, seulement si l'appareil du profil est celui qu'EtatReseau
-// lit), précédées de la méthode IPv4 du profil (« Automatique » ou « Fixe »), lue une fois par « nmcli -g
-// ipv4.method » au changement de profil actif et au retour de la sous-page de l'onglet. Aucun réglage ici : ils sont
-// dans la sous-page (FicheProfil).
+// l'interface et état du câble, « Connecté », « Câble débranché » ou « Aucune carte » ; puis son adresse matérielle en
+// Valeur copiable, quand elle est connue), « Profils » (les profils filaires enregistrés, GroupeProfils, chacun ouvrant
+// sa sous-page « ‹ Filaire » ; « Aucun profil filaire. » sans profil) et, pour le profil filaire actif, « Adresses » en
+// lecture seule et copiables (CarteAdresses, seulement si l'appareil du profil est celui qu'EtatReseau lit), précédées
+// de la méthode IPv4 du profil (« Automatique » ou « Fixe »), lue une fois par « nmcli -g ipv4.method » au changement
+// de profil actif et au retour de la sous-page de l'onglet. Aucun réglage ici : ils sont dans la sous-page
+// (FicheProfil).
 // Clavier : les profils sont des Ligne cliquables (tabulation, Entrée, Espace, contour de focus : bible, « Clavier »).
 // Entrées : panneau, le PanneauReseau (rangees, ouvrirProfil) ; etat, la source de l'état, EtatReseau par défaut
 // (filaire, carteFilaire, appareilFilaire, appareil).
-// Sorties : actif, la rangée du profil filaire actif (null sans lui) ; nomAppareil, le nom de l'interface filaire,
-// vide sans carte ; adresseMaterielle, l'adresse matérielle de l'appareil filaire, vide si elle est inconnue ;
-// etatCable, l'état affiché ; methode, la méthode IPv4 lue du profil actif (vide avant la lecture). Erreurs : un échec
-// de la lecture laisse la méthode vide, la rangée est alors omise (EtatReseau.executer). Dépendances : TitrePage,
-// Section, Groupe, Ligne, Valeur, GroupeProfils, CarteAdresses, Texte, Theme, PanneauReseau, EtatReseau.
+// Sorties : actif, la rangée du profil filaire actif (null sans lui) ; nomAppareil, le nom de l'interface filaire, vide
+// sans carte ; adresseMaterielle, l'adresse matérielle de l'appareil filaire, vide si elle est inconnue ; etatCable,
+// l'état affiché ; methode, la méthode IPv4 lue du profil actif (vide avant la lecture). Erreurs : un échec de la
+// lecture laisse la méthode vide, la rangée est alors omise (EtatReseau.executer).
+// Dépendances : TitrePage, Section, Groupe, Ligne, Valeur, GroupeProfils, CarteAdresses, Texte, Theme, PanneauReseau,
+// EtatReseau.
 ColumnLayout {
     id: page
 
@@ -36,14 +37,19 @@ ColumnLayout {
 
     spacing: 0
 
+    // Garde des réponses de nmcli : marquée morte à la destruction, pour qu'un retour tardif après la fermeture de la
+    // fenêtre n'écrive plus rien.
+    property var garde: ({mort: false})
+    Component.onDestruction: garde.mort = true
+
     // lireMethode — lit la méthode IPv4 du profil filaire actif. Entrées : aucune. Sortie : aucune ; methode mise à
-    // jour (une réponse tardive pour un autre profil est ignorée). Erreurs : un code non nul vide la méthode.
-    // Dépendances : etat.executer.
+    // jour (une réponse tardive pour un autre profil, ou après la destruction de la page, est ignorée). Erreurs : un
+    // code non nul vide la méthode. Dépendances : etat.executer.
     function lireMethode() {
-        const u = uuidActif
+        const u = uuidActif, g = garde
         if (u === "") return void (methode = "")
         etat.executer(["-g", "ipv4.method", "connection", "show", u], (code, sortie) => {
-            if (uuidActif !== u) return
+            if (g.mort || uuidActif !== u) return
             const m = sortie.trim()
             methode = code !== 0 ? "" : m === "manual" ? "Fixe" : m === "auto" ? "Automatique" : ""
         })

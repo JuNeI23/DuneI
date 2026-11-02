@@ -4,12 +4,12 @@ import "../Theme"
 import "../Composants"
 
 // GroupeProfils — carte des profils enregistrés d'un type, chacun une Ligne qui ouvre sa sous-page.
-// Rôle : liste les profils d'un groupe de PanneauReseau.rangees (« Wi-Fi » ou « Filaire »), en rangée à médaillon,
-// nom et état, un chevron à droite ; un clic ouvre la sous-page du profil (panneau.ouvrirProfil). Des rangées
-// supplémentaires, déclarées comme enfants, suivent les profils dans la même carte (PageWifi y pose « Autre
-// réseau… »).
-// Entrées : panneau, le PanneauReseau (rangees, ouvrirProfil) ; type, « Wi-Fi » ou « Filaire » (le groupe des rangées) ; les rangées
-// supplémentaires, en enfants.
+// Rôle : liste les profils d'un groupe de PanneauReseau.rangees, en rangée à médaillon, nom et état, un chevron à
+// droite ; un clic ouvre la sous-page du profil (panneau.ouvrirProfil). Des rangées supplémentaires, déclarées comme
+// enfants, suivent les profils dans la même carte. Seule PageFilaire l'emploie (PageWifi bâtit ses propres cartes,
+// pour le réseau joint, les disponibles et « Autre réseau… »).
+// Entrées : panneau, le PanneauReseau (rangees, ouvrirProfil) ; type, le groupe des rangées (« Filaire » aujourd'hui) ;
+// les rangées supplémentaires, en enfants.
 // Sorties : profils, les rangées du groupe (nmcli.profilsFenetre). Erreurs : aucune ; sans profil, la carte est
 // vide (ou ne porte que les rangées supplémentaires).
 // Dépendances : Groupe, Ligne, Icone, Theme (icons), PanneauReseau.

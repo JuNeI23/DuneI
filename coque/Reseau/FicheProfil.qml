@@ -72,7 +72,7 @@ ColumnLayout {
     // Génération des écritures : une lecture lancée avant la dernière écriture est périmée (voir lire et appliquer).
     property int ecritures: 0
     // Icône de force du réseau joint (rangée de tête du mode résumé), aux paliers de la barre.
-    readonly property string iconeForce: Icones.iconeReseau({carte: true, radio: true, connecte: true, connectivite: "full", force: etat?.force ?? 0})
+    readonly property string iconeForce: Icones.iconeForce(etat?.force ?? 0)
     readonly property bool lu: profil !== null
     readonly property bool wifi: rangee?.wifi ?? false
     readonly property alias secret: secret
@@ -337,23 +337,29 @@ ColumnLayout {
                 couleur: Theme.color?.accentStandalone ?? "transparent"
             }
         }
+        // Mot de passe : seuls les réseaux à clé partagée (key-mgmt « wpa-psk » ou « sae ») ont un champ et un œil. Un
+        // réseau ouvert le dit ; un réseau d'entreprise (« wpa-eap ») montre une rangée en lecture seule, sans œil ;
+        // les autres sécurités (« owe », WEP…) ne montrent rien, et la valeur brute de key-mgmt ne paraît jamais en
+        // aide.
         Ligne {
-            visible: fiche.wifi
+            id: ligneMdp
+            readonly property string securite: fiche.valeurs.securite ?? ""
+            readonly property bool partage: ["wpa-psk", "sae"].includes(securite)
+            visible: fiche.wifi && (securite === "" || partage || securite === "wpa-eap")
             filet: fiche.resume
-            libelle: "Mot de passe"
-            aide: ({"": "", "wpa-psk": "WPA2 personnel", "sae": "WPA3 personnel", "none": "WEP"})[fiche.valeurs.securite ?? ""]
-                  ?? fiche.valeurs.securite ?? ""
+            libelle: securite === "wpa-eap" ? "Entreprise (802.1X)" : "Mot de passe"
+            aide: ({"wpa-psk": "WPA2 personnel", "sae": "WPA3 personnel"})[securite] ?? ""
             erreur: fiche.erreurs.psk ?? ""
             Texte {
-                visible: (fiche.valeurs.securite ?? "") === ""
+                visible: ligneMdp.securite === ""
                 text: "Réseau ouvert : aucun mot de passe"
                 color: Theme.color?.textSecondary ?? "transparent"
             }
             ChampSecret {
                 id: secret
                 objectName: "secret"
-                visible: (fiche.valeurs.securite ?? "") !== ""
-                Layout.preferredWidth: 290
+                visible: ligneMdp.partage
+                Layout.preferredWidth: Theme.reglages?.fieldWidth ?? 0
                 secretALire: true
                 placeholderText: "••••••••••"
                 onRevelationDemandee: fiche.reveler()
@@ -427,7 +433,7 @@ ColumnLayout {
             Champ {
                 id: adresse
                 objectName: "adresse"
-                Layout.preferredWidth: 290
+                Layout.preferredWidth: Theme.reglages?.fieldWidth ?? 0
                 enabled: fiche.fixe
                 placeholderText: fiche.fixe ? "192.168.1.50/24" : (fiche.rangee?.actif ? fiche.etat.ip4[0] ?? "" : "Fournie par le réseau")
                 onEditingFinished: fiche.validerIp("adresse")
@@ -440,7 +446,7 @@ ColumnLayout {
             Champ {
                 id: passerelle
                 objectName: "passerelle"
-                Layout.preferredWidth: 290
+                Layout.preferredWidth: Theme.reglages?.fieldWidth ?? 0
                 placeholderText: "192.168.1.1"
                 onEditingFinished: fiche.validerIp("passerelle")
             }
@@ -452,7 +458,7 @@ ColumnLayout {
             Champ {
                 id: dns
                 objectName: "dns"
-                Layout.preferredWidth: 290
+                Layout.preferredWidth: Theme.reglages?.fieldWidth ?? 0
                 enabled: fiche.fixe
                 placeholderText: fiche.fixe ? "1.1.1.1, 9.9.9.9" : "Fournis par le réseau"
                 onEditingFinished: fiche.validerDns()

@@ -429,6 +429,11 @@ medallion_glyph = 18          # taille du glyphe dans le médaillon
 text_column = 56              # colonne du texte, et retrait du filet de séparation
 sidebar_inset = 8             # retrait du plateau détaché de la barre latérale
 tab_height = 48               # hauteur de la barre d'onglets
+field_width = 290             # largeur d'un champ ou d'un sélecteur d'une fiche de réglage (D104, D105)
+window_width = 840            # largeur par défaut de la fenêtre Réseau (D105)
+window_height = 640           # hauteur par défaut de la fenêtre Réseau (D105)
+window_min_width = 720        # largeur minimale de la fenêtre Réseau (D105)
+window_min_height = 480       # hauteur minimale de la fenêtre Réseau (D105)
 
 [layout]
 sidebar_default = 240
