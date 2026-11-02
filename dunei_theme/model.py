@@ -46,13 +46,14 @@ def accent_muet(model: dict) -> Oklch:
 
 
 def themes(data: dict) -> list[tuple[str, str]]:
-    """Liste des thèmes composables.
+    """Liste des thèmes composables : chaque couple famille × moment, sauf ceux que [theme] exclus retire.
 
-    Entrée : data — TOML brut.
+    Entrée : data — TOML brut ; theme.exclus, facultatif, liste de « famille/moment ».
     Sortie : couples (famille, moment), familles puis moments dans l'ordre du TOML.
     Erreurs : KeyError si [familles] ou [moments] manque. Dépendances : aucune.
     """
-    return [(f, m) for f in data["familles"] for m in data["moments"]]
+    exclus = data.get("theme", {}).get("exclus", [])
+    return [(f, m) for f in data["familles"] for m in data["moments"] if f"{f}/{m}" not in exclus]
 
 
 def defaut(data: dict) -> tuple[str, str]:
@@ -87,12 +88,15 @@ def theme_data(data: dict, famille: str, moment: str) -> dict:
     Sortie : copie profonde de data, fusionnée, que resolve() sait résoudre ; la table [moments] n'y reçoit pas
              les surcharges croisées.
     Erreurs : KeyError « famille inconnue : <f> » ou « moment inconnu : <m> », y compris pour un moment nommé par
-              une surcharge croisée de la famille.
+              une surcharge croisée de la famille ; KeyError « thème retiré : <f>/<m> » pour un couple de
+              [theme] exclus.
     Dépendances : copy.
     """
     for table, nom, libelle in (("familles", famille, "famille"), ("moments", moment, "moment")):
         if nom not in data.get(table, {}):
             raise KeyError(f"{libelle} inconnu{'e' if libelle == 'famille' else ''} : {nom}")
+    if f"{famille}/{moment}" in data.get("theme", {}).get("exclus", []):
+        raise KeyError(f"thème retiré : {famille}/{moment}")
     fam = dict(data["familles"][famille])
     croisees = fam.pop("moments", {})
     for nom in croisees:

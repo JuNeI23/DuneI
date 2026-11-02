@@ -2433,7 +2433,14 @@ de thème et l'extraction de teinte, s'il trouve alors une palette juste.
   accordée en D84 pour le jour thématisé tombe avec lui. Le retrait lui-même (jetons, `dunei-theme`, planche,
   tests) est porté par L2-50.
 
-*Touché : journal, backlog (L2-50).*
+- **Mise en œuvre (L2-50, 2026-11-02).** Le retrait se déclare dans `tokens.toml` par `theme.exclus =
+  ["thematisee/jour"]`, liste que `model.themes` filtre et que `model.theme_data` refuse (« thème retiré ») ; les
+  surcharges du jour thématisé sont supprimées et restent dans l'historique git. Une demande qui nomme un couple
+  retiré garde son moment et prend la première famille qui l'offre, dans `dunei-theme` comme dans `Theme.qml`, plutôt
+  que de retomber sur le défaut : le moment est ce que l'on demande d'abord, et la règle reste juste si d'autres
+  familles arrivent. `bascule` depuis la thématisée nuit mène donc à la dominante jour.
+
+*Touché : journal, backlog (L2-50), `tokens.toml`, `dunei_theme/model.py`, `dunei-theme`, `Theme.qml`, bible, tests.*
 
 ### D103 · Le verre de E3 à 60 %, jour et nuit, et ce qui s'y pose
 

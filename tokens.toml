@@ -19,8 +19,8 @@ contrast_target_body = 90  # Lc — corps 13px/400 sur fond sombre
 contrast_floor = 75        # Lc — plancher de rejet
 
 # Planchers de contraste par rôle (Lc), mesurés sur la nuit thématisée aux teintes 0, 55, 200 et 265, arrondis à
-# l'entier inférieur. Tous les thèmes les respectent, hormis les planchers propres à un moment ou à un couple
-# (knob-off et on-accent-muted au jour ; le jour thématisé, D84), qui ne peuvent que les borner par leur minimum mesuré
+# l'entier inférieur. Tous les thèmes les respectent, hormis les planchers propres à un moment (knob-off et
+# on-accent-muted au jour), qui ne peuvent que les borner par leur minimum mesuré
 # (conception § 5.2).
 # Pour les remesurer après une révision de la nuit : python3 mesure_planchers.py
 [meta.planchers]
@@ -92,7 +92,7 @@ assumed_color_depth = 8
 # machine (caladan…) vit dans la surcharge, jamais ici (L4-08).
 hue = 55                   # 0–360, quantifiée par pas de 5°
 chroma_scale = 1.0         # 0.8–1.2, borné
-neutral_chroma = 0.014     # infusion de la teinte dans les gris (0,020 jusqu'à L2-40 ; le jour thématisé garde 0,020)
+neutral_chroma = 0.014     # infusion de la teinte dans les gris (0,020 jusqu'à L2-40)
 dark_chroma_boost = 1.4    # majoration sous L 0.45 : perception réduite en basse lumière
 accent_chroma = 0.15
 chroma_ceiling = 0.16      # plafond gamut sRGB sur toute la plage de teintes
@@ -100,6 +100,11 @@ chroma_ceiling = 0.16      # plafond gamut sRGB sur toute la plage de teintes
 # Repli quand le fond d'écran est achromatique.
 # Jamais de teinte tirée au hasard sur du bruit.
 fallback_hue = 255         # Giedi Prime, achromatique, tombera ici
+
+# Couples famille/moment retirés : ils ne sont ni composés ni proposés ; une demande qui en nomme un garde son
+# moment et prend la première famille qui l'offre (model.themes, dunei-theme, Theme.qml). Le jour thématisé est
+# retiré jusqu'au lot 4 (D102, L2-50) ; ses surcharges et sa dérogation de contraste (D84) restent dans l'historique git.
+exclus = ["thematisee/jour"]
 
 # Thème choisi tant que l'utilisateur n'a rien demandé.
 [theme.defaut]
@@ -591,11 +596,9 @@ e3_opacity = 0.60             # D103 ; 0,88 auparavant
 # texte ne dépasse Lc 97 : le plancher de text-emphasis (98) n'est atteignable qu'avec une fenêtre plus claire. La
 # fenêtre est passée de 0,965 à 0,968 quand sa chroma a monté (L2-40, 7b) : elle garde ainsi Lc 98,3 pour text-emphasis.
 steps = [0.925, 0.968, 0.98, 1.0, 0.89, 0.85, 0.76, 0.68, 0.60, 0.50, 0.25, 0.18]
-# Facteur de chroma neutre par échelon, sur la chroma neutre du jour thématisé (0,020, surcharge croisée plus bas) :
-# 0,025 sur le bureau, la fenêtre et le panneau, pour que la teinte s'y sente ; 0,012 entre L 0,8 et 0,9 ; 0,020
-# au-dessous, majoré sous L 0,45 ; blanc pur à E3. La dominante, à chroma neutre nulle, reste strictement neutre.
-# Le jour thématisé a sa propre échelle et ses propres facteurs (surcharge croisée plus bas) : ce profil n'agit donc
-# plus sur aucun thème (la dominante, à chroma neutre nulle, l'ignore) ; il reste comme valeur de repli du moment.
+# Facteur de chroma neutre par échelon : 1,25 sur le bureau, la fenêtre et le panneau, pour que la teinte s'y sente ;
+# 0,6 entre L 0,8 et 0,9 ; 1,0 au-dessous, majoré sous L 0,45 ; blanc pur à E3. Le seul jour composé aujourd'hui est
+# celui de la dominante, à chroma neutre nulle, qui l'ignore ; le profil reste pour une famille teintée de jour (lot 4).
 neutral_profile = [1.25, 1.25, 1.25, 0.0, 0.6, 0.6, 1.0, 1.0, 1.0, 1.0, 1.4, 1.4]
 
 [moments.jour.roles]
@@ -668,54 +671,6 @@ lightness = 1.0
 disabled_toward = "border-default"
 
 [familles.thematisee]    # la base : aucune surcharge
-
-# Surcharges croisées famille × moment, fusionnées en dernier (model.theme_data).
-# Le jour thématisé garde la chroma neutre d'avant L2-40 : la nuit seule descend à 0,014.
-[familles.thematisee.moments.jour.theme]
-neutral_chroma = 0.020
-
-# Le jour thématisé repose sur une base colorée (Nicolas, validation à l'écran) : sur un fond presque blanc la
-# chroma ne se voit pas, donc tous les gris sont teintés. Le bureau, la fenêtre, le panneau et E3 descendent à
-# 0,79, 0,82, 0,845 et 0,88 et portent une chroma neutre bien plus forte (facteurs 7,5 à 6,0 sur 0,020, soit 0,15 à
-# 0,12, avant écrêtage à la gamme), dégressifs jusqu'aux textes. Les contrôles blancs de [moments.jour] n'y subsistent pas : E3 et control-raised
-# sont à 0,88 et teintés. La dominante de jour garde les fonds blancs de [moments.jour].
-[familles.thematisee.moments.jour.lightness]
-steps = [0.79, 0.82, 0.845, 0.88, 0.75, 0.70, 0.60, 0.52, 0.44, 0.36, 0.13, 0.07]
-neutral_profile = [7.5, 7.5, 7.0, 6.0, 5.0, 4.5, 3.5, 3.0, 2.5, 2.5, 2.0, 1.5]
-
-# Les sémantiques descendent de 0,05 à 0,07 sous celles du jour, pour tenir leurs planchers sur ces fonds plus sombres.
-[familles.thematisee.moments.jour.semantic]
-error   = { l = 0.38 }
-warning = { l = 0.50 }
-success = { l = 0.48 }
-info    = { l = 0.50 }
-
-# Décision explicite de Nicolas, prise à l'écran et propre à ce thème : le corps de texte y tombe à Lc 69 à 76, sous
-# la règle de la bible de design (cible 90, plancher absolu 75). Les trois autres thèmes gardent ces règles. Ici la
-# cible, le plancher absolu et les planchers par rôle valent les minima mesurés aux teintes 0, 55, 200 et 265,
-# arrondis à l'entier inférieur ; remonter la fenêtre vers 0,86 rétablirait des textes plus contrastés.
-[familles.thematisee.moments.jour.meta]
-contrast_target_body = 69
-contrast_floor = 69
-
-[familles.thematisee.moments.jour.meta.planchers]
-"border-subtle" = 9
-"border-default" = 16
-"border-strong" = 31
-"text-disabled" = 41
-"text-tertiary" = 50
-"text-secondary" = 58
-"text-primary" = 69
-"text-emphasis" = 69
-"control-raised-text" = 80
-"accent-standalone" = 48
-"categorical" = 41
-"error" = 55
-"warning" = 43
-"success" = 43
-"info" = 42
-"knob-accent" = 79
-"knob-off" = 46
 
 [familles.dominante.theme]
 neutral_chroma = 0.0     # gris strictement neutres ; l'accent garde sa teinte

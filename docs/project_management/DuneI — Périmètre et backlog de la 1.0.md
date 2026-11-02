@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.36. Historique en fin de document.
+Version 1.37. Historique en fin de document.
 
 La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **164 éléments** répartis en **cinq lots**, sur six chantiers.
 
@@ -302,7 +302,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L2-47 | B | Écrit | Mouvement réduit dans la coque — l'interrupteur du mode (L2-07) n'est lu par aucun composant ; `Ressort` et `ColorSpring` devraient le respecter |
 | L2-48 | B | Écrit | Presqu'île — transitions d'apparition et de disparition (plein écran, démarrage, changement de module), à concevoir avec le premier module qui change sa forme (D98) |
 | L2-49 | B | Écrit | Thème de plateforme Qt pour toute la session — `QT_QPA_PLATFORMTHEME` : icônes DuneI (D101), mais aussi polices, couleurs et dialogues ; Dolphin est la seule application Qt ; à traiter après repérage (voie large voulue par Nicolas, D101) |
-| L2-50 | C | Écrit | Retrait du jour thématisé jusqu'au lot 4 (D102) — trois thèmes seulement : dominante jour, dominante nuit, thématisée nuit ; `coque-tokens.json`, `dunei-theme` (une demande « thématisée jour » se replie sur dominante jour), planche et tests ; la dérogation au corps de texte de D84 tombe avec lui |
+| L2-50 | C | Écrit | Retrait du jour thématisé jusqu'au lot 4 (D102) — trois thèmes seulement : dominante jour, dominante nuit, thématisée nuit ; `coque-tokens.json`, `dunei-theme` (une demande « thématisée jour » se replie sur dominante jour), planche et tests ; la dérogation au corps de texte de D84 tombe avec lui — **fait (D102)** : couples retirés déclarés dans `theme.exclus` de `tokens.toml`, refusés par `model.theme_data` ; surcharges du jour thématisé et dérogation de D84 supprimées, trois autres thèmes identiques au bit près ; `dunei-theme` et `Theme.qml` replient un couple retiré sur la première famille qui offre son moment (`bascule` depuis la thématisée nuit mène à la dominante jour) ; tests et instantanés à trois thèmes |
 | L2-51 | C | Écrit | VPN complet de la fenêtre Réseau — l'onglet VPN minimal (liste et interrupteur par connexion, `nmcli connection up` ou `down` par uuid) est fait ; reste : import d'un fichier (`.conf` WireGuard, `.ovpn` OpenVPN) par `nmcli connection import`, sélecteur de fichiers par le portail FileChooser (`xdg-desktop-portal-gtk` à ajouter) ou champ de saisie avec dépôt, identifiants (gardés dans le profil ou confiés à un agent de secrets de la coque), sous-page d'un VPN (réglages, adresses), lecture du greffon (OpenVPN) pour l'aide de la rangée, paquets `networkmanager-vpn-plugin-openvpn` et `wireguard-tools` ; reporté à la demande de Nicolas (2026-11-01) faute d'accès VPN pour tester |
 | L2-52 | C | Écrit | Popover thème et luminosité — idée de Nicolas (2026-11-01) : un popover dédié, ancré à la barre, qui réunit le thème (famille et moment : jour, nuit) et la luminosité ; à peser avec L2-29 (contrôle de la luminosité), dont il peut devenir la forme, et avec L2-50 (retrait du jour thématisé), qui fixe d'abord ce que « moment » veut dire ; suit le motif du popover de réglage rapide (bible, D105) |
 | L2-53 | B | Écrit | Recherche partagée — la relance du balayage Wi-Fi (« nmcli device wifi rescan », l'indicateur d'activité et sa borne `motion.delays.scan`), aujourd'hui écrite deux fois, dans le popover réseau et dans la page Wi-Fi de la fenêtre, passe dans `Jonction`, déjà partagée entre eux (relecture finale de L2-11) |
@@ -513,6 +513,7 @@ Le choix de la distribution de base et du compositeur, précédemment ouverts, s
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-12 | Version initiale, 137 éléments |
+| 1.37 | 2026-11-02 | L2-50 fait : jour thématisé retiré, trois thèmes, repli d'un couple retiré (D102) |
 | 1.36 | 2026-11-02 | L1-09 : double appui du bouton marche pendant la session (D106) |
 | 1.35 | 2026-11-02 | Relecture finale de L2-11 : `nm-applet` retiré (décidé, plus à constater) ; ajout de L2-53 (recherche partagée), L2-54 (saisie IPv4 protégée des relectures) et L2-55 (rangées du popover réseau au clavier) ; recompte exact, 164 éléments ; L2-45 reçoit l'ombre non évidée de la presqu'île |
 | 1.34 | 2026-11-01 | L2-11 fait (popover D5, fenêtre Réseau D4, VPN minimal), en attente de fusion ; ajout de L2-52 (popover thème et luminosité) ; 161 éléments |

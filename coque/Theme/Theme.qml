@@ -7,7 +7,7 @@ import Quickshell.Io
 // Rôle : lit coque-tokens.json et motion.json, produits par make tokens et make motion et déployés par
 // deploy.py, ainsi que theme.json, le choix du thème écrit par dunei-theme ; les surveille sur disque et
 // remplace d'un bloc l'objet exposé à chaque lecture valide : toutes les liaisons se réévaluent dans la même
-// image. coque-tokens.json porte les quatre thèmes (themes[famille][moment]) ; tokens est la vue du thème
+// image. coque-tokens.json porte les thèmes composables (themes[famille][moment]) ; tokens est la vue du thème
 // actif, un objet neuf à chaque lecture, fait des clés partagées du fichier et de la branche choisie, ce qui
 // fait basculer ColorSpring d'un coup, sans animation (D81). Aucune valeur de design n'est écrite ici.
 // Le texte posé directement sur le bureau (la barre) se règle d'après bureau.json, que deploy.py écrit et que
@@ -143,25 +143,32 @@ Singleton {
 
     // composer — construit la vue du thème actif et la publie d'un bloc.
     // Rôle : choisit la branche themes[famille][moment] désignée par choix, ou le défaut des tokens si choix est
-    //        nul ou nomme une famille ou un moment que les tokens ne déclarent pas, puis remplace tokens par un
-    //        objet neuf : les clés partagées du fichier, sans themes, et celles de la branche.
+    //        nul ou nomme une famille ou un moment que les tokens ne déclarent pas. Un couple connu mais retiré
+    //        (absent de themes, D102) garde son moment et prend la première famille qui l'offre, comme
+    //        dunei-theme. Remplace ensuite tokens par un objet neuf : les clés partagées du fichier, sans themes,
+    //        et celles de la branche.
     // Entrées : aucune ; lit brut et choix. Sortie : aucune ; pose famille, moment puis tokens. Sans tokens
     //           lus, ne fait rien.
-    // Erreurs : thème inconnu → console.warn « Theme : thème <f>/<m> inconnu ; défaut <f>/<m> appliqué », une
-    //           seule fois par nom inconnu.
+    // Erreurs : thème inconnu → console.warn « Theme : thème <f>/<m> inconnu ; défaut <f>/<m> appliqué » ; thème
+    //           retiré → console.info « Theme : thème <f>/<m> retiré ; <f>/<m> appliqué » ; une seule fois par nom.
     // Dépendances : brut (defaut, familles, moments, themes), choix.
     function composer() {
         if (!brut) return
         const d = brut.defaut
         let f = choix?.famille ?? d.famille, m = choix?.moment ?? d.moment
-        if (!brut.familles.includes(f) || !brut.moments.includes(m)) {
-            if (signale !== f + "/" + m)
-                console.warn("Theme : thème " + f + "/" + m + " inconnu ; défaut " + d.famille + "/" + d.moment
-                    + " appliqué")
+        const repli = brut.moments.includes(m) ? brut.familles.find(x => brut.themes[x]?.[m]) : undefined
+        if (brut.familles.includes(f) && brut.themes[f]?.[m]) signale = ""
+        else {
+            const retire = brut.familles.includes(f) && repli !== undefined
+            const [rf, rm] = retire ? [repli, m] : [d.famille, d.moment]
+            if (signale !== f + "/" + m) {
+                if (retire) console.info("Theme : thème " + f + "/" + m + " retiré ; " + rf + "/" + rm + " appliqué")
+                else console.warn("Theme : thème " + f + "/" + m + " inconnu ; défaut " + rf + "/" + rm + " appliqué")
+            }
             signale = f + "/" + m
-            f = d.famille
-            m = d.moment
-        } else signale = ""
+            f = rf
+            m = rm
+        }
         const vue = Object.assign({}, brut, brut.themes[f][m])
         delete vue.themes
         _famille = f

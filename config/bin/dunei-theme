@@ -3,7 +3,9 @@
 # Rôle : afficher ou changer le thème actif en écrivant {"famille":…, "moment":…} dans theme.json, que la
 #   coque surveille et applique à chaud. Les noms valides viennent de coque-tokens.json, jamais d'une liste ici.
 # Entrées : [jour|nuit|bascule|famille <nom>|<famille> <moment>] (la dernière forme choisit les deux d'un seul coup
-#   et d'une seule écriture, noms validés avant d'écrire) ; sans argument, affiche seulement l'état. Le dossier est
+#   et d'une seule écriture, noms validés avant d'écrire) ; sans argument, affiche seulement l'état. Un couple
+#   connu mais retiré (absent de .themes, D102) garde son moment et prend la première famille qui l'offre : une
+#   demande « thematisee jour » donne « dominante jour », et bascule depuis la nuit thématisée y mène aussi. Le dossier est
 #   $DUNEI_TOKENS_DIR, sinon ${XDG_CONFIG_HOME:-$HOME/.config}/dunei. Sans theme.json, l'état est le défaut des tokens.
 # Sortie : « <famille> <moment> » sur la sortie standard après chaque appel réussi.
 # Erreurs : code 1 si coque-tokens.json est introuvable ou illisible (rien n'est écrit) ; code 2 pour un
@@ -31,6 +33,14 @@ Usage : dunei-theme [jour|nuit|bascule|famille <nom>|<famille> <moment>]" >&2; e
 # Erreurs : aucune. Dépendances : jq.
 existe() { jq -e --arg n "$2" ".$1 | index(\$n)" "$tokens" > /dev/null; }
 
+# replier — remplace un couple retiré par la première famille qui offre son moment.
+# Entrées : aucune ; lit et modifie les variables famille et moment, déjà validées. Sortie : aucune.
+# Erreurs : aucune ; un moment qu'aucune famille n'offre laisse le couple tel quel. Dépendances : jq.
+replier() {
+  famille=$(jq -r --arg f "$famille" --arg m "$moment" \
+    '. as $t | if $t.themes[$f][$m] then $f else ($t.familles | map(select($t.themes[.][$m])) | first // $f) end' "$tokens")
+}
+
 if ! { [ -r "$tokens" ] && jq -e '.familles and .moments and .defaut' "$tokens" > /dev/null 2>&1; }; then
   echo "dunei-theme : coque-tokens.json est introuvable ou illisible dans $dir ; lance make install." >&2
   exit 1
@@ -41,7 +51,7 @@ famille=$(jq -r '.defaut.famille' "$tokens")
 moment=$(jq -r '.defaut.moment' "$tokens")
 if [ -r "$choix" ] && lu=$(jq -r '[.famille, .moment] | @tsv' "$choix" 2> /dev/null); then
   f=${lu%%$'\t'*} m=${lu##*$'\t'}
-  if existe familles "$f" && existe moments "$m"; then famille=$f moment=$m; fi
+  if existe familles "$f" && existe moments "$m"; then famille=$f moment=$m; replier; fi
 fi
 
 case "${1:-}" in
@@ -57,6 +67,7 @@ case "${1:-}" in
      fi ;;
 esac
 
+replier
 mkdir -p "$dir"
 tmp=$(mktemp "$dir/.theme.json.XXXXXX")
 trap 'rm -f "$tmp"' EXIT  # sans effet après le mv (le temporaire n'existe plus), utile si jq ou mv échoue

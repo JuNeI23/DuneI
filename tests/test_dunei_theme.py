@@ -42,8 +42,20 @@ class DuneiThemeTest(unittest.TestCase):
         self.assertEqual((res.returncode, res.stdout), (0, "dominante jour\n"))
 
     def test_bascule_aller_retour(self):
-        self.assertEqual(self.lance("bascule").stdout, "thematisee jour\n")
-        self.assertEqual(self.lance("bascule").stdout, "thematisee nuit\n")
+        """Depuis la thématisée de nuit, bascule mène à la dominante de jour (jour thématisé retiré, D102), puis
+        revient à la nuit de cette famille."""
+        self.assertEqual(self.lance("bascule").stdout, "dominante jour\n")
+        self.assertEqual(self.lance("bascule").stdout, "dominante nuit\n")
+
+    def test_theme_retire_replie(self):
+        """Une demande du couple retiré, directe, par la famille ou lue dans theme.json, garde le moment et prend
+        la première famille qui l'offre."""
+        self.lance("jour")
+        self.assertEqual(self.lance("famille", "thematisee").stdout, "dominante jour\n")
+        self.assertEqual(self.lance("thematisee", "jour").stdout, "dominante jour\n")
+        self.assertEqual(json.loads(self.choix.read_text()), {"famille": "dominante", "moment": "jour"})
+        self.choix.write_text('{"famille": "thematisee", "moment": "jour"}')
+        self.assertEqual(self.lance().stdout, "dominante jour\n")
 
     def test_famille(self):
         res = self.lance("famille", "dominante")

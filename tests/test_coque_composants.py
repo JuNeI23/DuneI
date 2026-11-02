@@ -556,7 +556,7 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
         self.demarrer()
         self.ipc("interrupteurCocher", "false")
         self.ipc("basculeCocher", "false")
-        for famille, moment in ((None, None), ("thematisee", "jour")):
+        for famille, moment in ((None, None), ("dominante", "jour")):
             if famille:
                 self.choisir(famille, moment)
             vue = self.vue(55, famille, moment)
@@ -607,7 +607,7 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
         self.demarrer()
         self.ipc("materiauHauteur", "32")
         self.assertEqual(self.valeur("verre").split()[3], "true")
-        famille = self.vue(55)["defaut"]["famille"]
+        famille = "dominante"  # seule famille qui offre encore le jour (D102)
         self.choisir(famille, "jour")
         self.attendre(f"Theme : thème {famille}/jour appliqué")
         opacite, _, _, reflet = self.valeur("verre").split()
@@ -618,7 +618,7 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
         # L'ombre d'élévation suit elevation.<niveau>.shadow : la nuit, e2 n'en a pas et e3 en a une ; le jour, les
         # deux en ont une. La marge de l'ombre visible est la portée plus le décalage de l'ombre flottante.
         self.demarrer()
-        famille = self.vue(55)["defaut"]["famille"]
+        famille = "dominante"  # seule famille qui offre encore le jour (D102)
         for moment, attendu in (("nuit", "false true"), ("jour", "true true")):
             self.choisir(famille, moment)
             self.attendre(f"Theme : thème {famille}/{moment} appliqué")
@@ -631,7 +631,7 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
     def test_champ_creux(self):
         # Le fond d'un Champ est un Materiau de niveau field, creusé (ombre interne) la nuit comme le jour.
         self.demarrer()
-        famille = self.vue(55)["defaut"]["famille"]
+        famille = "dominante"  # seule famille qui offre encore le jour (D102)
         for moment in ("nuit", "jour"):
             self.choisir(famille, moment)
             self.attendre(f"Theme : thème {famille}/{moment} appliqué")
