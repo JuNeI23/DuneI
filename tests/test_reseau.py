@@ -311,6 +311,26 @@ class EtatReseauTest(EssaiCoque, unittest.TestCase):
         time.sleep(2)
         self.assertEqual(lectures(), 2)
 
+    def test_suspension_oublie_relecture(self):
+        """Une ligne reçue pendant une lecture, puis une suspension : la relecture promise est abandonnée.
+
+        Sans cela, la lecture en cours relançait à sa sortie la commande de lecture courante alors que la surveillance
+        était arrêtée (la lecture réelle du démarrage relançait ainsi la lecture factice injectée, d'où une lecture
+        en trop dans test_lecture_apres_ligne_seulement).
+        """
+        base = Path(self.tmp.name)
+        compte, emise, fin = base / "compte", base / "emise", base / "fin"
+        lectures = lambda: len(compte.read_text().split()) if compte.exists() else 0
+        # La lecture reste ouverte jusqu'au fichier « fin » ; le moniteur émet sa ligne pendant ce temps.
+        self.injecter(f"echo x >> {compte}; while [ ! -e {fin} ]; do sleep 0.05; done",
+                      f"while [ ! -e {compte} ]; do sleep 0.05; done; echo ligne; touch {emise}; sleep 30")
+        self.jusqua(emise.exists, "ligne du moniteur pendant la lecture")
+        self.assertFalse(self.valeur("veille"))  # aller-retour IPC : la ligne déjà émise est traitée avant la suite
+        self.ipc("etat", "suspendre")
+        fin.touch()
+        time.sleep(1)
+        self.assertEqual(lectures(), 1, "aucune relecture après la suspension")
+
     def jusqua(self, condition, message: str):
         """Attend, au plus DELAI secondes, qu'une condition devienne vraie.
 

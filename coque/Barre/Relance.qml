@@ -9,7 +9,8 @@ import Quickshell.Io
 // (NetworkManager ou dunst relancé, outil absent), elle est relancée une seconde plus tard par une minuterie à
 // un coup, sans tourner en boucle serrée.
 // Entrées : surveille, commande du processus résident (propriété, pour qu'un test injecte une commande
-// factice) ; lecture, commande de la lecture ponctuelle ; actif, vrai par défaut, suspend tout si faux ;
+// factice) ; lecture, commande de la lecture ponctuelle ; actif, vrai par défaut, suspend tout si faux (surveillance
+// arrêtée, relance annulée, relecture en attente abandonnée ; une lecture déjà lancée va à son terme) ;
 // environnement, variables ajoutées à celles du processus de surveillance (vide par défaut).
 // Sorties : signal lu(texte), sortie standard de la lecture ; signal ligne(texte), chaque ligne de la surveillance ; propriété relances, nombre de démarrages de la
 // surveillance (utile aux tests).
@@ -28,7 +29,9 @@ Item {
     signal lu(string texte)
     signal ligne(string texte)
 
-    // true quand une ligne est arrivée pendant une lecture : la lecture est refaite dès qu'elle se termine.
+    // true quand une ligne est arrivée pendant une lecture : la lecture est refaite dès qu'elle se termine. La
+    // suspension (actif faux) l'efface : la reprise relit de toute façon, et une relecture promise par l'ancienne
+    // surveillance lancerait sinon, à la sortie de la lecture en cours, la commande de lecture qui l'a remplacée.
     property bool relire: false
 
     // lire — demande une lecture ponctuelle. Rôle : lance la lecture, ou, si l'une est en cours, note qu'il
@@ -70,7 +73,7 @@ Item {
     }
 
     onActifChanged: {
-        if (actif) demarrer(); else { delai.stop(); veilleur.running = false }
+        if (actif) demarrer(); else { relire = false; delai.stop(); veilleur.running = false }
     }
     Component.onCompleted: if (actif) demarrer()
 }

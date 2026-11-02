@@ -41,6 +41,10 @@ ShellRoot {
             reprise.start()
         }
 
+        // suspendre — suspend EtatReseau (actif faux) sans le relancer : le test éprouve ce que l'arrêt abandonne.
+        // Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : EtatReseau.
+        function suspendre(): void { EtatReseau.actif = false }
+
         // valeur — propriété de EtatReseau, en JSON. Entrée : nom. Sortie : JSON. Erreurs : nom inconnu, « null ».
         // Dépendances : EtatReseau.
         function valeur(nom: string): string { return JSON.stringify(EtatReseau[nom] ?? null) }
