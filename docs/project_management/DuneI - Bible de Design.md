@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas
 
-Document normatif. Version 0.22. Historique en fin de document.
+Document normatif. Version 0.23. Historique en fin de document.
 
 ## Comment lire ce document
 
@@ -87,7 +87,7 @@ Chroma des neutres de la nuit thématisée : 0,014 (0,020 avant L2-40, jugé tro
 | 10 | `text-primary` | 0,25 | 0,13 |
 | 11 | `text-emphasis` | 0,18 | 0,07 |
 
-Le jour dominant a des gris strictement neutres et un E3 blanc pur. Le jour thématisé repose sur une base colorée : tous ses gris sont teintés (chroma 0,020 multipliée par un facteur de 7,5 sur le bureau et la fenêtre jusqu'à 1,5 sur le texte), et son E3 n'est pas blanc.
+Le jour dominant a des gris strictement neutres et un E3 blanc pur. Le jour thématisé repose sur une base colorée : tous ses gris sont teintés (chroma 0,020 multipliée par un facteur de 7,5 sur le bureau et la fenêtre jusqu'à 1,5 sur le texte), et son E3 n'est pas blanc. *Thème retiré jusqu'au lot 4 (D102, L2-50) ; ce passage tombe avec lui.*
 
 **Le rabattement dans le gamut sRGB se fait échelon par échelon, en préservant la teinte.** Sans cette précaution, la majoration en basse lumière peut décaler la teinte au rabattement.
 
@@ -158,7 +158,7 @@ Usages autorisés : bureaux virtuels, étiquettes, coloration syntaxique, série
 - Cible pour le corps de texte : **Lc 90**.
 - Plancher de rejet : **Lc 75**.
 - Au-dessus de la cible et du plancher, **chaque rôle a son plancher propre** (D83) : le plus petit Lc que tient la nuit thématisée sur ses fonds de référence, tenu dans les quatre thèmes et aux quatre teintes de référence (0, 55, 200, 265). L'ordre des rôles est contrôlé : chaque texte plus contrasté que le précédent, tout texte plus contrasté que toute bordure.
-- **Exception, une seule : le jour thématisé** (D84). Sa base colorée, voulue par Nicolas pour que ce thème « tire tout l'avantage d'avoir des couleurs », ramène le corps de texte à Lc 69 à 76 : sous la cible de 90 et, par endroits, sous le plancher de rejet de 75. Ce thème porte donc ses propres seuils, égaux aux minima mesurés (`contrast_target_body` et `contrast_floor` à 69, planchers par rôle propres). Aucun autre thème n'en bénéficie, et aucune autre dérogation n'est permise sans une entrée au journal.
+- **Exception, une seule : le jour thématisé** (D84). Sa base colorée, voulue par Nicolas pour que ce thème « tire tout l'avantage d'avoir des couleurs », ramène le corps de texte à Lc 69 à 76 : sous la cible de 90 et, par endroits, sous le plancher de rejet de 75. Ce thème porte donc ses propres seuils, égaux aux minima mesurés (`contrast_target_body` et `contrast_floor` à 69, planchers par rôle propres). Aucun autre thème n'en bénéficie, et aucune autre dérogation n'est permise sans une entrée au journal. *Thème retiré jusqu'au lot 4 (D102, L2-50) ; ce passage tombe avec lui.*
 - **Seconde dérogation, bornée : l'état inactif au jour** (D83). Le texte sur-accent posé sur l'accent muet de la sélection inactive (luminosité 0,78, validée à l'écran par Nicolas) ne tient que Lc 41 dans les deux thèmes de jour : un état inactif, volontairement atténué, hors du corps de texte. Elle est bornée par le plancher `on-accent-muted` de ce moment (41), contre 79 la nuit.
 - WCAG 2 conservé comme filet réglementaire, jamais comme critère de conception.
 
@@ -947,3 +947,4 @@ Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si 
 | 0.20 | 2026-11-01 | Chapitre 5, verre de la coque : E3 en verre à 60 % le jour comme la nuit, sans sheen ni liseré ; ombre évidée sous la surface ; filet translucide `glassLine` et textes d'appoint d'un ton plus soutenus sur le verre (D103) |
 | 0.21 | 2026-11-01 | Chapitre 7, formes : formes des fenêtres de réglages, jetons `reglages` (D104) |
 | 0.22 | 2026-11-01 | Chapitre 7 : motif de la fenêtre de réglages (barre latérale à onglets, cartes, rangées, valeur copiable, sous-page) et du popover de réglage rapide ; annexe E : carte, rangée, valeur copiable, fenêtre de réglages (D105) |
+| 0.23 | 2026-11-02 | Chapitre 2 : le jour thématisé et son exception (D84) portent la mention de son retrait jusqu'au lot 4 (D102, L2-50) |

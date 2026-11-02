@@ -2,9 +2,9 @@
 
 Oct 10, 2026 · @Nicolas — révisée le 22 octobre 2026
 
-Version 1.32. Historique en fin de document.
+Version 1.33. Historique en fin de document.
 
-*Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent cinquante-huit lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
+*Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent soixante-quatre lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
 
 ## En une phrase
 
@@ -118,7 +118,7 @@ L'ordre découle d'une seule règle : **chaque lot laisse la machine en état de
 | **4 — Accord visuel** | Thématisation Qt et GTK sur cibles réelles, premier lot d'icônes, fond d'écran, panneau de thème, extraction de teinte | Cohérente de bout en bout, bible opposable partout |
 | **5 — Écrans système et voix** | Réglages panneau par panneau, connexion, amorçage, « À propos », catalogue de messages, recette | **1.0** |
 
-Le détail — cent cinquante-huit éléments, chacun rattaché à un chantier, un lot et une nature — vit dans le document de périmètre et de backlog. **Cette note ne s'y substitue pas.**
+Le détail — cent soixante-quatre éléments, chacun rattaché à un chantier, un lot et une nature — vit dans le document de périmètre et de backlog. **Cette note ne s'y substitue pas.**
 
 ## Les risques, par ordre de gravité
 
@@ -259,7 +259,7 @@ tuigreet remplacent SDDM : au démarrage, aucun écran de connexion, un fond uni
 sortie de session, un écran de connexion provisoire (L5-12) qui ne propose que DuneI. Le verrou est fermé
 par construction : aucun raccourci ordinaire ne répond avant le déverrouillage, son et luminosité restent
 actifs, et un verrouilleur qui échoue trois fois ferme la session. Ce qui démarre avec la session est une
-liste blanche, `session.toml` (`hypridle`, `nm-applet`) : l'autostart XDG est masqué, et ajouter un
+liste blanche, `session.toml` (`hypridle`, `nm-applet`, puis `dunei-coque` ; `nm-applet` retiré à L2-11) : l'autostart XDG est masqué, et ajouter un
 programme demande une ligne et son unité. Recette passée à l'écran, démarrage de 18,3 s contre 18,9 s avec
 SDDM, SDDM désinstallé. Limites acceptées : la commande libre de tuigreet reste ouverte jusqu'à L5-12, et
 un `demarrage.lua` cassé ne verrouillerait rien (D49 à D51). Prochaine étape du lot 1 : **L1-18, le terminal
@@ -470,7 +470,7 @@ en L2-51, faute d'accès VPN pour tester. Les formes sont des jetons (`Theme.reg
 bible comme modèle de toute fenêtre de réglages. Le changement d'onglet est passé de 300 à 600 ms à moins de 10 ms
 (pages gardées vivantes, balayage Wi-Fi demandé une fois pour toute la vie de la fenêtre). Le jour thématisé et les
 couleurs de la fenêtre restent renvoyés au lot 4 (D102) ; Nicolas a ajouté l'idée d'un popover dédié au thème et à la
-luminosité (L2-52, à peser avec L2-29 et L2-50). Le sort de `nm-applet` se tranche à la recette de sortie.
+luminosité (L2-52, à peser avec L2-29 et L2-50). `nm-applet` est retiré de la session (`session.toml`, `retires`) ; `nm-connection-editor` reste le recours.
 
 Prochaine étape : **fusionner L2-11** (la PR de `feat/reseau`, après la relecture finale de la branche), puis, à la
 demande de Nicolas, **L2-50, le retrait du jour thématisé**, dans sa propre branche, aussitôt après la fusion.
@@ -480,7 +480,8 @@ demande de Nicolas, **L2-50, le retrait du jour thématisé**, dans sa propre br
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-10 | Version initiale |
-| 1.32 | 2026-11-01 | L2-11 livrée et validée à l'écran (popover D5, fenêtre Réseau D4, VPN minimal ; D103 à D105) ; L2-52 ajoutée ; prochaine étape : fusion de L2-11, puis L2-50 en branche à part |
+| 1.33 | 2026-11-02 | Corrections de la relecture finale de L2-11 : recompte du backlog (164 éléments), sort de `nm-applet` tranché (retiré) |
+| 1.32 | 2026-11-01 | L2-11 livrée et validée à l'écran (popover D5, fenêtre Réseau D4, VPN minimal ; D103 à D105) ; L2-50, L2-51 et L2-52 ajoutées ; relecture finale : trois lignes ajoutées au backlog (L2-53 recherche partagée, L2-54 saisie IPv4 protégée des relectures, L2-55 rangées du popover réseau au clavier), soit 164 éléments ; prochaine étape : fusion de L2-11, puis L2-50 en branche à part |
 | 1.31 | 2026-10-31 | Première tranche du thème d'icônes DuneI (L4-12, D101) livrée et validée à l'écran, graisse bold ; L2-49 ajoutée (thème de plateforme Qt) ; prochaine étape : L2-11, l'indicateur réseau et son popover |
 | 1.30 | 2026-10-31 | Masque de saisie de la barre calculé rangée par rangée (L2-08, D100) : les deux bugs de la coque sont corrigés ; prochaine étape : popover du réseau ou prochain module de la presqu'île |
 | 1.29 | 2026-10-31 | Garde du bouton marche au réveil (L1-09, D99) contre l'appui fantôme ; prochaine étape : le bug 2 de la coque (barre inerte au survol et au clic gauche après un réveil), puis le popover du réseau ou le prochain module |

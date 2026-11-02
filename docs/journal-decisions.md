@@ -2452,8 +2452,9 @@ la nuit, sans sheen ni liseré.** La nuit n'est plus opaque pour E3 (dérogation
   ton au-dessus dans les tokens ».
 - **Ombre évidée.** Sous un verre translucide, l'ombre portée dessinée sous toute la surface transparaît et
   l'assombrit ; l'ombre tirée de la silhouette floutée formait de plus une bande uniforme coupée net sous le popover.
-  L'ombre retenue est celle d'`OmbreElevation` (RectangularShadow), évidée sous la forme. L'essai le fait ; la coque
-  le fera dans la refonte de L2-11 (popovers et presqu'île).
+  L'ombre retenue est celle d'`OmbreElevation` (RectangularShadow), évidée sous la forme. L'essai et les popovers de la
+  coque le font (`Overlay` pose une `OmbreElevation` évidée, refonte de L2-11) ; la presqu'île (`Encoche`) dessine
+  encore sa propre ombre floutée, non évidée : elle reste à reprendre.
 - **Lien à la barre.** Accepté pour la refonte : tant qu'un popover est ouvert, l'icône de la barre qui l'a ouvert
   prend l'accent et sa variante pleine (bible, chapitre 9 : contour au repos, plein à l'état actif), en fondu.
 
@@ -2462,28 +2463,70 @@ règles de calque, filet), coque d'essai des composants, bible (chapitre 5, anne
 
 ### D104 · Les formes de la fenêtre Réseau deviennent des jetons
 
-2026-11-01. **Les formes de la fenêtre Réseau (direction D4), validées à l'écran le 2026-11-01, deviennent la section `[reglages]` de `tokens.toml`, émise sous `Theme.reglages.*`.** Elles valent pour toutes les fenêtres de réglages.
+2026-11-01. **Les formes de la fenêtre Réseau (direction D4), validées à l'écran le 2026-11-01, deviennent la section
+`[reglages]` de `tokens.toml`, émise sous `Theme.reglages.*`.** Elles valent pour toutes les fenêtres de réglages.
 
-- **Raison.** Les hauteurs de ligne, le médaillon et le plateau de la barre latérale se retrouveront dans chaque fenêtre de réglages : les écrire une fois en jetons évite des cotes dispersées dans les composants.
-- **Valeurs.** `row = 44` (ligne simple), `row_help = 52` (ligne avec texte d'aide), `row_lead = 60` (ligne de tête, réseau joint), `medallion = 32` (diamètre du médaillon d'icône), `medallion_glyph = 18` (glyphe du médaillon), `text_column = 56` (colonne du texte et retrait du filet), `sidebar_inset = 8` (retrait du plateau détaché), `tab_height = 48` (barre d'onglets).
-- **Rayons.** Décision de Nicolas : la fenêtre garde `radius.window` (12) comme toutes les fenêtres. Le plateau de la barre latérale et les cartes prennent le `radius.panel` (10) existant, pour rester sous le coin de la fenêtre (règle d'imbrication). Aucun jeton de rayon nouveau.
+- **Raison.** Les hauteurs de ligne, le médaillon et le plateau de la barre latérale se retrouveront dans chaque fenêtre
+  de réglages : les écrire une fois en jetons évite des cotes dispersées dans les composants.
+- **Valeurs.** `row = 44` (ligne simple), `row_help = 52` (ligne avec texte d'aide), `row_lead = 60` (ligne de tête,
+  réseau joint), `medallion = 32` (diamètre du médaillon d'icône), `medallion_glyph = 18` (glyphe du médaillon),
+  `text_column = 56` (colonne du texte et retrait du filet), `sidebar_inset = 8` (retrait du plateau détaché),
+  `tab_height = 48` (barre d'onglets).
+- **Rayons.** Décision de Nicolas : la fenêtre garde `radius.window` (12) comme toutes les fenêtres. Le plateau de la
+  barre latérale et les cartes prennent le `radius.panel` (10) existant, pour rester sous le coin de la fenêtre (règle
+  d'imbrication). Aucun jeton de rayon nouveau.
+- **Complément : cotes de la fenêtre Réseau (relecture finale de L2-11).** Cinq jetons s'ajoutent à `[reglages]` pour ne
+  laisser aucune cote en dur dans la coque : `field_width = 290` (largeur d'un champ ou d'un sélecteur d'une fiche de
+  réglage), `window_width = 840` et `window_height = 640` (taille par défaut de la fenêtre Réseau, D105),
+  `window_min_width = 720` et `window_min_height = 480` (taille minimale). La règle Hyprland `fenetre-reseau` renvoie à
+  ces jetons dans son commentaire.
 
-*Touché : `tokens.toml`, `dunei_theme/emitters/quickshell.py`, `coque/Theme/Theme.qml`, `generated/`, `tests/` (émetteur, golden), bible (chapitre 7, formes, v0.21).*
+*Touché : `tokens.toml`, `dunei_theme/emitters/quickshell.py`, `coque/Theme/Theme.qml`, `generated/`, `tests/`
+(émetteur, golden), bible (chapitre 7, formes, v0.21).*
 
 ### D105 · La fenêtre Réseau en onglets (direction D4)
 
-2026-11-01. **La fenêtre Réseau est refaite sur la direction D4 des essais, validée à l'écran le 2026-11-01 : une barre latérale à trois onglets (Wi-Fi, Filaire, VPN), des cartes de réglages et une sous-page par profil enregistré.** Le popover (direction D5, L2-11) en est le raccourci : « Réglages réseau… » l'ouvre, comme `qs ipc call reseau ouvrir`.
+2026-11-01. **La fenêtre Réseau est refaite sur la direction D4 des essais, validée à l'écran le 2026-11-01 : une barre
+latérale à trois onglets (Wi-Fi, Filaire, VPN), des cartes de réglages et une sous-page par profil enregistré.** Le
+popover (direction D5, L2-11) en est le raccourci : « Réglages réseau… » l'ouvre, comme `qs ipc call reseau ouvrir`.
 
-- **Trois onglets.** Wi-Fi, Filaire et VPN, parce que ce sont les trois familles de connexion de NetworkManager que Nicolas manipule ; la liste unique de profils d'avant mélangeait des réglages qui n'ont rien en commun.
-- **Sous-page pour les profils enregistrés (Nicolas).** Un clic sur un réseau enregistré qui n'est pas le réseau joint ouvre une sous-page « ‹ Wi-Fi » (mot de passe, connexion automatique, priorité, facturation, IPv4 fixe, Se connecter, Oublier), fermée par Échap. Le réseau joint garde en carte ses réglages fréquents et une rangée « Détails… » vers sa sous-page. Raison : la page reste lisible, et la saisie d'un réglage dense ne se mêle pas à la liste.
-- **VPN minimal, VPN complet reporté en L2-51 (Nicolas).** L'onglet liste les connexions `vpn` et `wireguard` connues de NetworkManager, chacune avec son interrupteur, et montre sous la rangée le refus de nmcli. L'import d'un fichier, les identifiants et la sous-page d'un VPN sont laissés en chantier exprès : l'import attend le portail de sélection de fichiers, et Nicolas n'a pas encore d'accès VPN pour tester. Le repérage est consigné dans le plan et au backlog.
-- **Angle de la fenêtre gardé à 12, cartes à `radius.panel` (Nicolas).** Toutes les fenêtres gardent `radius.window` ; le plateau latéral et les cartes prennent `radius.panel` (10), sous le coin de la fenêtre (règle d'imbrication). Aucun jeton de rayon ni règle Hyprland nouveaux (D104).
-- **Priorité par le Compteur de la bible.** La pilule « − n + » de l'essai est écartée : la bible fait du Compteur le composant d'un nombre à régler, et elle est la règle des composants.
-- **Briques partagées.** `Jonction` (choisir, rejoindre, échec) devient un contrôleur non visuel commun au popover et à la page Wi-Fi, et `BlocSecret` (la ligne de mot de passe dépliée) un composant commun : deux copies de cette logique divergeaient déjà. `FicheProfil` sert en mode résumé pour la carte du réseau joint, sans recopier sa logique de lecture et d'écriture de nmcli.
-- **Balayage demandé pour toute la vie de la fenêtre.** Le panneau demande le balayage Wi-Fi dès l'ouverture et le rend à sa destruction, quel que soit l'onglet. Mesure : écrire `scannerEnabled` bloque le fil graphique pendant environ 0,5 s ; le lier à la page Wi-Fi visible gelait donc l'interface à chaque bascule vers ou depuis Wi-Fi. Le coût d'un balayage pendant que Nicolas est sur Filaire ou VPN est négligeable ; l'écriture se fait une fois, après la première image.
-- **Pages gardées en vie, secrets effacés au masquage.** Les trois pages sont construites à l'ouverture et seulement montrées ou cachées (changement d'onglet ramené de 300 à 600 ms à moins de 10 ms). Une page vivante garde ses saisies : tout secret (mot de passe saisi, secret révélé) est donc effacé quand la page se cache, pour qu'aucun ne survive à un changement d'onglet.
-- **Contour de focus après une touche seulement.** Tant qu'aucune touche n'a été frappée dans la fenêtre, l'arrivée du focus sur la liste des onglets cache le contour : Qt 6.12 n'expose pas la raison du focus, et Nicolas ne veut pas d'anneau à l'ouverture à la souris. Contrepartie : une fenêtre ouverte au clavier depuis le popover ne montre le contour qu'à la première touche.
-- **Adresses multiples, une par ligne.** Chaque adresse d'un champ multiple (IPv6, DNS) a sa ligne, copiable ; rien ne déborde de la carte, au prix d'une rangée plus haute.
-- **Reporté.** Les couleurs et le jour thématisé sont renvoyés au lot 4 (D102, L2-50), qui suit la fusion de L2-11 dans sa propre branche. L'idée de Nicolas d'un popover dédié au thème et à la luminosité est inscrite au backlog (L2-52).
+- **Trois onglets.** Wi-Fi, Filaire et VPN, parce que ce sont les trois familles de connexion de NetworkManager que
+  Nicolas manipule ; la liste unique de profils d'avant mélangeait des réglages qui n'ont rien en commun.
+- **Sous-page pour les profils enregistrés (Nicolas).** Un clic sur un réseau enregistré qui n'est pas le réseau joint
+  ouvre une sous-page « ‹ Wi-Fi » (mot de passe, connexion automatique, priorité, facturation, IPv4 fixe, Se connecter,
+  Oublier), fermée par Échap. Le réseau joint garde en carte ses réglages fréquents et une rangée « Détails… » vers sa
+  sous-page. Raison : la page reste lisible, et la saisie d'un réglage dense ne se mêle pas à la liste.
+- **VPN minimal, VPN complet reporté en L2-51 (Nicolas).** L'onglet liste les connexions `vpn` et `wireguard` connues de
+  NetworkManager, chacune avec son interrupteur, et montre sous la rangée le refus de nmcli. L'import d'un fichier, les
+  identifiants et la sous-page d'un VPN sont laissés en chantier exprès : l'import attend le portail de sélection de
+  fichiers, et Nicolas n'a pas encore d'accès VPN pour tester. Le repérage est consigné dans le plan et au backlog.
+- **Angle de la fenêtre gardé à 12, cartes à `radius.panel` (Nicolas).** Toutes les fenêtres gardent `radius.window` ;
+  le plateau latéral et les cartes prennent `radius.panel` (10), sous le coin de la fenêtre (règle d'imbrication). Aucun
+  jeton de rayon ni règle Hyprland nouveaux (D104).
+- **Priorité par le Compteur de la bible.** La pilule « − n + » de l'essai est écartée : la bible fait du Compteur le
+  composant d'un nombre à régler, et elle est la règle des composants.
+- **Briques partagées.** `Jonction` (choisir, rejoindre, échec) devient un contrôleur non visuel commun au popover et à
+  la page Wi-Fi, et `BlocSecret` (la ligne de mot de passe dépliée) un composant commun : deux copies de cette logique
+  divergeaient déjà. `FicheProfil` sert en mode résumé pour la carte du réseau joint, sans recopier sa logique de
+  lecture et d'écriture de nmcli.
+- **Balayage demandé pour toute la vie de la fenêtre.** Le panneau demande le balayage Wi-Fi dès l'ouverture et le rend
+  à sa destruction, quel que soit l'onglet. Mesure : écrire `scannerEnabled` bloque le fil graphique pendant environ 0,5
+  s ; le lier à la page Wi-Fi visible gelait donc l'interface à chaque bascule vers ou depuis Wi-Fi. Le coût d'un
+  balayage pendant que Nicolas est sur Filaire ou VPN est négligeable ; l'écriture se fait une fois, après la première
+  image.
+- **Pages gardées en vie, secrets effacés au masquage.** Les trois pages sont construites à l'ouverture et seulement
+  montrées ou cachées (changement d'onglet ramené de 300 à 600 ms à moins de 10 ms). Une page vivante garde ses saisies
+  : tout secret (mot de passe saisi, secret révélé) est donc effacé quand la page se cache, pour qu'aucun ne survive à
+  un changement d'onglet.
+- **Contour de focus après une touche seulement.** Tant qu'aucune touche n'a été frappée dans la fenêtre, l'arrivée du
+  focus sur la liste des onglets cache le contour : Qt 6.12 n'expose pas la raison du focus, et Nicolas ne veut pas
+  d'anneau à l'ouverture à la souris. Contrepartie : une fenêtre ouverte au clavier depuis le popover ne montre le
+  contour qu'à la première touche.
+- **Adresses multiples, une par ligne.** Chaque adresse d'un champ multiple (IPv6, DNS) a sa ligne, copiable ; rien ne
+  déborde de la carte, au prix d'une rangée plus haute.
+- **Reporté.** Les couleurs et le jour thématisé sont renvoyés au lot 4 (D102, L2-50), qui suit la fusion de L2-11 dans
+  sa propre branche. L'idée de Nicolas d'un popover dédié au thème et à la luminosité est inscrite au backlog (L2-52).
 
-*Touché : `coque/Reseau/` (panneau, pages, fiches, Jonction, BlocSecret, popover, Groupe, Ligne, Section), `coque/Composants/` (Carte, Medaillon, ReglageLigne, Valeur), `tests/test_reseau.py`, `tests/test_reglages.py`, bible (chapitre 7, annexe E, v0.22), carnet (L2-11), backlog (L2-11, L2-52).*
+*Touché : `coque/Reseau/` (panneau, pages, fiches, Jonction, BlocSecret, popover, Groupe, Ligne, Section),
+`coque/Composants/` (Carte, Medaillon, ReglageLigne, Valeur), `tests/test_reseau.py`, `tests/test_reglages.py`, bible
+(chapitre 7, annexe E, v0.22), carnet (L2-11), backlog (L2-11, L2-52).*
