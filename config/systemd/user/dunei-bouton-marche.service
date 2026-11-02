@@ -1,0 +1,18 @@
+# Bouton marche confié à Hyprland pendant la session graphique de DuneI (L1-09, D106).
+# Posé par DuneI depuis config/ — NE PAS MODIFIER À LA MAIN : make install le remplace.
+# Le service tient le verrou handle-power-key de logind, que logind respecte toujours : pendant la session,
+# HandlePowerKey=suspend reste sans effet, et Hyprland lie XF86PowerOff au double appui
+# (scripts/dunei-bouton-marche). Hors session, ou si le service tombe, logind reprend la main (D44).
+[Unit]
+Description=Bouton marche confié à Hyprland (double appui)
+PartOf=graphical-session.target
+After=graphical-session.target
+ConditionEnvironment=WAYLAND_DISPLAY
+
+[Service]
+Type=exec
+ExecStart=/usr/bin/systemd-inhibit --what=handle-power-key --mode=block --who=DuneI --why="Double appui géré par Hyprland" /usr/bin/sleep infinity
+Restart=on-failure
+
+[Install]
+WantedBy=graphical-session.target

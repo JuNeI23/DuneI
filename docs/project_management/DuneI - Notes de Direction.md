@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas — révisée le 22 octobre 2026
 
-Version 1.33. Historique en fin de document.
+Version 1.34. Historique en fin de document.
 
 *Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent soixante-quatre lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
 
@@ -472,14 +472,23 @@ bible comme modèle de toute fenêtre de réglages. Le changement d'onglet est p
 couleurs de la fenêtre restent renvoyés au lot 4 (D102) ; Nicolas a ajouté l'idée d'un popover dédié au thème et à la
 luminosité (L2-52, à peser avec L2-29 et L2-50). `nm-applet` est retiré de la session (`session.toml`, `retires`) ; `nm-connection-editor` reste le recours.
 
-Prochaine étape : **fusionner L2-11** (la PR de `feat/reseau`, après la relecture finale de la branche), puis, à la
-demande de Nicolas, **L2-50, le retrait du jour thématisé**, dans sa propre branche, aussitôt après la fusion.
+L2-11 est fusionnée. Le 2026-11-02, un appui fantôme du bouton marche a de nouveau mis la machine en veille, cette
+fois 1 min 41 s après le réveil, hors de la garde de D99 : ces appuis viennent du même bouton que les vrais, celui que
+pilote le contrôleur embarqué, et peuvent arriver plusieurs minutes après la reprise. D106 confie donc le bouton à
+Hyprland pendant la session : `dunei-bouton-marche.service` tient le verrou `handle-power-key` de logind, et la veille
+demande deux appuis à moins d'une seconde d'intervalle ; un appui isolé ne fait plus rien. Hors session, logind et la
+garde de D99 restent en place.
+
+Prochaine étape : **valider D106 à l'écran** (un appui isolé sans effet, un double appui qui met en veille, écran
+verrouillé ou non), fusionner `feat/double-appui-marche`, puis, à la demande de Nicolas, **L2-50, le retrait du jour
+thématisé**, dans sa propre branche.
 
 ## Historique des versions
 
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-10 | Version initiale |
+| 1.34 | 2026-11-02 | Bouton marche au double appui pendant la session (D106), après un appui fantôme hors de la garde de D99 ; prochaine étape : sa validation, puis L2-50 |
 | 1.33 | 2026-11-02 | Corrections de la relecture finale de L2-11 : recompte du backlog (164 éléments), sort de `nm-applet` tranché (retiré) |
 | 1.32 | 2026-11-01 | L2-11 livrée et validée à l'écran (popover D5, fenêtre Réseau D4, VPN minimal ; D103 à D105) ; L2-50, L2-51 et L2-52 ajoutées ; relecture finale : trois lignes ajoutées au backlog (L2-53 recherche partagée, L2-54 saisie IPv4 protégée des relectures, L2-55 rangées du popover réseau au clavier), soit 164 éléments ; prochaine étape : fusion de L2-11, puis L2-50 en branche à part |
 | 1.31 | 2026-10-31 | Première tranche du thème d'icônes DuneI (L4-12, D101) livrée et validée à l'écran, graisse bold ; L2-49 ajoutée (thème de plateforme Qt) ; prochaine étape : L2-11, l'indicateur réseau et son popover |

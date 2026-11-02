@@ -791,7 +791,7 @@ Hyprland avec le couvercle. Le module est couvert par des tests sur un `hl` simu
 **Piège de développement.** Une sonde `hyprctl dispatch 'hl.dsp.dpms({ action = "zzz" })'` a éteint
 l'écran de Nicolas : Hyprland 0.56.2 fait basculer l'écran sur toute valeur inconnue (`parseToggleStr`).
 
-*Complété par D99 (garde du bouton marche au réveil).*
+*Complété par D99 (garde du bouton marche au réveil), puis par D106 (double appui pendant la session).*
 Règle : ne jamais sonder la session réelle avec un répartiteur ; lire le code source.
 
 Raison : une seule autorité par fonction, et la veille doit survivre à l'absence de session.
@@ -2325,6 +2325,8 @@ de la garde.
 *Touché : `systeme/etc/systemd/system/dunei-garde-reveil.service`, `systeme/etc/systemd/system/sleep.target.d/10-dunei.conf`,
 `tests/test_garde_reveil.py`, carnet (§ Énergie — L1-09), backlog (L1-09), notes de direction.*
 
+*Complétée par D106 : pendant la session, le bouton passe par Hyprland au double appui ; la garde ne couvre plus que l'écran de connexion.*
+
 ### D100 · Masque de la barre calculé rangée par rangée
 
 2026-10-31. **Le masque de saisie de la barre se calcule à coordonnées cumulées, rangée par rangée, au lieu de nommer
@@ -2530,3 +2532,45 @@ popover (direction D5, L2-11) en est le raccourci : « Réglages réseau… » l
 *Touché : `coque/Reseau/` (panneau, pages, fiches, Jonction, BlocSecret, popover, Groupe, Ligne, Section),
 `coque/Composants/` (Carte, Medaillon, ReglageLigne, Valeur), `tests/test_reseau.py`, `tests/test_reglages.py`, bible
 (chapitre 7, annexe E, v0.22), carnet (L2-11), backlog (L2-11, L2-52).*
+
+## 2026-11-02 — Bouton marche au double appui (L1-09)
+
+### D106 · Pendant la session, le bouton marche met en veille au double appui
+
+2026-11-02. **Pendant la session graphique, la veille par le bouton marche demande deux appuis à moins d'une seconde
+d'intervalle ; un appui isolé reste sans effet.** `dunei-bouton-marche.service`, service de session listé dans
+`session.toml`, tient le verrou `handle-power-key` de logind pour toute la durée de la session ; Hyprland lie
+`XF86PowerOff` (drapeau `locked`, donc aussi sous `hyprlock`) au script `dunei-bouton-marche`, qui arme le bouton au
+premier appui et lance `systemctl suspend` au second. Hors session (écran de connexion), ou si le service tombe,
+logind reprend la main et D44 s'applique telle quelle. Le verrouillage reste à SUPER + L.
+
+- **Raison.** D99 supposait l'appui fantôme collé au réveil. Le 2026-11-02, la garde a bien absorbé un appui à
+  18:40:30, une seconde après la reprise de 18:40:29, mais logind en a reçu un autre à 18:42:10, 1 min 41 s après la
+  reprise, pendant que Nicolas naviguait sans toucher au bouton, et a mis la machine en veille. L'historique en montre
+  d'autres loin du réveil : 42 s le 2026-10-31 à 16:16:38, plus de 6 min le 2026-11-01 à 09:38:06. Aucune durée de
+  garde ne couvre ce cas.
+- **Origine.** Le compteur `/sys/firmware/acpi/interrupts/ff_pwr_btn` est à 0 depuis le démarrage : tous les appuis,
+  vrais comme fantômes, viennent du bouton piloté par le contrôleur embarqué (`PNP0C0C`, `event0`), et non du bouton
+  ACPI fixe (`LNXPWRBN`). Les deux ne se distinguent donc ni par le périphérique, ni par la durée : ce bouton rapporte
+  l'appui et le relâchement d'un seul coup, ce qui exclut un appui long. Aucun défaut connu ni correctif noyau n'a été
+  trouvé pour ce symptôme sur le T14s Gen 3 AMD.
+- **Fenêtre d'une seconde.** Les fantômes relevés sont isolés ou espacés d'au moins 2 s (2026-10-31 à 08:13:36 et
+  08:13:39, 2026-11-02 à 14:35:26 et 14:35:28) ; un double appui volontaire tient en quelques dixièmes. Le script lit
+  `/proc/uptime`, horloge qui ne recule jamais et compte la veille : un premier appui avant une veille ne s'apparie
+  jamais avec un appui après le réveil.
+- **Verrou de session plutôt que `HandlePowerKey=ignore`.** C'est la méthode que la documentation de Hyprland
+  recommande (« Binding to keys handled by systemd-logind ») : logind garde la main hors session, et un service tombé
+  rend le bouton à logind au lieu de le laisser muet. La politique polkit `inhibit-handle-power-key` l'accorde à la
+  session active sans mot de passe.
+- **Écarté.** Allonger la garde de D99 : les fantômes arrivent jusqu'à plusieurs minutes après le réveil. Bouton =
+  verrouillage seul : Nicolas verrouille déjà par SUPER + L, et perdrait la veille au bouton. Appui long : impossible,
+  voir plus haut.
+- **D99 conservée.** La garde ne sert plus pendant la session, puisque logind n'y agit plus sur le bouton ; elle couvre
+  encore l'écran de connexion, où l'appui court reste `suspend`.
+- **Coût accepté.** Aucun retour visuel au premier appui ; la veille par le bouton n'existe pas sous une session
+  graphique dont le service serait arrêté à la main.
+
+*Touché : `config/hypr/scripts/dunei-bouton-marche`, `config/systemd/user/dunei-bouton-marche.service`,
+`session.toml`, `config/hypr/donnees/raccourcis.lua`, `tests/test_energie_scripts.py`,
+`tests/test_hyprland_clavier.py`, `tests/test_deploy.py`, carnet (§ Énergie — L1-09), backlog (L1-09), notes de
+direction.*

@@ -489,7 +489,8 @@ class DeployTest(unittest.TestCase):
         calls = [l for l in self.journal() if l.startswith("systemctl --user") and "is-" not in l]
         self.assertEqual(calls, ["systemctl --user disable --now nm-applet.service", "systemctl --user daemon-reload",
                                  "systemctl --user restart hypridle.service",
-                                 "systemctl --user restart dunei-coque.service"])
+                                 "systemctl --user restart dunei-coque.service",
+                             "systemctl --user restart dunei-bouton-marche.service"])
         self.log.unlink()
         self.assertEqual(run(self.cfg).returncode, 0)
         self.assertEqual([l for l in self.journal() if "is-" not in l], [])
@@ -502,7 +503,7 @@ class DeployTest(unittest.TestCase):
         return repo
 
     def test_session_real_list(self):
-        self.assertEqual(lire_session(ROOT), (["hypridle.service", "dunei-coque.service"], []))
+        self.assertEqual(lire_session(ROOT), (["hypridle.service", "dunei-coque.service", "dunei-bouton-marche.service"], []))
 
     def test_session_refusals(self):
         for body, word in (('version = "0.1.0"\n[demarrage]\nservices = []\n', "non vide"),

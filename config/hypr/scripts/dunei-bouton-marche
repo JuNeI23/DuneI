@@ -1,0 +1,13 @@
+#!/bin/sh
+# dunei-bouton-marche — double appui du bouton marche, lié à XF86PowerOff par donnees/raccourcis.lua (L1-09, D106).
+# Un premier appui arme le bouton ; un second, dans la seconde qui suit, met en veille. Un appui isolé, comme
+# l'appui fantôme que le contrôleur embarqué de caladan émet parfois longtemps après un réveil, reste sans effet.
+# Entrée : aucune ; DUNEI_HORLOGE peut désigner un autre fichier au format de /proc/uptime (tests).
+# Sortie : code 0 au premier appui ; au second, celui de systemctl suspend.
+# Erreurs : XDG_RUNTIME_DIR absent arrête le script avec le message du shell.
+# Dépendances : /proc/uptime (horloge qui ne recule jamais, veille comprise), awk, systemctl, XDG_RUNTIME_DIR.
+etat="${XDG_RUNTIME_DIR:?}/dunei-bouton-marche"
+maintenant=$(awk '{ printf "%d", $1 * 100 }' "${DUNEI_HORLOGE:-/proc/uptime}")   # En centièmes de seconde.
+avant=$(cat "$etat" 2>/dev/null || echo -1000)
+if [ $((maintenant - avant)) -le 100 ]; then rm -f "$etat"; exec systemctl suspend; fi
+echo "$maintenant" > "$etat"
