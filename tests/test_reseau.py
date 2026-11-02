@@ -1247,6 +1247,7 @@ class PageVpnTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(self.ipc("focus"), "interrupteur:Maison: OpenVPN")
 
 
+@unittest.skipUnless(QS, "Quickshell requis")
 class GroupeTest(EssaiCoque, unittest.TestCase):
     """Groupe et Ligne, éprouvés dans une coque d'essai sans fenêtre : largeurs, contrôle à droite, filets en retrait."""
 
