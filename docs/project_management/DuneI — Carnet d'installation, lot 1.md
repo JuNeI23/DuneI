@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.28. Historique en fin de document.
+Version 1.30. Historique en fin de document.
 
 Socle amorçable.
 
@@ -78,7 +78,7 @@ DuneI/
 │   │   ├── machines/       # un fichier par machine, choisi par nom d'hôte
 │   │   └── scripts/        # scripts de la session (atténuation, verrou initial…)
 │   ├── kitty/kitty.conf    # terminal provisoire (L1-18)
-│   └── systemd/user/       # unités de session (nm-applet, surcharge de hypridle)
+│   └── systemd/user/       # unités de session (dunei-coque, surcharge de hypridle)
 ├── systeme/etc/            # fichiers système copiés sous /etc par make install (greetd, logind, pacman, profile.d, systemd)
 ├── tokens.toml             # source du thème
 ├── motion.toml             # source du mouvement (L1-23)
@@ -1131,6 +1131,8 @@ greetd greetd-tuigreet
 | `config/hypr/scripts/dunei-verrou-initial` | `~/.config/hypr/scripts/` (lien) | Trois tentatives du verrouilleur, puis `uwsm stop` |
 | `generated/energie.lua` | `~/.config/hypr/generated/` | Commande du verrouilleur, tirée d'`energie.toml` |
 
+*Depuis L2-11, cette unité n'est plus posée : `session.toml` la retire (`retires`), voir « Le réseau : popover et fenêtre — L2-11 ».*
+
 **Ce que fait `make install`.** Dans l'ordre : `hypr`, `fontconfig`, `services`, `systeme`, `connexion`.
 - `{utilisateur}` est rempli avec l'utilisateur qui lance la commande, avant comparaison et copie ; lancé en root, `make install` refuse.
 - `services` copie les unités du dépôt, pose le masque `~/.config/systemd/user/wayland-session-xdg-autostart@.target` → `/dev/null`, recharge systemd, puis active et démarre chaque service de `session.toml`. Une unité accrochée à `graphical-session.target` hors de la liste est signalée, jamais désactivée.
@@ -1158,7 +1160,7 @@ journalctl -t dunei-verrou-initial                             # échecs du verr
 - greetd lance la session automatique à 6,6 s après le noyau ; l'état `~/.local/state/dunei/verrou-initial` contient l'identifiant du démarrage courant.
 - Plantage simulé, `pkill -9 hyprlock` depuis `tty2`, trois fois : échecs journalisés à 60 s, 98 s et 101 s, session reverrouillée entre deux, puis fermeture de la session et tuigreet à 102 s. Connexion par tuigreet à 126,9 s : session sans verrou, mode `default`.
 - `SUPER + Alt + M` ramène tuigreet ; reconnexion normale.
-- `nm-applet` et `hypridle` actifs ; `print-applet` absent ; `loginctl lock-session` verrouille toujours.
+- `nm-applet` et `hypridle` actifs ; `print-applet` absent ; `loginctl lock-session` verrouille toujours (état du 2026-10-16 ; `nm-applet` est retiré depuis L2-11).
 - Démarrage complet de 18,3 s (micrologiciel 8,2 + chargeur 3,3 + noyau 4,5 + espace utilisateur 2,3), contre 18,9 s avec SDDM.
 - Avant le redémarrage : le mode bloquant avec `hyprlock` sur la session courante, et la maquette de tuigreet (`--mock`, menu F3 ne proposant que DuneI), validés par Nicolas. Le fond `surface-base` (#120601 à la teinte 55°) est validé comme bureau provisoire jusqu'à L2-27.
 
@@ -2007,6 +2009,46 @@ Rien à lancer à la main : `make install` régénère le thème (`make icones`)
   pixel aux tailles de la barre : écart accepté (D101).
 - **Non couvert : Qt.** Dolphin garde ses icônes ; le thème de plateforme Qt est la ligne L2-49 du backlog.
 
+## Le réseau : popover et fenêtre — L2-11
+
+Rien de plus à installer : le popover et la fenêtre sont dans la même coque (`dunei-coque.service`), et `make install`
+n'ajoute aucune étape. Le réseau repose sur NetworkManager (nmcli) et sur `Quickshell.Networking`. `nm-applet` est
+retiré : sa ligne de `session.toml` passe en `retires` et `make install` désactive, arrête et supprime son unité (commit
+« Contrôle de connectivité à 30 s, retrait de l'unité nm-applet, prérequis wheel ») ; le paquet reste pour
+`nm-connection-editor`, recours.
+
+- **Le popover (D103, direction D5).** Un clic sur l'icône réseau de la barre l'ouvre : 288 px de large, sur le verre de
+  E3. L'en-tête porte la bascule du Wi-Fi, le nom du réseau joint et son état ; dessous, les réseaux à proximité (le
+  réseau joint n'y figure pas) avec le bouton de nouvelle recherche, puis, sous un filet translucide, les actions en
+  texte : « Se déconnecter » et « Réglages réseau… ». Un réseau sécurisé inconnu déplie son mot de passe sous sa ligne.
+  Tant qu'il est ouvert, l'icône de la barre prend l'accent et sa variante pleine.
+- **La fenêtre (D105, direction D4).** Une fenêtre flottante, créée à l'ouverture et détruite à la fermeture (D80). À
+  gauche, un plateau détaché à trois onglets : **Wi-Fi** (réseau joint en carte avec ses réglages fréquents et
+  « Détails… », réseaux disponibles, « Autre réseau… », profils enregistrés), **Filaire** (état du câble, méthode IPv4,
+  adresses copiables, profils filaires, « Se connecter ») et **VPN** (connexions `vpn` et `wireguard` connues de
+  NetworkManager, un interrupteur chacune ; import, identifiants et sous-page restent à faire, L2-51). Un clic sur un
+  profil enregistré ouvre sa sous-page « ‹ Wi-Fi » (mot de passe, connexion automatique, priorité, facturation, IPv4
+  fixe, Se connecter, Oublier) ; Échap revient.
+- **L'ouvrir.** « Réglages réseau… » du popover, ou, depuis un terminal, `qs ipc call reseau ouvrir`. Une fenêtre déjà
+  ouverte garde son onglet courant. « Détails… » du popover ouvre directement la sous-page du profil demandé.
+- **Au clavier.** Les flèches haut et bas passent d'un onglet à l'autre ; le contour de focus n'apparaît qu'après une
+  première touche. Tabulation et Entrée parcourent et activent les rangées ; Entrée ou un clic sur une adresse la copie
+  (« Copié »). Chaque adresse d'un champ multiple (IPv6, DNS) occupe sa ligne.
+- **Les tests.** `python3 -m unittest tests.test_reseau` (nmcli, état, popover, trois pages, groupes, fenêtre,
+  notifications) et `python3 -m unittest tests.test_reglages` (jetons et composants de réglage) ; la suite complète est
+  `make test`. Les coques d'essai tournent en `QT_QPA_PLATFORM=offscreen` et ne touchent jamais au vrai bureau.
+- **Recette validée à l'écran par Nicolas le 2026-11-01.** (1) Ouvrir la fenêtre depuis le popover : l'onglet Wi-Fi paraît,
+  sans contour de focus à l'ouverture à la souris. (2) Passer de Wi-Fi à Filaire puis à VPN, à la souris et aux flèches :
+  la bascule est immédiate (moins de 10 ms mesurées, contre 300 à 600 ms avant la correction). (3) Wi-Fi : le réseau joint
+  porte sa coche pleine, « Détails… » ouvre sa sous-page, un réseau enregistré aussi ; Échap revient. (4) Filaire :
+  adresses copiables, une par ligne, aucune ne déborde de la carte. (5) VPN : la liste et l'interrupteur de chaque
+  connexion. (6) Une fenêtre réduite à 720 × 480 défile sans couper une carte. **Reporté, non validé ici :** les couleurs et
+  le jour thématisé, renvoyés au lot 4 (D102, L2-50) ; le VPN n'a pas été éprouvé avec une vraie connexion, Nicolas n'en
+  ayant pas encore.
+- **Pièges rencontrés.** Écrire `Networking.wifiDevices[i].scannerEnabled` gèle l'interface environ 0,5 s : la fenêtre
+  demande donc le balayage une fois, après sa première image, et pour toute sa vie (D105). Un `Coche` dans un `Layout`
+  est écrasé s'il n'a pas de taille préférée.
+
 ## Lecteur d'empreinte — nouveau
 
 Cet élément n'existe dans aucun document du projet. Il est consigné ici parce qu'il s'installe au lot 1, mais **son travail de conception appartient au lot 5**.
@@ -2109,6 +2151,8 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 
 | Version | Date | Changement |
 | --- | --- | --- |
+| 1.30 | 2026-11-02 | Relecture finale de L2-11 : `nm-applet` retiré (décidé, plus à trancher), renvois des anciennes sections corrigés (arborescence, table des unités, recette de L1-10) |
+| 1.29 | 2026-11-01 | Le réseau (L2-11) : popover, fenêtre en onglets, ouverture, tests et recette validée à l'écran (D103 à D105) |
 | 1.28 | 2026-10-31 | Le thème d'icônes DuneI (L4-12, première tranche) : déploiement, table de correspondance, `make phosphor`, retour arrière, relevés et recette (D101) |
 | 1.27 | 2026-10-31 | La barre système (L2-08) : piège du masque `Region { item: … }` qui ne suit pas ses ancêtres, et vérification du masque de saisie par la position réelle du curseur (D100) |
 | 1.26 | 2026-10-31 | Énergie (L1-09) : garde du bouton marche au réveil, `dunei-garde-reveil.service` et `sleep.target.d/10-dunei.conf`, vérification et recette en attente (D99) |

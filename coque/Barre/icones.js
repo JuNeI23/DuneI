@@ -28,17 +28,33 @@ function iconeBatterie(presente, pourcent, enCharge, pleine) {
     return "battery-level-" + dizaine + (enCharge ? "-charging" : "")
 }
 
-// iconeWifi — icône du Wi-Fi.
-// Entrées : carte, une carte Wi-Fi existe ; actif, la radio est allumée ; connecte, un réseau est joint ;
-// force, qualité du signal de 0 à 1. Sortie : "" sans carte, "network-wireless-disabled" coupé,
-// "network-wireless-offline" déconnecté, sinon "network-wireless-signal-" + none, weak, ok, good ou
-// excellent (seuils 0,2 ; 0,4 ; 0,6 ; 0,8). Erreurs : aucune ; une force non numérique donne « none ».
-function iconeWifi(carte, actif, connecte, force) {
-    if (!carte) return ""
-    if (!actif) return "network-wireless-disabled"
-    if (!connecte) return "network-wireless-offline"
+// iconeReseau — icône du réseau (Wi-Fi et filaire).
+// Entrée : e, objet {carte, radio, filaire, connecte, connectivite, facture, force} : une carte Wi-Fi existe ;
+// sa radio est allumée ; un lien filaire est connecté ; le Wi-Fi est joint ; connectivité NetworkManager (« full »,
+// « limited », « portal », « none » ou « unknown ») ; la connexion est facturée à l'usage ; qualité du signal de
+// 0 à 1 ; filaire signifie « lien filaire connecté ». Sortie, par ordre de priorité : "" sans carte ni filaire ;
+// « network-wired » dès que filaire est vrai (l'état de la carte Wi-Fi, présente ou non, n'y change rien),
+// avec « -no-route » si la connectivité est « limited », « portal » ou « none » ; « network-wireless-disabled » radio coupée ; « network-wireless-offline » non joint ;
+// « network-wireless-no-route » sans internet (« limited » ou « none ») ou derrière un portail captif ; « network-wireless-hotspot »
+// facturé ; sinon les cinq paliers de signal (seuils 0,2 ; 0,4 ; 0,6 ; 0,8).
+// Erreurs : aucune ; une force non numérique donne « none ». Dépendances : aucune.
+function iconeReseau(e) {
+    if (!e.carte && !e.filaire) return ""
+    const sansInternet = ["limited", "portal", "none"].includes(e.connectivite)
+    if (e.filaire) return sansInternet ? "network-wired-no-route" : "network-wired"
+    if (!e.radio) return "network-wireless-disabled"
+    if (!e.connecte) return "network-wireless-offline"
+    if (sansInternet) return "network-wireless-no-route"
+    if (e.facture) return "network-wireless-hotspot"
     const palier = ["none", "weak", "ok", "good", "excellent"]
-    return "network-wireless-signal-" + palier[Math.max(0, Math.min(4, (Math.floor(force * 5) || 0)))]
+    return "network-wireless-signal-" + palier[Math.max(0, Math.min(4, (Math.floor(e.force * 5) || 0)))]
+}
+
+// iconeForce — icône de force d'un réseau Wi-Fi joint ou disponible, aux mêmes paliers que la barre.
+// Entrée : force, qualité du signal de 0 à 1. Sortie : nom « network-wireless-signal-… ». Erreurs : aucune ; une
+// force non numérique donne « none ». Dépendances : iconeReseau.
+function iconeForce(force) {
+    return iconeReseau({carte: true, radio: true, connecte: true, connectivite: "full", force})
 }
 
 // iconeBluetooth — icône du Bluetooth.

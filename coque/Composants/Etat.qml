@@ -12,13 +12,18 @@ import "etats.js" as Etats
 // de fond, par défaut le cran au-dessus du dnRole hérité (surfaceWindow à la racine) ; forcer, réservée à la
 // planche de contrôle : une clé d'interaction ("hover", "pressed"…) qui, non vide, remplace celle que lit le
 // contrôle, pour montrer un état sans geste ; vide par défaut, et jamais posée par une surface de la coque ;
-// peintFond et peintTexte, vrais par défaut : faux quand le contrôle ne peint pas cette couleur, qui reste alors
+// selectionNeutre, faux par défaut : vrai, une sélection prend toujours la clé « inactive » (sans accent ni accent
+// muet) et les couleurs au repos du rôle controlRaised, un cran levé, neutre et légèrement teinté, distinct du
+// panneau et de son survol aux deux moments (la sélection inactive du jour se confond avec surfacePanel), sans
+// réagir au survol ni à la pression, comme la sélection d'une barre latérale de macOS : c'est la rangée choisie
+// d'une colonne de navigation ; peintFond et peintTexte, vrais par défaut : faux quand le contrôle ne peint pas cette couleur, qui reste alors
 // transparente, si bien que son ressort ne démarre jamais (sobriété, D80) ; fondReposTransparent, faux par
 // défaut : vrai, le fond ni survolé, ni pressé, ni sélectionné (au repos ou désactivé) vise sa couleur rendue
 // transparente, pour un élément qui ne se distingue pas de son conteneur au repos (une rangée) et ne doit pas en
 // repeindre la couleur opaque, qui se détacherait d'une surface de verre. L'opacité seule change : le ressort
 // fond la couleur d'état depuis sa propre teinte, sans passer par le noir.
-// Sorties : interaction, selection, inactif (clés des tokens) ; fond, texte, couleurs affichées ; texteNeutre, le
+// Sorties : interaction, selection, inactif (clés des tokens) ; levee, vrai pour une sélection neutre (selectionNeutre)
+// peinte en controlRaised ; fond, texte, couleurs affichées ; texteNeutre, le
 // texte du même rôle et de la même interaction sans sélection, sans ressort, pour un libellé posé à côté d'une
 // marque sélectionnable (case, radio, interrupteur, bascule) ou d'un en-tête sans fond (section dépliable).
 // Erreurs : aucune ; avant le chargement des tokens ou pour une combinaison absente, les couleurs restent
@@ -36,11 +41,15 @@ Item {
     property bool peintFond: true
     property bool peintTexte: true
     property bool fondReposTransparent: false
+    property bool selectionNeutre: false
     property string role: Etats.cran(Etats.herite(controle, "dnRole", "surfaceWindow"))
     readonly property bool inactif: Etats.herite(controle, "dnInactive", false)
     readonly property string interaction: forcer || Etats.interaction(controle)
-    readonly property string selection: Etats.selection(selectionne, focusDansGroupe, inactif)
-    readonly property var couleurs: Theme.stateColors(role, selection, interaction)
+    readonly property string selection: selectionNeutre && selectionne ? "inactive"
+        : Etats.selection(selectionne, focusDansGroupe, inactif)
+    readonly property bool levee: selectionNeutre && selectionne
+    readonly property var couleurs: levee ? Theme.stateColors("controlRaised", "none", "rest")
+        : Theme.stateColors(role, selection, interaction)
     readonly property color fond: ressortFond.value
     readonly property color texte: ressortTexte.value
     readonly property color texteNeutre: Theme.stateColors(role, "none", interaction)?.text ?? "transparent"

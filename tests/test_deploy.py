@@ -14,7 +14,7 @@ from pathlib import Path
 from unittest import mock
 
 import deploy
-from deploy import COPIES, config_home, lire_session, plan
+from deploy import COPIES, config_home, lire_retires, lire_session, plan, verifier_wheel
 
 ROOT = Path(__file__).resolve().parent.parent
 # core.hooksPath déjà effectif par l'environnement : le déploiement n'écrit jamais dans la configuration du vrai dépôt.
@@ -23,11 +23,12 @@ GENERIC = "-- Configuration générique de test.\n"
 FOREIGN = "<?xml version=\"1.0\"?>\n<fontconfig/>\n"
 # Faux sudo et faux systemctl : chaque appel est consigné dans $FAKE_LOG. sudo exécute la commande telle
 # quelle, sauf si $FAKE_SUDO_FAIL est posé ; systemctl répond à is-enabled par $FAKE_ENABLED et à
-# is-active par $FAKE_ACTIVE (« active » par défaut). gh (non connecté), hyprlock, greetd, tuigreet, kitty, checkupdates,
+# is-active par $FAKE_ACTIVE (« active » par défaut) ; les unités de $FAKE_ABSENTES sont inconnues de systemd. gh (non connecté), hyprlock, greetd, tuigreet, kitty, checkupdates,
 # paccache, pacdiff et informant sont de faux exécutables vides.
 FAKES = {
     "sudo": '#!/bin/sh\necho "sudo $*" >> "$FAKE_LOG"\n[ -z "$FAKE_SUDO_FAIL" ] || exit 1\nexec "$@"\n',
     "systemctl": ('#!/bin/sh\necho "systemctl $*" >> "$FAKE_LOG"\n'
+                  'for u in $FAKE_ABSENTES; do case "$*" in *"$u"*) case "$*" in *is-enabled*) exit 1 ;; *is-active*) exit 3 ;; esac ;; esac; done\n'
                   'case "$*" in *is-enabled*) echo "$FAKE_ENABLED"; [ "$FAKE_ENABLED" = enabled ] ;;\n'
                   '*is-active*) [ "${FAKE_ACTIVE:-active}" = active ] ;; esac\n'),
     "gh": "#!/bin/sh\nexit 1\n",  # Non connecté : la destination atelier se contente de sa note.
@@ -118,7 +119,7 @@ class DeployTest(unittest.TestCase):
                                                 "XDG_DATA_HOME": str(t / "data"),
                                                 "XDG_CACHE_HOME": str(t / "cache"), "HOME": str(t / "home"),
                                                 "DUNEI_ATELIER_TOML": str(t / "atelier.toml"),
-                                                "FAKE_ENABLED": "enabled", "PATH": f"{fake}:{os.environ['PATH']}", **CROCHETS_POSES})
+                                                "FAKE_ENABLED": "enabled", "FAKE_ABSENTES": "nm-applet.service", "PATH": f"{fake}:{os.environ['PATH']}", **CROCHETS_POSES})
         self.env.start()
         (self.root / DM).parent.mkdir(parents=True)
         (self.root / DM).symlink_to("/usr/lib/systemd/system/greetd.service")
@@ -481,12 +482,13 @@ class DeployTest(unittest.TestCase):
         self.assertNotIn("systemctl --user restart hypridle.service", self.journal())
 
     def test_dropin_deployed_then_reload_precedes_restart(self):
-        self.assertEqual(run(self.cfg).returncode, 0)
+        with mock.patch.dict(os.environ, {"FAKE_ABSENTES": ""}):   # nm-applet encore présente : elle est retirée en premier.
+            self.assertEqual(run(self.cfg).returncode, 0)
         dropin = self.cfg / "systemd/user/hypridle.service.d/10-dunei.conf"
         self.assertIn("ExecStart=/usr/bin/hypridle --quiet", dropin.read_text(encoding="utf-8"))
         calls = [l for l in self.journal() if l.startswith("systemctl --user") and "is-" not in l]
-        self.assertEqual(calls, ["systemctl --user daemon-reload", "systemctl --user restart hypridle.service",
-                                 "systemctl --user restart nm-applet.service",
+        self.assertEqual(calls, ["systemctl --user disable --now nm-applet.service", "systemctl --user daemon-reload",
+                                 "systemctl --user restart hypridle.service",
                                  "systemctl --user restart dunei-coque.service"])
         self.log.unlink()
         self.assertEqual(run(self.cfg).returncode, 0)
@@ -500,7 +502,7 @@ class DeployTest(unittest.TestCase):
         return repo
 
     def test_session_real_list(self):
-        self.assertEqual(lire_session(ROOT), (["hypridle.service", "nm-applet.service", "dunei-coque.service"], []))
+        self.assertEqual(lire_session(ROOT), (["hypridle.service", "dunei-coque.service"], []))
 
     def test_session_refusals(self):
         for body, word in (('version = "0.1.0"\n[demarrage]\nservices = []\n', "non vide"),
@@ -525,14 +527,89 @@ class DeployTest(unittest.TestCase):
         (self.cfg / MASQUE).write_text("[Unit]\n", encoding="utf-8")
         self.assert_refused("autostart")
 
-    def test_deploys_and_enables_nm_applet(self):
-        with mock.patch.dict(os.environ, {"FAKE_ENABLED": "disabled"}):
-            self.assertEqual(run(self.cfg).returncode, 0)
+    def unite_nm_applet(self) -> Path:
+        """Pose l'ancienne unité nm-applet, telle que DuneI la copiait avant L2-11, et la rend."""
         unit = self.cfg / "systemd/user/nm-applet.service"
-        self.assertEqual(unit.read_bytes(), (ROOT / "config/systemd/user/nm-applet.service").read_bytes())
-        calls = [l for l in self.journal() if l.startswith("systemctl --user") and "is-" not in l]
-        self.assertEqual(calls[0], "systemctl --user daemon-reload")
-        self.assertIn("systemctl --user enable --now nm-applet.service", calls)
+        unit.parent.mkdir(parents=True)
+        unit.write_text("[Unit]\n# Posé par DuneI depuis config/\n", encoding="utf-8")
+        return unit
+
+    def test_unite_retiree(self):
+        unit = self.unite_nm_applet()
+        with mock.patch.dict(os.environ, {"FAKE_ABSENTES": ""}):
+            self.assertEqual(run(self.cfg).returncode, 0)
+        self.assertIn("systemctl --user disable --now nm-applet.service", self.journal())
+        self.assertFalse(unit.exists())
+        self.assertNotIn("systemctl --user enable --now nm-applet.service", self.journal())
+        self.log.unlink()
+        self.assertEqual(run(self.cfg).returncode, 0)
+        self.assertFalse([l for l in self.journal() if "disable" in l])
+
+    def test_unite_retiree_deja_absente(self):
+        res = run(self.cfg)
+        self.assertEqual(res.returncode, 0, res.stderr)
+        self.assertNotIn("systemctl --user disable --now nm-applet.service", self.journal())
+
+    def test_unite_retiree_etrangere_refusee(self):
+        self.unite_nm_applet().write_text("[Unit]\n# à moi\n", encoding="utf-8")
+        self.assert_refused("nm-applet.service")
+
+    def test_unite_retiree_non_signalee_hors_liste(self):
+        wants = self.cfg / "systemd/user/graphical-session.target.wants"
+        wants.mkdir(parents=True)
+        (wants / "nm-applet.service").symlink_to("/dev/null")
+        with mock.patch.dict(os.environ, {"FAKE_ABSENTES": ""}):
+            res = run(self.cfg)
+        self.assertNotIn("hors-liste", res.stdout)
+        self.assertNotIn("nm-applet.service est accroché", res.stdout)
+
+    def test_retires_refus(self):
+        for body, word in (('version = "0.1.0"\n[demarrage]\nservices = ["a.service"]\nretires = "x"\n', "retires"),
+                           ('version = "0.1.0"\n[demarrage]\nservices = ["a.service"]\nretires = ["nm-applet"]\n', "nm-applet"),
+                           ('version = "0.1.0"\n[demarrage]\nservices = ["a.service"]\nretires = ["a.service"]\n', "a.service")):
+            with self.subTest(attendu=word):
+                retires, err = lire_retires(self.write_session(body))
+                self.assertEqual(retires, [])
+                self.assertTrue(any(word in e for e in err), err)
+
+    def test_retires_reels(self):
+        self.assertEqual(lire_retires(ROOT), (["nm-applet.service"], []))
+        self.assertEqual(lire_retires(self.write_session('version = "0.1.0"\n[demarrage]\nservices = ["a.service"]\n')), ([], []))
+
+    def test_conf_networkmanager_recharge(self):
+        res = run(self.cfg)
+        self.assertEqual(res.returncode, 0, res.stderr)
+        conf = Path("etc/NetworkManager/conf.d/50-dunei-connectivite.conf")
+        self.assertEqual((self.root / conf).read_bytes(), (ROOT / "systeme" / conf).read_bytes())
+        self.assertIn("sudo systemctl reload NetworkManager", self.journal())
+        self.log.unlink()
+        run(self.cfg)
+        self.assertNotIn("sudo systemctl reload NetworkManager", self.journal())
+
+    def test_networkmanager_arrete_sans_rechargement(self):
+        with mock.patch.dict(os.environ, {"FAKE_ABSENTES": "nm-applet.service NetworkManager"}):
+            res = run(self.cfg)
+        self.assertEqual(res.returncode, 0, res.stderr)
+        self.assertTrue((self.root / "etc/NetworkManager/conf.d/50-dunei-connectivite.conf").exists())
+        self.assertNotIn("sudo systemctl reload NetworkManager", self.journal())
+
+    def test_controle_github_dans_wheel(self):
+        flux = (ROOT / ".github/workflows/controle.yml").read_text(encoding="utf-8")
+        self.assertIn("useradd -m -G wheel controle", flux)
+
+    def test_connectivite_a_30_secondes(self):
+        lignes = (ROOT / "systeme/etc/NetworkManager/conf.d/50-dunei-connectivite.conf").read_text(encoding="utf-8").splitlines()
+        self.assertIn("Posé par DuneI", lignes[1])
+        self.assertIn("[connectivity]", lignes)
+        self.assertIn("interval=30", lignes)
+
+    def test_wheel_requis(self):
+        err = verifier_wheel(["junei", "users"])
+        self.assertEqual(len(err), 1)
+        self.assertIn("wheel", err[0])
+        self.assertIn("polkit", err[0])
+        self.assertIn("usermod -aG wheel", err[0])
+        self.assertEqual(verifier_wheel(["junei", "wheel"]), [])
 
     def test_reports_unit_outside_list(self):
         wants = self.cfg / "systemd/user/graphical-session.target.wants"

@@ -30,10 +30,17 @@ class QuickshellEmitterTest(unittest.TestCase):
 
     def test_cles_premier_niveau(self):
         self.assertEqual(list(self.out), [
-            "_generated", "hue", "space", "density", "radius", "window", "layout", "breakpoints", "typo", "icons",
+            "_generated", "hue", "space", "density", "radius", "window", "layout", "reglages", "breakpoints", "typo", "icons",
             "familles", "moments", "defaut", "themes", "pastilles", "bureau", "bureauxVirtuels", "presquile"])
         self.assertEqual(list(self.nuit), ["color", "states", "focus", "disabled", "elevation", "material", "glass", "render",
                                            "knob", "controls"])
+
+    def test_reglages(self):
+        """Vérifie les treize formes des fenêtres de réglages (D104, D105), émises en camelCase sous reglages."""
+        self.assertEqual(self.out["reglages"], {"row": 44, "rowHelp": 52, "rowLead": 60, "medallion": 32,
+                                                "medallionGlyph": 18, "textColumn": 56, "sidebarInset": 8,
+                                                "tabHeight": 48, "fieldWidth": 290, "windowWidth": 840,
+                                                "windowHeight": 640, "windowMinWidth": 720, "windowMinHeight": 480})
 
     def test_presquile(self):
         """Vérifie les sept dimensions de la presqu'île, en pixels logiques."""
@@ -51,11 +58,18 @@ class QuickshellEmitterTest(unittest.TestCase):
         self.assertEqual(self.out["bureauxVirtuels"], {"nombre": 4})
 
     def test_verre(self):
-        """Le verre est opaque la nuit (1,0) et translucide le jour (0,85 et 0,88), pour les deux familles."""
-        attendu = {"nuit": {"e2": 1.0, "e3": 1.0}, "jour": {"e2": 0.85, "e3": 0.88}}
+        """E2 est opaque la nuit (1,0) et translucide le jour (0,85) ; E3 est à 0,60 aux deux moments (D103)."""
+        attendu = {"nuit": {"e2": 1.0, "e3": 0.60}, "jour": {"e2": 0.85, "e3": 0.60}}
         for f in self.out["themes"].values():
             for moment, t in f.items():
                 self.assertEqual(t["glass"], attendu[moment], moment)
+
+    def test_filet_du_verre(self):
+        """glassLine est text-primary à glass_line_opacity : foncé le jour, clair la nuit, translucide (D103)."""
+        alpha = f"#{round(self.data['surface_material']['glass_line_opacity'] * 255):02x}"
+        for f in self.out["themes"].values():
+            for t in f.values():
+                self.assertEqual(t["material"]["glassLine"], alpha + t["color"]["textPrimary"][1:])
 
     def test_ombre_flottante_et_profondeur_du_creux(self):
         """La matière expose la portée et le décalage de l'ombre flottante, et la profondeur du creux (jetons)."""

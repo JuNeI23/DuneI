@@ -20,6 +20,12 @@ reduced_fade_ms   = 100           # Durée du fondu qui remplace tout mouvement 
 
 [delays]                          # Attentes avant une réaction de l'interface, en millisecondes.
 tooltip = 500                     # Survol continu avant l'ouverture d'une infobulle (bible, annexe E ; L2-21).
+scan    = 6000                    # Borne du retour visuel d'une recherche de réseaux relancée, quand le balayage
+                                  # ne change pas la liste (popover réseau, L2-11).
+copied  = 1500                    # Tenue du retour « Copié » qui remplace une valeur copiée, avant que la valeur
+                                  # ne revienne (fenêtre Réseau, L2-11).
+stable  = 5000                    # Stabilité exigée d'un état du réseau avant d'en notifier le changement : une coupure
+                                  # plus courte, ou une reprise après veille, ne produit rien (notifications, L2-11).
 
 [periods]                         # Durée d'un cycle des mouvements continus, en millisecondes.
 spinner = 1200                    # Un cycle de la vague des trois grains de l'indicateur d'activité.

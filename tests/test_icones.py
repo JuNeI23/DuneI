@@ -6,8 +6,8 @@ import tomllib
 import unittest
 from pathlib import Path
 
-from generate_icones import generer, index_theme, recolorable
-from phosphor import charger, nom_fichier
+from generate_icones import composer, generer, index_theme, recolorable
+from phosphor import charger, glyphes, nom_fichier
 
 ROOT = Path(__file__).resolve().parent.parent
 TABLE = ROOT / "icones" / "correspondances.toml"
@@ -23,7 +23,8 @@ ATTENDUS = (
        "emblem-system", "system-search", "edit-clear", "network-vpn"]
     + ["network-wireless-no-route", "network-wireless-acquiring", "network-wireless-hotspot",
        "network-wireless-encrypted", "network-wired", "network-wired-acquiring", "network-wired-disconnected",
-       "network-wired-offline", "network-wired-no-route", "view-refresh", "network-vpn-disabled"]
+       "network-wired-offline", "network-wired-no-route", "view-refresh", "network-vpn-disabled",
+       "view-reveal", "view-conceal", "edit-copy", "list-add", "list-remove", "user-trash", "go-next", "dialog-warning", "web-browser"]
 )
 
 
@@ -37,7 +38,7 @@ class IconesTest(unittest.TestCase):
         self.assertEqual(sorted(self.noms), sorted(ATTENDUS))
 
     def test_sources_presentes(self):
-        for v in set(self.noms.values()):
+        for v in {g for n in self.noms.values() for g in glyphes(n)}:
             for g in (self.graisse, "fill"):
                 self.assertTrue((SVG / g / nom_fichier(v, g)).is_file(), f"{g}/{v}")
 
@@ -51,7 +52,7 @@ class IconesTest(unittest.TestCase):
         self.assertIn("MIT", licence.read_text(encoding="utf-8"))
 
     def test_aucun_svg_orphelin(self):
-        voulus = {(g, nom_fichier(v, g)) for v in self.noms.values() for g in (self.graisse, "fill")}
+        voulus = {(g, nom_fichier(v, g)) for n in self.noms.values() for v in glyphes(n) for g in (self.graisse, "fill")}
         presents = {(p.parent.name, p.name) for p in SVG.glob("*/*.svg")}
         self.assertEqual(presents - voulus, set())
 
@@ -85,8 +86,8 @@ class IconesTest(unittest.TestCase):
             for nom, phosphor in self.noms.items():
                 self.assertTrue((Path(d) / "DuneI" / "symbolic" / f"{nom}-symbolic.svg").is_file())
                 plein = (Path(d) / "DuneI" / "symbolic" / f"{nom}-fill-symbolic.svg").read_text(encoding="utf-8")
-                brut = (SVG / "fill" / nom_fichier(phosphor, "fill")).read_text(encoding="utf-8")
-                self.assertEqual(plein, recolorable(brut))
+                bruts = [(SVG / "fill" / nom_fichier(g, "fill")).read_text(encoding="utf-8") for g in glyphes(phosphor)]
+                self.assertEqual(plein, recolorable(composer(*bruts) if len(bruts) == 2 else bruts[0]))
 
     def test_source_manquante(self):
         with tempfile.TemporaryDirectory() as d:
@@ -107,6 +108,35 @@ class IconesTest(unittest.TestCase):
             self.assertEqual(frais, suivi)
             for p in frais:
                 self.assertEqual((Path(d) / p).read_bytes(), (ROOT / "generated" / "icons" / p).read_bytes(), str(p))
+
+    def test_glyphes(self):
+        self.assertEqual(glyphes("bell"), ["bell"])
+        self.assertEqual(glyphes("wifi-high+warning-circle"), ["wifi-high", "warning-circle"])
+
+    def test_composer(self):
+        base = '<svg viewBox="0 0 256 256" fill="currentColor"><path d="M1 1"/></svg>'
+        badge = '<svg viewBox="0 0 256 256" fill="currentColor"><path d="M2 2"/><circle r="3"/></svg>'
+        svg = composer(base, badge)
+        self.assertEqual(svg.count("<svg"), 1)
+        self.assertIn('viewBox="0 0 256 256"', svg)
+        # La base est évidée sous la pastille (masque), la pastille est réduite et épaissie.
+        self.assertRegex(svg, r'<g mask="url\(#[a-z]+\)"><path d="M1 1"/></g>')
+        self.assertRegex(svg, r'<g transform="translate\([\d. ]+\) scale\([\d.]+\)" stroke="currentColor" '
+                              r'stroke-width="\d+" stroke-linejoin="round"><path d="M2 2"/><circle r="3"/></g>')
+        self.assertIn("<mask", svg)
+
+    def test_icone_composee_generee(self):
+        # « Sans internet » est un SVG unique composé de deux glyphes (wifi-high et warning-circle).
+        self.assertEqual(glyphes(self.noms["network-wireless-no-route"]), ["wifi-high", "warning-circle"])
+        self.assertEqual(glyphes(self.noms["network-wired-no-route"]), ["network", "warning-circle"])
+        with tempfile.TemporaryDirectory() as d:
+            generer(ROOT, Path(d))
+            for nom in ("network-wireless-no-route", "network-wired-no-route"):
+                for suffixe in ("", "-fill"):
+                    svg = (Path(d) / "DuneI" / "symbolic" / f"{nom}{suffixe}-symbolic.svg").read_text(encoding="utf-8")
+                    self.assertEqual(svg.count("<svg"), 1, nom)
+                    self.assertIn("<mask", svg)
+                    self.assertIn('class="ColorScheme-Text"', svg)
 
 
 if __name__ == "__main__":

@@ -189,6 +189,13 @@ ShellRoot {
             IpcHandler {
                 target: "essai"
 
+                // focaliser — donne le focus du clavier au bouton « bulle » ou au déroulant. Entrée : nom, « bulle » ou
+                // « deroulant ». Sortie : aucune. Erreurs : TypeError pour un nom inconnu. Dépendances : boutonBulle,
+                // deroulantEssai.
+                function focaliser(nom: string): void {
+                    ({ bulle: boutonBulle, deroulant: deroulantEssai })[nom].forceActiveFocus(Qt.TabFocusReason)
+                }
+
                 // touche — frappe une touche dans la fenêtre, comme le clavier.
                 // Entrée : nom, "tab", "majtab" (Maj+Tab, reçu comme Backtab), "gauche", "droite", "haut", "bas",
                 // "espace", "entree" ou "echap".

@@ -12,7 +12,7 @@ import "Composants/ancrage.js" as Ancrage
 // Rôle : instancie un arbre fixe (une Surface fenêtre contenant une Surface panneau, qui porte la sonde capteur, un
 // contrôle simulé avec son Etat, un Texte, une Icone, les cinq contrôles interactifs (Bouton, Case, Interrupteur,
 // Onglet, Curseur), trois Radio dans un même parent, une Jauge, une Progression, deux Separateur, un Champ, des
-// Pastilles, un Compteur, un Deroulant, une Recherche, une Activite, une Depliable, une Bascule, une Liste vide, une
+// Pastilles, un Compteur, un Deroulant, une Recherche, un ChampSecret, une Activite, une Depliable, une Bascule, une Liste vide, une
 // Liste de trois Rangee et une cible munie d'un AnneauFocus, plus une Surface inactive et une Surface de verre à
 // l'écart, deux Overlay fermés, un de chaque famille, et trois objets factices pour le singleton Overlays) pour que tests/test_coque_composants.py
 // éprouve dans un vrai Quickshell les règles d'etats.js, l'héritage par remontée, l'import du Theme, les pièces de
@@ -22,11 +22,13 @@ import "Composants/ancrage.js" as Ancrage
 // <clé> <valeur> » par commande IPC de lecture (cran, interaction, selection, sonde, naissances, fond, texte, anneau,
 // etat, ressort, ressortsFiges, image, controles, coches, cotes, glyphes, radios, jauge, progression, separateur,
 // champ, indicatif, tailleIcone, liste, arrets, rangee, bouton, overlays, overlaysFermes, pastilles, compteur,
-// compteurLargeur, deroulant, recherche, rechercheCouleurs, activite, depliable, depliableCotes, iconesControles,
-// bascule, fenetreAttention, knobs, contours, materiauSurfaces, verre, champMateriau, ombres).
-// Commandes sans journal : « essai rechercheTexte <texte> », « essai rechercheActive <bool> », « essai activiteEtat
+// compteurLargeur, deroulant, recherche, rechercheCouleurs, secret, activite, depliable, depliableCotes, iconesControles,
+// bascule, reglages, valeur, fenetreAttention, knobs, contours, materiauSurfaces, verre, champMateriau, ombres).
+// Commandes sans journal : « essai rechercheTexte <texte> », « essai secretTexte <texte> », « essai secretALire
+// <bool> », « essai secretOeil » (qui journalise « essai : revelationDemandee true » si le parent doit lire le
+// secret), « essai rechercheActive <bool> », « essai activiteEtat
 // <visible> <running> », « essai activitePhase <phase> », « essai activiteAncetre <bool> », « essai depliableOuvrir
-// <bool> », « essai basculeCocher <bool> », « essai pastillesForcer <état> », « essai pastillesReduire <bool> »,
+// <bool> », « essai basculeCocher <bool> », « essai valeurCopier », « essai pastillesForcer <état> », « essai pastillesReduire <bool> »,
 // « essai knobsActifs <bool> », « essai interrupteurCocher <bool> », « essai compteurValeur <n> », « essai deroulantRang <n> », « essai decocher »,
 // « essai radioCocher <rang> », « essai jaugeActive <bool> », « essai boutonPrincipal <bool> », « essai inactif
 // <bool> », « essai reparenter », « essai texteMoyen », « essai anneauInactif <bool> », « essai survol <bool> »,
@@ -172,6 +174,11 @@ ShellRoot {
                 id: rechercheEssai
             }
 
+            ChampSecret {
+                id: secretEssai
+                onRevelationDemandee: essai.journal("revelationDemandee", true)
+            }
+
             // L'indicateur est porté par un Item qu'on peut masquer, pour éprouver l'arrêt sous un ancêtre invisible.
             Item {
                 id: porteActivite
@@ -190,6 +197,24 @@ ShellRoot {
                 text: "Wi-Fi"
                 checked: true
             }
+
+            Carte {
+                id: carteEssai
+                width: 300
+                ReglageLigne {
+                    id: reglageEssai
+                    width: parent.width
+                    titre: "Titre"
+                    aide: "Aide"
+                    erreur: "Erreur"
+                    icone: "network-wireless"
+                    iconeActive: true
+                }
+                ReglageLigne { id: reglageSimple; width: parent.width; titre: "Simple"; plaque: true }
+                Medaillon { id: medaillonInactif; nom: "network-wireless" }
+            }
+
+            Valeur { id: valeurEssai; text: "192.168.1.2" }
 
             Liste {
                 id: listeVide
@@ -235,6 +260,14 @@ ShellRoot {
         id: verreEssai
         role: "surfaceRaised"
         verre: true
+        width: 100
+        height: 32
+    }
+
+    // Surface E2 de hauteur réglable, pour le reflet : E3 n'en porte plus la nuit (D103), E2 en garde un.
+    Surface {
+        id: refletEssai
+        role: "surfacePanel"
         width: 100
         height: 32
     }
@@ -709,6 +742,32 @@ ShellRoot {
             rechercheEssai.text = texte
         }
 
+        // secret — journalise le champ secret sans jamais son texte : echoMode, revele, nom et statut de l'œil,
+        // longueur du texte. Entrées : aucune. Sortie : aucune ; « essai : secret <mode> <bool> <nom> <statut> <n> ».
+        // Erreurs : aucune. Dépendances : secretEssai (oeil), journal.
+        function secret(): void {
+            const s = secretEssai
+            essai.journal("secret", [s.echoMode, s.revele, s.oeil.nom, s.oeil.status, s.length].join(" "))
+        }
+
+        // secretTexte — remplace le texte du champ secret. Entrée : texte. Sortie : aucune. Erreurs : aucune.
+        // Dépendances : secretEssai.
+        function secretTexte(texte: string): void {
+            secretEssai.text = texte
+        }
+
+        // secretALire — pose secretALire sur le champ secret. Entrée : valeur. Sortie : aucune. Erreurs : aucune.
+        // Dépendances : secretEssai.
+        function secretALire(valeur: bool): void {
+            secretEssai.secretALire = valeur
+        }
+
+        // secretOeil — clique l'œil du champ secret, comme son TapHandler. Entrées : aucune. Sortie : aucune.
+        // Erreurs : aucune. Dépendances : secretEssai.
+        function secretOeil(): void {
+            secretEssai.basculer()
+        }
+
         // activite — journalise l'indicateur d'activité : son état anime, l'état en marche de l'animation de
         // chacun des trois grains, ses cotes, sa couleur, le diamètre d'un grain, la pose « échelle/opacité » de
         // chacun, la durée d'une étape, les boucles et le type d'Easing d'une étape. Les nombres sont arrondis au
@@ -801,6 +860,37 @@ ShellRoot {
             basculeEssai.checked = valeur
         }
 
+        // reglages — journalise la carte, les rangées de réglage et les médaillons d'essai : garde en haut puis en bas de la
+        // carte (sans fenêtre, aucune mise en page n'est calculée : les largeurs sont éprouvées par la coque d'essai de Groupe),
+        // hauteurs de la rangée à aide et erreur puis de la rangée simple, abscisse du texte de la première rangée,
+        // côté, rayon et couleur du médaillon actif (celui de la première rangée), couleur du médaillon inactif,
+        // variante pleine du médaillon actif puis de l'inactif, puis rôle hérité d'une rangée.
+        // Entrées : aucune. Sortie : aucune ; « essai : reglages <h> <h1> <h2> <x> <côté> <rayon> <#fond> <#inactif>
+        // <bool> <bool> <rôle> ». Erreurs : aucune. Dépendances : carteEssai, reglageEssai, reglageSimple,
+        // medaillonInactif, journal.
+        function reglages(): void {
+            const a = reglageEssai.children.find(e => e.nom !== undefined && e.actif !== undefined)
+            const icone = m => m.children[0].pleine
+            essai.journal("reglages", [carteEssai.children[1].y + "/" + (carteEssai.implicitHeight - carteEssai.children[1].implicitHeight), reglageEssai.height, reglageSimple.height, reglageEssai.texteX,
+                a.width, a.radius, a.color, medaillonInactif.color, icone(a), icone(medaillonInactif),
+                Etats.herite(reglageEssai, "dnRole", "")].join(" "))
+        }
+
+        // valeur — journalise la valeur d'essai : texte, copie en cours, opacité de la valeur puis de « Copié »,
+        // texte du presse-papiers. Entrées : aucune. Sortie : aucune ; « essai : valeur <texte> <bool> <o1> <o2>
+        // <presse-papiers> ». Erreurs : aucune. Dépendances : valeurEssai, Quickshell.clipboardText.
+        function valeur(): void {
+            const v = valeurEssai
+            essai.journal("valeur", [v.text, v.copie, v.children[0].opacity, v.children[1].opacity,
+                Quickshell.clipboardText].join(" "))
+        }
+
+        // valeurCopier — déclenche la copie de la valeur d'essai, comme un clic. Entrée et sortie : aucune.
+        // Erreurs : aucune. Dépendances : valeurEssai.
+        function valeurCopier(): void {
+            valeurEssai.copier()
+        }
+
         // champTexte — remplace le texte du champ d'essai.
         // Entrées : texte, nouveau contenu (vide pour un champ vide). Sortie : aucune. Erreurs : aucune.
         // Dépendances : champEssai.
@@ -840,6 +930,26 @@ ShellRoot {
         function liste(): void {
             essai.journal("liste", [listeVide.currentIndex, ...[0, 1, 2].map(i => listeEssai.itemAtIndex(i)?.etat
                 .selection)].join(" "))
+        }
+
+        // navigation — fait de la liste d'essai une colonne de navigation (Liste.navigation).
+        // Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : listeEssai.
+        function navigation(): void { listeEssai.navigation = true }
+
+        // graisses — journalise, pour chaque rangée de la liste d'essai, son drapeau gras et la graisse de son
+        // libellé. Entrées : aucune. Sortie : aucune ; « essai : graisses <gras> <graisse> … ». Erreurs : aucune.
+        // Dépendances : listeEssai, Rangee (gras, libelle).
+        function graisses(): void {
+            essai.journal("graisses", [0, 1, 2].map(i => listeEssai.itemAtIndex(i))
+                .map(r => r.gras + " " + r.libelle.font.weight).join(" "))
+        }
+
+        // fondNavigation — journalise les couleurs visées (fond, texte) de la rangée 1 de la liste d'essai.
+        // Entrées : aucune. Sortie : aucune ; « essai : fondNavigation <fond> <texte> ». Erreurs : aucune.
+        // Dépendances : listeEssai, Etat (couleurs).
+        function fondNavigation(): void {
+            const c = listeEssai.itemAtIndex(1).etat.couleurs
+            essai.journal("fondNavigation", c.fill + " " + c.text)
         }
 
         // selectionLibre — confie la sélection à l'appelant et sélectionne la seule rangée 0.
@@ -895,7 +1005,8 @@ ShellRoot {
         // fenêtres (barre ancrée des deux côtés, calque ancré à droite à 300 px du bord, calque centré, fenêtre
         // flottante), puis le bord gauche du cadre : menu sous une ancre à 12 px du bord gauche, menu sous une ancre
         // près du bord droit, infobulle centrée près du bord droit, menu au point de clic avec et sans place à droite,
-        // cadre plus large que l'écran. Entrées : aucune. Sortie : aucune ; « essai : serrage <valeurs> ».
+        // cadre plus large que l'écran, puis un menu près de chaque bord, serré à une marge de 8 px.
+        // Entrées : aucune. Sortie : aucune ; « essai : serrage <valeurs> ».
         // Erreurs : aucune. Dépendances : Ancrage, journal.
         function serrage(): void {
             const ecran = { width: 1536 }
@@ -911,7 +1022,9 @@ ShellRoot {
                 Ancrage.gaucheCadre(true, 1500, 30, null, 100, 1536),
                 Ancrage.gaucheCadre(false, 1000, 50, 20, 200, 1536),
                 Ancrage.gaucheCadre(false, 1400, 50, 20, 200, 1536),
-                Ancrage.gaucheCadre(false, 12, 53, null, 2000, 1536)
+                Ancrage.gaucheCadre(false, 12, 53, null, 2000, 1536),
+                Ancrage.gaucheCadre(false, 1450, 60, null, 200, 1536, 8),
+                Ancrage.gaucheCadre(false, 2, 53, null, 200, 1536, 8)
             ]
             essai.journal("serrage", fenetres.map(Ancrage.origine).concat(cadres).join(" "))
         }
@@ -944,17 +1057,19 @@ ShellRoot {
         }
 
         // verre — journalise l'opacité du Materiau de la Surface de verre, celle du Materiau du panneau (sans
-        // verre), puis si le reflet de la Surface de verre est actif. Entrées : aucune. Sortie : aucune ;
-        // « essai : verre <opacité> <opacité> <bool> ». Erreurs : aucune. Dépendances : verreEssai, panneau.
+        // verre), si le reflet de la Surface de verre (E3) est actif, puis celui de la Surface E2 de reflet.
+        // Entrées : aucune. Sortie : aucune ; « essai : verre <opacité> <opacité> <bool> <bool> ». Erreurs : aucune.
+        // Dépendances : verreEssai, panneau, refletEssai.
         function verre(): void {
             const m = verreEssai.peinture
-            essai.journal("verre", [m.opacite, panneau.peinture.opacite, m.refletActif].join(" "))
+            essai.journal("verre", [m.opacite, panneau.peinture.opacite, m.refletActif, refletEssai.peinture.refletActif].join(" "))
         }
 
-        // materiauHauteur — pose la hauteur de la Surface de verre. Entrée : hauteur, en pixels logiques.
-        // Sortie : aucune. Erreurs : aucune. Dépendances : verreEssai.
+        // materiauHauteur — pose la hauteur de la Surface de verre et de la Surface E2 de reflet. Entrée : hauteur,
+        // en pixels logiques. Sortie : aucune. Erreurs : aucune. Dépendances : verreEssai, refletEssai.
         function materiauHauteur(hauteur: int): void {
             verreEssai.height = hauteur
+            refletEssai.height = hauteur
         }
 
         // champMateriau — journalise si le fond du champ est un Materiau, son niveau, puis son uniforme creux.

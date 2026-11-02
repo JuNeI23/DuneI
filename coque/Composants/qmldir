@@ -6,6 +6,7 @@ Bascule 1.0 Bascule.qml
 Bouton 1.0 Bouton.qml
 Case 1.0 Case.qml
 Champ 1.0 Champ.qml
+ChampSecret 1.0 ChampSecret.qml
 Chevron 1.0 Chevron.qml
 Coche 1.0 Coche.qml
 Compteur 1.0 Compteur.qml
@@ -25,6 +26,7 @@ Onglet 1.0 Onglet.qml
 Onglets 1.0 Onglets.qml
 Overlay 1.0 Overlay.qml
 Pastilles 1.0 Pastilles.qml
+PastillesFenetre 1.0 PastillesFenetre.qml
 Progression 1.0 Progression.qml
 Radio 1.0 Radio.qml
 Rangee 1.0 Rangee.qml
@@ -32,3 +34,7 @@ Recherche 1.0 Recherche.qml
 Separateur 1.0 Separateur.qml
 Surface 1.0 Surface.qml
 Texte 1.0 Texte.qml
+Carte 1.0 Carte.qml
+Medaillon 1.0 Medaillon.qml
+ReglageLigne 1.0 ReglageLigne.qml
+Valeur 1.0 Valeur.qml

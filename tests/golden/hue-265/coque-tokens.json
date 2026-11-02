@@ -86,6 +86,21 @@
     "systemBarHeight": 32,
     "readingMeasureMax": 78
   },
+  "reglages": {
+    "row": 44,
+    "rowHelp": 52,
+    "rowLead": 60,
+    "medallion": 32,
+    "medallionGlyph": 18,
+    "textColumn": 56,
+    "sidebarInset": 8,
+    "tabHeight": 48,
+    "fieldWidth": 290,
+    "windowWidth": 840,
+    "windowHeight": 640,
+    "windowMinWidth": 720,
+    "windowMinHeight": 480
+  },
   "breakpoints": {
     "compact": 480,
     "extended": 900
@@ -578,9 +593,9 @@
           },
           "e3": {
             "fill": "#1f242e",
-            "sheen": true,
-            "sheenTop": "#242933",
-            "edgeLight": true,
+            "sheen": false,
+            "sheenTop": null,
+            "edgeLight": false,
             "shadow": true
           },
           "field": {
@@ -595,6 +610,7 @@
           "edgeShadow": "#1f000000",
           "shade": "#5c000000",
           "overlayOutline": "#80000000",
+          "glassLine": "#1fe5eaf3",
           "insetShadow": "#38000000",
           "insetDepth": 4,
           "shadowBlur": 16,
@@ -602,7 +618,7 @@
         },
         "glass": {
           "e2": 1.0,
-          "e3": 1.0
+          "e3": 0.6
         },
         "render": {
           "scrim": "#8c000000",
@@ -1078,6 +1094,7 @@
           "edgeShadow": "#1f000000",
           "shade": "#5c000000",
           "overlayOutline": "#80000000",
+          "glassLine": "#1f020617",
           "insetShadow": "#38000000",
           "insetDepth": 4,
           "shadowBlur": 16,
@@ -1085,7 +1102,7 @@
         },
         "glass": {
           "e2": 0.85,
-          "e3": 0.88
+          "e3": 0.6
         },
         "render": {
           "scrim": "#8c000000",
@@ -1546,9 +1563,9 @@
           },
           "e3": {
             "fill": "#1d1d1d",
-            "sheen": true,
-            "sheenTop": "#222222",
-            "edgeLight": true,
+            "sheen": false,
+            "sheenTop": null,
+            "edgeLight": false,
             "shadow": true
           },
           "field": {
@@ -1563,6 +1580,7 @@
           "edgeShadow": "#1f000000",
           "shade": "#5c000000",
           "overlayOutline": "#80000000",
+          "glassLine": "#1fe9e9e9",
           "insetShadow": "#38000000",
           "insetDepth": 4,
           "shadowBlur": 16,
@@ -1570,7 +1588,7 @@
         },
         "glass": {
           "e2": 1.0,
-          "e3": 1.0
+          "e3": 0.6
         },
         "render": {
           "scrim": "#8c000000",
@@ -2046,6 +2064,7 @@
           "edgeShadow": "#1f000000",
           "shade": "#5c000000",
           "overlayOutline": "#80000000",
+          "glassLine": "#1f222222",
           "insetShadow": "#38000000",
           "insetDepth": 4,
           "shadowBlur": 16,
@@ -2053,7 +2072,7 @@
         },
         "glass": {
           "e2": 0.85,
-          "e3": 0.88
+          "e3": 0.6
         },
         "render": {
           "scrim": "#8c000000",

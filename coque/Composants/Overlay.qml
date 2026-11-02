@@ -37,8 +37,14 @@ import "ancrage.js" as Ancrage
 //           l'écrivent impérativement, ce qui romprait une liaison ; l'appelant se resynchronise sur ferme() ; ancre,
 //           élément déclencheur d'un contextuel ou d'une infobulle, dans une fenêtre déjà affichée ; point, point de
 //           clic dans le repère de l'ancre (Qt.point), null par défaut pour s'ancrer sous l'ancre entière ; contenu,
-//           propriété par défaut : l'élément déclaré dans l'Overlay, instancié à chaque ouverture.
-// Sorties : ferme(), émis à chaque fermeture, quelle qu'en soit la cause ; chargeur, le LazyLoader de la
+//           propriété par défaut : l'élément déclaré dans l'Overlay, instancié à chaque ouverture ; associees,
+//           fenêtres ajoutées à la prise du clavier d'un contextuel (HyprlandFocusGrab), vide par défaut : un clic
+//           dans l'une d'elles ne lève pas la prise, si bien que l'ouvreur, posé dans la barre, ferme lui-même le
+//           contextuel au lieu de le voir fermé à l'appui puis rouvert au relâchement.
+// Sorties : ferme(), émis à chaque fermeture, quelle qu'en soit la cause ; margeEcran, écart que garde le cadre
+//           d'un overlay ancré dans un calque (la barre) avec chaque bord de l'écran quand il y est serré,
+//           space.scale[1] (8), à la demande de Nicolas (L2-11 : le popover réseau ne colle plus au bord droit) ;
+//           sous une fenêtre flottante, le compositeur garde la fenêtre dans l'écran sans marge ; chargeur, le LazyLoader de la
 //           fenêtre, exposé pour les essais et les relevés de mémoire ; fenetreAttention (un porteur de
 //           FenetreAttention) et fenetreContextuel, les composants que le chargeur instancie, internes à la
 //           primitive ; bulle, vrai pour la famille infobulle. La fenêtre d'une infobulle est fenetreContextuel.
@@ -60,6 +66,8 @@ QtObject {
     property Item ancre: null
     property var point: null
     default property Component contenu
+    property list<QtObject> associees
+    readonly property real margeEcran: Theme.space?.scale[1] ?? 0
     signal ferme()
     readonly property bool bulle: famille === "infobulle"
 
@@ -73,7 +81,7 @@ QtObject {
     // Surface et le contenu. Sorties : echap(), émis sur Échap non consommé par le contenu ; implicitWidth,
     // implicitHeight, taille du contenu et du retrait ; marge, débord de l'ombre autour de la Surface, que la
     // fenêtre réserve. Erreurs : aucune.
-    // Dépendances : Surface, OmbreElevation (niveau e3, sœur de la Surface).
+    // Dépendances : Surface, OmbreElevation (niveau e3, sœur de la Surface, évidée sous le verre, D103).
     component Cadre: FocusScope {
         id: cadre
 
@@ -92,6 +100,7 @@ QtObject {
             id: ombre
             cible: corps
             niveau: "e3"
+            evidee: true
         }
 
         Surface {
@@ -191,7 +200,7 @@ QtObject {
         readonly property real ancreX: serre && overlay.ancre ? origine + overlay.ancre.mapToItem(null, 0, 0).x : 0
         readonly property real gaucheCadre: serre
             ? Ancrage.gaucheCadre(overlay.bulle, ancreX, overlay.ancre?.width ?? 0, overlay.point?.x ?? null,
-                                  cadrePopup.implicitWidth, fenetreAncre.screen.width) - ancreX
+                                  cadrePopup.implicitWidth, fenetreAncre.screen.width, overlay.margeEcran) - ancreX
             : 0
         anchor.rect.x: serre ? gaucheCadre - marge : (overlay.point?.x ?? 0) - marge
         anchor.rect.y: overlay.point ? overlay.point.y - marge : (overlay.ancre?.height ?? 1) + ecart - marge - 1
@@ -225,7 +234,7 @@ QtObject {
         }
 
         HyprlandFocusGrab {
-            windows: [popup]
+            windows: [popup, ...Array.from(overlay.associees)]
             active: overlay.ouvert && !overlay.bulle
             onCleared: overlay.ouvert = false
         }

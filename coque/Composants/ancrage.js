@@ -28,17 +28,19 @@ function origine(fenetre) {
 // Rôle : sous une ancre, un contextuel aligne son bord gauche sur celui de l'ancre, une infobulle se centre sur
 //        elle ; à un point de clic, le cadre part du point vers la droite, ou finit au point s'il n'a pas la place
 //        (retournement, comme un menu contextuel de macOS). Le cadre est ensuite serré entre les deux bords de
-//        l'écran, sans marge ; plus large que l'écran, il part du bord gauche.
+//        l'écran, à la marge demandée de chacun (aucune par défaut) ; plus large que l'écran, il part de la marge
+//        gauche.
 // Entrées : bulle, vrai pour une infobulle ; ancreX, bord gauche de l'ancre sur l'écran ; ancreLargeur, sa
 //           largeur ; pointX, abscisse du point de clic dans l'ancre, ou null sous l'ancre ; largeur, largeur du
-//           cadre ; ecran, largeur de l'écran ; toutes en pixels logiques.
+//           cadre ; ecran, largeur de l'écran ; marge, écart gardé entre le cadre et chaque bord de l'écran,
+//           0 si omise ; toutes en pixels logiques.
 // Sortie : l'abscisse du bord gauche du cadre sur l'écran.
 // Erreurs : aucune. Dépendances : aucune.
-function gaucheCadre(bulle, ancreX, ancreLargeur, pointX, largeur, ecran) {
+function gaucheCadre(bulle, ancreX, ancreLargeur, pointX, largeur, ecran, marge = 0) {
     let x = bulle ? ancreX + (ancreLargeur - largeur) / 2 : ancreX
     if (pointX !== null) {
         x = ancreX + pointX
         if (x + largeur > ecran) x += 1 - largeur
     }
-    return Math.max(0, Math.min(x, ecran - largeur))
+    return Math.max(marge, Math.min(x, ecran - largeur - marge))
 }

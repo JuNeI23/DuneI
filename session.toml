@@ -7,4 +7,7 @@
 version = "0.1.0"
 
 [demarrage]
-services = ["hypridle.service", "nm-applet.service", "dunei-coque.service"]   # nm-applet : son sort se décide à L2-11.
+services = ["hypridle.service", "dunei-coque.service"]
+# Unités retirées : make install les désactive, les arrête et supprime le fichier que DuneI avait copié (sans effet
+# si elles sont déjà absentes). nm-applet cède la place à la coque (L2-11) ; nm-connection-editor reste le recours.
+retires = ["nm-applet.service"]

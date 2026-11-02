@@ -39,12 +39,15 @@ mis de côté sous le nom .avant-dunei, et un lien remplacé par un fichier est 
   destination est sautée avec une note.
 - services : hyprlock doit être installé ; les unités et surcharges de config/systemd/user/ sont
   copiées, l'autostart XDG d'uwsm est masqué (liste blanche de session.toml) ; chaque service de la
-  liste est activé, démarré, ou redémarré si sa configuration change (daemon-reload d'abord). Un
-  service accroché à la session hors de la liste est signalé, jamais désactivé.
+  liste est activé, démarré, ou redémarré si sa configuration change (daemon-reload d'abord). Chaque
+  unité de demarrage.retires est désactivée et arrêtée, puis son fichier copié par DuneI supprimé ; sans
+  effet si elle est déjà absente. Un service accroché à la session hors de la liste est signalé, jamais désactivé.
   Cette étape précède les fichiers système : un échec de sudo ne laisse jamais l'ancienne échelle active.
 - systeme : chaque fichier de systeme/ est copié sous la racine du système, /etc compris, avec sudo, et
   seulement s'il manque ou diffère ; {utilisateur} est rempli par l'utilisateur courant ; un fichier de
-  logind.conf.d recharge logind, sans le redémarrer ; un fichier sous etc/systemd/system recharge systemd.
+  logind.conf.d recharge logind, sans le redémarrer ; un fichier sous etc/systemd/system recharge systemd ;
+  un fichier sous etc/NetworkManager/ recharge NetworkManager, sans couper les connexions. Le compte courant
+  doit appartenir au groupe wheel : le panneau réseau écrit les profils système par polkit (L2-11).
 - socle : chaque unité système de services.toml (liste blanche, sur le modèle de session.toml) est activée
   et démarrée avec sudo si elle ne l'est pas ; si ufw.service y figure et que etc/ufw/ufw.conf n'indique
   pas ENABLED=yes, le pare-feu est allumé (ufw --force enable) après l'activation du service (L1-25).
@@ -58,6 +61,8 @@ mis de côté sous le nom .avant-dunei, et un lien remplacé par un fichier est 
 from __future__ import annotations
 
 import argparse
+import contextlib
+import grp
 import json
 import os
 import pwd
@@ -66,7 +71,7 @@ import subprocess
 import sys
 import tempfile
 import tomllib
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from pathlib import Path
 
 import atelier
@@ -122,6 +127,7 @@ UFW_CONF = "etc/ufw/ufw.conf"                                # Configuration d'u
 MINUTEUR = "dunei-precharge.timer"                           # Minuteur du préchargement des mises à jour, posé par systeme/.
 GTK_SETTINGS = ("gtk-3.0/settings.ini", "gtk-4.0/settings.ini")  # Réglages GTK, sous le dossier de configuration, qui nomment le thème d'icônes.
 GSETTINGS = ("org.gnome.desktop.interface", "icon-theme")    # Schéma et clé GSettings du thème d'icônes (lus par GTK sous portail).
+GROUPE_ADMIN = "wheel"                                       # Groupe exigé : polkit lui laisse écrire les profils réseau système (L2-11).
 CROCHETS = ".githooks"                                       # Crochets git du dépôt (L1-21), valeur relative de core.hooksPath.
 
 
@@ -162,6 +168,19 @@ def utilisateur() -> str:
     Erreurs : KeyError si l'uid n'a pas de compte. Dépendances : pwd.
     """
     return pwd.getpwuid(os.getuid()).pw_name
+
+
+def groupes_utilisateur() -> list[str]:
+    """Noms des groupes du compte courant dans la session en cours.
+
+    Entrée : aucune. Sortie : noms des groupes effectifs du processus (os.getgroups).
+    Erreurs : aucune ; un gid sans nom de groupe est ignoré. Dépendances : os, grp.
+    """
+    noms = []
+    for gid in os.getgroups():
+        with contextlib.suppress(KeyError):
+            noms.append(grp.getgrgid(gid).gr_name)
+    return noms
 
 
 def _links_to(link: Path, target: Path) -> bool:
@@ -482,13 +501,25 @@ def plan_maj(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
     return ([] if etat == "enabled" else [("sudo-enable", MINUTEUR)]), err
 
 
+def _systeme_actif(unite: str) -> bool:
+    """Indique si une unité système tourne.
+
+    Entrée : unite — nom d'unité. Sortie : vrai si systemctl is-active répond 0 ; faux si l'unité est
+    arrêtée, inconnue, ou si systemctl est absent. Erreurs : aucune. Dépendances : systemctl.
+    """
+    try:
+        return subprocess.run(["systemctl", "is-active", "--quiet", unite]).returncode == 0
+    except OSError:
+        return False
+
+
 def plan_systeme(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
     """Inspection des fichiers système, sans aucune modification.
 
     Entrées : repo — racine du dépôt ; home — dossier de configuration racine, inutilisé ici.
     Sortie : (copies avec sudo des fichiers absents ou différents, une fois {utilisateur} rempli ; puis
-             rechargement de logind si l'un d'eux est sous logind.conf.d, et daemon-reload si l'un d'eux
-             est sous etc/systemd/system ; erreurs). Aucune action si tout est identique.
+             rechargement de logind si l'un d'eux est sous logind.conf.d, de NetworkManager s'il est sous
+             etc/NetworkManager et actif (sinon il lira le fichier à son démarrage), et daemon-reload si l'un d'eux est sous etc/systemd/system ; erreurs). Aucune action si tout est identique.
     Erreurs : KeyError (par utilisateur) si l'uid n'a pas de compte ; sinon aucune exception, un fichier ou
               un lien étranger à la place d'un fichier de DuneI devient un message. Dépendances : system_root, utilisateur, _ours, SYSTEME, SYSTEM_MARK, CHAMP.
     """
@@ -504,6 +535,8 @@ def plan_systeme(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
     rels = [a[2].relative_to(root).parts for a in actions]
     if any("logind.conf.d" in p for p in rels):
         actions.append(("sudo-reload", "systemd-logind"))
+    if any(p[:2] == ("etc", "NetworkManager") for p in rels) and _systeme_actif("NetworkManager"):
+        actions.append(("sudo-reload", "NetworkManager"))
     if any(p[:3] == ("etc", "systemd", "system") for p in rels):
         actions.append(("sudo-daemon-reload",))
     return actions, err
@@ -558,6 +591,48 @@ def lire_session(repo: Path) -> tuple[list[str], list[str]]:
     return ([] if err else services), err
 
 
+def lire_retires(repo: Path) -> tuple[list[str], list[str]]:
+    """Lecture et contrôle des unités retirées du démarrage de session.
+
+    Entrée : repo — racine du dépôt.
+    Sortie : (unités de demarrage.retires, dans l'ordre, vide si la clé est absente ; erreurs). La liste
+             est vide dès qu'une erreur existe.
+    Erreurs : aucune exception ; fichier illisible, clé qui n'est pas une liste, nom qui n'est pas une
+              unité .service, doublon, unité aussi présente dans services deviennent des messages.
+    Dépendances : tomllib, lire_session, SESSION.
+    """
+    try:
+        with (repo / SESSION).open("rb") as fh:
+            demarrage = tomllib.load(fh).get("demarrage")
+    except (OSError, ValueError) as e:
+        return [], [f"{SESSION} illisible ({e})"]
+    retires = demarrage.get("retires", []) if isinstance(demarrage, dict) else []
+    if not isinstance(retires, list):
+        return [], [f"{SESSION} : demarrage.retires doit être une liste"]
+    services = demarrage.get("services", []) if isinstance(demarrage, dict) and isinstance(demarrage.get("services"), list) else []
+    err = [f"{SESSION} : retires « {r} » n'est pas un nom d'unité .service" for r in retires
+           if not (isinstance(r, str) and r.endswith(".service") and "/" not in r)]
+    err += [f"{SESSION} : retires « {r} » figure aussi dans services" for r in retires if r in services]
+    err += [f"{SESSION} : retires « {r} » apparaît deux fois" for r in sorted({r for r in retires if isinstance(r, str)})
+            if retires.count(r) > 1]
+    return ([] if err else retires), err
+
+
+def verifier_wheel(groupes: Iterable[str]) -> list[str]:
+    """Contrôle de l'appartenance au groupe administrateur.
+
+    Entrée : groupes — noms des groupes du compte courant.
+    Sortie : liste vide si GROUPE_ADMIN en fait partie, sinon un message qui dit pourquoi il est exigé
+             (polkit n'autorise l'écriture des profils réseau système qu'à ce groupe) et comment l'ajouter.
+    Erreurs : aucune. Dépendances : GROUPE_ADMIN.
+    """
+    if GROUPE_ADMIN in groupes:
+        return []
+    return [f"le compte n'appartient pas au groupe {GROUPE_ADMIN} : sans lui, polkit refuse au panneau réseau "
+            "d'écrire les profils système de NetworkManager (mot de passe Wi-Fi, IP fixe, DNS). "
+            f"Remède : sudo usermod -aG {GROUPE_ADMIN} <compte>, puis se reconnecter, puis relancer make install"]
+
+
 def _etat(service: str) -> tuple[str, bool]:
     """État d'un service utilisateur auprès de systemd.
 
@@ -580,12 +655,16 @@ def plan_services(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
              différentes, masque de l'autostart XDG s'il manque, daemon-reload si l'un ou l'autre change ;
              puis pour chaque service de la liste blanche : activation s'il ne l'est pas, redémarrage si
              son unité, sa surcharge ou (pour hypridle) hypridle.conf change, démarrage s'il est arrêté ;
-             enfin un signalement ("hors-liste") par service accroché à la session hors de la liste.
+             avant le daemon-reload, pour chaque unité de demarrage.retires encore active ou activée,
+             désactivation avec arrêt, puis suppression de son fichier s'il a été posé par DuneI (rien si
+             elle est déjà absente) ; enfin un signalement ("hors-liste") par service accroché à la session hors de la liste.
     Erreurs : aucune exception ; liste fautive, verrouilleur absent, unité introuvable, fichier ou lien
-              étranger deviennent des messages. Dépendances : lire_session, _etat, _ours, _links_to,
+              étranger deviennent des messages. Dépendances : lire_session, lire_retires, _etat, _ours, _links_to,
               shutil.which, SERVICE, VERROUILLEUR, UNITES, MASQUE, SESSION_WANTS, IDLE, SYSTEM_MARK.
     """
     services, err = lire_session(repo)
+    retires, err_retires = lire_retires(repo)
+    err += err_retires
     if not shutil.which(VERROUILLEUR):
         err.append(f"{VERROUILLEUR} introuvable : sans verrouilleur la machine dormirait déverrouillée "
                    "(sudo pacman -S hypridle hyprlock)")
@@ -616,6 +695,17 @@ def plan_services(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
         dossier(masque.parent)
         actions.append(("link", Path("/dev/null"), masque))
         changes.add(masque.name)
+    for r in retires:
+        fichier = home / "systemd" / "user" / r
+        etat, actif = _etat(r)
+        if fichier.is_symlink() or (fichier.exists() and not _ours(fichier, SYSTEM_MARK)):
+            err.append(f"{fichier} existe mais n'a pas été posé par DuneI : {r} est retirée de session.toml")
+            continue
+        if etat == "enabled" or actif:
+            actions.append(("desactiver", r))
+        if fichier.exists():
+            actions.append(("supprimer", fichier))
+            changes.add(r)
     if changes:
         actions.append(("daemon-reload",))
 
@@ -635,7 +725,7 @@ def plan_services(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
             actions.append(("start", s))
     wants = home / SESSION_WANTS
     if wants.is_dir():
-        actions += [("hors-liste", p.name) for p in sorted(wants.iterdir()) if p.name not in services]
+        actions += [("hors-liste", p.name) for p in sorted(wants.iterdir()) if p.name not in services + retires]
     return actions, err
 
 
@@ -721,7 +811,7 @@ def plan(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
     if os.getuid() == 0:
         return [], ["make install ne se lance pas en root : les fichiers système nommeraient root, et les "
                     "fichiers utilisateur iraient dans /root"]
-    actions, err = [], []
+    actions, err = [], verifier_wheel(groupes_utilisateur())
     if (repo / ".git").is_file():
         err.append(f"{repo} est un arbre de travail secondaire : les liens disparaîtraient avec lui, "
                    "lancer make install depuis le dépôt principal")
@@ -756,6 +846,8 @@ def describe(action: tuple) -> str:
         "start": "démarrer {0}",
         "enable": "activer et démarrer {0}",
         "restart": "redémarrer {0}",
+        "desactiver": "désactiver et arrêter {0}, retirée du démarrage de session",
+        "supprimer": "supprimer {0}",
         "crochets": "activer les crochets du dépôt ({0}/.githooks)",
         "chemin": "{0} n'est pas encore dans le PATH de cette session : /etc/profile.d/dunei-bin.sh l'y met à la prochaine connexion",
         "rtk-pose": "poser rtk (archive {0}) dans {2}",
@@ -829,6 +921,10 @@ def apply(actions: list[tuple]) -> None:
             subprocess.run(["sudo", "systemctl", "reload", args[0]], check=True)
         elif kind == "enable":
             subprocess.run(["systemctl", "--user", "enable", "--now", args[0]], check=True)
+        elif kind == "desactiver":
+            subprocess.run(["systemctl", "--user", "disable", "--now", args[0]], check=True)
+        elif kind == "supprimer":
+            args[0].unlink(missing_ok=True)
         elif kind in ("restart", "start"):
             subprocess.run(["systemctl", "--user", kind, args[0]], check=True)
         elif kind == "daemon-reload":

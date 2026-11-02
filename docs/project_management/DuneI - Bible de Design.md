@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas
 
-Document normatif. Version 0.19. Historique en fin de document.
+Document normatif. Version 0.23. Historique en fin de document.
 
 ## Comment lire ce document
 
@@ -87,7 +87,7 @@ Chroma des neutres de la nuit thématisée : 0,014 (0,020 avant L2-40, jugé tro
 | 10 | `text-primary` | 0,25 | 0,13 |
 | 11 | `text-emphasis` | 0,18 | 0,07 |
 
-Le jour dominant a des gris strictement neutres et un E3 blanc pur. Le jour thématisé repose sur une base colorée : tous ses gris sont teintés (chroma 0,020 multipliée par un facteur de 7,5 sur le bureau et la fenêtre jusqu'à 1,5 sur le texte), et son E3 n'est pas blanc.
+Le jour dominant a des gris strictement neutres et un E3 blanc pur. Le jour thématisé repose sur une base colorée : tous ses gris sont teintés (chroma 0,020 multipliée par un facteur de 7,5 sur le bureau et la fenêtre jusqu'à 1,5 sur le texte), et son E3 n'est pas blanc. *Thème retiré jusqu'au lot 4 (D102, L2-50) ; ce passage tombe avec lui.*
 
 **Le rabattement dans le gamut sRGB se fait échelon par échelon, en préservant la teinte.** Sans cette précaution, la majoration en basse lumière peut décaler la teinte au rabattement.
 
@@ -158,7 +158,7 @@ Usages autorisés : bureaux virtuels, étiquettes, coloration syntaxique, série
 - Cible pour le corps de texte : **Lc 90**.
 - Plancher de rejet : **Lc 75**.
 - Au-dessus de la cible et du plancher, **chaque rôle a son plancher propre** (D83) : le plus petit Lc que tient la nuit thématisée sur ses fonds de référence, tenu dans les quatre thèmes et aux quatre teintes de référence (0, 55, 200, 265). L'ordre des rôles est contrôlé : chaque texte plus contrasté que le précédent, tout texte plus contrasté que toute bordure.
-- **Exception, une seule : le jour thématisé** (D84). Sa base colorée, voulue par Nicolas pour que ce thème « tire tout l'avantage d'avoir des couleurs », ramène le corps de texte à Lc 69 à 76 : sous la cible de 90 et, par endroits, sous le plancher de rejet de 75. Ce thème porte donc ses propres seuils, égaux aux minima mesurés (`contrast_target_body` et `contrast_floor` à 69, planchers par rôle propres). Aucun autre thème n'en bénéficie, et aucune autre dérogation n'est permise sans une entrée au journal.
+- **Exception, une seule : le jour thématisé** (D84). Sa base colorée, voulue par Nicolas pour que ce thème « tire tout l'avantage d'avoir des couleurs », ramène le corps de texte à Lc 69 à 76 : sous la cible de 90 et, par endroits, sous le plancher de rejet de 75. Ce thème porte donc ses propres seuils, égaux aux minima mesurés (`contrast_target_body` et `contrast_floor` à 69, planchers par rôle propres). Aucun autre thème n'en bénéficie, et aucune autre dérogation n'est permise sans une entrée au journal. *Thème retiré jusqu'au lot 4 (D102, L2-50) ; ce passage tombe avec lui.*
 - **Seconde dérogation, bornée : l'état inactif au jour** (D83). Le texte sur-accent posé sur l'accent muet de la sélection inactive (luminosité 0,78, validée à l'écran par Nicolas) ne tient que Lc 41 dans les deux thèmes de jour : un état inactif, volontairement atténué, hors du corps de texte. Elle est bornée par le plancher `on-accent-muted` de ce moment (41), contre 79 la nuit.
 - WCAG 2 conservé comme filet réglementaire, jamais comme critère de conception.
 
@@ -253,11 +253,13 @@ Ils agissent ensemble ; isolément, aucun ne fait grand-chose.
 
 ### Le verre de la coque
 
-**Le jour, les surfaces E2 et E3 de la coque sont en verre dépoli ; la nuit, elles sont opaques** (D85). Sur fond clair, le verre allège ; sur fond sombre, les surfaces opaques sont plus belles.
+**Les surfaces E3 de la coque (popovers, menus, presqu'île) sont en verre dépoli le jour comme la nuit, à 60 % ; les surfaces E2 le sont le jour seulement** (D85, D103). Le verre allège la surface et la rattache au bureau ; un popover se lit comme une feuille posée, non comme une plaque.
 
 - **La translucidité appartient à la fenêtre de coque, pas au niveau.** Seul le compositeur floute ce qu'il y a derrière une surface Wayland : seuls les panneaux, les overlays de la coque (les popovers de la barre compris) et la fenêtre d'attention peuvent être de verre ; la barre système, elle, est transparente et n'a pas de matière (D89). Un en-tête E2 dessiné à l'intérieur d'une fenêtre opaque reste opaque. Les fenêtres d'applications (E1) restent opaques.
-- **Le verre est teinté par le thème** : la couleur de l'échelon domine (0,85 en E2, 0,88 en E3), le bureau ne fait que transparaître, flouté. Sans cette teinte, le verre prend la couleur délavée du fond d'écran et jure avec les fenêtres.
-- **La nuit, l'opacité du verre vaut 1** : la surface garde son sheen, ses liserés et, en E3, son ombre, comme le veut le tableau ci-dessus. Le jour, ni sheen ni liseré, une ombre en E2 et E3.
+- **Le verre est teinté par le thème** : la couleur de l'échelon domine (0,85 en E2 le jour, 0,60 en E3), le bureau transparaît, flouté. Sans cette teinte, le verre prend la couleur délavée du fond d'écran et jure avec les fenêtres.
+- **La nuit, E2 reste opaque** et garde son sheen et ses liserés. **E3 n'a ni sheen ni liseré, à aucun moment** : sur le verre, le liseré clair du haut se lisait comme un éclat parasite (D103). Le jour, ni sheen ni liseré, une ombre en E2 et E3.
+- **L'ombre s'arrête au bord de la surface.** Sous un verre, une ombre portée dessinée sous toute la surface transparaît et l'assombrit : elle est évidée sous la forme et ne se voit qu'au dehors (D103).
+- **Un filet sur le verre est translucide** : rôle `material.glassLine`, la couleur de `text-primary` à 12 %. Un gris opaque se lit en blanc sur un verre posé devant un fond sombre, ou disparaît sur un fond clair ; le filet translucide fonce ou éclaircit ce qu'il y a dessous, quel que soit le fond (D103). Les textes d'appoint posés sur le verre montent d'un ton (`text-secondary` plutôt que `text-tertiary`), car le verre les pâlit.
 - **Rien d'opaque ne se pose sur le verre au repos.** Une rangée de menu au repos — ni survolée, ni pressée, ni sélectionnée, désactivée comprise — est transparente ; sinon chaque rangée forme une plaque distincte sur le fond translucide.
 - Le verre dépoli n'est pas le « flou » des overlays d'attention : celui-là floute tout l'écran derrière un voile, celui-ci ne touche que le fond de la surface qui le porte.
 
@@ -352,6 +354,20 @@ fichiers, navigateur, lanceur), jamais par le nom d'un logiciel.
 ### Formes
 
 Les contrôles reprennent **les formes et les proportions de macOS**, à la demande de Nicolas : coche et point de radio dessinés, et non tirés du thème d'icônes ; interrupteur en pilule ; jauge sans disque à la manière du Centre de contrôle ; onglets en contrôle segmenté ; sélection des rangées en pastille arrondie ; pastilles de fenêtre ; stepper du compteur ; bouton principal rempli d'accent. Seules les formes sont empruntées : les couleurs restent celles des tokens, et le liseré, l'ombre et le mouvement des positions relèvent du chapitre 5 et du chapitre 6. Le détail, élément par élément, est dans la conception de la bibliothèque de composants, § 7.10 (`docs/superpowers/specs/2026-10-23-composants-design.md`).
+
+**Fenêtres de réglages (D104).** Les formes validées à l'écran pour la fenêtre Réseau valent pour toutes les fenêtres de réglages et sont émises sous `Theme.reglages.*` : ligne simple de 44 px, ligne avec aide de 52 px, ligne de tête de 60 px ; médaillon d'icône de 32 px portant un glyphe de 18 px ; colonne du texte à 56 px, qui fixe aussi le retrait du filet de séparation ; barre d'onglets de 48 px ; plateau détaché de la barre latérale, retiré de 8 px. La fenêtre garde `radius.window` (12) comme toutes les fenêtres ; le plateau de la barre latérale et les cartes prennent `radius.panel` (10), pour rester sous le coin de la fenêtre (règle d'imbrication) : aucun nouveau rayon.
+
+**Le motif de la fenêtre de réglages (D105).** Toute fenêtre de réglages se construit comme la fenêtre Réseau :
+
+- **Barre latérale à onglets.** Un plateau détaché (`radius.panel`, retiré de `reglages.sidebarInset`), colonne de navigation au sens de la liste (« Sélectionné inactif ») : chaque onglet porte un médaillon, son nom et une ligne d'état en texte secondaire ; l'onglet choisi prend la plaque neutre `controlRaised` et un nom en graisse moyenne, jamais le fond d'accent. Les flèches haut et bas passent d'un onglet à l'autre. Le contour de focus n'orne la rangée courante qu'une fois une touche frappée dans la fenêtre : une ouverture à la souris ne montre aucun anneau.
+- **Page.** Un titre de page, puis des cartes précédées d'étiquettes de section à l'accent. La zone de page défile et se remet en haut à chaque changement d'onglet ou de sous-page. Les pages d'onglet sont construites une fois et gardées en vie tant que la fenêtre est ouverte : une bascule d'onglet ne fait que montrer la page ; tout secret saisi ou lu s'efface quand sa page se cache.
+- **Carte.** Aplat opaque `surfaceRaised`, `radius.panel`. Les rangées qu'elle porte sont séparées par un filet `borderSubtle` en retrait, qui part de `reglages.textColumn` (sous le texte, jamais sous le médaillon).
+- **Rangée.** Hauteur `reglages.row` (simple), `reglages.rowHelp` (avec texte d'aide en `textSecondary`) ou `reglages.rowLead` (rangée de tête). Elle reçoit au besoin un médaillon (`Medaillon`, disque de `reglages.medallion` portant un glyphe de `reglages.medallionGlyph`), un contrôle à droite (interrupteur, compteur, bouton, valeur) et, si elle est cliquable, un chevron ; elle se lit au clavier (tabulation, Entrée) et au survol comme une rangée de liste.
+- **Valeur copiable.** Texte à chasse fixe, calé à droite, tronqué au milieu s'il dépasse. Un clic ou Entrée la copie et la rangée annonce « Copié » un instant, en fondu. **Un champ multiple (adresses IPv4, IPv6, DNS) met une valeur par ligne**, chacune copiable : rien ne déborde de la carte, la rangée grandit.
+- **Sous-page.** Un réglage dense s'ouvre sur une sous-page qui remplace la page d'onglet, avec en tête la rangée de retour « ‹ » suivie du nom de l'onglet ; Échap revient. Aucune saisie en cours n'est gardée au retour.
+- **Priorité.** Un nombre à régler reste un Compteur de la bible (champ et stepper), jamais une pastille faite pour l'occasion.
+
+**Le motif du popover de réglage rapide (D105).** Le popover de la barre (réseau, et ceux qui suivront) tient en 288 px de large et suit les popovers sobres d'inspiration : carré, sur le verre de E3 (D103). Il porte de haut en bas l'en-tête (bascule à glyphe, nom de l'élément joint, état), la liste, puis, sous un filet `material.glassLine`, les actions en texte seul, sans bouton plein. L'élément joint ne paraît que dans l'en-tête, jamais dans la liste. Un mot de passe se déplie sous sa ligne, sans plaque. Tant que le popover est ouvert, l'icône de la barre qui l'a ouvert prend l'accent et sa variante pleine.
 
 ## 8. Fenêtrage et grille
 
@@ -873,6 +889,9 @@ Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si 
 | Barre de progression | — | `surface` | — | Indéterminée : animation en boucle, exception à l'interdiction de la boucle, partagée avec l'indicateur d'activité |
 | Indicateur d'activité | — | `surface` | — | Trois grains en vague continue, période `periods.spinner`. Ne s'anime que visible et en marche |
 | Séparateur | — | `surface` | — | `border-subtle`. Jamais deux séparateurs adjacents : c'est un défaut d'espacement |
+| Carte de réglages | E1 (fenêtre opaque) | `surface` + `row` | — | Aplat `surfaceRaised`, `radius.panel`, rangées séparées par un filet `border-subtle` qui part de `reglages.textColumn` (D105) |
+| Rangée de réglage | — | `row` + `interactive` + `text` | `state` | Hauteur `reglages.row`, `rowHelp` ou `rowLead` ; médaillon facultatif, contrôle à droite, chevron si elle ouvre une sous-page ; au clavier comme une rangée de liste (D105) |
+| Valeur copiable | — | `text` | `state` | Chasse fixe, calée à droite, tronquée au milieu ; clic ou Entrée la copie, « Copié » en fondu ; une valeur par ligne pour un champ multiple (D105) |
 | Barre de défilement | — | `interactive` | `state` | Superposée, 8px au repos, 12px au survol. S'efface après 800 ms d'inactivité |
 
 ### Couche 2 — le flottant applicatif
@@ -880,6 +899,7 @@ Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si 
 | Composant | Élév. | Primitives | Transition | Règles particulières |
 | --- | --- | --- | --- | --- |
 | Fenêtre flottante | E1 | `surface` | `window` | Une ombre : portée 16, décalage 4, noir à 36 %. Seul dépassement autorisé du système |
+| Fenêtre de réglages | E1 | `surface` + `row` + `interactive` | `window` | Barre latérale à onglets sur un plateau détaché, page à cartes, sous-page « ‹ onglet » fermée par Échap ; angle `radius.window`, plateau et cartes `radius.panel` (D104, D105) |
 | Dialogue modal | E3 | `overlay` + `surface` + `field` + `interactive` | `overlay` | Attention : voile **sur sa fenêtre parente seulement**, pas sur l'écran |
 | Palette flottante | E3 | `surface` + `interactive` | `window` | Contextuel : ombre seule, pas de voile |
 | Média plein écran | E0 | `surface` | `spectacle` | Tous effets désactivés : rayon 0, aucune ombre. Neutre colorimétrique pur |
@@ -894,8 +914,8 @@ Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si 
 | Sélecteur de bureaux | attention | E3 | `overlay` + `row` | `overlay` | Chaque bureau porte une teinte de la palette catégorielle |
 | Menu de déconnexion | attention | E3 | `overlay` + `interactive` | `overlay` | Action destructrice en `error`, jamais en accent |
 | Verrouillage / connexion | attention | E0 | `overlay` + `text` + `field` | `spectacle` | Registre de spectacle. Horloge en grand corps, poids léger |
-| Menu contextuel | contextuel | E3 | `surface` + `row` | `reveal` | **Ni voile ni flou** de l'écran ; verre dépoli le jour, opaque la nuit (D85). Part du point de clic, sans écart. Aucun contour de focus sur ses rangées (D88) |
-| Popover, liste déroulante | contextuel | E3 | `surface` + `row` | `reveal` | Part de son élément déclencheur, à `space.scale[0]` sous lui ; glisse au lieu de se retourner (D88) |
+| Menu contextuel | contextuel | E3 | `surface` + `row` | `reveal` | **Ni voile ni flou** de l'écran ; verre dépoli le jour comme la nuit (D85, D103). Part du point de clic, sans écart. Aucun contour de focus sur ses rangées (D88) |
+| Popover, liste déroulante | contextuel | E3 | `surface` + `row` | `reveal` | Part de son élément déclencheur, à `space.scale[0]` sous lui ; glisse au lieu de se retourner (D88) ; popover de réglage rapide : 288 px, élément joint dans l'en-tête seulement, mot de passe sans plaque, actions en texte seul sous `glassLine`, icône de la barre à l'accent et pleine tant qu'il est ouvert (D105) |
 | Infobulle | contextuel | E3 | `surface` + `text` | `reveal` | Délai de 500 ms avant apparition (`delays.tooltip`, D82). Ne prend jamais le focus |
 | Notification | contextuel | E3 | `surface` + `text` + `icon` | `reveal` | Couleurs sémantiques fixes, hors thème. Décalage limité à 5 |
 
@@ -924,3 +944,7 @@ Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si 
 | 0.17 | 2026-10-31 | Annexe E : la presqu'île (encoche continue de 28px, matière E3, couche haute, rôle `accent-discret`) et les quatre bureaux (D96 à D98) |
 | 0.18 | 2026-10-31 | Annexe E, barre système : survol réservé aux éléments cliquables (D100) |
 | 0.19 | 2026-10-31 | Chapitre 9 : première tranche du thème d'icônes DuneI, table de correspondance et sources Phosphor, graisse bold retenue, écart de calage au pixel accepté (D101) |
+| 0.20 | 2026-11-01 | Chapitre 5, verre de la coque : E3 en verre à 60 % le jour comme la nuit, sans sheen ni liseré ; ombre évidée sous la surface ; filet translucide `glassLine` et textes d'appoint d'un ton plus soutenus sur le verre (D103) |
+| 0.21 | 2026-11-01 | Chapitre 7, formes : formes des fenêtres de réglages, jetons `reglages` (D104) |
+| 0.22 | 2026-11-01 | Chapitre 7 : motif de la fenêtre de réglages (barre latérale à onglets, cartes, rangées, valeur copiable, sous-page) et du popover de réglage rapide ; annexe E : carte, rangée, valeur copiable, fenêtre de réglages (D105) |
+| 0.23 | 2026-11-02 | Chapitre 2 : le jour thématisé et son exception (D84) portent la mention de son retrait jusqu'au lot 4 (D102, L2-50) |

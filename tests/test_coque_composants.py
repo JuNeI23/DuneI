@@ -359,6 +359,24 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
         self.ipc("inactif", "true")
         self.assertEqual(self.valeur("liste"), "-1 activeMuted none none")
 
+    def test_liste_de_navigation(self):
+        # Colonne de navigation : la rangée sélectionnée ne prend jamais l'accent (clé « inactive », même sous le
+        # modificateur inactive, sans accent muet), et son libellé passe en graisse moyenne ; les autres rangées
+        # gardent la graisse régulière.
+        self.demarrer()
+        typo = self.tokens55()[0]["typo"]
+        self.ipc("navigation")
+        self.assertEqual(self.valeur("liste"), "-1 none inactive none")
+        self.assertEqual(self.valeur("graisses"), f"false {typo['weightRegular']} true {typo['weightMedium']} "
+                                                  f"false {typo['weightRegular']}")
+        # Le fond de la rangée choisie se lève d'un cran : celui d'un contrôle au repos (controlRaised), distinct du
+        # panneau et du survol aux deux moments, sans réagir au survol ; son texte est celui de ce rôle.
+        etats = self.tokens55()[0]["states"]["controlRaised"]["none"]["rest"]
+        self.assertEqual(self.valeur("fondNavigation").lower(), f"{etats['fill']} {etats['text']}".lower())
+        self.ipc("inactif", "true")
+        self.assertEqual(self.valeur("liste"), "-1 none inactive none")
+        self.assertEqual(self.valeur("fondNavigation").lower(), f"{etats['fill']} {etats['text']}".lower())
+
     def test_un_arret(self):
         # La liste est l'unique arrêt de tabulation et navigue au clavier ; ses rangées n'acceptent aucun focus
         # (Qt.NoFocus vaut 0). Sans fenêtre, la tabulation elle-même ne s'exécute pas : seules les propriétés
@@ -403,10 +421,11 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
         # son ancre tant qu'il tient dans l'écran (bord gauche du cadre = bord gauche de l'ancre, 12), et se serre
         # au bord droit sans marge sinon (1536 - 200) ; une infobulle centrée est serrée de même (1436). Au point
         # de clic, le cadre part du point (1020) ou, sans place, finit au point (1420 + 1 - 200 = 1221). L'origine
-        # d'un calque se déduit de ses ancrages et marges ; celle d'une fenêtre flottante est inconnue (NaN).
+        # d'un calque se déduit de ses ancrages et marges ; celle d'une fenêtre flottante est inconnue (NaN). Avec
+        # une marge d'écran de 8 px (le popover réseau), le cadre s'arrête à 8 px de chaque bord (1328 et 8).
         self.demarrer()
         self.assertEqual(self.valeur("serrage").split(),
-                         ["0", "1196", "518", "NaN", "12", "1336", "1436", "1020", "1221", "0"])
+                         ["0", "1196", "518", "NaN", "12", "1336", "1436", "1020", "1221", "0", "1328", "8"])
 
     def test_bouton_principal(self):
         # Le bouton principal d'un dialogue est sélectionné : l'accent, puis l'accent sans chroma sous le
@@ -566,32 +585,32 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
 
     def test_verre_opacite(self):
         # Le verre n'est posé que sur une fenêtre de coque : une Surface surfaceRaised munie de verre prend
-        # l'opacité glass.e3 (opaque à la nuit, 1,0) ; la Surface panneau, sans verre, reste opaque.
+        # l'opacité glass.e3 (translucide la nuit aussi depuis D103) ; la Surface panneau, sans verre, reste opaque.
         self.demarrer()
-        opacite, panneau, _ = self.valeur("verre").split()
+        opacite, panneau, _, _ = self.valeur("verre").split()
         self.assertEqual(float(opacite), self.vue(55)["glass"]["e3"])
-        self.assertEqual(float(opacite), 1.0)
+        self.assertLess(float(opacite), 1.0)
         self.assertEqual(float(panneau), 1)
 
     def test_reflet_borne(self):
-        # Le reflet est réservé au chrome de moins de material.sheenMaxHeight (80 px) : un menu de 32 px le
-        # porte la nuit, un menu de 120 px garde verre et liserés mais perd le reflet.
+        # Le reflet est réservé au chrome de moins de material.sheenMaxHeight (80 px) : une surface E2 de 32 px le
+        # porte la nuit, une de 120 px le perd. E3 n'en porte plus la nuit (D103), quelle que soit sa hauteur.
         self.demarrer()
         self.ipc("materiauHauteur", "32")
-        self.assertEqual(self.valeur("verre").split()[2], "true")
+        self.assertEqual(self.valeur("verre").split()[2:], ["false", "true"])
         self.ipc("materiauHauteur", "120")
-        self.assertEqual(self.valeur("verre").split()[2], "false")
+        self.assertEqual(self.valeur("verre").split()[2:], ["false", "false"])
 
     def test_materiau_suit_le_moment(self):
-        # Bascule à chaud vers le jour : le reflet s'éteint (sheen faux au jour) et l'opacité suit glass du jour,
-        # sans redémarrer la coque.
+        # Bascule à chaud vers le jour : le reflet de E2 s'éteint (sheen faux au jour) et l'opacité suit glass du
+        # jour, sans redémarrer la coque.
         self.demarrer()
         self.ipc("materiauHauteur", "32")
-        self.assertEqual(self.valeur("verre").split()[2], "true")
+        self.assertEqual(self.valeur("verre").split()[3], "true")
         famille = self.vue(55)["defaut"]["famille"]
         self.choisir(famille, "jour")
         self.attendre(f"Theme : thème {famille}/jour appliqué")
-        opacite, _, reflet = self.valeur("verre").split()
+        opacite, _, _, reflet = self.valeur("verre").split()
         self.assertEqual(reflet, "false")
         self.assertEqual(float(opacite), self.vue(55, famille, "jour")["glass"]["e3"])
 
@@ -643,6 +662,26 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(self.valeur("deroulant"), "Un 0 double surfaceRaised true false true")
         self.ipc("deroulantRang", "2")
         self.assertEqual(self.valeur("deroulant"), "Trois éléments 2 double surfaceRaised true false true")
+
+    def test_champ_secret(self):
+        # Masqué par défaut (echoMode Password, 2) avec l'œil view-reveal ; un clic sur l'œil révèle (echoMode
+        # Normal, 0, et l'œil barré view-conceal), un second masque. Avec un secret à lire et un texte vide, le clic
+        # demande la révélation au parent sans rien basculer. Les deux icônes se résolvent dans le thème DuneI.
+        # Le texte n'atteint jamais le journal.
+        self.demarrer()
+        secret = "s3cret-jamais-journalise"
+        self.ipc("secretTexte", secret)
+        self.assertEqual(self.valeur("secret"), f"2 false view-reveal 1 {len(secret)}")
+        self.ipc("secretOeil")
+        self.assertEqual(self.valeur("secret"), f"0 true view-conceal 1 {len(secret)}")
+        self.ipc("secretOeil")
+        self.assertEqual(self.valeur("secret"), f"2 false view-reveal 1 {len(secret)}")
+        self.ipc("secretTexte", "")
+        self.ipc("secretALire", "true")
+        self.ipc("secretOeil")
+        self.attendre("essai : revelationDemandee")
+        self.assertEqual(self.valeur("secret"), "2 false view-reveal 1 0")
+        self.assertNotIn(secret, self.journal())
 
     def test_recherche(self):
         # La recherche est un Champ en pilule (rayon de la moitié de sa hauteur), avec la loupe system-search à
@@ -768,6 +807,49 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
                 attendu = ["surfaceraised", "1", "true", coche, selection, cote, str(d["toggleSize"] // 2),
                            couleurs["fill"].lower(), glyphe, couleurs["text"].lower(), "1", "true"]
                 self.assertEqual(lire(attendu), attendu)
+
+    def test_reglages(self):
+        # Carte et rangées de réglage de la fenêtre Réseau : la rangée à aide prend reglages.rowHelp (erreur en
+        # plus), la simple reglages.row ; le texte s'aligne sur reglages.textColumn ; la carte ajoute deux gardes de
+        # space.scale[0] ; le médaillon prend reglages.medallion et radius.panel ; actif, il porte l'accent plein et
+        # la variante pleine de l'icône ; inactif, la sélection neutre (controlRaised au repos) et l'icône
+        # ordinaire ; la rangée hérite du rôle surfaceRaised de la carte.
+        self.demarrer()
+        tokens = self.tokens55()[0]
+        r, garde = tokens["reglages"], tokens["space"]["scale"][0]
+        lu = self.valeur("reglages").split()
+        erreur = int(lu[1]) - r["rowHelp"]  # la ligne d'erreur s'ajoute sous la rangée à aide
+        self.assertGreater(erreur, 0)
+        self.assertEqual([lu[0], int(lu[2])], [f"{garde}/{2 * garde}", r["row"]])
+        self.assertEqual(lu[3:6], [str(r["textColumn"]), str(r["medallion"]), str(tokens["radius"]["panel"])])
+        self.assertEqual(lu[6:8], [tokens["color"]["accent"].lower(), tokens["states"]["controlRaised"]["none"]["rest"]["fill"].lower()])
+        self.assertEqual(lu[8:], ["true", "false", "surfaceRaised"])
+
+    def test_valeur_copie(self):
+        # Valeur : le clic (ici l'appel de copier) remplit le presse-papiers, fait passer « Copié » devant la valeur
+        # en fondu, puis le minuteur de motion.delays.copied remet la valeur ; au repos, rien n'est copié.
+        self.demarrer()
+        motion = self.tokens55()[1]["delays"]["copied"]
+        self.assertEqual(self.valeur("valeur").split()[:4], ["192.168.1.2", "false", "1", "0"])
+        self.ipc("valeurCopier")
+        copie = self.lire_jusqua_valeur("valeur", lambda l: l[1] == "true" and l[2] == "0" and l[3] == "1")
+        self.assertEqual(copie[4], "192.168.1.2")
+        fin = self.lire_jusqua_valeur("valeur", lambda l: l[1] == "false" and l[2] == "1" and l[3] == "0", motion / 1000 + 3)
+        self.assertEqual(fin[1:4], ["false", "1", "0"])
+
+    def lire_jusqua_valeur(self, cle: str, ok, delai: float = 3.0) -> list[str]:
+        """Relit une mesure jusqu'à ce que ok la satisfasse, ou pendant delai secondes au plus.
+
+        Entrées : cle — mesure IPC ; ok — prédicat sur la liste des mots lus ; delai — durée maximale en secondes.
+        Sortie : la dernière lecture, en mots. Erreurs : aucune (le test compare ensuite). Dépendances : valeur.
+        """
+        fin, lu = time.monotonic() + delai, []
+        while time.monotonic() < fin:
+            lu = self.valeur(cle).split()
+            if ok(lu):
+                break
+            time.sleep(0.1)
+        return lu
 
     def test_exclusivite(self):
         # Le singleton Overlays seul, sur trois objets factices qui suivent le protocole d'Overlay (ouvert passe à
@@ -1054,6 +1136,21 @@ class CoqueClavierTest(EssaiCoque, unittest.TestCase):
         self.ipc("rechercheTexte", "xyz")
         self.ipc("cliquerEffacer")
         self.assertEqual(self.valeur("recherche"), "«» false")
+
+    def test_bouton_entree(self):
+        # Entrée active le Bouton qui a le focus une seule fois (Espace aussi) ; le Déroulant, qui gère déjà Entrée
+        # lui-même, l'ouvre sans activation supplémentaire.
+        self.demarrer()
+        self.ipc("focaliser", "bulle")
+        self.ipc("touche", "entree")
+        self.assertEqual(self.valeur("bulle").split()[-1], "1")
+        self.ipc("touche", "espace")
+        self.assertEqual(self.valeur("bulle").split()[-1], "2")
+        self.ipc("focaliser", "deroulant")
+        self.ipc("touche", "entree")
+        v = self.valeur("deroulant").split()
+        self.assertEqual((v[2], v[3]), ("0", "true"))
+        self.assertEqual(self.valeur("bulle").split()[-1], "2")
 
     def test_depliable_clavier(self):
         # L'en-tête de la section est un arrêt de tabulation après la recherche, entouré de l'anneau au clavier ;

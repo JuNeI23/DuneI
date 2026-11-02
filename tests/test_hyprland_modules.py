@@ -65,7 +65,8 @@ class ModulesTest(unittest.TestCase):
                                                      "layer\tdunei-verre-dunei-barre",
                                                      "layer\tdunei-verre-dunei-attention",
                                                      "layer\tdunei-verre-dunei-presquile",
-                                                     "rule\tsans-agrandissement", "rule\tglisser-xwayland"])
+                                                     "rule\tsans-agrandissement", "rule\tglisser-xwayland",
+                                                     "rule\tfenetre-reseau"])
 
     def test_verrouillage(self):
         self.assertEqual(self.run_module("verrouillage"), ["misc\ttrue"])

@@ -9,7 +9,9 @@ import "etats.js" as Etats
 // conteneur, sans cran : ni survolée, ni pressée, ni sélectionnée, désactivée comprise, sa pastille est transparente
 // et laisse voir le fond de la liste (§ 7.4), opaque ou de verre, au lieu d'en repeindre la couleur. Elle est
 // sélectionnée quand elle est la rangée courante, ou, si la liste ne fait pas suivre la sélection, quand l'appelant
-// pose selectionnee (§ 7.5) ; la sélection prend l'accent quand la liste a le focus. Sélection et survol se peignent
+// pose selectionnee (§ 7.5) ; la sélection prend l'accent quand la liste a le focus, sauf dans une colonne de
+// navigation (Liste.navigation) : elle y prend un fond neutre levé d'un cran (controlRaised, Etat.selectionNeutre)
+// et son libellé passe en graisse moyenne. Sélection et survol se peignent
 // dans une pastille arrondie en retrait des bords de la liste, à la manière de macOS (§ 7.10). Le focus se montre par
 // un contour sans fond de focus.width, qui suit la pastille rentré de -focus.rowOffset pixel, et jamais par un anneau
 // ni par un changement de fond (§ 7.3) ; il paraît sur la rangée courante d'une liste qui a le focus obtenu au
@@ -21,16 +23,20 @@ import "etats.js" as Etats
 // freedesktop d'une icône symbolique, vide par défaut (pas d'icône) ; selectionnee, sélection fournie par
 // l'appelant quand la liste ne la fait pas suivre currentIndex ; accessoire, composant facultatif posé en tête
 // de la rangée, avant l'icône, comme la colonne des coches d'un menu de macOS (le Deroulant y pose sa Coche) ;
-// null par défaut ; forcerContour, réservée à la planche de contrôle : montre le contour de focus sans que la
+// null par défaut ; suffixe, composant facultatif posé en fin de rangée, après le libellé (le popover réseau y pose
+// « Connexion… », l'indicateur d'activité et le cadenas), null par défaut ; accentue, libellé à l'accent autonome et en graisse
+// moyenne, comme le réseau joint du popover, faux par défaut ; forcerContour, réservée à la planche de contrôle : montre le contour de focus sans que la
 // liste ait le focus, faux par défaut.
-// Sorties : etat, l'Etat de la rangée (rôle, interaction, sélection, couleurs) ; signal active(), émis au clic
+// Sorties : etat, l'Etat de la rangée (rôle, interaction, sélection, couleurs) ; gras, vrai quand le libellé est
+// en graisse moyenne (accentue, ou rangée sélectionnée d'une colonne de navigation), que suit un contentItem
+// remplacé ; libelle, le Texte du libellé par défaut ; signal active(), émis au clic
 // et à Entrée (la Liste l'émet pour sa rangée courante).
 // Erreurs : aucune ; hors d'une ListView, la rangée garde sa largeur implicite, n'est jamais courante ni
 // sélectionnée par currentIndex, et se comporte comme si son groupe avait le focus ; avant le chargement des
 // tokens, les cotes sont nulles et les couleurs transparentes. Le clic suppose une Liste : une ListView
 // ordinaire ne déclare pas focusClavier, que le clic écrit.
 // Dépendances : QtQuick.Templates (ItemDelegate), QtQuick.Layouts, propriétés attachées ListView (view,
-// isCurrentItem) et Liste (focusClavier, selectionSuitCourant, selectionSuitSurvol) ; Theme (density, focus,
+// isCurrentItem) et Liste (focusClavier, selectionSuitCourant, selectionSuitSurvol, navigation) ; Theme (density, focus,
 // radius, space), Etat, Texte, Icone, etats.js (herite).
 // Cotes : hauteur density.rowHeight ; pastille en retrait de space.scale[0] (4) des bords, rayon radius.control ;
 // retrait horizontal du contenu space.scale[2] (12), soit 8 dans la pastille ; écart entre icône et libellé
@@ -45,8 +51,12 @@ T.ItemDelegate {
     property bool selectionnee: false
     property bool forcerContour: false
     property Component accessoire: null
+    property Component suffixe: null
+    property bool accentue: false
 
     readonly property alias etat: etat
+    readonly property bool gras: accentue || (vue?.navigation ?? false) && etat.selectionne
+    readonly property alias libelle: libelle
     // Les propriétés attachées se lisent ici, dans la portée de la rangée : lues dans un enfant, elles
     // viseraient cet enfant, qui n'est pas le délégué.
     readonly property ListView vue: ListView.view
@@ -88,6 +98,7 @@ T.ItemDelegate {
         selectionne: (rangee.vue?.selectionSuitCourant ?? true) ? rangee.courante : rangee.selectionnee
         focusDansGroupe: rangee.vue?.activeFocus ?? true
         fondReposTransparent: true
+        selectionNeutre: rangee.vue?.navigation ?? false
     }
 
     // Fond : une pastille de sélection et de survol, premier enfant du fond, en retrait de space.scale[0] de
@@ -134,11 +145,19 @@ T.ItemDelegate {
         }
 
         Texte {
+            id: libelle
             Layout.fillWidth: true
             text: rangee.text
-            color: etat.texte
+            moyen: rangee.gras
+            color: rangee.accentue ? Theme.color?.accentStandalone ?? "transparent" : etat.texte
             elide: Text.ElideRight
             verticalAlignment: Text.AlignVCenter
+        }
+
+        Loader {
+            active: rangee.suffixe !== null
+            visible: active
+            sourceComponent: rangee.suffixe
         }
     }
 }

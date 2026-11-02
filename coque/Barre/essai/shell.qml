@@ -6,12 +6,13 @@ import Quickshell.Services.UPower
 import Quickshell.Networking
 import "Theme"
 import "Barre"
+import "Reseau"
 import "Barre/icones.js" as Icones
 
 // Coque d'essai du module Barre, sans aucune fenêtre.
 // Rôle : expose par IPC (cible « barre ») les fonctions pures de icones.js, et porte un ElementBarre que le test
 // pilote, pour que tests/test_barre.py éprouve les correspondances dans un vrai Quickshell.
-// Entrées : DUNEI_TOKENS_DIR, lu par Theme. Commandes IPC : normaliserPourcent, iconeBatterie, iconeWifi,
+// Entrées : DUNEI_TOKENS_DIR, lu par Theme. Commandes IPC : normaliserPourcent, iconeBatterie, iconeReseau,
 // iconeBluetooth, iconeNotifications, iconeMoment, texteBatterie (chacune retourne son résultat), et
 // regler <icone> <texte> qui règle l'élément, puis elementVisible qui retourne sa visibilité et policeTexte
 // qui retourne la taille et les chiffres tabulaires de son texte.
@@ -30,11 +31,19 @@ ShellRoot {
         Logo { id: logo }
         Batterie { id: batterie }
         JourNuit { id: jourNuit }
-        Wifi { id: wifi }
+        Reseau { id: reseau }
         Bluetooth { id: bluetooth }
         Parametres { id: parametres }
-        Vpn { id: vpn; actif: false }
+        Vpn { id: vpn }
         Notifications { id: notifications; actif: false }
+    }
+
+    // Réactive EtatReseau peu après son arrêt : le moniteur réel, tué par l'arrêt, ne doit pas se voir relancé
+    // par sa sortie tardive sur l'état « actif » déjà rétabli.
+    Timer {
+        id: reprise
+        interval: 300
+        onTriggered: EtatReseau.actif = true
     }
 
     IpcHandler {
@@ -44,8 +53,9 @@ ShellRoot {
         function iconeBatterie(presente: bool, pourcent: int, enCharge: bool, pleine: bool): string {
             return Icones.iconeBatterie(presente, pourcent, enCharge, pleine)
         }
-        function iconeWifi(carte: bool, actif: bool, connecte: bool, force: real): string {
-            return Icones.iconeWifi(carte, actif, connecte, force)
+        function iconeReseau(carte: bool, radio: bool, filaire: bool, connecte: bool, connectivite: string,
+                             facture: bool, force: real): string {
+            return Icones.iconeReseau({carte, radio, filaire, connecte, connectivite, facture, force})
         }
         function iconeBluetooth(adaptateur: bool, allume: bool): string { return Icones.iconeBluetooth(adaptateur, allume) }
         function iconeNotifications(enPause: bool): string { return Icones.iconeNotifications(enPause) }
@@ -68,14 +78,18 @@ ShellRoot {
             return `${f.pixelSize};${f.features?.tnum ?? ""}`
         }
 
-        // surveillerVpn — remplace la surveillance et la lecture du Vpn par « sh -c » et les démarre.
-        // Entrées : commande (surveillance), lecture. Sortie : aucune. Erreurs : aucune. Dépendances : vpn.
+        // surveillerVpn — remplace la surveillance et la lecture de EtatReseau (que le Vpn lit) par « sh -c » et
+        // les redémarre ; le compteur de démarrages repart de zéro.
+        // Entrées : commande (surveillance), lecture. Sortie : aucune. Erreurs : aucune. Dépendances : EtatReseau.
         function surveillerVpn(commande: string, lecture: string): void {
-            vpn.surveille = ["sh", "-c", commande]; vpn.lecture = ["sh", "-c", lecture]; vpn.actif = true
+            EtatReseau.actif = false; EtatReseau.relances = 0
+            EtatReseau.surveille = ["sh", "-c", commande]; EtatReseau.lecture = ["sh", "-c", lecture]
+            reprise.start()
         }
 
-        // relancesVpn — nombre de démarrages de la surveillance du Vpn. Sortie : entier. Dépendances : vpn.
-        function relancesVpn(): int { return vpn.relances }
+        // relancesVpn — nombre de démarrages de la surveillance de EtatReseau. Sortie : entier.
+        // Dépendances : EtatReseau.
+        function relancesVpn(): int { return EtatReseau.relances }
 
         // surveillerNotifications — comme surveillerVpn, pour Notifications.
         // Entrées : commande, lecture. Sortie : aucune. Dépendances : notifications.
@@ -85,10 +99,10 @@ ShellRoot {
         }
 
         // etat — relevé des indicateurs en texte « clé=valeur » séparé par des « ; » : visibilité, texte, icône.
-        // Entrée : nom de l'indicateur (horloge, logo, batterie, jourNuit, wifi, bluetooth, parametres, notifications).
+        // Entrée : nom de l'indicateur (horloge, logo, batterie, jourNuit, reseau, bluetooth, parametres, notifications).
         // Sortie : texte. Erreurs : nom inconnu, chaîne vide. Dépendances : les indicateurs ci-dessus.
         function etat(nom: string): string {
-            const e = {horloge, logo, batterie, jourNuit, wifi, bluetooth, parametres, notifications, vpn}[nom]
+            const e = {horloge, logo, batterie, jourNuit, reseau, bluetooth, parametres, notifications, vpn}[nom]
             return e ? `visible=${e.visible};icone=${e.icone};texte=${e.texte};cliquable=${e.cliquable}` : ""
         }
 

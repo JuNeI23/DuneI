@@ -27,7 +27,8 @@ NIVEAUX = [f"battery-level-{n}{s}" for n in range(0, 101, 10) for s in ("", "-ch
 ICONES = (NIVEAUX + ["battery-level-100-charged", "network-wireless-disabled", "network-wireless-offline",
                      "bluetooth-disabled", "bluetooth-active", "notifications-disabled",
                      "preferences-system-notifications", "weather-clear-night", "weather-clear"]
-          + [f"network-wireless-signal-{p}" for p in ("none", "weak", "ok", "good", "excellent")])
+          + [f"network-wireless-signal-{p}" for p in ("none", "weak", "ok", "good", "excellent")]
+         + ["network-wireless-no-route", "network-wireless-hotspot", "network-wired", "network-wired-no-route"])
 
 
 class BarreStatiqueTest(unittest.TestCase):
@@ -42,13 +43,16 @@ class BarreStatiqueTest(unittest.TestCase):
         # Tout littéral rendu par les fonctions d'icône de icones.js, plus les icônes fixes, figure dans la table.
         texte = (ROOT / "coque" / "Barre" / "icones.js").read_text(encoding="utf-8")
         corps = "".join(re.findall(r"^function icone\w+.*?^}", texte, re.S | re.M))
-        # Ne sont pas des noms d'icône : « nuit » (argument d'iconeMoment), les cinq paliers du Wi-Fi et les
+        # Ne sont pas des noms d'icône : « nuit » (argument d'iconeMoment), les cinq paliers du Wi-Fi, les états de
+        # connectivité d'iconeReseau et d'iconeForce (« limited », « portal », « full ») et les
         # préfixes ou suffixes que les fonctions concatènent (les noms complets viennent de ICONES).
-        litteraux = set(re.findall(r'"([a-z0-9-]+)"', corps)) - {"nuit", "none", "weak", "ok", "good", "excellent"}
+        litteraux = set(re.findall(r'"([a-z0-9-]+)"', corps)) - {"nuit", "none", "weak", "ok", "good", "excellent", "limited", "portal", "full"}
         litteraux -= {"network-wireless-signal-", "battery-level-", "-charging"}
         fixes = {n for dossier in ("Barre", "Composants") for q in (ROOT / "coque" / dossier).glob("*.qml")
-                 for n in LITTERAUX_QML.findall(q.read_text(encoding="utf-8"))}
-        self.assertGreaterEqual(fixes, {"emblem-system", "network-vpn", "system-search", "edit-clear"})
+                 for n in LITTERAUX_QML.findall(q.read_text(encoding="utf-8"))} \
+            | {n for q in (ROOT / "coque" / "Reseau").glob("*.qml") for n in LITTERAUX_QML.findall(q.read_text(encoding="utf-8"))}
+        self.assertGreaterEqual(fixes, {"emblem-system", "network-vpn", "system-search", "edit-clear",
+                                        "view-conceal", "web-browser", "network-wireless-encrypted"})
         table = charger(ROOT / "icones" / "correspondances.toml")[1]
         manquants = sorted((litteraux | set(ICONES) | fixes) - set(table))
         self.assertEqual(manquants, [])
@@ -99,15 +103,46 @@ class IconesTest(BarreIpc, unittest.TestCase):
         self.assertEqual(self.appeler("iconeBatterie", True, 97, False, False), "battery-level-100")
         self.assertEqual(self.appeler("texteBatterie", 78), "78\u00a0%")
 
-    def test_wifi(self):
-        self.assertEqual(self.appeler("iconeWifi", False, True, True, 0.9), "")
-        self.assertEqual(self.appeler("iconeWifi", True, False, True, 0.9), "network-wireless-disabled")
-        self.assertEqual(self.appeler("iconeWifi", True, True, False, 0.9), "network-wireless-offline")
-        for force, palier in ((0.1, "none"), (0.3, "weak"), (0.5, "ok"), (0.7, "good"), (0.9, "excellent"), (1, "excellent")):
-            self.assertEqual(self.appeler("iconeWifi", True, True, True, force), f"network-wireless-signal-{palier}", force)
+    def reseau(self, carte=True, radio=True, filaire=False, connecte=True, connectivite="full", facture=False, force=0.9):
+        """Appelle iconeReseau avec un état par défaut « Wi-Fi joint, excellent signal, internet joignable ».
 
-    def test_wifi_force_non_numerique(self):
-        self.assertEqual(self.appeler("iconeWifi", True, True, True, "NaN"), "network-wireless-signal-none")
+        Entrées : les champs de l'état, tous nommés. Sortie : le nom d'icône. Erreurs : CalledProcessError.
+        Dépendances : appeler.
+        """
+        return self.appeler("iconeReseau", carte, radio, filaire, connecte, connectivite, facture, force)
+
+    def test_reseau(self):
+        # Priorité : rien, filaire, radio coupée, déconnecté, sans internet, facturé, puis les cinq paliers.
+        self.assertEqual(self.reseau(carte=False), "")
+        self.assertEqual(self.reseau(filaire=True), "network-wired")
+        self.assertEqual(self.reseau(filaire=True, connectivite="limited"), "network-wired-no-route")
+        self.assertEqual(self.reseau(filaire=True, connectivite="portal"), "network-wired-no-route")
+        self.assertEqual(self.reseau(filaire=True, radio=False), "network-wired")
+        self.assertEqual(self.reseau(radio=False), "network-wireless-disabled")
+        self.assertEqual(self.reseau(connecte=False), "network-wireless-offline")
+        self.assertEqual(self.reseau(connecte=False, connectivite="limited"), "network-wireless-offline")
+        self.assertEqual(self.reseau(connectivite="limited"), "network-wireless-no-route")
+        self.assertEqual(self.reseau(connectivite="none"), "network-wireless-no-route")
+        self.assertEqual(self.reseau(connectivite="portal", facture=True), "network-wireless-no-route")
+        self.assertEqual(self.reseau(facture=True), "network-wireless-hotspot")
+        self.assertEqual(self.reseau(connectivite="unknown"), "network-wireless-signal-excellent")
+        for force, palier in ((0.1, "none"), (0.3, "weak"), (0.5, "ok"), (0.7, "good"), (0.9, "excellent"), (1, "excellent")):
+            self.assertEqual(self.reseau(force=force), f"network-wireless-signal-{palier}", force)
+        self.assertEqual(self.reseau(force="NaN"), "network-wireless-signal-none")
+
+    def test_reseau_filaire_l_emporte(self):
+        # Le lien filaire l'emporte sur tout l'état du Wi-Fi, carte présente.
+        for radio, connecte in ((False, False), (True, False), (False, True)):
+            self.assertEqual(self.reseau(filaire=True, radio=radio, connecte=connecte), "network-wired")
+            self.assertEqual(self.reseau(filaire=True, radio=radio, connecte=connecte, connectivite="limited"),
+                             "network-wired-no-route")
+            self.assertEqual(self.reseau(filaire=True, radio=radio, connecte=connecte, connectivite="portal"),
+                             "network-wired-no-route")
+
+    def test_reseau_sans_carte_filaire(self):
+        self.assertEqual(self.reseau(carte=False, filaire=True), "network-wired")
+        self.assertEqual(self.reseau(carte=False, filaire=True, connecte=False), "network-wired")
+        self.assertEqual(self.reseau(carte=False, filaire=True, connectivite="limited"), "network-wired-no-route")
 
     def test_bluetooth_notifications_moment(self):
         self.assertEqual(self.appeler("iconeBluetooth", False, True), "")
@@ -140,7 +175,7 @@ class IconesTest(BarreIpc, unittest.TestCase):
         self.assertEqual(tnum, "1")
 
 
-INDICATEURS = ("Horloge", "Logo", "Notifications", "Batterie", "JourNuit", "Wifi", "Vpn", "Bluetooth", "Parametres")
+INDICATEURS = ("Horloge", "Logo", "Notifications", "Batterie", "JourNuit", "Reseau", "Vpn", "Bluetooth", "Parametres")
 
 
 class IndicateursStatiqueTest(unittest.TestCase):
@@ -170,13 +205,29 @@ class IndicateursStatiqueTest(unittest.TestCase):
     def test_chiffres_tabulaires_dans_element(self):
         self.assertIn("tabulaire: true", self.qml()["ElementBarre.qml"])
 
-    def test_jour_nuit_seul_cliquable(self):
+    def test_cliquables(self):
         qml = self.qml()
         self.assertIn("cliquable: true", qml["JourNuit.qml"])
         self.assertIn('["dunei-theme", "bascule"]', qml["JourNuit.qml"])
-        for nom in INDICATEURS:
-            if nom != "JourNuit":
-                self.assertNotIn("cliquable: true", qml[f"{nom}.qml"], nom)
+        cliquables = sorted(nom for nom in INDICATEURS if "cliquable: true" in qml[f"{nom}.qml"])
+        self.assertEqual(cliquables, ["JourNuit", "Reseau"])
+        # Un clic bascule « ouvert », que la barre reporte sur le PopoverReseau (voir test_popover_accroche) ;
+        # l'icône vient du singleton.
+        self.assertRegex(qml["Reseau.qml"], r"onClicked:\s*ouvert\s*=\s*!ouvert")
+        self.assertIn("EtatReseau.icone", qml["Reseau.qml"])
+
+    def test_popover_accroche(self):
+        # Le popover du réseau est ancré sous l'indicateur ; « ouvert » s'affecte dans les deux sens, et la barre est
+        # associée à sa prise du clavier pour qu'un clic sur l'indicateur le ferme sans le rouvrir.
+        barre = self.qml()["Barre.qml"]
+        self.assertRegex(barre, r"PopoverReseau \{\s*id: popoverReseau\s*ancre: reseau\s*associees: \[barre\]\s*"
+                                r"onFerme: reseau\.ouvert = false")
+        self.assertIn("onOuvertChanged: popoverReseau.ouvert = ouvert", barre)
+
+    def test_reseau_disparait_sans_materiel(self):
+        # Ni carte ni filaire : l'icône est vide, donc l'élément (sans icône, image ni texte) est invisible.
+        # iconeReseau rend une chaîne vide sans carte ni filaire : voir test_reseau_sans_carte_filaire et test_reseau.
+        self.assertNotRegex(self.qml()["Reseau.qml"], r"\bvisible:\s*true")
 
     def test_icones_fixes_existent(self):
         for nom in ("emblem-system", "network-vpn"):
@@ -228,9 +279,10 @@ class RelanceTest(BarreIpc, unittest.TestCase):
         self.assertIn("icone=notifications-disabled", self.appeler("etat", "notifications"))
 
     def test_indicateurs_sans_erreur(self):
-        for nom in ("horloge", "logo", "batterie", "jourNuit", "wifi", "bluetooth", "parametres"):
+        for nom in ("horloge", "logo", "batterie", "jourNuit", "reseau", "bluetooth", "parametres"):
             self.assertIn("visible=", self.appeler("etat", nom))
         self.assertIn("cliquable=true", self.appeler("etat", "jourNuit"))
+        self.assertIn("cliquable=true", self.appeler("etat", "reseau"))
         self.assertRegex(self.appeler("etat", "horloge"), r"texte=\w+\.? \d+ \w+\.? \d\d:\d\d")
         self.assertIn("icone=emblem-system", self.appeler("etat", "parametres"))
         self.assertNotIn("ERROR", self.journal())
@@ -250,18 +302,24 @@ class BarreStructureTest(unittest.TestCase):
         self.assertIn('color: "transparent"', self.barre)
         self.assertIn("WlrKeyboardFocus.None", self.barre)
 
-    def test_masque_ne_couvre_que_jour_nuit(self):
-        masque = re.search(r"mask:\s*Region\s*\{([^}]*)\}", self.barre)
+    def test_masque_ne_couvre_que_jour_nuit_et_reseau(self):
+        masque = re.search(r"mask:\s*Region\s*\{([^{}]*)Region\s*\{([^{}]*)\}\s*\}", self.barre)
         self.assertIsNotNone(masque)
-        corps = masque.group(1)
+        regions = masque.groups()
+        # Deux régions : l'interrupteur et l'indicateur réseau, chacune suivant sa position dans la rangée.
+        self.assertEqual(len(regions), 2)
+        self.assertNotRegex(self.barre, r"\bitem:")
         # Une Region qui nomme un item ne suit que ses déplacements dans son parent : le masque se calcule par
         # rangée, pour suivre aussi le glissement de la rangée quand une icône apparaît à droite (D100).
-        self.assertNotRegex(corps, r"\bitem:")
-        self.assertRegex(corps, r"x:\s*rangee\.x\s*\+\s*droite\.x\s*\+\s*jourNuit\.x\b")
-        self.assertRegex(corps, r"y:\s*rangee\.y\s*\+\s*droite\.y\s*\+\s*jourNuit\.y\b")
-        self.assertRegex(corps, r"width:\s*jourNuit\.width\b")
-        self.assertRegex(corps, r"height:\s*jourNuit\.height\b")
+        for corps, nom in zip(regions, ("jourNuit", "reseau")):
+            self.assertRegex(corps, rf"x:\s*rangee\.x\s*\+\s*droite\.x\s*\+\s*{nom}\.x\b")
+            self.assertRegex(corps, rf"y:\s*rangee\.y\s*\+\s*droite\.y\s*\+\s*{nom}\.y\b")
+            self.assertRegex(corps, rf"height:\s*{nom}\.height\b")
+        self.assertRegex(regions[0], r"width:\s*jourNuit\.width\b")
+        # Invisible (matériel absent), l'indicateur garde sa largeur : le masque ne doit alors rien couvrir.
+        self.assertRegex(regions[1], r"width:\s*reseau\.visible\s*\?\s*reseau\.width\s*:\s*0\b")
         self.assertRegex(self.barre, r"JourNuit\s*\{\s*id:\s*jourNuit\b")
+        self.assertRegex(self.barre, r"Reseau\s*\{\s*id:\s*reseau\b")
         self.assertRegex(self.barre, r"RowLayout\s*\{\s*id:\s*rangee\b")
         self.assertRegex(self.barre, r"RowLayout\s*\{\s*id:\s*droite\b")
 
@@ -270,8 +328,8 @@ class BarreStructureTest(unittest.TestCase):
         self.assertIn("element.cliquable && element.hovered", element)
 
     def test_ordre_des_indicateurs(self):
-        droite = ["Notifications", "Batterie", "JourNuit", "Wifi", "Vpn", "Bluetooth", "Parametres"]
-        trouves = re.findall(r"\b(Logo|Horloge|Notifications|Batterie|JourNuit|Wifi|Vpn|Bluetooth|Parametres)\s*\{",
+        droite = ["Notifications", "Batterie", "JourNuit", "Reseau", "Vpn", "Bluetooth", "Parametres"]
+        trouves = re.findall(r"\b(Logo|Horloge|Notifications|Batterie|JourNuit|Reseau|Vpn|Bluetooth|Parametres)\s*\{",
                              self.barre)
         self.assertEqual(trouves, ["Logo", "Horloge"] + droite)
 

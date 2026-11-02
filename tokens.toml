@@ -305,6 +305,8 @@ edge_shadow_opacity = 0.12   # 1px noir, arête inférieure
 shadow_color = { l = 0.0, c = 0.0, h = 0 }   # noir — teinte de toutes les ombres
 shade_opacity = 0.36         # ombrage d'élévation : ombre portée E3, ombrage sous les barres E2
 overlay_outline_opacity = 0.50   # contour d'un élément superposé au contenu
+glass_line_opacity = 0.12        # filet posé sur le verre, à la couleur de text-primary : il fonce ou éclaircit
+                                 # ce qu'il y a dessous, quel que soit le fond (D103)
 inset_shadow_opacity = 0.22      # ombre intérieure du creux (primitive `field`), en noir
 inset_shadow_depth = 4           # px logiques — profondeur de l'ombre intérieure du creux, multiple de 4
 
@@ -313,11 +315,11 @@ inset_shadow_depth = 4           # px logiques — profondeur de l'ombre intéri
 [glass]
 namespaces = ["dunei-barre", "dunei-attention", "dunei-presquile"]   # calques de la coque floutés
 xray = ["dunei-barre"]       # flou du seul fond ; jamais un calque qui porte de l'E3
-ignore_alpha = 0.6           # > shade_opacity et scrim (jamais floutés), < opacité minimale du verre
+ignore_alpha = 0.58          # > shade_opacity et scrim (jamais floutés), < opacité minimale du verre (0,60, D103)
 blur_size = 8
 blur_passes = 2
 e2_opacity = 1.0             # opacité du verre de l'élévation 2 (la nuit : opaque, plus beau sur fonds sombres)
-e3_opacity = 1.0             # opacité du verre de l'élévation 3 (le jour la surcharge : [moments.jour.glass])
+e3_opacity = 1.0             # opacité de base du verre de E3, surchargée aux deux moments (0,60, D103)
 
 
 # Bureau : texte posé directement sur le fond d'écran, sans capsule (barre système, L2-08). Le fond du
@@ -417,6 +419,21 @@ marge = 14                   # marge intérieure, de part et d'autre du contenu
 
 [bureaux_virtuels]
 nombre = 4                   # bureaux 1 à n, liés à SUPER + 1…n ; le bureau spécial (accueil) n'est pas compté
+
+[reglages]                    # formes des fenêtres de réglages (D104) ; px logiques, lus sous Theme.reglages.*
+row = 44                      # hauteur d'une ligne de réglage simple
+row_help = 52                 # hauteur d'une ligne avec texte d'aide
+row_lead = 60                 # hauteur d'une ligne de tête (réseau joint)
+medallion = 32                # diamètre du médaillon d'icône de tête de ligne
+medallion_glyph = 18          # taille du glyphe dans le médaillon
+text_column = 56              # colonne du texte, et retrait du filet de séparation
+sidebar_inset = 8             # retrait du plateau détaché de la barre latérale
+tab_height = 48               # hauteur de la barre d'onglets
+field_width = 290             # largeur d'un champ ou d'un sélecteur d'une fiche de réglage (D104, D105)
+window_width = 840            # largeur par défaut de la fenêtre Réseau (D105)
+window_height = 640           # hauteur par défaut de la fenêtre Réseau (D105)
+window_min_width = 720        # largeur minimale de la fenêtre Réseau (D105)
+window_min_height = 480       # hauteur minimale de la fenêtre Réseau (D105)
 
 [layout]
 sidebar_default = 240
@@ -548,6 +565,16 @@ role = "text-emphasis"   # nuit : la couleur qu'ont aujourd'hui le disque et la 
 
 [moments.nuit]           # la base : aucune surcharge
 
+# D103 : E3 en verre la nuit comme le jour, à la manière des popovers d'anhphong, et sans liseré clair ni reflet
+# en haut (Nicolas : « l'effet bizarre sur le haut »).
+[moments.nuit.glass]
+e3_opacity = 0.60
+
+[moments.nuit.elevation.e3]
+sheen = false
+edge_light = false
+shadow = true
+
 # Le jour : l'élévation monte vers le blanc, l'ombre porte le relief (conception § 5.2 à 5.4). Valeurs de départ,
 # calibrées par les planchers et l'ordre (checks.py) ; Nicolas les tranche à l'écran.
 [moments.jour]
@@ -557,7 +584,7 @@ mode = "light"
 # Le jour garde le verre : sur fonds clairs, Nicolas le préfère aux surfaces opaques (recette 2 de L2-04).
 [moments.jour.glass]
 e2_opacity = 0.85
-e3_opacity = 0.88
+e3_opacity = 0.60             # D103 ; 0,88 auparavant
 
 [moments.jour.lightness]
 # Écart à la conception : surface-window 0,968 (départ 0,955) et surface-panel 0,98 (départ 0,975). Sur 0,955, aucun
