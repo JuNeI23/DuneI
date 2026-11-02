@@ -371,6 +371,17 @@ class CoqueThemeTest(EssaiCoque, unittest.TestCase):
         self.assertIn("Theme : thème verre/nuit inconnu ; défaut thematisee/nuit appliqué", self.journal())
         self.assertNotIn(" ERROR ", self.journal())
 
+    def test_theme_retire_replie(self):
+        """Un theme.json qui nomme le jour thématisé, retiré (D102), applique la dominante de jour, comme
+        dunei-theme, et le dit une seule fois au journal, sans avertissement."""
+        self.installer(55)
+        self.choisir("thematisee", "jour")
+        self.lancer(self.dir)
+        self.attendre(f"essai : thème dominante/jour {self.vue(55, 'dominante', 'jour')['color']['surfacePanel'].lower()}")
+        self.assertEqual(self.journal().count("Theme : thème thematisee/jour retiré ; dominante/jour appliqué"), 1,
+                         self.journal())
+        self.assertNotIn("inconnu", self.journal())
+
     def test_choix_vide(self):
         # Point de vigilance 1 : un theme.json vide vaut le défaut, signalé une fois, sans erreur.
         self.installer(55)

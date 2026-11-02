@@ -7,7 +7,7 @@ import "etats.js" as Etats
 // Pastilles — les trois pastilles de fenêtre de macOS : fermer, réduire, agrandir.
 // Rôle : une rangée de trois disques de density.pastille de diamètre, espacés de space.scale[1] (8), aux couleurs
 // pastilles.error, pastilles.warning et pastilles.success (conception, § 7.10). Ces couleurs forment un petit jeu de
-// tokens propre, identique dans les quatre thèmes : comme sur macOS, les pastilles ne suivent pas le moment. Au survol
+// tokens propre, identique dans tous les thèmes : comme sur macOS, les pastilles ne suivent pas le moment. Au survol
 // du groupe, chaque disque montre son glyphe dessiné (QtQuick.Shapes) : une croix, un tiret, et les deux flèches
 // d'agrandissement de macOS (deux triangles pleins pointés vers les coins opposés). Les glyphes sont en
 // pastilles.glyph, le surfaceBase de la nuit : le contraste le plus fort sur les trois teintes (4,2:1 sur error, 8,8:1

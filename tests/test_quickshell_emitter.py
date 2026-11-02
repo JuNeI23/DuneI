@@ -8,7 +8,6 @@ from pathlib import Path
 from dunei_theme.color import Oklch, apca_lc, from_srgb255, oklch, to_hex
 from dunei_theme.emitters.hyprland import emit as emit_hyprland
 from dunei_theme.emitters.quickshell import emit
-from dunei_theme.checks import check
 from dunei_theme.model import load, resolve, theme_data, themes
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -81,16 +80,15 @@ class QuickshellEmitterTest(unittest.TestCase):
 
     def test_creux_du_champ(self):
         """Le creux du champ existe au jour comme à la nuit, avec une ombre intérieure noire à 22 %."""
-        for m in ("jour", "nuit"):
-            t = self.out["themes"]["thematisee"][m]
+        for f, m in themes(self.data):
+            t = self.out["themes"][f][m]
             self.assertTrue(t["elevation"]["field"]["insetShadow"])
             self.assertEqual(t["material"]["insetShadow"], "#38000000")
 
-    def test_quatre_themes(self):
-        """Vérifie les deux familles, leurs deux moments et le thème par défaut."""
-        self.assertEqual(set(self.out["themes"]), {"thematisee", "dominante"})
-        for f in self.out["themes"]:
-            self.assertEqual(set(self.out["themes"][f]), {"nuit", "jour"})
+    def test_trois_themes(self):
+        """Vérifie les deux familles, leurs moments (la thématisée sans jour, retiré par D102) et le défaut."""
+        self.assertEqual({f: set(t) for f, t in self.out["themes"].items()},
+                         {"thematisee": {"nuit"}, "dominante": {"nuit", "jour"}})
         self.assertEqual(self.out["defaut"], {"famille": "thematisee", "moment": "nuit"})
 
     @staticmethod
@@ -124,9 +122,9 @@ class QuickshellEmitterTest(unittest.TestCase):
                 self.assertFalse([k for k in t["color"] if k.endswith(("Hover", "Pressed"))])
 
     def test_knob(self):
-        """Vérifie le knob blanc au jour et, dans les quatre thèmes, son désactivé distinct du repos."""
+        """Vérifie le knob blanc au jour et, dans chaque thème, son désactivé distinct du repos."""
+        self.assertEqual(self.out["themes"]["dominante"]["jour"]["color"]["knob"], "#ffffff")
         for f in self.out["themes"].values():
-            self.assertEqual(f["jour"]["color"]["knob"], "#ffffff")
             for t in f.values():
                 self.assertEqual(t["knob"]["rest"], t["color"]["knob"])
             for t in f.values():
@@ -135,18 +133,19 @@ class QuickshellEmitterTest(unittest.TestCase):
     def test_controles_blancs(self):
         """Vérifie la branche controls : à la nuit, ni contour, ni piste éteinte propre, ni ombre (la nuit ne change
         pas à l'écran) ; au jour, le contour au rôle de la bordure de la case, la piste éteinte au rôle control-off,
-        une ombre translucide ; et les états du rôle controlOff dans les quatre thèmes."""
-        for f in ("thematisee", "dominante"):
-            nuit, jour = self.out["themes"][f]["nuit"], self.out["themes"][f]["jour"]
-            with self.subTest(famille=f):
-                self.assertEqual(nuit["controls"], {"outline": None, "offTrack": False, "shadow": None,
-                                                    "shadowBlur": nuit["controls"]["shadowBlur"],
-                                                    "shadowOffsetY": nuit["controls"]["shadowOffsetY"]})
-                self.assertEqual(jour["controls"]["outline"], jour["color"]["borderDefault"])
-                self.assertTrue(jour["controls"]["offTrack"])
-                self.assertRegex(jour["controls"]["shadow"], r"^#[0-9a-f]{8}$")
-                for t in (nuit, jour):
-                    self.assertEqual(t["states"]["controlOff"]["none"]["rest"]["fill"], t["color"]["controlOff"])
+        une ombre translucide ; et les états du rôle controlOff dans chaque thème."""
+        for f, m in themes(self.data):
+            t = self.out["themes"][f][m]
+            with self.subTest(famille=f, moment=m):
+                if m == "nuit":
+                    self.assertEqual(t["controls"], {"outline": None, "offTrack": False, "shadow": None,
+                                                     "shadowBlur": t["controls"]["shadowBlur"],
+                                                     "shadowOffsetY": t["controls"]["shadowOffsetY"]})
+                else:
+                    self.assertEqual(t["controls"]["outline"], t["color"]["borderDefault"])
+                    self.assertTrue(t["controls"]["offTrack"])
+                    self.assertRegex(t["controls"]["shadow"], r"^#[0-9a-f]{8}$")
+                self.assertEqual(t["states"]["controlOff"]["none"]["rest"]["fill"], t["color"]["controlOff"])
 
     def test_roles_en_srgb(self):
         c, m = self.nuit["color"], self.model
@@ -227,13 +226,7 @@ class QuickshellEmitterTest(unittest.TestCase):
                         with self.subTest(hue=hue, theme=(f, mo), s=s, i=i):
                             c = st[s][i]
                             self.assertEqual(c["text"], emph)
-                            if (f, mo) == ("thematisee", "jour"):
-                                continue  # exemption ci-dessous : ce thème a ses propres planchers (décision de Nicolas)
                             self.assertGreaterEqual(abs(apca_lc(hexa(c["text"]), hexa(c["fill"]))), cible)
-                # Le jour thématisé, à base colorée, a un corps de texte sous Lc 90 par décision de Nicolas (tokens.toml) :
-                # il doit seulement tenir ses propres planchers, les trois autres thèmes gardent la cible du corps.
-                if (f, mo) == ("thematisee", "jour"):
-                    self.assertEqual(check(resolve(theme_data(self.data, f, mo), float(hue))), [])
         # Les autres rôles gardent text-primary.
         self.assertEqual(self.nuit["states"]["surfaceRaised"]["none"]["rest"]["text"],
                          to_hex(self.model["roles"]["text-primary"]))
@@ -257,8 +250,8 @@ class QuickshellEmitterTest(unittest.TestCase):
         """Vérifie que, au jour, l'accent sans chroma du modificateur inactive prend la luminosité de
         states.container_inactive.fill_lightness, dans la gamme claire, et qu'il reste gris ; à la nuit, il garde
         celle de l'accent (test_states_valeurs)."""
-        cible = theme_data(self.data, "thematisee", "jour")["states"]["container_inactive"]["fill_lightness"]
-        for f in ("thematisee", "dominante"):
+        cible = theme_data(self.data, "dominante", "jour")["states"]["container_inactive"]["fill_lightness"]
+        for f in [f for f, m in themes(self.data) if m == "jour"]:
             m = resolve(theme_data(self.data, f, "jour"), 55.0)
             acc, ce = m["accent"], self.data["theme"]["chroma_ceiling"]
             with self.subTest(famille=f):

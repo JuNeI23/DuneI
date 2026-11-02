@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas
 
-Document normatif. Version 0.23. Historique en fin de document.
+Document normatif. Version 0.24. Historique en fin de document.
 
 ## Comment lire ce document
 
@@ -39,9 +39,9 @@ Ils sont ordonnés. En cas de conflit, le plus haut l'emporte.
 
 > **Un thème est une famille et un moment, colorés par une teinte et un facteur d'échelle de chroma borné. Rien d'autre.**
 >
-> **Chaque rôle a un plancher de contraste, tenu dans les quatre thèmes et à toutes les teintes** : un thème peut être plus contrasté que la nuit thématisée pour un rôle, jamais moins (D83).
+> **Chaque rôle a un plancher de contraste, tenu dans chaque thème et à toutes les teintes** : un thème peut être plus contrasté que la nuit thématisée pour un rôle, jamais moins (D83).
 
-La **famille** règle l'infusion des gris : *thématisée*, ils portent la teinte du fond d'écran ; *dominante*, ils sont strictement neutres et seul l'accent garde la teinte. Le **moment** est *nuit* ou *jour* : il règle l'échelle de luminosité. Les quatre thèmes sont précalculés ; l'utilisateur en choisit un (commande `dunei-theme`), la teinte et le facteur de chroma restant ses deux seules valeurs réglables.
+La **famille** règle l'infusion des gris : *thématisée*, ils portent la teinte du fond d'écran ; *dominante*, ils sont strictement neutres et seul l'accent garde la teinte. Le **moment** est *nuit* ou *jour* : il règle l'échelle de luminosité. Trois thèmes sont précalculés : thématisée nuit, dominante nuit et dominante jour. Le jour thématisé est retiré jusqu'au lot 4 (D102) : une demande qui le nomme garde le jour et applique la dominante. Un couple retiré se déclare dans `theme.exclus` de `tokens.toml` ; l'utilisateur en choisit un (commande `dunei-theme`), la teinte et le facteur de chroma restant ses deux seules valeurs réglables.
 
 Sont **invariants par construction** : l'espacement, les rayons, la typographie, les durées et courbes, la densité, les couleurs sémantiques de la famille et de la teinte (elles ne dépendent que du moment). L'échelle de luminosité est fixe **à l'intérieur d'un moment** : le choix de la famille ne la fait jamais bouger, et ne peut donc jamais faire tomber un contraste. Aucun de ces invariants ne prend le fond d'écran en paramètre.
 
@@ -87,7 +87,7 @@ Chroma des neutres de la nuit thématisée : 0,014 (0,020 avant L2-40, jugé tro
 | 10 | `text-primary` | 0,25 | 0,13 |
 | 11 | `text-emphasis` | 0,18 | 0,07 |
 
-Le jour dominant a des gris strictement neutres et un E3 blanc pur. Le jour thématisé repose sur une base colorée : tous ses gris sont teintés (chroma 0,020 multipliée par un facteur de 7,5 sur le bureau et la fenêtre jusqu'à 1,5 sur le texte), et son E3 n'est pas blanc. *Thème retiré jusqu'au lot 4 (D102, L2-50) ; ce passage tombe avec lui.*
+Le jour dominant a des gris strictement neutres et un E3 blanc pur.
 
 **Le rabattement dans le gamut sRGB se fait échelon par échelon, en préservant la teinte.** Sans cette précaution, la majoration en basse lumière peut décaler la teinte au rabattement.
 
@@ -157,9 +157,8 @@ Usages autorisés : bureaux virtuels, étiquettes, coloration syntaxique, série
 
 - Cible pour le corps de texte : **Lc 90**.
 - Plancher de rejet : **Lc 75**.
-- Au-dessus de la cible et du plancher, **chaque rôle a son plancher propre** (D83) : le plus petit Lc que tient la nuit thématisée sur ses fonds de référence, tenu dans les quatre thèmes et aux quatre teintes de référence (0, 55, 200, 265). L'ordre des rôles est contrôlé : chaque texte plus contrasté que le précédent, tout texte plus contrasté que toute bordure.
-- **Exception, une seule : le jour thématisé** (D84). Sa base colorée, voulue par Nicolas pour que ce thème « tire tout l'avantage d'avoir des couleurs », ramène le corps de texte à Lc 69 à 76 : sous la cible de 90 et, par endroits, sous le plancher de rejet de 75. Ce thème porte donc ses propres seuils, égaux aux minima mesurés (`contrast_target_body` et `contrast_floor` à 69, planchers par rôle propres). Aucun autre thème n'en bénéficie, et aucune autre dérogation n'est permise sans une entrée au journal. *Thème retiré jusqu'au lot 4 (D102, L2-50) ; ce passage tombe avec lui.*
-- **Seconde dérogation, bornée : l'état inactif au jour** (D83). Le texte sur-accent posé sur l'accent muet de la sélection inactive (luminosité 0,78, validée à l'écran par Nicolas) ne tient que Lc 41 dans les deux thèmes de jour : un état inactif, volontairement atténué, hors du corps de texte. Elle est bornée par le plancher `on-accent-muted` de ce moment (41), contre 79 la nuit.
+- Au-dessus de la cible et du plancher, **chaque rôle a son plancher propre** (D83) : le plus petit Lc que tient la nuit thématisée sur ses fonds de référence, tenu dans chaque thème et aux quatre teintes de référence (0, 55, 200, 265). L'ordre des rôles est contrôlé : chaque texte plus contrasté que le précédent, tout texte plus contrasté que toute bordure.
+- **Dérogation, bornée : l'état inactif au jour** (D83). Le texte sur-accent posé sur l'accent muet de la sélection inactive (luminosité 0,78, validée à l'écran par Nicolas) ne tient que Lc 41 au jour : un état inactif, volontairement atténué, hors du corps de texte. Elle est bornée par le plancher `on-accent-muted` de ce moment (41), contre 79 la nuit.
 - WCAG 2 conservé comme filet réglementaire, jamais comme critère de conception.
 
 ## 3. Dimensions
@@ -327,7 +326,7 @@ Sur `controlRaised`, le texte est `text-emphasis` : `text-primary` y restait à 
 - **`knob`** : un seul rôle pour le disque de l'interrupteur et la poignée du curseur. En nuit, `text-emphasis` du thème ; au jour, blanc pur, et son état désactivé se rapproche de `border-default`. Son contraste est contrôlé contre l'accent (`knob-accent`) et contre la piste éteinte (`knob-off`) (D83).
 - **`control-off`** : le gris plein de la piste éteinte d'un interrupteur, de la bascule éteinte et du rail d'une barre d'onglets, pour qu'un disque blanc s'y détache. Au jour, L 0,89 ; en nuit, défini mais non employé.
 - **Au jour, un contrôle blanc est cerné** : un pixel physique à la couleur de `border-default`, et une ombre noire à 20 % sur la poignée du curseur et le segment coché d'une barre d'onglets. Un blanc sans contour se confond avec un fond clair ; en nuit, aucun contour ni ombre. Le contour et l'ombre sont des tokens du moment (`[controls]`), jamais déduits dans le QML.
-- **Les pastilles de fenêtre** ne dépendent pas du moment : mêmes fonds sémantiques de nuit et même glyphe dans les quatre thèmes.
+- **Les pastilles de fenêtre** ne dépendent pas du moment : mêmes fonds sémantiques de nuit et même glyphe dans tous les thèmes.
 
 ### Modificateur de conteneur `inactive`
 
@@ -948,3 +947,4 @@ Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si 
 | 0.21 | 2026-11-01 | Chapitre 7, formes : formes des fenêtres de réglages, jetons `reglages` (D104) |
 | 0.22 | 2026-11-01 | Chapitre 7 : motif de la fenêtre de réglages (barre latérale à onglets, cartes, rangées, valeur copiable, sous-page) et du popover de réglage rapide ; annexe E : carte, rangée, valeur copiable, fenêtre de réglages (D105) |
 | 0.23 | 2026-11-02 | Chapitre 2 : le jour thématisé et son exception (D84) portent la mention de son retrait jusqu'au lot 4 (D102, L2-50) |
+| 0.24 | 2026-11-02 | Chapitre 2 : jour thématisé retiré (L2-50, D102) ; trois thèmes précalculés, couples retirés déclarés dans `theme.exclus`, repli sur la première famille qui offre le moment ; passage de l'échelle du jour thématisé et exception du corps de texte (D84) supprimés ; « quatre thèmes » devient « chaque thème » |

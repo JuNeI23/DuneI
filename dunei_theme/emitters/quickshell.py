@@ -250,7 +250,7 @@ def _bureau(model: dict) -> dict:
 
 
 def emit(model: dict) -> str:
-    """Fichier `coque-tokens.json` : les quatre thèmes, les pastilles et les cotes partagées.
+    """Fichier `coque-tokens.json` : les thèmes composables (model.themes), les pastilles et les cotes partagées.
 
     Entrée : model — sortie de model.resolve ; `raw` et `hue` servent à résoudre chaque thème ici, `roles` à la clé
              `bureau` (via _bureau).

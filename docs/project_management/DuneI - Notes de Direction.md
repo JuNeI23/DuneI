@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas — révisée le 22 octobre 2026
 
-Version 1.34. Historique en fin de document.
+Version 1.35. Historique en fin de document.
 
 *Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent soixante-quatre lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
 
@@ -479,15 +479,24 @@ Hyprland pendant la session : `dunei-bouton-marche.service` tient le verrou `han
 demande deux appuis à moins d'une seconde d'intervalle ; un appui isolé ne fait plus rien. Hors session, logind et la
 garde de D99 restent en place.
 
-Prochaine étape : **valider D106 à l'écran** (un appui isolé sans effet, un double appui qui met en veille, écran
-verrouillé ou non), fusionner `feat/double-appui-marche`, puis, à la demande de Nicolas, **L2-50, le retrait du jour
-thématisé**, dans sa propre branche.
+D106 est fusionnée. L2-50 retire le jour thématisé (D102) : la coque ne compose plus que trois thèmes,
+thématisée nuit, dominante nuit et dominante jour. Le couple retiré se déclare dans `theme.exclus` de `tokens.toml`,
+que `model.themes` et `model.theme_data` respectent ; ses surcharges et la dérogation de contraste de D84 sont
+supprimées, et les trois autres thèmes restent identiques au bit près. Une demande qui nomme un couple retiré garde
+son moment et prend la première famille qui l'offre, dans `dunei-theme` comme dans `Theme.qml` : `bascule` depuis la
+thématisée nuit mène à la dominante jour, et un ancien `theme.json` resté sur le jour thématisé s'affiche en dominante
+jour.
+
+Prochaine étape : **valider L2-50 à l'écran** (planche en thématisée nuit, `dunei-theme bascule` vers la dominante
+jour), fusionner `feat/retrait-jour-thematise`, puis choisir l'élément suivant du lot 2 dans le backlog ; L2-52, le
+popover thème et luminosité, a désormais un sens fixé pour « moment ».
 
 ## Historique des versions
 
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-10 | Version initiale |
+| 1.35 | 2026-11-02 | L2-50 : jour thématisé retiré, trois thèmes, couples retirés dans `theme.exclus`, repli sur la première famille qui offre le moment (D102) ; prochaine étape : valider L2-50 à l'écran, puis choisir l'élément suivant du lot 2 |
 | 1.34 | 2026-11-02 | Bouton marche au double appui pendant la session (D106), après un appui fantôme hors de la garde de D99 ; prochaine étape : sa validation, puis L2-50 |
 | 1.33 | 2026-11-02 | Corrections de la relecture finale de L2-11 : recompte du backlog (164 éléments), sort de `nm-applet` tranché (retiré) |
 | 1.32 | 2026-11-01 | L2-11 livrée et validée à l'écran (popover D5, fenêtre Réseau D4, VPN minimal ; D103 à D105) ; L2-50, L2-51 et L2-52 ajoutées ; relecture finale : trois lignes ajoutées au backlog (L2-53 recherche partagée, L2-54 saisie IPv4 protégée des relectures, L2-55 rangées du popover réseau au clavier), soit 164 éléments ; prochaine étape : fusion de L2-11, puis L2-50 en branche à part |

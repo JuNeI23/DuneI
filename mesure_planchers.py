@@ -24,8 +24,8 @@ def main() -> int:
     Entrée : argument --src (tokens.toml par défaut).
     Sortie : code de retour 0 ; la table TOML sur stdout.
     Erreurs : FileNotFoundError si la source manque ; KeyError si elle est incomplète.
-    Dépendances : dunei_theme (model, checks). Les planchers propres au jour (knob-off, on-accent-muted, jour
-    thématisé) se relèvent à la main : ce script ne mesure que la nuit.
+    Dépendances : dunei_theme (model, checks). Les planchers propres au jour (knob-off, on-accent-muted) se
+    relèvent à la main : ce script ne mesure que la nuit.
     """
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--src", default=Path("tokens.toml"), type=Path)

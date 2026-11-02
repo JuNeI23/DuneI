@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.31. Historique en fin de document.
+Version 1.32. Historique en fin de document.
 
 Socle amorçable.
 
@@ -1759,8 +1759,10 @@ départ. Le flou et l'opacité du voile restent à L2-35.
 
 ## Les thèmes statiques — L2-40
 
-La coque offre quatre thèmes : une **famille** (*thématisée*, dont les gris portent la teinte du fond d'écran, ou
-*dominante*, dont les gris sont neutres) et un **moment** (*nuit* ou *jour*). Ils sont tous précalculés dans
+La coque offre trois thèmes, chacun une **famille** (*thématisée*, dont les gris portent la teinte du fond d'écran,
+ou *dominante*, dont les gris sont neutres) et un **moment** (*nuit* ou *jour*) : thématisée nuit, dominante nuit
+et dominante jour. Le jour thématisé est retiré jusqu'au lot 4 (D102, L2-50) ; un couple retiré se déclare dans
+`theme.exclus` de `tokens.toml`. Ils sont tous précalculés dans
 `coque-tokens.json` ; en choisir un ne demande ni Python ni le dépôt. Le contrat est au journal (D83, D84) et la
 conception est `docs/superpowers/specs/2026-10-24-themes-statiques-design.md`.
 
@@ -1769,7 +1771,9 @@ conception est `docs/superpowers/specs/2026-10-24-themes-statiques-design.md`.
 Le thème actif est dans `~/.config/dunei/theme.json` (ou `$DUNEI_TOKENS_DIR/theme.json`) :
 `{ "famille": "dominante", "moment": "jour" }`. Ce fichier appartient à la machine : `make install` ne l'écrit ni ne
 l'écrase, et il n'entre pas dans le dépôt. Absent, vide ou portant un nom inconnu, il vaut le défaut,
-`thematisee` et `nuit` ; la coque le signale une fois dans le journal de Quickshell et ne plante pas. La coque
+`thematisee` et `nuit` ; la coque le signale une fois dans le journal de Quickshell et ne plante pas. S'il nomme un
+couple retiré (`thematisee` et `jour`), la coque garde le moment et applique la première famille qui l'offre, la
+dominante jour, et le note une fois au journal (« retiré »). La coque
 surveille ce fichier et bascule d'un bloc, sans animation.
 
 ### La commande `dunei-theme`
@@ -1783,6 +1787,10 @@ moments de `coque-tokens.json` (lus avec `jq`) et écrit `theme.json` par un fic
 | `dunei-theme jour` / `nuit` | change de moment, garde la famille |
 | `dunei-theme bascule` | passe au moment opposé |
 | `dunei-theme famille <nom>` | change de famille (`thematisee`, `dominante`), garde le moment |
+
+Un couple retiré n'est jamais écrit : la commande garde le moment et prend la première famille qui l'offre. Depuis
+la thématisée nuit, `bascule` et `jour` mènent donc à la dominante jour, et `famille thematisee` au jour laisse la
+dominante jour.
 
 Codes de sortie : 0 en cas de succès ; 2 pour un argument ou un nom inconnu (`theme.json` reste intact) ; 1 si
 `coque-tokens.json` est introuvable, auquel cas il faut lancer `make install` (rien n'est écrit). La teinte reste
@@ -2166,6 +2174,7 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 
 | Version | Date | Changement |
 | --- | --- | --- |
+| 1.32 | 2026-11-02 | Thèmes statiques : trois thèmes, jour thématisé retiré (L2-50, D102), repli d'un couple retiré dans la coque et dans `dunei-theme` |
 | 1.31 | 2026-11-02 | Énergie (L1-09) : double appui du bouton marche pendant la session, `dunei-bouton-marche.service` et `scripts/dunei-bouton-marche` (D106) |
 | 1.30 | 2026-11-02 | Relecture finale de L2-11 : `nm-applet` retiré (décidé, plus à trancher), renvois des anciennes sections corrigés (arborescence, table des unités, recette de L1-10) |
 | 1.29 | 2026-11-01 | Le réseau (L2-11) : popover, fenêtre en onglets, ouverture, tests et recette validée à l'écran (D103 à D105) |
