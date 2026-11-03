@@ -1,6 +1,6 @@
 # Popover Bluetooth : conception (L2-14)
 
-Version 0.2, 2026-11-03.
+Version 0.3, 2026-11-03.
 
 ## Intention
 
@@ -73,10 +73,26 @@ connecte ou déconnecte un appareil connu, recherche les appareils voisins, en a
    - Un appairage ou une connexion en cours continue après la fermeture : l'action appartient à BlueZ, pas au
      popover.
 
+10. **Appairage par un agent et le bon transport** (recette du 2026-11-03, décision de Nicolas). `pair()` de
+    Quickshell échoue sur le Bose (« Authentication Rejected ») : sans agent d'appairage, BlueZ refuse
+    l'authentification, même pour un appareil sans code. De plus, un appareil double (Bluetooth classique et LE), revu
+    par ses annonces LE, est appairé en LE : le PC se croit lié, l'appareil n'a aucune clé pour l'audio, et la
+    connexion échoue (« br-connection-key-missing »). L'appairage passe donc par un exécutable,
+    `dunei-bluetooth-appairer <adresse> <transport>` (`config/bin/`), qui ouvre une session `bluetoothctl` avec un agent
+    `NoInputNoOutput` le temps de l'appairage, recherche avec le filtre de transport donné, appaire, marque de confiance
+    et connecte ; il sort en 0, en 1 (appairage impossible) ou en 2 (connexion impossible). Transport : `bredr` pour un
+    appareil audio (icône `audio-*`), `auto` sinon. La recherche du popover se suspend pendant un appairage : BlueZ fusionne
+    les filtres de ses clients, et une recherche sans filtre ramènerait le LE.
+11. **Nom affiché sans préfixe « LE- »** (ni « LE_ », ni « LE »), que certains appareils doubles ajoutent à leur nom
+    LE (demande de Nicolas).
+12. **Hauteur fixe de « Appareils à proximité »** : cinq lignes réservées dès l'ouverture, pour que la fenêtre ne
+    grandisse pas par à-coups pendant la recherche (recette du 2026-11-03).
+
 ## Non-objectifs
 
-- Appairage d'un appareil à code (clavier, certains téléphones) : il faut un agent d'appairage BlueZ, que Quickshell ne
-  fournit pas. Reste en L3-09. Un tel appareil échoue avec le message d'erreur générique.
+- Appairage d'un appareil à code (clavier, certains téléphones) : l'agent `NoInputNoOutput` ne sait pas saisir ni
+  afficher un code. Reste en L3-09. Un tel appareil échoue avec le message d'erreur générique.
+- Animations de passage d'un popover à l'autre : demandées pour un lot suivant (backlog).
 - Fenêtre de réglages Bluetooth (L5-06), renommage d'un appareil, blocage, réveil par un appareil.
 - Choix de la sortie audio (L2-12) : WirePlumber bascule déjà sur le casque à sa connexion.
 - Navigation au clavier des rangées : même dette que le popover réseau (L2-55).
@@ -147,3 +163,4 @@ connecte ou déconnecte un appareil connu, recherche les appareils voisins, en a
 |---|---|---|
 | 0.1 | 2026-11-03 | Première rédaction après le brainstorming avec Nicolas |
 | 0.2 | 2026-11-03 | Relecture : appareil connecté gardé dans la liste, masque de la barre ; exclusion des popovers et fermeture à 1,5 s demandées par Nicolas |
+| 0.3 | 2026-11-03 | Recette : appairage par un agent et le bon transport (objectif 10), préfixe « LE- » masqué, hauteur fixe des voisins |

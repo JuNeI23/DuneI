@@ -248,3 +248,35 @@ d'essai par `qs ipc`.
 - [ ] Notes de direction : l'état d'avancement, et la prochaine étape dans le dernier paragraphe.
 - [ ] Recette à l'écran avec Nicolas, en fenêtre réelle et capture grim, selon la fiche, section « Vérification ».
 - [ ] Commit, puis PR. La fusion n'a lieu qu'après la validation à l'écran.
+
+---
+
+## Correctifs de la recette (fiche v0.3)
+
+### Tâche 9 : exécutable d'appairage
+
+**Fichiers :** créer `config/bin/dunei-bluetooth-appairer` (sh, exécutable) ; test `tests/test_bluetooth_appairer.py`
+(faux `bluetoothctl` dans le PATH, sur le modèle de `tests/test_energie_scripts.py`).
+
+**Interface :** `dunei-bluetooth-appairer <adresse> <auto|bredr|le>` ; codes 0, 1 (appairage impossible), 2
+(connexion impossible), 64 (arguments invalides). Attentes réglables pour les tests : `DUNEI_BT_RECHERCHE` (secondes
+de recherche avant `pair`, 6 par défaut), `DUNEI_BT_DELAI` (borne de chaque attente, 20 par défaut), `DUNEI_BT_PAS`
+(intervalle de sondage, 0,5 par défaut).
+
+- [ ] Tests : ordre des commandes envoyées (`agent NoInputNoOutput`, `default-agent`, filtre `transport bredr`,
+  `scan on`, `pair`, `trust`, `connect`, `scan off`) ; codes 0, 1, 2 et 64 ; adresse invalide refusée.
+- [ ] Échec constaté, implémentation, tests verts, `test_shellcheck`, commit.
+
+### Tâche 10 : l'état et le popover l'emploient
+
+- `bluetooth.js` : `nomAffiche(nom)` retire un préfixe `LE-`, `LE_` ou `LE ` ; `trierAppareils` et `resume` l'emploient ;
+  `transport(icone)` rend `bredr` pour `audio-*`, `auto` sinon.
+- `EtatBluetooth` : `appairages` devient notifiant (réaffecté) ; `appairer` lance `commandeAppairage` (par défaut
+  `["dunei-bluetooth-appairer"]`) avec l'adresse et le transport par un `Process`, ignore un appareil déjà suivi, et
+  émet `echec` selon le code de sortie ; la recherche se suspend tant qu'un appairage est suivi ; `suiviApparie` et
+  `suiviAppairage` disparaissent (l'exécutable confie et connecte).
+- Popover : nom par `nomAffiche`, ligne occupée tant que `etat.appairages[cle]` ; « Appareils à proximité » à cinq
+  lignes de hauteur fixe.
+- Tests : `nomAffiche`, `transport`, scénarios de l'état (échec par code 1, double appel ignoré), popover (nom sans
+  préfixe, hauteur fixe).
+
