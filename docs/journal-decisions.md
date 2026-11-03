@@ -2629,7 +2629,8 @@ activent.
 - **Quand le compte part.** Le compte à rebours ne démarre qu'une fois le pointeur vu sur le popover ou sur son icône :
   un popover ouvert au clavier ne se ferme pas tout seul. Il s'annule dès que le pointeur revient. Il est suspendu
   tant qu'une saisie ou une action est en cours : mot de passe Wi-Fi déplié ou connexion suivie dans le popover
-  réseau, « Oublier » déplié dans le popover Bluetooth. Un appairage lancé continue après la fermeture.
+  réseau, « Oublier » déplié ou ligne occupée (appairage, connexion) dans le popover Bluetooth, pour en montrer
+  l'issue (relecture finale). Un appairage lancé continue s'il est fermé autrement.
 - **Mise en œuvre.** La logique vit dans `MinuterieDepart`, éprouvée seule par la coque d'essai des composants, car le
   pointeur ne se simule pas en offscreen. L'icône compte comme survolée par sa propriété `hovered` (`ElementBarre` est
   un `AbstractButton`) : un `HoverHandler` posé sur l'ancre depuis l'`Overlay`, un `QtObject`, faisait planter

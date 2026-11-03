@@ -71,6 +71,24 @@ class BluetoothJsTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(self.appeler("resume", True, {"nom": "Bose NC 700 Headphones", "batterie": 0.615}),
                          "Bose NC 700 Headphones · 62 %")
 
+    def scenario(self, cle: str) -> dict:
+        """Joue un scénario du suivi d'EtatBluetooth sur un appareil factice. Entrée : cle. Sortie : {appels, trusted,
+        echecs}. Dépendances : qs."""
+        return json.loads(subprocess.run([QS, "ipc", "--pid", str(self.proc.pid), "call", "bluetooth", "scenario", cle],
+                                         check=True, capture_output=True, text=True, timeout=DELAI).stdout.strip())
+
+    def test_appaire_deja_connecte_puis_deconnexion_voulue(self):
+        # Un casque souvent déjà connecté au bout de l'appairage : pas de connect() inutile, et sa déconnexion voulue
+        # plus tard n'est pas un échec (relecture finale, I1).
+        r = self.scenario("appaireDejaConnecte")
+        self.assertEqual(r["appels"], ["pair", "disconnect"])
+        self.assertTrue(r["trusted"])
+        self.assertEqual(r["echecs"], [])
+
+    def test_double_appairage_ignore(self):
+        # Un second clic pendant l'appairage ne relance pas pair() (relecture finale, I2).
+        self.assertEqual(self.scenario("doubleAppairage")["appels"], ["pair"])
+
     def test_etat_reel_se_charge(self):
         # Le singleton réel se charge et compose une ligne d'état, quel que soit l'état de la radio de la machine.
         sortie = subprocess.run([QS, "ipc", "--pid", str(self.proc.pid), "call", "bluetooth", "resume"], check=True,
@@ -163,6 +181,17 @@ class PopoverBluetoothTest(EssaiCoque, unittest.TestCase):
         self.ipc("oublier")
         self.attendre_journal(f"essai : oublier {self.SOURIS}")
         self.assertEqual(self.panneau()["deplie"], "")
+
+    def test_ligne_occupee_et_popover_retenu(self):
+        # Pendant un appairage, un second clic ne relance rien, et le popover reste ouvert pour en montrer l'issue
+        # (relecture finale, I2 et I3).
+        self.ouvrir()
+        p = json.loads(self.ipc("puisLire", "choisir", self.ENCEINTE))
+        self.assertTrue(p["retenu"])
+        self.ipc("choisir", self.ENCEINTE)
+        self.assertEqual(self.journal().count(f"essai : appairer {self.ENCEINTE}"), 1)
+        p = json.loads(self.ipc("puisLire", "echouer", self.ENCEINTE))
+        self.assertFalse(p["retenu"])
 
     def test_echec_appairage(self):
         self.ouvrir()

@@ -52,18 +52,24 @@ Singleton {
         if (adaptateur) adaptateur.enabled = actif
     }
 
-    // basculer — déconnecte un appareil connecté, connecte un appareil déconnecté (suivi par connexions).
+    // basculer — déconnecte un appareil connecté, connecte un appareil déconnecté (suivi par connexions). Une
+    // déconnexion voulue efface le suivi de connexion : elle n'est jamais un échec.
     // Entrées : appareil, un BluetoothDevice. Sortie : aucune. Erreurs : voir echec. Dépendances : connexions.
     function basculer(appareil): void {
-        if (appareil.connected) return appareil.disconnect()
+        if (appareil.connected) {
+            delete connexions[appareil.address]
+            return appareil.disconnect()
+        }
         connexions[appareil.address] = true
         appareil.connect()
     }
 
     // appairer — lance l'appairage d'un appareil voisin ; la suite (confiance, connexion) vient de son suivi.
-    // Entrées : appareil, un BluetoothDevice non appairé. Sortie : aucune. Erreurs : voir echec.
+    // Entrées : appareil, un BluetoothDevice non appairé. Sortie : aucune. Erreurs : voir echec ; un appareil déjà en
+    // cours d'appairage est ignoré (un second pair() serait refusé par BlueZ et romprait le suivi).
     // Dépendances : appairages.
     function appairer(appareil): void {
+        if (appareil.pairing) return
         appairages[appareil.address] = true
         appareil.pair()
     }
@@ -74,39 +80,49 @@ Singleton {
         appareil.forget()
     }
 
+    // suiviApparie — un appareil vient d'être appairé : s'il l'a été par appairer(), il devient de confiance puis
+    // est connecté, sauf s'il l'est déjà (un casque se connecte souvent pendant l'appairage). Entrées : a, l'appareil. Sortie : aucune. Erreurs : aucune. Dépendances : appairages, connexions.
+    function suiviApparie(a): void {
+        if (!a.paired || !appairages[a.address]) return
+        delete appairages[a.address]
+        a.trusted = true
+        if (a.connected) return
+        connexions[a.address] = true
+        a.connect()
+    }
+
+    // suiviAppairage — l'appairage d'un appareil s'arrête : sans appairage abouti, echec(« Appairage impossible »).
+    // L'ordre des signaux pairing et paired n'est pas garanti : l'échec se constate au tour suivant (Qt.callLater).
+    // Entrées : a, l'appareil. Sortie : aucune. Erreurs : voir echec. Dépendances : appairages.
+    function suiviAppairage(a): void {
+        if (!a.pairing) Qt.callLater(() => {
+            if (a.pairing || a.paired || !appairages[a.address]) return
+            delete appairages[a.address]
+            echec(a.address, "Appairage impossible")
+        })
+    }
+
+    // suiviEtat — l'état de connexion d'un appareil change : une connexion demandée aboutit, ou échoue
+    // (echec(« Connexion impossible ») si l'appareil revient à l'état déconnecté).
+    // Entrées : a, l'appareil. Sortie : aucune. Erreurs : voir echec. Dépendances : connexions.
+    function suiviEtat(a): void {
+        if (!connexions[a.address]) return
+        if (a.state === BluetoothDeviceState.Connected) delete connexions[a.address]
+        else if (a.state === BluetoothDeviceState.Disconnected) {
+            delete connexions[a.address]
+            echec(a.address, "Connexion impossible")
+        }
+    }
+
     // Suivi de chaque appareil : issue d'un appairage lancé et d'une connexion demandée.
     Instantiator {
         model: etat.appareils
         delegate: Connections {
             required property var modelData
             target: modelData
-
-            function onPairedChanged() {
-                const a = modelData
-                if (!a.paired || !etat.appairages[a.address]) return
-                delete etat.appairages[a.address]
-                a.trusted = true
-                etat.connexions[a.address] = true
-                a.connect()
-            }
-            // L'ordre des signaux pairing et paired n'est pas garanti : l'échec se constate au tour suivant.
-            function onPairingChanged() {
-                const a = modelData
-                if (!a.pairing) Qt.callLater(() => {
-                    if (a.pairing || a.paired || !etat.appairages[a.address]) return
-                    delete etat.appairages[a.address]
-                    etat.echec(a.address, "Appairage impossible")
-                })
-            }
-            function onStateChanged() {
-                const a = modelData
-                if (!etat.connexions[a.address]) return
-                if (a.state === BluetoothDeviceState.Connected) delete etat.connexions[a.address]
-                else if (a.state === BluetoothDeviceState.Disconnected) {
-                    delete etat.connexions[a.address]
-                    etat.echec(a.address, "Connexion impossible")
-                }
-            }
+            function onPairedChanged() { etat.suiviApparie(modelData) }
+            function onPairingChanged() { etat.suiviAppairage(modelData) }
+            function onStateChanged() { etat.suiviEtat(modelData) }
         }
     }
 }

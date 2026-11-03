@@ -21,7 +21,7 @@ import "bluetooth.js" as Bt
 // (reflow), et l'ordre est figé tant qu'une ligne est dépliée. Ainsi, un appareil qui vient d'être appairé quitte les
 // voisins et entre dans « Mes appareils ». Radio coupée : listes absentes et recherche non demandée. Popover de la
 // barre (D108) : en ouvrir un autre le ferme ; il se ferme 1,5 s après le départ de la souris, sauf tant que
-// « Oublier » est déplié (retenu).
+// « Oublier » est déplié ou qu'une ligne est occupée (appairage, connexion), pour en montrer l'issue (retenu).
 // Entrées : ancre, l'indicateur de la barre ; ouvert, à affecter (voir Overlay) ; associees, voir Overlay ; etat, la
 // source de l'état et des actions, EtatBluetooth par défaut (la coque d'essai y met un factice).
 // Sorties : ferme(), voir Overlay ; panneau, le contenu construit, null fermé, lu par les essais.
@@ -42,7 +42,7 @@ Overlay {
     famille: "contextuel"
     exclusif: true
     fermeAuDepart: true
-    retenu: panneau !== null && panneau.deplie !== ""
+    retenu: panneau !== null && (panneau.deplie !== "" || panneau.occupe)
     // La recherche n'est demandée que popover ouvert et radio allumée ; seul un popover qui l'a demandée la rend.
     readonly property bool demande: ouvert && etat.allume
     onDemandeChanged: etat.recherche = demande
@@ -287,6 +287,8 @@ Overlay {
         readonly property alias proches: listeProches
         // Adresse → ligne, des deux listes ; « Mes appareils » l'emporte pendant le passage d'un appareil appairé.
         readonly property var delegues: Object.assign({}, listeProches.delegues, listeMes.delegues)
+        // Vrai tant qu'une ligne est occupée (appairage, connexion, déconnexion) : le popover reste ouvert.
+        readonly property bool occupe: Object.values(delegues).some(d => d.occupe)
 
         focus: true
         implicitWidth: 70 * (Theme.space?.scale[0] ?? 0)
@@ -298,9 +300,10 @@ Overlay {
         function appareil(cle: string): var { return Array.from(etat.appareils ?? []).find(a => a?.address === cle) ?? null }
 
         // choisir — clic sur une ligne : efface son échec, puis connecte ou déconnecte un appareil appairé, appaire un
-        // voisin. Entrée : ligne. Sortie : aucune. Erreurs : sans appareil, rien. Dépendances : etat, erreurs.
+        // voisin. Entrée : ligne. Sortie : aucune. Erreurs : sans appareil, ou ligne occupée (un second clic pendant
+        // un appairage ou une connexion), rien. Dépendances : etat, erreurs.
         function choisir(ligne): void {
-            if (!ligne.appareil) return
+            if (!ligne.appareil || ligne.occupe) return
             const reste = Object.assign({}, erreurs)
             delete reste[ligne.cle]
             erreurs = reste
