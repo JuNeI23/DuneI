@@ -73,3 +73,13 @@ graisse = "bold"
 "go-next" = "caret-right"
 "dialog-warning" = "warning-circle"
 "web-browser" = "arrow-square-out"
+
+# Types d'appareils du popover Bluetooth (L2-14), d'après la propriété Icon de BlueZ (bluetooth.js, iconeAppareil).
+[bluetooth]
+"audio-headphones" = "headphones"
+"audio-speakers" = "speaker-hifi"
+"input-mouse" = "mouse"
+"input-keyboard" = "keyboard"
+"input-gaming" = "game-controller"
+"phone" = "device-mobile"
+"computer" = "desktop"
