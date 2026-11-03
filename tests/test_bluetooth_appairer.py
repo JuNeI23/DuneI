@@ -23,9 +23,20 @@ while IFS= read -r ligne; do
     echo "$ligne" >> "$FAKE_DIR/log"
     case "$ligne" in
         "pair "*) [ "$FAKE_PAIR" = ok ] && touch "$FAKE_DIR/paired" ;;
-        "connect "*) [ "$FAKE_CONNECT" = ok ] && touch "$FAKE_DIR/connected" ;;
+        "connect "*) [ "$FAKE_CONNECT" = ok ] && touch "$FAKE_DIR/connected"
+                     echo x >> "$FAKE_DIR/connects"
+                     [ "$(wc -l < "$FAKE_DIR/connects")" -ge "${FAKE_AUDIO_APRES:-1}" ] && [ "$FAKE_AUDIO" = ok ] && [ "$FAKE_CONNECT" = ok ] \
+                         && touch "$FAKE_DIR/audio" ;;
     esac
 done
+'''
+
+# Faux busctl : l'arbre d'org.bluez cite l'appareil ; MediaControl1.Connected suit le fichier audio.
+FAUX_BUSCTL = '''#!/bin/sh
+case "$*" in
+    *"tree org.bluez"*) echo /org/bluez/hci0; echo /org/bluez/hci0/dev_4C_87_5D_A2_58_8A ;;
+    *"MediaControl1 Connected"*) [ -f "$FAKE_DIR/audio" ] && echo "b true" || echo "b false" ;;
+esac
 '''
 
 
@@ -38,10 +49,12 @@ class AppairerTest(unittest.TestCase):
         (t / "bin").mkdir()
         (t / "bin" / "bluetoothctl").write_text(FAUX, encoding="utf-8")
         (t / "bin" / "bluetoothctl").chmod(0o755)
+        (t / "bin" / "busctl").write_text(FAUX_BUSCTL, encoding="utf-8")
+        (t / "bin" / "busctl").chmod(0o755)
         self.dir = t
         self.env = {**os.environ, "PATH": f"{t / 'bin'}:{os.environ['PATH']}", "FAKE_DIR": str(t),
                     "DUNEI_BT_RECHERCHE": "0", "DUNEI_BT_DELAI": "1", "DUNEI_BT_PAS": "0.1",
-                    "FAKE_PAIR": "ok", "FAKE_CONNECT": "ok"}
+                    "FAKE_PAIR": "ok", "FAKE_CONNECT": "ok", "FAKE_AUDIO": "ok"}
 
     def tearDown(self):
         self.tmp.cleanup()
@@ -63,8 +76,21 @@ class AppairerTest(unittest.TestCase):
                                             "back", "scan on", f"pair {BOSE}", f"trust {BOSE}", f"connect {BOSE}",
                                             "scan off", "quit"])
 
+    def test_audio_exige_le_profil(self):
+        # « Connected » vient dès l'appairage, avant l'audio (recette du 2026-11-03) : en bredr, l'exécutable attend
+        # que le profil audio soit monté et relance connect, trois fois au plus.
+        r = self.lancer(BOSE, "bredr", FAKE_AUDIO_APRES="2")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(self.commandes().count(f"connect {BOSE}"), 2)
+
+    def test_audio_jamais_monte(self):
+        r = self.lancer(BOSE, "bredr", FAKE_AUDIO="non")
+        self.assertEqual(r.returncode, 2)
+        self.assertEqual(self.commandes().count(f"connect {BOSE}"), 3)
+
     def test_transport_auto(self):
-        self.assertEqual(self.lancer(BOSE, "auto").returncode, 0)
+        # Hors audio, la connexion suffit : le profil audio n'est pas attendu.
+        self.assertEqual(self.lancer(BOSE, "auto", FAKE_AUDIO="non").returncode, 0)
         self.assertIn("transport auto", self.commandes())
 
     def test_appairage_impossible(self):
