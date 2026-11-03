@@ -29,6 +29,8 @@ import "nmcli.js" as Nmcli
 // ouvert derrière un portail, il demande un contrôle de connectivité ponctuel (etat.verifier). La liste ne se retrie
 // pas tant qu'une ligne de mot de passe est dépliée, pour ne pas en perdre la saisie. Une connexion suivie (enCours)
 // appartient au panneau : fermé, il est détruit, et un connectionFailed tardif ne rouvre rien.
+// Popover de la barre (D108) : en ouvrir un autre le ferme ; il se ferme 1,5 s après le départ de la souris, sauf
+// pendant une saisie ou une connexion suivie (retenu).
 // Entrées : ancre, l'indicateur de la barre ; ouvert, à affecter (voir Overlay) ; associees, voir Overlay ; etat,
 // la source de l'état et des actions, EtatReseau par défaut (la coque d'essai y met un factice).
 // Sorties : ferme(), voir Overlay ; panneau, le contenu construit, null fermé, lu par les essais.
@@ -50,6 +52,11 @@ Overlay {
     property Item panneau: null
 
     famille: "contextuel"
+    // Popover de la barre (D108) : exclusif, et fermé 1,5 s après le départ de la souris, sauf tant qu'une ligne de
+    // mot de passe est dépliée ou qu'une connexion suivie est en cours.
+    exclusif: true
+    fermeAuDepart: true
+    retenu: panneau !== null && (panneau.deplie !== "" || panneau.enCours !== null)
     // À l'ouverture derrière un portail, un contrôle de connectivité ponctuel (aucun minuteur) : la page de connexion
     // a pu être validée depuis la dernière ouverture.
     onOuvertChanged: {

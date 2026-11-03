@@ -520,6 +520,14 @@ class PopoverTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(self.panneau(), {})
         self.assertNotIn("essai : connect Wifi_TRIADES", self.journal())
 
+    def test_popover_de_barre_retenu_pendant_saisie(self):
+        # Popover de la barre (D108) : exclusif, fermé au départ de la souris, sauf tant qu'une ligne de mot de passe
+        # est dépliée, pour ne jamais perdre une saisie.
+        p = self.ouvrir()
+        self.assertEqual((p["exclusif"], p["fermeAuDepart"], p["retenu"]), (True, True, False))
+        self.assertTrue(self.puis_lire("choisir", "Inconnu")["retenu"])
+        self.assertFalse(self.puis_lire("choisir", "Inconnu")["retenu"])
+
     def test_depliage_anime(self):
         # La ligne de mot de passe se déplie en animant sa hauteur, et, repliée, reste construite le temps de
         # replier (rien ne disparaît d'un coup), puis est détruite. L'état en vol est lu dans la passe du clic.
