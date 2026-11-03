@@ -1,7 +1,7 @@
 .pragma library
 
 // bluetooth.js — logique pure du popover Bluetooth (L2-14) : filtre des appareils anonymes, tri des listes, icône
-// d'un type d'appareil, nom affiché, transport de l'appairage et résumé de l'en-tête. Aucun accès à Quickshell : les fonctions reçoivent des valeurs simples,
+// d'un type d'appareil, nom affiché, transport de l'appairage, connexion audio et résumé de l'en-tête. Aucun accès à Quickshell : les fonctions reçoivent des valeurs simples,
 // pour s'éprouver par tests/test_bluetooth.py.
 // Dépendances : aucune.
 
@@ -24,6 +24,22 @@ function nomAffiche(nom) {
 // Entrée : icone, la valeur Icon de BlueZ. Sortie : « bredr » ou « auto ». Erreurs : aucune. Dépendances : aucune.
 function transport(icone) {
     return String(icone ?? "").startsWith("audio-") ? "bredr" : "auto"
+}
+
+// audioPret — dit si PipeWire a une sortie audio pour un appareil : WirePlumber nomme ses nœuds
+// « bluez_output.<adresse, deux-points en tirets bas>.<n> ». Entrées : noms, les noms des nœuds PipeWire ; adresse.
+// Sortie : vrai ou faux. Erreurs : aucune. Dépendances : aucune.
+function audioPret(noms, adresse) {
+    const prefixe = "bluez_output." + String(adresse ?? "").replace(/:/g, "_") + "."
+    return (noms ?? []).some(n => String(n).startsWith(prefixe))
+}
+
+// estConnecte — connexion telle que l'utilisateur l'entend : un appareil audio n'est connecté que si son audio l'est
+// (une liaison LE seule, ou la liaison de l'appairage, dit « Connected » sans aucun son) ; un autre l'est dès la liaison.
+// Entrées : connecte, Connected de BlueZ ; icone, la valeur Icon ; audio, audioPret pour cet appareil.
+// Sortie : vrai ou faux. Erreurs : aucune. Dépendances : aucune.
+function estConnecte(connecte, icone, audio) {
+    return !!connecte && (!String(icone ?? "").startsWith("audio-") || !!audio)
 }
 
 // anonyme — dit si un appareil n'a pas de vrai nom : BlueZ lui donne alors son adresse, en tirets.

@@ -3,6 +3,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import Quickshell.Bluetooth
+import Quickshell.Services.Pipewire
 import "bluetooth.js" as Bt
 
 // EtatBluetooth — état et actions du Bluetooth pour la coque, adossés à Quickshell.Bluetooth (L2-14).
@@ -19,13 +20,15 @@ import "bluetooth.js" as Bt
 // Sorties : disponible, vrai si un adaptateur existe ; allume ; recherche ; rechercheVoulue, la recherche demandée
 // hors appairage en cours ; enRecherche, vrai tant que l'adaptateur recherche ; appareils, les BluetoothDevice de
 // l'adaptateur ; connecte, le premier appareil connecté, ou null ; resumeTexte, la ligne d'état de l'en-tête
-// (bluetooth.js, resume) ; appairages, adresse → vrai tant que son appairage est en cours ; signaux
+// (bluetooth.js, resume) ; noeuds, les noms des nœuds PipeWire ; pret(appareil), la connexion telle que l'utilisateur
+// l'entend (audio monté pour un appareil audio) ; appairages, adresse → vrai tant que son appairage est en cours ; signaux
 // appairageLance(adresse) et echec(adresse, message).
 // Erreurs : echec(adresse, « Appairage impossible ») si l'exécutable sort en 1 ou autrement (refus, appareil à code,
 // hors de portée) ; echec(adresse, « Connexion impossible ») s'il sort en 2, ou si une connexion demandée revient à
 // l'état déconnecté.
 // Dépendances : Quickshell (Singleton, Instantiator), Quickshell.Io (Process), Quickshell.Bluetooth (Bluetooth,
-// BluetoothDeviceState), bluetooth.js (resume, transport), dunei-bluetooth-appairer (config/bin).
+// BluetoothDeviceState), Quickshell.Services.Pipewire (Pipewire.nodes), bluetooth.js (resume, transport,
+// estConnecte, audioPret), dunei-bluetooth-appairer (config/bin).
 Singleton {
     id: etat
 
@@ -35,7 +38,9 @@ Singleton {
     property bool recherche: false
     readonly property bool enRecherche: adaptateur?.discovering ?? false
     readonly property var appareils: adaptateur?.devices.values ?? []
-    readonly property var connecte: appareils.find(a => a.connected) ?? null
+    // Noms des nœuds PipeWire, lus sans liaison (PwNode.name), pour savoir si l'audio d'un appareil est monté.
+    readonly property var noeuds: Array.from(Pipewire.nodes.values ?? []).map(n => n?.name ?? "")
+    readonly property var connecte: appareils.find(a => pret(a)) ?? null
     readonly property string resumeTexte: Bt.resume(allume, connecte ? {
         nom: connecte.name, batterie: connecte.batteryAvailable ? connecte.battery : null } : null)
     property var commandeAppairage: ["dunei-bluetooth-appairer"]
@@ -59,21 +64,30 @@ Singleton {
         if (adaptateur && allume && adaptateur.discovering !== rechercheVoulue) adaptateur.discovering = rechercheVoulue
     }
 
+    // pret — connexion telle que l'utilisateur l'entend (bluetooth.js, estConnecte) : un appareil audio n'est prêt que
+    // si PipeWire a sa sortie. Entrée : a, un BluetoothDevice. Sortie : vrai ou faux. Erreurs : aucune.
+    // Dépendances : noeuds, bluetooth.js (estConnecte, audioPret).
+    function pret(a): bool {
+        return !!a && Bt.estConnecte(a.connected, a.icon, Bt.audioPret(noeuds, a.address))
+    }
+
     // allumer — allume ou coupe la radio. Entrées : actif. Sortie : aucune. Erreurs : sans adaptateur, rien.
     // Dépendances : adaptateur.
     function allumer(actif: bool): void {
         if (adaptateur) adaptateur.enabled = actif
     }
 
-    // basculer — déconnecte un appareil connecté, connecte un appareil déconnecté (suivi par connexions). Une
-    // déconnexion voulue efface le suivi de connexion : elle n'est jamais un échec.
+    // basculer — déconnecte un appareil prêt, connecte les autres : un appareil audio relié sans audio (liaison LE
+    // seule, recette du 2026-11-03) reçoit connect(), qui monte ses profils, sans suivi puisqu'il est déjà « Connected ».
+    // Une connexion depuis l'état déconnecté est suivie par connexions ; une déconnexion voulue efface ce suivi : elle
+    // n'est jamais un échec.
     // Entrées : appareil, un BluetoothDevice. Sortie : aucune. Erreurs : voir echec. Dépendances : connexions.
     function basculer(appareil): void {
-        if (appareil.connected) {
+        if (pret(appareil)) {
             delete connexions[appareil.address]
             return appareil.disconnect()
         }
-        connexions[appareil.address] = true
+        if (!appareil.connected) connexions[appareil.address] = true
         appareil.connect()
     }
 

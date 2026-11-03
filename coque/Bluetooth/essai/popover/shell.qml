@@ -39,6 +39,8 @@ ShellRoot {
 
     FauxAppareil { id: bose; name: "Bose NC 700 Headphones"; address: "4C:87:5D:A2:58:8A"; icon: "audio-headset"; paired: true; connected: true; batteryAvailable: true; battery: 0.62 }
     FauxAppareil { id: souris; name: "Souris"; address: "11:22:33:44:55:66"; icon: "input-mouse"; paired: true }
+    // Casque relié sans audio, comme le Bose après une reconnexion LE seule (recette du 2026-11-03).
+    FauxAppareil { id: demi; name: "Casque"; address: "22:33:44:55:66:77"; icon: "audio-headset"; paired: true; connected: true; property bool sansAudio: true }
     FauxAppareil { id: enceinte; name: "LE-Enceinte"; address: "77:88:99:AA:BB:CC"; icon: "audio-card" }
     FauxAppareil { id: anonyme; name: "AA-BB-CC-DD-EE-FF"; address: "AA:BB:CC:DD:EE:FF" }
 
@@ -49,8 +51,9 @@ ShellRoot {
         property bool allume: true
         property bool recherche: false
         readonly property bool enRecherche: recherche && allume
-        property var appareils: [bose, souris, enceinte, anonyme]
-        readonly property var connecte: appareils.find(a => a.connected) ?? null
+        property var appareils: [bose, souris, demi, enceinte, anonyme]
+        readonly property var connecte: appareils.find(a => pret(a)) ?? null
+        function pret(a) { return a.connected && !a.sansAudio }
         readonly property string resumeTexte: !allume ? "Désactivé" : connecte
             ? connecte.name + (connecte.batteryAvailable ? " · " + Math.round(connecte.battery * 100) + " %" : "")
             : "Aucun appareil connecté"

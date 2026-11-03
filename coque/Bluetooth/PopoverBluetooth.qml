@@ -15,7 +15,8 @@ import "bluetooth.js" as Bt
 // clic replie ; « Appareils à proximité », petite étiquette au texte secondaire avec l'indicateur d'activité tant que
 // la recherche tourne, le bouton de nouvelle recherche sinon, puis les appareils voisins nommés : un clic lance
 // l'appairage, que l'état poursuit (confiance, connexion) même popover fermé. Une ligne en cours montre « Appairage… »,
-// « Connexion… » ou « Déconnexion… » et l'indicateur d'activité ; un échec remplace l'état par « Appairage
+// « Connexion… » ou « Déconnexion… » et l'indicateur d'activité ; « Connecté » ne vaut, pour un appareil audio, que si
+// PipeWire a sa sortie (EtatBluetooth.pret) ; un échec remplace l'état par « Appairage
 // impossible » ou « Connexion impossible », en couleur d'alerte, jusqu'au clic suivant. Les transitions sont celles du
 // popover réseau : une ligne paraît ou se referme en hauteur et en fondu (reveal), glisse vers sa nouvelle place
 // (reflow), et l'ordre est figé tant qu'une ligne est dépliée. Ainsi, un appareil qui vient d'être appairé quitte les
@@ -173,7 +174,7 @@ Overlay {
             : enAppairage ? "Appairage…"
             : appareil?.state === BluetoothDeviceState.Connecting ? "Connexion…"
             : appareil?.state === BluetoothDeviceState.Disconnecting ? "Déconnexion…"
-            : appareil?.connected ? "Connecté" : ""
+            : panneau.etat.pret(appareil) ? "Connecté" : ""
         readonly property real base: conteneur.bases[cle] ?? 0
         readonly property Item rangee: rangeeLigne
         readonly property alias depliage: depliage
@@ -279,7 +280,7 @@ Overlay {
         readonly property bool listeVisible: etat.disponible && etat.allume
         // Les deux listes, triées par bluetooth.js ; les lectures des propriétés des appareils relancent le tri.
         readonly property var tri: Bt.trierAppareils(Array.from(etat.appareils ?? []).filter(a => a).map(a => ({
-            nom: a.name, adresse: a.address, appaire: a.paired, connecte: a.connected })))
+            nom: a.name, adresse: a.address, appaire: a.paired, connecte: etat.pret(a) })))
         // Adresse de l'appareil dont « Oublier » est déplié, vide sinon.
         property string deplie: ""
         // Adresse → message d'échec, effacé au clic suivant sur la ligne.

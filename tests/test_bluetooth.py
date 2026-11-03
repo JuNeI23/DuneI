@@ -75,6 +75,19 @@ class BluetoothJsTest(EssaiCoque, unittest.TestCase):
             with self.subTest(icone=icone):
                 self.assertEqual(self.appeler("transport", icone), attendu)
 
+    def test_audio_pret(self):
+        noms = ["alsa_output.pci-0000_04_00.6.analog-stereo", "bluez_output.4C_87_5D_A2_58_8A.1"]
+        self.assertTrue(self.appeler("audioPret", noms, "4C:87:5D:A2:58:8A"))
+        self.assertFalse(self.appeler("audioPret", noms, "11:22:33:44:55:66"))
+        self.assertFalse(self.appeler("audioPret", ["bluez_input.4C_87_5D_A2_58_8A.0"], "4C:87:5D:A2:58:8A"))
+
+    def test_est_connecte(self):
+        # Un appareil audio n'est connecté que si son audio l'est (recette du 2026-11-03) ; les autres, dès la liaison.
+        self.assertTrue(self.appeler("estConnecte", True, "audio-headset", True))
+        self.assertFalse(self.appeler("estConnecte", True, "audio-headset", False))
+        self.assertTrue(self.appeler("estConnecte", True, "input-mouse", False))
+        self.assertFalse(self.appeler("estConnecte", False, "audio-headset", True))
+
     def test_resume(self):
         self.assertEqual(self.appeler("resume", False, None), "Désactivé")
         self.assertEqual(self.appeler("resume", True, None), "Aucun appareil connecté")
@@ -134,6 +147,7 @@ class PopoverBluetoothTest(EssaiCoque, unittest.TestCase):
     teintes = (55,)
     environnement = {"QT_QPA_PLATFORM": "offscreen"}
     BOSE, SOURIS, ENCEINTE, ANONYME = "4C:87:5D:A2:58:8A", "11:22:33:44:55:66", "77:88:99:AA:BB:CC", "AA:BB:CC:DD:EE:FF"
+    DEMI = "22:33:44:55:66:77"
 
     def setUp(self):
         super().setUp()
@@ -173,12 +187,13 @@ class PopoverBluetoothTest(EssaiCoque, unittest.TestCase):
         p = self.ouvrir()
         self.assertEqual((p["titre"], p["etat"]), ("Bluetooth", "Bose NC 700 Headphones · 62 %"))
         self.assertEqual(p["bascule"], {"actif": True, "allumee": True})
-        self.assertEqual(p["mes"], [self.BOSE, self.SOURIS])
+        self.assertEqual(p["mes"], [self.BOSE, self.DEMI, self.SOURIS], "un casque sans audio n'est pas en tête")
         self.assertEqual(p["proches"], [self.ENCEINTE], "l'appareil anonyme n'a pas de ligne")
         self.assertEqual(p["lignes"][self.BOSE]["statut"], "Connecté")
         self.assertEqual(p["lignes"][self.BOSE]["icone"], "audio-headphones")
         self.assertEqual(p["lignes"][self.ENCEINTE]["nom"], "Enceinte", "le préfixe « LE- » est masqué")
         self.assertEqual(p["hauteurProches"], 5 * p["hauteurLigne"], "cinq lignes réservées aux voisins")
+        self.assertEqual(p["lignes"][self.DEMI]["statut"], "", "liaison sans audio : pas « Connecté »")
         self.assertEqual((p["exclusif"], p["fermeAuDepart"], p["retenu"]), (True, True, False))
         self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read|Unable to assign|Binding loop")
 
@@ -218,6 +233,13 @@ class PopoverBluetoothTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(self.journal().count(f"essai : appairer {self.ENCEINTE}"), 1)
         p = json.loads(self.ipc("puisLire", "echouer", self.ENCEINTE))
         self.assertFalse(p["retenu"])
+
+    def test_clic_sur_liaison_sans_audio_connecte(self):
+        # Un clic sur un casque relié sans audio relance la connexion (le factice journalise basculer ; l'état réel
+        # connecte, puisqu'il n'est pas prêt).
+        self.ouvrir()
+        self.ipc("choisir", self.DEMI)
+        self.attendre_journal(f"essai : basculer {self.DEMI}")
 
     def test_echec_appairage(self):
         self.ouvrir()

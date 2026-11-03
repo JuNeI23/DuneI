@@ -2621,6 +2621,12 @@ popover réseau.
   confiance et connecte. Nicolas a choisi cette voie, plutôt qu'un agent permanent (`bt-agent` de `bluez-tools`, qui
   accepterait toute demande voisine) ou qu'un agent propre (prévu avec L3-09). La recherche du popover se suspend
   pendant l'appairage, car BlueZ fusionne les filtres de ses clients.
+- **Recette : connecté sans son.** Après l'appairage par l'exécutable, le popover disait le Bose connecté, mais le
+  son restait sur les haut-parleurs : l'appairage ouvre déjà une liaison radio, « Connected » était vrai avant l'audio,
+  et le `connect` envoyé aussitôt n'avait rien monté (AVRCP déconnecté, aucune sortie PipeWire). L'exécutable attend
+  désormais, en bredr, le profil audio (`MediaControl1.Connected`, lu par `busctl`) et relance `connect` trois fois au
+  plus. Le popover ne dit « Connecté » d'un appareil audio que si PipeWire a sa sortie (`bluez_output.<adresse>`, nom de
+  nœud lu sans liaison) ; un clic sur un casque relié sans audio le connecte au lieu de le déconnecter.
 - **Recette : affichage.** Le préfixe « LE- » des noms LE est masqué ; « Appareils à proximité » a une hauteur fixe de
   cinq lignes, car la fenêtre grandissait par à-coups à chaque appareil trouvé.
 

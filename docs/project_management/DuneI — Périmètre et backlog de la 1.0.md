@@ -309,7 +309,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L2-54 | B | Écrit | Saisie IPv4 protégée des relectures — `FicheProfil.restaurer()` remet chaque contrôle sur les réglages lus et peut écraser l'adresse, la passerelle ou les DNS en cours de saisie quand une relecture arrive ; la saisie non validée doit survivre (relecture finale de L2-11) |
 | L2-55 | B | Écrit | Rangées du popover réseau au clavier — les rangées du popover (réseaux, actions) doivent suivre la bible, « Clavier » : tabulation, flèches, Entrée et Espace, contour de focus venu du clavier seulement (relecture finale de L2-11) |
 | L2-56 | B | Écrit | Animations de passage d'un popover de la barre à l'autre — demande de Nicolas à la recette de L2-14 (2026-11-03) : l'exclusion (D108) ferme l'un et ouvre l'autre sans transition |
-| L2-57 | B | Écrit | Suites du popover Bluetooth (relecture finale de L2-14) — suivi des appareils par l'ObjectModel plutôt que par un tableau reconstruit à chaque balise ; recherche partagée entre écrans (un compteur de demandes) ; voisins gelés sous le pointeur pendant la recherche ; suivi des connexions purgé à l'oubli d'un appareil ; couleur d'erreur à confronter à la bible |
+| L2-57 | B | Écrit | Suites du popover Bluetooth (relecture finale de L2-14) — suivi des appareils par l'ObjectModel plutôt que par un tableau reconstruit à chaque balise ; recherche partagée entre écrans (un compteur de demandes) ; voisins gelés sous le pointeur pendant la recherche ; suivi des connexions purgé à l'oubli d'un appareil ; couleur d'erreur à confronter à la bible ; `Activite` lève « Cannot read property 'phase' of null » quand sa ligne est détruite en pleine animation (journal de la coque, 2026-11-03) |
 
 ### Lot 3 — la bascule
 
