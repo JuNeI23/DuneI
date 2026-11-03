@@ -1,2 +1,3 @@
 module Bluetooth
 singleton EtatBluetooth 1.0 EtatBluetooth.qml
+PopoverBluetooth 1.0 PopoverBluetooth.qml
