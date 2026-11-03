@@ -6,14 +6,18 @@
 # NoInputNoOutput (appareils sans code) comme agent par défaut, le temps de l'appairage seulement, recherche avec le
 # filtre de transport donné, appaire, puis marque de confiance (reconnexion automatique) et connecte. L'appairage ouvre
 # déjà une liaison radio : « Connected » est vrai avant que l'audio soit monté. En bredr (appareil audio), le succès
-# exige donc le profil audio (MediaControl1.Connected), et connect est relancé, trois fois au plus.
+# exige donc l'audio : la commande des médias connectée (MediaControl1.Connected) ou un flux monté (un objet de
+# transport « sepN/fdM » sous l'appareil) ; connect est relancé, trois fois au plus. La confiance est posée avant
+# l'appairage : un appareil de confiance n'a aucun service à faire autoriser par l'agent, qui sinon lirait la ligne
+# suivante comme sa réponse. Chaque sonde est bornée, pour qu'un bluetoothd muet ne bloque pas le script.
 # Entrées : adresse, l'adresse MAC ; transport, « auto », « bredr » (Bluetooth classique, pour l'audio) ou « le ».
 #   DUNEI_BT_RECHERCHE : secondes de recherche avant l'appairage (6) ; DUNEI_BT_DELAI : borne en secondes de l'attente
-#   de l'appairage puis de la connexion (20) ; DUNEI_BT_PAS : intervalle de sondage en secondes (0,5).
+#   de l'appairage (20) ; DUNEI_BT_CONNEXION : borne de chacune des trois attentes de connexion (10) ;
+#   DUNEI_BT_PAS : intervalle de sondage en secondes (0,5).
 # Sortie : code 0 si l'appareil est appairé et connecté.
 # Erreurs : code 1 et « Appairage impossible » (refus, appareil à code, hors de portée) ; code 2 et « Connexion
 #   impossible » (appairé mais non connecté) ; code 64 et l'usage pour des arguments invalides.
-# Dépendances : bluetoothctl (bluez-utils), busctl (systemd), grep, tr, date, sleep, mktemp.
+# Dépendances : bluetoothctl (bluez-utils), busctl (systemd), timeout (coreutils), grep, tr, date, sleep, mktemp.
 adresse=$1
 transport=$2
 usage() { echo "usage : dunei-bluetooth-appairer <adresse> <auto|bredr|le>" >&2; exit 64; }
@@ -21,12 +25,15 @@ printf '%s\n' "$adresse" | grep -Eqx '([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}' || usa
 case "$transport" in auto|bredr|le) ;; *) usage ;; esac
 recherche=${DUNEI_BT_RECHERCHE:-6}
 delai=${DUNEI_BT_DELAI:-20}
+connexion=${DUNEI_BT_CONNEXION:-10}
 pas=${DUNEI_BT_PAS:-0.5}
 
 # attendre — relance une sonde jusqu'à ce qu'elle réussisse.
-# Entrées : la commande de la sonde et ses arguments. Sortie : code 0 dès qu'elle réussit, 1 au bout de $delai s.
+# Entrées : borne, en secondes ; la commande de la sonde et ses arguments. Sortie : code 0 dès qu'elle réussit, 1 une
+# fois la borne passée.
 attendre() {
-    fin=$(($(date +%s) + delai))
+    fin=$(($(date +%s) + $1))
+    shift
     while [ "$(date +%s)" -le "$fin" ]; do
         "$@" && return 0
         sleep "$pas"
@@ -36,15 +43,19 @@ attendre() {
 
 # shellcheck disable=SC2329  # Sonde appelée par attendre.
 # vrai — sonde : « bluetoothctl info » montre « <champ>: yes ». Entrée : champ, « Paired » ou « Connected ».
-vrai() { bluetoothctl info "$adresse" 2>/dev/null | grep -q "^[[:space:]]*$1: yes"; }
+vrai() { timeout 3 bluetoothctl info "$adresse" 2>/dev/null | grep -q "^[[:space:]]*$1: yes"; }
 
 # shellcheck disable=SC2329  # Sonde appelée par attendre.
-# audio — sonde : le profil de commande audio (AVRCP, MediaControl1) de l'appareil est connecté ; hors bredr, la
-# connexion suffit. Sortie : code 0 ou 1. Dépendances : busctl, l'arbre d'org.bluez.
+# audio — sonde : l'audio de l'appareil est monté, par sa commande des médias (AVRCP, MediaControl1) ou par un flux
+# (objet de transport sous l'appareil) ; hors bredr, la connexion suffit. Sortie : code 0 ou 1.
+# Dépendances : busctl, l'arbre d'org.bluez.
 audio() {
     [ "$transport" = bredr ] || { vrai Connected; return; }
-    chemin=$(busctl --list tree org.bluez 2>/dev/null | grep -m1 "/dev_$(printf '%s' "$adresse" | tr : _)\$")
-    [ -n "$chemin" ] && busctl get-property org.bluez "$chemin" org.bluez.MediaControl1 Connected 2>/dev/null | grep -q true
+    arbre=$(busctl --timeout=2 --list tree org.bluez 2>/dev/null)
+    chemin=$(printf '%s\n' "$arbre" | grep -m1 "/dev_$(printf '%s' "$adresse" | tr : _)\$")
+    [ -n "$chemin" ] || return 1
+    printf '%s\n' "$arbre" | grep -q "^$chemin/sep[0-9]*/fd[0-9]*\$" && return 0
+    busctl --timeout=2 get-property org.bluez "$chemin" org.bluez.MediaControl1 Connected 2>/dev/null | grep -q true
 }
 
 resultat=$(mktemp)
@@ -56,13 +67,12 @@ trap 'rm -f "$resultat"' EXIT
     sleep 1
     printf 'default-agent\nmenu scan\ntransport %s\nback\nscan on\n' "$transport"
     sleep "$recherche"
-    printf 'pair %s\n' "$adresse"
-    if attendre vrai Paired; then
-        printf 'trust %s\n' "$adresse"
+    printf 'trust %s\npair %s\n' "$adresse" "$adresse"
+    if attendre "$delai" vrai Paired; then
         echo 2 > "$resultat"
         for _ in 1 2 3; do
             printf 'connect %s\n' "$adresse"
-            if attendre audio; then echo 0 > "$resultat"; break; fi
+            if attendre "$connexion" audio; then echo 0 > "$resultat"; break; fi
         done
     else
         echo 1 > "$resultat"

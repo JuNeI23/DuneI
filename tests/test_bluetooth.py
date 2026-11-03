@@ -121,6 +121,21 @@ class BluetoothJsTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(json.loads(self.ipc_bt("lancements")), 1)
         self.assertEqual(json.loads(self.ipc_bt("rechercheVoulue")), True)
 
+    def test_executable_introuvable(self):
+        # Une commande absente du PATH ne laisse pas l'appairage bloqué : échec, recherche rendue (I4).
+        self.scenario("introuvable")
+        fin = time.monotonic() + DELAI
+        while not (e := json.loads(self.ipc_bt("echecs"))) and time.monotonic() < fin:
+            time.sleep(0.1)
+        self.assertEqual(e, ["introuvable Appairage impossible"])
+        self.assertEqual(json.loads(self.ipc_bt("rechercheVoulue")), True)
+
+    def test_connexion_audio_suivie_jusqu_au_son(self):
+        # Un casque dont la liaison monte sans audio reste suivi ; à l'échéance, « Connexion impossible » (I1).
+        r = self.scenario("connexionSansAudio")
+        self.assertEqual(r["appels"], ["connect"])
+        self.assertEqual(r["echecs"], ["connexionSansAudio Connexion impossible"])
+
     def ipc_bt(self, fonction: str, *args: str) -> str:
         """Appelle une fonction IPC de la cible « bluetooth ». Sortie : la sortie standard. Dépendances : qs."""
         return subprocess.run([QS, "ipc", "--pid", str(self.proc.pid), "call", "bluetooth", fonction, *args],

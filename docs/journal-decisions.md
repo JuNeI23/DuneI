@@ -2627,6 +2627,12 @@ popover réseau.
   désormais, en bredr, le profil audio (`MediaControl1.Connected`, lu par `busctl`) et relance `connect` trois fois au
   plus. Le popover ne dit « Connecté » d'un appareil audio que si PipeWire a sa sortie (`bluez_output.<adresse>`, nom de
   nœud lu sans liaison) ; un clic sur un casque relié sans audio le connecte au lieu de le déconnecter.
+- **Relecture des correctifs.** La confiance est posée avant l'appairage (sinon l'agent pourrait lire la ligne
+  `trust` comme sa réponse à une autorisation de service) ; l'audio se reconnaît aussi à un flux monté (objet de
+  transport sous l'appareil), pour un appareil sans commande des médias ; chaque sonde est bornée (`timeout 3`,
+  `busctl --timeout=2`), et chaque essai de connexion à 10 s ; une commande d'appairage introuvable finit en échec au
+  lieu de bloquer la ligne ; une connexion audio demandée reste suivie jusqu'à la sortie PipeWire, au plus 20 s, puis
+  « Connexion impossible ».
 - **Recette : affichage.** Le préfixe « LE- » des noms LE est masqué ; « Appareils à proximité » a une hauteur fixe de
   cinq lignes, car la fenêtre grandissait par à-coups à chaque appareil trouvé.
 

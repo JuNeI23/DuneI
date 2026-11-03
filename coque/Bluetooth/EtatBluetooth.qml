@@ -47,8 +47,8 @@ Singleton {
     signal appairageLance(string adresse)
     signal echec(string adresse, string message)
 
-    // Adresses des appairages en cours (réaffecté à chaque changement, pour notifier le popover) et des connexions
-    // demandées, suivies jusqu'à leur issue.
+    // Adresses des appairages en cours, et connexions demandées (adresse → {appareil, fin}) suivies jusqu'à leur
+    // issue ; tous deux réaffectés à chaque changement, pour notifier leurs lecteurs.
     property var appairages: ({})
     property var connexions: ({})
     readonly property bool rechercheVoulue: recherche && Object.keys(appairages).length === 0
@@ -78,17 +78,49 @@ Singleton {
     }
 
     // basculer — déconnecte un appareil prêt, connecte les autres : un appareil audio relié sans audio (liaison LE
-    // seule, recette du 2026-11-03) reçoit connect(), qui monte ses profils, sans suivi puisqu'il est déjà « Connected ».
-    // Une connexion depuis l'état déconnecté est suivie par connexions ; une déconnexion voulue efface ce suivi : elle
-    // n'est jamais un échec.
+    // seule, recette du 2026-11-03) reçoit connect(), qui monte ses profils. Toute connexion demandée est suivie
+    // jusqu'à ce que l'appareil soit prêt (audio monté pour un appareil audio), au plus delaiConnexion ; une déconnexion
+    // voulue efface ce suivi : elle n'est jamais un échec.
     // Entrées : appareil, un BluetoothDevice. Sortie : aucune. Erreurs : voir echec. Dépendances : connexions.
     function basculer(appareil): void {
         if (pret(appareil)) {
-            delete connexions[appareil.address]
+            oublierConnexion(appareil.address)
             return appareil.disconnect()
         }
-        if (!appareil.connected) connexions[appareil.address] = true
+        connexions = Object.assign({}, connexions, { [appareil.address]: { appareil, fin: Date.now() + delaiConnexion } })
         appareil.connect()
+    }
+
+    // oublierConnexion — retire une adresse du suivi des connexions. Entrée : adresse. Sortie : aucune.
+    function oublierConnexion(adresse: string): void {
+        if (!connexions[adresse]) return
+        const reste = Object.assign({}, connexions)
+        delete reste[adresse]
+        connexions = reste
+    }
+
+    // verifierConnexions — une connexion suivie devenue prête quitte le suivi ; une connexion échue sans l'être
+    // devient echec(« Connexion impossible »). Entrée : maintenant, en millisecondes (Date.now()).
+    // Sortie : aucune. Erreurs : voir echec. Dépendances : connexions, pret.
+    function verifierConnexions(maintenant: real): void {
+        for (const [adresse, c] of Object.entries(connexions)) {
+            if (pret(c.appareil)) oublierConnexion(adresse)
+            else if (maintenant >= c.fin) {
+                oublierConnexion(adresse)
+                echec(adresse, "Connexion impossible")
+            }
+        }
+    }
+
+    // Délai laissé à une connexion pour devenir prête, en millisecondes ; vérifié chaque seconde et à chaque
+    // changement des nœuds PipeWire.
+    readonly property int delaiConnexion: 20000
+    onNoeudsChanged: verifierConnexions(Date.now())
+    Timer {
+        interval: 1000
+        repeat: true
+        running: Object.keys(etat.connexions).length > 0
+        onTriggered: etat.verifierConnexions(Date.now())
     }
 
     // appairer — lance l'exécutable d'appairage pour un appareil voisin, avec le transport de son type.
@@ -113,13 +145,19 @@ Singleton {
         if (code !== 0) echec(adresse, code === 2 ? "Connexion impossible" : "Appairage impossible")
     }
 
-    // Un processus par appairage, détruit à sa sortie.
+    // Un processus par appairage, détruit à sa sortie. Une commande qui ne démarre pas (absente du PATH) n'émet pas
+    // exited : quand running retombe, un appairage encore en cours finit au tour suivant en échec (code 127).
     Component {
         id: fabriqueAppairage
         Process {
+            id: processus
             property string adresse
             running: true
             onExited: (code, statut) => { etat.finAppairage(adresse, code); destroy() }
+            onRunningChanged: if (!running) {
+                const a = adresse
+                Qt.callLater(() => { if (etat.appairages[a]) { etat.finAppairage(a, 127); processus.destroy() } })
+            }
         }
     }
 
@@ -129,14 +167,14 @@ Singleton {
         appareil.forget()
     }
 
-    // suiviEtat — l'état de connexion d'un appareil change : une connexion demandée aboutit, ou échoue
-    // (echec(« Connexion impossible ») si l'appareil revient à l'état déconnecté).
-    // Entrées : a, l'appareil. Sortie : aucune. Erreurs : voir echec. Dépendances : connexions.
+    // suiviEtat — l'état de connexion d'un appareil change : une connexion suivie aboutit si l'appareil est prêt, ou
+    // échoue (echec(« Connexion impossible ») s'il revient à l'état déconnecté) ; sinon, l'échéance tranchera.
+    // Entrées : a, l'appareil. Sortie : aucune. Erreurs : voir echec. Dépendances : connexions, pret.
     function suiviEtat(a): void {
         if (!connexions[a.address]) return
-        if (a.state === BluetoothDeviceState.Connected) delete connexions[a.address]
+        if (pret(a)) oublierConnexion(a.address)
         else if (a.state === BluetoothDeviceState.Disconnected) {
-            delete connexions[a.address]
+            oublierConnexion(a.address)
             echec(a.address, "Connexion impossible")
         }
     }

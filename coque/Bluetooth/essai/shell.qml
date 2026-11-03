@@ -20,6 +20,7 @@ ShellRoot {
     component FauxAppareil: QtObject {
         property string name: "Factice"
         property string address
+        property string icon
         property bool paired: false
         property bool connected: false
         property bool pairing: false
@@ -55,9 +56,19 @@ ShellRoot {
             const a = fabrique.createObject(racine, { address: cle })
             if (cle === "deconnexionVoulue") {
                 a.connected = true; a.state = BluetoothDeviceState.Connected
-                EtatBluetooth.connexions[a.address] = true
+                EtatBluetooth.connexions = Object.assign({}, EtatBluetooth.connexions, { [a.address]: { appareil: a, fin: 0 } })
                 EtatBluetooth.basculer(a)
                 EtatBluetooth.suiviEtat(a)
+            } else if (cle === "connexionSansAudio") {
+                a.icon = "audio-headset"
+                EtatBluetooth.basculer(a)
+                a.connected = true; a.state = BluetoothDeviceState.Connected
+                EtatBluetooth.suiviEtat(a)
+                EtatBluetooth.verifierConnexions(Date.now() + 60000)
+            } else if (cle === "introuvable") {
+                EtatBluetooth.commandeAppairage = ["dunei-commande-introuvable-xyz"]
+                EtatBluetooth.recherche = true
+                EtatBluetooth.appairer(a)
             } else if (cle === "appairageEchoue") {
                 EtatBluetooth.commandeAppairage = ["sh", "-c", "sleep 1; exit 1"]
                 EtatBluetooth.recherche = true
