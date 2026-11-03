@@ -69,3 +69,10 @@ class BluetoothJsTest(EssaiCoque, unittest.TestCase):
                          "Bose NC 700 Headphones")
         self.assertEqual(self.appeler("resume", True, {"nom": "Bose NC 700 Headphones", "batterie": 0.615}),
                          "Bose NC 700 Headphones · 62 %")
+
+    def test_etat_reel_se_charge(self):
+        # Le singleton réel se charge et compose une ligne d'état, quel que soit l'état de la radio de la machine.
+        sortie = subprocess.run([QS, "ipc", "--pid", str(self.proc.pid), "call", "bluetooth", "resume"], check=True,
+                                capture_output=True, text=True, timeout=DELAI).stdout.strip()
+        self.assertNotEqual(sortie, "", "ligne d'état vide")
+        self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|is not a type|Cannot assign")

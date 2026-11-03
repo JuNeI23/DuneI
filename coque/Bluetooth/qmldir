@@ -1,0 +1,2 @@
+module Bluetooth
+singleton EtatBluetooth 1.0 EtatBluetooth.qml
