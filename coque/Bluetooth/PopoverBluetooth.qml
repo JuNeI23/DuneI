@@ -11,7 +11,7 @@ import "bluetooth.js" as Bt
 // porte de haut en bas : l'en-tête, dont la bascule à glyphe allume ou coupe la radio (accent plein allumée, neutre
 // éteinte), avec « Bluetooth » et la ligne d'état (appareil connecté et sa batterie, « Aucun appareil connecté » ou
 // « Désactivé ») ; « Mes appareils », les appareils appairés, connectés d'abord, une ligne chacun (icône du type,
-// nom, état) : un clic connecte ou déconnecte, le chevron déplie sous la ligne « Oublier cet appareil », un second
+// nom affiché sans préfixe « LE- », état) : un clic connecte ou déconnecte, le chevron déplie sous la ligne « Oublier cet appareil », un second
 // clic replie ; « Appareils à proximité », petite étiquette au texte secondaire avec l'indicateur d'activité tant que
 // la recherche tourne, le bouton de nouvelle recherche sinon, puis les appareils voisins nommés : un clic lance
 // l'appairage, que l'état poursuit (confiance, connexion) même popover fermé. Une ligne en cours montre « Appairage… »,
@@ -31,7 +31,7 @@ import "bluetooth.js" as Bt
 // Quickshell.Bluetooth (BluetoothDeviceState).
 // Cotes : celles du popover réseau ; surface de 288 px, panneau de 280 px, contenu à space.scale[2] (12) du bord,
 // rangées de density.controlHeight plus space.scale[0] (32 px) ; au plus quatre lignes visibles pour « Mes
-// appareils » et cinq pour les voisins, la suite défile.
+// appareils », la suite défile ; « Appareils à proximité » a une hauteur fixe de cinq lignes (fiche 0.3).
 Overlay {
     id: popover
 
@@ -166,10 +166,11 @@ Overlay {
         readonly property bool ouverte: conteneur.appaires && panneau.deplie === cle
         readonly property string icone: Bt.iconeAppareil(appareil?.icon ?? "")
         readonly property string erreur: panneau.erreurs[cle] ?? ""
-        readonly property bool occupe: erreur === "" && (appareil?.pairing
+        readonly property bool enAppairage: !!panneau.etat.appairages?.[cle] || (appareil?.pairing ?? false)
+        readonly property bool occupe: erreur === "" && (enAppairage
             || appareil?.state === BluetoothDeviceState.Connecting || appareil?.state === BluetoothDeviceState.Disconnecting)
         readonly property string statut: erreur !== "" ? erreur
-            : appareil?.pairing ? "Appairage…"
+            : enAppairage ? "Appairage…"
             : appareil?.state === BluetoothDeviceState.Connecting ? "Connexion…"
             : appareil?.state === BluetoothDeviceState.Disconnecting ? "Déconnexion…"
             : appareil?.connected ? "Connecté" : ""
@@ -223,7 +224,7 @@ Overlay {
             implicitHeight: panneau.hauteurLigne
             hoverEnabled: true
             icone: ligne.icone
-            text: ligne.appareil?.name ?? ""
+            text: Bt.nomAffiche(ligne.appareil?.name)
             onActive: panneau.choisir(ligne)
             suffixe: Component {
                 Row {
@@ -287,6 +288,7 @@ Overlay {
         readonly property alias proches: listeProches
         // Adresse → ligne, des deux listes ; « Mes appareils » l'emporte pendant le passage d'un appareil appairé.
         readonly property var delegues: Object.assign({}, listeProches.delegues, listeMes.delegues)
+        readonly property real hauteurProches: flickProches.height
         // Vrai tant qu'une ligne est occupée (appairage, connexion, déconnexion) : le popover reste ouvert.
         readonly property bool occupe: Object.values(delegues).some(d => d.occupe)
 
@@ -399,10 +401,12 @@ Overlay {
                     Infobulle { cible: recherche; texte: "Rechercher les appareils" }
                 }
             }
+            // Hauteur fixe de cinq lignes : la fenêtre ne grandit pas par à-coups au fil de la recherche.
             Flickable {
+                id: flickProches
                 visible: panneau.listeVisible
                 Layout.fillWidth: true
-                Layout.preferredHeight: Math.min(contentHeight, 5 * panneau.hauteurLigne)
+                Layout.preferredHeight: 5 * panneau.hauteurLigne
                 contentHeight: listeProches.implicitHeight
                 clip: true
                 boundsBehavior: Flickable.StopAtBounds

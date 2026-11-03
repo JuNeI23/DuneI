@@ -39,7 +39,7 @@ ShellRoot {
 
     FauxAppareil { id: bose; name: "Bose NC 700 Headphones"; address: "4C:87:5D:A2:58:8A"; icon: "audio-headset"; paired: true; connected: true; batteryAvailable: true; battery: 0.62 }
     FauxAppareil { id: souris; name: "Souris"; address: "11:22:33:44:55:66"; icon: "input-mouse"; paired: true }
-    FauxAppareil { id: enceinte; name: "Enceinte"; address: "77:88:99:AA:BB:CC"; icon: "audio-card" }
+    FauxAppareil { id: enceinte; name: "LE-Enceinte"; address: "77:88:99:AA:BB:CC"; icon: "audio-card" }
     FauxAppareil { id: anonyme; name: "AA-BB-CC-DD-EE-FF"; address: "AA:BB:CC:DD:EE:FF" }
 
     // État factice : les propriétés et les fonctions de EtatBluetooth qu'emploie le popover.
@@ -54,10 +54,12 @@ ShellRoot {
         readonly property string resumeTexte: !allume ? "Désactivé" : connecte
             ? connecte.name + (connecte.batteryAvailable ? " · " + Math.round(connecte.battery * 100) + " %" : "")
             : "Aucun appareil connecté"
+        property var appairages: ({})
         signal echec(string adresse, string message)
         function allumer(actif) { essai.journal("allumer", actif) }
         function basculer(a) { essai.journal("basculer", a.address) }
-        function appairer(a) { essai.journal("appairer", a.address); a.pairing = true }
+        function appairer(a) { essai.journal("appairer", a.address); appairages = Object.assign({}, appairages, { [a.address]: true }) }
+        function finir(adresse) { const r = Object.assign({}, appairages); delete r[adresse]; appairages = r }
         function oublier(a) { essai.journal("oublier", a.address) }
     }
 
@@ -97,7 +99,7 @@ ShellRoot {
                     const bascule = essai.trouver(p, o => o.objectName === "bascule")
                     const lignes = {}
                     for (const d of Object.values(p.delegues)) lignes[d.cle] = {
-                        nom: d.appareil?.name ?? "", icone: d.icone, statut: d.statut, apparition: d.apparition.value,
+                        nom: d.rangee.text, icone: d.icone, statut: d.statut, apparition: d.apparition.value,
                     }
                     return JSON.stringify({
                         titre: "Bluetooth", etat: p.etat.resumeTexte,
@@ -107,6 +109,7 @@ ShellRoot {
                         deplie: p.deplie, lignes,
                         exclusif: porteur.item.exclusif, fermeAuDepart: porteur.item.fermeAuDepart,
                         retenu: porteur.item.retenu,
+                        hauteurProches: p.hauteurProches, hauteurLigne: p.hauteurLigne,
                     })
                 }
                 // puisLire — appelle une fonction de cette cible puis rend l'état du panneau dans la même passe.
@@ -127,13 +130,13 @@ ShellRoot {
                 }
                 // echouer — l'appairage de l'appareil d'adresse donnée échoue. Entrée : adresse.
                 function echouer(adresse: string): void {
-                    faux.appareils.find(a => a.address === adresse).pairing = false
+                    faux.finir(adresse)
                     faux.echec(adresse, "Appairage impossible")
                 }
                 // appaire — l'appairage de l'appareil d'adresse donnée réussit. Entrée : adresse.
                 function appaire(adresse: string): void {
                     const a = faux.appareils.find(x => x.address === adresse)
-                    a.pairing = false
+                    faux.finir(adresse)
                     a.paired = true
                 }
                 // couper — la radio est coupée. Entrées : aucune.

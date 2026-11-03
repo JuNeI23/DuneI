@@ -1,22 +1,31 @@
 pragma Singleton
 import QtQuick
 import Quickshell
+import Quickshell.Io
 import Quickshell.Bluetooth
 import "bluetooth.js" as Bt
 
 // EtatBluetooth — état et actions du Bluetooth pour la coque, adossés à Quickshell.Bluetooth (L2-14).
 // Rôle : lit l'adaptateur par défaut et ses appareils, compose la ligne d'état de l'en-tête, et porte les actions du
-// popover. L'appairage d'un nouvel appareil s'enchaîne ici, et non dans le popover, pour survivre à sa fermeture :
-// pair(), puis, dès que l'appareil est appairé, trusted (il se reconnectera seul) et connect(). Le popover lit ce
-// singleton par sa propriété etat, que la coque d'essai remplace par un factice aux mêmes noms.
-// Entrées : recherche, en écriture : vrai demande la recherche des appareils voisins (discovering), faux la rend.
-// Sorties : disponible, vrai si un adaptateur existe ; allume ; recherche ; enRecherche, vrai tant que l'adaptateur
-// recherche ; appareils, les BluetoothDevice de l'adaptateur ; connecte, le premier appareil connecté, ou null ;
-// resumeTexte, la ligne d'état de l'en-tête (bluetooth.js, resume) ; signal echec(adresse, message).
-// Erreurs : echec(adresse, « Appairage impossible ») si l'appairage retombe sans aboutir (appareil à code, hors de
-// portée, refus) ; echec(adresse, « Connexion impossible ») si une connexion demandée revient à l'état déconnecté.
-// Dépendances : Quickshell (Singleton, Instantiator), Quickshell.Bluetooth (Bluetooth, BluetoothDeviceState),
-// bluetooth.js (resume).
+// popover. L'appairage d'un nouvel appareil passe par l'exécutable dunei-bluetooth-appairer (fiche 0.3, objectif 10) :
+// Pair() de Quickshell n'enregistre aucun agent, ce que BlueZ refuse, et ne choisit pas le transport. L'exécutable,
+// lancé ici et non dans le popover pour survivre à sa fermeture, appaire avec un agent et le transport voulu
+// (bluetooth.js, transport), marque de confiance et connecte ; la recherche du popover se suspend pendant ce temps,
+// car BlueZ fusionne les filtres de ses clients. Le popover lit ce singleton par sa propriété etat, que la coque
+// d'essai remplace par un factice aux mêmes noms.
+// Entrées : recherche, en écriture : vrai demande la recherche des appareils voisins (discovering), faux la rend ;
+// commandeAppairage, la commande lancée avec l'adresse et le transport (« dunei-bluetooth-appairer » par défaut,
+// remplacée par la coque d'essai).
+// Sorties : disponible, vrai si un adaptateur existe ; allume ; recherche ; rechercheVoulue, la recherche demandée
+// hors appairage en cours ; enRecherche, vrai tant que l'adaptateur recherche ; appareils, les BluetoothDevice de
+// l'adaptateur ; connecte, le premier appareil connecté, ou null ; resumeTexte, la ligne d'état de l'en-tête
+// (bluetooth.js, resume) ; appairages, adresse → vrai tant que son appairage est en cours ; signaux
+// appairageLance(adresse) et echec(adresse, message).
+// Erreurs : echec(adresse, « Appairage impossible ») si l'exécutable sort en 1 ou autrement (refus, appareil à code,
+// hors de portée) ; echec(adresse, « Connexion impossible ») s'il sort en 2, ou si une connexion demandée revient à
+// l'état déconnecté.
+// Dépendances : Quickshell (Singleton, Instantiator), Quickshell.Io (Process), Quickshell.Bluetooth (Bluetooth,
+// BluetoothDeviceState), bluetooth.js (resume, transport), dunei-bluetooth-appairer (config/bin).
 Singleton {
     id: etat
 
@@ -29,21 +38,25 @@ Singleton {
     readonly property var connecte: appareils.find(a => a.connected) ?? null
     readonly property string resumeTexte: Bt.resume(allume, connecte ? {
         nom: connecte.name, batterie: connecte.batteryAvailable ? connecte.battery : null } : null)
+    property var commandeAppairage: ["dunei-bluetooth-appairer"]
+    signal appairageLance(string adresse)
     signal echec(string adresse, string message)
 
-    // Adresses des appairages lancés par appairer() et des connexions demandées, suivies jusqu'à leur issue.
+    // Adresses des appairages en cours (réaffecté à chaque changement, pour notifier le popover) et des connexions
+    // demandées, suivies jusqu'à leur issue.
     property var appairages: ({})
     property var connexions: ({})
+    readonly property bool rechercheVoulue: recherche && Object.keys(appairages).length === 0
 
     // La recherche suit la demande tant que la radio est allumée ; une radio rallumée pendant l'ouverture la reprend.
-    onRechercheChanged: suivreRecherche()
+    onRechercheVoulueChanged: suivreRecherche()
     onAllumeChanged: suivreRecherche()
 
-    // suivreRecherche — accorde discovering à la demande de recherche.
+    // suivreRecherche — accorde discovering à la demande de recherche, suspendue pendant un appairage.
     // Entrées : aucune. Sortie : aucune. Erreurs : aucune ; sans adaptateur ou radio coupée, rien n'est fait.
-    // Dépendances : adaptateur, allume, recherche.
+    // Dépendances : adaptateur, allume, rechercheVoulue.
     function suivreRecherche(): void {
-        if (adaptateur && allume && adaptateur.discovering !== recherche) adaptateur.discovering = recherche
+        if (adaptateur && allume && adaptateur.discovering !== rechercheVoulue) adaptateur.discovering = rechercheVoulue
     }
 
     // allumer — allume ou coupe la radio. Entrées : actif. Sortie : aucune. Erreurs : sans adaptateur, rien.
@@ -64,42 +77,42 @@ Singleton {
         appareil.connect()
     }
 
-    // appairer — lance l'appairage d'un appareil voisin ; la suite (confiance, connexion) vient de son suivi.
-    // Entrées : appareil, un BluetoothDevice non appairé. Sortie : aucune. Erreurs : voir echec ; un appareil déjà en
-    // cours d'appairage est ignoré (un second pair() serait refusé par BlueZ et romprait le suivi).
-    // Dépendances : appairages.
+    // appairer — lance l'exécutable d'appairage pour un appareil voisin, avec le transport de son type.
+    // Entrées : appareil, un BluetoothDevice non appairé. Sortie : aucune. Erreurs : voir echec ; un appareil dont
+    // l'appairage est déjà en cours est ignoré (un second clic).
+    // Dépendances : appairages, commandeAppairage, fabriqueAppairage, bluetooth.js (transport).
     function appairer(appareil): void {
-        if (appareil.pairing) return
-        appairages[appareil.address] = true
-        appareil.pair()
+        const adresse = appareil.address
+        if (appairages[adresse]) return
+        appairages = Object.assign({}, appairages, { [adresse]: true })
+        fabriqueAppairage.createObject(etat, { adresse, command: commandeAppairage.concat([adresse, Bt.transport(appareil.icon)]) })
+        appairageLance(adresse)
+    }
+
+    // finAppairage — issue de l'exécutable : l'adresse quitte les appairages en cours, et un code non nul devient un
+    // echec. Entrées : adresse ; code, le code de sortie. Sortie : aucune. Erreurs : voir echec.
+    // Dépendances : appairages.
+    function finAppairage(adresse: string, code: int): void {
+        const reste = Object.assign({}, appairages)
+        delete reste[adresse]
+        appairages = reste
+        if (code !== 0) echec(adresse, code === 2 ? "Connexion impossible" : "Appairage impossible")
+    }
+
+    // Un processus par appairage, détruit à sa sortie.
+    Component {
+        id: fabriqueAppairage
+        Process {
+            property string adresse
+            running: true
+            onExited: (code, statut) => { etat.finAppairage(adresse, code); destroy() }
+        }
     }
 
     // oublier — retire un appareil appairé (forget). Entrées : appareil. Sortie : aucune. Erreurs : aucune.
     // Dépendances : aucune.
     function oublier(appareil): void {
         appareil.forget()
-    }
-
-    // suiviApparie — un appareil vient d'être appairé : s'il l'a été par appairer(), il devient de confiance puis
-    // est connecté, sauf s'il l'est déjà (un casque se connecte souvent pendant l'appairage). Entrées : a, l'appareil. Sortie : aucune. Erreurs : aucune. Dépendances : appairages, connexions.
-    function suiviApparie(a): void {
-        if (!a.paired || !appairages[a.address]) return
-        delete appairages[a.address]
-        a.trusted = true
-        if (a.connected) return
-        connexions[a.address] = true
-        a.connect()
-    }
-
-    // suiviAppairage — l'appairage d'un appareil s'arrête : sans appairage abouti, echec(« Appairage impossible »).
-    // L'ordre des signaux pairing et paired n'est pas garanti : l'échec se constate au tour suivant (Qt.callLater).
-    // Entrées : a, l'appareil. Sortie : aucune. Erreurs : voir echec. Dépendances : appairages.
-    function suiviAppairage(a): void {
-        if (!a.pairing) Qt.callLater(() => {
-            if (a.pairing || a.paired || !appairages[a.address]) return
-            delete appairages[a.address]
-            echec(a.address, "Appairage impossible")
-        })
     }
 
     // suiviEtat — l'état de connexion d'un appareil change : une connexion demandée aboutit, ou échoue
@@ -114,14 +127,12 @@ Singleton {
         }
     }
 
-    // Suivi de chaque appareil : issue d'un appairage lancé et d'une connexion demandée.
+    // Suivi de chaque appareil : issue d'une connexion demandée.
     Instantiator {
         model: etat.appareils
         delegate: Connections {
             required property var modelData
             target: modelData
-            function onPairedChanged() { etat.suiviApparie(modelData) }
-            function onPairingChanged() { etat.suiviAppairage(modelData) }
             function onStateChanged() { etat.suiviEtat(modelData) }
         }
     }

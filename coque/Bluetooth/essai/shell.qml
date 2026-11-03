@@ -34,36 +34,45 @@ ShellRoot {
     Component { id: fabrique; FauxAppareil {} }
     // Échecs émis par le singleton, relevés pour les scénarios.
     property var echecs: []
+    property int lancements: 0
     Connections {
         target: EtatBluetooth
         function onEchec(adresse, message) { racine.echecs = racine.echecs.concat([adresse + " " + message]) }
+        function onAppairageLance(adresse) { racine.lancements++ }
     }
 
     IpcHandler {
         target: "bluetooth"
 
-        // scenario — joue un scénario du suivi d'EtatBluetooth sur un appareil factice neuf, puis rend en JSON
-        // {appels, trusted, echecs}. Entrée : cle, « appaireDejaConnecte » (appairage abouti sur un appareil déjà
-        // connecté, puis déconnexion voulue) ou « doubleAppairage » (deux appairages coup sur coup).
+        // scenario — joue un scénario d'EtatBluetooth sur un appareil factice neuf, puis rend en JSON {appels, echecs,
+        // suivi, rechercheVoulue}. Entrée : cle, « deconnexionVoulue » (connexion suivie puis déconnexion voulue) ou
+        // « appairageEchoue » (deux appairages coup sur coup, par une commande qui sort en 1 au bout d'une seconde ;
+        // l'issue se lit ensuite par echecs, lancements et rechercheVoulue).
         // Erreurs : un scénario inconnu rend les valeurs de l'appareil intact. Dépendances : EtatBluetooth, fabrique.
         function scenario(cle: string): string {
             racine.echecs = []
+            racine.lancements = 0
             const a = fabrique.createObject(racine, { address: cle })
-            if (cle === "appaireDejaConnecte") {
-                EtatBluetooth.appairer(a)
-                a.pairing = false; a.paired = true; a.connected = true; a.state = BluetoothDeviceState.Connected
-                EtatBluetooth.suiviApparie(a)
-                EtatBluetooth.suiviEtat(a)
+            if (cle === "deconnexionVoulue") {
+                a.connected = true; a.state = BluetoothDeviceState.Connected
+                EtatBluetooth.connexions[a.address] = true
                 EtatBluetooth.basculer(a)
                 EtatBluetooth.suiviEtat(a)
-            } else if (cle === "doubleAppairage") {
+            } else if (cle === "appairageEchoue") {
+                EtatBluetooth.commandeAppairage = ["sh", "-c", "sleep 1; exit 1"]
+                EtatBluetooth.recherche = true
                 EtatBluetooth.appairer(a)
                 EtatBluetooth.appairer(a)
             }
-            const r = JSON.stringify({ appels: a.appels, trusted: a.trusted, echecs: racine.echecs })
+            const r = JSON.stringify({ appels: a.appels, echecs: racine.echecs, suivi: !!EtatBluetooth.appairages[cle],
+                                       rechercheVoulue: EtatBluetooth.rechercheVoulue })
             a.destroy()
             return r
         }
+        // echecs, lancements, rechercheVoulue — relevés du dernier scénario, en JSON. Sortie : texte.
+        function echecs(): string { return JSON.stringify(racine.echecs) }
+        function lancements(): string { return JSON.stringify(racine.lancements) }
+        function rechercheVoulue(): string { return JSON.stringify(EtatBluetooth.rechercheVoulue) }
 
         // resume — rend la ligne d'état du vrai singleton EtatBluetooth, preuve qu'il se charge sur cette machine.
         // Entrées : aucune. Sortie : resumeTexte. Erreurs : aucune. Dépendances : EtatBluetooth.

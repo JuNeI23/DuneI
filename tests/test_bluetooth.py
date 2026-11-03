@@ -63,6 +63,18 @@ class BluetoothJsTest(EssaiCoque, unittest.TestCase):
             with self.subTest(icone=icone):
                 self.assertEqual(self.appeler("iconeAppareil", icone), nom)
 
+    def test_nom_affiche(self):
+        for nom, attendu in (("LE-Bose NC 700 Headphones", "Bose NC 700 Headphones"), ("LE_WH-1000XM3", "WH-1000XM3"),
+                             ("LE Bose", "Bose"), ("Bose", "Bose"), ("LEGO Hub", "LEGO Hub"), ("", "")):
+            with self.subTest(nom=nom):
+                self.assertEqual(self.appeler("nomAffiche", nom), attendu)
+
+    def test_transport(self):
+        for icone, attendu in (("audio-headset", "bredr"), ("audio-headphones", "bredr"), ("audio-card", "bredr"),
+                               ("input-mouse", "auto"), ("", "auto")):
+            with self.subTest(icone=icone):
+                self.assertEqual(self.appeler("transport", icone), attendu)
+
     def test_resume(self):
         self.assertEqual(self.appeler("resume", False, None), "Désactivé")
         self.assertEqual(self.appeler("resume", True, None), "Aucun appareil connecté")
@@ -70,6 +82,7 @@ class BluetoothJsTest(EssaiCoque, unittest.TestCase):
                          "Bose NC 700 Headphones")
         self.assertEqual(self.appeler("resume", True, {"nom": "Bose NC 700 Headphones", "batterie": 0.615}),
                          "Bose NC 700 Headphones · 62 %")
+        self.assertEqual(self.appeler("resume", True, {"nom": "LE-Bose", "batterie": None}), "Bose")
 
     def scenario(self, cle: str) -> dict:
         """Joue un scénario du suivi d'EtatBluetooth sur un appareil factice. Entrée : cle. Sortie : {appels, trusted,
@@ -77,17 +90,28 @@ class BluetoothJsTest(EssaiCoque, unittest.TestCase):
         return json.loads(subprocess.run([QS, "ipc", "--pid", str(self.proc.pid), "call", "bluetooth", "scenario", cle],
                                          check=True, capture_output=True, text=True, timeout=DELAI).stdout.strip())
 
-    def test_appaire_deja_connecte_puis_deconnexion_voulue(self):
-        # Un casque souvent déjà connecté au bout de l'appairage : pas de connect() inutile, et sa déconnexion voulue
-        # plus tard n'est pas un échec (relecture finale, I1).
-        r = self.scenario("appaireDejaConnecte")
-        self.assertEqual(r["appels"], ["pair", "disconnect"])
-        self.assertTrue(r["trusted"])
+    def test_deconnexion_voulue_sans_erreur(self):
+        # Une connexion suivie puis une déconnexion voulue : pas d'échec (relecture finale, I1).
+        r = self.scenario("deconnexionVoulue")
+        self.assertEqual(r["appels"], ["disconnect"])
         self.assertEqual(r["echecs"], [])
 
-    def test_double_appairage_ignore(self):
-        # Un second clic pendant l'appairage ne relance pas pair() (relecture finale, I2).
-        self.assertEqual(self.scenario("doubleAppairage")["appels"], ["pair"])
+    def test_appairage_par_l_executable(self):
+        # appairer lance l'exécutable une seule fois malgré un second appel (I2), suspend la recherche pendant
+        # l'appairage, et traduit le code 1 en « Appairage impossible » (fiche 0.3, objectif 10).
+        r = self.scenario("appairageEchoue")
+        self.assertEqual((r["suivi"], r["rechercheVoulue"]), (True, False))
+        fin = time.monotonic() + DELAI
+        while not (e := json.loads(self.ipc_bt("echecs"))) and time.monotonic() < fin:
+            time.sleep(0.1)
+        self.assertEqual(e, ["appairageEchoue Appairage impossible"])
+        self.assertEqual(json.loads(self.ipc_bt("lancements")), 1)
+        self.assertEqual(json.loads(self.ipc_bt("rechercheVoulue")), True)
+
+    def ipc_bt(self, fonction: str, *args: str) -> str:
+        """Appelle une fonction IPC de la cible « bluetooth ». Sortie : la sortie standard. Dépendances : qs."""
+        return subprocess.run([QS, "ipc", "--pid", str(self.proc.pid), "call", "bluetooth", fonction, *args],
+                              check=True, capture_output=True, text=True, timeout=DELAI).stdout.strip()
 
     def test_etat_reel_se_charge(self):
         # Le singleton réel se charge et compose une ligne d'état, quel que soit l'état de la radio de la machine.
@@ -153,6 +177,8 @@ class PopoverBluetoothTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(p["proches"], [self.ENCEINTE], "l'appareil anonyme n'a pas de ligne")
         self.assertEqual(p["lignes"][self.BOSE]["statut"], "Connecté")
         self.assertEqual(p["lignes"][self.BOSE]["icone"], "audio-headphones")
+        self.assertEqual(p["lignes"][self.ENCEINTE]["nom"], "Enceinte", "le préfixe « LE- » est masqué")
+        self.assertEqual(p["hauteurProches"], 5 * p["hauteurLigne"], "cinq lignes réservées aux voisins")
         self.assertEqual((p["exclusif"], p["fermeAuDepart"], p["retenu"]), (True, True, False))
         self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read|Unable to assign|Binding loop")
 
