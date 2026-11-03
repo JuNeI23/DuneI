@@ -2609,7 +2609,22 @@ popover réseau.
 - **Appareils anonymes.** Un voisin dont le nom n'est que l'adresse n'a pas de ligne : le relevé du 2026-11-02 en
   comptait environ soixante-dix autour de la machine.
 
-*Touché : `coque/Bluetooth/` (`PopoverBluetooth.qml`, `EtatBluetooth.qml`, `bluetooth.js`, coques d'essai),
+- **Recette du 2026-11-03 : l'appairage par Quickshell échoue.** `pair()` de Quickshell n'enregistre aucun agent :
+  BlueZ refuse l'authentification (« Authentication Rejected », quatorze fois au journal de la coque). Le Bose, appareil
+  double (classique et LE), revu par ses annonces LE après « Oublier », a de plus été appairé en LE : le PC se croyait
+  lié, le casque n'avait aucune clé pour l'audio, et la connexion échouait (« br-connection-key-missing ») ; sa liste
+  d'appareils ne citait pas le PC. Il a fallu effacer cette liste (appui long du bouton Power/Bluetooth), puis
+  appairer avec un agent et le filtre de recherche `transport bredr`, seule séquence qui a réussi. `PreferredBearer`, la
+  voie de BlueZ pour choisir le transport, est expérimentale et désactivée. L'appairage passe donc par
+  `dunei-bluetooth-appairer <adresse> <transport>` (`config/bin/`), qui tient l'agent `NoInputNoOutput` le temps de
+  l'appairage, recherche avec le transport voulu (`bredr` pour un appareil audio, `auto` sinon), appaire, marque de
+  confiance et connecte. Nicolas a choisi cette voie, plutôt qu'un agent permanent (`bt-agent` de `bluez-tools`, qui
+  accepterait toute demande voisine) ou qu'un agent propre (prévu avec L3-09). La recherche du popover se suspend
+  pendant l'appairage, car BlueZ fusionne les filtres de ses clients.
+- **Recette : affichage.** Le préfixe « LE- » des noms LE est masqué ; « Appareils à proximité » a une hauteur fixe de
+  cinq lignes, car la fenêtre grandissait par à-coups à chaque appareil trouvé.
+
+*Touché : `config/bin/dunei-bluetooth-appairer`, `tests/test_bluetooth_appairer.py`, `coque/Bluetooth/` (`PopoverBluetooth.qml`, `EtatBluetooth.qml`, `bluetooth.js`, coques d'essai),
 `coque/Barre/Bluetooth.qml`, `coque/Barre/Barre.qml` (masque de saisie, accroche), `icones/correspondances.toml`
 (sept types d'appareils), `tests/test_bluetooth.py`, `tests/test_barre.py`, `tests/test_icones.py`, bible
 (chapitre 7, annexe E), backlog (L2-14, L3-05, L3-09).*

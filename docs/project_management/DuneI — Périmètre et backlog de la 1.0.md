@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.38. Historique en fin de document.
+Version 1.39. Historique en fin de document.
 
 La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **164 éléments** répartis en **cinq lots**, sur six chantiers.
 
@@ -308,6 +308,8 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L2-53 | B | Écrit | Recherche partagée — la relance du balayage Wi-Fi (« nmcli device wifi rescan », l'indicateur d'activité et sa borne `motion.delays.scan`), aujourd'hui écrite deux fois, dans le popover réseau et dans la page Wi-Fi de la fenêtre, passe dans `Jonction`, déjà partagée entre eux (relecture finale de L2-11) |
 | L2-54 | B | Écrit | Saisie IPv4 protégée des relectures — `FicheProfil.restaurer()` remet chaque contrôle sur les réglages lus et peut écraser l'adresse, la passerelle ou les DNS en cours de saisie quand une relecture arrive ; la saisie non validée doit survivre (relecture finale de L2-11) |
 | L2-55 | B | Écrit | Rangées du popover réseau au clavier — les rangées du popover (réseaux, actions) doivent suivre la bible, « Clavier » : tabulation, flèches, Entrée et Espace, contour de focus venu du clavier seulement (relecture finale de L2-11) |
+| L2-56 | B | Écrit | Animations de passage d'un popover de la barre à l'autre — demande de Nicolas à la recette de L2-14 (2026-11-03) : l'exclusion (D108) ferme l'un et ouvre l'autre sans transition |
+| L2-57 | B | Écrit | Suites du popover Bluetooth (relecture finale de L2-14) — suivi des appareils par l'ObjectModel plutôt que par un tableau reconstruit à chaque balise ; recherche partagée entre écrans (un compteur de demandes) ; voisins gelés sous le pointeur pendant la recherche ; suivi des connexions purgé à l'oubli d'un appareil ; couleur d'erreur à confronter à la bible |
 
 ### Lot 3 — la bascule
 
@@ -513,6 +515,7 @@ Le choix de la distribution de base et du compositeur, précédemment ouverts, s
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-12 | Version initiale, 137 éléments |
+| 1.39 | 2026-11-03 | L2-14 : appairage par `dunei-bluetooth-appairer` après la recette ; ajout de L2-56 (animations entre popovers) et de L2-57 (suites du popover Bluetooth) |
 | 1.38 | 2026-11-03 | L2-14 fait, en attente de recette : popover Bluetooth, popovers de la barre exclusifs et fermés au départ de la souris (D107, D108) ; L3-09 réduit à l'appairage à code ; L3-05 annoté |
 | 1.37 | 2026-11-02 | L2-50 fait : jour thématisé retiré, trois thèmes, repli d'un couple retiré (D102) |
 | 1.36 | 2026-11-02 | L1-09 : double appui du bouton marche pendant la session (D106) |
