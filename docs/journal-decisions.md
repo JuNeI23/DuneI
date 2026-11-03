@@ -2581,3 +2581,63 @@ logind reprend la main et D44 s'applique telle quelle. Le verrouillage reste à 
 `session.toml`, `config/hypr/donnees/raccourcis.lua`, `tests/test_energie_scripts.py`,
 `tests/test_hyprland_clavier.py`, `tests/test_deploy.py`, carnet (§ Énergie — L1-09), backlog (L1-09), notes de
 direction.*
+
+## 2026-11-03 — Popover Bluetooth (L2-14)
+
+### D107 · Le popover Bluetooth, copie adaptée du popover réseau
+
+2026-11-03. **Le popover Bluetooth (`coque/Bluetooth/PopoverBluetooth.qml`) est une copie adaptée du popover réseau,
+sans squelette partagé dans `Composants/`.** Il porte la bascule de la radio, « Mes appareils » (connecter,
+déconnecter, oublier) et « Appareils à proximité » (recherche, appairage), avec les transitions et le gel du tri du
+popover réseau.
+
+- **Raison.** Le besoin est né d'une urgence : un casque à connecter, appairé le 2026-11-02 par `bluetoothctl`. Nicolas
+  juge le popover réseau « très bien fait » et veut le même. Claude a proposé d'extraire l'en-tête, la section de
+  recherche, la liste animée et le pied dans des composants partagés, pour les popovers à venir (audio, énergie,
+  thème) ; Nicolas l'a refusé : « 500 lignes, c'est pas grand-chose ». La liste animée devient un composant interne
+  au fichier, employé deux fois.
+- **Appairage dans le popover.** La recherche et l'appairage, prévus en L3-09, entrent dans ce popover pour les
+  appareils sans code (casques, enceintes, souris) : `pair()`, puis confiance (`trusted`, pour la reconnexion
+  automatique) et connexion. La suite de l'appairage vit dans le singleton `EtatBluetooth`, pour survivre à la
+  fermeture du popover. Un appareil à code demande un agent d'appairage BlueZ, que Quickshell ne fournit pas : il
+  reste en L3-09.
+- **Écart au motif du popover de réglage (D105).** Un appareil connecté reste dans « Mes appareils », en plus de
+  l'en-tête qui le nomme : sa ligne est le seul endroit d'où on le déconnecte ou l'oublie.
+- **Oublier.** Un chevron à droite de la ligne d'un appareil appairé déplie « Oublier cet appareil », en texte seul ;
+  le clic sur la ligne garde son rôle, ce qui évite d'oublier un appareil par erreur. Le chevron est hors de la
+  rangée, pour que son clic ne déclenche pas celui de la ligne.
+- **Appareils anonymes.** Un voisin dont le nom n'est que l'adresse n'a pas de ligne : le relevé du 2026-11-02 en
+  comptait environ soixante-dix autour de la machine.
+
+*Touché : `coque/Bluetooth/` (`PopoverBluetooth.qml`, `EtatBluetooth.qml`, `bluetooth.js`, coques d'essai),
+`coque/Barre/Bluetooth.qml`, `coque/Barre/Barre.qml` (masque de saisie, accroche), `icones/correspondances.toml`
+(sept types d'appareils), `tests/test_bluetooth.py`, `tests/test_barre.py`, `tests/test_icones.py`, bible
+(chapitre 7, annexe E), backlog (L2-14, L3-05, L3-09).*
+
+### D108 · Un seul popover de la barre à la fois, fermé quand la souris s'éloigne
+
+2026-11-03. **Ouvrir un popover de la barre ferme celui qui l'était ; un popover de la barre se ferme quand le pointeur
+l'a quitté, lui et son icône, depuis 1,5 seconde (`motion.delays.dismiss`).** Les deux comportements sont demandés par
+Nicolas et vivent dans le code partagé, en option : `Overlay.exclusif` (registre `Overlays`, emplacement `popover`, à
+côté de l'attention) et `Overlay.fermeAuDepart`, que suspend `Overlay.retenu`. Les popovers réseau et Bluetooth les
+activent.
+
+- **Raison.** Sans exclusion, un clic sur une seconde icône laissait deux popovers côte à côte. La fermeture au départ
+  de la souris « manquait », selon Nicolas.
+- **Exclusion en option.** Elle n'est pas une règle de la famille « contextuel » : une liste déroulante ouverte dans
+  un popover est aussi un contextuel, et fermerait son propre popover.
+- **Quand le compte part.** Le compte à rebours ne démarre qu'une fois le pointeur vu sur le popover ou sur son icône :
+  un popover ouvert au clavier ne se ferme pas tout seul. Il s'annule dès que le pointeur revient. Il est suspendu
+  tant qu'une saisie ou une action est en cours : mot de passe Wi-Fi déplié ou connexion suivie dans le popover
+  réseau, « Oublier » déplié dans le popover Bluetooth. Un appairage lancé continue après la fermeture.
+- **Mise en œuvre.** La logique vit dans `MinuterieDepart`, éprouvée seule par la coque d'essai des composants, car le
+  pointeur ne se simule pas en offscreen. L'icône compte comme survolée par sa propriété `hovered` (`ElementBarre` est
+  un `AbstractButton`) : un `HoverHandler` posé sur l'ancre depuis l'`Overlay`, un `QtObject`, faisait planter
+  Quickshell au lancement.
+- **Non couvert.** La suspension pendant une liste déroulante ouverte dans un popover n'est pas écrite : aucun popover
+  de la barre n'en porte. Un futur popover qui en aurait une liera `retenu` à son ouverture.
+
+*Touché : `coque/Composants/Overlay.qml`, `Overlays.qml`, `MinuterieDepart.qml`, coque d'essai des composants,
+`coque/Reseau/PopoverReseau.qml`, `motion.toml`, `dunei_motion/checks.py`, `generated/motion.json`, tests (composants,
+mouvement, golden, réseau), bible (chapitre 7, annexe E).*
+
