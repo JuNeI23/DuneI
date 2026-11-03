@@ -33,7 +33,7 @@ import "Composants/ancrage.js" as Ancrage
 // « essai radioCocher <rang> », « essai jaugeActive <bool> », « essai boutonPrincipal <bool> », « essai inactif
 // <bool> », « essai reparenter », « essai texteMoyen », « essai anneauInactif <bool> », « essai survol <bool> »,
 // « essai champActif <bool> », « essai champTexte <texte> », « essai selectionLibre », « essai icone <nom> <bool> »,
-// « essai ouvrirFactice <A|B|C> », « essai fermerFactice <A|B|C> » et « essai materiauHauteur <px> ».
+// « essai ouvrirFactice <A…E> », « essai fermerFactice <A…E> » et « essai materiauHauteur <px> ».
 // Erreurs : celles de Theme et des liaisons, dans le journal. Dépendances : quickshell ≥ 0.3 (Quickshell.Io :
 // IpcHandler), modules coque/Theme et coque/Composants.
 // Import : Quickshell ne résout pas un module situé au-dessus de la racine de la coque lancée ; les liens
@@ -296,35 +296,39 @@ ShellRoot {
     QtObject { id: factA; property string famille: "attention"; property bool ouvert: false }
     QtObject { id: factB; property string famille: "attention"; property bool ouvert: false }
     QtObject { id: factC; property string famille: "contextuel"; property bool ouvert: false }
+    // D et E sont des contextuels exclusifs, comme les popovers de la barre : un seul des deux reste ouvert.
+    QtObject { id: factD; property string famille: "contextuel"; property bool exclusif: true; property bool ouvert: false }
+    QtObject { id: factE; property string famille: "contextuel"; property bool exclusif: true; property bool ouvert: false }
 
     IpcHandler {
         target: "essai"
 
         // ouvrirFactice — ouvre un objet factice comme le ferait Overlay : ouvert à vrai, puis Overlays.ouvrir.
-        // Entrées : nom, "A", "B" ou "C". Sortie : aucune. Erreurs : TypeError au journal pour un nom inconnu.
-        // Dépendances : Overlays, factA, factB, factC.
+        // Entrées : nom, "A", "B", "C", "D" ou "E". Sortie : aucune. Erreurs : TypeError au journal pour un nom inconnu.
+        // Dépendances : Overlays, factA à factE.
         function ouvrirFactice(nom: string): void {
-            const o = { A: factA, B: factB, C: factC }[nom]
+            const o = { A: factA, B: factB, C: factC, D: factD, E: factE }[nom]
             o.ouvert = true
             Overlays.ouvrir(o)
         }
 
         // fermerFactice — ferme un objet factice comme le ferait Overlay : ouvert à faux, puis Overlays.fermer.
-        // Entrées : nom, "A", "B" ou "C". Sortie : aucune. Erreurs : TypeError au journal pour un nom inconnu.
-        // Dépendances : Overlays, factA, factB, factC.
+        // Entrées : nom, "A", "B", "C", "D" ou "E". Sortie : aucune. Erreurs : TypeError au journal pour un nom inconnu.
+        // Dépendances : Overlays, factA à factE.
         function fermerFactice(nom: string): void {
-            const o = { A: factA, B: factB, C: factC }[nom]
+            const o = { A: factA, B: factB, C: factC, D: factD, E: factE }[nom]
             o.ouvert = false
             Overlays.fermer(o)
         }
 
-        // overlays — journalise le nom de l'attention retenue par Overlays (null si aucune), puis l'état ouvert
-        // des objets factices A, B et C. Entrées : aucune. Sortie : aucune ; « essai : overlays <nom|null>
-        // <bool> <bool> <bool> ». Erreurs : aucune. Dépendances : Overlays, factA, factB, factC.
+        // overlays — journalise le nom de l'attention retenue par Overlays (null si aucune), celui du popover
+        // exclusif retenu (null si aucun), puis l'état ouvert des objets factices A à E. Entrées : aucune.
+        // Sortie : aucune ; « essai : overlays <nom|null> <nom|null> <bool> × 5 ». Erreurs : aucune.
+        // Dépendances : Overlays, factA à factE.
         function overlays(): void {
-            const noms = new Map([[factA, "A"], [factB, "B"], [factC, "C"]])
-            essai.journal("overlays", [noms.get(Overlays.attention) ?? "null", factA.ouvert, factB.ouvert,
-                factC.ouvert].join(" "))
+            const noms = new Map([[factA, "A"], [factB, "B"], [factC, "C"], [factD, "D"], [factE, "E"]])
+            essai.journal("overlays", [noms.get(Overlays.attention) ?? "null", noms.get(Overlays.popover) ?? "null",
+                factA.ouvert, factB.ouvert, factC.ouvert, factD.ouvert, factE.ouvert].join(" "))
         }
 
         // overlaysFermes — journalise, pour les deux Overlay d'essai, leur famille, l'activité de leur chargeur

@@ -852,21 +852,32 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
         return lu
 
     def test_exclusivite(self):
-        # Le singleton Overlays seul, sur trois objets factices qui suivent le protocole d'Overlay (ouvert passe à
+        # Le singleton Overlays seul, sur cinq objets factices qui suivent le protocole d'Overlay (ouvert passe à
         # vrai puis Overlays.ouvrir, ouvert passe à faux puis Overlays.fermer) : A et B sont des attentions, C un
-        # contextuel. Aucune fenêtre n'est ouverte. La ligne journalisée donne l'attention retenue, puis l'état
-        # ouvert de A, B et C.
+        # contextuel, D et E des contextuels exclusifs (les popovers de la barre). Aucune fenêtre n'est ouverte. La
+        # ligne journalisée donne l'attention retenue, le popover exclusif retenu, puis l'état ouvert de A à E.
         self.demarrer()
-        self.assertEqual(self.valeur("overlays"), "null false false false")
+        self.assertEqual(self.valeur("overlays"), "null null false false false false false")
         self.ipc("ouvrirFactice", "A")
         self.ipc("ouvrirFactice", "A")
-        self.assertEqual(self.valeur("overlays"), "A true false false")
+        self.assertEqual(self.valeur("overlays"), "A null true false false false false")
         self.ipc("ouvrirFactice", "B")
-        self.assertEqual(self.valeur("overlays"), "B false true false")
+        self.assertEqual(self.valeur("overlays"), "B null false true false false false")
         self.ipc("ouvrirFactice", "C")
-        self.assertEqual(self.valeur("overlays"), "B false true true")
+        self.assertEqual(self.valeur("overlays"), "B null false true true false false")
         self.ipc("fermerFactice", "B")
-        self.assertEqual(self.valeur("overlays"), "null false false true")
+        self.assertEqual(self.valeur("overlays"), "null null false false true false false")
+        # Popovers exclusifs : ouvrir E ferme D ; un contextuel ordinaire ou une attention ne touchent pas E.
+        self.ipc("ouvrirFactice", "D")
+        self.assertEqual(self.valeur("overlays"), "null D false false true true false")
+        self.ipc("ouvrirFactice", "E")
+        self.assertEqual(self.valeur("overlays"), "null E false false true false true")
+        self.ipc("fermerFactice", "C")
+        self.ipc("ouvrirFactice", "C")
+        self.ipc("ouvrirFactice", "A")
+        self.assertEqual(self.valeur("overlays"), "A E true false true false true")
+        self.ipc("fermerFactice", "E")
+        self.assertEqual(self.valeur("overlays"), "A null true false true false false")
 
     def test_overlay_ferme_sans_erreur(self):
         # Un Overlay de chaque famille, instancié fermé : son chargeur reste inactif et ne porte aucune fenêtre,
