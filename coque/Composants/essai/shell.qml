@@ -300,8 +300,28 @@ ShellRoot {
     QtObject { id: factD; property string famille: "contextuel"; property bool exclusif: true; property bool ouvert: false }
     QtObject { id: factE; property string famille: "contextuel"; property bool exclusif: true; property bool ouvert: false }
 
+    // Minuterie de départ du pointeur, pilotée par l'IPC (minuterie, echeances) ; compte ses échéances.
+    MinuterieDepart {
+        id: minuterie
+        property int echeances: 0
+        onEcheance: echeances++
+    }
+
     IpcHandler {
         target: "essai"
+
+        // minuterie — fixe l'état de la minuterie de départ d'essai.
+        // Entrées : actif, retenu, survole, "true" ou "false". Sortie : aucune. Erreurs : aucune.
+        // Dépendances : minuterie.
+        function minuterie(actif: string, retenu: string, survole: string): void {
+            minuterie.actif = actif === "true"
+            minuterie.retenu = retenu === "true"
+            minuterie.survole = survole === "true"
+        }
+
+        // echeances — journalise le nombre d'échéances de la minuterie d'essai : « essai : echeances <n> ».
+        // Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : minuterie.
+        function echeances(): void { essai.journal("echeances", minuterie.echeances) }
 
         // ouvrirFactice — ouvre un objet factice comme le ferait Overlay : ouvert à vrai, puis Overlays.ouvrir.
         // Entrées : nom, "A", "B", "C", "D" ou "E". Sortie : aucune. Erreurs : TypeError au journal pour un nom inconnu.

@@ -879,6 +879,38 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
         self.ipc("fermerFactice", "E")
         self.assertEqual(self.valeur("overlays"), "A null true false true false false")
 
+    def test_minuterie_depart(self):
+        # MinuterieDepart seule, pilotée par l'IPC (actif, retenu, survole) : un popover que la souris a quitté
+        # émet son échéance après motion.delays.dismiss (1,5 s) ; un retour du pointeur annule le compte.
+        self.demarrer()
+        self.ipc("minuterie", "true", "false", "true")
+        self.ipc("minuterie", "true", "false", "false")
+        time.sleep(0.8)
+        self.ipc("minuterie", "true", "false", "true")
+        self.ipc("minuterie", "true", "false", "false")
+        time.sleep(0.9)
+        self.assertEqual(self.valeur("echeances"), "0")
+        time.sleep(1.0)
+        self.assertEqual(self.valeur("echeances"), "1")
+
+    def test_minuterie_retenue(self):
+        # Retenue (saisie en cours), la minuterie ne compte pas ; relâchée, elle reprend tout le délai.
+        self.demarrer()
+        self.ipc("minuterie", "true", "true", "true")
+        self.ipc("minuterie", "true", "true", "false")
+        time.sleep(2.0)
+        self.assertEqual(self.valeur("echeances"), "0")
+        self.ipc("minuterie", "true", "false", "false")
+        time.sleep(2.0)
+        self.assertEqual(self.valeur("echeances"), "1")
+
+    def test_minuterie_sans_pointeur(self):
+        # Ouvert au clavier, sans que le pointeur soit jamais passé sur lui ni sur son ancre : aucun compte.
+        self.demarrer()
+        self.ipc("minuterie", "true", "false", "false")
+        time.sleep(2.0)
+        self.assertEqual(self.valeur("echeances"), "0")
+
     def test_overlay_ferme_sans_erreur(self):
         # Un Overlay de chaque famille, instancié fermé : son chargeur reste inactif et ne porte aucune fenêtre,
         # aucune attention n'est retenue, et rien n'atteint le journal. L'ouverture réelle n'est jamais faite ici,
