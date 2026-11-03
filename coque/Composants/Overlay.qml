@@ -40,7 +40,11 @@ import "ancrage.js" as Ancrage
 //           propriété par défaut : l'élément déclaré dans l'Overlay, instancié à chaque ouverture ; associees,
 //           fenêtres ajoutées à la prise du clavier d'un contextuel (HyprlandFocusGrab), vide par défaut : un clic
 //           dans l'une d'elles ne lève pas la prise, si bien que l'ouvreur, posé dans la barre, ferme lui-même le
-//           contextuel au lieu de le voir fermé à l'appui puis rouvert au relâchement.
+//           contextuel au lieu de le voir fermé à l'appui puis rouvert au relâchement ; exclusif, faux par défaut :
+//           vrai pour un popover de la barre, dont l'ouverture ferme le popover exclusif déjà ouvert (D108) ;
+//           fermeAuDepart, faux par défaut : vrai pour un contextuel qui se ferme quand le pointeur l'a quitté, lui et
+//           son ancre, depuis motion.delays.dismiss (D108, MinuterieDepart) ; retenu, faux par défaut : vrai suspend
+//           cette fermeture, tant qu'une saisie ou une action est en cours.
 // Sorties : ferme(), émis à chaque fermeture, quelle qu'en soit la cause ; margeEcran, écart que garde le cadre
 //           d'un overlay ancré dans un calque (la barre) avec chaque bord de l'écran quand il y est serré,
 //           space.scale[1] (8), à la demande de Nicolas (L2-11 : le popover réseau ne colle plus au bord droit) ;
@@ -52,7 +56,7 @@ import "ancrage.js" as Ancrage
 //           chargement des tokens, voile et fond restent transparents et le retrait vaut 0.
 // Dépendances : Quickshell (LazyLoader, PopupWindow, QsWindow, Edges, PopupAdjustment, Region pour le masque
 //               des clics), Quickshell.Hyprland (Hyprland, HyprlandFocusGrab), ancrage.js (origine, gaucheCadre),
-//               Theme (radius, space), Surface, OmbreElevation, Overlays, FenetreAttention (chargée par son adresse,
+//               Theme (radius, space), Surface, OmbreElevation, Overlays, MinuterieDepart, FenetreAttention (chargée par son adresse,
 //               qui emploie le Cadre déclaré ici).
 // Liste ouverte à la souris : Liste passe focusClavier à vrai dès qu'elle reçoit le focus. Un menu
 // (selectionSuitSurvol) ne montre jamais le contour de sa rangée courante ; une autre Liste le montrerait, et
@@ -67,6 +71,21 @@ QtObject {
     property var point: null
     default property Component contenu
     property list<QtObject> associees
+    // Contextuel exclusif (popover de la barre, D108) : l'ouvrir ferme le popover exclusif déjà ouvert, par Overlays.
+    property bool exclusif: false
+    // Fermeture au départ du pointeur (D108) : un contextuel qui la demande se ferme quand la souris l'a quitté, lui
+    // et son ancre, depuis motion.delays.dismiss ; retenu la suspend (saisie ou action en cours). Voir MinuterieDepart.
+    property bool fermeAuDepart: false
+    property bool retenu: false
+    // Pointeur sur le cadre, tenu par la fenêtre contextuelle ; remis à faux à la fermeture, quand elle est détruite.
+    property bool survolCadre: false
+    readonly property MinuterieDepart depart: MinuterieDepart {
+        actif: overlay.ouvert && overlay.fermeAuDepart && !overlay.bulle
+        retenu: overlay.retenu
+        // L'ancre compte comme survolée si elle expose hovered (un Control, comme ElementBarre), sinon jamais.
+        survole: overlay.survolCadre || (overlay.ancre?.hovered ?? false)
+        onEcheance: overlay.ouvert = false
+    }
     readonly property real margeEcran: Theme.space?.scale[1] ?? 0
     signal ferme()
     readonly property bool bulle: famille === "infobulle"
@@ -130,15 +149,17 @@ QtObject {
 
     // Ouverture d'une attention : l'écran focalisé est figé dans ecran, puis Overlays.ouvrir retient cet Overlay et,
     // s'il y en avait une autre, passe son ouvert à faux, ce qui la ferme par ce même gestionnaire. Ouverture d'un
-    // contextuel ou d'une infobulle : rien, ils ne passent pas par le registre. Fermeture, pour les trois familles :
+    // contextuel exclusif : Overlays.ouvrir le retient de même et ferme le popover exclusif précédent. Ouverture d'un
+    // contextuel ordinaire ou d'une infobulle : le registre l'ignore. Fermeture, pour les trois familles :
     // Overlays.fermer oublie cet Overlay s'il était l'attention retenue, puis ferme() est émis, registre déjà à jour.
     // Dans tous les cas, le chargeur suit ouvert par sa liaison. Protocole repris par essai/shell.qml (ouvrirFactice,
     // fermerFactice).
     onOuvertChanged: {
-        if (ouvert && famille === "attention") {
-            ecran = ecranFocalise
+        if (ouvert) {
+            if (famille === "attention") ecran = ecranFocalise
             Overlays.ouvrir(overlay)
         } else if (!ouvert) {
+            survolCadre = false
             Overlays.fermer(overlay)
             ferme()
         }
@@ -233,6 +254,11 @@ QtObject {
             onEchap: overlay.ouvert = false
         }
 
+        HoverHandler {
+            parent: cadrePopup
+            enabled: overlay.fermeAuDepart
+            onHoveredChanged: overlay.survolCadre = hovered
+        }
         HyprlandFocusGrab {
             windows: [popup, ...Array.from(overlay.associees)]
             active: overlay.ouvert && !overlay.bulle

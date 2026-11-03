@@ -173,6 +173,8 @@ ShellRoot {
                         connexion: delegues.filter(d => d.enConnexion).map(d => d.cle),
                         glisse: delegues.some(d => d.decalage.moving), lignes,
                         margeEcran: porteur.item.margeEcran,
+                        exclusif: porteur.item.exclusif, fermeAuDepart: porteur.item.fermeAuDepart,
+                        retenu: porteur.item.retenu,
                         saisie: p.bloc ? p.bloc.secret.length : -1,
                     })
                 }

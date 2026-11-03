@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.37. Historique en fin de document.
+Version 1.40. Historique en fin de document.
 
 La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **164 éléments** répartis en **cinq lots**, sur six chantiers.
 
@@ -266,7 +266,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L2-11 | B | Écrit | Indicateur réseau et son popover ; le sort de `nm-applet`, qui passait par `session.toml` et son unité `nm-applet.service` (L1-10, D50), est décidé : il est remplacé et retiré (D40) — **fait, en attente de fusion (D103 à D105)** : popover D5 (288 px, verre de E3, réseau joint dans l'en-tête, mot de passe sans plaque, actions en texte seul, icône de la barre pleine tant qu'il est ouvert) ; fenêtre Réseau D4 en trois onglets (Wi-Fi, Filaire, VPN), cartes de réglages et sous-page par profil, validée à l'écran le 2026-11-01 ; **VPN minimal** (liste et interrupteur), le reste en L2-51 ; `nm-applet` retiré (sa ligne de `session.toml` passe en `retires`, son unité est supprimée) ; `nm-connection-editor` reste le recours |
 | L2-12 | B | Écrit | Indicateur audio et son popover — volume, sorties ; niveau du micro numérique, qui sature à 100 % (relevé du 2026-10-15, D38) |
 | L2-13 | B | Écrit | Indicateur d'énergie et son popover |
-| L2-14 | B | Écrit | Indicateur Bluetooth et son popover |
+| L2-14 | B | Écrit | Indicateur Bluetooth et son popover — **fait (D107, D108), recette validée à l'écran le 2026-11-03** : popover copié du popover réseau, bascule de la radio, « Mes appareils » (connecter, déconnecter, oublier par le chevron), « Appareils à proximité » (recherche, appairage sans code, confiance puis connexion), appareils anonymes masqués, préfixe « LE- » masqué, voisins à hauteur fixe ; appairage par `dunei-bluetooth-appairer` (agent `NoInputNoOutput`, transport `bredr` pour l'audio, profil audio attendu) ; « Connecté » exige la sortie PipeWire d'un appareil audio ; popovers de la barre exclusifs et fermés 1,5 s après le départ de la souris |
 | L2-15 | B | Écrit | Zone d'état des applications tierces |
 | L2-16 | B | Écrit | Lanceur — voile, flou par instantané, focus clavier ; touche `SUPER + R`, tenue par wofi au lot 1 |
 | L2-17 | B | Écrit | Sélecteur de fenêtres — vignettes en neutre pur |
@@ -308,6 +308,8 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L2-53 | B | Écrit | Recherche partagée — la relance du balayage Wi-Fi (« nmcli device wifi rescan », l'indicateur d'activité et sa borne `motion.delays.scan`), aujourd'hui écrite deux fois, dans le popover réseau et dans la page Wi-Fi de la fenêtre, passe dans `Jonction`, déjà partagée entre eux (relecture finale de L2-11) |
 | L2-54 | B | Écrit | Saisie IPv4 protégée des relectures — `FicheProfil.restaurer()` remet chaque contrôle sur les réglages lus et peut écraser l'adresse, la passerelle ou les DNS en cours de saisie quand une relecture arrive ; la saisie non validée doit survivre (relecture finale de L2-11) |
 | L2-55 | B | Écrit | Rangées du popover réseau au clavier — les rangées du popover (réseaux, actions) doivent suivre la bible, « Clavier » : tabulation, flèches, Entrée et Espace, contour de focus venu du clavier seulement (relecture finale de L2-11) |
+| L2-56 | B | Écrit | Animations de passage d'un popover de la barre à l'autre — demande de Nicolas à la recette de L2-14 (2026-11-03) : l'exclusion (D108) ferme l'un et ouvre l'autre sans transition |
+| L2-57 | B | Écrit | Suites du popover Bluetooth (relecture finale de L2-14) — suivi des appareils par l'ObjectModel plutôt que par un tableau reconstruit à chaque balise ; recherche partagée entre écrans (un compteur de demandes) ; voisins gelés sous le pointeur pendant la recherche ; suivi des connexions purgé à l'oubli d'un appareil ; couleur d'erreur à confronter à la bible ; `Activite` lève « Cannot read property 'phase' of null » quand sa ligne est détruite en pleine animation (journal de la coque, 2026-11-03) ; exécutable d'appairage : adresse en minuscules (chemin D-Bus introuvable), signaux INT et TERM sans nettoyage, processus survivant au rechargement de la coque (lancer en groupe), écouteurs LE Audio seuls forcés en `bredr`, micro (`audio-input-*`) jamais « connecté » faute de `bluez_output` ; tests de ces cas |
 
 ### Lot 3 — la bascule
 
@@ -317,11 +319,11 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L3-02 | A | Configuré | Portail de partage d'écran — visioconférence |
 | L3-03 | A | Configuré | Portail de sélection de fichiers |
 | L3-04 | A | Configuré | Portail d'apparence — teinte aux applications en bac à sable |
-| L3-05 | A | Offert | Service Bluetooth — vérification ; y éprouver le changement de sortie audio par un casque Bluetooth, réserve de la recette de sortie du lot 1 (D78) |
+| L3-05 | A | Offert | Service Bluetooth — vérification ; y éprouver le changement de sortie audio par un casque Bluetooth, réserve de la recette de sortie du lot 1 (D78) — le passage de la sortie audio au casque Bluetooth (Bose NC 700, appairé le 2026-11-02) est fait par WirePlumber sans réglage ; à confirmer à la recette de L2-14 |
 | L3-06 | A | Offert | Service d'impression — vérification |
 | L3-07 | A | Configuré | Service de montage des volumes amovibles |
 | L3-08 | B | Écrit | Interface de montage et d'éjection des volumes |
-| L3-09 | B | Écrit | Interface d'appairage Bluetooth |
+| L3-09 | B | Écrit | Interface d'appairage Bluetooth — l'appairage sans code (casques, enceintes, souris) est fait dans le popover (L2-14, D107) ; reste l'agent d'appairage BlueZ pour les appareils à code (clavier, téléphone), que Quickshell ne fournit pas |
 | L3-10 | B | Écrit | Interface d'agencement multi-écran |
 | L3-11 | E | Configuré | Appliquer la grille de sélection du chapitre 12 — terminal : kitty, provisoire depuis L1-18, face à Konsole, seul candidat de la famille coopérative (D52) |
 | L3-12 | E | Configuré | Gestionnaire de fichiers |
@@ -513,6 +515,9 @@ Le choix de la distribution de base et du compositeur, précédemment ouverts, s
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-12 | Version initiale, 137 éléments |
+| 1.40 | 2026-11-03 | L2-14 validé à l'écran : appairage, reconnexion automatique, exclusion et fermeture des popovers |
+| 1.39 | 2026-11-03 | L2-14 : appairage par `dunei-bluetooth-appairer` après la recette ; ajout de L2-56 (animations entre popovers) et de L2-57 (suites du popover Bluetooth) |
+| 1.38 | 2026-11-03 | L2-14 fait, en attente de recette : popover Bluetooth, popovers de la barre exclusifs et fermés au départ de la souris (D107, D108) ; L3-09 réduit à l'appairage à code ; L3-05 annoté |
 | 1.37 | 2026-11-02 | L2-50 fait : jour thématisé retiré, trois thèmes, repli d'un couple retiré (D102) |
 | 1.36 | 2026-11-02 | L1-09 : double appui du bouton marche pendant la session (D106) |
 | 1.35 | 2026-11-02 | Relecture finale de L2-11 : `nm-applet` retiré (décidé, plus à constater) ; ajout de L2-53 (recherche partagée), L2-54 (saisie IPv4 protégée des relectures) et L2-55 (rangées du popover réseau au clavier) ; recompte exact, 164 éléments ; L2-45 reçoit l'ombre non évidée de la presqu'île |

@@ -210,7 +210,8 @@ class IndicateursStatiqueTest(unittest.TestCase):
         self.assertIn("cliquable: true", qml["JourNuit.qml"])
         self.assertIn('["dunei-theme", "bascule"]', qml["JourNuit.qml"])
         cliquables = sorted(nom for nom in INDICATEURS if "cliquable: true" in qml[f"{nom}.qml"])
-        self.assertEqual(cliquables, ["JourNuit", "Reseau"])
+        self.assertEqual(cliquables, ["Bluetooth", "JourNuit", "Reseau"])
+        self.assertRegex(qml["Bluetooth.qml"], r"onClicked:\s*ouvert\s*=\s*!ouvert")
         # Un clic bascule « ouvert », que la barre reporte sur le PopoverReseau (voir test_popover_accroche) ;
         # l'icône vient du singleton.
         self.assertRegex(qml["Reseau.qml"], r"onClicked:\s*ouvert\s*=\s*!ouvert")
@@ -223,6 +224,13 @@ class IndicateursStatiqueTest(unittest.TestCase):
         self.assertRegex(barre, r"PopoverReseau \{\s*id: popoverReseau\s*ancre: reseau\s*associees: \[barre\]\s*"
                                 r"onFerme: reseau\.ouvert = false")
         self.assertIn("onOuvertChanged: popoverReseau.ouvert = ouvert", barre)
+
+    def test_popover_bluetooth_accroche(self):
+        # Même accroche que le popover réseau (voir test_popover_accroche), sous l'indicateur Bluetooth.
+        barre = self.qml()["Barre.qml"]
+        self.assertRegex(barre, r"PopoverBluetooth \{\s*id: popoverBluetooth\s*ancre: bluetooth\s*associees: \[barre\]\s*"
+                                r"onFerme: bluetooth\.ouvert = false")
+        self.assertIn("onOuvertChanged: popoverBluetooth.ouvert = ouvert", barre)
 
     def test_reseau_disparait_sans_materiel(self):
         # Ni carte ni filaire : l'icône est vide, donc l'élément (sans icône, image ni texte) est invisible.
@@ -302,22 +310,25 @@ class BarreStructureTest(unittest.TestCase):
         self.assertIn('color: "transparent"', self.barre)
         self.assertIn("WlrKeyboardFocus.None", self.barre)
 
-    def test_masque_ne_couvre_que_jour_nuit_et_reseau(self):
-        masque = re.search(r"mask:\s*Region\s*\{([^{}]*)Region\s*\{([^{}]*)\}\s*\}", self.barre)
+    def test_masque_ne_couvre_que_les_cliquables(self):
+        masque = re.search(r"mask:\s*Region\s*\{([^{}]*)Region\s*\{([^{}]*)\}\s*Region\s*\{([^{}]*)\}\s*\}", self.barre)
         self.assertIsNotNone(masque)
         regions = masque.groups()
-        # Deux régions : l'interrupteur et l'indicateur réseau, chacune suivant sa position dans la rangée.
-        self.assertEqual(len(regions), 2)
+        # Trois régions : l'interrupteur, l'indicateur réseau et l'indicateur Bluetooth, chacune suivant sa position
+        # dans la rangée.
+        self.assertEqual(len(regions), 3)
         self.assertNotRegex(self.barre, r"\bitem:")
         # Une Region qui nomme un item ne suit que ses déplacements dans son parent : le masque se calcule par
         # rangée, pour suivre aussi le glissement de la rangée quand une icône apparaît à droite (D100).
-        for corps, nom in zip(regions, ("jourNuit", "reseau")):
+        for corps, nom in zip(regions, ("jourNuit", "reseau", "bluetooth")):
             self.assertRegex(corps, rf"x:\s*rangee\.x\s*\+\s*droite\.x\s*\+\s*{nom}\.x\b")
             self.assertRegex(corps, rf"y:\s*rangee\.y\s*\+\s*droite\.y\s*\+\s*{nom}\.y\b")
             self.assertRegex(corps, rf"height:\s*{nom}\.height\b")
         self.assertRegex(regions[0], r"width:\s*jourNuit\.width\b")
         # Invisible (matériel absent), l'indicateur garde sa largeur : le masque ne doit alors rien couvrir.
         self.assertRegex(regions[1], r"width:\s*reseau\.visible\s*\?\s*reseau\.width\s*:\s*0\b")
+        self.assertRegex(regions[2], r"width:\s*bluetooth\.visible\s*\?\s*bluetooth\.width\s*:\s*0\b")
+        self.assertRegex(self.barre, r"Bluetooth\s*\{\s*id:\s*bluetooth\b")
         self.assertRegex(self.barre, r"JourNuit\s*\{\s*id:\s*jourNuit\b")
         self.assertRegex(self.barre, r"Reseau\s*\{\s*id:\s*reseau\b")
         self.assertRegex(self.barre, r"RowLayout\s*\{\s*id:\s*rangee\b")

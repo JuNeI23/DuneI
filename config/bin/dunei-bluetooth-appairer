@@ -1,0 +1,86 @@
+#!/bin/sh
+# dunei-bluetooth-appairer — appaire, marque de confiance et connecte un appareil Bluetooth (L2-14, D107).
+# Rôle : Quickshell.Bluetooth appelle Pair() sans agent d'appairage, ce que BlueZ refuse (« Authentication Rejected »),
+# et ne sait pas choisir le transport : un appareil double (classique et LE), revu par ses annonces LE, est alors
+# appairé en LE et sa connexion audio échoue. Ce script ouvre une session bluetoothctl qui enregistre un agent
+# NoInputNoOutput (appareils sans code) comme agent par défaut, le temps de l'appairage seulement, recherche avec le
+# filtre de transport donné, appaire, puis marque de confiance (reconnexion automatique) et connecte. L'appairage ouvre
+# déjà une liaison radio : « Connected » est vrai avant que l'audio soit monté. En bredr (appareil audio), le succès
+# exige donc l'audio : la commande des médias connectée (MediaControl1.Connected) ou un flux monté (un objet de
+# transport « sepN/fdM » sous l'appareil) ; connect est relancé, trois fois au plus. La confiance est posée avant
+# l'appairage : un appareil de confiance n'a aucun service à faire autoriser par l'agent, qui sinon lirait la ligne
+# suivante comme sa réponse. Chaque sonde est bornée, pour qu'un bluetoothd muet ne bloque pas le script.
+# Entrées : adresse, l'adresse MAC ; transport, « auto », « bredr » (Bluetooth classique, pour l'audio) ou « le ».
+#   DUNEI_BT_RECHERCHE : secondes de recherche avant l'appairage (6) ; DUNEI_BT_DELAI : borne en secondes de l'attente
+#   de l'appairage (20) ; DUNEI_BT_CONNEXION : borne de chacune des trois attentes de connexion (10) ;
+#   DUNEI_BT_PAS : intervalle de sondage en secondes (0,5).
+# Sortie : code 0 si l'appareil est appairé et connecté.
+# Erreurs : code 1 et « Appairage impossible » (refus, appareil à code, hors de portée) ; code 2 et « Connexion
+#   impossible » (appairé mais non connecté) ; code 64 et l'usage pour des arguments invalides.
+# Dépendances : bluetoothctl (bluez-utils), busctl (systemd), timeout (coreutils), grep, tr, date, sleep, mktemp.
+adresse=$1
+transport=$2
+usage() { echo "usage : dunei-bluetooth-appairer <adresse> <auto|bredr|le>" >&2; exit 64; }
+printf '%s\n' "$adresse" | grep -Eqx '([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}' || usage
+case "$transport" in auto|bredr|le) ;; *) usage ;; esac
+recherche=${DUNEI_BT_RECHERCHE:-6}
+delai=${DUNEI_BT_DELAI:-20}
+connexion=${DUNEI_BT_CONNEXION:-10}
+pas=${DUNEI_BT_PAS:-0.5}
+
+# attendre — relance une sonde jusqu'à ce qu'elle réussisse.
+# Entrées : borne, en secondes ; la commande de la sonde et ses arguments. Sortie : code 0 dès qu'elle réussit, 1 une
+# fois la borne passée.
+attendre() {
+    fin=$(($(date +%s) + $1))
+    shift
+    while [ "$(date +%s)" -le "$fin" ]; do
+        "$@" && return 0
+        sleep "$pas"
+    done
+    return 1
+}
+
+# shellcheck disable=SC2329  # Sonde appelée par attendre.
+# vrai — sonde : « bluetoothctl info » montre « <champ>: yes ». Entrée : champ, « Paired » ou « Connected ».
+vrai() { timeout 3 bluetoothctl info "$adresse" 2>/dev/null | grep -q "^[[:space:]]*$1: yes"; }
+
+# shellcheck disable=SC2329  # Sonde appelée par attendre.
+# audio — sonde : l'audio de l'appareil est monté, par sa commande des médias (AVRCP, MediaControl1) ou par un flux
+# (objet de transport sous l'appareil) ; hors bredr, la connexion suffit. Sortie : code 0 ou 1.
+# Dépendances : busctl, l'arbre d'org.bluez.
+audio() {
+    [ "$transport" = bredr ] || { vrai Connected; return; }
+    arbre=$(busctl --timeout=2 --list tree org.bluez 2>/dev/null)
+    chemin=$(printf '%s\n' "$arbre" | grep -m1 "/dev_$(printf '%s' "$adresse" | tr : _)\$")
+    [ -n "$chemin" ] || return 1
+    printf '%s\n' "$arbre" | grep -q "^$chemin/sep[0-9]*/fd[0-9]*\$" && return 0
+    busctl --timeout=2 get-property org.bluez "$chemin" org.bluez.MediaControl1 Connected 2>/dev/null | grep -q true
+}
+
+resultat=$(mktemp)
+trap 'rm -f "$resultat"' EXIT
+# Les commandes sont écrites dans la session pendant que l'agent y reste enregistré ; les sondages passent par
+# d'autres appels de bluetoothctl. Le code de l'issue revient par le fichier resultat.
+{
+    printf 'agent NoInputNoOutput\n'
+    sleep 1
+    printf 'default-agent\nmenu scan\ntransport %s\nback\nscan on\n' "$transport"
+    sleep "$recherche"
+    printf 'trust %s\npair %s\n' "$adresse" "$adresse"
+    if attendre "$delai" vrai Paired; then
+        echo 2 > "$resultat"
+        for _ in 1 2 3; do
+            printf 'connect %s\n' "$adresse"
+            if attendre "$connexion" audio; then echo 0 > "$resultat"; break; fi
+        done
+    else
+        echo 1 > "$resultat"
+    fi
+    printf 'scan off\nquit\n'
+} | bluetoothctl > /dev/null 2>&1
+
+code=$(cat "$resultat")
+[ "$code" = 1 ] && echo "Appairage impossible : $adresse" >&2
+[ "$code" = 2 ] && echo "Connexion impossible : $adresse" >&2
+exit "${code:-1}"

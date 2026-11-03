@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas
 
-Document normatif. Version 0.24. Historique en fin de document.
+Document normatif. Version 0.25. Historique en fin de document.
 
 ## Comment lire ce document
 
@@ -366,7 +366,7 @@ Les contrôles reprennent **les formes et les proportions de macOS**, à la dema
 - **Sous-page.** Un réglage dense s'ouvre sur une sous-page qui remplace la page d'onglet, avec en tête la rangée de retour « ‹ » suivie du nom de l'onglet ; Échap revient. Aucune saisie en cours n'est gardée au retour.
 - **Priorité.** Un nombre à régler reste un Compteur de la bible (champ et stepper), jamais une pastille faite pour l'occasion.
 
-**Le motif du popover de réglage rapide (D105).** Le popover de la barre (réseau, et ceux qui suivront) tient en 288 px de large et suit les popovers sobres d'inspiration : carré, sur le verre de E3 (D103). Il porte de haut en bas l'en-tête (bascule à glyphe, nom de l'élément joint, état), la liste, puis, sous un filet `material.glassLine`, les actions en texte seul, sans bouton plein. L'élément joint ne paraît que dans l'en-tête, jamais dans la liste. Un mot de passe se déplie sous sa ligne, sans plaque. Tant que le popover est ouvert, l'icône de la barre qui l'a ouvert prend l'accent et sa variante pleine.
+**Le motif du popover de réglage rapide (D105).** Le popover de la barre (réseau, et ceux qui suivront) tient en 288 px de large et suit les popovers sobres d'inspiration : carré, sur le verre de E3 (D103). Il porte de haut en bas l'en-tête (bascule à glyphe, nom de l'élément joint, état), la liste, puis, sous un filet `material.glassLine`, les actions en texte seul, sans bouton plein. L'élément joint ne paraît que dans l'en-tête, jamais dans la liste. Un mot de passe se déplie sous sa ligne, sans plaque. Tant que le popover est ouvert, l'icône de la barre qui l'a ouvert prend l'accent et sa variante pleine. **Un seul popover de la barre est ouvert à la fois**, et il se ferme quand le pointeur l'a quitté, lui et son icône, depuis `motion.delays.dismiss` (1,5 s), sauf pendant une saisie ou une action en cours (D108). Exception à l'élément joint : un appareil Bluetooth connecté reste aussi dans « Mes appareils », d'où on le déconnecte ou l'oublie ; « Oublier » se déplie sous la ligne par un chevron, en texte seul (D107).
 
 ## 8. Fenêtrage et grille
 
@@ -855,7 +855,7 @@ La distinction correcte porte sur **ce que l'overlay demande à l'utilisateur** 
 
 **Overlay d'attention** — il suspend le travail et attend une décision. Lanceur, sélecteur de fenêtres, sélecteur de bureaux, menu de déconnexion, dialogue modal, verrouillage. → Voile + flou par instantané + `overlay`. Un seul à la fois.
 
-**Overlay contextuel** — il prolonge une action en cours sans l'interrompre. Menu contextuel, popover, liste déroulante, infobulle, notification. → Ombre seule. **Ni voile ni flou.** Peut coexister avec un autre. Le flou proscrit ici est celui de l'écran ; le verre dépoli du jour, propre à la surface de l'overlay (§ 5), reste permis.
+**Overlay contextuel** — il prolonge une action en cours sans l'interrompre. Menu contextuel, popover, liste déroulante, infobulle, notification. → Ombre seule. **Ni voile ni flou.** Peut coexister avec un autre. Les popovers de la barre, eux, s'excluent entre eux (D108). Le flou proscrit ici est celui de l'écran ; le verre dépoli du jour, propre à la surface de l'overlay (§ 5), reste permis.
 
 **Placement d'un overlay contextuel.** Ancré à un élément, il se tient à un écart de `space.scale[0]` sous lui, comme sur macOS ; ouvert au point de clic, il part du point, sans écart. Il ne se retourne pas verticalement : près du bas de l'écran, il glisse. Son cadre visible reste dans l'écran au pixel près ; seule la marge transparente de son ombre peut en sortir (D88).
 
@@ -914,7 +914,7 @@ Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si 
 | Menu de déconnexion | attention | E3 | `overlay` + `interactive` | `overlay` | Action destructrice en `error`, jamais en accent |
 | Verrouillage / connexion | attention | E0 | `overlay` + `text` + `field` | `spectacle` | Registre de spectacle. Horloge en grand corps, poids léger |
 | Menu contextuel | contextuel | E3 | `surface` + `row` | `reveal` | **Ni voile ni flou** de l'écran ; verre dépoli le jour comme la nuit (D85, D103). Part du point de clic, sans écart. Aucun contour de focus sur ses rangées (D88) |
-| Popover, liste déroulante | contextuel | E3 | `surface` + `row` | `reveal` | Part de son élément déclencheur, à `space.scale[0]` sous lui ; glisse au lieu de se retourner (D88) ; popover de réglage rapide : 288 px, élément joint dans l'en-tête seulement, mot de passe sans plaque, actions en texte seul sous `glassLine`, icône de la barre à l'accent et pleine tant qu'il est ouvert (D105) |
+| Popover, liste déroulante | contextuel | E3 | `surface` + `row` | `reveal` | Part de son élément déclencheur, à `space.scale[0]` sous lui ; glisse au lieu de se retourner (D88) ; popover de réglage rapide : 288 px, élément joint dans l'en-tête seulement, mot de passe sans plaque, actions en texte seul sous `glassLine`, icône de la barre à l'accent et pleine tant qu'il est ouvert (D105) ; un seul popover de la barre à la fois, fermé 1,5 s après le départ du pointeur (D108) |
 | Infobulle | contextuel | E3 | `surface` + `text` | `reveal` | Délai de 500 ms avant apparition (`delays.tooltip`, D82). Ne prend jamais le focus |
 | Notification | contextuel | E3 | `surface` + `text` + `icon` | `reveal` | Couleurs sémantiques fixes, hors thème. Décalage limité à 5 |
 
@@ -948,3 +948,4 @@ Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si 
 | 0.22 | 2026-11-01 | Chapitre 7 : motif de la fenêtre de réglages (barre latérale à onglets, cartes, rangées, valeur copiable, sous-page) et du popover de réglage rapide ; annexe E : carte, rangée, valeur copiable, fenêtre de réglages (D105) |
 | 0.23 | 2026-11-02 | Chapitre 2 : le jour thématisé et son exception (D84) portent la mention de son retrait jusqu'au lot 4 (D102, L2-50) |
 | 0.24 | 2026-11-02 | Chapitre 2 : jour thématisé retiré (L2-50, D102) ; trois thèmes précalculés, couples retirés déclarés dans `theme.exclus`, repli sur la première famille qui offre le moment ; passage de l'échelle du jour thématisé et exception du corps de texte (D84) supprimés ; « quatre thèmes » devient « chaque thème » |
+| 0.25 | 2026-11-03 | Chapitre 7 et annexe E : popovers de la barre exclusifs et fermés au départ du pointeur (D108) ; popover Bluetooth, appareil connecté gardé dans la liste et « Oublier » par chevron (D107) |

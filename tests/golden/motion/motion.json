@@ -17,7 +17,8 @@
     "tooltip": 500,
     "scan": 6000,
     "copied": 1500,
-    "stable": 5000
+    "stable": 5000,
+    "dismiss": 1500
   },
   "periods": {
     "spinner": 1200

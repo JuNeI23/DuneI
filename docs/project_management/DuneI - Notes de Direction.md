@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas — révisée le 22 octobre 2026
 
-Version 1.35. Historique en fin de document.
+Version 1.37. Historique en fin de document.
 
 *Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent soixante-quatre lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
 
@@ -491,11 +491,32 @@ Prochaine étape : **valider L2-50 à l'écran** (planche en thématisée nuit, 
 jour), fusionner `feat/retrait-jour-thematise`, puis choisir l'élément suivant du lot 2 dans le backlog ; L2-52, le
 popover thème et luminosité, a désormais un sens fixé pour « moment ».
 
+**L2-14, popover Bluetooth (D107, D108).** Le Bluetooth avait été remis en marche en urgence le 2026-11-02 : le casque
+de Nicolas (Bose NC 700) a été appairé par `bluetoothctl`, la pile système (bluez, PipeWire, WirePlumber) étant déjà
+complète. Le popover qui suit en est l'interface : un clic sur l'icône de la barre ouvre, sous elle, la bascule de la
+radio, « Mes appareils » (connecter, déconnecter, oublier par le chevron) et « Appareils à proximité » (recherche,
+appairage sans code, puis confiance et connexion). C'est une copie adaptée du popover réseau, sans base commune, à la
+demande de Nicolas. Deux comportements rejoignent le code partagé et valent pour tous les popovers de la barre : un
+seul ouvert à la fois, et la fermeture 1,5 s après le départ de la souris, retenue pendant une saisie. L'appairage d'un
+appareil à code reste en L3-09.
+
+La recette a révélé que l'appairage par Quickshell ne marche pas : sans agent, BlueZ refuse l'authentification, et un
+appareil double (classique et LE) s'appaire en LE, sans audio. L'appairage passe donc par `dunei-bluetooth-appairer`
+(agent le temps de l'appairage, Bluetooth classique pour l'audio, profil audio attendu), et le popover ne dit un casque
+« Connecté » que si PipeWire a sa sortie. Recette validée le 2026-11-03 : radio, oubli, appairage, reconnexion
+automatique, exclusion des popovers, fermeture au départ de la souris.
+
+Prochaine étape : **choisir l'élément suivant du lot 2** dans le backlog ; L2-12 (audio) et L2-13 (énergie) suivront
+le motif du popover de réglage, L2-56 (animations entre popovers) et L2-57 (suites du popover Bluetooth) attendent leur
+tour.
+
 ## Historique des versions
 
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-10 | Version initiale |
+| 1.37 | 2026-11-03 | L2-14 validé à l'écran après les correctifs de recette (appairage par agent et transport, audio exigé) ; prochaine étape : l'élément suivant du lot 2 |
+| 1.36 | 2026-11-03 | L2-14 : popover Bluetooth, popovers de la barre exclusifs et fermés au départ de la souris (D107, D108) ; prochaine étape : sa validation à l'écran, puis l'élément suivant du lot 2 |
 | 1.35 | 2026-11-02 | L2-50 : jour thématisé retiré, trois thèmes, couples retirés dans `theme.exclus`, repli sur la première famille qui offre le moment (D102) ; prochaine étape : valider L2-50 à l'écran, puis choisir l'élément suivant du lot 2 |
 | 1.34 | 2026-11-02 | Bouton marche au double appui pendant la session (D106), après un appui fantôme hors de la garde de D99 ; prochaine étape : sa validation, puis L2-50 |
 | 1.33 | 2026-11-02 | Corrections de la relecture finale de L2-11 : recompte du backlog (164 éléments), sort de `nm-applet` tranché (retiré) |
