@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.39. Historique en fin de document.
+Version 1.40. Historique en fin de document.
 
 La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **164 éléments** répartis en **cinq lots**, sur six chantiers.
 
@@ -266,7 +266,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L2-11 | B | Écrit | Indicateur réseau et son popover ; le sort de `nm-applet`, qui passait par `session.toml` et son unité `nm-applet.service` (L1-10, D50), est décidé : il est remplacé et retiré (D40) — **fait, en attente de fusion (D103 à D105)** : popover D5 (288 px, verre de E3, réseau joint dans l'en-tête, mot de passe sans plaque, actions en texte seul, icône de la barre pleine tant qu'il est ouvert) ; fenêtre Réseau D4 en trois onglets (Wi-Fi, Filaire, VPN), cartes de réglages et sous-page par profil, validée à l'écran le 2026-11-01 ; **VPN minimal** (liste et interrupteur), le reste en L2-51 ; `nm-applet` retiré (sa ligne de `session.toml` passe en `retires`, son unité est supprimée) ; `nm-connection-editor` reste le recours |
 | L2-12 | B | Écrit | Indicateur audio et son popover — volume, sorties ; niveau du micro numérique, qui sature à 100 % (relevé du 2026-10-15, D38) |
 | L2-13 | B | Écrit | Indicateur d'énergie et son popover |
-| L2-14 | B | Écrit | Indicateur Bluetooth et son popover — **fait, en attente de recette (D107, D108)** : popover copié du popover réseau, bascule de la radio, « Mes appareils » (connecter, déconnecter, oublier par le chevron), « Appareils à proximité » (recherche, appairage sans code, confiance puis connexion), appareils anonymes masqués ; popovers de la barre exclusifs et fermés 1,5 s après le départ de la souris |
+| L2-14 | B | Écrit | Indicateur Bluetooth et son popover — **fait (D107, D108), recette validée à l'écran le 2026-11-03** : popover copié du popover réseau, bascule de la radio, « Mes appareils » (connecter, déconnecter, oublier par le chevron), « Appareils à proximité » (recherche, appairage sans code, confiance puis connexion), appareils anonymes masqués, préfixe « LE- » masqué, voisins à hauteur fixe ; appairage par `dunei-bluetooth-appairer` (agent `NoInputNoOutput`, transport `bredr` pour l'audio, profil audio attendu) ; « Connecté » exige la sortie PipeWire d'un appareil audio ; popovers de la barre exclusifs et fermés 1,5 s après le départ de la souris |
 | L2-15 | B | Écrit | Zone d'état des applications tierces |
 | L2-16 | B | Écrit | Lanceur — voile, flou par instantané, focus clavier ; touche `SUPER + R`, tenue par wofi au lot 1 |
 | L2-17 | B | Écrit | Sélecteur de fenêtres — vignettes en neutre pur |
@@ -515,6 +515,7 @@ Le choix de la distribution de base et du compositeur, précédemment ouverts, s
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-12 | Version initiale, 137 éléments |
+| 1.40 | 2026-11-03 | L2-14 validé à l'écran : appairage, reconnexion automatique, exclusion et fermeture des popovers |
 | 1.39 | 2026-11-03 | L2-14 : appairage par `dunei-bluetooth-appairer` après la recette ; ajout de L2-56 (animations entre popovers) et de L2-57 (suites du popover Bluetooth) |
 | 1.38 | 2026-11-03 | L2-14 fait, en attente de recette : popover Bluetooth, popovers de la barre exclusifs et fermés au départ de la souris (D107, D108) ; L3-09 réduit à l'appairage à code ; L3-05 annoté |
 | 1.37 | 2026-11-02 | L2-50 fait : jour thématisé retiré, trois thèmes, repli d'un couple retiré (D102) |
