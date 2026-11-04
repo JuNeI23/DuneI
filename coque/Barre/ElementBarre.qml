@@ -36,8 +36,8 @@ T.AbstractButton {
     implicitWidth: rangee.implicitWidth
     implicitHeight: 24
 
-    // ESSAI JETABLE (lot de mouvement) : l'icône descend de 3 px tant que son menu est ouvert ; au clic et à l'ouverture,
-    // la couleur suit le ressort plus souple d'overlay.
+    // L'icône descend de 3 px tant que son menu est ouvert ; au clic et à l'ouverture, la couleur suit un ressort plus
+    // souple.
     Ressort { id: abaisse; seuil: 0.02; transition: "reveal"; cible: element.ouvert ? 1 : 0 }
 
     ColorSpring {

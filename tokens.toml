@@ -318,7 +318,7 @@ inset_shadow_depth = 4           # px logiques — profondeur de l'ombre intéri
 # Verre dépoli des surfaces de la coque (L2-04). Hyprland n'a qu'un thème : flou et règles de calque
 # ne varient pas avec le moment ; seules les opacités du verre, lues par la coque, le peuvent.
 [glass]
-namespaces = ["dunei-barre", "dunei-attention", "dunei-presquile"]   # calques de la coque floutés
+namespaces = ["dunei-barre", "dunei-attention", "dunei-presquile", "dunei-popovers"]   # calques de la coque floutés
 xray = ["dunei-barre"]       # flou du seul fond ; jamais un calque qui porte de l'E3
 ignore_alpha = 0.58          # > shade_opacity et scrim (jamais floutés), < opacité minimale du verre (0,60, D103)
 blur_size = 8

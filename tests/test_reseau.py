@@ -433,6 +433,8 @@ class PopoverTest(EssaiCoque, unittest.TestCase):
         p = json.loads(self.ipc("puisLire", "choisir", "Inconnu"))
         self.assertEqual(p["deplie"], "Inconnu")
         self.ipc("saisir", self.SECRET)
+        self.ipc("reveler")
+        self.assertTrue(self.panneau()["revele"])
         self.ipc("remplir")
         # Les lignes ajoutées s'ouvrent en s'étirant : la liste ne peut défiler qu'une fois assez haute.
         fin = time.monotonic() + DELAI
@@ -446,6 +448,8 @@ class PopoverTest(EssaiCoque, unittest.TestCase):
         # Dépliée de nouveau tout de suite, la ligne ne garde rien de la saisie précédente.
         p = json.loads(self.ipc("puisLire", "choisir", "Inconnu"))
         self.assertEqual((p["deplie"], p["saisie"]), ("Inconnu", 0))
+        # Le mot de passe se ressaisit masqué : l'œil ne reste pas ouvert d'une ouverture à l'autre.
+        self.assertFalse(p["revele"])
 
     def test_reinitialiser_ne_coupe_pas_une_connexion(self):
         # Une connexion suivie n'est ni annulée ni oubliée : le popover reste retenu et rien n'est déconnecté.

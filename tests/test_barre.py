@@ -218,19 +218,23 @@ class IndicateursStatiqueTest(unittest.TestCase):
         self.assertIn("EtatReseau.icone", qml["Reseau.qml"])
 
     def test_popover_accroche(self):
-        # Le popover du réseau est ancré sous l'indicateur ; « ouvert » s'affecte dans les deux sens, et la barre est
-        # associée à sa prise du clavier pour qu'un clic sur l'indicateur le ferme sans le rouvrir.
+        # Le popover du réseau est hébergé par la fenêtre des popovers et ancré sous l'indicateur ; « ouvert » s'affecte
+        # dans les deux sens. La barre est associée à la prise du clavier par l'hôte (voir test_hote_accroche).
         barre = self.qml()["Barre.qml"]
-        self.assertRegex(barre, r"PopoverReseau \{\s*id: popoverReseau\s*ancre: reseau\s*associees: \[barre\]\s*"
+        self.assertRegex(barre, r"PopoverReseau \{\s*id: popoverReseau\s*heberge: true\s*ancre: reseau\s*"
                                 r"onFerme: reseau\.ouvert = false")
         self.assertIn("onOuvertChanged: popoverReseau.ouvert = ouvert", barre)
 
     def test_popover_bluetooth_accroche(self):
         # Même accroche que le popover réseau (voir test_popover_accroche), sous l'indicateur Bluetooth.
         barre = self.qml()["Barre.qml"]
-        self.assertRegex(barre, r"PopoverBluetooth \{\s*id: popoverBluetooth\s*ancre: bluetooth\s*associees: \[barre\]\s*"
+        self.assertRegex(barre, r"PopoverBluetooth \{\s*id: popoverBluetooth\s*heberge: true\s*ancre: bluetooth\s*"
                                 r"onFerme: bluetooth\.ouvert = false")
         self.assertIn("onOuvertChanged: popoverBluetooth.ouvert = ouvert", barre)
+
+    def test_hote_accroche(self):
+        # Une seule fenêtre hôte par barre, pour ses deux popovers.
+        self.assertRegex(self.qml()["Barre.qml"], r"HotePopovers \{\s*barre: barre\s*popovers: \[popoverReseau, popoverBluetooth\]")
 
     def test_reseau_disparait_sans_materiel(self):
         # Ni carte ni filaire : l'icône est vide, donc l'élément (sans icône, image ni texte) est invisible.
@@ -404,3 +408,396 @@ class BarreStructureTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class HoteStatiqueTest(unittest.TestCase):
+    """La fenêtre hôte des popovers, qui ne se charge pas sous offscreen, et le retrait de l'essai jetable."""
+
+    BARRE = ROOT / "coque" / "Barre"
+
+    def lire(self, nom: str) -> str:
+        """Texte d'un fichier du module Barre. Entrée : nom. Sortie : texte. Erreurs : OSError s'il manque."""
+        return (self.BARRE / nom).read_text(encoding="utf-8")
+
+    def test_fenetre(self):
+        # Calque à lui, sans zone réservée, à une ligne au repos (D109), au clavier seulement popover ouvert.
+        hote = self.lire("HotePopovers.qml")
+        for ligne in ('WlrLayershell.namespace: "dunei-popovers"', "exclusionMode: ExclusionMode.Ignore",
+                      "WlrLayershell.layer: WlrLayer.Overlay", 'color: "transparent"',
+                      "anchors { top: true; left: true; right: true }",
+                      "WlrLayershell.keyboardFocus: courant ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None",
+                      "implicitHeight: deploye ? (screen?.height ?? 0) : 1"):
+            self.assertIn(ligne, hote)
+
+    def test_masque_vide_sans_courant(self):
+        # Les clics traversent dès qu'ouvert est faux, sans attendre la fin de la fermeture du cadre.
+        hote = self.lire("HotePopovers.qml")
+        self.assertRegex(hote, r"mask: Region \{[^}]*width: hote\.courant \? [^}]*height: hote\.courant \? ")
+
+    def test_prise_du_clavier(self):
+        # La barre partage la prise : un clic sur une autre icône passe à son popover sans fermeture parasite.
+        hote = self.lire("HotePopovers.qml")
+        self.assertRegex(hote, r"HyprlandFocusGrab \{\s*windows: hote\.barre \? \[hote, hote\.barre\] : \[hote\]\s*"
+                               r"active: hote\.courant !== null\s*onCleared: if \(hote\.courant\) hote\.courant\.ouvert = false")
+
+    def test_aucun_nombre_de_mouvement(self):
+        # Hors commentaires, seuls 0, 1 et 2 s'écrivent (indices, ligne de repos, deux retraits) : tout vient de Theme.
+        for nom in ("HotePopovers.qml", "CadrePopovers.qml"):
+            code = re.sub(r"//.*", "", self.lire(nom))
+            self.assertEqual([n for n in re.findall(r"(?<![\w.])\d+(?:\.\d+)?", code) if n not in ("0", "1", "2")], [], nom)
+
+    def test_cadre_lit_les_valeurs_de_mouvement(self):
+        cadre = self.lire("CadrePopovers.qml")
+        for valeur in ("rest_threshold_px", "passage_content_at", 'transition: "overlay"', 'nature: "fondu"'):
+            self.assertIn(valeur, cadre)
+
+    def test_types_declares(self):
+        qmldir = self.lire("qmldir")
+        self.assertIn("HotePopovers 1.0 HotePopovers.qml", qmldir)
+        self.assertIn("CadrePopovers 1.0 CadrePopovers.qml", qmldir)
+
+    def test_overlay_ne_cite_pas_l_hote(self):
+        # La primitive ignore la fenêtre qui l'héberge : elle reste réutilisable hors de la barre.
+        code = re.sub(r"//.*", "", (ROOT / "coque" / "Composants" / "Overlay.qml").read_text(encoding="utf-8"))
+        self.assertNotIn("HotePopovers", code)
+
+    def test_regle_de_calque(self):
+        self.assertIn('"^dunei-popovers$"', (ROOT / "generated" / "hyprland-layers.lua").read_text(encoding="utf-8"))
+
+    def test_essai_jetable_retire(self):
+        # L'essai validé à l'écran ne laisse derrière lui ni commande de test, ni mesure, ni parcours d'arbre.
+        for chemin in (ROOT / "coque").rglob("*.qml"):
+            if "essai" in chemin.parts:
+                continue
+            texte = chemin.read_text(encoding="utf-8")
+            for reste in ("essaiBarre", "ESSAI JETABLE", "MESURE", "voiler(", "t0 ="):
+                self.assertNotIn(reste, texte, chemin)
+
+
+@unittest.skipUnless(QS, "Quickshell requis")
+class HoteTest(EssaiCoque, unittest.TestCase):
+    """Le chemin hébergé d'Overlay et le cadre des popovers, éprouvés dans une fenêtre offscreen.
+
+    Le contenu est factice ; les clics et les touches sont synthétisés dans la coque d'essai et n'atteignent pas le
+    bureau. Formes attendues : le retrait de 4 px de chaque côté du contenu, a sous son ancre, b serré à 8 px du bord.
+    """
+
+    essai = ESSAI / "hote"
+    teintes = (55,)
+    environnement = {"QT_QPA_PLATFORM": "offscreen"}
+    FERME_A = {"gauche": 600, "droite": 628, "hauteur": 0}
+    OUVERT_A = {"gauche": 600, "droite": 808, "hauteur": 308}
+    OUVERT_B = {"gauche": 704, "droite": 992, "hauteur": 158}
+    OUVERT_C = {"gauche": 100, "droite": 228, "hauteur": 408}
+
+    def setUp(self):
+        super().setUp()
+        self.installer(55)
+        self.lancer(self.dir)
+        self.attendre("essai : prêt true")
+
+    def ipc(self, fonction: str, *args) -> str:
+        """Appelle une fonction de la cible « hote ». Entrées : fonction, args (booléens en true/false).
+
+        Sortie : la sortie standard. Erreurs : CalledProcessError si l'appel échoue. Dépendances : qs.
+        """
+        texte = [str(a).lower() if isinstance(a, bool) else str(a) for a in args]
+        return subprocess.run([QS, "ipc", "--pid", str(self.proc.pid), "call", "hote", fonction, *texte],
+                              check=True, capture_output=True, text=True, timeout=DELAI).stdout.strip()
+
+    def etat(self) -> dict:
+        """Relevé de la coque d'essai, décodé. Sortie : dictionnaire. Dépendances : ipc."""
+        return json.loads(self.ipc("etat"))
+
+    def ouvrir(self, nom: str, valeur: bool = True) -> dict:
+        """Ouvre ou ferme un Overlay. Entrées : nom, valeur. Sortie : l'état lu dans la même passe. Dépendances : ipc."""
+        return json.loads(self.ipc("ouvrir", nom, valeur))
+
+    def jusqua(self, condition, message: str = "") -> dict:
+        """Attend qu'une condition sur l'état soit vraie.
+
+        Entrées : condition, fonction de l'état ; message, ajouté à l'échec. Sortie : l'état qui la satisfait.
+        Erreurs : échec du test après DELAI, avec le dernier état et le journal. Dépendances : etat.
+        """
+        fin = time.monotonic() + DELAI
+        while True:
+            e = self.etat()
+            if condition(e):
+                return e
+            if time.monotonic() > fin:
+                self.fail(f"{message} : {e}\n{self.journal()}")
+            time.sleep(0.02)
+
+    def panneaux_prets(self):
+        """Attend la construction asynchrone des trois panneaux. Sortie : l'état. Dépendances : jusqua."""
+        return self.jusqua(lambda e: set(e["panneaux"]) == {"a", "b", "c", "e"}, "panneaux non construits")
+
+    def forme_atteinte(self, forme: dict, nom: str) -> dict:
+        """Attend que le cadre ait pris une forme et que le panneau nommé soit plein.
+
+        Entrées : forme ; nom, panneau affiché. Sortie : l'état. Erreurs : échec après DELAI. Dépendances : jusqua.
+        """
+        return self.jusqua(lambda e: e["cadre"] == forme and e["panneaux"][nom]["contenu"] == 1, f"forme {forme}")
+
+    def ferme_au_repos(self) -> dict:
+        """Attend que le cadre soit entièrement refermé. Sortie : l'état. Dépendances : jusqua."""
+        return self.jusqua(lambda e: not e["deploye"], "cadre encore déployé")
+
+    def sans_erreur(self):
+        """Vérifie que rien d'anormal n'a atteint le journal. Dépendances : journal."""
+        for erreur in ("TypeError", "ReferenceError", "Unable to assign", "Cannot read", "is not a function"):
+            self.assertNotIn(erreur, self.journal())
+
+    def test_overlay_non_heberge_inchange(self):
+        # Un Overlay ordinaire crée toujours sa fenêtre à l'ouverture, la détruit à la fermeture et échappe au cadre.
+        self.panneaux_prets()
+        self.ouvrir("ordinaire")
+        self.jusqua(lambda e: e["ordinaire"]["fenetre"], "fenêtre du contextuel ordinaire absente")
+        e = self.etat()
+        self.assertEqual((e["registre"], e["courant"], e["deploye"]), (None, None, False))
+        self.ouvrir("ordinaire", False)
+        self.jusqua(lambda e: not e["ordinaire"]["fenetre"], "fenêtre du contextuel ordinaire restée")
+        self.sans_erreur()
+
+    def test_overlay_heberge_sans_fenetre(self):
+        # Hébergé : aucun objet dans le chargeur ; ouvert, ferme() et l'exclusion fonctionnent.
+        self.panneaux_prets()
+        e = self.ouvrir("a")
+        self.assertEqual((e["registre"], e["a"]["ouvert"], e["a"]["fenetre"]), ("a", True, False))
+        time.sleep(0.2)
+        self.assertFalse(self.etat()["a"]["fenetre"])
+        e = self.ouvrir("b")
+        self.assertEqual((e["registre"], e["a"]["ouvert"], e["b"]["ouvert"]), ("b", False, True))
+        self.attendre("essai : ferme a")
+        e = self.ouvrir("b", False)
+        self.assertEqual((e["registre"], e["b"]["ouvert"]), (None, False))
+        self.attendre("essai : ferme b")
+        self.sans_erreur()
+
+    def test_repos(self):
+        # Au repos, rien ne dépasse : ni déploiement, ni cadre dessiné, ni contenu visible.
+        e = self.panneaux_prets()
+        self.assertEqual((e["courant"], e["affiche"], e["deploye"], e["cadreVisible"]), (None, None, False, False))
+        self.assertTrue(all(not p["visible"] for p in e["panneaux"].values()))
+        # Le haut du cadre est fixe, à l'écart habituel sous la barre.
+        self.assertEqual(e["cadreY"], 32)
+
+    def test_ouverture_et_fermeture(self):
+        self.panneaux_prets()
+        # Le cadre naît de l'icône, sans animation ; le contenu reste à sa place sur l'écran pendant toute l'ouverture.
+        e = self.ouvrir("a")
+        self.assertEqual(e["cadre"], self.FERME_A)
+        self.assertTrue(e["deploye"])
+        self.assertEqual(e["sens"], "in")
+        depart = e["panneaux"]["a"]["xEcran"]
+        e = self.forme_atteinte(self.OUVERT_A, "a")
+        self.assertEqual(e["panneaux"]["a"]["xEcran"], depart)
+        self.assertEqual(e["panneaux"]["a"]["xEcran"], 604)
+        self.assertEqual(e["panneaux"]["a"]["disque"], 1)
+        # À la fermeture, le déploiement dure jusqu'à la fin du retour dans l'icône, puis le cadre disparaît.
+        e = self.ouvrir("a", False)
+        self.assertEqual((e["courant"], e["affiche"], e["deploye"], e["sens"]), (None, None, True, "out"))
+        e = self.ferme_au_repos()
+        self.assertEqual((e["cadre"], e["cadreVisible"]), (self.FERME_A, False))
+        self.sans_erreur()
+
+    def test_reinitialisation_une_fois_fermee(self):
+        # Jamais pendant que le contenu est encore visible : seulement quand il a fini de s'effacer.
+        self.panneaux_prets()
+        self.ouvrir("a")
+        self.forme_atteinte(self.OUVERT_A, "a")
+        e = self.ouvrir("a", False)
+        self.assertEqual(e["panneaux"]["a"]["remises"], 0)
+        # Le cadre refermé, plus rien ne se voit : la traîne du fondu n'a pas à être attendue, et une seule remise suffit.
+        e = self.ferme_au_repos()
+        self.assertEqual(e["panneaux"]["a"]["remises"], 1)
+        e = self.jusqua(lambda e: not e["panneaux"]["a"]["visible"], "contenu encore visible")
+        self.assertEqual(e["panneaux"]["a"]["remises"], 1)
+        self.assertEqual((e["panneaux"]["b"]["remises"], e["panneaux"]["c"]["remises"]), (0, 0))
+
+    def test_passage(self):
+        # Le cadre glisse sans se refermer ; le nouveau contenu attend 65 % du trajet ; l'ancien disque reste plein
+        # jusqu'à être recouvert ; le nouveau est au-dessus de l'ancien.
+        self.panneaux_prets()
+        self.ouvrir("a")
+        depuis = self.forme_atteinte(self.OUVERT_A, "a")["cadre"]
+        self.ipc("marquer")
+        e = self.ouvrir("b")
+        self.assertEqual((e["affiche"], e["passage"], e["sens"]), ("b", True, "in"))
+        self.assertEqual(e["panneaux"]["b"]["contenu"], 0)
+        self.assertEqual(e["panneaux"]["a"]["remises"], 0)
+        self.assertGreater(e["panneaux"]["b"]["z"], e["panneaux"]["a"]["z"])
+        # Pendant tout le passage, l'ancien disque ne bouge pas tant que le nouveau n'est pas plein.
+        fin = time.monotonic() + DELAI
+        while (e := self.etat())["panneaux"]["b"]["contenu"] < 1 and time.monotonic() < fin:
+            if e["panneaux"]["b"]["contenu"] < 0.99:
+                self.assertEqual(e["panneaux"]["a"]["disque"], 1, e)
+                self.assertTrue(e["panneaux"]["a"]["visible"], e)
+            time.sleep(0.005)
+        e = self.jusqua(lambda e: e["cadre"] == self.OUVERT_B and e["panneaux"]["a"]["disque"] == 0, "passage inachevé")
+        # Le cadre ne s'est jamais refermé, et le nouveau contenu n'a commencé qu'après 65 % du trajet.
+        self.assertGreater(e["hauteurMin"], 100)
+        ecart = lambda f, g: max(abs(f[k] - g[k]) for k in f)
+        self.assertLessEqual(ecart(e["premierFondu"]["b"], self.OUVERT_B) / ecart(depuis, self.OUVERT_B), 0.35)
+        self.assertGreater(ecart(e["premierFondu"]["b"], self.OUVERT_B), 0)
+        # L'ancien contenu, éteint, n'est remis à neuf qu'une fois, et seulement maintenant.
+        e = self.jusqua(lambda e: not e["panneaux"]["a"]["visible"], "ancien contenu encore visible")
+        self.assertEqual(e["panneaux"]["a"]["remises"], 1)
+        self.sans_erreur()
+
+    def test_passage_interrompu(self):
+        # Une troisième icône repart de la forme courante, sans file d'attente, et l'ancien disque tient jusqu'au bout.
+        self.panneaux_prets()
+        self.ouvrir("a")
+        self.forme_atteinte(self.OUVERT_A, "a")
+        self.ouvrir("b")
+        time.sleep(0.03)
+        e = self.ouvrir("c")
+        self.assertEqual((e["affiche"], e["registre"], e["b"]["ouvert"]), ("c", "c", False))
+        self.assertNotEqual(e["cadre"], self.OUVERT_C)
+        self.assertEqual(e["panneaux"]["a"]["disque"], 1)
+        e = self.forme_atteinte(self.OUVERT_C, "c")
+        e = self.jusqua(lambda e: not e["panneaux"]["a"]["visible"] and not e["panneaux"]["b"]["visible"], "anciens visibles")
+        self.assertEqual((e["panneaux"]["a"]["remises"], e["panneaux"]["c"]["remises"]), (1, 0))
+        self.sans_erreur()
+
+    def test_fermeture_pendant_un_passage(self):
+        # Fermé en plein passage : rien ne reste retenu et une ouverture suivante part de l'icône, sans passage.
+        self.panneaux_prets()
+        self.ouvrir("a")
+        self.forme_atteinte(self.OUVERT_A, "a")
+        self.ouvrir("b")
+        e = self.ouvrir("b", False)
+        self.assertEqual((e["passage"], e["affiche"]), (False, None))
+        e = self.ferme_au_repos()
+        self.jusqua(lambda e: all(not p["visible"] for p in e["panneaux"].values()), "contenu resté visible")
+        e = self.ouvrir("c")
+        self.assertEqual((e["passage"], e["panneaux"]["a"]["disque"], e["panneaux"]["b"]["disque"]), (False, 0, 0))
+        self.forme_atteinte(self.OUVERT_C, "c")
+
+    def test_passage_sans_trajet(self):
+        # Sans trajet réel, le contenu apparaît aussitôt, et l'ancien disque tient quand même jusqu'à être recouvert.
+        self.panneaux_prets()
+        self.ouvrir("a")
+        self.forme_atteinte(self.OUVERT_A, "a")
+        e = self.ouvrir("e")
+        self.assertEqual((e["affiche"], e["passage"], e["panneaux"]["a"]["disque"]), ("e", False, 1))
+        self.forme_atteinte(self.OUVERT_A, "e")
+        self.jusqua(lambda e: e["panneaux"]["a"]["disque"] == 0, "ancien disque resté plein")
+
+    def test_reouverture_pendant_la_fermeture(self):
+        # Rouvert en plein retour : le cadre repart de sa forme courante, et le contenu retrouve le sien, sans remise à neuf.
+        self.panneaux_prets()
+        self.ouvrir("a")
+        self.forme_atteinte(self.OUVERT_A, "a")
+        self.ouvrir("a", False)
+        time.sleep(0.03)
+        e = self.ouvrir("a")
+        self.assertGreater(e["cadre"]["hauteur"], 0)
+        e = self.forme_atteinte(self.OUVERT_A, "a")
+        self.assertEqual(e["panneaux"]["a"]["remises"], 0)
+
+    def test_clic_pendant_la_construction(self):
+        # Ouvert avant que le contenu soit construit : le clic n'est pas perdu, le popover s'ouvre quand il est prêt.
+        self.panneaux_prets()
+        self.ipc("detruireHote")
+        self.jusqua(lambda e: not e["panneaux"], "panneaux non détruits")
+        self.ouvrir("a")
+        self.ipc("construire")
+        self.forme_atteinte(self.OUVERT_A, "a")
+        self.assertEqual(self.etat()["affiche"], "a")
+        self.sans_erreur()
+
+    def test_hote_detruit_popover_ouvert(self):
+        # La fenêtre hôte disparaît seule (écran débranché) : l'Overlay se ferme et le registre ne le retient pas.
+        self.panneaux_prets()
+        self.ouvrir("a")
+        self.forme_atteinte(self.OUVERT_A, "a")
+        self.ipc("detruireHote")
+        e = self.etat()
+        self.assertEqual((e["registre"], e["a"]["ouvert"]), (None, False))
+        self.attendre("essai : ferme a")
+        self.sans_erreur()
+
+    def test_barre_detruite_popover_ouvert(self):
+        # La barre entière disparaît d'un bloc : ni registre périmé, ni erreur au journal, ferme() émis.
+        self.ipc("construireBarre")
+        self.jusqua(lambda e: "d" in e["panneaux"], "panneau de la barre factice non construit")
+        self.ipc("ouvrirBarre")
+        self.jusqua(lambda e: e["registre"] == "d", "popover de la barre factice non retenu")
+        self.ipc("detruireBarre")
+        self.assertIsNone(self.etat()["registre"])
+        self.attendre("essai : ferme d")
+        self.sans_erreur()
+
+    def test_ancre_invisible_ferme(self):
+        self.panneaux_prets()
+        self.ouvrir("a")
+        self.forme_atteinte(self.OUVERT_A, "a")
+        self.ipc("cacherAncre")
+        e = self.etat()
+        self.assertEqual((e["a"]["ouvert"], e["registre"]), (False, None))
+        self.attendre("essai : ferme a")
+        # Le cadre se referme à une place valide, sur l'ancre retenue.
+        e = self.ferme_au_repos()
+        self.assertEqual(e["cadre"], self.FERME_A)
+
+    def test_survol_revient_a_faux(self):
+        # Pointeur sur le cadre : le survol est reporté ; à la fermeture, il revient à faux malgré le pointeur immobile.
+        self.panneaux_prets()
+        self.ouvrir("a")
+        self.forme_atteinte(self.OUVERT_A, "a")
+        self.ipc("survoler", True)
+        self.jusqua(lambda e: e["a"]["survol"], "survol non reporté")
+        e = self.ouvrir("a", False)
+        self.assertFalse(e["a"]["survol"])
+        self.ferme_au_repos()
+        self.assertFalse(self.etat()["a"]["survol"])
+
+    def test_survol_suit_le_passage(self):
+        # Le pointeur reste sur le cadre pendant un passage : le nouveau popover compte comme survolé d'emblée.
+        self.panneaux_prets()
+        self.ouvrir("a")
+        self.forme_atteinte(self.OUVERT_A, "a")
+        self.ipc("survoler", True)
+        self.jusqua(lambda e: e["a"]["survol"], "survol non reporté")
+        e = self.ouvrir("b")
+        self.assertEqual((e["a"]["survol"], e["b"]["survol"]), (False, True))
+
+    def test_contenu_ferme_ne_recoit_aucun_clic(self):
+        # Un contenu encore visible mais fermé (ancien pendant un passage) n'attrape rien ; le contenu ouvert, si.
+        self.panneaux_prets()
+        self.ouvrir("a")
+        self.forme_atteinte(self.OUVERT_A, "a")
+        self.ipc("cliquer", "a")
+        self.assertEqual(self.jusqua(lambda e: e["panneaux"]["a"]["clics"] == 1, "clic perdu")["panneaux"]["a"]["clics"], 1)
+        e = self.ouvrir("c")
+        self.assertTrue(e["panneaux"]["a"]["visible"])
+        self.ipc("cliquer", "a")
+        time.sleep(0.05)
+        self.assertEqual(self.etat()["panneaux"]["a"]["clics"], 1)
+        # À la fermeture, de même.
+        e = self.forme_atteinte(self.OUVERT_C, "c")
+        self.ipc("cliquer", "c")
+        self.jusqua(lambda e: e["panneaux"]["c"]["clics"] == 1, "clic perdu")
+        self.ouvrir("c", False)
+        self.ipc("cliquer", "c")
+        time.sleep(0.05)
+        self.assertEqual(self.etat()["panneaux"]["c"]["clics"], 1)
+
+    def test_echap_ferme(self):
+        self.panneaux_prets()
+        self.ouvrir("a")
+        self.forme_atteinte(self.OUVERT_A, "a")
+        self.ipc("echap")
+        e = self.jusqua(lambda e: not e["a"]["ouvert"], "Échap sans effet")
+        self.assertIsNone(e["registre"])
+        self.attendre("essai : ferme a")
+
+    def test_focus_suit_le_popover_ouvert(self):
+        self.panneaux_prets()
+        self.ouvrir("a")
+        e = self.forme_atteinte(self.OUVERT_A, "a")
+        self.assertEqual((e["panneaux"]["a"]["focus"], e["panneaux"]["b"]["focus"]), (True, False))
+        e = self.ouvrir("b")
+        self.assertEqual((e["panneaux"]["a"]["focus"], e["panneaux"]["b"]["focus"]), (False, True))

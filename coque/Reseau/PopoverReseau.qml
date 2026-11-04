@@ -177,12 +177,12 @@ Overlay {
         Component.onDestruction: if (popover.panneau === panneau) popover.panneau = null
 
         // reinitialiser — rend au contenu l'aspect d'un popover neuf : ligne de mot de passe repliée, saisie et message
-        // d'erreur effacés, liste en haut, retour visuel du balayage éteint. Une connexion suivie (enCours) n'est jamais
-        // annulée : seule la vue revient à neuf, et le popover reste retenu tant qu'elle dure.
+        // d'erreur effacés, mot de passe de nouveau masqué, liste en haut, retour visuel du balayage éteint. Une connexion
+        // suivie (enCours) n'est jamais annulée : seule la vue revient à neuf, et le popover reste retenu tant qu'elle dure.
         // Entrées : aucune. Sortie : aucune. Erreurs : aucune.
         // Dépendances : bloc, deplie, erreur, balayage, finBalayage, liste.
         function reinitialiser(): void {
-            if (bloc) bloc.secret.text = ""
+            if (bloc) { bloc.secret.text = ""; bloc.secret.revele = false }
             deplie = ""
             erreur = ""
             balayage = false

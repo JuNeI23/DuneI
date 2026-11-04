@@ -176,6 +176,7 @@ ShellRoot {
                         exclusif: porteur.item.exclusif, fermeAuDepart: porteur.item.fermeAuDepart,
                         retenu: porteur.item.retenu,
                         saisie: p.bloc ? p.bloc.secret.length : -1,
+                        revele: p.bloc ? p.bloc.secret.revele : false,
                         enCours: p.enCours !== null, defile: objet("liste").contentY,
                         fonduContenu: p.fonduContenu, fonduDisque: p.fonduDisque,
                     })
@@ -214,6 +215,8 @@ ShellRoot {
                 }
                 // reinitialiser, defiler — rendent le panneau à neuf ; font défiler la liste. Entrée : y (defiler).
                 function reinitialiser(): void { porteur.item.panneau.reinitialiser() }
+                // reveler — montre le mot de passe de la ligne dépliée, comme l'œil. Entrées : aucune. Sortie : aucune.
+                function reveler(): void { porteur.item.panneau.bloc.secret.revele = true }
                 function defiler(y: string): void { essai.trouver(porteur.item.panneau, o => o.objectName === "liste").contentY = Number(y) }
 
                 // choisir — clic sur le réseau nommé. Entrée : nom. Sortie : aucune.
