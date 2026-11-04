@@ -26,6 +26,14 @@ Item {
     property var _st: ({ x: 0, v: 0, acc: 0 })
     property var _params: null
     property bool _pret: false
+    // MESURE TEMPORAIRE de l'essai de mouvement.
+    property string mesure: ""
+    // ESSAI JETABLE : force « in » ou « out » pour que plusieurs ressorts avancent ensemble, quel que soit leur sens.
+    property string force: ""
+    property var _t: null
+    // ESSAI JETABLE : écart, en unités de la valeur, sous lequel le ressort se pose ; 0 garde le critère de physics.js.
+    property real seuil: 0
+    property var _dts: []
 
     Component.onCompleted: { _pret = true; _st = { x: cible, v: 0, acc: 0 }; _x = cible }
 
@@ -51,6 +59,7 @@ Item {
             _x = cible
             return
         }
+        _t = t
         _params = cible > _x ? t.in : t.out
         _st.x = _x
         anim.start()
@@ -59,12 +68,14 @@ Item {
     FrameAnimation {
         id: anim
         onTriggered: {
-            const r = ressort._params
+            const r = ressort.force ? ressort._t[ressort.force] : ressort._params
+            if (ressort.mesure) ressort._dts.push(frameTime * 1000)
             // Le temps d'une image est plafonné : une image très longue ne doit pas faire sauter le ressort.
             Physics.integrate(ressort._st, ressort.cible, r.mass, r.stiffness, r.dampening, Math.min(frameTime, 0.05))
-            const done = Physics.atRest(ressort._st, ressort.cible)
+            const done = Physics.atRest(ressort._st, ressort.cible) || Math.abs(ressort._st.x - ressort.cible) < ressort.seuil
             ressort._x = done ? ressort.cible : ressort._st.x
-            if (done) { ressort._st.x = ressort.cible; ressort._st.v = 0; stop() }
+            if (done) { ressort._st.x = ressort.cible; ressort._st.v = 0; stop()
+                if (ressort.mesure) { const d = ressort._dts; console.info("MESURE", ressort.mesure, "images", d.length, "total", Math.round(d.reduce((x, y) => x + y, 0)), "ms ; delta", d.map(v => Math.round(v)).join(" ")); ressort._dts = [] } }
         }
     }
 }

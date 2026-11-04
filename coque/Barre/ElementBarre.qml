@@ -36,14 +36,20 @@ T.AbstractButton {
     implicitWidth: rangee.implicitWidth
     implicitHeight: 24
 
+    // ESSAI JETABLE (lot de mouvement) : l'icône descend de 3 px tant que son menu est ouvert ; au clic et à l'ouverture,
+    // la couleur suit le ressort plus souple d'overlay.
+    Ressort { id: abaisse; seuil: 0.02; mesure: "icone"; transition: "reveal"; cible: element.ouvert ? 1 : 0 }
+
     ColorSpring {
         id: ressort
+        params: element.down || element.ouvert || abaisse.moving ? Theme.motion?.transitions.reveal.in : Theme.motion?.transitions.state.in
         target: element.down || element.ouvert ? Theme.color?.accentStandalone ?? "transparent"
               : element.cliquable && element.hovered ? Theme.texteBureauSurvol : Theme.texteBureau
     }
 
     contentItem: Row {
         id: rangee
+        transform: Translate { y: 3 * abaisse.value }
         spacing: Theme.space?.scale[0] ?? 0
 
         // Icône creuse et icône pleine superposées ; le ressort plein va de 0 (creuse) à 1 (pleine, menu ouvert).
@@ -53,7 +59,7 @@ T.AbstractButton {
             implicitWidth: element.taille
             implicitHeight: element.taille
 
-            Ressort { id: plein; transition: "state"; cible: element.ouvert && element.icone !== "" ? 1 : 0 }
+            Ressort { id: plein; seuil: 0.02; transition: "reveal"; cible: element.ouvert && element.icone !== "" ? 1 : 0 }
             Icone {
                 anchors.fill: parent
                 opacity: 1 - plein.value

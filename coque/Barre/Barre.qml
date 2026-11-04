@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
+import Quickshell.Io
 import Quickshell.Wayland
 import "../Theme"
 import "../Reseau"
@@ -99,8 +100,16 @@ PanelWindow {
     // l'ouvre et le ferme, et toute fermeture du popover (Échap, clic à l'extérieur, action) rend la main à
     // l'indicateur. La barre est associée à sa prise du clavier : un clic sur l'indicateur ne lève pas la prise et
     // ferme le popover par l'indicateur, au lieu de le fermer à l'appui puis de le rouvrir au relâchement.
+    // ESSAI JETABLE (lot de mouvement) : ouverture sans souris, pour les captures.
+    IpcHandler {
+        target: "essaiBarre"
+        function basculeReseau(): void { reseau.ouvert = !reseau.ouvert }
+        function basculeBluetooth(): void { bluetooth.ouvert = !bluetooth.ouvert }
+    }
+
     PopoverReseau {
         id: popoverReseau
+        heberge: true
         ancre: reseau
         associees: [barre]
         onFerme: reseau.ouvert = false
@@ -109,8 +118,12 @@ PanelWindow {
     // Popover du Bluetooth, accroché comme celui du réseau (voir ci-dessus).
     PopoverBluetooth {
         id: popoverBluetooth
+        heberge: true
         ancre: bluetooth
         associees: [barre]
         onFerme: bluetooth.ouvert = false
     }
+
+    // ESSAI JETABLE (lot de mouvement) : fenêtre unique des popovers.
+    HotePopovers { barre: barre; popovers: [popoverReseau, popoverBluetooth] }
 }

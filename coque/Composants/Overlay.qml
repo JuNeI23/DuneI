@@ -77,6 +77,9 @@ QtObject {
     // et son ancre, depuis motion.delays.dismiss ; retenu la suspend (saisie ou action en cours). Voir MinuterieDepart.
     property bool fermeAuDepart: false
     property bool retenu: false
+    // ESSAI JETABLE (lot de mouvement) : heberge, contenu rendu par HotePopovers ; t0, instant de l'ouverture.
+    property bool heberge: false
+    property real t0: 0
     // Pointeur sur le cadre, tenu par la fenêtre contextuelle ; remis à faux à la fermeture, quand elle est détruite.
     property bool survolCadre: false
     readonly property MinuterieDepart depart: MinuterieDepart {
@@ -156,6 +159,7 @@ QtObject {
     // fermerFactice).
     onOuvertChanged: {
         if (ouvert) {
+            t0 = Date.now()
             if (famille === "attention") ecran = ecranFocalise
             Overlays.ouvrir(overlay)
         } else if (!ouvert) {
@@ -166,7 +170,7 @@ QtObject {
     }
 
     readonly property LazyLoader chargeur: LazyLoader {
-        activeAsync: overlay.ouvert
+        activeAsync: overlay.ouvert && !overlay.heberge
         component: overlay.famille === "attention" ? overlay.fenetreAttention : overlay.fenetreContextuel
     }
 
