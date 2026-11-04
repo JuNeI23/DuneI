@@ -743,6 +743,25 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
         self.ipc("inactif", "true")
         self.assertEqual(lire()[4], st["activeMuted"]["rest"]["fill"].lower())
 
+    def test_activite_reduit(self):
+        # Mouvement réduit : l'échelle des grains est constante (1), seule l'opacité varie (spinner.rest_opacity au repos,
+        # 1 au sommet), avec les mêmes cotes, la même période et les animations toujours en marche.
+        self.installer(55)
+        (self.dir / "mouvement.json").write_text('{"reduit": true}')
+        self.lancer(self.dir)
+        self.attendre("essai : prêt true")
+        motion = self.tokens55()[1]
+        o = motion["spinner"]["rest_opacity"]
+        lire = lambda: self.valeur("activite").lower().split()
+        champs = lire()
+        self.assertEqual(champs[:2], ["true", "true,true,true"])
+        self.assertEqual(champs[6:9], [f"1/{o:g}", f"1/{o:g}", "1/1"])
+        # Arrêté à la phase 0,5 : les deux premiers grains à mi-opacité, toujours à pleine taille.
+        self.ipc("activiteEtat", "true", "false")
+        self.ipc("activitePhase", "0.5")
+        milieu = f"1/{round((1 + o) / 2, 3):g}"
+        self.assertEqual(lire()[6:9], [milieu, milieu, f"1/{o:g}"])
+
     def test_ressorts_figes(self):
         # Sobriété (D80) : le champ et le compteur ne peignent pas le fond de leur Etat, la section dépliable ni son
         # fond ni son texte. Au survol forcé, leurs ressorts restent à l'arrêt, alors que celui du fond du contrôle

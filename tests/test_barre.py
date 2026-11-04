@@ -69,9 +69,16 @@ class BarreIpc(EssaiCoque):
     essai = ESSAI
     teintes = (55,)
 
+    def preparer(self) -> None:
+        """Dernière occasion de poser un fichier dans le dossier surveillé avant le lancement ; ne fait rien ici.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : aucune.
+        """
+
     def setUp(self):
         super().setUp()
         self.installer(55)
+        self.preparer()
         self.lancer(self.dir)
         self.attendre("Theme : chargé, teinte 55")
 
@@ -176,6 +183,95 @@ class IconesTest(BarreIpc, unittest.TestCase):
 
 
 INDICATEURS = ("Horloge", "Logo", "Notifications", "Batterie", "JourNuit", "Reseau", "Vpn", "Bluetooth", "Parametres")
+
+
+class ElementBarreStatiqueTest(unittest.TestCase):
+    """Le source de l'icône de la barre ne porte aucune valeur de mouvement et choisit le bon ressort."""
+
+    def test_couleur_a_l_appui_et_au_survol(self):
+        # L'appui et l'ouverture prennent « overlay », le survol seul garde « state » (lecture du source : un appui ni un
+        # survol ne se simulent sans fenêtre).
+        element = (ROOT / "coque" / "Barre" / "ElementBarre.qml").read_text(encoding="utf-8")
+        self.assertIn("params: element.down || element.ouvert || abaisse.moving ? Theme.motion?.transitions.overlay.in"
+                      " : Theme.motion?.transitions.state.in", element)
+
+    def test_aucune_valeur_de_mouvement_dans_l_element(self):
+        # La descente et le seuil viennent de motion.json, la transition est « overlay », et le banc d'essai (3 px,
+        # seuil 0,02, « reveal ») a disparu.
+        element = re.sub(r"//.*", "", (ROOT / "coque" / "Barre" / "ElementBarre.qml").read_text(encoding="utf-8"))
+        for valeur in ("icon_travel_px", "rest_threshold_px", 'transition: "overlay"'):
+            self.assertIn(valeur, element)
+        for reste in ('"reveal"', "0.02", "3 *"):
+            self.assertNotIn(reste, element)
+
+
+class ElementBarreBase(BarreIpc):
+    """Base des tests de mouvement de l'icône de la barre, par IPC sur l'ElementBarre de la coque d'essai."""
+
+    def motion(self) -> dict:
+        """Mouvement chargé par la coque d'essai. Sortie : le contenu de motion.json. Erreurs : OSError."""
+        return json.loads((self.dir / "motion.json").read_text())
+
+    def decalage(self) -> float:
+        """Descente actuelle de l'icône, en pixels. Sortie : réel. Dépendances : appeler."""
+        return float(self.appeler("decalageElement"))
+
+    def jusqua_decalage(self, valeur: float) -> None:
+        """Attend que l'icône ait fini de descendre ou de remonter à la valeur donnée.
+
+        Entrée : valeur, décalage attendu. Sortie : aucune. Erreurs : échec du test après DELAI. Dépendances : decalage.
+        """
+        fin = time.monotonic() + DELAI
+        while abs(self.decalage() - valeur) > 1e-6:
+            self.assertLess(time.monotonic(), fin, f"décalage {self.decalage()} au lieu de {valeur}")
+            time.sleep(0.02)
+
+
+class ElementBarreTest(ElementBarreBase, unittest.TestCase):
+    """Mouvement normal : l'icône descend, la couleur suit « overlay » puis revient à « state »."""
+
+    def test_icone_descend(self):
+        # Ouvert, la rangée (icône et texte) descend de icon_travel_px, et remonte à la fermeture.
+        travel = self.motion()["popover"]["icon_travel_px"]
+        self.appeler("regler", "network-wireless-signal-good", "")
+        repos = self.decalage()
+        self.appeler("ouvrirElement", True)
+        self.jusqua_decalage(repos + travel)
+        self.appeler("ouvrirElement", False)
+        self.jusqua_decalage(repos)
+
+    def test_couleur_ressort(self):
+        # Ouvert, puis tant que l'icône remonte, la couleur suit « overlay » ; au repos (sans survol), « state ».
+        transitions = self.motion()["transitions"]
+        self.appeler("regler", "network-wireless-signal-good", "")
+        repos = self.decalage()
+        self.assertEqual(float(self.appeler("ressortCouleur")), transitions["state"]["in"]["stiffness"])
+        self.appeler("ouvrirElement", True)
+        self.assertEqual(float(self.appeler("ressortCouleur")), transitions["overlay"]["in"]["stiffness"])
+        self.appeler("ouvrirElement", False)
+        self.assertEqual(float(self.appeler("ressortCouleur")), transitions["overlay"]["in"]["stiffness"])
+        self.jusqua_decalage(repos)
+        fin = time.monotonic() + DELAI
+        while float(self.appeler("ressortCouleur")) != transitions["state"]["in"]["stiffness"]:
+            self.assertLess(time.monotonic(), fin, "la couleur n'est pas revenue au ressort « state »")
+            time.sleep(0.02)
+
+
+class ElementBarreReduitTest(ElementBarreBase, unittest.TestCase):
+    """Mouvement réduit : l'icône ne descend pas ; elle garde ses couleurs animées et son fondu."""
+
+    def preparer(self):
+        (self.dir / "mouvement.json").write_text('{"reduit": true}')
+
+    def test_icone_descend(self):
+        self.appeler("regler", "network-wireless-signal-good", "")
+        repos = self.decalage()
+        self.appeler("ouvrirElement", True)
+        for _ in range(15):
+            self.assertEqual(self.decalage(), repos)
+            time.sleep(0.02)
+        self.appeler("ouvrirElement", False)
+        self.assertEqual(self.decalage(), repos)
 
 
 class IndicateursStatiqueTest(unittest.TestCase):
@@ -471,8 +567,8 @@ class HoteStatiqueTest(unittest.TestCase):
 
 
 @unittest.skipUnless(QS, "Quickshell requis")
-class HoteTest(EssaiCoque, unittest.TestCase):
-    """Le chemin hébergé d'Overlay et le cadre des popovers, éprouvés dans une fenêtre offscreen.
+class HoteBase(EssaiCoque):
+    """Base des essais du chemin hébergé d'Overlay et du cadre des popovers, dans une fenêtre offscreen.
 
     Le contenu est factice ; les clics et les touches sont synthétisés dans la coque d'essai et n'atteignent pas le
     bureau. Formes attendues : le retrait de 4 px de chaque côté du contenu, a sous son ancre, b serré à 8 px du bord.
@@ -486,9 +582,16 @@ class HoteTest(EssaiCoque, unittest.TestCase):
     OUVERT_B = {"gauche": 704, "droite": 992, "hauteur": 158}
     OUVERT_C = {"gauche": 100, "droite": 228, "hauteur": 408}
 
+    def preparer(self) -> None:
+        """Dernière occasion de poser un fichier dans le dossier surveillé avant le lancement ; ne fait rien ici.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : aucune.
+        """
+
     def setUp(self):
         super().setUp()
         self.installer(55)
+        self.preparer()
         self.lancer(self.dir)
         self.attendre("essai : prêt true")
 
@@ -544,6 +647,10 @@ class HoteTest(EssaiCoque, unittest.TestCase):
         for erreur in ("TypeError", "ReferenceError", "Unable to assign", "Cannot read", "is not a function"):
             self.assertNotIn(erreur, self.journal())
 
+
+class HoteTest(HoteBase, unittest.TestCase):
+    """Mouvement normal : le cadre naît de l'icône, passe d'une forme à l'autre au ressort, et le verre n'est jamais estompé."""
+
     def test_overlay_non_heberge_inchange(self):
         # Un Overlay ordinaire crée toujours sa fenêtre à l'ouverture, la détruit à la fermeture et échappe au cadre.
         self.panneaux_prets()
@@ -585,6 +692,8 @@ class HoteTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(e["cadre"], self.FERME_A)
         self.assertTrue(e["deploye"])
         self.assertEqual(e["sens"], "in")
+        # Le verre n'est jamais estompé en mouvement normal : le cadre reste à pleine opacité, ouvert comme refermé.
+        self.assertEqual(e["cadreOpacite"], 1)
         depart = e["panneaux"]["a"]["xEcran"]
         e = self.forme_atteinte(self.OUVERT_A, "a")
         self.assertEqual(e["panneaux"]["a"]["xEcran"], depart)
@@ -593,6 +702,7 @@ class HoteTest(EssaiCoque, unittest.TestCase):
         # À la fermeture, le déploiement dure jusqu'à la fin du retour dans l'icône, puis le cadre disparaît.
         e = self.ouvrir("a", False)
         self.assertEqual((e["courant"], e["affiche"], e["deploye"], e["sens"]), (None, None, True, "out"))
+        self.assertEqual(e["cadreOpacite"], 1)
         e = self.ferme_au_repos()
         self.assertEqual((e["cadre"], e["cadreVisible"]), (self.FERME_A, False))
         self.sans_erreur()
@@ -855,6 +965,165 @@ class HoteTest(EssaiCoque, unittest.TestCase):
         self.assertEqual((e["panneaux"]["a"]["focus"], e["panneaux"]["b"]["focus"]), (True, False))
         e = self.ouvrir("b")
         self.assertEqual((e["panneaux"]["a"]["focus"], e["panneaux"]["b"]["focus"]), (False, True))
+
+
+class HoteReduitTest(HoteBase, unittest.TestCase):
+    """Mouvement réduit : le cadre paraît à sa forme finale et s'efface en fondu court ; le verre n'est estompé que là."""
+
+    def preparer(self):
+        (self.dir / "mouvement.json").write_text('{"reduit": true}')
+
+    def fondu_court(self, e: dict) -> bool:
+        """Vrai si le cadre est entre le transparent et le plein, donc en plein fondu. Entrée : état. Sortie : bool."""
+        return 0 < e["cadreOpacite"] < 1
+
+    def test_ouverture_posee_et_fondue(self):
+        # Le cadre est à sa forme finale dès la première image, transparent, puis plein en environ 100 ms ; sa forme
+        # ne bouge pas pendant le fondu, et le contenu ne change pas de place.
+        self.panneaux_prets()
+        e = self.ouvrir("a")
+        self.assertEqual(e["cadre"], self.OUVERT_A)
+        self.assertLess(e["cadreOpacite"], 1)
+        depart = time.monotonic()
+        formes, opacites = [], []
+        while (e := self.etat())["cadreOpacite"] < 1 and time.monotonic() - depart < DELAI:
+            formes.append(e["cadre"])
+            opacites.append(e["cadreOpacite"])
+            time.sleep(0.005)
+        duree = time.monotonic() - depart
+        self.assertEqual(e["cadre"], self.OUVERT_A)
+        self.assertTrue(all(f == self.OUVERT_A for f in formes), formes)
+        self.assertLess(duree, 0.4, f"fondu trop long : {duree:.3f} s")
+        self.assertEqual(opacites, sorted(opacites), "l'opacité ne doit que monter")
+        e = self.forme_atteinte(self.OUVERT_A, "a")
+        self.assertEqual((e["cadreOpacite"], e["panneaux"]["a"]["xEcran"]), (1, 604))
+        self.sans_erreur()
+
+    def test_fermeture_fondue_sur_place(self):
+        # À la fermeture, le cadre garde sa forme pendant son fondu, puis se replie sur l'icône, sans mouvement.
+        self.panneaux_prets()
+        self.ouvrir("a")
+        self.forme_atteinte(self.OUVERT_A, "a")
+        e = self.ouvrir("a", False)
+        self.assertEqual((e["deploye"], e["cadre"]), (True, self.OUVERT_A))
+        depart = time.monotonic()
+        vus = 0
+        while (e := self.etat())["deploye"] and time.monotonic() - depart < DELAI:
+            self.assertEqual(e["cadre"], self.OUVERT_A, e)
+            vus += self.fondu_court(e)
+            time.sleep(0.005)
+        self.assertFalse(e["deploye"], e)
+        self.assertLess(time.monotonic() - depart, 0.5)
+        self.assertGreater(vus, 0, "aucune image de fondu observée")
+        self.assertEqual((e["cadre"], e["cadreVisible"]), (self.FERME_A, False))
+        self.assertEqual(self.ferme_au_repos()["panneaux"]["a"]["remises"], 1)
+        self.sans_erreur()
+
+    def test_passage_pose_et_croise(self):
+        # Le cadre se pose à la nouvelle forme ; les contenus se croisent en fondu court ; le disque de l'ancien reste
+        # plein tant que le nouveau n'est pas plein (même règle qu'en mouvement normal).
+        self.panneaux_prets()
+        self.ouvrir("a")
+        self.forme_atteinte(self.OUVERT_A, "a")
+        e = self.ouvrir("b")
+        self.assertEqual((e["cadre"], e["affiche"]), (self.OUVERT_B, "b"))
+        depart = time.monotonic()
+        while (e := self.etat())["panneaux"]["b"]["contenu"] < 1 and time.monotonic() - depart < DELAI:
+            self.assertEqual(e["cadre"], self.OUVERT_B, e)
+            self.assertEqual(e["cadreOpacite"], 1)
+            if e["panneaux"]["b"]["contenu"] < 0.99:
+                self.assertEqual(e["panneaux"]["a"]["disque"], 1, e)
+            time.sleep(0.005)
+        self.assertLess(time.monotonic() - depart, 0.5)
+        e = self.jusqua(lambda e: not e["panneaux"]["a"]["visible"], "ancien contenu encore visible")
+        self.assertEqual(e["panneaux"]["a"]["remises"], 1)
+        self.sans_erreur()
+
+    def test_interruption_en_plein_fondu(self):
+        # Rouvrir pendant la fermeture reprend le cadre là où il est, sans saut de forme ni erreur.
+        self.panneaux_prets()
+        self.ouvrir("a")
+        self.forme_atteinte(self.OUVERT_A, "a")
+        self.ouvrir("a", False)
+        e = self.ouvrir("a")
+        self.assertEqual(e["cadre"], self.OUVERT_A)
+        e = self.forme_atteinte(self.OUVERT_A, "a")
+        self.assertEqual(e["cadreOpacite"], 1)
+        self.sans_erreur()
+
+
+class MouvementReduitStatiqueTest(unittest.TestCase):
+    """Aucun ressort de déplacement ne porte une opacité : un fondu se déclare, et seul un fondu suit « reduced »."""
+
+    COQUE = ROOT / "coque"
+    RESSORT = re.compile(r"Ressort\s*\{(?P<corps>[^{}]*)\}", re.S)
+
+    def ressorts(self):
+        """Les ressorts de la coque, hors Theme et hors coques d'essai.
+
+        Entrées : aucune. Sortie : liste de (fichier, texte du fichier, identifiant, corps du ressort).
+        Erreurs : OSError si un fichier est illisible. Dépendances : COQUE, RESSORT.
+        """
+        trouves = []
+        for chemin in sorted(self.COQUE.rglob("*.qml")):
+            if "essai" in chemin.parts or "Theme" in chemin.parts:
+                continue
+            texte = chemin.read_text(encoding="utf-8")
+            code = re.sub(r"//.*", "", texte)
+            for m in self.RESSORT.finditer(code):
+                ident = re.search(r"\bid:\s*(\w+)", m["corps"])
+                if ident:
+                    trouves.append((chemin.relative_to(self.COQUE), code, ident[1], m["corps"]))
+        return trouves
+
+    def porte_une_opacite(self, code: str, ident: str) -> bool:
+        """Vrai si la valeur du ressort alimente une opacité du même fichier.
+
+        Règle : une ligne qui mentionne « opac » (opacity, opacite…) et contient `<ident>.value`, ou bien une propriété
+        du fichier définie par `<ident>.value` (un seul rang d'indirection) dont le nom figure sur une telle ligne.
+        Limites : une opacité alimentée à travers deux propriétés intermédiaires ou une fonction, ou par un ressort
+        d'un autre fichier, n'est pas vue ; un ressort dont la valeur sert d'abord à une taille et ensuite seulement à une
+        opacité l'est (il doit alors déclarer « fondu », ou séparer les deux usages). Un faux positif se corrige en
+        séparant l'usage, jamais en assouplissant la règle.
+        Entrées : code, le fichier sans commentaires ; ident, l'identifiant du ressort. Sortie : booléen.
+        Erreurs : aucune. Dépendances : aucune.
+        """
+        lignes = code.splitlines()
+        direct = [l for l in lignes if re.search(rf"\b{ident}\.value\b", l) and re.search(r"opac", l, re.I)]
+        relais = [m[1] for l in lignes if re.search(rf"\b{ident}\.value\b", l)
+                  for m in [re.search(r"property\s+\w+\s+(\w+)\s*:", l)] if m]
+        indirect = [l for r in relais for l in lignes if re.search(r"opac", l, re.I) and re.search(rf"\b{r}\b", l)
+                    and not re.search(rf"property\s+\w+\s+{r}\b", l)]
+        return bool(direct or indirect)
+
+    def test_ressort_d_opacite_declare_fondu(self):
+        # Un ressort d'opacité déclare « nature: "fondu" » ; sinon le mouvement réduit le poserait d'un coup et le fondu
+        # exigé par la bible disparaîtrait. Contre-épreuve : on exige d'en trouver quelques-uns.
+        opacites = [(f, i) for f, code, i, corps in self.ressorts() if self.porte_une_opacite(code, i)]
+        self.assertGreaterEqual(len(opacites), 4, opacites)
+        manquants = [(f, i) for f, code, i, corps in self.ressorts()
+                     if self.porte_une_opacite(code, i) and 'nature: "fondu"' not in corps]
+        self.assertEqual(manquants, [])
+
+    def test_fondu_ne_porte_pas_de_deplacement(self):
+        # Réciproque : un ressort « fondu » ne sert ni de hauteur, ni de position, ni de largeur (il suivrait « reduced »
+        # au lieu de se poser).
+        for f, code, i, corps in self.ressorts():
+            if 'nature: "fondu"' not in corps:
+                continue
+            usages = [l for l in code.splitlines() if re.search(rf"\b{i}\.value\b", l)
+                      and re.search(r"\b(?:x|y|width|height|implicitWidth|implicitHeight)\s*:", l)
+                      and not re.search(r"opac", l, re.I)]
+            self.assertEqual(usages, [], (f, i))
+
+    def test_detection_a_des_dents(self):
+        # La règle repère un ressort d'opacité sans déclaration (faux fichier), directement et par une propriété relais.
+        directe = "Ressort { id: r; cible: 1 }\nItem { opacity: 1 - r.value }"
+        relais = "Ressort { id: r; cible: 1 }\nreadonly property real alpha: r.value\nItem { opacity: alpha }"
+        neutre = "Ressort { id: r; cible: 1 }\nItem { width: r.value }"
+        self.assertTrue(self.porte_une_opacite(directe, "r"))
+        self.assertTrue(self.porte_une_opacite(relais, "r"))
+        self.assertFalse(self.porte_une_opacite(neutre, "r"))
 
 
 if __name__ == "__main__":

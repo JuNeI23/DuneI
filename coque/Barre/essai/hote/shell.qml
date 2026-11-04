@@ -176,6 +176,7 @@ ShellRoot {
                         registre: nomme(Overlays.popover), courant: nomme(h?.courant), affiche: nomme(h?.affiche),
                         deploye: h?.deploye ?? null, passage: h?.passage ?? null, sens: h?.sens ?? null,
                         cadre: essai.formeCadre(), cadreVisible: h?.cadre.visible ?? null, cadreY: h?.cadre.y ?? null,
+                        cadreOpacite: h?.cadre.opacity ?? null,
                         a: ov(a), b: ov(b), c: ov(c), e: ov(e), ordinaire: ov(ordinaire), panneaux,
                         premierFondu: essai.premierFondu, hauteurMin: essai.hauteurMin,
                         d: barreFactice.item ? ov(barreFactice.item.popover) : null,

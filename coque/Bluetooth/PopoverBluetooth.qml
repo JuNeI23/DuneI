@@ -38,6 +38,8 @@ import "bluetooth.js" as Bt
 // Cotes : celles du popover réseau ; surface de 288 px, panneau de 280 px, contenu à space.scale[2] (12) du bord,
 // rangées de density.controlHeight plus space.scale[0] (32 px) ; au plus quatre lignes visibles pour « Mes
 // appareils », la suite défile ; « Appareils à proximité » a une hauteur fixe de cinq lignes (fiche 0.3).
+// Mouvement réduit (Theme.mouvementReduit) : comme le popover réseau, le déplacement et le dépliage des lignes se
+// posent aussitôt et seule leur opacité (nature « fondu ») s'anime, en fondu court.
 Overlay {
     id: popover
 
@@ -185,11 +187,14 @@ Overlay {
         readonly property alias depliage: depliage
         readonly property alias decalage: decalage
         readonly property alias apparition: apparition
+        // Part de la hauteur que prend la ligne : elle suit le fondu, sauf en mouvement réduit, où la place se prend ou se
+        // rend d'un coup et où seule l'opacité s'anime.
+        readonly property real place: Theme.mouvementReduit ? apparition.cible : apparition.value
         property bool posee: !entre
         readonly property bool partie: rang < 0 && apparition.value === 0 && !apparition.moving
 
         width: conteneur.width
-        height: (rangeeLigne.height + depliage.value) * apparition.value
+        height: (rangeeLigne.height + depliage.value) * place
         opacity: apparition.value
         visible: apparition.value > 0
         clip: true
@@ -215,7 +220,7 @@ Overlay {
         function deplier(): void { panneau.deplie = ouverte ? "" : cle }
 
         Ressort { id: decalage; transition: "reflow"; cible: 0 }
-        Ressort { id: apparition; transition: "reveal"; cible: ligne.posee && ligne.montre ? 1 : 0 }
+        Ressort { id: apparition; transition: "reveal"; nature: "fondu"; cible: ligne.posee && ligne.montre ? 1 : 0 }
         Ressort {
             id: depliage
             transition: "reveal"

@@ -44,6 +44,16 @@ class PresquileStructureTest(unittest.TestCase):
         self.assertRegex(self.surface, r"property Component module:\s*Component\s*\{\s*Bureaux\b")
         self.assertIn('transition: "window"', self.surface)
 
+    def test_ressorts_de_deplacement_declares(self):
+        # La presqu'île et ses bureaux ne portent aucune opacité : leurs ressorts déplacent, et le déclarent, pour que
+        # le mouvement réduit les pose aussitôt (la surface ne se charge pas sous offscreen : lecture du source).
+        for nom in ("Presquile.qml", "Bureaux.qml"):
+            texte = re.sub(r"//.*", "", (ROOT / "coque" / "Presquile" / nom).read_text(encoding="utf-8"))
+            ressorts = re.findall(r"Ressort\s*\{([^{}]*)\}", texte)
+            self.assertGreaterEqual(len(ressorts), 1, nom)
+            for corps in ressorts:
+                self.assertIn('nature: "deplacement"', corps, nom)
+
     def test_qmldir_et_coque(self):
         self.assertIn("Presquile 1.0 Presquile.qml", (ROOT / "coque" / "Presquile" / "qmldir").read_text("utf-8"))
         shell = re.sub(r"//[^\n]*", "", (ROOT / "coque" / "shell.qml").read_text(encoding="utf-8"))
@@ -59,9 +69,16 @@ class PresquileIpc(EssaiCoque):
     teintes = (55,)
     environnement = {"QT_QPA_PLATFORM": "offscreen"}
 
+    def preparer(self) -> None:
+        """Dernière occasion de poser un fichier dans le dossier surveillé avant le lancement ; ne fait rien ici.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : aucune.
+        """
+
     def setUp(self):
         super().setUp()
         self.installer(55)
+        self.preparer()
         self.lancer(self.dir)
         self.attendre("Theme : chargé, teinte 55")
 
@@ -187,6 +204,20 @@ class BureauxModuleTest(PresquileIpc, unittest.TestCase):
 
 # Tracé de la variante D de la planche forme.html (132 × 34, évasement 13), validée à l'écran par Nicolas.
 TRACE_PLANCHE = "M0 0 H132 C124 0 120 3 119 12 V20 C119 29 115 34 105 34 H27 C17 34 13 29 13 20 V12 C12 3 8 0 0 0 Z"
+
+
+class BureauxReduitTest(PresquileIpc, unittest.TestCase):
+    """Mouvement réduit : les points des bureaux prennent leur largeur cible aussitôt, sans s'étirer."""
+
+    def preparer(self):
+        (self.dir / "mouvement.json").write_text('{"reduit": true}')
+
+    def test_largeurs_posees_aussitot(self):
+        # Chaque changement de bureau actif pose les largeurs réelles sur les cibles dans la même passe ; en mouvement
+        # normal, elles auraient encore à parcourir leur ressort (couleurs non concernées : elles restent animées).
+        for actif in (2, 3, 1, 4):
+            etat = self.json("bureauxEtat", actif, "-", -1)
+            self.assertEqual(etat["reelles"], etat["largeurs"], actif)
 
 
 class MontageTest(PresquileIpc, unittest.TestCase):

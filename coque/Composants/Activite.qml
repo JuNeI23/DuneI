@@ -13,7 +13,8 @@ import "etats.js" as Etats
 // (InOutSine), que douceur() reproduit pour les poses. La couleur est l'accent du rôle de son conteneur (sélection
 // active), ou activeMuted sous le modificateur inactive hérité (§ 7.5). Sobriété (D80) : les animations ne tournent que
 // si l'indicateur est visible, ancêtre masqué compris, et en marche ; arrêté, il reprend aussitôt la pose de sa phase
-// et ne coûte rien.
+// et ne coûte rien. Mouvement réduit (Theme.mouvementReduit) : la taille des grains ne varie plus (échelle constante,
+// à 1, car grossir est un mouvement) ; seule l'opacité garde sa vague, avec la même période.
 // Entrées : running, vrai par défaut ; phase, fraction du cycle que montre la pose arrêtée (0 par défaut ; la
 //           planche fige ainsi l'indicateur à mi-cycle), sans effet en marche, où la vague part toujours du début
 //           de son cycle ; visible.
@@ -21,7 +22,7 @@ import "etats.js" as Etats
 //           mène ; accent, la couleur des grains ; repeteur, qui porte les trois grains (leur animation), lu par
 //           les essais.
 // Erreurs : aucune ; avant le chargement des tokens et du mouvement, les cotes sont nulles, les couleurs
-//           transparentes et rien ne s'anime.
+//           transparentes et rien ne s'anime. Réduit, la période et les opacités sont celles du mouvement normal.
 // Dépendances : Theme (icons.sizes, stateColors, motion.periods, motion.spinner), etats.js (herite) ; le rôle
 //               (dnRole) et le modificateur (dnInactive) viennent de la Surface englobante.
 // Cotes : grains du tiers de icons.sizes.default, espacés d'un demi-grain, sur la hauteur icons.sizes.default. Au
@@ -48,6 +49,8 @@ Item {
         InOutSine: { type: Easing.InOutSine, f: t => (1 - Math.cos(Math.PI * t)) / 2 },
         InOutQuad: { type: Easing.InOutQuad, f: t => t < 0.5 ? 2 * t * t : 1 - 2 * (1 - t) * (1 - t) }
     })
+    // Mouvement réduit : les grains gardent leur taille et ne varient plus qu'en opacité.
+    readonly property bool reduit: Theme.mouvementReduit
     readonly property var courbe: courbes[Theme.motion?.spinner?.easing] ?? courbes.Linear
     readonly property string role: Etats.herite(activite, "dnRole", "surfaceWindow")
     readonly property bool inactif: Etats.herite(activite, "dnInactive", false)
@@ -110,10 +113,10 @@ Item {
 
                 // pose — échelle et opacité du grain à une phase de son cycle.
                 // Entrée : p, phase. Sortie : [échelle, opacité]. Erreurs : aucune.
-                // Dépendances : activite (vague, bas, creux).
+                // Dépendances : activite (vague, bas, creux, reduit).
                 function pose(p: real): var {
                     const v = activite.vague(index, p)
-                    return [activite.bas + (1 - activite.bas) * v, activite.creux + (1 - activite.creux) * v]
+                    return [activite.reduit ? 1 : activite.bas + (1 - activite.bas) * v, activite.creux + (1 - activite.creux) * v]
                 }
 
                 width: activite.diametre

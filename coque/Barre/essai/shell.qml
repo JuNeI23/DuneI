@@ -15,7 +15,8 @@ import "Barre/forme.js" as Forme
 // pilote, pour que tests/test_barre.py éprouve les correspondances dans un vrai Quickshell.
 // Entrées : DUNEI_TOKENS_DIR, lu par Theme. Commandes IPC : normaliserPourcent, iconeBatterie, iconeReseau,
 // iconeBluetooth, iconeNotifications, iconeMoment, texteBatterie (chacune retourne son résultat), et
-// regler <icone> <texte> qui règle l'élément, puis elementVisible qui retourne sa visibilité et policeTexte
+// regler <icone> <texte> qui règle l'élément, ouvrirElement, decalageElement et ressortCouleur qui en éprouvent le
+// mouvement, puis elementVisible qui retourne sa visibilité et policeTexte
 // qui retourne la taille et les chiffres tabulaires de son texte.
 // Sortie : le résultat de chaque appel IPC, sur la sortie de « qs ipc call ». Erreurs : celles de Theme, dans
 // le journal. Dépendances : quickshell ≥ 0.3 (Quickshell.Io), modules Theme, Composants et Barre.
@@ -95,6 +96,19 @@ ShellRoot {
         // regler — règle l'icône et le texte de l'ElementBarre d'essai. Entrées : icone, texte (vides permis).
         // Sortie : aucune. Erreurs : aucune. Dépendances : element.
         function regler(icone: string, texte: string): void { element.icone = icone; element.texte = texte }
+
+        // ouvrirElement — ouvre ou ferme l'ElementBarre d'essai, comme le fait son popover.
+        // Entrée : valeur. Sortie : aucune. Erreurs : aucune. Dépendances : element.
+        function ouvrirElement(valeur: bool): void { element.ouvert = valeur }
+
+        // decalageElement — ordonnée de la rangée de l'ElementBarre d'essai dans l'élément, transformation comprise :
+        // la différence entre ouvert et fermé est la descente de l'icône.
+        // Entrées : aucune. Sortie : réel. Erreurs : aucune. Dépendances : element (contentItem).
+        function decalageElement(): real { return element.contentItem.mapToItem(element, 0, 0).y }
+
+        // ressortCouleur — raideur du ressort que le ColorSpring de l'ElementBarre d'essai emploie, et si l'icône bouge.
+        // Entrées : aucune. Sortie : texte « raideur ». Erreurs : aucune. Dépendances : element (couleurRessort).
+        function ressortCouleur(): string { return String(element.couleurRessort.params?.stiffness) }
 
         // elementVisible — lit la visibilité de l'ElementBarre d'essai.
         // Entrées : aucune. Sortie : vrai s'il est visible. Erreurs : aucune. Dépendances : element.

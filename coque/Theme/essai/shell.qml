@@ -104,12 +104,16 @@ ShellRoot {
 
         // ressort — crée un Ressort numérique réglé, le recible et journalise sa trajectoire.
         // Entrées : nom étiquette du journal ; depart valeur initiale ; cible nouvelle cible ; sens, seuil et nature,
-        //           propriétés du Ressort (sens vide pour le choix selon la cible, seuil nul pour le critère de physique).
+        //           propriétés du Ressort (sens vide pour le choix selon la cible, seuil nul pour le critère de physique) ;
+        //           transition nom de la transition de motion.json (« reveal » pour un ressort ordinaire, « spectacle »
+        //           pour un ressort assez lent pour être interrompu en vol).
         // Sortie : « essai : trace <nom> <ms> <valeur> <mobile> » aussitôt, puis à chaque changement de valeur ;
         //          « essai : fin <nom> <ms> » quand le ressort s'arrête. Erreurs : aucune. Dépendances : Ressort, Theme.
-        function ressort(nom: string, depart: real, cible: real, sens: string, seuil: real, nature: string): void {
+        function ressort(nom: string, depart: real, cible: real, sens: string, seuil: real, nature: string,
+                          transition: string): void {
             const r = Qt.createQmlObject('import QtQuick\nimport "Theme"\nRessort { cible: ' + depart + '; sens: "' + sens
-                + '"; seuil: ' + seuil + '; nature: "' + nature + '"; transition: "reveal" }', essai, "ressort.qml")
+                + '"; seuil: ' + seuil + '; nature: "' + nature + '"; transition: "' + transition + '" }',
+                essai, "ressort.qml")
             const t0 = Date.now()
             const trace = () => console.info("essai : trace " + nom + " " + (Date.now() - t0) + " " + r.value + " " + r.moving)
             r.valueChanged.connect(trace)

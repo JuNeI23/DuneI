@@ -344,9 +344,9 @@ class CoqueThemeTest(EssaiCoque, unittest.TestCase):
         self.installer(55)
         self.lancer(self.dir)
         self.attendre("essai : prêt true")
-        self.ipc("ressort", "monte", "0", "10", "", "0", "deplacement")
-        self.ipc("ressort", "baisse", "10", "0", "in", "0", "deplacement")
-        self.ipc("ressort", "libre", "10", "0", "", "0", "deplacement")
+        self.ipc("ressort", "monte", "0", "10", "", "0", "deplacement", "reveal")
+        self.ipc("ressort", "baisse", "10", "0", "in", "0", "deplacement", "reveal")
+        self.ipc("ressort", "libre", "10", "0", "", "0", "deplacement", "reveal")
         monte, baisse, libre = (self.duree_pose(n, d, c) for n, d, c in
                                 (("monte", 0, 10), ("baisse", 10, 0), ("libre", 10, 0)))
         self.assertLess(abs(monte - baisse), 40, self.journal())
@@ -357,7 +357,7 @@ class CoqueThemeTest(EssaiCoque, unittest.TestCase):
         self.installer(55)
         self.lancer(self.dir)
         self.attendre("essai : prêt true")
-        self.ipc("ressort", "seuil", "0", "10", "", "3", "deplacement")
+        self.ipc("ressort", "seuil", "0", "10", "", "3", "deplacement", "reveal")
         self.attendre("essai : fin seuil ")
         trace = self.lire_trace("seuil")
         self.assertEqual(trace[-1][1], 10, self.journal())
@@ -369,7 +369,7 @@ class CoqueThemeTest(EssaiCoque, unittest.TestCase):
         (self.dir / "mouvement.json").write_text('{"reduit": true}')
         self.lancer(self.dir)
         self.attendre("essai : prêt true")
-        self.ipc("ressort", "pose", "0", "10", "", "0", "deplacement")
+        self.ipc("ressort", "pose", "0", "10", "", "0", "deplacement", "reveal")
         self.attendre("essai : trace pose ")
         self.assertEqual(self.lire_trace("pose")[0][1:], (10, False), self.journal())
 
@@ -379,10 +379,41 @@ class CoqueThemeTest(EssaiCoque, unittest.TestCase):
         (self.dir / "mouvement.json").write_text('{"reduit": true}')
         self.lancer(self.dir)
         self.attendre("essai : prêt true")
-        self.ipc("ressort", "fondu", "0", "1", "", "0", "fondu")
+        self.ipc("ressort", "fondu", "0", "1", "", "0", "fondu", "reveal")
         duree = self.duree_pose("fondu", 0, 1)
         self.assertGreater(duree, 0, self.journal())
         self.assertLess(abs(duree - 100), 50, self.journal())
+
+    def test_ressort_reduit_en_vol(self):
+        # La préférence devient « réduit » pendant qu'un ressort de déplacement avance : il se pose aussitôt sur sa
+        # cible, au lieu de finir son trajet (« spectacle » dure plus de 500 ms, la bascule survient bien avant).
+        self.installer(55)
+        self.lancer(self.dir)
+        self.attendre("essai : prêt true")
+        self.ipc("ressort", "vol", "0", "10", "", "0", "deplacement", "spectacle")
+        self.ecrire_mouvement('{"reduit": true}')
+        self.attendre("essai : fin vol ")
+        trace = self.lire_trace("vol")
+        self.assertEqual(trace[-1][1:], (10, False), self.journal())
+        # Un ressort qui finit son trajet se pose en rampant ; posé d'un coup, son dernier saut est large.
+        self.assertGreater(abs(trace[-1][1] - trace[-2][1]), 1, self.journal())
+
+    def test_ressort_reduit_sans_reduced(self):
+        # Un motion.json ancien, sans le réglage « reduced » : un fondu réduit ne lève aucune erreur à chaque image
+        # et rejoint sa cible avec son réglage ordinaire.
+        self.installer(55)
+        chemin = self.dir / "motion.json"
+        motion = json.loads(chemin.read_text())
+        del motion["reduced"]
+        chemin.write_text(json.dumps(motion))
+        (self.dir / "mouvement.json").write_text('{"reduit": true}')
+        self.lancer(self.dir)
+        self.attendre("essai : prêt true")
+        self.ipc("ressort", "fondu", "0", "1", "", "0", "fondu", "reveal")
+        self.duree_pose("fondu", 0, 1)
+        self.assertEqual(self.lire_trace("fondu")[-1][1], 1, self.journal())
+        for erreur in ("TypeError", "undefined", "Cannot read"):
+            self.assertNotIn(erreur, self.journal())
 
     def ecrire_mouvement(self, texte: str | None) -> None:
         """Remplace mouvement.json par renommage, comme dunei-mouvement, ou le supprime.

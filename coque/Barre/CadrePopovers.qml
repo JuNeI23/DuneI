@@ -6,9 +6,15 @@ import "forme.js" as Forme
 // CadrePopovers — cadre de verre unique des popovers de la barre et contenu de chacun (L2-06, L2-56).
 // Rôle : partie visuelle et logique de HotePopovers, séparée de la fenêtre de calque pour se charger aussi sous la
 // plateforme offscreen des coques d'essai. Trois ressorts au même réglage (bord gauche, bord droit, hauteur) décrivent le
-// cadre : il naît de l'icône, y retourne, et passe d'un popover à l'autre sans se refermer. Le verre n'est jamais estompé.
+// cadre : il naît de l'icône, y retourne, et passe d'un popover à l'autre sans se refermer. Le verre n'est jamais
+// estompé, hors mouvement réduit.
 // Le contenu de chaque Overlay est construit une fois pour toutes, de façon asynchrone, et reste fixe sur l'écran : le
-// cadre le découvre sans le déplacer. Au passage, l'ancien contenu s'efface aussitôt, le nouveau attend la part
+// cadre le découvre sans le déplacer. Mouvement réduit (Theme.mouvementReduit) : le cadre paraît à sa forme finale (ses
+// ressorts, de déplacement, se posent aussitôt) et s'efface ou apparaît par un fondu court de tout le cadre, au ressort
+// `reduced` ; il garde sa forme pendant le fondu de sortie, puis se replie sur l'icône. Le verre n'est alors estompé que
+// pendant ce fondu : sous le seuil ignore_alpha du calque, le flou s'éteint (seule exception à la règle du verre, bible
+// ch. 6), et le cadre à pleine opacité retrouve son flou. Au passage, le cadre se pose à la nouvelle forme et les
+// contenus se croisent en fondu court. Hors mouvement réduit, au passage, l'ancien contenu s'efface aussitôt, le nouveau attend la part
 // motion.popover.passage_content_at du trajet et s'affiche au-dessus, et le disque de l'ancienne bascule reste plein
 // jusqu'à être recouvert. Un contenu fermé ne reçoit plus aucun clic, même pendant son fondu : son bouclier les arrête,
 // car le désactiver (enabled) changerait la couleur de sa bascule sous les yeux. Une fois qu'il ne se voit plus, il est
@@ -51,7 +57,9 @@ Item {
     property real ancreL: 0
     property real largeurOuverte: 0
     readonly property real hauteurOuverte: vueAffichee?.item ? vueAffichee.item.implicitHeight + 2 * retrait : 0
-    readonly property var visee: Forme.cibles(affiche !== null, ancreX, ancreL, largeurOuverte, hauteurOuverte,
+    // Mouvement réduit : le cadre reste à sa forme ouverte tant que son fondu de sortie n'est pas terminé.
+    readonly property bool tenu: affiche !== null || (Theme.mouvementReduit && presence.value > 0)
+    readonly property var visee: Forme.cibles(tenu, ancreX, ancreL, largeurOuverte, hauteurOuverte,
                                               largeurEcran, marge)
 
     // Passage : la distance restante n'est lue, à chaque image, que tant qu'un contenu l'attend.
@@ -115,6 +123,8 @@ Item {
         width: droite.value - gauche.value
         height: hauteur.value
         visible: racine.dessine
+        // Verre jamais estompé, sauf en mouvement réduit où tout le cadre s'efface en fondu court (objectif 6).
+        opacity: Theme.mouvementReduit ? presence.value : 1
         focus: true
         Keys.onEscapePressed: if (racine.courant) racine.courant.ouvert = false
 

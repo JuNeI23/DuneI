@@ -9,7 +9,8 @@ import Quickshell.Hyprland
 // l'ouverture n'attend ni fenêtre ni contenu. Sans popover ouvert, son masque de saisie est vide, dès la fermeture et sans
 // attendre la fin du mouvement : les clics le traversent. Il ne prend le clavier que popover ouvert, car un
 // clavier à la demande peut garder le focus au détriment d'une autre fenêtre. La prise du clavier associe la barre : un
-// clic sur une autre icône passe à son popover sans fermeture parasite, et un clic ailleurs ferme.
+// clic sur une autre icône passe à son popover sans fermeture parasite, et un clic ailleurs ferme. Le mouvement réduit
+// (forme posée, fondu court du cadre entier) est l'affaire de CadrePopovers : la fenêtre n'a rien à y changer.
 // Entrées : barre, la fenêtre de la barre ; popovers, les Overlay hébergés (heberge: true), voir CadrePopovers.
 // Sorties : courant, l'Overlay ouvert, ou null ; deploye, vrai tant que le cadre est déployé.
 // Erreurs : aucune ; sans barre, la fenêtre suit l'écran par défaut et la prise ne porte que sur elle.

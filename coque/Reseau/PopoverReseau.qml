@@ -47,8 +47,8 @@ import "nmcli.js" as Nmcli
 // Cotes : surface de 72 × space.scale[0] (288 px) de large comme l'essai D5, panneau de 280 px dans le retrait de
 // l'Overlay ; contenu à space.scale[2] (12) du bord du panneau, rangées sur toute sa largeur ; rangées de
 // density.controlHeight plus space.scale[0] (32 px).
-// Mouvement réduit : la coque n'a pas encore de bascule (voir Ressort) ; les animations passent toutes par Ressort,
-// qui la suivra.
+// Mouvement réduit (Theme.mouvementReduit) : les animations passent toutes par Ressort. Le déplacement et le
+// dépliage des lignes se posent aussitôt, et seule l'opacité des lignes (nature « fondu ») s'anime, en fondu court.
 Overlay {
     id: popover
 
@@ -409,6 +409,9 @@ Overlay {
                             readonly property alias depliage: depliage
                             readonly property alias decalage: decalage
                             readonly property alias apparition: apparition
+                            // Part de la hauteur de la ligne : elle suit le fondu, sauf en mouvement réduit, où la place se prend
+                            // ou se rend d'un coup et où seule l'opacité s'anime.
+                            readonly property real place: Theme.mouvementReduit ? apparition.cible : apparition.value
                             // Faux le temps d'une passe pour une ligne qui entre : son ressort part ainsi de zéro.
                             property bool posee: !entre
                             // Refermée et sortie du tri : la ligne se retire du modèle.
@@ -416,7 +419,7 @@ Overlay {
 
                             width: lignes.width
                             // La ligne s'ouvre et se referme en hauteur et en fondu (reveal), sans glisser de côté.
-                            height: (rangee.height + depliage.value) * apparition.value
+                            height: (rangee.height + depliage.value) * place
                             opacity: apparition.value
                             visible: apparition.value > 0
                             clip: true
@@ -443,7 +446,7 @@ Overlay {
                             Ressort { id: decalage; transition: "reflow"; cible: 0 }
                             // Présence de la ligne, de 0 (refermée) à 1 (ouverte) : entrée par le ressort reveal
                             // d'entrée, sortie par celui de sortie (environ 70 % de l'entrée, motion.json).
-                            Ressort { id: apparition; transition: "reveal"; cible: ligne.posee && ligne.montre ? 1 : 0 }
+                            Ressort { id: apparition; transition: "reveal"; nature: "fondu"; cible: ligne.posee && ligne.montre ? 1 : 0 }
                             Ressort {
                                 id: depliage
                                 transition: "reveal"
