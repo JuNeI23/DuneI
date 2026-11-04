@@ -109,8 +109,9 @@ Singleton {
     function ouvrirPortail() { portail.running = true }
 
     // appliquerRecherche — reporte balayage (recherche ou rechercheFenetre) sur le balayage de chaque carte Wi-Fi.
-    // Une carte n'est écrite que si sa valeur diffère : chaque écriture de scannerEnabled bloque le fil graphique
-    // environ une demi-seconde (mesuré en 7a), même quand elle ne change rien.
+    // Une carte n'est écrite que si sa valeur diffère, car une écriture de scannerEnabled, même sans effet, occupe
+    // le fil graphique : environ une demi-seconde à la mesure de 7a, mais de 2 à 15 ms à la mesure de L2-06 (D116),
+    // relevée sur la machine caladan seulement, donc à confirmer ailleurs.
     // Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : cartes, balayage.
     function appliquerRecherche() { cartes.forEach(c => { if (c.scannerEnabled !== balayage) c.scannerEnabled = balayage }) }
     onBalayageChanged: appliquerRecherche()

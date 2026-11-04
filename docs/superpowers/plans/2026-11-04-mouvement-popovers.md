@@ -1,5 +1,7 @@
 # Mouvement des popovers de la barre : plan de mise en œuvre
 
+Version 0.2, 2026-11-04.
+
 > **Pour les agents :** sous-compétence requise : `superpowers:subagent-driven-development` (ou `superpowers:executing-plans`). Les étapes se suivent par cases à cocher.
 
 **But :** remplacer l'essai jetable par une version propre de la fenêtre unique des popovers, avec le mouvement réduit.
@@ -154,4 +156,5 @@
 
 | Version | Date | Changements |
 | --- | --- | --- |
+| 0.2 | 2026-11-04 | Écarts de la réalisation : le cadre et le contenu vivent dans `CadrePopovers.qml`, que `HotePopovers.qml` n'enveloppe que d'une fenêtre, pour se charger aussi sous la plateforme offscreen ; la fenêtre hôte se réduit à une ligne au repos (D109) ; la tâche 6 a précédé la tâche 5, pour que l'hôte trouve prêts `fonduContenu`, `fonduDisque` et `reinitialiser()` |
 | 0.1 | 2026-11-04 | Première rédaction |
