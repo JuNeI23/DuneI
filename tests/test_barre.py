@@ -406,10 +406,6 @@ class BarreStructureTest(unittest.TestCase):
         self.assertIn("dunei-coque.service", (ROOT / "session.toml").read_text(encoding="utf-8"))
 
 
-if __name__ == "__main__":
-    unittest.main()
-
-
 class HoteStatiqueTest(unittest.TestCase):
     """La fenêtre hôte des popovers, qui ne se charge pas sous offscreen, et le retrait de l'essai jetable."""
 
@@ -675,6 +671,64 @@ class HoteTest(EssaiCoque, unittest.TestCase):
         self.assertEqual((e["passage"], e["panneaux"]["a"]["disque"], e["panneaux"]["b"]["disque"]), (False, 0, 0))
         self.forme_atteinte(self.OUVERT_C, "c")
 
+    def test_passage_aller_retour(self):
+        # A, B, puis A de nouveau en plein passage : le disque de A ne quitte pas le plein tant que son contenu ne l'est pas.
+        self.panneaux_prets()
+        self.ouvrir("a")
+        self.forme_atteinte(self.OUVERT_A, "a")
+        self.ouvrir("b")
+        time.sleep(0.05)
+        e = self.ouvrir("a")
+        self.assertEqual((e["affiche"], e["panneaux"]["a"]["disque"]), ("a", 1))
+        fin = time.monotonic() + DELAI
+        while (e := self.etat())["panneaux"]["a"]["contenu"] < 1 and time.monotonic() < fin:
+            self.assertEqual(e["panneaux"]["a"]["disque"], 1, e)
+            time.sleep(0.005)
+        e = self.forme_atteinte(self.OUVERT_A, "a")
+        # Le contenu plein, plus rien n'est retenu : le disque suit de nouveau le fondu à la fermeture.
+        self.assertEqual(e["panneaux"]["a"]["disque"], 1)
+        self.ouvrir("a", False)
+        self.jusqua(lambda e: e["panneaux"]["a"]["disque"] == 0, "disque resté plein après la fermeture")
+        self.sans_erreur()
+
+    def test_fermeture_du_passage_sans_saut(self):
+        # Fermé en plein passage : le disque retenu s'efface sans saut, sans remontée, et finit éteint.
+        self.panneaux_prets()
+        self.ouvrir("a")
+        self.forme_atteinte(self.OUVERT_A, "a")
+        self.ouvrir("b")
+        time.sleep(0.03)
+        e = self.ouvrir("b", False)
+        self.assertEqual(e["panneaux"]["a"]["disque"], 1)
+        precedent = 1
+        fin = time.monotonic() + DELAI
+        while (d := self.etat()["panneaux"]["a"]["disque"]) > 0 and time.monotonic() < fin:
+            self.assertLessEqual(d, precedent)
+            precedent = d
+            time.sleep(0.005)
+        self.assertEqual(d, 0)
+
+    def test_infobulle_du_contenu_ferme(self):
+        # Pointeur immobile sur une infobulle ouverte, Échap : le contenu n'est plus détruit, mais la bulle ne lui survit pas.
+        self.panneaux_prets()
+        self.ouvrir("a")
+        self.forme_atteinte(self.OUVERT_A, "a")
+        self.ipc("survoler", True)
+        self.jusqua(lambda e: e["panneaux"]["a"]["bulle"], "infobulle non ouverte")
+        self.ipc("echap")
+        self.jusqua(lambda e: not e["a"]["ouvert"], "Échap sans effet")
+        self.ferme_au_repos()
+        self.assertFalse(self.etat()["panneaux"]["a"]["bulle"])
+        # Rien ne la rouvre tant que le pointeur n'est pas reparti, et le contenu rouvert sans pointeur reste sobre.
+        time.sleep(1.2)
+        self.assertFalse(self.etat()["panneaux"]["a"]["bulle"])
+        self.ipc("survoler", False)
+        self.ouvrir("a")
+        self.forme_atteinte(self.OUVERT_A, "a")
+        self.ipc("survoler", True)
+        self.jusqua(lambda e: e["panneaux"]["a"]["bulle"], "infobulle morte après une réouverture")
+        self.sans_erreur()
+
     def test_passage_sans_trajet(self):
         # Sans trajet réel, le contenu apparaît aussitôt, et l'ancien disque tient quand même jusqu'à être recouvert.
         self.panneaux_prets()
@@ -801,3 +855,7 @@ class HoteTest(EssaiCoque, unittest.TestCase):
         self.assertEqual((e["panneaux"]["a"]["focus"], e["panneaux"]["b"]["focus"]), (True, False))
         e = self.ouvrir("b")
         self.assertEqual((e["panneaux"]["a"]["focus"], e["panneaux"]["b"]["focus"]), (False, True))
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -34,7 +34,8 @@ Item {
     readonly property var courant: popovers.indexOf(Overlays.popover) >= 0 ? Overlays.popover : null
     property var affiche: null
     property var vueAffichee: null
-    // Ancienne vue dont le disque reste plein pendant un passage, null hors passage.
+    // Vue dont le disque reste plein pendant un passage, null hors passage : l'ancienne, ou celle qu'on rouvre en plein
+    // passage. Le disque retenu s'efface avec presence si le popover se ferme avant d'être recouvert.
     property var vueRetenue: null
     readonly property real opaciteAffichee: vueAffichee?.opaciteContenu ?? 1
     // Cadre assez haut pour se dessiner ; la stricte positivité vaut pour le repos d'avant le chargement des jetons.
@@ -61,6 +62,7 @@ Item {
 
     onResteChanged: if (Forme.contenuPermis(passage, reste, trajetTotal, partPassage)) passage = false
     onOpaciteAfficheeChanged: if (opaciteAffichee >= 1) vueRetenue = null
+    onDeployeChanged: if (!deploye) vueRetenue = null
     onCourantChanged: {
         if (courant) {
             // Le pointeur a pu rester sur le cadre : le survol passe au nouveau popover, que sa minuterie ne le ferme pas.
@@ -68,7 +70,6 @@ Item {
         } else {
             affiche = null
             passage = false
-            vueRetenue = null
         }
     }
     Component.onDestruction: if (courant) courant.ouvert = false
@@ -92,9 +93,10 @@ Item {
         largeurOuverte = vue.item.implicitWidth + 2 * retrait
         vue.xFixe = Forme.cibles(true, ancreX, ancreL, largeurOuverte, 0, largeurEcran, marge).gauche
         if (ferme) { gauche.poser(); droite.poser() }
-        // Le disque déjà retenu reste le seul plein, jusqu'à être recouvert par le dernier contenu choisi.
-        if (!precedente || precedente === vue || vueRetenue === vue) vueRetenue = null
-        else if (!vueRetenue) vueRetenue = precedente
+        // Le disque déjà retenu reste le seul plein, même si son popover est rouvert, jusqu'à ce que le dernier contenu
+        // choisi soit plein.
+        if (!precedente) vueRetenue = null
+        else if (!vueRetenue && precedente !== vue) vueRetenue = precedente
         vueAffichee = vue
         affiche = ov
         trajetTotal = Forme.trajet(formeActuelle(), visee)
@@ -104,6 +106,7 @@ Item {
     Ressort { id: gauche; transition: "overlay"; sens: racine.sens; seuil: racine.seuil; cible: racine.visee.gauche }
     Ressort { id: droite; transition: "overlay"; sens: racine.sens; seuil: racine.seuil; cible: racine.visee.droite }
     Ressort { id: hauteur; transition: "overlay"; sens: racine.sens; seuil: racine.seuil; cible: racine.visee.hauteur }
+    Ressort { id: presence; transition: "reveal"; nature: "fondu"; cible: racine.affiche ? 1 : 0 }
 
     FocusScope {
         id: cadre
@@ -138,8 +141,10 @@ Item {
                     readonly property bool pret: modelData.ouvert && status === Loader.Ready
                     readonly property bool estAffichee: racine.vueAffichee === vue
                     readonly property real opaciteContenu: fondu.value
-                    readonly property real opaciteDisque: Forme.opaciteDisque(estAffichee, racine.vueRetenue === vue,
+                    readonly property bool retenue: racine.vueRetenue === vue
+                    readonly property real opaciteDisque: Forme.opaciteDisque(estAffichee && !retenue, retenue,
                                                                               racine.opaciteAffichee, fondu.value)
+                                                          * (retenue ? presence.value : 1)
                     readonly property bool montree: opaciteContenu > 0 || opaciteDisque > 0
                     // Plus rien ne se voit : son fondu est terminé (fin de passage), ou le cadre est refermé, ce qui arrive
                     // avant la fin de la traîne invisible du fondu.

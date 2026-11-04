@@ -44,6 +44,7 @@ ShellRoot {
         property real fonduDisque: 1
         property int remises: 0
         property int clics: 0
+        readonly property alias aide: aide
         focus: true
         implicitWidth: largeur
         implicitHeight: hauteur
@@ -54,6 +55,7 @@ ShellRoot {
         onFonduContenuChanged: if (fonduContenu > 0 && fonduContenu < 1 && !essai.premierFondu[nom])
             essai.premierFondu[nom] = essai.formeCadre()
         MouseArea { anchors.fill: parent; onClicked: contenu.clics++ }
+        Infobulle { id: aide; cible: contenu; texte: "aide" }
     }
 
     // formeCadre — forme affichée du cadre principal. Entrées : aucune. Sortie : {gauche, droite, hauteur}, ou null
@@ -168,7 +170,7 @@ ShellRoot {
                         const v = p.parent
                         panneaux[n] = { contenu: p.fonduContenu, disque: p.fonduDisque, remises: p.remises, clics: p.clics,
                                         xEcran: h ? p.mapToItem(null, 0, 0).x : 0, visible: v.montree, z: v.z,
-                                        focus: v.focus, statut: v.status }
+                                        focus: v.focus, statut: v.status, bulle: p.aide.bulle.ouvert }
                     }
                     return JSON.stringify({
                         registre: nomme(Overlays.popover), courant: nomme(h?.courant), affiche: nomme(h?.affiche),
