@@ -2772,7 +2772,7 @@ toutes, et reste fixe sur l'écran. Chaque contenu offre sur sa racine `fonduCon
   `ChampSecret.revele` remis à faux.
 - **Une connexion n'est jamais annulée en silence.** `reinitialiser()` ne coupe pas une connexion en cours.
 - **Échec après la fermeture.** Un échec de connexion qui survient après la fermeture reste affiché à la réouverture
-  (ligne dépliée, erreur) : l'échec est une information utile. Arbitrage du plan, à confirmer à la recette ; s'il
+  (ligne dépliée, erreur) : l'échec est une information utile. Arbitrage du plan, soumis à la recette et non contesté ; s'il
   gêne, le popover sera remis plus « neuf » qu'avant.
 - **Un contenu fermé ne reçoit aucun clic**, même pendant son fondu : un bouclier les arrête, car désactiver le contenu
   (`enabled`) changerait la couleur de sa bascule sous les yeux.
@@ -2815,7 +2815,7 @@ commande `dunei-mouvement` la change, sur le modèle de `dunei-theme` ; l'interf
   nouvelle forme, les contenus se croisent en fondu court et le disque garde sa règle (D114).
 - **Raison de la préférence unique.** Deux sources (coque et Hyprland) se contrediraient ; une seule, lue par les deux,
   ne le peut pas.
-- **Statut.** Le code est écrit et testé ; la validation à l'écran du mode réduit est en attente de recette.
+- **Statut.** Le code est écrit et testé ; la recette à l'écran est validée par Nicolas le 2026-11-04.
 
 *Touché : `coque/Theme/Ressort.qml`, `Theme.qml`, `config/bin/dunei-mouvement`, `coque/Barre/*`, `coque/Presquile/Bureaux.qml`,
 `coque/Composants/Activite.qml`, carnet.*
@@ -2826,7 +2826,7 @@ commande `dunei-mouvement` la change, sur le modèle de `dunei-theme` ; l'interf
 2026-11-04. **Le mouvement des popovers a été mesuré par la coque sur `caladan` : sur 37 mouvements et 906 images (10
 cycles), la première image suit le clic de 34 ms au plus, et 5 images dépassent 33 ms (34, 34, 34, 39 et 87 ms).** Le
 blocage de la fermeture du popover Wi-Fi a disparu. Le budget de la conception (aucune image au-delà de 33 ms) n'est
-donc pas tenu à la lettre ; Nicolas en juge à la recette.
+donc pas tenu à la lettre ; l'écart, soumis à Nicolas à la recette, est accepté.
 
 - **`scannerEnabled` écarté.** L'écriture de `scannerEnabled` était soupçonnée du blocage de 62 à 82 ms. Mesurée sur
   cette machine, elle prend de 2 à 15 ms, contre une demi-seconde dans l'ancienne note d'`EtatReseau.qml`. La mesure
@@ -2869,7 +2869,7 @@ prêt tout de suite. Défaut signalé par Nicolas à la recette de L2-06.
   hauteur montrerait un cadre vide pendant le retour des lignes.
 - **Mesure.** Trois passages du Bluetooth au Wi-Fi : la hauteur visée passe directement de 319 à 413 px, sans étape
   intermédiaire, et la forme part 38 à 58 ms après l'ouverture. Le budget de 50 ms (fiche, objectif 8) est donc dépassé
-  ponctuellement, pour ce seul popover ; cet écart reste soumis à la recette.
+  ponctuellement, pour ce seul popover ; cet écart, soumis à la recette, est accepté.
 - **Autre défaut corrigé.** `Qt.callLater(panneau.retirer, cle)` fusionnait les appels d'une même fonction : de plusieurs
   lignes sorties ensemble, une seule quittait le modèle, les autres restaient cachées puis revenaient en s'animant. Le
   popover Bluetooth avait le même défaut. Chaque appel passe maintenant par une fonction propre.
