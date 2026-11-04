@@ -2669,3 +2669,24 @@ activent.
 `coque/Reseau/PopoverReseau.qml`, `motion.toml`, `dunei_motion/checks.py`, `generated/motion.json`, tests (composants,
 mouvement, golden, réseau), bible (chapitre 7, annexe E).*
 
+
+### D109 · La fenêtre hôte des popovers se réduit à une ligne au repos
+
+2026-11-04. **Au repos, la fenêtre hôte des popovers mesure 1 px de haut ; elle reprend la hauteur de l'écran dès qu'un
+popover s'ouvre, et la perd quand le cadre s'est refermé.** Elle reste une seule surface permanente, ce qui garde la
+réactivité validée à l'écran (L2-06, L2-56).
+
+- **Raison.** Hyprland recalcule le flou d'un calque quand ce qui se trouve dessous change, même si ce calque est
+  entièrement transparent. Sous une source animée à 30 images/s en fenêtre, la fenêtre à la taille de l'écran occupe le
+  GPU à 18 et 21 %, contre 6 et 12 % sans elle, soit environ 10 points de plus, bien au-delà du seuil de 2 points fixé par
+  la conception. Le processeur de Hyprland ne montre pas d'écart net.
+- **Mesure de la réduction.** Sous la même source, fenêtre réduite : 8 et 10 % de GPU, contre 7 % sans fenêtre, un écart
+  qui reste dans le bruit de cette mesure.
+- **Réactivité.** Le redimensionnement est acquis 2 à 6 ms après l'ouverture ; la première image à pleine hauteur arrive
+  8 à 23 ms après. Le plafond d'une image de retard n'est donc dépassé que ponctuellement, de quelques millisecondes, et
+  l'icône n'en dépend pas. La règle « la réactivité prime » ne joue pas ici : les durées d'image ne se dégradent pas.
+- **Limite de la mesure.** GPU relevé une fois par seconde pendant 60 s, sur `caladan`, avec une source synthétique
+  (`testsrc2` dans `ffplay`). Deux séries antérieures sont écartées : l'une tournait pendant une vidéo en plein écran,
+  l'autre sans que la fenêtre de test se soit lancée.
+
+*Touché : journal ; la mise en œuvre vient avec `coque/Barre/HotePopovers.qml` (L2-06).*
