@@ -7,7 +7,8 @@ import "bluetooth.js" as Bt
 
 // PopoverBluetooth — popover du Bluetooth, ancré sous l'indicateur Bluetooth de la barre (L2-14).
 // Rôle : copie adaptée du popover réseau (PopoverReseau, décision de Nicolas : pas de base commune, D107). Un Overlay
-// contextuel, construit à l'ouverture et détruit à la fermeture (D80), compact, carré, sur le verre de E3 (D103). Il
+// contextuel dont le contenu est construit une fois pour toutes et que l'hôte des popovers montre ou cache (il n'est
+// plus détruit à la fermeture ; D80 reste vrai pour un popover non hébergé), compact, carré, sur le verre de E3 (D103). Il
 // porte de haut en bas : l'en-tête, dont la bascule à glyphe allume ou coupe la radio (accent plein allumée, neutre
 // éteinte), avec « Bluetooth » et la ligne d'état (appareil connecté et sa batterie, « Aucun appareil connecté » ou
 // « Désactivé ») ; « Mes appareils », les appareils appairés, connectés d'abord, une ligne chacun (icône du type,
@@ -22,10 +23,14 @@ import "bluetooth.js" as Bt
 // (reflow), et l'ordre est figé tant qu'une ligne est dépliée. Ainsi, un appareil qui vient d'être appairé quitte les
 // voisins et entre dans « Mes appareils ». Radio coupée : listes absentes et recherche non demandée. Popover de la
 // barre (D108) : en ouvrir un autre le ferme ; il se ferme 1,5 s après le départ de la souris, sauf tant que
-// « Oublier » est déplié ou qu'une ligne est occupée (appairage, connexion), pour en montrer l'issue (retenu).
+// « Oublier » est déplié ou qu'une ligne est occupée (appairage, connexion), pour en montrer l'issue (retenu). Pour
+// l'hôte, le panneau offre fonduContenu et fonduDisque, deux fondus distincts (la bascule d'en-tête, posée sur un
+// emplacement réservé hors de la colonne, ne suit que le second), et reinitialiser(), qui rend à la vue l'aspect d'un
+// popover neuf sans couper un appairage ou une connexion en cours.
 // Entrées : ancre, l'indicateur de la barre ; ouvert, à affecter (voir Overlay) ; associees, voir Overlay ; etat, la
 // source de l'état et des actions, EtatBluetooth par défaut (la coque d'essai y met un factice).
-// Sorties : ferme(), voir Overlay ; panneau, le contenu construit, null fermé, lu par les essais.
+// Sorties : ferme(), voir Overlay ; panneau, le contenu construit (null tant qu'il ne l'est pas, ou une fois détruit),
+// lu par les essais ; fonduContenu, fonduDisque, reinitialiser(), voir ci-dessus.
 // Erreurs : un echec(adresse, message) de l'état s'affiche sur la ligne de l'appareil.
 // Dépendances : Overlay (famille contextuel), Bascule, Activite, Infobulle, Rangee, Icone, Texte, Ressort, Theme
 // (density, space, icons, color, motion par Ressort), EtatBluetooth, bluetooth.js (trierAppareils, iconeAppareil),
@@ -37,7 +42,7 @@ Overlay {
     id: popover
 
     property var etat: EtatBluetooth
-    // Écrit par le panneau seul, à sa construction et à sa destruction.
+    // Écrit par le panneau seul, à sa construction et à sa destruction (null avant la première et après la seconde).
     property Item panneau: null
 
     famille: "contextuel"
@@ -293,11 +298,27 @@ Overlay {
         // Vrai tant qu'une ligne est occupée (appairage, connexion, déconnexion) : le popover reste ouvert.
         readonly property bool occupe: Object.values(delegues).some(d => d.occupe)
 
+        // Fondus que l'hôte des popovers pose, de 0 à 1 : fonduContenu pour tout l'en-tête sauf la bascule et pour le
+        // reste du contenu, fonduDisque pour la bascule seule. Sans hôte, ils restent à 1 : le panneau est tel quel.
+        property real fonduContenu: 1
+        property real fonduDisque: 1
+
         focus: true
         implicitWidth: 70 * (Theme.space?.scale[0] ?? 0)
         implicitHeight: colonne.implicitHeight + 2 * (Theme.space?.scale[1] ?? 0)
         Component.onCompleted: popover.panneau = panneau
         Component.onDestruction: if (popover.panneau === panneau) popover.panneau = null
+
+        // reinitialiser — rend au contenu l'aspect d'un popover neuf : « Oublier » replié, échecs affichés effacés,
+        // listes en haut. Un appairage ou une connexion en cours n'est jamais annulé : seule la vue revient à neuf, et
+        // le popover reste retenu tant que la ligne est occupée.
+        // Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : deplie, erreurs, flickMes, flickProches.
+        function reinitialiser(): void {
+            deplie = ""
+            erreurs = ({})
+            flickMes.contentY = 0
+            flickProches.contentY = 0
+        }
 
         // appareil — l'appareil d'une adresse. Entrée : cle. Sortie : le BluetoothDevice, ou null. Erreurs : aucune.
         function appareil(cle: string): var { return Array.from(etat.appareils ?? []).find(a => a?.address === cle) ?? null }
@@ -331,27 +352,39 @@ Overlay {
             function onEchec(adresse, message) { panneau.erreurs = Object.assign({}, panneau.erreurs, { [adresse]: message }) }
         }
 
+        // La bascule de la radio, déclarée avant la colonne : elle garde sa place dans l'ordre de tabulation, la
+        // première, et se pose par-dessus l'emplacement que l'en-tête lui réserve, au pixel près.
+        Bascule {
+            id: bascule
+            objectName: "bascule"
+            z: 1
+            x: colonne.x + entete.x + emplacement.x
+            y: colonne.y + entete.y + emplacement.y
+            opacity: panneau.fonduDisque
+            icone: panneau.etat.allume ? "bluetooth-active" : "bluetooth-disabled"
+            enabled: panneau.etat.disponible
+            checked: panneau.etat.allume
+            onToggled: { panneau.etat.allumer(checked); checked = Qt.binding(() => panneau.etat.allume) }
+        }
+
         ColumnLayout {
             id: colonne
+            opacity: panneau.fonduContenu
             y: Theme.space?.scale[1] ?? 0
             width: panneau.width
             spacing: Theme.space?.scale[0] ?? 0
 
-            // En-tête : la bascule de la radio, le titre et la ligne d'état.
+            // En-tête : l'emplacement de la bascule de la radio, le titre et la ligne d'état.
             RowLayout {
+                id: entete
                 Layout.leftMargin: panneau.marge
                 Layout.rightMargin: panneau.marge
                 Layout.bottomMargin: Theme.space?.scale[0] ?? 0
                 spacing: Theme.space?.scale[2] ?? 0
 
-                Bascule {
-                    id: bascule
-                    objectName: "bascule"
-                    icone: panneau.etat.allume ? "bluetooth-active" : "bluetooth-disabled"
-                    enabled: panneau.etat.disponible
-                    checked: panneau.etat.allume
-                    onToggled: { panneau.etat.allumer(checked); checked = Qt.binding(() => panneau.etat.allume) }
-                }
+                // Emplacement réservé à la bascule, de sa taille : elle s'y pose sans faire partie de la colonne, pour que
+                // le fondu du contenu ne l'atteigne pas (voir fonduContenu et fonduDisque).
+                Item { id: emplacement; implicitWidth: bascule.implicitWidth; implicitHeight: bascule.implicitHeight }
                 ColumnLayout {
                     Layout.fillWidth: true
                     spacing: 0
@@ -370,6 +403,8 @@ Overlay {
                 color: Theme.color?.textSecondary ?? "transparent"
             }
             Flickable {
+                id: flickMes
+                objectName: "listeMes"
                 visible: panneau.listeVisible
                 Layout.fillWidth: true
                 Layout.preferredHeight: Math.min(contentHeight, 4 * panneau.hauteurLigne)

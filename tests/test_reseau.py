@@ -427,6 +427,52 @@ class PopoverTest(EssaiCoque, unittest.TestCase):
         self.ipc("detruire")
         self.assertFalse(self.recherche())
 
+    def test_reinitialiser(self):
+        # Le contenu d'un popover permanent revient à neuf : ligne repliée, mot de passe effacé, liste en haut.
+        self.ouvrir()
+        p = json.loads(self.ipc("puisLire", "choisir", "Inconnu"))
+        self.assertEqual(p["deplie"], "Inconnu")
+        self.ipc("saisir", self.SECRET)
+        self.ipc("remplir")
+        # Les lignes ajoutées s'ouvrent en s'étirant : la liste ne peut défiler qu'une fois assez haute.
+        fin = time.monotonic() + DELAI
+        while self.panneau()["defile"] != 40 and time.monotonic() < fin:
+            self.ipc("defiler", "40")
+            time.sleep(0.05)
+        self.assertEqual(self.panneau()["defile"], 40)
+        self.ipc("reinitialiser")
+        p = self.panneau()
+        self.assertEqual((p["deplie"], p["erreur"], p["defile"], p["balayage"]), ("", "", 0, False))
+        # Dépliée de nouveau tout de suite, la ligne ne garde rien de la saisie précédente.
+        p = json.loads(self.ipc("puisLire", "choisir", "Inconnu"))
+        self.assertEqual((p["deplie"], p["saisie"]), ("Inconnu", 0))
+
+    def test_reinitialiser_ne_coupe_pas_une_connexion(self):
+        # Une connexion suivie n'est ni annulée ni oubliée : le popover reste retenu et rien n'est déconnecté.
+        self.ouvrir()
+        self.ipc("choisir", "Connu")
+        self.assertTrue(self.panneau()["enCours"])
+        self.ipc("reinitialiser")
+        p = self.panneau()
+        self.assertEqual((p["enCours"], p["retenu"]), (True, True))
+        self.assertNotIn("essai : disconnect", self.journal())
+
+    def test_fondus(self):
+        # Contenu éteint, disque plein : la bascule reste pleine, le reste de l'en-tête disparaît. Par défaut, tout est plein.
+        p = self.ouvrir()
+        self.assertEqual((p["fonduContenu"], p["fonduDisque"]), (1, 1))
+        self.assertEqual(json.loads(self.ipc("fondus", "0", "1")), {"bascule": 1, "titre": 0})
+        self.assertEqual(json.loads(self.ipc("fondus", "0", "0")), {"bascule": 0, "titre": 0})
+        self.assertEqual(json.loads(self.ipc("fondus", "1", "1")), {"bascule": 1, "titre": 1})
+
+    def test_recharge_rend_le_balayage(self):
+        # Recharger la coque avec un popover ouvert détruit son contenu : le balayage est rendu, comme avant le
+        # contenu permanent.
+        self.ouvrir()
+        self.assertTrue(self.recherche())
+        self.ipc("detruire")
+        self.assertFalse(self.recherche())
+
     def test_destruction_ferme_ne_coupe_pas_la_recherche(self):
         # Un popover fermé qu'on détruit (écran débranché) ne rend pas le balayage d'un autre popover ouvert.
         self.ouvrir()

@@ -37,6 +37,7 @@ ShellRoot {
         property real battery: 0
     }
 
+    Component { id: fabriqueAppareil; FauxAppareil {} }
     FauxAppareil { id: bose; name: "Bose NC 700 Headphones"; address: "4C:87:5D:A2:58:8A"; icon: "audio-headset"; paired: true; connected: true; batteryAvailable: true; battery: 0.62 }
     FauxAppareil { id: souris; name: "Souris"; address: "11:22:33:44:55:66"; icon: "input-mouse"; paired: true }
     // Casque relié sans audio, comme le Bose après une reconnexion LE seule (recette du 2026-11-03).
@@ -113,6 +114,8 @@ ShellRoot {
                         exclusif: porteur.item.exclusif, fermeAuDepart: porteur.item.fermeAuDepart,
                         retenu: porteur.item.retenu,
                         hauteurProches: p.hauteurProches, hauteurLigne: p.hauteurLigne,
+                        occupe: p.occupe, defile: essai.trouver(p, o => o.objectName === "listeMes").contentY,
+                        fonduContenu: p.fonduContenu, fonduDisque: p.fonduDisque,
                     })
                 }
                 // puisLire — appelle une fonction de cette cible puis rend l'état du panneau dans la même passe.
@@ -121,6 +124,28 @@ ShellRoot {
                     ipc[fonction](argument)
                     return panneau()
                 }
+
+                // fondus — pose les deux fondus du panneau et rend les opacités effectives (produit des opacités de
+                // l'élément et de ses parents jusqu'au panneau) de la bascule et du titre de l'en-tête, en JSON.
+                // Entrées : contenu, disque (réels, en chaîne). Sortie : {bascule, titre}. Erreurs : aucune.
+                function fondus(contenu: string, disque: string): string {
+                    const p = porteur.item.panneau
+                    p.fonduContenu = Number(contenu)
+                    p.fonduDisque = Number(disque)
+                    const effective = o => { let v = 1; for (let i = o; i && i !== p.parent; i = i.parent) v *= i.opacity; return v }
+                    return JSON.stringify({ bascule: effective(essai.trouver(p, o => o.objectName === "bascule")),
+                                            titre: effective(essai.trouver(p, o => o.text === "Bluetooth")) })
+                }
+                // remplir — ajoute six appareils appairés, pour que « Mes appareils » dépasse sa hauteur et défile.
+                // Entrées : aucune. Sortie : aucune. Erreurs : aucune.
+                function remplir(): void {
+                    const c = proprietes => fabriqueAppareil.createObject(essai, proprietes)
+                    faux.appareils = faux.appareils.concat(Array.from({ length: 6 }, (_, i) =>
+                        c({ name: "Appairé " + i, address: "00:00:00:00:00:0" + i, paired: true })))
+                }
+                // reinitialiser, defiler — rendent le panneau à neuf ; font défiler « Mes appareils ». Entrée : y (defiler).
+                function reinitialiser(): void { porteur.item.panneau.reinitialiser() }
+                function defiler(y: string): void { essai.trouver(porteur.item.panneau, o => o.objectName === "listeMes").contentY = Number(y) }
 
                 // choisir — clic sur la ligne de l'appareil d'adresse donnée. Entrée : adresse.
                 function choisir(adresse: string): void { porteur.item.panneau.delegues[adresse].rangee.active() }

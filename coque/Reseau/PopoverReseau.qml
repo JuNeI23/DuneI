@@ -7,7 +7,8 @@ import "../Barre/icones.js" as Icones
 import "nmcli.js" as Nmcli
 
 // PopoverReseau — popover du réseau, ancré sous l'indicateur réseau de la barre (L2-11, direction D5 des essais).
-// Rôle : un Overlay contextuel, construit à l'ouverture et détruit à la fermeture (D80), tenu à la marge d'écran
+// Rôle : un Overlay contextuel dont le contenu est construit une fois pour toutes et que l'hôte des popovers montre ou
+// cache (il n'est plus détruit à la fermeture ; D80 reste vrai pour un popover non hébergé), tenu à la marge d'écran
 // des overlays ancrés à la barre (Overlay.margeEcran). Il suit les popovers sobres d'inspiration/anhphong : compact,
 // carré, sur le verre de E3 (D103), il porte de haut en bas : l'en-tête, dont la bascule à glyphe allume ou coupe le
 // Wi-Fi (accent plein allumée, neutre éteinte), avec le nom du réseau joint et son état (« Connecté », « Connecté
@@ -28,12 +29,16 @@ import "nmcli.js" as Nmcli
 // le balayage Wi-Fi (etat.recherche), rendu à faux à la fermeture comme à la destruction d'un popover ouvert ;
 // ouvert derrière un portail, il demande un contrôle de connectivité ponctuel (etat.verifier). La liste ne se retrie
 // pas tant qu'une ligne de mot de passe est dépliée, pour ne pas en perdre la saisie. Une connexion suivie (enCours)
-// appartient au panneau : fermé, il est détruit, et un connectionFailed tardif ne rouvre rien.
+// appartient au panneau, qui survit à la fermeture : un connectionFailed tardif déplie la ligne du réseau, et
+// reinitialiser() ne l'annule pas.
 // Popover de la barre (D108) : en ouvrir un autre le ferme ; il se ferme 1,5 s après le départ de la souris, sauf
-// pendant une saisie ou une connexion suivie (retenu).
+// pendant une saisie ou une connexion suivie (retenu). Pour l'hôte, le panneau offre fonduContenu et fonduDisque,
+// deux fondus distincts (la bascule d'en-tête, posée sur un emplacement réservé hors de la colonne, ne suit que le
+// second), et reinitialiser(), qui rend à la vue l'aspect d'un popover neuf sans couper une connexion en cours.
 // Entrées : ancre, l'indicateur de la barre ; ouvert, à affecter (voir Overlay) ; associees, voir Overlay ; etat,
 // la source de l'état et des actions, EtatReseau par défaut (la coque d'essai y met un factice).
-// Sorties : ferme(), voir Overlay ; panneau, le contenu construit, null fermé, lu par les essais.
+// Sorties : ferme(), voir Overlay ; panneau, le contenu construit (null tant qu'il ne l'est pas, ou une fois détruit),
+// lu par les essais ; fonduContenu, fonduDisque, reinitialiser(), voir ci-dessus.
 // Erreurs : un connectionFailed déplie la ligne de mot de passe avec « Mot de passe refusé » (raison
 // d'authentification) ou « Connexion impossible ». Le texte d'un mot de passe ne passe jamais au journal.
 // Dépendances : Overlay (famille contextuel), Bascule, Activite, Infobulle, Rangee, Bouton, BlocSecret, Jonction, Separateur,
@@ -48,7 +53,7 @@ Overlay {
     id: popover
 
     property var etat: EtatReseau
-    // Écrit par le panneau seul, à sa construction et à sa destruction.
+    // Écrit par le panneau seul, à sa construction et à sa destruction (null avant la première et après la seconde).
     property Item panneau: null
 
     famille: "contextuel"
@@ -160,11 +165,30 @@ Overlay {
         // Ligne de mot de passe de la ligne dépliée, null sans elle (ni pendant le repli d'une autre).
         readonly property Item bloc: delegues[deplie]?.bloc ?? null
 
+        // Fondus que l'hôte des popovers pose, de 0 à 1 : fonduContenu pour tout l'en-tête sauf la bascule et pour le
+        // reste du contenu, fonduDisque pour la bascule seule. Sans hôte, ils restent à 1 : le panneau est tel quel.
+        property real fonduContenu: 1
+        property real fonduDisque: 1
+
         focus: true
         implicitWidth: 70 * (Theme.space?.scale[0] ?? 0)
         implicitHeight: colonne.implicitHeight + 2 * (Theme.space?.scale[1] ?? 0)
         Component.onCompleted: { trier(); popover.panneau = panneau }
         Component.onDestruction: if (popover.panneau === panneau) popover.panneau = null
+
+        // reinitialiser — rend au contenu l'aspect d'un popover neuf : ligne de mot de passe repliée, saisie et message
+        // d'erreur effacés, liste en haut, retour visuel du balayage éteint. Une connexion suivie (enCours) n'est jamais
+        // annulée : seule la vue revient à neuf, et le popover reste retenu tant qu'elle dure.
+        // Entrées : aucune. Sortie : aucune. Erreurs : aucune.
+        // Dépendances : bloc, deplie, erreur, balayage, finBalayage, liste.
+        function reinitialiser(): void {
+            if (bloc) bloc.secret.text = ""
+            deplie = ""
+            erreur = ""
+            balayage = false
+            finBalayage.stop()
+            liste.contentY = 0
+        }
 
         // releve — ordonnées affichées des lignes, à relever avant tout changement qui les déplace.
         // Entrées : aucune. Sortie : tableau de [nom, ordonnée]. Erreurs : aucune. Dépendances : delegues.
@@ -268,29 +292,41 @@ Overlay {
         // Une entrée par nom de réseau ; l'ordre affiché vient de ordre, pas du modèle.
         ListModel { id: modele }
 
+        // Elle suit la radio réelle après chaque bascule ; sans carte Wi-Fi, désactivée, elle montre le lien. Elle est
+        // déclarée avant la colonne : elle garde sa place dans l'ordre de tabulation, la première, et se pose par-dessus
+        // l'emplacement que l'en-tête lui réserve, au pixel près.
+        Bascule {
+            id: bascule
+            objectName: "bascule"
+            z: 1
+            x: colonne.x + entete.x + emplacement.x
+            y: colonne.y + entete.y + emplacement.y
+            opacity: panneau.fonduDisque
+            readonly property bool allumee: panneau.etat.carte ? panneau.etat.radio : panneau.etat.connecte
+            icone: panneau.etat.icone
+            enabled: panneau.etat.carte
+            checked: allumee
+            onToggled: { panneau.etat.allumer(checked); checked = Qt.binding(() => bascule.allumee) }
+        }
+
         ColumnLayout {
             id: colonne
+            opacity: panneau.fonduContenu
             y: Theme.space?.scale[1] ?? 0
             width: panneau.width
             spacing: Theme.space?.scale[0] ?? 0
 
-            // En-tête : la bascule du Wi-Fi, le titre et l'état.
+            // En-tête : l'emplacement de la bascule du Wi-Fi, le titre et l'état.
             RowLayout {
+                id: entete
                 Layout.leftMargin: panneau.marge
                 Layout.rightMargin: panneau.marge
                 Layout.bottomMargin: Theme.space?.scale[0] ?? 0
                 spacing: Theme.space?.scale[2] ?? 0
 
-                // Elle suit la radio réelle après chaque bascule ; sans carte Wi-Fi, désactivée, elle montre le lien.
-                Bascule {
-                    id: bascule
-                    objectName: "bascule"
-                    readonly property bool allumee: panneau.etat.carte ? panneau.etat.radio : panneau.etat.connecte
-                    icone: panneau.etat.icone
-                    enabled: panneau.etat.carte
-                    checked: allumee
-                    onToggled: { panneau.etat.allumer(checked); checked = Qt.binding(() => bascule.allumee) }
-                }
+                // Emplacement réservé à la bascule, de sa taille : elle s'y pose sans faire partie de la colonne, pour que
+                // le fondu du contenu ne l'atteigne pas (voir fonduContenu et fonduDisque).
+                Item { id: emplacement; implicitWidth: bascule.implicitWidth; implicitHeight: bascule.implicitHeight }
                 ColumnLayout {
                     Layout.fillWidth: true
                     spacing: 0
@@ -338,6 +374,8 @@ Overlay {
             }
 
             Flickable {
+                id: liste
+                objectName: "liste"
                 visible: panneau.listeVisible
                 Layout.fillWidth: true
                 Layout.preferredHeight: Math.min(contentHeight, 8 * panneau.hauteurLigne)

@@ -176,6 +176,8 @@ ShellRoot {
                         exclusif: porteur.item.exclusif, fermeAuDepart: porteur.item.fermeAuDepart,
                         retenu: porteur.item.retenu,
                         saisie: p.bloc ? p.bloc.secret.length : -1,
+                        enCours: p.enCours !== null, defile: objet("liste").contentY,
+                        fonduContenu: p.fonduContenu, fonduDisque: p.fonduDisque,
                     })
                 }
 
@@ -192,6 +194,27 @@ ShellRoot {
                 function profilActif(uuid: string): void {
                     faux.profils = [{ nom: faux.nomActif, uuid, type: "802-11-wireless", actif: true }]
                 }
+
+                // fondus — pose les deux fondus du panneau et rend les opacités effectives (produit des opacités de
+                // l'élément et de ses parents jusqu'au panneau) de la bascule et du titre de l'en-tête, en JSON.
+                // Entrées : contenu, disque (réels, en chaîne). Sortie : {bascule, titre}. Erreurs : aucune.
+                function fondus(contenu: string, disque: string): string {
+                    const p = porteur.item.panneau
+                    p.fonduContenu = Number(contenu)
+                    p.fonduDisque = Number(disque)
+                    const effective = o => { let v = 1; for (let i = o; i && i !== p.parent; i = i.parent) v *= i.opacity; return v }
+                    return JSON.stringify({ bascule: effective(essai.trouver(p, o => o.objectName === "bascule")),
+                                            titre: effective(essai.trouver(p, o => o.text === p.resume.titre)) })
+                }
+                // remplir — ajoute douze réseaux au balayage, pour que la liste dépasse sa hauteur et défile.
+                // Entrées : aucune. Sortie : aucune. Erreurs : aucune.
+                function remplir(): void {
+                    const c = proprietes => fabriqueReseau.createObject(essai, proprietes)
+                    faux.reseaux = faux.reseaux.concat(Array.from({ length: 12 }, (_, i) => c({ name: "Voisin " + i, signalStrength: 0.2, known: true })))
+                }
+                // reinitialiser, defiler — rendent le panneau à neuf ; font défiler la liste. Entrée : y (defiler).
+                function reinitialiser(): void { porteur.item.panneau.reinitialiser() }
+                function defiler(y: string): void { essai.trouver(porteur.item.panneau, o => o.objectName === "liste").contentY = Number(y) }
 
                 // choisir — clic sur le réseau nommé. Entrée : nom. Sortie : aucune.
                 function choisir(nom: string): void {
