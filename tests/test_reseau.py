@@ -636,6 +636,58 @@ class PopoverTest(EssaiCoque, unittest.TestCase):
             time.sleep(0.02)
         self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read|Unable to assign|Binding loop")
 
+    def attendre_pret(self) -> dict:
+        """Attend que le panneau soit prêt à fixer la forme du cadre. Sortie : son état. Erreurs : échec du test."""
+        fin = time.monotonic() + DELAI
+        while not (p := self.panneau())["pretAMontrer"] and time.monotonic() < fin:
+            time.sleep(0.005)
+        self.assertTrue(p["pretAMontrer"])
+        return p
+
+    def test_liste_rendue_a_l_ouverture(self):
+        # La liste vidée à l'arrêt du balayage revient à la réouverture : le cadre attend, les lignes paraissent d'emblée.
+        self.ipc("heberger")
+        self.ouvrir()
+        self.attendre_pret()
+        self.attendre_repos()
+        self.ipc("ouvrir", "false")
+        self.ipc("viderReseaux")
+        fin = time.monotonic() + DELAI
+        while self.panneau()["lignes"] and time.monotonic() < fin:
+            time.sleep(0.02)
+        self.assertEqual(self.panneau()["lignes"], {}, "toutes les lignes sorties ensemble doivent quitter le modèle")
+        p = json.loads(self.ipc("rouvrirAvecListe"))
+        self.assertFalse(p["pretAMontrer"])
+        self.assertTrue(p["lignes"], "liste non rendue")
+        for ligne in p["lignes"].values():
+            self.assertEqual((ligne["apparition"], ligne["apparitionEnCours"]), (1, False), p)
+        self.attendre_pret()
+
+    def test_pret_a_montrer_sans_reseau_et_a_chaque_ouverture(self):
+        # Aucun réseau à la ronde : le cadre se déploie quand même, et l'attente se réarme à chaque ouverture.
+        self.ipc("heberger")
+        self.ouvrir()
+        self.ipc("ouvrir", "false")
+        self.ipc("viderReseaux")
+        self.assertFalse(json.loads(self.ipc("puisLire", "ouvrir", "true"))["pretAMontrer"])
+        self.attendre_pret()
+        self.ipc("ouvrir", "false")
+        self.assertFalse(self.panneau()["pretAMontrer"])
+
+    def test_reseau_tardif_entre_en_s_ouvrant(self):
+        # Après l'attente, un réseau qui paraît entre encore en s'ouvrant.
+        self.ipc("heberger")
+        self.ouvrir()
+        self.attendre_pret()
+        self.attendre_repos()
+        self.ipc("ajouterReseau")
+        self.assertLess(self.panneau()["lignes"]["Nouveau"]["apparition"], 1)
+
+    def test_pret_a_montrer_sans_carte(self):
+        # Sans liste à attendre, le popover est prêt tout de suite.
+        self.ipc("sansCarte")
+        self.assertTrue(self.ouvrir()["pretAMontrer"])
+
     def test_ligne_qui_sort_puis_ligne_qui_entre(self):
         # Un réseau qui quitte le balayage : sa ligne se referme (hauteur et fondu) au lieu de disparaître, et la
         # ligne suivante ne saute pas, elle suit sa hauteur. Un réseau qui paraît : sa ligne s'ouvre à partir de

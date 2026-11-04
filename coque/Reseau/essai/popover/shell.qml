@@ -25,6 +25,8 @@ ShellRoot {
     id: essai
 
     // journal — écrit une ligne lisible par le test. Entrées : cle, valeur. Sortie : aucune. Erreurs : aucune.
+    // Liste mise de côté par viderReseaux, le temps que le balayage reprenne.
+    property var reseauxTenus: []
     function journal(cle, valeur) { console.info("essai : " + cle + " " + valeur) }
 
     // Réseau factice : les membres de WifiNetwork que lit le popover.
@@ -95,9 +97,16 @@ ShellRoot {
                 sourceComponent: Component { PopoverReseau { ancre: cible; etat: faux } }
             }
 
+            // Contenu tenu comme par l'hôte des popovers : construit une fois, il survit aux fermetures.
+            Loader { id: hebergeur; active: false; sourceComponent: porteur.item?.contenu ?? null }
+
             IpcHandler {
                 id: ipc
                 target: "popover"
+
+                // heberger — passe le popover au contenu permanent, comme hébergé dans la barre. Entrées : aucune.
+                // Sortie : aucune. Erreurs : aucune. Dépendances : porteur, hebergeur.
+                function heberger(): void { porteur.item.heberge = true; hebergeur.active = true }
 
                 // ouvrir — ouvre ou ferme le popover. Entrée : valeur. Sortie : aucune. Dépendances : porteur.
                 function ouvrir(valeur: bool): void { porteur.item.ouvert = valeur }
@@ -134,6 +143,13 @@ ShellRoot {
                 // forcerRecherche — pose recherche à vrai, comme un popover ouvert sur un autre écran.
                 function forcerRecherche(): void { faux.recherche = true }
                 // ajouterReseau — fait paraître un réseau, comme le balayage. Entrées : aucune. Sortie : aucune.
+                // viderReseaux, rendreReseaux — la liste se vide à l'arrêt du balayage et revient à sa reprise, comme sous
+                // Quickshell. Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : faux.
+                function viderReseaux(): void { essai.reseauxTenus = faux.reseaux; faux.reseaux = [] }
+                function rendreReseaux(): void { faux.reseaux = essai.reseauxTenus }
+                // rouvrirAvecListe — rouvre le popover et rend la liste dans la même passe, puis lit l'état du panneau :
+                // l'attente de l'ouverture est plus courte qu'un appel IPC. Sortie : texte JSON. Erreurs : aucune.
+                function rouvrirAvecListe(): string { porteur.item.ouvert = true; rendreReseaux(); return panneau() }
                 function ajouterReseau(): void { faux.reseaux = faux.reseaux.concat([essai.reseau("Nouveau")]) }
                 // retirerReseau — le réseau nommé quitte le balayage, puis son objet est détruit, comme sous
                 // Quickshell. Entrée : nom. Sortie : aucune.
@@ -191,7 +207,7 @@ ShellRoot {
                         saisie: p.bloc ? p.bloc.secret.length : -1,
                         revele: p.bloc ? p.bloc.secret.revele : false,
                         enCours: p.enCours !== null, defile: objet("liste").contentY,
-                        fonduContenu: p.fonduContenu, fonduDisque: p.fonduDisque,
+                        fonduContenu: p.fonduContenu, fonduDisque: p.fonduDisque, pretAMontrer: p.pretAMontrer,
                     })
                 }
 

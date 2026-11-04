@@ -138,6 +138,9 @@ ShellRoot {
                 }
                 // remplir — ajoute six appareils appairés, pour que « Mes appareils » dépasse sa hauteur et défile.
                 // Entrées : aucune. Sortie : aucune. Erreurs : aucune.
+                // vider — tous les appareils quittent la liste en même temps. Entrées : aucune. Sortie : aucune.
+                // Erreurs : aucune. Dépendances : faux.
+                function vider(): void { faux.appareils = [] }
                 function remplir(): void {
                     const c = proprietes => fabriqueAppareil.createObject(essai, proprietes)
                     faux.appareils = faux.appareils.concat(Array.from({ length: 6 }, (_, i) =>

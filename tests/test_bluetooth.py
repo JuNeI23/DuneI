@@ -212,6 +212,16 @@ class PopoverBluetoothTest(EssaiCoque, unittest.TestCase):
         self.assertEqual((p["exclusif"], p["fermeAuDepart"], p["retenu"]), (True, True, False))
         self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read|Unable to assign|Binding loop")
 
+    def test_lignes_sorties_ensemble(self):
+        # Plusieurs lignes qui quittent la liste en même temps se retirent toutes du modèle, pas la seule dernière.
+        self.ouvrir()
+        self.assertTrue(self.panneau()["lignes"])
+        self.ipc("vider")
+        fin = time.monotonic() + DELAI
+        while self.panneau()["lignes"] and time.monotonic() < fin:
+            time.sleep(0.02)
+        self.assertEqual(self.panneau()["lignes"], {})
+
     def test_recherche_suit_ouverture(self):
         self.assertEqual(self.ipc("recherche"), "false")
         self.ouvrir()

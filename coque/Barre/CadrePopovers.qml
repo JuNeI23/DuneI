@@ -76,6 +76,8 @@ Item {
         if (courant) {
             // Le pointeur a pu rester sur le cadre : le survol passe au nouveau popover, que sa minuterie ne le ferme pas.
             courant.survolCadre = survol.hovered
+            // Le contenu choisi peut se faire attendre (pretAMontrer) : le disque de l'ancien tient dès le clic.
+            if (affiche && affiche !== courant && !vueRetenue) vueRetenue = vueAffichee
         } else {
             affiche = null
             passage = false
@@ -149,7 +151,9 @@ Item {
                 Loader {
                     id: vue
                     required property var modelData
-                    readonly property bool pret: modelData.ouvert && status === Loader.Ready
+                    // Un contenu qui connaît sa vraie hauteur un instant après l'ouverture le dit par pretAMontrer : le cadre
+                    // attend pour viser directement sa forme, au lieu de passer par une forme vide (D118).
+                    readonly property bool pret: modelData.ouvert && status === Loader.Ready && (item?.pretAMontrer ?? true)
                     readonly property bool estAffichee: racine.vueAffichee === vue
                     readonly property real opaciteContenu: fondu.value
                     readonly property bool retenue: racine.vueRetenue === vue

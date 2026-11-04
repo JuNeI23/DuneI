@@ -2851,3 +2851,28 @@ décoratives longues en `power-saver` reste une idée, gardée pour L2-13 (indic
   croisé avec le mouvement réduit (D115) compliquerait la règle de la préférence unique pour un gain non mesuré.
 
 *Touché : journal.*
+
+### D118 · Le cadre du popover réseau attend le retour de la liste Wi-Fi, 30 ms
+
+2026-11-04. **À l'ouverture du popover réseau, le cadre attend `motion.delays.liste` (30 ms) avant de se déployer, et les
+réseaux revenus pendant cette attente paraissent d'emblée.** L'icône réagit aussitôt : seule la forme attend. Le contrat
+est générique : un contenu hébergé peut exposer `pretAMontrer`, que `CadrePopovers` lit ; sans cette propriété, il est
+prêt tout de suite. Défaut signalé par Nicolas à la recette de L2-06.
+
+- **Raison.** Du Bluetooth (319 px) au Wi-Fi (381 px), le cadre raccourcissait puis s'allongeait. Comme le contenu reste
+  construit (D113) et que la liste se vide à l'arrêt du balayage, le panneau Wi-Fi fermé ne mesurait que 189 px ; ses
+  lignes revenaient ensuite en s'ouvrant, et sa hauteur montait en environ 300 ms.
+- **Pourquoi une attente fixe.** Sur `caladan`, les réseaux reviennent un par un, en 12 ms environ après l'ouverture, et
+  le réseau joint ne quitte jamais la liste : attendre le premier réseau revenait à ne pas attendre. Une attente fixe
+  évite aussi de distinguer le cas d'une liste vide. Un réseau arrivé plus tard entre en s'ouvrant, et le cadre le suit.
+- **Écartés.** Garder le balayage actif popover fermé consommerait de la batterie et de la radio. Mémoriser l'ancienne
+  hauteur montrerait un cadre vide pendant le retour des lignes.
+- **Mesure.** Trois passages du Bluetooth au Wi-Fi : la hauteur visée passe directement de 319 à 413 px, sans étape
+  intermédiaire, et la forme part 38 à 58 ms après l'ouverture. Le budget de 50 ms (fiche, objectif 8) est donc dépassé
+  ponctuellement, pour ce seul popover ; cet écart reste soumis à la recette.
+- **Autre défaut corrigé.** `Qt.callLater(panneau.retirer, cle)` fusionnait les appels d'une même fonction : de plusieurs
+  lignes sorties ensemble, une seule quittait le modèle, les autres restaient cachées puis revenaient en s'animant. Le
+  popover Bluetooth avait le même défaut. Chaque appel passe maintenant par une fonction propre.
+
+*Touché : `motion.toml`, `dunei_motion/checks.py`, `generated/motion.json`, golden, `coque/Barre/CadrePopovers.qml`,
+`coque/Reseau/PopoverReseau.qml`, `coque/Bluetooth/PopoverBluetooth.qml`, coques d'essai, tests, fiche de conception.*

@@ -133,9 +133,12 @@ Overlay {
         // Ordre d'affichage : ordre, plus les lignes qui sortent (leur réseau a quitté le tri), gardées à leur ancien
         // rang le temps de se refermer, pour que les lignes voisines suivent leur hauteur au lieu de sauter.
         property var disposition: []
-        // Faux pendant le premier tri, qui a lieu à la construction de la coque : les lignes déjà présentes paraissent
-        // d'emblée, seules celles qui arrivent ensuite entrent.
-        property bool trie: false
+        // À l'arrêt du balayage, la liste se vide ; à sa reprise, elle revient un réseau à la fois, en quelques
+        // millisecondes. Pendant motion.delays.liste après l'ouverture, ces réseaux paraissent d'emblée ; seuls ceux qui
+        // arrivent ensuite entrent en s'ouvrant (D118).
+        property bool attenteFinie: false
+        // La hauteur du panneau est connue : la liste a eu le temps de revenir, ou il n'y en a pas. Lu par l'hôte (D118).
+        readonly property bool pretAMontrer: !listeVisible || attenteFinie
         // Réseaux présents au dernier balayage, suivis même liste figée : un réseau de la liste figée qui n'y figure
         // plus est masqué et ne peut plus être choisi ni rejoint (son WifiNetwork peut avoir été détruit).
         property alias presents: jonction.presents
@@ -196,7 +199,7 @@ Overlay {
         function releve(): var { return Object.entries(delegues).map(([nom, d]) => [nom, d.y]) }
 
         // trier — fige l'ordre de la liste et met le modèle des lignes à jour : un nom nouveau y est ajouté (sa
-        // ligne entre en s'ouvrant, sauf au premier tri), un nom disparu reste à son ancien rang dans disposition le
+        // ligne entre en s'ouvrant, sauf pendant l'attente de l'ouverture), un nom disparu reste à son ancien rang dans disposition le
         // temps que sa ligne se referme (elle se retire elle-même ensuite, voir retirer), les autres lignes glissent
         // de leur place relevée à la nouvelle. Le réseau joint n'y figure pas : l'en-tête le nomme. Tant qu'une ligne
         // de mot de passe est dépliée, rien ne change, pour ne perdre ni la saisie ni le message d'erreur ; le tri
@@ -213,8 +216,7 @@ Overlay {
             for (const [i, nom] of disposition.entries())
                 if (!ordre.includes(nom) && connus.includes(nom)) d.splice(Math.min(i, d.length), 0, nom)
             disposition = d
-            for (const nom of ordre) if (!connus.includes(nom)) modele.append({ cle: nom, entre: trie })
-            trie = true
+            for (const nom of ordre) if (!connus.includes(nom)) modele.append({ cle: nom, entre: attenteFinie })
             for (const [nom, y] of avant) delegues[nom]?.glisser(y)
         }
         onDeplieChanged: trier()
@@ -290,6 +292,17 @@ Overlay {
         // Borne du retour visuel de la recherche quand le balayage ne change pas la liste (motion.delays.scan) ;
         // armée par le seul clic.
         Timer { id: finBalayage; interval: Theme.motion?.delays?.scan ?? 0; onTriggered: panneau.balayage = false }
+        // Temps laissé à la liste pour revenir après l'ouverture.
+        Timer {
+            interval: Theme.motion?.delays?.liste ?? 0
+            running: popover.ouvert && !panneau.attenteFinie
+            onTriggered: panneau.attenteFinie = true
+        }
+        // À la fermeture, le balayage s'arrête et la liste se vide : la prochaine ouverture attend de nouveau.
+        Connections {
+            target: popover
+            function onOuvertChanged() { if (!popover.ouvert) panneau.attenteFinie = false }
+        }
         // Une entrée par nom de réseau ; l'ordre affiché vient de ordre, pas du modèle.
         ListModel { id: modele }
 
@@ -396,7 +409,7 @@ Overlay {
                         delegate: Item {
                             id: ligne
                             required property string cle
-                            // Vrai pour une ligne ajoutée après le premier tri : elle entre en s'ouvrant.
+                            // Vrai pour une ligne ajoutée après l'attente de l'ouverture : elle entre en s'ouvrant.
                             required property bool entre
                             readonly property int rang: panneau.ordre.indexOf(cle)
                             // Lectures sûres : le WifiNetwork d'une liste figée peut avoir été détruit (null).
@@ -430,7 +443,9 @@ Overlay {
                                 if (!posee) Qt.callLater(() => posee = true)
                             }
                             Component.onDestruction: panneau.desinscrire(cle, ligne)
-                            onPartieChanged: if (partie) Qt.callLater(panneau.retirer, cle)
+                            // Une fonction propre à chaque appel : Qt.callLater fusionne les appels d'une même fonction, et plusieurs lignes
+                            // peuvent sortir ensemble.
+                            onPartieChanged: if (partie) Qt.callLater(() => panneau.retirer(cle))
 
                             // glisser — fait partir la ligne de sa place d'avant un nouveau tri vers la nouvelle,
                             // par le ressort reflow, depuis sa position courante même en plein glissement.

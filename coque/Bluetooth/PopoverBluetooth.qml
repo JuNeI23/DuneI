@@ -205,7 +205,9 @@ Overlay {
             if (!posee) Qt.callLater(() => posee = true)
         }
         Component.onDestruction: conteneur.desinscrire(cle, ligne)
-        onPartieChanged: if (partie) Qt.callLater(conteneur.retirer, cle)
+        // Une fonction propre à chaque appel : Qt.callLater fusionne les appels d'une même fonction, et plusieurs lignes
+        // peuvent sortir ensemble.
+        onPartieChanged: if (partie) Qt.callLater(() => conteneur.retirer(cle))
 
         // glisser — fait partir la ligne de sa place d'avant un tri vers la nouvelle (ressort reflow),
         // sans effet tant que la ligne est cachée (popover fermé).

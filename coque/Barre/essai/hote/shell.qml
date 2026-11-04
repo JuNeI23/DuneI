@@ -42,6 +42,7 @@ ShellRoot {
         property real hauteur
         property real fonduContenu: 1
         property real fonduDisque: 1
+        property bool pretAMontrer: true
         property int remises: 0
         property int clics: 0
         readonly property alias aide: aide
@@ -203,6 +204,9 @@ ShellRoot {
                 // construireBarre, ouvrirBarre, detruireBarre — barre factice entière : la construit, ouvre son
                 // popover, la détruit d'un bloc. Entrées : aucune. Sortie : aucune. Erreurs : aucune.
                 function construireBarre(): void { barreFactice.active = true }
+                // pretAMontrer — dit si le contenu nommé est prêt à fixer la forme du cadre.
+                // Entrées : nom, le panneau ; valeur, vrai s'il est prêt. Sortie : aucune. Erreurs : aucune.
+                function pretAMontrer(nom: string, valeur: bool): void { essai.panneaux[nom].pretAMontrer = valeur }
                 function ouvrirBarre(): void { barreFactice.item.popover.ouvert = true }
                 function detruireBarre(): void { barreFactice.active = false }
 

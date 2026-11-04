@@ -784,6 +784,35 @@ class HoteTest(HoteBase, unittest.TestCase):
         self.assertEqual((e["passage"], e["panneaux"]["a"]["disque"], e["panneaux"]["b"]["disque"]), (False, 0, 0))
         self.forme_atteinte(self.OUVERT_C, "c")
 
+    def test_cadre_attend_le_contenu(self):
+        # Un contenu pas encore prêt ne fixe pas la forme : au passage, le cadre garde l'ancienne, le disque reste plein.
+        self.panneaux_prets()
+        self.ipc("pretAMontrer", "b", "false")
+        self.ouvrir("a")
+        self.forme_atteinte(self.OUVERT_A, "a")
+        e = self.ouvrir("b")
+        self.assertEqual((e["courant"], e["affiche"]), ("b", "a"))
+        fin = time.monotonic() + 0.15
+        while time.monotonic() < fin:
+            e = self.etat()
+            self.assertEqual(e["affiche"], "a")
+            self.assertEqual(e["panneaux"]["a"]["disque"], 1, e)
+            self.assertEqual(e["panneaux"]["b"]["contenu"], 0, e)
+            time.sleep(0.01)
+        self.ipc("pretAMontrer", "b", "true")
+        self.jusqua(lambda e: e["affiche"] == "b" and e["panneaux"]["b"]["contenu"] == 1, "contenu prêt jamais montré")
+        self.sans_erreur()
+
+    def test_ouverture_attend_le_contenu(self):
+        # Depuis l'état fermé, le cadre ne se déploie pas avant que le contenu soit prêt.
+        self.panneaux_prets()
+        self.ipc("pretAMontrer", "a", "false")
+        e = self.ouvrir("a")
+        self.assertEqual((e["courant"], e["affiche"], e["cadreVisible"]), ("a", None, False))
+        self.ipc("pretAMontrer", "a", "true")
+        self.forme_atteinte(self.OUVERT_A, "a")
+        self.sans_erreur()
+
     def test_passage_sans_boucle_de_liaison(self):
         # La fin d'un passage lève l'attente du contenu sans que la distance restante se réévalue pendant sa notification.
         self.panneaux_prets()

@@ -28,6 +28,8 @@ stable  = 5000                    # Stabilité exigée d'un état du réseau ava
                                   # plus courte, ou une reprise après veille, ne produit rien (notifications, L2-11).
 dismiss = 1500                    # Absence du pointeur après laquelle un popover de la barre se ferme, une fois que
                                   # la souris l'a quitté, lui et son icône (D108, L2-14).
+liste   = 30                      # Attente, à l'ouverture du popover réseau, du retour de la liste Wi-Fi avant de déployer
+                                  # le cadre : les réseaux reviennent un par un, en une douzaine de ms (D118, L2-06).
 
 [periods]                         # Durée d'un cycle des mouvements continus, en millisecondes.
 spinner = 1200                    # Un cycle de la vague des trois grains de l'indicateur d'activité.

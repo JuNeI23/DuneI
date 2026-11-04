@@ -18,7 +18,8 @@
     "scan": 6000,
     "copied": 1500,
     "stable": 5000,
-    "dismiss": 1500
+    "dismiss": 1500,
+    "liste": 30
   },
   "periods": {
     "spinner": 1200

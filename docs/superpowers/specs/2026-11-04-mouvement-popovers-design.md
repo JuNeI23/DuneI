@@ -1,6 +1,6 @@
 # Mouvement des popovers de la barre : conception (L2-06, L2-07, L2-47, L2-56)
 
-Version 0.3, 2026-11-04.
+Version 0.4, 2026-11-04.
 
 ## Intention
 
@@ -210,6 +210,7 @@ d'une image (16 ms) de retard à l'ouverture. Au-delà, **la réactivité prime,
 
 | Version | Date | Changements |
 | --- | --- | --- |
+| 0.4 | 2026-11-04 | Recette : le cadre du popover réseau attend 30 ms le retour de la liste Wi-Fi (D118) ; le budget de 50 ms avant le départ de la forme est dépassé ponctuellement pour ce popover |
 | 0.3 | 2026-11-04 | Écarts de la réalisation : le cadre et le contenu vivent dans `CadrePopovers.qml`, que `HotePopovers.qml` n'enveloppe que d'une fenêtre, pour se charger aussi sous la plateforme offscreen ; la fenêtre hôte se réduit à une ligne au repos (D109) ; la tâche 6 a précédé la tâche 5, pour que l'hôte trouve prêts `fonduContenu`, `fonduDisque` et `reinitialiser()` ; le mouvement réduit de l'implémentation fait paraître le cadre à sa forme finale, flou coupé pendant le fondu de 100 ms |
 | 0.2 | 2026-11-04 | Relecture du constructeur : la réactivité prime sur la réduction de la fenêtre hôte (décision de Nicolas), budget de fluidité, repli du réglage d'`overlay` |
 | 0.1 | 2026-11-04 | Première rédaction, après validation de l'essai jetable à l'écran |
