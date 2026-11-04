@@ -14,9 +14,9 @@ import "forme.js" as Forme
 // `reduced` ; il garde sa forme pendant le fondu de sortie, puis se replie sur l'icône. Le verre n'est alors estompé que
 // pendant ce fondu : sous le seuil ignore_alpha du calque, le flou s'éteint (seule exception à la règle du verre, bible
 // ch. 6), et le cadre à pleine opacité retrouve son flou. Au passage, le cadre se pose à la nouvelle forme et les
-// contenus se croisent en fondu court. Hors mouvement réduit, au passage, l'ancien contenu s'efface aussitôt, le nouveau attend la part
-// motion.popover.passage_content_at du trajet et s'affiche au-dessus, et le disque de l'ancienne bascule reste plein
-// jusqu'à être recouvert. Un contenu fermé ne reçoit plus aucun clic, même pendant son fondu : son bouclier les arrête,
+// contenus se croisent en fondu court. En mouvement normal, l'ancien contenu s'efface aussitôt, le nouveau attend la
+// part motion.popover.passage_content_at du trajet et s'affiche au-dessus, et le disque de l'ancienne bascule reste
+// plein jusqu'à être recouvert. Un contenu fermé ne reçoit plus aucun clic, même pendant son fondu : son bouclier les arrête,
 // car le désactiver (enabled) changerait la couleur de sa bascule sous les yeux. Une fois qu'il ne se voit plus, il est
 // remis à neuf par reinitialiser(). Une ouverture faite avant la fin de la construction attend le contenu.
 // Entrées : popovers, les Overlay hébergés (heberge: true) de cette barre, dont le contenu offre sur sa racine fonduContenu,
@@ -62,13 +62,14 @@ Item {
     readonly property var visee: Forme.cibles(tenu, ancreX, ancreL, largeurOuverte, hauteurOuverte,
                                               largeurEcran, marge)
 
-    // Passage : la distance restante n'est lue, à chaque image, que tant qu'un contenu l'attend.
+    // Passage : la distance restante ne dépend pas de passage, que sa notification écrit ; elle ne varie que pendant un
+    // mouvement, donc rien ne se calcule au repos.
     property bool passage: false
     property real trajetTotal: 0
-    readonly property real reste: passage ? Forme.trajet(formeActuelle(), visee) : 0
+    readonly property real reste: Forme.trajet(formeActuelle(), visee)
     readonly property real partPassage: Theme.motion?.popover.passage_content_at ?? 0
 
-    onResteChanged: if (Forme.contenuPermis(passage, reste, trajetTotal, partPassage)) passage = false
+    onResteChanged: if (passage && Forme.contenuPermis(passage, reste, trajetTotal, partPassage)) passage = false
     onOpaciteAfficheeChanged: if (opaciteAffichee >= 1) vueRetenue = null
     onDeployeChanged: if (!deploye) vueRetenue = null
     onCourantChanged: {

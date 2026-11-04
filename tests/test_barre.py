@@ -644,7 +644,8 @@ class HoteBase(EssaiCoque):
 
     def sans_erreur(self):
         """Vérifie que rien d'anormal n'a atteint le journal. Dépendances : journal."""
-        for erreur in ("TypeError", "ReferenceError", "Unable to assign", "Cannot read", "is not a function"):
+        for erreur in ("TypeError", "ReferenceError", "Unable to assign", "Cannot read", "is not a function",
+                       "Binding loop"):
             self.assertNotIn(erreur, self.journal())
 
 
@@ -780,6 +781,15 @@ class HoteTest(HoteBase, unittest.TestCase):
         e = self.ouvrir("c")
         self.assertEqual((e["passage"], e["panneaux"]["a"]["disque"], e["panneaux"]["b"]["disque"]), (False, 0, 0))
         self.forme_atteinte(self.OUVERT_C, "c")
+
+    def test_passage_sans_boucle_de_liaison(self):
+        # La fin d'un passage lève l'attente du contenu sans que la distance restante se réévalue pendant sa notification.
+        self.panneaux_prets()
+        self.ouvrir("a")
+        self.forme_atteinte(self.OUVERT_A, "a")
+        self.ouvrir("b")
+        self.jusqua(lambda e: not e["passage"], "passage resté en cours")
+        self.sans_erreur()
 
     def test_passage_aller_retour(self):
         # A, B, puis A de nouveau en plein passage : le disque de A ne quitte pas le plein tant que son contenu ne l'est pas.
