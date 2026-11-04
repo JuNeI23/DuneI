@@ -75,6 +75,32 @@ class ErrorsTest(unittest.TestCase):
         r = raw(); r["spinner"]["easing"] = 1
         self.check(r, "spinner", "easing", "type")
 
+    def test_popover_exige_ses_cles(self):
+        """La section [popover] et chacune de ses trois clés sont exigées, numériques, et aucune clé inconnue n'y passe."""
+        r = raw(); del r["popover"]
+        self.check(r, "popover", "manquante")
+        for key in ("icon_travel_px", "rest_threshold_px", "passage_content_at"):
+            with self.subTest(key=key):
+                r = raw(); del r["popover"][key]
+                self.check(r, "popover", key, "manquante")
+                r = raw(); r["popover"][key] = "1"
+                self.check(r, "popover", key, "type")
+        r = raw(); r["popover"]["inconnue"] = 1
+        self.check(r, "popover", "inconnue", "inconnue")
+
+    def test_popover_bornes(self):
+        """Le déplacement de l'icône et le seuil de repos sont strictement positifs ; le point de passage du
+        contenu est compris entre 0 et 1 exclus."""
+        for key in ("icon_travel_px", "rest_threshold_px"):
+            for v in (0, -1):
+                with self.subTest(key=key, v=v):
+                    r = raw(); r["popover"][key] = v
+                    self.check(r, "popover", key, "strictement positif")
+        for v in (0, 1, 1.2):
+            with self.subTest(passage_content_at=v):
+                r = raw(); r["popover"]["passage_content_at"] = v
+                self.check(r, "popover", "passage_content_at", "exclus")
+
     def test_nonpositive_reduced_fade(self):
         r = raw(); r["rules"]["reduced_fade_ms"] = 0
         self.check(r, "reduced_fade_ms", "strictement")

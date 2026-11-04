@@ -38,6 +38,11 @@ rest_opacity = 0.35               # Opacité d'un grain au repos, entre 0 et 1 e
 easing       = "InOutSine"        # Courbe de chaque étape, nommée comme le type Easing de Qt (Linear, InOutSine,
                                   # InOutQuad : les seules que l'indicateur sait reproduire pour sa pose arrêtée).
 
+[popover]                         # Mouvement des popovers de la barre (L2-06, L2-07, L2-47, L2-56).
+icon_travel_px     = 3            # Déplacement, en pixels, de l'icône qui réagit dès la première image.
+rest_threshold_px  = 0.5          # Écart, en pixels, sous lequel le ressort est considéré au repos.
+passage_content_at = 0.65         # Progression de la forme, entre 0 et 1 exclus, à laquelle le contenu passe.
+
 [transitions.state]
 usage      = "Changement d'état sur place : survol, focus, pression, sélection."
 mass       = 0.50
@@ -56,8 +61,8 @@ stagger_ms = 40                   # Décalage entre deux éléments successifs d
 [transitions.overlay]
 usage      = "Entrée d'une surface de couche 3."
 mass       = 1.00
-stiffness  = 400
-dampening  = 44
+stiffness  = 600
+dampening  = 50
 exit_ratio = 0.70
 
 [transitions.window]
