@@ -13,8 +13,9 @@ require("modules.demarrage").apply()
 -- Gouttières, rayon, bordure et ombre, produits par generate_tokens.py.
 hl.config(require("generated.hyprland-tokens"))
 
--- Ressorts et animations produits par generate_motion.py ; apply(true) pour le mouvement réduit (D18).
-require("modules.motion").apply(false)
+-- Ressorts et animations produits par generate_motion.py ; la préférence de mouvement réduit vient de
+-- mouvement.json, écrit par dunei-mouvement (D18).
+require("modules.motion").apply(require("modules.motion").preference())
 
 -- Variables transmises aux clients : décorations dessinées par Qt retirées (L1-14).
 require("modules.env").apply()

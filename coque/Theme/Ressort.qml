@@ -5,13 +5,18 @@ import "physics.js" as Physics
 // Rôle : à chaque nouvelle cible, repart de la position et de la vitesse courantes (une interruption en vol ne
 // saute pas et ne forme aucune file d'attente, bible ch. 6) ; sert de moteur à toute taille ou position animée
 // de la coque (largeur d'une pastille, taille de la presqu'île). Les paramètres viennent toujours de
-// motion.json : `in` quand la cible est supérieure à la valeur affichée, `out` quand elle est inférieure.
-// Entrées : transition nom d'une transition de motion.json (défaut « navigate ») ; cible valeur visée.
+// motion.json : `in` quand la cible est supérieure à la valeur affichée, `out` quand elle est inférieure, sauf si
+// `sens` impose l'un des deux.
+// Mouvement réduit (Theme.mouvementReduit) : un ressort de nature « deplacement » se pose sur sa cible aussitôt ;
+// un ressort de nature « fondu » suit le ressort `reduced` de motion.json, court et sans dépassement.
+// Entrées : transition nom d'une transition de motion.json (défaut « navigate ») ; cible valeur visée ;
+//          sens « in » ou « out » pour forcer le réglage, relu à chaque image, « » pour le choisir selon le sens de
+//          la cible (défaut) ; seuil écart, dans l'unité de la valeur, sous lequel le ressort se pose (0 garde le
+//          critère de physics.js) ; nature « deplacement » (défaut) ou « fondu », ce que le ressort anime.
 // Sorties : value valeur affichée ; moving vrai tant que le ressort avance ; vitesse() vitesse courante ; poser()
 //          pose le ressort sur sa cible sans animation.
 // Erreurs : aucune ; avant que Theme soit prêt, ou si la transition est inconnue, value prend cible sans
-//           animation, ainsi qu'à la création : la cible initiale se pose d'un coup. Le mouvement réduit n'a pas encore de bascule dans la
-//           coque : il n'est pas lu ici.
+//           animation, ainsi qu'à la création : la cible initiale se pose d'un coup.
 // Dépendances : Theme (singleton du module), physics.js (integrate, atRest).
 // L'animation ne tourne que tant que le ressort avance, pour rester à 0 % de processeur au repos.
 Item {
@@ -26,14 +31,10 @@ Item {
     property var _st: ({ x: 0, v: 0, acc: 0 })
     property var _params: null
     property bool _pret: false
-    // MESURE TEMPORAIRE de l'essai de mouvement.
-    property string mesure: ""
-    // ESSAI JETABLE : force « in » ou « out » pour que plusieurs ressorts avancent ensemble, quel que soit leur sens.
-    property string force: ""
-    property var _t: null
-    // ESSAI JETABLE : écart, en unités de la valeur, sous lequel le ressort se pose ; 0 garde le critère de physics.js.
+    property string sens: ""
     property real seuil: 0
-    property var _dts: []
+    property string nature: "deplacement"
+    property var _t: null
 
     Component.onCompleted: { _pret = true; _st = { x: cible, v: 0, acc: 0 }; _x = cible }
 
@@ -53,7 +54,8 @@ Item {
     onCibleChanged: {
         if (!_pret) return
         const t = Theme.ready ? Theme.motion?.transitions?.[transition] : null
-        if (!t) {
+        // Réduit, ce qui se déplace se pose aussitôt ; seul un fondu garde un ressort.
+        if (!t || (Theme.mouvementReduit && nature !== "fondu")) {
             anim.stop()
             _st = { x: cible, v: 0, acc: 0 }
             _x = cible
@@ -68,14 +70,13 @@ Item {
     FrameAnimation {
         id: anim
         onTriggered: {
-            const r = ressort.force ? ressort._t[ressort.force] : ressort._params
-            if (ressort.mesure) ressort._dts.push(frameTime * 1000)
+            const r = Theme.mouvementReduit && ressort.nature === "fondu" ? Theme.motion.reduced
+                : ressort.sens ? ressort._t[ressort.sens] : ressort._params
             // Le temps d'une image est plafonné : une image très longue ne doit pas faire sauter le ressort.
             Physics.integrate(ressort._st, ressort.cible, r.mass, r.stiffness, r.dampening, Math.min(frameTime, 0.05))
             const done = Physics.atRest(ressort._st, ressort.cible) || Math.abs(ressort._st.x - ressort.cible) < ressort.seuil
             ressort._x = done ? ressort.cible : ressort._st.x
-            if (done) { ressort._st.x = ressort.cible; ressort._st.v = 0; stop()
-                if (ressort.mesure) { const d = ressort._dts; console.info("MESURE", ressort.mesure, "images", d.length, "total", Math.round(d.reduce((x, y) => x + y, 0)), "ms ; delta", d.map(v => Math.round(v)).join(" ")); ressort._dts = [] } }
+            if (done) { ressort._st.x = ressort.cible; ressort._st.v = 0; stop() }
         }
     }
 }

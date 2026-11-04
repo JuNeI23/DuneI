@@ -88,9 +88,9 @@ PanelWindow {
 
     // Les trois ressorts suivent le même réglage, quel que soit leur sens : les bords avancent ensemble.
     readonly property string sens: affiche ? "in" : "out"
-    Ressort { id: gauche; seuil: 0.5; force: hote.sens; transition: "reveal"; cible: hote.cibleG }
-    Ressort { id: droite; seuil: 0.5; force: hote.sens; transition: "reveal"; cible: hote.cibleD }
-    Ressort { id: hauteur; seuil: 0.5; force: hote.sens; mesure: "cadre"; transition: "reveal"; cible: hote.cibleH }
+    Ressort { id: gauche; seuil: 0.5; sens: hote.sens; transition: "reveal"; cible: hote.cibleG }
+    Ressort { id: droite; seuil: 0.5; sens: hote.sens; transition: "reveal"; cible: hote.cibleD }
+    Ressort { id: hauteur; seuil: 0.5; sens: hote.sens; transition: "reveal"; cible: hote.cibleH }
 
     FocusScope {
         id: cadre
@@ -138,7 +138,7 @@ PanelWindow {
                     onLoaded: hote.voiler(item, vue)
                     focus: modelData.ouvert
                     sourceComponent: modelData.contenu
-                    onPretChanged: if (pret) { console.info("MESURE contenu pret", Date.now() - modelData.t0, "ms"); hote.montrer(modelData, vue) }
+                    onPretChanged: if (pret) { hote.montrer(modelData, vue) }
                     Ressort { id: fondu; transition: "reveal"; cible: vue.pret && !(hote.passage && hote.vueAffichee === vue) ? 1 : 0 }
                 }
             }

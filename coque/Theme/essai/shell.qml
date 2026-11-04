@@ -102,6 +102,28 @@ ShellRoot {
             console.info("essai : pose " + r.value + " " + r.moving)
         }
 
+        // ressort — crée un Ressort numérique réglé, le recible et journalise sa trajectoire.
+        // Entrées : nom étiquette du journal ; depart valeur initiale ; cible nouvelle cible ; sens, seuil et nature,
+        //           propriétés du Ressort (sens vide pour le choix selon la cible, seuil nul pour le critère de physique).
+        // Sortie : « essai : trace <nom> <ms> <valeur> <mobile> » aussitôt, puis à chaque changement de valeur ;
+        //          « essai : fin <nom> <ms> » quand le ressort s'arrête. Erreurs : aucune. Dépendances : Ressort, Theme.
+        function ressort(nom: string, depart: real, cible: real, sens: string, seuil: real, nature: string): void {
+            const r = Qt.createQmlObject('import QtQuick\nimport "Theme"\nRessort { cible: ' + depart + '; sens: "' + sens
+                + '"; seuil: ' + seuil + '; nature: "' + nature + '"; transition: "reveal" }', essai, "ressort.qml")
+            const t0 = Date.now()
+            const trace = () => console.info("essai : trace " + nom + " " + (Date.now() - t0) + " " + r.value + " " + r.moving)
+            r.valueChanged.connect(trace)
+            r.movingChanged.connect(() => { if (!r.moving) console.info("essai : fin " + nom + " " + (Date.now() - t0)) })
+            r.cible = cible
+            trace()
+        }
+
+        // reduit — journalise la préférence de mouvement réduit lue par Theme.
+        // Entrées : aucune. Sortie : « essai : reduit <bool> ». Erreurs : aucune. Dépendances : Theme.
+        function reduit(): void {
+            console.info("essai : reduit " + Theme.mouvementReduit)
+        }
+
         // etat — change l'interaction simulée du ressort, comme un survol ou une pression.
         // Entrées : interaction (rest, hover, pressed, disabled). Sortie : aucune ; journal un tour plus tard.
         // Erreurs : aucune ; une interaction inconnue donne une cible transparente. Dépendances : posture.
