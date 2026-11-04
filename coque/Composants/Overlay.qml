@@ -44,7 +44,11 @@ import "ancrage.js" as Ancrage
 //           vrai pour un popover de la barre, dont l'ouverture ferme le popover exclusif déjà ouvert (D108) ;
 //           fermeAuDepart, faux par défaut : vrai pour un contextuel qui se ferme quand le pointeur l'a quitté, lui et
 //           son ancre, depuis motion.delays.dismiss (D108, MinuterieDepart) ; retenu, faux par défaut : vrai suspend
-//           cette fermeture, tant qu'une saisie ou une action est en cours.
+//           cette fermeture, tant qu'une saisie ou une action est en cours ; heberge, faux par défaut : vrai pour un
+//           contextuel dont une fenêtre tierce (celle des popovers de la barre) instancie contenu et tient le cadre :
+//           l'Overlay garde ouvert, ferme(), l'exclusion, fermeAuDepart, retenu et survolCadre, mais ne crée ni
+//           fenêtre ni prise du clavier, et se ferme si son ancre devient invisible ; la fenêtre tierce le ferme à sa
+//           destruction.
 // Sorties : ferme(), émis à chaque fermeture, quelle qu'en soit la cause ; margeEcran, écart que garde le cadre
 //           d'un overlay ancré dans un calque (la barre) avec chaque bord de l'écran quand il y est serré,
 //           space.scale[1] (8), à la demande de Nicolas (L2-11 : le popover réseau ne colle plus au bord droit) ;
@@ -77,7 +81,9 @@ QtObject {
     // et son ancre, depuis motion.delays.dismiss ; retenu la suspend (saisie ou action en cours). Voir MinuterieDepart.
     property bool fermeAuDepart: false
     property bool retenu: false
-    // Pointeur sur le cadre, tenu par la fenêtre contextuelle ; remis à faux à la fermeture, quand elle est détruite.
+    // Hébergé : l'Overlay garde son rôle logique et ne crée aucune fenêtre ; une fenêtre tierce rend son contenu.
+    property bool heberge: false
+    // Pointeur sur le cadre, tenu par la fenêtre qui le rend ; remis à faux à la fermeture.
     property bool survolCadre: false
     readonly property MinuterieDepart depart: MinuterieDepart {
         actif: overlay.ouvert && overlay.fermeAuDepart && !overlay.bulle
@@ -158,15 +164,19 @@ QtObject {
         if (ouvert) {
             if (famille === "attention") ecran = ecranFocalise
             Overlays.ouvrir(overlay)
-        } else if (!ouvert) {
+        } else {
             survolCadre = false
             Overlays.fermer(overlay)
             ferme()
         }
     }
 
+    // Un Overlay hébergé se ferme si son ancre devient invisible (matériel retiré). Le chemin non hébergé ne change pas.
+    readonly property bool ancreVisible: ancre?.visible ?? true
+    onAncreVisibleChanged: if (heberge && ouvert && !ancreVisible) ouvert = false
+
     readonly property LazyLoader chargeur: LazyLoader {
-        activeAsync: overlay.ouvert
+        activeAsync: overlay.ouvert && !overlay.heberge
         component: overlay.famille === "attention" ? overlay.fenetreAttention : overlay.fenetreContextuel
     }
 

@@ -743,6 +743,25 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
         self.ipc("inactif", "true")
         self.assertEqual(lire()[4], st["activeMuted"]["rest"]["fill"].lower())
 
+    def test_activite_reduit(self):
+        # Mouvement réduit : l'échelle des grains est constante (1), seule l'opacité varie (spinner.rest_opacity au repos,
+        # 1 au sommet), avec les mêmes cotes, la même période et les animations toujours en marche.
+        self.installer(55)
+        (self.dir / "mouvement.json").write_text('{"reduit": true}')
+        self.lancer(self.dir)
+        self.attendre("essai : prêt true")
+        motion = self.tokens55()[1]
+        o = motion["spinner"]["rest_opacity"]
+        lire = lambda: self.valeur("activite").lower().split()
+        champs = lire()
+        self.assertEqual(champs[:2], ["true", "true,true,true"])
+        self.assertEqual(champs[6:9], [f"1/{o:g}", f"1/{o:g}", "1/1"])
+        # Arrêté à la phase 0,5 : les deux premiers grains à mi-opacité, toujours à pleine taille.
+        self.ipc("activiteEtat", "true", "false")
+        self.ipc("activitePhase", "0.5")
+        milieu = f"1/{round((1 + o) / 2, 3):g}"
+        self.assertEqual(lire()[6:9], [milieu, milieu, f"1/{o:g}"])
+
     def test_ressorts_figes(self):
         # Sobriété (D80) : le champ et le compteur ne peignent pas le fond de leur Etat, la section dépliable ni son
         # fond ni son texte. Au survol forcé, leurs ressorts restent à l'arrêt, alors que celui du fond du contrôle
@@ -1281,6 +1300,31 @@ class CoqueClavierTest(EssaiCoque, unittest.TestCase):
         self.ipc("cibleNouvelle")
         self.ipc("survolerMobile")
         self.assertEqual(self.valeur("mobile"), "true true true false true")
+        for erreur in ERREURS + ("Cannot read property",):
+            with self.subTest(erreur=erreur):
+                self.assertNotIn(erreur, self.journal())
+
+    def test_infobulle_cible_cachee(self):
+        # Une cible cachée ne laisse ni délai armé ni bulle due, et la bulle ne s'arme pas tant que la cible reste
+        # cachée, même si le pointeur y est resté ; montrée de nouveau, le survol qui dure l'arme.
+        self.demarrer()
+        delai = self.tokens55()[1]["delays"]["tooltip"] / 1000
+        self.ipc("quitterBulle")
+        self.ipc("cibleNouvelle")
+        self.ipc("survolerMobile")
+        self.assertEqual(self.valeur("mobile"), "true true true false true")
+        self.ipc("cibleVisible", "false")
+        self.assertEqual(self.valeur("mobile").split()[2:4], ["false", "false"])
+        time.sleep(1.5 * delai)
+        self.assertEqual(self.valeur("mobile").split()[2:4], ["false", "false"])
+        self.ipc("cibleVisible", "true")
+        self.ipc("quitterBulle")
+        self.ipc("survolerMobile")
+        time.sleep(1.5 * delai)
+        self.assertEqual(self.valeur("mobile").split()[3], "true")
+        # Due, la cible qui se cache referme la bulle.
+        self.ipc("cibleVisible", "false")
+        self.assertEqual(self.valeur("mobile").split()[2:4], ["false", "false"])
         for erreur in ERREURS + ("Cannot read property",):
             with self.subTest(erreur=erreur):
                 self.assertNotIn(erreur, self.journal())

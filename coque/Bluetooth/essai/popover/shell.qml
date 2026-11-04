@@ -37,6 +37,7 @@ ShellRoot {
         property real battery: 0
     }
 
+    Component { id: fabriqueAppareil; FauxAppareil {} }
     FauxAppareil { id: bose; name: "Bose NC 700 Headphones"; address: "4C:87:5D:A2:58:8A"; icon: "audio-headset"; paired: true; connected: true; batteryAvailable: true; battery: 0.62 }
     FauxAppareil { id: souris; name: "Souris"; address: "11:22:33:44:55:66"; icon: "input-mouse"; paired: true }
     // Casque relié sans audio, comme le Bose après une reconnexion LE seule (recette du 2026-11-03).
@@ -95,7 +96,7 @@ ShellRoot {
                 // panneau — état du panneau construit, en JSON ; {} s'il n'existe pas.
                 // Sortie : {titre, etat, bascule {actif, allumee}, mes et proches (adresses des lignes montrées, dans
                 // l'ordre), deplie, lignes (adresse → {nom, icone, statut, apparition}), exclusif, fermeAuDepart,
-                // retenu}. Erreurs : aucune.
+                // retenu, glisse (une ligne glisse)}. Erreurs : aucune.
                 function panneau(): string {
                     const p = porteur.item?.panneau
                     if (!p) return "{}"
@@ -113,6 +114,8 @@ ShellRoot {
                         exclusif: porteur.item.exclusif, fermeAuDepart: porteur.item.fermeAuDepart,
                         retenu: porteur.item.retenu,
                         hauteurProches: p.hauteurProches, hauteurLigne: p.hauteurLigne,
+                        glisse: Object.values(p.delegues).some(d => d.decalage.moving), occupe: p.occupe, defile: essai.trouver(p, o => o.objectName === "listeMes").contentY,
+                        fonduContenu: p.fonduContenu, fonduDisque: p.fonduDisque,
                     })
                 }
                 // puisLire — appelle une fonction de cette cible puis rend l'état du panneau dans la même passe.
@@ -121,6 +124,31 @@ ShellRoot {
                     ipc[fonction](argument)
                     return panneau()
                 }
+
+                // fondus — pose les deux fondus du panneau et rend les opacités effectives (produit des opacités de
+                // l'élément et de ses parents jusqu'au panneau) de la bascule et du titre de l'en-tête, en JSON.
+                // Entrées : contenu, disque (réels, en chaîne). Sortie : {bascule, titre}. Erreurs : aucune.
+                function fondus(contenu: string, disque: string): string {
+                    const p = porteur.item.panneau
+                    p.fonduContenu = Number(contenu)
+                    p.fonduDisque = Number(disque)
+                    const effective = o => { let v = 1; for (let i = o; i && i !== p.parent; i = i.parent) v *= i.opacity; return v }
+                    return JSON.stringify({ bascule: effective(essai.trouver(p, o => o.objectName === "bascule")),
+                                            titre: effective(essai.trouver(p, o => o.text === "Bluetooth")) })
+                }
+                // remplir — ajoute six appareils appairés, pour que « Mes appareils » dépasse sa hauteur et défile.
+                // Entrées : aucune. Sortie : aucune. Erreurs : aucune.
+                // vider — tous les appareils quittent la liste en même temps. Entrées : aucune. Sortie : aucune.
+                // Erreurs : aucune. Dépendances : faux.
+                function vider(): void { faux.appareils = [] }
+                function remplir(): void {
+                    const c = proprietes => fabriqueAppareil.createObject(essai, proprietes)
+                    faux.appareils = faux.appareils.concat(Array.from({ length: 6 }, (_, i) =>
+                        c({ name: "Appairé " + i, address: "00:00:00:00:00:0" + i, paired: true })))
+                }
+                // reinitialiser, defiler — rendent le panneau à neuf ; font défiler « Mes appareils ». Entrée : y (defiler).
+                function reinitialiser(): void { porteur.item.panneau.reinitialiser() }
+                function defiler(y: string): void { essai.trouver(porteur.item.panneau, o => o.objectName === "listeMes").contentY = Number(y) }
 
                 // choisir — clic sur la ligne de l'appareil d'adresse donnée. Entrée : adresse.
                 function choisir(adresse: string): void { porteur.item.panneau.delegues[adresse].rangee.active() }
@@ -142,6 +170,16 @@ ShellRoot {
                     faux.finir(adresse)
                     a.paired = true
                 }
+                // connecter — change l'état relié d'un appareil, ce qui réordonne les lignes, comme une connexion.
+                // Entrées : adresse ; valeur, « true » ou « false ». Sortie : aucune. Erreurs : TypeError si l'adresse
+                // est inconnue.
+                function connecter(adresse: string, valeur: string): void {
+                    faux.appareils.find(x => x.address === adresse).connected = valeur === "true"
+                }
+                // cacherPanneau — cache ou montre le panneau construit, comme le fait le cadre des popovers hébergés
+                // d'un popover fermé (son contenu reste construit mais n'est plus visible).
+                // Entrée : valeur, vrai pour le cacher. Sortie : aucune. Erreurs : aucune ; sans panneau, rien.
+                function cacherPanneau(valeur: bool): void { if (porteur.item?.panneau) porteur.item.panneau.visible = !valeur }
                 // couper — la radio est coupée. Entrées : aucune.
                 function couper(): void { faux.allume = false }
             }

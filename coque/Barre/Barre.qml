@@ -11,13 +11,14 @@ import "../Bluetooth"
 // l'horloge, à droite les indicateurs, au centre rien. Aucun fond ni capsule : les éléments se posent sur le
 // bureau. Le masque de saisie ne couvre que l'interrupteur jour/nuit, l'indicateur réseau et l'indicateur Bluetooth,
 // seuls éléments cliquables : partout ailleurs les clics traversent la barre jusqu'au bureau. Elle ne prend jamais
-// le focus clavier. Elle porte le popover du réseau et celui du Bluetooth, chacun ancré sous son indicateur.
+// le focus clavier. Elle porte le popover du réseau et celui du Bluetooth, chacun ancré sous son indicateur et rendu
+// par la fenêtre unique HotePopovers.
 // Entrées : modelData, l'écran que lui donne le Variants de la coque.
 // Sorties : une fenêtre de calque au namespace « dunei-barre » (floutée par les règles de calque générées).
 // Erreurs : sans jeton de thème, les éléments restent invisibles (voir chacun) ; la fenêtre reste posée.
 // Dépendances : quickshell ≥ 0.3 (PanelWindow, Region, WlrLayershell), QtQuick.Layouts, indicateurs du module
 // Barre (Logo, Horloge, Notifications, Batterie, JourNuit, Reseau, Vpn, Bluetooth, Parametres), PopoverReseau
-// (module Reseau), PopoverBluetooth (module Bluetooth), Theme.
+// (module Reseau), PopoverBluetooth (module Bluetooth), HotePopovers, Theme.
 PanelWindow {
     id: barre
 
@@ -97,20 +98,26 @@ PanelWindow {
 
     // Popover du réseau, sous l'indicateur. « ouvert » s'affecte dans les deux sens (voir Overlay) : l'indicateur
     // l'ouvre et le ferme, et toute fermeture du popover (Échap, clic à l'extérieur, action) rend la main à
-    // l'indicateur. La barre est associée à sa prise du clavier : un clic sur l'indicateur ne lève pas la prise et
-    // ferme le popover par l'indicateur, au lieu de le fermer à l'appui puis de le rouvrir au relâchement.
+    // l'indicateur. La fenêtre hôte associe la barre à sa prise du clavier : un clic sur l'indicateur ne lève pas la
+    // prise et ferme le popover par l'indicateur, au lieu de le fermer à l'appui puis de le rouvrir au relâchement.
     PopoverReseau {
         id: popoverReseau
+        heberge: true
         ancre: reseau
-        associees: [barre]
         onFerme: reseau.ouvert = false
     }
 
     // Popover du Bluetooth, accroché comme celui du réseau (voir ci-dessus).
     PopoverBluetooth {
         id: popoverBluetooth
+        heberge: true
         ancre: bluetooth
-        associees: [barre]
         onFerme: bluetooth.ouvert = false
+    }
+
+    // Fenêtre unique qui porte le cadre et le contenu de ces deux popovers (D109).
+    HotePopovers {
+        barre: barre
+        popovers: [popoverReseau, popoverBluetooth]
     }
 }

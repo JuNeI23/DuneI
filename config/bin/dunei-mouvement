@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+# dunei-mouvement — préférence de mouvement réduit, lue par la coque et par Hyprland.
+# Rôle : afficher ou changer la préférence en écrivant {"reduit": bool} dans mouvement.json, que la coque
+#   surveille et applique à chaud ; si Hyprland tourne, la configuration est rechargée pour qu'il suive aussi
+#   (modules.motion lit le même fichier). Sans fichier, ou avec un fichier invalide, l'état est « normal ».
+# Entrées : [reduit|normal|bascule] ; sans argument, affiche seulement l'état. Le dossier est
+#   $DUNEI_TOKENS_DIR, sinon ${XDG_CONFIG_HOME:-$HOME/.config}/dunei.
+# Sortie : « reduit » ou « normal » sur la sortie standard après chaque appel réussi.
+# Erreurs : code 2 pour un argument inconnu ou superflu (usage sur la sortie d'erreur, mouvement.json inchangé) ;
+#   code 1 si jq manque.
+# Dépendances : jq (paquet déclaré dans paquets.toml), mktemp, mv ; hyprctl, seulement si Hyprland tourne.
+set -euo pipefail
+
+if ! command -v jq > /dev/null; then
+  echo "dunei-mouvement : jq est introuvable ; installe-le (pacman -S jq) ou lance make paquets." >&2
+  exit 1
+fi
+
+dir=${DUNEI_TOKENS_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/dunei}
+choix=$dir/mouvement.json
+
+# usage — signale un appel invalide.
+# Entrées : le motif, en clair. Sortie : aucune (le script se termine avec le code 2).
+# Erreurs : motif et usage sur la sortie d'erreur. Dépendances : aucune.
+usage() { echo "dunei-mouvement : $1
+Usage : dunei-mouvement [reduit|normal|bascule]" >&2; exit 2; }
+
+# Un mouvement.json absent ou invalide vaut « normal », comme dans la coque et dans Hyprland.
+reduit=false
+if [ -r "$choix" ] && [ "$(jq -r '.reduit' "$choix" 2> /dev/null)" = true ]; then reduit=true; fi
+
+[ $# -le 1 ] || usage "un seul argument est attendu."
+case "${1:-}" in
+  "") [ "$reduit" = true ] && echo reduit || echo normal; exit 0 ;;
+  reduit) reduit=true ;;
+  normal) reduit=false ;;
+  bascule) [ "$reduit" = true ] && reduit=false || reduit=true ;;
+  *) usage "argument inconnu : $1." ;;
+esac
+
+mkdir -p "$dir"
+tmp=$(mktemp "$dir/.mouvement.json.XXXXXX")
+trap 'rm -f "$tmp"' EXIT  # sans effet après le mv (le temporaire n'existe plus), utile si jq ou mv échoue
+jq -n --argjson r "$reduit" '{reduit: $r}' > "$tmp"
+mv "$tmp" "$choix"
+
+# Hyprland relit sa configuration, donc la préférence ; hors session, la coque seule suit le fichier.
+if [ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ] && command -v hyprctl > /dev/null; then hyprctl reload > /dev/null || true; fi
+[ "$reduit" = true ] && echo reduit || echo normal

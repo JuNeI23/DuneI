@@ -463,6 +463,13 @@ ShellRoot {
                     infobulleMobile.cible?.destroy()
                 }
 
+                // cibleVisible — montre ou cache la cible de l'infobulle mobile, sans la détruire.
+                // Entrée : visible, vrai pour la montrer. Sortie : aucune. Erreurs : aucune ; sans cible, rien.
+                // Dépendances : infobulleMobile.
+                function cibleVisible(visible: bool): void {
+                    if (infobulleMobile.cible) infobulleMobile.cible.visible = visible
+                }
+
                 // survolerMobile — pose le pointeur au centre de la cible de l'infobulle mobile.
                 // Entrées : aucune. Sortie : aucune. Erreurs : TypeError sans cible. Dépendances : infobulleMobile.
                 function survolerMobile(): void {

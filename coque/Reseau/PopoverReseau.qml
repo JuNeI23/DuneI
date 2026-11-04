@@ -7,7 +7,8 @@ import "../Barre/icones.js" as Icones
 import "nmcli.js" as Nmcli
 
 // PopoverReseau — popover du réseau, ancré sous l'indicateur réseau de la barre (L2-11, direction D5 des essais).
-// Rôle : un Overlay contextuel, construit à l'ouverture et détruit à la fermeture (D80), tenu à la marge d'écran
+// Rôle : un Overlay contextuel dont le contenu est construit une fois pour toutes et que l'hôte des popovers montre ou
+// cache (il n'est plus détruit à la fermeture ; D80 reste vrai pour un popover non hébergé), tenu à la marge d'écran
 // des overlays ancrés à la barre (Overlay.margeEcran). Il suit les popovers sobres d'inspiration/anhphong : compact,
 // carré, sur le verre de E3 (D103), il porte de haut en bas : l'en-tête, dont la bascule à glyphe allume ou coupe le
 // Wi-Fi (accent plein allumée, neutre éteinte), avec le nom du réseau joint et son état (« Connecté », « Connecté
@@ -28,12 +29,16 @@ import "nmcli.js" as Nmcli
 // le balayage Wi-Fi (etat.recherche), rendu à faux à la fermeture comme à la destruction d'un popover ouvert ;
 // ouvert derrière un portail, il demande un contrôle de connectivité ponctuel (etat.verifier). La liste ne se retrie
 // pas tant qu'une ligne de mot de passe est dépliée, pour ne pas en perdre la saisie. Une connexion suivie (enCours)
-// appartient au panneau : fermé, il est détruit, et un connectionFailed tardif ne rouvre rien.
+// appartient au panneau, qui survit à la fermeture : un connectionFailed tardif déplie la ligne du réseau, et
+// reinitialiser() ne l'annule pas.
 // Popover de la barre (D108) : en ouvrir un autre le ferme ; il se ferme 1,5 s après le départ de la souris, sauf
-// pendant une saisie ou une connexion suivie (retenu).
+// pendant une saisie ou une connexion suivie (retenu). Pour l'hôte, le panneau offre fonduContenu et fonduDisque,
+// deux fondus distincts (la bascule d'en-tête, posée sur un emplacement réservé hors de la colonne, ne suit que le
+// second), et reinitialiser(), qui rend à la vue l'aspect d'un popover neuf sans couper une connexion en cours.
 // Entrées : ancre, l'indicateur de la barre ; ouvert, à affecter (voir Overlay) ; associees, voir Overlay ; etat,
 // la source de l'état et des actions, EtatReseau par défaut (la coque d'essai y met un factice).
-// Sorties : ferme(), voir Overlay ; panneau, le contenu construit, null fermé, lu par les essais.
+// Sorties : ferme(), voir Overlay ; panneau, le contenu construit (null tant qu'il ne l'est pas, ou une fois détruit),
+// lu par les essais ; fonduContenu, fonduDisque, reinitialiser(), voir ci-dessus.
 // Erreurs : un connectionFailed déplie la ligne de mot de passe avec « Mot de passe refusé » (raison
 // d'authentification) ou « Connexion impossible ». Le texte d'un mot de passe ne passe jamais au journal.
 // Dépendances : Overlay (famille contextuel), Bascule, Activite, Infobulle, Rangee, Bouton, BlocSecret, Jonction, Separateur,
@@ -42,13 +47,13 @@ import "nmcli.js" as Nmcli
 // Cotes : surface de 72 × space.scale[0] (288 px) de large comme l'essai D5, panneau de 280 px dans le retrait de
 // l'Overlay ; contenu à space.scale[2] (12) du bord du panneau, rangées sur toute sa largeur ; rangées de
 // density.controlHeight plus space.scale[0] (32 px).
-// Mouvement réduit : la coque n'a pas encore de bascule (voir Ressort) ; les animations passent toutes par Ressort,
-// qui la suivra.
+// Mouvement réduit (Theme.mouvementReduit) : les animations passent toutes par Ressort. Le déplacement et le
+// dépliage des lignes se posent aussitôt, et seule l'opacité des lignes (nature « fondu ») s'anime, en fondu court.
 Overlay {
     id: popover
 
     property var etat: EtatReseau
-    // Écrit par le panneau seul, à sa construction et à sa destruction.
+    // Écrit par le panneau seul, à sa construction et à sa destruction (null avant la première et après la seconde).
     property Item panneau: null
 
     famille: "contextuel"
@@ -128,8 +133,12 @@ Overlay {
         // Ordre d'affichage : ordre, plus les lignes qui sortent (leur réseau a quitté le tri), gardées à leur ancien
         // rang le temps de se refermer, pour que les lignes voisines suivent leur hauteur au lieu de sauter.
         property var disposition: []
-        // Faux pendant le premier tri : les lignes de l'ouverture paraissent d'emblée, seules les suivantes entrent.
-        property bool trie: false
+        // À l'arrêt du balayage, la liste se vide ; à sa reprise, elle revient un réseau à la fois, en quelques
+        // millisecondes. Pendant motion.delays.liste après l'ouverture, ces réseaux paraissent d'emblée ; seuls ceux qui
+        // arrivent ensuite entrent en s'ouvrant (D118).
+        property bool attenteFinie: false
+        // La hauteur du panneau est connue : la liste a eu le temps de revenir, ou il n'y en a pas. Lu par l'hôte (D118).
+        readonly property bool pretAMontrer: !listeVisible || attenteFinie
         // Réseaux présents au dernier balayage, suivis même liste figée : un réseau de la liste figée qui n'y figure
         // plus est masqué et ne peut plus être choisi ni rejoint (son WifiNetwork peut avoir été détruit).
         property alias presents: jonction.presents
@@ -160,18 +169,37 @@ Overlay {
         // Ligne de mot de passe de la ligne dépliée, null sans elle (ni pendant le repli d'une autre).
         readonly property Item bloc: delegues[deplie]?.bloc ?? null
 
+        // Fondus que l'hôte des popovers pose, de 0 à 1 : fonduContenu pour tout l'en-tête sauf la bascule et pour le
+        // reste du contenu, fonduDisque pour la bascule seule. Sans hôte, ils restent à 1 : le panneau est tel quel.
+        property real fonduContenu: 1
+        property real fonduDisque: 1
+
         focus: true
         implicitWidth: 70 * (Theme.space?.scale[0] ?? 0)
         implicitHeight: colonne.implicitHeight + 2 * (Theme.space?.scale[1] ?? 0)
         Component.onCompleted: { trier(); popover.panneau = panneau }
         Component.onDestruction: if (popover.panneau === panneau) popover.panneau = null
 
+        // reinitialiser — rend au contenu l'aspect d'un popover neuf : ligne de mot de passe repliée, saisie et message
+        // d'erreur effacés, mot de passe de nouveau masqué, liste en haut, retour visuel du balayage éteint. Une connexion
+        // suivie (enCours) n'est jamais annulée : seule la vue revient à neuf, et le popover reste retenu tant qu'elle dure.
+        // Entrées : aucune. Sortie : aucune. Erreurs : aucune.
+        // Dépendances : bloc, deplie, erreur, balayage, finBalayage, liste.
+        function reinitialiser(): void {
+            if (bloc) { bloc.secret.text = ""; bloc.secret.revele = false }
+            deplie = ""
+            erreur = ""
+            balayage = false
+            finBalayage.stop()
+            liste.contentY = 0
+        }
+
         // releve — ordonnées affichées des lignes, à relever avant tout changement qui les déplace.
         // Entrées : aucune. Sortie : tableau de [nom, ordonnée]. Erreurs : aucune. Dépendances : delegues.
         function releve(): var { return Object.entries(delegues).map(([nom, d]) => [nom, d.y]) }
 
         // trier — fige l'ordre de la liste et met le modèle des lignes à jour : un nom nouveau y est ajouté (sa
-        // ligne entre en s'ouvrant, sauf au premier tri), un nom disparu reste à son ancien rang dans disposition le
+        // ligne entre en s'ouvrant, sauf pendant l'attente de l'ouverture), un nom disparu reste à son ancien rang dans disposition le
         // temps que sa ligne se referme (elle se retire elle-même ensuite, voir retirer), les autres lignes glissent
         // de leur place relevée à la nouvelle. Le réseau joint n'y figure pas : l'en-tête le nomme. Tant qu'une ligne
         // de mot de passe est dépliée, rien ne change, pour ne perdre ni la saisie ni le message d'erreur ; le tri
@@ -188,8 +216,7 @@ Overlay {
             for (const [i, nom] of disposition.entries())
                 if (!ordre.includes(nom) && connus.includes(nom)) d.splice(Math.min(i, d.length), 0, nom)
             disposition = d
-            for (const nom of ordre) if (!connus.includes(nom)) modele.append({ cle: nom, entre: trie })
-            trie = true
+            for (const nom of ordre) if (!connus.includes(nom)) modele.append({ cle: nom, entre: attenteFinie })
             for (const [nom, y] of avant) delegues[nom]?.glisser(y)
         }
         onDeplieChanged: trier()
@@ -265,32 +292,55 @@ Overlay {
         // Borne du retour visuel de la recherche quand le balayage ne change pas la liste (motion.delays.scan) ;
         // armée par le seul clic.
         Timer { id: finBalayage; interval: Theme.motion?.delays?.scan ?? 0; onTriggered: panneau.balayage = false }
+        // Temps laissé à la liste pour revenir après l'ouverture.
+        Timer {
+            interval: Theme.motion?.delays?.liste ?? 0
+            running: popover.ouvert && !panneau.attenteFinie
+            onTriggered: panneau.attenteFinie = true
+        }
+        // À la fermeture, le balayage s'arrête et la liste se vide : la prochaine ouverture attend de nouveau.
+        Connections {
+            target: popover
+            function onOuvertChanged() { if (!popover.ouvert) panneau.attenteFinie = false }
+        }
         // Une entrée par nom de réseau ; l'ordre affiché vient de ordre, pas du modèle.
         ListModel { id: modele }
 
+        // Elle suit la radio réelle après chaque bascule ; sans carte Wi-Fi, désactivée, elle montre le lien. Elle est
+        // déclarée avant la colonne : elle garde sa place dans l'ordre de tabulation, la première, et se pose par-dessus
+        // l'emplacement que l'en-tête lui réserve, au pixel près.
+        Bascule {
+            id: bascule
+            objectName: "bascule"
+            z: 1
+            x: colonne.x + entete.x + emplacement.x
+            y: colonne.y + entete.y + emplacement.y
+            opacity: panneau.fonduDisque
+            readonly property bool allumee: panneau.etat.carte ? panneau.etat.radio : panneau.etat.connecte
+            icone: panneau.etat.icone
+            enabled: panneau.etat.carte
+            checked: allumee
+            onToggled: { panneau.etat.allumer(checked); checked = Qt.binding(() => bascule.allumee) }
+        }
+
         ColumnLayout {
             id: colonne
+            opacity: panneau.fonduContenu
             y: Theme.space?.scale[1] ?? 0
             width: panneau.width
             spacing: Theme.space?.scale[0] ?? 0
 
-            // En-tête : la bascule du Wi-Fi, le titre et l'état.
+            // En-tête : l'emplacement de la bascule du Wi-Fi, le titre et l'état.
             RowLayout {
+                id: entete
                 Layout.leftMargin: panneau.marge
                 Layout.rightMargin: panneau.marge
                 Layout.bottomMargin: Theme.space?.scale[0] ?? 0
                 spacing: Theme.space?.scale[2] ?? 0
 
-                // Elle suit la radio réelle après chaque bascule ; sans carte Wi-Fi, désactivée, elle montre le lien.
-                Bascule {
-                    id: bascule
-                    objectName: "bascule"
-                    readonly property bool allumee: panneau.etat.carte ? panneau.etat.radio : panneau.etat.connecte
-                    icone: panneau.etat.icone
-                    enabled: panneau.etat.carte
-                    checked: allumee
-                    onToggled: { panneau.etat.allumer(checked); checked = Qt.binding(() => bascule.allumee) }
-                }
+                // Emplacement réservé à la bascule, de sa taille : elle s'y pose sans faire partie de la colonne, pour que
+                // le fondu du contenu ne l'atteigne pas (voir fonduContenu et fonduDisque).
+                Item { id: emplacement; implicitWidth: bascule.implicitWidth; implicitHeight: bascule.implicitHeight }
                 ColumnLayout {
                     Layout.fillWidth: true
                     spacing: 0
@@ -338,6 +388,8 @@ Overlay {
             }
 
             Flickable {
+                id: liste
+                objectName: "liste"
                 visible: panneau.listeVisible
                 Layout.fillWidth: true
                 Layout.preferredHeight: Math.min(contentHeight, 8 * panneau.hauteurLigne)
@@ -357,7 +409,7 @@ Overlay {
                         delegate: Item {
                             id: ligne
                             required property string cle
-                            // Vrai pour une ligne ajoutée après le premier tri : elle entre en s'ouvrant.
+                            // Vrai pour une ligne ajoutée après l'attente de l'ouverture : elle entre en s'ouvrant.
                             required property bool entre
                             readonly property int rang: panneau.ordre.indexOf(cle)
                             // Lectures sûres : le WifiNetwork d'une liste figée peut avoir été détruit (null).
@@ -371,6 +423,9 @@ Overlay {
                             readonly property alias depliage: depliage
                             readonly property alias decalage: decalage
                             readonly property alias apparition: apparition
+                            // Part de la hauteur de la ligne : elle suit le fondu, sauf en mouvement réduit, où la place se prend
+                            // ou se rend d'un coup et où seule l'opacité s'anime.
+                            readonly property real place: Theme.mouvementReduit ? apparition.cible : apparition.value
                             // Faux le temps d'une passe pour une ligne qui entre : son ressort part ainsi de zéro.
                             property bool posee: !entre
                             // Refermée et sortie du tri : la ligne se retire du modèle.
@@ -378,7 +433,7 @@ Overlay {
 
                             width: lignes.width
                             // La ligne s'ouvre et se referme en hauteur et en fondu (reveal), sans glisser de côté.
-                            height: (rangee.height + depliage.value) * apparition.value
+                            height: (rangee.height + depliage.value) * place
                             opacity: apparition.value
                             visible: apparition.value > 0
                             clip: true
@@ -388,15 +443,18 @@ Overlay {
                                 if (!posee) Qt.callLater(() => posee = true)
                             }
                             Component.onDestruction: panneau.desinscrire(cle, ligne)
-                            onPartieChanged: if (partie) Qt.callLater(panneau.retirer, cle)
+                            // Une fonction propre à chaque appel : Qt.callLater fusionne les appels d'une même fonction, et plusieurs lignes
+                            // peuvent sortir ensemble.
+                            onPartieChanged: if (partie) Qt.callLater(() => panneau.retirer(cle))
 
                             // glisser — fait partir la ligne de sa place d'avant un nouveau tri vers la nouvelle,
                             // par le ressort reflow, depuis sa position courante même en plein glissement.
+                            // Sans effet tant que la ligne est cachée (popover fermé) : aucun ressort ne tourne pour rien.
                             // Entrée : avant, l'ordonnée affichée avant le tri. Sortie : aucune. Erreurs : aucune.
                             // Dépendances : decalage (Ressort), base.
                             function glisser(avant: real): void {
                                 const ecart = avant - base
-                                if (Math.abs(ecart) < 0.5) return
+                                if (!visible || Math.abs(ecart) < 0.5) return
                                 decalage.cible = ecart
                                 decalage.poser()
                                 decalage.cible = 0
@@ -405,7 +463,7 @@ Overlay {
                             Ressort { id: decalage; transition: "reflow"; cible: 0 }
                             // Présence de la ligne, de 0 (refermée) à 1 (ouverte) : entrée par le ressort reveal
                             // d'entrée, sortie par celui de sortie (environ 70 % de l'entrée, motion.json).
-                            Ressort { id: apparition; transition: "reveal"; cible: ligne.posee && ligne.montre ? 1 : 0 }
+                            Ressort { id: apparition; transition: "reveal"; nature: "fondu"; cible: ligne.posee && ligne.montre ? 1 : 0 }
                             Ressort {
                                 id: depliage
                                 transition: "reveal"

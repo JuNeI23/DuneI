@@ -427,6 +427,56 @@ class PopoverTest(EssaiCoque, unittest.TestCase):
         self.ipc("detruire")
         self.assertFalse(self.recherche())
 
+    def test_reinitialiser(self):
+        # Le contenu d'un popover permanent revient à neuf : ligne repliée, mot de passe effacé, liste en haut.
+        self.ouvrir()
+        p = json.loads(self.ipc("puisLire", "choisir", "Inconnu"))
+        self.assertEqual(p["deplie"], "Inconnu")
+        self.ipc("saisir", self.SECRET)
+        self.ipc("reveler")
+        self.assertTrue(self.panneau()["revele"])
+        self.ipc("remplir")
+        # Les lignes ajoutées s'ouvrent en s'étirant : la liste ne peut défiler qu'une fois assez haute.
+        fin = time.monotonic() + DELAI
+        while self.panneau()["defile"] != 40 and time.monotonic() < fin:
+            self.ipc("defiler", "40")
+            time.sleep(0.05)
+        self.assertEqual(self.panneau()["defile"], 40)
+        self.ipc("reinitialiser")
+        p = self.panneau()
+        self.assertEqual((p["deplie"], p["erreur"], p["defile"], p["balayage"]), ("", "", 0, False))
+        # Dépliée de nouveau tout de suite, la ligne ne garde rien de la saisie précédente.
+        p = json.loads(self.ipc("puisLire", "choisir", "Inconnu"))
+        self.assertEqual((p["deplie"], p["saisie"]), ("Inconnu", 0))
+        # Le mot de passe se ressaisit masqué : l'œil ne reste pas ouvert d'une ouverture à l'autre.
+        self.assertFalse(p["revele"])
+
+    def test_reinitialiser_ne_coupe_pas_une_connexion(self):
+        # Une connexion suivie n'est ni annulée ni oubliée : le popover reste retenu et rien n'est déconnecté.
+        self.ouvrir()
+        self.ipc("choisir", "Connu")
+        self.assertTrue(self.panneau()["enCours"])
+        self.ipc("reinitialiser")
+        p = self.panneau()
+        self.assertEqual((p["enCours"], p["retenu"]), (True, True))
+        self.assertNotIn("essai : disconnect", self.journal())
+
+    def test_fondus(self):
+        # Contenu éteint, disque plein : la bascule reste pleine, le reste de l'en-tête disparaît. Par défaut, tout est plein.
+        p = self.ouvrir()
+        self.assertEqual((p["fonduContenu"], p["fonduDisque"]), (1, 1))
+        self.assertEqual(json.loads(self.ipc("fondus", "0", "1")), {"bascule": 1, "titre": 0})
+        self.assertEqual(json.loads(self.ipc("fondus", "0", "0")), {"bascule": 0, "titre": 0})
+        self.assertEqual(json.loads(self.ipc("fondus", "1", "1")), {"bascule": 1, "titre": 1})
+
+    def test_recharge_rend_le_balayage(self):
+        # Recharger la coque avec un popover ouvert détruit son contenu : le balayage est rendu, comme avant le
+        # contenu permanent.
+        self.ouvrir()
+        self.assertTrue(self.recherche())
+        self.ipc("detruire")
+        self.assertFalse(self.recherche())
+
     def test_destruction_ferme_ne_coupe_pas_la_recherche(self):
         # Un popover fermé qu'on détruit (écran débranché) ne rend pas le balayage d'un autre popover ouvert.
         self.ouvrir()
@@ -565,6 +615,78 @@ class PopoverTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(apres["Wifi_TRIADES"]["y"], avant["Connu"]["y"])
         self.assertEqual(apres["Inconnu"]["y"], avant["Inconnu"]["y"])
         self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read|Unable to assign|Binding loop")
+
+    def test_aucun_glissement_popover_ferme(self):
+        # Dans l'arbre hébergé, un popover fermé garde son contenu construit mais invisible : un changement de réseau
+        # n'y anime plus aucune ligne (le ressort reflow ne tourne pas pour rien). Visible, le même changement fait
+        # bien glisser les lignes (témoin).
+        self.ouvrir()
+        self.attendre_repos()
+        self.ipc("regler", "Inconnu", "0.1")
+        fin = time.monotonic() + DELAI
+        while not self.panneau()["glisse"]:
+            self.assertLess(time.monotonic(), fin, "témoin : aucune ligne ne glisse popover ouvert")
+            time.sleep(0.01)
+        self.attendre_repos()
+        self.ipc("cacherPanneau", "true")
+        self.ipc("regler", "Inconnu", "0.9")
+        fin = time.monotonic() + 1
+        while time.monotonic() < fin:
+            self.assertFalse(self.panneau()["glisse"], "une ligne glisse popover fermé")
+            time.sleep(0.02)
+        self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read|Unable to assign|Binding loop")
+
+    def attendre_pret(self) -> dict:
+        """Attend que le panneau soit prêt à fixer la forme du cadre. Sortie : son état. Erreurs : échec du test."""
+        fin = time.monotonic() + DELAI
+        while not (p := self.panneau())["pretAMontrer"] and time.monotonic() < fin:
+            time.sleep(0.005)
+        self.assertTrue(p["pretAMontrer"])
+        return p
+
+    def test_liste_rendue_a_l_ouverture(self):
+        # La liste vidée à l'arrêt du balayage revient à la réouverture : le cadre attend, les lignes paraissent d'emblée.
+        self.ipc("heberger")
+        self.ouvrir()
+        self.attendre_pret()
+        self.attendre_repos()
+        self.ipc("ouvrir", "false")
+        self.ipc("viderReseaux")
+        fin = time.monotonic() + DELAI
+        while self.panneau()["lignes"] and time.monotonic() < fin:
+            time.sleep(0.02)
+        self.assertEqual(self.panneau()["lignes"], {}, "toutes les lignes sorties ensemble doivent quitter le modèle")
+        p = json.loads(self.ipc("rouvrirAvecListe"))
+        self.assertFalse(p["pretAMontrer"])
+        self.assertTrue(p["lignes"], "liste non rendue")
+        for ligne in p["lignes"].values():
+            self.assertEqual((ligne["apparition"], ligne["apparitionEnCours"]), (1, False), p)
+        self.attendre_pret()
+
+    def test_pret_a_montrer_sans_reseau_et_a_chaque_ouverture(self):
+        # Aucun réseau à la ronde : le cadre se déploie quand même, et l'attente se réarme à chaque ouverture.
+        self.ipc("heberger")
+        self.ouvrir()
+        self.ipc("ouvrir", "false")
+        self.ipc("viderReseaux")
+        self.assertFalse(json.loads(self.ipc("puisLire", "ouvrir", "true"))["pretAMontrer"])
+        self.attendre_pret()
+        self.ipc("ouvrir", "false")
+        self.assertFalse(self.panneau()["pretAMontrer"])
+
+    def test_reseau_tardif_entre_en_s_ouvrant(self):
+        # Après l'attente, un réseau qui paraît entre encore en s'ouvrant.
+        self.ipc("heberger")
+        self.ouvrir()
+        self.attendre_pret()
+        self.attendre_repos()
+        self.ipc("ajouterReseau")
+        self.assertLess(self.panneau()["lignes"]["Nouveau"]["apparition"], 1)
+
+    def test_pret_a_montrer_sans_carte(self):
+        # Sans liste à attendre, le popover est prêt tout de suite.
+        self.ipc("sansCarte")
+        self.assertTrue(self.ouvrir()["pretAMontrer"])
 
     def test_ligne_qui_sort_puis_ligne_qui_entre(self):
         # Un réseau qui quitte le balayage : sa ligne se referme (hauteur et fondu) au lieu de disparaître, et la

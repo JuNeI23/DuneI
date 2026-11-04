@@ -8,13 +8,15 @@ import "Theme"
 import "Barre"
 import "Reseau"
 import "Barre/icones.js" as Icones
+import "Barre/forme.js" as Forme
 
 // Coque d'essai du module Barre, sans aucune fenêtre.
 // Rôle : expose par IPC (cible « barre ») les fonctions pures de icones.js, et porte un ElementBarre que le test
 // pilote, pour que tests/test_barre.py éprouve les correspondances dans un vrai Quickshell.
 // Entrées : DUNEI_TOKENS_DIR, lu par Theme. Commandes IPC : normaliserPourcent, iconeBatterie, iconeReseau,
 // iconeBluetooth, iconeNotifications, iconeMoment, texteBatterie (chacune retourne son résultat), et
-// regler <icone> <texte> qui règle l'élément, puis elementVisible qui retourne sa visibilité et policeTexte
+// regler <icone> <texte> qui règle l'élément, ouvrirElement, decalageElement et ressortCouleur qui en éprouvent le
+// mouvement, puis elementVisible qui retourne sa visibilité et policeTexte
 // qui retourne la taille et les chiffres tabulaires de son texte.
 // Sortie : le résultat de chaque appel IPC, sur la sortie de « qs ipc call ». Erreurs : celles de Theme, dans
 // le journal. Dépendances : quickshell ≥ 0.3 (Quickshell.Io), modules Theme, Composants et Barre.
@@ -62,9 +64,51 @@ ShellRoot {
         function iconeMoment(moment: string): string { return Icones.iconeMoment(moment) }
         function texteBatterie(pourcent: int): string { return Icones.texteBatterie(pourcent) }
 
+        // cibles — forme visée du cadre (forme.js), en JSON {gauche, droite, hauteur}.
+        // Entrées : celles de Forme.cibles. Sortie : texte JSON. Erreurs : aucune. Dépendances : forme.js.
+        function cibles(ouvert: bool, ancreX: real, ancreL: real, largeur: real, hauteur: real, ecran: real,
+                        marge: real): string {
+            return JSON.stringify(Forme.cibles(ouvert, ancreX, ancreL, largeur, hauteur, ecran, marge))
+        }
+
+        // trajet — distance entre deux formes JSON (forme.js). Entrées : depuis, vers (texte JSON).
+        // Sortie : réel. Erreurs : JSON invalide, l'appel échoue. Dépendances : forme.js.
+        function trajet(depuis: string, vers: string): real { return Forme.trajet(JSON.parse(depuis), JSON.parse(vers)) }
+
+        // contenuPermis — règle de passage du contenu (forme.js). Entrées : celles de Forme.contenuPermis.
+        // Sortie : booléen. Erreurs : aucune. Dépendances : forme.js.
+        function contenuPermis(enPassage: bool, reste: real, trajetTotal: real, seuil: real): bool {
+            return Forme.contenuPermis(enPassage, reste, trajetTotal, seuil)
+        }
+
+        // opaciteDisque — opacité du disque (forme.js). Entrées : celles de Forme.opaciteDisque.
+        // Sortie : réel. Erreurs : aucune. Dépendances : forme.js.
+        function opaciteDisque(estAffiche: bool, passageEnCours: bool, opaciteNouveau: real, fondu: real): real {
+            return Forme.opaciteDisque(estAffiche, passageEnCours, opaciteNouveau, fondu)
+        }
+
+        // rayon — rayon des coins (forme.js). Entrées : rayonPanneau, largeur, hauteur. Sortie : réel.
+        // Erreurs : aucune. Dépendances : forme.js.
+        function rayon(rayonPanneau: real, largeur: real, hauteur: real): real {
+            return Forme.rayon(rayonPanneau, largeur, hauteur)
+        }
+
         // regler — règle l'icône et le texte de l'ElementBarre d'essai. Entrées : icone, texte (vides permis).
         // Sortie : aucune. Erreurs : aucune. Dépendances : element.
         function regler(icone: string, texte: string): void { element.icone = icone; element.texte = texte }
+
+        // ouvrirElement — ouvre ou ferme l'ElementBarre d'essai, comme le fait son popover.
+        // Entrée : valeur. Sortie : aucune. Erreurs : aucune. Dépendances : element.
+        function ouvrirElement(valeur: bool): void { element.ouvert = valeur }
+
+        // decalageElement — ordonnée de la rangée de l'ElementBarre d'essai dans l'élément, transformation comprise :
+        // la différence entre ouvert et fermé est la descente de l'icône.
+        // Entrées : aucune. Sortie : réel. Erreurs : aucune. Dépendances : element (contentItem).
+        function decalageElement(): real { return element.contentItem.mapToItem(element, 0, 0).y }
+
+        // ressortCouleur — raideur du ressort que le ColorSpring de l'ElementBarre d'essai emploie, et si l'icône bouge.
+        // Entrées : aucune. Sortie : texte « raideur ». Erreurs : aucune. Dépendances : element (couleurRessort).
+        function ressortCouleur(): string { return String(element.couleurRessort.params?.stiffness) }
 
         // elementVisible — lit la visibilité de l'ElementBarre d'essai.
         // Entrées : aucune. Sortie : vrai s'il est visible. Erreurs : aucune. Dépendances : element.

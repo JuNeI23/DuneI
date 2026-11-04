@@ -6,7 +6,8 @@ import "../Theme"
 // Presquile — surface de la presqu'île, posée au centre du bord haut de chaque écran (L2-46).
 // Rôle : fenêtre de calque transparente, ancrée en haut seulement (donc centrée), qui porte l'encoche continue et,
 // dedans, le module de contenu. La taille de l'encoche suit celle du module par deux Ressorts (transition « window ») :
-// immobile tant que le module garde sa taille, elle s'étire sans saut quand il en change. La fenêtre réserve en plus
+// immobile tant que le module garde sa taille, elle s'étire sans saut quand il en change (mouvement réduit : elle prend sa nouvelle
+// taille aussitôt, ces ressorts étant de nature « deplacement »). La fenêtre réserve en plus
 // de l'encoche la marge de son ombre, pour qu'elle ne soit pas coupée. Le masque de saisie ne couvre que le corps de
 // l'encoche : partout ailleurs, les clics traversent. Elle ne réserve aucune place et ne prend jamais le focus clavier.
 // Entrées : modelData, l'écran que lui donne le Variants de la coque (obligatoire) ; module, le composant de contenu,
@@ -37,10 +38,11 @@ PanelWindow {
     WlrLayershell.layer: WlrLayer.Top
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
 
-    Ressort { id: largeur; transition: "window"; cible: surface.contenu?.implicitWidth ?? 0 }
+    Ressort { id: largeur; transition: "window"; nature: "deplacement"; cible: surface.contenu?.implicitWidth ?? 0 }
     Ressort {
         id: hauteur
         transition: "window"
+        nature: "deplacement"
         cible: surface.contenu?.implicitHeight || (Theme.tokens?.presquile?.hauteur ?? 0)
     }
 

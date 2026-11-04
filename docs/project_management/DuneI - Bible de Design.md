@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas
 
-Document normatif. Version 0.25. Historique en fin de document.
+Document normatif. Version 0.26. Historique en fin de document.
 
 ## Comment lire ce document
 
@@ -290,9 +290,18 @@ Ils agissent ensemble ; isolément, aucun ne fait grand-chose.
 - Le décalage de `reveal` est plafonné à cinq éléments. Au-delà, le dernier arrive trop tard et le système paraît lent.
 - **Aucune animation linéaire, nulle part.**
 
+### Popovers de la barre
+
+- **Le verre ne s'estompe jamais.** Le calque coupe son flou sous `ignore_alpha` (0,58) et le verre est à 60 % : dès 3 % de transparence en plus, le flou disparaît d'un coup. Un popover ne change donc jamais l'opacité de son verre pendant un mouvement normal : c'est sa forme qui bouge. **La seule exception est le fondu court du mouvement réduit** (ci-dessous).
+- **Un passage est une transformation de la même surface.** D'un popover à l'autre, le cadre ne se ferme pas : il se déforme vers la forme du nouveau, ses trois bords (gauche, droit, hauteur) au même ressort, `overlay`. Le contenu reste fixe sur l'écran, le cadre le découvre ; le nouveau contenu paraît quand le cadre a fait 65 % de son trajet, et le disque de l'en-tête ne s'éteint jamais.
+- **Une seule fenêtre.** Les popovers exclusifs d'une barre se partagent une fenêtre de calque permanente, par écran, au namespace `dunei-popovers`, à la règle de flou des autres calques ; elle mesure une ligne au repos et laisse tout passer sans popover ouvert (D109, D110).
+- **Table `[popover]` de `motion.toml`.** `icon_travel_px` (descente de l'icône, 3 px), `rest_threshold_px` (écart sous lequel un bord se pose, 0,5 px) et `passage_content_at` (part du trajet à franchir avant le nouveau contenu, 0,65). Aucune de ces valeurs ne s'écrit ailleurs (D112).
+
 ### Mouvement réduit
 
 Suppression des déplacements et changements d'échelle, **conservation d'un fondu court**. Une apparition sans aucune transition est plus désorientante, pour une personne sensible au mouvement, qu'un fondu de 100 ms.
+
+Pour un popover de la barre, le cadre paraît à sa forme finale et s'efface ou apparaît par ce fondu : le flou est alors coupé pendant ces 100 ms, **seule exception à la règle du verre jamais estompé**. L'icône ne descend pas ; la couleur d'état reste animée.
 
 Les valeurs vivent dans `motion.toml` ; `generate_motion.py` refuse toute infraction à ces règles.
 
@@ -867,7 +876,7 @@ Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si 
 | --- | --- | --- | --- | --- |
 | Bureau | E0 | `surface` | `spectacle` | Registre de spectacle |
 | Fenêtre tuilée | E1 | `surface` | `reflow` | **Aucune ombre, aucune bordure.** Gouttière 8px, rayon 12. Fenêtre active : les autres portent le modificateur `container_inactive` |
-| Barre système | aucune (transparente) | `text` + `interactive` | `state` | 28px, zone exclusive de 28px. Aucun fond, aucun verre, aucune capsule, de nuit comme de jour (D89). Texte et icônes posés sur le bureau, d'un clair ou d'un foncé choisi d'après le fond réel (`bureau.json`, D90) ; survol un peu plus sombre ou plus clair, sur les seuls éléments cliquables (D100), appui et menu ouvert à `accentStandalone` (D92). Icônes à 16px, logo à 20px, texte à l'échelon 3 (D95). Fonctions coupées : forme barrée (D91) |
+| Barre système | aucune (transparente) | `text` + `interactive` | `state` | 28px, zone exclusive de 28px. Aucun fond, aucun verre, aucune capsule, de nuit comme de jour (D89). Texte et icônes posés sur le bureau, d'un clair ou d'un foncé choisi d'après le fond réel (`bureau.json`, D90) ; survol un peu plus sombre ou plus clair, sur les seuls éléments cliquables (D100), appui et menu ouvert à `accentStandalone` (D92) ; quand un popover s'ouvre, l'icône descend de 3 px (`popover.icon_travel_px`) et sa couleur et son passage à l'icône pleine suivent `overlay`, le survol seul gardant `state` ; elle ne descend pas en mouvement réduit (D111, D115). Icônes à 16px, logo à 20px, texte à l'échelon 3 (D95). Fonctions coupées : forme barrée (D91) |
 | Presqu'île | E3 | `state` | `state` | Encoche continue au centre du haut de l'écran, 28px de haut comme la barre, couche haute : le plein écran la recouvre (D97). Elle montre les quatre bureaux de DuneI (D96) : points identiques en `textDisabled`, pilule d'accent discret (`accentDiscret`, identique de jour et de nuit) sur le bureau courant ; pilule grisée tant que le bureau spécial est ouvert. Survol en `textTertiary` (D92). Surface, forme et modules de contenu sont indépendants (D98) |
 | Barre latérale | E2 | `surface` + `row` | `state` | 240px, redimensionnable 180–400 par pas de 4. Sous 480px de conteneur → icônes seules |
 | En-tête de panneau | E2 | `surface` + `text` | — | Sheen autorisé : hauteur sous 80px |
@@ -883,7 +892,7 @@ Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si 
 | Compteur | field | `field` + `interactive` | `state` | Valeur dans un champ enfoncé, stepper à deux demi-boutons. Flèches et molette |
 | Menu déroulant | E3 rel. | `interactive` + `overlay` + `row` | `state` | Apparence d'un bouton, double chevron ; ouvre un overlay contextuel |
 | Champ de recherche | field | `field` + `icon` + `interactive` | `state` | Champ en pilule, loupe, effacement ; Échap efface |
-| Section dépliable | — | `interactive` + `text` | `state` | Chevron et libellé ; le chevron pivote sans animation jusqu'à L2-06 |
+| Section dépliable | — | `interactive` + `text` | `state` | Chevron et libellé ; le chevron pivote sans animation jusqu'à L2-58 |
 | Pastilles de fenêtre | — | `interactive` | — | Fermer, réduire, agrandir, en couleurs sémantiques ; neutres sous `inactive`. Sans `Etat` ni transition : survol et pression posent d'un coup leurs variantes précalculées (`errorHover`, `errorPressed`…). Aucun arrêt de tabulation. Rôle et emplacement sous tuilage : L2-42 |
 | Barre de progression | — | `surface` | — | Indéterminée : animation en boucle, exception à l'interdiction de la boucle, partagée avec l'indicateur d'activité |
 | Indicateur d'activité | — | `surface` | — | Trois grains en vague continue, période `periods.spinner`. Ne s'anime que visible et en marche |
@@ -914,7 +923,7 @@ Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si 
 | Menu de déconnexion | attention | E3 | `overlay` + `interactive` | `overlay` | Action destructrice en `error`, jamais en accent |
 | Verrouillage / connexion | attention | E0 | `overlay` + `text` + `field` | `spectacle` | Registre de spectacle. Horloge en grand corps, poids léger |
 | Menu contextuel | contextuel | E3 | `surface` + `row` | `reveal` | **Ni voile ni flou** de l'écran ; verre dépoli le jour comme la nuit (D85, D103). Part du point de clic, sans écart. Aucun contour de focus sur ses rangées (D88) |
-| Popover, liste déroulante | contextuel | E3 | `surface` + `row` | `reveal` | Part de son élément déclencheur, à `space.scale[0]` sous lui ; glisse au lieu de se retourner (D88) ; popover de réglage rapide : 288 px, élément joint dans l'en-tête seulement, mot de passe sans plaque, actions en texte seul sous `glassLine`, icône de la barre à l'accent et pleine tant qu'il est ouvert (D105) ; un seul popover de la barre à la fois, fermé 1,5 s après le départ du pointeur (D108) |
+| Popover, liste déroulante | contextuel | E3 | `surface` + `row` | `overlay` | Part de son élément déclencheur, à `space.scale[0]` sous lui ; glisse au lieu de se retourner (D88) ; popover de réglage rapide : 288 px, élément joint dans l'en-tête seulement, mot de passe sans plaque, actions en texte seul sous `glassLine`, icône de la barre à l'accent et pleine tant qu'il est ouvert (D105) ; un seul popover de la barre à la fois, fermé 1,5 s après le départ du pointeur (D108) ; popover de la barre : le cadre naît sous l'icône et y retourne, ses bords partent d'un même ressort `overlay`, le contenu reste fixe et le cadre le découvre, le verre n'est jamais estompé, le disque de l'en-tête reste plein pendant un passage (D110 à D114) |
 | Infobulle | contextuel | E3 | `surface` + `text` | `reveal` | Délai de 500 ms avant apparition (`delays.tooltip`, D82). Ne prend jamais le focus |
 | Notification | contextuel | E3 | `surface` + `text` + `icon` | `reveal` | Couleurs sémantiques fixes, hors thème. Décalage limité à 5 |
 
@@ -949,3 +958,4 @@ Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si 
 | 0.23 | 2026-11-02 | Chapitre 2 : le jour thématisé et son exception (D84) portent la mention de son retrait jusqu'au lot 4 (D102, L2-50) |
 | 0.24 | 2026-11-02 | Chapitre 2 : jour thématisé retiré (L2-50, D102) ; trois thèmes précalculés, couples retirés déclarés dans `theme.exclus`, repli sur la première famille qui offre le moment ; passage de l'échelle du jour thématisé et exception du corps de texte (D84) supprimés ; « quatre thèmes » devient « chaque thème » |
 | 0.25 | 2026-11-03 | Chapitre 7 et annexe E : popovers de la barre exclusifs et fermés au départ du pointeur (D108) ; popover Bluetooth, appareil connecté gardé dans la liste et « Oublier » par chevron (D107) |
+| 0.26 | 2026-11-04 | Chapitre 6 : le verre ne s'estompe jamais, fenêtre unique des popovers de la barre, table `[popover]`, un passage est une transformation d'une même surface, fondu du mouvement réduit seule exception ; composants : popover, icône de la barre, ligne de la section dépliable reportée à L2-58 (D110 à D115) ; annexe : colonne Transition du popover corrigée en `overlay`, comme le chapitre 6 et D112 |

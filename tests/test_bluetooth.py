@@ -212,6 +212,16 @@ class PopoverBluetoothTest(EssaiCoque, unittest.TestCase):
         self.assertEqual((p["exclusif"], p["fermeAuDepart"], p["retenu"]), (True, True, False))
         self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read|Unable to assign|Binding loop")
 
+    def test_lignes_sorties_ensemble(self):
+        # Plusieurs lignes qui quittent la liste en même temps se retirent toutes du modèle, pas la seule dernière.
+        self.ouvrir()
+        self.assertTrue(self.panneau()["lignes"])
+        self.ipc("vider")
+        fin = time.monotonic() + DELAI
+        while self.panneau()["lignes"] and time.monotonic() < fin:
+            time.sleep(0.02)
+        self.assertEqual(self.panneau()["lignes"], {})
+
     def test_recherche_suit_ouverture(self):
         self.assertEqual(self.ipc("recherche"), "false")
         self.ouvrir()
@@ -219,6 +229,73 @@ class PopoverBluetoothTest(EssaiCoque, unittest.TestCase):
         self.ipc("ouvrir", "false")
         self.assertEqual(self.ipc("recherche"), "false")
         self.ouvrir()
+        self.ipc("detruire")
+        self.assertEqual(self.ipc("recherche"), "false")
+
+    def test_reinitialiser(self):
+        # Le contenu d'un popover permanent revient à neuf : « Oublier » replié, échec effacé, liste en haut.
+        self.ouvrir()
+        self.ipc("choisir", self.ENCEINTE)
+        self.ipc("echouer", self.ENCEINTE)
+        self.assertEqual(self.panneau()["lignes"][self.ENCEINTE]["statut"], "Appairage impossible")
+        p = json.loads(self.ipc("puisLire", "deplier", self.SOURIS))
+        self.assertEqual(p["deplie"], self.SOURIS)
+        self.ipc("remplir")
+        # Les lignes ajoutées s'ouvrent en s'étirant : la liste ne peut défiler qu'une fois assez haute.
+        fin = time.monotonic() + DELAI
+        while self.panneau()["defile"] != 40 and time.monotonic() < fin:
+            self.ipc("defiler", "40")
+            time.sleep(0.05)
+        self.assertEqual(self.panneau()["defile"], 40)
+        self.ipc("reinitialiser")
+        p = self.panneau()
+        self.assertEqual((p["deplie"], p["defile"]), ("", 0))
+        self.assertEqual(p["lignes"][self.ENCEINTE]["statut"], "")
+
+    def test_reinitialiser_ne_coupe_pas_un_appairage(self):
+        # Un appairage en cours n'est pas annulé : la ligne reste occupée et le popover retenu.
+        self.ouvrir()
+        p = json.loads(self.ipc("puisLire", "choisir", self.ENCEINTE))
+        self.assertTrue(p["occupe"])
+        self.ipc("reinitialiser")
+        p = self.panneau()
+        self.assertEqual((p["occupe"], p["retenu"]), (True, True))
+        self.assertEqual(p["lignes"][self.ENCEINTE]["statut"], "Appairage…")
+
+    def test_aucun_glissement_popover_ferme(self):
+        # Dans l'arbre hébergé, un popover fermé garde son contenu construit mais invisible : un changement de tri
+        # n'y anime plus aucune ligne. Visible, le même changement fait bien glisser les lignes (témoin).
+        self.ouvrir()
+        self.ipc("connecter", self.SOURIS, "true")
+        fin = time.monotonic() + DELAI
+        while not self.panneau()["glisse"]:
+            self.assertLess(time.monotonic(), fin, "témoin : aucune ligne ne glisse popover ouvert")
+            time.sleep(0.01)
+        fin = time.monotonic() + DELAI
+        while self.panneau()["glisse"]:
+            self.assertLess(time.monotonic(), fin, "ligne toujours en mouvement")
+            time.sleep(0.05)
+        self.ipc("cacherPanneau", "true")
+        self.ipc("connecter", self.SOURIS, "false")
+        fin = time.monotonic() + 1
+        while time.monotonic() < fin:
+            self.assertFalse(self.panneau()["glisse"], "une ligne glisse popover fermé")
+            time.sleep(0.02)
+        self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read|Unable to assign|Binding loop")
+
+    def test_fondus(self):
+        # Contenu éteint, disque plein : la bascule reste pleine, le reste de l'en-tête disparaît. Par défaut, tout est plein.
+        p = self.ouvrir()
+        self.assertEqual((p["fonduContenu"], p["fonduDisque"]), (1, 1))
+        self.assertEqual(json.loads(self.ipc("fondus", "0", "1")), {"bascule": 1, "titre": 0})
+        self.assertEqual(json.loads(self.ipc("fondus", "0", "0")), {"bascule": 0, "titre": 0})
+        self.assertEqual(json.loads(self.ipc("fondus", "1", "1")), {"bascule": 1, "titre": 1})
+
+    def test_recharge_rend_la_recherche(self):
+        # Recharger la coque avec un popover ouvert détruit son contenu : la recherche est rendue, comme avant le
+        # contenu permanent.
+        self.ouvrir()
+        self.assertEqual(self.ipc("recherche"), "true")
         self.ipc("detruire")
         self.assertEqual(self.ipc("recherche"), "false")
 

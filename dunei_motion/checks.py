@@ -13,7 +13,7 @@ from .model import reduced_animation
 from .spring import critical_spring, exit_spring, spring, unit_mass, zeta
 
 VERSION = "0.1.0"
-SECTIONS = ("meta", "rules", "delays", "periods", "spinner", "transitions", "hyprland", "hyprland_reduced")
+SECTIONS = ("meta", "rules", "delays", "periods", "spinner", "popover", "transitions", "hyprland", "hyprland_reduced")
 REDUCED_FLOOR_MS = 100   # Plancher du fondu réduit fixé par la bible.
 
 # Types acceptés, désignés par leur nom dans les messages d'erreur.
@@ -28,10 +28,12 @@ KINDS = {
 META_KEYS = {"name": "texte", "prefix": "texte"}
 RULE_KEYS = {"exit_ratio": "nombre", "exit_tolerance": "nombre", "overshoot_allowed": "liste de textes",
              "stagger_allowed": "liste de textes", "stagger_cap": "nombre", "reduced_fade_ms": "nombre"}
-DELAY_KEYS = {"tooltip": "nombre", "scan": "nombre", "copied": "nombre", "stable": "nombre", "dismiss": "nombre"}     # Attentes de l'interface, en millisecondes.
+DELAY_KEYS = {"tooltip": "nombre", "scan": "nombre", "copied": "nombre", "stable": "nombre", "dismiss": "nombre", "liste": "nombre"}     # Attentes de l'interface, en millisecondes.
 PERIOD_KEYS = {"spinner": "nombre"}    # Cycles des mouvements continus, en millisecondes.
 # Pose de repos et courbe de la vague de l'indicateur d'activité.
 SPINNER_KEYS = {"rest_scale": "nombre", "rest_opacity": "nombre", "easing": "texte"}
+# Réglages de mouvement des popovers : déplacement de l'icône, seuil de repos du ressort, point de passage du contenu.
+POPOVER_KEYS = {"icon_travel_px": "nombre", "rest_threshold_px": "nombre", "passage_content_at": "nombre"}
 # Courbes que l'indicateur sait reproduire pour sa pose arrêtée (Activite.qml, courbes) ; les deux listes vont ensemble.
 EASINGS = ("Linear", "InOutSine", "InOutQuad")
 TRANSITION_KEYS = {"usage": "texte", "mass": "nombre", "stiffness": "nombre", "dampening": "nombre",
@@ -176,7 +178,8 @@ def errors(raw: dict) -> list[str]:
     err += _table("meta", raw["meta"], META_KEYS) + _table("rules", raw["rules"], RULE_KEYS)
     err += [f"meta : clé « {k} » manquante" for k in META_KEYS if k not in raw["meta"]]
     err += [f"rules : clé « {k} » manquante" for k in RULE_KEYS if k not in raw["rules"]]
-    for section, schema in (("delays", DELAY_KEYS), ("periods", PERIOD_KEYS), ("spinner", SPINNER_KEYS)):
+    for section, schema in (("delays", DELAY_KEYS), ("periods", PERIOD_KEYS), ("spinner", SPINNER_KEYS),
+                            ("popover", POPOVER_KEYS)):
         err += _table(section, raw[section], schema)
         err += [f"{section} : clé « {k} » manquante" for k in schema if k not in raw[section]]
     for section, schema in (("transitions", TRANSITION_KEYS), ("hyprland", HYPRLAND_KEYS),
@@ -193,6 +196,10 @@ def errors(raw: dict) -> list[str]:
             for k, v in raw[section].items() if v <= 0]
     err += [f"spinner : {k} doit être compris entre 0 et 1 exclus" for k in ("rest_scale", "rest_opacity")
             if not 0 < raw["spinner"][k] < 1]
+    err += [f"popover : {k} doit être strictement positif" for k in ("icon_travel_px", "rest_threshold_px")
+            if raw["popover"][k] <= 0]
+    if not 0 < raw["popover"]["passage_content_at"] < 1:
+        err.append("popover : passage_content_at doit être compris entre 0 et 1 exclus")
     if raw["spinner"]["easing"] not in EASINGS:
         err.append(f"spinner : easing « {raw['spinner']['easing']} » inconnu (attendu : {', '.join(EASINGS)})")
     return err + _transitions(raw) + _hyprland(raw) + _reduced(raw)

@@ -2669,3 +2669,210 @@ activent.
 `coque/Reseau/PopoverReseau.qml`, `motion.toml`, `dunei_motion/checks.py`, `generated/motion.json`, tests (composants,
 mouvement, golden, réseau), bible (chapitre 7, annexe E).*
 
+
+### D109 · La fenêtre hôte des popovers se réduit à une ligne au repos
+
+2026-11-04. **Au repos, la fenêtre hôte des popovers mesure 1 px de haut ; elle reprend la hauteur de l'écran dès qu'un
+popover s'ouvre, et la perd quand le cadre s'est refermé.** Elle reste une seule surface permanente, ce qui garde la
+réactivité validée à l'écran (L2-06, L2-56).
+
+- **Raison.** Hyprland recalcule le flou d'un calque quand ce qui se trouve dessous change, même si ce calque est
+  entièrement transparent. Sous une source animée à 30 images/s en fenêtre, la fenêtre à la taille de l'écran occupe le
+  GPU à 18 et 21 %, contre 6 et 12 % sans elle, soit environ 10 points de plus, bien au-delà du seuil de 2 points fixé par
+  la conception. Le processeur de Hyprland ne montre pas d'écart net.
+- **Mesure de la réduction.** Sous la même source, fenêtre réduite : 8 et 10 % de GPU, contre 7 % sans fenêtre, un écart
+  qui reste dans le bruit de cette mesure.
+- **Réactivité.** Le redimensionnement est acquis 2 à 6 ms après l'ouverture ; la première image à pleine hauteur arrive
+  8 à 23 ms après. Le plafond d'une image de retard n'est donc dépassé que ponctuellement, de quelques millisecondes, et
+  l'icône n'en dépend pas. La règle « la réactivité prime » ne joue pas ici : les durées d'image ne se dégradent pas.
+- **Limite de la mesure.** GPU relevé une fois par seconde pendant 60 s, sur `caladan`, avec une source synthétique
+  (`testsrc2` dans `ffplay`). Deux séries antérieures sont écartées : l'une tournait pendant une vidéo en plein écran,
+  l'autre sans que la fenêtre de test se soit lancée.
+
+*Touché : journal ; la mise en œuvre vient avec `coque/Barre/HotePopovers.qml` (L2-06).*
+
+
+### D110 · Une seule fenêtre hôte pour les popovers de la barre, et un cadre qui se charge aussi hors écran
+
+2026-11-04. **Les popovers de la barre (Wi-Fi, Bluetooth, et ceux qui suivront) ne créent plus chacun une `PopupWindow` :
+un composant `HotePopovers`, un par écran, tient une seule fenêtre `PanelWindow` permanente qui porte le cadre de verre
+de tous les popovers exclusifs (D108).** Un `Overlay` y devient hébergé par `heberge: true`, garde son rôle logique
+(`ouvert`, `ferme()`, exclusion, retenue, survol) et ne crée plus de fenêtre ; un `Overlay` non hébergé garde exactement
+son comportement d'avant (`Deroulant`, `Infobulle`, coques d'essai). La partie visuelle et logique vit dans
+`CadrePopovers.qml`, que la fenêtre n'enveloppe que d'un calque : `PanelWindow` ne se charge pas sous la plateforme
+offscreen des coques d'essai, et la logique de forme et de passage reste dans `forme.js`, JavaScript pur, testé seul.
+
+- **Raison.** Une fenêtre de popup naît et meurt à chaque ouverture : le cadre ne pouvait ni partir de l'icône ni se
+  transformer d'un popover à l'autre, puisque l'un se détruisait pendant que l'autre se créait. Une surface permanente
+  est la seule à pouvoir être animée de bout en bout, et elle supprime le coût de création de fenêtre à chaque clic.
+- **Mesure du spike (essai jetable, `caladan`).** Avec une fenêtre créée à chaque ouverture, les premières images
+  après le clic duraient de 70 à 117 ms ; avec la fenêtre unique, elles durent de 9 à 38 ms.
+- **Prise du clavier.** `HyprlandFocusGrab` associe la fenêtre hôte et la barre : un clic à l'extérieur ferme, un clic
+  sur une autre icône passe à son popover sans fermeture parasite ; l'hôte ne prend le clavier que popover ouvert.
+- **Calque.** Il reçoit le namespace `dunei-popovers`, ajouté à `[glass].namespaces` de `tokens.toml`, avec le flou et
+  `ignore_alpha` des autres calques, sans `xray`.
+- **Écart à la fiche.** La fiche plaçait tout dans `HotePopovers.qml` ; le découpage en `CadrePopovers` a été fait
+  pour que la logique se charge sous la plateforme offscreen, sans quoi elle n'aurait pas été testable.
+
+*Touché : `coque/Barre/HotePopovers.qml`, `CadrePopovers.qml`, `forme.js`, `Barre.qml`, `coque/Composants/Overlay.qml`,
+`tokens.toml`, tests de la barre (L2-06, L2-56).*
+
+
+### D111 · Le verre n'est jamais estompé ; le cadre se déploie depuis l'icône, bords d'un même ressort
+
+2026-11-04. **Le verre d'un popover ne change jamais d'opacité pendant un mouvement normal : c'est la forme du cadre qui
+bouge, jamais sa transparence.** Le cadre naît sous son icône (la largeur de l'icône, à hauteur nulle) et y retourne ;
+ses trois bords (gauche, droit, hauteur) sont trois ressorts qui prennent le même réglage, `in` tant qu'un popover est
+montré, `out` à la fermeture.
+
+- **Raison du verre.** Le calque coupe son flou sous `ignore_alpha` (0,58) et le verre des surfaces E3 est à 60 %
+  (D103) : dès 3 % de transparence en plus, le flou disparaît d'un coup, puis revient d'un coup. Un fondu du verre se
+  voit donc comme un clignotement. Les fondus se portent sur le contenu, jamais sur le verre.
+- **Raison du sens unique.** Avec un sens par ressort, un bord qui recule prenait le ressort de sortie, plus vif, et le
+  cadre s'ouvrait de travers (défaut constaté dans l'essai). Les trois bords partent et arrivent ensemble.
+- **Exception.** Le mouvement réduit accepte le fondu du cadre entier (D115) : la bible l'impose, et le flou est alors
+  coupé pendant ces 100 ms seulement.
+- **Autres règles de forme.** Le rayon des coins est plafonné à la moitié du plus petit côté ; sous 0,5 px de hauteur,
+  le cadre n'est pas dessiné ; le contenu reste à sa place sur l'écran, le cadre le découvre sans le déplacer.
+
+*Touché : `coque/Barre/CadrePopovers.qml`, `forme.js`, bible (chapitre 6, composants).*
+
+
+### D112 · Le ressort `overlay` passe à 1, 600, 50 ; la table `[popover]`
+
+2026-11-04. **`[transitions.overlay]` de `motion.toml` passe à `mass = 1.00`, `stiffness = 600`, `dampening = 50`, le
+réglage que Nicolas a validé dans l'essai sous le nom `reveal`.** Une nouvelle table `[popover]` porte
+`icon_travel_px = 3`, `rest_threshold_px = 0.5` et `passage_content_at = 0.65` ; `dunei_motion/checks.py` les exige et
+les borne, et le golden suit.
+
+- **Raison.** Un popover est une surface de couche 3 : il relève d'`overlay`, non de `reveal`, qui sert à l'apparition
+  d'éléments dans le flux. Le premier réglage d'`overlay` paraissait lent, surtout en fin de mouvement ; le réglage
+  plus rapide est « parfait » selon Nicolas.
+- **Calques de Hyprland.** Le changement vaut aussi pour les éléments que Hyprland anime au ressort `overlay`
+  (`layersIn`, `layersOut`, `fadeLayersIn`, `fadeLayersOut`, `specialWorkspace*`). Il est validé à l'écran, calques de
+  Hyprland compris (lanceur, menus), le 2026-11-04. Aucun rattachement à une autre transition n'a donc été nécessaire ;
+  le vocabulaire reste de sept transitions.
+- **Le seuil de repos.** `rest_threshold_px` est l'écart sous lequel un bord se pose, ce qui supprime la fin de
+  mouvement qui rampe ; il vit dans la table parce que ce n'est pas un réglage de ressort.
+- **Aucune valeur dans le QML.** L'icône, le cadre et le passage lisent `Theme.motion.popover`.
+
+*Touché : `motion.toml`, `dunei_motion/checks.py`, `generated/motion.json` et cibles (par `make motion`), tests
+(mouvement, golden), bible (chapitre 6).*
+
+
+### D113 · Contenu construit une fois au démarrage, remis à neuf par `reinitialiser()`
+
+2026-11-04. **Le contenu de chaque popover est construit de façon asynchrone au démarrage de la coque, une fois pour
+toutes, et reste fixe sur l'écran. Chaque contenu offre sur sa racine `fonduContenu`, `fonduDisque` et
+`reinitialiser()` ; la fermeture le remet dans l'état d'un popover neuf quand il ne se voit plus.**
+
+- **Raison.** Un contenu créé à l'ouverture retarde la première image : c'est ce qui causait les images de 70 à 117 ms
+  (D110). Un contenu invisible ne consomme rien et aucun balayage ni recherche ne tourne popover fermé. Ce que faisait
+  la destruction (rien de déplié, aucun champ rempli, défilement en haut) reste vrai par `reinitialiser()`, y compris
+  `ChampSecret.revele` remis à faux.
+- **Une connexion n'est jamais annulée en silence.** `reinitialiser()` ne coupe pas une connexion en cours.
+- **Échec après la fermeture.** Un échec de connexion qui survient après la fermeture reste affiché à la réouverture
+  (ligne dépliée, erreur) : l'échec est une information utile. Arbitrage du plan, soumis à la recette et non contesté ; s'il
+  gêne, le popover sera remis plus « neuf » qu'avant.
+- **Un contenu fermé ne reçoit aucun clic**, même pendant son fondu : un bouclier les arrête, car désactiver le contenu
+  (`enabled`) changerait la couleur de sa bascule sous les yeux.
+- **Ouverture avant la fin de la construction.** Elle attend le contenu.
+
+*Touché : `coque/Barre/CadrePopovers.qml`, `coque/Reseau/PopoverReseau.qml`, `coque/Bluetooth/PopoverBluetooth.qml`.*
+
+
+### D114 · Règles du passage d'un popover à l'autre
+
+2026-11-04. **Cliquer sur une autre icône, popover ouvert, ne referme pas le cadre : il va directement à la forme du
+nouveau popover, au ressort `in`.**
+
+- L'icône quittée remonte et la choisie descend en même temps, au mouvement normal.
+- L'ancien contenu s'efface tout de suite ; le nouveau attend que le cadre ait fait 65 % de son trajet
+  (`motion.popover.passage_content_at`), puis apparaît. Sans trajet réel, il apparaît aussitôt.
+- **Le disque de la bascule d'en-tête n'est jamais éteint.** L'ancien reste plein jusqu'à ce que le nouveau, posé
+  au-dessus, l'ait entièrement recouvert : le glyphe passe en fondu enchaîné. Raison de Nicolas : « C'est bien mieux
+  pour aider l'œil ». Une bascule de couleur différente (radio coupée) passe en fondu de la même façon.
+- **Aller-retour A, B, A.** Le disque est tenu pendant l'aller-retour et pendant une fermeture en plein passage ; une
+  troisième icône en plein passage repart de la forme courante, sans file d'attente.
+- Validé par Nicolas avec de vrais gestes sur la version propre en mouvement normal : ouverture, passage, clic à
+  l'extérieur, Échap, départ de la souris, mot de passe.
+
+*Touché : `coque/Barre/CadrePopovers.qml`, `forme.js` (`contenuPermis`, `opaciteDisque`).*
+
+
+### D115 · Mouvement réduit : une préférence, `Ressort.nature`, fondu du cadre
+
+2026-11-04. **Le mouvement réduit tient dans une préférence unique, `mouvement.json` (`{"reduit": bool}`), désactivée par
+défaut, lue à chaud par la coque (`Theme.mouvementReduit`) et par Hyprland (`modules.motion.apply(reduced)`, D18).** La
+commande `dunei-mouvement` la change, sur le modèle de `dunei-theme` ; l'interface viendra avec les paramètres.
+
+- **`Ressort.nature`.** Un ressort déclare ce qu'il anime : `deplacement` (par défaut) se pose sur sa cible en mouvement
+  réduit ; `fondu` suit le ressort `reduced` de `motion.json`, tiré de `rules.reduced_fade_ms` (100 ms). Les couleurs
+  d'état restent animées, car la bible conserve un fondu court. Sont concernés `Ressort`, `Bureaux`, la presqu'île, les
+  lignes animées des popovers, l'icône de la barre et `Activite`.
+- **Popover en réduit.** Le cadre paraît à sa forme finale et s'efface ou apparaît par un fondu de 100 ms, flou coupé
+  pendant ce temps : c'est la seule exception à D111. L'icône ne descend pas. Au passage, le cadre se pose à la
+  nouvelle forme, les contenus se croisent en fondu court et le disque garde sa règle (D114).
+- **Raison de la préférence unique.** Deux sources (coque et Hyprland) se contrediraient ; une seule, lue par les deux,
+  ne le peut pas.
+- **Statut.** Le code est écrit et testé ; la recette à l'écran est validée par Nicolas le 2026-11-04.
+
+*Touché : `coque/Theme/Ressort.qml`, `Theme.qml`, `config/bin/dunei-mouvement`, `coque/Barre/*`, `coque/Presquile/Bureaux.qml`,
+`coque/Composants/Activite.qml`, carnet.*
+
+
+### D116 · Fluidité : mesures finales, `scannerEnabled` écarté, budget non tenu à la lettre
+
+2026-11-04. **Le mouvement des popovers a été mesuré par la coque sur `caladan` : sur 37 mouvements et 906 images (10
+cycles), la première image suit le clic de 34 ms au plus, et 5 images dépassent 33 ms (34, 34, 34, 39 et 87 ms).** Le
+blocage de la fermeture du popover Wi-Fi a disparu. Le budget de la conception (aucune image au-delà de 33 ms) n'est
+donc pas tenu à la lettre ; l'écart, soumis à Nicolas à la recette, est accepté.
+
+- **`scannerEnabled` écarté.** L'écriture de `scannerEnabled` était soupçonnée du blocage de 62 à 82 ms. Mesurée sur
+  cette machine, elle prend de 2 à 15 ms, contre une demi-seconde dans l'ancienne note d'`EtatReseau.qml`. La mesure
+  contredit la note : les commentaires d'`EtatReseau.qml` et de `PanneauReseau.qml` sont corrigés et disent que la
+  mesure vient de `caladan` seulement. La garde « n'écrire que si la valeur diffère » est conservée.
+- **Cause du blocage trouvé.** Une boucle de liaison sur `reste`, dans `CadrePopovers`, en fin de passage ; corrigée
+  (commit « suppression de la boucle de liaison en fin de passage »).
+- **Les cinq images au-delà de 33 ms.** Cause non identifiée, rare (5 sur 906) ; elles ne bloquent pas la fusion,
+  conformément à la conception (cause hors de portée mesurée et consignée), à condition que Nicolas n'y voie pas de
+  gêne. Si une saccade occasionnelle se voit, elle est à reprendre ; l'image de 87 ms est la seule vraiment longue.
+- **Limite de la mesure.** Série relevée sur une seule machine, écran calme, après deux séries invalides écartées.
+
+*Touché : `coque/Reseau/EtatReseau.qml` et `PanneauReseau.qml` (commentaires seulement), journal.*
+
+
+### D117 · Pas de lien entre les animations et le profil d'énergie dans ce lot
+
+2026-11-04. **Les animations ne dépendent pas du profil d'énergie (décision de Nicolas).** Couper les animations
+décoratives longues en `power-saver` reste une idée, gardée pour L2-13 (indicateur d'énergie et son popover).
+
+- **Raison.** Les mouvements d'un popover sont courts et ne coûtent rien au repos (D109, D113) ; un second réglage
+  croisé avec le mouvement réduit (D115) compliquerait la règle de la préférence unique pour un gain non mesuré.
+
+*Touché : journal.*
+
+### D118 · Le cadre du popover réseau attend le retour de la liste Wi-Fi, 30 ms
+
+2026-11-04. **À l'ouverture du popover réseau, le cadre attend `motion.delays.liste` (30 ms) avant de se déployer, et les
+réseaux revenus pendant cette attente paraissent d'emblée.** L'icône réagit aussitôt : seule la forme attend. Le contrat
+est générique : un contenu hébergé peut exposer `pretAMontrer`, que `CadrePopovers` lit ; sans cette propriété, il est
+prêt tout de suite. Défaut signalé par Nicolas à la recette de L2-06.
+
+- **Raison.** Du Bluetooth (319 px) au Wi-Fi (381 px), le cadre raccourcissait puis s'allongeait. Comme le contenu reste
+  construit (D113) et que la liste se vide à l'arrêt du balayage, le panneau Wi-Fi fermé ne mesurait que 189 px ; ses
+  lignes revenaient ensuite en s'ouvrant, et sa hauteur montait en environ 300 ms.
+- **Pourquoi une attente fixe.** Sur `caladan`, les réseaux reviennent un par un, en 12 ms environ après l'ouverture, et
+  le réseau joint ne quitte jamais la liste : attendre le premier réseau revenait à ne pas attendre. Une attente fixe
+  évite aussi de distinguer le cas d'une liste vide. Un réseau arrivé plus tard entre en s'ouvrant, et le cadre le suit.
+- **Écartés.** Garder le balayage actif popover fermé consommerait de la batterie et de la radio. Mémoriser l'ancienne
+  hauteur montrerait un cadre vide pendant le retour des lignes.
+- **Mesure.** Trois passages du Bluetooth au Wi-Fi : la hauteur visée passe directement de 319 à 413 px, sans étape
+  intermédiaire, et la forme part 38 à 58 ms après l'ouverture. Le budget de 50 ms (fiche, objectif 8) est donc dépassé
+  ponctuellement, pour ce seul popover ; cet écart, soumis à la recette, est accepté.
+- **Autre défaut corrigé.** `Qt.callLater(panneau.retirer, cle)` fusionnait les appels d'une même fonction : de plusieurs
+  lignes sorties ensemble, une seule quittait le modèle, les autres restaient cachées puis revenaient en s'animant. Le
+  popover Bluetooth avait le même défaut. Chaque appel passe maintenant par une fonction propre.
+
+*Touché : `motion.toml`, `dunei_motion/checks.py`, `generated/motion.json`, golden, `coque/Barre/CadrePopovers.qml`,
+`coque/Reseau/PopoverReseau.qml`, `coque/Bluetooth/PopoverBluetooth.qml`, coques d'essai, tests, fiche de conception.*

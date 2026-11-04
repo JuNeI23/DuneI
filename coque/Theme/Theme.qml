@@ -15,9 +15,11 @@ import Quickshell.Io
 // du fond effectif comparée au seuil des jetons.
 // Entrées : DUNEI_TOKENS_DIR (dossier redirigé, pour la planche et les essais), sinon
 //           $XDG_CONFIG_HOME/dunei, sinon $HOME/.config/dunei ; dans ce dossier, theme.json
-//           {famille, moment}, facultatif, et bureau.json {origine, fond}, facultatif.
+//           {famille, moment}, facultatif, bureau.json {origine, fond}, facultatif, et mouvement.json
+//           {reduit}, facultatif, écrit par dunei-mouvement.
 // Sorties : dir, ready, famille, moment, tokens et ses raccourcis par groupe (pastilles, knob, controls et glass
 //           compris), bureau (jetons du bureau), texteBureau, texteBureauSurvol, density (confortable), motion,
+//           mouvementReduit (vrai si mouvement.json le demande),
 //           stateColors(), hairline(), luminance(), police(), fichier().
 // Erreurs : tokens ou mouvement absents ou illisibles → console.error, ready reste faux ; contenu invalide ou
 //           incomplet → console.warn, valeurs précédentes gardées. theme.json absent → défaut des tokens, en
@@ -32,6 +34,8 @@ Singleton {
         || (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config") + "/dunei"
     property var tokens: null
     property var motion: null
+    // Mouvement réduit, lu dans mouvement.json ({"reduit": bool}) : faux si le fichier est absent ou invalide.
+    property bool mouvementReduit: false
     // Contenus bruts : brut, coque-tokens.json entier ; choix, theme.json validé ({famille, moment}) ou null
     // pour le défaut. Seul composer() les combine en tokens.
     property var brut: null
@@ -264,6 +268,16 @@ Singleton {
             root._ready = root.tokens !== null
             console.info("Theme : mouvement chargé, version " + data.version)
         }
+    }
+
+    // La préférence de mouvement réduit, écrite par dunei-mouvement : absente, invalide ou supprimée, elle vaut faux.
+    Source {
+        name: "mouvement.json"
+        keys: ["reduit"]
+        optional: true
+        suite: "mouvement normal appliqué"
+        onParsed: data => root.mouvementReduit = data.reduit === true
+        onRejected: root.mouvementReduit = false
     }
 
     // Le fond du bureau : absent, illisible ou sans fond #rrggbb, il vaut celui des jetons.

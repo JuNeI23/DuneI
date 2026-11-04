@@ -155,9 +155,9 @@ Item {
     Component.onDestruction: { etat.rechercheFenetre = false; etat.profilDemande = "" }
 
     // Balayage Wi-Fi : demandé à etat.rechercheFenetre pour toute la vie du panneau, donc de la fenêtre, quel que soit
-    // l'onglet ou la sous-page, et rendu à sa destruction. L'écriture de scannerEnabled bloquant le fil graphique
-    // d'une demi-seconde environ, elle suit la première image de la fenêtre (frameSwapped), qu'elle ne retarde pas ;
-    // sans fenêtre, elle est immédiate.
+    // l'onglet ou la sous-page, et rendu à sa destruction. L'écriture de scannerEnabled occupant le fil graphique
+    // (environ une demi-seconde à la mesure de 7a, de 2 à 15 ms à celle de L2-06 sur caladan, D116), elle suit la
+    // première image de la fenêtre (frameSwapped), qu'elle ne retarde pas ; sans fenêtre, elle est immédiate.
     property bool demandeBalayage: false
     Connections {
         target: panneau.demandeBalayage ? panneau.Window.window : null

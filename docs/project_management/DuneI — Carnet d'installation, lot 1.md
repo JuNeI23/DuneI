@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.32. Historique en fin de document.
+Version 1.33. Historique en fin de document.
 
 Socle amorçable.
 
@@ -2069,8 +2069,55 @@ retiré : sa ligne de `session.toml` passe en `retires` et `make install` désac
   le jour thématisé, renvoyés au lot 4 (D102, L2-50) ; le VPN n'a pas été éprouvé avec une vraie connexion, Nicolas n'en
   ayant pas encore.
 - **Pièges rencontrés.** Écrire `Networking.wifiDevices[i].scannerEnabled` gèle l'interface environ 0,5 s : la fenêtre
-  demande donc le balayage une fois, après sa première image, et pour toute sa vie (D105). Un `Coche` dans un `Layout`
+  demande donc le balayage une fois, après sa première image, et pour toute sa vie (D105). La mesure de L2-06 sur
+  `caladan` donne ensuite de 2 à 15 ms par écriture, non une demi-seconde (D116) : la précaution est gardée. Un `Coche` dans un `Layout`
   est écrasé s'il n'a pas de taille préférée.
+
+## Le mouvement des popovers — L2-06, L2-07, L2-47, L2-56
+
+Rien de plus à installer : la fenêtre des popovers est dans la coque (`dunei-coque.service`), et `make install` lie
+`dunei-mouvement` dans `~/.local/bin`, comme `dunei-theme`. Les décisions sont D110 à D117 du journal.
+
+### La commande `dunei-mouvement`
+
+Elle écrit la préférence de mouvement réduit dans `mouvement.json`, au dossier de `theme.json` (`$DUNEI_TOKENS_DIR`,
+sinon `~/.config/dunei`), par un fichier temporaire puis un renommage. La coque surveille ce fichier et applique le
+changement à chaud ; si Hyprland tourne, la commande lui fait relire sa configuration (`hyprctl reload`), car
+`modules.motion` lit le même fichier. Un fichier absent ou invalide vaut « normal ». `jq` est requis.
+
+| Appel | Effet |
+| --- | --- |
+| `dunei-mouvement` | affiche « reduit » ou « normal » |
+| `dunei-mouvement reduit` | active le mouvement réduit (déplacements posés, fondu court de 100 ms) |
+| `dunei-mouvement normal` | rend le mouvement normal |
+| `dunei-mouvement bascule` | passe à l'état opposé |
+
+Codes de sortie : 0 en cas de succès ; 2 pour un argument inconnu ou superflu (`mouvement.json` reste intact) ; 1 si `jq`
+manque. Il n'y a pas encore d'interface : elle viendra avec les paramètres.
+
+### Le calque `dunei-popovers`
+
+Les popovers de la barre ne sont plus des fenêtres de popup : chaque barre porte une seule fenêtre de calque
+permanente, `HotePopovers`, au namespace `dunei-popovers`, déclaré dans `[glass].namespaces` de `tokens.toml` : sa
+règle de flou (taille, passes, `ignore_alpha`, sans `xray`) est donc générée par `make tokens`, comme celle des autres
+calques. Au repos elle mesure une ligne de haut et son masque de saisie est vide (D109). Le verre n'est jamais estompé
+(D111) ; vérifier le calque : `hyprctl layers`, une ligne `dunei-popovers`.
+
+### Ajouter un popover à l'hôte
+
+1. Écrire le contenu comme une racine d'`Overlay` hébergé : `heberge: true`, `ancre` sur l'indicateur de la barre,
+   et, sur la racine du contenu, `fonduContenu` et `fonduDisque` (propriétés réelles de 0 à 1, à 1 par défaut) et
+   `reinitialiser()`, qui remet la vue à l'état d'un popover neuf sans couper une connexion en cours (D113).
+2. Dans `coque/Barre/Barre.qml`, déclarer ce popover à côté de `PopoverReseau` et l'ajouter au tableau `popovers` de
+   `HotePopovers` ; l'indicateur y relie son `ouvert` comme les deux existants.
+3. Choisir pour chaque ressort du contenu sa `nature` : `deplacement` (par défaut) ou `fondu` si le ressort n'anime qu'une
+   opacité, pour que le mouvement réduit le respecte (D115). Aucune durée ni aucun ressort ne s'écrit dans le QML.
+4. Relever : `python3 -m unittest tests.test_barre` (hôte, cadre, forme, passage), puis un essai à l'écran.
+
+### Relevés
+
+Sur `caladan`, 906 images mesurées sur 37 mouvements : première image à 34 ms au plus, cinq images au-delà de 33 ms
+(34, 34, 34, 39 et 87 ms), cause non identifiée (D116). Nicolas a validé la recette à l'écran le 2026-11-04.
 
 ## Lecteur d'empreinte — nouveau
 
@@ -2174,6 +2221,7 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 
 | Version | Date | Changement |
 | --- | --- | --- |
+| 1.33 | 2026-11-04 | Le mouvement des popovers : commande `dunei-mouvement`, calque `dunei-popovers`, ajout d'un popover à l'hôte, relevés (L2-06, L2-07, L2-47, L2-56 ; D110 à D117), recette en attente |
 | 1.32 | 2026-11-02 | Thèmes statiques : trois thèmes, jour thématisé retiré (L2-50, D102), repli d'un couple retiré dans la coque et dans `dunei-theme` |
 | 1.31 | 2026-11-02 | Énergie (L1-09) : double appui du bouton marche pendant la session, `dunei-bouton-marche.service` et `scripts/dunei-bouton-marche` (D106) |
 | 1.30 | 2026-11-02 | Relecture finale de L2-11 : `nm-applet` retiré (décidé, plus à trancher), renvois des anciennes sections corrigés (arborescence, table des unités, recette de L1-10) |

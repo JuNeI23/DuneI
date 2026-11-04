@@ -1,5 +1,6 @@
 """Modules env, fenetres et regles — exécutés par Lua avec un faux hl, dans un dossier imitant ~/.config/hypr."""
 
+import os
 import shutil
 import subprocess
 import tempfile
@@ -65,11 +66,41 @@ class ModulesTest(unittest.TestCase):
                                                      "layer\tdunei-verre-dunei-barre",
                                                      "layer\tdunei-verre-dunei-attention",
                                                      "layer\tdunei-verre-dunei-presquile",
+                                                     "layer\tdunei-verre-dunei-popovers",
                                                      "rule\tsans-agrandissement", "rule\tglisser-xwayland",
                                                      "rule\tfenetre-reseau"])
 
     def test_verrouillage(self):
         self.assertEqual(self.run_module("verrouillage"), ["misc\ttrue"])
+
+    def preference(self, contenu: str | None) -> str:
+        """Exécute modules.motion.preference() avec mouvement.json de contenu donné dans un dossier temporaire.
+
+        Entrée : contenu — texte du fichier, ou None pour un fichier absent. Sortie : « true » ou « false ».
+        Erreurs : CalledProcessError si le module échoue. Dépendances : DUNEI_TOKENS_DIR, generated/motion.lua.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            hypr = Path(tmp) / "hypr"
+            (hypr / "generated").mkdir(parents=True)
+            shutil.copy(ROOT / "generated" / "motion.lua", hypr / "generated")
+            (hypr / "modules").symlink_to(ROOT / "config" / "hypr" / "modules")
+            if contenu is not None:
+                (Path(tmp) / "mouvement.json").write_text(contenu, encoding="utf-8")
+            script = f'package.path = "{hypr}/?.lua"\nprint(tostring(require("modules.motion").preference()))\n'
+            env = {**os.environ, "DUNEI_TOKENS_DIR": tmp}
+            return subprocess.run([LUA, "-e", script], capture_output=True, text=True, check=True, env=env).stdout.strip()
+
+    def test_preference_mouvement(self):
+        self.assertEqual(self.preference(None), "false")
+        self.assertEqual(self.preference('{"reduit": true}'), "true")
+        self.assertEqual(self.preference('{\n  "reduit": true\n}\n'), "true")
+        self.assertEqual(self.preference('{"reduit": false}'), "false")
+        for invalide in ("", "pas du json", '{"reduit": "true"}', '{"reduit": 1}', "{}"):
+            self.assertEqual(self.preference(invalide), "false", invalide)
+
+    def test_entree_applique_la_preference(self):
+        entree = (ROOT / "config" / "hypr" / "hyprland.lua").read_text(encoding="utf-8")
+        self.assertIn('modules.motion").apply(require("modules.motion").preference())', entree)
 
 
 if __name__ == "__main__":

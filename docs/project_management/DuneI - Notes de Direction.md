@@ -2,9 +2,9 @@
 
 Oct 10, 2026 · @Nicolas — révisée le 22 octobre 2026
 
-Version 1.37. Historique en fin de document.
+Version 1.38. Historique en fin de document.
 
-*Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent soixante-quatre lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
+*Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent soixante-huit lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
 
 ## En une phrase
 
@@ -118,7 +118,7 @@ L'ordre découle d'une seule règle : **chaque lot laisse la machine en état de
 | **4 — Accord visuel** | Thématisation Qt et GTK sur cibles réelles, premier lot d'icônes, fond d'écran, panneau de thème, extraction de teinte | Cohérente de bout en bout, bible opposable partout |
 | **5 — Écrans système et voix** | Réglages panneau par panneau, connexion, amorçage, « À propos », catalogue de messages, recette | **1.0** |
 
-Le détail — cent soixante-quatre éléments, chacun rattaché à un chantier, un lot et une nature — vit dans le document de périmètre et de backlog. **Cette note ne s'y substitue pas.**
+Le détail — cent soixante-huit éléments, chacun rattaché à un chantier, un lot et une nature — vit dans le document de périmètre et de backlog. **Cette note ne s'y substitue pas.**
 
 ## Les risques, par ordre de gravité
 
@@ -506,15 +506,28 @@ appareil double (classique et LE) s'appaire en LE, sans audio. L'appairage passe
 « Connecté » que si PipeWire a sa sortie. Recette validée le 2026-11-03 : radio, oubli, appairage, reconnexion
 automatique, exclusion des popovers, fermeture au départ de la souris.
 
-Prochaine étape : **choisir l'élément suivant du lot 2** dans le backlog ; L2-12 (audio) et L2-13 (énergie) suivront
-le motif du popover de réglage, L2-56 (animations entre popovers) et L2-57 (suites du popover Bluetooth) attendent leur
-tour.
+**Mouvement des popovers de la barre (L2-06, L2-07, L2-47, L2-56 ; D110 à D117), 2026-11-04.** Les popovers de la barre
+ne paraissent plus d'un coup : l'icône descend de 3 px et le cadre de verre naît sous elle, y retourne, et passe d'un
+popover à l'autre en se transformant sans se fermer. Tous les popovers d'une barre partagent une seule fenêtre
+permanente (`HotePopovers`, réduite à une ligne au repos, D109), dont le cadre et le contenu vivent dans `CadrePopovers`.
+Le verre n'est jamais estompé, car le calque coupe son flou sous `ignore_alpha` ; le contenu est construit une fois au
+démarrage et remis à neuf à la fermeture. Le ressort `overlay` passe à 1, 600, 50, validé à l'écran, calques de
+Hyprland compris, et la table `[popover]` porte les trois valeurs propres au mouvement. Le mouvement réduit tient dans
+une préférence unique (`dunei-mouvement`, `mouvement.json`), lue à chaud par la coque et par Hyprland. Sur `caladan`, 906
+images mesurées sur 37 mouvements donnent une première image à 34 ms au plus et cinq images au-delà de 33 ms (dont une
+de 87 ms, de cause non identifiée) : le budget n'est pas tenu à la lettre, écart accepté. Nicolas a validé la recette à l'écran le 2026-11-04.
+Les menus, listes déroulantes et infobulles passent à L2-58, et les reliquats à L2-59.
+
+Prochaine étape : **après la fusion de cette PR, choisir l'élément suivant du lot 2** dans le backlog ; L2-12 (audio) et
+L2-13 (énergie) suivront le motif du popover hébergé (`heberge: true`, `fonduContenu`, `fonduDisque`, `reinitialiser()`),
+L2-57 (suites du popover Bluetooth), L2-58 et L2-59 attendent leur tour.
 
 ## Historique des versions
 
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-10 | Version initiale |
+| 1.38 | 2026-11-04 | Mouvement des popovers de la barre (L2-06, L2-07, L2-47, L2-56 ; D110 à D118), recette validée ; backlog recompté à 168 éléments (l'écart de 2 avec les 164 annoncés datait d'avant cette branche) ; prochaine étape : après la fusion, l'élément suivant du lot 2 |
 | 1.37 | 2026-11-03 | L2-14 validé à l'écran après les correctifs de recette (appairage par agent et transport, audio exigé) ; prochaine étape : l'élément suivant du lot 2 |
 | 1.36 | 2026-11-03 | L2-14 : popover Bluetooth, popovers de la barre exclusifs et fermés au départ de la souris (D107, D108) ; prochaine étape : sa validation à l'écran, puis l'élément suivant du lot 2 |
 | 1.35 | 2026-11-02 | L2-50 : jour thématisé retiré, trois thèmes, couples retirés dans `theme.exclus`, repli sur la première famille qui offre le moment (D102) ; prochaine étape : valider L2-50 à l'écran, puis choisir l'élément suivant du lot 2 |

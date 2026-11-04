@@ -25,6 +25,8 @@ ShellRoot {
     id: essai
 
     // journal — écrit une ligne lisible par le test. Entrées : cle, valeur. Sortie : aucune. Erreurs : aucune.
+    // Liste mise de côté par viderReseaux, le temps que le balayage reprenne.
+    property var reseauxTenus: []
     function journal(cle, valeur) { console.info("essai : " + cle + " " + valeur) }
 
     // Réseau factice : les membres de WifiNetwork que lit le popover.
@@ -95,9 +97,16 @@ ShellRoot {
                 sourceComponent: Component { PopoverReseau { ancre: cible; etat: faux } }
             }
 
+            // Contenu tenu comme par l'hôte des popovers : construit une fois, il survit aux fermetures.
+            Loader { id: hebergeur; active: false; sourceComponent: porteur.item?.contenu ?? null }
+
             IpcHandler {
                 id: ipc
                 target: "popover"
+
+                // heberger — passe le popover au contenu permanent, comme hébergé dans la barre. Entrées : aucune.
+                // Sortie : aucune. Erreurs : aucune. Dépendances : porteur, hebergeur.
+                function heberger(): void { porteur.item.heberge = true; hebergeur.active = true }
 
                 // ouvrir — ouvre ou ferme le popover. Entrée : valeur. Sortie : aucune. Dépendances : porteur.
                 function ouvrir(valeur: bool): void { porteur.item.ouvert = valeur }
@@ -105,6 +114,19 @@ ShellRoot {
                 function ouvert(): string { return JSON.stringify(porteur.item?.ouvert ?? false) }
                 // detruire — détruit le popover, ouvert ou non. Entrées : aucune. Sortie : aucune.
                 function detruire(): void { porteur.active = false }
+                // regler — change la force d'un réseau factice puis republie la liste, comme un balayage : le tri peut
+                // alors réordonner les lignes. Entrées : nom ; force, réel entre 0 et 1 (chaîne). Sortie : aucune.
+                // Erreurs : aucune ; un nom inconnu ne change que la liste. Dépendances : essai, faux.
+                function regler(nom: string, force: string): void {
+                    const r = essai.reseau(nom)
+                    if (r) r.signalStrength = Number(force)
+                    faux.reseaux = faux.reseaux.slice()
+                }
+                // cacherPanneau — cache ou montre le panneau construit, comme le fait le cadre des popovers hébergés
+                // d'un popover fermé (son contenu reste construit mais n'est plus visible).
+                // Entrée : valeur, vrai pour le cacher. Sortie : aucune. Erreurs : aucune ; sans panneau, rien.
+                // Dépendances : porteur.
+                function cacherPanneau(valeur: bool): void { if (porteur.item?.panneau) porteur.item.panneau.visible = !valeur }
                 // recherche, fenetre — valeurs de l'état factice, en JSON. Sortie : texte.
                 function recherche(): string { return JSON.stringify(faux.recherche) }
                 function fenetre(): string { return JSON.stringify(faux.fenetre) }
@@ -121,6 +143,13 @@ ShellRoot {
                 // forcerRecherche — pose recherche à vrai, comme un popover ouvert sur un autre écran.
                 function forcerRecherche(): void { faux.recherche = true }
                 // ajouterReseau — fait paraître un réseau, comme le balayage. Entrées : aucune. Sortie : aucune.
+                // viderReseaux, rendreReseaux — la liste se vide à l'arrêt du balayage et revient à sa reprise, comme sous
+                // Quickshell. Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : faux.
+                function viderReseaux(): void { essai.reseauxTenus = faux.reseaux; faux.reseaux = [] }
+                function rendreReseaux(): void { faux.reseaux = essai.reseauxTenus }
+                // rouvrirAvecListe — rouvre le popover et rend la liste dans la même passe, puis lit l'état du panneau :
+                // l'attente de l'ouverture est plus courte qu'un appel IPC. Sortie : texte JSON. Erreurs : aucune.
+                function rouvrirAvecListe(): string { porteur.item.ouvert = true; rendreReseaux(); return panneau() }
                 function ajouterReseau(): void { faux.reseaux = faux.reseaux.concat([essai.reseau("Nouveau")]) }
                 // retirerReseau — le réseau nommé quitte le balayage, puis son objet est détruit, comme sous
                 // Quickshell. Entrée : nom. Sortie : aucune.
@@ -176,6 +205,9 @@ ShellRoot {
                         exclusif: porteur.item.exclusif, fermeAuDepart: porteur.item.fermeAuDepart,
                         retenu: porteur.item.retenu,
                         saisie: p.bloc ? p.bloc.secret.length : -1,
+                        revele: p.bloc ? p.bloc.secret.revele : false,
+                        enCours: p.enCours !== null, defile: objet("liste").contentY,
+                        fonduContenu: p.fonduContenu, fonduDisque: p.fonduDisque, pretAMontrer: p.pretAMontrer,
                     })
                 }
 
@@ -192,6 +224,29 @@ ShellRoot {
                 function profilActif(uuid: string): void {
                     faux.profils = [{ nom: faux.nomActif, uuid, type: "802-11-wireless", actif: true }]
                 }
+
+                // fondus — pose les deux fondus du panneau et rend les opacités effectives (produit des opacités de
+                // l'élément et de ses parents jusqu'au panneau) de la bascule et du titre de l'en-tête, en JSON.
+                // Entrées : contenu, disque (réels, en chaîne). Sortie : {bascule, titre}. Erreurs : aucune.
+                function fondus(contenu: string, disque: string): string {
+                    const p = porteur.item.panneau
+                    p.fonduContenu = Number(contenu)
+                    p.fonduDisque = Number(disque)
+                    const effective = o => { let v = 1; for (let i = o; i && i !== p.parent; i = i.parent) v *= i.opacity; return v }
+                    return JSON.stringify({ bascule: effective(essai.trouver(p, o => o.objectName === "bascule")),
+                                            titre: effective(essai.trouver(p, o => o.text === p.resume.titre)) })
+                }
+                // remplir — ajoute douze réseaux au balayage, pour que la liste dépasse sa hauteur et défile.
+                // Entrées : aucune. Sortie : aucune. Erreurs : aucune.
+                function remplir(): void {
+                    const c = proprietes => fabriqueReseau.createObject(essai, proprietes)
+                    faux.reseaux = faux.reseaux.concat(Array.from({ length: 12 }, (_, i) => c({ name: "Voisin " + i, signalStrength: 0.2, known: true })))
+                }
+                // reinitialiser, defiler — rendent le panneau à neuf ; font défiler la liste. Entrée : y (defiler).
+                function reinitialiser(): void { porteur.item.panneau.reinitialiser() }
+                // reveler — montre le mot de passe de la ligne dépliée, comme l'œil. Entrées : aucune. Sortie : aucune.
+                function reveler(): void { porteur.item.panneau.bloc.secret.revele = true }
+                function defiler(y: string): void { essai.trouver(porteur.item.panneau, o => o.objectName === "liste").contentY = Number(y) }
 
                 // choisir — clic sur le réseau nommé. Entrée : nom. Sortie : aucune.
                 function choisir(nom: string): void {

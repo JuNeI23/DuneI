@@ -8,7 +8,8 @@ import "bureaux.js" as Logique
 // Rôle : montre le bureau actif de son écran et l'état de son bureau spécial, et en commande le changement. Chaque
 // point a un Ressort (transition « navigate ») sur sa largeur et un ColorSpring sur sa couleur : au changement de
 // bureau, l'ancienne pilule redevient un point et la nouvelle s'allonge, une interruption en vol repartant de la
-// position courante. Points inactifs en Theme.color.textDisabled ; pilule en Theme.color.accentDiscret, ou, sous
+// position courante ; en mouvement réduit, les largeurs se posent aussitôt et la couleur reste animée. Points inactifs
+// en Theme.color.textDisabled ; pilule en Theme.color.accentDiscret, ou, sous
 // un bureau spécial ouvert, dans la couleur des points inactifs. Survol (D92) : le point visé passe à
 // Theme.color.textTertiary, un cran d'emphase de la rampe du thème, lue sur la surface de la coque (et non le texte
 // du bureau, choisi sur la luminance du fond d'écran), sans capsule ; la pilule grisée par un spécial réagit de même,
@@ -98,7 +99,7 @@ Item {
 
                 readonly property Item zoneClic: zone
 
-                Ressort { id: etirement; transition: "navigate"; cible: point.largeurCible }
+                Ressort { id: etirement; transition: "navigate"; nature: "deplacement"; cible: point.largeurCible }
                 ColorSpring { id: teinte; target: point.couleurCible }
 
                 Rectangle {
