@@ -4,7 +4,7 @@
 // forme.js — forme et règles de passage du cadre des popovers.
 // Rôle : calcule la forme visée du cadre (bords et hauteur), la distance d'un trajet entre deux formes, le moment
 // où le contenu peut apparaître pendant un passage, l'opacité du disque de l'ancien popover et le rayon des coins.
-// Toutes les fonctions sont pures et sans QML : la fenêtre hôte (HotePopovers) les consomme, et la coque d'essai
+// Toutes les fonctions sont pures et sans QML : le cadre des popovers (CadrePopovers) les consomme, et la coque d'essai
 // de la barre les expose par IPC. Aucune valeur de mouvement n'y est écrite : les seuils viennent des appelants.
 // Dépendances : Composants/ancrage.js (gaucheCadre).
 

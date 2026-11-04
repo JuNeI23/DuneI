@@ -252,6 +252,27 @@ class PopoverBluetoothTest(EssaiCoque, unittest.TestCase):
         self.assertEqual((p["occupe"], p["retenu"]), (True, True))
         self.assertEqual(p["lignes"][self.ENCEINTE]["statut"], "Appairage…")
 
+    def test_aucun_glissement_popover_ferme(self):
+        # Dans l'arbre hébergé, un popover fermé garde son contenu construit mais invisible : un changement de tri
+        # n'y anime plus aucune ligne. Visible, le même changement fait bien glisser les lignes (témoin).
+        self.ouvrir()
+        self.ipc("connecter", self.SOURIS, "true")
+        fin = time.monotonic() + DELAI
+        while not self.panneau()["glisse"]:
+            self.assertLess(time.monotonic(), fin, "témoin : aucune ligne ne glisse popover ouvert")
+            time.sleep(0.01)
+        fin = time.monotonic() + DELAI
+        while self.panneau()["glisse"]:
+            self.assertLess(time.monotonic(), fin, "ligne toujours en mouvement")
+            time.sleep(0.05)
+        self.ipc("cacherPanneau", "true")
+        self.ipc("connecter", self.SOURIS, "false")
+        fin = time.monotonic() + 1
+        while time.monotonic() < fin:
+            self.assertFalse(self.panneau()["glisse"], "une ligne glisse popover fermé")
+            time.sleep(0.02)
+        self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read|Unable to assign|Binding loop")
+
     def test_fondus(self):
         # Contenu éteint, disque plein : la bascule reste pleine, le reste de l'en-tête disparaît. Par défaut, tout est plein.
         p = self.ouvrir()

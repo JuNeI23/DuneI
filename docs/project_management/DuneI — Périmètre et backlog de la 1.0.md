@@ -4,7 +4,7 @@ Oct 12, 2026 · @Nicolas
 
 Version 1.41. Historique en fin de document.
 
-La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **166 éléments** répartis en **cinq lots**, sur six chantiers.
+La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **168 éléments** répartis en **cinq lots**, sur six chantiers.
 
 Ce document dit ce qui est attendu, dans quel ordre, et à quelle condition c'est terminé. Il ne dit pas à quoi ça ressemble — c'est le rôle de la bible de design. En cas de contradiction : la bible l'emporte sur l'apparence, ce document l'emporte sur le périmètre.
 
@@ -413,7 +413,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L5-29 | — | Écrit | Passe de regard complète — étage 3 |
 | L5-30 | — | Écrit | Résorber les points ouverts de l'annexe C |
 
-**Volume total : 166 éléments** — 117 écrits, 42 configurés, 5 offerts, 2 mixtes.
+**Volume total : 168 éléments** — 119 écrits, 42 configurés, 5 offerts, 2 mixtes.
 
 Les deux tiers du travail sont de l'écrit, et les trois quarts de cet écrit se concentrent sur la coque et les écrans système. C'est cohérent avec la stratégie retenue, et c'est là que tout le risque se trouve.
 
@@ -517,7 +517,7 @@ Le choix de la distribution de base et du compositeur, précédemment ouverts, s
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-12 | Version initiale, 137 éléments |
-| 1.41 | 2026-11-04 | L2-07, L2-47 et L2-56 faits, L2-06 fait pour les popovers de la barre (D110 à D117), recette en attente ; ajout de L2-58 (mouvement des menus, listes, infobulles et chevron) et de L2-59 (suites du mouvement) ; L2-12 et L2-13 héritent du popover hébergé ; 166 éléments |
+| 1.41 | 2026-11-04 | L2-07, L2-47 et L2-56 faits, L2-06 fait pour les popovers de la barre (D110 à D117), recette en attente ; ajout de L2-58 (mouvement des menus, listes, infobulles et chevron) et de L2-59 (suites du mouvement) ; L2-12 et L2-13 héritent du popover hébergé ; recompte du backlog : 168 éléments (119 écrits), les deux lignes de L2-58 et L2-59 s'ajoutant aux 166 lignes déjà présentes, que le décompte annonçait à 164 depuis avant cette branche |
 | 1.40 | 2026-11-03 | L2-14 validé à l'écran : appairage, reconnexion automatique, exclusion et fermeture des popovers |
 | 1.39 | 2026-11-03 | L2-14 : appairage par `dunei-bluetooth-appairer` après la recette ; ajout de L2-56 (animations entre popovers) et de L2-57 (suites du popover Bluetooth) |
 | 1.38 | 2026-11-03 | L2-14 fait, en attente de recette : popover Bluetooth, popovers de la barre exclusifs et fermés au départ de la souris (D107, D108) ; L3-09 réduit à l'appairage à code ; L3-05 annoté |

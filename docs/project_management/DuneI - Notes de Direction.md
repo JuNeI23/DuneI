@@ -4,7 +4,7 @@ Oct 10, 2026 · @Nicolas — révisée le 22 octobre 2026
 
 Version 1.38. Historique en fin de document.
 
-*Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent soixante-six lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
+*Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent soixante-huit lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
 
 ## En une phrase
 
@@ -118,7 +118,7 @@ L'ordre découle d'une seule règle : **chaque lot laisse la machine en état de
 | **4 — Accord visuel** | Thématisation Qt et GTK sur cibles réelles, premier lot d'icônes, fond d'écran, panneau de thème, extraction de teinte | Cohérente de bout en bout, bible opposable partout |
 | **5 — Écrans système et voix** | Réglages panneau par panneau, connexion, amorçage, « À propos », catalogue de messages, recette | **1.0** |
 
-Le détail — cent soixante-six éléments, chacun rattaché à un chantier, un lot et une nature — vit dans le document de périmètre et de backlog. **Cette note ne s'y substitue pas.**
+Le détail — cent soixante-huit éléments, chacun rattaché à un chantier, un lot et une nature — vit dans le document de périmètre et de backlog. **Cette note ne s'y substitue pas.**
 
 ## Les risques, par ordre de gravité
 
@@ -516,8 +516,8 @@ Hyprland compris, et la table `[popover]` porte les trois valeurs propres au mou
 une préférence unique (`dunei-mouvement`, `mouvement.json`), lue à chaud par la coque et par Hyprland. Sur `caladan`, 906
 images mesurées sur 37 mouvements donnent une première image à 34 ms au plus et cinq images au-delà de 33 ms (dont une
 de 87 ms, de cause non identifiée) : le budget n'est pas tenu à la lettre, et Nicolas en juge. Nicolas a validé les
-gestes en mouvement normal sur la version propre ; la recette à l'écran du mouvement réduit et la recette finale sont en
-attente de recette. Les menus, listes déroulantes et infobulles passent à L2-58, et les reliquats à L2-59.
+gestes en mouvement normal sur la version propre ; la recette finale et celle du mouvement réduit restent à
+faire. Les menus, listes déroulantes et infobulles passent à L2-58, et les reliquats à L2-59.
 
 Prochaine étape : **après la fusion de cette PR, choisir l'élément suivant du lot 2** dans le backlog ; L2-12 (audio) et
 L2-13 (énergie) suivront le motif du popover hébergé (`heberge: true`, `fonduContenu`, `fonduDisque`, `reinitialiser()`),
@@ -528,7 +528,7 @@ L2-57 (suites du popover Bluetooth), L2-58 et L2-59 attendent leur tour.
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-10 | Version initiale |
-| 1.38 | 2026-11-04 | Mouvement des popovers de la barre (L2-06, L2-07, L2-47, L2-56 ; D110 à D117), recette en attente ; backlog à 166 éléments ; prochaine étape : après la fusion, l'élément suivant du lot 2 |
+| 1.38 | 2026-11-04 | Mouvement des popovers de la barre (L2-06, L2-07, L2-47, L2-56 ; D110 à D117), recette en attente ; backlog recompté à 168 éléments (l'écart de 2 avec les 164 annoncés datait d'avant cette branche) ; prochaine étape : après la fusion, l'élément suivant du lot 2 |
 | 1.37 | 2026-11-03 | L2-14 validé à l'écran après les correctifs de recette (appairage par agent et transport, audio exigé) ; prochaine étape : l'élément suivant du lot 2 |
 | 1.36 | 2026-11-03 | L2-14 : popover Bluetooth, popovers de la barre exclusifs et fermés au départ de la souris (D107, D108) ; prochaine étape : sa validation à l'écran, puis l'élément suivant du lot 2 |
 | 1.35 | 2026-11-02 | L2-50 : jour thématisé retiré, trois thèmes, couples retirés dans `theme.exclus`, repli sur la première famille qui offre le moment (D102) ; prochaine étape : valider L2-50 à l'écran, puis choisir l'élément suivant du lot 2 |

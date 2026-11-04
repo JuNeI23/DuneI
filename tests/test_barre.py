@@ -518,7 +518,7 @@ class HoteStatiqueTest(unittest.TestCase):
                       "WlrLayershell.layer: WlrLayer.Overlay", 'color: "transparent"',
                       "anchors { top: true; left: true; right: true }",
                       "WlrLayershell.keyboardFocus: courant ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None",
-                      "implicitHeight: deploye ? (screen?.height ?? 0) : 1"):
+                      "implicitHeight: deploye ? (screen?.height ?? 1) : 1"):
             self.assertIn(ligne, hote)
 
     def test_masque_vide_sans_courant(self):
@@ -745,7 +745,9 @@ class HoteTest(HoteBase, unittest.TestCase):
         # Le cadre ne s'est jamais refermé, et le nouveau contenu n'a commencé qu'après 65 % du trajet.
         self.assertGreater(e["hauteurMin"], 100)
         ecart = lambda f, g: max(abs(f[k] - g[k]) for k in f)
-        self.assertLessEqual(ecart(e["premierFondu"]["b"], self.OUVERT_B) / ecart(depuis, self.OUVERT_B), 0.35)
+        # Le seuil vient de motion.json (part restante 1 - passage_content_at), avec une marge d'échantillonnage.
+        reste = 1 - json.loads((self.dir / "motion.json").read_text())["popover"]["passage_content_at"]
+        self.assertLessEqual(ecart(e["premierFondu"]["b"], self.OUVERT_B) / ecart(depuis, self.OUVERT_B), reste + 0.1)
         self.assertGreater(ecart(e["premierFondu"]["b"], self.OUVERT_B), 0)
         # L'ancien contenu, éteint, n'est remis à neuf qu'une fois, et seulement maintenant.
         e = self.jusqua(lambda e: not e["panneaux"]["a"]["visible"], "ancien contenu encore visible")
@@ -758,7 +760,7 @@ class HoteTest(HoteBase, unittest.TestCase):
         self.ouvrir("a")
         self.forme_atteinte(self.OUVERT_A, "a")
         self.ouvrir("b")
-        time.sleep(0.03)
+        self.jusqua(lambda e: e["passage"] and e["cadre"] != self.OUVERT_A, "passage non entamé")
         e = self.ouvrir("c")
         self.assertEqual((e["affiche"], e["registre"], e["b"]["ouvert"]), ("c", "c", False))
         self.assertNotEqual(e["cadre"], self.OUVERT_C)
@@ -797,7 +799,7 @@ class HoteTest(HoteBase, unittest.TestCase):
         self.ouvrir("a")
         self.forme_atteinte(self.OUVERT_A, "a")
         self.ouvrir("b")
-        time.sleep(0.05)
+        self.jusqua(lambda e: e["passage"] and e["cadre"] != self.OUVERT_A, "passage non entamé")
         e = self.ouvrir("a")
         self.assertEqual((e["affiche"], e["panneaux"]["a"]["disque"]), ("a", 1))
         fin = time.monotonic() + DELAI
@@ -817,7 +819,7 @@ class HoteTest(HoteBase, unittest.TestCase):
         self.ouvrir("a")
         self.forme_atteinte(self.OUVERT_A, "a")
         self.ouvrir("b")
-        time.sleep(0.03)
+        self.jusqua(lambda e: e["passage"] and e["cadre"] != self.OUVERT_A, "passage non entamé")
         e = self.ouvrir("b", False)
         self.assertEqual(e["panneaux"]["a"]["disque"], 1)
         precedent = 1

@@ -52,7 +52,8 @@ Item {
 
     // poser — pose le ressort sur sa cible d'un coup, sans animation ni vitesse résiduelle.
     // Entrées : aucune. Sortie : aucune ; value égale cible et moving est faux aussitôt. Erreurs : aucune.
-    // Dépendances : anim, _st. Sert à la première valeur d'une grandeur dont la cible n'est connue qu'après la création.
+    // Dépendances : anim, _st. Sert à la première valeur d'une grandeur dont la cible n'est connue qu'après la création,
+    // et au mouvement réduit, où le ressort se pose d'un coup au lieu de rouler.
     function poser() {
         anim.stop()
         _st = { x: cible, v: 0, acc: 0 }

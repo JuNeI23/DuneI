@@ -616,6 +616,26 @@ class PopoverTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(apres["Inconnu"]["y"], avant["Inconnu"]["y"])
         self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read|Unable to assign|Binding loop")
 
+    def test_aucun_glissement_popover_ferme(self):
+        # Dans l'arbre hébergé, un popover fermé garde son contenu construit mais invisible : un changement de réseau
+        # n'y anime plus aucune ligne (le ressort reflow ne tourne pas pour rien). Visible, le même changement fait
+        # bien glisser les lignes (témoin).
+        self.ouvrir()
+        self.attendre_repos()
+        self.ipc("regler", "Inconnu", "0.1")
+        fin = time.monotonic() + DELAI
+        while not self.panneau()["glisse"]:
+            self.assertLess(time.monotonic(), fin, "témoin : aucune ligne ne glisse popover ouvert")
+            time.sleep(0.01)
+        self.attendre_repos()
+        self.ipc("cacherPanneau", "true")
+        self.ipc("regler", "Inconnu", "0.9")
+        fin = time.monotonic() + 1
+        while time.monotonic() < fin:
+            self.assertFalse(self.panneau()["glisse"], "une ligne glisse popover fermé")
+            time.sleep(0.02)
+        self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read|Unable to assign|Binding loop")
+
     def test_ligne_qui_sort_puis_ligne_qui_entre(self):
         # Un réseau qui quitte le balayage : sa ligne se referme (hauteur et fondu) au lieu de disparaître, et la
         # ligne suivante ne saute pas, elle suit sa hauteur. Un réseau qui paraît : sa ligne s'ouvre à partir de

@@ -1304,6 +1304,31 @@ class CoqueClavierTest(EssaiCoque, unittest.TestCase):
             with self.subTest(erreur=erreur):
                 self.assertNotIn(erreur, self.journal())
 
+    def test_infobulle_cible_cachee(self):
+        # Une cible cachée ne laisse ni délai armé ni bulle due, et la bulle ne s'arme pas tant que la cible reste
+        # cachée, même si le pointeur y est resté ; montrée de nouveau, le survol qui dure l'arme.
+        self.demarrer()
+        delai = self.tokens55()[1]["delays"]["tooltip"] / 1000
+        self.ipc("quitterBulle")
+        self.ipc("cibleNouvelle")
+        self.ipc("survolerMobile")
+        self.assertEqual(self.valeur("mobile"), "true true true false true")
+        self.ipc("cibleVisible", "false")
+        self.assertEqual(self.valeur("mobile").split()[2:4], ["false", "false"])
+        time.sleep(1.5 * delai)
+        self.assertEqual(self.valeur("mobile").split()[2:4], ["false", "false"])
+        self.ipc("cibleVisible", "true")
+        self.ipc("quitterBulle")
+        self.ipc("survolerMobile")
+        time.sleep(1.5 * delai)
+        self.assertEqual(self.valeur("mobile").split()[3], "true")
+        # Due, la cible qui se cache referme la bulle.
+        self.ipc("cibleVisible", "false")
+        self.assertEqual(self.valeur("mobile").split()[2:4], ["false", "false"])
+        for erreur in ERREURS + ("Cannot read property",):
+            with self.subTest(erreur=erreur):
+                self.assertNotIn(erreur, self.journal())
+
     def test_infobulle_detruite_avant_sa_cible(self):
         # Détruite alors que sa cible survit, l'Infobulle retire les gestionnaires qu'elle avait posés sur la cible :
         # un survol et un clic ultérieurs sur la cible ne lèvent aucune erreur de référence, et le bouton reçoit

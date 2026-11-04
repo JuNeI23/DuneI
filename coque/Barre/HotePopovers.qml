@@ -26,7 +26,7 @@ PanelWindow {
 
     screen: barre?.screen ?? null
     anchors { top: true; left: true; right: true }
-    implicitHeight: deploye ? (screen?.height ?? 0) : 1
+    implicitHeight: deploye ? (screen?.height ?? 1) : 1
     exclusionMode: ExclusionMode.Ignore
     color: "transparent"
     WlrLayershell.layer: WlrLayer.Overlay

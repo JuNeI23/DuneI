@@ -133,7 +133,8 @@ Overlay {
         // Ordre d'affichage : ordre, plus les lignes qui sortent (leur réseau a quitté le tri), gardées à leur ancien
         // rang le temps de se refermer, pour que les lignes voisines suivent leur hauteur au lieu de sauter.
         property var disposition: []
-        // Faux pendant le premier tri : les lignes de l'ouverture paraissent d'emblée, seules les suivantes entrent.
+        // Faux pendant le premier tri, qui a lieu à la construction de la coque : les lignes déjà présentes paraissent
+        // d'emblée, seules celles qui arrivent ensuite entrent.
         property bool trie: false
         // Réseaux présents au dernier balayage, suivis même liste figée : un réseau de la liste figée qui n'y figure
         // plus est masqué et ne peut plus être choisi ni rejoint (son WifiNetwork peut avoir été détruit).
@@ -433,11 +434,12 @@ Overlay {
 
                             // glisser — fait partir la ligne de sa place d'avant un nouveau tri vers la nouvelle,
                             // par le ressort reflow, depuis sa position courante même en plein glissement.
+                            // Sans effet tant que la ligne est cachée (popover fermé) : aucun ressort ne tourne pour rien.
                             // Entrée : avant, l'ordonnée affichée avant le tri. Sortie : aucune. Erreurs : aucune.
                             // Dépendances : decalage (Ressort), base.
                             function glisser(avant: real): void {
                                 const ecart = avant - base
-                                if (Math.abs(ecart) < 0.5) return
+                                if (!visible || Math.abs(ecart) < 0.5) return
                                 decalage.cible = ecart
                                 decalage.poser()
                                 decalage.cible = 0

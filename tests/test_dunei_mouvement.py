@@ -5,6 +5,7 @@ Hyprland n'est jamais joint : un faux hyprctl, placé en tête du PATH, enregist
 
 import json
 import os
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -79,6 +80,19 @@ class DuneiMouvementTest(unittest.TestCase):
     def test_ecriture_atomique(self):
         self.lance("reduit")
         self.assertEqual([p.name for p in self.dir.iterdir()], ["mouvement.json"])
+
+    def test_jq_manquant(self):
+        # Sans jq dans le PATH, le script refuse d'agir : code 1, message explicite, aucune préférence écrite.
+        sain = Path(self.tmp.name) / "sain"
+        sain.mkdir()
+        for outil in ("sh", "bash", "env", "mktemp", "mv", "rm", "dirname", "cat"):
+            if chemin := shutil.which(outil):
+                (sain / outil).symlink_to(chemin)
+        env = {**os.environ, "DUNEI_TOKENS_DIR": str(self.dir), "PATH": str(sain)}
+        res = subprocess.run([str(SCRIPT), "reduit"], capture_output=True, text=True, env=env)
+        self.assertEqual(res.returncode, 1)
+        self.assertIn("jq", res.stderr)
+        self.assertFalse(self.choix.exists())
 
     def test_recharge_hyprland_si_il_tourne(self):
         self.lance("reduit", hyprland=True)

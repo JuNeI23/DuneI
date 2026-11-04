@@ -16,8 +16,8 @@ import "../Theme"
 // Sorties : armee, vrai pendant que le délai court ; due, vrai quand le délai est écoulé et que le pointeur est
 // toujours sur la cible ; survolee, le survol de la cible ; survol et appui, les gestionnaires posés sur la cible
 // courante (null sans cible) ; bulle, l'Overlay ; tous lus par les essais et les relevés de mémoire.
-// Erreurs : aucune ; sans cible, rien n'est observé ; quand la cible passe à null ou est détruite, l'infobulle cesse
-// d'être due et la bulle se ferme ; avant le chargement du mouvement, le délai est nul et le minuteur ne s'arme pas.
+// Erreurs : aucune ; sans cible, rien n'est observé ; une cible cachée n'arme pas le délai et referme la bulle ;
+// quand la cible passe à null ou est détruite, l'infobulle cesse d'être due et la bulle se ferme ; avant le chargement du mouvement, le délai est nul et le minuteur ne s'arme pas.
 // Limite : une cible désactivée (enabled faux) désactive aussi les gestionnaires qu'elle porte ; l'infobulle ne
 // s'ouvre donc pas sur une cible désactivée, contrairement à macOS, qui montre l'aide d'un contrôle grisé.
 // Dépendances : Theme (motion.delays), Overlay (famille infobulle), Texte.
@@ -58,6 +58,7 @@ QtObject {
     readonly property Timer delai: Timer {
         interval: Theme.motion?.delays?.tooltip ?? 0
         running: infobulle.survolee && !infobulle.due && !infobulle.masquee && interval > 0
+                 && infobulle.cibleVisible
         onTriggered: infobulle.due = true
     }
 
@@ -96,6 +97,9 @@ QtObject {
         appui?.destroy()
     }
     onCibleChanged: poser()
+    // Une cible qui se cache referme la bulle déjà due : le pointeur n'a pas quitté la cible, mais elle ne se voit plus.
+    readonly property bool cibleVisible: cible?.visible ?? false
+    onCibleVisibleChanged: if (!cibleVisible) due = false
     // Le pointeur parti, la bulle se referme et le masquage du clic prend fin.
     onSurvoleeChanged: if (!survolee) {
         due = false

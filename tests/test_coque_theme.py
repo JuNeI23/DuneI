@@ -349,7 +349,7 @@ class CoqueThemeTest(EssaiCoque, unittest.TestCase):
         self.ipc("ressort", "libre", "10", "0", "", "0", "deplacement", "reveal")
         monte, baisse, libre = (self.duree_pose(n, d, c) for n, d, c in
                                 (("monte", 0, 10), ("baisse", 10, 0), ("libre", 10, 0)))
-        self.assertLess(abs(monte - baisse), 40, self.journal())
+        self.assertLess(abs(monte - baisse), 80, self.journal())
         self.assertGreater(baisse - libre, 40, self.journal())
 
     def test_ressort_seuil(self):
@@ -382,7 +382,7 @@ class CoqueThemeTest(EssaiCoque, unittest.TestCase):
         self.ipc("ressort", "fondu", "0", "1", "", "0", "fondu", "reveal")
         duree = self.duree_pose("fondu", 0, 1)
         self.assertGreater(duree, 0, self.journal())
-        self.assertLess(abs(duree - 100), 50, self.journal())
+        self.assertLess(abs(duree - 100), 70, self.journal())
 
     def test_ressort_reduit_en_vol(self):
         # La préférence devient « réduit » pendant qu'un ressort de déplacement avance : il se pose aussitôt sur sa

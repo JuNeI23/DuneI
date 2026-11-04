@@ -2117,8 +2117,8 @@ calques. Au repos elle mesure une ligne de haut et son masque de saisie est vide
 ### Relevés
 
 Sur `caladan`, 906 images mesurées sur 37 mouvements : première image à 34 ms au plus, cinq images au-delà de 33 ms
-(34, 34, 34, 39 et 87 ms), cause non identifiée (D116). La recette à l'écran du mouvement réduit et la recette finale
-sont en attente de recette ; Nicolas a déjà validé les gestes en mouvement normal.
+(34, 34, 34, 39 et 87 ms), cause non identifiée (D116). La recette finale et celle du mouvement réduit restent à
+faire ; Nicolas a déjà validé les gestes en mouvement normal.
 
 ## Lecteur d'empreinte — nouveau
 

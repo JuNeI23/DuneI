@@ -105,6 +105,19 @@ ShellRoot {
                 function ouvert(): string { return JSON.stringify(porteur.item?.ouvert ?? false) }
                 // detruire — détruit le popover, ouvert ou non. Entrées : aucune. Sortie : aucune.
                 function detruire(): void { porteur.active = false }
+                // regler — change la force d'un réseau factice puis republie la liste, comme un balayage : le tri peut
+                // alors réordonner les lignes. Entrées : nom ; force, réel entre 0 et 1 (chaîne). Sortie : aucune.
+                // Erreurs : aucune ; un nom inconnu ne change que la liste. Dépendances : essai, faux.
+                function regler(nom: string, force: string): void {
+                    const r = essai.reseau(nom)
+                    if (r) r.signalStrength = Number(force)
+                    faux.reseaux = faux.reseaux.slice()
+                }
+                // cacherPanneau — cache ou montre le panneau construit, comme le fait le cadre des popovers hébergés
+                // d'un popover fermé (son contenu reste construit mais n'est plus visible).
+                // Entrée : valeur, vrai pour le cacher. Sortie : aucune. Erreurs : aucune ; sans panneau, rien.
+                // Dépendances : porteur.
+                function cacherPanneau(valeur: bool): void { if (porteur.item?.panneau) porteur.item.panneau.visible = !valeur }
                 // recherche, fenetre — valeurs de l'état factice, en JSON. Sortie : texte.
                 function recherche(): string { return JSON.stringify(faux.recherche) }
                 function fenetre(): string { return JSON.stringify(faux.fenetre) }

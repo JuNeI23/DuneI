@@ -96,7 +96,7 @@ ShellRoot {
                 // panneau — état du panneau construit, en JSON ; {} s'il n'existe pas.
                 // Sortie : {titre, etat, bascule {actif, allumee}, mes et proches (adresses des lignes montrées, dans
                 // l'ordre), deplie, lignes (adresse → {nom, icone, statut, apparition}), exclusif, fermeAuDepart,
-                // retenu}. Erreurs : aucune.
+                // retenu, glisse (une ligne glisse)}. Erreurs : aucune.
                 function panneau(): string {
                     const p = porteur.item?.panneau
                     if (!p) return "{}"
@@ -114,7 +114,7 @@ ShellRoot {
                         exclusif: porteur.item.exclusif, fermeAuDepart: porteur.item.fermeAuDepart,
                         retenu: porteur.item.retenu,
                         hauteurProches: p.hauteurProches, hauteurLigne: p.hauteurLigne,
-                        occupe: p.occupe, defile: essai.trouver(p, o => o.objectName === "listeMes").contentY,
+                        glisse: Object.values(p.delegues).some(d => d.decalage.moving), occupe: p.occupe, defile: essai.trouver(p, o => o.objectName === "listeMes").contentY,
                         fonduContenu: p.fonduContenu, fonduDisque: p.fonduDisque,
                     })
                 }
@@ -167,6 +167,16 @@ ShellRoot {
                     faux.finir(adresse)
                     a.paired = true
                 }
+                // connecter — change l'état relié d'un appareil, ce qui réordonne les lignes, comme une connexion.
+                // Entrées : adresse ; valeur, « true » ou « false ». Sortie : aucune. Erreurs : TypeError si l'adresse
+                // est inconnue.
+                function connecter(adresse: string, valeur: string): void {
+                    faux.appareils.find(x => x.address === adresse).connected = valeur === "true"
+                }
+                // cacherPanneau — cache ou montre le panneau construit, comme le fait le cadre des popovers hébergés
+                // d'un popover fermé (son contenu reste construit mais n'est plus visible).
+                // Entrée : valeur, vrai pour le cacher. Sortie : aucune. Erreurs : aucune ; sans panneau, rien.
+                function cacherPanneau(valeur: bool): void { if (porteur.item?.panneau) porteur.item.panneau.visible = !valeur }
                 // couper — la radio est coupée. Entrées : aucune.
                 function couper(): void { faux.allume = false }
             }

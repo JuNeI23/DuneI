@@ -94,7 +94,8 @@ Overlay {
         property var ordre: []
         // Ordre d'affichage : ordre, plus les lignes qui sortent, gardées à leur ancien rang le temps de se refermer.
         property var disposition: []
-        // Faux pendant le premier tri : les lignes de l'ouverture paraissent d'emblée, seules les suivantes entrent.
+        // Faux pendant le premier tri, qui a lieu à la construction de la coque : les lignes déjà présentes paraissent
+        // d'emblée, seules celles qui arrivent ensuite entrent.
         property bool trie: false
         property var delegues: ({})
         // Adresse → ordonnée de la ligne sans glissement ; « » donne la hauteur de la liste (voir le popover réseau).
@@ -206,11 +207,12 @@ Overlay {
         Component.onDestruction: conteneur.desinscrire(cle, ligne)
         onPartieChanged: if (partie) Qt.callLater(conteneur.retirer, cle)
 
-        // glisser — fait partir la ligne de sa place d'avant un tri vers la nouvelle (ressort reflow).
+        // glisser — fait partir la ligne de sa place d'avant un tri vers la nouvelle (ressort reflow),
+        // sans effet tant que la ligne est cachée (popover fermé).
         // Entrée : avant, l'ordonnée affichée avant le tri. Sortie : aucune. Erreurs : aucune. Dépendances : decalage.
         function glisser(avant: real): void {
             const ecart = avant - base
-            if (Math.abs(ecart) < 0.5) return
+            if (!visible || Math.abs(ecart) < 0.5) return
             decalage.cible = ecart
             decalage.poser()
             decalage.cible = 0
