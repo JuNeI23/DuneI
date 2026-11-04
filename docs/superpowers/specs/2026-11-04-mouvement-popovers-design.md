@@ -1,6 +1,6 @@
 # Mouvement des popovers de la barre : conception (L2-06, L2-07, L2-47, L2-56)
 
-Version 0.1, 2026-11-04.
+Version 0.2, 2026-11-04.
 
 ## Intention
 
@@ -113,6 +113,9 @@ Aucune valeur n'est écrite dans le QML.
 - Une nouvelle table `[popover]` porte `icon_travel_px = 3`, `rest_threshold_px = 0.5` (écart sous lequel un bord se pose,
   pour supprimer la fin de mouvement qui rampe) et `passage_content_at = 0.65`. `dunei_motion/checks.py` les exige et
   les borne, et le golden suit.
+- Ce changement part dans son propre commit et se contrôle à l'écran tôt dans le plan. Si l'effet sur les calques de
+  Hyprland déplaît, ces éléments sont rattachés dans `[hyprland]` à une transition existante, après accord de Nicolas ;
+  le vocabulaire de sept transitions ne change pas.
 
 ### 8. Fluidité
 
@@ -121,6 +124,11 @@ L'essai a supprimé les images de 70 à 117 ms au clic. La version propre doit a
 - trouver et supprimer, ou justifier, le blocage de 62 à 82 ms à la fermeture du popover réseau et les 40 à 100 ms entre
   l'ouverture et le départ de la forme ; l'arrêt et le lancement du balayage sont suspects, sans preuve ;
 - expliquer les images irrégulières (environ 28 puis 4 ms) à la fin d'un passage.
+
+Budget, mesuré par la coque sur `caladan` : l'icône réagit dès la première image après le clic, la forme part en moins de
+50 ms, et aucune image ne dépasse 33 ms pendant un mouvement, sauf exception ci-dessous. Une cause hors de portée de la
+coque (NetworkManager, Quickshell, compositeur) ne bloque pas la fusion si elle est identifiée, mesurée, consignée au
+journal et sans gêne visible pour Nicolas ; le lancement ou l'arrêt d'un balayage peut être différé après le mouvement.
 
 ## Non-objectifs
 
@@ -164,9 +172,10 @@ si le calque est transparent. Ce coût n'est pas mesuré. La mémoire, elle, n'a
 coque à environ 200 Mo avec l'essai, pic de 238 Mo juste avant).
 
 Première tâche du plan : comparer l'occupation du GPU et le processeur de Hyprland sous une vidéo plein écran de bureau,
-avec et sans la fenêtre hôte. Si l'écart moyen atteint 2 points de GPU, la fenêtre se réduit au repos à la plus petite
-taille possible, à condition que l'ouverture reste aussi réactive ; sinon elle reste à la taille de l'écran. Le résultat
-va au journal.
+avec et sans la fenêtre hôte. Sous 2 points de GPU d'écart moyen, la fenêtre reste à la taille de l'écran. À 2 points ou
+plus, la fenêtre se réduit au repos à la plus petite taille possible, à condition que cette réduction n'ajoute pas plus
+d'une image (16 ms) de retard à l'ouverture. Au-delà, **la réactivité prime, sur décision de Nicolas** : la fenêtre reste
+à la taille de l'écran et son coût est consigné au journal. Le résultat va au journal dans tous les cas.
 
 ## Emplacement
 
@@ -201,4 +210,5 @@ va au journal.
 
 | Version | Date | Changements |
 | --- | --- | --- |
+| 0.2 | 2026-11-04 | Relecture du constructeur : la réactivité prime sur la réduction de la fenêtre hôte (décision de Nicolas), budget de fluidité, repli du réglage d'`overlay` |
 | 0.1 | 2026-11-04 | Première rédaction, après validation de l'essai jetable à l'écran |
