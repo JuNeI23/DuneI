@@ -296,6 +296,48 @@ class RelanceTest(BarreIpc, unittest.TestCase):
         self.assertNotIn("ERROR", self.journal())
 
 
+class FormeTest(BarreIpc, unittest.TestCase):
+    """Appelle chaque fonction de forme.js par l'IPC de la coque d'essai de la barre."""
+
+    def cibles(self, *args) -> dict:
+        """Entrée : arguments de cibles(). Sortie : la forme décodée. Dépendances : appeler."""
+        return json.loads(self.appeler("cibles", *args))
+
+    def test_cibles(self):
+        self.assertEqual(self.cibles(False, 100, 30, 200, 300, 1000, 8), {"gauche": 100, "droite": 130, "hauteur": 0})
+        ouvert = self.cibles(True, 950, 30, 200, 300, 1000, 8)
+        self.assertEqual(ouvert["droite"], 992)
+        self.assertEqual(ouvert["droite"] - ouvert["gauche"], 200)
+        self.assertEqual(ouvert["hauteur"], 300)
+        nul = self.cibles(True, 400, 0, 200, 300, 1000, 8)
+        self.assertTrue(8 <= nul["gauche"] and nul["droite"] <= 992)
+
+    def test_trajet(self):
+        forme = '{"gauche":10,"droite":50,"hauteur":20}'
+        self.assertEqual(self.appeler("trajet", forme, forme), "0")
+        self.assertEqual(self.appeler("trajet", forme, '{"gauche":10,"droite":80,"hauteur":25}'), "30")
+        self.assertEqual(self.appeler("trajet", forme, '{"gauche":0,"droite":50,"hauteur":20}'), "10")
+
+    def test_contenu_permis(self):
+        self.assertEqual(self.appeler("contenuPermis", False, 90, 100, 0.65), "true")
+        self.assertEqual(self.appeler("contenuPermis", True, 40, 100, 0.65), "false")
+        self.assertEqual(self.appeler("contenuPermis", True, 35, 100, 0.65), "true")
+        self.assertEqual(self.appeler("contenuPermis", True, 0, 0, 0.65), "true")
+
+    def test_opacite_disque(self):
+        self.assertEqual(self.appeler("opaciteDisque", False, True, 0.5, 0.3), "1")
+        self.assertEqual(self.appeler("opaciteDisque", False, True, 1, 0.3), "0.3")
+        self.assertEqual(self.appeler("opaciteDisque", False, False, 0.5, 0.3), "0.3")
+        self.assertEqual(self.appeler("opaciteDisque", True, True, 0.5, 0.3), "0.3")
+
+    def test_rayon(self):
+        self.assertEqual(self.appeler("rayon", 12, 200, 100), "12")
+        self.assertEqual(self.appeler("rayon", 12, 200, 10), "5")
+        self.assertEqual(self.appeler("rayon", 12, 8, 100), "4")
+        self.assertEqual(self.appeler("rayon", 12, 0, 100), "0")
+        self.assertEqual(self.appeler("rayon", 12, -5, 100), "0")
+
+
 class BarreStructureTest(unittest.TestCase):
     """La barre, la coque de session et son unité respectent les contraintes de la spec (texte seul)."""
 
