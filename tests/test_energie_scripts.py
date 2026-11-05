@@ -131,8 +131,16 @@ class BoutonMarcheTest(unittest.TestCase):
 
     def test_double_appui(self):
         self.appui("5000.00")
-        self.appui("5000.60")
+        self.appui("5000.33")
         self.assertEqual(self.veilles(), ["suspend"])
+
+    def test_fantomes_rapproches(self):
+        """Écarts relevés entre fantômes, multiples du pas de 0,25 s du contrôleur embarqué (D120)."""
+        for ecart in ("0.50", "0.75", "1.00"):
+            debut = 6000.00 + 100 * float(ecart)
+            self.appui(f"{debut:.2f}")
+            self.appui(f"{debut + float(ecart):.2f}")
+        self.assertEqual(self.veilles(), [])
 
     def test_appuis_espaces(self):
         self.appui("5000.00")
@@ -140,7 +148,7 @@ class BoutonMarcheTest(unittest.TestCase):
         self.assertEqual(self.veilles(), [])
 
     def test_triple_appui_une_seule_veille(self):
-        for t in ("5000.00", "5000.40", "5000.80"):
+        for t in ("5000.00", "5000.30", "5000.60"):
             self.appui(t)
         self.assertEqual(self.veilles(), ["suspend"])
 

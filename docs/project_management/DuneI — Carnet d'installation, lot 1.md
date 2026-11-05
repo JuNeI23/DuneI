@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.33. Historique en fin de document.
+Version 1.34. Historique en fin de document.
 
 Socle amorçable.
 
@@ -969,7 +969,7 @@ Une vidéo en lecture plein écran suspend l'échelle : Firefox demande le bloca
 | --- | --- | --- |
 | Couvercle fermé, sans écran externe | logind (`HandleLidSwitch`, `HandleLidSwitchExternalPower` : `suspend`) | Verrouillage, puis veille |
 | Couvercle fermé, écran externe actif | logind ignore (`HandleLidSwitchDocked=ignore`) ; `config/hypr/modules/couvercle.lua` | Écran interne désactivé, pas de veille ; à la réouverture, la règle machine le rétablit |
-| Bouton marche, en session | Hyprland (`XF86PowerOff`, D106) ; logind bloqué par `dunei-bouton-marche.service` | Double appui en moins d'une seconde : verrouillage, puis veille ; un appui isolé ne fait rien |
+| Bouton marche, en session | Hyprland (`XF86PowerOff`, D106) ; logind bloqué par `dunei-bouton-marche.service` | Double appui à 0,4 s au plus (D120) : verrouillage, puis veille ; un appui isolé ne fait rien |
 | Bouton marche, appui court hors session | logind (`HandlePowerKey=suspend`) | Veille ; la machine ne s'éteint plus |
 | Bouton marche, appui long | Micrologiciel | Arrêt forcé, inchangé |
 | Batterie à 5 % | — | Rien au lot 1 ; notification avec L2-13 |
@@ -994,11 +994,11 @@ journalctl -b -u systemd-logind -u dunei-garde-reveil.service --since -10min
 
 Au réveil, un « Power key pressed short » sans « Suspending... » à la suite, pendant la garde, prouve qu'un fantôme a été absorbé.
 
-**Double appui du bouton marche** (D106, 2026-11-02). Les appuis fantômes arrivent aussi bien plus tard qu'au réveil (1 min 41 s le 2026-11-02 à 18:42:10) et viennent du même bouton que les vrais (`PNP0C0C`, piloté par le contrôleur embarqué ; `ff_pwr_btn` reste à 0). Pendant la session, la veille par le bouton demande donc deux appuis à moins d'une seconde d'intervalle.
+**Double appui du bouton marche** (D106, 2026-11-02). Les appuis fantômes arrivent aussi bien plus tard qu'au réveil (1 min 41 s le 2026-11-02 à 18:42:10) et viennent du même bouton que les vrais (`PNP0C0C`, piloté par le contrôleur embarqué ; `ff_pwr_btn` reste à 0). Pendant la session, la veille par le bouton demande donc deux appuis rapprochés. La fenêtre, d'abord d'une seconde, est passée à 0,4 s : les fantômes peuvent se suivre à 0,5 s (D120).
 
 - `config/systemd/user/dunei-bouton-marche.service`, listé dans `session.toml` : tient le verrou `handle-power-key` de logind (`systemd-inhibit ... sleep infinity`) tant que la session graphique vit. La garde de D99 ne couvre plus que l'écran de connexion.
 - `config/hypr/donnees/raccourcis.lua` : `XF86PowerOff`, drapeau `locked` (actif sous `hyprlock`), lance `config/hypr/scripts/dunei-bouton-marche`.
-- Le script note l'instant de l'appui (`/proc/uptime`, en centièmes) dans `$XDG_RUNTIME_DIR/dunei-bouton-marche` ; un second appui à 1 s au plus efface la note et lance `systemctl suspend`, que `hypridle` fait précéder du verrouillage.
+- Le script note l'instant de l'appui (`/proc/uptime`, en centièmes) dans `$XDG_RUNTIME_DIR/dunei-bouton-marche` ; un second appui à 0,4 s au plus (D120) efface la note et lance `systemctl suspend`, que `hypridle` fait précéder du verrouillage.
 
 ```
 systemctl --user status dunei-bouton-marche.service
@@ -2221,6 +2221,7 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 
 | Version | Date | Changement |
 | --- | --- | --- |
+| 1.34 | 2026-11-05 | Énergie (L1-09) : fenêtre du double appui du bouton marche ramenée à 0,4 s après une veille déclenchée par deux fantômes (D120) |
 | 1.33 | 2026-11-04 | Le mouvement des popovers : commande `dunei-mouvement`, calque `dunei-popovers`, ajout d'un popover à l'hôte, relevés (L2-06, L2-07, L2-47, L2-56 ; D110 à D117), recette en attente |
 | 1.32 | 2026-11-02 | Thèmes statiques : trois thèmes, jour thématisé retiré (L2-50, D102), repli d'un couple retiré dans la coque et dans `dunei-theme` |
 | 1.31 | 2026-11-02 | Énergie (L1-09) : double appui du bouton marche pendant la session, `dunei-bouton-marche.service` et `scripts/dunei-bouton-marche` (D106) |

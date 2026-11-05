@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas — révisée le 22 octobre 2026
 
-Version 1.38. Historique en fin de document.
+Version 1.39. Historique en fin de document.
 
 *Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent soixante-huit lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
 
@@ -518,7 +518,16 @@ images mesurées sur 37 mouvements donnent une première image à 34 ms au plus 
 de 87 ms, de cause non identifiée) : le budget n'est pas tenu à la lettre, écart accepté. Nicolas a validé la recette à l'écran le 2026-11-04.
 Les menus, listes déroulantes et infobulles passent à L2-58, et les reliquats à L2-59.
 
-Prochaine étape : **après la fusion de cette PR, choisir l'élément suivant du lot 2** dans le backlog ; L2-12 (audio) et
+Le 2026-11-05, deux appuis fantômes du bouton marche, à 0,501 s d'écart, ont mis la machine en veille malgré le double
+appui de D106. Le journal montre que les fantômes suivent un pas de 0,25 s et se suivent à 0,5 s au moins, alors que les
+doubles appuis volontaires relevés tiennent en 0,33 s au plus : D120 ramène la fenêtre à 0,4 s. Un écart d'un seul pas,
+jamais observé, tromperait encore le script ; SUPER + bouton marche reste la parade en réserve, et L1-27 porte la mise à
+jour du BIOS, sans promesse sur ce défaut.
+
+Nicolas a validé le correctif à l'écran le 2026-11-05.
+
+Prochaine étape : **après la fusion de ce correctif, finir le travail Codex (D119) et choisir l'élément suivant du
+lot 2** dans le backlog ; L2-12 (audio) et
 L2-13 (énergie) suivront le motif du popover hébergé (`heberge: true`, `fonduContenu`, `fonduDisque`, `reinitialiser()`),
 L2-57 (suites du popover Bluetooth), L2-58 et L2-59 attendent leur tour.
 
@@ -527,6 +536,7 @@ L2-57 (suites du popover Bluetooth), L2-58 et L2-59 attendent leur tour.
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-10 | Version initiale |
+| 1.39 | 2026-11-05 | Fenêtre du double appui du bouton marche ramenée à 0,4 s (D120) ; prochaine étape : Codex, puis le lot 2 |
 | 1.38 | 2026-11-04 | Mouvement des popovers de la barre (L2-06, L2-07, L2-47, L2-56 ; D110 à D118), recette validée ; backlog recompté à 168 éléments (l'écart de 2 avec les 164 annoncés datait d'avant cette branche) ; prochaine étape : après la fusion, l'élément suivant du lot 2 |
 | 1.37 | 2026-11-03 | L2-14 validé à l'écran après les correctifs de recette (appairage par agent et transport, audio exigé) ; prochaine étape : l'élément suivant du lot 2 |
 | 1.36 | 2026-11-03 | L2-14 : popover Bluetooth, popovers de la barre exclusifs et fermés au départ de la souris (D107, D108) ; prochaine étape : sa validation à l'écran, puis l'élément suivant du lot 2 |
