@@ -38,7 +38,7 @@ class LectureTest(unittest.TestCase):
         self.assertEqual(erreurs, [])
         self.assertEqual(donnees["rtk"]["version"], "1.0.1")
         self.assertEqual(donnees["atelier"]["clone"], Path.home() / "dunei-atelier")
-        self.assertEqual(len(donnees["atelier"]["liens"]), 5)
+        self.assertEqual(len(donnees["atelier"]["liens"]), 7)
 
     def test_memoire_du_projet_dans_le_clone(self):
         donnees, _ = lire_atelier(ROOT)
@@ -216,7 +216,7 @@ echo "$*" >> "$FAKE_CLAUDE_LOG"
 exit 0
 """
 LIENS = {"claude/settings.json": ".claude/settings.json", "claude/CLAUDE.md": ".claude/CLAUDE.md",
-         "claude/RTK.md": ".claude/RTK.md", "maison/CLAUDE.md": "CLAUDE.md", "rtk/config.toml": ".config/rtk/config.toml"}
+         "claude/RTK.md": ".claude/RTK.md", "codex/AGENTS.md": ".codex/AGENTS.md", "codex/hooks.json": ".codex/hooks.json", "maison/CLAUDE.md": "CLAUDE.md", "rtk/config.toml": ".config/rtk/config.toml"}
 
 
 class AtelierTest(unittest.TestCase):

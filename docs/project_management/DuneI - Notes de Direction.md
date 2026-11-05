@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas — révisée le 22 octobre 2026
 
-Version 1.39. Historique en fin de document.
+Version 1.40. Historique en fin de document.
 
 *Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent soixante-huit lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
 
@@ -526,8 +526,10 @@ jour du BIOS, sans promesse sur ce défaut.
 
 Nicolas a validé le correctif à l'écran le 2026-11-05.
 
-Prochaine étape : **après la fusion de ce correctif, finir le travail Codex (D119) et choisir l'élément suivant du
-lot 2** dans le backlog ; L2-12 (audio) et
+Codex rejoint l'atelier comme second agent de Nicolas, pour ses autres sujets (L1-26, D119) : il ne développe pas
+DuneI, et ses instructions globales lui interdisent d'installer sur le système sans passer par `paquets.toml`.
+
+Prochaine étape : **après la fusion de cette PR, choisir l'élément suivant du lot 2** dans le backlog ; L2-12 (audio) et
 L2-13 (énergie) suivront le motif du popover hébergé (`heberge: true`, `fonduContenu`, `fonduDisque`, `reinitialiser()`),
 L2-57 (suites du popover Bluetooth), L2-58 et L2-59 attendent leur tour.
 
@@ -536,6 +538,7 @@ L2-57 (suites du popover Bluetooth), L2-58 et L2-59 attendent leur tour.
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-10 | Version initiale |
+| 1.40 | 2026-11-05 | Codex ajouté à l'atelier (L1-26, D119) ; prochaine étape : l'élément suivant du lot 2 |
 | 1.39 | 2026-11-05 | Fenêtre du double appui du bouton marche ramenée à 0,4 s (D120) ; prochaine étape : Codex, puis le lot 2 |
 | 1.38 | 2026-11-04 | Mouvement des popovers de la barre (L2-06, L2-07, L2-47, L2-56 ; D110 à D118), recette validée ; backlog recompté à 168 éléments (l'écart de 2 avec les 164 annoncés datait d'avant cette branche) ; prochaine étape : après la fusion, l'élément suivant du lot 2 |
 | 1.37 | 2026-11-03 | L2-14 validé à l'écran après les correctifs de recette (appairage par agent et transport, audio exigé) ; prochaine étape : l'élément suivant du lot 2 |

@@ -2877,6 +2877,28 @@ prêt tout de suite. Défaut signalé par Nicolas à la recette de L2-06.
 *Touché : `motion.toml`, `dunei_motion/checks.py`, `generated/motion.json`, golden, `coque/Barre/CadrePopovers.qml`,
 `coque/Reseau/PopoverReseau.qml`, `coque/Bluetooth/PopoverBluetooth.qml`, coques d'essai, tests, fiche de conception.*
 
+### D119 · Codex entre dans l'atelier par le paquet `extra` et des instructions globales
+
+2026-11-04. **Codex s'installe par le paquet `openai-codex` du dépôt `extra`, déclaré dans `paquets.toml`, et reçoit ses
+règles par `~/.codex/AGENTS.md`, relié depuis `codex/AGENTS.md` de `dunei-atelier`.** Il sert à d'autres sujets que DuneI.
+
+- **Raison.** Un agent qui lance `pacman -S` crée un paquet que `make paquets` signale ou propose de retirer. Codex charge
+  ses instructions globales dans tous les dossiers, même ceux auxquels il n'a pas accordé sa confiance : c'est le seul
+  endroit qui le couvre partout.
+- **Règle d'installation.** Une dépendance va d'abord dans le projet. Si elle doit aller sur le système, Codex s'arrête et
+  propose une ligne pour `paquets.toml`, avec sa raison ; Nicolas décide. `~/DuneI` et `~/dunei-atelier` sont en lecture
+  seule pour lui, sauf demande explicite.
+- **Écartés.** Le script officiel échappe à `paquets.toml` sans rien apporter : le paquet (0.166.0) est plus récent que la
+  dernière version indexée par la documentation (0.165.0). Relier `config.toml` mêlerait à l'atelier les dossiers de
+  confiance que Codex y écrit lui-même ; `auth.json` reste de toute façon hors de l'atelier.
+- **rtk.** Le crochet `rtk hook codex` est posé par `codex/hooks.json`, relié comme les instructions, et la consigne de
+  lecture des sorties entre directement dans `codex/AGENTS.md`. `rtk init --codex` n'est pas lancé : il écrirait à travers
+  le lien une référence en chemin absolu, propre à la machine. Codex exige en plus que Nicolas approuve le crochet une fois ;
+  cette approbation reste locale à la machine et se refait après une réinstallation.
+
+*Touché : `paquets.toml`, `atelier.toml`, `tests/test_atelier.py`, `dunei-atelier` (`codex/AGENTS.md`, `codex/hooks.json`, README), backlog,
+carnet, notes de direction.*
+
 ## 2026-11-05 — Veille déclenchée par deux appuis fantômes
 
 ### D120 · La fenêtre du double appui du bouton marche passe de 1 s à 0,4 s
