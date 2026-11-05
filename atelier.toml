@@ -15,5 +15,7 @@ gitconfig = "git/gitconfig"           # inclus par ~/.gitconfig, jamais lié
 "claude/settings.json" = "~/.claude/settings.json"
 "claude/CLAUDE.md" = "~/.claude/CLAUDE.md"
 "claude/RTK.md" = "~/.claude/RTK.md"
+"codex/AGENTS.md" = "~/.codex/AGENTS.md"
+"codex/hooks.json" = "~/.codex/hooks.json"
 "maison/CLAUDE.md" = "~/CLAUDE.md"
 "rtk/config.toml" = "~/.config/rtk/config.toml"

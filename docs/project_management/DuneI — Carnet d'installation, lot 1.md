@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.34. Historique en fin de document.
+Version 1.35. Historique en fin de document.
 
 Socle amorçable.
 
@@ -675,6 +675,7 @@ par `make install` (D62 à D64). Le dépôt public porte la façon de le poser ;
 | --- | --- | --- |
 | Réglages globaux de Claude Code | `claude/settings.json` | lien `~/.claude/settings.json` |
 | Instructions globales | `claude/CLAUDE.md`, `claude/RTK.md` | liens sous `~/.claude/` |
+| Instructions globales et crochet rtk de Codex | `codex/AGENTS.md`, `codex/hooks.json` | liens sous `~/.codex/` |
 | Instructions du dossier personnel | `maison/CLAUDE.md` | lien `~/CLAUDE.md` |
 | Réglages de rtk | `rtk/config.toml` | lien `~/.config/rtk/config.toml` |
 | Mémoire de Claude pour DuneI | `memoire/` | désignée par `autoMemoryDirectory` dans `.claude/settings.json` de DuneI |
@@ -687,6 +688,12 @@ droits du clone (0644) au lieu de 0600 : aucun ne contient de secret.
 L'archive est téléchargée dans `~/.cache/dunei/` pendant l'inspection, `--dry-run` compris, et une somme
 fausse refuse tout `make install`. Monter de version : changer les quatre valeurs d'`atelier.toml`, sommes
 relevées sur la publication GitHub, puis `make install`.
+
+**Codex** vient du paquet `openai-codex` du dépôt `extra`, déclaré dans le groupe `outils` de `paquets.toml`, et
+se met à jour avec le système (D119). La connexion reste un geste de Nicolas : `codex login`, qui écrit
+`~/.codex/auth.json` hors de l'atelier. `~/.codex/config.toml` n'est pas relié, car Codex y note les dossiers
+auxquels il accorde sa confiance ; il garde donc ses réglages par défaut. Le crochet `rtk hook codex` doit être approuvé
+une fois dans Codex, avec `/hooks` : sans cela, Codex ne l'exécute pas et ses sorties ne sont pas condensées.
 
 **Ce que fait la destination `atelier`.**
 
@@ -2221,6 +2228,7 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 
 | Version | Date | Changement |
 | --- | --- | --- |
+| 1.35 | 2026-11-05 | Codex : paquet `openai-codex`, instructions globales et crochet rtk reliés depuis l'atelier (L1-26, D119) |
 | 1.34 | 2026-11-05 | Énergie (L1-09) : fenêtre du double appui du bouton marche ramenée à 0,4 s après une veille déclenchée par deux fantômes (D120) |
 | 1.33 | 2026-11-04 | Le mouvement des popovers : commande `dunei-mouvement`, calque `dunei-popovers`, ajout d'un popover à l'hôte, relevés (L2-06, L2-07, L2-47, L2-56 ; D110 à D117), recette en attente |
 | 1.32 | 2026-11-02 | Thèmes statiques : trois thèmes, jour thématisé retiré (L2-50, D102), repli d'un couple retiré dans la coque et dans `dunei-theme` |

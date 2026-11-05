@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.42. Historique en fin de document.
+Version 1.43. Historique en fin de document.
 
 La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **169 éléments** répartis en **cinq lots**, sur six chantiers.
 
@@ -247,7 +247,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L1-23 | C | Écrit | Concevoir et écrire `motion.toml` et `generate_motion.py` — **fait (D14 à D20)** : paquet `dunei_motion/`, cibles Lua et JSON, contrôles bloquants, `make motion` |
 | L1-24 | C | Écrit | Cible Hyprland en Lua pour les deux générateurs — **fait** : `hyprland-tokens.lua` et `motion.lua`, branchés dans la session par le point d'entrée `config/hypr/hyprland.lua` et `make install` (D21) |
 | L1-25 | A | Configuré | Chiffrement de `caladan` (écart de L1-03, D53) par **réinstallation complète selon la procédure** (D61) — **fait (D66 à D74, D76)** : services système par liste blanche (`services.toml`), pare-feu allumé par `make install` ; `PATH` posé par `/etc/profile.d/dunei-bin.sh` ; `tpm2-tss` et `python` déclarés ; `make chiffrement`, une étape par passage déduite du disque, deux redémarrages : amorçage `systemd` (`sd-vconsole`, `sd-encrypt`, *discards* permis) possédé par la seule commande, image d'origine gardée au menu, puis clé de secours rangée dans Bitwarden et retapée, puis puce TPM2 avec phrase liée à aucun état d'amorçage, éprouvée par son jeton avant le retrait de la phrase d'`archinstall` ; `make phrase` pour réaligner la phrase sur le mot de passe de session ; procédure répétée de l'ISO à la session dans la machine virtuelle de recette le 2026-10-18, qui a fait corriger le carnet (`loadkeys uk` avant `archinstall`, racine à cocher au chiffrement) et `make phrase` (systemd 262 remplace seul la puce) ; `caladan` réinstallé selon le carnet le 2026-10-19 et recetté : puce et phrase, clé de secours, aucune unité en échec ; mise à jour du noyau et `make phrase` non éprouvées sur la machine, couvertes en machine virtuelle |
-| L1-26 | A | Écrit | Outillage de développement par IA — **fait (D61 à D65)** : `atelier.toml` ; rtk épinglé (1.0.1), téléchargé et vérifié contre deux sommes `sha256` ; dépôt privé `JuNeI23/dunei-atelier` cloné dans `~/dunei-atelier` et relié par `make install` (réglages et instructions de Claude Code, réglages de rtk, mémoire de Claude par `autoMemoryDirectory`, identité git par inclusion) ; plugins installés depuis `enabledPlugins`, leur marché déclaré par `extraKnownMarketplaces` ; changements non envoyés signalés par `make install` et `dunei-maj` ; recette sur `caladan` et en machine virtuelle |
+| L1-26 | A | Écrit | Outillage de développement par IA — **fait (D61 à D65)** : `atelier.toml` ; rtk épinglé (1.0.1), téléchargé et vérifié contre deux sommes `sha256` ; dépôt privé `JuNeI23/dunei-atelier` cloné dans `~/dunei-atelier` et relié par `make install` (réglages et instructions de Claude Code, réglages de rtk, mémoire de Claude par `autoMemoryDirectory`, identité git par inclusion) ; plugins installés depuis `enabledPlugins`, leur marché déclaré par `extraKnownMarketplaces` ; changements non envoyés signalés par `make install` et `dunei-maj` ; recette sur `caladan` et en machine virtuelle ; Codex ajouté comme second agent, hors du développement de DuneI (D119) : paquet `openai-codex`, instructions `~/.codex/AGENTS.md` et crochet rtk `~/.codex/hooks.json` reliés depuis l'atelier |
 | L1-27 | A | Configuré | Mise à jour du BIOS et du contrôleur embarqué de `caladan` — **à faire, sur décision de Nicolas** : BIOS en 1.25 (2022), EC en 1.22 ; versions bien plus récentes proposées, sans correctif connu des appuis fantômes du bouton marche (D120). Repérage de la version et du chemin (fwupd ou Lenovo) avant tout geste : une partie du passage est irréversible, le retour en arrière étant interdit après la 1.40 |
 
 ### Lot 2 — coque vitale
@@ -518,6 +518,7 @@ Le choix de la distribution de base et du compositeur, précédemment ouverts, s
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-12 | Version initiale, 137 éléments |
+| 1.43 | 2026-11-05 | L1-26 : Codex ajouté à l'atelier comme second agent (D119) |
 | 1.42 | 2026-11-05 | L1-09 : fenêtre du double appui ramenée à 0,4 s (D120) ; ajout de L1-27, mise à jour du BIOS |
 | 1.41 | 2026-11-04 | L2-07, L2-47 et L2-56 faits, L2-06 fait pour les popovers de la barre (D110 à D118), recette validée le 2026-11-04 ; ajout de L2-58 (mouvement des menus, listes, infobulles et chevron) et de L2-59 (suites du mouvement) ; L2-12 et L2-13 héritent du popover hébergé ; recompte du backlog : 168 éléments (119 écrits), les deux lignes de L2-58 et L2-59 s'ajoutant aux 166 lignes déjà présentes, que le décompte annonçait à 164 depuis avant cette branche |
 | 1.40 | 2026-11-03 | L2-14 validé à l'écran : appairage, reconnexion automatique, exclusion et fermeture des popovers |

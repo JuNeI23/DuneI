@@ -74,6 +74,7 @@ outils = [
     "qemu-desktop",   # machine virtuelle de recette
     "edk2-ovmf",      # UEFI de la machine virtuelle
     "swtpm",          # TPM de la machine virtuelle
+    "openai-codex",   # second agent de Nicolas, pour ses autres sujets (D119)
 ]
 
 # Paquet = élément du backlog qui le remplacera.
