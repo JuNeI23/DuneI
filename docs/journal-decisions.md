@@ -2876,3 +2876,34 @@ prêt tout de suite. Défaut signalé par Nicolas à la recette de L2-06.
 
 *Touché : `motion.toml`, `dunei_motion/checks.py`, `generated/motion.json`, golden, `coque/Barre/CadrePopovers.qml`,
 `coque/Reseau/PopoverReseau.qml`, `coque/Bluetooth/PopoverBluetooth.qml`, coques d'essai, tests, fiche de conception.*
+
+## 2026-11-05 — Veille déclenchée par deux appuis fantômes
+
+### D120 · La fenêtre du double appui du bouton marche passe de 1 s à 0,4 s
+
+2026-11-05. **Le second appui ne met en veille que s'il suit le premier de 0,4 s au plus.** Le reste de D106 ne change
+pas. Défaut signalé par Nicolas : veille non voulue à 14:08:13, 36 s après une reprise.
+
+- **Raison.** Le journal montre cinq appuis en 19 s après cette reprise, dont les deux derniers à 0,501 s d'écart. Le même
+  motif a produit les veilles non voulues du 2026-11-03 à 20:50:07 (0,751 s) et du 2026-11-04 à 21:10:25 (0,752 s). D106
+  avait conclu à une fenêtre d'une seconde sur des fantômes relevés à 2 s d'écart au moins : ils peuvent en réalité se
+  suivre de plus près.
+- **Mesure.** Depuis le 2026-10-19, sur 43 écarts de moins de 30 s, 19 tombent à 12 ms près sur un multiple d'environ
+  0,25 s, contre 4 attendus par hasard. Ce rythme désigne une scrutation du contrôleur embarqué, hypothèse que rien ne
+  confirme directement. Sous 1 s, les écarts se répartissent en deux familles : 0,230, 0,279, 0,328, 0,329 et 0,330 s,
+  hors du pas, attribués aux doubles appuis volontaires ; 0,501, 0,751, 0,751 et 0,752 s, sur le pas, attribués aux
+  fantômes.
+- **Veille de 13:51:49.** Elle n'est pas en cause : c'est le palier de 900 s sur batterie, cohérent avec le verrouillage
+  à 300 s de 13:41:49.
+- **Limite.** Deux fantômes à un seul pas (0,25 s) tromperaient encore le script, sans qu'aucun critère de temps les
+  sépare d'un geste volontaire. Ce cas n'a jamais été observé sur les 19 écarts du pas, dont le plus petit vaut deux pas.
+- **Écartés.** SUPER + bouton marche, immunisé contre les fantômes, mais qui prend deux mains : gardé en réserve si le
+  défaut revient. Une garde après le réveil : D106 a relevé des fantômes à plus de 6 min. Exiger un silence avant le
+  premier appui : un double appui volontaire a suivi un autre appui de 2 s le 2026-11-03 à 13:55.
+- **Recette.** Nicolas a validé à l'écran le 2026-11-05 : l'appui de 0,281 s met en veille, et une paire à 0,480 s reste
+  sans effet. Si des doubles appuis volontaires échouent à l'usage, la fenêtre se relève sans dépasser 0,5 s.
+- **BIOS.** `caladan` est en 1.25 (2022), EC 1.22. Une recherche n'a trouvé aucun correctif documenté de ce symptôme, sur
+  des journaux de versions lus en partie seulement ; la mise à jour devient L1-27.
+
+*Touché : `config/hypr/scripts/dunei-bouton-marche`, `tests/test_energie_scripts.py`, carnet (§ Énergie — L1-09), backlog
+(L1-09, L1-27), notes de direction.*
