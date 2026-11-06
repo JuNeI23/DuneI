@@ -104,9 +104,15 @@ class QuickshellEmitterTest(unittest.TestCase):
         self.assertEqual(self.out["bureau"]["fond"], "#" + rgba)
 
     def test_bureau_cles(self):
-        """Les sept clés existent, les couleurs sont en `#rrggbb`, le seuil est dans ]0, 1[ et les survols s'inversent."""
+        """Les neuf clés existent, les couleurs sont en `#rrggbb`, le seuil est dans ]0, 1[, les survols s'inversent, et la
+        bande, le dossier et le namespace du calque valent ce que le fond d'écran attend (ce dernier n'est lu que dans
+        tokens.toml, l'émetteur de la coque ne l'expose pas)."""
         b = self.out["bureau"]
-        self.assertEqual(list(b), ["fond", "texteClair", "texteClairSurvol", "texteFonce", "texteFonceSurvol", "seuil", "logo"])
+        self.assertEqual(list(b), ["fond", "texteClair", "texteClairSurvol", "texteFonce", "texteFonceSurvol", "seuil", "logo",
+                                   "bande", "dossier"])
+        self.assertEqual(b["bande"], 28)
+        self.assertEqual(b["dossier"], "Documents/Images/Wallpapers")
+        self.assertEqual(self.data["bureau"]["namespace"], "dunei-fond")
         for k in ("fond", "texteClair", "texteClairSurvol", "texteFonce", "texteFonceSurvol"):
             self.assertRegex(b[k], r"^#[0-9a-f]{6}$")
         self.assertTrue(0 < b["seuil"] < 1)

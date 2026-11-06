@@ -6,17 +6,14 @@ import "Fond"
 
 // Coque d'essai du module Fond.
 // Rôle : sous la plateforme offscreen seulement, ouvre une vitrine (FloatingWindow jamais montrée à l'écran) qui porte
-// un
-// Affichage dès le lancement, donc avant la première lecture de bureau.json, journalise chaque étape de sa machine
-// d'états
-// et l'expose par IPC (cible « fond ») à tests/test_fond.py.
+// un Affichage dès le lancement, donc avant la première lecture de bureau.json, journalise chaque étape de sa machine
+// d'états et l'expose par IPC (cible « fond ») à tests/test_fond.py.
 // Entrées : DUNEI_TOKENS_DIR, lu par Theme ; QT_QPA_PLATFORM, posé à offscreen par le test ; ESSAI_FOND_SANS_TAILLE,
-// non
-// vide pour ouvrir la vitrine avec un Affichage de taille nulle. Commandes IPC : etat, demander, demanderDeux, taille,
-// tailleEtDemande, brancher.
+//           non vide pour ouvrir la vitrine avec un Affichage de taille nulle. Commandes IPC : etat, demander,
+//           demanderDeux, taille, tailleEtDemande, brancher.
 // Sortie : le résultat de chaque appel IPC sur la sortie de « qs ipc call » ; au journal, des lignes « essai : … ».
 // Erreurs : celles de Theme et d'Affichage, dans le journal ; une commande IPC sans vitrine rend ou journalise une
-// erreur.
+//           erreur.
 // Dépendances : quickshell ≥ 0.3 (Quickshell.Io, FloatingWindow, LazyLoader), modules Theme et Fond.
 // Import : liens essai/Theme et essai/Fond, comme dans les autres coques d'essai.
 ShellRoot {
@@ -55,9 +52,8 @@ ShellRoot {
                 target: aff.coucheHaute
                 function onYChanged() { console.info("essai : y " + aff.coucheHaute.y) }
                 function onOpacityChanged() { console.info("essai : opacite " + aff.coucheHaute.opacity) }
-                // Le statut de la base accompagne la ligne : le journal de la base suit le gestionnaire de
-                // l'Affichage, qui
-                // vide la couche haute pendant la même émission.
+                // Le statut de la base accompagne la ligne : le journal de la base suit le gestionnaire de l'Affichage,
+                // qui vide la couche haute pendant la même émission.
                 function onSourceChanged() {
                     console.info("essai : haut " + aff.coucheHaute.source + " base " + aff.coucheBasse.status)
                 }
@@ -83,10 +79,8 @@ ShellRoot {
 
         // etat — photographie de l'Affichage et de ce qu'il publie.
         // Entrées : aucune. Sortie : JSON {etat, imageAffichee, enAttente, fondPublie, y, opacite, haut, base,
-        // statutBase,
-        // largeurBase, hauteurBase, source (largeur de sourceSize), second (image du second Affichage, ou null),
-        // sourceSecond (sa
-        // largeur de sourceSize, ou null)}.
+        // statutBase, largeurBase, hauteurBase, source (largeur de sourceSize), second (image du second Affichage, ou
+        // null), sourceSecond (sa largeur de sourceSize, ou null)}.
         // Erreurs : « null » tant que la vitrine n'existe pas. Dépendances : vitrine, second, Theme.
         function etat(): string {
             const a = vitrine.item?.affichage
@@ -108,8 +102,7 @@ ShellRoot {
         }
 
         // demanderDeux — pose deux demandes dans le même tour de boucle : la première est forcément encore en
-        // chargement
-        // quand la seconde arrive, ce qu'un test ne garantirait pas par deux appels ou deux écritures.
+        // chargement quand la seconde arrive, ce qu'un test ne garantirait pas par deux appels ou deux écritures.
         // Entrées : image1, fond1, image2, fond2. Sortie : aucune. Erreurs : aucune. Dépendances : demander.
         function demanderDeux(image1: string, fond1: string, image2: string, fond2: string): void {
             demander(image1, fond1)
@@ -123,9 +116,8 @@ ShellRoot {
             vitrine.item.hauteur = hauteur
         }
 
-        // tailleEtDemande — donne sa taille à un Affichage qui l'attendait, puis pose une demande juste après : la
-        // pose du
-        // démarrage, lancée au même tour différé, charge forcément encore à son arrivée.
+        // tailleEtDemande — donne sa taille à un Affichage qui l'attendait, puis pose une demande juste après : la pose
+        // du démarrage, lancée au même tour différé, charge forcément encore à son arrivée.
         // Entrées : largeur, hauteur, image, fond. Sortie : aucune. Erreurs : aucune. Dépendances : taille, demander.
         function tailleEtDemande(largeur: int, hauteur: int, image: string, fond: string): void {
             taille(largeur, hauteur)

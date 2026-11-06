@@ -3,36 +3,27 @@ import "../Theme"
 
 // Affichage — l'image du bureau et la montée de la suivante par-dessus, sans fenêtre : son parent le remplit (L2-27).
 // Rôle : deux couches superposées. `base` porte l'image en place et ne bouge jamais ; `haut` charge la nouvelle, puis
-// monte
-// du bas de l'écran au ressort `spectacle`, sur le réglage `out` que le Ressort choisit de lui-même, la cible
-// descendant vers
-// 0. En mouvement réduit, `haut` ne se déplace pas : son opacité passe de 0 à 1, par un ressort de nature « fondu ».
-// À l'atterrissage, l'image et le fond sont publiés, `base` reçoit l'image, puis `haut` se vide une fois `base` prête :
-// `retainWhileLoading` garde l'ancienne image dans `base` jusque-là, et rien ne clignote.
+// monte du bas de l'écran. Deux ressorts `spectacle` se partagent le vol, et celui qui vole est choisi au décollage :
+// `montee` déplace `haut`, sur le réglage `out` que le Ressort choisit de lui-même, la cible descendant vers 0 ; en
+// mouvement réduit, `apparition` fait passer son opacité de 0 à 1, sans déplacement. À l'atterrissage, l'image et le
+// fond sont publiés, `base` reçoit l'image, puis `haut` se vide une fois `base` prête : rien ne clignote.
 // Machine d'états (`etat`) : « repos » ; « charge », `haut` décode la demande, qu'une nouvelle demande remplace
-// aussitôt ;
-// « vol », du décollage à la fin de l'échange, où seule la dernière demande reçue est gardée (`_demande`) pour
-// s'appliquer
-// après. Sans file d'attente, une demande égale à l'image qui vole efface celle qui attendait. Au démarrage, `etat`
-// reste à
-// « repos » : tant que `bureau.json` n'est pas lu et que la taille n'est pas connue, rien n'est décodé, puis l'image
-// se pose
-// d'un coup dans `base` (`_phase` « pose »). Une demande reçue pendant cette pose la remplace, d'un coup elle aussi.
+// aussitôt ; « vol », du décollage à la fin de l'échange, où seule la dernière demande reçue est gardée (`_demande`)
+// pour s'appliquer après. Il n'y a pas de file d'attente : une demande égale à l'image qui vole efface celle qui
+// attendait. Au démarrage, `etat` reste à « repos » : tant que `bureau.json` n'est pas lu et que la taille n'est pas
+// connue, rien n'est décodé, puis l'image se pose d'un coup dans `base` (`_phase` « pose »). Une demande reçue pendant
+// cette pose la remplace, d'un coup elle aussi.
 // Entrées : echelle, rapport pixels physiques / logiques, pour décoder l'image à la taille de l'écran ; Theme.bureauLu,
 //           Theme.imageBureau, Theme.fondFichier, Theme.bureau, Theme.mouvementReduit.
 // Sorties : etat ; imageAffichee, chemin de l'image en place, "" sans image, qui change à l'atterrissage ; enAttente,
-// chemin
-//           de la demande gardée pendant un vol, "" sans demande ou pour un retrait ; coucheHaute, coucheBasse, les
-//           deux
-//           Image, pour les essais ; Theme.fondPublie, écrit à l'atterrissage et à la pose, par chaque écran, avec la
-//           même valeur.
+//           chemin de la demande gardée pendant un vol, "" sans demande ou pour un retrait ; coucheHaute, coucheBasse,
+//           les deux Image, pour les essais ; Theme.fondPublie, écrit à l'atterrissage et à la pose, par chaque écran,
+//           avec la même valeur.
 // Erreurs : image absente ou illisible → console.warn « Fond : image illisible, <chemin> ; <suite> ». Au démarrage,
-// l'aplat
-//           du bureau s'applique ; à un changement, l'image en place reste. Si le fichier disparaît pendant le vol,
-//           `base`
-//           ne peut plus le lire : `haut` garde l'image, et cède la place à `base`, sans image ou non, à la demande
-//           suivante.
-//           Le fichier affiché peut disparaître sans effet tant que la taille de l'écran ne change pas.
+//           l'aplat du bureau s'applique ; à un changement, l'image en place reste. Si le fichier disparaît pendant le
+//           vol, `base` ne peut plus le lire : `haut` garde l'image, et cède la place à `base`, avec ou sans image, à
+//           la demande suivante. Le fichier affiché peut disparaître sans effet tant que la taille de l'écran ne
+//           change pas.
 // Dépendances : Theme, Ressort (module Theme).
 Item {
     id: affichage
@@ -55,7 +46,8 @@ Item {
     property var _fondAffiche: null
     // Attente de `base` : « pose » au démarrage, « echange » après l'atterrissage, "" sinon.
     property string _phase: ""
-    // Le vol en cours est un fondu : figé au décollage, pour qu'une bascule de la préférence n'en change pas l'échelle.
+    // Le vol en cours est le fondu d'`apparition`, et non le déplacement de `montee` : figé au décollage, pour qu'une
+    // bascule de la préférence ne change pas de ressort en plein vol.
     property bool _fondu: false
     property bool _demarre: false
     readonly property bool _pret: Theme.bureauLu && width > 0 && height > 0
@@ -88,8 +80,7 @@ Item {
 
     // publier — publie le fond réellement affiché dans Theme.
     // Entrées : aucune. Sortie : aucune. Erreurs : aucune ; null tant que les tokens ne sont pas lus, et
-    // onBureauChanged
-    // republie à leur arrivée. Dépendances : _fondAffiche, Theme.
+    // onBureauChanged republie à leur arrivée. Dépendances : _fondAffiche, Theme.
     function publier() {
         Theme.fondPublie = _fondAffiche ?? Theme.bureau?.fond ?? null
     }
@@ -112,8 +103,7 @@ Item {
     }
 
     // traiter — applique une demande hors vol : l'image en place ne change rien, et abandonne un chargement ; sans
-    // image, le
-    // retrait se fait d'un coup ; sinon `haut` charge l'image, en remplaçant un chargement en cours.
+    // image, le retrait se fait d'un coup ; sinon `haut` charge l'image, en remplaçant un chargement en cours.
     // Entrée : d, demande {image, fond}. Sortie : aucune. Erreurs : voir haut. Dépendances : poser, url.
     function traiter(d) {
         if (d.image === imageAffichee || !d.image) {
@@ -147,18 +137,19 @@ Item {
     }
 
     // decoller — lance le vol de `haut`, qui vient de finir de charger.
-    // Rôle : place le ressort au départ sans animation, lève enVol, puis change la cible. Sans animation possible
-    // (tokens
-    // absents, hauteur nulle), le ressort se pose sans jamais avoir avancé : le vol s'arrête aussitôt.
-    // Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : montee, atterrir.
+    // Rôle : choisit le ressort du vol, le place au départ sans animation, lève enVol, puis change sa cible. Sans
+    // animation possible (tokens absents, hauteur nulle), le ressort se pose sans jamais avoir avancé : le vol s'arrête
+    // aussitôt.
+    // Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : montee, apparition, atterrir.
     function decoller() {
         etat = "vol"
         _fondu = Theme.mouvementReduit
-        montee.cible = _fondu ? 0 : height
-        montee.poser()
+        const ressort = _fondu ? apparition : montee
+        ressort.cible = _fondu ? 0 : height
+        ressort.poser()
         enVol = true
-        montee.cible = _fondu ? 1 : 0
-        if (!montee.moving) atterrir()
+        ressort.cible = _fondu ? 1 : 0
+        if (!ressort.moving) atterrir()
     }
 
     // atterrir — fin du vol : publie l'image et son fond, et lance l'échange vers `base`.
@@ -173,11 +164,10 @@ Item {
     }
 
     // finirBase — `base` a fini de charger : termine la pose ou l'échange en cours ; un rechargement dû à sourceSize,
-    // hors de
-    // ces deux phases, ne fait rien.
+    // hors de ces deux phases, ne fait rien.
     // Entrée : lisible, vrai si l'image est prête. Sortie : aucune.
     // Erreurs : console.warn si l'image est illisible, voir l'en-tête. Dépendances : finirPose, signaler, traiter,
-    // montee.
+    // apparition. `montee` n'a pas à être remise au neutre : elle atterrit toujours à 0.
     function finirBase(lisible) {
         const phase = _phase
         _phase = ""
@@ -191,8 +181,8 @@ Item {
             if (lisible) haut.source = ""
             else signaler(_cours.image, "image gardée en mémoire jusqu'à la demande suivante")
             _fondu = false
-            montee.cible = 0
-            montee.poser()
+            apparition.cible = 0
+            apparition.poser()
             etat = "repos"
             const suite = _demande
             _demande = null
@@ -207,16 +197,23 @@ Item {
         function onBureauChanged() { if (affichage._demarre && affichage._phase !== "pose") affichage.publier() }
     }
 
+    // Seul le ressort choisi au décollage avance pendant un vol : l'arrêt de l'un ou de l'autre en marque la fin.
     Ressort {
         id: montee
         transition: "spectacle"
-        nature: affichage._fondu ? "fondu" : "deplacement"
+        nature: "deplacement"
+        onMovingChanged: if (!moving && affichage.enVol) affichage.atterrir()
+    }
+
+    Ressort {
+        id: apparition
+        transition: "spectacle"
+        nature: "fondu"
         onMovingChanged: if (!moving && affichage.enVol) affichage.atterrir()
     }
 
     // Couche — une image plein cadre, décodée à la taille de l'écran. La taille ne sert qu'une fois connue : la pose
-    // attend
-    // _pret, et aucun décodage n'a lieu à une taille nulle.
+    // attend _pret, et aucun décodage n'a lieu à une taille nulle.
     // Entrées et sorties : celles d'Image. Erreurs : voir status. Dépendances : affichage.echelle.
     component Couche: Image {
         width: affichage.width
@@ -233,17 +230,17 @@ Item {
     Couche {
         id: base
         retainWhileLoading: true
-        onStatusChanged: if (status === Image.Ready || status === Image.Error) affichage.finirBase(status ===
-        Image.Ready)
+        onStatusChanged: {
+            if (status === Image.Ready || status === Image.Error) affichage.finirBase(status === Image.Ready)
+        }
     }
 
     Couche {
         id: haut
         y: affichage._fondu ? 0 : montee.value
-        opacity: affichage._fondu ? montee.value : 1
+        opacity: affichage._fondu ? apparition.value : 1
         // Seul l'état « charge » écoute : un rechargement dû à sourceSize pendant le vol ne relance rien, et vider la
-        // source
-        // met le statut à Null, qui n'est pas une erreur.
+        // source met le statut à Null, qui n'est pas une erreur.
         onStatusChanged: {
             if (affichage.etat !== "charge") return
             if (status === Image.Ready) affichage.decoller()

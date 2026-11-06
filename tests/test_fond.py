@@ -120,8 +120,7 @@ class FondTest(EssaiCoque, unittest.TestCase):
         """Installe les tokens et bureau.json, puis lance la coque d'essai et attend que les tokens soient lus.
 
         Entrées : image et fond, comme bureau ; lent, vrai pour ralentir les ressorts ; reduit, vrai pour la préférence
-        de
-        mouvement réduit dès le lancement.
+        de mouvement réduit dès le lancement.
         Sortie : aucune. Erreurs : échec du test si la coque ne se charge pas. Dépendances : installer, lancer,
         attendre.
         """
