@@ -83,7 +83,7 @@ def emit(model: dict) -> str:
 
     Entrée : model — sortie de model.resolve.
     Sortie : contenu de hyprland-tokens.lua (une table Lua retournée).
-    Erreurs : KeyError si le TOML brut manque ; ValueError transmise par _validate.
+    Erreurs : KeyError si le TOML brut ou [bureau].namespace manque ; ValueError transmise par _validate.
     Dépendances : _validate, _rgba, color.Oklch.
     """
     raw = model["raw"]
@@ -138,7 +138,7 @@ def emit_rules(model: dict) -> str:
              une tuile (D31, suite du 2026-10-15). Le plein écran vient en
              dernier, pour qu'une règle de plein écran l'emporte sur toute règle plus générale qui
              poserait une valeur contraire (aujourd'hui, les deux retirent l'ombre).
-    Erreurs : KeyError si le TOML brut manque ; ValueError transmise par _validate.
+    Erreurs : KeyError si le TOML brut ou [bureau].namespace manque ; ValueError transmise par _validate.
     Dépendances : _validate.
     """
     raw = model["raw"]
@@ -162,8 +162,9 @@ def emit_layer_rules(model: dict) -> str:
     Entrée : model — sortie de model.resolve.
     Sortie : contenu de hyprland-layers.lua (une liste Lua retournée, appliquée par modules/regles.lua),
              une règle par calque de glass.namespaces : flou, flou des popups, seuil d'alpha ignoré
-             et, pour les calques de glass.xray seulement, flou du fond seul.
-    Erreurs : KeyError si le TOML brut manque ; ValueError transmise par _validate_glass.
+             et, pour les calques de glass.xray seulement, flou du fond seul ; puis la règle du fond d'écran
+             ([bureau].namespace), sans flou, qui retire seulement l'animation d'apparition du calque.
+    Erreurs : KeyError si le TOML brut ou [bureau].namespace manque ; ValueError transmise par _validate_glass.
     Dépendances : _validate_glass.
     """
     g = model["raw"]["glass"]
@@ -171,6 +172,8 @@ def emit_layer_rules(model: dict) -> str:
     rules = [f'    {{ name = "dunei-verre-{ns}", match = {{ namespace = "^{ns}$" }}, blur = true, '
              f'blur_popups = true, ignore_alpha = {g["ignore_alpha"]}, xray = {str(ns in g["xray"]).lower()} }},'
              for ns in g["namespaces"]]
+    fond = model["raw"]["bureau"]["namespace"]
+    rules.append(f'    {{ name = "{fond}", match = {{ namespace = "^{fond}$" }}, no_anim = true }},')
     return "\n".join([
         "-- GÉNÉRÉ depuis tokens.toml — NE PAS MODIFIER À LA MAIN",
         "-- Usage : for _, r in ipairs(require(\"generated.hyprland-layers\")) do hl.layer_rule(r) end",
@@ -185,7 +188,7 @@ def emit_binds(model: dict) -> str:
 
     Entrée : model — sortie de model.resolve.
     Sortie : contenu de hyprland-binds.lua (une table Lua retournée, lue par modules/clavier.lua).
-    Erreurs : KeyError si le TOML brut manque ; ValueError transmise par _validate ou model.bureaux (nombre de bureaux invalide).
+    Erreurs : KeyError si le TOML brut ou [bureau].namespace manque ; ValueError transmise par _validate ou model.bureaux (nombre de bureaux invalide).
     Dépendances : _validate, model.bureaux.
     """
     raw = model["raw"]

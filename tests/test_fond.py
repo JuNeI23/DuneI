@@ -6,9 +6,11 @@ la trajectoire que la vitrine journalise. Ignoré sans session Wayland ou sans Q
 """
 
 import json
+import re
 import os
 import subprocess
 import time
+import tomllib
 import unittest
 from pathlib import Path
 
@@ -632,6 +634,36 @@ class FondTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(hauteurs, sorted(hauteurs, reverse=True))
         self.assertEqual(hauteurs[-1], 0)
         self.assertEqual(self.traces().count("etat vol"), 1)
+
+
+class FondStructureTest(unittest.TestCase):
+    """Le calque Fond lu dans son source : fenêtre de fond, sans saisie, et sa place dans la coque."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.calque = (ROOT / "coque" / "Fond" / "Fond.qml").read_text(encoding="utf-8")
+        cls.coque = (ROOT / "coque" / "shell.qml").read_text(encoding="utf-8")
+
+    def test_calque(self):
+        for ligne in ('WlrLayershell.namespace: "dunei-fond"', "WlrLayershell.layer: WlrLayer.Background",
+                      "WlrLayershell.keyboardFocus: WlrKeyboardFocus.None", "exclusionMode: ExclusionMode.Ignore",
+                      "mask: Region {}", 'color: Theme.bureau?.fond ?? "transparent"',
+                      "echelle: modelData.devicePixelRatio"):
+            with self.subTest(ligne=ligne):
+                self.assertIn(ligne, self.calque)
+
+    def test_ancrage_aux_quatre_bords(self):
+        ancrage = re.search(r"anchors\s*\{([^}]*)\}", self.calque).group(1)
+        self.assertEqual(sorted(re.findall(r"(\w+):\s*true", ancrage)), ["bottom", "left", "right", "top"])
+
+    def test_namespace_egal_au_jeton(self):
+        jeton = tomllib.loads((ROOT / "tokens.toml").read_text(encoding="utf-8"))["bureau"]["namespace"]
+        self.assertIn(f'WlrLayershell.namespace: "{jeton}"', self.calque)
+
+    def test_shell_ordre(self):
+        delegue = self.coque.split("delegate:", 1)[1]
+        place = [delegue.index(f"{nom} {{") for nom in ("Fond", "Barre", "Presquile")]
+        self.assertEqual(place, sorted(place))
 
 
 if __name__ == "__main__":
