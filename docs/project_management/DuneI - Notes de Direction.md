@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas — révisée le 22 octobre 2026
 
-Version 1.40. Historique en fin de document.
+Version 1.41. Historique en fin de document.
 
 *Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent soixante-huit lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
 
@@ -529,15 +529,23 @@ Nicolas a validé le correctif à l'écran le 2026-11-05.
 Codex rejoint l'atelier comme second agent de Nicolas, pour ses autres sujets (L1-26, D119) : il ne développe pas
 DuneI, et ses instructions globales lui interdisent d'installer sur le système sans passer par `paquets.toml`.
 
-Prochaine étape : **après la fusion de cette PR, choisir l'élément suivant du lot 2** dans le backlog ; L2-12 (audio) et
-L2-13 (énergie) suivront le motif du popover hébergé (`heberge: true`, `fonduContenu`, `fonduDisque`, `reinitialiser()`),
-L2-57 (suites du popover Bluetooth), L2-58 et L2-59 attendent leur tour.
+DuneI a maintenant un fond d'écran (L2-27, D121, D122) : un calque de la coque, sans démon, choisi par `dunei-fond`. La
+nouvelle image monte du bas de l'écran au ressort `spectacle`, le verre de la barre et de la presqu'île la laisse passer,
+et le texte de la barre suit la couleur de la bande qu'il recouvre. Nicolas a validé la recette à l'écran le 2026-11-06 ;
+l'écran externe reste à éprouver. L'extraction de teinte reste à L4-06 : pour ce besoin, Nicolas a écarté toute teinte
+prélevée, la couleur venant de ce qui est derrière le verre.
+
+Prochaine étape : **après la fusion de cette PR, la galerie de fonds d'écran dans la presqu'île (L2-60, avec L2-48)**, puis
+le verre du jour (L2-61), où Nicolas tranchera le verre des popovers. Viendront ensuite L2-12 (audio) et L2-13 (énergie),
+qui suivront le motif du popover hébergé (`heberge: true`, `fonduContenu`, `fonduDisque`, `reinitialiser()`) ; L2-57 (suites
+du popover Bluetooth), L2-58, L2-59 et L2-62 attendent leur tour.
 
 ## Historique des versions
 
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-10 | Version initiale |
+| 1.41 | 2026-11-06 | L2-27 fait : fond d'écran en calque de la coque (D121, D122) ; prochaine étape : la galerie (L2-60) |
 | 1.40 | 2026-11-05 | Codex ajouté à l'atelier (L1-26, D119) ; prochaine étape : l'élément suivant du lot 2 |
 | 1.39 | 2026-11-05 | Fenêtre du double appui du bouton marche ramenée à 0,4 s (D120) ; prochaine étape : Codex, puis le lot 2 |
 | 1.38 | 2026-11-04 | Mouvement des popovers de la barre (L2-06, L2-07, L2-47, L2-56 ; D110 à D118), recette validée ; backlog recompté à 168 éléments (l'écart de 2 avec les 164 annoncés datait d'avant cette branche) ; prochaine étape : après la fusion, l'élément suivant du lot 2 |

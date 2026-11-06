@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas
 
-Document normatif. Version 0.26. Historique en fin de document.
+Document normatif. Version 0.27. Historique en fin de document.
 
 ## Comment lire ce document
 
@@ -107,6 +107,8 @@ Confondre les deux est l'erreur la plus fréquente.
 ### Le fond d'écran est une entrée
 
 **Le fond d'écran est une entrée qui influe dynamiquement sur la coloration.** N'importe quelle image est acceptée : le moteur en extrait une teinte et régénère tout le reste.
+
+**État actuel :** l'image s'affiche dans un calque de la coque, choisi par `dunei-fond` (D121), et passe à travers le verre. Elle ne fixe encore que le texte de la barre, d'après la couleur moyenne de la bande qu'elle recouvre (D122). L'extraction de teinte décrite ici reste à brancher (L4-06).
 
 Cinq règles rendent cette extraction robuste, quelle que soit l'image fournie :
 
@@ -874,7 +876,7 @@ Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si 
 
 | Composant | Élév. | Primitives | Transition | Règles particulières |
 | --- | --- | --- | --- | --- |
-| Bureau | E0 | `surface` | `spectacle` | Registre de spectacle |
+| Bureau | E0 | `surface` | `spectacle` | Registre de spectacle. Calque `dunei-fond` de la coque, sous la barre et la presqu'île, sans focus ni clic. Une nouvelle image part du bas et monte sur l'ancienne, qui ne bouge pas ; pose sans animation au démarrage ; fondu seul en mouvement réduit. Sans image, aplat `surface-base` (D121) |
 | Fenêtre tuilée | E1 | `surface` | `reflow` | **Aucune ombre, aucune bordure.** Gouttière 8px, rayon 12. Fenêtre active : les autres portent le modificateur `container_inactive` |
 | Barre système | aucune (transparente) | `text` + `interactive` | `state` | 28px, zone exclusive de 28px. Aucun fond, aucun verre, aucune capsule, de nuit comme de jour (D89). Texte et icônes posés sur le bureau, d'un clair ou d'un foncé choisi d'après le fond réel (`bureau.json`, D90) ; survol un peu plus sombre ou plus clair, sur les seuls éléments cliquables (D100), appui et menu ouvert à `accentStandalone` (D92) ; quand un popover s'ouvre, l'icône descend de 3 px (`popover.icon_travel_px`) et sa couleur et son passage à l'icône pleine suivent `overlay`, le survol seul gardant `state` ; elle ne descend pas en mouvement réduit (D111, D115). Icônes à 16px, logo à 20px, texte à l'échelon 3 (D95). Fonctions coupées : forme barrée (D91) |
 | Presqu'île | E3 | `state` | `state` | Encoche continue au centre du haut de l'écran, 28px de haut comme la barre, couche haute : le plein écran la recouvre (D97). Elle montre les quatre bureaux de DuneI (D96) : points identiques en `textDisabled`, pilule d'accent discret (`accentDiscret`, identique de jour et de nuit) sur le bureau courant ; pilule grisée tant que le bureau spécial est ouvert. Survol en `textTertiary` (D92). Surface, forme et modules de contenu sont indépendants (D98) |
@@ -959,3 +961,4 @@ Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si 
 | 0.24 | 2026-11-02 | Chapitre 2 : jour thématisé retiré (L2-50, D102) ; trois thèmes précalculés, couples retirés déclarés dans `theme.exclus`, repli sur la première famille qui offre le moment ; passage de l'échelle du jour thématisé et exception du corps de texte (D84) supprimés ; « quatre thèmes » devient « chaque thème » |
 | 0.25 | 2026-11-03 | Chapitre 7 et annexe E : popovers de la barre exclusifs et fermés au départ du pointeur (D108) ; popover Bluetooth, appareil connecté gardé dans la liste et « Oublier » par chevron (D107) |
 | 0.26 | 2026-11-04 | Chapitre 6 : le verre ne s'estompe jamais, fenêtre unique des popovers de la barre, table `[popover]`, un passage est une transformation d'une même surface, fondu du mouvement réduit seule exception ; composants : popover, icône de la barre, ligne de la section dépliable reportée à L2-58 (D110 à D115) ; annexe : colonne Transition du popover corrigée en `overlay`, comme le chapitre 6 et D112 |
+| 0.27 | 2026-11-06 | Chapitre 2 : état actuel du fond d'écran, affiché sans extraction de teinte (D121, D122) ; annexe E : le bureau et sa transition d'image (L2-27) |

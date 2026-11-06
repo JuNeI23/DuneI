@@ -2,9 +2,9 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.43. Historique en fin de document.
+Version 1.44. Historique en fin de document.
 
-La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **169 éléments** répartis en **cinq lots**, sur six chantiers.
+La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **172 éléments** répartis en **cinq lots**, sur six chantiers.
 
 Ce document dit ce qui est attendu, dans quel ordre, et à quelle condition c'est terminé. Il ne dit pas à quoi ça ressemble — c'est le rôle de la bible de design. En cas de contradiction : la bible l'emporte sur l'apparence, ce document l'emporte sur le périmètre.
 
@@ -280,7 +280,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L2-24 | B | Écrit | Agent d'authentification — il devra entrer dans `session.toml` (unité systemd utilisateur) pour démarrer avec la session (L1-10, D50) |
 | L2-25 | B | Configuré | Trousseau de secrets |
 | L2-26 | B | Écrit | Démon de thème — rechargement à chaud |
-| L2-27 | B | Écrit | Application du fond d'écran — le démon de fond d'écran entrera dans `session.toml` ; d'ici là, le fond uni `surface-base` du compositeur (#0f0703 à la teinte 55° ; le texte disait #120601, le fichier généré dit #0f0703) ; la barre lit déjà ce fond dans `~/.config/dunei/bureau.json` (origine `theme`) : l'outil l'y réécrira avec l'origine `fond` et la luminance de l'image (D90) est le bureau provisoire validé (L1-10, D51) |
+| L2-27 | B | Écrit | Application du fond d'écran — **fait (D121, D122)** : calque `dunei-fond` de la coque (module `Fond`), sans démon ; commande `dunei-fond <image>|--aucun`, dossier `~/Documents/Images/Wallpapers` créé par `make install` ; montée au ressort `spectacle`, pose sans animation au démarrage ; `bureau.json` porte `image`, et `fond` est calculé sur la bande de la barre (écart à D90). Sans image, le bureau reste l'aplat `surface-base` (D51). Écran externe non éprouvé |
 | L2-28 | B | Mixte | Raccourcis clavier globaux et leur affichage ; touche réservée `SUPER + /` ; lire `hyprctl binds -j`, qui rend les descriptions de la table |
 | L2-29 | B | Écrit | Contrôle de la luminosité |
 | L2-30 | B | Écrit | Capture d'écran ; `Print` (zone), `SHIFT + Print` (fenêtre) et `CTRL + Print` (écran) lancent le rôle `capture`, tenu de façon provisoire par hyprshot : le remplacer, c'est changer ses trois variantes dans `roles.lua` et retirer le paquet de `[provisoire]` (D79) |
@@ -313,6 +313,9 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L2-57 | B | Écrit | Suites du popover Bluetooth (relecture finale de L2-14) — suivi des appareils par l'ObjectModel plutôt que par un tableau reconstruit à chaque balise ; recherche partagée entre écrans (un compteur de demandes) ; voisins gelés sous le pointeur pendant la recherche ; suivi des connexions purgé à l'oubli d'un appareil ; couleur d'erreur à confronter à la bible ; `Activite` lève « Cannot read property 'phase' of null » quand sa ligne est détruite en pleine animation (journal de la coque, 2026-11-03) ; exécutable d'appairage : adresse en minuscules (chemin D-Bus introuvable), signaux INT et TERM sans nettoyage, processus survivant au rechargement de la coque (lancer en groupe), écouteurs LE Audio seuls forcés en `bredr`, micro (`audio-input-*`) jamais « connecté » faute de `bluez_output` ; tests de ces cas |
 | L2-58 | B | Écrit | Mouvement des autres surfaces (suite de L2-06) — menus contextuels, listes déroulantes et infobulles, qui gardent leur apparition actuelle ; leur fenêtre est distincte (`PopupWindow`) et leur verre est soumis à la même règle du flou que celui des popovers (D111), il leur faut donc une réponse propre ; chevron de la section dépliable, qui pivote encore sans animation |
 | L2-59 | B | Écrit | Suites du mouvement (relecture finale de L2-06) — largeur et position du cadre figées à l'affichage, à réévaluer avec L2-12 et L2-13 ; en mouvement réduit, les lignes ne s'effacent pas en fondu (la place est rendue d'un coup) ; disque retenu qui peut sauter à une réouverture pendant la fermeture ; opacité qui saute à 1 si le réglage repasse à normal pendant un fondu de sortie ; une image isolée de 87 ms, de cause non identifiée (5 images sur 906 au-delà de 33 ms) ; `mouvement.json` écrit en 0600 et motif Lua strict qui le lit ; pas de cas négatif pour `passage_content_at`, cas limites de `forme.js` (cadre plus large que l'écran, opacité du nouveau à 0), tests `test_recharge_*` sans valeur propre, test `sens_force` sensible aux valeurs de `motion.toml`, défilement de `flickProches` non testé |
+| L2-60 | B | Écrit | Galerie de fonds d'écran dans la presqu'île, avec L2-48 — validé par Nicolas : SUPER + W agrandit la presqu'île et y montre `~/Documents/Images/Wallpapers` en bande horizontale, trois vignettes entières et une vignette coupée de chaque côté (une seule au bord de la liste) ; flèches ou souris pour défiler ; clic ou Entrée pour valider. Elle appelle `dunei-fond` (D121) |
+| L2-61 | B | Écrit | Verre du jour — valeurs validées à l'écran : colonne des fenêtres de réglages en `surfacePanel` à 90 %, floutée, pleine hauteur et sans plateau détaché (écart à D104) ; contenu `surfaceWindow` opaque ; presqu'île à 82 % ; points en `textDisabled`. Verre des popovers à trancher par Nicolas (82 % ou 60 %, D103), maintenant que le fond d'écran est en place |
+| L2-62 | B | Écrit | Hauteur de la barre dans les jetons — `systemBarHeight` vaut 32 alors que la barre mesure 28 px (D89, D122) : aligner le jeton sur la hauteur réelle et faire lire celle-ci à `Barre.qml` |
 
 ### Lot 3 — la bascule
 
@@ -414,7 +417,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L5-29 | — | Écrit | Passe de regard complète — étage 3 |
 | L5-30 | — | Écrit | Résorber les points ouverts de l'annexe C |
 
-**Volume total : 169 éléments** — 119 écrits, 43 configurés, 5 offerts, 2 mixtes.
+**Volume total : 172 éléments** — 122 écrits, 43 configurés, 5 offerts, 2 mixtes.
 
 Les deux tiers du travail sont de l'écrit, et les trois quarts de cet écrit se concentrent sur la coque et les écrans système. C'est cohérent avec la stratégie retenue, et c'est là que tout le risque se trouve.
 
@@ -518,6 +521,7 @@ Le choix de la distribution de base et du compositeur, précédemment ouverts, s
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-12 | Version initiale, 137 éléments |
+| 1.44 | 2026-11-06 | L2-27 fait : fond d'écran en calque de la coque (D121, D122) ; ajout de L2-60 (galerie), L2-61 (verre du jour) et L2-62 (`systemBarHeight`) ; 172 éléments |
 | 1.43 | 2026-11-05 | L1-26 : Codex ajouté à l'atelier comme second agent (D119) |
 | 1.42 | 2026-11-05 | L1-09 : fenêtre du double appui ramenée à 0,4 s (D120) ; ajout de L1-27, mise à jour du BIOS |
 | 1.41 | 2026-11-04 | L2-07, L2-47 et L2-56 faits, L2-06 fait pour les popovers de la barre (D110 à D118), recette validée le 2026-11-04 ; ajout de L2-58 (mouvement des menus, listes, infobulles et chevron) et de L2-59 (suites du mouvement) ; L2-12 et L2-13 héritent du popover hébergé ; recompte du backlog : 168 éléments (119 écrits), les deux lignes de L2-58 et L2-59 s'ajoutant aux 166 lignes déjà présentes, que le décompte annonçait à 164 depuis avant cette branche |

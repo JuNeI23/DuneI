@@ -1,6 +1,6 @@
 # Application du fond d'écran : conception (L2-27)
 
-Version 0.2, 2026-11-06.
+Version 0.3, 2026-11-06.
 
 ## Intention
 
@@ -171,6 +171,20 @@ Tests automatiques, dans le style des tests existants :
   externe si disponible, netteté à l'échelle 1,25 ;
 - `pss` de la coque avant et après, relevé au carnet.
 
+## Écarts constatés à la réalisation
+
+La fiche reste valable sur le comportement ; ces précisions ont été prises en cours de réalisation (D121, D122) :
+
+- `image` est lue par `data.image` et n'entre pas dans `keys` du `Source`, qui rendrait la clé obligatoire ;
+- `Theme.bureauLu` s'ajoute aux sorties de `Theme` : sans lui, la lecture asynchrone de `bureau.json` déclencherait une
+  montée au démarrage ;
+- le `devicePixelRatio` de `sourceSize` se lit sur la fenêtre, le ratio de l'écran valant l'échelle entière (D82) ;
+- le chemin s'encode par `encodeURIComponent`, composant par composant ;
+- deux ressorts distincts portent le déplacement et l'opacité (`nature: "fondu"`) ;
+- la valeur unique du dossier est le jeton `bureau.dossier` de `tokens.toml`, et la bande le jeton `bureau.bande`.
+
+Mesures intégrées à la coque : voir D121.
+
 ## Documentation à mettre à jour
 
 Journal (le calque remplace le démon prévu par L2-27, l'écart à D90), backlog (L2-27, nouvelle ligne de la galerie, ligne
@@ -186,4 +200,5 @@ valeur du dossier, tant que le comportement ci-dessus tient.
 | Version | Date | Changement |
 |---|---|---|
 | 0.1 | 2026-11-06 | Première version, après l'essai à l'écran |
+| 0.3 | 2026-11-06 | Écarts constatés à la réalisation |
 | 0.2 | 2026-11-06 | Relecture du constructeur : moment de la bascule du texte, image illisible, `--aucun`, écran du recadrage, bande de 28 px, règle `no_anim` |
