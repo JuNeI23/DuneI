@@ -33,10 +33,34 @@ class FondTest(EssaiCoque, unittest.TestCase):
     environnement = {"QT_QPA_PLATFORM": "offscreen"}
 
     def tearDown(self):
-        journal = self.journal() if self.log.exists() else ""
+        self.arreter()
+        journal = self.journal() if self.proc else ""
         super().tearDown()
+        self.controler_journal(journal)
+
+    def controler_journal(self, journal: str) -> None:
+        """Vérifie qu'un journal de la coque d'essai ne porte ni erreur QML ni boucle de liaison.
+
+        Entrée : journal, texte complet. Sortie : aucune. Erreurs : échec du test, journal en message.
+        Dépendances : ERREURS.
+        """
         for erreur in (*ERREURS, "Binding loop", "binding loop"):
             self.assertNotIn(erreur, journal)
+
+    def lancer(self, dossier: Path) -> None:
+        """Lance la coque d'essai après avoir arrêté la précédente et contrôlé son journal, que le lancement écrase.
+
+        Rôle : une boucle de sous-tests relance la coque à chaque itération ; le contrôle de tearDown ne verrait sinon
+        que la dernière. La nouvelle coque démarre avant le contrôle, pour qu'un journal fautif ne bloque pas l'itération
+        suivante : l'échec est alors signalé dans l'itération qui suit celle qui l'a produit.
+        Entrée : dossier, valeur de DUNEI_TOKENS_DIR. Sortie : aucune ; self.proc tient la nouvelle coque.
+        Erreurs : OSError si qs ne démarre pas ; échec du test si le journal précédent est fautif.
+        Dépendances : arreter, journal, controler_journal.
+        """
+        self.arreter()
+        journal = self.journal() if self.proc else ""
+        super().lancer(dossier)
+        self.controler_journal(journal)
 
     def image(self, nom: str, couleur: str = ROUGE, taille: tuple = (64, 40)) -> str:
         """Génère une image d'une seule couleur dans le dossier temporaire du test.
@@ -199,8 +223,6 @@ class FondTest(EssaiCoque, unittest.TestCase):
                 etat = self.attendre_que(lambda e: e["fondPublie"] == self.fond_jeton())
                 self.assertEqual((etat["imageAffichee"], etat["etat"], etat["base"]), ("", "repos", ""))
                 self.assertNotIn("etat vol", self.traces())
-                self.proc.kill()
-                self.proc.wait(timeout=DELAI)
 
     def test_bureau_absent_ou_invalide(self):
         # Trois formes d'une première lecture sans image : le calque doit quand même démarrer et publier le jeton.
@@ -213,8 +235,6 @@ class FondTest(EssaiCoque, unittest.TestCase):
                 self.lancer(self.dir)
                 etat = self.attendre_que(lambda e: e["fondPublie"] == self.fond_jeton())
                 self.assertEqual((etat["imageAffichee"], etat["etat"]), ("", "repos"))
-                self.proc.kill()
-                self.proc.wait(timeout=DELAI)
 
     def test_taille_inconnue_a_la_creation(self):
         # Une taille nulle ne décode rien : la pose attend la taille, et ne décode qu'une fois, à la bonne échelle.
@@ -440,8 +460,6 @@ class FondTest(EssaiCoque, unittest.TestCase):
                 etat = self.repos_sur(a)
                 self.assertEqual((etat["fondPublie"], etat["haut"], etat["statutBase"]), (ROUGE, "", 1))
                 self.assertNotIn("etat vol", self.traces())
-                self.proc.kill()
-                self.proc.wait(timeout=DELAI)
 
     def test_montee_apres_une_erreur(self):
         # L'erreur ne bloque pas la machine : la demande suivante monte normalement.
@@ -472,6 +490,18 @@ class FondTest(EssaiCoque, unittest.TestCase):
         self.repos_sur(b)
         self.bureau(accents, ROUGE)
         self.repos_sur(accents)
+        self.assertNotIn("Fond : image illisible", self.journal())
+
+    def test_chemin_caracteres_reserves(self):
+        # « # » et « ? » sont des délimiteurs d'URL : non encodés, ils tronqueraient le chemin, et l'image semblerait
+        # absente.
+        reserve, b = self.image("a#b?.png"), self.image("b.png", BLEU)
+        self.demarrer(reserve, ROUGE)
+        self.repos_sur(reserve)
+        self.bureau(b, BLEU)
+        self.repos_sur(b)
+        self.bureau(reserve, ROUGE)
+        self.repos_sur(reserve)
         self.assertNotIn("Fond : image illisible", self.journal())
 
     def test_reste_apres_suppression(self):

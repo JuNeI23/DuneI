@@ -79,10 +79,11 @@ Item {
         return { image: Theme.imageBureau, fond: Theme.fondFichier }
     }
 
-    // url — URL d'un fichier local, chemin encodé (accents et espaces compris).
+    // url — URL d'un fichier local, chaque segment du chemin encodé : accents et espaces, mais aussi « # » et « ? »,
+    // qu'une URL prendrait sinon pour ses délimiteurs, ce qui tronquerait le chemin.
     // Entrée : chemin absolu. Sortie : texte file://… . Erreurs : aucune. Dépendances : aucune.
     function url(chemin) {
-        return "file://" + encodeURI(chemin)
+        return "file://" + chemin.split("/").map(encodeURIComponent).join("/")
     }
 
     // publier — publie le fond réellement affiché dans Theme.
