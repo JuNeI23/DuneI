@@ -83,7 +83,7 @@ def emit(model: dict) -> str:
 
     Entrée : model — sortie de model.resolve.
     Sortie : contenu de hyprland-tokens.lua (une table Lua retournée).
-    Erreurs : KeyError si le TOML brut ou [bureau].namespace manque ; ValueError transmise par _validate.
+    Erreurs : KeyError si le TOML brut manque ; ValueError transmise par _validate.
     Dépendances : _validate, _rgba, color.Oklch.
     """
     raw = model["raw"]
@@ -138,7 +138,7 @@ def emit_rules(model: dict) -> str:
              une tuile (D31, suite du 2026-10-15). Le plein écran vient en
              dernier, pour qu'une règle de plein écran l'emporte sur toute règle plus générale qui
              poserait une valeur contraire (aujourd'hui, les deux retirent l'ombre).
-    Erreurs : KeyError si le TOML brut ou [bureau].namespace manque ; ValueError transmise par _validate.
+    Erreurs : KeyError si le TOML brut manque ; ValueError transmise par _validate.
     Dépendances : _validate.
     """
     raw = model["raw"]
@@ -188,7 +188,7 @@ def emit_binds(model: dict) -> str:
 
     Entrée : model — sortie de model.resolve.
     Sortie : contenu de hyprland-binds.lua (une table Lua retournée, lue par modules/clavier.lua).
-    Erreurs : KeyError si le TOML brut ou [bureau].namespace manque ; ValueError transmise par _validate ou model.bureaux (nombre de bureaux invalide).
+    Erreurs : KeyError si le TOML brut manque ; ValueError transmise par _validate ou model.bureaux (nombre de bureaux invalide).
     Dépendances : _validate, model.bureaux.
     """
     raw = model["raw"]

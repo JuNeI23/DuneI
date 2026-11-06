@@ -8,7 +8,8 @@ import "Reseau"
 
 // Coque de session de DuneI — racine chargée par « qs -c dunei » (unité dunei-coque.service).
 // Rôle : pose sur chaque écran le fond d'écran, une barre système et la presqu'île, dans le même Variants (le fond
-// d'abord, pour qu'il soit le plus bas), et, une seule fois hors de Variants, la fenêtre Réseau, construite seulement à sa demande, et les notifications de connexion.
+// d'abord, pour qu'il soit le plus bas), et, une seule fois hors de Variants, la fenêtre Réseau, construite seulement
+// à sa demande, et les notifications de connexion.
 // Entrées : aucune ; l'écran de chaque barre vient de Quickshell.screens. Sortie : trois fenêtres de calque par écran ;
 // la fenêtre Réseau quand elle est ouverte (IPC « reseau ouvrir » ou « Réglages réseau… »).
 // Erreurs : tokens absents ou invalides → fond, barre et presqu'île transparents, erreur de Theme dans le journal de Quickshell.

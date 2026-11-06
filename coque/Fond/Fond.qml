@@ -9,7 +9,8 @@ import "../Theme"
 // Entrées : modelData, l'écran que lui donne le Variants de la coque (obligatoire) ; Theme.bureau.
 // Sorties : une fenêtre de calque au namespace « dunei-fond » (le jeton [bureau].namespace, accordé par un test).
 // Erreurs : sans jeton de thème, la fenêtre est transparente ; l'image absente ou illisible se signale dans Affichage.
-// Dépendances : quickshell ≥ 0.3 (PanelWindow, Region, WlrLayershell, ShellScreen.devicePixelRatio), Affichage, Theme.
+// Dépendances : quickshell ≥ 0.3 (PanelWindow, Region, WlrLayershell, QsWindow.devicePixelRatio, le rapport réel de la
+// fenêtre, non l'échelle entière de la sortie), Affichage, Theme.
 PanelWindow {
     id: surface
 
@@ -26,6 +27,6 @@ PanelWindow {
 
     Affichage {
         anchors.fill: parent
-        echelle: modelData.devicePixelRatio
+        echelle: surface.devicePixelRatio
     }
 }

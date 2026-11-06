@@ -6,8 +6,8 @@ la trajectoire que la vitrine journalise. Ignoré sans session Wayland ou sans Q
 """
 
 import json
-import re
 import os
+import re
 import subprocess
 import time
 import tomllib
@@ -647,7 +647,7 @@ class FondStructureTest(unittest.TestCase):
         for ligne in ('WlrLayershell.namespace: "dunei-fond"', "WlrLayershell.layer: WlrLayer.Background",
                       "WlrLayershell.keyboardFocus: WlrKeyboardFocus.None", "exclusionMode: ExclusionMode.Ignore",
                       "mask: Region {}", 'color: Theme.bureau?.fond ?? "transparent"',
-                      "echelle: modelData.devicePixelRatio"):
+                      "echelle: surface.devicePixelRatio"):
             with self.subTest(ligne=ligne):
                 self.assertIn(ligne, self.calque)
 
