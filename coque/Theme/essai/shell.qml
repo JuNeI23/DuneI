@@ -20,6 +20,8 @@ import "Theme"
 // valeur <v> pic <p> mobile <bool> » (pic : plus grande valeur vue depuis le dernier recible) ; « essai saut
 // <n> » le recible et journalise valeur, vitesse et mouvement avant et après, dans le même tour de boucle ;
 // « essai neuf <n> » crée un Ressort de cible n et journalise son état aussitôt puis 150 ms après.
+// « essai image » journalise « essai : image '<chemin>' » ; « essai publier <couleur> » pose Theme.fondPublie
+// (chaîne vide : retrait).
 // Erreurs : celles de Theme, dans le journal. Dépendances : quickshell ≥ 0.3 (Quickshell.Io : IpcHandler), module coque/Theme.
 // Import : Quickshell ne résout pas un module situé au-dessus de la racine de la coque lancée (import "../"
 // laisse Theme indéfini) ; le lien essai/Theme -> .. le place sous cette racine.
@@ -120,6 +122,19 @@ ShellRoot {
             r.movingChanged.connect(() => { if (!r.moving) console.info("essai : fin " + nom + " " + (Date.now() - t0)) })
             r.cible = cible
             trace()
+        }
+
+        // image — journalise l'image du bureau lue par Theme.
+        // Entrées : aucune. Sortie : « essai : image '<chemin>' ». Erreurs : aucune. Dépendances : Theme.
+        function image(): void {
+            console.info("essai : image '" + Theme.imageBureau + "'")
+        }
+
+        // publier — pose le fond publié par le calque, comme le module Fond.
+        // Entrées : couleur au format #rrggbb, ou chaîne vide pour retirer la publication.
+        // Sortie : aucune ; texteBureau se journalise s'il change. Erreurs : aucune. Dépendances : Theme.
+        function publier(couleur: string): void {
+            Theme.fondPublie = couleur === "" ? null : couleur
         }
 
         // reduit — journalise la préférence de mouvement réduit lue par Theme.

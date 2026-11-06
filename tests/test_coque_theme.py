@@ -601,6 +601,47 @@ class CoqueThemeTest(EssaiCoque, unittest.TestCase):
         self.ecrire_bureau(json.dumps({"origine": "fond", "fond": "#f0f0f0"}))
         self.attendre(f"essai : texte bureau {b['texteFonce']} survol {b['texteFonceSurvol']}")
 
+    def test_image_lue(self):
+        self.installer(55)
+        self.ecrire_bureau(json.dumps({"origine": "fond", "fond": "#101010", "image": "/tmp/x.jpg"}))
+        self.lancer(self.dir)
+        self.attendre("essai : prêt true")
+        self.ipc("image")
+        self.attendre("essai : image '/tmp/x.jpg'")
+
+    def test_image_absente_ou_invalide(self):
+        b = self.jetons_bureau()
+        self.installer(55)
+        for contenu in ({"origine": "fond", "fond": "#f0f0f0"}, {"origine": "fond", "fond": "#f0f0f0", "image": 3}):
+            with self.subTest(contenu=contenu):
+                self.ecrire_bureau(json.dumps(contenu))
+                self.lancer(self.dir)
+                self.attendre(f"essai : texte bureau {b['texteFonce']}")
+                self.ipc("image")
+                self.attendre("essai : image ''")
+                self.proc.kill()
+                self.proc.wait(timeout=DELAI)
+
+    def test_fond_publie_prioritaire(self):
+        b = self.jetons_bureau()
+        self.installer(55)
+        self.ecrire_bureau(json.dumps({"origine": "theme", "fond": "#0f0703"}))
+        self.lancer(self.dir)
+        self.attendre(f"essai : texte bureau {b['texteClair']}")
+        self.ipc("publier", "#f0f0f0")
+        self.attendre(f"essai : texte bureau {b['texteFonce']}")
+        self.ipc("publier", "")
+        self.attendre(f"essai : texte bureau {b['texteClair']}", 2)
+
+    def test_sans_module_fond(self):
+        b = self.jetons_bureau()
+        self.installer(55)
+        self.ecrire_bureau(json.dumps({"origine": "theme", "fond": "#0f0703"}))
+        self.lancer(self.dir)
+        self.attendre(f"essai : texte bureau {b['texteClair']}")
+        self.ecrire_bureau(json.dumps({"origine": "fond", "fond": "#f0f0f0"}))
+        self.attendre(f"essai : texte bureau {b['texteFonce']} survol {b['texteFonceSurvol']}")
+
     def test_texte_bureau_sans_fichier(self):
         b = self.jetons_bureau()
         self.installer(55)
