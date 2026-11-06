@@ -993,6 +993,11 @@ class CoqueTest(unittest.TestCase):
         self.poser_bureau('{"origine": "fond", "fond": "#123456"}')
         self.assertEqual(self.actions(), self.lien)
 
+    def test_bureau_image_preservee(self):
+        """Un bureau.json d'origine « fond » portant une image est préservé, sans aucune action."""
+        self.poser_bureau('{"origine": "fond", "fond": "#123456", "image": "/home/x/Images/a.png"}')
+        self.assertEqual(self.actions(), self.lien)
+
     def test_bureau_illisible_refuse(self):
         """Un JSON invalide, non-objet ou d'origine inconnue est refusé, sans écriture."""
         for texte in ("pas du json", "[1]", '{"origine": "autre"}', "{}"):
@@ -1133,3 +1138,38 @@ class IconesTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class FondsTest(unittest.TestCase):
+    """Le dossier des fonds d'écran est créé s'il manque, sans jamais recevoir d'image (L2-27)."""
+
+    def setUp(self):
+        """Prépare un dépôt et un dossier personnel jetables, HOME pointant sur ce dernier. Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : tempfile, mock."""
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.repo, self.home = Path(self.tmp.name) / "repo", Path(self.tmp.name) / "home"
+        self.repo.mkdir()
+        self.home.mkdir()
+        (self.repo / "tokens.toml").write_text('[bureau]\ndossier = "Documents/Images/Wallpapers"\n', encoding="utf-8")
+        self.dossier = self.home / "Documents" / "Images" / "Wallpapers"
+        patch = mock.patch.dict(os.environ, {"HOME": str(self.home)})
+        patch.start()
+        self.addCleanup(patch.stop)
+
+    def test_fonds_cree(self):
+        """Un dossier absent donne la seule création, parents compris."""
+        self.assertEqual(deploy.plan_fonds(self.repo, self.home / ".config"), ([("mkdir", self.dossier)], []))
+
+    def test_fonds_existant(self):
+        """Un dossier présent, avec une image, ne donne aucune action."""
+        self.dossier.mkdir(parents=True)
+        (self.dossier / "a.png").write_bytes(b"png")
+        self.assertEqual(deploy.plan_fonds(self.repo, self.home / ".config"), ([], []))
+
+    def test_fonds_pas_un_dossier(self):
+        """Un fichier à la place du dossier est une erreur, sans action."""
+        self.dossier.parent.mkdir(parents=True)
+        self.dossier.write_text("", encoding="utf-8")
+        actions, err = deploy.plan_fonds(self.repo, self.home / ".config")
+        self.assertEqual((actions, len(err)), ([], 1))
+        self.assertIn(str(self.dossier), err[0])
