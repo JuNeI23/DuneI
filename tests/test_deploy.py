@@ -1136,10 +1136,6 @@ class IconesTest(unittest.TestCase):
         self.assertIn("DuneI", deploy.describe(actions[-1]))
 
 
-if __name__ == "__main__":
-    unittest.main()
-
-
 class FondsTest(unittest.TestCase):
     """Le dossier des fonds d'écran est créé s'il manque, sans jamais recevoir d'image (L2-27)."""
 
@@ -1173,3 +1169,8 @@ class FondsTest(unittest.TestCase):
         actions, err = deploy.plan_fonds(self.repo, self.home / ".config")
         self.assertEqual((actions, len(err)), ([], 1))
         self.assertIn(str(self.dossier), err[0])
+
+
+if __name__ == "__main__":
+    unittest.main()
+
