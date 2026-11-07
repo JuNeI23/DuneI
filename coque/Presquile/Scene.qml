@@ -6,7 +6,7 @@ import "../Theme"
 // par deux Ressorts « window » de nature « deplacement » dont la cible suit la taille du module. Au premier montage,
 // la taille se pose d'un coup. Ensuite, changer de module déroule une séquence en trois temps : l'ancien contenu
 // s'efface par un Ressort d'opacité « reveal » de nature « fondu » (phase « sortie ») ; dès que son opacité passe sous
-// seuilSortie (jeton presquile.sortie), il est confié au conteneur de départ, découpé à la forme, où il finit son fondu
+// seuilSortie (jeton presquile.sortie), il est confié au conteneur de départ, découpé au rectangle du corps, où il finit son fondu
 // puis est détruit, pendant que le nouveau module est monté, invisible, et que la forme s'étire vers sa
 // taille (phase « forme ») : sortie et étirement se chevauchent. Quand le reste à parcourir des deux ressorts de taille
 // passe sous la part seuilEntree (jeton presquile.entree) de leur écart de référence, le nouveau contenu apparaît
@@ -107,8 +107,8 @@ Item {
     }
     Ressort { id: effacement; transition: "reveal"; nature: "fondu"; cible: 0; onMovingChanged: Qt.callLater(scene.avancer) }
 
-    // Conteneur de l'ancien contenu pendant le chevauchement : découpé à la forme, pour qu'un contenu plus large que
-    // l'encoche qui se rétracte n'en déborde pas.
+    // Conteneur de l'ancien contenu pendant le chevauchement : découpé au rectangle du corps (et non à la silhouette évasée), pour
+    // qu'un contenu plus large que l'encoche qui se rétracte n'en déborde pas.
     Item {
         id: depart
         anchors.fill: parent

@@ -35,7 +35,8 @@ import "galerie.js" as Logique
 //           un processus « commande <chemin> » à chaque validation d'une autre image que le fond actuel, lancé dès le
 //           signal choisi.
 // Erreurs : sans presqu'île sur l'écran actif, basculer() n'ouvre rien ; un code de sortie non nul de la commande
-//           écrit « galerie : dunei-fond a échoué (<code>) » au journal, le fond reste inchangé.
+//           écrit « galerie : <programme> a échoué (<code>) » au journal (le nom de base du premier élément de la
+//           commande, dunei-fond par défaut), le fond reste inchangé.
 // Dépendances : quickshell ≥ 0.3 (IpcHandler, Process, Hyprland, HyprlandFocusGrab), Theme (imageBureau), Overlays,
 //               Galerie, galerie.js (identique).
 Scope {
@@ -167,7 +168,7 @@ Scope {
         Process {
             running: true
             onExited: code => {
-                if (code !== 0) console.warn("galerie : dunei-fond a échoué (" + code + ")")
+                if (code !== 0) console.warn("galerie : " + ouvreuse.commande[0].split("/").pop() + " a échoué (" + code + ")")
                 destroy()
             }
         }

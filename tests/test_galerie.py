@@ -561,7 +561,7 @@ class OuvreuseTest(GalerieDossier, unittest.TestCase):
         self.script = self.ecrire_script(2)
         self.regler()
         self.valider(2)
-        self.attendre("galerie : dunei-fond a échoué (2)")
+        self.attendre("galerie : fond-2.sh a échoué (2)")
         self.assertEqual(self.appels(), [["1", self.chemins[2]]])
 
     def test_ecran_retire(self):

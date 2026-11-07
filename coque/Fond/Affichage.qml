@@ -131,7 +131,7 @@ Item {
     // decoder — confie une demande à la couche qui décode déjà, sinon à une couche libre, placée au-dessus des autres ;
     // sans couche libre, la demande attend (`_demande`).
     // Entrée : d, demande {image, fond}. Sortie : aucune ; statutCouche suit. Erreurs : voir statutCouche.
-    // Dépendances : couche, _couches, url.
+    // Dépendances : couche, _couches, Fichiers.url (Theme/fichiers.js).
     function decoder(d) {
         const c = couche("decode") ?? _couches.find(k => !k.role)
         if (!c) return void (_demande = d)
@@ -185,7 +185,7 @@ Item {
     // atterrir — fin du vol d'une couche : vide celles qu'elle recouvre, publie son image et son fond, et lance
     // l'échange vers `base`. Une place de vol se libère : une image prête décolle.
     // Entrée : c, la couche qui atterrit. Sortie : aucune ; finirBase suit. Erreurs : aucune.
-    // Dépendances : liberer, publier, url, finirBase, decoller, majEtat.
+    // Dépendances : liberer, publier, Fichiers.url (Theme/fichiers.js), finirBase, decoller, majEtat.
     function atterrir(c) {
         c.enVol = false
         for (const k of _couches)
@@ -235,7 +235,7 @@ Item {
 
     // poser — pose une demande dans `base` d'un coup : la pose du démarrage et le retrait de l'image.
     // Entrée : d, demande {image, fond}. Sortie : aucune ; finirPose suit, tout de suite sans image, sinon à la fin du
-    // chargement. Erreurs : voir finirBase. Dépendances : url, finirPose.
+    // chargement. Erreurs : voir finirBase. Dépendances : Fichiers.url (Theme/fichiers.js), finirPose.
     function poser(d) {
         _cours = d
         _phase = d.image ? "pose" : ""
