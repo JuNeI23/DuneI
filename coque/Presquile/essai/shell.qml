@@ -15,10 +15,10 @@ import "Presquile/bureaux.js" as Bureaux
 // une capture agrandie ; QT_QUICK_BACKEND=rhi et QSG_RHI_BACKEND=opengl pour une capture fidèle (la plateforme
 // offscreen choisit sinon le rendu logiciel, qui ne peint ni shader ni remplissage par texture). Commandes IPC :
 // indexPilule, pasMolette, cibleMolette, lireSpecial, commandesClic, commandeBureau, bureauxEtat, encoche, etirerEncoche,
-// capturer, changer, changementEtat (les listes et objets sont rendus en JSON, le reste en texte). Une Scene sans
+// capturer, changer, charger, changementEtat (les listes et objets sont rendus en JSON, le reste en texte). Une Scene sans
 // fenêtre, montée sur les bureaux d'essai, journalise chaque image de ses changements de module (« essai : … »).
 // Sortie : le résultat de chaque appel IPC, sur la sortie de « qs ipc call » ; au journal, les lignes « essai : phase
-// …», « essai : contenu … », « essai : l … », « essai : h … » et « essai : o … » de la scène. Erreurs : celles de Theme, dans
+// …», « essai : contenu … », « essai : lp … » (largeur au changement de phase), « essai : l … », « essai : cl … » (cible de largeur), « essai : h … » et « essai : o … » de la scène. Erreurs : celles de Theme, dans
 // le journal ; capturer sans vitrine (hors offscreen) journalise « presquile : aucune vitrine ».
 // Dépendances : quickshell ≥ 0.3 (Quickshell.Io, FloatingWindow, LazyLoader), modules Theme, Composants et
 // Presquile.
@@ -37,17 +37,28 @@ ShellRoot {
     // Modules de la scène d'essai : les bureaux, sans Hyprland, et un module factice « grand » de taille connue.
     Component { id: moduleBureaux; Bureaux { objectName: "bureaux"; idActif: 0; special: "" } }
     Component { id: moduleGrand; Item { objectName: "grand"; property var ecran; implicitWidth: 400; implicitHeight: 80 } }
+    // Module « tardif » : 1000 × 80 au montage, 400 × 80 quand l'essai appelle charger, comme un contenu dont la taille
+    // n'est connue qu'après coup.
+    Component {
+        id: moduleTardif
+        Item { objectName: "tardif"; property var ecran; property bool charge: false; implicitWidth: charge ? 400 : 1000; implicitHeight: 80 }
+    }
 
     // Scène sans fenêtre, comme celle de la surface : sa trajectoire est lue par tests/test_presquile.py.
     Scene { id: essaiScene; module: moduleBureaux }
     Connections {
         target: essaiScene
-        function onPhaseChanged() { console.info("essai : phase " + essaiScene.phase) }
+        // La largeur au moment du passage : la scène change de phase avant que la trace de l'image ne soit écrite.
+        function onPhaseChanged() {
+            console.info("essai : phase " + essaiScene.phase)
+            console.info("essai : lp " + essaiScene.ressortLargeur.value)
+        }
         function onContenuChanged() { console.info("essai : contenu " + (essaiScene.contenu?.objectName ?? "")) }
     }
     Connections {
         target: essaiScene.ressortLargeur
         function onValueChanged() { console.info("essai : l " + essaiScene.ressortLargeur.value) }
+        function onCibleChanged() { console.info("essai : cl " + essaiScene.ressortLargeur.cible) }
     }
     Connections {
         target: essaiScene.ressortHauteur
@@ -147,9 +158,15 @@ ShellRoot {
         }
 
         // changer — change le module de la scène d'essai, ce qui déroule la séquence de changement.
-        // Entrée : nom, « grand » pour le module factice, tout autre nom pour les bureaux. Sortie : aucune.
+        // Entrée : nom, « grand » ou « tardif » pour les modules factices, tout autre nom pour les bureaux. Sortie : aucune.
         // Erreurs : aucune. Dépendances : essaiScene, moduleGrand, moduleBureaux.
-        function changer(nom: string): void { essaiScene.module = nom === "grand" ? moduleGrand : moduleBureaux }
+        function changer(nom: string): void {
+            essaiScene.module = nom === "grand" ? moduleGrand : nom === "tardif" ? moduleTardif : moduleBureaux
+        }
+
+        // charger — donne au module « tardif » monté sa taille définitive. Entrées : aucune. Sortie : aucune.
+        // Erreurs : sans effet sur un autre module. Dépendances : essaiScene.
+        function charger(): void { if (essaiScene.contenu?.objectName === "tardif") essaiScene.contenu.charge = true }
 
         // changementEtat — photographie de la scène d'essai.
         // Entrées : aucune. Sortie : JSON {phase, opacite, largeur, hauteur, contenu (objectName du module monté),

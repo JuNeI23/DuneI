@@ -7,8 +7,9 @@ import "../Theme"
 // la taille se pose d'un coup. Ensuite, changer de module déroule une séquence en trois temps : l'ancien contenu
 // s'efface par un Ressort d'opacité « reveal » de nature « fondu » (phase « sortie ») ; à opacité nulle, le nouveau
 // module est monté, invisible, et la forme s'étire vers sa taille (phase « forme ») ; quand le reste à parcourir des
-// deux ressorts de taille passe sous la part seuilEntree de leur écart initial, le nouveau contenu apparaît (phase
-// « entree ») ; la scène revient au « repos » quand plus rien ne bouge. Un changement pendant la forme ou l'entrée
+// deux ressorts de taille passe sous la part seuilEntree (jeton presquile.entree) de leur écart de référence, le
+// nouveau contenu apparaît (phase « entree ») ; cet écart est pris au montage, puis repris depuis la position courante
+// si la taille du module change pendant la forme (contenu chargé après coup) ; la scène revient au « repos » quand plus rien ne bouge. Un changement pendant la forme ou l'entrée
 // reprend en sortie depuis l'opacité et la taille courantes, sans saut ; un changement pendant la sortie la laisse
 // finir et monte le dernier module demandé. Mouvement réduit : la taille se pose aussitôt, seuls les fondus restent.
 // Entrées : ecran, l'écran transmis au module ; module, le composant de contenu, un Item déclarant implicitWidth et
@@ -18,7 +19,7 @@ import "../Theme"
 //           lus par la surface et les essais ; width et height suivent les ressorts de taille.
 // Erreurs : un composant sans Item valide laisse contenu nul, se lit au journal de Quickshell, et la séquence se
 //           termine sur une forme de largeur nulle ; un module sans hauteur laisse la hauteur des jetons.
-// Dépendances : Ressort, Theme (tokens.presquile.hauteur, motion.json par Ressort).
+// Dépendances : Ressort, Theme (tokens.presquile.hauteur et entree, motion.json par Ressort).
 Item {
     id: scene
 
@@ -29,9 +30,9 @@ Item {
     readonly property alias ressortLargeur: largeur
     readonly property alias ressortHauteur: hauteur
     readonly property alias ressortOpacite: opacite
-    // Part de l'écart de taille initial sous laquelle le nouveau contenu commence d'apparaître ; choisie par le plan,
-    // réglable à la recette.
-    readonly property real seuilEntree: 0.1
+    // Part de l'écart de taille sous laquelle le nouveau contenu commence d'apparaître (jeton presquile.entree,
+    // réglable à la recette) ; sans jeton, 0 : l'entrée attend que la forme soit posée.
+    readonly property real seuilEntree: Theme.tokens?.presquile?.entree ?? 0
 
     property string _phase: "repos"
     property bool _pret: false
@@ -47,6 +48,8 @@ Item {
         transition: "window"
         nature: "deplacement"
         cible: scene.contenu?.implicitWidth ?? 0
+        // Une taille du module connue après coup, pendant la forme, redéfinit l'écart depuis la position courante.
+        onCibleChanged: if (scene._phase === "forme") scene._ecartLargeur = Math.abs(cible - value)
         onValueChanged: scene.avancer()
         onMovingChanged: Qt.callLater(scene.avancer)
     }
@@ -55,6 +58,7 @@ Item {
         transition: "window"
         nature: "deplacement"
         cible: scene.contenu?.implicitHeight || (Theme.tokens?.presquile?.hauteur ?? 0)
+        onCibleChanged: if (scene._phase === "forme") scene._ecartHauteur = Math.abs(cible - value)
         onValueChanged: scene.avancer()
         onMovingChanged: Qt.callLater(scene.avancer)
     }
@@ -94,8 +98,9 @@ Item {
         avancer()
     }
 
-    // proche — dit si un ressort de taille a parcouru tout son écart initial sauf la part seuilEntree.
-    // Entrées : r, le ressort ; ecart, l'écart à sa cible au début de la forme. Sortie : booléen. Erreurs : aucune.
+    // proche — dit si un ressort de taille a parcouru tout son écart de référence sauf la part seuilEntree.
+    // Entrées : r, le ressort ; ecart, l'écart à sa cible au montage, ou au dernier changement de cible pendant la
+    // forme. Sortie : booléen. Erreurs : aucune.
     // Dépendances : seuilEntree.
     function proche(r, ecart) { return Math.abs(r.cible - r.value) <= seuilEntree * ecart }
 

@@ -350,6 +350,26 @@ class ChangementTest(PresquileIpc, unittest.TestCase):
         self.assertEqual(phases[-1], "repos")
 
 
+    def test_taille_tardive(self):
+        # La taille du module change pendant la forme, comme une galerie qui charge son dossier : l'écart de référence
+        # repart de la position courante vers la nouvelle cible, et l'entrée ne commence qu'à moins du seuil de cet
+        # écart-là. Le module passe de 1000 à 400 de large : l'ancien écart (905) aurait ouvert l'entrée aussitôt.
+        self.repos()
+        depart = len(self.traces())
+        self.appeler("changer", "tardif")
+        self.attendre_que(lambda e: e["phase"] == "forme" and e["largeur"] > 250)
+        self.appeler("charger")
+        etat = self.repos()
+        self.assertEqual((etat["largeur"], etat["contenu"]), (400, "tardif"))
+        traces = self.traces(depart)
+        changement, entree = traces.index("cl 400"), traces.index("phase entree")
+        self.assertLess(changement, entree, "l'entrée a commencé avant le changement de taille")
+        position = self.valeurs(traces[:changement], "l")[-1]
+        a_l_entree = float(traces[entree + 1].split()[1])
+        seuil = json.loads(self.tokens(55).read_text(encoding="utf-8"))["presquile"]["entree"]
+        self.assertLessEqual(abs(400 - a_l_entree), seuil * abs(400 - position) + 1e-6, (position, a_l_entree))
+
+
 class ChangementReduitTest(ChangementTest):
     """Mouvement réduit : la taille se pose d'un coup, seuls les fondus de contenu subsistent."""
 
@@ -359,6 +379,7 @@ class ChangementReduitTest(ChangementTest):
     # La séquence et l'interruption au ressort n'ont pas cours ici : la forme ne s'étire pas.
     test_sequence = None
     test_changement_interrompu = None
+    test_taille_tardive = None
 
     def test_reduit(self):
         self.repos()

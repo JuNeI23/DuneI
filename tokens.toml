@@ -424,6 +424,7 @@ point = 7                    # diamètre d'un point de bureau
 pilule = 22                  # largeur de la pilule du bureau actif
 ecart = 8                    # espace entre deux marques de bureau
 marge = 14                   # marge intérieure, de part et d'autre du contenu
+entree = 0.10                # part du reste à parcourir des ressorts de taille sous laquelle le fondu d'entrée commence (L2-48)
 
 [galerie]                    # galerie de fonds d'écran, dans la presqu'île (L2-60) ; px logiques sauf mention
 largeur = 160                # largeur d'une vignette
