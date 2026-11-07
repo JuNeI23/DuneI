@@ -13,6 +13,9 @@ Type=exec
 ExecStart=/usr/bin/qs -n -c dunei
 Restart=on-failure
 Slice=app-graphical.slice
+# Pages géantes transparentes seulement sur demande explicite (madvise) : en mode « always », khugepaged regonfle en
+# pages de 2 Mo les zones que jemalloc a rendues, et la coque garde ce qu'elle a libéré (L2-60, mémoire de la galerie).
+MemoryTHP=madvise
 
 [Install]
 WantedBy=graphical-session.target

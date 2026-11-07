@@ -262,7 +262,7 @@ class CoqueThemeTest(EssaiCoque, unittest.TestCase):
         self.lancer(self.dir)
         self.attendre("essai : prêt true")
         self.ipc("cible", "22")
-        # Marge large devant les 186 ms de navigate : la machine peut être chargée.
+        # Marge large devant les 353 ms de navigate : la machine peut être chargée.
         fin = time.monotonic() + 3
         etat = self.lire_course()
         while etat["mobile"] and time.monotonic() < fin:

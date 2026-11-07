@@ -1,5 +1,6 @@
 import QtQuick
 import "../Theme"
+import "../Theme/fichiers.js" as Fichiers
 
 // Affichage — l'image du bureau et la montée des suivantes par-dessus, sans fenêtre : son parent le remplit (L2-27).
 // Rôle : `base` porte l'image en place et ne bouge jamais. Trois couches volantes, chacune avec ses deux ressorts
@@ -78,13 +79,6 @@ Item {
         return { image: Theme.imageBureau, fond: Theme.fondFichier }
     }
 
-    // url — URL d'un fichier local, chaque segment du chemin encodé : accents et espaces, mais aussi « # » et « ? »,
-    // qu'une URL prendrait sinon pour ses délimiteurs, ce qui tronquerait le chemin.
-    // Entrée : chemin absolu. Sortie : texte file://… . Erreurs : aucune. Dépendances : aucune.
-    function url(chemin) {
-        return "file://" + chemin.split("/").map(encodeURIComponent).join("/")
-    }
-
     // publier — publie le fond réellement affiché dans Theme.
     // Entrées : aucune. Sortie : aucune. Erreurs : aucune ; null tant que les tokens ne sont pas lus, et
     // onBureauChanged republie à leur arrivée. Dépendances : _fondAffiche, Theme.
@@ -137,7 +131,7 @@ Item {
     // decoder — confie une demande à la couche qui décode déjà, sinon à une couche libre, placée au-dessus des autres ;
     // sans couche libre, la demande attend (`_demande`).
     // Entrée : d, demande {image, fond}. Sortie : aucune ; statutCouche suit. Erreurs : voir statutCouche.
-    // Dépendances : couche, _couches, url.
+    // Dépendances : couche, _couches, Fichiers.url (Theme/fichiers.js).
     function decoder(d) {
         const c = couche("decode") ?? _couches.find(k => !k.role)
         if (!c) return void (_demande = d)
@@ -148,7 +142,7 @@ Item {
             c.role = "decode"
             c.z = ++_z
         }
-        c.source = url(d.image)
+        c.source = Fichiers.url(d.image)
     }
 
     // statutCouche — suit le décodage d'une couche : prête, elle décolle dès que possible ; illisible, elle se vide.
@@ -191,7 +185,7 @@ Item {
     // atterrir — fin du vol d'une couche : vide celles qu'elle recouvre, publie son image et son fond, et lance
     // l'échange vers `base`. Une place de vol se libère : une image prête décolle.
     // Entrée : c, la couche qui atterrit. Sortie : aucune ; finirBase suit. Erreurs : aucune.
-    // Dépendances : liberer, publier, url, finirBase, decoller, majEtat.
+    // Dépendances : liberer, publier, Fichiers.url (Theme/fichiers.js), finirBase, decoller, majEtat.
     function atterrir(c) {
         c.enVol = false
         for (const k of _couches)
@@ -207,7 +201,7 @@ Item {
         if (_imageBase === image && base.status === Image.Ready) finirBase(true)
         else {
             _imageBase = image
-            base.source = url(image)
+            base.source = Fichiers.url(image)
         }
         decoller()
         majEtat()
@@ -241,12 +235,12 @@ Item {
 
     // poser — pose une demande dans `base` d'un coup : la pose du démarrage et le retrait de l'image.
     // Entrée : d, demande {image, fond}. Sortie : aucune ; finirPose suit, tout de suite sans image, sinon à la fin du
-    // chargement. Erreurs : voir finirBase. Dépendances : url, finirPose.
+    // chargement. Erreurs : voir finirBase. Dépendances : Fichiers.url (Theme/fichiers.js), finirPose.
     function poser(d) {
         _cours = d
         _phase = d.image ? "pose" : ""
         _imageBase = d.image
-        base.source = d.image ? url(d.image) : ""
+        base.source = d.image ? Fichiers.url(d.image) : ""
         if (!d.image) finirPose(false)
     }
 

@@ -31,9 +31,25 @@ class PresquileStructureTest(unittest.TestCase):
             with self.subTest(ligne=ligne):
                 self.assertIn(ligne, self.surface)
 
-    def test_ancrage_haut_seul(self):
+    def test_ancrage_pleine_largeur(self):
+        # Ancrée en haut, à gauche et à droite : la largeur de la fenêtre ne change jamais (recette de L2-60), seule
+        # sa hauteur suit celle que tient la scène, et l'encoche se centre dans la fenêtre.
         ancrage = re.search(r"anchors\s*\{([^}]*)\}", self.surface).group(1)
-        self.assertEqual(re.findall(r"(\w+):\s*true", ancrage), ["top"])
+        self.assertEqual(re.findall(r"(\w+):\s*true", ancrage), ["top", "left", "right"])
+        code = re.sub(r"//.*", "", self.surface)
+        self.assertNotIn("implicitWidth:", code)
+        self.assertRegex(code, r"implicitHeight:\s*scene\.hauteurSurface\s*\+\s*encoche\.marge")
+        self.assertIn("x: (surface.width - implicitWidth) / 2", code)
+
+    def test_reserve_de_la_coque(self):
+        # Recette 4 de L2-60 : la coque passe à chaque presqu'île la hauteur du module de la galerie, que la surface
+        # réserve toujours, et la surface demande une image à chaque changement de hauteur, pour que Quickshell envoie
+        # la nouvelle taille aussitôt et non au prochain mouvement.
+        code = re.sub(r"//.*", "", self.surface)
+        self.assertIn("reserve: surface.reserve", code)
+        self.assertRegex(code, r"onImplicitHeightChanged:.*Window\.window\?\.update\(\)")
+        coque = re.sub(r"//.*", "", (ROOT / "coque/shell.qml").read_text(encoding="utf-8"))
+        self.assertRegex(coque, r"Presquile\s*\{[^}]*reserve:\s*ouvreuse\.hauteurModule")
 
     def test_masque_sur_le_corps(self):
         masque = re.search(r"mask:\s*Region\s*\{([^}]*)\}", self.surface)
@@ -42,17 +58,33 @@ class PresquileStructureTest(unittest.TestCase):
 
     def test_module_et_ressort(self):
         self.assertRegex(self.surface, r"property Component module:\s*Component\s*\{\s*Bureaux\b")
-        self.assertIn('transition: "window"', self.surface)
+        self.assertRegex(self.surface, r"Scene\s*\{[^}]*module:\s*surface\.module")
+        scene = (ROOT / "coque" / "Presquile" / "Scene.qml").read_text(encoding="utf-8")
+        self.assertEqual(scene.count('transition: "window"'), 2)
 
-    def test_ressorts_de_deplacement_declares(self):
-        # La presqu'île et ses bureaux ne portent aucune opacité : leurs ressorts déplacent, et le déclarent, pour que
-        # le mouvement réduit les pose aussitôt (la surface ne se charge pas sous offscreen : lecture du source).
-        for nom in ("Presquile.qml", "Bureaux.qml"):
+    def test_natures_des_ressorts(self):
+        # Les ressorts de taille de la scène et ceux des bureaux déplacent, et le déclarent, pour que le mouvement
+        # réduit les pose aussitôt ; seul le ressort d'opacité de la scène est un fondu, qui garde son ressort en
+        # mouvement réduit (lecture du source : la surface ne se charge pas sous offscreen).
+        attendues = {"Scene.qml": {"largeur": "deplacement", "hauteur": "deplacement", "opacite": "fondu",
+                                   "effacement": "fondu"},
+                     "Bureaux.qml": None}
+        for nom, natures in attendues.items():
             texte = re.sub(r"//.*", "", (ROOT / "coque" / "Presquile" / nom).read_text(encoding="utf-8"))
             ressorts = re.findall(r"Ressort\s*\{([^{}]*)\}", texte)
             self.assertGreaterEqual(len(ressorts), 1, nom)
             for corps in ressorts:
-                self.assertIn('nature: "deplacement"', corps, nom)
+                nature = re.search(r'nature:\s*"(\w+)"', corps)
+                self.assertIsNotNone(nature, (nom, corps))
+                if natures is None:
+                    self.assertEqual(nature.group(1), "deplacement", nom)
+                else:
+                    ident = re.search(r"id:\s*(\w+)", corps).group(1)
+                    self.assertEqual(nature.group(1), natures.pop(ident), (nom, ident))
+            self.assertFalse(natures, nom)
+        # La surface ne déclare plus de ressort : elle lit ceux de sa scène.
+        surface = re.sub(r"//.*", "", (ROOT / "coque" / "Presquile" / "Presquile.qml").read_text(encoding="utf-8"))
+        self.assertEqual(re.findall(r"Ressort\s*\{", surface), [])
 
     def test_qmldir_et_coque(self):
         self.assertIn("Presquile 1.0 Presquile.qml", (ROOT / "coque" / "Presquile" / "qmldir").read_text("utf-8"))
@@ -227,9 +259,246 @@ class MontageTest(PresquileIpc, unittest.TestCase):
         self.assertEqual(self.json("montage", 95), {"valeur": 95, "mobile": False})
 
     def test_surface_pose_au_montage(self):
-        source = (ROOT / "coque" / "Presquile" / "Presquile.qml").read_text(encoding="utf-8")
-        self.assertIn("largeur.poser(); hauteur.poser()", source)
-        self.assertRegex(source, r"implicitWidth: Math\.max\(largeur\.value, largeur\.cible\)")
+        scene = (ROOT / "coque" / "Presquile" / "Scene.qml").read_text(encoding="utf-8")
+        self.assertIn("largeur.poser(); hauteur.poser()", scene)
+        surface = (ROOT / "coque" / "Presquile" / "Presquile.qml").read_text(encoding="utf-8")
+
+
+# Module factice « grand » de la coque d'essai, et module des bureaux d'essai (4 bureaux, presqu'île de 28).
+GRAND = (400, 80)
+BUREAUX = (95, 28)
+
+
+class ChangementTest(PresquileIpc, unittest.TestCase):
+    """Changement de module de la scène (L2-48) : fondu de sortie, étirement au ressort, fondu d'entrée.
+
+    La scène d'essai, sans fenêtre, journalise chaque image : « phase … », « contenu … », « l … », « h … », « o … ».
+    """
+
+    # Vrai pour la variante en mouvement réduit, où la taille se pose d'un coup.
+    reduit = False
+
+    def etat(self) -> dict:
+        """Photographie de la scène d'essai. Sortie : JSON de changementEtat. Erreurs : celles de appeler."""
+        return self.json("changementEtat")
+
+    def traces(self, depuis: int = 0) -> list:
+        """Lignes journalisées par la scène d'essai, dans l'ordre, sans le préfixe « essai : ».
+
+        Entrée : depuis, indice à partir duquel les rendre. Sortie : liste de textes. Erreurs : aucune.
+        Dépendances : journal.
+        """
+        return [l.split("essai : ", 1)[1] for l in self.journal().splitlines() if "essai : " in l][depuis:]
+
+    def attendre_que(self, condition) -> dict:
+        """Interroge la scène jusqu'à ce qu'une condition soit vraie.
+
+        Entrée : condition, fonction d'une photographie vers un booléen. Sortie : la photographie qui la satisfait.
+        Erreurs : échec du test à l'expiration, avec le journal en message. Dépendances : etat, journal.
+        """
+        fin = time.monotonic() + DELAI
+        while time.monotonic() < fin:
+            etat = self.etat()
+            if condition(etat):
+                return etat
+            time.sleep(0.01)
+        self.fail(f"condition jamais remplie :\n{self.journal()}")
+
+    def repos(self) -> dict:
+        """Attend la fin d'une séquence : phase « repos » et aucun ressort en mouvement, sans boucle de liaison au
+        journal. Sortie : la photographie. Erreurs : échec du test à l'expiration ou sur une boucle de liaison."""
+        etat = self.attendre_que(lambda e: e["phase"] == "repos" and not e["mobile"] and e["sortant"] is None)
+        self.assertNotIn("Binding loop", self.journal())
+        return etat
+
+    @staticmethod
+    def valeurs(traces: list, cle: str) -> list:
+        """Valeurs numériques d'une clé (« l », « h » ou « o ») dans des traces. Sortie : liste de réels."""
+        return [float(t.split()[1]) for t in traces if t.startswith(cle + " ")]
+
+    def test_premier_montage_pose(self):
+        # Au lancement, la scène monte les bureaux et pose leur taille d'un coup : aucune phase ni aucun fondu n'est
+        # journalisé, et la largeur ne prend aucune valeur intermédiaire.
+        etat = self.repos()
+        self.assertEqual((etat["phase"], etat["opacite"], etat["contenu"]), ("repos", 1, "bureaux"))
+        self.assertEqual((etat["largeur"], etat["hauteur"]), BUREAUX)
+        traces = self.traces()
+        self.assertEqual([t for t in traces if t.startswith(("phase ", "o "))], [])
+        self.assertEqual([v for v in self.valeurs(traces, "l") if v not in (0, BUREAUX[0])], [])
+
+    def test_sequence(self):
+        self.repos()
+        depart = len(self.traces())
+        self.appeler("changer", "grand")
+        etat = self.repos()
+        self.assertEqual((etat["largeur"], etat["hauteur"], etat["opacite"], etat["contenu"]), (*GRAND, 1, "grand"))
+        traces = self.traces(depart)
+        self.assertEqual([t.split()[1] for t in traces if t.startswith("phase ")],
+                         ["sortie", "forme", "entree", "repos"])
+        # L'opacité de l'ancien contenu passe sous le seuil de sortie (et non plus à 0) avant que la largeur ne bouge,
+        # après un fondu de plusieurs images.
+        premiere_largeur = next(i for i, t in enumerate(traces) if t.startswith("l "))
+        forme = traces.index("phase forme")
+        sortie = self.valeurs(traces[:forme], "o")
+        self.assertGreater(len(sortie), 2)
+        self.assertLessEqual(sortie[-1], self.seuil_sortie())
+        self.assertGreater(sortie[-1], 0)
+        self.assertLess(forme, premiere_largeur)
+        # Le nouveau contenu ne dépasse l'opacité 0 qu'en phase « entree ».
+        monte = traces.index("contenu grand")
+        entree = traces.index("phase entree")
+        self.assertEqual([v for v in self.valeurs(traces[monte:entree], "o") if v > 0], [])
+        # La largeur s'étire au ressort : plusieurs images intermédiaires entre les deux tailles.
+        largeurs = self.valeurs(traces, "l")
+        self.assertGreater(len([v for v in largeurs if BUREAUX[0] < v < GRAND[0]]), 5)
+
+    def test_changement_interrompu(self):
+        # Le second changement arrive en plein étirement : la largeur repart de sa position, sans saut (un pas de
+        # ressort reste bien en deçà du cinquième de l'écart), et la scène finit sur les bureaux, au repos.
+        self.repos()
+        depart = len(self.traces())
+        self.appeler("changer", "grand")
+        ecart = GRAND[0] - BUREAUX[0]
+        self.attendre_que(lambda e: e["phase"] == "forme" and e["largeur"] > BUREAUX[0] + ecart / 4)
+        self.appeler("changer", "bureaux")
+        etat = self.repos()
+        self.assertEqual((etat["phase"], etat["opacite"], etat["contenu"]), ("repos", 1, "bureaux"))
+        self.assertEqual((etat["largeur"], etat["hauteur"]), BUREAUX)
+        traces = self.traces(depart)
+        largeurs = [BUREAUX[0], *self.valeurs(traces, "l")]
+        sauts = [abs(b - a) for a, b in zip(largeurs, largeurs[1:])]
+        self.assertLess(max(sauts), ecart / 5, sauts)
+        phases = [t.split()[1] for t in traces if t.startswith("phase ")]
+        self.assertEqual(phases[:3], ["sortie", "forme", "sortie"])
+        self.assertEqual(phases[-1], "repos")
+
+    def seuil_sortie(self) -> float:
+        """Jeton presquile.sortie des tokens de l'essai. Sortie : réel. Erreurs : OSError, KeyError."""
+        return json.loads(self.tokens(55).read_text(encoding="utf-8"))["presquile"]["sortie"]
+
+    def test_chevauchement(self):
+        # La forme s'étire alors que l'ancien contenu est encore visible ; il finit son fondu jusqu'à 0, puis est
+        # détruit, une seule fois ; les bureaux ne coexistent jamais avec un deuxième ancien contenu.
+        self.repos()
+        depart = len(self.traces())
+        self.appeler("changer", "grand")
+        self.repos()
+        traces = self.traces(depart)
+        self.assertIn("sortant bureaux", traces)
+        cede = traces.index("sortant bureaux")
+        detruit = traces.index("detruit bureaux")
+        self.assertEqual(traces.count("detruit bureaux"), 1)
+        effacement = self.valeurs(traces[cede:detruit], "so")
+        self.assertEqual(effacement[-1], 0)
+        self.assertEqual(effacement, sorted(effacement, reverse=True))
+        # Au moins une image de largeur pendant que l'ancien contenu est encore à une opacité non nulle.
+        visible, chevauche = None, False
+        for t in traces[cede:detruit]:
+            if t.startswith("so "):
+                visible = float(t.split()[1]) > 0
+            elif t.startswith("l ") and visible:
+                chevauche = True
+        self.assertTrue(chevauche, traces[cede:detruit])
+        self.assertLess(cede, detruit)
+        self.assertEqual(traces[detruit + 1:].count("sortant bureaux"), 0)
+
+    def test_cession_sans_palier(self):
+        # À la cession, le fondu de l'ancien contenu change de ressort sans changer de vitesse : la courbe de son
+        # opacité, de 1 à 0, descend à chaque image sans palier : le ressort de départ reprend la position et la vitesse
+        # de l'ancien (recette de L2-60 : un arrêt à mi-opacité se voyait).
+        self.repos()
+        depart = len(self.traces())
+        self.appeler("changer", "grand")
+        self.repos()
+        traces = self.traces(depart)
+        cede = traces.index("sortant bureaux")
+        detruit = traces.index("detruit bureaux")
+        avant = [(float(t.split()[1]), float(t.split()[2])) for t in traces[:cede] if t.startswith("o ")]
+        apres = [(float(t.split()[1]), float(t.split()[2])) for t in traces[cede:detruit] if t.startswith("so ")]
+        # Le dernier « o » avant la cession est la pose à 0 du conteneur du module : il n'appartient pas à l'ancien.
+        avant = [p for p in avant if p != (0.0, 0.0)]
+        # La première valeur du ressort de départ est la reprise elle-même, au même instant que la dernière valeur
+        # de l'ancien ressort : elle en reprend la position et la vitesse exactes, et n'est pas une image de plus.
+        reprise, apres = apres[0], apres[1:]
+        self.assertLess(avant[-1][1], 0)
+        self.assertEqual(reprise, avant[-1])
+        # Ensuite, la courbe descend à chaque image jusqu'à 0, sans palier, à vitesse toujours non nulle.
+        courbe = [x for x, _ in avant + apres]
+        self.assertEqual(courbe[-1], 0)
+        self.assertTrue(all(b < a for a, b in zip(courbe, courbe[1:])), courbe)
+        self.assertTrue(all(v < 0 for _, v in apres[:-1]), apres)
+
+    def test_hauteur_surface_tenue(self):
+        # La hauteur réservée par la surface monte d'un coup quand la forme s'agrandit, puis ne bouge plus pendant la
+        # rétractation : elle ne redescend qu'une fois, à l'arrêt du ressort de hauteur (aucune reconfiguration de la
+        # fenêtre image par image).
+        self.repos()
+        depart = len(self.traces())
+        self.appeler("changer", "grand")
+        self.repos()
+        traces = self.traces(depart)
+        self.assertEqual(self.valeurs(traces, "hs"), [GRAND[1]])
+        # Elle est montée avant la première hauteur intermédiaire (il n'y en a pas en mouvement réduit).
+        intermediaires = [i for i, t in enumerate(traces) if t.startswith("h ") and BUREAUX[1] < float(t.split()[1]) < GRAND[1]]
+        if intermediaires:
+            self.assertLess(traces.index(f"hs {GRAND[1]}"), intermediaires[0])
+        depart = len(self.traces())
+        self.appeler("changer", "bureaux")
+        self.repos()
+        traces = self.traces(depart)
+        self.assertEqual(self.valeurs(traces, "hs"), [BUREAUX[1]])
+        # En mouvement normal, la rétractation a bien duré plusieurs images sous cette hauteur fixe.
+        self.assertGreaterEqual(len(self.valeurs(traces, "h")), 1 if self.reduit else 6)
+        derniere_hauteur = max(i for i, t in enumerate(traces) if t.startswith("h "))
+        self.assertGreater(traces.index(f"hs {BUREAUX[1]}"), derniere_hauteur)
+
+    def test_taille_tardive(self):
+        # La taille du module change pendant la forme, comme une galerie qui charge son dossier : l'écart de référence
+        # repart de la position courante vers la nouvelle cible, et l'entrée ne commence qu'à moins du seuil de cet
+        # écart-là. Le module passe de 1000 à 400 de large : l'ancien écart (905) aurait ouvert l'entrée aussitôt.
+        self.repos()
+        depart = len(self.traces())
+        self.appeler("changer", "tardif")
+        self.attendre_que(lambda e: e["phase"] == "forme" and e["largeur"] > 250)
+        self.appeler("charger")
+        etat = self.repos()
+        self.assertEqual((etat["largeur"], etat["contenu"]), (400, "tardif"))
+        traces = self.traces(depart)
+        changement, entree = traces.index("cl 400"), traces.index("phase entree")
+        self.assertLess(changement, entree, "l'entrée a commencé avant le changement de taille")
+        position = self.valeurs(traces[:changement], "l")[-1]
+        a_l_entree = float(traces[entree + 1].split()[1])
+        seuil = json.loads(self.tokens(55).read_text(encoding="utf-8"))["presquile"]["entree"]
+        self.assertLessEqual(abs(400 - a_l_entree), seuil * abs(400 - position) + 1e-6, (position, a_l_entree))
+
+
+class ChangementReduitTest(ChangementTest):
+    """Mouvement réduit : la taille se pose d'un coup, seuls les fondus de contenu subsistent."""
+
+    reduit = True
+
+    def preparer(self):
+        (self.dir / "mouvement.json").write_text('{"reduit": true}')
+
+    # La séquence et l'interruption au ressort n'ont pas cours ici : la forme ne s'étire pas.
+    test_sequence = None
+    test_changement_interrompu = None
+    test_taille_tardive = None
+
+    def test_reduit(self):
+        self.repos()
+        depart = len(self.traces())
+        self.appeler("changer", "grand")
+        etat = self.repos()
+        self.assertEqual((etat["largeur"], etat["hauteur"], etat["opacite"], etat["contenu"]), (*GRAND, 1, "grand"))
+        traces = self.traces(depart)
+        self.assertEqual(self.valeurs(traces, "l"), [GRAND[0]])
+        # Le fondu d'entrée part de 0 et monte jusqu'à 1 sans revenir en arrière, sur plus de cinq images.
+        entree = self.valeurs(traces[traces.index("phase entree"):], "o")
+        self.assertEqual(entree[-1], 1)
+        self.assertEqual(entree, sorted(entree))
+        self.assertGreater(len(entree), 5)
+        self.assertIn(["o", "0"], [t.split()[:2] for t in traces[:traces.index("contenu grand")]])
 
 
 class EncocheTest(PresquileIpc, unittest.TestCase):

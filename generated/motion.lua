@@ -3,8 +3,8 @@
 return {
     -- Courbes : un ressort d'entrée et un ressort de sortie par transition, plus le fondu réduit.
     curves = {
-        ["dunei-navigate-in"] = { type = "spring", mass = 1, stiffness = 2000, dampening = 100 },
-        ["dunei-navigate-out"] = { type = "spring", mass = 1, stiffness = 2000, dampening = 100 },
+        ["dunei-navigate-in"] = { type = "spring", mass = 1, stiffness = 400, dampening = 41 },
+        ["dunei-navigate-out"] = { type = "spring", mass = 1, stiffness = 400, dampening = 41 },
         ["dunei-overlay-in"] = { type = "spring", mass = 1, stiffness = 600, dampening = 50 },
         ["dunei-overlay-out"] = { type = "spring", mass = 1, stiffness = 1224.5, dampening = 71.43 },
         ["dunei-reduced"] = { type = "spring", mass = 1, stiffness = 4406.3, dampening = 132.76 },

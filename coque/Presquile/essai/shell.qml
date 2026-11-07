@@ -15,8 +15,10 @@ import "Presquile/bureaux.js" as Bureaux
 // une capture agrandie ; QT_QUICK_BACKEND=rhi et QSG_RHI_BACKEND=opengl pour une capture fidèle (la plateforme
 // offscreen choisit sinon le rendu logiciel, qui ne peint ni shader ni remplissage par texture). Commandes IPC :
 // indexPilule, pasMolette, cibleMolette, lireSpecial, commandesClic, commandeBureau, bureauxEtat, encoche, etirerEncoche,
-// capturer (les listes et objets sont rendus en JSON, le reste en texte).
-// Sortie : le résultat de chaque appel IPC, sur la sortie de « qs ipc call ». Erreurs : celles de Theme, dans
+// capturer, changer, charger, changementEtat (les listes et objets sont rendus en JSON, le reste en texte). Une Scene sans
+// fenêtre, montée sur les bureaux d'essai, journalise chaque image de ses changements de module (« essai : … »).
+// Sortie : le résultat de chaque appel IPC, sur la sortie de « qs ipc call » ; au journal, les lignes « essai : phase
+// …», « essai : contenu … », « essai : lp … » (largeur au changement de phase), « essai : l … », « essai : cl … » (cible de largeur), « essai : h … » et « essai : o … » de la scène. Erreurs : celles de Theme, dans
 // le journal ; capturer sans vitrine (hors offscreen) journalise « presquile : aucune vitrine ».
 // Dépendances : quickshell ≥ 0.3 (Quickshell.Io, FloatingWindow, LazyLoader), modules Theme, Composants et
 // Presquile.
@@ -31,6 +33,68 @@ ShellRoot {
     // Module des bureaux sans fenêtre et sans Hyprland : idActif et special, écrits par l'IPC, remplacent leurs
     // liaisons par défaut dès la création, et rien ici n'appelle Hyprland.dispatch.
     Bureaux { id: essaiBureaux; ecran: null; idActif: 0; special: "" }
+
+    // Modules de la scène d'essai : les bureaux, sans Hyprland, et un module factice « grand » de taille connue.
+    // Chaque module d'essai journalise sa destruction (« detruit <nom> ») : aucun contenu ne doit rester orphelin.
+    Component {
+        id: moduleBureaux
+        Bureaux {
+            objectName: "bureaux"; idActif: 0; special: ""
+            Component.onDestruction: console.info("essai : detruit bureaux")
+        }
+    }
+    Component {
+        id: moduleGrand
+        Item {
+            objectName: "grand"; property var ecran; implicitWidth: 400; implicitHeight: 80
+            Component.onDestruction: console.info("essai : detruit grand")
+        }
+    }
+    // Module « tardif » : 1000 × 80 au montage, 400 × 80 quand l'essai appelle charger, comme un contenu dont la taille
+    // n'est connue qu'après coup.
+    Component {
+        id: moduleTardif
+        Item { objectName: "tardif"; property var ecran; property bool charge: false; implicitWidth: charge ? 400 : 1000; implicitHeight: 80 }
+    }
+
+    // Scène sans fenêtre, comme celle de la surface : sa trajectoire est lue par tests/test_presquile.py.
+    Scene { id: essaiScene; module: moduleBureaux }
+    Connections {
+        target: essaiScene
+        // La largeur au moment du passage : la scène change de phase avant que la trace de l'image ne soit écrite.
+        function onPhaseChanged() {
+            console.info("essai : phase " + essaiScene.phase)
+            console.info("essai : lp " + essaiScene.ressortLargeur.value)
+        }
+        function onContenuChanged() { console.info("essai : contenu " + (essaiScene.contenu?.objectName ?? "")) }
+        function onSortantChanged() { console.info("essai : sortant " + (essaiScene.sortant?.objectName ?? "")) }
+        // Hauteur réservée par la surface : elle ne doit changer qu'au départ d'un agrandissement et à l'arrêt.
+        function onHauteurSurfaceChanged() { console.info("essai : hs " + essaiScene.hauteurSurface) }
+    }
+    Connections {
+        target: essaiScene.ressortLargeur
+        function onValueChanged() { console.info("essai : l " + essaiScene.ressortLargeur.value) }
+        function onCibleChanged() { console.info("essai : cl " + essaiScene.ressortLargeur.cible) }
+    }
+    Connections {
+        target: essaiScene.ressortHauteur
+        function onValueChanged() { console.info("essai : h " + essaiScene.ressortHauteur.value) }
+    }
+    Connections {
+        target: essaiScene.ressortSortant
+        // Valeur puis vitesse, pour vérifier que le fondu continue sans rupture de vitesse à la cession.
+        function onValueChanged() {
+            const r = essaiScene.ressortSortant
+            console.info("essai : so " + r.value + " " + r.vitesse())
+        }
+    }
+    Connections {
+        target: essaiScene.ressortOpacite
+        function onValueChanged() {
+            const r = essaiScene.ressortOpacite
+            console.info("essai : o " + r.value + " " + r.vitesse())
+        }
+    }
 
     LazyLoader {
         id: vitrine
@@ -118,6 +182,28 @@ ShellRoot {
                                     hauteur: b.implicitHeight,
                                     reelles: p.map(x => x.width),
                                     zones: zones, centres: centres })
+        }
+
+        // changer — change le module de la scène d'essai, ce qui déroule la séquence de changement.
+        // Entrée : nom, « grand » ou « tardif » pour les modules factices, tout autre nom pour les bureaux. Sortie : aucune.
+        // Erreurs : aucune. Dépendances : essaiScene, moduleGrand, moduleBureaux.
+        function changer(nom: string): void {
+            essaiScene.module = nom === "grand" ? moduleGrand : nom === "tardif" ? moduleTardif : moduleBureaux
+        }
+
+        // charger — donne au module « tardif » monté sa taille définitive. Entrées : aucune. Sortie : aucune.
+        // Erreurs : sans effet sur un autre module. Dépendances : essaiScene.
+        function charger(): void { if (essaiScene.contenu?.objectName === "tardif") essaiScene.contenu.charge = true }
+
+        // changementEtat — photographie de la scène d'essai.
+        // Entrées : aucune. Sortie : JSON {phase, opacite, largeur, hauteur, contenu (objectName du module monté),
+        // sortant (objectName de l'ancien contenu qui s'efface, ou null), mobile (vrai si l'un des quatre ressorts
+        // avance)}. Erreurs : aucune. Dépendances : essaiScene.
+        function changementEtat(): string {
+            const s = essaiScene, l = s.ressortLargeur, h = s.ressortHauteur, o = s.ressortOpacite
+            return JSON.stringify({ phase: s.phase, opacite: o.value, largeur: l.value, hauteur: h.value,
+                                    contenu: s.contenu?.objectName ?? null, sortant: s.sortant?.objectName ?? null,
+                                    mobile: l.moving || h.moving || o.moving || s.ressortSortant.moving })
         }
 
         // capturer — enregistre la vitrine en PNG, de façon asynchrone. Entrée : chemin, fichier à écrire.

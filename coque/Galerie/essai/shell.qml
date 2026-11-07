@@ -1,0 +1,373 @@
+import QtQuick
+import Quickshell
+import Quickshell.Io
+import QtTest
+import "Theme"
+import "Composants"
+import "Galerie"
+import "Presquile"
+import "Galerie/galerie.js" as Galerie
+import "Theme/fichiers.js" as Fichiers
+
+// Coque d'essai du module Galerie.
+// Rôle : expose par IPC (cible « galerie-essai ») les fonctions pures de galerie.js et de fichiers.js, et monte le
+// module Galerie dans une fenêtre d'essai qui imite la presqu'île (fond du bureau, Encoche à la taille du module), pour
+// que tests/test_galerie.py les éprouve dans un vrai Quickshell. Porte aussi une Ouvreuse, avec sa vraie cible IPC
+// « galerie », sur deux presqu'îles d'essai sans fenêtre (écrans « A » et « B », une Scene chacune, bureaux sans
+// Hyprland) et un popover exclusif factice ; l'écran actif, le plein écran, la commande d'application et le dossier
+// lu y sont réglés par l'IPC. Sous la plateforme offscreen (les tests), la fenêtre
+// n'apparaît jamais à l'écran ; lancée à la main dans la session, elle s'ouvre en fenêtre flottante pour la capture.
+// Entrées : DUNEI_TOKENS_DIR, lu par Theme ; QT_QPA_PLATFORM, posé à offscreen par le test. Commandes IPC : filtres,
+// borner, deplacer, initial, cran, identique, url, developper, jeton, presquile, actuel, monter, etat, touche,
+// molette, molettereelle, cliquer, cliquerreel, capturer, regler, etatOuvreuse, releve, tailles, popover, validerOuvreuse,
+// retirer (les listes et objets sont rendus en JSON, le reste en texte).
+// Sortie : le résultat de chaque appel IPC, sur la sortie de « qs ipc call ». Erreurs : celles de Theme, dans
+// le journal ; les commandes du module sont sans effet tant qu'aucune galerie n'est montée.
+// Dépendances : quickshell ≥ 0.3 (Quickshell.Io, FloatingWindow, LazyLoader, Instantiator), QtTest (événements réels),
+// modules Theme, Composants (Overlays), Galerie (Galerie, Ouvreuse) et Presquile (Scene, Bureaux).
+// Import : liens essai/Theme, essai/Composants, essai/Galerie et essai/Presquile, comme dans les autres coques d'essai.
+ShellRoot {
+    id: racine
+
+    // Theme est un singleton paresseux : cette lecture le charge, ce qu'attend le setUp de l'essai.
+    Component.onCompleted: Theme.tokens
+
+    // Galerie montée par monter (null avant) ; fini, chemin reçu de son signal fini (null avant) ; finiApres, délai en
+    // millisecondes entre le montage et ce signal ; choisi et choisiApres, de même pour le signal choisi ; effaceApres,
+    // délai entre le montage et la fin de l'effacement des vignettes non choisies ; t0, instant du montage.
+    property Item galerie: null
+    property var fini: null
+    property real finiApres: -1
+    property var choisi: null
+    property real choisiApres: -1
+    property real effaceApres: -1
+    property real t0: 0
+
+    Component { id: moduleGalerie; Galerie {} }
+
+    // Ouvreuse d'essai : dossier, lu par ses galeries ; galeries, nombre de galeries vivantes (aucune orpheline) ;
+    // tEntree, instant du passage de sa presqu'île en phase « entree » ; tChoisi, instant du signal choisi de sa
+    // galerie ; tEfface, instant de la fin de l'effacement ; tFin, instant de sa fermeture (0 avant chacun).
+    property string dossierOuvreuse: ""
+    property int galeries: 0
+    property real tEntree: 0
+    property real tChoisi: 0
+    property real tEfface: 0
+    property real tFin: 0
+
+    // Relevé image par image d'une ouverture (L2-60, recette de la première ouverture) : de l'appel à basculer jusqu'au
+    // repos de la presqu'île, une entrée par image {t, dt, phase, op, y, h} ; op est l'opacité de l'ancien contenu
+    // (celle du conteneur du module avant la cession, puis celle du conteneur de départ), y sa position verticale dans
+    // la scène (null une fois détruit), h la hauteur de la forme. cession, durée en millisecondes de l'image où
+    // l'ancien contenu est cédé et le nouveau monté (du passage en phase « forme » au nouveau contenu), −1 avant.
+    property var releve: []
+    property bool releveActif: false
+    property real tReleve: 0
+    property real tForme: 0
+    property real cession: -1
+    // Hauteurs réservées par les surfaces des presqu'îles d'essai, une entrée {t, nom, hs, phase} à chaque changement de
+    // leur hauteurSurface (recette 4 de L2-60 : elle ne doit plus changer, ni à l'ouverture ni après la fermeture).
+    property var tailles: []
+
+    Ouvreuse {
+        id: ouvreuse
+        ecranActif: null
+        pleinEcran: false
+        commande: []
+        galerie: Component {
+            Galerie {
+                objectName: "galerie"
+                dossier: racine.dossierOuvreuse
+                Component.onCompleted: racine.galeries++
+                Component.onDestruction: racine.galeries--
+            }
+        }
+        onOuvertChanged: {
+            if (!ouvert) racine.tFin = Date.now()
+            else { racine.releve = []; racine.cession = -1; racine.tReleve = Date.now(); racine.releveActif = true }
+        }
+    }
+    Connections {
+        target: ouvreuse.cible
+        function onPhaseChanged() {
+            const phase = ouvreuse.cible.phase
+            if (phase === "entree") racine.tEntree = Date.now()
+            if (phase === "forme") racine.tForme = Date.now()
+            if (phase === "repos") racine.releveActif = false
+        }
+        function onContenuChanged() {
+            if (ouvreuse.cible.phase === "forme" && racine.cession < 0) racine.cession = Date.now() - racine.tForme
+        }
+    }
+
+    // Relève une image de l'ouverture en cours (voir releve) ; l'ancien contenu est le module monté pendant la sortie,
+    // puis le contenu cédé au conteneur de départ tant qu'il finit son fondu.
+    FrameAnimation {
+        running: racine.releveActif
+        onTriggered: {
+            const sc = ouvreuse.cible?.sceneEssai
+            if (!sc) return
+            const n = Date.now()
+            const ancien = sc.phase === "sortie" ? sc.contenu : sc.sortant
+            racine.releve.push({ t: n, dt: n - racine.tReleve, phase: sc.phase,
+                                 op: sc.sortant ? sc.ressortSortant.value : sc.ressortOpacite.value,
+                                 y: ancien ? ancien.mapToItem(sc, 0, 0).y : null, h: sc.height })
+            racine.tReleve = n
+        }
+    }
+    Connections {
+        target: ouvreuse._montee
+        ignoreUnknownSignals: true
+        function onChoisi() { racine.tChoisi = Date.now() }
+        function onEffacementChanged() {
+            if (ouvreuse._montee.effacement === 0 && racine.tEfface === 0) racine.tEfface = Date.now()
+        }
+    }
+
+    Component { id: bureauxEssai; Bureaux { objectName: "bureaux"; idActif: 0; special: "" } }
+
+    // Presqu'îles d'essai, au contrat de Presquile vu par l'ouvreuse : modelData (un écran factice, comparé par
+    // identité), module, contenu, phase, et fenetre nulle (aucun grab sous offscreen).
+    Instantiator {
+        model: ListModel {
+            id: ecransEssai
+            ListElement { nom: "A" }
+            ListElement { nom: "B" }
+        }
+        delegate: Item {
+            id: presquileEssai
+            required property string nom
+            readonly property var modelData: ({ name: nom })
+            property Component module: bureauxEssai
+            readonly property alias contenu: scene.contenu
+            readonly property alias phase: scene.phase
+            readonly property var fenetre: null
+            readonly property Item sceneEssai: scene
+
+            // Comme dans la coque, la presqu'île réserve la hauteur du module de la galerie mesurée par l'ouvreuse.
+            Scene {
+                id: scene
+                ecran: presquileEssai.modelData
+                module: presquileEssai.module
+                reserve: ouvreuse.hauteurModule
+                onHauteurSurfaceChanged: racine.tailles.push({ t: Date.now(), nom: presquileEssai.nom,
+                                                               hs: hauteurSurface, phase: phase })
+            }
+            Component.onCompleted: ouvreuse.inscrire(presquileEssai)
+            Component.onDestruction: ouvreuse.retirer(presquileEssai)
+        }
+    }
+
+    // Popover exclusif factice, inscrit au registre comme un Overlay de la barre.
+    QtObject {
+        id: popoverEssai
+        readonly property string famille: "contextuel"
+        readonly property bool exclusif: true
+        property bool ouvert: false
+        onOuvertChanged: ouvert ? Overlays.ouvrir(popoverEssai) : Overlays.fermer(popoverEssai)
+    }
+
+    // Générateur de vrais événements (QWheelEvent remis à la fenêtre d'essai) : un TestCase qui ne lance aucun test
+    // (when faux, optional vrai), dont seules les méthodes d'envoi d'événements servent.
+    TestCase { id: evenements; when: false; optional: true }
+
+    // Fenêtre d'essai : le fond du bureau, et l'Encoche de la presqu'île étirée à la taille de la galerie, avec la
+    // marge de son ombre ; cadre reçoit la galerie montée.
+    LazyLoader {
+        id: fenetre
+        activeAsync: Theme.ready
+
+        FloatingWindow {
+            property Item cadre: support
+            property Item vue: fond
+            implicitWidth: fond.width
+            implicitHeight: fond.height
+            color: "transparent"
+
+            Rectangle {
+                id: fond
+                width: forme.implicitWidth + 2 * forme.marge
+                height: forme.implicitHeight + forme.marge
+                color: Theme.elevation?.e0?.fill ?? "transparent"
+
+                Encoche {
+                    id: forme
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    largeurCorps: racine.galerie?.implicitWidth ?? 0
+                    hauteur: racine.galerie?.implicitHeight || (Theme.tokens?.presquile?.hauteur ?? 0)
+
+                    Item { id: support; x: forme.evasement; width: forme.largeurCorps; height: forme.hauteur }
+                }
+            }
+        }
+    }
+
+    IpcHandler {
+        target: "galerie-essai"
+
+        // filtres — motifs de formats. Sortie : JSON, liste de textes. Erreurs : aucune. Dépendances : Galerie.
+        function filtres(): string { return JSON.stringify(Galerie.FILTRES) }
+        // borner — voir galerie.js. Sortie : l'index borné. Erreurs : aucune. Dépendances : Galerie.
+        function borner(index: int, nombre: int): int { return Galerie.borner(index, nombre) }
+        // deplacer — voir galerie.js. Sortie : le nouvel index. Erreurs : aucune. Dépendances : Galerie.
+        function deplacer(index: int, pas: int, nombre: int): int { return Galerie.deplacer(index, pas, nombre) }
+        // initial — voir galerie.js. Entrées : chemins, séparés par des sauts de ligne (« qs ipc » découpe un
+        // argument JSON) ; actuel. Sortie : l'index. Erreurs : aucune. Dépendances : Galerie.
+        function initial(chemins: string, actuel: string): int {
+            return Galerie.initial(chemins === "" ? [] : chemins.split("\n"), actuel)
+        }
+        // cran — voir galerie.js. Sortie : JSON {pas, reste}. Erreurs : aucune. Dépendances : Galerie.
+        function cran(reste: real, delta: real, tranche: real): string {
+            return JSON.stringify(Galerie.cran(reste, delta, tranche))
+        }
+        // identique — voir galerie.js. Sortie : true ou false. Erreurs : aucune. Dépendances : Galerie.
+        function identique(choisi: string, actuel: string): bool { return Galerie.identique(choisi, actuel) }
+        // url — voir fichiers.js. Sortie : l'URL. Erreurs : aucune. Dépendances : Fichiers.
+        function url(chemin: string): string { return Fichiers.url(chemin) }
+        // developper — voir fichiers.js. Sortie : le chemin développé. Erreurs : aucune. Dépendances : Fichiers.
+        function developper(chemin: string, home: string): string { return Fichiers.developper(chemin, home) }
+        // jeton — lit un jeton de Theme.galerie. Entrée : nom. Sortie : sa valeur en JSON. Erreurs : aucune.
+        // Dépendances : Theme.
+        function jeton(nom: string): string { return JSON.stringify(Theme.galerie?.[nom]) }
+        // presquile — lit un jeton de la presqu'île. Entrée : nom. Sortie : sa valeur en JSON. Erreurs : aucune.
+        // Dépendances : Theme.
+        function presquile(nom: string): string { return JSON.stringify(Theme.tokens?.presquile?.[nom]) }
+        // actuel — fond actuel lu dans bureau.json. Sortie : Theme.imageBureau. Erreurs : aucune. Dépendances : Theme.
+        function actuel(): string { return Theme.imageBureau }
+
+        // monter — remplace la galerie de la fenêtre d'essai par une neuve.
+        // Entrée : dossier, chemin absolu lu par la galerie, ou « - » pour celui des jetons. Sortie : aucune ; fini et
+        // finiApres sont remis à zéro. Erreurs : « galerie-essai : aucune fenêtre » au journal si la fenêtre n'est pas
+        // encore créée. Dépendances : fenetre, moduleGalerie.
+        function monter(dossier: string): void {
+            if (!fenetre.item) return console.warn("galerie-essai : aucune fenêtre")
+            racine.galerie?.destroy()
+            racine.fini = null
+            racine.finiApres = -1
+            racine.choisi = null
+            racine.choisiApres = -1
+            racine.effaceApres = -1
+            racine.t0 = Date.now()
+            const g = moduleGalerie.createObject(fenetre.item.cadre, dossier === "-" ? { ecran: null } : { ecran: null, dossier: dossier })
+            g.fini.connect(c => { racine.fini = c; racine.finiApres = Date.now() - racine.t0 })
+            g.choisi.connect(c => { racine.choisi = c; racine.choisiApres = Date.now() - racine.t0 })
+            g.effacementChanged.connect(() => {
+                if (g.effacement === 0 && racine.effaceApres < 0) racine.effaceApres = Date.now() - racine.t0
+            })
+            g.forceActiveFocus()
+            racine.galerie = g
+        }
+
+        // etat — photographie de la galerie montée.
+        // Sortie : JSON {index, nombre, chemins, lu, vide, message, largeur, hauteur, fini, finiApres, glisse,
+        // defilement (position du ressort de la bande), choisi,
+        // choisiApres, effaceApres, choisie, effacement, delegues} ; delegues liste les délégués créés par la bande,
+        // {i, echelle, voile, statut, presence (opacité de la vignette), x (abscisse réelle de son emplacement dans la
+        // galerie)}. "null" sans galerie.
+        // Erreurs : aucune. Dépendances : galerie.
+        function etat(): string {
+            const g = racine.galerie
+            if (!g) return "null"
+            const delegues = []
+            for (let i = 0; i < g.nombre; i++) {
+                const d = g.emplacement(i)
+                if (d) delegues.push({ i: i, echelle: d.vignette.echelle, voile: d.vignette.voile,
+                                       statut: d.vignette.statut, presence: d.vignette.opacity,
+                                       x: d.mapToItem(g, 0, 0).x })
+            }
+            return JSON.stringify({ index: g.index, nombre: g.nombre, chemins: g.chemins, lu: g.lu, vide: g.vide,
+                                    message: g.vide ? g.message.text : "", largeur: g.implicitWidth,
+                                    hauteur: g.implicitHeight, fini: racine.fini, finiApres: racine.finiApres,
+                                    glisse: g.glisse, defilement: g.defilement, choisi: racine.choisi, choisiApres: racine.choisiApres,
+                                    effaceApres: racine.effaceApres, choisie: g.choisie, effacement: g.effacement,
+                                    delegues: delegues })
+        }
+
+        // touche — envoie une touche à la galerie. Entrée : nom, « Droite », « Gauche », « Entree » ou « Echap ».
+        // Sortie : aucune. Erreurs : un nom inconnu est ignoré. Dépendances : galerie.touche.
+        function touche(nom: string): void {
+            const codes = { Droite: Qt.Key_Right, Gauche: Qt.Key_Left, Entree: Qt.Key_Return, Echap: Qt.Key_Escape }
+            if (nom in codes) racine.galerie?.touche(codes[nom])
+        }
+        // molette — envoie un défilement à la galerie. Entrées : dx, dy ; pixel, vrai pour un pixelDelta (pavé tactile).
+        // Sortie : aucune. Erreurs : aucune. Dépendances : galerie.defiler.
+        function molette(dx: real, dy: real, pixel: bool): void { racine.galerie?.defiler(dx, dy, pixel) }
+        // molettereelle — envoie un vrai événement de molette (angleDelta) au centre de la galerie, par la fenêtre.
+        // Entrées : dx, dy, angleDelta. Sortie : aucune. Erreurs : sans effet sans galerie ; un échec d'envoi se lit au
+        // journal. Dépendances : evenements (QtTest), galerie.
+        function molettereelle(dx: int, dy: int): void {
+            const g = racine.galerie
+            if (g) evenements.mouseWheel(g, g.width / 2, g.height / 2, dx, dy)
+        }
+        // cliquerreel — envoie un vrai clic au milieu de la partie visible de l'emplacement d'index i, par la fenêtre
+        // (une vignette coupée n'est visible, et cliquable, que sur sa tranche).
+        // Entrée : i. Sortie : aucune. Erreurs : sans effet sans galerie, si l'emplacement n'est pas chargé ou s'il est
+        // entièrement hors de la partie visible. Dépendances : evenements (QtTest), galerie (emplacement, largeurBande).
+        function cliquerreel(i: int): void {
+            const g = racine.galerie, d = g?.emplacement(i)
+            if (!d) return
+            const debut = Math.max(0, -d.x), fin = Math.min(d.width, g.largeurBande - d.x)
+            if (fin > debut) evenements.mouseClick(d, (debut + fin) / 2, d.height / 2)
+        }
+        // cliquer — clic sur la vignette d'index i. Sortie : aucune. Erreurs : aucune. Dépendances : galerie.cliquer.
+        function cliquer(i: int): void { racine.galerie?.cliquer(i) }
+
+        // regler — règle l'ouvreuse d'essai. Entrées : actif, nom de l'écran actif (« » pour aucun) ; plein, plein
+        // écran simulé ; commande, programme d'application ; dossier, dossier lu par ses galeries. Sortie : aucune.
+        // Erreurs : un nom inconnu laisse l'écran actif nul. Dépendances : ouvreuse.
+        function regler(actif: string, plein: bool, commande: string, dossier: string): void {
+            ouvreuse.ecranActif = ouvreuse.presquiles.find(p => p.nom === actif)?.modelData ?? null
+            ouvreuse.pleinEcran = plein
+            ouvreuse.commande = [commande]
+            racine.dossierOuvreuse = dossier
+        }
+        // etatOuvreuse — photographie de l'ouvreuse. Sortie : JSON {ouvert, cible, popover (« ouvreuse », « autre » ou
+        // null), popoverOuvert, presquiles [{nom, module, phase}], lu, galeries, tEntree, tChoisi, tEfface, tFin}.
+        // Erreurs : aucune.
+        // Dépendances : ouvreuse, Overlays.
+        function etatOuvreuse(): string {
+            const o = Overlays.popover
+            return JSON.stringify({ ouvert: ouvreuse.ouvert, cible: ouvreuse.cible?.nom ?? null,
+                                    popover: o === ouvreuse ? "ouvreuse" : o ? "autre" : null,
+                                    popoverOuvert: popoverEssai.ouvert,
+                                    presquiles: ouvreuse.presquiles.map(p => ({ nom: p.nom, module: p.contenu?.objectName ?? "",
+                                                                                 phase: p.phase })),
+                                    lu: ouvreuse.cible?.contenu?.lu ?? false, galeries: racine.galeries,
+                                    tEntree: racine.tEntree, tChoisi: racine.tChoisi, tEfface: racine.tEfface,
+                                    tFin: racine.tFin })
+        }
+        // releve — le relevé de la dernière ouverture. Sortie : JSON {actif, cession, images [{t, dt, phase, op, y, h}]}.
+        // Erreurs : aucune. Dépendances : releve, releveActif, cession.
+        function releve(): string {
+            return JSON.stringify({ actif: racine.releveActif, cession: racine.cession, images: racine.releve })
+        }
+        // tailles — les changements de hauteur réservée des presqu'îles d'essai. Sortie : JSON {hauteurModule, actuelles
+        // {nom: hauteurSurface}, tailles [{t, nom, hs, phase}]}. Erreurs : aucune. Dépendances : ouvreuse, tailles.
+        function tailles(): string {
+            const actuelles = {}
+            for (const p of ouvreuse.presquiles) actuelles[p.nom] = p.sceneEssai.hauteurSurface
+            return JSON.stringify({ hauteurModule: ouvreuse.hauteurModule, tailles: racine.tailles, actuelles: actuelles })
+        }
+        // popover — ouvre ou ferme le popover factice. Entrée : ouvrir. Sortie : aucune. Erreurs : aucune.
+        // Dépendances : popoverEssai.
+        function popover(ouvrir: bool): void { popoverEssai.ouvert = ouvrir }
+        // validerOuvreuse — valide l'image d'index i de la galerie de l'ouvreuse. Sortie : aucune.
+        // Erreurs : sans effet sans galerie montée. Dépendances : ouvreuse.
+        function validerOuvreuse(i: int): void { ouvreuse.cible?.contenu?.valider?.(i) }
+        // retirer — retire l'écran d'essai d'un nom, comme un écran débranché. Sortie : aucune.
+        // Erreurs : un nom inconnu est ignoré. Dépendances : ecransEssai.
+        function retirer(nom: string): void {
+            for (let i = 0; i < ecransEssai.count; i++) if (ecransEssai.get(i).nom === nom) return ecransEssai.remove(i)
+        }
+
+        // capturer — enregistre la fenêtre d'essai en PNG, de façon asynchrone (sous offscreen, avec
+        // QT_QUICK_BACKEND=rhi et QSG_RHI_BACKEND=opengl pour un rendu fidèle, comme l'essai de la presqu'île).
+        // Entrée : chemin, fichier à écrire. Sortie : aucune ; le fichier paraît une fois l'image saisie.
+        // Erreurs : « galerie-essai : aucune fenêtre » ou « galerie-essai : capture non écrite » au journal.
+        // Dépendances : fenetre, grabToImage.
+        function capturer(chemin: string): void {
+            if (!fenetre.item) return console.warn("galerie-essai : aucune fenêtre")
+            fenetre.item.vue.grabToImage(r => { if (!r.saveToFile(chemin)) console.warn("galerie-essai : capture non écrite") })
+        }
+    }
+}

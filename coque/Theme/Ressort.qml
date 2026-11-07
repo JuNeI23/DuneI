@@ -15,7 +15,8 @@ import "physics.js" as Physics
 //          la cible (défaut) ; seuil écart, dans l'unité de la valeur, sous lequel le ressort se pose (0 garde le
 //          critère de physics.js) ; nature « deplacement » (défaut) ou « fondu », ce que le ressort anime.
 // Sorties : value valeur affichée ; moving vrai tant que le ressort avance ; vitesse() vitesse courante ; poser()
-//          pose le ressort sur sa cible sans animation.
+//          pose le ressort sur sa cible sans animation ; reprendre(x, v) le relance depuis une position et une vitesse,
+//          pour qu'un autre ressort continue un mouvement sans rupture.
 // Erreurs : aucune ; avant que Theme soit prêt, ou si la transition est inconnue, value prend cible sans
 //           animation, ainsi qu'à la création : la cible initiale se pose d'un coup. Sans le réglage `reduced` (motion.json
 //           ancien), un fondu réduit garde le réglage ordinaire de sa transition.
@@ -58,6 +59,24 @@ Item {
         anim.stop()
         _st = { x: cible, v: 0, acc: 0 }
         _x = cible
+    }
+
+    // reprendre — relance le ressort depuis une position et une vitesse données, vers sa cible courante : un ressort
+    // qui prend le relais d'un autre (même transition) continue son mouvement sans saut de valeur ni de vitesse.
+    // Entrées : x, position de départ ; v, vitesse de départ, en unités de valeur par seconde (celle que rend
+    // vitesse()). Sortie : aucune ; value vaut x aussitôt, et le ressort avance s'il n'est pas déjà au repos sur sa
+    // cible. Erreurs : aucune ; avant que Theme soit prêt, si la transition est inconnue, ou pour un déplacement en
+    // mouvement réduit, le ressort se pose sur sa cible comme à tout changement de cible.
+    // Dépendances : anim, poser, Theme (motion.transitions).
+    function reprendre(x, v) {
+        anim.stop()
+        _st = { x: x, v: v, acc: 0 }
+        _x = x
+        const t = Theme.ready ? Theme.motion?.transitions?.[transition] : null
+        if (!t || _pose) return poser()
+        _t = t
+        _params = cible > x ? t.in : t.out
+        if (x !== cible || v !== 0) anim.start()
     }
 
     onCibleChanged: {

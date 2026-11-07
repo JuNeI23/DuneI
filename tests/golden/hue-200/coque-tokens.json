@@ -1642,6 +1642,19 @@
     "point": 7,
     "pilule": 22,
     "ecart": 8,
-    "marge": 14
+    "marge": 14,
+    "entree": 0.1,
+    "sortie": 0.5
+  },
+  "galerie": {
+    "largeur": 160,
+    "hauteur": 90,
+    "coupe": 56,
+    "echelle": 1.06,
+    "voile": 0.3,
+    "delai": 2000,
+    "tenue": 200,
+    "pas": 60,
+    "dossier": "~/Documents/Images/Wallpapers"
   }
 }

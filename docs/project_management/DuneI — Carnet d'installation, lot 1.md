@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.36. Historique en fin de document.
+Version 1.38. Historique en fin de document.
 
 Socle amorçable.
 
@@ -1380,6 +1380,7 @@ bureau spécial, `accueil`, qui s'affiche par-dessus le bureau courant.
 | `SUPER + S` / `SUPER + Maj + S` | Afficher ou masquer l'accueil / y ranger la fenêtre |
 | `SUPER + Q`, `E`, `F`, `R` | Terminal, fichiers, navigateur, lanceur (kitty, dolphin, firefox, wofi : provisoires) |
 | `Print`, `SHIFT + Print`, `CTRL + Print` | Capturer une zone, une fenêtre choisie au clic, l'écran actif : rôle `capture`, tenu par hyprshot jusqu'à L2-30 ; image dans `~/Images/Captures` et dans le presse-papiers (D79) |
+| `SUPER + W` | Ouvrir ou refermer la galerie de fonds d'écran dans la presqu'île de l'écran actif (L2-60) |
 | `SUPER + L` | Verrouiller : `loginctl lock-session`, verrouilleur provisoire (L1-09, remplacé à L2-22) |
 | `SUPER + Alt + M` | Quitter la session (`uwsm stop`) |
 | `SUPER + Alt + R` | Recharger la configuration (`hyprctl reload`) |
@@ -2162,6 +2163,86 @@ image. Processeur au repos : 1 à 2 tics sur 10 s avec l'image, 6 sur l'aplat. N
 2026-11-06. Le mouvement réduit a été essayé par Claude, sans capture intermédiaire du fondu, et l'écran externe n'a pas
 été éprouvé (D121).
 
+## La galerie de fonds — L2-60
+
+La galerie est un module de la coque (`coque/Galerie/`) : elle ne demande aucun paquet. SUPER + W lance
+`qs ipc -c dunei call galerie basculer`, ligne de `config/hypr/donnees/raccourcis.lua` ; l'option `-c dunei` est
+nécessaire, car sans elle `qs` cherche la configuration `default` et échoue (D126). Elle lit
+`~/Documents/Images/Wallpapers`, le dossier de L2-27, et applique l'image choisie par `dunei-fond`. Les décisions sont
+D124 à D135 du journal.
+
+**`make install` est nécessaire** après une mise à jour du dépôt, suivi d'un redémarrage de la coque (`systemctl --user restart dunei-coque.service`) pour que l'unité modifiée (`MemoryTHP=madvise`, D134) prenne effet : la coque lit ses jetons (`galerie.*`,
+`presquile.entree`, `presquile.sortie`) et le mouvement (`navigate`) dans `~/.config/dunei`, où seul `make install`
+copie les fichiers générés. Sans lui, la coque, qui suit `coque/` par son lien, verrait le nouveau code avec les anciens
+jetons. La table des raccourcis est liée au dépôt : Hyprland connaît SUPER + W après le rechargement de sa configuration
+(`hyprctl reload config-only` au besoin).
+
+### Usage
+
+| Geste | Effet |
+| --- | --- |
+| SUPER + W | Ouvre la galerie sur l'écran actif, ou la referme ; ne fait rien si l'espace de travail actif a une fenêtre en plein écran, et ferme un popover de la barre ouvert |
+| Flèches, molette, pavé tactile à deux doigts | Sélection précédente ou suivante, sans bouclage aux bouts |
+| Entrée, clic sur la sélection ou sur une vignette entière | Applique l'image ; les autres vignettes s'effacent, puis la presqu'île se rétracte pendant que l'image monte |
+| Clic sur une vignette coupée | La sélectionne sans l'appliquer |
+| Échap, clic en dehors, 2 s sans action | Referme sans rien changer |
+
+### Si la galerie ne se comporte pas comme prévu
+
+- Si SUPER + W ne fait rien : `qs ipc -c dunei show` doit lister `target galerie` et `function basculer(): void`, puis
+  `qs ipc -c dunei call galerie basculer` doit ouvrir la galerie. Si la commande marche à la main, la table des raccourcis
+  n'est pas rechargée : `hyprctl reload config-only`.
+- Si la galerie s'ouvre avec des tailles ou des durées anciennes : `make install` n'a pas été rejoué après la mise à jour.
+- Si le dossier est vide, absent ou illisible, la presqu'île affiche « Aucune image dans ~/Documents/Images/Wallpapers ».
+  Un échec de `dunei-fond` s'écrit au journal de la coque (`journalctl --user -u dunei-coque -e`, ligne
+  « galerie : dunei-fond a échoué »).
+
+### Essais
+
+`python3 -m unittest tests.test_galerie` éprouve la logique de sélection, le module monté dans une fenêtre d'essai et
+l'ouvreuse, par la vraie cible IPC `galerie`, dans une coque d'essai sous la plateforme offscreen : rien ne paraît à
+l'écran. `tests.test_presquile` éprouve le changement de module. Lancée à la main sans `QT_QPA_PLATFORM=offscreen`,
+la coque d'essai `coque/Galerie/essai/` ouvre une fenêtre flottante : à faire sur les bureaux 1 à 4, jamais en plein
+écran.
+
+### Mesures et recette
+
+Le 2026-11-07, sur `caladan`, avec une copie de la coque d'essai sous la plateforme offscreen (la coque de Nicolas n'a pas
+été ouverte) ; trois à cinq ouvertures par dossier, délais relevés dans la coque par une horloge de 2 ms :
+
+| Dossier | Commande → trois vignettes centrales décodées | PSS avant / pendant / 10 s après | Processeur au repos |
+| --- | --- | --- | --- |
+| Réel, 4 images, 9 Mo | 274 à 289 ms, au début du fondu d'entrée | 59 / 103 à 108 / 103 à 108 Mo | 0,2 à 0,3 % |
+| Essai, 30 images lourdes, 467 Mo (JPEG 6000 × 4000, PNG 3840 × 2160) | 830 à 913 ms, après la fin de l'étirement | 59 / 99 à 103 / 98 à 103 Mo | 0,2 à 0,3 % |
+| Témoin, 3 petites images | 256 à 274 ms | 59 / 73 / 73 Mo | 0,2 à 0,3 % |
+
+L'appel `qs ipc` coûte 30 à 35 ms ; le fondu d'entrée commence 225 à 242 ms après l'ouverture. Sur le dossier lourd,
+l'ouverture dépasse donc l'étirement d'environ 600 ms. La mémoire ne redescend pas après la fermeture, mais reste stable
+d'une ouverture à l'autre et aucune galerie ne survit : c'est un coût payé une fois par la coque, dont la part dépend
+du poids des images décodées. Ces mesures ont été prises avant le correctif de mémoire : la rétention est la cause décrite ci-dessus (D134), et Nicolas a accepté le retard sur un gros dossier ; le cache de miniatures est reporté à L2-63 (D135).
+
+### Mémoire de la coque — `MemoryTHP=madvise`
+
+L'unité `config/systemd/user/dunei-coque.service` demande `MemoryTHP=madvise` (systemd 260 ou plus ; `caladan` a la 262)
+: le noyau n'accorde des pages géantes transparentes à la coque que sur demande explicite (D134). Sans cela, avec le
+noyau réglé sur `always`, la coque retenait des centaines de Mo de pages de 2 Mo que `khugepaged` regonflait, et la
+mémoire ne redescendait pas après la galerie. L'unité est posée par `make install` depuis `config/` : il faut donc
+`make install`, puis `systemctl --user restart dunei-coque.service`, au moment choisi (la coque disparaît et revient en
+quelques secondes). À relever ensuite :
+
+```
+grep -E 'Pss:|AnonHugePages' /proc/$(pgrep -f 'qs -n -c dunei')/smaps_rollup
+```
+
+Sur la coque de Nicolas, le 2026-11-07 : 971 Mo de PSS dont 811 Mo en pages géantes avant, 160 Mo et aucune page géante
+après redémarrage. Si `AnonHugePages` reste élevé, la ligne n'est pas prise en compte : `systemctl --user cat
+dunei-coque.service` doit la montrer, et `systemctl --version` doit annoncer 260 ou plus. Le réglage du noyau lui-même
+n'est pas touché ; le passer en `madvise` pour toute la machine est L2-64.
+
+Nicolas a validé la recette à l'écran le 2026-11-07 : ouverture et fermeture, flèches sans clic préalable, validation
+mise en valeur, montée du fond, clics sur la barre intacts, glissement `navigate` et bascule des bureaux. Le plein écran
+n'a pas été éprouvé avec une vraie fenêtre (D129).
+
 ## Lecteur d'empreinte — nouveau
 
 Cet élément n'existe dans aucun document du projet. Il est consigné ici parce qu'il s'installe au lot 1, mais **son travail de conception appartient au lot 5**.
@@ -2264,6 +2345,8 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 
 | Version | Date | Changement |
 | --- | --- | --- |
+| 1.38 | 2026-11-07 | La galerie de fonds : mémoire de la coque (`MemoryTHP=madvise`, `make install` puis redémarrage du service, relevé de `smaps_rollup`, D134), préchauffage et surface constante (D132, D133), gros dossier accepté (D135) |
+| 1.37 | 2026-11-07 | La galerie de fonds (L2-60, D124 à D131) : SUPER + W, `make install` pour les nouveaux jetons, dépannage, essais, mesures et recette |
 | 1.36 | 2026-11-06 | Le fond d'écran (L2-27, D121 à D123) : `dunei-fond`, dossier des images, dépannage du calque, mesures ; `bureau.json` gagne `image` |
 | 1.35 | 2026-11-05 | Codex : paquet `openai-codex`, instructions globales et crochet rtk reliés depuis l'atelier (L1-26, D119) |
 | 1.34 | 2026-11-05 | Énergie (L1-09) : fenêtre du double appui du bouton marche ramenée à 0,4 s après une veille déclenchée par deux fantômes (D120) |

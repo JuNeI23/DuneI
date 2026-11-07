@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas
 
-Document normatif. Version 0.27. Historique en fin de document.
+Document normatif. Version 0.29. Historique en fin de document.
 
 ## Comment lire ce document
 
@@ -276,7 +276,7 @@ Ils agissent ensemble ; isolément, aucun ne fait grand-chose.
 | `window` | Ouverture et fermeture de fenêtre |
 | `reflow` | Réagencement du tuilage |
 | `spectacle` | Moments sans contenu |
-| `navigate` | Changement de bureau : la vue glisse d'un bureau à l'autre |
+| `navigate` | Changement de bureau : la vue glisse d'un bureau à l'autre ; glissement de la bande de la galerie. Ressort posé, environ 0,35 s, sans rebond (D130) |
 
 ### Trois règles transversales
 
@@ -298,6 +298,13 @@ Ils agissent ensemble ; isolément, aucun ne fait grand-chose.
 - **Un passage est une transformation de la même surface.** D'un popover à l'autre, le cadre ne se ferme pas : il se déforme vers la forme du nouveau, ses trois bords (gauche, droit, hauteur) au même ressort, `overlay`. Le contenu reste fixe sur l'écran, le cadre le découvre ; le nouveau contenu paraît quand le cadre a fait 65 % de son trajet, et le disque de l'en-tête ne s'éteint jamais.
 - **Une seule fenêtre.** Les popovers exclusifs d'une barre se partagent une fenêtre de calque permanente, par écran, au namespace `dunei-popovers`, à la règle de flou des autres calques ; elle mesure une ligne au repos et laisse tout passer sans popover ouvert (D109, D110).
 - **Table `[popover]` de `motion.toml`.** `icon_travel_px` (descente de l'icône, 3 px), `rest_threshold_px` (écart sous lequel un bord se pose, 0,5 px) et `passage_content_at` (part du trajet à franchir avant le nouveau contenu, 0,65). Aucune de ces valeurs ne s'écrit ailleurs (D112).
+
+### Presqu'île
+
+- **Un changement de module se fait en trois temps qui se chevauchent** (D124). L'ancien contenu s'efface en fondu (`reveal`) ; dès que son opacité passe sous `presquile.sortie` (0,50), la forme s'étire vers la taille du nouveau module (`window`) pendant que l'ancien finit son fondu, centré et contenu dans la forme, à la même vitesse ; le nouveau contenu apparaît en fondu quand la forme n'a plus que la part `presquile.entree` (0,10) de son trajet à parcourir. Le retour se déroule de la même façon. Un changement demandé en cours de route repart de l'état courant, sans saut.
+- **La forme bouge, la surface ne bouge pas.** La fenêtre de la presqu'île couvre toute la largeur de l'écran et a une hauteur constante, celle du plus grand module (`reserve`, mesurée sur la galerie au démarrage) : elle ne change jamais de taille, ni à l'ouverture ni à la fermeture, car chaque changement fait étirer l'ancien tampon par le compositeur (rebond de l'encoche, première ouverture lente). Seule l'encoche, centrée dedans, change de taille ; le reste de la surface est transparent et laisse passer les clics (D125, D132).
+- **L'ancien contenu s'efface sur place.** Pendant sa sortie, un module garde sa position verticale ; la forme qui s'étire ou se rétracte le découpe, sans qu'il suive son mouvement (D133).
+- **La galerie** (L2-60). La bande glisse au ressort `navigate` ; échelle et voile passent d'une vignette à l'autre au ressort `state`. À la validation, les autres vignettes s'effacent en fondu, la choisie reste seule 200 ms (`galerie.tenue`), puis la presqu'île se rétracte ; la montée du fond (`spectacle`) part dès la validation (D131).
 
 ### Mouvement réduit
 
@@ -879,7 +886,7 @@ Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si 
 | Bureau | E0 | `surface` | `spectacle` | Registre de spectacle. Calque `dunei-fond` de la coque, sous la barre et la presqu'île, sans focus ni clic. Une nouvelle image part du bas et monte sur l'ancienne, qui ne bouge pas ; une demande en vol monte par-dessus celle qui vole, qui finit sa course dessous (D123) ; pose sans animation au démarrage ; fondu seul en mouvement réduit. Sans image, aplat `surface-base` (D121) |
 | Fenêtre tuilée | E1 | `surface` | `reflow` | **Aucune ombre, aucune bordure.** Gouttière 8px, rayon 12. Fenêtre active : les autres portent le modificateur `container_inactive` |
 | Barre système | aucune (transparente) | `text` + `interactive` | `state` | 28px, zone exclusive de 28px. Aucun fond, aucun verre, aucune capsule, de nuit comme de jour (D89). Texte et icônes posés sur le bureau, d'un clair ou d'un foncé choisi d'après le fond réel (`bureau.json`, D90) ; survol un peu plus sombre ou plus clair, sur les seuls éléments cliquables (D100), appui et menu ouvert à `accentStandalone` (D92) ; quand un popover s'ouvre, l'icône descend de 3 px (`popover.icon_travel_px`) et sa couleur et son passage à l'icône pleine suivent `overlay`, le survol seul gardant `state` ; elle ne descend pas en mouvement réduit (D111, D115). Icônes à 16px, logo à 20px, texte à l'échelon 3 (D95). Fonctions coupées : forme barrée (D91) |
-| Presqu'île | E3 | `state` | `state` | Encoche continue au centre du haut de l'écran, 28px de haut comme la barre, couche haute : le plein écran la recouvre (D97). Elle montre les quatre bureaux de DuneI (D96) : points identiques en `textDisabled`, pilule d'accent discret (`accentDiscret`, identique de jour et de nuit) sur le bureau courant ; pilule grisée tant que le bureau spécial est ouvert. Survol en `textTertiary` (D92). Surface, forme et modules de contenu sont indépendants (D98) |
+| Presqu'île | E3 | `state` | `state` | Encoche continue au centre du haut de l'écran, 28px de haut comme la barre, couche haute : le plein écran la recouvre (D97). Elle montre les quatre bureaux de DuneI (D96) : points identiques en `textDisabled`, pilule d'accent discret (`accentDiscret`, identique de jour et de nuit) sur le bureau courant ; pilule grisée tant que le bureau spécial est ouvert. Survol en `textTertiary` (D92). Surface, forme et modules de contenu sont indépendants (D98). Un module en remplace un autre par fondu de sortie, étirement de la forme et fondu d'entrée, qui se chevauchent (D124, D133, chapitre 6). **Galerie de fonds** (SUPER + W, D126) : bande de vignettes 160 × 90, angles `radius.control`, liseré `border-subtle`, la sélection au centre entre une vignette entière et une vignette coupée à 56 px de chaque côté ; relief de la sélection à l'échelle 1,06, les autres sous un voile `surface-base` à 30 %, sans couleur recalculée ; dossier vide signalé en `text-secondary` |
 | Barre latérale | E2 | `surface` + `row` | `state` | 240px, redimensionnable 180–400 par pas de 4. Sous 480px de conteneur → icônes seules |
 | En-tête de panneau | E2 | `surface` + `text` | — | Sheen autorisé : hauteur sous 80px |
 | Rangée de liste | — | `row` | `state` | Transparente au repos. Sélection en pastille arrondie, en retrait des bords. Focus = **contour intérieur pleine largeur**, décalage −1, qui suit l'arrondi. Jamais d'anneau. La liste est un seul arrêt de tabulation |
@@ -962,3 +969,5 @@ Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si 
 | 0.25 | 2026-11-03 | Chapitre 7 et annexe E : popovers de la barre exclusifs et fermés au départ du pointeur (D108) ; popover Bluetooth, appareil connecté gardé dans la liste et « Oublier » par chevron (D107) |
 | 0.26 | 2026-11-04 | Chapitre 6 : le verre ne s'estompe jamais, fenêtre unique des popovers de la barre, table `[popover]`, un passage est une transformation d'une même surface, fondu du mouvement réduit seule exception ; composants : popover, icône de la barre, ligne de la section dépliable reportée à L2-58 (D110 à D115) ; annexe : colonne Transition du popover corrigée en `overlay`, comme le chapitre 6 et D112 |
 | 0.27 | 2026-11-06 | Chapitre 2 : état actuel du fond d'écran, affiché sans extraction de teinte (D121, D122) ; annexe E : le bureau et sa transition d'image, interruptible (L2-27, D123) |
+| 0.28 | 2026-11-07 | Chapitre 6 : `navigate` posé, environ 0,35 s, sans rebond (D130) ; section Presqu'île : changement de module en trois temps qui se chevauchent, surface fixe, mouvement de la galerie (D124, D125, D131) ; annexe E : la galerie de fonds dans la presqu'île et son relief (L2-60, D126) |
+| 0.29 | 2026-11-07 | Section Presqu'île : surface de hauteur constante égale au plus grand module, ancien contenu qui s'efface sur place (D132, D133) ; annexe E : renvoi à D133 |

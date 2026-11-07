@@ -20,7 +20,7 @@ class ModelTest(unittest.TestCase):
         self.assertEqual(len(curves), 15)
         self.assertEqual(list(curves), sorted(curves))
         self.assertEqual(curves["dunei-state-out"], {"mass": 1, "stiffness": 4489.8, "dampening": 142.86})
-        self.assertEqual(curves["dunei-navigate-in"], {"mass": 1, "stiffness": 2000, "dampening": 100})
+        self.assertEqual(curves["dunei-navigate-in"], {"mass": 1, "stiffness": 400, "dampening": 41})
         self.assertTrue(all(c["mass"] == 1 for c in curves.values()))
         self.assertEqual(curves["dunei-reduced"], {"mass": 1, "stiffness": 4406.3, "dampening": 132.76})
         self.assertEqual(curves["dunei-reflow-in"], curves["dunei-reflow-out"])
@@ -29,7 +29,7 @@ class ModelTest(unittest.TestCase):
         t = self.model["transitions"]
         self.assertEqual(len(t), 7)
         self.assertEqual(t["navigate"]["in"], t["navigate"]["out"])
-        self.assertEqual(t["navigate"]["in"]["settle_ms"], 186)
+        self.assertEqual(t["navigate"]["in"]["settle_ms"], 353)
         self.assertEqual(t["window"]["in"]["zeta"], 0.93)
         self.assertTrue(t["window"]["overshoot"])
         self.assertEqual(t["reveal"]["stagger"], {"ms": 40, "cap": 5})
