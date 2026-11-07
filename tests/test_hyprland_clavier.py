@@ -83,6 +83,7 @@ def expected() -> dict[str, tuple[str, str]]:
         "SUPER + ALT + M": ("dsp.exec_cmd(uwsm stop)", "{}"),
         "SUPER + ALT + R": ("dsp.exec_cmd(hyprctl reload)", "{}"),
         "SUPER + L": ("dsp.exec_cmd(loginctl lock-session)", "{}"),
+        "SUPER + W": ("dsp.exec_cmd(qs ipc -c dunei call galerie basculer)", "{}"),
         "SUPER + mouse:272": ("dsp.window.drag()", "{mouse=true}"),
         "SUPER + mouse:273": ("dsp.window.resize()", "{mouse=true}"),
         "SUPER + mouse_down": ("dsp.focus({workspace=e+1})", "{}"),

@@ -31,6 +31,9 @@ M.touches = {
     { touches = "SUPER + ALT + R", action = "recharger", description = "Recharger la configuration" },
     { touches = "SUPER + L", action = "commande", commande = "loginctl lock-session",
       description = "Verrouiller la session" },   -- Verrouilleur provisoire (L1-09), remplacé à L2-22.
+    -- Coque : la galerie de fonds d'écran (L2-60), par la cible IPC « galerie » de la coque « dunei ».
+    { touches = "SUPER + W", action = "commande", commande = "qs ipc -c dunei call galerie basculer",
+      description = "Choisir le fond d'écran" },
     -- Souris
     { touches = "SUPER + mouse:272", action = "glisser", drapeaux = { mouse = true }, description = "Déplacer la fenêtre à la souris" },
     { touches = "SUPER + mouse:273", action = "etirer",  drapeaux = { mouse = true }, description = "Redimensionner la fenêtre à la souris" },

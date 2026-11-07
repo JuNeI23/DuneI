@@ -16,7 +16,8 @@ import "../Theme"
 //           Le changer est l'unique manière de changer de contenu.
 // Sorties : une fenêtre de calque au namespace « dunei-presquile » (floutée par les règles de calque générées) ;
 //           contenu, le module monté ; phase, celle de la séquence de changement (« repos », « sortie », « forme »
-//           ou « entree »), lue par les essais et l'ouvreuse de la galerie.
+//           ou « entree »), lue par les essais et l'ouvreuse de la galerie ; fenetre, la surface elle-même, que
+//           l'ouvreuse de la galerie passe à sa prise du clavier (HyprlandFocusGrab).
 // Erreurs : sans jeton de thème, l'encoche est vide et la fenêtre reste posée ; un module sans taille laisse l'encoche
 //           à la hauteur des jetons.
 // Dépendances : quickshell ≥ 0.3 (PanelWindow, Region, WlrLayershell), Encoche, Scene, Bureaux, Ressort, Theme.
@@ -29,6 +30,8 @@ PanelWindow {
     // Module instancié pour l'écran de la surface (null tant que le composant n'est pas monté).
     readonly property alias contenu: scene.contenu
     readonly property alias phase: scene.phase
+    // Fenêtre à prendre dans le HyprlandFocusGrab de l'ouvreuse (contrat partagé avec les presqu'îles d'essai).
+    readonly property var fenetre: surface
     // Ressorts de taille de la scène, lus pour dimensionner la fenêtre et le corps de l'encoche.
     readonly property Ressort largeur: scene.ressortLargeur
     readonly property Ressort hauteur: scene.ressortHauteur

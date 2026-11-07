@@ -105,8 +105,8 @@ CASSE = "casse.jpg"
 TEXTE = "notes.txt"
 
 
-class ModuleTest(GalerieIpc, unittest.TestCase):
-    """Le module Galerie monté dans la fenêtre d'essai (plateforme offscreen) sur un dossier temporaire."""
+class GalerieDossier(GalerieIpc):
+    """Base des tests sur un dossier d'images temporaire, le fond actuel étant sa deuxième image."""
 
     def setUp(self):
         EssaiCoque.setUp(self)
@@ -146,6 +146,10 @@ class ModuleTest(GalerieIpc, unittest.TestCase):
                 return valeur
             time.sleep(0.05)
         self.fail(f"{quoi} : délai dépassé\n{self.journal()}")
+
+
+class ModuleTest(GalerieDossier, unittest.TestCase):
+    """Le module Galerie monté dans la fenêtre d'essai (plateforme offscreen) sur un dossier temporaire."""
 
     def etat(self) -> dict:
         """Photographie de la galerie d'essai (voir etat dans coque/Galerie/essai/shell.qml)."""
@@ -300,3 +304,164 @@ class ModuleTest(GalerieIpc, unittest.TestCase):
                 self.assertEqual(e["message"], "Aucune image dans ~/Documents/Images/Wallpapers")
                 self.touches("Echap")
                 self.assertEqual(self.etat()["fini"], "")
+
+
+class OuvreuseTest(GalerieDossier, unittest.TestCase):
+    """L'ouvreuse de la coque d'essai, sur deux presqu'îles d'essai (écrans « A » et « B », sans fenêtre), pilotée par
+    sa vraie cible IPC « galerie » ; dunei-fond est remplacé par un script qui consigne ses arguments, et l'écran actif
+    comme le plein écran sont simulés par des propriétés d'essai."""
+
+    def setUp(self):
+        super().setUp()
+        self.consigne = Path(self.tmp.name) / "fond.log"
+        self.script = self.ecrire_script(0)
+        self.regler()
+
+    def ecrire_script(self, code: int) -> Path:
+        """Écrit le faux dunei-fond : une ligne par appel, le nombre d'arguments puis chacun, séparés par des tabulations.
+
+        Entrée : code, code de sortie du script. Sortie : chemin du script, exécutable.
+        Erreurs : OSError si l'écriture échoue. Dépendances : consigne.
+        """
+        script = Path(self.tmp.name) / f"fond-{code}.sh"
+        script.write_text("#!/bin/sh\n{ printf '%s' \"$#\"; for a in \"$@\"; do printf '\\t%s' \"$a\"; done; "
+                          f"printf '\\n'; }} >> '{self.consigne}'\nexit {code}\n", encoding="utf-8")
+        script.chmod(0o755)
+        return script
+
+    def regler(self, actif: str = "B", plein: bool = False) -> None:
+        """Règle l'ouvreuse d'essai. Entrées : actif, nom de l'écran actif ; plein, plein écran simulé.
+        Sortie : aucune. Erreurs : celles de appeler. Dépendances : appeler, script, images."""
+        self.appeler("regler", actif, plein, str(self.script), str(self.images))
+
+    def basculer(self) -> None:
+        """Appelle basculer() par la vraie cible IPC « galerie » de la coque d'essai. Erreurs : CalledProcessError."""
+        subprocess.run([QS, "ipc", "--pid", str(self.proc.pid), "call", "galerie", "basculer"],
+                       check=True, capture_output=True, text=True, timeout=DELAI)
+
+    def ouvreuse(self) -> dict:
+        """Photographie de l'ouvreuse (voir etatOuvreuse dans coque/Galerie/essai/shell.qml)."""
+        return self.json("etatOuvreuse")
+
+    def module(self, e: dict, nom: str) -> dict:
+        """La presqu'île d'essai d'un écran dans une photographie. Sortie : {nom, module, phase}."""
+        return next(p for p in e["presquiles"] if p["nom"] == nom)
+
+    def attendre_module(self, nom: str, module: str) -> dict:
+        """Attend qu'une presqu'île porte un module au repos (et, pour la galerie, son dossier lu).
+
+        Entrées : nom, l'écran ; module, « galerie » ou « bureaux ». Sortie : la photographie.
+        Erreurs : échec du test au délai dépassé. Dépendances : ouvreuse, sonder.
+        """
+        def pret():
+            e = self.ouvreuse()
+            p = self.module(e, nom)
+            return p["module"] == module and p["phase"] == "repos" and (module != "galerie" or e["lu"]) and e
+        return self.sonder(pret, f"{module} au repos sur {nom}")
+
+    def appels(self) -> list[list[str]]:
+        """Appels consignés par le faux dunei-fond. Sortie : [[nombre d'arguments, arguments…], …]."""
+        if not self.consigne.exists():
+            return []
+        return [ligne.split("\t") for ligne in self.consigne.read_text(encoding="utf-8").splitlines()]
+
+    def test_basculer(self):
+        self.basculer()
+        e = self.attendre_module("B", "galerie")
+        self.assertTrue(e["ouvert"])
+        self.assertEqual(e["cible"], "B")
+        self.assertEqual(self.module(e, "A")["module"], "bureaux")
+        self.assertEqual(e["popover"], "ouvreuse")
+        self.basculer()
+        e = self.attendre_module("B", "bureaux")
+        self.assertFalse(e["ouvert"])
+        self.assertIsNone(e["popover"])
+        self.sonder(lambda: self.ouvreuse()["galeries"] == 0, "galerie détruite")
+
+    def test_basculer_deux_fois(self):
+        """SUPER + W pressé deux fois pendant l'étirement : retour aux bureaux depuis l'état courant, sans orphelin."""
+        self.basculer()
+        time.sleep(0.05)
+        self.basculer()
+        e = self.attendre_module("B", "bureaux")
+        self.assertFalse(e["ouvert"])
+        self.assertIsNone(e["popover"])
+        self.sonder(lambda: self.ouvreuse()["galeries"] == 0, "aucune galerie orpheline")
+
+    def test_plein_ecran(self):
+        self.regler(plein=True)
+        self.basculer()
+        time.sleep(0.5)
+        e = self.ouvreuse()
+        self.assertFalse(e["ouvert"])
+        self.assertIsNone(e["popover"])
+        self.assertEqual([(p["module"], p["phase"]) for p in e["presquiles"]], [("bureaux", "repos")] * 2)
+
+    def test_popover_ferme(self):
+        self.appeler("popover", True)
+        self.assertEqual(self.ouvreuse()["popover"], "autre")
+        self.basculer()
+        e = self.attendre_module("B", "galerie")
+        self.assertEqual(e["popover"], "ouvreuse")
+        self.assertFalse(e["popoverOuvert"])
+        self.appeler("popover", True)
+        e = self.attendre_module("B", "bureaux")
+        self.assertFalse(e["ouvert"])
+        self.assertEqual(e["popover"], "autre")
+
+    def valider(self, i: int) -> dict:
+        """Ouvre la galerie sur B, valide l'image d'index i, et attend le retour aux bureaux.
+        Sortie : la photographie finale. Dépendances : basculer, attendre_module, appeler."""
+        self.basculer()
+        self.attendre_module("B", "galerie")
+        self.appeler("validerOuvreuse", i)
+        return self.attendre_module("B", "bureaux")
+
+    def test_valider(self):
+        e = self.valider(2)
+        self.assertFalse(e["ouvert"])
+        self.sonder(lambda: self.appels(), "dunei-fond appelé")
+        time.sleep(0.3)
+        self.assertEqual(self.appels(), [["1", self.chemins[2]]])
+
+    def test_valider_nom_special(self):
+        """Un nom à espace, « # » et « ? » arrive intact, en un seul argument."""
+        self.valider(0)
+        self.sonder(lambda: self.appels(), "dunei-fond appelé")
+        self.assertEqual(self.appels(), [["1", self.chemins[0]]])
+        self.assertTrue(self.chemins[0].endswith("a #b?.jpg"))
+
+    def test_valider_actuel(self):
+        self.valider(1)
+        time.sleep(0.5)
+        self.assertEqual(self.appels(), [])
+
+    def test_echec_journalise(self):
+        self.script = self.ecrire_script(2)
+        self.regler()
+        self.valider(2)
+        self.attendre("galerie : dunei-fond a échoué (2)")
+        self.assertEqual(self.appels(), [["1", self.chemins[2]]])
+
+    def test_ecran_retire(self):
+        """L'écran de la galerie débranché pendant l'ouverture : l'ouvreuse revient à l'état fermé, et rouvre ailleurs."""
+        self.basculer()
+        self.attendre_module("B", "galerie")
+        self.appeler("retirer", "B")
+        e = self.sonder(lambda: (e := self.ouvreuse())["galeries"] == 0 and e, "galerie détruite avec son écran")
+        self.assertFalse(e["ouvert"])
+        self.assertIsNone(e["cible"])
+        self.assertIsNone(e["popover"])
+        self.assertEqual([p["nom"] for p in e["presquiles"]], ["A"])
+        self.regler(actif="A")
+        self.basculer()
+        self.assertEqual(self.attendre_module("A", "galerie")["cible"], "A")
+
+    def test_delai_depuis_entree(self):
+        """Le délai d'abandon repart quand la galerie apparaît (phase « entree »), et non à sa création."""
+        delai = self.jetons["delai"]
+        self.basculer()
+        e = self.sonder(lambda: (e := self.ouvreuse())["tFin"] > 0 and e, "abandon au délai")
+        self.assertGreater(e["tEntree"], 0)
+        self.assertGreaterEqual(e["tFin"] - e["tEntree"], delai - 50)
+        self.assertEqual(self.appels(), [])

@@ -3,6 +3,7 @@ import Quickshell
 import Quickshell.Io
 import QtTest
 import "Theme"
+import "Composants"
 import "Galerie"
 import "Presquile"
 import "Galerie/galerie.js" as Galerie
@@ -11,14 +12,19 @@ import "Theme/fichiers.js" as Fichiers
 // Coque d'essai du module Galerie.
 // Rôle : expose par IPC (cible « galerie-essai ») les fonctions pures de galerie.js et de fichiers.js, et monte le
 // module Galerie dans une fenêtre d'essai qui imite la presqu'île (fond du bureau, Encoche à la taille du module), pour
-// que tests/test_galerie.py les éprouve dans un vrai Quickshell. Sous la plateforme offscreen (les tests), la fenêtre
+// que tests/test_galerie.py les éprouve dans un vrai Quickshell. Porte aussi une Ouvreuse, avec sa vraie cible IPC
+// « galerie », sur deux presqu'îles d'essai sans fenêtre (écrans « A » et « B », une Scene chacune, bureaux sans
+// Hyprland) et un popover exclusif factice ; l'écran actif, le plein écran, la commande d'application et le dossier
+// lu y sont réglés par l'IPC. Sous la plateforme offscreen (les tests), la fenêtre
 // n'apparaît jamais à l'écran ; lancée à la main dans la session, elle s'ouvre en fenêtre flottante pour la capture.
 // Entrées : DUNEI_TOKENS_DIR, lu par Theme ; QT_QPA_PLATFORM, posé à offscreen par le test. Commandes IPC : filtres,
 // borner, deplacer, initial, cran, identique, url, developper, jeton, presquile, actuel, monter, etat, touche,
-// molette, molettereelle, cliquer, cliquerreel, capturer (les listes et objets sont rendus en JSON, le reste en texte).
+// molette, molettereelle, cliquer, cliquerreel, capturer, regler, etatOuvreuse, popover, validerOuvreuse, retirer (les
+// listes et objets sont rendus en JSON, le reste en texte).
 // Sortie : le résultat de chaque appel IPC, sur la sortie de « qs ipc call ». Erreurs : celles de Theme, dans
 // le journal ; les commandes du module sont sans effet tant qu'aucune galerie n'est montée.
-// Dépendances : quickshell ≥ 0.3 (Quickshell.Io, FloatingWindow, LazyLoader), QtTest (événements réels), modules Theme, Galerie et Presquile.
+// Dépendances : quickshell ≥ 0.3 (Quickshell.Io, FloatingWindow, LazyLoader, Instantiator), QtTest (événements réels),
+// modules Theme, Composants (Overlays), Galerie (Galerie, Ouvreuse) et Presquile (Scene, Bureaux).
 // Import : liens essai/Theme, essai/Composants, essai/Galerie et essai/Presquile, comme dans les autres coques d'essai.
 ShellRoot {
     id: racine
@@ -34,6 +40,67 @@ ShellRoot {
     property real t0: 0
 
     Component { id: moduleGalerie; Galerie {} }
+
+    // Ouvreuse d'essai : dossier, lu par ses galeries ; galeries, nombre de galeries vivantes (aucune orpheline) ;
+    // tEntree, instant du passage de sa presqu'île en phase « entree » ; tFin, instant de sa fermeture (0 avant).
+    property string dossierOuvreuse: ""
+    property int galeries: 0
+    property real tEntree: 0
+    property real tFin: 0
+
+    Ouvreuse {
+        id: ouvreuse
+        ecranActif: null
+        pleinEcran: false
+        commande: []
+        galerie: Component {
+            Galerie {
+                objectName: "galerie"
+                dossier: racine.dossierOuvreuse
+                Component.onCompleted: racine.galeries++
+                Component.onDestruction: racine.galeries--
+            }
+        }
+        onOuvertChanged: if (!ouvert) racine.tFin = Date.now()
+    }
+    Connections {
+        target: ouvreuse.cible
+        function onPhaseChanged() { if (ouvreuse.cible.phase === "entree") racine.tEntree = Date.now() }
+    }
+
+    Component { id: bureauxEssai; Bureaux { objectName: "bureaux"; idActif: 0; special: "" } }
+
+    // Presqu'îles d'essai, au contrat de Presquile vu par l'ouvreuse : modelData (un écran factice, comparé par
+    // identité), module, contenu, phase, et fenetre nulle (aucun grab sous offscreen).
+    Instantiator {
+        model: ListModel {
+            id: ecransEssai
+            ListElement { nom: "A" }
+            ListElement { nom: "B" }
+        }
+        delegate: Item {
+            id: presquileEssai
+            required property string nom
+            readonly property var modelData: ({ name: nom })
+            property Component module: bureauxEssai
+            readonly property alias contenu: scene.contenu
+            readonly property alias phase: scene.phase
+            readonly property var fenetre: null
+
+            Scene { id: scene; ecran: presquileEssai.modelData; module: presquileEssai.module }
+            Component.onCompleted: ouvreuse.inscrire(presquileEssai)
+            Component.onDestruction: ouvreuse.retirer(presquileEssai)
+        }
+    }
+
+    // Popover exclusif factice, inscrit au registre comme un Overlay de la barre.
+    QtObject {
+        id: popoverEssai
+        readonly property string famille: "contextuel"
+        readonly property bool exclusif: true
+        property bool ouvert: false
+        onOuvertChanged: ouvert ? Overlays.ouvrir(popoverEssai) : Overlays.fermer(popoverEssai)
+    }
 
     // Générateur de vrais événements (QWheelEvent remis à la fenêtre d'essai) : un TestCase qui ne lance aucun test
     // (when faux, optional vrai), dont seules les méthodes d'envoi d'événements servent.
@@ -162,6 +229,40 @@ ShellRoot {
         }
         // cliquer — clic sur la vignette d'index i. Sortie : aucune. Erreurs : aucune. Dépendances : galerie.cliquer.
         function cliquer(i: int): void { racine.galerie?.cliquer(i) }
+
+        // regler — règle l'ouvreuse d'essai. Entrées : actif, nom de l'écran actif (« » pour aucun) ; plein, plein
+        // écran simulé ; commande, programme d'application ; dossier, dossier lu par ses galeries. Sortie : aucune.
+        // Erreurs : un nom inconnu laisse l'écran actif nul. Dépendances : ouvreuse.
+        function regler(actif: string, plein: bool, commande: string, dossier: string): void {
+            ouvreuse.ecranActif = ouvreuse.presquiles.find(p => p.nom === actif)?.modelData ?? null
+            ouvreuse.pleinEcran = plein
+            ouvreuse.commande = [commande]
+            racine.dossierOuvreuse = dossier
+        }
+        // etatOuvreuse — photographie de l'ouvreuse. Sortie : JSON {ouvert, cible, popover (« ouvreuse », « autre » ou
+        // null), popoverOuvert, presquiles [{nom, module, phase}], lu, galeries, tEntree, tFin}. Erreurs : aucune.
+        // Dépendances : ouvreuse, Overlays.
+        function etatOuvreuse(): string {
+            const o = Overlays.popover
+            return JSON.stringify({ ouvert: ouvreuse.ouvert, cible: ouvreuse.cible?.nom ?? null,
+                                    popover: o === ouvreuse ? "ouvreuse" : o ? "autre" : null,
+                                    popoverOuvert: popoverEssai.ouvert,
+                                    presquiles: ouvreuse.presquiles.map(p => ({ nom: p.nom, module: p.contenu?.objectName ?? "",
+                                                                                 phase: p.phase })),
+                                    lu: ouvreuse.cible?.contenu?.lu ?? false, galeries: racine.galeries,
+                                    tEntree: racine.tEntree, tFin: racine.tFin })
+        }
+        // popover — ouvre ou ferme le popover factice. Entrée : ouvrir. Sortie : aucune. Erreurs : aucune.
+        // Dépendances : popoverEssai.
+        function popover(ouvrir: bool): void { popoverEssai.ouvert = ouvrir }
+        // validerOuvreuse — valide l'image d'index i de la galerie de l'ouvreuse. Sortie : aucune.
+        // Erreurs : sans effet sans galerie montée. Dépendances : ouvreuse.
+        function validerOuvreuse(i: int): void { ouvreuse.cible?.contenu?.valider?.(i) }
+        // retirer — retire l'écran d'essai d'un nom, comme un écran débranché. Sortie : aucune.
+        // Erreurs : un nom inconnu est ignoré. Dépendances : ecransEssai.
+        function retirer(nom: string): void {
+            for (let i = 0; i < ecransEssai.count; i++) if (ecransEssai.get(i).nom === nom) return ecransEssai.remove(i)
+        }
 
         // capturer — enregistre la fenêtre d'essai en PNG, de façon asynchrone (sous offscreen, avec
         // QT_QUICK_BACKEND=rhi et QSG_RHI_BACKEND=opengl pour un rendu fidèle, comme l'essai de la presqu'île).
