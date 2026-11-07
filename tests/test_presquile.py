@@ -392,6 +392,32 @@ class ChangementTest(PresquileIpc, unittest.TestCase):
         self.assertLess(cede, detruit)
         self.assertEqual(traces[detruit + 1:].count("sortant bureaux"), 0)
 
+    def test_cession_sans_palier(self):
+        # À la cession, le fondu de l'ancien contenu change de ressort sans changer de vitesse : la courbe de son
+        # opacité, de 1 à 0, descend à chaque image sans palier : le ressort de départ reprend la position et la vitesse
+        # de l'ancien (recette de L2-60 : un arrêt à mi-opacité se voyait).
+        self.repos()
+        depart = len(self.traces())
+        self.appeler("changer", "grand")
+        self.repos()
+        traces = self.traces(depart)
+        cede = traces.index("sortant bureaux")
+        detruit = traces.index("detruit bureaux")
+        avant = [(float(t.split()[1]), float(t.split()[2])) for t in traces[:cede] if t.startswith("o ")]
+        apres = [(float(t.split()[1]), float(t.split()[2])) for t in traces[cede:detruit] if t.startswith("so ")]
+        # Le dernier « o » avant la cession est la pose à 0 du conteneur du module : il n'appartient pas à l'ancien.
+        avant = [p for p in avant if p != (0.0, 0.0)]
+        # La première valeur du ressort de départ est la reprise elle-même, au même instant que la dernière valeur
+        # de l'ancien ressort : elle en reprend la position et la vitesse exactes, et n'est pas une image de plus.
+        reprise, apres = apres[0], apres[1:]
+        self.assertLess(avant[-1][1], 0)
+        self.assertEqual(reprise, avant[-1])
+        # Ensuite, la courbe descend à chaque image jusqu'à 0, sans palier, à vitesse toujours non nulle.
+        courbe = [x for x, _ in avant + apres]
+        self.assertEqual(courbe[-1], 0)
+        self.assertTrue(all(b < a for a, b in zip(courbe, courbe[1:])), courbe)
+        self.assertTrue(all(v < 0 for _, v in apres[:-1]), apres)
+
     def test_hauteur_surface_tenue(self):
         # La hauteur réservée par la surface monte d'un coup quand la forme s'agrandit, puis ne bouge plus pendant la
         # rétractation : elle ne redescend qu'une fois, à l'arrêt du ressort de hauteur (aucune reconfiguration de la
@@ -462,7 +488,7 @@ class ChangementReduitTest(ChangementTest):
         self.assertEqual(entree[-1], 1)
         self.assertEqual(entree, sorted(entree))
         self.assertGreater(len(entree), 5)
-        self.assertIn("o 0", traces[:traces.index("contenu grand")])
+        self.assertIn(["o", "0"], [t.split()[:2] for t in traces[:traces.index("contenu grand")]])
 
 
 class EncocheTest(PresquileIpc, unittest.TestCase):

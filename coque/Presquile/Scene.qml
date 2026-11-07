@@ -155,16 +155,15 @@ Item {
     }
 
     // ceder — confie le contenu courant au conteneur de départ, où il finit son fondu depuis son opacité courante
-    // (sans saut de valeur ; sa vitesse repart de zéro), toujours centré dans la scène ; le conteneur du module repasse
+    // (le ressort de départ reprend la position et la vitesse de celui du module : le fondu continue sans palier),
+    // toujours centré dans la scène ; le conteneur du module repasse
     // à l'opacité 0 pour le contenu suivant.
     // Entrées : aucune. Sortie : met à jour _sortant. Erreurs : aucune ; appelée seulement quand aucun ancien contenu
     // n'est en train de partir. Dépendances : depart, effacement, opacite.
     function ceder() {
         _sortant = contenu
         if (contenu) contenu.parent = depart
-        effacement.cible = opacite.value
-        effacement.poser()
-        effacement.cible = 0
+        effacement.reprendre(opacite.value, opacite.vitesse())
         opacite.cible = 0
         opacite.poser()
         Qt.callLater(avancer)

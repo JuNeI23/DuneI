@@ -82,11 +82,18 @@ ShellRoot {
     }
     Connections {
         target: essaiScene.ressortSortant
-        function onValueChanged() { console.info("essai : so " + essaiScene.ressortSortant.value) }
+        // Valeur puis vitesse, pour vérifier que le fondu continue sans rupture de vitesse à la cession.
+        function onValueChanged() {
+            const r = essaiScene.ressortSortant
+            console.info("essai : so " + r.value + " " + r.vitesse())
+        }
     }
     Connections {
         target: essaiScene.ressortOpacite
-        function onValueChanged() { console.info("essai : o " + essaiScene.ressortOpacite.value) }
+        function onValueChanged() {
+            const r = essaiScene.ressortOpacite
+            console.info("essai : o " + r.value + " " + r.vitesse())
+        }
     }
 
     LazyLoader {
