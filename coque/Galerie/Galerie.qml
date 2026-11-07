@@ -202,7 +202,9 @@ FocusScope {
                 selectionnee: emplacement.index === galerie.index
             }
 
-            TapHandler { onTapped: galerie.cliquer(emplacement.index) }
+            // Clic : une MouseArea plutôt qu'un TapHandler, pour que les vrais clics envoyés par l'essai l'atteignent
+            // (comme la molette, ils n'atteignent pas les gestionnaires de pointeur).
+            MouseArea { anchors.fill: parent; onClicked: galerie.cliquer(emplacement.index) }
         }
     }
 
@@ -214,9 +216,14 @@ FocusScope {
         text: "Aucune image dans " + (galerie.jetons?.dossier ?? "")
     }
 
-    // Molette et pavé tactile sur tout le module ; mouvement de souris, qui relance le délai.
-    WheelHandler {
-        acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+    // Molette et pavé tactile sur tout le module, sur les deux axes : une MouseArea qui n'accepte aucun bouton (les
+    // clics passent aux vignettes) et lit angleDelta ou pixelDelta en x comme en y. Un WheelHandler est écarté : son
+    // orientation (verticale par défaut) désigne, selon la documentation de Qt 6, la seule molette à laquelle il
+    // réagit, et les vrais événements de molette envoyés par l'essai ne l'atteignent pas, alors qu'ils atteignent la
+    // MouseArea. Mouvement de souris : relance le délai.
+    MouseArea {
+        anchors.fill: parent
+        acceptedButtons: Qt.NoButton
         onWheel: event => {
             const pixel = event.pixelDelta.x !== 0 || event.pixelDelta.y !== 0
             const d = pixel ? event.pixelDelta : event.angleDelta

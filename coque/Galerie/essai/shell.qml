@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import QtTest
 import "Theme"
 import "Galerie"
 import "Presquile"
@@ -14,10 +15,10 @@ import "Theme/fichiers.js" as Fichiers
 // n'apparaît jamais à l'écran ; lancée à la main dans la session, elle s'ouvre en fenêtre flottante pour la capture.
 // Entrées : DUNEI_TOKENS_DIR, lu par Theme ; QT_QPA_PLATFORM, posé à offscreen par le test. Commandes IPC : filtres,
 // borner, deplacer, initial, cran, identique, url, developper, jeton, presquile, actuel, monter, etat, touche,
-// molette, cliquer, capturer (les listes et objets sont rendus en JSON, le reste en texte).
+// molette, molettereelle, cliquer, cliquerreel, capturer (les listes et objets sont rendus en JSON, le reste en texte).
 // Sortie : le résultat de chaque appel IPC, sur la sortie de « qs ipc call ». Erreurs : celles de Theme, dans
 // le journal ; les commandes du module sont sans effet tant qu'aucune galerie n'est montée.
-// Dépendances : quickshell ≥ 0.3 (Quickshell.Io, FloatingWindow, LazyLoader), modules Theme, Galerie et Presquile.
+// Dépendances : quickshell ≥ 0.3 (Quickshell.Io, FloatingWindow, LazyLoader), QtTest (événements réels), modules Theme, Galerie et Presquile.
 // Import : liens essai/Theme, essai/Composants, essai/Galerie et essai/Presquile, comme dans les autres coques d'essai.
 ShellRoot {
     id: racine
@@ -33,6 +34,10 @@ ShellRoot {
     property real t0: 0
 
     Component { id: moduleGalerie; Galerie {} }
+
+    // Générateur de vrais événements (QWheelEvent remis à la fenêtre d'essai) : un TestCase qui ne lance aucun test
+    // (when faux, optional vrai), dont seules les méthodes d'envoi d'événements servent.
+    TestCase { id: evenements; when: false; optional: true }
 
     // Fenêtre d'essai : le fond du bureau, et l'Encoche de la presqu'île étirée à la taille de la galerie, avec la
     // marge de son ombre ; cadre reçoit la galerie montée.
@@ -141,6 +146,20 @@ ShellRoot {
         // molette — envoie un défilement à la galerie. Entrées : dx, dy ; pixel, vrai pour un pixelDelta (pavé tactile).
         // Sortie : aucune. Erreurs : aucune. Dépendances : galerie.defiler.
         function molette(dx: real, dy: real, pixel: bool): void { racine.galerie?.defiler(dx, dy, pixel) }
+        // molettereelle — envoie un vrai événement de molette (angleDelta) au centre de la galerie, par la fenêtre.
+        // Entrées : dx, dy, angleDelta. Sortie : aucune. Erreurs : sans effet sans galerie ; un échec d'envoi se lit au
+        // journal. Dépendances : evenements (QtTest), galerie.
+        function molettereelle(dx: int, dy: int): void {
+            const g = racine.galerie
+            if (g) evenements.mouseWheel(g, g.width / 2, g.height / 2, dx, dy)
+        }
+        // cliquerreel — envoie un vrai clic au centre du délégué d'index i, par la fenêtre.
+        // Entrée : i. Sortie : aucune. Erreurs : sans effet sans galerie ou si le délégué n'est pas créé.
+        // Dépendances : evenements (QtTest), galerie.
+        function cliquerreel(i: int): void {
+            const d = racine.galerie?.liste.itemAtIndex(i)
+            if (d) evenements.mouseClick(d)
+        }
         // cliquer — clic sur la vignette d'index i. Sortie : aucune. Erreurs : aucune. Dépendances : galerie.cliquer.
         function cliquer(i: int): void { racine.galerie?.cliquer(i) }
 

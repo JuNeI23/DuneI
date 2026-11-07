@@ -224,6 +224,25 @@ class ModuleTest(GalerieIpc, unittest.TestCase):
             self.appeler("molette", 0, -self.jetons["pas"] / 2, True)
         self.assertEqual(self.etat()["index"], 3)
 
+    def test_molette_reelle_deux_axes(self):
+        """Vrais QWheelEvent remis à la fenêtre : un cran vertical puis un cran horizontal avancent chacun d'un pas."""
+        self.monter()
+        self.appeler("molettereelle", 0, -120)
+        self.sonder(lambda: self.etat()["index"] == 2, "cran vertical")
+        self.appeler("molettereelle", -120, 0)
+        self.sonder(lambda: self.etat()["index"] == 3, "cran horizontal")
+
+    def test_clics_reels(self):
+        """Vrais clics par la fenêtre, sous la zone de molette : une coupée se sélectionne, une entière se valide."""
+        self.monter()
+        self.appeler("cliquerreel", 3)
+        self.sonder(lambda: self.etat()["index"] == 3, "coupée sélectionnée")
+        self.assertIsNone(self.etat()["fini"])
+        # Le délégué 4 n'est créé qu'une fois la bande glissée : on attend qu'il existe avant de cliquer.
+        self.sonder(lambda: self.delegue(self.etat(), 4), "délégué 4 créé")
+        self.appeler("cliquerreel", 4)
+        self.sonder(lambda: self.etat()["fini"] == self.chemins[4], "entière validée")
+
     def test_entree(self):
         self.monter()
         self.touches("Entree")
