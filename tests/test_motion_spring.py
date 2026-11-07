@@ -4,7 +4,8 @@ import unittest
 
 from dunei_motion.spring import critical_spring, exit_spring, simulate, spring, zeta
 
-# Durées de stabilisation à ±1 % affichées par le banc pour les réglages validés le 2026-10-13.
+# Durées de stabilisation à ±1 % affichées par le banc pour les réglages validés le 2026-10-13 ; navigate a été
+# reposé à la recette de la galerie (L2-60, 2026-11-07) : critique à peine sur-amorti, 353 ms.
 BENCH = {
     "state": ((0.50, 1100, 50), 164),
     "reveal": ((1.00, 600, 50), 286),
@@ -12,7 +13,7 @@ BENCH = {
     "window": ((0.70, 300, 27), 274),
     "reflow": ((0.80, 500, 40), 269),
     "spectacle": ((1.00, 150, 25), 569),
-    "navigate": ((0.30, 600, 30), 186),
+    "navigate": ((1.00, 400, 41), 353),
 }
 
 

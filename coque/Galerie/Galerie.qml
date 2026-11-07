@@ -26,8 +26,8 @@ import "../Theme/fichiers.js" as Fichiers
 //           création ; implicitHeight, galerie.hauteur + 2 × presquile.marge, qui laisse place au débord de la
 //           sélection agrandie ; en dossier vide, la largeur du message plus les marges et presquile.hauteur ;
 //           index, sélection courante (−1 sans image) ; nombre, chemins, la liste lue ; lu, vrai une fois le dossier
-//           lu (ou reconnu absent) ; vide ; liste, la ListView, et message, le texte du dossier vide (lus par les
-//           essais) ; signal fini(chemin), le chemin choisi, ou "" pour un abandon.
+//           lu (ou reconnu absent) ; vide ; liste, la ListView, et message, le texte du dossier vide, glisse, vrai
+//           tant que la bande glisse (lus par les essais) ; signal fini(chemin), le chemin choisi, ou "" pour un abandon.
 // Erreurs : aucune ; une image illisible garde sa vignette vide et la navigation la traverse ; un dossier absent ou
 //           illisible se traite comme un dossier vide. Avant le chargement des jetons, le module est de taille nulle.
 // Dépendances : Qt.labs.folderlistmodel, Quickshell (env), Theme (galerie, tokens.presquile, imageBureau, color),
@@ -44,6 +44,7 @@ FocusScope {
     readonly property bool vide: _lu && nombre === 0
     readonly property ListView liste: bande
     readonly property Texte message: ligne
+    readonly property bool glisse: glissement.moving
 
     signal fini(string chemin)
 
@@ -78,13 +79,13 @@ FocusScope {
     // synchroniser — relit la liste des chemins après une lecture ou un changement du dossier.
     // Entrées : aucune (lit modele). Sortie : met à jour chemins et index ; à la première lecture complète, place la
     // sélection sur le fond actuel et pose la bande sans glissement ; ensuite, ramène la sélection dans les bornes
-    // (image retirée pendant l'ouverture). Erreurs : aucune. Dépendances : modele, Logique (initial, borner), glisse.
+    // (image retirée pendant l'ouverture). Erreurs : aucune. Dépendances : modele, Logique (initial, borner), glissement.
     function synchroniser() {
         if (modele.status !== FolderListModel.Ready) return
         chemins = Array.from({ length: modele.count }, (_, i) => modele.get(i, "filePath"))
         if (_lu) { index = Logique.borner(index, chemins.length); return }
         index = Logique.initial(chemins, Theme.imageBureau)
-        glisse.poser()
+        glissement.poser()
         _lu = true
     }
 
@@ -165,7 +166,7 @@ FocusScope {
 
     // Glissement de la bande : contentX qui place la vignette sélectionnée au centre de la partie visible.
     Ressort {
-        id: glisse
+        id: glissement
         transition: "navigate"
         nature: "deplacement"
         cible: galerie.index * ((galerie.jetons?.largeur ?? 0) + galerie.ecart) - (galerie.largeurBande - (galerie.jetons?.largeur ?? 0)) / 2
@@ -181,7 +182,7 @@ FocusScope {
         spacing: galerie.ecart
         interactive: false
         clip: true
-        contentX: glisse.value
+        contentX: glissement.value
         model: modele
 
         delegate: Item {

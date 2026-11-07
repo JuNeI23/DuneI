@@ -187,7 +187,7 @@ ShellRoot {
         }
 
         // etat — photographie de la galerie montée.
-        // Sortie : JSON {index, nombre, chemins, lu, vide, message, largeur, hauteur, fini, finiApres, delegues} ;
+        // Sortie : JSON {index, nombre, chemins, lu, vide, message, largeur, hauteur, fini, finiApres, glisse, delegues} ;
         // delegues liste les délégués créés par la bande, {i, echelle, voile, statut}. "null" sans galerie.
         // Erreurs : aucune. Dépendances : galerie.
         function etat(): string {
@@ -201,7 +201,7 @@ ShellRoot {
             return JSON.stringify({ index: g.index, nombre: g.nombre, chemins: g.chemins, lu: g.lu, vide: g.vide,
                                     message: g.vide ? g.message.text : "", largeur: g.implicitWidth,
                                     hauteur: g.implicitHeight, fini: racine.fini, finiApres: racine.finiApres,
-                                    delegues: delegues })
+                                    glisse: g.glisse, delegues: delegues })
         }
 
         // touche — envoie une touche à la galerie. Entrée : nom, « Droite », « Gauche », « Entree » ou « Echap ».

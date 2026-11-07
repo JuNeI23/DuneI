@@ -157,17 +157,17 @@
       "usage": "Changement de bureau : la vue glisse d'un bureau à l'autre.",
       "in": {
         "mass": 1,
-        "stiffness": 2000.0,
-        "dampening": 100.0,
-        "zeta": 1.12,
-        "settle_ms": 186
+        "stiffness": 400.0,
+        "dampening": 41.0,
+        "zeta": 1.02,
+        "settle_ms": 353
       },
       "out": {
         "mass": 1,
-        "stiffness": 2000.0,
-        "dampening": 100.0,
-        "zeta": 1.12,
-        "settle_ms": 186
+        "stiffness": 400.0,
+        "dampening": 41.0,
+        "zeta": 1.02,
+        "settle_ms": 353
       },
       "overshoot": false,
       "symmetric": true

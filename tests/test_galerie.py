@@ -242,8 +242,9 @@ class ModuleTest(GalerieDossier, unittest.TestCase):
         self.appeler("cliquerreel", 3)
         self.sonder(lambda: self.etat()["index"] == 3, "coupée sélectionnée")
         self.assertIsNone(self.etat()["fini"])
-        # Le délégué 4 n'est créé qu'une fois la bande glissée : on attend qu'il existe avant de cliquer.
-        self.sonder(lambda: self.delegue(self.etat(), 4), "délégué 4 créé")
+        # Le délégué 4 n'est créé qu'une fois la bande glissée, et ne reçoit le clic qu'une fois entré dans la partie
+        # visible : on attend la fin du glissement avant de cliquer.
+        self.sonder(lambda: not (e := self.etat())["glisse"] and self.delegue(e, 4), "bande posée, délégué 4 créé")
         self.appeler("cliquerreel", 4)
         self.sonder(lambda: self.etat()["fini"] == self.chemins[4], "entière validée")
 

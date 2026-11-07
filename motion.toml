@@ -91,9 +91,9 @@ exit_ratio = 0.70
 
 [transitions.navigate]
 usage      = "Changement de bureau : la vue glisse d'un bureau à l'autre."
-mass       = 0.30
-stiffness  = 600
-dampening  = 30
+mass       = 1.00                 # Ressort posé, sans rebond, voulu par Nicolas à la recette de la galerie (L2-60) :
+stiffness  = 400                  # ζ ≈ 1,02, à peine sur-amorti, stabilisé à ±1 % en 353 ms (au lieu de 186 ms) ;
+dampening  = 41                   # il sert aussi à la bascule des bureaux de Hyprland et au glissement de la galerie.
 symmetric  = true                 # Aller et retour sont le même déplacement.
 
 [hyprland]                        # Chaque élément d'animation de Hyprland reçoit une transition DuneI.
