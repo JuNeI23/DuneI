@@ -11,9 +11,11 @@ import "../Theme/fichiers.js" as Fichiers
 // Rôle : lit le dossier galerie.dossier (FolderListModel, sans sous-dossiers, filtres de galerie.js, tri par nom) et
 // l'affiche en une bande horizontale de vignettes 16:9 : la sélection au centre, une vignette entière puis une
 // vignette coupée à galerie.coupe de chaque côté, les emplacements sans image laissés vides aux bouts. La bande glisse
-// par un Ressort « navigate » de nature « deplacement » sur contentX (la ListView n'anime rien d'elle-même et ne se
-// manipule pas au doigt) ; l'échelle et le voile de chaque vignette sont portés par la Vignette. La sélection s'ouvre
-// sur le fond actuel (Theme.imageBureau) s'il est dans le dossier, sur la première image sinon. Navigation : flèches,
+// par un Ressort « navigate » de nature « deplacement », seul à placer la rangée des emplacements dans une partie
+// visible découpée (aucune vue ne reprend la main sur la position, rien ne se manipule au doigt) ; chaque image a un
+// emplacement léger, et sa vignette n'est chargée qu'à moins d'un pas de la partie visible ; l'échelle et le voile de
+// chaque vignette sont portés par la Vignette. La sélection s'ouvre sur le fond actuel (Theme.imageBureau) s'il est
+// dans le dossier, sur la première image sinon. Navigation : flèches,
 // molette et pavé tactile par pas (galerie.js cran : 120 par cran d'angleDelta, galerie.pas par tranche de
 // pixelDelta), sans bouclage ; Entrée ou un clic sur une vignette entière valident ; un clic sur une vignette coupée la
 // sélectionne ; Échap abandonne, et galerie.delai millisecondes sans action aussi, délai relancé par chaque touche,
@@ -31,9 +33,10 @@ import "../Theme/fichiers.js" as Fichiers
 //           création ; implicitHeight, galerie.hauteur + 2 × presquile.marge, qui laisse place au débord de la
 //           sélection agrandie ; en dossier vide, la largeur du message plus les marges et presquile.hauteur ;
 //           index, sélection courante (−1 sans image) ; nombre, chemins, la liste lue ; lu, vrai une fois le dossier
-//           lu (ou reconnu absent) ; vide ; liste, la ListView, et message, le texte du dossier vide, glisse, vrai
-//           tant que la bande glisse (lus par les essais) ; choisie, index de la vignette validée (−1 avant) ;
-//           effacement, opacité courante des vignettes non choisies (1 avant la validation) ; signal choisi(chemin),
+//           lu (ou reconnu absent) ; vide ; liste, le Repeater des emplacements, message, le texte du dossier vide,
+//           glisse, vrai tant que la bande glisse, defilement, la position courante de son ressort, et
+//           emplacement(i), l'emplacement d'index i s'il porte sa vignette (lus par les essais) ; choisie, index de la
+//           vignette validée (−1 avant) ; effacement, opacité courante des vignettes non choisies (1 avant la validation) ; signal choisi(chemin),
 //           émis à la validation ; signal fini(chemin), le chemin choisi après la tenue, ou "" pour un abandon.
 // Erreurs : aucune ; une image illisible garde sa vignette vide et la navigation la traverse ; un dossier absent ou
 //           illisible se traite comme un dossier vide. Avant le chargement des jetons, le module est de taille nulle.
@@ -49,9 +52,10 @@ FocusScope {
     property var chemins: []
     readonly property bool lu: _lu
     readonly property bool vide: _lu && nombre === 0
-    readonly property ListView liste: bande
+    readonly property Repeater liste: emplacements
     readonly property Texte message: ligne
     readonly property bool glisse: glissement.moving
+    readonly property real defilement: glissement.value
 
     readonly property int choisie: _choisie
     readonly property real effacement: efface.value
@@ -64,6 +68,8 @@ FocusScope {
     readonly property real ecart: gabarit?.ecart ?? 0
     readonly property real marge: gabarit?.marge ?? 0
     // Largeur visible de la bande : trois vignettes entières, deux coupées et les quatre écarts qui les séparent.
+    // Pas de la bande : une vignette et l'écart qui la suit.
+    readonly property real pasBande: (jetons?.largeur ?? 0) + ecart
     readonly property real largeurBande: 3 * (jetons?.largeur ?? 0) + 2 * (jetons?.coupe ?? 0) + 4 * ecart
     // Défilement qui vaut un pas pour angleDelta : un cran de molette chez Qt, et non une valeur de design.
     readonly property real cranMolette: 120
@@ -103,6 +109,11 @@ FocusScope {
         glissement.poser()
         _lu = true
     }
+
+    // emplacement — l'emplacement d'index i, s'il est créé et porte sa vignette chargée.
+    // Entrée : i, index de l'image. Sortie : l'Item de l'emplacement (propriétés index et vignette), ou null.
+    // Erreurs : aucune. Dépendances : emplacements.
+    function emplacement(i) { const e = emplacements.itemAt(i); return e?.vignette ? e : null }
 
     // relancer — repart le délai d'abandon de zéro. Entrées : aucune. Sortie : aucune. Erreurs : aucune.
     // Dépendances : delai.
@@ -209,50 +220,63 @@ FocusScope {
         onTriggered: galerie.fini(galerie._chemin)
     }
 
-    // Glissement de la bande : contentX qui place la vignette sélectionnée au centre de la partie visible.
+    // Glissement de la bande : décalage de la rangée qui place la vignette sélectionnée au centre de la partie visible.
     Ressort {
         id: glissement
         transition: "navigate"
         nature: "deplacement"
-        cible: galerie.index * ((galerie.jetons?.largeur ?? 0) + galerie.ecart) - (galerie.largeurBande - (galerie.jetons?.largeur ?? 0)) / 2
+        cible: galerie.index * galerie.pasBande - (galerie.largeurBande - (galerie.jetons?.largeur ?? 0)) / 2
     }
 
-    ListView {
+    // Bande : une fenêtre découpée sur la partie visible, dont la rangée d'emplacements est placée par le seul ressort
+    // de glissement (x: −defilement). Une ListView reprenait d'elle-même son contentX au remplissage asynchrone du
+    // dossier, et la première flèche faisait sauter la bande (recette de L2-60) : rien ici ne déplace la rangée.
+    Item {
         id: bande
         x: galerie.marge
         width: galerie.largeurBande
         height: galerie.height
         visible: !galerie.vide
-        orientation: ListView.Horizontal
-        spacing: galerie.ecart
-        interactive: false
         clip: true
-        contentX: glissement.value
-        model: modele
 
-        delegate: Item {
-            id: emplacement
-            required property int index
-            required property string filePath
-            readonly property Vignette vignette: image
+        Repeater {
+            id: emplacements
+            model: modele
 
-            width: image.implicitWidth
-            height: bande.height
+            // Emplacement léger, créé pour chaque image ; la vignette n'y est chargée que près de la partie visible.
+            delegate: Item {
+                id: emplacement
+                required property int index
+                required property string filePath
+                readonly property Vignette vignette: charge.item
 
-            Vignette {
-                id: image
-                anchors.centerIn: parent
-                width: implicitWidth
-                height: implicitHeight
-                chemin: emplacement.filePath
-                // Après la validation, le relief passe à la vignette choisie, et les autres s'effacent.
-                selectionnee: emplacement.index === (galerie._choisie < 0 ? galerie.index : galerie._choisie)
-                opacity: galerie._choisie < 0 || emplacement.index === galerie._choisie ? 1 : efface.value
+                x: index * galerie.pasBande - glissement.value
+                width: galerie.jetons?.largeur ?? 0
+                height: bande.height
+
+                Loader {
+                    id: charge
+                    anchors.centerIn: parent
+                    // Un pas de marge de chaque côté de la partie visible : la vignette est prête avant d'entrer.
+                    active: emplacement.x > -2 * galerie.pasBande && emplacement.x < bande.width + galerie.pasBande
+                    sourceComponent: Vignette {
+                        width: implicitWidth
+                        height: implicitHeight
+                        chemin: emplacement.filePath
+                        // Après la validation, le relief passe à la vignette choisie, et les autres s'effacent.
+                        selectionnee: emplacement.index === (galerie._choisie < 0 ? galerie.index : galerie._choisie)
+                        opacity: galerie._choisie < 0 || emplacement.index === galerie._choisie ? 1 : efface.value
+                    }
+                }
+
+                // Clic : une MouseArea plutôt qu'un TapHandler, pour que les vrais clics envoyés par l'essai
+                // l'atteignent (comme la molette, ils n'atteignent pas les gestionnaires de pointeur).
+                MouseArea {
+                    anchors.fill: parent
+                    enabled: charge.status === Loader.Ready
+                    onClicked: galerie.cliquer(emplacement.index)
+                }
             }
-
-            // Clic : une MouseArea plutôt qu'un TapHandler, pour que les vrais clics envoyés par l'essai l'atteignent
-            // (comme la molette, ils n'atteignent pas les gestionnaires de pointeur).
-            MouseArea { anchors.fill: parent; onClicked: galerie.cliquer(emplacement.index) }
         }
     }
 

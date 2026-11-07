@@ -211,6 +211,32 @@ class ModuleTest(GalerieDossier, unittest.TestCase):
         self.assertIsNotNone(self.delegue(e, choisi))
         self.assertGreaterEqual(len(e["delegues"]), 3)
 
+    def bande_suit_le_ressort(self, e: dict) -> None:
+        """Vérifie que chaque emplacement est réellement là où le ressort de la bande le place : marge + i × pas −
+        defilement, pas = largeur + écart. Entrée : e, une photographie. Erreurs : échec du test sinon."""
+        pas = self.jetons["largeur"] + self.json("presquile", "ecart")
+        marge = self.json("presquile", "marge")
+        for d in e["delegues"]:
+            self.assertAlmostEqual(d["x"], marge + d["i"] * pas - e["defilement"], delta=0.5, msg=(d, e["defilement"]))
+
+    def test_position_reelle(self):
+        """Recette : la première flèche faisait sauter la bande. Le dossier se lit de façon asynchrone ; à l'ouverture,
+        puis à chaque relevé pendant le premier glissement, la position réelle de la bande est celle du ressort : la
+        vue ne reprend jamais la main sur sa position, et la bande ne peut donc pas sauter."""
+        e = self.monter()
+        self.assertEqual(e["index"], 1)
+        self.assertGreaterEqual(len(e["delegues"]), 3)
+        self.bande_suit_le_ressort(e)
+        time.sleep(0.3)
+        self.bande_suit_le_ressort(self.etat())
+        self.touches("Droite")
+        releves = 0
+        while (e := self.etat())["glisse"] or releves == 0:
+            self.bande_suit_le_ressort(e)
+            releves += 1
+        self.bande_suit_le_ressort(e)
+        self.assertGreater(releves, 2)
+
     def test_relief(self):
         self.monter()
         self.relief(1)

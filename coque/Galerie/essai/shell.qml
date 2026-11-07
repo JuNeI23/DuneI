@@ -209,23 +209,26 @@ ShellRoot {
         }
 
         // etat — photographie de la galerie montée.
-        // Sortie : JSON {index, nombre, chemins, lu, vide, message, largeur, hauteur, fini, finiApres, glisse, choisi,
+        // Sortie : JSON {index, nombre, chemins, lu, vide, message, largeur, hauteur, fini, finiApres, glisse,
+        // defilement (position du ressort de la bande), choisi,
         // choisiApres, effaceApres, choisie, effacement, delegues} ; delegues liste les délégués créés par la bande,
-        // {i, echelle, voile, statut, presence (opacité de la vignette)}. "null" sans galerie.
+        // {i, echelle, voile, statut, presence (opacité de la vignette), x (abscisse réelle de son emplacement dans la
+        // galerie)}. "null" sans galerie.
         // Erreurs : aucune. Dépendances : galerie.
         function etat(): string {
             const g = racine.galerie
             if (!g) return "null"
             const delegues = []
             for (let i = 0; i < g.nombre; i++) {
-                const d = g.liste.itemAtIndex(i)
+                const d = g.emplacement(i)
                 if (d) delegues.push({ i: i, echelle: d.vignette.echelle, voile: d.vignette.voile,
-                                       statut: d.vignette.statut, presence: d.vignette.opacity })
+                                       statut: d.vignette.statut, presence: d.vignette.opacity,
+                                       x: d.mapToItem(g, 0, 0).x })
             }
             return JSON.stringify({ index: g.index, nombre: g.nombre, chemins: g.chemins, lu: g.lu, vide: g.vide,
                                     message: g.vide ? g.message.text : "", largeur: g.implicitWidth,
                                     hauteur: g.implicitHeight, fini: racine.fini, finiApres: racine.finiApres,
-                                    glisse: g.glisse, choisi: racine.choisi, choisiApres: racine.choisiApres,
+                                    glisse: g.glisse, defilement: g.defilement, choisi: racine.choisi, choisiApres: racine.choisiApres,
                                     effaceApres: racine.effaceApres, choisie: g.choisie, effacement: g.effacement,
                                     delegues: delegues })
         }
@@ -246,12 +249,15 @@ ShellRoot {
             const g = racine.galerie
             if (g) evenements.mouseWheel(g, g.width / 2, g.height / 2, dx, dy)
         }
-        // cliquerreel — envoie un vrai clic au centre du délégué d'index i, par la fenêtre.
-        // Entrée : i. Sortie : aucune. Erreurs : sans effet sans galerie ou si le délégué n'est pas créé.
-        // Dépendances : evenements (QtTest), galerie.
+        // cliquerreel — envoie un vrai clic au milieu de la partie visible de l'emplacement d'index i, par la fenêtre
+        // (une vignette coupée n'est visible, et cliquable, que sur sa tranche).
+        // Entrée : i. Sortie : aucune. Erreurs : sans effet sans galerie, si l'emplacement n'est pas chargé ou s'il est
+        // entièrement hors de la partie visible. Dépendances : evenements (QtTest), galerie (emplacement, largeurBande).
         function cliquerreel(i: int): void {
-            const d = racine.galerie?.liste.itemAtIndex(i)
-            if (d) evenements.mouseClick(d)
+            const g = racine.galerie, d = g?.emplacement(i)
+            if (!d) return
+            const debut = Math.max(0, -d.x), fin = Math.min(d.width, g.largeurBande - d.x)
+            if (fin > debut) evenements.mouseClick(d, (debut + fin) / 2, d.height / 2)
         }
         // cliquer — clic sur la vignette d'index i. Sortie : aucune. Erreurs : aucune. Dépendances : galerie.cliquer.
         function cliquer(i: int): void { racine.galerie?.cliquer(i) }
