@@ -1643,7 +1643,8 @@
     "pilule": 22,
     "ecart": 8,
     "marge": 14,
-    "entree": 0.1
+    "entree": 0.1,
+    "sortie": 0.5
   },
   "galerie": {
     "largeur": 160,

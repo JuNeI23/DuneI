@@ -43,10 +43,11 @@ class QuickshellEmitterTest(unittest.TestCase):
                                                 "windowHeight": 640, "windowMinWidth": 720, "windowMinHeight": 480})
 
     def test_presquile(self):
-        """Vérifie les sept dimensions de la presqu'île, en pixels logiques, et le seuil d'entrée du changement de
-        module (part de l'écart restant, L2-48)."""
+        """Vérifie les sept dimensions de la presqu'île, en pixels logiques, le seuil d'entrée du changement de
+        module (part de l'écart restant, L2-48) et son seuil de sortie (opacité de l'ancien contenu, L2-60)."""
         self.assertEqual(self.out["presquile"], {"hauteur": 28, "evasement": 13, "rayon": 10, "point": 7,
-                                                 "pilule": 22, "ecart": 8, "marge": 14, "entree": 0.10})
+                                                 "pilule": 22, "ecart": 8, "marge": 14, "entree": 0.10,
+                                                 "sortie": 0.50})
 
     def test_galerie(self):
         """Vérifie les jetons de la galerie de fonds : vignette, coupe, échelle, voile, délai, tenue de la validation,

@@ -5,13 +5,17 @@ import "../Theme"
 // Rôle : instancie le module de contenu pour l'écran, centré dans son cadre, et porte la taille du corps de l'encoche
 // par deux Ressorts « window » de nature « deplacement » dont la cible suit la taille du module. Au premier montage,
 // la taille se pose d'un coup. Ensuite, changer de module déroule une séquence en trois temps : l'ancien contenu
-// s'efface par un Ressort d'opacité « reveal » de nature « fondu » (phase « sortie ») ; à opacité nulle, le nouveau
-// module est monté, invisible, et la forme s'étire vers sa taille (phase « forme ») ; quand le reste à parcourir des
-// deux ressorts de taille passe sous la part seuilEntree (jeton presquile.entree) de leur écart de référence, le
-// nouveau contenu apparaît (phase « entree ») ; cet écart est pris au montage, puis repris depuis la position courante
-// si la taille du module change pendant la forme (contenu chargé après coup) ; la scène revient au « repos » quand plus rien ne bouge. Un changement pendant la forme ou l'entrée
-// reprend en sortie depuis l'opacité et la taille courantes, sans saut ; un changement pendant la sortie la laisse
-// finir et monte le dernier module demandé. Mouvement réduit : la taille se pose aussitôt, seuls les fondus restent.
+// s'efface par un Ressort d'opacité « reveal » de nature « fondu » (phase « sortie ») ; dès que son opacité passe sous
+// seuilSortie (jeton presquile.sortie), il est confié au conteneur de départ, découpé à la forme, où il finit son fondu
+// toujours centré puis est détruit, pendant que le nouveau module est monté, invisible, et que la forme s'étire vers sa
+// taille (phase « forme ») : sortie et étirement se chevauchent. Quand le reste à parcourir des deux ressorts de taille
+// passe sous la part seuilEntree (jeton presquile.entree) de leur écart de référence, le nouveau contenu apparaît
+// (phase « entree ») ; cet écart est pris au montage, puis repris depuis la position courante si la taille du module
+// change pendant la forme (contenu chargé après coup) ; la scène revient au « repos » quand plus rien ne bouge et que
+// l'ancien contenu est détruit. Un changement pendant la forme ou l'entrée reprend en sortie depuis l'opacité et la
+// taille courantes, sans saut ; un changement pendant la sortie la laisse finir et monte le dernier module demandé.
+// Un seul ancien contenu part à la fois : tant qu'il n'est pas détruit, la sortie suivante attend, sous le seuil, que
+// son conteneur soit libre. Mouvement réduit : la taille se pose aussitôt, seuls les fondus restent.
 // La scène donne aussi la hauteur que doit réserver la surface (hauteurSurface) : elle monte d'un coup à la cible du
 // ressort de hauteur quand elle est plus grande, et ne redescend qu'à son arrêt, jamais image par image : chaque
 // changement de taille d'une surface de calque passe par un aller-retour avec le compositeur.
@@ -19,11 +23,12 @@ import "../Theme"
 //           implicitHeight et recevant ecran.
 // Sorties : contenu, le module monté (null avant le premier montage ou si le composant échoue) ; phase, « repos »,
 //           « sortie », « forme » ou « entree » ; ressortLargeur, ressortHauteur et ressortOpacite, les trois ressorts,
-//           lus par la surface et les essais ; width et height suivent les ressorts de taille ; hauteurSurface, la
+//           lus par la surface et les essais ; sortant, l'ancien contenu qui finit de s'effacer (null sinon), et
+//           ressortSortant, le ressort de son opacité ; width et height suivent les ressorts de taille ; hauteurSurface, la
 //           hauteur que la surface réserve à l'encoche, stable pendant tout mouvement de la hauteur.
 // Erreurs : un composant sans Item valide laisse contenu nul, se lit au journal de Quickshell, et la séquence se
 //           termine sur une forme de largeur nulle ; un module sans hauteur laisse la hauteur des jetons.
-// Dépendances : Ressort, Theme (tokens.presquile.hauteur et entree, motion.json par Ressort).
+// Dépendances : Ressort, Theme (tokens.presquile.hauteur, entree et sortie, motion.json par Ressort).
 Item {
     id: scene
 
@@ -38,6 +43,12 @@ Item {
     // Part de l'écart de taille sous laquelle le nouveau contenu commence d'apparaître (jeton presquile.entree,
     // réglable à la recette) ; sans jeton, 0 : l'entrée attend que la forme soit posée.
     readonly property real seuilEntree: Theme.tokens?.presquile?.entree ?? 0
+    // Opacité de l'ancien contenu sous laquelle la forme commence de s'étirer (jeton presquile.sortie) ; sans jeton, 0 :
+    // l'étirement attend que l'ancien contenu soit effacé.
+    readonly property real seuilSortie: Theme.tokens?.presquile?.sortie ?? 0
+    // Ancien contenu qui finit de s'effacer pendant l'étirement (null sinon), et le ressort de son opacité.
+    readonly property Item sortant: _sortant
+    readonly property alias ressortSortant: effacement
 
     property string _phase: "repos"
     property bool _pret: false
@@ -45,6 +56,7 @@ Item {
     property real _ecartLargeur: 0
     property real _ecartHauteur: 0
     property real _hauteurSurface: 0
+    property Item _sortant: null
 
     width: largeur.value
     height: hauteur.value
@@ -75,7 +87,26 @@ Item {
         function onValueChanged() { scene.tenir() }
         function onMovingChanged() { scene.tenir() }
     }
-    Ressort { id: opacite; transition: "reveal"; nature: "fondu"; cible: 1; onMovingChanged: Qt.callLater(scene.avancer) }
+    Ressort {
+        id: opacite
+        transition: "reveal"
+        nature: "fondu"
+        cible: 1
+        // Au tour de boucle suivant : céder l'ancien contenu pose ce même ressort, ce qui ne peut se faire pendant le
+        // signal de sa propre valeur.
+        onValueChanged: if (scene._phase === "sortie") Qt.callLater(scene.avancer)
+        onMovingChanged: Qt.callLater(scene.avancer)
+    }
+    Ressort { id: effacement; transition: "reveal"; nature: "fondu"; cible: 0; onMovingChanged: Qt.callLater(scene.avancer) }
+
+    // Conteneur de l'ancien contenu pendant le chevauchement : découpé à la forme, pour qu'un contenu plus large que
+    // l'encoche qui se rétracte n'en déborde pas.
+    Item {
+        id: depart
+        anchors.fill: parent
+        clip: true
+        opacity: effacement.value
+    }
 
     // Conteneur du module, dont l'opacité porte les fondus.
     Item {
@@ -89,7 +120,7 @@ Item {
     // laisse contenu nul et se lit au journal de Quickshell. Dépendances : module, montage.
     function monter() {
         _montage = true
-        contenu?.destroy()
+        if (contenu !== _sortant) contenu?.destroy()
         const m = module?.createObject(montage, { ecran: scene.ecran }) ?? null
         contenu = m
         if (m) {
@@ -123,6 +154,22 @@ Item {
         _hauteurSurface = Math.max(hauteur.cible, hauteur.moving ? _hauteurSurface : hauteur.value)
     }
 
+    // ceder — confie le contenu courant au conteneur de départ, où il finit son fondu depuis son opacité courante
+    // (sans saut de valeur ; sa vitesse repart de zéro), toujours centré dans la scène ; le conteneur du module repasse
+    // à l'opacité 0 pour le contenu suivant.
+    // Entrées : aucune. Sortie : met à jour _sortant. Erreurs : aucune ; appelée seulement quand aucun ancien contenu
+    // n'est en train de partir. Dépendances : depart, effacement, opacite.
+    function ceder() {
+        _sortant = contenu
+        if (contenu) contenu.parent = depart
+        effacement.cible = opacite.value
+        effacement.poser()
+        effacement.cible = 0
+        opacite.cible = 0
+        opacite.poser()
+        Qt.callLater(avancer)
+    }
+
     // proche — dit si un ressort de taille a parcouru tout son écart de référence sauf la part seuilEntree.
     // Entrées : r, le ressort ; ecart, l'écart à sa cible au montage, ou au dernier changement de cible pendant la
     // forme. Sortie : booléen. Erreurs : aucune.
@@ -130,17 +177,26 @@ Item {
     function proche(r, ecart) { return Math.abs(r.cible - r.value) <= seuilEntree * ecart }
 
     // avancer — fait progresser la séquence d'autant de phases que l'état des ressorts le permet.
-    // Entrées : aucune ; appelée à chaque image des ressorts de taille, et après chaque arrêt ou départ d'un ressort,
+    // Entrées : aucune ; appelée à chaque image des ressorts de taille et, pendant la sortie, de l'opacité, et après
+    // chaque arrêt ou départ d'un ressort,
     // au tour de boucle suivant (Qt.callLater) : relancer un ressort pendant le signal de son propre arrêt formerait
     // une boucle de liaison sur moving.
-    // Sortie : met à jour _phase, monte le nouveau module à la fin de la sortie, lance le fondu d'entrée.
+    // Sortie : met à jour _phase ; sous le seuil de sortie, cède l'ancien contenu et monte le nouveau module ; lance le
+    // fondu d'entrée ; détruit l'ancien contenu une fois effacé.
     // Erreurs : aucune ; sans effet pendant un montage, dont les ressorts posés en mouvement réduit la rappellent.
-    // Dépendances : monter, proche, les trois ressorts.
+    // Dépendances : monter, ceder, proche, les quatre ressorts.
     function avancer() {
         if (_montage) return
-        if (_phase === "sortie" && !opacite.moving && opacite.value === 0) {
+        // L'ancien contenu effacé est détruit ; tant qu'il ne l'est pas, aucun autre ne peut partir.
+        if (_sortant && !effacement.moving && effacement.value === 0) {
+            const s = _sortant
+            _sortant = null
+            if (s !== contenu) s.destroy()
+        }
+        if (_phase === "sortie" && !_sortant && opacite.value <= seuilSortie) {
             const l = largeur.value, h = hauteur.value
             _phase = "forme"
+            ceder()
             monter()
             _ecartLargeur = Math.abs(largeur.cible - l)
             _ecartHauteur = Math.abs(hauteur.cible - h)
@@ -149,7 +205,8 @@ Item {
             _phase = "entree"
             opacite.cible = 1
         }
-        if (_phase === "entree" && !opacite.moving && opacite.value === 1 && !largeur.moving && !hauteur.moving)
+        if (_phase === "entree" && !opacite.moving && opacite.value === 1 && !largeur.moving && !hauteur.moving
+                && !_sortant)
             _phase = "repos"
     }
 

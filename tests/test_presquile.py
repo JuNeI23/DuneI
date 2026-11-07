@@ -56,7 +56,8 @@ class PresquileStructureTest(unittest.TestCase):
         # Les ressorts de taille de la scène et ceux des bureaux déplacent, et le déclarent, pour que le mouvement
         # réduit les pose aussitôt ; seul le ressort d'opacité de la scène est un fondu, qui garde son ressort en
         # mouvement réduit (lecture du source : la surface ne se charge pas sous offscreen).
-        attendues = {"Scene.qml": {"largeur": "deplacement", "hauteur": "deplacement", "opacite": "fondu"},
+        attendues = {"Scene.qml": {"largeur": "deplacement", "hauteur": "deplacement", "opacite": "fondu",
+                                   "effacement": "fondu"},
                      "Bureaux.qml": None}
         for nom, natures in attendues.items():
             texte = re.sub(r"//.*", "", (ROOT / "coque" / "Presquile" / nom).read_text(encoding="utf-8"))
@@ -296,7 +297,7 @@ class ChangementTest(PresquileIpc, unittest.TestCase):
     def repos(self) -> dict:
         """Attend la fin d'une séquence : phase « repos » et aucun ressort en mouvement, sans boucle de liaison au
         journal. Sortie : la photographie. Erreurs : échec du test à l'expiration ou sur une boucle de liaison."""
-        etat = self.attendre_que(lambda e: e["phase"] == "repos" and not e["mobile"])
+        etat = self.attendre_que(lambda e: e["phase"] == "repos" and not e["mobile"] and e["sortant"] is None)
         self.assertNotIn("Binding loop", self.journal())
         return etat
 
@@ -324,11 +325,15 @@ class ChangementTest(PresquileIpc, unittest.TestCase):
         traces = self.traces(depart)
         self.assertEqual([t.split()[1] for t in traces if t.startswith("phase ")],
                          ["sortie", "forme", "entree", "repos"])
-        # L'ancien contenu atteint l'opacité 0 avant que la largeur ne bouge, et le fondu de sortie a duré plusieurs
-        # images.
+        # L'opacité de l'ancien contenu passe sous le seuil de sortie (et non plus à 0) avant que la largeur ne bouge,
+        # après un fondu de plusieurs images.
         premiere_largeur = next(i for i, t in enumerate(traces) if t.startswith("l "))
-        self.assertIn("o 0", traces[:premiere_largeur])
-        self.assertGreater(len(self.valeurs(traces[:premiere_largeur], "o")), 2)
+        forme = traces.index("phase forme")
+        sortie = self.valeurs(traces[:forme], "o")
+        self.assertGreater(len(sortie), 2)
+        self.assertLessEqual(sortie[-1], self.seuil_sortie())
+        self.assertGreater(sortie[-1], 0)
+        self.assertLess(forme, premiere_largeur)
         # Le nouveau contenu ne dépasse l'opacité 0 qu'en phase « entree ».
         monte = traces.index("contenu grand")
         entree = traces.index("phase entree")
@@ -356,6 +361,36 @@ class ChangementTest(PresquileIpc, unittest.TestCase):
         phases = [t.split()[1] for t in traces if t.startswith("phase ")]
         self.assertEqual(phases[:3], ["sortie", "forme", "sortie"])
         self.assertEqual(phases[-1], "repos")
+
+    def seuil_sortie(self) -> float:
+        """Jeton presquile.sortie des tokens de l'essai. Sortie : réel. Erreurs : OSError, KeyError."""
+        return json.loads(self.tokens(55).read_text(encoding="utf-8"))["presquile"]["sortie"]
+
+    def test_chevauchement(self):
+        # La forme s'étire alors que l'ancien contenu est encore visible ; il finit son fondu jusqu'à 0, puis est
+        # détruit, une seule fois ; les bureaux ne coexistent jamais avec un deuxième ancien contenu.
+        self.repos()
+        depart = len(self.traces())
+        self.appeler("changer", "grand")
+        self.repos()
+        traces = self.traces(depart)
+        self.assertIn("sortant bureaux", traces)
+        cede = traces.index("sortant bureaux")
+        detruit = traces.index("detruit bureaux")
+        self.assertEqual(traces.count("detruit bureaux"), 1)
+        effacement = self.valeurs(traces[cede:detruit], "so")
+        self.assertEqual(effacement[-1], 0)
+        self.assertEqual(effacement, sorted(effacement, reverse=True))
+        # Au moins une image de largeur pendant que l'ancien contenu est encore à une opacité non nulle.
+        visible, chevauche = None, False
+        for t in traces[cede:detruit]:
+            if t.startswith("so "):
+                visible = float(t.split()[1]) > 0
+            elif t.startswith("l ") and visible:
+                chevauche = True
+        self.assertTrue(chevauche, traces[cede:detruit])
+        self.assertLess(cede, detruit)
+        self.assertEqual(traces[detruit + 1:].count("sortant bureaux"), 0)
 
     def test_hauteur_surface_tenue(self):
         # La hauteur réservée par la surface monte d'un coup quand la forme s'agrandit, puis ne bouge plus pendant la

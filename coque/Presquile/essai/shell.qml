@@ -35,8 +35,21 @@ ShellRoot {
     Bureaux { id: essaiBureaux; ecran: null; idActif: 0; special: "" }
 
     // Modules de la scène d'essai : les bureaux, sans Hyprland, et un module factice « grand » de taille connue.
-    Component { id: moduleBureaux; Bureaux { objectName: "bureaux"; idActif: 0; special: "" } }
-    Component { id: moduleGrand; Item { objectName: "grand"; property var ecran; implicitWidth: 400; implicitHeight: 80 } }
+    // Chaque module d'essai journalise sa destruction (« detruit <nom> ») : aucun contenu ne doit rester orphelin.
+    Component {
+        id: moduleBureaux
+        Bureaux {
+            objectName: "bureaux"; idActif: 0; special: ""
+            Component.onDestruction: console.info("essai : detruit bureaux")
+        }
+    }
+    Component {
+        id: moduleGrand
+        Item {
+            objectName: "grand"; property var ecran; implicitWidth: 400; implicitHeight: 80
+            Component.onDestruction: console.info("essai : detruit grand")
+        }
+    }
     // Module « tardif » : 1000 × 80 au montage, 400 × 80 quand l'essai appelle charger, comme un contenu dont la taille
     // n'est connue qu'après coup.
     Component {
@@ -54,6 +67,7 @@ ShellRoot {
             console.info("essai : lp " + essaiScene.ressortLargeur.value)
         }
         function onContenuChanged() { console.info("essai : contenu " + (essaiScene.contenu?.objectName ?? "")) }
+        function onSortantChanged() { console.info("essai : sortant " + (essaiScene.sortant?.objectName ?? "")) }
         // Hauteur réservée par la surface : elle ne doit changer qu'au départ d'un agrandissement et à l'arrêt.
         function onHauteurSurfaceChanged() { console.info("essai : hs " + essaiScene.hauteurSurface) }
     }
@@ -65,6 +79,10 @@ ShellRoot {
     Connections {
         target: essaiScene.ressortHauteur
         function onValueChanged() { console.info("essai : h " + essaiScene.ressortHauteur.value) }
+    }
+    Connections {
+        target: essaiScene.ressortSortant
+        function onValueChanged() { console.info("essai : so " + essaiScene.ressortSortant.value) }
     }
     Connections {
         target: essaiScene.ressortOpacite
@@ -172,11 +190,13 @@ ShellRoot {
 
         // changementEtat — photographie de la scène d'essai.
         // Entrées : aucune. Sortie : JSON {phase, opacite, largeur, hauteur, contenu (objectName du module monté),
-        // mobile (vrai si l'un des trois ressorts avance)}. Erreurs : aucune. Dépendances : essaiScene.
+        // sortant (objectName de l'ancien contenu qui s'efface, ou null), mobile (vrai si l'un des quatre ressorts
+        // avance)}. Erreurs : aucune. Dépendances : essaiScene.
         function changementEtat(): string {
             const s = essaiScene, l = s.ressortLargeur, h = s.ressortHauteur, o = s.ressortOpacite
             return JSON.stringify({ phase: s.phase, opacite: o.value, largeur: l.value, hauteur: h.value,
-                                    contenu: s.contenu?.objectName ?? null, mobile: l.moving || h.moving || o.moving })
+                                    contenu: s.contenu?.objectName ?? null, sortant: s.sortant?.objectName ?? null,
+                                    mobile: l.moving || h.moving || o.moving || s.ressortSortant.moving })
         }
 
         // capturer — enregistre la vitrine en PNG, de façon asynchrone. Entrée : chemin, fichier à écrire.
