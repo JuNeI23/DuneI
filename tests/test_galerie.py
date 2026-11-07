@@ -104,6 +104,14 @@ IMAGES = ["a #b?.jpg", "b.jpg", "c.jpg", "casse.jpg", "d.png"]
 CASSE = "casse.jpg"
 TEXTE = "notes.txt"
 
+# Seuils de la recette de la première ouverture (L2-60). Une image dure 16,7 ms à 60 Hz ; la cession (céder l'ancien
+# contenu et monter le nouveau module) s'exécute dans l'une d'elles, avec les ressorts et la synchronisation de la scène :
+# elle doit en laisser au moins la moitié, d'où 8 ms (mesurée à 1 ou 2 ms à la deuxième ouverture, 16 à 19 ms à la
+# première avant correction). Une image ne doit pas dépasser deux périodes (33 ms) : au-delà, au moins une image est
+# perdue, ce qui se voit dans un fondu ou un étirement.
+SEUIL_CESSION = 8
+SEUIL_IMAGE = 33
+
 
 class GalerieDossier(GalerieIpc):
     """Base des tests sur un dossier d'images temporaire, le fond actuel étant sa deuxième image."""
@@ -578,3 +586,44 @@ class OuvreuseTest(GalerieDossier, unittest.TestCase):
         self.assertGreater(e["tEntree"], 0)
         self.assertGreaterEqual(e["tFin"] - e["tEntree"], delai - 50)
         self.assertEqual(self.appels(), [])
+
+    def relever(self) -> dict:
+        """Ouvre la galerie par la vraie cible IPC et rend le relevé image par image de cette ouverture, une fois la
+        presqu'île au repos (voir releve dans coque/Galerie/essai/shell.qml).
+
+        Entrées : aucune. Sortie : {actif, cession, images [{t, dt, phase, op, y, h}]}.
+        Erreurs : échec du test au délai dépassé. Dépendances : basculer, attendre_module, sonder, json.
+        """
+        self.basculer()
+        self.attendre_module("B", "galerie")
+        return self.sonder(lambda: (r := self.json("releve"))["actif"] is False and r, "relevé de l'ouverture")
+
+    def verifier_ouverture(self, r: dict, quelle: str) -> None:
+        """Contrôle une ouverture relevée : cession brève, aucune image longue, ancien contenu immobile verticalement.
+
+        Entrées : r, le relevé (voir relever) ; quelle, « première » ou « deuxième », pour les messages.
+        Sortie : aucune. Erreurs : échec du test, avec les valeurs mesurées. Dépendances : SEUIL_CESSION, SEUIL_IMAGE.
+        """
+        images = r["images"]
+        self.assertTrue(images, f"{quelle} ouverture : aucune image relevée")
+        self.assertGreaterEqual(r["cession"], 0, f"{quelle} ouverture : cession non relevée")
+        self.assertLessEqual(r["cession"], SEUIL_CESSION, f"{quelle} ouverture : cession de {r['cession']} ms")
+        longues = [(i["phase"], i["dt"]) for i in images[1:] if i["dt"] > SEUIL_IMAGE]
+        self.assertEqual(longues, [], f"{quelle} ouverture : images de plus de {SEUIL_IMAGE} ms")
+        positions = [i["y"] for i in images if i["y"] is not None]
+        self.assertTrue(positions, f"{quelle} ouverture : ancien contenu non relevé")
+        self.assertLess(max(positions) - min(positions), 0.01,
+                        f"{quelle} ouverture : l'ancien contenu bouge verticalement de {min(positions)} à {max(positions)}")
+        self.assertTrue(any(i["phase"] == "forme" and i["y"] is not None for i in images),
+                        f"{quelle} ouverture : ancien contenu jamais relevé pendant l'étirement")
+
+    def test_premiere_ouverture(self):
+        """Recette de L2-60 : à froid, la première ouverture est aussi fluide que la deuxième. La cession (céder l'ancien
+        contenu et monter la galerie, dans une seule image) tient sous SEUIL_CESSION, aucune image ne dépasse
+        SEUIL_IMAGE, et l'ancien contenu garde sa position verticale pendant toute sa sortie, étirement compris."""
+        premiere = self.relever()
+        self.basculer()
+        self.attendre_module("B", "bureaux")
+        deuxieme = self.relever()
+        self.verifier_ouverture(premiere, "première")
+        self.verifier_ouverture(deuxieme, "deuxième")

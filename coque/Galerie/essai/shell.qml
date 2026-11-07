@@ -19,7 +19,7 @@ import "Theme/fichiers.js" as Fichiers
 // n'apparaît jamais à l'écran ; lancée à la main dans la session, elle s'ouvre en fenêtre flottante pour la capture.
 // Entrées : DUNEI_TOKENS_DIR, lu par Theme ; QT_QPA_PLATFORM, posé à offscreen par le test. Commandes IPC : filtres,
 // borner, deplacer, initial, cran, identique, url, developper, jeton, presquile, actuel, monter, etat, touche,
-// molette, molettereelle, cliquer, cliquerreel, capturer, regler, etatOuvreuse, popover, validerOuvreuse, retirer (les
+// molette, molettereelle, cliquer, cliquerreel, capturer, regler, etatOuvreuse, releve, popover, validerOuvreuse, retirer (les
 // listes et objets sont rendus en JSON, le reste en texte).
 // Sortie : le résultat de chaque appel IPC, sur la sortie de « qs ipc call ». Erreurs : celles de Theme, dans
 // le journal ; les commandes du module sont sans effet tant qu'aucune galerie n'est montée.
@@ -55,6 +55,17 @@ ShellRoot {
     property real tEfface: 0
     property real tFin: 0
 
+    // Relevé image par image d'une ouverture (L2-60, recette de la première ouverture) : de l'appel à basculer jusqu'au
+    // repos de la presqu'île, une entrée par image {t, dt, phase, op, y, h} ; op est l'opacité de l'ancien contenu
+    // (celle du conteneur du module avant la cession, puis celle du conteneur de départ), y sa position verticale dans
+    // la scène (null une fois détruit), h la hauteur de la forme. cession, durée en millisecondes de l'image où
+    // l'ancien contenu est cédé et le nouveau monté (du passage en phase « forme » au nouveau contenu), −1 avant.
+    property var releve: []
+    property bool releveActif: false
+    property real tReleve: 0
+    property real tForme: 0
+    property real cession: -1
+
     Ouvreuse {
         id: ouvreuse
         ecranActif: null
@@ -68,11 +79,38 @@ ShellRoot {
                 Component.onDestruction: racine.galeries--
             }
         }
-        onOuvertChanged: if (!ouvert) racine.tFin = Date.now()
+        onOuvertChanged: {
+            if (!ouvert) racine.tFin = Date.now()
+            else { racine.releve = []; racine.cession = -1; racine.tReleve = Date.now(); racine.releveActif = true }
+        }
     }
     Connections {
         target: ouvreuse.cible
-        function onPhaseChanged() { if (ouvreuse.cible.phase === "entree") racine.tEntree = Date.now() }
+        function onPhaseChanged() {
+            const phase = ouvreuse.cible.phase
+            if (phase === "entree") racine.tEntree = Date.now()
+            if (phase === "forme") racine.tForme = Date.now()
+            if (phase === "repos") racine.releveActif = false
+        }
+        function onContenuChanged() {
+            if (ouvreuse.cible.phase === "forme" && racine.cession < 0) racine.cession = Date.now() - racine.tForme
+        }
+    }
+
+    // Relève une image de l'ouverture en cours (voir releve) ; l'ancien contenu est le module monté pendant la sortie,
+    // puis le contenu cédé au conteneur de départ tant qu'il finit son fondu.
+    FrameAnimation {
+        running: racine.releveActif
+        onTriggered: {
+            const sc = ouvreuse.cible?.sceneEssai
+            if (!sc) return
+            const n = Date.now()
+            const ancien = sc.phase === "sortie" ? sc.contenu : sc.sortant
+            racine.releve.push({ t: n, dt: n - racine.tReleve, phase: sc.phase,
+                                 op: sc.sortant ? sc.ressortSortant.value : sc.ressortOpacite.value,
+                                 y: ancien ? ancien.mapToItem(sc, 0, 0).y : null, h: sc.height })
+            racine.tReleve = n
+        }
     }
     Connections {
         target: ouvreuse._montee
@@ -101,6 +139,7 @@ ShellRoot {
             readonly property alias contenu: scene.contenu
             readonly property alias phase: scene.phase
             readonly property var fenetre: null
+            readonly property Item sceneEssai: scene
 
             Scene { id: scene; ecran: presquileEssai.modelData; module: presquileEssai.module }
             Component.onCompleted: ouvreuse.inscrire(presquileEssai)
@@ -285,6 +324,11 @@ ShellRoot {
                                     lu: ouvreuse.cible?.contenu?.lu ?? false, galeries: racine.galeries,
                                     tEntree: racine.tEntree, tChoisi: racine.tChoisi, tEfface: racine.tEfface,
                                     tFin: racine.tFin })
+        }
+        // releve — le relevé de la dernière ouverture. Sortie : JSON {actif, cession, images [{t, dt, phase, op, y, h}]}.
+        // Erreurs : aucune. Dépendances : releve, releveActif, cession.
+        function releve(): string {
+            return JSON.stringify({ actif: racine.releveActif, cession: racine.cession, images: racine.releve })
         }
         // popover — ouvre ou ferme le popover factice. Entrée : ouvrir. Sortie : aucune. Erreurs : aucune.
         // Dépendances : popoverEssai.

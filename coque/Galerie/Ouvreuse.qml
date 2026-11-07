@@ -18,7 +18,9 @@ import "galerie.js" as Logique
 // son chemin, s'il n'est pas déjà le fond actuel, est passé à dunei-fond, dont un échec s'écrit au journal : la montée
 // du fond part pendant que la galerie met le choix en valeur. À la fin de la galerie (signal fini, après cette tenue
 // ou aussitôt pour un abandon), elle se referme. Une presqu'île retirée (écran débranché) pendant l'ouverture remet
-// l'ouvreuse à l'état fermé.
+// l'ouvreuse à l'état fermé. Au démarrage, l'ouvreuse crée puis détruit aussitôt une galerie sans dossier : la première
+// instance d'un composant prépare ses types, ce qui coûtait 12 à 19 ms dans l'image où la presqu'île cède l'ancien
+// contenu et monte la galerie, contre 1 ou 2 ms ensuite (recette de L2-60) ; aucune galerie ni image ne reste en mémoire.
 // Entrées : les presqu'îles, inscrites par inscrire() et retirées par retirer() ; chacune porte modelData (son écran),
 //           module (composant écrit par l'ouvreuse), contenu et phase (lus), et fenetre (la fenêtre du grab, ou null) ;
 //           ecranActif, l'écran du moniteur focalisé d'Hyprland ; pleinEcran, vrai si son espace de travail actif
@@ -55,6 +57,12 @@ Scope {
     // Galerie montée et visible pour l'ouvreuse : nulle pendant le fondu de sortie de l'ancien contenu, pour qu'un
     // module sur le départ ne puisse pas refermer une ouverture neuve.
     readonly property var _montee: ouvert && cible?.module === galerie && cible?.phase !== "sortie" ? cible.contenu : null
+
+    // prechauffer — crée une galerie sans dossier, hors de toute fenêtre, et la détruit au tour de boucle suivant, pour
+    // que la première vraie ouverture ne paie pas la préparation des types du composant.
+    // Entrées : aucune (lit galerie). Sortie : aucune. Erreurs : sans effet sans composant ; un composant invalide
+    // s'écrit au journal de Quickshell. Dépendances : galerie (le module Galerie, dont ecran et dossier).
+    function prechauffer() { galerie?.createObject(null, { ecran: null, dossier: "" })?.destroy() }
 
     // inscrire — fait connaître une presqu'île à l'ouvreuse. Entrée : p, la presqu'île. Sortie : aucune.
     // Erreurs : aucune ; une presqu'île déjà inscrite ne l'est pas deux fois. Dépendances : presquiles.
@@ -103,6 +111,8 @@ Scope {
     }
 
     onOuvertChanged: if (!ouvert) rendre()
+    // Au tour de boucle suivant : le démarrage de la coque finit d'abord de créer ses fenêtres.
+    Component.onCompleted: Qt.callLater(prechauffer)
 
     // Galerie montée : une image choisie s'applique aussitôt ; la fin (abandon, ou choix après sa tenue) referme.
     Connections {

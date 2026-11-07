@@ -7,12 +7,15 @@ import "../Theme"
 // la taille se pose d'un coup. Ensuite, changer de module déroule une séquence en trois temps : l'ancien contenu
 // s'efface par un Ressort d'opacité « reveal » de nature « fondu » (phase « sortie ») ; dès que son opacité passe sous
 // seuilSortie (jeton presquile.sortie), il est confié au conteneur de départ, découpé à la forme, où il finit son fondu
-// toujours centré puis est détruit, pendant que le nouveau module est monté, invisible, et que la forme s'étire vers sa
+// puis est détruit, pendant que le nouveau module est monté, invisible, et que la forme s'étire vers sa
 // taille (phase « forme ») : sortie et étirement se chevauchent. Quand le reste à parcourir des deux ressorts de taille
 // passe sous la part seuilEntree (jeton presquile.entree) de leur écart de référence, le nouveau contenu apparaît
 // (phase « entree ») ; cet écart est pris au montage, puis repris depuis la position courante si la taille du module
 // change pendant la forme (contenu chargé après coup) ; la scène revient au « repos » quand plus rien ne bouge et que
-// l'ancien contenu est détruit. Un changement pendant la forme ou l'entrée reprend en sortie depuis l'opacité et la
+// l'ancien contenu est détruit. Dès le début de sa sortie, l'ancien contenu garde sa position verticale : la forme,
+// collée au bord haut de l'écran, s'étire vers le bas, et un contenu resté centré glisserait avec elle pendant qu'il
+// s'efface (recette de L2-60) ; il reste centré en largeur, donc immobile à l'écran, la forme s'étirant des deux côtés
+// de son axe. Un changement pendant la forme ou l'entrée reprend en sortie depuis l'opacité et la
 // taille courantes, sans saut ; un changement pendant la sortie la laisse finir et monte le dernier module demandé.
 // Un seul ancien contenu part à la fois : tant qu'il n'est pas détruit, la sortie suivante attend, sous le seuil, que
 // son conteneur soit libre. Mouvement réduit : la taille se pose aussitôt, seuls les fondus restent.
@@ -130,13 +133,16 @@ Item {
         _montage = false
     }
 
-    // changer — répond à un nouveau module : premier montage posé, ou séquence relancée en sortie.
+    // changer — répond à un nouveau module : premier montage posé, ou séquence relancée en sortie, l'ancien contenu
+    // figé à sa position verticale du moment (il ne revient jamais : le module suivant est toujours une instance neuve).
     // Entrées : aucune (lit module, contenu). Sortie : monte le module ou passe en phase « sortie ». Erreurs : aucune.
     // Dépendances : monter, avancer, Ressort.poser.
     function changer() {
         if (!_pret) return
         // Au premier montage, l'encoche prend sa taille d'un coup : elle ne naît pas de la largeur nulle.
         if (!contenu) { monter(); largeur.poser(); hauteur.poser(); return }
+        // Affecter sa propre valeur rompt la liaison de centrage vertical posée par monter.
+        contenu.y = contenu.y
         _phase = "sortie"
         opacite.cible = 0
         avancer()
@@ -156,7 +162,7 @@ Item {
 
     // ceder — confie le contenu courant au conteneur de départ, où il finit son fondu depuis son opacité courante
     // (le ressort de départ reprend la position et la vitesse de celui du module : le fondu continue sans palier),
-    // toujours centré dans la scène ; le conteneur du module repasse
+    // centré en largeur et à la position verticale figée au début de sa sortie ; le conteneur du module repasse
     // à l'opacité 0 pour le contenu suivant.
     // Entrées : aucune. Sortie : met à jour _sortant. Erreurs : aucune ; appelée seulement quand aucun ancien contenu
     // n'est en train de partir. Dépendances : depart, effacement, opacite.
