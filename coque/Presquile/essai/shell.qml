@@ -15,8 +15,10 @@ import "Presquile/bureaux.js" as Bureaux
 // une capture agrandie ; QT_QUICK_BACKEND=rhi et QSG_RHI_BACKEND=opengl pour une capture fidèle (la plateforme
 // offscreen choisit sinon le rendu logiciel, qui ne peint ni shader ni remplissage par texture). Commandes IPC :
 // indexPilule, pasMolette, cibleMolette, lireSpecial, commandesClic, commandeBureau, bureauxEtat, encoche, etirerEncoche,
-// capturer (les listes et objets sont rendus en JSON, le reste en texte).
-// Sortie : le résultat de chaque appel IPC, sur la sortie de « qs ipc call ». Erreurs : celles de Theme, dans
+// capturer, changer, changementEtat (les listes et objets sont rendus en JSON, le reste en texte). Une Scene sans
+// fenêtre, montée sur les bureaux d'essai, journalise chaque image de ses changements de module (« essai : … »).
+// Sortie : le résultat de chaque appel IPC, sur la sortie de « qs ipc call » ; au journal, les lignes « essai : phase
+// …», « essai : contenu … », « essai : l … », « essai : h … » et « essai : o … » de la scène. Erreurs : celles de Theme, dans
 // le journal ; capturer sans vitrine (hors offscreen) journalise « presquile : aucune vitrine ».
 // Dépendances : quickshell ≥ 0.3 (Quickshell.Io, FloatingWindow, LazyLoader), modules Theme, Composants et
 // Presquile.
@@ -31,6 +33,30 @@ ShellRoot {
     // Module des bureaux sans fenêtre et sans Hyprland : idActif et special, écrits par l'IPC, remplacent leurs
     // liaisons par défaut dès la création, et rien ici n'appelle Hyprland.dispatch.
     Bureaux { id: essaiBureaux; ecran: null; idActif: 0; special: "" }
+
+    // Modules de la scène d'essai : les bureaux, sans Hyprland, et un module factice « grand » de taille connue.
+    Component { id: moduleBureaux; Bureaux { objectName: "bureaux"; idActif: 0; special: "" } }
+    Component { id: moduleGrand; Item { objectName: "grand"; property var ecran; implicitWidth: 400; implicitHeight: 80 } }
+
+    // Scène sans fenêtre, comme celle de la surface : sa trajectoire est lue par tests/test_presquile.py.
+    Scene { id: essaiScene; module: moduleBureaux }
+    Connections {
+        target: essaiScene
+        function onPhaseChanged() { console.info("essai : phase " + essaiScene.phase) }
+        function onContenuChanged() { console.info("essai : contenu " + (essaiScene.contenu?.objectName ?? "")) }
+    }
+    Connections {
+        target: essaiScene.ressortLargeur
+        function onValueChanged() { console.info("essai : l " + essaiScene.ressortLargeur.value) }
+    }
+    Connections {
+        target: essaiScene.ressortHauteur
+        function onValueChanged() { console.info("essai : h " + essaiScene.ressortHauteur.value) }
+    }
+    Connections {
+        target: essaiScene.ressortOpacite
+        function onValueChanged() { console.info("essai : o " + essaiScene.ressortOpacite.value) }
+    }
 
     LazyLoader {
         id: vitrine
@@ -118,6 +144,20 @@ ShellRoot {
                                     hauteur: b.implicitHeight,
                                     reelles: p.map(x => x.width),
                                     zones: zones, centres: centres })
+        }
+
+        // changer — change le module de la scène d'essai, ce qui déroule la séquence de changement.
+        // Entrée : nom, « grand » pour le module factice, tout autre nom pour les bureaux. Sortie : aucune.
+        // Erreurs : aucune. Dépendances : essaiScene, moduleGrand, moduleBureaux.
+        function changer(nom: string): void { essaiScene.module = nom === "grand" ? moduleGrand : moduleBureaux }
+
+        // changementEtat — photographie de la scène d'essai.
+        // Entrées : aucune. Sortie : JSON {phase, opacite, largeur, hauteur, contenu (objectName du module monté),
+        // mobile (vrai si l'un des trois ressorts avance)}. Erreurs : aucune. Dépendances : essaiScene.
+        function changementEtat(): string {
+            const s = essaiScene, l = s.ressortLargeur, h = s.ressortHauteur, o = s.ressortOpacite
+            return JSON.stringify({ phase: s.phase, opacite: o.value, largeur: l.value, hauteur: h.value,
+                                    contenu: s.contenu?.objectName ?? null, mobile: l.moving || h.moving || o.moving })
         }
 
         // capturer — enregistre la vitrine en PNG, de façon asynchrone. Entrée : chemin, fichier à écrire.
