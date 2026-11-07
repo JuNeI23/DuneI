@@ -17,9 +17,14 @@ import "../Theme/fichiers.js" as Fichiers
 // molette et pavé tactile par pas (galerie.js cran : 120 par cran d'angleDelta, galerie.pas par tranche de
 // pixelDelta), sans bouclage ; Entrée ou un clic sur une vignette entière valident ; un clic sur une vignette coupée la
 // sélectionne ; Échap abandonne, et galerie.delai millisecondes sans action aussi, délai relancé par chaque touche,
-// molette, clic ou mouvement de souris sur le module. Le module n'applique rien : il émet fini, une seule fois, et
-// l'ouvreuse (Tâche 4) appelle dunei-fond et rend la presqu'île aux bureaux. Dossier vide, absent ou illisible : une
-// ligne « Aucune image dans <galerie.dossier> » en text-secondary, à la hauteur de la presqu'île.
+// molette, clic ou mouvement de souris sur le module. Le module n'applique rien. Valider émet choisi aussitôt
+// (l'ouvreuse appelle alors dunei-fond, et la montée du fond part), puis met le choix en valeur : la vignette choisie
+// prend le relief de la sélection et les autres s'effacent en fondu (Ressort « reveal » de nature « fondu ») ; une fois
+// l'effacement fini, la vignette choisie reste seule galerie.tenue millisecondes, puis le module émet fini avec son
+// chemin, et l'ouvreuse rend la presqu'île aux bureaux. Dès la validation, plus aucune touche, molette ni clic n'agit.
+// Un abandon émet fini("") aussitôt, sans effacement ni tenue. Chacun des deux signaux n'est émis qu'une fois.
+// En mouvement réduit, le relief se pose aussitôt, seul l'effacement reste un fondu. Dossier vide, absent ou
+// illisible : une ligne « Aucune image dans <galerie.dossier> » en text-secondary, à la hauteur de la presqu'île.
 // Entrées : ecran, écran de la presqu'île (contrat D98, inutilisé ici) ; dossier, chemin absolu du dossier lu, par
 //           défaut galerie.dossier développé depuis HOME (les essais le remplacent).
 // Sorties : implicitWidth, 2 × presquile.marge + 3 vignettes + 2 coupes + 4 écarts (presquile.ecart), fixe dès la
@@ -27,11 +32,13 @@ import "../Theme/fichiers.js" as Fichiers
 //           sélection agrandie ; en dossier vide, la largeur du message plus les marges et presquile.hauteur ;
 //           index, sélection courante (−1 sans image) ; nombre, chemins, la liste lue ; lu, vrai une fois le dossier
 //           lu (ou reconnu absent) ; vide ; liste, la ListView, et message, le texte du dossier vide, glisse, vrai
-//           tant que la bande glisse (lus par les essais) ; signal fini(chemin), le chemin choisi, ou "" pour un abandon.
+//           tant que la bande glisse (lus par les essais) ; choisie, index de la vignette validée (−1 avant) ;
+//           effacement, opacité courante des vignettes non choisies (1 avant la validation) ; signal choisi(chemin),
+//           émis à la validation ; signal fini(chemin), le chemin choisi après la tenue, ou "" pour un abandon.
 // Erreurs : aucune ; une image illisible garde sa vignette vide et la navigation la traverse ; un dossier absent ou
 //           illisible se traite comme un dossier vide. Avant le chargement des jetons, le module est de taille nulle.
-// Dépendances : Qt.labs.folderlistmodel, Quickshell (env), Theme (galerie, tokens.presquile, imageBureau, color),
-//               Ressort, Composants (Texte), Vignette, galerie.js, fichiers.js.
+// Dépendances : Qt.labs.folderlistmodel, Quickshell (env), Theme (galerie, dont tenue ; tokens.presquile, imageBureau,
+//               color), Ressort, Composants (Texte), Vignette, galerie.js, fichiers.js.
 FocusScope {
     id: galerie
 
@@ -46,6 +53,10 @@ FocusScope {
     readonly property Texte message: ligne
     readonly property bool glisse: glissement.moving
 
+    readonly property int choisie: _choisie
+    readonly property real effacement: efface.value
+
+    signal choisi(string chemin)
     signal fini(string chemin)
 
     readonly property var jetons: Theme.galerie
@@ -59,6 +70,9 @@ FocusScope {
 
     property bool _lu: false
     property bool _ferme: false
+    property int _choisie: -1
+    property string _chemin: ""
+    property bool _tenu: false
     property real _resteAngle: 0
     property real _restePixel: 0
 
@@ -79,7 +93,8 @@ FocusScope {
     // synchroniser — relit la liste des chemins après une lecture ou un changement du dossier.
     // Entrées : aucune (lit modele). Sortie : met à jour chemins et index ; à la première lecture complète, place la
     // sélection sur le fond actuel et pose la bande sans glissement ; ensuite, ramène la sélection dans les bornes
-    // (image retirée pendant l'ouverture). Erreurs : aucune. Dépendances : modele, Logique (initial, borner), glissement.
+    // (image retirée pendant l'ouverture). Erreurs : aucune.
+    // Dépendances : modele, Logique (initial, borner), glissement.
     function synchroniser() {
         if (modele.status !== FolderListModel.Ready) return
         chemins = Array.from({ length: modele.count }, (_, i) => modele.get(i, "filePath"))
@@ -102,13 +117,27 @@ FocusScope {
         if (nombre > 0) index = Logique.deplacer(index, pas, nombre)
     }
 
-    // valider — choisit une image : émet fini avec son chemin.
+    // valider — choisit une image : émet choisi avec son chemin, puis lance l'effacement des autres vignettes, que
+    // suivent la tenue et fini.
     // Entrée : i, index de l'image. Sortie : aucune. Erreurs : sans effet si i est hors de la liste ou si le module
-    // est déjà fini. Dépendances : chemins, fini.
+    // est déjà fini. Dépendances : chemins, choisi, efface (par sa cible), tenir.
     function valider(i) {
         if (_ferme || i < 0 || i >= chemins.length) return
         _ferme = true
-        fini(chemins[i])
+        _chemin = chemins[i]
+        _choisie = i
+        choisi(_chemin)
+        Qt.callLater(tenir)
+    }
+
+    // tenir — lance la tenue une fois l'effacement fini ; fini part à son échéance.
+    // Entrées : aucune ; appelée après la validation et à chaque arrêt ou départ du ressort d'effacement, au tour de
+    // boucle suivant. Sortie : aucune. Erreurs : sans effet avant la validation, pendant l'effacement ou une fois la
+    // tenue lancée. Dépendances : efface, tenue.
+    function tenir() {
+        if (_choisie < 0 || efface.moving || efface.value !== 0 || _tenu) return
+        _tenu = true
+        tenue.start()
     }
 
     // abandonner — referme sans rien choisir : émet fini(""). Entrées : aucune. Sortie : aucune.
@@ -164,6 +193,22 @@ FocusScope {
         onTriggered: galerie.abandonner()
     }
 
+    // Effacement des vignettes non choisies, à la validation.
+    Ressort {
+        id: efface
+        transition: "reveal"
+        nature: "fondu"
+        cible: galerie._choisie < 0 ? 1 : 0
+        onMovingChanged: Qt.callLater(galerie.tenir)
+    }
+
+    // Tenue de la vignette choisie, seule, avant la fermeture.
+    Timer {
+        id: tenue
+        interval: galerie.jetons?.tenue ?? 0
+        onTriggered: galerie.fini(galerie._chemin)
+    }
+
     // Glissement de la bande : contentX qui place la vignette sélectionnée au centre de la partie visible.
     Ressort {
         id: glissement
@@ -200,7 +245,9 @@ FocusScope {
                 width: implicitWidth
                 height: implicitHeight
                 chemin: emplacement.filePath
-                selectionnee: emplacement.index === galerie.index
+                // Après la validation, le relief passe à la vignette choisie, et les autres s'effacent.
+                selectionnee: emplacement.index === (galerie._choisie < 0 ? galerie.index : galerie._choisie)
+                opacity: galerie._choisie < 0 || emplacement.index === galerie._choisie ? 1 : efface.value
             }
 
             // Clic : une MouseArea plutôt qu'un TapHandler, pour que les vrais clics envoyés par l'essai l'atteignent

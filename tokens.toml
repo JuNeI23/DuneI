@@ -433,6 +433,8 @@ coupe = 56                   # hauteur de la tranche de vignette qui dépasse du
 echelle = 1.06               # grossissement de la vignette sélectionnée
 voile = 0.30                 # opacité du voile surface-base qui atténue les vignettes non sélectionnées
 delai = 2000                 # ms avant que la galerie ne se referme d'elle-même, sans action
+tenue = 200                  # ms pendant lesquelles la vignette validée reste seule, les autres effacées, avant que la
+                             # presqu'île ne se rétracte (mise en valeur du choix, recette de L2-60)
 pas = 60                     # px de pixelDelta du pavé tactile qui valent un pas de sélection ; réglé à la recette
 dossier = "~/Documents/Images/Wallpapers"   # dossier des images, « ~ » développé à l'exécution
 

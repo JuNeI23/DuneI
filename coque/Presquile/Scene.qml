@@ -13,7 +13,8 @@ import "../Theme"
 // reprend en sortie depuis l'opacité et la taille courantes, sans saut ; un changement pendant la sortie la laisse
 // finir et monte le dernier module demandé. Mouvement réduit : la taille se pose aussitôt, seuls les fondus restent.
 // La scène donne aussi la hauteur que doit réserver la surface (hauteurSurface) : elle monte d'un coup à la cible du
-// ressort de hauteur quand elle est plus grande, et ne redescend qu'à son arrêt, jamais image par image ; chaque changement de taille d'une surface de calque passe par un aller-retour avec le compositeur.
+// ressort de hauteur quand elle est plus grande, et ne redescend qu'à son arrêt, jamais image par image : chaque
+// changement de taille d'une surface de calque passe par un aller-retour avec le compositeur.
 // Entrées : ecran, l'écran transmis au module ; module, le composant de contenu, un Item déclarant implicitWidth et
 //           implicitHeight et recevant ecran.
 // Sorties : contenu, le module monté (null avant le premier montage ou si le composant échoue) ; phase, « repos »,

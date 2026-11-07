@@ -1652,6 +1652,7 @@
     "echelle": 1.06,
     "voile": 0.3,
     "delai": 2000,
+    "tenue": 200,
     "pas": 60,
     "dossier": "~/Documents/Images/Wallpapers"
   }

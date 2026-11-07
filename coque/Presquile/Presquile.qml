@@ -8,8 +8,9 @@ import "../Theme"
 // l'encoche continue, centrée, et, dedans, la Scene qui monte le module de contenu. La largeur de la fenêtre ne change
 // donc jamais, et sa hauteur suit la hauteurSurface de la scène, stable pendant tout mouvement : la surface n'est
 // jamais reconfigurée image par image, ce qui ferait attendre chaque image l'aller-retour avec le compositeur
-// (saccades de la rétractation, décalage d'une image à l'ouverture, constatés à la recette de L2-60). La taille de l'encoche suit celle du module par les deux Ressorts
-// « window » de la scène : immobile tant que le module garde sa taille, elle s'étire sans saut quand il en change.
+// (saccades de la rétractation, décalage d'une image à l'ouverture, constatés à la recette de L2-60). La taille de
+// l'encoche suit celle du module par les deux Ressorts « window » de la scène : immobile tant que le module garde sa
+// taille, elle s'étire sans saut quand il en change.
 // Changer de module déroule la séquence de la scène (L2-48) : fondu de sortie, étirement, fondu d'entrée ; en
 // mouvement réduit, la taille se pose aussitôt et seuls les fondus restent. La fenêtre réserve en plus
 // de l'encoche la marge de son ombre, pour qu'elle ne soit pas coupée. Le masque de saisie ne couvre que le corps de
@@ -42,7 +43,8 @@ PanelWindow {
     screen: modelData
     anchors { top: true; left: true; right: true }
     // Pleine largeur, et hauteur tenue par la scène pendant le mouvement : seule la forme s'anime, jamais la fenêtre.
-    // Les zones transparentes ne sont pas floutées (ignore_alpha des règles de calque) et le masque laisse passer les clics.
+    // Les zones transparentes ne sont pas floutées (ignore_alpha des règles de calque), et le masque laisse passer
+    // les clics.
     implicitHeight: scene.hauteurSurface + encoche.marge
     exclusionMode: ExclusionMode.Ignore
     color: "transparent"

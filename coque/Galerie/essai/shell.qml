@@ -33,19 +33,26 @@ ShellRoot {
     Component.onCompleted: Theme.tokens
 
     // Galerie montée par monter (null avant) ; fini, chemin reçu de son signal fini (null avant) ; finiApres, délai en
-    // millisecondes entre le montage et ce signal ; t0, instant du montage.
+    // millisecondes entre le montage et ce signal ; choisi et choisiApres, de même pour le signal choisi ; effaceApres,
+    // délai entre le montage et la fin de l'effacement des vignettes non choisies ; t0, instant du montage.
     property Item galerie: null
     property var fini: null
     property real finiApres: -1
+    property var choisi: null
+    property real choisiApres: -1
+    property real effaceApres: -1
     property real t0: 0
 
     Component { id: moduleGalerie; Galerie {} }
 
     // Ouvreuse d'essai : dossier, lu par ses galeries ; galeries, nombre de galeries vivantes (aucune orpheline) ;
-    // tEntree, instant du passage de sa presqu'île en phase « entree » ; tFin, instant de sa fermeture (0 avant).
+    // tEntree, instant du passage de sa presqu'île en phase « entree » ; tChoisi, instant du signal choisi de sa
+    // galerie ; tEfface, instant de la fin de l'effacement ; tFin, instant de sa fermeture (0 avant chacun).
     property string dossierOuvreuse: ""
     property int galeries: 0
     property real tEntree: 0
+    property real tChoisi: 0
+    property real tEfface: 0
     property real tFin: 0
 
     Ouvreuse {
@@ -66,6 +73,14 @@ ShellRoot {
     Connections {
         target: ouvreuse.cible
         function onPhaseChanged() { if (ouvreuse.cible.phase === "entree") racine.tEntree = Date.now() }
+    }
+    Connections {
+        target: ouvreuse._montee
+        ignoreUnknownSignals: true
+        function onChoisi() { racine.tChoisi = Date.now() }
+        function onEffacementChanged() {
+            if (ouvreuse._montee.effacement === 0 && racine.tEfface === 0) racine.tEfface = Date.now()
+        }
     }
 
     Component { id: bureauxEssai; Bureaux { objectName: "bureaux"; idActif: 0; special: "" } }
@@ -179,16 +194,24 @@ ShellRoot {
             racine.galerie?.destroy()
             racine.fini = null
             racine.finiApres = -1
+            racine.choisi = null
+            racine.choisiApres = -1
+            racine.effaceApres = -1
             racine.t0 = Date.now()
             const g = moduleGalerie.createObject(fenetre.item.cadre, dossier === "-" ? { ecran: null } : { ecran: null, dossier: dossier })
             g.fini.connect(c => { racine.fini = c; racine.finiApres = Date.now() - racine.t0 })
+            g.choisi.connect(c => { racine.choisi = c; racine.choisiApres = Date.now() - racine.t0 })
+            g.effacementChanged.connect(() => {
+                if (g.effacement === 0 && racine.effaceApres < 0) racine.effaceApres = Date.now() - racine.t0
+            })
             g.forceActiveFocus()
             racine.galerie = g
         }
 
         // etat — photographie de la galerie montée.
-        // Sortie : JSON {index, nombre, chemins, lu, vide, message, largeur, hauteur, fini, finiApres, glisse, delegues} ;
-        // delegues liste les délégués créés par la bande, {i, echelle, voile, statut}. "null" sans galerie.
+        // Sortie : JSON {index, nombre, chemins, lu, vide, message, largeur, hauteur, fini, finiApres, glisse, choisi,
+        // choisiApres, effaceApres, choisie, effacement, delegues} ; delegues liste les délégués créés par la bande,
+        // {i, echelle, voile, statut, presence (opacité de la vignette)}. "null" sans galerie.
         // Erreurs : aucune. Dépendances : galerie.
         function etat(): string {
             const g = racine.galerie
@@ -196,12 +219,15 @@ ShellRoot {
             const delegues = []
             for (let i = 0; i < g.nombre; i++) {
                 const d = g.liste.itemAtIndex(i)
-                if (d) delegues.push({ i: i, echelle: d.vignette.echelle, voile: d.vignette.voile, statut: d.vignette.statut })
+                if (d) delegues.push({ i: i, echelle: d.vignette.echelle, voile: d.vignette.voile,
+                                       statut: d.vignette.statut, presence: d.vignette.opacity })
             }
             return JSON.stringify({ index: g.index, nombre: g.nombre, chemins: g.chemins, lu: g.lu, vide: g.vide,
                                     message: g.vide ? g.message.text : "", largeur: g.implicitWidth,
                                     hauteur: g.implicitHeight, fini: racine.fini, finiApres: racine.finiApres,
-                                    glisse: g.glisse, delegues: delegues })
+                                    glisse: g.glisse, choisi: racine.choisi, choisiApres: racine.choisiApres,
+                                    effaceApres: racine.effaceApres, choisie: g.choisie, effacement: g.effacement,
+                                    delegues: delegues })
         }
 
         // touche — envoie une touche à la galerie. Entrée : nom, « Droite », « Gauche », « Entree » ou « Echap ».
@@ -240,7 +266,8 @@ ShellRoot {
             racine.dossierOuvreuse = dossier
         }
         // etatOuvreuse — photographie de l'ouvreuse. Sortie : JSON {ouvert, cible, popover (« ouvreuse », « autre » ou
-        // null), popoverOuvert, presquiles [{nom, module, phase}], lu, galeries, tEntree, tFin}. Erreurs : aucune.
+        // null), popoverOuvert, presquiles [{nom, module, phase}], lu, galeries, tEntree, tChoisi, tEfface, tFin}.
+        // Erreurs : aucune.
         // Dépendances : ouvreuse, Overlays.
         function etatOuvreuse(): string {
             const o = Overlays.popover
@@ -250,7 +277,8 @@ ShellRoot {
                                     presquiles: ouvreuse.presquiles.map(p => ({ nom: p.nom, module: p.contenu?.objectName ?? "",
                                                                                  phase: p.phase })),
                                     lu: ouvreuse.cible?.contenu?.lu ?? false, galeries: racine.galeries,
-                                    tEntree: racine.tEntree, tFin: racine.tFin })
+                                    tEntree: racine.tEntree, tChoisi: racine.tChoisi, tEfface: racine.tEfface,
+                                    tFin: racine.tFin })
         }
         // popover — ouvre ou ferme le popover factice. Entrée : ouvrir. Sortie : aucune. Erreurs : aucune.
         // Dépendances : popoverEssai.

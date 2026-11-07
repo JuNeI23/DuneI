@@ -121,6 +121,7 @@ class GalerieDossier(GalerieIpc):
         (self.images / TEXTE).write_text("rien", encoding="utf-8")
         self.chemins = [str(self.images / nom) for nom in IMAGES]
         self.installer(55)
+        self.preparer()
         # Le fond actuel est la deuxième image : la galerie doit s'ouvrir dessus.
         (self.dir / "bureau.json").write_text(json.dumps({"origine": "fond", "fond": "#676590",
                                                           "image": self.chemins[1]}), encoding="utf-8")
@@ -130,7 +131,13 @@ class GalerieDossier(GalerieIpc):
         self.attendre("Theme : chargé, teinte 55")
         self.sonder(lambda: self.appeler("actuel") == self.chemins[1], "fond actuel lu")
         self.jetons = {n: self.json("jeton", n) for n in ("largeur", "hauteur", "coupe", "echelle", "voile",
-                                                           "delai", "pas")}
+                                                           "delai", "pas", "tenue")}
+
+    def preparer(self) -> None:
+        """Dernière occasion de poser un fichier dans le dossier surveillé avant le lancement ; ne fait rien ici.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : aucune.
+        """
 
     def sonder(self, condition, quoi: str):
         """Attend qu'une condition devienne vraie, en la réévaluant toutes les 50 ms.
@@ -249,9 +256,50 @@ class ModuleTest(GalerieDossier, unittest.TestCase):
         self.sonder(lambda: self.etat()["fini"] == self.chemins[4], "entière validée")
 
     def test_entree(self):
+        # Entrée choisit aussitôt (signal choisi) ; fini ne part qu'après l'effacement et la tenue.
         self.monter()
         self.touches("Entree")
-        self.assertEqual(self.etat()["fini"], self.chemins[1])
+        e = self.etat()
+        self.assertEqual((e["choisi"], e["fini"]), (self.chemins[1], None))
+        self.sonder(lambda: self.etat()["fini"] == self.chemins[1], "fin après la tenue")
+
+    def test_validation_tenue(self):
+        """Validation mise en valeur : choisi, puis effacement des autres vignettes, puis fini après galerie.tenue ; aucune
+        touche, molette ni clic n'agit entre-temps."""
+        self.monter()
+        self.touches("Entree")
+        # Pendant la tenue : flèches, molette, clics sur une coupée et sur une entière, Échap. Rien ne change.
+        self.touches("Droite", 2)
+        self.touches("Gauche")
+        self.appeler("molette", 0, -240, False)
+        self.appeler("cliquer", 3)
+        self.appeler("cliquer", 2)
+        self.touches("Echap")
+        e = self.etat()
+        self.assertEqual((e["index"], e["choisie"], e["choisi"], e["fini"]), (1, 1, self.chemins[1], None))
+        e = self.sonder(lambda: (e := self.etat())["fini"] is not None and e, "fin après la tenue")
+        self.assertEqual(e["fini"], self.chemins[1])
+        # Ordre : choisi, puis effacement fini (un fondu de plusieurs images, pas un saut), puis fini après la tenue.
+        self.assertGreater(e["effaceApres"] - e["choisiApres"], 50, e)
+        self.assertGreaterEqual(e["finiApres"] - e["effaceApres"], self.jetons["tenue"] - 5, e)
+        self.assertLessEqual(e["finiApres"] - e["effaceApres"], self.jetons["tenue"] + 300, e)
+        # La choisie reste seule, nette et en relief ; les autres sont effacées.
+        for d in e["delegues"]:
+            with self.subTest(vignette=d["i"]):
+                self.assertEqual(d["presence"], 1 if d["i"] == 1 else 0)
+        self.assertAlmostEqual(self.delegue(e, 1)["voile"], 0, places=3)
+
+    def test_validation_voisine(self):
+        """Un clic sur une vignette entière voisine : elle prend le relief, sans que la bande ne glisse, et reste seule."""
+        self.monter()
+        self.appeler("cliquer", 2)
+        j = self.jetons
+        e = self.sonder(lambda: (e := self.etat())["fini"] is not None and e, "fin après la tenue")
+        self.assertEqual((e["index"], e["choisie"], e["fini"]), (1, 2, self.chemins[2]))
+        choisie = self.delegue(e, 2)
+        self.assertAlmostEqual(choisie["echelle"], j["echelle"], places=3)
+        self.assertAlmostEqual(choisie["voile"], 0, places=3)
+        self.assertEqual([d["i"] for d in e["delegues"] if d["presence"] > 0], [2])
 
     def test_clic_coupee(self):
         self.monter()
@@ -263,12 +311,15 @@ class ModuleTest(GalerieDossier, unittest.TestCase):
     def test_clic_entiere(self):
         self.monter()
         self.appeler("cliquer", 2)
-        self.assertEqual(self.etat()["fini"], self.chemins[2])
+        self.assertEqual(self.etat()["choisi"], self.chemins[2])
+        self.sonder(lambda: self.etat()["fini"] == self.chemins[2], "fin après la tenue")
 
     def test_echap(self):
+        # L'abandon referme aussitôt, sans choix, sans effacement ni tenue.
         self.monter()
         self.touches("Echap")
-        self.assertEqual(self.etat()["fini"], "")
+        e = self.etat()
+        self.assertEqual((e["fini"], e["choisi"], e["choisie"], e["effacement"]), ("", None, -1, 1))
 
     def test_delai(self):
         delai = self.jetons["delai"]
@@ -305,6 +356,26 @@ class ModuleTest(GalerieDossier, unittest.TestCase):
                 self.assertEqual(e["message"], "Aucune image dans ~/Documents/Images/Wallpapers")
                 self.touches("Echap")
                 self.assertEqual(self.etat()["fini"], "")
+
+
+class ValidationReduiteTest(GalerieDossier, unittest.TestCase):
+    """Validation en mouvement réduit : le relief de la choisie se pose aussitôt, seul l'effacement reste un fondu."""
+
+    def preparer(self):
+        (self.dir / "mouvement.json").write_text('{"reduit": true}')
+
+    def test_validation_reduite(self):
+        self.appeler("monter", str(self.images))
+        self.sonder(lambda: self.json("etat")["lu"], "dossier lu")
+        self.appeler("cliquer", 2)
+        e = self.json("etat")
+        self.assertEqual(e["choisi"], self.chemins[2])
+        self.assertAlmostEqual(next(d for d in e["delegues"] if d["i"] == 2)["echelle"], self.jetons["echelle"], places=3)
+        e = self.sonder(lambda: (e := self.json("etat"))["fini"] is not None and e, "fin après la tenue")
+        self.assertEqual(e["fini"], self.chemins[2])
+        # Le fondu réduit est court, mais reste un fondu de plusieurs images.
+        self.assertGreater(e["effaceApres"] - e["choisiApres"], 30, e)
+        self.assertGreaterEqual(e["finiApres"] - e["effaceApres"], self.jetons["tenue"] - 5, e)
 
 
 class OuvreuseTest(GalerieDossier, unittest.TestCase):
@@ -423,6 +494,21 @@ class OuvreuseTest(GalerieDossier, unittest.TestCase):
         self.assertFalse(e["ouvert"])
         self.sonder(lambda: self.appels(), "dunei-fond appelé")
         time.sleep(0.3)
+        self.assertEqual(self.appels(), [["1", self.chemins[2]]])
+
+    def test_valider_ordre(self):
+        """dunei-fond est appelé dès le choix, galerie encore ouverte ; la fermeture suit l'effacement et la tenue."""
+        self.basculer()
+        self.attendre_module("B", "galerie")
+        self.appeler("validerOuvreuse", 2)
+        self.sonder(lambda: self.appels(), "dunei-fond appelé")
+        e = self.ouvreuse()
+        self.assertTrue(e["ouvert"])
+        self.assertEqual(e["tFin"], 0)
+        e = self.sonder(lambda: (e := self.ouvreuse())["tFin"] > 0 and e, "fermeture")
+        self.assertGreater(e["tChoisi"], 0)
+        self.assertGreater(e["tEfface"], e["tChoisi"])
+        self.assertGreaterEqual(e["tFin"] - e["tEfface"], self.jetons["tenue"] - 5, e)
         self.assertEqual(self.appels(), [["1", self.chemins[2]]])
 
     def test_valider_nom_special(self):

@@ -14,9 +14,11 @@ import "galerie.js" as Logique
 // ferme le popover de la barre éventuellement ouvert, et un popover qui s'ouvre la referme. Pendant l'ouverture, un
 // HyprlandFocusGrab sur la fenêtre de la presqu'île prend le clavier ; sa levée (clic en dehors) referme la galerie.
 // Quand la presqu'île passe en phase « entree », le délai d'abandon de la galerie repart de zéro et le module prend
-// le focus : Nicolas dispose de tout le délai une fois la bande visible. À la fin de la galerie (signal fini), elle
-// se referme ; un chemin choisi, s'il n'est pas déjà le fond actuel, est passé à dunei-fond, dont un échec s'écrit au
-// journal. Une presqu'île retirée (écran débranché) pendant l'ouverture remet l'ouvreuse à l'état fermé.
+// le focus : Nicolas dispose de tout le délai une fois la bande visible. Dès qu'une image est choisie (signal choisi),
+// son chemin, s'il n'est pas déjà le fond actuel, est passé à dunei-fond, dont un échec s'écrit au journal : la montée
+// du fond part pendant que la galerie met le choix en valeur. À la fin de la galerie (signal fini, après cette tenue
+// ou aussitôt pour un abandon), elle se referme. Une presqu'île retirée (écran débranché) pendant l'ouverture remet
+// l'ouvreuse à l'état fermé.
 // Entrées : les presqu'îles, inscrites par inscrire() et retirées par retirer() ; chacune porte modelData (son écran),
 //           module (composant écrit par l'ouvreuse), contenu et phase (lus), et fenetre (la fenêtre du grab, ou null) ;
 //           ecranActif, l'écran du moniteur focalisé d'Hyprland ; pleinEcran, vrai si son espace de travail actif
@@ -24,7 +26,8 @@ import "galerie.js" as Logique
 //           commande, le programme d'application, dunei-fond par défaut ; galerie, le composant du module.
 //           Les essais remplacent ecranActif, pleinEcran, commande et galerie.
 // Sorties : ouvert ; cible, la presqu'île qui porte la galerie (null fermée) ; famille et exclusif, lus par Overlays ;
-//           un processus « commande <chemin> » à chaque validation d'une autre image que le fond actuel.
+//           un processus « commande <chemin> » à chaque validation d'une autre image que le fond actuel, lancé dès le
+//           signal choisi.
 // Erreurs : sans presqu'île sur l'écran actif, basculer() n'ouvre rien ; un code de sortie non nul de la commande
 //           écrit « galerie : dunei-fond a échoué (<code>) » au journal, le fond reste inchangé.
 // Dépendances : quickshell ≥ 0.3 (IpcHandler, Process, Hyprland, HyprlandFocusGrab), Theme (imageBureau), Overlays,
@@ -101,14 +104,12 @@ Scope {
 
     onOuvertChanged: if (!ouvert) rendre()
 
-    // Fin de la galerie montée : abandon ("") ou choix d'une image.
+    // Galerie montée : une image choisie s'applique aussitôt ; la fin (abandon, ou choix après sa tenue) referme.
     Connections {
         target: ouvreuse._montee
         ignoreUnknownSignals: true
-        function onFini(chemin) {
-            ouvreuse.ouvert = false
-            if (chemin !== "") ouvreuse.appliquer(chemin)
-        }
+        function onChoisi(chemin) { ouvreuse.appliquer(chemin) }
+        function onFini() { ouvreuse.ouvert = false }
     }
 
     // Galerie visible : le délai d'abandon repart, et le module prend le focus clavier de sa fenêtre.

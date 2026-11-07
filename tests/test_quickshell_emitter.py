@@ -49,9 +49,10 @@ class QuickshellEmitterTest(unittest.TestCase):
                                                  "pilule": 22, "ecart": 8, "marge": 14, "entree": 0.10})
 
     def test_galerie(self):
-        """Vérifie les jetons de la galerie de fonds : vignette, coupe, échelle, voile, délai, pas du pavé, dossier."""
+        """Vérifie les jetons de la galerie de fonds : vignette, coupe, échelle, voile, délai, tenue de la validation,
+        pas du pavé, dossier."""
         self.assertEqual(self.out["galerie"], {"largeur": 160, "hauteur": 90, "coupe": 56, "echelle": 1.06,
-                                               "voile": 0.30, "delai": 2000, "pas": 60,
+                                               "voile": 0.30, "delai": 2000, "tenue": 200, "pas": 60,
                                                "dossier": "~/Documents/Images/Wallpapers"})
 
     def test_accent_discret(self):
