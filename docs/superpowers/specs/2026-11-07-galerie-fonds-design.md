@@ -1,6 +1,6 @@
 # Galerie de fonds d'écran dans la presqu'île : conception (L2-60, avec L2-48)
 
-Version 0.2, 2026-11-07.
+Version 0.3, 2026-11-07.
 
 ## Intention
 
@@ -113,7 +113,7 @@ ou la coque, qui remet `Bureaux`.
 
 Un `IpcHandler` de cible `galerie` expose `basculer()` : ouvrir sur l'écran actif si la galerie est fermée, la refermer
 sinon. `config/hypr/donnees/raccourcis.lua` gagne une ligne `SUPER + W`, `action = "commande"`,
-`commande = "qs ipc call galerie basculer"`, avec sa description pour l'aide des raccourcis. SUPER + W est libre.
+`commande = "qs ipc -c dunei call galerie basculer"` (écart, voir « Écarts constatés à la réalisation »), avec sa description pour l'aide des raccourcis. SUPER + W est libre.
 
 Coût mesuré sur `caladan` : 33 ms par appel `qs ipc`. `GlobalShortcut` a été écarté : le protocole fait planter le second
 client qui enregistre le même raccourci, ce qui arriverait avec les essais de coque, et le wiki de Hyprland le dit lié à
@@ -166,11 +166,11 @@ bande vers le haut et le bas : la marge verticale de la presqu'île en tient com
 
 | Moment | Mouvement | Ressort |
 |---|---|---|
-| Ouverture | Bureaux en fondu sortant, étirement de la forme, bande en fondu entrant | fondu, `window`, fondu |
-| Défilement | La bande glisse jusqu'à centrer la sélection | `navigate` |
+| Ouverture | Bureaux en fondu sortant ; sous l'opacité `presquile.sortie` (0,50), étirement de la forme pendant que les bureaux finissent leur fondu ; bande en fondu entrant quand la forme n'a plus que `presquile.entree` (0,10) de son trajet | fondu (`reveal`), `window`, fondu (`reveal`) |
+| Défilement | La bande glisse jusqu'à centrer la sélection | `navigate`, reréglé à environ 0,35 s sans rebond (1, 400, 41) |
 | Changement de sélection | Échelle et voile passent d'une vignette à l'autre | `state` |
-| Fermeture | Bande en fondu sortant, rétraction de la forme, bureaux en fondu entrant | fondu, `window`, fondu |
-| Validation | Fermeture ci-dessus ; la montée du fond (`spectacle`, L2-27) part en même temps | — |
+| Fermeture | Bande en fondu sortant, rétraction de la forme qui chevauche ce fondu, bureaux en fondu entrant | fondu (`reveal`), `window`, fondu (`reveal`) |
+| Validation | Les autres vignettes s'effacent, la choisie reste seule `galerie.tenue` (200 ms), puis fermeture ci-dessus ; la montée du fond (`spectacle`, L2-27) part dès la validation | fondu (`reveal`), puis fermeture |
 
 **Mouvement réduit.** Seuls les fondus subsistent : la forme, la bande et l'échelle se posent sur leur cible sans
 déplacement, sous les fondus de contenu.
@@ -222,9 +222,50 @@ direction, aide des raccourcis si elle est générée.
 Le découpage en fichiers sous `coque/Galerie/`, la place de l'`IpcHandler`, le seuil de « forme presque posée », les
 marges verticales exactes, la manière d'écouter le mouvement de souris pour le délai.
 
+## Écarts constatés à la réalisation
+
+Relevés pendant la construction et la recette du 2026-11-07 ; chacun a sa raison au journal.
+
+- **Commande du raccourci.** `qs ipc -c dunei call galerie basculer`, et non `qs ipc call galerie basculer` : sans
+  `-c dunei`, `qs` cherche la configuration `default` et échoue, la coque tournant sous `qs -n -c dunei` (D126).
+- **Chevauchement de la sortie et de l'étirement.** La fiche attendait que l'ancien contenu soit effacé avant d'étirer
+  la forme ; Nicolas a trouvé l'ouverture trop lente. L'étirement part quand l'opacité de l'ancien contenu passe sous
+  `presquile.sortie` (0,50) ; l'ancien finit son fondu dans un conteneur découpé à la forme, à la même vitesse grâce à
+  `Ressort.reprendre(x, v)` (D124).
+- **Seuil d'entrée.** Le seuil « forme presque posée », laissé au constructeur, est le jeton `presquile.entree` (0,10),
+  part de l'écart restant à parcourir par les ressorts de taille ; les écarts de référence suivent une cible qui arrive
+  en retard (D124).
+- **Surface pleine largeur.** La fenêtre de la presqu'île couvre toute la largeur et tient sa hauteur pendant le
+  mouvement : la surface redimensionnée image par image causait un décalage à l'ouverture et une rétractation saccadée
+  (D125).
+- **Bande sans `ListView`.** `StrictlyEnforceRange` aurait disputé la position au ressort `navigate`, et une `ListView`
+  liée au ressort remettait sa position à l'origine au remplissage du modèle, d'où un saut à la première flèche. La
+  bande est un `Repeater` d'emplacements placés par le seul ressort, chaque vignette chargée par un `Loader` à moins
+  d'un pas de la partie visible (D127).
+- **`MouseArea` plutôt que `TapHandler` et `WheelHandler`.** Les gestionnaires de pointeur ne recevaient pas les vrais
+  événements des essais (D127).
+- **Validation avec tenue.** La fiche refermait aussitôt ; Nicolas a choisi « les autres s'effacent » : la choisie
+  reste seule `galerie.tenue` (200 ms) avant la rétractation, et la montée du fond part dès la validation. Un clic sur
+  une vignette entière voisine lui donne le relief sur place, sans glissement (D131).
+- **`navigate` reréglé.** Masse 1, raideur 400, amortissement 41, environ 0,35 s sans rebond, au lieu de 186 ms, pour
+  la bande comme pour la bascule des bureaux : décision de Nicolas (D130).
+- **Écran actif par son nom.** `Hyprland.monitorFor(écran) === Hyprland.focusedMonitor` ne se réévalue pas ; l'écran
+  actif est celui dont le nom vaut `Hyprland.focusedMonitor.name` (D129).
+- **Plein écran.** Lu sur `Hyprland.focusedMonitor.activeWorkspace.hasFullscreen` ; le cas vrai n'a pas été éprouvé avec
+  une vraie fenêtre (D129).
+- **Clavier.** Les flèches arrivent dès l'ouverture avec le seul `HyprlandFocusGrab` et `WlrKeyboardFocus.None` ;
+  Nicolas l'a constaté à l'écran, le focus exclusif n'est pas employé (D128). Le délai d'abandon repart quand la bande
+  paraît.
+- **Mesures.** Sur le dossier réel, les trois vignettes centrales sont décodées environ 280 ms après la commande, au
+  début du fondu d'entrée ; sur trente images lourdes, environ 870 ms après, soit quelque 600 ms après la fin de
+  l'étirement. La mémoire PSS de la coque d'essai passe de 59 Mo à environ 100 Mo et ne redescend pas après la
+  fermeture, mais reste stable d'une ouverture à l'autre. Les deux constats sont soumis à Nicolas avant tout cache de
+  miniatures (carnet, « La galerie de fonds » ; D126).
+
 ## Historique des versions
 
 | Version | Date | Changement |
 |---|---|---|
 | 0.1 | 2026-11-07 | Première version, après la séance de conception sur maquettes |
 | 0.2 | 2026-11-07 | Relecture du constructeur : pavé tactile par pas, rien en plein écran, exclusivité avec les popovers, rotation EXIF |
+| 0.3 | 2026-11-07 | Écarts constatés à la réalisation et à la recette (commande avec `-c dunei`, chevauchement, surface pleine largeur, bande sans `ListView`, validation avec tenue, `navigate` reréglé, écran par nom, mesures) ; tableau du mouvement à jour |

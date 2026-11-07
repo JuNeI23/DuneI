@@ -1,6 +1,6 @@
 # Galerie de fonds d'écran : plan d'implémentation (L2-60, avec L2-48)
 
-Version 0.1, 2026-11-07.
+Version 0.2, 2026-11-07.
 
 > **Pour les agents :** sous-compétence requise : superpowers:subagent-driven-development (recommandée) ou
 > superpowers:executing-plans, tâche par tâche. Les étapes se cochent (`- [ ]`).
@@ -72,7 +72,7 @@ d'elle : la lire en entier avant toute tâche.
 - Produit : essai `coque/Galerie/essai/shell.qml` avec `IpcHandler { target: "galerie-essai" }` qui expose chaque
   fonction de `galerie.js` et `fichiers.js` et rend du JSON, sur le modèle de `coque/Presquile/essai/shell.qml`.
 
-- [ ] **Étape 1 : tests rouges.** Dans `test_quickshell_emitter.py`, ajouter `galerie` à la liste de
+- [x] **Étape 1 : tests rouges.** Dans `test_quickshell_emitter.py`, ajouter `galerie` à la liste de
   `test_cles_premier_niveau` (après `presquile`) et `test_galerie` qui vérifie le dict exact ci-dessus. Créer
   `tests/test_galerie.py` avec une classe `GalerieIpc(EssaiCoque)` copiée du motif `PresquileIpc`
   (`tests/test_presquile.py:66-98`) et la classe `LogiqueTest` :
@@ -86,14 +86,14 @@ d'elle : la lire en entier avant toute tâche.
   - `test_filtres` : chaque format en minuscules et en majuscules, aucun `*.avif` ;
   - `test_url_caracteres` : `url("/a b/#c?.jpg") == "file:///a%20b/%23c%3F.jpg"` ;
   - `test_developper` : `developper("~/x", "/home/n") == "/home/n/x"`, chemin absolu inchangé.
-- [ ] **Étape 2 :** `python3 -m unittest tests.test_quickshell_emitter tests.test_galerie -v` → échec (clé absente,
+- [x] **Étape 2 :** `python3 -m unittest tests.test_quickshell_emitter tests.test_galerie -v` → échec (clé absente,
   essai absent).
-- [ ] **Étape 3 : implémenter.** Table `[galerie]` commentée comme `[presquile]` ; `pas` (tranche du pavé tactile en
+- [x] **Étape 3 : implémenter.** Table `[galerie]` commentée comme `[presquile]` ; `pas` (tranche du pavé tactile en
   px de `pixelDelta`) part à 60, réglé à la recette. `"galerie": _camel_keys(raw["galerie"])` dans `emit`.
   `readonly property var galerie: tokens?.galerie` dans `Theme.qml`. Extraire `url()` vers `fichiers.js`.
-- [ ] **Étape 4 :** `make tokens && make golden && make check` → tout passe, dont `test_fond` (l'extraction d'`url` ne
+- [x] **Étape 4 :** `make tokens && make golden && make check` → tout passe, dont `test_fond` (l'extraction d'`url` ne
   change rien).
-- [ ] **Étape 5 : commit** « Galerie : jetons et logique de sélection (L2-60) ».
+- [x] **Étape 5 : commit** « Galerie : jetons et logique de sélection (L2-60) ».
 
 ### Tâche 2 : changement de module animé de la presqu'île (L2-48)
 
@@ -107,7 +107,7 @@ d'elle : la lire en entier avant toute tâche.
   `Presquile.phase: string` ∈ `"repos" | "sortie" | "forme" | "entree"`, pour les essais et l'ouvreuse.
   `Presquile.contenu` reste le module monté.
 
-- [ ] **Étape 1 : tests rouges** dans `test_presquile.py`, classe `ChangementTest` pilotée par l'essai (méthode IPC
+- [x] **Étape 1 : tests rouges** dans `test_presquile.py`, classe `ChangementTest` pilotée par l'essai (méthode IPC
   `changer(nom)` qui pose un module factice de taille connue, et `etat()` qui rend `phase`, opacité du contenu, largeur
   et hauteur des ressorts, nom du contenu) :
   - `test_sequence` : après `changer("grand")`, les phases relevées se suivent `sortie`, `forme`, `entree`, `repos` ;
@@ -119,15 +119,15 @@ d'elle : la lire en entier avant toute tâche.
   - `test_reduit` : en mouvement réduit, la largeur se pose d'un coup et l'opacité passe de 0 à 1 de façon monotone
     sur plus de 5 images, sur le modèle de `test_mouvement_reduit` (`tests/test_fond.py:555`).
   Adapter le contrôle des natures : les ressorts de taille restent `deplacement`, le ressort d'opacité est `fondu`.
-- [ ] **Étape 2 :** `python3 -m unittest tests.test_presquile -v` → échec.
-- [ ] **Étape 3 : implémenter** la séquence dans `Presquile.qml` : un ressort `opacite` (`transition: "reveal"`,
+- [x] **Étape 2 :** `python3 -m unittest tests.test_presquile -v` → échec.
+- [x] **Étape 3 : implémenter** la séquence dans `Presquile.qml` : un ressort `opacite` (`transition: "reveal"`,
   `nature: "fondu"`) sur le conteneur `montage` ; `onModuleChanged` lance `sortie` ; `!opacite.moving` à 0 crée le
   nouveau module (`opacity` à 0) et passe en `forme` ; la phase `entree` commence quand le reste à parcourir des deux
   ressorts de taille passe sous 10 % de l'écart initial (seuil choisi par le plan, réglable à la recette). Un
   changement en `forme` ou `entree` reprend en `sortie` depuis l'opacité courante. Le premier montage garde `poser()`.
-- [ ] **Étape 4 :** `python3 -m unittest tests.test_presquile -v` puis `make check` → tout passe ; capture grim de la
+- [x] **Étape 4 :** `python3 -m unittest tests.test_presquile -v` puis `make check` → tout passe ; capture grim de la
   vraie presqu'île au repos, identique à avant.
-- [ ] **Étape 5 : commit** « Presqu'île : changement de module en fondu et étirement (L2-48) ».
+- [x] **Étape 5 : commit** « Presqu'île : changement de module en fondu et étirement (L2-48) ».
 
 ### Tâche 3 : le module `Galerie`
 
@@ -143,7 +143,7 @@ d'elle : la lire en entier avant toute tâche.
   `signal fini(string chemin)` (`""` pour un abandon ; la valeur sert aux essais) ; `property bool vide`.
   `Galerie` n'appelle pas `dunei-fond` : l'ouvreuse le fait (Tâche 4).
 
-- [ ] **Étape 1 : tests rouges**, classe `ModuleTest` ; l'essai monte `Galerie` dans une fenêtre d'essai sur un dossier
+- [x] **Étape 1 : tests rouges**, classe `ModuleTest` ; l'essai monte `Galerie` dans une fenêtre d'essai sur un dossier
   temporaire (le test y copie trois JPEG, un PNG, un fichier `.txt` et un `.jpg` corrompu, dont un nom `a #b?.jpg`) et
   expose `etat()` (index, nombre, chemins, échelle et voile de chaque délégué visible, `vide`, `fini` reçu), `touche(nom)`,
   `molette(dx, dy, pixel)`, `cliquer(i)`, `attendre(ms)` :
@@ -162,8 +162,8 @@ d'elle : la lire en entier avant toute tâche.
   - `test_vignette_illisible` : le `.jpg` corrompu garde son délégué et la navigation le traverse ;
   - `test_dossier_vide` : dossier vide → `vide` vrai, message « Aucune image dans ~/Documents/Images/Wallpapers »
     (le dossier affiché est la valeur du jeton), Échap → `fini("")`.
-- [ ] **Étape 2 :** `python3 -m unittest tests.test_galerie.ModuleTest -v` → échec.
-- [ ] **Étape 3 : implémenter.** `FolderListModel` (`showDirs: false`, `nameFilters: FILTRES`, tri par nom) ;
+- [x] **Étape 2 :** `python3 -m unittest tests.test_galerie.ModuleTest -v` → échec.
+- [x] **Étape 3 : implémenter.** `FolderListModel` (`showDirs: false`, `nameFilters: FILTRES`, tri par nom) ;
   `ListView` horizontale, `highlightRangeMode: StrictlyEnforceRange` centré, `highlightMoveDuration` neutralisé au profit
   d'un `Ressort` `navigate` sur `contentX` ; largeur visible = 3 vignettes entières + 2 coupes + 4 écarts
   (`presquile.ecart`). `Vignette` : `ClippingRectangle` (`radius.control`, liseré `border-subtle`), `Image` réglée
@@ -171,9 +171,9 @@ d'elle : la lire en entier avant toute tâche.
   sur des `Ressort` `state`. `Keys` sur un `FocusScope` ; `WheelHandler` ou `onWheel` vers `cran()` ; `Timer` du délai
   relancé par chaque touche, molette, clic et `HoverHandler` en mouvement. Marges verticales de la presqu'île assez
   grandes pour l'échelle 1,06.
-- [ ] **Étape 4 :** `python3 -m unittest tests.test_galerie -v` puis `make check` → tout passe.
-- [ ] **Étape 5 : capture grim** de l'essai à l'écran (bureau 1 à 4), comparée à `galerie-relief.png` variante 3.
-- [ ] **Étape 6 : commit** « Galerie : module de vignettes, navigation et relief (L2-60) ».
+- [x] **Étape 4 :** `python3 -m unittest tests.test_galerie -v` puis `make check` → tout passe.
+- [x] **Étape 5 : capture grim** de l'essai à l'écran (bureau 1 à 4), comparée à `galerie-relief.png` variante 3.
+- [x] **Étape 6 : commit** « Galerie : module de vignettes, navigation et relief (L2-60) ».
 
 ### Tâche 4 : l'ouvreuse, le raccourci et l'application
 
@@ -189,8 +189,8 @@ d'elle : la lire en entier avant toute tâche.
 - Produit : `IpcHandler { target: "galerie" }` avec `function basculer(): void` ; une seule `Ouvreuse` dans
   `shell.qml`, qui connaît les presqu'îles par écran.
 
-- [ ] **Étape 1 : tests rouges.** Dans `test_hyprland_clavier.py`, ajouter à `expected()` :
-  `"SUPER + W": ("dsp.exec_cmd(qs ipc call galerie basculer)", "{}")`. Dans `test_galerie.py`, classe `OuvreuseTest`
+- [x] **Étape 1 : tests rouges.** Dans `test_hyprland_clavier.py`, ajouter à `expected()` :
+  `"SUPER + W": ("dsp.exec_cmd(qs ipc call galerie basculer)", "{}")` (réalisé avec `qs ipc -c dunei call`, voir la fiche, « Écarts constatés à la réalisation »). Dans `test_galerie.py`, classe `OuvreuseTest`
   sur un essai qui remplace `dunei-fond` par un script d'essai qui consigne ses arguments, et simule l'écran actif et le
   plein écran par des propriétés d'essai :
   - `test_basculer` : `basculer()` → module `Galerie` sur l'écran actif seul, `Overlays.popover` est l'ouvreuse ;
@@ -203,8 +203,8 @@ d'elle : la lire en entier avant toute tâche.
   - `test_valider_actuel` : chemin égal à `Theme.imageBureau` → aucun appel ;
   - `test_echec_journalise` : script d'essai qui sort en 2 → ligne `galerie : dunei-fond a échoué (2)` au journal ;
   - `test_ecran_retire` : l'écran de la galerie disparaît → l'ouvreuse se remet à l'état fermé.
-- [ ] **Étape 2 :** `python3 -m unittest tests.test_hyprland_clavier tests.test_galerie.OuvreuseTest -v` → échec.
-- [ ] **Étape 3 : implémenter.** Écran actif : `Hyprland.focusedMonitor` comparé à `Hyprland.monitorFor(ecran)`
+- [x] **Étape 2 :** `python3 -m unittest tests.test_hyprland_clavier tests.test_galerie.OuvreuseTest -v` → échec.
+- [x] **Étape 3 : implémenter.** Écran actif : `Hyprland.focusedMonitor` comparé à `Hyprland.monitorFor(ecran)`
   (attention : `undefined` au premier accès, voir `Overlay.qml:148`). Plein écran : `activeWorkspace.hasFullscreen`
   du moniteur actif si Quickshell 0.3 l'expose, sinon `lastIpcObject.hasfullscreen` après `refreshWorkspaces()` ;
   vérifier sur la machine avant d'écrire le test d'intégration et noter le choix au journal. Exclusivité : l'ouvreuse
@@ -212,11 +212,11 @@ d'elle : la lire en entier avant toute tâche.
   (`windows: [fenêtre de la presqu'île]`, `active` pendant l'ouverture, `onCleared` → abandon). Application : `Process`
   `["dunei-fond", chemin]` sur le modèle d'`EtatReseau.qml:166-179`, `console.warn` en cas de code non nul. Ligne
   `SUPER + W` dans `raccourcis.lua`, `description = "Choisir le fond d'écran"`.
-- [ ] **Étape 4 :** `make check` → tout passe.
-- [ ] **Étape 5 : épreuve sur la machine** (Nicolas présent) : SUPER + W, puis une flèche sans clic. Si les flèches
+- [x] **Étape 4 :** `make check` → tout passe.
+- [x] **Étape 5 : épreuve sur la machine** (Nicolas présent) : SUPER + W, puis une flèche sans clic. Si les flèches
   n'arrivent pas, passer la presqu'île en `WlrKeyboardFocus.Exclusive` pendant l'ouverture et `None` sinon, ajouter
   `test_clavier_exclusif` (la propriété suit l'état) et consigner la raison au journal.
-- [ ] **Étape 6 : commit** « Galerie : ouverture par SUPER + W, exclusivité et application (L2-60) ».
+- [x] **Étape 6 : commit** « Galerie : ouverture par SUPER + W, exclusivité et application (L2-60) ».
 
 ### Tâche 5 : mesures, recette et documentation
 
@@ -225,14 +225,14 @@ d'elle : la lire en entier avant toute tâche.
   galerie, clavier, plein écran), backlog (L2-60 fait, L2-48 en partie), carnet (raccourci, essais, mesures), notes de
   direction (dernier paragraphe : prochaine étape L2-61), fiche (« Écarts constatés à la réalisation »), ce plan.
 
-- [ ] **Étape 1 : mesures**, sur le dossier réel puis sur un dossier d'essai d'une trentaine d'images (JPEG et PNG
+- [x] **Étape 1 : mesures**, sur le dossier réel puis sur un dossier d'essai d'une trentaine d'images (JPEG et PNG
   lourds, générés par Pillow dans le bloc-notes) : délai entre `qs ipc call galerie basculer` et l'affichage des trois
   vignettes centrales (trace d'essai), mémoire PSS de la coque avant, pendant et 10 s après, processeur au repos après
   fermeture. Si l'ouverture dépasse la durée de l'étirement, ou si la mémoire ne redescend pas, s'arrêter et en parler à
   Nicolas (fiche, « Les vignettes »).
-- [ ] **Étape 2 : recette à l'écran** avec Nicolas, points 1 à 7 de la fiche ; régler `galerie.pas` et le seuil de la
+- [x] **Étape 2 : recette à l'écran** avec Nicolas, points 1 à 7 de la fiche ; régler `galerie.pas` et le seuil de la
   phase `entree` s'il le demande.
-- [ ] **Étape 3 : documentation**, puis `make check`.
+- [x] **Étape 3 : documentation**, puis `make check`.
 - [ ] **Étape 4 : commit**, push, PR ; relecture finale ; fusion par `gh pr merge <n> --merge` après validation à
   l'écran, puis procédure après fusion du carnet (D32).
 
@@ -241,3 +241,4 @@ d'elle : la lire en entier avant toute tâche.
 | Version | Date | Changement |
 |---|---|---|
 | 0.1 | 2026-11-07 | Première version |
+| 0.2 | 2026-11-07 | Tâches 1 à 5 cochées, sauf la fusion ; la capture grim de la Tâche 3 est remplacée par la recette à l'écran, et l'épreuve du clavier de la Tâche 4 faite par Nicolas ; écarts consignés dans la fiche v0.3 et au journal (D124 à D131) |

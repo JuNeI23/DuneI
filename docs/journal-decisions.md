@@ -3014,3 +3014,164 @@ AVIF reste refusé : ce paquet ne le fournit pas.
 
 *Touché : `coque/Fond/Affichage.qml`, `config/bin/dunei-fond`, `paquets.toml`, tests, fiche v0.4, bible (annexe E), carnet,
 backlog.*
+
+### D124 · La presqu'île change de module en trois temps qui se chevauchent
+
+2026-11-07, avec la galerie de fonds (L2-60), première part réalisée de L2-48. **Quand un module en remplace un autre
+dans la presqu'île, l'ancien contenu s'efface en fondu, la forme s'étire vers la taille du nouveau, puis le nouveau
+apparaît en fondu.** La séquence vit dans `coque/Presquile/Scene.qml` et vaut pour tout module à venir (musique,
+minuteur…) : la presqu'île ne sait toujours rien de son contenu (D98).
+
+- **Sortie.** L'ancien contenu s'efface par un ressort `reveal` de nature `fondu`. Dès que son opacité passe sous le
+  jeton `presquile.sortie` (0,50), il est cédé à un conteneur de départ, découpé à la forme, où il finit son fondu
+  pendant que la forme s'étire déjà : il reste centré et ne déborde pas de l'encoche qui change de taille.
+- **Raison du chevauchement.** La première version attendait que l'ancien contenu ait entièrement disparu avant
+  d'étirer la forme. À la recette, Nicolas a trouvé l'ouverture trop lente : il fallait attendre la disparition des points
+  des bureaux. Le seuil est un jeton pour rester réglable à l'écran.
+- **Reprise de vitesse.** À la cession, le ressort de départ reprend l'opacité **et la vitesse** de l'ancien, par la
+  nouvelle fonction `Ressort.reprendre(x, v)` : poser seulement la valeur faisait repartir la vitesse de zéro, et le fondu
+  marquait un palier à mi-opacité.
+- **Étirement.** Les ressorts de largeur et de hauteur, `window` de nature `deplacement`, prennent la taille du nouveau
+  module, que celui-ci peut connaître en retard (la galerie lit son dossier de façon asynchrone) : les écarts de
+  référence suivent la cible.
+- **Entrée.** Le nouveau contenu apparaît en fondu quand les ressorts de taille n'ont plus à parcourir que la part
+  `presquile.entree` (0,10) de leur écart : la forme est presque posée, le contenu ne naît pas dans une forme qui bouge
+  encore beaucoup.
+- **Interruption.** Un changement demandé en cours de séquence repart de l'état courant, sans saut (règle de la bible,
+  chapitre 6, appliquée comme en D123). Un seul ancien contenu part à la fois : tant que le conteneur de départ est
+  occupé, une nouvelle sortie attend sous le seuil qu'il se libère, si bien qu'aucun contenu ne reste orphelin.
+- **Premier montage et mouvement réduit.** Au démarrage, le module se pose sans animation. En mouvement réduit, la taille
+  se pose et seuls les deux fondus restent.
+
+*Touché : `coque/Presquile/Scene.qml`, `coque/Presquile/Presquile.qml`, `coque/Theme/Ressort.qml`, `tokens.toml`
+(`presquile.entree`, `presquile.sortie`), essai et tests de la presqu'île, fiche et plan du 2026-11-07, bible (chapitre 6,
+annexe E).*
+
+### D125 · La surface de la presqu'île couvre toute la largeur, et sa hauteur ne change pas pendant un mouvement
+
+2026-11-07, à la première recette de la galerie. **La fenêtre de calque de la presqu'île est ancrée en haut, à gauche et à
+droite : elle couvre toute la largeur de l'écran, et l'encoche se centre dedans. Sa hauteur monte d'un coup à la plus
+grande taille visée, reste fixe pendant le mouvement, et ne redescend qu'à l'arrêt du ressort.**
+
+- **Raison.** La surface suivait la taille animée de l'encoche. À l'ouverture, elle s'élargissait d'un coup et l'encoche
+  se recentrait une image avant que Hyprland ne recentre la surface : Nicolas voyait la forme décalée à gauche, puis
+  grandir. À la rétractation, elle changeait de taille à chaque image, et chaque image attendait l'aller-retour de
+  configuration avec le compositeur : la rétractation était saccadée.
+- **Clics et flou.** Le masque de saisie suit toujours le seul corps de l'encoche : le reste de la surface est
+  transparent et laisse passer les clics vers la barre et les fenêtres. Nicolas l'a vérifié à l'écran.
+- **Dépassement.** Le léger dépassement du ressort `window` (moins d'un pixel) n'agrandit pas la surface : il déborde
+  dans la marge réservée à l'ombre.
+
+*Touché : `coque/Presquile/Presquile.qml`, `coque/Presquile/Scene.qml`, tests de la presqu'île.*
+
+### D126 · La galerie de fonds est un module de presqu'île, ouvert par IPC
+
+2026-11-07 (L2-60). **SUPER + W ouvre, dans la presqu'île de l'écran actif, le module `coque/Galerie/Galerie.qml`, qui
+montre `~/Documents/Images/Wallpapers` en bande de vignettes ; Entrée ou un clic appliquent l'image par `dunei-fond`.**
+Le module suit le contrat de D98 ; `coque/Galerie/Ouvreuse.qml`, unique dans `shell.qml`, choisit la presqu'île, gère
+l'exclusivité avec les popovers de la barre (D108) et applique le choix. Les décisions de Nicolas prises sur maquettes
+sont dans la fiche du 2026-11-07.
+
+- **Raccourci par IPC plutôt que `GlobalShortcut`.** L'ouvreuse porte un `IpcHandler` de cible `galerie`, avec
+  `basculer()` ; la ligne `SUPER + W` de `config/hypr/donnees/raccourcis.lua` lance
+  `qs ipc -c dunei call galerie basculer` (environ 33 ms par appel). `GlobalShortcut` a été écarté : le protocole fait
+  planter le second client qui enregistre le même raccourci, ce qui arriverait avec les coques d'essai, et le wiki de
+  Hyprland le dit lié à XDPH.
+- **`-c dunei`, écart à la fiche.** La fiche prévoyait `qs ipc call galerie basculer`. Sans `-c dunei`, `qs` cherche la
+  configuration `default` et échoue, puisque la coque tourne sous `qs -n -c dunei` (`dunei-coque.service`).
+- **Relief de la sélection.** La vignette sélectionnée grandit à 1,06 ; les autres portent un voile `surface-base`
+  d'opacité 0,30, et aucune couleur n'est recalculée. Échelle et voile suivent un ressort `state`.
+- **Vignettes.** Une `Image` asynchrone sans cache, décodée à la taille affichée multipliée par l'échelle de la fenêtre
+  (D82, D121), recadrée au centre, rotation EXIF appliquée. Aucun cache de miniatures sur disque : les mesures de la
+  fiche (« Les vignettes ») en décident avec Nicolas.
+- **Mesures, 2026-11-07, sur une coque d'essai (plateforme offscreen).** Sur le dossier réel (4 images, 9 Mo), les trois
+  vignettes centrales sont décodées environ 275 à 290 ms après la commande, au début du fondu d'entrée. Sur trente
+  images lourdes générées (JPEG 6000 × 4000 et PNG 3840 × 2160, 467 Mo), elles le sont 830 à 910 ms après la commande,
+  bien après la fin de l'étirement : les vignettes paraissent d'abord à l'échelon de la presqu'île. La mémoire PSS de
+  la coque d'essai passe de 59 Mo à environ 100 Mo pendant la galerie et ne redescend pas après la fermeture, mais reste
+  stable d'une ouverture à l'autre (cinq ouvertures), et aucune galerie ne survit à sa fermeture. Processeur au repos
+  après fermeture : 0,2 à 0,3 %. Ces deux constats sont soumis à Nicolas avant tout cache de miniatures.
+
+*Touché : `coque/Galerie/`, `coque/shell.qml`, `coque/Presquile/Presquile.qml` (fenêtre exposée au grab),
+`config/hypr/donnees/raccourcis.lua`, `tokens.toml` (`[galerie]`), émetteur Quickshell, tests, fiche et plan du
+2026-11-07, bible, backlog, carnet, notes de direction.*
+
+### D127 · La bande de la galerie n'est placée que par son ressort
+
+2026-11-07, à la recette de la galerie. **La bande n'est pas une `ListView` : un `Repeater` crée un emplacement léger par
+image, placé en `x = index × pas − position du ressort`, dans un `Item` découpé à la largeur visible. Chaque emplacement
+ne charge sa vignette, par un `Loader`, qu'à moins d'un pas de la partie visible.**
+
+- **Raison.** La fiche prévoyait une `ListView` centrée par `StrictlyEnforceRange`. Ce mode et le ressort `navigate` se
+  seraient disputé `contentX` : il a été abandonné dès la construction au profit d'un `contentX` lié au seul ressort.
+  À la recette, la bande sautait vers la droite à la première flèche : au remplissage asynchrone du modèle, la
+  `ListView` remettait d'elle-même son `contentX` à l'origine sans que la liaison ne soit réévaluée. Sans vue, rien ne
+  peut reprendre la main sur la position, et un essai vérifie que la position réelle suit le ressort à chaque image.
+- **Création paresseuse gardée.** Une image lointaine ne coûte qu'un petit `Item` ; le clic est sans effet tant que sa
+  vignette n'est pas chargée.
+- **`MouseArea` plutôt que les gestionnaires de pointeur.** Clics, molette et mouvement de souris passent par des
+  `MouseArea` : `TapHandler` et `WheelHandler` ne recevaient pas les vrais événements envoyés par les essais, si bien
+  que le comportement réel n'aurait pas pu être éprouvé automatiquement.
+
+*Touché : `coque/Galerie/Galerie.qml`, essai et tests de la galerie, fiche du 2026-11-07.*
+
+### D128 · La galerie prend le clavier par un `HyprlandFocusGrab`, sans focus exclusif
+
+2026-11-07. **Pendant l'ouverture, un `HyprlandFocusGrab` porte sur la fenêtre de la presqu'île, qui garde
+`WlrKeyboardFocus.None` ; sa levée, par un clic en dehors, referme la galerie.** C'est le motif d'`Overlay`.
+
+- **Raison.** La fiche demandait d'éprouver que les flèches arrivent dès l'ouverture, sans clic préalable, avant de
+  décider s'il fallait passer la presqu'île en focus exclusif le temps de l'ouverture. Nicolas l'a constaté à l'écran le
+  2026-11-07 : les flèches répondent aussitôt. Le focus exclusif n'est donc pas employé.
+- **Délai et focus.** Quand la presqu'île entre en phase d'entrée, le module prend le focus et le délai d'abandon de
+  deux secondes repart de zéro : tout le délai court une fois la bande visible, et non pendant l'étirement.
+
+*Touché : `coque/Galerie/Ouvreuse.qml`, `coque/Presquile/Presquile.qml`, fiche du 2026-11-07.*
+
+### D129 · Le plein écran se lit sur l'espace de travail, l'écran actif par son nom
+
+2026-11-07. **SUPER + W ne fait rien quand `Hyprland.focusedMonitor.activeWorkspace.hasFullscreen` est vrai, et l'écran
+actif est l'écran de Quickshell dont le nom vaut `Hyprland.focusedMonitor.name`.**
+
+- **Plein écran.** `HyprlandWorkspace.hasFullscreen` existe dans Quickshell 0.3.2, notifié par l'événement `fullscreen`
+  de Hyprland, et concorde avec `hyprctl -j workspaces`. Sans lui, la presqu'île, sur la couche `Top`, serait cachée par
+  la fenêtre tout en prenant le clavier. Le cas vrai n'a pas été éprouvé sur la machine, faute de pouvoir passer une
+  fenêtre de Nicolas en plein écran pendant les essais ; l'essai automatique le simule.
+- **Écran actif par son nom.** La fiche prévoyait `Hyprland.monitorFor(écran) === Hyprland.focusedMonitor`. Éprouvée dans
+  une coque de sonde, cette liaison reste nulle après le remplissage de `focusedMonitor` : elle ne se réévalue pas. La
+  comparaison par nom, déjà employée par `Overlay`, se réévalue bien.
+- **Écran débranché.** Si la presqu'île de la galerie disparaît pendant l'ouverture, l'ouvreuse revient à l'état fermé.
+
+*Touché : `coque/Galerie/Ouvreuse.qml`, essai et tests de la galerie, fiche du 2026-11-07.*
+
+### D130 · `navigate` devient un ressort posé, d'environ 0,35 s, sans rebond
+
+2026-11-07, décision de Nicolas à la recette de la galerie. **`[transitions.navigate]` passe à masse 1, raideur 400,
+amortissement 41 : ζ ≈ 1,02, aucun dépassement, établissement à ±1 % en 353 ms au lieu de 186 ms.**
+
+- **Raison.** Nicolas trouvait le glissement de la bande trop rapide et brut, et la bascule des bureaux aussi. Il a
+  demandé un mouvement « posé, 0,35 s, sans rebond », pour les deux. Parmi les réglages voisins simulés (360/38, 380/40,
+  420/42), 400/41 est le plus proche de 0,35 s avec une marge d'amortissement. Nicolas l'a validé à l'écran : « top, on
+  le garde ».
+- **Portée.** Le même ressort sert au glissement de la galerie et aux éléments `workspacesIn` et `workspacesOut` de
+  Hyprland, dont la courbe est identique puisque la masse vaut 1. Il reste symétrique (bible, chapitre 6).
+
+*Touché : `motion.toml`, fichiers générés du mouvement, tests et instantanés du mouvement, bible (chapitre 6).*
+
+### D131 · Valider met le choix en valeur avant de refermer
+
+2026-11-07, décision de Nicolas à la recette de la galerie. **À la validation, les vignettes non choisies s'effacent en
+fondu, la choisie reste seule `galerie.tenue` millisecondes (200), puis la presqu'île se rétracte. La montée du fond
+part dès la validation.**
+
+- **Raison.** La première version refermait aussitôt : Nicolas trouvait la validation sans mise en valeur. Il a choisi
+  « les autres s'effacent », la choisie restant environ 0,2 s pendant la montée, puis la rétractation.
+- **Déroulé.** La galerie émet `choisi(chemin)` dès la validation, sur lequel l'ouvreuse appelle `dunei-fond`, puis
+  `fini(chemin)` après l'effacement (`reveal` sortant, environ 200 ms) et la tenue, sur lequel elle referme : environ
+  0,4 s entre le clic et le début de la rétractation. Pendant ce temps, touches, molette et clics sont sans effet. Un
+  clic sur une vignette entière voisine lui donne le relief sur place, sans faire glisser la bande, pour ne pas ajouter
+  de mouvement pendant la tenue. Un abandon referme aussitôt, sans effacement ni tenue.
+- **Mouvement réduit.** Le relief se pose, l'effacement reste un fondu.
+
+*Touché : `coque/Galerie/Galerie.qml`, `coque/Galerie/Ouvreuse.qml`, `tokens.toml` (`galerie.tenue`), émetteur
+Quickshell, essai et tests de la galerie, fiche du 2026-11-07.*
