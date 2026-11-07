@@ -17,7 +17,9 @@ import "../Theme"
 // l'encoche : partout ailleurs, les clics traversent. Elle ne réserve aucune place et ne prend jamais le focus clavier.
 // Entrées : modelData, l'écran que lui donne le Variants de la coque (obligatoire) ; module, le composant de contenu,
 //           Bureaux par défaut ; il doit être un Item déclarant implicitWidth et implicitHeight, et recevoir ecran.
-//           Le changer est l'unique manière de changer de contenu.
+//           Le changer est l'unique manière de changer de contenu. reserve, hauteur minimale réservée à l'encoche
+//           (0 par défaut) : la coque y passe celle du plus grand module connu, pour que la surface garde toujours la
+//           même taille (voir Scene.hauteurSurface).
 // Sorties : une fenêtre de calque au namespace « dunei-presquile » (floutée par les règles de calque générées) ;
 //           contenu, le module monté ; phase, celle de la séquence de changement (« repos », « sortie », « forme »
 //           ou « entree »), lue par les essais et l'ouvreuse de la galerie ; fenetre, la surface elle-même, que
@@ -30,6 +32,7 @@ PanelWindow {
 
     required property var modelData
     property Component module: Component { Bureaux {} }
+    property real reserve: 0
 
     // Module instancié pour l'écran de la surface (null tant que le composant n'est pas monté).
     readonly property alias contenu: scene.contenu
@@ -46,6 +49,10 @@ PanelWindow {
     // Les zones transparentes ne sont pas floutées (ignore_alpha des règles de calque), et le masque laisse passer
     // les clics.
     implicitHeight: scene.hauteurSurface + encoche.marge
+    // Quickshell n'envoie la nouvelle taille au compositeur qu'au polissage de l'image suivante, et une surface au repos
+    // n'en rend aucune : sans cette demande d'image, une réserve posée au repos ne s'appliquerait qu'au prochain
+    // mouvement, avec l'étirement d'un ancien tampon par Hyprland (recette de L2-60).
+    onImplicitHeightChanged: Qt.callLater(() => encoche.Window.window?.update())
     exclusionMode: ExclusionMode.Ignore
     color: "transparent"
     mask: Region { item: encoche.corps }
@@ -66,6 +73,7 @@ PanelWindow {
             x: encoche.evasement
             ecran: surface.modelData
             module: surface.module
+            reserve: surface.reserve
         }
     }
 }

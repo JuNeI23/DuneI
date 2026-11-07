@@ -21,6 +21,9 @@ import "galerie.js" as Logique
 // l'ouvreuse à l'état fermé. Au démarrage, l'ouvreuse crée puis détruit aussitôt une galerie sans dossier : la première
 // instance d'un composant prépare ses types, ce qui coûtait 12 à 19 ms dans l'image où la presqu'île cède l'ancien
 // contenu et monte la galerie, contre 1 ou 2 ms ensuite (recette de L2-60) ; aucune galerie ni image ne reste en mémoire.
+// Cette galerie de préchauffage donne aussi la hauteur du module (hauteurModule), que chaque presqu'île réserve pour
+// que sa surface ne change jamais de taille. Elle est mesurée dès que Theme est prêt, dans la notification même, pour
+// que la première taille de la surface soit déjà la bonne, puis remesurée à chaque rechargement des jetons.
 // Entrées : les presqu'îles, inscrites par inscrire() et retirées par retirer() ; chacune porte modelData (son écran),
 //           module (composant écrit par l'ouvreuse), contenu et phase (lus), et fenetre (la fenêtre du grab, ou null) ;
 //           ecranActif, l'écran du moniteur focalisé d'Hyprland ; pleinEcran, vrai si son espace de travail actif
@@ -28,6 +31,7 @@ import "galerie.js" as Logique
 //           commande, le programme d'application, dunei-fond par défaut ; galerie, le composant du module.
 //           Les essais remplacent ecranActif, pleinEcran, commande et galerie.
 // Sorties : ouvert ; cible, la presqu'île qui porte la galerie (null fermée) ; famille et exclusif, lus par Overlays ;
+//           hauteurModule, hauteur implicite d'une galerie (0 avant la première mesure ou sans jetons) ;
 //           un processus « commande <chemin> » à chaque validation d'une autre image que le fond actuel, lancé dès le
 //           signal choisi.
 // Erreurs : sans presqu'île sur l'écran actif, basculer() n'ouvre rien ; un code de sortie non nul de la commande
@@ -43,6 +47,8 @@ Scope {
     property bool ouvert: false
     property var cible: null
     property var presquiles: []
+    readonly property real hauteurModule: _hauteurModule
+    property real _hauteurModule: 0
 
     // Écran actif, rapproché par son nom comme dans Overlay et évalué dès la création, car Hyprland.focusedMonitor
     // vaut undefined au premier accès. Une liaison sur Hyprland.monitorFor(s) === focusedMonitor ne se réévalue pas
@@ -58,11 +64,17 @@ Scope {
     // module sur le départ ne puisse pas refermer une ouverture neuve.
     readonly property var _montee: ouvert && cible?.module === galerie && cible?.phase !== "sortie" ? cible.contenu : null
 
-    // prechauffer — crée une galerie sans dossier, hors de toute fenêtre, et la détruit au tour de boucle suivant, pour
-    // que la première vraie ouverture ne paie pas la préparation des types du composant.
-    // Entrées : aucune (lit galerie). Sortie : aucune. Erreurs : sans effet sans composant ; un composant invalide
-    // s'écrit au journal de Quickshell. Dépendances : galerie (le module Galerie, dont ecran et dossier).
-    function prechauffer() { galerie?.createObject(null, { ecran: null, dossier: "" })?.destroy() }
+    // prechauffer — crée une galerie sans dossier, hors de toute fenêtre, en relève la hauteur et la détruit au tour de
+    // boucle suivant, pour que la première vraie ouverture ne paie pas la préparation des types du composant.
+    // Une galerie sans dossier n'est jamais lue : elle a la hauteur d'une bande de vignettes, pas celle du message de
+    // dossier vide. Entrées : aucune (lit galerie). Sortie : met à jour _hauteurModule. Erreurs : sans composant, ou
+    // avec un composant invalide (écrit au journal de Quickshell), la hauteur vaut 0.
+    // Dépendances : galerie (le module Galerie, dont ecran, dossier et implicitHeight).
+    function prechauffer() {
+        const g = galerie?.createObject(null, { ecran: null, dossier: "" }) ?? null
+        _hauteurModule = g?.implicitHeight ?? 0
+        g?.destroy()
+    }
 
     // inscrire — fait connaître une presqu'île à l'ouvreuse. Entrée : p, la presqu'île. Sortie : aucune.
     // Erreurs : aucune ; une presqu'île déjà inscrite ne l'est pas deux fois. Dépendances : presquiles.
@@ -111,8 +123,17 @@ Scope {
     }
 
     onOuvertChanged: if (!ouvert) rendre()
-    // Au tour de boucle suivant : le démarrage de la coque finit d'abord de créer ses fenêtres.
-    Component.onCompleted: Qt.callLater(prechauffer)
+    // Au tour de boucle suivant si Theme est déjà prêt : le démarrage de la coque finit d'abord de créer ses fenêtres.
+    // Sinon, la mesure attend Theme : une galerie sans jetons n'a pas de hauteur.
+    Component.onCompleted: if (Theme.ready) Qt.callLater(prechauffer)
+    // Theme prêt : ready est posé après les données, la mesure peut se faire dans la notification. Jetons rechargés
+    // ensuite : la hauteur du module peut changer, elle est remesurée au tour de boucle suivant, une fois les raccourcis
+    // de Theme réévalués.
+    Connections {
+        target: Theme
+        function onReadyChanged() { if (Theme.ready) ouvreuse.prechauffer() }
+        function onTokensChanged() { if (Theme.ready) Qt.callLater(ouvreuse.prechauffer) }
+    }
 
     // Galerie montée : une image choisie s'applique aussitôt ; la fin (abandon, ou choix après sa tenue) referme.
     Connections {

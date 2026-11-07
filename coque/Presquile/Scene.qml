@@ -19,11 +19,15 @@ import "../Theme"
 // taille courantes, sans saut ; un changement pendant la sortie la laisse finir et monte le dernier module demandé.
 // Un seul ancien contenu part à la fois : tant qu'il n'est pas détruit, la sortie suivante attend, sous le seuil, que
 // son conteneur soit libre. Mouvement réduit : la taille se pose aussitôt, seuls les fondus restent.
-// La scène donne aussi la hauteur que doit réserver la surface (hauteurSurface) : elle monte d'un coup à la cible du
-// ressort de hauteur quand elle est plus grande, et ne redescend qu'à son arrêt, jamais image par image : chaque
-// changement de taille d'une surface de calque passe par un aller-retour avec le compositeur.
+// La scène donne aussi la hauteur que doit réserver la surface (hauteurSurface) : jamais moins que reserve, elle monte
+// d'un coup à la cible du ressort de hauteur quand elle est plus grande, et ne redescend qu'à son arrêt, jamais image
+// par image : chaque changement de taille d'une surface de calque passe par un aller-retour avec le compositeur, et
+// Hyprland étire l'ancien tampon dans la nouvelle taille pendant une à trois images (rebond constaté à la recette de
+// L2-60, 0,5 s après la fermeture de la galerie). Une reserve égale au plus grand module connu rend la surface
+// immobile : elle ne change plus de taille ni à l'ouverture, ni à l'arrêt des ressorts.
 // Entrées : ecran, l'écran transmis au module ; module, le composant de contenu, un Item déclarant implicitWidth et
-//           implicitHeight et recevant ecran.
+//           implicitHeight et recevant ecran ; reserve, hauteur minimale de hauteurSurface (0 par défaut : la surface
+//           suit alors la taille du module, comme dans les essais de la presqu'île).
 // Sorties : contenu, le module monté (null avant le premier montage ou si le composant échoue) ; phase, « repos »,
 //           « sortie », « forme » ou « entree » ; ressortLargeur, ressortHauteur et ressortOpacite, les trois ressorts,
 //           lus par la surface et les essais ; sortant, l'ancien contenu qui finit de s'effacer (null sinon), et
@@ -38,6 +42,7 @@ Item {
     property var ecran: null
     property Component module: null
     property Item contenu: null
+    property real reserve: 0
     readonly property string phase: _phase
     readonly property alias ressortLargeur: largeur
     readonly property alias ressortHauteur: hauteur
@@ -148,16 +153,18 @@ Item {
         avancer()
     }
 
-    // tenir — met à jour la hauteur réservée par la surface : tant que le ressort de hauteur avance, la plus grande
-    // des hauteurs déjà réservées et de sa cible ; à l'arrêt, la plus grande de sa valeur et de sa cible, donc sa
-    // cible une fois posé, ou sa valeur d'avant tant qu'un rétrécissement n'a pas démarré.
-    // Entrées : aucune ; appelée à chaque changement de valeur, de cible ou de mouvement du ressort de hauteur.
-    // Sortie : met à jour _hauteurSurface, qui ne change donc qu'au départ d'un mouvement (s'il agrandit) et à son
-    // arrêt (s'il rétrécit). Le léger dépassement du ressort « window » au-dessus de sa cible n'est pas suivi : il
-    // déborde de moins d'un pixel dans la marge de l'ombre, que la surface réserve sous l'encoche.
-    // Erreurs : aucune. Dépendances : hauteur.
+    // tenir — met à jour la hauteur réservée par la surface : jamais moins que reserve ; au-delà, tant que le ressort de
+    // hauteur avance, la plus grande des hauteurs déjà réservées et de sa cible ; à l'arrêt, la plus grande de sa
+    // valeur et de sa cible, donc sa cible une fois posé, ou sa valeur d'avant tant qu'un rétrécissement n'a pas
+    // démarré.
+    // Entrées : aucune ; appelée à chaque changement de reserve, et de valeur, de cible ou de mouvement du ressort de
+    // hauteur. Sortie : met à jour _hauteurSurface, qui ne change donc qu'avec reserve, au départ d'un mouvement (s'il
+    // dépasse reserve en agrandissant) et à son arrêt (s'il rétrécit au-dessus de reserve). Le léger dépassement du
+    // ressort « window » au-dessus de sa cible n'est pas suivi : il déborde de moins d'un pixel dans la marge de
+    // l'ombre, que la surface réserve sous l'encoche.
+    // Erreurs : aucune. Dépendances : hauteur, reserve.
     function tenir() {
-        _hauteurSurface = Math.max(hauteur.cible, hauteur.moving ? _hauteurSurface : hauteur.value)
+        _hauteurSurface = Math.max(reserve, hauteur.cible, hauteur.moving ? _hauteurSurface : hauteur.value)
     }
 
     // ceder — confie le contenu courant au conteneur de départ, où il finit son fondu depuis son opacité courante
@@ -216,5 +223,6 @@ Item {
     }
 
     onModuleChanged: changer()
+    onReserveChanged: tenir()
     Component.onCompleted: { _pret = true; changer(); tenir() }
 }

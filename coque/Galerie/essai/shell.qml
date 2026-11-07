@@ -19,8 +19,8 @@ import "Theme/fichiers.js" as Fichiers
 // n'apparaît jamais à l'écran ; lancée à la main dans la session, elle s'ouvre en fenêtre flottante pour la capture.
 // Entrées : DUNEI_TOKENS_DIR, lu par Theme ; QT_QPA_PLATFORM, posé à offscreen par le test. Commandes IPC : filtres,
 // borner, deplacer, initial, cran, identique, url, developper, jeton, presquile, actuel, monter, etat, touche,
-// molette, molettereelle, cliquer, cliquerreel, capturer, regler, etatOuvreuse, releve, popover, validerOuvreuse, retirer (les
-// listes et objets sont rendus en JSON, le reste en texte).
+// molette, molettereelle, cliquer, cliquerreel, capturer, regler, etatOuvreuse, releve, tailles, popover, validerOuvreuse,
+// retirer (les listes et objets sont rendus en JSON, le reste en texte).
 // Sortie : le résultat de chaque appel IPC, sur la sortie de « qs ipc call ». Erreurs : celles de Theme, dans
 // le journal ; les commandes du module sont sans effet tant qu'aucune galerie n'est montée.
 // Dépendances : quickshell ≥ 0.3 (Quickshell.Io, FloatingWindow, LazyLoader, Instantiator), QtTest (événements réels),
@@ -65,6 +65,9 @@ ShellRoot {
     property real tReleve: 0
     property real tForme: 0
     property real cession: -1
+    // Hauteurs réservées par les surfaces des presqu'îles d'essai, une entrée {t, nom, hs, phase} à chaque changement de
+    // leur hauteurSurface (recette 4 de L2-60 : elle ne doit plus changer, ni à l'ouverture ni après la fermeture).
+    property var tailles: []
 
     Ouvreuse {
         id: ouvreuse
@@ -141,7 +144,15 @@ ShellRoot {
             readonly property var fenetre: null
             readonly property Item sceneEssai: scene
 
-            Scene { id: scene; ecran: presquileEssai.modelData; module: presquileEssai.module }
+            // Comme dans la coque, la presqu'île réserve la hauteur du module de la galerie mesurée par l'ouvreuse.
+            Scene {
+                id: scene
+                ecran: presquileEssai.modelData
+                module: presquileEssai.module
+                reserve: ouvreuse.hauteurModule
+                onHauteurSurfaceChanged: racine.tailles.push({ t: Date.now(), nom: presquileEssai.nom,
+                                                               hs: hauteurSurface, phase: phase })
+            }
             Component.onCompleted: ouvreuse.inscrire(presquileEssai)
             Component.onDestruction: ouvreuse.retirer(presquileEssai)
         }
@@ -329,6 +340,13 @@ ShellRoot {
         // Erreurs : aucune. Dépendances : releve, releveActif, cession.
         function releve(): string {
             return JSON.stringify({ actif: racine.releveActif, cession: racine.cession, images: racine.releve })
+        }
+        // tailles — les changements de hauteur réservée des presqu'îles d'essai. Sortie : JSON {hauteurModule, actuelles
+        // {nom: hauteurSurface}, tailles [{t, nom, hs, phase}]}. Erreurs : aucune. Dépendances : ouvreuse, tailles.
+        function tailles(): string {
+            const actuelles = {}
+            for (const p of ouvreuse.presquiles) actuelles[p.nom] = p.sceneEssai.hauteurSurface
+            return JSON.stringify({ hauteurModule: ouvreuse.hauteurModule, tailles: racine.tailles, actuelles: actuelles })
         }
         // popover — ouvre ou ferme le popover factice. Entrée : ouvrir. Sortie : aucune. Erreurs : aucune.
         // Dépendances : popoverEssai.

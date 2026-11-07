@@ -627,3 +627,24 @@ class OuvreuseTest(GalerieDossier, unittest.TestCase):
         deuxieme = self.relever()
         self.verifier_ouverture(premiere, "première")
         self.verifier_ouverture(deuxieme, "deuxième")
+
+    def test_surface_constante(self):
+        """Recette 4 de L2-60 : la surface d'une presqu'île ne change jamais de taille. Hyprland étire l'ancien tampon
+        dans la nouvelle taille d'une surface de calque pendant une à trois images : le changement de hauteur à l'arrêt
+        des ressorts, après la fermeture, faisait « rebondir » l'encoche, et l'agrandissement de la première ouverture
+        coûtait deux images. Dès le démarrage, chaque presqu'île réserve la hauteur du module de la galerie (mesurée
+        par l'ouvreuse) ; de la première ouverture à 1,5 s après la deuxième fermeture, aucune hauteur réservée ne
+        change, et la presqu'île en mouvement ne dépasse jamais cette réserve."""
+        avant = self.json("tailles")
+        self.assertGreater(avant["hauteurModule"], self.json("jeton", "hauteur"),
+                           "la hauteur du module de la galerie n'est pas mesurée")
+        self.assertEqual(avant["actuelles"], {"A": avant["hauteurModule"], "B": avant["hauteurModule"]})
+        for _ in range(2):
+            self.relever()
+            self.basculer()
+            self.attendre_module("B", "bureaux")
+        time.sleep(1.5)
+        apres = self.json("tailles")
+        self.assertEqual(apres["tailles"][len(avant["tailles"]):], [],
+                         "une hauteur réservée a changé pendant les ouvertures et fermetures")
+        self.assertEqual(apres["actuelles"], avant["actuelles"])

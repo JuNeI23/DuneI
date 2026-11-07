@@ -41,6 +41,16 @@ class PresquileStructureTest(unittest.TestCase):
         self.assertRegex(code, r"implicitHeight:\s*scene\.hauteurSurface\s*\+\s*encoche\.marge")
         self.assertIn("x: (surface.width - implicitWidth) / 2", code)
 
+    def test_reserve_de_la_coque(self):
+        # Recette 4 de L2-60 : la coque passe à chaque presqu'île la hauteur du module de la galerie, que la surface
+        # réserve toujours, et la surface demande une image à chaque changement de hauteur, pour que Quickshell envoie
+        # la nouvelle taille aussitôt et non au prochain mouvement.
+        code = re.sub(r"//.*", "", self.surface)
+        self.assertIn("reserve: surface.reserve", code)
+        self.assertRegex(code, r"onImplicitHeightChanged:.*Window\.window\?\.update\(\)")
+        coque = re.sub(r"//.*", "", (ROOT / "coque/shell.qml").read_text(encoding="utf-8"))
+        self.assertRegex(coque, r"Presquile\s*\{[^}]*reserve:\s*ouvreuse\.hauteurModule")
+
     def test_masque_sur_le_corps(self):
         masque = re.search(r"mask:\s*Region\s*\{([^}]*)\}", self.surface)
         self.assertIsNotNone(masque)
