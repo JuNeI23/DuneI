@@ -1628,7 +1628,9 @@
     "texteFonce": "#161616",
     "texteFonceSurvol": "#484848",
     "seuil": 0.18,
-    "logo": "/usr/share/pixmaps/archlinux-logo.svg"
+    "logo": "/usr/share/pixmaps/archlinux-logo.svg",
+    "bande": 28,
+    "dossier": "Documents/Images/Wallpapers"
   },
   "bureauxVirtuels": {
     "nombre": 4

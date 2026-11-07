@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.35. Historique en fin de document.
+Version 1.36. Historique en fin de document.
 
 Socle amorçable.
 
@@ -1942,11 +1942,11 @@ modèle de la barre des menus de macOS. Les raisons sont au journal (D89 à D95)
 | `config/systemd/user/dunei-coque.service` | `~/.config/systemd/user/` | Unité de la coque de session : `qs -n -c dunei`, rattachée à `graphical-session.target`, relancée en cas d'échec (D94) |
 | `session.toml` | lu par `deploy.py` | Ligne `dunei-coque.service` ajoutée à la liste blanche de la session (D50), après `nm-applet.service` |
 | `coque/` | `~/.config/quickshell/dunei` (lien) | Dossier de la coque, que `qs -c dunei` retrouve par son nom de configuration |
-| `tokens.toml`, table `[bureau]` | `generated/coque-tokens.json` | Jeux de texte clair et foncé, seuil de luminance, logo ; `make tokens` les régénère |
-| (écrit par `deploy.py`) | `~/.config/dunei/bureau.json` | État du fond du bureau : `{ "origine", "fond" }` (D90) |
+| `tokens.toml`, table `[bureau]` | `generated/coque-tokens.json` | Jeux de texte clair et foncé, seuil de luminance, logo, hauteur `bande` et `dossier` des images ; `namespace` sert à la règle de calque de `hyprland-layers.lua` ; `make tokens` les régénère |
+| (écrit par `deploy.py`) | `~/.config/dunei/bureau.json` | État du fond du bureau : `{ "origine", "fond" }`, plus `"image"` avec l'origine `fond` (D90, D122) |
 
 - `deploy.py` écrit `bureau.json` avec l'origine `theme` et la valeur de `tokens.bureau.fond` (`#0f0703`), et le
-  réécrit tant que l'origine reste `theme`. Avec l'origine `fond`, que posera l'outil de fond d'écran de L2-27, il le
+  réécrit tant que l'origine reste `theme`. Avec l'origine `fond`, que pose `dunei-fond` (L2-27), il le
   laisse intact. Un fichier illisible ou écrit par un tiers fait refuser `make install` avec un message, sans rien
   écraser ; la coque retombe alors sur `tokens.bureau.fond`.
 - La coque se recharge d'elle-même quand `bureau.json` ou `theme.json` change (surveillance de fichier). Rien n'est
@@ -2126,6 +2126,42 @@ calques. Au repos elle mesure une ligne de haut et son masque de saisie est vide
 Sur `caladan`, 906 images mesurées sur 37 mouvements : première image à 34 ms au plus, cinq images au-delà de 33 ms
 (34, 34, 34, 39 et 87 ms), cause non identifiée (D116). Nicolas a validé la recette à l'écran le 2026-11-04.
 
+## Le fond d'écran — L2-27
+
+`qt6-imageformats` s'ajoute par `make paquets` (WebP et TIFF, D123) ; Pillow est déjà déclaré, et le calque est dans la
+coque (`dunei-coque.service`). `make install` lie `dunei-fond` dans `~/.local/bin`, crée `~/Documents/Images/Wallpapers` s'il
+manque, sans y copier d'image, et préserve `bureau.json` tant que son origine vaut `fond`. Les décisions sont D121 à D123
+du journal. Aucune image n'entre dans le dépôt.
+
+### La commande `dunei-fond`
+
+```bash
+dunei-fond ~/Documents/Images/Wallpapers/image.jpg   # applique l'image : elle monte, puis reste en place
+dunei-fond --aucun                                   # retire l'image d'un coup et rétablit l'aplat
+dunei-fond                                           # affiche l'état
+```
+
+Un chemin absent, une image illisible ou un format autre que JPEG, PNG, GIF, BMP, WebP et TIFF donne le code 2 et laisse
+`bureau.json` intact ; un `coque-tokens.json` illisible
+donne le code 1. Le dossier respecte `DUNEI_TOKENS_DIR`, sinon `XDG_CONFIG_HOME`, comme `dunei-theme`.
+
+### Si le fond ne se comporte pas comme prévu
+
+- Si le bureau montre l'aplat : `jq . ~/.config/dunei/bureau.json`, puis `journalctl --user -u dunei-coque -e`. Une image
+  absente ou illisible au démarrage produit une ligne au journal et laisse l'aplat ; à un changement, l'image en place
+  reste.
+- Si le calque manque : `hyprctl layers -j` doit montrer le namespace `dunei-fond` au niveau 0 de chaque écran. Si la
+  coque tombe, l'aplat du compositeur reparaît jusqu'à sa relance (`systemctl --user restart dunei-coque`).
+- Si l'image s'anime au démarrage de la coque : la règle `no_anim` de `dunei-fond` est générée par `make tokens`, posée par
+  `make install` et rechargée par `hyprctl reload config-only`.
+
+### Mesures et recette
+
+Sur `caladan` (1920 × 1200, échelle 1,25), mémoire PSS de la coque : 267 Mo sur l'aplat après une relance, 309 Mo avec une
+image. Processeur au repos : 1 à 2 tics sur 10 s avec l'image, 6 sur l'aplat. Nicolas a validé la recette à l'écran le
+2026-11-06. Le mouvement réduit a été essayé par Claude, sans capture intermédiaire du fondu, et l'écran externe n'a pas
+été éprouvé (D121).
+
 ## Lecteur d'empreinte — nouveau
 
 Cet élément n'existe dans aucun document du projet. Il est consigné ici parce qu'il s'installe au lot 1, mais **son travail de conception appartient au lot 5**.
@@ -2228,6 +2264,7 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 
 | Version | Date | Changement |
 | --- | --- | --- |
+| 1.36 | 2026-11-06 | Le fond d'écran (L2-27, D121 à D123) : `dunei-fond`, dossier des images, dépannage du calque, mesures ; `bureau.json` gagne `image` |
 | 1.35 | 2026-11-05 | Codex : paquet `openai-codex`, instructions globales et crochet rtk reliés depuis l'atelier (L1-26, D119) |
 | 1.34 | 2026-11-05 | Énergie (L1-09) : fenêtre du double appui du bouton marche ramenée à 0,4 s après une veille déclenchée par deux fantômes (D120) |
 | 1.33 | 2026-11-04 | Le mouvement des popovers : commande `dunei-mouvement`, calque `dunei-popovers`, ajout d'un popover à l'hôte, relevés (L2-06, L2-07, L2-47, L2-56 ; D110 à D117), recette en attente |

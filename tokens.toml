@@ -337,6 +337,9 @@ texte_fonce = { l = 0.20, c = 0.0, h = 0 }          # texte au repos sur un fond
 texte_fonce_survol = { l = 0.40, c = 0.0, h = 0 }   # texte survolé sur un fond clair (plus clair)
 seuil = 0.18                 # luminance relative (WCAG) sous laquelle le fond est jugé sombre
 logo = "/usr/share/pixmaps/archlinux-logo.svg"   # logo de la distribution, affiché à gauche de la barre
+bande = 28                   # hauteur réelle de la barre (Barre.qml) : la zone du fond mesurée pour choisir la couleur du texte
+dossier = "Documents/Images/Wallpapers"   # dossier des fonds d'écran, relatif à $HOME
+namespace = "dunei-fond"     # calque du fond d'écran : sans flou ni animation d'apparition, hors de glass.namespaces
 
 
 # ===========================================================================

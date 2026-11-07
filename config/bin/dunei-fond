@@ -1,0 +1,122 @@
+#!/usr/bin/env python3
+# dunei-fond — choix du fond d'écran de la coque.
+# Rôle : appliquer une image (ou revenir au fond du thème) en écrivant bureau.json, que la coque surveille et
+#   applique à chaud. Pour une image, la commande mesure la couleur moyenne de la bande occupée par la barre, telle
+#   qu'elle est réellement affichée (image redressée, transparence composée sur le fond du thème, recadrage centré de
+#   l'écran actif), afin que la coque choisisse entre texte clair et texte foncé. Le dossier est $DUNEI_TOKENS_DIR,
+#   sinon ${XDG_CONFIG_HOME:-$HOME/.config}/dunei.
+# Entrées : <image> (chemin absolu ou relatif) | --aucun ; sans argument, affiche l'état sans rien écrire.
+# Sortie : le chemin absolu de l'image appliquée, ou « aucun » ; bureau.json vaut
+#   {"origine":"fond","fond":"#rrggbb","image":"<absolu>"} ou {"origine":"theme","fond":<tokens.bureau.fond>}.
+# Erreurs : code 1 si coque-tokens.json est introuvable ou illisible, ou si l'écriture échoue (rien n'est écrit) ;
+#   code 2 pour un argument invalide ou une image absente ou illisible (bureau.json inchangé).
+# Dépendances : Python 3, Pillow ; hyprctl (facultatif : sans lui, la mesure suppose un écran de 1536 × 960).
+import json
+import os
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+from PIL import Image, ImageOps, ImageStat
+
+FORMATS = ("JPEG", "PNG", "GIF", "BMP", "WEBP", "TIFF")  # ce que Qt affiche, avec qt6-imageformats ; AVIF en est absent
+REFERENCE = (1536, 960)  # écran supposé hors session Hyprland : fixe la proportion de la bande, sans recadrage
+
+
+def lire_jetons(dossier: Path) -> dict:
+    """Lit coque-tokens.json. Entrée : le dossier des jetons. Sortie : le dict des jetons.
+    Erreurs : OSError, ValueError ou KeyError si le fichier manque, est corrompu ou que la table bureau est incomplète.
+    Dépendances : json."""
+    jetons = json.loads((dossier / "coque-tokens.json").read_text(encoding="utf-8"))
+    jetons["bureau"]["fond"], jetons["bureau"]["bande"]
+    return jetons
+
+
+def ecran_actif() -> tuple[int, int] | None:
+    """Donne la taille logique de l'écran focalisé. Entrée : aucune.
+    Sortie : (largeur, hauteur) en pixels logiques (taille / échelle), ou None si hyprctl est absent, échoue ou ne
+    signale aucun écran focalisé. Erreurs : aucune, tout échec donne None. Dépendances : hyprctl, subprocess, json."""
+    try:
+        res = subprocess.run(["hyprctl", "monitors", "-j"], capture_output=True, text=True, timeout=5, check=True)
+        m = next(m for m in json.loads(res.stdout) if m["focused"])
+        return round(m["width"] / m["scale"]), round(m["height"] / m["scale"])
+    except (OSError, subprocess.SubprocessError, ValueError, KeyError, StopIteration, ZeroDivisionError):
+        return None
+
+
+def mesurer(image: Image.Image, ecran: tuple[int, int] | None, bande: int, aplat: str) -> str:
+    """Mesure la couleur moyenne de la bande du haut de l'écran. Entrées : l'image ouverte ; la taille logique de
+    l'écran (None : référence 1536 × 960, sans recadrage) ; la hauteur de la bande en pixels logiques ; l'aplat
+    #rrggbb sur lequel composer la transparence. Sortie : la moyenne de la bande en #rrggbb. L'image est redressée
+    selon l'EXIF, composée sur l'aplat, puis recadrée comme PreserveAspectCrop (remplissage centré) quand l'écran
+    est connu. Erreurs : ValueError si l'aplat est invalide. Dépendances : Pillow."""
+    image = ImageOps.exif_transpose(image).convert("RGBA")
+    largeur, hauteur = image.size
+    ecr_l, ecr_h = ecran or REFERENCE
+    if ecran:
+        echelle = max(ecr_l / largeur, ecr_h / hauteur)
+        vis_l, vis_h = ecr_l / echelle, ecr_h / echelle
+    else:
+        echelle, vis_l, vis_h = ecr_h / hauteur, largeur, hauteur
+    gauche, haut = (largeur - vis_l) / 2, (hauteur - vis_h) / 2
+    zone = image.crop((round(gauche), round(haut), round(gauche + vis_l), max(round(haut + bande / echelle), round(haut) + 1)))
+    fond = Image.new("RGBA", zone.size, aplat)
+    moyenne = ImageStat.Stat(Image.alpha_composite(fond, zone).convert("RGB")).mean
+    return "#%02x%02x%02x" % tuple(round(c) for c in moyenne)
+
+
+def ecrire(chemin: Path, contenu: dict) -> None:
+    """Écrit un JSON de façon atomique. Entrées : le fichier cible ; le contenu sérialisable. Sortie : aucune.
+    Erreurs : OSError si le dossier est inaccessible (aucun temporaire ne reste). Dépendances : tempfile, os."""
+    descripteur, tmp = tempfile.mkstemp(dir=chemin.parent, prefix=f".{chemin.name}.")
+    try:
+        with os.fdopen(descripteur, "w", encoding="utf-8") as f:
+            json.dump(contenu, f, ensure_ascii=False)
+        os.replace(tmp, chemin)
+    except BaseException:
+        Path(tmp).unlink(missing_ok=True)
+        raise
+
+
+def main(argv: list[str]) -> int:
+    """Point d'entrée. Entrée : les arguments (hors nom du programme). Sortie : le code de retour.
+    Erreurs : voir l'en-tête du fichier. Dépendances : lire_jetons, ecran_actif, mesurer, ecrire."""
+    dossier = Path(os.environ.get("DUNEI_TOKENS_DIR") or Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config") / "dunei")
+    sortie = dossier / "bureau.json"
+    if not argv:
+        try:
+            print(json.loads(sortie.read_text(encoding="utf-8")).get("image", "aucun"))
+        except (OSError, ValueError):
+            print("aucun")
+        return 0
+    if len(argv) != 1:
+        print("dunei-fond : usage : dunei-fond [<image>|--aucun]", file=sys.stderr)
+        return 2
+    try:
+        bureau = lire_jetons(dossier)["bureau"]
+    except (OSError, ValueError, KeyError):
+        print(f"dunei-fond : coque-tokens.json est introuvable ou illisible dans {dossier} ; lance make install.", file=sys.stderr)
+        return 1
+    if argv[0] == "--aucun":
+        contenu, affiche = {"origine": "theme", "fond": bureau["fond"]}, "aucun"
+    else:
+        image = os.path.abspath(os.path.expanduser(argv[0]))
+        try:
+            with Image.open(image, formats=FORMATS) as img:
+                fond = mesurer(img, ecran_actif(), bureau["bande"], bureau["fond"])
+        except (OSError, ValueError, Image.DecompressionBombError) as e:
+            print(f"dunei-fond : image absente ou illisible : {image} ({e}).", file=sys.stderr)
+            return 2
+        contenu, affiche = {"origine": "fond", "fond": fond, "image": image}, image
+    try:
+        ecrire(sortie, contenu)
+    except OSError as e:
+        print(f"dunei-fond : écriture impossible dans {dossier} ({e}).", file=sys.stderr)
+        return 1
+    print(affiche)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

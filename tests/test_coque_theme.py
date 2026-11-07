@@ -66,11 +66,19 @@ class EssaiCoque:
         self.proc = None
 
     def tearDown(self):
+        self.arreter()
+        self.tmp.cleanup()
+
+    def arreter(self) -> None:
+        """Arrête la coque d'essai si elle tourne et attend sa fin.
+
+        Entrées : aucune. Sortie : aucune ; self.proc reste lisible. Erreurs : TimeoutExpired si elle ne se termine pas.
+        Dépendances : lancer.
+        """
         if self.proc and self.proc.poll() is None:
             self.proc.kill()
         if self.proc:
             self.proc.wait(timeout=DELAI)
-        self.tmp.cleanup()
 
     def tokens(self, teinte: int) -> Path:
         """Chemin des tokens générés pour une teinte de référence.
@@ -140,9 +148,11 @@ class EssaiCoque:
         """Démarre la coque d'essai, journal redirigé dans un fichier.
 
         Entrée : dossier — valeur de DUNEI_TOKENS_DIR.
-        Sortie : aucune ; self.proc tient le processus, tué par tearDown.
-        Erreurs : OSError si qs ne démarre pas. Dépendances : qs, dossier essai et environnement de la classe.
+        Sortie : aucune ; self.proc tient le processus, tué par tearDown. Une coque déjà lancée est arrêtée d'abord :
+        une boucle de sous-tests qui échoue en cours d'itération n'en laisse aucune derrière elle.
+        Erreurs : OSError si qs ne démarre pas. Dépendances : arreter, qs, dossier essai et environnement de la classe.
         """
+        self.arreter()
         env = {**os.environ, **self.environnement, "DUNEI_TOKENS_DIR": str(dossier), "NO_COLOR": "1"}
         with self.log.open("w") as sortie:
             self.proc = subprocess.Popen([QS, "-p", str(self.essai)], env=env, stdout=sortie,
@@ -601,6 +611,45 @@ class CoqueThemeTest(EssaiCoque, unittest.TestCase):
         self.ecrire_bureau(json.dumps({"origine": "fond", "fond": "#f0f0f0"}))
         self.attendre(f"essai : texte bureau {b['texteFonce']} survol {b['texteFonceSurvol']}")
 
+    def test_image_lue(self):
+        self.installer(55)
+        self.ecrire_bureau(json.dumps({"origine": "fond", "fond": "#101010", "image": "/tmp/x.jpg"}))
+        self.lancer(self.dir)
+        self.attendre("essai : prêt true")
+        self.ipc("image")
+        self.attendre("essai : image '/tmp/x.jpg'")
+
+    def test_image_absente_ou_invalide(self):
+        b = self.jetons_bureau()
+        self.installer(55)
+        for contenu in ({"origine": "fond", "fond": "#f0f0f0"}, {"origine": "fond", "fond": "#f0f0f0", "image": 3}):
+            with self.subTest(contenu=contenu):
+                self.ecrire_bureau(json.dumps(contenu))
+                self.lancer(self.dir)
+                self.attendre(f"essai : texte bureau {b['texteFonce']}")
+                self.ipc("image")
+                self.attendre("essai : image ''")
+
+    def test_fond_publie_prioritaire(self):
+        b = self.jetons_bureau()
+        self.installer(55)
+        self.ecrire_bureau(json.dumps({"origine": "theme", "fond": "#0f0703"}))
+        self.lancer(self.dir)
+        self.attendre(f"essai : texte bureau {b['texteClair']}")
+        self.ipc("publier", "#f0f0f0")
+        self.attendre(f"essai : texte bureau {b['texteFonce']}")
+        self.ipc("publier", "")
+        self.attendre(f"essai : texte bureau {b['texteClair']}", 2)
+
+    def test_sans_module_fond(self):
+        b = self.jetons_bureau()
+        self.installer(55)
+        self.ecrire_bureau(json.dumps({"origine": "theme", "fond": "#0f0703"}))
+        self.lancer(self.dir)
+        self.attendre(f"essai : texte bureau {b['texteClair']}")
+        self.ecrire_bureau(json.dumps({"origine": "fond", "fond": "#f0f0f0"}))
+        self.attendre(f"essai : texte bureau {b['texteFonce']} survol {b['texteFonceSurvol']}")
+
     def test_texte_bureau_sans_fichier(self):
         b = self.jetons_bureau()
         self.installer(55)
@@ -616,8 +665,6 @@ class CoqueThemeTest(EssaiCoque, unittest.TestCase):
                 self.lancer(self.dir)
                 self.attendre(f"essai : texte bureau {b['texteClair']} survol {b['texteClairSurvol']}")
                 self.attendre("Theme : bureau.json ignoré")
-                self.proc.kill()
-                self.proc.wait(timeout=DELAI)
 
 
 if __name__ == "__main__":

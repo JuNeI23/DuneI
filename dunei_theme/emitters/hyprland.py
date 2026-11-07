@@ -162,8 +162,9 @@ def emit_layer_rules(model: dict) -> str:
     Entrée : model — sortie de model.resolve.
     Sortie : contenu de hyprland-layers.lua (une liste Lua retournée, appliquée par modules/regles.lua),
              une règle par calque de glass.namespaces : flou, flou des popups, seuil d'alpha ignoré
-             et, pour les calques de glass.xray seulement, flou du fond seul.
-    Erreurs : KeyError si le TOML brut manque ; ValueError transmise par _validate_glass.
+             et, pour les calques de glass.xray seulement, flou du fond seul ; puis la règle du fond d'écran
+             ([bureau].namespace), sans flou, qui retire seulement l'animation d'apparition du calque.
+    Erreurs : KeyError si le TOML brut ou [bureau].namespace manque ; ValueError transmise par _validate_glass.
     Dépendances : _validate_glass.
     """
     g = model["raw"]["glass"]
@@ -171,6 +172,8 @@ def emit_layer_rules(model: dict) -> str:
     rules = [f'    {{ name = "dunei-verre-{ns}", match = {{ namespace = "^{ns}$" }}, blur = true, '
              f'blur_popups = true, ignore_alpha = {g["ignore_alpha"]}, xray = {str(ns in g["xray"]).lower()} }},'
              for ns in g["namespaces"]]
+    fond = model["raw"]["bureau"]["namespace"]
+    rules.append(f'    {{ name = "{fond}", match = {{ namespace = "^{fond}$" }}, no_anim = true }},')
     return "\n".join([
         "-- GÉNÉRÉ depuis tokens.toml — NE PAS MODIFIER À LA MAIN",
         "-- Usage : for _, r in ipairs(require(\"generated.hyprland-layers\")) do hl.layer_rule(r) end",

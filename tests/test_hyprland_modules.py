@@ -67,6 +67,7 @@ class ModulesTest(unittest.TestCase):
                                                      "layer\tdunei-verre-dunei-attention",
                                                      "layer\tdunei-verre-dunei-presquile",
                                                      "layer\tdunei-verre-dunei-popovers",
+                                                     "layer\tdunei-fond",
                                                      "rule\tsans-agrandissement", "rule\tglisser-xwayland",
                                                      "rule\tfenetre-reseau"])
 

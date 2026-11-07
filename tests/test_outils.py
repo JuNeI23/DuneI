@@ -16,8 +16,10 @@ NAMESPACE = re.compile(r'WlrLayershell\.namespace\s*:\s*"([^"]+)"')
 
 
 def declares() -> set[str]:
-    """Namespaces déclarés floutés. Sortie : ensemble de [glass].namespaces ; KeyError si la table manque."""
-    return set(tomllib.loads((ROOT / "tokens.toml").read_text(encoding="utf-8"))["glass"]["namespaces"])
+    """Namespaces déclarés par les jetons. Sortie : ensemble de [glass].namespaces (floutés) et du calque du fond
+    d'écran, [bureau].namespace, qui n'est pas flouté ; KeyError si une des deux tables manque."""
+    jetons = tomllib.loads((ROOT / "tokens.toml").read_text(encoding="utf-8"))
+    return set(jetons["glass"]["namespaces"]) | {jetons["bureau"]["namespace"]}
 
 
 class NamespacesTest(unittest.TestCase):
@@ -27,7 +29,7 @@ class NamespacesTest(unittest.TestCase):
         self.assertEqual(NAMESPACE.findall(texte), ["dunei-attention"])
 
     def test_namespaces_declares(self):
-        """Chaque namespace écrit dans coque/**/*.qml figure dans [glass].namespaces de tokens.toml."""
+        """Chaque namespace écrit dans coque/**/*.qml figure dans [glass].namespaces ou est [bureau].namespace dans tokens.toml."""
         trouves = {}
         for f in COQUE.rglob("*.qml"):
             for n in NAMESPACE.findall(f.read_text(encoding="utf-8")):
@@ -35,7 +37,7 @@ class NamespacesTest(unittest.TestCase):
         self.assertTrue(trouves, "aucun namespace trouvé : motif périmé ?")
         for n, fichiers in trouves.items():
             with self.subTest(namespace=n):
-                self.assertIn(n, declares(), f"namespace non déclaré dans [glass].namespaces : {fichiers}")
+                self.assertIn(n, declares(), f"namespace non déclaré dans tokens.toml : {fichiers}")
 
     def test_banc_du_verre_porte_le_namespace_de_la_barre(self):
         """Le banc d'essai du verre emprunte le namespace de la future barre, pour éprouver ses règles de calque."""

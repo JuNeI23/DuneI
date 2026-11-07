@@ -11,15 +11,17 @@ import Quickshell.Io
 // actif, un objet neuf à chaque lecture, fait des clés partagées du fichier et de la branche choisie, ce qui
 // fait basculer ColorSpring d'un coup, sans animation (D81). Aucune valeur de design n'est écrite ici.
 // Le texte posé directement sur le bureau (la barre) se règle d'après bureau.json, que deploy.py écrit et que
-// L2-27 réécrira : texteBureau est le texte clair ou foncé des jetons du bureau, selon la luminance relative
-// du fond effectif comparée au seuil des jetons.
+// dunei-fond réécrit (L2-27) : texteBureau est le texte clair ou foncé des jetons du bureau, selon la
+// luminance relative du fond effectif comparée au seuil des jetons.
 // Entrées : DUNEI_TOKENS_DIR (dossier redirigé, pour la planche et les essais), sinon
 //           $XDG_CONFIG_HOME/dunei, sinon $HOME/.config/dunei ; dans ce dossier, theme.json
-//           {famille, moment}, facultatif, bureau.json {origine, fond}, facultatif, et mouvement.json
+//           {famille, moment}, facultatif, bureau.json {origine, fond, image}, facultatif, et mouvement.json
 //           {reduit}, facultatif, écrit par dunei-mouvement.
 // Sorties : dir, ready, famille, moment, tokens et ses raccourcis par groupe (pastilles, knob, controls et glass
-//           compris), bureau (jetons du bureau), texteBureau, texteBureauSurvol, density (confortable), motion,
-//           mouvementReduit (vrai si mouvement.json le demande),
+//           compris), bureau (jetons du bureau), imageBureau (image du bureau, "" si absente), bureauLu (vrai dès la
+//           première lecture de bureau.json, même absent ou invalide), fondPublie (fond publié par le calque du fond
+//           d'écran, null par défaut, prioritaire sur celui du fichier),
+//           texteBureau, texteBureauSurvol, density (confortable), motion, mouvementReduit (vrai si mouvement.json le demande),
 //           stateColors(), hairline(), luminance(), police(), fichier().
 // Erreurs : tokens ou mouvement absents ou illisibles → console.error, ready reste faux ; contenu invalide ou
 //           incomplet → console.warn, valeurs précédentes gardées. theme.json absent → défaut des tokens, en
@@ -81,7 +83,15 @@ Singleton {
     // Fond du bureau lu dans bureau.json, ou null (absent, illisible ou invalide) : le fond effectif vaut alors
     // celui des jetons.
     property var fondFichier: null
-    readonly property color fondBureau: fondFichier ?? bureau?.fond ?? "transparent"
+    // Image du bureau lue dans bureau.json (chemin absolu), ou "" si la clé manque ou n'est pas une chaîne.
+    property string imageBureau: ""
+    // Vrai dès que bureau.json a été lu une première fois, valide ou non, présent ou non, et posé après fondFichier et
+    // imageBureau : le calque distingue ainsi la valeur de départ d'imageBureau d'une demande de changement.
+    property bool bureauLu: false
+    // Fond effectif que le calque du fond d'écran publie (#rrggbb, moyenne de l'image affichée), ou null tant
+    // qu'aucun calque ne publie : le fond du fichier puis celui des jetons s'appliquent alors.
+    property var fondPublie: null
+    readonly property color fondBureau: fondPublie ?? fondFichier ?? bureau?.fond ?? "transparent"
     readonly property bool bureauClair: luminance(fondBureau) >= (bureau?.seuil ?? 0)
     // Texte posé sur le bureau, au repos et au survol : clair sur un fond sombre, foncé sur un fond clair.
     readonly property color texteBureau: (bureauClair ? bureau?.texteFonce : bureau?.texteClair) ?? "transparent"
@@ -290,7 +300,13 @@ Singleton {
             const valide = typeof data.fond === "string" && /^#[0-9a-fA-F]{6}$/.test(data.fond)
             if (!valide) console.warn("Theme : bureau.json ignoré, fond invalide ; fond des jetons du bureau appliqué")
             root.fondFichier = valide ? data.fond : null
+            root.imageBureau = typeof data.image === "string" ? data.image : ""
+            root.bureauLu = true
         }
-        onRejected: root.fondFichier = null
+        onRejected: {
+            root.fondFichier = null
+            root.imageBureau = ""
+            root.bureauLu = true
+        }
     }
 }

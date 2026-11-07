@@ -2929,3 +2929,88 @@ pas. Défaut signalé par Nicolas : veille non voulue à 14:08:13, 36 s après u
 
 *Touché : `config/hypr/scripts/dunei-bouton-marche`, `tests/test_energie_scripts.py`, carnet (§ Énergie — L1-09), backlog
 (L1-09, L1-27), notes de direction.*
+
+## 2026-11-06 — Fond d'écran (L2-27)
+
+### D121 · Le fond d'écran est un calque de la coque, sans démon
+
+2026-11-06. **L'image du bureau est affichée par un module `Fond` de la coque Quickshell, dans une `PanelWindow` par écran
+au niveau `Background`, et choisie par la commande `dunei-fond`.** Le démon que L2-27 prévoyait de déclarer dans
+`session.toml` n'existe pas. C'est le choix de Nicolas, à qui awww a été présenté.
+
+- **Raison.** L'harmonie entre DuneI et le fond d'écran compte pour Nicolas, et le geste de changement doit être animé
+  avec le vocabulaire de la bible. Le calque emploie le `Ressort` de la coque, publie le fond réellement affiché et ne
+  demande aucun paquet ni aucune ligne dans la session.
+- **Conséquence acceptée.** Si la coque tombe, l'aplat `surface-base` du compositeur reparaît jusqu'à sa relance.
+- **Transition.** La nouvelle image part du bas de l'écran et monte jusqu'à couvrir l'ancienne, qui ne bouge pas. Le
+  ressort est `spectacle`, réglage `out`, retenu par Nicolas à l'écran parmi trois durées ; aucun jeton de mouvement n'est
+  créé. L'interruption pendant une montée relève de D123. Au démarrage de la coque, l'image se pose d'un coup, grâce à la règle de calque `no_anim` générée pour `dunei-fond`, et à
+  `Theme.bureauLu`, sans lequel la lecture asynchrone de `bureau.json` déclencherait une montée.
+- **Mouvement réduit.** Deux ressorts séparés : `montee` pour le déplacement, et `apparition`, qui déclare
+  `nature: "fondu"`, pour l'opacité. Un fondu ne pilote jamais une position.
+- **Netteté.** L'échelle de décodage se lit sur la fenêtre, `QsWindow.devicePixelRatio`, et non sur l'écran, conformément
+  à D82 : sur `caladan`, la fenêtre annonce 1,25 et `ShellScreen.devicePixelRatio` annonce 2, ce qui décoderait l'image
+  bien trop grande.
+- **Chemins.** L'URL de l'image encode chaque composant du chemin par `encodeURIComponent` : `encodeURI` laisserait `#`
+  et `?`, valides dans un nom de fichier, couper l'URL.
+- **Mesures sur `caladan`.** Mémoire PSS de la coque : 267 Mo sur l'aplat juste après une relance, 309 Mo avec une image
+  (+42 Mo), à comparer à 381 Mo pour une coque en service depuis longtemps avant la relance, dont l'origine n'a pas été
+  recherchée. Processeur au repos, une fois l'image posée : 1 puis 2 tics sur 10 s, contre 6 tics sur 10 s sur l'aplat ;
+  le calque n'ajoute donc aucun coût mesurable au repos.
+- **Recette.** Nicolas a validé à l'écran le 2026-11-06 : montée, bascule du texte de la barre, pose sans animation après
+  une relance de la coque, verre vivant sur l'image, réveil de veille et reprise après réouverture de session. Claude a
+  essayé le mouvement réduit : sur six captures rapprochées, l'image ne se déplace pas, mais aucune ne montre un état
+  intermédiaire du fondu, qui reste prouvé par `test_mouvement_reduit` avec des ressorts ralentis. L'écran externe n'a pas
+  été éprouvé, faute d'écran branché.
+- **Écarté.** awww, présenté à Nicolas, qui a préféré le calque ; aucun autre démon n'a été retenu à l'essai.
+
+*Touché : `coque/Fond/`, `coque/shell.qml`, `coque/Theme/`, `config/bin/dunei-fond`, `tokens.toml`, émetteurs Quickshell et
+Hyprland, `deploy.py`, tests, fiche et plan du 2026-11-06, bible (chapitre 2, annexe E), backlog (L2-27, L2-60 à L2-62),
+carnet, notes de direction.*
+
+### D122 · Le fond publié se calcule sur la bande de la barre, et se publie à l'arrivée (écart à D90)
+
+2026-11-06. **`fond` est la couleur moyenne de la bande de 28 px logiques que la barre recouvre, après le recadrage de
+l'image à l'écran actif, et non la moyenne de toute l'image comme le prévoyait D90.** Une image sombre à ciel clair aurait
+sinon donné un texte clair sur un fond clair. Le seuil et les deux jeux de texte de `Theme.bureauClair` ne changent pas.
+
+- **Moment.** Le calque publie le fond réellement affiché, `Theme.fondPublie`, à la fin de la montée : le texte reste
+  ainsi lisible sur l'ancienne image pendant le vol. Une coque d'essai sans module `Fond` continue de lire le fichier.
+- **Hors session.** Si `hyprctl monitors -j` échoue, la commande prend le haut de l'image sans recadrage, dans la même
+  proportion. `bureau.json` ne porte qu'un `fond` pour tous les écrans, et rien n'est recalculé au branchement d'un écran.
+- **Contrat.** `bureau.json` reste la seule source de vérité et gagne la clé `image` avec l'origine `fond`. Cette clé est
+  lue par `data.image` et reste absente de `keys` : les clés de `keys` sont obligatoires, et un fichier sans image
+  resterait sinon rejeté alors qu'il est valide.
+- **Écart relevé, non corrigé.** La bande vaut la hauteur réelle de la barre, 28 px (D89), portée par le jeton
+  `bureau.bande`. Le jeton `systemBarHeight` vaut toujours 32 : L2-62.
+
+*Touché : `config/bin/dunei-fond`, `coque/Theme/Theme.qml`, `coque/Fond/Affichage.qml`, `tokens.toml`, fiche du
+2026-11-06, bible (annexe E), backlog (L2-62).*
+
+### D123 · La montée est interruptible, et `dunei-fond` n'accepte que ce que la coque affiche
+
+2026-11-07, après la relecture finale. Nicolas a tranché les deux points qu'elle soulevait.
+
+**La montée s'interrompt.** La fiche v0.2 laissait une demande attendre la fin du vol, ce que contredit la bible,
+chapitre 6 : « Toute animation est interruptible […] Jamais de file d'attente. » Une exception écrite lui a été proposée, et
+Nicolas a préféré se conformer à la bible.
+
+- **Comportement.** L'image demandée pendant une montée décode dans une couche cachée, puis monte du bas de l'écran
+  par-dessus celle qui vole, qui finit sa course dessous. Rien ne disparaît ni ne coupe, y compris pour revenir à l'image
+  en place. Chaque couche porte ses propres ressorts ; à son atterrissage, celles qu'elle recouvre se vident, et son
+  image et son fond sont publiés. `--aucun` vide tout d'un coup. Une demande illisible laisse la montée aller à son
+  terme.
+- **Limites.** Deux images au plus volent à la fois : une troisième, prête, attend que la plus ancienne ait atterri. Seule
+  la dernière demande compte : elle remplace celle qui décodait, sans file d'attente.
+- **Premier essai, écarté à l'écran.** Remplacer à la même hauteur l'image qui monte : le décodage de la suivante prend
+  plusieurs centaines de millisecondes, si bien que le remplacement tombait en fin de course, et un retour à l'image en
+  place faisait disparaître la montée d'un coup. Nicolas l'a vu le 2026-11-07 et a choisi la montée par-dessus, qu'il a
+  validée à l'écran le même jour.
+
+**Les formats sont déclarés.** Pillow lit des formats que Qt n'affiche pas : `dunei-fond x.webp` annonçait un succès, la
+coque gardait l'ancienne image, et celle-ci était perdue à la relance. `qt6-imageformats` entre dans `paquets.toml`, ce qui
+ajoute le WebP et le TIFF, et `dunei-fond` limite Pillow à JPEG, PNG, GIF, BMP, WebP et TIFF ; le reste donne le code 2.
+AVIF reste refusé : ce paquet ne le fournit pas.
+
+*Touché : `coque/Fond/Affichage.qml`, `config/bin/dunei-fond`, `paquets.toml`, tests, fiche v0.4, bible (annexe E), carnet,
+backlog.*

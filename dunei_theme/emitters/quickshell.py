@@ -236,17 +236,17 @@ def _pastilles(model: dict) -> dict:
 
 
 def _bureau(model: dict) -> dict:
-    """Jetons du bureau : fond du compositeur, couleurs de texte posé dessus, seuil de luminance et logo.
+    """Jetons du bureau : fond du compositeur, couleurs de texte posé dessus, seuil de luminance, logo, bande et dossier.
 
     Entrée : model — sortie de model.resolve (thème par défaut) ; `raw["bureau"]` fournit les valeurs.
-    Sortie : dict {fond, texteClair, texteClairSurvol, texteFonce, texteFonceSurvol, seuil, logo} ; `fond` est
+    Sortie : dict {fond, texteClair, texteClairSurvol, texteFonce, texteFonceSurvol, seuil, logo, bande, dossier} ; `fond` est
              `surface-base`, la valeur exacte de `misc.background_color` de Hyprland.
     Erreurs : KeyError si la table [bureau] ou une de ses clés manque. Dépendances : color.Oklch, color.to_hex.
     """
     b = model["raw"]["bureau"]
     return {"fond": to_hex(model["roles"]["surface-base"]),
             **{_camel(k): to_hex(Oklch(**b[k])) for k in ("texte_clair", "texte_clair_survol", "texte_fonce", "texte_fonce_survol")},
-            "seuil": b["seuil"], "logo": b["logo"]}
+            "seuil": b["seuil"], "logo": b["logo"], "bande": b["bande"], "dossier": b["dossier"]}
 
 
 def emit(model: dict) -> str:

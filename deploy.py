@@ -28,6 +28,8 @@ mis de côté sous le nom .avant-dunei, et un lien remplacé par un fichier est 
   en place. Seul kitty, le terminal provisoire, y figure (L1-18).
 - bin : chaque fichier exécutable de config/bin/ est lié dans $XDG_BIN_HOME (~/.local/bin par défaut).
   Un fichier non exécutable, ou un fichier ou lien étranger à sa place, est refusé.
+- fonds : le dossier des fonds d'écran, nommé par tokens.toml ([bureau].dossier, relatif à $HOME), est créé
+  avec ses parents s'il manque ; DuneI n'y copie jamais d'image (L2-27).
 - crochets : core.hooksPath du dépôt vaut .githooks, pour que le crochet pre-commit refuse un generated/
   retouché (L1-21). Absent, il est posé ; une autre valeur est refusée.
 - maj : checkupdates, paccache, pacdiff, informant et fakeroot doivent être installés ; le minuteur
@@ -463,6 +465,28 @@ def plan_bin(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
     return actions, err
 
 
+def plan_fonds(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
+    """Inspection du dossier des fonds d'écran, sans aucune modification (L2-27).
+
+    Entrées : repo — racine du dépôt ; home — dossier de configuration racine, inutilisé ici ; le dossier
+              personnel se lit dans $HOME, comme bin_home.
+    Sortie : (création du dossier [bureau].dossier de tokens.toml, parents compris, s'il manque ; erreurs).
+             Aucune image n'est jamais copiée.
+    Erreurs : aucune exception ; clé illisible dans tokens.toml, ou dossier qui n'en est pas un (fichier,
+              lien cassé), deviennent des messages.
+    Dépendances : tomllib, os.environ.
+    """
+    try:
+        with (repo / "tokens.toml").open("rb") as fh:
+            rel = tomllib.load(fh)["bureau"]["dossier"]
+    except (OSError, tomllib.TOMLDecodeError, KeyError):
+        return [], [f"{repo / 'tokens.toml'} ne donne pas [bureau].dossier"]
+    dest = Path(os.environ["HOME"]) / rel
+    if dest.is_symlink() and not dest.is_dir() or dest.exists() and not dest.is_dir():
+        return [], [f"{dest} existe mais n'est pas un dossier"]
+    return ([] if dest.exists() else [("mkdir", dest)]), []
+
+
 def plan_crochets(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
     """Inspection des crochets git du dépôt, sans aucune modification (L1-21).
 
@@ -796,7 +820,7 @@ def plan_socle(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
 
 NOTES = ("hors-liste", "chemin", "rtk-remplace", "atelier-saute", "atelier-sans-claude", "atelier-plugins-echec", "gsettings-absent")  # Signalements affichés après le bilan : ils n'agissent pas et ne bloquent pas.
 DESTINATIONS = {"hypr": plan_hypr, "fontconfig": plan_fontconfig, "coque": plan_coque, "icones": plan_icones, "applis": plan_applis,
-                "bin": plan_bin, "crochets": plan_crochets, "rtk": atelier.plan_rtk, "atelier": atelier.plan_atelier, "services": plan_services, "systeme": plan_systeme, "socle": plan_socle, "maj": plan_maj,
+                "bin": plan_bin, "fonds": plan_fonds, "crochets": plan_crochets, "rtk": atelier.plan_rtk, "atelier": atelier.plan_atelier, "services": plan_services, "systeme": plan_systeme, "socle": plan_socle, "maj": plan_maj,
                 "connexion": plan_connexion}  # Nom → planification, dans l'ordre d'exécution (sudo en dernier).
 
 

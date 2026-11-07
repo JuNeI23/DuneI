@@ -5,4 +5,5 @@ return {
     { name = "dunei-verre-dunei-attention", match = { namespace = "^dunei-attention$" }, blur = true, blur_popups = true, ignore_alpha = 0.58, xray = false },
     { name = "dunei-verre-dunei-presquile", match = { namespace = "^dunei-presquile$" }, blur = true, blur_popups = true, ignore_alpha = 0.58, xray = false },
     { name = "dunei-verre-dunei-popovers", match = { namespace = "^dunei-popovers$" }, blur = true, blur_popups = true, ignore_alpha = 0.58, xray = false },
+    { name = "dunei-fond", match = { namespace = "^dunei-fond$" }, no_anim = true },
 }
