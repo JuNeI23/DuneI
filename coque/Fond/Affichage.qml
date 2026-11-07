@@ -225,6 +225,8 @@ Item {
         c.fondu = false
         c.montee.cible = 0
         c.montee.poser()
+        c.apparition.cible = 0
+        c.apparition.poser()
         if (_pose === c) _pose = null
         if (_demande) decoder(_demande)
     }
@@ -279,6 +281,8 @@ Item {
             _pose = null
         } else if (!lisible && !couche("pose") && !couche("vol")) {
             signaler(imageAffichee, "aplat du bureau appliqué")
+            _imageBase = ""
+            base.source = ""
             finirPose(false)
         }
         majEtat()

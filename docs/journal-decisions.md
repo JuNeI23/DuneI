@@ -3004,7 +3004,8 @@ Nicolas a préféré se conformer à la bible.
   la dernière demande compte : elle remplace celle qui décodait, sans file d'attente.
 - **Premier essai, écarté à l'écran.** Remplacer à la même hauteur l'image qui monte : le décodage de la suivante prend
   plusieurs centaines de millisecondes, si bien que le remplacement tombait en fin de course, et un retour à l'image en
-  place faisait disparaître la montée d'un coup. Nicolas l'a vu le 2026-11-07 et a choisi la montée par-dessus.
+  place faisait disparaître la montée d'un coup. Nicolas l'a vu le 2026-11-07 et a choisi la montée par-dessus, qu'il a
+  validée à l'écran le même jour.
 
 **Les formats sont déclarés.** Pillow lit des formats que Qt n'affiche pas : `dunei-fond x.webp` annonçait un succès, la
 coque gardait l'ancienne image, et celle-ci était perdue à la relance. `qt6-imageformats` entre dans `paquets.toml`, ce qui

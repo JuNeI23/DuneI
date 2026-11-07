@@ -1942,7 +1942,7 @@ modèle de la barre des menus de macOS. Les raisons sont au journal (D89 à D95)
 | `config/systemd/user/dunei-coque.service` | `~/.config/systemd/user/` | Unité de la coque de session : `qs -n -c dunei`, rattachée à `graphical-session.target`, relancée en cas d'échec (D94) |
 | `session.toml` | lu par `deploy.py` | Ligne `dunei-coque.service` ajoutée à la liste blanche de la session (D50), après `nm-applet.service` |
 | `coque/` | `~/.config/quickshell/dunei` (lien) | Dossier de la coque, que `qs -c dunei` retrouve par son nom de configuration |
-| `tokens.toml`, table `[bureau]` | `generated/coque-tokens.json` | Jeux de texte clair et foncé, seuil de luminance, logo, hauteur `bande` et `dossier` des images ; `namespace` sert à la règle de calque de `hyprland-tokens.lua` ; `make tokens` les régénère |
+| `tokens.toml`, table `[bureau]` | `generated/coque-tokens.json` | Jeux de texte clair et foncé, seuil de luminance, logo, hauteur `bande` et `dossier` des images ; `namespace` sert à la règle de calque de `hyprland-layers.lua` ; `make tokens` les régénère |
 | (écrit par `deploy.py`) | `~/.config/dunei/bureau.json` | État du fond du bureau : `{ "origine", "fond" }`, plus `"image"` avec l'origine `fond` (D90, D122) |
 
 - `deploy.py` écrit `bureau.json` avec l'origine `theme` et la valeur de `tokens.bureau.fond` (`#0f0703`), et le

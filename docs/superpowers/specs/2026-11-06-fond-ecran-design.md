@@ -182,6 +182,8 @@ La fiche reste valable sur le comportement ; ces précisions ont été prises en
 - le `devicePixelRatio` de `sourceSize` se lit sur la fenêtre, le ratio de l'écran valant l'échelle entière (D82) ;
 - le chemin s'encode par `encodeURIComponent`, composant par composant ;
 - deux ressorts distincts portent le déplacement et l'opacité (`nature: "fondu"`) ;
+- la montée interruptible (D123) remplace `haut` par trois couches volantes, chacune avec ses deux ressorts : l'enchaînement
+  de l'essai ci-dessus ne vaut plus que pour une montée seule ;
 - la valeur unique du dossier est le jeton `bureau.dossier` de `tokens.toml`, et la bande le jeton `bureau.bande`.
 
 Mesures intégrées à la coque : voir D121.
