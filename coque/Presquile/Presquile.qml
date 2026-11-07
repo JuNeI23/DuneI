@@ -4,8 +4,11 @@ import Quickshell.Wayland
 import "../Theme"
 
 // Presquile — surface de la presqu'île, posée au centre du bord haut de chaque écran (L2-46).
-// Rôle : fenêtre de calque transparente, ancrée en haut seulement (donc centrée), qui porte l'encoche continue et,
-// dedans, la Scene qui monte le module de contenu. La taille de l'encoche suit celle du module par les deux Ressorts
+// Rôle : fenêtre de calque transparente, ancrée en haut, à gauche et à droite (toute la largeur de l'écran), qui porte
+// l'encoche continue, centrée, et, dedans, la Scene qui monte le module de contenu. La largeur de la fenêtre ne change
+// donc jamais, et sa hauteur suit la hauteurSurface de la scène, stable pendant tout mouvement : la surface n'est
+// jamais reconfigurée image par image, ce qui ferait attendre chaque image l'aller-retour avec le compositeur
+// (saccades de la rétractation, décalage d'une image à l'ouverture, constatés à la recette de L2-60). La taille de l'encoche suit celle du module par les deux Ressorts
 // « window » de la scène : immobile tant que le module garde sa taille, elle s'étire sans saut quand il en change.
 // Changer de module déroule la séquence de la scène (L2-48) : fondu de sortie, étirement, fondu d'entrée ; en
 // mouvement réduit, la taille se pose aussitôt et seuls les fondus restent. La fenêtre réserve en plus
@@ -37,11 +40,10 @@ PanelWindow {
     readonly property Ressort hauteur: scene.ressortHauteur
 
     screen: modelData
-    anchors { top: true }
-    // La fenêtre se dimensionne sur la cible (ou sur la valeur courante si elle est plus grande, pour ne rien couper
-    // pendant un rétrécissement) : elle n'est donc pas reconfigurée à chaque image, seule la forme s'anime.
-    implicitWidth: Math.max(largeur.value, largeur.cible) + 2 * (encoche.evasement + encoche.marge)
-    implicitHeight: Math.max(hauteur.value, hauteur.cible) + encoche.marge
+    anchors { top: true; left: true; right: true }
+    // Pleine largeur, et hauteur tenue par la scène pendant le mouvement : seule la forme s'anime, jamais la fenêtre.
+    // Les zones transparentes ne sont pas floutées (ignore_alpha des règles de calque) et le masque laisse passer les clics.
+    implicitHeight: scene.hauteurSurface + encoche.marge
     exclusionMode: ExclusionMode.Ignore
     color: "transparent"
     mask: Region { item: encoche.corps }
@@ -51,7 +53,7 @@ PanelWindow {
 
     Encoche {
         id: encoche
-        x: (surface.implicitWidth - implicitWidth) / 2
+        x: (surface.width - implicitWidth) / 2
         // Noms qualifiés : dans ce bloc, « hauteur » désignerait la propriété de l'Encoche elle-même.
         largeurCorps: surface.largeur.value
         hauteur: surface.hauteur.value

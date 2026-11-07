@@ -31,9 +31,15 @@ class PresquileStructureTest(unittest.TestCase):
             with self.subTest(ligne=ligne):
                 self.assertIn(ligne, self.surface)
 
-    def test_ancrage_haut_seul(self):
+    def test_ancrage_pleine_largeur(self):
+        # Ancrée en haut, à gauche et à droite : la largeur de la fenêtre ne change jamais (recette de L2-60), seule
+        # sa hauteur suit celle que tient la scène, et l'encoche se centre dans la fenêtre.
         ancrage = re.search(r"anchors\s*\{([^}]*)\}", self.surface).group(1)
-        self.assertEqual(re.findall(r"(\w+):\s*true", ancrage), ["top"])
+        self.assertEqual(re.findall(r"(\w+):\s*true", ancrage), ["top", "left", "right"])
+        code = re.sub(r"//.*", "", self.surface)
+        self.assertNotIn("implicitWidth:", code)
+        self.assertRegex(code, r"implicitHeight:\s*scene\.hauteurSurface\s*\+\s*encoche\.marge")
+        self.assertIn("x: (surface.width - implicitWidth) / 2", code)
 
     def test_masque_sur_le_corps(self):
         masque = re.search(r"mask:\s*Region\s*\{([^}]*)\}", self.surface)
@@ -245,7 +251,6 @@ class MontageTest(PresquileIpc, unittest.TestCase):
         scene = (ROOT / "coque" / "Presquile" / "Scene.qml").read_text(encoding="utf-8")
         self.assertIn("largeur.poser(); hauteur.poser()", scene)
         surface = (ROOT / "coque" / "Presquile" / "Presquile.qml").read_text(encoding="utf-8")
-        self.assertRegex(surface, r"implicitWidth: Math\.max\(largeur\.value, largeur\.cible\)")
 
 
 # Module factice « grand » de la coque d'essai, et module des bureaux d'essai (4 bureaux, presqu'île de 28).
@@ -258,6 +263,9 @@ class ChangementTest(PresquileIpc, unittest.TestCase):
 
     La scène d'essai, sans fenêtre, journalise chaque image : « phase … », « contenu … », « l … », « h … », « o … ».
     """
+
+    # Vrai pour la variante en mouvement réduit, où la taille se pose d'un coup.
+    reduit = False
 
     def etat(self) -> dict:
         """Photographie de la scène d'essai. Sortie : JSON de changementEtat. Erreurs : celles de appeler."""
@@ -349,6 +357,29 @@ class ChangementTest(PresquileIpc, unittest.TestCase):
         self.assertEqual(phases[:3], ["sortie", "forme", "sortie"])
         self.assertEqual(phases[-1], "repos")
 
+    def test_hauteur_surface_tenue(self):
+        # La hauteur réservée par la surface monte d'un coup quand la forme s'agrandit, puis ne bouge plus pendant la
+        # rétractation : elle ne redescend qu'une fois, à l'arrêt du ressort de hauteur (aucune reconfiguration de la
+        # fenêtre image par image).
+        self.repos()
+        depart = len(self.traces())
+        self.appeler("changer", "grand")
+        self.repos()
+        traces = self.traces(depart)
+        self.assertEqual(self.valeurs(traces, "hs"), [GRAND[1]])
+        # Elle est montée avant la première hauteur intermédiaire (il n'y en a pas en mouvement réduit).
+        intermediaires = [i for i, t in enumerate(traces) if t.startswith("h ") and BUREAUX[1] < float(t.split()[1]) < GRAND[1]]
+        if intermediaires:
+            self.assertLess(traces.index(f"hs {GRAND[1]}"), intermediaires[0])
+        depart = len(self.traces())
+        self.appeler("changer", "bureaux")
+        self.repos()
+        traces = self.traces(depart)
+        self.assertEqual(self.valeurs(traces, "hs"), [BUREAUX[1]])
+        # En mouvement normal, la rétractation a bien duré plusieurs images sous cette hauteur fixe.
+        self.assertGreaterEqual(len(self.valeurs(traces, "h")), 1 if self.reduit else 6)
+        derniere_hauteur = max(i for i, t in enumerate(traces) if t.startswith("h "))
+        self.assertGreater(traces.index(f"hs {BUREAUX[1]}"), derniere_hauteur)
 
     def test_taille_tardive(self):
         # La taille du module change pendant la forme, comme une galerie qui charge son dossier : l'écart de référence
@@ -372,6 +403,8 @@ class ChangementTest(PresquileIpc, unittest.TestCase):
 
 class ChangementReduitTest(ChangementTest):
     """Mouvement réduit : la taille se pose d'un coup, seuls les fondus de contenu subsistent."""
+
+    reduit = True
 
     def preparer(self):
         (self.dir / "mouvement.json").write_text('{"reduit": true}')

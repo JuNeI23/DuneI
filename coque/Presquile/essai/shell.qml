@@ -54,6 +54,8 @@ ShellRoot {
             console.info("essai : lp " + essaiScene.ressortLargeur.value)
         }
         function onContenuChanged() { console.info("essai : contenu " + (essaiScene.contenu?.objectName ?? "")) }
+        // Hauteur réservée par la surface : elle ne doit changer qu'au départ d'un agrandissement et à l'arrêt.
+        function onHauteurSurfaceChanged() { console.info("essai : hs " + essaiScene.hauteurSurface) }
     }
     Connections {
         target: essaiScene.ressortLargeur

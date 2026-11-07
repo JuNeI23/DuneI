@@ -12,11 +12,14 @@ import "../Theme"
 // si la taille du module change pendant la forme (contenu chargé après coup) ; la scène revient au « repos » quand plus rien ne bouge. Un changement pendant la forme ou l'entrée
 // reprend en sortie depuis l'opacité et la taille courantes, sans saut ; un changement pendant la sortie la laisse
 // finir et monte le dernier module demandé. Mouvement réduit : la taille se pose aussitôt, seuls les fondus restent.
+// La scène donne aussi la hauteur que doit réserver la surface (hauteurSurface) : elle monte d'un coup à la cible du
+// ressort de hauteur quand elle est plus grande, et ne redescend qu'à son arrêt, jamais image par image ; chaque changement de taille d'une surface de calque passe par un aller-retour avec le compositeur.
 // Entrées : ecran, l'écran transmis au module ; module, le composant de contenu, un Item déclarant implicitWidth et
 //           implicitHeight et recevant ecran.
 // Sorties : contenu, le module monté (null avant le premier montage ou si le composant échoue) ; phase, « repos »,
 //           « sortie », « forme » ou « entree » ; ressortLargeur, ressortHauteur et ressortOpacite, les trois ressorts,
-//           lus par la surface et les essais ; width et height suivent les ressorts de taille.
+//           lus par la surface et les essais ; width et height suivent les ressorts de taille ; hauteurSurface, la
+//           hauteur que la surface réserve à l'encoche, stable pendant tout mouvement de la hauteur.
 // Erreurs : un composant sans Item valide laisse contenu nul, se lit au journal de Quickshell, et la séquence se
 //           termine sur une forme de largeur nulle ; un module sans hauteur laisse la hauteur des jetons.
 // Dépendances : Ressort, Theme (tokens.presquile.hauteur et entree, motion.json par Ressort).
@@ -30,6 +33,7 @@ Item {
     readonly property alias ressortLargeur: largeur
     readonly property alias ressortHauteur: hauteur
     readonly property alias ressortOpacite: opacite
+    readonly property real hauteurSurface: _hauteurSurface
     // Part de l'écart de taille sous laquelle le nouveau contenu commence d'apparaître (jeton presquile.entree,
     // réglable à la recette) ; sans jeton, 0 : l'entrée attend que la forme soit posée.
     readonly property real seuilEntree: Theme.tokens?.presquile?.entree ?? 0
@@ -39,6 +43,7 @@ Item {
     property bool _montage: false
     property real _ecartLargeur: 0
     property real _ecartHauteur: 0
+    property real _hauteurSurface: 0
 
     width: largeur.value
     height: hauteur.value
@@ -61,6 +66,13 @@ Item {
         onCibleChanged: if (scene._phase === "forme") scene._ecartHauteur = Math.abs(cible - value)
         onValueChanged: scene.avancer()
         onMovingChanged: Qt.callLater(scene.avancer)
+    }
+    // Hauteur réservée par la surface, recalculée à chaque changement du ressort de hauteur.
+    Connections {
+        target: hauteur
+        function onCibleChanged() { scene.tenir() }
+        function onValueChanged() { scene.tenir() }
+        function onMovingChanged() { scene.tenir() }
     }
     Ressort { id: opacite; transition: "reveal"; nature: "fondu"; cible: 1; onMovingChanged: Qt.callLater(scene.avancer) }
 
@@ -98,6 +110,18 @@ Item {
         avancer()
     }
 
+    // tenir — met à jour la hauteur réservée par la surface : tant que le ressort de hauteur avance, la plus grande
+    // des hauteurs déjà réservées et de sa cible ; à l'arrêt, la plus grande de sa valeur et de sa cible, donc sa
+    // cible une fois posé, ou sa valeur d'avant tant qu'un rétrécissement n'a pas démarré.
+    // Entrées : aucune ; appelée à chaque changement de valeur, de cible ou de mouvement du ressort de hauteur.
+    // Sortie : met à jour _hauteurSurface, qui ne change donc qu'au départ d'un mouvement (s'il agrandit) et à son
+    // arrêt (s'il rétrécit). Le léger dépassement du ressort « window » au-dessus de sa cible n'est pas suivi : il
+    // déborde de moins d'un pixel dans la marge de l'ombre, que la surface réserve sous l'encoche.
+    // Erreurs : aucune. Dépendances : hauteur.
+    function tenir() {
+        _hauteurSurface = Math.max(hauteur.cible, hauteur.moving ? _hauteurSurface : hauteur.value)
+    }
+
     // proche — dit si un ressort de taille a parcouru tout son écart de référence sauf la part seuilEntree.
     // Entrées : r, le ressort ; ecart, l'écart à sa cible au montage, ou au dernier changement de cible pendant la
     // forme. Sortie : booléen. Erreurs : aucune.
@@ -129,5 +153,5 @@ Item {
     }
 
     onModuleChanged: changer()
-    Component.onCompleted: { _pret = true; changer() }
+    Component.onCompleted: { _pret = true; changer(); tenir() }
 }
