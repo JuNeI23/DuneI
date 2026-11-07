@@ -1,6 +1,6 @@
 # Galerie de fonds d'écran : plan d'implémentation (L2-60, avec L2-48)
 
-Version 0.2, 2026-11-07.
+Version 0.3, 2026-11-07.
 
 > **Pour les agents :** sous-compétence requise : superpowers:subagent-driven-development (recommandée) ou
 > superpowers:executing-plans, tâche par tâche. Les étapes se cochent (`- [ ]`).
@@ -242,3 +242,4 @@ d'elle : la lire en entier avant toute tâche.
 |---|---|---|
 | 0.1 | 2026-11-07 | Première version |
 | 0.2 | 2026-11-07 | Tâches 1 à 5 cochées, sauf la fusion ; la capture grim de la Tâche 3 est remplacée par la recette à l'écran, et l'épreuve du clavier de la Tâche 4 faite par Nicolas ; écarts consignés dans la fiche v0.3 et au journal (D124 à D131) |
+| 0.3 | 2026-11-07 | Correctifs de recette après les tâches : préchauffage, ancien contenu figé, surface de hauteur constante, `MemoryTHP=madvise` ; décisions D132 à D135 ; fiche en version 0.4 |

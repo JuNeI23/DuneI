@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.45. Historique en fin de document.
+Version 1.46. Historique en fin de document.
 
 La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **172 éléments** répartis en **cinq lots**, sur six chantiers.
 
@@ -313,9 +313,11 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L2-57 | B | Écrit | Suites du popover Bluetooth (relecture finale de L2-14) — suivi des appareils par l'ObjectModel plutôt que par un tableau reconstruit à chaque balise ; recherche partagée entre écrans (un compteur de demandes) ; voisins gelés sous le pointeur pendant la recherche ; suivi des connexions purgé à l'oubli d'un appareil ; couleur d'erreur à confronter à la bible ; `Activite` lève « Cannot read property 'phase' of null » quand sa ligne est détruite en pleine animation (journal de la coque, 2026-11-03) ; exécutable d'appairage : adresse en minuscules (chemin D-Bus introuvable), signaux INT et TERM sans nettoyage, processus survivant au rechargement de la coque (lancer en groupe), écouteurs LE Audio seuls forcés en `bredr`, micro (`audio-input-*`) jamais « connecté » faute de `bluez_output` ; tests de ces cas |
 | L2-58 | B | Écrit | Mouvement des autres surfaces (suite de L2-06) — menus contextuels, listes déroulantes et infobulles, qui gardent leur apparition actuelle ; leur fenêtre est distincte (`PopupWindow`) et leur verre est soumis à la même règle du flou que celui des popovers (D111), il leur faut donc une réponse propre ; chevron de la section dépliable, qui pivote encore sans animation |
 | L2-59 | B | Écrit | Suites du mouvement (relecture finale de L2-06) — largeur et position du cadre figées à l'affichage, à réévaluer avec L2-12 et L2-13 ; en mouvement réduit, les lignes ne s'effacent pas en fondu (la place est rendue d'un coup) ; disque retenu qui peut sauter à une réouverture pendant la fermeture ; opacité qui saute à 1 si le réglage repasse à normal pendant un fondu de sortie ; une image isolée de 87 ms, de cause non identifiée (5 images sur 906 au-delà de 33 ms) ; `mouvement.json` écrit en 0600 et motif Lua strict qui le lit ; pas de cas négatif pour `passage_content_at`, cas limites de `forme.js` (cadre plus large que l'écran, opacité du nouveau à 0), tests `test_recharge_*` sans valeur propre, test `sens_force` sensible aux valeurs de `motion.toml`, défilement de `flickProches` non testé |
-| L2-60 | B | Écrit | Galerie de fonds d'écran dans la presqu'île, avec L2-48 — **fait (D124 à D131)** : module `Galerie` de la presqu'île ouvert par SUPER + W (`qs ipc -c dunei call galerie basculer`), relief à l'échelle 1,06 et voile `surface-base`, validation mise en valeur (`galerie.tenue`), `navigate` reréglé à environ 0,35 s ; recette validée à l'écran le 2026-11-07 ; cache de miniatures à trancher avec Nicolas d'après les mesures (D126). Demande d'origine, validée par Nicolas : SUPER + W agrandit la presqu'île et y montre `~/Documents/Images/Wallpapers` en bande horizontale, trois vignettes entières et une vignette coupée de chaque côté (une seule au bord de la liste) ; flèches ou souris pour défiler ; clic ou Entrée pour valider. Elle appelle `dunei-fond` (D121) |
+| L2-60 | B | Écrit | Galerie de fonds d'écran dans la presqu'île, avec L2-48 — **fait (D124 à D131)** : module `Galerie` de la presqu'île ouvert par SUPER + W (`qs ipc -c dunei call galerie basculer`), relief à l'échelle 1,06 et voile `surface-base`, validation mise en valeur (`galerie.tenue`), `navigate` reréglé à environ 0,35 s ; recette validée à l'écran le 2026-11-07 ; cache de miniatures reporté à L2-63 (D135) ; préchauffage, surface de hauteur constante et mémoire de la coque ajoutés après la recette (D132 à D134). Demande d'origine, validée par Nicolas : SUPER + W agrandit la presqu'île et y montre `~/Documents/Images/Wallpapers` en bande horizontale, trois vignettes entières et une vignette coupée de chaque côté (une seule au bord de la liste) ; flèches ou souris pour défiler ; clic ou Entrée pour valider. Elle appelle `dunei-fond` (D121) |
 | L2-61 | B | Écrit | Verre du jour — valeurs validées à l'écran : colonne des fenêtres de réglages en `surfacePanel` à 90 %, floutée, pleine hauteur et sans plateau détaché (écart à D104) ; contenu `surfaceWindow` opaque ; presqu'île à 82 % ; points en `textDisabled`. Verre des popovers à trancher par Nicolas (82 % ou 60 %, D103), maintenant que le fond d'écran est en place |
 | L2-62 | B | Écrit | Hauteur de la barre dans les jetons — `systemBarHeight` vaut 32 alors que la barre mesure 28 px (D89, D122) : aligner le jeton sur la hauteur réelle et faire lire celle-ci à `Barre.qml` |
+| L2-63 | C | Écrit | Cache de vignettes sur disque pour la galerie de fonds (suite de L2-60, D126, D135) — miniatures précalculées, créées au premier passage ou à l'ajout d'une image, lues à l'ouverture : ouverture instantanée même sur un gros dossier (trente images lourdes : vignettes environ 0,6 s après l'étirement, accepté par Nicolas) et mémoire faible (le décodage pleine taille d'un PNG 4K a une crête de 32 Mio). À concevoir : emplacement (`~/.cache`), invalidation par date et taille, génération hors du fil de la coque |
+| L2-64 | C | Écrit | Pages géantes transparentes en `madvise` pour tout le système — piste à trancher par Nicolas (D134, D135) : `MemoryTHP=madvise` n'est posé que sur l'unité de la coque (971 Mo de PSS devenus 160 Mo) ; passer `/sys/kernel/mm/transparent_hugepage/enabled` ou `transparent_hugepage=madvise` à toute la machine profiterait sans doute aux autres processus à jemalloc ou à tas épars. Choix de machine : mesurer d'abord les plus gros processus, et consigner la valeur dans le fragment de `caladan`, jamais dans le code commun |
 
 ### Lot 3 — la bascule
 
@@ -417,7 +419,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L5-29 | — | Écrit | Passe de regard complète — étage 3 |
 | L5-30 | — | Écrit | Résorber les points ouverts de l'annexe C |
 
-**Volume total : 172 éléments** — 122 écrits, 43 configurés, 5 offerts, 2 mixtes.
+**Volume total : 174 éléments** — 124 écrits, 43 configurés, 5 offerts, 2 mixtes.
 
 Les deux tiers du travail sont de l'écrit, et les trois quarts de cet écrit se concentrent sur la coque et les écrans système. C'est cohérent avec la stratégie retenue, et c'est là que tout le risque se trouve.
 
@@ -521,6 +523,7 @@ Le choix de la distribution de base et du compositeur, précédemment ouverts, s
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-12 | Version initiale, 137 éléments |
+| 1.46 | 2026-11-07 | L2-60 : correctifs de recette (préchauffage, surface de hauteur constante, D132 et D133) et mémoire de la coque (`MemoryTHP=madvise`, D134) ; gros dossier accepté (D135) ; ajout de L2-63 (cache de vignettes sur disque) et de L2-64 (pages géantes du système) ; 174 éléments |
 | 1.45 | 2026-11-07 | L2-60 fait : galerie de fonds dans la presqu'île (D124 à D131) ; L2-48 fait en partie (changement de module) ; 172 éléments |
 | 1.44 | 2026-11-06 | L2-27 fait : fond d'écran en calque de la coque (D121 à D123) ; ajout de L2-60 (galerie), L2-61 (verre du jour) et L2-62 (`systemBarHeight`) ; 172 éléments |
 | 1.43 | 2026-11-05 | L1-26 : Codex ajouté à l'atelier comme second agent (D119) |

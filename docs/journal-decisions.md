@@ -3049,6 +3049,8 @@ annexe E).*
 
 ### D125 · La surface de la presqu'île couvre toute la largeur, et sa hauteur ne change pas pendant un mouvement
 
+*Remplacée en partie par D132 : la largeur pleine reste, mais la hauteur ne monte plus « à la plus grande taille visée » au départ d'un mouvement ; elle est constante, égale à la hauteur du plus grand module.*
+
 2026-11-07, à la première recette de la galerie. **La fenêtre de calque de la presqu'île est ancrée en haut, à gauche et à
 droite : elle couvre toute la largeur de l'écran, et l'encoche se centre dedans. Sa hauteur monte d'un coup à la plus
 grande taille visée, reste fixe pendant le mouvement, et ne redescend qu'à l'arrêt du ressort.**
@@ -3175,3 +3177,112 @@ part dès la validation.**
 
 *Touché : `coque/Galerie/Galerie.qml`, `coque/Galerie/Ouvreuse.qml`, `tokens.toml` (`galerie.tenue`), émetteur
 Quickshell, essai et tests de la galerie, fiche du 2026-11-07.*
+
+### D132 · La surface de la presqu'île a une hauteur constante, la hauteur du plus grand module (remplace D125 pour la hauteur)
+
+2026-11-07, à la quatrième recette de la galerie. **La fenêtre de calque de la presqu'île ne change plus jamais de
+taille : sa hauteur est un plancher, l'entrée `reserve` de la scène, égal à la hauteur du plus grand module connu
+(aujourd'hui la galerie : 118 px, soit 138 px logiques avec la marge d'ombre). Elle ne monte plus au départ d'un
+mouvement et ne redescend plus à son arrêt.** La largeur pleine de D125 est conservée.
+
+- **Raison.** D125 faisait monter la surface au départ d'un mouvement et la rabaissait à l'arrêt du ressort de
+  hauteur. Nicolas a relevé deux défauts, qui ont une seule cause : le changement de taille de la surface de calque.
+  Quickshell envoie `set_size` au polissage d'une image, avant que Qt n'ait un tampon de la nouvelle taille, et
+  Hyprland 0.57 étire le tampon courant dans la boîte de la couche. À la fermeture, le tampon de 138 px est écrasé dans
+  48 px pendant une image, la boîte repasse à 138 px pendant deux images, puis à 48 : l'encoche s'écrase et se redresse,
+  environ 0,5 s après la fermeture (rebond relevé par `hyprctl -j layers` et `WAYLAND_DEBUG`). À la première ouverture,
+  le même agrandissement alloue pour la première fois de nouveaux tampons et coûtait 48 ms, dont 42 ms sans image. Les
+  hypothèses d'un dépassement du ressort et d'un mouvement qui repartirait ont été mesurées et écartées.
+- **Mesure de la réserve.** Le préchauffage de l'ouvreuse (D133) relève la hauteur de la galerie sans dossier, dès que
+  `Theme` est prêt, puis à chaque rechargement des jetons, et la publie dans `hauteurModule` ; `shell.qml` la passe à
+  chaque presqu'île (`reserve`). Aucune valeur de design n'est ajoutée : la hauteur vient de la galerie elle-même.
+  Un module futur plus haut devra élever la réserve ou fournir sa mesure (le plus grand l'emporte).
+- **Demande d'image.** Quickshell n'envoie une nouvelle taille qu'au polissage d'une image, et une surface au repos
+  n'en rend aucune : la presqu'île demande une image à sa fenêtre à chaque changement de hauteur, pour que la
+  première taille, ou une réserve rechargée, parte aussitôt.
+- **Coût.** Hors de l'encoche, la surface est transparente et ne floute rien de visible (`ignore_alpha`) ; le masque de
+  saisie reste le corps de l'encoche, les clics traversent. Le flou porte sur une boîte de 1920 × 172 px physiques au
+  lieu de 1920 × 60, soit environ 9 % de l'écran de plus, payé seulement quand la région est endommagée : jugé négligeable,
+  non mesuré côté processeur graphique.
+- **Résultat mesuré.** Deux `set_size(0, 138)` en tout, à la création ; aucun pendant les ouvertures et fermetures ;
+  la couche mesure 1536 × 138 sur tous les relevés ; plus aucune image ni échange de plus de 20 ms à la fermeture
+  (contre 33 et 51 ms) ; première et deuxième ouvertures identiques à la milliseconde près. Nicolas l'a validé à l'écran :
+  première ouverture fluide, plus de rebond.
+
+*Touché : `coque/Presquile/Scene.qml` (`reserve`, `tenir`), `coque/Presquile/Presquile.qml`, `coque/Galerie/Ouvreuse.qml`
+(`hauteurModule`), `coque/shell.qml`, essai de la galerie, `tests/test_galerie.py` (`test_surface_constante`),
+`tests/test_presquile.py` (`test_reserve_de_la_coque`), fiche du 2026-11-07.*
+
+### D133 · La galerie est préchauffée au démarrage, l'ancien contenu garde sa hauteur pendant sa sortie
+
+2026-11-07, à la recette de la première ouverture. **Au démarrage de la coque, l'ouvreuse crée une galerie sans dossier
+hors de toute fenêtre et la détruit aussitôt. Au début de sa sortie, l'ancien contenu d'une presqu'île perd sa liaison de
+centrage vertical et garde sa position jusqu'à sa destruction. À la fermeture, la galerie sortante s'efface donc sur
+place, la forme qui se rétracte la découpant par le bas.**
+
+- **Raison du préchauffage.** La première instance du composant `Galerie` paie la préparation de ses types dans l'image
+  même de la cession : 16 à 19 ms contre 1 à 2 ms ensuite, une image entière perdue au moment où l'étirement démarre.
+  Le décodage des vignettes, asynchrone, et la compilation du fichier, faite au chargement, ne sont pas en cause. Le
+  coût passe au démarrage (17 à 18 ms, une fois, sans animation en cours) ; rien ne reste vivant. Préchauffer aussi une
+  `Vignette` n'a rien apporté de mesurable ; `Component.incubateObject` n'a pas été retenu, la création synchrone au
+  démarrage ne gênant rien. Le préchauffage ne couvre que la préparation des types : une coque rechargée à chaud le
+  refait, voulu.
+- **Raison de la hauteur figée.** L'ancien contenu restait lié au centre vertical de la scène : pendant que la forme
+  s'étirait, il descendait de la moitié de l'étirement (45 px) alors qu'il s'effaçait encore, et paraissait remonter
+  par rapport au bord bas de la forme. Nicolas voyait les points des bureaux « bouger verticalement ». Figée, sa position
+  reste à 0,00 px d'écart à chaque image, aux deux ouvertures. Sans risque : un contenu en sortie ne revient jamais, le
+  module suivant est toujours une instance neuve.
+- **Changement visible à la fermeture.** La galerie sortante ne remonte plus avec la forme ; elle reste en place et la
+  forme la découpe par le bas pendant son fondu. Nicolas l'a validé à l'écran.
+- **Précision sur D124.** Le chevauchement des trois temps est inchangé ; seul le placement vertical de l'ancien contenu
+  change.
+
+*Touché : `coque/Galerie/Ouvreuse.qml` (`prechauffer`), `coque/Presquile/Scene.qml` (`changer`), essai de la galerie,
+`tests/test_galerie.py` (`test_premiere_ouverture`), fiche du 2026-11-07.*
+
+### D134 · La coque de DuneI n'accepte les pages géantes transparentes que sur demande (`MemoryTHP=madvise`)
+
+2026-11-07, après la galerie. **L'unité `dunei-coque.service` porte `MemoryTHP=madvise` : le noyau ne donne des pages
+géantes de 2 Mo à la coque que si elle les demande explicitement (`MADV_HUGEPAGE`), ce que ni Quickshell ni jemalloc ne
+font. Le reste du système garde le réglage du noyau.**
+
+- **Constat.** Nicolas a remarqué que la coque ne rendait pas la mémoire après la galerie. Sur une coque d'essai, la
+  mémoire PSS passait de 66 à 103 Mo et ne redescendait pas ; sur la coque réelle, la PSS atteignait environ 1 Go.
+- **Cause établie par la mesure.** Ni objets QML survivants, ni cache de pixmaps, ni allocateur seul : `qs` est lié à
+  jemalloc 5.4, qui rend bien au noyau les pages libérées (son bilan interne retombe de 42 à 11 Mio), mais `caladan`
+  règle les pages géantes transparentes sur `always`. Le PNG 3840 × 2160 décodé en entier (le greffon PNG de Qt ne décode
+  pas à taille réduite) occupe 32 Mio ; la région reste couverte de pages de 2 Mo, ou `khugepaged` la regonfle (avec
+  `max_ptes_none` à 511, une seule page de 4 Kio présente sur 512 suffit). Le même mécanisme gonfle le reste de la coque :
+  la moitié de la PSS d'une coque d'essai au repos était faite de pages géantes.
+- **Pistes écartées.** Purge immédiate de jemalloc et fil de fond : sans effet (+32 Mo retenus). `thp:never` de jemalloc :
+  partiel (+19 Mo). `gc()`, le cache de `Image` (déjà `cache: false`) et les variables de la glibc (`qs` n'utilise pas
+  son tas) : sans objet.
+- **Mesures.** Sur la coque d'essai avec un PNG 4K : retenu +32 Mo par défaut, +2 Mo en madvise ; au repos, 66 Mo
+  contre 34 Mo. Sur le dossier réel, +37 contre +7 Mo ; sur trente images lourdes, +33 contre +6 Mo. **Sur la coque réelle
+  de Nicolas, après redémarrage : 971 Mo de PSS dont 811 Mo en pages géantes, contre 160 Mo et aucune page géante.**
+- **`madvise` plutôt que `disable`.** Même gain mesuré (vérifié avec `systemd-run` : 62 Mio de pages géantes sur 64 en
+  `inherit`, aucune en `madvise` et en `disable`), et un composant qui demanderait explicitement des pages géantes les
+  obtiendrait encore. Il faut systemd 260 ou plus ; `caladan` a la 262.
+- **Test.** `tests/test_barre.py` exige la ligne dans l'unité. Le gain lui-même n'a pas de test automatique : il dépend
+  du réglage du noyau et n'est pas stable d'une machine à l'autre ; la mesure ci-dessus le prouve.
+- **À appliquer.** `make install` (l'unité vient de `config/`), puis `systemctl --user restart dunei-coque.service`.
+
+*Touché : `config/systemd/user/dunei-coque.service`, `tests/test_barre.py`, carnet.*
+
+### D135 · Le gros dossier d'images est accepté tel quel ; le cache de vignettes et les pages géantes du système vont au backlog
+
+2026-11-07, décision de Nicolas à la fin de la recette de la galerie. **Sur un gros dossier d'images lourdes (trente
+images, 467 Mo), les vignettes centrales arrivent environ 0,6 s après la fin de l'étirement : Nicolas l'accepte. Le
+cache de miniatures sur disque, qui rendrait l'ouverture instantanée et la mémoire basse, devient L2-63. Passer tout le
+système en pages géantes `madvise` devient L2-64, à trancher.**
+
+- **Raison.** Le correctif de D134 a ramené la mémoire à un niveau sans commune mesure avec le coût de crête du décodage
+  (+6 Mo retenus sur le dossier lourd) ; le dossier réel de Nicolas, de quatre images, affiche ses vignettes au début du
+  fondu d'entrée. Le cache de miniatures reste utile, car le décodage pleine taille d'un PNG 4K a une crête de 32 Mio et le
+  retard sur un gros dossier disparaîtrait, mais il n'est plus pressé. Il lève ce que D126 laissait à trancher
+  « d'après les mesures ».
+- **Pages géantes du système.** Régler `/sys/kernel/mm/transparent_hugepage/enabled` sur `madvise`, ou
+  `transparent_hugepage=madvise` sur la ligne du noyau, profiterait sans doute aux autres processus à jemalloc ou à tas
+  épars. C'est un choix de machine, hors de la galerie et plus large que l'unité de la coque : Nicolas le tranchera.
+
+*Touché : backlog (L2-63, L2-64), fiche du 2026-11-07.*

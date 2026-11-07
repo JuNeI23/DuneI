@@ -1,6 +1,6 @@
 # Galerie de fonds d'écran dans la presqu'île : conception (L2-60, avec L2-48)
 
-Version 0.3, 2026-11-07.
+Version 0.4, 2026-11-07.
 
 ## Intention
 
@@ -256,11 +256,29 @@ Relevés pendant la construction et la recette du 2026-11-07 ; chacun a sa raiso
 - **Clavier.** Les flèches arrivent dès l'ouverture avec le seul `HyprlandFocusGrab` et `WlrKeyboardFocus.None` ;
   Nicolas l'a constaté à l'écran, le focus exclusif n'est pas employé (D128). Le délai d'abandon repart quand la bande
   paraît.
+- **Préchauffage.** La première instance du composant `Galerie` perdait une image entière à la cession (16 à 19 ms
+  contre 1 à 2 ms ensuite) : l'ouvreuse crée et détruit une galerie sans dossier au démarrage de la coque (D133).
+- **Ancien contenu figé, fermeture sur place.** L'ancien contenu restait lié au centre vertical de la scène et
+  descendait de 45 px pendant l'étirement ; il garde désormais sa position dès le début de sa sortie. À la fermeture, la
+  galerie s'efface donc sur place pendant que la forme se rétracte et la découpe par le bas, au lieu de remonter avec
+  elle (D133).
+- **Surface de hauteur constante.** La surface pleine largeur de D125, dont la hauteur montait et redescendait,
+  provoquait le rebond de l'encoche 0,5 s après la fermeture et ralentissait la première ouverture, Hyprland étirant
+  l'ancien tampon à chaque `set_size`. La hauteur est constante, égale à celle de la galerie mesurée au préchauffage
+  (`reserve`, 138 px logiques avec la marge d'ombre) ; la presqu'île demande une image à chaque changement de
+  hauteur (D132).
+- **Mémoire.** La mémoire de la coque ne redescendait pas après la galerie : les pages géantes transparentes du
+  noyau, gardées ou regonflées par `khugepaged`, en étaient la cause, non le cache de vignettes ni le moteur QML.
+  `MemoryTHP=madvise` sur l'unité de la coque ramène la coque réelle de 971 Mo de PSS (dont 811 Mo en pages géantes) à
+  160 Mo (D134). Le décodage pleine taille d'un PNG 4K garde une crête de 32 Mio.
+- **Gros dossier accepté, cache au backlog.** Les vignettes centrales d'un dossier de trente images lourdes arrivent
+  environ 0,6 s après l'étirement : Nicolas l'accepte. Le cache de miniatures sur disque (L2-63) et le passage du
+  système en pages géantes `madvise` (L2-64) vont au backlog (D135).
 - **Mesures.** Sur le dossier réel, les trois vignettes centrales sont décodées environ 280 ms après la commande, au
   début du fondu d'entrée ; sur trente images lourdes, environ 870 ms après, soit quelque 600 ms après la fin de
   l'étirement. La mémoire PSS de la coque d'essai passe de 59 Mo à environ 100 Mo et ne redescend pas après la
-  fermeture, mais reste stable d'une ouverture à l'autre. Les deux constats sont soumis à Nicolas avant tout cache de
-  miniatures (carnet, « La galerie de fonds » ; D126).
+  fermeture, mais reste stable d'une ouverture à l'autre. Ces mesures précèdent le
+  correctif de mémoire ci-dessus ; le cache de miniatures est reporté à L2-63 (carnet, « La galerie de fonds » ; D126, D135).
 
 ## Historique des versions
 
@@ -269,3 +287,4 @@ Relevés pendant la construction et la recette du 2026-11-07 ; chacun a sa raiso
 | 0.1 | 2026-11-07 | Première version, après la séance de conception sur maquettes |
 | 0.2 | 2026-11-07 | Relecture du constructeur : pavé tactile par pas, rien en plein écran, exclusivité avec les popovers, rotation EXIF |
 | 0.3 | 2026-11-07 | Écarts constatés à la réalisation et à la recette (commande avec `-c dunei`, chevauchement, surface pleine largeur, bande sans `ListView`, validation avec tenue, `navigate` reréglé, écran par nom, mesures) ; tableau du mouvement à jour |
+| 0.4 | 2026-11-07 | Écarts de la quatrième recette : préchauffage, ancien contenu figé et fermeture sur place, surface de hauteur constante, mémoire de la coque, gros dossier accepté (D132 à D135) |

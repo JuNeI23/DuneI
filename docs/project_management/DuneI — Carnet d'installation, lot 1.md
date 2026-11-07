@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.37. Historique en fin de document.
+Version 1.38. Historique en fin de document.
 
 Socle amorçable.
 
@@ -2169,9 +2169,9 @@ La galerie est un module de la coque (`coque/Galerie/`) : elle ne demande aucun 
 `qs ipc -c dunei call galerie basculer`, ligne de `config/hypr/donnees/raccourcis.lua` ; l'option `-c dunei` est
 nécessaire, car sans elle `qs` cherche la configuration `default` et échoue (D126). Elle lit
 `~/Documents/Images/Wallpapers`, le dossier de L2-27, et applique l'image choisie par `dunei-fond`. Les décisions sont
-D124 à D131 du journal.
+D124 à D135 du journal.
 
-**`make install` est nécessaire** après une mise à jour du dépôt : la coque lit ses jetons (`galerie.*`,
+**`make install` est nécessaire** après une mise à jour du dépôt, suivi d'un redémarrage de la coque (`systemctl --user restart dunei-coque.service`) pour que l'unité modifiée (`MemoryTHP=madvise`, D134) prenne effet : la coque lit ses jetons (`galerie.*`,
 `presquile.entree`, `presquile.sortie`) et le mouvement (`navigate`) dans `~/.config/dunei`, où seul `make install`
 copie les fichiers générés. Sans lui, la coque, qui suit `coque/` par son lien, verrait le nouveau code avec les anciens
 jetons. La table des raccourcis est liée au dépôt : Hyprland connaît SUPER + W après le rechargement de sa configuration
@@ -2219,7 +2219,25 @@ Le 2026-11-07, sur `caladan`, avec une copie de la coque d'essai sous la platefo
 L'appel `qs ipc` coûte 30 à 35 ms ; le fondu d'entrée commence 225 à 242 ms après l'ouverture. Sur le dossier lourd,
 l'ouverture dépasse donc l'étirement d'environ 600 ms. La mémoire ne redescend pas après la fermeture, mais reste stable
 d'une ouverture à l'autre et aucune galerie ne survit : c'est un coût payé une fois par la coque, dont la part dépend
-du poids des images décodées. Ces deux constats sont soumis à Nicolas avant tout cache de miniatures (D126).
+du poids des images décodées. Ces mesures ont été prises avant le correctif de mémoire : la rétention est la cause décrite ci-dessus (D134), et Nicolas a accepté le retard sur un gros dossier ; le cache de miniatures est reporté à L2-63 (D135).
+
+### Mémoire de la coque — `MemoryTHP=madvise`
+
+L'unité `config/systemd/user/dunei-coque.service` demande `MemoryTHP=madvise` (systemd 260 ou plus ; `caladan` a la 262)
+: le noyau n'accorde des pages géantes transparentes à la coque que sur demande explicite (D134). Sans cela, avec le
+noyau réglé sur `always`, la coque retenait des centaines de Mo de pages de 2 Mo que `khugepaged` regonflait, et la
+mémoire ne redescendait pas après la galerie. L'unité est posée par `make install` depuis `config/` : il faut donc
+`make install`, puis `systemctl --user restart dunei-coque.service`, au moment choisi (la coque disparaît et revient en
+quelques secondes). À relever ensuite :
+
+```
+grep -E 'Pss:|AnonHugePages' /proc/$(pgrep -f 'qs -n -c dunei')/smaps_rollup
+```
+
+Sur la coque de Nicolas, le 2026-11-07 : 971 Mo de PSS dont 811 Mo en pages géantes avant, 160 Mo et aucune page géante
+après redémarrage. Si `AnonHugePages` reste élevé, la ligne n'est pas prise en compte : `systemctl --user cat
+dunei-coque.service` doit la montrer, et `systemctl --version` doit annoncer 260 ou plus. Le réglage du noyau lui-même
+n'est pas touché ; le passer en `madvise` pour toute la machine est L2-64.
 
 Nicolas a validé la recette à l'écran le 2026-11-07 : ouverture et fermeture, flèches sans clic préalable, validation
 mise en valeur, montée du fond, clics sur la barre intacts, glissement `navigate` et bascule des bureaux. Le plein écran
@@ -2327,6 +2345,7 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 
 | Version | Date | Changement |
 | --- | --- | --- |
+| 1.38 | 2026-11-07 | La galerie de fonds : mémoire de la coque (`MemoryTHP=madvise`, `make install` puis redémarrage du service, relevé de `smaps_rollup`, D134), préchauffage et surface constante (D132, D133), gros dossier accepté (D135) |
 | 1.37 | 2026-11-07 | La galerie de fonds (L2-60, D124 à D131) : SUPER + W, `make install` pour les nouveaux jetons, dépannage, essais, mesures et recette |
 | 1.36 | 2026-11-06 | Le fond d'écran (L2-27, D121 à D123) : `dunei-fond`, dossier des images, dépannage du calque, mesures ; `bureau.json` gagne `image` |
 | 1.35 | 2026-11-05 | Codex : paquet `openai-codex`, instructions globales et crochet rtk reliés depuis l'atelier (L1-26, D119) |

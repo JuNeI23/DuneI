@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas — révisée le 22 octobre 2026
 
-Version 1.42. Historique en fin de document.
+Version 1.43. Historique en fin de document.
 
 *Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent soixante-douze lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
 
@@ -541,10 +541,12 @@ pendant que la forme s'étire, la bande paraît en fondu, et Entrée ou un clic 
 que les autres vignettes se sont effacées. Cette séquence vaut pour tout module à venir. La surface de la presqu'île
 couvre désormais toute la largeur et ne change plus de taille pendant le mouvement, ce qui a supprimé le décalage à
 l'ouverture et la saccade de la rétractation. À la recette, Nicolas a voulu un `navigate` posé, d'environ 0,35 s et sans
-rebond, pour la bande comme pour la bascule des bureaux. Il a validé la recette à l'écran le 2026-11-07. Deux mesures lui
-restent soumises : sur trente images lourdes, les vignettes centrales arrivent environ 600 ms après la fin de
-l'étirement (sur le dossier réel, au début du fondu d'entrée), et la mémoire de la coque ne redescend pas après la
-fermeture, tout en restant stable d'une ouverture à l'autre ; il dira si un cache de miniatures se justifie. Le plein
+rebond, pour la bande comme pour la bascule des bureaux. Il a validé la recette à l'écran le 2026-11-07. Des correctifs sont venus après cette première recette : la première ouverture est préchauffée, et la surface de la
+presqu'île a une hauteur constante, ce qui a supprimé le rebond de l'encoche 0,5 s après la fermeture (D132, D133).
+La mémoire de la coque, qui ne redescendait pas, avait pour cause les pages géantes transparentes du noyau : avec
+`MemoryTHP=madvise` sur l'unité de la coque, la PSS de la coque réelle passe de 971 à 160 Mo après redémarrage (D134 ;
+`make install` puis redémarrage du service). Nicolas accepte le retard des vignettes sur un gros dossier et renvoie le
+cache de miniatures à L2-63, le passage de tout le système en pages géantes `madvise` à L2-64 (D135). Le plein
 écran et le démarrage de la coque restent à L2-48.
 
 Prochaine étape : **après la fusion de cette PR, le verre du jour (L2-61)**, où Nicolas tranchera le verre des popovers.
@@ -557,6 +559,7 @@ et L2-62 attendent leur tour.
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-10 | Version initiale |
+| 1.43 | 2026-11-07 | L2-60 : correctifs de recette, mémoire de la coque en `MemoryTHP=madvise` (971 à 160 Mo), gros dossier accepté, L2-63 et L2-64 au backlog (D132 à D135) ; prochaine étape inchangée : L2-61 |
 | 1.42 | 2026-11-07 | L2-60 fait : galerie de fonds dans la presqu'île, changement de module de L2-48 (D124 à D131), recette validée, mesures soumises à Nicolas ; prochaine étape : le verre du jour (L2-61) |
 | 1.41 | 2026-11-06 | L2-27 fait : fond d'écran en calque de la coque (D121 à D123) ; prochaine étape : la galerie (L2-60) |
 | 1.40 | 2026-11-05 | Codex ajouté à l'atelier (L1-26, D119) ; prochaine étape : l'élément suivant du lot 2 |
