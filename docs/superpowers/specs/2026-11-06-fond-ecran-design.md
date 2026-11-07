@@ -1,6 +1,6 @@
 # Application du fond d'écran : conception (L2-27)
 
-Version 0.3, 2026-11-06.
+Version 0.4, 2026-11-07.
 
 ## Intention
 
@@ -37,14 +37,15 @@ verre.
 
 - `dunei-fond <chemin>` applique l'image : elle monte, puis reste en place.
 - Au démarrage de la coque, la dernière image choisie se pose d'un coup, sans animation.
-- Un second changement demandé pendant une montée ne l'interrompt pas : seule la dernière demande reçue s'applique, une
-  fois la montée finie. Il n'y a pas de file d'attente.
+- Un second changement demandé pendant une montée l'interrompt : l'image décodée monte par-dessus celle qui vole, qui
+  finit sa course dessous ; deux images au plus volent à la fois. Seule la dernière demande compte, sans file d'attente
+  (D123, qui remplace la version 0.3 sur ce point).
 - En mouvement réduit, l'image ne se déplace pas : elle apparaît par le fondu court de la bible (chapitre 6, ressort
   `reduced` par `Ressort.nature: "fondu"`).
 - Une image absente ou illisible, au démarrage ou à un changement, ne plante rien et produit une ligne au journal. Au
   démarrage, le bureau montre l'aplat `tokens.bureau.fond`, et le texte de la barre suit cet aplat ; à un changement,
   l'image en place reste.
-- `dunei-fond --aucun` retire l'image d'un coup, sans animation : c'est une commande de secours (*choix de Claude*).
+- `dunei-fond --aucun` retire l'image d'un coup, sans animation, même pendant une montée : c'est une commande de secours (*choix de Claude*).
 - Le texte de la barre bascule entre clair et foncé selon le nouveau fond (D90), à la fin de la montée, quand la nouvelle
   image atteint la barre : il reste ainsi lisible sur l'ancienne image pendant le vol (*choix de Claude*).
 
@@ -200,5 +201,6 @@ valeur du dossier, tant que le comportement ci-dessus tient.
 | Version | Date | Changement |
 |---|---|---|
 | 0.1 | 2026-11-06 | Première version, après l'essai à l'écran |
-| 0.3 | 2026-11-06 | Écarts constatés à la réalisation |
 | 0.2 | 2026-11-06 | Relecture du constructeur : moment de la bascule du texte, image illisible, `--aucun`, écran du recadrage, bande de 28 px, règle `no_anim` |
+| 0.3 | 2026-11-06 | Écarts constatés à la réalisation |
+| 0.4 | 2026-11-07 | Montée interruptible et formats déclarés, après la relecture finale (D123) |

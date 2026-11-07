@@ -1,29 +1,32 @@
 import QtQuick
 import "../Theme"
 
-// Affichage — l'image du bureau et la montée de la suivante par-dessus, sans fenêtre : son parent le remplit (L2-27).
-// Rôle : deux couches superposées. `base` porte l'image en place et ne bouge jamais ; `haut` charge la nouvelle, puis
-// monte du bas de l'écran. Deux ressorts `spectacle` se partagent le vol, et celui qui vole est choisi au décollage :
-// `montee` déplace `haut`, sur le réglage `out` que le Ressort choisit de lui-même, la cible descendant vers 0 ; en
-// mouvement réduit, `apparition` fait passer son opacité de 0 à 1, sans déplacement. À l'atterrissage, l'image et le
-// fond sont publiés, `base` reçoit l'image, puis `haut` se vide une fois `base` prête : rien ne clignote.
-// Machine d'états (`etat`) : « repos » ; « charge », `haut` décode la demande, qu'une nouvelle demande remplace
-// aussitôt ; « vol », du décollage à la fin de l'échange, où seule la dernière demande reçue est gardée (`_demande`)
-// pour s'appliquer après. Il n'y a pas de file d'attente : une demande égale à l'image qui vole efface celle qui
-// attendait. Au démarrage, `etat` reste à « repos » : tant que `bureau.json` n'est pas lu et que la taille n'est pas
-// connue, rien n'est décodé, puis l'image se pose d'un coup dans `base` (`_phase` « pose »). Une demande reçue pendant
-// cette pose la remplace, d'un coup elle aussi.
+// Affichage — l'image du bureau et la montée des suivantes par-dessus, sans fenêtre : son parent le remplit (L2-27).
+// Rôle : `base` porte l'image en place et ne bouge jamais. Trois couches volantes, chacune avec ses deux ressorts
+// `spectacle`, portent les images demandées : une couche décode, cachée, puis monte du bas de l'écran au-dessus de toutes
+// les autres. `montee` la déplace, sur le réglage `out` que le Ressort choisit de lui-même, la cible descendant vers 0 ;
+// en mouvement réduit, choisi au décollage, `apparition` fait passer son opacité de 0 à 1, sans déplacement.
+// Toute montée est interruptible (bible, chapitre 6 ; D123) : une demande reçue pendant un vol décode à son tour, puis
+// monte par-dessus celle qui vole, qui finit sa course dessous ; rien ne disparaît ni ne coupe. Deux couches au plus
+// volent à la fois : une image prête au-delà attend que la plus ancienne ait atterri. Seule la dernière demande compte :
+// elle remplace celle qui décodait, et une demande égale à l'image qui finira en haut annule ce décodage. À
+// l'atterrissage d'une couche, celles qu'elle recouvre se vident, l'image et le fond sont publiés, `base` reçoit
+// l'image, puis la couche se vide une fois `base` prête : rien ne clignote. Un retrait vide tout d'un coup.
+// Machine d'états (`etat`) : « repos » ; « charge », une image décode sans rien en vol ; « vol », tant qu'une couche
+// monte ou attend `base`. Au démarrage, `etat` reste à « repos » : tant que `bureau.json` n'est pas lu et que la taille
+// n'est pas connue, rien n'est décodé, puis l'image se pose d'un coup dans `base` (`_phase` « pose »). Une demande
+// reçue pendant cette pose la remplace, d'un coup elle aussi.
 // Entrées : echelle, rapport pixels physiques / logiques, pour décoder l'image à la taille de l'écran ; Theme.bureauLu,
 //           Theme.imageBureau, Theme.fondFichier, Theme.bureau, Theme.mouvementReduit.
-// Sorties : etat ; imageAffichee, chemin de l'image en place, "" sans image, qui change à l'atterrissage ; enAttente,
-//           chemin de la demande gardée pendant un vol, "" sans demande ou pour un retrait ; coucheHaute, coucheBasse,
-//           les deux Image, pour les essais ; Theme.fondPublie, écrit à l'atterrissage et à la pose, par chaque écran,
-//           avec la même valeur.
+// Sorties : etat ; imageAffichee, chemin de l'image en place, "" sans image, qui change à chaque atterrissage ;
+//           enAttente, chemin de la demande qui décode ou attend une couche libre, "" sans demande ; coucheHaute, la
+//           couche occupée la plus haute (une couche libre au repos), et coucheBasse, `base`, pour les essais ;
+//           Theme.fondPublie, écrit à l'atterrissage et à la pose, par chaque écran, avec la même valeur.
 // Erreurs : image absente ou illisible → console.warn « Fond : image illisible, <chemin> ; <suite> ». Au démarrage,
-//           l'aplat du bureau s'applique ; à un changement, l'image en place reste. Si le fichier disparaît pendant le
-//           vol, `base` ne peut plus le lire : `haut` garde l'image, et cède la place à `base`, avec ou sans image, à
-//           la demande suivante. Le fichier affiché peut disparaître sans effet tant que la taille de l'écran ne
-//           change pas.
+//           l'aplat du bureau s'applique ; à un changement, l'image en place reste, et un vol en cours continue. Si le
+//           fichier disparaît pendant le vol, `base` ne peut plus le lire : la couche garde l'image, et la prochaine
+//           montée la recouvre. Le fichier affiché peut disparaître sans effet tant que la taille de l'écran ne change
+//           pas ; à son changement, l'aplat s'applique, et le fond publié le suit.
 // Dépendances : Theme, Ressort (module Theme).
 Item {
     id: affichage
@@ -31,24 +34,28 @@ Item {
     property real echelle: 1
     property string etat: "repos"
     property string imageAffichee: ""
-    readonly property string enAttente: _demande?.image ?? ""
-    readonly property Image coucheHaute: haut
+    readonly property string enAttente: _demande?.image ?? (_couches.find(c => c.role === "decode")?.demande?.image ?? "")
     readonly property Image coucheBasse: base
+    readonly property Image coucheHaute: {
+        let haute = null
+        for (const c of _couches) if (c.role && (!haute || c.z > haute.z)) haute = c
+        return haute ?? c1
+    }
 
-    // Vrai du décollage à l'arrêt du ressort : poser() met `moving` à faux, ce qui sans ce drapeau passerait pour la
-    // fin du vol.
-    property bool enVol: false
-    // Demande gardée pendant un vol, ou null ; demande qui charge ou qui vole : {image, fond}, pris ensemble à la
-    // réception.
+    readonly property var _couches: [c1, c2, c3]
+    // Demande sans couche libre, qui décodera dès qu'une couche se vide ; null sinon.
     property var _demande: null
+    // Demande de la pose du démarrage ou du retrait : {image, fond}.
     property var _cours: null
+    // Couche atterrie qui attend que `base` porte son image, ou null.
+    property Image _pose: null
+    // Chemin que `base` charge ou porte : la source d'une Image, normalisée, ne se compare pas au chemin.
+    property string _imageBase: ""
     // Fond de l'image en place ; null sans image ou sans fond valide : le jeton du bureau s'applique, et le suit.
     property var _fondAffiche: null
-    // Attente de `base` : « pose » au démarrage, « echange » après l'atterrissage, "" sinon.
+    // Attente de `base` : « pose » au démarrage, « echange » après un atterrissage, "" sinon.
     property string _phase: ""
-    // Le vol en cours est le fondu d'`apparition`, et non le déplacement de `montee` : figé au décollage, pour qu'une
-    // bascule de la préférence ne change pas de ressort en plein vol.
-    property bool _fondu: false
+    property int _z: 0
     property bool _demarre: false
     readonly property bool _pret: Theme.bureauLu && width > 0 && height > 0
 
@@ -92,29 +99,142 @@ Item {
         console.warn("Fond : image illisible, " + chemin + " ; " + suite)
     }
 
-    // recevoir — reçoit une nouvelle demande de Theme et l'oriente selon le moment.
-    // Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : demandeCourante, poser, traiter, _cours.
+    // couche — la couche qui tient un rôle, la plus haute s'il y en a plusieurs.
+    // Entrée : role, « decode », « vol » ou « pose ». Sortie : l'Image, ou null. Erreurs : aucune. Dépendances : _couches.
+    function couche(role) {
+        let haute = null
+        for (const c of _couches) if (c.role === role && (!haute || c.z > haute.z)) haute = c
+        return haute
+    }
+
+    // majEtat — déduit `etat` de l'occupation des couches.
+    // Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : couche, _phase, _demande.
+    function majEtat() {
+        etat = couche("vol") || _phase === "echange" ? "vol" : couche("decode") || _demande ? "charge" : "repos"
+    }
+
+    // recevoir — reçoit une nouvelle demande de Theme et l'oriente.
+    // Rôle : pendant la pose du démarrage, elle la remplace ; une demande égale à l'image qui finira en haut annule le
+    // décodage en cours ; un retrait vide tout d'un coup ; sinon l'image décode, pour monter dès que possible.
+    // Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : demandeCourante, poser, couche, liberer,
+    // decoder, couper, majEtat.
     function recevoir() {
         if (!_demarre) return
         const d = demandeCourante()
-        if (_phase === "pose") poser(d)
-        else if (etat === "vol") _demande = d.image === _cours.image ? null : d
-        else traiter(d)
+        if (_phase === "pose") return poser(d)
+        const finale = couche("vol")?.demande.image ?? imageAffichee
+        if (d.image === finale) {
+            _demande = null
+            const enCours = couche("decode")
+            if (enCours) liberer(enCours)
+        } else if (!d.image) {
+            couper()
+            poser(d)
+        } else decoder(d)
+        majEtat()
     }
 
-    // traiter — applique une demande hors vol : l'image en place ne change rien, et abandonne un chargement ; sans
-    // image, le retrait se fait d'un coup ; sinon `haut` charge l'image, en remplaçant un chargement en cours.
-    // Entrée : d, demande {image, fond}. Sortie : aucune. Erreurs : voir haut. Dépendances : poser, url.
-    function traiter(d) {
-        if (d.image === imageAffichee || !d.image) {
-            haut.source = ""
-            etat = "repos"
-            if (d.image !== imageAffichee) poser(d)
-            return
+    // decoder — confie une demande à la couche qui décode déjà, sinon à une couche libre, placée au-dessus des autres ;
+    // sans couche libre, la demande attend (`_demande`).
+    // Entrée : d, demande {image, fond}. Sortie : aucune ; statutCouche suit. Erreurs : voir statutCouche.
+    // Dépendances : couche, _couches, url.
+    function decoder(d) {
+        const c = couche("decode") ?? _couches.find(k => !k.role)
+        if (!c) return void (_demande = d)
+        _demande = null
+        c.demande = d
+        c.pret = false
+        if (c.role !== "decode") {
+            c.role = "decode"
+            c.z = ++_z
         }
-        _cours = d
-        etat = "charge"
-        haut.source = url(d.image)
+        c.source = url(d.image)
+    }
+
+    // statutCouche — suit le décodage d'une couche : prête, elle décolle dès que possible ; illisible, elle se vide.
+    // Les autres rôles ignorent leur statut : un rechargement dû à sourceSize ne relance rien, et vider une source met
+    // le statut à Null, qui n'est pas une erreur.
+    // Entrée : c, la couche dont le statut change. Sortie : aucune.
+    // Erreurs : console.warn si l'image est illisible, l'état visible ne change pas. Dépendances : decoller, liberer,
+    // signaler, couche, majEtat.
+    function statutCouche(c) {
+        if (c.role !== "decode") return
+        if (c.status === Image.Ready) {
+            c.pret = true
+            decoller()
+        } else if (c.status === Image.Error) {
+            signaler(c.demande.image, couche("vol") ? "montée en cours poursuivie" : "image en place gardée")
+            liberer(c)
+        }
+        majEtat()
+    }
+
+    // decoller — lance le vol de la couche décodée, si moins de deux couches volent déjà.
+    // Rôle : choisit le ressort du vol, le place au départ sans animation, lève enVol, puis change sa cible. Sans
+    // animation possible (tokens absents, hauteur nulle), le ressort se pose sans jamais avoir avancé : le vol s'arrête
+    // aussitôt.
+    // Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : couche, _couches, atterrir, majEtat.
+    function decoller() {
+        const c = couche("decode")
+        if (!c?.pret || _couches.filter(k => k.role === "vol").length >= 2) return
+        c.role = "vol"
+        majEtat()
+        c.fondu = Theme.mouvementReduit
+        const ressort = c.fondu ? c.apparition : c.montee
+        ressort.cible = c.fondu ? 0 : height
+        ressort.poser()
+        c.enVol = true
+        ressort.cible = c.fondu ? 1 : 0
+        if (!ressort.moving) atterrir(c)
+    }
+
+    // atterrir — fin du vol d'une couche : vide celles qu'elle recouvre, publie son image et son fond, et lance
+    // l'échange vers `base`. Une place de vol se libère : une image prête décolle.
+    // Entrée : c, la couche qui atterrit. Sortie : aucune ; finirBase suit. Erreurs : aucune.
+    // Dépendances : liberer, publier, url, finirBase, decoller, majEtat.
+    function atterrir(c) {
+        c.enVol = false
+        for (const k of _couches)
+            if (k !== c && (k.role === "vol" || k.role === "pose") && k.z < c.z) liberer(k)
+        const image = c.demande.image
+        imageAffichee = image
+        _fondAffiche = c.demande.fond
+        publier()
+        c.role = "pose"
+        _pose = c
+        _phase = "echange"
+        // Retour à l'image que `base` porte déjà : sa source inchangée n'émettrait aucun statut.
+        if (_imageBase === image && base.status === Image.Ready) finirBase(true)
+        else {
+            _imageBase = image
+            base.source = url(image)
+        }
+        decoller()
+        majEtat()
+    }
+
+    // liberer — vide une couche et la rend disponible, ressorts au neutre ; une demande sans couche y décode aussitôt.
+    // La source se vide en premier, la couche restant la plus haute le temps de ce signal.
+    // Entrée : c, la couche. Sortie : aucune. Erreurs : aucune. Dépendances : decoder.
+    function liberer(c) {
+        c.enVol = false
+        c.source = ""
+        c.role = ""
+        c.demande = null
+        c.pret = false
+        c.fondu = false
+        c.montee.cible = 0
+        c.montee.poser()
+        if (_pose === c) _pose = null
+        if (_demande) decoder(_demande)
+    }
+
+    // couper — vide toutes les couches d'un coup, pour un retrait.
+    // Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : liberer.
+    function couper() {
+        _demande = null
+        for (const c of _couches) if (c.role) liberer(c)
+        if (_phase === "echange") _phase = ""
     }
 
     // poser — pose une demande dans `base` d'un coup : la pose du démarrage et le retrait de l'image.
@@ -123,6 +243,7 @@ Item {
     function poser(d) {
         _cours = d
         _phase = d.image ? "pose" : ""
+        _imageBase = d.image
         base.source = d.image ? url(d.image) : ""
         if (!d.image) finirPose(false)
     }
@@ -136,58 +257,31 @@ Item {
         publier()
     }
 
-    // decoller — lance le vol de `haut`, qui vient de finir de charger.
-    // Rôle : choisit le ressort du vol, le place au départ sans animation, lève enVol, puis change sa cible. Sans
-    // animation possible (tokens absents, hauteur nulle), le ressort se pose sans jamais avoir avancé : le vol s'arrête
-    // aussitôt.
-    // Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : montee, apparition, atterrir.
-    function decoller() {
-        etat = "vol"
-        _fondu = Theme.mouvementReduit
-        const ressort = _fondu ? apparition : montee
-        ressort.cible = _fondu ? 0 : height
-        ressort.poser()
-        enVol = true
-        ressort.cible = _fondu ? 1 : 0
-        if (!ressort.moving) atterrir()
-    }
-
-    // atterrir — fin du vol : publie l'image et son fond, et lance l'échange vers `base`.
-    // Entrées : aucune. Sortie : aucune ; finirBase suit. Erreurs : aucune. Dépendances : publier, url.
-    function atterrir() {
-        enVol = false
-        imageAffichee = _cours.image
-        _fondAffiche = _cours.fond
-        publier()
-        _phase = "echange"
-        base.source = url(_cours.image)
-    }
-
-    // finirBase — `base` a fini de charger : termine la pose ou l'échange en cours ; un rechargement dû à sourceSize,
-    // hors de ces deux phases, ne fait rien.
+    // finirBase — `base` a fini de charger : termine la pose ou l'échange en cours. Un rechargement dû à sourceSize, hors
+    // de ces deux phases, ne fait rien, sauf si le fichier affiché a disparu : l'aplat s'applique alors, et le fond
+    // publié le suit, tant qu'aucune couche ne garde l'image.
     // Entrée : lisible, vrai si l'image est prête. Sortie : aucune.
-    // Erreurs : console.warn si l'image est illisible, voir l'en-tête. Dépendances : finirPose, signaler, traiter,
-    // apparition. `montee` n'a pas à être remise au neutre : elle atterrit toujours à 0.
+    // Erreurs : console.warn si l'image est illisible, voir l'en-tête. Dépendances : finirPose, signaler, liberer,
+    // couche, majEtat.
     function finirBase(lisible) {
         const phase = _phase
         _phase = ""
         if (phase === "pose") {
             if (!lisible) {
                 signaler(_cours.image, "aplat du bureau appliqué")
+                _imageBase = ""
                 base.source = ""
             }
             finirPose(lisible)
         } else if (phase === "echange") {
-            if (lisible) haut.source = ""
-            else signaler(_cours.image, "image gardée en mémoire jusqu'à la demande suivante")
-            _fondu = false
-            apparition.cible = 0
-            apparition.poser()
-            etat = "repos"
-            const suite = _demande
-            _demande = null
-            if (suite) traiter(suite)
+            if (!lisible) signaler(imageAffichee, "image gardée en mémoire jusqu'à la montée suivante")
+            else if (_pose) liberer(_pose)
+            _pose = null
+        } else if (!lisible && !couche("pose") && !couche("vol")) {
+            signaler(imageAffichee, "aplat du bureau appliqué")
+            finirPose(false)
         }
+        majEtat()
     }
 
     Connections {
@@ -197,21 +291,6 @@ Item {
         function onBureauChanged() { if (affichage._demarre && affichage._phase !== "pose") affichage.publier() }
     }
 
-    // Seul le ressort choisi au décollage avance pendant un vol : l'arrêt de l'un ou de l'autre en marque la fin.
-    Ressort {
-        id: montee
-        transition: "spectacle"
-        nature: "deplacement"
-        onMovingChanged: if (!moving && affichage.enVol) affichage.atterrir()
-    }
-
-    Ressort {
-        id: apparition
-        transition: "spectacle"
-        nature: "fondu"
-        onMovingChanged: if (!moving && affichage.enVol) affichage.atterrir()
-    }
-
     // Couche — une image plein cadre, décodée à la taille de l'écran. La taille ne sert qu'une fois connue : la pose
     // attend _pret, et aucun décodage n'a lieu à une taille nulle.
     // Entrées et sorties : celles d'Image. Erreurs : voir status. Dépendances : affichage.echelle.
@@ -219,12 +298,49 @@ Item {
         width: affichage.width
         height: affichage.height
         fillMode: Image.PreserveAspectCrop
-        // Sans clip, le recadrage peut peindre hors de l'élément, donc au-dessus de `haut` pendant sa montée.
+        // Sans clip, le recadrage peut peindre hors de l'élément, donc au-dessus d'une couche qui monte.
         clip: true
         asynchronous: true
         autoTransform: true
         cache: false
         sourceSize: Qt.size(width * affichage.echelle, height * affichage.echelle)
+    }
+
+    // Volante — une couche qui décode, cachée, puis monte. Chacune porte ses ressorts, pour qu'une montée continue
+    // sous celle qui la recouvre.
+    // Entrées : role, « » libre, « decode », « vol » ou « pose » (atterrie, en attente de `base`) ; demande, {image,
+    // fond} ; fondu, vol en mouvement réduit, figé au décollage ; enVol, vrai du décollage à l'arrêt du ressort, car
+    // poser() met `moving` à faux, ce qui sans ce drapeau passerait pour la fin du vol ; pret, image décodée.
+    // Sorties : montee, apparition, ses ressorts. Erreurs : voir statutCouche. Dépendances : affichage, Ressort.
+    component Volante: Couche {
+        id: volante
+        property string role: ""
+        property var demande: null
+        property bool fondu: false
+        property bool enVol: false
+        property bool pret: false
+        readonly property Ressort montee: deplacement
+        readonly property Ressort apparition: opacite
+
+        y: fondu ? 0 : deplacement.value
+        opacity: fondu ? opacite.value : 1
+        visible: role === "vol" || role === "pose"
+        onStatusChanged: affichage.statutCouche(volante)
+
+        // Seul le ressort choisi au décollage avance pendant un vol : l'arrêt de l'un ou de l'autre en marque la fin.
+        Ressort {
+            id: deplacement
+            transition: "spectacle"
+            nature: "deplacement"
+            onMovingChanged: if (!moving && volante.enVol) affichage.atterrir(volante)
+        }
+
+        Ressort {
+            id: opacite
+            transition: "spectacle"
+            nature: "fondu"
+            onMovingChanged: if (!moving && volante.enVol) affichage.atterrir(volante)
+        }
     }
 
     Couche {
@@ -235,20 +351,7 @@ Item {
         }
     }
 
-    Couche {
-        id: haut
-        y: affichage._fondu ? 0 : montee.value
-        opacity: affichage._fondu ? apparition.value : 1
-        // Seul l'état « charge » écoute : un rechargement dû à sourceSize pendant le vol ne relance rien, et vider la
-        // source met le statut à Null, qui n'est pas une erreur.
-        onStatusChanged: {
-            if (affichage.etat !== "charge") return
-            if (status === Image.Ready) affichage.decoller()
-            else if (status === Image.Error) {
-                affichage.signaler(affichage._cours.image, "image en place gardée")
-                source = ""
-                affichage.etat = "repos"
-            }
-        }
-    }
+    Volante { id: c1 }
+    Volante { id: c2 }
+    Volante { id: c3 }
 }

@@ -7,7 +7,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 SHELLCHECK = shutil.which("shellcheck")
-SCRIPTS = sorted([p for d in ("hypr/scripts", "bin") for p in (ROOT / "config" / d).iterdir() if "python" not in p.open(encoding="utf-8").readline()] + list((ROOT / "setup").glob("*.sh")) + list((ROOT / "systeme/etc/profile.d").glob("*.sh")) + list((ROOT / ".githooks").glob("*")))
+SCRIPTS = sorted([p for d in ("hypr/scripts", "bin") for p in (ROOT / "config" / d).iterdir() if "python" not in p.read_text(encoding="utf-8").partition("\n")[0]] + list((ROOT / "setup").glob("*.sh")) + list((ROOT / "systeme/etc/profile.d").glob("*.sh")) + list((ROOT / ".githooks").glob("*")))
 
 
 @unittest.skipUnless(SHELLCHECK, "shellcheck absent : pacman -S shellcheck")

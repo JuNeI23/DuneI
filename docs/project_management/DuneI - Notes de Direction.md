@@ -4,7 +4,7 @@ Oct 10, 2026 · @Nicolas — révisée le 22 octobre 2026
 
 Version 1.41. Historique en fin de document.
 
-*Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent soixante-huit lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
+*Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent soixante-douze lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
 
 ## En une phrase
 
@@ -118,7 +118,7 @@ L'ordre découle d'une seule règle : **chaque lot laisse la machine en état de
 | **4 — Accord visuel** | Thématisation Qt et GTK sur cibles réelles, premier lot d'icônes, fond d'écran, panneau de thème, extraction de teinte | Cohérente de bout en bout, bible opposable partout |
 | **5 — Écrans système et voix** | Réglages panneau par panneau, connexion, amorçage, « À propos », catalogue de messages, recette | **1.0** |
 
-Le détail — cent soixante-huit éléments, chacun rattaché à un chantier, un lot et une nature — vit dans le document de périmètre et de backlog. **Cette note ne s'y substitue pas.**
+Le détail — cent soixante-douze éléments, chacun rattaché à un chantier, un lot et une nature — vit dans le document de périmètre et de backlog. **Cette note ne s'y substitue pas.**
 
 ## Les risques, par ordre de gravité
 
@@ -529,7 +529,7 @@ Nicolas a validé le correctif à l'écran le 2026-11-05.
 Codex rejoint l'atelier comme second agent de Nicolas, pour ses autres sujets (L1-26, D119) : il ne développe pas
 DuneI, et ses instructions globales lui interdisent d'installer sur le système sans passer par `paquets.toml`.
 
-DuneI a maintenant un fond d'écran (L2-27, D121, D122) : un calque de la coque, sans démon, choisi par `dunei-fond`. La
+DuneI a maintenant un fond d'écran (L2-27, D121 à D123) : un calque de la coque, sans démon, choisi par `dunei-fond`. La
 nouvelle image monte du bas de l'écran au ressort `spectacle`, le verre de la barre et de la presqu'île la laisse passer,
 et le texte de la barre suit la couleur de la bande qu'il recouvre. Nicolas a validé la recette à l'écran le 2026-11-06 ;
 l'écran externe reste à éprouver. L'extraction de teinte reste à L4-06 : pour ce besoin, Nicolas a écarté toute teinte
@@ -545,7 +545,7 @@ du popover Bluetooth), L2-58, L2-59 et L2-62 attendent leur tour.
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-10 | Version initiale |
-| 1.41 | 2026-11-06 | L2-27 fait : fond d'écran en calque de la coque (D121, D122) ; prochaine étape : la galerie (L2-60) |
+| 1.41 | 2026-11-06 | L2-27 fait : fond d'écran en calque de la coque (D121 à D123) ; prochaine étape : la galerie (L2-60) |
 | 1.40 | 2026-11-05 | Codex ajouté à l'atelier (L1-26, D119) ; prochaine étape : l'élément suivant du lot 2 |
 | 1.39 | 2026-11-05 | Fenêtre du double appui du bouton marche ramenée à 0,4 s (D120) ; prochaine étape : Codex, puis le lot 2 |
 | 1.38 | 2026-11-04 | Mouvement des popovers de la barre (L2-06, L2-07, L2-47, L2-56 ; D110 à D118), recette validée ; backlog recompté à 168 éléments (l'écart de 2 avec les 164 annoncés datait d'avant cette branche) ; prochaine étape : après la fusion, l'élément suivant du lot 2 |

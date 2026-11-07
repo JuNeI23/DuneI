@@ -20,15 +20,16 @@ from pathlib import Path
 
 from PIL import Image, ImageOps, ImageStat
 
+FORMATS = ("JPEG", "PNG", "GIF", "BMP", "WEBP", "TIFF")  # ce que Qt affiche, avec qt6-imageformats ; AVIF en est absent
 REFERENCE = (1536, 960)  # écran supposé hors session Hyprland : fixe la proportion de la bande, sans recadrage
 
 
 def lire_jetons(dossier: Path) -> dict:
     """Lit coque-tokens.json. Entrée : le dossier des jetons. Sortie : le dict des jetons.
-    Erreurs : OSError, ValueError ou KeyError si le fichier manque, est corrompu ou n'a pas de table bureau.
+    Erreurs : OSError, ValueError ou KeyError si le fichier manque, est corrompu ou que la table bureau est incomplète.
     Dépendances : json."""
     jetons = json.loads((dossier / "coque-tokens.json").read_text(encoding="utf-8"))
-    jetons["bureau"]["fond"]
+    jetons["bureau"]["fond"], jetons["bureau"]["bande"]
     return jetons
 
 
@@ -57,7 +58,7 @@ def mesurer(image: Image.Image, ecran: tuple[int, int] | None, bande: int, aplat
         echelle = max(ecr_l / largeur, ecr_h / hauteur)
         vis_l, vis_h = ecr_l / echelle, ecr_h / echelle
     else:
-        echelle, vis_l, vis_h = hauteur / ecr_h, largeur, hauteur
+        echelle, vis_l, vis_h = ecr_h / hauteur, largeur, hauteur
     gauche, haut = (largeur - vis_l) / 2, (hauteur - vis_h) / 2
     zone = image.crop((round(gauche), round(haut), round(gauche + vis_l), max(round(haut + bande / echelle), round(haut) + 1)))
     fond = Image.new("RGBA", zone.size, aplat)
@@ -102,14 +103,13 @@ def main(argv: list[str]) -> int:
     else:
         image = os.path.abspath(os.path.expanduser(argv[0]))
         try:
-            with Image.open(image) as img:
+            with Image.open(image, formats=FORMATS) as img:
                 fond = mesurer(img, ecran_actif(), bureau["bande"], bureau["fond"])
         except (OSError, ValueError, Image.DecompressionBombError) as e:
             print(f"dunei-fond : image absente ou illisible : {image} ({e}).", file=sys.stderr)
             return 2
         contenu, affiche = {"origine": "fond", "fond": fond, "image": image}, image
     try:
-        dossier.mkdir(parents=True, exist_ok=True)
         ecrire(sortie, contenu)
     except OSError as e:
         print(f"dunei-fond : écriture impossible dans {dossier} ({e}).", file=sys.stderr)

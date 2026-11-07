@@ -93,6 +93,11 @@ class DuneiFondTest(unittest.TestCase):
         self.lance(str(img))
         self.assertLess(luminance(self.sortie_json()["fond"]), SEUIL)
 
+    def test_bande_hors_session_proportionnelle(self):
+        """Hors session, la bande vaut 28/960 de la hauteur : 58 lignes sur 2000, dont 20 blanches (0xff × 20 / 58 = 0x58)."""
+        self.lance(str(self.image("b.png", (1000, 2000), 20, "white", "black")))
+        self.assertEqual(self.sortie_json()["fond"], "#585858")
+
     def test_relatif_et_accents(self):
         img = self.image("été à la plage.jpg", (200, 200), 100, "white", "black")
         res = self.lance("./été à la plage.jpg", cwd=img.parent)
@@ -139,6 +144,27 @@ class DuneiFondTest(unittest.TestCase):
         (self.dir / "coque-tokens.json").write_text("{corrompu")
         res = self.lance(str(self.image("a.png", (10, 10), 5, "white", "black")))
         self.assertEqual(res.returncode, 1)
+        self.assertFalse(self.sortie.exists())
+
+    def test_format_que_qt_n_affiche_pas(self):
+        """Pillow lit le PPM et Qt aussi, mais il n'est pas déclaré : refusé comme illisible, code 2, fichier intact."""
+        img = self.image("a.ppm", (10, 10), 5, "white", "black")
+        res = self.lance(str(img))
+        self.assertEqual(res.returncode, 2)
+        self.assertFalse(self.sortie.exists())
+
+    def test_formats_declares(self):
+        for nom in ("a.jpg", "a.webp", "a.tiff"):
+            with self.subTest(nom=nom):
+                self.assertEqual(self.lance(str(self.image(nom, (10, 10), 5, "white", "black"))).returncode, 0)
+
+    def test_tokens_sans_bande(self):
+        jetons = json.loads((self.dir / "coque-tokens.json").read_text())
+        del jetons["bureau"]["bande"]
+        (self.dir / "coque-tokens.json").write_text(json.dumps(jetons))
+        res = self.lance(str(self.image("a.png", (10, 10), 5, "white", "black")))
+        self.assertEqual(res.returncode, 1)
+        self.assertIn("make install", res.stderr)
         self.assertFalse(self.sortie.exists())
 
     def test_aucun(self):

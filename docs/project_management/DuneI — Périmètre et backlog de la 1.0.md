@@ -280,7 +280,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L2-24 | B | Écrit | Agent d'authentification — il devra entrer dans `session.toml` (unité systemd utilisateur) pour démarrer avec la session (L1-10, D50) |
 | L2-25 | B | Configuré | Trousseau de secrets |
 | L2-26 | B | Écrit | Démon de thème — rechargement à chaud |
-| L2-27 | B | Écrit | Application du fond d'écran — **fait (D121, D122)** : calque `dunei-fond` de la coque (module `Fond`), sans démon ; commande `dunei-fond <image>|--aucun`, dossier `~/Documents/Images/Wallpapers` créé par `make install` ; montée au ressort `spectacle`, pose sans animation au démarrage ; `bureau.json` porte `image`, et `fond` est calculé sur la bande de la barre (écart à D90). Sans image, le bureau reste l'aplat `surface-base` (D51). Écran externe non éprouvé |
+| L2-27 | B | Écrit | Application du fond d'écran — **fait (D121 à D123)** : calque `dunei-fond` de la coque (module `Fond`), sans démon ; commande `dunei-fond <image>` ou `--aucun`, dossier `~/Documents/Images/Wallpapers` créé par `make install` ; montée interruptible au ressort `spectacle`, pose sans animation au démarrage ; `bureau.json` porte `image`, et `fond` est calculé sur la bande de la barre (écart à D90). Sans image, le bureau reste l'aplat `surface-base` (D51). Écran externe, écran pivoté et extinction pendant une montée non éprouvés |
 | L2-28 | B | Mixte | Raccourcis clavier globaux et leur affichage ; touche réservée `SUPER + /` ; lire `hyprctl binds -j`, qui rend les descriptions de la table |
 | L2-29 | B | Écrit | Contrôle de la luminosité |
 | L2-30 | B | Écrit | Capture d'écran ; `Print` (zone), `SHIFT + Print` (fenêtre) et `CTRL + Print` (écran) lancent le rôle `capture`, tenu de façon provisoire par hyprshot : le remplacer, c'est changer ses trois variantes dans `roles.lua` et retirer le paquet de `[provisoire]` (D79) |
@@ -521,7 +521,7 @@ Le choix de la distribution de base et du compositeur, précédemment ouverts, s
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-12 | Version initiale, 137 éléments |
-| 1.44 | 2026-11-06 | L2-27 fait : fond d'écran en calque de la coque (D121, D122) ; ajout de L2-60 (galerie), L2-61 (verre du jour) et L2-62 (`systemBarHeight`) ; 172 éléments |
+| 1.44 | 2026-11-06 | L2-27 fait : fond d'écran en calque de la coque (D121 à D123) ; ajout de L2-60 (galerie), L2-61 (verre du jour) et L2-62 (`systemBarHeight`) ; 172 éléments |
 | 1.43 | 2026-11-05 | L1-26 : Codex ajouté à l'atelier comme second agent (D119) |
 | 1.42 | 2026-11-05 | L1-09 : fenêtre du double appui ramenée à 0,4 s (D120) ; ajout de L1-27, mise à jour du BIOS |
 | 1.41 | 2026-11-04 | L2-07, L2-47 et L2-56 faits, L2-06 fait pour les popovers de la barre (D110 à D118), recette validée le 2026-11-04 ; ajout de L2-58 (mouvement des menus, listes, infobulles et chevron) et de L2-59 (suites du mouvement) ; L2-12 et L2-13 héritent du popover hébergé ; recompte du backlog : 168 éléments (119 écrits), les deux lignes de L2-58 et L2-59 s'ajoutant aux 166 lignes déjà présentes, que le décompte annonçait à 164 depuis avant cette branche |

@@ -1,5 +1,7 @@
 # Application du fond d'écran : plan d'implémentation (L2-27)
 
+Version 0.2, 2026-11-06.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal :** afficher une image de fond dans un calque de la coque, la changer par `dunei-fond <chemin>` avec la montée validée, et la reprendre au démarrage.
@@ -8,7 +10,7 @@
 
 **Tech Stack :** Quickshell 0.3 / QML (Qt 6.12), Python 3 avec Pillow, Hyprland 0.57 en Lua, `unittest`.
 
-**Spec :** `docs/superpowers/specs/2026-11-06-fond-ecran-design.md` (v0.2)
+**Spec :** `docs/superpowers/specs/2026-11-06-fond-ecran-design.md` (v0.4)
 
 ## Global Constraints
 

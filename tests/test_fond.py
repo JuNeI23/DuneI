@@ -318,24 +318,38 @@ class FondTest(EssaiCoque, unittest.TestCase):
         self.assertLess(traces.index(vide), traces.index("etat repos"))
 
     def test_demande_en_vol(self):
+        # Chaque demande monte par-dessus le vol en cours, qui finit sa course dessous : un seul passage en vol, chaque
+        # image atterrit dans l'ordre, et la quatrième attend qu'une des deux qui volent ait atterri.
         a, b, c, d = (self.image(f"{n}.png", k) for n, k in (("a", ROUGE), ("b", BLEU), ("c", VERT), ("d", "#808080")))
         self.demarrer(a, ROUGE, lent=True)
         self.repos_sur(a)
         self.bureau(b, BLEU)
         self.attendre_que(lambda e: e["etat"] == "vol")
         self.bureau(c, VERT)
-        self.attendre_que(lambda e: e["enAttente"] == c)
+        etat = self.attendre_que(lambda e: e["haut"].endswith("/c.png") and e["enAttente"] == "")
+        self.assertEqual((etat["imageAffichee"], etat["fondPublie"]), (a, ROUGE))
         self.bureau(d, "#808080")
-        etat = self.attendre_que(lambda e: e["enAttente"] == d)
-        self.assertEqual(etat["etat"], "vol")
-        self.assertEqual(etat["fondPublie"], ROUGE)
+        self.attendre_que(lambda e: e["haut"].endswith("/d.png"))
         self.repos_sur(d)
-        self.assertEqual(self.etat()["fondPublie"], "#808080")
+        etat = self.etat()
+        self.assertEqual((etat["fondPublie"], etat["haut"], etat["y"], etat["opacite"]), ("#808080", "", 0, 1))
         traces = self.traces()
-        self.assertNotIn(f"image {c}", traces)
-        self.assertNotIn(f"publie {VERT}", traces)
-        self.assertLess(traces.index(f"publie {BLEU}"), traces.index("publie #808080"))
-        self.assertEqual(traces.count("etat vol"), 2)
+        self.assertEqual(traces.count("etat vol"), 1)
+        ordre = [traces.index(f"publie {f}") for f in (BLEU, VERT, "#808080")]
+        self.assertEqual(ordre, sorted(ordre))
+
+    def test_illisible_en_vol(self):
+        # Une demande illisible n'interrompt rien : la montée en cours va à son terme.
+        a, b = self.image("a.png"), self.image("b.png", BLEU)
+        self.demarrer(a, ROUGE, lent=True)
+        self.repos_sur(a)
+        self.bureau(b, BLEU)
+        self.attendre_que(lambda e: e["etat"] == "vol")
+        self.bureau(self.illisible(), VERT)
+        self.attendre("montée en cours poursuivie")
+        etat = self.repos_sur(b)
+        self.assertEqual((etat["fondPublie"], etat["enAttente"]), (BLEU, ""))
+        self.assertEqual(self.traces().count("etat vol"), 1)
 
     def test_retour_a_la_cible_en_vol(self):
         # B en vol, C demandée, puis B de nouveau : la dernière demande est déjà celle qui vole, rien ne suit.
@@ -351,18 +365,19 @@ class FondTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(self.etat()["fondPublie"], BLEU)
 
     def test_retour_a_l_image_en_place_en_vol(self):
-        # A affichée, B en vol, A redemandée : B atterrit, puis A remonte par-dessus.
+        # A affichée, B en vol, A redemandée : A monte par-dessus B, qui atterrit dessous ; A finit en place.
         a, b = self.image("a.png"), self.image("b.png", BLEU)
         self.demarrer(a, ROUGE, lent=True)
         self.repos_sur(a)
         self.bureau(b, BLEU)
         self.attendre_que(lambda e: e["etat"] == "vol")
         self.appeler("demander", a, ROUGE)
-        self.assertEqual(self.etat()["enAttente"], a)
-        self.attendre("essai : image " + b)
-        self.attendre("essai : etat vol", 2)
-        self.repos_sur(a)
-        self.assertEqual(self.etat()["fondPublie"], ROUGE)
+        self.attendre_que(lambda e: e["haut"].endswith("/a.png"))
+        etat = self.repos_sur(a)
+        self.assertEqual((etat["fondPublie"], etat["statutBase"], etat["haut"]), (ROUGE, 1, ""))
+        traces = self.traces()
+        self.assertEqual(traces.count("etat vol"), 1)
+        self.assertLess(traces.index(f"image {b}"), traces.index(f"publie {ROUGE}", traces.index(f"image {b}")))
 
     # --- Demandes pendant le chargement ---
 
@@ -425,20 +440,21 @@ class FondTest(EssaiCoque, unittest.TestCase):
         self.assertNotIn("etat charge", self.traces())
 
     def test_aucun_en_vol(self):
-        a, b = self.image("a.png"), self.image("b.png", BLEU)
+        # Le retrait coupe le vol d'un coup : aucune image n'atterrit, et une montée suivante part du bas.
+        a, b, c = self.image("a.png"), self.image("b.png", BLEU), self.image("c.png", VERT)
         self.demarrer(a, ROUGE, lent=True)
         self.repos_sur(a)
         self.bureau(b, BLEU)
         self.attendre_que(lambda e: e["etat"] == "vol")
         self.bureau(None, ROUGE)
-        self.attendre("essai : fichier " + ROUGE, 2)
-        self.assertEqual(self.etat()["etat"], "vol")
-        self.assertEqual(self.etat()["imageAffichee"], a)
         etat = self.repos_sur("")
         self.assertEqual((etat["fondPublie"], etat["base"], etat["haut"]), (self.fond_jeton(), "", ""))
         traces = self.traces()
-        self.assertLess(traces.index(f"image {b}"), traces.index("image "))
+        self.assertNotIn(f"image {b}", traces)
         self.assertEqual(traces.count("etat vol"), 1)
+        self.bureau(c, VERT)
+        self.repos_sur(c)
+        self.assertEqual(self.traces().count("etat vol"), 2)
 
     def test_jeton_suivi_sans_image(self):
         # Sans image, le fond publié est le jeton courant, même quand les tokens changent ensuite.
@@ -618,6 +634,17 @@ class FondTest(EssaiCoque, unittest.TestCase):
         traces = self.traces()
         self.assertNotIn("etat charge", traces)
         self.assertEqual(sum(1 for t in traces if t.startswith("publie ")), 1)
+
+    def test_fichier_supprime_puis_taille_changee(self):
+        # Le rechargement échoue : le bureau montre l'aplat, et le texte de la barre doit le suivre.
+        a = self.image("a.png")
+        self.demarrer(a, ROUGE)
+        self.repos_sur(a)
+        os.unlink(a)
+        self.appeler("taille", 320, 200)
+        self.attendre("aplat du bureau appliqué")
+        etat = self.attendre_que(lambda e: e["fondPublie"] == self.fond_jeton())
+        self.assertEqual((etat["imageAffichee"], etat["etat"]), ("", "repos"))
 
     def test_taille_changee_en_vol(self):
         # Le rechargement de la couche haute dû à sourceSize ne relance pas le vol, qui descend jusqu'au bout.

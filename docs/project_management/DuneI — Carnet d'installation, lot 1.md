@@ -1942,7 +1942,7 @@ modèle de la barre des menus de macOS. Les raisons sont au journal (D89 à D95)
 | `config/systemd/user/dunei-coque.service` | `~/.config/systemd/user/` | Unité de la coque de session : `qs -n -c dunei`, rattachée à `graphical-session.target`, relancée en cas d'échec (D94) |
 | `session.toml` | lu par `deploy.py` | Ligne `dunei-coque.service` ajoutée à la liste blanche de la session (D50), après `nm-applet.service` |
 | `coque/` | `~/.config/quickshell/dunei` (lien) | Dossier de la coque, que `qs -c dunei` retrouve par son nom de configuration |
-| `tokens.toml`, table `[bureau]` | `generated/coque-tokens.json` | Jeux de texte clair et foncé, seuil de luminance, logo ; `make tokens` les régénère |
+| `tokens.toml`, table `[bureau]` | `generated/coque-tokens.json` | Jeux de texte clair et foncé, seuil de luminance, logo, hauteur `bande` et `dossier` des images ; `namespace` sert à la règle de calque de `hyprland-tokens.lua` ; `make tokens` les régénère |
 | (écrit par `deploy.py`) | `~/.config/dunei/bureau.json` | État du fond du bureau : `{ "origine", "fond" }`, plus `"image"` avec l'origine `fond` (D90, D122) |
 
 - `deploy.py` écrit `bureau.json` avec l'origine `theme` et la valeur de `tokens.bureau.fond` (`#0f0703`), et le
@@ -2128,9 +2128,9 @@ Sur `caladan`, 906 images mesurées sur 37 mouvements : première image à 34 ms
 
 ## Le fond d'écran — L2-27
 
-Rien de plus à installer : Pillow est déjà déclaré dans `paquets.toml` et le calque est dans la coque
-(`dunei-coque.service`). `make install` lie `dunei-fond` dans `~/.local/bin`, crée `~/Documents/Images/Wallpapers` s'il
-manque, sans y copier d'image, et préserve `bureau.json` tant que son origine vaut `fond`. Les décisions sont D121 et D122
+`qt6-imageformats` s'ajoute par `make paquets` (WebP et TIFF, D123) ; Pillow est déjà déclaré, et le calque est dans la
+coque (`dunei-coque.service`). `make install` lie `dunei-fond` dans `~/.local/bin`, crée `~/Documents/Images/Wallpapers` s'il
+manque, sans y copier d'image, et préserve `bureau.json` tant que son origine vaut `fond`. Les décisions sont D121 à D123
 du journal. Aucune image n'entre dans le dépôt.
 
 ### La commande `dunei-fond`
@@ -2141,7 +2141,8 @@ dunei-fond --aucun                                   # retire l'image d'un coup 
 dunei-fond                                           # affiche l'état
 ```
 
-Un chemin absent ou une image illisible donne le code 2 et laisse `bureau.json` intact ; un `coque-tokens.json` illisible
+Un chemin absent, une image illisible ou un format autre que JPEG, PNG, GIF, BMP, WebP et TIFF donne le code 2 et laisse
+`bureau.json` intact ; un `coque-tokens.json` illisible
 donne le code 1. Le dossier respecte `DUNEI_TOKENS_DIR`, sinon `XDG_CONFIG_HOME`, comme `dunei-theme`.
 
 ### Si le fond ne se comporte pas comme prévu
@@ -2263,7 +2264,7 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 
 | Version | Date | Changement |
 | --- | --- | --- |
-| 1.36 | 2026-11-06 | Le fond d'écran (L2-27, D121, D122) : `dunei-fond`, dossier des images, dépannage du calque, mesures ; `bureau.json` gagne `image` |
+| 1.36 | 2026-11-06 | Le fond d'écran (L2-27, D121 à D123) : `dunei-fond`, dossier des images, dépannage du calque, mesures ; `bureau.json` gagne `image` |
 | 1.35 | 2026-11-05 | Codex : paquet `openai-codex`, instructions globales et crochet rtk reliés depuis l'atelier (L1-26, D119) |
 | 1.34 | 2026-11-05 | Énergie (L1-09) : fenêtre du double appui du bouton marche ramenée à 0,4 s après une veille déclenchée par deux fantômes (D120) |
 | 1.33 | 2026-11-04 | Le mouvement des popovers : commande `dunei-mouvement`, calque `dunei-popovers`, ajout d'un popover à l'hôte, relevés (L2-06, L2-07, L2-47, L2-56 ; D110 à D117), recette en attente |

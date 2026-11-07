@@ -2944,8 +2944,7 @@ au niveau `Background`, et choisie par la commande `dunei-fond`.** Le démon que
 - **Conséquence acceptée.** Si la coque tombe, l'aplat `surface-base` du compositeur reparaît jusqu'à sa relance.
 - **Transition.** La nouvelle image part du bas de l'écran et monte jusqu'à couvrir l'ancienne, qui ne bouge pas. Le
   ressort est `spectacle`, réglage `out`, retenu par Nicolas à l'écran parmi trois durées ; aucun jeton de mouvement n'est
-  créé. Une demande reçue pendant une montée ne l'interrompt pas : seule la dernière s'applique, à l'arrivée. Au démarrage
-  de la coque, l'image se pose d'un coup, grâce à la règle de calque `no_anim` générée pour `dunei-fond`, et à
+  créé. L'interruption pendant une montée relève de D123. Au démarrage de la coque, l'image se pose d'un coup, grâce à la règle de calque `no_anim` générée pour `dunei-fond`, et à
   `Theme.bureauLu`, sans lequel la lecture asynchrone de `bureau.json` déclencherait une montée.
 - **Mouvement réduit.** Deux ressorts séparés : `montee` pour le déplacement, et `apparition`, qui déclare
   `nature: "fondu"`, pour l'opacité. Un fondu ne pilote jamais une position.
@@ -2987,3 +2986,30 @@ sinon donné un texte clair sur un fond clair. Le seuil et les deux jeux de text
 
 *Touché : `config/bin/dunei-fond`, `coque/Theme/Theme.qml`, `coque/Fond/Affichage.qml`, `tokens.toml`, fiche du
 2026-11-06, bible (annexe E), backlog (L2-62).*
+
+### D123 · La montée est interruptible, et `dunei-fond` n'accepte que ce que la coque affiche
+
+2026-11-07, après la relecture finale. Nicolas a tranché les deux points qu'elle soulevait.
+
+**La montée s'interrompt.** La fiche v0.2 laissait une demande attendre la fin du vol, ce que contredit la bible,
+chapitre 6 : « Toute animation est interruptible […] Jamais de file d'attente. » Une exception écrite lui a été proposée, et
+Nicolas a préféré se conformer à la bible.
+
+- **Comportement.** L'image demandée pendant une montée décode dans une couche cachée, puis monte du bas de l'écran
+  par-dessus celle qui vole, qui finit sa course dessous. Rien ne disparaît ni ne coupe, y compris pour revenir à l'image
+  en place. Chaque couche porte ses propres ressorts ; à son atterrissage, celles qu'elle recouvre se vident, et son
+  image et son fond sont publiés. `--aucun` vide tout d'un coup. Une demande illisible laisse la montée aller à son
+  terme.
+- **Limites.** Deux images au plus volent à la fois : une troisième, prête, attend que la plus ancienne ait atterri. Seule
+  la dernière demande compte : elle remplace celle qui décodait, sans file d'attente.
+- **Premier essai, écarté à l'écran.** Remplacer à la même hauteur l'image qui monte : le décodage de la suivante prend
+  plusieurs centaines de millisecondes, si bien que le remplacement tombait en fin de course, et un retour à l'image en
+  place faisait disparaître la montée d'un coup. Nicolas l'a vu le 2026-11-07 et a choisi la montée par-dessus.
+
+**Les formats sont déclarés.** Pillow lit des formats que Qt n'affiche pas : `dunei-fond x.webp` annonçait un succès, la
+coque gardait l'ancienne image, et celle-ci était perdue à la relance. `qt6-imageformats` entre dans `paquets.toml`, ce qui
+ajoute le WebP et le TIFF, et `dunei-fond` limite Pillow à JPEG, PNG, GIF, BMP, WebP et TIFF ; le reste donne le code 2.
+AVIF reste refusé : ce paquet ne le fournit pas.
+
+*Touché : `coque/Fond/Affichage.qml`, `config/bin/dunei-fond`, `paquets.toml`, tests, fiche v0.4, bible (annexe E), carnet,
+backlog.*
