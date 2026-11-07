@@ -1643,5 +1643,15 @@
     "pilule": 22,
     "ecart": 8,
     "marge": 14
+  },
+  "galerie": {
+    "largeur": 160,
+    "hauteur": 90,
+    "coupe": 56,
+    "echelle": 1.06,
+    "voile": 0.3,
+    "delai": 2000,
+    "pas": 60,
+    "dossier": "~/Documents/Images/Wallpapers"
   }
 }

@@ -425,6 +425,16 @@ pilule = 22                  # largeur de la pilule du bureau actif
 ecart = 8                    # espace entre deux marques de bureau
 marge = 14                   # marge intérieure, de part et d'autre du contenu
 
+[galerie]                    # galerie de fonds d'écran, dans la presqu'île (L2-60) ; px logiques sauf mention
+largeur = 160                # largeur d'une vignette
+hauteur = 90                 # hauteur d'une vignette (16:9)
+coupe = 56                   # hauteur de la tranche de vignette qui dépasse du bord de la presqu'île
+echelle = 1.06               # grossissement de la vignette sélectionnée
+voile = 0.30                 # opacité du voile surface-base qui atténue les vignettes non sélectionnées
+delai = 2000                 # ms avant que la galerie ne se referme d'elle-même, sans action
+pas = 60                     # px de pixelDelta du pavé tactile qui valent un pas de sélection ; réglé à la recette
+dossier = "~/Documents/Images/Wallpapers"   # dossier des images, « ~ » développé à l'exécution
+
 [bureaux_virtuels]
 nombre = 4                   # bureaux 1 à n, liés à SUPER + 1…n ; le bureau spécial (accueil) n'est pas compté
 

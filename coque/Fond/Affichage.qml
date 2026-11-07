@@ -1,5 +1,6 @@
 import QtQuick
 import "../Theme"
+import "../Theme/fichiers.js" as Fichiers
 
 // Affichage — l'image du bureau et la montée des suivantes par-dessus, sans fenêtre : son parent le remplit (L2-27).
 // Rôle : `base` porte l'image en place et ne bouge jamais. Trois couches volantes, chacune avec ses deux ressorts
@@ -78,13 +79,6 @@ Item {
         return { image: Theme.imageBureau, fond: Theme.fondFichier }
     }
 
-    // url — URL d'un fichier local, chaque segment du chemin encodé : accents et espaces, mais aussi « # » et « ? »,
-    // qu'une URL prendrait sinon pour ses délimiteurs, ce qui tronquerait le chemin.
-    // Entrée : chemin absolu. Sortie : texte file://… . Erreurs : aucune. Dépendances : aucune.
-    function url(chemin) {
-        return "file://" + chemin.split("/").map(encodeURIComponent).join("/")
-    }
-
     // publier — publie le fond réellement affiché dans Theme.
     // Entrées : aucune. Sortie : aucune. Erreurs : aucune ; null tant que les tokens ne sont pas lus, et
     // onBureauChanged republie à leur arrivée. Dépendances : _fondAffiche, Theme.
@@ -148,7 +142,7 @@ Item {
             c.role = "decode"
             c.z = ++_z
         }
-        c.source = url(d.image)
+        c.source = Fichiers.url(d.image)
     }
 
     // statutCouche — suit le décodage d'une couche : prête, elle décolle dès que possible ; illisible, elle se vide.
@@ -207,7 +201,7 @@ Item {
         if (_imageBase === image && base.status === Image.Ready) finirBase(true)
         else {
             _imageBase = image
-            base.source = url(image)
+            base.source = Fichiers.url(image)
         }
         decoller()
         majEtat()
@@ -246,7 +240,7 @@ Item {
         _cours = d
         _phase = d.image ? "pose" : ""
         _imageBase = d.image
-        base.source = d.image ? url(d.image) : ""
+        base.source = d.image ? Fichiers.url(d.image) : ""
         if (!d.image) finirPose(false)
     }
 

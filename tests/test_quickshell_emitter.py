@@ -30,7 +30,8 @@ class QuickshellEmitterTest(unittest.TestCase):
     def test_cles_premier_niveau(self):
         self.assertEqual(list(self.out), [
             "_generated", "hue", "space", "density", "radius", "window", "layout", "reglages", "breakpoints", "typo", "icons",
-            "familles", "moments", "defaut", "themes", "pastilles", "bureau", "bureauxVirtuels", "presquile"])
+            "familles", "moments", "defaut", "themes", "pastilles", "bureau", "bureauxVirtuels", "presquile",
+            "galerie"])
         self.assertEqual(list(self.nuit), ["color", "states", "focus", "disabled", "elevation", "material", "glass", "render",
                                            "knob", "controls"])
 
@@ -45,6 +46,12 @@ class QuickshellEmitterTest(unittest.TestCase):
         """Vérifie les sept dimensions de la presqu'île, en pixels logiques."""
         self.assertEqual(self.out["presquile"], {"hauteur": 28, "evasement": 13, "rayon": 10, "point": 7,
                                                  "pilule": 22, "ecart": 8, "marge": 14})
+
+    def test_galerie(self):
+        """Vérifie les jetons de la galerie de fonds : vignette, coupe, échelle, voile, délai, pas du pavé, dossier."""
+        self.assertEqual(self.out["galerie"], {"largeur": 160, "hauteur": 90, "coupe": 56, "echelle": 1.06,
+                                               "voile": 0.30, "delai": 2000, "pas": 60,
+                                               "dossier": "~/Documents/Images/Wallpapers"})
 
     def test_accent_discret(self):
         """Vérifie que l'accent discret émis de chaque thème est celui du modèle, au format `#rrggbb`."""

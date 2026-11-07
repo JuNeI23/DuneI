@@ -282,5 +282,6 @@ def emit(model: dict) -> str:
         "bureau": _bureau(model),
         "bureauxVirtuels": {"nombre": bureaux(raw)},
         "presquile": _camel_keys(raw["presquile"]),
+        "galerie": _camel_keys(raw["galerie"]),
     }
     return json.dumps(out, indent=2, ensure_ascii=False) + "\n"

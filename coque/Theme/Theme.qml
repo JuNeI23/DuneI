@@ -73,6 +73,8 @@ Singleton {
     readonly property var layout: tokens?.layout
     // Formes des fenêtres de réglages (D104) : hauteurs de lignes, médaillon, colonne du texte, plateau, onglets.
     readonly property var reglages: tokens?.reglages
+    // Galerie de fonds d'écran (L2-60) : vignette, coupe, échelle, voile, délai de fermeture, pas du pavé, dossier.
+    readonly property var galerie: tokens?.galerie
     readonly property var breakpoints: tokens?.breakpoints
     readonly property var typo: tokens?.typo
     readonly property var icons: tokens?.icons
