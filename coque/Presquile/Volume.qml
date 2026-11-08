@@ -16,8 +16,9 @@ import "encoche.js" as Forme
 // ainsi corps avec l'encoche, sans jamais en déborder. Genre « volume » : le remplissage vaut le volume de la sortie,
 // l'icône de seuil est à gauche et le pourcentage à droite. Sous sourdine, le genre « volume » prend la disposition des
 // autres genres : l'icône barrée et « Coupé » centrés ; la bascule de la sourdine (genre « son ») centre toujours,
-// « Coupé » coupé, ou l'icône du niveau et « Son actif » rétabli, sur le remplissage d'accent au niveau ; le remplissage restant au niveau du son ; « Coupé » et « Son actif » se
-// croisent en fondu, chacun centré seul ; le passage d'une disposition à l'autre est un fondu croisé (Ressort « reveal » de nature « fondu »). Autres genres (« micro »,
+// « Coupé » coupé, ou l'icône du niveau et « Son actif » rétabli, sur le remplissage d'accent au niveau ; le remplissage restant au niveau du son ; « Coupé » et « Son actif » roulent
+// l'un sur l'autre vers le haut (Ressort « navigate » de nature « deplacement », instantané sous mouvement réduit),
+// rognés au corps, chacun centré seul ; le passage d'une disposition à l'autre est un fondu croisé (Ressort « reveal » de nature « fondu »). Autres genres (« micro »,
 // « sortie », « entree ») : le remplissage glisse jusqu'à la pleine largeur, l'icône et le texte sont centrés et
 // serrés (4 px), le texte tronqué à droite ; l'icône d'un appareil est pleine.
 // Au montage d'un genre autre que « volume », le remplissage part du volume affiché et ne glisse vers la pleine
@@ -109,13 +110,23 @@ Item {
         nature: "fondu"
         cible: volume.centree ? 1 : 0
     }
-    // Fondu croisé de la sourdine, dans la disposition centrée du genre « volume » ou « son » : 1 pour l'icône barrée et
-    // « Coupé », 0 pour l'icône du niveau et « Son actif ». Chaque couche se centre seule : rien ne saute à la bascule.
+    // Compteur de la sourdine, dans la disposition centrée du genre « volume » ou « son » : pair, « Coupé » est au
+    // centre, impair, « Son actif » ; chaque bascule l'avance de un et les couches roulent d'un cran vers le haut.
+    property int tours: muet ? 0 : 1
+    onMuetChanged: tours = tours + 1
     Ressort {
         id: bascule
-        transition: "reveal"
-        nature: "fondu"
-        cible: volume.muet ? 1 : 0
+        transition: "navigate"
+        nature: "deplacement"
+        cible: volume.tours
+    }
+    // decalage — position verticale d'une couche sur le compteur : au centre quand la valeur est congrue à son rang
+    // modulo 2, sortie par le haut juste après, entrée par le bas juste avant.
+    // Entrées : x, valeur du compteur moins le rang de la couche. Sortie : décalage en pixels. Erreurs : aucune.
+    // Dépendances : height.
+    function decalage(x: real): real {
+        const d = ((x % 2) + 2) % 2
+        return (d <= 1 ? -d : 2 - d) * height
     }
     // Teinte de l'évasement droit : 1 quand le remplissage est complet, 0 sinon, en fondu court d'opacité.
     Ressort {
@@ -192,57 +203,66 @@ Item {
         }
     }
 
-    // Disposition centrée : icône et texte serrés, le texte tronqué pour tenir dans largeurMax. Genre « volume » :
-    // l'icône barrée et « Coupé », gardés pendant le fondu de retour vers la disposition à gauche et à droite.
-    Row {
-        id: centre
-        anchors.centerIn: parent
-        opacity: disposition.value * (volume.niveau ? bascule.value : 1)
-        visible: opacity > 0
-        spacing: 4
+    // Couches centrées, rognées au corps de la presqu'île : rien ne se voit hors de l'encoche pendant le glissement.
+    Item {
+        id: couches
+        anchors.fill: parent
+        clip: true
 
-        Icone {
-            id: symbole
-            anchors.verticalCenter: parent.verticalCenter
-            nom: volume.niveau ? Icones.iconeAudio(true, true, volume.niveauSon)
-                : volume.annonce.genre === "micro" ? Icones.iconeMicro(volume.coupe) : volume.annonce.appareil
-            pleine: !volume.niveau && volume.annonce.genre !== "micro"
-            taille: Theme.icons?.sizes?.dense ?? 0
-            couleur: encre.value
-        }
-        Texte {
-            id: etiquette
-            anchors.verticalCenter: parent.verticalCenter
-            width: Math.min(implicitWidth, volume.largeurMax - 2 * volume.marge - symbole.width - centre.spacing)
-            elide: Text.ElideRight
-            moyen: true
-            text: volume.niveau ? "Coupé" : volume.annonce.texte
-            color: encre.value
-        }
-    }
+        // Disposition centrée : icône et texte serrés, le texte tronqué pour tenir dans largeurMax. Genre « volume » :
+        // l'icône barrée et « Coupé », gardés pendant le fondu de retour vers la disposition à gauche et à droite.
+        Row {
+            id: centre
+            anchors.horizontalCenter: parent.horizontalCenter
+            y: (parent.height - height) / 2 + (volume.niveau ? volume.decalage(bascule.value) : 0)
+            opacity: disposition.value
+            visible: opacity > 0
+            spacing: 4
 
-    // Couche rétablie du genre « volume » ou « son » : l'icône du niveau et « Son actif », qui prend la place de la couche
-    // « Coupé » par fondu croisé.
-    Row {
-        id: actif
-        anchors.centerIn: parent
-        opacity: volume.niveau ? disposition.value * (1 - bascule.value) : 0
-        visible: opacity > 0
-        spacing: centre.spacing
-
-        Icone {
-            id: symboleActif
-            anchors.verticalCenter: parent.verticalCenter
-            nom: Icones.iconeAudio(true, false, volume.niveauSon)
-            taille: Theme.icons?.sizes?.dense ?? 0
-            couleur: encre.value
+            Icone {
+                id: symbole
+                anchors.verticalCenter: parent.verticalCenter
+                nom: volume.niveau ? Icones.iconeAudio(true, true, volume.niveauSon)
+                    : volume.annonce.genre === "micro" ? Icones.iconeMicro(volume.coupe) : volume.annonce.appareil
+                pleine: !volume.niveau && volume.annonce.genre !== "micro"
+                taille: Theme.icons?.sizes?.dense ?? 0
+                couleur: encre.value
+            }
+            Texte {
+                id: etiquette
+                anchors.verticalCenter: parent.verticalCenter
+                width: Math.min(implicitWidth, volume.largeurMax - 2 * volume.marge - symbole.width - centre.spacing)
+                elide: Text.ElideRight
+                moyen: true
+                text: volume.niveau ? "Coupé" : volume.annonce.texte
+                color: encre.value
+            }
         }
-        Texte {
-            id: etiquetteActif
-            anchors.verticalCenter: parent.verticalCenter
-            moyen: true
-            text: "Son actif"
-            color: encre.value
+
+        // Couche rétablie du genre « volume » ou « son » : l'icône du niveau et « Son actif », qui prend la place de la couche
+        // « Coupé » par fondu croisé.
+        Row {
+            id: actif
+            anchors.horizontalCenter: parent.horizontalCenter
+            y: (parent.height - height) / 2 + volume.decalage(bascule.value - 1)
+            opacity: volume.niveau ? disposition.value : 0
+            visible: opacity > 0
+            spacing: centre.spacing
+
+            Icone {
+                id: symboleActif
+                anchors.verticalCenter: parent.verticalCenter
+                nom: Icones.iconeAudio(true, false, volume.niveauSon)
+                taille: Theme.icons?.sizes?.dense ?? 0
+                couleur: encre.value
+            }
+            Texte {
+                id: etiquetteActif
+                anchors.verticalCenter: parent.verticalCenter
+                moyen: true
+                text: "Son actif"
+                color: encre.value
+            }
         }
     }
 }

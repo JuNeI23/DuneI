@@ -349,7 +349,8 @@ ShellRoot {
                                     cible: v?.remplissage?.cible ?? null, fond: String(v?.couleurFond ?? ""),
                                     encre: String(v?.couleurEncre ?? ""), opaciteCote: v?.cote?.opacity ?? null,
                                     opaciteCentre: v?.centre?.opacity ?? null, symbole: v?.symbole?.nom ?? null,
-                                    texte: v?.etiquette?.text ?? null, opaciteActif: v?.actif?.opacity ?? null,
+                                    texte: v?.etiquette?.text ?? null, opaciteActif: v?.actif?.opacity ?? null, yCentre: v?.centre?.y ?? null,
+                                    yActif: v?.actif?.y ?? null, hauteur: v?.height ?? null,
                                     symboleActif: v?.symboleActif?.nom ?? null, texteActif: v?.etiquetteActif?.text ?? null,
                                     mobile: s.ressortLargeur.moving || (v?.remplissage?.moving ?? false) || (v?.jointure?.moving ?? false)
                                         || (v?.disposition?.moving ?? false) || (v?.bascule?.moving ?? false) })

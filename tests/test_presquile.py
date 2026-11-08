@@ -72,7 +72,7 @@ class PresquileStructureTest(unittest.TestCase):
         # ne se charge pas sous offscreen).
         attendues = {"Scene.qml": {"largeur": "deplacement", "hauteur": "deplacement", "opacite": "fondu",
                                    "effacement": "fondu"},
-                     "Bureaux.qml": None, "Volume.qml": {"remplissage": "deplacement", "disposition": "fondu", "jointure": "fondu", "bascule": "fondu"}}
+                     "Bureaux.qml": None, "Volume.qml": {"remplissage": "deplacement", "disposition": "fondu", "jointure": "fondu", "bascule": "deplacement"}}
         for nom, natures in attendues.items():
             texte = re.sub(r"//.*", "", (ROOT / "coque" / "Presquile" / nom).read_text(encoding="utf-8"))
             ressorts = re.findall(r"Ressort\s*\{([^{}]*)\}", texte)
@@ -472,14 +472,22 @@ class VolumeTest(PresquileIpc, unittest.TestCase):
         self.appeler("volumeNiveau", 50)
         self.appeler("volumeAnnoncer", "son", "")
         self.appeler("volumeSourdine", True)
-        etat, _ = self.attendre_fondu("opaciteCentre")
-        self.assertEqual((etat["symbole"], etat["texte"]), ("audio-volume-muted", "Coupé"), etat)
-        self.appeler("volumeSourdine", False)
-        etat, fondu = self.attendre_fondu("opaciteActif")
-        self.assertTrue(fondu, "bascule sans fondu")
         etat = self.attendre_repos()
+        self.assertEqual((etat["symbole"], etat["texte"]), ("audio-volume-muted", "Coupé"), etat)
+        self.assertAlmostEqual(etat["yActif"] - etat["yCentre"], -etat["hauteur"], delta=2, msg=etat)
+        self.appeler("volumeSourdine", False)
+        # Le rétablissement fait rouler les couches vers le haut : « Coupé » sort, « Son actif » monte du bas.
+        vus, fin = set(), time.monotonic() + DELAI
+        while time.monotonic() < fin:
+            etat = self.json("volumeEtat")
+            vus.add(round(etat["yActif"]))
+            if not etat["mobile"]:
+                break
+            time.sleep(0.01)
+        self.assertGreater(len(vus), 3, f"bascule sans glissement : {vus}")
+        self.assertAlmostEqual(etat["yCentre"] - etat["yActif"], -etat["hauteur"], delta=2, msg=etat)
         self.assertEqual((etat["opaciteCote"], etat["opaciteCentre"], etat["opaciteActif"], etat["cible"]),
-                         (0, 0, 1, 0.5), etat)
+                         (0, 1, 1, 0.5), etat)
         self.assertEqual((etat["symboleActif"], etat["texteActif"]), ("audio-volume-medium", "Son actif"), etat)
         self.assertEqual((etat["fond"].lower(), etat["encre"].lower()), (couleurs["accent"], couleurs["onAccent"]), etat)
 
