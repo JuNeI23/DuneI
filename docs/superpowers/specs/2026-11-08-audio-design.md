@@ -1,6 +1,6 @@
 # Indicateur audio, popover et jauge de la presqu'île : conception (L2-12)
 
-Version 0.2, 2026-11-08.
+Version 0.3, 2026-11-08.
 
 ## Intention
 
@@ -47,6 +47,10 @@ Les maquettes validées sont dans `.superpowers/preview/audio/maquettes.html` (v
 11. **Toute source de changement ouvre la presqu'île** : les touches, les boutons du Bose NC 700, une application.
     Le déclenchement se lit dans PipeWire ; il n'est pas limité aux quatre touches.
 12. **Popover ouvert, la presqu'île ne s'ouvre pas** : le popover montre déjà le niveau.
+13. **Changement de sortie affiché** : quand la sortie par défaut change d'elle-même (le Bose qui s'allume et prend
+    le son, puis le rend aux haut-parleurs en s'éteignant), la presqu'île le montre sur le même schéma que la sourdine
+    du micro : remplissage qui glisse jusqu'à la pleine largeur, fond accent, icône pleine de l'appareil et son nom,
+    centrés et serrés.
 
 ## Objectifs
 
@@ -103,7 +107,7 @@ conséquence. Le pas de la jauge du popover est le centième.
 
 Un module `Presquile/Volume.qml`, de hauteur `presquile.hauteur` (28 px) comme `Bureaux.qml`, de sorte que la surface
 de la presqu'île ne change pas (D132) : seule la largeur s'étire, par le ressort existant de `Scene.qml`. Largeur de
-la variante D : 240 px. Le remplissage suit la valeur par un ressort (ou une animation continue) relancé à chaque
+la variante D : 240 px ; le message d'une sortie peut l'élargir jusqu'à 320 px, au-delà le nom est tronqué. Le remplissage suit la valeur par un ressort (ou une animation continue) relancé à chaque
 changement, jamais par paliers.
 
 Déclenchement (décisions 11 et 12) : tout changement de volume ou de sourdine de la sortie par défaut, et de sourdine
@@ -113,6 +117,10 @@ de l'entrée par défaut, quelle qu'en soit la source, lu dans les signaux de Pi
 - **garde de liaison** : pendant 1 s après un démarrage de la coque, une liaison du tracker, un changement de sortie ou
   d'entrée par défaut, une reconnexion ou un réveil, les signaux sont ignorés ; ils proviennent de PipeWire ou de
   WirePlumber, pas d'un geste de Nicolas (la valeur de 1 s est un choix de conception, à ajuster à l'essai) ;
+- **changement de la sortie par défaut** : il n'est pas ignoré comme les autres signaux de liaison ; il ouvre la
+  presqu'île sur le message de la décision 13, puis la garde de liaison s'applique au volume que WirePlumber
+  rétablit sur la nouvelle sortie. Le premier défaut connu au démarrage de la coque ne compte pas comme un
+  changement. Un changement d'entrée par défaut ne s'affiche pas ;
 - **garde du popover** : tant que le popover audio est ouvert, la presqu'île ne s'ouvre pas, quelle que soit la source
   du changement.
 
@@ -170,7 +178,9 @@ les bureaux, jamais un volume périmé. L'Ouvreuse passe par cet arbitre.
 - Tests unitaires des fonctions pures (seuils d'icône, filtres de nœuds, icône d'appareil, arrondi et bornes).
 - Essai réel : F2, F3, F1 et F4 répétés, jauge du popover glissée, sourdine par l'icône ; captures grim de la
   presqu'île et du popover, de jour et de nuit, sur les bureaux 1 à 4.
-- Démarrage de la coque, changement de sortie, reconnexion du casque, réveil : la presqu'île ne s'ouvre pas.
+- Démarrage de la coque et réveil : la presqu'île ne s'ouvre pas.
+- Bose allumé puis éteint : la presqu'île montre « LE-Bose NC 700 Headphones » puis « Haut-parleurs », sans
+  afficher ensuite le volume que WirePlumber rétablit.
 - Boutons de volume du Bose : la presqu'île s'ouvre. Popover ouvert et touche de volume : elle ne s'ouvre pas.
 - Galerie ouverte puis touche de volume : la galerie reste ; fermeture : les bureaux reviennent.
 - Changement de sortie vers le Bose NC 700 par le popover : `preferredDefaultAudioSink` n'a pas pu être éprouvé
@@ -183,3 +193,4 @@ les bureaux, jamais un volume périmé. L'Ouvreuse passe par cet arbitre.
 |---------|------|-------------|
 | 0.1 | 2026-11-08 | Première rédaction après le remue-méninges et les maquettes |
 | 0.2 | 2026-11-08 | Relecture du constructeur : déclenchement par toute source avec garde de liaison, presqu'île muette popover ouvert (décisions 11 et 12), hauteur du popover qui suit le contenu |
+| 0.3 | 2026-11-08 | Changement automatique de sortie montré dans la presqu'île (décision 13) |
