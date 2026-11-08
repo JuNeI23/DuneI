@@ -49,11 +49,12 @@ function dansGarde(maintenant, finGarde) {
 }
 
 // annonce — construit l'annonce affichée dans la presqu'île.
-// Entrées : genre, « volume », « micro », « sortie » ou « entree » ; sortie, entree, nœuds courants ; muetSortie,
+// Entrées : genre, « volume », « son » (bascule de la sourdine), « micro », « sortie » ou « entree » ; sortie, entree, nœuds courants ; muetSortie,
 // muetEntree, états muets. Sortie : { genre, appareil, texte, coupe }. Erreurs : aucune ; le choix de l'icône de seuil
 // ou de micro revient à Volume.qml. Dépendances : iconeAppareil, libelle.
 function annonce(genre, sortie, entree, muetSortie, muetEntree) {
     if (genre === "micro") return { genre, appareil: "", texte: muetEntree ? "Micro coupé" : "Micro actif", coupe: muetEntree }
+    if (genre === "son") return { genre, appareil: "", texte: muetSortie ? "Coupé" : "Son actif", coupe: muetSortie }
     if (genre === "volume") return { genre, appareil: "", texte: "", coupe: muetSortie }
     const n = genre === "sortie" ? sortie : entree
     return { genre, appareil: iconeAppareil(n, genre === "entree"), texte: libelle(n), coupe: false }

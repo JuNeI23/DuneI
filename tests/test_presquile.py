@@ -465,19 +465,36 @@ class VolumeTest(PresquileIpc, unittest.TestCase):
         self.assertTrue(fondu, "retour sans fondu")
         self.assertEqual((etat["opaciteCentre"], etat["cible"]), (0, 0.5), etat)
 
-    def test_son_retabli_sans_message(self):
-        # Rétabli, le genre « volume » rend la jauge sans aucun message : la disposition à gauche et à droite, le
-        # remplissage au niveau en accent, et pas de « Son actif » (seul le micro garde « Micro actif »).
+    def test_son_actif_au_retablissement(self):
+        # Une annonce « son » (bascule de la sourdine) rétablie centre l'icône du niveau et « Son actif », en
+        # sur-accent, sur le remplissage d'accent au niveau ; coupée, elle centre « Coupé » comme avant.
         couleurs = {k: v.lower() for k, v in self.vue(55)["color"].items() if isinstance(v, str)}
         self.appeler("volumeNiveau", 50)
-        self.appeler("volumeAnnoncer", "volume", "")
+        self.appeler("volumeAnnoncer", "son", "")
         self.appeler("volumeSourdine", True)
-        self.attendre_fondu("opaciteCentre")
+        etat, _ = self.attendre_fondu("opaciteCentre")
+        self.assertEqual((etat["symbole"], etat["texte"]), ("audio-volume-muted", "Coupé"), etat)
         self.appeler("volumeSourdine", False)
-        etat, _ = self.attendre_fondu("opaciteCote")
-        self.assertEqual((etat["opaciteCote"], etat["opaciteCentre"], etat["cible"]), (1, 0, 0.5), etat)
+        etat = self.attendre_repos()
+        self.assertEqual((etat["opaciteCote"], etat["opaciteCentre"], etat["cible"]), (0, 1, 0.5), etat)
+        self.assertEqual((etat["symbole"], etat["texte"]), ("audio-volume-medium", "Son actif"), etat)
         self.assertEqual((etat["fond"].lower(), etat["encre"].lower()), (couleurs["accent"], couleurs["onAccent"]), etat)
-        self.assertNotIn("actif", etat["texte"].lower(), etat)
+
+    def test_niveau_apres_le_retablissement(self):
+        # Un changement de niveau (annonce « volume ») rétabli rend la jauge ordinaire ; coupé, il garde « Coupé »
+        # centré, le remplissage suivant le niveau.
+        self.appeler("volumeNiveau", 50)
+        self.appeler("volumeAnnoncer", "son", "")
+        self.appeler("volumeSourdine", False)
+        self.attendre_repos()
+        self.appeler("volumeAnnoncer", "volume", "")
+        etat, _ = self.attendre_fondu("opaciteCote")
+        self.assertEqual((etat["opaciteCote"], etat["opaciteCentre"]), (1, 0), etat)
+        self.appeler("volumeSourdine", True)
+        self.appeler("volumeNiveau", 80)
+        etat, _ = self.attendre_fondu("opaciteCentre")
+        self.assertEqual((etat["opaciteCote"], etat["opaciteCentre"], etat["texte"], etat["cible"]),
+                         (0, 1, "Coupé", 0.8), etat)
 
 
 class EtatAudioPopoverTest(PresquileIpc, unittest.TestCase):

@@ -63,6 +63,13 @@ class AudioJsTest(EssaiCoque, unittest.TestCase):
         a = json.loads(self.appeler("annonce", "micro", None, None, False, True))
         self.assertEqual(a, {"genre": "micro", "appareil": "", "texte": "Micro coupé", "coupe": True})
 
+    def test_annonce_son(self):
+        # La bascule de la sourdine de la sortie annonce « Coupé » ou « Son actif » ; le volume seul n'a pas de texte.
+        for muet, texte in ((True, "Coupé"), (False, "Son actif")):
+            a = json.loads(self.appeler("annonce", "son", None, None, muet, False))
+            self.assertEqual(a, {"genre": "son", "appareil": "", "texte": texte, "coupe": muet})
+        self.assertEqual(json.loads(self.appeler("annonce", "volume", None, None, False, False))["texte"], "")
+
     def test_dans_garde(self):
         self.assertEqual(self.appeler("dansGarde", 999, 1000), "true")
         self.assertEqual(self.appeler("dansGarde", 1000, 1000), "false")

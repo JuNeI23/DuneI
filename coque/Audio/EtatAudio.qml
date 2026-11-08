@@ -15,7 +15,7 @@ import "audio.js" as Audio
 // - un changement de sortie annonce « sortie » avant de poser la garde ; un changement d'entrée attend 150 ms et
 //   s'efface si une annonce de sortie survient dans l'intervalle, ou s'il suit une annonce de sortie de moins d'une
 //   seconde (audio.js, fusionner) : la sortie l'emporte, qu'elle arrive avant ou après l'entrée ;
-// - volume ou sourdine de la sortie hors garde annoncent « volume », sourdine de l'entrée hors garde « micro » ;
+// - le volume de la sortie hors garde annonce « volume », sa sourdine « son », la sourdine de l'entrée « micro » ;
 // - tant qu'un popover audio est ouvert, sur quelque écran que ce soit, rien n'est annoncé.
 // Entrées : tenirPopover(proprietaire, ouvert), appelé par l'indicateur de chaque barre à chaque changement de son
 // popover et à sa destruction.
@@ -113,7 +113,7 @@ Singleton {
     Connections {
         target: etat.sortie?.audio ?? null
         function onVolumesChanged() { etat.signaler("volume") }
-        function onMutedChanged() { etat.signaler("volume") }
+        function onMutedChanged() { etat.signaler("son") }
     }
     Connections {
         target: etat.entree?.audio ?? null
@@ -136,7 +136,7 @@ Singleton {
     }
 
     // signaler — annonce un changement de volume ou de sourdine, sauf pendant la garde de liaison.
-    // Entrée : genre, « volume » ou « micro ». Sortie : aucune. Erreurs : aucune.
+    // Entrée : genre, « volume », « son » ou « micro ». Sortie : aucune. Erreurs : aucune.
     // Dépendances : audio.js (dansGarde), emettre.
     function signaler(genre: string): void {
         if (!Audio.dansGarde(Date.now(), memoire.finGarde)) emettre(genre)

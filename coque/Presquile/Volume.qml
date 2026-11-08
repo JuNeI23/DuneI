@@ -15,7 +15,8 @@ import "encoche.js" as Forme
 // d'opacité (Ressort « fondu », instantané sous mouvement réduit), non par un remplissage géométrique ; la jauge fait
 // ainsi corps avec l'encoche, sans jamais en déborder. Genre « volume » : le remplissage vaut le volume de la sortie,
 // l'icône de seuil est à gauche et le pourcentage à droite. Sous sourdine, le genre « volume » prend la disposition des
-// autres genres : l'icône barrée et « Coupé » centrés, le remplissage restant au niveau du son ; le passage d'une
+// autres genres : l'icône barrée et « Coupé » centrés ; la bascule de la sourdine (genre « son ») centre toujours,
+// « Coupé » coupé, ou l'icône du niveau et « Son actif » rétabli, sur le remplissage d'accent au niveau ; le remplissage restant au niveau du son ; le passage d'une
 // disposition à l'autre est un fondu croisé (Ressort « reveal » de nature « fondu »). Autres genres (« micro »,
 // « sortie », « entree ») : le remplissage glisse jusqu'à la pleine largeur, l'icône et le texte sont centrés et
 // serrés (4 px), le texte tronqué à droite ; l'icône d'un appareil est pleine.
@@ -45,12 +46,14 @@ Item {
     required property var ecran
     readonly property var gabarit: Theme.tokens?.presquile
     readonly property var annonce: EtatAudio.annonceCourante
-    readonly property bool niveau: (annonce?.genre ?? "volume") === "volume"
+    // Vrai pour les genres de la jauge : « volume » (changement de niveau) et « son » (bascule de la sourdine).
+    readonly property bool niveau: ["volume", "son"].includes(annonce?.genre ?? "volume")
     property bool muet: EtatAudio.muet
     property int niveauSon: EtatAudio.volume
     readonly property bool coupe: niveau ? muet : annonce.coupe
-    // Vrai pour la disposition centrée : tout genre autre que « volume », et le son coupé.
-    readonly property bool centree: !niveau || muet
+    // Vrai pour la disposition centrée : tout genre hors jauge, la bascule « son » (« Son actif » ou « Coupé »), et le
+    // son coupé.
+    readonly property bool centree: !niveau || muet || annonce?.genre === "son"
     readonly property alias remplissage: remplissage
     readonly property alias disposition: disposition
     readonly property alias cote: cote
@@ -189,7 +192,7 @@ Item {
         Icone {
             id: symbole
             anchors.verticalCenter: parent.verticalCenter
-            nom: volume.niveau ? Icones.iconeAudio(true, true, volume.niveauSon)
+            nom: volume.niveau ? Icones.iconeAudio(true, volume.muet, volume.niveauSon)
                 : volume.annonce.genre === "micro" ? Icones.iconeMicro(volume.coupe) : volume.annonce.appareil
             pleine: !volume.niveau && volume.annonce.genre !== "micro"
             taille: Theme.icons?.sizes?.dense ?? 0
@@ -201,7 +204,7 @@ Item {
             width: Math.min(implicitWidth, volume.largeurMax - 2 * volume.marge - symbole.width - centre.spacing)
             elide: Text.ElideRight
             moyen: true
-            text: volume.niveau ? "Coupé" : volume.annonce.texte
+            text: volume.niveau ? (volume.muet ? "Coupé" : "Son actif") : volume.annonce.texte
             color: encre.value
         }
     }
