@@ -1,6 +1,6 @@
 # Indicateur d'énergie, popover et alerte de la presqu'île : conception (L2-13)
 
-Version 0.3, 2026-11-08.
+Version 0.4, 2026-11-08.
 
 ## Intention
 
@@ -31,6 +31,10 @@ coup d'œil.
    `PowerProfiles`), sans `powerprofilesctl` ni sondage ; les seuils sont posés dans la configuration de DuneI, et non
    lus dans `/etc/UPower/UPower.conf`.
 9. En plein écran, l'alerte n'est pas perdue : elle est retenue et s'affiche à la sortie du plein écran.
+10. Maquettes (`.superpowers/preview/energie/maquettes.html`), validées à l'écran : alerte critique en encre 2, le
+    symbole et « Branchez le chargeur » tout en `error` ; popover A, le pourcentage en grand (28 px, graisse 600),
+    « 7 h 40 restantes » dessous en `text-secondary`, puis l'en-tête de section « Profil d'énergie » et les
+    segments en texte seul, sans icône.
 
 ## Repérage
 
@@ -98,8 +102,7 @@ Contenu, de haut en bas :
 
 Aucune ligne de pied : il n'existe pas encore de fenêtre de réglages de l'énergie vers laquelle pointer.
 
-La disposition exacte (pourcentage en grand ou en ligne, segments avec ou sans icône) se tranche sur maquette dans
-`.superpowers/preview/energie/`, validée à l'écran par Nicolas avant l'implémentation.
+Disposition validée sur maquette (décision 10) : la variante A.
 
 ### Alerte de la presqu'île
 
@@ -107,8 +110,7 @@ Un module `Presquile/Alerte.qml`, de hauteur `presquile.hauteur` (28 px) comme `
 presqu'île ne change pas (D132), seule la largeur s'étire par le ressort existant de `Scene.qml`.
 
 - **Faible** : symbole d'attention (Phosphor `warning`, en bold, D101) puis « Batterie faible », le tout en `warning`.
-- **Critique** : symbole d'attention en `error`, puis « Branchez le chargeur » ; le texte prend l'encre de texte
-  ordinaire ou `error`, à trancher sur maquette (décision 7 ne nomme que le symbole en rouge).
+- **Critique** : symbole d'attention puis « Branchez le chargeur », le tout en `error` (décision 10).
 
 Règles de déclenchement :
 
@@ -203,3 +205,4 @@ galerie passe de 2 à 3 dans l'Ouvreuse, l'alerte prend 2). Choix de Claude, apr
 | 0.1 | 2026-11-08 | Première rédaction après le remue-méninges |
 | 0.2 | 2026-11-08 | Relecture du constructeur : seuils dans `energie.toml`, écran visé, attente derrière la galerie, palier unique en attente, garde de `ready`, priorités de l'arbitre |
 | 0.3 | 2026-11-08 | Alerte retenue en plein écran et affichée à sa sortie (décision 9) |
+| 0.4 | 2026-11-08 | Maquettes validées : alerte critique tout en `error`, popover A (décision 10) |
