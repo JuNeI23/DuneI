@@ -339,7 +339,7 @@ class PopoverEnergieTest(EssaiCoque, unittest.TestCase):
         self.assertTrue(p["exclusif"] and p["fermeAuDepart"])
 
     def test_estimation_en_erreur_au_seuil_faible(self):
-        # Le seuil vient de l'état (energie.toml), non du popover : 20 % est au seuil, 21 % au-dessus.
+        # Sur batterie ; le seuil vient de l'état (energie.toml), non du popover : 20 % est au seuil, 21 % au-dessus.
         c = {k: v.lower() for k, v in self.vue(55)["color"].items() if isinstance(v, str)}
         self.ouvrir()
         for pourcent, role in ((20, "error"), (21, "textSecondary"), (5, "error"), (76, "textSecondary")):
@@ -349,6 +349,18 @@ class PopoverEnergieTest(EssaiCoque, unittest.TestCase):
         self.ipc("poser", "seuilFaible", "30")
         self.ipc("poser", "pourcent", "25")
         p = self.attendre_panneau(lambda p: p.get("pourcent") == "25 %")
+        self.assertEqual(p["couleurEstimation"].lower(), c["error"])
+
+    def test_estimation_jamais_en_erreur_hors_batterie(self):
+        c = {k: v.lower() for k, v in self.vue(55)["color"].items() if isinstance(v, str)}
+        self.ouvrir()
+        self.ipc("poser", "surBatterie", "false")
+        for pourcent in (20, 5):
+            self.ipc("poser", "pourcent", str(pourcent))
+            p = self.attendre_panneau(lambda p: p.get("pourcent") == f"{pourcent} %")
+            self.assertEqual(p["couleurEstimation"].lower(), c["textSecondary"], f"{pourcent} % en charge")
+        self.ipc("poser", "surBatterie", "true")
+        p = self.attendre_panneau(lambda p: p.get("couleurEstimation", "").lower() == c["error"])
         self.assertEqual(p["couleurEstimation"].lower(), c["error"])
 
     def test_estimation_sur_la_ligne_du_pourcentage(self):

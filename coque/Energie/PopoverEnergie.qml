@@ -9,7 +9,7 @@ import "energie.js" as Energie
 // construit une fois pour toutes et que l'hôte des popovers montre ou cache, compact, carré, sur le verre de E3, sans
 // contour ni bascule ronde (spec, décision 10, maquette A). Il porte de haut en bas : le pourcentage en grand (28 px,
 // graisse 600) au texte accentué, suivi sur la même ligne de la phrase d'estimation au texte secondaire
-// (« 7 h 40 restantes », en couleur d'erreur à partir du seuil faible), puis la section « Profil d'énergie » et un contrôle segmenté de la bible (Onglets) en texte seul : Économie, Équilibré et,
+// (« 7 h 40 restantes », en couleur d'erreur sur batterie à partir du seuil faible), puis la section « Profil d'énergie » et un contrôle segmenté de la bible (Onglets) en texte seul : Économie, Équilibré et,
 // si le démon le propose, Performance. Sans profils (power-profiles-daemon absent), la section et les segments
 // disparaissent et le reste demeure. Aucun pied. Un profil changé ailleurs se reflète dans le contrôle. Popover de la
 // barre (D108) : en ouvrir un autre le ferme ; il se ferme 1,5 s après le départ de la souris. Pour l'hôte, le panneau
@@ -111,8 +111,9 @@ Overlay {
                     text: panneau.etat.estimation
                     echelon: 1
                     elide: Text.ElideRight
-                    // Au seuil « faible » de energie.toml ou en dessous, l'estimation prend la couleur d'erreur.
-                    color: panneau.etat.pourcent <= panneau.etat.seuilFaible ? Theme.color?.error ?? "transparent"
+                    // Sur batterie, au seuil « faible » de energie.toml ou en dessous, l'estimation prend la couleur
+                    // d'erreur ; en charge ou sur secteur, jamais.
+                    color: panneau.etat.surBatterie && panneau.etat.pourcent <= panneau.etat.seuilFaible ? Theme.color?.error ?? "transparent"
                                                                              : Theme.color?.textSecondary ?? "transparent"
                 }
             }
