@@ -10,8 +10,9 @@ import "encoche.js" as Forme
 // Rôle : montre la dernière annonce d'EtatAudio. La presqu'île devient la jauge : un remplissage d'accent part de son
 // bord gauche, découpé à la silhouette entière de l'encoche (évasements et angles du bas compris) ; sa largeur suit un
 // Ressort « reflow » de nature « deplacement », relancé à chaque changement, jamais par paliers. Le niveau se lit sur
-// le corps : l'évasement gauche est teint dès que le niveau est non nul, et l'évasement droit se teint pendant que le
-// remplissage parcourt la dernière largeur d'évasement du corps, pour l'être entièrement au bord droit ; la jauge fait
+// le corps : l'évasement gauche est teint dès que le niveau est non nul, et l'évasement droit seulement quand le
+// remplissage est complet (corps rempli jusqu'au bord droit), jamais en dessous ; il s'y teint par un court fondu
+// d'opacité (Ressort « fondu », instantané sous mouvement réduit), non par un remplissage géométrique ; la jauge fait
 // ainsi corps avec l'encoche, sans jamais en déborder. Genre « volume » : le remplissage vaut le volume de la sortie,
 // l'icône de seuil est à gauche et le pourcentage à droite. Sous sourdine, le genre « volume » prend la disposition des
 // autres genres : l'icône barrée et « Coupé » centrés, le remplissage restant au niveau du son ; le passage d'une
@@ -31,7 +32,7 @@ import "encoche.js" as Forme
 // Sorties : implicitWidth, largeur (240) pour le genre « volume », sinon le contenu et ses marges bornés entre
 //           largeur et largeurMax (320) ; implicitHeight, hauteur de la presqu'île (contrat de tout module de
 //           contenu) ; remplissage, le ressort de la part remplie (0 à 1) ; remplie et flanc, les éléments découpés du
-//           remplissage (évasement gauche et corps, évasement droit) ; disposition, le ressort du fondu entre les deux
+//           remplissage (évasement gauche et corps, évasement droit) ; jointure, le ressort de teinte de l'évasement droit ; disposition, le ressort du fondu entre les deux
 //           dispositions ; cote et centre, les deux dispositions ; symbole et etiquette, l'icône et le texte centrés ;
 //           couleurFond et couleurEncre, les teintes visées du remplissage et du contenu ; tous lus par les essais.
 // Erreurs : aucune ; sans annonce, le module montre le volume ; avant le chargement des jetons, les cotes sont nulles
@@ -72,9 +73,11 @@ Item {
     property bool parti: false
     readonly property alias remplie: remplie
     readonly property alias flanc: flanc
-    // Largeur remplie du corps, et part de l'évasement droit teinte : elle croît sur la dernière largeur d'évasement.
+    readonly property alias jointure: jointure
+    // Largeur remplie du corps, et vrai quand elle atteint le bord droit (à un demi-pixel près) : seul cas où
+    // l'évasement droit est teint.
     readonly property real rempli: remplissage.value * corps
-    readonly property real partDroite: evasement > 0 ? Math.max(0, Math.min(1, (rempli - corps) / evasement + 1)) : 0
+    readonly property bool complet: rempli > 0 && rempli >= corps - 0.5
     // Bord gauche du corps de l'encoche dans le repère du module, qui le dépasse pendant que la forme s'étire.
     readonly property real origine: scene ? -x : 0
 
@@ -98,6 +101,13 @@ Item {
         transition: "reveal"
         nature: "fondu"
         cible: volume.centree ? 1 : 0
+    }
+    // Teinte de l'évasement droit : 1 quand le remplissage est complet, 0 sinon, en fondu court d'opacité.
+    Ressort {
+        id: jointure
+        transition: "reveal"
+        nature: "fondu"
+        cible: volume.complet ? 1 : 0
     }
     // Couleurs du remplissage et du contenu, en fondu : gris et rouge sous sourdine, accent et sur-accent sinon.
     ColorSpring {
@@ -131,11 +141,13 @@ Item {
         clip: true
         Silhouette {}
     }
-    // Évasement droit, au-delà du corps : teint à mesure que le remplissage approche du bord droit.
+    // Évasement droit, au-delà du corps : teint seulement quand le remplissage est complet, par un fondu d'opacité.
     Item {
         id: flanc
         x: volume.origine + volume.corps
-        width: volume.partDroite * volume.evasement
+        width: volume.evasement
+        opacity: jointure.value
+        visible: opacity > 0
         height: volume.height
         clip: true
         Silhouette { x: -volume.corps - volume.evasement }

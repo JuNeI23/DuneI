@@ -72,7 +72,7 @@ class PresquileStructureTest(unittest.TestCase):
         # ne se charge pas sous offscreen).
         attendues = {"Scene.qml": {"largeur": "deplacement", "hauteur": "deplacement", "opacite": "fondu",
                                    "effacement": "fondu"},
-                     "Bureaux.qml": None, "Volume.qml": {"remplissage": "deplacement", "disposition": "fondu"}}
+                     "Bureaux.qml": None, "Volume.qml": {"remplissage": "deplacement", "disposition": "fondu", "jointure": "fondu"}}
         for nom, natures in attendues.items():
             texte = re.sub(r"//.*", "", (ROOT / "coque" / "Presquile" / nom).read_text(encoding="utf-8"))
             ressorts = re.findall(r"Ressort\s*\{([^{}]*)\}", texte)
@@ -419,8 +419,11 @@ class VolumeTest(PresquileIpc, unittest.TestCase):
         self.appeler("volumeAnnoncer", "micro", "Micro actif")
         etat = self.attendre_repos()
         self.assertEqual((etat["gauche"], etat["droite"]), (-e, 240 + e), etat)
-        self.appeler("volumeNiveau", 100)
+        self.appeler("volumeNiveau", 99)
         self.appeler("volumeAnnoncer", "volume", "")
+        etat = self.attendre_repos()
+        self.assertAlmostEqual(etat["droite"], 237.6, delta=0.5, msg=etat)
+        self.appeler("volumeNiveau", 100)
         etat = self.attendre_repos()
         self.assertEqual((etat["gauche"], etat["droite"]), (-e, 240 + e), etat)
         self.appeler("volumeNiveau", 0)

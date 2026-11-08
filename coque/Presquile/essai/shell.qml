@@ -128,7 +128,7 @@ ShellRoot {
             const v = contenu, r = v?.remplie, f = v?.flanc
             if (!r) return null
             const g = v.x + r.x
-            return { gauche: g, droite: Math.max(g + r.width, f.width > 0 ? v.x + f.x + f.width : -Infinity) }
+            return { gauche: g, droite: Math.max(g + r.width, f.visible ? v.x + f.x + f.width : -Infinity) }
         }
 
         // mesurer — retient le débord courant du remplissage hors de l'encoche (corps et évasements), en px logiques.
@@ -350,7 +350,7 @@ ShellRoot {
                                     encre: String(v?.couleurEncre ?? ""), opaciteCote: v?.cote?.opacity ?? null,
                                     opaciteCentre: v?.centre?.opacity ?? null, symbole: v?.symbole?.nom ?? null,
                                     texte: v?.etiquette?.text ?? null,
-                                    mobile: s.ressortLargeur.moving || (v?.remplissage?.moving ?? false)
+                                    mobile: s.ressortLargeur.moving || (v?.remplissage?.moving ?? false) || (v?.jointure?.moving ?? false)
                                         || (v?.disposition?.moving ?? false) })
         }
 
