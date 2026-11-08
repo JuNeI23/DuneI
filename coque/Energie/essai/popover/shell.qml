@@ -68,6 +68,10 @@ ShellRoot {
                     return JSON.stringify({
                         pourcent: trouve("pourcent").text, taillePourcent: trouve("pourcent").font.pixelSize,
                         graissePourcent: trouve("pourcent").font.weight, couleurPourcent: String(trouve("pourcent").color),
+                        baselinePourcent: trouve("pourcent").mapToItem(p, 0, trouve("pourcent").baselineOffset).y,
+                        baselineEstimation: trouve("estimation").mapToItem(p, 0, trouve("estimation").baselineOffset).y,
+                        xPourcent: trouve("pourcent").mapToItem(p, 0, 0).x, largeurPourcent: trouve("pourcent").implicitWidth,
+                        xEstimation: trouve("estimation").mapToItem(p, 0, 0).x,
                         estimation: trouve("estimation").text, couleurEstimation: String(trouve("estimation").color),
                         section: { visible: trouve("sectionProfil").visible, texte: trouve("sectionProfil").text,
                                    couleur: String(trouve("sectionProfil").color) },

@@ -281,6 +281,11 @@ class PopoverEnergieTest(EssaiCoque, unittest.TestCase):
         self.assertFalse(p["disque"])
         self.assertTrue(p["exclusif"] and p["fermeAuDepart"])
 
+    def test_estimation_sur_la_ligne_du_pourcentage(self):
+        p = self.ouvrir()
+        self.assertEqual(p["baselinePourcent"], p["baselineEstimation"])
+        self.assertGreater(p["xEstimation"], p["xPourcent"] + p["largeurPourcent"])
+
     def test_sans_performance(self):
         self.ouvrir()
         self.ipc("poser", "aPerformance", "false")

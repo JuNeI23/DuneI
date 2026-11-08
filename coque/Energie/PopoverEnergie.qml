@@ -8,8 +8,8 @@ import "energie.js" as Energie
 // Rôle : même motif que le popover audio (D107 : pas de base commune). Un Overlay contextuel dont le contenu est
 // construit une fois pour toutes et que l'hôte des popovers montre ou cache, compact, carré, sur le verre de E3, sans
 // contour ni bascule ronde (spec, décision 10, maquette A). Il porte de haut en bas : le pourcentage en grand (28 px,
-// graisse 600) au texte accentué, la phrase d'estimation en dessous au texte secondaire (« 7 h 40 restantes »), la
-// section « Profil d'énergie » et un contrôle segmenté de la bible (Onglets) en texte seul : Économie, Équilibré et,
+// graisse 600) au texte accentué, suivi sur la même ligne de la phrase d'estimation au texte secondaire
+// (« 7 h 40 restantes »), puis la section « Profil d'énergie » et un contrôle segmenté de la bible (Onglets) en texte seul : Économie, Équilibré et,
 // si le démon le propose, Performance. Sans profils (power-profiles-daemon absent), la section et les segments
 // disparaissent et le reste demeure. Aucun pied. Un profil changé ailleurs se reflète dans le contrôle. Popover de la
 // barre (D108) : en ouvrir un autre le ferme ; il se ferme 1,5 s après le départ de la souris. Pour l'hôte, le panneau
@@ -64,14 +64,15 @@ Overlay {
             width: panneau.width
             spacing: Theme.space?.scale[0] ?? 0
 
-            // L'état : le pourcentage en grand (échelon 6, graisse 600, chiffres tabulaires) et l'estimation dessous.
-            ColumnLayout {
+            // L'état : le pourcentage en grand (échelon 6, graisse 600, chiffres tabulaires) et, sur la même ligne, à
+            // la même ligne de base, l'estimation, séparés d'un espace de space.scale[1].
+            RowLayout {
                 Layout.leftMargin: panneau.marge
                 Layout.rightMargin: panneau.marge
-                spacing: 0
+                spacing: Theme.space?.scale[1] ?? 0
                 Texte {
                     objectName: "pourcent"
-                    Layout.fillWidth: true
+                    Layout.alignment: Qt.AlignBaseline
                     text: panneau.etat.pourcent + " %"
                     font: Qt.font({ family: Theme.typo?.interface ?? Qt.application.font.family,
                                     pixelSize: Theme.typo?.scale[6] ?? Qt.application.font.pixelSize, weight: 600,
@@ -81,6 +82,7 @@ Overlay {
                 Texte {
                     objectName: "estimation"
                     Layout.fillWidth: true
+                    Layout.alignment: Qt.AlignBaseline
                     text: panneau.etat.estimation
                     echelon: 1
                     elide: Text.ElideRight
