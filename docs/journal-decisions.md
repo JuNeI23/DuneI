@@ -3537,8 +3537,13 @@ une fraction de 0 à 1. Le dossier de `energie.json` est celui des jetons, `Them
   chaque démarrage. Il peut aussi porter une valeur avant `ready`, d'où la garde.
 - **Dossier.** La session ne pose pas `DUNEI_TOKENS_DIR` : lu seul, il donnait le chemin « /energie.json » et des seuils
   par défaut. `Theme.dir` retombe sur `$XDG_CONFIG_HOME/dunei`, puis `~/.config/dunei`.
+- **Présence du démon de profils.** Le singleton `PowerProfiles` de Quickshell existe toujours, démon ou non, et
+  n'expose aucun drapeau de présence. `SuiviEnergie` lance donc une fois, au démarrage, `busctl --system status
+  net.hadess.PowerProfiles` : sans démon, la section des profils disparaît. Un démon lancé après la coque n'est vu
+  qu'au redémarrage de celle-ci ; c'est accepté, plutôt qu'un sondage.
+- **Une seule source.** La batterie de la barre lit désormais `EtatEnergie`, comme le popover.
 
-*Touché : `coque/Energie/SuiviEnergie.qml`, `coque/Energie/essai/`, `tests/test_energie.py`.*
+*Touché : `coque/Energie/SuiviEnergie.qml`, `coque/Energie/essai/`, `coque/Barre/Batterie.qml`, `tests/test_energie.py`.*
 
 ### D148 · Les segments d'un contrôle segmenté sont déclarés, et leur fond part de la transparence
 
