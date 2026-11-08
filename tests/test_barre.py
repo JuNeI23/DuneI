@@ -160,6 +160,16 @@ class IconesTest(BarreIpc, unittest.TestCase):
         self.assertEqual(self.appeler("iconeMoment", "nuit"), "weather-clear-night")
         self.assertEqual(self.appeler("iconeMoment", "jour"), "weather-clear")
 
+    def test_icone_audio_seuils(self):
+        self.assertEqual(self.appeler("iconeAudio", True, False, 0), "audio-volume-muted")
+        self.assertEqual(self.appeler("iconeAudio", True, False, 33), "audio-volume-low")
+        self.assertEqual(self.appeler("iconeAudio", True, False, 34), "audio-volume-medium")
+        self.assertEqual(self.appeler("iconeAudio", True, False, 67), "audio-volume-high")
+        self.assertEqual(self.appeler("iconeAudio", True, True, 80), "audio-volume-muted")
+
+    def test_icone_sans_sortie(self):
+        self.assertEqual(self.appeler("iconeAudio", False, False, 50), "")
+
     def test_element_disparait_sans_contenu(self):
         self.assertEqual(self.appeler("elementVisible"), "false")
         self.appeler("regler", "battery-level-80", "")

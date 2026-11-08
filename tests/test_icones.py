@@ -26,6 +26,8 @@ ATTENDUS = (
        "network-wired-offline", "network-wired-no-route", "view-refresh", "network-vpn-disabled",
        "view-reveal", "view-conceal", "edit-copy", "list-add", "list-remove", "user-trash", "go-next", "dialog-warning", "web-browser"]
     + ["audio-headphones", "audio-speakers", "input-mouse", "input-keyboard", "input-gaming", "phone", "computer"]
+    + ["audio-volume-muted", "audio-volume-low", "audio-volume-medium", "audio-volume-high",
+       "microphone-sensitivity-muted", "microphone-sensitivity-high", "audio-headset", "audio-input-microphone"]
 )
 
 
