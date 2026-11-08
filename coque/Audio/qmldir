@@ -1,0 +1,2 @@
+module Audio
+singleton EtatAudio 1.0 EtatAudio.qml

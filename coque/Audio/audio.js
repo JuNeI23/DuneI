@@ -58,3 +58,12 @@ function annonce(genre, sortie, entree, muetSortie, muetEntree) {
     const n = genre === "sortie" ? sortie : entree
     return { genre, appareil: iconeAppareil(n, genre === "entree"), texte: libelle(n), coupe: false }
 }
+
+// fusionner — dit si une annonce doit se fondre dans l'annonce de sortie qui la précède : quand sortie et entrée
+// changent vers le même appareil dans la seconde, seul le message de la sortie est montré (spec, décision 14).
+// Entrées : genre, genre de l'annonce candidate ; derniereSortieMs, instant de la dernière annonce de sortie ;
+// maintenant, instant courant, en millisecondes. Sortie : vrai si l'annonce est une entrée survenue moins de 1000 ms
+// après une annonce de sortie. Erreurs : aucune.
+function fusionner(genre, derniereSortieMs, maintenant) {
+    return genre === "entree" && maintenant - derniereSortieMs < 1000
+}

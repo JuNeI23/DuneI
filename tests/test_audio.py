@@ -61,3 +61,12 @@ class AudioJsTest(EssaiCoque, unittest.TestCase):
     def test_annonce_micro(self):
         a = json.loads(self.appeler("annonce", "micro", None, None, False, True))
         self.assertEqual(a, {"genre": "micro", "appareil": "", "texte": "Micro coupé", "coupe": True})
+
+    def test_dans_garde(self):
+        self.assertEqual(self.appeler("dansGarde", 999, 1000), "true")
+        self.assertEqual(self.appeler("dansGarde", 1000, 1000), "false")
+
+    def test_fusion(self):
+        self.assertEqual(self.appeler("fusionner", "entree", 0, 999), "true")
+        self.assertEqual(self.appeler("fusionner", "entree", 0, 1000), "false")
+        self.assertEqual(self.appeler("fusionner", "sortie", 0, 10), "false")
