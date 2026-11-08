@@ -7,7 +7,8 @@ import "../Audio"
 // Annonceur — contrôleur unique de la jauge du son dans la presqu'île (L2-12).
 // Rôle : à chaque annonce d'EtatAudio (signal annoncer), demande le module Volume, en priorité 1, à la presqu'île de
 // l'écran actif et relance le délai de retour (Theme.motion.delays.dismiss, 1,5 s) ; à son terme, libère la demande :
-// la presqu'île rend le module suivant de son arbitre (les bureaux, ou la galerie si elle est ouverte). Une rafale
+// la presqu'île rend le module suivant de son arbitre, par ordre de priorité : la galerie (3) si elle est ouverte,
+// l'alerte d'énergie (2) si elle est affichée, sinon les bureaux. Le volume (1) passe sous l'une et l'autre. Une rafale
 // d'annonces ne monte le module qu'une fois : une demande renouvelée est sans effet dans l'arbitre, et le module lit
 // lui-même l'annonce courante. Rien ne s'ouvre si l'espace de travail de l'écran actif porte une fenêtre en plein
 // écran (la presqu'île, sur la couche Top, y est cachée). Si l'écran actif change pendant l'affichage, la demande en

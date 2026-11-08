@@ -6,10 +6,11 @@ nomme le palier en cause. Une seule erreur bloque la génération. Les types son
 
 from __future__ import annotations
 
-VERSION = "0.1.0"
+VERSION = "0.2.0"
 ORDRE = ("attenuation", "verrouillage", "ecran", "veille")   # Ordre imposé des paliers dans le temps.
 ALIMENTATIONS = ("batterie", "secteur")
-SECTIONS = ("version", "commandes", "attenuation", "paliers")
+SECTIONS = ("version", "commandes", "attenuation", "alerte", "paliers")
+SEUILS = ("faible", "critique")                              # Seuils d'alerte de la batterie, en % (L2-13).
 COMMANDES = ("verrouiller", "verrouilleur")
 
 
@@ -26,7 +27,7 @@ def _types(raw: dict) -> list[str]:
     """Contrôle des sections, des clés et des types.
 
     Entrée : raw — TOML brut. Sortie : liste des erreurs, vide si tout est bien formé.
-    Erreurs : aucune exception. Dépendances : SECTIONS, COMMANDES, ORDRE, ALIMENTATIONS, _entier.
+    Erreurs : aucune exception. Dépendances : SECTIONS, COMMANDES, SEUILS, ORDRE, ALIMENTATIONS, _entier.
     """
     err = [f"section inconnue « {k} »" for k in raw if k not in SECTIONS]
     if raw.get("version") != VERSION:
@@ -40,6 +41,16 @@ def _types(raw: dict) -> list[str]:
     niveau = att.get("niveau") if isinstance(att, dict) else None
     if not (_entier(niveau) and 1 <= niveau <= 100):
         err.append(f"attenuation : niveau « {niveau} » hors de 1 à 100")
+    alerte = raw.get("alerte")
+    if not isinstance(alerte, dict):
+        err.append("alerte : table attendue")
+    else:
+        err += [f"alerte : clé inconnue « {k} »" for k in alerte if k not in SEUILS]
+        hors = [f"alerte : {k} « {alerte.get(k)} » hors de 1 à 99" for k in SEUILS
+                if not (_entier(alerte.get(k)) and 1 <= alerte[k] <= 99)]
+        err += hors
+        if not hors and alerte["critique"] >= alerte["faible"]:
+            err.append(f"alerte : critique ({alerte['critique']}) n'est pas sous faible ({alerte['faible']})")
     paliers = raw.get("paliers", {})
     if not isinstance(paliers, dict):
         return err + ["paliers : table attendue"]

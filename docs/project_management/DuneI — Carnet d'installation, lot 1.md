@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.39. Historique en fin de document.
+Version 1.40. Historique en fin de document.
 
 Socle amorçable.
 
@@ -942,7 +942,7 @@ hypridle hyprlock upower brightnessctl
 
 `hypridle` 0.1.8-2 et `hyprlock` 0.9.6-3, dépôt officiel, installés par `sudo pacman -S --needed hypridle hyprlock` (D41, D42). `hypridle` joue l'échelle d'inactivité ; `hyprlock` est le verrouilleur provisoire, remplacé à L2-22.
 
-**La source : `energie.toml`.** Comme `motion.toml`, un fichier à la racine du dépôt donne les délais, en secondes depuis le début de l'inactivité. `make energie` (aussi appelée par `make check` et `make install`) lance `generate_energie.py`, qui vérifie les délais, puis écrit `generated/hypridle.conf`, où chaque palier existe une fois par alimentation. Une source fautive est refusée avec le nom du palier en cause : délais entiers et strictement positifs, ordre strict, un palier présent exige ceux qui le précèdent (aucune veille sans verrouillage), niveau d'atténuation entre 1 et 100. `hypridle.conf` est copié sous `~/.config/hypr/hypridle.conf`, où `hypridle` le cherche.
+**La source : `energie.toml`.** Comme `motion.toml`, un fichier à la racine du dépôt donne les délais, en secondes depuis le début de l'inactivité. `make energie` (aussi appelée par `make check` et `make install`) lance `generate_energie.py`, qui vérifie les délais, puis écrit `generated/hypridle.conf`, où chaque palier existe une fois par alimentation. Depuis L2-13 (version 0.2.0 de la source), la section `[alerte]` porte aussi les seuils d'alerte de la batterie, `faible = 20` et `critique = 5`, en pourcentage, entiers de 1 à 99, le critique strictement sous le faible ; ils partent dans `generated/energie.json`, lu par la coque. Changer un seuil demande `make install`, puis un redémarrage de la coque (`systemctl --user restart dunei-coque`). Pour éprouver l'alerte sans vider la batterie, on relève temporairement les seuils au-dessus du pourcentage courant, on installe et on redémarre la coque : l'alerte part au démarrage ; on rétablit ensuite 20 et 5. Une source fautive est refusée avec le nom du palier en cause : délais entiers et strictement positifs, ordre strict, un palier présent exige ceux qui le précèdent (aucune veille sans verrouillage), niveau d'atténuation entre 1 et 100. `hypridle.conf` est copié sous `~/.config/hypr/hypridle.conf`, où `hypridle` le cherche.
 
 **L'échelle** (D43). Une alimentation absente veut dire « jamais » ; les paliers se retentent toutes les 5 s, si bien que brancher ou débrancher le secteur pendant l'inactivité change d'échelle dans les 5 s.
 
@@ -1535,9 +1535,10 @@ un fichier généré, jamais dans le QML (D81).
 | --- | --- | --- |
 | `generated/coque-tokens.json` | `tokens.toml`, par `make tokens` | couleurs, états, matière, tailles |
 | `generated/motion.json` | `motion.toml`, par `make motion` | ressorts et transitions |
-| `~/.config/dunei/coque-tokens.json`, `motion.json` | `make install` | copies lues par la coque |
+| `generated/energie.json` | `energie.toml`, par `make energie` | seuils d'alerte de la batterie (L2-13) |
+| `~/.config/dunei/coque-tokens.json`, `motion.json`, `energie.json` | `make install` | copies lues par la coque |
 
-`make install` dépose ces deux fichiers (copie atomique par renommage) ; la variable `DUNEI_TOKENS_DIR`
+`make install` dépose ces trois fichiers (copie atomique par renommage) ; la variable `DUNEI_TOKENS_DIR`
 remplace le dossier de lecture (sinon `$XDG_CONFIG_HOME/dunei`, sinon `~/.config/dunei`). Les fichiers portent
 la marque « GÉNÉRÉ » en deuxième ligne et ne s'éditent jamais.
 
@@ -2345,6 +2346,7 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 
 | Version | Date | Changement |
 | --- | --- | --- |
+| 1.40 | 2026-11-08 | Énergie (L2-13) : section `[alerte]` d'`energie.toml` (version 0.2.0), `generated/energie.json` copié sous `~/.config/dunei/` par `make install`, essai de l'alerte par seuils relevés |
 | 1.39 | 2026-11-08 | Audio (L2-12) : la table des icônes compte le groupe `[audio]` (huit noms, 74 au total) ; `make install` n'a pas d'autre changement de comportement |
 | 1.38 | 2026-11-07 | La galerie de fonds : mémoire de la coque (`MemoryTHP=madvise`, `make install` puis redémarrage du service, relevé de `smaps_rollup`, D134), préchauffage et surface constante (D132, D133), gros dossier accepté (D135) |
 | 1.37 | 2026-11-07 | La galerie de fonds (L2-60, D124 à D131) : SUPER + W, `make install` pour les nouveaux jetons, dépannage, essais, mesures et recette |

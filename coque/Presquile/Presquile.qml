@@ -16,11 +16,11 @@ import "../Theme"
 // de l'encoche la marge de son ombre, pour qu'elle ne soit pas coupée. Le masque de saisie ne couvre que le corps de
 // l'encoche : partout ailleurs, les clics traversent. Elle ne réserve aucune place et ne prend jamais le focus clavier.
 // Entrées : modelData, l'écran que lui donne le Variants de la coque (obligatoire) ; demander(cle, composant,
-//           priorite) et liberer(cle), par lesquels les modules (galerie 2, volume 1) réclament la presqu'île, que
-//           tranche un Arbitre : le composant de contenu est un Item déclarant implicitWidth et implicitHeight, et
-//           recevant ecran. C'est l'unique manière de changer de contenu. reserve, hauteur minimale réservée à
-//           l'encoche (0 par défaut) : la coque y passe celle du plus grand module connu, pour que la surface garde
-//           toujours la même taille (voir Scene.hauteurSurface).
+//           priorite) et liberer(cle), par lesquels les modules (galerie 3, alerte 2, volume 1) réclament la
+//           presqu'île, que tranche un Arbitre : le composant de contenu est un Item déclarant implicitWidth et
+//           implicitHeight, et recevant ecran. C'est l'unique manière de changer de contenu. reserve, hauteur
+//           minimale réservée à l'encoche (0 par défaut) : la coque y passe celle du plus grand module connu, pour
+//           que la surface garde toujours la même taille (voir Scene.hauteurSurface).
 // Sorties : une fenêtre de calque au namespace « dunei-presquile » (floutée par les règles de calque générées) ;
 //           module, le composant arbitré (lecture seule, Bureaux sans demande) ; contenu, le module monté ; phase,
 //           celle de la séquence de changement (« repos », « sortie », « forme » ou « entree »), lue par les essais et

@@ -13,7 +13,9 @@ import "Audio"
 // seulement, ouvre une vitrine (FloatingWindow jamais montrée à l'écran) qui porte une Encoche au corps de la
 // planche forme.html (106), sur le fond du bureau, avec la marge de son ombre, et l'enregistre en PNG à la demande.
 // Les commandes arbitreDemander, arbitreLiberer et arbitreEtat éprouvent l'Arbitre ; annonceurRafale,
-// annonceurPleinEcran et annonceurEtat, l'Annonceur, piloté par une source et une presqu'île factices ;
+// annonceurPleinEcran et annonceurEtat, l'Annonceur, piloté par une source et une presqu'île factices ; alerteAnnoncer,
+// alerteEffacer, alertePleinEcran, alerteEcran, alerteDemander, alerteLiberer, alertePhase et alerteEtat, l'AnnonceurAlerte, piloté
+// par une source et deux presqu'îles factices ; alerteModule, le rendu du module Alerte réel ;
 // volumeAnnoncer, volumeMicro, volumeSourdine, volumeNiveau et volumeEtat, le module Volume réel dans une scène sans fenêtre (débord
 // du remplissage hors de l'encoche, jointures, disposition du son coupé) ; audioTenir et audioPopover, le compte des
 // popovers audio ouverts d'EtatAudio. Les tâches suivantes y ajoutent leurs composants et leurs fonctions IPC.
@@ -29,7 +31,8 @@ import "Audio"
 // Dépendances : quickshell ≥ 0.3 (Quickshell.Io, FloatingWindow, LazyLoader), modules Theme, Composants et
 // Presquile (dont encoche.js).
 // Import : liens essai/Theme, essai/Composants et essai/Presquile, comme dans les autres coques d'essai ; essai/Audio et
-// essai/Barre, que résolvent les imports relatifs de l'Annonceur et du module Volume.
+// essai/Barre, que résolvent les imports relatifs de l'Annonceur et du module Volume ; essai/Energie, celui de
+// l'AnnonceurAlerte.
 ShellRoot {
     // Theme est un singleton paresseux : cette lecture le charge, ce qu'attend le setUp de l'essai.
     Component.onCompleted: Theme.tokens
@@ -110,9 +113,40 @@ ShellRoot {
         volume: moduleVolume
         Component.onCompleted: inscrire(essaiIle)
     }
+    // Annonceur de l'alerte d'énergie, sans Hyprland ni UPower : une source factice émet annoncer et effacer, et deux
+    // presqu'îles factices, aux écrans « A » et « B » (des noms, comme ecranActif), portent chacune un arbitre réel.
+    // montees compte les fois où le module Alerte devient le module arbitré d'une presqu'île.
+    QtObject { id: sourceAlerte; signal annoncer(int palier); signal effacer() }
+    component IleAlerte: QtObject {
+        property var modelData
+        // Phase de la séquence de changement, posée par l'IPC (alertePhase) : « repos » tient le module pour posé.
+        property string phase: "repos"
+        readonly property Arbitre arbitre: Arbitre {}
+        readonly property Component module: arbitre.module
+
+        // demander — relaie une demande à l'arbitre de la presqu'île factice. Entrées : cle, composant, priorite.
+        // Sortie : aucune. Erreurs : aucune. Dépendances : arbitre.
+        function demander(cle, composant, priorite) { arbitre.demander(cle, composant, priorite) }
+
+        // liberer — relaie une libération à l'arbitre. Entrée : cle. Sortie : aucune. Erreurs : aucune.
+        // Dépendances : arbitre.
+        function liberer(cle) { arbitre.liberer(cle) }
+    }
+    IleAlerte { id: ileA; modelData: "A"; onModuleChanged: if (module === essaiAlerte.alerte) essaiAlerte.montees++ }
+    IleAlerte { id: ileB; modelData: "B"; onModuleChanged: if (module === essaiAlerte.alerte) essaiAlerte.montees++ }
+    AnnonceurAlerte {
+        id: essaiAlerte
+        property int montees: 0
+        etat: sourceAlerte
+        ecranActif: "A"
+        pleinEcran: false
+        galerie: moduleGalerie
+        Component.onCompleted: { inscrire(ileA); inscrire(ileB) }
+    }
     // Scène d'essai du module Volume réel (EtatAudio lu en lecture seule ; l'essai n'écrit que annonceCourante, dans
     // ce processus) : depassement retient, image par image, le plus grand débord du remplissage hors du corps.
     // Le niveau et la sourdine du module viennent de la scène d'essai, que l'IPC écrit, et non de PipeWire.
+    Component { id: moduleAlerteReel; Alerte {} }
     Component { id: moduleVolumeReel; Volume { objectName: "volume"; muet: sceneVolume.muetEssai; niveauSon: sceneVolume.niveauEssai } }
     Scene {
         id: sceneVolume
@@ -326,6 +360,64 @@ ShellRoot {
             return JSON.stringify({ module: arbitreAnnonce.module === moduleVolume ? "volume" : "bureaux",
                                     changements: arbitreAnnonce.changements, liberations: essaiIle.liberations,
                                     cible: essaiAnnonceur.cible !== null })
+        }
+
+        // alerteAnnoncer — émet une annonce de la source factice de l'alerte. Entrée : palier (1 ou 2). Sortie : aucune.
+        // Erreurs : aucune. Dépendances : sourceAlerte.
+        function alerteAnnoncer(palier: int): void { sourceAlerte.annoncer(palier) }
+
+        // alerteEffacer — émet l'effacement de la source factice (branchement). Entrées : aucune. Sortie : aucune.
+        // Erreurs : aucune. Dépendances : sourceAlerte.
+        function alerteEffacer(): void { sourceAlerte.effacer() }
+
+        // alertePleinEcran — pose le plein écran vu par l'annonceur de l'alerte. Entrée : b. Sortie : aucune.
+        // Erreurs : aucune. Dépendances : essaiAlerte.
+        function alertePleinEcran(b: bool): void { essaiAlerte.pleinEcran = b }
+
+        // alerteEcran — pose l'écran actif vu par l'annonceur de l'alerte. Entrée : nom (« A » ou « B »).
+        // Sortie : aucune. Erreurs : aucune. Dépendances : essaiAlerte.
+        function alerteEcran(nom: string): void { essaiAlerte.ecranActif = nom }
+
+        // alerteDemander — demande un module factice à une presqu'île de l'alerte, à sa priorité de la coque (galerie 3,
+        // volume 1). Entrées : ile (« A » ou « B ») ; cle (« galerie » ou « volume »). Sortie : aucune.
+        // Erreurs : aucune. Dépendances : ileA, ileB, moduleGalerie, moduleVolume.
+        function alerteDemander(ile: string, cle: string): void {
+            (ile === "A" ? ileA : ileB).demander(cle, cle === "galerie" ? moduleGalerie : moduleVolume, cle === "galerie" ? 3 : 1)
+        }
+
+        // alertePhase — pose la phase de la séquence de changement d'une presqu'île de l'alerte. Entrées : ile (« A »
+        // ou « B ») ; phase (« repos », « sortie », « forme » ou « entree »). Sortie : aucune. Erreurs : aucune.
+        // Dépendances : ileA, ileB.
+        function alertePhase(ile: string, phase: string): void { (ile === "A" ? ileA : ileB).phase = phase }
+
+        // alerteLiberer — libère la demande d'une clé sur une presqu'île de l'alerte. Entrées : ile, cle.
+        // Sortie : aucune. Erreurs : aucune. Dépendances : ileA, ileB.
+        function alerteLiberer(ile: string, cle: string): void { (ile === "A" ? ileA : ileB).liberer(cle) }
+
+        // alerteEtat — état de l'annonceur de l'alerte. Entrées : aucune. Sortie : JSON {A, B (module arbitré de chaque
+        // presqu'île : « alerte », « galerie », « volume » ou « bureaux »), enAttente, affiche, cible (« A », « B » ou
+        // vide), montees}. Erreurs : aucune. Dépendances : essaiAlerte, ileA, ileB.
+        function alerteEtat(): string {
+            const nom = m => m === essaiAlerte.alerte ? "alerte" : m === moduleGalerie ? "galerie"
+                : m === moduleVolume ? "volume" : "bureaux"
+            return JSON.stringify({ A: nom(ileA.module), B: nom(ileB.module), enAttente: essaiAlerte.enAttente,
+                                    affiche: essaiAlerte.affiche, cible: essaiAlerte.cible?.modelData ?? "",
+                                    montees: essaiAlerte.montees })
+        }
+
+        // alerteModule — crée un module Alerte réel hors fenêtre, en relève le rendu et le détruit.
+        // Entrée : palier (1 ou 2). Sortie : JSON {icone, texte, couleurIcone, couleurTexte, warning, error (couleurs
+        // des rôles du thème), hauteur, gabarit (hauteur de la presqu'île), largeur, contenu (symbole, écart et texte)}.
+        // Erreurs : aucune. Dépendances : moduleAlerteReel, Theme.
+        function alerteModule(palier: int): string {
+            const a = moduleAlerteReel.createObject(null, { ecran: null, palier })
+            const r = { icone: a.symbole.nom, texte: a.message.text, couleurIcone: String(a.symbole.couleur),
+                        couleurTexte: String(a.message.color), warning: String(Theme.color.warning),
+                        error: String(Theme.color.error), hauteur: a.implicitHeight,
+                        gabarit: Theme.tokens.presquile.hauteur, largeur: a.implicitWidth,
+                        contenu: a.symbole.width + 6 + a.message.implicitWidth }
+            a.destroy()
+            return JSON.stringify(r)
         }
 
         // volumeAnnoncer — pose l'annonce courante d'EtatAudio dans ce processus et monte le module Volume réel dans sa

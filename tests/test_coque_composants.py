@@ -16,7 +16,7 @@ import time
 import unittest
 from pathlib import Path
 
-from tests.test_coque_theme import QS, ROOT, EssaiCoque
+from tests.test_coque_theme import DELAI, QS, ROOT, EssaiCoque
 
 # Messages d'erreur du moteur JavaScript ou d'une liaison QML qui ne doivent jamais atteindre le journal.
 ERREURS = ("TypeError", "ReferenceError", "Unable to assign")
@@ -1135,7 +1135,15 @@ class CoqueClavierTest(EssaiCoque, unittest.TestCase):
         self.assertEqual((hs, rs), (str(h0), str(rc - retrait)))
         self.assertEqual(nu, "#00000000")
         self.ipc("survolerOnglet")
-        self.assertEqual(self.valeur("ongletSurvole"), "hover #00000000")
+        # Le ressort d'état d'un segment non coché part de la transparence au survol comme au repos : sinon son fond
+        # opaque paraîtrait au premier instant de la pression (gris, noir, gris constatés à l'écran).
+        # Le ressort peut finir de glisser vers la transparence après la création : on attend qu'il s'y pose.
+        # Une ligne de moins de trois champs est complétée de champs vides : l'échec reste lisible, sans IndexError.
+        fin = time.monotonic() + DELAI
+        while (survol := self.valeur("ongletSurvole").split() + [""] * 3)[2][:3] != "#00" and time.monotonic() < fin:
+            time.sleep(0.1)
+        self.assertEqual(survol[:2], ["hover", "#00000000"])
+        self.assertEqual(survol[2][:3], "#00", survol)
 
     def test_anneau_sur_la_barre(self):
         # Défaut relevé à l'écran : l'anneau du segment coché chevauchait le segment voisin. La barre étant l'unique

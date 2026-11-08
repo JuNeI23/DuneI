@@ -3483,3 +3483,87 @@ actif sans coche, par l'icône en graisse pleine et en accent autonome, le nom e
 
 *Touché : `Jauge.qml`, `Rangee.qml`, `PopoverAudio.qml`, `CadrePopovers.qml`, `Barre/Audio.qml`, `icones.js`,
 `icones/correspondances.toml`, bible (chapitre 7), spec, backlog (L2-12, L2-65).*
+
+### D145 · Le popover d'énergie donne le temps restant et le choix du profil ; aucune bascule automatique, aucun lien avec les animations
+
+2026-11-08, décisions de Nicolas au cadrage de L2-13. **Un clic sur la batterie de la barre ouvre un popover hébergé qui
+donne le pourcentage, suivi sur la même ligne du temps restant (« 7 h 40 restantes », « Plein dans 1 h 10 »), puis le
+choix du profil d'énergie (Économie, Équilibré, Performance) dans un contrôle segmenté. Le profil ne change que par ce
+choix : ni le branchement, ni un seuil de batterie ne le basculent. L'économie ne touche que le système : DuneI ne coupe
+aucune animation en `power-saver`, ce qui referme l'idée gardée pour L2-13 par D117.**
+
+- **Moment fondateur.** Nicolas, en cours, sans chargeur : il veut d'un geste passer en économie et savoir combien de
+  temps il tiendra. Les deux réponses sont donc dans le même popover, sans menu.
+- **Disposition.** Maquette A retenue à l'écran (pourcentage en grand, segments en texte seul), puis, à la recette,
+  l'estimation placée à la suite du pourcentage, alignée sur sa ligne de base, au lieu de dessous.
+- **Technique.** Le service UPower de Quickshell (`UPower`, `PowerProfiles`) lit et écrit tout, sans `powerprofilesctl`
+  ni sondage ; `powerprofilesctl` lancé en commande et D-Bus en direct ont été écartés (sondage, code à maintenir).
+- **Estimation inconnue.** Une estimation nulle, négative ou de moins d'une minute s'affiche « Estimation en cours… »,
+  jamais « 0 min ».
+- **Pleine charge.** UPower reste en « charging » à 100 %, quelques secondes avant le plein : chargée, en charge à
+  100 % ou à moins d'une minute du plein, le popover dit « Pleine charge » (recette de Nicolas).
+- **Estimation en rouge.** Sur batterie seulement, à 20 % ou moins (seuil faible d'`energie.toml`), l'estimation
+  s'écrit en `error` ; en charge, elle garde `text-secondary` (décision de Nicolas).
+
+*Touché : `coque/Energie/` (`EtatEnergie`, `SuiviEnergie`, `PopoverEnergie`, `energie.js`), `Barre/Batterie.qml`,
+`Barre/Barre.qml`, spec et plan du 2026-11-08, backlog (L2-13).*
+
+### D146 · L'alerte de batterie passe par la presqu'île, à 20 % puis à 5 %, retenue derrière la galerie et le plein écran
+
+2026-11-08, décisions de Nicolas au cadrage de L2-13. **Sur batterie, la presqu'île s'ouvre une fois à 20 % sur le
+symbole d'attention et « Batterie faible » en `warning`, puis une fois à 5 % sur le symbole et « Branchez le chargeur »
+en `error`. Rien ne se répète entre les deux ; le branchement efface l'alerte et réarme les deux paliers. Une alerte qui
+tombe en plein écran ou derrière la galerie de l'écran actif attend, puis s'affiche pour son délai entier (4 s, jeton
+`delays.alerte`), compté depuis la montée effective du module.**
+
+- **Seuils.** Ils vivent dans `energie.toml` (section `[alerte]`, version 0.2.0), à côté de l'échelle de veille, et
+  rejoignent la coque par `generated/energie.json`. Les seuils d'UPower (`PercentageLow`, `PercentageCritical`) ne sont
+  pas lus ; l'action d'urgence à 2 % reste l'affaire du système.
+- **Démarrage.** Une batterie déjà sous un seuil au démarrage de la coque avertit une fois ; rien n'est évalué tant que
+  l'appareil n'est pas prêt, pour ne jamais lancer une fausse alerte critique.
+- **Priorités de l'arbitre (D143 révisée).** Galerie 3, alerte 2, volume 1, bureaux 0 : le volume ne recouvre jamais
+  l'alerte. Une galerie ouverte par-dessus une alerte en suspend le délai, et l'alerte revient en entier à sa fermeture.
+- **Une seule alerte en attente.** Le palier critique remplace le faible ; un branchement pendant l'attente l'annule.
+
+*Touché : `Presquile/Alerte.qml`, `Presquile/AnnonceurAlerte.qml`, `Galerie/Ouvreuse.qml`, `shell.qml`, `energie.toml`,
+`dunei_energie/` (cible `coque`), `deploy.py`, `motion.toml`, `icones/correspondances.toml`, spec, bible.*
+
+### D147 · L'état d'énergie lit la batterie du portable dans `UPower.devices`, en fraction, et ses seuils sous `Theme.dir`
+
+2026-11-08, constats de l'exécution de L2-13 sur `caladan`. **`SuiviEnergie` prend pour appareil la première batterie de
+portable de `UPower.devices`, et `UPower.displayDevice` tant que la liste est vide. Le pourcentage de Quickshell 0.3.2 est
+une fraction de 0 à 1. Le dossier de `energie.json` est celui des jetons, `Theme.dir`.**
+
+- **Appareil.** En charge, `displayDevice.timeToFull` vaut une valeur négative (−13 555 relevé), alors que la batterie
+  elle-même donne le bon temps (1 026 s, comme `upower`). Lire la batterie rend « Plein dans 17 min » au lieu
+  d'« Estimation en cours… ».
+- **Fraction.** Le pourcentage relevé valait 0,61 à 61 % ; lu comme un pourcentage, il donnait une alerte critique à
+  chaque démarrage. Il peut aussi porter une valeur avant `ready`, d'où la garde.
+- **Dossier.** La session ne pose pas `DUNEI_TOKENS_DIR` : lu seul, il donnait le chemin « /energie.json » et des seuils
+  par défaut. `Theme.dir` retombe sur `$XDG_CONFIG_HOME/dunei`, puis `~/.config/dunei`.
+- **Présence du démon de profils.** Le singleton `PowerProfiles` de Quickshell existe toujours, démon ou non, et
+  n'expose aucun drapeau de présence. `SuiviEnergie` lance donc une fois, au démarrage, `busctl --system status
+  net.hadess.PowerProfiles` : sans démon, la section des profils disparaît. Un démon lancé après la coque n'est vu
+  qu'au redémarrage de celle-ci ; c'est accepté, plutôt qu'un sondage.
+- **Une seule source.** La batterie de la barre lit désormais `EtatEnergie`, comme le popover.
+
+*Touché : `coque/Energie/SuiviEnergie.qml`, `coque/Energie/essai/`, `coque/Barre/Batterie.qml`, `tests/test_energie.py`.*
+
+### D148 · Les segments d'un contrôle segmenté sont déclarés, et leur fond part de la transparence
+
+2026-11-08, constats de la recette de L2-13. **Dans un contenu de popover hébergé, les segments d'`Onglets` sont déclarés
+un à un, jamais créés par un `Repeater`. Un segment non coché d'une barre a un fond qui part de sa propre teinte rendue
+transparente au repos comme au survol (`fondReposTransparent`, nouveau `fondSurvolTransparent` d'`Etat`).**
+
+- **Segments invisibles.** `CadrePopovers` construit chaque contenu par un `Loader` asynchrone. Sous cette construction,
+  les `Onglet` créés par un `Repeater` existaient, visibles et placés, mais n'étaient jamais peints, et leur ordre était
+  inversé : la piste restait vide, noire la nuit et blanche le jour. Reproduit hors écran, puis corrigé. Sans profil
+  Performance, un segment masqué laissait un vide (T.TabBar compte les enfants masqués) : le popover déclare deux
+  contrôles, à deux et à trois segments, et n'en montre qu'un.
+- **Scintillement au clic.** Un segment non coché ne peint rien au repos, mais son ressort de couleur reposait sur le
+  fond opaque du rôle : à la pression, il peignait ce fond d'un coup, descendait vers la couleur pressée, puis remontait
+  vers la sélection (noir, gris, noir, gris, mesuré par une rafale de captures). Le correctif vaut pour tous les
+  contrôles segmentés, ceux de la fenêtre Réseau compris.
+
+*Touché : `Composants/Onglet.qml`, `Composants/Etat.qml`, `Energie/PopoverEnergie.qml`, tests des composants et de
+l'énergie.*

@@ -1,7 +1,7 @@
 # DuneI — chaîne de construction.
 #   make tokens   tokens.toml → generated/
 #   make motion   motion.toml → generated/
-#   make energie  energie.toml → generated/hypridle.conf, generated/energie.lua
+#   make energie  energie.toml → generated/hypridle.conf, generated/energie.lua, generated/energie.json
 #   make shaders  coque/Theme/materiau.frag → generated/materiau.frag.qsb (qsb de qt6-shadertools) et son empreinte
 #                 generated/materiau.frag.sha256 ; ne recompile que si la source ne répond plus à l'empreinte, car les
 #                 octets du .qsb changent avec la version de qsb (D85)

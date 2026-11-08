@@ -25,7 +25,7 @@ class GenerateTest(unittest.TestCase):
             self.assertEqual(res.returncode, 0, res.stderr)
             data = json.loads((Path(tmp) / "motion.json").read_text(encoding="utf-8"))
             self.assertEqual(data["transitions"]["navigate"]["in"]["settle_ms"], 353)
-            self.assertEqual((data["delays"], data["periods"]), ({"tooltip": 500, "scan": 6000, "copied": 1500, "stable": 5000, "dismiss": 1500, "liste": 30}, {"spinner": 1200}))
+            self.assertEqual((data["delays"], data["periods"]), ({"tooltip": 500, "scan": 6000, "copied": 1500, "stable": 5000, "dismiss": 1500, "liste": 30, "alerte": 4000}, {"spinner": 1200}))
             # La pose de repos et la courbe de l'indicateur d'activité viennent du mouvement, non du QML.
             self.assertEqual(data["spinner"], {"rest_scale": 0.6, "rest_opacity": 0.35, "easing": "InOutSine"})
             # Les trois valeurs du mouvement des popovers sont émises telles quelles.

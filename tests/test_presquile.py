@@ -110,6 +110,33 @@ class PresquileStructureTest(unittest.TestCase):
         for ligne in ("Annonceur 1.0 Annonceur.qml", "Volume 1.0 Volume.qml"):
             self.assertIn(ligne, qmldir)
 
+    def test_alerte_dans_la_coque(self):
+        # L'annonceur de l'alerte est unique, hors du Variants, connaît la galerie de l'ouvreuse, et chaque presqu'île
+        # s'y inscrit et s'en retire ; la galerie passe au-dessus de l'alerte (3 contre 2, volume 1).
+        shell = re.sub(r"//[^\n]*", "", (ROOT / "coque" / "shell.qml").read_text(encoding="utf-8"))
+        self.assertRegex(shell, r"\n    AnnonceurAlerte \{ id: alerte; galerie: ouvreuse\.galerie \}")
+        self.assertIn("alerte.inscrire(presquile)", shell)
+        self.assertIn("alerte.retirer(presquile)", shell)
+        qmldir = (ROOT / "coque" / "Presquile" / "qmldir").read_text("utf-8")
+        for ligne in ("AnnonceurAlerte 1.0 AnnonceurAlerte.qml", "Alerte 1.0 Alerte.qml"):
+            self.assertIn(ligne, qmldir)
+        ouvreuse = (ROOT / "coque" / "Galerie" / "Ouvreuse.qml").read_text(encoding="utf-8")
+        self.assertIn('p.demander("galerie", galerie, 3)', ouvreuse)
+        annonceur = re.sub(r"//[^\n]*", "", (ROOT / "coque" / "Presquile" / "AnnonceurAlerte.qml").read_text("utf-8"))
+        self.assertIn('demander("alerte", alerte, 2)', annonceur)
+        self.assertIn("Theme.motion?.delays?.alerte", annonceur)
+        self.assertIn("property var etat: EtatEnergie", annonceur)
+
+    def test_alerte_gabarit_et_icone(self):
+        # Hauteur de la presqu'île, comme Volume (la surface ne change jamais, D132) ; symbole Phosphor warning en bold
+        # (D101), déclaré dans la table des icônes.
+        code = re.sub(r"//.*", "", (ROOT / "coque" / "Presquile" / "Alerte.qml").read_text(encoding="utf-8"))
+        self.assertIn("readonly property var gabarit: Theme.tokens?.presquile", code)
+        self.assertRegex(code, r"implicitHeight:\s*gabarit\?\.hauteur\s*\?\?\s*0")
+        table = (ROOT / "icones" / "correspondances.toml").read_text(encoding="utf-8")
+        self.assertIn('"battery-caution" = "warning"', table)
+        self.assertTrue((ROOT / "icones" / "phosphor" / "bold" / "warning-bold.svg").exists())
+
     def test_qmldir_et_coque(self):
         self.assertIn("Presquile 1.0 Presquile.qml", (ROOT / "coque" / "Presquile" / "qmldir").read_text("utf-8"))
         shell = re.sub(r"//[^\n]*", "", (ROOT / "coque" / "shell.qml").read_text(encoding="utf-8"))
@@ -288,8 +315,8 @@ class MontageTest(PresquileIpc, unittest.TestCase):
         surface = (ROOT / "coque" / "Presquile" / "Presquile.qml").read_text(encoding="utf-8")
 
 
-# Priorités des modules de la presqu'île (galerie 2, volume 1).
-PRIORITE = {"volume": 1, "galerie": 2}
+# Priorités des modules de la presqu'île (galerie 3, alerte 2, volume 1).
+PRIORITE = {"volume": 1, "alerte": 2, "galerie": 3}
 
 
 class ArbitreTest(PresquileIpc, unittest.TestCase):
@@ -382,6 +409,151 @@ class AnnonceurTest(PresquileIpc, unittest.TestCase):
         self.appeler("annonceurPleinEcran", True)
         self.appeler("annonceurRafale", 1, 0)
         self.assertEqual(self.etat(), avant)
+
+
+class AlerteTest(PresquileIpc, unittest.TestCase):
+    """Annonceur de l'alerte d'énergie (L2-13), piloté par une source factice et deux presqu'îles factices « A » et
+    « B » : l'alerte vise l'écran actif au moment où elle s'affiche, attend la sortie du plein écran ou la fermeture
+    de la galerie de son écran, n'est remplacée que par le palier critique, et s'efface au branchement. Le délai
+    d'affichage (motion.delays.alerte) est ramené à DUREE dans le mouvement de l'essai, avant le lancement."""
+
+    DUREE = 1000
+
+    def preparer(self) -> None:
+        """Ramène delays.alerte à DUREE dans le mouvement de l'essai.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : OSError ou JSONDecodeError si motion.json manque.
+        Dépendances : installer (motion.json déjà posé).
+        """
+        mouvement = self.dir / "motion.json"
+        donnees = json.loads(mouvement.read_text())
+        donnees["delays"]["alerte"] = self.DUREE
+        mouvement.write_text(json.dumps(donnees))
+
+    def etat(self) -> dict:
+        """État de l'annonceur d'essai. Sortie : {A, B, enAttente, affiche, cible, montees}, A et B étant le module
+        arbitré de chaque presqu'île. Erreurs : celles de json."""
+        return self.json("alerteEtat")
+
+    def modules(self) -> tuple:
+        """Modules arbitrés des presqu'îles A et B. Sortie : (A, B). Erreurs : celles de json."""
+        e = self.etat()
+        return e["A"], e["B"]
+
+    def test_annonce_hors_plein_ecran(self):
+        self.appeler("alerteAnnoncer", 1)
+        e = self.etat()
+        self.assertEqual((e["A"], e["B"], e["enAttente"], e["affiche"], e["cible"]), ("alerte", "bureaux", 0, 1, "A"))
+        time.sleep(0.6)
+        self.assertEqual(self.modules(), ("alerte", "bureaux"))
+        time.sleep(0.8)
+        e = self.etat()
+        self.assertEqual((e["A"], e["cible"], e["montees"]), ("bureaux", "", 1))
+
+    def test_plein_ecran_retenue_puis_critique(self):
+        # Point de vigilance 5 : retenue en plein écran, puis palier critique avant la sortie → un seul message, le
+        # critique, pour son délai entier compté depuis la sortie.
+        self.appeler("alertePleinEcran", True)
+        self.appeler("alerteAnnoncer", 1)
+        self.assertEqual((self.etat()["enAttente"], self.modules()), (1, ("bureaux", "bureaux")))
+        self.appeler("alerteAnnoncer", 2)
+        self.assertEqual((self.etat()["enAttente"], self.modules()), (2, ("bureaux", "bureaux")))
+        time.sleep(1.2)
+        self.appeler("alertePleinEcran", False)
+        e = self.etat()
+        self.assertEqual((e["A"], e["enAttente"], e["affiche"], e["montees"]), ("alerte", 0, 2, 1))
+        time.sleep(0.6)
+        self.assertEqual(self.modules()[0], "alerte")
+        time.sleep(0.8)
+        self.assertEqual((self.modules()[0], self.etat()["montees"]), ("bureaux", 1))
+
+    def test_galerie_du_meme_ecran(self):
+        self.appeler("alerteDemander", "A", "galerie")
+        self.appeler("alerteAnnoncer", 1)
+        self.assertEqual((self.etat()["enAttente"], self.modules()[0]), (1, "galerie"))
+        time.sleep(1.2)
+        self.appeler("alerteLiberer", "A", "galerie")
+        self.assertEqual((self.etat()["enAttente"], self.modules()[0]), (0, "alerte"))
+        time.sleep(0.6)
+        self.assertEqual(self.modules()[0], "alerte")
+        time.sleep(0.8)
+        self.assertEqual(self.modules()[0], "bureaux")
+
+    def test_delai_depuis_la_montee_effective(self):
+        # Le délai ne court qu'à partir de la montée effective du module (phase « entree ») : la séquence de changement,
+        # ici tenue en « sortie » plus longtemps que le délai après la fermeture de la galerie, n'en consomme rien.
+        self.appeler("alerteDemander", "A", "galerie")
+        self.appeler("alerteAnnoncer", 1)
+        self.appeler("alertePhase", "A", "sortie")
+        self.appeler("alerteLiberer", "A", "galerie")
+        self.assertEqual(self.modules()[0], "alerte")
+        time.sleep(1.2)
+        self.assertEqual(self.modules()[0], "alerte")
+        self.appeler("alertePhase", "A", "entree")
+        time.sleep(0.6)
+        self.assertEqual(self.modules()[0], "alerte")
+        time.sleep(0.8)
+        self.assertEqual(self.modules()[0], "bureaux")
+
+    def test_galerie_par_dessus_l_alerte(self):
+        # Une galerie ouverte pendant l'affichage arrête le délai ; à sa fermeture, l'alerte revient pour un délai entier.
+        self.appeler("alerteAnnoncer", 1)
+        self.appeler("alerteDemander", "A", "galerie")
+        self.assertEqual(self.modules()[0], "galerie")
+        time.sleep(1.2)
+        self.appeler("alerteLiberer", "A", "galerie")
+        self.assertEqual(self.modules()[0], "alerte")
+        time.sleep(0.6)
+        self.assertEqual(self.modules()[0], "alerte")
+        time.sleep(0.8)
+        self.assertEqual(self.modules()[0], "bureaux")
+
+    def test_galerie_d_un_autre_ecran(self):
+        self.appeler("alerteDemander", "B", "galerie")
+        self.appeler("alerteAnnoncer", 1)
+        self.assertEqual((self.etat()["enAttente"], self.modules()), (0, ("alerte", "galerie")))
+
+    def test_ecran_actif_au_moment_de_l_affichage(self):
+        self.appeler("alertePleinEcran", True)
+        self.appeler("alerteAnnoncer", 1)
+        self.appeler("alerteEcran", "B")
+        self.appeler("alertePleinEcran", False)
+        self.assertEqual((self.modules(), self.etat()["cible"]), (("bureaux", "alerte"), "B"))
+
+    def test_effacer_pendant_l_attente(self):
+        self.appeler("alertePleinEcran", True)
+        self.appeler("alerteAnnoncer", 1)
+        self.appeler("alerteEffacer")
+        self.assertEqual(self.etat()["enAttente"], 0)
+        self.appeler("alertePleinEcran", False)
+        self.assertEqual((self.modules(), self.etat()["montees"]), (("bureaux", "bureaux"), 0))
+
+    def test_effacer_pendant_l_affichage(self):
+        self.appeler("alerteAnnoncer", 2)
+        self.assertEqual(self.modules()[0], "alerte")
+        self.appeler("alerteEffacer")
+        e = self.etat()
+        self.assertEqual((e["A"], e["cible"]), ("bureaux", ""))
+
+    def test_volume_pendant_l_alerte(self):
+        self.appeler("alerteAnnoncer", 1)
+        self.appeler("alerteDemander", "A", "volume")
+        self.assertEqual(self.modules()[0], "alerte")
+        time.sleep(1.4)
+        self.assertEqual(self.modules()[0], "volume")
+
+    def test_module_alerte(self):
+        # Rendu validé (décision 10) : symbole puis texte, tous deux en warning pour le faible, en error pour le
+        # critique ; hauteur de la presqu'île.
+        faible, critique = self.json("alerteModule", 1), self.json("alerteModule", 2)
+        self.assertEqual((faible["icone"], faible["texte"]), ("battery-caution", "Batterie faible"))
+        self.assertEqual((critique["icone"], critique["texte"]), ("battery-caution", "Branchez le chargeur"))
+        for m, role in ((faible, "warning"), (critique, "error")):
+            with self.subTest(role=role):
+                self.assertEqual((m["couleurIcone"], m["couleurTexte"]), (m[role], m[role]))
+                self.assertEqual(m["hauteur"], m["gabarit"])
+                self.assertGreater(m["largeur"], m["contenu"])
+        self.assertNotEqual(faible["warning"], faible["error"])
 
 
 class VolumeTest(PresquileIpc, unittest.TestCase):

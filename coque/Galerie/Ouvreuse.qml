@@ -8,7 +8,7 @@ import "galerie.js" as Logique
 
 // Ouvreuse — contrôleur unique de la galerie de fonds d'écran (L2-60) : ouverture, fermeture et application.
 // Rôle : expose par IPC (cible « galerie ») basculer(), que lie SUPER + W. Ouvrir monte le module Galerie dans la
-// presqu'île de l'écran actif seule, par une demande de priorité 2 à l'arbitre de la presqu'île, libérée à la
+// presqu'île de l'écran actif seule, par une demande de priorité 3 à l'arbitre de la presqu'île, libérée à la
 // fermeture ; rien ne s'ouvre si
 // l'espace de travail de l'écran actif porte une fenêtre en plein écran (la presqu'île, sur la couche Top, serait
 // cachée tout en prenant le clavier). L'ouvreuse est un contextuel exclusif du registre Overlays (D108) : l'ouvrir
@@ -100,7 +100,7 @@ Scope {
         const p = presquiles.find(q => q.modelData === ecranActif)
         if (ouvert || pleinEcran || !p) return
         cible = p
-        p.demander("galerie", galerie, 2)
+        p.demander("galerie", galerie, 3)
         ouvert = true
         Overlays.ouvrir(ouvreuse)
     }
