@@ -11,9 +11,8 @@ import "../Audio"
 // d'annonces ne monte le module qu'une fois : une demande renouvelée est sans effet dans l'arbitre, et le module lit
 // lui-même l'annonce courante. Rien ne s'ouvre si l'espace de travail de l'écran actif porte une fenêtre en plein
 // écran (la presqu'île, sur la couche Top, y est cachée). Si l'écran actif change pendant l'affichage, la demande en
-// cours
-// reste sur l'ancienne presqu'île ; elle passe à la nouvelle à l'annonce suivante. Une presqu'île retirée (écran
-// débranché) est oubliée.
+// cours reste posée sur l'ancienne presqu'île et se libère à la fin du délai de 1,5 s ; l'annonce suivante vise la
+// nouvelle. Une presqu'île retirée (écran débranché) est oubliée.
 // Entrées : les presqu'îles, inscrites par inscrire() et retirées par retirer() ; chacune porte modelData (son écran),
 //           demander() et liberer() ; ecranActif et pleinEcran, lus comme dans l'Ouvreuse (Galerie/Ouvreuse.qml) ;
 //           etat, la source des annonces, EtatAudio par défaut ; volume, le composant du module. Les essais

@@ -19,14 +19,13 @@ import "../Theme"
 //           priorite) et liberer(cle), par lesquels les modules (galerie 2, volume 1) réclament la presqu'île, que
 //           tranche un Arbitre : le composant de contenu est un Item déclarant implicitWidth et implicitHeight, et
 //           recevant ecran. C'est l'unique manière de changer de contenu. reserve, hauteur minimale réservée à
-// l'encoche
-//           (0 par défaut) : la coque y passe celle du plus grand module connu, pour que la surface garde toujours la
-//           même taille (voir Scene.hauteurSurface).
+//           l'encoche (0 par défaut) : la coque y passe celle du plus grand module connu, pour que la surface garde
+//           toujours la même taille (voir Scene.hauteurSurface).
 // Sorties : une fenêtre de calque au namespace « dunei-presquile » (floutée par les règles de calque générées) ;
 //           module, le composant arbitré (lecture seule, Bureaux sans demande) ; contenu, le module monté ; phase,
 //           celle de la séquence de changement (« repos », « sortie », « forme » ou « entree »), lue par les essais et
-// l'ouvreuse de la galerie ; fenetre, la surface elle-même, que
-//           l'ouvreuse de la galerie passe à sa prise du clavier (HyprlandFocusGrab).
+//           l'ouvreuse de la galerie ; fenetre, la surface elle-même, que l'ouvreuse de la galerie passe à sa prise du
+//           clavier (HyprlandFocusGrab).
 // Erreurs : sans jeton de thème, l'encoche est vide et la fenêtre reste posée ; un module sans taille laisse l'encoche
 //           à la hauteur des jetons.
 // Dépendances : quickshell ≥ 0.3 (PanelWindow, Region, WlrLayershell), Arbitre, Encoche, Scene, Bureaux, Ressort,

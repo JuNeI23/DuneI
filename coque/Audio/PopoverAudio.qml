@@ -79,8 +79,8 @@ Overlay {
     // Rôle : la ligne de l'appareil actif prend l'icône pleine, le gras et ses teintes (accent autonome et texte
     // accentué, ou erreur et texte tertiaire si coupe) ; les autres le texte secondaire. Un clic émet choisi(n).
     // Entrées : noeuds, les PwNode ; actif, le défaut courant ; entree, vrai pour les micros (icône) ; coupe, la
-    // sourdine ;
-    // hauteurLigne. Sorties : signal choisi(n) ; implicitHeight, qui suit le nombre de lignes. Erreurs : aucune.
+    // sourdine ; hauteurLigne. Sorties : signal choisi(n) ; implicitHeight, qui suit le nombre de lignes. Erreurs :
+    // aucune.
     // Dépendances : Rangee, audio.js (libelle, iconeAppareil), Theme (color).
     component Appareils: Column {
         id: appareils

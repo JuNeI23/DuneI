@@ -5,10 +5,9 @@ import "forme.js" as Forme
 
 // CadrePopovers — cadre de verre unique des popovers de la barre et contenu de chacun (L2-06, L2-56).
 // Rôle : partie visuelle et logique de HotePopovers, séparée de la fenêtre de calque pour se charger aussi sous la
-// plateforme offscreen des coques d'essai. Trois ressorts au même réglage (bord gauche, bord droit, hauteur) décrivent
-// le
-// cadre : il naît de l'icône, y retourne, et passe d'un popover à l'autre sans se refermer. Le verre n'est jamais
-// estompé, hors mouvement réduit.
+// plateforme offscreen des coques d'essai. Trois ressorts au même réglage (bord gauche, bord droit, hauteur)
+// décrivent le cadre : il naît de l'icône, y retourne, et passe d'un popover à l'autre sans se refermer. Le verre
+// n'est jamais estompé, hors mouvement réduit.
 // Le contenu de chaque Overlay est construit une fois pour toutes, de façon asynchrone, et reste fixe sur l'écran : le
 // cadre le découvre sans le déplacer. Mouvement réduit (Theme.mouvementReduit) : le cadre paraît à sa forme finale (ses
 // ressorts, de déplacement, se posent aussitôt) et s'efface ou apparaît par un fondu court de tout le cadre, au ressort
@@ -32,9 +31,9 @@ import "forme.js" as Forme
 // deploye, vrai tant qu'un popover est ouvert ou que le cadre n'a pas fini de se refermer ; passage, vrai tant qu'un
 // nouveau contenu attend le trajet du cadre ; sens, réglage des ressorts du cadre ; cadre, l'élément du cadre, dont la
 // fenêtre tire son masque de saisie.
-// Erreurs : aucune ; avant le chargement des jetons, les ressorts se posent sans animation et les cotes sont nulles. À
-// la
-// destruction de ce composant, l'Overlay encore ouvert passe à faux, pour ne rester ni au registre ni sans fenêtre.
+// Erreurs : aucune ; avant le chargement des jetons, les ressorts se posent sans animation et les cotes sont nulles.
+// À la destruction de ce composant, l'Overlay encore ouvert passe à faux, pour ne rester ni au registre ni sans
+// fenêtre.
 // Dépendances : Theme (motion, radius, space), Overlays, Ressort, Surface, OmbreElevation, forme.js.
 Item {
     id: racine

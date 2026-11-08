@@ -127,8 +127,7 @@ Item {
     // centre, impair, « Son actif » ; chaque bascule l'avance de un et les couches roulent d'un cran vers le haut.
     property int tours: 0
     // Famille de l'annonce vue en dernier : « son » pour les genres « volume » et « son », sinon le genre. Une bascule
-    // ne
-    // glisse que dans la même famille ; d'une famille à l'autre, le compteur se cale sans mouvement.
+    // ne glisse que dans la même famille ; d'une famille à l'autre, le compteur se cale sans mouvement.
     readonly property string famille: niveau ? "son" : (annonce?.genre ?? "volume")
     property string familleVue: famille
     // Les genres qui roulent : la jauge du son et le micro ; les appareils changent de texte sans glisser.
