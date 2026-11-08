@@ -3500,6 +3500,10 @@ aucune animation en `power-saver`, ce qui referme l'idée gardée pour L2-13 par
   ni sondage ; `powerprofilesctl` lancé en commande et D-Bus en direct ont été écartés (sondage, code à maintenir).
 - **Estimation inconnue.** Une estimation nulle, négative ou de moins d'une minute s'affiche « Estimation en cours… »,
   jamais « 0 min ».
+- **Pleine charge.** UPower reste en « charging » à 100 %, quelques secondes avant le plein : chargée, en charge à
+  100 % ou à moins d'une minute du plein, le popover dit « Pleine charge » (recette de Nicolas).
+- **Estimation en rouge.** Sur batterie seulement, à 20 % ou moins (seuil faible d'`energie.toml`), l'estimation
+  s'écrit en `error` ; en charge, elle garde `text-secondary` (décision de Nicolas).
 
 *Touché : `coque/Energie/` (`EtatEnergie`, `SuiviEnergie`, `PopoverEnergie`, `energie.js`), `Barre/Batterie.qml`,
 `Barre/Barre.qml`, spec et plan du 2026-11-08, backlog (L2-13).*

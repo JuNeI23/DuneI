@@ -89,7 +89,10 @@ Contenu, de haut en bas :
 1. **L'état et l'estimation.** Le pourcentage et une phrase qui répond à « combien de temps ? » :
    - en décharge : « 7 h 40 restantes » (moins d'une heure : « 35 min restantes ») ;
    - en charge : « Plein dans 1 h 10 » ;
-   - chargée, ou sur secteur sans charge : « Chargée » ou « Sur secteur » ;
+   - chargée, en charge à 100 %, ou à moins d'une minute du plein : « Pleine charge » (recette) ; sur secteur sans
+     charge : « Sur secteur » ;
+   - sur batterie, à 20 % ou moins (seuil faible d'`energie.toml`), l'estimation s'écrit en `error` au lieu de
+     `text-secondary` (recette) ;
    - estimation encore inconnue (valeur 0 juste après un branchement ou un changement de profil) : « Estimation en
      cours… ». Jamais « 0 min ».
    L'estimation suit UPower, qui la recalcule sur la consommation réelle : après un passage en économie, elle monte
@@ -217,6 +220,10 @@ Changements de recette :
   transparence, au repos comme au survol (D148).
 - **Temps jusqu'au plein.** `displayDevice.timeToFull` était négatif en charge ; l'appareil est désormais la batterie
   de portable de `UPower.devices` (D147).
+- **Pleine charge.** UPower reste en « charging » à 100 % (7 s jusqu'au plein relevées) : « Pleine charge » remplace
+  « Chargée » et « Estimation en cours… » dans ce cas.
+- **Estimation en rouge.** Sur batterie, sous le seuil faible, l'estimation passe en `error` (décision de Nicolas :
+  seulement sur batterie).
 - **Dossier des seuils.** Lu dans `DUNEI_TOKENS_DIR`, absente de la session ; il vient désormais de `Theme.dir` (D147).
 
 Non éprouvé en réel : la descente naturelle sous 20 % puis 5 %, l'alerte retenue en plein écran et derrière la galerie
@@ -230,4 +237,4 @@ Non éprouvé en réel : la descente naturelle sous 20 % puis 5 %, l'alerte rete
 | 0.2 | 2026-11-08 | Relecture du constructeur : seuils dans `energie.toml`, écran visé, attente derrière la galerie, palier unique en attente, garde de `ready`, priorités de l'arbitre |
 | 0.3 | 2026-11-08 | Alerte retenue en plein écran et affichée à sa sortie (décision 9) |
 | 0.4 | 2026-11-08 | Maquettes validées : alerte critique tout en `error`, popover A (décision 10) |
-| 0.5 | 2026-11-08 | Recette : estimation à la suite du pourcentage, segments déclarés, fond des segments parti de la transparence, appareil pris dans `UPower.devices`, seuils sous `Theme.dir` (D145 à D148) |
+| 0.5 | 2026-11-08 | Recette : estimation à la suite du pourcentage, segments déclarés, fond des segments parti de la transparence, appareil pris dans `UPower.devices`, seuils sous `Theme.dir`, « Pleine charge », estimation en `error` sur batterie sous le seuil faible (D145 à D148) |
