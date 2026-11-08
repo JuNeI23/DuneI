@@ -12,7 +12,10 @@ import "etats.js" as Etats
 //           (surfaceWindow e1, surfacePanel e2, surfaceRaised e3) ; dnInactive, modificateur inactive,
 //           hérité de la Surface englobante par défaut, faux à la racine ; radius, rayon des coins du fond,
 //           0 par défaut, à lire dans Theme.radius ; verre, vrai pour la Surface d'une fenêtre de coque, que le
-//           compositeur floute (spec de l'élévation, § 4), faux par défaut, sans effet sur e0 et e1.
+//           compositeur floute (spec de l'élévation, § 4), faux par défaut, sans effet sur e0 et e1 ; cleVerre, clé
+//           de Theme.glass qui donne l'opacité de ce verre, le niveau par défaut (Materiau) ; peinte, faux pour une
+//           Surface qui ne porte que son rôle et laisse ses enfants peindre le fond (fenêtre Réseau, D136), vrai
+//           par défaut.
 // Sorties : dnRole, rôle lu par les descendants ; dnInactive ; peinture, l'élément qui peint le fond (Rectangle
 //           ou Materiau), lu par les essais.
 // Erreurs : aucune ; avant le chargement des tokens ou pour un niveau inconnu, le fond reste transparent.
@@ -28,12 +31,15 @@ Item {
     readonly property string dnRole: role
     property real radius: 0
     property bool verre: false
+    property string cleVerre: elevation
+    property bool peinte: true
     readonly property Item peinture: fond.item
 
     // Le fond est chargé avant les enfants déclarés dans la Surface, donc peint sous eux.
     Loader {
         id: fond
         anchors.fill: parent
+        active: surface.peinte
         sourceComponent: surface.elevation === "e2" || surface.elevation === "e3" ? materiau : aplat
     }
 
@@ -50,6 +56,7 @@ Item {
         Materiau {
             niveau: surface.elevation
             verre: surface.verre
+            cleVerre: surface.cleVerre
             rayon: surface.radius
         }
     }

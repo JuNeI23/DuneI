@@ -9,8 +9,9 @@ import "../Barre/icones.js" as Icones
 // PanneauReseau — panneau Réseau : une barre latérale à trois onglets (Wi-Fi, Filaire, VPN) et une pile de pages à
 // droite, page d'onglet puis sous-page d'un profil (L2-11, direction D4).
 // Rôle : un Item sans fenêtre, que FenetreReseau pose dans sa FloatingWindow et que l'écran de réglages (L5-01)
-// reprendra tel quel comme premier panneau. À gauche, un plateau surfacePanel au rayon radius.panel, détaché du bord de
-// reglages.sidebarInset (bible, « Formes »), large de layout.sidebarDefault moins ce retrait ; les pastilles de la
+// reprendra tel quel comme premier panneau. À gauche, une colonne surfacePanel pleine hauteur, collée au bord, large
+// de layout.sidebarDefault, en verre à l'opacité glass.sidebar (bible, « Formes », D136) ; à droite, le fond
+// surfaceWindow opaque du contenu, peint par le panneau lui-même ; les pastilles de la
 // fenêtre (bible, « Pastilles de fenêtre ») se posent à son sommet, dans la hauteur enTete réservée. Dessous, les trois
 // onglets de reglages.tabHeight : médaillon (à l'accent pour l'onglet choisi), nom en échelon 2 (graisse moyenne pour
 // l'onglet choisi) et état en échelon 0 au texte secondaire (Wi-Fi : réseau joint, « Désactivé » ou « Non connecté » ;
@@ -43,8 +44,8 @@ import "../Barre/icones.js" as Icones
 // Dépendances : EtatReseau (profils, reseaux, facture, profilDemande, radio, carte, reseauActif, force, connectivite,
 // filaire, carteFilaire, vpnActif), PageWifi, PageFilaire, PageVpn, FicheProfil, FicheNouveau, nmcli.js
 // (profilsFenetre, lireFactures), Liste, Rangee, Medaillon, Bouton, Surface, Texte, icones.js, Theme, Quickshell.Io
-// (Process, StdioCollector). Cotes : plateau détaché de reglages.sidebarInset (8) sur ses quatre côtés, de largeur
-// layout.sidebarDefault moins ce retrait, au rayon radius.panel ; onglets de reglages.tabHeight (48), séparés de
+// (Process, StdioCollector). Cotes : colonne pleine hauteur de largeur layout.sidebarDefault, sans rayon propre (les coins
+// de gauche sont ceux de la fenêtre, arrondis par le compositeur) ; onglets de reglages.tabHeight (48), séparés de
 // space.scale[0] (4) ; pages en retrait de space.blockGap (24) de la zone qui défile.
 Item {
     id: panneau
@@ -190,15 +191,22 @@ Item {
         onRunningChanged: if (!running && panneau.facturesAttendues) { panneau.facturesAttendues = false; running = true }
     }
 
-    // Plateau de la barre latérale (bible, « Formes ») : surfacePanel opaque, détaché des bords de la fenêtre.
+    // Fond du contenu, à droite de la colonne : surfaceWindow opaque (D136).
+    Surface {
+        x: Theme.layout?.sidebarDefault ?? 0
+        width: parent.width - x
+        height: parent.height
+    }
+
+    // Colonne de la barre latérale (bible, « Formes », D136) : surfacePanel pleine hauteur, en verre flouté par le
+    // compositeur à l'opacité glass.sidebar (0,90 le jour, opaque la nuit).
     Surface {
         id: plateau
         role: "surfacePanel"
-        x: Theme.reglages?.sidebarInset ?? 0
-        y: x
-        width: (Theme.layout?.sidebarDefault ?? 0) - x
-        height: parent.height - 2 * x
-        radius: Theme.radius?.panel ?? 0
+        verre: true
+        cleVerre: "sidebar"
+        width: Theme.layout?.sidebarDefault ?? 0
+        height: parent.height
 
         Liste {
             id: liste

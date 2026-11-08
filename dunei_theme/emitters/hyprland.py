@@ -70,7 +70,8 @@ def _validate_glass(raw: dict) -> None:
     g = raw["glass"]
     plancher = max(raw["surface_material"]["shade_opacity"], raw["render"]["scrim_opacity"])
     plafond = min(min(m.get("glass", {}).get(k, g[k]) for m in (raw.get("moments") or {}).values() for k in
-                      ("e2_opacity", "e3_opacity")), g["e2_opacity"], g["e3_opacity"])
+                      ("e2_opacity", "e3_opacity", "presquile_opacity")), g["e2_opacity"], g["e3_opacity"],
+                  g["presquile_opacity"])
     if not plancher < g["ignore_alpha"] < plafond:
         raise ValueError(f"glass.ignore_alpha = {g['ignore_alpha']} : doit dépasser {plancher} (ombre, voile) "
                          f"et rester sous {plafond} (verre)")

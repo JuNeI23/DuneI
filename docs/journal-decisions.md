@@ -3286,3 +3286,42 @@ système en pages géantes `madvise` devient L2-64, à trancher.**
   épars. C'est un choix de machine, hors de la galerie et plus large que l'unité de la coque : Nicolas le tranchera.
 
 *Touché : backlog (L2-63, L2-64), fiche du 2026-11-07.*
+
+### D136 · La colonne d'une fenêtre de réglages est une bande de verre pleine hauteur, sans plateau détaché (écart à D104)
+
+2026-11-08, décision de Nicolas à la recette du verre du jour (L2-61). **La barre latérale d'une fenêtre de réglages
+n'est plus un plateau détaché, retiré de 8 px et arrondi : c'est une colonne `surfacePanel` qui occupe toute la hauteur,
+collée au bord gauche de la fenêtre, sans rayon propre. Son opacité est portée par un jeton à part,
+`glass.sidebar_opacity` : 0,90 le jour, la colonne étant alors du verre flouté par le compositeur ; 1,0 la nuit, la
+colonne restant opaque. La zone de contenu, à droite, garde `surfaceWindow` opaque. La forme vaut jour et nuit.**
+
+- **Raison.** Le jour, la colonne et le contenu, tous deux très clairs, se confondaient : le faible contraste ne séparait
+  pas la navigation de la page. Les essais du 2026-11-06 avaient retenu la combinaison colonne de verre à 90 % et contenu
+  opaque ; Nicolas l'a validée à l'écran le 2026-11-08, devant son fond d'écran et devant un terminal noir. Il a voulu
+  que la nuit prenne la même forme, pour uniformiser : seule l'opacité change d'un moment à l'autre.
+- **Mise en œuvre.** La fenêtre de coque est transparente ; son fond est dessiné par deux surfaces, la colonne en verre
+  et le contenu opaque. `Surface` reçoit `cleVerre`, la clé du jeton de verre à lire (par défaut son élévation), et
+  `peinte`, qui lui permet de transmettre son rôle sans peindre de fond. Les pastilles de la fenêtre passent à
+  `space.scale[2]` du coin, puisqu'il n'y a plus de plateau à éviter. `reglages.sidebarInset` reste, pour le retrait des
+  rangées survolées.
+- **Écart à D104.** D104 posait un plateau détaché, retiré de `reglages.sidebarInset` et arrondi en `radius.panel`. Cette
+  forme est retirée ; les autres cotes de D104 (lignes, médaillons, colonne du texte, barre d'onglets) restent.
+- **Le jeton n'est pas un niveau.** `sidebar_opacity` ne décrit pas une couche flottante : il n'entre pas dans le
+  plafond que `glass.ignore_alpha` doit respecter pour Hyprland.
+
+*Touché : `tokens.toml`, émetteur Quickshell, `Materiau.qml`, `Surface.qml`, `FenetreReseau.qml`, `PanneauReseau.qml`,
+bible (chapitres 5 et 7), backlog (L2-61).*
+
+### D137 · Le verre de la presqu'île a son propre jeton, séparé de E3 : 0,82 le jour, 0,60 la nuit
+
+2026-11-08, décision de Nicolas à la recette du verre du jour (L2-61). **La presqu'île ne lit plus l'opacité de E3 : elle
+lit `glass.presquile_opacity`, à 0,82 le jour et 0,60 la nuit. Les popovers et les menus restent sur E3, à 0,60 jour et
+nuit : leur verre est validé tel quel, ce qui tranche la question que D103 laissait ouverte.**
+
+- **Raison.** Le jour, à 60 %, la presqu'île prenait trop la couleur du fond d'écran et ses points se lisaient mal. Les
+  essais du 2026-11-06 avaient retenu 82 % ; Nicolas l'a validé à l'écran le 2026-11-08. La nuit, 0,60 convenait déjà.
+- **Contrôle Hyprland.** `presquile_opacity` est une couche de verre : il entre dans le plafond que
+  `glass.ignore_alpha` (0,58) doit rester sous, au même titre que E2 et E3.
+
+*Touché : `tokens.toml`, émetteurs Quickshell et Hyprland, `Encoche.qml`, bible (chapitre 5), backlog (L2-61).*
+

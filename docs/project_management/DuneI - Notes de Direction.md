@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas — révisée le 22 octobre 2026
 
-Version 1.43. Historique en fin de document.
+Version 1.44. Historique en fin de document.
 
 *Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent soixante-douze lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
 
@@ -549,16 +549,21 @@ La mémoire de la coque, qui ne redescendait pas, avait pour cause les pages gé
 cache de miniatures à L2-63, le passage de tout le système en pages géantes `madvise` à L2-64 (D135). Le plein
 écran et le démarrage de la coque restent à L2-48.
 
-Prochaine étape : **après la fusion de cette PR, le verre du jour (L2-61)**, où Nicolas tranchera le verre des popovers.
-Viendront ensuite L2-12 (audio) et L2-13 (énergie), qui suivront le motif du popover hébergé (`heberge: true`,
-`fonduContenu`, `fonduDisque`, `reinitialiser()`) ; le reste de L2-48, L2-57 (suites du popover Bluetooth), L2-58, L2-59
-et L2-62 attendent leur tour.
+Le verre du jour est réglé (L2-61, D136, D137). La presqu'île a son propre verre, à 82 % le jour et 60 % la nuit, et
+se détache mieux du fond d'écran. La colonne des fenêtres de réglages est désormais une bande pleine hauteur, sans
+plateau détaché : du verre à 90 % le jour, opaque la nuit, à côté d'un contenu opaque, ce qui sépare nettement la
+navigation de la page. Les popovers gardent leur verre à 60 %. Nicolas a validé à l'écran le 2026-11-08.
+
+Prochaine étape : **après la fusion de cette PR, l'indicateur audio et son popover (L2-12)**, puis L2-13 (énergie) ; tous
+deux suivront le motif du popover hébergé (`heberge: true`, `fonduContenu`, `fonduDisque`, `reinitialiser()`). Le reste
+de L2-48, L2-57 (suites du popover Bluetooth), L2-58, L2-59 et L2-62 attendent leur tour.
 
 ## Historique des versions
 
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-10 | Version initiale |
+| 1.44 | 2026-11-08 | L2-61 fait : verre propre de la presqu'île, colonne des fenêtres de réglages pleine hauteur (D136, D137) ; prochaine étape : L2-12 |
 | 1.43 | 2026-11-07 | L2-60 : correctifs de recette, mémoire de la coque en `MemoryTHP=madvise` (971 à 160 Mo), gros dossier accepté, L2-63 et L2-64 au backlog (D132 à D135) ; prochaine étape inchangée : L2-61 |
 | 1.42 | 2026-11-07 | L2-60 fait : galerie de fonds dans la presqu'île, changement de module de L2-48 (D124 à D131), recette validée, mesures soumises à Nicolas ; prochaine étape : le verre du jour (L2-61) |
 | 1.41 | 2026-11-06 | L2-27 fait : fond d'écran en calque de la coque (D121 à D123) ; prochaine étape : la galerie (L2-60) |
