@@ -35,6 +35,16 @@ class ChecksTest(unittest.TestCase):
         self.assertEqual(m["paliers"]["batterie"],
                          [("attenuation", 150), ("verrouillage", 300), ("ecran", 330), ("veille", 900)])
         self.assertEqual(m["paliers"]["secteur"], [("attenuation", 300), ("verrouillage", 600), ("ecran", 630)])
+        self.assertEqual(m["alerte"], {"faible": 20, "critique": 5})
+
+    def test_alerte(self):
+        """Seuils d'alerte de la batterie (L2-13) : entiers de 1 à 99, critique sous faible, section exigée."""
+        self.refused(lambda r: r["alerte"].update(critique=20), "alerte", "critique")
+        self.refused(lambda r: r["alerte"].update(faible=0), "alerte", "faible")
+        self.refused(lambda r: r["alerte"].update(faible=100), "alerte", "faible")
+        self.refused(lambda r: r["alerte"].update(critique=2.5), "alerte", "critique")
+        self.refused(lambda r: r.pop("alerte"), "alerte")
+        self.refused(lambda r: r["alerte"].update(moyen=10), "alerte", "moyen")
 
     def test_order(self):
         self.refused(lambda r: r["paliers"]["ecran"].update(batterie=200), "palier ecran, batterie", "verrouillage")

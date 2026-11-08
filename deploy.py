@@ -12,9 +12,10 @@ mis de côté sous le nom .avant-dunei, et un lien remplacé par un fichier est 
   Un script de config/hypr/scripts/ non exécutable est refusé.
 - fontconfig : generated/fonts.conf est copié vers fontconfig/conf.d/50-dunei.conf. Les applications
   lancées ensuite le lisent ; aucun fc-cache n'est nécessaire.
-- coque : generated/coque-tokens.json, generated/motion.json et generated/materiau.frag.qsb sont copiés vers
-  dunei/ sous le dossier de configuration ; le singleton Theme de la coque Quickshell lit et surveille les deux
-  premiers, le matériau charge le shader compilé (L2-34, L2-04). dunei/bureau.json, JSON pur
+- coque : generated/coque-tokens.json, generated/motion.json, generated/energie.json et generated/materiau.frag.qsb
+  sont copiés vers dunei/ sous le dossier de configuration ; le singleton Theme de la coque Quickshell lit et
+  surveille les deux premiers, EtatEnergie lit les seuils d'alerte de la batterie (L2-13), le matériau charge le
+  shader compilé (L2-34, L2-04). dunei/bureau.json, JSON pur
   {"origine", "fond"}, dit le fond du bureau : posé avec origine « theme » (réécrit si le thème change),
   préservé avec origine « fond », refusé sous toute autre forme. Le lien quickshell/dunei pointe vers
   coque/ du dépôt : la coque de session se lance par qs -c dunei (L2-08).
@@ -97,6 +98,7 @@ IDLE = ("hypridle.conf", "GÉNÉRÉ depuis energie.toml")       # Fichier de gen
 # Fichiers de generated/ copiés sous dunei/ : nom, marque de deuxième ligne et cible make qui le produit. Le shader
 # compilé est binaire et n'a pas de marque (None) : dans dunei/, dossier propre à DuneI, son nom suffit.
 COQUE = (("coque-tokens.json", "GÉNÉRÉ depuis tokens.toml", "tokens"), ("motion.json", "GÉNÉRÉ depuis motion.toml", "motion"),
+         ("energie.json", "GÉNÉRÉ depuis energie.toml", "energie"),
          ("materiau.frag.qsb", None, "shaders"))
 BUREAU = "bureau.json"                                       # État du fond du bureau lu par la coque, sous dunei/ (L2-08).
 BUREAU_ORIGINES = ("theme", "fond")                          # Origines reconnues : suit le thème, ou fond choisi (préservé).

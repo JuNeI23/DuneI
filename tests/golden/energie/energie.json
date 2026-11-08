@@ -1,0 +1,8 @@
+{
+  "_generated": "GÉNÉRÉ depuis energie.toml par generate_energie.py. Ne pas modifier à la main.",
+  "version": "0.2.0",
+  "alerte": {
+    "faible": 20,
+    "critique": 5
+  }
+}

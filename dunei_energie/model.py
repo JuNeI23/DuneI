@@ -24,10 +24,12 @@ def resolve(raw: dict) -> dict:
     """Résolution d'une source déjà validée par checks.errors.
 
     Entrée : raw — sortie de load.
-    Sortie : {verrouiller, verrouilleur, niveau, paliers : {alimentation : [(palier, délai), …]}},
+    Sortie : {verrouiller, verrouilleur, niveau, version, alerte : {faible, critique},
+             paliers : {alimentation : [(palier, délai), …]}},
              paliers dans l'ordre ORDRE, sans ceux qui manquent pour l'alimentation.
     Erreurs : KeyError si raw n'a pas été validé. Dépendances : ORDRE, ALIMENTATIONS.
     """
     p = raw["paliers"]
     return {**raw["commandes"], "niveau": raw["attenuation"]["niveau"],
+            "version": raw["version"], "alerte": dict(raw["alerte"]),
             "paliers": {a: [(n, p[n][a]) for n in ORDRE if a in p.get(n, {})] for a in ALIMENTATIONS}}

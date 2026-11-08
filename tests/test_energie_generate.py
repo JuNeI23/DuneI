@@ -1,5 +1,6 @@
 """Générateur de l'échelle d'inactivité — generate_energie.py sur la vraie source et sur une source fautive."""
 
+import json
 import shutil
 import subprocess
 import sys
@@ -80,6 +81,19 @@ class GenerateTest(unittest.TestCase):
             res = run(Path(tmp) / "absent.toml", Path(tmp))
             self.assertEqual(res.returncode, 1)
             self.assertIn("source illisible", res.stderr)
+
+
+class CoqueTargetTest(unittest.TestCase):
+    """generated/energie.json porte les seuils d'alerte de la batterie lus par la coque (L2-13)."""
+
+    def test_seuils(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            res = run(ROOT / "energie.toml", Path(tmp))
+            self.assertEqual(res.returncode, 0, res.stderr)
+            data = json.loads((Path(tmp) / "energie.json").read_text(encoding="utf-8"))
+        self.assertEqual(data["alerte"], {"faible": 20, "critique": 5})
+        self.assertIn("GÉNÉRÉ depuis energie.toml", data["_generated"])
+        self.assertEqual(data["version"], "0.2.0")
 
 
 class LuaTargetTest(unittest.TestCase):
