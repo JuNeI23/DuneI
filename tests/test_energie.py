@@ -286,6 +286,48 @@ class PopoverEnergieTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(p["baselinePourcent"], p["baselineEstimation"])
         self.assertGreater(p["xEstimation"], p["xPourcent"] + p["largeurPourcent"])
 
+    def asynchrone(self) -> dict:
+        """État du contenu construit par un Loader asynchrone, comme l'hôte des popovers. Attend qu'il soit prêt."""
+        fin = time.monotonic() + DELAI
+        while not (a := json.loads(self.ipc("asynchrone"))) and time.monotonic() < fin:
+            time.sleep(0.05)
+        self.assertTrue(a, self.journal())
+        return a
+
+    def grille(self, a: dict):
+        """Capture le contenu asynchrone et rend la zone de la piste des profils, en image PIL (RVB)."""
+        from PIL import Image
+        chemin = self.dir / "capture.png"
+        self.ipc("capturer", str(chemin))
+        fin = time.monotonic() + DELAI
+        while not chemin.exists() and time.monotonic() < fin:
+            time.sleep(0.05)
+        time.sleep(0.2)
+        r = a["rect"]
+        return Image.open(chemin).convert("RGB").crop(
+            (int(r["x"]), int(r["y"]), int(r["x"] + r["largeur"]), int(r["y"] + r["hauteur"])))
+
+    def test_construction_asynchrone_ordre_et_peinture(self):
+        """Construit comme à la barre, les segments sont dans l'ordre et peints (piste non uniforme)."""
+        a = self.asynchrone()
+        self.assertEqual(a["segments"], ["Économie", "Équilibré", "Performance"])
+        try:
+            piste = self.grille(a)
+        except ImportError:
+            self.skipTest("Pillow requis pour la capture")
+        # Piste seule : une couleur. Segment coché et libellés peints : plusieurs.
+        self.assertGreater(len(piste.getcolors(maxcolors=100000)), 3)
+
+    def test_segment_masque_sans_trou(self):
+        """Sans Performance, les deux segments visibles remplissent la piste, sans espace vide à droite."""
+        self.ipc("poser", "aPerformance", "false")
+        fin = time.monotonic() + DELAI
+        while len((a := self.asynchrone())["largeurs"]) != 2 and time.monotonic() < fin:
+            time.sleep(0.05)
+        self.assertEqual(len(a["largeurs"]), 2, a)
+        fin_segments = a["xs"][-1] + a["largeurs"][-1]
+        self.assertGreaterEqual(fin_segments, a["rect"]["largeur"] - 8, a)
+
     def test_sans_performance(self):
         self.ouvrir()
         self.ipc("poser", "aPerformance", "false")

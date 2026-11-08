@@ -49,6 +49,16 @@ ShellRoot {
                 sourceComponent: Component { PopoverEnergie { ancre: cible; etat: faux } }
             }
 
+            // Second popover, dont le contenu est construit comme le fait CadrePopovers (D109) : par un Loader
+            // asynchrone. L'incubation asynchrone n'est pas celle d'une création directe, et c'est elle qui sert à la barre.
+            PopoverEnergie { id: second; etat: faux }
+            Loader {
+                id: hote
+                y: 60
+                asynchronous: true
+                sourceComponent: second.contenu
+            }
+
             IpcHandler {
                 id: ipc
                 target: "popover"
@@ -64,7 +74,7 @@ ShellRoot {
                     const p = porteur.item?.panneau
                     if (!p) return "{}"
                     const trouve = nom => essai.trouver(p, o => o.objectName === nom)
-                    const segments = trouve("profils")
+                    const segments = essai.trouver(p, o => o.objectName === "profils" && o.visible) ?? trouve("profils")
                     return JSON.stringify({
                         pourcent: trouve("pourcent").text, taillePourcent: trouve("pourcent").font.pixelSize,
                         graissePourcent: trouve("pourcent").font.weight, couleurPourcent: String(trouve("pourcent").color),
@@ -81,16 +91,33 @@ ShellRoot {
                         hauteur: p.implicitHeight,
                     })
                 }
+                // asynchrone — état du contenu construit par le Loader asynchrone, en JSON ; {} tant qu'il n'est pas prêt.
+                // Sortie : {segments (textes dans l'ordre), rect (x, y, largeur, hauteur de la piste dans le Loader),
+                // largeurs et xs (largeur et abscisse de chaque segment visible, dans la piste)}. Erreurs : aucune.
+                // Dépendances : hote, essai.trouver.
+                function asynchrone(): string {
+                    if (hote.status !== Loader.Ready) return "{}"
+                    const s = essai.trouver(hote.item, o => o.objectName === "profils" && o.visible)
+                    const vus = Array.from(s.contentChildren).filter(o => o.visible)
+                    const r = s.mapToItem(hote, 0, 0)
+                    return JSON.stringify({ segments: Array.from(s.contentChildren, o => o.text),
+                        rect: { x: r.x, y: r.y, largeur: s.width, hauteur: s.height },
+                        largeurs: vus.map(o => o.width), xs: vus.map(o => o.x) })
+                }
+                // capturer — enregistre en PNG l'image du contenu asynchrone. Entrée : chemin. Sortie : aucune.
+                // Erreurs : aucune ; un échec de capture laisse le fichier absent. Dépendances : hote.
+                function capturer(chemin: string): void { hote.grabToImage(r => r.saveToFile(chemin)) }
+
                 // cliquer — choix d'un segment, comme son clic (la barre coche le segment cliqué). Entrée : nom, son texte. Sortie : aucune.
                 // Erreurs : TypeError si le segment est introuvable.
                 function cliquer(nom: string): void {
-                    const s = essai.trouver(porteur.item.panneau, o => o.objectName === "profils")
+                    const s = essai.trouver(porteur.item.panneau, o => o.objectName === "profils" && o.visible)
                     s.setCurrentIndex(Array.from(s.contentChildren).findIndex(o => o.text === nom))
                 }
                 // fleche — flèche droite sur le segment coché, comme au clavier. Entrées : aucune. Sortie : aucune.
                 // Erreurs : TypeError si le panneau n'existe pas.
                 function fleche(): void {
-                    const s = essai.trouver(porteur.item.panneau, o => o.objectName === "profils")
+                    const s = essai.trouver(porteur.item.panneau, o => o.objectName === "profils" && o.visible)
                     s.incrementCurrentIndex()
                 }
                 // poser — change une valeur de l'état factice, comme un autre client. Entrées : cle, « pourcent »,

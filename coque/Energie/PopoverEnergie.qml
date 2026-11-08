@@ -34,6 +34,27 @@ Overlay {
     exclusif: true
     fermeAuDepart: true
 
+    // ChoixProfil — contrôle segmenté du profil d'énergie, reflet du profil de l'état.
+    // Rôle : les Onglet déclarés comme enfants sont les profils, dans l'ordre de l'énumération PowerProfile. Le
+    // contrôle reflète le profil de l'état, y compris celui changé ailleurs ; un choix (clic ou flèche) l'écrit par
+    // l'état, qui le confirme ou le laisse inchangé. Pendant la construction, la barre coche d'elle-même son premier
+    // segment : ce n'est pas un choix et il ne doit rien écrire ; « arme » ne passe à vrai qu'une fois les segments
+    // posés.
+    // Entrées : les Onglet enfants ; popover.etat (profil, choisirProfil). Sorties : aucune. Erreurs : aucune.
+    // Dépendances : Onglets, Theme (space), popover.
+    component ChoixProfil: Onglets {
+        objectName: "profils"
+        property bool arme: false
+        Layout.fillWidth: true
+        Layout.leftMargin: Theme.space?.scale[2] ?? 0
+        Layout.rightMargin: Theme.space?.scale[2] ?? 0
+        Layout.bottomMargin: Theme.space?.scale[0] ?? 0
+        Component.onCompleted: Qt.callLater(() => arme = true)
+        Binding on currentIndex { value: popover.etat.profil; restoreMode: Binding.RestoreNone }
+        onCurrentIndexChanged: if (arme && currentIndex >= 0 && currentIndex !== popover.etat.profil)
+            popover.etat.choisirProfil(currentIndex)
+    }
+
     FocusScope {
         id: panneau
 
@@ -101,29 +122,21 @@ Overlay {
                 moyen: true
                 color: Theme.color?.textSecondary ?? "transparent"
             }
-            // Un segment par profil proposé : l'indice d'un segment est la valeur de l'énumération PowerProfile.
-            Onglets {
-                id: profils
-                objectName: "profils"
-                visible: panneau.etat.aProfils
-                Layout.fillWidth: true
-                Layout.leftMargin: panneau.marge
-                Layout.rightMargin: panneau.marge
-                Layout.bottomMargin: Theme.space?.scale[0] ?? 0
-                // Le contrôle reflète le profil de l'état, y compris celui changé ailleurs ; un choix (clic ou
-                // flèche) l'écrit par l'état, qui le confirme ou le laisse inchangé.
-                // Pendant la construction, la barre coche d'elle-même son premier segment : ce n'est pas un choix, et
-                // il ne doit rien écrire. « arme » ne passe à vrai qu'une fois les segments posés.
-                property bool arme: false
-                Component.onCompleted: Qt.callLater(() => arme = true)
-                Binding on currentIndex { value: panneau.etat.profil; restoreMode: Binding.RestoreNone }
-                onCurrentIndexChanged: if (arme && currentIndex >= 0 && currentIndex !== panneau.etat.profil)
-                    panneau.etat.choisirProfil(currentIndex)
-
-                Repeater {
-                    model: panneau.etat.aPerformance ? 3 : 2
-                    delegate: Onglet { required property int index; text: Energie.nomProfil(index) }
-                }
+            // Un segment par profil, l'indice d'un segment étant la valeur de l'énumération PowerProfile. Les segments
+            // sont déclarés, non engendrés par un Repeater : sous l'incubation asynchrone de l'hôte des popovers, les
+            // Onglet d'un Repeater ne sont jamais peints et se rangent à l'envers. Un segment masqué compterait encore
+            // dans la répartition en parts égales de la barre et laisserait un vide à droite : deux contrôles sont
+            // donc déclarés, celui à deux segments et celui à trois, et un seul est visible à la fois.
+            ChoixProfil {
+                visible: panneau.etat.aProfils && !panneau.etat.aPerformance
+                Onglet { text: Energie.nomProfil(0) }
+                Onglet { text: Energie.nomProfil(1) }
+            }
+            ChoixProfil {
+                visible: panneau.etat.aProfils && panneau.etat.aPerformance
+                Onglet { text: Energie.nomProfil(0) }
+                Onglet { text: Energie.nomProfil(1) }
+                Onglet { text: Energie.nomProfil(2) }
             }
         }
     }
