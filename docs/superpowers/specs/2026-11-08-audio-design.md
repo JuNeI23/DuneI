@@ -1,6 +1,6 @@
 # Indicateur audio, popover et jauge de la presqu'île : conception (L2-12)
 
-Version 0.3, 2026-11-08.
+Version 0.4, 2026-11-08.
 
 ## Intention
 
@@ -51,6 +51,9 @@ Les maquettes validées sont dans `.superpowers/preview/audio/maquettes.html` (v
     le son, puis le rend aux haut-parleurs en s'éteignant), la presqu'île le montre sur le même schéma que la sourdine
     du micro : remplissage qui glisse jusqu'à la pleine largeur, fond accent, icône pleine de l'appareil et son nom,
     centrés et serrés.
+14. **Changement de micro affiché** : un changement automatique du micro par défaut s'affiche de même (icône du micro et
+    son nom). Si la sortie et le micro basculent ensemble vers le même appareil, un seul message, celui de l'appareil ;
+    si le micro change seul (casque filaire branché sur la prise), son propre message.
 
 ## Objectifs
 
@@ -120,7 +123,8 @@ de l'entrée par défaut, quelle qu'en soit la source, lu dans les signaux de Pi
 - **changement de la sortie par défaut** : il n'est pas ignoré comme les autres signaux de liaison ; il ouvre la
   presqu'île sur le message de la décision 13, puis la garde de liaison s'applique au volume que WirePlumber
   rétablit sur la nouvelle sortie. Le premier défaut connu au démarrage de la coque ne compte pas comme un
-  changement. Un changement d'entrée par défaut ne s'affiche pas ;
+  changement. Un changement d'entrée par défaut s'affiche de même (décision 14) ; quand sortie et entrée changent
+  vers le même appareil dans la seconde, les deux demandes se fondent en un seul message, celui de l'appareil ;
 - **garde du popover** : tant que le popover audio est ouvert, la presqu'île ne s'ouvre pas, quelle que soit la source
   du changement.
 
@@ -194,3 +198,4 @@ les bureaux, jamais un volume périmé. L'Ouvreuse passe par cet arbitre.
 | 0.1 | 2026-11-08 | Première rédaction après le remue-méninges et les maquettes |
 | 0.2 | 2026-11-08 | Relecture du constructeur : déclenchement par toute source avec garde de liaison, presqu'île muette popover ouvert (décisions 11 et 12), hauteur du popover qui suit le contenu |
 | 0.3 | 2026-11-08 | Changement automatique de sortie montré dans la presqu'île (décision 13) |
+| 0.4 | 2026-11-08 | Changement automatique de micro montré lui aussi, fusionné avec celui de la sortie pour un même appareil (décision 14) |
