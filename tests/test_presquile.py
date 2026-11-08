@@ -57,7 +57,10 @@ class PresquileStructureTest(unittest.TestCase):
         self.assertEqual(re.findall(r"item:\s*([\w.]+)", masque.group(1)), ["encoche.corps"])
 
     def test_module_et_ressort(self):
-        self.assertRegex(self.surface, r"property Component module:\s*Component\s*\{\s*Bureaux\b")
+        # Le module est arbitré, en lecture seule ; les bureaux sont le défaut de l'arbitre.
+        self.assertRegex(self.surface, r"readonly property Component module:\s*arbitre\.module")
+        arbitre = (ROOT / "coque" / "Presquile" / "Arbitre.qml").read_text(encoding="utf-8")
+        self.assertRegex(arbitre, r"property Component defaut:\s*Component\s*\{\s*Bureaux\b")
         self.assertRegex(self.surface, r"Scene\s*\{[^}]*module:\s*surface\.module")
         scene = (ROOT / "coque" / "Presquile" / "Scene.qml").read_text(encoding="utf-8")
         self.assertEqual(scene.count('transition: "window"'), 2)
@@ -262,6 +265,51 @@ class MontageTest(PresquileIpc, unittest.TestCase):
         scene = (ROOT / "coque" / "Presquile" / "Scene.qml").read_text(encoding="utf-8")
         self.assertIn("largeur.poser(); hauteur.poser()", scene)
         surface = (ROOT / "coque" / "Presquile" / "Presquile.qml").read_text(encoding="utf-8")
+
+
+class ArbitreTest(PresquileIpc, unittest.TestCase):
+    """Arbitre des modules de la presqu'île (L2-12) : priorités, libération, demandes renouvelées."""
+
+    def etat(self) -> dict:
+        """Module arbitré et nombre de changements. Sortie : {module, changements}. Erreurs : celles de json."""
+        return self.json("arbitreEtat")
+
+    def test_defaut_bureaux(self):
+        self.assertEqual(self.etat()["module"], "bureaux")
+
+    def test_galerie_prioritaire(self):
+        for ordre in (("volume", "galerie"), ("galerie", "volume")):
+            with self.subTest(ordre=ordre):
+                self.appeler("arbitreDemander", ordre[0], ordre[0], {"volume": 1, "galerie": 2}[ordre[0]])
+                self.appeler("arbitreDemander", ordre[1], ordre[1], {"volume": 1, "galerie": 2}[ordre[1]])
+                self.assertEqual(self.etat()["module"], "galerie")
+                for cle in ordre:
+                    self.appeler("arbitreLiberer", cle)
+
+    def test_liberation_rend_bureaux(self):
+        self.appeler("arbitreDemander", "galerie", "galerie", 2)
+        self.appeler("arbitreDemander", "volume", "volume", 1)
+        self.appeler("arbitreLiberer", "volume")
+        self.assertEqual(self.etat()["module"], "galerie")
+        self.appeler("arbitreLiberer", "galerie")
+        self.assertEqual(self.etat()["module"], "bureaux")
+
+    def test_volume_rendu_apres_la_galerie(self):
+        self.appeler("arbitreDemander", "volume", "volume", 1)
+        self.appeler("arbitreDemander", "galerie", "galerie", 2)
+        self.appeler("arbitreLiberer", "galerie")
+        self.assertEqual(self.etat()["module"], "volume")
+
+    def test_demande_renouvelee_sans_remontage(self):
+        avant = self.etat()["changements"]
+        self.appeler("arbitreDemander", "volume", "volume", 1)
+        self.appeler("arbitreDemander", "volume", "volume", 1)
+        self.assertEqual(self.etat(), {"module": "volume", "changements": avant + 1})
+
+    def test_liberation_inconnue_sans_effet(self):
+        avant = self.etat()
+        self.appeler("arbitreLiberer", "absent")
+        self.assertEqual(self.etat(), avant)
 
 
 # Module factice « grand » de la coque d'essai, et module des bureaux d'essai (4 bureaux, presqu'île de 28).

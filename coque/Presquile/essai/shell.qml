@@ -10,7 +10,7 @@ import "Presquile/bureaux.js" as Bureaux
 // fenêtre, pour que tests/test_presquile.py les éprouve dans un vrai Quickshell ; sous la plateforme offscreen
 // seulement, ouvre une vitrine (FloatingWindow jamais montrée à l'écran) qui porte une Encoche au corps de la
 // planche forme.html (106), sur le fond du bureau, avec la marge de son ombre, et l'enregistre en PNG à la demande.
-// Les tâches suivantes y ajoutent leurs composants et leurs fonctions IPC.
+// Les commandes arbitreDemander, arbitreLiberer et arbitreEtat éprouvent l'Arbitre. Les tâches suivantes y ajoutent leurs composants et leurs fonctions IPC.
 // Entrées : DUNEI_TOKENS_DIR, lu par Theme ; QT_QPA_PLATFORM, posé à offscreen par le test ; QT_SCALE_FACTOR, pour
 // une capture agrandie ; QT_QUICK_BACKEND=rhi et QSG_RHI_BACKEND=opengl pour une capture fidèle (la plateforme
 // offscreen choisit sinon le rendu logiciel, qui ne peint ni shader ni remplissage par texture). Commandes IPC :
@@ -55,6 +55,16 @@ ShellRoot {
     Component {
         id: moduleTardif
         Item { objectName: "tardif"; property var ecran; property bool charge: false; implicitWidth: charge ? 400 : 1000; implicitHeight: 80 }
+    }
+
+    // Arbitre sans fenêtre, au module par défaut des bureaux, et deux modules factices « volume » et « galerie » ;
+    // changements compte les fois où le module arbitré change, c'est-à-dire les remontages que subirait la scène.
+    Component { id: moduleVolume; Item { objectName: "volume"; property var ecran; implicitWidth: 60; implicitHeight: 28 } }
+    Component { id: moduleGalerie; Item { objectName: "galerie"; property var ecran; implicitWidth: 400; implicitHeight: 28 } }
+    Arbitre {
+        id: essaiArbitre
+        property int changements: 0
+        onModuleChanged: changements++
     }
 
     // Scène sans fenêtre, comme celle de la surface : sa trajectoire est lue par tests/test_presquile.py.
@@ -182,6 +192,25 @@ ShellRoot {
                                     hauteur: b.implicitHeight,
                                     reelles: p.map(x => x.width),
                                     zones: zones, centres: centres })
+        }
+
+        // arbitreDemander — relaie une demande à l'arbitre d'essai. Entrées : cle ; nom, « volume » ou « galerie » ;
+        // priorite. Sortie : aucune. Erreurs : aucune. Dépendances : essaiArbitre.
+        function arbitreDemander(cle: string, nom: string, priorite: int): void {
+            essaiArbitre.demander(cle, nom === "volume" ? moduleVolume : moduleGalerie, priorite)
+        }
+
+        // arbitreLiberer — retire une demande de l'arbitre d'essai. Entrée : cle. Sortie : aucune. Erreurs : aucune.
+        // Dépendances : essaiArbitre.
+        function arbitreLiberer(cle: string): void { essaiArbitre.liberer(cle) }
+
+        // arbitreEtat — module arbitré. Entrées : aucune. Sortie : JSON {module (« volume », « galerie » ou
+        // « bureaux »), changements (nombre de changements de module depuis le démarrage)}. Erreurs : aucune.
+        // Dépendances : essaiArbitre.
+        function arbitreEtat(): string {
+            const m = essaiArbitre.module
+            return JSON.stringify({ module: m === moduleVolume ? "volume" : m === moduleGalerie ? "galerie" : "bureaux",
+                                    changements: essaiArbitre.changements })
         }
 
         // changer — change le module de la scène d'essai, ce qui déroule la séquence de changement.
