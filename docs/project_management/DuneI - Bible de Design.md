@@ -896,7 +896,7 @@ Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si 
 | Interrupteur | — | `interactive` | `state` | Pilule ; coché = piste d'accent + bouton déplacé. Jamais la couleur seule |
 | Onglets | E2 | `interactive` + `text` | `state` | Contrôle segmenté : actif = accent sur le segment, pas sur la piste. Un seul arrêt de tabulation, anneau autour de la barre |
 | Curseur (slider) | — | `interactive` | `state` | Piste à E0, poignée à E3. Focus = anneau sur la poignée |
-| Jauge | — | `interactive` + `icon` | `state` | Curseur sans disque, comme le Centre de contrôle : barre enfoncée, partie remplie en accent, icône facultative dedans. Focus = anneau sur la barre |
+| Jauge | — | `interactive` + `icon` | `state` | Curseur sans disque, comme le Centre de contrôle : barre enfoncée, partie remplie en accent, icône facultative dedans, cliquable quand la jauge pilote une sourdine ; état coupé : remplissage `text-disabled`, icône `error`, en fondu. Focus = anneau sur la barre |
 | Bascule à glyphe | E3 rel. | `interactive` + `icon` + `text` | `state` | Disque ; allumée = accent plein. Focus = anneau rond |
 | Compteur | field | `field` + `interactive` | `state` | Valeur dans un champ enfoncé, stepper à deux demi-boutons. Flèches et molette |
 | Menu déroulant | E3 rel. | `interactive` + `overlay` + `row` | `state` | Apparence d'un bouton, double chevron ; ouvre un overlay contextuel |

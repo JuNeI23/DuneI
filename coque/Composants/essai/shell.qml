@@ -20,7 +20,7 @@ import "Composants/ancrage.js" as Ancrage
 // Entrées : DUNEI_TOKENS_DIR, lu par Theme ; thème d'icônes DuneI, posé par la directive IconTheme en tête.
 // Sortie : journal de Theme, plus « essai : prêt <bool> » à chaque changement de Theme.ready, et une ligne « essai :
 // <clé> <valeur> » par commande IPC de lecture (cran, interaction, selection, sonde, naissances, fond, texte, anneau,
-// etat, ressort, ressortsFiges, image, controles, coches, cotes, glyphes, radios, jauge, progression, separateur,
+// etat, ressort, ressortsFiges, image, controles, coches, cotes, glyphes, radios, jauge, jaugeIcone, jaugeHors, jaugeCibles, progression, separateur,
 // champ, indicatif, tailleIcone, liste, arrets, rangee, bouton, overlays, overlaysFermes, pastilles, compteur,
 // compteurLargeur, deroulant, recherche, rechercheCouleurs, secret, activite, depliable, depliableCotes, iconesControles,
 // bascule, reglages, valeur, fenetreAttention, knobs, contours, materiauSurfaces, verre, cleVerre, champMateriau, ombres).
@@ -30,7 +30,7 @@ import "Composants/ancrage.js" as Ancrage
 // <visible> <running> », « essai activitePhase <phase> », « essai activiteAncetre <bool> », « essai depliableOuvrir
 // <bool> », « essai basculeCocher <bool> », « essai valeurCopier », « essai pastillesForcer <état> », « essai pastillesReduire <bool> »,
 // « essai knobsActifs <bool> », « essai interrupteurCocher <bool> », « essai compteurValeur <n> », « essai deroulantRang <n> », « essai decocher »,
-// « essai radioCocher <rang> », « essai jaugeActive <bool> », « essai boutonPrincipal <bool> », « essai inactif
+// « essai radioCocher <rang> », « essai jaugeActive <bool> », « essai jaugeCoupe <bool> », « essai boutonPrincipal <bool> », « essai inactif
 // <bool> », « essai reparenter », « essai texteMoyen », « essai anneauInactif <bool> », « essai survol <bool> »,
 // « essai champActif <bool> », « essai champTexte <texte> », « essai selectionLibre », « essai icone <nom> <bool> »,
 // « essai ouvrirFactice <A…E> », « essai fermerFactice <A…E> » et « essai materiauHauteur <px> ».
@@ -125,6 +125,8 @@ ShellRoot {
                 id: jaugeEssai
                 value: 0.5
                 icone: "audio-volume-high"
+                property int clics: 0
+                onIconeCliquee: clics++
             }
 
             Progression {
@@ -577,6 +579,35 @@ ShellRoot {
             }
             essai.journal("jauge", [b.height, b.radius, b.color, r[0], r[1], b.width, j.remplie.color,
                 j.symbole.x + j.symbole.width / 2, j.symbole.couleur, j.symbole.taille].join(" "))
+        }
+
+        // jaugeIcone — simule un clic sur l'icône de la jauge et journalise la valeur et le nombre d'émissions de
+        // iconeCliquee. Entrées : aucune. Sortie : aucune ; « essai : jaugeIcone <valeur> <clics> ». Erreurs : aucune.
+        // Dépendances : jaugeEssai (zoneIcone, clics).
+        function jaugeIcone(): void {
+            jaugeEssai.zoneIcone.clicked(null)
+            essai.journal("jaugeIcone", [jaugeEssai.value, jaugeEssai.clics].join(" "))
+        }
+
+        // jaugeHors — pose la valeur de la jauge comme le ferait un clic hors de l'icône, après avoir vérifié que la
+        // zone de l'icône ne couvre que le carré de gauche. Entrées : aucune. Sortie : aucune ; « essai : jaugeHors
+        // <valeur> <clics> <zoneLargeur> <barreHauteur> ». Erreurs : aucune. Dépendances : jaugeEssai.
+        function jaugeHors(): void {
+            jaugeEssai.value = 0.8
+            essai.journal("jaugeHors", [jaugeEssai.value, jaugeEssai.clics, jaugeEssai.zoneIcone.width,
+                jaugeEssai.barre.height].join(" "))
+        }
+
+        // jaugeCibles — journalise les cibles de couleur du remplissage et de l'icône. Entrées : aucune. Sortie :
+        // aucune ; « essai : jaugeCibles <#remplissage> <#icône> ». Erreurs : aucune. Dépendances : jaugeEssai.
+        function jaugeCibles(): void {
+            essai.journal("jaugeCibles", [jaugeEssai.fondRemplie.target, jaugeEssai.fondIcone.target].join(" "))
+        }
+
+        // jaugeCoupe — coupe ou rétablit la jauge d'essai. Entrée : valeur, nouvel état coupe. Sortie : aucune.
+        // Erreurs : aucune. Dépendances : jaugeEssai.
+        function jaugeCoupe(valeur: bool): void {
+            jaugeEssai.coupe = valeur
         }
 
         // pastilles — journalise le diamètre du premier disque, l'écart des disques, la couleur peinte de chacun,

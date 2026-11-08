@@ -481,6 +481,27 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
         self.ipc("inactif", "true")
         self.attendre_jauge([st["activeMuted"]["rest"]["fill"].lower(), st["activeMuted"]["rest"]["text"].lower()])
 
+    def test_jauge_icone_cliquee(self):
+        # Un clic sur l'icône émet iconeCliquee une fois sans changer la valeur (0,5).
+        self.demarrer()
+        self.assertEqual(self.valeur("jaugeIcone"), "0.5 1")
+
+    def test_jauge_clic_hors_icone(self):
+        # Hors de l'icône, la valeur change et aucun signal n'est émis ; la zone cliquable n'est que le carré de
+        # la hauteur de la barre.
+        self.demarrer()
+        valeur, clics, zone, barre = self.valeur("jaugeHors").split()
+        self.assertEqual((valeur, clics, zone), ("0.8", "0", barre))
+
+    def test_jauge_coupe_couleurs(self):
+        # Coupée, la cible du remplissage est text-disabled et celle de l'icône error ; rétablie, celles de l'Etat.
+        self.demarrer()
+        t = self.tokens55()[0]["color"]
+        self.ipc("jaugeCoupe", "true")
+        self.assertEqual(self.valeur("jaugeCibles").lower().split(), [t["textDisabled"].lower(), t["error"].lower()])
+        self.ipc("jaugeCoupe", "false")
+        self.assertNotEqual(self.valeur("jaugeCibles").lower().split()[1], t["error"].lower())
+
     def attendre_jauge(self, attendu: list) -> None:
         """Relit la couleur de la partie remplie et celle de l'icône de la jauge jusqu'à ce qu'elles valent attendu.
 
