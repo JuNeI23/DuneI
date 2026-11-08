@@ -1,7 +1,8 @@
 import QtQuick
 import Quickshell
 import Quickshell.Io
-import "energie.js" as Energie
+import "Energie"
+import "Energie/energie.js" as Logique
 
 // Coque d'essai de la logique de l'énergie, sans aucune fenêtre.
 // Rôle : expose par IPC (cible « energie ») les fonctions pures de energie.js, et (cible « suivi ») un SuiviEnergie
@@ -11,7 +12,7 @@ import "energie.js" as Energie
 // <state> <secondes> ; suivi lire ; suivi choisir <profil> ; reel choisir <profil> ; reel lire.
 // Sorties : le résultat encodé en JSON, ou « erreur : <message> » si la fonction lève ; le suivi journalise
 // « annonce <palier> » et « effacer » ; lire rend un objet JSON. Erreurs : nom de fonction inconnu, JSON invalide (même
-// forme de retour). Dépendances : quickshell ≥ 0.3 (Quickshell.Io), energie.js et SuiviEnergie.qml (liens dans essai/,
+// forme de retour). Dépendances : quickshell ≥ 0.3 (Quickshell.Io), energie.js et SuiviEnergie.qml (liens dans essai/Energie/, et Theme dans essai/,
 // car Quickshell ne suit pas les imports hors du dossier de la coque).
 ShellRoot {
     Component.onCompleted: console.log("energie : prêt")
@@ -49,10 +50,10 @@ ShellRoot {
 
         // appeler — appelle une fonction exportée de energie.js.
         // Entrées : fonction, son nom ; argumentsJson, un objet JSON {"args": [...]}.
-        // Sortie : le résultat en JSON, ou « erreur : <message> ». Erreurs : voir ci-dessus. Dépendances : Energie.
+        // Sortie : le résultat en JSON, ou « erreur : <message> ». Erreurs : voir ci-dessus. Dépendances : Logique (energie.js).
         function appeler(fonction: string, argumentsJson: string): string {
             try {
-                return JSON.stringify(Energie[fonction](...JSON.parse(argumentsJson).args))
+                return JSON.stringify(Logique[fonction](...JSON.parse(argumentsJson).args))
             } catch (e) {
                 return "erreur : " + e.message
             }
@@ -73,6 +74,9 @@ ShellRoot {
             faux.timeToFull = secondes
             faux.ready = ready
         }
+
+        // dossier — dossier où le suivi simulé cherche energie.json. Entrées : aucune. Sortie : son chemin. Erreurs : aucune.
+        function dossier(): string { return suivi.dir }
 
         // permettre — autorise ou non le profil Performance du démon simulé. Entrée : oui. Sortie : aucune.
         function permettre(oui: bool): void { fauxProfils.hasPerformanceProfile = oui }

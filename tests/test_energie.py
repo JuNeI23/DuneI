@@ -183,6 +183,13 @@ class SuiviEnergieTest(EssaiCoque, unittest.TestCase):
         self.attendre("energie : seuils par défaut", 2)
         self.assertEqual((self.lire()["faible"], self.lire()["critique"]), (20, 5))
 
+    def test_dossier_de_repli_sans_variable(self):
+        # DUNEI_TOKENS_DIR vide : le dossier suit Theme.dir, soit $XDG_CONFIG_HOME/dunei (jamais « /energie.json »).
+        self.environnement = {"XDG_CONFIG_HOME": "/tmp/dunei-essai-xdg"}
+        self.lancer("")
+        self.attendre("energie : prêt")
+        self.assertEqual(self.appeler_cible("suivi", "dossier"), "/tmp/dunei-essai-xdg/dunei")
+
     def test_seuils_du_fichier(self):
         (self.dir / "energie.json").write_text(json.dumps({"alerte": {"faible": 30, "critique": 10}}))
         self.lancer(self.dir)

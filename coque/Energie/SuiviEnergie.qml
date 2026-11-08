@@ -2,6 +2,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import Quickshell.Services.UPower
+import "../Theme"
 import "energie.js" as Energie
 
 // SuiviEnergie — état et actions de l'énergie, sans singleton : la logique de EtatEnergie (L2-13).
@@ -12,20 +13,20 @@ import "energie.js" as Energie
 // jetons ; sans fichier lisible, 20 % et 5 % s'appliquent et le journal le dit.
 // Entrées : appareil, objet portant ready, isLaptopBattery, percentage (fraction de 0 à 1, relevée sur Quickshell 0.3.2 ; elle peut être non nulle avant ready), state, timeToEmpty, timeToFull (défaut
 // UPower.displayDevice) ; profils, objet portant profile et hasPerformanceProfile (défaut PowerProfiles) ; dir, dossier
-// de energie.json (défaut : variable DUNEI_TOKENS_DIR). choisirProfil(profil), action de l'interface.
+// de energie.json (défaut Theme.dir : DUNEI_TOKENS_DIR, sinon $XDG_CONFIG_HOME/dunei, sinon ~/.config/dunei). choisirProfil(profil), action de l'interface.
 // Sorties : presente, vrai si l'appareil est une batterie de portable ; pourcent, entier ; etat, « decharge »,
 // « charge », « chargee » ou « secteur » ; surBatterie ; estimation, texte du popover ; profil, aPerformance, aProfils ;
 // palierCourant (0, 1 ou 2) ; signal annoncer(palier), 1 ou 2, quand un palier plus haut est franchi sur batterie ;
 // signal effacer(), quand l'appareil quitte la batterie (branchement).
 // Erreurs : energie.json absent ou invalide → console.log « energie : seuils par défaut » ; sans batterie, presente
 // reste faux et rien n'est annoncé ; sans démon de profils, aProfils reste faux.
-// Dépendances : Quickshell (Scope, Quickshell.env), Quickshell.Io (FileView), Quickshell.Services.UPower, energie.js.
+// Dépendances : Theme (dir), Quickshell (Scope), Quickshell.Io (FileView), Quickshell.Services.UPower, energie.js.
 Scope {
     id: racine
 
     property var appareil: UPower.displayDevice
     property var profils: PowerProfiles
-    property string dir: Quickshell.env("DUNEI_TOKENS_DIR")
+    property string dir: Theme.dir
 
     property int seuilFaible: 20
     property int seuilCritique: 5
