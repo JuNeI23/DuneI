@@ -285,6 +285,10 @@ class MontageTest(PresquileIpc, unittest.TestCase):
         surface = (ROOT / "coque" / "Presquile" / "Presquile.qml").read_text(encoding="utf-8")
 
 
+# Priorités des modules de la presqu'île (galerie 2, volume 1).
+PRIORITE = {"volume": 1, "galerie": 2}
+
+
 class ArbitreTest(PresquileIpc, unittest.TestCase):
     """Arbitre des modules de la presqu'île (L2-12) : priorités, libération, demandes renouvelées."""
 
@@ -298,8 +302,8 @@ class ArbitreTest(PresquileIpc, unittest.TestCase):
     def test_galerie_prioritaire(self):
         for ordre in (("volume", "galerie"), ("galerie", "volume")):
             with self.subTest(ordre=ordre):
-                self.appeler("arbitreDemander", ordre[0], ordre[0], {"volume": 1, "galerie": 2}[ordre[0]])
-                self.appeler("arbitreDemander", ordre[1], ordre[1], {"volume": 1, "galerie": 2}[ordre[1]])
+                for nom in ordre:
+                    self.appeler("arbitreDemander", nom, nom, PRIORITE[nom])
                 self.assertEqual(self.etat()["module"], "galerie")
                 for cle in ordre:
                     self.appeler("arbitreLiberer", cle)
@@ -323,6 +327,29 @@ class ArbitreTest(PresquileIpc, unittest.TestCase):
         self.appeler("arbitreDemander", "volume", "volume", 1)
         self.appeler("arbitreDemander", "volume", "volume", 1)
         self.assertEqual(self.etat(), {"module": "volume", "changements": avant + 1})
+
+    def test_egalite_premier_arrive_et_demande_identique(self):
+        # À priorité égale, le premier arrivé l'emporte ; renouveler sa demande à l'identique ne la fait pas passer
+        # après l'autre (sans la garde de demander(), « b » prendrait la place).
+        self.appeler("arbitreDemander", "a", "volume", 1)
+        self.appeler("arbitreDemander", "b", "galerie", 1)
+        self.assertEqual(self.etat()["module"], "volume")
+        self.appeler("arbitreDemander", "a", "volume", 1)
+        self.assertEqual(self.etat()["module"], "volume")
+
+    def test_demande_modifiee_passe_la_derniere(self):
+        self.appeler("arbitreDemander", "a", "volume", 2)
+        self.appeler("arbitreDemander", "b", "galerie", 1)
+        self.assertEqual(self.etat()["module"], "volume")
+        self.appeler("arbitreDemander", "a", "volume", 1)
+        self.assertEqual(self.etat()["module"], "galerie")
+
+    def test_priorite_changee_au_renouvellement(self):
+        self.appeler("arbitreDemander", "a", "volume", 1)
+        self.appeler("arbitreDemander", "b", "galerie", 2)
+        self.assertEqual(self.etat()["module"], "galerie")
+        self.appeler("arbitreDemander", "a", "volume", 3)
+        self.assertEqual(self.etat()["module"], "volume")
 
     def test_liberation_inconnue_sans_effet(self):
         avant = self.etat()

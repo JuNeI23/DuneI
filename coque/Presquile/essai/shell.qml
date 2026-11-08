@@ -62,8 +62,14 @@ ShellRoot {
 
     // Arbitre sans fenêtre, au module par défaut des bureaux, et deux modules factices « volume » et « galerie » ;
     // changements compte les fois où le module arbitré change, c'est-à-dire les remontages que subirait la scène.
-    Component { id: moduleVolume; Item { objectName: "volume"; property var ecran; implicitWidth: 60; implicitHeight: 28 } }
-    Component { id: moduleGalerie; Item { objectName: "galerie"; property var ecran; implicitWidth: 400; implicitHeight: 28 } }
+    Component {
+        id: moduleVolume
+        Item { objectName: "volume"; property var ecran; implicitWidth: 60; implicitHeight: 28 }
+    }
+    Component {
+        id: moduleGalerie
+        Item { objectName: "galerie"; property var ecran; implicitWidth: 400; implicitHeight: 28 }
+    }
     Arbitre {
         id: essaiArbitre
         property int changements: 0
