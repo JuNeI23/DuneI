@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas — révisée le 22 octobre 2026
 
-Version 1.45. Historique en fin de document.
+Version 1.46. Historique en fin de document.
 
 *Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent soixante-quinze lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
 
@@ -554,26 +554,38 @@ se détache mieux du fond d'écran. La colonne des fenêtres de réglages est d�
 plateau détaché : du verre à 90 % le jour, opaque la nuit, à côté d'un contenu opaque, ce qui sépare nettement la
 navigation de la page. Les popovers gardent leur verre à 60 %. Nicolas a validé à l'écran le 2026-11-08.
 
-L'indicateur audio et son popover sont faits (L2-12, D138 à D144), en attente de fusion. Un clic sur l'icône de la barre
+L'indicateur audio et son popover sont faits (L2-12, D138 à D144), fusionnés le 2026-11-08 (PR #52). Un clic sur l'icône de la barre
 ouvre un popover où Nicolas règle le volume et le micro, choisit la sortie et l'entrée, coupe ou rétablit l'un et
 l'autre. Surtout, la presqu'île est devenue la jauge du son : elle s'élargit et se remplit d'accent au rythme du niveau,
 sans à-coups, à chaque appui de F2 ou F3 comme à chaque bouton du Bose ; F1 et F4 l'ouvrent sur « Coupé » et « Son
 actif », « Micro coupé » et « Micro actif » ; l'allumage et l'extinction du Bose y annoncent le nouvel appareil. Le son
 ne se rétablit que par F1 ou l'icône de la jauge, et la presqu'île reste muette au démarrage et popover ouvert. Les
 lecteurs viennent du module PipeWire de Quickshell, sans `wpctl` ni sondage. Nicolas a validé l'ensemble à l'écran le
-2026-11-08. Deux vérifications attendent encore avant la fusion : la lisibilité de « Son actif » de jour à bas volume,
-et le silence de la presqu'île au réveil de veille. La fenêtre Son, vers laquelle pointe « Réglages du son… », naîtra de
+2026-11-08. Deux vérifications restent ouvertes : la lisibilité de « Son actif » de jour à bas volume, et le silence de
+la presqu'île au réveil de veille. La fenêtre Son, vers laquelle pointe « Réglages du son… », naîtra de
 L2-65, qui allège d'abord la fenêtre Réseau.
 
-Prochaine étape : **après la fusion de cette PR, l'indicateur d'énergie et son popover (L2-13)**, qui suivra le motif du
-popover hébergé (`heberge: true`, `fonduContenu`, `fonduDisque`, `reinitialiser()`, `disque` si le popover n'a pas de
-bascule ronde). Le reste de L2-48, L2-57 (suites du popover Bluetooth), L2-58, L2-59, L2-62 et L2-65 attendent leur tour.
+L'indicateur d'énergie et son popover sont faits (L2-13, D145 à D148). Un clic sur la batterie de la barre ouvre un
+popover qui répond d'un coup d'œil à « combien de temps ? » : le pourcentage, suivi du temps restant sur batterie ou du
+temps jusqu'au plein en charge, puis le choix du profil d'énergie, Économie, Équilibré ou Performance. Le profil ne change
+que par ce choix, et l'économie ne touche pas aux animations : l'idée réservée par D117 est écartée. Sur batterie, la
+presqu'île avertit une fois à 20 % (« Batterie faible », en orange) et une fois à 5 % (« Branchez le chargeur », en
+rouge) ; une alerte tombée en plein écran ou derrière la galerie attend qu'on en sorte. Les seuils vivent dans
+`energie.toml`. La recette a mis au jour trois défauts corrigés avant la fusion : le temps jusqu'au plein, absent du
+périphérique d'affichage d'UPower et lu désormais sur la batterie ; des segments jamais peints sous la construction
+asynchrone des popovers ; un scintillement au clic de tout contrôle segmenté. Nicolas a validé l'ensemble à l'écran le
+2026-11-08.
+
+Prochaine étape : **après la fusion de cette PR, l'allègement de la fenêtre Réseau puis la fenêtre Son (L2-65)**, vers
+laquelle pointe déjà « Réglages du son… » du popover audio. Le reste de L2-48, L2-57 (suites du popover Bluetooth), L2-58,
+L2-59 et L2-62 attendent leur tour.
 
 ## Historique des versions
 
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-10 | Version initiale |
+| 1.46 | 2026-11-08 | L2-12 fusionné (PR #52) ; L2-13 fait : indicateur d'énergie, popover du profil, alerte de la presqu'île (D145 à D148), recette validée à l'écran ; prochaine étape : L2-65 |
 | 1.45 | 2026-11-08 | L2-12 fait, en attente de fusion : indicateur audio, popover du son, presqu'île-jauge (D138 à D144), recette validée à l'écran ; ajout de L2-65 (fenêtre Son) ; prochaine étape : L2-13 |
 | 1.44 | 2026-11-08 | L2-61 fait : verre propre de la presqu'île, colonne des fenêtres de réglages pleine hauteur (D136, D137) ; prochaine étape : L2-12 |
 | 1.43 | 2026-11-07 | L2-60 : correctifs de recette, mémoire de la coque en `MemoryTHP=madvise` (971 à 160 Mo), gros dossier accepté, L2-63 et L2-64 au backlog (D132 à D135) ; prochaine étape inchangée : L2-61 |

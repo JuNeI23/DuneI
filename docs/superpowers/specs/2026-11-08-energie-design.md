@@ -1,6 +1,6 @@
 # Indicateur d'énergie, popover et alerte de la presqu'île : conception (L2-13)
 
-Version 0.4, 2026-11-08.
+Version 0.5, 2026-11-08.
 
 ## Intention
 
@@ -198,6 +198,30 @@ galerie passe de 2 à 3 dans l'Ouvreuse, l'alerte prend 2). Choix de Claude, apr
 - Captures grim du popover et des deux alertes, de jour et de nuit, sur les bureaux 1 à 4.
 - Validation à l'écran par Nicolas.
 
+## Recette
+
+Recette faite à l'écran par Nicolas le 2026-11-08, sur `caladan`, après `make install` et redémarrage de la coque.
+
+Validé : les deux alertes au démarrage, seuils relevés le temps de l'essai à 60 et 55 % (batterie à 49 %), puis
+rétablis à 20 et 5 % ; le popover, son pourcentage, le temps restant et le temps jusqu'au plein ; le changement de
+profil, vérifié côté système (un seul `ActiveProfile` publié par clic, relevé par `gdbus monitor`).
+
+Changements de recette :
+
+- **Disposition.** L'estimation suit le pourcentage sur la même ligne, alignée sur sa ligne de base, au lieu d'être
+  dessous ; couleurs et tailles inchangées.
+- **Segments jamais peints.** Construits par un `Repeater` dans le `Loader` asynchrone de `CadrePopovers`, ils
+  n'apparaissaient pas ; ils sont déclarés, et deux contrôles, à deux et à trois segments, évitent le vide d'un segment
+  Performance masqué (D148).
+- **Scintillement au clic.** Fond d'un segment non coché parti du fond opaque de son rôle ; il part désormais de la
+  transparence, au repos comme au survol (D148).
+- **Temps jusqu'au plein.** `displayDevice.timeToFull` était négatif en charge ; l'appareil est désormais la batterie
+  de portable de `UPower.devices` (D147).
+- **Dossier des seuils.** Lu dans `DUNEI_TOKENS_DIR`, absente de la session ; il vient désormais de `Theme.dir` (D147).
+
+Non éprouvé en réel : la descente naturelle sous 20 % puis 5 %, l'alerte retenue en plein écran et derrière la galerie
+(couvertes par les tests de l'annonceur), une machine sans profil Performance (couverte par l'essai).
+
 ## Historique des versions
 
 | Version | Date | Changements |
@@ -206,3 +230,4 @@ galerie passe de 2 à 3 dans l'Ouvreuse, l'alerte prend 2). Choix de Claude, apr
 | 0.2 | 2026-11-08 | Relecture du constructeur : seuils dans `energie.toml`, écran visé, attente derrière la galerie, palier unique en attente, garde de `ready`, priorités de l'arbitre |
 | 0.3 | 2026-11-08 | Alerte retenue en plein écran et affichée à sa sortie (décision 9) |
 | 0.4 | 2026-11-08 | Maquettes validées : alerte critique tout en `error`, popover A (décision 10) |
+| 0.5 | 2026-11-08 | Recette : estimation à la suite du pourcentage, segments déclarés, fond des segments parti de la transparence, appareil pris dans `UPower.devices`, seuils sous `Theme.dir` (D145 à D148) |
