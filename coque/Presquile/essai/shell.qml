@@ -5,6 +5,7 @@ import "Theme"
 import "Presquile"
 import "Presquile/bureaux.js" as Bureaux
 import "Presquile/encoche.js" as Forme
+import "Audio"
 
 // Coque d'essai du module Presquile.
 // Rôle : expose par IPC (cible « presquile ») les fonctions pures de bureaux.js et la géométrie d'une Encoche sans
@@ -12,7 +13,8 @@ import "Presquile/encoche.js" as Forme
 // seulement, ouvre une vitrine (FloatingWindow jamais montrée à l'écran) qui porte une Encoche au corps de la
 // planche forme.html (106), sur le fond du bureau, avec la marge de son ombre, et l'enregistre en PNG à la demande.
 // Les commandes arbitreDemander, arbitreLiberer et arbitreEtat éprouvent l'Arbitre ; annonceurRafale,
-// annonceurPleinEcran et annonceurEtat, l'Annonceur, piloté par une source et une presqu'île factices. Les tâches suivantes y ajoutent leurs composants et leurs fonctions IPC.
+// annonceurPleinEcran et annonceurEtat, l'Annonceur, piloté par une source et une presqu'île factices ;
+// volumeAnnoncer et volumeEtat, le débord du remplissage du module Volume réel dans une scène sans fenêtre. Les tâches suivantes y ajoutent leurs composants et leurs fonctions IPC.
 // Entrées : DUNEI_TOKENS_DIR, lu par Theme ; QT_QPA_PLATFORM, posé à offscreen par le test ; QT_SCALE_FACTOR, pour
 // une capture agrandie ; QT_QUICK_BACKEND=rhi et QSG_RHI_BACKEND=opengl pour une capture fidèle (la plateforme
 // offscreen choisit sinon le rendu logiciel, qui ne peint ni shader ni remplissage par texture). Commandes IPC :
@@ -106,6 +108,32 @@ ShellRoot {
         volume: moduleVolume
         Component.onCompleted: inscrire(essaiIle)
     }
+    // Scène d'essai du module Volume réel (EtatAudio lu en lecture seule ; l'essai n'écrit que annonceCourante, dans
+    // ce processus) : depassement retient, image par image, le plus grand débord du remplissage hors du corps.
+    Component { id: moduleVolumeReel; Volume { objectName: "volume" } }
+    Scene {
+        id: sceneVolume
+        property real depassement: 0
+
+        // mesurer — retient le débord courant du remplissage hors du corps (bord gauche ou droit), en px logiques.
+        // Entrées : aucune. Sortie : met à jour depassement. Erreurs : aucune, sans module monté. Dépendances : Volume.
+        function mesurer() {
+            const v = contenu, r = v?.remplie
+            if (!r) return
+            const g = v.x + r.x
+            depassement = Math.max(depassement, -g, g + r.width - width)
+        }
+    }
+    Connections {
+        target: sceneVolume.ressortLargeur
+        function onValueChanged() { sceneVolume.mesurer() }
+    }
+    Connections {
+        target: sceneVolume.contenu?.remplissage ?? null
+        ignoreUnknownSignals: true
+        function onValueChanged() { sceneVolume.mesurer() }
+    }
+
     // Rafale : count annonces de volume, une toutes les interval millisecondes.
     Timer {
         id: rafale
@@ -284,6 +312,25 @@ ShellRoot {
             return JSON.stringify({ module: arbitreAnnonce.module === moduleVolume ? "volume" : "bureaux",
                                     changements: arbitreAnnonce.changements, liberations: essaiIle.liberations,
                                     cible: essaiAnnonceur.cible !== null })
+        }
+
+        // volumeAnnoncer — pose l'annonce courante d'EtatAudio dans ce processus et monte le module Volume réel dans sa
+        // scène d'essai. Entrées : genre (« volume », « micro », « sortie » ou « entree ») ; texte, le libellé.
+        // Sortie : aucune. Erreurs : aucune. Dépendances : EtatAudio, sceneVolume, moduleVolumeReel.
+        function volumeAnnoncer(genre: string, texte: string): void {
+            EtatAudio.annonceCourante = { genre, appareil: genre === "micro" ? "" : "audio-speakers", texte, coupe: false }
+            sceneVolume.module = moduleVolumeReel
+        }
+
+        // volumeEtat — photographie de la scène du Volume. Entrées : aucune. Sortie : JSON {depassement (débord
+        // maximal du remplissage hors du corps depuis le départ), largeurScene, largeurModule, phase, mobile}.
+        // Erreurs : aucune. Dépendances : sceneVolume.
+        function volumeEtat(): string {
+            const s = sceneVolume
+            s.mesurer()
+            return JSON.stringify({ depassement: s.depassement, largeurScene: s.width,
+                                    largeurModule: s.contenu?.implicitWidth ?? 0, phase: s.phase, genre: s.contenu?.annonce?.genre ?? null,
+                                    mobile: s.ressortLargeur.moving || (s.contenu?.remplissage?.moving ?? false) })
         }
 
         // changer — change le module de la scène d'essai, ce qui déroule la séquence de changement.

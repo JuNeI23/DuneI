@@ -33,6 +33,9 @@ import "../Theme"
 //           lus par la surface et les essais ; sortant, l'ancien contenu qui finit de s'effacer (null sinon), et
 //           ressortSortant, le ressort de son opacité ; width et height suivent les ressorts de taille ; hauteurSurface, la
 //           hauteur que la surface réserve à l'encoche, stable pendant tout mouvement de la hauteur.
+//           contenuVisible, vrai quand le module monté est visible (opacité de son conteneur non nulle). Un module qui
+//           déclare « property Item scene » reçoit sa Scene au montage, pour lire width (le corps de l'encoche à cette
+//           image) et contenuVisible ; les autres modules ne reçoivent que ecran.
 // Erreurs : un composant sans Item valide laisse contenu nul, se lit au journal de Quickshell, et la séquence se
 //           termine sur une forme de largeur nulle ; un module sans hauteur laisse la hauteur des jetons.
 // Dépendances : Ressort, Theme (tokens.presquile.hauteur, entree et sortie, motion.json par Ressort).
@@ -57,6 +60,8 @@ Item {
     // Ancien contenu qui finit de s'effacer pendant l'étirement (null sinon), et le ressort de son opacité.
     readonly property Item sortant: _sortant
     readonly property alias ressortSortant: effacement
+    // Vrai quand le module monté est visible, si peu que ce soit (opacité de son conteneur non nulle).
+    readonly property bool contenuVisible: opacite.value > 0
 
     property string _phase: "repos"
     property bool _pret: false
@@ -123,7 +128,8 @@ Item {
         opacity: opacite.value
     }
 
-    // monter — instancie le module pour l'écran, centré dans la scène, à la place du précédent.
+    // monter — instancie le module pour l'écran, centré dans la scène, à la place du précédent ; un module qui déclare
+    // scene la reçoit.
     // Entrées : aucune (lit module et ecran). Sortie : met à jour contenu. Erreurs : un composant sans Item valide
     // laisse contenu nul et se lit au journal de Quickshell. Dépendances : module, montage.
     function monter() {
@@ -132,6 +138,7 @@ Item {
         const m = module?.createObject(montage, { ecran: scene.ecran }) ?? null
         contenu = m
         if (m) {
+            if ("scene" in m) m.scene = scene
             m.x = Qt.binding(() => (scene.width - m.implicitWidth) / 2)
             m.y = Qt.binding(() => (scene.height - m.implicitHeight) / 2)
         }

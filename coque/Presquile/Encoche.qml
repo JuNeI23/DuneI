@@ -48,8 +48,10 @@ Item {
     implicitWidth: largeurCorps + 2 * evasement
     implicitHeight: hauteur
 
-    // tracer — voir encoche.js (tracer). Entrées : l, h, e, r. Sortie : le tracé SVG. Erreurs : aucune.
-    // Dépendances : encoche.js.
+    // tracer — tracé SVG de l'encoche continue aux dimensions données, relais de encoche.js gardé pour les lecteurs
+    // de l'Encoche. Entrées : l, largeur du corps ; h, hauteur ; e, évasement ; r, rayon des angles du bas (px
+    // logiques). Sortie : chaîne de chemin SVG depuis le coin haut gauche. Erreurs : aucune ; des dimensions nulles
+    // donnent un tracé vide de surface. Dépendances : encoche.js (tracer).
     function tracer(l: real, h: real, e: real, r: real): string { return Forme.tracer(l, h, e, r) }
 
     Item {

@@ -96,6 +96,8 @@ class PresquileStructureTest(unittest.TestCase):
         self.assertIn("readonly property var gabarit: Theme.tokens?.presquile", code)
         self.assertRegex(code, r"implicitHeight:\s*gabarit\?\.hauteur\s*\?\?\s*0")
         self.assertRegex(code, r'transition:\s*"reflow"')
+        # Le pourcentage est en texte secondaire (maquette validée), en erreur sous sourdine.
+        self.assertIn('color: EtatAudio.muet ? encre.value : Theme.color?.textSecondary ?? "transparent"', code)
 
     def test_annonceur_dans_la_coque(self):
         # L'annonceur est unique, hors du Variants, et chaque presqu'île s'y inscrit et s'en retire.
@@ -379,6 +381,30 @@ class AnnonceurTest(PresquileIpc, unittest.TestCase):
         self.appeler("annonceurPleinEcran", True)
         self.appeler("annonceurRafale", 1, 0)
         self.assertEqual(self.etat(), avant)
+
+
+class VolumeTest(PresquileIpc, unittest.TestCase):
+    """Module Volume dans une scène sans fenêtre : le remplissage ne déborde jamais du corps de l'encoche, ni au
+    montage, ni quand le module s'élargit (240 → 320 pour un nom d'appareil long) pendant que la forme s'étire."""
+
+    def attendre_repos(self) -> dict:
+        """Attend que la scène et le remplissage soient immobiles. Sortie : l'état. Erreurs : échec après DELAI."""
+        fin = time.monotonic() + DELAI
+        while time.monotonic() < fin:
+            etat = self.json("volumeEtat")
+            if etat["phase"] == "repos" and not etat["mobile"]:
+                return etat
+            time.sleep(0.1)
+        self.fail(f"scène du Volume jamais au repos : {etat}")
+
+    def test_remplissage_borne_au_corps(self):
+        self.appeler("volumeAnnoncer", "micro", "Micro actif")
+        etat = self.attendre_repos()
+        self.assertEqual((etat["largeurScene"], etat["largeurModule"]), (240, 240))
+        self.appeler("volumeAnnoncer", "sortie", "Un appareil au nom assez long pour élargir la jauge au maximum")
+        etat = self.attendre_repos()
+        self.assertEqual((etat["largeurScene"], etat["largeurModule"]), (320, 320), etat)
+        self.assertLessEqual(etat["depassement"], 0.5)
 
 
 # Module factice « grand » de la coque d'essai, et module des bureaux d'essai (4 bureaux, presqu'île de 28).
