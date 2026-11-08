@@ -21,7 +21,9 @@ import "audio.js" as Audio
 // Sorties : sorties, entrees, listes de PwNode ; sortie, entree, défauts courants (null pendant une bascule) ;
 // presente, vrai si une sortie existe ; volume, niveauMicro (0 à 100), muet, micMuet, qui gardent leur dernière
 // valeur tant que le défaut est nul ; annonceCourante, dernière annonce émise ; signal annoncer(annonce), objet
-// { genre, appareil, texte, coupe } construit par audio.js (annonce).
+// { genre, appareil, texte, coupe } construit par audio.js (annonce). À l'instant où annoncer est émis, volume et muet
+// peuvent valoir encore leur valeur précédente (les liaisons se réévaluent après le gestionnaire du signal de
+// PipeWire) : un lecteur lie EtatAudio.volume, il ne le recopie jamais dans son gestionnaire d'annoncer.
 // Erreurs : aucune ; sans défaut, les actions ne font rien.
 // Dépendances : Quickshell (Singleton), Quickshell.Services.Pipewire (Pipewire, PwObjectTracker), audio.js (estSortie,
 // estEntree, pourcent, dansGarde, fusionner, annonce).
@@ -62,6 +64,13 @@ Singleton {
     Binding { target: memoire; property: "niveauMicro"; when: etat.entree?.ready ?? false; restoreMode: Binding.RestoreNone; value: Audio.pourcent(etat.entree?.audio?.volume) }
     Binding { target: memoire; property: "micMuet"; when: etat.entree?.ready ?? false; restoreMode: Binding.RestoreNone; value: etat.entree?.audio?.muted ?? false }
 
+    // Défauts déjà connus à la création du singleton (création tardive, rechargement) : ils sont le premier défaut,
+    // que onSortieChanged et onEntreeChanged ne voient pas passer.
+    Component.onCompleted: {
+        memoire.idSortie = sortie?.id ?? -1
+        memoire.idEntree = entree?.id ?? -1
+    }
+
     // Sans liaison, volume et sourdine des défauts valent 0 et ne se notifient pas.
     PwObjectTracker { objects: [etat.sortie, etat.entree] }
 
@@ -83,8 +92,9 @@ Singleton {
         poserGarde()
     }
 
-    // Attente d'une annonce d'entrée, que la sortie du même appareil peut encore effacer.
-    Timer { id: attenteEntree; interval: 150; onTriggered: etat.emettre("entree") }
+    // Attente d'une annonce d'entrée, que la sortie du même appareil peut encore effacer ; une entrée redevenue nulle
+    // entre-temps n'est pas annoncée.
+    Timer { id: attenteEntree; interval: 150; onTriggered: if (etat.entree) etat.emettre("entree") }
 
     // Liaison d'un défaut (démarrage, reconnexion, réveil) : WirePlumber rétablit ses valeurs, rien n'est annoncé.
     Connections {
@@ -120,7 +130,8 @@ Singleton {
     }
 
     // emettre — construit l'annonce, la retient dans annonceCourante et l'émet, sauf popover ouvert.
-    // Entrée : genre, « volume », « micro », « sortie » ou « entree ». Sortie : aucune ; signal annoncer.
+    // Entrée : genre, « volume », « micro », « sortie » ou « entree ». Sortie : aucune ; signal annoncer, émis avant
+    // que volume et muet ne suivent le nœud : les lecteurs les lient, ils ne les recopient pas ici.
     // Erreurs : aucune. Dépendances : audio.js (annonce), sortie, entree, muet, micMuet.
     function emettre(genre: string): void {
         if (popoverOuvert) return
