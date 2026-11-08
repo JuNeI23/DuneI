@@ -111,12 +111,12 @@ class SuiviEnergieTest(EssaiCoque, unittest.TestCase):
         return subprocess.run([QS, "ipc", "--pid", str(self.proc.pid), "call", cible, *commande], check=True,
                               capture_output=True, text=True, timeout=DELAI).stdout.strip()
 
-    def fixer(self, ready: bool, pourcent: float, state: int, secondes: float = 0, portable: bool = True) -> None:
+    def fixer(self, ready: bool, fraction: float, state: int, secondes: float = 0, portable: bool = True) -> None:
         """Remplace l'état de l'appareil simulé (state : 1 charge, 2 décharge, 4 pleine, 5 en attente).
 
-        Entrées : ready, pourcent, state, secondes, portable. Sortie : aucune. Erreurs : voir appeler_cible.
+        Entrées : ready, fraction (de 0 à 1, comme UPower), state, secondes, portable. Sortie : aucune. Erreurs : voir appeler_cible.
         """
-        self.appeler_cible("suivi", "fixer", str(ready).lower(), str(portable).lower(), str(pourcent), str(state),
+        self.appeler_cible("suivi", "fixer", str(ready).lower(), str(portable).lower(), str(fraction), str(state),
                            str(secondes))
 
     def lire(self) -> dict:
@@ -124,36 +124,59 @@ class SuiviEnergieTest(EssaiCoque, unittest.TestCase):
         return json.loads(self.appeler_cible("suivi", "lire"))
 
     def test_pas_ready_aucune_annonce(self):
-        self.fixer(False, 0, 2)
+        self.fixer(False, 0.0, 2)
         time.sleep(0.3)
         self.assertNotIn("energie : annonce", self.journal())
         self.assertEqual(self.lire()["palier"], 0)
 
     def test_faible_puis_critique(self):
-        self.fixer(False, 0, 2)
-        self.fixer(True, 18, 2, 3000)
+        self.fixer(False, 0.0, 2)
+        self.fixer(True, 0.18, 2, 3000)
         self.attendre("energie : annonce 1")
-        self.fixer(True, 17, 2, 3000)
-        self.fixer(True, 4, 2, 600)
+        self.fixer(True, 0.17, 2, 3000)
+        self.fixer(True, 0.04, 2, 600)
         self.attendre("energie : annonce 2")
         self.assertEqual(self.journal().count("energie : annonce 1"), 1)
         self.assertEqual(self.lire()["estimation"], "10 min restantes")
 
+    def test_fraction_61_pour_cent_sans_alerte(self):
+        self.fixer(True, 0.61, 2, 3000)
+        time.sleep(0.3)
+        self.assertEqual((self.lire()["pourcent"], self.lire()["palier"]), (61, 0))
+        self.assertNotIn("energie : annonce", self.journal())
+
+    def test_valeur_avant_ready_puis_ready(self):
+        self.fixer(False, 0.03, 2)
+        time.sleep(0.3)
+        self.assertNotIn("energie : annonce", self.journal())
+        self.fixer(True, 0.03, 2, 600)
+        self.attendre("energie : annonce 2")
+        time.sleep(0.3)
+        self.assertEqual(self.journal().count("energie : annonce"), 1)
+
+    def test_demarrage_deja_critique(self):
+        self.environnement = {"ESSAI_READY": "1", "ESSAI_FRACTION": "0.04", "ESSAI_STATE": "2"}
+        self.lancer(self.dir)
+        self.attendre("energie : annonce 2")
+        time.sleep(0.3)
+        self.assertEqual(self.journal().count("energie : annonce"), 1)
+        self.assertNotIn("energie : annonce 1", self.journal())
+
     def test_branchement_efface(self):
-        self.fixer(True, 18, 2, 3000)
+        self.fixer(True, 0.18, 2, 3000)
         self.attendre("energie : annonce 1")
-        self.fixer(True, 18, 1, 4200)
+        self.fixer(True, 0.18, 1, 4200)
         self.attendre("energie : effacer")
         self.assertEqual(self.lire()["estimation"], "Plein dans 1 h 10")
-        self.fixer(True, 18, 2, 3000)
+        self.fixer(True, 0.18, 2, 3000)
         self.attendre("energie : annonce 1", 2)
 
     def test_etats(self):
-        self.fixer(True, 100, 4)
+        self.fixer(True, 1.0, 4)
         self.assertEqual(self.lire()["etat"], "chargee")
-        self.fixer(True, 80, 5)
+        self.fixer(True, 0.8, 5)
         self.assertEqual(self.lire()["etat"], "secteur")
-        self.fixer(True, 80, 5, portable=False)
+        self.fixer(True, 0.8, 5, portable=False)
         self.assertFalse(self.lire()["presente"])
 
     def test_seuils_par_defaut_sans_fichier(self):

@@ -10,7 +10,7 @@ import "energie.js" as Energie
 // parce qu'un singleton ne se recrée pas dans un essai : la coque d'essai instancie ce composant avec un appareil et
 // des profils simulés. Les seuils viennent de energie.json (source unique : energie.toml), sous le dossier des
 // jetons ; sans fichier lisible, 20 % et 5 % s'appliquent et le journal le dit.
-// Entrées : appareil, objet portant ready, isLaptopBattery, percentage, state, timeToEmpty, timeToFull (défaut
+// Entrées : appareil, objet portant ready, isLaptopBattery, percentage (fraction de 0 à 1, relevée sur Quickshell 0.3.2 ; elle peut être non nulle avant ready), state, timeToEmpty, timeToFull (défaut
 // UPower.displayDevice) ; profils, objet portant profile et hasPerformanceProfile (défaut PowerProfiles) ; dir, dossier
 // de energie.json (défaut : variable DUNEI_TOKENS_DIR). choisirProfil(profil), action de l'interface.
 // Sorties : presente, vrai si l'appareil est une batterie de portable ; pourcent, entier ; etat, « decharge »,
@@ -31,10 +31,13 @@ Scope {
     property int seuilCritique: 5
     // Plus haut palier déjà annoncé depuis le dernier branchement (réarmé par energie.js, avancer).
     property int arme: 0
+    // Faux jusqu'à la fin de la création : les gestionnaires de changement tirés pendant l'initialisation verraient arme
+    // réécrit par son initialiseur et annonceraient deux fois.
+    property bool demarre: false
 
     readonly property bool presente: appareil?.isLaptopBattery ?? false
     readonly property bool pret: presente && (appareil?.ready ?? false)
-    readonly property int pourcent: Math.round(appareil?.percentage ?? 0)
+    readonly property int pourcent: Math.max(0, Math.min(100, Math.round((appareil?.percentage ?? 0) * 100)))
     readonly property string etat: !presente ? "" : appareil.state === UPowerDeviceState.Discharging ? "decharge"
         : appareil.state === UPowerDeviceState.Charging ? "charge"
         : appareil.state === UPowerDeviceState.FullyCharged ? "chargee" : "secteur"
@@ -72,9 +75,9 @@ Scope {
 
     // Le palier dérive de ready, du pourcentage et de l'état : le surveiller couvre leurs trois changements, et lui
     // seul est réévalué après eux (un gestionnaire posé sur pourcent lirait encore l'ancien palier).
-    onPalierCourantChanged: avancer()
-    onSurBatterieChanged: avancer()
-    Component.onCompleted: avancer()
+    onPalierCourantChanged: if (demarre) avancer()
+    onSurBatterieChanged: if (demarre) avancer()
+    Component.onCompleted: { demarre = true; avancer() }
 
     // Seuils d'alerte lus dans energie.json ; repli sur 20 et 5 si le fichier manque ou est invalide.
     FileView {

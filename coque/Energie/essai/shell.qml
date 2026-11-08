@@ -19,10 +19,12 @@ ShellRoot {
     // Appareil et profils simulés : mêmes propriétés que UPowerDevice et PowerProfiles.
     QtObject {
         id: faux
-        property bool ready: false
+        // État initial réglable par ESSAI_READY (« 1 »), ESSAI_FRACTION (réel de 0 à 1) et ESSAI_STATE (UPowerDeviceState),
+        // pour éprouver le démarrage d'une coque dont l'appareil est déjà prêt.
+        property bool ready: Quickshell.env("ESSAI_READY") === "1"
         property bool isLaptopBattery: true
-        property real percentage: 0
-        property int state: 2
+        property real percentage: Number(Quickshell.env("ESSAI_FRACTION") ?? 0)
+        property int state: Number(Quickshell.env("ESSAI_STATE") ?? 2)
         property real timeToEmpty: 0
         property real timeToFull: 0
     }
@@ -61,11 +63,11 @@ ShellRoot {
         target: "suivi"
 
         // fixer — remplace d'un coup l'état de l'appareil simulé.
-        // Entrées : ready, portable (« true » ou « false »), pourcent, state (UPowerDeviceState), secondes (estimation,
+        // Entrées : ready, portable (« true » ou « false »), fraction (réel de 0 à 1, comme UPower), state (UPowerDeviceState), secondes (estimation,
         // pour la décharge comme pour la charge). Sortie : aucune. Erreurs : aucune. Dépendances : faux.
-        function fixer(ready: bool, portable: bool, pourcent: real, state: int, secondes: real): void {
+        function fixer(ready: bool, portable: bool, fraction: real, state: int, secondes: real): void {
             faux.isLaptopBattery = portable
-            faux.percentage = pourcent
+            faux.percentage = fraction
             faux.state = state
             faux.timeToEmpty = secondes
             faux.timeToFull = secondes
