@@ -28,6 +28,7 @@ ATTENDUS = (
     + ["audio-headphones", "audio-speakers", "input-mouse", "input-keyboard", "input-gaming", "phone", "computer"]
     + ["audio-volume-muted", "audio-volume-low", "audio-volume-medium", "audio-volume-high",
        "microphone-sensitivity-muted", "microphone-sensitivity-high", "audio-headset", "audio-input-microphone"]
+    + ["battery-caution"]
 )
 
 

@@ -94,3 +94,7 @@ graisse = "bold"
 "microphone-sensitivity-high" = "microphone"
 "audio-headset" = "headset"
 "audio-input-microphone" = "laptop"
+
+# Alerte d'énergie de la presqu'île (L2-13) : le symbole d'attention, le même pour les deux paliers.
+[energie]
+"battery-caution" = "warning"

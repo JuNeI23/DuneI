@@ -18,10 +18,11 @@ import "Reseau"
 // Entrées : aucune ; l'écran de chaque barre vient de Quickshell.screens. Sortie : trois fenêtres de calque par écran ;
 // la fenêtre Réseau quand elle est ouverte (IPC « reseau ouvrir » ou « Réglages réseau… ») ; la galerie dans la
 // presqu'île de l'écran actif à la demande (IPC « galerie basculer », SUPER + W) ; la jauge du son à chaque
-// annonce d'EtatAudio (Annonceur).
+// annonce d'EtatAudio (Annonceur) ; l'alerte de batterie à chaque palier franchi d'EtatEnergie (AnnonceurAlerte), qui
+// attend la fermeture de la galerie de l'ouvreuse sur son écran.
 // Erreurs : tokens absents ou invalides → fond, barre et presqu'île transparents, erreur de Theme dans le journal de Quickshell.
 // Dépendances : quickshell ≥ 0.3, modules Barre (Barre), Fond (Fond), Galerie (Ouvreuse), Presquile (Presquile,
-// Annonceur) et Reseau (FenetreReseau, NotificationsReseau).
+// Annonceur, AnnonceurAlerte) et Reseau (FenetreReseau, NotificationsReseau).
 // Rendu du texte : la directive Env force l'anticrénelage en niveaux de gris, comme dans le banc du verre.
 ShellRoot {
     Variants {
@@ -37,14 +38,15 @@ ShellRoot {
                 id: presquile
                 modelData: ecran.modelData
                 reserve: ouvreuse.hauteurModule
-                Component.onCompleted: { ouvreuse.inscrire(presquile); annonceur.inscrire(presquile) }
-                Component.onDestruction: { ouvreuse.retirer(presquile); annonceur.retirer(presquile) }
+                Component.onCompleted: { ouvreuse.inscrire(presquile); annonceur.inscrire(presquile); alerte.inscrire(presquile) }
+                Component.onDestruction: { ouvreuse.retirer(presquile); annonceur.retirer(presquile); alerte.retirer(presquile) }
             }
         }
     }
 
     Ouvreuse { id: ouvreuse }
     Annonceur { id: annonceur }
+    AnnonceurAlerte { id: alerte; galerie: ouvreuse.galerie }
     FenetreReseau {}
     NotificationsReseau {}
 }
