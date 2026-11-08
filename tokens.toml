@@ -325,6 +325,8 @@ blur_size = 8
 blur_passes = 2
 e2_opacity = 1.0             # opacité du verre de l'élévation 2 (la nuit : opaque, plus beau sur fonds sombres)
 e3_opacity = 1.0             # opacité de base du verre de E3, surchargée aux deux moments (0,60, D103)
+presquile_opacity = 1.0      # opacité du verre de la presqu'île, séparée de E3 (D137) : 0,60 la nuit, 0,82 le jour
+sidebar_opacity = 1.0        # opacité de la colonne d'une fenêtre de réglages (D136) : opaque la nuit, 0,90 le jour
 
 
 # Bureau : texte posé directement sur le fond d'écran, sans capsule (barre système, L2-08). Le fond du
@@ -592,6 +594,7 @@ role = "text-emphasis"   # nuit : la couleur qu'ont aujourd'hui le disque et la 
 # en haut (Nicolas : « l'effet bizarre sur le haut »).
 [moments.nuit.glass]
 e3_opacity = 0.60
+presquile_opacity = 0.60      # la nuit, la presqu'île garde le verre des popovers (D137)
 
 [moments.nuit.elevation.e3]
 sheen = false
@@ -608,6 +611,8 @@ mode = "light"
 [moments.jour.glass]
 e2_opacity = 0.85
 e3_opacity = 0.60             # D103 ; 0,88 auparavant
+presquile_opacity = 0.82      # D137 : à 0,60, la presqu'île manquait de contraste devant le fond d'écran
+sidebar_opacity = 0.90        # D136 : la colonne des réglages en verre flouté, le contenu de droite reste opaque
 
 [moments.jour.lightness]
 # Écart à la conception : surface-window 0,968 (départ 0,955) et surface-panel 0,98 (départ 0,975). Sur 0,955, aucun

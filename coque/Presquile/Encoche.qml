@@ -28,7 +28,7 @@ import "../Composants"
 //           ou basse reste fermée.
 // Erreurs : aucune ; avant le chargement des tokens, les dimensions sont nulles et rien n'est peint.
 // Dépendances : QtQuick.Shapes (ShapePath.fillItem, Qt 6.8 et plus), QtQuick.Effects (MultiEffect), Theme (tokens,
-//               elevation, material), Materiau (niveau e3).
+//               elevation, material, glass.presquile), Materiau (niveau e3, verre glass.presquile, D137).
 Item {
     id: encoche
 
@@ -72,6 +72,7 @@ Item {
         anchors.fill: parent
         niveau: "e3"
         verre: encoche.verre
+        cleVerre: "presquile"
         visible: false
         layer.enabled: true
     }

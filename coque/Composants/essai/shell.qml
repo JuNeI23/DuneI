@@ -23,7 +23,7 @@ import "Composants/ancrage.js" as Ancrage
 // etat, ressort, ressortsFiges, image, controles, coches, cotes, glyphes, radios, jauge, progression, separateur,
 // champ, indicatif, tailleIcone, liste, arrets, rangee, bouton, overlays, overlaysFermes, pastilles, compteur,
 // compteurLargeur, deroulant, recherche, rechercheCouleurs, secret, activite, depliable, depliableCotes, iconesControles,
-// bascule, reglages, valeur, fenetreAttention, knobs, contours, materiauSurfaces, verre, champMateriau, ombres).
+// bascule, reglages, valeur, fenetreAttention, knobs, contours, materiauSurfaces, verre, cleVerre, champMateriau, ombres).
 // Commandes sans journal : « essai rechercheTexte <texte> », « essai secretTexte <texte> », « essai secretALire
 // <bool> », « essai secretOeil » (qui journalise « essai : revelationDemandee true » si le parent doit lire le
 // secret), « essai rechercheActive <bool> », « essai activiteEtat
@@ -263,6 +263,18 @@ ShellRoot {
         width: 100
         height: 32
     }
+
+    // Surface de verre qui lit une autre clé de Theme.glass que son niveau (presqu'île, D137), et Surface qui ne
+    // peint pas son fond (fenêtre Réseau, D136).
+    Surface {
+        id: cleEssai
+        role: "surfaceRaised"
+        verre: true
+        cleVerre: "presquile"
+        width: 100
+        height: 32
+    }
+    Surface { id: sansFondEssai; peinte: false; width: 100; height: 32 }
 
     // Surface E2 de hauteur réglable, pour le reflet : E3 n'en porte plus la nuit (D103), E2 en garde un.
     Surface {
@@ -1087,6 +1099,13 @@ ShellRoot {
         function verre(): void {
             const m = verreEssai.peinture
             essai.journal("verre", [m.opacite, panneau.peinture.opacite, m.refletActif, refletEssai.peinture.refletActif].join(" "))
+        }
+
+        // cleVerre — journalise l'opacité du Materiau de la Surface de clé presquile, puis si la Surface non peinte
+        // n'a aucun fond. Entrées : aucune. Sortie : aucune ; « essai : cleVerre <opacité> <bool> ». Erreurs : aucune.
+        // Dépendances : cleEssai, sansFondEssai.
+        function cleVerre(): void {
+            essai.journal("cleVerre", cleEssai.peinture.opacite + " " + (sansFondEssai.peinture === null))
         }
 
         // materiauHauteur — pose la hauteur de la Surface de verre et de la Surface E2 de reflet. Entrée : hauteur,

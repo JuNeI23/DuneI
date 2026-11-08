@@ -19,9 +19,10 @@ import "../Composants"
 // Dépendances : quickshell ≥ 0.3 (LazyLoader, FloatingWindow, IpcHandler), Theme, Surface, PastillesFenetre,
 // PanneauReseau, EtatReseau, Theme (reglages, space).
 // Cotes : 840 × 640 px par défaut (direction D4) et au moins 720 × 480 px, par les jetons reglages.windowWidth,
-// windowHeight, windowMinWidth et windowMinHeight ; la sous-page d'un profil défile au-delà ; pastilles au sommet du
-// plateau latéral, à reglages.sidebarInset plus space.scale[2] (12) du coin haut gauche de la fenêtre, dont l'angle
-// reste radius.window (la règle Hyprland ne change pas).
+// windowHeight, windowMinWidth et windowMinHeight ; la sous-page d'un profil défile au-delà ; pastilles au sommet de
+// la colonne latérale, à space.scale[2] (12) du coin haut gauche de la fenêtre, dont l'angle reste radius.window (la
+// règle Hyprland ne change pas). Fond : la fenêtre est transparente et sa Surface ne peint rien ; le panneau peint la
+// colonne en verre et le contenu opaque, que Hyprland floute derrière la colonne (D136).
 Scope {
     id: racine
 
@@ -40,7 +41,7 @@ Scope {
             readonly property alias panneau: panneau
             readonly property alias pastilles: pastilles
             title: "Réseau"
-            color: Theme.color?.surfaceWindow ?? "transparent"
+            color: "transparent"
             implicitWidth: Theme.reglages?.windowWidth ?? 0
             implicitHeight: Theme.reglages?.windowHeight ?? 0
             minimumSize: Qt.size(Theme.reglages?.windowMinWidth ?? 0, Theme.reglages?.windowMinHeight ?? 0)
@@ -50,6 +51,7 @@ Scope {
             Surface {
                 anchors.fill: parent
                 role: "surfaceWindow"
+                peinte: false
                 PanneauReseau {
                     id: panneau
                     anchors.fill: parent
@@ -57,7 +59,7 @@ Scope {
                 }
                 PastillesFenetre {
                     id: pastilles
-                    x: (Theme.reglages?.sidebarInset ?? 0) + (Theme.space?.scale[2] ?? 0)
+                    x: Theme.space?.scale[2] ?? 0
                     y: x
                     titre: "Réseau"
                     onFermer: racine.fermer()

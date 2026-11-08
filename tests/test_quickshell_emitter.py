@@ -67,8 +67,11 @@ class QuickshellEmitterTest(unittest.TestCase):
         self.assertEqual(self.out["bureauxVirtuels"], {"nombre": 4})
 
     def test_verre(self):
-        """E2 est opaque la nuit (1,0) et translucide le jour (0,85) ; E3 est à 0,60 aux deux moments (D103)."""
-        attendu = {"nuit": {"e2": 1.0, "e3": 0.60}, "jour": {"e2": 0.85, "e3": 0.60}}
+        """E2 est opaque la nuit (1,0) et translucide le jour (0,85) ; E3 est à 0,60 aux deux moments (D103) ; la
+        presqu'île suit E3 la nuit et monte à 0,82 le jour (D137) ; la colonne des réglages est opaque la nuit et à
+        0,90 le jour (D136)."""
+        attendu = {"nuit": {"e2": 1.0, "e3": 0.60, "presquile": 0.60, "sidebar": 1.0},
+                   "jour": {"e2": 0.85, "e3": 0.60, "presquile": 0.82, "sidebar": 0.90}}
         for f in self.out["themes"].values():
             for moment, t in f.items():
                 self.assertEqual(t["glass"], attendu[moment], moment)

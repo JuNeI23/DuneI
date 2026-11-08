@@ -592,6 +592,16 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
         self.assertLess(float(opacite), 1.0)
         self.assertEqual(float(panneau), 1)
 
+    def test_cle_verre(self):
+        # Une Surface de verre peut lire une autre clé de Theme.glass que son niveau : celle de la presqu'île suit
+        # glass.presquile, 0,60 la nuit et 0,82 le jour, quand E3 reste à 0,60 (D137). Une Surface non peinte ne
+        # charge aucun fond (D136).
+        self.demarrer()
+        self.assertEqual(self.valeur("cleVerre").split(), [str(self.vue(55)["glass"]["presquile"]), "true"])
+        self.choisir("dominante", "jour")
+        self.attendre("Theme : thème dominante/jour appliqué")
+        self.assertEqual(float(self.valeur("cleVerre").split()[0]), 0.82)
+
     def test_reflet_borne(self):
         # Le reflet est réservé au chrome de moins de material.sheenMaxHeight (80 px) : une surface E2 de 32 px le
         # porte la nuit, une de 120 px le perd. E3 n'en porte plus la nuit (D103), quelle que soit sa hauteur.

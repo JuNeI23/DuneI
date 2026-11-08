@@ -10,9 +10,11 @@ import "../Theme"
 // elevation.field.insetShadow est vrai. Toutes les valeurs sont liées au Theme : une bascule de moment se répercute
 // sans recréer le matériau.
 // Entrées : niveau, niveau d'élévation peint (e2, e3 ou field), e2 par défaut ; verre, vrai pour la surface d'une
-//           fenêtre de coque, que le compositeur floute, faux par défaut ; rayon, rayon des coins en pixels logiques,
+//           fenêtre de coque, que le compositeur floute, faux par défaut ; cleVerre, clé de Theme.glass lue pour
+//           l'opacité du verre, le niveau par défaut (presquile pour la presqu'île, sidebar pour la colonne d'une
+//           fenêtre de réglages, D136 et D137) ; rayon, rayon des coins en pixels logiques,
 //           0 par défaut.
-// Sorties (lecture seule) : couleur, couleur opaque de l'échelon ; opacite, Theme.glass[niveau] si verre, sinon 1 ;
+// Sorties (lecture seule) : couleur, couleur opaque de l'échelon ; opacite, Theme.glass[cleVerre] si verre, sinon 1 ;
 //           refletActif, vrai si le niveau porte sheen et que la hauteur reste sous material.sheenMaxHeight ; dpr,
 //           rapport pixels physiques / logiques de la fenêtre (1 hors de toute fenêtre) ; creuse, vrai si l'ombre
 //           interne est dessinée.
@@ -31,11 +33,12 @@ ShaderEffect {
 
     property string niveau: "e2"
     property bool verre: false
+    property string cleVerre: niveau
     property real rayon: 0
 
     readonly property var echelon: Theme.elevation?.[niveau]
     readonly property color couleur: echelon?.fill ?? "transparent"
-    readonly property real opacite: verre ? (Theme.glass?.[niveau] ?? 1) : 1
+    readonly property real opacite: verre ? (Theme.glass?.[cleVerre] ?? 1) : 1
     readonly property bool refletActif: !!echelon?.sheen && height < (Theme.material?.sheenMaxHeight ?? 0)
     readonly property real dpr: QsWindow.window?.devicePixelRatio ?? 1
     readonly property bool creuse: niveau === "field" && !!echelon?.insetShadow
