@@ -68,10 +68,11 @@ class PresquileStructureTest(unittest.TestCase):
     def test_natures_des_ressorts(self):
         # Les ressorts de taille de la scène et ceux des bureaux déplacent, et le déclarent, pour que le mouvement
         # réduit les pose aussitôt ; seul le ressort d'opacité de la scène est un fondu, qui garde son ressort en
-        # mouvement réduit (lecture du source : la surface ne se charge pas sous offscreen).
+        # mouvement réduit, comme celui du fondu croisé des deux dispositions du Volume (lecture du source : la surface
+        # ne se charge pas sous offscreen).
         attendues = {"Scene.qml": {"largeur": "deplacement", "hauteur": "deplacement", "opacite": "fondu",
                                    "effacement": "fondu"},
-                     "Bureaux.qml": None, "Volume.qml": None}
+                     "Bureaux.qml": None, "Volume.qml": {"remplissage": "deplacement", "disposition": "fondu"}}
         for nom, natures in attendues.items():
             texte = re.sub(r"//.*", "", (ROOT / "coque" / "Presquile" / nom).read_text(encoding="utf-8"))
             ressorts = re.findall(r"Ressort\s*\{([^{}]*)\}", texte)
@@ -96,8 +97,8 @@ class PresquileStructureTest(unittest.TestCase):
         self.assertIn("readonly property var gabarit: Theme.tokens?.presquile", code)
         self.assertRegex(code, r"implicitHeight:\s*gabarit\?\.hauteur\s*\?\?\s*0")
         self.assertRegex(code, r'transition:\s*"reflow"')
-        # Le pourcentage est en texte secondaire (maquette validée), en erreur sous sourdine.
-        self.assertIn('color: EtatAudio.muet ? encre.value : Theme.color?.textSecondary ?? "transparent"', code)
+        # Le pourcentage est en texte secondaire (maquette validée) ; sous sourdine, il cède la place à « Coupé » centré.
+        self.assertIn('color: Theme.color?.textSecondary ?? "transparent"', code)
 
     def test_annonceur_dans_la_coque(self):
         # L'annonceur est unique, hors du Variants, et chaque presqu'île s'y inscrit et s'en retire.
@@ -405,6 +406,79 @@ class VolumeTest(PresquileIpc, unittest.TestCase):
         etat = self.attendre_repos()
         self.assertEqual((etat["largeurScene"], etat["largeurModule"]), (320, 320), etat)
         self.assertLessEqual(etat["depassement"], 0.5)
+
+    def test_jointures_teintees(self):
+        # Le remplissage couvre l'évasement gauche dès que le niveau est non nul, et l'évasement droit seulement
+        # quand il atteint le bord droit : il épouse la silhouette entière de l'encoche, sans en déborder.
+        self.appeler("volumeNiveau", 50)
+        self.appeler("volumeAnnoncer", "volume", "")
+        etat = self.attendre_repos()
+        e = etat["evasement"]
+        self.assertGreater(e, 0)
+        self.assertEqual((etat["gauche"], etat["droite"]), (-e, 120), etat)
+        self.appeler("volumeAnnoncer", "micro", "Micro actif")
+        etat = self.attendre_repos()
+        self.assertEqual((etat["gauche"], etat["droite"]), (-e, 240 + e), etat)
+        self.appeler("volumeNiveau", 100)
+        self.appeler("volumeAnnoncer", "volume", "")
+        etat = self.attendre_repos()
+        self.assertEqual((etat["gauche"], etat["droite"]), (-e, 240 + e), etat)
+        self.appeler("volumeNiveau", 0)
+        etat = self.attendre_repos()
+        self.assertEqual(etat["droite"], etat["gauche"], etat)
+        self.assertLessEqual(etat["depassement"], 0.5)
+
+    def attendre_fondu(self, cle: str) -> tuple:
+        """Attend qu'une disposition du module soit pleinement montrée, en relevant si elle est passée par une
+        opacité intermédiaire. Entrée : cle, « opaciteCote » ou « opaciteCentre ». Sortie : (état final, vrai si une
+        valeur strictement entre 0 et 1 a été vue). Erreurs : échec après DELAI."""
+        fin, fondu = time.monotonic() + DELAI, False
+        while time.monotonic() < fin:
+            etat = self.json("volumeEtat")
+            fondu = fondu or 0 < etat[cle] < 1
+            if etat[cle] == 1 and not etat["mobile"]:
+                return etat, fondu
+            time.sleep(0.01)
+        self.fail(f"disposition jamais montrée : {etat}")
+
+    def test_son_coupe_centre(self):
+        # Coupé, le genre « volume » prend la disposition du micro : icône barrée et « Coupé » centrés, en error ; le
+        # remplissage reste au niveau, en text-disabled. Rétabli, l'icône revient à gauche et le pourcentage à droite.
+        # Les deux passages se font en fondu.
+        couleurs = {k: v.lower() for k, v in self.vue(55)["color"].items() if isinstance(v, str)}
+        self.appeler("volumeNiveau", 50)
+        self.appeler("volumeAnnoncer", "volume", "")
+        etat = self.attendre_repos()
+        self.assertEqual((etat["opaciteCote"], etat["opaciteCentre"]), (1, 0), etat)
+        self.appeler("volumeSourdine", True)
+        etat, fondu = self.attendre_fondu("opaciteCentre")
+        self.assertTrue(fondu, "passage sans fondu")
+        self.assertEqual((etat["opaciteCote"], etat["symbole"], etat["texte"], etat["cible"]),
+                         (0, "audio-volume-muted", "Coupé", 0.5), etat)
+        self.assertEqual((etat["fond"].lower(), etat["encre"].lower()),
+                         (couleurs["textDisabled"], couleurs["error"]), etat)
+        self.appeler("volumeSourdine", False)
+        etat, fondu = self.attendre_fondu("opaciteCote")
+        self.assertTrue(fondu, "retour sans fondu")
+        self.assertEqual((etat["opaciteCentre"], etat["cible"]), (0, 0.5), etat)
+
+
+class EtatAudioPopoverTest(PresquileIpc, unittest.TestCase):
+    """Popovers audio ouverts, comptés par EtatAudio sous la clé de chaque indicateur (L2-12) : la presqu'île reste
+    muette tant qu'au moins un est ouvert, quel que soit l'écran, et une fermeture répétée ne compte qu'une fois."""
+
+    def test_compte_par_proprietaire(self):
+        self.assertEqual(self.appeler("audioPopover"), "false")
+        self.appeler("audioTenir", "barre1", True)
+        self.appeler("audioTenir", "barre2", True)
+        self.appeler("audioTenir", "barre1", False)
+        self.assertEqual(self.appeler("audioPopover"), "true")
+        # Une barre détruite referme son popover une seconde fois : sans effet sur le compte.
+        self.appeler("audioTenir", "barre1", False)
+        self.appeler("audioTenir", "barre2", True)
+        self.assertEqual(self.appeler("audioPopover"), "true")
+        self.appeler("audioTenir", "barre2", False)
+        self.assertEqual(self.appeler("audioPopover"), "false")
 
 
 # Module factice « grand » de la coque d'essai, et module des bureaux d'essai (4 bureaux, presqu'île de 28).

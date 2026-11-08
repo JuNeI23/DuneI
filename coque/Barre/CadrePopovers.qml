@@ -16,11 +16,12 @@ import "forme.js" as Forme
 // ch. 6), et le cadre à pleine opacité retrouve son flou. Au passage, le cadre se pose à la nouvelle forme et les
 // contenus se croisent en fondu court. En mouvement normal, l'ancien contenu s'efface aussitôt, le nouveau attend la
 // part motion.popover.passage_content_at du trajet et s'affiche au-dessus, et le disque de l'ancienne bascule reste
-// plein jusqu'à être recouvert. Un contenu fermé ne reçoit plus aucun clic, même pendant son fondu : son bouclier les arrête,
+// plein jusqu'à être recouvert, sauf si le nouveau contenu n'a pas de bascule ronde pour le recouvrir (disque faux) :
+// il s'efface alors avec son contenu. Un contenu fermé ne reçoit plus aucun clic, même pendant son fondu : son bouclier les arrête,
 // car le désactiver (enabled) changerait la couleur de sa bascule sous les yeux. Une fois qu'il ne se voit plus, il est
 // remis à neuf par reinitialiser(). Une ouverture faite avant la fin de la construction attend le contenu.
 // Entrées : popovers, les Overlay hébergés (heberge: true) de cette barre, dont le contenu offre sur sa racine fonduContenu,
-// fonduDisque et reinitialiser() ; largeurEcran, largeur de l'écran ; hauteurBarre, hauteur de la barre, sous laquelle se
+// fonduDisque et reinitialiser(), et peut déclarer disque, faux s'il n'a pas de bascule ronde (vrai par défaut) ; largeurEcran, largeur de l'écran ; hauteurBarre, hauteur de la barre, sous laquelle se
 // tient le cadre.
 // Sorties : courant, l'Overlay ouvert parmi popovers, ou null ; affiche, l'Overlay dont le cadre a la forme, ou null ;
 // deploye, vrai tant qu'un popover est ouvert ou que le cadre n'a pas fini de se refermer ; passage, vrai tant qu'un
@@ -105,8 +106,9 @@ Item {
         vue.xFixe = Forme.cibles(true, ancreX, ancreL, largeurOuverte, 0, largeurEcran, marge).gauche
         if (ferme) { gauche.poser(); droite.poser() }
         // Le disque déjà retenu reste le seul plein, même si son popover est rouvert, jusqu'à ce que le dernier contenu
-        // choisi soit plein.
-        if (!precedente) vueRetenue = null
+        // choisi soit plein. Un contenu sans bascule ronde ne recouvrira jamais l'ancien disque : rien n'est retenu, et
+        // l'ancien disque s'efface avec son contenu.
+        if (!precedente || !(vue.item.disque ?? true)) vueRetenue = null
         else if (!vueRetenue && precedente !== vue) vueRetenue = precedente
         vueAffichee = vue
         affiche = ov

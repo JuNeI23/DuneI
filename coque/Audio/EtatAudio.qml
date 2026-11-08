@@ -16,10 +16,11 @@ import "audio.js" as Audio
 //   s'efface si une annonce de sortie survient dans l'intervalle, ou s'il suit une annonce de sortie de moins d'une
 //   seconde (audio.js, fusionner) : la sortie l'emporte, qu'elle arrive avant ou après l'entrée ;
 // - volume ou sourdine de la sortie hors garde annoncent « volume », sourdine de l'entrée hors garde « micro » ;
-// - popover ouvert, rien n'est annoncé.
-// Entrées : popoverOuvert, en écriture par la barre.
+// - tant qu'un popover audio est ouvert, sur quelque écran que ce soit, rien n'est annoncé.
+// Entrées : tenirPopover(proprietaire, ouvert), appelé par l'indicateur de chaque barre à chaque changement de son
+// popover et à sa destruction.
 // Sorties : sorties, entrees, listes de PwNode ; sortie, entree, défauts courants (null pendant une bascule) ;
-// presente, vrai si une sortie existe ; volume, niveauMicro (0 à 100), muet, micMuet, qui gardent leur dernière
+// presente, vrai si une sortie existe ; popoverOuvert, vrai tant qu'au moins un popover audio est ouvert ; volume, niveauMicro (0 à 100), muet, micMuet, qui gardent leur dernière
 // valeur tant que le défaut est nul ; annonceCourante, dernière annonce émise ; signal annoncer(annonce), objet
 // { genre, appareil, texte, coupe } construit par audio.js (annonce). À l'instant où annoncer est émis, volume et muet
 // peuvent valoir encore leur valeur précédente (les liaisons se réévaluent après le gestionnaire du signal de
@@ -40,7 +41,10 @@ Singleton {
     readonly property int niveauMicro: memoire.niveauMicro
     readonly property bool muet: memoire.muet
     readonly property bool micMuet: memoire.micMuet
-    property bool popoverOuvert: false
+    // Propriétaires des popovers audio ouverts (un indicateur par barre, donc par écran) : un ensemble et non un
+    // drapeau, pour qu'une barre ne referme pas le popover d'une autre et qu'une fermeture répétée reste sans effet.
+    property var proprietaires: []
+    readonly property bool popoverOuvert: proprietaires.length > 0
     property var annonceCourante: null
     signal annoncer(var annonce)
 
@@ -114,6 +118,15 @@ Singleton {
     Connections {
         target: etat.entree?.audio ?? null
         function onMutedChanged() { etat.signaler("micro") }
+    }
+
+    // tenirPopover — inscrit ou retire le popover audio d'un propriétaire parmi les popovers ouverts ; idempotent.
+    // Entrées : proprietaire, l'indicateur qui porte le popover (toute valeur comparable par identité) ; ouvert, vrai
+    // s'il est ouvert. Sortie : met à jour proprietaires, donc popoverOuvert. Erreurs : aucune ; retirer un
+    // propriétaire absent ne change rien. Dépendances : aucune.
+    function tenirPopover(proprietaire, ouvert: bool): void {
+        const autres = proprietaires.filter(p => p !== proprietaire)
+        proprietaires = ouvert ? autres.concat([proprietaire]) : autres
     }
 
     // poserGarde — ouvre la garde de liaison pour une seconde.

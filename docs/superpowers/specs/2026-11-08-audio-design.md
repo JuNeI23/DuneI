@@ -1,6 +1,6 @@
 # Indicateur audio, popover et jauge de la presqu'île : conception (L2-12)
 
-Version 0.4, 2026-11-08.
+Version 0.5, 2026-11-08.
 
 ## Intention
 
@@ -24,7 +24,10 @@ Les maquettes validées sont dans `.superpowers/preview/audio/maquettes.html` (v
    autres variantes sont écartés.
 3. **Fluidité** : le remplissage glisse en continu vers la nouvelle valeur ; aucun saut de 5 en 5. Les changements de
    couleur (sourdine, rétablissement) se font en fondu.
-4. **Sourdine du son** : la jauge passe au gris, l'icône et le mot « coupé » passent au rouge (`error`). F2 et F3 changent
+4. **Sourdine du son** : la presqu'île prend la disposition du micro (décision 5) : l'icône barrée (`speaker-x`) et le
+   mot « Coupé », centrés et serrés (4 px), en rouge (`error`) ; le remplissage reste au niveau du son, en gris
+   (`text-disabled`). Au rétablissement, l'icône de seuil revient à gauche et le pourcentage à droite ; les deux
+   dispositions se croisent en fondu (recette 1). F2 et F3 changent
    le niveau d'une sortie coupée sans la rétablir ; glisser dans la jauge du popover ne la rétablit pas non plus.
    **Seuls F1 et un clic sur l'icône de la jauge du popover rétablissent le son.**
 5. **Micro dans la presqu'île** : aucun niveau, puisque le clavier ne sait que couper et rétablir le micro. À l'appui sur
@@ -94,7 +97,9 @@ ouvert, comme celle du réseau. Sans sortie, l'élément disparaît (nom vide, c
 
 `Audio/PopoverAudio.qml`, popover hébergé : `heberge: true`, `ancre`, `onFerme`, inscrit dans
 `HotePopovers { popovers: [...] }` de `Barre.qml`, avec sa `Region` dans le masque de saisie ; la racine du contenu porte
-`fonduContenu`, `fonduDisque` et `reinitialiser()` (D107 : copie du motif, sans base commune). Largeur 288 px (D5),
+`fonduContenu`, `fonduDisque` et `reinitialiser()` (D107 : copie du motif, sans base commune), ainsi que `disque: false` :
+sans bascule ronde, il ne recouvrirait jamais le disque du popover Réseau ou Bluetooth qu'il remplace, et l'hôte ne
+retient donc pas ce disque, qui s'efface avec son contenu (recette 1). Largeur 288 px (D5),
 verre E3. Contenu et états : décisions 6 à 8. La largeur reste fixe ; la hauteur suit le contenu quand une sortie ou
 un micro apparaît ou disparaît popover ouvert (casque qui se connecte), comme les listes du popover Bluetooth. Ce
 choix du constructeur ne reprend pas le point de L2-59 sur le cadre figé, qui reste au backlog.
@@ -111,7 +116,11 @@ conséquence. Le pas de la jauge du popover est le centième.
 Un module `Presquile/Volume.qml`, de hauteur `presquile.hauteur` (28 px) comme `Bureaux.qml`, de sorte que la surface
 de la presqu'île ne change pas (D132) : seule la largeur s'étire, par le ressort existant de `Scene.qml`. Largeur de
 la variante D : 240 px ; le message d'une sortie peut l'élargir jusqu'à 320 px, au-delà le nom est tronqué. Le remplissage suit la valeur par un ressort (ou une animation continue) relancé à chaque
-changement, jamais par paliers.
+changement, jamais par paliers. Le remplissage épouse la silhouette entière de l'encoche, évasements compris, sans
+jamais en déborder : l'évasement gauche est teint dès que le niveau est non nul, et l'évasement droit se teint pendant
+que le remplissage parcourt la dernière largeur d'évasement du corps, pour l'être entièrement au bord droit (100 %, ou
+genres autres que le volume). La jauge fait ainsi corps avec l'encoche, au lieu de s'en détacher par une jointure
+restée noire ou blanche (recette 1).
 
 Déclenchement (décisions 11 et 12) : tout changement de volume ou de sourdine de la sortie par défaut, et de sourdine
 de l'entrée par défaut, quelle qu'en soit la source, lu dans les signaux de PipeWire (`volumesChanged`,
@@ -125,8 +134,10 @@ de l'entrée par défaut, quelle qu'en soit la source, lu dans les signaux de Pi
   rétablit sur la nouvelle sortie. Le premier défaut connu au démarrage de la coque ne compte pas comme un
   changement. Un changement d'entrée par défaut s'affiche de même (décision 14) ; quand sortie et entrée changent
   vers le même appareil dans la seconde, les deux demandes se fondent en un seul message, celui de l'appareil ;
-- **garde du popover** : tant que le popover audio est ouvert, la presqu'île ne s'ouvre pas, quelle que soit la source
-  du changement.
+- **garde du popover** : tant qu'un popover audio est ouvert, sur quelque écran que ce soit, la presqu'île ne s'ouvre
+  pas, quelle que soit la source du changement. `EtatAudio` tient l'ensemble des indicateurs dont le popover est
+  ouvert (`tenirPopover`), et non un drapeau qu'une barre écraserait ; une barre détruite popover ouvert y retire le
+  sien.
 
 Retour aux bureaux 1,5 s après le dernier changement ; un nouveau changement relance le délai sans rejouer l'entrée.
 
@@ -199,3 +210,4 @@ les bureaux, jamais un volume périmé. L'Ouvreuse passe par cet arbitre.
 | 0.2 | 2026-11-08 | Relecture du constructeur : déclenchement par toute source avec garde de liaison, presqu'île muette popover ouvert (décisions 11 et 12), hauteur du popover qui suit le contenu |
 | 0.3 | 2026-11-08 | Changement automatique de sortie montré dans la presqu'île (décision 13) |
 | 0.4 | 2026-11-08 | Changement automatique de micro montré lui aussi, fusionné avec celui de la sortie pour un même appareil (décision 14) |
+| 0.5 | 2026-11-08 | Recette 1 : son coupé centré comme le micro, icône barrée et « Coupé » en rouge, remplissage gardé au niveau en gris, fondu croisé des deux dispositions (décision 4) ; remplissage étendu aux évasements de l'encoche, le gauche dès un niveau non nul, le droit au bord droit (module de la presqu'île) ; disque de l'ancien popover non retenu au passage vers le popover du son ; popovers audio ouverts comptés par indicateur |

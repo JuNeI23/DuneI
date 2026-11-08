@@ -20,11 +20,12 @@ import "../Barre/icones.js" as Icones
 // la jauge et celle de l'appareil actif aussi, et le nom de ce dernier pâlit (décision 8). La largeur est fixe ; la
 // hauteur suit les listes, qui gagnent ou perdent une ligne quand un appareil paraît ou disparaît. Popover de la barre
 // (D108) : en ouvrir un autre le ferme ; il se ferme 1,5 s après le départ de la souris, sauf pendant le glisser d'une
-// jauge (retenu). Pour l'hôte, le panneau offre fonduContenu, fonduDisque et reinitialiser().
+// jauge (retenu). Pour l'hôte, le panneau offre fonduContenu, fonduDisque, disque (faux : aucune bascule ronde) et
+// reinitialiser().
 // Entrées : ancre, l'indicateur de la barre ; ouvert, à affecter (voir Overlay) ; etat, la source de l'état et des
 // actions, EtatAudio par défaut (la coque d'essai y met un factice).
 // Sorties : ferme(), voir Overlay ; panneau, le contenu construit (null tant qu'il ne l'est pas, ou une fois détruit),
-// lu par les essais ; fonduContenu, fonduDisque, reinitialiser(), voir le panneau.
+// lu par les essais ; fonduContenu, fonduDisque, disque, reinitialiser(), voir le panneau.
 // Erreurs : aucune ; sans sortie ou sans entrée par défaut, le sous-titre est vide et aucune ligne n'est active. Un
 // nœud qui ne peut devenir défaut (micro d'une prise sans fiche) garde sa ligne : la choisir ne change rien.
 // Dépendances : QtQuick.Templates (Slider.SnapAlways), Overlay (famille contextuel), Jauge, Rangee, Separateur, Texte, Ressort, Theme (density, space, color,
@@ -64,9 +65,10 @@ Overlay {
         Layout.leftMargin: Theme.space?.scale[2] ?? 0
         Layout.rightMargin: Theme.space?.scale[2] ?? 0
         // Tenue, la cible est la valeur de la poignée, posée à chaque mouvement : relâchée, le ressort repart d'elle.
+        // Un pas au clavier, sans poignée tenue, ne pose rien : le ressort glisse vers le niveau que l'état renverra.
         Ressort { id: suivi; transition: "reflow"; cible: jaugeNiveau.pressed ? jaugeNiveau.value : jaugeNiveau.niveau }
         Binding on value { when: !jaugeNiveau.pressed; value: suivi.value; restoreMode: Binding.RestoreNone }
-        onMoved: suivi.poser()
+        onMoved: if (pressed) suivi.poser()
     }
 
     // Appareils — liste des appareils d'un sens, une rangée chacun, dans l'ordre de l'état.
@@ -119,6 +121,8 @@ Overlay {
         // contenu et fonduDisque, gardé pour le contrat de l'hôte, n'a rien à fondre. Sans hôte, ils restent à 1.
         property real fonduContenu: 1
         property real fonduDisque: 1
+        // Pas de bascule ronde : l'hôte ne retient pas le disque du popover précédent, que rien ici ne recouvrirait.
+        readonly property bool disque: false
 
         focus: true
         implicitWidth: 70 * (Theme.space?.scale[0] ?? 0)

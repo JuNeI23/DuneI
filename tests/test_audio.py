@@ -131,6 +131,8 @@ class PopoverAudioTest(EssaiCoque, unittest.TestCase):
         p = self.ouvrir()
         c = self.couleurs()
         self.assertEqual((p["titre"], p["sousTitre"]), ("Son", "Haut-parleurs · 50 %"))
+        # Pas de bascule ronde : l'hôte n'a pas à retenir le disque du popover précédent.
+        self.assertFalse(p["disque"])
         self.assertEqual((p["sectionSortie"], p["sectionMicro"]), ("Sortie", "Micro"))
         self.assertEqual([s["nom"] for s in p["sorties"]], ["Haut-parleurs", "Bose NC 700"])
         self.assertEqual([e["nom"] for e in p["entrees"]], ["Micro intégré", "Prise casque"])
@@ -180,6 +182,15 @@ class PopoverAudioTest(EssaiCoque, unittest.TestCase):
         self.ipc("poser", "volume", "80")
         p = self.attendre_panneau(lambda p: p["jaugeSon"]["valeur"] == 80)
         self.assertEqual((p["jaugeSon"]["valeur"], p["sousTitre"]), (80, "Haut-parleurs · 80 %"))
+
+    def test_pas_clavier_pendant_un_glissement(self):
+        # Un pas au clavier pendant que la jauge glisse vers un niveau venu d'ailleurs garde la valeur du pas : le
+        # ressort n'est posé que sous le glisser de la souris, sinon il ramènerait la jauge au niveau en vol.
+        self.ouvrir()
+        self.assertEqual(self.ipc("pasClavier", "jaugeSon", "80"), "51")
+        self.assertIn("essai : reglerVolume 51", self.journal())
+        p = self.attendre_panneau(lambda p: p["jaugeSon"]["valeur"] == 51)
+        self.assertEqual(p["jaugeSon"]["valeur"], 51)
 
     def test_sourdines(self):
         self.ouvrir()

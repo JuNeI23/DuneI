@@ -32,7 +32,8 @@ ShellRoot {
     function journal(cle, valeur) { console.info("essai : " + cle + " " + valeur) }
 
     // Contenu — contenu factice d'un popover hébergé : le même contrat que le panneau des vrais popovers.
-    // Entrées : nom, le nom du panneau dans essai.panneaux ; largeur et hauteur, sa taille implicite.
+    // Entrées : nom, le nom du panneau dans essai.panneaux ; largeur et hauteur, sa taille implicite ; disque, faux pour
+    // un contenu sans bascule ronde (vrai par défaut).
     // Sorties : remises, nombre d'appels à reinitialiser ; clics, nombre de clics reçus. Erreurs : aucune.
     // Dépendances : essai (panneaux, premierFondu, formeCadre).
     component Contenu: FocusScope {
@@ -42,6 +43,8 @@ ShellRoot {
         property real hauteur
         property real fonduContenu: 1
         property real fonduDisque: 1
+        // Faux pour un contenu sans bascule ronde dans son en-tête (le popover du son), voir CadrePopovers.
+        property bool disque: true
         property bool pretAMontrer: true
         property int remises: 0
         property int clics: 0
@@ -207,6 +210,9 @@ ShellRoot {
                 // pretAMontrer — dit si le contenu nommé est prêt à fixer la forme du cadre.
                 // Entrées : nom, le panneau ; valeur, vrai s'il est prêt. Sortie : aucune. Erreurs : aucune.
                 function pretAMontrer(nom: string, valeur: bool): void { essai.panneaux[nom].pretAMontrer = valeur }
+                // sansDisque — fait du contenu nommé un contenu sans bascule ronde, comme le popover du son.
+                // Entrée : nom, le panneau. Sortie : aucune. Erreurs : TypeError pour un nom inconnu.
+                function sansDisque(nom: string): void { essai.panneaux[nom].disque = false }
                 function ouvrirBarre(): void { barreFactice.item.popover.ouvert = true }
                 function detruireBarre(): void { barreFactice.active = false }
 

@@ -14,7 +14,9 @@ import "Audio"
 // planche forme.html (106), sur le fond du bureau, avec la marge de son ombre, et l'enregistre en PNG à la demande.
 // Les commandes arbitreDemander, arbitreLiberer et arbitreEtat éprouvent l'Arbitre ; annonceurRafale,
 // annonceurPleinEcran et annonceurEtat, l'Annonceur, piloté par une source et une presqu'île factices ;
-// volumeAnnoncer et volumeEtat, le débord du remplissage du module Volume réel dans une scène sans fenêtre. Les tâches suivantes y ajoutent leurs composants et leurs fonctions IPC.
+// volumeAnnoncer, volumeSourdine, volumeNiveau et volumeEtat, le module Volume réel dans une scène sans fenêtre (débord
+// du remplissage hors de l'encoche, jointures, disposition du son coupé) ; audioTenir et audioPopover, le compte des
+// popovers audio ouverts d'EtatAudio. Les tâches suivantes y ajoutent leurs composants et leurs fonctions IPC.
 // Entrées : DUNEI_TOKENS_DIR, lu par Theme ; QT_QPA_PLATFORM, posé à offscreen par le test ; QT_SCALE_FACTOR, pour
 // une capture agrandie ; QT_QUICK_BACKEND=rhi et QSG_RHI_BACKEND=opengl pour une capture fidèle (la plateforme
 // offscreen choisit sinon le rendu logiciel, qui ne peint ni shader ni remplissage par texture). Commandes IPC :
@@ -110,18 +112,30 @@ ShellRoot {
     }
     // Scène d'essai du module Volume réel (EtatAudio lu en lecture seule ; l'essai n'écrit que annonceCourante, dans
     // ce processus) : depassement retient, image par image, le plus grand débord du remplissage hors du corps.
-    Component { id: moduleVolumeReel; Volume { objectName: "volume" } }
+    // Le niveau et la sourdine du module viennent de la scène d'essai, que l'IPC écrit, et non de PipeWire.
+    Component { id: moduleVolumeReel; Volume { objectName: "volume"; muet: sceneVolume.muetEssai; niveauSon: sceneVolume.niveauEssai } }
     Scene {
         id: sceneVolume
         property real depassement: 0
+        property bool muetEssai: false
+        property int niveauEssai: 50
+        readonly property real evasement: Theme.tokens?.presquile?.evasement ?? 0
 
-        // mesurer — retient le débord courant du remplissage hors du corps (bord gauche ou droit), en px logiques.
-        // Entrées : aucune. Sortie : met à jour depassement. Erreurs : aucune, sans module monté. Dépendances : Volume.
-        function mesurer() {
-            const v = contenu, r = v?.remplie
-            if (!r) return
+        // bords — bords gauche et droit de toute la partie remplie (corps et évasements), dans le repère de la scène.
+        // Entrées : aucune. Sortie : {gauche, droite}, droite égal à gauche quand rien n'est rempli ; null sans module.
+        // Erreurs : aucune. Dépendances : Volume (remplie, flanc).
+        function bords() {
+            const v = contenu, r = v?.remplie, f = v?.flanc
+            if (!r) return null
             const g = v.x + r.x
-            depassement = Math.max(depassement, -g, g + r.width - width)
+            return { gauche: g, droite: Math.max(g + r.width, f.width > 0 ? v.x + f.x + f.width : -Infinity) }
+        }
+
+        // mesurer — retient le débord courant du remplissage hors de l'encoche (corps et évasements), en px logiques.
+        // Entrées : aucune. Sortie : met à jour depassement. Erreurs : aucune, sans module monté. Dépendances : bords.
+        function mesurer() {
+            const b = bords()
+            if (b) depassement = Math.max(depassement, -evasement - b.gauche, b.droite - width - evasement)
         }
     }
     Connections {
@@ -326,12 +340,34 @@ ShellRoot {
         // maximal du remplissage hors du corps depuis le départ), largeurScene, largeurModule, phase, mobile}.
         // Erreurs : aucune. Dépendances : sceneVolume.
         function volumeEtat(): string {
-            const s = sceneVolume
+            const s = sceneVolume, v = s.contenu
             s.mesurer()
-            return JSON.stringify({ depassement: s.depassement, largeurScene: s.width,
-                                    largeurModule: s.contenu?.implicitWidth ?? 0, phase: s.phase, genre: s.contenu?.annonce?.genre ?? null,
-                                    mobile: s.ressortLargeur.moving || (s.contenu?.remplissage?.moving ?? false) })
+            const b = s.bords()
+            return JSON.stringify({ depassement: s.depassement, largeurScene: s.width, evasement: s.evasement,
+                                    largeurModule: v?.implicitWidth ?? 0, phase: s.phase, genre: v?.annonce?.genre ?? null,
+                                    gauche: b?.gauche ?? null, droite: b?.droite ?? null,
+                                    cible: v?.remplissage?.cible ?? null, fond: String(v?.couleurFond ?? ""),
+                                    encre: String(v?.couleurEncre ?? ""), opaciteCote: v?.cote?.opacity ?? null,
+                                    opaciteCentre: v?.centre?.opacity ?? null, symbole: v?.symbole?.nom ?? null,
+                                    texte: v?.etiquette?.text ?? null,
+                                    mobile: s.ressortLargeur.moving || (v?.remplissage?.moving ?? false)
+                                        || (v?.disposition?.moving ?? false) })
         }
+
+        // volumeSourdine, volumeNiveau — sourdine et niveau du son vus par le module Volume d'essai, à la place de
+        // PipeWire. Entrées : b, vrai pour couper ; n, le niveau de 0 à 100. Sortie : aucune. Erreurs : aucune.
+        // Dépendances : sceneVolume.
+        function volumeSourdine(b: bool): void { sceneVolume.muetEssai = b }
+        function volumeNiveau(n: int): void { sceneVolume.niveauEssai = n }
+
+        // audioTenir — un popover audio s'ouvre ou se ferme, sous la clé d'un propriétaire, comme le fait chaque
+        // indicateur de barre. Entrées : cle, le propriétaire ; ouvert, son état. Sortie : aucune. Erreurs : aucune.
+        // Dépendances : EtatAudio (tenirPopover).
+        function audioTenir(cle: string, ouvert: bool): void { EtatAudio.tenirPopover(cle, ouvert) }
+
+        // audioPopover — dit si un popover audio est ouvert, d'après EtatAudio. Entrées : aucune. Sortie : « true » ou
+        // « false ». Erreurs : aucune. Dépendances : EtatAudio (popoverOuvert).
+        function audioPopover(): string { return String(EtatAudio.popoverOuvert) }
 
         // changer — change le module de la scène d'essai, ce qui déroule la séquence de changement.
         // Entrée : nom, « grand » ou « tardif » pour les modules factices, tout autre nom pour les bureaux. Sortie : aucune.

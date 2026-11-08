@@ -50,7 +50,9 @@ ShellRoot {
         property bool muet: false
         property bool micMuet: false
         property bool popoverOuvert: false
-        function reglerVolume(p) { essai.journal("reglerVolume", p); volume = p }
+        // Vrai pour que reglerVolume n'applique le volume qu'au tour de boucle suivant, comme PipeWire.
+        property bool differe: false
+        function reglerVolume(p) { essai.journal("reglerVolume", p); if (differe) Qt.callLater(() => volume = p); else volume = p }
         function reglerMicro(p) { essai.journal("reglerMicro", p); niveauMicro = p }
         function basculerSon() { essai.journal("basculerSon"); muet = !muet }
         function basculerMicro() { essai.journal("basculerMicro"); micMuet = !micMuet }
@@ -83,7 +85,7 @@ ShellRoot {
                 // panneau — état du panneau construit, en JSON ; {} s'il n'existe pas.
                 // Sortie : {titre, sousTitre, sectionSortie, sectionMicro et leurs couleurs, sorties et entrees (lignes
                 // {nom, icone, pleine, gras, teinteIcone, teinteTexte}, dans l'ordre), jaugeSon et jaugeMicro ({valeur,
-                // coupe, icone, pas}), reglages {texte, actif}, exclusif, fermeAuDepart, hauteur, hauteurLigne}.
+                // coupe, icone, pas}), reglages {texte, actif}, disque, exclusif, fermeAuDepart, hauteur, hauteurLigne}.
                 // Erreurs : aucune. Dépendances : essai.trouver, essai.lignes.
                 function panneau(): string {
                     const p = porteur.item?.panneau
@@ -102,7 +104,7 @@ ShellRoot {
                         sorties: essai.lignes(texte("sorties")), entrees: essai.lignes(texte("entrees")),
                         jaugeSon: jauge("jaugeSon"), jaugeMicro: jauge("jaugeMicro"),
                         reglages: { texte: reglages.text, actif: reglages.enabled },
-                        exclusif: porteur.item.exclusif, fermeAuDepart: porteur.item.fermeAuDepart,
+                        disque: p.disque, exclusif: porteur.item.exclusif, fermeAuDepart: porteur.item.fermeAuDepart,
                         hauteur: p.implicitHeight, hauteurLigne: p.hauteurLigne,
                     })
                 }
@@ -135,6 +137,20 @@ ShellRoot {
                     const lu = panneau()
                     j.pressed = false
                     return lu
+                }
+                // pasClavier — un pas au clavier (flèche vers le haut) sur une jauge qui glisse encore vers un niveau
+                // venu d'ailleurs, le réglage n'étant appliqué par l'état qu'au tour de boucle suivant, comme PipeWire.
+                // Entrées : nom, la jauge ; niveau, le niveau posé juste avant le pas (entier, en chaîne).
+                // Sortie : la valeur de la jauge juste après le pas, en texte. Erreurs : TypeError si la jauge est
+                // introuvable. Dépendances : faux, essai.trouver.
+                function pasClavier(nom: string, niveau: string): string {
+                    const j = essai.trouver(porteur.item.panneau, o => o.objectName === nom)
+                    faux.differe = true
+                    faux.volume = Number(niveau)
+                    j.increase()
+                    j.moved()
+                    faux.differe = false
+                    return String(j.value)
                 }
                 // poser — change une valeur de l'état factice, comme une touche ou une autre application.
                 // Entrées : cle, « volume », « niveauMicro », « muet » ou « micMuet » ; valeur, en chaîne.

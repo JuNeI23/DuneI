@@ -8,11 +8,16 @@ import "encoche.js" as Forme
 
 // Volume — module « volume » de la presqu'île : la jauge du son, du micro et des sorties (variante D, L2-12).
 // Rôle : montre la dernière annonce d'EtatAudio. La presqu'île devient la jauge : un remplissage d'accent part de son
-// bord gauche, découpé à la silhouette du corps de l'encoche (angles du bas compris) ; sa largeur suit un Ressort
-// « reflow » de nature « deplacement », relancé à chaque changement, jamais par paliers. Genre « volume » : le
-// remplissage vaut le volume de la sortie, l'icône de seuil est à gauche et le pourcentage à droite (« coupé » sous
-// sourdine). Autres genres (« micro », « sortie », « entree ») : le remplissage glisse jusqu'à la pleine largeur,
-// l'icône et le texte sont centrés et serrés (4 px), le texte tronqué à droite ; l'icône d'un appareil est pleine.
+// bord gauche, découpé à la silhouette entière de l'encoche (évasements et angles du bas compris) ; sa largeur suit un
+// Ressort « reflow » de nature « deplacement », relancé à chaque changement, jamais par paliers. Le niveau se lit sur
+// le corps : l'évasement gauche est teint dès que le niveau est non nul, et l'évasement droit se teint pendant que le
+// remplissage parcourt la dernière largeur d'évasement du corps, pour l'être entièrement au bord droit ; la jauge fait
+// ainsi corps avec l'encoche, sans jamais en déborder. Genre « volume » : le remplissage vaut le volume de la sortie,
+// l'icône de seuil est à gauche et le pourcentage à droite. Sous sourdine, le genre « volume » prend la disposition des
+// autres genres : l'icône barrée et « Coupé » centrés, le remplissage restant au niveau du son ; le passage d'une
+// disposition à l'autre est un fondu croisé (Ressort « reveal » de nature « fondu »). Autres genres (« micro »,
+// « sortie », « entree ») : le remplissage glisse jusqu'à la pleine largeur, l'icône et le texte sont centrés et
+// serrés (4 px), le texte tronqué à droite ; l'icône d'un appareil est pleine.
 // Au montage d'un genre autre que « volume », le remplissage part du volume affiché et ne glisse vers la pleine
 // largeur qu'une fois le module visible (Scene.contenuVisible) ; un changement de genre
 // dans un module déjà monté part de la valeur affichée. Sous sourdine (« coupe »), le remplissage passe à
@@ -21,11 +26,14 @@ import "encoche.js" as Forme
 // de la scène à chaque image, non la largeur du module : il ne déborde jamais de l'encoche qui s'étire.
 // Entrées : ecran, écran de la presqu'île (obligatoire, contrat de tout module de contenu, inutilisé ici) ; scene, la
 //           Scene qui le monte (width, contenuVisible), remise par Scene.monter, null hors scène ;
-//           EtatAudio (annonceCourante, volume, muet), lu par liaison : volume et muet ne sont jamais recopiés.
+//           EtatAudio (annonceCourante), lu par liaison ; muet et niveauSon, liés par défaut à EtatAudio.muet et
+//           EtatAudio.volume (jamais recopiés), que la coque d'essai lie à ses propres valeurs.
 // Sorties : implicitWidth, largeur (240) pour le genre « volume », sinon le contenu et ses marges bornés entre
 //           largeur et largeurMax (320) ; implicitHeight, hauteur de la presqu'île (contrat de tout module de
-//           contenu) ; remplissage, le ressort de la part remplie (0 à 1), et remplie, l'élément découpé du
-//           remplissage, lus par les essais.
+//           contenu) ; remplissage, le ressort de la part remplie (0 à 1) ; remplie et flanc, les éléments découpés du
+//           remplissage (évasement gauche et corps, évasement droit) ; disposition, le ressort du fondu entre les deux
+//           dispositions ; cote et centre, les deux dispositions ; symbole et etiquette, l'icône et le texte centrés ;
+//           couleurFond et couleurEncre, les teintes visées du remplissage et du contenu ; tous lus par les essais.
 // Erreurs : aucune ; sans annonce, le module montre le volume ; avant le chargement des jetons, les cotes sont nulles
 //           et les couleurs transparentes ; un nom d'icône introuvable ne peint rien.
 // Dépendances : Theme (tokens.presquile, color, icons), Ressort, ColorSpring, Icone, Texte, EtatAudio, icones.js
@@ -37,12 +45,24 @@ Item {
     readonly property var gabarit: Theme.tokens?.presquile
     readonly property var annonce: EtatAudio.annonceCourante
     readonly property bool niveau: (annonce?.genre ?? "volume") === "volume"
-    readonly property bool coupe: niveau ? EtatAudio.muet : annonce.coupe
+    property bool muet: EtatAudio.muet
+    property int niveauSon: EtatAudio.volume
+    readonly property bool coupe: niveau ? muet : annonce.coupe
+    // Vrai pour la disposition centrée : tout genre autre que « volume », et le son coupé.
+    readonly property bool centree: !niveau || muet
     readonly property alias remplissage: remplissage
+    readonly property alias disposition: disposition
+    readonly property alias cote: cote
+    readonly property alias centre: centre
+    readonly property alias symbole: symbole
+    readonly property alias etiquette: etiquette
+    readonly property color couleurFond: fond.target
+    readonly property color couleurEncre: encre.target
     // Largeurs de la variante D (spec, « Module de la presqu'île ») : la jauge, et le plus large message d'appareil.
     readonly property real largeur: 240
     readonly property real largeurMax: 320
     readonly property real marge: gabarit?.marge ?? 0
+    readonly property real evasement: gabarit?.evasement ?? 0
     // Scène qui monte le module (remise par Scene.monter) : le remplissage suit son corps, et le module sa visibilité.
     // Sans scène (essai isolé), le corps est le module lui-même, toujours visible.
     property Item scene: null
@@ -51,6 +71,12 @@ Item {
     // Vrai dès que le module a été visible une fois : jusque-là, un genre autre que « volume » garde le volume affiché.
     property bool parti: false
     readonly property alias remplie: remplie
+    readonly property alias flanc: flanc
+    // Largeur remplie du corps, et part de l'évasement droit teinte : elle croît sur la dernière largeur d'évasement.
+    readonly property real rempli: remplissage.value * corps
+    readonly property real partDroite: evasement > 0 ? Math.max(0, Math.min(1, (rempli - corps) / evasement + 1)) : 0
+    // Bord gauche du corps de l'encoche dans le repère du module, qui le dépasse pendant que la forme s'étire.
+    readonly property real origine: scene ? -x : 0
 
     // Contenu centré mesuré pièce à pièce, sans attendre la mise en page de la rangée (faite au rendu seulement).
     implicitWidth: niveau ? largeur
@@ -64,7 +90,14 @@ Item {
         id: remplissage
         transition: "reflow"
         nature: "deplacement"
-        cible: volume.niveau || !volume.parti ? EtatAudio.volume / 100 : 1
+        cible: volume.niveau || !volume.parti ? volume.niveauSon / 100 : 1
+    }
+    // Fondu croisé des deux dispositions : 0 pour l'icône à gauche et le pourcentage à droite, 1 pour le centre.
+    Ressort {
+        id: disposition
+        transition: "reveal"
+        nature: "fondu"
+        cible: volume.centree ? 1 : 0
     }
     // Couleurs du remplissage et du contenu, en fondu : gris et rouge sous sourdine, accent et sur-accent sinon.
     ColorSpring {
@@ -76,57 +109,76 @@ Item {
         target: volume.coupe ? Theme.color?.error ?? "transparent" : Theme.color?.onAccent ?? "transparent"
     }
 
-    // Remplissage : le corps de l'encoche tel que la scène le dessine à cette image, découpé à la part remplie ; il part
-    // du bord gauche du corps et non de celui du module, qui le dépasse pendant que la forme s'étire.
-    Item {
-        id: remplie
-        x: volume.scene ? -volume.x : 0
-        width: remplissage.value * volume.corps
+    // Silhouette entière de l'encoche (évasements compris), de la teinte du remplissage, montrée par deux découpes.
+    component Silhouette: Shape {
+        width: volume.corps + 2 * volume.evasement
         height: volume.height
-        clip: true
-
-        Shape {
-            width: volume.corps
-            height: volume.height
-            preferredRendererType: Shape.CurveRenderer
-            ShapePath {
-                strokeWidth: -1
-                fillColor: fond.value
-                PathSvg { path: Forme.tracer(volume.corps, volume.height, 0, volume.gabarit?.rayon ?? 0) }
-            }
+        preferredRendererType: Shape.CurveRenderer
+        ShapePath {
+            strokeWidth: -1
+            fillColor: fond.value
+            PathSvg { path: Forme.tracer(volume.corps, volume.height, volume.evasement, volume.gabarit?.rayon ?? 0) }
         }
     }
 
-    // Genre « volume » : icône de seuil à gauche, pourcentage à droite.
-    Icone {
-        x: volume.marge
-        anchors.verticalCenter: parent.verticalCenter
-        visible: volume.niveau
-        nom: Icones.iconeAudio(true, EtatAudio.muet, EtatAudio.volume)
-        taille: Theme.icons?.sizes?.dense ?? 0
-        couleur: encre.value
+    // Remplissage, évasement gauche et corps : l'encoche telle que la scène la dessine à cette image, découpée de la
+    // pointe de l'évasement gauche jusqu'à la part remplie du corps ; rien quand le niveau est nul.
+    Item {
+        id: remplie
+        x: volume.origine - volume.evasement
+        width: volume.rempli > 0 ? volume.evasement + volume.rempli : 0
+        height: volume.height
+        clip: true
+        Silhouette {}
     }
-    Texte {
-        anchors { right: parent.right; rightMargin: volume.marge; verticalCenter: parent.verticalCenter }
-        visible: volume.niveau
-        tabulaire: true
-        text: EtatAudio.muet ? "coupé" : EtatAudio.volume + " %"
-        // Hors du remplissage la plupart du temps : texte secondaire, comme dans la maquette validée ; erreur si coupé.
-        color: EtatAudio.muet ? encre.value : Theme.color?.textSecondary ?? "transparent"
+    // Évasement droit, au-delà du corps : teint à mesure que le remplissage approche du bord droit.
+    Item {
+        id: flanc
+        x: volume.origine + volume.corps
+        width: volume.partDroite * volume.evasement
+        height: volume.height
+        clip: true
+        Silhouette { x: -volume.corps - volume.evasement }
     }
 
-    // Autres genres : icône et texte centrés, serrés, le texte tronqué pour tenir dans largeurMax.
+    // Genre « volume », son ouvert : icône de seuil à gauche, pourcentage à droite. Elle garde ce contenu pendant son
+    // fondu de sortie vers la disposition centrée.
+    Item {
+        id: cote
+        anchors.fill: parent
+        opacity: 1 - disposition.value
+        visible: volume.niveau && opacity > 0
+
+        Icone {
+            x: volume.marge
+            anchors.verticalCenter: parent.verticalCenter
+            nom: Icones.iconeAudio(true, false, volume.niveauSon)
+            taille: Theme.icons?.sizes?.dense ?? 0
+            couleur: encre.value
+        }
+        // Hors du remplissage la plupart du temps : texte secondaire, comme dans la maquette validée.
+        Texte {
+            anchors { right: parent.right; rightMargin: volume.marge; verticalCenter: parent.verticalCenter }
+            tabulaire: true
+            text: volume.niveauSon + " %"
+            color: Theme.color?.textSecondary ?? "transparent"
+        }
+    }
+
+    // Disposition centrée : icône et texte serrés, le texte tronqué pour tenir dans largeurMax. Genre « volume » :
+    // l'icône barrée et « Coupé », gardés pendant le fondu de retour vers la disposition à gauche et à droite.
     Row {
         id: centre
         anchors.centerIn: parent
-        visible: !volume.niveau
+        opacity: disposition.value
+        visible: opacity > 0
         spacing: 4
 
         Icone {
             id: symbole
             anchors.verticalCenter: parent.verticalCenter
-            nom: volume.niveau ? "" : volume.annonce.genre === "micro" ? Icones.iconeMicro(volume.coupe)
-                : volume.annonce.appareil
+            nom: volume.niveau ? Icones.iconeAudio(true, true, volume.niveauSon)
+                : volume.annonce.genre === "micro" ? Icones.iconeMicro(volume.coupe) : volume.annonce.appareil
             pleine: !volume.niveau && volume.annonce.genre !== "micro"
             taille: Theme.icons?.sizes?.dense ?? 0
             couleur: encre.value
@@ -137,7 +189,7 @@ Item {
             width: Math.min(implicitWidth, volume.largeurMax - 2 * volume.marge - symbole.width - centre.spacing)
             elide: Text.ElideRight
             moyen: true
-            text: volume.niveau ? "" : volume.annonce.texte
+            text: volume.niveau ? "Coupé" : volume.annonce.texte
             color: encre.value
         }
     }

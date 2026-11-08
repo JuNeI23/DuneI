@@ -341,13 +341,14 @@ class IndicateursStatiqueTest(unittest.TestCase):
 
     def test_popover_audio_accroche(self):
         # Même accroche que le popover réseau, sous l'indicateur audio ; l'indicateur tient aussi
-        # EtatAudio.popoverOuvert, qui retient la presqu'île tant que le popover est ouvert (décision 12).
+        # EtatAudio.tenirPopover, qui retient la presqu'île tant que le popover est ouvert (décision 12).
         qml = self.qml()
         self.assertRegex(qml["Barre.qml"], r"PopoverAudio \{\s*id: popoverAudio\s*heberge: true\s*ancre: audio\s*"
                                            r"onFerme: audio\.ouvert = false")
         self.assertIn("onOuvertChanged: popoverAudio.ouvert = ouvert", qml["Barre.qml"])
         self.assertRegex(qml["Audio.qml"], r"onClicked:\s*ouvert\s*=\s*!ouvert")
-        self.assertIn("onOuvertChanged: EtatAudio.popoverOuvert = ouvert", qml["Audio.qml"])
+        self.assertIn("onOuvertChanged: EtatAudio.tenirPopover(indicateur, ouvert)", qml["Audio.qml"])
+        self.assertIn("Component.onDestruction: EtatAudio.tenirPopover(indicateur, false)", qml["Audio.qml"])
         self.assertIn("Icones.iconeAudio(EtatAudio.presente, EtatAudio.muet, EtatAudio.volume)", qml["Audio.qml"])
 
     def test_hote_accroche(self):
@@ -778,6 +779,23 @@ class HoteTest(HoteBase, unittest.TestCase):
         # L'ancien contenu, éteint, n'est remis à neuf qu'une fois, et seulement maintenant.
         e = self.jusqua(lambda e: not e["panneaux"]["a"]["visible"], "ancien contenu encore visible")
         self.assertEqual(e["panneaux"]["a"]["remises"], 1)
+        self.sans_erreur()
+
+    def test_passage_vers_un_contenu_sans_disque(self):
+        # Le nouveau contenu n'a pas de bascule ronde (popover du son) : rien ne recouvrira l'ancien disque, qui
+        # s'efface donc avec son contenu, aussitôt, au lieu d'attendre que le nouveau soit plein.
+        self.panneaux_prets()
+        self.ouvrir("a")
+        self.forme_atteinte(self.OUVERT_A, "a")
+        self.ipc("sansDisque", "b")
+        self.ouvrir("b")
+        fin, eteint = time.monotonic() + DELAI, False
+        while (e := self.etat())["panneaux"]["b"]["contenu"] < 1 and time.monotonic() < fin:
+            a = e["panneaux"]["a"]
+            self.assertEqual(a["disque"], a["contenu"], e)
+            eteint = eteint or a["disque"] == 0
+            time.sleep(0.005)
+        self.assertTrue(eteint, "ancien disque encore visible quand le nouveau contenu est plein")
         self.sans_erreur()
 
     def test_passage_interrompu(self):
