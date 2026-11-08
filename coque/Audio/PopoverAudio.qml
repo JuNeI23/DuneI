@@ -11,8 +11,10 @@ import "../Barre/icones.js" as Icones
 // construit une fois pour toutes et que l'hôte des popovers montre ou cache, compact, carré, sur le verre de E3, sans
 // contour ni bascule ronde dans l'en-tête (spec, décision 6). Il porte de haut en bas : « Son » et, en sous-titre, la
 // sortie active et son volume (« Haut-parleurs · 50 % ») ou « Coupé » ; la jauge du volume ; la section « Sortie » et
-// la liste des sorties ; la section « Micro », la jauge du niveau du micro et la liste des entrées ; puis, sous un filet,
-// « Réglages du son… », affiché mais inactif tant que la fenêtre Son n'existe pas (L2-65). Une jauge se règle au clic et
+// la liste des sorties ; la section « Micro », la jauge du niveau du micro et la liste des entrées ; puis, sous un
+// filet,
+// « Réglages du son… », affiché mais inactif tant que la fenêtre Son n'existe pas (L2-65). Une jauge se règle au clic
+// et
 // au glisser, au centième, sans jamais toucher la sourdine ; un clic sur son icône coupe ou rétablit (seul moyen, avec
 // F1, de rétablir le son : décision 4). Un clic sur une ligne en fait l'appareil par défaut. La ligne active n'a pas de
 // coche : icône pleine à l'accent autonome, nom en gras au texte accentué ; les autres sont au texte secondaire, icône
@@ -28,7 +30,8 @@ import "../Barre/icones.js" as Icones
 // lu par les essais ; fonduContenu, fonduDisque, disque, reinitialiser(), voir le panneau.
 // Erreurs : aucune ; sans sortie ou sans entrée par défaut, le sous-titre est vide et aucune ligne n'est active. Un
 // nœud qui ne peut devenir défaut (micro d'une prise sans fiche) garde sa ligne : la choisir ne change rien.
-// Dépendances : QtQuick.Templates (Slider.SnapAlways), Overlay (famille contextuel), Jauge, Rangee, Separateur, Texte, Ressort, Theme (density, space, color,
+// Dépendances : QtQuick.Templates (Slider.SnapAlways), Overlay (famille contextuel), Jauge, Rangee, Separateur, Texte,
+// Ressort, Theme (density, space, color,
 // material), EtatAudio, audio.js (libelle, iconeAppareil), Barre/icones.js (iconeAudio, iconeMicro).
 // Cotes : celles du popover Bluetooth ; surface de 288 px, panneau de 70 * space.scale[0] (280), contenu à
 // space.scale[2] (12) du bord, rangées de density.controlHeight plus space.scale[0] (32 px).
@@ -45,7 +48,8 @@ Overlay {
     retenu: panneau !== null && panneau.glisse
 
     // JaugeNiveau — jauge d'un niveau de 0 à 100, au pas du centième, dont la valeur suit le niveau par un ressort.
-    // Rôle : un changement venu d'ailleurs (touche, application) fait glisser la partie remplie jusqu'au nouveau niveau ;
+    // Rôle : un changement venu d'ailleurs (touche, application) fait glisser la partie remplie jusqu'au nouveau niveau
+    // ;
     // pendant le glisser, le ressort ne s'applique pas et la poignée suit la souris.
     // Entrées : niveau, le niveau de l'état. Sorties : celles de Jauge (moved, iconeCliquee) ; poser(), qui pose la
     // valeur sur le niveau sans glissement. Erreurs : aucune. Dépendances : Jauge, Ressort.
@@ -74,7 +78,8 @@ Overlay {
     // Appareils — liste des appareils d'un sens, une rangée chacun, dans l'ordre de l'état.
     // Rôle : la ligne de l'appareil actif prend l'icône pleine, le gras et ses teintes (accent autonome et texte
     // accentué, ou erreur et texte tertiaire si coupe) ; les autres le texte secondaire. Un clic émet choisi(n).
-    // Entrées : noeuds, les PwNode ; actif, le défaut courant ; entree, vrai pour les micros (icône) ; coupe, la sourdine ;
+    // Entrées : noeuds, les PwNode ; actif, le défaut courant ; entree, vrai pour les micros (icône) ; coupe, la
+    // sourdine ;
     // hauteurLigne. Sorties : signal choisi(n) ; implicitHeight, qui suit le nombre de lignes. Erreurs : aucune.
     // Dépendances : Rangee, audio.js (libelle, iconeAppareil), Theme (color).
     component Appareils: Column {
@@ -130,7 +135,8 @@ Overlay {
         Component.onCompleted: popover.panneau = panneau
         Component.onDestruction: if (popover.panneau === panneau) popover.panneau = null
 
-        // reinitialiser — rend au contenu l'aspect d'un popover neuf : les jauges posées sur leur niveau, sans glissement
+        // reinitialiser — rend au contenu l'aspect d'un popover neuf : les jauges posées sur leur niveau, sans
+        // glissement
         // en cours. Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : jaugeSon, jaugeMicro.
         function reinitialiser(): void {
             jaugeSon.poser()

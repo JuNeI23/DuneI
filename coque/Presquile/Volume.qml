@@ -13,29 +13,35 @@ import "encoche.js" as Forme
 // le corps : l'évasement gauche est teint dès que le niveau est non nul, et l'évasement droit seulement quand le
 // remplissage est complet (corps rempli jusqu'au bord droit), jamais en dessous ; il s'y teint par un court fondu
 // d'opacité (Ressort « fondu », instantané sous mouvement réduit), non par un remplissage géométrique ; la jauge fait
-// ainsi corps avec l'encoche, sans jamais en déborder. Genre « volume » : le remplissage vaut le volume de la sortie,
-// l'icône de seuil est à gauche et le pourcentage à droite. Sous sourdine, le genre « volume » prend la disposition des
-// autres genres : l'icône barrée et « Coupé » centrés ; la bascule de la sourdine (genre « son ») centre toujours,
-// « Coupé » coupé, ou l'icône du niveau et « Son actif » rétabli, sur le remplissage d'accent au niveau ; le remplissage restant au niveau du son ; « Coupé » et « Son actif » roulent
-// l'un sur l'autre vers le haut (Ressort « navigate » de nature « deplacement », instantané sous mouvement réduit),
-// rognés au corps, chacun centré seul ; le passage d'une disposition à l'autre est un fondu croisé (Ressort « reveal » de nature « fondu »). Autres genres (« micro »,
-// « sortie », « entree ») : le remplissage glisse jusqu'à la pleine largeur, l'icône et le texte sont centrés et
-// serrés (4 px), le texte tronqué à droite ; l'icône d'un appareil est pleine.
+// ainsi corps avec l'encoche, sans jamais en déborder.
+// Genre « volume » : le remplissage vaut le volume de la sortie, l'icône de seuil est à gauche et le pourcentage à
+// droite. Sous sourdine, ce genre prend la disposition des autres genres : l'icône barrée et « Coupé » centrés.
+// Genre « son » (bascule de la sourdine) : la disposition est toujours centrée, avec « Coupé » et l'icône barrée quand
+// le son est coupé, ou l'icône du niveau et « Son actif » quand il est rétabli ; le remplissage garde le niveau du son.
+// « Coupé » et « Son actif » roulent l'un sur l'autre vers le haut (Ressort « navigate » de nature « deplacement »,
+// instantané sous mouvement réduit), rognés au corps, chacun centré seul ; le passage d'une disposition à l'autre est
+// un fondu croisé (Ressort « reveal » de nature « fondu »).
+// Autres genres (« micro », « sortie », « entree ») : le remplissage glisse jusqu'à la pleine largeur, l'icône et le
+// texte sont centrés et serrés (4 px), le texte tronqué à droite ; l'icône d'un appareil est pleine. Le micro roule
+// comme le son, entre « Micro coupé » et « Micro actif ».
 // Au montage d'un genre autre que « volume », le remplissage part du volume affiché et ne glisse vers la pleine
-// largeur qu'une fois le module visible (Scene.contenuVisible) ; un changement de genre
-// dans un module déjà monté part de la valeur affichée. Sous sourdine (« coupe »), le remplissage passe à
-// text-disabled et le contenu à error, en fondu (ColorSpring) ; sinon accent et on-accent, sauf le pourcentage, en
-// text-secondary (maquette validée), puisqu'il se lit le plus souvent hors du remplissage. Le remplissage suit le corps
-// de la scène à chaque image, non la largeur du module : il ne déborde jamais de l'encoche qui s'étire.
+// largeur qu'une fois le module visible (Scene.contenuVisible) ; un changement de genre dans un module déjà monté part
+// de la valeur affichée. Sous sourdine (« coupe »), le remplissage passe à text-disabled et le contenu à error, en
+// fondu (ColorSpring) ; sinon accent et on-accent, sauf le pourcentage, en text-secondary (maquette validée), puisqu'il
+// se lit le plus souvent hors du remplissage. Le remplissage suit le corps de la scène à chaque image, non la largeur
+// du module : il ne déborde jamais de l'encoche qui s'étire.
 // Entrées : ecran, écran de la presqu'île (obligatoire, contrat de tout module de contenu, inutilisé ici) ; scene, la
 //           Scene qui le monte (width, contenuVisible), remise par Scene.monter, null hors scène ;
 //           EtatAudio (annonceCourante), lu par liaison ; muet et niveauSon, liés par défaut à EtatAudio.muet et
 //           EtatAudio.volume (jamais recopiés), que la coque d'essai lie à ses propres valeurs.
 // Sorties : implicitWidth, largeur (240) pour le genre « volume », sinon le contenu et ses marges bornés entre
 //           largeur et largeurMax (320) ; implicitHeight, hauteur de la presqu'île (contrat de tout module de
-//           contenu) ; remplissage, le ressort de la part remplie (0 à 1) ; remplie et flanc, les éléments découpés du
-//           remplissage (évasement gauche et corps, évasement droit) ; jointure, le ressort de teinte de l'évasement droit ; disposition, le ressort du fondu entre les deux
-//           dispositions ; cote et centre, les deux dispositions ; symbole et etiquette, l'icône et le texte centrés ;
+//           contenu) ; remplissage, le ressort de la part remplie (0 à 1) ; remplie et flanc, les éléments découpés
+//           du remplissage (évasement gauche et corps, évasement droit) ; jointure, le ressort de teinte de
+//           l'évasement droit ; disposition, le ressort du fondu entre les deux dispositions ; cote et centre, les
+//           deux dispositions ; symbole et etiquette, l'icône et le texte centrés de la couche coupée ; bascule, le
+//           ressort du compteur de roulement ; actif, symboleActif et etiquetteActif, la couche rétablie (icône et
+//           texte) ; tours et famille, le compteur de la sourdine et la famille d'annonce qui le cale ;
 //           couleurFond et couleurEncre, les teintes visées du remplissage et du contenu ; tous lus par les essais.
 // Erreurs : aucune ; sans annonce, le module montre le volume ; avant le chargement des jetons, les cotes sont nulles
 //           et les couleurs transparentes ; un nom d'icône introuvable ne peint rien.
@@ -95,7 +101,14 @@ Item {
     implicitHeight: gabarit?.hauteur ?? 0
 
     onMontreChanged: if (montre) parti = true
-    Component.onCompleted: Qt.callLater(() => { if (montre) parti = true })
+    // Au chargement : le compteur de la sourdine prend sa valeur initiale sans liaison (une liaison serait cassée à la
+    // première bascule et rendrait le sens du glissement dépendant de l'ordre des gestionnaires), puis le ressort s'y
+    // pose.
+    Component.onCompleted: {
+        tours = coupe ? 0 : 1
+        bascule.poser()
+        Qt.callLater(() => { if (montre) parti = true })
+    }
 
     Ressort {
         id: remplissage
@@ -112,8 +125,9 @@ Item {
     }
     // Compteur de la sourdine, dans la disposition centrée du genre « volume » ou « son » : pair, « Coupé » est au
     // centre, impair, « Son actif » ; chaque bascule l'avance de un et les couches roulent d'un cran vers le haut.
-    property int tours: coupe ? 0 : 1
-    // Famille de l'annonce vue en dernier : « son » pour les genres « volume » et « son », sinon le genre. Une bascule ne
+    property int tours: 0
+    // Famille de l'annonce vue en dernier : « son » pour les genres « volume » et « son », sinon le genre. Une bascule
+    // ne
     // glisse que dans la même famille ; d'une famille à l'autre, le compteur se cale sans mouvement.
     readonly property string famille: niveau ? "son" : (annonce?.genre ?? "volume")
     property string familleVue: famille
@@ -123,7 +137,8 @@ Item {
     onFamilleChanged: suivre()
     // suivre — cale le compteur sur l'état coupé : une bascule dans la même famille l'avance d'un cran (les couches
     // roulent) ; un changement de famille le cale sans glisser.
-    // Entrées : aucune. Sortie : met à jour tours et familleVue. Erreurs : aucune. Dépendances : bascule, coupe, famille.
+    // Entrées : aucune. Sortie : met à jour tours et familleVue. Erreurs : aucune. Dépendances : bascule, coupe,
+    // famille.
     function suivre(): void {
         const autre = famille !== familleVue
         familleVue = famille
@@ -256,7 +271,8 @@ Item {
             }
         }
 
-        // Couche rétablie des genres « volume », « son » et « micro » : l'icône du niveau et « Son actif », ou le micro et
+        // Couche rétablie des genres « volume », « son » et « micro » : l'icône du niveau et « Son actif », ou le micro
+        // et
         // « Micro actif », qui roule sur la couche coupée.
         Row {
             id: actif

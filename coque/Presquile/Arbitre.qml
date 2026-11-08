@@ -19,7 +19,8 @@ QtObject {
     readonly property Component module: _demandes.reduce((m, d) => !m || d.priorite > m.priorite ? d : m, null)?.composant ?? defaut
 
     // demander — inscrit ou met à jour la demande d'une clé.
-    // Entrées : cle, identifiant du demandeur ; composant, le module voulu ; priorite, entier (le plus grand l'emporte).
+    // Entrées : cle, identifiant du demandeur ; composant, le module voulu ; priorite, entier (le plus grand
+    // l'emporte).
     // Sortie : aucune. Erreurs : aucune ; une demande identique à la précédente ne touche à rien, et une demande
     // modifiée passe après les autres à égalité de priorité.
     // Dépendances : _demandes.

@@ -24,22 +24,26 @@ import "etats.js" as Etats
 // l'appelant quand la liste ne la fait pas suivre currentIndex ; accessoire, composant facultatif posé en tête
 // de la rangée, avant l'icône, comme la colonne des coches d'un menu de macOS (le Deroulant y pose sa Coche) ;
 // null par défaut ; suffixe, composant facultatif posé en fin de rangée, après le libellé (le popover réseau y pose
-// « Connexion… », l'indicateur d'activité et le cadenas), null par défaut ; accentue, libellé à l'accent autonome et en graisse
+// « Connexion… », l'indicateur d'activité et le cadenas), null par défaut ; accentue, libellé à l'accent autonome et en
+// graisse
 // moyenne, comme le réseau joint du popover, faux par défaut ; pleine, variante pleine de l'icône (Icone.pleine),
 // faux par défaut ; teinteIcone et teinteTexte, couleurs imposées à l'icône et au libellé, transparentes par défaut :
-// les couleurs de l'état s'appliquent alors, sinon l'imposée les remplace, en fondu (ColorSpring), et elle l'emporte sur
+// les couleurs de l'état s'appliquent alors, sinon l'imposée les remplace, en fondu (ColorSpring), et elle l'emporte
+// sur
 // accentue ; forcerContour, réservée à la planche de contrôle : montre le contour de focus sans que la
 // liste ait le focus, faux par défaut.
 // Sorties : etat, l'Etat de la rangée (rôle, interaction, sélection, couleurs) ; gras, vrai quand le libellé est
 // en graisse moyenne (par défaut accentue, ou rangée sélectionnée d'une colonne de navigation ; l'appelant peut le
-// poser), que suit un contentItem remplacé ; fondIcone et fondTexte, les ressorts des couleurs de l'icône et du libellé ; libelle, le Texte du libellé par défaut ; glyphe, l'Icone ; signal active(), émis au clic
+// poser), que suit un contentItem remplacé ; fondIcone et fondTexte, les ressorts des couleurs de l'icône et du libellé
+// ; libelle, le Texte du libellé par défaut ; glyphe, l'Icone ; signal active(), émis au clic
 // et à Entrée (la Liste l'émet pour sa rangée courante).
 // Erreurs : aucune ; hors d'une ListView, la rangée garde sa largeur implicite, n'est jamais courante ni
 // sélectionnée par currentIndex, et se comporte comme si son groupe avait le focus ; avant le chargement des
 // tokens, les cotes sont nulles et les couleurs transparentes. Le clic suppose une Liste : une ListView
 // ordinaire ne déclare pas focusClavier, que le clic écrit.
 // Dépendances : QtQuick.Templates (ItemDelegate), QtQuick.Layouts, propriétés attachées ListView (view,
-// isCurrentItem) et Liste (focusClavier, selectionSuitCourant, selectionSuitSurvol, navigation) ; Theme (density, focus,
+// isCurrentItem) et Liste (focusClavier, selectionSuitCourant, selectionSuitSurvol, navigation) ; Theme (density,
+// focus,
 // radius, space), Etat, Texte, Icone, etats.js (herite).
 // Cotes : hauteur density.rowHeight ; pastille en retrait de space.scale[0] (4) des bords, rayon radius.control ;
 // retrait horizontal du contenu space.scale[2] (12), soit 8 dans la pastille ; écart entre icône et libellé

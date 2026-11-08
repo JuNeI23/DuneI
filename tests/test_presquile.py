@@ -491,6 +491,24 @@ class VolumeTest(PresquileIpc, unittest.TestCase):
         self.assertEqual((etat["symboleActif"], etat["texteActif"]), ("audio-volume-medium", "Son actif"), etat)
         self.assertEqual((etat["fond"].lower(), etat["encre"].lower()), (couleurs["accent"], couleurs["onAccent"]), etat)
 
+    def test_son_coupe_glisse_vers_le_haut(self):
+        # La sourdine fait aussi rouler les couches vers le haut : « Son actif » sort par le haut (jamais par le bas) et
+        # « Coupé » monte du bas, quel que soit l'ordre d'évaluation des liaisons du compteur.
+        self.appeler("volumeNiveau", 50)
+        self.appeler("volumeAnnoncer", "son", "")
+        etat = self.attendre_repos()
+        self.appeler("volumeSourdine", True)
+        vus, fin = [], time.monotonic() + DELAI
+        while time.monotonic() < fin:
+            etat = self.json("volumeEtat")
+            vus.append(round(etat["yActif"]))
+            if not etat["mobile"]:
+                break
+            time.sleep(0.01)
+        self.assertGreater(len(set(vus)), 3, f"sourdine sans glissement : {vus}")
+        self.assertLess(max(vus), etat["hauteur"] / 4, f"« Son actif » est sorti par le bas : {vus}")
+        self.assertAlmostEqual(etat["yActif"] - etat["yCentre"], -etat["hauteur"], delta=2, msg=etat)
+
     def test_micro_glisse(self):
         # Le micro roule comme le son quand sa bascule arrive module monté : « Micro coupé » sort par le haut et « Micro
         # actif » monte du bas. Monté frais sur une annonce de micro, rien ne glisse.

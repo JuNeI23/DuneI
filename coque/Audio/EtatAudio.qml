@@ -20,7 +20,8 @@ import "audio.js" as Audio
 // Entrées : tenirPopover(proprietaire, ouvert), appelé par l'indicateur de chaque barre à chaque changement de son
 // popover et à sa destruction.
 // Sorties : sorties, entrees, listes de PwNode ; sortie, entree, défauts courants (null pendant une bascule) ;
-// presente, vrai si une sortie existe ; popoverOuvert, vrai tant qu'au moins un popover audio est ouvert ; volume, niveauMicro (0 à 100), muet, micMuet, qui gardent leur dernière
+// presente, vrai si une sortie existe ; popoverOuvert, vrai tant qu'au moins un popover audio est ouvert ; volume,
+// niveauMicro (0 à 100), muet, micMuet, qui gardent leur dernière
 // valeur tant que le défaut est nul ; annonceCourante, dernière annonce émise ; signal annoncer(annonce), objet
 // { genre, appareil, texte, coupe } construit par audio.js (annonce). À l'instant où annoncer est émis, volume et muet
 // peuvent valoir encore leur valeur précédente (les liaisons se réévaluent après le gestionnaire du signal de
