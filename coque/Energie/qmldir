@@ -1,0 +1,2 @@
+module Energie
+singleton EtatEnergie 1.0 EtatEnergie.qml

@@ -3,7 +3,9 @@
 """
 import json
 import os
+import shutil
 import subprocess
+import time
 import unittest
 
 from tests.test_coque_theme import DELAI, QS, ROOT, EssaiCoque
@@ -86,3 +88,108 @@ class EnergieJsTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(self.appeler("nomProfil", 1), "Équilibré")
         self.assertEqual(self.appeler("nomProfil", 2), "Performance")
         self.assertEqual(self.appeler("nomProfil", 9), "")
+
+
+@unittest.skipUnless(os.environ.get("WAYLAND_DISPLAY") and QS, "session Wayland et Quickshell requis")
+class SuiviEnergieTest(EssaiCoque, unittest.TestCase):
+    """Éprouve SuiviEnergie (la logique de EtatEnergie) sur un appareil simulé, puis sur le démon de profils réel."""
+
+    essai = ESSAI
+    teintes = (55,)
+
+    def setUp(self):
+        super().setUp()
+        self.lancer(self.dir)
+        self.attendre("energie : prêt")
+
+    def appeler_cible(self, cible: str, *commande: str) -> str:
+        """Appelle une fonction IPC d'une cible de la coque d'essai de l'énergie.
+
+        Entrées : cible — « suivi » ou « reel » ; commande — fonction suivie de ses arguments.
+        Sortie : la sortie standard de l'appel. Erreurs : CalledProcessError si l'appel échoue. Dépendances : qs.
+        """
+        return subprocess.run([QS, "ipc", "--pid", str(self.proc.pid), "call", cible, *commande], check=True,
+                              capture_output=True, text=True, timeout=DELAI).stdout.strip()
+
+    def fixer(self, ready: bool, pourcent: float, state: int, secondes: float = 0, portable: bool = True) -> None:
+        """Remplace l'état de l'appareil simulé (state : 1 charge, 2 décharge, 4 pleine, 5 en attente).
+
+        Entrées : ready, pourcent, state, secondes, portable. Sortie : aucune. Erreurs : voir appeler_cible.
+        """
+        self.appeler_cible("suivi", "fixer", str(ready).lower(), str(portable).lower(), str(pourcent), str(state),
+                           str(secondes))
+
+    def lire(self) -> dict:
+        """Rend l'état courant du suivi simulé décodé. Entrées : aucune. Erreurs : voir appeler_cible."""
+        return json.loads(self.appeler_cible("suivi", "lire"))
+
+    def test_pas_ready_aucune_annonce(self):
+        self.fixer(False, 0, 2)
+        time.sleep(0.3)
+        self.assertNotIn("energie : annonce", self.journal())
+        self.assertEqual(self.lire()["palier"], 0)
+
+    def test_faible_puis_critique(self):
+        self.fixer(False, 0, 2)
+        self.fixer(True, 18, 2, 3000)
+        self.attendre("energie : annonce 1")
+        self.fixer(True, 17, 2, 3000)
+        self.fixer(True, 4, 2, 600)
+        self.attendre("energie : annonce 2")
+        self.assertEqual(self.journal().count("energie : annonce 1"), 1)
+        self.assertEqual(self.lire()["estimation"], "10 min restantes")
+
+    def test_branchement_efface(self):
+        self.fixer(True, 18, 2, 3000)
+        self.attendre("energie : annonce 1")
+        self.fixer(True, 18, 1, 4200)
+        self.attendre("energie : effacer")
+        self.assertEqual(self.lire()["estimation"], "Plein dans 1 h 10")
+        self.fixer(True, 18, 2, 3000)
+        self.attendre("energie : annonce 1", 2)
+
+    def test_etats(self):
+        self.fixer(True, 100, 4)
+        self.assertEqual(self.lire()["etat"], "chargee")
+        self.fixer(True, 80, 5)
+        self.assertEqual(self.lire()["etat"], "secteur")
+        self.fixer(True, 80, 5, portable=False)
+        self.assertFalse(self.lire()["presente"])
+
+    def test_seuils_par_defaut_sans_fichier(self):
+        self.attendre("energie : seuils par défaut", 2)
+        self.assertEqual((self.lire()["faible"], self.lire()["critique"]), (20, 5))
+
+    def test_seuils_du_fichier(self):
+        (self.dir / "energie.json").write_text(json.dumps({"alerte": {"faible": 30, "critique": 10}}))
+        self.lancer(self.dir)
+        self.attendre("energie : prêt")
+        time.sleep(0.5)
+        self.assertEqual((self.lire()["faible"], self.lire()["critique"]), (30, 10))
+        self.assertNotIn("seuils par défaut", self.journal())
+
+    def test_choisir_profil_simule(self):
+        self.appeler_cible("suivi", "choisir", "0")
+        self.assertEqual(self.lire()["profil"], 0)
+        self.appeler_cible("suivi", "choisir", "2")
+        self.assertEqual(self.lire()["profil"], 0)
+        self.appeler_cible("suivi", "permettre", "true")
+        self.appeler_cible("suivi", "choisir", "2")
+        self.assertEqual(self.lire()["profil"], 2)
+
+    @unittest.skipUnless(shutil.which("powerprofilesctl"), "powerprofilesctl requis")
+    def test_profil_reel(self):
+        """Écrit un profil par le suivi réel, le relit par powerprofilesctl, puis rétablit le profil d'origine."""
+        ctl = lambda *a: subprocess.run(["powerprofilesctl", *a], check=True, capture_output=True, text=True).stdout.strip()
+        origine = ctl("get")
+        noms = {"power-saver": 0, "balanced": 1, "performance": 2}
+        try:
+            cible = 0 if origine != "power-saver" else 1
+            self.appeler_cible("reel", "choisir", str(cible))
+            time.sleep(0.5)
+            self.assertEqual(noms[ctl("get")], cible)
+            ctl("set", origine)
+            time.sleep(0.5)
+            self.assertEqual(json.loads(self.appeler_cible("reel", "lire"))["profil"], noms[origine])
+        finally:
+            ctl("set", origine)
