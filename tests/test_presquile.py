@@ -465,6 +465,20 @@ class VolumeTest(PresquileIpc, unittest.TestCase):
         self.assertTrue(fondu, "retour sans fondu")
         self.assertEqual((etat["opaciteCentre"], etat["cible"]), (0, 0.5), etat)
 
+    def test_son_retabli_sans_message(self):
+        # Rétabli, le genre « volume » rend la jauge sans aucun message : la disposition à gauche et à droite, le
+        # remplissage au niveau en accent, et pas de « Son actif » (seul le micro garde « Micro actif »).
+        couleurs = {k: v.lower() for k, v in self.vue(55)["color"].items() if isinstance(v, str)}
+        self.appeler("volumeNiveau", 50)
+        self.appeler("volumeAnnoncer", "volume", "")
+        self.appeler("volumeSourdine", True)
+        self.attendre_fondu("opaciteCentre")
+        self.appeler("volumeSourdine", False)
+        etat, _ = self.attendre_fondu("opaciteCote")
+        self.assertEqual((etat["opaciteCote"], etat["opaciteCentre"], etat["cible"]), (1, 0, 0.5), etat)
+        self.assertEqual((etat["fond"].lower(), etat["encre"].lower()), (couleurs["accent"], couleurs["onAccent"]), etat)
+        self.assertNotIn("actif", etat["texte"].lower(), etat)
+
 
 class EtatAudioPopoverTest(PresquileIpc, unittest.TestCase):
     """Popovers audio ouverts, comptés par EtatAudio sous la clé de chaque indicateur (L2-12) : la presqu'île reste
