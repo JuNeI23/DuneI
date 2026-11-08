@@ -5,20 +5,21 @@ import Quickshell.Wayland
 import "../Theme"
 import "../Reseau"
 import "../Bluetooth"
+import "../Audio"
 
 // Barre — barre système de DuneI, posée en haut de chaque écran (L2-08, L2-09).
 // Rôle : fenêtre de calque de 28 px, transparente, qui réserve 28 px en haut de l'écran ; à gauche le logo et
 // l'horloge, à droite les indicateurs, au centre rien. Aucun fond ni capsule : les éléments se posent sur le
-// bureau. Le masque de saisie ne couvre que l'interrupteur jour/nuit, l'indicateur réseau et l'indicateur Bluetooth,
+// bureau. Le masque de saisie ne couvre que l'interrupteur jour/nuit et les indicateurs réseau, Bluetooth et audio,
 // seuls éléments cliquables : partout ailleurs les clics traversent la barre jusqu'au bureau. Elle ne prend jamais
-// le focus clavier. Elle porte le popover du réseau et celui du Bluetooth, chacun ancré sous son indicateur et rendu
-// par la fenêtre unique HotePopovers.
+// le focus clavier. Elle porte le popover du réseau, celui du Bluetooth et celui du son, chacun ancré sous son
+// indicateur et rendu par la fenêtre unique HotePopovers.
 // Entrées : modelData, l'écran que lui donne le Variants de la coque.
 // Sorties : une fenêtre de calque au namespace « dunei-barre » (floutée par les règles de calque générées).
 // Erreurs : sans jeton de thème, les éléments restent invisibles (voir chacun) ; la fenêtre reste posée.
 // Dépendances : quickshell ≥ 0.3 (PanelWindow, Region, WlrLayershell), QtQuick.Layouts, indicateurs du module
-// Barre (Logo, Horloge, Notifications, Batterie, JourNuit, Reseau, Vpn, Bluetooth, Parametres), PopoverReseau
-// (module Reseau), PopoverBluetooth (module Bluetooth), HotePopovers, Theme.
+// Barre (Logo, Horloge, Notifications, Batterie, JourNuit, Reseau, Vpn, Bluetooth, Audio, Parametres), PopoverReseau
+// (module Reseau), PopoverBluetooth (module Bluetooth), PopoverAudio (module Audio), HotePopovers, Theme.
 PanelWindow {
     id: barre
 
@@ -32,7 +33,7 @@ PanelWindow {
     implicitHeight: 28
     exclusiveZone: 28
     color: "transparent"
-    // Masque de saisie posé sur l'interrupteur et sur les indicateurs réseau et Bluetooth, leurs coordonnées cumulées rangée par
+    // Masque de saisie posé sur l'interrupteur et sur les indicateurs réseau, Bluetooth et audio, leurs coordonnées cumulées rangée par
     // rangée (D100) : une Region qui nomme un item ne suit que ses déplacements dans son parent, et l'apparition
     // d'une icône à leur droite (le réseau au lancement ou au réveil) faisait glisser la rangée sans déplacer le
     // masque, laissé sur l'icône voisine. Invisible (matériel absent), l'indicateur sort de la rangée (un Item
@@ -55,6 +56,12 @@ PanelWindow {
             y: rangee.y + droite.y + bluetooth.y
             width: bluetooth.visible ? bluetooth.width : 0
             height: bluetooth.height
+        }
+        Region {
+            x: rangee.x + droite.x + audio.x
+            y: rangee.y + droite.y + audio.y
+            width: audio.visible ? audio.width : 0
+            height: audio.height
         }
     }
     WlrLayershell.namespace: "dunei-barre"
@@ -92,6 +99,10 @@ PanelWindow {
                 id: bluetooth
                 onOuvertChanged: popoverBluetooth.ouvert = ouvert
             }
+            Audio {
+                id: audio
+                onOuvertChanged: popoverAudio.ouvert = ouvert
+            }
             Parametres {}
         }
     }
@@ -115,9 +126,17 @@ PanelWindow {
         onFerme: bluetooth.ouvert = false
     }
 
-    // Fenêtre unique qui porte le cadre et le contenu de ces deux popovers (D109).
+    // Popover du son, accroché comme celui du réseau (voir ci-dessus).
+    PopoverAudio {
+        id: popoverAudio
+        heberge: true
+        ancre: audio
+        onFerme: audio.ouvert = false
+    }
+
+    // Fenêtre unique qui porte le cadre et le contenu de ces trois popovers (D109).
     HotePopovers {
         barre: barre
-        popovers: [popoverReseau, popoverBluetooth]
+        popovers: [popoverReseau, popoverBluetooth, popoverAudio]
     }
 }
