@@ -1,2 +1,4 @@
 module Energie
 singleton EtatEnergie 1.0 EtatEnergie.qml
+PopoverEnergie 1.0 PopoverEnergie.qml
+SuiviEnergie 1.0 SuiviEnergie.qml

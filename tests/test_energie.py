@@ -216,3 +216,90 @@ class SuiviEnergieTest(EssaiCoque, unittest.TestCase):
             self.assertEqual(json.loads(self.appeler_cible("reel", "lire"))["profil"], noms[origine])
         finally:
             ctl("set", origine)
+
+
+@unittest.skipUnless(os.environ.get("WAYLAND_DISPLAY") and QS, "session Wayland et Quickshell requis")
+class PopoverEnergieTest(EssaiCoque, unittest.TestCase):
+    """Le popover de l'énergie, ouvert dans une fenêtre offscreen sur un état factice.
+
+    L'état factice affiche 76 %, « 7 h 40 restantes », le profil Équilibré, avec les trois profils proposés ; un choix
+    journalise « essai : choisirProfil <profil> » et est confirmé aussitôt.
+    """
+
+    essai = ESSAI / "popover"
+    teintes = (55,)
+    environnement = {"QT_QPA_PLATFORM": "offscreen"}
+
+    def setUp(self):
+        super().setUp()
+        self.installer(55)
+        self.lancer(self.dir)
+        self.attendre("essai : prêt")
+
+    def ipc(self, fonction: str, *args: str) -> str:
+        """Appelle une fonction IPC de la coque d'essai (cible « popover »). Sortie : la sortie standard."""
+        return subprocess.run([QS, "ipc", "--pid", str(self.proc.pid), "call", "popover", fonction, *args],
+                              check=True, capture_output=True, text=True, timeout=DELAI).stdout.strip()
+
+    def panneau(self) -> dict:
+        """État du panneau décodé ; {} tant qu'il n'est pas construit. Dépendances : ipc."""
+        return json.loads(self.ipc("panneau"))
+
+    def ouvrir(self) -> dict:
+        """Ouvre le popover et attend son panneau. Sortie : l'état du panneau."""
+        self.ipc("ouvrir", "true")
+        fin = time.monotonic() + DELAI
+        while not (p := self.panneau()) and time.monotonic() < fin:
+            time.sleep(0.05)
+        self.assertTrue(p, self.journal())
+        return p
+
+    def attendre_panneau(self, test) -> dict:
+        """Attend que l'état du panneau vérifie un prédicat. Sortie : le dernier état lu."""
+        fin = time.monotonic() + DELAI
+        while not test(p := self.panneau()) and time.monotonic() < fin:
+            time.sleep(0.05)
+        return p
+
+    def test_contenu(self):
+        p = self.ouvrir()
+        c = {k: v.lower() for k, v in self.vue(55)["color"].items() if isinstance(v, str)}
+        self.assertEqual((p["pourcent"], p["estimation"]), ("76 %", "7 h 40 restantes"))
+        self.assertEqual((p["taillePourcent"], p["graissePourcent"]), (28, 600))
+        self.assertEqual(p["couleurPourcent"].lower(), c["textEmphasis"])
+        self.assertEqual(p["couleurEstimation"].lower(), c["textSecondary"])
+        self.assertEqual((p["section"]["texte"], p["section"]["visible"]), ("Profil d'énergie", True))
+        self.assertEqual(p["section"]["couleur"].lower(), c["textSecondary"])
+        self.assertEqual((p["segments"], p["coche"]), (["Économie", "Équilibré", "Performance"], 1))
+        self.assertFalse(p["disque"])
+        self.assertTrue(p["exclusif"] and p["fermeAuDepart"])
+
+    def test_sans_performance(self):
+        self.ouvrir()
+        self.ipc("poser", "aPerformance", "false")
+        p = self.attendre_panneau(lambda p: len(p["segments"]) == 2)
+        self.assertEqual(p["segments"], ["Économie", "Équilibré"])
+
+    def test_sans_profils(self):
+        self.ouvrir()
+        self.ipc("poser", "aProfils", "false")
+        p = self.attendre_panneau(lambda p: not p["segmentsVisibles"])
+        self.assertFalse(p["section"]["visible"])
+        self.assertEqual(p["pourcent"], "76 %")
+
+    def test_clic_choisit_le_profil(self):
+        self.ouvrir()
+        self.ipc("cliquer", "Économie")
+        self.attendre("essai : choisirProfil 0")
+        self.assertEqual(self.attendre_panneau(lambda p: p["coche"] == 0)["coche"], 0)
+
+    def test_fleche_choisit_le_profil(self):
+        self.ouvrir()
+        self.ipc("fleche")
+        self.attendre("essai : choisirProfil 2")
+
+    def test_profil_change_ailleurs(self):
+        self.ouvrir()
+        self.ipc("poser", "profil", "2")
+        self.assertEqual(self.attendre_panneau(lambda p: p["coche"] == 2)["coche"], 2)
+        self.assertNotIn("choisirProfil", self.journal())

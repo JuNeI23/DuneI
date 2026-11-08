@@ -6,20 +6,22 @@ import "../Theme"
 import "../Reseau"
 import "../Bluetooth"
 import "../Audio"
+import "../Energie"
 
 // Barre — barre système de DuneI, posée en haut de chaque écran (L2-08, L2-09).
 // Rôle : fenêtre de calque de 28 px, transparente, qui réserve 28 px en haut de l'écran ; à gauche le logo et
 // l'horloge, à droite les indicateurs, au centre rien. Aucun fond ni capsule : les éléments se posent sur le
-// bureau. Le masque de saisie ne couvre que l'interrupteur jour/nuit et les indicateurs réseau, Bluetooth et audio,
-// seuls éléments cliquables : partout ailleurs les clics traversent la barre jusqu'au bureau. Elle ne prend jamais
-// le focus clavier. Elle porte le popover du réseau, celui du Bluetooth et celui du son, chacun ancré sous son
+// bureau. Le masque de saisie ne couvre que l'interrupteur jour/nuit et les indicateurs réseau, Bluetooth, audio et
+// batterie, seuls éléments cliquables : partout ailleurs les clics traversent la barre jusqu'au bureau. Elle ne prend
+// jamais le focus clavier. Elle porte le popover du réseau, ceux du Bluetooth, du son et de l'énergie, chacun ancré sous son
 // indicateur et rendu par la fenêtre unique HotePopovers.
 // Entrées : modelData, l'écran que lui donne le Variants de la coque.
 // Sorties : une fenêtre de calque au namespace « dunei-barre » (floutée par les règles de calque générées).
 // Erreurs : sans jeton de thème, les éléments restent invisibles (voir chacun) ; la fenêtre reste posée.
 // Dépendances : quickshell ≥ 0.3 (PanelWindow, Region, WlrLayershell), QtQuick.Layouts, indicateurs du module
 // Barre (Logo, Horloge, Notifications, Batterie, JourNuit, Reseau, Vpn, Bluetooth, Audio, Parametres), PopoverReseau
-// (module Reseau), PopoverBluetooth (module Bluetooth), PopoverAudio (module Audio), HotePopovers, Theme.
+// (module Reseau), PopoverBluetooth (module Bluetooth), PopoverAudio (module Audio),
+// PopoverEnergie (module Energie), HotePopovers, Theme.
 PanelWindow {
     id: barre
 
@@ -63,6 +65,12 @@ PanelWindow {
             width: audio.visible ? audio.width : 0
             height: audio.height
         }
+        Region {
+            x: rangee.x + droite.x + batterie.x
+            y: rangee.y + droite.y + batterie.y
+            width: batterie.visible ? batterie.width : 0
+            height: batterie.height
+        }
     }
     WlrLayershell.namespace: "dunei-barre"
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
@@ -88,7 +96,10 @@ PanelWindow {
             spacing: Theme.space?.scale[1] ?? 0
 
             Notifications {}
-            Batterie {}
+            Batterie {
+                id: batterie
+                onOuvertChanged: popoverEnergie.ouvert = ouvert
+            }
             JourNuit { id: jourNuit }
             Reseau {
                 id: reseau
@@ -134,9 +145,17 @@ PanelWindow {
         onFerme: audio.ouvert = false
     }
 
-    // Fenêtre unique qui porte le cadre et le contenu de ces trois popovers (D109).
+    // Popover de l'énergie, accroché comme celui du réseau (voir ci-dessus).
+    PopoverEnergie {
+        id: popoverEnergie
+        heberge: true
+        ancre: batterie
+        onFerme: batterie.ouvert = false
+    }
+
+    // Fenêtre unique qui porte le cadre et le contenu de ces quatre popovers (D109).
     HotePopovers {
         barre: barre
-        popovers: [popoverReseau, popoverBluetooth, popoverAudio]
+        popovers: [popoverReseau, popoverBluetooth, popoverAudio, popoverEnergie]
     }
 }
