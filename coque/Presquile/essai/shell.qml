@@ -14,7 +14,7 @@ import "Audio"
 // planche forme.html (106), sur le fond du bureau, avec la marge de son ombre, et l'enregistre en PNG à la demande.
 // Les commandes arbitreDemander, arbitreLiberer et arbitreEtat éprouvent l'Arbitre ; annonceurRafale,
 // annonceurPleinEcran et annonceurEtat, l'Annonceur, piloté par une source et une presqu'île factices ; alerteAnnoncer,
-// alerteEffacer, alertePleinEcran, alerteEcran, alerteDemander, alerteLiberer et alerteEtat, l'AnnonceurAlerte, piloté
+// alerteEffacer, alertePleinEcran, alerteEcran, alerteDemander, alerteLiberer, alertePhase et alerteEtat, l'AnnonceurAlerte, piloté
 // par une source et deux presqu'îles factices ; alerteModule, le rendu du module Alerte réel ;
 // volumeAnnoncer, volumeMicro, volumeSourdine, volumeNiveau et volumeEtat, le module Volume réel dans une scène sans fenêtre (débord
 // du remplissage hors de l'encoche, jointures, disposition du son coupé) ; audioTenir et audioPopover, le compte des
@@ -119,6 +119,8 @@ ShellRoot {
     QtObject { id: sourceAlerte; signal annoncer(int palier); signal effacer() }
     component IleAlerte: QtObject {
         property var modelData
+        // Phase de la séquence de changement, posée par l'IPC (alertePhase) : « repos » tient le module pour posé.
+        property string phase: "repos"
         readonly property Arbitre arbitre: Arbitre {}
         readonly property Component module: arbitre.module
 
@@ -382,6 +384,11 @@ ShellRoot {
         function alerteDemander(ile: string, cle: string): void {
             (ile === "A" ? ileA : ileB).demander(cle, cle === "galerie" ? moduleGalerie : moduleVolume, cle === "galerie" ? 3 : 1)
         }
+
+        // alertePhase — pose la phase de la séquence de changement d'une presqu'île de l'alerte. Entrées : ile (« A »
+        // ou « B ») ; phase (« repos », « sortie », « forme » ou « entree »). Sortie : aucune. Erreurs : aucune.
+        // Dépendances : ileA, ileB.
+        function alertePhase(ile: string, phase: string): void { (ile === "A" ? ileA : ileB).phase = phase }
 
         // alerteLiberer — libère la demande d'une clé sur une presqu'île de l'alerte. Entrées : ile, cle.
         // Sortie : aucune. Erreurs : aucune. Dépendances : ileA, ileB.

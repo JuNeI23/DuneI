@@ -479,6 +479,35 @@ class AlerteTest(PresquileIpc, unittest.TestCase):
         time.sleep(0.8)
         self.assertEqual(self.modules()[0], "bureaux")
 
+    def test_delai_depuis_la_montee_effective(self):
+        # Le délai ne court qu'à partir de la montée effective du module (phase « entree ») : la séquence de changement,
+        # ici tenue en « sortie » plus longtemps que le délai après la fermeture de la galerie, n'en consomme rien.
+        self.appeler("alerteDemander", "A", "galerie")
+        self.appeler("alerteAnnoncer", 1)
+        self.appeler("alertePhase", "A", "sortie")
+        self.appeler("alerteLiberer", "A", "galerie")
+        self.assertEqual(self.modules()[0], "alerte")
+        time.sleep(1.2)
+        self.assertEqual(self.modules()[0], "alerte")
+        self.appeler("alertePhase", "A", "entree")
+        time.sleep(0.6)
+        self.assertEqual(self.modules()[0], "alerte")
+        time.sleep(0.8)
+        self.assertEqual(self.modules()[0], "bureaux")
+
+    def test_galerie_par_dessus_l_alerte(self):
+        # Une galerie ouverte pendant l'affichage arrête le délai ; à sa fermeture, l'alerte revient pour un délai entier.
+        self.appeler("alerteAnnoncer", 1)
+        self.appeler("alerteDemander", "A", "galerie")
+        self.assertEqual(self.modules()[0], "galerie")
+        time.sleep(1.2)
+        self.appeler("alerteLiberer", "A", "galerie")
+        self.assertEqual(self.modules()[0], "alerte")
+        time.sleep(0.6)
+        self.assertEqual(self.modules()[0], "alerte")
+        time.sleep(0.8)
+        self.assertEqual(self.modules()[0], "bureaux")
+
     def test_galerie_d_un_autre_ecran(self):
         self.appeler("alerteDemander", "B", "galerie")
         self.appeler("alerteAnnoncer", 1)
