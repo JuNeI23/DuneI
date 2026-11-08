@@ -8,7 +8,8 @@ import "galerie.js" as Logique
 
 // Ouvreuse — contrôleur unique de la galerie de fonds d'écran (L2-60) : ouverture, fermeture et application.
 // Rôle : expose par IPC (cible « galerie ») basculer(), que lie SUPER + W. Ouvrir monte le module Galerie dans la
-// presqu'île de l'écran actif seule, à la place de son module courant, rendu à la fermeture ; rien ne s'ouvre si
+// presqu'île de l'écran actif seule, par une demande de priorité 2 à l'arbitre de la presqu'île, libérée à la
+// fermeture ; rien ne s'ouvre si
 // l'espace de travail de l'écran actif porte une fenêtre en plein écran (la presqu'île, sur la couche Top, serait
 // cachée tout en prenant le clavier). L'ouvreuse est un contextuel exclusif du registre Overlays (D108) : l'ouvrir
 // ferme le popover de la barre éventuellement ouvert, et un popover qui s'ouvre la referme. Pendant l'ouverture, un
@@ -25,7 +26,8 @@ import "galerie.js" as Logique
 // que sa surface ne change jamais de taille. Elle est mesurée dès que Theme est prêt, dans la notification même, pour
 // que la première taille de la surface soit déjà la bonne, puis remesurée à chaque rechargement des jetons.
 // Entrées : les presqu'îles, inscrites par inscrire() et retirées par retirer() ; chacune porte modelData (son écran),
-//           module (composant écrit par l'ouvreuse), contenu et phase (lus), et fenetre (la fenêtre du grab, ou null) ;
+//           module (composant arbitré, lu), demander() et liberer() (par lesquelles l'ouvreuse réclame et rend la
+//           presqu'île), contenu et phase (lus), et fenetre (la fenêtre du grab, ou null) ;
 //           ecranActif, l'écran du moniteur focalisé d'Hyprland ; pleinEcran, vrai si son espace de travail actif
 //           porte une fenêtre en plein écran (HyprlandWorkspace.hasFullscreen, éprouvé sous Quickshell 0.3.2) ;
 //           commande, le programme d'application, dunei-fond par défaut ; galerie, le composant du module.
@@ -59,8 +61,6 @@ Scope {
     property var commande: ["dunei-fond"]
     property Component galerie: Component { Galerie {} }
 
-    // Module que la presqu'île portait avant l'ouverture, rendu à la fermeture.
-    property Component _avant: null
     // Galerie montée et visible pour l'ouvreuse : nulle pendant le fondu de sortie de l'ancien contenu, pour qu'un
     // module sur le départ ne puisse pas refermer une ouverture neuve.
     readonly property var _montee: ouvert && cible?.module === galerie && cible?.phase !== "sortie" ? cible.contenu : null
@@ -100,20 +100,19 @@ Scope {
         const p = presquiles.find(q => q.modelData === ecranActif)
         if (ouvert || pleinEcran || !p) return
         cible = p
-        _avant = p.module
-        p.module = galerie
+        p.demander("galerie", galerie, 2)
         ouvert = true
         Overlays.ouvrir(ouvreuse)
     }
 
-    // rendre — défait l'ouverture : quitte le registre et rend à la presqu'île son module d'avant.
+    // rendre — défait l'ouverture : quitte le registre et libère la demande de la galerie, ce qui rend la presqu'île
+    // au module suivant dans l'arbitre.
     // Entrées : aucune ; appelée quand ouvert passe à faux, quelle qu'en soit la cause (basculer, fin de la galerie,
     // popover, clic en dehors, presqu'île retirée). Sortie : aucune. Erreurs : aucune. Dépendances : Overlays.fermer.
     function rendre() {
         Overlays.fermer(ouvreuse)
-        if (cible) cible.module = _avant
+        cible?.liberer("galerie")
         cible = null
-        _avant = null
     }
 
     // appliquer — passe une image à la commande d'application, sauf si elle est déjà le fond actuel.

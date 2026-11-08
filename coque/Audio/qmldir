@@ -1,0 +1,3 @@
+module Audio
+singleton EtatAudio 1.0 EtatAudio.qml
+PopoverAudio 1.0 PopoverAudio.qml

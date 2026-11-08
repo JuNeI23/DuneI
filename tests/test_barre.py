@@ -160,6 +160,16 @@ class IconesTest(BarreIpc, unittest.TestCase):
         self.assertEqual(self.appeler("iconeMoment", "nuit"), "weather-clear-night")
         self.assertEqual(self.appeler("iconeMoment", "jour"), "weather-clear")
 
+    def test_icone_audio_seuils(self):
+        self.assertEqual(self.appeler("iconeAudio", True, False, 0), "audio-volume-muted")
+        self.assertEqual(self.appeler("iconeAudio", True, False, 33), "audio-volume-low")
+        self.assertEqual(self.appeler("iconeAudio", True, False, 34), "audio-volume-medium")
+        self.assertEqual(self.appeler("iconeAudio", True, False, 67), "audio-volume-high")
+        self.assertEqual(self.appeler("iconeAudio", True, True, 80), "audio-volume-muted")
+
+    def test_icone_sans_sortie(self):
+        self.assertEqual(self.appeler("iconeAudio", False, False, 50), "")
+
     def test_element_disparait_sans_contenu(self):
         self.assertEqual(self.appeler("elementVisible"), "false")
         self.appeler("regler", "battery-level-80", "")
@@ -182,7 +192,8 @@ class IconesTest(BarreIpc, unittest.TestCase):
         self.assertEqual(tnum, "1")
 
 
-INDICATEURS = ("Horloge", "Logo", "Notifications", "Batterie", "JourNuit", "Reseau", "Vpn", "Bluetooth", "Parametres")
+INDICATEURS = ("Horloge", "Logo", "Notifications", "Batterie", "JourNuit", "Reseau", "Vpn", "Bluetooth", "Audio",
+               "Parametres")
 
 
 class ElementBarreStatiqueTest(unittest.TestCase):
@@ -280,7 +291,7 @@ class IndicateursStatiqueTest(unittest.TestCase):
     def qml(self):
         return {f.name: f.read_text(encoding="utf-8") for f in (ROOT / "coque" / "Barre").glob("*.qml")}
 
-    def test_neuf_indicateurs_inscrits(self):
+    def test_dix_indicateurs_inscrits(self):
         qmldir = (ROOT / "coque" / "Barre" / "qmldir").read_text(encoding="utf-8")
         for nom in INDICATEURS:
             self.assertIn(f"{nom} 1.0 {nom}.qml", qmldir)
@@ -306,7 +317,7 @@ class IndicateursStatiqueTest(unittest.TestCase):
         self.assertIn("cliquable: true", qml["JourNuit.qml"])
         self.assertIn('["dunei-theme", "bascule"]', qml["JourNuit.qml"])
         cliquables = sorted(nom for nom in INDICATEURS if "cliquable: true" in qml[f"{nom}.qml"])
-        self.assertEqual(cliquables, ["Bluetooth", "JourNuit", "Reseau"])
+        self.assertEqual(cliquables, ["Audio", "Bluetooth", "JourNuit", "Reseau"])
         self.assertRegex(qml["Bluetooth.qml"], r"onClicked:\s*ouvert\s*=\s*!ouvert")
         # Un clic bascule « ouvert », que la barre reporte sur le PopoverReseau (voir test_popover_accroche) ;
         # l'icône vient du singleton.
@@ -328,9 +339,21 @@ class IndicateursStatiqueTest(unittest.TestCase):
                                 r"onFerme: bluetooth\.ouvert = false")
         self.assertIn("onOuvertChanged: popoverBluetooth.ouvert = ouvert", barre)
 
+    def test_popover_audio_accroche(self):
+        # Même accroche que le popover réseau, sous l'indicateur audio ; l'indicateur tient aussi
+        # EtatAudio.tenirPopover, qui retient la presqu'île tant que le popover est ouvert (décision 12).
+        qml = self.qml()
+        self.assertRegex(qml["Barre.qml"], r"PopoverAudio \{\s*id: popoverAudio\s*heberge: true\s*ancre: audio\s*"
+                                           r"onFerme: audio\.ouvert = false")
+        self.assertIn("onOuvertChanged: popoverAudio.ouvert = ouvert", qml["Barre.qml"])
+        self.assertRegex(qml["Audio.qml"], r"onClicked:\s*ouvert\s*=\s*!ouvert")
+        self.assertIn("onOuvertChanged: EtatAudio.tenirPopover(indicateur, ouvert)", qml["Audio.qml"])
+        self.assertIn("Component.onDestruction: EtatAudio.tenirPopover(indicateur, false)", qml["Audio.qml"])
+        self.assertIn("Icones.iconeAudio(EtatAudio.presente, EtatAudio.muet, EtatAudio.volume)", qml["Audio.qml"])
+
     def test_hote_accroche(self):
-        # Une seule fenêtre hôte par barre, pour ses deux popovers.
-        self.assertRegex(self.qml()["Barre.qml"], r"HotePopovers \{\s*barre: barre\s*popovers: \[popoverReseau, popoverBluetooth\]")
+        # Une seule fenêtre hôte par barre, pour ses trois popovers.
+        self.assertRegex(self.qml()["Barre.qml"], r"HotePopovers \{\s*barre: barre\s*popovers: \[popoverReseau, popoverBluetooth, popoverAudio\]")
 
     def test_reseau_disparait_sans_materiel(self):
         # Ni carte ni filaire : l'icône est vide, donc l'élément (sans icône, image ni texte) est invisible.
@@ -453,16 +476,17 @@ class BarreStructureTest(unittest.TestCase):
         self.assertIn("WlrKeyboardFocus.None", self.barre)
 
     def test_masque_ne_couvre_que_les_cliquables(self):
-        masque = re.search(r"mask:\s*Region\s*\{([^{}]*)Region\s*\{([^{}]*)\}\s*Region\s*\{([^{}]*)\}\s*\}", self.barre)
+        masque = re.search(r"mask:\s*Region\s*\{([^{}]*)Region\s*\{([^{}]*)\}\s*Region\s*\{([^{}]*)\}\s*"
+                           r"Region\s*\{([^{}]*)\}\s*\}", self.barre)
         self.assertIsNotNone(masque)
         regions = masque.groups()
-        # Trois régions : l'interrupteur, l'indicateur réseau et l'indicateur Bluetooth, chacune suivant sa position
-        # dans la rangée.
-        self.assertEqual(len(regions), 3)
+        # Quatre régions : l'interrupteur, puis trois enfants, les indicateurs réseau, Bluetooth et audio, chacune
+        # suivant sa position dans la rangée.
+        self.assertEqual(len(regions), 4)
         self.assertNotRegex(self.barre, r"\bitem:")
         # Une Region qui nomme un item ne suit que ses déplacements dans son parent : le masque se calcule par
         # rangée, pour suivre aussi le glissement de la rangée quand une icône apparaît à droite (D100).
-        for corps, nom in zip(regions, ("jourNuit", "reseau", "bluetooth")):
+        for corps, nom in zip(regions, ("jourNuit", "reseau", "bluetooth", "audio")):
             self.assertRegex(corps, rf"x:\s*rangee\.x\s*\+\s*droite\.x\s*\+\s*{nom}\.x\b")
             self.assertRegex(corps, rf"y:\s*rangee\.y\s*\+\s*droite\.y\s*\+\s*{nom}\.y\b")
             self.assertRegex(corps, rf"height:\s*{nom}\.height\b")
@@ -470,6 +494,8 @@ class BarreStructureTest(unittest.TestCase):
         # Invisible (matériel absent), l'indicateur garde sa largeur : le masque ne doit alors rien couvrir.
         self.assertRegex(regions[1], r"width:\s*reseau\.visible\s*\?\s*reseau\.width\s*:\s*0\b")
         self.assertRegex(regions[2], r"width:\s*bluetooth\.visible\s*\?\s*bluetooth\.width\s*:\s*0\b")
+        self.assertRegex(regions[3], r"width:\s*audio\.visible\s*\?\s*audio\.width\s*:\s*0\b")
+        self.assertRegex(self.barre, r"Audio\s*\{\s*id:\s*audio\b")
         self.assertRegex(self.barre, r"Bluetooth\s*\{\s*id:\s*bluetooth\b")
         self.assertRegex(self.barre, r"JourNuit\s*\{\s*id:\s*jourNuit\b")
         self.assertRegex(self.barre, r"Reseau\s*\{\s*id:\s*reseau\b")
@@ -481,8 +507,8 @@ class BarreStructureTest(unittest.TestCase):
         self.assertIn("element.cliquable && element.hovered", element)
 
     def test_ordre_des_indicateurs(self):
-        droite = ["Notifications", "Batterie", "JourNuit", "Reseau", "Vpn", "Bluetooth", "Parametres"]
-        trouves = re.findall(r"\b(Logo|Horloge|Notifications|Batterie|JourNuit|Reseau|Vpn|Bluetooth|Parametres)\s*\{",
+        droite = ["Notifications", "Batterie", "JourNuit", "Reseau", "Vpn", "Bluetooth", "Audio", "Parametres"]
+        trouves = re.findall(r"\b(Logo|Horloge|Notifications|Batterie|JourNuit|Reseau|Vpn|Bluetooth|Audio|Parametres)\s*\{",
                              self.barre)
         self.assertEqual(trouves, ["Logo", "Horloge"] + droite)
 
@@ -753,6 +779,23 @@ class HoteTest(HoteBase, unittest.TestCase):
         # L'ancien contenu, éteint, n'est remis à neuf qu'une fois, et seulement maintenant.
         e = self.jusqua(lambda e: not e["panneaux"]["a"]["visible"], "ancien contenu encore visible")
         self.assertEqual(e["panneaux"]["a"]["remises"], 1)
+        self.sans_erreur()
+
+    def test_passage_vers_un_contenu_sans_disque(self):
+        # Le nouveau contenu n'a pas de bascule ronde (popover du son) : rien ne recouvrira l'ancien disque, qui
+        # s'efface donc avec son contenu, aussitôt, au lieu d'attendre que le nouveau soit plein.
+        self.panneaux_prets()
+        self.ouvrir("a")
+        self.forme_atteinte(self.OUVERT_A, "a")
+        self.ipc("sansDisque", "b")
+        self.ouvrir("b")
+        fin, eteint = time.monotonic() + DELAI, False
+        while (e := self.etat())["panneaux"]["b"]["contenu"] < 1 and time.monotonic() < fin:
+            a = e["panneaux"]["a"]
+            self.assertEqual(a["disque"], a["contenu"], e)
+            eteint = eteint or a["disque"] == 0
+            time.sleep(0.005)
+        self.assertTrue(eteint, "ancien disque encore visible quand le nouveau contenu est plein")
         self.sans_erreur()
 
     def test_passage_interrompu(self):

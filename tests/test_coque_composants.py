@@ -402,6 +402,28 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
         self.ipc("inactif", "true")
         self.assertIn(focus["colorMuted"].lower(), self.valeur("rangee").lower())
 
+    def test_rangee_pleine(self):
+        # Posée pleine, la rangée demande à son icône la variante pleine ; par défaut, l'icône est de fer.
+        self.demarrer()
+        self.ipc("rangeeImposer", "false")
+        self.assertEqual(self.valeur("rangeeImposees").split()[0], "false")
+        self.ipc("rangeeImposer", "true")
+        self.assertEqual(self.valeur("rangeeImposees").split()[0], "true")
+
+    def test_rangee_teintes(self):
+        # Les teintes imposées (accent pour l'icône, error pour le libellé) deviennent les couleurs visées et le
+        # libellé passe en graisse moyenne ; rendues transparentes, les couleurs de l'état reviennent.
+        self.demarrer()
+        t = self.tokens55()[0]["color"]
+        self.ipc("rangeeImposer", "true")
+        _, icone, texte, gras, _ = self.valeur("rangeeImposees").lower().split()
+        self.assertEqual((icone, texte, gras), (t["accent"].lower(), t["error"].lower(), "true"))
+        self.ipc("rangeeImposer", "false")
+        _, icone, texte, gras, _ = self.valeur("rangeeImposees").lower().split()
+        self.assertNotIn(icone, (t["accent"].lower(), t["error"].lower()))
+        self.assertNotIn(texte, (t["accent"].lower(), t["error"].lower()))
+        self.assertEqual(gras, "false")
+
     def test_rangee_transparente_au_repos(self):
         # Défaut relevé à l'écran : sur le verre d'un menu, chaque rangée au repos peignait la couleur opaque de sa
         # surface et formait une plaque distincte. Ni survolée, ni pressée, ni sélectionnée, la pastille est
@@ -480,6 +502,32 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
         self.ipc("jaugeActive", "true")
         self.ipc("inactif", "true")
         self.attendre_jauge([st["activeMuted"]["rest"]["fill"].lower(), st["activeMuted"]["rest"]["text"].lower()])
+
+    def test_jauge_icone_cliquee(self):
+        # Un clic sur l'icône émet iconeCliquee une fois sans changer la valeur (0,5).
+        self.demarrer()
+        self.assertEqual(self.valeur("jaugeIcone"), "0.5 1")
+
+    def test_jauge_clic_hors_icone(self):
+        # La zone cliquable est exactement le carré de la hauteur de la barre, à gauche : un appui à son centre
+        # atteint la zone, un appui dans la moitié droite de la barre n'y atteint pas (il revient à T.Slider).
+        # Sans icône, la zone est désactivée.
+        self.demarrer()
+        x, y, w, h, bx, by, bh, dedans, dehors, actif, sans = self.valeur("jaugeHors").split()
+        self.assertEqual((x, y, w, h), (bx, by, bh, bh))
+        self.assertEqual((dedans, dehors, actif, sans), ("true", "false", "true", "false"))
+
+    def test_jauge_coupe_couleurs(self):
+        # Coupée, la cible du remplissage est text-disabled et celle de l'icône error ; rétablie, le remplissage
+        # reprend le fond de l'Etat et l'icône quitte error.
+        self.demarrer()
+        t = self.tokens55()[0]["color"]
+        self.ipc("jaugeCoupe", "true")
+        self.assertEqual(self.valeur("jaugeCibles").lower().split()[:2], [t["textDisabled"].lower(), t["error"].lower()])
+        self.ipc("jaugeCoupe", "false")
+        remplie, icone, fond = self.valeur("jaugeCibles").lower().split()
+        self.assertEqual(remplie, fond)
+        self.assertNotEqual(icone, t["error"].lower())
 
     def attendre_jauge(self, attendu: list) -> None:
         """Relit la couleur de la partie remplie et celle de l'icône de la jauge jusqu'à ce qu'elles valent attendu.

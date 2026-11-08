@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.38. Historique en fin de document.
+Version 1.39. Historique en fin de document.
 
 Socle amorçable.
 
@@ -2020,7 +2020,7 @@ Rien à lancer à la main : `make install` régénère le thème (`make icones`)
   `~/.config/gtk-4.0/settings.ini`, marqués comme écrits par DuneI ; et `gsettings set org.gnome.desktop.interface
   icon-theme DuneI`. Un `settings.ini` déjà écrit par Nicolas ou par une application est refusé avec un message, jamais
   écrasé. Les cinq coques portent `//@ pragma IconTheme DuneI`.
-- **D'où viennent les icônes.** `icones/correspondances.toml` (groupes `[barre]` et `[reseau]`) fait correspondre 50 noms
+- **D'où viennent les icônes.** `icones/correspondances.toml` (groupes `[barre]`, `[reseau]`, `[bluetooth]` et `[audio]`) fait correspondre 74 noms
   freedesktop à des icônes Phosphor ; `generate_icones.py` lit les SVG versionnés sous `icones/phosphor/{bold,fill}/`
   et écrit chaque nom en `-symbolic` et `-fill-symbolic`. Nom du thème et héritage (`Adwaita,breeze-dark,hicolor`)
   viennent de `tokens.toml`. La graisse est commandée par `[source].graisse` de la table ; `[icons].variants` de
@@ -2345,6 +2345,7 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 
 | Version | Date | Changement |
 | --- | --- | --- |
+| 1.39 | 2026-11-08 | Audio (L2-12) : la table des icônes compte le groupe `[audio]` (huit noms, 74 au total) ; `make install` n'a pas d'autre changement de comportement |
 | 1.38 | 2026-11-07 | La galerie de fonds : mémoire de la coque (`MemoryTHP=madvise`, `make install` puis redémarrage du service, relevé de `smaps_rollup`, D134), préchauffage et surface constante (D132, D133), gros dossier accepté (D135) |
 | 1.37 | 2026-11-07 | La galerie de fonds (L2-60, D124 à D131) : SUPER + W, `make install` pour les nouveaux jetons, dépannage, essais, mesures et recette |
 | 1.36 | 2026-11-06 | Le fond d'écran (L2-27, D121 à D123) : `dunei-fond`, dossier des images, dépannage du calque, mesures ; `bureau.json` gagne `image` |

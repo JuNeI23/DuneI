@@ -84,3 +84,20 @@ function iconeMoment(moment) {
 function texteBatterie(pourcent) {
     return pourcent + " %"
 }
+
+// iconeAudio — icône du volume de sortie.
+// Entrées : presente, une sortie existe ; muet, elle est coupée ; pourcent, volume de 0 à 100. Sortie : "" sans sortie,
+// « audio-volume-muted » si muet ou à 0, puis « -low » jusqu'à 33, « -medium » jusqu'à 66, sinon « -high ».
+// Erreurs : aucune.
+function iconeAudio(presente, muet, pourcent) {
+    if (!presente) return ""
+    if (muet || pourcent <= 0) return "audio-volume-muted"
+    return pourcent <= 33 ? "audio-volume-low" : pourcent <= 66 ? "audio-volume-medium" : "audio-volume-high"
+}
+
+// iconeMicro — icône de l'entrée audio.
+// Entrée : muet, le micro est coupé. Sortie : « microphone-sensitivity-muted » ou « microphone-sensitivity-high ».
+// Erreurs : aucune.
+function iconeMicro(muet) {
+    return muet ? "microphone-sensitivity-muted" : "microphone-sensitivity-high"
+}

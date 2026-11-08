@@ -4,13 +4,19 @@ import Quickshell.Io
 import "Theme"
 import "Presquile"
 import "Presquile/bureaux.js" as Bureaux
+import "Presquile/encoche.js" as Forme
+import "Audio"
 
 // Coque d'essai du module Presquile.
 // Rôle : expose par IPC (cible « presquile ») les fonctions pures de bureaux.js et la géométrie d'une Encoche sans
 // fenêtre, pour que tests/test_presquile.py les éprouve dans un vrai Quickshell ; sous la plateforme offscreen
 // seulement, ouvre une vitrine (FloatingWindow jamais montrée à l'écran) qui porte une Encoche au corps de la
 // planche forme.html (106), sur le fond du bureau, avec la marge de son ombre, et l'enregistre en PNG à la demande.
-// Les tâches suivantes y ajoutent leurs composants et leurs fonctions IPC.
+// Les commandes arbitreDemander, arbitreLiberer et arbitreEtat éprouvent l'Arbitre ; annonceurRafale,
+// annonceurPleinEcran et annonceurEtat, l'Annonceur, piloté par une source et une presqu'île factices ;
+// volumeAnnoncer, volumeMicro, volumeSourdine, volumeNiveau et volumeEtat, le module Volume réel dans une scène sans fenêtre (débord
+// du remplissage hors de l'encoche, jointures, disposition du son coupé) ; audioTenir et audioPopover, le compte des
+// popovers audio ouverts d'EtatAudio. Les tâches suivantes y ajoutent leurs composants et leurs fonctions IPC.
 // Entrées : DUNEI_TOKENS_DIR, lu par Theme ; QT_QPA_PLATFORM, posé à offscreen par le test ; QT_SCALE_FACTOR, pour
 // une capture agrandie ; QT_QUICK_BACKEND=rhi et QSG_RHI_BACKEND=opengl pour une capture fidèle (la plateforme
 // offscreen choisit sinon le rendu logiciel, qui ne peint ni shader ni remplissage par texture). Commandes IPC :
@@ -21,8 +27,9 @@ import "Presquile/bureaux.js" as Bureaux
 // …», « essai : contenu … », « essai : lp … » (largeur au changement de phase), « essai : l … », « essai : cl … » (cible de largeur), « essai : h … » et « essai : o … » de la scène. Erreurs : celles de Theme, dans
 // le journal ; capturer sans vitrine (hors offscreen) journalise « presquile : aucune vitrine ».
 // Dépendances : quickshell ≥ 0.3 (Quickshell.Io, FloatingWindow, LazyLoader), modules Theme, Composants et
-// Presquile.
-// Import : liens essai/Theme, essai/Composants et essai/Presquile, comme dans les autres coques d'essai.
+// Presquile (dont encoche.js).
+// Import : liens essai/Theme, essai/Composants et essai/Presquile, comme dans les autres coques d'essai ; essai/Audio et
+// essai/Barre, que résolvent les imports relatifs de l'Annonceur et du module Volume.
 ShellRoot {
     // Theme est un singleton paresseux : cette lecture le charge, ce qu'attend le setUp de l'essai.
     Component.onCompleted: Theme.tokens
@@ -55,6 +62,101 @@ ShellRoot {
     Component {
         id: moduleTardif
         Item { objectName: "tardif"; property var ecran; property bool charge: false; implicitWidth: charge ? 400 : 1000; implicitHeight: 80 }
+    }
+
+    // Arbitre sans fenêtre, au module par défaut des bureaux, et deux modules factices « volume » et « galerie » ;
+    // changements compte les fois où le module arbitré change, c'est-à-dire les remontages que subirait la scène.
+    Component {
+        id: moduleVolume
+        Item { objectName: "volume"; property var ecran; implicitWidth: 60; implicitHeight: 28 }
+    }
+    Component {
+        id: moduleGalerie
+        Item { objectName: "galerie"; property var ecran; implicitWidth: 400; implicitHeight: 28 }
+    }
+    Arbitre {
+        id: essaiArbitre
+        property int changements: 0
+        onModuleChanged: changements++
+    }
+
+    // Annonceur d'essai, sans Hyprland ni PipeWire : une source factice émet les annonces, et une presqu'île factice
+    // (sans écran, comme ecranActif) relaie ses demandes à un arbitre qui compte les changements de module (les
+    // montages que subirait la scène) et les libérations.
+    QtObject { id: essaiSource; signal annoncer(var annonce) }
+    Arbitre {
+        id: arbitreAnnonce
+        property int changements: 0
+        onModuleChanged: changements++
+    }
+    QtObject {
+        id: essaiIle
+        property var modelData: null
+        property int liberations: 0
+
+        // demander — relaie une demande à l'arbitre de l'annonceur d'essai. Entrées : cle, composant, priorite.
+        // Sortie : aucune. Erreurs : aucune. Dépendances : arbitreAnnonce.
+        function demander(cle, composant, priorite) { arbitreAnnonce.demander(cle, composant, priorite) }
+
+        // liberer — compte la libération et la relaie à l'arbitre. Entrée : cle. Sortie : aucune. Erreurs : aucune.
+        // Dépendances : arbitreAnnonce.
+        function liberer(cle) { liberations++; arbitreAnnonce.liberer(cle) }
+    }
+    Annonceur {
+        id: essaiAnnonceur
+        etat: essaiSource
+        ecranActif: null
+        pleinEcran: false
+        volume: moduleVolume
+        Component.onCompleted: inscrire(essaiIle)
+    }
+    // Scène d'essai du module Volume réel (EtatAudio lu en lecture seule ; l'essai n'écrit que annonceCourante, dans
+    // ce processus) : depassement retient, image par image, le plus grand débord du remplissage hors du corps.
+    // Le niveau et la sourdine du module viennent de la scène d'essai, que l'IPC écrit, et non de PipeWire.
+    Component { id: moduleVolumeReel; Volume { objectName: "volume"; muet: sceneVolume.muetEssai; niveauSon: sceneVolume.niveauEssai } }
+    Scene {
+        id: sceneVolume
+        property real depassement: 0
+        property bool muetEssai: false
+        property int niveauEssai: 50
+        readonly property real evasement: Theme.tokens?.presquile?.evasement ?? 0
+
+        // bords — bords gauche et droit de toute la partie remplie (corps et évasements), dans le repère de la scène.
+        // Entrées : aucune. Sortie : {gauche, droite}, droite égal à gauche quand rien n'est rempli ; null sans module.
+        // Erreurs : aucune. Dépendances : Volume (remplie, flanc).
+        function bords() {
+            const v = contenu, r = v?.remplie, f = v?.flanc
+            if (!r) return null
+            const g = v.x + r.x
+            return { gauche: g, droite: Math.max(g + r.width, f.visible ? v.x + f.x + f.width : -Infinity) }
+        }
+
+        // mesurer — retient le débord courant du remplissage hors de l'encoche (corps et évasements), en px logiques.
+        // Entrées : aucune. Sortie : met à jour depassement. Erreurs : aucune, sans module monté. Dépendances : bords.
+        function mesurer() {
+            const b = bords()
+            if (b) depassement = Math.max(depassement, -evasement - b.gauche, b.droite - width - evasement)
+        }
+    }
+    Connections {
+        target: sceneVolume.ressortLargeur
+        function onValueChanged() { sceneVolume.mesurer() }
+    }
+    Connections {
+        target: sceneVolume.contenu?.remplissage ?? null
+        ignoreUnknownSignals: true
+        function onValueChanged() { sceneVolume.mesurer() }
+    }
+
+    // Rafale : count annonces de volume, une toutes les interval millisecondes.
+    Timer {
+        id: rafale
+        property int reste: 0
+        repeat: true
+        onTriggered: {
+            essaiSource.annoncer({ genre: "volume", appareil: "", texte: "", coupe: false })
+            if (--reste <= 0) stop()
+        }
     }
 
     // Scène sans fenêtre, comme celle de la surface : sa trajectoire est lue par tests/test_presquile.py.
@@ -152,11 +254,11 @@ ShellRoot {
         // Sortie : la géométrie, comme encoche. Erreurs : aucune. Dépendances : encoche, Encoche.
         function etirerEncoche(l: real): string { essaiEncoche.largeurCorps = l; return encoche() }
 
-        // tracerEncoche — tracé d'une Encoche éphémère aux dimensions explicites, indépendante des jetons.
+        // tracerEncoche — tracé de l'encoche aux dimensions explicites, indépendant des jetons.
         // Entrées : l, largeur du corps ; h, hauteur ; e, évasement ; r, rayon (px logiques).
-        // Sortie : le tracé SVG. Erreurs : aucune. Dépendances : Encoche.
+        // Sortie : le tracé SVG. Erreurs : aucune. Dépendances : encoche.js.
         function tracerEncoche(l: real, h: real, e: real, r: real): string {
-            return essaiEncoche.tracer(l, h, e, r)
+            return Forme.tracer(l, h, e, r)
         }
 
         // bureauxEtat — pose idActif et special du module des bureaux d'essai (jamais Hyprland) et rend son état.
@@ -183,6 +285,97 @@ ShellRoot {
                                     reelles: p.map(x => x.width),
                                     zones: zones, centres: centres })
         }
+
+        // arbitreDemander — relaie une demande à l'arbitre d'essai. Entrées : cle ; nom, « volume » ou « galerie » ;
+        // priorite. Sortie : aucune. Erreurs : aucune. Dépendances : essaiArbitre.
+        function arbitreDemander(cle: string, nom: string, priorite: int): void {
+            essaiArbitre.demander(cle, nom === "volume" ? moduleVolume : moduleGalerie, priorite)
+        }
+
+        // arbitreLiberer — retire une demande de l'arbitre d'essai. Entrée : cle. Sortie : aucune. Erreurs : aucune.
+        // Dépendances : essaiArbitre.
+        function arbitreLiberer(cle: string): void { essaiArbitre.liberer(cle) }
+
+        // arbitreEtat — module arbitré. Entrées : aucune. Sortie : JSON {module (« volume », « galerie » ou
+        // « bureaux »), changements (nombre de changements de module depuis le démarrage)}. Erreurs : aucune.
+        // Dépendances : essaiArbitre.
+        function arbitreEtat(): string {
+            const m = essaiArbitre.module
+            return JSON.stringify({ module: m === moduleVolume ? "volume" : m === moduleGalerie ? "galerie" : "bureaux",
+                                    changements: essaiArbitre.changements })
+        }
+
+        // annonceurRafale — émet n annonces de volume, la première aussitôt, puis une toutes les ms millisecondes.
+        // Entrées : n, nombre d'annonces (au moins 1) ; ms, intervalle. Sortie : aucune. Erreurs : aucune.
+        // Dépendances : essaiSource, rafale.
+        function annonceurRafale(n: int, ms: int): void {
+            essaiSource.annoncer({ genre: "volume", appareil: "", texte: "", coupe: false })
+            rafale.reste = n - 1
+            rafale.interval = ms
+            if (rafale.reste > 0) rafale.start()
+        }
+
+        // annonceurPleinEcran — pose le plein écran vu par l'annonceur d'essai. Entrée : b. Sortie : aucune.
+        // Erreurs : aucune. Dépendances : essaiAnnonceur.
+        function annonceurPleinEcran(b: bool): void { essaiAnnonceur.pleinEcran = b }
+
+        // annonceurEtat — état de l'annonceur d'essai. Entrées : aucune. Sortie : JSON {module (« volume » ou
+        // « bureaux »), changements, liberations, cible (vrai si une presqu'île porte la jauge)}. Erreurs : aucune.
+        // Dépendances : arbitreAnnonce, essaiIle, essaiAnnonceur.
+        function annonceurEtat(): string {
+            return JSON.stringify({ module: arbitreAnnonce.module === moduleVolume ? "volume" : "bureaux",
+                                    changements: arbitreAnnonce.changements, liberations: essaiIle.liberations,
+                                    cible: essaiAnnonceur.cible !== null })
+        }
+
+        // volumeAnnoncer — pose l'annonce courante d'EtatAudio dans ce processus et monte le module Volume réel dans sa
+        // scène d'essai. Entrées : genre (« volume », « micro », « sortie » ou « entree ») ; texte, le libellé.
+        // Sortie : aucune. Erreurs : aucune. Dépendances : EtatAudio, sceneVolume, moduleVolumeReel.
+        function volumeAnnoncer(genre: string, texte: string): void {
+            EtatAudio.annonceCourante = { genre, appareil: genre === "micro" ? "" : "audio-speakers", texte, coupe: false }
+            sceneVolume.module = moduleVolumeReel
+        }
+
+        // volumeMicro — rebascule l'annonce de micro courante, module monté. Entrée : coupe, vrai pour « Micro coupé ».
+        // Sortie : aucune. Erreurs : aucune. Dépendances : EtatAudio.
+        function volumeMicro(coupe: bool): void {
+            EtatAudio.annonceCourante = { genre: "micro", appareil: "", texte: coupe ? "Micro coupé" : "Micro actif", coupe }
+        }
+
+        // volumeEtat — photographie de la scène du Volume. Entrées : aucune. Sortie : JSON {depassement (débord
+        // maximal du remplissage hors du corps depuis le départ), largeurScene, largeurModule, phase, mobile}.
+        // Erreurs : aucune. Dépendances : sceneVolume.
+        function volumeEtat(): string {
+            const s = sceneVolume, v = s.contenu
+            s.mesurer()
+            const b = s.bords()
+            return JSON.stringify({ depassement: s.depassement, largeurScene: s.width, evasement: s.evasement,
+                                    largeurModule: v?.implicitWidth ?? 0, phase: s.phase, genre: v?.annonce?.genre ?? null,
+                                    gauche: b?.gauche ?? null, droite: b?.droite ?? null,
+                                    cible: v?.remplissage?.cible ?? null, fond: String(v?.couleurFond ?? ""),
+                                    encre: String(v?.couleurEncre ?? ""), opaciteCote: v?.cote?.opacity ?? null,
+                                    opaciteCentre: v?.centre?.opacity ?? null, symbole: v?.symbole?.nom ?? null,
+                                    texte: v?.etiquette?.text ?? null, opaciteActif: v?.actif?.opacity ?? null, yCentre: v?.centre?.y ?? null,
+                                    yActif: v?.actif?.y ?? null, hauteur: v?.height ?? null,
+                                    symboleActif: v?.symboleActif?.nom ?? null, texteActif: v?.etiquetteActif?.text ?? null,
+                                    mobile: s.ressortLargeur.moving || (v?.remplissage?.moving ?? false) || (v?.jointure?.moving ?? false)
+                                        || (v?.disposition?.moving ?? false) || (v?.bascule?.moving ?? false) })
+        }
+
+        // volumeSourdine, volumeNiveau — sourdine et niveau du son vus par le module Volume d'essai, à la place de
+        // PipeWire. Entrées : b, vrai pour couper ; n, le niveau de 0 à 100. Sortie : aucune. Erreurs : aucune.
+        // Dépendances : sceneVolume.
+        function volumeSourdine(b: bool): void { sceneVolume.muetEssai = b }
+        function volumeNiveau(n: int): void { sceneVolume.niveauEssai = n }
+
+        // audioTenir — un popover audio s'ouvre ou se ferme, sous la clé d'un propriétaire, comme le fait chaque
+        // indicateur de barre. Entrées : cle, le propriétaire ; ouvert, son état. Sortie : aucune. Erreurs : aucune.
+        // Dépendances : EtatAudio (tenirPopover).
+        function audioTenir(cle: string, ouvert: bool): void { EtatAudio.tenirPopover(cle, ouvert) }
+
+        // audioPopover — dit si un popover audio est ouvert, d'après EtatAudio. Entrées : aucune. Sortie : « true » ou
+        // « false ». Erreurs : aucune. Dépendances : EtatAudio (popoverOuvert).
+        function audioPopover(): string { return String(EtatAudio.popoverOuvert) }
 
         // changer — change le module de la scène d'essai, ce qui déroule la séquence de changement.
         // Entrée : nom, « grand » ou « tardif » pour les modules factices, tout autre nom pour les bureaux. Sortie : aucune.

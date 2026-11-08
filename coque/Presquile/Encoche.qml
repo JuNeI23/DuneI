@@ -3,6 +3,7 @@ import QtQuick.Effects
 import QtQuick.Shapes
 import "../Theme"
 import "../Composants"
+import "encoche.js" as Forme
 
 // Encoche — forme de la presqu'île : l'encoche continue qui descend du bord haut de l'écran (variante D de la
 // planche forme.html), peinte dans la matière E3 de la coque.
@@ -27,8 +28,9 @@ import "../Composants"
 //           de l'angle est bornée par la moitié du corps et par la hauteur sous le creux, pour qu'une forme étroite
 //           ou basse reste fermée.
 // Erreurs : aucune ; avant le chargement des tokens, les dimensions sont nulles et rien n'est peint.
-// Dépendances : QtQuick.Shapes (ShapePath.fillItem, Qt 6.8 et plus), QtQuick.Effects (MultiEffect), Theme (tokens,
-//               elevation, material, glass.presquile), Materiau (niveau e3, verre glass.presquile, D137).
+// Dépendances : encoche.js (tracer), QtQuick.Shapes (ShapePath.fillItem, Qt 6.8 et plus), QtQuick.Effects
+//               (MultiEffect), Theme (tokens, elevation, material, glass.presquile), Materiau (niveau e3, verre
+//               glass.presquile, D137).
 Item {
     id: encoche
 
@@ -46,17 +48,11 @@ Item {
     implicitWidth: largeurCorps + 2 * evasement
     implicitHeight: hauteur
 
-    // tracer — tracé SVG de l'encoche continue, du coin haut gauche, dans le sens des aiguilles d'une montre.
-    // Entrées : l, largeur du corps ; h, hauteur ; e, évasement ; r, rayon des angles du bas (px logiques).
-    // Sortie : chaîne de chemin SVG (M, H, C, V, Z), en px logiques depuis le coin haut gauche de l'encoche.
-    // Erreurs : aucune ; des dimensions nulles donnent un tracé vide de surface. Dépendances : aucune.
-    function tracer(l: real, h: real, e: real, r: real): string {
-        const w = l + 2 * e, creux = 12 * e / 13, a = Math.max(0, Math.min(1.4 * r, l / 2, h - creux))
-        return `M0 0 H${w} C${w - 8 * e / 13} 0 ${w - 12 * e / 13} ${3 * e / 13} ${w - e} ${creux} V${h - a} `
-            + `C${w - e} ${h - 5 * a / 14} ${w - e - 4 * a / 14} ${h} ${w - e - a} ${h} H${e + a} `
-            + `C${e + 4 * a / 14} ${h} ${e} ${h - 5 * a / 14} ${e} ${h - a} V${creux} `
-            + `C${12 * e / 13} ${3 * e / 13} ${8 * e / 13} 0 0 0 Z`
-    }
+    // tracer — tracé SVG de l'encoche continue aux dimensions données, relais de encoche.js gardé pour les lecteurs
+    // de l'Encoche. Entrées : l, largeur du corps ; h, hauteur ; e, évasement ; r, rayon des angles du bas (px
+    // logiques). Sortie : chaîne de chemin SVG depuis le coin haut gauche. Erreurs : aucune ; des dimensions nulles
+    // donnent un tracé vide de surface. Dépendances : encoche.js (tracer).
+    function tracer(l: real, h: real, e: real, r: real): string { return Forme.tracer(l, h, e, r) }
 
     Item {
         id: corps

@@ -2,9 +2,9 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.47. Historique en fin de document.
+Version 1.48. Historique en fin de document.
 
-La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **172 éléments** répartis en **cinq lots**, sur six chantiers.
+La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **175 éléments** répartis en **cinq lots**, sur six chantiers.
 
 Ce document dit ce qui est attendu, dans quel ordre, et à quelle condition c'est terminé. Il ne dit pas à quoi ça ressemble — c'est le rôle de la bible de design. En cas de contradiction : la bible l'emporte sur l'apparence, ce document l'emporte sur le périmètre.
 
@@ -265,7 +265,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L2-09 | B | Écrit | Barre système — horloge, chiffres tabulaires — **fait (D95)** : « lun. 26 oct. 14:32 » en français, chiffres tabulaires par `Theme.police(echelon, moyen, tabulaire)`, précision à la minute |
 | L2-10 | B | Écrit | Barre système — indicateur de bureaux virtuels — **fait (D96, D97)** : déplacé dans la presqu'île (D93, L2-46), quatre points identiques et pilule d'accent discret sur le bureau courant |
 | L2-11 | B | Écrit | Indicateur réseau et son popover ; le sort de `nm-applet`, qui passait par `session.toml` et son unité `nm-applet.service` (L1-10, D50), est décidé : il est remplacé et retiré (D40) — **fait, en attente de fusion (D103 à D105)** : popover D5 (288 px, verre de E3, réseau joint dans l'en-tête, mot de passe sans plaque, actions en texte seul, icône de la barre pleine tant qu'il est ouvert) ; fenêtre Réseau D4 en trois onglets (Wi-Fi, Filaire, VPN), cartes de réglages et sous-page par profil, validée à l'écran le 2026-11-01 ; **VPN minimal** (liste et interrupteur), le reste en L2-51 ; `nm-applet` retiré (sa ligne de `session.toml` passe en `retires`, son unité est supprimée) ; `nm-connection-editor` reste le recours |
-| L2-12 | B | Écrit | Indicateur audio et son popover — volume, sorties ; niveau du micro numérique, qui sature à 100 % (relevé du 2026-10-15, D38) | — **hérite du popover hébergé** (L2-06) : `heberge: true`, `fonduContenu`, `fonduDisque` et `reinitialiser()` sur la racine du contenu, déclaré dans `popovers` de la barre
+| L2-12 | B | Écrit | Indicateur audio et son popover — volume, sorties ; niveau du micro numérique, qui sature à 100 % (relevé du 2026-10-15, D38) | — **fait, en attente de fusion (D138 à D144)** : singleton `EtatAudio` sur le module PipeWire de Quickshell (D138), indicateur `Barre/Audio` aux seuils 33 et 66, popover du son (volume, micro, sorties et entrées, « Réglages du son… » affiché mais inactif), presqu'île-jauge au ressort continu avec glissements et jointures de l'encoche (D139), rétablissement du son par F1 ou l'icône seulement et message « Son actif » (D140), ouverture par toute source de changement avec garde de liaison et silence du popover (D141), annonce des changements de sortie et de micro avec fusion de 150 ms, bascule du Bose laissée à WirePlumber (D142), arbitre des modules (D143), jauge à icône cliquable, rangée active sans coche, contrat `disque` (D144) ; recette 1 validée à l'écran par Nicolas le 2026-11-08 ; reste à éprouver avant fusion : lisibilité de « Son actif » de jour à bas volume, et silence de la presqu'île au réveil de veille. — **hérite du popover hébergé** (L2-06) : `heberge: true`, `fonduContenu`, `fonduDisque` et `reinitialiser()` sur la racine du contenu, déclaré dans `popovers` de la barre
 | L2-13 | B | Écrit | Indicateur d'énergie et son popover | — **hérite du popover hébergé** (L2-06) comme L2-12 ; l'idée de couper les animations décoratives longues en `power-saver` lui est réservée (D117)
 | L2-14 | B | Écrit | Indicateur Bluetooth et son popover — **fait (D107, D108), recette validée à l'écran le 2026-11-03** : popover copié du popover réseau, bascule de la radio, « Mes appareils » (connecter, déconnecter, oublier par le chevron), « Appareils à proximité » (recherche, appairage sans code, confiance puis connexion), appareils anonymes masqués, préfixe « LE- » masqué, voisins à hauteur fixe ; appairage par `dunei-bluetooth-appairer` (agent `NoInputNoOutput`, transport `bredr` pour l'audio, profil audio attendu) ; « Connecté » exige la sortie PipeWire d'un appareil audio ; popovers de la barre exclusifs et fermés 1,5 s après le départ de la souris |
 | L2-15 | B | Écrit | Zone d'état des applications tierces |
@@ -318,6 +318,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L2-62 | B | Écrit | Hauteur de la barre dans les jetons — `systemBarHeight` vaut 32 alors que la barre mesure 28 px (D89, D122) : aligner le jeton sur la hauteur réelle et faire lire celle-ci à `Barre.qml` |
 | L2-63 | C | Écrit | Cache de vignettes sur disque pour la galerie de fonds (suite de L2-60, D126, D135) — miniatures précalculées, créées au premier passage ou à l'ajout d'une image, lues à l'ouverture : ouverture instantanée même sur un gros dossier (trente images lourdes : vignettes environ 0,6 s après l'étirement, accepté par Nicolas) et mémoire faible (le décodage pleine taille d'un PNG 4K a une crête de 32 Mio). À concevoir : emplacement (`~/.cache`), invalidation par date et taille, génération hors du fil de la coque |
 | L2-64 | C | Écrit | Pages géantes transparentes en `madvise` pour tout le système — piste à trancher par Nicolas (D134, D135) : `MemoryTHP=madvise` n'est posé que sur l'unité de la coque (971 Mo de PSS devenus 160 Mo) ; passer `/sys/kernel/mm/transparent_hugepage/enabled` ou `transparent_hugepage=madvise` à toute la machine profiterait sans doute aux autres processus à jemalloc ou à tas épars. Choix de machine : mesurer d'abord les plus gros processus, et consigner la valeur dans le fragment de `caladan`, jamais dans le code commun |
+| L2-65 | B | Écrit | Alléger la fenêtre Réseau, puis la copier pour créer la fenêtre Son — la fenêtre Réseau est lente à l'ouvrir et à la fermer, sans aucune animation, et sa colonne de droite est chargée et mal ordonnée ; la fenêtre Son naît de sa copie allégée, et le lien « Réglages du son… » du popover du son (L2-12) l'ouvre ; volume par application, profils de la carte, effets et égaliseur y trouveront leur place (spec du 2026-11-08, non-objectifs) |
 
 ### Lot 3 — la bascule
 
@@ -419,7 +420,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L5-29 | — | Écrit | Passe de regard complète — étage 3 |
 | L5-30 | — | Écrit | Résorber les points ouverts de l'annexe C |
 
-**Volume total : 174 éléments** — 124 écrits, 43 configurés, 5 offerts, 2 mixtes.
+**Volume total : 175 éléments** — 125 écrits, 43 configurés, 5 offerts, 2 mixtes.
 
 Les deux tiers du travail sont de l'écrit, et les trois quarts de cet écrit se concentrent sur la coque et les écrans système. C'est cohérent avec la stratégie retenue, et c'est là que tout le risque se trouve.
 
@@ -523,6 +524,7 @@ Le choix de la distribution de base et du compositeur, précédemment ouverts, s
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-12 | Version initiale, 137 éléments |
+| 1.48 | 2026-11-08 | L2-12 fait, en attente de fusion : indicateur audio, popover du son et presqu'île-jauge (D138 à D144) ; ajout de L2-65 (alléger la fenêtre Réseau puis créer la fenêtre Son) ; 175 éléments |
 | 1.47 | 2026-11-08 | L2-61 fait : verre propre de la presqu'île et colonne des fenêtres de réglages (D136, D137) ; popovers gardés à 60 % ; 174 éléments |
 | 1.46 | 2026-11-07 | L2-60 : correctifs de recette (préchauffage, surface de hauteur constante, D132 et D133) et mémoire de la coque (`MemoryTHP=madvise`, D134) ; gros dossier accepté (D135) ; ajout de L2-63 (cache de vignettes sur disque) et de L2-64 (pages géantes du système) ; 174 éléments |
 | 1.45 | 2026-11-07 | L2-60 fait : galerie de fonds dans la presqu'île (D124 à D131) ; L2-48 fait en partie (changement de module) ; 172 éléments |

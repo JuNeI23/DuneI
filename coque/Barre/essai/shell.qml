@@ -14,7 +14,7 @@ import "Barre/forme.js" as Forme
 // Rôle : expose par IPC (cible « barre ») les fonctions pures de icones.js, et porte un ElementBarre que le test
 // pilote, pour que tests/test_barre.py éprouve les correspondances dans un vrai Quickshell.
 // Entrées : DUNEI_TOKENS_DIR, lu par Theme. Commandes IPC : normaliserPourcent, iconeBatterie, iconeReseau,
-// iconeBluetooth, iconeNotifications, iconeMoment, texteBatterie (chacune retourne son résultat), et
+// iconeBluetooth, iconeNotifications, iconeMoment, iconeAudio, iconeMicro, texteBatterie (chacune retourne son résultat), et
 // regler <icone> <texte> qui règle l'élément, ouvrirElement, decalageElement et ressortCouleur qui en éprouvent le
 // mouvement, puis elementVisible qui retourne sa visibilité et policeTexte
 // qui retourne la taille et les chiffres tabulaires de son texte.
@@ -62,6 +62,8 @@ ShellRoot {
         function iconeBluetooth(adaptateur: bool, allume: bool): string { return Icones.iconeBluetooth(adaptateur, allume) }
         function iconeNotifications(enPause: bool): string { return Icones.iconeNotifications(enPause) }
         function iconeMoment(moment: string): string { return Icones.iconeMoment(moment) }
+        function iconeAudio(presente: bool, muet: bool, pourcent: int): string { return Icones.iconeAudio(presente, muet, pourcent) }
+        function iconeMicro(muet: bool): string { return Icones.iconeMicro(muet) }
         function texteBatterie(pourcent: int): string { return Icones.texteBatterie(pourcent) }
 
         // cibles — forme visée du cadre (forme.js), en JSON {gauche, droite, hauteur}.

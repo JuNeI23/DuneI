@@ -1,5 +1,8 @@
 module Presquile
+Annonceur 1.0 Annonceur.qml
+Arbitre 1.0 Arbitre.qml
 Encoche 1.0 Encoche.qml
 Bureaux 1.0 Bureaux.qml
 Presquile 1.0 Presquile.qml
 Scene 1.0 Scene.qml
+Volume 1.0 Volume.qml

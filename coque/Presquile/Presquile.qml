@@ -15,24 +15,39 @@ import "../Theme"
 // mouvement réduit, la taille se pose aussitôt et seuls les fondus restent. La fenêtre réserve en plus
 // de l'encoche la marge de son ombre, pour qu'elle ne soit pas coupée. Le masque de saisie ne couvre que le corps de
 // l'encoche : partout ailleurs, les clics traversent. Elle ne réserve aucune place et ne prend jamais le focus clavier.
-// Entrées : modelData, l'écran que lui donne le Variants de la coque (obligatoire) ; module, le composant de contenu,
-//           Bureaux par défaut ; il doit être un Item déclarant implicitWidth et implicitHeight, et recevoir ecran.
-//           Le changer est l'unique manière de changer de contenu. reserve, hauteur minimale réservée à l'encoche
-//           (0 par défaut) : la coque y passe celle du plus grand module connu, pour que la surface garde toujours la
-//           même taille (voir Scene.hauteurSurface).
+// Entrées : modelData, l'écran que lui donne le Variants de la coque (obligatoire) ; demander(cle, composant,
+//           priorite) et liberer(cle), par lesquels les modules (galerie 2, volume 1) réclament la presqu'île, que
+//           tranche un Arbitre : le composant de contenu est un Item déclarant implicitWidth et implicitHeight, et
+//           recevant ecran. C'est l'unique manière de changer de contenu. reserve, hauteur minimale réservée à
+//           l'encoche (0 par défaut) : la coque y passe celle du plus grand module connu, pour que la surface garde
+//           toujours la même taille (voir Scene.hauteurSurface).
 // Sorties : une fenêtre de calque au namespace « dunei-presquile » (floutée par les règles de calque générées) ;
-//           contenu, le module monté ; phase, celle de la séquence de changement (« repos », « sortie », « forme »
-//           ou « entree »), lue par les essais et l'ouvreuse de la galerie ; fenetre, la surface elle-même, que
-//           l'ouvreuse de la galerie passe à sa prise du clavier (HyprlandFocusGrab).
+//           module, le composant arbitré (lecture seule, Bureaux sans demande) ; contenu, le module monté ; phase,
+//           celle de la séquence de changement (« repos », « sortie », « forme » ou « entree »), lue par les essais et
+//           l'ouvreuse de la galerie ; fenetre, la surface elle-même, que l'ouvreuse de la galerie passe à sa prise du
+//           clavier (HyprlandFocusGrab).
 // Erreurs : sans jeton de thème, l'encoche est vide et la fenêtre reste posée ; un module sans taille laisse l'encoche
 //           à la hauteur des jetons.
-// Dépendances : quickshell ≥ 0.3 (PanelWindow, Region, WlrLayershell), Encoche, Scene, Bureaux, Ressort, Theme.
+// Dépendances : quickshell ≥ 0.3 (PanelWindow, Region, WlrLayershell), Arbitre, Encoche, Scene, Bureaux, Ressort,
+// Theme.
 PanelWindow {
     id: surface
 
     required property var modelData
-    property Component module: Component { Bureaux {} }
+    // Module arbitré : la demande de plus haute priorité, les bureaux sans demande.
+    readonly property Component module: arbitre.module
     property real reserve: 0
+
+    // demander — voir Arbitre.demander. Entrées : cle, composant, priorite. Sortie : aucune. Erreurs : aucune.
+    // Dépendances : Arbitre.
+    function demander(cle: string, composant: Component, priorite: int): void {
+        arbitre.demander(cle, composant, priorite)
+    }
+
+    // liberer — voir Arbitre.liberer. Entrée : cle. Sortie : aucune. Erreurs : aucune. Dépendances : Arbitre.
+    function liberer(cle: string): void { arbitre.liberer(cle) }
+
+    Arbitre { id: arbitre }
 
     // Module instancié pour l'écran de la surface (null tant que le composant n'est pas monté).
     readonly property alias contenu: scene.contenu
@@ -49,7 +64,8 @@ PanelWindow {
     // Les zones transparentes ne sont pas floutées (ignore_alpha des règles de calque), et le masque laisse passer
     // les clics.
     implicitHeight: scene.hauteurSurface + encoche.marge
-    // Quickshell n'envoie la nouvelle taille au compositeur qu'au polissage de l'image suivante, et une surface au repos
+    // Quickshell n'envoie la nouvelle taille au compositeur qu'au polissage de l'image suivante, et une surface au
+    // repos
     // n'en rend aucune : sans cette demande d'image, une réserve posée au repos ne s'appliquerait qu'au prochain
     // mouvement, avec l'étirement d'un ancien tampon par Hyprland (recette de L2-60).
     onImplicitHeightChanged: Qt.callLater(() => encoche.Window.window?.update())

@@ -138,11 +138,15 @@ ShellRoot {
             id: presquileEssai
             required property string nom
             readonly property var modelData: ({ name: nom })
-            property Component module: bureauxEssai
+            readonly property Component module: arbitre.module
             readonly property alias contenu: scene.contenu
             readonly property alias phase: scene.phase
             readonly property var fenetre: null
             readonly property Item sceneEssai: scene
+
+            function demander(cle: string, composant: Component, priorite: int): void { arbitre.demander(cle, composant, priorite) }
+            function liberer(cle: string): void { arbitre.liberer(cle) }
+            Arbitre { id: arbitre; defaut: bureauxEssai }
 
             // Comme dans la coque, la presqu'île réserve la hauteur du module de la galerie mesurée par l'ouvreuse.
             Scene {

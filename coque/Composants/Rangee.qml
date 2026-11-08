@@ -24,19 +24,24 @@ import "etats.js" as Etats
 // l'appelant quand la liste ne la fait pas suivre currentIndex ; accessoire, composant facultatif posé en tête
 // de la rangée, avant l'icône, comme la colonne des coches d'un menu de macOS (le Deroulant y pose sa Coche) ;
 // null par défaut ; suffixe, composant facultatif posé en fin de rangée, après le libellé (le popover réseau y pose
-// « Connexion… », l'indicateur d'activité et le cadenas), null par défaut ; accentue, libellé à l'accent autonome et en graisse
-// moyenne, comme le réseau joint du popover, faux par défaut ; forcerContour, réservée à la planche de contrôle : montre le contour de focus sans que la
-// liste ait le focus, faux par défaut.
+// « Connexion… », l'indicateur d'activité et le cadenas), null par défaut ; accentue, libellé à l'accent autonome et en
+// graisse moyenne, comme le réseau joint du popover, faux par défaut ; pleine, variante pleine de l'icône
+// (Icone.pleine), faux par défaut ; teinteIcone et teinteTexte, couleurs imposées à l'icône et au libellé,
+// transparentes par défaut : les couleurs de l'état s'appliquent alors, sinon l'imposée les remplace, en fondu
+// (ColorSpring), et elle l'emporte sur accentue ; forcerContour, réservée à la planche de contrôle : montre le contour
+// de focus sans que la liste ait le focus, faux par défaut.
 // Sorties : etat, l'Etat de la rangée (rôle, interaction, sélection, couleurs) ; gras, vrai quand le libellé est
-// en graisse moyenne (accentue, ou rangée sélectionnée d'une colonne de navigation), que suit un contentItem
-// remplacé ; libelle, le Texte du libellé par défaut ; signal active(), émis au clic
-// et à Entrée (la Liste l'émet pour sa rangée courante).
+// en graisse moyenne (par défaut accentue, ou rangée sélectionnée d'une colonne de navigation ; l'appelant peut le
+// poser), que suit un contentItem remplacé ; fondIcone et fondTexte, les ressorts des couleurs de l'icône et du
+// libellé ; libelle, le Texte du libellé par défaut ; glyphe, l'Icone ; signal active(), émis au clic et à Entrée
+// (la Liste l'émet pour sa rangée courante).
 // Erreurs : aucune ; hors d'une ListView, la rangée garde sa largeur implicite, n'est jamais courante ni
 // sélectionnée par currentIndex, et se comporte comme si son groupe avait le focus ; avant le chargement des
 // tokens, les cotes sont nulles et les couleurs transparentes. Le clic suppose une Liste : une ListView
 // ordinaire ne déclare pas focusClavier, que le clic écrit.
 // Dépendances : QtQuick.Templates (ItemDelegate), QtQuick.Layouts, propriétés attachées ListView (view,
-// isCurrentItem) et Liste (focusClavier, selectionSuitCourant, selectionSuitSurvol, navigation) ; Theme (density, focus,
+// isCurrentItem) et Liste (focusClavier, selectionSuitCourant, selectionSuitSurvol, navigation) ; Theme (density,
+// focus,
 // radius, space), Etat, Texte, Icone, etats.js (herite).
 // Cotes : hauteur density.rowHeight ; pastille en retrait de space.scale[0] (4) des bords, rayon radius.control ;
 // retrait horizontal du contenu space.scale[2] (12), soit 8 dans la pastille ; écart entre icône et libellé
@@ -53,10 +58,16 @@ T.ItemDelegate {
     property Component accessoire: null
     property Component suffixe: null
     property bool accentue: false
+    property bool pleine: false
+    property color teinteIcone: "transparent"
+    property color teinteTexte: "transparent"
 
     readonly property alias etat: etat
-    readonly property bool gras: accentue || (vue?.navigation ?? false) && etat.selectionne
+    readonly property alias fondIcone: fondIcone
+    readonly property alias fondTexte: fondTexte
+    property bool gras: accentue || (vue?.navigation ?? false) && etat.selectionne
     readonly property alias libelle: libelle
+    readonly property alias glyphe: glyphe
     // Les propriétés attachées se lisent ici, dans la portée de la rangée : lues dans un enfant, elles
     // viseraient cet enfant, qui n'est pas le délégué.
     readonly property ListView vue: ListView.view
@@ -101,6 +112,19 @@ T.ItemDelegate {
         selectionNeutre: rangee.vue?.navigation ?? false
     }
 
+    // Couleurs de l'icône et du libellé : celles de l'état (ou de l'accent autonome pour un libellé accentué), ou
+    // la teinte imposée quand elle n'est pas transparente, en fondu.
+    ColorSpring {
+        id: fondIcone
+        target: rangee.teinteIcone.a > 0 ? rangee.teinteIcone : etat.texte
+    }
+
+    ColorSpring {
+        id: fondTexte
+        target: rangee.teinteTexte.a > 0 ? rangee.teinteTexte
+            : rangee.accentue ? Theme.color?.accentStandalone ?? "transparent" : etat.texte
+    }
+
     // Fond : une pastille de sélection et de survol, premier enfant du fond, en retrait de space.scale[0] de
     // chaque bord de la liste et sur toute la hauteur, au rayon radius.control, comme la sélection d'une barre
     // latérale ou d'un menu de macOS (§ 7.10). Son premier enfant est le contour de focus : sans fond, il suit le
@@ -138,9 +162,11 @@ T.ItemDelegate {
         }
 
         Icone {
+            id: glyphe
             nom: rangee.icone
             taille: Theme.icons?.sizes.dense ?? 0
-            couleur: etat.texte
+            pleine: rangee.pleine
+            couleur: fondIcone.value
             visible: nom !== ""
         }
 
@@ -149,7 +175,7 @@ T.ItemDelegate {
             Layout.fillWidth: true
             text: rangee.text
             moyen: rangee.gras
-            color: rangee.accentue ? Theme.color?.accentStandalone ?? "transparent" : etat.texte
+            color: fondTexte.value
             elide: Text.ElideRight
             verticalAlignment: Text.AlignVCenter
         }

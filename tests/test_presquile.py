@@ -57,7 +57,10 @@ class PresquileStructureTest(unittest.TestCase):
         self.assertEqual(re.findall(r"item:\s*([\w.]+)", masque.group(1)), ["encoche.corps"])
 
     def test_module_et_ressort(self):
-        self.assertRegex(self.surface, r"property Component module:\s*Component\s*\{\s*Bureaux\b")
+        # Le module est arbitré, en lecture seule ; les bureaux sont le défaut de l'arbitre.
+        self.assertRegex(self.surface, r"readonly property Component module:\s*arbitre\.module")
+        arbitre = (ROOT / "coque" / "Presquile" / "Arbitre.qml").read_text(encoding="utf-8")
+        self.assertRegex(arbitre, r"property Component defaut:\s*Component\s*\{\s*Bureaux\b")
         self.assertRegex(self.surface, r"Scene\s*\{[^}]*module:\s*surface\.module")
         scene = (ROOT / "coque" / "Presquile" / "Scene.qml").read_text(encoding="utf-8")
         self.assertEqual(scene.count('transition: "window"'), 2)
@@ -65,10 +68,11 @@ class PresquileStructureTest(unittest.TestCase):
     def test_natures_des_ressorts(self):
         # Les ressorts de taille de la scène et ceux des bureaux déplacent, et le déclarent, pour que le mouvement
         # réduit les pose aussitôt ; seul le ressort d'opacité de la scène est un fondu, qui garde son ressort en
-        # mouvement réduit (lecture du source : la surface ne se charge pas sous offscreen).
+        # mouvement réduit, comme celui du fondu croisé des deux dispositions du Volume (lecture du source : la surface
+        # ne se charge pas sous offscreen).
         attendues = {"Scene.qml": {"largeur": "deplacement", "hauteur": "deplacement", "opacite": "fondu",
                                    "effacement": "fondu"},
-                     "Bureaux.qml": None}
+                     "Bureaux.qml": None, "Volume.qml": {"remplissage": "deplacement", "disposition": "fondu", "jointure": "fondu", "bascule": "deplacement"}}
         for nom, natures in attendues.items():
             texte = re.sub(r"//.*", "", (ROOT / "coque" / "Presquile" / nom).read_text(encoding="utf-8"))
             ressorts = re.findall(r"Ressort\s*\{([^{}]*)\}", texte)
@@ -85,6 +89,26 @@ class PresquileStructureTest(unittest.TestCase):
         # La surface ne déclare plus de ressort : elle lit ceux de sa scène.
         surface = re.sub(r"//.*", "", (ROOT / "coque" / "Presquile" / "Presquile.qml").read_text(encoding="utf-8"))
         self.assertEqual(re.findall(r"Ressort\s*\{", surface), [])
+
+    def test_volume_hauteur_du_gabarit(self):
+        # D132 : le module Volume a la hauteur de la presqu'île, lue du gabarit, comme les bureaux ; seule sa largeur
+        # change, dans la surface fixe.
+        code = re.sub(r"//.*", "", (ROOT / "coque" / "Presquile" / "Volume.qml").read_text(encoding="utf-8"))
+        self.assertIn("readonly property var gabarit: Theme.tokens?.presquile", code)
+        self.assertRegex(code, r"implicitHeight:\s*gabarit\?\.hauteur\s*\?\?\s*0")
+        self.assertRegex(code, r'transition:\s*"reflow"')
+        # Le pourcentage est en texte secondaire (maquette validée) ; sous sourdine, il cède la place à « Coupé » centré.
+        self.assertIn('color: Theme.color?.textSecondary ?? "transparent"', code)
+
+    def test_annonceur_dans_la_coque(self):
+        # L'annonceur est unique, hors du Variants, et chaque presqu'île s'y inscrit et s'en retire.
+        shell = re.sub(r"//[^\n]*", "", (ROOT / "coque" / "shell.qml").read_text(encoding="utf-8"))
+        self.assertRegex(shell, r"\n    Annonceur \{ id: annonceur \}")
+        self.assertIn("annonceur.inscrire(presquile)", shell)
+        self.assertIn("annonceur.retirer(presquile)", shell)
+        qmldir = (ROOT / "coque" / "Presquile" / "qmldir").read_text("utf-8")
+        for ligne in ("Annonceur 1.0 Annonceur.qml", "Volume 1.0 Volume.qml"):
+            self.assertIn(ligne, qmldir)
 
     def test_qmldir_et_coque(self):
         self.assertIn("Presquile 1.0 Presquile.qml", (ROOT / "coque" / "Presquile" / "qmldir").read_text("utf-8"))
@@ -262,6 +286,280 @@ class MontageTest(PresquileIpc, unittest.TestCase):
         scene = (ROOT / "coque" / "Presquile" / "Scene.qml").read_text(encoding="utf-8")
         self.assertIn("largeur.poser(); hauteur.poser()", scene)
         surface = (ROOT / "coque" / "Presquile" / "Presquile.qml").read_text(encoding="utf-8")
+
+
+# Priorités des modules de la presqu'île (galerie 2, volume 1).
+PRIORITE = {"volume": 1, "galerie": 2}
+
+
+class ArbitreTest(PresquileIpc, unittest.TestCase):
+    """Arbitre des modules de la presqu'île (L2-12) : priorités, libération, demandes renouvelées."""
+
+    def etat(self) -> dict:
+        """Module arbitré et nombre de changements. Sortie : {module, changements}. Erreurs : celles de json."""
+        return self.json("arbitreEtat")
+
+    def test_defaut_bureaux(self):
+        self.assertEqual(self.etat()["module"], "bureaux")
+
+    def test_galerie_prioritaire(self):
+        for ordre in (("volume", "galerie"), ("galerie", "volume")):
+            with self.subTest(ordre=ordre):
+                for nom in ordre:
+                    self.appeler("arbitreDemander", nom, nom, PRIORITE[nom])
+                self.assertEqual(self.etat()["module"], "galerie")
+                for cle in ordre:
+                    self.appeler("arbitreLiberer", cle)
+
+    def test_liberation_rend_bureaux(self):
+        self.appeler("arbitreDemander", "galerie", "galerie", 2)
+        self.appeler("arbitreDemander", "volume", "volume", 1)
+        self.appeler("arbitreLiberer", "volume")
+        self.assertEqual(self.etat()["module"], "galerie")
+        self.appeler("arbitreLiberer", "galerie")
+        self.assertEqual(self.etat()["module"], "bureaux")
+
+    def test_volume_rendu_apres_la_galerie(self):
+        self.appeler("arbitreDemander", "volume", "volume", 1)
+        self.appeler("arbitreDemander", "galerie", "galerie", 2)
+        self.appeler("arbitreLiberer", "galerie")
+        self.assertEqual(self.etat()["module"], "volume")
+
+    def test_demande_renouvelee_sans_remontage(self):
+        avant = self.etat()["changements"]
+        self.appeler("arbitreDemander", "volume", "volume", 1)
+        self.appeler("arbitreDemander", "volume", "volume", 1)
+        self.assertEqual(self.etat(), {"module": "volume", "changements": avant + 1})
+
+    def test_egalite_premier_arrive_et_demande_identique(self):
+        # À priorité égale, le premier arrivé l'emporte ; renouveler sa demande à l'identique ne la fait pas passer
+        # après l'autre (sans la garde de demander(), « b » prendrait la place).
+        self.appeler("arbitreDemander", "a", "volume", 1)
+        self.appeler("arbitreDemander", "b", "galerie", 1)
+        self.assertEqual(self.etat()["module"], "volume")
+        self.appeler("arbitreDemander", "a", "volume", 1)
+        self.assertEqual(self.etat()["module"], "volume")
+
+    def test_demande_modifiee_passe_la_derniere(self):
+        self.appeler("arbitreDemander", "a", "volume", 2)
+        self.appeler("arbitreDemander", "b", "galerie", 1)
+        self.assertEqual(self.etat()["module"], "volume")
+        self.appeler("arbitreDemander", "a", "volume", 1)
+        self.assertEqual(self.etat()["module"], "galerie")
+
+    def test_priorite_changee_au_renouvellement(self):
+        self.appeler("arbitreDemander", "a", "volume", 1)
+        self.appeler("arbitreDemander", "b", "galerie", 2)
+        self.assertEqual(self.etat()["module"], "galerie")
+        self.appeler("arbitreDemander", "a", "volume", 3)
+        self.assertEqual(self.etat()["module"], "volume")
+
+    def test_liberation_inconnue_sans_effet(self):
+        avant = self.etat()
+        self.appeler("arbitreLiberer", "absent")
+        self.assertEqual(self.etat(), avant)
+
+
+class AnnonceurTest(PresquileIpc, unittest.TestCase):
+    """Annonceur de la jauge du son (L2-12) : une rafale d'annonces ne monte le module qu'une fois et ne le libère
+    qu'une fois, après le délai de retour (motion.delays.dismiss, 1500 ms) compté depuis la dernière annonce."""
+
+    def etat(self) -> dict:
+        """État de l'annonceur d'essai. Sortie : {module, changements, liberations, cible}. Erreurs : celles de json."""
+        return self.json("annonceurEtat")
+
+    def test_rafale_une_seule_demande(self):
+        avant = self.etat()["changements"]
+        self.appeler("annonceurRafale", 10, 20)
+        time.sleep(1.2)
+        # Dernière annonce vers 180 ms : à 1,2 s, le délai court encore, et le module n'a été monté qu'une fois.
+        self.assertEqual(self.etat(), {"module": "volume", "changements": avant + 1, "liberations": 0, "cible": True})
+        time.sleep(1.0)
+        self.assertEqual(self.etat(), {"module": "bureaux", "changements": avant + 2, "liberations": 1, "cible": False})
+
+    def test_plein_ecran_rien(self):
+        avant = self.etat()
+        self.appeler("annonceurPleinEcran", True)
+        self.appeler("annonceurRafale", 1, 0)
+        self.assertEqual(self.etat(), avant)
+
+
+class VolumeTest(PresquileIpc, unittest.TestCase):
+    """Module Volume dans une scène sans fenêtre : le remplissage ne déborde jamais du corps de l'encoche, ni au
+    montage, ni quand le module s'élargit (240 → 320 pour un nom d'appareil long) pendant que la forme s'étire."""
+
+    def attendre_repos(self) -> dict:
+        """Attend que la scène et le remplissage soient immobiles. Sortie : l'état. Erreurs : échec après DELAI."""
+        fin = time.monotonic() + DELAI
+        while time.monotonic() < fin:
+            etat = self.json("volumeEtat")
+            if etat["phase"] == "repos" and not etat["mobile"]:
+                return etat
+            time.sleep(0.1)
+        self.fail(f"scène du Volume jamais au repos : {etat}")
+
+    def test_remplissage_borne_au_corps(self):
+        self.appeler("volumeAnnoncer", "micro", "Micro actif")
+        etat = self.attendre_repos()
+        self.assertEqual((etat["largeurScene"], etat["largeurModule"]), (240, 240))
+        self.appeler("volumeAnnoncer", "sortie", "Un appareil au nom assez long pour élargir la jauge au maximum")
+        etat = self.attendre_repos()
+        self.assertEqual((etat["largeurScene"], etat["largeurModule"]), (320, 320), etat)
+        self.assertLessEqual(etat["depassement"], 0.5)
+
+    def test_jointures_teintees(self):
+        # Le remplissage couvre l'évasement gauche dès que le niveau est non nul, et l'évasement droit seulement
+        # quand il atteint le bord droit : il épouse la silhouette entière de l'encoche, sans en déborder.
+        self.appeler("volumeNiveau", 50)
+        self.appeler("volumeAnnoncer", "volume", "")
+        etat = self.attendre_repos()
+        e = etat["evasement"]
+        self.assertGreater(e, 0)
+        self.assertEqual((etat["gauche"], etat["droite"]), (-e, 120), etat)
+        self.appeler("volumeAnnoncer", "micro", "Micro actif")
+        etat = self.attendre_repos()
+        self.assertEqual((etat["gauche"], etat["droite"]), (-e, 240 + e), etat)
+        self.appeler("volumeNiveau", 99)
+        self.appeler("volumeAnnoncer", "volume", "")
+        etat = self.attendre_repos()
+        self.assertAlmostEqual(etat["droite"], 237.6, delta=0.5, msg=etat)
+        self.appeler("volumeNiveau", 100)
+        etat = self.attendre_repos()
+        self.assertEqual((etat["gauche"], etat["droite"]), (-e, 240 + e), etat)
+        self.appeler("volumeNiveau", 0)
+        etat = self.attendre_repos()
+        self.assertEqual(etat["droite"], etat["gauche"], etat)
+        self.assertLessEqual(etat["depassement"], 0.5)
+
+    def attendre_fondu(self, cle: str) -> tuple:
+        """Attend qu'une disposition du module soit pleinement montrée, en relevant si elle est passée par une
+        opacité intermédiaire. Entrée : cle, « opaciteCote » ou « opaciteCentre ». Sortie : (état final, vrai si une
+        valeur strictement entre 0 et 1 a été vue). Erreurs : échec après DELAI."""
+        fin, fondu = time.monotonic() + DELAI, False
+        while time.monotonic() < fin:
+            etat = self.json("volumeEtat")
+            fondu = fondu or 0 < etat[cle] < 1
+            if etat[cle] == 1 and not etat["mobile"]:
+                return etat, fondu
+            time.sleep(0.01)
+        self.fail(f"disposition jamais montrée : {etat}")
+
+    def test_son_coupe_centre(self):
+        # Coupé, le genre « volume » prend la disposition du micro : icône barrée et « Coupé » centrés, en error ; le
+        # remplissage reste au niveau, en text-disabled. Rétabli, l'icône revient à gauche et le pourcentage à droite.
+        # Les deux passages se font en fondu.
+        couleurs = {k: v.lower() for k, v in self.vue(55)["color"].items() if isinstance(v, str)}
+        self.appeler("volumeNiveau", 50)
+        self.appeler("volumeAnnoncer", "volume", "")
+        etat = self.attendre_repos()
+        self.assertEqual((etat["opaciteCote"], etat["opaciteCentre"]), (1, 0), etat)
+        self.appeler("volumeSourdine", True)
+        etat, fondu = self.attendre_fondu("opaciteCentre")
+        self.assertTrue(fondu, "passage sans fondu")
+        self.assertEqual((etat["opaciteCote"], etat["symbole"], etat["texte"], etat["cible"]),
+                         (0, "audio-volume-muted", "Coupé", 0.5), etat)
+        self.assertEqual((etat["fond"].lower(), etat["encre"].lower()),
+                         (couleurs["textDisabled"], couleurs["error"]), etat)
+        self.appeler("volumeSourdine", False)
+        etat, fondu = self.attendre_fondu("opaciteCote")
+        self.assertTrue(fondu, "retour sans fondu")
+        self.assertEqual((etat["opaciteCentre"], etat["cible"]), (0, 0.5), etat)
+
+    def test_son_actif_au_retablissement(self):
+        # Une annonce « son » (bascule de la sourdine) rétablie centre l'icône du niveau et « Son actif », en
+        # sur-accent, sur le remplissage d'accent au niveau ; coupée, elle centre « Coupé » comme avant.
+        couleurs = {k: v.lower() for k, v in self.vue(55)["color"].items() if isinstance(v, str)}
+        self.appeler("volumeNiveau", 50)
+        self.appeler("volumeAnnoncer", "son", "")
+        self.appeler("volumeSourdine", True)
+        etat = self.attendre_repos()
+        self.assertEqual((etat["symbole"], etat["texte"]), ("audio-volume-muted", "Coupé"), etat)
+        self.assertAlmostEqual(etat["yActif"] - etat["yCentre"], -etat["hauteur"], delta=2, msg=etat)
+        self.appeler("volumeSourdine", False)
+        # Le rétablissement fait rouler les couches vers le haut : « Coupé » sort, « Son actif » monte du bas.
+        vus, fin = set(), time.monotonic() + DELAI
+        while time.monotonic() < fin:
+            etat = self.json("volumeEtat")
+            vus.add(round(etat["yActif"]))
+            if not etat["mobile"]:
+                break
+            time.sleep(0.01)
+        self.assertGreater(len(vus), 3, f"bascule sans glissement : {vus}")
+        self.assertAlmostEqual(etat["yCentre"] - etat["yActif"], -etat["hauteur"], delta=2, msg=etat)
+        self.assertEqual((etat["opaciteCote"], etat["opaciteCentre"], etat["opaciteActif"], etat["cible"]),
+                         (0, 1, 1, 0.5), etat)
+        self.assertEqual((etat["symboleActif"], etat["texteActif"]), ("audio-volume-medium", "Son actif"), etat)
+        self.assertEqual((etat["fond"].lower(), etat["encre"].lower()), (couleurs["accent"], couleurs["onAccent"]), etat)
+
+    def test_son_coupe_glisse_vers_le_haut(self):
+        # La sourdine fait aussi rouler les couches vers le haut : « Son actif » sort par le haut (jamais par le bas) et
+        # « Coupé » monte du bas, quel que soit l'ordre d'évaluation des liaisons du compteur.
+        self.appeler("volumeNiveau", 50)
+        self.appeler("volumeAnnoncer", "son", "")
+        etat = self.attendre_repos()
+        self.appeler("volumeSourdine", True)
+        vus, fin = [], time.monotonic() + DELAI
+        while time.monotonic() < fin:
+            etat = self.json("volumeEtat")
+            vus.append(round(etat["yActif"]))
+            if not etat["mobile"]:
+                break
+            time.sleep(0.01)
+        self.assertGreater(len(set(vus)), 3, f"sourdine sans glissement : {vus}")
+        self.assertLess(max(vus), etat["hauteur"] / 4, f"« Son actif » est sorti par le bas : {vus}")
+        self.assertAlmostEqual(etat["yActif"] - etat["yCentre"], -etat["hauteur"], delta=2, msg=etat)
+
+    def test_micro_glisse(self):
+        # Le micro roule comme le son quand sa bascule arrive module monté : « Micro coupé » sort par le haut et « Micro
+        # actif » monte du bas. Monté frais sur une annonce de micro, rien ne glisse.
+        self.appeler("volumeAnnoncer", "micro", "")
+        etat = self.attendre_repos()
+        self.assertEqual(etat["texteActif"], "Micro actif", etat)
+        self.assertAlmostEqual(etat["yCentre"] - etat["yActif"], -etat["hauteur"], delta=2, msg=etat)
+        self.appeler("volumeMicro", True)
+        vus, fin = set(), time.monotonic() + DELAI
+        while time.monotonic() < fin:
+            etat = self.json("volumeEtat")
+            vus.add(round(etat["yActif"]))
+            if not etat["mobile"]:
+                break
+            time.sleep(0.01)
+        self.assertGreater(len(vus), 3, f"micro sans glissement : {vus}")
+        self.assertAlmostEqual(etat["yActif"] - etat["yCentre"], -etat["hauteur"], delta=2, msg=etat)
+
+    def test_niveau_apres_le_retablissement(self):
+        # Un changement de niveau (annonce « volume ») rétabli rend la jauge ordinaire ; coupé, il garde « Coupé »
+        # centré, le remplissage suivant le niveau.
+        self.appeler("volumeNiveau", 50)
+        self.appeler("volumeAnnoncer", "son", "")
+        self.appeler("volumeSourdine", False)
+        self.attendre_repos()
+        self.appeler("volumeAnnoncer", "volume", "")
+        etat, _ = self.attendre_fondu("opaciteCote")
+        self.assertEqual((etat["opaciteCote"], etat["opaciteCentre"]), (1, 0), etat)
+        self.appeler("volumeSourdine", True)
+        self.appeler("volumeNiveau", 80)
+        etat, _ = self.attendre_fondu("opaciteCentre")
+        self.assertEqual((etat["opaciteCote"], etat["opaciteCentre"], etat["texte"], etat["cible"]),
+                         (0, 1, "Coupé", 0.8), etat)
+
+
+class EtatAudioPopoverTest(PresquileIpc, unittest.TestCase):
+    """Popovers audio ouverts, comptés par EtatAudio sous la clé de chaque indicateur (L2-12) : la presqu'île reste
+    muette tant qu'au moins un est ouvert, quel que soit l'écran, et une fermeture répétée ne compte qu'une fois."""
+
+    def test_compte_par_proprietaire(self):
+        self.assertEqual(self.appeler("audioPopover"), "false")
+        self.appeler("audioTenir", "barre1", True)
+        self.appeler("audioTenir", "barre2", True)
+        self.appeler("audioTenir", "barre1", False)
+        self.assertEqual(self.appeler("audioPopover"), "true")
+        # Une barre détruite referme son popover une seconde fois : sans effet sur le compte.
+        self.appeler("audioTenir", "barre1", False)
+        self.appeler("audioTenir", "barre2", True)
+        self.assertEqual(self.appeler("audioPopover"), "true")
+        self.appeler("audioTenir", "barre2", False)
+        self.assertEqual(self.appeler("audioPopover"), "false")
 
 
 # Module factice « grand » de la coque d'essai, et module des bureaux d'essai (4 bureaux, presqu'île de 28).

@@ -83,3 +83,14 @@ graisse = "bold"
 "input-gaming" = "game-controller"
 "phone" = "device-mobile"
 "computer" = "desktop"
+
+# Volume et micro de la barre et de la presqu'île (L2-12), d'après icones.js (iconeAudio, iconeMicro) et audio.js.
+[audio]
+"audio-volume-muted" = "speaker-x"
+"audio-volume-low" = "speaker-none"
+"audio-volume-medium" = "speaker-low"
+"audio-volume-high" = "speaker-high"
+"microphone-sensitivity-muted" = "microphone-slash"
+"microphone-sensitivity-high" = "microphone"
+"audio-headset" = "headset"
+"audio-input-microphone" = "laptop"
