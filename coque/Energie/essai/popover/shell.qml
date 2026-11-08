@@ -28,6 +28,7 @@ ShellRoot {
         id: faux
         property int pourcent: 76
         property string estimation: "7 h 40 restantes"
+        property int seuilFaible: 20
         property int profil: 1
         property bool aPerformance: true
         property bool aProfils: true
@@ -123,7 +124,7 @@ ShellRoot {
                     s.incrementCurrentIndex()
                 }
                 // poser — change une valeur de l'état factice, comme un autre client. Entrées : cle, « pourcent »,
-                // « estimation », « profil », « aPerformance », « aProfils » ou « refuse » ; valeur, en JSON.
+                // « seuilFaible », « estimation », « profil », « aPerformance », « aProfils » ou « refuse » ; valeur, en JSON.
                 // Sortie : aucune.
                 function poser(cle: string, valeur: string): void { faux[cle] = JSON.parse(valeur) }
             }

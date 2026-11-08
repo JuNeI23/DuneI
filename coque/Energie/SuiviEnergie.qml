@@ -61,7 +61,7 @@ Scope {
         : appareil.state === UPowerDeviceState.FullyCharged ? "chargee" : "secteur"
     readonly property bool surBatterie: etat === "decharge"
     readonly property string estimation: Energie.texteEstimation(etat,
-        etat === "charge" ? appareil.timeToFull : appareil?.timeToEmpty ?? 0)
+        etat === "charge" ? appareil.timeToFull : appareil?.timeToEmpty ?? 0, pourcent)
     readonly property int profil: profils?.profile ?? 1
     readonly property bool aPerformance: profils?.hasPerformanceProfile ?? false
     readonly property bool aProfils: demonProfils && !!profils

@@ -13,12 +13,14 @@ function duree(minutes) {
 }
 
 // texteEstimation — texte d'état de la batterie affiché dans le popover.
-// Entrées : etat, « decharge », « charge », « chargee » ou « secteur » ; secondes, estimation d'UPower (0 si elle
-// n'est pas encore connue). Sortie : « 7 h 40 restantes », « Plein dans 1 h 10 », « Chargée », « Sur secteur », ou
-// « Estimation en cours… » quand la durée arrondie vaut moins d'une minute (jamais « 0 min »). Erreurs : aucune ;
-// un état inconnu rend la chaîne vide. Dépendances : duree.
-function texteEstimation(etat, secondes) {
-    if (etat === "chargee") return "Chargée"
+// Entrées : etat, « decharge », « charge », « chargee » ou « secteur » ; secondes, estimation d'UPower (0 ou négative si
+// elle n'est pas encore connue) ; pourcent, niveau entier de la batterie. Sortie : « 7 h 40 restantes », « Plein dans
+// 1 h 10 », « Pleine charge » (état « chargee », ou « charge » à 100 %, ou « charge » avec une estimation positive de
+// moins d'une minute : UPower garde « charging » à 100 %), « Sur secteur », ou « Estimation en cours… » quand la durée
+// arrondie vaut moins d'une minute (jamais « 0 min »). Erreurs : aucune ; un état inconnu rend la chaîne vide.
+// Dépendances : duree.
+function texteEstimation(etat, secondes, pourcent) {
+    if (etat === "chargee" || (etat === "charge" && (pourcent >= 100 || (secondes > 0 && secondes < 60)))) return "Pleine charge"
     if (etat === "secteur") return "Sur secteur"
     if (etat !== "decharge" && etat !== "charge") return ""
     const minutes = Math.round(secondes / 60)

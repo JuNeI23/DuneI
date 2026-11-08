@@ -55,31 +55,40 @@ class EnergieJsTest(EssaiCoque, unittest.TestCase):
         return sortie if sortie.startswith("erreur") else json.loads(sortie)
 
     def test_estimation_decharge(self):
-        self.assertEqual(self.appeler("texteEstimation", "decharge", 27600), "7 h 40 restantes")
-        self.assertEqual(self.appeler("texteEstimation", "decharge", 2100), "35 min restantes")
-        self.assertEqual(self.appeler("texteEstimation", "decharge", 3600), "1 h 00 restantes")
+        self.assertEqual(self.appeler("texteEstimation", "decharge", 27600, 50), "7 h 40 restantes")
+        self.assertEqual(self.appeler("texteEstimation", "decharge", 2100, 50), "35 min restantes")
+        self.assertEqual(self.appeler("texteEstimation", "decharge", 3600, 50), "1 h 00 restantes")
 
     def test_estimation_arrondie_a_la_minute(self):
-        self.assertEqual(self.appeler("texteEstimation", "decharge", 2129), "35 min restantes")
-        self.assertEqual(self.appeler("texteEstimation", "decharge", 2131), "36 min restantes")
+        self.assertEqual(self.appeler("texteEstimation", "decharge", 2129, 50), "35 min restantes")
+        self.assertEqual(self.appeler("texteEstimation", "decharge", 2131, 50), "36 min restantes")
 
     def test_estimation_charge(self):
-        self.assertEqual(self.appeler("texteEstimation", "charge", 4200), "Plein dans 1 h 10")
-        self.assertEqual(self.appeler("texteEstimation", "charge", 600), "Plein dans 10 min")
+        self.assertEqual(self.appeler("texteEstimation", "charge", 4200, 50), "Plein dans 1 h 10")
+        self.assertEqual(self.appeler("texteEstimation", "charge", 600, 50), "Plein dans 10 min")
 
     def test_estimation_nulle_jamais_zero_minute(self):
-        self.assertEqual(self.appeler("texteEstimation", "charge", 0), "Estimation en cours…")
-        self.assertEqual(self.appeler("texteEstimation", "decharge", 0), "Estimation en cours…")
-        self.assertEqual(self.appeler("texteEstimation", "decharge", 10), "Estimation en cours…")
+        self.assertEqual(self.appeler("texteEstimation", "charge", 0, 50), "Estimation en cours…")
+        self.assertEqual(self.appeler("texteEstimation", "decharge", 0, 50), "Estimation en cours…")
+        self.assertEqual(self.appeler("texteEstimation", "decharge", 10, 50), "Estimation en cours…")
 
     def test_estimation_negative_jamais_zero_minute(self):
         # UPower.displayDevice rend un timeToFull négatif en charge (mesuré : -13555).
-        self.assertEqual(self.appeler("texteEstimation", "charge", -13555), "Estimation en cours…")
-        self.assertEqual(self.appeler("texteEstimation", "decharge", -1), "Estimation en cours…")
+        self.assertEqual(self.appeler("texteEstimation", "charge", -13555, 50), "Estimation en cours…")
+        self.assertEqual(self.appeler("texteEstimation", "decharge", -1, 50), "Estimation en cours…")
+
+    def test_estimation_pleine_charge(self):
+        # UPower garde « charging » à 100 % (mesuré : 7 s restantes) ; moins d'une minute positive vaut aussi plein.
+        self.assertEqual(self.appeler("texteEstimation", "charge", 7, 100), "Pleine charge")
+        self.assertEqual(self.appeler("texteEstimation", "charge", 0, 100), "Pleine charge")
+        self.assertEqual(self.appeler("texteEstimation", "charge", 30, 99), "Pleine charge")
+        self.assertEqual(self.appeler("texteEstimation", "charge", 0, 50), "Estimation en cours…")
+        self.assertEqual(self.appeler("texteEstimation", "charge", -13555, 100), "Pleine charge")
+        self.assertEqual(self.appeler("texteEstimation", "decharge", 20, 99), "Estimation en cours…")
 
     def test_estimation_etats_sans_duree(self):
-        self.assertEqual(self.appeler("texteEstimation", "chargee", 0), "Chargée")
-        self.assertEqual(self.appeler("texteEstimation", "secteur", 0), "Sur secteur")
+        self.assertEqual(self.appeler("texteEstimation", "chargee", 0, 100), "Pleine charge")
+        self.assertEqual(self.appeler("texteEstimation", "secteur", 0, 50), "Sur secteur")
 
     def test_palier(self):
         self.assertEqual(self.appeler("palier", False, True, 0, 20, 5), 0)
@@ -328,6 +337,19 @@ class PopoverEnergieTest(EssaiCoque, unittest.TestCase):
         self.assertEqual((p["segments"], p["coche"]), (["Économie", "Équilibré", "Performance"], 1))
         self.assertFalse(p["disque"])
         self.assertTrue(p["exclusif"] and p["fermeAuDepart"])
+
+    def test_estimation_en_erreur_au_seuil_faible(self):
+        # Le seuil vient de l'état (energie.toml), non du popover : 20 % est au seuil, 21 % au-dessus.
+        c = {k: v.lower() for k, v in self.vue(55)["color"].items() if isinstance(v, str)}
+        self.ouvrir()
+        for pourcent, role in ((20, "error"), (21, "textSecondary"), (5, "error"), (76, "textSecondary")):
+            self.ipc("poser", "pourcent", str(pourcent))
+            p = self.attendre_panneau(lambda p: p.get("pourcent") == f"{pourcent} %")
+            self.assertEqual(p["couleurEstimation"].lower(), c[role], f"{pourcent} %")
+        self.ipc("poser", "seuilFaible", "30")
+        self.ipc("poser", "pourcent", "25")
+        p = self.attendre_panneau(lambda p: p.get("pourcent") == "25 %")
+        self.assertEqual(p["couleurEstimation"].lower(), c["error"])
 
     def test_estimation_sur_la_ligne_du_pourcentage(self):
         p = self.ouvrir()
