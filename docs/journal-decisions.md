@@ -3325,3 +3325,161 @@ nuit : leur verre est validé tel quel, ce qui tranche la question que D103 lais
 
 *Touché : `tokens.toml`, émetteurs Quickshell et Hyprland, `Encoche.qml`, bible (chapitre 5), backlog (L2-61).*
 
+### D138 · L'état audio se lit dans le module PipeWire de Quickshell, jamais par `wpctl` ni par sondage
+
+2026-11-08, décision d'architecture de L2-12, éprouvée au repérage de la tâche 1. **Le singleton `EtatAudio` lit et pilote
+PipeWire par `Quickshell.Services.Pipewire` : sortie et entrée par défaut, volume, sourdine, listes de nœuds. `wpctl` ne
+sert plus qu'aux touches F1 à F4 du compositeur (`raccourcis.lua`), que le module voit passer, les touches ne prévenant pas la
+coque. Aucun sondage de `wpctl` ni de `pw-dump`.**
+
+- **Raison.** Le module notifie un `wpctl set-volume` en environ 18 ms, par `volumesChanged` et `mutedChanged` : un
+  sondage n'apporterait que du retard et de la charge. La lecture passe aussi par un `PwObjectTracker` sur la sortie et
+  l'entrée par défaut, sans lequel volume et sourdine valent 0.
+- **`preferredDefaultAudioSink` est éprouvé.** Écrit, il change `defaultAudioSink` en 3 ms, à l'aller comme au retour,
+  sans passer par `null` ; aucun repli par `wpctl set-default` n'est donc nécessaire pour la sortie. Pour l'entrée, le
+  micro de la prise (nœud 53, prise vide) figure dans PipeWire mais ne devient défaut ni par `preferredDefaultAudioSource`
+  ni par `wpctl` : voir D144 pour la liste.
+- **Défaut nul.** Les deux défauts peuvent valoir `null` un instant pendant un changement. Une mémoire du dernier volume
+  et de la dernière sourdine, tenue par un `Binding { when: ready; restoreMode: RestoreNone }`, évite que la barre, le
+  popover et la presqu'île ne clignotent à zéro pendant ce trou.
+- **Bornes.** Le volume est ramené à 0–100 et arrondi à l'entier ; une valeur non numérique vaut 0 (PipeWire rend des
+  flottants comme 0,7499847, et `wpctl` peut dépasser 1 par une autre voie).
+
+*Touché : `coque/Audio/EtatAudio.qml`, `audio.js`, spec du 2026-11-08, plan du 2026-11-08.*
+
+### D139 · La presqu'île devient une jauge : forme, ressort, jointures et glissements
+
+2026-11-08, décision de Nicolas aux maquettes (variante D) puis à la recette 1 de L2-12. **À chaque changement de volume,
+la presqu'île s'élargit à 240 px et se remplit d'accent de gauche à droite : l'icône du seuil à gauche, le pourcentage à
+droite, le tout posé sur le remplissage. La surface ne change pas de taille (D132) ; seule la forme dessinée s'étire.**
+
+- **Fluidité.** Le remplissage suit la valeur par un ressort « reflow » de nature « deplacement », relancé à chaque
+  changement, jamais par paliers de 5 ; les ressorts sont suramortis, donc le remplissage ne dépasse jamais le corps.
+  Il suit `scene.width` image par image et découpe la silhouette réelle, par `encoche.js`, tracé partagé avec l'encoche
+  pour n'en dupliquer aucune courbe.
+- **Jointures (recette 1).** Le remplissage couvre aussi les évasements de l'encoche, sans en déborder : le gauche est
+  teint dès 1 %, le droit seulement à 100 % ou à la pleine largeur, par un fondu d'opacité de nature « state ». Le premier
+  essai teignait le droit progressivement sur sa dernière largeur ; Nicolas l'a jugé moins net que l'apparition d'un seul
+  coup à 100 %.
+- **Pourcentage en `text-secondary`.** La maquette approuvée l'écrit ainsi ; l'encre sur accent (`onAccent`) devenait
+  illisible de jour dès que le chiffre tombait hors du remplissage, sur le verre à 82 % (D137).
+- **Glissement vertical (recette 1).** Entre « Coupé » et « Son actif », et entre « Micro coupé » et « Micro actif », le
+  module déjà affiché fait monter l'ancien contenu et arriver le nouveau par le bas, rogné au corps, au ressort
+  « navigate » (D130). Il remplace le fondu croisé de la version 0.5 de la spec, qui laissait deux textes superposés un
+  instant. Un changement de famille (jauge ordinaire vers message centré) se cale sans glisser. En mouvement réduit,
+  tout se pose sans glisser ni fondre.
+- **Hauteur.** Le module mesure `presquile.hauteur` (28 px), comme `Bureaux.qml`. Sa largeur peut atteindre 320 px pour
+  un nom d'appareil, au-delà duquel le nom est tronqué.
+
+*Touché : `Volume.qml`, `Encoche.qml`, `Scene.qml`, `encoche.js`, spec (version 0.6).*
+
+### D140 · Le son ne se rétablit que par F1 ou par l'icône de la jauge ; le message « Son actif » devient un genre à part
+
+2026-11-08, décision de Nicolas au cadrage puis à la recette 1 de L2-12. **Seuls F1 et un clic sur l'icône de la jauge du
+popover rétablissent une sortie coupée. F2 et F3 changent le niveau d'une sortie coupée sans la rétablir, et glisser dans
+la jauge du popover non plus. La coupure et le rétablissement sont annoncés par le genre « son » de `annonce`, avec
+« Coupé » centré sur gris, puis « Son actif » centré sur accent.**
+
+- **Raison.** `wpctl set-volume` laisse lui-même une sortie coupée en sourdine : DuneI n'a pas de code à écrire pour les
+  touches, et n'ajoute aucune voie de rétablissement discrète (anti-objectif). Un son que l'on croit coupé ne doit pas se
+  rallumer en glissant une jauge.
+- **Genre « son ».** Il ne figurait pas dans l'interface prévue au plan (tâche 2), qui annonçait le micro, les sorties et
+  les entrées. Un changement de niveau pendant un état rétabli rend la jauge ordinaire ; pendant un état coupé, il garde
+  « Coupé » centré, le remplissage suivant le niveau en gris.
+- **Rétablissement de WirePlumber.** Quand WirePlumber rétablit lui-même le volume ou la sourdine d'une nouvelle sortie,
+  c'est la garde de liaison de D141 qui l'écarte ; « Son actif » ne répond donc qu'à un geste de Nicolas.
+- **Textes.** `annonce.texte` porte les libellés de ces genres à titre descriptif ; `Volume.qml` écrit ses propres
+  littéraux, à unifier un jour (mineur noté à la revue finale).
+
+*Touché : `audio.js`, `EtatAudio.qml`, `Volume.qml`, spec (décision 4).*
+
+### D141 · Toute source de changement ouvre la presqu'île, avec une garde de liaison et le silence du popover
+
+2026-11-08, décision de Nicolas au cadrage de L2-12. **La presqu'île s'ouvre pour tout changement de volume ou de
+sourdine de la sortie par défaut, et de sourdine de l'entrée par défaut, quelle qu'en soit la source : touches, boutons du
+Bose NC 700, application. Le déclenchement se lit dans `volumesChanged` et `mutedChanged`, sans exception pour les
+touches.**
+
+- **Garde de liaison.** Pendant une seconde après un démarrage de la coque, une liaison du tracker, un changement de
+  sortie ou d'entrée par défaut, une reconnexion ou un réveil, les signaux sont ignorés ; ils viennent de PipeWire ou de
+  WirePlumber, pas d'un geste. La seconde est un choix de conception, à ajuster à l'essai. La revue finale a relevé que la
+  garde de réveil repose sur un passage de `ready` à vrai : si WirePlumber réémet un volume au réveil sans délier le
+  nœud, une annonce pourrait partir. Cet essai de veille reste à faire (recette de l'audio).
+- **Popover ouvert, presqu'île muette.** Le popover montre déjà le niveau. Le blocage couvre aussi les annonces de
+  sortie et de micro. `EtatAudio` ne tient plus un drapeau que chaque barre écraserait : il compte les indicateurs dont le
+  popover est ouvert (`tenirPopover`, ensemble `proprietaires`), et une barre détruite popover ouvert y retire le sien.
+  C'est la correction du défaut de multi-écran relevé à la tâche 8.
+- **Résolution d'une contradiction de la spec.** L'anti-objectif « presqu'île qui s'ouvre au changement de sortie »
+  contredisait la décision 13 (le changement de sortie l'ouvre). La décision 13 l'emporte ; l'anti-objectif ne vise plus
+  que le démarrage, le réveil et le rétablissement du volume par WirePlumber.
+- **Annonceur.** Il file les demandes vers la presqu'île de l'écran actif ; le transfert vers un nouvel écran actif se fait
+  à l'annonce suivante, sans gestionnaire sur `ecranActif`. Comportement accepté.
+
+*Touché : `EtatAudio.qml`, `Annonceur.qml`, `Barre/Audio.qml`, `PopoverAudio.qml`, spec (décisions 11 et 12).*
+
+### D142 · Les changements de sortie et de micro s'annoncent par comparaison au dernier nœud non nul, avec une fusion de 150 ms
+
+2026-11-08, décision de Nicolas au cadrage de L2-12, calée sur les mesures de la tâche 1 (Bose allumé puis éteint).
+**Quand la sortie par défaut change d'elle-même, la presqu'île annonce le nouvel appareil (icône pleine, nom, fond
+accent, remplissage glissant jusqu'à la pleine largeur). Il en va de même du micro. Sortie et entrée qui basculent vers le
+même appareil ne font qu'une annonce, celle de la sortie.**
+
+- **Comparer au dernier nœud non nul.** La séquence mesurée à l'extinction du Bose est : sortie et entrée à `null` au même
+  instant, l'entrée revenant (même micro) 6 ms avant que la sortie passe aux haut-parleurs, puis `volumesChanged` dans la
+  même milliseconde. Comparer au précédent nœud brut annoncerait un micro parasite. On compare donc, par identifiant, au
+  dernier nœud non nul connu : un retour au même nœud après un `null` n'annonce rien. Le premier défaut connu au démarrage
+  ne compte pas comme un changement.
+- **Fusion symétrique.** L'entrée arrivant avant la sortie, son annonce est retenue 150 ms (`attenteEntree`) et annulée si
+  une annonce de sortie survient dans l'intervalle ou vient de passer dans la seconde précédente. Coût : 150 ms de
+  retard pour un changement de micro seul (casque filaire branché). Le rallumage du Bose n'avait pas été mesuré ; le
+  supposé symétrique a été validé à l'écran par Nicolas.
+- **Résultat à l'extinction.** Exactement une annonce « Haut-parleurs », sans annonce de micro ni volume rétabli.
+- **Bascule à la connexion du Bose.** Elle reste à WirePlumber, qui rejoue le défaut configuré mémorisé ; DuneI n'écrit rien
+  à la connexion. Nicolas l'a validée à la recette 1.
+
+*Touché : `EtatAudio.qml`, `audio.js` (`fusionner`, `annonce`), spec (décisions 13 et 14).*
+
+### D143 · Un arbitre tranche les demandes de modules de la presqu'île : galerie, puis volume, puis bureaux
+
+2026-11-08, décision d'architecture de L2-12. **`Presquile.qml` n'a qu'une propriété `module` ; un arbitre par presqu'île
+reçoit les demandes avec une priorité (galerie 2, volume 1, bureaux 0), ignore une demande identique à la courante, et
+rend le suivant à la libération. La galerie ouverte n'est jamais remplacée par le volume ; à sa fermeture, elle rend les
+bureaux, jamais un volume périmé.**
+
+- **Extrait en `Arbitre.qml`.** L'arbitre est un `QtObject` à part, et `Presquile` relaie `demander` et `liberer`. Le corps
+  de `Presquile.qml` ne pouvait pas l'accueillir : un `PanelWindow` ne se charge pas hors d'un écran, et les tests de
+  l'arbitre passent par un IPC sans fenêtre. Coût : un fichier de plus.
+- **L'Ouvreuse** (galerie) perd sa propriété `_avant`, qui retenait le module d'avant pour le rendre et pouvait servir un
+  module périmé.
+- **Contrat de scène.** `Scene.contenuVisible` indique au module qu'il est visible, et chaque module reçoit la scène par
+  `property Item scene`.
+
+*Touché : `Arbitre.qml`, `Presquile.qml`, `Scene.qml`, `Galerie/Ouvreuse.qml`, plan du 2026-11-08.*
+
+### D144 · La jauge a une icône cliquable, la rangée active n'a pas de coche, les listes ne sont pas filtrées, le popover a un `disque`
+
+2026-11-08, décisions de Nicolas au cadrage de L2-12 et rulings d'exécution. **Composants (bible, chapitre 7) : `Jauge`
+gagne un signal `iconeCliquee()` et un état `coupe` (remplissage gris, icône rouge, en fondu) ; `Rangee` marque l'appareil
+actif sans coche, par l'icône en graisse pleine et en accent autonome, le nom en gras et en `text-emphasis`.**
+
+- **Jauge.** Un clic sur l'icône émet `iconeCliquee()` et ne déplace pas la valeur ; ailleurs, clic et glisser restent ceux
+  de `T.Slider`. Le pas de la jauge du popover est le centième. La zone cliquable est active dès qu'une icône existe, même
+  pour une jauge qui ne pilote aucune sourdine (planche de luminosité) : une propriété `iconeCliquable` l'évitera lorsque la
+  luminosité viendra.
+- **Rangée.** Les couleurs d'icône et de libellé passent désormais par `ColorSpring` pour toutes les rangées (réseau,
+  déroulant, planche) : le survol fond au lieu de basculer. Effet de bord accepté, à confirmer d'un coup d'œil dans le
+  popover réseau.
+- **Listes sans filtre de disponibilité.** Les sorties (`audio && isSink && !isStream`) et les entrées sont listées telles
+  quelles. Le micro de la prise vide reste visible mais inopérant, aucune propriété connue ne permettant de le
+  distinguer. Coût : une ligne morte au popover.
+- **Contrat `disque`.** `CadrePopovers` accepte un popover sans bascule ronde (`disque: false`). Le popover Son n'a pas de
+  rond dans l'en-tête ; sans ce contrat, l'hôte retenait le disque du popover Réseau ou Bluetooth qu'il remplaçait, et
+  celui-ci mettait trop longtemps à disparaître (recette 1).
+- **Icône de la barre.** Seuils 33 et 66 conservés (`speaker-none`, `speaker-low`, `speaker-high`). Nicolas a essayé puis
+  abandonné une icône à trois ondes et des quartiles : une troisième onde ne tient pas dans la boîte de 256 de Phosphor
+  sans altérer `speaker-high`. Avant la première liaison, la barre montre quelques millisecondes `audio-volume-muted`
+  (mémoire à 0) ; acceptable.
+- **Hors périmètre.** « Réglages du son… », affiché mais inactif, attend la fenêtre Son (L2-65).
+
+*Touché : `Jauge.qml`, `Rangee.qml`, `PopoverAudio.qml`, `CadrePopovers.qml`, `Barre/Audio.qml`, `icones.js`,
+`icones/correspondances.toml`, bible (chapitre 7), spec, backlog (L2-12, L2-65).*

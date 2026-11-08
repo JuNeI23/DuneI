@@ -2,9 +2,9 @@
 
 Oct 10, 2026 · @Nicolas — révisée le 22 octobre 2026
 
-Version 1.44. Historique en fin de document.
+Version 1.45. Historique en fin de document.
 
-*Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent soixante-douze lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
+*Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent soixante-quinze lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
 
 ## En une phrase
 
@@ -118,7 +118,7 @@ L'ordre découle d'une seule règle : **chaque lot laisse la machine en état de
 | **4 — Accord visuel** | Thématisation Qt et GTK sur cibles réelles, premier lot d'icônes, fond d'écran, panneau de thème, extraction de teinte | Cohérente de bout en bout, bible opposable partout |
 | **5 — Écrans système et voix** | Réglages panneau par panneau, connexion, amorçage, « À propos », catalogue de messages, recette | **1.0** |
 
-Le détail — cent soixante-douze éléments, chacun rattaché à un chantier, un lot et une nature — vit dans le document de périmètre et de backlog. **Cette note ne s'y substitue pas.**
+Le détail — cent soixante-quinze éléments, chacun rattaché à un chantier, un lot et une nature — vit dans le document de périmètre et de backlog. **Cette note ne s'y substitue pas.**
 
 ## Les risques, par ordre de gravité
 
@@ -554,15 +554,27 @@ se détache mieux du fond d'écran. La colonne des fenêtres de réglages est d�
 plateau détaché : du verre à 90 % le jour, opaque la nuit, à côté d'un contenu opaque, ce qui sépare nettement la
 navigation de la page. Les popovers gardent leur verre à 60 %. Nicolas a validé à l'écran le 2026-11-08.
 
-Prochaine étape : **après la fusion de cette PR, l'indicateur audio et son popover (L2-12)**, puis L2-13 (énergie) ; tous
-deux suivront le motif du popover hébergé (`heberge: true`, `fonduContenu`, `fonduDisque`, `reinitialiser()`). Le reste
-de L2-48, L2-57 (suites du popover Bluetooth), L2-58, L2-59 et L2-62 attendent leur tour.
+L'indicateur audio et son popover sont faits (L2-12, D138 à D144), en attente de fusion. Un clic sur l'icône de la barre
+ouvre un popover où Nicolas règle le volume et le micro, choisit la sortie et l'entrée, coupe ou rétablit l'un et
+l'autre. Surtout, la presqu'île est devenue la jauge du son : elle s'élargit et se remplit d'accent au rythme du niveau,
+sans à-coups, à chaque appui de F2 ou F3 comme à chaque bouton du Bose ; F1 et F4 l'ouvrent sur « Coupé » et « Son
+actif », « Micro coupé » et « Micro actif » ; l'allumage et l'extinction du Bose y annoncent le nouvel appareil. Le son
+ne se rétablit que par F1 ou l'icône de la jauge, et la presqu'île reste muette au démarrage et popover ouvert. Les
+lecteurs viennent du module PipeWire de Quickshell, sans `wpctl` ni sondage. Nicolas a validé l'ensemble à l'écran le
+2026-11-08. Deux vérifications attendent encore avant la fusion : la lisibilité de « Son actif » de jour à bas volume,
+et le silence de la presqu'île au réveil de veille. La fenêtre Son, vers laquelle pointe « Réglages du son… », naîtra de
+L2-65, qui allège d'abord la fenêtre Réseau.
+
+Prochaine étape : **après la fusion de cette PR, l'indicateur d'énergie et son popover (L2-13)**, qui suivra le motif du
+popover hébergé (`heberge: true`, `fonduContenu`, `fonduDisque`, `reinitialiser()`, `disque` si le popover n'a pas de
+bascule ronde). Le reste de L2-48, L2-57 (suites du popover Bluetooth), L2-58, L2-59, L2-62 et L2-65 attendent leur tour.
 
 ## Historique des versions
 
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-10 | Version initiale |
+| 1.45 | 2026-11-08 | L2-12 fait, en attente de fusion : indicateur audio, popover du son, presqu'île-jauge (D138 à D144), recette validée à l'écran ; ajout de L2-65 (fenêtre Son) ; prochaine étape : L2-13 |
 | 1.44 | 2026-11-08 | L2-61 fait : verre propre de la presqu'île, colonne des fenêtres de réglages pleine hauteur (D136, D137) ; prochaine étape : L2-12 |
 | 1.43 | 2026-11-07 | L2-60 : correctifs de recette, mémoire de la coque en `MemoryTHP=madvise` (971 à 160 Mo), gros dossier accepté, L2-63 et L2-64 au backlog (D132 à D135) ; prochaine étape inchangée : L2-61 |
 | 1.42 | 2026-11-07 | L2-60 fait : galerie de fonds dans la presqu'île, changement de module de L2-48 (D124 à D131), recette validée, mesures soumises à Nicolas ; prochaine étape : le verre du jour (L2-61) |

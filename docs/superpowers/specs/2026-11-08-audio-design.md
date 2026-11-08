@@ -1,6 +1,6 @@
 # Indicateur audio, popover et jauge de la presqu'île : conception (L2-12)
 
-Version 0.5, 2026-11-08.
+Version 0.6, 2026-11-08.
 
 ## Intention
 
@@ -24,11 +24,16 @@ Les maquettes validées sont dans `.superpowers/preview/audio/maquettes.html` (v
    autres variantes sont écartés.
 3. **Fluidité** : le remplissage glisse en continu vers la nouvelle valeur ; aucun saut de 5 en 5. Les changements de
    couleur (sourdine, rétablissement) se font en fondu.
-4. **Sourdine du son** : la presqu'île prend la disposition du micro (décision 5) : l'icône barrée (`speaker-x`) et le
-   mot « Coupé », centrés et serrés (4 px), en rouge (`error`) ; le remplissage reste au niveau du son, en gris
-   (`text-disabled`). Au rétablissement, l'icône de seuil revient à gauche et le pourcentage à droite ; les deux
-   dispositions se croisent en fondu (recette 1). F2 et F3 changent
-   le niveau d'une sortie coupée sans la rétablir ; glisser dans la jauge du popover ne la rétablit pas non plus.
+4. **Sourdine du son** : la presqu'île prend la disposition du micro (décision 5) sous un genre à part, « son ».
+   À la coupure, l'icône barrée (`speaker-x`) et le mot « Coupé », centrés et serrés (4 px), en rouge (`error`) ; le
+   remplissage reste au niveau du son, en gris (`text-disabled`). Au rétablissement, l'icône du niveau et « Son actif »,
+   centrés et serrés, en encre sur accent, le remplissage restant au niveau du son derrière eux. Un changement de niveau
+   après le rétablissement rend la jauge ordinaire (icône à gauche, pourcentage à droite) ; sorti coupé, il garde « Coupé »
+   centré. Quand le module est déjà affiché, « Coupé » et « Son actif » se remplacent par un glissement vertical rogné au
+   corps (l'ancien contenu monte, le nouveau arrive du bas), de même que « Micro coupé » et « Micro actif » ; un
+   changement de famille (jauge ordinaire vers message centré, et inversement) se cale sans glisser. Le glissement
+   remplace le fondu croisé de la version 0.5 (recette 1). F2 et F3 changent le niveau d'une sortie coupée sans la
+   rétablir ; glisser dans la jauge du popover ne la rétablit pas non plus.
    **Seuls F1 et un clic sur l'icône de la jauge du popover rétablissent le son.**
 5. **Micro dans la presqu'île** : aucun niveau, puisque le clavier ne sait que couper et rétablir le micro. À l'appui sur
    F4, le remplissage glisse depuis la valeur affichée jusqu'à la pleine largeur ; coupé, fond gris, icône
@@ -88,6 +93,9 @@ d'une fonction pure `iconeAudio(muet, pourcent)` de `Barre/icones.js` :
 | 34 à 66 % | `audio-volume-medium` | `speaker-low` |
 | 67 à 100 % | `audio-volume-high` | `speaker-high` |
 
+Une icône à trois ondes et des seuils en quartiles ont été essayés puis abandonnés par Nicolas (recette 1) : une
+troisième onde ne tient pas dans la boîte de 256 de Phosphor sans altérer `speaker-high`. Les seuils 33 et 66 restent.
+
 Le micro utilise `microphone-sensitivity-muted` → `microphone-slash` et `microphone-sensitivity-high` → `microphone`.
 Les correspondances vont dans une section `[audio]` de `icones/correspondances.toml`, avec les graisses `fill` des
 icônes d'appareil (haut-parleurs, casque, micro intégré, prise casque). L'icône est pleine tant que le popover est
@@ -117,9 +125,10 @@ Un module `Presquile/Volume.qml`, de hauteur `presquile.hauteur` (28 px) comme `
 de la presqu'île ne change pas (D132) : seule la largeur s'étire, par le ressort existant de `Scene.qml`. Largeur de
 la variante D : 240 px ; le message d'une sortie peut l'élargir jusqu'à 320 px, au-delà le nom est tronqué. Le remplissage suit la valeur par un ressort (ou une animation continue) relancé à chaque
 changement, jamais par paliers. Le remplissage épouse la silhouette entière de l'encoche, évasements compris, sans
-jamais en déborder : l'évasement gauche est teint dès que le niveau est non nul, et l'évasement droit se teint pendant
-que le remplissage parcourt la dernière largeur d'évasement du corps, pour l'être entièrement au bord droit (100 %, ou
-genres autres que le volume). La jauge fait ainsi corps avec l'encoche, au lieu de s'en détacher par une jointure
+jamais en déborder : l'évasement gauche est teint dès 1 % (dès que le niveau est non nul), et l'évasement droit
+seulement à 100 % (ou à la pleine largeur, pour les genres autres que le volume), par un fondu d'opacité de nature
+« state » et non plus par une teinte progressive sur la dernière largeur d'évasement. Le pourcentage s'écrit en
+`text-secondary`, puisqu'il peut tomber hors du remplissage, sur le verre de la presqu'île. La jauge fait ainsi corps avec l'encoche, au lieu de s'en détacher par une jointure
 restée noire ou blanche (recette 1).
 
 Déclenchement (décisions 11 et 12) : tout changement de volume ou de sourdine de la sortie par défaut, et de sourdine
@@ -134,7 +143,8 @@ de l'entrée par défaut, quelle qu'en soit la source, lu dans les signaux de Pi
   rétablit sur la nouvelle sortie. Le premier défaut connu au démarrage de la coque ne compte pas comme un
   changement. Un changement d'entrée par défaut s'affiche de même (décision 14) ; quand sortie et entrée changent
   vers le même appareil dans la seconde, les deux demandes se fondent en un seul message, celui de l'appareil ;
-- **garde du popover** : tant qu'un popover audio est ouvert, sur quelque écran que ce soit, la presqu'île ne s'ouvre
+- **garde du popover** : tant qu'un popover audio est ouvert (il bloque aussi les annonces de changement de sortie
+  ou de micro), sur quelque écran que ce soit, la presqu'île ne s'ouvre
   pas, quelle que soit la source du changement. `EtatAudio` tient l'ensemble des indicateurs dont le popover est
   ouvert (`tenirPopover`), et non un drapeau qu'une barre écraserait ; une barre détruite popover ouvert y retire le
   sien.
@@ -151,11 +161,14 @@ les bureaux, jamais un volume périmé. L'Ouvreuse passe par cet arbitre.
 - La fenêtre Son et tout réglage fin : volume par application, profils de la carte, effets, égaliseur (L2-65).
 - Un niveau par défaut imposé au micro (décision 9).
 - Le retour du niveau dans la presqu'île pour la luminosité ou d'autres touches.
-- Le passage automatique de la sortie quand un casque se connecte, déjà fait par WirePlumber.
+- Le passage automatique de la sortie quand un casque se connecte : il reste à WirePlumber, qui rejoue le défaut
+  configuré mémorisé (Bose NC 700 compris) ; DuneI n'écrit rien à la connexion (validé par Nicolas à la recette 1).
 
 ## Anti-objectifs
 
-- Une presqu'île qui s'ouvre sans geste de Nicolas (au démarrage, au changement de sortie, au réveil).
+- Une presqu'île qui s'ouvre sans geste de Nicolas au démarrage, au réveil ou au rétablissement du volume par
+  WirePlumber. Le changement de sortie ou de micro par défaut l'ouvre, lui, par la décision 13 : la contradiction de la
+  version 0.5 entre cet anti-objectif et la décision 13 est tranchée en faveur de la décision 13.
 - Une presqu'île qui redimensionne sa surface : seule la forme dessinée s'élargit (D132, D134).
 - Un rétablissement du son par une autre voie que F1 ou l'icône de la jauge.
 - Un niveau qui avance par sauts visibles.
@@ -176,7 +189,10 @@ les bureaux, jamais un volume périmé. L'Ouvreuse passe par cet arbitre.
 - `coque/Audio/` : `EtatAudio.qml` (singleton), `PopoverAudio.qml`, `audio.js` (fonctions pures : filtres, icônes
   d'appareils, libellés), `qmldir`.
 - `coque/Barre/Audio.qml`, `Barre.qml`, `icones.js`, `qmldir`.
-- `coque/Presquile/Volume.qml` et l'arbitre ; `Galerie/Ouvreuse.qml` adaptée.
+- `coque/Presquile/Volume.qml`, `Arbitre.qml` (arbitre extrait en `QtObject`, testable sans fenêtre), `Annonceur.qml`
+  (file des demandes de `EtatAudio` vers la presqu'île de l'écran actif, le transfert vers un nouvel écran se faisant à
+  l'annonce suivante) et `encoche.js` (tracé de l'encoche, partagé avec le remplissage) ; `Galerie/Ouvreuse.qml` adaptée.
+  `Scene.qml` expose `contenuVisible`, et chaque module reçoit la scène par `property Item scene`.
 - `coque/Composants/Jauge.qml`.
 - `icones/correspondances.toml`, puis `make phosphor`.
 - Tests dans `tests/`, sur le modèle de ceux du Bluetooth et des bureaux.
@@ -193,7 +209,8 @@ les bureaux, jamais un volume périmé. L'Ouvreuse passe par cet arbitre.
 - Tests unitaires des fonctions pures (seuils d'icône, filtres de nœuds, icône d'appareil, arrondi et bornes).
 - Essai réel : F2, F3, F1 et F4 répétés, jauge du popover glissée, sourdine par l'icône ; captures grim de la
   presqu'île et du popover, de jour et de nuit, sur les bureaux 1 à 4.
-- Démarrage de la coque et réveil : la presqu'île ne s'ouvre pas.
+- Démarrage de la coque et réveil : la presqu'île ne s'ouvre pas. Le démarrage est validé à la recette ; le réveil de
+  veille reste à éprouver (journal des signaux, voir la recette de l'audio).
 - Bose allumé puis éteint : la presqu'île montre « LE-Bose NC 700 Headphones » puis « Haut-parleurs », sans
   afficher ensuite le volume que WirePlumber rétablit.
 - Boutons de volume du Bose : la presqu'île s'ouvre. Popover ouvert et touche de volume : elle ne s'ouvre pas.
@@ -201,6 +218,34 @@ les bureaux, jamais un volume périmé. L'Ouvreuse passe par cet arbitre.
 - Changement de sortie vers le Bose NC 700 par le popover : `preferredDefaultAudioSink` n'a pas pu être éprouvé
   faute d'une seconde sortie au repérage ; il l'est en premier dans l'implémentation, casque relié.
 - Validation à l'écran par Nicolas.
+
+## Recette
+
+Recette 1, faite à l'écran par Nicolas le 2026-11-08, sur `caladan`, après `make install` et redémarrage de la coque.
+
+Validé :
+
+- F1 à F4 : jauge qui suit F2 et F3 sans à-coups ; « Coupé » puis « Son actif » à F1, « Micro coupé » puis « Micro actif »
+  à F4 ; niveau changé sur une sortie coupée sans la rétablir.
+- Popover de la barre : ouverture, jauges du volume et du micro (clic, glisser, clic sur l'icône), listes des sorties et
+  des entrées, bascule vers le popover Réseau ou Bluetooth et retour, presqu'île muette tant qu'il est ouvert.
+- Transitions : glissement vertical entre « Coupé » et « Son actif » et entre « Micro coupé » et « Micro actif » ;
+  jointures de l'encoche, gauche dès 1 %, droite à 100 %.
+- Galerie ouverte puis touche de volume : la galerie reste ; à sa fermeture, les bureaux reviennent.
+- Bose NC 700 : boutons de volume, allumage et extinction ; annonce de l'appareil à chaque changement de sortie, sans
+  annonce de micro ni de volume parasite ; sortie choisie par le popover ; bascule à la connexion laissée à WirePlumber.
+- Démarrage de la coque : la presqu'île ne s'ouvre pas.
+
+À vérifier avant la fusion (relevés de la revue finale) :
+
+- Lisibilité de « Son actif » de jour à bas volume : le texte centré, en encre sur accent, peut tomber hors du
+  remplissage, sur le verre à 82 %. Capture à 10 % et à 0 % après F1 ; si Nicolas la juge illisible, il tranche entre
+  l'encre `text-emphasis` hors remplissage et un remplissage plein comme pour le micro.
+- Silence de la presqu'île à la sortie de veille : essai réel (veille puis réveil, journal des signaux). Si une annonce
+  part, la garde de liaison s'appuiera sur le signal de reprise déjà utilisé dans la coque plutôt que sur un sondage.
+
+Couvert par les tests seulement, sans essai en machine virtuelle : le comportement sans carte son (l'élément de barre
+disparaît avec la sortie).
 
 ## Historique des versions
 
@@ -211,3 +256,4 @@ les bureaux, jamais un volume périmé. L'Ouvreuse passe par cet arbitre.
 | 0.3 | 2026-11-08 | Changement automatique de sortie montré dans la presqu'île (décision 13) |
 | 0.4 | 2026-11-08 | Changement automatique de micro montré lui aussi, fusionné avec celui de la sortie pour un même appareil (décision 14) |
 | 0.5 | 2026-11-08 | Recette 1 : son coupé centré comme le micro, icône barrée et « Coupé » en rouge, remplissage gardé au niveau en gris, fondu croisé des deux dispositions (décision 4) ; remplissage étendu aux évasements de l'encoche, le gauche dès un niveau non nul, le droit au bord droit (module de la presqu'île) ; disque de l'ancien popover non retenu au passage vers le popover du son ; popovers audio ouverts comptés par indicateur |
+| 0.6 | 2026-11-08 | Fin de recette 1 et revue finale : genre « son » (coupure « Coupé » sur gris, rétablissement « Son actif » sur accent, icône du niveau, remplissage au niveau derrière) et jauge ordinaire à tout changement de niveau rétabli ; glissement vertical rogné entre « Coupé » et « Son actif » et entre « Micro coupé » et « Micro actif », à la place du fondu croisé ; pourcentage en `text-secondary` ; évasement gauche teint dès 1 %, évasement droit seulement à 100 % en transition « state » ; icône à trois ondes et quartiles abandonnés, seuils 33/66 gardés ; bascule du Bose à la connexion laissée à WirePlumber ; popover bloquant aussi les annonces de sortie et de micro ; contradiction entre l'anti-objectif sur le changement de sortie et la décision 13 tranchée en faveur de la décision 13 ; contrat `disque` du cadre des popovers, `Arbitre`, `Annonceur`, `Scene.contenuVisible` ; sortie de veille à éprouver ; section Recette |
