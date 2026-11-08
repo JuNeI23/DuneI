@@ -11,7 +11,7 @@ import "energie.js" as Energie
 // parce qu'un singleton ne se recrée pas dans un essai : la coque d'essai instancie ce composant avec un appareil et
 // des profils simulés. Les seuils viennent de energie.json (source unique : energie.toml), sous le dossier des
 // jetons ; sans fichier lisible, 20 % et 5 % s'appliquent et le journal le dit.
-// Entrées : appareil, objet portant ready, isLaptopBattery, percentage (fraction de 0 à 1, relevée sur Quickshell 0.3.2 ; elle peut être non nulle avant ready), state, timeToEmpty, timeToFull (défaut
+// Entrées : appareil (défaut : la batterie de UPower.devices, sinon UPower.displayDevice), objet portant ready, isLaptopBattery, percentage (fraction de 0 à 1, relevée sur Quickshell 0.3.2 ; elle peut être non nulle avant ready), state, timeToEmpty, timeToFull (défaut
 // UPower.displayDevice) ; profils, objet portant profile et hasPerformanceProfile (défaut PowerProfiles) ; dir, dossier
 // de energie.json (défaut Theme.dir : DUNEI_TOKENS_DIR, sinon $XDG_CONFIG_HOME/dunei, sinon ~/.config/dunei). choisirProfil(profil), action de l'interface.
 // Sorties : presente, vrai si l'appareil est une batterie de portable ; pourcent, entier ; etat, « decharge »,
@@ -24,7 +24,10 @@ import "energie.js" as Energie
 Scope {
     id: racine
 
-    property var appareil: UPower.displayDevice
+    // Batterie du portable : premier appareil de UPower.devices qui en est une (la liste se remplit après le démarrage) ;
+    // displayDevice, dont timeToFull est négatif en charge, ne sert que tant qu'aucune n'est connue.
+    readonly property var batterie: (UPower.devices?.values ?? []).find(d => d.isLaptopBattery) ?? null
+    property var appareil: batterie ?? UPower.displayDevice
     property var profils: PowerProfiles
     property string dir: Theme.dir
 

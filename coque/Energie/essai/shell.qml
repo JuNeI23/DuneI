@@ -100,9 +100,11 @@ ShellRoot {
         function choisir(profil: int): void { reel.choisirProfil(profil) }
 
         // lire — profil réel tel que le suivi le lit. Entrées : aucune. Sortie : objet JSON { profil, aProfils,
-        // aPerformance }. Erreurs : aucune.
+        // aPerformance, presente, pourcent, etat, estimation, palier }. Erreurs : aucune.
         function lire(): string {
-            return JSON.stringify({ profil: reel.profil, aProfils: reel.aProfils, aPerformance: reel.aPerformance })
+            return JSON.stringify({ profil: reel.profil, aProfils: reel.aProfils, aPerformance: reel.aPerformance,
+                presente: reel.presente, pourcent: reel.pourcent, etat: reel.etat, estimation: reel.estimation,
+                palier: reel.palierCourant })
         }
     }
 }

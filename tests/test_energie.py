@@ -55,6 +55,11 @@ class EnergieJsTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(self.appeler("texteEstimation", "decharge", 0), "Estimation en cours…")
         self.assertEqual(self.appeler("texteEstimation", "decharge", 10), "Estimation en cours…")
 
+    def test_estimation_negative_jamais_zero_minute(self):
+        # UPower.displayDevice rend un timeToFull négatif en charge (mesuré : -13555).
+        self.assertEqual(self.appeler("texteEstimation", "charge", -13555), "Estimation en cours…")
+        self.assertEqual(self.appeler("texteEstimation", "decharge", -1), "Estimation en cours…")
+
     def test_estimation_etats_sans_duree(self):
         self.assertEqual(self.appeler("texteEstimation", "chargee", 0), "Chargée")
         self.assertEqual(self.appeler("texteEstimation", "secteur", 0), "Sur secteur")
@@ -161,6 +166,12 @@ class SuiviEnergieTest(EssaiCoque, unittest.TestCase):
         time.sleep(0.3)
         self.assertEqual(self.journal().count("energie : annonce"), 1)
         self.assertNotIn("energie : annonce 1", self.journal())
+
+    def test_charge_estimation_negative(self):
+        self.fixer(True, 0.5, 1, -13555)
+        self.assertEqual(self.lire()["estimation"], "Estimation en cours…")
+        self.fixer(True, 0.5, 1, 1026)
+        self.assertEqual(self.lire()["estimation"], "Plein dans 17 min")
 
     def test_branchement_efface(self):
         self.fixer(True, 0.18, 2, 3000)
