@@ -11,15 +11,17 @@ import "Reseau"
 // Coque de session de DuneI — racine chargée par « qs -c dunei » (unité dunei-coque.service).
 // Rôle : pose sur chaque écran le fond d'écran, une barre système et la presqu'île, dans le même Variants (le fond
 // d'abord, pour qu'il soit le plus bas), et, une seule fois hors de Variants, la fenêtre Réseau, construite seulement
-// à sa demande, les notifications de connexion et l'ouvreuse de la galerie de fonds, à qui chaque presqu'île
-// s'inscrit à sa création et se retire à sa destruction (écran débranché). Chaque presqu'île réserve la hauteur du
-// module de la galerie, mesurée par l'ouvreuse : sa surface ne change jamais de taille (recette de L2-60).
+// à sa demande, les notifications de connexion, l'ouvreuse de la galerie de fonds et l'annonceur de la jauge du son,
+// à qui chaque presqu'île s'inscrit à sa création et se retire à sa destruction (écran débranché). Chaque presqu'île
+// réserve la hauteur du module de la galerie, mesurée par l'ouvreuse : sa surface ne change jamais de taille (recette
+// de L2-60).
 // Entrées : aucune ; l'écran de chaque barre vient de Quickshell.screens. Sortie : trois fenêtres de calque par écran ;
 // la fenêtre Réseau quand elle est ouverte (IPC « reseau ouvrir » ou « Réglages réseau… ») ; la galerie dans la
-// presqu'île de l'écran actif à la demande (IPC « galerie basculer », SUPER + W).
+// presqu'île de l'écran actif à la demande (IPC « galerie basculer », SUPER + W) ; la jauge du son à chaque
+// annonce d'EtatAudio (Annonceur).
 // Erreurs : tokens absents ou invalides → fond, barre et presqu'île transparents, erreur de Theme dans le journal de Quickshell.
-// Dépendances : quickshell ≥ 0.3, modules Barre (Barre), Fond (Fond), Galerie (Ouvreuse), Presquile (Presquile) et
-// Reseau (FenetreReseau, NotificationsReseau).
+// Dépendances : quickshell ≥ 0.3, modules Barre (Barre), Fond (Fond), Galerie (Ouvreuse), Presquile (Presquile,
+// Annonceur) et Reseau (FenetreReseau, NotificationsReseau).
 // Rendu du texte : la directive Env force l'anticrénelage en niveaux de gris, comme dans le banc du verre.
 ShellRoot {
     Variants {
@@ -35,13 +37,14 @@ ShellRoot {
                 id: presquile
                 modelData: ecran.modelData
                 reserve: ouvreuse.hauteurModule
-                Component.onCompleted: ouvreuse.inscrire(presquile)
-                Component.onDestruction: ouvreuse.retirer(presquile)
+                Component.onCompleted: { ouvreuse.inscrire(presquile); annonceur.inscrire(presquile) }
+                Component.onDestruction: { ouvreuse.retirer(presquile); annonceur.retirer(presquile) }
             }
         }
     }
 
     Ouvreuse { id: ouvreuse }
+    Annonceur { id: annonceur }
     FenetreReseau {}
     NotificationsReseau {}
 }

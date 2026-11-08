@@ -4,13 +4,15 @@ import Quickshell.Io
 import "Theme"
 import "Presquile"
 import "Presquile/bureaux.js" as Bureaux
+import "Presquile/encoche.js" as Forme
 
 // Coque d'essai du module Presquile.
 // Rôle : expose par IPC (cible « presquile ») les fonctions pures de bureaux.js et la géométrie d'une Encoche sans
 // fenêtre, pour que tests/test_presquile.py les éprouve dans un vrai Quickshell ; sous la plateforme offscreen
 // seulement, ouvre une vitrine (FloatingWindow jamais montrée à l'écran) qui porte une Encoche au corps de la
 // planche forme.html (106), sur le fond du bureau, avec la marge de son ombre, et l'enregistre en PNG à la demande.
-// Les commandes arbitreDemander, arbitreLiberer et arbitreEtat éprouvent l'Arbitre. Les tâches suivantes y ajoutent leurs composants et leurs fonctions IPC.
+// Les commandes arbitreDemander, arbitreLiberer et arbitreEtat éprouvent l'Arbitre ; annonceurRafale,
+// annonceurPleinEcran et annonceurEtat, l'Annonceur, piloté par une source et une presqu'île factices. Les tâches suivantes y ajoutent leurs composants et leurs fonctions IPC.
 // Entrées : DUNEI_TOKENS_DIR, lu par Theme ; QT_QPA_PLATFORM, posé à offscreen par le test ; QT_SCALE_FACTOR, pour
 // une capture agrandie ; QT_QUICK_BACKEND=rhi et QSG_RHI_BACKEND=opengl pour une capture fidèle (la plateforme
 // offscreen choisit sinon le rendu logiciel, qui ne peint ni shader ni remplissage par texture). Commandes IPC :
@@ -21,8 +23,9 @@ import "Presquile/bureaux.js" as Bureaux
 // …», « essai : contenu … », « essai : lp … » (largeur au changement de phase), « essai : l … », « essai : cl … » (cible de largeur), « essai : h … » et « essai : o … » de la scène. Erreurs : celles de Theme, dans
 // le journal ; capturer sans vitrine (hors offscreen) journalise « presquile : aucune vitrine ».
 // Dépendances : quickshell ≥ 0.3 (Quickshell.Io, FloatingWindow, LazyLoader), modules Theme, Composants et
-// Presquile.
-// Import : liens essai/Theme, essai/Composants et essai/Presquile, comme dans les autres coques d'essai.
+// Presquile (dont encoche.js).
+// Import : liens essai/Theme, essai/Composants et essai/Presquile, comme dans les autres coques d'essai ; essai/Audio et
+// essai/Barre, que résolvent les imports relatifs de l'Annonceur et du module Volume.
 ShellRoot {
     // Theme est un singleton paresseux : cette lecture le charge, ce qu'attend le setUp de l'essai.
     Component.onCompleted: Theme.tokens
@@ -65,6 +68,47 @@ ShellRoot {
         id: essaiArbitre
         property int changements: 0
         onModuleChanged: changements++
+    }
+
+    // Annonceur d'essai, sans Hyprland ni PipeWire : une source factice émet les annonces, et une presqu'île factice
+    // (sans écran, comme ecranActif) relaie ses demandes à un arbitre qui compte les changements de module (les
+    // montages que subirait la scène) et les libérations.
+    QtObject { id: essaiSource; signal annoncer(var annonce) }
+    Arbitre {
+        id: arbitreAnnonce
+        property int changements: 0
+        onModuleChanged: changements++
+    }
+    QtObject {
+        id: essaiIle
+        property var modelData: null
+        property int liberations: 0
+
+        // demander — relaie une demande à l'arbitre de l'annonceur d'essai. Entrées : cle, composant, priorite.
+        // Sortie : aucune. Erreurs : aucune. Dépendances : arbitreAnnonce.
+        function demander(cle, composant, priorite) { arbitreAnnonce.demander(cle, composant, priorite) }
+
+        // liberer — compte la libération et la relaie à l'arbitre. Entrée : cle. Sortie : aucune. Erreurs : aucune.
+        // Dépendances : arbitreAnnonce.
+        function liberer(cle) { liberations++; arbitreAnnonce.liberer(cle) }
+    }
+    Annonceur {
+        id: essaiAnnonceur
+        etat: essaiSource
+        ecranActif: null
+        pleinEcran: false
+        volume: moduleVolume
+        Component.onCompleted: inscrire(essaiIle)
+    }
+    // Rafale : count annonces de volume, une toutes les interval millisecondes.
+    Timer {
+        id: rafale
+        property int reste: 0
+        repeat: true
+        onTriggered: {
+            essaiSource.annoncer({ genre: "volume", appareil: "", texte: "", coupe: false })
+            if (--reste <= 0) stop()
+        }
     }
 
     // Scène sans fenêtre, comme celle de la surface : sa trajectoire est lue par tests/test_presquile.py.
@@ -162,11 +206,11 @@ ShellRoot {
         // Sortie : la géométrie, comme encoche. Erreurs : aucune. Dépendances : encoche, Encoche.
         function etirerEncoche(l: real): string { essaiEncoche.largeurCorps = l; return encoche() }
 
-        // tracerEncoche — tracé d'une Encoche éphémère aux dimensions explicites, indépendante des jetons.
+        // tracerEncoche — tracé de l'encoche aux dimensions explicites, indépendant des jetons.
         // Entrées : l, largeur du corps ; h, hauteur ; e, évasement ; r, rayon (px logiques).
-        // Sortie : le tracé SVG. Erreurs : aucune. Dépendances : Encoche.
+        // Sortie : le tracé SVG. Erreurs : aucune. Dépendances : encoche.js.
         function tracerEncoche(l: real, h: real, e: real, r: real): string {
-            return essaiEncoche.tracer(l, h, e, r)
+            return Forme.tracer(l, h, e, r)
         }
 
         // bureauxEtat — pose idActif et special du module des bureaux d'essai (jamais Hyprland) et rend son état.
@@ -211,6 +255,29 @@ ShellRoot {
             const m = essaiArbitre.module
             return JSON.stringify({ module: m === moduleVolume ? "volume" : m === moduleGalerie ? "galerie" : "bureaux",
                                     changements: essaiArbitre.changements })
+        }
+
+        // annonceurRafale — émet n annonces de volume, la première aussitôt, puis une toutes les ms millisecondes.
+        // Entrées : n, nombre d'annonces (au moins 1) ; ms, intervalle. Sortie : aucune. Erreurs : aucune.
+        // Dépendances : essaiSource, rafale.
+        function annonceurRafale(n: int, ms: int): void {
+            essaiSource.annoncer({ genre: "volume", appareil: "", texte: "", coupe: false })
+            rafale.reste = n - 1
+            rafale.interval = ms
+            if (rafale.reste > 0) rafale.start()
+        }
+
+        // annonceurPleinEcran — pose le plein écran vu par l'annonceur d'essai. Entrée : b. Sortie : aucune.
+        // Erreurs : aucune. Dépendances : essaiAnnonceur.
+        function annonceurPleinEcran(b: bool): void { essaiAnnonceur.pleinEcran = b }
+
+        // annonceurEtat — état de l'annonceur d'essai. Entrées : aucune. Sortie : JSON {module (« volume » ou
+        // « bureaux »), changements, liberations, cible (vrai si une presqu'île porte la jauge)}. Erreurs : aucune.
+        // Dépendances : arbitreAnnonce, essaiIle, essaiAnnonceur.
+        function annonceurEtat(): string {
+            return JSON.stringify({ module: arbitreAnnonce.module === moduleVolume ? "volume" : "bureaux",
+                                    changements: arbitreAnnonce.changements, liberations: essaiIle.liberations,
+                                    cible: essaiAnnonceur.cible !== null })
         }
 
         // changer — change le module de la scène d'essai, ce qui déroule la séquence de changement.

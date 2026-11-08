@@ -71,7 +71,7 @@ class PresquileStructureTest(unittest.TestCase):
         # mouvement réduit (lecture du source : la surface ne se charge pas sous offscreen).
         attendues = {"Scene.qml": {"largeur": "deplacement", "hauteur": "deplacement", "opacite": "fondu",
                                    "effacement": "fondu"},
-                     "Bureaux.qml": None}
+                     "Bureaux.qml": None, "Volume.qml": None}
         for nom, natures in attendues.items():
             texte = re.sub(r"//.*", "", (ROOT / "coque" / "Presquile" / nom).read_text(encoding="utf-8"))
             ressorts = re.findall(r"Ressort\s*\{([^{}]*)\}", texte)
@@ -88,6 +88,24 @@ class PresquileStructureTest(unittest.TestCase):
         # La surface ne déclare plus de ressort : elle lit ceux de sa scène.
         surface = re.sub(r"//.*", "", (ROOT / "coque" / "Presquile" / "Presquile.qml").read_text(encoding="utf-8"))
         self.assertEqual(re.findall(r"Ressort\s*\{", surface), [])
+
+    def test_volume_hauteur_du_gabarit(self):
+        # D132 : le module Volume a la hauteur de la presqu'île, lue du gabarit, comme les bureaux ; seule sa largeur
+        # change, dans la surface fixe.
+        code = re.sub(r"//.*", "", (ROOT / "coque" / "Presquile" / "Volume.qml").read_text(encoding="utf-8"))
+        self.assertIn("readonly property var gabarit: Theme.tokens?.presquile", code)
+        self.assertRegex(code, r"implicitHeight:\s*gabarit\?\.hauteur\s*\?\?\s*0")
+        self.assertRegex(code, r'transition:\s*"reflow"')
+
+    def test_annonceur_dans_la_coque(self):
+        # L'annonceur est unique, hors du Variants, et chaque presqu'île s'y inscrit et s'en retire.
+        shell = re.sub(r"//[^\n]*", "", (ROOT / "coque" / "shell.qml").read_text(encoding="utf-8"))
+        self.assertRegex(shell, r"\n    Annonceur \{ id: annonceur \}")
+        self.assertIn("annonceur.inscrire(presquile)", shell)
+        self.assertIn("annonceur.retirer(presquile)", shell)
+        qmldir = (ROOT / "coque" / "Presquile" / "qmldir").read_text("utf-8")
+        for ligne in ("Annonceur 1.0 Annonceur.qml", "Volume 1.0 Volume.qml"):
+            self.assertIn(ligne, qmldir)
 
     def test_qmldir_et_coque(self):
         self.assertIn("Presquile 1.0 Presquile.qml", (ROOT / "coque" / "Presquile" / "qmldir").read_text("utf-8"))
@@ -309,6 +327,30 @@ class ArbitreTest(PresquileIpc, unittest.TestCase):
     def test_liberation_inconnue_sans_effet(self):
         avant = self.etat()
         self.appeler("arbitreLiberer", "absent")
+        self.assertEqual(self.etat(), avant)
+
+
+class AnnonceurTest(PresquileIpc, unittest.TestCase):
+    """Annonceur de la jauge du son (L2-12) : une rafale d'annonces ne monte le module qu'une fois et ne le libère
+    qu'une fois, après le délai de retour (motion.delays.dismiss, 1500 ms) compté depuis la dernière annonce."""
+
+    def etat(self) -> dict:
+        """État de l'annonceur d'essai. Sortie : {module, changements, liberations, cible}. Erreurs : celles de json."""
+        return self.json("annonceurEtat")
+
+    def test_rafale_une_seule_demande(self):
+        avant = self.etat()["changements"]
+        self.appeler("annonceurRafale", 10, 20)
+        time.sleep(1.2)
+        # Dernière annonce vers 180 ms : à 1,2 s, le délai court encore, et le module n'a été monté qu'une fois.
+        self.assertEqual(self.etat(), {"module": "volume", "changements": avant + 1, "liberations": 0, "cible": True})
+        time.sleep(1.0)
+        self.assertEqual(self.etat(), {"module": "bureaux", "changements": avant + 2, "liberations": 1, "cible": False})
+
+    def test_plein_ecran_rien(self):
+        avant = self.etat()
+        self.appeler("annonceurPleinEcran", True)
+        self.appeler("annonceurRafale", 1, 0)
         self.assertEqual(self.etat(), avant)
 
 
