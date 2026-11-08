@@ -551,11 +551,11 @@ ShellRoot {
                     clavier.mouseMove(tokens, tokens.width / 2, tokens.height / 2, -1, Qt.NoButton, Qt.NoModifier)
                 }
 
-                // ongletSurvole — journalise l'interaction de l'onglet « tokens » et la couleur de son fond.
-                // Entrées : aucune. Sortie : aucune ; « essai : ongletSurvole <interaction> <#aarrggbb> ».
+                // ongletSurvole — journalise l'interaction de l'onglet « tokens », la couleur de son fond peint et celle de son ressort d'état.
+                // Entrées : aucune. Sortie : aucune ; « essai : ongletSurvole <interaction> <#aarrggbb du fond peint> <#aarrggbb du fond d'état> ».
                 // Erreurs : aucune. Dépendances : tokens, journal.
                 function ongletSurvole(): void {
-                    essai.journal("ongletSurvole", tokens.etat.interaction + " " + tokens.background.color)
+                    essai.journal("ongletSurvole", tokens.etat.interaction + " " + tokens.background.color + " " + tokens.etat.fond)
                 }
 
                 // ongletActif — active ou désactive l'onglet coché « composants ».

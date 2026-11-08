@@ -21,7 +21,10 @@ import "etats.js" as Etats
 // défaut : vrai, le fond ni survolé, ni pressé, ni sélectionné (au repos ou désactivé) vise sa couleur rendue
 // transparente, pour un élément qui ne se distingue pas de son conteneur au repos (une rangée) et ne doit pas en
 // repeindre la couleur opaque, qui se détacherait d'une surface de verre. L'opacité seule change : le ressort
-// fond la couleur d'état depuis sa propre teinte, sans passer par le noir.
+// fond la couleur d'état depuis sa propre teinte, sans passer par le noir ; fondSurvolTransparent, faux par défaut :
+// vrai, le survol (non sélectionné) fait de même, pour un élément qui ne se peint qu'à la pression (le segment d'une
+// barre d'onglets) et dont le ressort, resté sur le fond de survol opaque, le ferait apparaître au premier instant
+// de la pression.
 // Sorties : interaction, selection, inactif (clés des tokens) ; levee, vrai pour une sélection neutre (selectionNeutre)
 // peinte en controlRaised ; fond, texte, couleurs affichées ; texteNeutre, le
 // texte du même rôle et de la même interaction sans sélection, sans ressort, pour un libellé posé à côté d'une
@@ -41,6 +44,7 @@ Item {
     property bool peintFond: true
     property bool peintTexte: true
     property bool fondReposTransparent: false
+    property bool fondSurvolTransparent: false
     property bool selectionNeutre: false
     property string role: Etats.cran(Etats.herite(controle, "dnRole", "surfaceWindow"))
     readonly property bool inactif: Etats.herite(controle, "dnInactive", false)
@@ -59,8 +63,9 @@ Item {
     ColorSpring {
         id: ressortFond
         readonly property color plein: etat.peintFond ? (etat.couleurs?.fill ?? "transparent") : "transparent"
-        target: etat.fondReposTransparent && etat.selection === "none"
+        target: etat.selection === "none" && (etat.fondReposTransparent
             && (etat.interaction === "rest" || etat.interaction === "disabled")
+            || etat.fondSurvolTransparent && etat.interaction === "hover")
             ? Qt.alpha(plein, 0) : plein
     }
 

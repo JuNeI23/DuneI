@@ -65,6 +65,11 @@ T.TabButton {
         controle: onglet
         selectionne: onglet.checked
         focusDansGroupe: onglet.focusDansGroupe
+        // Dans une barre, un segment non coché ne se peint qu'à la pression : son ressort de fond part donc de sa propre
+        // teinte rendue transparente, au repos comme au survol, et non du fond opaque, qui paraîtrait au premier
+        // instant de la pression avant de s'assombrir (grise, noir, gris constatés à l'écran).
+        fondReposTransparent: !!onglet.barre
+        fondSurvolTransparent: !!onglet.barre
     }
 
     // Un segment non coché d'une barre n'a de fond qu'à la pression : au repos comme au survol, la piste se lit.
