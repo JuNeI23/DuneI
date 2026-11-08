@@ -349,9 +349,10 @@ ShellRoot {
                                     cible: v?.remplissage?.cible ?? null, fond: String(v?.couleurFond ?? ""),
                                     encre: String(v?.couleurEncre ?? ""), opaciteCote: v?.cote?.opacity ?? null,
                                     opaciteCentre: v?.centre?.opacity ?? null, symbole: v?.symbole?.nom ?? null,
-                                    texte: v?.etiquette?.text ?? null,
+                                    texte: v?.etiquette?.text ?? null, opaciteActif: v?.actif?.opacity ?? null,
+                                    symboleActif: v?.symboleActif?.nom ?? null, texteActif: v?.etiquetteActif?.text ?? null,
                                     mobile: s.ressortLargeur.moving || (v?.remplissage?.moving ?? false) || (v?.jointure?.moving ?? false)
-                                        || (v?.disposition?.moving ?? false) })
+                                        || (v?.disposition?.moving ?? false) || (v?.bascule?.moving ?? false) })
         }
 
         // volumeSourdine, volumeNiveau — sourdine et niveau du son vus par le module Volume d'essai, à la place de

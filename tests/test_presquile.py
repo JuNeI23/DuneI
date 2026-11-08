@@ -72,7 +72,7 @@ class PresquileStructureTest(unittest.TestCase):
         # ne se charge pas sous offscreen).
         attendues = {"Scene.qml": {"largeur": "deplacement", "hauteur": "deplacement", "opacite": "fondu",
                                    "effacement": "fondu"},
-                     "Bureaux.qml": None, "Volume.qml": {"remplissage": "deplacement", "disposition": "fondu", "jointure": "fondu"}}
+                     "Bureaux.qml": None, "Volume.qml": {"remplissage": "deplacement", "disposition": "fondu", "jointure": "fondu", "bascule": "fondu"}}
         for nom, natures in attendues.items():
             texte = re.sub(r"//.*", "", (ROOT / "coque" / "Presquile" / nom).read_text(encoding="utf-8"))
             ressorts = re.findall(r"Ressort\s*\{([^{}]*)\}", texte)
@@ -475,9 +475,12 @@ class VolumeTest(PresquileIpc, unittest.TestCase):
         etat, _ = self.attendre_fondu("opaciteCentre")
         self.assertEqual((etat["symbole"], etat["texte"]), ("audio-volume-muted", "Coupé"), etat)
         self.appeler("volumeSourdine", False)
+        etat, fondu = self.attendre_fondu("opaciteActif")
+        self.assertTrue(fondu, "bascule sans fondu")
         etat = self.attendre_repos()
-        self.assertEqual((etat["opaciteCote"], etat["opaciteCentre"], etat["cible"]), (0, 1, 0.5), etat)
-        self.assertEqual((etat["symbole"], etat["texte"]), ("audio-volume-medium", "Son actif"), etat)
+        self.assertEqual((etat["opaciteCote"], etat["opaciteCentre"], etat["opaciteActif"], etat["cible"]),
+                         (0, 0, 1, 0.5), etat)
+        self.assertEqual((etat["symboleActif"], etat["texteActif"]), ("audio-volume-medium", "Son actif"), etat)
         self.assertEqual((etat["fond"].lower(), etat["encre"].lower()), (couleurs["accent"], couleurs["onAccent"]), etat)
 
     def test_niveau_apres_le_retablissement(self):

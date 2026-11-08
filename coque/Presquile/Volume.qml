@@ -16,8 +16,8 @@ import "encoche.js" as Forme
 // ainsi corps avec l'encoche, sans jamais en déborder. Genre « volume » : le remplissage vaut le volume de la sortie,
 // l'icône de seuil est à gauche et le pourcentage à droite. Sous sourdine, le genre « volume » prend la disposition des
 // autres genres : l'icône barrée et « Coupé » centrés ; la bascule de la sourdine (genre « son ») centre toujours,
-// « Coupé » coupé, ou l'icône du niveau et « Son actif » rétabli, sur le remplissage d'accent au niveau ; le remplissage restant au niveau du son ; le passage d'une
-// disposition à l'autre est un fondu croisé (Ressort « reveal » de nature « fondu »). Autres genres (« micro »,
+// « Coupé » coupé, ou l'icône du niveau et « Son actif » rétabli, sur le remplissage d'accent au niveau ; le remplissage restant au niveau du son ; « Coupé » et « Son actif » se
+// croisent en fondu, chacun centré seul ; le passage d'une disposition à l'autre est un fondu croisé (Ressort « reveal » de nature « fondu »). Autres genres (« micro »,
 // « sortie », « entree ») : le remplissage glisse jusqu'à la pleine largeur, l'icône et le texte sont centrés et
 // serrés (4 px), le texte tronqué à droite ; l'icône d'un appareil est pleine.
 // Au montage d'un genre autre que « volume », le remplissage part du volume affiché et ne glisse vers la pleine
@@ -60,6 +60,10 @@ Item {
     readonly property alias centre: centre
     readonly property alias symbole: symbole
     readonly property alias etiquette: etiquette
+    readonly property alias bascule: bascule
+    readonly property alias actif: actif
+    readonly property alias symboleActif: symboleActif
+    readonly property alias etiquetteActif: etiquetteActif
     readonly property color couleurFond: fond.target
     readonly property color couleurEncre: encre.target
     // Largeurs de la variante D (spec, « Module de la presqu'île ») : la jauge, et le plus large message d'appareil.
@@ -104,6 +108,14 @@ Item {
         transition: "reveal"
         nature: "fondu"
         cible: volume.centree ? 1 : 0
+    }
+    // Fondu croisé de la sourdine, dans la disposition centrée du genre « volume » ou « son » : 1 pour l'icône barrée et
+    // « Coupé », 0 pour l'icône du niveau et « Son actif ». Chaque couche se centre seule : rien ne saute à la bascule.
+    Ressort {
+        id: bascule
+        transition: "reveal"
+        nature: "fondu"
+        cible: volume.muet ? 1 : 0
     }
     // Teinte de l'évasement droit : 1 quand le remplissage est complet, 0 sinon, en fondu court d'opacité.
     Ressort {
@@ -185,14 +197,14 @@ Item {
     Row {
         id: centre
         anchors.centerIn: parent
-        opacity: disposition.value
+        opacity: disposition.value * (volume.niveau ? bascule.value : 1)
         visible: opacity > 0
         spacing: 4
 
         Icone {
             id: symbole
             anchors.verticalCenter: parent.verticalCenter
-            nom: volume.niveau ? Icones.iconeAudio(true, volume.muet, volume.niveauSon)
+            nom: volume.niveau ? Icones.iconeAudio(true, true, volume.niveauSon)
                 : volume.annonce.genre === "micro" ? Icones.iconeMicro(volume.coupe) : volume.annonce.appareil
             pleine: !volume.niveau && volume.annonce.genre !== "micro"
             taille: Theme.icons?.sizes?.dense ?? 0
@@ -204,7 +216,32 @@ Item {
             width: Math.min(implicitWidth, volume.largeurMax - 2 * volume.marge - symbole.width - centre.spacing)
             elide: Text.ElideRight
             moyen: true
-            text: volume.niveau ? (volume.muet ? "Coupé" : "Son actif") : volume.annonce.texte
+            text: volume.niveau ? "Coupé" : volume.annonce.texte
+            color: encre.value
+        }
+    }
+
+    // Couche rétablie du genre « volume » ou « son » : l'icône du niveau et « Son actif », qui prend la place de la couche
+    // « Coupé » par fondu croisé.
+    Row {
+        id: actif
+        anchors.centerIn: parent
+        opacity: volume.niveau ? disposition.value * (1 - bascule.value) : 0
+        visible: opacity > 0
+        spacing: centre.spacing
+
+        Icone {
+            id: symboleActif
+            anchors.verticalCenter: parent.verticalCenter
+            nom: Icones.iconeAudio(true, false, volume.niveauSon)
+            taille: Theme.icons?.sizes?.dense ?? 0
+            couleur: encre.value
+        }
+        Texte {
+            id: etiquetteActif
+            anchors.verticalCenter: parent.verticalCenter
+            moyen: true
+            text: "Son actif"
             color: encre.value
         }
     }
