@@ -20,7 +20,8 @@ import "Composants/ancrage.js" as Ancrage
 // Entrées : DUNEI_TOKENS_DIR, lu par Theme ; thème d'icônes DuneI, posé par la directive IconTheme en tête.
 // Sortie : journal de Theme, plus « essai : prêt <bool> » à chaque changement de Theme.ready, et une ligne « essai :
 // <clé> <valeur> » par commande IPC de lecture (cran, interaction, selection, sonde, naissances, fond, texte, anneau,
-// etat, ressort, ressortsFiges, image, controles, coches, cotes, glyphes, radios, jauge, jaugeIcone, jaugeHors, jaugeCibles, progression, separateur,
+// etat, ressort, ressortsFiges, image, controles, coches, cotes, glyphes, radios, jauge, jaugeIcone, jaugeHors,
+// jaugeCibles, progression, separateur,
 // champ, indicatif, tailleIcone, liste, arrets, rangee, rangeeImposees, bouton, overlays, overlaysFermes, pastilles, compteur,
 // compteurLargeur, deroulant, recherche, rechercheCouleurs, secret, activite, depliable, depliableCotes, iconesControles,
 // bascule, reglages, valeur, fenetreAttention, knobs, contours, materiauSurfaces, verre, cleVerre, champMateriau, ombres).
@@ -589,19 +590,27 @@ ShellRoot {
             essai.journal("jaugeIcone", [jaugeEssai.value, jaugeEssai.clics].join(" "))
         }
 
-        // jaugeHors — pose la valeur de la jauge comme le ferait un clic hors de l'icône, après avoir vérifié que la
-        // zone de l'icône ne couvre que le carré de gauche. Entrées : aucune. Sortie : aucune ; « essai : jaugeHors
-        // <valeur> <clics> <zoneLargeur> <barreHauteur> ». Erreurs : aucune. Dépendances : jaugeEssai.
+        // jaugeHors — journalise la géométrie de la zone cliquable de l'icône dans la jauge, puis si cette zone est
+        // l'élément atteint par un appui au centre du carré de l'icône et par un appui dans la moitié droite de la
+        // barre, puis si elle est active avec l'icône et sans elle (l'icône est rétablie). Entrées : aucune. Sortie :
+        // aucune ; « essai : jaugeHors <x> <y> <largeur> <hauteur> <barreX> <barreY> <barreHauteur> <bool dedans>
+        // <bool dehors> <bool actif> <bool actifSansIcone> ». Erreurs : aucune. Dépendances : jaugeEssai.
         function jaugeHors(): void {
-            jaugeEssai.value = 0.8
-            essai.journal("jaugeHors", [jaugeEssai.value, jaugeEssai.clics, jaugeEssai.zoneIcone.width,
-                jaugeEssai.barre.height].join(" "))
+            const j = jaugeEssai, z = j.zoneIcone, b = j.barre, h = b.height, y = b.y + h / 2
+            const dedans = j.childAt(b.x + h / 2, y) === z, dehors = j.childAt(b.x + b.width * 0.75, y) === z
+            const actif = z.enabled
+            j.icone = ""
+            const sans = z.enabled
+            j.icone = "audio-volume-high"
+            essai.journal("jaugeHors", [z.x, z.y, z.width, z.height, b.x, b.y, h, dedans, dehors, actif, sans].join(" "))
         }
 
-        // jaugeCibles — journalise les cibles de couleur du remplissage et de l'icône. Entrées : aucune. Sortie :
-        // aucune ; « essai : jaugeCibles <#remplissage> <#icône> ». Erreurs : aucune. Dépendances : jaugeEssai.
+        // jaugeCibles — journalise les cibles de couleur du remplissage et de l'icône, puis la couleur de fond de
+        // l'Etat. Entrées : aucune. Sortie : aucune ; « essai : jaugeCibles <#remplissage> <#icône> <#fondEtat> ».
+        // Erreurs : aucune. Dépendances : jaugeEssai.
         function jaugeCibles(): void {
-            essai.journal("jaugeCibles", [jaugeEssai.fondRemplie.target, jaugeEssai.fondIcone.target].join(" "))
+            essai.journal("jaugeCibles", [jaugeEssai.fondRemplie.target, jaugeEssai.fondIcone.target,
+                jaugeEssai.etat.fond].join(" "))
         }
 
         // jaugeCoupe — coupe ou rétablit la jauge d'essai. Entrée : valeur, nouvel état coupe. Sortie : aucune.
