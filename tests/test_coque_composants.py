@@ -402,6 +402,28 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
         self.ipc("inactif", "true")
         self.assertIn(focus["colorMuted"].lower(), self.valeur("rangee").lower())
 
+    def test_rangee_pleine(self):
+        # Posée pleine, la rangée demande à son icône la variante pleine ; par défaut, l'icône est de fer.
+        self.demarrer()
+        self.ipc("rangeeImposer", "false")
+        self.assertEqual(self.valeur("rangeeImposees").split()[0], "false")
+        self.ipc("rangeeImposer", "true")
+        self.assertEqual(self.valeur("rangeeImposees").split()[0], "true")
+
+    def test_rangee_teintes(self):
+        # Les teintes imposées (accent pour l'icône, error pour le libellé) deviennent les couleurs visées et le
+        # libellé passe en graisse moyenne ; rendues transparentes, les couleurs de l'état reviennent.
+        self.demarrer()
+        t = self.tokens55()[0]["color"]
+        self.ipc("rangeeImposer", "true")
+        _, icone, texte, gras, _ = self.valeur("rangeeImposees").lower().split()
+        self.assertEqual((icone, texte, gras), (t["accent"].lower(), t["error"].lower(), "true"))
+        self.ipc("rangeeImposer", "false")
+        _, icone, texte, gras, _ = self.valeur("rangeeImposees").lower().split()
+        self.assertNotIn(icone, (t["accent"].lower(), t["error"].lower()))
+        self.assertNotIn(texte, (t["accent"].lower(), t["error"].lower()))
+        self.assertEqual(gras, "false")
+
     def test_rangee_transparente_au_repos(self):
         # Défaut relevé à l'écran : sur le verre d'un menu, chaque rangée au repos peignait la couleur opaque de sa
         # surface et formait une plaque distincte. Ni survolée, ni pressée, ni sélectionnée, la pastille est

@@ -21,7 +21,7 @@ import "Composants/ancrage.js" as Ancrage
 // Sortie : journal de Theme, plus « essai : prêt <bool> » à chaque changement de Theme.ready, et une ligne « essai :
 // <clé> <valeur> » par commande IPC de lecture (cran, interaction, selection, sonde, naissances, fond, texte, anneau,
 // etat, ressort, ressortsFiges, image, controles, coches, cotes, glyphes, radios, jauge, jaugeIcone, jaugeHors, jaugeCibles, progression, separateur,
-// champ, indicatif, tailleIcone, liste, arrets, rangee, bouton, overlays, overlaysFermes, pastilles, compteur,
+// champ, indicatif, tailleIcone, liste, arrets, rangee, rangeeImposees, bouton, overlays, overlaysFermes, pastilles, compteur,
 // compteurLargeur, deroulant, recherche, rechercheCouleurs, secret, activite, depliable, depliableCotes, iconesControles,
 // bascule, reglages, valeur, fenetreAttention, knobs, contours, materiauSurfaces, verre, cleVerre, champMateriau, ombres).
 // Commandes sans journal : « essai rechercheTexte <texte> », « essai secretTexte <texte> », « essai secretALire
@@ -30,7 +30,7 @@ import "Composants/ancrage.js" as Ancrage
 // <visible> <running> », « essai activitePhase <phase> », « essai activiteAncetre <bool> », « essai depliableOuvrir
 // <bool> », « essai basculeCocher <bool> », « essai valeurCopier », « essai pastillesForcer <état> », « essai pastillesReduire <bool> »,
 // « essai knobsActifs <bool> », « essai interrupteurCocher <bool> », « essai compteurValeur <n> », « essai deroulantRang <n> », « essai decocher »,
-// « essai radioCocher <rang> », « essai jaugeActive <bool> », « essai jaugeCoupe <bool> », « essai boutonPrincipal <bool> », « essai inactif
+// « essai radioCocher <rang> », « essai jaugeActive <bool> », « essai jaugeCoupe <bool> », « essai rangeeImposer <bool> », « essai boutonPrincipal <bool> », « essai inactif
 // <bool> », « essai reparenter », « essai texteMoyen », « essai anneauInactif <bool> », « essai survol <bool> »,
 // « essai champActif <bool> », « essai champTexte <texte> », « essai selectionLibre », « essai icone <nom> <bool> »,
 // « essai ouvrirFactice <A…E> », « essai fermerFactice <A…E> » et « essai materiauHauteur <px> ».
@@ -1046,6 +1046,28 @@ ShellRoot {
             const p = c.mapToItem(r, 0, 0)
             essai.journal("rangee", [r.etat.role, r.height, r.width, "|", t.mapToItem(r, 0, 0).x, t.width, t.height,
                 t.radius, "|", p.x, p.y, c.width, c.height, c.radius, c.border.width, c.border.color, c.visible].join(" "))
+        }
+
+        // rangeeImposer — pose sur la rangée 0 de la liste d'essai une icône, la variante pleine, des teintes
+        // imposées (accent et error) et le gras, ou les rétablit. Entrée : valeur, vrai pour imposer. Sortie :
+        // aucune. Erreurs : aucune. Dépendances : listeEssai, Theme (color).
+        function rangeeImposer(valeur: bool): void {
+            const r = listeEssai.itemAtIndex(0)
+            r.icone = "audio-volume-high"
+            r.pleine = valeur
+            r.gras = valeur
+            r.teinteIcone = valeur ? Theme.color?.accent ?? "transparent" : "transparent"
+            r.teinteTexte = valeur ? Theme.color?.error ?? "transparent" : "transparent"
+        }
+
+        // rangeeImposees — journalise, pour la rangée 0, la variante pleine de son icône, les cibles de couleur
+        // de l'icône et du libellé, et le drapeau gras avec la graisse du libellé. Entrées : aucune. Sortie :
+        // aucune ; « essai : rangeeImposees <bool> <#icône> <#libellé> <gras> <graisse> ». Erreurs : aucune.
+        // Dépendances : listeEssai, Rangee (glyphe, fondIcone, fondTexte, gras, libelle).
+        function rangeeImposees(): void {
+            const r = listeEssai.itemAtIndex(0)
+            essai.journal("rangeeImposees", [r.glyphe.pleine, r.fondIcone.target, r.fondTexte.target, r.gras,
+                r.libelle.font.weight].join(" "))
         }
 
         // pastillesRangees — journalise l'opacité de la pastille des rangées 0 (au repos) et 1 (courante, donc
