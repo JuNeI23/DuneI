@@ -491,6 +491,24 @@ class VolumeTest(PresquileIpc, unittest.TestCase):
         self.assertEqual((etat["symboleActif"], etat["texteActif"]), ("audio-volume-medium", "Son actif"), etat)
         self.assertEqual((etat["fond"].lower(), etat["encre"].lower()), (couleurs["accent"], couleurs["onAccent"]), etat)
 
+    def test_micro_glisse(self):
+        # Le micro roule comme le son quand sa bascule arrive module monté : « Micro coupé » sort par le haut et « Micro
+        # actif » monte du bas. Monté frais sur une annonce de micro, rien ne glisse.
+        self.appeler("volumeAnnoncer", "micro", "")
+        etat = self.attendre_repos()
+        self.assertEqual(etat["texteActif"], "Micro actif", etat)
+        self.assertAlmostEqual(etat["yCentre"] - etat["yActif"], -etat["hauteur"], delta=2, msg=etat)
+        self.appeler("volumeMicro", True)
+        vus, fin = set(), time.monotonic() + DELAI
+        while time.monotonic() < fin:
+            etat = self.json("volumeEtat")
+            vus.add(round(etat["yActif"]))
+            if not etat["mobile"]:
+                break
+            time.sleep(0.01)
+        self.assertGreater(len(vus), 3, f"micro sans glissement : {vus}")
+        self.assertAlmostEqual(etat["yActif"] - etat["yCentre"], -etat["hauteur"], delta=2, msg=etat)
+
     def test_niveau_apres_le_retablissement(self):
         # Un changement de niveau (annonce « volume ») rétabli rend la jauge ordinaire ; coupé, il garde « Coupé »
         # centré, le remplissage suivant le niveau.

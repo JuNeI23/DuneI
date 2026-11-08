@@ -112,8 +112,25 @@ Item {
     }
     // Compteur de la sourdine, dans la disposition centrée du genre « volume » ou « son » : pair, « Coupé » est au
     // centre, impair, « Son actif » ; chaque bascule l'avance de un et les couches roulent d'un cran vers le haut.
-    property int tours: muet ? 0 : 1
-    onMuetChanged: tours = tours + 1
+    property int tours: coupe ? 0 : 1
+    // Famille de l'annonce vue en dernier : « son » pour les genres « volume » et « son », sinon le genre. Une bascule ne
+    // glisse que dans la même famille ; d'une famille à l'autre, le compteur se cale sans mouvement.
+    readonly property string famille: niveau ? "son" : (annonce?.genre ?? "volume")
+    property string familleVue: famille
+    // Les genres qui roulent : la jauge du son et le micro ; les appareils changent de texte sans glisser.
+    readonly property bool glisse: niveau || annonce?.genre === "micro"
+    onCoupeChanged: suivre()
+    onFamilleChanged: suivre()
+    // suivre — cale le compteur sur l'état coupé : une bascule dans la même famille l'avance d'un cran (les couches
+    // roulent) ; un changement de famille le cale sans glisser.
+    // Entrées : aucune. Sortie : met à jour tours et familleVue. Erreurs : aucune. Dépendances : bascule, coupe, famille.
+    function suivre(): void {
+        const autre = famille !== familleVue
+        familleVue = famille
+        if ((coupe ? 0 : 1) === tours % 2) return
+        tours = tours + 1
+        if (autre) Qt.callLater(bascule.poser)
+    }
     Ressort {
         id: bascule
         transition: "navigate"
@@ -131,7 +148,7 @@ Item {
     // Teinte de l'évasement droit : 1 quand le remplissage est complet, 0 sinon, en fondu court d'opacité.
     Ressort {
         id: jointure
-        transition: "reveal"
+        transition: "state"
         nature: "fondu"
         cible: volume.complet ? 1 : 0
     }
@@ -214,7 +231,7 @@ Item {
         Row {
             id: centre
             anchors.horizontalCenter: parent.horizontalCenter
-            y: (parent.height - height) / 2 + (volume.niveau ? volume.decalage(bascule.value) : 0)
+            y: (parent.height - height) / 2 + (volume.glisse ? volume.decalage(bascule.value) : 0)
             opacity: disposition.value
             visible: opacity > 0
             spacing: 4
@@ -223,7 +240,7 @@ Item {
                 id: symbole
                 anchors.verticalCenter: parent.verticalCenter
                 nom: volume.niveau ? Icones.iconeAudio(true, true, volume.niveauSon)
-                    : volume.annonce.genre === "micro" ? Icones.iconeMicro(volume.coupe) : volume.annonce.appareil
+                    : volume.annonce.genre === "micro" ? Icones.iconeMicro(true) : volume.annonce.appareil
                 pleine: !volume.niveau && volume.annonce.genre !== "micro"
                 taille: Theme.icons?.sizes?.dense ?? 0
                 couleur: encre.value
@@ -234,25 +251,25 @@ Item {
                 width: Math.min(implicitWidth, volume.largeurMax - 2 * volume.marge - symbole.width - centre.spacing)
                 elide: Text.ElideRight
                 moyen: true
-                text: volume.niveau ? "Coupé" : volume.annonce.texte
+                text: volume.niveau ? "Coupé" : volume.annonce.genre === "micro" ? "Micro coupé" : volume.annonce.texte
                 color: encre.value
             }
         }
 
-        // Couche rétablie du genre « volume » ou « son » : l'icône du niveau et « Son actif », qui prend la place de la couche
-        // « Coupé » par fondu croisé.
+        // Couche rétablie des genres « volume », « son » et « micro » : l'icône du niveau et « Son actif », ou le micro et
+        // « Micro actif », qui roule sur la couche coupée.
         Row {
             id: actif
             anchors.horizontalCenter: parent.horizontalCenter
             y: (parent.height - height) / 2 + volume.decalage(bascule.value - 1)
-            opacity: volume.niveau ? disposition.value : 0
+            opacity: volume.glisse ? disposition.value : 0
             visible: opacity > 0
             spacing: centre.spacing
 
             Icone {
                 id: symboleActif
                 anchors.verticalCenter: parent.verticalCenter
-                nom: Icones.iconeAudio(true, false, volume.niveauSon)
+                nom: volume.niveau ? Icones.iconeAudio(true, false, volume.niveauSon) : Icones.iconeMicro(false)
                 taille: Theme.icons?.sizes?.dense ?? 0
                 couleur: encre.value
             }
@@ -260,7 +277,7 @@ Item {
                 id: etiquetteActif
                 anchors.verticalCenter: parent.verticalCenter
                 moyen: true
-                text: "Son actif"
+                text: volume.niveau ? "Son actif" : "Micro actif"
                 color: encre.value
             }
         }

@@ -14,7 +14,7 @@ import "Audio"
 // planche forme.html (106), sur le fond du bureau, avec la marge de son ombre, et l'enregistre en PNG à la demande.
 // Les commandes arbitreDemander, arbitreLiberer et arbitreEtat éprouvent l'Arbitre ; annonceurRafale,
 // annonceurPleinEcran et annonceurEtat, l'Annonceur, piloté par une source et une presqu'île factices ;
-// volumeAnnoncer, volumeSourdine, volumeNiveau et volumeEtat, le module Volume réel dans une scène sans fenêtre (débord
+// volumeAnnoncer, volumeMicro, volumeSourdine, volumeNiveau et volumeEtat, le module Volume réel dans une scène sans fenêtre (débord
 // du remplissage hors de l'encoche, jointures, disposition du son coupé) ; audioTenir et audioPopover, le compte des
 // popovers audio ouverts d'EtatAudio. Les tâches suivantes y ajoutent leurs composants et leurs fonctions IPC.
 // Entrées : DUNEI_TOKENS_DIR, lu par Theme ; QT_QPA_PLATFORM, posé à offscreen par le test ; QT_SCALE_FACTOR, pour
@@ -334,6 +334,12 @@ ShellRoot {
         function volumeAnnoncer(genre: string, texte: string): void {
             EtatAudio.annonceCourante = { genre, appareil: genre === "micro" ? "" : "audio-speakers", texte, coupe: false }
             sceneVolume.module = moduleVolumeReel
+        }
+
+        // volumeMicro — rebascule l'annonce de micro courante, module monté. Entrée : coupe, vrai pour « Micro coupé ».
+        // Sortie : aucune. Erreurs : aucune. Dépendances : EtatAudio.
+        function volumeMicro(coupe: bool): void {
+            EtatAudio.annonceCourante = { genre: "micro", appareil: "", texte: coupe ? "Micro coupé" : "Micro actif", coupe }
         }
 
         // volumeEtat — photographie de la scène du Volume. Entrées : aucune. Sortie : JSON {depassement (débord
