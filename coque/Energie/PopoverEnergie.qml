@@ -37,7 +37,8 @@ Overlay {
     // ChoixProfil — contrôle segmenté du profil d'énergie, reflet du profil de l'état.
     // Rôle : les Onglet déclarés comme enfants sont les profils, dans l'ordre de l'énumération PowerProfile. Le
     // contrôle reflète le profil de l'état, y compris celui changé ailleurs ; un choix (clic ou flèche) l'écrit par
-    // l'état, qui le confirme ou le laisse inchangé. Pendant la construction, la barre coche d'elle-même son premier
+    // l'état, qui le confirme ou le laisse inchangé ; dans ce dernier cas, le contrôle revient au profil effectif
+    // aussitôt la main rendue à la boucle d'événements. Pendant la construction, la barre coche d'elle-même son premier
     // segment : ce n'est pas un choix et il ne doit rien écrire ; « arme » ne passe à vrai qu'une fois les segments
     // posés.
     // Entrées : les Onglet enfants ; popover.etat (profil, choisirProfil). Sorties : aucune. Erreurs : aucune.
@@ -51,8 +52,11 @@ Overlay {
         Layout.bottomMargin: Theme.space?.scale[0] ?? 0
         Component.onCompleted: Qt.callLater(() => arme = true)
         Binding on currentIndex { value: popover.etat.profil; restoreMode: Binding.RestoreNone }
-        onCurrentIndexChanged: if (arme && currentIndex >= 0 && currentIndex !== popover.etat.profil)
+        onCurrentIndexChanged: if (arme && currentIndex >= 0 && currentIndex !== popover.etat.profil) {
             popover.etat.choisirProfil(currentIndex)
+            // Un choix que l'état n'a pas pris (démon qui refuse) rend au contrôle le profil effectif.
+            Qt.callLater(() => { if (currentIndex !== popover.etat.profil) currentIndex = popover.etat.profil })
+        }
     }
 
     FocusScope {

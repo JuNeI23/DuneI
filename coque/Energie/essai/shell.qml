@@ -9,7 +9,8 @@ import "Energie/energie.js" as Logique
 // branché sur un appareil et des profils simulés, plus (cible « reel ») un SuiviEnergie branché sur UPower et le démon
 // de profils réels, pour que tests/test_energie.py les éprouve dans un vrai Quickshell.
 // Entrées : commande IPC energie appeler <fonction> <{"args": [...]} en JSON> ; suivi fixer <ready> <portable> <pourcent>
-// <state> <secondes> ; suivi lire ; suivi choisir <profil> ; reel choisir <profil> ; reel lire.
+// <state> <secondes> ; suivi lire ; suivi choisir <profil> ; reel choisir <profil> ; reel lire. ESSAI_PROFILS=0
+// simule l'absence du démon de profils pour le suivi simulé.
 // Sorties : le résultat encodé en JSON, ou « erreur : <message> » si la fonction lève ; le suivi journalise
 // « annonce <palier> » et « effacer » ; lire rend un objet JSON. Erreurs : nom de fonction inconnu, JSON invalide (même
 // forme de retour). Dépendances : quickshell ≥ 0.3 (Quickshell.Io), energie.js et SuiviEnergie.qml (liens dans essai/Energie/, et Theme dans essai/,
@@ -39,6 +40,8 @@ ShellRoot {
         id: suivi
         appareil: faux
         profils: fauxProfils
+        // Détection du démon simulée : ESSAI_PROFILS=0 la fait échouer (démon absent), sinon elle réussit.
+        commandeProfils: [Quickshell.env("ESSAI_PROFILS") === "0" ? "false" : "true"]
         onAnnoncer: palier => console.log("energie : annonce " + palier)
         onEffacer: console.log("energie : effacer")
     }
@@ -89,6 +92,7 @@ ShellRoot {
         function lire(): string {
             return JSON.stringify({ presente: suivi.presente, pourcent: suivi.pourcent, etat: suivi.etat,
                 estimation: suivi.estimation, palier: suivi.palierCourant, profil: suivi.profil,
+                aProfils: suivi.aProfils,
                 faible: suivi.seuilFaible, critique: suivi.seuilCritique })
         }
     }

@@ -13,6 +13,23 @@ from tests.test_coque_theme import DELAI, QS, ROOT, EssaiCoque
 ESSAI = ROOT / "coque" / "Energie" / "essai"
 
 
+class SourcesEnergieTest(unittest.TestCase):
+    """Vérifie dans le source de SuiviEnergie les choix que l'essai simulé ne peut pas éprouver : la batterie prise
+    dans UPower.devices et la commande par défaut qui détecte le démon de profils."""
+
+    qml = (ROOT / "coque" / "Energie" / "SuiviEnergie.qml").read_text()
+
+    def test_batterie_prise_dans_les_appareils(self):
+        self.assertRegex(self.qml, r"batterie:\s*\(UPower\.devices\?\.values \?\? \[\]\)"
+                                   r"\.find\(d => d\.isLaptopBattery\) \?\? null")
+        self.assertRegex(self.qml, r"property var appareil:\s*batterie \?\? UPower\.displayDevice")
+
+    def test_detection_du_demon_par_le_bus(self):
+        self.assertIn('commandeProfils: ["busctl", "--system", "status", "net.hadess.PowerProfiles"]', self.qml)
+        self.assertRegex(self.qml, r"onExited: code => racine\.demonProfils = code === 0")
+        self.assertRegex(self.qml, r"aProfils: demonProfils && !!profils")
+
+
 @unittest.skipUnless(os.environ.get("WAYLAND_DISPLAY") and QS, "session Wayland et Quickshell requis")
 class EnergieJsTest(EssaiCoque, unittest.TestCase):
     """Appelle chaque fonction de energie.js par l'IPC de la coque d'essai de l'énergie."""
@@ -218,6 +235,26 @@ class SuiviEnergieTest(EssaiCoque, unittest.TestCase):
         self.appeler_cible("suivi", "choisir", "2")
         self.assertEqual(self.lire()["profil"], 2)
 
+    def test_detection_demon_profils(self):
+        # La détection unique a réussi (commande « true ») : les profils sont proposés.
+        self.assertTrue(self.lire()["aProfils"])
+        # Elle échoue (commande « false », démon absent) : aProfils reste faux et un choix ne change rien.
+        self.environnement = {"ESSAI_PROFILS": "0"}
+        self.lancer(self.dir)
+        self.attendre("energie : prêt")
+        time.sleep(0.3)
+        self.assertFalse(self.lire()["aProfils"])
+        self.appeler_cible("suivi", "choisir", "0")
+        self.assertEqual(self.lire()["profil"], 1)
+
+    @unittest.skipUnless(shutil.which("busctl"), "busctl requis")
+    def test_detection_demon_reel(self):
+        """Le suivi réel voit le démon de profils exactement quand le bus système lui connaît un propriétaire."""
+        present = subprocess.run(["busctl", "--system", "status", "net.hadess.PowerProfiles"],
+                                 capture_output=True).returncode == 0
+        time.sleep(0.5)
+        self.assertEqual(json.loads(self.appeler_cible("reel", "lire"))["aProfils"], present)
+
     @unittest.skipUnless(shutil.which("powerprofilesctl"), "powerprofilesctl requis")
     def test_profil_reel(self):
         """Écrit un profil par le suivi réel, le relit par powerprofilesctl, puis rétablit le profil d'origine."""
@@ -351,6 +388,13 @@ class PopoverEnergieTest(EssaiCoque, unittest.TestCase):
         p = self.attendre_panneau(lambda p: not p["segmentsVisibles"])
         self.assertFalse(p["section"]["visible"])
         self.assertEqual(p["pourcent"], "76 %")
+
+    def test_choix_refuse_revient_au_profil(self):
+        self.ouvrir()
+        self.ipc("poser", "refuse", "true")
+        self.ipc("cliquer", "Économie")
+        self.attendre("essai : choisirProfil 0")
+        self.assertEqual(self.attendre_panneau(lambda p: p["coche"] == 1)["coche"], 1)
 
     def test_clic_choisit_le_profil(self):
         self.ouvrir()

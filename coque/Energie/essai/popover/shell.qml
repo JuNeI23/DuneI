@@ -23,7 +23,7 @@ ShellRoot {
     function journal(cle, valeur = "") { console.info(("essai : " + cle + " " + valeur).trim()) }
 
     // État factice : les propriétés et la fonction de EtatEnergie qu'emploie le popover. Un choix est confirmé aussitôt,
-    // comme le fait le démon de profils.
+    // comme le fait le démon de profils, sauf si refuse est vrai.
     QtObject {
         id: faux
         property int pourcent: 76
@@ -31,7 +31,9 @@ ShellRoot {
         property int profil: 1
         property bool aPerformance: true
         property bool aProfils: true
-        function choisirProfil(p) { essai.journal("choisirProfil", p); profil = p }
+        // Vrai, le démon simulé refuse tout choix et le profil reste inchangé.
+        property bool refuse: false
+        function choisirProfil(p) { essai.journal("choisirProfil", p); if (!refuse) profil = p }
     }
 
     LazyLoader {
@@ -121,7 +123,8 @@ ShellRoot {
                     s.incrementCurrentIndex()
                 }
                 // poser — change une valeur de l'état factice, comme un autre client. Entrées : cle, « pourcent »,
-                // « estimation », « profil », « aPerformance » ou « aProfils » ; valeur, en JSON. Sortie : aucune.
+                // « estimation », « profil », « aPerformance », « aProfils » ou « refuse » ; valeur, en JSON.
+                // Sortie : aucune.
                 function poser(cle: string, valeur: string): void { faux[cle] = JSON.parse(valeur) }
             }
         }

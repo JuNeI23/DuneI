@@ -11,16 +11,27 @@ import "energie.js" as Energie
 // parce qu'un singleton ne se recrée pas dans un essai : la coque d'essai instancie ce composant avec un appareil et
 // des profils simulés. Les seuils viennent de energie.json (source unique : energie.toml), sous le dossier des
 // jetons ; sans fichier lisible, 20 % et 5 % s'appliquent et le journal le dit.
-// Entrées : appareil (défaut : la batterie de UPower.devices, sinon UPower.displayDevice), objet portant ready, isLaptopBattery, percentage (fraction de 0 à 1, relevée sur Quickshell 0.3.2 ; elle peut être non nulle avant ready), state, timeToEmpty, timeToFull (défaut
-// UPower.displayDevice) ; profils, objet portant profile et hasPerformanceProfile (défaut PowerProfiles) ; dir, dossier
-// de energie.json (défaut Theme.dir : DUNEI_TOKENS_DIR, sinon $XDG_CONFIG_HOME/dunei, sinon ~/.config/dunei). choisirProfil(profil), action de l'interface.
+// Le démon de profils est détecté une fois, au démarrage, sans sondage : le singleton PowerProfiles de Quickshell
+// existe toujours et n'expose aucun drapeau de présence (seulement profile, hasPerformanceProfile, degradationReason
+// et holds). Un Process unique lance busctl (livré avec systemd, donc présent sur toute Arch) et demande si le nom
+// net.hadess.PowerProfiles du bus système a un propriétaire ; un code de sortie nul vaut démon présent.
+// Entrées : appareil, objet portant ready, isLaptopBattery, percentage (fraction de 0 à 1, relevée sur Quickshell
+// 0.3.2 ; elle peut être non nulle avant ready), state, timeToEmpty et timeToFull ; par défaut la batterie du
+// portable prise dans UPower.devices, et UPower.displayDevice tant qu'aucune n'est connue. profils, objet portant
+// profile et hasPerformanceProfile (défaut PowerProfiles). commandeProfils, commande de détection du démon, liste
+// d'arguments (défaut busctl --system status net.hadess.PowerProfiles ; la coque d'essai la remplace). dir, dossier
+// de energie.json (défaut Theme.dir : DUNEI_TOKENS_DIR, sinon $XDG_CONFIG_HOME/dunei, sinon ~/.config/dunei).
+// choisirProfil(profil), action de l'interface.
 // Sorties : presente, vrai si l'appareil est une batterie de portable ; pourcent, entier ; etat, « decharge »,
-// « charge », « chargee » ou « secteur » ; surBatterie ; estimation, texte du popover ; profil, aPerformance, aProfils ;
-// palierCourant (0, 1 ou 2) ; signal annoncer(palier), 1 ou 2, quand un palier plus haut est franchi sur batterie ;
-// signal effacer(), quand l'appareil quitte la batterie (branchement).
+// « charge », « chargee » ou « secteur » ; surBatterie ; estimation, texte du popover ; profil, aPerformance ;
+// aProfils, vrai si la détection a trouvé le démon ; palierCourant (0, 1 ou 2) ; signal annoncer(palier), 1 ou 2,
+// quand un palier plus haut est franchi sur batterie ; signal effacer(), quand l'appareil quitte la batterie
+// (branchement).
 // Erreurs : energie.json absent ou invalide → console.log « energie : seuils par défaut » ; sans batterie, presente
-// reste faux et rien n'est annoncé ; sans démon de profils, aProfils reste faux.
-// Dépendances : Theme (dir), Quickshell (Scope), Quickshell.Io (FileView), Quickshell.Services.UPower, energie.js.
+// reste faux et rien n'est annoncé ; sans démon de profils (ou sans busctl), aProfils reste faux et choisirProfil
+// ne fait rien. Un démon lancé après la coque n'est vu qu'au redémarrage de celle-ci.
+// Dépendances : Theme (dir), Quickshell (Scope), Quickshell.Io (FileView, Process), busctl, Quickshell.Services.UPower,
+// energie.js.
 Scope {
     id: racine
 
@@ -29,6 +40,9 @@ Scope {
     readonly property var batterie: (UPower.devices?.values ?? []).find(d => d.isLaptopBattery) ?? null
     property var appareil: batterie ?? UPower.displayDevice
     property var profils: PowerProfiles
+    property var commandeProfils: ["busctl", "--system", "status", "net.hadess.PowerProfiles"]
+    // Vrai quand la détection unique du démon de profils a réussi (voir le Process en fin de fichier).
+    property bool demonProfils: false
     property string dir: Theme.dir
 
     property int seuilFaible: 20
@@ -50,7 +64,7 @@ Scope {
         etat === "charge" ? appareil.timeToFull : appareil?.timeToEmpty ?? 0)
     readonly property int profil: profils?.profile ?? 1
     readonly property bool aPerformance: profils?.hasPerformanceProfile ?? false
-    readonly property bool aProfils: profils !== null && profils !== undefined
+    readonly property bool aProfils: demonProfils && !!profils
     readonly property int palierCourant: Energie.palier(pret, surBatterie, pourcent, seuilFaible, seuilCritique)
 
     signal annoncer(int palier)
@@ -102,5 +116,13 @@ Scope {
             }
         }
         onLoadFailed: console.log("energie : seuils par défaut")
+    }
+
+    // Détection unique du démon de profils au démarrage : code de sortie nul, démon présent ; échec du lancement
+    // (commande introuvable), démon absent.
+    Process {
+        command: racine.commandeProfils
+        running: true
+        onExited: code => racine.demonProfils = code === 0
     }
 }

@@ -1138,8 +1138,9 @@ class CoqueClavierTest(EssaiCoque, unittest.TestCase):
         # Le ressort d'état d'un segment non coché part de la transparence au survol comme au repos : sinon son fond
         # opaque paraîtrait au premier instant de la pression (gris, noir, gris constatés à l'écran).
         # Le ressort peut finir de glisser vers la transparence après la création : on attend qu'il s'y pose.
+        # Une ligne de moins de trois champs est complétée de champs vides : l'échec reste lisible, sans IndexError.
         fin = time.monotonic() + DELAI
-        while (survol := self.valeur("ongletSurvole").split())[2][:3] != "#00" and time.monotonic() < fin:
+        while (survol := self.valeur("ongletSurvole").split() + [""] * 3)[2][:3] != "#00" and time.monotonic() < fin:
             time.sleep(0.1)
         self.assertEqual(survol[:2], ["hover", "#00000000"])
         self.assertEqual(survol[2][:3], "#00", survol)

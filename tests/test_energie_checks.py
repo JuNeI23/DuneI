@@ -46,6 +46,13 @@ class ChecksTest(unittest.TestCase):
         self.refused(lambda r: r.pop("alerte"), "alerte")
         self.refused(lambda r: r["alerte"].update(moyen=10), "alerte", "moyen")
 
+    def test_alerte_inversee_signalee_avec_les_autres_fautes(self):
+        """Une paire de seuils inversée est signalée même quand une autre section est fautive."""
+        def change(r):
+            r["alerte"].update(faible=5, critique=20)
+            r["attenuation"]["niveau"] = 0
+        self.refused(change, "n'est pas sous faible", "attenuation")
+
     def test_order(self):
         self.refused(lambda r: r["paliers"]["ecran"].update(batterie=200), "palier ecran, batterie", "verrouillage")
 

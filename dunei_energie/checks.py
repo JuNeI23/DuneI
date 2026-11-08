@@ -46,9 +46,10 @@ def _types(raw: dict) -> list[str]:
         err.append("alerte : table attendue")
     else:
         err += [f"alerte : clé inconnue « {k} »" for k in alerte if k not in SEUILS]
-        err += [f"alerte : {k} « {alerte.get(k)} » hors de 1 à 99" for k in SEUILS
+        hors = [f"alerte : {k} « {alerte.get(k)} » hors de 1 à 99" for k in SEUILS
                 if not (_entier(alerte.get(k)) and 1 <= alerte[k] <= 99)]
-        if not err and alerte["critique"] >= alerte["faible"]:
+        err += hors
+        if not hors and alerte["critique"] >= alerte["faible"]:
             err.append(f"alerte : critique ({alerte['critique']}) n'est pas sous faible ({alerte['faible']})")
     paliers = raw.get("paliers", {})
     if not isinstance(paliers, dict):
