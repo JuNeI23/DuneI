@@ -327,7 +327,7 @@ function premiere(valeurs) {
 // Sortie : vrai quand le nom contient le filtre, sans tenir compte de la casse ni des accents.
 // Erreurs : aucune. Dépendances : aucune.
 function filtrer(nom, filtre) {
-    const nu = t => t.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase()
+    const nu = t => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
     return nu(nom).includes(nu(filtre))
 }
 
