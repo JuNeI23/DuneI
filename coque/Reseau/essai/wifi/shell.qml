@@ -239,6 +239,15 @@ ShellRoot {
                     faux.nomActif = ""
                     panneauFaux.rangees = panneauFaux.rangees.map(r => r.uuid === "wifi-1" ? Object.assign({}, r, {actif: false, etat: "À portée"}) : r)
                 }
+                // radio — allume ou coupe le Wi-Fi de l'état factice, sans journaliser l'appel comme un geste de
+                // l'utilisateur. Entrée : valeur. Sortie : aucune.
+                function radio(valeur: bool): void { faux.radio = valeur }
+                // capturer — enregistre l'image de la page telle qu'elle paraît dans la fenêtre, pour les captures de
+                // recette (L2-65). Entrée : chemin du PNG. Sortie : aucune. Erreurs : écriture refusée, avertissement au
+                // journal. Dépendances : Item.grabToImage.
+                function capturer(chemin: string): void {
+                    defilement.grabToImage(r => { if (!r.saveToFile(chemin)) console.warn("essai : capture non écrite") })
+                }
                 // sansConnus — ne laisse au panneau factice que le profil Wi-Fi actif et le filaire. Entrées et sortie : aucune.
                 function sansConnus(): void { panneauFaux.rangees = panneauFaux.rangees.filter(r => r.actif || !r.wifi) }
                 // nombreux — remplace les réseaux connus par 40 profils factices hors de portée, « Profil_01 » à
