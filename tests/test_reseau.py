@@ -42,6 +42,65 @@ class NmcliTest(EssaiCoque, unittest.TestCase):
                                 timeout=DELAI).stdout.strip()
         return sortie if sortie.startswith("erreur") else json.loads(sortie)
 
+    def test_lire_station(self):
+        releve = "Station 44:48 (on wlp1s0)\n\tsignal:  \t-48 [-50, -51] dBm\n\tsignal avg:\t-47 dBm\n\tconnected time:\t11460 seconds\n"
+        self.assertEqual(self.appeler("lireStation", releve), {"dbm": -48, "duree": 11460})
+        self.assertEqual(self.appeler("lireStation", ""), {"dbm": None, "duree": None})
+
+    def test_debit(self):
+        self.assertEqual(self.appeler("debit", 100, 600, 1000), 500)
+        self.assertEqual(self.appeler("debit", 0, 500, 500), 1000)
+        self.assertEqual(self.appeler("debit", 500, 100, 1000), 0)
+        self.assertEqual(self.appeler("debit", 100, 600, 0), 0)
+
+    def test_format_debit(self):
+        self.assertEqual(self.appeler("formatDebit", 1250), {"valeur": "1,3", "unite": "ko/s"})
+        self.assertEqual(self.appeler("formatDebit", 45000), {"valeur": "45", "unite": "ko/s"})
+        self.assertEqual(self.appeler("formatDebit", 2500000), {"valeur": "2,5", "unite": "Mo/s"})
+        self.assertEqual(self.appeler("formatDebit", 25000000), {"valeur": "25", "unite": "Mo/s"})
+
+    def test_format_duree(self):
+        for s, attendu in ((45, "45 s"), (720, "12 min"), (11460, "3 h 11"), (187200, "2 j 4 h")):
+            self.assertEqual(self.appeler("formatDuree", s), attendu)
+        self.assertEqual(self.appeler("formatDuree", None), "—")
+
+    def test_barres_signal(self):
+        for dbm, barres, mot in ((-48, 4, "Excellent"), (-55, 4, "Excellent"), (-67, 3, "Bon"), (-75, 2, "Moyen"),
+                                 (-85, 1, "Faible"), (-90, 0, "Très faible")):
+            self.assertEqual(self.appeler("barresSignal", dbm), {"barres": barres, "mot": mot})
+
+    def test_bande(self):
+        self.assertEqual(self.appeler("bande", 2412, 1), "2,4 GHz · canal 1")
+        self.assertEqual(self.appeler("bande", 5180, 36), "5 GHz · canal 36")
+        self.assertEqual(self.appeler("bande", 5975, 5), "6 GHz · canal 5")
+
+    def test_premiere(self):
+        self.assertEqual(self.appeler("premiere", []), "—")
+        self.assertEqual(self.appeler("premiere", ["1.1.1.1"]), "1.1.1.1")
+        self.assertEqual(self.appeler("premiere", ["192.168.1.1", "1.1.1.1"]), "192.168.1.1 +1")
+
+    def test_filtrer(self):
+        self.assertTrue(self.appeler("filtrer", "Café", "cafe"))
+        self.assertTrue(self.appeler("filtrer", "Wi:Fi", "WI"))
+        self.assertTrue(self.appeler("filtrer", "Maison", ""))
+        self.assertFalse(self.appeler("filtrer", "Maison", "bureau"))
+
+    def test_partager(self):
+        rangees = [{"nom": "Maison", "uuid": "a", "wifi": True, "actif": True}, {"nom": "Café", "uuid": "b", "wifi": True, "actif": False},
+                   {"nom": "Loin", "uuid": "c", "wifi": True, "actif": False}, {"nom": "Câble", "uuid": "d", "wifi": False, "actif": True}]
+        presents = [{"name": "Maison", "signalStrength": 0.9, "connected": True, "known": True},
+                    {"name": "Café", "signalStrength": 0.5, "connected": False, "known": True},
+                    {"name": "Voisin", "signalStrength": 0.7, "connected": False, "known": False},
+                    {"name": "Autre", "signalStrength": 0.2, "connected": False, "known": False}]
+        r = self.appeler("partager", rangees, presents, "")
+        self.assertEqual(r["joint"]["uuid"], "a")
+        self.assertEqual([p["name"] for p in r["autres"]], ["Voisin", "Autre"])
+        self.assertEqual([(c["uuid"], c["portee"], c.get("force")) for c in r["connus"]], [("b", True, 0.5), ("c", False, None)])
+        r = self.appeler("partager", rangees, presents, "CAFE")
+        self.assertEqual((r["joint"], r["autres"], [c["uuid"] for c in r["connus"]]), (None, [], ["b"]))
+        r = self.appeler("partager", rangees[:1] + rangees[3:], [], "")
+        self.assertEqual((r["joint"]["uuid"], r["autres"], r["connus"]), ("a", [], []))
+
     def test_champs_echappes(self):
         self.assertEqual(self.appeler("champs", "Caf\\:é\\\\x:abc:wifi"), ["Caf:é\\x", "abc", "wifi"])
         self.assertEqual(self.appeler("champs", ""), [""])

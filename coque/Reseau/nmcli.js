@@ -248,3 +248,98 @@ function resume(e) {
     if (e.connectivite === "limited" || e.connectivite === "none") return {titre, etat: "Connecté sans internet", alerte: true}
     return {titre, etat: !e.filaire && e.facture ? "Partage du téléphone" : "Connecté", alerte: false}
 }
+
+// lireStation — signal et durée de connexion lus dans « iw dev <interface> station dump ».
+// Entrée : texte, la sortie de la commande (vide si l'interface est déconnectée).
+// Sortie : {dbm, duree} ; dbm, la ligne « signal: » en dBm entier, et duree, la ligne « connected time: » en
+// secondes ; chacun vaut null quand sa ligne manque. « signal avg: » et « beacon signal avg: » sont ignorées.
+// Erreurs : aucune. Dépendances : aucune.
+function lireStation(texte) {
+    const lu = motif => { const m = texte.match(motif); return m ? Number(m[1]) : null }
+    return {dbm: lu(/^\s*signal:\s*(-?\d+)/m), duree: lu(/^\s*connected time:\s*(\d+)/m)}
+}
+
+// debit — débit moyen entre deux relevés d'un compteur d'octets du noyau.
+// Entrées : avant et apres, le compteur aux deux relevés ; ms, le temps écoulé entre eux en millisecondes.
+// Sortie : octets par seconde ; 0 quand le compteur a reculé (interface recréée) ou que ms n'est pas positif.
+// Erreurs : aucune. Dépendances : aucune.
+function debit(avant, apres, ms) {
+    return apres < avant || ms <= 0 ? 0 : (apres - avant) * 1000 / ms
+}
+
+// formatDebit — débit prêt à l'affichage.
+// Entrée : octetsParSeconde, un nombre positif ou nul.
+// Sortie : {valeur, unite} ; unite vaut « ko/s » sous 1 000 000 et « Mo/s » au-delà ; valeur a une virgule
+// décimale, une décimale sous 10 et aucune ensuite.
+// Erreurs : aucune. Dépendances : aucune.
+function formatDebit(octetsParSeconde) {
+    const mo = octetsParSeconde >= 1e6
+    const v = octetsParSeconde / (mo ? 1e6 : 1e3)
+    return {valeur: (v < 10 ? v.toFixed(1) : Math.round(v).toString()).replace(".", ","), unite: mo ? "Mo/s" : "ko/s"}
+}
+
+// formatDuree — durée écoulée prête à l'affichage.
+// Entrée : secondes, un nombre positif ou nul, ou null.
+// Sortie : « 45 s », « 12 min », « 3 h 11 » ou « 2 j 4 h » selon la grandeur ; « — » pour null.
+// Erreurs : aucune. Dépendances : aucune.
+function formatDuree(secondes) {
+    if (secondes === null) return "—"
+    const s = Math.floor(secondes), min = Math.floor(s / 60), h = Math.floor(min / 60), j = Math.floor(h / 24)
+    return s < 60 ? s + " s" : h < 1 ? min + " min" : j < 1 ? h + " h " + String(min % 60).padStart(2, "0") : j + " j " + (h % 24) + " h"
+}
+
+// barresSignal — nombre de barres et mot qualifiant un signal.
+// Entrée : dbm, la puissance en dBm.
+// Sortie : {barres, mot} ; 4 « Excellent » dès −55, 3 « Bon » dès −67, 2 « Moyen » dès −75, 1 « Faible » dès −85,
+// sinon 0 « Très faible ».
+// Erreurs : aucune. Dépendances : aucune.
+function barresSignal(dbm) {
+    const paliers = [[-55, "Excellent"], [-67, "Bon"], [-75, "Moyen"], [-85, "Faible"]]
+    const i = paliers.findIndex(p => dbm >= p[0])
+    return i < 0 ? {barres: 0, mot: "Très faible"} : {barres: 4 - i, mot: paliers[i][1]}
+}
+
+// bande — bande de fréquence et canal d'un point d'accès.
+// Entrées : freqMHz, la fréquence en MHz ; canal, son numéro de canal.
+// Sortie : « 2,4 GHz · canal 1 », « 5 GHz · canal 36 » ou « 6 GHz · canal 5 ».
+// Erreurs : aucune. Dépendances : aucune.
+function bande(freqMHz, canal) {
+    return (freqMHz < 3000 ? "2,4" : freqMHz < 5925 ? "5" : "6") + " GHz · canal " + canal
+}
+
+// premiere — première valeur d'une liste, suivie du nombre de celles qu'elle cache.
+// Entrée : valeurs, tableau de chaînes.
+// Sortie : « — » si le tableau est vide, la valeur seule s'il n'en a qu'une, sinon « <première> +<n-1> ».
+// Erreurs : aucune. Dépendances : aucune.
+function premiere(valeurs) {
+    return valeurs.length === 0 ? "—" : valeurs.length === 1 ? valeurs[0] : valeurs[0] + " +" + (valeurs.length - 1)
+}
+
+// filtrer — correspondance d'un nom avec la saisie de la recherche.
+// Entrées : nom, le nom du réseau ; filtre, le texte saisi.
+// Sortie : vrai quand le nom contient le filtre, sans tenir compte de la casse ni des accents.
+// Erreurs : aucune. Dépendances : aucune.
+function filtrer(nom, filtre) {
+    const nu = t => t.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase()
+    return nu(nom).includes(nu(filtre))
+}
+
+// partager — répartition des réseaux entre les trois listes de la page Wi-Fi.
+// Entrées : rangees, les rangées de profilsFenetre ; presents, les réseaux à portée {name, signalStrength,
+// connected, known} (WifiNetwork ou factices) ; filtre, la saisie de la recherche (vide : rien n'est écarté).
+// Sortie : {joint, autres, connus} ; joint, la rangée Wi-Fi active (null sans elle ou si le filtre l'écarte) ;
+// autres, les réseaux à portée sans profil, triés par trierReseaux ; connus, les profils Wi-Fi sauf le joint,
+// chacun augmenté de portee (bool) et, s'il est à portée, de force. Tout est filtré par nom avec filtrer.
+// Erreurs : aucune. Dépendances : trierReseaux, filtrer.
+function partager(rangees, presents, filtre) {
+    const wifi = rangees.filter(r => r.wifi), garde = nom => filtrer(nom, filtre)
+    const joint = wifi.find(r => r.actif) ?? null
+    return {
+        joint: joint && garde(joint.nom) ? joint : null,
+        autres: trierReseaux(presents).filter(p => !wifi.some(r => r.nom === p.name) && garde(p.name)),
+        connus: wifi.filter(r => !r.actif && garde(r.nom)).map(r => {
+            const p = presents.find(x => x.name === r.nom)
+            return Object.assign({}, r, p ? {portee: true, force: p.signalStrength} : {portee: false})
+        }),
+    }
+}
