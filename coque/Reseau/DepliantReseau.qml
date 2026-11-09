@@ -17,12 +17,13 @@ import "../Barre/icones.js" as Icones
 // que son appareil est celui qu'EtatReseau lit (actuel ; sinon les débits sont masqués et les tuiles à « — ») ;
 // il retire sa demande au repli, à sa destruction et dès que la fenêtre se cache (FenetreReseau.fermer la cache
 // avant de la détruire).
+// Secret : dès que le dépliant n'est plus à l'écran (montre faux), le mot de passe lu est vidé et masqué.
 // Entrées : rangee, la rangée du profil (uuid, nom, icone, actif, wifi, appareil ; force et portee pour un réseau
 // connu) ; detaille, vrai pour les débits et les tuiles ; ouvert ; portee, vrai si le réseau est à portée ; etat, la
 // source de l'état et des actions, EtatReseau par défaut.
 // Sorties : signaux basculer() (clic sur la tête), avances(uuid) (« Réglages avancés… »), relu(uuid, profil) (chaque
-// lecture du profil) ; actuel ; corps, le contenu chargé (null replié : profil, debits, tuiles, reglages), lu par la
-// vue et les essais.
+// lecture du profil) ; actuel ; montre, vrai tant que le dépliant est à l'écran ; corps, le contenu chargé (null
+// replié : profil, debits, tuiles, reglages), lu par la vue et les essais.
 // Erreurs : celles du ProfilReseau, sous ses réglages ; un appareil absent donne des tuiles à « — ».
 // Dépendances : Ligne, Medaillon, IconeSignal, Chevron, DebitsReseau, TuilesConnexion, ReglagesReseau, ProfilReseau,
 // Ressort, Theme (reglages, space, icons, color), icones.js (iconeForce), EtatReseau.
@@ -39,7 +40,9 @@ ColumnLayout {
     // les tuiles seraient ceux d'un autre appareil.
     readonly property bool actuel: (rangee?.actif ?? false) && rangee.appareil !== ""
                                    && rangee.appareil === etat.appareil
-    readonly property bool sonde: detaille && actuel && ouvert && visible && (Window.window?.visible ?? false)
+    // Le dépliant est à l'écran : visible et dans une fenêtre visible.
+    readonly property bool montre: visible && (Window.window?.visible ?? false)
+    readonly property bool sonde: detaille && actuel && ouvert && montre
     readonly property var corps: charge.item
     // Demande de sonde posée par ce dépliant, pour ne la retirer qu'une fois.
     property bool _sonde: false
@@ -65,6 +68,9 @@ ColumnLayout {
         etat.demanderSonde?.(actif)
     }
     onSondeChanged: demander(sonde)
+    // Dépliant caché (autre onglet, sous-page, filtre de la recherche, fenêtre cachée) : le mot de passe lu et révélé
+    // ne lui survit pas ; le profil reste lu.
+    onMontreChanged: if (!montre) corps?.profil.masquerSecret()
     onOuvertChanged: _anime = true
     Component.onCompleted: demander(sonde)
     Component.onDestruction: demander(false)

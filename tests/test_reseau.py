@@ -1237,6 +1237,25 @@ class PageWifiTest(EssaiCoque, unittest.TestCase):
         self.assertNotIn(self.SECRET, self.journal())
         self.assertNotIn(psk, self.journal())
 
+    def test_secret_d_un_connu_masque_quand_la_page_se_cache(self):
+        # Le mot de passe révélé d'un réseau connu déplié disparaît quand la page se cache (onglet Filaire puis retour)
+        # et quand la fenêtre se cache, sans relecture du profil.
+        psk = "psk-enregistre-jamais-journalise"
+        self.ipc("section")
+        self.ipc("connu", "connu-1")
+        self.jusqua(lambda p: p["secretsConnus"].get("connu-1") == [0, False] and p["rejoindre"].get("connu-1"), "connu déplié")
+        for cacher, montrer in ((("masquer", "true"), ("masquer", "false")),
+                                (("fenetreVisible", "false"), ("fenetreVisible", "true"))):
+            self.ipc("revelerConnu", "connu-1")
+            self.jusqua(lambda p: p["secretsConnus"]["connu-1"] == [len(psk), True], "mot de passe lu et révélé")
+            lectures = self.journal().count('"-t"')
+            self.ipc(*cacher)
+            self.ipc(*montrer)
+            p = self.jusqua(lambda p: p["secretsConnus"].get("connu-1") == [0, False], f"secret masqué ({cacher[0]})")
+            self.assertEqual(p["ouverts"], ["connu-1"])
+            self.assertEqual(self.journal().count('"-t"'), lectures, "le profil a été relu")
+        self.assertNotIn(psk, self.journal())
+
     def test_wifi_coupe_sans_connus(self):
         # Remplace test_wifi_coupe_sans_profils_hors_de_portee (L2-65, tâche 7) : sans autre profil que le joint, radio
         # coupée, ni section des réseaux connus ni « Autre réseau… ».

@@ -80,10 +80,9 @@ ColumnLayout {
     }
     onDeplieChanged: trier()
     onListesChanged: trier()
-    // Page cachée (autre onglet ou sous-page, la page restant vivante) : aucun secret ne survit, ni le mot de passe
-    // lu et révélé du dépliant du réseau joint, ni celui saisi dans un bloc déplié.
+    // Page cachée (autre onglet ou sous-page, la page restant vivante) : le mot de passe saisi dans un bloc déplié ne
+    // survit pas ; celui lu dans un dépliant est masqué par le dépliant lui-même (DepliantReseau.montre).
     onVisibleChanged: if (!visible) {
-        depliant?.corps?.profil.masquerSecret()
         deplie = ""
         erreur = ""
     }

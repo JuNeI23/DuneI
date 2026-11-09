@@ -181,7 +181,7 @@ ShellRoot {
                 // (libellés des réseaux connus visibles, dans l'ordre), connusVisible (la section des réseaux connus
                 // est visible), connusOuverts (son groupe est montré), connuOuvert (uuid du connu déplié), compte (le
                 // nombre affiché), ouverts (uuids des connus dépliés), rejoindre (uuid → « Rejoindre » visible, pour
-                // les connus chargés), icones ({autres, connus} : tailles des icônes de signal visibles), deplie,
+                // les connus chargés), secretsConnus (uuid → [longueur du mot de passe, révélé], pour les connus chargés), icones ({autres, connus} : tailles des icônes de signal visibles), deplie,
                 // erreur, saisie (longueur du mot de passe saisi, -1 sans bloc), connexion (noms « Connexion… »),
                 // balayage, activite, rechercher (le bouton est visible), radio, balayageEtat (faux.balayage),
                 // recherche, rechercheFenetre, priorite (valeur du Compteur), titres (étiquettes de section
@@ -211,6 +211,8 @@ ShellRoot {
                         connusOuverts: objet("groupeConnus")?.visible ?? false, connuOuvert: p.connuOuvert,
                         compte: objet("compte")?.text ?? "", ouverts: connus.filter(o => o.ouvert).map(o => o.rangee.uuid),
                         rejoindre: connus.reduce((m, o) => o.corps ? (m[o.rangee.uuid] = essai.trouver(o, i => i.objectName === "rejoindre").visible, m) : m, {}),
+                        secretsConnus: essai.tous_(objet("connus"), o => String(o.objectName).startsWith("depliant:")).reduce((m, o) => o.corps
+                            ? (m[o.rangee.uuid] = [o.corps.reglages.champ.length, o.corps.reglages.champ.revele], m) : m, {}),
                         icones: {autres: tailles(objet("disponibles")), connus: tailles(objet("connus"))},
                         revele: bloc ? bloc.secret.revele : null, deplie: p.deplie, erreur: p.erreur, saisie: bloc ? bloc.secret.length : -1,
                         connexion: reseaux.filter(o => essai.trouver(o, i => i.objectName === "ligne")?.aide === "Connexion…").map(o => o.objectName.slice(7)),
@@ -264,6 +266,11 @@ ShellRoot {
                 function section(): void { essai.trouver(porteur.item, o => o.objectName === "connus").entete.clicked() }
                 // connu — clic sur la tête du réseau connu d'un uuid. Entrée : uuid. Sortie : aucune.
                 function connu(uuid: string): void { essai.trouver(essai.trouver(porteur.item, o => o.objectName === "depliant:" + uuid), o => o.objectName === "tete").clique() }
+                // revelerConnu — clic sur l'œil du réseau connu déplié d'un uuid : lit le secret factice et le montre.
+                // Entrée : uuid. Sortie : aucune.
+                function revelerConnu(uuid: string): void { essai.trouver(porteur.item, o => o.objectName === "depliant:" + uuid).corps.profil.reveler() }
+                // fenetreVisible — montre ou cache la fenêtre de l'essai, la page restant visible. Entrée : valeur.
+                function fenetreVisible(valeur: bool): void { fenetre.visible = valeur }
                 // rejoindreConnu — clic sur « Rejoindre » du réseau connu déplié d'un uuid. Entrée : uuid. Sortie : aucune.
                 function rejoindreConnu(uuid: string): void { essai.trouver(essai.trouver(porteur.item, o => o.objectName === "depliant:" + uuid), o => o.objectName === "rejoindre").clicked() }
                 // defiler — défile la page jusqu'en bas. Sortie : JSON {defile (la page dépasse la fenêtre), dernier
