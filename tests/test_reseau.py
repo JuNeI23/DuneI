@@ -1038,6 +1038,21 @@ class PageWifiTest(EssaiCoque, unittest.TestCase):
         self.ipc("filtrer", "")
         self.assertTrue(self.jusqua(lambda p: p["filtre"] == "", "filtre vidé")["connusOuverts"])
 
+    def test_filtre_garde_le_depliant_du_joint(self):
+        # Un filtre qui écarte le réseau joint masque son groupe sans détruire le dépliant : le repli choisi survit,
+        # le profil n'est pas relu.
+        self.ipc("connu", "wifi-1")
+        self.jusqua(lambda p: not p["depliantOuvert"], "joint replié")
+        lectures = self.journal().count('"-t"')
+        self.ipc("filtrer", "tel")
+        p = self.jusqua(lambda p: p["filtre"] == "tel" and not p["joint"], "joint écarté")
+        self.assertTrue(p["jointCharge"])
+        self.assertNotIn("Réseau joint", p["titres"])
+        self.ipc("filtrer", "")
+        p = self.jusqua(lambda p: p["filtre"] == "" and p["joint"], "joint rendu")
+        self.assertFalse(p["depliantOuvert"])
+        self.assertEqual(self.journal().count('"-t"'), lectures, "le profil a été relu")
+
     def test_deconnecte(self):
         self.ipc("deconnecter")
         p = self.jusqua(lambda p: not p["joint"], "réseau joint retiré")

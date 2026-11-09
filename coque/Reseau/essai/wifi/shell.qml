@@ -173,8 +173,8 @@ ShellRoot {
                     return t
                 }
 
-                // page — état de la page, en JSON, sans aucun texte saisi. Sortie : {existe, joint (le dépliant du réseau
-                // joint existe), tete (libellé de sa rangée de tête), aideTete, rangeesJoint (libellés des rangées du
+                // page — état de la page, en JSON, sans aucun texte saisi. Sortie : {existe, joint (le groupe du réseau
+                // joint est montré), jointCharge (son dépliant existe, montré ou masqué par le filtre), tete (libellé de sa rangée de tête), aideTete, rangeesJoint (libellés des rangées du
                 // dépliant), reseaux (noms montrés des autres réseaux, dans l'ordre), serrures (noms à cadenas), autre
                 // (« Autre réseau… » visible dans le groupe des autres réseaux), blocs (objectName des blocs visibles de
                 // la page, de haut en bas), filtre, connus
@@ -201,7 +201,7 @@ ShellRoot {
                         .filter(o => o?.visible).sort((a, b) => a.mapToItem(p, 0, 0).y - b.mapToItem(p, 0, 0).y)
                     const tailles = o => essai.tous_(o, i => i.securise !== undefined && i.force !== undefined && i.visible).map(i => i.taille)
                     return JSON.stringify({
-                        existe: true, joint: f !== null, tete: tete ? tete.libelle : "", aideTete: tete ? tete.aide : "",
+                        existe: true, joint: p.montreJoint, jointCharge: f !== null, tete: tete ? tete.libelle : "", aideTete: tete ? tete.aide : "",
                         rangeesJoint: carteJoint,
                         reseaux: reseaux.map(o => o.objectName.slice(7)),
                         serrures: reseaux.filter(o => essai.trouver(o, i => i.nom === "network-wireless-encrypted" && i.visible)).map(o => o.objectName.slice(7)),

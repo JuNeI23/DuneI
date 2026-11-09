@@ -13,7 +13,8 @@ import "nmcli.js" as Nmcli
 // avec l'action « Rechercher » alignée sur le bord droit des cartes, les réseaux à portée et sans profil, puis « Autre
 // réseau… » en dernière ligne ; enfin les « Réseaux connus » (ConnusWifi), repliés. Les listes viennent de
 // Nmcli.partager ; radio coupée, aucun réseau n'est tenu pour à portée. Déconnecté, le groupe du réseau joint
-// disparaît et « Autres réseaux » remonte sous la recherche.
+// disparaît et « Autres réseaux » remonte sous la recherche ; écarté par le filtre, il est masqué, son dépliant
+// restant chargé.
 // Autres réseaux : chacun porte son IconeSignal (force et cadenas), à la même taille que celles des réseaux connus. Un
 // clic rejoint un réseau ouvert (« Connexion… » et l'Activite sur la rangée) ; sur un réseau sécurisé, il déplie sous
 // la rangée le BlocSecret (partagé avec le popover), qu'un second clic replie. Un connectionFailed déplie la rangée
@@ -36,7 +37,9 @@ import "nmcli.js" as Nmcli
 // joint, la rangée du profil Wi-Fi actif retenue par le filtre (null sans elle) ; connuOuvert, l'uuid du réseau connu
 // déplié (un seul) ; connusOuverts, vrai si l'utilisateur a ouvert la section des réseaux connus ; ordre, les noms
 // des autres réseaux dans l'ordre affiché ; deplie, le nom de la rangée dépliée ; erreur, le message sous son champ ;
-// balayage, vrai pendant la recherche relancée ; depliant, le DepliantReseau du réseau joint (null sans lui).
+// balayage, vrai pendant la recherche relancée ; actif, la rangée du profil Wi-Fi actif, filtre ignoré ; montreJoint,
+// vrai si le groupe du réseau joint est montré ; depliant, le DepliantReseau du réseau joint (null sans lui ; gardé,
+// masqué, tant que le filtre l'écarte).
 // Erreurs : un échec nmcli des réglages s'affiche dans le dépliant concerné ; un réseau qui quitte le balayage est
 // masqué et ne peut plus être choisi.
 // Dépendances : TitrePage, Recherche, Section, Groupe, Ligne, DepliantReseau, IconeSignal, ConnusWifi, BlocSecret,
@@ -51,6 +54,10 @@ ColumnLayout {
     property alias filtre: recherche.text
     readonly property var listes: Nmcli.partager(panneau.rangees, etat.radio ? presents : [], filtre)
     readonly property var joint: listes.joint
+    // Le profil Wi-Fi actif, que le filtre l'écarte ou non : son dépliant reste chargé pendant le filtre, seul son
+    // groupe est masqué, pour ne perdre ni le repli choisi ni la lecture du profil.
+    readonly property var actif: panneau.rangees.find(r => r.wifi && r.actif) ?? null
+    readonly property bool montreJoint: chargeurJoint.active && joint !== null
     property alias connuOuvert: connus.connuOuvert
     property alias connusOuverts: connus.ouverts
     readonly property var depliant: chargeurJoint.item
@@ -190,14 +197,14 @@ ColumnLayout {
         placeholderText: "Rechercher un réseau"
     }
 
-    Section { visible: chargeurJoint.active; text: "Réseau joint" }
-    // Le dépliant du réseau joint, sur la carte de son groupe.
+    Section { visible: page.montreJoint; text: "Réseau joint" }
+    // Le dépliant du réseau joint, sur la carte de son groupe, que le filtre masque sans le détruire.
     Groupe {
-        visible: chargeurJoint.active
+        visible: page.montreJoint
         Loader {
             id: chargeurJoint
             objectName: "joint"
-            active: page.etat.radio && page.joint !== null
+            active: page.etat.radio && page.actif !== null
             visible: active
             Layout.fillWidth: true
             sourceComponent: DepliantReseau {
@@ -206,7 +213,7 @@ ColumnLayout {
                 ouvert: true
                 portee: true
                 etat: page.etat
-                rangee: page.joint
+                rangee: page.actif
                 onBasculer: ouvert = !ouvert
                 onAvances: uuid => page.panneau.ouvrirProfil(uuid)
                 onRelu: (u, p) => page.panneau.factures = Object.assign({}, page.panneau.factures, {[u]: p.facture})
