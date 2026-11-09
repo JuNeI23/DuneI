@@ -269,6 +269,10 @@ ShellRoot {
         // Entrées : aucune. Sortie : texte JSON, voir etat. Erreurs : aucune. Dépendances : fermer, etat.
         function fermerEtat(): string { fenetre.fermer(); return etat() }
 
+        // fermerDeuxFois — appelle fermer deux fois dans la même passe, comme la pastille puis onVisibleChanged.
+        // Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : fermer.
+        function fermerDeuxFois(): void { fenetre.fermer(); fenetre.fermer() }
+
         // dureeDestruction — durée de la dernière destruction de la fenêtre (ms), -1 sans destruction. Sortie : texte.
         function dureeDestruction(): string { return String(fenetre.dureeDestruction) }
     }

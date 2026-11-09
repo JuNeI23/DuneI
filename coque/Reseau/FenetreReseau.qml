@@ -36,7 +36,7 @@ Scope {
     // Durée de la dernière destruction (ms), de l'ordre de lâcher le chargeur à la fin du tour d'événements qui a démoli
     // la fenêtre ; -1 tant qu'aucune n'a eu lieu. Lue par la coque d'essai et la mesure de L2-65.
     property int dureeDestruction: -1
-    // Instant (ms) où le chargeur a été lâché, pour mesurer la destruction.
+    // Instant (ms) du premier lâcher du chargeur, 0 hors destruction en cours ; remis à 0 par mesurerDestruction.
     property double _debutDestruction: 0
 
     // fermer — cache la fenêtre aussitôt, puis la détruit au tour suivant (appelée par la pastille rouge, le compositeur
@@ -44,12 +44,20 @@ Scope {
     // plus que baisser EtatReseau.fenetre. Dépendances : EtatReseau, Qt.callLater.
     function fermer() {
         if (chargeur.item?.visible) chargeur.item.visible = false
-        Qt.callLater(() => { racine._debutDestruction = Date.now(); EtatReseau.fenetre = false })
+        Qt.callLater(racine.lacher)
+    }
+
+    // lacher — lâche le chargeur, en notant l'instant du premier lâcher. Passée nommément à Qt.callLater, que celui-ci
+    // dédoublonne par identité : deux fermer() de la même passe n'en font qu'un. Entrées : aucune. Sortie : aucune.
+    // Erreurs : aucune. Dépendances : EtatReseau, Date.
+    function lacher() {
+        if (!_debutDestruction) _debutDestruction = Date.now()
+        EtatReseau.fenetre = false
     }
 
     // mesurerDestruction — note la durée de la destruction qui vient de s'achever, depuis le lâcher du chargeur.
-    // Entrées : aucune. Sortie : aucune (écrit dureeDestruction). Erreurs : aucune. Dépendances : Date.
-    function mesurerDestruction() { dureeDestruction = Date.now() - _debutDestruction }
+    // Entrées : aucune. Sortie : aucune (écrit dureeDestruction, remet le début à 0). Erreurs : aucune. Dépendances : Date.
+    function mesurerDestruction() { dureeDestruction = Date.now() - _debutDestruction; _debutDestruction = 0 }
 
     LazyLoader {
         id: chargeur

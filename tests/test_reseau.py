@@ -1512,7 +1512,20 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
         self.ipc("reseau", "fermer")
         self.assertLess(time.monotonic() - debut, 0.1)
         self.jusqua(lambda e: not e["fenetre"], "fenêtre détruite")
-        self.assertGreaterEqual(int(self.ipc("essai", "dureeDestruction")), 0)
+
+    def test_duree_destruction_mesuree_une_fois(self):
+        # Deux fermer() dans la même passe (pastille puis onVisibleChanged) ne font qu'un lâcher : la durée est mesurée
+        # depuis le premier, bornée, et une destruction suivante repart d'un début remis à zéro.
+        for _ in range(2):
+            self.ouvrir()
+            self.ipc("essai", "fermerDeuxFois")
+            self.jusqua(lambda e: not e["fenetre"], "fenêtre détruite")
+            fin = time.monotonic() + DELAI
+            while int(self.ipc("essai", "dureeDestruction")) < 0 and time.monotonic() < fin:
+                time.sleep(0.05)
+            duree = int(self.ipc("essai", "dureeDestruction"))
+            self.assertTrue(0 <= duree < 1000, duree)
+        self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
 
     def test_balayage_a_la_vie_de_la_fenetre(self):
         # Le panneau demande le balayage (rechercheFenetre) pour toute la vie de la fenêtre, sur n'importe quel onglet et
