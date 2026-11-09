@@ -23,7 +23,7 @@ import "Composants/ancrage.js" as Ancrage
 // etat, ressort, ressortsFiges, image, controles, coches, cotes, glyphes, radios, jauge, jaugeIcone, jaugeHors,
 // jaugeCibles, progression, separateur,
 // champ, indicatif, tailleIcone, liste, arrets, rangee, rangeeImposees, bouton, overlays, overlaysFermes, pastilles, compteur,
-// compteurLargeur, deroulant, recherche, rechercheCouleurs, secret, activite, depliable, depliableCotes, iconesControles,
+// compteurLargeur, deroulant, recherche, rechercheCouleurs, secret, activite, depliable, depliableCotes, courbe, tuile, iconesControles,
 // bascule, reglages, valeur, fenetreAttention, knobs, contours, materiauSurfaces, verre, cleVerre, champMateriau, ombres).
 // Commandes sans journal : « essai rechercheTexte <texte> », « essai secretTexte <texte> », « essai secretALire
 // <bool> », « essai secretOeil » (qui journalise « essai : revelationDemandee true » si le parent doit lire le
@@ -192,6 +192,23 @@ ShellRoot {
                 id: depliableEssai
                 text: "Section"
                 Texte { text: "Contenu" }
+            }
+
+            // Deux séries de 60 valeurs (la première jusqu'à 42, avec aire) et une courbe à la seule série vide.
+            Courbe {
+                id: courbeEssai
+                width: 200; height: 40
+                series: [
+                    { valeurs: Array.from({ length: 60 }, (_, i) => i % 43), couleur: Theme.color?.accent, aire: true },
+                    { valeurs: Array.from({ length: 60 }, (_, i) => i % 7), couleur: Theme.color?.success }
+                ]
+            }
+            Courbe { id: courbeVide; width: 200; height: 40; series: [{ valeurs: [], couleur: Theme.color?.accent, aire: true }] }
+
+            GridLayout {
+                columns: 3
+                Tuile { id: tuileEssai; libelle: "Adresse"; largeur: 2; Texte { text: "192.168.43.17" } }
+                Tuile { id: tuileSimple; libelle: "DNS"; Texte { text: "1.1.1.1" } }
             }
 
             Bascule {
@@ -889,6 +906,28 @@ ShellRoot {
             const d = depliableEssai
             essai.journal("depliable", [d.ouvert, d.chevron.rotation, d.bloc.visible, d.entete.focusPolicy,
                                         d.entete.height].join(" "))
+        }
+
+        // courbe — journalise la courbe d'essai : maximum, nombre de points de chaque série, visibilité de l'aire de
+        // chacune, opacité de la première aire, puis maximum et nombre de points de la courbe à série vide.
+        // Entrées : aucune. Sortie : aucune ; « essai : courbe <max> <n0> <n1> <aire0> <aire1> <opacité> <max> <n> ».
+        // Erreurs : aucune. Dépendances : courbeEssai, courbeVide, journal.
+        function courbe(): void {
+            const s = courbeEssai.repetiteur, v = courbeVide
+            essai.journal("courbe", [courbeEssai.maximum, s.itemAt(0).points.length, s.itemAt(1).points.length,
+                                     s.itemAt(0).fond.visible, s.itemAt(1).fond.visible, s.itemAt(0).fond.opacity,
+                                     v.maximum, v.repetiteur.itemAt(0).points.length].join(" "))
+        }
+
+        // tuile — journalise la tuile d'essai : échelon et couleur de son libellé, columnSpan de la tuile large et de
+        // la simple, texte du libellé, puis vrai si le libellé précède le contenu et si le contenu est posé dans la tuile
+        // (la coque d'essai n'a pas de fenêtre : les positions ne sont pas calculées, on lit donc l'ordre des enfants).
+        // Entrées : aucune. Sortie : aucune ; « essai : tuile <échelon> <span> <span simple> <couleur> <libellé> <bool> <bool> ».
+        // Erreurs : aucune. Dépendances : tuileEssai, tuileSimple, journal.
+        function tuile(): void {
+            const t = tuileEssai
+            essai.journal("tuile", [t.etiquette.echelon, t.Layout.columnSpan, tuileSimple.Layout.columnSpan,
+                                    t.etiquette.color, t.etiquette.text, t.children[0] === t.etiquette, t.children[1].children[0] === t.contenu[0]].join(" "))
         }
 
         // depliableOuvrir — ouvre ou ferme la section dépliable d'essai par programme.

@@ -829,20 +829,45 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
 
     def test_depliable(self):
         # Repliée, la section cache son contenu et son chevron pointe à droite (rotation -90 du chevron bas) ;
-        # dépliée, le contenu paraît et le chevron pointe en bas, sans animation. L'en-tête, de la hauteur d'une
-        # rangée, ne prend le focus qu'à la tabulation (Qt.TabFocus vaut 1).
+        # dépliée, le contenu paraît et le chevron pointe en bas, en pivotant sur le ressort reveal (relevé toutes les
+        # 50 ms : des angles intermédiaires, puis 0). L'en-tête, de la hauteur d'une rangée, ne prend le focus qu'à la
+        # tabulation (Qt.TabFocus vaut 1).
         self.demarrer()
         tokens = self.tokens55()[0]
         h = tokens["density"]["comfortable"]["rowHeight"]
         self.assertEqual(self.valeur("depliable"), f"false -90 false 1 {h}")
         self.ipc("depliableOuvrir", "true")
-        self.assertEqual(self.valeur("depliable"), f"true 0 true 1 {h}")
+        angles = []
+        for _ in range(60):
+            lu = self.valeur("depliable").split()
+            angles.append(float(lu[1]))
+            if angles[-1] == 0:
+                break
+            time.sleep(0.05)
+        self.assertEqual(lu, ["true", "0", "true", "1", str(h)])
+        self.assertTrue(any(-90 < a < 0 for a in angles), angles)
         # L'en-tête laisse à l'anneau de focus, posé sur son fond, un retrait de space.scale[1] de chaque côté du
         # contenu : le libellé ne touche plus l'anneau. Le bloc reste aligné sur le libellé.
         marge, ecart = tokens["space"]["scale"][1], tokens["space"]["scale"][0]
         chevron = tokens["icons"]["sizes"]["dense"]
         gauche, droite, bloc = self.valeur("depliableCotes").split()
         self.assertEqual((float(gauche), float(droite), float(bloc)), (marge, marge, marge + chevron + ecart))
+
+    def test_courbe(self):
+        # Deux séries de 60 valeurs : un tracé de 60 points chacune, le maximum égal au plus grand échantillon, l'aire
+        # peinte à 12 % d'opacité seulement pour la série qui la demande. Une série vide ne trace aucun chemin et le
+        # maximum retombe à son plancher, 1.
+        self.demarrer()
+        self.assertEqual(self.valeur("courbe"), "42 60 60 true false 0.12 1 0")
+
+    def test_tuile(self):
+        # Le libellé de la tuile est à l'échelon 0, en texte tertiaire, au-dessus du contenu ; sa largeur de 2
+        # colonnes devient un columnSpan de 2 dans la grille (1 par défaut).
+        self.demarrer()
+        t = self.tokens55()[0]["color"]["textTertiary"]
+        lu = self.valeur("tuile").split()
+        self.assertEqual((lu[0], lu[1], lu[2], lu[3].lower(), lu[4]), ("0", "2", "1", t.lower(), "Adresse"))
+        self.assertEqual(lu[5:], ["true", "true"])
 
     def test_icones_des_controles(self):
         # Dans le bouton et la rangée (donc les listes, le menu et le déroulant), l'icône prend icons.sizes.dense,

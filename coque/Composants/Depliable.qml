@@ -4,8 +4,8 @@ import "../Theme"
 
 // Depliable — section dépliable de la coque : un en-tête cliquable au-dessus d'un bloc de contenu.
 // Rôle : à la manière de macOS (conception, § 7.10), l'en-tête porte un chevron dessiné, qui pointe à droite quand
-// la section est repliée et en bas quand elle est dépliée (le Chevron bas, pivoté d'un quart de tour, sans animation
-// jusqu'à L2-06), puis le libellé ; le contenu, aligné sur le libellé, n'est visible que déplié. Un clic, Espace ou
+// la section est repliée et en bas quand elle est dépliée (le Chevron bas, pivoté d'un quart de tour par le ressort
+// reveal, comme le dépliage d'une rangée du popover), puis le libellé ; le contenu, aligné sur le libellé, n'est visible que déplié. Un clic, Espace ou
 // Entrée basculent la section. L'en-tête est un arrêt de tabulation, entouré de l'anneau de focus au clavier
 // (visualFocus) ; un clic ne vole pas le focus d'un champ (Qt.TabFocus, § 7.3). Le libellé prend le texte non
 // sélectionné de l'Etat de l'en-tête, qui ne le ternit que désactivé ; le chevron prend le texte secondaire.
@@ -15,7 +15,7 @@ import "../Theme"
 // fond de l'en-tête, que la planche entoure de l'anneau), lus par les essais et la planche.
 // Erreurs : aucune ; avant le chargement des tokens, les cotes sont nulles et les couleurs transparentes.
 // Dépendances : QtQuick.Templates, Theme (density, icons, space, radius, color), Etat, Chevron, Texte,
-// AnneauFocus.
+// AnneauFocus, Ressort (transition reveal ; le mouvement réduit pose le chevron d'un coup).
 // Cotes : en-tête de density.rowHeight de haut, au rayon radius.small ; le contenu y est en retrait de space.scale[1]
 // (8) à gauche et à droite, pour que l'anneau de focus, posé autour du fond, ne touche ni le chevron ni la fin du
 // libellé (v0.7) ; chevron de icons.sizes.dense ; écart entre le chevron et le libellé space.scale[0] (4) ; le bloc
@@ -32,6 +32,9 @@ Column {
     readonly property alias bloc: bloc
     readonly property alias anneau: anneau
     readonly property alias cibleFocus: fond
+
+    // Angle du chevron, de -90 (replié) à 0 (déplié), porté par le ressort reveal.
+    Ressort { id: pivot; transition: "reveal"; cible: depliable.ouvert ? 0 : -90 }
 
     T.AbstractButton {
         id: entete
@@ -78,7 +81,7 @@ Column {
                 width: Theme.icons?.sizes.dense ?? 0
                 height: width
                 sens: "bas"
-                rotation: depliable.ouvert ? 0 : -90
+                rotation: pivot.value
                 couleur: Theme.color?.textSecondary ?? "transparent"
             }
 
