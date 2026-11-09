@@ -78,6 +78,16 @@ Singleton {
     property var profils: []
     property bool vpnActif: false
 
+    // Sonde à la demande (voir demanderSonde) : demandeurs, dossier des compteurs du noyau, débits en octets par
+    // seconde (60 échantillons, le plus récent en dernier), signal en dBm et durée de connexion en secondes (null
+    // quand l'interface ne répond pas).
+    property int sondeurs: 0
+    property string racineCompteurs: "/sys/class/net"
+    property var debits: ({rx: Array(60).fill(0), tx: Array(60).fill(0)})
+    property var signalDbm: null
+    property var connecteDepuis: null
+    readonly property bool sondeActive: sondeurs > 0 && appareil !== ""
+
     readonly property string icone: Icones.iconeReseau({carte, radio, filaire, connecte, connectivite, facture, force})
 
     // relire — demande une lecture nmcli. Rôle : rafraîchit les valeurs nmcli sans attendre le moniteur.
@@ -117,6 +127,29 @@ Singleton {
     onBalayageChanged: appliquerRecherche()
     onCartesChanged: appliquerRecherche()
 
+    // demanderSonde — ajoute ou retire un demandeur de la sonde, qui ne tourne que tant qu'il en reste un.
+    // Entrée : actif, vrai pour demander, faux pour retirer sa demande. Sortie : aucune. Erreurs : aucune (le compte
+    // ne descend jamais sous zéro). Dépendances : sondeurs.
+    function demanderSonde(actif) { sondeurs = Math.max(0, sondeurs + (actif ? 1 : -1)) }
+
+    // sonder — publie un relevé de la sonde : deux compteurs d'octets, une ligne « -- », puis « iw station dump ».
+    // Entrée : texte, sortie du relevé. Sortie : aucune ; décale les débits d'un pas si les compteurs sont lisibles
+    // et qu'un relevé précédent existe, sinon la courbe se fige ; signalDbm et connecteDepuis valent null sans station.
+    // Erreurs : aucune. Dépendances : nmcli.js (lireStation, debit), releve.
+    function sonder(texte) {
+        const [compteurs, station] = texte.split("\n--\n")
+        const c = compteurs.trim().split("\n").map(Number)
+        const maintenant = Date.now()
+        const lu = Nmcli.lireStation(station ?? "")
+        signalDbm = lu.dbm
+        connecteDepuis = lu.duree
+        if (c.length !== 2 || c.some(isNaN)) { releve.precedent = null; return }
+        const avant = releve.precedent
+        releve.precedent = {rx: c[0], tx: c[1], t: maintenant}
+        if (avant) debits = {rx: [...debits.rx.slice(1), Nmcli.debit(avant.rx, c[0], maintenant - avant.t)],
+                             tx: [...debits.tx.slice(1), Nmcli.debit(avant.tx, c[1], maintenant - avant.t)]}
+    }
+
     // lu — publie la sortie de la lecture unique : trois sections séparées par une ligne « -- » (connexions
     // actives « TYPE,DEVICE », état IP de l'appareil actif, profils). Une section absente se lit comme vide.
     // Entrée : texte, sortie complète. Sortie : aucune. Erreurs : aucune. Dépendances : nmcli.js.
@@ -152,6 +185,28 @@ Singleton {
             printf '%s\\n' --
             nmcli -t -f NAME,UUID,TYPE,DEVICE,ACTIVE connection show`]
         onLu: texte => etat.lu(texte)
+    }
+
+    // Minuteur de la sonde : un relevé par seconde, seulement tant que quelqu'un le demande et qu'un appareil existe.
+    // À l'arrêt, le relevé précédent et les mesures de station sont oubliés pour que la reprise ne mesure pas l'écart.
+    Timer {
+        id: minuteurSonde
+        interval: 1000
+        repeat: true
+        running: etat.sondeActive
+        triggeredOnStart: true
+        onTriggered: if (!releve.running) releve.running = true
+        onRunningChanged: if (!running) { releve.precedent = null; etat.signalDbm = null; etat.connecteDepuis = null }
+    }
+
+    // Un seul relevé à la fois : compteurs du noyau, puis iw ; les erreurs des deux sont écartées (interface perdue).
+    Process {
+        id: releve
+        property var precedent: null
+        command: ["sh", "-c", 'cat "$1/$2/rx_bytes" "$1/$2/tx_bytes" 2>/dev/null; echo --; iw dev "$2" station dump 2>/dev/null',
+                  "sh", etat.racineCompteurs, etat.appareil]
+        stdout: StdioCollector { id: releveSortie }
+        onExited: etat.sondeActive && etat.sonder(releveSortie.text)
     }
 
     // Navigateur sur une page en HTTP simple, que le portail captif intercepte ; xdg-open rend la main dès que le

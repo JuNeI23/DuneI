@@ -6,7 +6,9 @@ moteur de Quickshell, jamais dans un interpréteur de substitution.
 
 import json
 import os
+import shutil
 import subprocess
+import threading
 import time
 import unittest
 from pathlib import Path
@@ -882,7 +884,7 @@ printf '%s\n' "$*" >> "$d/appels"
 case "$*" in
     monitor) exec sleep 30 ;;
     "-t -f TYPE,DEVICE connection show --active")
-        echo "802-11-wireless:wlan0"
+        [ -f "$d/coupe" ] || echo "802-11-wireless:wlan0"
         [ -f "$d/vpn" ] && echo "vpn:wg0"
         [ -f "$d/filaire" ] && echo "802-3-ethernet:eth0" ;;
     "-t -f GENERAL.DEVICE,"*" device show eth0") printf 'GENERAL.DEVICE:eth0\nIP4.ADDRESS[1]:10.0.0.2/24\nGENERAL.METERED:no\n' ;;
@@ -922,6 +924,15 @@ case "$*" in
         case "$*" in *"hotspot-1 connection.autoconnect-priority "*) for v; do :; done; echo "$v" > "$d/priorite" ;; esac ;;
 esac
 exit 0
+"""
+
+
+# iw factice de la fenêtre : journalise ses appels, rend le relevé d'une station sauf si le drapeau « iw_muet » existe.
+IW_FACTICE = r"""#!/bin/sh
+d=$(dirname "$0")
+printf '%s\n' "$*" >> "$d/appels_iw"
+[ -f "$d/iw_muet" ] && exit 0
+printf 'Station aa:bb:cc:dd:ee:ff (on wlan0)\n\tconnected time:\t11460 seconds\n\tsignal:  \t-48 [-48] dBm\n\tsignal avg:\t-50 dBm\n'
 """
 
 
@@ -1484,7 +1495,11 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
         nmcli = bin_ / "nmcli"
         nmcli.write_text(NMCLI_FACTICE.replace("SECRET", self.SECRET))
         nmcli.chmod(0o755)
+        iw = bin_ / "iw"
+        iw.write_text(IW_FACTICE)
+        iw.chmod(0o755)
         self.fichier_appels = bin_ / "appels"
+        self.compteurs = Path(self.tmp.name) / "net"
         self.refus = bin_ / "refus"
         self.bin = bin_
         self.environnement = {"QT_QPA_PLATFORM": "offscreen", "PATH": f"{bin_}:{os.environ['PATH']}"}
@@ -1532,6 +1547,89 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
         self.jusqua(lambda e: e["fenetre"] and e["rangees"], "fenêtre construite et profils lus")
         self.ipc("essai", "choisir", uuid)
         return self.jusqua(lambda e: e["fiche"].get("uuid") == uuid and e["fiche"]["lu"], "profil lu")
+
+    def sonde(self) -> dict:
+        """État de la sonde d'EtatReseau, décodé (voir la coque d'essai). Dépendances : ipc."""
+        return json.loads(self.ipc("essai", "sonde"))
+
+    def appels_iw(self) -> list[str]:
+        """Appels reçus par le iw factice, un par ligne. Dépendances : iw factice."""
+        f = self.bin / "appels_iw"
+        return f.read_text().splitlines() if f.exists() else []
+
+    def faire_avancer(self, octets_par_s: int = 2000) -> threading.Event:
+        """Fait croître les compteurs factices de wlan0 de octets_par_s par seconde, dans un fil.
+
+        Entrée : octets_par_s. Sortie : l'événement qui arrête le fil (posé au nettoyage). Erreurs : aucune.
+        Dépendances : self.compteurs, threading.
+        """
+        dossier = self.compteurs / "wlan0"
+        dossier.mkdir(parents=True, exist_ok=True)
+        arret = threading.Event()
+        debut = time.monotonic()
+
+        def boucle():
+            while not arret.is_set():
+                n = int((time.monotonic() - debut) * octets_par_s)
+                try:
+                    for nom in ("rx_bytes", "tx_bytes"):
+                        tmp = dossier / f".{nom}"
+                        tmp.write_text(f"{n}\n")
+                        os.replace(tmp, dossier / nom)
+                except OSError:
+                    return  # dossier supprimé par le test : l'interface a disparu
+                arret.wait(0.05)
+
+        threading.Thread(target=boucle, daemon=True).start()
+        self.addCleanup(arret.set)
+        return arret
+
+    def test_sonde_au_repos(self):
+        # Sans demandeur, ni appel iw ni minuteur actif, même appareil connu.
+        self.jusqua(lambda e: self.sonde()["appareil"] == "wlan0", "appareil lu")
+        time.sleep(3)
+        self.assertEqual((self.sonde()["actif"], self.appels_iw()), (False, []))
+
+    def test_sonde_releve(self):
+        self.faire_avancer(2000)
+        self.ipc("essai", "racine", str(self.compteurs))
+        self.jusqua(lambda e: self.sonde()["appareil"] == "wlan0", "appareil lu")
+        self.ipc("essai", "sondeur", "true")
+        time.sleep(3.5)
+        s = self.sonde()
+        self.assertTrue(s["actif"])
+        self.assertEqual((s["signal"], s["depuis"]), (-48, 11460))
+        self.assertEqual(len(s["rx"]), 60)
+        self.assertTrue(all(1500 < v < 2500 for v in s["rx"][-2:]), s["rx"][-4:])
+        self.assertTrue(all(1500 < v < 2500 for v in s["tx"][-2:]), s["tx"][-4:])
+        self.assertEqual(s["rx"][0], 0)
+        self.ipc("essai", "sondeur", "false")
+        self.jusqua(lambda e: not self.sonde()["actif"], "sonde arrêtée")
+        n = len(self.appels_iw())
+        time.sleep(2)
+        self.assertEqual(len(self.appels_iw()), n, "plus d'appel iw sans demandeur")
+        self.assertIn("dev wlan0 station dump", self.appels_iw()[0])
+        self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
+
+    def test_sonde_interface_perdue(self):
+        # Interface qui disparaît pendant la sonde : aucune erreur, signal et durée à null, courbe figée ; puis
+        # l'appareil disparaît et la sonde s'arrête.
+        self.faire_avancer(2000)
+        self.ipc("essai", "racine", str(self.compteurs))
+        self.jusqua(lambda e: self.sonde()["appareil"] == "wlan0", "appareil lu")
+        self.ipc("essai", "sondeur", "true")
+        self.jusqua(lambda e: self.sonde()["signal"] == -48, "signal relevé")
+        (self.bin / "iw_muet").touch()
+        shutil.rmtree(self.compteurs / "wlan0")
+        self.jusqua(lambda e: self.sonde()["signal"] is None, "signal perdu")
+        figee = self.sonde()["rx"]
+        time.sleep(2.5)
+        s = self.sonde()
+        self.assertEqual((s["rx"], s["depuis"], s["actif"]), (figee, None, True))
+        (self.bin / "coupe").touch()
+        self.ipc("essai", "relire")
+        self.jusqua(lambda e: not self.sonde()["actif"] and self.sonde()["appareil"] == "", "sonde arrêtée")
+        self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read|rror")
 
     def test_ouvrir_et_fermer(self):
         self.assertFalse(self.etat()["fenetre"])

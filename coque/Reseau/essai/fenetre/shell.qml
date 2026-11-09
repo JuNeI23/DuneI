@@ -105,6 +105,20 @@ ShellRoot {
             })
         }
 
+        // sonde — état de la sonde d'EtatReseau, en JSON : {appareil, sondeurs, actif (minuteur en marche), rx, tx
+        // (débits, octets/s), signal (dBm ou null), depuis (secondes ou null)}. Sortie : texte JSON. Erreurs : aucune.
+        function sonde(): string {
+            return JSON.stringify({appareil: EtatReseau.appareil, sondeurs: EtatReseau.sondeurs, actif: EtatReseau.sondeActive,
+                                   rx: EtatReseau.debits.rx, tx: EtatReseau.debits.tx,
+                                   signal: EtatReseau.signalDbm, depuis: EtatReseau.connecteDepuis})
+        }
+        // sondeur — pose ou retire un demandeur de la sonde. Entrée : actif, « true » pour demander. Sortie : aucune.
+        function sondeur(actif: bool): void { EtatReseau.demanderSonde(actif) }
+        // racine — remplace le dossier des compteurs du noyau par un dossier d'essai. Entrée : chemin. Sortie : aucune.
+        function racine(chemin: string): void { EtatReseau.racineCompteurs = chemin }
+        // relire — relit nmcli sans attendre le moniteur. Entrées et sortie : aucune. Dépendances : EtatReseau.relire.
+        function relire(): void { EtatReseau.relire() }
+
         // demander — demande la fenêtre sur un profil, comme « Détails… » du popover. Entrée : cle, uuid ou nom.
         // Sortie : aucune. Erreurs : aucune.
         function demander(cle: string): void { EtatReseau.profilDemande = cle; EtatReseau.fenetre = true }
