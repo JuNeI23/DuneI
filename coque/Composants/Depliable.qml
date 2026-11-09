@@ -5,9 +5,9 @@ import "../Theme"
 // Depliable — section dépliable de la coque : un en-tête cliquable au-dessus d'un bloc de contenu.
 // Rôle : à la manière de macOS (conception, § 7.10), l'en-tête porte un chevron dessiné, qui pointe à droite quand
 // la section est repliée et en bas quand elle est dépliée (le Chevron bas, pivoté d'un quart de tour par le ressort
-// reveal, comme le dépliage d'une rangée du popover), puis le libellé ; le contenu, aligné sur le libellé, n'est visible que déplié. Un clic, Espace ou
-// Entrée basculent la section. L'en-tête est un arrêt de tabulation, entouré de l'anneau de focus au clavier
-// (visualFocus) ; un clic ne vole pas le focus d'un champ (Qt.TabFocus, § 7.3). Le libellé prend le texte non
+// reveal, comme le dépliage d'une rangée du popover), puis le libellé ; le contenu, aligné sur le libellé, n'est
+// visible que déplié. Un clic, Espace ou Entrée basculent la section. L'en-tête est un arrêt de tabulation, entouré
+// de l'anneau de focus au clavier (visualFocus) ; un clic ne vole pas le focus d'un champ (Qt.TabFocus, § 7.3). Le libellé prend le texte non
 // sélectionné de l'Etat de l'en-tête, qui ne le ternit que désactivé ; le chevron prend le texte secondaire.
 // Entrées : text, le libellé ; ouvert, vrai si la section est dépliée, faux par défaut ; contenu, propriété par
 // défaut : les éléments déclarés dans la Depliable, posés en colonne dans le bloc.

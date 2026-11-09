@@ -139,7 +139,7 @@ ShellRoot {
                 }
             }
 
-            // Sous-page d'un profil (FicheProfil complète) sur l'état factice, ouverte à la demande de l'IPC.
+            // Sous-page « Réglages avancés » d'un profil (FicheProfil) sur l'état factice, ouverte à la demande de l'IPC.
             Loader {
                 id: sousPage
                 property string uuid
@@ -155,7 +155,7 @@ ShellRoot {
                 id: ipc
                 target: "wifi"
 
-                // ouvrirFiche — ouvre la FicheProfil complète d'un profil du panneau factice. Entrée : uuid. Sortie : aucune.
+                // ouvrirFiche — ouvre la FicheProfil (réglages avancés) d'un profil du panneau factice. Entrée : uuid. Sortie : aucune.
                 function ouvrirFiche(uuid: string): void { sousPage.uuid = uuid }
                 // prioriteLue, sousPage — simulent une modification faite dans la sous-page « Détails… » (nouvelle priorité
                 // enregistrée) puis l'ouverture ou la fermeture de la sous-page. Entrées : valeur. Sortie : aucune.

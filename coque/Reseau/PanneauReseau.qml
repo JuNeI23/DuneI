@@ -101,8 +101,8 @@ Item {
     // Dépendances : sousPage.
     function retour() { sousPage = "" }
 
-    // ajoute — referme la fiche « Nouveau réseau » et demande le profil créé, dont la sous-page s'ouvre dès que la
-    // lecture des profils le montre. Entrées : uuid, celui que nmcli a donné (vide s'il manque) ; nom, le nom du
+    // ajoute — referme la fiche « Nouveau réseau » et demande le profil créé, que remplir montre dès que la lecture
+    // des profils le contient (un profil Wi-Fi est déplié dans la page Wi-Fi). Entrées : uuid, celui que nmcli a donné (vide s'il manque) ; nom, le nom du
     // profil. Sortie : aucune. Erreurs : aucune. Dépendances : etat.profilDemande, retour, remplir.
     function ajoute(uuid, nom) {
         retour()
@@ -111,9 +111,11 @@ Item {
     }
 
     // remplir — montre le profil demandé par etat.profilDemande (uuid ou nom) s'il figure parmi les rangées, après
-    // avoir choisi son onglet (déplié dans la page Wi-Fi, ou dans la page Filaire pour le profil filaire actif ; sous-page des autres profils filaires), puis consomme la demande ; referme une sous-page dont le profil n'existe
-    // plus. Entrées : aucune. Sortie : aucune. Erreurs : aucune ; une demande dont le profil n'est pas (encore) lu
-    // attend la lecture suivante. Dépendances : rangees, etat.profilDemande, choisirOnglet, ouvrirProfil, pageWifi.montrer, pageFilaire.montrer.
+    // avoir choisi son onglet (déplié dans la page Wi-Fi, ou dans la page Filaire pour le profil filaire actif ;
+    // sous-page des autres profils filaires), puis consomme la demande ; referme une sous-page dont le profil
+    // n'existe plus. Entrées : aucune. Sortie : aucune. Erreurs : aucune ; une demande dont le profil n'est pas
+    // (encore) lu attend la lecture suivante. Dépendances : rangees, etat.profilDemande, choisirOnglet, ouvrirProfil,
+    // pageWifi.montrer, pageFilaire.montrer.
     function remplir() {
         const demande = etat.profilDemande === "" ? null
             : rangees.find(r => r.uuid === etat.profilDemande || r.nom === etat.profilDemande)
