@@ -21,8 +21,13 @@ import "../Barre/icones.js" as Icones
 // « Enregistrer » : la valeur affichée change aussitôt, puis la fiche relit le profil ; un refus de nmcli affiche
 // sa sortie d'erreur sous le réglage et restaure les valeurs lues. Passer en Fixe n'écrit rien tant que
 // l'adresse manque : NetworkManager refuse la méthode manuelle sans adresse.
-// Secret : lu seulement au clic sur l'œil (nmcli -s -g 802-11-wireless-security.psk), jamais journalisé ni rendu ;
-// il est effacé quand la fiche change de profil et disparaît avec elle à la fermeture de la fenêtre.
+// Logique du profil : lecture, écriture des réglages, mot de passe, connexion et oubli sont portés par le
+// ProfilReseau que la fiche possède (reglagesProfil), lié à son uuid ; la fiche garde le rendu, la validation de
+// l'IPv4, le détail et « Tout copier », et recale ses contrôles quand le profil émet restaure.
+// Secret : lu seulement au clic sur l'œil, ou par la demande de copie du champ (copieDemandee : copie sans
+// révélation), par nmcli -s -g 802-11-wireless-security.psk, jamais journalisé ni rendu ; il est effacé quand la
+// fiche change de profil et disparaît avec elle à la fermeture de la fenêtre. Le bouton de copie du champ reste
+// caché (copiable faux) : la fiche garde son rendu.
 // Clavier : toutes les rangées cliquables sont des Ligne (tabulation, Entrée, Espace, contour de focus : bible,
 // « Clavier ») ; les Bouton prennent la tabulation, Entrée et Espace.
 // Mode résumé (resume vrai) : la page Wi-Fi y pose la carte du réseau joint, sans dupliquer la logique de la fiche.
@@ -33,16 +38,15 @@ import "../Barre/icones.js" as Icones
 // Entrées : uuid, le profil affiché (vide : fiche vide) ; rangee, sa rangée de la liste (nmcli.profilsFenetre :
 // nom, wifi, actif, etat, icone) ; etat, la source de l'état et des actions, EtatReseau par défaut ; resume, faux par
 // défaut, voir ci-dessus ; panneauHote, le PanneauReseau dont « Détails… » ouvre la sous-page (mode résumé seulement).
-// Sorties : profil, réglages lus (null avant lecture) ; lu, vrai une fois lus ; valeurs, réglages affichés ;
-// erreurs, objet clé → message (autoconnect, priorite, facture, methode, adresse, passerelle, dns, psk, connexion,
-// oublier, profil) ; copie, « * » tant que « Copié » tient la place de « Tout copier », vide sinon ; finCopie, le minuteur du retour « Copié » de « Tout copier » ; fixe, vrai si la section IPv4 montre la configuration fixe ; confirmer, vrai pendant la
+// Sorties : reglagesProfil, le ProfilReseau de la fiche ; profil, lu, valeurs, erreurs et secretLu, ceux de
+// reglagesProfil (voir ProfilReseau) ; copie, « * » tant que « Copié » tient la place de « Tout copier », vide sinon ; finCopie, le minuteur du retour « Copié » de « Tout copier » ; fixe, vrai si la section IPv4 montre la configuration fixe ; confirmer, vrai pendant la
 // demande de confirmation de l'oubli ; secret, le ChampSecret ; detail, libellé → valeur du détail de la connexion
 // active, vide pour un autre profil et pour un profil actif dont l'appareil n'est pas celui que lit EtatReseau ; signaux relu(uuid, profil) après chaque lecture et oublie() après la
 // suppression du profil.
 // Erreurs : un échec de lecture du profil s'affiche en tête de fiche (erreurs.profil). Une réponse de nmcli qui
-// arrive après un changement de profil ou la destruction de la fiche est ignorée (garde).
-// Dépendances : Quickshell (clipboardText), EtatReseau (executer, appareil, ip4, ip6, passerelle, dns, mac,
-// connectivite), nmcli.js (CHAMPS_PROFIL, lireProfil, argsModifier, champs, liste), Groupe, Ligne, Section, Theme,
+// arrive après un changement de profil ou la destruction de la fiche est ignorée (garde de ProfilReseau).
+// Dépendances : Quickshell (clipboardText), ProfilReseau, EtatReseau (appareil, ip4, ip6, passerelle, dns, mac,
+// connectivite), nmcli.js (liste), Groupe, Ligne, Section, Theme,
 // Texte, Icone, Bouton, Interrupteur, Compteur, Valeur, Champ, ChampSecret, Onglets, Onglet.
 // Cotes : contenu en retrait de space.blockGap (24) à gauche et à droite, sections espacées de space.scale[1] (8) ;
 // cartes au rayon radius.panel ; rangées d'au moins reglages.row, la rangée de tête de reglages.rowLead, contenu à
@@ -55,25 +59,17 @@ ColumnLayout {
     property bool resume: false
     property var panneauHote: null
     property var etat: EtatReseau
-    property var profil: null
-    property var valeurs: ({})
-    property var erreurs: ({})
     property bool fixe: false
     property bool confirmer: false
     property string copie: ""
-    // Dernier secret lu ou enregistré : la validation d'un texte identique n'écrit rien.
-    property string secretLu: ""
-    // Uuid dont la lecture est en cours : une seconde demande pour le même profil est ignorée.
-    property string enLecture: ""
-    // Vrai quand une relecture a été demandée pendant la lecture en cours.
-    property bool relectureAttendue: false
-    // Garde des réponses de nmcli : marquée morte au changement de profil et à la destruction.
-    property var garde: ({mort: false})
-    // Génération des écritures : une lecture lancée avant la dernière écriture est périmée (voir lire et appliquer).
-    property int ecritures: 0
+    readonly property alias reglagesProfil: reglagesProfil
+    readonly property var profil: reglagesProfil.profil
+    readonly property var valeurs: reglagesProfil.valeurs
+    readonly property var erreurs: reglagesProfil.erreurs
+    readonly property string secretLu: reglagesProfil.secretLu
     // Icône de force du réseau joint (rangée de tête du mode résumé), aux paliers de la barre.
     readonly property string iconeForce: Icones.iconeForce(etat?.force ?? 0)
-    readonly property bool lu: profil !== null
+    readonly property bool lu: reglagesProfil.lu
     readonly property bool wifi: rangee?.wifi ?? false
     readonly property alias secret: secret
     readonly property alias finCopie: finCopie
@@ -91,55 +87,29 @@ ColumnLayout {
 
     spacing: Theme.space?.scale[1] ?? 0
 
+    // Le profil (reglagesProfil) se relit et oublie son secret de lui-même au changement d'uuid ; la fiche n'oublie
+    // que ses états d'affichage.
     onUuidChanged: {
-        garde.mort = true
-        garde = {mort: false}
-        enLecture = ""
-        relectureAttendue = false
-        profil = null; erreurs = {}; confirmer = false
+        confirmer = false
         copie = ""; finCopie.stop()
-        masquerSecret()
-        lire()
-    }
-    Component.onCompleted: lire()
-    Component.onDestruction: garde.mort = true
-
-    // lire — lit les réglages du profil, puis restaure les contrôles sur eux.
-    // Entrées : aucune. Sortie : aucune ; profil, valeurs et contrôles mis à jour, relu émis ; une demande pour le
-    // profil dont la lecture est déjà en cours est notée, et rejouée à la fin de celle-ci : une modification
-    // achevée pendant la lecture n'y figure peut-être pas. Une lecture lancée avant la dernière écriture (appliquer)
-    // est périmée : sa réponse n'écrase ni les valeurs affichées ni le profil lu, et la relecture demandée prend le
-    // relais (sans quoi deux pas rapprochés de la priorité repartiraient de la valeur périmée).
-    // Erreurs : un code non nul s'affiche en tête de fiche. Dépendances : etat.executer, Nmcli, restaurer.
-    function lire() {
-        if (uuid === "") return
-        if (enLecture === uuid) return relectureAttendue = true
-        const g = garde, u = uuid, ecriture = ecritures
-        enLecture = u
-        etat.executer(["-t", "-f", Nmcli.CHAMPS_PROFIL, "connection", "show", u], (code, sortie) => {
-            if (g.mort) return
-            enLecture = ""
-            // Lecture périmée : une écriture a eu lieu depuis son lancement, la relecture qu'elle a demandée suit.
-            if (ecriture !== ecritures && profil !== null) relectureAttendue = true
-            else if (code !== 0) erreur("profil", sortie, code)
-            else {
-                profil = Nmcli.lireProfil(sortie)
-                restaurer()
-                relu(u, profil)
-            }
-            if (relectureAttendue) {
-                relectureAttendue = false
-                lire()
-            }
-        })
     }
 
-    // restaurer — remet chaque contrôle sur les réglages lus (après une lecture ou un refus).
-    // Entrées : aucune. Sortie : aucune. Erreurs : aucune ; sans profil lu, ne fait rien.
+    ProfilReseau {
+        id: reglagesProfil
+        uuid: fiche.uuid
+        etat: fiche.etat
+        actif: fiche.rangee?.actif ?? false
+        champ: secret
+        onRelu: (u, p) => fiche.relu(u, p)
+        onRestaure: fiche.restaurer()
+        onOublie: fiche.oublie()
+    }
+
+    // restaurer — recale chaque contrôle sur les réglages lus, quand le profil les rend (après une lecture ou un
+    // refus). Entrées : aucune. Sortie : aucune. Erreurs : aucune ; sans profil lu, ne fait rien.
     // Dépendances : profil, contrôles de la fiche.
     function restaurer() {
         if (!profil) return
-        valeurs = Object.assign({}, profil)
         fixe = profil.methode === "manual"
         onglets.currentIndex = fixe ? 1 : 0
         autoconnect.checked = profil.autoconnect
@@ -149,69 +119,16 @@ ColumnLayout {
         dns.text = profil.dns.join(", ")
     }
 
-    // erreur — affiche la sortie d'erreur de nmcli sous un réglage.
-    // Entrées : cle, le réglage ; sortie, la sortie d'erreur ; code, le code de sortie. Sortie : aucune.
-    // Erreurs : aucune ; une sortie vide donne un message générique avec le code. Dépendances : erreurs.
-    function erreur(cle, sortie, code) {
-        erreurs = Object.assign({}, erreurs, {[cle]: sortie.trim() || `nmcli a échoué (code ${code}).`})
-    }
-
-    // effacer — retire l'erreur d'un réglage. Entrée : cle. Sortie : aucune. Erreurs : aucune.
-    function effacer(cle) {
-        const e = Object.assign({}, erreurs)
-        delete e[cle]
-        erreurs = e
-    }
-
-    // appliquer — écrit un ou plusieurs réglages par « nmcli connection modify ».
-    // Entrées : cle, le réglage sous lequel afficher une erreur ; changes, objet pour nmcli.argsModifier.
-    // Sortie : aucune ; la valeur affichée change aussitôt (le mot de passe excepté), puis le profil est relu, ou,
-    // sur un refus, l'erreur s'affiche et les valeurs lues sont restaurées.
-    // Erreurs : celles de nmcli, sous le réglage. Dépendances : etat.executer, Nmcli.argsModifier, lire, restaurer.
-    function appliquer(cle, changes) {
-        const g = garde
-        effacer(cle)
-        ecritures++
-        const visibles = Object.assign({}, changes)
-        delete visibles.psk
-        valeurs = Object.assign({}, valeurs, visibles)
-        etat.executer(Nmcli.argsModifier(uuid, changes), (code, sortie) => {
-            if (g.mort) return
-            if (code === 0) {
-                if ("psk" in changes) secretLu = changes.psk
-                return lire()
-            }
-            erreur(cle, sortie, code)
-            restaurer()
-            if ("psk" in changes) secret.text = secretLu
-        })
-    }
-
-    // masquerSecret — vide et masque le mot de passe : champ vidé, œil refermé, secret lu oublié. La fiche reste
-    // lue : aucune relecture n'a lieu. Appelée quand la fiche change de profil ou que sa page se cache.
-    // Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : secret, secretLu.
-    function masquerSecret() { secret.text = ""; secret.revele = false; secretLu = "" }
-
-    // reveler — lit le secret enregistré du profil Wi-Fi, puis le montre (demandé par l'œil du champ vide).
-    // Entrées : aucune. Sortie : aucune ; secret.text rempli et révélé. Erreurs : celles de nmcli, sous le champ.
-    // Dépendances : etat.executer, Nmcli.champs (« -g » échappe les deux-points et les barres obliques inverses).
-    function reveler() {
-        const g = garde
-        effacer("psk")
-        etat.executer(["-s", "-g", "802-11-wireless-security.psk", "connection", "show", uuid], (code, sortie) => {
-            if (g.mort) return
-            if (code !== 0) return erreur("psk", sortie, code)
-            secret.text = secretLu = Nmcli.champs(sortie.replace(/\n$/, "")).join(":")
-            secret.revele = true
-        })
-    }
-
-    // priorite — décale la priorité de connexion automatique, bornée à [-999, 999] comme NetworkManager.
-    // Entrée : pas, +1 ou -1. Sortie : aucune. Erreurs : voir appliquer. Dépendances : appliquer, valeurs.
-    function priorite(pas) {
-        const v = Math.max(-999, Math.min(999, (valeurs.priorite ?? 0) + pas))
-        if (v !== valeurs.priorite) appliquer("priorite", {priorite: v})
-    }
+    // lire, appliquer, masquerSecret, reveler, copierSecret, priorite, connecter — relais vers le profil de la fiche
+    // (voir ProfilReseau), gardés pour les pages qui appellent la fiche. Entrées et erreurs : celles de ProfilReseau.
+    // Sortie : aucune. Dépendances : reglagesProfil.
+    function lire() { reglagesProfil.lire() }
+    function appliquer(cle, changes) { reglagesProfil.appliquer(cle, changes) }
+    function masquerSecret() { reglagesProfil.masquerSecret() }
+    function reveler() { reglagesProfil.reveler() }
+    function copierSecret() { reglagesProfil.copierSecret() }
+    function priorite(pas) { reglagesProfil.priorite(pas) }
+    function connecter() { reglagesProfil.connecter() }
 
     // methode — choisit la configuration IPv4. Fixe montre les champs et attend l'adresse ; Automatique écrit
     // aussitôt la méthode si le profil était fixe. Entrée : f, vrai pour Fixe. Sortie : aucune.
@@ -242,27 +159,11 @@ ColumnLayout {
         if (profil && l.join(",") !== profil.dns.join(",")) appliquer("dns", {dns: l})
     }
 
-    // connecter — active ou désactive le profil (« nmcli connection up|down »). Entrées : aucune. Sortie : aucune.
-    // Erreurs : celles de nmcli, sous l'en-tête. Dépendances : etat.executer, rangee.
-    function connecter() {
-        const g = garde
-        effacer("connexion")
-        etat.executer(["connection", rangee.actif ? "down" : "up", uuid], (code, sortie) => {
-            if (!g.mort && code !== 0) erreur("connexion", sortie, code)
-        })
-    }
-
-    // oublier — supprime le profil (« nmcli connection delete »), après confirmation. Entrées : aucune.
-    // Sortie : aucune ; oublie() émis au succès. Erreurs : celles de nmcli, sous le bouton.
-    // Dépendances : etat.executer.
+    // oublier — referme la confirmation, puis supprime le profil (voir ProfilReseau.oublier). Entrées : aucune.
+    // Sortie : aucune ; oublie() émis au succès. Erreurs : celles de nmcli, sous le bouton. Dépendances : reglagesProfil.
     function oublier() {
-        const g = garde
         confirmer = false
-        etat.executer(["connection", "delete", uuid], (code, sortie) => {
-            if (g.mort) return
-            if (code === 0) oublie()
-            else erreur("oublier", sortie, code)
-        })
+        reglagesProfil.oublier()
     }
 
     // texteDetail — le détail de la connexion active en texte, une ligne « Libellé : valeur » par paramètre.
@@ -348,7 +249,7 @@ ColumnLayout {
             visible: fiche.wifi && (securite === "" || partage || securite === "wpa-eap")
             filet: fiche.resume
             libelle: securite === "wpa-eap" ? "Entreprise (802.1X)" : "Mot de passe"
-            aide: ({"wpa-psk": "WPA2 personnel", "sae": "WPA3 personnel"})[securite] ?? ""
+            aide: partage ? reglagesProfil.securite : ""
             erreur: fiche.erreurs.psk ?? ""
             Texte {
                 visible: ligneMdp.securite === ""
@@ -363,6 +264,7 @@ ColumnLayout {
                 secretALire: true
                 placeholderText: "••••••••••"
                 onRevelationDemandee: fiche.reveler()
+                onCopieDemandee: fiche.copierSecret()
                 onAccepted: if (text !== "" && text !== fiche.secretLu) fiche.appliquer("psk", {psk: text})
             }
         }

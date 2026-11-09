@@ -2066,6 +2066,20 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
         self.jusqua(lambda e: not e["fenetre"], "fenêtre détruite")
         self.assertNotIn(self.SECRET, self.journal())
 
+    def test_copie_du_secret(self):
+        # La copie du mot de passe le lit par la même commande que l'œil, le met au presse-papiers sans remplir ni
+        # révéler le champ, et le champ montre son retour de copie ; le secret ne paraît jamais au journal.
+        self.ouvrir("hotspot-1")
+        self.ipc("essai", "cliquer", "copierSecret")
+        fin = time.monotonic() + DELAI
+        while self.ipc("essai", "presse") != self.SECRET:
+            self.assertLess(time.monotonic(), fin, self.appels())
+            time.sleep(0.05)
+        e = self.jusqua(lambda e: e["fiche"]["copieSecret"], "retour de copie du champ")
+        self.assertEqual((e["fiche"]["secret"], e["fiche"]["revele"]), (0, False))
+        self.assertEqual(self.appels().count("-s -g 802-11-wireless-security.psk connection show hotspot-1"), 1)
+        self.assertNotIn(self.SECRET, self.journal())
+
     def test_oublier(self):
         self.ouvrir("hotspot-1")
         self.ipc("essai", "cliquer", "oublier")

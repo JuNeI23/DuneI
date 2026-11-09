@@ -81,7 +81,8 @@ ShellRoot {
         // etat — état de la fenêtre, en JSON : {fenetre (construite), demandee (EtatReseau.fenetre), rangees
         // ([groupe, nom, état, icône] des profils), detail (libellé → valeur du détail de la connexion active),
         // onglet et sousPage (ceux du panneau), onglets ([clé, nom, état] des trois onglets), defilement ([contentY,
-        // contentHeight, height]), fiche: {uuid, lu, priorite, autoconnect, facture, fixe, erreurs, secret (longueur), revele, confirmer}}.
+        // contentHeight, height]), fiche: {uuid, lu, priorite, autoconnect, facture, fixe, erreurs, secret (longueur), revele,
+        // copieSecret (retour de copie du champ secret), confirmer}}.
         // Entrées : aucune. Sortie : texte JSON. Erreurs : aucune ; fenêtre fermée, rangees, detail et fiche vides.
         function etat(): string {
             const p = fenetre.panneau
@@ -100,7 +101,7 @@ ShellRoot {
                 fiche: !f ? {} : {
                     uuid: f.uuid, lu: f.lu, priorite: f.valeurs.priorite, autoconnect: f.valeurs.autoconnect,
                     facture: f.valeurs.facture === "yes", fixe: f.fixe, erreurs: f.erreurs,
-                    secret: f.secret.length, revele: f.secret.revele, confirmer: f.confirmer,
+                    secret: f.secret.length, revele: f.secret.revele, copieSecret: f.secret.copie, confirmer: f.confirmer,
                 },
             })
         }
@@ -207,11 +208,13 @@ ShellRoot {
         }
 
         // cliquer — geste sur un contrôle de la fiche : plus et moins (pas du Compteur de priorité), facture, auto,
-        // fixe, automatique, oeil, connexion, oublier (rangée cliquable), confirmer. Entrée : nom. Sortie : aucune.
+        // fixe, automatique, oeil, copierSecret (copie du mot de passe, comme le bouton de copie du champ), connexion,
+        // oublier (rangée cliquable), confirmer. Entrée : nom. Sortie : aucune.
         // Erreurs : nom inconnu, TypeError au journal.
         function cliquer(nom: string): void {
-            const o = essai.nomme(nom === "oeil" ? "secret" : nom === "plus" || nom === "moins" ? "priorite" : nom)
+            const o = essai.nomme(nom === "oeil" || nom === "copierSecret" ? "secret" : nom === "plus" || nom === "moins" ? "priorite" : nom)
             if (nom === "oeil") o.basculer()
+            else if (nom === "copierSecret") o.copier()
             else if (nom === "plus" || nom === "moins") { nom === "plus" ? o.increase() : o.decrease(); o.valueModified() }
             else if (nom === "facture" || nom === "auto") { o.toggle(); o.toggled() }
             else if (nom === "oublier") o.clique()
@@ -253,6 +256,9 @@ ShellRoot {
         }
         // copie — lit le retour de copie d'un libellé, sans geste. Entrée : cle. Sortie : voir lireCopie.
         function copie(cle: string): string { return essai.lireCopie(cle) }
+        // presse — contenu du presse-papiers (Quickshell.clipboardText), rendu à l'appelant et jamais journalisé.
+        // Entrées : aucune. Sortie : texte. Erreurs : aucune.
+        function presse(): string { return Quickshell.clipboardText }
 
         // nouveau — clic sur « Autre réseau… » de la page Wi-Fi. Entrées : aucune. Sortie : aucune.
         function nouveau(): void { essai.trouver(fenetre.panneau, o => o.libelle === "Autre réseau…").clique() }

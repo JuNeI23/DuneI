@@ -741,6 +741,26 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(self.valeur("secret"), "2 false view-reveal 1 0")
         self.assertNotIn(secret, self.journal())
 
+    def test_champ_secret_copiable(self):
+        # Le bouton de copie n'existe que si copiable : il se place alors à droite de l'œil, que le champ décale d'une
+        # icône et d'un écart. Son clic demande la copie au parent ; confirmerCopie montre le retour (la coche remplace
+        # l'icône de copie) jusqu'à la fin de motion.delays.copied. Le champ reste masqué et le texte n'atteint pas le
+        # journal.
+        self.demarrer()
+        motion = self.tokens55()[1]["delays"]["copied"]
+        self.assertEqual(self.valeur("secretCopie").split()[:2], ["false", "false"])
+        self.ipc("secretCopiable", "true")
+        lu = self.valeur("secretCopie").split()
+        self.assertEqual(lu[:2], ["true", "false"])
+        self.assertGreater(int(lu[2]), 0, "le bouton de copie est à droite de l'œil")
+        self.ipc("secretCopier")
+        self.attendre("essai : copieDemandee true")
+        copie = self.lire_jusqua_valeur("secretCopie", lambda l: l[1] == "true" and l[3] == "1")
+        self.assertEqual(copie[4], "2", "le champ reste masqué")
+        self.lire_jusqua_valeur("secretCopie", lambda l: l[1] == "false" and l[3] == "0", motion / 1000 + 3)
+        self.ipc("secretCopiable", "false")
+        self.assertEqual(self.valeur("secretCopie").split()[:2], ["false", "false"])
+
     def test_recherche(self):
         # La recherche est un Champ en pilule (rayon de la moitié de sa hauteur), avec la loupe system-search à
         # gauche ; le bouton d'effacement edit-clear n'est visible que s'il y a du texte. Les deux icônes se

@@ -23,11 +23,12 @@ import "Composants/ancrage.js" as Ancrage
 // etat, ressort, ressortsFiges, image, controles, coches, cotes, glyphes, radios, jauge, jaugeIcone, jaugeHors,
 // jaugeCibles, progression, separateur,
 // champ, indicatif, tailleIcone, liste, arrets, rangee, rangeeImposees, bouton, overlays, overlaysFermes, pastilles, compteur,
-// compteurLargeur, deroulant, recherche, rechercheCouleurs, secret, activite, depliable, depliableCotes, courbe, tuile, iconesControles,
+// compteurLargeur, deroulant, recherche, rechercheCouleurs, secret, secretCopie, activite, depliable, depliableCotes, courbe, tuile, iconesControles,
 // bascule, reglages, valeur, fenetreAttention, knobs, contours, materiauSurfaces, verre, cleVerre, champMateriau, ombres).
 // Commandes sans journal : « essai rechercheTexte <texte> », « essai secretTexte <texte> », « essai secretALire
 // <bool> », « essai secretOeil » (qui journalise « essai : revelationDemandee true » si le parent doit lire le
-// secret), « essai rechercheActive <bool> », « essai activiteEtat
+// secret), « essai secretCopiable <bool> », « essai secretCopier » (qui journalise « essai : copieDemandee true »
+// et confirme la copie), « essai rechercheActive <bool> », « essai activiteEtat
 // <visible> <running> », « essai activitePhase <phase> », « essai activiteAncetre <bool> », « essai depliableOuvrir
 // <bool> », « essai basculeCocher <bool> », « essai valeurCopier », « essai pastillesForcer <état> », « essai pastillesReduire <bool> »,
 // « essai knobsActifs <bool> », « essai interrupteurCocher <bool> », « essai compteurValeur <n> », « essai deroulantRang <n> », « essai decocher »,
@@ -180,6 +181,7 @@ ShellRoot {
             ChampSecret {
                 id: secretEssai
                 onRevelationDemandee: essai.journal("revelationDemandee", true)
+                onCopieDemandee: { essai.journal("copieDemandee", true); confirmerCopie() }
             }
 
             // L'indicateur est porté par un Item qu'on peut masquer, pour éprouver l'arrêt sous un ancêtre invisible.
@@ -853,6 +855,28 @@ ShellRoot {
         // Dépendances : secretEssai.
         function secretALire(valeur: bool): void {
             secretEssai.secretALire = valeur
+        }
+
+        // secretCopie — journalise le bouton de copie du champ secret, sans jamais son texte : présence du bouton,
+        // retour de copie, écart horizontal entre le bouton et l'œil, opacité de la coche, echoMode.
+        // Entrées : aucune. Sortie : aucune ; « essai : secretCopie <bool> <bool> <écart> <opacité> <mode> ».
+        // Erreurs : aucune. Dépendances : secretEssai (copieur, coche, oeil), journal.
+        function secretCopie(): void {
+            const s = secretEssai, c = s.copieur
+            essai.journal("secretCopie", [c?.visible ?? false, s.copie ?? false, Math.round((c ? c.mapToItem(s, 0, 0).x : 0) - s.oeil.x),
+                                          Math.round(s.coche?.opacity ?? 0), s.echoMode].join(" "))
+        }
+
+        // secretCopiable — pose copiable sur le champ secret. Entrée : valeur. Sortie : aucune. Erreurs : aucune.
+        // Dépendances : secretEssai.
+        function secretCopiable(valeur: bool): void {
+            secretEssai.copiable = valeur
+        }
+
+        // secretCopier — clique le bouton de copie du champ secret, comme son TapHandler. Entrées : aucune.
+        // Sortie : aucune. Erreurs : aucune. Dépendances : secretEssai.
+        function secretCopier(): void {
+            secretEssai.copier()
         }
 
         // secretOeil — clique l'œil du champ secret, comme son TapHandler. Entrées : aucune. Sortie : aucune.
