@@ -88,6 +88,8 @@ Singleton {
     property var signalDbm: null
     property var connecteDepuis: null
     readonly property bool sondeActive: sondeurs > 0 && appareil !== ""
+    // Un autre appareil a d'autres compteurs : la référence du débit ne vaut plus.
+    onAppareilChanged: releve.precedent = null
 
     readonly property string icone: Icones.iconeReseau({carte, radio, filaire, connecte, connectivite, facture, force})
 
@@ -138,7 +140,7 @@ Singleton {
     // et qu'un relevé précédent existe, sinon la courbe se fige ; signalDbm et connecteDepuis valent null sans station.
     // Erreurs : aucune. Dépendances : nmcli.js (lireStation, debit), releve.
     function sonder(texte) {
-        const [compteurs, station] = texte.split("\n--\n")
+        const [compteurs, station] = texte.split(/^--$/m)
         const c = compteurs.trim().split("\n").map(Number)
         const maintenant = Date.now()
         const lu = Nmcli.lireStation(station ?? "")

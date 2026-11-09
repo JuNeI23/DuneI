@@ -1595,8 +1595,7 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
         self.ipc("essai", "racine", str(self.compteurs))
         self.jusqua(lambda e: self.sonde()["appareil"] == "wlan0", "appareil lu")
         self.ipc("essai", "sondeur", "true")
-        time.sleep(3.5)
-        s = self.sonde()
+        s = self.jusqua(lambda e: all(v > 0 for v in self.sonde()["rx"][-2:]), "deux échantillons récents") and self.sonde()
         self.assertTrue(s["actif"])
         self.assertEqual((s["signal"], s["depuis"]), (-48, 11460))
         self.assertEqual(len(s["rx"]), 60)
@@ -1610,6 +1609,25 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(len(self.appels_iw()), n, "plus d'appel iw sans demandeur")
         self.assertIn("dev wlan0 station dump", self.appels_iw()[0])
         self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
+
+    def test_sonde_changement_d_appareil(self):
+        # Câble branché sonde ouverte (wlan0 → eth0) : la référence est oubliée, aucun échantillon ne compare deux
+        # interfaces. eth0 porte un compteur énorme et immobile : un écart entre interfaces ferait un pic.
+        self.faire_avancer(2000)
+        eth = self.compteurs / "eth0"
+        eth.mkdir(parents=True)
+        for nom in ("rx_bytes", "tx_bytes"):
+            (eth / nom).write_text("5000000\n")
+        self.ipc("essai", "racine", str(self.compteurs))
+        self.jusqua(lambda e: self.sonde()["appareil"] == "wlan0", "appareil lu")
+        self.ipc("essai", "sondeur", "true")
+        self.jusqua(lambda e: self.sonde()["rx"][-1] > 0, "premier débit")
+        (self.bin / "filaire").touch()
+        self.ipc("essai", "relire")
+        self.jusqua(lambda e: self.sonde()["appareil"] == "eth0", "appareil changé")
+        self.jusqua(lambda e: self.sonde()["rx"][-2:] == [0, 0], "débits d'eth0 relevés")
+        s = self.sonde()
+        self.assertLess(max(s["rx"] + s["tx"]), 100000, s)
 
     def test_sonde_interface_perdue(self):
         # Interface qui disparaît pendant la sonde : aucune erreur, signal et durée à null, courbe figée ; puis
