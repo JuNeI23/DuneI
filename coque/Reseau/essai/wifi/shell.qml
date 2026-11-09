@@ -52,7 +52,7 @@ ShellRoot {
         faux.reseaux = ["Connu", "Ouvert", "Wifi_TRIADES", "Inconnu"].map(reseau)
     }
 
-    // État factice : les propriétés et fonctions d'EtatReseau qu'emploient la page et sa fiche résumée.
+    // État factice : les propriétés et fonctions d'EtatReseau qu'emploient la page et le dépliant du réseau joint.
     QtObject {
         id: faux
         property bool radio: true
@@ -84,7 +84,7 @@ ShellRoot {
     QtObject {
         id: panneauFaux
         property var factures: ({})
-        // Onglet et sous-page courants, que lit la page pour relire sa fiche au retour d'une sous-page.
+        // Onglet et sous-page courants, que lit la page pour relire le profil du réseau joint au retour d'une sous-page.
         property string onglet: "wifi"
         property string sousPage: ""
         property var rangees: [
@@ -180,7 +180,7 @@ ShellRoot {
                     const objet = nom => essai.trouver(p, o => o.objectName === nom)
                     const lignes = nom => essai.tous_(p, o => o.objectName === nom && o.visible)
                     const reseaux = essai.tous_(p, o => String(o.objectName).startsWith("reseau:") && o.visible)
-                    const f = p.fiche
+                    const f = p.depliant
                     const carteJoint = f ? essai.tous_(f, o => o.libelle !== undefined && o.libelle !== "" && o.visible).map(o => o.libelle) : []
                     const tete = f ? essai.trouver(f, o => o.objectName === "tete") : null
                     const bloc = essai.trouver(p, o => o.objectName === "bloc" && o.visible)?.item
@@ -203,7 +203,7 @@ ShellRoot {
                         balayage: p.balayage, activite: objet("activiteRecherche")?.visible ?? false,
                         rechercher: objet("rechercher")?.visible ?? false, radio: faux.radio, balayageEtat: faux.balayage,
                         recherche: faux.recherche, rechercheFenetre: faux.rechercheFenetre,
-                        ficheSecret: f ? [f.secret.length, f.secret.revele] : null,
+                        ficheSecret: f?.corps ? [f.corps.reglages.champ.length, f.corps.reglages.champ.revele] : null,
                         priorite: f ? essai.trouver(f, o => o.objectName === "priorite")?.value ?? null : null,
                         disponiblesVisible: objet("disponibles").visible,
                         titres: essai.tous_(p, o => o.text !== undefined && o.moyen === true && o.echelon === 0 && o.visible).map(o => o.text),
@@ -229,14 +229,14 @@ ShellRoot {
                 }
                 // geometrie — largeur de la carte « Adresses » et, par Valeur d'IPv6, son texte et ses bords gauche et droit
                 // dans la carte ; taille de la coche de la rangée de tête. Sortie : JSON {carte, ip6: [[texte, gauche, droite]],
-                // coche: [largeur, hauteur]}. Erreurs : page absente, TypeError au journal.
+                // coche: [largeur, hauteur], null sans coche}. Erreurs : page absente, TypeError au journal.
                 function geometrie(): string {
                     const carte = essai.trouver(porteur.item, o => o.objectName === "adresses")
                     const vs = essai.tous_(carte, o => o.objectName === "valeur:IPv6" && o.visible)
-                    const coche = essai.trouver(porteur.item.fiche, o => o.objectName === "coche")
+                    const coche = essai.trouver(porteur.item.depliant, o => o.objectName === "coche")
                     return JSON.stringify({carte: carte.width,
                         ip6: vs.map(v => [v.text, v.mapToItem(carte, 0, 0).x, v.mapToItem(carte, v.width, 0).x]),
-                        coche: [coche.width, coche.height]})
+                        coche: coche ? [coche.width, coche.height] : null})
                 }
 
                 // choisir — clic sur le réseau disponible nommé. Entrée : nom. Sortie : aucune.
@@ -253,8 +253,8 @@ ShellRoot {
                 function hors(uuid: string): void { essai.trouver(porteur.item, o => o.objectName === "hors:" + uuid).clique() }
                 // autre — clic sur « Autre réseau… ». Entrées : aucune.
                 function autre(): void { essai.trouver(porteur.item, o => o.objectName === "autre").clique() }
-                // details — clic sur « Détails… » du réseau joint. Entrées : aucune.
-                function details(): void { essai.trouver(porteur.item.fiche, o => o.objectName === "details").clique() }
+                // details — clic sur « Réglages avancés… » du dépliant du réseau joint. Entrées : aucune.
+                function details(): void { essai.trouver(porteur.item.depliant, o => o.objectName === "avances").clicked() }
                 // rechercher — clic sur « Rechercher ». Entrées : aucune.
                 function rechercher(): void { essai.trouver(porteur.item, o => o.objectName === "rechercher").clique() }
                 // balayer — le balayage rend sa liste : la liste est réaffectée, comme le fait EtatReseau. Entrées : aucune.
@@ -268,13 +268,13 @@ ShellRoot {
                 // popover — le popover (autre demandeur) pose ou lâche sa demande de balayage. Entrée : valeur.
                 function popover(valeur: bool): void { faux.recherche = valeur }
                 // masquer, detruire — la page devient invisible (autre sous-page) ou est détruite. Entrées : aucune.
-                // reveler — clic sur l'œil de la fiche du réseau joint : lit le secret factice et le montre. Entrées et sortie : aucune.
-                function reveler(): void { porteur.item.fiche.reveler() }
+                // reveler — clic sur l'œil du dépliant du réseau joint : lit le secret factice et le montre. Entrées et sortie : aucune.
+                function reveler(): void { porteur.item.depliant.corps.profil.reveler() }
                 function masquer(valeur: bool): void { porteur.visible = !valeur }
                 function detruire(): void { porteur.active = false }
                 // priorite — pas du Compteur de priorité. Entrée : pas (+1 ou -1).
                 function priorite(pas: int): void {
-                    const c = essai.trouver(porteur.item.fiche, o => o.objectName === "priorite")
+                    const c = essai.trouver(porteur.item.depliant, o => o.objectName === "priorite")
                     pas > 0 ? c.increase() : c.decrease()
                     c.valueModified()
                 }

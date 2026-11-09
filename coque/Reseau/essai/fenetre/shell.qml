@@ -47,7 +47,7 @@ ShellRoot {
     // reperable — vrai pour les éléments que focus() nomme : une Ligne (libellé), une Valeur copiable (« copier: » ou « valeur: ») ou
     // l'un des boutons de la sous-page. Entrée : o, un Item. Sortie : booléen. Erreurs : aucune.
     function reperable(o) {
-        return !!o.libelle || ["retour", "connexion", "toutCopier"].includes(o.objectName) || /^(copier|valeur):/.test(String(o.objectName))
+        return !!o.libelle || ["retour", "connexion", "toutCopier", "avances"].includes(o.objectName) || /^(copier|valeur):/.test(String(o.objectName))
     }
 
     // nomme — descendant de la fiche par son objectName. Entrée : nom. Sortie : l'Item, ou null.
@@ -75,10 +75,45 @@ ShellRoot {
                                minuteur: o.fin.running})
     }
 
+    // depliant — dépliant de réseau de la fenêtre par l'uuid de son profil. Entrée : uuid. Sortie : l'Item, ou null.
+    function depliant(uuid) { return trouver(fenetre.panneau, o => o.objectName === "depliant:" + uuid) }
+
+    // depliants — état des dépliants de réseau de la fenêtre, par uuid : {ouvert, charge (contenu chargé), lu (profil
+    // lu), tuiles (libellé → texte des tuiles d'information), reglages (libellés des réglages montrés), ouvertTexte
+    // (« Réseau ouvert : aucun mot de passe » montré), champ (champ du mot de passe montré), secret (longueur de son
+    // texte, jamais le texte), revele, copie (coche du retour de copie), securite (texte de la
+    // tuile Sécurité), grille: {tuiles: [x des tuiles], reglages: [[x du réglage, x de son contrôle]]}, abscisses
+    // dans la scène}. Entrées : aucune. Sortie : objet. Erreurs : aucune ; fenêtre fermée, objet vide.
+    function depliants() {
+        const r = {}
+        const x = o => Math.round(o.mapToItem(null, 0, 0).x)
+        const tuilesDe = g => Array.from(g?.children ?? []).filter(t => t.largeur !== undefined && t.visible)
+        const parcourir = o => {
+            for (const e of o?.children ?? []) {
+                if (!String(e.objectName).startsWith("depliant:")) { parcourir(e); continue }
+                const c = e.corps
+                r[e.rangee?.uuid ?? ""] = {
+                    ouvert: e.ouvert, charge: c !== null, lu: c?.profil.lu ?? false,
+                    tuiles: c ? c.tuiles.liste.reduce((m, t) => (m[t.libelle] = t.texte, m), {}) : {},
+                    reglages: c ? tuilesDe(c.reglages.grille).map(t => t.libelle) : [],
+                    ouvertTexte: c?.reglages.ouvertTexte.visible ?? false, champ: c?.reglages.champ.visible ?? false,
+                    secret: c?.reglages.champ.length ?? 0, revele: c?.reglages.champ.revele ?? false,
+                    copie: c?.reglages.champ.copie ?? false,
+                    securite: c?.reglages.securite ?? "",
+                    grille: !c ? {} : {tuiles: tuilesDe(c.tuiles).map(x),
+                                       reglages: tuilesDe(c.reglages.grille).map(t => [x(t), x(t.children[1].children[0])])},
+                }
+            }
+        }
+        parcourir(fenetre.panneau)
+        return r
+    }
+
     IpcHandler {
         target: "essai"
 
-        // etat — état de la fenêtre, en JSON : {fenetre (construite), demandee (EtatReseau.fenetre), rangees
+        // etat — état de la fenêtre, en JSON : {fenetre (construite), demandee (EtatReseau.fenetre), sondeurs
+        // (demandeurs de la sonde), depliants (voir essai.depliants), rangees
         // ([groupe, nom, état, icône] des profils), detail (libellé → valeur du détail de la connexion active),
         // onglet et sousPage (ceux du panneau), onglets ([clé, nom, état] des trois onglets), defilement ([contentY,
         // contentHeight, height]), fiche: {uuid, lu, priorite, autoconnect, facture, fixe, erreurs, secret (longueur), revele,
@@ -89,6 +124,7 @@ ShellRoot {
             const f = p?.fiche
             return JSON.stringify({
                 fenetre: p !== null, visible: p?.Window.window?.visible ?? false, demandee: EtatReseau.fenetre,
+                sondeurs: EtatReseau.sondeurs, depliants: essai.depliants(),
                 rangees: (p?.rangees ?? []).map(r => [r.groupe, r.nom, r.etat, r.icone]),
                 detail: f?.detail ?? {},
                 selection: essai.selection(),
@@ -220,6 +256,28 @@ ShellRoot {
             else if (nom === "oublier") o.clique()
             else o.clicked()
         }
+
+        // basculer — clic sur la ligne de tête d'un dépliant de réseau. Entrée : uuid. Sortie : aucune.
+        // Erreurs : dépliant absent, TypeError au journal.
+        function basculer(uuid: string): void { essai.trouver(essai.depliant(uuid), o => o.objectName === "tete").clique() }
+
+        // regler — geste sur un réglage d'un dépliant de réseau : auto et donnees (interrupteurs), plus et moins (pas du
+        // compteur de priorité), oeil et copierSecret (œil et copie du champ du mot de passe), avances, oublier,
+        // confirmer, rejoindre (boutons du pied). Entrées : uuid, nom.
+        // Sortie : aucune. Erreurs : dépliant fermé ou nom inconnu, TypeError au journal.
+        function regler(uuid: string, nom: string): void {
+            const cible = nom === "plus" || nom === "moins" ? "priorite" : nom === "oeil" || nom === "copierSecret" ? "secret" : nom
+            const o = essai.trouver(essai.depliant(uuid), i => i.objectName === cible)
+            if (nom === "oeil") o.basculer()
+            else if (nom === "copierSecret") o.copier()
+            else if (nom === "plus" || nom === "moins") { nom === "plus" ? o.increase() : o.decrease(); o.valueModified() }
+            else if (nom === "auto" || nom === "donnees") { o.toggle(); o.toggled() }
+            else o.clicked()
+        }
+
+        // relireDepliant — relit le profil d'un dépliant ouvert, comme après une modification. Entrée : uuid.
+        // Sortie : aucune. Erreurs : dépliant fermé, TypeError au journal.
+        function relireDepliant(uuid: string): void { essai.depliant(uuid).corps.profil.lire() }
 
         // saisir — remplit un champ de la fiche (adresse, passerelle, dns) et le valide, comme Entrée.
         // Entrées : nom, texte. Sortie : aucune.

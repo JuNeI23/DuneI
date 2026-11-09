@@ -249,14 +249,18 @@ function resume(e) {
     return {titre, etat: !e.filaire && e.facture ? "Partage du téléphone" : "Connecté", alerte: false}
 }
 
-// lireStation — signal et durée de connexion lus dans « iw dev <interface> station dump ».
-// Entrée : texte, la sortie de la commande (vide si l'interface est déconnectée).
-// Sortie : {dbm, duree} ; dbm, la ligne « signal: » en dBm entier, et duree, la ligne « connected time: » en
-// secondes ; chacun vaut null quand sa ligne manque. « signal avg: » et « beacon signal avg: » sont ignorées.
+// lireStation — signal, durée de connexion, canal et fréquence lus dans « iw dev <interface> station dump », suivi
+// de « iw dev <interface> info ».
+// Entrée : texte, la sortie des deux commandes (vide si l'interface est déconnectée).
+// Sortie : {dbm, duree, canal, freq} ; dbm, la ligne « signal: » en dBm entier ; duree, la ligne « connected time: »
+// en secondes ; canal et freq (MHz), la ligne « channel 36 (5180 MHz) » de la description de l'interface ; chacun vaut
+// null quand sa ligne manque. « signal avg: » et « beacon signal avg: » sont ignorées.
 // Erreurs : aucune. Dépendances : aucune.
 function lireStation(texte) {
-    const lu = motif => { const m = texte.match(motif); return m ? Number(m[1]) : null }
-    return {dbm: lu(/^\s*signal:\s*(-?\d+)/m), duree: lu(/^\s*connected time:\s*(\d+)/m)}
+    const lu = (motif, n = 1) => { const m = texte.match(motif); return m ? Number(m[n]) : null }
+    const canal = /^\s*channel (\d+) \((\d+) MHz\)/m
+    return {dbm: lu(/^\s*signal:\s*(-?\d+)/m), duree: lu(/^\s*connected time:\s*(\d+)/m),
+            canal: lu(canal), freq: lu(canal, 2)}
 }
 
 // debit — débit moyen entre deux relevés d'un compteur d'octets du noyau.
@@ -269,13 +273,15 @@ function debit(avant, apres, ms) {
 
 // formatDebit — débit prêt à l'affichage.
 // Entrée : octetsParSeconde, un nombre positif ou nul.
-// Sortie : {valeur, unite} ; unite vaut « ko/s » sous 1 000 000 et « Mo/s » au-delà ; valeur a une virgule
-// décimale, une décimale sous 10 et aucune ensuite.
+// Sortie : {valeur, unite} ; unite vaut « ko/s » tant que la valeur arrondie en ko/s reste sous 1000, « Mo/s »
+// ensuite ; valeur a une virgule décimale, une décimale sous 10 et aucune ensuite. L'arrondi précède le choix de
+// l'unité et des décimales : 999 999 o/s donne « 1,0 Mo/s » et 9 960 o/s « 10 ko/s ».
 // Erreurs : aucune. Dépendances : aucune.
 function formatDebit(octetsParSeconde) {
-    const mo = octetsParSeconde >= 1e6
-    const v = octetsParSeconde / (mo ? 1e6 : 1e3)
-    return {valeur: (v < 10 ? v.toFixed(1) : Math.round(v).toString()).replace(".", ","), unite: mo ? "Mo/s" : "ko/s"}
+    const arrondi = v => v < 9.95 ? Math.round(v * 10) / 10 : Math.round(v)
+    const mo = arrondi(octetsParSeconde / 1e3) >= 1000
+    const v = arrondi(octetsParSeconde / (mo ? 1e6 : 1e3))
+    return {valeur: (v < 10 ? v.toFixed(1) : String(v)).replace(".", ","), unite: mo ? "Mo/s" : "ko/s"}
 }
 
 // formatDuree — durée écoulée prête à l'affichage.
@@ -289,11 +295,12 @@ function formatDuree(secondes) {
 }
 
 // barresSignal — nombre de barres et mot qualifiant un signal.
-// Entrée : dbm, la puissance en dBm.
+// Entrée : dbm, la puissance en dBm, ou null sans relevé.
 // Sortie : {barres, mot} ; 4 « Excellent » dès −55, 3 « Bon » dès −67, 2 « Moyen » dès −75, 1 « Faible » dès −85,
-// sinon 0 « Très faible ».
+// sinon 0 « Très faible » ; 0 « — » sans relevé.
 // Erreurs : aucune. Dépendances : aucune.
 function barresSignal(dbm) {
+    if (dbm === null || dbm === undefined) return {barres: 0, mot: "—"}
     const paliers = [[-55, "Excellent"], [-67, "Bon"], [-75, "Moyen"], [-85, "Faible"]]
     const i = paliers.findIndex(p => dbm >= p[0])
     return i < 0 ? {barres: 0, mot: "Très faible"} : {barres: 4 - i, mot: paliers[i][1]}

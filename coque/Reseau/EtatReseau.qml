@@ -28,7 +28,8 @@ import "../Barre/icones.js" as Icones
 // le filaire actif, sinon le Wi-Fi), ip4, ip6, passerelle, dns, mac (adresse matérielle de l'appareil actif), profils,
 // vpnActif, icone, reseaux (WifiNetwork de toutes les cartes, non triés) ; relances, nombre de démarrages du moniteur.
 // Fonctions : relire, verifier, executer, allumer, ouvrirPortail, demanderSonde (sonde à la demande : sondeurs,
-// racineCompteurs, debits, signalDbm, connecteDepuis ; un minuteur d'une seconde seulement tant qu'un demandeur existe).
+// racineCompteurs, debits, signalDbm, connecteDepuis, canal, frequence ; un minuteur d'une seconde seulement tant
+// qu'un demandeur existe).
 // Erreurs : sans nmcli ou sans NetworkManager, les valeurs nmcli restent vides et le moniteur est relancé toutes les
 // secondes (voir Relance) ; la sortie d'une lecture partielle est lue au mieux.
 // Dépendances : Relance, nmcli.js, icones.js, Quickshell.Networking, Quickshell.Io.
@@ -87,6 +88,9 @@ Singleton {
     property var debits: ({rx: Array(60).fill(0), tx: Array(60).fill(0)})
     property var signalDbm: null
     property var connecteDepuis: null
+    // Canal et fréquence (MHz) du point d'accès, lus par la sonde (null sans relevé) : la tuile Bande.
+    property var canal: null
+    property var frequence: null
     readonly property bool sondeActive: sondeurs > 0 && appareil !== ""
     // Un autre appareil a d'autres compteurs : la référence du débit ne vaut plus.
     onAppareilChanged: releve.precedent = null
@@ -135,7 +139,8 @@ Singleton {
     // ne descend jamais sous zéro). Dépendances : sondeurs.
     function demanderSonde(actif) { sondeurs = Math.max(0, sondeurs + (actif ? 1 : -1)) }
 
-    // sonder — publie un relevé de la sonde : deux compteurs d'octets, une ligne « -- », puis « iw station dump ».
+    // sonder — publie un relevé de la sonde : deux compteurs d'octets, une ligne « -- », puis « iw station dump » et
+    // « iw info » (canal et fréquence).
     // Entrée : texte, sortie du relevé. Sortie : aucune ; décale les débits d'un pas si les compteurs sont lisibles
     // et qu'un relevé précédent existe, sinon la courbe se fige ; signalDbm et connecteDepuis valent null sans station.
     // Erreurs : aucune. Dépendances : nmcli.js (lireStation, debit), releve.
@@ -146,6 +151,8 @@ Singleton {
         const lu = Nmcli.lireStation(station ?? "")
         signalDbm = lu.dbm
         connecteDepuis = lu.duree
+        canal = lu.canal
+        frequence = lu.freq
         if (c.length !== 2 || c.some(isNaN)) { releve.precedent = null; return }
         const avant = releve.precedent
         releve.precedent = {rx: c[0], tx: c[1], t: maintenant}
@@ -199,14 +206,19 @@ Singleton {
         running: etat.sondeActive
         triggeredOnStart: true
         onTriggered: if (!releve.running) releve.running = true
-        onRunningChanged: if (!running) { releve.precedent = null; etat.signalDbm = null; etat.connecteDepuis = null }
+        onRunningChanged: if (!running) {
+            releve.precedent = null
+            etat.signalDbm = etat.connecteDepuis = etat.canal = etat.frequence = null
+        }
     }
 
-    // Un seul relevé à la fois : compteurs du noyau, puis iw ; les erreurs des deux sont écartées (interface perdue).
+    // Un seul relevé à la fois : compteurs du noyau (<racine>/<interface>/statistics/rx_bytes et tx_bytes), puis iw ;
+    // les erreurs des deux sont écartées (interface perdue).
     Process {
         id: releve
         property var precedent: null
-        command: ["sh", "-c", 'cat "$1/$2/rx_bytes" "$1/$2/tx_bytes" 2>/dev/null; echo --; iw dev "$2" station dump 2>/dev/null',
+        command: ["sh", "-c", 'cat "$1/$2/statistics/rx_bytes" "$1/$2/statistics/tx_bytes" 2>/dev/null; echo --; '
+                  + 'iw dev "$2" station dump 2>/dev/null; iw dev "$2" info 2>/dev/null',
                   "sh", etat.racineCompteurs, etat.appareil]
         stdout: StdioCollector { id: releveSortie }
         onExited: etat.sondeActive && etat.sonder(releveSortie.text)

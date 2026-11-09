@@ -46,8 +46,11 @@ class NmcliTest(EssaiCoque, unittest.TestCase):
 
     def test_lire_station(self):
         releve = "Station 44:48 (on wlp1s0)\n\tsignal:  \t-48 [-50, -51] dBm\n\tsignal avg:\t-47 dBm\n\tconnected time:\t11460 seconds\n"
-        self.assertEqual(self.appeler("lireStation", releve), {"dbm": -48, "duree": 11460})
-        self.assertEqual(self.appeler("lireStation", ""), {"dbm": None, "duree": None})
+        self.assertEqual(self.appeler("lireStation", releve), {"dbm": -48, "duree": 11460, "canal": None, "freq": None})
+        self.assertEqual(self.appeler("lireStation", ""), {"dbm": None, "duree": None, "canal": None, "freq": None})
+        # « iw dev <interface> info », lu à la suite du relevé de la station : canal et fréquence du point d'accès.
+        info = "Interface wlp1s0\n\ttype managed\n\tchannel 36 (5180 MHz), width: 80 MHz, center1: 5210 MHz\n"
+        self.assertEqual(self.appeler("lireStation", releve + info), {"dbm": -48, "duree": 11460, "canal": 36, "freq": 5180})
 
     def test_debit(self):
         self.assertEqual(self.appeler("debit", 100, 600, 1000), 500)
@@ -60,6 +63,11 @@ class NmcliTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(self.appeler("formatDebit", 45000), {"valeur": "45", "unite": "ko/s"})
         self.assertEqual(self.appeler("formatDebit", 2500000), {"valeur": "2,5", "unite": "Mo/s"})
         self.assertEqual(self.appeler("formatDebit", 25000000), {"valeur": "25", "unite": "Mo/s"})
+        # Bords : l'arrondi précède le choix de l'unité et des décimales.
+        self.assertEqual(self.appeler("formatDebit", 999999), {"valeur": "1,0", "unite": "Mo/s"})
+        self.assertEqual(self.appeler("formatDebit", 9960), {"valeur": "10", "unite": "ko/s"})
+        self.assertEqual(self.appeler("formatDebit", 9949), {"valeur": "9,9", "unite": "ko/s"})
+        self.assertEqual(self.appeler("formatDebit", 0), {"valeur": "0,0", "unite": "ko/s"})
 
     def test_format_duree(self):
         for s, attendu in ((45, "45 s"), (720, "12 min"), (11460, "3 h 11"), (187200, "2 j 4 h")):
@@ -70,6 +78,8 @@ class NmcliTest(EssaiCoque, unittest.TestCase):
         for dbm, barres, mot in ((-48, 4, "Excellent"), (-55, 4, "Excellent"), (-67, 3, "Bon"), (-75, 2, "Moyen"),
                                  (-85, 1, "Faible"), (-90, 0, "Très faible")):
             self.assertEqual(self.appeler("barresSignal", dbm), {"barres": barres, "mot": mot})
+        # Sans relevé (iw muet), ni barre ni qualificatif.
+        self.assertEqual(self.appeler("barresSignal", None), {"barres": 0, "mot": "—"})
 
     def test_bande(self):
         self.assertEqual(self.appeler("bande", 2412, 1), "2,4 GHz · canal 1")
@@ -877,7 +887,8 @@ class PopoverTest(EssaiCoque, unittest.TestCase):
 
 # nmcli factice de la fenêtre Réseau : journalise chaque appel dans « appels » (à côté du script) et rend des
 # sorties fixes ; un fichier « refus » à côté du script fait échouer toute modification ou tout ajout comme un refus de
-# polkit ; un ajout réussi pose « ajoute », et la liste des profils montre alors le profil créé.
+# polkit ; un ajout réussi pose « ajoute », et la liste des profils montre alors le profil créé ; « psk_joint » donne au
+# profil joint (wifi-1, ouvert sans lui) la sécurité WPA2 personnel.
 NMCLI_FACTICE = r"""#!/bin/sh
 d=$(dirname "$0")
 printf '%s\n' "$*" >> "$d/appels"
@@ -897,7 +908,7 @@ case "$*" in
         printf 'lo:lo-1:loopback:lo:yes\n' ;;
     "-g connection.metered connection show hotspot-1") echo yes ;;
     "-g connection.metered connection show "*) echo unknown ;;
-    "-s -g 802-11-wireless-security.psk connection show hotspot-1") echo "SECRET" ;;
+    "-s -g 802-11-wireless-security.psk connection show "*) echo "SECRET" ;;
     "-t -f connection.autoconnect,"*" connection show hotspot-1")
         printf 'connection.autoconnect:yes\nconnection.autoconnect-priority:%s\nconnection.metered:yes\nipv4.method:auto\n' "$(cat "$d/priorite" 2>/dev/null || echo 9)"
         printf 'ipv4.addresses:\nipv4.gateway:\nipv4.dns:\n802-11-wireless.ssid:Telephone_Essai\n802-11-wireless-security.key-mgmt:wpa-psk\n'
@@ -905,7 +916,8 @@ case "$*" in
         [ -f "$d/lent" ] && sleep 0.6 ;;
     "-t -f connection.autoconnect,"*" connection show wifi-1")
         printf 'connection.autoconnect:yes\nconnection.autoconnect-priority:0\nconnection.metered:unknown\nipv4.method:auto\n'
-        printf 'ipv4.addresses:\nipv4.gateway:\nipv4.dns:\n802-11-wireless.ssid:Wifi_TRIADES\n' ;;
+        printf 'ipv4.addresses:\nipv4.gateway:\nipv4.dns:\n802-11-wireless.ssid:Wifi_TRIADES\n'
+        [ -f "$d/psk_joint" ] && printf '802-11-wireless-security.key-mgmt:wpa-psk\n' ;;
     "-t -f connection.autoconnect,"*" connection show filaire-1")
         printf 'connection.autoconnect:yes\nconnection.autoconnect-priority:0\nconnection.metered:unknown\nipv4.method:manual\n'
         printf 'ipv4.addresses:10.0.0.2/24\nipv4.gateway:10.0.0.1\nipv4.dns:10.0.0.1\n' ;;
@@ -927,12 +939,16 @@ exit 0
 """
 
 
-# iw factice de la fenêtre : journalise ses appels, rend le relevé d'une station sauf si le drapeau « iw_muet » existe.
+# iw factice de la fenêtre : journalise ses appels, rend le relevé d'une station ou, pour « info », le canal de
+# l'interface, sauf si le drapeau « iw_muet » existe.
 IW_FACTICE = r"""#!/bin/sh
 d=$(dirname "$0")
 printf '%s\n' "$*" >> "$d/appels_iw"
 [ -f "$d/iw_muet" ] && exit 0
-printf 'Station aa:bb:cc:dd:ee:ff (on wlan0)\n\tconnected time:\t11460 seconds\n\tsignal:  \t-48 [-48] dBm\n\tsignal avg:\t-50 dBm\n'
+case "$*" in
+    *" info") printf 'Interface wlan0\n\ttype managed\n\tchannel 1 (2412 MHz), width: 20 MHz, center1: 2412 MHz\n' ;;
+    *) printf 'Station aa:bb:cc:dd:ee:ff (on wlan0)\n\tconnected time:\t11460 seconds\n\tsignal:  \t-48 [-48] dBm\n\tsignal avg:\t-50 dBm\n' ;;
+esac
 """
 
 
@@ -1563,7 +1579,7 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
         Entrée : octets_par_s. Sortie : l'événement qui arrête le fil (posé au nettoyage). Erreurs : aucune.
         Dépendances : self.compteurs, threading.
         """
-        dossier = self.compteurs / "wlan0"
+        dossier = self.compteurs / "wlan0" / "statistics"
         dossier.mkdir(parents=True, exist_ok=True)
         arret = threading.Event()
         debut = time.monotonic()
@@ -1614,7 +1630,7 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
         # Câble branché sonde ouverte (wlan0 → eth0) : la référence est oubliée, aucun échantillon ne compare deux
         # interfaces. eth0 porte un compteur énorme et immobile : un écart entre interfaces ferait un pic.
         self.faire_avancer(2000)
-        eth = self.compteurs / "eth0"
+        eth = self.compteurs / "eth0" / "statistics"
         eth.mkdir(parents=True)
         for nom in ("rx_bytes", "tx_bytes"):
             (eth / nom).write_text("5000000\n")
@@ -1648,6 +1664,112 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
         self.ipc("essai", "relire")
         self.jusqua(lambda e: not self.sonde()["actif"] and self.sonde()["appareil"] == "", "sonde arrêtée")
         self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read|rror")
+
+    def depliant(self, condition, message: str, uuid: str = "wifi-1") -> dict:
+        """Attend qu'une condition sur l'état d'un dépliant de réseau devienne vraie.
+
+        Entrées : condition, fonction(état du dépliant) → bool ; message ; uuid, le réseau (wifi-1 par défaut).
+        Sortie : l'état du dépliant. Erreurs : échec du test au délai. Dépendances : jusqua.
+        """
+        return self.jusqua(lambda e: condition(e["depliants"].get(uuid, {})), message)["depliants"][uuid]
+
+    def test_depliant_joint(self):
+        # À l'ouverture de la fenêtre, le dépliant du réseau joint est ouvert : six tuiles, dont l'adresse sans son
+        # préfixe, le routeur, le signal et la bande lus par la sonde, qu'il demande ; la fenêtre cachée (avant sa
+        # destruction), la demande est retirée dans le même tour.
+        self.ipc("reseau", "ouvrir")
+        d = self.depliant(lambda d: d.get("tuiles", {}).get("Bande", "—") != "—", "tuiles relevées")
+        self.assertTrue(d["ouvert"])
+        self.assertEqual(d["tuiles"], {"Adresse IP": "192.168.1.42", "Routeur": "192.168.1.1", "DNS": "192.168.1.1",
+                                       "Signal": "Excellent · −48 dBm", "Bande": "2,4 GHz · canal 1",
+                                       "Connecté depuis": "3 h 11"})
+        self.assertEqual(self.sonde()["sondeurs"], 1)
+        self.assertEqual(json.loads(self.ipc("essai", "fermerEtat"))["sondeurs"], 0)
+        self.jusqua(lambda e: not e["fenetre"], "fenêtre détruite")
+        self.assertEqual(self.sonde()["sondeurs"], 0)
+        self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
+
+    def test_depliant_replie_sans_sonde(self):
+        # Replié, le dépliant décharge son contenu : plus de demande de sonde, plus d'appel iw, aucun réglage relu.
+        self.ipc("reseau", "ouvrir")
+        self.depliant(lambda d: d.get("charge") and d.get("lu"), "dépliant ouvert et profil lu")
+        self.assertEqual(self.sonde()["sondeurs"], 1)
+        self.ipc("essai", "basculer", "wifi-1")
+        d = self.depliant(lambda d: not d["charge"], "contenu déchargé après le repli")
+        self.assertFalse(d["ouvert"])
+        self.assertEqual(self.sonde()["sondeurs"], 0)
+        iw = len(self.appels_iw())
+        lectures = sum(a.endswith("connection show wifi-1") for a in self.appels())
+        time.sleep(2)
+        self.assertEqual(len(self.appels_iw()), iw, "appel iw dépliant replié")
+        self.assertEqual(sum(a.endswith("connection show wifi-1") for a in self.appels()), lectures, "réglage relu")
+        # Rouvert, il redemande la sonde.
+        self.ipc("essai", "basculer", "wifi-1")
+        self.depliant(lambda d: d["charge"] and d["lu"], "dépliant rouvert")
+        self.assertEqual(self.sonde()["sondeurs"], 1)
+
+    def test_reglages_dans_le_depliant(self):
+        self.ipc("reseau", "ouvrir")
+        self.depliant(lambda d: d.get("lu"), "profil lu")
+        for geste, attendu in (("auto", "connection modify wifi-1 connection.autoconnect no"),
+                               ("plus", "connection modify wifi-1 connection.autoconnect-priority 1"),
+                               ("donnees", "connection modify wifi-1 connection.metered yes")):
+            self.ipc("essai", "regler", "wifi-1", geste)
+            fin = time.monotonic() + DELAI
+            while attendu not in self.appels():
+                self.assertLess(time.monotonic(), fin, self.appels())
+                time.sleep(0.05)
+
+    def test_reseau_ouvert(self):
+        # Profil sans sécurité : le texte remplace le champ du mot de passe ; sécurisé, le champ revient.
+        self.ipc("reseau", "ouvrir")
+        d = self.depliant(lambda d: d.get("lu"), "profil lu")
+        self.assertEqual((d["ouvertTexte"], d["champ"], d["securite"]), (True, False, "Ouvert"))
+        self.assertEqual(d["reglages"], ["Mot de passe", "Sécurité", "Connexion automatique", "Données limitées",
+                                         "Priorité"])
+        (self.bin / "psk_joint").touch()
+        self.ipc("essai", "relireDepliant", "wifi-1")
+        d = self.depliant(lambda d: d["champ"], "champ du mot de passe")
+        self.assertEqual((d["ouvertTexte"], d["securite"]), (False, "WPA2 personnel"))
+
+    def test_secret_dans_le_depliant(self):
+        # Mot de passe du réseau joint (D80) : jamais lu à l'ouverture ; la copie le met au presse-papiers sans le
+        # révéler et montre la coche ; l'œil le lit et le révèle ; replié puis rouvert, le champ repart vide.
+        (self.bin / "psk_joint").touch()
+        self.ipc("reseau", "ouvrir")
+        d = self.depliant(lambda d: d.get("champ"), "champ du mot de passe")
+        lecture = "-s -g 802-11-wireless-security.psk connection show wifi-1"
+        self.assertNotIn(lecture, self.appels())
+        self.ipc("essai", "regler", "wifi-1", "copierSecret")
+        d = self.depliant(lambda d: d["copie"], "coche de copie")
+        self.assertEqual((d["secret"], d["revele"], self.ipc("essai", "presse")), (0, False, self.SECRET))
+        self.ipc("essai", "regler", "wifi-1", "oeil")
+        d = self.depliant(lambda d: d["revele"], "secret révélé")
+        self.assertEqual(d["secret"], len(self.SECRET))
+        self.assertEqual(self.appels().count(lecture), 2)
+        self.ipc("essai", "basculer", "wifi-1")
+        self.depliant(lambda d: not d["charge"], "replié")
+        self.ipc("essai", "basculer", "wifi-1")
+        d = self.depliant(lambda d: d["charge"] and d["champ"], "rouvert")
+        self.assertEqual((d["secret"], d["revele"], d["copie"]), (0, False, False))
+        self.assertNotIn(self.SECRET, self.journal())
+
+    def test_alignement_grille(self):
+        # Les réglages suivent les colonnes des tuiles : chaque réglage commence au bord gauche d'une colonne des tuiles,
+        # son contrôle aussi, et les trois colonnes servent.
+        self.ipc("reseau", "ouvrir")
+        # La grille des réglages, cachée tant que le profil n'est pas lu, se met en page au tour suivant sa lecture.
+        posee = lambda g: len(g.get("tuiles", [])) == 6 and len({x for x, _ in g.get("reglages", [])}) == 3
+        d = self.depliant(lambda d: d.get("lu") and posee(d.get("grille", {})), "grilles posées")
+        colonnes = sorted(set(d["grille"]["tuiles"]))
+        self.assertEqual(len(colonnes), 3, d["grille"])
+        vues = set()
+        for x, controle in d["grille"]["reglages"]:
+            self.assertLessEqual(abs(x - controle), 1, d["grille"])
+            proche = min(colonnes, key=lambda c: abs(c - x))
+            self.assertLessEqual(abs(proche - x), 1, d["grille"])
+            vues.add(proche)
+        self.assertEqual(vues, set(colonnes), d["grille"])
 
     def test_ouvrir_et_fermer(self):
         self.assertFalse(self.etat()["fenetre"])
@@ -1874,13 +1996,14 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
 
     def test_clavier_des_rangees(self):
         # Bible, « Clavier » : Tab atteint les rangées cliquables de la page, Entrée les active. Les arrêts avant la liste
-        # des réseaux du système (« Détails… » du réseau joint) se comptent à la tabulation ; la fin de la page
+        # des réseaux du système (jusqu'à « Réglages avancés… » du dépliant du réseau joint, qui a remplacé « Détails… »
+        # de la fiche résumée en L2-65) se comptent à la tabulation ; la fin de la page
         # (« Autre réseau… »), derrière cette liste réelle de longueur imprévisible, s'atteint à rebours : Maj+Tab sans
         # focus boucle sur le dernier arrêt. L'ordre complet, sur un état factice, est éprouvé par
         # PageWifiTest.test_ordre_de_tabulation.
         self.ipc("reseau", "ouvrir")
         self.jusqua(lambda e: e["fenetre"] and e["rangees"], "fenêtre construite")
-        self.tabuler_jusqu_a("Détails…")
+        self.tabuler_jusqu_a("avances", 16)
         self.ipc("essai", "entree")
         self.jusqua(lambda e: e["sousPage"] == "wifi-1", "Entrée ouvre la sous-page du profil joint")
 
@@ -2078,6 +2201,10 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
         e = self.jusqua(lambda e: e["fiche"]["copieSecret"], "retour de copie du champ")
         self.assertEqual((e["fiche"]["secret"], e["fiche"]["revele"]), (0, False))
         self.assertEqual(self.appels().count("-s -g 802-11-wireless-security.psk connection show hotspot-1"), 1)
+        # Le changement de profil masque le secret et retire aussitôt la coche de copie (masquerSecret).
+        self.ipc("essai", "choisir", "wifi-1")
+        e = self.jusqua(lambda e: e["fiche"]["uuid"] == "wifi-1", "autre profil")
+        self.assertFalse(e["fiche"]["copieSecret"])
         self.assertNotIn(self.SECRET, self.journal())
 
     def test_oublier(self):

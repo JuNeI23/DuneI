@@ -7,13 +7,15 @@ import "../Composants/etats.js" as Etats
 // Ligne — rangée de réglage d'un Groupe : médaillon facultatif, libellé et aide, contrôle à droite, erreur dessous,
 // filet au-dessus.
 // Rôle : met en page un réglage d'une fiche de la fenêtre Réseau ; le libellé s'étire, le contrôle se cale à droite.
-// Entrées : icone, facultative, icône d'un Medaillon à gauche ; libelle ; aide, facultative, sous le libellé, en
-// texte secondaire ; erreur, facultative, sous la rangée, à la couleur d'erreur ; filet, vrai sauf pour la première
-// ligne d'un groupe, en retrait à reglages.textColumn avec une icône, à space.scale[2] sans, et à space.scale[3]
-// du bord droit (bible, « Rangées de liste ») ; cliquable, faux par défaut : vrai, la rangée entière réagit au clic
-// (curseur en main, signal clique), s'atteint à la tabulation et s'active par Entrée ou Espace (bible, « Clavier »),
-// se peint d'une plaque de survol un cran au-dessus de son conteneur, comme ReglageLigne (bible, « Survol »), et montre
-// le contour de focus (focus.width, jamais un anneau ni un changement de fond) quand le focus lui vient du clavier ;
+// Entrées : icone, facultative, icône d'un Medaillon à gauche ; tete, composant facultatif posé à sa place, de la
+// largeur d'un médaillon pour garder la colonne du texte ; libelle ; aide, facultative, sous le libellé, en texte
+// secondaire ; erreur, facultative, sous la rangée, à la couleur d'erreur ; filet, vrai sauf pour la première
+// ligne d'un groupe, en retrait à reglages.textColumn avec une icône ou une tête, à space.scale[2] sans, et à
+// space.scale[3] du bord droit (bible, « Rangées de liste ») ; cliquable, faux par défaut : vrai, la rangée entière
+// réagit au clic (curseur en main, signal clique), s'atteint à la tabulation et s'active par Entrée ou Espace
+// (bible, « Clavier »), se peint d'une plaque de survol un cran au-dessus de son conteneur, comme ReglageLigne
+// (bible, « Survol »), et montre le contour de focus (focus.width, jamais un anneau ni un changement de fond) quand
+// le focus lui vient du clavier ;
 // hauteur, hauteur minimale de la rangée, reglages.row par défaut (reglages.rowLead pour une rangée de tête) ;
 // couleurLibelle, couleur du libellé, texte principal par défaut (une action destructrice y met color.error) ;
 // et le contrôle déclaré comme enfant.
@@ -28,6 +30,7 @@ ColumnLayout {
     property string aide
     property string erreur
     property string icone
+    property Component tete: null
     property bool iconeActive: false
     property bool filet: true
     property bool cliquable: false
@@ -55,7 +58,7 @@ ColumnLayout {
     Separateur {
         visible: ligne.filet
         Layout.fillWidth: true
-        retraitGauche: ligne.icone !== "" ? Theme.reglages?.textColumn ?? 0 : ligne.cote
+        retraitGauche: ligne.icone !== "" || ligne.tete !== null ? Theme.reglages?.textColumn ?? 0 : ligne.cote
         retraitDroit: Theme.space?.scale[3] ?? 0
     }
     // Rangée : plaque de survol et contour de focus d'une rangée cliquable, en retrait de reglages.sidebarInset, sous
@@ -99,6 +102,8 @@ ColumnLayout {
             anchors.leftMargin: ligne.cote
             anchors.rightMargin: ligne.cote
             spacing: ligne.cote
+            // Tête propre à la rangée (l'icône de signal d'un réseau connu), à la place du médaillon.
+            Loader { active: ligne.tete !== null; visible: active; sourceComponent: ligne.tete }
             Medaillon {
                 visible: ligne.icone !== ""
                 Layout.alignment: Qt.AlignVCenter

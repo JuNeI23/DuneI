@@ -19,13 +19,14 @@ import "nmcli.js" as Nmcli
 // n'est ni montré ni effacé).
 // Sorties : profil, réglages lus (null avant lecture) ; lu, vrai une fois lus ; valeurs, réglages affichés ;
 // erreurs, objet clé → message (autoconnect, priorite, facture, methode, adresse, passerelle, dns, psk, connexion,
-// oublier, profil) ; securite, la sécurité en clair d'un profil Wi-Fi (« WPA2 personnel », « WPA3 personnel »,
-// « Ouvert »), vide pour une autre (« wpa-eap », « owe »…) ; ouvert, vrai pour un profil lu sans sécurité ;
+// oublier, profil) ; wifi, vrai pour un profil Wi-Fi (il porte un SSID) ; securite, la sécurité en clair d'un profil
+// Wi-Fi (« WPA2 personnel », « WPA3 personnel », « Ouvert »), vide pour une autre (« wpa-eap », « owe »…) et pour un
+// profil filaire ; ouvert, vrai pour un profil Wi-Fi lu sans sécurité, jamais pour un profil filaire ;
 // secretLu, dernier secret lu ou enregistré ; signaux relu(uuid, profil) après chaque lecture, restaure() quand les
 // valeurs reviennent aux réglages lus (la vue y recale ses contrôles), oublie() après la suppression du profil.
 // Erreurs : celles de nmcli, sous le réglage concerné (erreurs) ; un échec de lecture sous erreurs.profil.
 // Dépendances : Quickshell (clipboardText), EtatReseau (executer), nmcli.js (CHAMPS_PROFIL, lireProfil, argsModifier,
-// champs), ChampSecret (text, revele, confirmerCopie).
+// champs), ChampSecret (text, revele, copie, fin, confirmerCopie).
 QtObject {
     id: profilReseau
 
@@ -37,8 +38,8 @@ QtObject {
     property var _profil: null
     property var _valeurs: ({})
     property var _erreurs: ({})
-    // Dernier secret lu ou enregistré : la validation d'un texte identique n'écrit rien.
-    property string secretLu: ""
+    // Dernier secret lu ou enregistré : la validation d'un texte identique n'écrit rien. Écrit par l'objet seul.
+    property string _secretLu: ""
     // Uuid dont la lecture est en cours : une seconde demande pour le même profil est ignorée.
     property string enLecture: ""
     // Vrai quand une relecture a été demandée pendant la lecture en cours.
@@ -51,8 +52,11 @@ QtObject {
     readonly property bool lu: _profil !== null
     readonly property var valeurs: _valeurs
     readonly property var erreurs: _erreurs
-    readonly property string securite: ({"wpa-psk": "WPA2 personnel", "sae": "WPA3 personnel", "": "Ouvert"})[_valeurs.securite ?? "-"] ?? ""
-    readonly property bool ouvert: lu && (_valeurs.securite ?? "") === ""
+    readonly property string secretLu: _secretLu
+    // Un profil Wi-Fi a toujours un SSID ; un profil filaire n'en a pas, et n'a ni sécurité ni « ouvert ».
+    readonly property bool wifi: (_valeurs.ssid ?? "") !== ""
+    readonly property string securite: !wifi ? "" : ({"wpa-psk": "WPA2 personnel", "sae": "WPA3 personnel", "": "Ouvert"})[_valeurs.securite ?? "-"] ?? ""
+    readonly property bool ouvert: lu && wifi && (_valeurs.securite ?? "") === ""
 
     signal relu(string uuid, var profil)
     signal restaure()
@@ -138,7 +142,7 @@ QtObject {
         etat.executer(Nmcli.argsModifier(uuid, changes), (code, sortie) => {
             if (g.mort) return
             if (code === 0) {
-                if ("psk" in changes) secretLu = changes.psk
+                if ("psk" in changes) _secretLu = changes.psk
                 return lire()
             }
             erreur(cle, sortie, code)
@@ -166,7 +170,7 @@ QtObject {
     // Dépendances : lireSecret, champ.
     function reveler() {
         lireSecret(s => {
-            secretLu = s
+            _secretLu = s
             if (!champ) return
             champ.text = s
             champ.revele = true
@@ -184,13 +188,16 @@ QtObject {
         })
     }
 
-    // masquerSecret — vide et masque le mot de passe : champ vidé, œil refermé, secret lu oublié. Le profil reste
+    // masquerSecret — vide et masque le mot de passe : champ vidé, œil refermé, coche de copie retirée (minuteur
+    // arrêté), secret lu oublié. Le profil reste
     // lu : aucune relecture n'a lieu. Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : champ.
     function masquerSecret() {
-        secretLu = ""
+        _secretLu = ""
         if (!champ) return
         champ.text = ""
         champ.revele = false
+        champ.copie = false
+        champ.fin?.stop()
     }
 
     // priorite — décale la priorité de connexion automatique, bornée à [-999, 999] comme NetworkManager.

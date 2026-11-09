@@ -7,9 +7,9 @@ import "../Barre/icones.js" as Icones
 import "nmcli.js" as Nmcli
 
 // PageWifi — page de l'onglet Wi-Fi de la fenêtre Réseau (direction D4).
-// Rôle : le titre « Wi-Fi » avec l'interrupteur de la radio, puis, radio allumée, quatre cartes : le réseau joint (la
-// FicheProfil en mode résumé, qui porte la rangée de tête, le mot de passe à l'œil, la connexion automatique, la
-// priorité, la facturation et « Détails… » ; aucune logique nmcli n'est dupliquée ici), les réseaux disponibles, les
+// Rôle : le titre « Wi-Fi » avec l'interrupteur de la radio, puis, radio allumée, quatre cartes : le réseau joint (son
+// DepliantReseau détaillé, ouvert à l'ouverture de la page : débits, courbe, tuiles, réglages et pied, dont « Réglages
+// avancés… » qui ouvre la sous-page ; aucune logique nmcli n'est dupliquée ici), les réseaux disponibles, les
 // profils enregistrés hors de portée suivis d'« Autre réseau… », et les adresses du réseau joint en lecture seule,
 // copiables (Valeur). Radio coupée : le titre et la carte des profils enregistrés, s'il y en a, seuls (ni « Autre
 // réseau… » ni adresses). Les adresses ne sont montrées que si l'appareil du profil joint est celui qu'EtatReseau lit
@@ -33,11 +33,11 @@ import "nmcli.js" as Nmcli
 // des actions, EtatReseau par défaut.
 // Sorties : joint, la rangée du profil Wi-Fi actif (null sans lui) ; hors, les rangées des profils enregistrés hors de
 // portée ; ordre, les noms des réseaux disponibles dans l'ordre affiché ; deplie, le nom de la rangée dépliée ; erreur,
-// le message sous son champ ; balayage, vrai pendant la recherche relancée ; fiche, la FicheProfil résumée du réseau
-// joint (null sans elle).
-// Erreurs : un échec nmcli du résumé s'affiche dans la carte du réseau joint (FicheProfil) ; un réseau qui quitte le
+// le message sous son champ ; balayage, vrai pendant la recherche relancée ; depliant, le DepliantReseau du réseau
+// joint (null sans lui).
+// Erreurs : un échec nmcli des réglages s'affiche dans le dépliant du réseau joint ; un réseau qui quitte le
 // balayage est masqué et ne peut plus être choisi.
-// Dépendances : TitrePage, Section, Groupe, Ligne, FicheProfil, CarteAdresses, BlocSecret, Jonction, Interrupteur,
+// Dépendances : TitrePage, Section, Groupe, Ligne, DepliantReseau, CarteAdresses, BlocSecret, Jonction, Interrupteur,
 // Activite, Icone, Texte, Valeur, ReglageLigne, Separateur, Carte, Theme (reglages, space, color, icons, motion),
 // nmcli.js (trierReseaux), icones.js (iconeForce), PanneauReseau, EtatReseau.
 ColumnLayout {
@@ -48,7 +48,7 @@ ColumnLayout {
 
     readonly property var joint: panneau.rangees.find(r => r.wifi && r.actif) ?? null
     readonly property var hors: panneau.rangees.filter(r => r.wifi && !r.actif && r.etat === "Hors de portée")
-    readonly property var fiche: chargeurJoint.item
+    readonly property var depliant: chargeurJoint.item
     // Logique de connexion partagée avec le popover (voir Jonction) ; ordre garde les noms des réseaux disponibles
     // triés.
     property alias presents: jonction.presents
@@ -75,9 +75,9 @@ ColumnLayout {
     }
     onDeplieChanged: trier()
     // Page cachée (autre onglet ou sous-page, la page restant vivante) : aucun secret ne survit, ni le mot de passe
-    // lu et révélé de la fiche du réseau joint, ni celui saisi dans un bloc déplié.
+    // lu et révélé du dépliant du réseau joint, ni celui saisi dans un bloc déplié.
     onVisibleChanged: if (!visible) {
-        fiche?.masquerSecret()
+        depliant?.corps?.profil.masquerSecret()
         deplie = ""
         erreur = ""
     }
@@ -109,11 +109,11 @@ ColumnLayout {
         // Le réseau joint a changé : il quitte la liste, et l'ancien y revient.
         function onNomActifChanged() { page.trier() }
     }
-    // Retour d'une sous-page de l'onglet Wi-Fi : la page restant vivante, la fiche résumée du réseau joint est relue,
-    // car « Détails… » a pu changer la connexion automatique, la priorité, la facturation ou l'IPv4.
+    // Retour d'une sous-page de l'onglet Wi-Fi : la page restant vivante, le profil du dépliant du réseau joint est relu,
+    // car « Réglages avancés… » a pu changer la connexion automatique, la priorité, la facturation ou l'IPv4.
     Connections {
         target: page.panneau
-        function onSousPageChanged() { if (page.panneau.sousPage === "" && page.panneau.onglet === "wifi") page.fiche?.lire() }
+        function onSousPageChanged() { if (page.panneau.sousPage === "" && page.panneau.onglet === "wifi") page.depliant?.corps?.profil.lire() }
     }
     // Borne du retour visuel de la recherche quand le balayage ne change pas la liste ; armée par le seul clic.
     Timer { id: finBalayage; interval: Theme.motion?.delays?.scan ?? 0; onTriggered: page.balayage = false }
@@ -127,22 +127,28 @@ ColumnLayout {
         }
     }
 
-    Section { visible: page.etat.radio && page.fiche?.lu === true; text: "Réseau joint" }
-    Loader {
-        id: chargeurJoint
-        objectName: "joint"
-        active: page.etat.radio && page.joint !== null
-        visible: active
-        Layout.fillWidth: true
-        sourceComponent: FicheProfil {
-            width: chargeurJoint.width
-            resume: true
-            panneauHote: page.panneau
-            etat: page.etat
-            uuid: page.joint.uuid
-            rangee: page.joint
-            onRelu: (u, p) => page.panneau.factures = Object.assign({}, page.panneau.factures, {[u]: p.facture})
-        }
+    Section { visible: chargeurJoint.active; text: "Réseau joint" }
+    // Le dépliant du réseau joint, sur la carte de son groupe.
+    Groupe {
+        visible: chargeurJoint.active
+        Loader {
+            id: chargeurJoint
+            objectName: "joint"
+            active: page.etat.radio && page.joint !== null
+            visible: active
+            Layout.fillWidth: true
+            sourceComponent: DepliantReseau {
+                width: chargeurJoint.width
+                detaille: true
+                ouvert: true
+                portee: true
+                etat: page.etat
+                rangee: page.joint
+                onBasculer: ouvert = !ouvert
+                onAvances: uuid => page.panneau.ouvrirProfil(uuid)
+                onRelu: (u, p) => page.panneau.factures = Object.assign({}, page.panneau.factures, {[u]: p.facture})
+            }
+    }
     }
 
     // Réseaux disponibles : le titre, puis « Rechercher » ou l'Activite pendant le balayage.
@@ -293,11 +299,11 @@ ColumnLayout {
         }
     }
 
-    // Adresses du réseau joint, en lecture seule (CarteAdresses) ; la méthode IPv4 vient du profil lu par la fiche
-    // résumée, et la modification d'une adresse fixe reste dans la sous-page.
+    // Adresses du réseau joint, en lecture seule (CarteAdresses) ; la méthode IPv4 vient du profil lu par le dépliant
+    // du réseau joint, et la modification d'une adresse fixe reste dans la sous-page.
     CarteAdresses {
         etat: page.etat
         rangee: page.etat.radio ? page.joint : null
-        methode: page.fiche?.profil ? (page.fiche.fixe ? "Fixe" : "Automatique") : ""
+        methode: page.depliant?.corps?.profil.lu ? (page.depliant.corps.profil.valeurs.methode === "manual" ? "Fixe" : "Automatique") : ""
     }
 }

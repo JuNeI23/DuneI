@@ -18,3 +18,8 @@ PageFilaire 1.0 PageFilaire.qml
 PageVpn 1.0 PageVpn.qml
 BlocSecret 1.0 BlocSecret.qml
 Jonction 1.0 Jonction.qml
+DepliantReseau 1.0 DepliantReseau.qml
+DebitsReseau 1.0 DebitsReseau.qml
+TuilesConnexion 1.0 TuilesConnexion.qml
+ReglagesReseau 1.0 ReglagesReseau.qml
+IconeSignal 1.0 IconeSignal.qml

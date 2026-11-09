@@ -48,7 +48,8 @@ ShellRoot {
                 droites: [[avecIcone, c1], [avecFilet, c2], [sansIcone, c3]].map(([l, c]) => l.width - c.mapToItem(l, c.width, 0).x),
                 filets: [filet(avecFilet), filet(sansIcone)],
                 erreur: [enErreur.children[2].width, enErreur.children[2].height, enErreur.children[2].implicitHeight],
-                aide: String(sansIcone.children[1].children[2].children[1].children[1].color)
+                // Rangée : la tête facultative (Loader), le médaillon, puis la colonne du libellé et de l'aide.
+                aide: String(sansIcone.children[1].children[2].children[2].children[1].color)
             })
         }
     }
