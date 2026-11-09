@@ -242,11 +242,15 @@ ShellRoot {
         // defiler — pose le défilement des pages à y pixels. Entrée : y. Sortie : aucune.
         function defiler(y: int): void { fenetre.panneau.defilement.contentY = y }
 
-        // rangeeProfil — clic sur la rangée du profil d'un uuid dans la page d'onglet courante. Entrée : uuid.
-        // Sortie : aucune. Erreurs : rangée absente, TypeError au journal.
+        // rangeeProfil — ouvre la sous-page du profil d'un uuid depuis la page d'onglet courante : clic sur sa rangée
+        // ou, pour un réseau Wi-Fi connu (L2-65), dépliage de son dépliant puis « Réglages avancés… ». Entrée : uuid.
+        // Sortie : aucune. Erreurs : profil absent, TypeError au journal.
         function rangeeProfil(uuid: string): void {
             const l = essai.trouver(fenetre.panneau, o => o.modelData?.uuid === uuid && o.clique !== undefined)
-            l.clique()
+            if (l) return l.clique()
+            const d = essai.depliant(uuid)
+            d.basculer()
+            essai.trouver(d, o => o.objectName === "avances").clicked()
         }
 
         // cliquer — geste sur un contrôle de la fiche : plus et moins (pas du Compteur de priorité), facture, auto,

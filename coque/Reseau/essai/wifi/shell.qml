@@ -127,10 +127,16 @@ ShellRoot {
             color: Theme.color?.surfaceWindow ?? "transparent"
             Component.onCompleted: essai.journal("prêt", true)
 
-            Loader {
-                id: porteur
-                width: parent.width
-                sourceComponent: Component { PageWifi { width: fenetre.width; panneau: panneauFaux; etat: faux } }
+            // La page défile comme dans le panneau de la fenêtre, pour éprouver une longue liste de réseaux connus.
+            Flickable {
+                id: defilement
+                anchors.fill: parent
+                contentHeight: porteur.height
+                Loader {
+                    id: porteur
+                    width: fenetre.width
+                    sourceComponent: Component { PageWifi { width: fenetre.width; panneau: panneauFaux; etat: faux } }
+                }
             }
 
             // Sous-page d'un profil (FicheProfil complète) sur l'état factice, ouverte à la demande de l'IPC.
@@ -167,13 +173,19 @@ ShellRoot {
                     return t
                 }
 
-                // page — état de la page, en JSON, sans aucun texte saisi. Sortie : {existe, joint (la carte du réseau
-                // joint existe), tete (libellé de sa rangée de tête), aideTete, rangeesJoint (libellés des rangées de la
-                // carte), reseaux (noms montrés des réseaux disponibles, dans l'ordre), serrures (noms à cadenas),
-                // hors (libellés des profils hors de portée), autre, adresses (titre → valeur), deplie, erreur, saisie
-                // (longueur du mot de passe saisi, -1 sans bloc), connexion (noms « Connexion… »), balayage, activite,
-                // rechercher (le bouton est visible), radio, balayageEtat (faux.balayage), recherche, rechercheFenetre,
-                // priorite (valeur du Compteur), titres (étiquettes de section visibles)}. Erreurs : aucune.
+                // page — état de la page, en JSON, sans aucun texte saisi. Sortie : {existe, joint (le dépliant du réseau
+                // joint existe), tete (libellé de sa rangée de tête), aideTete, rangeesJoint (libellés des rangées du
+                // dépliant), reseaux (noms montrés des autres réseaux, dans l'ordre), serrures (noms à cadenas), autre
+                // (« Autre réseau… » visible dans le groupe des autres réseaux), blocs (objectName des blocs visibles de
+                // la page, de haut en bas), carteAdresses (une CarteAdresses existe dans la page), filtre, connus
+                // (libellés des réseaux connus visibles, dans l'ordre), connusVisible (la section des réseaux connus
+                // est visible), connusOuverts (son groupe est montré), connuOuvert (uuid du connu déplié), compte (le
+                // nombre affiché), ouverts (uuids des connus dépliés), rejoindre (uuid → « Rejoindre » visible, pour
+                // les connus chargés), icones ({autres, connus} : tailles des icônes de signal visibles), deplie,
+                // erreur, saisie (longueur du mot de passe saisi, -1 sans bloc), connexion (noms « Connexion… »),
+                // balayage, activite, rechercher (le bouton est visible), radio, balayageEtat (faux.balayage),
+                // recherche, rechercheFenetre, priorite (valeur du Compteur), titres (étiquettes de section
+                // visibles)}. Erreurs : aucune.
                 function page(): string {
                     const p = porteur.item
                     if (!p) return JSON.stringify({existe: false, rechercheFenetre: faux.rechercheFenetre, balayageEtat: faux.balayage})
@@ -184,20 +196,22 @@ ShellRoot {
                     const carteJoint = f ? essai.tous_(f, o => o.libelle !== undefined && o.libelle !== "" && o.visible).map(o => o.libelle) : []
                     const tete = f ? essai.trouver(f, o => o.objectName === "tete") : null
                     const bloc = essai.trouver(p, o => o.objectName === "bloc" && o.visible)?.item
-                    const adresses = {}
-                    const carte = objet("adresses")
-                    if (carte) for (const t of essai.tous_(carte, o => o.titre !== undefined && o.visible)) {
-                        const v = essai.trouver(t, o => o.copiable !== undefined && o.visible && o.text !== undefined)
-                        adresses[t.titre] = v ? v.text : (essai.trouver(t, o => o.text !== undefined && o.text !== "" && o.text !== t.titre && o.visible)?.text ?? "")
-                    }
+                    const connus = essai.tous_(objet("connus"), o => String(o.objectName).startsWith("depliant:") && o.visible)
+                    const blocs = ["titre", "desactive", "recherche", "joint", "autres", "connus"].map(objet)
+                        .filter(o => o?.visible).sort((a, b) => a.mapToItem(p, 0, 0).y - b.mapToItem(p, 0, 0).y)
+                    const tailles = o => essai.tous_(o, i => i.securise !== undefined && i.force !== undefined && i.visible).map(i => i.taille)
                     return JSON.stringify({
                         existe: true, joint: f !== null, tete: tete ? tete.libelle : "", aideTete: tete ? tete.aide : "",
                         rangeesJoint: carteJoint,
                         reseaux: reseaux.map(o => o.objectName.slice(7)),
                         serrures: reseaux.filter(o => essai.trouver(o, i => i.nom === "network-wireless-encrypted" && i.visible)).map(o => o.objectName.slice(7)),
-                        hors: essai.tous_(objet("enregistres"), o => String(o.objectName).startsWith("hors:") && o.visible).map(o => o.libelle),
-                        autre: essai.trouver(objet("enregistres"), o => o.objectName === "autre" && o.visible) !== null,
-                        adresses, adressesVisible: objet("adresses").visible, enregistresVisible: objet("enregistres").visible,
+                        autre: objet("disponibles").visible && essai.trouver(objet("disponibles"), o => o.objectName === "autre" && o.visible) !== null,
+                        depliantOuvert: f?.ouvert ?? false, blocs: blocs.map(o => o.objectName), carteAdresses: essai.trouver(p, o => o.methode !== undefined && o.rangee !== undefined) !== null,
+                        filtre: p.filtre, connus: connus.map(o => o.rangee.nom), connusVisible: objet("connus")?.visible ?? false,
+                        connusOuverts: objet("groupeConnus")?.visible ?? false, connuOuvert: p.connuOuvert,
+                        compte: objet("compte")?.text ?? "", ouverts: connus.filter(o => o.ouvert).map(o => o.rangee.uuid),
+                        rejoindre: connus.reduce((m, o) => o.corps ? (m[o.rangee.uuid] = essai.trouver(o, i => i.objectName === "rejoindre").visible, m) : m, {}),
+                        icones: {autres: tailles(objet("disponibles")), connus: tailles(objet("connus"))},
                         revele: bloc ? bloc.secret.revele : null, deplie: p.deplie, erreur: p.erreur, saisie: bloc ? bloc.secret.length : -1,
                         connexion: reseaux.filter(o => essai.trouver(o, i => i.objectName === "ligne")?.aide === "Connexion…").map(o => o.objectName.slice(7)),
                         balayage: p.balayage, activite: objet("activiteRecherche")?.visible ?? false,
@@ -218,25 +232,39 @@ ShellRoot {
                 function focus(): string { return essai.nomDe(porteur.item.Window.window?.activeFocusItem) }
                 // appareil — change l'appareil que lit l'état (le filaire actif l'emporte sur le Wi-Fi). Entrée : nom.
                 function appareil(nom: string): void { faux.appareil = nom }
-                // sansHors — retire les profils hors de portée du panneau factice. Entrées : aucune. Sortie : aucune.
-                function sansHors(): void { panneauFaux.rangees = panneauFaux.rangees.filter(r => r.etat !== "Hors de portée") }
-
-                // plusieursIp6 — donne à l'état trois adresses IPv6 (une de lien local), dont une très longue, pour éprouver
-                // le renvoi à la ligne de la carte « Adresses ». Entrées et sortie : aucune.
-                function plusieursIp6(): void {
-                    faux.ip6 = ["fe80::7a2c:41ff:fe0b:9d10/64", "2a01:cb04:1234:5678:9abc:def0:1234:5678/64",
-                                "2a01:cb04:1234:5678:aaaa:bbbb:cccc:dddd/128"]
+                // deconnecter — le Wi-Fi n'a plus de réseau actif : le profil joint et son réseau se déconnectent. Entrées et
+                // sortie : aucune.
+                function deconnecter(): void {
+                    essai.reseau("Wifi_TRIADES").connected = false
+                    faux.nomActif = ""
+                    panneauFaux.rangees = panneauFaux.rangees.map(r => r.uuid === "wifi-1" ? Object.assign({}, r, {actif: false, etat: "À portée"}) : r)
                 }
-                // geometrie — largeur de la carte « Adresses » et, par Valeur d'IPv6, son texte et ses bords gauche et droit
-                // dans la carte ; taille de la coche de la rangée de tête. Sortie : JSON {carte, ip6: [[texte, gauche, droite]],
-                // coche: [largeur, hauteur], null sans coche}. Erreurs : page absente, TypeError au journal.
-                function geometrie(): string {
-                    const carte = essai.trouver(porteur.item, o => o.objectName === "adresses")
-                    const vs = essai.tous_(carte, o => o.objectName === "valeur:IPv6" && o.visible)
-                    const coche = essai.trouver(porteur.item.depliant, o => o.objectName === "coche")
-                    return JSON.stringify({carte: carte.width,
-                        ip6: vs.map(v => [v.text, v.mapToItem(carte, 0, 0).x, v.mapToItem(carte, v.width, 0).x]),
-                        coche: coche ? [coche.width, coche.height] : null})
+                // sansConnus — ne laisse au panneau factice que le profil Wi-Fi actif et le filaire. Entrées et sortie : aucune.
+                function sansConnus(): void { panneauFaux.rangees = panneauFaux.rangees.filter(r => r.actif || !r.wifi) }
+                // nombreux — remplace les réseaux connus par 40 profils factices hors de portée, « Profil_01 » à
+                // « Profil_40 » (uuid « profil-01 » à « profil-40 »). Entrées et sortie : aucune.
+                function nombreux(): void {
+                    const n = i => String(i + 1).padStart(2, "0")
+                    panneauFaux.rangees = panneauFaux.rangees.filter(r => r.actif || !r.wifi).concat(Array.from({length: 40}, (_, i) => (
+                        {groupe: "Wi-Fi", nom: "Profil_" + n(i), uuid: "profil-" + n(i), appareil: "", wifi: true, actif: false,
+                         etat: "Hors de portée", icone: "network-wireless-signal-excellent"})))
+                }
+                // filtrer — saisit un filtre dans le champ de recherche (vide : l'efface). Entrée : texte. Sortie : aucune.
+                function filtrer(texte: string): void { essai.trouver(porteur.item, o => o.objectName === "recherche").text = texte }
+                // section — clic sur l'en-tête de la section « Réseaux connus ». Entrées et sortie : aucune.
+                function section(): void { essai.trouver(porteur.item, o => o.objectName === "connus").entete.clicked() }
+                // connu — clic sur la tête du réseau connu d'un uuid. Entrée : uuid. Sortie : aucune.
+                function connu(uuid: string): void { essai.trouver(essai.trouver(porteur.item, o => o.objectName === "depliant:" + uuid), o => o.objectName === "tete").clique() }
+                // rejoindreConnu — clic sur « Rejoindre » du réseau connu déplié d'un uuid. Entrée : uuid. Sortie : aucune.
+                function rejoindreConnu(uuid: string): void { essai.trouver(essai.trouver(porteur.item, o => o.objectName === "depliant:" + uuid), o => o.objectName === "rejoindre").clicked() }
+                // defiler — défile la page jusqu'en bas. Sortie : JSON {defile (la page dépasse la fenêtre), dernier
+                // (libellé du dernier réseau connu), vu (sa tête est entièrement dans la fenêtre)}. Erreurs : aucune.
+                function defiler(): string {
+                    defilement.contentY = Math.max(0, defilement.contentHeight - defilement.height)
+                    const tetes = essai.tous_(essai.trouver(porteur.item, o => o.objectName === "connus"), o => o.objectName === "tete" && o.visible)
+                    const t = tetes[tetes.length - 1], y = t.mapToItem(defilement, 0, 0).y
+                    return JSON.stringify({defile: defilement.contentHeight > defilement.height, dernier: t.libelle,
+                                           vu: y >= 0 && y + t.height <= defilement.height})
                 }
 
                 // choisir — clic sur le réseau disponible nommé. Entrée : nom. Sortie : aucune.
@@ -249,12 +277,12 @@ ShellRoot {
                 function echouer(nom: string): void { essai.reseau(nom).connectionFailed(ConnectionFailReason.NoSecrets) }
                 // echouerAutrement — émet connectionFailed (échec générique). Entrée : nom.
                 function echouerAutrement(nom: string): void { essai.reseau(nom).connectionFailed(ConnectionFailReason.Unknown) }
-                // hors — clic sur le profil hors de portée d'un uuid. Entrée : uuid.
-                function hors(uuid: string): void { essai.trouver(porteur.item, o => o.objectName === "hors:" + uuid).clique() }
                 // autre — clic sur « Autre réseau… ». Entrées : aucune.
                 function autre(): void { essai.trouver(porteur.item, o => o.objectName === "autre").clique() }
                 // details — clic sur « Réglages avancés… » du dépliant du réseau joint. Entrées : aucune.
                 function details(): void { essai.trouver(porteur.item.depliant, o => o.objectName === "avances").clicked() }
+                // avancesConnu — clic sur « Réglages avancés… » du réseau connu déplié d'un uuid. Entrée : uuid.
+                function avancesConnu(uuid: string): void { essai.trouver(essai.trouver(porteur.item, o => o.objectName === "depliant:" + uuid), o => o.objectName === "avances").clicked() }
                 // rechercher — clic sur « Rechercher ». Entrées : aucune.
                 function rechercher(): void { essai.trouver(porteur.item, o => o.objectName === "rechercher").clique() }
                 // balayer — le balayage rend sa liste : la liste est réaffectée, comme le fait EtatReseau. Entrées : aucune.
