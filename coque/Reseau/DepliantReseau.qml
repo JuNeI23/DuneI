@@ -6,9 +6,10 @@ import "../Composants"
 import "../Barre/icones.js" as Icones
 
 // DepliantReseau — réseau enregistré dont la ligne de tête se déplie sur ses mesures et ses réglages (L2-65).
-// Rôle : une ligne de tête à reglages.rowLead (médaillon du réseau, ou icône de signal d'un réseau inactif, nom, état,
-// chevron), dont le clic émet basculer : le parent tient ouvert, pour qu'un seul réseau connu soit ouvert à la fois.
-// Dessous, le contenu, en retrait à reglages.textColumn : détaillé (réseau joint, connexion filaire active), les
+// Rôle : une ligne de tête à reglages.rowLead (médaillon du réseau, ou icône de signal d'un réseau Wi-Fi inactif, nom,
+// état : « Connecté », « À portée » ou « Hors de portée », « Câble branché » ou « Câble débranché » pour un profil
+// filaire inactif ; chevron), dont le clic émet basculer : le parent tient ouvert, pour qu'un seul profil soit
+// ouvert à la fois. Dessous, le contenu, en retrait à reglages.textColumn : détaillé (réseau joint, connexion filaire active), les
 // débits et leur courbe (DebitsReseau) puis les tuiles d'information (TuilesConnexion) ; toujours, les réglages et le
 // pied (ReglagesReseau). Le contenu n'est chargé que tant que le dépliant est ouvert ou en mouvement : le ProfilReseau
 // qu'il porte ne lit rien tant que le réseau n'est pas déplié, et disparaît au repli. La hauteur suit le ressort reveal
@@ -85,13 +86,15 @@ ColumnLayout {
         filet: false
         hauteur: Theme.reglages?.rowLead ?? 0
         cliquable: true
-        icone: depliant.detaille || (depliant.rangee?.actif ?? false) ? depliant.rangee?.icone ?? "" : ""
+        // Un réseau Wi-Fi inactif montre son signal ; un profil filaire garde toujours son médaillon.
+        icone: depliant.detaille || depliant.filaire || (depliant.rangee?.actif ?? false) ? depliant.rangee?.icone ?? "" : ""
         iconeActive: depliant.rangee?.actif ?? false
         tete: icone !== "" ? null : teteSignal
         libelle: depliant.rangee?.nom ?? ""
         aide: (depliant.rangee?.actif ?? false)
             ? "Connecté" + (({full: " · internet disponible", limited: " · sans internet", none: " · sans internet",
                              portal: " · portail de connexion"})[depliant.etat.connectivite] ?? "")
+            : depliant.filaire ? (depliant.portee ? "Câble branché" : "Câble débranché")
             : depliant.portee ? "À portée" : "Hors de portée"
         onClique: depliant.basculer()
         // Le chevron a une taille fixe dans son emplacement : mis en page directement, sa forme et sa taille

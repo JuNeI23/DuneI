@@ -1406,7 +1406,7 @@ class PageFilaireTest(EssaiCoque, unittest.TestCase):
         p = self.page()
         self.assertEqual(p["titres"], ["Ethernet", "Réglages du réseau", "Profils"])
         self.assertEqual((p["appareil"], p["aide"], p["actif"]), ("Ethernet (enp3s0)", "Connecté", True))
-        self.assertEqual((p["materiel"], p["profils"]), ("", ["Atelier"]))
+        self.assertEqual((p["materiel"], p["profils"]), ("", ["Atelier", "Garage"]))
         self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
 
     def test_filaire_actif_deplie(self):
@@ -1475,8 +1475,66 @@ class PageFilaireTest(EssaiCoque, unittest.TestCase):
         self.jusqua(lambda p: p["depliant"]["ouvert"], "dépliant rouvert")
         self.assertEqual(self.ipc("montrer", "atelier-1"), "false")
 
-    def test_profil_ouvre_sa_sous_page(self):
+    def profil(self, uuid: str, condition, message: str) -> dict:
+        """Attend qu'une condition sur le dépliant d'un profil de « Profils » devienne vraie. Sortie : son état."""
+        fin = time.monotonic() + DELAI
+        while time.monotonic() < fin:
+            d = json.loads(self.ipc("profil", uuid))
+            if condition(d):
+                return d
+            time.sleep(0.05)
+        self.fail(f"{message}\n{d}\n{self.journal()}")
+
+    def test_profil_inactif_deplie(self):
+        # Un profil inactif se déplie comme un réseau connu : réglages filaires, pied complet, « Rejoindre » câble
+        # branché ; le clic sur la tête ne connecte rien, et un seul profil est déplié à la fois.
+        d = json.loads(self.ipc("profil", "atelier-1"))
+        self.assertEqual((d["ouvert"], d["lu"], d["icone"], d["aide"]), (False, False, "network-wired", "Câble branché"))
         self.ipc("choisir", "atelier-1")
+        d = self.profil("atelier-1", lambda d: d["ouvert"] and d["lu"], "Atelier déplié et lu")
+        self.assertEqual(d["reglages"], ["Connexion automatique", "Priorité"])
+        self.assertEqual(d["pied"], ["Rejoindre", "Réglages avancés…", "Oublier ce réseau"])
+        self.assertEqual(self.page()["profilOuvert"], "atelier-1")
+        self.ipc("choisir", "garage-1")
+        self.profil("garage-1", lambda d: d["ouvert"] and d["lu"], "Garage déplié")
+        self.profil("atelier-1", lambda d: not d["ouvert"], "Atelier replié")
+        self.assertNotIn('"connection","up"', self.journal())
+        self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
+
+    def test_profil_inactif_rejoindre_si_branche(self):
+        self.ipc("choisir", "atelier-1")
+        self.profil("atelier-1", lambda d: "Rejoindre" in d["pied"], "Rejoindre montré")
+        self.ipc("cliquer", "atelier-1", "rejoindre")
+        self.attendre('essai : executer ["connection","up","atelier-1"]')
+        # Câble débranché : plus de « Rejoindre », la tête le dit.
+        self.ipc("lien", "false")
+        d = self.profil("atelier-1", lambda d: "Rejoindre" not in d["pied"], "Rejoindre retiré")
+        self.assertEqual((d["aide"], d["pied"]), ("Câble débranché", ["Réglages avancés…", "Oublier ce réseau"]))
+
+    def test_profil_inactif_reglages_ecrits(self):
+        # Connexion automatique et priorité s'écrivent par « nmcli connection modify » sur le profil déplié.
+        self.ipc("choisir", "atelier-1")
+        d = self.profil("atelier-1", lambda d: d["lu"], "Atelier lu")
+        self.assertEqual((d["auto"], d["priorite"]), (True, 5))
+        self.ipc("cliquer", "atelier-1", "auto")
+        self.attendre('essai : executer ["connection","modify","atelier-1","connection.autoconnect","no"]')
+        self.ipc("cliquer", "atelier-1", "plus")
+        self.attendre('essai : executer ["connection","modify","atelier-1","connection.autoconnect-priority","6"]')
+
+    def test_profil_inactif_oublie_apres_confirmation(self):
+        self.ipc("choisir", "atelier-1")
+        self.profil("atelier-1", lambda d: d["lu"], "Atelier lu")
+        self.ipc("cliquer", "atelier-1", "oublier")
+        self.profil("atelier-1", lambda d: d["confirmer"], "confirmation montrée")
+        self.assertNotIn('"connection","delete"', self.journal())
+        self.ipc("cliquer", "atelier-1", "confirmer")
+        self.attendre('essai : executer ["connection","delete","atelier-1"]')
+
+    def test_profil_ouvre_sa_sous_page(self):
+        # La sous-page d'un profil inactif s'ouvre par « Réglages avancés… » de son dépliant.
+        self.ipc("choisir", "atelier-1")
+        self.profil("atelier-1", lambda d: d["lu"], "Atelier lu")
+        self.ipc("cliquer", "atelier-1", "avances")
         self.attendre("essai : ouvrirProfil atelier-1")
 
 

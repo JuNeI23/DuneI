@@ -10,19 +10,24 @@ import "../Composants"
 // détaillé, ouvert à l'ouverture de la page, comme le réseau joint de la page Wi-Fi : débits et courbe, tuiles
 // (Adresse IP, Routeur, DNS, Débit du lien, Adresse matérielle ; « Connecté depuis » seulement si la sonde la connaît),
 // réglages Connexion automatique et Priorité, pied « Réglages avancés… » (sous-page) et « Oublier ce réseau ». Sans
-// carte, ou câble débranché, il n'y a pas de dépliant et la page reste en l'état. Vient ensuite « Profils » (les autres
-// profils filaires enregistrés, GroupeProfils, chacun ouvrant sa sous-page « ‹ Filaire » ; « Aucun profil filaire. »
-// sans profil, et la section disparaît quand le seul profil est l'actif). Aucune logique nmcli n'est dupliquée ici.
-// Clavier : les profils sont des Ligne cliquables (tabulation, Entrée, Espace, contour de focus : bible, « Clavier »).
-// Entrées : panneau, le PanneauReseau (rangees, ouvrirProfil) ; etat, la source de l'état, EtatReseau par défaut
-// (filaire, carteFilaire, appareilFilaire, appareil, et ce que lisent les tuiles).
+// carte, ou câble débranché, le dépliant est masqué et replié, rien n'y est chargé, et la page reste en l'état. Vient
+// ensuite « Profils » (fiche, cas complémentaire 8) : les autres profils filaires enregistrés, comme les réseaux connus
+// de la page Wi-Fi (GroupeProfils) : chacun un DepliantReseau non détaillé, un seul déplié à la fois, avec Connexion
+// automatique, Priorité et le pied « Réglages avancés… », « Oublier ce réseau », et « Rejoindre » quand le câble est
+// branché ; « Aucun profil filaire. » sans profil, et la section disparaît quand le seul profil est l'actif. Aucune
+// logique nmcli n'est dupliquée ici.
+// Clavier : les têtes des dépliants sont des Ligne cliquables (tabulation, Entrée, Espace, contour de focus : bible,
+// « Clavier »).
+// Entrées : panneau, le PanneauReseau (rangees, ouvrirProfil, factures) ; etat, la source de l'état, EtatReseau par
+// défaut (filaire, carteFilaire, appareilFilaire et son lien hasLink, appareil, et ce que lisent les tuiles).
 // Sorties : actif, la rangée du profil filaire actif (null sans lui) ; nomAppareil, le nom de l'interface filaire, vide
 // sans carte ; adresseMaterielle, l'adresse matérielle de l'appareil filaire, vide si elle est inconnue ; etatCable,
-// l'état affiché ; ouvert, vrai si le dépliant est ouvert ; depliant, le DepliantReseau (null sans lui) ; montrer(uuid),
-// qui déplie le profil actif demandé.
+// l'état affiché ; ouvert, vrai si le dépliant est ouvert ; depliant, le DepliantReseau ; branchable, vrai si le câble
+// est branché ; autres, les rangées de la section « Profils » ; profilOuvert, l'uuid du profil déplié dans « Profils »,
+// vide sinon ; montrer(uuid), qui déplie le profil actif demandé.
 // Erreurs : celles du ProfilReseau, sous ses réglages ; aucune propre à la page.
 // Dépendances : TitrePage, Section, Groupe, Ligne, Valeur, GroupeProfils, DepliantReseau, Texte, Theme, PanneauReseau,
-// EtatReseau.
+// EtatReseau (appareilFilaire.hasLink, de Quickshell.Networking).
 ColumnLayout {
     id: page
 
@@ -35,6 +40,12 @@ ColumnLayout {
     readonly property string etatCable: etat.filaire ? "Connecté" : etat.carteFilaire ? "Câble débranché" : "Aucune carte"
     // Le dépliant n'existe que pour une connexion filaire réellement active (câble branché).
     readonly property bool deplie: etat.filaire && actif !== null
+    // Un profil inactif est branchable quand l'appareil filaire a un lien (câble branché) : son pied porte « Rejoindre ».
+    readonly property bool branchable: etat.appareilFilaire?.hasLink ?? false
+    // Les profils de la section « Profils » : tous les filaires, sauf celui du dépliant de tête.
+    readonly property var autres: panneau.rangees.filter(r => r.groupe === "Filaire" && !(deplie && r.uuid === actif.uuid))
+        .map(r => Object.assign({}, r, {portee: branchable}))
+    property alias profilOuvert: profils.ouvert
     readonly property alias depliant: depliant
     property bool ouvert: true
 
@@ -84,13 +95,14 @@ ColumnLayout {
         }
     }
 
-    Section { visible: profils.profils.length > 0; text: "Profils" }
+    Section { visible: page.autres.length > 0; text: "Profils" }
     GroupeProfils {
         id: profils
+        objectName: "profils"
+        visible: page.autres.length > 0
+        profils: page.autres
         panneau: page.panneau
-        type: "Filaire"
-        exclu: page.deplie ? page.actif.uuid : ""
-        visible: profils.profils.length > 0
+        etat: page.etat
     }
     Texte {
         visible: page.panneau.rangees.every(r => r.groupe !== "Filaire")

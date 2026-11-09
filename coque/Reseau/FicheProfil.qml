@@ -6,8 +6,8 @@ import "../Composants"
 import "nmcli.js" as Nmcli
 
 // FicheProfil — « Réglages avancés » d'un profil de connexion enregistré : sous-page « ‹ Wi-Fi » ou « ‹ Filaire » de la
-// fenêtre Réseau (L2-11, direction D4), ouverte par « Réglages avancés… » du dépliant d'un réseau ou par la rangée d'un
-// profil filaire (L2-65).
+// fenêtre Réseau (L2-11, direction D4), ouverte par « Réglages avancés… » du dépliant d'un réseau ou d'un profil
+// filaire (L2-65).
 // Rôle : lit les réglages du profil (nmcli.lireProfil) à chaque sélection, puis montre, en cartes D4 de haut en bas :
 // la carte de tête (rangée de tête : médaillon, nom, état, et « Se connecter » ou « Se déconnecter » à droite, en
 // Bouton) ; la section « IPv4 » (Automatique ou Fixe en Onglets, bible « Onglets » ; adresse, passerelle en Fixe,
