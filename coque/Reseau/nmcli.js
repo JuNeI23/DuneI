@@ -333,10 +333,11 @@ function filtrer(nom, filtre) {
 
 // partager — répartition des réseaux entre les trois listes de la page Wi-Fi.
 // Entrées : rangees, les rangées de profilsFenetre ; presents, les réseaux à portée {name, signalStrength,
-// connected, known} (WifiNetwork ou factices) ; filtre, la saisie de la recherche (vide : rien n'est écarté).
+// connected, known, security} (WifiNetwork ou factices) ; filtre, la saisie de la recherche (vide : rien n'est écarté).
 // Sortie : {joint, autres, connus} ; joint, la rangée Wi-Fi active (null sans elle ou si le filtre l'écarte) ;
 // autres, les réseaux à portée sans profil, triés par trierReseaux ; connus, les profils Wi-Fi sauf le joint,
-// chacun augmenté de portee (bool) et, s'il est à portée, de force. Tout est filtré par nom avec filtrer.
+// chacun augmenté de portee (bool) et, s'il est à portée, de force et de security (celles du réseau présent). Tout
+// est filtré par nom avec filtrer.
 // Erreurs : aucune. Dépendances : trierReseaux, filtrer.
 function partager(rangees, presents, filtre) {
     const wifi = rangees.filter(r => r.wifi), garde = nom => filtrer(nom, filtre)
@@ -346,7 +347,7 @@ function partager(rangees, presents, filtre) {
         autres: trierReseaux(presents).filter(p => !wifi.some(r => r.nom === p.name) && garde(p.name)),
         connus: wifi.filter(r => !r.actif && garde(r.nom)).map(r => {
             const p = presents.find(x => x.name === r.nom)
-            return Object.assign({}, r, p ? {portee: true, force: p.signalStrength} : {portee: false})
+            return Object.assign({}, r, p ? {portee: true, force: p.signalStrength, security: p.security} : {portee: false})
         }),
     }
 }

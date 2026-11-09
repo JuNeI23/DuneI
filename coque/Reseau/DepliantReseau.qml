@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import Quickshell.Networking
 import "../Theme"
 import "../Composants"
 import "../Barre/icones.js" as Icones
@@ -18,15 +19,16 @@ import "../Barre/icones.js" as Icones
 // il retire sa demande au repli, à sa destruction et dès que la fenêtre se cache (FenetreReseau.fermer la cache
 // avant de la détruire).
 // Secret : dès que le dépliant n'est plus à l'écran (montre faux), le mot de passe lu est vidé et masqué.
-// Entrées : rangee, la rangée du profil (uuid, nom, icone, actif, wifi, appareil ; force et portee pour un réseau
-// connu) ; detaille, vrai pour les débits et les tuiles ; ouvert ; portee, vrai si le réseau est à portée ; etat, la
+// Entrées : rangee, la rangée du profil (uuid, nom, icone, actif, wifi, appareil ; portee, et force et security
+// pour un réseau connu à portée) ; detaille, vrai pour les débits et les tuiles ; ouvert ; portee, vrai si le réseau est à portée ; etat, la
 // source de l'état et des actions, EtatReseau par défaut.
 // Sorties : signaux basculer() (clic sur la tête), avances(uuid) (« Réglages avancés… »), relu(uuid, profil) (chaque
 // lecture du profil) ; actuel ; montre, vrai tant que le dépliant est à l'écran ; corps, le contenu chargé (null
 // replié : profil, debits, tuiles, reglages), lu par la vue et les essais.
 // Erreurs : celles du ProfilReseau, sous ses réglages ; un appareil absent donne des tuiles à « — ».
 // Dépendances : Ligne, Medaillon, IconeSignal, Chevron, DebitsReseau, TuilesConnexion, ReglagesReseau, ProfilReseau,
-// Ressort, Theme (reglages, space, icons, color), icones.js (iconeForce), EtatReseau.
+// Ressort, Theme (reglages, space, icons, color), icones.js (iconeForce), EtatReseau, Quickshell.Networking
+// (WifiSecurityType).
 ColumnLayout {
     id: depliant
 
@@ -113,6 +115,10 @@ ColumnLayout {
             IconeSignal {
                 anchors.centerIn: parent
                 force: depliant.portee ? Math.round((depliant.rangee?.force ?? 0) * 100) : -1
+                // Cadenas d'un réseau à portée qui demande un mot de passe, selon la sécurité du réseau présent, comme
+                // Jonction.securise : ni ouvert, ni OWE, ni inconnu.
+                securise: depliant.portee && ![WifiSecurityType.Owe, WifiSecurityType.Open, WifiSecurityType.Unknown]
+                    .includes(depliant.rangee?.security)
             }
         }
     }

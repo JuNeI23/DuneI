@@ -102,13 +102,14 @@ class NmcliTest(EssaiCoque, unittest.TestCase):
         rangees = [{"nom": "Maison", "uuid": "a", "wifi": True, "actif": True}, {"nom": "Café", "uuid": "b", "wifi": True, "actif": False},
                    {"nom": "Loin", "uuid": "c", "wifi": True, "actif": False}, {"nom": "Câble", "uuid": "d", "wifi": False, "actif": True}]
         presents = [{"name": "Maison", "signalStrength": 0.9, "connected": True, "known": True},
-                    {"name": "Café", "signalStrength": 0.5, "connected": False, "known": True},
+                    {"name": "Café", "signalStrength": 0.5, "connected": False, "known": True, "security": 3},
                     {"name": "Voisin", "signalStrength": 0.7, "connected": False, "known": False},
                     {"name": "Autre", "signalStrength": 0.2, "connected": False, "known": False}]
         r = self.appeler("partager", rangees, presents, "")
         self.assertEqual(r["joint"]["uuid"], "a")
         self.assertEqual([p["name"] for p in r["autres"]], ["Voisin", "Autre"])
-        self.assertEqual([(c["uuid"], c["portee"], c.get("force")) for c in r["connus"]], [("b", True, 0.5), ("c", False, None)])
+        self.assertEqual([(c["uuid"], c["portee"], c.get("force"), c.get("security")) for c in r["connus"]],
+                         [("b", True, 0.5, 3), ("c", False, None, None)])
         r = self.appeler("partager", rangees, presents, "CAFE")
         self.assertEqual((r["joint"], r["autres"], [c["uuid"] for c in r["connus"]]), (None, [], ["b"]))
         r = self.appeler("partager", rangees[:1] + rangees[3:], [], "")
@@ -1087,6 +1088,15 @@ class PageWifiTest(EssaiCoque, unittest.TestCase):
         self.ipc("section")
         p = self.jusqua(lambda p: len(p["icones"]["connus"]) == 3, "section ouverte")
         self.assertEqual(set(p["icones"]["autres"] + p["icones"]["connus"]), {dense})
+
+    def test_cadenas_des_connus_a_portee(self):
+        # Un réseau connu à portée et sécurisé porte le cadenas, selon la sécurité du réseau présent ; hors de portée,
+        # ou devenu ouvert, il n'en a pas.
+        self.ipc("section")
+        p = self.jusqua(lambda p: len(p["connus"]) == 3, "section ouverte")
+        self.assertEqual(p["serruresConnus"], ["Connu"])
+        self.ipc("ouvrirReseau", "Connu")
+        self.jusqua(lambda p: p["serruresConnus"] == [], "Connu ouvert, sans cadenas")
 
     def test_retour_de_sous_page_relit_le_resume(self):
         # Les pages restent vivantes : la carte du réseau joint est relue au retour d'une sous-page de l'onglet Wi-Fi,
