@@ -1701,6 +1701,20 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
         self.assertIn("dev wlan0 station dump", self.appels_iw()[0])
         self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
 
+    def test_sonde_reouverte_sans_echantillons_d_avant(self):
+        # L'arrêt de la sonde remet la courbe à zéro : à la réouverture, aucun échantillon de la séance précédente.
+        self.faire_avancer(2000)
+        self.ipc("essai", "racine", str(self.compteurs))
+        self.jusqua(lambda e: self.sonde()["appareil"] == "wlan0", "appareil lu")
+        self.ipc("essai", "sondeur", "true")
+        self.jusqua(lambda e: sum(v > 0 for v in self.sonde()["rx"]) >= 3, "trois échantillons relevés")
+        self.ipc("essai", "sondeur", "false")
+        s = self.jusqua(lambda e: not self.sonde()["actif"], "sonde arrêtée") and self.sonde()
+        self.assertEqual((s["rx"], s["tx"]), ([0] * 60, [0] * 60))
+        self.ipc("essai", "sondeur", "true")
+        s = self.jusqua(lambda e: self.sonde()["rx"][-1] > 0, "premier débit repris") and self.sonde()
+        self.assertEqual(s["rx"][:-2], [0] * 58, s["rx"][-6:])
+
     def test_sonde_changement_d_appareil(self):
         # Câble branché sonde ouverte (wlan0 → eth0) : la référence est oubliée, aucun échantillon ne compare deux
         # interfaces. eth0 porte un compteur énorme et immobile : un écart entre interfaces ferait un pic.

@@ -27,9 +27,9 @@ import "../Barre/icones.js" as Icones
 // (WifiNetwork ou null), nomActif, force (0 à 1), facture, appareil (l'interface dont la lecture donne les adresses :
 // le filaire actif, sinon le Wi-Fi), ip4, ip6, passerelle, dns, mac (adresse matérielle de l'appareil actif), profils,
 // vpnActif, icone, reseaux (WifiNetwork de toutes les cartes, non triés) ; relances, nombre de démarrages du moniteur.
-// Fonctions : relire, verifier, executer, allumer, ouvrirPortail, demanderSonde (sonde à la demande : sondeurs,
-// racineCompteurs, debits, signalDbm, connecteDepuis, canal, frequence ; un minuteur d'une seconde seulement tant
-// qu'un demandeur existe).
+// Fonctions : relire, verifier, executer, allumer, ouvrirPortail, oublierDebits, demanderSonde (sonde à la demande :
+// sondeurs, racineCompteurs, debits, signalDbm, connecteDepuis, canal, frequence ; un minuteur d'une seconde
+// seulement tant qu'un demandeur existe).
 // Erreurs : sans nmcli ou sans NetworkManager, les valeurs nmcli restent vides et le moniteur est relancé toutes les
 // secondes (voir Relance) ; la sortie d'une lecture partielle est lue au mieux.
 // Dépendances : Relance, nmcli.js, icones.js, Quickshell.Networking, Quickshell.Io.
@@ -92,8 +92,9 @@ Singleton {
     property var canal: null
     property var frequence: null
     readonly property bool sondeActive: sondeurs > 0 && appareil !== ""
-    // Un autre appareil a d'autres compteurs : la référence du débit ne vaut plus.
-    onAppareilChanged: releve.precedent = null
+    // Un autre appareil a d'autres compteurs : la référence du débit ne vaut plus, et la courbe de l'ancien n'est pas
+    // la sienne.
+    onAppareilChanged: oublierDebits()
 
     readonly property string icone: Icones.iconeReseau({carte, radio, filaire, connecte, connectivite, facture, force})
 
@@ -139,12 +140,21 @@ Singleton {
     // ne descend jamais sous zéro). Dépendances : sondeurs.
     function demanderSonde(actif) { sondeurs = Math.max(0, sondeurs + (actif ? 1 : -1)) }
 
+    // oublierDebits — remet la courbe à 60 zéros et oublie la référence du débit, pour que la reprise de la sonde (ou
+    // un autre appareil) ne montre aucun échantillon d'avant. Entrées : aucune. Sortie : aucune. Erreurs : aucune.
+    // Dépendances : debits, releve.
+    function oublierDebits() {
+        releve.precedent = null
+        debits = {rx: Array(60).fill(0), tx: Array(60).fill(0)}
+    }
+
     // sonder — publie un relevé de la sonde : deux compteurs d'octets, une ligne « -- », puis « iw station dump » et
     // « iw info » (canal et fréquence).
-    // Entrée : texte, sortie du relevé. Sortie : aucune ; décale les débits d'un pas si les compteurs sont lisibles
-    // et qu'un relevé précédent existe, sinon la courbe se fige ; signalDbm et connecteDepuis valent null sans station.
+    // Entrées : texte, sortie du relevé ; appareil, l'interface relevée (etat.appareil par défaut). Sortie : aucune ;
+    // décale les débits d'un pas si les compteurs sont lisibles et qu'un relevé précédent du même appareil existe,
+    // sinon la courbe se fige ; signalDbm et connecteDepuis valent null sans station.
     // Erreurs : aucune. Dépendances : nmcli.js (lireStation, debit), releve.
-    function sonder(texte) {
+    function sonder(texte, appareil = etat.appareil) {
         const [compteurs, station] = texte.split(/^--$/m)
         const c = compteurs.trim().split("\n").map(Number)
         const maintenant = Date.now()
@@ -154,8 +164,9 @@ Singleton {
         canal = lu.canal
         frequence = lu.freq
         if (c.length !== 2 || c.some(isNaN)) { releve.precedent = null; return }
-        const avant = releve.precedent
-        releve.precedent = {rx: c[0], tx: c[1], t: maintenant}
+        // Un relevé en vol au changement d'appareil porte l'ancien : il ne sert jamais de référence au nouveau.
+        const avant = releve.precedent?.appareil === appareil ? releve.precedent : null
+        releve.precedent = {rx: c[0], tx: c[1], t: maintenant, appareil}
         if (avant) debits = {rx: [...debits.rx.slice(1), Nmcli.debit(avant.rx, c[0], maintenant - avant.t)],
                              tx: [...debits.tx.slice(1), Nmcli.debit(avant.tx, c[1], maintenant - avant.t)]}
     }
@@ -198,30 +209,35 @@ Singleton {
     }
 
     // Minuteur de la sonde : un relevé par seconde, seulement tant que quelqu'un le demande et qu'un appareil existe.
-    // À l'arrêt, le relevé précédent et les mesures de station sont oubliés pour que la reprise ne mesure pas l'écart.
+    // À l'arrêt, la courbe, le relevé précédent et les mesures de station sont oubliés : la reprise ne mesure pas
+    // l'écart et ne montre aucun échantillon d'avant.
     Timer {
         id: minuteurSonde
         interval: 1000
         repeat: true
         running: etat.sondeActive
         triggeredOnStart: true
-        onTriggered: if (!releve.running) releve.running = true
+        onTriggered: if (!releve.running) {
+            releve.appareil = etat.appareil
+            releve.running = true
+        }
         onRunningChanged: if (!running) {
-            releve.precedent = null
+            etat.oublierDebits()
             etat.signalDbm = etat.connecteDepuis = etat.canal = etat.frequence = null
         }
     }
 
     // Un seul relevé à la fois : compteurs du noyau (<racine>/<interface>/statistics/rx_bytes et tx_bytes), puis iw ;
-    // les erreurs des deux sont écartées (interface perdue).
+    // les erreurs des deux sont écartées (interface perdue). L'appareil relevé est figé au lancement, pour que la
+    // sortie soit lue comme la sienne même si l'appareil change en vol.
     Process {
         id: releve
         property var precedent: null
+        property string appareil
         command: ["sh", "-c", 'cat "$1/$2/statistics/rx_bytes" "$1/$2/statistics/tx_bytes" 2>/dev/null; echo --; '
                   + 'iw dev "$2" station dump 2>/dev/null; iw dev "$2" info 2>/dev/null',
-                  "sh", etat.racineCompteurs, etat.appareil]
-        stdout: StdioCollector { id: releveSortie }
-        onExited: etat.sondeActive && etat.sonder(releveSortie.text)
+                  "sh", etat.racineCompteurs, releve.appareil]
+        stdout: StdioCollector { onStreamFinished: if (etat.sondeActive) etat.sonder(text, releve.appareil) }
     }
 
     // Navigateur sur une page en HTTP simple, que le portail captif intercepte ; xdg-open rend la main dès que le
