@@ -87,7 +87,7 @@ ShellRoot {
             const p = fenetre.panneau
             const f = p?.fiche
             return JSON.stringify({
-                fenetre: p !== null, demandee: EtatReseau.fenetre,
+                fenetre: p !== null, visible: p?.Window.window?.visible ?? false, demandee: EtatReseau.fenetre,
                 rangees: (p?.rangees ?? []).map(r => [r.groupe, r.nom, r.etat, r.icone]),
                 detail: f?.detail ?? {},
                 selection: essai.selection(),
@@ -264,5 +264,12 @@ ShellRoot {
 
         // fermer — ferme la fenêtre comme le compositeur. Entrées : aucune. Sortie : aucune.
         function fermer(): void { fenetre.fermer() }
+
+        // fermerEtat — ferme la fenêtre puis rend l'état dans le même tour d'événements, avant la destruction différée.
+        // Entrées : aucune. Sortie : texte JSON, voir etat. Erreurs : aucune. Dépendances : fermer, etat.
+        function fermerEtat(): string { fenetre.fermer(); return etat() }
+
+        // dureeDestruction — durée de la dernière destruction de la fenêtre (ms), -1 sans destruction. Sortie : texte.
+        function dureeDestruction(): string { return String(fenetre.dureeDestruction) }
     }
 }

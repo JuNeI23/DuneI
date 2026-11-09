@@ -1492,6 +1492,28 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
         self.ouvrir()
         self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
 
+    def test_fermeture_cache_avant_destruction(self):
+        # La fermeture cache d'abord la fenêtre, puis lâche le chargeur au tour suivant : dans le tour même de l'appel,
+        # le panneau existe encore mais n'est plus visible ; ensuite la fenêtre est détruite.
+        self.ouvrir()
+        self.assertTrue(self.etat()["visible"])
+        e = json.loads(self.ipc("essai", "fermerEtat"))
+        self.assertTrue(e["fenetre"])
+        self.assertFalse(e["visible"])
+        e = self.jusqua(lambda e: not e["fenetre"], "fenêtre détruite")
+        self.assertFalse(e["demandee"])
+        self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
+
+    def test_destruction_hors_du_clic(self):
+        # L'appel IPC « reseau fermer » rend la main en moins de 100 ms, destruction comprise ou non, et la durée de
+        # destruction mesurée par la fenêtre est exposée à l'essai.
+        self.ouvrir()
+        debut = time.monotonic()
+        self.ipc("reseau", "fermer")
+        self.assertLess(time.monotonic() - debut, 0.1)
+        self.jusqua(lambda e: not e["fenetre"], "fenêtre détruite")
+        self.assertGreaterEqual(int(self.ipc("essai", "dureeDestruction")), 0)
+
     def test_balayage_a_la_vie_de_la_fenetre(self):
         # Le panneau demande le balayage (rechercheFenetre) pour toute la vie de la fenêtre, sur n'importe quel onglet et
         # sous-page ; le popover écrit une autre propriété, si bien que sa fermeture ne coupe pas la demande de la
