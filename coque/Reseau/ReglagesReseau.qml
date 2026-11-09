@@ -90,7 +90,8 @@ ColumnLayout {
 
         Tuile {
             Layout.alignment: Qt.AlignTop
-            visible: reglages.wifi
+            // Un profil d'entreprise (wpa-eap) n'a ni mot de passe partagé ni réseau ouvert : la tuile est masquée.
+            visible: reglages.partage || reglages.profil.ouvert
             libelle: "Mot de passe"
             largeur: 2
             ChampSecret {

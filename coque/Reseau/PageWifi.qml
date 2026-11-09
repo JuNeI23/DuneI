@@ -148,7 +148,7 @@ ColumnLayout {
                 onAvances: uuid => page.panneau.ouvrirProfil(uuid)
                 onRelu: (u, p) => page.panneau.factures = Object.assign({}, page.panneau.factures, {[u]: p.facture})
             }
-    }
+        }
     }
 
     // Réseaux disponibles : le titre, puis « Rechercher » ou l'Activite pendant le balayage.

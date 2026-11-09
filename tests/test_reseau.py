@@ -1689,6 +1689,29 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(self.sonde()["sondeurs"], 0)
         self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
 
+    def test_cable_sous_le_wifi_joint(self):
+        # Câble branché sous un Wi-Fi joint : EtatReseau lit eth0. Le dépliant Wi-Fi ne montre pas les débits du câble,
+        # retire sa demande de sonde et ses tuiles valent « — ».
+        self.ipc("reseau", "ouvrir")
+        self.depliant(lambda d: d.get("debits") and d.get("lu"), "débits montrés")
+        self.assertEqual(self.sonde()["sondeurs"], 1)
+        (self.bin / "filaire").touch()
+        self.ipc("essai", "relire")
+        d = self.depliant(lambda d: not d["debits"], "débits masqués")
+        self.assertEqual(self.sonde()["sondeurs"], 0)
+        self.assertEqual(set(d["tuiles"].values()), {"—"})
+
+    def test_polices_des_tuiles(self):
+        # Fiche : toutes les valeurs des tuiles, adresses copiables comprises, sont à l'échelon 3, en graisse moyenne,
+        # dans la police de l'interface.
+        self.ipc("reseau", "ouvrir")
+        d = self.depliant(lambda d: len(d.get("polices", {})) == 6, "tuiles posées")
+        self.assertEqual(len({tuple(p) for p in d["polices"].values()}), 1, d["polices"])
+        famille, graisse, taille = d["polices"]["Adresse IP"]
+        jetons = self.vue(55)
+        self.assertEqual((famille, graisse, taille), (jetons["typo"]["interface"], jetons["typo"]["weightMedium"],
+                                                      jetons["typo"]["scale"][3]))
+
     def test_depliant_replie_sans_sonde(self):
         # Replié, le dépliant décharge son contenu : plus de demande de sonde, plus d'appel iw, aucun réglage relu.
         self.ipc("reseau", "ouvrir")

@@ -15,6 +15,7 @@ import "nmcli.js" as Nmcli
 // Entrées : filaire, vrai pour une connexion filaire ; etat, la source des mesures, EtatReseau par défaut (ip4,
 // passerelle, dns, mac, appareilFilaire.linkSpeed, signalDbm, canal, frequence, connecteDepuis) ; actuel, faux quand
 // l'appareil lu par etat n'est pas celui du réseau : toutes les valeurs valent alors « — ».
+// Valeurs copiables : Valeur sans police mono, à l'échelon et à la graisse des autres tuiles.
 // Sorties : liste, [{libelle, texte, copie, barres}] des tuiles montrées (texte, la valeur affichée ; copie, la
 // valeur copiable, vide sans elle ; barres, le nombre de barres du signal, -1 sans barres), lue par les essais.
 // Erreurs : aucune ; une mesure absente vaut « — ».
@@ -93,6 +94,7 @@ GridLayout {
                     anchors.verticalCenter: parent.verticalCenter
                     text: tuile.modelData.copie
                     echelon: 3
+                    mono: false
                     couleur: Theme.color?.textPrimary ?? "transparent"
                 }
                 Texte {

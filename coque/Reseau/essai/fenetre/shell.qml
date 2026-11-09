@@ -81,7 +81,8 @@ ShellRoot {
     // depliants — état des dépliants de réseau de la fenêtre, par uuid : {ouvert, charge (contenu chargé), lu (profil
     // lu), tuiles (libellé → texte des tuiles d'information), reglages (libellés des réglages montrés), ouvertTexte
     // (« Réseau ouvert : aucun mot de passe » montré), champ (champ du mot de passe montré), secret (longueur de son
-    // texte, jamais le texte), revele, copie (coche du retour de copie), securite (texte de la
+    // texte, jamais le texte), revele, copie (coche du retour de copie), debits (débits montrés), polices (libellé →
+    // [famille, graisse, taille] de la valeur de chaque tuile), securite (texte de la
     // tuile Sécurité), grille: {tuiles: [x des tuiles], reglages: [[x du réglage, x de son contrôle]]}, abscisses
     // dans la scène}. Entrées : aucune. Sortie : objet. Erreurs : aucune ; fenêtre fermée, objet vide.
     function depliants() {
@@ -99,7 +100,12 @@ ShellRoot {
                     ouvertTexte: c?.reglages.ouvertTexte.visible ?? false, champ: c?.reglages.champ.visible ?? false,
                     secret: c?.reglages.champ.length ?? 0, revele: c?.reglages.champ.revele ?? false,
                     copie: c?.reglages.champ.copie ?? false,
-                    securite: c?.reglages.securite ?? "",
+                    securite: c?.reglages.securite ?? "", debits: c?.debits.visible ?? false,
+                    polices: c ? tuilesDe(c.tuiles).reduce((m, t) => {
+                        const rang = t.children[1].children[0], v = rang.children[1]
+                        const f = (v.visible ? v.children[0] : rang.children[2]).font
+                        return (m[t.libelle] = [f.family, f.weight, f.pixelSize], m)
+                    }, {}) : {},
                     grille: !c ? {} : {tuiles: tuilesDe(c.tuiles).map(x),
                                        reglages: tuilesDe(c.reglages.grille).map(t => [x(t), x(t.children[1].children[0])])},
                 }
