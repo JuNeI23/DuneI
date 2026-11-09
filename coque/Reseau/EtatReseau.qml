@@ -27,7 +27,8 @@ import "../Barre/icones.js" as Icones
 // (WifiNetwork ou null), nomActif, force (0 à 1), facture, appareil (l'interface dont la lecture donne les adresses :
 // le filaire actif, sinon le Wi-Fi), ip4, ip6, passerelle, dns, mac (adresse matérielle de l'appareil actif), profils,
 // vpnActif, icone, reseaux (WifiNetwork de toutes les cartes, non triés) ; relances, nombre de démarrages du moniteur.
-// Fonctions : relire, verifier, executer, allumer, ouvrirPortail.
+// Fonctions : relire, verifier, executer, allumer, ouvrirPortail, demanderSonde (sonde à la demande : sondeurs,
+// racineCompteurs, debits, signalDbm, connecteDepuis ; un minuteur d'une seconde seulement tant qu'un demandeur existe).
 // Erreurs : sans nmcli ou sans NetworkManager, les valeurs nmcli restent vides et le moniteur est relancé toutes les
 // secondes (voir Relance) ; la sortie d'une lecture partielle est lue au mieux.
 // Dépendances : Relance, nmcli.js, icones.js, Quickshell.Networking, Quickshell.Io.
