@@ -1017,7 +1017,6 @@ class PageWifiTest(EssaiCoque, unittest.TestCase):
     def test_ordre_de_la_page(self):
         p = self.page()
         self.assertEqual(p["blocs"], ["titre", "recherche", "joint", "autres", "connus"])
-        self.assertFalse(p["carteAdresses"])
         self.assertTrue(p["joint"] and p["depliantOuvert"])
 
     def test_recherche_filtre_tout(self):
@@ -1358,45 +1357,73 @@ class PageFilaireTest(EssaiCoque, unittest.TestCase):
         self.fail(f"{message}\n{p}\n{self.journal()}")
 
     def test_cable_branche(self):
+        # Carte branchée : le profil actif est le dépliant de la page (plus de carte « Adresses »), « Profils » ne liste
+        # que les autres profils, et l'adresse matérielle est dans les tuiles du dépliant, plus dans la carte d'appareil.
         p = self.page()
-        self.assertEqual(p["titres"], ["Ethernet", "Profils", "Adresses"])
+        self.assertEqual(p["titres"], ["Ethernet", "Réglages du réseau", "Profils"])
         self.assertEqual((p["appareil"], p["aide"], p["actif"]), ("Ethernet (enp3s0)", "Connecté", True))
-        self.assertEqual(p["materiel"], "8C:16:45:2E:71:B0")
-        self.assertEqual(p["profils"], ["Bureau", "Atelier"])
-        p = self.jusqua(lambda p: "Configuration IPv4" in p["adresses"], "méthode IPv4 lue")
-        self.assertEqual(p["adresses"], {"Configuration IPv4": "Automatique", "Adresse IPv4": "10.0.0.2/24",
-                                         "Passerelle": "10.0.0.1", "DNS": "10.0.0.1", "IPv6": "fe80::2/64"})
-        self.attendre('essai : executer ["-g","ipv4.method","connection","show","bureau-1"]')
+        self.assertEqual((p["materiel"], p["profils"]), ("", ["Atelier"]))
         self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
 
-    def test_cable_debranche(self):
-        # Carte sans câble : l'état le dit, l'adresse matérielle reste lisible, et les adresses (celles du Wi-Fi que
-        # lit alors l'état) ne sont pas montrées pour le profil filaire.
-        self.ipc("mode", "debranche")
-        p = self.jusqua(lambda p: p["aide"] == "Câble débranché", "câble débranché")
-        self.assertEqual((p["appareil"], p["actif"], p["materiel"]), ("Ethernet (enp3s0)", False, "8C:16:45:2E:71:B0"))
-        self.assertFalse(p["adressesVisible"])
+    def test_filaire_actif_deplie(self):
+        # Le dépliant est ouvert d'office : profil lu, tuiles filaires (sans « Connecté depuis », faute de source),
+        # réglages Connexion automatique et Priorité seuls, pied sans « Rejoindre », plus aucune CarteAdresses.
+        d = self.jusqua(lambda p: p["depliant"]["lu"], "profil lu")["depliant"]
+        self.assertTrue(d["existe"] and d["ouvert"] and d["debits"])
+        self.assertEqual(d["tuiles"], {"Adresse IP": "10.0.0.2", "Routeur": "10.0.0.1", "DNS": "10.0.0.1",
+                                       "Débit du lien": "1 Gbit/s", "Adresse matérielle": "8C:16:45:2E:71:B0"})
+        self.assertEqual(d["reglages"], ["Connexion automatique", "Priorité"])
+        self.assertEqual(d["pied"], ["Réglages avancés…", "Oublier ce réseau"])
+        self.assertFalse(d["carteAdresses"])
+        self.attendre('essai : executer ["-t"')
+        self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
 
-    def test_aucune_carte(self):
+    def test_deplier_replier(self):
+        self.jusqua(lambda p: p["depliant"]["lu"], "profil lu")
+        self.ipc("basculer")
+        self.jusqua(lambda p: not p["depliant"]["ouvert"], "dépliant replié")
+        self.ipc("basculer")
+        self.jusqua(lambda p: p["depliant"]["ouvert"], "dépliant rouvert")
+
+    def test_sans_carte(self):
+        # Aucune carte filaire : la page reste en l'état, sans dépliant.
         self.ipc("mode", "aucune")
         p = self.jusqua(lambda p: p["aide"] == "Aucune carte", "aucune carte")
         self.assertEqual((p["appareil"], p["actif"], p["materiel"]), ("Ethernet", False, ""))
+        self.assertFalse(p["depliant"]["existe"])
+
+    def test_cable_debranche(self):
+        # Carte sans câble : l'état le dit, l'adresse matérielle reste lisible, et aucun dépliant n'est montré.
+        self.ipc("mode", "debranche")
+        p = self.jusqua(lambda p: p["aide"] == "Câble débranché", "câble débranché")
+        self.assertEqual((p["appareil"], p["actif"], p["materiel"]), ("Ethernet (enp3s0)", False, "8C:16:45:2E:71:B0"))
+        self.assertFalse(p["depliant"]["existe"])
 
     def test_sans_profil(self):
         self.ipc("sansProfils")
         p = self.jusqua(lambda p: p["aucun"], "message sans profil")
         self.assertEqual((p["profils"], p["titres"]), ([], ["Ethernet"]))
+        self.assertFalse(p["depliant"]["existe"])
 
-    def test_adresses_de_l_appareil_lu_seulement(self):
-        # Le Wi-Fi actif seul : EtatReseau lit wlan0, dont les adresses ne sont pas celles du profil filaire.
-        self.assertTrue(self.page()["adressesVisible"])
+    def test_profil_actif_seul(self):
+        # Le profil actif est le seul : la section « Profils » disparaît, sans le message « Aucun profil filaire. ».
+        self.ipc("sansAutres")
+        p = self.jusqua(lambda p: p["profils"] == [], "profils masqués")
+        self.assertEqual((p["titres"], p["aucun"], p["depliant"]["existe"]), (["Ethernet", "Réglages du réseau"], False, True))
+
+    def test_appareil_lu_ailleurs(self):
+        # EtatReseau lit alors wlan0 : le dépliant reste, mais ses tuiles valent « — » et la courbe est masquée.
         self.ipc("appareil", "wlan0")
-        self.jusqua(lambda p: not p["adressesVisible"], "adresses masquées")
+        d = self.jusqua(lambda p: p["depliant"]["lu"] and not p["depliant"]["debits"], "appareil étranger")["depliant"]
+        self.assertEqual(set(d["tuiles"].values()), {"—"})
 
-    def test_methode_fixe(self):
-        # Une méthode manuelle se dit « Fixe » ; elle est relue au retour sur la page.
-        self.ipc("methode", "manual")
-        self.jusqua(lambda p: p["adresses"].get("Configuration IPv4") == "Fixe", "méthode fixe")
+    def test_profil_demande(self):
+        # Le profil actif se déplie dans la page ; un autre profil garde sa sous-page.
+        self.ipc("basculer")
+        self.jusqua(lambda p: not p["depliant"]["ouvert"], "dépliant replié")
+        self.assertEqual(self.ipc("montrer", "bureau-1"), "true")
+        self.jusqua(lambda p: p["depliant"]["ouvert"], "dépliant rouvert")
+        self.assertEqual(self.ipc("montrer", "atelier-1"), "false")
 
     def test_profil_ouvre_sa_sous_page(self):
         self.ipc("choisir", "atelier-1")

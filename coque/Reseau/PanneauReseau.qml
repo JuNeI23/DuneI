@@ -111,16 +111,16 @@ Item {
     }
 
     // remplir — montre le profil demandé par etat.profilDemande (uuid ou nom) s'il figure parmi les rangées, après
-    // avoir choisi son onglet (déplié dans la page Wi-Fi, ou sous-page d'un profil filaire), puis consomme la demande ; referme une sous-page dont le profil n'existe
+    // avoir choisi son onglet (déplié dans la page Wi-Fi, ou dans la page Filaire pour le profil filaire actif ; sous-page des autres profils filaires), puis consomme la demande ; referme une sous-page dont le profil n'existe
     // plus. Entrées : aucune. Sortie : aucune. Erreurs : aucune ; une demande dont le profil n'est pas (encore) lu
-    // attend la lecture suivante. Dépendances : rangees, etat.profilDemande, choisirOnglet, ouvrirProfil, pageWifi.montrer.
+    // attend la lecture suivante. Dépendances : rangees, etat.profilDemande, choisirOnglet, ouvrirProfil, pageWifi.montrer, pageFilaire.montrer.
     function remplir() {
         const demande = etat.profilDemande === "" ? null
             : rangees.find(r => r.uuid === etat.profilDemande || r.nom === etat.profilDemande)
         if (demande) {
             choisirOnglet(demande.wifi ? "wifi" : "filaire")
             if (demande.wifi) pageWifi.montrer(demande.uuid)
-            else ouvrirProfil(demande.uuid)
+            else if (!pageFilaire?.montrer(demande.uuid)) ouvrirProfil(demande.uuid)
             etat.profilDemande = ""
         } else if (sousPageProfil && rangees.length > 0 && !rangees.some(r => r.uuid === sousPage)) retour()
     }

@@ -177,7 +177,7 @@ ShellRoot {
                 // joint existe), tete (libellé de sa rangée de tête), aideTete, rangeesJoint (libellés des rangées du
                 // dépliant), reseaux (noms montrés des autres réseaux, dans l'ordre), serrures (noms à cadenas), autre
                 // (« Autre réseau… » visible dans le groupe des autres réseaux), blocs (objectName des blocs visibles de
-                // la page, de haut en bas), carteAdresses (une CarteAdresses existe dans la page), filtre, connus
+                // la page, de haut en bas), filtre, connus
                 // (libellés des réseaux connus visibles, dans l'ordre), connusVisible (la section des réseaux connus
                 // est visible), connusOuverts (son groupe est montré), connuOuvert (uuid du connu déplié), compte (le
                 // nombre affiché), ouverts (uuids des connus dépliés), rejoindre (uuid → « Rejoindre » visible, pour
@@ -206,7 +206,7 @@ ShellRoot {
                         reseaux: reseaux.map(o => o.objectName.slice(7)),
                         serrures: reseaux.filter(o => essai.trouver(o, i => i.nom === "network-wireless-encrypted" && i.visible)).map(o => o.objectName.slice(7)),
                         autre: objet("disponibles").visible && essai.trouver(objet("disponibles"), o => o.objectName === "autre" && o.visible) !== null,
-                        depliantOuvert: f?.ouvert ?? false, blocs: blocs.map(o => o.objectName), carteAdresses: essai.trouver(p, o => o.methode !== undefined && o.rangee !== undefined) !== null,
+                        depliantOuvert: f?.ouvert ?? false, blocs: blocs.map(o => o.objectName),
                         filtre: p.filtre, connus: connus.map(o => o.rangee.nom), connusVisible: objet("connus")?.visible ?? false,
                         connusOuverts: objet("groupeConnus")?.visible ?? false, connuOuvert: p.connuOuvert,
                         compte: objet("compte")?.text ?? "", ouverts: connus.filter(o => o.ouvert).map(o => o.rangee.uuid),
