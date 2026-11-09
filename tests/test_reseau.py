@@ -1514,17 +1514,21 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
         self.jusqua(lambda e: not e["fenetre"], "fenêtre détruite")
 
     def test_duree_destruction_mesuree_une_fois(self):
-        # Deux fermer() dans la même passe (pastille puis onVisibleChanged) ne font qu'un lâcher : la durée est mesurée
-        # depuis le premier, bornée, et une destruction suivante repart d'un début remis à zéro.
+        # Deux lâchers dans la même passe gardent le début du premier ; la mesure, neuve à chaque cycle (remise à -1),
+        # est faite depuis ce début (au moins l'intervalle de 5 ms entre les lâchers), puis le début revient à 0.
         for _ in range(2):
             self.ouvrir()
-            self.ipc("essai", "fermerDeuxFois")
+            premier, second = json.loads(self.ipc("essai", "lacherDeuxFois"))
+            self.assertGreater(premier, 0)
+            self.assertEqual(second, premier)
             self.jusqua(lambda e: not e["fenetre"], "fenêtre détruite")
             fin = time.monotonic() + DELAI
             while int(self.ipc("essai", "dureeDestruction")) < 0 and time.monotonic() < fin:
                 time.sleep(0.05)
             duree = int(self.ipc("essai", "dureeDestruction"))
-            self.assertTrue(0 <= duree < 1000, duree)
+            self.assertTrue(5 <= duree < 1000, duree)
+            self.assertEqual(self.ipc("essai", "debutDestruction"), "0")
+        self.ipc("essai", "fermerDeuxFois")
         self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
 
     def test_balayage_a_la_vie_de_la_fenetre(self):

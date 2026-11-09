@@ -273,6 +273,22 @@ ShellRoot {
         // Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : fermer.
         function fermerDeuxFois(): void { fenetre.fermer(); fenetre.fermer() }
 
+        // lacherDeuxFois — appelle lacher deux fois à 5 ms d'intervalle, après avoir remis dureeDestruction à -1.
+        // Entrées : aucune. Sortie : texte JSON [début après le premier lâcher, début après le second].
+        // Erreurs : aucune. Dépendances : lacher et _debutDestruction de FenetreReseau.
+        function lacherDeuxFois(): string {
+            fenetre.dureeDestruction = -1
+            fenetre.lacher()
+            const premier = fenetre._debutDestruction
+            const t = Date.now()
+            while (Date.now() - t < 5) {}
+            fenetre.lacher()
+            return JSON.stringify([premier, fenetre._debutDestruction])
+        }
+
+        // debutDestruction — début de destruction en cours (ms), 0 hors destruction. Sortie : texte.
+        function debutDestruction(): string { return String(fenetre._debutDestruction) }
+
         // dureeDestruction — durée de la dernière destruction de la fenêtre (ms), -1 sans destruction. Sortie : texte.
         function dureeDestruction(): string { return String(fenetre.dureeDestruction) }
     }
