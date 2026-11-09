@@ -9,14 +9,16 @@ import "../Composants"
 // réseau… » du popover, ou « qs ipc call reseau ouvrir ») et détruite à sa fermeture (D80) : le secret révélé disparaît
 // avec elle. La fermeture est immédiate : fermer() cache d'abord la fenêtre, de sorte que l'image cachée parte avant
 // tout, puis ne lâche le chargeur qu'au tour suivant de la boucle d'événements. Sans cela, la destruction de
-// l'arborescence, menée dans le tour du clic, retenait la fenêtre à l'écran le temps de la démolition (L2-65). La fenêtre est créée de façon asynchrone une fois Theme prêt, comme la planche de contrôle : une création
+// l'arborescence, menée dans le tour du clic, retenait la fenêtre à l'écran le temps de la démolition (L2-65).
+// La fenêtre est créée de façon asynchrone une fois Theme prêt, comme la planche de contrôle : une création
 // synchrone, pendant la notification de Theme.ready, verrait les raccourcis de groupe encore indéfinis.
 // Entrées : aucune ; EtatReseau.fenetre commande la construction. La fenêtre porte en tête, au sommet du plateau de la
 // barre latérale (bible, « Pastilles de fenêtre »), ses pastilles (PastillesFenetre) : fermer la détruit, réduire
 // l'envoie au bureau spécial, agrandir bascule le plein écran. Une règle Hyprland (config/hypr/modules/regles.lua,
 // « fenetre-reseau ») la fait flotter, centrée, à sa taille implicite.
 // Sorties : panneau, le PanneauReseau de la fenêtre construite, null fermée ; pastilles, ses PastillesFenetre ;
-// dureeDestruction (ms, dernière destruction mesurée, -1 avant la première) ; fonction fermer ; IPC « reseau ouvrir » et « reseau fermer ».
+// dureeDestruction (ms, dernière destruction mesurée, -1 avant la première) ; fonction fermer ;
+// IPC « reseau ouvrir » et « reseau fermer ».
 // Erreurs : aucune ; avant le chargement des tokens, la fenêtre n'est pas construite.
 // Dépendances : quickshell ≥ 0.3 (LazyLoader, FloatingWindow, IpcHandler), Theme, Surface, PastillesFenetre,
 // PanneauReseau, EtatReseau, Theme (reglages, space).
