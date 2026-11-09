@@ -2106,23 +2106,52 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
             time.sleep(0.02)
         self.fail("bascule non mesurée")
 
-    def test_pages_gardees_vivantes(self):
-        # Les trois pages d'onglet sont instanciées une fois : un changement d'onglet n'en recrée aucune (mêmes objets)
-        # et ne lance aucune lecture nmcli ; seul le balayage suit la visibilité de la page Wi-Fi. La durée de chaque
-        # bascule est mesurée (affichée, non bornée : la vraie mesure se fait à l'écran).
+    def test_pages_a_la_demande(self):
+        # Remplace test_pages_gardees_vivantes (L2-65, ouverture plus rapide) : à l'ouverture seule la page Wi-Fi
+        # existe ; le premier passage à Filaire, puis à VPN, construit la page de l'onglet ; les passages suivants
+        # gardent les mêmes objets et ne lancent aucune lecture nmcli ; seul le balayage suit la visibilité de la page
+        # Wi-Fi. La durée de chaque bascule est mesurée (affichée, non bornée : la vraie mesure se fait à l'écran).
         self.ipc("reseau", "ouvrir")
         self.jusqua(lambda e: e["fenetre"] and e["rangees"], "fenêtre construite")
         time.sleep(1)
-        pages = self.ipc("essai", "pages")
-        self.assertEqual(len(set(json.loads(pages))), 3)
+        wifi, filaire, vpn = json.loads(self.ipc("essai", "pages"))
+        self.assertNotEqual(wifi, "null", "page Wi-Fi absente à l'ouverture")
+        self.assertEqual((filaire, vpn), ("null", "null"), "page construite avant son onglet")
+        mesures = [("filaire", self.mesure_bascule("filaire"))]
+        pages = json.loads(self.ipc("essai", "pages"))
+        self.assertEqual((pages[0], pages[2]), (wifi, "null"))
+        self.assertNotEqual(pages[1], "null", "page Filaire non construite au premier choix")
+        mesures.append(("vpn", self.mesure_bascule("vpn")))
+        pages = json.loads(self.ipc("essai", "pages"))
+        self.assertEqual(len(set(pages)), 3)
+        self.assertNotIn("null", pages)
         appels = len(self.appels())
-        mesures = []
-        for cle in ("filaire", "vpn", "wifi") * 3:
+        for cle in ("wifi", "filaire", "vpn", "wifi") * 2:
             mesures.append((cle, self.mesure_bascule(cle)))
-            self.assertEqual(self.ipc("essai", "pages"), pages, f"page recréée au passage à {cle}")
+            self.assertEqual(json.loads(self.ipc("essai", "pages")), pages, f"page recréée au passage à {cle}")
         time.sleep(0.5)
         self.assertEqual(len(self.appels()), appels, "une lecture nmcli a suivi un changement d'onglet")
         print("\nMESURE_BASCULE (ms)", mesures)
+
+    def test_reglages_avances(self):
+        # « Réglages avancés… » du dépliant ouvre la sous-page, titrée du nom du réseau : IPv4 automatique ou fixe,
+        # adresse, DNS (la passerelle suit le mode Fixe), détail complet avec IPv6 et « Tout copier » ; plus aucun
+        # réglage courant (mot de passe, connexion automatique, priorité, données limitées, oubli), passés au dépliant.
+        self.ipc("reseau", "ouvrir")
+        self.depliant(lambda d: d.get("lu"), "profil lu")
+        self.ipc("essai", "regler", "wifi-1", "avances")
+        e = self.jusqua(lambda e: e["fiche"].get("uuid") == "wifi-1" and e["fiche"]["lu"], "sous-page ouverte")
+        self.assertEqual(e["fiche"]["titre"], "Wifi_TRIADES")
+        libelles = e["fiche"]["libelles"]
+        self.assertTrue({"Configuration", "Adresse", "DNS", "IPv6"} <= set(libelles + list(e["detail"])), libelles)
+        self.assertEqual(e["detail"]["IPv6"], "fe80::1/64")
+        self.assertGreater(e["toutCopier"], 0)
+        for retire in ("Mot de passe", "Connexion automatique", "Priorité", "Connexion facturée", "Données limitées",
+                       "Oublier ce réseau"):
+            self.assertNotIn(retire, libelles)
+        self.ipc("essai", "cliquer", "fixe")
+        e = self.jusqua(lambda e: e["fiche"]["fixe"] and "Passerelle" in e["fiche"]["libelles"], "mode Fixe")
+        self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
 
     def test_contour_de_focus_apres_une_touche_seulement(self):
         # Fenêtre ouverte à la souris (comme depuis le popover) : la liste des onglets a le focus pour les flèches, mais
@@ -2140,8 +2169,9 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
     def test_changer_d_onglet(self):
         # Changer d'onglet ferme la sous-page et remet le défilement en haut, comme le retour ; les flèches du
         # clavier passent d'un onglet à l'autre.
+        # (L2-65 : la sous-page des réglages avancés tient désormais dans la fenêtre ; le défilement est posé à la
+        # main, sans attendre qu'elle déborde.)
         self.ouvrir()
-        self.jusqua(lambda e: e["defilement"][1] > e["defilement"][2], "la sous-page du profil actif défile")
         self.ipc("essai", "defiler", "40")
         self.assertEqual(self.etat()["defilement"][0], 40)
         self.ipc("essai", "onglet", "filaire")
@@ -2210,25 +2240,40 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
             self.assertLess(time.monotonic(), fin, self.appels())
             time.sleep(0.05)
 
+    def deplier(self, uuid: str = "hotspot-1") -> dict:
+        """Ouvre la fenêtre et déplie le dépliant d'un réseau connu, puis attend la lecture de son profil.
+
+        Entrée : uuid, le réseau (hotspot-1, un réseau connu, par défaut). Sortie : l'état du dépliant. Erreurs : échec
+        du test au délai. Dépendances : ipc, depliant.
+        """
+        self.ipc("reseau", "ouvrir")
+        self.jusqua(lambda e: e["fenetre"] and e["rangees"], "fenêtre construite et profils lus")
+        self.ipc("essai", "basculer", uuid)
+        return self.depliant(lambda d: d.get("charge") and d.get("lu"), "dépliant ouvert et profil lu", uuid)
+
     def test_priorite(self):
-        self.ouvrir("hotspot-1")
-        self.ipc("essai", "cliquer", "plus")
+        # Réécrit pour le dépliant (L2-65) : la priorité n'est plus dans la sous-page mais dans les réglages du
+        # dépliant du réseau connu ; son compteur écrit la même commande nmcli.
+        self.deplier()
+        self.ipc("essai", "regler", "hotspot-1", "plus")
         fin = time.monotonic() + DELAI
         while "connection modify hotspot-1 connection.autoconnect-priority 10" not in self.appels():
             self.assertLess(time.monotonic(), fin, self.appels())
             time.sleep(0.05)
 
     def test_refus_restaure(self):
-        e = self.ouvrir("hotspot-1")
-        self.assertEqual((e["fiche"]["priorite"], e["fiche"]["facture"]), (9, True))
+        # Réécrit pour le dépliant (L2-65) : un refus de nmcli met son message sous le réglage et rend la valeur lue,
+        # pour la priorité (compteur) comme pour les données limitées (interrupteur).
+        d = self.deplier()
+        self.assertEqual((d["priorite"], d["donnees"]), (9, True))
         self.refus.touch()
-        self.ipc("essai", "cliquer", "plus")
-        e = self.jusqua(lambda e: "priorite" in e["fiche"]["erreurs"], "erreur sous la priorité")
-        self.assertIn("Not authorized", e["fiche"]["erreurs"]["priorite"])
-        self.assertEqual(e["fiche"]["priorite"], 9)
-        self.ipc("essai", "cliquer", "facture")
-        e = self.jusqua(lambda e: "facture" in e["fiche"]["erreurs"], "erreur sous la facturation")
-        self.assertTrue(e["fiche"]["facture"])
+        self.ipc("essai", "regler", "hotspot-1", "plus")
+        d = self.depliant(lambda d: "priorite" in d["erreurs"], "erreur sous la priorité", "hotspot-1")
+        self.assertIn("Not authorized", d["erreurs"]["priorite"])
+        self.assertEqual(d["priorite"], 9)
+        self.ipc("essai", "regler", "hotspot-1", "donnees")
+        d = self.depliant(lambda d: "facture" in d["erreurs"], "erreur sous les données limitées", "hotspot-1")
+        self.assertTrue(d["donnees"])
 
     def test_ip_fixe(self):
         # Passer en Fixe n'écrit rien tant que l'adresse manque ; l'adresse validée écrit méthode et adresse.
@@ -2243,80 +2288,91 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(sum("modify" in a for a in self.appels()), 1, self.appels())
 
     def test_secret(self):
-        self.ouvrir("hotspot-1")
-        self.ipc("essai", "cliquer", "oeil")
-        e = self.jusqua(lambda e: e["fiche"]["secret"] == len(self.SECRET), "secret lu")
-        self.assertTrue(e["fiche"]["revele"])
-        self.ipc("essai", "cliquer", "oeil")
-        self.assertFalse(self.etat()["fiche"]["revele"])
-        self.ipc("essai", "cliquer", "oeil")
-        self.assertTrue(self.etat()["fiche"]["revele"])
+        # Réécrit pour le dépliant (L2-65) : l'œil lit le secret une seule fois (le révéler, le masquer, le révéler
+        # de nouveau ne relit rien) ; replier le dépliant l'efface ; il ne paraît jamais au journal, même à la
+        # fermeture de la fenêtre.
+        self.deplier()
+        self.ipc("essai", "regler", "hotspot-1", "oeil")
+        d = self.depliant(lambda d: d["secret"] == len(self.SECRET), "secret lu", "hotspot-1")
+        self.assertTrue(d["revele"])
+        self.ipc("essai", "regler", "hotspot-1", "oeil")
+        self.assertFalse(self.depliant(lambda d: True, "", "hotspot-1")["revele"])
+        self.ipc("essai", "regler", "hotspot-1", "oeil")
+        self.depliant(lambda d: d["revele"], "secret révélé de nouveau", "hotspot-1")
         lecture = "-s -g 802-11-wireless-security.psk connection show hotspot-1"
         self.assertEqual(self.appels().count(lecture), 1)
-        # Changer de profil efface le secret ; la fermeture détruit la fiche.
-        self.ipc("essai", "choisir", "wifi-1")
-        e = self.jusqua(lambda e: e["fiche"]["uuid"] == "wifi-1", "autre profil")
-        self.assertEqual((e["fiche"]["secret"], e["fiche"]["revele"]), (0, False))
+        # Replier le dépliant efface le secret ; la fermeture détruit la fenêtre.
+        self.ipc("essai", "basculer", "hotspot-1")
+        self.depliant(lambda d: not d["charge"], "replié", "hotspot-1")
+        self.ipc("essai", "basculer", "hotspot-1")
+        d = self.depliant(lambda d: d["charge"] and d["lu"], "rouvert", "hotspot-1")
+        self.assertEqual((d["secret"], d["revele"]), (0, False))
         self.ipc("essai", "fermer")
         self.jusqua(lambda e: not e["fenetre"], "fenêtre détruite")
         self.assertNotIn(self.SECRET, self.journal())
 
     def test_copie_du_secret(self):
-        # La copie du mot de passe le lit par la même commande que l'œil, le met au presse-papiers sans remplir ni
-        # révéler le champ, et le champ montre son retour de copie ; le secret ne paraît jamais au journal.
-        self.ouvrir("hotspot-1")
-        self.ipc("essai", "cliquer", "copierSecret")
+        # Réécrit pour le dépliant (L2-65), en complément de test_secret_dans_le_depliant (qui vise le réseau joint) :
+        # pour un réseau connu, la copie lit le mot de passe par la même commande que l'œil, le met au presse-papiers
+        # sans remplir ni révéler le champ, et le champ montre son retour de copie ; replier le dépliant retire la
+        # coche ; le secret ne paraît jamais au journal.
+        self.deplier()
+        self.ipc("essai", "regler", "hotspot-1", "copierSecret")
         fin = time.monotonic() + DELAI
         while self.ipc("essai", "presse") != self.SECRET:
             self.assertLess(time.monotonic(), fin, self.appels())
             time.sleep(0.05)
-        e = self.jusqua(lambda e: e["fiche"]["copieSecret"], "retour de copie du champ")
-        self.assertEqual((e["fiche"]["secret"], e["fiche"]["revele"]), (0, False))
+        d = self.depliant(lambda d: d["copie"], "retour de copie du champ", "hotspot-1")
+        self.assertEqual((d["secret"], d["revele"]), (0, False))
         self.assertEqual(self.appels().count("-s -g 802-11-wireless-security.psk connection show hotspot-1"), 1)
-        # Le changement de profil masque le secret et retire aussitôt la coche de copie (masquerSecret).
-        self.ipc("essai", "choisir", "wifi-1")
-        e = self.jusqua(lambda e: e["fiche"]["uuid"] == "wifi-1", "autre profil")
-        self.assertFalse(e["fiche"]["copieSecret"])
+        self.ipc("essai", "basculer", "hotspot-1")
+        self.depliant(lambda d: not d["charge"], "replié", "hotspot-1")
+        self.ipc("essai", "basculer", "hotspot-1")
+        d = self.depliant(lambda d: d["charge"] and d["lu"], "rouvert", "hotspot-1")
+        self.assertFalse(d["copie"])
         self.assertNotIn(self.SECRET, self.journal())
 
     def test_oublier(self):
-        self.ouvrir("hotspot-1")
-        self.ipc("essai", "cliquer", "oublier")
-        self.assertTrue(self.etat()["fiche"]["confirmer"])
+        # Réécrit pour le dépliant (L2-65) : « Oublier ce réseau » est au pied du dépliant et demande confirmation ;
+        # rien n'est supprimé avant la confirmation, qui écrit « connection delete » sur l'uuid.
+        self.deplier()
+        self.ipc("essai", "regler", "hotspot-1", "oublier")
+        self.depliant(lambda d: d["confirmer"], "confirmation demandée", "hotspot-1")
         self.assertFalse(any("delete" in a for a in self.appels()))
-        self.ipc("essai", "cliquer", "confirmer")
+        self.ipc("essai", "regler", "hotspot-1", "confirmer")
         fin = time.monotonic() + DELAI
         while "connection delete hotspot-1" not in self.appels():
             self.assertLess(time.monotonic(), fin, self.appels())
             time.sleep(0.05)
 
     def test_modifications_rapprochees(self):
-        # Course éprouvée : les lectures sont lentes (nmcli factice), si bien que la lecture lancée à l'ouverture, ou
-        # celle qu'a demandée la première modification, répond après la seconde. Une lecture lancée avant la dernière
-        # écriture est périmée : elle n'écrase pas la valeur affichée, le second pas part de 10 et écrit 11, et la
-        # fiche finit sur la dernière valeur enregistrée.
-        self.ouvrir("hotspot-1")
+        # Réécrit pour le dépliant (L2-65), où se trouve désormais la priorité. Course éprouvée : les lectures sont
+        # lentes (nmcli factice), si bien que la lecture lancée à l'ouverture, ou celle qu'a demandée la première
+        # modification, répond après la seconde. Une lecture lancée avant la dernière écriture est périmée : elle
+        # n'écrase pas la valeur affichée, le second pas part de 10 et écrit 11, et le dépliant finit sur la dernière
+        # valeur enregistrée.
+        self.deplier()
         (self.bin / "lent").touch()
         lectures = lambda: len([a for a in self.appels() if a.endswith("connection show hotspot-1") and a.startswith("-t -f")])
         avant = lectures()
-        self.ipc("essai", "cliquer", "plus")
+        self.ipc("essai", "regler", "hotspot-1", "plus")
         fin = time.monotonic() + DELAI
         while lectures() <= avant:
             self.assertLess(time.monotonic(), fin, self.appels())
             time.sleep(0.02)
-        self.ipc("essai", "cliquer", "plus")
-        e = self.jusqua(lambda e: e["fiche"]["priorite"] == 11 and "connection modify hotspot-1 connection.autoconnect-priority 11"
-                        in self.appels(), "priorité 11 écrite et affichée")
+        self.ipc("essai", "regler", "hotspot-1", "plus")
+        self.depliant(lambda d: d["priorite"] == 11 and "connection modify hotspot-1 connection.autoconnect-priority 11"
+                      in self.appels(), "priorité 11 écrite et affichée", "hotspot-1")
         self.assertEqual(self.appels().count("connection modify hotspot-1 connection.autoconnect-priority 10"), 1,
                          self.appels())
 
     def test_pas_rapproches_sans_attente(self):
-        # Deux pas enchaînés sans laisser une lecture finir : le second part de la valeur affichée, jamais d'une
-        # lecture périmée.
-        self.ouvrir("hotspot-1")
+        # Réécrit pour le dépliant (L2-65). Deux pas enchaînés sans laisser une lecture finir : le second part de la
+        # valeur affichée, jamais d'une lecture périmée.
+        self.deplier()
         (self.bin / "lent").touch()
-        self.ipc("essai", "cliquer", "plus")
-        self.ipc("essai", "cliquer", "plus")
+        self.ipc("essai", "regler", "hotspot-1", "plus")
+        self.ipc("essai", "regler", "hotspot-1", "plus")
         self.jusqua(lambda e: "connection modify hotspot-1 connection.autoconnect-priority 11" in self.appels(),
                     "second pas écrit 11")
 

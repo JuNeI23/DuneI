@@ -23,21 +23,25 @@ import "../Barre/icones.js" as Icones
 // PageVpn) ; une sous-page la remplace : la rangée de retour « ‹ Wi-Fi » (ou le nom de l'onglet courant), puis la
 // FicheProfil du profil (sousPage = son uuid) ou la FicheNouveau (sousPage = « nouveau »). Changer d'onglet, ouvrir une
 // sous-page ou revenir remet le défilement en haut ; Échap, tant qu'une sous-page est ouverte, revient à la page
-// d'onglet. La FicheProfil n'existe que sous sa sous-page : le secret qu'elle a lu disparaît au retour. Le profil
-// demandé (etat.profilDemande, posé par ajoute après la création d'un profil ; le popover, lui, le vide) ouvre sa
-// sous-page et choisit son onglet (Wi-Fi pour un profil 802-11-wireless, Filaire pour un profil ethernet) ; une demande
-// faite fenêtre ouverte est suivie aussitôt, et toute demande est consommée (remise à vide) dès que son profil est lu.
+// d'onglet. La FicheProfil (« Réglages avancés » : IPv4 et détail, les réglages courants étant dans le dépliant du
+// réseau) n'existe que sous sa sous-page. Le profil demandé (etat.profilDemande, posé par ajoute après la création
+// d'un profil ; le popover, lui, le vide) ouvre sa sous-page et choisit son onglet (Wi-Fi pour un profil
+// 802-11-wireless, Filaire pour un profil ethernet) ; une demande faite fenêtre ouverte est suivie aussitôt, et toute
+// demande est consommée (remise à vide) dès que son profil est lu.
 // Sans demande, la fenêtre s'ouvre sur la page de l'onglet Wi-Fi. Le panneau demande le balayage Wi-Fi
 // (etat.rechercheFenetre) pour toute la vie de la fenêtre et le rend à sa destruction ; changer d'onglet ou de
 // sous-page n'y touche jamais. La facturation de chaque profil Wi-Fi est lue d'un seul processus quand la liste des
-// profils change, puis tenue à jour par les lectures de la fiche ; aucun minuteur.
+// profils change, puis tenue à jour par les lectures de la fiche ; aucun minuteur. Seule la page de l'onglet affiché à
+// l'ouverture est construite (Wi-Fi par défaut) : les pages Filaire et VPN le sont au premier choix de leur onglet,
+// puis gardées (L2-65, ouverture plus rapide).
 // Entrées : etat, la source de l'état et des actions, EtatReseau par défaut ; onglet, « wifi » (défaut), « filaire » ou
 // « vpn » ; sousPage, l'uuid du profil ouvert, « nouveau » pour la fiche d'un autre réseau, vide pour la page d'onglet
 // ; enTete, hauteur réservée en haut de la barre latérale pour les pastilles d'une fenêtre, 0 par défaut.
 // Sorties : onglets, [{cle, nom, etat, icone}] des trois onglets ; rangees, les profils (nmcli.profilsFenetre) ; fiche,
 // la FicheProfil ouverte, null sinon ; nouvelle, la FicheNouveau ouverte, null sinon ; defilement, le Flickable des
-// pages ; liste, la Liste des onglets ; pageWifi, pageFilaire, pageVpn, les trois pages d'onglet, instanciées une fois
-// et gardées (seule leur visibilité change d'un onglet à l'autre) ; factures, uuid → facturation lue. Fonctions :
+// pages ; liste, la Liste des onglets ; pageWifi, pageFilaire, pageVpn, les trois pages d'onglet : la page Wi-Fi
+// existe dès l'ouverture, les deux autres valent null tant que leur onglet n'a pas été choisi, puis restent les mêmes
+// objets (seule leur visibilité change d'un onglet à l'autre) ; factures, uuid → facturation lue. Fonctions :
 // choisirOnglet, ouvrirProfil, ouvrirNouveau, retour, ajoute, remplir.
 // Erreurs : un échec de la lecture des factures laisse les icônes Wi-Fi ordinaires ; une sous-page dont le profil
 // disparaît (supprimé ailleurs) se referme.
@@ -75,8 +79,8 @@ Item {
     readonly property alias defilement: defilement
     readonly property alias liste: liste
     readonly property alias pageWifi: pageWifi
-    readonly property alias pageFilaire: pageFilaire
-    readonly property alias pageVpn: pageVpn
+    readonly property var pageFilaire: chargeurFilaire.item
+    readonly property var pageVpn: chargeurVpn.item
     // Uuid des profils Wi-Fi : la facturation est relue quand cette liste change, et seulement alors.
     readonly property string cleFactures: rangees.filter(r => r.wifi).map(r => r.uuid).join(" ")
 
@@ -279,8 +283,8 @@ Item {
                 onClicked: panneau.retour()
             }
 
-            // Les trois pages d'onglet sont instanciées une fois, à la construction du panneau, et gardées : un
-            // changement d'onglet n'en bascule que la visibilité. Une page masquée ne pèse pas dans la pile.
+            // La page Wi-Fi est construite à l'ouverture ; Filaire et VPN le sont au premier choix de leur onglet, puis
+            // gardées : un changement d'onglet n'en bascule que la visibilité. Une page masquée ne pèse pas dans la pile.
             PageWifi {
                 id: pageWifi
                 visible: panneau.sousPage === "" && panneau.onglet === "wifi"
@@ -288,19 +292,27 @@ Item {
                 panneau: soi
                 etat: panneau.etat
             }
-            PageFilaire {
-                id: pageFilaire
+            Loader {
+                id: chargeurFilaire
+                active: panneau.onglet === "filaire" || item !== null
                 visible: panneau.sousPage === "" && panneau.onglet === "filaire"
                 Layout.fillWidth: true
-                panneau: soi
-                etat: panneau.etat
+                sourceComponent: PageFilaire {
+                    width: chargeurFilaire.width
+                    panneau: soi
+                    etat: panneau.etat
+                }
             }
-            PageVpn {
-                id: pageVpn
+            Loader {
+                id: chargeurVpn
+                active: panneau.onglet === "vpn" || item !== null
                 visible: panneau.sousPage === "" && panneau.onglet === "vpn"
                 Layout.fillWidth: true
-                panneau: soi
-                etat: panneau.etat
+                sourceComponent: PageVpn {
+                    width: chargeurVpn.width
+                    panneau: soi
+                    etat: panneau.etat
+                }
             }
             Loader {
                 id: chargeurFiche
@@ -313,7 +325,6 @@ Item {
                     rangee: panneau.rangees.find(r => r.uuid === panneau.sousPage) ?? null
                     etat: panneau.etat
                     onRelu: (u, p) => panneau.factures = Object.assign({}, panneau.factures, {[u]: p.facture})
-                    onOublie: panneau.retour()
                 }
             }
             Loader {

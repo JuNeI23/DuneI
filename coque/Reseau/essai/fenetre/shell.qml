@@ -44,6 +44,17 @@ ShellRoot {
         return null
     }
 
+    // tous — descendants visuels qui vérifient un prédicat, en profondeur. Entrées : racine, Item ; test,
+    // fonction(Item) → bool. Sortie : tableau d'Items, vide sans racine. Erreurs : aucune. Dépendances : aucune.
+    function tous(racine, test) {
+        const r = []
+        for (const e of racine?.children ?? []) {
+            if (test(e)) r.push(e)
+            r.push(...tous(e, test))
+        }
+        return r
+    }
+
     // reperable — vrai pour les éléments que focus() nomme : une Ligne (libellé), une Valeur copiable (« copier: » ou « valeur: ») ou
     // l'un des boutons de la sous-page. Entrée : o, un Item. Sortie : booléen. Erreurs : aucune.
     function reperable(o) {
@@ -100,6 +111,8 @@ ShellRoot {
                     ouvertTexte: c?.reglages.ouvertTexte.visible ?? false, champ: c?.reglages.champ.visible ?? false,
                     secret: c?.reglages.champ.length ?? 0, revele: c?.reglages.champ.revele ?? false,
                     copie: c?.reglages.champ.copie ?? false,
+                    priorite: c?.profil.valeurs.priorite ?? null, donnees: c?.profil.valeurs.facture === "yes",
+                    erreurs: c?.profil.erreurs ?? {}, confirmer: c?.reglages.confirmer ?? false,
                     securite: c?.reglages.securite ?? "", debits: c?.debits.visible ?? false,
                     polices: c ? tuilesDe(c.tuiles).reduce((m, t) => {
                         const rang = t.children[1].children[0], v = rang.children[1]
@@ -122,8 +135,8 @@ ShellRoot {
         // (demandeurs de la sonde), depliants (voir essai.depliants), rangees
         // ([groupe, nom, état, icône] des profils), detail (libellé → valeur du détail de la connexion active),
         // onglet et sousPage (ceux du panneau), onglets ([clé, nom, état] des trois onglets), defilement ([contentY,
-        // contentHeight, height]), fiche: {uuid, lu, priorite, autoconnect, facture, fixe, erreurs, secret (longueur), revele,
-        // copieSecret (retour de copie du champ secret), confirmer}}.
+        // contentHeight, height]), fiche: {uuid, lu, fixe, erreurs, titre (nom de la carte de tête), libelles (libellés
+        // des Ligne montrées par la sous-page)}}.
         // Entrées : aucune. Sortie : texte JSON. Erreurs : aucune ; fenêtre fermée, rangees, detail et fiche vides.
         function etat(): string {
             const p = fenetre.panneau
@@ -141,9 +154,9 @@ ShellRoot {
                 nouvelle: !p?.nouvelle ? {} : {visible: p.nouvelle.visible, securise: p.nouvelle.securise,
                                                 valide: p.nouvelle.valide, erreur: p.nouvelle.erreur},
                 fiche: !f ? {} : {
-                    uuid: f.uuid, lu: f.lu, priorite: f.valeurs.priorite, autoconnect: f.valeurs.autoconnect,
-                    facture: f.valeurs.facture === "yes", fixe: f.fixe, erreurs: f.erreurs,
-                    secret: f.secret.length, revele: f.secret.revele, copieSecret: f.secret.copie, confirmer: f.confirmer,
+                    uuid: f.uuid, lu: f.lu, fixe: f.fixe, erreurs: f.erreurs,
+                    titre: essai.nomme("enTete")?.libelle ?? "",
+                    libelles: essai.tous(f, o => typeof o.libelle === "string" && o.libelle !== "" && o.visible).map(o => o.libelle),
                 },
             })
         }
@@ -200,8 +213,9 @@ ShellRoot {
         }
         // mesure — durée en millisecondes de la dernière bascule, -1 tant qu'elle n'est pas finie. Sortie : texte.
         function mesure(): string { return String(essai.dureeBascule) }
-        // pages — identité (type et adresse) des trois pages d'onglet, en JSON, pour vérifier qu'elles survivent aux
-        // changements d'onglet. Sortie : texte JSON. Erreurs : fenêtre fermée, TypeError au journal.
+        // pages — identité (type et adresse) des trois pages d'onglet, en JSON (« null » pour une page pas encore
+        // construite), pour vérifier qu'elles se construisent à la demande et survivent aux changements d'onglet.
+        // Sortie : texte JSON. Erreurs : fenêtre fermée, TypeError au journal.
         function pages(): string {
             const p = fenetre.panneau
             return JSON.stringify([p.pageWifi, p.pageFilaire, p.pageVpn].map(String))
@@ -253,19 +267,9 @@ ShellRoot {
             essai.trouver(d, o => o.objectName === "avances").clicked()
         }
 
-        // cliquer — geste sur un contrôle de la fiche : plus et moins (pas du Compteur de priorité), facture, auto,
-        // fixe, automatique, oeil, copierSecret (copie du mot de passe, comme le bouton de copie du champ), connexion,
-        // oublier (rangée cliquable), confirmer. Entrée : nom. Sortie : aucune.
-        // Erreurs : nom inconnu, TypeError au journal.
-        function cliquer(nom: string): void {
-            const o = essai.nomme(nom === "oeil" || nom === "copierSecret" ? "secret" : nom === "plus" || nom === "moins" ? "priorite" : nom)
-            if (nom === "oeil") o.basculer()
-            else if (nom === "copierSecret") o.copier()
-            else if (nom === "plus" || nom === "moins") { nom === "plus" ? o.increase() : o.decrease(); o.valueModified() }
-            else if (nom === "facture" || nom === "auto") { o.toggle(); o.toggled() }
-            else if (nom === "oublier") o.clique()
-            else o.clicked()
-        }
+        // cliquer — geste sur un contrôle de la sous-page : fixe, automatique, connexion (boutons ou onglets).
+        // Entrée : nom. Sortie : aucune. Erreurs : nom inconnu, TypeError au journal.
+        function cliquer(nom: string): void { essai.nomme(nom).clicked() }
 
         // basculer — clic sur la ligne de tête d'un dépliant de réseau. Entrée : uuid. Sortie : aucune.
         // Erreurs : dépliant absent, TypeError au journal.
