@@ -95,7 +95,8 @@ ShellRoot {
                 // page — état de la page, en JSON : {titres (étiquettes de section visibles), appareil (libellé de la
                 // rangée de tête), aide (son état), actif (son médaillon est à l'accent), materiel (adresse matérielle
                 // montrée, vide sans rangée), profils (noms des profils filaires, dans l'ordre), aucun (« Aucun profil
-                // filaire. » est montré), depliant ({existe (le dépliant de la connexion active est montré), ouvert, lu
+                // filaire. » est montré), depliant ({existe (le dépliant de la connexion active est montré), charge (son
+                // contenu est chargé, montré ou non), ouvert, lu
                 // (profil lu), tuiles (libellé → texte), reglages (libellés des réglages montrés), pied (libellés des
                 // boutons du pied), debits (la courbe est montrée), carteAdresses (une CarteAdresses existe : toujours
                 // faux)}}. Erreurs : aucune.
@@ -107,7 +108,7 @@ ShellRoot {
                     const c = f?.corps
                     const tuilesDe = g => Array.from(g?.children ?? []).filter(t => t.largeur !== undefined && t.visible)
                     const depliant = {
-                        existe: f !== null, ouvert: f?.ouvert ?? false, lu: c?.profil.lu ?? false,
+                        existe: f !== null, charge: page.depliant.corps !== null, ouvert: f?.ouvert ?? false, lu: c?.profil.lu ?? false,
                         tuiles: c ? c.tuiles.liste.reduce((m, t) => (m[t.libelle] = t.texte, m), {}) : {},
                         reglages: c ? tuilesDe(c.reglages.grille).map(t => t.libelle) : [],
                         pied: c ? essai.tous_(c.reglages, o => (o.objectName === "avances" || o.objectName === "oublier") && o.visible).map(o => o.text) : [],

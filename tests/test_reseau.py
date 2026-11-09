@@ -1435,6 +1435,8 @@ class PageFilaireTest(EssaiCoque, unittest.TestCase):
         p = self.jusqua(lambda p: p["aide"] == "Aucune carte", "aucune carte")
         self.assertEqual((p["appareil"], p["actif"], p["materiel"]), ("Ethernet", False, ""))
         self.assertFalse(p["depliant"]["existe"])
+        # Sans connexion active, le dépliant masqué ne charge rien : son contenu est déchargé.
+        self.jusqua(lambda p: not p["depliant"]["charge"], "contenu déchargé")
 
     def test_cable_debranche(self):
         # Carte sans câble : l'état le dit, l'adresse matérielle reste lisible, et aucun dépliant n'est montré.
@@ -1442,6 +1444,10 @@ class PageFilaireTest(EssaiCoque, unittest.TestCase):
         p = self.jusqua(lambda p: p["aide"] == "Câble débranché", "câble débranché")
         self.assertEqual((p["appareil"], p["actif"], p["materiel"]), ("Ethernet (enp3s0)", False, "8C:16:45:2E:71:B0"))
         self.assertFalse(p["depliant"]["existe"])
+        self.jusqua(lambda p: not p["depliant"]["charge"], "contenu déchargé")
+        # Câble rebranché : le dépliant se charge et s'ouvre de nouveau.
+        self.ipc("mode", "connecte")
+        self.jusqua(lambda p: p["depliant"]["existe"] and p["depliant"]["ouvert"] and p["depliant"]["lu"], "dépliant rouvert")
 
     def test_sans_profil(self):
         self.ipc("sansProfils")

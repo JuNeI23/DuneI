@@ -74,7 +74,8 @@ ColumnLayout {
             visible: page.deplie
             Layout.fillWidth: true
             detaille: true
-            ouvert: page.ouvert
+            // Sans connexion active, le dépliant reste replié : rien n'est chargé ni lu.
+            ouvert: page.ouvert && page.deplie
             portee: true
             etat: page.etat
             rangee: page.actif
