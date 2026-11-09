@@ -45,6 +45,10 @@ Scope {
         Qt.callLater(() => { racine._debutDestruction = Date.now(); EtatReseau.fenetre = false })
     }
 
+    // mesurerDestruction — note la durée de la destruction qui vient de s'achever, depuis le lâcher du chargeur.
+    // Entrées : aucune. Sortie : aucune (écrit dureeDestruction). Erreurs : aucune. Dépendances : Date.
+    function mesurerDestruction() { dureeDestruction = Date.now() - _debutDestruction }
+
     LazyLoader {
         id: chargeur
         activeAsync: EtatReseau.fenetre && Theme.ready
@@ -57,7 +61,7 @@ Scope {
             implicitWidth: Theme.reglages?.windowWidth ?? 0
             implicitHeight: Theme.reglages?.windowHeight ?? 0
             minimumSize: Qt.size(Theme.reglages?.windowMinWidth ?? 0, Theme.reglages?.windowMinHeight ?? 0)
-            Component.onDestruction: if (racine._debutDestruction) Qt.callLater(() => racine.dureeDestruction = Date.now() - racine._debutDestruction)
+            Component.onDestruction: if (racine._debutDestruction) Qt.callLater(racine.mesurerDestruction)
             onClosed: racine.fermer()
             onVisibleChanged: if (!visible) racine.fermer()
 
