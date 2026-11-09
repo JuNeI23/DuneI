@@ -89,6 +89,51 @@ ColumnLayout {
     }
     Component.onCompleted: trier()
 
+    // montrer — déplie un réseau dans la page et y fait défiler : le dépliant du réseau joint s'il s'agit du joint
+    // (ouvert), sinon le réseau connu (section des réseaux connus ouverte, connuOuvert à son uuid). Demandé par le
+    // panneau pour un profil demandé (« Détails… » du popover, réseau ajouté). Entrée : uuid, le profil. Sortie :
+    // aucune ; le défilement suit la mise en page (aMontrer) tant que la hauteur de la page change, pendant au plus
+    // une seconde, et cesse dès que l'utilisateur fait défiler. Erreurs : aucune ; un uuid absent des listes ne
+    // déplie ni ne défile rien. Dépendances : joint, depliant, connusOuverts, connuOuvert, defiler, finMontrer.
+    function montrer(uuid) {
+        if (joint?.uuid === uuid) { if (depliant) depliant.ouvert = true }
+        else { connusOuverts = true; connuOuvert = uuid }
+        aMontrer = uuid
+        finMontrer.restart()
+        Qt.callLater(defiler)
+    }
+
+    // defiler — fait défiler la page jusqu'au réseau à montrer. Entrées : aucune. Sortie : aucune. Erreurs : aucune ;
+    // sans réseau à montrer ou sans son dépliant, ne fait rien. Dépendances : aMontrer, chercher, panneau.defilement.
+    function defiler() {
+        const cible = aMontrer === "" ? null : chercher(page, "depliant:" + aMontrer)
+        if (!cible) return
+        const d = panneau.defilement
+        d.contentY = Math.max(0, Math.min(cible.mapToItem(d.contentItem, 0, 0).y - (Theme.space?.blockGap ?? 0),
+                                          d.contentHeight - d.height))
+    }
+
+    // Réseau à montrer, vide au repos ; la page suit les changements de hauteur du défilement (ouverture de la fenêtre,
+    // de la section, du dépliant) jusqu'à la fin de la borne ou au premier geste de l'utilisateur.
+    property string aMontrer: ""
+    Timer { id: finMontrer; interval: 1000; onTriggered: page.aMontrer = "" }
+    Connections {
+        target: page.panneau.defilement
+        function onContentHeightChanged() { page.defiler() }
+        function onMovementStarted() { page.aMontrer = "" }
+    }
+
+    // chercher — premier descendant visuel d'un objectName, en profondeur. Entrées : racine, Item ; nom. Sortie :
+    // l'Item, ou null. Erreurs : aucune. Dépendances : aucune.
+    function chercher(racine, nom) {
+        for (const e of racine.children) {
+            if (e.objectName === nom) return e
+            const r = chercher(e, nom)
+            if (r) return r
+        }
+        return null
+    }
+
     // rechercher — relance « nmcli device wifi rescan » et montre l'Activite jusqu'au retour de la liste, au plus
     // finBalayage.interval (motion.delays.scan). Entrées : aucune. Sortie : aucune. Erreurs : aucune.
     // Dépendances : etat.executer, finBalayage.

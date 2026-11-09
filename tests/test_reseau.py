@@ -1990,7 +1990,10 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
         self.ipc("essai", "remplirNouveau", "Nouveau: essai", "true", "m0t-de-passe", "true")
         self.assertTrue(self.etat()["nouvelle"]["valide"])
         self.ipc("essai", "cliquerNouveau", "ajouter")
-        e = self.jusqua(lambda e: e["fiche"].get("uuid") == "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee", "profil créé choisi")
+        # Changé par L2-65 : le profil créé n'ouvre plus la sous-page, il se déplie parmi les réseaux connus.
+        uuid = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
+        e = self.jusqua(lambda e: e["depliants"].get(uuid, {}).get("ouvert"), "profil créé déplié")
+        self.assertEqual((e["onglet"], e["sousPage"], e["fiche"]), ("wifi", "", {}))
         self.assertIn("connection add type wifi con-name Nouveau: essai ssid Nouveau: essai wifi-sec.key-mgmt wpa-psk "
                       "wifi-sec.psk m0t-de-passe 802-11-wireless.hidden yes", self.appels())
         self.assertFalse(e["nouvelle"].get("visible", False))
@@ -2017,13 +2020,18 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
 
     def test_profil_demande(self):
         # « Détails… » du popover : la fenêtre s'ouvre sur le profil demandé (par uuid ou par nom), et la demande est
-        # consommée ; une demande faite fenêtre ouverte est suivie aussitôt.
+        # consommée ; une demande faite fenêtre ouverte est suivie aussitôt. Changé par L2-65 : un profil Wi-Fi n'ouvre
+        # plus la sous-page (elle n'a plus les réglages courants) mais se déplie dans la page Wi-Fi, où la page défile
+        # jusqu'à lui : le réseau connu dans sa section ouverte, le réseau joint dans son dépliant ; un profil filaire
+        # garde sa sous-page.
         self.ipc("essai", "demander", "hotspot-1")
-        e = self.jusqua(lambda e: e["fiche"].get("uuid") == "hotspot-1" and e["fiche"]["lu"], "profil demandé lu")
-        self.assertEqual((e["onglet"], e["sousPage"]), ("wifi", "hotspot-1"))
+        e = self.jusqua(lambda e: e["depliants"].get("hotspot-1", {}).get("ouvert") and e["defilement"][0] > 0,
+                        "réseau connu déplié, page défilée")
+        self.assertEqual((e["onglet"], e["sousPage"], e["fiche"]), ("wifi", "", {}))
         self.assertEqual(self.ipc("essai", "demande"), "")
         self.ipc("essai", "demander", "Wifi_TRIADES")
-        self.jusqua(lambda e: e["fiche"].get("uuid") == "wifi-1", "demande suivie fenêtre ouverte")
+        e = self.jusqua(lambda e: e["depliants"]["wifi-1"]["ouvert"], "réseau joint déplié, demande suivie fenêtre ouverte")
+        self.assertEqual((e["onglet"], e["sousPage"], e["fiche"]), ("wifi", "", {}))
         self.assertEqual(self.ipc("essai", "demande"), "")
         # Un profil filaire choisit l'onglet Filaire.
         self.ipc("essai", "demander", "filaire-1")
@@ -2046,9 +2054,12 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
     def test_onglet_vpn_connecte(self):
         # Un VPN actif lu par EtatReseau passe l'état de l'onglet de « Non connecté » à « Connecté ».
         (self.bin / "vpn").touch()
-        self.ouvrir("hotspot-1")
-        self.ipc("essai", "cliquer", "plus")
+        # Réécrit pour L2-65 : le geste « plus » (priorité) n'a plus d'objet dans la sous-page et n'était qu'un
+        # prétexte ; l'ouverture de la fenêtre suffit à lire l'état du VPN.
+        self.ipc("reseau", "ouvrir")
+        self.jusqua(lambda e: e["fenetre"] and e["rangees"], "fenêtre construite et profils lus")
         self.jusqua(lambda e: e["onglets"][2][2] == "Connecté", "VPN connecté")
+        self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
 
     def tabuler_jusqu_a(self, libelle: str, essais: int = 12):
         """Frappe Tab jusqu'à ce que le focus soit sur la Ligne de ce libellé (douze frappes au plus par défaut).
@@ -2143,7 +2154,7 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
         e = self.jusqua(lambda e: e["fiche"].get("uuid") == "wifi-1" and e["fiche"]["lu"], "sous-page ouverte")
         self.assertEqual(e["fiche"]["titre"], "Wifi_TRIADES")
         libelles = e["fiche"]["libelles"]
-        self.assertTrue({"Configuration", "Adresse", "DNS", "IPv6"} <= set(libelles + list(e["detail"])), libelles)
+        self.assertTrue({"Configuration", "Adresse", "DNS", "IPv6"} <= set(libelles), libelles)
         self.assertEqual(e["detail"]["IPv6"], "fe80::1/64")
         self.assertGreater(e["toutCopier"], 0)
         for retire in ("Mot de passe", "Connexion automatique", "Priorité", "Connexion facturée", "Données limitées",

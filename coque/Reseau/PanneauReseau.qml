@@ -25,9 +25,10 @@ import "../Barre/icones.js" as Icones
 // sous-page ou revenir remet le défilement en haut ; Échap, tant qu'une sous-page est ouverte, revient à la page
 // d'onglet. La FicheProfil (« Réglages avancés » : IPv4 et détail, les réglages courants étant dans le dépliant du
 // réseau) n'existe que sous sa sous-page. Le profil demandé (etat.profilDemande, posé par ajoute après la création
-// d'un profil ; le popover, lui, le vide) ouvre sa sous-page et choisit son onglet (Wi-Fi pour un profil
-// 802-11-wireless, Filaire pour un profil ethernet) ; une demande faite fenêtre ouverte est suivie aussitôt, et toute
-// demande est consommée (remise à vide) dès que son profil est lu.
+// d'un profil ; le popover, lui, le vide) choisit son onglet (Wi-Fi pour un profil 802-11-wireless, Filaire pour un
+// profil ethernet) ; un profil Wi-Fi est alors déplié dans la page et la page y défile (PageWifi.montrer : le dépliant
+// du réseau joint, ou le réseau connu), un profil filaire ouvre sa sous-page ; une demande faite fenêtre ouverte est
+// suivie aussitôt, et toute demande est consommée (remise à vide) dès que son profil est lu.
 // Sans demande, la fenêtre s'ouvre sur la page de l'onglet Wi-Fi. Le panneau demande le balayage Wi-Fi
 // (etat.rechercheFenetre) pour toute la vie de la fenêtre et le rend à sa destruction ; changer d'onglet ou de
 // sous-page n'y touche jamais. La facturation de chaque profil Wi-Fi est lue d'un seul processus quand la liste des
@@ -109,16 +110,17 @@ Item {
         remplir()
     }
 
-    // remplir — ouvre la sous-page du profil demandé par etat.profilDemande (uuid ou nom) s'il figure parmi les
-    // rangées, après avoir choisi son onglet, puis consomme la demande ; referme une sous-page dont le profil n'existe
+    // remplir — montre le profil demandé par etat.profilDemande (uuid ou nom) s'il figure parmi les rangées, après
+    // avoir choisi son onglet (déplié dans la page Wi-Fi, ou sous-page d'un profil filaire), puis consomme la demande ; referme une sous-page dont le profil n'existe
     // plus. Entrées : aucune. Sortie : aucune. Erreurs : aucune ; une demande dont le profil n'est pas (encore) lu
-    // attend la lecture suivante. Dépendances : rangees, etat.profilDemande, choisirOnglet, ouvrirProfil.
+    // attend la lecture suivante. Dépendances : rangees, etat.profilDemande, choisirOnglet, ouvrirProfil, pageWifi.montrer.
     function remplir() {
         const demande = etat.profilDemande === "" ? null
             : rangees.find(r => r.uuid === etat.profilDemande || r.nom === etat.profilDemande)
         if (demande) {
             choisirOnglet(demande.wifi ? "wifi" : "filaire")
-            ouvrirProfil(demande.uuid)
+            if (demande.wifi) pageWifi.montrer(demande.uuid)
+            else ouvrirProfil(demande.uuid)
             etat.profilDemande = ""
         } else if (sousPageProfil && rangees.length > 0 && !rangees.some(r => r.uuid === sousPage)) retour()
     }
