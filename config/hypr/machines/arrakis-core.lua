@@ -5,6 +5,8 @@
 
 -- Écran interne, nommé par son port, qui ne change pas pour une dalle intégrée. Échelle validée à l'écran (D158).
 hl.monitor({ output = "eDP-1", mode = "1920x1080@60", position = "0x0", scale = 1.25 })  -- surface logique de 1536 × 864
+-- XWayland ne met pas les applications X11 à l'échelle (D161) : Steam reçoit l'échelle de l'écran par sa propre variable.
+hl.env("STEAM_FORCE_DESKTOPUI_SCALING", "1.25")
 
 -- Clavier interne en disposition française ; la touche Compose est commune (modules/entree.lua).
 hl.config({ input = { kb_layout = "fr" } })
