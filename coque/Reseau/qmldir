@@ -2,7 +2,6 @@ module Reseau
 singleton EtatReseau 1.0 EtatReseau.qml
 PopoverReseau 1.0 PopoverReseau.qml
 PanneauReseau 1.0 PanneauReseau.qml
-FicheProfil 1.0 FicheProfil.qml
 ProfilReseau 1.0 ProfilReseau.qml
 FenetreReseau 1.0 FenetreReseau.qml
 Groupe 1.0 Groupe.qml
@@ -23,3 +22,4 @@ TuilesConnexion 1.0 TuilesConnexion.qml
 ReglagesReseau 1.0 ReglagesReseau.qml
 IconeSignal 1.0 IconeSignal.qml
 ConnusWifi 1.0 ConnusWifi.qml
+AvancesReseau 1.0 AvancesReseau.qml

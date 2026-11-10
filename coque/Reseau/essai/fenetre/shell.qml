@@ -22,6 +22,21 @@ ShellRoot {
 
     // Durée de la dernière bascule d'onglet (ms), -1 tant qu'elle court.
     property int dureeBascule: -1
+    // Uuid du profil dont les réglages avancés sont à déplier dès que son dépliant a chargé son contenu, vide sinon.
+    property string avancesDe: ""
+
+    // Déplie les réglages avancés du profil demandé (avancesDe) dès que son dépliant les porte, puis oublie la demande.
+    Timer {
+        interval: 50
+        repeat: true
+        running: essai.avancesDe !== ""
+        onTriggered: {
+            const r = essai.depliant(essai.avancesDe)?.corps?.reglages
+            if (!r) return
+            r.pli.ouvert = true
+            essai.avancesDe = ""
+        }
+    }
 
     FenetreReseau { id: fenetre }
 
@@ -55,14 +70,19 @@ ShellRoot {
         return r
     }
 
-    // reperable — vrai pour les éléments que focus() nomme : une Ligne (libellé), une Valeur copiable (« copier: » ou « valeur: ») ou
-    // l'un des boutons de la sous-page. Entrée : o, un Item. Sortie : booléen. Erreurs : aucune.
+    // reperable — vrai pour les éléments que focus() nomme : une Ligne (libellé), une Valeur copiable (« copier: » ou
+    // « valeur: »), la section « Réglages avancés » d'un dépliant (pliAvances), le retour de la sous-page ou l'un des
+    // boutons du dépliant. Entrée : o, un Item. Sortie : booléen. Erreurs : aucune.
     function reperable(o) {
-        return !!o.libelle || ["retour", "connexion", "toutCopier", "avances"].includes(o.objectName) || /^(copier|valeur):/.test(String(o.objectName))
+        return !!o.libelle || ["retour", "rejoindre", "toutCopier", "pliAvances"].includes(o.objectName) || /^(copier|valeur):/.test(String(o.objectName))
     }
 
-    // nomme — descendant de la fiche par son objectName. Entrée : nom. Sortie : l'Item, ou null.
-    function nomme(nom) { return trouver(fenetre.panneau?.fiche, o => o.objectName === nom) }
+    // fiche — les réglages avancés dépliés (AvancesReseau) de la fenêtre, null sans eux : ils tiennent lieu de
+    // l'ancienne sous-page de profil (D155). Entrées : aucune. Sortie : l'Item, ou null. Erreurs : aucune.
+    function fiche() { return trouver(fenetre.panneau, o => o.objectName === "avancesReseau" && o.visible) }
+
+    // nomme — descendant des réglages avancés dépliés par son objectName. Entrée : nom. Sortie : l'Item, ou null.
+    function nomme(nom) { return trouver(fiche(), o => o.objectName === nom) }
 
     // selection — clé de sélection, graisse et contour de la rangée choisie. Entrées : aucune. Sortie : [clé de
     // sélection, gras, contour montré], ou [] sans rangée choisie. Erreurs : aucune. Dépendances : fenetre.panneau (Liste, Rangee).
@@ -75,9 +95,9 @@ ShellRoot {
     // {presse (Quickshell.clipboardText), copie (le libellé dont « Copié » est le texte opaque, « * » pour « Tout copier »,
     // vide sinon), texte (le texte opaque de la Valeur, ou celui du bouton), minuteur (vrai s'il tourne)}. Une Valeur
     // porte son retour et son minuteur (copie, fin) ; « Tout copier » ceux de la fiche. Erreurs : libellé absent,
-    // TypeError au journal. Dépendances : fenetre.panneau.fiche, nomme.
+    // TypeError au journal. Dépendances : fiche, nomme.
     function lireCopie(cle) {
-        const f = fenetre.panneau.fiche
+        const f = fiche()
         const o = nomme(cle === "" ? "toutCopier" : "copier:" + cle)
         if (cle === "") return JSON.stringify({presse: Quickshell.clipboardText, copie: f.copie, texte: o.text, minuteur: f.finCopie.running})
         // Ce que la Valeur montre : son texte, ou « Copié », celui des deux Text de la Valeur qui est le plus opaque.
@@ -86,12 +106,19 @@ ShellRoot {
                                minuteur: o.fin.running})
     }
 
-    // depliant — dépliant de réseau de la fenêtre par l'uuid de son profil. Entrée : uuid. Sortie : l'Item, ou null.
-    function depliant(uuid) { return trouver(fenetre.panneau, o => o.objectName === "depliant:" + uuid) }
+    // depliant — dépliant de réseau de la fenêtre par l'uuid de son profil, le visible de préférence : un profil filaire
+    // a deux dépliants, celui de la connexion active, masqué sans câble, et celui de la section « Profils ». Entrée :
+    // uuid. Sortie : l'Item, ou null.
+    function depliant(uuid) {
+        const nom = "depliant:" + uuid
+        return trouver(fenetre.panneau, o => o.objectName === nom && o.visible) ?? trouver(fenetre.panneau, o => o.objectName === nom)
+    }
 
     // depliants — état des dépliants de réseau de la fenêtre, par uuid : {ouvert, charge (contenu chargé), lu (profil
-    // lu), tuiles (libellé → texte des tuiles d'information), reglages (libellés des réglages montrés), ouvertTexte
-    // (« Réseau ouvert : aucun mot de passe » montré), champ (champ du mot de passe montré), secret (longueur de son
+    // lu), tuiles (libellé → texte des tuiles d'information de la page), avances (réglages avancés dépliés),
+    // tuilesAvances (libellé → texte des tuiles des réglages avancés chargés), titre (nom mis en valeur dans la tête),
+    // pied (textes des boutons du pied montrés), reglages (libellés des réglages montrés), ouvertTexte
+    // (« Aucun (réseau ouvert) » montré), champ (champ du mot de passe montré), secret (longueur de son
     // texte, jamais le texte), revele, copie (coche du retour de copie), debits (débits montrés), polices (libellé →
     // [famille, graisse, taille] de la valeur de chaque tuile), securite (texte de la
     // tuile Sécurité), grille: {tuiles: [x des tuiles], reglages: [[x du réglage, x de son contrôle]]}, abscisses
@@ -107,6 +134,10 @@ ShellRoot {
                 r[e.rangee?.uuid ?? ""] = {
                     ouvert: e.ouvert, charge: c !== null, lu: c?.profil.lu ?? false,
                     tuiles: c ? c.tuiles.liste.reduce((m, t) => (m[t.libelle] = t.texte, m), {}) : {},
+                    avances: c?.reglages.pli.ouvert ?? false,
+                    tuilesAvances: (c?.reglages.contenuAvances?.tuiles.visible ? c.reglages.contenuAvances.tuiles.liste : []).reduce((m, t) => (m[t.libelle] = t.texte, m), {}),
+                    titre: trouver(e, o => o.objectName === "tete")?.titre ?? false,
+                    pied: c ? tous(c.reglages, o => ["rejoindre", "oublier"].includes(o.objectName) && o.visible).map(o => o.text) : [],
                     reglages: c ? tuilesDe(c.reglages.grille).map(t => t.libelle) : [],
                     ouvertTexte: c?.reglages.ouvertTexte.visible ?? false, champ: c?.reglages.champ.visible ?? false,
                     secret: c?.reglages.champ.length ?? 0, revele: c?.reglages.champ.revele ?? false,
@@ -133,14 +164,14 @@ ShellRoot {
 
         // etat — état de la fenêtre, en JSON : {fenetre (construite), demandee (EtatReseau.fenetre), sondeurs
         // (demandeurs de la sonde), depliants (voir essai.depliants), rangees
-        // ([groupe, nom, état, icône] des profils), detail (libellé → valeur du détail de la connexion active),
-        // onglet et sousPage (ceux du panneau), onglets ([clé, nom, état] des trois onglets), defilement ([contentY,
-        // contentHeight, height]), fiche: {uuid, lu, fixe, erreurs, titre (nom de la carte de tête), libelles (libellés
-        // des Ligne montrées par la sous-page)}}.
+        // ([groupe, nom, état, icône] des profils), detail (libellé → valeur du détail de la connexion active, dans les
+        // réglages avancés dépliés), onglet et sousPage (ceux du panneau), onglets ([clé, nom, état] des trois onglets),
+        // defilement ([contentY, contentHeight, height]), fiche: les réglages avancés dépliés (essai.fiche) {uuid, lu,
+        // fixe, erreurs, titre (nom du réseau de leur dépliant), libelles (libellés des Ligne montrées)}}.
         // Entrées : aucune. Sortie : texte JSON. Erreurs : aucune ; fenêtre fermée, rangees, detail et fiche vides.
         function etat(): string {
             const p = fenetre.panneau
-            const f = p?.fiche
+            const f = essai.fiche()
             return JSON.stringify({
                 fenetre: p !== null, visible: p?.Window.window?.visible ?? false, demandee: EtatReseau.fenetre,
                 sondeurs: EtatReseau.sondeurs, depliants: essai.depliants(),
@@ -154,8 +185,8 @@ ShellRoot {
                 nouvelle: !p?.nouvelle ? {} : {visible: p.nouvelle.visible, securise: p.nouvelle.securise,
                                                 valide: p.nouvelle.valide, erreur: p.nouvelle.erreur},
                 fiche: !f ? {} : {
-                    uuid: f.uuid, lu: f.lu, fixe: f.fixe, erreurs: f.erreurs,
-                    titre: essai.nomme("enTete")?.libelle ?? "",
+                    uuid: f.profil.uuid, lu: f.lu, fixe: f.fixe, erreurs: f.erreurs,
+                    titre: f.rangee?.nom ?? "",
                     libelles: essai.tous(f, o => typeof o.libelle === "string" && o.libelle !== "" && o.visible).map(o => o.libelle),
                 },
             })
@@ -189,8 +220,9 @@ ShellRoot {
         // popover — pose la demande de balayage du popover, qu'il écrit dans EtatReseau.recherche. Entrée : valeur.
         function popover(valeur: bool): void { EtatReseau.recherche = valeur }
 
-        // choisir — ouvre la sous-page du profil d'un uuid, comme un clic sur sa rangée. Entrée : uuid. Sortie : aucune.
-        function choisir(uuid: string): void { fenetre.panneau.ouvrirProfil(uuid) }
+        // choisir — déplie le profil d'un uuid dans sa page (comme « Détails… » du popover), puis ses réglages avancés,
+        // qui ont remplacé la sous-page de profil (D155). Entrée : uuid. Sortie : aucune.
+        function choisir(uuid: string): void { essai.avancesDe = uuid; EtatReseau.profilDemande = uuid }
 
         // onglet — choisit un onglet, comme un clic sur sa rangée. Entrée : cle (wifi, filaire, vpn). Sortie : aucune.
         function onglet(cle: string): void { fenetre.panneau.liste.itemAtIndex(fenetre.panneau.onglets.findIndex(o => o.cle === cle)).clicked() }
@@ -256,18 +288,11 @@ ShellRoot {
         // defiler — pose le défilement des pages à y pixels. Entrée : y. Sortie : aucune.
         function defiler(y: int): void { fenetre.panneau.defilement.contentY = y }
 
-        // rangeeProfil — ouvre la sous-page du profil d'un uuid depuis la page d'onglet courante : clic sur sa rangée
-        // ou, pour un réseau Wi-Fi connu (L2-65), dépliage de son dépliant puis « Réglages avancés… ». Entrée : uuid.
-        // Sortie : aucune. Erreurs : profil absent, TypeError au journal.
-        function rangeeProfil(uuid: string): void {
-            const l = essai.trouver(fenetre.panneau, o => o.modelData?.uuid === uuid && o.clique !== undefined)
-            if (l) return l.clique()
-            const d = essai.depliant(uuid)
-            d.basculer()
-            essai.trouver(d, o => o.objectName === "avances").clicked()
-        }
+        // rangeeProfil — déplie, depuis la page d'onglet courante, le dépliant du profil d'un uuid (clic sur sa tête),
+        // puis ses réglages avancés. Entrée : uuid. Sortie : aucune. Erreurs : profil absent, TypeError au journal.
+        function rangeeProfil(uuid: string): void { essai.avancesDe = uuid; essai.depliant(uuid).basculer() }
 
-        // cliquer — geste sur un contrôle de la sous-page : fixe, automatique, connexion (boutons ou onglets).
+        // cliquer — geste sur un contrôle des réglages avancés dépliés : fixe, automatique, toutCopier (boutons ou onglets).
         // Entrée : nom. Sortie : aucune. Erreurs : nom inconnu, TypeError au journal.
         function cliquer(nom: string): void { essai.nomme(nom).clicked() }
 
@@ -276,13 +301,15 @@ ShellRoot {
         function basculer(uuid: string): void { essai.trouver(essai.depliant(uuid), o => o.objectName === "tete").clique() }
 
         // regler — geste sur un réglage d'un dépliant de réseau : auto et donnees (interrupteurs), plus et moins (pas du
-        // compteur de priorité), oeil et copierSecret (œil et copie du champ du mot de passe), avances, oublier,
-        // confirmer, rejoindre (boutons du pied). Entrées : uuid, nom.
+        // compteur de priorité), oeil et copierSecret (œil et copie du champ du mot de passe), avances (bascule de la
+        // section « Réglages avancés »), oublier, confirmer, rejoindre (boutons du pied). Entrées : uuid, nom.
         // Sortie : aucune. Erreurs : dépliant fermé ou nom inconnu, TypeError au journal.
         function regler(uuid: string, nom: string): void {
-            const cible = nom === "plus" || nom === "moins" ? "priorite" : nom === "oeil" || nom === "copierSecret" ? "secret" : nom
+            const cible = nom === "plus" || nom === "moins" ? "priorite" : nom === "oeil" || nom === "copierSecret" ? "secret"
+                : nom === "avances" ? "pliAvances" : nom
             const o = essai.trouver(essai.depliant(uuid), i => i.objectName === cible)
-            if (nom === "oeil") o.basculer()
+            if (nom === "avances") o.ouvert = !o.ouvert
+            else if (nom === "oeil") o.basculer()
             else if (nom === "copierSecret") o.copier()
             else if (nom === "plus" || nom === "moins") { nom === "plus" ? o.increase() : o.decrease(); o.valueModified() }
             else if (nom === "auto" || nom === "donnees") { o.toggle(); o.toggled() }

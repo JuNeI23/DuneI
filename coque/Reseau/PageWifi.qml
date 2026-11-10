@@ -8,8 +8,9 @@ import "nmcli.js" as Nmcli
 // PageWifi — page de l'onglet Wi-Fi de la fenêtre Réseau (direction D4, ordre de L2-65).
 // Rôle : de haut en bas, le titre « Wi-Fi » et l'interrupteur de la radio (TitrePage) ; radio coupée, la ligne
 // « Wi-Fi désactivé » ; le champ de recherche (Recherche), qui filtre par nom les trois listes ; le réseau joint, dans
-// son groupe, en DepliantReseau détaillé ouvert à l'ouverture de la page (débits, courbe, tuiles, réglages et pied,
-// dont « Réglages avancés… » qui ouvre la sous-page ; aucune logique nmcli n'est dupliquée ici) ; « Autres réseaux »,
+// son groupe, en DepliantReseau détaillé, replié à l'ouverture de la page (Recette 1 de L2-65, D156) : déplié, débits,
+// courbe, tuiles, réglages, la section « Réglages avancés » et le pied ; aucune logique nmcli n'est dupliquée ici ;
+// « Détails… » du popover le déplie (montrer) ; « Autres réseaux »,
 // avec l'action « Rechercher » alignée sur le bord droit des cartes, les réseaux à portée et sans profil, puis « Autre
 // réseau… » en dernière ligne ; enfin les « Réseaux connus » (ConnusWifi), repliés. Les listes viennent de
 // Nmcli.partager ; radio coupée, aucun réseau n'est tenu pour à portée. Déconnecté, le groupe du réseau joint
@@ -31,7 +32,7 @@ import "nmcli.js" as Nmcli
 // le même contour de focus (tabulation, Entrée, Espace, contour de focus, plaque de survol : bible, « Clavier » et
 // « Survol »). Interrupteur : bible, « Interrupteur ». Champ de recherche : bible, « Champ de recherche ». Formes :
 // jetons Theme.reglages seuls (bible, « Formes »).
-// Entrées : panneau, le PanneauReseau (rangees, factures, ouvrirProfil, ouvrirNouveau) ; etat, la source de l'état et
+// Entrées : panneau, le PanneauReseau (rangees, factures, ouvrirNouveau, defilement) ; etat, la source de l'état et
 // des actions, EtatReseau par défaut.
 // Sorties : filtre, la saisie de la recherche ; listes, le résultat de Nmcli.partager ({joint, autres, connus}) ;
 // joint, la rangée du profil Wi-Fi actif retenue par le filtre (null sans elle) ; connuOuvert, l'uuid du réseau connu
@@ -163,12 +164,6 @@ ColumnLayout {
             jonction.actualiser()
         }
     }
-    // Retour d'une sous-page de l'onglet Wi-Fi : la page restant vivante, le profil du dépliant du réseau joint est relu,
-    // car « Réglages avancés… » a pu changer la connexion automatique, la priorité, la facturation ou l'IPv4.
-    Connections {
-        target: page.panneau
-        function onSousPageChanged() { if (page.panneau.sousPage === "" && page.panneau.onglet === "wifi") page.depliant?.corps?.profil.lire() }
-    }
     // Borne du retour visuel de la recherche quand le balayage ne change pas la liste ; armée par le seul clic.
     Timer { id: finBalayage; interval: Theme.motion?.delays?.scan ?? 0; onTriggered: page.balayage = false }
 
@@ -210,12 +205,11 @@ ColumnLayout {
             sourceComponent: DepliantReseau {
                 width: chargeurJoint.width
                 detaille: true
-                ouvert: true
+                ouvert: false
                 portee: true
                 etat: page.etat
                 rangee: page.actif
                 onBasculer: ouvert = !ouvert
-                onAvances: uuid => page.panneau.ouvrirProfil(uuid)
                 onRelu: (u, p) => page.panneau.factures = Object.assign({}, page.panneau.factures, {[u]: p.facture})
             }
         }

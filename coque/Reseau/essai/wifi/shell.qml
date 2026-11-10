@@ -10,11 +10,11 @@ import "Reseau"
 // Rôle : pose une PageWifi dans une FloatingWindow, branchée sur un état et un panneau factices (aucune action ne
 // touche le réseau réel) : réseaux factices qui journalisent leurs appels (connect, connectWithPsk avec la seule
 // longueur du mot de passe), executer qui journalise ses arguments et rend des profils fixes, panneau qui journalise
-// ouvrirProfil et ouvrirNouveau. tests/test_reseau.py (PageWifiTest) la pilote par IPC (cible « wifi »).
+// ouvrirNouveau. tests/test_reseau.py (PageWifiTest) la pilote par IPC (cible « wifi »).
 // Garde de plateforme : la fenêtre n'est construite que sous offscreen, où elle ne paraît jamais à l'écran.
 // Entrées : DUNEI_TOKENS_DIR, lu par Theme ; QT_QPA_PLATFORM=offscreen, posé par le test.
 // Sortie : « essai : prêt » à l'ouverture, puis les lignes « essai : connect <nom> », « essai : connectWithPsk <nom>
-// <longueur> », « essai : executer <arguments JSON> », « essai : allumer <bool> », « essai : ouvrirProfil <uuid> »,
+// <longueur> », « essai : executer <arguments JSON> », « essai : allumer <bool> »,
 // « essai : ouvrirNouveau ». Le texte d'un mot de passe n'est jamais journalisé ni rendu.
 // Erreurs : celles de Theme et des liaisons, dans le journal. Dépendances : quickshell ≥ 0.3 (FloatingWindow,
 // LazyLoader, IpcHandler), Quickshell.Networking (énumérations), modules Theme et Reseau, par les liens
@@ -70,7 +70,7 @@ ShellRoot {
         property bool rechercheFenetre: false
         readonly property bool balayage: recherche || rechercheFenetre
         property var reseaux: []
-        // Priorité que rend la lecture du profil ; changée par l'IPC « prioriteLue » pour simuler la sous-page.
+        // Priorité que rend la lecture du profil.
         property int prioriteLue: 5
         function allumer(actif) { essai.journal("allumer", actif); radio = actif }
         function executer(args, fin) {
@@ -80,13 +80,10 @@ ShellRoot {
         }
     }
 
-    // Panneau factice : les rangées de profils et les deux ouvertures de sous-page.
+    // Panneau factice : les rangées de profils et l'ouverture de la sous-page « Nouveau réseau ».
     QtObject {
         id: panneauFaux
         property var factures: ({})
-        // Onglet et sous-page courants, que lit la page pour relire le profil du réseau joint au retour d'une sous-page.
-        property string onglet: "wifi"
-        property string sousPage: ""
         property var rangees: [
             {groupe: "Wi-Fi", nom: "Wifi_TRIADES", uuid: "wifi-1", appareil: "wlan0", wifi: true, actif: true, etat: "Connecté", icone: "network-wireless-signal-excellent"},
             {groupe: "Wi-Fi", nom: "Connu", uuid: "connu-1", appareil: "", wifi: true, actif: false, etat: "À portée", icone: "network-wireless-signal-good"},
@@ -94,7 +91,6 @@ ShellRoot {
             {groupe: "Wi-Fi", nom: "Cafe", uuid: "cafe-1", appareil: "", wifi: true, actif: false, etat: "Hors de portée", icone: "network-wireless-signal-excellent"},
             {groupe: "Filaire", nom: "Bureau", uuid: "filaire-1", appareil: "", wifi: false, actif: false, etat: "Débranché", icone: "network-wired"}
         ]
-        function ouvrirProfil(uuid) { essai.journal("ouvrirProfil", uuid) }
         function ouvrirNouveau() { essai.journal("ouvrirNouveau", true) }
     }
 
@@ -139,39 +135,24 @@ ShellRoot {
                 }
             }
 
-            // Sous-page « Réglages avancés » d'un profil (FicheProfil) sur l'état factice, ouverte à la demande de l'IPC.
-            Loader {
-                id: sousPage
-                property string uuid
-                y: 0
-                width: fenetre.width
-                active: uuid !== ""
-                sourceComponent: Component {
-                    FicheProfil { width: fenetre.width; uuid: sousPage.uuid; rangee: panneauFaux.rangees.find(r => r.uuid === sousPage.uuid) ?? null; etat: faux }
-                }
-            }
-
             IpcHandler {
                 id: ipc
                 target: "wifi"
 
-                // ouvrirFiche — ouvre la FicheProfil (réglages avancés) d'un profil du panneau factice. Entrée : uuid. Sortie : aucune.
-                function ouvrirFiche(uuid: string): void { sousPage.uuid = uuid }
-                // prioriteLue, sousPage — simulent une modification faite dans la sous-page « Détails… » (nouvelle priorité
-                // enregistrée) puis l'ouverture ou la fermeture de la sous-page. Entrées : valeur. Sortie : aucune.
-                function prioriteLue(valeur: int): void { faux.prioriteLue = valeur }
-                function sousPage(valeur: string): void { panneauFaux.sousPage = valeur }
                 // carteFilaire — pose la présence d'une carte filaire dans l'état factice. Entrée : valeur. Sortie : aucune.
                 function carteFilaire(valeur: bool): void { faux.carteFilaire = valeur }
-                // connexion — clique « Se connecter » ou « Se déconnecter » de la carte de tête de la sous-page. Entrées :
-                // aucune. Sortie : le texte du bouton avant le clic, vide s'il est masqué. Erreurs : sous-page fermée.
-                function connexion(): string {
-                    const b = essai.trouver(sousPage.item, o => o.objectName === "connexion")
-                    if (!b.visible) return ""
-                    const t = b.text
-                    b.clicked()
-                    return t
+                // pied — textes des boutons montrés du pied du dépliant d'un uuid (Rejoindre ou Se déconnecter, Oublier ce
+                // réseau). Entrée : uuid. Sortie : texte JSON. Erreurs : dépliant replié, TypeError au journal.
+                function pied(uuid: string): string {
+                    const d = essai.trouver(porteur.item, o => o.objectName === "depliant:" + uuid)
+                    return JSON.stringify(essai.tous_(d.corps.reglages, o => ["rejoindre", "oublier"].includes(o.objectName) && o.visible).map(o => o.text))
                 }
+                // cliquerPied — clic sur « Rejoindre » ou « Se déconnecter » (rejoindre) du dépliant d'un uuid. Entrée : uuid.
+                function cliquerPied(uuid: string): void {
+                    essai.trouver(essai.trouver(porteur.item, o => o.objectName === "depliant:" + uuid), o => o.objectName === "rejoindre").clicked()
+                }
+                // deplierJoint — clic sur la tête du dépliant du réseau joint. Entrées et sortie : aucune.
+                function deplierJoint(): void { essai.trouver(porteur.item.depliant, o => o.objectName === "tete").clique() }
 
                 // page — état de la page, en JSON, sans aucun texte saisi. Sortie : {existe, joint (le groupe du réseau
                 // joint est montré), jointCharge (son dépliant existe, montré ou masqué par le filtre), tete (libellé de sa rangée de tête), aideTete, rangeesJoint (libellés des rangées du
@@ -298,10 +279,22 @@ ShellRoot {
                 function echouerAutrement(nom: string): void { essai.reseau(nom).connectionFailed(ConnectionFailReason.Unknown) }
                 // autre — clic sur « Autre réseau… ». Entrées : aucune.
                 function autre(): void { essai.trouver(porteur.item, o => o.objectName === "autre").clique() }
-                // details — clic sur « Réglages avancés… » du dépliant du réseau joint. Entrées : aucune.
-                function details(): void { essai.trouver(porteur.item.depliant, o => o.objectName === "avances").clicked() }
-                // avancesConnu — clic sur « Réglages avancés… » du réseau connu déplié d'un uuid. Entrée : uuid.
-                function avancesConnu(uuid: string): void { essai.trouver(essai.trouver(porteur.item, o => o.objectName === "depliant:" + uuid), o => o.objectName === "avances").clicked() }
+                // avances — clic sur l'en-tête de la section « Réglages avancés » du dépliant d'un uuid, puis état de la
+                // section : JSON {ouvert, charge (contenu chargé)}. Entrée : uuid. Sortie : texte JSON. Erreurs : dépliant
+                // replié, TypeError au journal.
+                function avances(uuid: string): string {
+                    const r = essai.trouver(porteur.item, o => o.objectName === "depliant:" + uuid).corps.reglages
+                    r.pli.entete.clicked()
+                    return avancesEtat(uuid)
+                }
+                // avancesEtat — état de la section « Réglages avancés » du dépliant d'un uuid : JSON {ouvert, charge,
+                // libelles (libellés des rangées montrées)}. Entrée : uuid. Sortie : texte JSON.
+                function avancesEtat(uuid: string): string {
+                    const r = essai.trouver(porteur.item, o => o.objectName === "depliant:" + uuid)?.corps?.reglages
+                    const c = r?.contenuAvances ?? null
+                    return JSON.stringify({ouvert: r?.pli.ouvert ?? false, charge: c !== null,
+                                           libelles: c ? essai.tous_(c, o => typeof o.libelle === "string" && o.libelle !== "" && o.visible).map(o => o.libelle) : []})
+                }
                 // rechercher — clic sur « Rechercher ». Entrées : aucune.
                 function rechercher(): void { essai.trouver(porteur.item, o => o.objectName === "rechercher").clique() }
                 // balayer — le balayage rend sa liste : la liste est réaffectée, comme le fait EtatReseau. Entrées : aucune.

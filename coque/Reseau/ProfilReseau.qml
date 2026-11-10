@@ -4,8 +4,8 @@ import "nmcli.js" as Nmcli
 
 // ProfilReseau — logique d'un profil de connexion NetworkManager enregistré, sans rendu : lecture, écriture des
 // réglages, mot de passe, connexion et oubli (L2-65).
-// Rôle : partagée par la sous-page des réglages d'un profil (FicheProfil) et par le dépliant d'un réseau, qui en crée
-// chacun la sienne, déclarée en enfant et liée à son uuid : l'objet vit et meurt avec la vue qui le porte, si bien
+// Rôle : portée par le dépliant d'un réseau, qui la partage avec ses réglages courants et ses réglages avancés
+// (AvancesReseau, D155) : déclarée en enfant et liée à son uuid, l'objet vit et meurt avec la vue qui le porte, si bien
 // qu'une réponse de nmcli arrivée après le changement de profil ou la destruction est ignorée (garde). Il lit le
 // profil à sa création et à chaque changement d'uuid (nmcli.lireProfil) ; chaque écriture change aussitôt les
 // valeurs affichées, puis relit le profil, ou, sur un refus, met la sortie d'erreur sous le réglage et rend les

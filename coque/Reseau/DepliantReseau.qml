@@ -8,28 +8,31 @@ import "../Barre/icones.js" as Icones
 // DepliantReseau — réseau enregistré dont la ligne de tête se déplie sur ses mesures et ses réglages (L2-65).
 // Rôle : une ligne de tête à reglages.rowLead (médaillon du réseau, ou icône de signal d'un réseau Wi-Fi inactif, nom,
 // état : « Connecté », « À portée » ou « Hors de portée », « Câble branché » ou « Câble débranché » pour un profil
-// filaire inactif ; chevron), dont le clic émet basculer : le parent tient ouvert, pour qu'un seul profil soit
-// ouvert à la fois. Dessous, le contenu, en retrait à reglages.textColumn : détaillé (réseau joint, connexion filaire active), les
-// débits et leur courbe (DebitsReseau) puis les tuiles d'information (TuilesConnexion) ; toujours, les réglages et le
-// pied (ReglagesReseau). Le contenu n'est chargé que tant que le dépliant est ouvert ou en mouvement : le ProfilReseau
-// qu'il porte ne lit rien tant que le réseau n'est pas déplié, et disparaît au repli. La hauteur suit le ressort reveal
-// (Ressort), comme le chevron, qui pivote de -90 à 0 degré ; tant que l'utilisateur n'a pas basculé le dépliant, la
-// hauteur suit le contenu sans animation, pour que la fenêtre ne s'ouvre pas sur un dépliage.
+// filaire inactif ; chevron), dont le clic émet basculer : le parent tient ouvert, pour qu'un seul profil soit ouvert à
+// la fois. Détaillé (réseau joint, connexion filaire active), le nom est mis en valeur, à l'échelon 3 en graisse
+// moyenne (Recette 1 de L2-65, D156). Dessous, le contenu, en retrait à reglages.textColumn : détaillé, les débits et
+// leur courbe (DebitsReseau) puis les tuiles essentielles (TuilesConnexion) ; toujours, les réglages, la section
+// « Réglages avancés » (AvancesReseau, dans ReglagesReseau, D155) et le pied. Le contenu n'est chargé que tant que le
+// dépliant est ouvert ou en mouvement : le ProfilReseau qu'il porte ne lit rien tant que le réseau n'est pas déplié, et
+// disparaît au repli. Le chevron pivote de -90 à 0 degré sur le ressort reveal (Ressort) et la hauteur montrée est
+// celle du contenu multipliée par cette progression : la fenêtre ne s'ouvre pas sur un dépliage (le ressort pose sa
+// valeur de départ) et un contenu qui grandit dans le dépliant ouvert, comme ses réglages avancés qu'on déplie, est
+// suivi sans second ressort.
 // Sonde : un dépliant détaillé demande la sonde d'EtatReseau tant qu'il est ouvert, visible, que sa fenêtre l'est et
 // que son appareil est celui qu'EtatReseau lit (actuel ; sinon les débits sont masqués et les tuiles à « — ») ;
 // il retire sa demande au repli, à sa destruction et dès que la fenêtre se cache (FenetreReseau.fermer la cache
 // avant de la détruire).
 // Secret : dès que le dépliant n'est plus à l'écran (montre faux), le mot de passe lu est vidé et masqué.
 // Entrées : rangee, la rangée du profil (uuid, nom, icone, actif, wifi, appareil ; portee, et force et security
-// pour un réseau connu à portée) ; detaille, vrai pour les débits et les tuiles ; ouvert ; portee, vrai si le réseau est à portée ; etat, la
-// source de l'état et des actions, EtatReseau par défaut.
-// Sorties : signaux basculer() (clic sur la tête), avances(uuid) (« Réglages avancés… »), relu(uuid, profil) (chaque
-// lecture du profil) ; actuel ; montre, vrai tant que le dépliant est à l'écran ; corps, le contenu chargé (null
-// replié : profil, debits, tuiles, reglages), lu par la vue et les essais.
+// pour un réseau connu à portée) ; detaille, vrai pour les débits et les tuiles ; ouvert ; portee, vrai si le réseau est
+// à portée ; etat, la source de l'état et des actions, EtatReseau par défaut.
+// Sorties : signaux basculer() (clic sur la tête), relu(uuid, profil) (chaque lecture du profil) ; actuel ; montre,
+// vrai tant que le dépliant est à l'écran ; corps, le contenu chargé (null replié : profil, debits, tuiles,
+// reglages), lu par la vue et les essais ; progression, de 0 (replié) à 1 (déplié).
 // Erreurs : celles du ProfilReseau, sous ses réglages ; un appareil absent donne des tuiles à « — ».
-// Dépendances : Ligne, Medaillon, IconeSignal, Chevron, DebitsReseau, TuilesConnexion, ReglagesReseau, ProfilReseau,
-// Ressort, Theme (reglages, space, icons, color), icones.js (iconeForce), EtatReseau, Quickshell.Networking
-// (WifiSecurityType).
+// Dépendances : Ligne, Medaillon, IconeSignal, Chevron, DebitsReseau, TuilesConnexion, ReglagesReseau, AvancesReseau,
+// ProfilReseau, Ressort, Theme (reglages, space, icons, color), icones.js (iconeForce), EtatReseau,
+// Quickshell.Networking (WifiSecurityType).
 ColumnLayout {
     id: depliant
 
@@ -47,15 +50,13 @@ ColumnLayout {
     readonly property bool montre: visible && (Window.window?.visible ?? false)
     readonly property bool sonde: detaille && actuel && ouvert && montre
     readonly property var corps: charge.item
+    readonly property real progression: (pivot.value + 90) / 90
     // Demande de sonde posée par ce dépliant, pour ne la retirer qu'une fois.
     property bool _sonde: false
-    // Vrai dès le premier basculement : la hauteur suit alors le ressort.
-    property bool _anime: false
     // Hauteur du contenu chargé, marges comprises.
     property real _contenu: 0
 
     signal basculer()
-    signal avances(string uuid)
     signal relu(string uuid, var profil)
 
     objectName: "depliant:" + (rangee?.uuid ?? "")
@@ -74,17 +75,16 @@ ColumnLayout {
     // Dépliant caché (autre onglet, sous-page, filtre de la recherche, fenêtre cachée) : le mot de passe lu et révélé
     // ne lui survit pas ; le profil reste lu.
     onMontreChanged: if (!montre) corps?.profil.masquerSecret()
-    onOuvertChanged: _anime = true
     Component.onCompleted: demander(sonde)
     Component.onDestruction: demander(false)
 
     Ressort { id: pivot; transition: "reveal"; cible: depliant.ouvert ? 0 : -90 }
-    Ressort { id: hauteur; transition: "reveal"; cible: depliant.ouvert ? depliant._contenu : 0 }
 
     Ligne {
         objectName: "tete"
         filet: false
         hauteur: Theme.reglages?.rowLead ?? 0
+        titre: depliant.detaille
         cliquable: true
         // Un réseau Wi-Fi inactif montre son signal ; un profil filaire garde toujours son médaillon.
         icone: depliant.detaille || depliant.filaire || (depliant.rangee?.actif ?? false) ? depliant.rangee?.icone ?? "" : ""
@@ -126,21 +126,18 @@ ColumnLayout {
         }
     }
 
-    // Contenu, découpé à la hauteur du ressort.
+    // Contenu, découpé à la hauteur montrée.
     Item {
         Layout.fillWidth: true
-        Layout.preferredHeight: hauteur.value
+        Layout.preferredHeight: depliant._contenu * depliant.progression
         clip: true
         Loader {
             id: charge
-            active: depliant.ouvert || hauteur.value > 0
+            active: depliant.ouvert || depliant.progression > 0
             x: Theme.reglages?.textColumn ?? 0
             y: Theme.space?.scale[0] ?? 0
             width: parent.width - x - (Theme.space?.scale[3] ?? 0)
-            onImplicitHeightChanged: {
-                depliant._contenu = implicitHeight + y + (Theme.space?.scale[3] ?? 0)
-                if (!depliant._anime) hauteur.poser()
-            }
+            onImplicitHeightChanged: depliant._contenu = implicitHeight + y + (Theme.space?.scale[3] ?? 0)
             sourceComponent: ColumnLayout {
                 readonly property alias profil: profilReseau
                 readonly property alias debits: debits
@@ -177,7 +174,15 @@ ColumnLayout {
                     filaire: depliant.filaire
                     portee: depliant.portee
                     nom: depliant.rangee?.nom ?? ""
-                    onAvances: depliant.avances(depliant.rangee?.uuid ?? "")
+                    avances: Component {
+                        AvancesReseau {
+                            profil: profilReseau
+                            rangee: depliant.rangee
+                            etat: depliant.etat
+                            filaire: depliant.filaire
+                            mesures: depliant.detaille && depliant.actuel
+                        }
+                    }
                 }
             }
         }

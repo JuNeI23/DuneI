@@ -3,26 +3,29 @@ import QtQuick.Layouts
 import "../Theme"
 import "../Composants"
 
-// ReglagesReseau — réglages d'un profil enregistré dans son dépliant, sur la grille des tuiles, puis le pied d'actions
-// (L2-65).
+// ReglagesReseau — réglages d'un profil enregistré dans son dépliant, sur la grille des tuiles, puis ses réglages
+// avancés et le pied d'actions (L2-65).
 // Rôle : sous un filet, le petit titre « Réglages du réseau », puis une grille de trois colonnes à cellules uniformes,
 // la même que celle de TuilesConnexion, si bien que libellés et contrôles s'alignent sur les tuiles du dessus ; les
-// cellules d'une rangée partent du même haut. Wi-Fi :
-// Mot de passe sur deux colonnes (ChampSecret à l'œil et à la copie, jamais lu à l'ouverture, D80 ; « Réseau ouvert :
-// aucun mot de passe » pour un réseau ouvert), Sécurité en lecture, Connexion automatique et Données limitées
+// cellules d'une rangée partent du même haut. Wi-Fi : Mot de passe sur deux colonnes (ChampSecret à l'œil et à la
+// copie, jamais lu à l'ouverture, D80 ; « Aucun (réseau ouvert) » pour un réseau ouvert, à l'échelon et à la couleur
+// des autres valeurs, Recette 1 de L2-65, D156), Sécurité en lecture, Connexion automatique et Données limitées
 // (Interrupteur suivi de « Oui » ou « Non »), Priorité (Compteur de −999 à 999). Filaire : Connexion automatique et
 // Priorité seules ; la sécurité et le mot de passe ne sont lus que pour le Wi-Fi. Chaque réglage écrit par le
-// ProfilReseau ; son erreur paraît sous son contrôle. Pied : « Rejoindre » pour un réseau à portée et non actif,
-// « Réglages avancés… », « Oublier ce réseau », qui demande confirmation comme la sous-page (Annuler, Oublier).
+// ProfilReseau ; son erreur paraît sous son contrôle. Sous la grille, la section dépliable « Réglages avancés »
+// (Depliable, pleine largeur), qui n'agrandit que le dépliant courant (D155) : son contenu, fourni par le dépliant
+// (avances, un AvancesReseau), n'est chargé que déplié ou en mouvement. Pied : « Rejoindre » pour un réseau à portée
+// et non actif, « Se déconnecter » pour le profil actif (D155), puis « Oublier ce réseau », qui demande confirmation
+// (Annuler, Oublier).
 // Entrées : profil, le ProfilReseau de la vue (lu, valeurs, erreurs, securite, ouvert, actif, secretLu et ses
 // fonctions) ; filaire, vrai pour un profil filaire ; portee, vrai si le réseau est à portée ; nom, le nom du réseau
-// (texte de la confirmation).
-// Sorties : signal avances(), émis par « Réglages avancés… » ; grille, champ (le ChampSecret) et ouvertTexte (le
-// texte du réseau ouvert), lus par la vue et les essais ; securite, le texte de la tuile Sécurité ; confirmer, vrai
-// pendant la confirmation de l'oubli.
+// (texte de la confirmation) ; avances, le composant des réglages avancés, null par défaut (section masquée).
+// Sorties : grille, champ (le ChampSecret) et ouvertTexte (le texte du réseau ouvert), lus par la vue et les essais ;
+// pli, la section « Réglages avancés » ; contenuAvances, son contenu chargé (null replié) ; securite, le texte de la
+// tuile Sécurité ; confirmer, vrai pendant la confirmation de l'oubli.
 // Erreurs : celles du ProfilReseau, sous le réglage concerné ; celle de la lecture et de l'oubli sous la grille.
-// Dépendances : Tuile, ChampSecret, Interrupteur, Compteur, Bouton, Texte, Separateur, Theme (space, color),
-// ProfilReseau.
+// Dépendances : Tuile, ChampSecret, Interrupteur, Compteur, Bouton, Texte, Separateur, Depliable, Theme (space,
+// color, density), ProfilReseau.
 ColumnLayout {
     id: reglages
 
@@ -30,6 +33,7 @@ ColumnLayout {
     property bool filaire: false
     property bool portee: false
     property string nom
+    property Component avances: null
     property bool confirmer: false
     readonly property bool wifi: !filaire
     readonly property var valeurs: profil.valeurs
@@ -40,8 +44,8 @@ ColumnLayout {
     readonly property alias grille: grille
     readonly property alias champ: champ
     readonly property alias ouvertTexte: ouvertTexte
-
-    signal avances()
+    readonly property alias pli: pli
+    readonly property var contenuAvances: chargeAvances.item
 
     spacing: Theme.space?.scale[1] ?? 0
 
@@ -55,7 +59,7 @@ ColumnLayout {
         wrapMode: Text.Wrap
         color: Theme.color?.error ?? "transparent"
     }
-    // Aide sous un contrôle de la grille, en texte tertiaire.
+    // Aide en texte tertiaire, sous la question de la confirmation de l'oubli.
     component Aide: Texte {
         width: parent?.width ?? 0
         echelon: 0
@@ -110,8 +114,9 @@ ColumnLayout {
             Texte {
                 id: ouvertTexte
                 visible: reglages.wifi && reglages.profil.ouvert
-                text: "Réseau ouvert : aucun mot de passe"
-                color: Theme.color?.textSecondary ?? "transparent"
+                text: "Aucun (réseau ouvert)"
+                echelon: 3
+                moyen: true
             }
             Erreur { cle: "psk" }
         }
@@ -119,7 +124,14 @@ ColumnLayout {
             Layout.alignment: Qt.AlignTop
             visible: reglages.wifi
             libelle: "Sécurité"
-            Texte { text: reglages.securite; echelon: 3; moyen: true }
+            // Face au champ du mot de passe, la valeur se centre sur sa hauteur, comme « Oui » sur son interrupteur.
+            Texte {
+                height: reglages.partage ? Theme.density?.controlHeight ?? implicitHeight : implicitHeight
+                verticalAlignment: Text.AlignVCenter
+                text: reglages.securite
+                echelon: 3
+                moyen: true
+            }
         }
         Tuile {
             Layout.alignment: Qt.AlignTop
@@ -150,7 +162,6 @@ ColumnLayout {
                     value: reglages.valeurs.facture === "yes"
                 }
             }
-            Aide { text: "Pas de mises à jour en arrière-plan" }
             Erreur { cle: "facture" }
         }
         Tuile {
@@ -168,8 +179,25 @@ ColumnLayout {
                     value: reglages.valeurs.priorite ?? 0
                 }
             }
-            Aide { text: "Plus haut = rejoint d'abord" }
             Erreur { cle: "priorite" }
+        }
+    }
+
+    // Réglages avancés : la section se déplie dans le dépliant, qu'elle seule agrandit ; son contenu ne vit que déplié
+    // ou en mouvement.
+    Depliable {
+        id: pli
+        objectName: "pliAvances"
+        visible: reglages.avances !== null
+        Layout.fillWidth: true
+        Layout.topMargin: Theme.space?.scale[1] ?? 0
+        text: "Réglages avancés"
+        retrait: false
+        Loader {
+            id: chargeAvances
+            active: pli.ouvert || pli.progression > 0
+            width: pli.largeurContenu
+            sourceComponent: reglages.avances
         }
     }
 
@@ -179,15 +207,15 @@ ColumnLayout {
         visible: !reglages.confirmer
         Layout.fillWidth: true
         spacing: Theme.space?.scale[1] ?? 0
+        // Le profil actif se déconnecte d'ici, depuis que la sous-page de profil a disparu (D155).
         Bouton {
             objectName: "rejoindre"
-            visible: reglages.portee && !reglages.profil.actif
-            text: "Rejoindre"
-            principal: true
+            visible: reglages.profil.actif || reglages.portee
+            text: reglages.profil.actif ? "Se déconnecter" : "Rejoindre"
+            principal: !reglages.profil.actif
             onClicked: reglages.profil.connecter()
         }
         Item { Layout.fillWidth: true }
-        Bouton { objectName: "avances"; text: "Réglages avancés…"; onClicked: reglages.avances() }
         Bouton { objectName: "oublier"; text: "Oublier ce réseau"; onClicked: reglages.confirmer = true }
     }
     RowLayout {

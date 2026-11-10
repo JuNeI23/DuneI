@@ -954,10 +954,12 @@ esac
 """
 
 
-# Ordre de tabulation de la page Wi-Fi sur l'état factice (voir test_ordre_de_tabulation).
-SEQUENCE_TAB = ["radio", "recherche", "Wifi_TRIADES", "valeur:Adresse IP", "valeur:Routeur", "valeur:DNS", "secret",
-                "auto", "donnees", "priorite", "avances", "oublier", "rechercher", "Inconnu", "Ouvert", "Autre réseau…",
-                "entete"]
+# Ordre de tabulation de la page Wi-Fi sur l'état factice (voir test_ordre_de_tabulation) : réseau joint replié, comme
+# à l'ouverture (D156), puis déplié (tuiles de la page, réglages, en-tête des réglages avancés, pied).
+SEQUENCE_TAB = ["radio", "recherche", "Wifi_TRIADES", "rechercher", "Inconnu", "Ouvert", "Autre réseau…", "entete"]
+SEQUENCE_TAB_DEPLIE = ["radio", "recherche", "Wifi_TRIADES", "valeur:Adresse IP", "valeur:Routeur", "secret", "auto",
+                       "donnees", "priorite", "entete", "rejoindre", "oublier", "rechercher", "Inconnu", "Ouvert",
+                       "Autre réseau…", "entete"]
 
 
 @unittest.skipUnless(os.environ.get("WAYLAND_DISPLAY") and QS, "session Wayland et Quickshell requis")
@@ -979,6 +981,13 @@ class PageWifiTest(EssaiCoque, unittest.TestCase):
         self.lancer(self.dir)
         self.attendre("essai : prêt")
         self.jusqua(lambda p: p["existe"] and p["joint"] and p["rangeesJoint"], "page construite et profil lu")
+
+    def deplier_joint(self) -> dict:
+        """Déplie le dépliant du réseau joint, replié à l'ouverture depuis la recette 1 de L2-65 (D156), puis attend la
+        lecture de son profil. Sortie : l'état de la page. Erreurs : échec du test au délai. Dépendances : ipc, jusqua.
+        """
+        self.ipc("deplierJoint")
+        return self.jusqua(lambda p: p["depliantOuvert"] and p["priorite"] is not None, "réseau joint déplié et lu")
 
     def ipc(self, fonction: str, *args: str) -> str:
         """Appelle une fonction IPC de la coque d'essai de la page Wi-Fi. Entrées : fonction, args. Sortie : stdout."""
@@ -1002,10 +1011,12 @@ class PageWifiTest(EssaiCoque, unittest.TestCase):
     def test_cartes(self):
         # Réécrit en L2-65 (tâche 7) : la page ne montre plus une carte résumée du réseau joint, des « Réseaux
         # disponibles », des « Enregistrés, hors de portée » et une carte d'adresses, mais le dépliant ouvert du réseau
-        # joint, les « Autres réseaux » (à portée et sans profil, Nmcli.partager) et les « Réseaux connus ».
+        # joint, les « Autres réseaux » (à portée et sans profil, Nmcli.partager) et les « Réseaux connus ». Recette 1
+        # (D156) : le dépliant du réseau joint est replié à l'ouverture ; déplié, il lit son profil.
         p = self.page()
         self.assertEqual((p["tete"], p["aideTete"]), ("Wifi_TRIADES", "Connecté · internet disponible"))
-        self.assertEqual(p["priorite"], 5)
+        self.assertEqual((p["depliantOuvert"], p["priorite"]), (False, None))
+        self.assertEqual(self.deplier_joint()["priorite"], 5)
         # Autres réseaux : triés par force, sans le réseau joint ni « Connu » (qui a un profil) ; cadenas des seuls
         # sécurisés ; « Autre réseau… » en dernière ligne.
         self.assertEqual(p["reseaux"], ["Inconnu", "Ouvert"])
@@ -1018,7 +1029,8 @@ class PageWifiTest(EssaiCoque, unittest.TestCase):
     def test_ordre_de_la_page(self):
         p = self.page()
         self.assertEqual(p["blocs"], ["titre", "recherche", "joint", "autres", "connus"])
-        self.assertTrue(p["joint"] and p["depliantOuvert"])
+        # Recette 1 (D156) : le réseau joint est montré, son dépliant replié.
+        self.assertTrue(p["joint"] and not p["depliantOuvert"])
 
     def test_recherche_filtre_tout(self):
         self.ipc("filtrer", "tel")
@@ -1028,8 +1040,8 @@ class PageWifiTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(p["connus"], ["Telephone_Essai"])
         self.assertEqual(p["compte"], "1")
         self.ipc("filtrer", "")
-        p = self.jusqua(lambda p: p["filtre"] == "" and p["joint"], "filtre vidé")
-        self.assertFalse(p["connusOuverts"])
+        # La section se replie sur le ressort reveal (D157) : son groupe reste montré le temps du repli.
+        p = self.jusqua(lambda p: p["filtre"] == "" and p["joint"] and not p["connusOuverts"], "filtre vidé, section repliée")
         self.assertEqual(p["reseaux"], ["Inconnu", "Ouvert"])
         # Section ouverte par l'utilisateur : le filtre vidé la laisse ouverte.
         self.ipc("section")
@@ -1039,10 +1051,9 @@ class PageWifiTest(EssaiCoque, unittest.TestCase):
         self.assertTrue(self.jusqua(lambda p: p["filtre"] == "", "filtre vidé")["connusOuverts"])
 
     def test_filtre_garde_le_depliant_du_joint(self):
-        # Un filtre qui écarte le réseau joint masque son groupe sans détruire le dépliant : le repli choisi survit,
-        # le profil n'est pas relu.
-        self.ipc("connu", "wifi-1")
-        self.jusqua(lambda p: not p["depliantOuvert"], "joint replié")
+        # Un filtre qui écarte le réseau joint masque son groupe sans détruire le dépliant : le dépliage choisi survit
+        # (replié à l'ouverture depuis la recette 1, il est ici déplié), le profil n'est pas relu.
+        self.deplier_joint()
         lectures = self.journal().count('"-t"')
         self.ipc("filtrer", "tel")
         p = self.jusqua(lambda p: p["filtre"] == "tel" and not p["joint"], "joint écarté")
@@ -1050,7 +1061,7 @@ class PageWifiTest(EssaiCoque, unittest.TestCase):
         self.assertNotIn("Réseau joint", p["titres"])
         self.ipc("filtrer", "")
         p = self.jusqua(lambda p: p["filtre"] == "" and p["joint"], "joint rendu")
-        self.assertFalse(p["depliantOuvert"])
+        self.assertTrue(p["depliantOuvert"])
         self.assertEqual(self.journal().count('"-t"'), lectures, "le profil a été relu")
 
     def test_deconnecte(self):
@@ -1088,7 +1099,11 @@ class PageWifiTest(EssaiCoque, unittest.TestCase):
         self.ipc("section")
         p = self.jusqua(lambda p: len(p["connus"]) == 40, "section ouverte")
         self.assertEqual(p["ouverts"], [])
-        d = json.loads(self.ipc("defiler"))
+        # La section se déplie sur le ressort reveal (D157) : la page grandit pendant le dépliage, d'où la reprise du
+        # défilement jusqu'à ce que le dernier réseau soit vu.
+        fin = time.monotonic() + DELAI
+        while not (d := json.loads(self.ipc("defiler")))["vu"] and time.monotonic() < fin:
+            time.sleep(0.05)
         self.assertEqual((d["defile"], d["dernier"], d["vu"]), (True, "Profil_40", True))
         self.assertNotRegex(self.journal(), r"connection.*show.*profil-")
         self.ipc("connu", "profil-40")
@@ -1112,18 +1127,6 @@ class PageWifiTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(p["serruresConnus"], ["Connu"])
         self.ipc("ouvrirReseau", "Connu")
         self.jusqua(lambda p: p["serruresConnus"] == [], "Connu ouvert, sans cadenas")
-
-    def test_retour_de_sous_page_relit_le_resume(self):
-        # Les pages restent vivantes : la carte du réseau joint est relue au retour d'une sous-page de l'onglet Wi-Fi,
-        # pour montrer ce que « Détails… » a modifié, ici la priorité.
-        self.assertEqual(self.page()["priorite"], 5)
-        self.ipc("sousPage", "wifi-1")
-        self.ipc("prioriteLue", "8")
-        time.sleep(0.3)
-        self.assertEqual(self.page()["priorite"], 5)
-        self.ipc("sousPage", "")
-        self.jusqua(lambda p: p["priorite"] == 8, "priorité relue au retour")
-        self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
 
     def test_reseau_ouvert_se_rejoint(self):
         # Depuis L2-65 (tâche 7), un réseau connu à portée quitte les autres réseaux pour les réseaux connus, où il se
@@ -1163,18 +1166,21 @@ class PageWifiTest(EssaiCoque, unittest.TestCase):
         self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
 
     def test_connu_avances_et_autre_reseau(self):
-        # Depuis L2-65 (tâche 7), un profil hors de portée est un réseau connu : son clic le déplie, et c'est
-        # « Réglages avancés… » de son dépliant qui ouvre sa sous-page.
+        # Un profil hors de portée est un réseau connu : son clic le déplie. Depuis la recette 1 (D155), « Réglages
+        # avancés » est une section dépliable du dépliant, chargée seulement dépliée, et non plus une sous-page ; elle
+        # porte la configuration IPv4 (le détail de la connexion n'existe que pour la connexion active).
         self.ipc("section")
         self.ipc("connu", "cafe-1")
-        self.jusqua(lambda p: p["ouverts"] == ["cafe-1"], "Cafe déplié")
-        self.assertNotIn("essai : ouvrirProfil cafe-1", self.journal())
-        self.ipc("avancesConnu", "cafe-1")
-        self.attendre("essai : ouvrirProfil cafe-1")
+        self.jusqua(lambda p: p["ouverts"] == ["cafe-1"] and "cafe-1" in p["rejoindre"], "Cafe déplié")
+        self.assertEqual(json.loads(self.ipc("avancesEtat", "cafe-1"))["charge"], False)
+        self.assertTrue(json.loads(self.ipc("avances", "cafe-1"))["ouvert"])
+        fin = time.monotonic() + DELAI
+        while not (a := json.loads(self.ipc("avancesEtat", "cafe-1")))["libelles"] and time.monotonic() < fin:
+            time.sleep(0.05)
+        self.assertEqual(a["libelles"], ["Configuration", "Adresse", "DNS"])
         self.ipc("autre")
         self.attendre("essai : ouvrirNouveau")
-        self.ipc("details")
-        self.attendre("essai : ouvrirProfil wifi-1")
+        self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
 
     def test_wifi_coupe(self):
         self.ipc("basculer")
@@ -1197,21 +1203,24 @@ class PageWifiTest(EssaiCoque, unittest.TestCase):
         return vus
 
     def test_ordre_de_tabulation(self):
-        # Ordre complet, sur l'état factice, réécrit en L2-65 (tâche 7) pour la nouvelle page : interrupteur de la radio,
-        # champ de recherche, dépliant du réseau joint (tête, valeurs copiables des tuiles, réglages, pied), « Rechercher »,
-        # autres réseaux, « Autre réseau… », en-tête des réseaux connus (repliés) ; puis retour au début. La carte des
-        # adresses a quitté la page : ses valeurs sont désormais celles des tuiles du dépliant.
+        # Ordre complet, sur l'état factice : interrupteur de la radio, champ de recherche, dépliant du réseau joint,
+        # « Rechercher », autres réseaux, « Autre réseau… », en-tête des réseaux connus (repliés) ; puis retour au début.
+        # Recette 1 (D155, D156) : le réseau joint est replié à l'ouverture ; déplié, sa tête est suivie des valeurs
+        # copiables des tuiles de la page (Adresse IP, Routeur), des réglages, de l'en-tête « Réglages avancés » et du
+        # pied (« Se déconnecter », « Oublier ce réseau »).
         attendu = SEQUENCE_TAB
         self.assertEqual(self.sequence_tab(len(attendu)), attendu)
         self.assertEqual(self.sequence_tab(1), [attendu[0]])
         self.assertEqual(self.sequence_tab(1, "retourArriere"), [attendu[-1]])
+        self.deplier_joint()
+        self.assertEqual(self.sequence_tab(len(SEQUENCE_TAB_DEPLIE)), SEQUENCE_TAB_DEPLIE)
 
     def test_rechercher_au_clavier(self):
         self.ipc("rechercher")
         self.jusqua(lambda p: p["balayage"], "recherche lancée")
         self.ipc("balayer")
         self.jusqua(lambda p: not p["balayage"], "liste rendue")
-        for _ in range(len(SEQUENCE_TAB)):
+        for _ in range(len(SEQUENCE_TAB_DEPLIE)):
             self.ipc("tab")
             if self.ipc("focus") == "rechercher":
                 break
@@ -1223,7 +1232,7 @@ class PageWifiTest(EssaiCoque, unittest.TestCase):
 
     def test_focus_traverse_un_balayage(self):
         # Un balayage qui ne change pas les noms ne recrée pas les rangées : le focus clavier reste sur « Inconnu ».
-        for _ in range(len(SEQUENCE_TAB)):
+        for _ in range(len(SEQUENCE_TAB_DEPLIE)):
             self.ipc("tab")
             if self.ipc("focus") == "Inconnu":
                 break
@@ -1247,6 +1256,7 @@ class PageWifiTest(EssaiCoque, unittest.TestCase):
         # La page reste vivante quand on change d'onglet : le mot de passe révélé de la fiche du réseau joint et celui
         # saisi dans un bloc déplié disparaissent à son masquage, sans nouvelle lecture de la fiche.
         psk = "psk-enregistre-jamais-journalise"
+        self.deplier_joint()
         self.ipc("reveler")
         p = self.jusqua(lambda p: p["ficheSecret"] == [len(psk), True], "mot de passe lu et révélé")
         self.ipc("choisir", "Inconnu")
@@ -1290,38 +1300,23 @@ class PageWifiTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(p["blocs"], ["titre", "desactive", "recherche"])
         self.assertFalse(p["autre"])
 
-    def test_sous_page_se_connecter_et_se_deconnecter(self):
-        # La carte de tête de la sous-page porte l'action de connexion : « Se connecter » pour un réseau à portée,
-        # « Se déconnecter » pour le profil actif ; chacune appelle l'action nmcli correspondante sur l'uuid du profil.
-        self.ipc("ouvrirFiche", "connu-1")
-        fin = time.monotonic() + DELAI
-        while True:
-            texte = self.ipc("connexion")
-            if texte or time.monotonic() > fin:
-                break
-            time.sleep(0.05)
-        self.assertEqual(texte, "Se connecter")
+    def test_rejoindre_et_se_deconnecter_au_pied(self):
+        # Recette 1 (D155) : la sous-page de profil a disparu, son action de connexion passe au pied du dépliant :
+        # « Rejoindre » pour un réseau connu à portée, « Se déconnecter » pour le réseau joint ; chacune appelle l'action
+        # nmcli correspondante sur l'uuid du profil.
+        self.ipc("section")
+        self.ipc("connu", "connu-1")
+        self.jusqua(lambda p: p["rejoindre"].get("connu-1"), "Connu déplié")
+        self.assertEqual(json.loads(self.ipc("pied", "connu-1")), ["Rejoindre", "Oublier ce réseau"])
+        self.ipc("cliquerPied", "connu-1")
         self.attendre('essai : executer ["connection","up","connu-1"]')
-        self.ipc("ouvrirFiche", "wifi-1")
-        self.assertEqual(self.ipc("connexion"), "Se déconnecter")
+        self.deplier_joint()
+        self.assertEqual(json.loads(self.ipc("pied", "wifi-1")), ["Se déconnecter", "Oublier ce réseau"])
+        self.ipc("cliquerPied", "wifi-1")
         self.attendre('essai : executer ["connection","down","wifi-1"]')
 
-    def test_profil_filaire_inactif_se_connecte(self):
-        # Un profil filaire inactif propose « Se connecter » tant qu'une carte filaire existe (l'état de la liste ne dit
-        # pas si le câble est branché) ; sans carte, le bouton disparaît.
-        self.ipc("ouvrirFiche", "filaire-1")
-        fin = time.monotonic() + DELAI
-        while True:
-            texte = self.ipc("connexion")
-            if texte or time.monotonic() > fin:
-                break
-            time.sleep(0.05)
-        self.assertEqual(texte, "Se connecter")
-        self.attendre('essai : executer ["connection","up","filaire-1"]')
-        self.ipc("carteFilaire", "false")
-        self.assertEqual(self.ipc("connexion"), "")
-
     def test_priorite_par_le_compteur(self):
+        self.deplier_joint()
         self.ipc("priorite", "1")
         self.attendre('essai : executer ["connection","modify","wifi-1","connection.autoconnect-priority","6"]')
 
@@ -1410,14 +1405,15 @@ class PageFilaireTest(EssaiCoque, unittest.TestCase):
         self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
 
     def test_filaire_actif_deplie(self):
-        # Le dépliant est ouvert d'office : profil lu, tuiles filaires (sans « Connecté depuis », faute de source),
-        # réglages Connexion automatique et Priorité seuls, pied sans « Rejoindre », plus aucune CarteAdresses.
+        # Le dépliant est ouvert d'office : profil lu, tuiles de la page réduites à Adresse IP et Routeur (sans
+        # « Connecté depuis », faute de source ; DNS, Débit du lien et adresse matérielle sont dans les réglages
+        # avancés, D156), réglages Connexion automatique et Priorité seuls, pied « Se déconnecter » (D155) et « Oublier
+        # ce réseau », plus aucune CarteAdresses.
         d = self.jusqua(lambda p: p["depliant"]["lu"], "profil lu")["depliant"]
         self.assertTrue(d["existe"] and d["ouvert"] and d["debits"])
-        self.assertEqual(d["tuiles"], {"Adresse IP": "10.0.0.2", "Routeur": "10.0.0.1", "DNS": "10.0.0.1",
-                                       "Débit du lien": "1 Gbit/s", "Adresse matérielle": "8C:16:45:2E:71:B0"})
+        self.assertEqual(d["tuiles"], {"Adresse IP": "10.0.0.2", "Routeur": "10.0.0.1"})
         self.assertEqual(d["reglages"], ["Connexion automatique", "Priorité"])
-        self.assertEqual(d["pied"], ["Réglages avancés…", "Oublier ce réseau"])
+        self.assertEqual(d["pied"], ["Se déconnecter", "Oublier ce réseau"])
         self.assertFalse(d["carteAdresses"])
         self.attendre('essai : executer ["-t"')
         self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
@@ -1468,12 +1464,15 @@ class PageFilaireTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(set(d["tuiles"].values()), {"—"})
 
     def test_profil_demande(self):
-        # Le profil actif se déplie dans la page ; un autre profil garde sa sous-page.
+        # Le profil actif se déplie dans la page ; depuis la recette 1 (D155), un autre profil se déplie dans
+        # « Profils » au lieu d'ouvrir une sous-page ; un profil que la page ne porte pas n'est pas montré.
         self.ipc("basculer")
         self.jusqua(lambda p: not p["depliant"]["ouvert"], "dépliant replié")
         self.assertEqual(self.ipc("montrer", "bureau-1"), "true")
         self.jusqua(lambda p: p["depliant"]["ouvert"], "dépliant rouvert")
-        self.assertEqual(self.ipc("montrer", "atelier-1"), "false")
+        self.assertEqual(self.ipc("montrer", "atelier-1"), "true")
+        self.jusqua(lambda p: p["profilOuvert"] == "atelier-1", "Atelier déplié dans « Profils »")
+        self.assertEqual(self.ipc("montrer", "wifi-1"), "false")
 
     def profil(self, uuid: str, condition, message: str) -> dict:
         """Attend qu'une condition sur le dépliant d'un profil de « Profils » devienne vraie. Sortie : son état."""
@@ -1493,7 +1492,7 @@ class PageFilaireTest(EssaiCoque, unittest.TestCase):
         self.ipc("choisir", "atelier-1")
         d = self.profil("atelier-1", lambda d: d["ouvert"] and d["lu"], "Atelier déplié et lu")
         self.assertEqual(d["reglages"], ["Connexion automatique", "Priorité"])
-        self.assertEqual(d["pied"], ["Rejoindre", "Réglages avancés…", "Oublier ce réseau"])
+        self.assertEqual(d["pied"], ["Rejoindre", "Oublier ce réseau"])
         self.assertEqual(self.page()["profilOuvert"], "atelier-1")
         self.ipc("choisir", "garage-1")
         self.profil("garage-1", lambda d: d["ouvert"] and d["lu"], "Garage déplié")
@@ -1509,7 +1508,7 @@ class PageFilaireTest(EssaiCoque, unittest.TestCase):
         # Câble débranché : plus de « Rejoindre », la tête le dit.
         self.ipc("lien", "false")
         d = self.profil("atelier-1", lambda d: "Rejoindre" not in d["pied"], "Rejoindre retiré")
-        self.assertEqual((d["aide"], d["pied"]), ("Câble débranché", ["Réglages avancés…", "Oublier ce réseau"]))
+        self.assertEqual((d["aide"], d["pied"]), ("Câble débranché", ["Oublier ce réseau"]))
 
     def test_profil_inactif_reglages_ecrits(self):
         # Connexion automatique et priorité s'écrivent par « nmcli connection modify » sur le profil déplié.
@@ -1530,12 +1529,18 @@ class PageFilaireTest(EssaiCoque, unittest.TestCase):
         self.ipc("cliquer", "atelier-1", "confirmer")
         self.attendre('essai : executer ["connection","delete","atelier-1"]')
 
-    def test_profil_ouvre_sa_sous_page(self):
-        # La sous-page d'un profil inactif s'ouvre par « Réglages avancés… » de son dépliant.
+    def test_profil_deplie_ses_reglages_avances(self):
+        # Recette 1 (D155) : « Réglages avancés » d'un profil inactif se déplie dans son dépliant, sans sous-page ; la
+        # section ne charge son contenu qu'ouverte : la configuration IPv4, sans détail ni tuiles hors connexion active.
         self.ipc("choisir", "atelier-1")
-        self.profil("atelier-1", lambda d: d["lu"], "Atelier lu")
+        d = self.profil("atelier-1", lambda d: d["lu"], "Atelier lu")
+        self.assertEqual((d["avances"], d["libellesAvances"]), (False, []))
         self.ipc("cliquer", "atelier-1", "avances")
-        self.attendre("essai : ouvrirProfil atelier-1")
+        d = self.profil("atelier-1", lambda d: d["avances"] and d["libellesAvances"], "réglages avancés dépliés")
+        self.assertEqual(d["libellesAvances"], ["Configuration", "Adresse", "DNS"])
+        self.ipc("cliquer", "atelier-1", "avances")
+        self.profil("atelier-1", lambda d: not d["avances"] and not d["libellesAvances"], "réglages avancés repliés")
+        self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
 
 
 @unittest.skipUnless(QS, "Quickshell requis")
@@ -1738,13 +1743,14 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
         return self.fichier_appels.read_text().splitlines() if self.fichier_appels.exists() else []
 
     def ouvrir(self, uuid: str = "wifi-1") -> dict:
-        """Ouvre la fenêtre par l'IPC réelle « reseau ouvrir », puis ouvre la sous-page d'un profil.
+        """Ouvre la fenêtre par l'IPC réelle « reseau ouvrir », puis déplie un profil et ses réglages avancés, qui
+        ont remplacé la sous-page de profil (D155) ; l'état les nomme encore « fiche ».
 
-        Entrée : uuid, le profil à ouvrir, « wifi-1 » (le profil actif) par défaut. Sortie : l'état, fiche lue.
+        Entrée : uuid, le profil à ouvrir, « wifi-1 » (le profil actif) par défaut. Sortie : l'état, profil lu.
         """
         self.ipc("reseau", "ouvrir")
         self.jusqua(lambda e: e["fenetre"] and e["rangees"], "fenêtre construite et profils lus")
-        self.ipc("essai", "choisir", uuid)
+        self.ipc("essai", "rangeeProfil", uuid)
         return self.jusqua(lambda e: e["fiche"].get("uuid") == uuid and e["fiche"]["lu"], "profil lu")
 
     def sonde(self) -> dict:
@@ -1862,6 +1868,18 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
         self.jusqua(lambda e: not self.sonde()["actif"] and self.sonde()["appareil"] == "", "sonde arrêtée")
         self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read|rror")
 
+    def deplier_joint(self, condition=lambda d: d.get("lu"), message: str = "réseau joint déplié et lu") -> dict:
+        """Ouvre la fenêtre et déplie le réseau joint, replié à l'ouverture depuis la recette 1 (D156), puis attend une
+        condition sur son dépliant (profil lu par défaut).
+
+        Entrées : condition, fonction(état du dépliant) → bool ; message. Sortie : l'état du dépliant. Erreurs : échec
+        du test au délai. Dépendances : ipc, depliant.
+        """
+        self.ipc("reseau", "ouvrir")
+        self.depliant(lambda d: d.get("tuiles") is not None and "ouvert" in d, "dépliant du réseau joint posé")
+        self.ipc("essai", "basculer", "wifi-1")
+        return self.depliant(lambda d: d.get("ouvert") and condition(d), message)
+
     def depliant(self, condition, message: str, uuid: str = "wifi-1") -> dict:
         """Attend qu'une condition sur l'état d'un dépliant de réseau devienne vraie.
 
@@ -1871,16 +1889,21 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
         return self.jusqua(lambda e: condition(e["depliants"].get(uuid, {})), message)["depliants"][uuid]
 
     def test_depliant_joint(self):
-        # À l'ouverture de la fenêtre, le dépliant du réseau joint est ouvert : six tuiles, dont l'adresse sans son
-        # préfixe, le routeur, le signal et la bande lus par la sonde, qu'il demande ; la fenêtre cachée (avant sa
+        # Recette 1 (D156) : à l'ouverture de la fenêtre, le dépliant du réseau joint est replié, son nom mis en valeur ;
+        # déplié, il montre trois tuiles (l'adresse sans son préfixe, le routeur, la durée de connexion) et demande la
+        # sonde ; ses réglages avancés, dépliés, portent le signal et la bande. La fenêtre cachée (avant sa
         # destruction), la demande est retirée dans le même tour.
         self.ipc("reseau", "ouvrir")
-        d = self.depliant(lambda d: d.get("tuiles", {}).get("Bande", "—") != "—", "tuiles relevées")
-        self.assertTrue(d["ouvert"])
-        self.assertEqual(d["tuiles"], {"Adresse IP": "192.168.1.42", "Routeur": "192.168.1.1", "DNS": "192.168.1.1",
-                                       "Signal": "Excellent · −48 dBm", "Bande": "2,4 GHz · canal 1",
-                                       "Connecté depuis": "3 h 11"})
+        d = self.depliant(lambda d: "ouvert" in d, "dépliant posé")
+        self.assertEqual((d["ouvert"], d["charge"], d["titre"]), (False, False, True))
+        self.assertEqual(self.sonde()["sondeurs"], 0)
+        self.ipc("essai", "basculer", "wifi-1")
+        d = self.depliant(lambda d: d.get("tuiles", {}).get("Connecté depuis", "—") != "—", "tuiles relevées")
+        self.assertEqual(d["tuiles"], {"Adresse IP": "192.168.1.42", "Routeur": "192.168.1.1", "Connecté depuis": "3 h 11"})
         self.assertEqual(self.sonde()["sondeurs"], 1)
+        self.ipc("essai", "regler", "wifi-1", "avances")
+        d = self.depliant(lambda d: d["tuilesAvances"].get("Bande", "—") != "—", "réglages avancés relevés")
+        self.assertEqual(d["tuilesAvances"], {"Signal": "Excellent · −48 dBm", "Bande": "2,4 GHz · canal 1"})
         self.assertEqual(json.loads(self.ipc("essai", "fermerEtat"))["sondeurs"], 0)
         self.jusqua(lambda e: not e["fenetre"], "fenêtre détruite")
         self.assertEqual(self.sonde()["sondeurs"], 0)
@@ -1889,8 +1912,7 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
     def test_cable_sous_le_wifi_joint(self):
         # Câble branché sous un Wi-Fi joint : EtatReseau lit eth0. Le dépliant Wi-Fi ne montre pas les débits du câble,
         # retire sa demande de sonde et ses tuiles valent « — ».
-        self.ipc("reseau", "ouvrir")
-        self.depliant(lambda d: d.get("debits") and d.get("lu"), "débits montrés")
+        self.deplier_joint(lambda d: d.get("debits") and d.get("lu"), "débits montrés")
         self.assertEqual(self.sonde()["sondeurs"], 1)
         (self.bin / "filaire").touch()
         self.ipc("essai", "relire")
@@ -1901,8 +1923,7 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
     def test_polices_des_tuiles(self):
         # Fiche : toutes les valeurs des tuiles, adresses copiables comprises, sont à l'échelon 3, en graisse moyenne,
         # dans la police de l'interface.
-        self.ipc("reseau", "ouvrir")
-        d = self.depliant(lambda d: len(d.get("polices", {})) == 6, "tuiles posées")
+        d = self.deplier_joint(lambda d: len(d.get("polices", {})) == 3, "tuiles posées")
         self.assertEqual(len({tuple(p) for p in d["polices"].values()}), 1, d["polices"])
         famille, graisse, taille = d["polices"]["Adresse IP"]
         jetons = self.vue(55)
@@ -1911,8 +1932,7 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
 
     def test_depliant_replie_sans_sonde(self):
         # Replié, le dépliant décharge son contenu : plus de demande de sonde, plus d'appel iw, aucun réglage relu.
-        self.ipc("reseau", "ouvrir")
-        self.depliant(lambda d: d.get("charge") and d.get("lu"), "dépliant ouvert et profil lu")
+        self.deplier_joint(lambda d: d.get("charge") and d.get("lu"), "dépliant ouvert et profil lu")
         self.assertEqual(self.sonde()["sondeurs"], 1)
         self.ipc("essai", "basculer", "wifi-1")
         d = self.depliant(lambda d: not d["charge"], "contenu déchargé après le repli")
@@ -1929,8 +1949,7 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(self.sonde()["sondeurs"], 1)
 
     def test_reglages_dans_le_depliant(self):
-        self.ipc("reseau", "ouvrir")
-        self.depliant(lambda d: d.get("lu"), "profil lu")
+        self.deplier_joint()
         for geste, attendu in (("auto", "connection modify wifi-1 connection.autoconnect no"),
                                ("plus", "connection modify wifi-1 connection.autoconnect-priority 1"),
                                ("donnees", "connection modify wifi-1 connection.metered yes")):
@@ -1941,9 +1960,9 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
                 time.sleep(0.05)
 
     def test_reseau_ouvert(self):
-        # Profil sans sécurité : le texte remplace le champ du mot de passe ; sécurisé, le champ revient.
-        self.ipc("reseau", "ouvrir")
-        d = self.depliant(lambda d: d.get("lu"), "profil lu")
+        # Profil sans sécurité : la valeur « Aucun (réseau ouvert) » remplace le champ du mot de passe (D156) ; sécurisé,
+        # le champ revient.
+        d = self.deplier_joint()
         self.assertEqual((d["ouvertTexte"], d["champ"], d["securite"]), (True, False, "Ouvert"))
         self.assertEqual(d["reglages"], ["Mot de passe", "Sécurité", "Connexion automatique", "Données limitées",
                                          "Priorité"])
@@ -1956,8 +1975,7 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
         # Mot de passe du réseau joint (D80) : jamais lu à l'ouverture ; la copie le met au presse-papiers sans le
         # révéler et montre la coche ; l'œil le lit et le révèle ; replié puis rouvert, le champ repart vide.
         (self.bin / "psk_joint").touch()
-        self.ipc("reseau", "ouvrir")
-        d = self.depliant(lambda d: d.get("champ"), "champ du mot de passe")
+        d = self.deplier_joint(lambda d: d.get("champ"), "champ du mot de passe")
         lecture = "-s -g 802-11-wireless-security.psk connection show wifi-1"
         self.assertNotIn(lecture, self.appels())
         self.ipc("essai", "regler", "wifi-1", "copierSecret")
@@ -1977,10 +1995,9 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
     def test_alignement_grille(self):
         # Les réglages suivent les colonnes des tuiles : chaque réglage commence au bord gauche d'une colonne des tuiles,
         # son contrôle aussi, et les trois colonnes servent.
-        self.ipc("reseau", "ouvrir")
         # La grille des réglages, cachée tant que le profil n'est pas lu, se met en page au tour suivant sa lecture.
-        posee = lambda g: len(g.get("tuiles", [])) == 6 and len({x for x, _ in g.get("reglages", [])}) == 3
-        d = self.depliant(lambda d: d.get("lu") and posee(d.get("grille", {})), "grilles posées")
+        posee = lambda g: len(g.get("tuiles", [])) == 3 and len({x for x, _ in g.get("reglages", [])}) == 3
+        d = self.deplier_joint(lambda d: d.get("lu") and posee(d.get("grille", {})), "grilles posées")
         colonnes = sorted(set(d["grille"]["tuiles"]))
         self.assertEqual(len(colonnes), 3, d["grille"])
         vues = set()
@@ -2002,7 +2019,7 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
                                        "DNS": "192.168.1.1", "Adresse matérielle": "A4:C3:F0:5B:1E:72"})
         # Colonne de navigation : l'onglet choisi a le fond neutre de la sélection et un nom en graisse moyenne.
         self.assertEqual(e["selection"], ["inactive", True, False])
-        self.assertEqual((e["onglet"], e["sousPage"]), ("wifi", "wifi-1"))
+        self.assertEqual((e["onglet"], e["sousPage"]), ("wifi", ""))
         self.ipc("essai", "fermer")
         e = self.jusqua(lambda e: not e["fenetre"], "fenêtre détruite")
         self.assertFalse(e["demandee"])
@@ -2067,8 +2084,8 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
         self.ipc("essai", "popover", "false")
         self.assertEqual(lire(), {"recherche": False, "fenetre": True, "balayage": True})
         # Ni sous-page ni onglet ne la touchent.
-        self.ipc("essai", "choisir", "wifi-1")
-        self.jusqua(lambda e: e["sousPage"] == "wifi-1", "sous-page ouverte")
+        self.ipc("essai", "nouveau")
+        self.jusqua(lambda e: e["sousPage"] == "nouveau", "sous-page ouverte")
         self.assertTrue(lire()["fenetre"])
         self.ipc("essai", "retour")
         self.jusqua(lambda e: e["sousPage"] == "", "retour")
@@ -2171,8 +2188,8 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
         # « Détails… » du popover : la fenêtre s'ouvre sur le profil demandé (par uuid ou par nom), et la demande est
         # consommée ; une demande faite fenêtre ouverte est suivie aussitôt. Changé par L2-65 : un profil Wi-Fi n'ouvre
         # plus la sous-page (elle n'a plus les réglages courants) mais se déplie dans la page Wi-Fi, où la page défile
-        # jusqu'à lui : le réseau connu dans sa section ouverte, le réseau joint dans son dépliant ; un profil filaire
-        # garde sa sous-page.
+        # jusqu'à lui : le réseau connu dans sa section ouverte, le réseau joint dans son dépliant. Recette 1 (D155) : un
+        # profil filaire inactif se déplie dans la section « Profils » de l'onglet Filaire, sans sous-page.
         self.ipc("essai", "demander", "hotspot-1")
         e = self.jusqua(lambda e: e["depliants"].get("hotspot-1", {}).get("ouvert") and e["defilement"][0] > 0,
                         "réseau connu déplié, page défilée")
@@ -2184,8 +2201,8 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(self.ipc("essai", "demande"), "")
         # Un profil filaire choisit l'onglet Filaire.
         self.ipc("essai", "demander", "filaire-1")
-        e = self.jusqua(lambda e: e["fiche"].get("uuid") == "filaire-1", "profil filaire demandé")
-        self.assertEqual((e["onglet"], e["sousPage"]), ("filaire", "filaire-1"))
+        e = self.jusqua(lambda e: e["depliants"].get("filaire-1", {}).get("ouvert"), "profil filaire demandé")
+        self.assertEqual((e["onglet"], e["sousPage"]), ("filaire", ""))
         self.assertEqual(self.ipc("essai", "demande"), "")
 
     def test_onglets(self):
@@ -2203,10 +2220,12 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
     def test_onglet_vpn_connecte(self):
         # Un VPN actif lu par EtatReseau passe l'état de l'onglet de « Non connecté » à « Connecté ».
         (self.bin / "vpn").touch()
-        # Réécrit pour L2-65 : le geste « plus » (priorité) n'a plus d'objet dans la sous-page et n'était qu'un
-        # prétexte ; l'ouverture de la fenêtre suffit à lire l'état du VPN.
+        # Réécrit pour L2-65, puis pour la recette 1 : le réseau joint, replié à l'ouverture (D156), ne lit plus son
+        # profil, dont la commande relançait la lecture d'EtatReseau ; le moniteur factice n'émettant rien, la relecture
+        # est demandée comme le ferait un événement de NetworkManager.
         self.ipc("reseau", "ouvrir")
         self.jusqua(lambda e: e["fenetre"] and e["rangees"], "fenêtre construite et profils lus")
+        self.ipc("essai", "relire")
         self.jusqua(lambda e: e["onglets"][2][2] == "Connecté", "VPN connecté")
         self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
 
@@ -2227,16 +2246,20 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
 
     def test_clavier_des_rangees(self):
         # Bible, « Clavier » : Tab atteint les rangées cliquables de la page, Entrée les active. Les arrêts avant la liste
-        # des réseaux du système (jusqu'à « Réglages avancés… » du dépliant du réseau joint, qui a remplacé « Détails… »
-        # de la fiche résumée en L2-65) se comptent à la tabulation ; la fin de la page
+        # des réseaux du système (la tête du réseau joint, replié à l'ouverture, puis, une fois déplié, l'en-tête de ses
+        # « Réglages avancés », D155) se comptent à la tabulation ; la fin de la page
         # (« Autre réseau… »), derrière cette liste réelle de longueur imprévisible, s'atteint à rebours : Maj+Tab sans
         # focus boucle sur le dernier arrêt. L'ordre complet, sur un état factice, est éprouvé par
         # PageWifiTest.test_ordre_de_tabulation.
         self.ipc("reseau", "ouvrir")
         self.jusqua(lambda e: e["fenetre"] and e["rangees"], "fenêtre construite")
-        self.tabuler_jusqu_a("avances", 16)
+        self.tabuler_jusqu_a("Wifi_TRIADES")
         self.ipc("essai", "entree")
-        self.jusqua(lambda e: e["sousPage"] == "wifi-1", "Entrée ouvre la sous-page du profil joint")
+        self.depliant(lambda d: d.get("ouvert") and d.get("lu"), "Entrée déplie le réseau joint")
+        self.tabuler_jusqu_a("pliAvances", 16)
+        self.ipc("essai", "entree")
+        e = self.jusqua(lambda e: e["fiche"].get("uuid") == "wifi-1", "Entrée déplie ses réglages avancés")
+        self.assertEqual(e["sousPage"], "")
 
     def test_clavier_fin_de_page(self):
         self.ipc("reseau", "ouvrir")
@@ -2294,14 +2317,14 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
         print("\nMESURE_BASCULE (ms)", mesures)
 
     def test_reglages_avances(self):
-        # « Réglages avancés… » du dépliant ouvre la sous-page, titrée du nom du réseau : IPv4 automatique ou fixe,
-        # adresse, DNS (la passerelle suit le mode Fixe), détail complet avec IPv6 et « Tout copier » ; plus aucun
-        # réglage courant (mot de passe, connexion automatique, priorité, données limitées, oubli), passés au dépliant.
-        self.ipc("reseau", "ouvrir")
-        self.depliant(lambda d: d.get("lu"), "profil lu")
+        # Recette 1 (D155) : « Réglages avancés » est une section dépliable du dépliant, qui ne grandit que lui : sans
+        # sous-page, le réseau reste titré de son nom ; IPv4 automatique ou fixe, adresse, DNS (la passerelle suit le
+        # mode Fixe), détail complet avec IPv6 et « Tout copier » ; aucun réglage courant n'y est repris. Repliée, la
+        # section décharge son contenu.
+        self.deplier_joint()
         self.ipc("essai", "regler", "wifi-1", "avances")
-        e = self.jusqua(lambda e: e["fiche"].get("uuid") == "wifi-1" and e["fiche"]["lu"], "sous-page ouverte")
-        self.assertEqual(e["fiche"]["titre"], "Wifi_TRIADES")
+        e = self.jusqua(lambda e: e["fiche"].get("uuid") == "wifi-1" and e["fiche"]["lu"], "réglages avancés dépliés")
+        self.assertEqual((e["fiche"]["titre"], e["sousPage"]), ("Wifi_TRIADES", ""))
         libelles = e["fiche"]["libelles"]
         self.assertTrue({"Configuration", "Adresse", "DNS", "IPv6"} <= set(libelles), libelles)
         self.assertEqual(e["detail"]["IPv6"], "fe80::1/64")
@@ -2311,6 +2334,8 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
             self.assertNotIn(retire, libelles)
         self.ipc("essai", "cliquer", "fixe")
         e = self.jusqua(lambda e: e["fiche"]["fixe"] and "Passerelle" in e["fiche"]["libelles"], "mode Fixe")
+        self.ipc("essai", "regler", "wifi-1", "avances")
+        self.jusqua(lambda e: e["fiche"] == {} and not e["depliants"]["wifi-1"]["avances"], "réglages avancés repliés")
         self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
 
     def test_contour_de_focus_apres_une_touche_seulement(self):
@@ -2342,59 +2367,50 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
         self.ipc("essai", "haut")
         self.jusqua(lambda e: e["onglet"] == "filaire", "flèche haut")
 
-    def test_sous_page_et_retour(self):
-        # Un profil de la page d'onglet ouvre sa sous-page (un réseau Wi-Fi connu, depuis L2-65, par « Réglages
-        # avancés… » de son dépliant) ; la rangée de retour et Échap la referment et remettent le défilement en haut.
-        # La fiche n'existe que sous sa sous-page.
+    def test_avances_d_un_reseau_connu(self):
+        # Recette 1 (D155) : les réglages avancés d'un réseau connu se déplient dans son dépliant, sans sous-page ni
+        # changement d'onglet ; Échap n'a plus de sous-page à fermer. Un réseau inactif n'a ni tuiles ni détail.
         self.ipc("reseau", "ouvrir")
         self.jusqua(lambda e: e["fenetre"] and e["rangees"], "fenêtre construite")
-        self.ipc("essai", "rangeeProfil", "hotspot-1")
-        e = self.jusqua(lambda e: e["fiche"].get("uuid") == "hotspot-1" and e["fiche"]["lu"], "sous-page ouverte")
-        self.assertEqual((e["onglet"], e["sousPage"]), ("wifi", "hotspot-1"))
-        self.ipc("essai", "defiler", "20")
-        self.ipc("essai", "retour")
-        e = self.jusqua(lambda e: e["sousPage"] == "", "retour")
-        self.assertEqual((e["fiche"], e["defilement"][0]), ({}, 0))
-        self.ipc("essai", "choisir", "wifi-1")
-        self.jusqua(lambda e: e["fiche"].get("uuid") == "wifi-1", "autre sous-page")
+        self.ipc("essai", "choisir", "hotspot-1")
+        e = self.jusqua(lambda e: e["fiche"].get("uuid") == "hotspot-1" and e["fiche"]["lu"], "réglages avancés dépliés")
+        self.assertEqual((e["onglet"], e["sousPage"], e["detail"]), ("wifi", "", {}))
+        self.assertEqual(e["depliants"]["hotspot-1"]["tuilesAvances"], {})
         self.ipc("essai", "echap")
-        e = self.jusqua(lambda e: e["sousPage"] == "", "Échap")
-        self.assertEqual(e["fiche"], {})
-        # Sans sous-page, Échap ne change rien.
-        self.ipc("essai", "echap")
-        self.assertEqual(self.etat()["onglet"], "wifi")
+        self.assertEqual((self.etat()["onglet"], self.etat()["fiche"].get("uuid")), ("wifi", "hotspot-1"))
         self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
 
     def test_retour_au_clavier(self):
-        # La rangée de retour de la sous-page prend la tabulation et se referme à Entrée ; elle porte le nom de
-        # l'onglet (« ‹ Wi-Fi »), et celui de l'onglet Filaire pour un profil filaire.
-        self.ouvrir()
+        # La rangée de retour de la sous-page « Nouveau réseau », la seule qui reste (D155), prend la tabulation et se
+        # referme à Entrée ; elle porte le nom de l'onglet (« ‹ Wi-Fi »).
+        self.ipc("reseau", "ouvrir")
+        self.jusqua(lambda e: e["fenetre"] and e["rangees"], "fenêtre construite")
+        self.ipc("essai", "nouveau")
+        self.jusqua(lambda e: e["sousPage"] == "nouveau", "sous-page ouverte")
         self.assertEqual(self.ipc("essai", "retourTexte"), "‹ Wi-Fi")
         self.tabuler_jusqu_a("retour")
         self.ipc("essai", "entree")
         self.jusqua(lambda e: e["sousPage"] == "", "Entrée referme la sous-page")
         self.assertEqual(self.ipc("essai", "retourTexte"), "")
-        self.ipc("essai", "choisir", "filaire-1")
-        self.jusqua(lambda e: e["fiche"].get("uuid") == "filaire-1", "sous-page filaire")
-        self.assertEqual(self.ipc("essai", "retourTexte"), "‹ Wi-Fi")
 
-    def test_sous_page_filaire_porte_le_nom_de_l_onglet(self):
-        # Un profil filaire ouvert depuis l'onglet Filaire donne la rangée de retour « ‹ Filaire ».
-        self.ouvrir()
+    def test_avances_d_un_profil_filaire(self):
+        # Un profil filaire inactif, depuis l'onglet Filaire, déplie ses réglages avancés dans la section « Profils » :
+        # l'onglet reste Filaire, aucune sous-page ni rangée de retour.
+        self.ipc("reseau", "ouvrir")
+        self.jusqua(lambda e: e["fenetre"] and e["rangees"], "fenêtre construite")
         self.ipc("essai", "onglet", "filaire")
         self.jusqua(lambda e: e["onglet"] == "filaire", "onglet Filaire")
         self.ipc("essai", "rangeeProfil", "filaire-1")
-        self.jusqua(lambda e: e["fiche"].get("uuid") == "filaire-1" and e["fiche"]["lu"], "sous-page filaire")
-        self.assertEqual(self.ipc("essai", "retourTexte"), "‹ Filaire")
-        self.tabuler_jusqu_a("retour")
-        self.ipc("essai", "entree")
-        self.jusqua(lambda e: e["sousPage"] == "", "retour à l'onglet")
-        self.assertEqual(self.etat()["onglet"], "filaire")
+        e = self.jusqua(lambda e: e["fiche"].get("uuid") == "filaire-1" and e["fiche"]["lu"], "réglages avancés filaires")
+        self.assertEqual((e["onglet"], e["sousPage"], self.ipc("essai", "retourTexte")), ("filaire", "", ""))
+        self.assertEqual(e["fiche"]["libelles"], ["Configuration", "Adresse", "Passerelle", "DNS"])
 
-    def test_se_deconnecter_de_la_carte_de_tete(self):
-        # « Se déconnecter » de la carte de tête du profil actif appelle « connection down » sur son uuid.
-        self.ouvrir()
-        self.ipc("essai", "cliquer", "connexion")
+    def test_se_deconnecter_au_pied(self):
+        # Recette 1 (D155) : « Se déconnecter », qui était dans la carte de tête de la sous-page, est au pied du dépliant
+        # du profil actif, à la place de « Rejoindre » ; il appelle « connection down » sur son uuid.
+        d = self.deplier_joint()
+        self.assertEqual(d["pied"], ["Se déconnecter", "Oublier ce réseau"])
+        self.ipc("essai", "regler", "wifi-1", "rejoindre")
         fin = time.monotonic() + DELAI
         while "connection down wifi-1" not in self.appels():
             self.assertLess(time.monotonic(), fin, self.appels())
@@ -2551,7 +2567,7 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
         e = self.ouvrir()
         self.assertEqual(e["detail"], {})
         self.ipc("essai", "choisir", "filaire-1")
-        e = self.jusqua(lambda e: e["fiche"]["uuid"] == "filaire-1" and e["fiche"]["lu"], "profil filaire lu")
+        e = self.jusqua(lambda e: e["fiche"].get("uuid") == "filaire-1" and e["fiche"]["lu"], "profil filaire lu")
         self.assertEqual(e["detail"].get("IPv4"), "10.0.0.2/24")
 
 

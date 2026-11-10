@@ -6,12 +6,12 @@ import "../Composants"
 // GroupeProfils — carte de profils enregistrés, chacun en DepliantReseau non détaillé, un seul déplié à la fois (L2-65).
 // Rôle : une carte où chaque profil est un DepliantReseau replié (ses seuls réglages et son pied, rien n'étant lu
 // tant qu'il est replié), séparé du précédent par un filet. Un clic sur une tête ne fait que la déplier et replie
-// l'autre ; « Rejoindre », au pied d'un profil à portée, lance sa connexion (ProfilReseau.connecter) ; « Réglages
-// avancés… » ouvre sa sous-page. Le modèle est la liste des uuids, réaffectée seulement quand elle change : une
+// l'autre ; « Rejoindre », au pied d'un profil à portée, lance sa connexion (ProfilReseau.connecter) ; ses
+// « Réglages avancés » se déplient dans son dépliant (D155). Le modèle est la liste des uuids, réaffectée seulement quand elle change : une
 // relecture des profils ou un balayage ne recrée ni ne relit le dépliant ouvert. Employée par ConnusWifi (réseaux
 // connus de la page Wi-Fi) et par PageFilaire (section « Profils »).
 // Entrées : profils, les rangées à montrer (uuid, nom, icone, actif, wifi, appareil, portee ; force et security pour
-// un réseau Wi-Fi à portée) ; panneau, le PanneauReseau (ouvrirProfil, factures) ; etat, la source de l'état et des
+// un réseau Wi-Fi à portée) ; panneau, le PanneauReseau (factures) ; etat, la source de l'état et des
 // actions, EtatReseau par défaut ; ouvert, l'uuid du profil déplié, vide sinon (écrit par le clic sur une tête). Les
 // rangées s'appellent profils : le nom rangees est celui des enfants de Carte.
 // Sorties : ouvert ; uuids, les uuids montrés, dans l'ordre.
@@ -57,7 +57,6 @@ Groupe {
                 ouvert: racine.ouvert === profil.modelData
                 etat: racine.etat
                 onBasculer: racine.ouvert = ouvert ? "" : profil.modelData
-                onAvances: uuid => racine.panneau.ouvrirProfil(uuid)
                 onRelu: (u, p) => racine.panneau.factures = Object.assign({}, racine.panneau.factures, {[u]: p.facture})
             }
         }

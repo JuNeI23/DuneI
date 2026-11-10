@@ -9,11 +9,11 @@ import "Reseau"
 // filaire active).
 // Rôle : pose une PageFilaire dans une FloatingWindow, branchée sur un état et un panneau factices (aucune commande ne
 // touche le réseau réel ni les appareils de la machine) : l'état simule un câble branché, débranché ou une machine
-// sans carte filaire, le panneau journalise ouvrirProfil. tests/test_reseau.py (PageFilaireTest) la pilote par IPC
-// (cible « filaire »).
+// sans carte filaire ; le panneau porte les rangées des profils. tests/test_reseau.py (PageFilaireTest) la pilote par
+// IPC (cible « filaire »).
 // Garde de plateforme : la fenêtre n'est construite que sous offscreen, où elle ne paraît jamais à l'écran.
 // Entrées : DUNEI_TOKENS_DIR, lu par Theme ; QT_QPA_PLATFORM=offscreen, posé par le test.
-// Sortie : « essai : prêt » à l'ouverture, puis « essai : ouvrirProfil <uuid> ».
+// Sortie : « essai : prêt » à l'ouverture, puis « essai : executer <arguments JSON> » à chaque commande nmcli.
 // Erreurs : celles de Theme et des liaisons, dans le journal. Dépendances : quickshell ≥ 0.3 (FloatingWindow,
 // LazyLoader, IpcHandler), modules Theme et Reseau, par les liens Theme, Composants, Reseau et Barre posés sous cette
 // racine.
@@ -54,10 +54,7 @@ ShellRoot {
             {groupe: "Filaire", nom: "Garage", uuid: "garage-1", appareil: "", wifi: false, actif: false, etat: "Débranché", icone: "network-wired"},
             {groupe: "Wi-Fi", nom: "Wifi_TRIADES", uuid: "wifi-1", appareil: "wlan0", wifi: true, actif: true, etat: "Connecté", icone: "network-wireless-signal-excellent"}
         ]
-        property string sousPage: ""
-        property string onglet: "filaire"
         property var factures: ({})
-        function ouvrirProfil(uuid) { essai.journal("ouvrirProfil", uuid) }
     }
 
     // trouver — premier descendant visuel qui vérifie un prédicat, en profondeur. Entrées : racine, test. Sortie : l'Item, ou null.
@@ -119,7 +116,7 @@ ShellRoot {
                         existe: f !== null, charge: page.depliant.corps !== null, ouvert: f?.ouvert ?? false, lu: c?.profil.lu ?? false,
                         tuiles: c ? c.tuiles.liste.reduce((m, t) => (m[t.libelle] = t.texte, m), {}) : {},
                         reglages: c ? tuilesDe(c.reglages.grille).map(t => t.libelle) : [],
-                        pied: c ? essai.tous_(c.reglages, o => (o.objectName === "avances" || o.objectName === "oublier") && o.visible).map(o => o.text) : [],
+                        pied: c ? essai.tous_(c.reglages, o => ["rejoindre", "oublier"].includes(o.objectName) && o.visible).map(o => o.text) : [],
                         debits: c?.debits.visible ?? false,
                         carteAdresses: essai.trouver(page, o => o.methode !== undefined && o.rangee !== undefined) !== null,
                     }
@@ -149,7 +146,7 @@ ShellRoot {
                 // appareil — change l'appareil que lit l'état (le Wi-Fi quand le filaire est inactif). Entrée : nom.
                 function appareil(nom: string): void { faux.appareil = nom }
                 // montrer — demande le dépliant d'un profil comme le fait le panneau pour un profil demandé. Entrée :
-                // uuid. Sortie : vrai si la page l'a déplié, faux s'il faut la sous-page.
+                // uuid. Sortie : vrai si la page l'a déplié, faux si elle ne porte pas ce profil.
                 function montrer(uuid: string): bool { return page.montrer(uuid) }
                 // basculer — clic sur la tête du dépliant. Entrées : aucune. Sortie : aucune.
                 function basculer(): void { essai.trouver(page, o => o.objectName === "tete").clique() }
@@ -158,27 +155,32 @@ ShellRoot {
                 // profil — état du dépliant d'un profil de « Profils », en JSON : {ouvert, lu, icone (médaillon de la
                 // tête), aide (état de la tête), reglages (libellés des réglages montrés), pied (libellés des boutons
                 // visibles du pied), confirmer (confirmation de l'oubli montrée), auto (interrupteur), priorite
-                // (compteur)}. Entrée : uuid. Sortie : texte JSON. Erreurs : aucune.
+                // (compteur), avances (section « Réglages avancés » dépliée), libellesAvances (libellés des rangées
+                // montrées par les réglages avancés chargés)}. Entrée : uuid. Sortie : texte JSON. Erreurs : aucune.
                 function profil(uuid: string): string {
                     const d = essai.profil(page, uuid), c = d.corps, tete = essai.trouver(d, o => o.objectName === "tete")
                     const tuilesDe = g => Array.from(g?.children ?? []).filter(t => t.largeur !== undefined && t.visible)
                     return JSON.stringify({
                         ouvert: d.ouvert, lu: c?.profil.lu ?? false, icone: tete.icone, aide: tete.aide,
                         reglages: c ? tuilesDe(c.reglages.grille).map(t => t.libelle) : [],
-                        pied: c ? essai.tous_(c.reglages, o => ["rejoindre", "avances", "oublier"].includes(o.objectName) && o.visible).map(o => o.text) : [],
+                        pied: c ? essai.tous_(c.reglages, o => ["rejoindre", "oublier"].includes(o.objectName) && o.visible).map(o => o.text) : [],
+                        avances: c?.reglages.pli.ouvert ?? false,
+                        libellesAvances: c?.reglages.contenuAvances ? essai.tous_(c.reglages.contenuAvances,
+                            o => typeof o.libelle === "string" && o.libelle !== "" && o.visible).map(o => o.libelle) : [],
                         confirmer: c?.reglages.confirmer ?? false,
                         auto: c ? essai.trouver(c.reglages, o => o.objectName === "auto").checked : null,
                         priorite: c ? essai.trouver(c.reglages, o => o.objectName === "priorite").value : null,
                     })
                 }
                 // cliquer — clic sur un contrôle du dépliant d'un profil de « Profils » : « auto » (bascule
-                // l'interrupteur), « plus » (un pas de priorité), « rejoindre », « avances », « oublier » ou
-                // « confirmer » (bouton du pied). Entrées : uuid, nom. Sortie : aucune. Erreurs : contrôle absent,
+                // l'interrupteur), « plus » (un pas de priorité), « avances » (en-tête de la section « Réglages
+                // avancés »), « rejoindre », « oublier » ou « confirmer » (bouton du pied). Entrées : uuid, nom. Sortie : aucune. Erreurs : contrôle absent,
                 // TypeError au journal.
                 function cliquer(uuid: string, nom: string): void {
                     const r = essai.profil(page, uuid).corps.reglages
                     if (nom === "auto") { const b = essai.trouver(r, o => o.objectName === "auto"); b.toggle(); b.toggled() }
                     else if (nom === "plus") { const c = essai.trouver(r, o => o.objectName === "priorite"); c.increase(); c.valueModified() }
+                    else if (nom === "avances") r.pli.entete.clicked()
                     else essai.trouver(r, o => o.objectName === nom).clicked()
                 }
                 // lien — pose le lien (câble branché) de l'appareil filaire, sans changer la connexion. Entrée : valeur.

@@ -23,7 +23,7 @@ import "../Composants"
 // Dépendances : quickshell ≥ 0.3 (LazyLoader, FloatingWindow, IpcHandler), Theme, Surface, PastillesFenetre,
 // PanneauReseau, EtatReseau, Theme (reglages, space).
 // Cotes : 840 × 640 px par défaut (direction D4) et au moins 720 × 480 px, par les jetons reglages.windowWidth,
-// windowHeight, windowMinWidth et windowMinHeight ; la sous-page d'un profil défile au-delà ; pastilles au sommet de
+// windowHeight, windowMinWidth et windowMinHeight ; la page défile au-delà ; pastilles au sommet de
 // la colonne latérale, à space.scale[2] (12) du coin haut gauche de la fenêtre, dont l'angle reste radius.window (la
 // règle Hyprland ne change pas). Fond : la fenêtre est transparente et sa Surface ne peint rien ; le panneau peint la
 // colonne en verre et le contenu opaque, que Hyprland floute derrière la colonne (D136).

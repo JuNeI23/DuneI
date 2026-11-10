@@ -7,10 +7,11 @@ import "../Composants"
 // Rôle : une section dépliable (Depliable, bible « Section dépliable ») « Réseaux connus », suivie de leur nombre en
 // texte tertiaire, repliée par défaut ; dépliée, la carte des réseaux connus (GroupeProfils : chacun un
 // DepliantReseau non détaillé, un seul déplié à la fois, un clic sur sa tête ne faisant que le déplier, « Rejoindre »
-// au pied d'un réseau à portée). Tant qu'un filtre est saisi, la section s'ouvre d'elle-même ; vidé, elle reprend
-// l'état choisi par l'utilisateur.
+// au pied d'un réseau à portée). La carte est le contenu de la Depliable, sans retrait : elle se déplie et se replie
+// en animant sa hauteur, comme toute section dépliable (Recette 1 de L2-65, D157). Tant qu'un filtre est saisi, la
+// section s'ouvre d'elle-même ; vidé, elle reprend l'état choisi par l'utilisateur.
 // Entrées : connus, les rangées de Nmcli.partager().connus (uuid, nom, portee, force, security) ; filtre, la saisie de la
-// recherche ; panneau, le PanneauReseau (ouvrirProfil, factures) ; etat, la source de l'état et des actions,
+// recherche ; panneau, le PanneauReseau (factures) ; etat, la source de l'état et des actions,
 // EtatReseau par défaut.
 // Sorties : ouverts, vrai si l'utilisateur a ouvert la section ; connuOuvert, l'uuid du réseau déplié, vide sinon ;
 // entete, l'en-tête de la Depliable, lu par les essais.
@@ -39,12 +40,22 @@ ColumnLayout {
         implicitHeight: pli.implicitHeight
         Depliable {
             id: pli
+            width: parent.width
             text: "Réseaux connus"
+            retrait: false
             ouvert: section.montre
             // Le clic de l'en-tête affecte ouvert : le choix de l'utilisateur est gardé, puis la liaison rétablie.
             onOuvertChanged: if (ouvert !== section.montre) {
                 section.ouverts = ouvert
                 ouvert = Qt.binding(() => section.montre)
+            }
+            GroupeProfils {
+                id: groupe
+                objectName: "groupeConnus"
+                width: pli.largeurContenu
+                profils: section.connus
+                panneau: section.panneau
+                etat: section.etat
             }
         }
         Texte {
@@ -54,13 +65,5 @@ ColumnLayout {
             text: section.connus.length
             color: Theme.color?.textTertiary ?? "transparent"
         }
-    }
-    GroupeProfils {
-        id: groupe
-        objectName: "groupeConnus"
-        visible: section.montre
-        profils: section.connus
-        panneau: section.panneau
-        etat: section.etat
     }
 }
