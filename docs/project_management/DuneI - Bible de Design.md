@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas
 
-Document normatif. Version 0.32. Historique en fin de document.
+Document normatif. Version 0.33. Historique en fin de document.
 
 ## Comment lire ce document
 
@@ -910,7 +910,7 @@ Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si 
 | Séparateur | — | `surface` | — | `border-subtle`. Jamais deux séparateurs adjacents : c'est un défaut d'espacement |
 | Carte de réglages | E1 (fenêtre opaque) | `surface` + `row` | — | Aplat `surfaceRaised`, `radius.panel`, rangées séparées par un filet `border-subtle` qui part de `reglages.textColumn` (D105) |
 | Rangée de réglage | — | `row` + `interactive` + `text` | `state` | Hauteur `reglages.row`, `rowHelp` ou `rowLead` ; médaillon facultatif, contrôle à droite, chevron si elle ouvre une sous-page ; au clavier comme une rangée de liste (D105) |
-| Valeur copiable | — | `text` | `state` | Chasse fixe, calée à droite, tronquée au milieu ; clic ou Entrée la copie, « Copié » en fondu ; une valeur par ligne pour un champ multiple (D105) |
+| Valeur copiable | — | `text` | `state` | Chasse fixe, calée à droite, tronquée au milieu ; clic ou Entrée la copie, « Copié » en fondu ; une valeur par ligne pour un champ multiple (D105) ; option `mono` (vraie par défaut), fausse dans les tuiles de la fenêtre Réseau où la valeur prend la police de l'interface (L2-65) |
 | Barre de défilement | — | `interactive` | `state` | Superposée, 8px au repos, 12px au survol. S'efface après 800 ms d'inactivité |
 
 ### Couche 2 — le flottant applicatif
@@ -975,4 +975,5 @@ Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si 
 | 0.29 | 2026-11-07 | Section Presqu'île : surface de hauteur constante égale au plus grand module, ancien contenu qui s'efface sur place (D132, D133) ; annexe E : renvoi à D133 |
 | 0.30 | 2026-11-08 | Chapitre 5 : verre propre de la presqu'île, 82 % le jour, 60 % la nuit (D137) ; popovers confirmés à 60 % ; chapitre 7 : colonne des fenêtres de réglages pleine hauteur, sans plateau détaché, verre à 90 % le jour et opaque la nuit (D136) |
 | 0.31 | 2026-11-08 | Annexe E : alerte de batterie de la presqu'île, `warning` à 20 %, `error` à 5 % (D146) ; contrôle segmenté dont le segment non coché part de la transparence (D148) |
+| 0.33 | 2026-11-09 | Valeur copiable : option `mono`, fausse dans les tuiles de la fenêtre Réseau (L2-65) |
 | 0.32 | 2026-11-09 | Section dépliable : chevron animé par le ressort `reveal` dans les fenêtres de réglages ; composants `Courbe` et `Tuile` ajoutés à l'inventaire (L2-65) |

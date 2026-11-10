@@ -1,6 +1,6 @@
 # Fenêtre Réseau allégée : plan d'implémentation (L2-65)
 
-Version 1.0, 2026-11-09.
+Version 1.1, 2026-11-09.
 
 > **Pour les agents :** sous-skill requis : superpowers:subagent-driven-development (recommandé) ou
 > superpowers:executing-plans, tâche par tâche. Les étapes se cochent (`- [ ]`).
@@ -374,3 +374,4 @@ réseau. `CarteAdresses` quitte la page.
 | Version | Date | Changement |
 |---|---|---|
 | 1.0 | 2026-11-09 | Première rédaction, d'après la fiche v0.2 et le repérage du code |
+| 1.1 | 2026-11-09 | Plan exécuté : la tâche 10 est scindée en diagnostic et documentation, l'allègement de la fenêtre est abandonné sur décision de Nicolas (D151) |

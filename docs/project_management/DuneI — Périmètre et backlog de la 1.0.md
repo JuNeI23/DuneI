@@ -2,9 +2,9 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.49. Historique en fin de document.
+Version 1.50. Historique en fin de document.
 
-La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **175 éléments** répartis en **cinq lots**, sur six chantiers.
+La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **176 éléments** répartis en **cinq lots**, sur six chantiers.
 
 Ce document dit ce qui est attendu, dans quel ordre, et à quelle condition c'est terminé. Il ne dit pas à quoi ça ressemble — c'est le rôle de la bible de design. En cas de contradiction : la bible l'emporte sur l'apparence, ce document l'emporte sur le périmètre.
 
@@ -318,7 +318,8 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L2-62 | B | Écrit | Hauteur de la barre dans les jetons — `systemBarHeight` vaut 32 alors que la barre mesure 28 px (D89, D122) : aligner le jeton sur la hauteur réelle et faire lire celle-ci à `Barre.qml` |
 | L2-63 | C | Écrit | Cache de vignettes sur disque pour la galerie de fonds (suite de L2-60, D126, D135) — miniatures précalculées, créées au premier passage ou à l'ajout d'une image, lues à l'ouverture : ouverture instantanée même sur un gros dossier (trente images lourdes : vignettes environ 0,6 s après l'étirement, accepté par Nicolas) et mémoire faible (le décodage pleine taille d'un PNG 4K a une crête de 32 Mio). À concevoir : emplacement (`~/.cache`), invalidation par date et taille, génération hors du fil de la coque |
 | L2-64 | C | Écrit | Pages géantes transparentes en `madvise` pour tout le système — piste à trancher par Nicolas (D134, D135) : `MemoryTHP=madvise` n'est posé que sur l'unité de la coque (971 Mo de PSS devenus 160 Mo) ; passer `/sys/kernel/mm/transparent_hugepage/enabled` ou `transparent_hugepage=madvise` à toute la machine profiterait sans doute aux autres processus à jemalloc ou à tas épars. Choix de machine : mesurer d'abord les plus gros processus, et consigner la valeur dans le fragment de `caladan`, jamais dans le code commun |
-| L2-65 | B | Écrit | Alléger la fenêtre Réseau, puis la copier pour créer la fenêtre Son — la fenêtre Réseau est lente à l'ouvrir et à la fermer, sans aucune animation, et sa colonne de droite est chargée et mal ordonnée ; la fenêtre Son naît de sa copie allégée, et le lien « Réglages du son… » du popover du son (L2-12) l'ouvre ; volume par application, profils de la carte, effets et égaliseur y trouveront leur place (spec du 2026-11-08, non-objectifs) |
+| L2-65 | B | Fait | Fenêtre Réseau allégée — **fait, en attente de fusion (D149 à D154)** : fenêtre qui se ferme dès le clic (fermeture visible 76-85 ms au lieu de 650-830, D151), page Wi-Fi « liste d'abord » (recherche, réseau joint déplié avec courbe vivante et tuiles, autres réseaux, connus repliés en fin de page, D149), réglages courants dans le dépliant et sous-page réduite à « Réglages avancés… » (D150), composants `Courbe`, `Tuile` et `Depliable` animé ; aucune correction de Hyprland nécessaire (D152). La fenêtre Son, détachée le 2026-11-09, devient L2-66 (D153). Fiche : `docs/superpowers/specs/2026-11-09-fenetre-reseau-design.md` ; plan : `docs/superpowers/plans/2026-11-09-fenetre-reseau.md` ; recette à l'écran à faire |
+| L2-66 | B | Écrit | Fenêtre Son, sur le gabarit de la fenêtre Réseau (L2-65) — le lien « Réglages du son… » du popover du son (L2-12) l'ouvre ; volume par application, profils de la carte, effets et égaliseur y trouveront leur place ; repérage propre à faire avant la fiche ; réemploi des composants `Courbe`, `Tuile` et d'un dépliant dans le style de `DepliantReseau` ; même lot et même priorité que L2-65 (D153) |
 
 ### Lot 3 — la bascule
 
@@ -420,7 +421,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L5-29 | — | Écrit | Passe de regard complète — étage 3 |
 | L5-30 | — | Écrit | Résorber les points ouverts de l'annexe C |
 
-**Volume total : 175 éléments** — 125 écrits, 43 configurés, 5 offerts, 2 mixtes.
+**Volume total : 176 éléments** — 126 écrits, 43 configurés, 5 offerts, 2 mixtes.
 
 Les deux tiers du travail sont de l'écrit, et les trois quarts de cet écrit se concentrent sur la coque et les écrans système. C'est cohérent avec la stratégie retenue, et c'est là que tout le risque se trouve.
 
@@ -524,6 +525,7 @@ Le choix de la distribution de base et du compositeur, précédemment ouverts, s
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-12 | Version initiale, 137 éléments |
+| 1.50 | 2026-11-09 | L2-65 réduit à la fenêtre Réseau et fait, en attente de fusion (D149 à D154) ; ajout de L2-66 (fenêtre Son, détachée de L2-65, D153) ; 176 éléments |
 | 1.49 | 2026-11-08 | L2-12 fusionné (PR #52) ; L2-13 fait : indicateur d'énergie, popover du profil et alerte de la presqu'île (D145 à D148) ; 175 éléments |
 | 1.48 | 2026-11-08 | L2-12 fait, en attente de fusion : indicateur audio, popover du son et presqu'île-jauge (D138 à D144) ; ajout de L2-65 (alléger la fenêtre Réseau puis créer la fenêtre Son) ; 175 éléments |
 | 1.47 | 2026-11-08 | L2-61 fait : verre propre de la presqu'île et colonne des fenêtres de réglages (D136, D137) ; popovers gardés à 60 % ; 174 éléments |

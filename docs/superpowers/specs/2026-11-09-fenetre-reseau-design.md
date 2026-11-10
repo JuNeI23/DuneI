@@ -1,6 +1,6 @@
 # Fenêtre Réseau allégée : conception (L2-65)
 
-Version 0.2, 2026-11-09.
+Version 1.0, 2026-11-09. État : faite, en attente de recette et de fusion.
 
 ## Intention
 
@@ -249,9 +249,27 @@ apparaître.
 Nicolas valide à l'écran la fermeture et l'ouverture animées, le déplacement, la page Wi-Fi et ses dépliants, la page
 Filaire si une carte est branchée, et les deux thèmes.
 
+## Réalisation
+
+La fenêtre est faite et correspond à cette fiche. Les mesures finales, prises sur la machine de Nicolas, sont : fermeture
+visible de 76 à 85 ms, destruction de 60 à 119 ms, ouverture de 187 à 215 ms. La destruction gèle encore le fil de la
+coque de 73 à 135 ms ; Nicolas l'a accepté, l'allègement de l'arborescence n'ayant apporté aucun gain mesurable (D151).
+
+Écarts et choix par rapport à la fiche :
+
+- la fenêtre Son, qui devait naître de la copie de celle-ci, est détachée et devient L2-66 (D153) ;
+- l'animation d'ouverture et la double disparition n'ont demandé aucune correction de Hyprland, et SUPER + glisser est
+  validé par Nicolas (D152) ;
+- la priorité d'un profil est un compteur, les libellés sont « Connexion automatique » et « Données limitées », et la
+  sous-page se réduit à « Réglages avancés… » (D150) ;
+- les profils filaires inactifs se déplient comme les réseaux connus, et les adresses des tuiles prennent la police de
+  l'interface ; ces choix de construction, avec « Détails… » et l'en-tête « Réseaux connus », sont regroupés en D154 et se
+  jugent à la recette.
+
 ## Historique des versions
 
 | Version | Date | Changement |
 |---|---|---|
 | 0.1 | 2026-11-09 | Première rédaction, après le repérage et les maquettes `colonne` à `colonne-v6` |
 | 0.2 | 2026-11-09 | Relecture de constructeur : cas complémentaires tranchés par Claude (partage des listes, états déconnecté et radio coupée, « Autre réseau… », recherche, mot de passe, valeurs multiples, réglages filaires) |
+| 1.0 | 2026-11-09 | Fenêtre faite : section « Réalisation » (mesures finales, écarts, D149 à D154) |
