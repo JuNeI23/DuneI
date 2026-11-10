@@ -3681,3 +3681,79 @@ d'une propriété ou de quelques lignes.**
 
 *Touché : `coque/Reseau/PageWifi.qml`, `coque/Reseau/PanneauReseau.qml`, `coque/Reseau/GroupeProfils.qml`,
 `coque/Reseau/DepliantReseau.qml`, `coque/Composants/Valeur.qml`.*
+
+## 2026-11-10 — Recette 1 de la fenêtre Réseau (L2-65)
+
+### D155 · Les réglages avancés se déplient dans le dépliant ; la sous-page de profil disparaît
+
+2026-11-10, retour de Nicolas à la recette (« le clic sur Réglages avancés est très désagréable […] mets-le en dépliant
+qui augmente seulement la surface du menu actuel, et anime ça »), arbitré par le coordinateur.
+
+- **« Réglages avancés » est une section dépliable du dépliant d'un réseau**, posée sous la grille des réglages et
+  avant le pied d'actions : c'est là qu'on la cherche après avoir parcouru les réglages courants, et le pied reste la
+  dernière ligne du dépliant, comme partout ailleurs. Déplier n'agrandit que ce dépliant ; la hauteur suit le ressort
+  `reveal`, celui du dépliant lui-même. La section est pleine largeur (sans retrait sous le libellé), pour garder la
+  grille des tuiles. Son contenu (`AvancesReseau`) n'est chargé que déplié ou en mouvement.
+- **Contenu repris de l'ancienne sous-page** (`FicheProfil`, supprimée) : configuration IPv4 automatique ou fixe et ses
+  champs, détail de la connexion active et « Tout copier », plus les tuiles qui ont quitté la page (D156). Il partage le
+  `ProfilReseau` du dépliant : rien n'est relu à l'ouverture de la section. Les rangées y sont des `Ligne` sans retrait
+  (nouvelle entrée `cote`), alignées sur la grille.
+- **Plus aucune sous-page de profil.** Aucun chemin n'y menait plus : `PanneauReseau.ouvrirProfil`, `sousPage = uuid`,
+  la fiche et leurs essais sont retirés ; la sous-page « Nouveau réseau » reste. Un profil filaire demandé (« Détails… »
+  du popover, profil créé) se déplie dans la section « Profils » de l'onglet Filaire au lieu d'ouvrir sa sous-page.
+- **« Se déconnecter » passe au pied du dépliant du profil actif**, à la place de « Rejoindre » : il n'existait que dans
+  la carte de tête de la sous-page, et sa disparition aurait retiré à la fenêtre toute déconnexion. Coût si le choix
+  déplaît : une condition dans `ReglagesReseau`.
+
+*Touché : `coque/Reseau/AvancesReseau.qml` (nouveau), `coque/Reseau/FicheProfil.qml` (supprimé),
+`coque/Reseau/ReglagesReseau.qml`, `coque/Reseau/DepliantReseau.qml`, `coque/Reseau/PanneauReseau.qml`,
+`coque/Reseau/PageWifi.qml`, `coque/Reseau/PageFilaire.qml`, `coque/Reseau/GroupeProfils.qml`, `coque/Reseau/Ligne.qml`,
+coques d'essai et `tests/test_reseau.py`, fiche de L2-65.*
+
+### D156 · La page Wi-Fi s'allège : réseau joint replié, tuiles réduites, aides retirées
+
+2026-11-10, retours de Nicolas à la recette, arbitrés par le coordinateur.
+
+- **Le réseau joint s'ouvre replié.** « Détails… » du popover continue de le déplier.
+- **Son nom est mis en valeur** dans la tête de son dépliant détaillé (et dans celle de la connexion filaire active) :
+  échelon 3 au lieu de 2, en graisse moyenne, dans l'échelle de la bible, sans taille nouvelle (`Ligne.titre`).
+- **Tuiles de la page : Adresse IP, Routeur, Connecté depuis**, pour le Wi-Fi comme pour le filaire (où « Connecté
+  depuis » ne paraît que si la sonde la connaît). Le signal et ses barres, la bande (Wi-Fi) et le débit du lien
+  (filaire) passent dans les réglages avancés. **DNS et adresse matérielle n'y forment pas de tuile** : le détail de la
+  connexion, juste dessous, les donne déjà en entier et copiables ; une tuile de plus les aurait dits deux fois dans la
+  même section. Coût si Nicolas veut la tuile : une ligne dans `TuilesConnexion`. Une rangée de tuiles incomplète est
+  complétée de cellules vides, pour que deux tuiles gardent la grille de trois colonnes.
+- **Mot de passe d'un réseau ouvert** : la valeur « Aucun (réseau ouvert) », à l'échelon 3 en graisse moyenne et au
+  texte primaire, comme « Sécurité », remplace la phrase en texte secondaire. Le champ d'un réseau protégé garde sa
+  hauteur (`controlHeight`, celle de l'interrupteur et du compteur) et ses deux colonnes ; la valeur de la sécurité se
+  centre désormais sur sa hauteur, comme « Oui » sur son interrupteur.
+- **Aides retirées** sous « Données limitées » et « Priorité ».
+- **L'interrupteur de la radio s'aligne sur le bord droit du champ de recherche** (et des cartes) : `TitrePage` ne le
+  retire plus de `space.scale[2]`.
+
+*Touché : `coque/Reseau/PageWifi.qml`, `coque/Reseau/TuilesConnexion.qml`, `coque/Reseau/ReglagesReseau.qml`,
+`coque/Reseau/DepliantReseau.qml`, `coque/Reseau/Ligne.qml`, `coque/Reseau/TitrePage.qml`, tests, fiche de L2-65.*
+
+### D157 · Section dépliable, interrupteur, pastilles et médaillon passent par un ressort
+
+2026-11-10, retours de Nicolas à la recette (« dépliage des réseaux connus pas agréable », « les toggle switch sont
+toujours pas animés », pastilles qui changent de couleur d'un coup, icône d'onglet trop brute), arbitrés par le
+coordinateur. Aucune durée n'est écrite en dur : tout passe par les transitions de `motion.json`.
+
+- **Section dépliable** (`Depliable`) : le bloc s'ouvre et se ferme en dépliant sa hauteur sur le ressort `reveal`, le
+  même que le chevron ; la hauteur montrée est celle du contenu multipliée par la progression du chevron, si bien qu'un
+  contenu qui grandit pendant ou après le dépliage (un réseau connu qu'on déplie) est suivi sans second ressort. Le bloc
+  est découpé pendant le mouvement. Toutes les sections en profitent ; « Réseaux connus » porte désormais sa carte dans
+  la section (entrée `retrait` fausse). Le dépliant d'un réseau suit le même principe, ce qui retire son second ressort
+  de hauteur.
+- **Interrupteur** : le bouton glisse au ressort `state`, celui de l'`Etat` qui fond déjà la couleur de la piste ; c'est
+  la transition des changements d'état sur place, que suivent case, radio et bascule.
+- **Pastilles de fenêtre** : chaque disque rejoint sa couleur par un `ColorSpring` au ressort `state` (fenêtre active ou
+  inactive, survol, pression). La bible disait « sans `Etat` ni transition » : elle est corrigée.
+- **Médaillon** : fond et glyphe fondent au ressort `state` ; l'onglet choisi de la colonne de la fenêtre Réseau change
+  de couleur sans à-coup. Le libellé suivait déjà son `Etat` ; le reste du changement d'onglet reste instantané.
+- Le mouvement réduit pose hauteur, chevron et bouton d'un coup, comme tout ressort de déplacement.
+
+*Touché : `coque/Composants/Depliable.qml`, `Interrupteur.qml`, `Pastilles.qml`, `Medaillon.qml`,
+`coque/Reseau/ConnusWifi.qml`, `coque/Reseau/DepliantReseau.qml`, coque d'essai des composants et
+`tests/test_coque_composants.py`, bible (v0.34).*

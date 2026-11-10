@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.50. Historique en fin de document.
+Version 1.51. Historique en fin de document.
 
 La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **176 éléments** répartis en **cinq lots**, sur six chantiers.
 
@@ -307,7 +307,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L2-51 | C | Écrit | VPN complet de la fenêtre Réseau — l'onglet VPN minimal (liste et interrupteur par connexion, `nmcli connection up` ou `down` par uuid) est fait ; reste : import d'un fichier (`.conf` WireGuard, `.ovpn` OpenVPN) par `nmcli connection import`, sélecteur de fichiers par le portail FileChooser (`xdg-desktop-portal-gtk` à ajouter) ou champ de saisie avec dépôt, identifiants (gardés dans le profil ou confiés à un agent de secrets de la coque), sous-page d'un VPN (réglages, adresses), lecture du greffon (OpenVPN) pour l'aide de la rangée, paquets `networkmanager-vpn-plugin-openvpn` et `wireguard-tools` ; reporté à la demande de Nicolas (2026-11-01) faute d'accès VPN pour tester |
 | L2-52 | C | Écrit | Popover thème et luminosité — idée de Nicolas (2026-11-01) : un popover dédié, ancré à la barre, qui réunit le thème (famille et moment : jour, nuit) et la luminosité ; à peser avec L2-29 (contrôle de la luminosité), dont il peut devenir la forme, et avec L2-50 (retrait du jour thématisé), qui fixe d'abord ce que « moment » veut dire ; suit le motif du popover de réglage rapide (bible, D105) |
 | L2-53 | B | Écrit | Recherche partagée — la relance du balayage Wi-Fi (« nmcli device wifi rescan », l'indicateur d'activité et sa borne `motion.delays.scan`), aujourd'hui écrite deux fois, dans le popover réseau et dans la page Wi-Fi de la fenêtre, passe dans `Jonction`, déjà partagée entre eux (relecture finale de L2-11) |
-| L2-54 | B | Écrit | Saisie IPv4 protégée des relectures — `FicheProfil.restaurer()` remet chaque contrôle sur les réglages lus et peut écraser l'adresse, la passerelle ou les DNS en cours de saisie quand une relecture arrive ; la saisie non validée doit survivre (relecture finale de L2-11) |
+| L2-54 | B | Écrit | Saisie IPv4 protégée des relectures — `AvancesReseau.restaurer()` (ex-`FicheProfil`, D155) remet chaque contrôle sur les réglages lus et peut écraser l'adresse, la passerelle ou les DNS en cours de saisie quand une relecture arrive ; la saisie non validée doit survivre (relecture finale de L2-11) |
 | L2-55 | B | Écrit | Rangées du popover réseau au clavier — les rangées du popover (réseaux, actions) doivent suivre la bible, « Clavier » : tabulation, flèches, Entrée et Espace, contour de focus venu du clavier seulement (relecture finale de L2-11) |
 | L2-56 | B | Écrit | Animations de passage d'un popover de la barre à l'autre — demande de Nicolas à la recette de L2-14 (2026-11-03) : l'exclusion (D108) ferme l'un et ouvre l'autre sans transition | — **fait (D110, D111, D114)** : fenêtre hôte unique, passage par transformation de la même surface, disque d'en-tête tenu ; geste validé par Nicolas en mouvement normal, recette finale en attente
 | L2-57 | B | Écrit | Suites du popover Bluetooth (relecture finale de L2-14) — suivi des appareils par l'ObjectModel plutôt que par un tableau reconstruit à chaque balise ; recherche partagée entre écrans (un compteur de demandes) ; voisins gelés sous le pointeur pendant la recherche ; suivi des connexions purgé à l'oubli d'un appareil ; couleur d'erreur à confronter à la bible ; `Activite` lève « Cannot read property 'phase' of null » quand sa ligne est détruite en pleine animation (journal de la coque, 2026-11-03) ; exécutable d'appairage : adresse en minuscules (chemin D-Bus introuvable), signaux INT et TERM sans nettoyage, processus survivant au rechargement de la coque (lancer en groupe), écouteurs LE Audio seuls forcés en `bredr`, micro (`audio-input-*`) jamais « connecté » faute de `bluez_output` ; tests de ces cas |
@@ -525,6 +525,7 @@ Le choix de la distribution de base et du compositeur, précédemment ouverts, s
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-12 | Version initiale, 137 éléments |
+| 1.51 | 2026-11-10 | L2-54 : la saisie IPv4 vit désormais dans `AvancesReseau`, la sous-page de profil ayant disparu (recette 1 de L2-65, D155) |
 | 1.50 | 2026-11-09 | L2-65 réduit à la fenêtre Réseau et fait, en attente de fusion (D149 à D154) ; ajout de L2-66 (fenêtre Son, détachée de L2-65, D153) ; 176 éléments |
 | 1.49 | 2026-11-08 | L2-12 fusionné (PR #52) ; L2-13 fait : indicateur d'énergie, popover du profil et alerte de la presqu'île (D145 à D148) ; 175 éléments |
 | 1.48 | 2026-11-08 | L2-12 fait, en attente de fusion : indicateur audio, popover du son et presqu'île-jauge (D138 à D144) ; ajout de L2-65 (alléger la fenêtre Réseau puis créer la fenêtre Son) ; 175 éléments |

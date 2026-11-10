@@ -1,6 +1,6 @@
 # Fenêtre Réseau allégée : conception (L2-65)
 
-Version 1.0, 2026-11-09. État : faite, en attente de recette et de fusion.
+Version 1.1, 2026-11-10. État : faite, recette 1 corrigée, en attente de la recette suivante et de la fusion.
 
 ## Intention
 
@@ -266,6 +266,27 @@ coque de 73 à 135 ms ; Nicolas l'a accepté, l'allègement de l'arborescence n'
   l'interface ; ces choix de construction, avec « Détails… » et l'en-tête « Réseaux connus », sont regroupés en D154 et se
   jugent à la recette.
 
+### Recette 1
+
+Première recette à l'écran, le 2026-11-10. Nicolas a gardé la vitesse d'ouverture et de fermeture, les deux thèmes et
+les courbes des débits ; il a demandé douze corrections, toutes faites :
+
+- la page s'allège (D156) : le réseau joint s'ouvre replié, son nom passe à l'échelon 3 en graisse moyenne ; les tuiles
+  de la page se réduisent à Adresse IP, Routeur et Connecté depuis ; le mot de passe d'un réseau ouvert vaut « Aucun
+  (réseau ouvert) » à l'échelon des autres valeurs ; les aides de « Données limitées » et de « Priorité » disparaissent ;
+  l'interrupteur de la radio s'aligne sur le bord droit du champ de recherche ;
+- « Réglages avancés » devient une section dépliable du dépliant, sous les réglages et avant le pied, qui n'agrandit que
+  lui et s'anime au ressort `reveal` ; elle porte la configuration IPv4, le détail de la connexion et « Tout copier »,
+  plus le signal et la bande (Wi-Fi) ou le débit du lien (filaire) ; DNS et adresse matérielle y restent dans le détail,
+  sans tuile en double. La sous-page de profil disparaît, et « Se déconnecter » passe au pied du dépliant du profil actif
+  (D155) ;
+- la section dépliable déplie sa hauteur au ressort `reveal` (les « Réseaux connus » en profitent), le bouton de
+  l'interrupteur glisse, les pastilles de la fenêtre et le médaillon de l'onglet choisi fondent leurs couleurs au ressort
+  `state` (D157).
+
+Captures : `.superpowers/preview/fenetre-reseau/captures/recette1-*.png`, sur la coque d'essai de la fenêtre (données
+factices de nmcli, thèmes jour et nuit), plus `recette1-reel-repos-jour.png` sur la coque réelle.
+
 ## Historique des versions
 
 | Version | Date | Changement |
@@ -273,3 +294,4 @@ coque de 73 à 135 ms ; Nicolas l'a accepté, l'allègement de l'arborescence n'
 | 0.1 | 2026-11-09 | Première rédaction, après le repérage et les maquettes `colonne` à `colonne-v6` |
 | 0.2 | 2026-11-09 | Relecture de constructeur : cas complémentaires tranchés par Claude (partage des listes, états déconnecté et radio coupée, « Autre réseau… », recherche, mot de passe, valeurs multiples, réglages filaires) |
 | 1.0 | 2026-11-09 | Fenêtre faite : section « Réalisation » (mesures finales, écarts, D149 à D154) |
+| 1.1 | 2026-11-10 | Recette 1 : douze corrections, réglages avancés en dépliant et fin de la sous-page de profil, page allégée, animations des composants (D155 à D157) |
