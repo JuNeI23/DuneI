@@ -3791,3 +3791,18 @@ symbole `1` ne se déclenche donc jamais.
 - Rien ne change sur caladan, en disposition britannique : les codes désignent les mêmes touches qu'avant.
 
 *Touché : `config/hypr/donnees/raccourcis.lua`, `tests/test_hyprland_clavier.py`.*
+
+### D160 · La touche Compose quitte la configuration commune pour le fichier machine
+
+2026-11-10, relevé de Nicolas sur `arrakis-core`, clavier en disposition française : les symboles placés derrière AltGr
+(`@`, `#`, `{`, `[`…) sont inaccessibles. `modules/entree.lua` imposait à toute machine `compose:ralt` (D36), qui fait
+d'AltGr droite la touche Compose et lui retire donc son rôle de troisième niveau. Sur le QWERTY britannique de
+caladan, c'était voulu ; sur un AZERTY, cela prive le clavier de la moitié de ses symboles.
+
+- La touche Compose dépend de la disposition, comme elle : `kb_options` sort de la configuration commune et vit dans
+  le fichier machine, conformément à D24. `caladan.lua` garde `compose:ralt` ; `arrakis-core.lua` n'en déclare
+  aucune, l'AZERTY portant déjà les accents.
+- D36 reste valable pour caladan : seul son emplacement change.
+
+*Touché : `config/hypr/modules/entree.lua`, `config/hypr/machines/caladan.lua`, `config/hypr/machines/arrakis-core.lua`,
+`tests/test_hyprland_modules.py`.*

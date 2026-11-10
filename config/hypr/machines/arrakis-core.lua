@@ -6,7 +6,8 @@
 -- Écran interne, nommé par son port, qui ne change pas pour une dalle intégrée. Échelle validée à l'écran (D158).
 hl.monitor({ output = "eDP-1", mode = "1920x1080@60", position = "0x0", scale = 1.25 })  -- surface logique de 1536 × 864
 
--- Clavier interne en disposition française ; la touche Compose est commune (modules/entree.lua).
+-- Clavier interne en disposition française. Pas de touche Compose : AltGr y donne le troisième niveau (@, #, {, […),
+-- et l'AZERTY porte déjà les accents (D160).
 hl.config({ input = { kb_layout = "fr" } })
 
 -- Écran externe fixe : à déclarer par sa description, relevée avec hyprctl monitors, jamais par son port.
