@@ -11,8 +11,8 @@ import "../Composants/etats.js" as Etats
 // largeur d'un médaillon pour garder la colonne du texte ; libelle ; aide, facultative, sous le libellé, en texte
 // secondaire ; erreur, facultative, sous la rangée, à la couleur d'erreur ; filet, vrai sauf pour la première
 // ligne d'un groupe, en retrait à reglages.textColumn avec une icône ou une tête, à space.scale[2] sans, et à
-// space.scale[3] du bord droit (bord à bord quand cote est nulle ; bible, « Rangées de liste ») ; cliquable, faux par défaut : vrai, la rangée entière
-// réagit au clic (curseur en main, signal clique), s'atteint à la tabulation et s'active par Entrée ou Espace
+// space.scale[3] du bord droit (bord à bord quand cote est nulle ; bible, « Rangées de liste ») ; cliquable, faux
+// par défaut : vrai, la rangée entière réagit au clic (curseur en main, signal clique), s'atteint à la tabulation et s'active par Entrée ou Espace
 // (bible, « Clavier »), se peint d'une plaque de survol un cran au-dessus de son conteneur, comme ReglageLigne
 // (bible, « Survol »), et montre le contour de focus (focus.width, jamais un anneau ni un changement de fond) quand
 // le focus lui vient du clavier ;

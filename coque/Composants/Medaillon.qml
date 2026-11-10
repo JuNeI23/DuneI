@@ -11,7 +11,8 @@ import "../Theme"
 // fenêtre Réseau qu'on choisit ou qu'on quitte change de couleur sans à-coup (Recette 1 de L2-65, D157) ; la variante
 // pleine du glyphe, elle, se pose d'un coup.
 // Entrées : nom, icône freedesktop ; actif, faux par défaut.
-// Sorties : fond et glyphe, les couleurs peintes, lues par les essais. Erreurs : aucune ; avant le chargement des tokens, le médaillon est nul et transparent.
+// Sorties : fond et glyphe, les couleurs peintes, lues par les essais.
+// Erreurs : aucune ; avant le chargement des tokens, le médaillon est nul et transparent.
 // Dépendances : Icone, Theme (reglages, radius.panel, color, stateColors, ColorSpring).
 Rectangle {
     id: medaillon
@@ -37,7 +38,8 @@ Rectangle {
     // Les ressorts suivent l'icône : elle reste le premier enfant, que la coque d'essai lit ainsi.
     ColorSpring {
         id: fondu
-        target: (medaillon.actif ? Theme.color?.accent : Theme.stateColors("controlRaised", "none", "rest")?.fill) ?? "transparent"
+        target: (medaillon.actif ? Theme.color?.accent
+            : Theme.stateColors("controlRaised", "none", "rest")?.fill) ?? "transparent"
     }
     ColorSpring {
         id: fonduGlyphe

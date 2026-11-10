@@ -34,8 +34,8 @@ import "etats.js" as Etats
 // disque expose couleur, la couleur visée, peinte, la couleur peinte (en fondu vers couleur), et trace, son glyphe.
 // Erreurs : aucune ; avant le chargement des tokens, les cotes sont nulles et les couleurs transparentes.
 // Dépendances : QtQuick.Shapes (moteur CurveRenderer), QtQuick.Templates (AbstractButton : clic, pression),
-// Theme (density, space, pastilles, color.borderDefault, ColorSpring), etats.js (herite) ; HoverHandler, qui suit le survol du
-// groupe, intervalles compris, et celui de chaque disque, quel que soit Qt.styleHints.useHoverEffects.
+// Theme (density, space, pastilles, color.borderDefault, ColorSpring), etats.js (herite) ; HoverHandler, qui suit le
+// survol du groupe, intervalles compris, et celui de chaque disque, quel que soit Qt.styleHints.useHoverEffects.
 // Cotes : diamètre density.pastille, écart space.scale[1] ; les glyphes sont décrits dans le carré unité et mis à
 // l'échelle du diamètre : leurs points et leur trait (un dixième du diamètre) sont des fractions, non des cotes.
 Row {

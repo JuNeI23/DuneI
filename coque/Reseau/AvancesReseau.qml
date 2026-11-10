@@ -10,12 +10,12 @@ import "nmcli.js" as Nmcli
 // Rôle : reprend ce que portait la sous-page de profil, supprimée, dans le dépliant même, sous ses réglages courants.
 // De haut en bas : pour la connexion active lue par EtatReseau (mesures), les tuiles d'information qui ont quitté la
 // page (TuilesConnexion, avances : Signal et Bande pour le Wi-Fi, Débit du lien pour le filaire) ; le petit titre
-// « IPv4 », puis Configuration (Automatique ou Fixe en Onglets, bible « Onglets »), Adresse, Passerelle en Fixe et
-// DNS ; enfin, pour la connexion active, « Détail de la connexion » et « Tout copier », puis une rangée par paramètre
-// (IPv4, IPv6, passerelle, DNS, adresse matérielle), chacun en Valeur copiable. « Tout copier » copie le bloc entier,
-// une ligne « Libellé : valeur » par paramètre, et montre « Copié » à sa place jusqu'à la fin de motion.delays.copied,
-// par un minuteur à un coup armé seulement par la copie. Les rangées sont des Ligne sans retrait (cote nulle), alignées
-// sur la grille du dépliant.
+// « IPv4 », une fois le profil lu, puis Configuration (Automatique ou Fixe en Onglets, bible « Onglets »), Adresse,
+// Passerelle en Fixe et DNS ; enfin, pour la connexion active, « Détail de la connexion » et « Tout copier », puis une
+// rangée par paramètre (IPv4, IPv6, passerelle, DNS, adresse matérielle), chacun en Valeur copiable. « Tout copier »
+// copie le bloc entier, une ligne « Libellé : valeur » par paramètre, et montre « Copié » à sa place jusqu'à la fin de
+// motion.delays.copied, par un minuteur à un coup armé seulement par la copie. Les rangées sont des Ligne sans retrait
+// (cote nulle), alignées sur la grille du dépliant.
 // Chaque réglage s'applique à sa validation (clic, Entrée ou sortie d'un champ), sans bouton global « Enregistrer » :
 // la valeur affichée change aussitôt, puis le profil est relu ; un refus de nmcli affiche sa sortie d'erreur sous le
 // réglage et restaure les valeurs lues. Passer en Fixe n'écrit rien tant que l'adresse manque : NetworkManager refuse
@@ -147,8 +147,10 @@ ColumnLayout {
         etat: racine.etat
     }
 
-    Titre { text: "IPv4" }
+    // La section IPv4 attend la lecture du profil, comme la grille des réglages courants.
+    Titre { visible: racine.lu; text: "IPv4" }
     ColumnLayout {
+        visible: racine.lu
         Layout.fillWidth: true
         spacing: 0
         Ligne {

@@ -43,7 +43,8 @@ GridLayout {
         const texte = (libelle, t) => ({libelle, texte: a && t ? t : "—", copie: "", barres: -1})
         const depuis = a && e.connecteDepuis != null ? Nmcli.formatDuree(e.connecteDepuis) : ""
         if (!avances)
-            return [adresses("Adresse IP", (e.ip4 ?? []).map(x => x.split("/")[0])), adresses("Routeur", [e.passerelle ?? ""])]
+            return [adresses("Adresse IP", (e.ip4 ?? []).map(x => x.split("/")[0])),
+                    adresses("Routeur", [e.passerelle ?? ""])]
                 .concat(depuis || !filaire ? [texte("Connecté depuis", depuis)] : [])
         if (filaire) {
             const lien = e.appareilFilaire?.linkSpeed ?? 0
