@@ -615,6 +615,14 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
             with self.subTest(moment=moment or "nuit"):
                 self.assertEqual(self.lire_jusqua("contours", attendu), attendu.lower())
 
+    def test_fondus(self):
+        # Recette 1 de L2-65 (D157) : les pastilles, le bouton de l'interrupteur et le médaillon rejoignent leur nouvel
+        # état par un ressort. Dans le tour même du changement, leur rendu n'a pas bougé et le disque vise une autre
+        # couleur que celle qu'il peint ; ensuite, chacun atteint sa cible.
+        self.demarrer()
+        self.assertEqual(self.valeur("fondus"), "true true true true")
+        self.assertEqual(self.lire_jusqua("fondusFin", "true true true"), "true true true")
+
     def test_pastilles_hors_moment(self):
         # Les pastilles ne dépendent pas du moment : au jour, les mêmes teintes et le même glyphe qu'à la nuit.
         self.demarrer()
@@ -850,22 +858,37 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
     def test_depliable(self):
         # Repliée, la section cache son contenu et son chevron pointe à droite (rotation -90 du chevron bas) ;
         # dépliée, le contenu paraît et le chevron pointe en bas, en pivotant sur le ressort reveal (relevé toutes les
-        # 50 ms : des angles intermédiaires, puis 0). L'en-tête, de la hauteur d'une rangée, ne prend le focus qu'à la
-        # tabulation (Qt.TabFocus vaut 1).
+        # 50 ms : des angles intermédiaires, puis 0). La hauteur montrée du bloc suit le même ressort (D157) : nulle
+        # repliée, des valeurs intermédiaires pendant le dépliage, puis celle du bloc entier ; le repli la ramène à 0.
+        # L'en-tête, de la hauteur d'une rangée, ne prend le focus qu'à la tabulation (Qt.TabFocus vaut 1).
         self.demarrer()
         tokens = self.tokens55()[0]
         h = tokens["density"]["comfortable"]["rowHeight"]
-        self.assertEqual(self.valeur("depliable"), f"false -90 false 1 {h}")
+        lu = self.valeur("depliable").split()
+        self.assertEqual(lu[:6], ["false", "-90", "false", "1", str(h), "0"])
+        bloc = float(lu[6])
+        self.assertGreater(bloc, 0)
         self.ipc("depliableOuvrir", "true")
-        angles = []
+        angles, hauteurs = [], []
         for _ in range(60):
             lu = self.valeur("depliable").split()
             angles.append(float(lu[1]))
+            hauteurs.append(float(lu[5]))
             if angles[-1] == 0:
                 break
             time.sleep(0.05)
-        self.assertEqual(lu, ["true", "0", "true", "1", str(h)])
+        self.assertEqual(lu[:5], ["true", "0", "true", "1", str(h)])
+        self.assertEqual(float(lu[5]), bloc)
         self.assertTrue(any(-90 < a < 0 for a in angles), angles)
+        self.assertTrue(any(0 < x < bloc for x in hauteurs), hauteurs)
+        self.ipc("depliableOuvrir", "false")
+        for _ in range(60):
+            lu = self.valeur("depliable").split()
+            if lu[1] == "-90":
+                break
+            time.sleep(0.05)
+        self.assertEqual((lu[2], lu[5]), ("false", "0"))
+        self.ipc("depliableOuvrir", "true")
         # L'en-tête laisse à l'anneau de focus, posé sur son fond, un retrait de space.scale[1] de chaque côté du
         # contenu : le libellé ne touche plus l'anneau. Le bloc reste aligné sur le libellé.
         marge, ecart = tokens["space"]["scale"][1], tokens["space"]["scale"][0]
@@ -1327,18 +1350,31 @@ class CoqueClavierTest(EssaiCoque, unittest.TestCase):
 
     def test_depliable_clavier(self):
         # L'en-tête de la section est un arrêt de tabulation après la recherche, entouré de l'anneau au clavier ;
-        # Espace et Entrée basculent la section, le clic aussi.
+        # Espace et Entrée basculent la section, le clic aussi. Le bloc se replie sur le ressort reveal (D157) : il reste
+        # visible le temps du repli, d'où la relecture jusqu'à l'état attendu.
         self.demarrer()
         for _ in range(9):  # … deroulant, recherche, en-tête de la section
             self.ipc("touche", "tab")
         self.assertEqual(self.valeur("focus").split()[0], "entete")
         self.assertEqual(self.valeur("depliable"), "false false true")
         self.ipc("touche", "espace")
-        self.assertEqual(self.valeur("depliable"), "true true true")
+        self.assertEqual(self.relire("depliable", "true true true"), "true true true")
         self.ipc("touche", "entree")
-        self.assertEqual(self.valeur("depliable"), "false false true")
+        self.assertEqual(self.valeur("depliable").split()[0], "false")
+        self.assertEqual(self.relire("depliable", "false false true"), "false false true")
         self.ipc("cliquerDepliable")
-        self.assertEqual(self.valeur("depliable").split()[:2], ["true", "true"])
+        self.assertEqual(self.relire("depliable", "true true true").split()[:2], ["true", "true"])
+
+    def relire(self, cle: str, attendu: str) -> str:
+        """Relit une valeur journalisée jusqu'à ce qu'elle vaille l'attendu, pendant trois secondes au plus.
+
+        Entrées : cle — fonction IPC de lecture ; attendu — valeur visée. Sortie : la dernière valeur lue, que le test
+        compare. Erreurs : celles de valeur. Dépendances : valeur.
+        """
+        fin = time.monotonic() + 3
+        while (lu := self.valeur(cle)) != attendu and time.monotonic() < fin:
+            time.sleep(0.05)
+        return lu
 
     def test_bascule_clavier(self):
         # La bascule est un arrêt de tabulation après l'en-tête de la section, entourée d'un anneau rond au clavier

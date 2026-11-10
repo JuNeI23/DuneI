@@ -24,7 +24,7 @@ import "Composants/ancrage.js" as Ancrage
 // jaugeCibles, progression, separateur,
 // champ, indicatif, tailleIcone, liste, arrets, rangee, rangeeImposees, bouton, overlays, overlaysFermes, pastilles, compteur,
 // compteurLargeur, deroulant, recherche, rechercheCouleurs, secret, secretCopie, activite, depliable, depliableCotes, courbe, tuile, iconesControles,
-// bascule, reglages, valeur, fenetreAttention, knobs, contours, materiauSurfaces, verre, cleVerre, champMateriau, ombres).
+// bascule, reglages, valeur, fenetreAttention, fondus, fondusFin, knobs, contours, materiauSurfaces, verre, cleVerre, champMateriau, ombres).
 // Commandes sans journal : « essai rechercheTexte <texte> », « essai secretTexte <texte> », « essai secretALire
 // <bool> », « essai secretOeil » (qui journalise « essai : revelationDemandee true » si le parent doit lire le
 // secret), « essai secretCopiable <bool> », « essai secretCopier » (qui journalise « essai : copieDemandee true »
@@ -638,7 +638,7 @@ ShellRoot {
             jaugeEssai.coupe = valeur
         }
 
-        // pastilles — journalise le diamètre du premier disque, l'écart des disques, la couleur peinte de chacun,
+        // pastilles — journalise le diamètre du premier disque, l'écart des disques, la couleur visée de chacun,
         // la visibilité de chaque glyphe, la couleur des glyphes et la politique de focus d'un disque.
         // Entrées : aucune. Sortie : aucune ; « essai : pastilles <diamètre> <écart> <#> <#> <#> <bool> <bool>
         // <bool> <#glyphe> <focusPolicy> ». Erreurs : aucune. Dépendances : pastillesEssai (disques).
@@ -646,6 +646,34 @@ ShellRoot {
             const d = [0, 1, 2].map(i => pastillesEssai.disques.itemAt(i))
             essai.journal("pastilles", [d[0].width, pastillesEssai.spacing, ...d.map(x => x.couleur),
                 ...d.map(x => x.trace.visible), d[0].trace.couleur, d[0].focusPolicy].join(" "))
+        }
+
+        // fondus — change d'un coup l'état de trois contrôles (survol forcé des pastilles, interrupteur basculé,
+        // médaillon inactif rendu actif), puis journalise, dans le même tour, si chacun garde encore son rendu d'avant
+        // (couleur peinte du premier disque, abscisse du bouton de l'interrupteur, fond du médaillon) et si le disque
+        // vise une autre couleur que celle qu'il peint : un ressort les mène, rien ne saute (D157).
+        // Entrées : aucune. Sortie : aucune ; « essai : fondus <bool> <bool> <bool> <bool> ». Erreurs : aucune.
+        // Dépendances : pastillesEssai, interrupteurEssai (le bouton est le premier enfant de la piste), medaillonInactif.
+        function fondus(): void {
+            const d = pastillesEssai.disques.itemAt(0), b = interrupteurEssai.indicator.children[0], m = medaillonInactif
+            const avant = [String(d.peinte), b.x, String(m.fond)]
+            pastillesEssai.forcer = "hover"
+            interrupteurEssai.checked = !interrupteurEssai.checked
+            m.actif = true
+            const apres = [String(d.peinte), b.x, String(m.fond)]
+            essai.journal("fondus", [...avant.map((v, i) => v === apres[i]), String(d.peinte) !== String(d.couleur)].join(" "))
+        }
+
+        // fondusFin — journalise si les trois contrôles de fondus ont rejoint leur état visé : couleur peinte du premier
+        // disque égale à sa couleur visée, bouton de l'interrupteur au bout de sa course, fond du médaillon à l'accent.
+        // Entrées : aucune. Sortie : aucune ; « essai : fondusFin <bool> <bool> <bool> ». Erreurs : aucune.
+        // Dépendances : pastillesEssai, interrupteurEssai, medaillonInactif, Theme (color.accent).
+        function fondusFin(): void {
+            const d = pastillesEssai.disques.itemAt(0), p = interrupteurEssai.indicator, b = p.children[0]
+            const marge = (p.height - b.height) / 2
+            const bout = marge + interrupteurEssai.visualPosition * (p.width - b.width - 2 * marge)
+            essai.journal("fondusFin", [String(d.peinte) === String(d.couleur), Math.abs(b.x - bout) < 0.01,
+                                        String(medaillonInactif.fond) === String(Theme.color.accent)].join(" "))
         }
 
         // pastillesForcer — force l'état des pastilles d'essai, comme la planche.
@@ -923,13 +951,15 @@ ShellRoot {
         }
 
         // depliable — journalise l'état de la section dépliable : ouverte, rotation du chevron, visibilité du
-        // bloc de contenu, politique de focus et hauteur de l'en-tête.
-        // Entrées : aucune. Sortie : aucune ; « essai : depliable <bool> <angle> <bool> <politique> <hauteur> ».
-        // Erreurs : aucune. Dépendances : depliableEssai (chevron, bloc, entete), journal.
+        // bloc de contenu, politique de focus, hauteur de l'en-tête, hauteur montrée du bloc (celle de son cadre) et
+        // hauteur du bloc entier.
+        // Entrées : aucune. Sortie : aucune ; « essai : depliable <bool> <angle> <bool> <politique> <hauteur>
+        // <hauteur montrée> <hauteur du bloc> ».
+        // Erreurs : aucune. Dépendances : depliableEssai (chevron, bloc, cadre, entete), journal.
         function depliable(): void {
             const d = depliableEssai
             essai.journal("depliable", [d.ouvert, d.chevron.rotation, d.bloc.visible, d.entete.focusPolicy,
-                                        d.entete.height].join(" "))
+                                        d.entete.height, d.cadre.height, d.bloc.implicitHeight].join(" "))
         }
 
         // courbe — journalise la courbe d'essai : maximum, nombre de points de chaque série, visibilité de l'aire de
