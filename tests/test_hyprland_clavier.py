@@ -96,8 +96,8 @@ def expected() -> dict[str, tuple[str, str]]:
         e[f"SUPER + SHIFT + {d}"] = (f"dsp.window.move({{direction={d}}})", "{}")
         e[f"SUPER + CTRL + {d}"] = (f"dsp.window.resize({{relative=true,x={x * STEP},y={y * STEP}}})", "{}")
     for i in range(1, 5):
-        e[f"SUPER + {i % 10}"] = (f"dsp.focus({{workspace={i}}})", "{}")
-        e[f"SUPER + SHIFT + {i % 10}"] = (f"dsp.window.move({{follow=false,workspace={i}}})", "{}")
+        e[f"SUPER + code:{9 + i}"] = (f"dsp.focus({{workspace={i}}})", "{}")
+        e[f"SUPER + SHIFT + code:{9 + i}"] = (f"dsp.window.move({{follow=false,workspace={i}}})", "{}")
     return e
 
 

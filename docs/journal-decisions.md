@@ -3778,3 +3778,16 @@ graphique, écran) fixe trois arbitrages.
 Matériel AMD sur les deux plans (processeur et graphique), donc dans le cas déjà prouvé par `paquets.toml`.
 
 *Touché : `config/hypr/machines/arrakis-core.lua`, carnet d'installation (v1.41).*
+
+### D159 · Les touches de bureau sont liées par leur code physique
+
+2026-11-10, relevé de Nicolas sur `arrakis-core`, clavier en disposition française : `SUPER` suivi d'un chiffre ne
+change pas de bureau. En AZERTY, la rangée du haut produit `&`, `é`, `"`… sans Maj, et une liaison écrite sur le
+symbole `1` ne se déclenche donc jamais.
+
+- Les liaisons « aller au bureau » et « envoyer au bureau » désignent la touche par son code physique, `code:10` pour
+  la touche 1 jusqu'à `code:19` pour la touche 0 : la même touche, quelle que soit la disposition. L'API Lua de
+  Hyprland l'accepte, ce qu'un essai sur caladan a vérifié (`hyprctl binds -j` rend `keycode` 10).
+- Rien ne change sur caladan, en disposition britannique : les codes désignent les mêmes touches qu'avant.
+
+*Touché : `config/hypr/donnees/raccourcis.lua`, `tests/test_hyprland_clavier.py`.*

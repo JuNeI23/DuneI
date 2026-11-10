@@ -72,9 +72,11 @@ for _, d in ipairs({ { "left", "la gauche" }, { "right", "la droite" }, { "up", 
 end
 
 -- Autant de bureaux que les jetons le déclarent (generated/hyprland-binds.lua, au plus dix) ; la touche 0
--- mène au bureau 10. Envoyer ne suit pas la fenêtre.
+-- mène au bureau 10. Envoyer ne suit pas la fenêtre. Les touches sont désignées par leur code physique
+-- (code:10 pour la touche 1, code:19 pour la touche 0) et non par leur symbole : en AZERTY, la rangée du
+-- haut produit « & é " … » sans Maj, et une liaison sur « 1 » ne se déclencherait jamais (D159).
 for i = 1, require("generated.hyprland-binds").bureaux do
-    local t, k = M.touches, tostring(i % 10)
+    local t, k = M.touches, "code:" .. (9 + i)
     t[#t + 1] = { touches = "SUPER + " .. k, action = "bureau", bureau = i, description = "Aller au bureau " .. i }
     t[#t + 1] = { touches = "SUPER + SHIFT + " .. k, action = "envoyer", bureau = i,
                   description = "Envoyer la fenêtre au bureau " .. i .. ", sans la suivre" }
