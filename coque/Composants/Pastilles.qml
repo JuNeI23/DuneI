@@ -15,7 +15,10 @@ import "etats.js" as Etats
 // survolé s'éclaircit et le disque pressé fonce franchement : il prend la variante de survol (pastilles.errorHover,
 // warningHover, successHover) ou la variante pressée (errorPressed…) de sa teinte, précalculées par l'émetteur dans
 // l'espace perceptif du thème avec les écarts propres aux pastilles (tokens.toml, section pastilles), plus marqués que
-// ceux des états ; le QML ne dérive aucune couleur, et le repos garde la teinte. Sous le modificateur inactive hérité,
+// ceux des états ; le QML ne dérive aucune couleur, et le repos garde la teinte. Chaque disque rejoint sa couleur
+// visée en fondu, par un ColorSpring au ressort des états (transitions.state de motion.json) : survol, pression et
+// passage d'une fenêtre active à inactive ne posent plus leur teinte d'un coup (Recette 1 de L2-65, D157) ; un
+// changement de thème la pose, comme partout. Sous le modificateur inactive hérité,
 // comme une fenêtre inactive de macOS, les trois disques passent au neutre color.borderDefault du thème actif et ne
 // montrent plus de glyphe ; un disque désactivé (reduireActif ou agrandirActif faux) prend ce même neutre, sans glyphe
 // ni réaction. Les pastilles ne sont pas un arrêt de tabulation (focusPolicy Qt.NoFocus) : la fenêtre se ferme, se
@@ -28,10 +31,10 @@ import "etats.js" as Etats
 // coque.
 // Sorties : signaux fermer(), reduire() et agrandir(), émis au clic du disque correspondant ; survol, vrai quand
 // le pointeur est sur le groupe (ou forcé) ; disques, le Repeater des trois disques, lu par les essais : chaque
-// disque expose couleur, la couleur peinte, et trace, son glyphe.
+// disque expose couleur, la couleur visée, peinte, la couleur peinte (en fondu vers couleur), et trace, son glyphe.
 // Erreurs : aucune ; avant le chargement des tokens, les cotes sont nulles et les couleurs transparentes.
 // Dépendances : QtQuick.Shapes (moteur CurveRenderer), QtQuick.Templates (AbstractButton : clic, pression),
-// Theme (density, space, pastilles, color.borderDefault), etats.js (herite) ; HoverHandler, qui suit le survol du
+// Theme (density, space, pastilles, color.borderDefault, ColorSpring), etats.js (herite) ; HoverHandler, qui suit le survol du
 // groupe, intervalles compris, et celui de chaque disque, quel que soit Qt.styleHints.useHoverEffects.
 // Cotes : diamètre density.pastille, écart space.scale[1] ; les glyphes sont décrits dans le carré unité et mis à
 // l'échelle du diamètre : leurs points et leur trait (un dixième du diamètre) sont des fractions, non des cotes.
@@ -76,6 +79,7 @@ Row {
             readonly property bool survole: survolDisque.hovered || pastilles.forcer === "hover"
             readonly property color couleur: (neutre ? Theme.color?.borderDefault
                 : Theme.pastilles?.[modelData.teinte + (enfonce ? "Pressed" : survole ? "Hover" : "")]) ?? "transparent"
+            readonly property color peinte: fondu.value
             readonly property alias trace: trace
 
             focusPolicy: Qt.NoFocus
@@ -85,10 +89,11 @@ Row {
             onClicked: [pastilles.fermer, pastilles.reduire, pastilles.agrandir][index]()
 
             HoverHandler { id: survolDisque }
+            ColorSpring { id: fondu; target: disque.couleur }
 
             background: Rectangle {
                 radius: width / 2
-                color: disque.couleur
+                color: disque.peinte
             }
 
             // Le glyphe, décrit dans le carré unité puis mis à l'échelle du diamètre depuis son coin haut gauche.
