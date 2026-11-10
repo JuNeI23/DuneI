@@ -169,7 +169,7 @@ n'aurait qu'un ancien `hyprland.conf`, que Hyprland ignorerait au profit du poin
 **Tout ce qui dépend du matériel vit dans `config/hypr/machines/<nom-d-hôte>.lua`, et nulle part ailleurs** : nom de sortie (`eDP-1`), facteur d'échelle, disposition du clavier, périphériques d'entrée nommés. Le point d'entrée charge le fichier qui correspond au nom d'hôte ; la configuration commune ne connaît aucun matériel. Une nouvelle machine = un nouveau fichier, rien d'autre ne change.
 
 **Machines déclarées** : `caladan` (Lenovo 14 pouces, 1920 × 1200, échelle 1,25, clavier `gb`) et `arrakis-core`
-(AMD Mendocino, 15,6 pouces, 1920 × 1080, échelle 1, clavier `fr`, D158).
+(AMD Mendocino, 15,6 pouces, 1920 × 1080, échelle 1,25, clavier `fr`, D158).
 
 **Installer sur une machine qui porte déjà une configuration primitive** (cas d'`arrakis-core`). Avant la phase 2,
 sauvegarder `~/.config/hypr` (`cp -a ~/.config/hypr ~/hypr.sauvegarde`), puis en retirer tout fichier homonyme d'un

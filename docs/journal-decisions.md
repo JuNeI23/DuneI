@@ -3771,9 +3771,9 @@ graphique, écran) fixe trois arbitrages.
   Le retour arrière consiste à remettre la sauvegarde en place.
 - **`multilib` désactivé.** Aucun paquet n'en était installé ; ses deux lignes sont commentées dans
   `/etc/pacman.conf`, pour que `make paquets` accepte la machine (D56).
-- **Échelle 1.** La dalle de 15,6 pouces en 1920 × 1080 donne environ 141 points par pouce, contre 162 sur caladan
-  (échelle 1,25, D27) ; l'échelle entière garde des pixels nets et une surface logique de 1920 × 1080. À revoir à
-  l'écran si les textes paraissent petits. Clavier en disposition française.
+- **Échelle 1,25.** La dalle de 15,6 pouces en 1920 × 1080 donne environ 141 points par pouce, contre 162 sur
+  caladan. L'échelle 1, d'abord retenue pour garder des pixels entiers, a été refusée par Nicolas à l'écran ; 1,25,
+  celle de caladan (D27), est validée, pour une surface logique de 1536 × 864. Clavier en disposition française.
 
 Matériel AMD sur les deux plans (processeur et graphique), donc dans le cas déjà prouvé par `paquets.toml`.
 
