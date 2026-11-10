@@ -3757,3 +3757,37 @@ coordinateur. Aucune durée n'est écrite en dur : tout passe par les transition
 *Touché : `coque/Composants/Depliable.qml`, `Interrupteur.qml`, `Pastilles.qml`, `Medaillon.qml`,
 `coque/Reseau/ConnusWifi.qml`, `coque/Reseau/DepliantReseau.qml`, coque d'essai des composants et
 `tests/test_coque_composants.py`, bible (v0.34).*
+
+### D158 · Deuxième machine, arrakis-core : DuneI seul, sans configuration générique
+
+2026-11-10, demande de Nicolas : installer DuneI au plus vite sur un second portable déjà sous Arch et Hyprland 0.57,
+porteur d'une configuration primitive. Le relevé sur la machine (nom d'hôte, version de Hyprland, dépôts, carte
+graphique, écran) fixe trois arbitrages.
+
+- **Pas de bascule.** La configuration primitive lançait ses propres scripts et portait `scripts/`, `hyprlock.conf` et
+  `hypridle.conf`, homonymes de fichiers posés par DuneI : `make install` les refuserait, et l'empilement ferait
+  tourner ses programmes de démarrage à côté de la coque. Elle est sauvegardée (`~/hypr.sauvegarde`) puis retirée de
+  `~/.config/hypr` ; `make install` lie alors directement le point d'entrée, comme sur une machine installée en DuneI.
+  Le retour arrière consiste à remettre la sauvegarde en place.
+- **`multilib` désactivé.** Aucun paquet n'en était installé ; ses deux lignes sont commentées dans
+  `/etc/pacman.conf`, pour que `make paquets` accepte la machine (D56).
+- **Échelle 1,25.** La dalle de 15,6 pouces en 1920 × 1080 donne environ 141 points par pouce, contre 162 sur
+  caladan. L'échelle 1, d'abord retenue pour garder des pixels entiers, a été refusée par Nicolas à l'écran ; 1,25,
+  celle de caladan (D27), est validée, pour une surface logique de 1536 × 864. Clavier en disposition française.
+
+Matériel AMD sur les deux plans (processeur et graphique), donc dans le cas déjà prouvé par `paquets.toml`.
+
+*Touché : `config/hypr/machines/arrakis-core.lua`, carnet d'installation (v1.41).*
+
+### D159 · Les touches de bureau sont liées par leur code physique
+
+2026-11-10, relevé de Nicolas sur `arrakis-core`, clavier en disposition française : `SUPER` suivi d'un chiffre ne
+change pas de bureau. En AZERTY, la rangée du haut produit `&`, `é`, `"`… sans Maj, et une liaison écrite sur le
+symbole `1` ne se déclenche donc jamais.
+
+- Les liaisons « aller au bureau » et « envoyer au bureau » désignent la touche par son code physique, `code:10` pour
+  la touche 1 jusqu'à `code:19` pour la touche 0 : la même touche, quelle que soit la disposition. L'API Lua de
+  Hyprland l'accepte, ce qu'un essai sur caladan a vérifié (`hyprctl binds -j` rend `keycode` 10).
+- Rien ne change sur caladan, en disposition britannique : les codes désignent les mêmes touches qu'avant.
+
+*Touché : `config/hypr/donnees/raccourcis.lua`, `tests/test_hyprland_clavier.py`.*

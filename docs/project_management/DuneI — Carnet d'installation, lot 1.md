@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.40. Historique en fin de document.
+Version 1.41. Historique en fin de document.
 
 Socle amorçable.
 
@@ -167,6 +167,17 @@ n'aurait qu'un ancien `hyprland.conf`, que Hyprland ignorerait au profit du poin
 ### Ce qui est propre à une machine
 
 **Tout ce qui dépend du matériel vit dans `config/hypr/machines/<nom-d-hôte>.lua`, et nulle part ailleurs** : nom de sortie (`eDP-1`), facteur d'échelle, disposition du clavier, périphériques d'entrée nommés. Le point d'entrée charge le fichier qui correspond au nom d'hôte ; la configuration commune ne connaît aucun matériel. Une nouvelle machine = un nouveau fichier, rien d'autre ne change.
+
+**Machines déclarées** : `caladan` (Lenovo 14 pouces, 1920 × 1200, échelle 1,25, clavier `gb`) et `arrakis-core`
+(AMD Mendocino, 15,6 pouces, 1920 × 1080, échelle 1,25, clavier `fr`, D158).
+
+**Installer sur une machine qui porte déjà une configuration primitive** (cas d'`arrakis-core`). Avant la phase 2,
+sauvegarder `~/.config/hypr` (`cp -a ~/.config/hypr ~/hypr.sauvegarde`), puis en retirer tout fichier homonyme d'un
+fichier posé par DuneI (`hyprland.lua`, `hyprland.conf`, `hypridle.conf`, `hyprlock.conf`, `scripts/`) : `make install`
+refuse ce qu'il n'a pas posé, et la configuration primitive ferait tourner ses programmes de démarrage à côté de la
+coque. Commenter aussi tout dépôt autre que `core` et `extra` dans `/etc/pacman.conf`, après avoir vérifié qu'aucun
+paquet n'en vient (`pacman -Sl multilib | grep installed`). `python3 paquets.py --dry-run` et
+`python3 deploy.py --dry-run` montrent ensuite le plan sans rien modifier.
 
 Le mécanisme (D24) : `config/hypr/modules/machine.lua` lit `/etc/hostname` au démarrage de Hyprland — l'API `hl` n'expose pas le nom d'hôte, mais la bibliothèque standard de Lua est chargée — et charge `machines/<nom>.lua` en dernier, pour qu'il l'emporte sur tout ce qui précède. Le nom n'est accepté que s'il ne contient que des lettres, des chiffres et des tirets : un point ou une barre oblique casserait la résolution du module. Une machine sans fichier, ou au nom refusé, applique les seules règles communes. Une erreur dans un fichier machine existant n'est **pas** avalée : elle remonte dans Hyprland, comme toute erreur de configuration. `make install` lie `config/hypr/machines` sous `~/.config/hypr/machines`, comme `modules`.
 
@@ -2346,6 +2357,7 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 
 | Version | Date | Changement |
 | --- | --- | --- |
+| 1.41 | 2026-11-10 | Deuxième machine, `arrakis-core` : fichier machine, installation sur une configuration primitive sans bascule (D158) |
 | 1.40 | 2026-11-08 | Énergie (L2-13) : section `[alerte]` d'`energie.toml` (version 0.2.0), `generated/energie.json` copié sous `~/.config/dunei/` par `make install`, essai de l'alerte par seuils relevés |
 | 1.39 | 2026-11-08 | Audio (L2-12) : la table des icônes compte le groupe `[audio]` (huit noms, 74 au total) ; `make install` n'a pas d'autre changement de comportement |
 | 1.38 | 2026-11-07 | La galerie de fonds : mémoire de la coque (`MemoryTHP=madvise`, `make install` puis redémarrage du service, relevé de `smaps_rollup`, D134), préchauffage et surface constante (D132, D133), gros dossier accepté (D135) |
