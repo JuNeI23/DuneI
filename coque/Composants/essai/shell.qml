@@ -23,11 +23,12 @@ import "Composants/ancrage.js" as Ancrage
 // etat, ressort, ressortsFiges, image, controles, coches, cotes, glyphes, radios, jauge, jaugeIcone, jaugeHors,
 // jaugeCibles, progression, separateur,
 // champ, indicatif, tailleIcone, liste, arrets, rangee, rangeeImposees, bouton, overlays, overlaysFermes, pastilles, compteur,
-// compteurLargeur, deroulant, recherche, rechercheCouleurs, secret, activite, depliable, depliableCotes, iconesControles,
-// bascule, reglages, valeur, fenetreAttention, knobs, contours, materiauSurfaces, verre, cleVerre, champMateriau, ombres).
+// compteurLargeur, deroulant, recherche, rechercheCouleurs, secret, secretCopie, activite, depliable, depliableCotes, courbe, tuile, iconesControles,
+// bascule, reglages, valeur, fenetreAttention, fondus, fondusFin, knobs, contours, materiauSurfaces, verre, cleVerre, champMateriau, ombres).
 // Commandes sans journal : « essai rechercheTexte <texte> », « essai secretTexte <texte> », « essai secretALire
 // <bool> », « essai secretOeil » (qui journalise « essai : revelationDemandee true » si le parent doit lire le
-// secret), « essai rechercheActive <bool> », « essai activiteEtat
+// secret), « essai secretCopiable <bool> », « essai secretCopier » (qui journalise « essai : copieDemandee true »
+// et confirme la copie), « essai rechercheActive <bool> », « essai activiteEtat
 // <visible> <running> », « essai activitePhase <phase> », « essai activiteAncetre <bool> », « essai depliableOuvrir
 // <bool> », « essai basculeCocher <bool> », « essai valeurCopier », « essai pastillesForcer <état> », « essai pastillesReduire <bool> »,
 // « essai knobsActifs <bool> », « essai interrupteurCocher <bool> », « essai compteurValeur <n> », « essai deroulantRang <n> », « essai decocher »,
@@ -180,6 +181,7 @@ ShellRoot {
             ChampSecret {
                 id: secretEssai
                 onRevelationDemandee: essai.journal("revelationDemandee", true)
+                onCopieDemandee: { essai.journal("copieDemandee", true); confirmerCopie() }
             }
 
             // L'indicateur est porté par un Item qu'on peut masquer, pour éprouver l'arrêt sous un ancêtre invisible.
@@ -192,6 +194,23 @@ ShellRoot {
                 id: depliableEssai
                 text: "Section"
                 Texte { text: "Contenu" }
+            }
+
+            // Deux séries de 60 valeurs (la première jusqu'à 42, avec aire) et une courbe à la seule série vide.
+            Courbe {
+                id: courbeEssai
+                width: 200; height: 40
+                series: [
+                    { valeurs: Array.from({ length: 60 }, (_, i) => i % 43), couleur: Theme.color?.accent, aire: true },
+                    { valeurs: Array.from({ length: 60 }, (_, i) => i % 7), couleur: Theme.color?.success }
+                ]
+            }
+            Courbe { id: courbeVide; width: 200; height: 40; series: [{ valeurs: [], couleur: Theme.color?.accent, aire: true }] }
+
+            GridLayout {
+                columns: 3
+                Tuile { id: tuileEssai; libelle: "Adresse"; largeur: 2; Texte { text: "192.168.43.17" } }
+                Tuile { id: tuileSimple; libelle: "DNS"; Texte { text: "1.1.1.1" } }
             }
 
             Bascule {
@@ -619,7 +638,7 @@ ShellRoot {
             jaugeEssai.coupe = valeur
         }
 
-        // pastilles — journalise le diamètre du premier disque, l'écart des disques, la couleur peinte de chacun,
+        // pastilles — journalise le diamètre du premier disque, l'écart des disques, la couleur visée de chacun,
         // la visibilité de chaque glyphe, la couleur des glyphes et la politique de focus d'un disque.
         // Entrées : aucune. Sortie : aucune ; « essai : pastilles <diamètre> <écart> <#> <#> <#> <bool> <bool>
         // <bool> <#glyphe> <focusPolicy> ». Erreurs : aucune. Dépendances : pastillesEssai (disques).
@@ -627,6 +646,34 @@ ShellRoot {
             const d = [0, 1, 2].map(i => pastillesEssai.disques.itemAt(i))
             essai.journal("pastilles", [d[0].width, pastillesEssai.spacing, ...d.map(x => x.couleur),
                 ...d.map(x => x.trace.visible), d[0].trace.couleur, d[0].focusPolicy].join(" "))
+        }
+
+        // fondus — change d'un coup l'état de trois contrôles (survol forcé des pastilles, interrupteur basculé,
+        // médaillon inactif rendu actif), puis journalise, dans le même tour, si chacun garde encore son rendu d'avant
+        // (couleur peinte du premier disque, abscisse du bouton de l'interrupteur, fond du médaillon) et si le disque
+        // vise une autre couleur que celle qu'il peint : un ressort les mène, rien ne saute (D157).
+        // Entrées : aucune. Sortie : aucune ; « essai : fondus <bool> <bool> <bool> <bool> ». Erreurs : aucune.
+        // Dépendances : pastillesEssai, interrupteurEssai (le bouton est le premier enfant de la piste), medaillonInactif.
+        function fondus(): void {
+            const d = pastillesEssai.disques.itemAt(0), b = interrupteurEssai.indicator.children[0], m = medaillonInactif
+            const avant = [String(d.peinte), b.x, String(m.fond)]
+            pastillesEssai.forcer = "hover"
+            interrupteurEssai.checked = !interrupteurEssai.checked
+            m.actif = true
+            const apres = [String(d.peinte), b.x, String(m.fond)]
+            essai.journal("fondus", [...avant.map((v, i) => v === apres[i]), String(d.peinte) !== String(d.couleur)].join(" "))
+        }
+
+        // fondusFin — journalise si les trois contrôles de fondus ont rejoint leur état visé : couleur peinte du premier
+        // disque égale à sa couleur visée, bouton de l'interrupteur au bout de sa course, fond du médaillon à l'accent.
+        // Entrées : aucune. Sortie : aucune ; « essai : fondusFin <bool> <bool> <bool> ». Erreurs : aucune.
+        // Dépendances : pastillesEssai, interrupteurEssai, medaillonInactif, Theme (color.accent).
+        function fondusFin(): void {
+            const d = pastillesEssai.disques.itemAt(0), p = interrupteurEssai.indicator, b = p.children[0]
+            const marge = (p.height - b.height) / 2
+            const bout = marge + interrupteurEssai.visualPosition * (p.width - b.width - 2 * marge)
+            essai.journal("fondusFin", [String(d.peinte) === String(d.couleur), Math.abs(b.x - bout) < 0.01,
+                                        String(medaillonInactif.fond) === String(Theme.color.accent)].join(" "))
         }
 
         // pastillesForcer — force l'état des pastilles d'essai, comme la planche.
@@ -838,6 +885,28 @@ ShellRoot {
             secretEssai.secretALire = valeur
         }
 
+        // secretCopie — journalise le bouton de copie du champ secret, sans jamais son texte : présence du bouton,
+        // retour de copie, écart horizontal entre le bouton et l'œil, opacité de la coche, echoMode.
+        // Entrées : aucune. Sortie : aucune ; « essai : secretCopie <bool> <bool> <écart> <opacité> <mode> ».
+        // Erreurs : aucune. Dépendances : secretEssai (copieur, coche, oeil), journal.
+        function secretCopie(): void {
+            const s = secretEssai, c = s.copieur
+            essai.journal("secretCopie", [c?.visible ?? false, s.copie ?? false, Math.round((c ? c.mapToItem(s, 0, 0).x : 0) - s.oeil.x),
+                                          Math.round(s.coche?.opacity ?? 0), s.echoMode].join(" "))
+        }
+
+        // secretCopiable — pose copiable sur le champ secret. Entrée : valeur. Sortie : aucune. Erreurs : aucune.
+        // Dépendances : secretEssai.
+        function secretCopiable(valeur: bool): void {
+            secretEssai.copiable = valeur
+        }
+
+        // secretCopier — clique le bouton de copie du champ secret, comme son TapHandler. Entrées : aucune.
+        // Sortie : aucune. Erreurs : aucune. Dépendances : secretEssai.
+        function secretCopier(): void {
+            secretEssai.copier()
+        }
+
         // secretOeil — clique l'œil du champ secret, comme son TapHandler. Entrées : aucune. Sortie : aucune.
         // Erreurs : aucune. Dépendances : secretEssai.
         function secretOeil(): void {
@@ -882,13 +951,37 @@ ShellRoot {
         }
 
         // depliable — journalise l'état de la section dépliable : ouverte, rotation du chevron, visibilité du
-        // bloc de contenu, politique de focus et hauteur de l'en-tête.
-        // Entrées : aucune. Sortie : aucune ; « essai : depliable <bool> <angle> <bool> <politique> <hauteur> ».
-        // Erreurs : aucune. Dépendances : depliableEssai (chevron, bloc, entete), journal.
+        // bloc de contenu, politique de focus, hauteur de l'en-tête, hauteur montrée du bloc (celle de son cadre) et
+        // hauteur du bloc entier.
+        // Entrées : aucune. Sortie : aucune ; « essai : depliable <bool> <angle> <bool> <politique> <hauteur>
+        // <hauteur montrée> <hauteur du bloc> ».
+        // Erreurs : aucune. Dépendances : depliableEssai (chevron, bloc, cadre, entete), journal.
         function depliable(): void {
             const d = depliableEssai
             essai.journal("depliable", [d.ouvert, d.chevron.rotation, d.bloc.visible, d.entete.focusPolicy,
-                                        d.entete.height].join(" "))
+                                        d.entete.height, d.cadre.height, d.bloc.implicitHeight].join(" "))
+        }
+
+        // courbe — journalise la courbe d'essai : maximum, nombre de points de chaque série, visibilité de l'aire de
+        // chacune, opacité de la première aire, puis maximum et nombre de points de la courbe à série vide.
+        // Entrées : aucune. Sortie : aucune ; « essai : courbe <max> <n0> <n1> <aire0> <aire1> <opacité> <max> <n> ».
+        // Erreurs : aucune. Dépendances : courbeEssai, courbeVide, journal.
+        function courbe(): void {
+            const s = courbeEssai.repetiteur, v = courbeVide
+            essai.journal("courbe", [courbeEssai.maximum, s.itemAt(0).points.length, s.itemAt(1).points.length,
+                                     s.itemAt(0).fond.visible, s.itemAt(1).fond.visible, s.itemAt(0).fond.opacity,
+                                     v.maximum, v.repetiteur.itemAt(0).points.length].join(" "))
+        }
+
+        // tuile — journalise la tuile d'essai : échelon et couleur de son libellé, columnSpan de la tuile large et de
+        // la simple, texte du libellé, puis vrai si le libellé précède le contenu et si le contenu est posé dans la tuile
+        // (la coque d'essai n'a pas de fenêtre : les positions ne sont pas calculées, on lit donc l'ordre des enfants).
+        // Entrées : aucune. Sortie : aucune ; « essai : tuile <échelon> <span> <span simple> <couleur> <libellé> <bool> <bool> ».
+        // Erreurs : aucune. Dépendances : tuileEssai, tuileSimple, journal.
+        function tuile(): void {
+            const t = tuileEssai
+            essai.journal("tuile", [t.etiquette.echelon, t.Layout.columnSpan, tuileSimple.Layout.columnSpan,
+                                    t.etiquette.color, t.etiquette.text, t.children[0] === t.etiquette, t.children[1].children[0] === t.contenu[0]].join(" "))
         }
 
         // depliableOuvrir — ouvre ou ferme la section dépliable d'essai par programme.

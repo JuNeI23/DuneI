@@ -3,43 +3,62 @@ import QtQuick.Layouts
 import "../Theme"
 import "../Composants"
 
-// GroupeProfils — carte des profils enregistrés d'un type, chacun une Ligne qui ouvre sa sous-page.
-// Rôle : liste les profils d'un groupe de PanneauReseau.rangees, en rangée à médaillon, nom et état, un chevron à
-// droite ; un clic ouvre la sous-page du profil (panneau.ouvrirProfil). Des rangées supplémentaires, déclarées comme
-// enfants, suivent les profils dans la même carte. Seule PageFilaire l'emploie (PageWifi bâtit ses propres cartes,
-// pour le réseau joint, les disponibles et « Autre réseau… »).
-// Entrées : panneau, le PanneauReseau (rangees, ouvrirProfil) ; type, le groupe des rangées (« Filaire » aujourd'hui) ;
-// les rangées supplémentaires, en enfants.
-// Sorties : profils, les rangées du groupe (nmcli.profilsFenetre). Erreurs : aucune ; sans profil, la carte est
-// vide (ou ne porte que les rangées supplémentaires).
-// Dépendances : Groupe, Ligne, Icone, Theme (icons), PanneauReseau.
+// GroupeProfils — carte de profils enregistrés, chacun en DepliantReseau non détaillé, un seul déplié à la fois (L2-65).
+// Rôle : une carte où chaque profil est un DepliantReseau replié (ses seuls réglages et son pied, rien n'étant lu
+// tant qu'il est replié), séparé du précédent par un filet. Un clic sur une tête ne fait que la déplier et replie
+// l'autre ; « Rejoindre », au pied d'un profil à portée, lance sa connexion (ProfilReseau.connecter) ; ses
+// « Réglages avancés » se déplient dans son dépliant (D155). Le modèle est la liste des uuids, réaffectée seulement quand elle change : une
+// relecture des profils ou un balayage ne recrée ni ne relit le dépliant ouvert. Employée par ConnusWifi (réseaux
+// connus de la page Wi-Fi) et par PageFilaire (section « Profils »).
+// Entrées : profils, les rangées à montrer (uuid, nom, icone, actif, wifi, appareil, portee ; force et security pour
+// un réseau Wi-Fi à portée) ; panneau, le PanneauReseau (factures) ; etat, la source de l'état et des
+// actions, EtatReseau par défaut ; ouvert, l'uuid du profil déplié, vide sinon (écrit par le clic sur une tête). Les
+// rangées s'appellent profils : le nom rangees est celui des enfants de Carte.
+// Sorties : ouvert ; uuids, les uuids montrés, dans l'ordre.
+// Erreurs : celles de chaque ProfilReseau, sous ses réglages ; une carte sans rangée est vide.
+// Dépendances : Groupe, DepliantReseau, Separateur, Theme (reglages, space), PanneauReseau, EtatReseau.
 Groupe {
     id: racine
 
+    required property var profils
     required property var panneau
-    required property string type
-    readonly property var profils: panneau.rangees.filter(r => r.groupe === type)
+    property var etat: EtatReseau
+    property string ouvert: ""
+    property var uuids: []
+
+    // garder — réaffecte uuids si la liste des profils a changé. Entrées : aucune. Sortie : aucune.
+    // Erreurs : aucune. Dépendances : profils, uuids.
+    function garder() {
+        const u = profils.map(r => r.uuid)
+        if (u.join("\n") !== uuids.join("\n")) uuids = u
+    }
+    onProfilsChanged: garder()
+    Component.onCompleted: garder()
 
     Repeater {
-        model: racine.profils
+        model: racine.uuids
 
-        Ligne {
-            id: ligne
-            required property var modelData
+        ColumnLayout {
+            id: profil
+            required property string modelData
             required property int index
-            filet: index > 0
-            icone: modelData.icone
-            iconeActive: modelData.actif
-            libelle: modelData.nom
-            aide: modelData.etat
+            Layout.fillWidth: true
+            spacing: 0
 
-            Icone {
-                nom: "go-next"
-                taille: Theme.icons?.sizes.dense ?? 0
-                couleur: Theme.color?.textTertiary ?? "transparent"
+            Separateur {
+                visible: profil.index > 0
+                Layout.fillWidth: true
+                retraitGauche: Theme.reglages?.textColumn ?? 0
+                retraitDroit: Theme.space?.scale[3] ?? 0
             }
-            cliquable: true
-            onClique: racine.panneau.ouvrirProfil(ligne.modelData.uuid)
+            DepliantReseau {
+                rangee: racine.profils.find(r => r.uuid === profil.modelData) ?? null
+                portee: rangee?.portee ?? false
+                ouvert: racine.ouvert === profil.modelData
+                etat: racine.etat
+                onBasculer: racine.ouvert = ouvert ? "" : profil.modelData
+                onRelu: (u, p) => racine.panneau.factures = Object.assign({}, racine.panneau.factures, {[u]: p.facture})
+            }
         }
     }
 }

@@ -3567,3 +3567,193 @@ transparente au repos comme au survol (`fondReposTransparent`, nouveau `fondSurv
 
 *Touché : `Composants/Onglet.qml`, `Composants/Etat.qml`, `Energie/PopoverEnergie.qml`, tests des composants et de
 l'énergie.*
+
+### D149 · La page Wi-Fi s'ouvre sur la liste : recherche, réseau joint déplié, autres réseaux, réseaux connus repliés
+
+2026-11-09, décision de Nicolas après les maquettes `colonne-v3` à `colonne-v6` de L2-65. **La page Wi-Fi se lit de haut en
+bas dans cet ordre : la recherche, le réseau joint déplié (courbe de débit vivante et tuiles), les autres réseaux à
+portée, puis les réseaux connus en fin de page, repliés.**
+
+- **Pourquoi une liste d'abord.** Nicolas gère ses connexions depuis le popover du réseau ; il ouvre la fenêtre pour
+  regarder en détail, et la première chose qu'il cherche est un réseau précis ou une adresse. La page précédente
+  commençait par une grande carte résumée, puis une colonne de droite chargée et mal ordonnée : « ça ne donne pas envie ».
+- **Pourquoi les connus en fin de page.** Ils servent peu : on les consulte pour oublier un réseau ou régler sa priorité,
+  rarement pour s'y rendre. Repliés, ils n'encombrent pas la lecture des réseaux à portée.
+- **Pourquoi le réseau joint est déplié.** C'est la connexion en cours, donc l'objet de la visite : adresses, débits
+  et qualité du signal y sont lisibles sans aucun clic.
+
+*Touché : `coque/Reseau/PageWifi.qml`, `coque/Reseau/DepliantReseau.qml`, `coque/Reseau/ConnusWifi.qml`, fiche et plan de
+L2-65.*
+
+### D150 · Les réglages courants vivent dans le dépliant ; la priorité est un compteur ; la sous-page se réduit à « Réglages avancés… »
+
+2026-11-09, décision de Nicolas. **Les réglages qu'on change vraiment (connexion automatique, priorité, données limitées)
+se trouvent dans le dépliant du réseau, sur la grille des tuiles. La priorité individuelle d'un profil est un compteur.
+Les libellés sont « Connexion automatique » et « Données limitées ». La sous-page du profil se réduit à « Réglages
+avancés… ».**
+
+- **Grille alignée sur les tuiles.** Les réglages et les tuiles partagent les mêmes trois colonnes : l'œil lit une seule
+  grille au lieu de deux mises en page qui se côtoient.
+- **Priorité en compteur, refus des trois crans.** Nicolas a refusé de ramener la priorité à trois crans (basse,
+  normale, haute) : NetworkManager accepte un entier, et trois crans en cacheraient l'échelle réelle. Il a aussi refusé
+  une priorité donnée par l'ordre des profils, qui rend le réglage indirect et fragile. Le compteur du composant
+  existant écrit l'entier sans détour.
+- **Libellés.** « Connexion automatique » et « Données limitées » disent ce que fait le réglage en mots de tous les
+  jours, sans le vocabulaire de NetworkManager.
+- **Sous-page réduite.** Les réglages courants ayant quitté la sous-page, il ne lui reste que ce que l'on ne règle
+  presque jamais : adresses fixes, DNS, valeurs multiples. Le dépliant y renvoie par « Réglages avancés… ».
+
+*Touché : `coque/Reseau/DepliantReseau.qml`, `coque/Reseau/FicheProfil.qml`, `coque/Reseau/ReglagesReseau.qml`, tests de
+la fenêtre Réseau.*
+
+### D151 · La fenêtre Réseau se ferme en « cachant puis détruisant » ; le gel résiduel est accepté, D80 est maintenu
+
+2026-11-09, mesures de la tâche 10 de L2-65 et accord de Nicolas. **La fermeture cache la fenêtre aussitôt, puis la
+détruit : la fermeture visible dure 76 à 85 ms, au lieu de 650 à 830 ms auparavant. La destruction gèle encore le fil de
+la coque de 73 à 135 ms (quatre mesures sur dix dépassent 100 ms), et l'ouverture jusqu'à 222 ms. Nicolas accepte cet
+état. Le repli « fenêtre gardée cachée » est écarté, et D80 est maintenu.**
+
+- **Mesures finales.** Fermeture visible 76 à 85 ms ; destruction 60 à 119 ms ; ouverture 187 à 215 ms ; gel du fil de la
+  coque pendant la destruction 73 à 135 ms.
+- **Pourquoi D80 tient.** D80 retient Quickshell avec sobriété et sans budget de mémoire permanent. Garder la fenêtre
+  cachée supprimerait le gel, mais en laissant en mémoire une fenêtre que Nicolas n'ouvre qu'à l'occasion : l'économie
+  de quelques dizaines de millisecondes ne vaut pas ce coût permanent.
+- **Allègement tenté, puis abandonné.** Nicolas avait d'abord demandé de « chercher à alléger ». Une mesure
+  de l'ouverture (environ 230 ms avant comme après l'allègement de l'arborescence) n'a montré aucun gain ; devant les
+  chiffres finaux, il a conclu : « la c'est très ok la vitesse, on peut valider ». L'agent d'allègement a été arrêté et
+  la sonde temporaire retirée.
+
+*Touché : `coque/Reseau/FenetreReseau.qml`, mesure d'essai ajoutée en IPC d'essai, fiche de L2-65.*
+
+### D152 · L'animation de la fenêtre et la double disparition n'appellent aucune correction de Hyprland ; SUPER + glisser est validé
+
+2026-11-09, diagnostic de la tâche 10 de L2-65. **Aucune règle ni aucun correctif de Hyprland n'est nécessaire pour
+l'animation d'ouverture (popin) ni pour la double disparition de la fenêtre. SUPER + glisser, validé par Nicolas à la
+souris, ne demande rien non plus.**
+
+- **Double disparition.** La fenêtre semblait disparaître deux fois parce que la coque la détruisait pendant qu'elle
+  s'affichait encore. La fermeture « cacher puis détruire » (D151) a supprimé la cause ; aucun réglage du compositeur
+  n'y est mêlé.
+- **Animation popin.** Mesurée sur la machine, elle se déroule normalement une fois la destruction écartée du chemin
+  visible.
+- **SUPER + glisser.** Le geste ne s'injecte pas par script ; une première hypothèse (un clic à deux doigts du pavé
+  tactile, lu comme un clic droit et donc un redimensionnement) a été écartée quand le geste a échoué aussi à la souris.
+  Nicolas l'a ensuite refait et validé : « c'est bon aussi le glissement, j'étais pas concentré ». Les échecs
+  venaient d'un manque d'attention, pas du compositeur. La sonde `sonde-glisser.sh` prévue devient inutile.
+
+*Touché : aucun fichier de configuration ; diagnostic consigné dans la fiche de L2-65.*
+
+### D153 · La fenêtre Son est détachée de L2-65 et devient L2-66
+
+2026-11-09, décision de Nicolas. **L2-65 ne livre plus que la fenêtre Réseau allégée. La fenêtre Son, qui devait naître de
+sa copie, devient l'élément L2-66 du backlog, sur le même lot et avec la même priorité.**
+
+- **Pourquoi la séparer.** Le chantier Réseau s'est révélé assez gros à lui seul : repérage, maquettes, composants
+  nouveaux (`Courbe`, `Tuile`, dépliants), mesures et diagnostic du compositeur. Y joindre la fenêtre Son retardait la
+  recette du Réseau, alors que celui-ci se juge indépendamment.
+- **Pourquoi elle y gagne.** La fenêtre Son sera construite sur le gabarit éprouvé de la fenêtre Réseau, avec ses
+  composants prêts, après un repérage qui lui sera propre (volume par application, profils de la carte, effets,
+  égaliseur). Le lien « Réglages du son… » du popover du son (L2-12) l'ouvrira.
+
+*Touché : backlog (L2-65 réduit, L2-66 ajouté), fiche et plan de L2-65.*
+
+### D154 · Arbitrages de construction de L2-65, à valider à la recette
+
+2026-11-09, choix de Claude pendant la construction, relevés au registre de la feature. Aucun n'a été soumis à Nicolas
+avant le code ; **chacun change un comportement visible et se juge à l'écran à la recette. S'il déplaît, le retour est
+d'une propriété ou de quelques lignes.**
+
+- **« Détails… » du popover déplie le réseau dans la page.** Pour un profil Wi-Fi (y compris un réseau caché ajouté), le
+  lien ouvre la page Wi-Fi, déplie le réseau (le joint, ou le connu dont la section s'ouvre) et y fait défiler, au lieu
+  d'ouvrir la sous-page avancée, qui n'a plus les réglages courants (D150). Le filaire garde la sous-page. Si Nicolas
+  préfère les réglages avancés, le retour est simple.
+- **En-tête « Réseaux connus » au style de la section dépliable de la bible.** Texte primaire, ouverture sans animation
+  de hauteur, plutôt que le petit titre d'accent animé de la maquette `colonne-v6` : la bible prime pour un composant
+  qu'elle décrit déjà. Si le titre d'accent est préféré, il devient une option de style de `Depliable`.
+- **Adresses des tuiles dans la police de l'interface.** La fiche demande l'échelon 3, graisse moyenne et chiffres
+  tabulaires ; elle prime sur le brief de la tâche (police à chasse fixe). `Valeur` reçoit pour cela l'option `mono`,
+  fausse dans les tuiles ; la copie au clic est gardée. Si Nicolas préférait la chasse fixe, le retour tient en une ligne.
+- **Profils filaires inactifs dépliables comme les réseaux connus.** La revue finale a relevé que ces profils n'avaient
+  aucun réglage courant ; ils se déplient désormais avec connexion automatique, priorité, « Réglages avancés… » et
+  « Oublier ce réseau », et « Rejoindre » n'apparaît que si le câble est branché.
+- **Libellés « Câble branché » et « Câble débranché »** pour l'état d'un profil filaire, à la place de ceux d'un réseau
+  sans fil.
+
+*Touché : `coque/Reseau/PageWifi.qml`, `coque/Reseau/PanneauReseau.qml`, `coque/Reseau/GroupeProfils.qml`,
+`coque/Reseau/DepliantReseau.qml`, `coque/Composants/Valeur.qml`.*
+
+## 2026-11-10 — Recette 1 de la fenêtre Réseau (L2-65)
+
+### D155 · Les réglages avancés se déplient dans le dépliant ; la sous-page de profil disparaît
+
+2026-11-10, retour de Nicolas à la recette (« le clic sur Réglages avancés est très désagréable […] mets-le en dépliant
+qui augmente seulement la surface du menu actuel, et anime ça »), arbitré par le coordinateur.
+
+- **« Réglages avancés » est une section dépliable du dépliant d'un réseau**, posée sous la grille des réglages et
+  avant le pied d'actions : c'est là qu'on la cherche après avoir parcouru les réglages courants, et le pied reste la
+  dernière ligne du dépliant, comme partout ailleurs. Déplier n'agrandit que ce dépliant ; la hauteur suit le ressort
+  `reveal`, celui du dépliant lui-même. La section est pleine largeur (sans retrait sous le libellé), pour garder la
+  grille des tuiles. Son contenu (`AvancesReseau`) n'est chargé que déplié ou en mouvement.
+- **Contenu repris de l'ancienne sous-page** (`FicheProfil`, supprimée) : configuration IPv4 automatique ou fixe et ses
+  champs, détail de la connexion active et « Tout copier », plus les tuiles qui ont quitté la page (D156). Il partage le
+  `ProfilReseau` du dépliant : rien n'est relu à l'ouverture de la section. Les rangées y sont des `Ligne` sans retrait
+  (nouvelle entrée `cote`), alignées sur la grille.
+- **Plus aucune sous-page de profil.** Aucun chemin n'y menait plus : `PanneauReseau.ouvrirProfil`, `sousPage = uuid`,
+  la fiche et leurs essais sont retirés ; la sous-page « Nouveau réseau » reste. Un profil filaire demandé (« Détails… »
+  du popover, profil créé) se déplie dans la section « Profils » de l'onglet Filaire au lieu d'ouvrir sa sous-page.
+- **« Se déconnecter » passe au pied du dépliant du profil actif**, à la place de « Rejoindre » : il n'existait que dans
+  la carte de tête de la sous-page, et sa disparition aurait retiré à la fenêtre toute déconnexion. Coût si le choix
+  déplaît : une condition dans `ReglagesReseau`.
+
+*Touché : `coque/Reseau/AvancesReseau.qml` (nouveau), `coque/Reseau/FicheProfil.qml` (supprimé),
+`coque/Reseau/ReglagesReseau.qml`, `coque/Reseau/DepliantReseau.qml`, `coque/Reseau/PanneauReseau.qml`,
+`coque/Reseau/PageWifi.qml`, `coque/Reseau/PageFilaire.qml`, `coque/Reseau/GroupeProfils.qml`, `coque/Reseau/Ligne.qml`,
+coques d'essai et `tests/test_reseau.py`, fiche de L2-65.*
+
+### D156 · La page Wi-Fi s'allège : réseau joint replié, tuiles réduites, aides retirées
+
+2026-11-10, retours de Nicolas à la recette, arbitrés par le coordinateur.
+
+- **Le réseau joint s'ouvre replié.** « Détails… » du popover continue de le déplier.
+- **Son nom est mis en valeur** dans la tête de son dépliant détaillé (et dans celle de la connexion filaire active) :
+  échelon 3 au lieu de 2, en graisse moyenne, dans l'échelle de la bible, sans taille nouvelle (`Ligne.titre`).
+- **Tuiles de la page : Adresse IP, Routeur, Connecté depuis**, pour le Wi-Fi comme pour le filaire (où « Connecté
+  depuis » ne paraît que si la sonde la connaît). Le signal et ses barres, la bande (Wi-Fi) et le débit du lien
+  (filaire) passent dans les réglages avancés. **DNS et adresse matérielle n'y forment pas de tuile** : le détail de la
+  connexion, juste dessous, les donne déjà en entier et copiables ; une tuile de plus les aurait dits deux fois dans la
+  même section. Coût si Nicolas veut la tuile : une ligne dans `TuilesConnexion`. Une rangée de tuiles incomplète est
+  complétée de cellules vides, pour que deux tuiles gardent la grille de trois colonnes.
+- **Mot de passe d'un réseau ouvert** : la valeur « Aucun (réseau ouvert) », à l'échelon 3 en graisse moyenne et au
+  texte primaire, comme « Sécurité », remplace la phrase en texte secondaire. Le champ d'un réseau protégé garde sa
+  hauteur (`controlHeight`, celle de l'interrupteur et du compteur) et ses deux colonnes ; la valeur de la sécurité se
+  centre désormais sur sa hauteur, comme « Oui » sur son interrupteur.
+- **Aides retirées** sous « Données limitées » et « Priorité ».
+- **L'interrupteur de la radio s'aligne sur le bord droit du champ de recherche** (et des cartes) : `TitrePage` ne le
+  retire plus de `space.scale[2]`.
+
+*Touché : `coque/Reseau/PageWifi.qml`, `coque/Reseau/TuilesConnexion.qml`, `coque/Reseau/ReglagesReseau.qml`,
+`coque/Reseau/DepliantReseau.qml`, `coque/Reseau/Ligne.qml`, `coque/Reseau/TitrePage.qml`, tests, fiche de L2-65.*
+
+### D157 · Section dépliable, interrupteur, pastilles et médaillon passent par un ressort
+
+2026-11-10, retours de Nicolas à la recette (« dépliage des réseaux connus pas agréable », « les toggle switch sont
+toujours pas animés », pastilles qui changent de couleur d'un coup, icône d'onglet trop brute), arbitrés par le
+coordinateur. Aucune durée n'est écrite en dur : tout passe par les transitions de `motion.json`.
+
+- **Section dépliable** (`Depliable`) : le bloc s'ouvre et se ferme en dépliant sa hauteur sur le ressort `reveal`, le
+  même que le chevron ; la hauteur montrée est celle du contenu multipliée par la progression du chevron, si bien qu'un
+  contenu qui grandit pendant ou après le dépliage (un réseau connu qu'on déplie) est suivi sans second ressort. Le bloc
+  est découpé pendant le mouvement. Toutes les sections en profitent ; « Réseaux connus » porte désormais sa carte dans
+  la section (entrée `retrait` fausse). Le dépliant d'un réseau suit le même principe, ce qui retire son second ressort
+  de hauteur.
+- **Interrupteur** : le bouton glisse au ressort `state`, celui de l'`Etat` qui fond déjà la couleur de la piste ; c'est
+  la transition des changements d'état sur place, que suivent case, radio et bascule.
+- **Pastilles de fenêtre** : chaque disque rejoint sa couleur par un `ColorSpring` au ressort `state` (fenêtre active ou
+  inactive, survol, pression). La bible disait « sans `Etat` ni transition » : elle est corrigée.
+- **Médaillon** : fond et glyphe fondent au ressort `state` ; l'onglet choisi de la colonne de la fenêtre Réseau change
+  de couleur sans à-coup. Le libellé suivait déjà son `Etat` ; le reste du changement d'onglet reste instantané.
+- Le mouvement réduit pose hauteur, chevron et bouton d'un coup, comme tout ressort de déplacement.
+
+*Touché : `coque/Composants/Depliable.qml`, `Interrupteur.qml`, `Pastilles.qml`, `Medaillon.qml`,
+`coque/Reseau/ConnusWifi.qml`, `coque/Reseau/DepliantReseau.qml`, coque d'essai des composants et
+`tests/test_coque_composants.py`, bible (v0.34).*

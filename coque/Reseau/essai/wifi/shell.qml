@@ -10,11 +10,11 @@ import "Reseau"
 // Rôle : pose une PageWifi dans une FloatingWindow, branchée sur un état et un panneau factices (aucune action ne
 // touche le réseau réel) : réseaux factices qui journalisent leurs appels (connect, connectWithPsk avec la seule
 // longueur du mot de passe), executer qui journalise ses arguments et rend des profils fixes, panneau qui journalise
-// ouvrirProfil et ouvrirNouveau. tests/test_reseau.py (PageWifiTest) la pilote par IPC (cible « wifi »).
+// ouvrirNouveau. tests/test_reseau.py (PageWifiTest) la pilote par IPC (cible « wifi »).
 // Garde de plateforme : la fenêtre n'est construite que sous offscreen, où elle ne paraît jamais à l'écran.
 // Entrées : DUNEI_TOKENS_DIR, lu par Theme ; QT_QPA_PLATFORM=offscreen, posé par le test.
 // Sortie : « essai : prêt » à l'ouverture, puis les lignes « essai : connect <nom> », « essai : connectWithPsk <nom>
-// <longueur> », « essai : executer <arguments JSON> », « essai : allumer <bool> », « essai : ouvrirProfil <uuid> »,
+// <longueur> », « essai : executer <arguments JSON> », « essai : allumer <bool> »,
 // « essai : ouvrirNouveau ». Le texte d'un mot de passe n'est jamais journalisé ni rendu.
 // Erreurs : celles de Theme et des liaisons, dans le journal. Dépendances : quickshell ≥ 0.3 (FloatingWindow,
 // LazyLoader, IpcHandler), Quickshell.Networking (énumérations), modules Theme et Reseau, par les liens
@@ -52,7 +52,7 @@ ShellRoot {
         faux.reseaux = ["Connu", "Ouvert", "Wifi_TRIADES", "Inconnu"].map(reseau)
     }
 
-    // État factice : les propriétés et fonctions d'EtatReseau qu'emploient la page et sa fiche résumée.
+    // État factice : les propriétés et fonctions d'EtatReseau qu'emploient la page et le dépliant du réseau joint.
     QtObject {
         id: faux
         property bool radio: true
@@ -70,7 +70,7 @@ ShellRoot {
         property bool rechercheFenetre: false
         readonly property bool balayage: recherche || rechercheFenetre
         property var reseaux: []
-        // Priorité que rend la lecture du profil ; changée par l'IPC « prioriteLue » pour simuler la sous-page.
+        // Priorité que rend la lecture du profil.
         property int prioriteLue: 5
         function allumer(actif) { essai.journal("allumer", actif); radio = actif }
         function executer(args, fin) {
@@ -80,13 +80,10 @@ ShellRoot {
         }
     }
 
-    // Panneau factice : les rangées de profils et les deux ouvertures de sous-page.
+    // Panneau factice : les rangées de profils et l'ouverture de la sous-page « Nouveau réseau ».
     QtObject {
         id: panneauFaux
         property var factures: ({})
-        // Onglet et sous-page courants, que lit la page pour relire sa fiche au retour d'une sous-page.
-        property string onglet: "wifi"
-        property string sousPage: ""
         property var rangees: [
             {groupe: "Wi-Fi", nom: "Wifi_TRIADES", uuid: "wifi-1", appareil: "wlan0", wifi: true, actif: true, etat: "Connecté", icone: "network-wireless-signal-excellent"},
             {groupe: "Wi-Fi", nom: "Connu", uuid: "connu-1", appareil: "", wifi: true, actif: false, etat: "À portée", icone: "network-wireless-signal-good"},
@@ -94,7 +91,6 @@ ShellRoot {
             {groupe: "Wi-Fi", nom: "Cafe", uuid: "cafe-1", appareil: "", wifi: true, actif: false, etat: "Hors de portée", icone: "network-wireless-signal-excellent"},
             {groupe: "Filaire", nom: "Bureau", uuid: "filaire-1", appareil: "", wifi: false, actif: false, etat: "Débranché", icone: "network-wired"}
         ]
-        function ouvrirProfil(uuid) { essai.journal("ouvrirProfil", uuid) }
         function ouvrirNouveau() { essai.journal("ouvrirNouveau", true) }
     }
 
@@ -127,21 +123,15 @@ ShellRoot {
             color: Theme.color?.surfaceWindow ?? "transparent"
             Component.onCompleted: essai.journal("prêt", true)
 
-            Loader {
-                id: porteur
-                width: parent.width
-                sourceComponent: Component { PageWifi { width: fenetre.width; panneau: panneauFaux; etat: faux } }
-            }
-
-            // Sous-page d'un profil (FicheProfil complète) sur l'état factice, ouverte à la demande de l'IPC.
-            Loader {
-                id: sousPage
-                property string uuid
-                y: 0
-                width: fenetre.width
-                active: uuid !== ""
-                sourceComponent: Component {
-                    FicheProfil { width: fenetre.width; uuid: sousPage.uuid; rangee: panneauFaux.rangees.find(r => r.uuid === sousPage.uuid) ?? null; etat: faux }
+            // La page défile comme dans le panneau de la fenêtre, pour éprouver une longue liste de réseaux connus.
+            Flickable {
+                id: defilement
+                anchors.fill: parent
+                contentHeight: porteur.height
+                Loader {
+                    id: porteur
+                    width: fenetre.width
+                    sourceComponent: Component { PageWifi { width: fenetre.width; panneau: panneauFaux; etat: faux } }
                 }
             }
 
@@ -149,61 +139,69 @@ ShellRoot {
                 id: ipc
                 target: "wifi"
 
-                // ouvrirFiche — ouvre la FicheProfil complète d'un profil du panneau factice. Entrée : uuid. Sortie : aucune.
-                function ouvrirFiche(uuid: string): void { sousPage.uuid = uuid }
-                // prioriteLue, sousPage — simulent une modification faite dans la sous-page « Détails… » (nouvelle priorité
-                // enregistrée) puis l'ouverture ou la fermeture de la sous-page. Entrées : valeur. Sortie : aucune.
-                function prioriteLue(valeur: int): void { faux.prioriteLue = valeur }
-                function sousPage(valeur: string): void { panneauFaux.sousPage = valeur }
                 // carteFilaire — pose la présence d'une carte filaire dans l'état factice. Entrée : valeur. Sortie : aucune.
                 function carteFilaire(valeur: bool): void { faux.carteFilaire = valeur }
-                // connexion — clique « Se connecter » ou « Se déconnecter » de la carte de tête de la sous-page. Entrées :
-                // aucune. Sortie : le texte du bouton avant le clic, vide s'il est masqué. Erreurs : sous-page fermée.
-                function connexion(): string {
-                    const b = essai.trouver(sousPage.item, o => o.objectName === "connexion")
-                    if (!b.visible) return ""
-                    const t = b.text
-                    b.clicked()
-                    return t
+                // pied — textes des boutons montrés du pied du dépliant d'un uuid (Rejoindre ou Se déconnecter, Oublier ce
+                // réseau). Entrée : uuid. Sortie : texte JSON. Erreurs : dépliant replié, TypeError au journal.
+                function pied(uuid: string): string {
+                    const d = essai.trouver(porteur.item, o => o.objectName === "depliant:" + uuid)
+                    return JSON.stringify(essai.tous_(d.corps.reglages, o => ["rejoindre", "oublier"].includes(o.objectName) && o.visible).map(o => o.text))
                 }
+                // cliquerPied — clic sur « Rejoindre » ou « Se déconnecter » (rejoindre) du dépliant d'un uuid. Entrée : uuid.
+                function cliquerPied(uuid: string): void {
+                    essai.trouver(essai.trouver(porteur.item, o => o.objectName === "depliant:" + uuid), o => o.objectName === "rejoindre").clicked()
+                }
+                // deplierJoint — clic sur la tête du dépliant du réseau joint. Entrées et sortie : aucune.
+                function deplierJoint(): void { essai.trouver(porteur.item.depliant, o => o.objectName === "tete").clique() }
 
-                // page — état de la page, en JSON, sans aucun texte saisi. Sortie : {existe, joint (la carte du réseau
-                // joint existe), tete (libellé de sa rangée de tête), aideTete, rangeesJoint (libellés des rangées de la
-                // carte), reseaux (noms montrés des réseaux disponibles, dans l'ordre), serrures (noms à cadenas),
-                // hors (libellés des profils hors de portée), autre, adresses (titre → valeur), deplie, erreur, saisie
-                // (longueur du mot de passe saisi, -1 sans bloc), connexion (noms « Connexion… »), balayage, activite,
-                // rechercher (le bouton est visible), radio, balayageEtat (faux.balayage), recherche, rechercheFenetre,
-                // priorite (valeur du Compteur), titres (étiquettes de section visibles)}. Erreurs : aucune.
+                // page — état de la page, en JSON, sans aucun texte saisi. Sortie : {existe, joint (le groupe du réseau
+                // joint est montré), jointCharge (son dépliant existe, montré ou masqué par le filtre), tete (libellé de sa rangée de tête), aideTete, rangeesJoint (libellés des rangées du
+                // dépliant), reseaux (noms montrés des autres réseaux, dans l'ordre), serrures (noms à cadenas), autre
+                // (« Autre réseau… » visible dans le groupe des autres réseaux), blocs (objectName des blocs visibles de
+                // la page, de haut en bas), filtre, connus
+                // (libellés des réseaux connus visibles, dans l'ordre), connusVisible (la section des réseaux connus
+                // est visible), connusOuverts (son groupe est montré), connuOuvert (uuid du connu déplié), compte (le
+                // nombre affiché), ouverts (uuids des connus dépliés), rejoindre (uuid → « Rejoindre » visible, pour
+                // les connus chargés), serruresConnus (noms des connus visibles à cadenas), secretsConnus (uuid → [longueur du mot de passe, révélé], pour les connus chargés), icones ({autres, connus} : tailles des icônes de signal visibles), deplie,
+                // erreur, saisie (longueur du mot de passe saisi, -1 sans bloc), connexion (noms « Connexion… »),
+                // balayage, activite, rechercher (le bouton est visible), radio, balayageEtat (faux.balayage),
+                // recherche, rechercheFenetre, priorite (valeur du Compteur), titres (étiquettes de section
+                // visibles)}. Erreurs : aucune.
                 function page(): string {
                     const p = porteur.item
                     if (!p) return JSON.stringify({existe: false, rechercheFenetre: faux.rechercheFenetre, balayageEtat: faux.balayage})
                     const objet = nom => essai.trouver(p, o => o.objectName === nom)
                     const lignes = nom => essai.tous_(p, o => o.objectName === nom && o.visible)
                     const reseaux = essai.tous_(p, o => String(o.objectName).startsWith("reseau:") && o.visible)
-                    const f = p.fiche
+                    const f = p.depliant
                     const carteJoint = f ? essai.tous_(f, o => o.libelle !== undefined && o.libelle !== "" && o.visible).map(o => o.libelle) : []
                     const tete = f ? essai.trouver(f, o => o.objectName === "tete") : null
                     const bloc = essai.trouver(p, o => o.objectName === "bloc" && o.visible)?.item
-                    const adresses = {}
-                    const carte = objet("adresses")
-                    if (carte) for (const t of essai.tous_(carte, o => o.titre !== undefined && o.visible)) {
-                        const v = essai.trouver(t, o => o.copiable !== undefined && o.visible && o.text !== undefined)
-                        adresses[t.titre] = v ? v.text : (essai.trouver(t, o => o.text !== undefined && o.text !== "" && o.text !== t.titre && o.visible)?.text ?? "")
-                    }
+                    const connus = essai.tous_(objet("connus"), o => String(o.objectName).startsWith("depliant:") && o.visible)
+                    const blocs = ["titre", "desactive", "recherche", "joint", "autres", "connus"].map(objet)
+                        .filter(o => o?.visible).sort((a, b) => a.mapToItem(p, 0, 0).y - b.mapToItem(p, 0, 0).y)
+                    const tailles = o => essai.tous_(o, i => i.securise !== undefined && i.force !== undefined && i.visible).map(i => i.taille)
                     return JSON.stringify({
-                        existe: true, joint: f !== null, tete: tete ? tete.libelle : "", aideTete: tete ? tete.aide : "",
+                        existe: true, joint: p.montreJoint, jointCharge: f !== null, tete: tete ? tete.libelle : "", aideTete: tete ? tete.aide : "",
                         rangeesJoint: carteJoint,
                         reseaux: reseaux.map(o => o.objectName.slice(7)),
                         serrures: reseaux.filter(o => essai.trouver(o, i => i.nom === "network-wireless-encrypted" && i.visible)).map(o => o.objectName.slice(7)),
-                        hors: essai.tous_(objet("enregistres"), o => String(o.objectName).startsWith("hors:") && o.visible).map(o => o.libelle),
-                        autre: essai.trouver(objet("enregistres"), o => o.objectName === "autre" && o.visible) !== null,
-                        adresses, adressesVisible: objet("adresses").visible, enregistresVisible: objet("enregistres").visible,
+                        autre: objet("disponibles").visible && essai.trouver(objet("disponibles"), o => o.objectName === "autre" && o.visible) !== null,
+                        depliantOuvert: f?.ouvert ?? false, blocs: blocs.map(o => o.objectName),
+                        filtre: p.filtre, connus: connus.map(o => o.rangee.nom), connusVisible: objet("connus")?.visible ?? false,
+                        connusOuverts: objet("groupeConnus")?.visible ?? false, connuOuvert: p.connuOuvert,
+                        compte: objet("compte")?.text ?? "", ouverts: connus.filter(o => o.ouvert).map(o => o.rangee.uuid),
+                        rejoindre: connus.reduce((m, o) => o.corps ? (m[o.rangee.uuid] = essai.trouver(o, i => i.objectName === "rejoindre").visible, m) : m, {}),
+                        serruresConnus: connus.filter(o => essai.trouver(o, i => i.nom === "network-wireless-encrypted" && i.visible)).map(o => o.rangee.nom),
+                        secretsConnus: essai.tous_(objet("connus"), o => String(o.objectName).startsWith("depliant:")).reduce((m, o) => o.corps
+                            ? (m[o.rangee.uuid] = [o.corps.reglages.champ.length, o.corps.reglages.champ.revele], m) : m, {}),
+                        icones: {autres: tailles(objet("disponibles")), connus: tailles(objet("connus"))},
                         revele: bloc ? bloc.secret.revele : null, deplie: p.deplie, erreur: p.erreur, saisie: bloc ? bloc.secret.length : -1,
                         connexion: reseaux.filter(o => essai.trouver(o, i => i.objectName === "ligne")?.aide === "Connexion…").map(o => o.objectName.slice(7)),
                         balayage: p.balayage, activite: objet("activiteRecherche")?.visible ?? false,
                         rechercher: objet("rechercher")?.visible ?? false, radio: faux.radio, balayageEtat: faux.balayage,
                         recherche: faux.recherche, rechercheFenetre: faux.rechercheFenetre,
-                        ficheSecret: f ? [f.secret.length, f.secret.revele] : null,
+                        ficheSecret: f?.corps ? [f.corps.reglages.champ.length, f.corps.reglages.champ.revele] : null,
                         priorite: f ? essai.trouver(f, o => o.objectName === "priorite")?.value ?? null : null,
                         disponiblesVisible: objet("disponibles").visible,
                         titres: essai.tous_(p, o => o.text !== undefined && o.moyen === true && o.echelon === 0 && o.visible).map(o => o.text),
@@ -218,25 +216,55 @@ ShellRoot {
                 function focus(): string { return essai.nomDe(porteur.item.Window.window?.activeFocusItem) }
                 // appareil — change l'appareil que lit l'état (le filaire actif l'emporte sur le Wi-Fi). Entrée : nom.
                 function appareil(nom: string): void { faux.appareil = nom }
-                // sansHors — retire les profils hors de portée du panneau factice. Entrées : aucune. Sortie : aucune.
-                function sansHors(): void { panneauFaux.rangees = panneauFaux.rangees.filter(r => r.etat !== "Hors de portée") }
-
-                // plusieursIp6 — donne à l'état trois adresses IPv6 (une de lien local), dont une très longue, pour éprouver
-                // le renvoi à la ligne de la carte « Adresses ». Entrées et sortie : aucune.
-                function plusieursIp6(): void {
-                    faux.ip6 = ["fe80::7a2c:41ff:fe0b:9d10/64", "2a01:cb04:1234:5678:9abc:def0:1234:5678/64",
-                                "2a01:cb04:1234:5678:aaaa:bbbb:cccc:dddd/128"]
+                // deconnecter — le Wi-Fi n'a plus de réseau actif : le profil joint et son réseau se déconnectent. Entrées et
+                // sortie : aucune.
+                function deconnecter(): void {
+                    essai.reseau("Wifi_TRIADES").connected = false
+                    faux.nomActif = ""
+                    panneauFaux.rangees = panneauFaux.rangees.map(r => r.uuid === "wifi-1" ? Object.assign({}, r, {actif: false, etat: "À portée"}) : r)
                 }
-                // geometrie — largeur de la carte « Adresses » et, par Valeur d'IPv6, son texte et ses bords gauche et droit
-                // dans la carte ; taille de la coche de la rangée de tête. Sortie : JSON {carte, ip6: [[texte, gauche, droite]],
-                // coche: [largeur, hauteur]}. Erreurs : page absente, TypeError au journal.
-                function geometrie(): string {
-                    const carte = essai.trouver(porteur.item, o => o.objectName === "adresses")
-                    const vs = essai.tous_(carte, o => o.objectName === "valeur:IPv6" && o.visible)
-                    const coche = essai.trouver(porteur.item.fiche, o => o.objectName === "coche")
-                    return JSON.stringify({carte: carte.width,
-                        ip6: vs.map(v => [v.text, v.mapToItem(carte, 0, 0).x, v.mapToItem(carte, v.width, 0).x]),
-                        coche: [coche.width, coche.height]})
+                // radio — allume ou coupe le Wi-Fi de l'état factice, sans journaliser l'appel comme un geste de
+                // l'utilisateur. Entrée : valeur. Sortie : aucune.
+                function radio(valeur: bool): void { faux.radio = valeur }
+                // capturer — enregistre l'image de la page telle qu'elle paraît dans la fenêtre, pour les captures de
+                // recette (L2-65). Entrée : chemin du PNG. Sortie : aucune. Erreurs : écriture refusée, avertissement au
+                // journal. Dépendances : Item.grabToImage.
+                function capturer(chemin: string): void {
+                    defilement.grabToImage(r => { if (!r.saveToFile(chemin)) console.warn("essai : capture non écrite") })
+                }
+                // sansConnus — ne laisse au panneau factice que le profil Wi-Fi actif et le filaire. Entrées et sortie : aucune.
+                function sansConnus(): void { panneauFaux.rangees = panneauFaux.rangees.filter(r => r.actif || !r.wifi) }
+                // nombreux — remplace les réseaux connus par 40 profils factices hors de portée, « Profil_01 » à
+                // « Profil_40 » (uuid « profil-01 » à « profil-40 »). Entrées et sortie : aucune.
+                function nombreux(): void {
+                    const n = i => String(i + 1).padStart(2, "0")
+                    panneauFaux.rangees = panneauFaux.rangees.filter(r => r.actif || !r.wifi).concat(Array.from({length: 40}, (_, i) => (
+                        {groupe: "Wi-Fi", nom: "Profil_" + n(i), uuid: "profil-" + n(i), appareil: "", wifi: true, actif: false,
+                         etat: "Hors de portée", icone: "network-wireless-signal-excellent"})))
+                }
+                // filtrer — saisit un filtre dans le champ de recherche (vide : l'efface). Entrée : texte. Sortie : aucune.
+                function filtrer(texte: string): void { essai.trouver(porteur.item, o => o.objectName === "recherche").text = texte }
+                // section — clic sur l'en-tête de la section « Réseaux connus ». Entrées et sortie : aucune.
+                function section(): void { essai.trouver(porteur.item, o => o.objectName === "connus").entete.clicked() }
+                // connu — clic sur la tête du réseau connu d'un uuid. Entrée : uuid. Sortie : aucune.
+                function connu(uuid: string): void { essai.trouver(essai.trouver(porteur.item, o => o.objectName === "depliant:" + uuid), o => o.objectName === "tete").clique() }
+                // revelerConnu — clic sur l'œil du réseau connu déplié d'un uuid : lit le secret factice et le montre.
+                // Entrée : uuid. Sortie : aucune.
+                function revelerConnu(uuid: string): void { essai.trouver(porteur.item, o => o.objectName === "depliant:" + uuid).corps.profil.reveler() }
+                // ouvrirReseau — rend ouvert (sans sécurité) le réseau factice nommé. Entrée : nom. Sortie : aucune.
+                function ouvrirReseau(nom: string): void { essai.reseau(nom).security = WifiSecurityType.Open }
+                // fenetreVisible — montre ou cache la fenêtre de l'essai, la page restant visible. Entrée : valeur.
+                function fenetreVisible(valeur: bool): void { fenetre.visible = valeur }
+                // rejoindreConnu — clic sur « Rejoindre » du réseau connu déplié d'un uuid. Entrée : uuid. Sortie : aucune.
+                function rejoindreConnu(uuid: string): void { essai.trouver(essai.trouver(porteur.item, o => o.objectName === "depliant:" + uuid), o => o.objectName === "rejoindre").clicked() }
+                // defiler — défile la page jusqu'en bas. Sortie : JSON {defile (la page dépasse la fenêtre), dernier
+                // (libellé du dernier réseau connu), vu (sa tête est entièrement dans la fenêtre)}. Erreurs : aucune.
+                function defiler(): string {
+                    defilement.contentY = Math.max(0, defilement.contentHeight - defilement.height)
+                    const tetes = essai.tous_(essai.trouver(porteur.item, o => o.objectName === "connus"), o => o.objectName === "tete" && o.visible)
+                    const t = tetes[tetes.length - 1], y = t.mapToItem(defilement, 0, 0).y
+                    return JSON.stringify({defile: defilement.contentHeight > defilement.height, dernier: t.libelle,
+                                           vu: y >= 0 && y + t.height <= defilement.height})
                 }
 
                 // choisir — clic sur le réseau disponible nommé. Entrée : nom. Sortie : aucune.
@@ -249,12 +277,24 @@ ShellRoot {
                 function echouer(nom: string): void { essai.reseau(nom).connectionFailed(ConnectionFailReason.NoSecrets) }
                 // echouerAutrement — émet connectionFailed (échec générique). Entrée : nom.
                 function echouerAutrement(nom: string): void { essai.reseau(nom).connectionFailed(ConnectionFailReason.Unknown) }
-                // hors — clic sur le profil hors de portée d'un uuid. Entrée : uuid.
-                function hors(uuid: string): void { essai.trouver(porteur.item, o => o.objectName === "hors:" + uuid).clique() }
                 // autre — clic sur « Autre réseau… ». Entrées : aucune.
                 function autre(): void { essai.trouver(porteur.item, o => o.objectName === "autre").clique() }
-                // details — clic sur « Détails… » du réseau joint. Entrées : aucune.
-                function details(): void { essai.trouver(porteur.item.fiche, o => o.objectName === "details").clique() }
+                // avances — clic sur l'en-tête de la section « Réglages avancés » du dépliant d'un uuid, puis état de la
+                // section : JSON {ouvert, charge (contenu chargé)}. Entrée : uuid. Sortie : texte JSON. Erreurs : dépliant
+                // replié, TypeError au journal.
+                function avances(uuid: string): string {
+                    const r = essai.trouver(porteur.item, o => o.objectName === "depliant:" + uuid).corps.reglages
+                    r.pli.entete.clicked()
+                    return avancesEtat(uuid)
+                }
+                // avancesEtat — état de la section « Réglages avancés » du dépliant d'un uuid : JSON {ouvert, charge,
+                // libelles (libellés des rangées montrées)}. Entrée : uuid. Sortie : texte JSON.
+                function avancesEtat(uuid: string): string {
+                    const r = essai.trouver(porteur.item, o => o.objectName === "depliant:" + uuid)?.corps?.reglages
+                    const c = r?.contenuAvances ?? null
+                    return JSON.stringify({ouvert: r?.pli.ouvert ?? false, charge: c !== null,
+                                           libelles: c ? essai.tous_(c, o => typeof o.libelle === "string" && o.libelle !== "" && o.visible).map(o => o.libelle) : []})
+                }
                 // rechercher — clic sur « Rechercher ». Entrées : aucune.
                 function rechercher(): void { essai.trouver(porteur.item, o => o.objectName === "rechercher").clique() }
                 // balayer — le balayage rend sa liste : la liste est réaffectée, comme le fait EtatReseau. Entrées : aucune.
@@ -268,13 +308,13 @@ ShellRoot {
                 // popover — le popover (autre demandeur) pose ou lâche sa demande de balayage. Entrée : valeur.
                 function popover(valeur: bool): void { faux.recherche = valeur }
                 // masquer, detruire — la page devient invisible (autre sous-page) ou est détruite. Entrées : aucune.
-                // reveler — clic sur l'œil de la fiche du réseau joint : lit le secret factice et le montre. Entrées et sortie : aucune.
-                function reveler(): void { porteur.item.fiche.reveler() }
+                // reveler — clic sur l'œil du dépliant du réseau joint : lit le secret factice et le montre. Entrées et sortie : aucune.
+                function reveler(): void { porteur.item.depliant.corps.profil.reveler() }
                 function masquer(valeur: bool): void { porteur.visible = !valeur }
                 function detruire(): void { porteur.active = false }
                 // priorite — pas du Compteur de priorité. Entrée : pas (+1 ou -1).
                 function priorite(pas: int): void {
-                    const c = essai.trouver(porteur.item.fiche, o => o.objectName === "priorite")
+                    const c = essai.trouver(porteur.item.depliant, o => o.objectName === "priorite")
                     pas > 0 ? c.increase() : c.decrease()
                     c.valueModified()
                 }

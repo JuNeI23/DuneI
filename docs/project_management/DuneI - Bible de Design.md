@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas
 
-Document normatif. Version 0.31. Historique en fin de document.
+Document normatif. Version 0.34. Historique en fin de document.
 
 ## Comment lire ce document
 
@@ -376,7 +376,7 @@ Les contrôles reprennent **les formes et les proportions de macOS**, à la dema
 
 **Le motif de la fenêtre de réglages (D105).** Toute fenêtre de réglages se construit comme la fenêtre Réseau :
 
-- **Barre latérale à onglets.** Une colonne `surfacePanel` pleine hauteur, collée au bord gauche, sans rayon propre : verre à 90 % le jour, opaque la nuit, à côté d'un contenu `surfaceWindow` opaque ; les pastilles de la fenêtre sont à `space.scale[2]` du coin (D136). C'est une colonne de navigation au sens de la liste (« Sélectionné inactif ») : chaque onglet porte un médaillon, son nom et une ligne d'état en texte secondaire ; l'onglet choisi prend la plaque neutre `controlRaised` et un nom en graisse moyenne, jamais le fond d'accent. Les flèches haut et bas passent d'un onglet à l'autre. Le contour de focus n'orne la rangée courante qu'une fois une touche frappée dans la fenêtre : une ouverture à la souris ne montre aucun anneau.
+- **Barre latérale à onglets.** Une colonne `surfacePanel` pleine hauteur, collée au bord gauche, sans rayon propre : verre à 90 % le jour, opaque la nuit, à côté d'un contenu `surfaceWindow` opaque ; les pastilles de la fenêtre sont à `space.scale[2]` du coin (D136). C'est une colonne de navigation au sens de la liste (« Sélectionné inactif ») : chaque onglet porte un médaillon, son nom et une ligne d'état en texte secondaire ; l'onglet choisi prend la plaque neutre `controlRaised` et un nom en graisse moyenne, jamais le fond d'accent ; les couleurs du médaillon et du nom fondent au ressort `state`, le reste du changement d'onglet est instantané (D157). Les flèches haut et bas passent d'un onglet à l'autre. Le contour de focus n'orne la rangée courante qu'une fois une touche frappée dans la fenêtre : une ouverture à la souris ne montre aucun anneau.
 - **Page.** Un titre de page, puis des cartes précédées d'étiquettes de section à l'accent. La zone de page défile et se remet en haut à chaque changement d'onglet ou de sous-page. Les pages d'onglet sont construites une fois et gardées en vie tant que la fenêtre est ouverte : une bascule d'onglet ne fait que montrer la page ; tout secret saisi ou lu s'efface quand sa page se cache.
 - **Carte.** Aplat opaque `surfaceRaised`, `radius.panel`. Les rangées qu'elle porte sont séparées par un filet `borderSubtle` en retrait, qui part de `reglages.textColumn` (sous le texte, jamais sous le médaillon).
 - **Rangée.** Hauteur `reglages.row` (simple), `reglages.rowHelp` (avec texte d'aide en `textSecondary`) ou `reglages.rowLead` (rangée de tête). Elle reçoit au besoin un médaillon (`Medaillon`, disque de `reglages.medallion` portant un glyphe de `reglages.medallionGlyph`), un contrôle à droite (interrupteur, compteur, bouton, valeur) et, si elle est cliquable, un chevron ; elle se lit au clavier (tabulation, Entrée) et au survol comme une rangée de liste.
@@ -893,7 +893,7 @@ Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si 
 | Champ de saisie | field | `field` | `state` | **S'enfonce** : la nuit, L 0.14 dans un panneau à 0.22, avec ombre interne ; le jour, clair (échelon 3) et creusé par l'ombre interne (D87). **Aucun anneau** : le curseur clignotant porte le focus |
 | Bouton | E3 rel. | `interactive` + `text` | `state` | Un cran au-dessus du conteneur, `controlRaised` sur E3. Pressé = descend sous le repos. Aucun déplacement, aucune réduction d'échelle. Le bouton principal d'un dialogue est rempli d'accent |
 | Case, radio | — | `interactive` | `state` | Coché = accent + coche ou point **dessinés**. Jamais la couleur seule |
-| Interrupteur | — | `interactive` | `state` | Pilule ; coché = piste d'accent + bouton déplacé. Jamais la couleur seule |
+| Interrupteur | — | `interactive` | `state` | Pilule ; coché = piste d'accent + bouton déplacé. Jamais la couleur seule. Le bouton glisse au ressort `state` pendant que la piste fond, sur le même ressort (D157) |
 | Onglets | E2 | `interactive` + `text` | `state` | Contrôle segmenté : actif = accent sur le segment, pas sur la piste. Un seul arrêt de tabulation, anneau autour de la barre. Le fond d'un segment non coché part de sa teinte rendue transparente, au repos comme au survol : la pression ne fait jamais apparaître un fond opaque avant la couleur pressée (D148) |
 | Curseur (slider) | — | `interactive` | `state` | Piste à E0, poignée à E3. Focus = anneau sur la poignée |
 | Jauge | — | `interactive` + `icon` | `state` | Curseur sans disque, comme le Centre de contrôle : barre enfoncée, partie remplie en accent, icône facultative dedans, cliquable quand la jauge pilote une sourdine ; état coupé : remplissage `text-disabled`, icône `error`, en fondu. Focus = anneau sur la barre |
@@ -901,14 +901,16 @@ Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si 
 | Compteur | field | `field` + `interactive` | `state` | Valeur dans un champ enfoncé, stepper à deux demi-boutons. Flèches et molette |
 | Menu déroulant | E3 rel. | `interactive` + `overlay` + `row` | `state` | Apparence d'un bouton, double chevron ; ouvre un overlay contextuel |
 | Champ de recherche | field | `field` + `icon` + `interactive` | `state` | Champ en pilule, loupe, effacement ; Échap efface |
-| Section dépliable | — | `interactive` + `text` | `state` | Chevron et libellé ; le chevron pivote sans animation jusqu'à L2-58 |
-| Pastilles de fenêtre | — | `interactive` | — | Fermer, réduire, agrandir, en couleurs sémantiques ; neutres sous `inactive`. Sans `Etat` ni transition : survol et pression posent d'un coup leurs variantes précalculées (`errorHover`, `errorPressed`…). Aucun arrêt de tabulation. Rôle et emplacement sous tuilage : L2-42 |
+| Section dépliable | — | `interactive` + `text` | `state` | Chevron et libellé ; le chevron pivote sur le ressort `reveal` dans les fenêtres de réglages (L2-65), et le contenu déplie sa hauteur sur ce même ressort, découpé pendant le mouvement : la hauteur montrée est celle du contenu multipliée par la progression du chevron (D157). Contenu aligné sur le libellé, ou pleine largeur pour une carte. Les menus restent sans animation jusqu'à L2-58 |
+| Courbe | — | `surface` | — | Séries temporelles sans axe ni grille : trait de 1,5 px par série, aire facultative à 12 % d'opacité de la couleur de la série, échelle commune (maximum glissant, plancher 1). Couleurs par rôles du thème (L2-65) |
+| Tuile | — | `text` | — | Libellé discret (`textTertiary`, échelon 0) au-dessus d'un contenu, pour une grille de trois colonnes ; occupe une ou deux colonnes (L2-65) |
+| Pastilles de fenêtre | — | `interactive` | `state` | Fermer, réduire, agrandir, en couleurs sémantiques ; neutres sous `inactive`. Sans `Etat` : survol et pression prennent leurs variantes précalculées (`errorHover`, `errorPressed`…), et chaque disque rejoint sa couleur en fondu au ressort `state`, passage de la fenêtre active à inactive compris (D157). Aucun arrêt de tabulation. Rôle et emplacement sous tuilage : L2-42 |
 | Barre de progression | — | `surface` | — | Indéterminée : animation en boucle, exception à l'interdiction de la boucle, partagée avec l'indicateur d'activité |
 | Indicateur d'activité | — | `surface` | — | Trois grains en vague continue, période `periods.spinner`. Ne s'anime que visible et en marche |
 | Séparateur | — | `surface` | — | `border-subtle`. Jamais deux séparateurs adjacents : c'est un défaut d'espacement |
 | Carte de réglages | E1 (fenêtre opaque) | `surface` + `row` | — | Aplat `surfaceRaised`, `radius.panel`, rangées séparées par un filet `border-subtle` qui part de `reglages.textColumn` (D105) |
 | Rangée de réglage | — | `row` + `interactive` + `text` | `state` | Hauteur `reglages.row`, `rowHelp` ou `rowLead` ; médaillon facultatif, contrôle à droite, chevron si elle ouvre une sous-page ; au clavier comme une rangée de liste (D105) |
-| Valeur copiable | — | `text` | `state` | Chasse fixe, calée à droite, tronquée au milieu ; clic ou Entrée la copie, « Copié » en fondu ; une valeur par ligne pour un champ multiple (D105) |
+| Valeur copiable | — | `text` | `state` | Chasse fixe, calée à droite, tronquée au milieu ; clic ou Entrée la copie, « Copié » en fondu ; une valeur par ligne pour un champ multiple (D105) ; option `mono` (vraie par défaut), fausse dans les tuiles de la fenêtre Réseau où la valeur prend la police de l'interface (L2-65) |
 | Barre de défilement | — | `interactive` | `state` | Superposée, 8px au repos, 12px au survol. S'efface après 800 ms d'inactivité |
 
 ### Couche 2 — le flottant applicatif
@@ -973,3 +975,6 @@ Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si 
 | 0.29 | 2026-11-07 | Section Presqu'île : surface de hauteur constante égale au plus grand module, ancien contenu qui s'efface sur place (D132, D133) ; annexe E : renvoi à D133 |
 | 0.30 | 2026-11-08 | Chapitre 5 : verre propre de la presqu'île, 82 % le jour, 60 % la nuit (D137) ; popovers confirmés à 60 % ; chapitre 7 : colonne des fenêtres de réglages pleine hauteur, sans plateau détaché, verre à 90 % le jour et opaque la nuit (D136) |
 | 0.31 | 2026-11-08 | Annexe E : alerte de batterie de la presqu'île, `warning` à 20 %, `error` à 5 % (D146) ; contrôle segmenté dont le segment non coché part de la transparence (D148) |
+| 0.33 | 2026-11-09 | Valeur copiable : option `mono`, fausse dans les tuiles de la fenêtre Réseau (L2-65) |
+| 0.32 | 2026-11-09 | Section dépliable : chevron animé par le ressort `reveal` dans les fenêtres de réglages ; composants `Courbe` et `Tuile` ajoutés à l'inventaire (L2-65) |
+| 0.34 | 2026-11-10 | Annexe E : section dépliable dont le contenu déplie sa hauteur au ressort `reveal`, interrupteur dont le bouton glisse, pastilles de fenêtre en fondu au ressort `state` ; chapitre 7 : couleurs de l'onglet choisi de la barre latérale en fondu (recette 1 de L2-65, D157) |

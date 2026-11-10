@@ -10,6 +10,7 @@ ChampSecret 1.0 ChampSecret.qml
 Chevron 1.0 Chevron.qml
 Coche 1.0 Coche.qml
 Compteur 1.0 Compteur.qml
+Courbe 1.0 Courbe.qml
 Curseur 1.0 Curseur.qml
 Depliable 1.0 Depliable.qml
 Deroulant 1.0 Deroulant.qml
@@ -35,6 +36,7 @@ Recherche 1.0 Recherche.qml
 Separateur 1.0 Separateur.qml
 Surface 1.0 Surface.qml
 Texte 1.0 Texte.qml
+Tuile 1.0 Tuile.qml
 Carte 1.0 Carte.qml
 Medaillon 1.0 Medaillon.qml
 ReglageLigne 1.0 ReglageLigne.qml

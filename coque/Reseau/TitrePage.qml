@@ -4,9 +4,10 @@ import "../Theme"
 import "../Composants"
 
 // TitrePage — titre d'une page d'onglet de la fenêtre Réseau (D4) : échelon 5 en graisse moyenne, avec un contrôle
-// facultatif à droite (l'interrupteur de la radio, à l'étape suivante).
-// Rôle : donne à PageWifi, PageFilaire et PageVpn le même en-tête, aligné sur le bord gauche des cartes.
-// Entrées : text, le titre ; un contrôle facultatif déclaré comme enfant, calé à space.scale[2] du bord droit.
+// facultatif à droite (l'interrupteur de la radio Wi-Fi).
+// Rôle : donne à PageWifi, PageFilaire et PageVpn le même en-tête, aligné sur le bord gauche des cartes ; le contrôle
+// se cale sur leur bord droit, qui est aussi celui du champ de recherche (Recette 1 de L2-65, D156).
+// Entrées : text, le titre ; un contrôle facultatif déclaré comme enfant, calé sur le bord droit de la page.
 // Sortie : aucune. Erreurs : aucune ; avant le chargement des tokens, les cotes sont nulles.
 // Dépendances : Texte, Theme (space), QtQuick.Layouts.
 // Cotes : hauteur du texte plus deux fois space.scale[0] (4) ; occupe la largeur de sa mise en page.
@@ -23,7 +24,6 @@ Item {
     Item {
         id: emplacement
         anchors.right: parent.right
-        anchors.rightMargin: Theme.space?.scale[2] ?? 0
         anchors.verticalCenter: parent.verticalCenter
         width: childrenRect.width
         height: childrenRect.height

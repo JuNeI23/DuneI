@@ -10,7 +10,9 @@ import "etats.js" as Etats
 // cran au-dessus du conteneur. Le bouton est rond et clair dans les deux états : il prend le rôle color.knob du thème
 // actif, et knob.disabled, précalculé par l'émetteur, quand l'interrupteur est désactivé ; aucune opacité n'est
 // posée ici. La position du bouton est l'indice non coloré : l'état ne se lit jamais par la couleur seule
-// (bible, annexe E). Elle suit visualPosition, qui accompagne aussi le glissement. L'anneau de focus entoure la piste,
+// (bible, annexe E). Elle rejoint visualPosition, qui accompagne aussi le glissement, par le ressort state (Ressort) :
+// le bouton glisse d'un bout à l'autre au lieu de sauter, pendant que la couleur de la piste fond par l'Etat, sur le
+// même ressort (Recette 1 de L2-65, D157) ; le mouvement réduit le pose d'un coup. L'anneau de focus entoure la piste,
 // sur visualFocus ; un clic ne vole pas le focus d'un champ (focusPolicy Qt.TabFocus, § 7.3).
 // Entrées : text, checked et le reste de l'API de T.Switch.
 // Sorties : etat, l'Etat de l'interrupteur (rôle, interaction, sélection, couleurs).
@@ -18,7 +20,8 @@ import "etats.js" as Etats
 // Quand le thème traite les contrôles blancs (au jour), la piste prend le rôle controlOff, gris plein sur lequel le
 // bouton blanc se détache éteint (controls.offTrack), et le bouton est cerné du contour controls.outline.
 // Dépendances : QtQuick.Templates, Quickshell (QsWindow : rapport de pixels, pour le filet), Theme (density, space,
-// color.knob, knob.disabled, controls, hairline), etats.js (cran, herite), Etat, AnneauFocus, Texte.
+// color.knob, knob.disabled, controls, hairline), etats.js (cran, herite), Etat, AnneauFocus, Texte, Ressort (module
+// Theme).
 // Cotes : piste de density.switchWidth sur density.switchHeight, bouton de density.switchThumb, centré dans
 // la hauteur de la piste, donc à (switchHeight - switchThumb) / 2 de son bord (2 px) ; rayons en
 // demi-hauteur ; écart entre la piste et le libellé space.scale[1] (8).
@@ -39,6 +42,9 @@ T.Switch {
         role: Theme.controls?.offTrack ? "controlOff" : Etats.cran(Etats.herite(interrupteur, "dnRole", "surfaceWindow"))
     }
 
+    // Position affichée du bouton, de 0 à 1, qui rejoint visualPosition par le ressort state.
+    Ressort { id: glisse; transition: "state"; cible: interrupteur.visualPosition }
+
     indicator: Rectangle {
         id: piste
         x: interrupteur.leftPadding
@@ -52,7 +58,7 @@ T.Switch {
         // en pied et aux deux bouts de sa course.
         Rectangle {
             readonly property real marge: (piste.height - height) / 2
-            x: marge + interrupteur.visualPosition * (piste.width - width - 2 * marge)
+            x: marge + glisse.value * (piste.width - width - 2 * marge)
             y: marge
             width: Theme.density?.switchThumb ?? 0
             height: width

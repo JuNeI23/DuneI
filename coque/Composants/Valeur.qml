@@ -9,7 +9,9 @@ import "../Theme"
 // « Clavier ») : une valeur copiable est un arrêt de tabulation, Entrée et Espace la copient, et le contour de focus
 // (focus.width, jamais un anneau) ne paraît que pour le focus venu du clavier : un clic ne prend pas le focus.
 // Entrées : text ; copiable, vrai par défaut ; couleur, texte secondaire par défaut ; echelon (2) ; largeurMax,
-// largeur au-delà de laquelle le texte est tronqué au milieu (ElideMiddle), illimitée par défaut.
+// largeur au-delà de laquelle le texte est tronqué au milieu (ElideMiddle), illimitée par défaut ; mono, vrai par
+// défaut (police mono des adresses) : faux, la valeur prend la police de l'interface en graisse moyenne et chiffres
+// tabulaires, comme les tuiles de mesure de la fenêtre Réseau.
 // Sorties : copie, vrai tant que « Copié » tient la place ; fin, le minuteur de ce retour (lu par les essais).
 // Fonction copier : copie text dans le presse-papiers et arme le retour ; sans entrée ni sortie. Erreurs : aucune ;
 // sous Wayland, le presse-papiers n'est rempli que si une fenêtre de la coque a le focus, ce qu'assure le clic.
@@ -24,6 +26,7 @@ Item {
     property color couleur: Theme.color?.textSecondary ?? "transparent"
     property bool copie: false
     property real largeurMax: Infinity
+    property bool mono: true
     readonly property alias fin: fin
 
     implicitWidth: Math.min(Math.max(t.implicitWidth, c.implicitWidth), Math.max(largeurMax, 0))
@@ -45,8 +48,8 @@ Item {
         width: Math.min(implicitWidth, valeur.width)
         elide: Text.ElideMiddle
         text: valeur.text
-        font.family: Theme.typo?.mono ?? ""
-        font.pixelSize: Theme.typo?.scale[valeur.echelon] ?? 0
+        font: valeur.mono ? Qt.font({family: Theme.typo?.mono ?? "", pixelSize: Theme.typo?.scale[valeur.echelon] ?? 0})
+                          : Theme.police(valeur.echelon, true, true)
         color: valeur.couleur
         opacity: valeur.copie ? 0 : 1
         Behavior on opacity { NumberAnimation { duration: Theme.motion?.rules?.reduced_fade_ms ?? 0 } }

@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas — révisée le 22 octobre 2026
 
-Version 1.46. Historique en fin de document.
+Version 1.48. Historique en fin de document.
 
 *Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent soixante-quinze lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
 
@@ -576,15 +576,27 @@ périphérique d'affichage d'UPower et lu désormais sur la batterie ; des segme
 asynchrone des popovers ; un scintillement au clic de tout contrôle segmenté. Nicolas a validé l'ensemble à l'écran le
 2026-11-08.
 
-Prochaine étape : **après la fusion de cette PR, l'allègement de la fenêtre Réseau puis la fenêtre Son (L2-65)**, vers
-laquelle pointe déjà « Réglages du son… » du popover audio. Le reste de L2-48, L2-57 (suites du popover Bluetooth), L2-58,
-L2-59 et L2-62 attendent leur tour.
+La fenêtre Réseau allégée est fusionnée (L2-65, PR #54, D149 à D157). Elle se ferme dès le clic (76 à 85 ms visibles
+au lieu de 650 à 830), et sa page Wi-Fi s'ouvre sur la liste : la recherche, le réseau joint replié dont le nom ressort,
+les autres réseaux, puis les réseaux connus repliés en fin de page. Déplié, le réseau joint montre sa courbe de débit
+vivante, trois tuiles (adresse IP, routeur, connecté depuis) et ses réglages courants ; les réglages avancés (signal,
+bande, IPv4, détail de la connexion) se déplient dans ce même dépliant, et la sous-page de profil a disparu (D155,
+D156). La recette à l'écran de Nicolas a fait animer chaque changement d'état : sections dépliables, interrupteurs,
+pastilles de fenêtre et couleur de l'onglet choisi passent par un ressort (D157). Hyprland n'a demandé aucune
+correction, et Nicolas a accepté le gel résiduel de la coque (73 à 135 ms) plutôt que de garder la fenêtre cachée (D80
+maintenu). La fenêtre Son, détachée de L2-65, devient L2-66 (D153).
+
+Prochaine étape : **la fenêtre Son (L2-66)**, vers laquelle pointe déjà « Réglages du son… » du popover audio, avec son
+repérage propre avant la fiche. Le reste de L2-48, L2-57 (suites du popover Bluetooth), L2-58, L2-59 et L2-62 attendent
+leur tour.
 
 ## Historique des versions
 
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-10 | Version initiale |
+| 1.48 | 2026-11-10 | L2-65 fusionné (PR #54) : recette à l'écran validée après une première série de corrections (D155 à D157) ; prochaine étape : L2-66 |
+| 1.47 | 2026-11-09 | L2-65 fait, en attente de fusion : fenêtre Réseau allégée (D149 à D154) ; fenêtre Son détachée en L2-66 (D153) ; prochaine étape : recette de L2-65, puis L2-66 |
 | 1.46 | 2026-11-08 | L2-12 fusionné (PR #52) ; L2-13 fait : indicateur d'énergie, popover du profil, alerte de la presqu'île (D145 à D148), recette validée à l'écran ; prochaine étape : L2-65 |
 | 1.45 | 2026-11-08 | L2-12 fait, en attente de fusion : indicateur audio, popover du son, presqu'île-jauge (D138 à D144), recette validée à l'écran ; ajout de L2-65 (fenêtre Son) ; prochaine étape : L2-13 |
 | 1.44 | 2026-11-08 | L2-61 fait : verre propre de la presqu'île, colonne des fenêtres de réglages pleine hauteur (D136, D137) ; prochaine étape : L2-12 |

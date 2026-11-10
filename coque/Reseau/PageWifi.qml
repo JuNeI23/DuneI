@@ -3,52 +3,65 @@ import QtQuick.Layouts
 import "../Theme"
 import "../Composants"
 import "../Composants/etats.js" as Etats
-import "../Barre/icones.js" as Icones
 import "nmcli.js" as Nmcli
 
-// PageWifi — page de l'onglet Wi-Fi de la fenêtre Réseau (direction D4).
-// Rôle : le titre « Wi-Fi » avec l'interrupteur de la radio, puis, radio allumée, quatre cartes : le réseau joint (la
-// FicheProfil en mode résumé, qui porte la rangée de tête, le mot de passe à l'œil, la connexion automatique, la
-// priorité, la facturation et « Détails… » ; aucune logique nmcli n'est dupliquée ici), les réseaux disponibles, les
-// profils enregistrés hors de portée suivis d'« Autre réseau… », et les adresses du réseau joint en lecture seule,
-// copiables (Valeur). Radio coupée : le titre et la carte des profils enregistrés, s'il y en a, seuls (ni « Autre
-// réseau… » ni adresses). Les adresses ne sont montrées que si l'appareil du profil joint est celui qu'EtatReseau lit
-// (etat.appareil). Réseaux disponibles : ceux d'etat.reseaux, triés par Nmcli.trierReseaux, sans le réseau joint. Un
-// clic rejoint un réseau connu ou ouvert (« Connexion… » et l'Activite sur la rangée) ; sur un réseau inconnu et
-// sécurisé, il déplie sous la rangée le BlocSecret (partagé avec le popover), qu'un second clic replie. Un
-// connectionFailed déplie la rangée avec « Mot de passe refusé. Vérifiez-le et réessayez. » (secrets absents, refusés,
-// délai d'authentification, client déconnecté) ou « Connexion impossible. », comme le popover. Comme lui, l'ordre est
-// figé tant qu'une rangée est dépliée, pour ne perdre ni la saisie ni l'erreur. « Rechercher » (accent autonome, plaque
-// de survol arrondie) relance « nmcli device wifi rescan » ; l'Activite et « Recherche… » la remplacent jusqu'au retour
-// de la liste, au plus motion.delays.scan.
+// PageWifi — page de l'onglet Wi-Fi de la fenêtre Réseau (direction D4, ordre de L2-65).
+// Rôle : de haut en bas, le titre « Wi-Fi » et l'interrupteur de la radio (TitrePage) ; radio coupée, la ligne
+// « Wi-Fi désactivé » ; le champ de recherche (Recherche), qui filtre par nom les trois listes ; le réseau joint, dans
+// son groupe, en DepliantReseau détaillé, replié à l'ouverture de la page (Recette 1 de L2-65, D156) : déplié, débits,
+// courbe, tuiles, réglages, la section « Réglages avancés » et le pied ; aucune logique nmcli n'est dupliquée ici ;
+// « Détails… » du popover le déplie (montrer) ; « Autres réseaux »,
+// avec l'action « Rechercher » alignée sur le bord droit des cartes, les réseaux à portée et sans profil, puis « Autre
+// réseau… » en dernière ligne ; enfin les « Réseaux connus » (ConnusWifi), repliés. Les listes viennent de
+// Nmcli.partager ; radio coupée, aucun réseau n'est tenu pour à portée. Déconnecté, le groupe du réseau joint
+// disparaît et « Autres réseaux » remonte sous la recherche ; écarté par le filtre, il est masqué, son dépliant
+// restant chargé.
+// Autres réseaux : chacun porte son IconeSignal (force et cadenas), à la même taille que celles des réseaux connus. Un
+// clic rejoint un réseau ouvert (« Connexion… » et l'Activite sur la rangée) ; sur un réseau sécurisé, il déplie sous
+// la rangée le BlocSecret (partagé avec le popover), qu'un second clic replie. Un connectionFailed déplie la rangée
+// avec « Mot de passe refusé. Vérifiez-le et réessayez. » (secrets absents, refusés, délai d'authentification, client
+// déconnecté) ou « Connexion impossible. », comme le popover. Comme lui, l'ordre est figé tant qu'une rangée est
+// dépliée, pour ne perdre ni la saisie ni l'erreur. « Rechercher » (accent autonome, plaque de survol arrondie)
+// relance « nmcli device wifi rescan » ; l'Activite et « Recherche… » la remplacent jusqu'au retour de la liste, au
+// plus motion.delays.scan.
 // Balayage : le balayage Wi-Fi est demandé par etat.rechercheFenetre : elle n'y touche plus, c'est le PanneauReseau qui
 // la pose pour toute la vie de la fenêtre ; le popover écrit etat.recherche, une autre propriété : EtatReseau balaye
 // tant que l'une des deux est vraie, si bien que la fermeture du popover ne coupe pas la demande de la fenêtre, ni
 // l'inverse (voir EtatReseau.balayage).
 // Clavier : toutes les rangées cliquables sont des Ligne, et « Rechercher » prend la tabulation, Entrée et Espace avec
 // le même contour de focus (tabulation, Entrée, Espace, contour de focus, plaque de survol : bible, « Clavier » et
-// « Survol »). Interrupteur : bible, « Interrupteur ». Priorité : Compteur (bible, « Compteur »). Formes : jetons
-// Theme.reglages seuls (bible, « Formes »).
-// Entrées : panneau, le PanneauReseau (rangees, factures, ouvrirProfil, ouvrirNouveau) ; etat, la source de l'état et
+// « Survol »). Interrupteur : bible, « Interrupteur ». Champ de recherche : bible, « Champ de recherche ». Formes :
+// jetons Theme.reglages seuls (bible, « Formes »).
+// Entrées : panneau, le PanneauReseau (rangees, factures, ouvrirNouveau, defilement) ; etat, la source de l'état et
 // des actions, EtatReseau par défaut.
-// Sorties : joint, la rangée du profil Wi-Fi actif (null sans lui) ; hors, les rangées des profils enregistrés hors de
-// portée ; ordre, les noms des réseaux disponibles dans l'ordre affiché ; deplie, le nom de la rangée dépliée ; erreur,
-// le message sous son champ ; balayage, vrai pendant la recherche relancée ; fiche, la FicheProfil résumée du réseau
-// joint (null sans elle).
-// Erreurs : un échec nmcli du résumé s'affiche dans la carte du réseau joint (FicheProfil) ; un réseau qui quitte le
-// balayage est masqué et ne peut plus être choisi.
-// Dépendances : TitrePage, Section, Groupe, Ligne, FicheProfil, CarteAdresses, BlocSecret, Jonction, Interrupteur,
-// Activite, Icone, Texte, Valeur, ReglageLigne, Separateur, Carte, Theme (reglages, space, color, icons, motion),
-// nmcli.js (trierReseaux), icones.js (iconeForce), PanneauReseau, EtatReseau.
+// Sorties : filtre, la saisie de la recherche ; listes, le résultat de Nmcli.partager ({joint, autres, connus}) ;
+// joint, la rangée du profil Wi-Fi actif retenue par le filtre (null sans elle) ; connuOuvert, l'uuid du réseau connu
+// déplié (un seul) ; connusOuverts, vrai si l'utilisateur a ouvert la section des réseaux connus ; ordre, les noms
+// des autres réseaux dans l'ordre affiché ; deplie, le nom de la rangée dépliée ; erreur, le message sous son champ ;
+// balayage, vrai pendant la recherche relancée ; actif, la rangée du profil Wi-Fi actif, filtre ignoré ; montreJoint,
+// vrai si le groupe du réseau joint est montré ; depliant, le DepliantReseau du réseau joint (null sans lui ; gardé,
+// masqué, tant que le filtre l'écarte).
+// Erreurs : un échec nmcli des réglages s'affiche dans le dépliant concerné ; un réseau qui quitte le balayage est
+// masqué et ne peut plus être choisi.
+// Dépendances : TitrePage, Recherche, Section, Groupe, Ligne, DepliantReseau, IconeSignal, ConnusWifi, BlocSecret,
+// Jonction, Interrupteur, Activite, Icone, Texte, Theme (reglages, space, color, icons, motion, density, radius, focus),
+// nmcli.js (partager), etats.js, PanneauReseau, EtatReseau.
 ColumnLayout {
     id: page
 
     required property var panneau
     property var etat: EtatReseau
 
-    readonly property var joint: panneau.rangees.find(r => r.wifi && r.actif) ?? null
-    readonly property var hors: panneau.rangees.filter(r => r.wifi && !r.actif && r.etat === "Hors de portée")
-    readonly property var fiche: chargeurJoint.item
+    property alias filtre: recherche.text
+    readonly property var listes: Nmcli.partager(panneau.rangees, etat.radio ? presents : [], filtre)
+    readonly property var joint: listes.joint
+    // Le profil Wi-Fi actif, que le filtre l'écarte ou non : son dépliant reste chargé pendant le filtre, seul son
+    // groupe est masqué, pour ne perdre ni le repli choisi ni la lecture du profil.
+    readonly property var actif: panneau.rangees.find(r => r.wifi && r.actif) ?? null
+    readonly property bool montreJoint: chargeurJoint.active && joint !== null
+    property alias connuOuvert: connus.connuOuvert
+    property alias connusOuverts: connus.ouverts
+    readonly property var depliant: chargeurJoint.item
     // Logique de connexion partagée avec le popover (voir Jonction) ; ordre garde les noms des réseaux disponibles
     // triés.
     property alias presents: jonction.presents
@@ -64,24 +77,69 @@ ColumnLayout {
     spacing: 0
 
 
-    // trier — fige l'ordre des réseaux disponibles : le réseau joint en est exclu ; rien ne change tant qu'une
+    // trier — fige l'ordre des autres réseaux (listes.autres, déjà triés et filtrés) ; rien ne change tant qu'une
     // rangée de mot de passe est dépliée, pour ne perdre ni la saisie ni le message d'erreur. L'ordre n'est
     // réaffecté que si les noms diffèrent, pour que le focus clavier et le survol traversent un balayage.
-    // Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : nmcli.js (trierReseaux), presents, deplie.
+    // Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : listes, deplie.
     function trier() {
         if (deplie !== "") return
-        const noms = Nmcli.trierReseaux(presents.filter(r => !r.connected)).map(r => r.name)
+        const noms = listes.autres.map(r => r.name)
         if (noms.join("\n") !== ordre.join("\n")) ordre = noms
     }
     onDeplieChanged: trier()
-    // Page cachée (autre onglet ou sous-page, la page restant vivante) : aucun secret ne survit, ni le mot de passe
-    // lu et révélé de la fiche du réseau joint, ni celui saisi dans un bloc déplié.
+    onListesChanged: trier()
+    // Page cachée (autre onglet ou sous-page, la page restant vivante) : le mot de passe saisi dans un bloc déplié ne
+    // survit pas ; celui lu dans un dépliant est masqué par le dépliant lui-même (DepliantReseau.montre).
     onVisibleChanged: if (!visible) {
-        fiche?.masquerSecret()
         deplie = ""
         erreur = ""
     }
     Component.onCompleted: trier()
+
+    // montrer — déplie un réseau dans la page et y fait défiler : le dépliant du réseau joint s'il s'agit du joint
+    // (ouvert), sinon le réseau connu (section des réseaux connus ouverte, connuOuvert à son uuid). Demandé par le
+    // panneau pour un profil demandé (« Détails… » du popover, réseau ajouté). Entrée : uuid, le profil. Sortie :
+    // aucune ; le défilement suit la mise en page (aMontrer) tant que la hauteur de la page change, pendant au plus
+    // une seconde, et cesse dès que l'utilisateur fait défiler. Erreurs : aucune ; un uuid absent des listes ne
+    // déplie ni ne défile rien. Dépendances : joint, depliant, connusOuverts, connuOuvert, defiler, finMontrer.
+    function montrer(uuid) {
+        if (joint?.uuid === uuid) { if (depliant) depliant.ouvert = true }
+        else { connusOuverts = true; connuOuvert = uuid }
+        aMontrer = uuid
+        finMontrer.restart()
+        Qt.callLater(defiler)
+    }
+
+    // defiler — fait défiler la page jusqu'au réseau à montrer. Entrées : aucune. Sortie : aucune. Erreurs : aucune ;
+    // sans réseau à montrer ou sans son dépliant, ne fait rien. Dépendances : aMontrer, chercher, panneau.defilement.
+    function defiler() {
+        const cible = aMontrer === "" ? null : chercher(page, "depliant:" + aMontrer)
+        if (!cible) return
+        const d = panneau.defilement
+        d.contentY = Math.max(0, Math.min(cible.mapToItem(d.contentItem, 0, 0).y - (Theme.space?.blockGap ?? 0),
+                                          d.contentHeight - d.height))
+    }
+
+    // Réseau à montrer, vide au repos ; la page suit les changements de hauteur du défilement (ouverture de la fenêtre,
+    // de la section, du dépliant) jusqu'à la fin de la borne ou au premier geste de l'utilisateur.
+    property string aMontrer: ""
+    Timer { id: finMontrer; interval: 1000; onTriggered: page.aMontrer = "" }
+    Connections {
+        target: page.panneau.defilement
+        function onContentHeightChanged() { page.defiler() }
+        function onMovementStarted() { page.aMontrer = "" }
+    }
+
+    // chercher — premier descendant visuel d'un objectName, en profondeur. Entrées : racine, Item ; nom. Sortie :
+    // l'Item, ou null. Erreurs : aucune. Dépendances : aucune.
+    function chercher(racine, nom) {
+        for (const e of racine.children) {
+            if (e.objectName === nom) return e
+            const r = chercher(e, nom)
+            if (r) return r
+        }
+        return null
+    }
 
     // rechercher — relance « nmcli device wifi rescan » et montre l'Activite jusqu'au retour de la liste, au plus
     // finBalayage.interval (motion.delays.scan). Entrées : aucune. Sortie : aucune. Erreurs : aucune.
@@ -104,21 +162,13 @@ ColumnLayout {
             page.balayage = false
             finBalayage.stop()
             jonction.actualiser()
-            page.trier()
         }
-        // Le réseau joint a changé : il quitte la liste, et l'ancien y revient.
-        function onNomActifChanged() { page.trier() }
-    }
-    // Retour d'une sous-page de l'onglet Wi-Fi : la page restant vivante, la fiche résumée du réseau joint est relue,
-    // car « Détails… » a pu changer la connexion automatique, la priorité, la facturation ou l'IPv4.
-    Connections {
-        target: page.panneau
-        function onSousPageChanged() { if (page.panneau.sousPage === "" && page.panneau.onglet === "wifi") page.fiche?.lire() }
     }
     // Borne du retour visuel de la recherche quand le balayage ne change pas la liste ; armée par le seul clic.
     Timer { id: finBalayage; interval: Theme.motion?.delays?.scan ?? 0; onTriggered: page.balayage = false }
 
     TitrePage {
+        objectName: "titre"
         text: "Wi-Fi"
         Interrupteur {
             objectName: "radio"
@@ -127,32 +177,53 @@ ColumnLayout {
         }
     }
 
-    Section { visible: page.etat.radio && page.fiche?.lu === true; text: "Réseau joint" }
-    Loader {
-        id: chargeurJoint
-        objectName: "joint"
-        active: page.etat.radio && page.joint !== null
-        visible: active
+    Texte {
+        objectName: "desactive"
+        visible: !page.etat.radio
+        Layout.leftMargin: Theme.space?.scale[0] ?? 0
+        text: "Wi-Fi désactivé"
+        color: Theme.color?.textSecondary ?? "transparent"
+    }
+    Recherche {
+        id: recherche
+        objectName: "recherche"
         Layout.fillWidth: true
-        sourceComponent: FicheProfil {
-            width: chargeurJoint.width
-            resume: true
-            panneauHote: page.panneau
-            etat: page.etat
-            uuid: page.joint.uuid
-            rangee: page.joint
-            onRelu: (u, p) => page.panneau.factures = Object.assign({}, page.panneau.factures, {[u]: p.facture})
+        Layout.topMargin: Theme.space?.scale[2] ?? 0
+        placeholderText: "Rechercher un réseau"
+    }
+
+    Section { visible: page.montreJoint; text: "Réseau joint" }
+    // Le dépliant du réseau joint, sur la carte de son groupe, que le filtre masque sans le détruire.
+    Groupe {
+        visible: page.montreJoint
+        Loader {
+            id: chargeurJoint
+            objectName: "joint"
+            active: page.etat.radio && page.actif !== null
+            visible: active
+            Layout.fillWidth: true
+            sourceComponent: DepliantReseau {
+                width: chargeurJoint.width
+                detaille: true
+                ouvert: false
+                portee: true
+                etat: page.etat
+                rangee: page.actif
+                onBasculer: ouvert = !ouvert
+                onRelu: (u, p) => page.panneau.factures = Object.assign({}, page.panneau.factures, {[u]: p.facture})
+            }
         }
     }
 
-    // Réseaux disponibles : le titre, puis « Rechercher » ou l'Activite pendant le balayage.
+    // Autres réseaux : le titre, puis « Rechercher » ou l'Activite pendant le balayage, dont la plaque de survol
+    // s'aligne sur le bord droit des cartes.
     RowLayout {
+        objectName: "autres"
         visible: page.etat.radio
         Layout.fillWidth: true
-        Section { Layout.fillWidth: true; Layout.alignment: Qt.AlignBottom; text: "Réseaux disponibles" }
+        Section { Layout.fillWidth: true; Layout.alignment: Qt.AlignBottom; text: "Autres réseaux" }
         Item {
             Layout.alignment: Qt.AlignBottom
-            Layout.rightMargin: page.cote
             Layout.bottomMargin: (Theme.space?.scale[0] ?? 0) / 2
             implicitWidth: Math.max(relance.implicitWidth, attente.implicitWidth)
             implicitHeight: Theme.density?.controlHeight ?? 0
@@ -227,18 +298,22 @@ ColumnLayout {
                 Ligne {
                     objectName: "ligne"
                     filet: page.ordre.slice(0, dispo.index).some(n => jonction.present(page.presents.find(x => x.name === n)))
-                    icone: Icones.iconeForce(dispo.r?.signalStrength ?? 0)
+                    tete: Component {
+                        Item {
+                            implicitWidth: Theme.reglages?.medallion ?? 0
+                            implicitHeight: implicitWidth
+                            IconeSignal {
+                                anchors.centerIn: parent
+                                force: Math.round((dispo.r?.signalStrength ?? 0) * 100)
+                                securise: jonction.securise(dispo.r)
+                            }
+                        }
+                    }
                     libelle: dispo.modelData
                     aide: dispo.enConnexion ? "Connexion…" : ""
                     cliquable: true
                     onClique: jonction.choisir(dispo.r)
                     Activite { visible: dispo.enConnexion }
-                    Icone {
-                        visible: !dispo.enConnexion && jonction.securise(dispo.r)
-                        nom: "network-wireless-encrypted"
-                        taille: Theme.icons?.sizes.dense ?? 0
-                        couleur: Theme.color?.textTertiary ?? "transparent"
-                    }
                 }
                 Loader {
                     objectName: "bloc"
@@ -260,32 +335,10 @@ ColumnLayout {
                 }
             }
         }
-    }
-
-    // Réseaux enregistrés hors de portée, puis « Autre réseau… ».
-    Section { visible: page.hors.length > 0; text: page.etat.radio ? "Enregistrés, hors de portée" : "Réseaux enregistrés" }
-    Groupe {
-        objectName: "enregistres"
-        visible: page.hors.length > 0 || page.etat.radio
-        Repeater {
-            model: page.hors
-
-            Ligne {
-                required property var modelData
-                required property int index
-                objectName: "hors:" + modelData.uuid
-                filet: index > 0
-                icone: "network-wireless-offline"
-                libelle: modelData.nom
-                aide: "Connexion automatique dès qu'il est à portée"
-                cliquable: true
-                onClique: page.panneau.ouvrirProfil(modelData.uuid)
-            }
-        }
+        // Réseau caché (FicheNouveau), en dernière ligne des autres réseaux.
         Ligne {
             objectName: "autre"
-            visible: page.etat.radio
-            filet: page.hors.length > 0
+            filet: page.ordre.some(n => jonction.present(page.presents.find(x => x.name === n)))
             icone: "list-add"
             libelle: "Autre réseau…"
             cliquable: true
@@ -293,11 +346,11 @@ ColumnLayout {
         }
     }
 
-    // Adresses du réseau joint, en lecture seule (CarteAdresses) ; la méthode IPv4 vient du profil lu par la fiche
-    // résumée, et la modification d'une adresse fixe reste dans la sous-page.
-    CarteAdresses {
+    ConnusWifi {
+        id: connus
+        connus: page.listes.connus
+        filtre: page.filtre
+        panneau: page.panneau
         etat: page.etat
-        rangee: page.etat.radio ? page.joint : null
-        methode: page.fiche?.profil ? (page.fiche.fixe ? "Fixe" : "Automatique") : ""
     }
 }

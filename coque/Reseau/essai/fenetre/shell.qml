@@ -22,6 +22,21 @@ ShellRoot {
 
     // Durée de la dernière bascule d'onglet (ms), -1 tant qu'elle court.
     property int dureeBascule: -1
+    // Uuid du profil dont les réglages avancés sont à déplier dès que son dépliant a chargé son contenu, vide sinon.
+    property string avancesDe: ""
+
+    // Déplie les réglages avancés du profil demandé (avancesDe) dès que son dépliant les porte, puis oublie la demande.
+    Timer {
+        interval: 50
+        repeat: true
+        running: essai.avancesDe !== ""
+        onTriggered: {
+            const r = essai.depliant(essai.avancesDe)?.corps?.reglages
+            if (!r) return
+            r.pli.ouvert = true
+            essai.avancesDe = ""
+        }
+    }
 
     FenetreReseau { id: fenetre }
 
@@ -44,14 +59,30 @@ ShellRoot {
         return null
     }
 
-    // reperable — vrai pour les éléments que focus() nomme : une Ligne (libellé), une Valeur copiable (« copier: » ou « valeur: ») ou
-    // l'un des boutons de la sous-page. Entrée : o, un Item. Sortie : booléen. Erreurs : aucune.
-    function reperable(o) {
-        return !!o.libelle || ["retour", "connexion", "toutCopier"].includes(o.objectName) || /^(copier|valeur):/.test(String(o.objectName))
+    // tous — descendants visuels qui vérifient un prédicat, en profondeur. Entrées : racine, Item ; test,
+    // fonction(Item) → bool. Sortie : tableau d'Items, vide sans racine. Erreurs : aucune. Dépendances : aucune.
+    function tous(racine, test) {
+        const r = []
+        for (const e of racine?.children ?? []) {
+            if (test(e)) r.push(e)
+            r.push(...tous(e, test))
+        }
+        return r
     }
 
-    // nomme — descendant de la fiche par son objectName. Entrée : nom. Sortie : l'Item, ou null.
-    function nomme(nom) { return trouver(fenetre.panneau?.fiche, o => o.objectName === nom) }
+    // reperable — vrai pour les éléments que focus() nomme : une Ligne (libellé), une Valeur copiable (« copier: » ou
+    // « valeur: »), la section « Réglages avancés » d'un dépliant (pliAvances), le retour de la sous-page ou l'un des
+    // boutons du dépliant. Entrée : o, un Item. Sortie : booléen. Erreurs : aucune.
+    function reperable(o) {
+        return !!o.libelle || ["retour", "rejoindre", "toutCopier", "pliAvances"].includes(o.objectName) || /^(copier|valeur):/.test(String(o.objectName))
+    }
+
+    // fiche — les réglages avancés dépliés (AvancesReseau) de la fenêtre, null sans eux : ils tiennent lieu de
+    // l'ancienne sous-page de profil (D155). Entrées : aucune. Sortie : l'Item, ou null. Erreurs : aucune.
+    function fiche() { return trouver(fenetre.panneau, o => o.objectName === "avancesReseau" && o.visible) }
+
+    // nomme — descendant des réglages avancés dépliés par son objectName. Entrée : nom. Sortie : l'Item, ou null.
+    function nomme(nom) { return trouver(fiche(), o => o.objectName === nom) }
 
     // selection — clé de sélection, graisse et contour de la rangée choisie. Entrées : aucune. Sortie : [clé de
     // sélection, gras, contour montré], ou [] sans rangée choisie. Erreurs : aucune. Dépendances : fenetre.panneau (Liste, Rangee).
@@ -64,9 +95,9 @@ ShellRoot {
     // {presse (Quickshell.clipboardText), copie (le libellé dont « Copié » est le texte opaque, « * » pour « Tout copier »,
     // vide sinon), texte (le texte opaque de la Valeur, ou celui du bouton), minuteur (vrai s'il tourne)}. Une Valeur
     // porte son retour et son minuteur (copie, fin) ; « Tout copier » ceux de la fiche. Erreurs : libellé absent,
-    // TypeError au journal. Dépendances : fenetre.panneau.fiche, nomme.
+    // TypeError au journal. Dépendances : fiche, nomme.
     function lireCopie(cle) {
-        const f = fenetre.panneau.fiche
+        const f = fiche()
         const o = nomme(cle === "" ? "toutCopier" : "copier:" + cle)
         if (cle === "") return JSON.stringify({presse: Quickshell.clipboardText, copie: f.copie, texte: o.text, minuteur: f.finCopie.running})
         // Ce que la Valeur montre : son texte, ou « Copié », celui des deux Text de la Valeur qui est le plus opaque.
@@ -75,19 +106,75 @@ ShellRoot {
                                minuteur: o.fin.running})
     }
 
+    // depliant — dépliant de réseau de la fenêtre par l'uuid de son profil, le visible de préférence : un profil filaire
+    // a deux dépliants, celui de la connexion active, masqué sans câble, et celui de la section « Profils ». Entrée :
+    // uuid. Sortie : l'Item, ou null.
+    function depliant(uuid) {
+        const nom = "depliant:" + uuid
+        return trouver(fenetre.panneau, o => o.objectName === nom && o.visible) ?? trouver(fenetre.panneau, o => o.objectName === nom)
+    }
+
+    // depliants — état des dépliants de réseau de la fenêtre, par uuid : {ouvert, charge (contenu chargé), lu (profil
+    // lu), tuiles (libellé → texte des tuiles d'information de la page), avances (réglages avancés dépliés),
+    // tuilesAvances (libellé → texte des tuiles des réglages avancés chargés), titre (nom mis en valeur dans la tête),
+    // pied (textes des boutons du pied montrés), reglages (libellés des réglages montrés), ouvertTexte
+    // (« Aucun (réseau ouvert) » montré), champ (champ du mot de passe montré), secret (longueur de son
+    // texte, jamais le texte), revele, copie (coche du retour de copie), debits (débits montrés), polices (libellé →
+    // [famille, graisse, taille] de la valeur de chaque tuile), securite (texte de la
+    // tuile Sécurité), grille: {tuiles: [x des tuiles], reglages: [[x du réglage, x de son contrôle]]}, abscisses
+    // dans la scène}. Entrées : aucune. Sortie : objet. Erreurs : aucune ; fenêtre fermée, objet vide.
+    function depliants() {
+        const r = {}
+        const x = o => Math.round(o.mapToItem(null, 0, 0).x)
+        const tuilesDe = g => Array.from(g?.children ?? []).filter(t => t.largeur !== undefined && t.visible)
+        const parcourir = o => {
+            for (const e of o?.children ?? []) {
+                if (!String(e.objectName).startsWith("depliant:")) { parcourir(e); continue }
+                const c = e.corps
+                r[e.rangee?.uuid ?? ""] = {
+                    ouvert: e.ouvert, charge: c !== null, lu: c?.profil.lu ?? false,
+                    tuiles: c ? c.tuiles.liste.reduce((m, t) => (m[t.libelle] = t.texte, m), {}) : {},
+                    avances: c?.reglages.pli.ouvert ?? false,
+                    tuilesAvances: (c?.reglages.contenuAvances?.tuiles.visible ? c.reglages.contenuAvances.tuiles.liste : []).reduce((m, t) => (m[t.libelle] = t.texte, m), {}),
+                    titre: trouver(e, o => o.objectName === "tete")?.titre ?? false,
+                    pied: c ? tous(c.reglages, o => ["rejoindre", "oublier"].includes(o.objectName) && o.visible).map(o => o.text) : [],
+                    reglages: c ? tuilesDe(c.reglages.grille).map(t => t.libelle) : [],
+                    ouvertTexte: c?.reglages.ouvertTexte.visible ?? false, champ: c?.reglages.champ.visible ?? false,
+                    secret: c?.reglages.champ.length ?? 0, revele: c?.reglages.champ.revele ?? false,
+                    copie: c?.reglages.champ.copie ?? false,
+                    priorite: c?.profil.valeurs.priorite ?? null, donnees: c?.profil.valeurs.facture === "yes",
+                    erreurs: c?.profil.erreurs ?? {}, confirmer: c?.reglages.confirmer ?? false,
+                    securite: c?.reglages.securite ?? "", debits: c?.debits.visible ?? false,
+                    polices: c ? tuilesDe(c.tuiles).reduce((m, t) => {
+                        const rang = t.children[1].children[0], v = rang.children[1]
+                        const f = (v.visible ? v.children[0] : rang.children[2]).font
+                        return (m[t.libelle] = [f.family, f.weight, f.pixelSize], m)
+                    }, {}) : {},
+                    grille: !c ? {} : {tuiles: tuilesDe(c.tuiles).map(x),
+                                       reglages: tuilesDe(c.reglages.grille).map(t => [x(t), x(t.children[1].children[0])])},
+                }
+            }
+        }
+        parcourir(fenetre.panneau)
+        return r
+    }
+
     IpcHandler {
         target: "essai"
 
-        // etat — état de la fenêtre, en JSON : {fenetre (construite), demandee (EtatReseau.fenetre), rangees
-        // ([groupe, nom, état, icône] des profils), detail (libellé → valeur du détail de la connexion active),
-        // onglet et sousPage (ceux du panneau), onglets ([clé, nom, état] des trois onglets), defilement ([contentY,
-        // contentHeight, height]), fiche: {uuid, lu, priorite, autoconnect, facture, fixe, erreurs, secret (longueur), revele, confirmer}}.
+        // etat — état de la fenêtre, en JSON : {fenetre (construite), demandee (EtatReseau.fenetre), sondeurs
+        // (demandeurs de la sonde), depliants (voir essai.depliants), rangees
+        // ([groupe, nom, état, icône] des profils), detail (libellé → valeur du détail de la connexion active, dans les
+        // réglages avancés dépliés), onglet et sousPage (ceux du panneau), onglets ([clé, nom, état] des trois onglets),
+        // defilement ([contentY, contentHeight, height]), fiche: les réglages avancés dépliés (essai.fiche) {uuid, lu,
+        // fixe, erreurs, titre (nom du réseau de leur dépliant), libelles (libellés des Ligne montrées)}}.
         // Entrées : aucune. Sortie : texte JSON. Erreurs : aucune ; fenêtre fermée, rangees, detail et fiche vides.
         function etat(): string {
             const p = fenetre.panneau
-            const f = p?.fiche
+            const f = essai.fiche()
             return JSON.stringify({
-                fenetre: p !== null, demandee: EtatReseau.fenetre,
+                fenetre: p !== null, visible: p?.Window.window?.visible ?? false, demandee: EtatReseau.fenetre,
+                sondeurs: EtatReseau.sondeurs, depliants: essai.depliants(),
                 rangees: (p?.rangees ?? []).map(r => [r.groupe, r.nom, r.etat, r.icone]),
                 detail: f?.detail ?? {},
                 selection: essai.selection(),
@@ -98,12 +185,26 @@ ShellRoot {
                 nouvelle: !p?.nouvelle ? {} : {visible: p.nouvelle.visible, securise: p.nouvelle.securise,
                                                 valide: p.nouvelle.valide, erreur: p.nouvelle.erreur},
                 fiche: !f ? {} : {
-                    uuid: f.uuid, lu: f.lu, priorite: f.valeurs.priorite, autoconnect: f.valeurs.autoconnect,
-                    facture: f.valeurs.facture === "yes", fixe: f.fixe, erreurs: f.erreurs,
-                    secret: f.secret.length, revele: f.secret.revele, confirmer: f.confirmer,
+                    uuid: f.profil.uuid, lu: f.lu, fixe: f.fixe, erreurs: f.erreurs,
+                    titre: f.rangee?.nom ?? "",
+                    libelles: essai.tous(f, o => typeof o.libelle === "string" && o.libelle !== "" && o.visible).map(o => o.libelle),
                 },
             })
         }
+
+        // sonde — état de la sonde d'EtatReseau, en JSON : {appareil, sondeurs, actif (minuteur en marche), rx, tx
+        // (débits, octets/s), signal (dBm ou null), depuis (secondes ou null)}. Sortie : texte JSON. Erreurs : aucune.
+        function sonde(): string {
+            return JSON.stringify({appareil: EtatReseau.appareil, sondeurs: EtatReseau.sondeurs, actif: EtatReseau.sondeActive,
+                                   rx: EtatReseau.debits.rx, tx: EtatReseau.debits.tx,
+                                   signal: EtatReseau.signalDbm, depuis: EtatReseau.connecteDepuis})
+        }
+        // sondeur — pose ou retire un demandeur de la sonde. Entrée : actif, « true » pour demander. Sortie : aucune.
+        function sondeur(actif: bool): void { EtatReseau.demanderSonde(actif) }
+        // racine — remplace le dossier des compteurs du noyau par un dossier d'essai. Entrée : chemin. Sortie : aucune.
+        function racine(chemin: string): void { EtatReseau.racineCompteurs = chemin }
+        // relire — relit nmcli sans attendre le moniteur. Entrées et sortie : aucune. Dépendances : EtatReseau.relire.
+        function relire(): void { EtatReseau.relire() }
 
         // demander — demande la fenêtre sur un profil, comme « Détails… » du popover. Entrée : cle, uuid ou nom.
         // Sortie : aucune. Erreurs : aucune.
@@ -119,8 +220,9 @@ ShellRoot {
         // popover — pose la demande de balayage du popover, qu'il écrit dans EtatReseau.recherche. Entrée : valeur.
         function popover(valeur: bool): void { EtatReseau.recherche = valeur }
 
-        // choisir — ouvre la sous-page du profil d'un uuid, comme un clic sur sa rangée. Entrée : uuid. Sortie : aucune.
-        function choisir(uuid: string): void { fenetre.panneau.ouvrirProfil(uuid) }
+        // choisir — déplie le profil d'un uuid dans sa page (comme « Détails… » du popover), puis ses réglages avancés,
+        // qui ont remplacé la sous-page de profil (D155). Entrée : uuid. Sortie : aucune.
+        function choisir(uuid: string): void { essai.avancesDe = uuid; EtatReseau.profilDemande = uuid }
 
         // onglet — choisit un onglet, comme un clic sur sa rangée. Entrée : cle (wifi, filaire, vpn). Sortie : aucune.
         function onglet(cle: string): void { fenetre.panneau.liste.itemAtIndex(fenetre.panneau.onglets.findIndex(o => o.cle === cle)).clicked() }
@@ -143,8 +245,9 @@ ShellRoot {
         }
         // mesure — durée en millisecondes de la dernière bascule, -1 tant qu'elle n'est pas finie. Sortie : texte.
         function mesure(): string { return String(essai.dureeBascule) }
-        // pages — identité (type et adresse) des trois pages d'onglet, en JSON, pour vérifier qu'elles survivent aux
-        // changements d'onglet. Sortie : texte JSON. Erreurs : fenêtre fermée, TypeError au journal.
+        // pages — identité (type et adresse) des trois pages d'onglet, en JSON (« null » pour une page pas encore
+        // construite), pour vérifier qu'elles se construisent à la demande et survivent aux changements d'onglet.
+        // Sortie : texte JSON. Erreurs : fenêtre fermée, TypeError au journal.
         function pages(): string {
             const p = fenetre.panneau
             return JSON.stringify([p.pageWifi, p.pageFilaire, p.pageVpn].map(String))
@@ -185,24 +288,37 @@ ShellRoot {
         // defiler — pose le défilement des pages à y pixels. Entrée : y. Sortie : aucune.
         function defiler(y: int): void { fenetre.panneau.defilement.contentY = y }
 
-        // rangeeProfil — clic sur la rangée du profil d'un uuid dans la page d'onglet courante. Entrée : uuid.
-        // Sortie : aucune. Erreurs : rangée absente, TypeError au journal.
-        function rangeeProfil(uuid: string): void {
-            const l = essai.trouver(fenetre.panneau, o => o.modelData?.uuid === uuid && o.clique !== undefined)
-            l.clique()
-        }
+        // rangeeProfil — déplie, depuis la page d'onglet courante, le dépliant du profil d'un uuid (clic sur sa tête),
+        // puis ses réglages avancés. Entrée : uuid. Sortie : aucune. Erreurs : profil absent, TypeError au journal.
+        function rangeeProfil(uuid: string): void { essai.avancesDe = uuid; essai.depliant(uuid).basculer() }
 
-        // cliquer — geste sur un contrôle de la fiche : plus et moins (pas du Compteur de priorité), facture, auto,
-        // fixe, automatique, oeil, connexion, oublier (rangée cliquable), confirmer. Entrée : nom. Sortie : aucune.
-        // Erreurs : nom inconnu, TypeError au journal.
-        function cliquer(nom: string): void {
-            const o = essai.nomme(nom === "oeil" ? "secret" : nom === "plus" || nom === "moins" ? "priorite" : nom)
-            if (nom === "oeil") o.basculer()
+        // cliquer — geste sur un contrôle des réglages avancés dépliés : fixe, automatique, toutCopier (boutons ou onglets).
+        // Entrée : nom. Sortie : aucune. Erreurs : nom inconnu, TypeError au journal.
+        function cliquer(nom: string): void { essai.nomme(nom).clicked() }
+
+        // basculer — clic sur la ligne de tête d'un dépliant de réseau. Entrée : uuid. Sortie : aucune.
+        // Erreurs : dépliant absent, TypeError au journal.
+        function basculer(uuid: string): void { essai.trouver(essai.depliant(uuid), o => o.objectName === "tete").clique() }
+
+        // regler — geste sur un réglage d'un dépliant de réseau : auto et donnees (interrupteurs), plus et moins (pas du
+        // compteur de priorité), oeil et copierSecret (œil et copie du champ du mot de passe), avances (bascule de la
+        // section « Réglages avancés »), oublier, confirmer, rejoindre (boutons du pied). Entrées : uuid, nom.
+        // Sortie : aucune. Erreurs : dépliant fermé ou nom inconnu, TypeError au journal.
+        function regler(uuid: string, nom: string): void {
+            const cible = nom === "plus" || nom === "moins" ? "priorite" : nom === "oeil" || nom === "copierSecret" ? "secret"
+                : nom === "avances" ? "pliAvances" : nom
+            const o = essai.trouver(essai.depliant(uuid), i => i.objectName === cible)
+            if (nom === "avances") o.ouvert = !o.ouvert
+            else if (nom === "oeil") o.basculer()
+            else if (nom === "copierSecret") o.copier()
             else if (nom === "plus" || nom === "moins") { nom === "plus" ? o.increase() : o.decrease(); o.valueModified() }
-            else if (nom === "facture" || nom === "auto") { o.toggle(); o.toggled() }
-            else if (nom === "oublier") o.clique()
+            else if (nom === "auto" || nom === "donnees") { o.toggle(); o.toggled() }
             else o.clicked()
         }
+
+        // relireDepliant — relit le profil d'un dépliant ouvert, comme après une modification. Entrée : uuid.
+        // Sortie : aucune. Erreurs : dépliant fermé, TypeError au journal.
+        function relireDepliant(uuid: string): void { essai.depliant(uuid).corps.profil.lire() }
 
         // saisir — remplit un champ de la fiche (adresse, passerelle, dns) et le valide, comme Entrée.
         // Entrées : nom, texte. Sortie : aucune.
@@ -239,6 +355,9 @@ ShellRoot {
         }
         // copie — lit le retour de copie d'un libellé, sans geste. Entrée : cle. Sortie : voir lireCopie.
         function copie(cle: string): string { return essai.lireCopie(cle) }
+        // presse — contenu du presse-papiers (Quickshell.clipboardText), rendu à l'appelant et jamais journalisé.
+        // Entrées : aucune. Sortie : texte. Erreurs : aucune.
+        function presse(): string { return Quickshell.clipboardText }
 
         // nouveau — clic sur « Autre réseau… » de la page Wi-Fi. Entrées : aucune. Sortie : aucune.
         function nouveau(): void { essai.trouver(fenetre.panneau, o => o.libelle === "Autre réseau…").clique() }
@@ -264,5 +383,32 @@ ShellRoot {
 
         // fermer — ferme la fenêtre comme le compositeur. Entrées : aucune. Sortie : aucune.
         function fermer(): void { fenetre.fermer() }
+
+        // fermerEtat — ferme la fenêtre puis rend l'état dans le même tour d'événements, avant la destruction différée.
+        // Entrées : aucune. Sortie : texte JSON, voir etat. Erreurs : aucune. Dépendances : fermer, etat.
+        function fermerEtat(): string { fenetre.fermer(); return etat() }
+
+        // fermerDeuxFois — appelle fermer deux fois dans la même passe, comme la pastille puis onVisibleChanged.
+        // Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : fermer.
+        function fermerDeuxFois(): void { fenetre.fermer(); fenetre.fermer() }
+
+        // lacherDeuxFois — appelle lacher deux fois à 5 ms d'intervalle, après avoir remis dureeDestruction à -1.
+        // Entrées : aucune. Sortie : texte JSON [début après le premier lâcher, début après le second].
+        // Erreurs : aucune. Dépendances : lacher et _debutDestruction de FenetreReseau.
+        function lacherDeuxFois(): string {
+            fenetre.dureeDestruction = -1
+            fenetre.lacher()
+            const premier = fenetre._debutDestruction
+            const t = Date.now()
+            while (Date.now() - t < 5) {}
+            fenetre.lacher()
+            return JSON.stringify([premier, fenetre._debutDestruction])
+        }
+
+        // debutDestruction — début de destruction en cours (ms), 0 hors destruction. Sortie : texte.
+        function debutDestruction(): string { return String(fenetre._debutDestruction) }
+
+        // dureeDestruction — durée de la dernière destruction de la fenêtre (ms), -1 sans destruction. Sortie : texte.
+        function dureeDestruction(): string { return String(fenetre.dureeDestruction) }
     }
 }

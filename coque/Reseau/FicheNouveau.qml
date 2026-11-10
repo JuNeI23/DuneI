@@ -19,7 +19,7 @@ import "nmcli.js" as Nmcli
 // Erreurs : celles de nmcli, sous le formulaire ; une réponse arrivée après la destruction de la fiche est ignorée.
 // Dépendances : EtatReseau (executer), nmcli.js (argsAjouter, uuidAjoute), Groupe, Ligne, Texte, Champ, ChampSecret,
 // Onglets, Onglet, Case, Bouton, Theme.
-// Cotes : celles de FicheProfil : sections espacées de space.scale[1] (8), champs de 290 px.
+// Cotes : sections espacées de space.scale[1] (8), champs de 290 px.
 ColumnLayout {
     id: fiche
 
