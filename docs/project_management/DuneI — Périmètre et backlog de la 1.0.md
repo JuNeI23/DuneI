@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.51. Historique en fin de document.
+Version 1.52. Historique en fin de document.
 
 La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **176 éléments** répartis en **cinq lots**, sur six chantiers.
 
@@ -318,7 +318,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L2-62 | B | Écrit | Hauteur de la barre dans les jetons — `systemBarHeight` vaut 32 alors que la barre mesure 28 px (D89, D122) : aligner le jeton sur la hauteur réelle et faire lire celle-ci à `Barre.qml` |
 | L2-63 | C | Écrit | Cache de vignettes sur disque pour la galerie de fonds (suite de L2-60, D126, D135) — miniatures précalculées, créées au premier passage ou à l'ajout d'une image, lues à l'ouverture : ouverture instantanée même sur un gros dossier (trente images lourdes : vignettes environ 0,6 s après l'étirement, accepté par Nicolas) et mémoire faible (le décodage pleine taille d'un PNG 4K a une crête de 32 Mio). À concevoir : emplacement (`~/.cache`), invalidation par date et taille, génération hors du fil de la coque |
 | L2-64 | C | Écrit | Pages géantes transparentes en `madvise` pour tout le système — piste à trancher par Nicolas (D134, D135) : `MemoryTHP=madvise` n'est posé que sur l'unité de la coque (971 Mo de PSS devenus 160 Mo) ; passer `/sys/kernel/mm/transparent_hugepage/enabled` ou `transparent_hugepage=madvise` à toute la machine profiterait sans doute aux autres processus à jemalloc ou à tas épars. Choix de machine : mesurer d'abord les plus gros processus, et consigner la valeur dans le fragment de `caladan`, jamais dans le code commun |
-| L2-65 | B | Fait | Fenêtre Réseau allégée — **fait, en attente de fusion (D149 à D154)** : fenêtre qui se ferme dès le clic (fermeture visible 76-85 ms au lieu de 650-830, D151), page Wi-Fi « liste d'abord » (recherche, réseau joint déplié avec courbe vivante et tuiles, autres réseaux, connus repliés en fin de page, D149), réglages courants dans le dépliant et sous-page réduite à « Réglages avancés… » (D150), composants `Courbe`, `Tuile` et `Depliable` animé ; aucune correction de Hyprland nécessaire (D152). La fenêtre Son, détachée le 2026-11-09, devient L2-66 (D153). Fiche : `docs/superpowers/specs/2026-11-09-fenetre-reseau-design.md` ; plan : `docs/superpowers/plans/2026-11-09-fenetre-reseau.md` ; recette à l'écran à faire |
+| L2-65 | B | Fait | Fenêtre Réseau allégée — **fait et fusionné (PR #54, D149 à D157)** : fenêtre qui se ferme dès le clic (fermeture visible 76-85 ms au lieu de 650-830, D151), page Wi-Fi « liste d'abord » (recherche, réseau joint replié au nom mis en valeur, autres réseaux, connus repliés en fin de page, D149, D156), dépliant du réseau joint avec courbe vivante, tuiles adresse IP, routeur et connecté depuis, réglages courants et réglages avancés dépliés sur place ; sous-page de profil supprimée (D150, D155) ; sections dépliables, interrupteurs, pastilles et onglets animés au ressort (D157) ; aucune correction de Hyprland nécessaire (D152). La fenêtre Son, détachée le 2026-11-09, devient L2-66 (D153). Fiche : `docs/superpowers/specs/2026-11-09-fenetre-reseau-design.md` ; plan : `docs/superpowers/plans/2026-11-09-fenetre-reseau.md` ; recette à l'écran validée le 2026-11-10 |
 | L2-66 | B | Écrit | Fenêtre Son, sur le gabarit de la fenêtre Réseau (L2-65) — le lien « Réglages du son… » du popover du son (L2-12) l'ouvre ; volume par application, profils de la carte, effets et égaliseur y trouveront leur place ; repérage propre à faire avant la fiche ; réemploi des composants `Courbe`, `Tuile` et d'un dépliant dans le style de `DepliantReseau` ; même lot et même priorité que L2-65 (D153) |
 
 ### Lot 3 — la bascule
@@ -525,6 +525,7 @@ Le choix de la distribution de base et du compositeur, précédemment ouverts, s
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-12 | Version initiale, 137 éléments |
+| 1.52 | 2026-11-10 | L2-65 fusionné (PR #54) : recette à l'écran validée (D155 à D157) |
 | 1.51 | 2026-11-10 | L2-54 : la saisie IPv4 vit désormais dans `AvancesReseau`, la sous-page de profil ayant disparu (recette 1 de L2-65, D155) |
 | 1.50 | 2026-11-09 | L2-65 réduit à la fenêtre Réseau et fait, en attente de fusion (D149 à D154) ; ajout de L2-66 (fenêtre Son, détachée de L2-65, D153) ; 176 éléments |
 | 1.49 | 2026-11-08 | L2-12 fusionné (PR #52) ; L2-13 fait : indicateur d'énergie, popover du profil et alerte de la presqu'île (D145 à D148) ; 175 éléments |
