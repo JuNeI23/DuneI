@@ -5,16 +5,20 @@ import "../Composants"
 import "nmcli.js" as Nmcli
 
 // TuilesConnexion — tuiles d'information d'une connexion active, sur une grille de trois colonnes (L2-65).
-// Rôle : sous les débits du dépliant, une Tuile par mesure : libellé discret, valeur à l'échelon 3 en graisse moyenne
-// et chiffres tabulaires. Wi-Fi : Adresse IP, Routeur, DNS, Signal (quatre barres de succès jusqu'à la force réelle,
-// puis « <qualificatif> · <puissance> dBm »), Bande, Connecté depuis. Filaire : Adresse IP, Routeur, DNS, Débit du
-// lien, Adresse matérielle, puis Connecté depuis seulement si la sonde la connaît. Une liste d'adresses montre la
-// première, suivie de « +n » (nmcli.premiere) ; seule la première se copie d'un clic (Valeur), la liste complète
-// étant dans « Réglages avancés… ». Les cellules ont une largeur uniforme, pour que les réglages du dessous
-// (ReglagesReseau, même grille) s'alignent sur les mêmes colonnes.
-// Entrées : filaire, vrai pour une connexion filaire ; etat, la source des mesures, EtatReseau par défaut (ip4,
-// passerelle, dns, mac, appareilFilaire.linkSpeed, signalDbm, canal, frequence, connecteDepuis) ; actuel, faux quand
-// l'appareil lu par etat n'est pas celui du réseau : toutes les valeurs valent alors « — ».
+// Rôle : une Tuile par mesure : libellé discret, valeur à l'échelon 3 en graisse moyenne et chiffres tabulaires. La page
+// n'en garde que l'essentiel (Recette 1 de L2-65, D156) : Adresse IP, Routeur et Connecté depuis, sous les débits du
+// dépliant ; pour le filaire, Connecté depuis seulement si la sonde la connaît. Les autres mesures vont dans les
+// « Réglages avancés » (avances) : Signal (quatre barres de succès jusqu'à la force réelle, puis « <qualificatif> ·
+// <puissance> dBm ») et Bande pour le Wi-Fi, Débit du lien pour le filaire ; DNS et adresse matérielle y sont dans le
+// détail de la connexion, en entier et copiables (AvancesReseau). Une liste d'adresses montre la première, suivie de
+// « +n » (nmcli.premiere) ; seule la première se copie d'un clic (Valeur). Les cellules ont une largeur uniforme, pour
+// que les réglages du dessous (ReglagesReseau, même grille) s'alignent sur les mêmes colonnes ; une dernière rangée
+// incomplète est complétée de cellules vides, si bien que deux tuiles occupent deux des trois colonnes, et non la
+// largeur entière.
+// Entrées : filaire, vrai pour une connexion filaire ; avances, faux par défaut : vrai, les mesures des réglages
+// avancés au lieu de celles de la page ; etat, la source des mesures, EtatReseau par défaut (ip4, passerelle,
+// appareilFilaire.linkSpeed, signalDbm, canal, frequence, connecteDepuis) ; actuel, faux quand l'appareil lu par etat
+// n'est pas celui du réseau : toutes les valeurs valent alors « — ».
 // Valeurs copiables : Valeur sans police mono, à l'échelon et à la graisse des autres tuiles.
 // Sorties : liste, [{libelle, texte, copie, barres}] des tuiles montrées (texte, la valeur affichée ; copie, la
 // valeur copiable, vide sans elle ; barres, le nombre de barres du signal, -1 sans barres), lue par les essais.
@@ -27,6 +31,7 @@ GridLayout {
     property bool filaire: false
     property var etat: EtatReseau
     property bool actuel: true
+    property bool avances: false
     readonly property var liste: {
         const e = etat, a = actuel
         // adresses — tuile d'une liste d'adresses : la première, copiable, suivie de « +n ». Entrées : libelle,
@@ -36,22 +41,19 @@ GridLayout {
             return {libelle, texte: Nmcli.premiere(v), copie: v[0] ?? "", barres: -1}
         }
         const texte = (libelle, t) => ({libelle, texte: a && t ? t : "—", copie: "", barres: -1})
-        const debut = [adresses("Adresse IP", (e.ip4 ?? []).map(x => x.split("/")[0])),
-                       adresses("Routeur", [e.passerelle ?? ""]), adresses("DNS", e.dns ?? [])]
         const depuis = a && e.connecteDepuis != null ? Nmcli.formatDuree(e.connecteDepuis) : ""
+        if (!avances)
+            return [adresses("Adresse IP", (e.ip4 ?? []).map(x => x.split("/")[0])), adresses("Routeur", [e.passerelle ?? ""])]
+                .concat(depuis || !filaire ? [texte("Connecté depuis", depuis)] : [])
         if (filaire) {
             const lien = e.appareilFilaire?.linkSpeed ?? 0
-            return debut.concat([texte("Débit du lien", !lien ? "" : lien >= 1000
-                                       ? String(lien / 1000).replace(".", ",") + " Gbit/s" : lien + " Mbit/s"),
-                                 adresses("Adresse matérielle", [e.mac ?? ""])],
-                                depuis ? [texte("Connecté depuis", depuis)] : [])
+            return [texte("Débit du lien", !lien ? "" : lien >= 1000
+                          ? String(lien / 1000).replace(".", ",") + " Gbit/s" : lien + " Mbit/s")]
         }
         const dbm = a ? e.signalDbm ?? null : null, s = Nmcli.barresSignal(dbm)
-        return debut.concat([
-            {libelle: "Signal", texte: dbm === null ? "—" : `${s.mot} · ${String(dbm).replace("-", "−")} dBm`,
-             copie: "", barres: dbm === null ? -1 : s.barres},
-            texte("Bande", e.frequence != null ? Nmcli.bande(e.frequence, e.canal) : ""),
-            texte("Connecté depuis", depuis)])
+        return [{libelle: "Signal", texte: dbm === null ? "—" : `${s.mot} · ${String(dbm).replace("-", "−")} dBm`,
+                 copie: "", barres: dbm === null ? -1 : s.barres},
+                texte("Bande", e.frequence != null ? Nmcli.bande(e.frequence, e.canal) : "")]
     }
 
     columns: 3
@@ -107,5 +109,11 @@ GridLayout {
                 }
             }
         }
+    }
+
+    // Cellules vides qui complètent la dernière rangée : la grille garde ses trois colonnes.
+    Repeater {
+        model: (3 - tuiles.liste.length % 3) % 3
+        Item { Layout.fillWidth: true }
     }
 }
