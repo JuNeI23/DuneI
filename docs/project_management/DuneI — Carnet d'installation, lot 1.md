@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.42. Historique en fin de document.
+Version 1.43. Historique en fin de document.
 
 Socle amorçable.
 
@@ -1073,7 +1073,6 @@ valeurs différentes des défauts de Hyprland y sont écrites :
 ```lua
 hl.config({
     input = {
-        kb_options = "compose:ralt",       -- AltGr droite devient la touche Compose
         touchpad = { natural_scroll = true, clickfinger_behavior = true },
     },
 })
@@ -1081,14 +1080,17 @@ hl.config({
 
 Restent aux défauts, non écrits : le focus suit la souris, le pavé est coupé pendant la frappe, toucher
 vaut clic, accélération adaptative, vitesses du TrackPoint et du pavé à 0. La disposition dépend du
-clavier physique : `kb_layout = "gb"` est déclaré dans `machines/caladan.lua`. `hl.config` fusionne la
-table `input`, les deux déclarations coexistent.
+clavier physique, la touche Compose aussi (D160) : `machines/caladan.lua` déclare `kb_layout = "gb"` et
+`kb_options = "compose:rctrl"`, qui fait de Ctrl droit, redondant avec Ctrl gauche, la touche Compose ;
+AltGr garde ainsi son troisième niveau (`AltGr + 4` donne `€`). `machines/arrakis-core.lua` n'en déclare
+aucune, l'AZERTY portant les accents et AltGr ses symboles. `hl.config` fusionne la table `input`, les
+déclarations coexistent.
 
-**Accents.** AltGr relâchée, puis deux touches ; la majuscule ne porte que sur la dernière, et le
+**Accents (caladan).** Ctrl droit relâché, puis deux touches ; la majuscule ne porte que sur la dernière, et le
 Verrouillage majuscules fonctionne. Les séquences viennent de la table Compose de la locale
 (`/usr/share/X11/locale/en_US.UTF-8/Compose`) ; DuneI n'en définit aucune.
 
-| Séquence après AltGr | Résultat |
+| Séquence après Ctrl droit | Résultat |
 | --- | --- |
 | `^` puis voyelle | â ê î ô û |
 | `` ` `` puis `a`, `e`, `u` | à è ù |
@@ -2357,6 +2359,7 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 
 | Version | Date | Changement |
 | --- | --- | --- |
+| 1.43 | 2026-11-12 | Entrée : la touche Compose quitte `entree.lua` pour le fichier machine ; caladan la place sur Ctrl droit (`compose:rctrl`), AltGr rend `€` ; arrakis-core n'en déclare aucune (D160). |
 | 1.42 | 2026-11-10 | XWayland en pixels réels (`force_zero_scaling = true`) et échelle de Steam par fichier machine (D161). |
 | 1.41 | 2026-11-10 | Deuxième machine, `arrakis-core` : fichier machine, installation sur une configuration primitive sans bascule (D158) |
 | 1.40 | 2026-11-08 | Énergie (L2-13) : section `[alerte]` d'`energie.toml` (version 0.2.0), `generated/energie.json` copié sous `~/.config/dunei/` par `make install`, essai de l'alerte par seuils relevés |

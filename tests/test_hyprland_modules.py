@@ -57,8 +57,8 @@ class ModulesTest(unittest.TestCase):
         self.assertEqual(self.run_module("fenetres"), ["config\tdwindle\ttrue"])
 
     def test_entree(self):
-        # La disposition dépend du clavier physique : elle vit dans le fichier machine, pas ici.
-        self.assertEqual(self.run_module("entree"), ["input\tcompose:ralt\ttrue\ttrue\tnil",
+        # La disposition et la touche Compose dépendent du clavier physique : elles vivent dans le fichier machine.
+        self.assertEqual(self.run_module("entree"), ["input\tnil\ttrue\ttrue\tnil",
                                                     "gestures\tfalse"])
 
     def test_regles_generated_layers_then_behaviour(self):

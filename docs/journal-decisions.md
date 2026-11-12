@@ -3792,6 +3792,22 @@ symbole `1` ne se déclenche donc jamais.
 
 *Touché : `config/hypr/donnees/raccourcis.lua`, `tests/test_hyprland_clavier.py`.*
 
+### D160 · La touche Compose quitte la configuration commune pour le fichier machine
+
+2026-11-10, relevé de Nicolas sur `arrakis-core`, clavier en disposition française : les symboles placés derrière AltGr
+(`@`, `#`, `{`, `[`…) sont inaccessibles. `modules/entree.lua` imposait à toute machine `compose:ralt` (D36), qui fait
+d'AltGr droite la touche Compose et lui retire donc son rôle de troisième niveau. Sur le QWERTY britannique de
+caladan, c'était voulu ; sur un AZERTY, cela prive le clavier de la moitié de ses symboles.
+
+- La touche Compose dépend de la disposition, comme elle : `kb_options` sort de la configuration commune et vit dans
+  le fichier machine, conformément à D24. `arrakis-core.lua` n'en déclare aucune, l'AZERTY portant déjà les accents.
+- Sur caladan aussi, `compose:ralt` privait la disposition britannique de son troisième niveau : `AltGr + 4` ne donnait
+  plus `€`. La touche Compose passe sur Ctrl droit (`compose:rctrl`), redondante avec Ctrl gauche ; AltGr rend `€` et
+  les autres symboles de `gb`. D36 est corrigé sur ce point.
+
+*Touché : `config/hypr/modules/entree.lua`, `config/hypr/machines/caladan.lua`, `config/hypr/machines/arrakis-core.lua`,
+`tests/test_hyprland_modules.py`.*
+
 ### D161 · XWayland laisse les applications X11 en pixels réels
 
 `modules/ecrans.lua` passe `xwayland.force_zero_scaling` à `true`, ce qui remplace le dernier point de D25. Les

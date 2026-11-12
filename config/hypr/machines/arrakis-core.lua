@@ -8,7 +8,8 @@ hl.monitor({ output = "eDP-1", mode = "1920x1080@60", position = "0x0", scale = 
 -- XWayland ne met pas les applications X11 à l'échelle (D161) : Steam reçoit l'échelle de l'écran par sa propre variable.
 hl.env("STEAM_FORCE_DESKTOPUI_SCALING", "1.25")
 
--- Clavier interne en disposition française ; la touche Compose est commune (modules/entree.lua).
+-- Clavier interne en disposition française. Pas de touche Compose : AltGr y donne le troisième niveau (@, #, {, […),
+-- et l'AZERTY porte déjà les accents (D160).
 hl.config({ input = { kb_layout = "fr" } })
 
 -- Écran externe fixe : à déclarer par sa description, relevée avec hyprctl monitors, jamais par son port.

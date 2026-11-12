@@ -9,8 +9,9 @@ hl.env("STEAM_FORCE_DESKTOPUI_SCALING", "1.25")
 -- L'écran interne est repéré par son connecteur (modules/couvercle.lua) ; une machine dont la dalle n'a pas
 -- un connecteur eDP, LVDS ou DSI le désigne ici : require("modules.couvercle").interne = "<nom>".
 
--- Clavier interne en disposition britannique ; la touche Compose est commune (modules/entree.lua).
-hl.config({ input = { kb_layout = "gb" } })
+-- Clavier interne en disposition britannique. compose:rctrl fait de Ctrl droit la touche Compose : Ctrl droit
+-- relâché, puis ' et e, donne é ; AltGr garde son troisième niveau (AltGr + 4 donne €) (D36, D160).
+hl.config({ input = { kb_layout = "gb", kb_options = "compose:rctrl" } })
 
 -- Écran externe fixe : à déclarer par sa description, relevée avec hyprctl monitors, jamais par son port.
 -- hl.monitor({ output = "desc:<marque> <modèle>", mode = "preferred", position = "auto-right", scale = "auto" })
