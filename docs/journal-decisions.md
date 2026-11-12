@@ -3791,3 +3791,20 @@ symbole `1` ne se déclenche donc jamais.
 - Rien ne change sur caladan, en disposition britannique : les codes désignent les mêmes touches qu'avant.
 
 *Touché : `config/hypr/donnees/raccourcis.lua`, `tests/test_hyprland_clavier.py`.*
+
+### D161 · XWayland laisse les applications X11 en pixels réels
+
+`modules/ecrans.lua` passe `xwayland.force_zero_scaling` à `true`, ce qui remplace le dernier point de D25. Les
+applications X11 ne sont plus agrandies par le compositeur : elles voient les pixels réels de l'écran, sont nettes,
+et règlent leur taille elles-mêmes. Steam la reçoit par `STEAM_FORCE_DESKTOPUI_SCALING`, déclarée dans chaque fichier
+machine à la valeur de son échelle (1,25 sur caladan et sur arrakis-core) ; un jeu se règle à la résolution native
+dans ses propres options.
+
+Raison : sur arrakis-core, à l'échelle 1,25, Steam et RimWorld étaient flous, et RimWorld, jeu Unity, recevait en
+plein écran des clics décalés par rapport à son dessin : les boutons s'enfonçaient sans rien déclencher, jusqu'à
+« Quitter ». L'échelle 1 corrigeait tout, ce qui désignait la mise à l'échelle de XWayland ; l'échelle 1,25 avec
+`force_zero_scaling = true` et le jeu relancé est validée à l'écran par Nicolas (2026-11-10). Le réglage est commun aux
+deux machines, dont les écrans ont presque la même densité (141 et 162 points par pouce).
+
+*Touché : `config/hypr/modules/ecrans.lua`, `config/hypr/machines/arrakis-core.lua`, `config/hypr/machines/caladan.lua`,
+carnet (version 1.42).*
