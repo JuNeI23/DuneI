@@ -77,6 +77,7 @@ outils = [
     "swtpm",          # TPM de la machine virtuelle
     "openai-codex",   # second agent de Nicolas, pour ses autres sujets (D119)
     "pyright",        # serveur de langage Python du plugin pyright-lsp de Claude Code (D164)
+    "libreoffice-fresh", # lecture et écriture des PDF, Word et PowerPoint
 ]
 
 # Paquet = élément du backlog qui le remplacera.

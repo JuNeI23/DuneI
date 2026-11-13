@@ -70,4 +70,3 @@ Le reste se lit seulement au besoin.
 2. Je suis humain et mes requêtes peuvent être imprécises : tant qu'il y a des zones d'ombre, il faut creuser avant de se lancer dans le développement
 3. Si tu vois que tu pourrais avoir besoin d'outils de dev et de test, demande-le. Je veux un développement optimal.
 4. Dès que c'est pertinent, indique-moi de compacter ou clear la conversation. N'hésite pas à faire de la doc et modifier tes ressources perso
-5. J'écris sans accents parce que mon clavier est en QWERTY : ce n'est pas un choix de style. Tout ce que tu écris (docs, code, commentaires, ce fichier) prend les accents du français correct.
