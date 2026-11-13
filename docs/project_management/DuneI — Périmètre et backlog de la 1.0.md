@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.53. Historique en fin de document.
+Version 1.54. Historique en fin de document.
 
 La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **179 éléments** répartis en **cinq lots**, sur six chantiers.
 
@@ -353,7 +353,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L3-23 | E | Configuré | Environnement de développement |
 | L3-24 | E | Configuré | Impression — outil tiers assumé visible |
 | L3-25 | E | Écrit | Recenser les applications de palier D et leur traitement |
-| L3-26 | A | Configuré | Améliorer l'atelier de développement par IA (L1-26) au fil des irritants relevés à l'usage ; premier constat : `~/CLAUDE.md` double `~/.claude/RTK.md` |
+| L3-26 | A | Configuré | Améliorer l'atelier de développement par IA (L1-26) au fil des irritants relevés à l'usage ; premier constat : `~/CLAUDE.md` double `~/.claude/RTK.md` ; serveur de langage Python (`pyright-lsp`) posé à l'essai, à juger à l'usage sur une feature Python (D164) |
 
 ## Backlog — lots 4 et 5
 
@@ -528,6 +528,7 @@ Le choix de la distribution de base et du compositeur, précédemment ouverts, s
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-12 | Version initiale, 137 éléments |
+| 1.54 | 2026-11-13 | L3-26 : serveur de langage Python pour Claude Code, à l'essai (D164) |
 | 1.53 | 2026-11-13 | L2-19 fait : notifications de la coque, dunst retiré (D162) ; L2-66 reportée et L2-65 à refaire de zéro (D163) ; ajout de L2-67 (cloche, historique, « ne pas déranger »), L2-68 (son) et L2-69 (« Ouvrir » de DuneI) ; 179 éléments |
 | 1.52 | 2026-11-10 | L2-65 fusionné (PR #54) : recette à l'écran validée (D155 à D157) |
 | 1.51 | 2026-11-10 | L2-54 : la saisie IPv4 vit désormais dans `AvancesReseau`, la sous-page de profil ayant disparu (recette 1 de L2-65, D155) |
