@@ -81,7 +81,9 @@ Item {
     Item {
         id: icone
         x: carte.interieur
-        y: carte.interieur
+        // Centrée sur la hauteur du texte (en-tête, titre, corps), sans la rangée d'actions : l'icône ne bouge pas
+        // pendant le dépliant du survol (recette de L2-19).
+        y: carte.interieur + Math.max(0, (colonne.hauteurTexte - carte.cote) / 2)
         width: carte.cote
         height: carte.cote
 
@@ -132,11 +134,13 @@ Item {
 
     Column {
         id: colonne
+        readonly property real hauteurTexte: entete.height + titre.height + (corps.visible ? corps.height : 0)
         x: icone.x + carte.cote + carte.ecart
         y: carte.interieur
         width: carte.width - x - carte.interieur
 
         Item {
+            id: entete
             width: parent.width
             height: application.implicitHeight
 
@@ -162,6 +166,7 @@ Item {
         Texte {
             id: titre
             width: parent.width
+            echelon: 3
             moyen: true
             elide: Text.ElideRight
             maximumLineCount: 1
@@ -181,6 +186,8 @@ Item {
             elide: Text.ElideRight
             color: Theme.color?.textSecondary ?? "transparent"
             // Les liens restent inertes : ils prennent la couleur du corps, pas celle de Qt.
+            lineHeightMode: Text.FixedHeight
+            lineHeight: Math.round(font.pixelSize * (Theme.typo?.lineHeightBody ?? 1))
             linkColor: color
             // Les balises <img> sont retirées : StyledText chargerait l'image, locale ou distante, sans borne de taille.
             text: (carte.notification?.body ?? "").replace(/<img\b[^>]*>/gi, "")

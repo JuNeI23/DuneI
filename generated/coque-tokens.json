@@ -1671,6 +1671,7 @@
     "duree": 5000,
     "icone": 36,
     "interieur": 12,
-    "lignes": 3
+    "lignes": 3,
+    "reprise": 1000
   }
 }

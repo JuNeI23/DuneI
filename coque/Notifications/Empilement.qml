@@ -78,6 +78,10 @@ Item {
             // Vrai au tour de boucle qui suit la création : l'entrée part alors de zéro, quel que soit l'ordre
             // d'achèvement des objets.
             property bool montee: false
+            // Position figée au début de la sortie : une carte qui part glisse droit vers la droite, même si une carte
+            // au-dessus d'elle part en même temps et libère sa place (rafale, recette de L2-19).
+            property real figee: 0
+            onSortanteChanged: if (sortante) figee = position.cible
             readonly property bool finie: sortante && depart.value >= 1 && !depart.moving && !glisse.moving
 
             x: vue.width - vue.marge - vue.largeur
@@ -86,7 +90,7 @@ Item {
             height: carte.implicitHeight
             opacity: apparition.value * (1 - depart.value)
 
-            Ressort { id: position; transition: "reflow"; cible: vue.cible(place.entree) }
+            Ressort { id: position; transition: "reflow"; cible: place.sortante ? place.figee : vue.cible(place.entree) }
             Ressort { id: apparition; transition: "reveal"; nature: "fondu"; cible: place.montee ? 1 : 0 }
             Ressort { id: arrivee; transition: "reveal"; cible: apparition.cible }
             Ressort { id: depart; transition: "reveal"; nature: "fondu"; sens: "out"; cible: place.sortante ? 1 : 0 }
@@ -104,6 +108,7 @@ Item {
 
             onFinieChanged: if (finie) vue.partie(entree)
             Component.onCompleted: {
+                if (sortante) figee = vue.cible(entree)
                 vue.places = vue.places.concat([place])
                 Qt.callLater(() => place.montee = true)
                 // Une place qui naît déjà sortante (vue recréée) est finie d'emblée, sans changement de finie : elle

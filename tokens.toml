@@ -451,6 +451,7 @@ duree = 5000                  # ms d'affichage quand l'application ne fixe pas d
 icone = 36                    # côté de l'icône ou de l'image de la carte
 interieur = 12                # marge intérieure de la carte
 lignes = 3                    # nombre maximal de lignes de corps affichées
+reprise = 1000                # ms d'attente après la fin d'un plein écran avant que la file ne s'écoule
 
 [bureaux_virtuels]
 nombre = 4                   # bureaux 1 à n, liés à SUPER + 1…n ; le bureau spécial (accueil) n'est pas compté
