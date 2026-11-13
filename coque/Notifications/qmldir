@@ -2,3 +2,6 @@ module Notifications
 Entree 1.0 Entree.qml
 Pile 1.0 Pile.qml
 Carte 1.0 Carte.qml
+Centre 1.0 Centre.qml
+Empilement 1.0 Empilement.qml
+FenetreNotifications 1.0 FenetreNotifications.qml

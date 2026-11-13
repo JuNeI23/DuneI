@@ -7,11 +7,16 @@ les remet à Pile ; aucun serveur de notifications n'est lancé, aucun bus D-Bus
 La coque d'essai coque/Notifications/essai/carte/ pose une seule Carte, dans une fenêtre jamais montrée (plateforme
 offscreen), sur une notification factice réglée par IPC.
 
+La coque d'essai coque/Notifications/essai/centre/ lance le vrai serveur (Centre) et la vue des cartes, sous la
+plateforme offscreen et dans un bus D-Bus privé (dbus-run-session) : le bus de la session n'est jamais touché, et
+chaque envoi (notify-send, gdbus) ne vise que l'adresse de ce bus privé, vérifiée distincte de celle de la session.
+
 Ignoré sans session Wayland ou sans Quickshell (contrôle de GitHub).
 """
 
 import json
 import os
+import signal
 import struct
 import subprocess
 import time
@@ -21,6 +26,26 @@ import zlib
 from tests.test_coque_theme import DELAI, QS, ROOT, EssaiCoque
 
 ESSAI = ROOT / "coque" / "Notifications" / "essai"
+
+
+def demarrer(test, duree: int) -> None:
+    """Pose les jetons de la teinte 55, durée par défaut des notifications ramenée, puis lance la coque d'essai.
+
+    Entrées : test — le cas EssaiCoque à démarrer (installer, lancer, attendre, jusqua, appel) ; duree — en ms.
+    Sortie : aucune ; la coque d'essai est prête et ses jetons chargés.
+    Erreurs : échec du test si la coque ne se déclare pas prête au délai. Dépendances : EssaiCoque.
+    """
+    test.installer(55)
+    jetons = test.dir / "coque-tokens.json"
+    donnees = json.loads(jetons.read_text())
+    # La clé est partagée à la racine ; si une branche de thème la porte aussi, elle est ramenée de même.
+    for branche in [donnees, *(m for f in donnees.get("themes", {}).values() for m in f.values())]:
+        if "notifications" in branche:
+            branche["notifications"]["duree"] = duree
+    jetons.write_text(json.dumps(donnees))
+    test.lancer(test.dir)
+    test.attendre("essai : prêt")
+    test.jusqua(lambda: test.appel("pret") == "true", "jetons chargés")
 
 
 @unittest.skipUnless(os.environ.get("WAYLAND_DISPLAY") and QS, "session Wayland et Quickshell requis")
@@ -37,17 +62,7 @@ class PileTest(EssaiCoque, unittest.TestCase):
 
     def setUp(self):
         super().setUp()
-        self.installer(55)
-        jetons = self.dir / "coque-tokens.json"
-        donnees = json.loads(jetons.read_text())
-        # La clé est partagée à la racine ; si une branche de thème la porte aussi, elle est ramenée de même.
-        for branche in [donnees, *(m for f in donnees.get("themes", {}).values() for m in f.values())]:
-            if "notifications" in branche:
-                branche["notifications"]["duree"] = self.DUREE
-        jetons.write_text(json.dumps(donnees))
-        self.lancer(self.dir)
-        self.attendre("essai : prêt")
-        self.jusqua(lambda: self.appel("pret") == "true", "jetons chargés")
+        demarrer(self, self.DUREE)
 
     def appel(self, fonction: str, *args) -> str:
         """Appelle une fonction IPC de la coque d'essai.
@@ -403,6 +418,210 @@ class CarteTest(EssaiCoque, unittest.TestCase):
         etat = self.etat()
         self.assertEqual(etat["app"], "SIGNAL")
         self.assertRegex(etat["heure"], r"^\d\d:\d\d$")
+
+
+@unittest.skipUnless(os.environ.get("WAYLAND_DISPLAY") and QS, "session Wayland et Quickshell requis")
+class CentreTest(EssaiCoque, unittest.TestCase):
+    """Le serveur et la vue : réception, remplacements, fermeture par l'application, rafale, retenue et actions.
+
+    La coque d'essai tourne sous dbus-run-session, dans son propre groupe de processus, que arreter tue entier. Les
+    envois ne passent que par le bus privé de l'essai.
+    """
+
+    essai = ESSAI / "centre"
+    teintes = (55,)
+    environnement = {"QT_QPA_PLATFORM": "offscreen", "WAYLAND_DISPLAY": None, "DISPLAY": None,
+                     "HYPRLAND_INSTANCE_SIGNATURE": None}
+    DUREE = 600
+    # Durée explicite des envois qui ne doivent pas expirer pendant leurs vérifications.
+    LONGUE = "4000"
+
+    jusqua = CarteTest.jusqua
+
+    def setUp(self):
+        super().setUp()
+        self.bus = ""
+        demarrer(self, self.DUREE)
+
+    def lancer(self, dossier) -> None:
+        """Démarre la coque d'essai dans un bus de session privé, et relève l'adresse de ce bus et le pid de qs.
+
+        Entrée : dossier — valeur de DUNEI_TOKENS_DIR.
+        Sortie : aucune ; self.proc tient dbus-run-session, chef d'un nouveau groupe de processus ; self.qs, le pid de
+        la coque (le shell s'y remplace par exec) ; self.bus, l'adresse du bus privé.
+        Erreurs : OSError si dbus-run-session ne démarre pas ; échec du test si l'adresse n'est pas écrite au délai.
+        Dépendances : dbus-run-session, sh, qs, arreter.
+        """
+        self.arreter()
+        env = {**os.environ, **self.environnement, "DUNEI_TOKENS_DIR": str(dossier), "NO_COLOR": "1"}
+        env = {cle: valeur for cle, valeur in env.items() if valeur is not None}
+        adresse = self.dir.parent / "bus"
+        script = 'printf "%s\\n%s" "$$" "$DBUS_SESSION_BUS_ADDRESS" > "$1.tmp"; mv "$1.tmp" "$1"; exec "$2" -p "$3"'
+        with self.log.open("w") as sortie:
+            self.proc = subprocess.Popen(["dbus-run-session", "--", "sh", "-c", script, "sh", str(adresse), QS,
+                                          str(self.essai)], env=env, stdout=sortie, stderr=subprocess.STDOUT,
+                                         stdin=subprocess.DEVNULL, start_new_session=True)
+        fin = time.monotonic() + DELAI
+        while not adresse.exists():
+            self.assertLess(time.monotonic(), fin, f"adresse du bus privé attendue :\n{self.journal()}")
+            time.sleep(0.02)
+        pid, self.bus = adresse.read_text().split("\n", 1)
+        self.qs = int(pid)
+
+    def arreter(self) -> None:
+        """Tue le groupe de processus de l'essai entier (dbus-run-session, dbus-daemon et qs) et attend sa fin.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : TimeoutExpired si dbus-run-session ne se termine pas.
+        Dépendances : lancer.
+        """
+        if self.proc and self.proc.poll() is None:
+            try:
+                os.killpg(self.proc.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+        if self.proc:
+            self.proc.wait(timeout=DELAI)
+
+    def appel(self, fonction: str, *args) -> str:
+        """Appelle une fonction IPC de la coque d'essai. Entrées, sortie, erreurs : comme PileTest.appel."""
+        return subprocess.run([QS, "ipc", "--pid", str(self.qs), "call", "essai", fonction, *map(str, args)],
+                              check=True, capture_output=True, text=True, timeout=DELAI).stdout.strip()
+
+    def env_prive(self) -> dict:
+        """Environnement d'un envoi : celui du test, bus de session remplacé par le bus privé de l'essai.
+
+        Sortie : dictionnaire d'environnement. Erreurs : échec du test si l'adresse privée est vide ou égale à celle
+        de la session. Dépendances : lancer.
+        """
+        self.assertTrue(self.bus)
+        self.assertNotEqual(self.bus, os.environ.get("DBUS_SESSION_BUS_ADDRESS"))
+        return {**os.environ, "DBUS_SESSION_BUS_ADDRESS": self.bus}
+
+    def envoyer(self, *args: str) -> str:
+        """Envoie une notification par notify-send sur le bus privé.
+
+        Entrée : args — arguments de notify-send. Sortie : sa sortie standard (l'identifiant avec -p).
+        Erreurs : CalledProcessError si l'envoi échoue. Dépendances : env_prive, notify-send.
+        """
+        return subprocess.run(["notify-send", *args], env=self.env_prive(), check=True, capture_output=True,
+                              text=True, timeout=DELAI).stdout.strip()
+
+    def envoyer_avec_actions(self, *args: str) -> subprocess.Popen:
+        """Envoie en arrière-plan une notification à actions, dont notify-send attend la réponse (8 s au plus).
+
+        Entrée : args — arguments de notify-send. Sortie : le processus, sortie standard en tube ; il est tué à la
+        fin du test. Erreurs : OSError si le lancement échoue. Dépendances : env_prive, timeout, notify-send.
+        """
+        envoi = subprocess.Popen(["timeout", "8", "notify-send", *args], env=self.env_prive(),
+                                 stdout=subprocess.PIPE, text=True)
+        self.addCleanup(lambda: (envoi.kill(), envoi.communicate()))
+        return envoi
+
+    def etat(self) -> tuple[list[str], list[str]]:
+        """État de la pile. Sortie : (résumés affichés, plus récent en tête, suffixe « ~s » pour une sortante ;
+        résumés en file, ordre d'arrivée)."""
+        affichees, file = json.loads(self.appel("etat"))
+        return affichees, file
+
+    def test_bus_prive(self):
+        self.assertTrue(self.bus.startswith("unix:"))
+        self.assertNotEqual(self.bus, os.environ.get("DBUS_SESSION_BUS_ADDRESS"))
+
+    def test_reception(self):
+        self.envoyer("-a", "App", "-t", self.LONGUE, "Titre", "Corps")
+        self.jusqua(lambda: self.etat() == (["Titre"], []), "une entrée affichée « Titre »")
+
+    def test_delai_en_millisecondes(self):
+        self.envoyer("-t", "3000", "Delai", "Corps")
+        self.jusqua(lambda: self.appel("delai", "Delai") == "3000", "expireTimeout en millisecondes")
+
+    def test_replaces_id(self):
+        ident = self.envoyer("-p", "-t", self.LONGUE, "Premier", "Corps")
+        self.jusqua(lambda: self.etat() == (["Premier"], []), "première entrée")
+        self.envoyer("-r", ident, "-t", self.LONGUE, "Second", "Corps")
+        self.jusqua(lambda: self.etat() == (["Second"], []), "remplacée sur place")
+
+    def test_etiquette_reseau(self):
+        for resume in ("Connecté", "Déconnecté"):
+            self.envoyer("-a", "DuneI", "-t", self.LONGUE, "-h", "string:x-dunst-stack-tag:reseau", resume, "Corps")
+        self.jusqua(lambda: self.etat() == (["Déconnecté"], []), "une entrée, second résumé")
+
+    def test_fermeture_par_application(self):
+        ident = self.envoyer("-p", "-t", "0", "Fermee", "Corps")
+        self.jusqua(lambda: self.etat() == (["Fermee"], []), "entrée affichée")
+        self.appel("figer", "true")
+        subprocess.run(["gdbus", "call", "--session", "--dest", "org.freedesktop.Notifications", "--object-path",
+                        "/org/freedesktop/Notifications", "--method", "org.freedesktop.Notifications.CloseNotification",
+                        ident], env=self.env_prive(), check=True, capture_output=True, timeout=DELAI)
+        # Le vrai RetainableLock garde la notification fermée : la carte sortante garde son résumé jusqu'à oublier.
+        self.jusqua(lambda: self.etat() == (["Fermee~s"], []), "entrée sortante")
+        time.sleep(0.5)
+        self.assertEqual(self.etat(), (["Fermee~s"], []))
+        self.appel("figer", "false")
+        self.jusqua(lambda: self.etat() == ([], []), "entrée oubliée")
+        self.jusqua(lambda: self.cartes()["n"] == 0, "carte détruite")
+        self.assertEqual(self.cartes()["boite"], [0, 0, 0, 0])
+        self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
+
+    def cartes(self) -> dict:
+        """Cartes posées. Sortie : {n, boite: [x, y, l, h], largeur, hauteur}, voir cartes dans l'essai."""
+        return json.loads(self.appel("cartes"))
+
+    def boite_stable(self) -> list[float]:
+        """Boîte du masque une fois immobile (deux relevés égaux à 0,2 s d'intervalle). Sortie : [x, y, l, h]."""
+        def relever():
+            avant = self.cartes()["boite"]
+            time.sleep(0.2)
+            return avant == (apres := self.cartes()["boite"]) and apres
+        return self.jusqua(relever, "boîte immobile")
+
+    def test_placement_et_masque(self):
+        self.envoyer_avec_actions("-t", "0", "-A", "x=Plus tard", "Ancienne", "Corps")
+        self.jusqua(lambda: self.etat() == (["Ancienne"], []), "première carte")
+        self.envoyer("-t", "0", "Recente", "Corps")
+        self.jusqua(lambda: self.cartes()["n"] == 2, "deux cartes")
+        taille = (self.cartes()["largeur"], self.cartes()["hauteur"])
+        x, y, largeur, hauteur = self.boite_stable()
+        # Deux cartes de même hauteur, la plus récente en haut, à la marge du haut et du bord droit, espacées de 8.
+        self.assertEqual((y, largeur), (8, 340))
+        self.assertEqual(x + largeur + 8, taille[0])
+        une = (hauteur - 8) / 2
+        # Le dépliant des actions de la carte du bas agrandit la boîte, jamais l'empilement.
+        self.appel("survoler", "Ancienne", "true")
+        self.assertGreater(self.boite_stable()[3], hauteur)
+        self.appel("survoler", "Ancienne", "false")
+        self.assertEqual(self.boite_stable()[3], hauteur)
+        # La carte du haut sort au clic : celle du bas remonte à la marge, la boîte se réduit à elle.
+        self.appel("cliquer", "Recente")
+        self.jusqua(lambda: self.etat() == (["Ancienne"], []), "carte du haut oubliée")
+        self.assertEqual(self.boite_stable(), [x, 8, 340, une])
+        self.assertEqual((self.cartes()["largeur"], self.cartes()["hauteur"]), taille)
+        self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
+
+    def test_action(self):
+        envoi = self.envoyer_avec_actions("-t", "0", "-A", "default=Ouvrir", "Action", "Corps")
+        self.jusqua(lambda: self.etat() == (["Action"], []), "entrée affichée")
+        self.appel("agir", "Action", "default")
+        self.assertEqual(envoi.communicate(timeout=DELAI)[0].strip(), "default")
+        self.jusqua(lambda: self.etat() == ([], []), "carte sortie")
+
+    def test_rafale_entierement_vue(self):
+        resumes = [f"R{i}" for i in range(20)]
+        envois = [subprocess.Popen(["notify-send", r, "Corps"], env=self.env_prive()) for r in resumes]
+        for envoi in envois:
+            self.assertEqual(envoi.wait(timeout=DELAI), 0)
+        affichees, file = self.etat()
+        self.assertEqual((len(affichees), len(file)), (5, 15))
+        self.jusqua(lambda: self.etat() == ([], []), "rafale écoulée", delai=3 * DELAI)
+        self.assertEqual(sorted(json.loads(self.appel("vues"))), sorted(resumes))
+
+    def test_retenue_plein_ecran(self):
+        self.appel("retenir", "true")
+        for resume in ("A", "B", "C"):
+            self.envoyer("-t", self.LONGUE, resume, "Corps")
+        self.jusqua(lambda: self.etat() == ([], ["A", "B", "C"]), "trois en file, rien d'affiché")
+        self.appel("retenir", "false")
+        self.jusqua(lambda: self.etat() == (["C", "B", "A"], []), "trois affichées")
 
 
 if __name__ == "__main__":

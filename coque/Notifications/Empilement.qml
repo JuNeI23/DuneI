@@ -1,0 +1,106 @@
+import QtQuick
+import Quickshell
+import "../Theme"
+
+// Empilement — les cartes de la pile, placées et animées, dans la fenêtre de la pile ou dans une coque d'essai.
+// Rôle : un Repeater sur un ScriptModel des affichées de la pile (plus récente en tête) pose une Carte par entrée, au
+// bord droit de l'empilement, à Theme.notifications.marge de ce bord. La cible verticale d'une carte est marge plus la
+// somme des hauteurs et des écarts des cartes non sortantes au-dessus d'elle : une carte qui sort libère sa place
+// aussitôt, et celles du dessous remontent. Trois Ressort par carte : la position verticale sur « reflow » ;
+// l'entrée sur « reveal » (fondu, glissement vers le bas de space.scale[1] et échelle de départ réduite du double de
+// ce glissement rapporté à la largeur), qui ne rejoue pas à un remplacement puisque l'entrée garde sa carte ; la
+// sortie sur « reveal » sortant (glissement vers la droite d'une largeur de carte et fondu), à la fin de laquelle le
+// signal partie est émis. En mouvement réduit (Theme.mouvementReduit), entrée et sortie ne sont qu'un fondu (ressorts
+// de nature « fondu ») ; la position, ressort de déplacement, se pose aussitôt.
+// Les cartes changent de hauteur en continu (dépliant des actions) : seuls leurs placements et la boîte en tiennent
+// compte, l'empilement ne change jamais de taille de lui-même (surface constante, D132, D134).
+// Entrées : pile, la Pile dont les affichées sont montrées.
+// Sorties : largeurUtile, largeur à donner à l'empilement (largeur de carte, marge et débord de l'ombre e3 à gauche) ;
+// boite, rectangle qui couvre toutes les cartes affichées, sortantes comprises, à leur position animée (vide sans
+// carte), pour le masque de saisie ; cartes, nombre de cartes posées ; signal partie(entree), à la fin de la sortie
+// d'une carte.
+// Erreurs : aucune ; sans jetons chargés, les cotes sont nulles et aucune carte n'est visible.
+// Dépendances : quickshell ≥ 0.3 (ScriptModel), Theme (notifications, space, elevation, material,
+// mouvementReduit), Ressort, Carte, Pile, Entree.
+Item {
+    id: vue
+
+    required property QtObject pile
+
+    readonly property real largeur: Theme.notifications?.largeur ?? 0
+    readonly property real marge: Theme.notifications?.marge ?? 0
+    readonly property real ecart: Theme.notifications?.ecart ?? 0
+    // Débord de l'ombre e3 de chaque côté de la carte, calculé comme OmbreElevation.marge.
+    readonly property real debord: Theme.elevation?.e3?.shadow
+        ? (Theme.material?.shadowBlur ?? 0) + Math.abs(Theme.material?.shadowOffsetY ?? 0) : 0
+    readonly property real largeurUtile: largeur + marge + debord
+    readonly property real glissement: Theme.space?.scale[1] ?? 0
+    readonly property real mobile: Theme.mouvementReduit ? 0 : 1
+    // Places posées (une par carte), inscrites à leur création et retirées à leur destruction.
+    property var places: []
+    readonly property int cartes: places.length
+    readonly property rect boite: {
+        if (places.length === 0) return Qt.rect(0, 0, 0, 0)
+        const haut = Math.min(...places.map(p => p.y))
+        const bas = Math.max(...places.map(p => p.y + p.height))
+        return Qt.rect(width - marge - largeur, haut, largeur, bas - haut)
+    }
+
+    signal partie(QtObject entree)
+
+    // cible — position verticale visée par la carte d'une entrée.
+    // Entrée : entree. Sortie : marge plus hauteurs et écarts des cartes non sortantes au-dessus d'elle.
+    // Erreurs : aucune ; une carte au-dessus pas encore posée ne compte pas encore. Dépendances : pile, places.
+    function cible(entree) {
+        let y = marge
+        for (const e of pile.affichees) {
+            if (e === entree) break
+            const p = e.sortante ? null : places.find(q => q.entree === e)
+            if (p) y += p.height + ecart
+        }
+        return y
+    }
+
+    Repeater {
+        model: ScriptModel { values: vue.pile.affichees }
+
+        Item {
+            id: place
+
+            required property QtObject modelData
+            readonly property QtObject entree: modelData
+            readonly property bool sortante: entree?.sortante ?? false
+            // Vrai au tour de boucle qui suit la création : l'entrée part alors de zéro, quel que soit l'ordre
+            // d'achèvement des objets.
+            property bool montee: false
+            readonly property bool finie: sortante && depart.value >= 1 && !depart.moving
+
+            x: vue.width - vue.marge - vue.largeur
+            y: position.value
+            width: vue.largeur
+            height: carte.implicitHeight
+            opacity: apparition.value * (1 - depart.value)
+
+            Ressort { id: position; transition: "reflow"; cible: vue.cible(place.entree) }
+            Ressort { id: apparition; transition: "reveal"; nature: "fondu"; cible: place.montee ? 1 : 0 }
+            Ressort { id: depart; transition: "reveal"; nature: "fondu"; sens: "out"; cible: place.sortante ? 1 : 0 }
+
+            Carte {
+                id: carte
+                entree: place.entree
+                pile: vue.pile
+                x: depart.value * vue.largeur * vue.mobile
+                y: -(1 - apparition.value) * vue.glissement * vue.mobile
+                transformOrigin: Item.Top
+                scale: 1 - (1 - apparition.value) * 2 * vue.glissement / Math.max(1, vue.largeur) * vue.mobile
+            }
+
+            onFinieChanged: if (finie) vue.partie(entree)
+            Component.onCompleted: {
+                vue.places = vue.places.concat([place])
+                Qt.callLater(() => place.montee = true)
+            }
+            Component.onDestruction: vue.places = vue.places.filter(q => q !== place)
+        }
+    }
+}
