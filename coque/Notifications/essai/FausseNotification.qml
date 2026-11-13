@@ -62,6 +62,7 @@ QtObject {
     }
 
     // liberer — détruit la notification fermée que plus aucun verrou ne retient. Entrées, sortie, erreurs : aucune.
+    // Dépendances : fermee, verrous.
     function liberer() { if (fermee && verrous === 0) destroy() }
 
     Component.onDestruction: detruite()
@@ -73,8 +74,10 @@ QtObject {
     }
 
     // expire — expiration demandée par la coque : journalisée, puis fermeture (raison 1).
+    // Entrées, sortie, erreurs : aucune. Dépendances : appel, fermer.
     function expire() { appel(id + ":expire"); fermer(1) }
 
     // dismiss — renvoi demandé par la coque : journalisé, puis fermeture (raison 2).
+    // Entrées, sortie, erreurs : aucune. Dépendances : appel, fermer.
     function dismiss() { appel(id + ":dismiss"); fermer(2) }
 }

@@ -14,11 +14,13 @@ chaque envoi (notify-send, gdbus) ne vise que l'adresse de ce bus privé, vérif
 Ignoré sans session Wayland ou sans Quickshell (contrôle de GitHub).
 """
 
+import http.server
 import json
 import os
 import signal
 import struct
 import subprocess
+import threading
 import time
 import unittest
 import zlib
@@ -91,25 +93,45 @@ class PileTest(EssaiCoque, unittest.TestCase):
 
     def creer(self, app: str = "app", resume: str = "r", corps: str = "c", delai: int = -1,
               etiquette: str = "") -> str:
-        """Crée une notification factice et la remet à la pile. Sortie : son identifiant. Dépendances : appel."""
+        """Crée une notification factice et la remet à la pile.
+
+        Entrées : app, resume, corps, delai (ms, expireTimeout), etiquette (« » pour aucune). Sortie : son identifiant.
+        Erreurs : CalledProcessError si l'appel IPC échoue. Dépendances : appel.
+        """
         return self.appel("creer", app, resume, corps, delai, etiquette)
 
     def etat(self) -> tuple[list[str], list[str]]:
-        """État de la pile. Sortie : (affichées, plus récente en tête, « s » pour sortante ; file, ordre d'arrivée)."""
+        """État de la pile.
+
+        Entrées : aucune. Sortie : (affichées, plus récente en tête, « s » pour sortante ; file, ordre d'arrivée).
+        Erreurs : CalledProcessError si l'appel IPC échoue. Dépendances : appel.
+        """
         affichees, file = (p.split(":", 1)[1].strip() for p in self.appel("etat").split("|"))
         return [x for x in affichees.split(",") if x], [x for x in file.split(",") if x]
 
     def appels(self) -> list[str]:
-        """Journal des appels reçus par les notifications factices, dans l'ordre (« 1:expire »…)."""
+        """Journal des appels reçus par les notifications factices.
+
+        Entrées : aucune. Sortie : liste dans l'ordre des appels (« 1:expire »…).
+        Erreurs : CalledProcessError si l'appel IPC échoue. Dépendances : appel.
+        """
         return [x for x in self.appel("appels").split(",") if x]
 
     def attendre_appel(self, attendu: str, delai: float = DELAI) -> float:
-        """Attend un appel du journal. Entrées : attendu, delai. Sortie : l'instant monotone où il est vu."""
+        """Attend un appel du journal.
+
+        Entrées : attendu — texte de l'appel ; delai — en secondes. Sortie : l'instant monotone où il est vu.
+        Erreurs : échec du test au délai. Dépendances : jusqua, appels.
+        """
         self.jusqua(lambda: attendu in self.appels(), f"« {attendu} » attendu", delai)
         return time.monotonic()
 
     def rester_sans(self, absent: str, duree: float) -> None:
-        """Vérifie qu'un appel n'apparaît pas pendant une durée. Entrées : absent ; duree, en secondes."""
+        """Vérifie qu'un appel n'apparaît pas pendant une durée.
+
+        Entrées : absent — texte de l'appel ; duree — en secondes. Sortie : aucune.
+        Erreurs : échec du test dès que l'appel apparaît. Dépendances : appels.
+        """
         fin = time.monotonic() + duree
         while time.monotonic() < fin:
             self.assertNotIn(absent, self.appels())
@@ -191,6 +213,18 @@ class PileTest(EssaiCoque, unittest.TestCase):
         # Sans réarmement, l'expiration tomberait 500 ms après le remplacement.
         self.rester_sans("3:expire", 1.2 - (time.monotonic() - rearme))
         self.attendre_appel("3:expire", 2.0)
+
+    def test_remplacement_renouvelle_l_heure(self):
+        # Par étiquette comme par mise à jour sur place, l'heure affichée devient celle du remplacement.
+        self.creer("A", "premier", delai=0, etiquette="t")
+        premiere = int(self.appel("arrivee", 1))
+        time.sleep(0.3)
+        self.creer("A", "second", delai=0, etiquette="t")
+        seconde = int(self.appel("arrivee", 2))
+        self.assertGreaterEqual(seconde - premiere, 250)
+        time.sleep(0.3)
+        self.appel("renommer", 2, "troisieme")
+        self.assertGreaterEqual(int(self.appel("arrivee", 2)) - seconde, 250)
 
     def test_remplacement_en_file(self):
         for _ in range(5):
@@ -279,6 +313,8 @@ def png(chemin, cote: int = 64) -> None:
     Erreurs : OSError si l'écriture échoue. Dépendances : struct, zlib.
     """
     def bloc(nature: bytes, donnees: bytes) -> bytes:
+        """Bloc PNG : longueur, nature, données et somme CRC32. Entrées : nature, donnees. Sortie : octets.
+        Erreurs : aucune. Dépendances : struct, zlib."""
         return struct.pack(">I", len(donnees)) + nature + donnees + struct.pack(">I", zlib.crc32(nature + donnees))
     lignes = b"".join(b"\x00" + b"\x80\x40\x20" * cote for _ in range(cote))
     chemin.write_bytes(b"\x89PNG\r\n\x1a\n" + bloc(b"IHDR", struct.pack(">IIBBBBB", cote, cote, 8, 2, 0, 0, 0))
@@ -327,15 +363,27 @@ class CarteTest(EssaiCoque, unittest.TestCase):
 
     def regler(self, app: str = "App", resume: str = "Titre", corps: str = "Corps", urgence: int = 1,
                image: str = "", icone: str = "", actions: str = "") -> None:
-        """Règle la notification de la carte. Entrées : celles de regler dans l'essai ; actions — « id:texte,… »."""
+        """Règle la notification de la carte.
+
+        Entrées : celles de regler dans l'essai ; actions — « id:texte,… ». Sortie : aucune.
+        Erreurs : CalledProcessError si l'appel IPC échoue. Dépendances : appel.
+        """
         self.appel("regler", app, resume, corps, urgence, image, icone, actions)
 
     def etat(self) -> dict:
-        """État de la carte. Sortie : dictionnaire des champs « cle=valeur » séparés par « ; »."""
+        """État de la carte.
+
+        Entrées : aucune. Sortie : dictionnaire des champs « cle=valeur » séparés par « ; ».
+        Erreurs : CalledProcessError si l'appel IPC échoue. Dépendances : appel.
+        """
         return dict(p.split("=", 1) for p in self.appel("etat").split(";"))
 
     def stable(self) -> dict:
-        """État de la carte une fois son dépliant au repos. Sortie : comme etat. Dépendances : etat, jusqua."""
+        """État de la carte une fois son dépliant au repos.
+
+        Entrées : aucune. Sortie : comme etat. Erreurs : échec du test si le dépliant bouge encore au délai.
+        Dépendances : etat, jusqua.
+        """
         return self.jusqua(lambda: (e := self.etat())["mouvement"] == "false" and e, "dépliant au repos")
 
     def test_couleur_du_titre(self):
@@ -412,6 +460,39 @@ class CarteTest(EssaiCoque, unittest.TestCase):
         self.appel("survoler", "false")
         repliee = self.stable()
         self.assertEqual((repliee["visibles"], repliee["hauteur"]), ("false", sans["hauteur"]))
+
+    def test_ouvrir_en_tete(self):
+        self.regler(actions="x:Plus tard,default:Activer,y:Archiver")
+        self.assertEqual(self.etat()["libelles"], "Ouvrir|Plus tard|Archiver")
+
+    def test_rien_de_distant(self):
+        # Un serveur local compte les requêtes : une image ou une icône en http(s) n'est jamais demandée, et la chaîne
+        # passe au maillon suivant.
+        requetes = []
+
+        class Gestionnaire(http.server.BaseHTTPRequestHandler):
+            def do_GET(self):
+                """Note le chemin demandé et répond 404. Entrées, sortie : aucune. Erreurs : aucune.
+                Dépendances : requetes."""
+                requetes.append(self.path)
+                self.send_error(404)
+
+            def log_message(self, *args):
+                """Tait le journal du serveur. Entrées : ignorées. Sortie : aucune. Erreurs : aucune. Dépendances :
+                aucune."""
+
+        serveur = http.server.HTTPServer(("127.0.0.1", 0), Gestionnaire)
+        threading.Thread(target=serveur.serve_forever, daemon=True).start()
+        self.addCleanup(serveur.server_close)
+        self.addCleanup(serveur.shutdown)
+        adresse = f"http://127.0.0.1:{serveur.server_port}"
+        icone = ROOT / "generated" / "icons" / "DuneI" / "symbolic" / "preferences-system-notifications-symbolic.svg"
+        self.regler(image=f"{adresse}/photo.png", icone=str(icone))
+        self.assertEqual(self.etat()["source"], "application")
+        self.regler(image="", icone=f"{adresse}/icone.png")
+        self.assertEqual(self.etat()["source"], "generique")
+        time.sleep(0.5)
+        self.assertEqual(requetes, [])
 
     def test_en_tete(self):
         self.regler(app="Signal")
@@ -518,8 +599,11 @@ class CentreTest(EssaiCoque, unittest.TestCase):
         return envoi
 
     def etat(self) -> tuple[list[str], list[str]]:
-        """État de la pile. Sortie : (résumés affichés, plus récent en tête, suffixe « ~s » pour une sortante ;
-        résumés en file, ordre d'arrivée)."""
+        """État de la pile.
+
+        Entrées : aucune. Sortie : (résumés affichés, plus récent en tête, suffixe « ~s » pour une sortante ; résumés
+        en file, ordre d'arrivée). Erreurs : CalledProcessError si l'appel IPC échoue. Dépendances : appel.
+        """
         affichees, file = json.loads(self.appel("etat"))
         return affichees, file
 
@@ -540,6 +624,21 @@ class CentreTest(EssaiCoque, unittest.TestCase):
         self.jusqua(lambda: self.etat() == (["Premier"], []), "première entrée")
         self.envoyer("-r", ident, "-t", self.LONGUE, "Second", "Corps")
         self.jusqua(lambda: self.etat() == (["Second"], []), "remplacée sur place")
+
+    def test_replaces_id_identique_rearme(self):
+        # Le même contenu renvoyé par replaces_id réarme la minuterie : notify-send joint l'indice sender-pid, propre à
+        # chaque envoi, et tout changement reçu vaut remplacement.
+        ident = self.envoyer("-p", "-t", "1500", "Meme", "Corps")
+        self.jusqua(lambda: self.etat() == (["Meme"], []), "première entrée")
+        t0 = time.monotonic()
+        time.sleep(1.0)
+        self.envoyer("-r", ident, "-t", "1500", "Meme", "Corps")
+        rearme = time.monotonic()
+        # Sans réarmement, la carte sortirait vers 1,5 s après t0.
+        while time.monotonic() - rearme < 1.1:
+            self.assertEqual(self.etat()[0], ["Meme"], f"sortie {time.monotonic() - t0:.2f} s après le premier envoi")
+            time.sleep(0.05)
+        self.jusqua(lambda: self.etat() == ([], []), "expirée après la durée pleine")
 
     def test_etiquette_reseau(self):
         for resume in ("Connecté", "Déconnecté"):
@@ -564,11 +663,19 @@ class CentreTest(EssaiCoque, unittest.TestCase):
         self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
 
     def cartes(self) -> dict:
-        """Cartes posées. Sortie : {n, boite: [x, y, l, h], largeur, hauteur, debord}, voir cartes dans l'essai."""
+        """Cartes posées.
+
+        Entrées : aucune. Sortie : {n, boite: [x, y, l, h], largeur, hauteur, debord}, voir cartes dans l'essai.
+        Erreurs : CalledProcessError si l'appel IPC échoue. Dépendances : appel.
+        """
         return json.loads(self.appel("cartes"))
 
     def boite_stable(self) -> list[float]:
-        """Boîte du masque une fois immobile (deux relevés égaux à 0,2 s d'intervalle). Sortie : [x, y, l, h]."""
+        """Boîte du masque une fois immobile (deux relevés égaux à 0,2 s d'intervalle).
+
+        Entrées : aucune. Sortie : [x, y, l, h]. Erreurs : échec du test si la boîte bouge encore au délai.
+        Dépendances : cartes, jusqua.
+        """
         def relever():
             avant = self.cartes()["boite"]
             time.sleep(0.2)
@@ -600,6 +707,32 @@ class CentreTest(EssaiCoque, unittest.TestCase):
         self.jusqua(lambda: self.etat() == (["Ancienne"], []), "carte du haut oubliée")
         self.assertEqual(self.boite_stable(), [x, debord + 8, 340, une])
         self.assertEqual((self.cartes()["largeur"], self.cartes()["hauteur"]), taille)
+        self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
+
+    def test_vue_recreee_sur_une_sortante(self):
+        # Une vue recréée pendant qu'une carte sort (second Empilement) voit naître sa place déjà sortante : elle la
+        # fait oublier quand même.
+        self.envoyer("-t", "0", "Sortie", "Corps")
+        self.jusqua(lambda: self.etat() == (["Sortie"], []), "entrée affichée")
+        self.appel("figer", "true")
+        self.appel("cliquer", "Sortie")
+        self.jusqua(lambda: self.etat() == (["Sortie~s"], []), "entrée sortante")
+        # La première vue a fini sa sortie et retient l'entrée au lieu de la faire oublier.
+        time.sleep(0.8)
+        self.assertEqual(self.etat(), (["Sortie~s"], []))
+        self.appel("doubler")
+        self.jusqua(lambda: self.etat() == ([], []), "oubliée par la vue recréée")
+        self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
+
+    def test_rechargement(self):
+        # keepOnReload : une notification affichée survit au rechargement de la coque et revient dans la nouvelle pile.
+        self.envoyer("-t", self.LONGUE, "Gardee", "Corps")
+        self.jusqua(lambda: self.etat() == (["Gardee"], []), "entrée affichée")
+        avant = self.appel("generation")
+        self.appel("recharger")
+        # La génération qui répond est la nouvelle : son état est celui de la nouvelle pile.
+        self.jusqua(lambda: (g := self.appel("generation")).isdigit() and g != avant, "nouvelle génération à l'écoute")
+        self.jusqua(lambda: self.etat() == (["Gardee"], []), "réémise à la nouvelle génération")
         self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
 
     def test_action(self):

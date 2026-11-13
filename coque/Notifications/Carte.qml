@@ -13,7 +13,9 @@ import "../Composants"
 // notification critique, rien d'autre ne change. Le survol est écrit dans l'entrée, qui suspend sa minuterie.
 // Chaîne d'icône : l'image jointe, en disque, si elle est chargée ; sinon l'icône de l'application (nom résolu par
 // Quickshell.iconPath, ou chemin de fichier), dans un carré arrondi ; sinon la cloche de la coque. Une image ou une
-// icône introuvable ne laisse qu'un refus de chargement de Qt au journal, et la chaîne passe au maillon suivant.
+// icône introuvable ne laisse qu'un refus de chargement de Qt au journal, et la chaîne passe au maillon suivant. Rien
+// n'est jamais téléchargé : seules les sources locales (chemin absolu, file://, image://) sont chargées, et une URL
+// distante passe aussitôt au maillon suivant.
 // Entrées : entree, l'Entree tenue par la pile ; pile, la Pile, qui reçoit les clics.
 // Sorties : implicitHeight, contenu et marges compris (la largeur est fixée à Theme.notifications.largeur) ;
 // survolee ; sourceIcone (« image », « application » ou « generique ») ; actionsVisibles, vrai tant que la rangée
@@ -36,7 +38,11 @@ Item {
     readonly property real cote: Theme.notifications?.icone ?? 0
     readonly property real ecart: Theme.space?.scale[2] ?? 0
     readonly property real dpr: QsWindow.window?.devicePixelRatio ?? 1
-    readonly property var actions: notification ? Array.from(notification.actions) : []
+    // Actions dans leur ordre d'envoi, « default » (« Ouvrir ») en tête.
+    readonly property var actions: notification
+        ? Array.from(notification.actions).filter(a => a.identifier === "default")
+            .concat(Array.from(notification.actions).filter(a => a.identifier !== "default"))
+        : []
     readonly property bool survolee: entree?.survolee ?? false
     readonly property string sourceIcone: photo.status === Image.Ready ? "image"
         : appli.status === Image.Ready ? "application" : "generique"
@@ -88,7 +94,7 @@ Item {
             Image {
                 id: photo
                 anchors.fill: parent
-                source: carte.notification?.image ?? ""
+                source: carte.locale(carte.notification?.image ?? "")
                 fillMode: Image.PreserveAspectCrop
                 sourceSize: Qt.size(carte.cote * carte.dpr, carte.cote * carte.dpr)
                 cache: true
@@ -218,11 +224,20 @@ Item {
     // Sortie : « Ouvrir » pour l'action « default », son texte sinon. Erreurs : aucune. Dépendances : aucune.
     function libelle(action) { return action.identifier === "default" ? qsTr("Ouvrir") : action.text }
 
+    // locale — source d'image locale, sans rien qui la ferait télécharger.
+    // Entrée : source, chemin absolu ou URL. Sortie : une URL de fichier pour un chemin absolu, l'URL telle quelle pour
+    // file:// et image:// (images fournies par Quickshell), « » pour toute autre URL (http, https…) et pour un texte
+    // qui n'est ni l'un ni l'autre. Erreurs : aucune. Dépendances : aucune.
+    function locale(source) {
+        return source.startsWith("/") ? "file://" + source : /^(file|image):\/\//.test(source) ? source : ""
+    }
+
     // cheminIcone — source d'image de l'icône d'une application.
-    // Entrée : icone, nom freedesktop, chemin absolu ou URL. Sortie : une URL de fichier pour un chemin, l'URL telle
-    // quelle, le chemin du thème pour un nom trouvé, « » sinon. Erreurs : aucune. Dépendances : Quickshell.iconPath.
+    // Entrée : icone, nom freedesktop, chemin absolu ou URL. Sortie : la source locale (locale) pour un chemin ou une
+    // URL, le chemin du thème pour un nom trouvé, « » sinon. Erreurs : aucune.
+    // Dépendances : locale, Quickshell.iconPath.
     function cheminIcone(icone) {
-        return icone.startsWith("/") ? "file://" + icone : icone.includes("://") ? icone
+        return icone.startsWith("/") || icone.includes("://") ? locale(icone)
             : icone !== "" ? Quickshell.iconPath(icone, true) : ""
     }
 }

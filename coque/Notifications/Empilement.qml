@@ -23,7 +23,7 @@ import "../Theme"
 // debord, débord de l'ombre e3, réservé aussi au-dessus de la première carte ;
 // boite, rectangle qui couvre toutes les cartes affichées, sortantes comprises, à leur position animée (vide sans
 // carte), pour le masque de saisie ; cartes, nombre de cartes posées ; signal partie(entree), à la fin de la sortie
-// d'une carte.
+// d'une carte, ou aussitôt après la création d'une place dont l'entrée est déjà sortante.
 // Erreurs : aucune ; sans jetons chargés, les cotes sont nulles et aucune carte n'est visible.
 // Dépendances : quickshell ≥ 0.3 (ScriptModel), Theme (notifications, space, elevation, material,
 // mouvementReduit), Ressort, Carte, Pile, Entree.
@@ -106,6 +106,12 @@ Item {
             Component.onCompleted: {
                 vue.places = vue.places.concat([place])
                 Qt.callLater(() => place.montee = true)
+                // Une place qui naît déjà sortante (vue recréée) est finie d'emblée, sans changement de finie : elle
+                // est oubliée quand même, au tour suivant, hors de la création du délégué, si elle est encore affichée
+                // (un délégué recréé dans le même tour la signale deux fois). La vue et l'entrée sont retenues ici : le
+                // délégué peut être détruit d'ici là, et son contexte avec lui.
+                const v = vue, e = entree
+                if (finie) Qt.callLater(() => { if (v.pile.affichees.includes(e)) v.partie(e) })
             }
             Component.onDestruction: vue.places = vue.places.filter(q => q !== place)
         }

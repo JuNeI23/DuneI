@@ -7,8 +7,12 @@ import "etiquettes.js" as Etiquettes
 // Rôle : porte la notification courante (remplaçable sur place par la pile), sa clé de remplacement et son état
 // (affichée, survolée, retenue, sortante). La minuterie ne tourne que si l'entrée est affichée, ni survolée, ni
 // retenue, ni sortante, et que sa durée est positive ; chaque arrêt garde le temps restant, chaque reprise repart de
-// lui. À son terme, le signal echue est émis ; la pile y répond par expire(). Une mise à jour du résumé ou du corps de
-// la notification courante réarme le compte à la durée pleine.
+// lui. À son terme, le signal echue est émis ; la pile y répond par expire(). Un remplacement (renouveler) remet
+// l'heure d'arrivée à l'instant présent et le compte à la durée pleine : la pile l'appelle pour un remplacement par
+// étiquette, et l'entrée elle-même à tout changement d'une propriété de la notification courante, puisque le serveur
+// de Quickshell met à jour sur place une notification remplacée par replaces_id sans émettre de signal propre.
+// Limite : un remplacement strictement identique (mêmes propriétés, mêmes indices) ne change aucune propriété et
+// n'est donc pas vu ; notify-send joint toujours l'indice sender-pid, qui diffère d'un envoi à l'autre.
 // Entrées : notification (objet à l'interface de Quickshell.Services.Notifications.Notification), arrivee, cle,
 // affichee (posée par la pile), survolee (écrite par la carte), retenue (liée par la pile), sortante (posée par la
 // pile). Sorties : restant (ms, lecture seule pour les autres), duree, signaux echue() et fermee(raison).
@@ -62,6 +66,10 @@ Scope {
         if (active) lancer()
     }
 
+    // renouveler — suite d'un remplacement : l'heure d'arrivée devient l'instant présent et le compte est réarmé.
+    // Entrées, sortie, erreurs : aucune. Dépendances : rearmer.
+    function renouveler() { arrivee = new Date(); rearmer() }
+
     onActiveChanged: active ? lancer() : suspendre()
     onDureeChanged: rearmer()
     Component.onCompleted: {
@@ -75,10 +83,18 @@ Scope {
     }
 
     // La notification courante seule : après un remplacement, la fermeture de l'ancienne ne retrouve plus l'entrée.
+    // Tout changement reçu est un remplacement par replaces_id.
     Connections {
         target: entree.notification
-        function onSummaryChanged() { entree.rearmer() }
-        function onBodyChanged() { entree.rearmer() }
+        function onSummaryChanged() { entree.renouveler() }
+        function onBodyChanged() { entree.renouveler() }
+        function onAppNameChanged() { entree.renouveler() }
+        function onAppIconChanged() { entree.renouveler() }
+        function onImageChanged() { entree.renouveler() }
+        function onUrgencyChanged() { entree.renouveler() }
+        function onExpireTimeoutChanged() { entree.renouveler() }
+        function onActionsChanged() { entree.renouveler() }
+        function onHintsChanged() { entree.renouveler() }
         function onClosed(raison) { entree.fermee(raison) }
     }
 }

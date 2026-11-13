@@ -46,12 +46,15 @@ ShellRoot {
     IpcHandler {
         target: "essai"
 
-        // pret — vrai une fois les jetons chargés et la notification affichée. Sortie : « true » ou « false ».
+        // pret — vrai une fois les jetons chargés et la notification affichée. Entrées : aucune.
+        // Sortie : « true » ou « false ». Erreurs : aucune. Dépendances : Theme, carte.
         function pret(): string { return String(Theme.notifications !== undefined && carte.entree !== null) }
 
         // regler — règle la notification sur place.
         // Entrées : app, resume, corps ; urgence (0, 1 ou 2) ; image, chemin de l'image jointe ; icone, appIcon ;
         // actions, « identifiant:texte » séparés par des virgules, « » pour aucune. Sortie : aucune.
+        // Erreurs : aucune ; une image ou une icône introuvable laisse un refus de chargement de Qt au journal.
+        // Dépendances : notification, FausseNotification.poserActions.
         function regler(app: string, resume: string, corps: string, urgence: int, image: string, icone: string,
                         actions: string): void {
             Object.assign(essai.notification, {appName: app, summary: resume, body: corps, urgency: urgence, image: image,
@@ -60,10 +63,12 @@ ShellRoot {
         }
 
         // survoler — pose le survol de l'entrée, comme le ferait le pointeur. Entrée : v. Sortie : aucune.
+        // Erreurs : aucune. Dépendances : carte.
         function survoler(v: bool): void { carte.entree.survolee = v }
 
         // etat — « source=…;titre=<couleur>;actions=<n>;libelles=a|b;visibles=…;mouvement=…;largeur=…;hauteur=…;
-        // lignesCorps=…;app=…;heure=HH:mm ». Sortie : texte. Dépendances : carte.
+        // lignesCorps=…;app=…;heure=HH:mm ». Entrées : aucune. Sortie : texte. Erreurs : aucune.
+        // Dépendances : carte.
         function etat(): string {
             return ["source=" + carte.sourceIcone, "titre=" + carte.couleurTitre, "actions=" + carte.actions.length,
                     "libelles=" + carte.libelles.join("|"), "visibles=" + carte.actionsVisibles,

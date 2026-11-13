@@ -47,7 +47,7 @@ Scope {
             const ancienne = cible.notification
             cible.notification = n
             ancienne.expire()
-            cible.rearmer()
+            cible.renouveler()
             return
         }
         const e = fabrique.createObject(pile, {notification: n, cle: cle, verrou: pile.verrou,

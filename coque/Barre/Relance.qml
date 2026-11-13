@@ -2,7 +2,7 @@ import QtQuick
 import Quickshell.Io
 
 // Relance — processus résident qui relance une lecture ponctuelle à chacune de ses lignes.
-// Rôle : motif de Vpn. Un processus de surveillance (nmcli monitor, dbus-monitor)
+// Rôle : motif de Vpn. Un processus de surveillance (nmcli monitor, par exemple)
 // émet une ligne à chaque changement ; chaque ligne relance une commande de lecture dont la sortie complète est
 // publiée par le signal lu. Une lecture initiale a lieu au démarrage et après chaque relance de la surveillance ;
 // une ligne reçue pendant une lecture en provoque une seconde juste après. Si la surveillance meurt

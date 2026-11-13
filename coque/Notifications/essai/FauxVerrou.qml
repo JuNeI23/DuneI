@@ -12,6 +12,7 @@ QtObject {
     property QtObject tenu: null
 
     // suivre — relâche l'objet tenu et retient l'objet visé si le verrou est fermé. Entrées, sortie, erreurs : aucune.
+    // Dépendances : relacher, FausseNotification.verrous.
     function suivre() {
         relacher()
         tenu = locked ? object : null
@@ -19,6 +20,7 @@ QtObject {
     }
 
     // relacher — retire le verrou de l'objet tenu, qui est détruit s'il est fermé et plus retenu.
+    // Entrées, sortie, erreurs : aucune. Dépendances : FausseNotification (verrous, liberer).
     function relacher() {
         const t = tenu
         tenu = null

@@ -33,11 +33,12 @@ PanelWindow {
     WlrLayershell.layer: WlrLayer.Top
     WlrLayershell.namespace: "dunei-notifications"
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+    // Region ne prend que des entiers : la boîte est arrondie vers l'extérieur pour couvrir chaque carte entière.
     mask: Region {
-        x: empilement.boite.x
-        y: empilement.boite.y
-        width: empilement.boite.width
-        height: empilement.boite.height
+        x: Math.floor(empilement.boite.x)
+        y: Math.floor(empilement.boite.y)
+        width: Math.ceil(empilement.boite.x + empilement.boite.width) - x
+        height: Math.ceil(empilement.boite.y + empilement.boite.height) - y
     }
 
     Empilement {

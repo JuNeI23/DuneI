@@ -15,7 +15,7 @@ import "../Theme"
 // bascule automatique.
 // Entrées (réglables) : connecte, connectivite et nom, par défaut ceux de EtatReseau (remplaçables par un test) ;
 // connus, vrai quand Networking a peuplé ses appareils ; veille, vrai pendant la veille de la machine ; commande, fonction(icone, titre, corps) qui rend le tableau d'arguments à lancer (notify-send par défaut, avec
-// l'étiquette de remplacement « reseau » pour que dunst remplace la notification précédente).
+// l'étiquette de pile « reseau », par laquelle le serveur de la coque remplace la notification précédente).
 // Sorties (lecture seule) : stable, dernier état notifié ou appris (vide avant le premier) ; armee, vrai tant que
 // le minuteur de stabilité court.
 // Erreurs : une connectivité « unknown » permanente (contrôle de connectivité désactivé) ne notifie rien, pas même

@@ -1,6 +1,6 @@
 # Notifications de la coque : conception (L2-19)
 
-Version 0.1, 2026-11-13.
+Version 0.3, 2026-11-13.
 
 ## Intention
 
@@ -73,9 +73,15 @@ Constats éprouvés sur caladan le 2026-11-13, par une sonde Quickshell 0.3.2 (d
 
 ### Serveur
 
-- Un `NotificationServer` unique dans la coque, avec `keepOnReload: false` et les prises en charge suivantes :
+- Un `NotificationServer` unique dans la coque, avec `keepOnReload: true` et les prises en charge suivantes :
   `actionsSupported`, `imageSupported`, `bodyMarkupSupported`, `persistenceSupported`. Chaque notification reçue passe
   à `tracked = true`.
+- `keepOnReload: true` (v0.3, décision du contrôleur à la relecture finale, contre la v0.2) : l'anti-objectif « ne
+  perdre aucune notification » prime. Quickshell recharge la coque à chaque modification d'un fichier de `coque/`, donc
+  à chaque `make install` ; avec `false`, les cartes à l'écran et la file disparaissaient sans avoir été vues. Avec
+  `true`, les notifications encore suivies de la génération précédente sont réémises par `onNotification`
+  (`lastGeneration` vrai) et reprennent place dans la nouvelle pile, avec une minuterie et une heure d'arrivée neuves.
+  Éprouvé hors session par `CentreTest.test_rechargement`.
 - La coque possède `org.freedesktop.Notifications`. dunst est retiré de `paquets.toml` et désinstallé de caladan, ce qui
   supprime aussi son fichier d'activation D-Bus.
 - Le service est séparé de l'affichage. Un module de données (file, cartes visibles, minuteries) expose un modèle que la
@@ -102,6 +108,9 @@ Constats éprouvés sur caladan le 2026-11-13, par une sonde Quickshell 0.3.2 (d
   - l'image jointe (`image`), en disque, quand il y en a une ;
   - sinon l'icône de l'application (`appIcon` passée par `Quickshell.iconPath()`), dans un carré arrondi ;
   - sinon une icône générique de la coque.
+
+  Rien n'est jamais téléchargé : seules les sources locales (chemin absolu, `file://`, `image://`) sont chargées ; une
+  image ou une icône en `http(s)` passe aussitôt au maillon suivant.
 - **Texte** sur trois lignes :
   - en tête, le nom de l'application en capitales de 11 px, graisse 550, `textTertiary`, avec l'heure d'arrivée
     alignée à droite en chiffres tabulaires ;
@@ -124,9 +133,12 @@ Constats éprouvés sur caladan le 2026-11-13, par une sonde Quickshell 0.3.2 (d
   pause au survol et reprend à la sortie avec le temps qui restait. À échéance, la carte appelle `expire()`.
 - **Clic** sur une action : `invoke()` de l'action, puis la carte sort. Clic ailleurs : `dismiss()` et la carte sort.
 - **Fermeture par l'application** (`CloseNotification`) : la carte sort de la même façon.
-- **Remplacement** : la carte en place prend le nouveau contenu sans rejouer son entrée, et sa minuterie repart à zéro.
-  C'est le choix de Claude. Une notification encore en file est remplacée dans la file, à sa place. Deux voies y mènent :
-  - `replaces_id`, que le serveur Quickshell traite lui-même ;
+- **Remplacement** : la carte en place prend le nouveau contenu sans rejouer son entrée, sa minuterie repart à zéro et
+  l'heure affichée devient celle du remplacement. C'est le choix de Claude. Une notification encore en file est remplacée dans la file, à sa place. Deux voies y mènent :
+  - `replaces_id`, que le serveur Quickshell traite lui-même : il met à jour l'objet sur place, sans signal propre. Tout
+    changement d'une propriété reçue (résumé, corps, application, icône, image, urgence, délai, actions, indices) vaut
+    donc remplacement. Limite : un envoi strictement identique, indices compris, ne change rien et n'est pas vu ;
+    `notify-send` joint toujours l'indice `sender-pid`, propre à chaque envoi ;
   - l'étiquette de pile (décision 9) : les indices `x-dunst-stack-tag` et `x-canonical-private-synchronous`, lus dans
     `hints`. La clé de rapprochement est le couple application et étiquette.
 
@@ -226,3 +238,4 @@ Constats éprouvés sur caladan le 2026-11-13, par une sonde Quickshell 0.3.2 (d
 |---------|------|-------------|
 | 0.1 | 2026-11-13 | Première rédaction après le remue-méninges et la maquette validée |
 | 0.2 | 2026-11-13 | Relecture du constructeur : remplacement par étiquette de pile, générique (décision 9) ; « Ouvrir » seulement si l'application le fournit (décision 10) ; pile sur l'écran actif |
+| 0.3 | 2026-11-13 | Relecture finale : `keepOnReload: true`, pour ne perdre aucune notification au rechargement de la coque ; un remplacement renouvelle l'heure d'arrivée, et tout changement reçu par `replaces_id` réarme la minuterie (limite de l'envoi identique) ; aucune image ni icône distante n'est téléchargée |
