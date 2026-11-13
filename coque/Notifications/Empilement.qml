@@ -6,16 +6,21 @@ import "../Theme"
 // Rôle : un Repeater sur un ScriptModel des affichées de la pile (plus récente en tête) pose une Carte par entrée, au
 // bord droit de l'empilement, à Theme.notifications.marge de ce bord. La cible verticale d'une carte est marge plus la
 // somme des hauteurs et des écarts des cartes non sortantes au-dessus d'elle : une carte qui sort libère sa place
-// aussitôt, et celles du dessous remontent. Trois Ressort par carte : la position verticale sur « reflow » ;
-// l'entrée sur « reveal » (fondu, glissement vers le bas de space.scale[1] et échelle de départ réduite du double de
-// ce glissement rapporté à la largeur), qui ne rejoue pas à un remplacement puisque l'entrée garde sa carte ; la
-// sortie sur « reveal » sortant (glissement vers la droite d'une largeur de carte et fondu), à la fin de laquelle le
-// signal partie est émis. En mouvement réduit (Theme.mouvementReduit), entrée et sortie ne sont qu'un fondu (ressorts
-// de nature « fondu ») ; la position, ressort de déplacement, se pose aussitôt.
+// aussitôt, et celles du dessous remontent. Cinq Ressort par carte, un par usage : la position verticale sur
+// « reflow » ; l'entrée sur « reveal », un fondu d'opacité et un déplacement (glissement vers le bas de
+// space.scale[1] et échelle de départ réduite du double de ce glissement rapporté à la largeur), qui ne rejoue pas à
+// un remplacement puisque l'entrée garde sa carte ; la sortie sur « reveal » sortant, un fondu d'opacité et un
+// déplacement (glissement vers la droite d'une largeur de carte), à la fin desquels le signal partie est émis. Les
+// ressorts d'opacité sont de nature « fondu », les autres de nature « deplacement ». En mouvement réduit
+// (Theme.mouvementReduit), les déplacements se posent aussitôt et leur effet est annulé (mobile vaut 0) : entrée et
+// sortie ne sont qu'un fondu au ressort « reduced ».
+// La première carte est posée à marge sous le haut utile, lui-même à debord sous le haut de l'empilement : l'ombre e3
+// et le début du glissement d'entrée ne sont pas rognés. La fenêtre remonte d'autant (marge de calque négative).
 // Les cartes changent de hauteur en continu (dépliant des actions) : seuls leurs placements et la boîte en tiennent
 // compte, l'empilement ne change jamais de taille de lui-même (surface constante, D132, D134).
 // Entrées : pile, la Pile dont les affichées sont montrées.
 // Sorties : largeurUtile, largeur à donner à l'empilement (largeur de carte, marge et débord de l'ombre e3 à gauche) ;
+// debord, débord de l'ombre e3, réservé aussi au-dessus de la première carte ;
 // boite, rectangle qui couvre toutes les cartes affichées, sortantes comprises, à leur position animée (vide sans
 // carte), pour le masque de saisie ; cartes, nombre de cartes posées ; signal partie(entree), à la fin de la sortie
 // d'une carte.
@@ -49,10 +54,10 @@ Item {
     signal partie(QtObject entree)
 
     // cible — position verticale visée par la carte d'une entrée.
-    // Entrée : entree. Sortie : marge plus hauteurs et écarts des cartes non sortantes au-dessus d'elle.
+    // Entrée : entree. Sortie : debord et marge plus hauteurs et écarts des cartes non sortantes au-dessus d'elle.
     // Erreurs : aucune ; une carte au-dessus pas encore posée ne compte pas encore. Dépendances : pile, places.
     function cible(entree) {
-        let y = marge
+        let y = debord + marge
         for (const e of pile.affichees) {
             if (e === entree) break
             const p = e.sortante ? null : places.find(q => q.entree === e)
@@ -73,7 +78,7 @@ Item {
             // Vrai au tour de boucle qui suit la création : l'entrée part alors de zéro, quel que soit l'ordre
             // d'achèvement des objets.
             property bool montee: false
-            readonly property bool finie: sortante && depart.value >= 1 && !depart.moving
+            readonly property bool finie: sortante && depart.value >= 1 && !depart.moving && !glisse.moving
 
             x: vue.width - vue.marge - vue.largeur
             y: position.value
@@ -83,16 +88,18 @@ Item {
 
             Ressort { id: position; transition: "reflow"; cible: vue.cible(place.entree) }
             Ressort { id: apparition; transition: "reveal"; nature: "fondu"; cible: place.montee ? 1 : 0 }
+            Ressort { id: arrivee; transition: "reveal"; cible: apparition.cible }
             Ressort { id: depart; transition: "reveal"; nature: "fondu"; sens: "out"; cible: place.sortante ? 1 : 0 }
+            Ressort { id: glisse; transition: "reveal"; sens: "out"; cible: depart.cible }
 
             Carte {
                 id: carte
                 entree: place.entree
                 pile: vue.pile
-                x: depart.value * vue.largeur * vue.mobile
-                y: -(1 - apparition.value) * vue.glissement * vue.mobile
+                x: glisse.value * vue.largeur * vue.mobile
+                y: -(1 - arrivee.value) * vue.glissement * vue.mobile
                 transformOrigin: Item.Top
-                scale: 1 - (1 - apparition.value) * 2 * vue.glissement / Math.max(1, vue.largeur) * vue.mobile
+                scale: 1 - (1 - arrivee.value) * 2 * vue.glissement / Math.max(1, vue.largeur) * vue.mobile
             }
 
             onFinieChanged: if (finie) vue.partie(entree)

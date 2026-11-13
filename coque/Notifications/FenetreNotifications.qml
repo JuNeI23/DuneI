@@ -6,7 +6,8 @@ import Quickshell.Hyprland
 // FenetreNotifications — fenêtre de calque de la pile de notifications (L2-19), unique, sur l'écran actif.
 // Rôle : PanelWindow ancrée en haut, à droite et en bas, sur la couche Top (le plein écran la recouvre, les popovers
 // en Overlay passent au-dessus), sans zone réservée : à exclusiveZone 0, le compositeur la pose sous la barre, dont il
-// respecte la zone exclusive. Elle porte l'Empilement des cartes de la pile du Centre. Sa largeur est constante
+// respecte la zone exclusive ; une marge de calque négative la remonte du débord de l'ombre e3, pour que l'ombre et le
+// glissement d'entrée de la première carte, posée à marge sous la barre, ne soient pas rognés. Elle porte l'Empilement des cartes de la pile du Centre. Sa largeur est constante
 // (largeur de carte, marge et débord de l'ombre e3) et sa hauteur suit l'écran : elle n'est jamais redimensionnée à
 // l'entrée ou à la sortie d'une carte (D132, D134) ; seul son masque de saisie change, à la boîte des cartes affichées,
 // sortantes comprises, et vide sans carte, pour que les clics passent partout ailleurs. Elle ne prend jamais le
@@ -27,6 +28,7 @@ PanelWindow {
     anchors { top: true; right: true; bottom: true }
     implicitWidth: empilement.largeurUtile
     exclusiveZone: 0
+    margins.top: -empilement.debord
     color: "transparent"
     WlrLayershell.layer: WlrLayer.Top
     WlrLayershell.namespace: "dunei-notifications"

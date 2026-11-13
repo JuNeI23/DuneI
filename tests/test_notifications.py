@@ -564,7 +564,7 @@ class CentreTest(EssaiCoque, unittest.TestCase):
         self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
 
     def cartes(self) -> dict:
-        """Cartes posées. Sortie : {n, boite: [x, y, l, h], largeur, hauteur}, voir cartes dans l'essai."""
+        """Cartes posées. Sortie : {n, boite: [x, y, l, h], largeur, hauteur, debord}, voir cartes dans l'essai."""
         return json.loads(self.appel("cartes"))
 
     def boite_stable(self) -> list[float]:
@@ -581,9 +581,13 @@ class CentreTest(EssaiCoque, unittest.TestCase):
         self.envoyer("-t", "0", "Recente", "Corps")
         self.jusqua(lambda: self.cartes()["n"] == 2, "deux cartes")
         taille = (self.cartes()["largeur"], self.cartes()["hauteur"])
+        debord = self.cartes()["debord"]
+        self.assertGreater(debord, 8)
         x, y, largeur, hauteur = self.boite_stable()
-        # Deux cartes de même hauteur, la plus récente en haut, à la marge du haut et du bord droit, espacées de 8.
-        self.assertEqual((y, largeur), (8, 340))
+        # Deux cartes de même hauteur, la plus récente en haut, à la marge du haut utile (sous le débord de l'ombre,
+        # que la fenêtre réserve au-dessus) et du bord droit, espacées de 8. L'ombre déborde à gauche dans la fenêtre.
+        self.assertEqual((y, largeur), (debord + 8, 340))
+        self.assertEqual(x, debord)
         self.assertEqual(x + largeur + 8, taille[0])
         une = (hauteur - 8) / 2
         # Le dépliant des actions de la carte du bas agrandit la boîte, jamais l'empilement.
@@ -594,7 +598,7 @@ class CentreTest(EssaiCoque, unittest.TestCase):
         # La carte du haut sort au clic : celle du bas remonte à la marge, la boîte se réduit à elle.
         self.appel("cliquer", "Recente")
         self.jusqua(lambda: self.etat() == (["Ancienne"], []), "carte du haut oubliée")
-        self.assertEqual(self.boite_stable(), [x, 8, 340, une])
+        self.assertEqual(self.boite_stable(), [x, debord + 8, 340, une])
         self.assertEqual((self.cartes()["largeur"], self.cartes()["hauteur"]), taille)
         self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
 
@@ -606,10 +610,15 @@ class CentreTest(EssaiCoque, unittest.TestCase):
         self.jusqua(lambda: self.etat() == ([], []), "carte sortie")
 
     def test_rafale_entierement_vue(self):
+        # Retenue pendant l'envoi : le décompte ne dépend pas de la vitesse des vingt envois.
+        self.appel("retenir", "true")
         resumes = [f"R{i}" for i in range(20)]
         envois = [subprocess.Popen(["notify-send", r, "Corps"], env=self.env_prive()) for r in resumes]
         for envoi in envois:
             self.assertEqual(envoi.wait(timeout=DELAI), 0)
+        self.jusqua(lambda: len(self.etat()[1]) == 20, "vingt en file")
+        self.assertEqual(self.etat()[0], [])
+        self.appel("retenir", "false")
         affichees, file = self.etat()
         self.assertEqual((len(affichees), len(file)), (5, 15))
         self.jusqua(lambda: self.etat() == ([], []), "rafale écoulée", delai=3 * DELAI)

@@ -107,12 +107,12 @@ ShellRoot {
         // Entrées : resume, v. Sortie : aucune. Dépendances : trouver.
         function survoler(resume: string, v: bool): void { essai.trouver(resume).survolee = v }
 
-        // cartes — JSON {n, boite: [x, y, l, h], largeur, hauteur} : cartes posées, boîte du masque et taille de
-        // l'empilement. Sortie : texte. Dépendances : empilement.
+        // cartes — JSON {n, boite: [x, y, l, h], largeur, hauteur, debord} : cartes posées, boîte du masque, taille
+        // de l'empilement et débord de l'ombre réservé au-dessus des cartes. Sortie : texte. Dépendances : empilement.
         function cartes(): string {
             const b = empilement.boite
             return JSON.stringify({n: empilement.cartes, boite: [b.x, b.y, b.width, b.height],
-                                   largeur: empilement.width, hauteur: empilement.height})
+                                   largeur: empilement.width, hauteur: empilement.height, debord: empilement.debord})
         }
     }
 }
