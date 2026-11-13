@@ -37,7 +37,7 @@ ShellRoot {
         Bluetooth { id: bluetooth }
         Parametres { id: parametres }
         Vpn { id: vpn }
-        Notifications { id: notifications; actif: false }
+        Notifications { id: notifications }
     }
 
     // Réactive EtatReseau peu après son arrêt : le moniteur réel, tué par l'arrêt, ne doit pas se voir relancé
@@ -136,13 +136,6 @@ ShellRoot {
         // relancesVpn — nombre de démarrages de la surveillance de EtatReseau. Sortie : entier.
         // Dépendances : EtatReseau.
         function relancesVpn(): int { return EtatReseau.relances }
-
-        // surveillerNotifications — comme surveillerVpn, pour Notifications.
-        // Entrées : commande, lecture. Sortie : aucune. Dépendances : notifications.
-        function surveillerNotifications(commande: string, lecture: string): void {
-            notifications.surveille = ["sh", "-c", commande]; notifications.lecture = ["sh", "-c", lecture]
-            notifications.actif = true
-        }
 
         // etat — relevé des indicateurs en texte « clé=valeur » séparé par des « ; » : visibilité, texte, icône.
         // Entrée : nom de l'indicateur (horloge, logo, batterie, jourNuit, reseau, bluetooth, parametres, notifications).

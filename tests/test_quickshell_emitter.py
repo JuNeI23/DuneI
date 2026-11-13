@@ -31,7 +31,7 @@ class QuickshellEmitterTest(unittest.TestCase):
         self.assertEqual(list(self.out), [
             "_generated", "hue", "space", "density", "radius", "window", "layout", "reglages", "breakpoints", "typo", "icons",
             "familles", "moments", "defaut", "themes", "pastilles", "bureau", "bureauxVirtuels", "presquile",
-            "galerie"])
+            "galerie", "notifications"])
         self.assertEqual(list(self.nuit), ["color", "states", "focus", "disabled", "elevation", "material", "glass", "render",
                                            "knob", "controls"])
 
@@ -55,6 +55,12 @@ class QuickshellEmitterTest(unittest.TestCase):
         self.assertEqual(self.out["galerie"], {"largeur": 160, "hauteur": 90, "coupe": 56, "echelle": 1.06,
                                                "voile": 0.30, "delai": 2000, "tenue": 200, "pas": 60,
                                                "dossier": "~/Documents/Images/Wallpapers"})
+
+    def test_notifications(self):
+        """Vérifie les jetons de la pile de notifications : largeur, marge, écart, plafond, durée, icône, intérieur,
+        lignes de corps."""
+        self.assertEqual(self.out["notifications"], {"largeur": 340, "marge": 8, "ecart": 8, "plafond": 5,
+                                                     "duree": 5000, "icone": 36, "interieur": 12, "lignes": 3, "reprise": 1000})
 
     def test_accent_discret(self):
         """Vérifie que l'accent discret émis de chaque thème est celui du modèle, au format `#rrggbb`."""

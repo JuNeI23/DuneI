@@ -3824,3 +3824,52 @@ deux machines, dont les écrans ont presque la même densité (141 et 162 points
 
 *Touché : `config/hypr/modules/ecrans.lua`, `config/hypr/machines/arrakis-core.lua`, `config/hypr/machines/caladan.lua`,
 carnet (version 1.42).*
+
+### D162 · La coque remplace dunst comme serveur de notifications
+
+La coque Quickshell devient le serveur `org.freedesktop.Notifications` et dunst est retiré : `paquets.toml` ne le
+porte plus et il est désinstallé de caladan. Le module `coque/Notifications/` se compose de `Pile` (file sans perte,
+plafond de cinq cartes, minuteries), `Entree` (verrou `Retainable` tenu jusqu'à la fin de la sortie), `Carte` (verre
+e3, maquette validée), `Empilement` (placement et mouvement par `Ressort`), `FenetreNotifications` (calque Top,
+`exclusiveZone` à 0, espace de noms `dunei-notifications`, taille constante, masque de saisie) et `Centre`
+(`NotificationServer`). Les valeurs vivent dans la section `[notifications]` de `tokens.toml` : `largeur` 340, `marge`
+8, `ecart` 8, `plafond` 5, `duree` 5000, `icone` 36, `interieur` 12, `lignes` 3, `reprise` 1000.
+
+Décisions de Nicolas (fiche `docs/superpowers/specs/2026-11-13-notifications-design.md`, « Décisions de Nicolas » 1 à
+10) : un clic ferme la carte, avec une sortie animée ; aucune fusion, rien n'est perdu ; les popovers passent
+au-dessus ; les actions sont des libellés en texte, à droite, au survol, « Ouvrir » étant l'action `default` et
+n'apparaissant que si l'application la fournit ; une notification urgente a le titre en rouge ; en plein écran, les
+cartes attendent ; le remplacement est générique, par étiquette de pile (une liste unique d'indices,
+`x-dunst-stack-tag`, `x-canonical-private-synchronous`, puis la clé application plus étiquette) ; le son viendra plus
+tard.
+
+Arbitrages de Claude :
+- la pile s'affiche sur l'écran actif ;
+- une durée de 0 signifie « jusqu'au clic » ;
+- un remplacement ne rejoue pas l'entrée, mais la minuterie et l'heure sont remises à neuf ;
+- `keepOnReload: true`, contre la fiche v0.2 : chaque `make install` ou modification de `coque/` recharge la coque, et
+  sans ce réglage les cartes et la file disparaissaient ;
+- les images distantes ne sont jamais téléchargées et les balises `<img>` sont retirées du corps ;
+- la cloche de la barre est simplifiée (fixe) en attendant la feature suivante.
+
+Retours de la recette à l'écran (2026-11-13) : l'icône est centrée sur la hauteur du texte ; le titre passe à 15 px,
+le 13 px de la maquette ne se distinguant pas du corps dans la coque ; le corps a un interligne de 1,45 en hauteur
+fixe ; une carte sortante fige sa position (en rafale, des cartes partaient vers le haut) ; la file attend une
+seconde (`reprise`) après la fin d'un plein écran. Nicolas a validé la forme, le clic, le popover au-dessus, les
+thèmes, une rafale de vingt entièrement vue, le survol qui suspend et le plein écran.
+
+*Touché : `coque/Notifications/`, `coque/Barre/` (cloche), `tokens.toml`, `paquets.toml`, la fiche et le plan du
+2026-11-13, backlog (version 1.53), notes de direction (version 1.49), carnet (version 1.44).*
+
+### D163 · Les fenêtres de réglages attendent ; la fenêtre Réseau sera refaite de zéro
+
+Nicolas reporte à plus tard L2-66 (la fenêtre Son) et toute feature qui ouvre une fenêtre du genre de la fenêtre
+Réseau. Il juge la fenêtre Réseau livrée par L2-65 « pas du tout » satisfaisante : elle sera refaite de zéro, mais pas
+maintenant. L2-65 passe donc de « Fait » à « À refaire de zéro », et ce que D149 à D157 y ont établi reste consigné
+comme état de départ de cette refonte.
+
+Raison : la fenêtre Réseau « ne va pas du tout » (Nicolas) ; une fenêtre Son bâtie sur le même modèle hériterait de
+ses défauts. Nicolas a choisi de passer aux notifications (L2-19) ; leur suite, la cloche avec pastille, l'historique et
+« ne pas déranger » (L2-67), devient la prochaine étape.
+
+*Touché : backlog (version 1.53), notes de direction (version 1.49).*

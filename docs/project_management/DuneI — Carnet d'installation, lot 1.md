@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.43. Historique en fin de document.
+Version 1.44. Historique en fin de document.
 
 Socle amorçable.
 
@@ -1992,7 +1992,7 @@ journalctl --user -u dunei-coque.service -e     # erreurs QML éventuelles
 - **UPower** donne `percentage` sur 0–1 ; la barre normalise les deux échelles.
 - **`font.features` posé sur une instance de `Texte`** supplante la liaison `font: Theme.police(…)` du composant : le
   texte retombe à 12 px. On passe par l'entrée `tabulaire` (D95).
-- **dunst** tient `org.freedesktop.Notifications` : la coque ne doit jamais instancier de `NotificationServer`.
+- **`org.freedesktop.Notifications`** : la coque en est le serveur depuis L2-19 (D162) ; dunst est retiré et aucun autre serveur ne doit tourner.
 - **Un masque `Region { item: … }` ne suit pas ses ancêtres** (Quickshell 0.3.2) : il ne se recalcule que sur la
   géométrie propre de l'item. Quand le Wi-Fi apparaît après coup, la rangée droite glisse et le masque reste sur le
   Wi-Fi : la barre semble inerte. Le masque se calcule donc à coordonnées cumulées, rangée par rangée (D100).
@@ -2257,6 +2257,29 @@ Nicolas a validé la recette à l'écran le 2026-11-07 : ouverture et fermeture,
 mise en valeur, montée du fond, clics sur la barre intacts, glissement `navigate` et bascule des bureaux. Le plein écran
 n'a pas été éprouvé avec une vraie fenêtre (D129).
 
+### Notifications — L2-19
+
+La coque (`coque/Notifications/`) est le serveur `org.freedesktop.Notifications` ; dunst est retiré de `paquets.toml`
+(D162). Passage sur une machine qui l'avait encore :
+
+```
+sudo pacman -Rns dunst        # emporte aussi son fichier d'activation D-Bus
+make install
+systemctl --user restart dunei-coque.service
+busctl --user status org.freedesktop.Notifications     # doit annoncer Comm=qs
+notify-send "Essai" "La coque répond"                    # une carte apparaît en haut à droite
+```
+
+Le désinstaller est indispensable : tant que `dunst.service` ou son fichier d'activation D-Bus subsiste, il peut
+reprendre le nom du bus avant la coque, et `Comm=` n'annonce pas `qs`.
+
+Mise en garde de développement : modifier un QML de la coque par `sed -i` remplace le fichier par un nouveau, et
+Quickshell, qui surveille l'ancien, perd sa surveillance : aucun rechargement n'a lieu. Il faut écrire le fichier en
+place (l'outil d'édition, ou une redirection `>`), ou redémarrer `dunei-coque.service`.
+
+Recette à l'écran validée par Nicolas le 2026-11-13 : forme de la carte, clic qui ferme, popover au-dessus, thèmes,
+rafale de vingt entièrement vue, survol qui suspend, plein écran qui retient les cartes.
+
 ## Lecteur d'empreinte — nouveau
 
 Cet élément n'existe dans aucun document du projet. Il est consigné ici parce qu'il s'installe au lot 1, mais **son travail de conception appartient au lot 5**.
@@ -2359,6 +2382,7 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 
 | Version | Date | Changement |
 | --- | --- | --- |
+| 1.44 | 2026-11-13 | Notifications (L2-19) : la coque remplace dunst ; procédure de passage (`pacman -Rns dunst`, `busctl`) et mise en garde sur `sed -i` et la surveillance de Quickshell (D162). |
 | 1.43 | 2026-11-12 | Entrée : la touche Compose quitte `entree.lua` pour le fichier machine ; caladan la place sur Ctrl droit (`compose:rctrl`), AltGr rend `€` ; arrakis-core n'en déclare aucune (D160). |
 | 1.42 | 2026-11-10 | XWayland en pixels réels (`force_zero_scaling = true`) et échelle de Steam par fichier machine (D161). |
 | 1.41 | 2026-11-10 | Deuxième machine, `arrakis-core` : fichier machine, installation sur une configuration primitive sans bascule (D158) |

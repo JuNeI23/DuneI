@@ -400,9 +400,8 @@ class RelanceTest(BarreIpc, unittest.TestCase):
         time.sleep(attente)
         self.assertIn(indice, self.appeler("etat", etat))
 
-    def test_notifications_lit_apres_ligne(self):
-        self.valeur_apres_ligne("surveillerNotifications", "notifications", "false", "true", "cat ", 1.5,
-                                "icone=notifications-disabled")
+    def test_cloche_fixe(self):
+        self.assertIn("icone=preferences-system-notifications", self.appeler("etat", "notifications"))
 
     def test_vpn_lit_apres_ligne(self):
         self.valeur_apres_ligne("surveillerVpn", "vpn", "", "wireguard", "cat ", 1.5, "visible=true")
@@ -410,12 +409,12 @@ class RelanceTest(BarreIpc, unittest.TestCase):
     def test_ligne_pendant_lecture_non_perdue(self):
         """Deux lignes rapprochées, lecture lente : l'état final reflète la seconde valeur."""
         fichier = Path(self.tmp.name) / "etat-rafale"
-        fichier.write_text("false")
-        self.appeler("surveillerNotifications",
-                     f"sleep 0.8; echo ligne; sleep 0.2; echo true > {fichier}; echo ligne; sleep 5",
+        fichier.write_text("")
+        self.appeler("surveillerVpn",
+                     f"sleep 0.8; echo ligne; sleep 0.2; echo wireguard > {fichier}; echo ligne; sleep 5",
                      f"cat {fichier}; sleep 0.5")
         time.sleep(2.5)
-        self.assertIn("icone=notifications-disabled", self.appeler("etat", "notifications"))
+        self.assertIn("visible=true", self.appeler("etat", "vpn"))
 
     def test_indicateurs_sans_erreur(self):
         for nom in ("horloge", "logo", "batterie", "jourNuit", "reseau", "bluetooth", "parametres"):

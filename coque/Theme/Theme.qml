@@ -75,6 +75,8 @@ Singleton {
     readonly property var reglages: tokens?.reglages
     // Galerie de fonds d'écran (L2-60) : vignette, coupe, échelle, voile, délai de fermeture, pas du pavé, dossier.
     readonly property var galerie: tokens?.galerie
+    // Pile de notifications (L2-19) : largeur, marge, écart, plafond, durée par défaut, icône, intérieur, lignes de corps.
+    readonly property var notifications: tokens?.notifications
     readonly property var breakpoints: tokens?.breakpoints
     readonly property var typo: tokens?.typo
     readonly property var icons: tokens?.icons

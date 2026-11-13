@@ -1662,5 +1662,16 @@
     "tenue": 200,
     "pas": 60,
     "dossier": "~/Documents/Images/Wallpapers"
+  },
+  "notifications": {
+    "largeur": 340,
+    "marge": 8,
+    "ecart": 8,
+    "plafond": 5,
+    "duree": 5000,
+    "icone": 36,
+    "interieur": 12,
+    "lignes": 3,
+    "reprise": 1000
   }
 }
