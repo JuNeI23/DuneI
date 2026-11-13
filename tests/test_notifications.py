@@ -4,14 +4,19 @@ La coque d'essai coque/Notifications/essai/pile/ crée des notifications factice
 les remet à Pile ; aucun serveur de notifications n'est lancé, aucun bus D-Bus n'est touché. La durée par défaut
 (notifications.duree) est ramenée à 600 ms dans les jetons de l'essai, avant le lancement.
 
+La coque d'essai coque/Notifications/essai/carte/ pose une seule Carte, dans une fenêtre jamais montrée (plateforme
+offscreen), sur une notification factice réglée par IPC.
+
 Ignoré sans session Wayland ou sans Quickshell (contrôle de GitHub).
 """
 
 import json
 import os
+import struct
 import subprocess
 import time
 import unittest
+import zlib
 
 from tests.test_coque_theme import DELAI, QS, ROOT, EssaiCoque
 
@@ -250,6 +255,145 @@ class PileTest(EssaiCoque, unittest.TestCase):
         self.appel("oublier", 1)
         self.assertEqual(self.etat(), (["2"], []))
         self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
+
+
+def png(chemin, cote: int = 64) -> None:
+    """Écrit une image PNG carrée et unie, sans dépendance extérieure.
+
+    Entrées : chemin — fichier écrit ; cote — côté en pixels. Sortie : aucune.
+    Erreurs : OSError si l'écriture échoue. Dépendances : struct, zlib.
+    """
+    def bloc(nature: bytes, donnees: bytes) -> bytes:
+        return struct.pack(">I", len(donnees)) + nature + donnees + struct.pack(">I", zlib.crc32(nature + donnees))
+    lignes = b"".join(b"\x00" + b"\x80\x40\x20" * cote for _ in range(cote))
+    chemin.write_bytes(b"\x89PNG\r\n\x1a\n" + bloc(b"IHDR", struct.pack(">IIBBBBB", cote, cote, 8, 2, 0, 0, 0))
+                       + bloc(b"IDAT", zlib.compress(lignes)) + bloc(b"IEND", b""))
+
+
+@unittest.skipUnless(os.environ.get("WAYLAND_DISPLAY") and QS, "session Wayland et Quickshell requis")
+class CarteTest(EssaiCoque, unittest.TestCase):
+    """La carte : couleur du titre, chaîne d'icône, corps borné et rangée d'actions dépliée au survol.
+
+    Thèmes éprouvés : dominante/nuit, dominante/jour et thematisee/nuit de la teinte 55 (la famille thématisée n'a pas
+    de jour dans les jetons générés).
+    """
+
+    essai = ESSAI / "carte"
+    teintes = (55,)
+    # Sous offscreen, Qt ne charge aucun thème de plateforme et QIcon ne résout aucun nom d'icône ; le thème gtk3
+    # (qt6-base) rend la résolution par nom, dans le thème DuneI choisi par la directive IconTheme de l'essai. Ce
+    # thème interroge le portail par le bus de session : l'adresse « disabled: » l'en coupe, et l'essai ne touche
+    # aucun bus (avertissements au démarrage seulement).
+    environnement = {"QT_QPA_PLATFORM": "offscreen", "QT_QPA_PLATFORMTHEME": "gtk3",
+                     "DBUS_SESSION_BUS_ADDRESS": "disabled:"}
+    THEMES = (("dominante", "nuit"), ("dominante", "jour"), ("thematisee", "nuit"))
+
+    def setUp(self):
+        super().setUp()
+        self.installer(55)
+        self.lancer(self.dir)
+        self.attendre("essai : prêt")
+        self.jusqua(lambda: self.appel("pret") == "true", "jetons chargés")
+
+    appel = PileTest.appel
+
+    def jusqua(self, condition, message: str, delai: float = DELAI):
+        """Attend qu'une condition devienne vraie.
+
+        Entrées : condition — fonction sans argument ; message — ajouté à l'échec ; delai — en secondes.
+        Sortie : la première valeur vraie rendue par la condition.
+        Erreurs : échec du test au délai, avec l'état de la carte et le journal de la coque. Dépendances : appel.
+        """
+        fin = time.monotonic() + delai
+        while not (valeur := condition()):
+            if time.monotonic() > fin:
+                self.fail(f"{message}\n{self.appel('etat')}\n{self.journal()}")
+            time.sleep(0.02)
+        return valeur
+
+    def regler(self, app: str = "App", resume: str = "Titre", corps: str = "Corps", urgence: int = 1,
+               image: str = "", icone: str = "", actions: str = "") -> None:
+        """Règle la notification de la carte. Entrées : celles de regler dans l'essai ; actions — « id:texte,… »."""
+        self.appel("regler", app, resume, corps, urgence, image, icone, actions)
+
+    def etat(self) -> dict:
+        """État de la carte. Sortie : dictionnaire des champs « cle=valeur » séparés par « ; »."""
+        return dict(p.split("=", 1) for p in self.appel("etat").split(";"))
+
+    def stable(self) -> dict:
+        """État de la carte une fois son dépliant au repos. Sortie : comme etat. Dépendances : etat, jusqua."""
+        return self.jusqua(lambda: (e := self.etat())["mouvement"] == "false" and e, "dépliant au repos")
+
+    def test_couleur_du_titre(self):
+        for famille, moment in self.THEMES:
+            with self.subTest(theme=f"{famille}/{moment}"):
+                self.choisir(famille, moment)
+                couleurs = self.vue(55, famille, moment)["color"]
+                self.regler(urgence=1)
+                self.jusqua(lambda: self.etat()["titre"] == couleurs["textPrimary"].lower(), "titre en textPrimary")
+                self.regler(urgence=2)
+                self.jusqua(lambda: self.etat()["titre"] == couleurs["error"].lower(), "titre en error")
+
+    def test_chaine_d_icone(self):
+        image = self.dir / "photo.png"
+        png(image)
+        self.regler(image=str(image), icone="preferences-system-notifications")
+        self.assertEqual(self.etat()["source"], "image")
+        self.regler(image="", icone="preferences-system-notifications")
+        self.assertEqual(self.etat()["source"], "application")
+        self.regler(image="", icone="")
+        self.assertEqual(self.etat()["source"], "generique")
+
+    def test_icone_introuvable(self):
+        avant = len(self.journal().splitlines())
+        self.regler(image="/inexistant.png", icone="nexistepas")
+        self.assertEqual(self.etat()["source"], "generique")
+        # Après le réglage, seul le refus de chargement de Qt, qui nomme le fichier, est admis au journal.
+        fautes = [l for l in self.journal().splitlines()[avant:]
+                  if ("WARN" in l or "ERROR" in l) and "inexistant.png" not in l]
+        self.assertEqual(fautes, [], self.journal())
+        self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
+
+    def test_corps_borne(self):
+        for corps in ("x" * 600, "<b>a</b> " + "mot <i>balisé</i> et encore " * 40):
+            with self.subTest(corps=corps[:12]):
+                self.regler(corps=corps)
+                etat = self.etat()
+                self.assertEqual(etat["largeur"], "340")
+                self.assertLessEqual(int(etat["lignesCorps"]), 3)
+                self.assertGreater(int(etat["lignesCorps"]), 1)
+
+    def test_actions(self):
+        # Sans survol, la rangée reste repliée dès la première pose des actions.
+        self.regler(actions="default:Activer,x:Plus tard")
+        self.assertEqual(self.stable()["visibles"], "false")
+        self.regler(actions="")
+        sans = self.stable()
+        self.assertEqual((sans["actions"], sans["visibles"]), ("0", "false"))
+        # Sans action, le survol ne déplie rien.
+        self.appel("survoler", "true")
+        time.sleep(0.3)
+        self.assertEqual(self.stable()["hauteur"], sans["hauteur"])
+        self.assertEqual(self.etat()["visibles"], "false")
+        self.appel("survoler", "false")
+        # L'action par défaut s'affiche « Ouvrir », quel que soit son texte.
+        self.regler(actions="default:Activer,x:Plus tard")
+        repos = self.stable()
+        self.assertEqual((repos["actions"], repos["libelles"]), ("2", "Ouvrir|Plus tard"))
+        self.assertEqual((repos["visibles"], repos["hauteur"]), ("false", sans["hauteur"]))
+        self.appel("survoler", "true")
+        depliee = self.stable()
+        self.assertEqual(depliee["visibles"], "true")
+        self.assertGreater(float(depliee["hauteur"]), float(sans["hauteur"]))
+        self.appel("survoler", "false")
+        repliee = self.stable()
+        self.assertEqual((repliee["visibles"], repliee["hauteur"]), ("false", sans["hauteur"]))
+
+    def test_en_tete(self):
+        self.regler(app="Signal")
+        etat = self.etat()
+        self.assertEqual(etat["app"], "SIGNAL")
+        self.assertRegex(etat["heure"], r"^\d\d:\d\d$")
 
 
 if __name__ == "__main__":

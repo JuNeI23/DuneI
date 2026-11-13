@@ -7,8 +7,9 @@ import QtQuick
 // Comme un objet Retainable, elle est détruite dès la fin des réactions à closed, sauf si un verrou (FauxVerrou) la
 // retient : elle l'est alors au retrait du dernier verrou.
 // Chaque appel reçu est signalé par appel(« id:expire », « id:dismiss », « id:invoke:<identifiant> »).
-// Entrées : id, appName, summary, body, urgency, expireTimeout (ms), hints, resident, image, appIcon.
-// Sorties : actions (une action « default »), signaux closed(raison), appel(texte) et detruite(). Erreurs : aucune.
+// Entrées : id, appName, summary, body, urgency (0 basse, 1 normale, 2 critique, comme NotificationUrgency),
+// expireTimeout (ms), hints, resident, image, appIcon.
+// Sorties : actions (une action « default » ; poserActions la remplace), signaux closed(raison), appel(texte) et detruite(). Erreurs : aucune.
 // Dépendances : aucune ; coque d'essai seulement.
 QtObject {
     id: fausse
@@ -30,6 +31,9 @@ QtObject {
     property list<QtObject> actions: [
         Action { identifier: "default"; text: "Ouvrir" }
     ]
+
+    // Fabrique des actions de poserActions ; QtObject n'a pas de propriété par défaut pour la porter en enfant.
+    property Component fabriqueAction: Component { Action {} }
 
     signal closed(int reason)
     signal appel(string texte)
@@ -61,6 +65,12 @@ QtObject {
     function liberer() { if (fermee && verrous === 0) destroy() }
 
     Component.onDestruction: detruite()
+
+    // poserActions — remplace les actions, dans l'ordre donné.
+    // Entrée : paires, tableau de [identifiant, texte]. Sortie : aucune. Erreurs : aucune. Dépendances : fabriqueAction.
+    function poserActions(paires) {
+        actions = paires.map(p => fabriqueAction.createObject(fausse, {identifier: p[0], text: p[1]}))
+    }
 
     // expire — expiration demandée par la coque : journalisée, puis fermeture (raison 1).
     function expire() { appel(id + ":expire"); fermer(1) }
