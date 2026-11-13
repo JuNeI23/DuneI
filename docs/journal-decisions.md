@@ -3873,3 +3873,22 @@ ses défauts. Nicolas a choisi de passer aux notifications (L2-19) ; leur suite,
 « ne pas déranger » (L2-67), devient la prochaine étape.
 
 *Touché : backlog (version 1.53), notes de direction (version 1.49).*
+
+### D164 · Un serveur de langage pour le Python de DuneI, à l'essai
+
+Claude Code reçoit le plugin officiel `pyright-lsp` (activé dans `enabledPlugins` de l'atelier) et la machine le
+paquet `pyright` (outils de `paquets.toml`). Claude trouve ainsi la définition, les références et le type d'un
+symbole Python par une requête, au lieu de chercher par grep puis de lire plusieurs fichiers.
+
+Raison : Nicolas cherchait à réduire la consommation de jetons. Aucun chiffre officiel n'existe ; la seule mesure
+indépendante (CircleCI, juin 2026) donne une économie modeste et variable selon la tâche, et les diagnostics
+injectés après chaque édition ont un coût propre. Le Python (98 fichiers, environ 23 000 lignes) est le terrain où
+le gain est le plus probable et où le serveur est le plus fiable. Le gain se jugera avec `/usage` sur une feature
+Python ; s'il est nul ou négatif, le plugin et le paquet sont retirés.
+
+Écartés pour l'instant : qmlls pour le QML, faute de plugin officiel, et parce que Quickshell documente qu'il ne
+résout pas ses types (`PanelWindow` notamment), ce qui produirait des diagnostics faux (on pourrait le brancher par un
+plugin local, diagnostics coupés, si l'essai Python convainc) ; Lua, shell et TOML, trop peu de code pour que la
+navigation par symbole paie.
+
+*Touché : `paquets.toml`, `claude/settings.json` de l'atelier, backlog (version 1.54), carnet (version 1.45).*

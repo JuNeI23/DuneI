@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.44. Historique en fin de document.
+Version 1.45. Historique en fin de document.
 
 Socle amorçable.
 
@@ -719,6 +719,9 @@ une fois dans Codex, avec `/hooks` : sans cela, Codex ne l'exécute pas et ses s
   `git -C ~/dunei-atelier status`.
 - Plugins : ceux de `enabledPlugins`, après déclaration de leur marché (`extraKnownMarketplaces`) ; un échec
   devient une note.
+- Serveurs de langage : `pyright-lsp` donne à Claude l'outil LSP sur le Python de DuneI (définition,
+  références, type) ; son binaire, `pyright`, vient de `paquets.toml`. Les diagnostics de pyright arrivent
+  dans le contexte après chaque édition. Le QML, le Lua, le shell et le TOML n'en ont pas (D164).
 - `~/.gitconfig` : l'inclusion de `git/gitconfig` est ajoutée si elle manque ; les lignes de `gh` restent.
 
 **Changements non envoyés.** `make install` et `dunei-maj` finissent par le relevé de
@@ -2382,6 +2385,7 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 
 | Version | Date | Changement |
 | --- | --- | --- |
+| 1.45 | 2026-11-13 | L3-26 : serveur de langage Python pour Claude Code, plugin `pyright-lsp` et paquet `pyright` (D164) |
 | 1.44 | 2026-11-13 | Notifications (L2-19) : la coque remplace dunst ; procédure de passage (`pacman -Rns dunst`, `busctl`) et mise en garde sur `sed -i` et la surveillance de Quickshell (D162). |
 | 1.43 | 2026-11-12 | Entrée : la touche Compose quitte `entree.lua` pour le fichier machine ; caladan la place sur Ctrl droit (`compose:rctrl`), AltGr rend `€` ; arrakis-core n'en déclare aucune (D160). |
 | 1.42 | 2026-11-10 | XWayland en pixels réels (`force_zero_scaling = true`) et échelle de Steam par fichier machine (D161). |
