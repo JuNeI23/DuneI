@@ -318,7 +318,7 @@ inset_shadow_depth = 4           # px logiques — profondeur de l'ombre intéri
 # Verre dépoli des surfaces de la coque (L2-04). Hyprland n'a qu'un thème : flou et règles de calque
 # ne varient pas avec le moment ; seules les opacités du verre, lues par la coque, le peuvent.
 [glass]
-namespaces = ["dunei-barre", "dunei-attention", "dunei-presquile", "dunei-popovers"]   # calques de la coque floutés
+namespaces = ["dunei-barre", "dunei-attention", "dunei-presquile", "dunei-popovers", "dunei-notifications"]   # calques de la coque floutés
 xray = ["dunei-barre"]       # flou du seul fond ; jamais un calque qui porte de l'E3
 ignore_alpha = 0.58          # > shade_opacity et scrim (jamais floutés), < opacité minimale du verre (0,60, D103)
 blur_size = 8
@@ -441,6 +441,16 @@ tenue = 200                  # ms pendant lesquelles la vignette validée reste 
                              # presqu'île ne se rétracte (mise en valeur du choix, recette de L2-60)
 pas = 60                     # px de pixelDelta du pavé tactile qui valent un pas de sélection ; réglé à la recette
 dossier = "~/Documents/Images/Wallpapers"   # dossier des images, « ~ » développé à l'exécution
+
+[notifications]               # pile de notifications de la coque (L2-19) ; px logiques sauf mention ; ms pour duree
+largeur = 340                 # largeur d'une carte
+marge = 8                     # distance de la pile au bord de l'écran
+ecart = 8                     # espace vertical entre deux cartes
+plafond = 5                   # nombre maximal de cartes affichées ; les suivantes attendent en file
+duree = 5000                  # ms d'affichage quand l'application ne fixe pas de délai (expireTimeout à -1)
+icone = 36                    # côté de l'icône ou de l'image de la carte
+interieur = 12                # marge intérieure de la carte
+lignes = 3                    # nombre maximal de lignes de corps affichées
 
 [bureaux_virtuels]
 nombre = 4                   # bureaux 1 à n, liés à SUPER + 1…n ; le bureau spécial (accueil) n'est pas compté
