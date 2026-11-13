@@ -167,6 +167,7 @@ class PileTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(self.etat(), (["2", "3"], []))
         self.assertEqual(self.appel("resume", 3), "troisieme")
         self.assertEqual(self.appels(), ["1:expire"])
+        self.jusqua(lambda: self.appel("existe", 1) == "false", "ancienne relâchée puis détruite")
         # Sans réarmement, l'expiration tomberait 500 ms après le remplacement.
         self.rester_sans("3:expire", 1.2 - (time.monotonic() - rearme))
         self.attendre_appel("3:expire", 2.0)
@@ -202,6 +203,7 @@ class PileTest(EssaiCoque, unittest.TestCase):
             self.creer(delai=0)
         self.appel("fermerParApp", 6)
         self.assertEqual(self.etat(), (["5", "4", "3", "2", "1"], ["7"]))
+        self.jusqua(lambda: self.appel("existe", 6) == "false", "retirée de la file, détruite")
         self.appel("fermerParApp", 1)
         self.assertEqual(self.etat(), (["7", "5", "4", "3", "2", "1s"], []))
 
@@ -217,6 +219,28 @@ class PileTest(EssaiCoque, unittest.TestCase):
         self.appel("agir", 3, "default")
         self.assertEqual(self.appels()[3:], ["3:invoke:default"])
         self.assertEqual(self.etat()[0], ["3s", "2s", "1s"])
+
+    def test_sortante_retenue_jusqu_a_oublier(self):
+        # Une notification fermée est détruite dès la fin des réactions à closed, sauf verrou : l'entrée sortante
+        # garde la sienne lisible pendant son animation de sortie, jusqu'à oublier.
+        self.creer(resume="lisible", delai=0)
+        self.appel("cliquer", 1)
+        self.assertEqual(self.etat()[0], ["1s"])
+        time.sleep(0.3)
+        self.assertEqual(self.appel("existe", 1), "true")
+        self.assertEqual(self.appel("resume", 1), "lisible")
+        self.appel("oublier", 1)
+        self.jusqua(lambda: self.appel("existe", 1) == "false", "relâchée à oublier, détruite")
+        self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
+
+    def test_sortante_ignoree(self):
+        self.creer(delai=0)
+        self.appel("residente", 1)
+        self.appel("cliquer", 1)
+        self.appel("cliquer", 1)
+        self.appel("agir", 1, "default")
+        self.assertEqual(self.appels(), ["1:dismiss"])
+        self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
 
     def test_oublier(self):
         self.creer(delai=0)

@@ -11,17 +11,23 @@ import "Notifications/essai"
 // journal des appels reçus par les notifications. tests/test_notifications.py (PileTest) la pilote.
 // Entrées : DUNEI_TOKENS_DIR, lu par Theme (durée par défaut ramenée par le test).
 // Sortie : « essai : prêt » au démarrage ; voir l'IpcHandler. Erreurs : celles de Theme, dans le journal.
-// Dépendances : quickshell ≥ 0.3 (IpcHandler), Pile, FausseNotification, liens Theme et Notifications.
+// Les notifications factices ne sont pas Retainable : la pile reçoit FauxVerrou à la place de RetainableLock.
+// Dépendances : quickshell ≥ 0.3 (IpcHandler), Pile, FausseNotification, FauxVerrou, liens Theme et Notifications.
 ShellRoot {
     id: essai
 
     property int suivant: 1
     property var notifications: ({})
     property var journal: []
+    // Identifiants des notifications factices détruites.
+    property var detruites: []
 
     Component.onCompleted: console.info("essai : prêt")
 
-    Pile { id: pile }
+    Pile {
+        id: pile
+        verrou: Component { FauxVerrou {} }
+    }
 
     Component {
         id: fabrique
@@ -48,6 +54,7 @@ ShellRoot {
             const n = fabrique.createObject(essai, {id: id, appName: app, summary: resume, body: corps,
                 expireTimeout: delai, hints: etiquette === "" ? {} : {"x-dunst-stack-tag": etiquette}})
             n.appel.connect(t => essai.journal = essai.journal.concat([t]))
+            n.detruite.connect(() => essai.detruites = essai.detruites.concat([id]))
             essai.notifications[id] = n
             pile.recevoir(n)
             return String(id)
@@ -80,6 +87,9 @@ ShellRoot {
 
         // resume — résumé montré par l'entrée qui tient la notification. Entrée : id. Sortie : texte.
         function resume(id: int): string { return essai.entree(id).notification.summary }
+
+        // existe — vrai si la notification n'est pas encore détruite. Entrée : id. Sortie : « true » ou « false ».
+        function existe(id: int): string { return String(!essai.detruites.includes(id)) }
 
         // etat — « affichees: id,… (s pour sortante) | file: id,… ». Sortie : texte. Dépendances : pile.
         function etat(): string {

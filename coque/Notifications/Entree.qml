@@ -13,7 +13,11 @@ import "etiquettes.js" as Etiquettes
 // affichee (posée par la pile), survolee (écrite par la carte), retenue (liée par la pile), sortante (posée par la
 // pile). Sorties : restant (ms, lecture seule pour les autres), duree, signaux echue() et fermee(raison).
 // Erreurs : sans jetons chargés, la durée par défaut vaut 0 et une notification au délai par défaut n'expire pas avant
-// leur chargement. Dépendances : Theme.notifications.duree, etiquettes.js.
+// leur chargement. Dépendances : Theme.notifications.duree, etiquettes.js, verrou (posé par la pile).
+// Durée de vie : une Notification de Quickshell est Retainable et détruite dès la fin des réactions à closed ;
+// l'entrée la retient par un verrou (RetainableLock dans la coque) jusqu'à sa propre destruction, à oublier ou au
+// retrait de la file, pour que la carte sortante garde son contenu pendant l'animation de sortie. Le verrou suit la
+// notification courante : après un remplacement, l'ancienne est relâchée.
 Scope {
     id: entree
 
@@ -25,6 +29,8 @@ Scope {
     property bool retenue: false
     property bool sortante: false
     property int restant: 0
+    // Fabrique du verrou qui retient la notification courante ; il reçoit object lié à notification.
+    property Component verrou
 
     readonly property int duree: Etiquettes.duree(notification ? notification.expireTimeout : -1,
                                                   Theme.notifications?.duree ?? 0)
@@ -58,7 +64,10 @@ Scope {
 
     onActiveChanged: active ? lancer() : suspendre()
     onDureeChanged: rearmer()
-    Component.onCompleted: rearmer()
+    Component.onCompleted: {
+        verrou?.createObject(entree, {object: Qt.binding(() => entree.notification)})
+        rearmer()
+    }
 
     Timer {
         id: minuterie

@@ -10,7 +10,9 @@ import "etiquettes.js" as Etiquettes
 // passe par le signal closed de la notification : en file, l'entrée est retirée et détruite ; affichée, elle devient
 // sortante, libère sa place aussitôt, et la vue appelle oublier à la fin de son animation de sortie.
 // Les tableaux sont réaffectés à chaque changement, jamais modifiés sur place, pour qu'un ScriptModel voie la différence.
-// Entrées : retenue (plein écran : la file ne s'écoule plus et les minuteries s'arrêtent).
+// Entrées : retenue (plein écran : la file ne s'écoule plus et les minuteries s'arrêtent) ; verrou, fabrique du verrou
+// qui retient la notification d'une entrée jusqu'à sa destruction (RetainableLock par défaut, remplacé dans l'essai
+// dont les notifications factices ne sont pas Retainable).
 // Sorties : affichees (Entree, plus récente en tête, sortantes comprises), file (Entree, ordre d'arrivée).
 // Erreurs : sans jetons chargés, le plafond vaut 0 et tout reste en file jusqu'à leur chargement.
 // Dépendances : Entree, etiquettes.js, Theme.notifications.plafond.
@@ -20,6 +22,9 @@ Scope {
     property bool retenue: false
     property var affichees: []
     property var file: []
+    property Component verrou: Component {
+        RetainableLock { locked: true }
+    }
     readonly property int plafond: Theme.notifications?.plafond ?? 0
 
     onRetenueChanged: ecouler()
@@ -45,7 +50,8 @@ Scope {
             cible.rearmer()
             return
         }
-        const e = fabrique.createObject(pile, {notification: n, cle: cle, retenue: Qt.binding(() => pile.retenue)})
+        const e = fabrique.createObject(pile, {notification: n, cle: cle, verrou: pile.verrou,
+                                                retenue: Qt.binding(() => pile.retenue)})
         e.fermee.connect(() => fermer(e))
         e.echue.connect(() => e.notification.expire())
         file = file.concat([e])
@@ -77,14 +83,15 @@ Scope {
         }
     }
 
-    // cliquer — clic sur une carte : la notification est écartée. Entrée : e. Sortie : aucune. Erreurs : aucune.
-    // Dépendances : Notification.dismiss.
-    function cliquer(e) { e.notification.dismiss() }
+    // cliquer — clic sur une carte : la notification est écartée ; une entrée déjà sortante est ignorée.
+    // Entrée : e. Sortie : aucune. Erreurs : aucune. Dépendances : Notification.dismiss.
+    function cliquer(e) { if (!e.sortante) e.notification.dismiss() }
 
     // agir — déclenche une action de la notification, puis l'écarte si elle est encore suivie (notification résidente,
-    // que l'action ne ferme pas). Entrées : e ; action, objet à l'interface de NotificationAction. Sortie : aucune.
+    // que l'action ne ferme pas) ; une entrée déjà sortante est ignorée. Entrées : e ; action, objet à l'interface de NotificationAction. Sortie : aucune.
     // Erreurs : aucune. Dépendances : NotificationAction.invoke, Notification.dismiss.
     function agir(e, action) {
+        if (e.sortante) return
         const n = e.notification
         action.invoke()
         if (n.resident && n.tracked) n.dismiss()
