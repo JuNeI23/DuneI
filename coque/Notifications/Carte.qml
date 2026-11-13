@@ -23,7 +23,8 @@ import "../Composants"
 // Dépendances : Quickshell (iconPath, QsWindow), Quickshell.Widgets (ClippingRectangle),
 // Quickshell.Services.Notifications (NotificationUrgency), Theme (notifications, color, radius, space, police),
 // Composants (Surface, OmbreElevation, Texte, Icone), Ressort, Entree, Pile.
-// Corps : balisage StyledText de Qt ; ses liens restent inertes (aucun gestionnaire de lien).
+// Corps : balisage StyledText de Qt, sans ses images (balises <img> retirées) ; ses liens restent inertes (aucun
+// gestionnaire de lien) et prennent la couleur du corps.
 Item {
     id: carte
 
@@ -173,7 +174,10 @@ Item {
             maximumLineCount: Theme.notifications?.lignes ?? 1
             elide: Text.ElideRight
             color: Theme.color?.textSecondary ?? "transparent"
-            text: carte.notification?.body ?? ""
+            // Les liens restent inertes : ils prennent la couleur du corps, pas celle de Qt.
+            linkColor: color
+            // Les balises <img> sont retirées : StyledText chargerait l'image, locale ou distante, sans borne de taille.
+            text: (carte.notification?.body ?? "").replace(/<img\b[^>]*>/gi, "")
         }
 
         // Rangée d'actions : hauteur et opacité suivent le dépliant ; le ressort peut dépasser, la hauteur reste

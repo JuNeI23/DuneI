@@ -280,11 +280,10 @@ class CarteTest(EssaiCoque, unittest.TestCase):
 
     essai = ESSAI / "carte"
     teintes = (55,)
-    # Sous offscreen, Qt ne charge aucun thème de plateforme et QIcon ne résout aucun nom d'icône ; le thème gtk3
-    # (qt6-base) rend la résolution par nom, dans le thème DuneI choisi par la directive IconTheme de l'essai. Ce
-    # thème interroge le portail par le bus de session : l'adresse « disabled: » l'en coupe, et l'essai ne touche
-    # aucun bus (avertissements au démarrage seulement).
-    environnement = {"QT_QPA_PLATFORM": "offscreen", "QT_QPA_PLATFORMTHEME": "gtk3",
+    # La coque d'essai ne voit ni le compositeur ni le bus de session. Sans thème de plateforme, Qt n'y résout aucun
+    # nom d'icône (le thème gtk3, qui le ferait, exige un affichage) : l'icône d'application s'y éprouve par chemin de
+    # fichier, et la résolution par nom de Quickshell.iconPath a été sondée en session réelle.
+    environnement = {"QT_QPA_PLATFORM": "offscreen", "WAYLAND_DISPLAY": None, "DISPLAY": None,
                      "DBUS_SESSION_BUS_ADDRESS": "disabled:"}
     THEMES = (("dominante", "nuit"), ("dominante", "jour"), ("thematisee", "nuit"))
 
@@ -337,9 +336,10 @@ class CarteTest(EssaiCoque, unittest.TestCase):
     def test_chaine_d_icone(self):
         image = self.dir / "photo.png"
         png(image)
-        self.regler(image=str(image), icone="preferences-system-notifications")
+        icone = ROOT / "generated" / "icons" / "DuneI" / "symbolic" / "preferences-system-notifications-symbolic.svg"
+        self.regler(image=str(image), icone=str(icone))
         self.assertEqual(self.etat()["source"], "image")
-        self.regler(image="", icone="preferences-system-notifications")
+        self.regler(image="", icone=str(icone))
         self.assertEqual(self.etat()["source"], "application")
         self.regler(image="", icone="")
         self.assertEqual(self.etat()["source"], "generique")
@@ -348,9 +348,11 @@ class CarteTest(EssaiCoque, unittest.TestCase):
         avant = len(self.journal().splitlines())
         self.regler(image="/inexistant.png", icone="nexistepas")
         self.assertEqual(self.etat()["source"], "generique")
-        # Après le réglage, seul le refus de chargement de Qt, qui nomme le fichier, est admis au journal.
+        self.regler(image="/inexistant.png", icone="/inexistante.svg")
+        self.assertEqual(self.etat()["source"], "generique")
+        # Après le réglage, seuls les refus de chargement de Qt, qui nomment les fichiers, sont admis au journal.
         fautes = [l for l in self.journal().splitlines()[avant:]
-                  if ("WARN" in l or "ERROR" in l) and "inexistant.png" not in l]
+                  if ("WARN" in l or "ERROR" in l) and not ("inexistant.png" in l or "inexistante.svg" in l)]
         self.assertEqual(fautes, [], self.journal())
         self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
 
@@ -362,6 +364,13 @@ class CarteTest(EssaiCoque, unittest.TestCase):
                 self.assertEqual(etat["largeur"], "340")
                 self.assertLessEqual(int(etat["lignesCorps"]), 3)
                 self.assertGreater(int(etat["lignesCorps"]), 1)
+        # Une image du corps n'est pas chargée : la carte garde la hauteur du même texte sans image.
+        photo = self.dir / "photo.png"
+        png(photo)
+        self.regler(corps="a  b")
+        sans = self.etat()["hauteur"]
+        self.regler(corps=f'a <img src="{photo}" width="500" height="500"> b')
+        self.assertEqual(self.etat()["hauteur"], sans)
 
     def test_actions(self):
         # Sans survol, la rangée reste repliée dès la première pose des actions.
