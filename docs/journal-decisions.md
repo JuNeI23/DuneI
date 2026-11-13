@@ -3868,7 +3868,8 @@ Réseau. Il juge la fenêtre Réseau livrée par L2-65 « pas du tout » satisfa
 maintenant. L2-65 passe donc de « Fait » à « À refaire de zéro », et ce que D149 à D157 y ont établi reste consigné
 comme état de départ de cette refonte.
 
-Raison : la coque a besoin de ses services transverses avant de nouvelles fenêtres, et la prochaine étape devient la
-suite naturelle des notifications, la cloche avec pastille, l'historique et « ne pas déranger ».
+Raison : la fenêtre Réseau « ne va pas du tout » (Nicolas) ; une fenêtre Son bâtie sur le même modèle hériterait de
+ses défauts. Nicolas a choisi de passer aux notifications (L2-19) ; leur suite, la cloche avec pastille, l'historique et
+« ne pas déranger » (L2-67), devient la prochaine étape.
 
 *Touché : backlog (version 1.53), notes de direction (version 1.49).*
