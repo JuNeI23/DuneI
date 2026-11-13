@@ -1,6 +1,6 @@
 # Notifications de la coque (L2-19) — plan d'implémentation
 
-Version 0.1
+Version 0.2
 
 > **Pour les agents d'exécution :** sous-compétence requise : superpowers:subagent-driven-development (recommandée) ou
 > superpowers:executing-plans, tâche par tâche. Les étapes se cochent (`- [ ]`).
@@ -253,7 +253,7 @@ l'état (`etat()` → `source=…;titre=<couleur>;actions=<n>;largeur=…;hauteu
 **Interfaces :**
 - Consomme : `Pile`, `Entree`, `Carte`.
 - Produit :
-  - `Centre` : `NotificationServer { keepOnReload: false; actionsSupported, imageSupported, bodyMarkupSupported,
+  - `Centre` : `NotificationServer { keepOnReload: true; actionsSupported, imageSupported, bodyMarkupSupported,
     persistenceSupported: true; onNotification: pile.recevoir(n) }` ; propriété `pile: Pile` lue par la fenêtre et,
     plus tard, par la cloche et l'historique ; `retenue` liée par défaut à
     `Hyprland.focusedMonitor?.activeWorkspace?.hasFullscreen ?? false` et remplaçable par l'essai.
@@ -366,3 +366,4 @@ constructeur » soldé, version 0.3).
 | Version | Date | Changement |
 |---|---|---|
 | 0.1 | 2026-11-13 | Première version, depuis la fiche v0.2 et la sonde du `replaces_id` sur bus privé. |
+| 0.2 | 2026-11-13 | `keepOnReload: true` au lieu de `false` (décision de la relecture finale, fiche v0.3 et D162) |

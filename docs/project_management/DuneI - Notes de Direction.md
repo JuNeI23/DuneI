@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas — révisée le 22 octobre 2026
 
-Version 1.48. Historique en fin de document.
+Version 1.49. Historique en fin de document.
 
 *Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent soixante-quinze lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
 
@@ -586,15 +586,28 @@ pastilles de fenêtre et couleur de l'onglet choisi passent par un ressort (D157
 correction, et Nicolas a accepté le gel résiduel de la coque (73 à 135 ms) plutôt que de garder la fenêtre cachée (D80
 maintenu). La fenêtre Son, détachée de L2-65, devient L2-66 (D153).
 
-Prochaine étape : **la fenêtre Son (L2-66)**, vers laquelle pointe déjà « Réglages du son… » du popover audio, avec son
-repérage propre avant la fiche. Le reste de L2-48, L2-57 (suites du popover Bluetooth), L2-58, L2-59 et L2-62 attendent
-leur tour.
+Les notifications de la coque sont faites (L2-19, D162). La coque est désormais le serveur
+`org.freedesktop.Notifications` et dunst est retiré. Les cartes, de verre e3, s'empilent en haut à droite de l'écran
+actif : cinq au plus, une file sans perte derrière, un clic qui ferme avec une sortie animée, des actions en texte au
+survol, un titre rouge pour l'urgence. Une notification qui porte une étiquette de pile remplace la précédente au lieu
+de s'ajouter, les popovers passent au-dessus, et les cartes attendent la fin d'un plein écran, plus une seconde. La
+recette à l'écran a fait centrer l'icône, passer le titre à 15 px et figer la position d'une carte sortante ; Nicolas
+a validé l'ensemble le 2026-11-13. La coque garde ses notifications en mémoire quand elle se recharge (`keepOnReload`).
+
+Nicolas reporte à plus tard la fenêtre Son (L2-66) et toute feature qui ouvre une fenêtre comme la fenêtre Réseau ;
+cette dernière (L2-65) ne le satisfait pas et sera refaite de zéro, pas maintenant (D163).
+
+Prochaine étape : **la cloche de la barre avec sa pastille rouge, l'historique des notifications et « ne pas
+déranger »** (L2-67), branchés sur la `Pile` du `Centre`. Le son de notification (L2-68) et l'« Ouvrir » propre à
+DuneI (L2-69) viennent plus tard. Le reste de L2-48, L2-57 (suites du popover Bluetooth), L2-58, L2-59 et L2-62
+attendent leur tour.
 
 ## Historique des versions
 
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-10 | Version initiale |
+| 1.49 | 2026-11-13 | L2-19 fait : notifications de la coque, dunst retiré (D162) ; L2-66 reportée, L2-65 à refaire de zéro (D163) ; prochaine étape : la cloche avec pastille, l'historique et « ne pas déranger » (L2-67) |
 | 1.48 | 2026-11-10 | L2-65 fusionné (PR #54) : recette à l'écran validée après une première série de corrections (D155 à D157) ; prochaine étape : L2-66 |
 | 1.47 | 2026-11-09 | L2-65 fait, en attente de fusion : fenêtre Réseau allégée (D149 à D154) ; fenêtre Son détachée en L2-66 (D153) ; prochaine étape : recette de L2-65, puis L2-66 |
 | 1.46 | 2026-11-08 | L2-12 fusionné (PR #52) ; L2-13 fait : indicateur d'énergie, popover du profil, alerte de la presqu'île (D145 à D148), recette validée à l'écran ; prochaine étape : L2-65 |

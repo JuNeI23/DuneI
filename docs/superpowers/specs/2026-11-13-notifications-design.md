@@ -1,6 +1,6 @@
 # Notifications de la coque : conception (L2-19)
 
-Version 0.3, 2026-11-13.
+Version 0.4, 2026-11-13.
 
 ## Intention
 
@@ -114,8 +114,9 @@ Constats éprouvés sur caladan le 2026-11-13, par une sonde Quickshell 0.3.2 (d
 - **Texte** sur trois lignes :
   - en tête, le nom de l'application en capitales de 11 px, graisse 550, `textTertiary`, avec l'heure d'arrivée
     alignée à droite en chiffres tabulaires ;
-  - le titre en 13 px, graisse 550, `textPrimary`, sur une ligne, coupé par une ellipse ;
-  - le corps en 13 px, `textSecondary`, sur trois lignes au plus, coupé par une ellipse.
+  - le titre en 15 px (le 13 px de la maquette ne se distinguait pas du corps dans la coque, recette du 2026-11-13), graisse 550, `textPrimary`, sur une ligne, coupé par une ellipse ;
+  - le corps en 13 px, `textSecondary`, interligne de 1,45 en hauteur fixe, sur trois lignes au plus, coupé par une ellipse.
+- **Alignement** : l'icône est centrée sur la hauteur du texte (recette).
 - **Urgente** (`urgency` Critical) : le titre en `error`, rien d'autre ne change.
 - **Actions au survol** : une rangée de libellés en texte de 13 px, graisse 550, à la couleur `accentStandalone`,
   alignée à droite sous le corps. Elle apparaît en dépliant animé (hauteur et opacité) et se replie quand la souris
@@ -147,7 +148,7 @@ Constats éprouvés sur caladan le 2026-11-13, par une sonde Quickshell 0.3.2 (d
 - **Plein écran** : tant que l'espace de travail actif de l'écran a une fenêtre en plein écran
   (`Hyprland.focusedMonitor?.activeWorkspace?.hasFullscreen`, comme `coque/Presquile/AnnonceurAlerte.qml`), aucune
   carte n'entre. Les cartes déjà visibles restent sous la fenêtre (calque Top) et leur minuterie s'arrête. Elles
-  reprennent à la sortie du plein écran, puis la file s'écoule.
+  reprennent à la sortie du plein écran, puis la file reprend après une seconde (`notifications.reprise`, recette), et s'écoule.
 
 ### Mouvement
 
@@ -205,12 +206,14 @@ Constats éprouvés sur caladan le 2026-11-13, par une sonde Quickshell 0.3.2 (d
 
 ## Laissé au constructeur
 
-- La structure exacte du service et du modèle (`ListModel`, tableau d'objets copiés, `ScriptModel`).
-- Le chargement des images et des icônes. Il doit être sûr face aux plantages connus : chargement synchrone des
-  icônes, `sourceSize` borné, image en cache.
-- Le traitement du balisage du corps (`StyledText` de Qt, liens désactivés ou non).
-- Le nom et la place des jetons.
-- La façon de désinstaller dunst sur caladan (procédure du carnet).
+Soldé à la construction (v0.4) :
+
+- Structure du service et du modèle : un `ScriptModel` sur un tableau d'`Entree`, que `Pile` tient à jour.
+- Images et icônes : chargement synchrone et `sourceSize` borné ; rien de distant n'est téléchargé.
+- Balisage du corps : `StyledText` de Qt, sans images (les balises `<img>` sont retirées) ni liens actifs.
+- Jetons : la section `[notifications]` de `tokens.toml` (`largeur`, `marge`, `ecart`, `plafond`, `duree`, `icone`,
+  `interieur`, `lignes`, `reprise`).
+- Désinstallation de dunst sur caladan : `sudo pacman -Rns dunst`, procédure du carnet (version 1.44).
 
 ## Vérification
 
@@ -239,3 +242,4 @@ Constats éprouvés sur caladan le 2026-11-13, par une sonde Quickshell 0.3.2 (d
 | 0.1 | 2026-11-13 | Première rédaction après le remue-méninges et la maquette validée |
 | 0.2 | 2026-11-13 | Relecture du constructeur : remplacement par étiquette de pile, générique (décision 9) ; « Ouvrir » seulement si l'application le fournit (décision 10) ; pile sur l'écran actif |
 | 0.3 | 2026-11-13 | Relecture finale : `keepOnReload: true`, pour ne perdre aucune notification au rechargement de la coque ; un remplacement renouvelle l'heure d'arrivée, et tout changement reçu par `replaces_id` réarme la minuterie (limite de l'envoi identique) ; aucune image ni icône distante n'est téléchargée |
+| 0.4 | 2026-11-13 | Construction et recette : « Laissé au constructeur » soldé (`ScriptModel`, chargement synchrone, `StyledText` sans images ni liens, jetons `[notifications]`) ; titre de la carte à 15 px, icône centrée, interligne 1,45 ; reprise d'une seconde après le plein écran |

@@ -2,9 +2,9 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.52. Historique en fin de document.
+Version 1.53. Historique en fin de document.
 
-La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **176 éléments** répartis en **cinq lots**, sur six chantiers.
+La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **179 éléments** répartis en **cinq lots**, sur six chantiers.
 
 Ce document dit ce qui est attendu, dans quel ordre, et à quelle condition c'est terminé. Il ne dit pas à quoi ça ressemble — c'est le rôle de la bible de design. En cas de contradiction : la bible l'emporte sur l'apparence, ce document l'emporte sur le périmètre.
 
@@ -272,7 +272,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L2-16 | B | Écrit | Lanceur — voile, flou par instantané, focus clavier ; touche `SUPER + R`, tenue par wofi au lot 1 |
 | L2-17 | B | Écrit | Sélecteur de fenêtres — vignettes en neutre pur |
 | L2-18 | B | Écrit | Sélecteur de bureaux — une teinte catégorielle par bureau |
-| L2-19 | B | Écrit | Notifications — couleurs sémantiques invariantes ; référence visuelle : `~/dunei-atelier/inspiration/Shoddyconfection962/notifications.jpg`. Consigne de Nicolas : en haut à droite, classique et bien dessinée ; la notification ne naît pas de l'îlot (conception de L2-01, § 2) |
+| L2-19 | B | Écrit | Notifications — couleurs sémantiques invariantes ; référence visuelle : `~/dunei-atelier/inspiration/Shoddyconfection962/notifications.jpg`. Consigne de Nicolas : en haut à droite, classique et bien dessinée ; la notification ne naît pas de l'îlot (conception de L2-01, § 2) — **fait (D162)** : la coque est le serveur `org.freedesktop.Notifications`, dunst est retiré ; module `coque/Notifications/`, cartes de verre e3 empilées en haut à droite, plafond de cinq, remplacement par étiquette de pile, plein écran qui retient les cartes ; recette à l'écran validée le 2026-11-13 ; cloche de la barre simplifiée, suite en L2-67 |
 | L2-20 | B | Écrit | Menu contextuel du bureau — part du point de clic |
 | L2-21 | B | Écrit | Infobulles — délai de 500 ms |
 | L2-22 | B | Écrit | Verrouillage — registre de spectacle ; `SUPER + L` est déjà lié à `loginctl lock-session` (L1-09, D41) ; le verrouilleur provisoire, `hyprlock`, ne se nomme qu'à un endroit, `verrouilleur` dans `energie.toml`, et c'est le seul point à remplacer ; l'esthétique du verrouillage reste ouverte, Nicolas acceptant d'y investir de la ressource machine |
@@ -318,8 +318,11 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L2-62 | B | Écrit | Hauteur de la barre dans les jetons — `systemBarHeight` vaut 32 alors que la barre mesure 28 px (D89, D122) : aligner le jeton sur la hauteur réelle et faire lire celle-ci à `Barre.qml` |
 | L2-63 | C | Écrit | Cache de vignettes sur disque pour la galerie de fonds (suite de L2-60, D126, D135) — miniatures précalculées, créées au premier passage ou à l'ajout d'une image, lues à l'ouverture : ouverture instantanée même sur un gros dossier (trente images lourdes : vignettes environ 0,6 s après l'étirement, accepté par Nicolas) et mémoire faible (le décodage pleine taille d'un PNG 4K a une crête de 32 Mio). À concevoir : emplacement (`~/.cache`), invalidation par date et taille, génération hors du fil de la coque |
 | L2-64 | C | Écrit | Pages géantes transparentes en `madvise` pour tout le système — piste à trancher par Nicolas (D134, D135) : `MemoryTHP=madvise` n'est posé que sur l'unité de la coque (971 Mo de PSS devenus 160 Mo) ; passer `/sys/kernel/mm/transparent_hugepage/enabled` ou `transparent_hugepage=madvise` à toute la machine profiterait sans doute aux autres processus à jemalloc ou à tas épars. Choix de machine : mesurer d'abord les plus gros processus, et consigner la valeur dans le fragment de `caladan`, jamais dans le code commun |
-| L2-65 | B | Fait | Fenêtre Réseau allégée — **fait et fusionné (PR #54, D149 à D157)** : fenêtre qui se ferme dès le clic (fermeture visible 76-85 ms au lieu de 650-830, D151), page Wi-Fi « liste d'abord » (recherche, réseau joint replié au nom mis en valeur, autres réseaux, connus repliés en fin de page, D149, D156), dépliant du réseau joint avec courbe vivante, tuiles adresse IP, routeur et connecté depuis, réglages courants et réglages avancés dépliés sur place ; sous-page de profil supprimée (D150, D155) ; sections dépliables, interrupteurs, pastilles et onglets animés au ressort (D157) ; aucune correction de Hyprland nécessaire (D152). La fenêtre Son, détachée le 2026-11-09, devient L2-66 (D153). Fiche : `docs/superpowers/specs/2026-11-09-fenetre-reseau-design.md` ; plan : `docs/superpowers/plans/2026-11-09-fenetre-reseau.md` ; recette à l'écran validée le 2026-11-10 |
-| L2-66 | B | Écrit | Fenêtre Son, sur le gabarit de la fenêtre Réseau (L2-65) — le lien « Réglages du son… » du popover du son (L2-12) l'ouvre ; volume par application, profils de la carte, effets et égaliseur y trouveront leur place ; repérage propre à faire avant la fiche ; réemploi des composants `Courbe`, `Tuile` et d'un dépliant dans le style de `DepliantReseau` ; même lot et même priorité que L2-65 (D153) |
+| L2-65 | B | À refaire | Fenêtre Réseau allégée — **à refaire de zéro, pas maintenant (D163)** : Nicolas juge la fenêtre livrée « pas du tout » satisfaisante ; état précédent, **fait et fusionné (PR #54, D149 à D157)** : fenêtre qui se ferme dès le clic (fermeture visible 76-85 ms au lieu de 650-830, D151), page Wi-Fi « liste d'abord » (recherche, réseau joint replié au nom mis en valeur, autres réseaux, connus repliés en fin de page, D149, D156), dépliant du réseau joint avec courbe vivante, tuiles adresse IP, routeur et connecté depuis, réglages courants et réglages avancés dépliés sur place ; sous-page de profil supprimée (D150, D155) ; sections dépliables, interrupteurs, pastilles et onglets animés au ressort (D157) ; aucune correction de Hyprland nécessaire (D152). La fenêtre Son, détachée le 2026-11-09, devient L2-66 (D153). Fiche : `docs/superpowers/specs/2026-11-09-fenetre-reseau-design.md` ; plan : `docs/superpowers/plans/2026-11-09-fenetre-reseau.md` ; recette à l'écran validée le 2026-11-10 |
+| L2-66 | B | Écrit | Fenêtre Son, sur le gabarit de la fenêtre Réseau (L2-65) — le lien « Réglages du son… » du popover du son (L2-12) l'ouvre ; volume par application, profils de la carte, effets et égaliseur y trouveront leur place ; repérage propre à faire avant la fiche ; réemploi des composants `Courbe`, `Tuile` et d'un dépliant dans le style de `DepliantReseau` ; même lot et même priorité que L2-65 (D153) — **reportée à plus tard (D163)**, comme toute feature qui ouvre une fenêtre du genre de la fenêtre Réseau |
+| L2-67 | B | Écrit | Cloche des notifications — la cloche de la barre, aujourd'hui fixe (L2-19, D162), reçoit une pastille rouge quand des notifications n'ont pas été lues ; elle ouvre l'historique des notifications reçues et un interrupteur « ne pas déranger » ; branchée sur la `Pile` du `Centre` ; prochaine étape après L2-19 |
+| L2-68 | C | Écrit | Son de notification — joué à l'arrivée d'une carte, avec ses réglages (volume, sons par urgence, coupure par « ne pas déranger ») ; décidé plus tard par Nicolas (L2-19, D162) |
+| L2-69 | C | Écrit | « Ouvrir » propre à DuneI — quand l'application ne fournit pas d'action `default`, la carte propose tout de même d'ouvrir l'application d'origine ; facultatif, après le lanceur (L2-19, D162) |
 
 ### Lot 3 — la bascule
 
@@ -421,7 +424,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L5-29 | — | Écrit | Passe de regard complète — étage 3 |
 | L5-30 | — | Écrit | Résorber les points ouverts de l'annexe C |
 
-**Volume total : 176 éléments** — 126 écrits, 43 configurés, 5 offerts, 2 mixtes.
+**Volume total : 179 éléments** — 129 écrits, 43 configurés, 5 offerts, 2 mixtes.
 
 Les deux tiers du travail sont de l'écrit, et les trois quarts de cet écrit se concentrent sur la coque et les écrans système. C'est cohérent avec la stratégie retenue, et c'est là que tout le risque se trouve.
 
@@ -525,6 +528,7 @@ Le choix de la distribution de base et du compositeur, précédemment ouverts, s
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-12 | Version initiale, 137 éléments |
+| 1.53 | 2026-11-13 | L2-19 fait : notifications de la coque, dunst retiré (D162) ; L2-66 reportée et L2-65 à refaire de zéro (D163) ; ajout de L2-67 (cloche, historique, « ne pas déranger »), L2-68 (son) et L2-69 (« Ouvrir » de DuneI) ; 179 éléments |
 | 1.52 | 2026-11-10 | L2-65 fusionné (PR #54) : recette à l'écran validée (D155 à D157) |
 | 1.51 | 2026-11-10 | L2-54 : la saisie IPv4 vit désormais dans `AvancesReseau`, la sous-page de profil ayant disparu (recette 1 de L2-65, D155) |
 | 1.50 | 2026-11-09 | L2-65 réduit à la fenêtre Réseau et fait, en attente de fusion (D149 à D154) ; ajout de L2-66 (fenêtre Son, détachée de L2-65, D153) ; 176 éléments |
