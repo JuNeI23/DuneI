@@ -239,7 +239,7 @@ Trois écarts à la bible, chacun à inscrire au journal comme décision et à r
 ## 11. Documentation à mettre à jour
 
 Backlog (L2-65 remplacé par cette feature, L5-01 avancé au lot 2, L2-66 rattaché comme page future), notes de direction,
-journal des décisions (après D164 : application unique, construction au clic, molette, règle des cinq, écarts à la
+journal des décisions (à partir de D165, D164 étant porté par la PR #59 : application unique, construction au clic, molette, règle des cinq, écarts à la
 bible), bible de design (motif de la fenêtre de réglages, palette catégorielle, nouveaux jetons).
 
 ## 12. Arbitrages après relecture
