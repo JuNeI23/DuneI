@@ -75,6 +75,29 @@ class ErrorsTest(unittest.TestCase):
         r = raw(); r["spinner"]["easing"] = 1
         self.check(r, "spinner", "easing", "type")
 
+    def test_molette(self):
+        """La section [wheel] est recopiée telle quelle par le modèle ; elle et chacune de ses trois clés sont
+        exigées, du bon type, aucune clé inconnue n'y passe, le pas et la durée sont strictement positifs et la
+        courbe est l'une de celles que le défilement sait suivre."""
+        self.assertEqual(resolve(raw())["wheel"], {"step": 110, "duration": 260, "easing": "OutCubic"})
+        r = raw(); del r["wheel"]
+        self.check(r, "wheel", "manquante")
+        for key, faux in (("step", "110"), ("duration", "260"), ("easing", 1)):
+            with self.subTest(key=key):
+                r = raw(); del r["wheel"][key]
+                self.check(r, "wheel", key, "manquante")
+                r = raw(); r["wheel"][key] = faux
+                self.check(r, "wheel", key, "type")
+        r = raw(); r["wheel"]["inconnue"] = 1
+        self.check(r, "wheel", "inconnue", "inconnue")
+        for key in ("step", "duration"):
+            for v in (0, -1):
+                with self.subTest(key=key, v=v):
+                    r = raw(); r["wheel"][key] = v
+                    self.check(r, "wheel", key, "strictement positif")
+        r = raw(); r["wheel"]["easing"] = "OutBounce"
+        self.check(r, "wheel", "OutBounce", "inconnu")
+
     def test_popover_exige_ses_cles(self):
         """La section [popover] et chacune de ses trois clés sont exigées, numériques, et aucune clé inconnue n'y passe."""
         r = raw(); del r["popover"]

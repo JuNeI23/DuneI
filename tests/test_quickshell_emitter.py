@@ -36,11 +36,28 @@ class QuickshellEmitterTest(unittest.TestCase):
                                            "knob", "controls"])
 
     def test_reglages(self):
-        """Vérifie les treize formes des fenêtres de réglages (D104, D105), émises en camelCase sous reglages."""
+        """Vérifie les dix-sept formes des fenêtres de réglages (D104, D105, application Paramètres), émises en
+        camelCase sous reglages."""
         self.assertEqual(self.out["reglages"], {"row": 44, "rowHelp": 52, "rowLead": 60, "medallion": 32,
                                                 "medallionGlyph": 18, "textColumn": 56, "sidebarInset": 8,
                                                 "tabHeight": 48, "fieldWidth": 290, "windowWidth": 840,
-                                                "windowHeight": 640, "windowMinWidth": 720, "windowMinHeight": 480})
+                                                "windowHeight": 640, "windowMinWidth": 720, "windowMinHeight": 480,
+                                                "entryHeight": 32, "thumb": 22, "thumbGlyph": 14, "networksShown": 5})
+
+    def test_reglages_parametres(self):
+        """Vérifie les jetons de l'application Paramètres : les quatre cotes de la barre latérale et de la liste des
+        réseaux sous reglages, puis, dans chaque thème, le verre des vignettes propre à son moment et la lueur
+        d'en-tête, sous material."""
+        for cle, valeur in (("entryHeight", 32), ("thumb", 22), ("thumbGlyph", 14), ("networksShown", 5)):
+            self.assertEqual(self.out["reglages"][cle], valeur, cle)
+        attendu = {"nuit": {"tint": 0.24, "sheen": 0.24, "edge": 0.10, "halo": 0.0},
+                   "jour": {"tint": 0.0, "sheen": 0.14, "edge": 0.38, "halo": 0.42}}
+        self.assertEqual({m for _, m in themes(self.data)}, set(attendu))
+        for f, m in themes(self.data):
+            with self.subTest(famille=f, moment=m):
+                matiere = self.out["themes"][f][m]["material"]
+                self.assertEqual(matiere["thumb"], attendu[m])
+                self.assertEqual(matiere["headerGlow"], 0.13)
 
     def test_presquile(self):
         """Vérifie les sept dimensions de la presqu'île, en pixels logiques, le seuil d'entrée du changement de

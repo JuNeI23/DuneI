@@ -151,6 +151,7 @@ def _theme(model: dict) -> dict:
 
     Entrée : model — sortie de model.resolve sur les données d'un thème (model.theme_data).
     Sortie : dict {color, states, focus, disabled, elevation, material, glass, render, knob, controls}, `color.knob` compris.
+             `material.thumb` ({tint, sheen, edge, halo}, verre des vignettes de réglages) et `material.headerGlow` suivent le moment.
     Erreurs : KeyError si une section du TOML manque.
     Dépendances : _camel, _argb, _states, _focus, _eteint, _controles, color.oklch, color.to_hex.
     """
@@ -206,6 +207,8 @@ def _theme(model: dict) -> dict:
             "insetDepth": mat["inset_shadow_depth"],
             "shadowBlur": raw["window"]["floating_shadow"]["range"],
             "shadowOffsetY": raw["window"]["floating_shadow"]["offset_y"],
+            "thumb": {k: mat["thumb"][k] for k in ("tint", "sheen", "edge", "halo")},
+            "headerGlow": mat["header_glow"],
         },
         "glass": {"e2": raw["glass"]["e2_opacity"], "e3": raw["glass"]["e3_opacity"],
                   "presquile": raw["glass"]["presquile_opacity"], "sidebar": raw["glass"]["sidebar_opacity"]},

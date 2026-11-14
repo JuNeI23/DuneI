@@ -99,7 +99,11 @@
     "windowWidth": 840,
     "windowHeight": 640,
     "windowMinWidth": 720,
-    "windowMinHeight": 480
+    "windowMinHeight": 480,
+    "entryHeight": 32,
+    "thumb": 22,
+    "thumbGlyph": 14,
+    "networksShown": 5
   },
   "breakpoints": {
     "compact": 480,
@@ -614,7 +618,14 @@
           "insetShadow": "#38000000",
           "insetDepth": 4,
           "shadowBlur": 16,
-          "shadowOffsetY": 4
+          "shadowOffsetY": 4,
+          "thumb": {
+            "tint": 0.24,
+            "sheen": 0.24,
+            "edge": 0.1,
+            "halo": 0.0
+          },
+          "headerGlow": 0.13
         },
         "glass": {
           "e2": 1.0,
@@ -1102,7 +1113,14 @@
           "insetShadow": "#38000000",
           "insetDepth": 4,
           "shadowBlur": 16,
-          "shadowOffsetY": 4
+          "shadowOffsetY": 4,
+          "thumb": {
+            "tint": 0.24,
+            "sheen": 0.24,
+            "edge": 0.1,
+            "halo": 0.0
+          },
+          "headerGlow": 0.13
         },
         "glass": {
           "e2": 1.0,
@@ -1588,7 +1606,14 @@
           "insetShadow": "#38000000",
           "insetDepth": 4,
           "shadowBlur": 16,
-          "shadowOffsetY": 4
+          "shadowOffsetY": 4,
+          "thumb": {
+            "tint": 0.0,
+            "sheen": 0.14,
+            "edge": 0.38,
+            "halo": 0.42
+          },
+          "headerGlow": 0.13
         },
         "glass": {
           "e2": 0.85,
