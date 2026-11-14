@@ -115,6 +115,71 @@ class NmcliTest(EssaiCoque, unittest.TestCase):
         r = self.appeler("partager", rangees[:1] + rangees[3:], [], "")
         self.assertEqual((r["joint"]["uuid"], r["autres"], r["connus"]), ("a", [], []))
 
+    def test_repartir_cinq(self):
+        # Deux profils à portée et six inconnus, limite de cinq : les connus d'abord, trois inconnus, trois en reste.
+        r = self.appeler("repartir", self.profils("A", "B", "Loin"), self.portee(A=0.3, B=0.8, **self.inconnus(6)), 5)
+        self.assertIsNone(r["joint"])
+        self.assertEqual([(m["nom"], m["uuid"], m["portee"], m["force"], m["security"]) for m in r["miens"]],
+                         [("B", "u-B", True, 0.8, 3), ("A", "u-A", True, 0.3, 3)])
+        self.assertEqual([p["name"] for p in r["autres"]], ["i6", "i5", "i4"])
+        self.assertEqual([p["name"] for p in r["reste"]], ["i3", "i2", "i1"])
+        self.assertEqual(self.appeler("repartir", [], [], 5), {"joint": None, "miens": [], "autres": [], "reste": []})
+
+    def test_connus_au_dela_de_cinq(self):
+        # Six profils à portée dépassent la limite : tous sont montrés, et aucun inconnu ne l'est.
+        noms = ["A", "B", "C", "D", "E", "F"]
+        forces = {nom: (i + 1) / 10 for i, nom in enumerate(noms)}
+        r = self.appeler("repartir", self.profils(*noms), self.portee(**forces, **self.inconnus(2)), 5)
+        self.assertEqual([m["nom"] for m in r["miens"]], noms[::-1])
+        self.assertEqual(r["autres"], [])
+        self.assertEqual([p["name"] for p in r["reste"]], ["i2", "i1"])
+
+    def test_joint_hors_compte(self):
+        # Le réseau joint n'entre ni dans les listes ni dans le compte des cinq ; le filaire actif n'est pas le joint.
+        rangees = self.profils("Maison", "A") + [{"nom": "Câble", "uuid": "d", "wifi": False, "actif": True}]
+        rangees[0]["actif"] = True
+        r = self.appeler("repartir", rangees, self.portee(Maison=0.9, A=0.4, **self.inconnus(5)), 5)
+        self.assertEqual(r["joint"]["uuid"], "u-Maison")
+        self.assertEqual([m["nom"] for m in r["miens"]], ["A"])
+        self.assertEqual([p["name"] for p in r["autres"]], ["i5", "i4", "i3", "i2"])
+        self.assertEqual([p["name"] for p in r["reste"]], ["i1"])
+
+    def test_doublons_et_noms_vides(self):
+        # Un nom vu deux fois (deux bandes) garde sa plus forte occurrence ; un réseau caché (nom vide) est écarté.
+        presents = self.portee(A=0.2, Voisin=0.3) + self.portee(A=0.7, Voisin=0.6) + [
+            {"name": "", "signalStrength": 0.9, "connected": False, "known": False, "security": 3}]
+        r = self.appeler("repartir", self.profils("A"), presents, 5)
+        self.assertEqual([(m["nom"], m["force"]) for m in r["miens"]], [("A", 0.7)])
+        self.assertEqual([(p["name"], p["signalStrength"]) for p in r["autres"]], [("Voisin", 0.6)])
+        self.assertEqual(r["reste"], [])
+
+    @staticmethod
+    def profils(*noms):
+        """Rangées Wi-Fi inactives de profilsFenetre réduites aux champs lus par repartir.
+
+        Entrées : noms des profils. Sortie : liste de {nom, uuid « u-<nom> », wifi vrai, actif faux}.
+        Erreurs : aucune. Dépendances : aucune.
+        """
+        return [{"nom": nom, "uuid": "u-" + nom, "wifi": True, "actif": False} for nom in noms]
+
+    @staticmethod
+    def portee(**forces):
+        """Réseaux à portée factices, à la forme des WifiNetwork.
+
+        Entrées : forces, nom → force du signal. Sortie : liste de {name, signalStrength, connected, known, security}.
+        Erreurs : aucune. Dépendances : aucune.
+        """
+        return [{"name": nom, "signalStrength": force, "connected": False, "known": False, "security": 3}
+                for nom, force in forces.items()]
+
+    @staticmethod
+    def inconnus(n):
+        """Forces de n réseaux sans profil, i1 le plus faible.
+
+        Entrée : n. Sortie : dictionnaire {"i1": 0.01, …, "i<n>": n / 100}. Erreurs : aucune. Dépendances : aucune.
+        """
+        return {f"i{i}": i / 100 for i in range(1, n + 1)}
+
     def test_champs_echappes(self):
         self.assertEqual(self.appeler("champs", "Caf\\:é\\\\x:abc:wifi"), ["Caf:é\\x", "abc", "wifi"])
         self.assertEqual(self.appeler("champs", ""), [""])

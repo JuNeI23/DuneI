@@ -331,6 +331,28 @@ function filtrer(nom, filtre) {
     return nu(nom).includes(nu(filtre))
 }
 
+// repartir — répartition des réseaux Wi-Fi de la page Wi-Fi selon la règle des cinq.
+// Entrées : rangees, les rangées de profilsFenetre ({nom, uuid, wifi, actif, …}, les rangées filaires sont
+// ignorées) ; presents, les réseaux à portée {name, signalStrength, connected, known, security} (WifiNetwork ou
+// factices), les mêmes formes que pour partager ; limite, le nombre de rangées montrées, réseau joint non compté.
+// Sortie : {joint, miens, autres, reste} ; joint, la rangée Wi-Fi active ou null ; miens, les profils Wi-Fi à
+// portée sauf le joint, chacun une copie de sa rangée augmentée de portee (vrai), force et security (celles du
+// réseau présent), par signal décroissant et jamais tronqués ; autres, les réseaux à portée sans profil, par signal
+// décroissant, tronqués à max(0, limite - miens.length) ; reste, les réseaux sans profil suivants. Un nom vide
+// (réseau caché) est écarté, et un nom vu plusieurs fois ne garde que sa plus forte occurrence.
+// Erreurs : aucune. Dépendances : aucune.
+function repartir(rangees, presents, limite) {
+    const wifi = rangees.filter(r => r.wifi), joint = wifi.find(r => r.actif) ?? null
+    const forts = presents.filter(p => p.name !== "" && p.name !== joint?.nom)
+        .sort((a, b) => b.signalStrength - a.signalStrength)
+        .filter((p, i, tries) => tries.findIndex(x => x.name === p.name) === i)
+    const profil = p => wifi.find(r => r.nom === p.name)
+    const miens = forts.filter(profil)
+        .map(p => Object.assign({}, profil(p), {portee: true, force: p.signalStrength, security: p.security}))
+    const inconnus = forts.filter(p => !profil(p)), place = Math.max(0, limite - miens.length)
+    return {joint, miens, autres: inconnus.slice(0, place), reste: inconnus.slice(place)}
+}
+
 // partager — répartition des réseaux entre les trois listes de la page Wi-Fi.
 // Entrées : rangees, les rangées de profilsFenetre ; presents, les réseaux à portée {name, signalStrength,
 // connected, known, security} (WifiNetwork ou factices) ; filtre, la saisie de la recherche (vide : rien n'est écarté).
