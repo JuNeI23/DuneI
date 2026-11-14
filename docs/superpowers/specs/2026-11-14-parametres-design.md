@@ -257,6 +257,9 @@ sont tranchés ici comme propositions du rédacteur, à corriger à l'écran si 
    portée. Seul son glyphe en dépend : il s'affiche pour un profil que NetworkManager tient pour facturé à l'usage
    (`connection.metered` du profil, ou valeur devinée lors d'une connexion). Ce que NetworkManager expose réellement
    pour un profil non connecté se vérifie sur la machine avant de coder ; à défaut, le glyphe Wi-Fi ordinaire reste.
+   Relevé du 14 novembre 2026 : `connection.metered` vaut `unknown` pour les trois profils, partage compris ; seul le
+   lien actif rend `yes (guessed)`. La coque retient donc, dans son état persistant, les profils vus facturés une
+   fois connectés, et leur donne le glyphe ensuite ; elle n'écrit rien dans les profils de NetworkManager.
 4. **Clic sur une autre rangée pendant une connexion** : le second clic abandonne la première tentative et lance la
    nouvelle ; une seule rangée affiche « Connexion… » à la fois, et c'est le réseau finalement joint qui glisse en tête.
 5. **Popover** : cinq rangées au plus, sans rangée « Afficher les N autres réseaux » ; le reste se trouve par
