@@ -1,6 +1,6 @@
 # Application Paramètres : coquille et pages Wi-Fi, Filaire, VPN
 
-Version 1.0 — 14 novembre 2026
+Version 1.1 — 14 novembre 2026
 
 Fiche de conception de l'application Paramètres de la coque, qui remplace la fenêtre Réseau (L2-65, « à refaire de
 zéro », D163). Elle avance au lot 2 la coquille de l'écran de réglages prévue au lot 5 (L5-01).
@@ -242,8 +242,35 @@ Backlog (L2-65 remplacé par cette feature, L5-01 avancé au lot 2, L2-66 rattac
 journal des décisions (après D164 : application unique, construction au clic, molette, règle des cinq, écarts à la
 bible), bible de design (motif de la fenêtre de réglages, palette catégorielle, nouveaux jetons).
 
+## 12. Arbitrages après relecture
+
+Une relecture « constructeur » a soulevé six points. Nicolas ayant validé la fiche avec la consigne « on ajustera », ils
+sont tranchés ici comme propositions du rédacteur, à corriger à l'écran si besoin.
+
+1. **Sous-pages** : le conteneur de page de la coquille porte une pile. Une sous-page (« Réseaux enregistrés »,
+   réglages d'un profil, réseau masqué) glisse depuis la droite et porte en tête une rangée de retour « ‹ Wi-Fi »,
+   comme le fait déjà `PanneauReseau.qml`. Le défilement de la page mère est conservé au retour.
+2. **Recherche** : seuls les réglages qui existent sont indexés (pas d'import VPN, exclu avec L2-51). Une ancre est un
+   chemin : page, puis sous-page ou dépliant éventuel, puis réglage ; la recherche déplie ou ouvre ce qu'il faut pour
+   l'atteindre. Un réglage dont la cible n'existe pas à l'instant (adresse IP sans réseau joint) n'est pas proposé.
+3. **Partage de connexion** : sa place en tête ne dépend d'aucune reconnaissance, puisqu'il s'agit d'un réseau connu à
+   portée. Seul son glyphe en dépend : il s'affiche pour un profil que NetworkManager tient pour facturé à l'usage
+   (`connection.metered` du profil, ou valeur devinée lors d'une connexion). Ce que NetworkManager expose réellement
+   pour un profil non connecté se vérifie sur la machine avant de coder ; à défaut, le glyphe Wi-Fi ordinaire reste.
+4. **Clic sur une autre rangée pendant une connexion** : le second clic abandonne la première tentative et lance la
+   nouvelle ; une seule rangée affiche « Connexion… » à la fois, et c'est le réseau finalement joint qui glisse en tête.
+5. **Popover** : cinq rangées au plus, sans rangée « Afficher les N autres réseaux » ; le reste se trouve par
+   « Réglages réseau… ».
+6. **Filtre par nom de la page Wi-Fi** : supprimé. La règle des cinq et la sous-page des profils enregistrés le
+   remplacent.
+
+Précisions tirées du code : la barre latérale garde un titre de groupe « Réseau » au-dessus des trois entrées ; la règle
+Hyprland renommée est aussi attendue par `tests/test_hyprland_modules.py` ; déplacer `EtatReseau.fenetre` et
+`profilDemande` vers l'état de l'application est un « besoin démontré » au sens du hors-périmètre.
+
 ## Historique des versions
 
 | Version | Date | Objet |
 |---|---|---|
 | 1.0 | 14 novembre 2026 | Première rédaction, après cadrage, maquette v4 et prototype dans la coque. |
+| 1.1 | 14 novembre 2026 | Arbitrages après relecture « constructeur » (section 12). |
