@@ -1019,6 +1019,103 @@ esac
 """
 
 
+@unittest.skipUnless(os.environ.get("WAYLAND_DISPLAY") and QS, "session Wayland et Quickshell requis")
+class JonctionTest(EssaiCoque, unittest.TestCase):
+    """La Jonction seule, sans vue, éprouvée sur un état et des réseaux factices.
+
+    La coque d'essai pose une Jonction sur des réseaux qui journalisent leurs appels, sans jamais le texte d'un mot de
+    passe ; chaque commande IPC rend l'état de la Jonction dans la même passe, sans attente.
+    """
+
+    essai = ESSAI / "jonction"
+    teintes = ()
+    SECRET = "s3cret-jamais-journalise"
+    REFUS = "Mot de passe refusé. Vérifiez-le et réessayez."
+
+    def setUp(self):
+        super().setUp()
+        self.lancer(self.dir)
+        self.attendre("essai : prêt")
+
+    def ipc(self, fonction: str, *args: str) -> dict:
+        """Appelle une fonction IPC de la coque d'essai de la Jonction.
+
+        Entrées : fonction, args (chaînes). Sortie : l'état de la Jonction après l'appel, décodé (voir la coque
+        d'essai). Erreurs : CalledProcessError ; JSONDecodeError si la fonction a échoué. Dépendances : qs.
+        """
+        return json.loads(subprocess.run([QS, "ipc", "--pid", str(self.proc.pid), "call", "jonction", fonction, *args],
+                                         check=True, capture_output=True, text=True, timeout=DELAI).stdout)
+
+    def test_second_clic_remplace(self):
+        # Point d'attention 2 : un clic sur un autre réseau pendant une connexion abandonne la tentative en cours.
+        # Une seule tentative est suivie, et l'échec tardif de l'ancienne n'affiche rien.
+        self.assertEqual(self.ipc("choisir", "Connu")["enCours"], "Connu")
+        self.assertEqual(self.ipc("choisir", "Voisin")["enCours"], "Voisin")
+        self.attendre("essai : connect Voisin")
+        e = self.ipc("echouer", "Connu", "NoSecrets")
+        self.assertEqual((e["enCours"], e["deplie"], e["erreur"], e["refus"]), ("Voisin", "", "", 0))
+        # Un réseau qui demande un mot de passe abandonne aussi la tentative : il se déplie, plus rien n'est suivi, et
+        # l'échec de l'ancienne tentative ne lui prend pas sa rangée.
+        e = self.ipc("choisir", "Inconnu")
+        self.assertEqual((e["enCours"], e["deplie"]), ("", "Inconnu"))
+        e = self.ipc("echouer", "Voisin", "Unknown")
+        self.assertEqual((e["enCours"], e["deplie"], e["erreur"], e["refus"]), ("", "Inconnu", "", 0))
+        # La réussite tardive d'une tentative abandonnée ne replie pas non plus la saisie, et n'émet rien.
+        e = self.ipc("joindre", "Voisin")
+        self.assertEqual((e["deplie"], e["joints"]), ("Inconnu", []))
+        # La validation du mot de passe remplace de même une tentative en cours.
+        self.ipc("choisir", "Ouvert")
+        self.ipc("choisir", "Inconnu")
+        e = self.ipc("rejoindre", self.SECRET)
+        self.assertEqual((e["enCours"], e["deplie"]), ("Inconnu", "Inconnu"))
+        self.assertEqual(self.ipc("echouer", "Ouvert", "NoSecrets")["erreur"], "")
+        # Aucune déconnexion n'est demandée : Quickshell la refuse sur un réseau qui n'est pas joint, et celle de la
+        # carte bloquerait la reconnexion automatique ; la nouvelle activation remplace l'ancienne.
+        self.assertNotIn("essai : disconnect", self.journal())
+        self.assertNotIn(self.SECRET, self.journal())
+        self.assertNotRegex(self.journal(), r"TypeError|ReferenceError")
+
+    def test_echec_reste_en_place(self):
+        # Spec 6.2, point 4 : à l'échec, l'erreur est sur la rangée, plus rien n'est en cours, la rangée se reclique.
+        self.ipc("choisir", "Connu")
+        e = self.ipc("echouer", "Connu", "NoSecrets")
+        self.assertEqual((e["enCours"], e["deplie"], e["erreur"], e["refus"]), ("", "Connu", self.REFUS, 1))
+        e = self.ipc("choisir", "Connu")
+        self.assertEqual((e["enCours"], e["erreur"]), ("Connu", ""))
+        self.attendre("essai : connect Connu", 2)
+        e = self.ipc("echouer", "Connu", "Unknown")
+        self.assertEqual((e["enCours"], e["erreur"], e["refus"]), ("", "Connexion impossible.", 2))
+        # Un clic sur un autre réseau efface l'erreur.
+        e = self.ipc("choisir", "Ouvert")
+        self.assertEqual((e["enCours"], e["deplie"], e["erreur"]), ("Ouvert", "", ""))
+
+    def test_ordre_fige_pendant_connexion(self):
+        # Point d'attention 1 : fige est vrai tant qu'une connexion est en cours ou qu'un mot de passe est déplié ;
+        # les listes le lisent pour retenir leur ordre quand un balayage se termine.
+        self.assertFalse(self.ipc("etat")["fige"])
+        self.assertTrue(self.ipc("choisir", "Connu")["fige"])
+        self.assertFalse(self.ipc("joindre", "Connu")["fige"])
+        self.assertTrue(self.ipc("choisir", "Inconnu")["fige"])
+        self.assertTrue(self.ipc("rejoindre", self.SECRET)["fige"])
+        self.assertTrue(self.ipc("echouer", "Inconnu", "NoSecrets")["fige"])
+        # Un second clic replie la rangée : l'ordre est rendu.
+        self.assertFalse(self.ipc("choisir", "Inconnu")["fige"])
+        self.assertTrue(self.ipc("choisir", "Ouvert")["fige"])
+        self.assertTrue(self.ipc("echouer", "Ouvert", "Unknown")["fige"])
+
+    def test_joint_emis(self):
+        # À la réussite, joint porte le réseau rejoint ; un réseau qui se connecte sans être suivi n'émet rien.
+        self.assertEqual(self.ipc("joindre", "Voisin")["joints"], [])
+        self.ipc("choisir", "Connu")
+        e = self.ipc("joindre", "Connu")
+        self.assertEqual((e["joints"], e["enCours"], e["deplie"]), (["Connu"], "", ""))
+        self.ipc("choisir", "Inconnu")
+        self.ipc("rejoindre", self.SECRET)
+        self.attendre(f"essai : connectWithPsk Inconnu {len(self.SECRET)}")
+        e = self.ipc("joindre", "Inconnu")
+        self.assertEqual((e["joints"], e["enCours"], e["deplie"]), (["Connu", "Inconnu"], "", ""))
+
+
 # Ordre de tabulation de la page Wi-Fi sur l'état factice (voir test_ordre_de_tabulation) : réseau joint replié, comme
 # à l'ouverture (D156), puis déplié (tuiles de la page, réglages, en-tête des réglages avancés, pied).
 SEQUENCE_TAB = ["radio", "recherche", "Wifi_TRIADES", "rechercher", "Inconnu", "Ouvert", "Autre réseau…", "entete"]
