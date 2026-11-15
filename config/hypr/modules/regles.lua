@@ -13,6 +13,8 @@ M.behaviour = {
       match = { class = "^$", title = "^$", xwayland = true, float = true, fullscreen = false, pin = false } },
     -- La fenêtre Réseau de la coque (L2-11) flotte, centrée, à la taille que la coque lui demande (jetons reglages.window_width × window_height de tokens.toml, 840 × 640).
     { name = "fenetre-reseau", match = { class = "^org\\.quickshell$", title = "^Réseau$" }, float = true, center = true },
+    -- L'application Paramètres de la coque flotte de même, centrée, à sa taille implicite (mêmes jetons). Elle remplace la fenêtre Réseau, dont la règle disparaîtra avec elle.
+    { name = "fenetre-parametres", match = { class = "^org\\.quickshell$", title = "^Paramètres$" }, float = true, center = true },
 }
 
 -- apply : déclare les règles de fenêtre générées, les règles de calque (verre), puis les règles de comportement.
