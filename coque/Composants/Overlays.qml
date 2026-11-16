@@ -8,13 +8,18 @@ import Quickshell
 // emplacements sont indépendants : une attention ne ferme pas un popover. Les contextuels ordinaires (menus, listes
 // déroulantes, y compris celles d'un popover) n'y passent pas ; plusieurs peuvent coexister.
 // Entrées : les appels d'Overlay, ouvrir() quand un overlay s'ouvre et fermer() quand il se ferme.
-// Sorties : attention, l'overlay d'attention ouvert, ou null ; popover, le contextuel exclusif ouvert, ou null.
+// Sorties : attention, l'overlay d'attention ouvert, ou null ; popover, le contextuel exclusif ouvert, ou null ;
+// deployes, le nombre de cadres de popovers encore déployés ou en repli.
 // Erreurs : aucune ; un objet qui n'est ni une attention ni un contextuel exclusif est ignoré.
 // Dépendances : Quickshell (Singleton) ; tout objet portant famille, ouvert et, pour un popover, exclusif ; Overlay en
 // premier lieu.
 Singleton {
     property var attention: null
     property var popover: null
+    // Nombre de cadres de popovers encore déployés, ouverts ou en train de se replier (CadrePopovers le tient à
+    // jour). Une construction lourde, comme celle de la fenêtre Paramètres, attend qu'il retombe à zéro : menée
+    // pendant le repli, elle le saccaderait, et serait saccadée par lui.
+    property int deployes: 0
 
     // ouvrir — retient une attention ou un popover exclusif qui vient de s'ouvrir et ferme celui de son emplacement.
     // Rôle : l'objet retenu est remplacé avant que l'ancien soit fermé ; ainsi, l'appel à fermer() que déclenche la

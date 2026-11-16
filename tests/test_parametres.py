@@ -151,6 +151,20 @@ class CoquilleTest(EssaiCoque, unittest.TestCase):
         self.assertEqual([e["chemin"] for e in filaire["index"] + vpn["index"]],
                          [["filaire", "ethernet"], ["filaire", "profils"], ["vpn", "connexions"]])
 
+    def test_attend_le_repli_du_popover(self):
+        # D174 : demandée depuis un popover, la fenêtre n'est construite qu'une fois ce popover replié ; une fois
+        # ouverte, un popover qui s'ouvre ne la détruit pas.
+        self.ipc("essai", "deployer", "1")
+        self.ipc("parametres", "ouvrir", "wifi")
+        time.sleep(0.4)
+        e = self.etat()
+        self.assertEqual((e["ouverte"], e["fenetre"]), (True, False))
+        self.ipc("essai", "deployer", "0")
+        self.jusqua(lambda e: e["fenetre"], "fenêtre construite après le repli")
+        self.ipc("essai", "deployer", "1")
+        time.sleep(0.3)
+        self.assertTrue(self.etat()["fenetre"])
+
     def test_ouvrir_page(self):
         e = self.etat()
         self.assertEqual((e["ouverte"], e["fenetre"], e["page"]), (False, False, "wifi"))

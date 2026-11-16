@@ -4,6 +4,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import QtTest
+import "Composants"
 import "Parametres"
 
 // Coque d'essai de la coquille de l'application Paramètres.
@@ -136,6 +137,9 @@ ShellRoot {
 
         // rien — ne fait rien : sert à mesurer le coût d'un appel IPC à vide. Entrées : aucune. Sortie : aucune.
         function rien(): void {}
+        // deployer — tient lieu des cadres de popovers : pose le nombre de cadres déployés ou en repli
+        // (Overlays.deployes). Entrée : n. Sortie : aucune.
+        function deployer(n: int): void { Overlays.deployes = n }
 
         // armer — remet la mesure d'ouverture à zéro et note l'instant de la demande. Entrées : aucune.
         // Sortie : aucune. Erreurs : aucune. Dépendances : Date.

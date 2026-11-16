@@ -4039,3 +4039,28 @@ fenêtre Paramètres ouverte, lui rend le style de sortie commun aux fenêtres (
 rafale de captures.
 
 *Touché : `config/hypr/modules/regles.lua`, `tests/test_hyprland_modules.py`, `tests/test_hyprland_entry.py`.*
+
+### D174 · La fenêtre Paramètres attend le repli du popover
+
+16 novembre 2026 · Ouverte par l'IPC, la fenêtre paraissait d'un trait ; ouverte par « Réglages réseau… » du popover
+de la barre, son entrée saccadait, et le repli du popover aussi (constat de Nicolas). Les deux se disputaient le fil
+de l'interface de la coque : la construction de la fenêtre, lourde, tombait pendant l'animation de repli. Le registre
+`Overlays` compte désormais les cadres de popovers encore déployés ou en repli (`deployes`, tenu par
+`CadrePopovers`), et `FenetreParametres` ne construit la fenêtre qu'une fois ce compte retombé à zéro. Le popover se
+replie d'abord, sans à-coup, puis la fenêtre entre. Une fenêtre déjà ouverte n'est pas touchée par un popover qui
+s'ouvre ensuite. Essai : `test_attend_le_repli_du_popover`.
+
+*Touché : `coque/Composants/Overlays.qml`, `coque/Barre/CadrePopovers.qml`, `coque/Parametres/FenetreParametres.qml`,
+`coque/Parametres/essai/fenetre/shell.qml`, `tests/test_parametres.py`.*
+
+### D175 · Le fondu d'entrée des fenêtres est court
+
+16 novembre 2026 · Depuis D171, le flou d'une fenêtre suit son opacité. Pendant le fondu d'entrée, mené par le
+ressort d'ouverture des fenêtres, le fond restait donc lisible à travers la colonne en verre de la fenêtre
+Paramètres, puis se floutait : Nicolas voyait la partie gauche « s'actualiser » à chaque ouverture. Le fondu d'entrée
+(`fadeIn`) prend le ressort des changements d'état (`state`), stabilisé en une centaine de millisecondes : la fenêtre
+est opaque, et son verre flouté, dès les premières images, tandis que son déplacement garde le ressort des fenêtres.
+Le réglage vaut pour toutes les fenêtres ; le fondu de sortie ne change pas. Vérifié en rafale de captures, validé à
+l'écran par Nicolas.
+
+*Touché : `motion.toml`, `generated/motion.lua`, `tests/golden/motion/motion.lua`.*

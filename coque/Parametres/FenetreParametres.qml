@@ -11,7 +11,9 @@ import "../Composants"
 // création synchrone, pendant la notification de Theme.ready, verrait les raccourcis de groupe encore indéfinis. La
 // fermeture est immédiate : fermer() cache d'abord la fenêtre, de sorte que l'image cachée parte avant tout, puis ne
 // lâche le chargeur qu'au tour suivant de la boucle d'événements ; sans cela, la démolition de l'arborescence
-// retiendrait la fenêtre à l'écran (leçon de L2-65). Échap revient d'une sous-page à sa page mère.
+// retiendrait la fenêtre à l'écran (leçon de L2-65). Échap revient d'une sous-page à sa page mère. Demandée depuis
+// un popover (« Réglages réseau… »), la fenêtre n'est construite qu'une fois ce popover replié (Overlays.deployes) :
+// sa construction occupe le fil de l'interface, et menée pendant le repli elle saccadait les deux (D174).
 // Entrées : aucune ; EtatParametres commande la construction. Une règle Hyprland (config/hypr/modules/regles.lua,
 // « fenetre-parametres ») fait flotter la fenêtre, centrée, à sa taille implicite.
 // Sorties : fenetre, la FloatingWindow construite, null fermée ; barre, sa BarreLaterale ; conteneur, son
@@ -26,6 +28,19 @@ import "../Composants"
 // floute, et le contenu une Surface surfaceWindow opaque.
 Scope {
     id: racine
+
+    // Vrai dès que la fenêtre peut être construite : demandée, et plus aucun popover déployé ou en repli. Une fois
+    // vrai, il le reste jusqu'à la fermeture : un popover ouvert ensuite ne détruit pas la fenêtre.
+    property bool construite: false
+    readonly property bool voulue: EtatParametres.ouverte && Overlays.deployes === 0
+    onVoulueChanged: suivre()
+    Component.onCompleted: suivre()
+    Connections { target: EtatParametres; function onOuverteChanged() { racine.suivre() } }
+
+    // suivre — tient construite à jour : levée quand la fenêtre est demandée et qu'aucun popover n'est déployé,
+    // baissée quand la demande tombe. Entrées : aucune. Sortie : aucune. Erreurs : aucune.
+    // Dépendances : EtatParametres.ouverte, Overlays.deployes.
+    function suivre() { construite = EtatParametres.ouverte && (construite || voulue) }
 
     readonly property var fenetre: chargeur.item
     readonly property var barre: chargeur.item?.barre ?? null
@@ -46,7 +61,7 @@ Scope {
 
     LazyLoader {
         id: chargeur
-        activeAsync: EtatParametres.ouverte && Theme.ready
+        activeAsync: racine.construite && Theme.ready
 
         FloatingWindow {
             readonly property alias barre: barre
