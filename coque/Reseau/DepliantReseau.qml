@@ -20,8 +20,8 @@ import "../Barre/icones.js" as Icones
 // suivi sans second ressort.
 // Sonde : un dépliant détaillé demande la sonde d'EtatReseau tant qu'il est ouvert, visible, que sa fenêtre l'est et
 // que son appareil est celui qu'EtatReseau lit (actuel ; sinon les débits sont masqués et les tuiles à « — ») ;
-// il retire sa demande au repli, à sa destruction et dès que la fenêtre se cache (FenetreReseau.fermer la cache
-// avant de la détruire).
+// il retire sa demande au repli, à sa destruction et dès que la fenêtre se cache (FenetreParametres.fermer la
+// cache avant de la détruire).
 // Secret : dès que le dépliant n'est plus à l'écran (montre faux), le mot de passe lu est vidé et masqué.
 // En tête, avant le chevron, l'appelant peut poser un contenu de fin (fin) : la page Wi-Fi de l'application
 // Paramètres y met la mini-courbe des débits du réseau joint, et demande alors la sonde même replié (veille).

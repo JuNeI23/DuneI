@@ -8,15 +8,15 @@ import "../Composants"
 // tant qu'il est replié), séparé du précédent par un filet. Un clic sur une tête ne fait que la déplier et replie
 // l'autre ; « Rejoindre », au pied d'un profil à portée, lance sa connexion (ProfilReseau.connecter) ; ses
 // « Réglages avancés » se déplient dans son dépliant (D155). Le modèle est la liste des uuids, réaffectée seulement quand elle change : une
-// relecture des profils ou un balayage ne recrée ni ne relit le dépliant ouvert. Employée par ConnusWifi (réseaux
-// connus de la page Wi-Fi) et par PageFilaire (section « Profils »).
+// relecture des profils ou un balayage ne recrée ni ne relit le dépliant ouvert. Employée par SousPageProfils (réseaux
+// enregistrés de la page Wi-Fi) et par PageFilaire (section « Profils »).
 // Entrées : profils, les rangées à montrer (uuid, nom, icone, actif, wifi, appareil, portee ; force et security pour
-// un réseau Wi-Fi à portée) ; panneau, le PanneauReseau (factures) ; etat, la source de l'état et des
+// un réseau Wi-Fi à portée) ; panneau, la page qui porte factures (PageWifi, PageFilaire) ; etat, la source de l'état et des
 // actions, EtatReseau par défaut ; ouvert, l'uuid du profil déplié, vide sinon (écrit par le clic sur une tête). Les
 // rangées s'appellent profils : le nom rangees est celui des enfants de Carte.
 // Sorties : ouvert ; uuids, les uuids montrés, dans l'ordre.
 // Erreurs : celles de chaque ProfilReseau, sous ses réglages ; une carte sans rangée est vide.
-// Dépendances : Groupe, DepliantReseau, Separateur, Theme (reglages, space), PanneauReseau, EtatReseau.
+// Dépendances : Groupe, DepliantReseau, Separateur, Theme (reglages, space), EtatReseau.
 Groupe {
     id: racine
 

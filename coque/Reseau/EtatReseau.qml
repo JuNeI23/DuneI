@@ -13,13 +13,10 @@ import "../Barre/icones.js" as Icones
 // popover, la fenêtre et les notifications lisent tous ce singleton. Aucun minuteur au repos : la lecture ne s'exécute
 // qu'au démarrage et en réponse à une ligne du moniteur. Entrées (réglables) : surveille et lecture, commandes du
 // moniteur et de la lecture (remplaçables par un test) ; actif, suspend le moniteur si faux ; recherche, vrai tant
-// qu'un popover demande un balayage Wi-Fi, et rechercheFenetre, vrai pendant toute la vie de la fenêtre Réseau (posé
-// par son PanneauReseau après la première image, rendu à sa destruction), quel que soit l'onglet : deux demandeurs,
-// deux propriétés, si bien que la fermeture de l'un ne coupe pas le balayage que l'autre réclame encore ; fenetre, vrai
-// pour demander la fenêtre Réseau (posé par « Réglages réseau… » du popover, lu par la fenêtre) ; profilDemande, uuid
-// ou nom du profil que la fenêtre doit montrer (posé par le seul PanneauReseau.ajoute, à la création d'un profil,
-// consommé et remis à vide par le panneau qui le sélectionne ; le popover le vide en ouvrant la fenêtre, et la
-// fermeture de la fenêtre le vide aussi), vide par défaut. Sorties (lecture seule) : veille (vrai de la ligne
+// qu'un popover demande un balayage Wi-Fi, et rechercheFenetre, vrai tant que la page Wi-Fi de l'application
+// Paramètres est à l'écran, radio allumée (posé par PageWifi, rendu dès qu'elle est cachée ou détruite) : deux
+// demandeurs, deux propriétés, si bien que la fermeture de l'un ne coupe pas le balayage que l'autre réclame encore.
+// Sorties (lecture seule) : veille (vrai de la ligne
 // « asleep » du moniteur jusqu'à l'état suivant), carte, radio, filaire, carteFilaire (vrai si une carte filaire
 // existe, branchée ou non : l'onglet Filaire distingue « Câble débranché » de « Aucune carte »), appareilFilaire (le
 // premier appareil filaire de Quickshell.Networking, avec son nom et son adresse matérielle, ou null sans carte
@@ -46,8 +43,6 @@ Singleton {
     property bool rechercheFenetre: false
     // Vrai tant qu'un demandeur au moins réclame le balayage : seule valeur reportée sur les cartes.
     readonly property bool balayage: recherche || rechercheFenetre
-    property bool fenetre: false
-    property string profilDemande: ""
     // Nombre de processus nmcli de executer encore vivants (utile aux tests).
     property int processus: 0
     // Vrai tant que NetworkManager est endormi (la machine est en veille) ; tiré des lignes du moniteur.

@@ -73,7 +73,6 @@ ShellRoot {
         property var ip4: ["192.168.1.42/24"]
         property string icone: "network-wireless-signal-excellent"
         property bool recherche: false
-        property bool fenetre: false
         // Profils enregistrés : le réseau joint, un réseau connu et le partage de connexion du téléphone, vu facturé.
         property var profils: [
             {nom: "Wifi_TRIADES", uuid: "wifi-1", type: "802-11-wireless", appareil: "wlan0", actif: true},
@@ -135,9 +134,8 @@ ShellRoot {
                 // Entrée : valeur, vrai pour le cacher. Sortie : aucune. Erreurs : aucune ; sans panneau, rien.
                 // Dépendances : porteur.
                 function cacherPanneau(valeur: bool): void { if (porteur.item?.panneau) porteur.item.panneau.visible = !valeur }
-                // recherche, fenetre — valeurs de l'état factice, en JSON. Sortie : texte.
+                // recherche — valeur de l'état factice, en JSON. Sortie : texte.
                 function recherche(): string { return JSON.stringify(faux.recherche) }
-                function fenetre(): string { return JSON.stringify(faux.fenetre) }
                 // parametres — ouverture demandée à l'application Paramètres, en JSON : {ouverte, page}. Sortie : texte.
                 function parametres(): string { return JSON.stringify({ouverte: EtatParametres.ouverte, page: EtatParametres.page}) }
                 // connectivite — change la connectivité factice. Entrée : valeur. Sortie : aucune.

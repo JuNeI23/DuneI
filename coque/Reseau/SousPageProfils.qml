@@ -4,7 +4,7 @@ import "../Composants"
 
 // SousPageProfils — sous-page « Réseaux enregistrés » de la page Wi-Fi : tous les profils Wi-Fi, hors de portée
 // compris.
-// Rôle : reprend la section « Réseaux connus » de l'ancienne fenêtre (ConnusWifi) en sous-page de l'application
+// Rôle : reprend la section « Réseaux connus » de l'ancienne fenêtre Réseau en sous-page de l'application
 // Paramètres : un titre, puis la carte des profils (GroupeProfils : chacun un DepliantReseau, un seul déplié à la
 // fois, ses réglages, ses réglages avancés et son pied « Rejoindre » ou « Se déconnecter », « Oublier ce réseau »).
 // Le réseau joint vient en tête, puis les autres profils. Sans profil, une phrase le dit. Le conteneur de page pose
