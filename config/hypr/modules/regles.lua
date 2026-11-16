@@ -12,11 +12,7 @@ M.behaviour = {
     { name = "glisser-xwayland", no_focus = true,
       match = { class = "^$", title = "^$", xwayland = true, float = true, fullscreen = false, pin = false } },
     -- L'application Paramètres de la coque flotte, centrée, à la taille que la coque lui demande (jetons reglages.window_width × window_height de tokens.toml).
-    -- Elle paraît sans l'animation d'ouverture du compositeur : son fondu montrait d'abord le flou d'arrière-plan seul,
-    -- puis le fond de la fenêtre (recette du 16 novembre 2026). Le fond est là d'emblée, et la coque anime elle-même
-    -- l'entrée du contenu.
-    { name = "fenetre-parametres", match = { class = "^org\\.quickshell$", title = "^Paramètres$" }, float = true, center = true,
-      no_anim = true },
+    { name = "fenetre-parametres", match = { class = "^org\\.quickshell$", title = "^Paramètres$" }, float = true, center = true },
 }
 
 -- apply : déclare les règles de fenêtre générées, les règles de calque (verre), puis les règles de comportement.

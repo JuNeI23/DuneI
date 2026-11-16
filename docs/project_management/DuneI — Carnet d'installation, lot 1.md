@@ -2068,7 +2068,7 @@ retiré : sa ligne de `session.toml` passe en `retires` et `make install` désac
   texte : « Se déconnecter » et « Réglages réseau… ». Un réseau sécurisé inconnu déplie son mot de passe sous sa ligne.
   Tant qu'il est ouvert, l'icône de la barre prend l'accent et sa variante pleine.
 - **La fenêtre (D105, direction D4) — retirée le 2026-11-16, remplacée par l'application Paramètres (section
-  suivante, D165 à D170) ; ce qui suit décrit l'état d'alors.** Une fenêtre flottante, créée à l'ouverture et détruite à la fermeture (D80). À
+  suivante, D165 à D171) ; ce qui suit décrit l'état d'alors.** Une fenêtre flottante, créée à l'ouverture et détruite à la fermeture (D80). À
   gauche, un plateau détaché à trois onglets : **Wi-Fi** (réseau joint en carte avec ses réglages fréquents et
   « Détails… », réseaux disponibles, « Autre réseau… », profils enregistrés), **Filaire** (état du câble, méthode IPv4,
   adresses copiables, profils filaires, « Se connecter ») et **VPN** (connexions `vpn` et `wireguard` connues de
@@ -2100,7 +2100,7 @@ retiré : sa ligne de `session.toml` passe en `retires` et `make install` désac
 ## L'application Paramètres — L5-01, L2-65
 
 Rien de plus à installer : l'application vit dans la coque (`dunei-coque.service`) et `make install` n'ajoute aucune
-étape. Elle remplace la fenêtre Réseau (D165 à D170) et accueillera toutes les pages de réglages.
+étape. Elle remplace la fenêtre Réseau (D165 à D171) et accueillera toutes les pages de réglages.
 
 - **L'ouvrir.** « Réglages réseau… » du popover réseau, ou, depuis un terminal,
   `qs ipc -c dunei call parametres ouvrir wifi` (ou `filaire`, `vpn`) ; `qs ipc -c dunei call parametres fermer` la
@@ -2415,7 +2415,7 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 
 | Version | Date | Changement |
 | --- | --- | --- |
-| 1.45 | 2026-11-16 | Application Paramètres (L5-01, L2-65) : ouverture, pages Wi-Fi, Filaire et VPN, partage de connexion, ajout d'une page, tests ; la fenêtre Réseau et `reseau ouvrir` sont retirés (D165 à D170) |
+| 1.45 | 2026-11-16 | Application Paramètres (L5-01, L2-65) : ouverture, pages Wi-Fi, Filaire et VPN, partage de connexion, ajout d'une page, tests ; la fenêtre Réseau et `reseau ouvrir` sont retirés (D165 à D171) |
 | 1.44 | 2026-11-13 | Notifications (L2-19) : la coque remplace dunst ; procédure de passage (`pacman -Rns dunst`, `busctl`) et mise en garde sur `sed -i` et la surveillance de Quickshell (D162). |
 | 1.43 | 2026-11-12 | Entrée : la touche Compose quitte `entree.lua` pour le fichier machine ; caladan la place sur Ctrl droit (`compose:rctrl`), AltGr rend `€` ; arrakis-core n'en déclare aucune (D160). |
 | 1.42 | 2026-11-10 | XWayland en pixels réels (`force_zero_scaling = true`) et échelle de Steam par fichier machine (D161). |

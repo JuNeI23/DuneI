@@ -4004,3 +4004,18 @@ Arbitrages de Claude, à revoir à l'écran si l'un d'eux déplaît :
 
 *Touché : `coque/Reseau/PageWifi.qml`, `coque/Reseau/RangeeReseau.qml`, `coque/Reseau/GroupeProfils.qml`,
 `coque/Reseau/PageFilaire.qml`, `coque/Composants/Carte.qml`, `coque/Reseau/essai/wifi/`.*
+
+### D171 · Le flou suit l'opacité des fenêtres ; la fenêtre Paramètres retrouve son animation d'ouverture
+
+16 novembre 2026 · Nicolas tient à l'animation d'ouverture : l'apparition instantanée de D169 (`no_anim`) est
+abandonnée, et l'écart noté en D170 est levé.
+
+Le défaut d'origine (le flou d'arrière-plan visible seul, puis le fond de la fenêtre) venait du réglage par défaut
+`decoration.blur.ignore_opacity = true` de Hyprland : pendant le fondu d'ouverture, le flou était peint à pleine
+force alors que la fenêtre était encore presque transparente. Le thème pose désormais `ignore_opacity = false` : le
+flou paraît avec la fenêtre, qui s'ouvre entière, en fondu et en légère expansion (`windowsIn`, `fadeIn`), comme
+toutes les autres. Vérifié en rafale de captures. Aucune règle ne rend une fenêtre translucide par l'opacité du
+compositeur, donc le verre de la coque (D136), qui passe par l'alpha de ses propres surfaces, ne change pas.
+
+*Touché : `dunei_theme/emitters/hyprland.py`, `generated/hyprland-tokens.lua`, `tests/golden/`,
+`config/hypr/modules/regles.lua`.*

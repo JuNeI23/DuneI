@@ -119,6 +119,9 @@ def emit(model: dict) -> str:
         f"            passes            = {g['blur_passes']},",
         "            popups            = false,",
         "            new_optimizations = true,",
+        # Le flou suit l'opacité de la fenêtre : pendant le fondu d'ouverture, il paraît avec elle, et non d'un
+        # bloc avant son fond (D171). Aucune règle ne rend une fenêtre translucide, donc rien d'autre ne change.
+        "            ignore_opacity    = false,",
         "        },",
         "    },",
         "    misc = {",
