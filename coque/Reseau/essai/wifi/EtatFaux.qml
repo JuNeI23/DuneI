@@ -105,6 +105,30 @@ Singleton {
     // Erreurs : aucune. Dépendances : sondeurs.
     function demanderSonde(actif) { sondeurs = Math.max(0, sondeurs + (actif ? 1 : -1)) }
 
+    // peupler — ajoute des réseaux factices sans profil, pour éprouver la page sur une longue liste (mesure de
+    // fluidité). Entrée : n, leur nombre. Sortie : aucune. Erreurs : aucune. Dépendances : fabrique, tous, reseaux.
+    function peupler(n) {
+        tous = tous.concat(Array.from({length: n}, (_, i) =>
+            fabrique.createObject(faux, {name: "Voisin_" + (i + 1), signalStrength: 0.2 + 0.5 * (i % 7) / 7})))
+        reseaux = tous.slice()
+    }
+
+    // agiter — rejoue un balayage qui se termine : pendant une seconde, toutes les 20 ms, le signal d'un réseau change
+    // et la liste est rendue, comme le fait NetworkManager réseau par réseau (mesure de fluidité). Entrées : aucune.
+    // Sortie : aucune. Erreurs : aucune. Dépendances : agitation, tous, reseaux.
+    function agiter() { agitation.pas = 0; agitation.start() }
+    Timer {
+        id: agitation
+        property int pas: 0
+        interval: 20
+        repeat: true
+        onTriggered: {
+            faux.tous[pas % faux.tous.length].signalStrength = (pas * 37 % 100) / 100
+            faux.reseaux = faux.tous.slice()
+            if (++pas === 50) stop()
+        }
+    }
+
     Component.onCompleted: {
         const c = (name, signalStrength, autres) => fabrique.createObject(faux, Object.assign({name, signalStrength}, autres))
         tous = [c("Wifi_TRIADES", 0.9, {connected: true, known: true}), c("Telephone_Essai", 0.6, {known: true}),

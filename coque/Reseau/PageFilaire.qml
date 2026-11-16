@@ -99,6 +99,7 @@ Item {
             id: ethernet
             objectName: "ethernet"
             width: parent.width
+            garde: 0
             visible: materiel.visible || page.deplie
             Ligne {
                 id: materiel

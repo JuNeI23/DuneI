@@ -61,6 +61,13 @@ ShellRoot {
                           teinte: 3, composant: Qt.resolvedUrl("PageBanc.qml"), index: [] }]
             }
 
+            // Sonde de fluidité, à la demande (DUNEI_IMAGES=1) : fait rendre chaque image et journalise celles qui
+            // dépassent 25 ms, soit plus d'une image manquée à 60 Hz. Elle chiffre les saccades d'un geste.
+            FrameAnimation {
+                running: Quickshell.env("DUNEI_IMAGES") === "1"
+                onTriggered: if (frameTime > 0.025) console.info("essai : image longue " + Math.round(frameTime * 1000) + " ms")
+            }
+
             IpcHandler {
                 target: "wifi"
 
@@ -158,6 +165,10 @@ ShellRoot {
                 function saisir(texte: string): void { essai.rangee(conteneur.mere, conteneur.mere.jonction.deplie).bloc.secret.text = texte }
                 // rejoindre — « Rejoindre » du mot de passe déplié. Entrées et sortie : aucune.
                 function rejoindre(): void { essai.rangee(conteneur.mere, conteneur.mere.jonction.deplie).bloc.rejoindre() }
+                // peupler — ajoute n réseaux factices à portée (voir EtatFaux.peupler). Entrée : n.
+                function peupler(n: int): void { EtatFaux.peupler(n) }
+                // agiter — rejoue un balayage qui se termine (voir EtatFaux.agiter). Entrées et sortie : aucune.
+                function agiter(): void { EtatFaux.agiter() }
                 // reduit — pose la préférence de mouvement réduit. Entrée : valeur.
                 function reduit(valeur: bool): void { Theme.mouvementReduit = valeur }
             }

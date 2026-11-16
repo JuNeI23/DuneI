@@ -16,7 +16,8 @@ import "etats.js" as Etats
 // ReglageLigne et Ligne (Layout.fillWidth) occupent la largeur de la carte ; la largeur est laissée à
 // l'appelant (width, ancres ou Layout.fillWidth) ; relief, vrai pour le relief « Doux », hérité par défaut de la
 // propriété dnRelief d'un ancêtre (le conteneur de page de l'application Paramètres la déclare), faux sans elle : les
-// cartes des autres fenêtres gardent l'aplat.
+// cartes des autres fenêtres gardent l'aplat ; garde, la marge au-dessus et au-dessous des rangées, space.scale[0] par
+// défaut, nulle pour une carte dont les rangées portent une plaque de survol d'un bord à l'autre (Ligne.bordABord).
 // Sorties : dnRole (« surfaceRaised ») et dnInactive, que lisent les contrôles et les plaques de survol des
 // rangées pour se tenir un cran au-dessus du plan ; implicitHeight, rangées et gardes comprises.
 // Erreurs : aucune ; avant le chargement des tokens, rayon et gardes sont nuls et le fond transparent.
@@ -29,7 +30,7 @@ Item {
 
     default property alias rangees: colonne.data
     readonly property string dnRole: "surfaceRaised"
-    readonly property real garde: Theme.space?.scale[0] ?? 0
+    property real garde: Theme.space?.scale[0] ?? 0
     property bool relief: Etats.herite(carte, "dnRelief", false)
 
     implicitHeight: colonne.implicitHeight + 2 * garde

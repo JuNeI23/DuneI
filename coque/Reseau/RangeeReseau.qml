@@ -8,7 +8,7 @@ import "../Barre/icones.js" as Icones
 // Rôle : une Ligne cliquable (clavier, contour de focus et plaque de survol compris) qui porte, de gauche à droite,
 // le glyphe du réseau dans la colonne des médaillons (force du signal, ou partage de connexion pour un profil vu
 // facturé), son nom, puis l'invite « Rejoindre », qui paraît en fondu au survol, et le cadenas d'un réseau sécurisé
-// ou le mot « Ouvert ». Pendant la connexion, la rangée reste à sa place : son glyphe et la ligne « Connexion… »
+// (un réseau ouvert ne porte rien, D170). Pendant la connexion, la rangée reste à sa place : son glyphe et la ligne « Connexion… »
 // passent à l'accent autonome, et l'indicateur d'activité remplace l'invite et le cadenas. Sous la rangée, le mot de
 // passe (BlocSecret) se déplie et se replie en animant sa hauteur, sur le ressort reveal ; il n'est chargé que
 // déplié ou en mouvement, et sa saisie disparaît avec lui.
@@ -82,19 +82,14 @@ ColumnLayout {
             moyen: true
             color: Theme.color?.accentStandalone ?? "transparent"
         }
-        Texte {
-            visible: !rangee.securise && !rangee.enConnexion
-            text: "Ouvert"
-            echelon: 1
-            color: Theme.color?.textTertiary ?? "transparent"
-        }
         Icone {
             visible: rangee.securise && !rangee.enConnexion
             nom: "network-wireless-encrypted"
             taille: Theme.icons?.sizes.dense ?? 0
             couleur: Theme.color?.textTertiary ?? "transparent"
         }
-        Activite { visible: rangee.enConnexion }
+        // L'indicateur d'activité n'est bâti que pour la rangée en connexion : une longue liste n'en paie pas le prix.
+        Loader { active: rangee.enConnexion; visible: active; sourceComponent: Activite {} }
     }
 
     // Mot de passe, découpé à la hauteur montrée.

@@ -3980,3 +3980,27 @@ Arbitrages de Claude, à revoir à l'écran si l'un d'eux déplaît :
 *Touché : `coque/Theme/RessortVue.qml`, `coque/Reseau/PageWifi.qml`, `coque/Reseau/Ligne.qml`,
 `coque/Reseau/RangeeReseau.qml`, `coque/Reseau/DepliantReseau.qml`, `config/hypr/modules/regles.lua`,
 `tests/test_reseau.py`.*
+
+### D170 · Recette de l'application Paramètres, deuxième tour : réseau ouvert sans marque, fluidité mesurée
+
+16 novembre 2026 · Suite de D169, après le deuxième passage de Nicolas à l'écran.
+
+- **Réseau ouvert.** Le mot « Ouvert » disparaît de la rangée d'un réseau sans mot de passe : seul le cadenas marque
+  un réseau protégé, comme sur iOS et macOS. Un cadenas ouvert se distinguait mal du cadenas fermé à cette taille, et
+  un avertissement dramatisait un Wi-Fi d'hôtel. Choix de Nicolas, sur trois propositions.
+- **Fluidité.** Le banc de la page Wi-Fi reçoit une sonde (`DUNEI_IMAGES=1`, images de plus de 25 ms journalisées),
+  une longue liste (`peupler`) et un balayage agité (`agiter`). Sur quarante-sept réseaux, « Afficher les N autres
+  réseaux » coûtait une image de 70 ms. Deux causes : chaque rangée bâtissait son indicateur d'activité, même au
+  repos, et toutes les rangées naissaient dans la même image. L'indicateur n'est plus bâti que pour la rangée en
+  connexion, et `ordonner` construit au plus `reveal.stagger.cap` rangées par passe, à l'intervalle
+  `reveal.stagger.ms`. Les plaques des sections ne sont plus détruites et rebâties à chaque changement de hauteur.
+  Après correction, plus aucune image longue sur « Afficher », ni pendant un balayage.
+- **Première image entière.** Les plaques des cartes de la page Wi-Fi sont posées dans la passe qui bâtit les
+  rangées, et non au tour suivant : la fenêtre paraît d'emblée avec ses cartes. Une animation d'ouverture a été
+  écartée : le fondu du compositeur comme un fondu de la coque montrent le flou d'arrière-plan avant le fond, tant
+  que le flou de Hyprland ignore l'opacité de la fenêtre (`decoration.blur.ignore_opacity`, réglage global).
+- **Survol des cartes.** `Carte.garde` devient réglable et vaut zéro là où les rangées portent une plaque d'un bord à
+  l'autre (carte de fin de la page Wi-Fi, profils, carte « Ethernet ») : la plaque couvre toute la carte.
+
+*Touché : `coque/Reseau/PageWifi.qml`, `coque/Reseau/RangeeReseau.qml`, `coque/Reseau/GroupeProfils.qml`,
+`coque/Reseau/PageFilaire.qml`, `coque/Composants/Carte.qml`, `coque/Reseau/essai/wifi/`.*

@@ -98,6 +98,8 @@ Item {
     readonly property bool montre: allume && visible && (Window.window?.visible ?? false)
     // Hauteur d'un en-tête de section, que tracer lit pour poser les plaques.
     readonly property real hauteurSection: (Theme.space?.scale[3] ?? 0) + gabarit.implicitHeight + (Theme.space?.scale[1] ?? 0)
+    // Nombre de rangées qu'une passe d'ordonner peut construire : le plafond d'échelonnement du mouvement.
+    readonly property int lot: Theme.motion?.transitions?.reveal?.stagger?.cap ?? 0
     readonly property alias modele: modele
     readonly property alias liste: liste
     readonly property alias jonction: jonction
@@ -133,22 +135,37 @@ Item {
 
     // ordonner — met le modèle au pas de voulu, sauf si l'ordre est retenu : retire les rangées disparues, insère les
     // nouvelles et déplace les autres, pour que la vue joue ses transitions ; le genre et la section d'une rangée
-    // gardée sont mis à jour sur place. Entrée : force, vrai pour passer outre la retenue (geste de l'utilisateur).
+    // gardée sont mis à jour sur place, s'ils ont changé. Une passe ne construit pas plus de lot rangées : bâtir d'un
+    // bloc la quarantaine de rangées d'« Afficher les N autres réseaux » coûtait une image de 70 ms ; le reste suit par
+    // lots, à l'intervalle d'échelonnement du mouvement (reveal.stagger.ms, minuteur suite), ce qui garde chaque image sous son budget.
+    // Entrée : force, vrai pour passer outre la retenue (geste de l'utilisateur, suite d'une passe).
     // Sortie : aucune ; lève promis une fois le réseau rejoint en tête. Erreurs : aucune.
-    // Dépendances : voulu, retenu, modele, meme, tracer.
+    // Dépendances : voulu, retenu, modele, meme, tracer, lot, suite.
     function ordonner(force) {
         if (retenu && !force) return
         for (let i = modele.count - 1; i >= 0; i--)
             if (!voulu.some(v => meme(v, modele.get(i)))) modele.remove(i)
-        voulu.forEach((v, i) => {
+        let poses = 0
+        const fini = voulu.every((v, i) => {
             let j = i
             while (j < modele.count && !meme(v, modele.get(j))) j++
-            if (j === modele.count) return modele.insert(i, v)
+            if (j === modele.count) {
+                if (lot > 0 && poses === lot) return false
+                poses++
+                modele.insert(i, v)
+                return true
+            }
             if (j !== i) modele.move(j, i, 1)
-            modele.set(i, v)
+            const m = modele.get(i)
+            if (m.genre !== v.genre || m.groupe !== v.groupe) modele.set(i, v)
+            return true
         })
+        if (!fini) suite.restart()
         if (promis !== "" && joint?.nom === promis) promis = ""
-        Qt.callLater(tracer)
+        // Les plaques sont posées dans la même passe que les rangées : la vue bâtit ses délégués aussitôt, pour que
+        // la première image de la page les montre déjà sur leurs cartes.
+        liste.forceLayout()
+        tracer()
     }
 
     // tracer — pose les plaques des sections à leur place finale : celle que la vue donne à chaque rangée une fois
@@ -219,6 +236,8 @@ Item {
     }
 
     ListModel { id: modele }
+    // Suite d'une passe d'ordonner qui n'a pas tout construit.
+    Timer { id: suite; interval: Theme.motion?.transitions?.reveal?.stagger?.ms ?? 0; onTriggered: page.ordonner(true) }
     Component { id: sousPageProfils; SousPageProfils {} }
     Component { id: sousPageMasque; SousPageMasque {} }
     // Gabarit du titre de section, jamais montré : il donne sa hauteur à hauteurSection.
@@ -271,12 +290,15 @@ Item {
 
             // Plaques des sections, sous les rangées.
             Repeater {
-                model: page.plans
+                // Le modèle est le nombre de plaques : une plaque qui bouge ou change de hauteur est gardée, et non
+                // détruite puis rebâtie avec son ombre à chaque image d'un dépliant en mouvement.
+                model: page.plans.length
                 Carte {
-                    required property var modelData
-                    y: modelData.y
+                    required property int index
+                    readonly property var plan: page.plans[index] ?? null
+                    y: plan?.y ?? 0
                     width: liste.width
-                    height: modelData.h
+                    height: plan?.h ?? 0
                 }
             }
 
@@ -454,6 +476,8 @@ Item {
         Carte {
             width: parent.width
             visible: page.allume
+            // Sans garde : les rangées touchent les bords de la carte, que leur plaque de survol couvre en entier.
+            garde: 0
             Ligne {
                 objectName: "enregistres"
                 filet: false

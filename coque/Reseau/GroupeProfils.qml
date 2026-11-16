@@ -19,6 +19,8 @@ import "../Composants"
 // Dépendances : Groupe, DepliantReseau, Separateur, Theme (reglages, space), EtatReseau.
 Groupe {
     id: racine
+    // Sans garde : les têtes des dépliants touchent les bords de la carte, que leur plaque de survol couvre en entier.
+    garde: 0
 
     required property var profils
     required property var panneau
