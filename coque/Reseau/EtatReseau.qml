@@ -13,26 +13,25 @@ import "../Barre/icones.js" as Icones
 // popover, la fenêtre et les notifications lisent tous ce singleton. Aucun minuteur au repos : la lecture ne s'exécute
 // qu'au démarrage et en réponse à une ligne du moniteur. Entrées (réglables) : surveille et lecture, commandes du
 // moniteur et de la lecture (remplaçables par un test) ; actif, suspend le moniteur si faux ; recherche, vrai tant
-// qu'un popover demande un balayage Wi-Fi, et rechercheFenetre, vrai pendant toute la vie de la fenêtre Réseau (posé
-// par son PanneauReseau après la première image, rendu à sa destruction), quel que soit l'onglet : deux demandeurs,
-// deux propriétés, si bien que la fermeture de l'un ne coupe pas le balayage que l'autre réclame encore ; fenetre, vrai
-// pour demander la fenêtre Réseau (posé par « Réglages réseau… » du popover, lu par la fenêtre) ; profilDemande, uuid
-// ou nom du profil que la fenêtre doit montrer (posé par le seul PanneauReseau.ajoute, à la création d'un profil,
-// consommé et remis à vide par le panneau qui le sélectionne ; le popover le vide en ouvrant la fenêtre, et la
-// fermeture de la fenêtre le vide aussi), vide par défaut. Sorties (lecture seule) : veille (vrai de la ligne
+// qu'un popover demande un balayage Wi-Fi, et rechercheFenetre, vrai tant que la page Wi-Fi de l'application
+// Paramètres est à l'écran, radio allumée (posé par PageWifi, rendu dès qu'elle est cachée ou détruite) : deux
+// demandeurs, deux propriétés, si bien que la fermeture de l'un ne coupe pas le balayage que l'autre réclame encore.
+// Sorties (lecture seule) : veille (vrai de la ligne
 // « asleep » du moniteur jusqu'à l'état suivant), carte, radio, filaire, carteFilaire (vrai si une carte filaire
 // existe, branchée ou non : l'onglet Filaire distingue « Câble débranché » de « Aucune carte »), appareilFilaire (le
 // premier appareil filaire de Quickshell.Networking, avec son nom et son adresse matérielle, ou null sans carte
 // filaire), connecte, connectivite (« unknown », « none », « portal », « limited » ou « full »), reseauActif
 // (WifiNetwork ou null), nomActif, force (0 à 1), facture, appareil (l'interface dont la lecture donne les adresses :
 // le filaire actif, sinon le Wi-Fi), ip4, ip6, passerelle, dns, mac (adresse matérielle de l'appareil actif), profils,
-// vpnActif, icone, reseaux (WifiNetwork de toutes les cartes, non triés) ; relances, nombre de démarrages du moniteur.
+// vpnActif, icone, reseaux (WifiNetwork de toutes les cartes, non triés) ; relances, nombre de démarrages du moniteur ;
+// facturesVues, les noms des réseaux Wi-Fi vus facturés une fois joints, retenus d'une session à l'autre dans l'état
+// persistant de la coque (MemoireFactures ; rien n'est écrit dans NetworkManager), pour leur glyphe de partage.
 // Fonctions : relire, verifier, executer, allumer, ouvrirPortail, oublierDebits, demanderSonde (sonde à la demande :
 // sondeurs, racineCompteurs, debits, signalDbm, connecteDepuis, canal, frequence ; un minuteur d'une seconde
 // seulement tant qu'un demandeur existe).
 // Erreurs : sans nmcli ou sans NetworkManager, les valeurs nmcli restent vides et le moniteur est relancé toutes les
 // secondes (voir Relance) ; la sortie d'une lecture partielle est lue au mieux.
-// Dépendances : Relance, nmcli.js, icones.js, Quickshell.Networking, Quickshell.Io.
+// Dépendances : Relance, MemoireFactures, nmcli.js, icones.js, Quickshell.Networking, Quickshell.Io.
 Singleton {
     id: etat
 
@@ -44,8 +43,6 @@ Singleton {
     property bool rechercheFenetre: false
     // Vrai tant qu'un demandeur au moins réclame le balayage : seule valeur reportée sur les cartes.
     readonly property bool balayage: recherche || rechercheFenetre
-    property bool fenetre: false
-    property string profilDemande: ""
     // Nombre de processus nmcli de executer encore vivants (utile aux tests).
     property int processus: 0
     // Vrai tant que NetworkManager est endormi (la machine est en veille) ; tiré des lignes du moniteur.
@@ -79,6 +76,8 @@ Singleton {
     property var dns: []
     property var profils: []
     property bool vpnActif: false
+    readonly property var facturesVues: memoire.noms
+    MemoireFactures { id: memoire; etat: etat }
 
     // Sonde à la demande (voir demanderSonde) : demandeurs, dossier des compteurs du noyau, débits en octets par
     // seconde (60 échantillons, le plus récent en dernier), signal en dBm et durée de connexion en secondes (null

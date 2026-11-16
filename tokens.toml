@@ -205,7 +205,7 @@ wal_cache = "~/.cache/wal/colors.json"
 # Décalages angulaires fixes : cinq couleurs qui vont ensemble par
 # construction, restent distinguables, et tournent toutes avec le thème.
 # Usages : bureaux virtuels, étiquettes, syntaxe, séries de données,
-# types de périphériques. JAMAIS deux accents dans une même fenêtre.
+# types de périphériques, pages de réglages. JAMAIS deux accents dans une même fenêtre.
 
 [categorical]
 hue_offsets = [0, 40, 95, 160, -60]
@@ -300,6 +300,15 @@ shadow = true
 step = 0
 inset_shadow = true
 
+# `card` est la carte d'une page de réglages (application Paramètres, relief « Doux ») : un plan opaque à peine
+# soulevé, à la couleur de surface-raised, avec le liseré clair du haut et une ombre courte (surface_material.card_*),
+# sans reflet ni liseré sombre.
+[elevation.card]
+step = 3
+sheen = false
+edge_light = true
+shadow = true
+
 [surface_material]
 sheen_delta = 0.020          # dégradé vertical, haut vers bas
 dither = "IGN"               # OBLIGATOIRE — bruit par pixel avant quantification
@@ -314,6 +323,27 @@ glass_line_opacity = 0.12        # filet posé sur le verre, à la couleur de te
                                  # ce qu'il y a dessous, quel que soit le fond (D103)
 inset_shadow_opacity = 0.22      # ombre intérieure du creux (primitive `field`), en noir
 inset_shadow_depth = 4           # px logiques — profondeur de l'ombre intérieure du creux, multiple de 4
+header_glow = 0.13               # force de la lueur d'en-tête d'une page de réglages, dans la teinte de la page
+header_glow_reach = 0.42         # portée de cette lueur depuis le coin de la vignette, en part de la largeur de la carte
+card_shadow_opacity = 0.45       # ombre courte d'une carte de réglages (relief « Doux »), en noir
+card_shadow_blur = 3             # px logiques — flou de l'ombre courte d'une carte
+card_shadow_offset_y = 1         # px logiques — décalage vertical de l'ombre courte d'une carte
+medallion_sheen = 0.14           # force du reflet clair, en haut d'un médaillon actif (réseau joint)
+medallion_sheen_reach = 0.6      # part de la hauteur du médaillon où ce reflet s'éteint
+
+# Verre des vignettes des pages de réglages (application Paramètres), lu sous Theme.material.thumb. Chaque valeur
+# est une part entre 0 et 1 ; la base est la nuit, le jour la surcharge sous [moments.jour.surface_material.thumb].
+[surface_material.thumb]
+tint = 0.24                  # part de la teinte de la page mêlée au fond de la vignette
+sheen = 0.24                 # force du reflet, en haut de la vignette
+edge = 0.10                  # opacité du liseré
+halo = 0.0                   # force du halo autour de la vignette
+ground = "surface-raised"    # rôle du fond de la vignette, sous la teinte
+edge_tinted = false          # faux : liseré au blanc des reflets ; vrai : liseré à la teinte de la page
+sheen_center = 0.5           # abscisse du centre du reflet sur le bord haut, en part du côté
+sheen_reach = 0.55           # portée du reflet, en part du côté
+halo_center = 0.3            # abscisse du centre du halo sur le bord haut, en part du côté
+halo_reach = 0.75            # portée du halo, en part du côté
 
 # Verre dépoli des surfaces de la coque (L2-04). Hyprland n'a qu'un thème : flou et règles de calque
 # ne varient pas avec le moment ; seules les opacités du verre, lues par la coque, le peuvent.
@@ -470,6 +500,16 @@ window_width = 840            # largeur par défaut de la fenêtre Réseau (D105
 window_height = 640           # hauteur par défaut de la fenêtre Réseau (D105)
 window_min_width = 720        # largeur minimale de la fenêtre Réseau (D105)
 window_min_height = 480       # hauteur minimale de la fenêtre Réseau (D105)
+entry_height = 32             # hauteur d'une entrée compacte de la barre latérale (application Paramètres)
+thumb = 22                    # côté de la vignette d'une entrée de la barre latérale
+thumb_glyph = 14              # taille du glyphe dans la vignette
+networks_shown = 5            # nombre maximal de rangées de réseaux affichées, le réseau joint non compté
+sidebar_width = 244           # largeur de la barre latérale de l'application Paramètres
+page_margin = 20              # retrait d'une page de réglages dans la zone qui défile
+page_rise = 6                 # montée de la page entrante, en fondu-glissé
+thumb_large = 44              # côté de la grande vignette d'une carte d'en-tête de page
+sparkline_width = 92          # largeur de la mini-courbe des débits, sur la rangée du réseau joint
+sparkline_height = 30         # hauteur de la mini-courbe des débits
 
 [layout]
 sidebar_default = 240
@@ -666,6 +706,17 @@ inset_shadow = true
 
 [moments.jour.surface_material]
 edge_light_opacity = 0.0
+card_shadow_opacity = 0.13       # le jour, l'ombre courte d'une carte est plus pâle et un peu plus large
+card_shadow_blur = 4
+
+# Le jour, la vignette n'est plus teintée dans sa masse : la teinte de la page passe dans son liseré et son halo.
+[moments.jour.surface_material.thumb]
+tint = 0.0
+sheen = 0.14
+edge = 0.38                  # liseré teinté, à la teinte de la page
+halo = 0.42
+ground = "surface-window"    # le jour, le fond de la vignette est celui de la fenêtre
+edge_tinted = true
 
 [moments.jour.accent]
 fill_lightness = 0.53

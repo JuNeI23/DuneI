@@ -4,24 +4,26 @@ import Quickshell
 import Quickshell.Io
 import QtTest
 import "Reseau"
+import "Parametres"
 
-// Coque d'essai de la fenêtre Réseau, sous la plateforme offscreen.
-// Rôle : instancie FenetreReseau sur le vrai EtatReseau ; le test place un nmcli factice en tête du PATH, si bien
-// qu'aucune commande ne touche le réseau réel. La fenêtre s'ouvre par l'IPC réelle (« reseau ouvrir ») ; la cible
-// « essai » lit son état et y joue les gestes de l'utilisateur (dont les touches, par un TestEvent de QtTest posé sur
-// le panneau). tests/test_reseau.py (FenetreTest) la pilote.
-// Entrées : DUNEI_TOKENS_DIR, lu par Theme ; QT_QPA_PLATFORM=offscreen et PATH, posés par le test.
+// Coque d'essai des pages du réseau dans l'application Paramètres, sous la plateforme offscreen.
+// Rôle : instancie FenetreParametres sur le vrai registre et le vrai EtatReseau ; le test place un nmcli et un iw
+// factices en tête du PATH, si bien qu'aucune commande ne touche le réseau réel. La fenêtre s'ouvre et se ferme par
+// l'IPC réelle (« parametres ouvrir <page> ») ; la cible « essai » lit son état et y joue les gestes de l'utilisateur
+// (dont les touches, par un TestEvent de QtTest posé sur le conteneur de page). tests/test_reseau.py
+// (ReseauParametresTest) la pilote ; elle reprend les essais d'intégration de l'ancienne fenêtre Réseau.
+// Entrées : DUNEI_TOKENS_DIR, lu par Theme ; DUNEI_ETAT_DIR, lu par la mémoire des réseaux vus facturés ;
+// QT_QPA_PLATFORM=offscreen et PATH, posés par le test.
 // Sortie : « essai : prêt » au démarrage ; voir chaque fonction de l'IpcHandler. Le texte d'un secret n'est jamais
 // rendu ni journalisé, seulement sa longueur.
 // Erreurs : celles de Theme et des liaisons, dans le journal. Dépendances : quickshell ≥ 0.3 (IpcHandler),
-// FenetreReseau, par les liens Theme, Composants, Reseau et Barre posés sous cette racine.
+// FenetreParametres, EtatParametres, EtatReseau, par les liens Theme, Composants, Reseau, Barre et Parametres posés
+// sous cette racine.
 ShellRoot {
     id: essai
 
     Component.onCompleted: console.info("essai : prêt")
 
-    // Durée de la dernière bascule d'onglet (ms), -1 tant qu'elle court.
-    property int dureeBascule: -1
     // Uuid du profil dont les réglages avancés sont à déplier dès que son dépliant a chargé son contenu, vide sinon.
     property string avancesDe: ""
 
@@ -38,12 +40,12 @@ ShellRoot {
         }
     }
 
-    FenetreReseau { id: fenetre }
+    FenetreParametres { id: fenetre }
 
     // touche — frappe une touche dans la fenêtre du panneau, comme le clavier. Entrée : cle, un Qt.Key_*. Sortie :
     // aucune. Erreurs : fenêtre fermée, TypeError au journal. Dépendances : QtTest (TestEvent).
     function touche(cle) {
-        const e = Qt.createQmlObject("import QtTest; TestEvent {}", fenetre.panneau)
+        const e = Qt.createQmlObject("import QtTest; TestEvent {}", fenetre.conteneur)
         e.keyClick(cle, Qt.NoModifier, -1)
         e.destroy()
     }
@@ -79,17 +81,10 @@ ShellRoot {
 
     // fiche — les réglages avancés dépliés (AvancesReseau) de la fenêtre, null sans eux : ils tiennent lieu de
     // l'ancienne sous-page de profil (D155). Entrées : aucune. Sortie : l'Item, ou null. Erreurs : aucune.
-    function fiche() { return trouver(fenetre.panneau, o => o.objectName === "avancesReseau" && o.visible) }
+    function fiche() { return trouver(fenetre.conteneur, o => o.objectName === "avancesReseau" && o.visible) }
 
     // nomme — descendant des réglages avancés dépliés par son objectName. Entrée : nom. Sortie : l'Item, ou null.
     function nomme(nom) { return trouver(fiche(), o => o.objectName === nom) }
-
-    // selection — clé de sélection, graisse et contour de la rangée choisie. Entrées : aucune. Sortie : [clé de
-    // sélection, gras, contour montré], ou [] sans rangée choisie. Erreurs : aucune. Dépendances : fenetre.panneau (Liste, Rangee).
-    function selection() {
-        const r = trouver(fenetre.panneau, o => o.gras !== undefined && o.etat?.selectionne)
-        return r ? [r.etat.selection, r.gras, r.contourMontre] : []
-    }
 
     // lireCopie — retour de copie d'un libellé du détail (vide : « Tout copier »). Entrée : cle. Sortie : JSON
     // {presse (Quickshell.clipboardText), copie (le libellé dont « Copié » est le texte opaque, « * » pour « Tout copier »,
@@ -111,7 +106,7 @@ ShellRoot {
     // uuid. Sortie : l'Item, ou null.
     function depliant(uuid) {
         const nom = "depliant:" + uuid
-        return trouver(fenetre.panneau, o => o.objectName === nom && o.visible) ?? trouver(fenetre.panneau, o => o.objectName === nom)
+        return trouver(fenetre.conteneur, o => o.objectName === nom && o.visible) ?? trouver(fenetre.conteneur, o => o.objectName === nom)
     }
 
     // depliants — état des dépliants de réseau de la fenêtre, par uuid : {ouvert, charge (contenu chargé), lu (profil
@@ -155,35 +150,37 @@ ShellRoot {
                 }
             }
         }
-        parcourir(fenetre.panneau)
+        parcourir(fenetre.conteneur)
         return r
     }
 
     IpcHandler {
         target: "essai"
 
-        // etat — état de la fenêtre, en JSON : {fenetre (construite), demandee (EtatReseau.fenetre), sondeurs
-        // (demandeurs de la sonde), depliants (voir essai.depliants), rangees
-        // ([groupe, nom, état, icône] des profils), detail (libellé → valeur du détail de la connexion active, dans les
-        // réglages avancés dépliés), onglet et sousPage (ceux du panneau), onglets ([clé, nom, état] des trois onglets),
-        // defilement ([contentY, contentHeight, height]), fiche: les réglages avancés dépliés (essai.fiche) {uuid, lu,
-        // fixe, erreurs, titre (nom du réseau de leur dépliant), libelles (libellés des Ligne montrées)}}.
+        // etat — état de la fenêtre, en JSON : {fenetre (construite), visible, demandee (EtatParametres.ouverte),
+        // sondeurs (demandeurs de la sonde), depliants (voir essai.depliants), rangees ([groupe, nom, état, icône] des
+        // profils de la page montrée), detail (libellé → valeur du détail de la connexion active, dans les réglages
+        // avancés dépliés), page (identifiant de la page montrée), niveau (nombre de sous-pages empilées), retour
+        // (texte de la rangée de retour, vide sans sous-page), phrase (phrase d'état de l'en-tête de la page),
+        // defilement ([contentY, contentHeight, height]), toutCopier (largeur du bouton, 0 sans lui), nouvelle (la
+        // fiche du réseau masqué : {visible, securise, valide, erreur}, vide sans elle), fiche : les réglages avancés
+        // dépliés (essai.fiche) {uuid, lu, fixe, erreurs, titre (nom du réseau de leur dépliant), libelles (libellés
+        // des Ligne montrées)}}.
         // Entrées : aucune. Sortie : texte JSON. Erreurs : aucune ; fenêtre fermée, rangees, detail et fiche vides.
         function etat(): string {
-            const p = fenetre.panneau
+            const c = fenetre.conteneur
             const f = essai.fiche()
+            const n = c?.courante?.fiche ?? null
             return JSON.stringify({
-                fenetre: p !== null, visible: p?.Window.window?.visible ?? false, demandee: EtatReseau.fenetre,
+                fenetre: !!fenetre.fenetre, visible: fenetre.fenetre?.visible ?? false, demandee: EtatParametres.ouverte,
                 sondeurs: EtatReseau.sondeurs, depliants: essai.depliants(),
-                rangees: (p?.rangees ?? []).map(r => [r.groupe, r.nom, r.etat, r.icone]),
+                rangees: (c?.mere?.rangees ?? []).map(r => [r.groupe, r.nom, r.etat, r.icone]),
                 detail: f?.detail ?? {},
-                selection: essai.selection(),
-                onglet: p?.onglet ?? "", sousPage: p?.sousPage ?? "",
-                onglets: (p?.onglets ?? []).map(o => [o.cle, o.nom, o.etat]),
-                defilement: p ? [p.defilement.contentY, p.defilement.contentHeight, p.defilement.height] : [],
+                page: EtatParametres.page, niveau: c?.niveau ?? 0, retour: c?.niveau ? "‹ " + c.retour : "",
+                phrase: c?.mere?.enTete?.etat ?? "",
+                defilement: c ? [c.defilement.contentY, c.defilement.contentHeight, c.defilement.height] : [],
                 toutCopier: f && essai.nomme("toutCopier") ? essai.nomme("toutCopier").width : 0,
-                nouvelle: !p?.nouvelle ? {} : {visible: p.nouvelle.visible, securise: p.nouvelle.securise,
-                                                valide: p.nouvelle.valide, erreur: p.nouvelle.erreur},
+                nouvelle: !n ? {} : {visible: n.visible, securise: n.securise, valide: n.valide, erreur: n.erreur},
                 fiche: !f ? {} : {
                     uuid: f.profil.uuid, lu: f.lu, fixe: f.fixe, erreurs: f.erreurs,
                     titre: f.rangee?.nom ?? "",
@@ -206,13 +203,7 @@ ShellRoot {
         // relire — relit nmcli sans attendre le moniteur. Entrées et sortie : aucune. Dépendances : EtatReseau.relire.
         function relire(): void { EtatReseau.relire() }
 
-        // demander — demande la fenêtre sur un profil, comme « Détails… » du popover. Entrée : cle, uuid ou nom.
-        // Sortie : aucune. Erreurs : aucune.
-        function demander(cle: string): void { EtatReseau.profilDemande = cle; EtatReseau.fenetre = true }
-        // demande — profil demandé encore en attente (EtatReseau.profilDemande). Sortie : texte.
-        function demande(): string { return EtatReseau.profilDemande }
-
-        // balayage — demandeurs du balayage Wi-Fi d'EtatReseau, en JSON : {recherche (popover), fenetre (page Wi-Fi),
+        // balayage — demandeurs du balayage Wi-Fi d'EtatReseau, en JSON : {recherche (popover), fenetre (page Wi-Fi à l'écran),
         // balayage (l'un ou l'autre)}. Sortie : texte JSON. Erreurs : aucune.
         function balayage(): string {
             return JSON.stringify({recherche: EtatReseau.recherche, fenetre: EtatReseau.rechercheFenetre, balayage: EtatReseau.balayage})
@@ -220,55 +211,23 @@ ShellRoot {
         // popover — pose la demande de balayage du popover, qu'il écrit dans EtatReseau.recherche. Entrée : valeur.
         function popover(valeur: bool): void { EtatReseau.recherche = valeur }
 
-        // choisir — déplie le profil d'un uuid dans sa page (comme « Détails… » du popover), puis ses réglages avancés,
-        // qui ont remplacé la sous-page de profil (D155). Entrée : uuid. Sortie : aucune.
-        function choisir(uuid: string): void { essai.avancesDe = uuid; EtatReseau.profilDemande = uuid }
+        // page — montre une page de l'application, comme un clic dans la barre latérale. Entrée : cle (wifi, filaire,
+        // vpn). Sortie : aucune. Dépendances : EtatParametres.
+        function page(cle: string): void { EtatParametres.ouvrir(cle, []) }
 
-        // onglet — choisit un onglet, comme un clic sur sa rangée. Entrée : cle (wifi, filaire, vpn). Sortie : aucune.
-        function onglet(cle: string): void { fenetre.panneau.liste.itemAtIndex(fenetre.panneau.onglets.findIndex(o => o.cle === cle)).clicked() }
-
-        // refocaliser — fait perdre puis reprendre le focus à la liste des onglets, comme une fenêtre qui se réactive.
-        // Entrées et sortie : aucune. Erreurs : fenêtre fermée, TypeError au journal.
-        function refocaliser(): void { fenetre.panneau.liste.focus = false; fenetre.panneau.liste.forceActiveFocus() }
-        // listeFocus — vrai si la liste des onglets a le focus actif. Sortie : texte « true » ou « false ».
-        function listeFocus(): string { return String(fenetre.panneau.liste.activeFocus) }
-        // bascule — chronomètre un changement d'onglet : pose l'onglet, puis note le temps écoulé jusqu'à la prochaine
-        // synchronisation de la scène (page visible et mise en page faite). Entrée : cle. Sortie : aucune ; le résultat
-        // se lit par mesure(). Erreurs : fenêtre fermée, TypeError au journal. Dépendances : Window (afterSynchronizing).
-        function bascule(cle: string): void {
-            const w = fenetre.panneau.Window.window
-            const debut = Date.now()
-            essai.dureeBascule = -1
-            const fin = () => { essai.dureeBascule = Date.now() - debut; w.afterSynchronizing.disconnect(fin) }
-            w.afterSynchronizing.connect(fin)
-            fenetre.panneau.liste.itemAtIndex(fenetre.panneau.onglets.findIndex(o => o.cle === cle)).clicked()
-        }
-        // mesure — durée en millisecondes de la dernière bascule, -1 tant qu'elle n'est pas finie. Sortie : texte.
-        function mesure(): string { return String(essai.dureeBascule) }
-        // pages — identité (type et adresse) des trois pages d'onglet, en JSON (« null » pour une page pas encore
-        // construite), pour vérifier qu'elles se construisent à la demande et survivent aux changements d'onglet.
-        // Sortie : texte JSON. Erreurs : fenêtre fermée, TypeError au journal.
-        function pages(): string {
-            const p = fenetre.panneau
-            return JSON.stringify([p.pageWifi, p.pageFilaire, p.pageVpn].map(String))
-        }
+        // enregistres — ouvre la sous-page « Réseaux enregistrés » de la page Wi-Fi. Entrées : aucune. Sortie : aucune.
+        // Erreurs : autre page montrée, TypeError au journal.
+        function enregistres(): void { fenetre.conteneur.mere.ouvrirProfils() }
 
         // retour — clic sur la rangée de retour de la sous-page. Entrées : aucune. Sortie : aucune.
-        function retour(): void { essai.trouver(fenetre.panneau, o => o.objectName === "retour").clicked() }
-
-        // retourTexte — texte de la rangée de retour de la sous-page (« ‹ Wi-Fi » ou « ‹ Filaire »), vide sans sous-page.
-        // Entrées : aucune. Sortie : texte. Erreurs : aucune.
-        function retourTexte(): string {
-            const r = essai.trouver(fenetre.panneau, o => o.objectName === "retour")
-            return r && r.visible ? r.text : ""
-        }
+        function retour(): void { essai.trouver(fenetre.conteneur, o => o.objectName === "retour").clicked() }
 
         // echap — frappe Échap. Entrées : aucune. Sortie : aucune. Dépendances : touche.
         function echap(): void { essai.touche(Qt.Key_Escape) }
 
         // retourArriere — frappe Maj+Tab. Entrées : aucune. Sortie : aucune. Dépendances : touche.
         function retourArriere(): void {
-            const e = Qt.createQmlObject("import QtTest; TestEvent {}", fenetre.panneau)
+            const e = Qt.createQmlObject("import QtTest; TestEvent {}", fenetre.conteneur)
             e.keyClick(Qt.Key_Backtab, Qt.ShiftModifier, -1)
             e.destroy()
         }
@@ -283,10 +242,10 @@ ShellRoot {
 
         // focus — libellé de la Ligne (ou objectName du contrôle, comme « retour » ou « connexion ») qui a le focus actif de la fenêtre, vide si c'est autre chose. Entrées :
         // aucune. Sortie : texte. Erreurs : fenêtre fermée, TypeError au journal.
-        function focus(): string { let o = fenetre.panneau.Window.window.activeFocusItem; while (o && !essai.reperable(o)) o = o.parent; return o?.libelle || o?.objectName || "" }
+        function focus(): string { let o = fenetre.conteneur.Window.window.activeFocusItem; while (o && !essai.reperable(o)) o = o.parent; return o?.libelle || o?.objectName || "" }
 
         // defiler — pose le défilement des pages à y pixels. Entrée : y. Sortie : aucune.
-        function defiler(y: int): void { fenetre.panneau.defilement.contentY = y }
+        function defiler(y: int): void { fenetre.conteneur.poser(y) }
 
         // rangeeProfil — déplie, depuis la page d'onglet courante, le dépliant du profil d'un uuid (clic sur sa tête),
         // puis ses réglages avancés. Entrée : uuid. Sortie : aucune. Erreurs : profil absent, TypeError au journal.
@@ -328,23 +287,6 @@ ShellRoot {
             o.editingFinished()
         }
 
-        // pastilles — éprouve les PastillesFenetre de la fenêtre sans rien envoyer à Hyprland : pose une adresse
-        // factice, puis rend en JSON {reduire, agrandir, inconnue} (les expressions de commande), et trouve
-        // (adresses rendues par trouver sur des fenêtres factices : une active et une inactive homonymes, une
-        // d'une autre classe, une d'un autre titre ; puis sans l'active ; puis aucune), visible et y.
-        // Entrée : adresse. Sortie : texte JSON. Erreurs : fenêtre fermée, TypeError au journal.
-        function pastilles(adresse: string): string {
-            const p = fenetre.pastilles
-            p.adresse = adresse
-            const f = (titre, appId, active, adr) => ({title: titre, wayland: {appId: appId}, activated: active, address: adr})
-            const l = [f("Réseau", "org.quickshell", false, "a"), f("Réseau", "org.quickshell", true, "b"),
-                       f("Réseau", "firefox", true, "c"), f("Autre", "org.quickshell", true, "d")]
-            const t = x => p.trouver(x, "Réseau", "org.quickshell")?.address ?? null
-            return JSON.stringify({reduire: p.commande("reduire"), agrandir: p.commande("agrandir"),
-                                   inconnue: p.commande("autre"), trouve: [t(l), t(l.filter(x => x.address !== "b")), t([])],
-                                   visible: p.visible, y: p.y})
-        }
-
         // copier — clic sur la valeur du détail d'un libellé (vide : « Tout copier »), puis lit le retour.
         // Entrée : cle. Sortie : voir lireCopie. Erreurs : libellé absent, TypeError au journal.
         function copier(cle: string): string {
@@ -359,13 +301,13 @@ ShellRoot {
         // Entrées : aucune. Sortie : texte. Erreurs : aucune.
         function presse(): string { return Quickshell.clipboardText }
 
-        // nouveau — clic sur « Autre réseau… » de la page Wi-Fi. Entrées : aucune. Sortie : aucune.
-        function nouveau(): void { essai.trouver(fenetre.panneau, o => o.libelle === "Autre réseau…").clique() }
+        // nouveau — clic sur « Rejoindre un réseau masqué… » de la page Wi-Fi. Entrées : aucune. Sortie : aucune.
+        function nouveau(): void { essai.trouver(fenetre.conteneur, o => o.objectName === "masque").clique() }
 
         // remplirNouveau — remplit la fiche « Nouveau réseau ». Entrées : nom ; securise, « true » pour WPA2 personnel ;
         // mdp, le mot de passe (jamais journalisé) ; cache, « true » pour un réseau caché. Sortie : aucune.
         function remplirNouveau(nom: string, securise: string, mdp: string, cache: string): void {
-            const n = fenetre.panneau.nouvelle
+            const n = fenetre.conteneur.courante.fiche
             const o = x => essai.trouver(n, i => i.objectName === x)
             o("nom").text = nom
             o("securite").currentIndex = securise === "true" ? 1 : 0
@@ -375,11 +317,8 @@ ShellRoot {
 
         // cliquerNouveau — clic sur « ajouter » ou « annuler » de la fiche « Nouveau réseau ». Entrée : nom.
         function cliquerNouveau(nom: string): void {
-            essai.trouver(fenetre.panneau.nouvelle, i => i.objectName === nom).clicked()
+            essai.trouver(fenetre.conteneur.courante.fiche, i => i.objectName === nom).clicked()
         }
-
-        // fermerPastille — clic sur la pastille rouge, sans geste. Entrées : aucune. Sortie : aucune.
-        function fermerPastille(): void { fenetre.pastilles.fermer() }
 
         // fermer — ferme la fenêtre comme le compositeur. Entrées : aucune. Sortie : aucune.
         function fermer(): void { fenetre.fermer() }
@@ -388,27 +327,5 @@ ShellRoot {
         // Entrées : aucune. Sortie : texte JSON, voir etat. Erreurs : aucune. Dépendances : fermer, etat.
         function fermerEtat(): string { fenetre.fermer(); return etat() }
 
-        // fermerDeuxFois — appelle fermer deux fois dans la même passe, comme la pastille puis onVisibleChanged.
-        // Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : fermer.
-        function fermerDeuxFois(): void { fenetre.fermer(); fenetre.fermer() }
-
-        // lacherDeuxFois — appelle lacher deux fois à 5 ms d'intervalle, après avoir remis dureeDestruction à -1.
-        // Entrées : aucune. Sortie : texte JSON [début après le premier lâcher, début après le second].
-        // Erreurs : aucune. Dépendances : lacher et _debutDestruction de FenetreReseau.
-        function lacherDeuxFois(): string {
-            fenetre.dureeDestruction = -1
-            fenetre.lacher()
-            const premier = fenetre._debutDestruction
-            const t = Date.now()
-            while (Date.now() - t < 5) {}
-            fenetre.lacher()
-            return JSON.stringify([premier, fenetre._debutDestruction])
-        }
-
-        // debutDestruction — début de destruction en cours (ms), 0 hors destruction. Sortie : texte.
-        function debutDestruction(): string { return String(fenetre._debutDestruction) }
-
-        // dureeDestruction — durée de la dernière destruction de la fenêtre (ms), -1 sans destruction. Sortie : texte.
-        function dureeDestruction(): string { return String(fenetre.dureeDestruction) }
     }
 }

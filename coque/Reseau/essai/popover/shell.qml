@@ -4,6 +4,7 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Networking
 import "Theme"
+import "Parametres"
 import "Reseau"
 
 // Coque d'essai du popover réseau, dans une fenêtre offscreen.
@@ -52,7 +53,9 @@ ShellRoot {
         const c = proprietes => fabriqueReseau.createObject(essai, proprietes)
         tous = [c({ name: "Wifi_TRIADES", signalStrength: 0.9, connected: true, known: true }),
                 c({ name: "Connu", signalStrength: 0.3, known: true }), c({ name: "Inconnu", signalStrength: 0.7 }),
-                c({ name: "Nouveau", signalStrength: 0.95 }),
+                c({ name: "Nouveau", signalStrength: 0.95 }), c({ name: "Telephone", signalStrength: 0.4, known: true }),
+                c({ name: "Voisin1", signalStrength: 0.2 }), c({ name: "Voisin2", signalStrength: 0.15 }),
+                c({ name: "Voisin3", signalStrength: 0.1 }),
                 c({ name: "Ouvert", signalStrength: 0.5, security: WifiSecurityType.Open })]
         faux.reseaux = ["Connu", "Ouvert", "Wifi_TRIADES", "Inconnu"].map(reseau)
     }
@@ -70,9 +73,13 @@ ShellRoot {
         property var ip4: ["192.168.1.42/24"]
         property string icone: "network-wireless-signal-excellent"
         property bool recherche: false
-        property bool fenetre: false
-        property string profilDemande: ""
-        property var profils: []
+        // Profils enregistrés : le réseau joint, un réseau connu et le partage de connexion du téléphone, vu facturé.
+        property var profils: [
+            {nom: "Wifi_TRIADES", uuid: "wifi-1", type: "802-11-wireless", appareil: "wlan0", actif: true},
+            {nom: "Connu", uuid: "connu-1", type: "802-11-wireless", appareil: "", actif: false},
+            {nom: "Telephone", uuid: "telephone-1", type: "802-11-wireless", appareil: "", actif: false}
+        ]
+        property var facturesVues: ["Telephone"]
         property var reseaux: []
         function allumer(actif) { essai.journal("allumer", actif) }
         function ouvrirPortail() { essai.journal("ouvrirPortail", true) }
@@ -127,11 +134,10 @@ ShellRoot {
                 // Entrée : valeur, vrai pour le cacher. Sortie : aucune. Erreurs : aucune ; sans panneau, rien.
                 // Dépendances : porteur.
                 function cacherPanneau(valeur: bool): void { if (porteur.item?.panneau) porteur.item.panneau.visible = !valeur }
-                // recherche, fenetre — valeurs de l'état factice, en JSON. Sortie : texte.
+                // recherche — valeur de l'état factice, en JSON. Sortie : texte.
                 function recherche(): string { return JSON.stringify(faux.recherche) }
-                function fenetre(): string { return JSON.stringify(faux.fenetre) }
-                // profilDemande — profil demandé à la fenêtre (le popover ne le pose plus : il le vide), en JSON. Sortie : texte.
-                function profilDemande(): string { return JSON.stringify(faux.profilDemande) }
+                // parametres — ouverture demandée à l'application Paramètres, en JSON : {ouverte, page}. Sortie : texte.
+                function parametres(): string { return JSON.stringify({ouverte: EtatParametres.ouverte, page: EtatParametres.page}) }
                 // connectivite — change la connectivité factice. Entrée : valeur. Sortie : aucune.
                 function connectivite(valeur: string): void { faux.connectivite = valeur }
                 // sansCarte — machine en filaire seul, sans carte Wi-Fi. Entrées : aucune. Sortie : aucune.
@@ -151,6 +157,9 @@ ShellRoot {
                 // l'attente de l'ouverture est plus courte qu'un appel IPC. Sortie : texte JSON. Erreurs : aucune.
                 function rouvrirAvecListe(): string { porteur.item.ouvert = true; rendreReseaux(); return panneau() }
                 function ajouterReseau(): void { faux.reseaux = faux.reseaux.concat([essai.reseau("Nouveau")]) }
+                // montrerReseau — fait entrer au balayage un réseau factice nommé (« Telephone », « Voisin1 »…). Entrée :
+                // nom. Sortie : aucune. Erreurs : nom inconnu, le balayage reçoit undefined.
+                function montrerReseau(nom: string): void { faux.reseaux = faux.reseaux.concat([essai.reseau(nom)]) }
                 // retirerReseau — le réseau nommé quitte le balayage, puis son objet est détruit, comme sous
                 // Quickshell. Entrée : nom. Sortie : aucune.
                 function retirerReseau(nom: string): void {
@@ -186,7 +195,7 @@ ShellRoot {
                     const lignes = {}
                     for (const d of delegues) lignes[d.cle] = {
                         depliage: d.depliage.value, deplieEnCours: d.depliage.moving, charge: d.bloc !== null || d.depliage.value > 0,
-                        y: d.y, apparition: d.apparition.value, apparitionEnCours: d.apparition.moving,
+                        y: d.y, apparition: d.apparition.value, apparitionEnCours: d.apparition.moving, icone: d.icone,
                     }
                     return JSON.stringify({
                         titre: p.resume.titre, etat: p.resume.etat,

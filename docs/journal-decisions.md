@@ -3873,3 +3873,194 @@ ses défauts. Nicolas a choisi de passer aux notifications (L2-19) ; leur suite,
 « ne pas déranger » (L2-67), devient la prochaine étape.
 
 *Touché : backlog (version 1.53), notes de direction (version 1.49).*
+
+## 2026-11-16 — Application Paramètres (L5-01, L2-65)
+
+### D165 · Une application Paramètres unique remplace la fenêtre Réseau
+
+La fenêtre Réseau, que D163 condamnait à être refaite de zéro, laisse la place à une application Paramètres inspirée
+des Réglages d'iOS et de macOS : une barre latérale (recherche, pages groupées, vignettes en verre), une zone de page
+à défilement lissé, des sous-pages empilées avec retour. Elle accueillera toutes les pages de réglages à venir ; trois
+sont livrées, Wi-Fi, Filaire et VPN. Ajouter une page revient à l'inscrire au registre (`coque/Parametres/Registre.qml`)
+et à écrire son fichier, qui suit le contrat de page (`conteneur`, `atteindre`, `implicitHeight`).
+
+Les priorités sont celles de Nicolas, dans l'ordre : l'expérience d'usage, puis les animations, puis le dessin. Ses
+griefs contre l'ancienne fenêtre fixaient le cahier des charges : ouverture lente et saccadée, défilement rigide,
+partage de connexion introuvable, réseau qui saute en tête sans transition après la connexion, trois points
+défectueux, popover de la barre sans le partage et mal animé, trop de réseaux listés.
+
+Approche retenue après repérage (documentation de Quickshell et rices GitHub) : la fenêtre vit dans le processus de
+la coque et n'est construite qu'au clic (`LazyLoader.activeAsync`), plutôt qu'une arborescence gardée vivante ou un
+processus à part. Mesure à l'écran : `openwindow` en 57 à 59 ms en médiane, 94 à 100 ms à froid. La molette est lissée
+(pas de 110 px, 260 ms) ; le pavé tactile défile au pixel.
+
+Dessin : la maquette v4, au relief « Doux », validée par Nicolas après une première version jugée trop en relief
+(cartes à peine soulevées, lueur d'en-tête à mi-force, vignettes en verre givré la nuit et en verre clair le jour).
+
+*Touché : `coque/Parametres/`, `coque/Composants/` (Carte, Medaillon, Materiau), `tokens.toml`, `motion.toml`, la fiche
+et le plan du 2026-11-14.*
+
+### D166 · Page Wi-Fi : cinq réseaux, jonction sans saut, partage de connexion reconnu
+
+La page Wi-Fi montre le réseau joint, puis « Mes réseaux » (les profils enregistrés à portée, tous montrés), puis
+« Autres réseaux », cinq rangées au plus en tout (`reglages.networks_shown`), le reste derrière « Afficher les N
+autres réseaux », déplié sur place. Les profils hors de portée et le réseau masqué vivent dans deux sous-pages.
+
+La jonction ne fait plus sauter la liste : la rangée cliquée passe en « Connexion… » à sa place, l'ordre est retenu
+tant que dure la tentative, qu'un mot de passe est déplié ou que le pointeur survole la liste, puis le réseau rejoint
+glisse en tête et l'ancien redescend. Une seule tentative est suivie à la fois ; en choisir une autre cesse de suivre
+la première.
+
+Le partage de connexion du téléphone se reconnaît à ce qu'il a été vu facturé à l'usage une fois joint : son nom est
+retenu dans l'état persistant de la coque (`MemoireFactures`), et il prend alors son glyphe et sa place parmi « Mes
+réseaux ». Rien n'est écrit dans NetworkManager. Raison : hors connexion, `connection.metered` vaut `unknown` pour ce
+profil, et lire chaque profil à l'ouverture coûtait une commande par réseau enregistré.
+
+*Touché : `coque/Reseau/` (PageWifi, RangeeReseau, Jonction, MemoireFactures, SousPageProfils, SousPageMasque),
+`coque/Theme/RessortVue.qml`, `nmcli.js` (`repartir`).*
+
+### D167 · Le popover réseau suit la page ; les trois points suivent une horloge commune
+
+Le popover de la barre tire désormais sa liste de la même répartition que la page (`nmcli.repartir`) : les profils
+enregistrés à portée d'abord, partage de connexion compris et reconnaissable à son glyphe, puis les réseaux sans
+profil les plus forts, cinq lignes. Il ne se fiait auparavant qu'au balayage et à son drapeau « connu », sans lire les
+profils : rien n'y distinguait le partage, noyé dans une liste de huit lignes défilantes. L'ordre y est retenu comme
+dans la page pendant une connexion, et « Réglages réseau… » ouvre l'application Paramètres à la page Wi-Fi.
+
+Les trois points (`Activite`) repartaient de zéro à chaque affichage ; montrés par affichages courts, le grain central
+n'atteignait jamais sa pleine opacité (0,63 mesuré contre 1,00 pour ses voisins). La vague suit désormais l'heure
+modulo sa période, partout où le composant sert.
+
+*Touché : `coque/Reseau/PopoverReseau.qml`, `coque/Composants/Activite.qml`.*
+
+### D168 · Retrait de l'ancienne fenêtre Réseau
+
+`FenetreReseau`, `PanneauReseau`, `ConnusWifi`, `TitrePage`, `Section`, la règle Hyprland `fenetre-reseau`, l'IPC
+« reseau ouvrir » et les propriétés `EtatReseau.fenetre` et `profilDemande` sont retirés. L'IPC est désormais
+`qs ipc -c dunei call parametres ouvrir <wifi|filaire|vpn>`. Les essais d'intégration de l'ancienne fenêtre (sonde,
+dépliants, réglages, mot de passe, réseau masqué) sont portés sur l'application (`ReseauParametresTest`) ; ceux dont
+le sujet a disparu ne sont pas repris : onglets et leur clavier (la barre latérale a ses propres essais), profil
+demandé à l'ouverture, mesure de la durée de destruction.
+
+Arbitrages de Claude, à revoir à l'écran si l'un d'eux déplaît :
+- un clic sur un autre réseau pendant une connexion cesse de suivre la première tentative sans la couper dans
+  NetworkManager (Quickshell refuse `disconnect()` sur un réseau non joint) : elle peut aboutir en silence ;
+- tout échec de connexion déplie le mot de passe de la rangée, pas seulement un mot de passe refusé ;
+- replié, le réseau joint garde la sonde des débits éveillée tant que la page Wi-Fi est à l'écran, pour la mini-courbe
+  de sa tête ;
+- l'ajout d'un réseau masqué referme sa sous-page sans déplier le profil créé, qui rejoint les réseaux enregistrés ;
+- page Filaire : la rangée d'appareil disparaît, l'en-tête porte l'interface et l'état du câble ; page VPN : la
+  section s'appelle « Mes VPN », comme sur la maquette ;
+- les pages factices qui ont servi à bâtir la coquille deviennent des accessoires de sa coque d'essai.
+
+*Touché : `coque/Reseau/`, `coque/shell.qml`, `config/hypr/modules/regles.lua`, `tests/test_reseau.py`,
+`tests/test_parametres.py`, backlog (version 1.54), notes de direction (version 1.50), bible (version 0.35), carnet (version 1.45).*
+
+### D169 · Recette de l'application Paramètres : transitions interruptibles, ouverture sans fondu, survol bord à bord
+
+16 novembre 2026 · Quatre corrections issues de la première recette à l'écran de l'application Paramètres.
+
+- **Rangées empilées en tête de liste.** À la jonction réelle, puis à chaque balayage, des rangées restaient
+  superposées en haut de la page Wi-Fi, ou à demi effacées, pendant plusieurs secondes. Cause : `RessortVue` était une
+  `SpringAnimation`, qui ne survit pas à une transition de vue interrompue ; quand un changement du modèle relance la
+  transition d'un délégué encore en mouvement, l'animation s'arrête sans atteindre sa cible. Sur le banc, un seul
+  changement à la fois ne montrait rien ; la jonction réelle en enchaîne plusieurs (réseau quitté, balayage, profil
+  actif). `RessortVue` devient une `NumberAnimation` de la durée de stabilisation du ressort (`settle_ms`), en sortie
+  cubique, et chaque déplacement mène aussi l'opacité à son terme. La réponse exacte du ressort en spline de Bézier a
+  été écartée : au-delà de seize segments, elle corrompt le tas de Qt 6. Essai : `test_transitions_interrompues`.
+- **Ouverture en deux temps.** Le fondu d'ouverture de Hyprland montrait d'abord le flou d'arrière-plan seul, puis
+  le fond de la fenêtre. La règle `fenetre-parametres` prend `no_anim` : la fenêtre paraît entière, et la coque anime
+  elle-même l'entrée du contenu.
+- **Survol.** La plaque de survol d'une rangée restait en retrait de la carte (`reglages.sidebarInset`), ce qui se
+  voit de jour. `Ligne` reçoit `bordABord` : dans les cartes de l'application, la plaque va d'un bord à l'autre, au
+  rayon de la carte.
+- **Mini-courbe.** Le réseau joint déplié montre déjà ses débits et leur graphe : la mini-courbe de sa tête s'efface
+  en fondu tant qu'il est déplié.
+
+*Touché : `coque/Theme/RessortVue.qml`, `coque/Reseau/PageWifi.qml`, `coque/Reseau/Ligne.qml`,
+`coque/Reseau/RangeeReseau.qml`, `coque/Reseau/DepliantReseau.qml`, `config/hypr/modules/regles.lua`,
+`tests/test_reseau.py`.*
+
+### D170 · Recette de l'application Paramètres, deuxième tour : réseau ouvert sans marque, fluidité mesurée
+
+16 novembre 2026 · Suite de D169, après le deuxième passage de Nicolas à l'écran.
+
+- **Réseau ouvert.** Le mot « Ouvert » disparaît de la rangée d'un réseau sans mot de passe : seul le cadenas marque
+  un réseau protégé, comme sur iOS et macOS. Un cadenas ouvert se distinguait mal du cadenas fermé à cette taille, et
+  un avertissement dramatisait un Wi-Fi d'hôtel. Choix de Nicolas, sur trois propositions.
+- **Fluidité.** Le banc de la page Wi-Fi reçoit une sonde (`DUNEI_IMAGES=1`, images de plus de 25 ms journalisées),
+  une longue liste (`peupler`) et un balayage agité (`agiter`). Sur quarante-sept réseaux, « Afficher les N autres
+  réseaux » coûtait une image de 70 ms. Deux causes : chaque rangée bâtissait son indicateur d'activité, même au
+  repos, et toutes les rangées naissaient dans la même image. L'indicateur n'est plus bâti que pour la rangée en
+  connexion, et `ordonner` construit au plus `reveal.stagger.cap` rangées par passe, à l'intervalle
+  `reveal.stagger.ms`. Les plaques des sections ne sont plus détruites et rebâties à chaque changement de hauteur.
+  Après correction, plus aucune image longue sur « Afficher », ni pendant un balayage.
+- **Première image entière.** Les plaques des cartes de la page Wi-Fi sont posées dans la passe qui bâtit les
+  rangées, et non au tour suivant : la fenêtre paraît d'emblée avec ses cartes. Une animation d'ouverture a été
+  écartée : le fondu du compositeur comme un fondu de la coque montrent le flou d'arrière-plan avant le fond, tant
+  que le flou de Hyprland ignore l'opacité de la fenêtre (`decoration.blur.ignore_opacity`, réglage global).
+- **Survol des cartes.** `Carte.garde` devient réglable et vaut zéro là où les rangées portent une plaque d'un bord à
+  l'autre (carte de fin de la page Wi-Fi, profils, carte « Ethernet ») : la plaque couvre toute la carte.
+
+*Touché : `coque/Reseau/PageWifi.qml`, `coque/Reseau/RangeeReseau.qml`, `coque/Reseau/GroupeProfils.qml`,
+`coque/Reseau/PageFilaire.qml`, `coque/Composants/Carte.qml`, `coque/Reseau/essai/wifi/`.*
+
+### D171 · Le flou suit l'opacité des fenêtres ; la fenêtre Paramètres retrouve son animation d'ouverture
+
+16 novembre 2026 · Nicolas tient à l'animation d'ouverture : l'apparition instantanée de D169 (`no_anim`) est
+abandonnée, et l'écart noté en D170 est levé.
+
+Le défaut d'origine (le flou d'arrière-plan visible seul, puis le fond de la fenêtre) venait du réglage par défaut
+`decoration.blur.ignore_opacity = true` de Hyprland : pendant le fondu d'ouverture, le flou était peint à pleine
+force alors que la fenêtre était encore presque transparente. Le thème pose désormais `ignore_opacity = false` : le
+flou paraît avec la fenêtre, qui s'ouvre entière, en fondu et en légère expansion (`windowsIn`, `fadeIn`), comme
+toutes les autres. Vérifié en rafale de captures. Aucune règle ne rend une fenêtre translucide par l'opacité du
+compositeur, donc le verre de la coque (D136), qui passe par l'alpha de ses propres surfaces, ne change pas.
+
+*Touché : `dunei_theme/emitters/hyprland.py`, `generated/hyprland-tokens.lua`, `tests/golden/`,
+`config/hypr/modules/regles.lua`.*
+
+### D172 · La fenêtre Paramètres entre par le bas de l'écran
+
+16 novembre 2026 · À la demande de Nicolas, la fenêtre Paramètres n'entre plus par l'expansion commune aux fenêtres
+(`popin`) mais par une translation depuis le bas de l'écran : la règle `fenetre-parametres` porte
+`animation = "slide bottom"`. Le mouvement garde le ressort d'ouverture des fenêtres et le fondu de D171 ; rien ne
+change pour les autres fenêtres. Vérifié en rafale de captures.
+
+*Touché : `config/hypr/modules/regles.lua`.*
+
+### D173 · La fenêtre Paramètres sort sur place
+
+16 novembre 2026 · La règle `animation = "slide bottom"` de D172 valait aussi pour la fermeture : la fenêtre
+repartait vers le bas, ce que Nicolas lit comme une fenêtre réduite dans une barre des tâches. Une règle de fenêtre de
+Hyprland ne distingue pas l'entrée de la sortie ; le module des règles écoute donc `window.open` et, une fois la
+fenêtre Paramètres ouverte, lui rend le style de sortie commun aux fenêtres (`windowsOut` du mouvement généré, par
+`hl.dsp.window.set_prop`). Elle entre par le bas, puis disparaît au centre, en fondu et en léger retrait. Vérifié en
+rafale de captures.
+
+*Touché : `config/hypr/modules/regles.lua`, `tests/test_hyprland_modules.py`, `tests/test_hyprland_entry.py`.*
+
+### D174 · La fenêtre Paramètres attend le repli du popover
+
+16 novembre 2026 · Ouverte par l'IPC, la fenêtre paraissait d'un trait ; ouverte par « Réglages réseau… » du popover
+de la barre, son entrée saccadait, et le repli du popover aussi (constat de Nicolas). Les deux se disputaient le fil
+de l'interface de la coque : la construction de la fenêtre, lourde, tombait pendant l'animation de repli. Le registre
+`Overlays` compte désormais les cadres de popovers encore déployés ou en repli (`deployes`, tenu par
+`CadrePopovers`), et `FenetreParametres` ne construit la fenêtre qu'une fois ce compte retombé à zéro. Le popover se
+replie d'abord, sans à-coup, puis la fenêtre entre. Une fenêtre déjà ouverte n'est pas touchée par un popover qui
+s'ouvre ensuite. Essai : `test_attend_le_repli_du_popover`.
+
+*Touché : `coque/Composants/Overlays.qml`, `coque/Barre/CadrePopovers.qml`, `coque/Parametres/FenetreParametres.qml`,
+`coque/Parametres/essai/fenetre/shell.qml`, `tests/test_parametres.py`.*
+
+### D175 · Le fondu d'entrée des fenêtres est court
+
+16 novembre 2026 · Depuis D171, le flou d'une fenêtre suit son opacité. Pendant le fondu d'entrée, mené par le
+ressort d'ouverture des fenêtres, le fond restait donc lisible à travers la colonne en verre de la fenêtre
+Paramètres, puis se floutait : Nicolas voyait la partie gauche « s'actualiser » à chaque ouverture. Le fondu d'entrée
+(`fadeIn`) prend le ressort des changements d'état (`state`), stabilisé en une centaine de millisecondes : la fenêtre
+est opaque, et son verre flouté, dès les premières images, tandis que son déplacement garde le ressort des fenêtres.
+Le réglage vaut pour toutes les fenêtres ; le fondu de sortie ne change pas. Vérifié en rafale de captures, validé à
+l'écran par Nicolas.
+
+*Touché : `motion.toml`, `generated/motion.lua`, `tests/golden/motion/motion.lua`.*

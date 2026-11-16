@@ -1,0 +1,10 @@
+module Parametres
+singleton EtatParametres 1.0 EtatParametres.qml
+singleton Registre 1.0 Registre.qml
+FenetreParametres 1.0 FenetreParametres.qml
+BarreLaterale 1.0 BarreLaterale.qml
+Vignette 1.0 Vignette.qml
+Lueur 1.0 Lueur.qml
+ConteneurPage 1.0 ConteneurPage.qml
+EnTetePage 1.0 EnTetePage.qml
+TitreSection 1.0 TitreSection.qml

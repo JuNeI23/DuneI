@@ -793,7 +793,8 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
         # l'accent du rôle de leur conteneur (sélection active, activeMuted sous inactive). Chacun monte, descend puis
         # se repose, un tiers de periods.spinner par étape, décalé d'une étape sur son voisin, en boucle
         # (Animation.Infinite vaut -1). La pose est donnée « échelle/opacité » : au repos spinner.rest_scale et
-        # spinner.rest_opacity du mouvement, au sommet 1 et 1 ; à la phase 0, le troisième grain est au sommet. Les
+        # spinner.rest_opacity du mouvement, au sommet 1 et 1 ; à la phase 0, le troisième grain est au sommet. En
+        # marche, la pose suit l'horloge commune de la vague (test_activite_vague) : elle ne se compare qu'à l'arrêt. Les
         # animations tournent tant que l'indicateur est visible et en marche, et s'arrêtent sinon, ancêtre masqué
         # compris (D80) ; arrêté, il tient la pose de sa phase, et la phase 0,5 le fige à mi-cycle.
         self.demarrer()
@@ -809,7 +810,8 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
         courbe = {"Linear": "0", "InOutQuad": "3", "InOutSine": "19"}[motion["spinner"]["easing"]]
         fin = [f"{periode / 3:g}", "-1", courbe]
         lire = lambda: self.valeur("activite").lower().split()
-        self.assertEqual(lire(), ["true", "true,true,true"] + fixe + [bas, bas, haut] + fin)
+        champs = lire()
+        self.assertEqual(champs[:6] + champs[9:], ["true", "true,true,true"] + fixe + fin)
         for visible, running in (("false", "true"), ("true", "false"), ("false", "false")):
             with self.subTest(visible=visible, running=running):
                 self.ipc("activiteEtat", visible, running)
@@ -841,7 +843,7 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
         lire = lambda: self.valeur("activite").lower().split()
         champs = lire()
         self.assertEqual(champs[:2], ["true", "true,true,true"])
-        self.assertEqual(champs[6:9], [f"1/{o:g}", f"1/{o:g}", "1/1"])
+        self.assertEqual([pose.split("/")[0] for pose in champs[6:9]], ["1", "1", "1"])
         # Arrêté à la phase 0,5 : les deux premiers grains à mi-opacité, toujours à pleine taille.
         self.ipc("activiteEtat", "true", "false")
         self.ipc("activitePhase", "0.5")
@@ -1400,6 +1402,80 @@ class CoqueClavierTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(self.valeur("activite"), "true true true")
         self.ipc("activiteMarche", "false")
         self.assertEqual(self.valeur("activite"), "false false false")
+
+    def cliches_activite(self, nombre: int, pas: int, affichage: int = 0, pause: int = 0) -> list:
+        """Photographie l'indicateur d'activité à intervalle régulier et mesure ses trois grains sur chaque cliché.
+
+        Rôle : les Animators ne mettent pas à jour les propriétés des grains pendant leur course ; la vague se lit
+        donc sur le rendu, agrandi douze fois par la coque d'essai. Un grain occupe le quart gauche, le quart
+        central ou le quart droit du cliché : son opacité est l'alpha le plus fort de sa bande, son échelle la
+        hauteur de sa tache rapportée au tiers de la hauteur du cliché, sa couleur celle du centre de sa bande.
+        Entrées : nombre de clichés ; pas, intervalle en ms ; affichage et pause, durées en ms de la marche et de
+                  l'arrêt alternés (affichage nul : la marche n'est pas touchée).
+        Sortie : liste de (instant en ms, [(opacité, échelle, couleur « #rrggbb ») pour chaque grain]).
+        Erreurs : échec du test si les clichés n'arrivent pas dans le délai. Dépendances : valeur, Pillow.
+        """
+        from PIL import Image
+        dossier = Path(self.tmp.name)
+        instants = self.valeur("activiteCliches", str(dossier), str(nombre), str(pas), str(affichage), str(pause))
+        mesures = []
+        for rang, instant in enumerate(instants.split(",")):
+            image = Image.open(dossier / f"{rang}.png").convert("RGBA")
+            largeur, hauteur = image.size
+            grains = []
+            for centre in (1 / 8, 1 / 2, 7 / 8):
+                bande = image.crop((round((centre - 1 / 8) * largeur), 0, round((centre + 1 / 8) * largeur), hauteur))
+                alpha = bande.getchannel("A")
+                fort = alpha.getextrema()[1]
+                tache = alpha.point(lambda a: 255 if fort and a > fort / 2 else 0).getbbox()
+                rouge, vert, bleu, _ = bande.getpixel((bande.width // 2, hauteur // 2))
+                grains.append((fort / 255, (tache[3] - tache[1]) / (hauteur / 3) if tache else 0,
+                               f"#{rouge:02x}{vert:02x}{bleu:02x}"))
+            mesures.append((float(instant), grains))
+        return mesures
+
+    def test_activite_vague(self):
+        # Sur un cycle complet, lu sur le rendu : chaque grain atteint une fois, et une seule, l'opacité 1 et
+        # l'échelle 1, à l'accent du rôle (sélection active de surfaceWindow, faute de Surface englobante), et les
+        # sommets se suivent de gauche à droite à un tiers de période d'écart.
+        self.demarrer()
+        tokens, motion = self.tokens55()
+        periode, accent = motion["periods"]["spinner"], tokens["states"]["surfaceWindow"]["active"]["rest"]["fill"]
+        self.ipc("activiteMarche", "true")
+        # Le raccord à l'horloge commune dure au plus un tiers de période : la mesure commence après lui.
+        time.sleep(periode / 2000)
+        mesures = self.cliches_activite(nombre=periode // 20, pas=25)
+        cycle = [m for m in mesures if m[0] - mesures[0][0] < periode]
+        self.assertGreater(len(cycle), periode // 40, "clichés trop espacés pour lire un cycle")
+        sommets = []
+        for rang in range(3):
+            opacites = [grains[rang][0] for _, grains in cycle]
+            with self.subTest(grain=rang):
+                instant, grains = max(cycle, key=lambda m: m[1][rang][0])
+                self.assertGreaterEqual(grains[rang][0], 0.97)
+                self.assertGreaterEqual(grains[rang][1], 0.95)
+                self.assertEqual(grains[rang][2], accent.lower())
+                # Une seule montée au-dessus de 0,9 sur le cycle, lu en boucle : un seul sommet.
+                hauts = [o > 0.9 for o in opacites]
+                self.assertEqual(sum(1 for i, h in enumerate(hauts) if h and not hauts[i - 1]), 1, opacites)
+                sommets.append(instant)
+        for rang in range(3):
+            with self.subTest(ecart=rang):
+                ecart = (sommets[(rang + 1) % 3] - sommets[rang]) % periode
+                self.assertAlmostEqual(ecart, periode / 3, delta=periode / 12)
+
+    def test_activite_affichages_courts(self):
+        # Montré par affichages plus courts que la montée du grain central (0,45 période, puis 0,13 d'arrêt),
+        # l'indicateur ne repart pas du début de sa vague : il la reprend où l'horloge commune la place, si bien
+        # que les trois grains atteignent leur sommet tour à tour. Repartie de zéro à chaque affichage, la vague
+        # n'éclairait jamais le grain central, qui ne monte qu'au deuxième tiers du cycle.
+        self.demarrer()
+        periode = self.tokens55()[1]["periods"]["spinner"]
+        mesures = self.cliches_activite(nombre=3 * periode // 25 + 24, pas=25, affichage=round(0.45 * periode),
+                                        pause=round(0.13 * periode))
+        for rang in range(3):
+            with self.subTest(grain=rang):
+                self.assertGreaterEqual(max(grains[rang][0] for _, grains in mesures), 0.9)
 
     def test_infobulle_delai(self):
         # Le délai de l'infobulle est armé dès que le pointeur entre sur la cible, et échoit après delays.tooltip de

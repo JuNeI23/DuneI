@@ -30,6 +30,8 @@ class GenerateTest(unittest.TestCase):
             self.assertEqual(data["spinner"], {"rest_scale": 0.6, "rest_opacity": 0.35, "easing": "InOutSine"})
             # Les trois valeurs du mouvement des popovers sont émises telles quelles.
             self.assertEqual(data["popover"], {"icon_travel_px": 3, "rest_threshold_px": 0.5, "passage_content_at": 0.65})
+            # Le pas, la durée et la courbe de la molette lissée sont émis tels quels.
+            self.assertEqual(data["wheel"], {"step": 110, "duration": 260, "easing": "OutCubic"})
             # La surface de couche 3 est plus ferme que l'ancien réglage (400, 44).
             self.assertEqual(data["transitions"]["overlay"]["in"]["stiffness"], 600)
             # L'indicateur d'activité s'anime en continu sur le fil de rendu : plus aucune cadence par pas.

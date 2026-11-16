@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.44. Historique en fin de document.
+Version 1.45. Historique en fin de document.
 
 Socle amorçable.
 
@@ -2067,14 +2067,16 @@ retiré : sa ligne de `session.toml` passe en `retires` et `make install` désac
   réseau joint n'y figure pas) avec le bouton de nouvelle recherche, puis, sous un filet translucide, les actions en
   texte : « Se déconnecter » et « Réglages réseau… ». Un réseau sécurisé inconnu déplie son mot de passe sous sa ligne.
   Tant qu'il est ouvert, l'icône de la barre prend l'accent et sa variante pleine.
-- **La fenêtre (D105, direction D4).** Une fenêtre flottante, créée à l'ouverture et détruite à la fermeture (D80). À
+- **La fenêtre (D105, direction D4) — retirée le 2026-11-16, remplacée par l'application Paramètres (section
+  suivante, D165 à D175) ; ce qui suit décrit l'état d'alors.** Une fenêtre flottante, créée à l'ouverture et détruite à la fermeture (D80). À
   gauche, un plateau détaché à trois onglets : **Wi-Fi** (réseau joint en carte avec ses réglages fréquents et
   « Détails… », réseaux disponibles, « Autre réseau… », profils enregistrés), **Filaire** (état du câble, méthode IPv4,
   adresses copiables, profils filaires, « Se connecter ») et **VPN** (connexions `vpn` et `wireguard` connues de
   NetworkManager, un interrupteur chacune ; import, identifiants et sous-page restent à faire, L2-51). Un clic sur un
   profil enregistré ouvre sa sous-page « ‹ Wi-Fi » (mot de passe, connexion automatique, priorité, facturation, IPv4
   fixe, Se connecter, Oublier) ; Échap revient.
-- **L'ouvrir.** « Réglages réseau… » du popover, ou, depuis un terminal, `qs ipc call reseau ouvrir`. Une fenêtre déjà
+- **L'ouvrir (état d'alors).** « Réglages réseau… » du popover, ou, depuis un terminal, `qs ipc call reseau ouvrir`
+  (commande retirée : voir la section suivante). Une fenêtre déjà
   ouverte garde son onglet courant. « Détails… » du popover ouvre directement la sous-page du profil demandé.
 - **Au clavier.** Les flèches haut et bas passent d'un onglet à l'autre ; le contour de focus n'apparaît qu'après une
   première touche. Tabulation et Entrée parcourent et activent les rangées ; Entrée ou un clic sur une adresse la copie
@@ -2094,6 +2096,37 @@ retiré : sa ligne de `session.toml` passe en `retires` et `make install` désac
   demande donc le balayage une fois, après sa première image, et pour toute sa vie (D105). La mesure de L2-06 sur
   `caladan` donne ensuite de 2 à 15 ms par écriture, non une demi-seconde (D116) : la précaution est gardée. Un `Coche` dans un `Layout`
   est écrasé s'il n'a pas de taille préférée.
+
+## L'application Paramètres — L5-01, L2-65
+
+Rien de plus à installer : l'application vit dans la coque (`dunei-coque.service`) et `make install` n'ajoute aucune
+étape. Elle remplace la fenêtre Réseau (D165 à D175) et accueillera toutes les pages de réglages.
+
+- **L'ouvrir.** « Réglages réseau… » du popover réseau, ou, depuis un terminal,
+  `qs ipc -c dunei call parametres ouvrir wifi` (ou `filaire`, `vpn`) ; `qs ipc -c dunei call parametres fermer` la
+  referme. La fenêtre n'est construite qu'à l'ouverture (57 à 59 ms en médiane jusqu'à `openwindow`, 94 à 100 ms à
+  froid) et détruite à la fermeture. La règle Hyprland `fenetre-parametres` la fait flotter, centrée.
+- **S'y repérer.** À gauche, la recherche et les pages ; à droite, la page. La recherche trouve un réglage par son nom
+  ou ses mots-clés, ouvre sa page et le met en évidence. Les flèches haut et bas changent de page.
+- **Wi-Fi.** Le réseau joint (mini-courbe des débits sur sa tête ; déplié : tuiles, réglages, réglages avancés,
+  « Se déconnecter », « Oublier ce réseau »), puis « Mes réseaux » (les profils enregistrés à portée, partage de
+  connexion du téléphone compris) et « Autres réseaux », cinq rangées en tout puis « Afficher les N autres réseaux ».
+  Un clic sur un réseau le rejoint : « Connexion… » sur place, puis le réseau glisse en tête. En bas, « Réseaux
+  enregistrés » (tous les profils, hors de portée compris) et « Rejoindre un réseau masqué… », chacun en sous-page.
+- **Partage de connexion.** Un réseau vu facturé à l'usage une fois joint est retenu dans l'état de la coque
+  (`reseau.json` du dossier d'état de Quickshell) : il prend ensuite le glyphe du partage. Rien n'est écrit dans
+  NetworkManager ; supprimer ce fichier fait oublier ces réseaux.
+- **Filaire et VPN.** Le contenu de l'ancienne fenêtre, dans la nouvelle disposition ; le VPN complet reste L2-51.
+- **Ajouter une page.** Une entrée dans `coque/Parametres/Registre.qml` (identifiant, groupe, libellé, glyphe, teinte,
+  fichier, index de recherche) et le fichier de la page, un `Item` qui expose `conteneur`, `atteindre(chemin)` et
+  `implicitHeight`. La coquille ne change pas.
+- **Les tests.** `python3 -m unittest tests.test_parametres` (recherche, coquille, registre) et
+  `python3 -m unittest tests.test_reseau` (répartition des réseaux, jonction, page Wi-Fi sur un état factice, pages
+  Filaire et VPN, popover, puis les pages sur le vrai état et un nmcli factice : `ReseauParametresTest`). Les coques
+  d'essai tournent en `QT_QPA_PLATFORM=offscreen` ; `coque/Reseau/essai/wifi` se lance aussi dans la session, sur ses
+  seuls réseaux factices, pour les captures.
+- **Non éprouvé à ce jour.** Aucune vraie connexion ni déconnexion Wi-Fi n'a été faite pendant le développement : la
+  jonction sans saut, le partage de connexion et le VPN se valident à l'écran, avec Nicolas.
 
 ## Le mouvement des popovers — L2-06, L2-07, L2-47, L2-56
 
@@ -2382,6 +2415,7 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 
 | Version | Date | Changement |
 | --- | --- | --- |
+| 1.45 | 2026-11-16 | Application Paramètres (L5-01, L2-65) : ouverture, pages Wi-Fi, Filaire et VPN, partage de connexion, ajout d'une page, tests ; la fenêtre Réseau et `reseau ouvrir` sont retirés (D165 à D175) |
 | 1.44 | 2026-11-13 | Notifications (L2-19) : la coque remplace dunst ; procédure de passage (`pacman -Rns dunst`, `busctl`) et mise en garde sur `sed -i` et la surveillance de Quickshell (D162). |
 | 1.43 | 2026-11-12 | Entrée : la touche Compose quitte `entree.lua` pour le fichier machine ; caladan la place sur Ctrl droit (`compose:rctrl`), AltGr rend `€` ; arrakis-core n'en déclare aucune (D160). |
 | 1.42 | 2026-11-10 | XWayland en pixels réels (`force_zero_scaling = true`) et échelle de Steam par fichier machine (D161). |

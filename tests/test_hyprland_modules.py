@@ -27,6 +27,14 @@ hl = {
     end,
     window_rule = function(r) print("rule", r.name) end,
     layer_rule = function(r) print("layer", r.name) end,
+    -- Le faux hl.on joue aussitôt le rappel sur la fenêtre Paramètres, puis sur une fenêtre quelconque.
+    on = function(e, f)
+        print("on", e)
+        f({ class = "org.quickshell", title = "Paramètres" })
+        f({ class = "kitty", title = "kitty" })
+    end,
+    dispatch = function(d) print("dispatch", d) end,
+    dsp = { window = { set_prop = function(t) return t.prop .. "=" .. t.value .. " " .. t.window.title end } },
 }
 """
 
@@ -44,7 +52,7 @@ class ModulesTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             hypr = Path(tmp)
             (hypr / "generated").mkdir()
-            for f in ("hyprland-rules.lua", "hyprland-layers.lua"):
+            for f in ("hyprland-rules.lua", "hyprland-layers.lua", "motion.lua"):
                 shutil.copy(ROOT / "generated" / f, hypr / "generated")
             (hypr / "modules").symlink_to(ROOT / "config" / "hypr" / "modules")
             script = f'package.path = "{hypr}/?.lua"\n' + FAKE + f'require("modules.{name}").apply()\n'
@@ -70,7 +78,9 @@ class ModulesTest(unittest.TestCase):
                                                      "layer\tdunei-verre-dunei-notifications",
                                                      "layer\tdunei-fond",
                                                      "rule\tsans-agrandissement", "rule\tglisser-xwayland",
-                                                     "rule\tfenetre-reseau"])
+                                                     "rule\tfenetre-parametres",
+                                                     # La fenêtre Paramètres, et elle seule, reprend la sortie commune.
+                                                     "on\twindow.open", "dispatch\tanimation=popin 90% Paramètres"])
 
     def test_verrouillage(self):
         self.assertEqual(self.run_module("verrouillage"), ["misc\ttrue"])

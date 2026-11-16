@@ -77,7 +77,11 @@ Item {
 
     onResteChanged: if (passage && Forme.contenuPermis(passage, reste, trajetTotal, partPassage)) passage = false
     onOpaciteAfficheeChanged: if (opaciteAffichee >= 1) vueRetenue = null
-    onDeployeChanged: if (!deploye) vueRetenue = null
+    // Le registre compte les cadres déployés, pour qui doit attendre la fin d'un repli (Overlays.deployes).
+    onDeployeChanged: {
+        if (!deploye) vueRetenue = null
+        Overlays.deployes += deploye ? 1 : -1
+    }
     onCourantChanged: {
         if (courant) {
             // Le pointeur a pu rester sur le cadre : le survol passe au nouveau popover, que sa minuterie ne le ferme
@@ -90,7 +94,10 @@ Item {
             passage = false
         }
     }
-    Component.onDestruction: if (courant) courant.ouvert = false
+    Component.onDestruction: {
+        if (deploye) Overlays.deployes--
+        if (courant) courant.ouvert = false
+    }
 
     // formeActuelle — forme affichée du cadre.
     // Entrées : aucune. Sortie : {gauche, droite, hauteur}. Erreurs : aucune. Dépendances : les trois ressorts.

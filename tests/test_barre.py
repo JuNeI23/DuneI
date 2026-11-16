@@ -317,7 +317,7 @@ class IndicateursStatiqueTest(unittest.TestCase):
         self.assertIn("cliquable: true", qml["JourNuit.qml"])
         self.assertIn('["dunei-theme", "bascule"]', qml["JourNuit.qml"])
         cliquables = sorted(nom for nom in INDICATEURS if "cliquable: true" in qml[f"{nom}.qml"])
-        self.assertEqual(cliquables, ["Audio", "Batterie", "Bluetooth", "JourNuit", "Reseau"])
+        self.assertEqual(cliquables, ["Audio", "Batterie", "Bluetooth", "JourNuit", "Parametres", "Reseau"])
         self.assertRegex(qml["Bluetooth.qml"], r"onClicked:\s*ouvert\s*=\s*!ouvert")
         # Un clic bascule « ouvert », que la barre reporte sur le PopoverReseau (voir test_popover_accroche) ;
         # l'icône vient du singleton.

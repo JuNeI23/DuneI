@@ -6,26 +6,28 @@ import "Barre"
 import "Fond"
 import "Galerie"
 import "Notifications"
+import "Parametres"
 import "Presquile"
 import "Reseau"
 
 // Coque de session de DuneI — racine chargée par « qs -c dunei » (unité dunei-coque.service).
 // Rôle : pose sur chaque écran le fond d'écran, une barre système et la presqu'île, dans le même Variants (le fond
-// d'abord, pour qu'il soit le plus bas), et, une seule fois hors de Variants, la fenêtre Réseau, construite seulement
-// à sa demande, les notifications de connexion, le serveur de notifications (Centre) et la fenêtre de sa pile, sur
+// d'abord, pour qu'il soit le plus bas), et, une seule fois hors de Variants, la fenêtre Réseau et l'application
+// Paramètres, construites seulement à leur demande, les notifications de connexion, le serveur de notifications (Centre) et la fenêtre de sa pile, sur
 // l'écran actif, l'ouvreuse de la galerie de fonds et l'annonceur de la jauge du son, à qui chaque presqu'île
 // s'inscrit à sa création et se retire à sa destruction (écran débranché). Chaque presqu'île réserve la hauteur du
 // module de la galerie, mesurée par l'ouvreuse : sa surface ne change jamais de taille (recette de L2-60).
 // Entrées : aucune ; l'écran de chaque barre vient de Quickshell.screens. Sortie : trois fenêtres de calque par écran ;
 // la fenêtre de la pile de notifications (une seule, sur l'écran actif) et les cartes de chaque notification reçue ;
-// la fenêtre Réseau quand elle est ouverte (IPC « reseau ouvrir » ou « Réglages réseau… ») ; la galerie dans la
+// l'application Paramètres quand elle est ouverte (IPC « parametres ouvrir <page> », icône des réglages de la barre
+// ou « Réglages réseau… » du popover) ; la galerie dans la
 // presqu'île de l'écran actif à la demande (IPC « galerie basculer », SUPER + W) ; la jauge du son à chaque
 // annonce d'EtatAudio (Annonceur) ; l'alerte de batterie à chaque palier franchi d'EtatEnergie (AnnonceurAlerte), qui
 // attend la fermeture de la galerie de l'ouvreuse sur son écran.
 // Erreurs : tokens absents ou invalides → fond, barre et presqu'île transparents, erreur de Theme dans le journal de Quickshell.
 // Dépendances : quickshell ≥ 0.3, modules Barre (Barre), Fond (Fond), Galerie (Ouvreuse), Notifications (Centre,
-// FenetreNotifications), Presquile (Presquile, Annonceur, AnnonceurAlerte) et Reseau (FenetreReseau,
-// NotificationsReseau). Le Centre possède org.freedesktop.Notifications : aucun autre démon (dunst) ne doit le tenir.
+// FenetreNotifications), Parametres (FenetreParametres), Presquile (Presquile, Annonceur, AnnonceurAlerte) et Reseau
+// (NotificationsReseau). Le Centre possède org.freedesktop.Notifications : aucun autre démon (dunst) ne doit le tenir.
 // Rendu du texte : la directive Env force l'anticrénelage en niveaux de gris, comme dans le banc du verre.
 ShellRoot {
     Variants {
@@ -50,7 +52,7 @@ ShellRoot {
     Ouvreuse { id: ouvreuse }
     Annonceur { id: annonceur }
     AnnonceurAlerte { id: alerte; galerie: ouvreuse.galerie }
-    FenetreReseau {}
+    FenetreParametres {}
     NotificationsReseau {}
     Centre { id: centre }
     FenetreNotifications { centre: centre }
