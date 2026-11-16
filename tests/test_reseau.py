@@ -1125,14 +1125,15 @@ SEQUENCE_TAB_DEPLIE = ["radio", "recherche", "Wifi_TRIADES", "valeur:Adresse IP"
 
 
 @unittest.skipUnless(os.environ.get("WAYLAND_DISPLAY") and QS, "session Wayland et Quickshell requis")
-class PageWifiTest(EssaiCoque, unittest.TestCase):
-    """La page Wi-Fi de la fenêtre Réseau, éprouvée sur un état, un panneau et des réseaux factices.
+class PageWifiFenetreTest(EssaiCoque, unittest.TestCase):
+    """La page Wi-Fi de l'ancienne fenêtre Réseau (PageWifiFenetre), éprouvée sur un état, un panneau et des réseaux
+    factices ; elle disparaît avec la fenêtre.
 
-    La coque d'essai pose une PageWifi dans une fenêtre offscreen ; les réseaux factices journalisent leurs appels,
+    La coque d'essai pose une PageWifiFenetre dans une fenêtre offscreen ; les réseaux factices journalisent leurs appels,
     sans jamais le texte d'un mot de passe, et le panneau factice journalise l'ouverture des sous-pages.
     """
 
-    essai = ESSAI / "wifi"
+    essai = ESSAI / "wifi-fenetre"
     teintes = (55,)
     environnement = {"QT_QPA_PLATFORM": "offscreen"}
     SECRET = "s3cret-jamais-journalise"
@@ -1517,6 +1518,235 @@ class PageWifiTest(EssaiCoque, unittest.TestCase):
         debut = time.monotonic()
         self.jusqua(lambda p: not p["balayage"], "recherche bornée")
         self.assertLess(time.monotonic() - debut, 8)
+
+
+@unittest.skipUnless(os.environ.get("WAYLAND_DISPLAY") and QS, "session Wayland et Quickshell requis")
+class PageWifiTest(EssaiCoque, unittest.TestCase):
+    """La page Wi-Fi de l'application Paramètres, éprouvée dans un vrai conteneur de page sur un état factice.
+
+    La coque d'essai (essai/wifi) pose la PageWifi dans un ConteneurPage, branchée sur EtatFaux : un réseau joint
+    (« Wifi_TRIADES »), deux profils à portée dont le partage de connexion « Telephone_Essai », un profil hors de
+    portée et neuf réseaux sans profil. Les réseaux factices journalisent leurs appels, sans jamais le texte d'un mot
+    de passe ; la mémoire des réseaux vus facturés est écrite dans le dossier de l'essai (reseau.json).
+    """
+
+    essai = ESSAI / "wifi"
+    teintes = (55,)
+    environnement = {"QT_QPA_PLATFORM": "offscreen"}
+    MIENS = ["Telephone_Essai", "Livebox-A3F2"]
+    AUTRES = ["Freebox-5C21B0", "eduroam", "SFR_WiFi_Fon"]
+    RESTE = ["Bbox-7F3A", "DIRECT-HP-Envy", "Livebox-99C0", "TP-Link_4E2", "Orange-Invite", "NETGEAR-21"]
+
+    def demarrer(self, memoire: list[str] | None = None) -> dict:
+        """Lance la coque d'essai et attend la page construite, sa liste posée.
+
+        Entrée : memoire — noms des réseaux déjà vus facturés, écrits dans reseau.json avant le lancement (None : pas
+        de fichier). Sortie : l'état de la page. Erreurs : échec du test au délai. Dépendances : installer, lancer.
+        """
+        self.installer(55)
+        if memoire is not None:
+            (self.dir / "reseau.json").write_text(json.dumps({"factures": memoire}), encoding="utf-8")
+        self.lancer(self.dir)
+        self.attendre("essai : prêt")
+        pose = lambda p: p["existe"] and len(p["lignes"]) == 7 and p["cartes"] == 3 and p["ys"] == sorted(set(p["ys"]))
+        p = self.jusqua(pose, "page construite")
+        # La liste est posée quand deux lectures successives rendent les mêmes ordonnées.
+        return self.jusqua(lambda q: pose(q) and (q["ys"] == p["ys"] or p.update(q)), "liste posée")
+
+    def ipc(self, fonction: str, *args: str) -> str:
+        """Appelle une fonction IPC de la coque d'essai de la page Wi-Fi. Entrées : fonction, args. Sortie : stdout."""
+        return subprocess.run([QS, "ipc", "--pid", str(self.proc.pid), "call", "wifi", fonction, *args],
+                              check=True, capture_output=True, text=True, timeout=DELAI).stdout.strip()
+
+    def page(self) -> dict:
+        """État de la page, décodé (voir la coque d'essai). Dépendances : ipc."""
+        return json.loads(self.ipc("page"))
+
+    def jusqua(self, condition, message: str = ""):
+        """Attend qu'une condition sur l'état de la page devienne vraie. Sortie : l'état qui la vérifie."""
+        fin = time.monotonic() + DELAI
+        while time.monotonic() < fin:
+            p = self.page()
+            if condition(p):
+                return p
+            time.sleep(0.05)
+        self.fail(f"{message}\n{p}\n{self.journal()}")
+
+    @staticmethod
+    def cles(p: dict, groupe: str | None = None) -> list[str]:
+        """Noms des réseaux de la liste, dans l'ordre, d'une section ou de toutes (rangée « Afficher… » exclue)."""
+        return [ligne["cle"] for ligne in p["lignes"] if ligne["genre"] != "plus" and groupe in (None, ligne["groupe"])]
+
+    def test_cinq_rangees(self):
+        # Règle des cinq (fiche, 6.1) : cinq rangées au plus sous le réseau joint, qui n'est pas compté ; les connus
+        # à portée d'abord, puis les inconnus, chaque groupe par signal décroissant ; le reste derrière « Afficher… ».
+        p = self.demarrer()
+        self.assertEqual(p["titres"], ["Réseau joint", "Mes réseaux", "Autres réseaux"])
+        self.assertEqual(self.cles(p, "Réseau joint"), ["Wifi_TRIADES"])
+        self.assertEqual(self.cles(p, "Mes réseaux"), self.MIENS)
+        self.assertEqual(self.cles(p, "Autres réseaux"), self.AUTRES)
+        self.assertEqual(len(self.cles(p)) - 1, 5)
+        self.assertEqual(p["plus"], "Afficher les 6 autres réseaux")
+        self.assertEqual(p["ys"], sorted(p["ys"]))
+        self.assertEqual((p["phrase"], p["presents"], p["recherche"]), ("Connecté à Wifi_TRIADES", ["joint"], True))
+        self.assertEqual(p["serrures"], ["Telephone_Essai", "Livebox-A3F2", "Freebox-5C21B0", "eduroam"])
+        self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Binding loop")
+
+    def test_partage_en_tete_des_miens(self):
+        # Fiche, 12.3 : le partage de connexion est un réseau connu à portée, donc dans « Mes réseaux », au-dessus
+        # de tout réseau inconnu, quel que soit son glyphe ; il prend le glyphe de partage une fois vu facturé.
+        p = self.demarrer()
+        self.assertEqual(self.cles(p, "Mes réseaux")[0], "Telephone_Essai")
+        self.assertEqual((p["partages"], p["memoire"]), ([], []))
+        self.arreter()
+        p = self.demarrer(["Telephone_Essai"])
+        self.assertEqual(self.cles(p, "Mes réseaux")[0], "Telephone_Essai")
+        self.assertEqual((p["partages"], p["memoire"]), (["Telephone_Essai"], ["Telephone_Essai"]))
+        # Plus faible que tous les inconnus, il reste dans « Mes réseaux », devant eux.
+        self.ipc("force", "Telephone_Essai", "0.05")
+        p = self.jusqua(lambda p: self.cles(p, "Mes réseaux") == ["Livebox-A3F2", "Telephone_Essai"], "connus triés")
+        self.assertEqual(self.cles(p, "Autres réseaux"), self.AUTRES)
+
+    def test_facture_retenue(self):
+        # Le lien actif vu facturé est retenu dans l'état persistant de la coque, jamais dans NetworkManager : aucune
+        # commande nmcli n'est lancée, et la mémoire survit au redémarrage.
+        p = self.demarrer()
+        self.assertFalse((self.dir / "reseau.json").exists())
+        self.ipc("facturer", "true")
+        self.jusqua(lambda p: p["memoire"] == ["Wifi_TRIADES"], "réseau retenu")
+        fin = time.monotonic() + DELAI
+        while not (self.dir / "reseau.json").exists() and time.monotonic() < fin:
+            time.sleep(0.05)
+        self.assertEqual(json.loads((self.dir / "reseau.json").read_text(encoding="utf-8")), {"factures": ["Wifi_TRIADES"]})
+        self.assertNotIn("essai : executer", self.journal())
+        # Rejoint par un autre réseau, l'ancien garde son glyphe de partage dans « Mes réseaux ».
+        self.ipc("facturer", "false")
+        self.ipc("joindre", "Livebox-A3F2")
+        self.jusqua(lambda p: p["partages"] == ["Wifi_TRIADES"], "glyphe de partage gardé")
+        self.arreter()
+        self.installer(55)
+        self.lancer(self.dir)
+        self.attendre("essai : prêt")
+        self.jusqua(lambda p: p["existe"] and p["memoire"] == ["Wifi_TRIADES"], "mémoire relue")
+
+    def test_connexion_sur_place(self):
+        # Fiche, 6.2 : la rangée cliquée annonce « Connexion… » sur place ; tant que la connexion est en cours, aucune
+        # rangée ne bouge, même si un balayage se termine avec un autre ordre des signaux.
+        p = self.demarrer()
+        avant, ys = p["lignes"], p["ys"]
+        self.ipc("choisir", "Livebox-A3F2")
+        self.attendre("essai : connect Livebox-A3F2")
+        p = self.jusqua(lambda p: p["activites"] == 1, "indicateur d'activité montré")
+        self.assertEqual((p["enCours"], p["connexions"], p["fige"]), ("Livebox-A3F2", ["Livebox-A3F2"], True))
+        self.assertEqual((p["lignes"], p["ys"], p["phrase"]), (avant, ys, "Connexion à Livebox-A3F2…"))
+        self.ipc("force", "Livebox-A3F2", "0.95")
+        self.ipc("force", "eduroam", "0.99")
+        time.sleep(0.3)
+        p = self.page()
+        self.assertEqual((p["lignes"], p["ys"], p["glissements"]), (avant, ys, 0))
+        # Un second clic sur la rangée en cours ne fait rien ; un clic sur un autre réseau connu remplace la tentative.
+        self.ipc("choisir", "Livebox-A3F2")
+        self.assertEqual(self.journal().count("essai : connect Livebox-A3F2"), 1)
+        self.ipc("choisir", "Telephone_Essai")
+        p = self.jusqua(lambda p: p["connexions"] == ["Telephone_Essai"], "une seule rangée en connexion")
+        self.assertEqual((p["lignes"], p["activites"]), (avant, 1))
+        # À l'échec, la rangée reste à sa place, déplie la saisie avec l'erreur, et la liste reste figée.
+        self.ipc("echouer", "Telephone_Essai")
+        p = self.jusqua(lambda p: p["deplie"] == "Telephone_Essai" and p["saisie"] == 0, "saisie dépliée")
+        self.assertEqual((p["lignes"], p["connexions"], p["fige"]), (avant, [], True))
+        self.assertIn("Mot de passe refusé", p["erreur"])
+        self.assertNotRegex(self.journal(), r"TypeError|ReferenceError")
+
+    def test_glissement_a_la_reussite(self):
+        # Fiche, 6.2 : à la réussite, la rangée rejointe glisse en tête (transition de déplacement de la liste, et non
+        # une recréation), l'ancien réseau joint redescend dans « Mes réseaux ».
+        p = self.demarrer()
+        self.assertEqual(p["glissements"], 0)
+        self.ipc("choisir", "Livebox-A3F2")
+        self.jusqua(lambda p: p["connexions"] == ["Livebox-A3F2"], "connexion en cours")
+        self.ipc("joindre", "Livebox-A3F2")
+        p = self.jusqua(lambda p: p["lignes"][0]["cle"] == "Livebox-A3F2" and p["lignes"][0]["genre"] == "joint"
+                        and p["ys"] == sorted(p["ys"]) and p["ys"][0] == min(p["ys"]), "rangée glissée en tête")
+        self.assertGreater(p["glissements"], 0)
+        self.assertEqual(self.cles(p, "Réseau joint"), ["Livebox-A3F2"])
+        self.assertEqual(self.cles(p, "Mes réseaux"), ["Wifi_TRIADES", "Telephone_Essai"])
+        self.assertEqual((p["enCours"], p["connexions"], p["fige"], p["phrase"]), ("", [], False, "Connecté à Livebox-A3F2"))
+        # Un réseau inconnu rejoint par son mot de passe glisse de même, et prend un profil.
+        self.ipc("choisir", "eduroam")
+        self.jusqua(lambda p: p["deplie"] == "eduroam" and p["saisie"] == 0, "saisie dépliée")
+        self.ipc("saisir", "s3cret-jamais-journalise")
+        self.ipc("rejoindre")
+        self.attendre("essai : connectWithPsk eduroam 24")
+        self.ipc("joindre", "eduroam")
+        p = self.jusqua(lambda p: self.cles(p, "Réseau joint") == ["eduroam"], "réseau inconnu joint")
+        self.assertEqual(self.cles(p, "Mes réseaux"), ["Wifi_TRIADES", "Telephone_Essai", "Livebox-A3F2"])
+        self.assertNotIn("s3cret-jamais-journalise", self.journal())
+        self.assertNotRegex(self.journal(), r"TypeError|ReferenceError")
+
+    def test_afficher_les_autres(self):
+        # La rangée « Afficher les N autres réseaux » déplie la suite sur place ; un second clic la replie.
+        p = self.demarrer()
+        self.ipc("afficher")
+        p = self.jusqua(lambda p: len(p["lignes"]) == 13, "suite dépliée")
+        self.assertEqual(self.cles(p, "Autres réseaux"), self.AUTRES + self.RESTE)
+        self.assertEqual((p["plus"], p["lignes"][-1]["genre"]), ("Réduire la liste", "plus"))
+        self.assertEqual(self.cles(p, "Mes réseaux"), self.MIENS)
+        self.ipc("afficher")
+        p = self.jusqua(lambda p: len(p["lignes"]) == 7, "suite repliée")
+        self.assertEqual((self.cles(p, "Autres réseaux"), p["plus"]), (self.AUTRES, "Afficher les 6 autres réseaux"))
+
+    def test_radio_eteinte(self):
+        # Point d'attention 5 : Wi-Fi éteint ou aucune carte, la page montre l'en-tête et son interrupteur, aucune
+        # liste, sans erreur au journal.
+        p = self.demarrer()
+        self.ipc("basculer")
+        self.attendre("essai : allumer false")
+        p = self.jusqua(lambda p: not p["lignes"], "liste vidée")
+        self.assertEqual((p["listeVisible"], p["bas"], p["titres"], p["cartes"]), (False, [], [], 0))
+        self.assertEqual((p["phrase"], p["interrupteur"], p["presents"], p["recherche"]),
+                         ("Désactivé", {"coche": False, "actif": True}, [], False))
+        self.ipc("basculer")
+        self.attendre("essai : allumer true")
+        p = self.jusqua(lambda p: len(p["lignes"]) == 7, "liste revenue")
+        self.assertEqual((p["listeVisible"], p["bas"]), (True, ["enregistres", "masque"]))
+        self.ipc("carte", "false")
+        p = self.jusqua(lambda p: not p["lignes"], "liste vidée sans carte")
+        self.assertEqual((p["listeVisible"], p["bas"], p["phrase"], p["interrupteur"]["actif"]),
+                         (False, [], "Aucune carte Wi-Fi", False))
+        self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Binding loop|Unable to assign|ERROR")
+
+    def test_sous_page_profils(self):
+        # « Réseaux enregistrés » pousse la sous-page de tous les profils, hors de portée compris, avec le retour
+        # « ‹ Wi-Fi » ; revenir rend la page.
+        p = self.demarrer()
+        self.assertEqual((p["bas"], p["compte"], p["niveau"]), (["enregistres", "masque"], "4", 0))
+        self.ipc("cliquer", "enregistres")
+        p = self.jusqua(lambda p: p["niveau"] == 1 and len(p["profils"]) == 4, "sous-page des profils")
+        self.assertEqual((p["retour"], p["sousPage"]), ("Wi-Fi", "Réseaux enregistrés"))
+        # Le réseau joint en tête, puis les autres profils dans l'ordre alphabétique.
+        self.assertEqual(p["profils"], ["Wifi_TRIADES", "Cafe", "Livebox-A3F2", "Telephone_Essai"])
+        self.ipc("revenir")
+        p = self.jusqua(lambda p: p["niveau"] == 0, "retour à la page")
+        self.assertEqual(len(p["lignes"]), 7)
+        self.ipc("atteindre", json.dumps({"chemin": ["wifi", "enregistres"]}))
+        self.jusqua(lambda p: p["niveau"] == 1 and p["sousPage"] == "Réseaux enregistrés", "sous-page atteinte")
+        self.assertNotRegex(self.journal(), r"TypeError|ReferenceError")
+
+    def test_atteindre_reseau_masque(self):
+        # L'ancre de recherche « Réseau masqué » ouvre la fiche du réseau masqué en sous-page ; les ancres du réseau
+        # joint le déplient et le mettent en évidence.
+        self.demarrer()
+        self.ipc("atteindre", json.dumps({"chemin": ["wifi", "masque"]}))
+        p = self.jusqua(lambda p: p["niveau"] == 1, "fiche ouverte")
+        self.assertEqual((p["retour"], p["sousPage"]), ("Wi-Fi", "Réseau masqué"))
+        self.ipc("revenir")
+        self.jusqua(lambda p: p["niveau"] == 0, "retour à la page")
+        self.ipc("cliquer", "masque")
+        self.jusqua(lambda p: p["niveau"] == 1 and p["sousPage"] == "Réseau masqué", "fiche ouverte au clic")
+        self.ipc("atteindre", json.dumps({"chemin": ["wifi", "joint", "ip"]}))
+        p = self.jusqua(lambda p: p["niveau"] == 0 and p["jointOuvert"], "réseau joint déplié")
+        self.assertEqual(p["evidence"], "depliant:wifi-1")
+        self.assertNotRegex(self.journal(), r"TypeError|ReferenceError")
 
 
 @unittest.skipUnless(os.environ.get("WAYLAND_DISPLAY") and QS, "session Wayland et Quickshell requis")
@@ -2412,7 +2642,7 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
         # « Réglages avancés », D155) se comptent à la tabulation ; la fin de la page
         # (« Autre réseau… »), derrière cette liste réelle de longueur imprévisible, s'atteint à rebours : Maj+Tab sans
         # focus boucle sur le dernier arrêt. L'ordre complet, sur un état factice, est éprouvé par
-        # PageWifiTest.test_ordre_de_tabulation.
+        # PageWifiFenetreTest.test_ordre_de_tabulation.
         self.ipc("reseau", "ouvrir")
         self.jusqua(lambda e: e["fenetre"] and e["rangees"], "fenêtre construite")
         self.tabuler_jusqu_a("Wifi_TRIADES")

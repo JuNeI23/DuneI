@@ -134,6 +134,21 @@ class CoquilleTest(EssaiCoque, unittest.TestCase):
         for motif in ("TypeError", "ReferenceError", "is not a type", "Unable to assign", "Binding loop"):
             self.assertNotIn(motif, journal)
 
+    def test_registre_wifi(self):
+        # Le registre nomme la vraie page Wi-Fi (le banc la remplace par une page factice pour ne pas lire le réseau
+        # de la machine) et déclare son index : l'interrupteur, le réseau joint et ses tuiles, qui exigent un réseau
+        # joint, les réseaux enregistrés et le réseau masqué.
+        wifi, filaire, vpn = json.loads(self.ipc("essai", "registre"))
+        self.assertTrue(wifi["composant"].endswith("/Reseau/PageWifi.qml"), wifi["composant"])
+        self.assertTrue((ROOT / "coque" / "Reseau" / "PageWifi.qml").is_file())
+        self.assertEqual([(e["chemin"], e["exige"]) for e in wifi["index"]], [
+            (["wifi", "radio"], ""), (["wifi", "joint"], "joint"), (["wifi", "joint", "ip"], "joint"),
+            (["wifi", "joint", "routeur"], "joint"), (["wifi", "joint", "depuis"], "joint"),
+            (["wifi", "enregistres"], ""), (["wifi", "masque"], "")])
+        self.assertTrue(all(e["page"] == "wifi" and e["libelle"] and e["motsCles"] for e in wifi["index"]))
+        # Filaire et VPN restent provisoires.
+        self.assertTrue(filaire["composant"].endswith("ProvisoireFilaire.qml") and vpn["composant"].endswith("ProvisoireVpn.qml"))
+
     def test_ouvrir_page(self):
         e = self.etat()
         self.assertEqual((e["ouverte"], e["fenetre"], e["page"]), (False, False, "wifi"))

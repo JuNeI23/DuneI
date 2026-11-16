@@ -5,7 +5,8 @@ import Quickshell
 // Registre — liste déclarative des pages de l'application Paramètres.
 // Rôle : seule source de la barre latérale, du conteneur de page et de la recherche. Ajouter une page revient à
 // ajouter ici une entrée et à écrire son fichier ; la coquille ne change pas.
-// Entrées : aucune.
+// Entrées : pages, remplaçable par une coque d'essai, qui éprouve ainsi la coquille sur des pages factices sans lire
+// le réseau de la machine.
 // Sorties : pages, liste ordonnée de { id, identifiant de la page ; groupe, titre du groupe de la barre latérale ;
 // libelle, nom montré ; glyphe, nom freedesktop de l'icône ; teinte, indice dans Theme.color.categorical ;
 // composant, URL du fichier de la page (contrat : voir ConteneurPage) ; index, ses réglages recherchables, au format
@@ -13,14 +14,22 @@ import Quickshell
 // index de toutes les pages. Fonction : page.
 // Erreurs : aucune.
 // Dépendances : Quickshell (Singleton) ; les fichiers de page nommés par composant.
-// Provisoire : les trois pages sont des pages factices (Provisoire*.qml) et leurs index ne nomment que des réglages
-// factices ; les pages Wi-Fi, Filaire et VPN les remplacent en changeant ici composant et index.
+// Page Wi-Fi : la PageWifi du module Reseau, nommée par son URL (aucun import : le registre ne charge rien). Son
+// index déclare l'interrupteur, le réseau joint et ses tuiles (proposés seulement quand un réseau est joint : exige
+// « joint »), les réseaux enregistrés et le réseau masqué ; PageWifi.atteindre suit ces ancres.
+// Provisoire : les pages Filaire et VPN sont encore des pages factices (Provisoire*.qml), dont l'index ne nomme que
+// des réglages factices ; les vraies pages les remplacent en changeant ici composant et index.
 Singleton {
-    readonly property var pages: [
+    property var pages: [
         { id: "wifi", groupe: "Réseau", libelle: "Wi-Fi", glyphe: "network-wireless-signal-excellent", teinte: 3,
-          composant: Qt.resolvedUrl("ProvisoireWifi.qml"), index: [
-            { page: "wifi", chemin: ["wifi", "masque"], libelle: "Réseau masqué", motsCles: ["caché", "SSID"], exige: "" },
-            { page: "wifi", chemin: ["wifi", "enregistres"], libelle: "Réseaux enregistrés", motsCles: ["profils", "connus"], exige: "" }
+          composant: Qt.resolvedUrl("../Reseau/PageWifi.qml"), index: [
+            { page: "wifi", chemin: ["wifi", "radio"], libelle: "Wi-Fi", motsCles: ["sans fil", "activer", "désactiver", "radio"], exige: "" },
+            { page: "wifi", chemin: ["wifi", "joint"], libelle: "Réseau joint", motsCles: ["connecté", "déconnecter", "oublier", "mot de passe", "débit"], exige: "joint" },
+            { page: "wifi", chemin: ["wifi", "joint", "ip"], libelle: "Adresse IP", motsCles: ["IPv4", "réseau local"], exige: "joint" },
+            { page: "wifi", chemin: ["wifi", "joint", "routeur"], libelle: "Routeur", motsCles: ["passerelle", "box"], exige: "joint" },
+            { page: "wifi", chemin: ["wifi", "joint", "depuis"], libelle: "Connecté depuis", motsCles: ["durée"], exige: "joint" },
+            { page: "wifi", chemin: ["wifi", "enregistres"], libelle: "Réseaux enregistrés", motsCles: ["profils", "connus"], exige: "" },
+            { page: "wifi", chemin: ["wifi", "masque"], libelle: "Réseau masqué", motsCles: ["caché", "SSID"], exige: "" }
           ] },
         { id: "filaire", groupe: "Réseau", libelle: "Filaire", glyphe: "network-wired", teinte: 2,
           composant: Qt.resolvedUrl("ProvisoireFilaire.qml"), index: [

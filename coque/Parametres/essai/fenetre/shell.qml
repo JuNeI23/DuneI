@@ -7,7 +7,9 @@ import QtTest
 import "Parametres"
 
 // Coque d'essai de la coquille de l'application Paramètres.
-// Rôle : instancie FenetreParametres sur ses pages provisoires. La fenêtre s'ouvre et se ferme par l'IPC réelle
+// Rôle : instancie FenetreParametres sur des pages provisoires : la page Wi-Fi du registre, qui lirait le réseau de
+// la machine, y est remplacée au démarrage par la page factice ProvisoireWifi et ses deux réglages factices (le
+// registre d'origine reste lisible par l'IPC registre). La fenêtre s'ouvre et se ferme par l'IPC réelle
 // (cible « parametres ») ; la cible « essai » lit son état et y joue les gestes de l'utilisateur (saisie, molette,
 // touches, par un TestEvent de QtTest). tests/test_parametres.py (CoquilleTest) la pilote sous la plateforme
 // offscreen ; lancée dans la session, elle sert aussi à la mesure d'ouverture et aux captures.
@@ -25,7 +27,17 @@ ShellRoot {
     property real pire: 0
     property int images: 0
 
-    Component.onCompleted: console.info("essai : prêt")
+    // Registre tel qu'il est déclaré, relevé avant le remplacement de la page Wi-Fi.
+    property var registre: []
+
+    Component.onCompleted: {
+        registre = Registre.pages
+        Registre.pages = Registre.pages.map(p => p.id !== "wifi" ? p : Object.assign({}, p, {
+            composant: Qt.resolvedUrl("Parametres/ProvisoireWifi.qml"), index: [
+                { page: "wifi", chemin: ["wifi", "masque"], libelle: "Réseau masqué", motsCles: ["caché", "SSID"], exige: "" },
+                { page: "wifi", chemin: ["wifi", "enregistres"], libelle: "Réseaux enregistrés", motsCles: ["profils", "connus"], exige: "" }] }))
+        console.info("essai : prêt")
+    }
 
     FenetreParametres { id: fenetre }
 
@@ -112,6 +124,12 @@ ShellRoot {
         // cheminJson, un objet JSON {"chemin": [...]} (un tableau nu serait déformé par la ligne de commande).
         // Sortie : aucune. Erreurs : JSON invalide, SyntaxError au journal. Dépendances : EtatParametres.
         function atteindre(page: string, cheminJson: string): void { EtatParametres.ouvrir(page, JSON.parse(cheminJson).chemin) }
+
+        // registre — pages du registre telles qu'elles sont déclarées, avant le remplacement de la page Wi-Fi.
+        // Entrées : aucune. Sortie : JSON [{ id, composant (URL en texte), index }]. Erreurs : aucune.
+        function registre(): string {
+            return JSON.stringify(essai.registre.map(p => ({ id: p.id, composant: String(p.composant), index: p.index })))
+        }
 
         // rien — ne fait rien : sert à mesurer le coût d'un appel IPC à vide. Entrées : aucune. Sortie : aucune.
         function rien(): void {}

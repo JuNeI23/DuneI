@@ -148,13 +148,15 @@ class EssaiCoque:
     def lancer(self, dossier: Path) -> None:
         """Démarre la coque d'essai, journal redirigé dans un fichier.
 
-        Entrée : dossier — valeur de DUNEI_TOKENS_DIR.
+        Entrée : dossier — valeur de DUNEI_TOKENS_DIR, et de DUNEI_ETAT_DIR : l'état persistant qu'une coque d'essai
+        écrirait (mémoire des réseaux vus facturés) reste dans ce dossier, jamais dans l'état de la session.
         Sortie : aucune ; self.proc tient le processus, tué par tearDown. Une coque déjà lancée est arrêtée d'abord :
         une boucle de sous-tests qui échoue en cours d'itération n'en laisse aucune derrière elle.
         Erreurs : OSError si qs ne démarre pas. Dépendances : arreter, qs, dossier essai et environnement de la classe.
         """
         self.arreter()
-        env = {**os.environ, **self.environnement, "DUNEI_TOKENS_DIR": str(dossier), "NO_COLOR": "1"}
+        env = {**os.environ, **self.environnement, "DUNEI_TOKENS_DIR": str(dossier), "DUNEI_ETAT_DIR": str(dossier),
+               "NO_COLOR": "1"}
         env = {cle: valeur for cle, valeur in env.items() if valeur is not None}
         with self.log.open("w") as sortie:
             self.proc = subprocess.Popen([QS, "-p", str(self.essai)], env=env, stdout=sortie,

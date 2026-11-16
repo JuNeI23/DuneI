@@ -29,8 +29,9 @@ import "../Composants"
 // Erreurs : aucune ; une page dont le fichier ne charge pas laisse son emplacement vide, l'erreur de Qt au journal.
 // Dépendances : Registre, EtatParametres (page, chemin), Ressort, Bouton, Theme (motion.wheel, motion.delays, space,
 // focus, radius, mouvementReduit), QtQuick (Flickable, WheelHandler, NumberAnimation).
-// Cotes : pages en retrait de space.blockGap ; rangée de retour séparée de sa sous-page de space.scale[1] ; la page
-// entrante monte de space.scale[0].
+// Cotes : pages en retrait de reglages.pageMargin ; rangée de retour séparée de sa sous-page de space.scale[1] ; la
+// page entrante monte de reglages.pageRise.
+// Relief : dnRelief, vrai, que les cartes et les médaillons des pages héritent pour prendre le relief « Doux ».
 Item {
     id: conteneur
 
@@ -44,7 +45,8 @@ Item {
     property Item _montre: null
     readonly property alias defilement: defilement
     readonly property bool anime: elan.running
-    readonly property real marge: Theme.space?.blockGap ?? 0
+    readonly property real marge: Theme.reglages?.pageMargin ?? 0
+    readonly property bool dnRelief: true
     readonly property real maximum: Math.max(0, defilement.contentHeight - defilement.height)
     // Compte des emplacements posés par le Repeater : sa propriété count change avant que l'élément soit lisible par
     // itemAt quand la fenêtre est construite de façon asynchrone, si bien que les liaisons suivent ce compte-ci.
@@ -240,7 +242,7 @@ Item {
         Item {
             id: contenu
             x: conteneur.marge
-            y: conteneur.marge + (Theme.mouvementReduit ? 0 : (1 - montee.value) * (Theme.space?.scale[0] ?? 0))
+            y: conteneur.marge + (Theme.mouvementReduit ? 0 : (1 - montee.value) * (Theme.reglages?.pageRise ?? 0))
             width: defilement.width - 2 * x
             opacity: entree.value
 

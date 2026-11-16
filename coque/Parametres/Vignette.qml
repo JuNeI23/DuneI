@@ -14,10 +14,11 @@ import "../Composants"
 // coins, radius.control par défaut.
 // Sorties : couleur, la teinte résolue, transparente si l'indice est inconnu ; icone, l'Icone du glyphe.
 // Erreurs : aucune ; avant le chargement des tokens, la vignette est vide et de taille nulle.
-// Dépendances : Lueur (dégradés radiaux), Icone, Theme (material.thumb,
-// color.categorical, color.surfaceRaised, color.onAccent, reglages, radius).
-// Jetons provisoires : le fond est surfaceRaised aux deux moments, le reflet prend onAccent faute d'un blanc de
-// reflet, et le liseré prend la teinte aux deux moments.
+// Dépendances : Lueur (dégradés radiaux), Icone, Theme (material.thumb, material.highlight, color.categorical,
+// reglages, radius).
+// Jetons : le fond est thumb.ground (surfaceRaised la nuit, surfaceWindow le jour) ; le reflet est au blanc des
+// reflets (material.highlight) ; le liseré prend ce blanc la nuit et la teinte le jour (thumb.edgeTinted) ; centres
+// et portées des deux dégradés viennent de thumb (sheenCenter, sheenReach, haloCenter, haloReach), en parts du côté.
 Item {
     id: vignette
 
@@ -35,7 +36,7 @@ Item {
     width: taille
     height: taille
 
-    Rectangle { anchors.fill: parent; radius: vignette.rayon; color: Theme.color?.surfaceRaised ?? "transparent" }
+    Rectangle { anchors.fill: parent; radius: vignette.rayon; color: vignette.verre?.ground ?? "transparent" }
     Rectangle {
         anchors.fill: parent
         radius: vignette.rayon
@@ -44,22 +45,21 @@ Item {
         visible: opacity > 0
     }
 
-    // Halo et reflet : deux dégradés radiaux centrés sur le bord haut, qui s'éteignent avant le bord bas. Le halo part
-    // du tiers gauche et couvre les trois quarts de la vignette ; le reflet part du milieu et en couvre la moitié.
+    // Halo et reflet : deux dégradés radiaux centrés sur le bord haut, qui s'éteignent avant le bord bas.
     Lueur {
         anchors.fill: parent
         rayon: vignette.rayon
         teinte: vignette.couleur
-        centre: 0.3
-        portee: 0.75 * vignette.taille
+        centre: vignette.verre?.haloCenter ?? 0
+        portee: (vignette.verre?.haloReach ?? 0) * vignette.taille
         opacity: vignette.verre?.halo ?? 0
     }
     Lueur {
         anchors.fill: parent
         rayon: vignette.rayon
-        teinte: Theme.color?.onAccent ?? "transparent"
-        centre: 0.5
-        portee: 0.55 * vignette.taille
+        teinte: Theme.material?.highlight ?? "transparent"
+        centre: vignette.verre?.sheenCenter ?? 0
+        portee: (vignette.verre?.sheenReach ?? 0) * vignette.taille
         opacity: vignette.verre?.sheen ?? 0
     }
 
@@ -68,7 +68,7 @@ Item {
         radius: vignette.rayon
         color: "transparent"
         border.width: 1
-        border.color: vignette.couleur
+        border.color: (vignette.verre?.edgeTinted ? vignette.couleur : Theme.material?.highlight) ?? "transparent"
         opacity: vignette.verre?.edge ?? 0
     }
 

@@ -1,5 +1,6 @@
 import QtQuick
 import "../Theme"
+import "etats.js" as Etats
 
 // Medaillon — icône dans un carré arrondi, tête d'une rangée de réglage de la fenêtre Réseau.
 // Rôle : actif, c'est la sélection de la bible (« Sélectionné actif : fond d'accent, texte sur-accent, icône en
@@ -10,10 +11,13 @@ import "../Theme"
 // rejoignent leurs couleurs en fondu, par deux ColorSpring au ressort des états : un onglet de la colonne de la
 // fenêtre Réseau qu'on choisit ou qu'on quitte change de couleur sans à-coup (Recette 1 de L2-65, D157) ; la variante
 // pleine du glyphe, elle, se pose d'un coup.
+// Relief « Doux » (application Paramètres) : sous un ancêtre qui déclare dnRelief, le médaillon actif porte un reflet
+// léger, un dégradé du blanc des reflets (material.highlight) tombant du bord haut et éteint avant le bas, à
+// l'opacité material.medallionSheen, à la part material.medallionSheenReach de la hauteur ; aucun halo. Ailleurs, le médaillon reste un aplat.
 // Entrées : nom, icône freedesktop ; actif, faux par défaut.
 // Sorties : fond et glyphe, les couleurs peintes, lues par les essais.
 // Erreurs : aucune ; avant le chargement des tokens, le médaillon est nul et transparent.
-// Dépendances : Icone, Theme (reglages, radius.panel, color, stateColors, ColorSpring).
+// Dépendances : Icone, Theme (reglages, radius.panel, color, stateColors, material, ColorSpring), etats.js (herite).
 Rectangle {
     id: medaillon
 
@@ -29,6 +33,7 @@ Rectangle {
 
     Icone {
         anchors.centerIn: parent
+        z: 1
         nom: medaillon.nom
         pleine: medaillon.actif
         taille: Theme.reglages?.medallionGlyph ?? 0
@@ -44,5 +49,16 @@ Rectangle {
     ColorSpring {
         id: fonduGlyphe
         target: (medaillon.actif ? Theme.color?.onAccent : Theme.color?.textSecondary) ?? "transparent"
+    }
+    // Reflet du relief « Doux », peint sur le fond et sous le glyphe, que son z garde au-dessus.
+    Rectangle {
+        anchors.fill: parent
+        visible: medaillon.actif && Etats.herite(medaillon, "dnRelief", false)
+        radius: parent.radius
+        opacity: Theme.material?.medallionSheen ?? 0
+        gradient: Gradient {
+            GradientStop { position: 0; color: Theme.material?.highlight ?? "transparent" }
+            GradientStop { position: Theme.material?.medallionSheenReach ?? 0; color: "transparent" }
+        }
     }
 }

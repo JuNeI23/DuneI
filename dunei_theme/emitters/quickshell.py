@@ -151,7 +151,11 @@ def _theme(model: dict) -> dict:
 
     Entrée : model — sortie de model.resolve sur les données d'un thème (model.theme_data).
     Sortie : dict {color, states, focus, disabled, elevation, material, glass, render, knob, controls}, `color.knob` compris.
-             `material.thumb` ({tint, sheen, edge, halo}, verre des vignettes de réglages) et `material.headerGlow` suivent le moment.
+             `material.thumb` ({tint, sheen, edge, halo, edgeTinted, sheenCenter, sheenReach, haloCenter, haloReach, ground},
+             verre des vignettes de réglages ; ground est la couleur du rôle nommé par thumb.ground), `material.headerGlow`
+             et `material.headerGlowReach` (lueur d'en-tête), `material.highlight` (blanc des reflets),
+             `material.cardShadow`, `cardShadowBlur` et `cardShadowOffsetY` (ombre courte d'une carte de réglages) et
+             `material.medallionSheen` et `medallionSheenReach` (reflet d'un médaillon actif) suivent le moment.
     Erreurs : KeyError si une section du TOML manque.
     Dépendances : _camel, _argb, _states, _focus, _eteint, _controles, color.oklch, color.to_hex.
     """
@@ -207,8 +211,17 @@ def _theme(model: dict) -> dict:
             "insetDepth": mat["inset_shadow_depth"],
             "shadowBlur": raw["window"]["floating_shadow"]["range"],
             "shadowOffsetY": raw["window"]["floating_shadow"]["offset_y"],
-            "thumb": {k: mat["thumb"][k] for k in ("tint", "sheen", "edge", "halo")},
+            "thumb": {**{_camel(k): mat["thumb"][k] for k in ("tint", "sheen", "edge", "halo", "edge_tinted", "sheen_center",
+                                                              "sheen_reach", "halo_center", "halo_reach")},
+                      "ground": to_hex(model["roles"][mat["thumb"]["ground"]])},
             "headerGlow": mat["header_glow"],
+            "headerGlowReach": mat["header_glow_reach"],
+            "highlight": to_hex(_BLANC),
+            "cardShadow": _argb(shadow, mat["card_shadow_opacity"]),
+            "cardShadowBlur": mat["card_shadow_blur"],
+            "cardShadowOffsetY": mat["card_shadow_offset_y"],
+            "medallionSheen": mat["medallion_sheen"],
+            "medallionSheenReach": mat["medallion_sheen_reach"],
         },
         "glass": {"e2": raw["glass"]["e2_opacity"], "e3": raw["glass"]["e3_opacity"],
                   "presquile": raw["glass"]["presquile_opacity"], "sidebar": raw["glass"]["sidebar_opacity"]},

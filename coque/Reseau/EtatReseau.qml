@@ -26,13 +26,15 @@ import "../Barre/icones.js" as Icones
 // filaire), connecte, connectivite (« unknown », « none », « portal », « limited » ou « full »), reseauActif
 // (WifiNetwork ou null), nomActif, force (0 à 1), facture, appareil (l'interface dont la lecture donne les adresses :
 // le filaire actif, sinon le Wi-Fi), ip4, ip6, passerelle, dns, mac (adresse matérielle de l'appareil actif), profils,
-// vpnActif, icone, reseaux (WifiNetwork de toutes les cartes, non triés) ; relances, nombre de démarrages du moniteur.
+// vpnActif, icone, reseaux (WifiNetwork de toutes les cartes, non triés) ; relances, nombre de démarrages du moniteur ;
+// facturesVues, les noms des réseaux Wi-Fi vus facturés une fois joints, retenus d'une session à l'autre dans l'état
+// persistant de la coque (MemoireFactures ; rien n'est écrit dans NetworkManager), pour leur glyphe de partage.
 // Fonctions : relire, verifier, executer, allumer, ouvrirPortail, oublierDebits, demanderSonde (sonde à la demande :
 // sondeurs, racineCompteurs, debits, signalDbm, connecteDepuis, canal, frequence ; un minuteur d'une seconde
 // seulement tant qu'un demandeur existe).
 // Erreurs : sans nmcli ou sans NetworkManager, les valeurs nmcli restent vides et le moniteur est relancé toutes les
 // secondes (voir Relance) ; la sortie d'une lecture partielle est lue au mieux.
-// Dépendances : Relance, nmcli.js, icones.js, Quickshell.Networking, Quickshell.Io.
+// Dépendances : Relance, MemoireFactures, nmcli.js, icones.js, Quickshell.Networking, Quickshell.Io.
 Singleton {
     id: etat
 
@@ -79,6 +81,8 @@ Singleton {
     property var dns: []
     property var profils: []
     property bool vpnActif: false
+    readonly property var facturesVues: memoire.noms
+    MemoireFactures { id: memoire; etat: etat }
 
     // Sonde à la demande (voir demanderSonde) : demandeurs, dossier des compteurs du noyau, débits en octets par
     // seconde (60 échantillons, le plus récent en dernier), signal en dBm et durée de connexion en secondes (null

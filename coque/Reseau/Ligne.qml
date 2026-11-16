@@ -18,6 +18,7 @@ import "../Composants/etats.js" as Etats
 // le focus lui vient du clavier ;
 // hauteur, hauteur minimale de la rangée, reglages.row par défaut (reglages.rowLead pour une rangée de tête) ;
 // couleurLibelle, couleur du libellé, texte principal par défaut (une action destructrice y met color.error) ;
+// couleurAide, couleur de l'aide, texte secondaire par défaut (l'accent autonome d'un réseau en cours de connexion) ;
 // titre, faux par défaut : vrai, le libellé passe à l'échelon 3 en graisse moyenne, pour le nom d'un réseau en tête
 // de son dépliant détaillé (Recette 1 de L2-65, D156) ; cote, le retrait du contenu aux deux bords, space.scale[2] par
 // défaut (0 pour une rangée posée dans un dépliant, alignée sur sa grille) ; et le contrôle déclaré comme enfant.
@@ -38,6 +39,7 @@ ColumnLayout {
     property bool cliquable: false
     property real hauteur: Theme.reglages?.row ?? 0
     property color couleurLibelle: Theme.color?.textPrimary ?? "transparent"
+    property color couleurAide: Theme.color?.textSecondary ?? "transparent"
     property bool titre: false
     default property alias controle: emplacement.data
     property real cote: Theme.space?.scale[2] ?? 0
@@ -131,7 +133,7 @@ ColumnLayout {
                     text: ligne.aide
                     echelon: 0
                     wrapMode: Text.Wrap
-                    color: Theme.color?.textSecondary ?? "transparent"
+                    color: ligne.couleurAide
                 }
             }
             RowLayout { id: emplacement; spacing: Theme.space?.scale[1] ?? 0 }

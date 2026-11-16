@@ -19,9 +19,9 @@ import "../Composants"
 // « parametres fermer ».
 // Erreurs : aucune ; avant le chargement des tokens, la fenêtre n'est pas construite.
 // Dépendances : quickshell ≥ 0.3 (LazyLoader, FloatingWindow, IpcHandler), EtatParametres, BarreLaterale,
-// ConteneurPage, Surface, PastillesFenetre, Theme (reglages, layout, space).
+// ConteneurPage, Surface, PastillesFenetre, Theme (reglages, space).
 // Cotes : reglages.windowWidth × windowHeight par défaut, au moins windowMinWidth × windowMinHeight ; colonne de
-// layout.sidebarDefault ; pastilles à space.scale[2] du coin haut gauche. Fond (D136) : la fenêtre est transparente
+// reglages.sidebarWidth ; pastilles à space.scale[2] du coin haut gauche. Fond (D136) : la fenêtre est transparente
 // et sa Surface ne peint rien ; la colonne est une Surface surfacePanel en verre (glass.sidebar), que Hyprland
 // floute, et le contenu une Surface surfaceWindow opaque.
 Scope {
@@ -81,7 +81,7 @@ Scope {
                     role: "surfacePanel"
                     verre: true
                     cleVerre: "sidebar"
-                    width: Theme.layout?.sidebarDefault ?? 0
+                    width: Theme.reglages?.sidebarWidth ?? 0
                     height: parent.height
                     BarreLaterale { id: barre; anchors.fill: parent; enTete: pastilles.y + pastilles.height }
                 }
