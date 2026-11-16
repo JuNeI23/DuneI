@@ -4019,3 +4019,12 @@ compositeur, donc le verre de la coque (D136), qui passe par l'alpha de ses prop
 
 *Touché : `dunei_theme/emitters/hyprland.py`, `generated/hyprland-tokens.lua`, `tests/golden/`,
 `config/hypr/modules/regles.lua`.*
+
+### D172 · La fenêtre Paramètres entre par le bas de l'écran
+
+16 novembre 2026 · À la demande de Nicolas, la fenêtre Paramètres n'entre plus par l'expansion commune aux fenêtres
+(`popin`) mais par une translation depuis le bas de l'écran : la règle `fenetre-parametres` porte
+`animation = "slide bottom"`. Le mouvement garde le ressort d'ouverture des fenêtres et le fondu de D171 ; rien ne
+change pour les autres fenêtres. Vérifié en rafale de captures.
+
+*Touché : `config/hypr/modules/regles.lua`.*

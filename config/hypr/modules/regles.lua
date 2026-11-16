@@ -12,7 +12,9 @@ M.behaviour = {
     { name = "glisser-xwayland", no_focus = true,
       match = { class = "^$", title = "^$", xwayland = true, float = true, fullscreen = false, pin = false } },
     -- L'application Paramètres de la coque flotte, centrée, à la taille que la coque lui demande (jetons reglages.window_width × window_height de tokens.toml).
-    { name = "fenetre-parametres", match = { class = "^org\\.quickshell$", title = "^Paramètres$" }, float = true, center = true },
+    -- Elle entre par une translation depuis le bas de l'écran, au ressort d'ouverture des fenêtres (D172).
+    { name = "fenetre-parametres", match = { class = "^org\\.quickshell$", title = "^Paramètres$" }, float = true, center = true,
+      animation = "slide bottom" },
 }
 
 -- apply : déclare les règles de fenêtre générées, les règles de calque (verre), puis les règles de comportement.
