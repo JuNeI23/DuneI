@@ -108,7 +108,8 @@ global              = { use = "state" }         # Déclaré en premier : valeur 
 windowsIn           = { use = "window",    phase = "in",  style = "popin 90%" }
 windowsOut          = { use = "window",    phase = "out", style = "popin 90%" }
 windowsMove         = { use = "reflow" }
-fadeIn              = { use = "window",    phase = "in" }
+fadeIn              = { use = "state",     phase = "in" }   # Fondu d'entrée court : le flou suit l'opacité (D171),
+                                                               # une fenêtre en verre doit donc être opaque presque aussitôt (D175).
 fadeOut             = { use = "window",    phase = "out" }
 layersIn            = { use = "overlay",   phase = "in",  style = "popin 96%" }
 layersOut           = { use = "overlay",   phase = "out", style = "popin 96%" }
