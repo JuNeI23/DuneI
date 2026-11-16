@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas — révisée le 22 octobre 2026
 
-Version 1.49. Historique en fin de document.
+Version 1.50. Historique en fin de document.
 
 *Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent soixante-quinze lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
 
@@ -597,6 +597,18 @@ a validé l'ensemble le 2026-11-13. La coque garde ses notifications en mémoire
 Nicolas reporte à plus tard la fenêtre Son (L2-66) et toute feature qui ouvre une fenêtre comme la fenêtre Réseau ;
 cette dernière (L2-65) ne le satisfait pas et sera refaite de zéro, pas maintenant (D163).
 
+Le 2026-11-14, Nicolas rouvre le sujet : la fenêtre Réseau est refaite de zéro, et remplacée par une **application
+Paramètres** unique, inspirée des Réglages d'iOS et de macOS, qui accueillera toutes les pages de réglages (L5-01,
+L2-65, D165 à D168). Ses priorités, dans l'ordre : l'expérience d'usage, les animations, le dessin. L'application vit
+dans le processus de la coque et se construit au clic (ouverture en 57 à 59 ms en médiane) : une barre latérale avec
+recherche et vignettes en verre, des pages inscrites à un registre, des sous-pages empilées, un défilement lissé. La
+page Wi-Fi montre cinq réseaux puis un dépliant, garde l'ordre de la liste pendant une connexion (« Connexion… » sur
+place, puis le réseau rejoint glisse en tête) et reconnaît le partage de connexion du téléphone, placé parmi « Mes
+réseaux ». Les pages Filaire et VPN reprennent leur contenu dans la nouvelle disposition. Le popover de la barre suit
+la même règle des cinq et ouvre l'application ; les trois points d'activité suivent une horloge commune. L'ancienne
+fenêtre Réseau est retirée. Ajouter une page de réglages revient désormais à l'inscrire au registre et à écrire son
+fichier : la fenêtre Son (L2-66) deviendra une page « Son ».
+
 Prochaine étape : **la cloche de la barre avec sa pastille rouge, l'historique des notifications et « ne pas
 déranger »** (L2-67), branchés sur la `Pile` du `Centre`. Le son de notification (L2-68) et l'« Ouvrir » propre à
 DuneI (L2-69) viennent plus tard. Le reste de L2-48, L2-57 (suites du popover Bluetooth), L2-58, L2-59 et L2-62
@@ -607,6 +619,7 @@ attendent leur tour.
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-10 | Version initiale |
+| 1.50 | 2026-11-16 | L5-01 et L2-65 faits, en attente de fusion : application Paramètres (coquille, pages Wi-Fi, Filaire et VPN), popover réseau à la règle des cinq, fenêtre Réseau retirée (D165 à D168) ; prochaine étape inchangée : L2-67 |
 | 1.49 | 2026-11-13 | L2-19 fait : notifications de la coque, dunst retiré (D162) ; L2-66 reportée, L2-65 à refaire de zéro (D163) ; prochaine étape : la cloche avec pastille, l'historique et « ne pas déranger » (L2-67) |
 | 1.48 | 2026-11-10 | L2-65 fusionné (PR #54) : recette à l'écran validée après une première série de corrections (D155 à D157) ; prochaine étape : L2-66 |
 | 1.47 | 2026-11-09 | L2-65 fait, en attente de fusion : fenêtre Réseau allégée (D149 à D154) ; fenêtre Son détachée en L2-66 (D153) ; prochaine étape : recette de L2-65, puis L2-66 |

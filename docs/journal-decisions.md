@@ -3873,3 +3873,85 @@ ses défauts. Nicolas a choisi de passer aux notifications (L2-19) ; leur suite,
 « ne pas déranger » (L2-67), devient la prochaine étape.
 
 *Touché : backlog (version 1.53), notes de direction (version 1.49).*
+
+## 2026-11-16 — Application Paramètres (L5-01, L2-65)
+
+### D165 · Une application Paramètres unique remplace la fenêtre Réseau
+
+La fenêtre Réseau, que D163 condamnait à être refaite de zéro, laisse la place à une application Paramètres inspirée
+des Réglages d'iOS et de macOS : une barre latérale (recherche, pages groupées, vignettes en verre), une zone de page
+à défilement lissé, des sous-pages empilées avec retour. Elle accueillera toutes les pages de réglages à venir ; trois
+sont livrées, Wi-Fi, Filaire et VPN. Ajouter une page revient à l'inscrire au registre (`coque/Parametres/Registre.qml`)
+et à écrire son fichier, qui suit le contrat de page (`conteneur`, `atteindre`, `implicitHeight`).
+
+Les priorités sont celles de Nicolas, dans l'ordre : l'expérience d'usage, puis les animations, puis le dessin. Ses
+griefs contre l'ancienne fenêtre fixaient le cahier des charges : ouverture lente et saccadée, défilement rigide,
+partage de connexion introuvable, réseau qui saute en tête sans transition après la connexion, trois points
+défectueux, popover de la barre sans le partage et mal animé, trop de réseaux listés.
+
+Approche retenue après repérage (documentation de Quickshell et rices GitHub) : la fenêtre vit dans le processus de
+la coque et n'est construite qu'au clic (`LazyLoader.activeAsync`), plutôt qu'une arborescence gardée vivante ou un
+processus à part. Mesure à l'écran : `openwindow` en 57 à 59 ms en médiane, 94 à 100 ms à froid. La molette est lissée
+(pas de 110 px, 260 ms) ; le pavé tactile défile au pixel.
+
+Dessin : la maquette v4, au relief « Doux », validée par Nicolas après une première version jugée trop en relief
+(cartes à peine soulevées, lueur d'en-tête à mi-force, vignettes en verre givré la nuit et en verre clair le jour).
+
+*Touché : `coque/Parametres/`, `coque/Composants/` (Carte, Medaillon, Materiau), `tokens.toml`, `motion.toml`, la fiche
+et le plan du 2026-11-14.*
+
+### D166 · Page Wi-Fi : cinq réseaux, jonction sans saut, partage de connexion reconnu
+
+La page Wi-Fi montre le réseau joint, puis « Mes réseaux » (les profils enregistrés à portée, tous montrés), puis
+« Autres réseaux », cinq rangées au plus en tout (`reglages.networks_shown`), le reste derrière « Afficher les N
+autres réseaux », déplié sur place. Les profils hors de portée et le réseau masqué vivent dans deux sous-pages.
+
+La jonction ne fait plus sauter la liste : la rangée cliquée passe en « Connexion… » à sa place, l'ordre est retenu
+tant que dure la tentative, qu'un mot de passe est déplié ou que le pointeur survole la liste, puis le réseau rejoint
+glisse en tête et l'ancien redescend. Une seule tentative est suivie à la fois ; en choisir une autre cesse de suivre
+la première.
+
+Le partage de connexion du téléphone se reconnaît à ce qu'il a été vu facturé à l'usage une fois joint : son nom est
+retenu dans l'état persistant de la coque (`MemoireFactures`), et il prend alors son glyphe et sa place parmi « Mes
+réseaux ». Rien n'est écrit dans NetworkManager. Raison : hors connexion, `connection.metered` vaut `unknown` pour ce
+profil, et lire chaque profil à l'ouverture coûtait une commande par réseau enregistré.
+
+*Touché : `coque/Reseau/` (PageWifi, RangeeReseau, Jonction, MemoireFactures, SousPageProfils, SousPageMasque),
+`coque/Theme/RessortVue.qml`, `nmcli.js` (`repartir`).*
+
+### D167 · Le popover réseau suit la page ; les trois points suivent une horloge commune
+
+Le popover de la barre tire désormais sa liste de la même répartition que la page (`nmcli.repartir`) : les profils
+enregistrés à portée d'abord, partage de connexion compris et reconnaissable à son glyphe, puis les réseaux sans
+profil les plus forts, cinq lignes. Il ne se fiait auparavant qu'au balayage et à son drapeau « connu », sans lire les
+profils : rien n'y distinguait le partage, noyé dans une liste de huit lignes défilantes. L'ordre y est retenu comme
+dans la page pendant une connexion, et « Réglages réseau… » ouvre l'application Paramètres à la page Wi-Fi.
+
+Les trois points (`Activite`) repartaient de zéro à chaque affichage ; montrés par affichages courts, le grain central
+n'atteignait jamais sa pleine opacité (0,63 mesuré contre 1,00 pour ses voisins). La vague suit désormais l'heure
+modulo sa période, partout où le composant sert.
+
+*Touché : `coque/Reseau/PopoverReseau.qml`, `coque/Composants/Activite.qml`.*
+
+### D168 · Retrait de l'ancienne fenêtre Réseau
+
+`FenetreReseau`, `PanneauReseau`, `ConnusWifi`, `TitrePage`, `Section`, la règle Hyprland `fenetre-reseau`, l'IPC
+« reseau ouvrir » et les propriétés `EtatReseau.fenetre` et `profilDemande` sont retirés. L'IPC est désormais
+`qs ipc -c dunei call parametres ouvrir <wifi|filaire|vpn>`. Les essais d'intégration de l'ancienne fenêtre (sonde,
+dépliants, réglages, mot de passe, réseau masqué) sont portés sur l'application (`ReseauParametresTest`) ; ceux dont
+le sujet a disparu ne sont pas repris : onglets et leur clavier (la barre latérale a ses propres essais), profil
+demandé à l'ouverture, mesure de la durée de destruction.
+
+Arbitrages de Claude, à revoir à l'écran si l'un d'eux déplaît :
+- un clic sur un autre réseau pendant une connexion cesse de suivre la première tentative sans la couper dans
+  NetworkManager (Quickshell refuse `disconnect()` sur un réseau non joint) : elle peut aboutir en silence ;
+- tout échec de connexion déplie le mot de passe de la rangée, pas seulement un mot de passe refusé ;
+- replié, le réseau joint garde la sonde des débits éveillée tant que la page Wi-Fi est à l'écran, pour la mini-courbe
+  de sa tête ;
+- l'ajout d'un réseau masqué referme sa sous-page sans déplier le profil créé, qui rejoint les réseaux enregistrés ;
+- page Filaire : la rangée d'appareil disparaît, l'en-tête porte l'interface et l'état du câble ; page VPN : la
+  section s'appelle « Mes VPN », comme sur la maquette ;
+- les pages factices qui ont servi à bâtir la coquille deviennent des accessoires de sa coque d'essai.
+
+*Touché : `coque/Reseau/`, `coque/shell.qml`, `config/hypr/modules/regles.lua`, `tests/test_reseau.py`,
+`tests/test_parametres.py`, backlog (version 1.54), notes de direction (version 1.50), bible (version 0.35), carnet (version 1.45).*
