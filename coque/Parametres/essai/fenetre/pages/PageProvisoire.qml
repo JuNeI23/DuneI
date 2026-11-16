@@ -1,8 +1,9 @@
 import QtQuick
 import "../Theme"
 import "../Composants"
+import "../Parametres"
 
-// PageProvisoire — page factice de l'application Paramètres, en attendant les pages Wi-Fi, Filaire et VPN.
+// PageProvisoire — page factice de l'application Paramètres, pour éprouver la coquille sans lire le réseau.
 // Rôle : éprouve la coquille (défilement, recherche, pile de sous-pages) et montre le contrat d'une page : un Item
 // qui porte conteneur, atteindre et implicitHeight. Elle affiche la carte d'en-tête de sa page, puis une carte de
 // rangées factices assez longue pour défiler. Les réglages que le registre déclare pour la page y prennent chacun
@@ -11,7 +12,7 @@ import "../Composants"
 // Sorties : implicitHeight ; fonction atteindre.
 // Erreurs : aucune ; une clé inconnue du registre donne une page sans en-tête ni réglage nommé.
 // Dépendances : Registre, EnTetePage, SousPageProvisoire, Carte, ReglageLigne, Theme (space).
-// Ce fichier disparaît avec les trois Provisoire*.qml quand les vraies pages sont branchées au registre.
+// Elle vit sous la coque d'essai de la coquille (essai/fenetre/pages), qui la substitue aux pages du registre.
 Item {
     id: page
 

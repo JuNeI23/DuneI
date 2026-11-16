@@ -7,8 +7,8 @@ import QtTest
 import "Parametres"
 
 // Coque d'essai de la coquille de l'application Paramètres.
-// Rôle : instancie FenetreParametres sur des pages provisoires : la page Wi-Fi du registre, qui lirait le réseau de
-// la machine, y est remplacée au démarrage par la page factice ProvisoireWifi et ses deux réglages factices (le
+// Rôle : instancie FenetreParametres sur des pages factices : les pages du registre, qui liraient le réseau de la
+// machine, y sont remplacées au démarrage par les pages Provisoire* du dossier pages et leurs réglages factices (le
 // registre d'origine reste lisible par l'IPC registre). La fenêtre s'ouvre et se ferme par l'IPC réelle
 // (cible « parametres ») ; la cible « essai » lit son état et y joue les gestes de l'utilisateur (saisie, molette,
 // touches, par un TestEvent de QtTest). tests/test_parametres.py (CoquilleTest) la pilote sous la plateforme
@@ -27,15 +27,18 @@ ShellRoot {
     property real pire: 0
     property int images: 0
 
-    // Registre tel qu'il est déclaré, relevé avant le remplacement de la page Wi-Fi.
+    // Registre tel qu'il est déclaré, relevé avant le remplacement des pages.
     property var registre: []
 
     Component.onCompleted: {
         registre = Registre.pages
-        Registre.pages = Registre.pages.map(p => p.id !== "wifi" ? p : Object.assign({}, p, {
-            composant: Qt.resolvedUrl("Parametres/ProvisoireWifi.qml"), index: [
-                { page: "wifi", chemin: ["wifi", "masque"], libelle: "Réseau masqué", motsCles: ["caché", "SSID"], exige: "" },
-                { page: "wifi", chemin: ["wifi", "enregistres"], libelle: "Réseaux enregistrés", motsCles: ["profils", "connus"], exige: "" }] }))
+        const factices = {
+            wifi: [{ page: "wifi", chemin: ["wifi", "masque"], libelle: "Réseau masqué", motsCles: ["caché", "SSID"], exige: "" },
+                   { page: "wifi", chemin: ["wifi", "enregistres"], libelle: "Réseaux enregistrés", motsCles: ["profils", "connus"], exige: "" }],
+            filaire: [{ page: "filaire", chemin: ["filaire", "mac"], libelle: "Adresse MAC", motsCles: ["matérielle", "ethernet"], exige: "" }],
+            vpn: [{ page: "vpn", chemin: ["vpn", "demarrage"], libelle: "Connexion au démarrage", motsCles: ["automatique"], exige: "" }] }
+        Registre.pages = Registre.pages.map(p => Object.assign({}, p, {
+            composant: Qt.resolvedUrl("pages/Provisoire" + p.id[0].toUpperCase() + p.id.slice(1) + ".qml"), index: factices[p.id] }))
         console.info("essai : prêt")
     }
 
@@ -125,7 +128,7 @@ ShellRoot {
         // Sortie : aucune. Erreurs : JSON invalide, SyntaxError au journal. Dépendances : EtatParametres.
         function atteindre(page: string, cheminJson: string): void { EtatParametres.ouvrir(page, JSON.parse(cheminJson).chemin) }
 
-        // registre — pages du registre telles qu'elles sont déclarées, avant le remplacement de la page Wi-Fi.
+        // registre — pages du registre telles qu'elles sont déclarées, avant le remplacement des pages.
         // Entrées : aucune. Sortie : JSON [{ id, composant (URL en texte), index }]. Erreurs : aucune.
         function registre(): string {
             return JSON.stringify(essai.registre.map(p => ({ id: p.id, composant: String(p.composant), index: p.index })))

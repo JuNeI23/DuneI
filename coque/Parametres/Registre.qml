@@ -14,11 +14,11 @@ import Quickshell
 // index de toutes les pages. Fonction : page.
 // Erreurs : aucune.
 // Dépendances : Quickshell (Singleton) ; les fichiers de page nommés par composant.
-// Page Wi-Fi : la PageWifi du module Reseau, nommée par son URL (aucun import : le registre ne charge rien). Son
-// index déclare l'interrupteur, le réseau joint et ses tuiles (proposés seulement quand un réseau est joint : exige
-// « joint »), les réseaux enregistrés et le réseau masqué ; PageWifi.atteindre suit ces ancres.
-// Provisoire : les pages Filaire et VPN sont encore des pages factices (Provisoire*.qml), dont l'index ne nomme que
-// des réglages factices ; les vraies pages les remplacent en changeant ici composant et index.
+// Pages du réseau : PageWifi, PageFilaire et PageVpn du module Reseau, nommées par leur URL (aucun import : le
+// registre ne charge rien). L'index de la page Wi-Fi déclare l'interrupteur, le réseau joint et ses tuiles (proposés
+// seulement quand un réseau est joint : exige « joint »), les réseaux enregistrés et le réseau masqué ; celui de la
+// page Filaire, la carte « Ethernet » et les profils ; celui de la page VPN, ses connexions. Chaque page suit ces
+// ancres dans sa fonction atteindre.
 Singleton {
     property var pages: [
         { id: "wifi", groupe: "Réseau", libelle: "Wi-Fi", glyphe: "network-wireless-signal-excellent", teinte: 3,
@@ -32,12 +32,13 @@ Singleton {
             { page: "wifi", chemin: ["wifi", "masque"], libelle: "Réseau masqué", motsCles: ["caché", "SSID"], exige: "" }
           ] },
         { id: "filaire", groupe: "Réseau", libelle: "Filaire", glyphe: "network-wired", teinte: 2,
-          composant: Qt.resolvedUrl("ProvisoireFilaire.qml"), index: [
-            { page: "filaire", chemin: ["filaire", "mac"], libelle: "Adresse MAC", motsCles: ["matérielle", "ethernet"], exige: "" }
+          composant: Qt.resolvedUrl("../Reseau/PageFilaire.qml"), index: [
+            { page: "filaire", chemin: ["filaire", "ethernet"], libelle: "Ethernet", motsCles: ["câble", "adresse matérielle", "MAC", "débit"], exige: "" },
+            { page: "filaire", chemin: ["filaire", "profils"], libelle: "Profils filaires", motsCles: ["enregistrés", "connexion automatique", "priorité"], exige: "" }
           ] },
         { id: "vpn", groupe: "Réseau", libelle: "VPN", glyphe: "network-vpn", teinte: 1,
-          composant: Qt.resolvedUrl("ProvisoireVpn.qml"), index: [
-            { page: "vpn", chemin: ["vpn", "demarrage"], libelle: "Connexion au démarrage", motsCles: ["automatique"], exige: "" }
+          composant: Qt.resolvedUrl("../Reseau/PageVpn.qml"), index: [
+            { page: "vpn", chemin: ["vpn", "connexions"], libelle: "Connexions VPN", motsCles: ["tunnel", "WireGuard", "OpenVPN"], exige: "" }
           ] }
     ]
     readonly property var index: [].concat(...pages.map(p => p.index))

@@ -146,8 +146,10 @@ class CoquilleTest(EssaiCoque, unittest.TestCase):
             (["wifi", "joint", "routeur"], "joint"), (["wifi", "joint", "depuis"], "joint"),
             (["wifi", "enregistres"], ""), (["wifi", "masque"], "")])
         self.assertTrue(all(e["page"] == "wifi" and e["libelle"] and e["motsCles"] for e in wifi["index"]))
-        # Filaire et VPN restent provisoires.
-        self.assertTrue(filaire["composant"].endswith("ProvisoireFilaire.qml") and vpn["composant"].endswith("ProvisoireVpn.qml"))
+        # Filaire et VPN nomment les vraies pages du module Reseau, avec leurs ancres.
+        self.assertTrue(filaire["composant"].endswith("/Reseau/PageFilaire.qml") and vpn["composant"].endswith("/Reseau/PageVpn.qml"))
+        self.assertEqual([e["chemin"] for e in filaire["index"] + vpn["index"]],
+                         [["filaire", "ethernet"], ["filaire", "profils"], ["vpn", "connexions"]])
 
     def test_ouvrir_page(self):
         e = self.etat()

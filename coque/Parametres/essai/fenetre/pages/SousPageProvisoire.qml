@@ -1,6 +1,7 @@
 import QtQuick
 import "../Theme"
 import "../Composants"
+import "../Parametres"
 
 // SousPageProvisoire — sous-page factice, pour éprouver la pile du conteneur de page.
 // Rôle : un titre et une carte de rangées factices assez longue pour défiler ; le conteneur pose au-dessus d'elle
@@ -9,7 +10,7 @@ import "../Composants"
 // Entrées : titre ; conteneur, le ConteneurPage qui la porte, posé par lui.
 // Sorties : implicitHeight ; fonction atteindre.
 // Erreurs : aucune. Dépendances : Carte, ReglageLigne, Texte, Theme (space, color).
-// Ce fichier disparaît avec PageProvisoire.
+// Elle vit sous la coque d'essai de la coquille, avec PageProvisoire.
 Item {
     id: sousPage
 

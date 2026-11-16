@@ -5,18 +5,17 @@ import Quickshell.Io
 import "Theme"
 import "Reseau"
 
-// Coque d'essai de la page Filaire de la fenêtre Réseau, dans une fenêtre offscreen (L2-65 : dépliant de la connexion
-// filaire active).
-// Rôle : pose une PageFilaire dans une FloatingWindow, branchée sur un état et un panneau factices (aucune commande ne
-// touche le réseau réel ni les appareils de la machine) : l'état simule un câble branché, débranché ou une machine
-// sans carte filaire ; le panneau porte les rangées des profils. tests/test_reseau.py (PageFilaireTest) la pilote par
+// Coque d'essai de la page Filaire de l'application Paramètres, dans une fenêtre offscreen.
+// Rôle : pose une PageFilaire dans une FloatingWindow, branchée sur un état factice (aucune commande ne touche le
+// réseau réel ni les appareils de la machine) : l'état simule un câble branché, débranché ou une machine sans carte
+// filaire, et porte les profils lus. tests/test_reseau.py (PageFilaireTest) la pilote par
 // IPC (cible « filaire »).
 // Garde de plateforme : la fenêtre n'est construite que sous offscreen, où elle ne paraît jamais à l'écran.
 // Entrées : DUNEI_TOKENS_DIR, lu par Theme ; QT_QPA_PLATFORM=offscreen, posé par le test.
 // Sortie : « essai : prêt » à l'ouverture, puis « essai : executer <arguments JSON> » à chaque commande nmcli.
 // Erreurs : celles de Theme et des liaisons, dans le journal. Dépendances : quickshell ≥ 0.3 (FloatingWindow,
-// LazyLoader, IpcHandler), modules Theme et Reseau, par les liens Theme, Composants, Reseau et Barre posés sous cette
-// racine.
+// LazyLoader, IpcHandler), modules Theme et Reseau, par les liens Theme, Composants, Reseau, Barre et Parametres posés sous
+// cette racine.
 ShellRoot {
     id: essai
 
@@ -36,6 +35,13 @@ ShellRoot {
         property var dns: ["10.0.0.1"]
         property string mac: "8C:16:45:2E:71:B0"
         property string connectivite: "full"
+        // Profils lus : trois filaires (un actif, deux inactifs) et un Wi-Fi, que la page écarte.
+        property var profils: [
+            {nom: "Bureau", uuid: "bureau-1", type: "802-3-ethernet", appareil: "enp3s0", actif: true},
+            {nom: "Atelier", uuid: "atelier-1", type: "802-3-ethernet", appareil: "", actif: false},
+            {nom: "Garage", uuid: "garage-1", type: "802-3-ethernet", appareil: "", actif: false},
+            {nom: "Wifi_TRIADES", uuid: "wifi-1", type: "802-11-wireless", appareil: "wlan0", actif: true}
+        ]
         // executer — journalise les arguments et rend le profil factice à la lecture « nmcli -t … show ». Entrées :
         // args, fin. Sortie : aucune.
         function executer(args, fin) {
@@ -43,18 +49,6 @@ ShellRoot {
             if (fin && args[0] === "-t" && args.includes("show"))
                 fin(0, "connection.autoconnect:yes\nconnection.autoconnect-priority:5\nconnection.metered:unknown\nipv4.method:auto\nipv4.addresses:\nipv4.gateway:\nipv4.dns:\n")
         }
-    }
-
-    // Panneau factice : les profils filaires (un actif, deux inactifs), les factures et l'ouverture d'une sous-page.
-    QtObject {
-        id: panneauFaux
-        property var rangees: [
-            {groupe: "Filaire", nom: "Bureau", uuid: "bureau-1", appareil: "enp3s0", wifi: false, actif: true, etat: "Connecté", icone: "network-wired"},
-            {groupe: "Filaire", nom: "Atelier", uuid: "atelier-1", appareil: "", wifi: false, actif: false, etat: "Débranché", icone: "network-wired"},
-            {groupe: "Filaire", nom: "Garage", uuid: "garage-1", appareil: "", wifi: false, actif: false, etat: "Débranché", icone: "network-wired"},
-            {groupe: "Wi-Fi", nom: "Wifi_TRIADES", uuid: "wifi-1", appareil: "wlan0", wifi: true, actif: true, etat: "Connecté", icone: "network-wireless-signal-excellent"}
-        ]
-        property var factures: ({})
     }
 
     // trouver — premier descendant visuel qui vérifie un prédicat, en profondeur. Entrées : racine, test. Sortie : l'Item, ou null.
@@ -91,13 +85,13 @@ ShellRoot {
             color: Theme.color?.surfaceWindow ?? "transparent"
             Component.onCompleted: essai.journal("prêt", true)
 
-            PageFilaire { id: page; width: fenetre.width; panneau: panneauFaux; etat: faux }
+            PageFilaire { id: page; width: fenetre.width; etat: faux }
 
             IpcHandler {
                 target: "filaire"
 
-                // page — état de la page, en JSON : {titres (étiquettes de section visibles), appareil (libellé de la
-                // rangée de tête), aide (son état), actif (son médaillon est à l'accent), materiel (adresse matérielle
+                // page — état de la page, en JSON : {titres (titres de section visibles, à l'accent), appareil (libellé de la
+                // l'appareil), aide (l'état du câble), actif (le câble est branché), phrase (la phrase de l'en-tête), materiel (adresse matérielle
                 // montrée, vide sans rangée), profils (noms des profils de la section « Profils », dans l'ordre),
                 // profilOuvert (uuid du profil déplié dans « Profils »), aucun (« Aucun profil
                 // filaire. » est montré), depliant ({existe (le dépliant de la connexion active est montré), charge (son
@@ -107,8 +101,7 @@ ShellRoot {
                 // faux)}}. Erreurs : aucune.
                 function page(): string {
                     const objet = nom => essai.trouver(page, o => o.objectName === nom)
-                    const tete = objet("appareil")
-                    const materiel = objet("materiel")
+                                        const materiel = objet("materiel")
                     const f = page.depliant.visible ? page.depliant : null
                     const c = f?.corps
                     const tuilesDe = g => Array.from(g?.children ?? []).filter(t => t.largeur !== undefined && t.visible)
@@ -121,8 +114,8 @@ ShellRoot {
                         carteAdresses: essai.trouver(page, o => o.methode !== undefined && o.rangee !== undefined) !== null,
                     }
                     return JSON.stringify({
-                        titres: essai.tous_(page, o => o.text !== undefined && o.moyen === true && o.echelon === 0 && o.visible).map(o => o.text),
-                        appareil: tete.libelle, aide: tete.aide, actif: tete.iconeActive,
+                        titres: essai.tous_(page, o => o.text !== undefined && o.moyen === true && o.echelon <= 1 && Qt.colorEqual(o.color, Theme.color.accentStandalone) && o.visible).map(o => o.text),
+                        appareil: page.libelleAppareil, aide: page.etatCable, actif: !!faux.filaire, phrase: page.enTete.etat,
                         materiel: materiel && materiel.visible ? essai.trouver(materiel, o => o.copiable !== undefined)?.text ?? "" : "",
                         profils: essai.tous_(objet("profils"), o => String(o.objectName).startsWith("depliant:") && o.visible).map(o => o.rangee.nom),
                         profilOuvert: page.profilOuvert,
@@ -140,9 +133,9 @@ ShellRoot {
                     faux.appareil = nom === "connecte" ? "enp3s0" : "wlan0"
                 }
                 // sansProfils — retire les profils filaires du panneau. Entrées : aucune. Sortie : aucune.
-                function sansProfils(): void { panneauFaux.rangees = panneauFaux.rangees.filter(r => r.wifi) }
+                function sansProfils(): void { faux.profils = faux.profils.filter(p => p.type !== "802-3-ethernet") }
                 // sansAutres — ne garde que le profil filaire actif. Entrées : aucune. Sortie : aucune.
-                function sansAutres(): void { panneauFaux.rangees = panneauFaux.rangees.filter(r => r.wifi || r.actif) }
+                function sansAutres(): void { faux.profils = faux.profils.filter(p => p.type !== "802-3-ethernet" || p.actif) }
                 // appareil — change l'appareil que lit l'état (le Wi-Fi quand le filaire est inactif). Entrée : nom.
                 function appareil(nom: string): void { faux.appareil = nom }
                 // montrer — demande le dépliant d'un profil comme le fait le panneau pour un profil demandé. Entrée :

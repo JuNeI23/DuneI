@@ -945,11 +945,51 @@ class PopoverTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(p["bascule"], {"visible": True, "actif": False, "allumee": True})
         self.assertEqual(p["reseaux"], [])
 
-    def test_reglages(self):
+    def test_popover_ouvre_parametres(self):
+        # « Réglages réseau… » ouvre l'application Paramètres à la page Wi-Fi et referme le popover ; l'ancienne
+        # fenêtre Réseau n'est plus demandée.
         self.ouvrir()
         self.ipc("activer", "reglages")
-        self.assertTrue(json.loads(self.ipc("fenetre")))
+        self.assertEqual(json.loads(self.ipc("parametres")), {"ouverte": True, "page": "wifi"})
+        self.assertFalse(json.loads(self.ipc("fenetre")))
         self.assertEqual(self.panneau(), {})
+
+    def test_popover_cinq(self):
+        # Règle des cinq : les profils à portée, puis les réseaux sans profil les plus forts, cinq lignes au plus ;
+        # le reste ne paraît pas.
+        self.ouvrir()
+        for nom in ("Nouveau", "Voisin1", "Voisin2", "Voisin3"):
+            self.ipc("montrerReseau", nom)
+        p = self.attendre_repos()
+        self.assertEqual(p["reseaux"], ["Connu", "Nouveau", "Inconnu", "Ouvert", "Voisin1"])
+        self.assertEqual(sorted(p["lignes"]), sorted(p["reseaux"]))
+
+    def test_popover_partage_present(self):
+        # Le partage de connexion du téléphone, profil enregistré vu facturé, vient parmi les profils à portée, en
+        # tête de la liste, avec son glyphe ; il n'entame pas la place des profils, tous montrés.
+        self.ouvrir()
+        for nom in ("Nouveau", "Voisin1", "Telephone"):
+            self.ipc("montrerReseau", nom)
+        p = self.attendre_repos()
+        self.assertEqual(p["reseaux"], ["Telephone", "Connu", "Nouveau", "Inconnu", "Ouvert"])
+        self.assertEqual(p["lignes"]["Telephone"]["icone"], "network-wireless-hotspot")
+        self.assertNotEqual(p["lignes"]["Connu"]["icone"], "network-wireless-hotspot")
+
+    def test_popover_ordre_fige(self):
+        # Pendant une connexion, l'ordre est retenu : un balayage qui change les forces ne déplace aucune ligne, et
+        # le réseau choisi montre « Connexion… » à sa place. À la réussite, le nouvel ordre s'applique.
+        self.ouvrir()
+        avant = self.attendre_repos()
+        self.ipc("choisir", "Connu")
+        self.attendre("essai : connect Connu")
+        self.ipc("regler", "Ouvert", "0.99")
+        p = self.attendre_repos()
+        self.assertEqual(p["connexion"], ["Connu"])
+        self.assertEqual(p["reseaux"], ["Connu", "Inconnu", "Ouvert"])
+        self.assertEqual({n: l["y"] for n, l in p["lignes"].items()}, {n: l["y"] for n, l in avant["lignes"].items()})
+        self.ipc("joindre", "Connu")
+        self.assertEqual(self.attendre_repos()["reseaux"], ["Wifi_TRIADES", "Ouvert", "Inconnu"])
+        self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read|Unable to assign|Binding loop")
 
 
 # nmcli factice de la fenêtre Réseau : journalise chaque appel dans « appels » (à côté du script) et rend des
@@ -1751,7 +1791,7 @@ class PageWifiTest(EssaiCoque, unittest.TestCase):
 
 @unittest.skipUnless(os.environ.get("WAYLAND_DISPLAY") and QS, "session Wayland et Quickshell requis")
 class PageFilaireTest(EssaiCoque, unittest.TestCase):
-    """La page Filaire de la fenêtre Réseau, éprouvée sur un état et un panneau factices.
+    """La page Filaire de l'application Paramètres, éprouvée sur un état factice.
 
     La coque d'essai pose une PageFilaire dans une fenêtre offscreen, sur un état qui simule le câble branché,
     débranché ou l'absence de carte : aucun appareil ni aucune commande de la machine n'entre en jeu.
@@ -1791,8 +1831,9 @@ class PageFilaireTest(EssaiCoque, unittest.TestCase):
         # Carte branchée : le profil actif est le dépliant de la page (plus de carte « Adresses »), « Profils » ne liste
         # que les autres profils, et l'adresse matérielle est dans les tuiles du dépliant, plus dans la carte d'appareil.
         p = self.page()
-        self.assertEqual(p["titres"], ["Ethernet", "Réglages du réseau", "Profils"])
+        self.assertEqual(p["titres"], ["Ethernet", "Profils"])
         self.assertEqual((p["appareil"], p["aide"], p["actif"]), ("Ethernet (enp3s0)", "Connecté", True))
+        self.assertEqual(p["phrase"], "Ethernet (enp3s0) · Connecté")
         self.assertEqual((p["materiel"], p["profils"]), ("", ["Atelier", "Garage"]))
         self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
 
@@ -1847,7 +1888,7 @@ class PageFilaireTest(EssaiCoque, unittest.TestCase):
         # Le profil actif est le seul : la section « Profils » disparaît, sans le message « Aucun profil filaire. ».
         self.ipc("sansAutres")
         p = self.jusqua(lambda p: p["profils"] == [], "profils masqués")
-        self.assertEqual((p["titres"], p["aucun"], p["depliant"]["existe"]), (["Ethernet", "Réglages du réseau"], False, True))
+        self.assertEqual((p["titres"], p["aucun"], p["depliant"]["existe"]), (["Ethernet"], False, True))
 
     def test_appareil_lu_ailleurs(self):
         # EtatReseau lit alors wlan0 : le dépliant reste, mais ses tuiles valent « — » et la courbe est masquée.
@@ -1937,7 +1978,7 @@ class PageFilaireTest(EssaiCoque, unittest.TestCase):
 
 @unittest.skipUnless(QS, "Quickshell requis")
 class PageVpnTest(EssaiCoque, unittest.TestCase):
-    """La page VPN de la fenêtre Réseau, éprouvée sur un état factice.
+    """La page VPN de l'application Paramètres, éprouvée sur un état factice.
 
     La coque d'essai pose une PageVpn dans une fenêtre offscreen, sur un état dont executer journalise les arguments
     de nmcli puis refuse ou réussit : aucune commande de la machine n'entre en jeu.
@@ -1976,7 +2017,7 @@ class PageVpnTest(EssaiCoque, unittest.TestCase):
     def test_liste(self):
         # Deux VPN dans l'ordre alphabétique (le profil Wi-Fi est ignoré), le type en aide.
         p = self.page()
-        self.assertEqual(p["titres"], ["Connexions"])
+        self.assertEqual((p["titres"], p["phrase"]), (["Mes VPN"], "Connecté à Bureau"))
         self.assertEqual(p["vpns"], [
             {"nom": "Bureau", "aide": "WireGuard", "actif": True, "erreur": "", "coche": True, "libre": True},
             {"nom": "Maison: OpenVPN", "aide": "VPN", "actif": False, "erreur": "", "coche": False, "libre": True}])
@@ -1986,7 +2027,7 @@ class PageVpnTest(EssaiCoque, unittest.TestCase):
     def test_sans_connexion(self):
         self.ipc("sans")
         p = self.jusqua(lambda p: p["aucun"], "message sans connexion")
-        self.assertEqual((p["vpns"], p["titres"], p["aide"]), ([], [], True))
+        self.assertEqual((p["vpns"], p["titres"], p["aide"], p["phrase"]), ([], [], True, "Aucune connexion"))
 
     def test_monter_puis_descendre(self):
         self.ipc("basculer", "Maison: OpenVPN")
