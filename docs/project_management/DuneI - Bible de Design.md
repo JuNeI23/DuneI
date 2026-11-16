@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas
 
-Document normatif. Version 0.35. Historique en fin de document.
+Document normatif. Version 0.36. Historique en fin de document.
 
 ## Comment lire ce document
 
@@ -292,6 +292,13 @@ Ils agissent ensemble ; isolément, aucun ne fait grand-chose.
 - Le décalage de `reveal` est plafonné à cinq éléments. Au-delà, le dernier arrive trop tard et le système paraît lent.
 - **Aucune animation linéaire, nulle part.**
 
+### Fenêtres
+
+- **Le flou suit l'opacité de la fenêtre.** Le thème pose `decoration.blur.ignore_opacity = false` : pendant un fondu, le flou d'arrière-plan paraît et s'efface avec la fenêtre, jamais avant elle ni après elle (D171). Aucune règle ne rend une fenêtre translucide par l'opacité du compositeur : le verre de la coque passe par l'alpha de ses propres surfaces.
+- **Le fondu d'entrée est court.** Une fenêtre qui s'ouvre se déplace au ressort `window`, mais son opacité monte au ressort `state`, stabilisé en une centaine de millisecondes : elle est opaque, et son verre flouté, dès les premières images. Sans cela, le fond reste lisible à travers une surface en verre pendant toute l'ouverture, puis se floute d'un coup. Le fondu de sortie garde le ressort `window` (D175).
+- **La fenêtre Paramètres entre par le bas de l'écran et sort sur place.** Elle monte depuis le bord bas au ressort `window` ; à la fermeture, elle disparaît là où elle est, en fondu et en léger retrait, comme les autres fenêtres. Une sortie vers le bas se lirait comme une fenêtre réduite dans une barre des tâches (D172, D173).
+- **Une fenêtre ouverte depuis un popover attend son repli.** Le popover se replie d'abord, puis la fenêtre entre : deux mouvements lourds ne se jouent jamais en même temps, sans quoi l'un et l'autre saccadent (D174).
+
 ### Popovers de la barre
 
 - **Le verre ne s'estompe jamais.** Le calque coupe son flou sous `ignore_alpha` (0,58) et le verre est à 60 % : dès 3 % de transparence en plus, le flou disparaît d'un coup. Un popover ne change donc jamais l'opacité de son verre pendant un mouvement normal : c'est sa forme qui bouge. **La seule exception est le fondu court du mouvement réduit** (ci-dessous).
@@ -382,8 +389,9 @@ Les contrôles reprennent **les formes et les proportions de macOS**, à la dema
 - **Page.** Une carte d'en-tête (grande vignette, nom de la page, phrase d'état, contrôle principal à droite, lueur discrète de la teinte de la page), puis des cartes précédées de titres de section à l'accent. La zone de page défile ; la molette est lissée, le pavé tactile défile au pixel. Une page n'est construite qu'à sa première visite, puis gardée tant que la fenêtre est ouverte ; tout secret saisi ou lu s'efface quand sa page se cache.
 - **Relief « Doux ».** Les cartes sont à peine soulevées : liseré clair en haut, ombre courte, sans reflet ni liseré sombre. Pas de puits autour des icônes, pas de tuiles en creux, pas de boutons bombés ; interrupteur et champ de recherche en creux à peine marqué.
 - **Carte.** Aplat opaque `surfaceRaised`, `radius.panel`. Les rangées qu'elle porte sont séparées par un filet `borderSubtle` en retrait, qui part de `reglages.textColumn` (sous le texte, jamais sous le médaillon).
-- **Rangée.** Hauteur `reglages.row` (simple), `reglages.rowHelp` (avec texte d'aide en `textSecondary`) ou `reglages.rowLead` (rangée de tête). Elle reçoit au besoin un médaillon (`Medaillon`, disque de `reglages.medallion` portant un glyphe de `reglages.medallionGlyph`), un contrôle à droite (interrupteur, compteur, bouton, valeur) et, si elle est cliquable, un chevron ; elle se lit au clavier (tabulation, Entrée) et au survol comme une rangée de liste.
-- **Liste longue.** Une liste ne montre d'emblée qu'un petit nombre de rangées (cinq réseaux, `reglages.networks_shown`), le reste derrière une rangée « Afficher les N autres… », dépliée sur place. Une liste vivante ne saute jamais : son ordre est retenu tant qu'une action y est en cours ou que le pointeur la survole, puis chaque rangée glisse à sa nouvelle place (`reflow`) ; une rangée qui paraît ou disparaît le fait en fondu (`reveal`).
+- **Rangée.** Hauteur `reglages.row` (simple), `reglages.rowHelp` (avec texte d'aide en `textSecondary`) ou `reglages.rowLead` (rangée de tête). Elle reçoit au besoin un médaillon (`Medaillon`, disque de `reglages.medallion` portant un glyphe de `reglages.medallionGlyph`), un contrôle à droite (interrupteur, compteur, bouton, valeur) et, si elle est cliquable, un chevron ; elle se lit au clavier (tabulation, Entrée) et au survol comme une rangée de liste. Dans une carte, sa plaque de survol va d'un bord à l'autre de la carte, au rayon de celle-ci, et couvre toute la carte quand elle n'a qu'une rangée : une plaque en retrait se détache de la carte, surtout de jour (D169, D170).
+- **Liste longue.** Une liste ne montre d'emblée qu'un petit nombre de rangées (cinq réseaux, `reglages.networks_shown`), le reste derrière une rangée « Afficher les N autres… », dépliée sur place. Une liste vivante ne saute jamais : son ordre est retenu tant qu'une action y est en cours ou que le pointeur la survole, puis chaque rangée glisse à sa nouvelle place (`reflow`) ; une rangée qui paraît ou disparaît le fait en fondu (`reveal`). Ces mouvements sont interruptibles : une rangée relancée en plein trajet repart de sa position courante et atteint toujours sa place et son opacité finales. Une longue liste dépliée naît par passes d'au plus `reveal.stagger.cap` rangées, à l'intervalle `reveal.stagger.ms`, pour ne coûter aucune image longue (D169, D170).
+- **Réseau protégé.** Dans une liste de réseaux, seul le cadenas marque un réseau protégé ; un réseau ouvert ne porte ni mot ni avertissement (D170).
 - **Valeur copiable.** Texte à chasse fixe, calé à droite, tronqué au milieu s'il dépasse. Un clic ou Entrée la copie et la rangée annonce « Copié » un instant, en fondu. **Un champ multiple (adresses IPv4, IPv6, DNS) met une valeur par ligne**, chacune copiable : rien ne déborde de la carte, la rangée grandit.
 - **Sous-page.** Un réglage dense ou une liste secondaire s'ouvre sur une sous-page qui glisse par-dessus la page, avec en tête la rangée de retour « ‹ » suivie du nom de la page. Aucune saisie en cours n'est gardée au retour.
 - **Priorité.** Un nombre à régler reste un Compteur de la bible (champ et stepper), jamais une pastille faite pour l'occasion.
@@ -983,3 +991,4 @@ Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si 
 | 0.32 | 2026-11-09 | Section dépliable : chevron animé par le ressort `reveal` dans les fenêtres de réglages ; composants `Courbe` et `Tuile` ajoutés à l'inventaire (L2-65) |
 | 0.34 | 2026-11-10 | Annexe E : section dépliable dont le contenu déplie sa hauteur au ressort `reveal`, interrupteur dont le bouton glisse, pastilles de fenêtre en fondu au ressort `state` ; chapitre 7 : couleurs de l'onglet choisi de la barre latérale en fondu (recette 1 de L2-65, D157) |
 | 0.35 | 2026-11-16 | Chapitre 7 : le motif de la fenêtre de réglages devient celui de l'application Paramètres (barre latérale à recherche et vignettes en verre, carte d'en-tête, relief « Doux », liste longue qui ne saute pas, sous-pages empilées) ; popover réseau à la règle des cinq (D165 à D167) |
+| 0.36 | 2026-11-16 | Recette de l'application Paramètres. Chapitre 6 : section « Fenêtres » (le flou suit l'opacité, fondu d'entrée court au ressort `state`, la fenêtre Paramètres entre par le bas et sort sur place, une fenêtre attend le repli du popover qui l'ouvre) ; chapitre 7 : survol d'un bord à l'autre de la carte, liste longue interruptible et bâtie par passes, réseau protégé marqué du seul cadenas (D169 à D175) |
