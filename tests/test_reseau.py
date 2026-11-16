@@ -1300,6 +1300,21 @@ class PageWifiTest(EssaiCoque, unittest.TestCase):
         self.assertIn("Mot de passe refusé", p["erreur"])
         self.assertNotRegex(self.journal(), r"TypeError|ReferenceError")
 
+    def test_transitions_interrompues(self):
+        # Recette du 16 novembre 2026 : des changements de liste rapprochés (réseau quitté, balayages, réseau rejoint)
+        # interrompent les glissements en cours. Au repos, chaque rangée doit avoir rejoint sa place, dans l'ordre du
+        # modèle, et être pleinement opaque : aucune ne reste empilée en tête de liste ni à demi effacée.
+        self.demarrer()
+        for geste in (("joindre", "Aucun"), ("force", "eduroam", "0.99"), ("joindre", "Livebox-A3F2"),
+                      ("force", "SFR_WiFi_Fon", "1.0"), ("afficher",), ("force", "eduroam", "0.1"),
+                      ("joindre", "Telephone_Essai")):
+            self.ipc(*geste)
+        time.sleep(1.5)
+        p = self.page()
+        self.assertEqual(p["lignes"][0], {"cle": "Telephone_Essai", "genre": "joint", "groupe": "Réseau joint"})
+        self.assertEqual(p["ys"], sorted(set(p["ys"])))
+        self.assertEqual(set(p["opacites"]), {1})
+
     def test_glissement_a_la_reussite(self):
         # Fiche, 6.2 : à la réussite, la rangée rejointe glisse en tête (transition de déplacement de la liste, et non
         # une recréation), l'ancien réseau joint redescend dans « Mes réseaux ».

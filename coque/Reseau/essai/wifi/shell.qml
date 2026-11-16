@@ -92,7 +92,7 @@ ShellRoot {
                         return sortie
                     }
                     return JSON.stringify({
-                        existe: true, lignes, ys: items.map(d => d?.y ?? -1),
+                        existe: true, lignes, ys: items.map(d => d?.y ?? -1), opacites: items.map(d => d?.opacity ?? -1),
                         titres: Array.from(p.liste.contentItem.children).filter(o => o.section !== undefined && o.visible)
                             .sort((a, b) => a.y - b.y).map(o => o.section),
                         plus: items.find((d, i) => lignes[i].genre === "plus")?.item?.libelle ?? "",

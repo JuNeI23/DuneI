@@ -92,6 +92,7 @@ ColumnLayout {
         hauteur: Theme.reglages?.rowLead ?? 0
         titre: depliant.detaille
         cliquable: true
+        bordABord: true
         // Un réseau Wi-Fi inactif montre son signal ; un profil filaire garde toujours son médaillon.
         icone: depliant.detaille || depliant.filaire || (depliant.rangee?.actif ?? false) ? depliant.rangee?.icone ?? "" : ""
         iconeActive: depliant.rangee?.actif ?? false

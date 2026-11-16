@@ -3955,3 +3955,28 @@ Arbitrages de Claude, à revoir à l'écran si l'un d'eux déplaît :
 
 *Touché : `coque/Reseau/`, `coque/shell.qml`, `config/hypr/modules/regles.lua`, `tests/test_reseau.py`,
 `tests/test_parametres.py`, backlog (version 1.54), notes de direction (version 1.50), bible (version 0.35), carnet (version 1.45).*
+
+### D169 · Recette de l'application Paramètres : transitions interruptibles, ouverture sans fondu, survol bord à bord
+
+16 novembre 2026 · Quatre corrections issues de la première recette à l'écran de l'application Paramètres.
+
+- **Rangées empilées en tête de liste.** À la jonction réelle, puis à chaque balayage, des rangées restaient
+  superposées en haut de la page Wi-Fi, ou à demi effacées, pendant plusieurs secondes. Cause : `RessortVue` était une
+  `SpringAnimation`, qui ne survit pas à une transition de vue interrompue ; quand un changement du modèle relance la
+  transition d'un délégué encore en mouvement, l'animation s'arrête sans atteindre sa cible. Sur le banc, un seul
+  changement à la fois ne montrait rien ; la jonction réelle en enchaîne plusieurs (réseau quitté, balayage, profil
+  actif). `RessortVue` devient une `NumberAnimation` de la durée de stabilisation du ressort (`settle_ms`), en sortie
+  cubique, et chaque déplacement mène aussi l'opacité à son terme. La réponse exacte du ressort en spline de Bézier a
+  été écartée : au-delà de seize segments, elle corrompt le tas de Qt 6. Essai : `test_transitions_interrompues`.
+- **Ouverture en deux temps.** Le fondu d'ouverture de Hyprland montrait d'abord le flou d'arrière-plan seul, puis
+  le fond de la fenêtre. La règle `fenetre-parametres` prend `no_anim` : la fenêtre paraît entière, et la coque anime
+  elle-même l'entrée du contenu.
+- **Survol.** La plaque de survol d'une rangée restait en retrait de la carte (`reglages.sidebarInset`), ce qui se
+  voit de jour. `Ligne` reçoit `bordABord` : dans les cartes de l'application, la plaque va d'un bord à l'autre, au
+  rayon de la carte.
+- **Mini-courbe.** Le réseau joint déplié montre déjà ses débits et leur graphe : la mini-courbe de sa tête s'efface
+  en fondu tant qu'il est déplié.
+
+*Touché : `coque/Theme/RessortVue.qml`, `coque/Reseau/PageWifi.qml`, `coque/Reseau/Ligne.qml`,
+`coque/Reseau/RangeeReseau.qml`, `coque/Reseau/DepliantReseau.qml`, `config/hypr/modules/regles.lua`,
+`tests/test_reseau.py`.*

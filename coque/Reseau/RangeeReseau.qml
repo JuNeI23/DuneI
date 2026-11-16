@@ -71,6 +71,7 @@ ColumnLayout {
         aide: rangee.enConnexion ? "Connexion…" : rangee.partage ? "Partage de connexion" : ""
         couleurAide: (rangee.enConnexion ? Theme.color?.accentStandalone : Theme.color?.textSecondary) ?? "transparent"
         cliquable: true
+        bordABord: true
         onClique: rangee.choisi()
 
         Texte {

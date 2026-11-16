@@ -358,18 +358,24 @@ Item {
                 }
 
                 // Transitions de la vue. Une rangée déplacée passe au-dessus des autres le temps de son glissement.
+                // Un déplacement qui interrompt l'apparition d'une rangée la laisserait à demi effacée : chaque déplacement
+                // mène donc aussi l'opacité à son terme.
                 move: Transition {
                     enabled: !Theme.mouvementReduit
                     SequentialAnimation {
                         ScriptAction { script: page.glissements++ }
                         PropertyAction { property: "z"; value: 1 }
-                        RessortVue { properties: "x,y"; transition: "reflow" }
+                        ParallelAnimation {
+                            RessortVue { properties: "x,y"; transition: "reflow" }
+                            RessortVue { property: "opacity"; to: 1; transition: "reveal" }
+                        }
                         PropertyAction { property: "z"; value: 0 }
                     }
                 }
                 displaced: Transition {
                     enabled: !Theme.mouvementReduit
                     RessortVue { properties: "x,y"; transition: "reflow" }
+                    RessortVue { property: "opacity"; to: 1; transition: "reveal" }
                 }
                 add: Theme.mouvementReduit ? entreeReduite : entree
                 remove: Theme.mouvementReduit ? sortieReduite : sortie
@@ -428,6 +434,7 @@ Item {
                                 : "Afficher les " + page.listes.reste.length + " autres réseaux"
                             couleurLibelle: Theme.color?.textSecondary ?? "transparent"
                             cliquable: true
+                            bordABord: true
                             onClique: page.basculerTous()
                             Icone {
                                 nom: "go-next"
@@ -453,6 +460,7 @@ Item {
                 tete: Component { Item { implicitWidth: Theme.reglages?.medallion ?? 0 } }
                 libelle: "Réseaux enregistrés"
                 cliquable: true
+                bordABord: true
                 onClique: page.ouvrirProfils()
                 Texte {
                     objectName: "compte"
@@ -468,6 +476,7 @@ Item {
                 tete: Component { Item { implicitWidth: Theme.reglages?.medallion ?? 0 } }
                 libelle: "Rejoindre un réseau masqué…"
                 cliquable: true
+                bordABord: true
                 onClique: page.ouvrirMasque()
                 Icone { nom: "go-next"; taille: Theme.icons?.sizes.dense ?? 0; couleur: Theme.color?.textTertiary ?? "transparent" }
             }
@@ -486,16 +495,20 @@ Item {
         NumberAnimation { property: "opacity"; to: 0; duration: Theme.motion?.rules?.reduced_fade_ms ?? 0 }
     }
 
-    // Mini-courbe des débits, sur la tête du réseau joint : la courbe de la dernière minute, puis la réception et
-    // l'envoi du dernier relevé, tant que l'appareil lu est celui du réseau joint.
+    // Mini-courbe des débits, sur la tête du réseau joint replié : la courbe de la dernière minute, puis la réception
+    // et l'envoi du dernier relevé, tant que l'appareil lu est celui du réseau joint. Elle s'efface en fondu quand le
+    // réseau joint est déplié.
     Component {
         id: miniCourbe
         Row {
             readonly property var series: [
                 {valeurs: page.etat.debits?.rx ?? [], couleur: Theme.color?.categorical?.[0] ?? "transparent", aire: true, signe: "↓"},
                 {valeurs: page.etat.debits?.tx ?? [], couleur: Theme.color?.categorical?.[3] ?? "transparent", signe: "↑"}]
-            visible: !!page.joint && page.joint.appareil !== "" && page.joint.appareil === page.etat.appareil
+            // Dépliée, la rangée montre déjà les débits et leur graphe (DebitsReseau) : la mini-courbe s'efface.
+            visible: opacity > 0 && !!page.joint && page.joint.appareil !== "" && page.joint.appareil === page.etat.appareil
+            opacity: repli.value
             spacing: Theme.space?.scale[1] ?? 0
+            Ressort { id: repli; transition: "state"; nature: "fondu"; cible: page.jointOuvert ? 0 : 1 }
             Courbe {
                 anchors.verticalCenter: parent.verticalCenter
                 width: Theme.reglages?.sparklineWidth ?? 0
