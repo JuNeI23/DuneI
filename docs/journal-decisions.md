@@ -4028,3 +4028,14 @@ compositeur, donc le verre de la coque (D136), qui passe par l'alpha de ses prop
 change pour les autres fenêtres. Vérifié en rafale de captures.
 
 *Touché : `config/hypr/modules/regles.lua`.*
+
+### D173 · La fenêtre Paramètres sort sur place
+
+16 novembre 2026 · La règle `animation = "slide bottom"` de D172 valait aussi pour la fermeture : la fenêtre
+repartait vers le bas, ce que Nicolas lit comme une fenêtre réduite dans une barre des tâches. Une règle de fenêtre de
+Hyprland ne distingue pas l'entrée de la sortie ; le module des règles écoute donc `window.open` et, une fois la
+fenêtre Paramètres ouverte, lui rend le style de sortie commun aux fenêtres (`windowsOut` du mouvement généré, par
+`hl.dsp.window.set_prop`). Elle entre par le bas, puis disparaît au centre, en fondu et en léger retrait. Vérifié en
+rafale de captures.
+
+*Touché : `config/hypr/modules/regles.lua`, `tests/test_hyprland_modules.py`, `tests/test_hyprland_entry.py`.*
