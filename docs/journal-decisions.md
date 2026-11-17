@@ -4138,7 +4138,7 @@ présent alors que les notifications sont actives. La bascule ne porte plus qu'u
 « Activé » ou « Désactivé ». Sous « ne pas déranger », la cloche barrée ne porte ni nombre ni boule : l'utilisateur a
 choisi de ne pas être sollicité, la cloche ne le relance pas ; les entrées restent au panneau. Les chiffres de la
 pastille penchaient en bas à droite : ils étaient centrés sur leur boîte de ligne, qui compte les descendantes et les
-approches ; ils sont désormais centrés sur leur dessin, mesuré par `TextMetrics` et arrondi au pixel. L'ouverture
+approches ; ils sont désormais centrés sur leur dessin, mesuré par `TextMetrics`. Une seconde recette les a encore trouvés trop bas : la position était arrondie au pixel logique, ce qui, à l'échelle 1,25 de l'écran, les décalait d'environ 0,75 px physique ; sans cet arrondi, le « 1 » relevé au pixel sur la barre est centré à un demi-pixel physique près. L'ouverture
 d'une application au clic sur son entrée n'a pas pu être éprouvée sur un vrai courriel ; la PR est validée et on y
 reviendra au besoin. Essais : `PanneauTest.test_bascule`, `PageNotificationsTest`, `RelanceTest.test_cloche_etats`,
 `RelanceTest.test_chiffres_centres`.

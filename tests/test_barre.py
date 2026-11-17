@@ -495,14 +495,15 @@ class RelanceTest(BarreIpc, unittest.TestCase):
         self.assertEqual(self.cloche()["texte"], "4")
 
     def test_chiffres_centres(self):
-        # Le dessin des chiffres est centré dans la pilule, à un demi-pixel près (retour de recette de L2-67).
+        # Le dessin des chiffres est centré dans la pilule, sans arrondi au pixel logique : à l'échelle 1,25, arrondir
+        # la position décalait le « 1 » d'environ 0,75 px physique vers le bas (seconde recette de L2-67).
         for nombre in (1, 7, 42, 150):
             self.appeler("cloche", nombre, False)
             self.jusqua_pastille(lambda m: m["pilule"] == 1)
             time.sleep(0.6)
             dx, dy = json.loads(self.appeler("centrageChiffres"))
-            self.assertLessEqual(abs(dx), 0.5, f"{nombre} : décalage horizontal {dx}")
-            self.assertLessEqual(abs(dy), 0.5, f"{nombre} : décalage vertical {dy}")
+            self.assertLessEqual(abs(dx), 0.05, f"{nombre} : décalage horizontal {dx}")
+            self.assertLessEqual(abs(dy), 0.05, f"{nombre} : décalage vertical {dy}")
 
     def jusqua_pastille(self, condition) -> None:
         """Attend un état du mouvement de la pastille. Entrée : condition sur {pilule, boule, ancien}.
