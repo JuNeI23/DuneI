@@ -11,18 +11,14 @@ import "garde.js" as Garde
 // détruite aussitôt. Le tableau est réaffecté à chaque changement, jamais modifié sur place.
 // Entrées : montree, vrai tant qu'une vue est montée ; verrou, fabrique du verrou des entrées (RetainableLock par
 // défaut, remplacé dans l'essai) ; connus, identifiants des notifications que l'attente de la génération précédente
-// de la coque tenait (voir connue).
+// de la coque tenait (posés par MemoireAttente ; voir connue).
 // Sorties : entrees (Attendue, plus récente en tête, sortantes comprises) ; vivantes, les entrées non sortantes ;
 // nombre, leur compte, celui que porte la cloche ; critique, vrai si l'une d'elles est critique ; groupes, les
 // vivantes rangées par application (garde.js, grouper) ; signal renouvelee(a), quand la notification d'une entrée est
 // mise à jour sur place : la pile décide alors de la remontrer en carte.
-// Rechargement de la coque : les identifiants des vivantes sont tenus dans un PersistentProperties, que Quickshell
-// transmet à la génération suivante avant que le serveur ne réémette les notifications encore suivies (épreuve du
-// 17 novembre 2026, bus privé : « loaded » puis « reloaded » précèdent onNotification) ; la liste est typée
-// (list<int>), car une valeur JavaScript libre ne passe pas d'un moteur à l'autre (« JSValue can't be reassigned to
-// another engine »). connus en est la copie prise au rechargement : la pile y reconnaît les notifications qui
-// retournent au panneau sans repasser en carte.
-// Erreurs : aucune. Dépendances : Quickshell (PersistentProperties), Attendue, garde.js.
+// Rechargement de la coque : connus est posé par MemoireAttente, qui tient les identifiants des vivantes d'une
+// génération à l'autre ; la pile y reconnaît les notifications qui retournent au panneau sans repasser en carte.
+// Erreurs : aucune. Dépendances : Attendue, garde.js.
 Scope {
     id: attente
 
@@ -38,15 +34,6 @@ Scope {
     readonly property var groupes: Garde.grouper(vivantes)
 
     signal renouvelee(var a)
-
-    onVivantesChanged: memoire.ids = vivantes.map(a => a.notification.id)
-
-    PersistentProperties {
-        id: memoire
-        reloadableId: "dunei-attente"
-        property list<int> ids: []
-        onReloaded: attente.connus = [...ids]
-    }
 
     Component {
         id: fabrique

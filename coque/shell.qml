@@ -54,6 +54,8 @@ ShellRoot {
     AnnonceurAlerte { id: alerte; galerie: ouvreuse.galerie }
     FenetreParametres {}
     NotificationsReseau {}
+    // Avant le Centre : la mémoire de l'attente est rechargée avant que le serveur ne réémette ses notifications.
+    MemoireAttente { attente: centre.attente }
     Centre { id: centre }
     FenetreNotifications { centre: centre }
 }

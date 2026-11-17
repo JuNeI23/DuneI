@@ -654,6 +654,9 @@ class CentreTest(EssaiCoque, unittest.TestCase):
     def setUp(self):
         super().setUp()
         self.bus = ""
+        # notify-send, l'application des cas historiques, est retirée du panneau : ses notifications expirent à
+        # l'échéance de leur carte comme avant L2-67. Les cas de la garde envoient sous le nom « Garde ».
+        (self.dir / "notifications.json").write_text(json.dumps({"nePasDeranger": False, "retirees": ["notify-send"]}))
         demarrer(self, self.DUREE)
 
     def lancer(self, dossier) -> None:
@@ -666,7 +669,8 @@ class CentreTest(EssaiCoque, unittest.TestCase):
         Dépendances : dbus-run-session, sh, qs, arreter.
         """
         self.arreter()
-        env = {**os.environ, **self.environnement, "DUNEI_TOKENS_DIR": str(dossier), "NO_COLOR": "1"}
+        env = {**os.environ, **self.environnement, "DUNEI_TOKENS_DIR": str(dossier), "DUNEI_ETAT_DIR": str(dossier),
+               "NO_COLOR": "1"}
         env = {cle: valeur for cle, valeur in env.items() if valeur is not None}
         adresse = self.dir.parent / "bus"
         script = 'printf "%s\\n%s" "$$" "$DBUS_SESSION_BUS_ADDRESS" > "$1.tmp"; mv "$1.tmp" "$1"; exec "$2" -p "$3"'
@@ -738,6 +742,57 @@ class CentreTest(EssaiCoque, unittest.TestCase):
         """
         affichees, file = json.loads(self.appel("etat"))
         return affichees, file
+
+    def attente(self) -> dict:
+        """Attente du centre. Entrées : aucune. Sortie : {"nombre", "critique", "resumes"}.
+        Erreurs : CalledProcessError si l'appel IPC échoue. Dépendances : appel."""
+        return json.loads(self.appel("attente"))
+
+    def test_gardee_reste_suivie(self):
+        self.envoyer("-a", "Garde", "Mail", "Corps")
+        self.jusqua(lambda: self.attente() == {"nombre": 1, "critique": False, "resumes": ["Mail"]}, "en attente")
+        self.jusqua(lambda: self.etat() == ([], []), "carte sortie")
+        time.sleep(0.5)
+        self.assertEqual(self.appel("suivies"), "1")
+        self.assertEqual(self.attente()["nombre"], 1)
+
+    def test_action_depuis_l_attente(self):
+        envoi = self.envoyer_avec_actions("-a", "Garde", "-A", "ouvrir=Ouvrir", "Mail", "Corps")
+        self.jusqua(lambda: self.attente()["resumes"] == ["Mail"], "en attente")
+        self.jusqua(lambda: self.etat() == ([], []), "carte sortie")
+        self.appel("agirAttendue", "Mail", "ouvrir")
+        self.assertEqual(envoi.communicate(timeout=DELAI)[0].strip(), "ouvrir")
+        self.jusqua(lambda: self.attente()["nombre"] == 0, "sortie de l'attente")
+        self.jusqua(lambda: self.appel("suivies") == "0", "plus suivie")
+
+    def test_ephemere(self):
+        self.envoyer("-a", "Garde", "-e", "Passage", "Corps")
+        self.jusqua(lambda: "Passage" in json.loads(self.appel("vues")), "carte vue")
+        self.jusqua(lambda: self.appel("suivies") == "0", "expirée")
+        self.assertEqual(self.attente()["nombre"], 0)
+
+    def test_notification_de_la_coque(self):
+        # La commande par défaut des notifications de connexion porte l'indice transient (-e) : envoyée telle quelle,
+        # une notification de la coque passe en carte et n'entre pas dans l'attente.
+        source = (ROOT / "coque" / "Reseau" / "NotificationsReseau.qml").read_text()
+        self.assertIn('["notify-send", "-a", "DuneI", "-e", "-i", icone,', source)
+        self.envoyer("-a", "DuneI", "-e", "-i", "network-wireless", "-h", "string:x-dunst-stack-tag:reseau",
+                     "Connexion perdue", "Corps")
+        self.jusqua(lambda: "Connexion perdue" in json.loads(self.appel("vues")), "carte vue")
+        self.jusqua(lambda: self.appel("suivies") == "0", "expirée")
+        self.assertEqual(self.attente()["nombre"], 0)
+
+    def test_critique(self):
+        self.envoyer("-a", "Garde", "-u", "critical", "-t", str(self.DUREE), "Batterie", "Corps")
+        self.jusqua(lambda: self.attente() == {"nombre": 1, "critique": True, "resumes": ["Batterie"]}, "en attente")
+
+    def test_ne_pas_deranger_persistant(self):
+        subprocess.run([QS, "ipc", "--pid", str(self.qs), "call", "notifications", "basculerNePasDeranger"],
+                       check=True, capture_output=True, timeout=DELAI)
+        self.envoyer("-a", "Garde", "Retenue", "Corps")
+        self.jusqua(lambda: self.attente()["resumes"] == ["Retenue"], "en attente sans carte")
+        self.assertEqual(json.loads(self.appel("vues")), [])
+        self.assertTrue(json.loads((self.dir / "notifications.json").read_text())["nePasDeranger"])
 
     def test_bus_prive(self):
         self.assertTrue(self.bus.startswith("unix:"))
@@ -865,6 +920,19 @@ class CentreTest(EssaiCoque, unittest.TestCase):
         # La génération qui répond est la nouvelle : son état est celui de la nouvelle pile.
         self.jusqua(lambda: (g := self.appel("generation")).isdigit() and g != avant, "nouvelle génération à l'écoute")
         self.jusqua(lambda: self.etat() == (["Gardee"], []), "réémise à la nouvelle génération")
+        self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
+
+    def test_rechargement_garde_l_attente(self):
+        # Une notification en attente retourne à l'attente de la nouvelle génération sans repasser en carte.
+        self.envoyer("-a", "Garde", "Mail", "Corps")
+        self.jusqua(lambda: self.attente()["resumes"] == ["Mail"], "en attente")
+        self.jusqua(lambda: self.etat() == ([], []), "carte sortie")
+        avant = self.appel("generation")
+        self.appel("recharger")
+        self.jusqua(lambda: (g := self.appel("generation")).isdigit() and g != avant, "nouvelle génération à l'écoute")
+        self.jusqua(lambda: self.attente()["resumes"] == ["Mail"], "retournée à l'attente")
+        self.assertEqual(json.loads(self.appel("vues")), [])
+        self.assertEqual(self.etat(), ([], []))
         self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
 
     def test_action(self):
