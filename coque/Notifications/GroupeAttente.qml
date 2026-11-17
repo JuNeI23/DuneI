@@ -18,7 +18,7 @@ import "../Composants"
 // autres » (vide s'il n'y en a pas) ; lignes, nombre de lignes montrées ; height, hauteur montrée.
 // Erreurs : aucune. Dépendances : Quickshell (ScriptModel), LigneAttente, Separateur, Texte, Ressort, Theme (space,
 // density, color).
-// Cotes : ligne de titre de density.rowHeight ; écart de space.scale[1] (8) entre le filet, le titre et les lignes.
+// Cotes : ligne de titre de density.rowHeight ; « N autres » en texte tertiaire, aligné sur le texte des lignes ; écart de space.scale[1] (8) entre le filet, le titre et les lignes.
 Item {
     id: groupe
 
@@ -142,12 +142,12 @@ Item {
             visible: height > 0
             clip: true
 
+            // Aligné sur la colonne du texte des lignes : retrait, icône, écart (maquette panneau-v1, « .plus »).
             Texte {
                 anchors.verticalCenter: parent.verticalCenter
-                x: groupe.ecart
+                x: groupe.ecart + (Theme.notifications?.icone ?? 0) + (Theme.space?.scale[2] ?? 0)
                 echelon: 1
-                moyen: true
-                color: Theme.color?.accentStandalone ?? "transparent"
+                color: Theme.color?.textTertiary ?? "transparent"
                 text: groupe._autres
                 TapHandler {
                     gesturePolicy: TapHandler.ReleaseWithinBounds
