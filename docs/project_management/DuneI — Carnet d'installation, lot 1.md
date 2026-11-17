@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.46. Historique en fin de document.
+Version 1.47. Historique en fin de document.
 
 Socle amorçable.
 
@@ -719,6 +719,9 @@ une fois dans Codex, avec `/hooks` : sans cela, Codex ne l'exécute pas et ses s
   `git -C ~/dunei-atelier status`.
 - Plugins : ceux de `enabledPlugins`, après déclaration de leur marché (`extraKnownMarketplaces`) ; un échec
   devient une note.
+- Serveurs de langage : `pyright-lsp` donne à Claude l'outil LSP sur le Python de DuneI (définition,
+  références, type) ; son binaire, `pyright`, vient de `paquets.toml`. Les diagnostics de pyright arrivent
+  dans le contexte après chaque édition. Le QML, le Lua, le shell et le TOML n'en ont pas (D164).
 - `~/.gitconfig` : l'inclusion de `git/gitconfig` est ajoutée si elle manque ; les lignes de `gh` restent.
 
 **Changements non envoyés.** `make install` et `dunei-maj` finissent par le relevé de
@@ -2443,6 +2446,7 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 
 | Version | Date | Changement |
 | --- | --- | --- |
+| 1.47 | 2026-11-17 | L3-26 : serveur de langage Python pour Claude Code, plugin `pyright-lsp` et paquet `pyright` (D164) ; LibreOffice (`libreoffice-fresh`) rejoint les outils, pour lire et écrire les PDF, Word et PowerPoint |
 | 1.46 | 2026-11-17 | Cloche et panneau des notifications (L2-67) : pastille, panneau, « ne pas déranger », applications retirées, état, tests (D176 à D180) |
 | 1.45 | 2026-11-16 | Application Paramètres (L5-01, L2-65) : ouverture, pages Wi-Fi, Filaire et VPN, partage de connexion, ajout d'une page, tests ; la fenêtre Réseau et `reseau ouvrir` sont retirés (D165 à D175) |
 | 1.44 | 2026-11-13 | Notifications (L2-19) : la coque remplace dunst ; procédure de passage (`pacman -Rns dunst`, `busctl`) et mise en garde sur `sed -i` et la surveillance de Quickshell (D162). |
