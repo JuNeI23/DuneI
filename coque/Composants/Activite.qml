@@ -10,17 +10,21 @@ import "etats.js" as Etats
 // gauche à droite (conception, § 7.10) : le cycle d'un grain, d'une période, enchaîne une montée, une descente et un
 // repos d'un tiers chacun, décalé d'un tiers sur son voisin. Chaque étape est un Pas, un ScaleAnimator et un
 // OpacityAnimator sur le fil de rendu, image par image, sans pas discrets, selon la courbe spinner.easing du mouvement
-// (InOutSine), que douceur() reproduit pour les poses. La couleur est l'accent du rôle de son conteneur (sélection
+// (InOutSine), que douceur() reproduit pour les poses. La vague suit une horloge commune (l'heure, modulo la
+// période) : un indicateur qui paraît, reparaît ou vient d'être créé la prend où elle en est, par un raccord qui mène
+// chaque grain de sa pose du moment à la fin de l'étape en cours, puis la boucle enchaîne les étapes entières. Repartie
+// de zéro à chaque affichage, elle n'éclairait jamais le grain central d'un indicateur montré brièvement ou recréé
+// souvent, car ce grain ne monte qu'au deuxième tiers du cycle. La couleur est l'accent du rôle de son conteneur (sélection
 // active), ou activeMuted sous le modificateur inactive hérité (§ 7.5). Sobriété (D80) : les animations ne tournent que
 // si l'indicateur est visible, ancêtre masqué compris, et en marche ; arrêté, il reprend aussitôt la pose de sa phase
 // et ne coûte rien. Mouvement réduit (Theme.mouvementReduit) : la taille des grains ne varie plus (échelle constante,
 // à 1, car grossir est un mouvement) ; seule l'opacité garde sa vague, avec la même période.
 // Entrées : running, vrai par défaut ; phase, fraction du cycle que montre la pose arrêtée (0 par défaut ; la
-//           planche fige ainsi l'indicateur à mi-cycle), sans effet en marche, où la vague part toujours du début
-//           de son cycle ; visible.
+//           planche fige ainsi l'indicateur à mi-cycle), sans effet en marche, où la vague suit l'horloge
+//           commune ; visible.
 // Sorties : anime, vrai si les animations doivent tourner, et marche, qui le suit un tour de boucle plus tard et les
-//           mène ; accent, la couleur des grains ; repeteur, qui porte les trois grains (leur animation), lu par
-//           les essais.
+//           mène ; depart, phase de l'horloge commune relevée à la mise en marche ; accent, la couleur des grains ;
+//           repeteur, qui porte les trois grains (leur animation et sa boucle), lu par les essais.
 // Erreurs : aucune ; avant le chargement des tokens et du mouvement, les cotes sont nulles, les couleurs
 //           transparentes et rien ne s'anime. Réduit, la période et les opacités sont celles du mouvement normal.
 // Dépendances : Theme (icons.sizes, stateColors, motion.periods, motion.spinner), etats.js (herite) ; le rôle
@@ -38,6 +42,10 @@ Item {
     // marche suit anime un tour de boucle plus tard : au chargement du mouvement, la période change en même temps
     // qu'anime, et un Animator qui partirait avant que sa durée ait suivi la période lirait une durée nulle.
     property bool marche: false
+    // depart est relevé quand anime devient vrai, donc un tour de boucle avant le départ des Animators, qui figent
+    // leurs bornes en partant ; palier est le rang de l'étape entière qui suit, où le raccord s'achève.
+    property real depart: 0
+    readonly property int palier: Math.floor(3 * depart) + 1
     readonly property real periode: Theme.motion?.periods?.spinner ?? 0
     readonly property real diametre: (Theme.icons?.sizes.default ?? 0) / 3
     readonly property real bas: Theme.motion?.spinner?.rest_scale ?? 0
@@ -75,6 +83,7 @@ Item {
     }
 
     Binding on marche { value: activite.anime; delayed: true }
+    onAnimeChanged: if (anime) depart = Date.now() % periode / periode
 
     implicitWidth: 4 * diametre
     implicitHeight: 3 * diametre
@@ -109,7 +118,12 @@ Item {
 
                 required property int index
                 readonly property alias animation: cycle
+                readonly property alias boucle: boucle
                 readonly property real tiers: activite.periode / 3
+                // Pose tenue hors des Animators : celle de la phase à l'arrêt, celle du départ de la vague dès
+                // qu'elle doit tourner, pour que les images rendues avant le départ des Animators ne montrent pas
+                // une autre pose que celle d'où part le raccord.
+                readonly property var repos: pose(activite.anime ? activite.depart : activite.phase)
 
                 // pose — échelle et opacité du grain à une phase de son cycle.
                 // Entrée : p, phase. Sortie : [échelle, opacité]. Erreurs : aucune.
@@ -119,26 +133,41 @@ Item {
                     return [activite.reduit ? 1 : activite.bas + (1 - activite.bas) * v, activite.creux + (1 - activite.creux) * v]
                 }
 
+                // palier — pose du grain au début d'une étape entière, comptée depuis celle où le raccord s'achève.
+                // Entrée : n, nombre d'étapes après le raccord. Sortie : [échelle, opacité]. Erreurs : aucune.
+                // Dépendances : pose, activite.palier.
+                function palier(n: int): var {
+                    return pose((activite.palier + n) % 3 / 3)
+                }
+
                 width: activite.diametre
                 height: width
                 radius: width / 2
                 color: activite.accent
-                scale: pose(activite.phase)[0]
-                opacity: pose(activite.phase)[1]
+                scale: repos[0]
+                opacity: repos[1]
 
                 // Arrêté, le grain reprend la pose de sa phase : la liaison est rétablie après la recopie des
                 // Animators.
                 SequentialAnimation {
                     id: cycle
-                    loops: Animation.Infinite
                     running: activite.marche
                     onRunningChanged: if (!running) {
-                        grain.scale = Qt.binding(() => grain.pose(activite.phase)[0])
-                        grain.opacity = Qt.binding(() => grain.pose(activite.phase)[1])
+                        grain.scale = Qt.binding(() => grain.repos[0])
+                        grain.opacity = Qt.binding(() => grain.repos[1])
                     }
-                    Pas { cible: grain; de: grain.pose(0); a: grain.pose(1 / 3); duree: grain.tiers }
-                    Pas { cible: grain; de: grain.pose(1 / 3); a: grain.pose(2 / 3); duree: grain.tiers }
-                    Pas { cible: grain; de: grain.pose(2 / 3); a: grain.pose(1); duree: grain.tiers }
+                    // Raccord : de la pose du moment à la fin de l'étape en cours, sur le temps qu'il lui reste.
+                    Pas {
+                        cible: grain; de: grain.pose(activite.depart); a: grain.palier(0)
+                        duree: (activite.palier - 3 * activite.depart) * grain.tiers
+                    }
+                    SequentialAnimation {
+                        id: boucle
+                        loops: Animation.Infinite
+                        Pas { cible: grain; de: grain.palier(0); a: grain.palier(1); duree: grain.tiers }
+                        Pas { cible: grain; de: grain.palier(1); a: grain.palier(2); duree: grain.tiers }
+                        Pas { cible: grain; de: grain.palier(2); a: grain.palier(3); duree: grain.tiers }
+                    }
                 }
             }
         }

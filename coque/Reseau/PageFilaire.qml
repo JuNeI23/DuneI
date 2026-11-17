@@ -2,60 +2,77 @@ import QtQuick
 import QtQuick.Layouts
 import "../Theme"
 import "../Composants"
+import "../Parametres"
+import "nmcli.js" as Nmcli
 
-// PageFilaire — page de l'onglet Filaire de la fenêtre Réseau (direction D4, L2-65).
-// Rôle : le titre « Filaire », puis « Ethernet » : la rangée de tête de l'appareil (médaillon, nom de l'interface et
-// état du câble, « Connecté », « Câble débranché » ou « Aucune carte »), son adresse matérielle en Valeur copiable
-// quand elle est connue et que le dépliant ne la porte pas, puis, pour la connexion filaire active, un DepliantReseau
-// détaillé, ouvert à l'ouverture de la page, comme le réseau joint de la page Wi-Fi : débits et courbe, tuiles
-// (Adresse IP, Routeur, DNS, Débit du lien, Adresse matérielle ; « Connecté depuis » seulement si la sonde la connaît),
-// réglages Connexion automatique et Priorité, la section « Réglages avancés » (D155), le pied « Se déconnecter » et
-// « Oublier ce réseau » ; les tuiles de la page se réduisent à Adresse IP, Routeur et Connecté depuis (D156). Sans
-// carte, ou câble débranché, le dépliant est masqué et replié, rien n'y est chargé, et la page reste en l'état. Vient
-// ensuite « Profils » (fiche, cas complémentaire 8) : les autres profils filaires enregistrés, comme les réseaux connus
-// de la page Wi-Fi (GroupeProfils) : chacun un DepliantReseau non détaillé, un seul déplié à la fois, avec Connexion
-// automatique, Priorité, « Réglages avancés » et le pied « Oublier ce réseau », et « Rejoindre » quand le câble est
-// branché ; « Aucun profil filaire. » sans profil, et la section disparaît quand le seul profil est l'actif. Aucune
-// logique nmcli n'est dupliquée ici.
+// PageFilaire — page Filaire de l'application Paramètres (fiche du 14 novembre 2026, section 7).
+// Rôle : reprend le contenu de la page Filaire de l'ancienne fenêtre, dans la disposition de l'application. De haut en
+// bas : la carte d'en-tête (EnTetePage : vignette, « Filaire », puis l'appareil et l'état du câble, « Connecté »,
+// « Câble débranché » ou « Aucune carte ») ; « Ethernet » : l'adresse matérielle en Valeur copiable quand elle est
+// connue et que le dépliant ne la porte pas, puis, pour la connexion filaire active, un DepliantReseau détaillé,
+// ouvert à l'ouverture de la page, comme le réseau joint de la page Wi-Fi (débits et courbe, tuiles, réglages
+// Connexion automatique et Priorité, « Réglages avancés », pied « Se déconnecter » et « Oublier ce réseau ») ;
+// « Profils » : les autres profils filaires enregistrés (GroupeProfils : un DepliantReseau non détaillé chacun, un
+// seul déplié à la fois, « Rejoindre » quand le câble est branché). Sans carte, ou câble débranché, le dépliant est
+// masqué et replié, et rien n'y est chargé ; sans carte ni adresse, la section « Ethernet » disparaît. Sans profil,
+// « Aucun profil filaire. » ; la section « Profils » disparaît quand le seul profil est l'actif. Aucune logique nmcli
+// n'est dupliquée ici.
 // Clavier : les têtes des dépliants sont des Ligne cliquables (tabulation, Entrée, Espace, contour de focus : bible,
 // « Clavier »).
-// Entrées : panneau, le PanneauReseau (rangees, factures) ; etat, la source de l'état, EtatReseau par
-// défaut (filaire, carteFilaire, appareilFilaire et son lien hasLink, appareil, et ce que lisent les tuiles).
-// Sorties : actif, la rangée du profil filaire actif (null sans lui) ; nomAppareil, le nom de l'interface filaire, vide
-// sans carte ; adresseMaterielle, l'adresse matérielle de l'appareil filaire, vide si elle est inconnue ; etatCable,
-// l'état affiché ; ouvert, vrai si le dépliant est ouvert ; depliant, le DepliantReseau ; branchable, vrai si le câble
-// est branché ; autres, les rangées de la section « Profils » ; profilOuvert, l'uuid du profil déplié dans « Profils »,
-// vide sinon ; montrer(uuid), qui déplie le profil demandé.
+// Contrat de page (voir ConteneurPage) : conteneur, atteindre, implicitHeight.
+// Entrées : conteneur, le ConteneurPage, posé par lui ; etat, la source de l'état, EtatReseau par défaut (profils,
+// filaire, carteFilaire, appareilFilaire et son lien hasLink, appareil, et ce que lisent les tuiles).
+// Sorties : rangees, les rangées des profils filaires (Nmcli.profilsFenetre) ; factures, uuid → facturation lue des
+// profils dépliés, que GroupeProfils complète ; actif, la rangée du profil filaire actif (null sans lui) ;
+// nomAppareil, le nom de l'interface filaire, vide sans carte ; libelleAppareil, « Ethernet » suivi de l'interface ;
+// adresseMaterielle, l'adresse matérielle de l'appareil filaire, vide si elle est inconnue ; etatCable, l'état
+// affiché ; deplie, vrai si le dépliant de la connexion active existe ; ouvert, vrai s'il est ouvert ; depliant, le
+// DepliantReseau ; branchable, vrai si le câble est branché ; autres, les rangées de la section « Profils » ;
+// profilOuvert, l'uuid du profil déplié dans « Profils », vide sinon ; enTete, l'EnTetePage.
+// Fonctions : atteindre, montrer.
 // Erreurs : celles du ProfilReseau, sous ses réglages ; aucune propre à la page.
-// Dépendances : TitrePage, Section, Groupe, Ligne, Valeur, GroupeProfils, DepliantReseau, Texte, Theme, PanneauReseau,
-// EtatReseau (appareilFilaire.hasLink, de Quickshell.Networking).
-ColumnLayout {
+// Dépendances : EnTetePage, TitreSection, Registre, ConteneurPage (Parametres) ; Groupe, Ligne, Valeur, GroupeProfils,
+// DepliantReseau, Texte, Theme, nmcli.js (profilsFenetre), EtatReseau (appareilFilaire.hasLink, de
+// Quickshell.Networking).
+Item {
     id: page
 
-    required property var panneau
+    property var conteneur: null
     property var etat: EtatReseau
+    property var factures: ({})
+    property bool ouvert: true
 
-    readonly property var actif: panneau.rangees.find(r => !r.wifi && r.actif) ?? null
+    readonly property var inscription: Registre.page("filaire")
+    readonly property var rangees: Nmcli.profilsFenetre(etat.profils ?? [], [], factures, false).filter(r => !r.wifi)
+    readonly property var actif: rangees.find(r => r.actif) ?? null
     readonly property string nomAppareil: etat.appareilFilaire?.name ?? (etat.filaire ? etat.appareil : "")
+    readonly property string libelleAppareil: nomAppareil !== "" ? `Ethernet (${nomAppareil})` : "Ethernet"
     readonly property string adresseMaterielle: etat.appareilFilaire?.address ?? ""
     readonly property string etatCable: etat.filaire ? "Connecté" : etat.carteFilaire ? "Câble débranché" : "Aucune carte"
     // Le dépliant n'existe que pour une connexion filaire réellement active (câble branché).
-    readonly property bool deplie: etat.filaire && actif !== null
+    readonly property bool deplie: !!etat.filaire && actif !== null
     // Un profil inactif est branchable quand l'appareil filaire a un lien (câble branché) : son pied porte « Rejoindre ».
     readonly property bool branchable: etat.appareilFilaire?.hasLink ?? false
     // Les profils de la section « Profils » : tous les filaires, sauf celui du dépliant de tête.
-    readonly property var autres: panneau.rangees.filter(r => r.groupe === "Filaire" && !(deplie && r.uuid === actif.uuid))
+    readonly property var autres: rangees.filter(r => !(deplie && r.uuid === actif.uuid))
         .map(r => Object.assign({}, r, {portee: branchable}))
     property alias profilOuvert: profils.ouvert
     readonly property alias depliant: depliant
-    property bool ouvert: true
+    readonly property alias enTete: enTete
 
-    spacing: 0
+    implicitHeight: colonne.implicitHeight
+
+    // atteindre — conduit à un réglage de la page : la carte « Ethernet », la section « Profils », ou l'en-tête pour
+    // toute autre ancre. Entrée : chemin, ancre au format de recherche.js (la page, puis « ethernet » ou « profils »).
+    // Sortie : aucune. Erreurs : aucune ; une section masquée renvoie à l'en-tête. Dépendances : conteneur (montrer).
+    function atteindre(chemin) {
+        const cible = chemin[1] === "ethernet" ? ethernet : chemin[1] === "profils" ? profils : null
+        conteneur.montrer(cible?.visible ? cible : enTete)
+    }
 
     // montrer — déplie le dépliant du profil filaire demandé : celui de la connexion active, ou celui de la section
-    // « Profils » (un seul déplié, D155 : il n'y a plus de sous-page de profil). Entrée : uuid, le profil. Sortie : vrai
-    // si la page porte ce profil et l'a déplié ; faux sinon. Erreurs : aucune. Dépendances : actif, deplie, ouvert,
-    // autres, profilOuvert.
+    // « Profils » (un seul déplié, D155). Entrée : uuid, le profil. Sortie : vrai si la page porte ce profil et l'a
+    // déplié ; faux sinon. Erreurs : aucune. Dépendances : actif, deplie, ouvert, autres, profilOuvert.
     function montrer(uuid) {
         if (deplie && actif.uuid === uuid) ouvert = true
         else if (autres.some(r => r.uuid === uuid)) profilOuvert = uuid
@@ -63,54 +80,65 @@ ColumnLayout {
         return true
     }
 
-    TitrePage { text: "Filaire" }
+    Column {
+        id: colonne
+        width: parent.width
 
-    Section { text: "Ethernet" }
-    Groupe {
-        objectName: "ethernet"
-        Ligne {
-            objectName: "appareil"
-            filet: false
-            hauteur: Theme.reglages?.rowLead ?? 0
-            icone: page.etat.filaire ? "network-wired" : "network-wired-disconnected"
-            iconeActive: page.etat.filaire
-            libelle: page.nomAppareil !== "" ? `Ethernet (${page.nomAppareil})` : "Ethernet"
-            aide: page.etatCable
+        EnTetePage {
+            id: enTete
+            objectName: "enTete"
+            width: parent.width
+            glyphe: page.inscription?.glyphe ?? ""
+            teinte: page.inscription?.teinte ?? 0
+            titre: page.inscription?.libelle ?? ""
+            etat: page.libelleAppareil + " · " + page.etatCable
         }
-        Ligne {
-            objectName: "materiel"
-            visible: page.adresseMaterielle !== "" && !page.deplie
-            libelle: "Adresse matérielle"
-            Valeur { text: page.adresseMaterielle }
+
+        TitreSection { visible: ethernet.visible; text: "Ethernet" }
+        Groupe {
+            id: ethernet
+            objectName: "ethernet"
+            width: parent.width
+            garde: 0
+            visible: materiel.visible || page.deplie
+            Ligne {
+                id: materiel
+                objectName: "materiel"
+                filet: false
+                visible: page.adresseMaterielle !== "" && !page.deplie
+                libelle: "Adresse matérielle"
+                Valeur { text: page.adresseMaterielle }
+            }
+            DepliantReseau {
+                id: depliant
+                visible: page.deplie
+                Layout.fillWidth: true
+                detaille: true
+                // Sans connexion active, le dépliant reste replié : rien n'est chargé ni lu.
+                ouvert: page.ouvert && page.deplie
+                portee: true
+                etat: page.etat
+                rangee: page.actif
+                onBasculer: page.ouvert = !page.ouvert
+            }
         }
-        DepliantReseau {
-            id: depliant
-            visible: page.deplie
-            Layout.fillWidth: true
-            detaille: true
-            // Sans connexion active, le dépliant reste replié : rien n'est chargé ni lu.
-            ouvert: page.ouvert && page.deplie
-            portee: true
+
+        TitreSection { visible: profils.visible; text: "Profils" }
+        GroupeProfils {
+            id: profils
+            objectName: "profils"
+            width: parent.width
+            visible: page.autres.length > 0
+            profils: page.autres
+            panneau: page
             etat: page.etat
-            rangee: page.actif
-            onBasculer: page.ouvert = !page.ouvert
         }
-    }
-
-    Section { visible: page.autres.length > 0; text: "Profils" }
-    GroupeProfils {
-        id: profils
-        objectName: "profils"
-        visible: page.autres.length > 0
-        profils: page.autres
-        panneau: page.panneau
-        etat: page.etat
-    }
-    Texte {
-        visible: page.panneau.rangees.every(r => r.groupe !== "Filaire")
-        Layout.topMargin: Theme.space?.scale[2] ?? 0
-        Layout.leftMargin: Theme.space?.scale[0] ?? 0
-        text: "Aucun profil filaire."
-        color: Theme.color?.textSecondary ?? "transparent"
+        Texte {
+            visible: page.rangees.length === 0
+            leftPadding: Theme.space?.scale[0] ?? 0
+            topPadding: Theme.space?.scale[2] ?? 0
+            text: "Aucun profil filaire."
+            color: Theme.color?.textSecondary ?? "transparent"
+        }
     }
 }

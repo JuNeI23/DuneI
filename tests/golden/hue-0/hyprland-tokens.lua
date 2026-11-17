@@ -22,6 +22,7 @@ return {
             passes            = 2,
             popups            = false,
             new_optimizations = true,
+            ignore_opacity    = false,
         },
     },
     misc = {

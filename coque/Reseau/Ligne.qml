@@ -18,9 +18,11 @@ import "../Composants/etats.js" as Etats
 // le focus lui vient du clavier ;
 // hauteur, hauteur minimale de la rangée, reglages.row par défaut (reglages.rowLead pour une rangée de tête) ;
 // couleurLibelle, couleur du libellé, texte principal par défaut (une action destructrice y met color.error) ;
+// couleurAide, couleur de l'aide, texte secondaire par défaut (l'accent autonome d'un réseau en cours de connexion) ;
 // titre, faux par défaut : vrai, le libellé passe à l'échelon 3 en graisse moyenne, pour le nom d'un réseau en tête
 // de son dépliant détaillé (Recette 1 de L2-65, D156) ; cote, le retrait du contenu aux deux bords, space.scale[2] par
-// défaut (0 pour une rangée posée dans un dépliant, alignée sur sa grille) ; et le contrôle déclaré comme enfant.
+// défaut (0 pour une rangée posée dans un dépliant, alignée sur sa grille) ; bordABord, vrai pour une plaque de survol qui va d'un bord à l'autre de la carte, au rayon
+// radius.panel (rangées des cartes de l'application Paramètres), faux par défaut ; et le contrôle déclaré comme enfant.
 // Sortie : signal clique(), émis au clic, à Entrée ou à Espace d'une rangée cliquable ; hovered, down (lus par Etat).
 // Erreurs : aucune ; avant le chargement des tokens, les retraits sont nuls.
 // Dépendances : Medaillon, Texte, Separateur, Theme (reglages, space, color), QtQuick.Layouts, Etat, etats.js,
@@ -38,9 +40,13 @@ ColumnLayout {
     property bool cliquable: false
     property real hauteur: Theme.reglages?.row ?? 0
     property color couleurLibelle: Theme.color?.textPrimary ?? "transparent"
+    property color couleurAide: Theme.color?.textSecondary ?? "transparent"
     property bool titre: false
     default property alias controle: emplacement.data
     property real cote: Theme.space?.scale[2] ?? 0
+    // Vrai pour une rangée posée dans une carte de l'application Paramètres : sa plaque de survol va d'un bord à
+    // l'autre de la carte, au rayon de celle-ci, au lieu de rester en retrait de reglages.sidebarInset.
+    property bool bordABord: false
     Layout.fillWidth: true
     spacing: 0
 
@@ -65,8 +71,8 @@ ColumnLayout {
         // Sans retrait de contenu (cote nulle), le filet va d'un bord à l'autre.
         retraitDroit: ligne.cote > 0 ? Theme.space?.scale[3] ?? 0 : 0
     }
-    // Rangée : plaque de survol et contour de focus d'une rangée cliquable, en retrait de reglages.sidebarInset, sous
-    // le contenu.
+    // Rangée : plaque de survol et contour de focus d'une rangée cliquable, sous le contenu : en retrait de
+    // reglages.sidebarInset, ou d'un bord à l'autre (bordABord).
     Item {
         Layout.fillWidth: true
         Layout.minimumHeight: ligne.hauteur
@@ -75,9 +81,9 @@ ColumnLayout {
         Rectangle {
             id: plaque
             anchors.fill: parent
-            anchors.leftMargin: Theme.reglages?.sidebarInset ?? 0
+            anchors.leftMargin: ligne.bordABord ? 0 : Theme.reglages?.sidebarInset ?? 0
             anchors.rightMargin: anchors.leftMargin
-            radius: Theme.radius?.control ?? 0
+            radius: (ligne.bordABord ? Theme.radius?.panel : Theme.radius?.control) ?? 0
             visible: ligne.cliquable
             color: etat.fond
 
@@ -131,7 +137,7 @@ ColumnLayout {
                     text: ligne.aide
                     echelon: 0
                     wrapMode: Text.Wrap
-                    color: Theme.color?.textSecondary ?? "transparent"
+                    color: ligne.couleurAide
                 }
             }
             RowLayout { id: emplacement; spacing: Theme.space?.scale[1] ?? 0 }

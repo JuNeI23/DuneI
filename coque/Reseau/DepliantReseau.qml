@@ -20,12 +20,16 @@ import "../Barre/icones.js" as Icones
 // suivi sans second ressort.
 // Sonde : un dépliant détaillé demande la sonde d'EtatReseau tant qu'il est ouvert, visible, que sa fenêtre l'est et
 // que son appareil est celui qu'EtatReseau lit (actuel ; sinon les débits sont masqués et les tuiles à « — ») ;
-// il retire sa demande au repli, à sa destruction et dès que la fenêtre se cache (FenetreReseau.fermer la cache
-// avant de la détruire).
+// il retire sa demande au repli, à sa destruction et dès que la fenêtre se cache (FenetreParametres.fermer la
+// cache avant de la détruire).
 // Secret : dès que le dépliant n'est plus à l'écran (montre faux), le mot de passe lu est vidé et masqué.
+// En tête, avant le chevron, l'appelant peut poser un contenu de fin (fin) : la page Wi-Fi de l'application
+// Paramètres y met la mini-courbe des débits du réseau joint, et demande alors la sonde même replié (veille).
 // Entrées : rangee, la rangée du profil (uuid, nom, icone, actif, wifi, appareil ; portee, et force et security
 // pour un réseau connu à portée) ; detaille, vrai pour les débits et les tuiles ; ouvert ; portee, vrai si le réseau est
-// à portée ; etat, la source de l'état et des actions, EtatReseau par défaut.
+// à portée ; etat, la source de l'état et des actions, EtatReseau par défaut ; fin, composant facultatif posé sur la
+// tête, avant le chevron, null par défaut ; veille, vrai pour qu'un dépliant détaillé demande la sonde même replié,
+// faux par défaut.
 // Sorties : signaux basculer() (clic sur la tête), relu(uuid, profil) (chaque lecture du profil) ; actuel ; montre,
 // vrai tant que le dépliant est à l'écran ; corps, le contenu chargé (null replié : profil, debits, tuiles,
 // reglages), lu par la vue et les essais ; progression, de 0 (replié) à 1 (déplié).
@@ -41,6 +45,8 @@ ColumnLayout {
     property bool ouvert: false
     property bool portee: false
     property var etat: EtatReseau
+    property Component fin: null
+    property bool veille: false
     readonly property bool filaire: !(rangee?.wifi ?? true)
     // Le réseau est celui de l'appareil qu'EtatReseau lit : sinon (câble branché sous un Wi-Fi joint), les débits et
     // les tuiles seraient ceux d'un autre appareil.
@@ -48,7 +54,7 @@ ColumnLayout {
                                    && rangee.appareil === etat.appareil
     // Le dépliant est à l'écran : visible et dans une fenêtre visible.
     readonly property bool montre: visible && (Window.window?.visible ?? false)
-    readonly property bool sonde: detaille && actuel && ouvert && montre
+    readonly property bool sonde: detaille && actuel && (ouvert || veille) && montre
     readonly property var corps: charge.item
     readonly property real progression: (pivot.value + 90) / 90
     // Demande de sonde posée par ce dépliant, pour ne la retirer qu'une fois.
@@ -86,6 +92,7 @@ ColumnLayout {
         hauteur: Theme.reglages?.rowLead ?? 0
         titre: depliant.detaille
         cliquable: true
+        bordABord: true
         // Un réseau Wi-Fi inactif montre son signal ; un profil filaire garde toujours son médaillon.
         icone: depliant.detaille || depliant.filaire || (depliant.rangee?.actif ?? false) ? depliant.rangee?.icone ?? "" : ""
         iconeActive: depliant.rangee?.actif ?? false
@@ -97,6 +104,7 @@ ColumnLayout {
             : depliant.filaire ? (depliant.portee ? "Câble branché" : "Câble débranché")
             : depliant.portee ? "À portée" : "Hors de portée"
         onClique: depliant.basculer()
+        Loader { active: depliant.fin !== null; visible: active; sourceComponent: depliant.fin }
         // Le chevron a une taille fixe dans son emplacement : mis en page directement, sa forme et sa taille
         // dépendraient l'une de l'autre.
         Item {

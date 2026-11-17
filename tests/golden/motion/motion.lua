@@ -25,7 +25,7 @@ return {
         { leaf = "windowsIn", enabled = true, speed = 1, spring = "dunei-window-in", style = "popin 90%" },
         { leaf = "windowsOut", enabled = true, speed = 1, spring = "dunei-window-out", style = "popin 90%" },
         { leaf = "windowsMove", enabled = true, speed = 1, spring = "dunei-reflow-in" },
-        { leaf = "fadeIn", enabled = true, speed = 1, spring = "dunei-window-in" },
+        { leaf = "fadeIn", enabled = true, speed = 1, spring = "dunei-state-in" },
         { leaf = "fadeOut", enabled = true, speed = 1, spring = "dunei-window-out" },
         { leaf = "layersIn", enabled = true, speed = 1, spring = "dunei-overlay-in", style = "popin 96%" },
         { leaf = "layersOut", enabled = true, speed = 1, spring = "dunei-overlay-out", style = "popin 96%" },

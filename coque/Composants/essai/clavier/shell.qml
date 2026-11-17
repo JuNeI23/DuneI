@@ -28,7 +28,8 @@ import "Composants"
 // <valeur> <anneau visible> », ainsi que contours, attention, anneauOnglets, compteur, deroulant, pastilles,
 // pastillesCouleurs, bascule, activite, materiauDpr, contextuel et ancrage (voir chaque fonction) ; « essai touche
 // <tab|majtab|gauche|droite|haut|bas|espace|entree|echap> » frappe une touche, « essai activiteMarche <bool> » lance
-// ou arrête l'indicateur d'activité, « essai molette <1|-1> » tourne la molette sur le compteur, « essai
+// ou arrête l'indicateur d'activité, « essai activiteCliches <dossier> <nombre> <pas> <affichage> <pause> » le
+// photographie à intervalle régulier, « essai molette <1|-1> » tourne la molette sur le compteur, « essai
 // cliquerDeroulant » clique le déroulant, « essai ouvrirAttention » ouvre l'Overlay d'attention, « essai
 // ouvrirContextuel » celui du contextuel, « essai pointerRangee <rang> <bool> » pose le pointeur sur une rangée du
 // menu ouvert et l'y clique si demandé, « essai pointerPastille <rang> <bool> » pose le pointeur sur une pastille et
@@ -110,6 +111,32 @@ ShellRoot {
 
                 // L'indicateur d'activité, arrêté : « essai activiteMarche » le lance.
                 Activite { id: activiteEssai; running: false }
+
+                // Clichés de l'indicateur d'activité : toutes les « interval » ms, son rendu est écrit dans un
+                // fichier, agrandi de « zoom » pour mesurer ses grains au pixel. Les Animators ne mettent pas à
+                // jour les propriétés des grains pendant leur course : seul le rendu dit où en est la vague.
+                // Avec un affichage non nul, l'indicateur alterne marche (affichage ms) et arrêt (pause ms).
+                Timer {
+                    id: cliches
+                    readonly property int zoom: 12
+                    property string dossier
+                    property int nombre: 0
+                    property int affichage: 0
+                    property int pause: 0
+                    property real debut: 0
+                    property var instants: []
+                    repeat: true
+                    onTriggered: {
+                        const rang = instants.length, t = Date.now() - debut
+                        if (affichage > 0) activiteEssai.running = t % (affichage + pause) < affichage
+                        instants.push(t)
+                        if (rang + 1 >= nombre) stop()
+                        activiteEssai.grabToImage(r => {
+                            if (!r.saveToFile(dossier + "/" + rang + ".png")) console.warn("essai : cliché non écrit")
+                            if (rang + 1 === nombre) essai.journal("activiteCliches", instants.join(","))
+                        }, Qt.size(activiteEssai.width * zoom, activiteEssai.height * zoom))
+                    }
+                }
 
                 // Bouton qui porte l'infobulle et compte ses clics. L'infobulle n'a pas de texte : son délai et sa
                 // fermeture s'éprouvent sans qu'aucune fenêtre ne s'ouvre.
@@ -392,6 +419,19 @@ ShellRoot {
                 // Entrée : valeur, nouvelle marche. Sortie : aucune. Erreurs : aucune. Dépendances : activiteEssai.
                 function activiteMarche(valeur: bool): void {
                     activiteEssai.running = valeur
+                }
+
+                // activiteCliches — photographie l'indicateur à intervalle régulier, en marche continue ou par
+                // affichages courts répétés, puis journalise l'instant de chaque cliché.
+                // Entrées : dossier, où écrire <rang>.png ; nombre de clichés ; pas, intervalle en ms ; affichage
+                // et pause, durées en ms de la marche et de l'arrêt alternés (affichage nul : la marche n'est
+                // pas touchée). Sortie : aucune ; « essai : activiteCliches <ms,ms,…> », instants comptés depuis
+                // l'appel, une fois le dernier cliché écrit. Erreurs : « essai : cliché non écrit » au journal.
+                // Dépendances : cliches, activiteEssai.
+                function activiteCliches(dossier: string, nombre: int, pas: int, affichage: int, pause: int): void {
+                    Object.assign(cliches, { dossier, nombre, affichage, pause, interval: pas, instants: [],
+                                             debut: Date.now() })
+                    cliches.start()
                 }
 
                 // recherche — journalise le texte de la recherche, entre chevrons, et la visibilité de son bouton

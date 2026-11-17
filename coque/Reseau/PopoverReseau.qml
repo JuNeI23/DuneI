@@ -3,6 +3,7 @@ import QtQuick.Layouts
 import Quickshell.Networking
 import "../Theme"
 import "../Composants"
+import "../Parametres"
 import "../Barre/icones.js" as Icones
 import "nmcli.js" as Nmcli
 
@@ -15,10 +16,13 @@ import "nmcli.js" as Nmcli
 // sans internet », « Portail de connexion », « Partage du téléphone »…) ; derrière un portail captif, « Ouvrir la
 // page de connexion » ; « Réseaux à proximité », petite étiquette au texte secondaire avec le bouton de nouvelle
 // recherche, que l'indicateur d'activité remplace tant que le balayage relancé n'a pas rendu sa liste ; la liste des
-// réseaux à proximité, une ligne chacun (signal, nom, cadenas si sécurisé), les connus puis la force décroissante,
-// sans le réseau joint, que l'en-tête nomme déjà ; sous un filet translucide (material.glassLine), les actions en
-// texte seul, à la manière d'un menu : « Se déconnecter » tant qu'un réseau Wi-Fi est joint, et « Réglages
-// réseau… », qui demande la fenêtre Réseau. Un clic sur un réseau sécurisé inconnu, ou un échec de connexion, déplie
+// réseaux à proximité, une ligne chacun (signal, nom, cadenas si sécurisé), selon la règle des cinq de la page Wi-Fi
+// (Nmcli.repartir, reglages.networksShown) : les profils enregistrés à portée d'abord, tous montrés, le partage de
+// connexion compris, avec son glyphe (un profil vu facturé une fois joint, etat.facturesVues), puis les réseaux sans
+// profil les plus forts, jusqu'à cinq lignes ; le reste se lit dans l'application Paramètres. Le réseau joint n'y
+// figure pas, l'en-tête le nomme déjà ; sous un filet translucide (material.glassLine), les actions en texte seul, à
+// la manière d'un menu : « Se déconnecter » tant qu'un réseau Wi-Fi est joint, et « Réglages réseau… », qui ouvre
+// l'application Paramètres à la page Wi-Fi (EtatParametres.ouvrir). Un clic sur un réseau sécurisé inconnu, ou un échec de connexion, déplie
 // sous sa ligne le mot de passe, sans plaque ; un second clic replie. Le dépliage et le repli animent la hauteur
 // (transition reveal) ; un réseau en cours de connexion montre « Connexion… » et l'indicateur d'activité ; quand
 // l'ordre de la liste change, chaque ligne glisse de son ancienne place à la nouvelle (transition reflow) ; une ligne
@@ -27,8 +31,10 @@ import "nmcli.js" as Nmcli
 // et l'ancien réseau joint y revient. Durées et courbes viennent toutes de motion.json, par Ressort. Sans carte
 // Wi-Fi, la bascule est désactivée et la liste absente : seulement l'état filaire. Tant qu'il est ouvert, il demande
 // le balayage Wi-Fi (etat.recherche), rendu à faux à la fermeture comme à la destruction d'un popover ouvert ;
-// ouvert derrière un portail, il demande un contrôle de connectivité ponctuel (etat.verifier). La liste ne se retrie
-// pas tant qu'une ligne de mot de passe est dépliée, pour ne pas en perdre la saisie. Une connexion suivie (enCours)
+// ouvert derrière un portail, il demande un contrôle de connectivité ponctuel (etat.verifier). L'ordre de la liste
+// est retenu tant que la Jonction le fige (connexion en cours, ligne de mot de passe dépliée) : le réseau choisi
+// montre « Connexion… » à sa place, un balayage qui se termine entre-temps ne déplace rien, et la saisie n'est pas
+// perdue ; le nouvel ordre s'applique ensuite, par glissement. Une connexion suivie (enCours)
 // appartient au panneau, qui survit à la fermeture : un connectionFailed tardif déplie la ligne du réseau, et
 // reinitialiser() ne l'annule pas.
 // Popover de la barre (D108) : en ouvrir un autre le ferme ; il se ferme 1,5 s après le départ de la souris, sauf
@@ -42,8 +48,8 @@ import "nmcli.js" as Nmcli
 // Erreurs : un connectionFailed déplie la ligne de mot de passe avec « Mot de passe refusé » (raison
 // d'authentification) ou « Connexion impossible ». Le texte d'un mot de passe ne passe jamais au journal.
 // Dépendances : Overlay (famille contextuel), Bascule, Activite, Infobulle, Rangee, Bouton, BlocSecret, Jonction, Separateur,
-// Icone, Texte, Theme (density, space, material, motion par Ressort), Ressort, EtatReseau, nmcli.js (trierReseaux,
-// resume), icones.js (iconeForce), Quickshell.Networking (ConnectionFailReason, ConnectionState, WifiSecurityType).
+// Icone, Texte, Theme (density, space, material, reglages, motion par Ressort), Ressort, EtatReseau, EtatParametres,
+// nmcli.js (profilsFenetre, repartir, resume), icones.js (iconeForce), Quickshell.Networking (ConnectionFailReason, ConnectionState, WifiSecurityType).
 // Cotes : surface de 72 × space.scale[0] (288 px) de large comme l'essai D5, panneau de 280 px dans le retrait de
 // l'Overlay ; contenu à space.scale[2] (12) du bord du panneau, rangées sur toute sa largeur ; rangées de
 // density.controlHeight plus space.scale[0] (32 px).
@@ -130,6 +136,15 @@ Overlay {
         // les noms, qui restent lisibles même quand un WifiNetwork de la liste figée a été détruit.
         property var reseaux: []
         property var ordre: []
+        // Noms des lignes qui portent le glyphe du partage de connexion, figés avec l'ordre.
+        property var partages: []
+        // Rangées des profils Wi-Fi enregistrés ; un profil vu facturé une fois joint (etat.facturesVues) y prend le
+        // glyphe du partage de connexion. Aucun n'y est tenu pour joint : la liste écarte le réseau joint d'après le
+        // balayage (connected), qui devance la relecture des profils.
+        readonly property var rangees: Nmcli.profilsFenetre(etat.profils ?? [], [], (etat.profils ?? [])
+            .filter(p => (etat.facturesVues ?? []).includes(p.nom)).reduce((m, p) => Object.assign(m, {[p.uuid]: "yes"}), {}), false)
+            .map(r => Object.assign({}, r, {actif: false}))
+        onRangeesChanged: trier()
         // Ordre d'affichage : ordre, plus les lignes qui sortent (leur réseau a quitté le tri), gardées à leur ancien
         // rang le temps de se refermer, pour que les lignes voisines suivent leur hauteur au lieu de sauter.
         property var disposition: []
@@ -201,16 +216,23 @@ Overlay {
         // trier — fige l'ordre de la liste et met le modèle des lignes à jour : un nom nouveau y est ajouté (sa
         // ligne entre en s'ouvrant, sauf pendant l'attente de l'ouverture), un nom disparu reste à son ancien rang dans disposition le
         // temps que sa ligne se referme (elle se retire elle-même ensuite, voir retirer), les autres lignes glissent
-        // de leur place relevée à la nouvelle. Le réseau joint n'y figure pas : l'en-tête le nomme. Tant qu'une ligne
-        // de mot de passe est dépliée, rien ne change, pour ne perdre ni la saisie ni le message d'erreur ; le tri
-        // reprend dès qu'elle se replie.
+        // de leur place relevée à la nouvelle. L'ordre est celui de la règle des cinq (Nmcli.repartir) : les profils
+        // à portée, puis les réseaux sans profil les plus forts, sans le reste. Le réseau joint n'y figure pas :
+        // l'en-tête le nomme. Tant que la Jonction fige l'ordre (connexion en cours, ligne de mot de passe dépliée),
+        // rien ne change, pour ne déplacer aucune ligne sous une tentative ni perdre la saisie ou le message
+        // d'erreur ; le tri reprend dès que la retenue est levée.
         // Entrée : avant, ordonnées relevées avant le changement qui provoque le tri (releve() par défaut).
         // Sortie : aucune. Erreurs : aucune.
-        // Dépendances : nmcli.js (trierReseaux), etat.reseaux, deplie, modele, disposition, delegues (glisser).
+        // Dépendances : nmcli.js (repartir), etat.reseaux, rangees, jonction.fige, modele, disposition, delegues
+        // (glisser), Theme.reglages.networksShown.
         function trier(avant = releve()): void {
-            if (deplie !== "") return
-            reseaux = Nmcli.trierReseaux(Array.from(etat.reseaux ?? []).filter(r => !r.connected))
-            ordre = reseaux.map(r => r.name)
+            if (jonction.fige) return
+            const presents = Array.from(etat.reseaux ?? []).filter(r => !r.connected)
+            const l = Nmcli.repartir(rangees, presents, Theme.reglages?.networksShown ?? 0)
+            ordre = l.miens.map(r => r.nom).concat(l.autres.map(r => r.name))
+            partages = l.miens.filter(r => r.icone === "network-wireless-hotspot").map(r => r.nom)
+            // Le réseau de chaque ligne : la plus forte occurrence de son nom au balayage.
+            reseaux = ordre.map(n => presents.filter(r => r.name === n).reduce((a, b) => b.signalStrength > a.signalStrength ? b : a))
             const connus = Array.from({ length: modele.count }, (_, i) => modele.get(i).cle)
             const d = ordre.slice()
             for (const [i, nom] of disposition.entries())
@@ -219,7 +241,6 @@ Overlay {
             for (const nom of ordre) if (!connus.includes(nom)) modele.append({ cle: nom, entre: attenteFinie })
             for (const [nom, y] of avant) delegues[nom]?.glisser(y)
         }
-        onDeplieChanged: trier()
 
         // retirer — ôte du modèle et de disposition la ligne d'un nom qui a quitté le tri, une fois refermée ; un nom
         // revenu au tri entre-temps est gardé. Entrée : nom. Sortie : aucune. Erreurs : aucune.
@@ -275,6 +296,8 @@ Overlay {
             id: jonction
             etat: popover.etat
             onRefuse: if (panneau.bloc) panneau.bloc.secret.revele = true
+            // La retenue levée, l'ordre est rendu : le réseau rejoint quitte la liste et les autres glissent.
+            onFigeChanged: if (!fige) panneau.trier()
         }
         Connections {
             target: panneau.etat
@@ -418,6 +441,9 @@ Overlay {
                             readonly property bool ouverte: panneau.deplie === cle
                             readonly property bool enConnexion: panneau.enCours !== null && panneau.enCours === modelData
                                 || modelData?.state === ConnectionState.Connecting
+                            // Glyphe de la ligne : le partage de connexion pour un profil vu facturé, sinon la force.
+                            readonly property string icone: panneau.partages.includes(cle) ? "network-wireless-hotspot"
+                                : Icones.iconeForce(modelData?.signalStrength ?? 0)
                             readonly property real base: panneau.bases[cle] ?? 0
                             readonly property Item bloc: ouverte ? charge.item : null
                             readonly property alias depliage: depliage
@@ -477,7 +503,7 @@ Overlay {
                                 width: parent.width
                                 implicitHeight: panneau.hauteurLigne
                                 hoverEnabled: true
-                                icone: Icones.iconeForce(ligne.modelData?.signalStrength ?? 0)
+                                icone: ligne.icone
                                 text: ligne.cle
                                 onActive: panneau.choisir(ligne.modelData)
                                 suffixe: Component {
@@ -556,8 +582,7 @@ Overlay {
                 implicitHeight: panneau.hauteurLigne
                 hoverEnabled: true
                 text: "Réglages réseau…"
-                // Une demande de profil restée sans suite ne détourne pas cette ouverture.
-                onActive: { panneau.etat.profilDemande = ""; panneau.etat.fenetre = true; panneau.fermer() }
+                onActive: { EtatParametres.ouvrir("wifi", []); panneau.fermer() }
             }
         }
     }

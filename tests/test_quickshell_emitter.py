@@ -31,16 +31,47 @@ class QuickshellEmitterTest(unittest.TestCase):
         self.assertEqual(list(self.out), [
             "_generated", "hue", "space", "density", "radius", "window", "layout", "reglages", "breakpoints", "typo", "icons",
             "familles", "moments", "defaut", "themes", "pastilles", "bureau", "bureauxVirtuels", "presquile",
-            "galerie", "notifications"])
+            "galerie", "notifications", "cloche", "panneau"])
         self.assertEqual(list(self.nuit), ["color", "states", "focus", "disabled", "elevation", "material", "glass", "render",
                                            "knob", "controls"])
 
     def test_reglages(self):
-        """Vérifie les treize formes des fenêtres de réglages (D104, D105), émises en camelCase sous reglages."""
+        """Vérifie les vingt-trois formes des fenêtres de réglages (D104, D105, application Paramètres), émises en
+        camelCase sous reglages."""
         self.assertEqual(self.out["reglages"], {"row": 44, "rowHelp": 52, "rowLead": 60, "medallion": 32,
                                                 "medallionGlyph": 18, "textColumn": 56, "sidebarInset": 8,
                                                 "tabHeight": 48, "fieldWidth": 290, "windowWidth": 840,
-                                                "windowHeight": 640, "windowMinWidth": 720, "windowMinHeight": 480})
+                                                "windowHeight": 640, "windowMinWidth": 720, "windowMinHeight": 480,
+                                                "entryHeight": 32, "thumb": 22, "thumbGlyph": 14, "networksShown": 5,
+                                                "sidebarWidth": 244, "pageMargin": 20, "pageRise": 6,
+                                                "thumbLarge": 44, "sparklineWidth": 92, "sparklineHeight": 30})
+
+    def test_reglages_parametres(self):
+        """Vérifie les jetons de l'application Paramètres : les quatre cotes de la barre latérale et de la liste des
+        réseaux sous reglages, puis, dans chaque thème, sous material, le verre des vignettes propre à son moment (son
+        fond est la couleur du rôle nommé par thumb.ground), la lueur d'en-tête, le blanc des reflets, l'ombre courte
+        des cartes et le reflet du médaillon ; enfin le niveau d'élévation card, à la couleur de surface-raised."""
+        for cle, valeur in (("entryHeight", 32), ("thumb", 22), ("thumbGlyph", 14), ("networksShown", 5)):
+            self.assertEqual(self.out["reglages"][cle], valeur, cle)
+        forme = {"sheenCenter": 0.5, "sheenReach": 0.55, "haloCenter": 0.3, "haloReach": 0.75}
+        attendu = {"nuit": {"tint": 0.24, "sheen": 0.24, "edge": 0.10, "halo": 0.0, "edgeTinted": False, **forme},
+                   "jour": {"tint": 0.0, "sheen": 0.14, "edge": 0.38, "halo": 0.42, "edgeTinted": True, **forme}}
+        fond = {"nuit": "surfaceRaised", "jour": "surfaceWindow"}
+        ombre = {"nuit": ("#73000000", 3), "jour": ("#21000000", 4)}
+        self.assertEqual({m for _, m in themes(self.data)}, set(attendu))
+        for f, m in themes(self.data):
+            with self.subTest(famille=f, moment=m):
+                matiere = self.out["themes"][f][m]["material"]
+                couleurs = self.out["themes"][f][m]["color"]
+                self.assertEqual(matiere["thumb"], {**attendu[m], "ground": couleurs[fond[m]]})
+                self.assertEqual((matiere["headerGlow"], matiere["headerGlowReach"]), (0.13, 0.42))
+                self.assertEqual((matiere["highlight"], matiere["medallionSheen"], matiere["medallionSheenReach"]),
+                                 ("#ffffff", 0.14, 0.6))
+                self.assertEqual((matiere["cardShadow"], matiere["cardShadowBlur"], matiere["cardShadowOffsetY"]),
+                                 (*ombre[m], 1))
+                self.assertEqual(self.out["themes"][f][m]["elevation"]["card"],
+                                 {"fill": couleurs["surfaceRaised"], "sheen": False, "sheenTop": None,
+                                  "edgeLight": True, "shadow": True})
 
     def test_presquile(self):
         """Vérifie les sept dimensions de la presqu'île, en pixels logiques, le seuil d'entrée du changement de
@@ -61,6 +92,12 @@ class QuickshellEmitterTest(unittest.TestCase):
         lignes de corps."""
         self.assertEqual(self.out["notifications"], {"largeur": 340, "marge": 8, "ecart": 8, "plafond": 5,
                                                      "duree": 5000, "icone": 36, "interieur": 12, "lignes": 3, "reprise": 1000})
+
+    def test_cloche_et_panneau(self):
+        """Vérifie les jetons de la pastille de la cloche et du panneau des notifications (L2-67)."""
+        self.assertEqual(self.out["cloche"], {"hauteur": 13, "corps": 9.5, "interieur": 3, "boule": 8,
+                                              "pastilleX": 9, "pastilleY": -5, "bouleX": 10, "bouleY": -2})
+        self.assertEqual(self.out["panneau"], {"largeur": 364, "hauteurMin": 320, "lignes": 2, "cascade": 60})
 
     def test_accent_discret(self):
         """Vérifie que l'accent discret émis de chaque thème est celui du modèle, au format `#rrggbb`."""

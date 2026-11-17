@@ -5,7 +5,7 @@ import Quickshell.Io
 import "Theme"
 import "Reseau"
 
-// Coque d'essai de la page VPN de la fenêtre Réseau, dans une fenêtre offscreen.
+// Coque d'essai de la page VPN de l'application Paramètres, dans une fenêtre offscreen.
 // Rôle : pose une PageVpn dans une FloatingWindow, branchée sur un état factice (aucune commande ne touche le réseau
 // réel) : la liste des profils est celle d'EtatReseau.profils, et executer journalise les arguments de nmcli puis, selon
 // le mode, rend un refus (code 1 et message) ou réussit en inversant l'état actif du profil visé, comme le fait la
@@ -96,20 +96,21 @@ ShellRoot {
             color: Theme.color?.surfaceWindow ?? "transparent"
             Component.onCompleted: essai.journal("prêt", true)
 
-            PageVpn { id: page; width: fenetre.width; panneau: null; etat: faux }
+            PageVpn { id: page; width: fenetre.width; etat: faux }
 
             IpcHandler {
                 target: "vpn"
 
                 // page — état de la page, en JSON : {titres (étiquettes de section visibles), vpns (liste de {nom, aide,
-                // actif (médaillon à l'accent), coche (interrupteur), erreur}), aucun, aide (message d'ajout visible)}.
+                // actif (médaillon à l'accent), coche (interrupteur), erreur}), aucun, aide (message d'ajout visible), phrase (la phrase de l'en-tête)}.
                 // Erreurs : aucune.
                 function page(): string {
                     const rangees = essai.tous_(page, o => o.objectName === "vpn" && o.visible)
                     return JSON.stringify({
-                        titres: essai.tous_(page, o => o.text !== undefined && o.moyen === true && o.echelon === 0 && o.visible).map(o => o.text),
+                        titres: essai.tous_(page, o => o.text !== undefined && o.moyen === true && o.echelon <= 1 && Qt.colorEqual(o.color, Theme.color.accentStandalone) && o.visible).map(o => o.text),
                         vpns: rangees.map(r => ({nom: r.libelle, aide: r.aide, actif: r.iconeActive, erreur: r.erreur,
                             coche: essai.trouver(r, o => o.objectName === "interrupteur").checked, libre: essai.trouver(r, o => o.objectName === "interrupteur").enabled})),
+                        phrase: page.phrase,
                         aucun: essai.trouver(page, o => o.text === "Aucune connexion VPN." && o.visible) !== null,
                         aide: essai.trouver(page, o => o.text === "L'ajout d'une connexion VPN viendra plus tard." && o.visible) !== null,
                     })

@@ -11,7 +11,7 @@ import "Notifications"
 // Empilement l'est à sa place et fait oublier les entrées sorties comme elle). Retenue réglable par IPC ; durée par
 // défaut ramenée par le test ; second Empilement et rechargement sur commande.
 // tests/test_notifications.py (CentreTest) la lance sous dbus-run-session et la pilote.
-// Entrées : DUNEI_TOKENS_DIR, lu par Theme ; QT_QPA_PLATFORM, posé à offscreen par le test ; DBUS_SESSION_BUS_ADDRESS,
+// Entrées : DUNEI_TOKENS_DIR, lu par Theme ; DUNEI_ETAT_DIR, où EtatNotifications lit et écrit son fichier ; QT_QPA_PLATFORM, posé à offscreen par le test ; DBUS_SESSION_BUS_ADDRESS,
 // le bus privé de dbus-run-session.
 // Sortie : « essai : prêt » au démarrage ; voir l'IpcHandler. Erreurs : celles de Theme et du serveur, dans le journal.
 // Dépendances : quickshell ≥ 0.3 (IpcHandler, FloatingWindow, Quickshell.reload,
@@ -35,6 +35,9 @@ ShellRoot {
         function onReloadCompleted() { Quickshell.inhibitReloadPopup() }
         function onReloadFailed() { Quickshell.inhibitReloadPopup() }
     }
+
+    // Avant le Centre, comme dans la coque : la mémoire est rechargée avant la réémission des notifications.
+    MemoireAttente { attente: centre.attente }
 
     Centre {
         id: centre
@@ -104,6 +107,27 @@ ShellRoot {
         // delai — expireTimeout reçu d'une notification affichée. Entrée : resume. Sortie : texte, « » si absente.
         // Erreurs : aucune. Dépendances : trouver.
         function delai(resume: string): string { return String(essai.trouver(resume)?.notification.expireTimeout ?? "") }
+
+        // attente — JSON {nombre, critique, resumes} de l'attente du centre, résumés du plus récent au plus ancien.
+        // Entrées : aucune. Sortie : texte. Erreurs : aucune. Dépendances : centre.attente.
+        function attente(): string {
+            const a = centre.attente
+            return JSON.stringify({nombre: a.nombre, critique: a.critique,
+                                   resumes: a.vivantes.map(e => e.notification?.summary ?? "")})
+        }
+
+        // suivies — nombre de notifications que le serveur suit encore. Entrées : aucune. Sortie : texte.
+        // Erreurs : aucune. Dépendances : centre.trackedNotifications.
+        function suivies(): string { return String(centre.trackedNotifications.values.length) }
+
+        // agirAttendue — déclenche une action d'une notification en attente, comme un clic sur son libellé dans le
+        // panneau. Entrées : resume ; identifiant, celui de l'action. Sortie : aucune.
+        // Erreurs : TypeError au journal si aucune notification en attente ne porte ce résumé.
+        // Dépendances : centre.attente.
+        function agirAttendue(resume: string, identifiant: string): void {
+            const e = centre.attente.vivantes.find(x => x.notification?.summary === resume)
+            centre.attente.agir(e, Array.from(e.notification.actions).find(a => a.identifier === identifiant))
+        }
 
         // retenir — pose la retenue (plein écran simulé). Entrée : v. Sortie : aucune. Erreurs : aucune.
         // Dépendances : centre.

@@ -13,7 +13,8 @@ import "../Theme"
 //           fenêtre de coque, que le compositeur floute, faux par défaut ; cleVerre, clé de Theme.glass lue pour
 //           l'opacité du verre, le niveau par défaut (presquile pour la presqu'île, sidebar pour la colonne d'une
 //           fenêtre de réglages, D136 et D137) ; rayon, rayon des coins en pixels logiques,
-//           0 par défaut.
+//           0 par défaut ; liserBas, vrai par défaut : faux, le liseré sombre du bas n'est pas peint (carte de
+//           réglages au relief « Doux », qui ne garde que le liseré clair).
 // Sorties (lecture seule) : couleur, couleur opaque de l'échelon ; opacite, Theme.glass[cleVerre] si verre, sinon 1 ;
 //           refletActif, vrai si le niveau porte sheen et que la hauteur reste sous material.sheenMaxHeight ; dpr,
 //           rapport pixels physiques / logiques de la fenêtre (1 hors de toute fenêtre) ; creuse, vrai si l'ombre
@@ -35,6 +36,7 @@ ShaderEffect {
     property bool verre: false
     property string cleVerre: niveau
     property real rayon: 0
+    property bool liserBas: true
 
     readonly property var echelon: Theme.elevation?.[niveau]
     readonly property color couleur: echelon?.fill ?? "transparent"
@@ -51,7 +53,7 @@ ShaderEffect {
     readonly property color refletHaut: echelon?.sheenTop ?? couleur
     readonly property real reflet: refletActif ? 1 : 0
     readonly property color liserClair: (echelon?.edgeLight && Theme.material?.edgeLight) || "transparent"
-    readonly property color liserSombre: (echelon?.edgeLight && Theme.material?.edgeShadow) || "transparent"
+    readonly property color liserSombre: (liserBas && echelon?.edgeLight && Theme.material?.edgeShadow) || "transparent"
     readonly property size taille: Qt.size(width, height)
     readonly property real creux: creuse ? 1 : 0
     readonly property color ombreInterne: Theme.material?.insetShadow ?? "transparent"

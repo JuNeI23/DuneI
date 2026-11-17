@@ -74,8 +74,8 @@ class EntryTest(unittest.TestCase):
             return subprocess.run([LUA, "-e", script], capture_output=True, text=True, check=True).stdout.split()
 
     MODULES = ("env:QT_WAYLAND_DISABLE_WINDOWDECORATION,config:dunei,rule:couche-1-sans-ombre,"
-               "rule:plein-ecran-nu,layer:dunei-verre-dunei-barre,layer:dunei-verre-dunei-attention,layer:dunei-verre-dunei-presquile,layer:dunei-verre-dunei-popovers,layer:dunei-verre-dunei-notifications,layer:dunei-fond,rule:sans-agrandissement,rule:glisser-xwayland,"
-               "rule:fenetre-reseau")
+               "rule:plein-ecran-nu,layer:dunei-verre-dunei-barre,layer:dunei-verre-dunei-attention,layer:dunei-verre-dunei-presquile,layer:dunei-verre-dunei-popovers,layer:dunei-verre-dunei-notifications,layer:dunei-verre-dunei-panneau,layer:dunei-fond,rule:sans-agrandissement,rule:glisser-xwayland,"
+               "rule:fenetre-parametres,on:window.open")
 
     DEMARRAGE = "config:dunei,submap,bind,on:hyprland.start"
     COUVERCLE = "bind,on:monitor.added,on:monitor.removed"

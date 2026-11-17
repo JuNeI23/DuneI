@@ -10,9 +10,15 @@ import Quickshell.Networking
 // de mot de passe (BlocSecret), du tri et de l'animation.
 // Entrées : etat, la source des réseaux (etat.reseaux, EtatReseau par défaut).
 // Sorties : presents, les WifiNetwork du dernier balayage ; deplie, le nom du réseau dont le mot de passe est
-// déplié, vide sinon ; erreur, le message sous le champ ; enCours, le réseau en connexion (null sans lui) ; signal
-// refuse(), émis après un échec, pour que la vue révèle le mot de passe saisi (comme sur la maquette).
-// Fonctions : actualiser, present, securise, choisir, rejoindre, echec (chacune décrite ci-dessous).
+// déplié, vide sinon ; erreur, le message sous le champ ; enCours, le réseau en connexion (null sans lui) ; fige,
+// vrai tant qu'une connexion est en cours ou qu'un mot de passe est déplié, que les listes lisent pour retenir leur
+// ordre ; signal refuse(), émis après un échec, pour que la vue révèle le mot de passe saisi (comme sur la
+// maquette) ; signal joint(r), émis à la réussite avec le réseau rejoint.
+// Abandon : une seule tentative est suivie. Un clic sur un autre réseau cesse de suivre la tentative en cours, dont
+// l'échec ou la réussite tardifs ne changent plus rien ici ; la nouvelle activation remplace l'ancienne dans
+// NetworkManager. Aucune déconnexion n'est demandée : WifiNetwork.disconnect() est refusée par Quickshell sur un
+// réseau qui n'est pas joint, et NetworkDevice.disconnect() empêcherait la carte de se reconnecter d'elle-même.
+// Fonctions : actualiser, present, securise, choisir, rejoindre, echec, reussite (chacune décrite ci-dessous).
 // Erreurs : un réseau qui a quitté le balayage est ignoré ; le texte d'un mot de passe n'est jamais conservé ni
 // journalisé ici.
 // Dépendances : Quickshell (Scope), Quickshell.Networking (WifiSecurityType, ConnectionFailReason).
@@ -26,8 +32,10 @@ Scope {
     property string deplie: ""
     property string erreur: ""
     property var enCours: null
+    readonly property bool fige: enCours !== null || deplie !== ""
 
     signal refuse()
+    signal joint(var r)
 
     // actualiser — relit etat.reseaux dans presents et replie la rangée dépliée si son réseau a quitté le balayage.
     // Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : etat, presents, deplie.
@@ -50,12 +58,14 @@ Scope {
     }
 
     // choisir — clic sur un réseau : un réseau connu ou ouvert se rejoint directement ; un autre déplie (ou replie)
-    // son mot de passe ; un réseau déjà en cours de connexion est ignoré. Entrée : r, le réseau. Sortie : aucune.
+    // son mot de passe ; un réseau déjà en cours de connexion est ignoré. Une tentative en cours sur un autre réseau
+    // est abandonnée dans les deux cas (voir « Abandon » en tête). Entrée : r, le réseau. Sortie : aucune.
     // Erreurs : un réseau qui n'est plus au balayage est ignoré ; un échec arrive par connectionFailed.
     // Dépendances : present, securise, deplie, enCours.
     function choisir(r) {
         if (!present(r) || r === enCours) return
         erreur = ""
+        enCours = null
         if (r.known || !securise(r)) {
             deplie = ""
             enCours = r
@@ -64,7 +74,8 @@ Scope {
     }
 
     // rejoindre — rejoint le réseau déplié avec le mot de passe saisi (connectWithPsk) ; la rangée reste dépliée
-    // pendant la connexion, qui la replie à son succès. Entrée : secret, le mot de passe, jamais journalisé.
+    // pendant la connexion, qui la replie à son succès ; une tentative en cours sur un autre réseau est abandonnée
+    // (voir « Abandon » en tête). Entrée : secret, le mot de passe, jamais journalisé.
     // Sortie : aucune. Erreurs : un réseau qui a quitté le balayage replie la rangée. Dépendances : presents.
     function rejoindre(secret) {
         const r = presents.find(x => x.name === deplie) ?? null
@@ -90,9 +101,19 @@ Scope {
         refuse()
     }
 
+    // reussite — le réseau suivi est joint : replie sa rangée, cesse de le suivre, puis émet joint(r).
+    // Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : enCours, deplie.
+    function reussite() {
+        const r = enCours
+        deplie = ""
+        enCours = null
+        joint(r)
+    }
+
+    // Seul le réseau suivi est écouté : les signaux d'une tentative abandonnée ne parviennent plus ici.
     Connections {
         target: jonction.enCours
         function onConnectionFailed(raison) { jonction.echec(raison) }
-        function onConnectedChanged() { if (jonction.enCours?.connected) { jonction.deplie = ""; jonction.enCours = null } }
+        function onConnectedChanged() { if (jonction.enCours?.connected) jonction.reussite() }
     }
 }

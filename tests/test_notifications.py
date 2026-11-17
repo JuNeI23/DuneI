@@ -17,6 +17,7 @@ Ignoré sans session Wayland ou sans Quickshell (contrôle de GitHub).
 import http.server
 import json
 import os
+import re
 import signal
 import struct
 import subprocess
@@ -62,9 +63,15 @@ class PileTest(EssaiCoque, unittest.TestCase):
     teintes = (55,)
     DUREE = 600
 
+    # Application des cas historiques de la pile : retirée du panneau, ses notifications expirent à l'échéance de
+    # leur carte comme avant L2-67. Les cas de la garde emploient une autre application.
+    RETIREE = "app"
+
     def setUp(self):
         super().setUp()
         demarrer(self, self.DUREE)
+        if self.RETIREE:
+            self.appel("retirerApp", self.RETIREE)
 
     def appel(self, fonction: str, *args) -> str:
         """Appelle une fonction IPC de la coque d'essai.
@@ -137,6 +144,131 @@ class PileTest(EssaiCoque, unittest.TestCase):
             self.assertNotIn(absent, self.appels())
             time.sleep(0.02)
 
+    def attente(self) -> tuple[int, bool, list[str], list[str]]:
+        """État de l'attente.
+
+        Entrées : aucune. Sortie : (nombre, critique, identifiants, plus récente en tête, « s » pour sortante,
+        groupes « nom:nombre » dans leur ordre). Erreurs : CalledProcessError si l'appel IPC échoue.
+        Dépendances : appel.
+        """
+        nombre, critique, ids, groupes = (p.strip() for p in self.appel("etatAttente").split("|"))
+        return int(nombre), critique == "true", [x for x in ids.split(",") if x], [x for x in groupes.split(",") if x]
+
+    def gardee(self, delai: int = -1, etiquette: str = "", urgence: int = 1, ephemere: bool = False,
+               generation: bool = False) -> str:
+        """Crée une notification d'une application gardée (« garde ») et la remet à la pile.
+
+        Entrées : delai, etiquette ; urgence (0, 1 ou 2) ; ephemere (indice transient) ; generation (réémise après
+        un rechargement). Sortie : son identifiant. Erreurs : CalledProcessError si l'appel IPC échoue.
+        Dépendances : appel, creer.
+        """
+        self.appel("preparer", urgence, str(ephemere).lower(), "", str(generation).lower())
+        return self.creer(app="garde", delai=delai, etiquette=etiquette)
+
+    def attendue(self, *attendu, delai: float = DELAI) -> None:
+        """Attend que l'attente prenne un état. Entrées : attendu — (nombre, critique, identifiants) ; delai.
+        Sortie : aucune. Erreurs : échec du test au délai. Dépendances : jusqua, attente."""
+        self.jusqua(lambda: self.attente()[:3] == attendu, f"attente {attendu} attendue, vue {self.attente()}", delai)
+
+    def test_gardee_passe_a_l_attente(self):
+        self.gardee()
+        self.attendue(1, False, ["1"])
+        self.assertEqual(self.etat(), (["1s"], []))
+        self.assertEqual(self.appels(), [])
+        self.assertEqual(self.appel("existe", 1), "true")
+
+    def test_non_gardee_expire(self):
+        self.gardee(ephemere=True)
+        self.attendre_appel("1:expire")
+        self.gardee(urgence=0)
+        self.attendre_appel("2:expire")
+        self.assertEqual(self.attente()[:3], (0, False, []))
+
+    def test_clic_ne_passe_pas(self):
+        self.gardee()
+        self.appel("cliquer", 1)
+        time.sleep(self.DUREE / 1000 + 0.3)
+        self.assertEqual(self.appels(), ["1:dismiss"])
+        self.assertEqual(self.attente()[:3], (0, False, []))
+
+    def test_ne_pas_deranger(self):
+        self.appel("deranger", "true")
+        self.gardee()
+        self.assertEqual(self.etat(), ([], []))
+        self.assertEqual(self.attente()[:3], (1, False, ["1"]))
+        self.gardee(ephemere=True)
+        self.assertEqual(self.appels(), ["2:expire"])
+        self.gardee(delai=0, urgence=2)
+        self.assertEqual(self.etat(), (["3"], []))
+        self.assertEqual(self.attente()[:3], (1, False, ["1"]))
+
+    def test_sans_delai(self):
+        self.gardee(delai=0)
+        time.sleep(self.DUREE / 1000 + 0.3)
+        self.assertEqual(self.etat(), (["1"], []))
+        self.assertEqual(self.attente()[:3], (0, False, []))
+        self.appel("deranger", "true")
+        self.gardee(delai=0)
+        self.assertEqual(self.attente()[:3], (1, False, ["2"]))
+
+    def test_remplacement_dans_l_attente(self):
+        self.gardee(etiquette="m")
+        self.attendue(1, False, ["1"])
+        self.gardee(etiquette="m")
+        self.assertEqual(self.appels(), ["1:expire"])
+        self.assertEqual(self.attente()[0], 0)
+        self.attendue(1, False, ["2"])
+        self.assertEqual(self.appels(), ["1:expire"])
+
+    def test_mise_a_jour_sur_place(self):
+        self.gardee()
+        self.attendue(1, False, ["1"])
+        self.appel("oublier", 1)
+        self.appel("renommer", 1, "nouveau")
+        self.assertEqual(self.attente()[:3], (0, False, []))
+        self.assertEqual(self.etat(), (["1"], []))
+        self.attendue(1, False, ["1"])
+        self.appel("oublier", 1)
+        self.appel("deranger", "true")
+        self.appel("renommer", 1, "retenu")
+        self.assertEqual(self.etat(), ([], []))
+        self.assertEqual(self.attente()[:3], (1, False, ["1"]))
+        self.assertEqual(self.appel("resumeAttendue", 1), "retenu")
+        self.assertEqual(self.appels(), [])
+        self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
+
+    def test_retiree_pendant_la_carte(self):
+        self.gardee()
+        self.appel("retirerApp", "garde")
+        self.attendre_appel("1:expire")
+        self.assertEqual(self.attente()[:3], (0, False, []))
+
+    def test_fermee_pendant_la_sortie(self):
+        self.gardee()
+        self.attendue(1, False, ["1"])
+        self.appel("fermerParApp", 1)
+        self.assertEqual(self.attente()[:3], (0, False, []))
+        self.appel("oublier", 1)
+        self.jusqua(lambda: self.appel("existe", 1) == "false", "détruite après la sortie de la carte")
+        self.assertEqual(self.etat(), ([], []))
+        self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
+
+    def test_generation_precedente(self):
+        self.appel("connaitre", 1)
+        self.gardee(generation=True)
+        self.assertEqual(self.etat(), ([], []))
+        self.assertEqual(self.attente()[:3], (1, False, ["1"]))
+        self.gardee(generation=True)
+        self.assertEqual(self.etat(), (["2"], []))
+
+    def test_plein_ecran_inchange(self):
+        self.appel("retenir", "true")
+        self.gardee()
+        self.assertEqual(self.etat(), ([], ["1"]))
+        self.assertEqual(self.attente()[:3], (0, False, []))
+        self.appel("retenir", "false")
+        self.assertEqual(self.etat(), (["1"], []))
+
     def test_ordre_et_plafond(self):
         for _ in range(7):
             self.creer(delai=0)
@@ -200,6 +332,7 @@ class PileTest(EssaiCoque, unittest.TestCase):
         self.assertAlmostEqual(self.attendre_appel("1:expire") - fin, 0.6, delta=0.25)
 
     def test_remplacement_par_etiquette(self):
+        self.appel("retirerApp", "A")
         t0 = time.monotonic()
         self.creer("A", "premier", delai=1500, etiquette="t")
         self.creer("B", "second", delai=0, etiquette="t")
@@ -522,6 +655,9 @@ class CentreTest(EssaiCoque, unittest.TestCase):
     def setUp(self):
         super().setUp()
         self.bus = ""
+        # notify-send, l'application des cas historiques, est retirée du panneau : ses notifications expirent à
+        # l'échéance de leur carte comme avant L2-67. Les cas de la garde envoient sous le nom « Garde ».
+        (self.dir / "notifications.json").write_text(json.dumps({"nePasDeranger": False, "retirees": ["notify-send"]}))
         demarrer(self, self.DUREE)
 
     def lancer(self, dossier) -> None:
@@ -534,7 +670,8 @@ class CentreTest(EssaiCoque, unittest.TestCase):
         Dépendances : dbus-run-session, sh, qs, arreter.
         """
         self.arreter()
-        env = {**os.environ, **self.environnement, "DUNEI_TOKENS_DIR": str(dossier), "NO_COLOR": "1"}
+        env = {**os.environ, **self.environnement, "DUNEI_TOKENS_DIR": str(dossier), "DUNEI_ETAT_DIR": str(dossier),
+               "NO_COLOR": "1"}
         env = {cle: valeur for cle, valeur in env.items() if valeur is not None}
         adresse = self.dir.parent / "bus"
         script = 'printf "%s\\n%s" "$$" "$DBUS_SESSION_BUS_ADDRESS" > "$1.tmp"; mv "$1.tmp" "$1"; exec "$2" -p "$3"'
@@ -606,6 +743,57 @@ class CentreTest(EssaiCoque, unittest.TestCase):
         """
         affichees, file = json.loads(self.appel("etat"))
         return affichees, file
+
+    def attente(self) -> dict:
+        """Attente du centre. Entrées : aucune. Sortie : {"nombre", "critique", "resumes"}.
+        Erreurs : CalledProcessError si l'appel IPC échoue. Dépendances : appel."""
+        return json.loads(self.appel("attente"))
+
+    def test_gardee_reste_suivie(self):
+        self.envoyer("-a", "Garde", "Mail", "Corps")
+        self.jusqua(lambda: self.attente() == {"nombre": 1, "critique": False, "resumes": ["Mail"]}, "en attente")
+        self.jusqua(lambda: self.etat() == ([], []), "carte sortie")
+        time.sleep(0.5)
+        self.assertEqual(self.appel("suivies"), "1")
+        self.assertEqual(self.attente()["nombre"], 1)
+
+    def test_action_depuis_l_attente(self):
+        envoi = self.envoyer_avec_actions("-a", "Garde", "-A", "ouvrir=Ouvrir", "Mail", "Corps")
+        self.jusqua(lambda: self.attente()["resumes"] == ["Mail"], "en attente")
+        self.jusqua(lambda: self.etat() == ([], []), "carte sortie")
+        self.appel("agirAttendue", "Mail", "ouvrir")
+        self.assertEqual(envoi.communicate(timeout=DELAI)[0].strip(), "ouvrir")
+        self.jusqua(lambda: self.attente()["nombre"] == 0, "sortie de l'attente")
+        self.jusqua(lambda: self.appel("suivies") == "0", "plus suivie")
+
+    def test_ephemere(self):
+        self.envoyer("-a", "Garde", "-e", "Passage", "Corps")
+        self.jusqua(lambda: "Passage" in json.loads(self.appel("vues")), "carte vue")
+        self.jusqua(lambda: self.appel("suivies") == "0", "expirée")
+        self.assertEqual(self.attente()["nombre"], 0)
+
+    def test_notification_de_la_coque(self):
+        # La commande par défaut des notifications de connexion porte l'indice transient (-e) : envoyée telle quelle,
+        # une notification de la coque passe en carte et n'entre pas dans l'attente.
+        source = (ROOT / "coque" / "Reseau" / "NotificationsReseau.qml").read_text()
+        self.assertIn('["notify-send", "-a", "DuneI", "-e", "-i", icone,', source)
+        self.envoyer("-a", "DuneI", "-e", "-i", "network-wireless", "-h", "string:x-dunst-stack-tag:reseau",
+                     "Connexion perdue", "Corps")
+        self.jusqua(lambda: "Connexion perdue" in json.loads(self.appel("vues")), "carte vue")
+        self.jusqua(lambda: self.appel("suivies") == "0", "expirée")
+        self.assertEqual(self.attente()["nombre"], 0)
+
+    def test_critique(self):
+        self.envoyer("-a", "Garde", "-u", "critical", "-t", str(self.DUREE), "Batterie", "Corps")
+        self.jusqua(lambda: self.attente() == {"nombre": 1, "critique": True, "resumes": ["Batterie"]}, "en attente")
+
+    def test_ne_pas_deranger_persistant(self):
+        subprocess.run([QS, "ipc", "--pid", str(self.qs), "call", "notifications", "basculerNePasDeranger"],
+                       check=True, capture_output=True, timeout=DELAI)
+        self.envoyer("-a", "Garde", "Retenue", "Corps")
+        self.jusqua(lambda: self.attente()["resumes"] == ["Retenue"], "en attente sans carte")
+        self.assertEqual(json.loads(self.appel("vues")), [])
+        self.assertTrue(json.loads((self.dir / "notifications.json").read_text())["nePasDeranger"])
 
     def test_bus_prive(self):
         self.assertTrue(self.bus.startswith("unix:"))
@@ -735,6 +923,19 @@ class CentreTest(EssaiCoque, unittest.TestCase):
         self.jusqua(lambda: self.etat() == (["Gardee"], []), "réémise à la nouvelle génération")
         self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
 
+    def test_rechargement_garde_l_attente(self):
+        # Une notification en attente retourne à l'attente de la nouvelle génération sans repasser en carte.
+        self.envoyer("-a", "Garde", "Mail", "Corps")
+        self.jusqua(lambda: self.attente()["resumes"] == ["Mail"], "en attente")
+        self.jusqua(lambda: self.etat() == ([], []), "carte sortie")
+        avant = self.appel("generation")
+        self.appel("recharger")
+        self.jusqua(lambda: (g := self.appel("generation")).isdigit() and g != avant, "nouvelle génération à l'écoute")
+        self.jusqua(lambda: self.attente()["resumes"] == ["Mail"], "retournée à l'attente")
+        self.assertEqual(json.loads(self.appel("vues")), [])
+        self.assertEqual(self.etat(), ([], []))
+        self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
+
     def test_action(self):
         envoi = self.envoyer_avec_actions("-t", "0", "-A", "default=Ouvrir", "Action", "Corps")
         self.jusqua(lambda: self.etat() == (["Action"], []), "entrée affichée")
@@ -768,3 +969,656 @@ class CentreTest(EssaiCoque, unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def notif(app: str = "App", bureau: str = "", urgence: int = 1, ephemere: bool = False) -> dict:
+    """Notification réduite aux propriétés que lisent les règles de garde.
+
+    Entrées : app — appName ; bureau — desktopEntry ; urgence — 0, 1 ou 2 ; ephemere — indice transient.
+    Sortie : dictionnaire à l'interface de Notification. Erreurs : aucune. Dépendances : aucune.
+    """
+    return {"appName": app, "desktopEntry": bureau, "urgency": urgence, "transient": ephemere}
+
+
+@unittest.skipUnless(os.environ.get("WAYLAND_DISPLAY") and QS, "session Wayland et Quickshell requis")
+class GardeTest(EssaiCoque, unittest.TestCase):
+    """Les règles de garde (garde.js), appelées par l'IPC d'une coque d'essai sans fenêtre."""
+
+    essai = ESSAI / "garde"
+    teintes = ()
+
+    def setUp(self):
+        super().setUp()
+        self.lancer(self.dir)
+        self.attendre("essai : prêt")
+
+    def appeler(self, fonction: str, *args):
+        """Appelle une fonction de garde.js et rend sa valeur décodée.
+
+        Entrées : fonction — nom exporté par garde.js ; args — ses arguments, transmis en JSON dans {"args": [...]}.
+        Sortie : la valeur retournée, décodée du JSON. Erreurs : échec du test si la fonction lève ;
+        CalledProcessError si l'appel IPC échoue. Dépendances : qs, lancer.
+        """
+        sortie = subprocess.run([QS, "ipc", "--pid", str(self.proc.pid), "call", "essai", "appeler", fonction,
+                                 json.dumps({"args": list(args)})], check=True, capture_output=True, text=True,
+                                timeout=DELAI).stdout.strip()
+        self.assertFalse(sortie.startswith("erreur"), sortie)
+        return json.loads(sortie)
+
+    def test_identifiant(self):
+        self.assertEqual(self.appeler("identifiant", notif("Thunderbird", "thunderbird")), "thunderbird")
+        self.assertEqual(self.appeler("identifiant", notif("Signal")), "Signal")
+        self.assertEqual(self.appeler("identifiant", notif("")), "")
+
+    def test_gardee(self):
+        self.assertTrue(self.appeler("gardee", notif(), []))
+        self.assertFalse(self.appeler("gardee", notif(ephemere=True), []))
+        self.assertFalse(self.appeler("gardee", {"appName": "App", "urgency": 1, "hints": {"transient": True}}, []))
+        self.assertFalse(self.appeler("gardee", notif(urgence=0), []))
+        self.assertFalse(self.appeler("gardee", notif("Signal"), ["Signal"]))
+        self.assertFalse(self.appeler("gardee", notif("Signal", urgence=2), ["Signal"]))
+        self.assertFalse(self.appeler("gardee", notif("Thunderbird", "thunderbird"), ["thunderbird"]))
+        self.assertTrue(self.appeler("gardee", notif("Thunderbird", "thunderbird"), ["Thunderbird"]))
+        self.assertTrue(self.appeler("gardee", notif(""), []))
+
+    def test_affichable(self):
+        for urgence in (0, 1, 2):
+            self.assertTrue(self.appeler("affichable", notif(urgence=urgence), False))
+        self.assertFalse(self.appeler("affichable", notif(urgence=0), True))
+        self.assertFalse(self.appeler("affichable", notif(urgence=1), True))
+        self.assertTrue(self.appeler("affichable", notif(urgence=2), True))
+
+    def grouper(self, *entrees) -> list[tuple]:
+        """Groupes rendus par grouper, réduits à (identifiant, nom, critique, heures d'arrivée de ses entrées).
+
+        Entrées : entrees — couples (notification, arrivee). Sortie : liste dans l'ordre des groupes.
+        Erreurs : celles d'appeler. Dépendances : appeler.
+        """
+        groupes = self.appeler("grouper", [{"notification": n, "arrivee": t} for n, t in entrees])
+        return [(g["identifiant"], g["nom"], g["critique"], [e["arrivee"] for e in g["entrees"]]) for g in groupes]
+
+    def test_grouper(self):
+        self.assertEqual(self.grouper((notif("A"), 1), (notif("B"), 2), (notif("A"), 3)),
+                         [("A", "A", False, [3, 1]), ("B", "B", False, [2])])
+        self.assertEqual(self.grouper((notif("A"), 1), (notif("B", urgence=2), 2), (notif("A"), 3)),
+                         [("B", "B", True, [2]), ("A", "A", False, [3, 1])])
+        self.assertEqual(self.grouper((notif(""), 1)), [("", "Application inconnue", False, [1])])
+        self.assertEqual(self.grouper(), [])
+
+
+@unittest.skipUnless(os.environ.get("WAYLAND_DISPLAY") and QS, "session Wayland et Quickshell requis")
+class EtatNotificationsTest(EssaiCoque, unittest.TestCase):
+    """L'état persistant des notifications : « ne pas déranger » et applications retirées, lus et écrits dans
+    notifications.json du dossier d'état (celui de l'essai, jamais celui de la session)."""
+
+    essai = ESSAI / "etat"
+    teintes = ()
+
+    def demarrer(self) -> None:
+        """Lance, ou relance, la coque d'essai sur le dossier de l'essai. Entrées, sortie : aucune.
+        Erreurs : échec du test si elle ne se déclare pas prête. Dépendances : lancer, attendre."""
+        self.lancer(self.dir)
+        self.attendre("essai : prêt")
+
+    def appel(self, cible: str, fonction: str, *args) -> str:
+        """Appelle une fonction IPC de la coque d'essai.
+
+        Entrées : cible — « essai » ou « notifications » ; fonction ; args, convertis en texte.
+        Sortie : la sortie standard de l'appel, sans blancs finaux.
+        Erreurs : CalledProcessError si l'appel échoue. Dépendances : qs, lancer.
+        """
+        return subprocess.run([QS, "ipc", "--pid", str(self.proc.pid), "call", cible, fonction, *map(str, args)],
+                              check=True, capture_output=True, text=True, timeout=DELAI).stdout.strip()
+
+    def etat(self) -> dict:
+        """État lu dans le singleton. Entrées : aucune. Sortie : {"nePasDeranger", "retirees"}.
+        Erreurs : celles d'appel. Dépendances : appel."""
+        return json.loads(self.appel("essai", "etat"))
+
+    def fichier(self):
+        """Chemin de notifications.json dans le dossier de l'essai. Entrées : aucune. Sortie : Path.
+        Erreurs : aucune. Dépendances : aucune."""
+        return self.dir / "notifications.json"
+
+    def ecrit(self, attendu: dict) -> None:
+        """Attend que le fichier contienne exactement l'état attendu. Entrée : attendu. Sortie : aucune.
+        Erreurs : échec du test au délai. Dépendances : fichier."""
+        fin = time.monotonic() + DELAI
+        while time.monotonic() < fin:
+            try:
+                if json.loads(self.fichier().read_text()) == attendu:
+                    return
+            except (OSError, ValueError):
+                pass
+            time.sleep(0.05)
+        self.fail(f"fichier attendu {attendu} : {self.fichier().read_text() if self.fichier().exists() else 'absent'}")
+
+    def test_defauts(self):
+        self.demarrer()
+        self.assertEqual(self.etat(), {"nePasDeranger": False, "retirees": []})
+        self.assertFalse(self.fichier().exists())
+
+    def test_ecriture_et_relecture(self):
+        self.demarrer()
+        self.appel("essai", "basculer")
+        self.appel("essai", "retirer", "Signal")
+        self.ecrit({"nePasDeranger": True, "retirees": ["Signal"]})
+        self.demarrer()
+        self.assertEqual(self.etat(), {"nePasDeranger": True, "retirees": ["Signal"]})
+
+    def test_retirer_remettre(self):
+        self.demarrer()
+        self.appel("essai", "retirer", "")
+        self.appel("essai", "retirer", "Signal")
+        self.appel("essai", "retirer", "Signal")
+        self.assertEqual(self.etat()["retirees"], ["Signal"])
+        self.appel("essai", "remettre", "Signal")
+        self.assertEqual(self.etat()["retirees"], [])
+        self.appel("essai", "poser", "true")
+        self.appel("essai", "poser", "true")
+        self.assertTrue(self.etat()["nePasDeranger"])
+
+    def test_fichier_illisible(self):
+        self.fichier().write_text('{"nePasDer')
+        self.demarrer()
+        self.assertEqual(self.etat(), {"nePasDeranger": False, "retirees": []})
+        self.appel("essai", "basculer")
+        self.ecrit({"nePasDeranger": True, "retirees": []})
+
+    def test_ipc(self):
+        self.demarrer()
+        self.assertEqual(self.appel("notifications", "nePasDeranger"), "false")
+        self.appel("notifications", "basculerNePasDeranger")
+        self.assertEqual(self.appel("notifications", "nePasDeranger"), "true")
+        self.assertTrue(self.etat()["nePasDeranger"])
+
+
+@unittest.skipUnless(os.environ.get("WAYLAND_DISPLAY") and QS, "session Wayland et Quickshell requis")
+class AttenteTest(PileTest):
+    """L'attente, logique du panneau : nombre, critique, groupes, ouverture, écart et fermeture par l'application.
+
+    Hérite de PileTest ses aides et sa coque d'essai ; les cas de la pile ne sont pas rejoués ici.
+    """
+
+    RETIREE = ""
+
+    def test_nombre_et_critique(self):
+        self.appel("attendre", "A", 1)
+        self.appel("attendre", "B", 2)
+        self.appel("attendre", "A", 1)
+        self.assertEqual(self.attente(), (3, True, ["3", "2", "1"], ["B:1", "A:2"]))
+        self.appel("ecarterAttendue", 2)
+        self.assertEqual(self.appels(), ["2:dismiss"])
+        self.assertEqual(self.attente(), (2, False, ["3", "1"], ["A:2"]))
+
+    def test_ouvrir(self):
+        self.appel("attendre", "A", 1)
+        self.appel("ouvrirAttendue", 1)
+        self.assertEqual(self.appels(), ["1:invoke:default"])
+        self.appel("attendre", "A", 1)
+        self.appel("residente", 2)
+        self.appel("ouvrirAttendue", 2)
+        self.assertEqual(self.appels()[1:], ["2:invoke:default", "2:dismiss"])
+        self.appel("attendre", "A", 1)
+        # Retirer ses actions met la notification à jour sur place : sous « ne pas déranger », elle reste en attente.
+        self.appel("deranger", "true")
+        self.appel("sansAction", 3)
+        self.appel("ouvrirAttendue", 3)
+        self.assertEqual(self.appels()[3:], ["3:dismiss"])
+        self.assertEqual(self.attente()[:3], (0, False, []))
+
+    def test_agir(self):
+        self.appel("attendre", "A", 1)
+        self.appel("agirAttendue", 1, "default")
+        self.assertEqual(self.appels(), ["1:invoke:default"])
+        self.assertEqual(self.attente()[0], 0)
+
+    def test_fermee_par_l_application(self):
+        self.appel("attendre", "A", 1)
+        self.appel("fermerParApp", 1)
+        self.assertEqual(self.attente()[:3], (0, False, []))
+        self.jusqua(lambda: self.appel("existe", 1) == "false", "retirée de l'attente, détruite")
+
+    def test_sortante_si_montree(self):
+        self.appel("montrer", "true")
+        self.appel("attendre", "A", 2)
+        self.appel("ecarterAttendue", 1)
+        self.assertEqual(self.attente()[:3], (0, False, ["1s"]))
+        self.appel("ecarterAttendue", 1)
+        self.appel("ouvrirAttendue", 1)
+        self.assertEqual(self.appels(), ["1:dismiss"])
+        time.sleep(0.3)
+        self.assertEqual(self.appel("existe", 1), "true")
+        self.appel("oublierAttendue", 1)
+        self.assertEqual(self.attente()[2], [])
+        self.jusqua(lambda: self.appel("existe", 1) == "false", "relâchée à oublier, détruite")
+        self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
+
+    def test_ecarter_groupe_et_tout(self):
+        for app in ("A", "B", "A", "C"):
+            self.appel("attendre", app, 1)
+        self.appel("ecarterGroupe", "A")
+        self.assertEqual(self.attente(), (2, False, ["4", "2"], ["C:1", "B:1"]))
+        self.appel("toutEcarter")
+        self.assertEqual(self.attente()[:3], (0, False, []))
+        self.assertEqual(sorted(self.appels()), ["1:dismiss", "2:dismiss", "3:dismiss", "4:dismiss"])
+
+    def test_cent(self):
+        for _ in range(100):
+            self.appel("attendre", "A", 1)
+        self.assertEqual(self.attente()[0], 100)
+
+
+# Les cas hérités de PileTest ne sont pas rejoués sous AttenteTest.
+for _nom in [n for n in vars(PileTest) if n.startswith("test_") and n not in vars(AttenteTest)]:
+    setattr(AttenteTest, _nom, None)
+
+
+@unittest.skipUnless(os.environ.get("WAYLAND_DISPLAY") and QS, "session Wayland et Quickshell requis")
+class PanneauTest(EssaiCoque, unittest.TestCase):
+    """Le contenu du panneau : état vide, groupes par application, actions, bascule, clavier et défilement."""
+
+    essai = ESSAI / "panneau"
+    teintes = (55,)
+    environnement = CarteTest.environnement
+
+    # Pas de la cascade de « Tout effacer », ralenti pour être observable par des appels IPC.
+    CASCADE = 200
+
+    def setUp(self):
+        super().setUp()
+        self.installer(55)
+        jetons = self.dir / "coque-tokens.json"
+        donnees = json.loads(jetons.read_text())
+        donnees["panneau"]["cascade"] = self.CASCADE
+        jetons.write_text(json.dumps(donnees))
+        self.lancer(self.dir)
+        self.attendre("essai : prêt")
+        self.jusqua(lambda: self.appel("pret") == "true", "jetons chargés")
+
+    appel = PileTest.appel
+
+    def etat(self) -> dict:
+        """État du panneau. Sortie : dictionnaire (voir etat dans la coque d'essai). Dépendances : appel."""
+        return json.loads(self.appel("etat"))
+
+    def jusqua(self, condition, message: str, delai: float = DELAI):
+        """Attend qu'une condition devienne vraie. Entrées : condition, message, delai. Sortie : sa valeur.
+        Erreurs : échec du test au délai, avec l'état du panneau et le journal. Dépendances : appel."""
+        fin = time.monotonic() + delai
+        while not (valeur := condition()):
+            if time.monotonic() > fin:
+                self.fail(f"{message}\n{self.appel('etat')}\n{self.journal()}")
+            time.sleep(0.02)
+        return valeur
+
+    def groupes(self) -> list[tuple]:
+        """Groupes montrés, réduits à (nom, nombre, deplie, autres). Dépendances : etat."""
+        return [(g["nom"], g["nombre"], g["deplie"], g["autres"]) for g in self.etat()["groupes"]]
+
+    def creer(self, app: str, resume: str = "Titre", urgence: int = 1) -> str:
+        """Crée une notification en attente. Sortie : son identifiant. Dépendances : appel."""
+        return self.appel("creer", app, resume, urgence)
+
+    def test_vide(self):
+        e = self.etat()
+        self.assertEqual((e["hauteur"], e["vide"], e["toutEffacer"], e["groupes"], e["montree"]),
+                         (320, True, False, [], True))
+        self.assertEqual(e["texteEtat"], "Notifications actives")
+
+    def test_groupes(self):
+        for app in ("A", "B", "A", "A"):
+            self.creer(app)
+        self.assertEqual(self.groupes(), [("A", 3, False, "2 autres"), ("B", 1, False, "")])
+        e = self.etat()
+        self.assertEqual((e["vide"], e["toutEffacer"]), (False, True))
+        self.assertEqual([g["lignes"] for g in e["groupes"]], [1, 1])
+        repliee = self.jusqua(lambda: (a := self.etat()["hauteur"]) == self.etat()["hauteur"] and a, "hauteur stable")
+        self.appel("deplier", "A")
+        vues, fin = [], time.monotonic() + DELAI
+        while True:
+            vues.append(self.etat()["hauteur"])
+            if len(vues) > 3 and vues[-1] == vues[-2] == vues[-3] and vues[-1] > repliee:
+                break
+            self.assertLess(time.monotonic(), fin, vues)
+        # La hauteur se déplie : des valeurs intermédiaires séparent la hauteur repliée de la hauteur dépliée.
+        self.assertTrue(any(repliee < h < vues[-1] for h in vues), vues)
+        self.assertEqual(self.groupes()[0], ("A", 3, True, ""))
+        self.assertEqual(self.etat()["groupes"][0]["lignes"], 3)
+
+    def test_critique_devant(self):
+        self.creer("A")
+        self.creer("B", urgence=2)
+        self.creer("A")
+        self.assertEqual([g[0] for g in self.groupes()], ["B", "A"])
+
+    def test_clic_entree(self):
+        self.creer("A")
+        self.creer("A")
+        self.appel("ouvrir", 2)
+        self.assertEqual(self.appel("appels"), "2:invoke:default")
+        self.assertEqual(self.etat()["nombre"], 1)
+        self.jusqua(lambda: self.groupes() == [("A", 1, False, "")], "groupe mis à jour après la sortie")
+        self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
+
+    def test_ne_plus_garder(self):
+        self.creer("A")
+        self.creer("B")
+        self.creer("A")
+        self.assertTrue(all(g["retirable"] for g in self.etat()["groupes"]))
+        self.appel("nePlusGarder", "A")
+        self.assertEqual(sorted(self.appel("appels").split(",")), ["1:dismiss", "3:dismiss"])
+        e = self.etat()
+        self.assertEqual((e["retirees"], e["nombre"]), (["A"], 1))
+        self.jusqua(lambda: self.groupes() == [("B", 1, False, "")], "groupe retiré après sa sortie")
+
+    def test_anonyme(self):
+        self.creer("")
+        g = self.etat()["groupes"][0]
+        self.assertEqual((g["nom"], g["retirable"]), ("Application inconnue", False))
+        self.appel("nePlusGarder", "")
+        self.assertEqual((self.etat()["retirees"], self.appel("appels")), ([], ""))
+        self.appel("effacerGroupe", "")
+        self.assertEqual(self.appel("appels"), "1:dismiss")
+
+    def test_tout_effacer(self):
+        for app in ("A", "B", "C"):
+            self.creer(app)
+        self.assertEqual([g[0] for g in self.groupes()], ["C", "B", "A"])
+        debut = time.monotonic()
+        self.appel("toutEffacer")
+        self.assertEqual(self.appel("appels"), "3:dismiss")
+        instants = {}
+        while len(instants) < 3:
+            self.assertLess(time.monotonic() - debut, DELAI, instants)
+            for appel in filter(None, self.appel("appels").split(",")):
+                instants.setdefault(appel, time.monotonic())
+        # En cascade, du haut vers le bas : le plus récent d'abord, un pas de cascade entre deux groupes.
+        self.assertEqual(list(instants), ["3:dismiss", "2:dismiss", "1:dismiss"])
+        self.assertGreater(instants["1:dismiss"] - debut, 2 * self.CASCADE / 1000 - 0.05)
+        self.jusqua(lambda: self.etat()["vide"] and self.etat()["hauteur"] == 320, "état vide à la hauteur minimale")
+
+    def test_bascule(self):
+        self.appel("basculer")
+        e = self.etat()
+        self.assertEqual((e["nePasDeranger"], e["texteEtat"]), (True, "Ne pas déranger"))
+        self.appel("basculer")
+        self.assertEqual(self.etat()["texteEtat"], "Notifications actives")
+
+    def test_clavier(self):
+        for app in ("A", "B", "C"):
+            self.creer(app)
+        self.appel("touche", "bas")
+        self.assertEqual(self.etat()["courante"], 3)
+        self.appel("touche", "bas")
+        self.assertEqual(self.etat()["courante"], 2)
+        self.appel("touche", "suppr")
+        self.assertEqual(self.appel("appels"), "2:dismiss")
+        self.assertEqual(self.etat()["courante"], 1)
+        self.appel("touche", "haut")
+        self.assertEqual(self.etat()["courante"], 3)
+        self.appel("touche", "entree")
+        self.assertEqual(self.appel("appels"), "2:dismiss,3:invoke:default")
+
+    def test_demontage_libere_les_sortantes(self):
+        # Fermée par son application pendant ou après un panneau monté, une entrée ne reste jamais retenue.
+        self.creer("A")
+        self.creer("B")
+        self.appel("fermerParApp", 1)
+        self.appel("monter", "false")
+        self.assertEqual(json.loads(self.appel("etat"))["entrees"], 1)
+        self.assertFalse(json.loads(self.appel("etat"))["montree"])
+        self.appel("fermerParApp", 2)
+        self.assertEqual(json.loads(self.appel("etat"))["entrees"], 0)
+        self.appel("monter", "true")
+        self.assertTrue(self.etat()["montree"])
+        self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
+
+    def test_tout_effacer_survit_au_demontage(self):
+        for app in ("A", "B", "C"):
+            self.creer(app)
+        self.appel("toutEffacer")
+        self.appel("monter", "false")
+        self.assertEqual(sorted(self.appel("appels").split(",")), ["1:dismiss", "2:dismiss", "3:dismiss"])
+
+    def test_clavier_garde_la_courante_en_vue(self):
+        self.appel("hauteurMax", 400)
+        for i in range(12):
+            self.creer(f"App{i}")
+        self.jusqua(lambda: self.etat()["defilable"], "liste défilante")
+        # Douze entrées, la plus récente en tête : la douzième flèche atteint la plus ancienne, tout en bas.
+        for _ in range(12):
+            self.appel("touche", "bas")
+        e = self.jusqua(lambda: (e := self.etat())["vue"] and e["vue"]["haut"] >= 0 and e["vue"]["bas"] <= e["vue"]["hauteur"]
+                        and e, "ligne courante dans la vue")
+        self.assertEqual(e["courante"], 1)
+
+    def test_hauteur_max(self):
+        self.appel("hauteurMax", 600)
+        for i in range(30):
+            self.creer(f"App{i}")
+        e = self.jusqua(lambda: (e := self.etat())["hauteur"] == 600 and e, "hauteur bornée")
+        self.assertTrue(e["defilable"])
+        self.appel("toutEffacer")
+        self.jusqua(lambda: self.etat()["hauteur"] == 320 and not self.etat()["defilable"], "retour à la hauteur minimale", 20)
+
+
+class FenetrePanneauStatiqueTest(unittest.TestCase):
+    """La fenêtre de calque du panneau, qui ne se construit pas sous offscreen : règles lues dans le texte QML."""
+
+    def setUp(self):
+        self.fenetre = (ROOT / "coque" / "Notifications" / "CalquePanneau.qml").read_text(encoding="utf-8")
+
+    def test_calque(self):
+        for ligne in ('WlrLayershell.namespace: "dunei-panneau"', "WlrLayershell.layer: WlrLayer.Top",
+                      "anchors { top: true; right: true; bottom: true }", 'color: "transparent"', "exclusiveZone: 0",
+                      "WlrLayershell.keyboardFocus: racine.ouvert ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None"):
+            self.assertIn(ligne, self.fenetre)
+        self.assertIn('"^dunei-panneau$"', (ROOT / "generated" / "hyprland-layers.lua").read_text(encoding="utf-8"))
+
+    def test_surface_constante(self):
+        # La largeur de la fenêtre ne lit aucun ressort : seule la forme bouge (D132, D134).
+        largeur = re.search(r"implicitWidth:([^\n]*)", self.fenetre).group(1)
+        self.assertIn("Theme.panneau?.largeur", largeur)
+        self.assertNotRegex(largeur, r"\.value|largeurForme|hauteurForme")
+        self.assertNotIn("implicitHeight", re.sub(r"//.*", "", self.fenetre))
+
+    def test_prise_du_clavier(self):
+        # La barre de la cloche partage la prise : un clic sur la cloche ferme par la cloche, sans réouverture.
+        self.assertRegex(self.fenetre, r"HyprlandFocusGrab \{\s*windows: racine\.barre \? \[fenetre, racine\.barre\] : "
+                                       r"\[fenetre\]\s*active: racine\.ouvert\s*onCleared: racine\.ouvert = false")
+
+    def test_masque_sur_le_corps(self):
+        self.assertRegex(self.fenetre, r"mask: Region \{[^}]*width: forme\.charge \? ")
+
+    def test_calque_cree_a_la_demande(self):
+        # PanelWindow ne se compile pas sous offscreen : la logique ne le nomme pas, elle crée le calque par son fichier.
+        logique = (ROOT / "coque" / "Notifications" / "FenetrePanneau.qml").read_text(encoding="utf-8")
+        self.assertNotIn("PanelWindow {", logique)
+        self.assertIn('Qt.createComponent("CalquePanneau.qml")', logique)
+
+    def test_coque(self):
+        shell = (ROOT / "coque" / "shell.qml").read_text(encoding="utf-8")
+        # L'identifiant ne s'appelle pas « panneau » : dans la Barre, ce nom désignerait sa propre propriété.
+        self.assertRegex(shell, r"FenetrePanneau \{ id: panneauNotifications; centre: centre \}")
+        self.assertRegex(shell, r"Barre \{ modelData: ecran\.modelData; panneau: panneauNotifications \}")
+        # La mémoire de l'attente précède le Centre : elle est rechargée avant la réémission des notifications.
+        self.assertLess(shell.index("MemoireAttente {"), shell.index("Centre { id: centre }"))
+
+
+@unittest.skipUnless(os.environ.get("WAYLAND_DISPLAY") and QS, "session Wayland et Quickshell requis")
+class FenetrePanneauTest(EssaiCoque, unittest.TestCase):
+    """La logique de la fenêtre du panneau et sa forme animée, sous offscreen : séquence, hauteur, exclusivité."""
+
+    essai = ESSAI / "fenetre"
+    teintes = (55,)
+    environnement = CarteTest.environnement
+
+    def preparer(self) -> None:
+        """Dernière occasion de poser un fichier avant le lancement ; ne fait rien ici."""
+
+    def setUp(self):
+        super().setUp()
+        self.installer(55)
+        self.preparer()
+        self.lancer(self.dir)
+        self.attendre("essai : prêt")
+        self.jusqua(lambda: self.appel("pret") == "true", "jetons chargés")
+
+    appel = PileTest.appel
+    jusqua = PanneauTest.jusqua
+
+    def etat(self) -> dict:
+        """État de la fenêtre et de la forme. Sortie : dictionnaire (voir etat dans la coque d'essai)."""
+        return json.loads(self.appel("etat"))
+
+    def repos(self, ouvert: bool) -> dict:
+        """Attend le repos de la forme, ouverte ou fermée. Entrée : ouvert. Sortie : l'état au repos."""
+        return self.jusqua(lambda: (e := self.etat())["phase"] == "repos" and e["charge"] == ouvert and e,
+                           f"repos {'ouvert' if ouvert else 'fermé'}")
+
+    def test_sequence(self):
+        e = self.etat()
+        self.assertEqual((e["ouvert"], e["phase"], e["charge"], e["largeur"], e["masque"]),
+                         (False, "repos", False, 0, [0, 0, 0, 0]))
+        self.appel("marquer")
+        self.appel("basculer", "A")
+        e = self.repos(True)
+        self.assertEqual((e["ouvert"], e["ecran"], e["phases"]), (True, "A", ["forme", "entree", "repos"]))
+        # Le contenu a fini de paraître ; le ressort de la largeur achève sa course à une fraction de pixel près.
+        e = self.jusqua(lambda: (e := self.etat())["largeur"] == 364 and e, "largeur posée")
+        self.assertEqual((e["hauteur"], e["opacite"]), (320, 1))
+        # Le masque est le corps de la forme : collé au bord droit, sous l'évasement du haut.
+        self.assertEqual(e["masque"], [e["formeLargeur"] - 364, 13, 364, 320])
+        self.appel("marquer")
+        self.appel("basculer", "A")
+        e = self.repos(False)
+        self.assertEqual((e["ouvert"], e["phases"], e["largeur"], e["masque"]),
+                         (False, ["sortie", "repos"], 0, [0, 0, 0, 0]))
+        self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
+
+    def test_echap(self):
+        self.appel("basculer", "A")
+        self.repos(True)
+        self.appel("echap")
+        self.assertFalse(self.repos(False)["ouvert"])
+
+    def test_hauteur_suit_le_contenu(self):
+        self.appel("basculer", "A")
+        self.repos(True)
+        self.appel("marquer")
+        for app in ("A", "B", "C", "D", "E"):
+            self.appel("creer", app)
+        e = self.jusqua(lambda: (e := self.etat())["hauteur"] > 320 and len(e["hauteurs"]) > 3
+                        and e["hauteurs"][-1] == e["hauteur"] and self.etat()["hauteur"] == e["hauteur"] and e,
+                        "hauteur au repos")
+        # La forme rejoint la hauteur du contenu par des valeurs intermédiaires.
+        self.assertTrue(any(320 < h < e["hauteur"] for h in e["hauteurs"]), e["hauteurs"])
+
+    def test_hauteur_bornee(self):
+        self.appel("basculer", "A")
+        for i in range(40):
+            self.appel("creer", f"App{i}")
+        e = self.jusqua(lambda: (e := self.etat())["phase"] == "repos" and e["hauteur"] == self.etat()["hauteur"]
+                        and e["hauteur"] > 320 and e, "hauteur au repos")
+        self.assertLessEqual(e["hauteur"] + 2 * 13, e["formeHauteur"])
+
+    def test_exclusif(self):
+        self.appel("basculer", "A")
+        self.appel("ouvrirAutre")
+        self.assertFalse(self.etat()["ouvert"])
+        self.appel("basculer", "A")
+        self.assertEqual((self.etat()["ouvert"], self.appel("autreOuvert")), (True, "false"))
+
+    def test_ecrans(self):
+        self.appel("basculer", "A")
+        self.appel("basculer", "B")
+        e = self.etat()
+        self.assertEqual((e["ouvert"], e["ecran"]), (True, "B"))
+        self.appel("debrancher", "A")
+        self.assertTrue(self.etat()["ouvert"])
+        self.appel("debrancher", "B")
+        self.assertFalse(self.etat()["ouvert"])
+
+    def test_ecran_detruit(self):
+        # Un écran détruit avant que la liste des écrans ne change laisse ecran à null : le panneau se ferme aussi.
+        self.appel("basculer", "A")
+        self.appel("detruireEcran", "A")
+        self.assertFalse(self.etat()["ouvert"])
+
+    def test_plein_ecran(self):
+        self.appel("pleinEcran", "true")
+        self.appel("basculer", "A")
+        self.assertFalse(self.etat()["ouvert"])
+
+
+class FenetrePanneauReduitTest(FenetrePanneauTest):
+    """Mouvement réduit : la forme prend sa taille d'un coup, seul le fondu du contenu dure."""
+
+    def preparer(self):
+        (self.dir / "mouvement.json").write_text('{"reduit": true}')
+
+    def test_sequence(self):
+        self.appel("marquer")
+        self.appel("basculer", "A")
+        e = self.etat()
+        self.assertEqual((e["largeur"], e["hauteur"]), (364, 320))
+        self.assertEqual(self.repos(True)["opacite"], 1)
+        self.appel("basculer", "A")
+        self.assertEqual(self.repos(False)["largeur"], 0)
+
+
+for _nom in [n for n in vars(FenetrePanneauTest) if n.startswith("test_") and n != "test_sequence"]:
+    setattr(FenetrePanneauReduitTest, _nom, None)
+
+
+@unittest.skipUnless(os.environ.get("WAYLAND_DISPLAY") and QS, "session Wayland et Quickshell requis")
+class PageNotificationsTest(EssaiCoque, unittest.TestCase):
+    """La page Notifications de Paramètres : interrupteur de « ne pas déranger » et applications retirées."""
+
+    essai = ESSAI / "page"
+    teintes = (55,)
+    environnement = CarteTest.environnement
+
+    def setUp(self):
+        super().setUp()
+        self.installer(55)
+        self.lancer(self.dir)
+        self.attendre("essai : prêt")
+        self.jusqua(lambda: self.appel("pret") == "true", "jetons chargés")
+
+    appel = PileTest.appel
+    jusqua = PanneauTest.jusqua
+
+    def etat(self) -> dict:
+        """État de la page. Sortie : dictionnaire (voir etat dans la coque d'essai)."""
+        return json.loads(self.appel("etat"))
+
+    def test_interrupteur_dans_les_deux_sens(self):
+        e = self.etat()
+        self.assertEqual((e["interrupteur"], e["nePasDeranger"], e["phrase"]), (False, False, "Désactivé"))
+        self.appel("basculer")
+        e = self.etat()
+        self.assertEqual((e["interrupteur"], e["nePasDeranger"]), (True, True))
+        self.assertEqual(e["phrase"], "Activé")
+        self.appel("poser", "false")
+        self.assertFalse(self.etat()["interrupteur"])
+
+    def test_retirees(self):
+        e = self.etat()
+        self.assertEqual((e["rangees"], e["vide"]), ([], True))
+        self.appel("retirer", "Signal")
+        self.appel("retirer", "inconnue.desktop.absente")
+        e = self.etat()
+        self.assertEqual((e["rangees"], e["vide"]), (["Signal", "inconnue.desktop.absente"], False))
+        self.appel("remettre", "Signal")
+        self.assertEqual(self.etat()["retirees"], ["inconnue.desktop.absente"])
+        self.appel("remettre", "inconnue.desktop.absente")
+        self.jusqua(lambda: self.etat()["vide"], "ligne « Aucune application retirée »")
+        self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
+
+    def test_atteindre(self):
+        self.appel("atteindre", "ne-pas-deranger")
+        self.assertEqual(self.etat()["montre"], "nePasDeranger")
+        self.appel("atteindre", "retirees")
+        self.assertEqual(self.etat()["montre"], "retirees")

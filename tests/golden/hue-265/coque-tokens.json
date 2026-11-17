@@ -99,7 +99,17 @@
     "windowWidth": 840,
     "windowHeight": 640,
     "windowMinWidth": 720,
-    "windowMinHeight": 480
+    "windowMinHeight": 480,
+    "entryHeight": 32,
+    "thumb": 22,
+    "thumbGlyph": 14,
+    "networksShown": 5,
+    "sidebarWidth": 244,
+    "pageMargin": 20,
+    "pageRise": 6,
+    "thumbLarge": 44,
+    "sparklineWidth": 92,
+    "sparklineHeight": 30
   },
   "breakpoints": {
     "compact": 480,
@@ -598,6 +608,13 @@
             "edgeLight": false,
             "shadow": true
           },
+          "card": {
+            "fill": "#1f242e",
+            "sheen": false,
+            "sheenTop": null,
+            "edgeLight": true,
+            "shadow": true
+          },
           "field": {
             "fill": "#060911",
             "insetShadow": true
@@ -614,7 +631,27 @@
           "insetShadow": "#38000000",
           "insetDepth": 4,
           "shadowBlur": 16,
-          "shadowOffsetY": 4
+          "shadowOffsetY": 4,
+          "thumb": {
+            "tint": 0.24,
+            "sheen": 0.24,
+            "edge": 0.1,
+            "halo": 0.0,
+            "edgeTinted": false,
+            "sheenCenter": 0.5,
+            "sheenReach": 0.55,
+            "haloCenter": 0.3,
+            "haloReach": 0.75,
+            "ground": "#1f242e"
+          },
+          "headerGlow": 0.13,
+          "headerGlowReach": 0.42,
+          "highlight": "#ffffff",
+          "cardShadow": "#73000000",
+          "cardShadowBlur": 3,
+          "cardShadowOffsetY": 1,
+          "medallionSheen": 0.14,
+          "medallionSheenReach": 0.6
         },
         "glass": {
           "e2": 1.0,
@@ -1086,6 +1123,13 @@
             "edgeLight": false,
             "shadow": true
           },
+          "card": {
+            "fill": "#1d1d1d",
+            "sheen": false,
+            "sheenTop": null,
+            "edgeLight": true,
+            "shadow": true
+          },
           "field": {
             "fill": "#040404",
             "insetShadow": true
@@ -1102,7 +1146,27 @@
           "insetShadow": "#38000000",
           "insetDepth": 4,
           "shadowBlur": 16,
-          "shadowOffsetY": 4
+          "shadowOffsetY": 4,
+          "thumb": {
+            "tint": 0.24,
+            "sheen": 0.24,
+            "edge": 0.1,
+            "halo": 0.0,
+            "edgeTinted": false,
+            "sheenCenter": 0.5,
+            "sheenReach": 0.55,
+            "haloCenter": 0.3,
+            "haloReach": 0.75,
+            "ground": "#1d1d1d"
+          },
+          "headerGlow": 0.13,
+          "headerGlowReach": 0.42,
+          "highlight": "#ffffff",
+          "cardShadow": "#73000000",
+          "cardShadowBlur": 3,
+          "cardShadowOffsetY": 1,
+          "medallionSheen": 0.14,
+          "medallionSheenReach": 0.6
         },
         "glass": {
           "e2": 1.0,
@@ -1572,6 +1636,13 @@
             "edgeLight": false,
             "shadow": true
           },
+          "card": {
+            "fill": "#ffffff",
+            "sheen": false,
+            "sheenTop": null,
+            "edgeLight": true,
+            "shadow": true
+          },
           "field": {
             "fill": "#ffffff",
             "insetShadow": true
@@ -1588,7 +1659,27 @@
           "insetShadow": "#38000000",
           "insetDepth": 4,
           "shadowBlur": 16,
-          "shadowOffsetY": 4
+          "shadowOffsetY": 4,
+          "thumb": {
+            "tint": 0.0,
+            "sheen": 0.14,
+            "edge": 0.38,
+            "halo": 0.42,
+            "edgeTinted": true,
+            "sheenCenter": 0.5,
+            "sheenReach": 0.55,
+            "haloCenter": 0.3,
+            "haloReach": 0.75,
+            "ground": "#f4f4f4"
+          },
+          "headerGlow": 0.13,
+          "headerGlowReach": 0.42,
+          "highlight": "#ffffff",
+          "cardShadow": "#21000000",
+          "cardShadowBlur": 4,
+          "cardShadowOffsetY": 1,
+          "medallionSheen": 0.14,
+          "medallionSheenReach": 0.6
         },
         "glass": {
           "e2": 0.85,
@@ -1673,5 +1764,21 @@
     "interieur": 12,
     "lignes": 3,
     "reprise": 1000
+  },
+  "cloche": {
+    "hauteur": 13,
+    "corps": 9.5,
+    "interieur": 3,
+    "boule": 8,
+    "pastilleX": 9,
+    "pastilleY": -5,
+    "bouleX": 10,
+    "bouleY": -2
+  },
+  "panneau": {
+    "largeur": 364,
+    "hauteurMin": 320,
+    "lignes": 2,
+    "cascade": 60
   }
 }
