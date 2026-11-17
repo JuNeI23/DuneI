@@ -110,7 +110,8 @@ ShellRoot {
     }
 
     // depliants — état des dépliants de réseau de la fenêtre, par uuid : {ouvert, charge (contenu chargé), lu (profil
-    // lu), tuiles (libellé → texte des tuiles d'information de la page), avances (réglages avancés dépliés),
+    // lu), montre (hauteur montrée du contenu, en px), decalage (position du contenu sous la tête : négative quand il
+    // remonte au repli), tuiles (libellé → texte des tuiles d'information de la page), avances (réglages avancés dépliés),
     // tuilesAvances (libellé → texte des tuiles des réglages avancés chargés), titre (nom mis en valeur dans la tête),
     // pied (textes des boutons du pied montrés), reglages (libellés des réglages montrés), ouvertTexte
     // (« Aucun (réseau ouvert) » montré), champ (champ du mot de passe montré), secret (longueur de son
@@ -127,7 +128,8 @@ ShellRoot {
                 if (!String(e.objectName).startsWith("depliant:")) { parcourir(e); continue }
                 const c = e.corps
                 r[e.rangee?.uuid ?? ""] = {
-                    ouvert: e.ouvert, charge: c !== null, lu: c?.profil.lu ?? false,
+                    ouvert: e.ouvert, charge: c !== null, lu: c?.profil.lu ?? false, montre: e._contenu * e.progression,
+                    decalage: e.decalageContenu,
                     tuiles: c ? c.tuiles.liste.reduce((m, t) => (m[t.libelle] = t.texte, m), {}) : {},
                     avances: c?.reglages.pli.ouvert ?? false,
                     tuilesAvances: (c?.reglages.contenuAvances?.tuiles.visible ? c.reglages.contenuAvances.tuiles.liste : []).reduce((m, t) => (m[t.libelle] = t.texte, m), {}),
