@@ -1,12 +1,50 @@
 import QtQuick
+import "../Theme"
+import "../Notifications"
 import "icones.js" as Icones
 
-// Notifications — cloche de la barre.
-// Rôle : affiche la cloche fixe des notifications. Le serveur et la pile (coque/Notifications/) tiennent les
-// notifications ; la cloche ne lit plus rien en attendant la feature suivante, qui apportera la pastille de
-// compte, l'historique et le « ne pas déranger ».
-// Entrées : aucune. Sorties : aucune. Erreurs : aucune.
-// Dépendances : ElementBarre, icones.js.
+// Notifications — cloche de la barre (L2-67).
+// Rôle : dit sans qu'on l'ouvre s'il reste des notifications à traiter, ouvre le panneau où elles attendent, et porte
+// l'état « ne pas déranger ». Le glyphe est creux sans rien à traiter, plein dès une notification ; barré sous « ne
+// pas déranger » (le passage se fait en fondu croisé) ; la pastille posée dessus donne le nombre, ou une boule rouge
+// dès qu'une notification critique attend (PastilleCloche). Un clic gauche ouvre ou ferme le panneau sur l'écran de
+// cette barre ; un clic droit bascule « ne pas déranger » sans ouvrir le panneau. Tant que le panneau est ouvert sur
+// son écran, la cloche suit la règle des icônes dont le popover est ouvert (accent, glyphe plein, descente : D105).
+// Entrées : panneau, l'objet à l'interface de FenetrePanneau (ouvert, ecran, attente : nombre et critique,
+// basculer(barre)), null par défaut : la cloche reste alors creuse et un clic gauche ne fait rien ; barre, la fenêtre
+// de la barre qui la porte (modelData : son écran), passée à basculer.
+// Sorties : nombre, critique ; pastille, la PastilleCloche, lue par les essais ; signal secondaire(), le clic droit.
+// Erreurs : aucune. Dépendances : ElementBarre, PastilleCloche, icones.js, EtatNotifications.
 ElementBarre {
-    icone: Icones.iconeNotifications(false)
+    id: cloche
+
+    property QtObject panneau: null
+    property QtObject barre: null
+    readonly property int nombre: panneau?.attente?.nombre ?? 0
+    readonly property bool critique: panneau?.attente?.critique ?? false
+    readonly property alias pastille: pastille
+
+    signal secondaire()
+
+    cliquable: true
+    fondu: true
+    pleine: nombre > 0
+    icone: Icones.iconeNotifications(EtatNotifications.nePasDeranger)
+    ouvert: !!panneau && panneau.ouvert && panneau.ecran === (barre?.modelData ?? null)
+
+    onClicked: panneau?.basculer(barre)
+    onSecondaire: EtatNotifications.basculer()
+
+    TapHandler {
+        acceptedButtons: Qt.RightButton
+        onTapped: cloche.secondaire()
+    }
+
+    PastilleCloche {
+        id: pastille
+        parent: cloche.cadreIcone
+        nombre: cloche.nombre
+        critique: cloche.critique
+        couleur: cloche.couleurRessort.value
+    }
 }

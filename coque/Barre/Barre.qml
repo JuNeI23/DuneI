@@ -11,11 +11,12 @@ import "../Energie"
 // Barre — barre système de DuneI, posée en haut de chaque écran (L2-08, L2-09).
 // Rôle : fenêtre de calque de 28 px, transparente, qui réserve 28 px en haut de l'écran ; à gauche le logo et
 // l'horloge, à droite les indicateurs, au centre rien. Aucun fond ni capsule : les éléments se posent sur le
-// bureau. Le masque de saisie ne couvre que l'interrupteur jour/nuit et les indicateurs réseau, Bluetooth, audio et
-// batterie, seuls éléments cliquables : partout ailleurs les clics traversent la barre jusqu'au bureau. Elle ne prend
+// bureau. Le masque de saisie ne couvre que l'interrupteur jour/nuit, les indicateurs réseau, Bluetooth, audio et
+// batterie, et la cloche, seuls éléments cliquables : partout ailleurs les clics traversent la barre jusqu'au bureau. Elle ne prend
 // jamais le focus clavier. Elle porte le popover du réseau, ceux du Bluetooth, du son et de l'énergie, chacun ancré sous son
 // indicateur et rendu par la fenêtre unique HotePopovers.
-// Entrées : modelData, l'écran que lui donne le Variants de la coque.
+// Entrées : modelData, l'écran que lui donne le Variants de la coque ; panneau, le panneau des notifications
+// (FenetrePanneau) que sa cloche ouvre et dont elle lit l'attente, null par défaut (coques d'essai).
 // Sorties : une fenêtre de calque au namespace « dunei-barre » (floutée par les règles de calque générées).
 // Erreurs : sans jeton de thème, les éléments restent invisibles (voir chacun) ; la fenêtre reste posée.
 // Dépendances : quickshell ≥ 0.3 (PanelWindow, Region, WlrLayershell), QtQuick.Layouts, indicateurs du module
@@ -26,6 +27,7 @@ PanelWindow {
     id: barre
 
     required property var modelData
+    property QtObject panneau: null
 
     // Marge de la rangée au bord de l'écran, en pixels logiques.
     readonly property int marge: 10
@@ -71,6 +73,12 @@ PanelWindow {
             width: batterie.visible ? batterie.width : 0
             height: batterie.height
         }
+        Region {
+            x: rangee.x + droite.x + cloche.x
+            y: rangee.y + droite.y + cloche.y
+            width: cloche.visible ? cloche.width : 0
+            height: cloche.height
+        }
     }
     WlrLayershell.namespace: "dunei-barre"
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
@@ -95,7 +103,7 @@ PanelWindow {
             Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
             spacing: Theme.space?.scale[1] ?? 0
 
-            Notifications {}
+            Notifications { id: cloche; panneau: barre.panneau; barre: barre }
             Batterie {
                 id: batterie
                 onOuvertChanged: popoverEnergie.ouvert = ouvert

@@ -7,6 +7,7 @@ import Quickshell.Networking
 import "Theme"
 import "Barre"
 import "Reseau"
+import "Notifications"
 import "Barre/icones.js" as Icones
 import "Barre/forme.js" as Forme
 
@@ -37,7 +38,26 @@ ShellRoot {
         Bluetooth { id: bluetooth }
         Parametres { id: parametres }
         Vpn { id: vpn }
-        Notifications { id: notifications }
+        Notifications { id: notifications; panneau: fauxPanneau; barre: fausseBarre }
+    }
+
+    // Faux panneau des notifications, à l'interface que la cloche lit (FenetrePanneau) : il compte les bascules.
+    QtObject {
+        id: fauxPanneau
+        property bool ouvert: false
+        property var ecran: null
+        property int bascules: 0
+        property var derniere: null
+        readonly property QtObject attente: QtObject {
+            property int nombre: 0
+            property bool critique: false
+        }
+        function basculer(barre) { bascules++; derniere = barre }
+    }
+    // Fausse barre : la cloche n'en lit que l'écran (modelData).
+    QtObject {
+        id: fausseBarre
+        property var modelData: null
     }
 
     // Réactive EtatReseau peu après son arrêt : le moniteur réel, tué par l'arrêt, ne doit pas se voir relancé
@@ -93,6 +113,56 @@ ShellRoot {
         // Erreurs : aucune. Dépendances : forme.js.
         function rayon(rayonPanneau: real, largeur: real, hauteur: real): real {
             return Forme.rayon(rayonPanneau, largeur, hauteur)
+        }
+
+        // textePastille — texte de la pastille de la cloche (icones.js). Entrée : nombre. Sortie : texte.
+        // Erreurs : aucune. Dépendances : icones.js.
+        function textePastille(nombre: int): string { return Icones.textePastille(nombre) }
+
+        // cloche — règle l'attente du faux panneau. Entrées : nombre, critique. Sortie : aucune. Erreurs : aucune.
+        // Dépendances : fauxPanneau.
+        function cloche(nombre: int, critique: bool): void {
+            fauxPanneau.attente.nombre = nombre; fauxPanneau.attente.critique = critique
+        }
+
+        // ouvrirPanneau — ouvre ou ferme le faux panneau. Entrée : v. Sortie : aucune. Erreurs : aucune.
+        // Dépendances : fauxPanneau.
+        function ouvrirPanneau(v: bool): void { fauxPanneau.ouvert = v }
+
+        // cliquerCloche — clic gauche (« gauche ») ou droit (« droit ») sur la cloche, par ses signaux.
+        // Entrée : bouton. Sortie : aucune. Erreurs : aucune. Dépendances : notifications (clicked, secondaire).
+        function cliquerCloche(bouton: string): void {
+            bouton === "droit" ? notifications.secondaire() : notifications.clicked()
+        }
+
+        // etatCloche — JSON {icone, pleine, cliquable, ouvert, forme, texte, bascules, barre, nePasDeranger} de la
+        // cloche ; barre est vrai si la dernière bascule a reçu la barre de la cloche. Entrées : aucune.
+        // Sortie : texte. Erreurs : aucune. Dépendances : notifications, fauxPanneau, EtatNotifications.
+        function etatCloche(): string {
+            const p = notifications.pastille
+            return JSON.stringify({icone: notifications.icone, pleine: notifications.pleine,
+                cliquable: notifications.cliquable, ouvert: notifications.ouvert, forme: p.forme, texte: p.texte,
+                bascules: fauxPanneau.bascules, barre: fauxPanneau.derniere === fausseBarre,
+                nePasDeranger: EtatNotifications.nePasDeranger})
+        }
+
+        // mouvementPastille — JSON {pilule, boule} : opacité de la pilule du nombre et de la boule.
+        // Entrées : aucune. Sortie : texte. Erreurs : aucune. Dépendances : notifications.pastille.
+        function mouvementPastille(): string {
+            const p = notifications.pastille
+            return JSON.stringify({pilule: p.pilule.opacity, boule: p.boule.opacity})
+        }
+
+        // reglerElement — pose pleine et fondu sur l'ElementBarre d'essai. Entrées : pleine, fondu. Sortie : aucune.
+        // Erreurs : aucune. Dépendances : element.
+        function reglerElement(pleine: bool, fondu: bool): void { element.pleine = pleine; element.fondu = fondu }
+
+        // mouvementElement — JSON {remplissage, sortant, couleur} de l'ElementBarre d'essai : part de la variante
+        // pleine (0 à 1), opacité de la couche du glyphe sortant, couleur visée. Entrées : aucune. Sortie : texte.
+        // Erreurs : aucune. Dépendances : element.
+        function mouvementElement(): string {
+            return JSON.stringify({remplissage: element.remplissage, sortant: element.sortant.opacity,
+                                   couleur: String(element.couleurRessort.target)})
         }
 
         // regler — règle l'icône et le texte de l'ElementBarre d'essai. Entrées : icone, texte (vides permis).

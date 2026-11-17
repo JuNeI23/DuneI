@@ -65,6 +65,13 @@ function iconeBluetooth(adaptateur, allume) {
     return !adaptateur ? "" : allume ? "bluetooth-active" : "bluetooth-disabled"
 }
 
+// textePastille — texte de la pastille de la cloche (L2-67).
+// Entrée : nombre, celui des notifications à traiter. Sortie : « » pour 0 ou moins, le nombre jusqu'à 99, « 99+ »
+// au-delà. Erreurs : aucune.
+function textePastille(nombre) {
+    return nombre <= 0 ? "" : nombre > 99 ? "99+" : String(nombre)
+}
+
 // iconeNotifications — icône de l'état des notifications.
 // Entrée : enPause, ne pas déranger actif. Sortie : "notifications-disabled" ou
 // "preferences-system-notifications". Erreurs : aucune.
