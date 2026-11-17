@@ -371,6 +371,7 @@ Overlay {
             y: colonne.y + entete.y + emplacement.y
             opacity: panneau.fonduDisque
             icone: panneau.etat.allume ? "bluetooth-active" : "bluetooth-disabled"
+            fondu: true
             enabled: panneau.etat.disponible
             checked: panneau.etat.allume
             onToggled: { panneau.etat.allumer(checked); checked = Qt.binding(() => panneau.etat.allume) }

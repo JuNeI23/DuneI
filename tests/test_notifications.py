@@ -288,14 +288,16 @@ class PileTest(EssaiCoque, unittest.TestCase):
         self.rester_sans("3:expire", 2.0)
 
     def test_pas_d_expiration_en_file(self):
+        # Une seconde de délai : six créations par IPC prennent près de 400 ms (66 ms l'appel), et la première carte ne
+        # doit pas expirer avant que la sixième soit en file.
         for _ in range(6):
-            self.creer(delai=300)
+            self.creer(delai=1000)
         self.assertEqual(self.etat()[1], ["6"])
         # La première expiration libère une place ; la 6ᵉ entre alors en tête.
         self.jusqua(lambda: "6" in self.etat()[0], "6 affichée")
         entree = time.monotonic()
         self.assertNotIn("6:expire", self.appels())
-        self.assertAlmostEqual(self.attendre_appel("6:expire") - entree, 0.3, delta=0.2)
+        self.assertAlmostEqual(self.attendre_appel("6:expire") - entree, 1.0, delta=0.2)
 
     def test_survol_suspend(self):
         t0 = time.monotonic()
@@ -1098,6 +1100,14 @@ class EtatNotificationsTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(self.etat(), {"nePasDeranger": False, "retirees": []})
         self.assertFalse(self.fichier().exists())
 
+    def test_icone(self):
+        # Le glyphe de l'état, lu par la cloche de la barre et par la bascule du panneau : la cloche, barrée sous
+        # « ne pas déranger » (D182).
+        self.demarrer()
+        self.assertEqual(self.appel("essai", "icone"), "preferences-system-notifications")
+        self.appel("essai", "basculer")
+        self.assertEqual(self.appel("essai", "icone"), "notifications-disabled")
+
     def test_ecriture_et_relecture(self):
         self.demarrer()
         self.appel("essai", "basculer")
@@ -1339,11 +1349,28 @@ class PanneauTest(EssaiCoque, unittest.TestCase):
         self.jusqua(lambda: self.etat()["vide"] and self.etat()["hauteur"] == 320, "état vide à la hauteur minimale")
 
     def test_bascule(self):
+        # Allumée, la bascule dit que les notifications sont actives, sous la cloche ; éteinte, « ne pas déranger »,
+        # sous la cloche barrée (D182).
+        actives = {"allumee": True, "glyphe": "preferences-system-notifications"}
+        self.assertEqual(self.etat()["bascule"], actives)
         self.appel("basculer")
         e = self.etat()
         self.assertEqual((e["nePasDeranger"], e["texteEtat"]), (True, "Ne pas déranger"))
+        self.assertEqual(e["bascule"], {"allumee": False, "glyphe": "notifications-disabled"})
         self.appel("basculer")
-        self.assertEqual(self.etat()["texteEtat"], "Notifications actives")
+        e = self.etat()
+        self.assertEqual((e["nePasDeranger"], e["texteEtat"]), (False, "Notifications actives"))
+        self.assertEqual(e["bascule"], actives)
+
+    def test_reglages(self):
+        # Le pied du panneau porte « Réglages des notifications… » : un clic ouvre la page Notifications de
+        # l'application Paramètres et demande la fermeture du panneau.
+        e = self.etat()
+        self.assertEqual((e["lien"], e["parametres"]["ouverte"], e["fermetures"]),
+                         ("Réglages des notifications…", False, 0))
+        self.appel("reglages")
+        e = self.etat()
+        self.assertEqual((e["parametres"], e["fermetures"]), ({"ouverte": True, "page": "notifications"}, 1))
 
     def test_clavier(self):
         for app in ("A", "B", "C"):
@@ -1503,6 +1530,13 @@ class FenetrePanneauTest(EssaiCoque, unittest.TestCase):
         self.appel("echap")
         self.assertFalse(self.repos(False)["ouvert"])
 
+    def test_reglages_ferme(self):
+        # « Réglages des notifications… » replie le panneau : la forme relaie la demande de fermeture du contenu.
+        self.appel("basculer", "A")
+        self.repos(True)
+        self.appel("reglages")
+        self.assertFalse(self.repos(False)["ouvert"])
+
     def test_hauteur_suit_le_contenu(self):
         self.appel("basculer", "A")
         self.repos(True)
@@ -1574,7 +1608,7 @@ for _nom in [n for n in vars(FenetrePanneauTest) if n.startswith("test_") and n 
 
 @unittest.skipUnless(os.environ.get("WAYLAND_DISPLAY") and QS, "session Wayland et Quickshell requis")
 class PageNotificationsTest(EssaiCoque, unittest.TestCase):
-    """La page Notifications de Paramètres : interrupteur de « ne pas déranger » et applications retirées."""
+    """La page Notifications de Paramètres : interrupteur des notifications dans l'en-tête et applications retirées."""
 
     essai = ESSAI / "page"
     teintes = (55,)
@@ -1595,14 +1629,15 @@ class PageNotificationsTest(EssaiCoque, unittest.TestCase):
         return json.loads(self.appel("etat"))
 
     def test_interrupteur_dans_les_deux_sens(self):
+        # L'interrupteur de l'en-tête suit le sens de la bascule du panneau : allumé, les notifications sont actives ;
+        # éteint, « ne pas déranger » (D184).
         e = self.etat()
-        self.assertEqual((e["interrupteur"], e["nePasDeranger"], e["phrase"]), (False, False, "Désactivé"))
+        self.assertEqual((e["interrupteur"], e["nePasDeranger"], e["phrase"]), (True, False, "Actives"))
         self.appel("basculer")
         e = self.etat()
-        self.assertEqual((e["interrupteur"], e["nePasDeranger"]), (True, True))
-        self.assertEqual(e["phrase"], "Activé")
+        self.assertEqual((e["interrupteur"], e["nePasDeranger"], e["phrase"]), (False, True, "Ne pas déranger"))
         self.appel("poser", "false")
-        self.assertFalse(self.etat()["interrupteur"])
+        self.assertTrue(self.etat()["interrupteur"])
 
     def test_retirees(self):
         e = self.etat()
@@ -1617,8 +1652,20 @@ class PageNotificationsTest(EssaiCoque, unittest.TestCase):
         self.jusqua(lambda: self.etat()["vide"], "ligne « Aucune application retirée »")
         self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
 
+    def test_phrase_en_fondu(self):
+        # La phrase d'état de l'en-tête passe de l'une à l'autre en fondu croisé : l'ancienne s'efface pendant que la
+        # nouvelle paraît (D184).
+        self.assertEqual(json.loads(self.appel("fondu")), {"sortante": 0, "ancienne": ""})
+        self.appel("basculer")
+        vues, fin = [], time.monotonic() + DELAI
+        while (f := json.loads(self.appel("fondu")))["sortante"] != 0 or not vues:
+            self.assertLess(time.monotonic(), fin, f"phrase sortante à {f}")
+            vues.append(f)
+        self.assertTrue(any(0 < v["sortante"] < 1 and v["ancienne"] == "Actives" for v in vues), vues)
+
     def test_atteindre(self):
+        # « Ne pas déranger », trouvé par la recherche, mène à l'interrupteur de l'en-tête (D184).
         self.appel("atteindre", "ne-pas-deranger")
-        self.assertEqual(self.etat()["montre"], "nePasDeranger")
+        self.assertEqual(self.etat()["montre"], "enTete")
         self.appel("atteindre", "retirees")
         self.assertEqual(self.etat()["montre"], "retirees")

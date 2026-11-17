@@ -1,7 +1,6 @@
 import QtQuick
 import "../Theme"
 import "../Notifications"
-import "icones.js" as Icones
 
 // Notifications — cloche de la barre (L2-67).
 // Rôle : dit sans qu'on l'ouvre s'il reste des notifications à traiter, ouvre le panneau où elles attendent, et porte
@@ -15,7 +14,7 @@ import "icones.js" as Icones
 // basculer(barre)), null par défaut : la cloche reste alors creuse et un clic gauche ne fait rien ; barre, la fenêtre
 // de la barre qui la porte (modelData : son écran), passée à basculer.
 // Sorties : nombre, critique ; pastille, la PastilleCloche, lue par les essais ; signal secondaire(), le clic droit.
-// Erreurs : aucune. Dépendances : ElementBarre, PastilleCloche, icones.js, EtatNotifications.
+// Erreurs : aucune. Dépendances : ElementBarre, PastilleCloche, EtatNotifications.
 ElementBarre {
     id: cloche
 
@@ -30,7 +29,7 @@ ElementBarre {
     cliquable: true
     fondu: true
     pleine: nombre > 0
-    icone: Icones.iconeNotifications(EtatNotifications.nePasDeranger)
+    icone: EtatNotifications.icone
     ouvert: !!panneau && panneau.ouvert && panneau.ecran === (barre?.modelData ?? null)
 
     onClicked: panneau?.basculer(barre)

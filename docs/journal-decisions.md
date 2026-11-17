@@ -4164,3 +4164,51 @@ reviendra au besoin. Essais : `PanneauTest.test_bascule`, `PageNotificationsTest
 
 *Touché : `coque/Notifications/Panneau.qml`, `PageNotifications.qml`, `coque/Barre/Notifications.qml`,
 `PastilleCloche.qml`, bible (annexe E, 0.37).*
+
+### D182 · La bascule du panneau dit les notifications, pas « ne pas déranger »
+
+17 novembre 2026 · L2-67, retour après fusion. Nicolas trouve la bascule à glyphe du panneau peu intuitive : allumée,
+elle signifiait « ne pas déranger », sous une lune, alors qu'une bascule allumée se lit comme un service qui marche
+(« activé doit impliquer notifications activées, sinon ne pas déranger »). Elle dit désormais les notifications :
+allumée quand elles sont actives, sous la cloche ; éteinte sous « ne pas déranger », sous la cloche barrée, le glyphe
+passant de l'une à l'autre en fondu croisé au ressort `state`. Le libellé d'état unique de D181 ne change pas. Le
+glyphe de l'état n'a plus qu'une source, `EtatNotifications.icone`, que lisent la cloche de la barre et la bascule ;
+la correspondance quitte `coque/Barre/icones.js`. La Bascule gagne l'option `fondu`, sur le modèle de l'élément de
+barre : un glyphe qui dit un état passe en fondu croisé. Celui du Bluetooth la prend aussi, celui du Wi-Fi non,
+puisqu'il suit la force du signal. Essais : `PanneauTest.test_bascule`, `EtatNotificationsTest.test_icone`,
+`CoqueComposantsTest.test_bascule_fondu`.
+
+*Touché : `coque/Notifications/Panneau.qml`, `EtatNotifications.qml`, `coque/Composants/Bascule.qml`,
+`coque/Barre/Notifications.qml`, `icones.js`, `coque/Bluetooth/PopoverBluetooth.qml`, bible (annexe E, 0.38),
+backlog (version 1.57), notes de direction (version 1.52).*
+
+### D183 · Le panneau mène aux réglages des notifications
+
+17 novembre 2026 · L2-67, retour après fusion. Nicolas relève que la page Notifications de Paramètres n'est pas
+accessible depuis le panneau. Le panneau prend un pied, comme le popover de réglage rapide (D105) : sous un filet
+translucide (`material.glassLine`), l'action en texte seul « Réglages des notifications… », qui ouvre la page
+Notifications et demande la fermeture du panneau. La fenêtre Paramètres attend le repli du panneau, contextuel du
+registre Overlays, comme elle attend celui d'un popover (D174). La liste défile désormais entre l'en-tête et la
+bascule, en haut, et le pied, en bas ; la rangée suit « Tout effacer » dans l'ordre de tabulation. Essais :
+`PanneauTest.test_reglages`, `FenetrePanneauTest.test_reglages_ferme`.
+
+*Touché : `coque/Notifications/Panneau.qml`, `FormePanneau.qml`, coques d'essai du panneau et de sa fenêtre, bible
+(annexe E, 0.38), backlog (version 1.57), notes de direction (version 1.52).*
+
+### D184 · La page Notifications suit le sens du panneau
+
+17 novembre 2026 · L2-67, retour après fusion. Une fois la bascule du panneau retournée (D182), l'interrupteur
+« Ne pas déranger » de la page Notifications de Paramètres restait allumé quand le mode était actif : un même état
+aurait été allumé à un endroit et éteint à l'autre. Nicolas veut le même sens partout. L'interrupteur quitte sa carte
+pour la carte d'en-tête, comme celui du Wi-Fi : allumé, les notifications sont actives, et la phrase d'état dit
+« Actives » ; éteint, elle dit « Ne pas déranger ». La carte « Ne pas déranger » et son texte d'aide disparaissent ;
+la recherche « Ne pas déranger » mène à l'en-tête. La phrase d'état de la carte d'en-tête passe désormais de l'une à
+l'autre en fondu croisé au ressort `state`, pour toutes les pages. En l'éprouvant, l'essai a montré qu'un nom tenu
+par liaison pouvait se mettre à jour avant le gestionnaire de changement, qui lançait alors un fondu entre deux
+textes identiques à la création : la carte d'en-tête et la Bascule tiennent ce nom à la main, initialisé à la fin de
+la construction, et ne fondent jamais deux textes identiques. Essais : `PageNotificationsTest`
+(`test_interrupteur_dans_les_deux_sens`, `test_phrase_en_fondu`, `test_atteindre`).
+
+*Touché : `coque/Notifications/PageNotifications.qml`, `coque/Parametres/EnTetePage.qml`,
+`coque/Composants/Bascule.qml`, coque d'essai de la page, bible (chapitre 7 et annexe E, 0.38), backlog (version
+1.57), notes de direction (version 1.52).*

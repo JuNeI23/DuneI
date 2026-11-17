@@ -72,13 +72,6 @@ function textePastille(nombre) {
     return nombre <= 0 ? "" : nombre > 99 ? "99+" : String(nombre)
 }
 
-// iconeNotifications — icône de l'état des notifications.
-// Entrée : enPause, ne pas déranger actif. Sortie : "notifications-disabled" ou
-// "preferences-system-notifications". Erreurs : aucune.
-function iconeNotifications(enPause) {
-    return enPause ? "notifications-disabled" : "preferences-system-notifications"
-}
-
 // iconeMoment — icône de l'interrupteur jour/nuit.
 // Entrée : moment, « jour » ou « nuit ». Sortie : "weather-clear-night" pour la nuit, "weather-clear" sinon.
 // Erreurs : aucune.

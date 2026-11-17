@@ -155,8 +155,6 @@ class IconesTest(BarreIpc, unittest.TestCase):
         self.assertEqual(self.appeler("iconeBluetooth", False, True), "")
         self.assertEqual(self.appeler("iconeBluetooth", True, False), "bluetooth-disabled")
         self.assertEqual(self.appeler("iconeBluetooth", True, True), "bluetooth-active")
-        self.assertEqual(self.appeler("iconeNotifications", True), "notifications-disabled")
-        self.assertEqual(self.appeler("iconeNotifications", False), "preferences-system-notifications")
         for nombre, texte in ((0, ""), (1, "1"), (99, "99"), (100, "99+"), (4000, "99+")):
             self.assertEqual(self.appeler("textePastille", nombre), texte)
         self.assertEqual(self.appeler("iconeMoment", "nuit"), "weather-clear-night")

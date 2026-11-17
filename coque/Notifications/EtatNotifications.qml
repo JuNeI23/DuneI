@@ -12,7 +12,9 @@ import Quickshell.Io
 // Entrées : chemin, le fichier de l'état, notifications.json dans le dossier d'état de la coque (Quickshell.stateDir)
 // par défaut, ou dans celui que nomme la variable DUNEI_ETAT_DIR (posée par les essais, pour qu'une coque d'essai
 // n'écrive jamais dans l'état de la session).
-// Sorties : nePasDeranger ; retirees, identifiants (garde.js, identifiant) des applications retirées.
+// Sorties : nePasDeranger ; retirees, identifiants (garde.js, identifiant) des applications retirées ; icone, le
+// glyphe de l'état, cloche barrée sous « ne pas déranger », cloche sinon, lu par la cloche de la barre et la
+// bascule du panneau (D182).
 // Fonctions : basculer, poser, retirer, remettre. IPC : nePasDeranger, basculerNePasDeranger.
 // Erreurs : aucune ; un fichier absent ou illisible donne les valeurs par défaut, et il est créé ou réécrit à la
 // première modification.
@@ -23,6 +25,7 @@ Singleton {
     property string chemin: (Quickshell.env("DUNEI_ETAT_DIR") || Quickshell.stateDir) + "/notifications.json"
     readonly property bool nePasDeranger: adaptateur.nePasDeranger
     readonly property var retirees: adaptateur.retirees
+    readonly property string icone: nePasDeranger ? "notifications-disabled" : "preferences-system-notifications"
 
     // basculer — inverse « ne pas déranger ». Entrées, sortie, erreurs : aucune. Dépendances : poser.
     function basculer() { poser(!nePasDeranger) }
