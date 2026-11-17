@@ -235,6 +235,16 @@ class PileTest(EssaiCoque, unittest.TestCase):
         self.maj(m, body="x", urgency=2)
         self.assertEqual(self.sons(), ["arrivee", "urgence", "urgence"])
 
+    def test_mise_a_jour_ancienne_devient_critique(self):
+        # Une carte ancienne mise à jour, corps puis urgence, ne sonne qu'une fois : la mise à jour est jugée sur son
+        # état final, quel que soit l'ordre des signaux du serveur.
+        n = self.gardee()
+        self.appel("vieillir", n, 61000)
+        self.appel("vieillirSon", 61000)
+        self.maj(n, body="x", urgency=2)
+        time.sleep(0.1)
+        self.assertEqual(self.sons(), ["arrivee", "urgence"])
+
     def test_mise_a_jour_attente_ancienne_sonne(self):
         self.appel("deranger", "true")
         n = self.gardee()
@@ -858,6 +868,9 @@ class CentreTest(EssaiCoque, unittest.TestCase):
         for resume in ("Un", "Deux"):
             self.envoyer("-a", "Garde", "-u", "critical", resume)
         self.jusqua(lambda: self.etat()[0] == ["Deux", "Un"], "deux cartes attendues")
+        # Les deux lancements ont échoué (Quickshell journalise chacun) avant qu'on compte l'avertissement de Voix.
+        self.jusqua(lambda: self.journal().count("Process failed to start") == 2, "deux lancements manqués")
+        time.sleep(0.1)
         self.assertEqual(self.journal().count("voix des notifications injouable"), 1, self.journal())
 
     def test_pas_de_capacite_son(self):

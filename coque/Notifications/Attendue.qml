@@ -23,16 +23,28 @@ Scope {
     property bool sortante: false
     property Component verrou
     property int urgenceConnue: -1
+    // Version remplacée par la mise à jour en cours, en attente de son annonce (voir renouveler).
+    property var _remplacee: null
 
     signal fermee(int raison)
     signal renouvelee(var precedente)
 
-    // renouveler — suite d'une mise à jour sur place : annonce la version remplacée, puis prend la nouvelle urgence.
-    // L'heure d'arrivée est remise par la pile (Pile.reprendre). Entrées : aucune. Sortie : signal
-    // renouvelee({age, urgence}), en ms. Erreurs : aucune. Dépendances : urgenceConnue.
+    // renouveler — suite d'une mise à jour sur place : lit la version remplacée au premier signal, puis l'annonce une
+    // fois la mise à jour finie (Qt.callLater), comme Entree. L'heure d'arrivée est remise par la pile
+    // (Pile.reprendre). Entrées : aucune. Sortie : signal renouvelee({age, urgence}), en ms, par annoncer.
+    // Erreurs : aucune. Dépendances : urgenceConnue, annoncer.
     function renouveler() {
-        const precedente = {age: Date.now() - arrivee.getTime(), urgence: urgenceConnue}
-        urgenceConnue = notification.urgency
+        if (_remplacee !== null) return
+        _remplacee = {age: Date.now() - arrivee.getTime(), urgence: urgenceConnue}
+        Qt.callLater(annoncer)
+    }
+
+    // annoncer — fin d'une mise à jour : prend la nouvelle urgence et annonce la version remplacée. Entrées : aucune.
+    // Sortie : signal renouvelee. Erreurs : aucune. Dépendances : _remplacee, urgenceConnue.
+    function annoncer() {
+        const precedente = _remplacee
+        _remplacee = null
+        urgenceConnue = notification?.urgency ?? -1
         renouvelee(precedente)
     }
 

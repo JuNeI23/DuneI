@@ -45,6 +45,8 @@ Scope {
     property real depart: 0
 
     property int urgenceConnue: -1
+    // Version remplacée par la mise à jour en cours, en attente de son annonce (voir renouveler).
+    property var _remplacee: null
 
     signal echue()
     signal fermee(int raison)
@@ -73,12 +75,24 @@ Scope {
 
     // renouveler — suite d'un remplacement : l'heure d'arrivée devient l'instant présent, le compte est réarmé, et la
     // version remplacée est annoncée (la pile en juge la voix, L2-68). Une mise à jour émet un signal par propriété
-    // changée : les suivants annoncent un âge nul et l'urgence déjà connue.
+    // changée, dans un ordre que l'on ne choisit pas : la version remplacée est lue au premier, et l'annonce attend la
+    // fin de la mise à jour (Qt.callLater), pour être jugée une seule fois sur l'état final.
     // Entrées : aucune. Sortie : signal renouvelee({age, urgence}), l'âge en ms et l'urgence de la version remplacée,
-    // lus avant la remise à l'heure. Erreurs : aucune. Dépendances : rearmer, urgenceConnue.
+    // lus avant la remise à l'heure. Erreurs : aucune. Dépendances : rearmer, urgenceConnue, annoncer.
     function renouveler() {
-        const precedente = {age: Date.now() - arrivee.getTime(), urgence: urgenceConnue}
-        urgenceConnue = notification.urgency; arrivee = new Date(); rearmer()
+        if (_remplacee === null) {
+            _remplacee = {age: Date.now() - arrivee.getTime(), urgence: urgenceConnue}
+            Qt.callLater(annoncer)
+        }
+        arrivee = new Date(); rearmer()
+    }
+
+    // annoncer — fin d'une mise à jour : prend la nouvelle urgence et annonce la version remplacée. Entrées : aucune.
+    // Sortie : signal renouvelee. Erreurs : aucune. Dépendances : _remplacee, urgenceConnue.
+    function annoncer() {
+        const precedente = _remplacee
+        _remplacee = null
+        urgenceConnue = notification?.urgency ?? -1
         renouvelee(precedente)
     }
 
