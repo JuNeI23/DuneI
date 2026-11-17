@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas — révisée le 22 octobre 2026
 
-Version 1.52. Historique en fin de document.
+Version 1.53. Historique en fin de document.
 
 *Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent soixante-quinze lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
 
@@ -622,16 +622,27 @@ du panneau : allumée, elle dit que les notifications sont actives, sous la cloc
 la cloche barrée (D182), et voulu que le panneau mène aux réglages : son pied porte « Réglages des notifications… »
 (D183). La page Notifications de Paramètres suit le même sens, son interrupteur passant dans l'en-tête (D184).
 
-Prochaine étape : **le son de notification** (L2-68). Son principe est arrêté le 17 novembre : une notification
-sonne quand le panneau la garderait, qu'elle est neuve et que le silence n'a pas été choisi, d'une voix « arrivée »,
-ou « urgence » pour une critique ; le repérage de la techno et une séance d'écoute des sons précèdent la fiche. L'« Ouvrir » propre à DuneI (L2-69) vient ensuite. Le reste de L2-48, L2-57 (suites
-du popover Bluetooth), L2-58, L2-59 et L2-62 attendent leur tour.
+Le son de notification (L2-68) est fait. Une notification sonne quand le panneau la garderait : d'une voix brève,
+Arrivée, pour une normale, et d'une voix plus longue, Urgence, pour une critique, toutes deux tirées du thème sonore
+KDE Ocean. Nicolas les a inversées à l'écoute, la plus longue donnant davantage envie d'aller voir (D185). Une mise
+à jour ne sonne qu'après une minute ou en devenant critique ; une rafale ne sonne qu'une fois ; « ne pas déranger »
+et le plein écran font taire les normales. La lecture passe par `pw-play`, au volume du système, sans jamais
+enregistrer de volume pour le rôle Notification de tout le système (D186) ; la capacité « sound » n'est pas
+annoncée, mais l'indice `suppress-sound` est respecté (D187). La page Notifications de Paramètres gagne la carte
+« Son ». Quatre tours de synthèse d'une corde ancienne, sablonneuse, n'ont pas convaincu : la voix propre à DuneI
+est renvoyée au lot 5 (L5-31), avec sa maquette, gardée dans l'atelier. En recette, Nicolas a vu qu'un repli finissait
+en deux temps, sur la carte Son comme dans le dépliant du réseau Wi-Fi : le contenu remonte désormais sous la tête,
+et le ressort ne traîne plus sur ses derniers pixels (D188).
+
+Prochaine étape : **l'« Ouvrir » propre à DuneI** (L2-69). Le reste de L2-48, L2-57 (suites du popover Bluetooth),
+L2-58, L2-59 et L2-62 attendent leur tour.
 
 ## Historique des versions
 
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-10 | Version initiale |
+| 1.53 | 2026-11-17 | L2-68 fait : voix KDE Ocean et ses règles, carte « Son », repli d'un seul geste (D185 à D188) ; voix propre renvoyée au lot 5 (L5-31) ; prochaine étape : L2-69 |
 | 1.52 | 2026-11-17 | L2-67, retour après fusion : la bascule du panneau est allumée quand les notifications sont actives (D182), le panneau mène aux réglages (D183), la page suit le même sens (D184) ; principe du son de notification arrêté (L2-68) |
 | 1.51 | 2026-11-17 | L2-67 fait : cloche à pastille, panneau des notifications, « ne pas déranger » (D176 à D180) ; prochaine étape : L2-68 |
 | 1.50 | 2026-11-16 | L5-01 et L2-65 faits, en attente de fusion : application Paramètres (coquille, pages Wi-Fi, Filaire et VPN), popover réseau à la règle des cinq, fenêtre Réseau retirée (D165 à D175) ; prochaine étape inchangée : L2-67 |

@@ -170,6 +170,90 @@ class PileTest(EssaiCoque, unittest.TestCase):
         Sortie : aucune. Erreurs : échec du test au délai. Dépendances : jusqua, attente."""
         self.jusqua(lambda: self.attente()[:3] == attendu, f"attente {attendu} attendue, vue {self.attente()}", delai)
 
+    def sons(self) -> list[str]:
+        """Voix émises par la pile (signal sonner, L2-68), dans l'ordre. Entrées : aucune. Sortie : liste.
+        Erreurs : CalledProcessError si l'appel IPC échoue. Dépendances : appel."""
+        return [x for x in self.appel("sons").split(",") if x]
+
+    def maj(self, id_: str, **champs) -> None:
+        """Mise à jour sur place d'une notification (replaces_id), champ par champ dans l'ordre donné, en un seul
+        appel IPC. Entrées : id_ ; champs, propriétés de la notification. Sortie : aucune.
+        Erreurs : CalledProcessError si l'appel IPC échoue. Dépendances : appel."""
+        self.appel("majCarte", id_, json.dumps(champs))
+
+    def test_son_nouvelle(self):
+        self.gardee()
+        self.assertEqual(self.sons(), ["arrivee"])
+        self.gardee(urgence=2)
+        self.assertEqual(self.sons(), ["arrivee", "urgence"])
+        self.creer()
+        self.assertEqual(self.sons(), ["arrivee", "urgence"])
+
+    def test_son_rafale(self):
+        for _ in range(3):
+            self.gardee()
+        self.assertEqual(self.sons(), ["arrivee"])
+
+    def test_son_generation(self):
+        self.gardee(generation=True)
+        self.assertEqual(self.sons(), [])
+
+    def test_son_plein_ecran(self):
+        self.appel("pleinEcran", "true")
+        self.gardee()
+        self.assertEqual(self.sons(), [])
+        self.gardee(urgence=2)
+        self.assertEqual(self.sons(), ["urgence"])
+
+    def test_son_desactive(self):
+        self.appel("sonActif", "false")
+        self.gardee(urgence=2)
+        self.assertEqual(self.sons(), [])
+
+    def test_remplacement_par_cle_recent_muet(self):
+        self.gardee(etiquette="t")
+        self.gardee(etiquette="t")
+        self.assertEqual(self.sons(), ["arrivee"])
+
+    def test_mise_a_jour_carte_recente_muette(self):
+        n = self.gardee()
+        self.maj(n, body="x")
+        self.assertEqual(self.sons(), ["arrivee"])
+
+    def test_mise_a_jour_carte_ancienne_sonne(self):
+        n = self.gardee()
+        self.appel("vieillir", n, 61000)
+        self.appel("vieillirSon", 61000)
+        self.maj(n, body="x")
+        self.assertEqual(self.sons(), ["arrivee", "arrivee"])
+
+    def test_mise_a_jour_devient_critique(self):
+        n = self.gardee()
+        self.maj(n, urgency=2)
+        self.assertEqual(self.sons(), ["arrivee", "urgence"])
+        m = self.gardee(etiquette="u")
+        self.maj(m, body="x", urgency=2)
+        self.assertEqual(self.sons(), ["arrivee", "urgence", "urgence"])
+
+    def test_mise_a_jour_ancienne_devient_critique(self):
+        # Une carte ancienne mise à jour, corps puis urgence, ne sonne qu'une fois : la mise à jour est jugée sur son
+        # état final, quel que soit l'ordre des signaux du serveur.
+        n = self.gardee()
+        self.appel("vieillir", n, 61000)
+        self.appel("vieillirSon", 61000)
+        self.maj(n, body="x", urgency=2)
+        time.sleep(0.1)
+        self.assertEqual(self.sons(), ["arrivee", "urgence"])
+
+    def test_mise_a_jour_attente_ancienne_sonne(self):
+        self.appel("deranger", "true")
+        n = self.gardee()
+        self.attendue(1, False, ["1"])
+        self.appel("deranger", "false")
+        self.appel("vieillir", n, 61000)
+        self.maj(n, body="x")
+        self.assertEqual(self.sons(), ["arrivee"])
+
     def test_gardee_passe_a_l_attente(self):
         self.gardee()
         self.attendue(1, False, ["1"])
@@ -646,8 +730,9 @@ class CentreTest(EssaiCoque, unittest.TestCase):
 
     essai = ESSAI / "centre"
     teintes = (55,)
+    # La voix des notifications (L2-68) passe par le faux pw-play, qui note ses arguments sans rien jouer.
     environnement = {"QT_QPA_PLATFORM": "offscreen", "WAYLAND_DISPLAY": None, "DISPLAY": None,
-                     "HYPRLAND_INSTANCE_SIGNATURE": None}
+                     "HYPRLAND_INSTANCE_SIGNATURE": None, "DUNEI_PW_PLAY": str(ROOT / "tests" / "donnees" / "pw-play-temoin")}
     DUREE = 600
     # Durée explicite des envois qui ne doivent pas expirer pendant leurs vérifications.
     LONGUE = "4000"
@@ -660,6 +745,8 @@ class CentreTest(EssaiCoque, unittest.TestCase):
         # notify-send, l'application des cas historiques, est retirée du panneau : ses notifications expirent à
         # l'échéance de leur carte comme avant L2-67. Les cas de la garde envoient sous le nom « Garde ».
         (self.dir / "notifications.json").write_text(json.dumps({"nePasDeranger": False, "retirees": ["notify-send"]}))
+        self.temoin = self.dir / "sons.log"
+        self.environnement = {**self.environnement, "DUNEI_TEMOIN_SON": str(self.temoin)}
         demarrer(self, self.DUREE)
 
     def lancer(self, dossier) -> None:
@@ -676,6 +763,8 @@ class CentreTest(EssaiCoque, unittest.TestCase):
                "NO_COLOR": "1"}
         env = {cle: valeur for cle, valeur in env.items() if valeur is not None}
         adresse = self.dir.parent / "bus"
+        # Une relance dans le même test ne doit pas relire l'adresse du bus précédent.
+        adresse.unlink(missing_ok=True)
         script = 'printf "%s\\n%s" "$$" "$DBUS_SESSION_BUS_ADDRESS" > "$1.tmp"; mv "$1.tmp" "$1"; exec "$2" -p "$3"'
         with self.log.open("w") as sortie:
             self.proc = subprocess.Popen(["dbus-run-session", "--", "sh", "-c", script, "sh", str(adresse), QS,
@@ -750,6 +839,47 @@ class CentreTest(EssaiCoque, unittest.TestCase):
         """Attente du centre. Entrées : aucune. Sortie : {"nombre", "critique", "resumes"}.
         Erreurs : CalledProcessError si l'appel IPC échoue. Dépendances : appel."""
         return json.loads(self.appel("attente"))
+
+    def sons(self) -> list[str]:
+        """Lignes écrites par le faux pw-play, une par son lancé. Entrées : aucune. Sortie : liste.
+        Erreurs : aucune. Dépendances : temoin."""
+        return self.temoin.read_text().splitlines() if self.temoin.exists() else []
+
+    def test_voix_par_notify_send(self):
+        self.envoyer("-a", "Garde", "Essai")
+        ligne = self.jusqua(lambda: self.sons(), "un son attendu")[0]
+        for attendu in ("--media-role Notification", "state.restore-props = false", "--volume 1 ",
+                        "dialog-warning.oga"):
+            self.assertIn(attendu, ligne)
+
+    def test_voix_critique(self):
+        self.envoyer("-a", "Garde", "-u", "critical", "Essai")
+        self.assertIn("message-new-instant.oga", self.jusqua(lambda: self.sons(), "un son attendu")[0])
+
+    def test_suppress_sound(self):
+        self.envoyer("-a", "Garde", "-h", "boolean:suppress-sound:true", "-t", self.LONGUE, "Muette")
+        self.jusqua(lambda: self.etat()[0] == ["Muette"], "carte attendue")
+        time.sleep(0.3)
+        self.assertEqual(self.sons(), [])
+
+    def test_lecteur_absent(self):
+        self.environnement = {**self.environnement, "DUNEI_PW_PLAY": str(self.dir / "inexistant")}
+        demarrer(self, self.DUREE)
+        for resume in ("Un", "Deux"):
+            self.envoyer("-a", "Garde", "-u", "critical", resume)
+        self.jusqua(lambda: self.etat()[0] == ["Deux", "Un"], "deux cartes attendues")
+        # Les deux lancements ont échoué (Quickshell journalise chacun) avant qu'on compte l'avertissement de Voix.
+        self.jusqua(lambda: self.journal().count("Process failed to start") == 2, "deux lancements manqués")
+        time.sleep(0.1)
+        self.assertEqual(self.journal().count("voix des notifications injouable"), 1, self.journal())
+
+    def test_pas_de_capacite_son(self):
+        capacites = subprocess.run(["gdbus", "call", "--session", "--dest", "org.freedesktop.Notifications",
+                                    "--object-path", "/org/freedesktop/Notifications", "--method",
+                                    "org.freedesktop.Notifications.GetCapabilities"], env=self.env_prive(),
+                                   check=True, capture_output=True, text=True, timeout=DELAI).stdout
+        self.assertIn("actions", capacites)
+        self.assertNotIn("'sound'", capacites)
 
     def test_gardee_reste_suivie(self):
         self.envoyer("-a", "Garde", "Mail", "Corps")
@@ -1049,6 +1179,75 @@ class GardeTest(EssaiCoque, unittest.TestCase):
 
 
 @unittest.skipUnless(os.environ.get("WAYLAND_DISPLAY") and QS, "session Wayland et Quickshell requis")
+class SonTest(EssaiCoque, unittest.TestCase):
+    """La règle de la voix des notifications (son.js, L2-68), appelée par l'IPC d'une coque d'essai sans fenêtre."""
+
+    essai = ESSAI / "son"
+    teintes = ()
+    appeler = GardeTest.appeler
+
+    def setUp(self):
+        super().setUp()
+        self.lancer(self.dir)
+        self.attendre("essai : prêt")
+
+    def voix(self, n: dict | None = None, **contexte) -> str:
+        """Voix rendue par son.js pour une notification et un contexte de base modifié.
+
+        Entrées : n — notification, par défaut gardée d'urgence normale ; contexte — champs du contexte qui
+        remplacent ceux de base (active, ni « ne pas déranger » ni plein écran, aucune retirée, maintenant 100000,
+        aucun son joué, nouvelle notification). Sortie : « », « arrivee » ou « urgence ». Erreurs : celles d'appeler.
+        Dépendances : appeler, notif.
+        """
+        c = {"active": True, "nePasDeranger": False, "pleinEcran": False, "retirees": [], "maintenant": 100000,
+             "dernierSon": -1e15, "precedente": None, "salve": 2000, "renouvellement": 60000} | contexte
+        return self.appeler("voix", notif() if n is None else n, c)
+
+    def test_nouvelle_sonne(self):
+        self.assertEqual(self.voix(), "arrivee")
+        self.assertEqual(self.voix(notif(urgence=2)), "urgence")
+
+    def test_desactive(self):
+        self.assertEqual(self.voix(active=False), "")
+        self.assertEqual(self.voix(notif(urgence=2), active=False), "")
+
+    def test_suppress_sound(self):
+        for urgence in (1, 2):
+            self.assertEqual(self.voix(notif(urgence=urgence) | {"hints": {"suppress-sound": True}}), "")
+
+    def test_non_gardee(self):
+        self.assertEqual(self.voix(notif(ephemere=True)), "")
+        self.assertEqual(self.voix(notif(urgence=0)), "")
+        self.assertEqual(self.voix(notif("Signal"), retirees=["Signal"]), "")
+
+    def test_ne_pas_deranger_et_plein_ecran(self):
+        for champ in ("nePasDeranger", "pleinEcran"):
+            self.assertEqual(self.voix(**{champ: True}), "")
+            self.assertEqual(self.voix(notif(urgence=2), **{champ: True}), "urgence")
+
+    def test_rafale(self):
+        self.assertEqual(self.voix(dernierSon=98500), "")
+        self.assertEqual(self.voix(dernierSon=98000), "arrivee")
+        self.assertEqual(self.voix(notif(urgence=2), dernierSon=98500), "urgence")
+
+    def test_mise_a_jour(self):
+        self.assertEqual(self.voix(precedente={"age": 59999, "urgence": 1}), "")
+        self.assertEqual(self.voix(precedente={"age": 60000, "urgence": 1}), "arrivee")
+        self.assertEqual(self.voix(notif(urgence=2), precedente={"age": 1000, "urgence": 1}), "urgence")
+        self.assertEqual(self.voix(notif(urgence=2), precedente={"age": 1000, "urgence": 2}), "")
+
+    def test_ordre(self):
+        self.assertEqual(self.voix(nePasDeranger=True, precedente={"age": 1000, "urgence": 1}), "")
+        self.assertEqual(self.voix(notif(urgence=2) | {"hints": {"suppress-sound": True}},
+                                   precedente={"age": 1000, "urgence": 1}), "")
+
+    def test_commande(self):
+        self.assertEqual(self.appeler("commande", "/x.oga", 80),
+                         ["pw-play", "--media-role", "Notification", "-P",
+                          '{ application.name = "DuneI" state.restore-props = false }', "--volume", "0.8", "/x.oga"])
+
+
+@unittest.skipUnless(os.environ.get("WAYLAND_DISPLAY") and QS, "session Wayland et Quickshell requis")
 class EtatNotificationsTest(EssaiCoque, unittest.TestCase):
     """L'état persistant des notifications : « ne pas déranger » et applications retirées, lus et écrits dans
     notifications.json du dossier d'état (celui de l'essai, jamais celui de la session)."""
@@ -1112,7 +1311,7 @@ class EtatNotificationsTest(EssaiCoque, unittest.TestCase):
         self.demarrer()
         self.appel("essai", "basculer")
         self.appel("essai", "retirer", "Signal")
-        self.ecrit({"nePasDeranger": True, "retirees": ["Signal"]})
+        self.ecrit({"nePasDeranger": True, "retirees": ["Signal"], "son": True, "volumeSon": 100})
         self.demarrer()
         self.assertEqual(self.etat(), {"nePasDeranger": True, "retirees": ["Signal"]})
 
@@ -1133,7 +1332,7 @@ class EtatNotificationsTest(EssaiCoque, unittest.TestCase):
         self.demarrer()
         self.assertEqual(self.etat(), {"nePasDeranger": False, "retirees": []})
         self.appel("essai", "basculer")
-        self.ecrit({"nePasDeranger": True, "retirees": []})
+        self.ecrit({"nePasDeranger": True, "retirees": [], "son": True, "volumeSon": 100})
 
     def test_ipc(self):
         self.demarrer()
@@ -1141,6 +1340,51 @@ class EtatNotificationsTest(EssaiCoque, unittest.TestCase):
         self.appel("notifications", "basculerNePasDeranger")
         self.assertEqual(self.appel("notifications", "nePasDeranger"), "true")
         self.assertTrue(self.etat()["nePasDeranger"])
+
+    def son(self) -> tuple[str, str]:
+        """Réglages du son lus par l'IPC « notifications » (L2-68). Sortie : (son, volumeSon) en texte.
+        Erreurs : celles d'appel. Dépendances : appel."""
+        return self.appel("notifications", "son"), self.appel("notifications", "volumeSon")
+
+    def test_son_par_defaut(self):
+        self.demarrer()
+        self.assertEqual(self.son(), ("true", "100"))
+        self.assertFalse(self.fichier().exists())
+
+    def test_son_persiste(self):
+        self.demarrer()
+        self.appel("essai", "poserSon", "false")
+        self.appel("essai", "poserVolume", 40)
+        self.ecrit({"nePasDeranger": False, "retirees": [], "son": False, "volumeSon": 40})
+        self.demarrer()
+        self.assertEqual(self.son(), ("false", "40"))
+
+    def test_fichier_ancien(self):
+        # Un fichier écrit avant L2-68 ne porte ni « son » ni « volumeSon » : les défauts s'appliquent, et la
+        # première écriture garde « ne pas déranger » et les applications retirées.
+        self.fichier().write_text('{"nePasDeranger": true, "retirees": ["a"]}')
+        self.demarrer()
+        self.assertEqual(self.son(), ("true", "100"))
+        self.appel("essai", "poserVolume", 50)
+        self.ecrit({"nePasDeranger": True, "retirees": ["a"], "son": True, "volumeSon": 50})
+
+    def test_volume_borne(self):
+        self.demarrer()
+        self.appel("essai", "poserVolume", 140)
+        self.assertEqual(self.son()[1], "100")
+        self.appel("essai", "poserVolume", -5)
+        self.assertEqual(self.son()[1], "0")
+
+
+class JetonsSonTest(unittest.TestCase):
+    """Les jetons de la voix des notifications (L2-68), tels que la coque les lit dans coque-tokens.json."""
+
+    def test_jetons_son(self):
+        son = json.loads((ROOT / "generated" / "coque-tokens.json").read_text())["son"]
+        # Inversées à l'écoute du 17 novembre 2026 : la brève pour l'arrivée, la plus longue pour l'urgence.
+        self.assertEqual(son, {"arrivee": "/usr/share/sounds/ocean/stereo/dialog-warning.oga",
+                               "urgence": "/usr/share/sounds/ocean/stereo/message-new-instant.oga",
+                               "salve": 2000, "renouvellement": 60000})
 
 
 @unittest.skipUnless(os.environ.get("WAYLAND_DISPLAY") and QS, "session Wayland et Quickshell requis")
@@ -1669,3 +1913,54 @@ class PageNotificationsTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(self.etat()["montre"], "enTete")
         self.appel("atteindre", "retirees")
         self.assertEqual(self.etat()["montre"], "retirees")
+
+    def son(self) -> dict:
+        """État de la carte Son. Sortie : dictionnaire (voir etatSon dans la coque d'essai)."""
+        return json.loads(self.appel("etatSon"))
+
+    def test_carte_son(self):
+        e = self.son()
+        self.assertEqual((e["interrupteur"], e["son"], e["curseur"], e["volumeSon"], e["valeur"]),
+                         (True, True, 100, 100, "100 %"))
+        self.assertGreater(e["hauteur"], 0)
+
+    def test_couper_replie(self):
+        # La carte elle-même doit suivre le repli : sa mise en page (ColumnLayout) lit la hauteur implicite des
+        # rangées, et une rangée qui n'animerait que sa hauteur propre ferait sauter la carte à la fin du ressort.
+        depliee, rangee = self.son()["carte"], self.son()["hauteur"]
+        self.appel("basculerSon")
+        self.assertFalse(self.son()["son"])
+        vues, fin = [], time.monotonic() + DELAI
+        decalages = []
+        while (h := (e := self.son())["carte"]) > depliee - rangee + 2:
+            self.assertLess(time.monotonic(), fin, f"carte Son à {h}")
+            vues.append(h)
+            decalages.append(e["decalage"])
+        # La ligne remonte sous « Activé » au lieu d'être rognée par le bas : son filet, en haut, part le premier
+        # au lieu de rester seul à la fin du repli.
+        self.assertTrue(any(d < 0 for d in decalages), decalages)
+        time.sleep(0.08)
+        self.assertTrue(any(depliee - rangee < h < depliee for h in vues), vues)
+        # Sans traîne : la carte ne s'attarde pas à un ou deux pixels de sa fin, ce qui se voit comme un repli en deux
+        # temps.
+        self.assertEqual(self.son()["carte"], depliee - rangee)
+        self.appel("basculerSon")
+        vues = []
+        while (h := self.son()["carte"]) < depliee:
+            self.assertLess(time.monotonic(), fin + DELAI, f"carte Son à {h}")
+            vues.append(h)
+        self.assertTrue(any(depliee - rangee < h < depliee for h in vues), vues)
+
+    def test_apercu_au_relachement(self):
+        for v in (30, 40, 55):
+            self.appel("deplacer", v, "true")
+        self.assertEqual((self.son()["volumeSon"], self.son()["apercus"]), (55, 0))
+        self.appel("relacher")
+        self.assertEqual((self.son()["volumeSon"], self.son()["apercus"], self.son()["valeur"]), (55, 1, "55 %"))
+        # Au clavier, chaque pas est un geste entier : l'aperçu part aussitôt.
+        self.appel("deplacer", 60, "false")
+        self.assertEqual((self.son()["volumeSon"], self.son()["apercus"]), (60, 2))
+
+    def test_atteindre_son(self):
+        self.appel("atteindre", "son")
+        self.assertEqual(self.etat()["montre"], "son")

@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.47. Historique en fin de document.
+Version 1.48. Historique en fin de document.
 
 Socle amorçable.
 
@@ -2159,6 +2159,34 @@ seulement l'espace de noms `dunei-panneau` au flou de Hyprland (D176 à D180).
   minutage des appels IPC et échoue sur une machine chargée, avant comme après L2-67.
 - **Non éprouvé à ce jour.** L'ouverture de l'application au clic sur une entrée, avec un vrai courriel.
 
+## Le son de notification — L2-68
+
+Deux paquets du dépôt `extra` sont déclarés dans `paquets.toml` : `pipewire-audio`, qui fournit `pw-play`, et
+`ocean-sound-theme`, dont viennent les deux voix. Rien n'est copié dans le dépôt : les sons restent ceux du paquet
+(CC-BY-SA-4.0), à `/usr/share/sounds/ocean/stereo/`.
+
+```
+sudo pacman -S --needed pipewire-audio ocean-sound-theme
+```
+
+- **Les voix.** Arrivée, `dialog-warning.oga`, brève, pour une notification normale ; Urgence,
+  `message-new-instant.oga`, plus longue, pour une critique (D185). Les chemins sont dans la table `[son]` de
+  `tokens.toml`, avec la rafale (2000 ms) et le délai de renouvellement (60000 ms).
+- **Quand elles sonnent.** Une notification sonne si le panneau la garderait. Une mise à jour ne sonne que si la
+  version qu'elle remplace a au moins une minute, ou si elle devient critique. Une rafale ne sonne qu'une fois. Sous
+  « ne pas déranger » et en plein écran, seules les critiques sonnent. L'indice `suppress-sound` fait taire.
+- **La lecture.** Un `pw-play` par son, au rôle Notification, au volume du système multiplié par celui de la carte
+  « Son » : `pw-play --media-role Notification -P '{ application.name = "DuneI" state.restore-props = false }'
+  --volume <0..1> <fichier>`. Sans `state.restore-props = false`, WirePlumber enregistrerait ce volume pour le rôle
+  Notification et l'imposerait aux autres applications (D186). Si `pw-play` manque, rien ne bloque ; le journal de
+  la coque le dit une fois.
+- **Les réglages.** Paramètres, page Notifications, carte « Son » : « Activé » et « Volume » (0 à 100 %, l'aperçu
+  joue au relâchement). Ils s'ajoutent à `notifications.json` (`son`, `volumeSon`). Depuis un terminal :
+  `qs -c dunei ipc call notifications son`, `qs -c dunei ipc call notifications volumeSon`.
+- **Les tests.** `python3 -m unittest tests.test_notifications` (`SonTest`, `PileTest`, `CentreTest`,
+  `EtatNotificationsTest`, `PageNotificationsTest`). Aucun test ne fait de bruit : la variable `DUNEI_PW_PLAY` remplace
+  `pw-play` par `tests/donnees/pw-play-temoin`, qui note ses arguments.
+
 ## Le mouvement des popovers — L2-06, L2-07, L2-47, L2-56
 
 Rien de plus à installer : la fenêtre des popovers est dans la coque (`dunei-coque.service`), et `make install` lie
@@ -2446,6 +2474,7 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 
 | Version | Date | Changement |
 | --- | --- | --- |
+| 1.48 | 2026-11-17 | Son de notification (L2-68) : `pipewire-audio` et `ocean-sound-theme`, voix, règles, lecture, réglages et tests |
 | 1.47 | 2026-11-17 | L3-26 : serveur de langage Python pour Claude Code, plugin `pyright-lsp` et paquet `pyright` (D164) ; LibreOffice (`libreoffice-fresh`) rejoint les outils, pour lire et écrire les PDF, Word et PowerPoint |
 | 1.46 | 2026-11-17 | Cloche et panneau des notifications (L2-67) : pastille, panneau, « ne pas déranger », applications retirées, état, tests (D176 à D180) |
 | 1.45 | 2026-11-16 | Application Paramètres (L5-01, L2-65) : ouverture, pages Wi-Fi, Filaire et VPN, partage de connexion, ajout d'une page, tests ; la fenêtre Réseau et `reseau ouvrir` sont retirés (D165 à D175) |

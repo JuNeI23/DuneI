@@ -1,5 +1,6 @@
 module Notifications
 singleton EtatNotifications 1.0 EtatNotifications.qml
+singleton Voix 1.0 Voix.qml
 Entree 1.0 Entree.qml
 Pile 1.0 Pile.qml
 Carte 1.0 Carte.qml

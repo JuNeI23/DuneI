@@ -2023,6 +2023,19 @@ class ReseauParametresTest(EssaiCoque, unittest.TestCase):
         time.sleep(2)
         self.assertEqual(len(self.appels_iw()), iw, "appel iw sans demandeur")
 
+    def test_repli_sans_traine(self):
+        # Le repli du réseau joint finit d'un seul geste : le ressort se pose sous le seuil de repos des jetons, en
+        # pixels, au lieu de laisser traîner une bande de contenu et le filet suivant (L2-68, signalé par Nicolas).
+        self.deplier_joint(lambda d: d.get("charge") and d.get("lu"), "dépliant ouvert et profil lu")
+        self.depliant(lambda d: d["montre"] > 100, "dépliant entièrement montré")
+        self.ipc("essai", "basculer", "wifi-1")
+        # Le contenu remonte sous la tête au lieu d'être rogné par le bas : son haut, et le filet qui s'y trouve,
+        # partent les premiers.
+        self.depliant(lambda d: d["decalage"] < -50, "contenu qui remonte")
+        self.depliant(lambda d: d["montre"] <= 3, "dépliant presque replié")
+        time.sleep(0.06)
+        self.assertEqual(self.depliant(lambda d: True, "état lu")["montre"], 0)
+
     def test_reglages_dans_le_depliant(self):
         self.deplier_joint()
         for geste, attendu in (("auto", "connection modify wifi-1 connection.autoconnect no"),

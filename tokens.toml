@@ -483,6 +483,12 @@ interieur = 12                # marge intérieure de la carte
 lignes = 3                    # nombre maximal de lignes de corps affichées
 reprise = 1000                # ms d'attente après la fin d'un plein écran avant que la file ne s'écoule
 
+[son]                         # voix des notifications (L2-68, D185) ; sons KDE Ocean du paquet ocean-sound-theme
+arrivee = "/usr/share/sounds/ocean/stereo/dialog-warning.oga"       # notification gardée, d'urgence normale : bref, discret
+urgence = "/usr/share/sounds/ocean/stereo/message-new-instant.oga"   # notification critique : plus long, il appelle
+salve = 2000                  # ms après le dernier son joué pendant lesquelles une normale reste muette
+renouvellement = 60000        # ms : une mise à jour sonne si la version remplacée est au moins aussi ancienne
+
 [cloche]                      # pastille posée sur la cloche de la barre (L2-67) ; px logiques
 hauteur = 13                  # hauteur de la pilule du nombre, et sa largeur minimale
 corps = 9.5                   # corps des chiffres, en gras et tabulaires

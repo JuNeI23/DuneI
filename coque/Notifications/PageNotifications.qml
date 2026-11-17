@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Layouts
 import Quickshell
 import "../Theme"
 import "../Composants"
@@ -10,19 +11,24 @@ import "../Reseau"
 // « Ne pas déranger », et l'Interrupteur, à droite, comme celui du Wi-Fi), dont l'interrupteur suit le sens de la
 // bascule du panneau : allumé, les notifications sont actives ; éteint, « ne pas déranger » (D184). Il est d'accord
 // avec la bascule et le clic droit sur la cloche, puisque tous lisent et écrivent EtatNotifications. Puis la carte
-// « Applications retirées »,
+// « Son » (L2-68) : la rangée « Activé », avec son Interrupteur, et la rangée « Volume », un Curseur de 0 à 100 % au pas
+// de 5 et sa valeur ; la rangée de volume se replie au ressort « reveal » quand le son est coupé. Le volume est écrit
+// à chaque pas ; l'aperçu (l'Arrivée au nouveau volume) part une seule fois par geste : au relâchement d'un
+// glissement, ou à chaque pas fait au clavier, jamais pendant un glissement. Puis la carte « Applications retirées »,
 // une rangée par application retirée du panneau (« Ne plus garder »), avec « Remettre » en texte à l'accent, ou,
 // sans application, la ligne « Aucune application retirée ». Remettre une application ne fait pas revenir ses
 // notifications passées. Une rangée qui paraît ou part se déplie ou se replie au ressort « reveal ».
 // Le nom montré d'une application est celui de son entrée de bureau (DesktopEntries) quand l'identifiant en désigne
 // une, l'identifiant lui-même sinon.
 // Contrat de page (voir ConteneurPage) : conteneur, atteindre, implicitHeight.
-// Entrées : conteneur, le ConteneurPage, posé par lui.
-// Sorties : phrase, l'état des notifications ; vide, vrai sans application retirée ; interrupteur et enTete, lus
-// par les essais. Fonctions : atteindre, remettre, rangees, nom.
+// Entrées : conteneur, le ConteneurPage, posé par lui ;
+// voix, la lecture des aperçus (Voix par défaut, un témoin dans l'essai).
+// Sorties : phrase, l'état des notifications ; vide, vrai sans application retirée ; interrupteur, enTete,
+// interrupteurSon, curseurVolume, rangeeVolume et carteSon, lus par les essais. Fonctions : atteindre, remettre, rangees, nom,
+// deplacer, relacher.
 // Erreurs : aucune.
 // Dépendances : Quickshell (DesktopEntries, ScriptModel), EnTetePage, TitreSection, Registre (Parametres) ; Groupe,
-// Ligne (Reseau) ; Interrupteur, Texte, Ressort ; EtatNotifications.
+// Ligne (Reseau) ; Interrupteur, Curseur, Texte, Ressort ; EtatNotifications, Voix.
 Item {
     id: page
 
@@ -32,16 +38,33 @@ Item {
     readonly property bool vide: EtatNotifications.retirees.length === 0
     readonly property alias interrupteur: interrupteur
     readonly property alias enTete: enTete
+    readonly property alias interrupteurSon: interrupteurSon
+    readonly property alias curseurVolume: curseurVolume
+    readonly property alias rangeeVolume: rangeeVolume
+    readonly property alias carteSon: carteSon
+    property var voix: Voix
 
     implicitHeight: colonne.implicitHeight
 
     // atteindre — conduit à un réglage de la page. Entrée : chemin, ancre au format de recherche.js (la page, puis
-    // « ne-pas-deranger » ou « retirees »). Sortie : aucune ; « ne-pas-deranger » montre l'en-tête, qui porte
+    // « ne-pas-deranger », « son » ou « retirees »). Sortie : aucune ; « ne-pas-deranger » montre l'en-tête, qui porte
     // l'interrupteur. Erreurs : aucune ; une ancre inconnue montre aussi l'en-tête.
     // Dépendances : conteneur (montrer).
     function atteindre(chemin) {
-        conteneur.montrer(chemin[1] === "retirees" ? carteRetirees : enTete)
+        conteneur.montrer({retirees: carteRetirees, son: carteSon}[chemin[1]] ?? enTete)
     }
+
+    // deplacer — un pas du curseur de volume : le volume est écrit ; hors glissement (clavier), l'aperçu part.
+    // Entrées : v, le volume en pour cent ; enGlissement, vrai tant que le curseur est tenu. Sortie : aucune.
+    // Erreurs : aucune. Dépendances : EtatNotifications.poserVolume, voix.
+    function deplacer(v, enGlissement) {
+        EtatNotifications.poserVolume(v)
+        if (!enGlissement) voix.jouer("arrivee")
+    }
+
+    // relacher — fin d'un glissement du curseur : l'aperçu part, une fois. Entrées, sortie, erreurs : aucune.
+    // Dépendances : voix.
+    function relacher() { voix.jouer("arrivee") }
 
     // remettre — remet une application retirée. Entrée : identifiant. Sortie : aucune. Erreurs : aucune.
     // Dépendances : EtatNotifications.remettre.
@@ -72,6 +95,70 @@ Item {
                 objectName: "notificationsActives"
                 checked: !EtatNotifications.nePasDeranger
                 onToggled: { EtatNotifications.poser(!checked); checked = Qt.binding(() => !EtatNotifications.nePasDeranger) }
+            }
+        }
+
+        TitreSection { text: qsTr("Son") }
+        Groupe {
+            id: carteSon
+            objectName: "son"
+            width: parent.width
+
+            Ligne {
+                width: carteSon.width
+                filet: false
+                libelle: qsTr("Activé")
+                Interrupteur {
+                    id: interrupteurSon
+                    objectName: "sonActif"
+                    checked: EtatNotifications.son
+                    onToggled: { EtatNotifications.poserSon(checked); checked = Qt.binding(() => EtatNotifications.son) }
+                }
+            }
+            Item {
+                id: rangeeVolume
+                // Hauteur implicite : la carte (ColumnLayout) la relit à chaque image du ressort. Le ressort se pose
+                // quand il reste moins que le seuil de repos des jetons, en pixels : sa fin ne traîne pas sur le
+                // dernier pixel, ce qui se verrait comme un repli en deux temps.
+                Layout.fillWidth: true
+                implicitHeight: Math.max(0, repli.value) * ligneVolume.implicitHeight
+                visible: implicitHeight > 0
+                clip: repli.moving
+                Ressort {
+                    id: repli
+                    transition: "reveal"
+                    cible: EtatNotifications.son ? 1 : 0
+                    seuil: (Theme.motion?.popover.rest_threshold_px ?? 0) / Math.max(1, ligneVolume.implicitHeight)
+                }
+                // Calée en bas : au repli, la ligne remonte sous « Activé » et son filet, en haut, disparaît le premier.
+                Ligne {
+                    id: ligneVolume
+                    width: parent.width
+                    anchors.bottom: parent.bottom
+                    libelle: qsTr("Volume")
+                    Row {
+                        spacing: Theme.space?.scale[2] ?? 0
+                        Curseur {
+                            id: curseurVolume
+                            anchors.verticalCenter: parent.verticalCenter
+                            from: 0; to: 100; stepSize: 5
+                            value: EtatNotifications.volumeSon
+                            onMoved: page.deplacer(value, pressed)
+                            onPressedChanged: if (!pressed) page.relacher()
+                        }
+                        // Largeur de « 100 % » : le curseur ne bouge pas quand la valeur change de nombre de chiffres.
+                        Texte {
+                            id: valeurVolume
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: largeur.width
+                            horizontalAlignment: Text.AlignRight
+                            tabulaire: true
+                            color: Theme.color?.textSecondary ?? "transparent"
+                            text: EtatNotifications.volumeSon + " %"
+                            TextMetrics { id: largeur; font: valeurVolume.font; text: "100 %" }
+                        }
+                    }
+                }
             }
         }
 

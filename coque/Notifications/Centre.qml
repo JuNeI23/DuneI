@@ -8,7 +8,9 @@ import "../Theme"
 // Rôle : reçoit chaque notification et la remet à sa Pile, qui la suit (tracked), la met en file, la remplace ou
 // l'affiche, puis confie à son attente celles qui doivent être traitées (L2-67). Le service est séparé de
 // l'affichage : la fenêtre de la pile (FenetreNotifications) lit pile ; la cloche et le panneau lisent attente. La
-// pile est liée à EtatNotifications (« ne pas déranger », applications retirées). keepOnReload est vrai : à chaque rechargement de la coque
+// pile est liée à EtatNotifications (« ne pas déranger », applications retirées, voix activée) et au plein écran ; la
+// voix qu'elle choisit (signal sonner, L2-68) est jouée par Voix. La capacité « sound » n'est pas annoncée (D187),
+// mais l'indice suppress-sound est respecté. keepOnReload est vrai : à chaque rechargement de la coque
 // (make install, toute modification de coque/), les notifications encore suivies de la génération précédente sont
 // réémises par onNotification (lastGeneration vrai) et reprennent place dans la nouvelle pile, minuterie à neuf ; sans
 // cela, cartes et file disparaîtraient sans avoir été vues.
@@ -20,7 +22,7 @@ import "../Theme"
 // Erreurs : si un autre démon tient déjà le nom org.freedesktop.Notifications, Quickshell le journalise et aucune
 // notification n'arrive.
 // Dépendances : quickshell ≥ 0.3 (Quickshell.Services.Notifications, Quickshell.Hyprland), Pile, Attente,
-// EtatNotifications.
+// EtatNotifications, Voix.
 NotificationServer {
     id: centre
 
@@ -33,6 +35,9 @@ NotificationServer {
         retenue: centre.retenue
         nePasDeranger: EtatNotifications.nePasDeranger
         retirees: EtatNotifications.retirees
+        pleinEcran: centre.pleinEcran
+        sonActif: EtatNotifications.son
+        onSonner: voix => Voix.jouer(voix)
     }
     readonly property Attente attente: pile.attente
 

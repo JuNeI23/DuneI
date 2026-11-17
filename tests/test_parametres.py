@@ -150,11 +150,11 @@ class CoquilleTest(EssaiCoque, unittest.TestCase):
         self.assertTrue(filaire["composant"].endswith("/Reseau/PageFilaire.qml") and vpn["composant"].endswith("/Reseau/PageVpn.qml"))
         self.assertEqual([e["chemin"] for e in filaire["index"] + vpn["index"]],
                          [["filaire", "ethernet"], ["filaire", "profils"], ["vpn", "connexions"]])
-        # La page Notifications (L2-67) déclare « ne pas déranger » et les applications retirées.
+        # La page Notifications (L2-67) déclare « ne pas déranger », le son (L2-68) et les applications retirées.
         self.assertTrue(notifications["composant"].endswith("/Notifications/PageNotifications.qml"))
         self.assertTrue((ROOT / "coque" / "Notifications" / "PageNotifications.qml").is_file())
         self.assertEqual([e["chemin"] for e in notifications["index"]],
-                         [["notifications", "ne-pas-deranger"], ["notifications", "retirees"]])
+                         [["notifications", "ne-pas-deranger"], ["notifications", "son"], ["notifications", "retirees"]])
         self.assertTrue(all(e["page"] == "notifications" and e["libelle"] and e["motsCles"] and e["exige"] == ""
                             for e in notifications["index"]))
 

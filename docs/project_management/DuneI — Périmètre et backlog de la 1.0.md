@@ -2,9 +2,9 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.57. Historique en fin de document.
+Version 1.58. Historique en fin de document.
 
-La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **179 éléments** répartis en **cinq lots**, sur six chantiers.
+La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **180 éléments** répartis en **cinq lots**, sur six chantiers.
 
 Ce document dit ce qui est attendu, dans quel ordre, et à quelle condition c'est terminé. Il ne dit pas à quoi ça ressemble — c'est le rôle de la bible de design. En cas de contradiction : la bible l'emporte sur l'apparence, ce document l'emporte sur le périmètre.
 
@@ -321,7 +321,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L2-65 | B | Écrit | Fenêtre Réseau allégée — **refaite de zéro dans l'application Paramètres : fait, en attente de fusion (D165 à D175)** : la fenêtre Réseau est retirée ; ses pages Wi-Fi, Filaire et VPN vivent dans l'application Paramètres (L5-01) : page Wi-Fi à cinq réseaux puis dépliant, jonction sans saut (« Connexion… » sur place, puis glissement en tête), partage de connexion reconnu et placé parmi « Mes réseaux », sous-pages « Réseaux enregistrés » et « Réseau masqué », popover de la barre à la même règle. Fiche : `docs/superpowers/specs/2026-11-14-parametres-design.md` ; plan : `docs/superpowers/plans/2026-11-14-parametres.md`. État précédent, que Nicolas jugeait « pas du tout » satisfaisant (D163), **fait et fusionné (PR #54, D149 à D157)** : fenêtre qui se ferme dès le clic (fermeture visible 76-85 ms au lieu de 650-830, D151), page Wi-Fi « liste d'abord » (recherche, réseau joint replié au nom mis en valeur, autres réseaux, connus repliés en fin de page, D149, D156), dépliant du réseau joint avec courbe vivante, tuiles adresse IP, routeur et connecté depuis, réglages courants et réglages avancés dépliés sur place ; sous-page de profil supprimée (D150, D155) ; sections dépliables, interrupteurs, pastilles et onglets animés au ressort (D157) ; aucune correction de Hyprland nécessaire (D152). La fenêtre Son, détachée le 2026-11-09, devient L2-66 (D153). Fiche : `docs/superpowers/specs/2026-11-09-fenetre-reseau-design.md` ; plan : `docs/superpowers/plans/2026-11-09-fenetre-reseau.md` ; recette à l'écran validée le 2026-11-10 |
 | L2-66 | B | Écrit | Fenêtre Son, sur le gabarit de la fenêtre Réseau (L2-65) — le lien « Réglages du son… » du popover du son (L2-12) l'ouvre ; volume par application, profils de la carte, effets et égaliseur y trouveront leur place ; repérage propre à faire avant la fiche ; réemploi des composants `Courbe`, `Tuile` et d'un dépliant dans le style de `DepliantReseau` ; même lot et même priorité que L2-65 (D153) — **reportée à plus tard (D163)**, comme toute feature qui ouvre une fenêtre du genre de la fenêtre Réseau ; depuis D165, elle prendra la forme d'une page « Son » de l'application Paramètres (L5-01), inscrite au registre |
 | L2-67 | B | Fait | Cloche des notifications — **fait (D176 à D180)** : la cloche de la barre porte le nombre de notifications à traiter (pilule, « 99+ ») ou une boule rouge dès qu'une critique attend, rien sous « ne pas déranger » ; elle ouvre le panneau des notifications, une presqu'île latérale de bord (groupes par application, « Tout effacer » en cascade, bascule « ne pas déranger » à libellé d'état unique) ; une notification vivante y reste jusqu'à son traitement, sauf les éphémères et les applications retirées (« Ne plus garder », « Remettre » dans Paramètres, page Notifications) ; la liste survit au rechargement de la coque ; clic droit sur la cloche : « ne pas déranger ». Fiche : `docs/superpowers/specs/2026-11-16-cloche-design.md` ; plan : `docs/superpowers/plans/2026-11-16-cloche.md` ; recette à l'écran validée le 2026-11-17, l'ouverture de l'application au clic restant à éprouver sur un vrai courriel ; après fusion, la bascule du panneau est allumée quand les notifications sont actives, sous la cloche, et éteinte sous « ne pas déranger », sous la cloche barrée (D182), et son pied mène aux réglages (« Réglages des notifications… », D183) ; la page Notifications de Paramètres suit le même sens, interrupteur dans l'en-tête (D184) |
-| L2-68 | C | Écrit | Son de notification — joué à l'arrivée d'une carte, avec ses réglages (volume, sons par urgence, coupure par « ne pas déranger ») ; décidé plus tard par Nicolas (L2-19, D162) |
+| L2-68 | C | Fait | Son de notification — **fait (D185 à D188)** : deux voix KDE Ocean, Arrivée (`dialog-warning`, brève) et Urgence (`message-new-instant`, plus longue), jouées par `pw-play` au rôle Notification sans enregistrer de volume de rôle (`state.restore-props = false`) ; une notification sonne si le panneau la garderait, une mise à jour seulement après une minute ou en devenant critique, une seule par rafale de 2 s, et les normales se taisent sous « ne pas déranger » et en plein écran ; carte « Son » dans Paramètres › Notifications (Activé, Volume relatif, aperçu au relâchement). La synthèse d'une voix propre à DuneI est renvoyée au lot 5 (L5-31). En recette, le repli du dépliant Wi-Fi a été corrigé de même (D188) |
 | L2-69 | C | Écrit | « Ouvrir » propre à DuneI — quand l'application ne fournit pas d'action `default`, la carte propose tout de même d'ouvrir l'application d'origine ; facultatif, après le lanceur (L2-19, D162) |
 
 ### Lot 3 — la bascule
@@ -423,8 +423,9 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L5-28 | — | Écrit | Grille de conformité par écran — étage 2 |
 | L5-29 | — | Écrit | Passe de regard complète — étage 3 |
 | L5-30 | — | Écrit | Résorber les points ouverts de l'annexe C |
+| L5-31 | C | Écrit | Voix de DuneI — remplacer les sons KDE Ocean de L2-68 par une voix propre : une corde ancienne, sablonneuse et brève, enregistrée ou de synthèse modale (quatre tours de Karplus-Strong n'ont pas convaincu, D185). Pistes : cielago, sietch, dunes chantantes, crysknife, bouclier, corne lointaine, variantes du pas sans rythme, espace acoustique unique, jour et nuit, une tonalité par machine, la teinte du thème en note. Maquette et cheminement dans l'atelier, `maquettes/son-notifications/` |
 
-**Volume total : 179 éléments** — 129 écrits, 43 configurés, 5 offerts, 2 mixtes.
+**Volume total : 180 éléments** — 130 écrits, 43 configurés, 5 offerts, 2 mixtes.
 
 Les deux tiers du travail sont de l'écrit, et les trois quarts de cet écrit se concentrent sur la coque et les écrans système. C'est cohérent avec la stratégie retenue, et c'est là que tout le risque se trouve.
 
@@ -528,6 +529,7 @@ Le choix de la distribution de base et du compositeur, précédemment ouverts, s
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-12 | Version initiale, 137 éléments |
+| 1.58 | 2026-11-17 | L2-68 fait : voix KDE Ocean, règles de sonnerie, carte « Son » (D185 à D188) ; ajout de L5-31, voix propre de DuneI ; 180 éléments |
 | 1.57 | 2026-11-17 | L2-67 : la bascule du panneau est allumée quand les notifications sont actives, cloche ou cloche barrée (D182) ; le panneau mène aux réglages des notifications (D183) ; la page Notifications suit le même sens (D184) |
 | 1.56 | 2026-11-17 | L3-26 : serveur de langage Python pour Claude Code, à l'essai (D164) |
 | 1.55 | 2026-11-17 | L2-67 fait : cloche à pastille, panneau des notifications en presqu'île latérale, « ne pas déranger » (D176 à D180) |

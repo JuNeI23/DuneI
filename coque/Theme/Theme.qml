@@ -81,6 +81,8 @@ Singleton {
     readonly property var cloche: tokens?.cloche
     // Panneau des notifications (L2-67) : largeur, hauteur minimale, lignes de corps, pas de la cascade.
     readonly property var panneau: tokens?.panneau
+    // Voix des notifications (L2-68) : sons Arrivée et Urgence, salve et renouvellement en ms.
+    readonly property var son: tokens?.son
     readonly property var breakpoints: tokens?.breakpoints
     readonly property var typo: tokens?.typo
     readonly property var icons: tokens?.icons

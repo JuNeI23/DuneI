@@ -32,7 +32,8 @@ import "../Barre/icones.js" as Icones
 // faux par défaut.
 // Sorties : signaux basculer() (clic sur la tête), relu(uuid, profil) (chaque lecture du profil) ; actuel ; montre,
 // vrai tant que le dépliant est à l'écran ; corps, le contenu chargé (null replié : profil, debits, tuiles,
-// reglages), lu par la vue et les essais ; progression, de 0 (replié) à 1 (déplié).
+// reglages), lu par la vue et les essais ; progression, de 0 (replié) à 1 (déplié) ; decalageContenu, la remontée du
+// contenu sous la tête, en px (0 déplié).
 // Erreurs : celles du ProfilReseau, sous ses réglages ; un appareil absent donne des tuiles à « — ».
 // Dépendances : Ligne, Medaillon, IconeSignal, Chevron, DebitsReseau, TuilesConnexion, ReglagesReseau, AvancesReseau,
 // ProfilReseau, Ressort, Theme (reglages, space, icons, color), icones.js (iconeForce), EtatReseau,
@@ -57,6 +58,9 @@ ColumnLayout {
     readonly property bool sonde: detaille && actuel && (ouvert || veille) && montre
     readonly property var corps: charge.item
     readonly property real progression: (pivot.value + 90) / 90
+    // Le contenu remonte sous la tête à mesure qu'il se replie, au lieu d'être rogné par le bas : son haut, et le
+    // filet qui s'y trouve, partent les premiers (L2-68).
+    readonly property real decalageContenu: -_contenu * (1 - progression)
     // Demande de sonde posée par ce dépliant, pour ne la retirer qu'une fois.
     property bool _sonde: false
     // Hauteur du contenu chargé, marges comprises.
@@ -84,7 +88,14 @@ ColumnLayout {
     Component.onCompleted: demander(sonde)
     Component.onDestruction: demander(false)
 
-    Ressort { id: pivot; transition: "reveal"; cible: depliant.ouvert ? 0 : -90 }
+    // Le ressort se pose quand la hauteur montrée est à moins du seuil de repos des jetons, en pixels, de sa fin : la
+    // fin du repli ne traîne pas sur les derniers pixels (L2-68).
+    Ressort {
+        id: pivot
+        transition: "reveal"
+        cible: depliant.ouvert ? 0 : -90
+        seuil: (Theme.motion?.popover.rest_threshold_px ?? 0) * 90 / Math.max(1, depliant._contenu)
+    }
 
     Ligne {
         objectName: "tete"
@@ -143,9 +154,10 @@ ColumnLayout {
             id: charge
             active: depliant.ouvert || depliant.progression > 0
             x: Theme.reglages?.textColumn ?? 0
-            y: Theme.space?.scale[0] ?? 0
+            y: (Theme.space?.scale[0] ?? 0) + depliant.decalageContenu
             width: parent.width - x - (Theme.space?.scale[3] ?? 0)
-            onImplicitHeightChanged: depliant._contenu = implicitHeight + y + (Theme.space?.scale[3] ?? 0)
+            onImplicitHeightChanged: depliant._contenu = implicitHeight + (Theme.space?.scale[0] ?? 0)
+                                                         + (Theme.space?.scale[3] ?? 0)
             sourceComponent: ColumnLayout {
                 readonly property alias profil: profilReseau
                 readonly property alias debits: debits

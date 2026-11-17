@@ -3,6 +3,7 @@ import Quickshell
 import "../Theme"
 import "etiquettes.js" as Etiquettes
 import "garde.js" as Garde
+import "son.js" as Son
 
 // Pile — logique de la pile de notifications : file d'attente, plafond, remplacements, sorties, et aiguillage entre la
 // carte et le panneau (L2-67).
@@ -19,15 +20,20 @@ import "garde.js" as Garde
 // mise à jour sur place) la retire de l'attente et repasse en carte si elle est affichable : elle ne compte jamais
 // deux fois. Après un rechargement de la coque, une notification que l'attente précédente tenait y retourne sans
 // repasser en carte.
+// Voix (L2-68, son.js) : chaque nouvelle notification, chaque remplacement par clé et chaque mise à jour sur place est
+// jugé par Son.voix ; s'il doit sonner, la pile émet sonner(voix). Une mise à jour est jugée avec l'âge et l'urgence
+// de la version remplacée. Une notification réémise après un rechargement de la coque (lastGeneration) ne sonne pas.
 // Les tableaux sont réaffectés à chaque changement, jamais modifiés sur place, pour qu'un ScriptModel voie la différence.
 // Entrées : retenue (plein écran : la file ne s'écoule plus et les minuteries s'arrêtent) ; nePasDeranger et retirees
 // (identifiants des applications retirées), liés par le Centre à EtatNotifications ; verrou, fabrique du verrou
 // qui retient la notification d'une entrée jusqu'à sa destruction (RetainableLock par défaut, remplacé dans l'essai
-// dont les notifications factices ne sont pas Retainable).
+// dont les notifications factices ne sont pas Retainable) ; pleinEcran et sonActif, liés par le Centre ; salve et
+// renouvellement, en ms, liés à Theme.son.
 // Sorties : affichees (Entree, plus récente en tête, sortantes comprises), file (Entree, ordre d'arrivée), attente
-// (Attente : les notifications gardées qui attendent dans le panneau).
+// (Attente : les notifications gardées qui attendent dans le panneau) ; signal sonner(voix), « arrivee » ou « urgence » ;
+// dernierSon, instant du dernier son émis en ms (-Infinity avant le premier).
 // Erreurs : sans jetons chargés, le plafond vaut 0 et tout reste en file jusqu'à leur chargement.
-// Dépendances : Entree, Attente, etiquettes.js, garde.js, Theme.notifications.plafond.
+// Dépendances : Entree, Attente, etiquettes.js, garde.js, son.js, Theme.notifications.plafond, Theme.son.
 Scope {
     id: pile
 
@@ -41,6 +47,13 @@ Scope {
         RetainableLock { locked: true }
     }
     readonly property int plafond: Theme.notifications?.plafond ?? 0
+    property bool pleinEcran: false
+    property bool sonActif: true
+    property int salve: Theme.son?.salve ?? 0
+    property int renouvellement: Theme.son?.renouvellement ?? 0
+    property real dernierSon: -Infinity
+
+    signal sonner(string voix)
 
     onRetenueChanged: ecouler()
     onPlafondChanged: ecouler()
@@ -53,7 +66,7 @@ Scope {
     Attente {
         id: enAttente
         verrou: pile.verrou
-        onRenouvelee: a => pile.reprendre(a)
+        onRenouvelee: (a, precedente) => pile.reprendre(a, precedente)
     }
 
     // recevoir — prend en charge une nouvelle notification.
@@ -61,19 +74,26 @@ Scope {
     // retourne à l'attente si celle de la génération précédente de la coque la tenait ; fait expirer l'entrée de
     // l'attente de même clé, qu'elle remplace ; remplace la notification d'une entrée non sortante de même clé ; sous
     // « ne pas déranger », sans être critique, entre dans l'attente si elle est gardée, expire sinon ; à défaut, entre
-    // en file. Erreurs : aucune. Dépendances : Etiquettes.cle, Garde, attente, presenter.
+    // en file. Hors de la génération précédente, sa voix est jugée (entendre) : comme une mise à jour de la version
+// qu'elle remplace par clé, ou comme une nouvelle. Erreurs : aucune.
+// Dépendances : Etiquettes.cle, Garde, attente, presenter, entendre, Entree.renouveler.
     function recevoir(n) {
         n.tracked = true
         const cle = Etiquettes.cle(n.appName, n.hints)
         if (n.lastGeneration && attente.connue(n.id)) return void attente.ajouter(n, cle, new Date())
-        attente.parCle(cle)?.notification.expire()
+        const remplacee = attente.parCle(cle)
+        const precedente = remplacee ? {age: Date.now() - remplacee.arrivee.getTime(), urgence: remplacee.urgenceConnue}
+                                     : null
+        remplacee?.notification.expire()
         const cible = cle === "" ? undefined : affichees.concat(file).find(e => !e.sortante && e.cle === cle)
         if (cible) {
             const ancienne = cible.notification
             cible.notification = n
             ancienne.expire()
-            cible.renouveler()
-        } else if (Garde.affichable(n, nePasDeranger)) presenter(n, cle)
+            return void cible.renouveler()
+        }
+        if (!n.lastGeneration) entendre(n, precedente)
+        if (Garde.affichable(n, nePasDeranger)) presenter(n, cle)
         else if (Garde.gardee(n, retirees)) attente.ajouter(n, cle, new Date())
         else n.expire()
     }
@@ -86,6 +106,7 @@ Scope {
                                                 retenue: Qt.binding(() => pile.retenue)})
         e.fermee.connect(() => fermer(e))
         e.echue.connect(() => echoir(e))
+        e.renouvelee.connect(p => entendre(e.notification, p))
         file = file.concat([e])
         ecouler()
     }
@@ -102,14 +123,29 @@ Scope {
     // reprendre — mise à jour sur place de la notification d'une entrée de l'attente (remplacement par replaces_id) :
     // affichable, elle quitte l'attente et repasse en carte ; sinon elle y reste, à l'heure présente. Une mise à jour
     // émet un signal par propriété changée : les suivants trouvent l'entrée déjà reprise et sont ignorés.
-    // Entrée : a, l'Attendue. Sortie : aucune. Erreurs : aucune.
-    // Dépendances : Garde.affichable, Attente.oublier, presenter.
-    function reprendre(a) {
+    // Entrées : a, l'Attendue ; precedente, {age, urgence} de la version remplacée, pour juger sa voix.
+    // Sortie : aucune. Erreurs : aucune. Dépendances : Garde.affichable, Attente.oublier, presenter, entendre.
+    function reprendre(a, precedente) {
         if (!attente.entrees.includes(a) || a.sortante) return
+        entendre(a.notification, precedente)
         if (!Garde.affichable(a.notification, nePasDeranger)) return void (a.arrivee = new Date())
         const n = a.notification, cle = a.cle
         attente.oublier(a)
         presenter(n, cle)
+    }
+
+    // entendre — juge la voix d'une notification et la fait entendre s'il y a lieu (L2-68).
+    // Entrées : n ; precedente, null pour une nouvelle notification, {age, urgence} de la version remplacée sinon.
+    // Sortie : aucune ; si Son.voix rend une voix, signal sonner(voix) et dernierSon à l'instant présent.
+    // Erreurs : aucune. Dépendances : Son.voix.
+    function entendre(n, precedente) {
+        const maintenant = Date.now()
+        const voix = Son.voix(n, {active: sonActif, nePasDeranger: nePasDeranger, pleinEcran: pleinEcran,
+                                  retirees: retirees, maintenant: maintenant, dernierSon: dernierSon,
+                                  precedente: precedente, salve: salve, renouvellement: renouvellement})
+        if (voix === "") return
+        dernierSon = maintenant
+        sonner(voix)
     }
 
     // ecouler — fait entrer les plus anciennes de la file en tête des affichées, tant que la place le permet.

@@ -23,6 +23,8 @@ socle = [
     "pipewire",              # serveur audio
     "pipewire-pulse",        # compatibilité PulseAudio
     "wireplumber",           # gestionnaire de session audio
+    "pipewire-audio",        # pw-play, voix des notifications (L2-68)
+    "ocean-sound-theme",     # sons de la voix des notifications (L2-68)
     "power-profiles-daemon", # profils d'énergie
     "git",                   # versionnage
     "make",                  # chaîne de génération

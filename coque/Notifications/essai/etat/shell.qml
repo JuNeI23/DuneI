@@ -9,7 +9,7 @@ import "Notifications"
 // le singleton lui-même, est appelée telle quelle par l'essai.
 // Entrées : DUNEI_ETAT_DIR, le dossier où notifications.json est lu et écrit. Sortie : « essai : prêt » au
 // démarrage ; voir l'IpcHandler. Erreurs : aucune. Dépendances : quickshell ≥ 0.3 (IpcHandler), EtatNotifications
-// (lien Notifications).
+// (lien Notifications) ; lien Theme, que lit Voix, singleton du même module (L2-68).
 ShellRoot {
     Component.onCompleted: { EtatNotifications.nePasDeranger; console.info("essai : prêt") }
 
@@ -22,12 +22,14 @@ ShellRoot {
             return JSON.stringify({nePasDeranger: EtatNotifications.nePasDeranger, retirees: EtatNotifications.retirees})
         }
 
-        // basculer, poser, retirer, remettre — relais des fonctions du singleton. Entrées : v ; identifiant.
+        // basculer, poser, retirer, remettre, poserSon, poserVolume — relais des fonctions du singleton. Entrées : v ; identifiant.
         // Sortie : aucune. Erreurs : aucune. Dépendances : EtatNotifications.
         function basculer(): void { EtatNotifications.basculer() }
         function poser(v: bool): void { EtatNotifications.poser(v) }
         function retirer(identifiant: string): void { EtatNotifications.retirer(identifiant) }
         function remettre(identifiant: string): void { EtatNotifications.remettre(identifiant) }
+        function poserSon(v: bool): void { EtatNotifications.poserSon(v) }
+        function poserVolume(v: int): void { EtatNotifications.poserVolume(v) }
 
         // icone — glyphe de l'état, tel que le lisent la cloche et la bascule. Entrées : aucune. Sortie : son nom.
         // Erreurs : aucune. Dépendances : EtatNotifications.
