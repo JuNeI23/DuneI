@@ -1362,6 +1362,16 @@ class PanneauTest(EssaiCoque, unittest.TestCase):
         self.assertEqual((e["nePasDeranger"], e["texteEtat"]), (False, "Notifications actives"))
         self.assertEqual(e["bascule"], actives)
 
+    def test_reglages(self):
+        # Le pied du panneau porte « Réglages des notifications… » : un clic ouvre la page Notifications de
+        # l'application Paramètres et demande la fermeture du panneau.
+        e = self.etat()
+        self.assertEqual((e["lien"], e["parametres"]["ouverte"], e["fermetures"]),
+                         ("Réglages des notifications…", False, 0))
+        self.appel("reglages")
+        e = self.etat()
+        self.assertEqual((e["parametres"], e["fermetures"]), ({"ouverte": True, "page": "notifications"}, 1))
+
     def test_clavier(self):
         for app in ("A", "B", "C"):
             self.creer(app)
@@ -1518,6 +1528,13 @@ class FenetrePanneauTest(EssaiCoque, unittest.TestCase):
         self.appel("basculer", "A")
         self.repos(True)
         self.appel("echap")
+        self.assertFalse(self.repos(False)["ouvert"])
+
+    def test_reglages_ferme(self):
+        # « Réglages des notifications… » replie le panneau : la forme relaie la demande de fermeture du contenu.
+        self.appel("basculer", "A")
+        self.repos(True)
+        self.appel("reglages")
         self.assertFalse(self.repos(False)["ouvert"])
 
     def test_hauteur_suit_le_contenu(self):

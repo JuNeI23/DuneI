@@ -2,6 +2,7 @@ import QtQuick
 import Quickshell
 import "../Theme"
 import "../Composants"
+import "../Parametres"
 import "garde.js" as Garde
 
 // Panneau — contenu du panneau des notifications (L2-67) : ce qui reste à traiter, et « ne pas déranger ».
@@ -11,25 +12,29 @@ import "garde.js" as Garde
 // en fondu croisé (D182), avec un seul libellé, l'état présent (« Notifications actives » ou « Ne pas déranger ») ;
 // puis les groupes par application (GroupeAttente), le plus récent en tête, un groupe qui contient une critique passant
 // devant ; sans rien à traiter, un état vide (cloche et « Rien à traiter ») centré dans la place restante. Le panneau
-// n'a pas de fond : sa fenêtre (FenetrePanneau) fournit la forme de verre. Il se déclare montré à l'attente tant qu'il
+// n'a pas de fond : sa fenêtre (FenetrePanneau) fournit la forme de verre. Au pied, sous un filet translucide
+// (material.glassLine), l'action en texte seul « Réglages des notifications… » ouvre la page Notifications de
+// l'application Paramètres et demande la fermeture du panneau, comme le pied du popover de réglage rapide (D105). Il se déclare montré à l'attente tant qu'il
 // est monté, pour qu'une entrée fermée reste le temps de son repli.
 // Hauteur : celle du contenu, jamais sous panneau.hauteurMin, jamais au-dessus de hauteurMax ; au-delà, la liste des
-// groupes défile sous l'en-tête et la bascule, qui restent fixes ; la molette suit le défilement lissé de
+// groupes défile entre l'en-tête et la bascule, en haut, et le pied, en bas, qui restent fixes ; la molette suit le défilement lissé de
 // l'application Paramètres (motion.wheel), posé d'un coup en mouvement réduit.
 // « Tout effacer » écarte les groupes en cascade, du haut vers le bas, à panneau.cascade ms l'un de l'autre.
 // Clavier : la liste est un seul arrêt de tabulation ; les flèches déplacent l'entrée courante parmi les entrées
 // montrées, Entrée l'ouvre, Suppr l'écarte (l'entrée courante passe alors à la suivante). Tab va de la bascule à la
-// liste, puis à « Tout effacer ».
+// liste, puis à « Tout effacer », puis aux réglages.
 // Entrées : attente, l'Attente ; hauteurMax, posée par la fenêtre (infinie par défaut).
 // Sorties : implicitHeight ; vide ; effacable, vrai quand « Tout effacer » est offert ; texteEtat, l'état de « ne
 // pas déranger » ; groupes, les entrées rangées par application, sortantes comprises ; deplies, identifiants des
 // groupes dépliés ; visibles, les entrées montrées dans l'ordre de l'écran ; courante, l'entrée courante au clavier ;
+// lienReglages, la rangée « Réglages des notifications… » ; signal fermer(), la demande de fermeture du panneau ;
 // clavier, vrai tant que la liste a le focus ; defilable ; pret, vrai une fois le panneau monté (les lignes et
 // groupes qui naissent ensuite se déplient) ; bascule, lue par les essais. Fonctions : deplier, effacerGroupe,
-// nePlusGarder, toutEffacer, touche, releve.
+// nePlusGarder, toutEffacer, reglages, touche, releve.
 // Erreurs : aucune ; sans jetons chargés, les cotes sont nulles.
-// Dépendances : Quickshell (ScriptModel), GroupeAttente, Bascule, Texte, Icone, Ressort, garde.js, EtatNotifications,
-// Attente, Theme (panneau, notifications, space, color, motion.wheel).
+// Dépendances : Quickshell (ScriptModel), GroupeAttente, Bascule, Rangee, Separateur, Texte, Icone, Ressort, garde.js,
+// EtatNotifications, EtatParametres, Attente, Theme (panneau, notifications, space, color, density, material,
+// motion.wheel).
 FocusScope {
     id: panneau
 
@@ -55,11 +60,24 @@ FocusScope {
     readonly property real fixe: marge + entete.height + ecart + reglage.height + ecart
     readonly property bool defilable: defilement.contentHeight > defilement.height + 0.5
     readonly property alias bascule: bascule
+    readonly property alias lienReglages: lienReglages
+    // Hauteur d'une rangée d'action en texte, celle du pied du popover de réglage rapide.
+    readonly property real hauteurLigne: (Theme.density?.controlHeight ?? 0) + (Theme.space?.scale[0] ?? 0)
     property bool pret: false
     // File des groupes que « Tout effacer » écarte un à un.
     property var _cascade: []
 
-    implicitHeight: Math.min(hauteurMax, Math.max(Theme.panneau?.hauteurMin ?? 0, fixe + colonne.height + marge))
+    implicitHeight: Math.min(hauteurMax, Math.max(Theme.panneau?.hauteurMin ?? 0, fixe + colonne.height + pied.height))
+
+    signal fermer()
+
+    // reglages — ouvre la page Notifications de l'application Paramètres et demande la fermeture du panneau ; la
+    // fenêtre Paramètres attend le repli du panneau, contextuel du registre Overlays (D174).
+    // Entrées, sortie, erreurs : aucune. Dépendances : EtatParametres.ouvrir, fermer.
+    function reglages() {
+        EtatParametres.ouvrir("notifications", [])
+        fermer()
+    }
 
     // Le panneau se déclare montré à sa création et ne l'est plus à sa destruction : un Binding détruit avec lui ne
     // rendrait pas sa valeur à la cible (relecture finale de L2-67). Une cascade de « Tout effacer » interrompue par
@@ -195,6 +213,7 @@ FocusScope {
             echelon: 1
             moyen: true
             activeFocusOnTab: panneau.effacable
+            KeyNavigation.tab: lienReglages
             color: Theme.color?.accentStandalone ?? "transparent"
             text: qsTr("Tout effacer")
             Keys.onReturnPressed: panneau.toutEffacer()
@@ -245,7 +264,7 @@ FocusScope {
         x: panneau.marge
         y: panneau.fixe
         width: entete.width
-        height: panneau.height - panneau.fixe - panneau.marge
+        height: panneau.height - panneau.fixe - pied.height
         activeFocusOnTab: !panneau.vide
         KeyNavigation.tab: effacer
         Keys.onPressed: event => event.accepted = panneau.touche(event.key)
@@ -329,6 +348,35 @@ FocusScope {
                 color: Theme.color?.textTertiary ?? "transparent"
                 text: qsTr("Rien à traiter")
             }
+        }
+    }
+
+    // Pied : sous un filet translucide (material.glassLine : un filet opaque se lit comme un trait blanc sur le verre,
+    // D103), l'action en texte seul qui ouvre les réglages des notifications.
+    Item {
+        id: pied
+        y: panneau.height - height
+        width: panneau.width
+        height: lienReglages.y + lienReglages.height + (Theme.space?.scale[1] ?? 0)
+
+        Separateur {
+            id: filet
+            x: panneau.marge
+            y: Theme.space?.scale[1] ?? 0
+            width: parent.width - 2 * panneau.marge
+            color: Theme.material?.glassLine ?? "transparent"
+        }
+        Rangee {
+            id: lienReglages
+            index: 0
+            y: filet.y + filet.height + (Theme.space?.scale[0] ?? 0)
+            width: parent.width
+            implicitHeight: panneau.hauteurLigne
+            hoverEnabled: true
+            activeFocusOnTab: true
+            KeyNavigation.tab: bascule
+            text: qsTr("Réglages des notifications…")
+            onActive: panneau.reglages()
         }
     }
 }

@@ -4181,3 +4181,16 @@ puisqu'il suit la force du signal. Essais : `PanneauTest.test_bascule`, `EtatNot
 *Touché : `coque/Notifications/Panneau.qml`, `EtatNotifications.qml`, `coque/Composants/Bascule.qml`,
 `coque/Barre/Notifications.qml`, `icones.js`, `coque/Bluetooth/PopoverBluetooth.qml`, bible (annexe E, 0.38),
 backlog (version 1.57), notes de direction (version 1.52).*
+
+### D183 · Le panneau mène aux réglages des notifications
+
+17 novembre 2026 · L2-67, retour après fusion. Nicolas relève que la page Notifications de Paramètres n'est pas
+accessible depuis le panneau. Le panneau prend un pied, comme le popover de réglage rapide (D105) : sous un filet
+translucide (`material.glassLine`), l'action en texte seul « Réglages des notifications… », qui ouvre la page
+Notifications et demande la fermeture du panneau. La fenêtre Paramètres attend le repli du panneau, contextuel du
+registre Overlays, comme elle attend celui d'un popover (D174). La liste défile désormais entre l'en-tête et la
+bascule, en haut, et le pied, en bas ; la rangée suit « Tout effacer » dans l'ordre de tabulation. Essais :
+`PanneauTest.test_reglages`, `FenetrePanneauTest.test_reglages_ferme`.
+
+*Touché : `coque/Notifications/Panneau.qml`, `FormePanneau.qml`, coques d'essai du panneau et de sa fenêtre, bible
+(annexe E, 0.38), backlog (version 1.57), notes de direction (version 1.52).*

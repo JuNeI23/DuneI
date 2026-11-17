@@ -19,7 +19,8 @@ import "../Presquile"
 // Sorties : phase (« repos », « forme », « entree » ou « sortie ») ; charge, vrai tant que la forme est sortie, même
 // en partie (le contenu est monté et le masque de saisie couvre le corps) ; corps, le rectangle du corps, masque de
 // saisie de la fenêtre ; largeurForme et hauteurForme, taille courante du corps ; opaciteContenu ; marge, débord de
-// l'ombre de la forme, à réserver à gauche par la fenêtre ; signal fermer().
+// l'ombre de la forme, à réserver à gauche par la fenêtre ; panneau, le Panneau monté (null sinon), lu par les
+// essais ; signal fermer(), émis par Échap et par la demande du contenu (« Réglages des notifications… »).
 // Erreurs : aucune ; sans jetons chargés, la forme est de taille nulle.
 // Dépendances : Encoche (côté droit), Panneau, Ressort, Theme (panneau, tokens.presquile).
 Item {
@@ -27,6 +28,7 @@ Item {
 
     property QtObject attente: null
     property bool ouvert: false
+    readonly property Item panneau: contenu.item
 
     readonly property real largeurPanneau: Theme.panneau?.largeur ?? 0
     readonly property real hauteurMin: Theme.panneau?.hauteurMin ?? 0
@@ -87,6 +89,7 @@ Item {
             sourceComponent: Panneau {
                 attente: forme.attente
                 hauteurMax: forme.hauteurMax
+                onFermer: forme.fermer()
             }
         }
     }

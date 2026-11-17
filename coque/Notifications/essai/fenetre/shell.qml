@@ -121,5 +121,9 @@ ShellRoot {
 
         // echap — touche Échap reçue par la forme. Sortie : aucune.
         function echap(): void { forme.fermer() }
+
+        // reglages — clic sur « Réglages des notifications… » du panneau chargé dans la forme. Sortie : aucune.
+        // Erreurs : TypeError au journal sans panneau chargé. Dépendances : forme (panneau).
+        function reglages(): void { forme.panneau.lienReglages.active() }
     }
 }

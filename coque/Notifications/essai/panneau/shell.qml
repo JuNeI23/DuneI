@@ -6,6 +6,7 @@ import Quickshell.Io
 import "Theme"
 import "Notifications"
 import "Notifications/essai"
+import "Parametres"
 
 // Coque d'essai du contenu du panneau des notifications, sous la plateforme offscreen.
 // Rôle : pose un Panneau, dans une fenêtre jamais montrée, sur une Attente de notifications factices créées par IPC ;
@@ -24,6 +25,8 @@ ShellRoot {
     property int suivant: 1
     property var notifications: ({})
     property var journal: []
+    // Nombre de demandes de fermeture émises par le panneau (signal fermer).
+    property int fermetures: 0
 
     Component.onCompleted: console.info("essai : prêt")
 
@@ -50,6 +53,11 @@ ShellRoot {
                 height: implicitHeight
                 attente: attenteEssai
             }
+        }
+        Connections {
+            target: chargeur.item
+            ignoreUnknownSignals: true
+            function onFermer() { essai.fermetures += 1 }
         }
     }
 
@@ -84,7 +92,9 @@ ShellRoot {
         // offerte), groupes [{nom, nombre, deplie, autres (libellé « N autres » ou « »), retirable, lignes}],
         // texteEtat (état de « ne pas déranger »), nePasDeranger, retirees, nombre (celui de l'attente), courante
         // (identifiant de la notification de l'entrée courante au clavier, 0 sans elle), defilable, montree, entrees
-        // (nombre d'entrées de l'attente, sortantes comprises), vue (position de la ligne courante dans la vue).
+        // (nombre d'entrées de l'attente, sortantes comprises), vue (position de la ligne courante dans la vue),
+        // bascule {allumee, glyphe}, lien (libellé du lien des réglages), parametres {ouverte, page} (EtatParametres)
+        // et fermetures (demandes de fermeture du panneau).
         // Entrées : aucune. Sortie : texte. Erreurs : aucune. Dépendances : panneau, attente, EtatNotifications.
         function etat(): string {
             return JSON.stringify({hauteur: panneau.implicitHeight, vide: panneau.vide,
@@ -93,7 +103,10 @@ ShellRoot {
                 nombre: attenteEssai.nombre, courante: panneau.courante?.notification?.id ?? 0,
                 defilable: panneau.defilable, montree: attenteEssai.montree, entrees: attenteEssai.entrees.length,
                 vue: panneau.vueCourante?.() ?? null,
-                bascule: {allumee: panneau.bascule?.checked ?? null, glyphe: panneau.bascule?.icone ?? null}})
+                bascule: {allumee: panneau.bascule?.checked ?? null, glyphe: panneau.bascule?.icone ?? null},
+                lien: panneau.lienReglages?.text ?? null,
+                parametres: {ouverte: EtatParametres.ouverte, page: EtatParametres.page},
+                fermetures: essai.fermetures})
         }
 
         // monter — monte ou démonte le panneau, comme l'ouverture et la fermeture de sa forme. Entrée : v.
@@ -119,6 +132,10 @@ ShellRoot {
         function nePlusGarder(identifiant: string): void { panneau.nePlusGarder(identifiant) }
         function toutEffacer(): void { panneau.toutEffacer() }
         function basculer(): void { panneau.bascule.toggle(); panneau.bascule.toggled() }
+
+        // reglages — clic sur « Réglages des notifications… », par le signal de sa rangée. Entrées : aucune.
+        // Sortie : aucune. Erreurs : TypeError au journal sans panneau monté. Dépendances : panneau.
+        function reglages(): void { panneau.lienReglages.active() }
 
         // touche — touche reçue par la liste : « bas », « haut », « entree » ou « suppr ». Entrée : nom.
         // Sortie : aucune. Erreurs : aucune. Dépendances : panneau.touche.
