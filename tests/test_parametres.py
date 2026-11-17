@@ -138,7 +138,7 @@ class CoquilleTest(EssaiCoque, unittest.TestCase):
         # Le registre nomme la vraie page Wi-Fi (le banc la remplace par une page factice pour ne pas lire le réseau
         # de la machine) et déclare son index : l'interrupteur, le réseau joint et ses tuiles, qui exigent un réseau
         # joint, les réseaux enregistrés et le réseau masqué.
-        wifi, filaire, vpn = json.loads(self.ipc("essai", "registre"))
+        wifi, filaire, vpn, notifications = json.loads(self.ipc("essai", "registre"))
         self.assertTrue(wifi["composant"].endswith("/Reseau/PageWifi.qml"), wifi["composant"])
         self.assertTrue((ROOT / "coque" / "Reseau" / "PageWifi.qml").is_file())
         self.assertEqual([(e["chemin"], e["exige"]) for e in wifi["index"]], [
@@ -150,6 +150,20 @@ class CoquilleTest(EssaiCoque, unittest.TestCase):
         self.assertTrue(filaire["composant"].endswith("/Reseau/PageFilaire.qml") and vpn["composant"].endswith("/Reseau/PageVpn.qml"))
         self.assertEqual([e["chemin"] for e in filaire["index"] + vpn["index"]],
                          [["filaire", "ethernet"], ["filaire", "profils"], ["vpn", "connexions"]])
+        # La page Notifications (L2-67) déclare « ne pas déranger » et les applications retirées.
+        self.assertTrue(notifications["composant"].endswith("/Notifications/PageNotifications.qml"))
+        self.assertTrue((ROOT / "coque" / "Notifications" / "PageNotifications.qml").is_file())
+        self.assertEqual([e["chemin"] for e in notifications["index"]],
+                         [["notifications", "ne-pas-deranger"], ["notifications", "retirees"]])
+        self.assertTrue(all(e["page"] == "notifications" and e["libelle"] and e["motsCles"] and e["exige"] == ""
+                            for e in notifications["index"]))
+
+    def test_recherche_ne_pas_deranger(self):
+        self.ouvrir("vpn")
+        self.ipc("essai", "saisir", "deranger")
+        self.assertEqual(self.etat()["resultats"], [{"libelle": "Ne pas déranger", "origine": "Notifications"}])
+        self.ipc("essai", "saisir", "remettre")
+        self.assertEqual(self.etat()["resultats"], [{"libelle": "Applications retirées", "origine": "Notifications"}])
 
     def test_attend_le_repli_du_popover(self):
         # D174 : demandée depuis un popover, la fenêtre n'est construite qu'une fois ce popover replié ; une fois
@@ -172,8 +186,8 @@ class CoquilleTest(EssaiCoque, unittest.TestCase):
         self.assertEqual((e["ouverte"], e["page"], e["titre"]), (True, "vpn", "Paramètres"))
         # Seule la page affichée est construite ; les autres le sont à leur première visite, puis gardées.
         self.assertEqual(e["chargees"], ["vpn"])
-        self.assertEqual(e["entrees"], ["Wi-Fi", "Filaire", "VPN"])
-        self.assertEqual(e["groupes"], ["Réseau"])
+        self.assertEqual(e["entrees"], ["Wi-Fi", "Filaire", "VPN", "Notifications"])
+        self.assertEqual(e["groupes"], ["Réseau", "Système"])
         self.ipc("parametres", "ouvrir", "wifi")
         e = self.jusqua(lambda e: e["page"] == "wifi" and len(e["chargees"]) == 2, "seconde page construite")
         self.assertEqual(e["chargees"], ["wifi", "vpn"])

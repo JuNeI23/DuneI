@@ -993,6 +993,26 @@ class EncocheTest(PresquileIpc, unittest.TestCase):
         # celui de la variante D, quelle que soit la hauteur des jetons.
         self.assertEqual(self.appeler("tracerEncoche", 106, 34, 13, 10), TRACE_PLANCHE)
 
+    # Forme latérale aux cotes du panneau des notifications : le tracé du haut dont chaque point (x, y) devient
+    # (largeur − y, x).
+    TRACE_LATERAL = ("M364 0 V346 C364 338 361 334 352 333 H14 C5 333 0 329 0 319 V27 C0 17 5 13 14 13 H352 "
+                     "C361 12 364 8 364 0 Z")
+
+    def test_trace_lateral(self):
+        self.assertEqual(self.appeler("tracerLateral", 364, 320, 13, 10), self.TRACE_LATERAL)
+
+    def test_lateral_bas(self):
+        # Corps plus bas que le creux des évasements ne le permet : le rayon est borné, aucune cote négative.
+        trace = self.appeler("tracerLateral", 364, 10, 13, 10)
+        self.assertTrue(trace.startswith("M364 0 V36 ") and trace.endswith(" Z"), trace)
+        self.assertNotIn("-", trace)
+
+    def test_encoche_droite(self):
+        geometrie = self.json("laterale")
+        self.assertEqual(geometrie.pop("trace"), self.TRACE_LATERAL)
+        self.assertEqual(geometrie, {"largeur": 364, "hauteur": 346, "corpsX": 0, "corpsY": 13, "corpsLargeur": 364,
+                                     "corpsHauteur": 320})
+
     def test_capture(self):
         # La vitrine, rendue hors écran, s'enregistre en PNG : de quoi comparer la forme à la planche.
         chemin = self.dir / "encoche.png"

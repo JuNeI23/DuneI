@@ -76,6 +76,7 @@ class ModulesTest(unittest.TestCase):
                                                      "layer\tdunei-verre-dunei-presquile",
                                                      "layer\tdunei-verre-dunei-popovers",
                                                      "layer\tdunei-verre-dunei-notifications",
+                                                     "layer\tdunei-verre-dunei-panneau",
                                                      "layer\tdunei-fond",
                                                      "rule\tsans-agrandissement", "rule\tglisser-xwayland",
                                                      "rule\tfenetre-parametres",

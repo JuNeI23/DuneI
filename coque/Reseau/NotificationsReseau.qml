@@ -15,7 +15,8 @@ import "../Theme"
 // bascule automatique.
 // Entrées (réglables) : connecte, connectivite et nom, par défaut ceux de EtatReseau (remplaçables par un test) ;
 // connus, vrai quand Networking a peuplé ses appareils ; veille, vrai pendant la veille de la machine ; commande, fonction(icone, titre, corps) qui rend le tableau d'arguments à lancer (notify-send par défaut, avec
-// l'étiquette de pile « reseau », par laquelle le serveur de la coque remplace la notification précédente).
+// l'étiquette de pile « reseau », par laquelle le serveur de la coque remplace la notification précédente, et
+// l'indice transient (-e) : une notification de connexion passe en carte mais n'attend pas dans le panneau, L2-67).
 // Sorties (lecture seule) : stable, dernier état notifié ou appris (vide avant le premier) ; armee, vrai tant que
 // le minuteur de stabilité court.
 // Erreurs : une connectivité « unknown » permanente (contrôle de connectivité désactivé) ne notifie rien, pas même
@@ -30,7 +31,7 @@ Scope {
     property string nom: EtatReseau.nomActif
     property bool connus: EtatReseau.appareils.length > 0
     property bool veille: EtatReseau.veille
-    property var commande: (icone, titre, corps) => ["notify-send", "-a", "DuneI", "-i", icone,
+    property var commande: (icone, titre, corps) => ["notify-send", "-a", "DuneI", "-e", "-i", icone,
         "-h", "string:x-dunst-stack-tag:reseau", titre, corps]
 
     property string stable: ""

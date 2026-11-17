@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas — révisée le 22 octobre 2026
 
-Version 1.50. Historique en fin de document.
+Version 1.51. Historique en fin de document.
 
 *Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent soixante-quinze lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
 
@@ -609,16 +609,26 @@ la même règle des cinq et ouvre l'application ; les trois points d'activité s
 fenêtre Réseau est retirée. Ajouter une page de réglages revient désormais à l'inscrire au registre et à écrire son
 fichier : la fenêtre Son (L2-66) deviendra une page « Son ».
 
-Prochaine étape : **la cloche de la barre avec sa pastille rouge, l'historique des notifications et « ne pas
-déranger »** (L2-67), branchés sur la `Pile` du `Centre`. Le son de notification (L2-68) et l'« Ouvrir » propre à
-DuneI (L2-69) viennent plus tard. Le reste de L2-48, L2-57 (suites du popover Bluetooth), L2-58, L2-59 et L2-62
-attendent leur tour.
+Le 2026-11-17, la **cloche des notifications** est faite (L2-67, D176 à D180). La cloche de la barre porte le
+nombre de notifications à traiter, ou une boule rouge dès qu'une critique attend ; sous « ne pas déranger », elle est
+barrée et ne porte rien. Elle ouvre le panneau des notifications, une presqu'île latérale collée au bord droit : les
+notifications encore vivantes, groupées par application, y attendent qu'on les traite, sauf les éphémères et les
+applications qu'on a retirées ; « Tout effacer » les écarte en cascade. « Ne pas déranger » se bascule du panneau, du
+clic droit sur la cloche ou de la page Notifications de Paramètres ; seules les critiques font alors paraître une
+carte. À la recette, Nicolas a voulu un libellé unique qui dise l'état présent, une cloche sans nombre ni boule sous
+« ne pas déranger », et des chiffres mieux centrés. L'ouverture d'une application au clic sur son entrée reste à
+éprouver sur un vrai courriel ; on y reviendra au besoin.
+
+Prochaine étape : **le son de notification** (L2-68), joué à l'arrivée d'une carte et coupé par « ne pas déranger »,
+dont Nicolas décidera le principe. L'« Ouvrir » propre à DuneI (L2-69) vient ensuite. Le reste de L2-48, L2-57 (suites
+du popover Bluetooth), L2-58, L2-59 et L2-62 attendent leur tour.
 
 ## Historique des versions
 
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-10 | Version initiale |
+| 1.51 | 2026-11-17 | L2-67 fait : cloche à pastille, panneau des notifications, « ne pas déranger » (D176 à D180) ; prochaine étape : L2-68 |
 | 1.50 | 2026-11-16 | L5-01 et L2-65 faits, en attente de fusion : application Paramètres (coquille, pages Wi-Fi, Filaire et VPN), popover réseau à la règle des cinq, fenêtre Réseau retirée (D165 à D175) ; prochaine étape inchangée : L2-67 |
 | 1.49 | 2026-11-13 | L2-19 fait : notifications de la coque, dunst retiré (D162) ; L2-66 reportée, L2-65 à refaire de zéro (D163) ; prochaine étape : la cloche avec pastille, l'historique et « ne pas déranger » (L2-67) |
 | 1.48 | 2026-11-10 | L2-65 fusionné (PR #54) : recette à l'écran validée après une première série de corrections (D155 à D157) ; prochaine étape : L2-66 |

@@ -8,7 +8,9 @@ import QtQuick
 // retient : elle l'est alors au retrait du dernier verrou.
 // Chaque appel reçu est signalé par appel(« id:expire », « id:dismiss », « id:invoke:<identifiant> »).
 // Entrées : id, appName, summary, body, urgency (0 basse, 1 normale, 2 critique, comme NotificationUrgency),
-// expireTimeout (ms), hints, resident, image, appIcon.
+// expireTimeout (ms), hints (l'indice « transient » y marque une notification éphémère : le mot est réservé en QML
+// et ne peut pas nommer une propriété déclarée ici), resident, image, appIcon, desktopEntry, lastGeneration
+// (notification réémise après un rechargement de la coque).
 // Sorties : actions (une action « default » ; poserActions la remplace), signaux closed(raison), appel(texte) et detruite(). Erreurs : aucune.
 // Dépendances : aucune ; coque d'essai seulement.
 QtObject {
@@ -22,6 +24,8 @@ QtObject {
     property real expireTimeout: -1
     property var hints: ({})
     property bool resident: false
+    property string desktopEntry: ""
+    property bool lastGeneration: false
     property bool tracked: false
     // Nombre de verrous posés par FauxVerrou ; fermee vaut vrai une fois closed émis.
     property int verrous: 0

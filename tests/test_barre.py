@@ -157,6 +157,8 @@ class IconesTest(BarreIpc, unittest.TestCase):
         self.assertEqual(self.appeler("iconeBluetooth", True, True), "bluetooth-active")
         self.assertEqual(self.appeler("iconeNotifications", True), "notifications-disabled")
         self.assertEqual(self.appeler("iconeNotifications", False), "preferences-system-notifications")
+        for nombre, texte in ((0, ""), (1, "1"), (99, "99"), (100, "99+"), (4000, "99+")):
+            self.assertEqual(self.appeler("textePastille", nombre), texte)
         self.assertEqual(self.appeler("iconeMoment", "nuit"), "weather-clear-night")
         self.assertEqual(self.appeler("iconeMoment", "jour"), "weather-clear")
 
@@ -268,6 +270,39 @@ class ElementBarreTest(ElementBarreBase, unittest.TestCase):
             time.sleep(0.02)
 
 
+    def mouvement(self) -> dict:
+        """Relevé du mouvement de l'élément d'essai. Sortie : {remplissage, sortant, couleur}. Dépendances : appeler."""
+        return json.loads(self.appeler("mouvementElement"))
+
+    def test_pleine_sans_ouverture(self):
+        # « pleine » remplit le glyphe sans le descendre ni lui donner l'accent : seul « ouvert » lie au popover.
+        self.appeler("regler", "preferences-system-notifications", "")
+        repos, couleur = self.decalage(), self.mouvement()["couleur"]
+        self.appeler("reglerElement", True, False)
+        fin = time.monotonic() + DELAI
+        while self.mouvement()["remplissage"] != 1:
+            self.assertLess(time.monotonic(), fin, "le glyphe plein n'est pas arrivé")
+            self.assertEqual(self.decalage(), repos)
+        self.assertEqual(self.mouvement()["couleur"], couleur)
+
+    def test_fondu_d_icone(self):
+        self.appeler("regler", "preferences-system-notifications", "")
+        self.appeler("reglerElement", False, True)
+        self.assertEqual(self.mouvement()["sortant"], 0)
+        self.appeler("regler", "notifications-disabled", "")
+        vues, fin = [], time.monotonic() + DELAI
+        while (v := self.mouvement()["sortant"]) != 0 or not vues:
+            self.assertLess(time.monotonic(), fin, f"couche sortante à {v}")
+            vues.append(v)
+        self.assertTrue(any(0 < v < 1 for v in vues), vues)
+
+    def test_sans_fondu_pas_de_couche_sortante(self):
+        self.appeler("regler", "preferences-system-notifications", "")
+        self.appeler("regler", "notifications-disabled", "")
+        for _ in range(10):
+            self.assertEqual(self.mouvement()["sortant"], 0)
+
+
 class ElementBarreReduitTest(ElementBarreBase, unittest.TestCase):
     """Mouvement réduit : l'icône ne descend pas ; elle garde ses couleurs animées et son fondu."""
 
@@ -317,7 +352,10 @@ class IndicateursStatiqueTest(unittest.TestCase):
         self.assertIn("cliquable: true", qml["JourNuit.qml"])
         self.assertIn('["dunei-theme", "bascule"]', qml["JourNuit.qml"])
         cliquables = sorted(nom for nom in INDICATEURS if "cliquable: true" in qml[f"{nom}.qml"])
-        self.assertEqual(cliquables, ["Audio", "Batterie", "Bluetooth", "JourNuit", "Parametres", "Reseau"])
+        self.assertEqual(cliquables, ["Audio", "Batterie", "Bluetooth", "JourNuit", "Notifications", "Parametres", "Reseau"])
+        # La cloche ouvre le panneau des notifications par son clic gauche et bascule « ne pas déranger » au droit.
+        self.assertRegex(qml["Notifications.qml"], r"onClicked:\s*panneau\?\.basculer\(barre\)")
+        self.assertRegex(qml["Notifications.qml"], r"acceptedButtons:\s*Qt\.RightButton")
         self.assertRegex(qml["Bluetooth.qml"], r"onClicked:\s*ouvert\s*=\s*!ouvert")
         # Un clic bascule « ouvert », que la barre reporte sur le PopoverReseau (voir test_popover_accroche) ;
         # l'icône vient du singleton.
@@ -400,8 +438,79 @@ class RelanceTest(BarreIpc, unittest.TestCase):
         time.sleep(attente)
         self.assertIn(indice, self.appeler("etat", etat))
 
-    def test_cloche_fixe(self):
-        self.assertIn("icone=preferences-system-notifications", self.appeler("etat", "notifications"))
+    def cloche(self) -> dict:
+        """État de la cloche de la coque d'essai. Sortie : dictionnaire (voir etatCloche). Dépendances : appeler."""
+        return json.loads(self.appeler("etatCloche"))
+
+    def test_cloche_etats(self):
+        self.assertEqual(self.cloche(), {"icone": "preferences-system-notifications", "pleine": False,
+                                         "cliquable": True, "ouvert": False, "forme": "", "texte": "", "bascules": 0,
+                                         "barre": False, "nePasDeranger": False})
+        self.appeler("cloche", 3, False)
+        e = self.cloche()
+        self.assertEqual((e["pleine"], e["forme"], e["texte"]), (True, "nombre", "3"))
+        self.appeler("cloche", 150, False)
+        self.assertEqual(self.cloche()["texte"], "99+")
+        self.appeler("cloche", 3, True)
+        e = self.cloche()
+        self.assertEqual((e["pleine"], e["forme"]), (True, "boule"))
+        self.appeler("cliquerCloche", "droit")
+        e = self.cloche()
+        # Sous « ne pas déranger », la cloche barrée ne porte ni nombre ni boule (retour de recette de L2-67).
+        self.assertEqual((e["icone"], e["forme"], e["texte"], e["nePasDeranger"], e["bascules"]),
+                         ("notifications-disabled", "", "", True, 0))
+        self.appeler("ouvrirPanneau", True)
+        self.assertTrue(self.cloche()["ouvert"])
+
+    def test_cloche_clics(self):
+        self.appeler("cliquerCloche", "gauche")
+        e = self.cloche()
+        self.assertEqual((e["bascules"], e["barre"], e["nePasDeranger"]), (1, True, False))
+
+    def test_pastille_s_anime(self):
+        # L'apparition de la pilule, puis son remplacement par la boule, passent par des opacités intermédiaires.
+        def suivre(cle: str, cible: float) -> list[float]:
+            vues, fin = [], time.monotonic() + DELAI
+            while (v := json.loads(self.appeler("mouvementPastille"))[cle]) != cible:
+                self.assertLess(time.monotonic(), fin, f"{cle} à {v} au lieu de {cible}")
+                vues.append(v)
+            return vues
+        self.assertEqual(json.loads(self.appeler("mouvementPastille")), {"pilule": 0, "boule": 0, "ancien": 0})
+        self.appeler("cloche", 1, False)
+        self.assertTrue(any(0 < v < 1 for v in suivre("pilule", 1)))
+        self.appeler("cloche", 1, True)
+        self.assertTrue(any(0 < v < 1 for v in suivre("boule", 1)))
+        suivre("pilule", 0)
+
+    def test_chiffres_en_fondu(self):
+        # Un nombre qui change passe par un fondu croisé : l'ancien texte s'efface pendant que le nouveau paraît.
+        self.appeler("cloche", 3, False)
+        self.jusqua_pastille(lambda m: m["pilule"] == 1)
+        self.appeler("cloche", 4, False)
+        vues, fin = [], time.monotonic() + DELAI
+        while (v := json.loads(self.appeler("mouvementPastille"))["ancien"]) != 0 or not vues:
+            self.assertLess(time.monotonic(), fin, f"ancien texte à {v}")
+            vues.append(v)
+        self.assertTrue(any(0 < v < 1 for v in vues), vues)
+        self.assertEqual(self.cloche()["texte"], "4")
+
+    def test_chiffres_centres(self):
+        # Le dessin des chiffres est centré dans la pilule, à un demi-pixel près (retour de recette de L2-67).
+        for nombre in (1, 7, 42, 150):
+            self.appeler("cloche", nombre, False)
+            self.jusqua_pastille(lambda m: m["pilule"] == 1)
+            time.sleep(0.6)
+            dx, dy = json.loads(self.appeler("centrageChiffres"))
+            self.assertLessEqual(abs(dx), 0.5, f"{nombre} : décalage horizontal {dx}")
+            self.assertLessEqual(abs(dy), 0.5, f"{nombre} : décalage vertical {dy}")
+
+    def jusqua_pastille(self, condition) -> None:
+        """Attend un état du mouvement de la pastille. Entrée : condition sur {pilule, boule, ancien}.
+        Sortie : aucune. Erreurs : échec du test au délai. Dépendances : appeler."""
+        fin = time.monotonic() + DELAI
+        while not condition(json.loads(self.appeler("mouvementPastille"))):
+            self.assertLess(time.monotonic(), fin, "pastille")
+            time.sleep(0.02)
 
     def test_vpn_lit_apres_ligne(self):
         self.valeur_apres_ligne("surveillerVpn", "vpn", "", "wireguard", "cat ", 1.5, "visible=true")
@@ -484,16 +593,16 @@ class BarreStructureTest(unittest.TestCase):
 
     def test_masque_ne_couvre_que_les_cliquables(self):
         masque = re.search(r"mask:\s*Region\s*\{([^{}]*)Region\s*\{([^{}]*)\}\s*Region\s*\{([^{}]*)\}\s*"
-                           r"Region\s*\{([^{}]*)\}\s*Region\s*\{([^{}]*)\}\s*\}", self.barre)
+                           r"Region\s*\{([^{}]*)\}\s*Region\s*\{([^{}]*)\}\s*Region\s*\{([^{}]*)\}\s*\}", self.barre)
         self.assertIsNotNone(masque)
         regions = masque.groups()
-        # Cinq régions : l'interrupteur, puis quatre enfants, les indicateurs réseau, Bluetooth, audio et batterie, chacune
-        # suivant sa position dans la rangée.
-        self.assertEqual(len(regions), 5)
+        # Six régions : l'interrupteur, puis cinq enfants, les indicateurs réseau, Bluetooth, audio et batterie et la
+        # cloche, chacune suivant sa position dans la rangée.
+        self.assertEqual(len(regions), 6)
         self.assertNotRegex(self.barre, r"\bitem:")
         # Une Region qui nomme un item ne suit que ses déplacements dans son parent : le masque se calcule par
         # rangée, pour suivre aussi le glissement de la rangée quand une icône apparaît à droite (D100).
-        for corps, nom in zip(regions, ("jourNuit", "reseau", "bluetooth", "audio", "batterie")):
+        for corps, nom in zip(regions, ("jourNuit", "reseau", "bluetooth", "audio", "batterie", "cloche")):
             self.assertRegex(corps, rf"x:\s*rangee\.x\s*\+\s*droite\.x\s*\+\s*{nom}\.x\b")
             self.assertRegex(corps, rf"y:\s*rangee\.y\s*\+\s*droite\.y\s*\+\s*{nom}\.y\b")
             self.assertRegex(corps, rf"height:\s*{nom}\.height\b")
@@ -503,6 +612,8 @@ class BarreStructureTest(unittest.TestCase):
         self.assertRegex(regions[2], r"width:\s*bluetooth\.visible\s*\?\s*bluetooth\.width\s*:\s*0\b")
         self.assertRegex(regions[3], r"width:\s*audio\.visible\s*\?\s*audio\.width\s*:\s*0\b")
         self.assertRegex(regions[4], r"width:\s*batterie\.visible\s*\?\s*batterie\.width\s*:\s*0\b")
+        self.assertRegex(regions[5], r"width:\s*cloche\.visible\s*\?\s*cloche\.width\s*:\s*0\b")
+        self.assertRegex(self.barre, r"Notifications\s*\{\s*id:\s*cloche\b")
         self.assertRegex(self.barre, r"Audio\s*\{\s*id:\s*audio\b")
         self.assertRegex(self.barre, r"Batterie\s*\{\s*id:\s*batterie\b")
         self.assertRegex(self.barre, r"Bluetooth\s*\{\s*id:\s*bluetooth\b")

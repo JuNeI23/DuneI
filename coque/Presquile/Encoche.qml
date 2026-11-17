@@ -14,10 +14,15 @@ import "encoche.js" as Forme
 // silhouette, floutée, donne l'ombre portée : reflet, liserés et ombre épousent la courbe, évasements compris.
 // Le tracé est une liaison : changer largeurCorps ou hauteur le redessine sans autre intervention (étirement par
 // ressorts, conception § 5). Rien ne s'anime de soi-même : la texture et le flou ne se recalculent qu'au changement.
-// Entrées : largeurCorps, largeur du corps sans les évasements, 0 par défaut ; hauteur, evasement, rayon, lus dans
+// Côté : « haut » (défaut), la forme descend du bord haut et ses évasements sont à gauche et à droite du corps ;
+//           « droite » (panneau des notifications, L2-67), elle sort du bord droit, ses évasements sont au-dessus et
+//           au-dessous du corps, et ses angles arrondis à gauche : largeurCorps et hauteur restent la largeur et la
+//           hauteur du corps.
+// Entrées : cote, « haut » ou « droite » ; largeurCorps, largeur du corps sans les évasements, 0 par défaut ; hauteur, evasement, rayon, lus dans
 //           Theme.tokens.presquile par défaut (28, 13 et 10 px logiques) ; verre, vrai pour la forme d'une fenêtre de
 //           coque, que le compositeur floute, vrai par défaut comme les autres surfaces de coque.
-// Sorties : implicitWidth, largeurCorps + 2 × evasement ; implicitHeight, hauteur ; corps, rectangle du corps sans
+// Sorties : implicitWidth, largeurCorps + 2 × evasement ; implicitHeight, hauteur (côté droit : largeurCorps, et
+//           hauteur + 2 × evasement) ; corps, rectangle du corps sans
 //           les évasements, masque de saisie de la surface ; trace, tracé SVG de la forme, lu par les essais ; marge,
 //           débord de l'ombre sur les côtés et le bas (portée plus décalage, 0 sans ombre), à réserver dans la
 //           fenêtre qui porte la forme.
@@ -34,6 +39,8 @@ import "encoche.js" as Forme
 Item {
     id: encoche
 
+    property string cote: "haut"
+    readonly property bool laterale: cote === "droite"
     property real largeurCorps: 0
     property real hauteur: Theme.tokens?.presquile?.hauteur ?? 0
     property real evasement: Theme.tokens?.presquile?.evasement ?? 0
@@ -43,10 +50,11 @@ Item {
     readonly property bool ombree: !!Theme.elevation?.e3?.shadow
     readonly property real marge: ombree
         ? (Theme.material?.shadowBlur ?? 0) + Math.abs(Theme.material?.shadowOffsetY ?? 0) : 0
-    readonly property string trace: tracer(largeurCorps, hauteur, evasement, rayon)
+    readonly property string trace: laterale ? Forme.tracerLateral(largeurCorps, hauteur, evasement, rayon)
+                                             : tracer(largeurCorps, hauteur, evasement, rayon)
 
-    implicitWidth: largeurCorps + 2 * evasement
-    implicitHeight: hauteur
+    implicitWidth: largeurCorps + (laterale ? 0 : 2 * evasement)
+    implicitHeight: hauteur + (laterale ? 2 * evasement : 0)
 
     // tracer — tracé SVG de l'encoche continue aux dimensions données, relais de encoche.js gardé pour les lecteurs
     // de l'Encoche. Entrées : l, largeur du corps ; h, hauteur ; e, évasement ; r, rayon des angles du bas (px
@@ -56,7 +64,8 @@ Item {
 
     Item {
         id: corps
-        x: encoche.evasement
+        x: encoche.laterale ? 0 : encoche.evasement
+        y: encoche.laterale ? encoche.evasement : 0
         width: encoche.largeurCorps
         height: encoche.hauteur
     }

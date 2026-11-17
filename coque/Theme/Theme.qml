@@ -77,6 +77,10 @@ Singleton {
     readonly property var galerie: tokens?.galerie
     // Pile de notifications (L2-19) : largeur, marge, écart, plafond, durée par défaut, icône, intérieur, lignes de corps.
     readonly property var notifications: tokens?.notifications
+    // Pastille de la cloche (L2-67) : hauteur, corps, intérieur, boule et positions sur le glyphe.
+    readonly property var cloche: tokens?.cloche
+    // Panneau des notifications (L2-67) : largeur, hauteur minimale, lignes de corps, pas de la cascade.
+    readonly property var panneau: tokens?.panneau
     readonly property var breakpoints: tokens?.breakpoints
     readonly property var typo: tokens?.typo
     readonly property var icons: tokens?.icons
@@ -99,6 +103,8 @@ Singleton {
     readonly property bool bureauClair: luminance(fondBureau) >= (bureau?.seuil ?? 0)
     // Texte posé sur le bureau, au repos et au survol : clair sur un fond sombre, foncé sur un fond clair.
     readonly property color texteBureau: (bureauClair ? bureau?.texteFonce : bureau?.texteClair) ?? "transparent"
+    // Texte opposé à texteBureau, pour des chiffres posés sur un aplat de la couleur du texte (pastille de la cloche).
+    readonly property color texteBureauOppose: (bureauClair ? bureau?.texteClair : bureau?.texteFonce) ?? "transparent"
     readonly property color texteBureauSurvol: (bureauClair ? bureau?.texteFonceSurvol : bureau?.texteClairSurvol)
         ?? "transparent"
     // La préférence de densité viendra de L2-26 ; d'ici là, la densité confortable s'applique.

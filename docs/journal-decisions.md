@@ -4064,3 +4064,84 @@ Le réglage vaut pour toutes les fenêtres ; le fondu de sortie ne change pas. V
 l'écran par Nicolas.
 
 *Touché : `motion.toml`, `generated/motion.lua`, `tests/golden/motion/motion.lua`.*
+
+### D176 · Les notifications à traiter restent vivantes
+
+17 novembre 2026 · L2-67. Quand la carte d'une notification s'efface sans avoir été cliquée, la coque ne la ferme plus
+(`expire()`) : la notification reste suivie par le serveur et passe dans l'attente que montre le panneau de la cloche.
+Cliquer une entrée déclenche son action `default`, ses autres actions restent utilisables, et une notification que
+son application retire elle-même quitte le panneau seule. L'autre voie, une copie morte du texte, aurait fait un
+journal sans « Ouvrir » fiable et aurait laissé un mail lu ailleurs affiché comme à lire, ce que Nicolas ne voulait
+pas (« Si pas effacées, pas traitées »). Contrepartie : un programme qui attend la fermeture de sa notification attend
+qu'elle soit traitée, et rien ne survit à la fin de la session. Épreuve sur bus privé avant la fiche : une action
+invoquée vingt secondes après la carte est reçue par `notify-send --wait`. Essais : `PileTest`, `AttenteTest`,
+`CentreTest` (`test_action_depuis_l_attente`).
+
+*Touché : `coque/Notifications/Pile.qml`, `Attente.qml`, `Attendue.qml`, `Centre.qml`.*
+
+### D177 · Tout est gardé, sauf exclusions
+
+17 novembre 2026 · L2-67. Le panneau ne liste que ce qui doit être lu, sans liste à cocher à l'avance : une
+notification est gardée sauf si elle porte l'indice `transient`, si son urgence est basse, ou si son application a été
+retirée par « Ne plus garder » (réversible dans la page Notifications de Paramètres). L'application est identifiée par
+`desktopEntry`, à défaut par `appName` ; une application anonyme ne peut pas être retirée, ce qui ferait taire toutes
+les anonymes. Les notifications de connexion de la coque portent l'indice `transient` (`notify-send -e`) : elles
+tombent sous la règle générale au lieu d'une exception par nom. Les règles tiennent en fonctions pures
+(`garde.js`). Essais : `GardeTest`, `CentreTest.test_notification_de_la_coque`.
+
+*Touché : `coque/Notifications/garde.js`, `EtatNotifications.qml`, `coque/Reseau/NotificationsReseau.qml`.*
+
+### D178 · « Ne pas déranger » retient les cartes, pas les urgences
+
+17 novembre 2026 · L2-67. Sous « ne pas déranger », aucune carte ne s'affiche : les notifications gardées entrent
+directement dans le panneau et le nombre de la cloche monte ; les autres sont fermées aussitôt. Une notification
+critique s'affiche tout de même en carte (une batterie à 5 % ne se retient pas). À la désactivation, rien ne repasse
+en carte. L'état est unique (`EtatNotifications`), persistant (`notifications.json` du dossier d'état de la coque) et
+exposé par l'IPC (`notifications basculerNePasDeranger`) ; la bascule du panneau, le clic droit sur la cloche et la
+page de Paramètres le lisent et l'écrivent tous. Essais : `EtatNotificationsTest`, `PileTest.test_ne_pas_deranger`.
+
+*Touché : `coque/Notifications/EtatNotifications.qml`, `Pile.qml`, `coque/Barre/Notifications.qml`.*
+
+### D179 · Le panneau survit au rechargement de la coque
+
+17 novembre 2026 · L2-67. À chaque `make install`, Quickshell recharge la coque et le serveur réémet les notifications
+encore suivies. Celles qui attendaient dans le panneau y retournent sans repasser en carte : leurs identifiants sont
+tenus dans un `PersistentProperties` (`MemoireAttente`), que Quickshell transmet à la génération suivante. Deux
+relevés sur bus privé fixent la manière : seuls les objets de la filiation de la racine sont rechargés (une mémoire
+tenue par une propriété, comme l'attente de la pile, renaît vide), et une valeur JavaScript libre ne passe pas d'un
+moteur à l'autre (« JSValue can't be reassigned to another engine ») : la mémoire est un enfant direct de la racine,
+déclaré avant le Centre, et sa liste est typée (`list<int>`). Essai : `CentreTest.test_rechargement_garde_l_attente`.
+
+*Touché : `coque/Notifications/MemoireAttente.qml`, `coque/shell.qml`.*
+
+### D180 · Le panneau est une presqu'île latérale de bord
+
+17 novembre 2026 · L2-67. Le panneau des notifications prend la forme de la presqu'île, couchée contre le bord droit
+sous la barre : même verre (`glass.presquile`), mêmes évasements et même rayon, mêmes ressorts et seuils d'ouverture
+(D124). Il n'est pas visible au repos et garde une hauteur minimale de 320 px, même vide (choix de Nicolas sur la
+maquette `cloche/panneau-v1`). Le tracé latéral est celui de l'encoche du haut, transposé point par point
+(`encoche.js`, `tracerLateral`) : aucune courbe recopiée. La fenêtre de calque garde une taille constante, seule la
+forme bouge (D132, D134). Comme `PanelWindow` ne se compile pas sous la plateforme offscreen des essais, la fenêtre vit
+dans son propre fichier (`CalquePanneau`), créé à la demande par la logique (`FenetrePanneau`), et la forme animée
+(`FormePanneau`) s'éprouve seule. Essais : `EncocheTest`, `FenetrePanneauTest`, `FenetrePanneauStatiqueTest`.
+
+*Touché : `coque/Presquile/encoche.js`, `Encoche.qml`, `coque/Notifications/FenetrePanneau.qml`, `CalquePanneau.qml`,
+`FormePanneau.qml`, `Panneau.qml`, `tokens.toml` (`[cloche]`, `[panneau]`, calque `dunei-panneau`).*
+
+
+### D181 · Recette de la cloche : un libellé d'état, rien sur la cloche sous « ne pas déranger »
+
+17 novembre 2026 · L2-67, recette à l'écran. Nicolas juge confus le libellé de la bascule du panneau : un titre
+« Ne pas déranger » en gras au-dessus de « Désactivé » ou de « Activé : les cartes sont retenues » se lit comme l'état
+présent alors que les notifications sont actives. La bascule ne porte plus qu'un libellé, l'état présent :
+« Notifications actives » ou « Ne pas déranger », passant de l'un à l'autre en fondu croisé ; la page de Paramètres dit
+« Activé » ou « Désactivé ». Sous « ne pas déranger », la cloche barrée ne porte ni nombre ni boule : l'utilisateur a
+choisi de ne pas être sollicité, la cloche ne le relance pas ; les entrées restent au panneau. Les chiffres de la
+pastille penchaient en bas à droite : ils étaient centrés sur leur boîte de ligne, qui compte les descendantes et les
+approches ; ils sont désormais centrés sur leur dessin, mesuré par `TextMetrics` et arrondi au pixel. L'ouverture
+d'une application au clic sur son entrée n'a pas pu être éprouvée sur un vrai courriel ; la PR est validée et on y
+reviendra au besoin. Essais : `PanneauTest.test_bascule`, `PageNotificationsTest`, `RelanceTest.test_cloche_etats`,
+`RelanceTest.test_chiffres_centres`.
+
+*Touché : `coque/Notifications/Panneau.qml`, `PageNotifications.qml`, `coque/Barre/Notifications.qml`,
+`PastilleCloche.qml`, bible (annexe E, 0.37).*

@@ -39,7 +39,7 @@ ShellRoot {
             filaire: [{ page: "filaire", chemin: ["filaire", "mac"], libelle: "Adresse MAC", motsCles: ["matérielle", "ethernet"], exige: "" }],
             vpn: [{ page: "vpn", chemin: ["vpn", "demarrage"], libelle: "Connexion au démarrage", motsCles: ["automatique"], exige: "" }] }
         Registre.pages = Registre.pages.map(p => Object.assign({}, p, {
-            composant: Qt.resolvedUrl("pages/Provisoire" + p.id[0].toUpperCase() + p.id.slice(1) + ".qml"), index: factices[p.id] }))
+            composant: Qt.resolvedUrl("pages/Provisoire" + p.id[0].toUpperCase() + p.id.slice(1) + ".qml"), index: factices[p.id] ?? p.index }))
         console.info("essai : prêt")
     }
 

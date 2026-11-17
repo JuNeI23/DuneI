@@ -31,7 +31,7 @@ class QuickshellEmitterTest(unittest.TestCase):
         self.assertEqual(list(self.out), [
             "_generated", "hue", "space", "density", "radius", "window", "layout", "reglages", "breakpoints", "typo", "icons",
             "familles", "moments", "defaut", "themes", "pastilles", "bureau", "bureauxVirtuels", "presquile",
-            "galerie", "notifications"])
+            "galerie", "notifications", "cloche", "panneau"])
         self.assertEqual(list(self.nuit), ["color", "states", "focus", "disabled", "elevation", "material", "glass", "render",
                                            "knob", "controls"])
 
@@ -92,6 +92,12 @@ class QuickshellEmitterTest(unittest.TestCase):
         lignes de corps."""
         self.assertEqual(self.out["notifications"], {"largeur": 340, "marge": 8, "ecart": 8, "plafond": 5,
                                                      "duree": 5000, "icone": 36, "interieur": 12, "lignes": 3, "reprise": 1000})
+
+    def test_cloche_et_panneau(self):
+        """Vérifie les jetons de la pastille de la cloche et du panneau des notifications (L2-67)."""
+        self.assertEqual(self.out["cloche"], {"hauteur": 13, "corps": 9.5, "interieur": 3, "boule": 8,
+                                              "pastilleX": 9, "pastilleY": -5, "bouleX": 10, "bouleY": -2})
+        self.assertEqual(self.out["panneau"], {"largeur": 364, "hauteurMin": 320, "lignes": 2, "cascade": 60})
 
     def test_accent_discret(self):
         """Vérifie que l'accent discret émis de chaque thème est celui du modèle, au format `#rrggbb`."""

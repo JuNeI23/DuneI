@@ -1764,5 +1764,21 @@
     "interieur": 12,
     "lignes": 3,
     "reprise": 1000
+  },
+  "cloche": {
+    "hauteur": 13,
+    "corps": 9.5,
+    "interieur": 3,
+    "boule": 8,
+    "pastilleX": 9,
+    "pastilleY": -5,
+    "bouleX": 10,
+    "bouleY": -2
+  },
+  "panneau": {
+    "largeur": 364,
+    "hauteurMin": 320,
+    "lignes": 2,
+    "cascade": 60
   }
 }

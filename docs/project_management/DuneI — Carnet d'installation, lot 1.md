@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.45. Historique en fin de document.
+Version 1.46. Historique en fin de document.
 
 Socle amorçable.
 
@@ -2128,6 +2128,34 @@ Rien de plus à installer : l'application vit dans la coque (`dunei-coque.servic
 - **Non éprouvé à ce jour.** Aucune vraie connexion ni déconnexion Wi-Fi n'a été faite pendant le développement : la
   jonction sans saut, le partage de connexion et le VPN se valident à l'écran, avec Nicolas.
 
+## La cloche et le panneau des notifications — L2-67
+
+Rien de plus à installer : la cloche, le panneau et « ne pas déranger » vivent dans la coque, et `make install` ajoute
+seulement l'espace de noms `dunei-panneau` au flou de Hyprland (D176 à D180).
+
+- **La cloche.** Creuse sans rien à traiter, pleine dès une entrée, barrée sous « ne pas déranger ». Sa pastille donne
+  le nombre d'entrées (« 99+ » au-delà), ou une boule rouge dès qu'une notification critique attend ; sous « ne pas
+  déranger », ni nombre ni boule. Clic gauche : le panneau, sur l'écran de cette barre ; clic droit : « ne pas
+  déranger ».
+- **Le panneau.** Une presqu'île latérale collée au bord droit, sous la barre. En tête, « Tout effacer » et la
+  bascule à lune, dont le libellé dit l'état présent : « Notifications actives » ou « Ne pas déranger ». Puis les
+  groupes par application, critiques en tête. Un clic sur une entrée ouvre son application (action `default`, ou son
+  entrée de bureau) et la retire ; au survol, un bouton l'écarte. Sur un groupe, « Effacer » et « Ne plus garder ».
+  Clavier : flèches, Entrée, Suppr, Échap. Depuis un terminal : `qs -c dunei ipc call panneau basculer`.
+- **Ce qui entre au panneau.** Toute notification encore vivante, jusqu'à ce qu'on la traite ou que son application
+  la ferme ; jamais une éphémère (`transient`, ou `notify-send -e`) ni une application retirée.
+- **« Ne pas déranger ».** Les cartes ne paraissent plus, sauf les critiques ; les notifications entrent quand même au
+  panneau. `qs -c dunei ipc call notifications basculerNePasDeranger` le bascule,
+  `qs -c dunei ipc call notifications nePasDeranger` le lit. Paramètres, page Notifications (groupe « Système ») : le
+  même interrupteur, et les applications retirées, chacune avec « Remettre ».
+- **L'état.** `notifications.json` du dossier d'état de la coque (`~/.local/state/dunei/`) garde « ne pas déranger »
+  et la liste des applications retirées. La liste du panneau survit au rechargement de la coque (`make install`),
+  non à son redémarrage.
+- **Les tests.** `python3 -m unittest tests.test_notifications` (garde, état, attente, panneau, fenêtre, page) et
+  `tests.test_barre` (cloche, pastille, centrage des chiffres). `PileTest.test_pas_d_expiration_en_file` dépend du
+  minutage des appels IPC et échoue sur une machine chargée, avant comme après L2-67.
+- **Non éprouvé à ce jour.** L'ouverture de l'application au clic sur une entrée, avec un vrai courriel.
+
 ## Le mouvement des popovers — L2-06, L2-07, L2-47, L2-56
 
 Rien de plus à installer : la fenêtre des popovers est dans la coque (`dunei-coque.service`), et `make install` lie
@@ -2415,6 +2443,7 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 
 | Version | Date | Changement |
 | --- | --- | --- |
+| 1.46 | 2026-11-17 | Cloche et panneau des notifications (L2-67) : pastille, panneau, « ne pas déranger », applications retirées, état, tests (D176 à D180) |
 | 1.45 | 2026-11-16 | Application Paramètres (L5-01, L2-65) : ouverture, pages Wi-Fi, Filaire et VPN, partage de connexion, ajout d'une page, tests ; la fenêtre Réseau et `reseau ouvrir` sont retirés (D165 à D175) |
 | 1.44 | 2026-11-13 | Notifications (L2-19) : la coque remplace dunst ; procédure de passage (`pacman -Rns dunst`, `busctl`) et mise en garde sur `sed -i` et la surveillance de Quickshell (D162). |
 | 1.43 | 2026-11-12 | Entrée : la touche Compose quitte `entree.lua` pour le fichier machine ; caladan la place sur Ctrl droit (`compose:rctrl`), AltGr rend `€` ; arrakis-core n'en déclare aucune (D160). |
