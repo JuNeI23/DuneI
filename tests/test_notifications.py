@@ -812,6 +812,7 @@ class GardeTest(EssaiCoque, unittest.TestCase):
     def test_gardee(self):
         self.assertTrue(self.appeler("gardee", notif(), []))
         self.assertFalse(self.appeler("gardee", notif(ephemere=True), []))
+        self.assertFalse(self.appeler("gardee", {"appName": "App", "urgency": 1, "hints": {"transient": True}}, []))
         self.assertFalse(self.appeler("gardee", notif(urgence=0), []))
         self.assertFalse(self.appeler("gardee", notif("Signal"), ["Signal"]))
         self.assertFalse(self.appeler("gardee", notif("Signal", urgence=2), ["Signal"]))
@@ -929,3 +930,90 @@ class EtatNotificationsTest(EssaiCoque, unittest.TestCase):
         self.appel("notifications", "basculerNePasDeranger")
         self.assertEqual(self.appel("notifications", "nePasDeranger"), "true")
         self.assertTrue(self.etat()["nePasDeranger"])
+
+
+@unittest.skipUnless(os.environ.get("WAYLAND_DISPLAY") and QS, "session Wayland et Quickshell requis")
+class AttenteTest(PileTest):
+    """L'attente, logique du panneau : nombre, critique, groupes, ouverture, écart et fermeture par l'application.
+
+    Hérite de PileTest ses aides et sa coque d'essai ; les cas de la pile ne sont pas rejoués ici.
+    """
+
+    def attente(self) -> tuple[int, bool, list[str], list[str]]:
+        """État de l'attente.
+
+        Entrées : aucune. Sortie : (nombre, critique, identifiants, plus récente en tête, « s » pour sortante,
+        groupes « nom:nombre » dans leur ordre). Erreurs : CalledProcessError si l'appel IPC échoue.
+        Dépendances : appel.
+        """
+        nombre, critique, ids, groupes = (p.strip() for p in self.appel("etatAttente").split("|"))
+        return int(nombre), critique == "true", [x for x in ids.split(",") if x], [x for x in groupes.split(",") if x]
+
+    def test_nombre_et_critique(self):
+        self.appel("attendre", "A", 1)
+        self.appel("attendre", "B", 2)
+        self.appel("attendre", "A", 1)
+        self.assertEqual(self.attente(), (3, True, ["3", "2", "1"], ["B:1", "A:2"]))
+        self.appel("ecarterAttendue", 2)
+        self.assertEqual(self.appels(), ["2:dismiss"])
+        self.assertEqual(self.attente(), (2, False, ["3", "1"], ["A:2"]))
+
+    def test_ouvrir(self):
+        self.appel("attendre", "A", 1)
+        self.appel("ouvrirAttendue", 1)
+        self.assertEqual(self.appels(), ["1:invoke:default"])
+        self.appel("attendre", "A", 1)
+        self.appel("residente", 2)
+        self.appel("ouvrirAttendue", 2)
+        self.assertEqual(self.appels()[1:], ["2:invoke:default", "2:dismiss"])
+        self.appel("attendre", "A", 1)
+        self.appel("sansAction", 3)
+        self.appel("ouvrirAttendue", 3)
+        self.assertEqual(self.appels()[3:], ["3:dismiss"])
+        self.assertEqual(self.attente()[:3], (0, False, []))
+
+    def test_agir(self):
+        self.appel("attendre", "A", 1)
+        self.appel("agirAttendue", 1, "default")
+        self.assertEqual(self.appels(), ["1:invoke:default"])
+        self.assertEqual(self.attente()[0], 0)
+
+    def test_fermee_par_l_application(self):
+        self.appel("attendre", "A", 1)
+        self.appel("fermerParApp", 1)
+        self.assertEqual(self.attente()[:3], (0, False, []))
+        self.jusqua(lambda: self.appel("existe", 1) == "false", "retirée de l'attente, détruite")
+
+    def test_sortante_si_montree(self):
+        self.appel("montrer", "true")
+        self.appel("attendre", "A", 2)
+        self.appel("ecarterAttendue", 1)
+        self.assertEqual(self.attente()[:3], (0, False, ["1s"]))
+        self.appel("ecarterAttendue", 1)
+        self.appel("ouvrirAttendue", 1)
+        self.assertEqual(self.appels(), ["1:dismiss"])
+        time.sleep(0.3)
+        self.assertEqual(self.appel("existe", 1), "true")
+        self.appel("oublierAttendue", 1)
+        self.assertEqual(self.attente()[2], [])
+        self.jusqua(lambda: self.appel("existe", 1) == "false", "relâchée à oublier, détruite")
+        self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
+
+    def test_ecarter_groupe_et_tout(self):
+        for app in ("A", "B", "A", "C"):
+            self.appel("attendre", app, 1)
+        self.appel("ecarterGroupe", "A")
+        self.assertEqual(self.attente(), (2, False, ["4", "2"], ["C:1", "B:1"]))
+        self.appel("toutEcarter")
+        self.assertEqual(self.attente()[:3], (0, False, []))
+        self.assertEqual(sorted(self.appels()), ["1:dismiss", "2:dismiss", "3:dismiss", "4:dismiss"])
+
+    def test_cent(self):
+        for _ in range(100):
+            self.appel("attendre", "A", 1)
+        self.assertEqual(self.attente()[0], 100)
+
+
+# Les cas hérités de PileTest ne sont pas rejoués sous AttenteTest.
+for _nom in [n for n in vars(PileTest) if n.startswith("test_") and n not in vars(AttenteTest)]:
+    setattr(AttenteTest, _nom, None)

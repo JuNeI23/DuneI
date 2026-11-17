@@ -14,12 +14,19 @@ function identifiant(n) {
     return n.desktopEntry || n.appName || ""
 }
 
+// ephemere — vrai si la notification porte l'indice « transient ».
+// Entrée : n, notification. Sortie : sa propriété transient, ou à défaut l'indice de même nom de ses hints (objets
+// qui n'exposent pas la propriété : notifications factices des essais). Erreurs : aucune. Dépendances : aucune.
+function ephemere(n) {
+    return !!(n.transient ?? n.hints?.transient)
+}
+
 // gardee — vrai si la notification doit attendre dans le panneau tant qu'elle n'est ni effacée ni cliquée.
 // Entrées : n, notification (transient, urgency, desktopEntry, appName) ; retirees, identifiants des applications
 // retirées par Nicolas. Sortie : faux si elle est éphémère, d'urgence basse, ou d'une application retirée ; vrai
-// sinon. Erreurs : aucune. Dépendances : identifiant.
+// sinon. Erreurs : aucune. Dépendances : ephemere, identifiant.
 function gardee(n, retirees) {
-    return !n.transient && n.urgency !== 0 && !retirees.includes(identifiant(n))
+    return !ephemere(n) && n.urgency !== 0 && !retirees.includes(identifiant(n))
 }
 
 // affichable — vrai si la notification peut s'afficher en carte.
