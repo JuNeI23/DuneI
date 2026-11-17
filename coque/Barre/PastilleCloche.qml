@@ -10,7 +10,8 @@ import "icones.js" as Icones
 // réduit ne garde que le fondu) ; le passage de l'une à l'autre est un fondu croisé ; un nombre qui change passe
 // lui aussi par un fondu croisé des chiffres, au ressort « state », pendant que la largeur de la pilule suit. La
 // pilule garde son dernier texte pendant qu'elle s'efface.
-// Les chiffres sont centrés sur leur dessin (boîte encrée mesurée par TextMetrics), arrondi au pixel.
+// Les chiffres sont centrés sur leur dessin (boîte encrée mesurée par TextMetrics), sans arrondi au pixel
+// logique : à l'échelle 1,25 de l'écran, l'arrondi les décalait vers le bas.
 // Entrées : nombre, critique ; couleur, celle du texte de l'élément de barre (son ressort de couleur).
 // Sorties : texte, celui de la pilule (icones.js, textePastille) ; forme, « », « nombre » ou « boule » ; pilule et
 // boule, et ancien, l'ancien texte d'un fondu croisé des chiffres ; decalage, l'écart du dessin des chiffres au
@@ -83,9 +84,8 @@ Item {
             id: chiffres
             // Centré sur le dessin des chiffres, non sur leur boîte de ligne : celle-ci compte l'espace des
             // descendantes et les approches, ce qui poussait les chiffres vers le bas et la droite.
-            x: Math.round((pilule.width - mesure.tightBoundingRect.width) / 2 - mesure.tightBoundingRect.x)
-            y: Math.round((pilule.height - mesure.tightBoundingRect.height) / 2 - mesure.tightBoundingRect.y
-                          - baselineOffset)
+            x: (pilule.width - mesure.tightBoundingRect.width) / 2 - mesure.tightBoundingRect.x
+            y: (pilule.height - mesure.tightBoundingRect.height) / 2 - mesure.tightBoundingRect.y - baselineOffset
             opacity: Math.max(0, Math.min(1, croise.value))
             text: pastille._montre
             color: Theme.texteBureauOppose
@@ -95,9 +95,9 @@ Item {
         }
         Text {
             id: ancien
-            x: Math.round((pilule.width - mesureAncien.tightBoundingRect.width) / 2 - mesureAncien.tightBoundingRect.x)
-            y: Math.round((pilule.height - mesureAncien.tightBoundingRect.height) / 2
-                          - mesureAncien.tightBoundingRect.y - baselineOffset)
+            x: (pilule.width - mesureAncien.tightBoundingRect.width) / 2 - mesureAncien.tightBoundingRect.x
+            y: (pilule.height - mesureAncien.tightBoundingRect.height) / 2 - mesureAncien.tightBoundingRect.y
+               - baselineOffset
             visible: opacity > 0
             opacity: 1 - chiffres.opacity
             text: pastille._ancien
