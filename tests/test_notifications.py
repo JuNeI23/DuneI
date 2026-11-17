@@ -62,9 +62,15 @@ class PileTest(EssaiCoque, unittest.TestCase):
     teintes = (55,)
     DUREE = 600
 
+    # Application des cas historiques de la pile : retirée du panneau, ses notifications expirent à l'échéance de
+    # leur carte comme avant L2-67. Les cas de la garde emploient une autre application.
+    RETIREE = "app"
+
     def setUp(self):
         super().setUp()
         demarrer(self, self.DUREE)
+        if self.RETIREE:
+            self.appel("retirerApp", self.RETIREE)
 
     def appel(self, fonction: str, *args) -> str:
         """Appelle une fonction IPC de la coque d'essai.
@@ -137,6 +143,131 @@ class PileTest(EssaiCoque, unittest.TestCase):
             self.assertNotIn(absent, self.appels())
             time.sleep(0.02)
 
+    def attente(self) -> tuple[int, bool, list[str], list[str]]:
+        """État de l'attente.
+
+        Entrées : aucune. Sortie : (nombre, critique, identifiants, plus récente en tête, « s » pour sortante,
+        groupes « nom:nombre » dans leur ordre). Erreurs : CalledProcessError si l'appel IPC échoue.
+        Dépendances : appel.
+        """
+        nombre, critique, ids, groupes = (p.strip() for p in self.appel("etatAttente").split("|"))
+        return int(nombre), critique == "true", [x for x in ids.split(",") if x], [x for x in groupes.split(",") if x]
+
+    def gardee(self, delai: int = -1, etiquette: str = "", urgence: int = 1, ephemere: bool = False,
+               generation: bool = False) -> str:
+        """Crée une notification d'une application gardée (« garde ») et la remet à la pile.
+
+        Entrées : delai, etiquette ; urgence (0, 1 ou 2) ; ephemere (indice transient) ; generation (réémise après
+        un rechargement). Sortie : son identifiant. Erreurs : CalledProcessError si l'appel IPC échoue.
+        Dépendances : appel, creer.
+        """
+        self.appel("preparer", urgence, str(ephemere).lower(), "", str(generation).lower())
+        return self.creer(app="garde", delai=delai, etiquette=etiquette)
+
+    def attendue(self, *attendu, delai: float = DELAI) -> None:
+        """Attend que l'attente prenne un état. Entrées : attendu — (nombre, critique, identifiants) ; delai.
+        Sortie : aucune. Erreurs : échec du test au délai. Dépendances : jusqua, attente."""
+        self.jusqua(lambda: self.attente()[:3] == attendu, f"attente {attendu} attendue, vue {self.attente()}", delai)
+
+    def test_gardee_passe_a_l_attente(self):
+        self.gardee()
+        self.attendue(1, False, ["1"])
+        self.assertEqual(self.etat(), (["1s"], []))
+        self.assertEqual(self.appels(), [])
+        self.assertEqual(self.appel("existe", 1), "true")
+
+    def test_non_gardee_expire(self):
+        self.gardee(ephemere=True)
+        self.attendre_appel("1:expire")
+        self.gardee(urgence=0)
+        self.attendre_appel("2:expire")
+        self.assertEqual(self.attente()[:3], (0, False, []))
+
+    def test_clic_ne_passe_pas(self):
+        self.gardee()
+        self.appel("cliquer", 1)
+        time.sleep(self.DUREE / 1000 + 0.3)
+        self.assertEqual(self.appels(), ["1:dismiss"])
+        self.assertEqual(self.attente()[:3], (0, False, []))
+
+    def test_ne_pas_deranger(self):
+        self.appel("deranger", "true")
+        self.gardee()
+        self.assertEqual(self.etat(), ([], []))
+        self.assertEqual(self.attente()[:3], (1, False, ["1"]))
+        self.gardee(ephemere=True)
+        self.assertEqual(self.appels(), ["2:expire"])
+        self.gardee(delai=0, urgence=2)
+        self.assertEqual(self.etat(), (["3"], []))
+        self.assertEqual(self.attente()[:3], (1, False, ["1"]))
+
+    def test_sans_delai(self):
+        self.gardee(delai=0)
+        time.sleep(self.DUREE / 1000 + 0.3)
+        self.assertEqual(self.etat(), (["1"], []))
+        self.assertEqual(self.attente()[:3], (0, False, []))
+        self.appel("deranger", "true")
+        self.gardee(delai=0)
+        self.assertEqual(self.attente()[:3], (1, False, ["2"]))
+
+    def test_remplacement_dans_l_attente(self):
+        self.gardee(etiquette="m")
+        self.attendue(1, False, ["1"])
+        self.gardee(etiquette="m")
+        self.assertEqual(self.appels(), ["1:expire"])
+        self.assertEqual(self.attente()[0], 0)
+        self.attendue(1, False, ["2"])
+        self.assertEqual(self.appels(), ["1:expire"])
+
+    def test_mise_a_jour_sur_place(self):
+        self.gardee()
+        self.attendue(1, False, ["1"])
+        self.appel("oublier", 1)
+        self.appel("renommer", 1, "nouveau")
+        self.assertEqual(self.attente()[:3], (0, False, []))
+        self.assertEqual(self.etat(), (["1"], []))
+        self.attendue(1, False, ["1"])
+        self.appel("oublier", 1)
+        self.appel("deranger", "true")
+        self.appel("renommer", 1, "retenu")
+        self.assertEqual(self.etat(), ([], []))
+        self.assertEqual(self.attente()[:3], (1, False, ["1"]))
+        self.assertEqual(self.appel("resumeAttendue", 1), "retenu")
+        self.assertEqual(self.appels(), [])
+        self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
+
+    def test_retiree_pendant_la_carte(self):
+        self.gardee()
+        self.appel("retirerApp", "garde")
+        self.attendre_appel("1:expire")
+        self.assertEqual(self.attente()[:3], (0, False, []))
+
+    def test_fermee_pendant_la_sortie(self):
+        self.gardee()
+        self.attendue(1, False, ["1"])
+        self.appel("fermerParApp", 1)
+        self.assertEqual(self.attente()[:3], (0, False, []))
+        self.appel("oublier", 1)
+        self.jusqua(lambda: self.appel("existe", 1) == "false", "détruite après la sortie de la carte")
+        self.assertEqual(self.etat(), ([], []))
+        self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
+
+    def test_generation_precedente(self):
+        self.appel("connaitre", 1)
+        self.gardee(generation=True)
+        self.assertEqual(self.etat(), ([], []))
+        self.assertEqual(self.attente()[:3], (1, False, ["1"]))
+        self.gardee(generation=True)
+        self.assertEqual(self.etat(), (["2"], []))
+
+    def test_plein_ecran_inchange(self):
+        self.appel("retenir", "true")
+        self.gardee()
+        self.assertEqual(self.etat(), ([], ["1"]))
+        self.assertEqual(self.attente()[:3], (0, False, []))
+        self.appel("retenir", "false")
+        self.assertEqual(self.etat(), (["1"], []))
+
     def test_ordre_et_plafond(self):
         for _ in range(7):
             self.creer(delai=0)
@@ -200,6 +331,7 @@ class PileTest(EssaiCoque, unittest.TestCase):
         self.assertAlmostEqual(self.attendre_appel("1:expire") - fin, 0.6, delta=0.25)
 
     def test_remplacement_par_etiquette(self):
+        self.appel("retirerApp", "A")
         t0 = time.monotonic()
         self.creer("A", "premier", delai=1500, etiquette="t")
         self.creer("B", "second", delai=0, etiquette="t")
@@ -939,15 +1071,7 @@ class AttenteTest(PileTest):
     Hérite de PileTest ses aides et sa coque d'essai ; les cas de la pile ne sont pas rejoués ici.
     """
 
-    def attente(self) -> tuple[int, bool, list[str], list[str]]:
-        """État de l'attente.
-
-        Entrées : aucune. Sortie : (nombre, critique, identifiants, plus récente en tête, « s » pour sortante,
-        groupes « nom:nombre » dans leur ordre). Erreurs : CalledProcessError si l'appel IPC échoue.
-        Dépendances : appel.
-        """
-        nombre, critique, ids, groupes = (p.strip() for p in self.appel("etatAttente").split("|"))
-        return int(nombre), critique == "true", [x for x in ids.split(",") if x], [x for x in groupes.split(",") if x]
+    RETIREE = ""
 
     def test_nombre_et_critique(self):
         self.appel("attendre", "A", 1)
@@ -967,6 +1091,8 @@ class AttenteTest(PileTest):
         self.appel("ouvrirAttendue", 2)
         self.assertEqual(self.appels()[1:], ["2:invoke:default", "2:dismiss"])
         self.appel("attendre", "A", 1)
+        # Retirer ses actions met la notification à jour sur place : sous « ne pas déranger », elle reste en attente.
+        self.appel("deranger", "true")
         self.appel("sansAction", 3)
         self.appel("ouvrirAttendue", 3)
         self.assertEqual(self.appels()[3:], ["3:dismiss"])

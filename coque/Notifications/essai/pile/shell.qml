@@ -31,12 +31,10 @@ ShellRoot {
         verrou: Component { FauxVerrou {} }
     }
 
-    // L'attente éprouvée.
-    readonly property Attente attente: autonome
-    Attente {
-        id: autonome
-        verrou: Component { FauxVerrou {} }
-    }
+    // L'attente éprouvée : celle de la pile.
+    readonly property Attente attente: pile.attente
+    // Propriétés posées sur la prochaine notification créée par creer (voir preparer), puis vidées.
+    property var prochaines: ({})
 
     Component {
         id: fabrique
@@ -76,11 +74,38 @@ ShellRoot {
         // Entrées : app, resume, corps, delai (ms, expireTimeout), etiquette (x-dunst-stack-tag, « » pour aucune).
         // Sortie : l'identifiant de la notification. Erreurs : aucune. Dépendances : fabrique, pile.
         function creer(app: string, resume: string, corps: string, delai: int, etiquette: string): string {
-            const n = essai.fabriquer({appName: app, summary: resume, body: corps, expireTimeout: delai,
-                hints: etiquette === "" ? {} : {"x-dunst-stack-tag": etiquette}})
+            const n = essai.fabriquer(Object.assign({appName: app, summary: resume, body: corps, expireTimeout: delai,
+                hints: Object.assign(etiquette === "" ? {} : {"x-dunst-stack-tag": etiquette},
+                                     essai.prochaines.ephemere ? {transient: true} : {})},
+                essai.prochaines.proprietes ?? {}))
+            essai.prochaines = ({})
             pile.recevoir(n)
             return String(n.id)
         }
+
+        // preparer — règle la prochaine notification créée par creer, et elle seule.
+        // Entrées : urgence (0, 1 ou 2) ; ephemere (indice transient) ; bureau (desktopEntry) ; generation
+        // (lastGeneration : réémise après un rechargement). Sortie : aucune. Erreurs : aucune. Dépendances : prochaines.
+        function preparer(urgence: int, ephemere: bool, bureau: string, generation: bool): void {
+            essai.prochaines = {ephemere: ephemere,
+                                proprietes: {urgency: urgence, desktopEntry: bureau, lastGeneration: generation}}
+        }
+
+        // deranger — pose « ne pas déranger » sur la pile. Entrée : v. Sortie : aucune. Erreurs : aucune.
+        // Dépendances : Pile.nePasDeranger.
+        function deranger(v: bool): void { pile.nePasDeranger = v }
+
+        // retirerApp — retire une application : ses notifications ne sont plus gardées. Entrée : identifiant.
+        // Sortie : aucune. Erreurs : aucune. Dépendances : Pile.retirees.
+        function retirerApp(identifiant: string): void { pile.retirees = pile.retirees.concat([identifiant]) }
+
+        // connaitre — fait passer un identifiant de notification pour tenu par l'attente de la génération
+        // précédente. Entrée : id. Sortie : aucune. Erreurs : aucune. Dépendances : Attente.connus.
+        function connaitre(id: int): void { essai.attente.connus = essai.attente.connus.concat([id]) }
+
+        // resumeAttendue — résumé montré par l'entrée de l'attente qui tient la notification. Entrée : id.
+        // Sortie : texte. Erreurs : TypeError au journal si aucune entrée ne la tient. Dépendances : attendue.
+        function resumeAttendue(id: int): string { return essai.attendue(id).notification.summary }
 
         // attendre — crée une notification factice et l'ajoute directement à l'attente, suivie.
         // Entrées : app ; urgence (0, 1 ou 2). Sortie : l'identifiant de la notification. Erreurs : aucune.
