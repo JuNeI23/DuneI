@@ -19,7 +19,8 @@ import "../Composants"
 // distante passe aussitôt au maillon suivant.
 // Entrées : notification (objet à l'interface de Notification) ; arrivee, son heure d'arrivée ; lignes, nombre
 // maximal de lignes de corps ; enTete, vrai par défaut ; survolee, posé par le parent : déplie les actions. La largeur
-// est posée par le parent.
+// est posée par le parent. estompe, de 0 à 1 : part dont l'heure posée à droite du titre s'efface (l'entrée du panneau y
+// montre son bouton d'écart au survol), 0 par défaut.
 // Sorties : implicitHeight ; sourceIcone (« image », « application » ou « generique ») ; actionsVisibles, vrai tant
 // que la rangée d'actions est au moins en partie dépliée ; enMouvement, vrai tant que le dépliant avance ;
 // couleurTitre, lignesCorps, libelles (textes des actions affichés), texteApplication et texteHeure, lus par les
@@ -38,6 +39,7 @@ Item {
     property int lignes: Theme.notifications?.lignes ?? 1
     property bool enTete: true
     property bool survolee: false
+    property real estompe: 0
 
     readonly property real cote: Theme.notifications?.icone ?? 0
     readonly property real ecart: Theme.space?.scale[2] ?? 0
@@ -163,6 +165,7 @@ Item {
             Texte {
                 id: heureTitre
                 visible: !carte.enTete
+                opacity: 1 - carte.estompe
                 x: titre.parent.width - implicitWidth
                 anchors.baseline: parent.baseline
                 echelon: 0

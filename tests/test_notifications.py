@@ -1211,3 +1211,159 @@ class AttenteTest(PileTest):
 # Les cas hérités de PileTest ne sont pas rejoués sous AttenteTest.
 for _nom in [n for n in vars(PileTest) if n.startswith("test_") and n not in vars(AttenteTest)]:
     setattr(AttenteTest, _nom, None)
+
+
+@unittest.skipUnless(os.environ.get("WAYLAND_DISPLAY") and QS, "session Wayland et Quickshell requis")
+class PanneauTest(EssaiCoque, unittest.TestCase):
+    """Le contenu du panneau : état vide, groupes par application, actions, bascule, clavier et défilement."""
+
+    essai = ESSAI / "panneau"
+    teintes = (55,)
+    environnement = CarteTest.environnement
+
+    # Pas de la cascade de « Tout effacer », ralenti pour être observable par des appels IPC.
+    CASCADE = 200
+
+    def setUp(self):
+        super().setUp()
+        self.installer(55)
+        jetons = self.dir / "coque-tokens.json"
+        donnees = json.loads(jetons.read_text())
+        donnees["panneau"]["cascade"] = self.CASCADE
+        jetons.write_text(json.dumps(donnees))
+        self.lancer(self.dir)
+        self.attendre("essai : prêt")
+        self.jusqua(lambda: self.appel("pret") == "true", "jetons chargés")
+
+    appel = PileTest.appel
+
+    def etat(self) -> dict:
+        """État du panneau. Sortie : dictionnaire (voir etat dans la coque d'essai). Dépendances : appel."""
+        return json.loads(self.appel("etat"))
+
+    def jusqua(self, condition, message: str, delai: float = DELAI):
+        """Attend qu'une condition devienne vraie. Entrées : condition, message, delai. Sortie : sa valeur.
+        Erreurs : échec du test au délai, avec l'état du panneau et le journal. Dépendances : appel."""
+        fin = time.monotonic() + delai
+        while not (valeur := condition()):
+            if time.monotonic() > fin:
+                self.fail(f"{message}\n{self.appel('etat')}\n{self.journal()}")
+            time.sleep(0.02)
+        return valeur
+
+    def groupes(self) -> list[tuple]:
+        """Groupes montrés, réduits à (nom, nombre, deplie, autres). Dépendances : etat."""
+        return [(g["nom"], g["nombre"], g["deplie"], g["autres"]) for g in self.etat()["groupes"]]
+
+    def creer(self, app: str, resume: str = "Titre", urgence: int = 1) -> str:
+        """Crée une notification en attente. Sortie : son identifiant. Dépendances : appel."""
+        return self.appel("creer", app, resume, urgence)
+
+    def test_vide(self):
+        e = self.etat()
+        self.assertEqual((e["hauteur"], e["vide"], e["toutEffacer"], e["groupes"], e["montree"]),
+                         (320, True, False, [], True))
+        self.assertEqual(e["texteEtat"], "Désactivé")
+
+    def test_groupes(self):
+        for app in ("A", "B", "A", "A"):
+            self.creer(app)
+        self.assertEqual(self.groupes(), [("A", 3, False, "2 autres"), ("B", 1, False, "")])
+        e = self.etat()
+        self.assertEqual((e["vide"], e["toutEffacer"]), (False, True))
+        self.assertEqual([g["lignes"] for g in e["groupes"]], [1, 1])
+        repliee = self.jusqua(lambda: (a := self.etat()["hauteur"]) == self.etat()["hauteur"] and a, "hauteur stable")
+        self.appel("deplier", "A")
+        vues, fin = [], time.monotonic() + DELAI
+        while True:
+            vues.append(self.etat()["hauteur"])
+            if len(vues) > 3 and vues[-1] == vues[-2] == vues[-3] and vues[-1] > repliee:
+                break
+            self.assertLess(time.monotonic(), fin, vues)
+        # La hauteur se déplie : des valeurs intermédiaires séparent la hauteur repliée de la hauteur dépliée.
+        self.assertTrue(any(repliee < h < vues[-1] for h in vues), vues)
+        self.assertEqual(self.groupes()[0], ("A", 3, True, ""))
+        self.assertEqual(self.etat()["groupes"][0]["lignes"], 3)
+
+    def test_critique_devant(self):
+        self.creer("A")
+        self.creer("B", urgence=2)
+        self.creer("A")
+        self.assertEqual([g[0] for g in self.groupes()], ["B", "A"])
+
+    def test_clic_entree(self):
+        self.creer("A")
+        self.creer("A")
+        self.appel("ouvrir", 2)
+        self.assertEqual(self.appel("appels"), "2:invoke:default")
+        self.assertEqual(self.etat()["nombre"], 1)
+        self.jusqua(lambda: self.groupes() == [("A", 1, False, "")], "groupe mis à jour après la sortie")
+        self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
+
+    def test_ne_plus_garder(self):
+        self.creer("A")
+        self.creer("B")
+        self.creer("A")
+        self.assertTrue(all(g["retirable"] for g in self.etat()["groupes"]))
+        self.appel("nePlusGarder", "A")
+        self.assertEqual(sorted(self.appel("appels").split(",")), ["1:dismiss", "3:dismiss"])
+        e = self.etat()
+        self.assertEqual((e["retirees"], e["nombre"]), (["A"], 1))
+        self.jusqua(lambda: self.groupes() == [("B", 1, False, "")], "groupe retiré après sa sortie")
+
+    def test_anonyme(self):
+        self.creer("")
+        g = self.etat()["groupes"][0]
+        self.assertEqual((g["nom"], g["retirable"]), ("Application inconnue", False))
+        self.appel("nePlusGarder", "")
+        self.assertEqual((self.etat()["retirees"], self.appel("appels")), ([], ""))
+        self.appel("effacerGroupe", "")
+        self.assertEqual(self.appel("appels"), "1:dismiss")
+
+    def test_tout_effacer(self):
+        for app in ("A", "B", "C"):
+            self.creer(app)
+        self.assertEqual([g[0] for g in self.groupes()], ["C", "B", "A"])
+        debut = time.monotonic()
+        self.appel("toutEffacer")
+        self.assertEqual(self.appel("appels"), "3:dismiss")
+        instants = {}
+        while len(instants) < 3:
+            self.assertLess(time.monotonic() - debut, DELAI, instants)
+            for appel in filter(None, self.appel("appels").split(",")):
+                instants.setdefault(appel, time.monotonic())
+        # En cascade, du haut vers le bas : le plus récent d'abord, un pas de cascade entre deux groupes.
+        self.assertEqual(list(instants), ["3:dismiss", "2:dismiss", "1:dismiss"])
+        self.assertGreater(instants["1:dismiss"] - debut, 2 * self.CASCADE / 1000 - 0.05)
+        self.jusqua(lambda: self.etat()["vide"] and self.etat()["hauteur"] == 320, "état vide à la hauteur minimale")
+
+    def test_bascule(self):
+        self.appel("basculer")
+        e = self.etat()
+        self.assertEqual((e["nePasDeranger"], e["texteEtat"]), (True, "Activé : les cartes sont retenues"))
+        self.appel("basculer")
+        self.assertEqual(self.etat()["texteEtat"], "Désactivé")
+
+    def test_clavier(self):
+        for app in ("A", "B", "C"):
+            self.creer(app)
+        self.appel("touche", "bas")
+        self.assertEqual(self.etat()["courante"], 3)
+        self.appel("touche", "bas")
+        self.assertEqual(self.etat()["courante"], 2)
+        self.appel("touche", "suppr")
+        self.assertEqual(self.appel("appels"), "2:dismiss")
+        self.assertEqual(self.etat()["courante"], 1)
+        self.appel("touche", "haut")
+        self.assertEqual(self.etat()["courante"], 3)
+        self.appel("touche", "entree")
+        self.assertEqual(self.appel("appels"), "2:dismiss,3:invoke:default")
+
+    def test_hauteur_max(self):
+        self.appel("hauteurMax", 600)
+        for i in range(30):
+            self.creer(f"App{i}")
+        e = self.jusqua(lambda: (e := self.etat())["hauteur"] == 600 and e, "hauteur bornée")
+        self.assertTrue(e["defilable"])
+        self.appel("toutEffacer")
+        self.jusqua(lambda: self.etat()["hauteur"] == 320 and not self.etat()["defilable"], "retour à la hauteur minimale", 20)

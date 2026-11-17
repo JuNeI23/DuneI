@@ -10,3 +10,6 @@ Attendue 1.0 Attendue.qml
 Attente 1.0 Attente.qml
 MemoireAttente 1.0 MemoireAttente.qml
 CorpsNotification 1.0 CorpsNotification.qml
+LigneAttente 1.0 LigneAttente.qml
+GroupeAttente 1.0 GroupeAttente.qml
+Panneau 1.0 Panneau.qml
