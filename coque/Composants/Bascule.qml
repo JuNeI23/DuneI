@@ -44,10 +44,13 @@ T.Button {
     property bool fondu: false
     // Nom du glyphe montré avant le dernier changement, peint par le glyphe sortant pendant un fondu.
     property string ancienne: ""
-    property string _montree: icone
+    // Glyphe montré, tenu à la main et non par liaison : une liaison pourrait se mettre à jour avant
+    // onIconeChanged, qui verrait alors le nouveau nom pour l'ancien.
+    property string _montree: ""
 
+    Component.onCompleted: _montree = icone
     onIconeChanged: {
-        if (fondu && _montree !== "" && icone !== "") { ancienne = _montree; croise.reprendre(0, 0) }
+        if (fondu && _montree !== "" && icone !== "" && icone !== _montree) { ancienne = _montree; croise.reprendre(0, 0) }
         _montree = icone
     }
 

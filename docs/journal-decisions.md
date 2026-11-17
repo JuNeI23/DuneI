@@ -4194,3 +4194,21 @@ bascule, en haut, et le pied, en bas ; la rangée suit « Tout effacer » dans l
 
 *Touché : `coque/Notifications/Panneau.qml`, `FormePanneau.qml`, coques d'essai du panneau et de sa fenêtre, bible
 (annexe E, 0.38), backlog (version 1.57), notes de direction (version 1.52).*
+
+### D184 · La page Notifications suit le sens du panneau
+
+17 novembre 2026 · L2-67, retour après fusion. Une fois la bascule du panneau retournée (D182), l'interrupteur
+« Ne pas déranger » de la page Notifications de Paramètres restait allumé quand le mode était actif : un même état
+aurait été allumé à un endroit et éteint à l'autre. Nicolas veut le même sens partout. L'interrupteur quitte sa carte
+pour la carte d'en-tête, comme celui du Wi-Fi : allumé, les notifications sont actives, et la phrase d'état dit
+« Actives » ; éteint, elle dit « Ne pas déranger ». La carte « Ne pas déranger » et son texte d'aide disparaissent ;
+la recherche « Ne pas déranger » mène à l'en-tête. La phrase d'état de la carte d'en-tête passe désormais de l'une à
+l'autre en fondu croisé au ressort `state`, pour toutes les pages. En l'éprouvant, l'essai a montré qu'un nom tenu
+par liaison pouvait se mettre à jour avant le gestionnaire de changement, qui lançait alors un fondu entre deux
+textes identiques à la création : la carte d'en-tête et la Bascule tiennent ce nom à la main, initialisé à la fin de
+la construction, et ne fondent jamais deux textes identiques. Essais : `PageNotificationsTest`
+(`test_interrupteur_dans_les_deux_sens`, `test_phrase_en_fondu`, `test_atteindre`).
+
+*Touché : `coque/Notifications/PageNotifications.qml`, `coque/Parametres/EnTetePage.qml`,
+`coque/Composants/Bascule.qml`, coque d'essai de la page, bible (chapitre 7 et annexe E, 0.38), backlog (version
+1.57), notes de direction (version 1.52).*

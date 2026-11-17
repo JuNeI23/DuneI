@@ -620,7 +620,7 @@ carte. À la recette, Nicolas a voulu un libellé unique qui dise l'état prése
 éprouver sur un vrai courriel ; on y reviendra au besoin. Après la fusion, Nicolas a retourné le sens de la bascule
 du panneau : allumée, elle dit que les notifications sont actives, sous la cloche ; éteinte, « ne pas déranger », sous
 la cloche barrée (D182), et voulu que le panneau mène aux réglages : son pied porte « Réglages des notifications… »
-(D183).
+(D183). La page Notifications de Paramètres suit le même sens, son interrupteur passant dans l'en-tête (D184).
 
 Prochaine étape : **le son de notification** (L2-68). Son principe est arrêté le 17 novembre : une notification
 sonne quand le panneau la garderait, qu'elle est neuve et que le silence n'a pas été choisi, d'une voix « arrivée »,
@@ -632,7 +632,7 @@ du popover Bluetooth), L2-58, L2-59 et L2-62 attendent leur tour.
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-10 | Version initiale |
-| 1.52 | 2026-11-17 | L2-67, retour après fusion : la bascule du panneau est allumée quand les notifications sont actives (D182), le panneau mène aux réglages (D183) ; principe du son de notification arrêté (L2-68) |
+| 1.52 | 2026-11-17 | L2-67, retour après fusion : la bascule du panneau est allumée quand les notifications sont actives (D182), le panneau mène aux réglages (D183), la page suit le même sens (D184) ; principe du son de notification arrêté (L2-68) |
 | 1.51 | 2026-11-17 | L2-67 fait : cloche à pastille, panneau des notifications, « ne pas déranger » (D176 à D180) ; prochaine étape : L2-68 |
 | 1.50 | 2026-11-16 | L5-01 et L2-65 faits, en attente de fusion : application Paramètres (coquille, pages Wi-Fi, Filaire et VPN), popover réseau à la règle des cinq, fenêtre Réseau retirée (D165 à D175) ; prochaine étape inchangée : L2-67 |
 | 1.49 | 2026-11-13 | L2-19 fait : notifications de la coque, dunst retiré (D162) ; L2-66 reportée, L2-65 à refaire de zéro (D163) ; prochaine étape : la cloche avec pastille, l'historique et « ne pas déranger » (L2-67) |

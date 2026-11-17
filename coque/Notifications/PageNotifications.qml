@@ -6,9 +6,11 @@ import "../Parametres"
 import "../Reseau"
 
 // PageNotifications — page Notifications de l'application Paramètres (L2-67).
-// Rôle : de haut en bas, la carte d'en-tête (EnTetePage : vignette, « Notifications », état de « ne pas déranger ») ;
-// la carte « Ne pas déranger », une rangée de réglage avec son Interrupteur, d'accord avec la bascule du panneau et
-// le clic droit sur la cloche puisque tous lisent et écrivent EtatNotifications ; la carte « Applications retirées »,
+// Rôle : de haut en bas, la carte d'en-tête (EnTetePage : vignette, « Notifications », phrase d'état « Actives » ou
+// « Ne pas déranger », et l'Interrupteur, à droite, comme celui du Wi-Fi), dont l'interrupteur suit le sens de la
+// bascule du panneau : allumé, les notifications sont actives ; éteint, « ne pas déranger » (D184). Il est d'accord
+// avec la bascule et le clic droit sur la cloche, puisque tous lisent et écrivent EtatNotifications. Puis la carte
+// « Applications retirées »,
 // une rangée par application retirée du panneau (« Ne plus garder »), avec « Remettre » en texte à l'accent, ou,
 // sans application, la ligne « Aucune application retirée ». Remettre une application ne fait pas revenir ses
 // notifications passées. Une rangée qui paraît ou part se déplie ou se replie au ressort « reveal ».
@@ -16,8 +18,8 @@ import "../Reseau"
 // une, l'identifiant lui-même sinon.
 // Contrat de page (voir ConteneurPage) : conteneur, atteindre, implicitHeight.
 // Entrées : conteneur, le ConteneurPage, posé par lui.
-// Sorties : phrase, l'état de « ne pas déranger » ; vide, vrai sans application retirée ; interrupteur, lu par les
-// essais. Fonctions : atteindre, remettre, rangees, nom.
+// Sorties : phrase, l'état des notifications ; vide, vrai sans application retirée ; interrupteur et enTete, lus
+// par les essais. Fonctions : atteindre, remettre, rangees, nom.
 // Erreurs : aucune.
 // Dépendances : Quickshell (DesktopEntries, ScriptModel), EnTetePage, TitreSection, Registre (Parametres) ; Groupe,
 // Ligne (Reseau) ; Interrupteur, Texte, Ressort ; EtatNotifications.
@@ -26,17 +28,19 @@ Item {
 
     property var conteneur: null
     readonly property var inscription: Registre.page("notifications")
-    readonly property string phrase: EtatNotifications.nePasDeranger ? qsTr("Activé") : qsTr("Désactivé")
+    readonly property string phrase: EtatNotifications.nePasDeranger ? qsTr("Ne pas déranger") : qsTr("Actives")
     readonly property bool vide: EtatNotifications.retirees.length === 0
     readonly property alias interrupteur: interrupteur
+    readonly property alias enTete: enTete
 
     implicitHeight: colonne.implicitHeight
 
     // atteindre — conduit à un réglage de la page. Entrée : chemin, ancre au format de recherche.js (la page, puis
-    // « ne-pas-deranger » ou « retirees »). Sortie : aucune. Erreurs : aucune ; une ancre inconnue montre l'en-tête.
+    // « ne-pas-deranger » ou « retirees »). Sortie : aucune ; « ne-pas-deranger » montre l'en-tête, qui porte
+    // l'interrupteur. Erreurs : aucune ; une ancre inconnue montre aussi l'en-tête.
     // Dépendances : conteneur (montrer).
     function atteindre(chemin) {
-        conteneur.montrer(chemin[1] === "ne-pas-deranger" ? carteDeranger : chemin[1] === "retirees" ? carteRetirees : enTete)
+        conteneur.montrer(chemin[1] === "retirees" ? carteRetirees : enTete)
     }
 
     // remettre — remet une application retirée. Entrée : identifiant. Sortie : aucune. Erreurs : aucune.
@@ -63,23 +67,11 @@ Item {
             teinte: page.inscription?.teinte ?? 0
             titre: page.inscription?.libelle ?? ""
             etat: page.phrase
-        }
-
-        TitreSection { text: qsTr("Ne pas déranger") }
-        Groupe {
-            id: carteDeranger
-            objectName: "nePasDeranger"
-            width: parent.width
-            Ligne {
-                filet: false
-                libelle: qsTr("Ne pas déranger")
-                aide: qsTr("Les cartes sont retenues ; les notifications à traiter attendent dans le panneau. Les "
-                           + "notifications critiques s'affichent toujours.")
-                Interrupteur {
-                    id: interrupteur
-                    checked: EtatNotifications.nePasDeranger
-                    onToggled: { EtatNotifications.poser(checked); checked = Qt.binding(() => EtatNotifications.nePasDeranger) }
-                }
+            Interrupteur {
+                id: interrupteur
+                objectName: "notificationsActives"
+                checked: !EtatNotifications.nePasDeranger
+                onToggled: { EtatNotifications.poser(!checked); checked = Qt.binding(() => !EtatNotifications.nePasDeranger) }
             }
         }
 

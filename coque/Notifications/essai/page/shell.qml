@@ -49,8 +49,14 @@ ShellRoot {
                 montre: conteneur.montre?.objectName ?? ""})
         }
 
-        // basculer — clic sur l'interrupteur de « ne pas déranger ». Sortie : aucune.
+        // basculer — clic sur l'interrupteur des notifications, dans l'en-tête. Sortie : aucune.
         function basculer(): void { page.interrupteur.toggle(); page.interrupteur.toggled() }
+
+        // fondu — JSON {sortante, ancienne} : opacité de la phrase sortante de l'en-tête et texte qu'elle peint.
+        // Sortie : texte. Erreurs : aucune. Dépendances : page (enTete).
+        function fondu(): string {
+            return JSON.stringify({sortante: page.enTete.sortante.opacity, ancienne: page.enTete.ancienne})
+        }
 
         // poser, retirer — changent l'état depuis ailleurs (cloche, panneau). Entrées : v ; identifiant.
         function poser(v: bool): void { EtatNotifications.poser(v) }

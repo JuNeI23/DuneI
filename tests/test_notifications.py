@@ -1608,7 +1608,7 @@ for _nom in [n for n in vars(FenetrePanneauTest) if n.startswith("test_") and n 
 
 @unittest.skipUnless(os.environ.get("WAYLAND_DISPLAY") and QS, "session Wayland et Quickshell requis")
 class PageNotificationsTest(EssaiCoque, unittest.TestCase):
-    """La page Notifications de Paramètres : interrupteur de « ne pas déranger » et applications retirées."""
+    """La page Notifications de Paramètres : interrupteur des notifications dans l'en-tête et applications retirées."""
 
     essai = ESSAI / "page"
     teintes = (55,)
@@ -1629,14 +1629,15 @@ class PageNotificationsTest(EssaiCoque, unittest.TestCase):
         return json.loads(self.appel("etat"))
 
     def test_interrupteur_dans_les_deux_sens(self):
+        # L'interrupteur de l'en-tête suit le sens de la bascule du panneau : allumé, les notifications sont actives ;
+        # éteint, « ne pas déranger » (D184).
         e = self.etat()
-        self.assertEqual((e["interrupteur"], e["nePasDeranger"], e["phrase"]), (False, False, "Désactivé"))
+        self.assertEqual((e["interrupteur"], e["nePasDeranger"], e["phrase"]), (True, False, "Actives"))
         self.appel("basculer")
         e = self.etat()
-        self.assertEqual((e["interrupteur"], e["nePasDeranger"]), (True, True))
-        self.assertEqual(e["phrase"], "Activé")
+        self.assertEqual((e["interrupteur"], e["nePasDeranger"], e["phrase"]), (False, True, "Ne pas déranger"))
         self.appel("poser", "false")
-        self.assertFalse(self.etat()["interrupteur"])
+        self.assertTrue(self.etat()["interrupteur"])
 
     def test_retirees(self):
         e = self.etat()
@@ -1651,8 +1652,20 @@ class PageNotificationsTest(EssaiCoque, unittest.TestCase):
         self.jusqua(lambda: self.etat()["vide"], "ligne « Aucune application retirée »")
         self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
 
+    def test_phrase_en_fondu(self):
+        # La phrase d'état de l'en-tête passe de l'une à l'autre en fondu croisé : l'ancienne s'efface pendant que la
+        # nouvelle paraît (D184).
+        self.assertEqual(json.loads(self.appel("fondu")), {"sortante": 0, "ancienne": ""})
+        self.appel("basculer")
+        vues, fin = [], time.monotonic() + DELAI
+        while (f := json.loads(self.appel("fondu")))["sortante"] != 0 or not vues:
+            self.assertLess(time.monotonic(), fin, f"phrase sortante à {f}")
+            vues.append(f)
+        self.assertTrue(any(0 < v["sortante"] < 1 and v["ancienne"] == "Actives" for v in vues), vues)
+
     def test_atteindre(self):
+        # « Ne pas déranger », trouvé par la recherche, mène à l'interrupteur de l'en-tête (D184).
         self.appel("atteindre", "ne-pas-deranger")
-        self.assertEqual(self.etat()["montre"], "nePasDeranger")
+        self.assertEqual(self.etat()["montre"], "enTete")
         self.appel("atteindre", "retirees")
         self.assertEqual(self.etat()["montre"], "retirees")
