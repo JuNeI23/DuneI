@@ -288,14 +288,16 @@ class PileTest(EssaiCoque, unittest.TestCase):
         self.rester_sans("3:expire", 2.0)
 
     def test_pas_d_expiration_en_file(self):
+        # Une seconde de délai : six créations par IPC prennent près de 400 ms (66 ms l'appel), et la première carte ne
+        # doit pas expirer avant que la sixième soit en file.
         for _ in range(6):
-            self.creer(delai=300)
+            self.creer(delai=1000)
         self.assertEqual(self.etat()[1], ["6"])
         # La première expiration libère une place ; la 6ᵉ entre alors en tête.
         self.jusqua(lambda: "6" in self.etat()[0], "6 affichée")
         entree = time.monotonic()
         self.assertNotIn("6:expire", self.appels())
-        self.assertAlmostEqual(self.attendre_appel("6:expire") - entree, 0.3, delta=0.2)
+        self.assertAlmostEqual(self.attendre_appel("6:expire") - entree, 1.0, delta=0.2)
 
     def test_survol_suspend(self):
         t0 = time.monotonic()
@@ -1098,6 +1100,14 @@ class EtatNotificationsTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(self.etat(), {"nePasDeranger": False, "retirees": []})
         self.assertFalse(self.fichier().exists())
 
+    def test_icone(self):
+        # Le glyphe de l'état, lu par la cloche de la barre et par la bascule du panneau : la cloche, barrée sous
+        # « ne pas déranger » (D182).
+        self.demarrer()
+        self.assertEqual(self.appel("essai", "icone"), "preferences-system-notifications")
+        self.appel("essai", "basculer")
+        self.assertEqual(self.appel("essai", "icone"), "notifications-disabled")
+
     def test_ecriture_et_relecture(self):
         self.demarrer()
         self.appel("essai", "basculer")
@@ -1339,11 +1349,18 @@ class PanneauTest(EssaiCoque, unittest.TestCase):
         self.jusqua(lambda: self.etat()["vide"] and self.etat()["hauteur"] == 320, "état vide à la hauteur minimale")
 
     def test_bascule(self):
+        # Allumée, la bascule dit que les notifications sont actives, sous la cloche ; éteinte, « ne pas déranger »,
+        # sous la cloche barrée (D182).
+        actives = {"allumee": True, "glyphe": "preferences-system-notifications"}
+        self.assertEqual(self.etat()["bascule"], actives)
         self.appel("basculer")
         e = self.etat()
         self.assertEqual((e["nePasDeranger"], e["texteEtat"]), (True, "Ne pas déranger"))
+        self.assertEqual(e["bascule"], {"allumee": False, "glyphe": "notifications-disabled"})
         self.appel("basculer")
-        self.assertEqual(self.etat()["texteEtat"], "Notifications actives")
+        e = self.etat()
+        self.assertEqual((e["nePasDeranger"], e["texteEtat"]), (False, "Notifications actives"))
+        self.assertEqual(e["bascule"], actives)
 
     def test_clavier(self):
         for app in ("A", "B", "C"):

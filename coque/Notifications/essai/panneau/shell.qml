@@ -92,7 +92,8 @@ ShellRoot {
                 nePasDeranger: EtatNotifications.nePasDeranger, retirees: EtatNotifications.retirees,
                 nombre: attenteEssai.nombre, courante: panneau.courante?.notification?.id ?? 0,
                 defilable: panneau.defilable, montree: attenteEssai.montree, entrees: attenteEssai.entrees.length,
-                vue: panneau.vueCourante?.() ?? null})
+                vue: panneau.vueCourante?.() ?? null,
+                bascule: {allumee: panneau.bascule?.checked ?? null, glyphe: panneau.bascule?.icone ?? null}})
         }
 
         // monter — monte ou démonte le panneau, comme l'ouverture et la fermeture de sa forme. Entrée : v.

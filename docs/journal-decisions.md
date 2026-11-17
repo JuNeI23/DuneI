@@ -4164,3 +4164,20 @@ reviendra au besoin. Essais : `PanneauTest.test_bascule`, `PageNotificationsTest
 
 *Touché : `coque/Notifications/Panneau.qml`, `PageNotifications.qml`, `coque/Barre/Notifications.qml`,
 `PastilleCloche.qml`, bible (annexe E, 0.37).*
+
+### D182 · La bascule du panneau dit les notifications, pas « ne pas déranger »
+
+17 novembre 2026 · L2-67, retour après fusion. Nicolas trouve la bascule à glyphe du panneau peu intuitive : allumée,
+elle signifiait « ne pas déranger », sous une lune, alors qu'une bascule allumée se lit comme un service qui marche
+(« activé doit impliquer notifications activées, sinon ne pas déranger »). Elle dit désormais les notifications :
+allumée quand elles sont actives, sous la cloche ; éteinte sous « ne pas déranger », sous la cloche barrée, le glyphe
+passant de l'une à l'autre en fondu croisé au ressort `state`. Le libellé d'état unique de D181 ne change pas. Le
+glyphe de l'état n'a plus qu'une source, `EtatNotifications.icone`, que lisent la cloche de la barre et la bascule ;
+la correspondance quitte `coque/Barre/icones.js`. La Bascule gagne l'option `fondu`, sur le modèle de l'élément de
+barre : un glyphe qui dit un état passe en fondu croisé. Celui du Bluetooth la prend aussi, celui du Wi-Fi non,
+puisqu'il suit la force du signal. Essais : `PanneauTest.test_bascule`, `EtatNotificationsTest.test_icone`,
+`CoqueComposantsTest.test_bascule_fondu`.
+
+*Touché : `coque/Notifications/Panneau.qml`, `EtatNotifications.qml`, `coque/Composants/Bascule.qml`,
+`coque/Barre/Notifications.qml`, `icones.js`, `coque/Bluetooth/PopoverBluetooth.qml`, bible (annexe E, 0.38),
+backlog (version 1.57), notes de direction (version 1.52).*

@@ -955,6 +955,21 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
                            couleurs["fill"].lower(), glyphe, couleurs["text"].lower(), "1", "true"]
                 self.assertEqual(lire(attendu), attendu)
 
+    def test_bascule_fondu(self):
+        # Avec fondu, le nouveau glyphe paraît pendant que l'ancien, peint par le glyphe sortant, s'efface au ressort
+        # « state » ; sans fondu, le glyphe change d'un coup et rien ne sort (D182).
+        self.demarrer()
+        self.assertEqual(self.valeur("basculeSortant").split(), ["0"])
+        self.ipc("basculeGlyphe", "bluetooth-active", "true")
+        vues, fin = [], time.monotonic() + DELAI
+        while (lu := self.valeur("basculeSortant").split())[0] != "0" or not vues:
+            self.assertLess(time.monotonic(), fin, f"glyphe sortant à {lu}")
+            vues.append(lu)
+        self.assertTrue(any(0 < float(v[0]) < 1 and v[1:] == ["network-wireless"] for v in vues), vues)
+        self.ipc("basculeGlyphe", "night-light", "false")
+        for _ in range(10):
+            self.assertEqual(self.valeur("basculeSortant").split()[0], "0")
+
     def test_reglages(self):
         # Carte et rangées de réglage de la fenêtre Réseau : la rangée à aide prend reglages.rowHelp (erreur en
         # plus), la simple reglages.row ; le texte s'aligne sur reglages.textColumn ; la carte ajoute deux gardes de

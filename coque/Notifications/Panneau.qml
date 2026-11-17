@@ -6,8 +6,9 @@ import "garde.js" as Garde
 
 // Panneau — contenu du panneau des notifications (L2-67) : ce qui reste à traiter, et « ne pas déranger ».
 // Rôle : de haut en bas, dans une marge intérieure de notifications.interieur : l'en-tête « Notifications » avec, à
-// droite, « Tout effacer » en texte à l'accent (absent quand rien n'attend) ; la bascule à glyphe de « ne pas déranger
-// » (Bascule, glyphe de lune) avec un seul libellé, l'état présent (« Notifications actives » ou « Ne pas déranger ») ;
+// droite, « Tout effacer » en texte à l'accent (absent quand rien n'attend) ; la bascule à glyphe des notifications
+// (Bascule), allumée quand elles sont actives, éteinte sous « ne pas déranger », sous la cloche ou la cloche barrée
+// en fondu croisé (D182), avec un seul libellé, l'état présent (« Notifications actives » ou « Ne pas déranger ») ;
 // puis les groupes par application (GroupeAttente), le plus récent en tête, un groupe qui contient une critique passant
 // devant ; sans rien à traiter, un état vide (cloche et « Rien à traiter ») centré dans la place restante. Le panneau
 // n'a pas de fond : sa fenêtre (FenetrePanneau) fournit la forme de verre. Il se déclare montré à l'attente tant qu'il
@@ -204,7 +205,7 @@ FocusScope {
         }
     }
 
-    // « Ne pas déranger » : la bascule à glyphe de la bible, son libellé et son état.
+    // Les notifications : la bascule à glyphe de la bible, allumée quand elles sont actives, son libellé et son état.
     Item {
         id: reglage
         x: panneau.marge
@@ -214,10 +215,11 @@ FocusScope {
 
         Bascule {
             id: bascule
-            icone: "weather-clear-night"
+            icone: EtatNotifications.icone
+            fondu: true
             KeyNavigation.tab: liste
-            onToggled: EtatNotifications.poser(checked)
-            Binding { target: bascule; property: "checked"; value: EtatNotifications.nePasDeranger }
+            onToggled: EtatNotifications.poser(!checked)
+            Binding { target: bascule; property: "checked"; value: !EtatNotifications.nePasDeranger }
         }
         // Un seul libellé, qui dit l'état présent ; le passage de l'un à l'autre est un fondu croisé.
         Ressort { id: fonduEtat; transition: "state"; nature: "fondu"; cible: EtatNotifications.nePasDeranger ? 1 : 0 }

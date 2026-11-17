@@ -28,5 +28,9 @@ ShellRoot {
         function poser(v: bool): void { EtatNotifications.poser(v) }
         function retirer(identifiant: string): void { EtatNotifications.retirer(identifiant) }
         function remettre(identifiant: string): void { EtatNotifications.remettre(identifiant) }
+
+        // icone — glyphe de l'état, tel que le lisent la cloche et la bascule. Entrées : aucune. Sortie : son nom.
+        // Erreurs : aucune. Dépendances : EtatNotifications.
+        function icone(): string { return EtatNotifications.icone }
     }
 }

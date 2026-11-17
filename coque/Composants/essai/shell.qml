@@ -1029,6 +1029,21 @@ ShellRoot {
             basculeEssai.checked = valeur
         }
 
+        // basculeGlyphe — change le glyphe de la bascule d'essai, avec ou sans fondu croisé.
+        // Entrées : nom, le nouveau glyphe ; fondu, vrai pour le fondu. Sortie : aucune. Erreurs : aucune.
+        // Dépendances : basculeEssai.
+        function basculeGlyphe(nom: string, fondu: bool): void {
+            basculeEssai.fondu = fondu
+            basculeEssai.icone = nom
+        }
+
+        // basculeSortant — journalise le glyphe sortant de la bascule d'essai : son opacité, puis le nom qu'il peint.
+        // Entrées : aucune. Sortie : aucune ; « essai : basculeSortant <opacité> <nom> ». Erreurs : aucune.
+        // Dépendances : basculeEssai (sortant, ancienne), journal.
+        function basculeSortant(): void {
+            essai.journal("basculeSortant", [basculeEssai.sortant.opacity, basculeEssai.ancienne].join(" "))
+        }
+
         // reglages — journalise la carte, les rangées de réglage et les médaillons d'essai : garde en haut puis en bas de la
         // carte (sans fenêtre, aucune mise en page n'est calculée : les largeurs sont éprouvées par la coque d'essai de Groupe),
         // hauteurs de la rangée à aide et erreur puis de la rangée simple, abscisse du texte de la première rangée,
