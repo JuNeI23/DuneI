@@ -22,12 +22,14 @@ ShellRoot {
             return JSON.stringify({nePasDeranger: EtatNotifications.nePasDeranger, retirees: EtatNotifications.retirees})
         }
 
-        // basculer, poser, retirer, remettre — relais des fonctions du singleton. Entrées : v ; identifiant.
+        // basculer, poser, retirer, remettre, poserSon, poserVolume — relais des fonctions du singleton. Entrées : v ; identifiant.
         // Sortie : aucune. Erreurs : aucune. Dépendances : EtatNotifications.
         function basculer(): void { EtatNotifications.basculer() }
         function poser(v: bool): void { EtatNotifications.poser(v) }
         function retirer(identifiant: string): void { EtatNotifications.retirer(identifiant) }
         function remettre(identifiant: string): void { EtatNotifications.remettre(identifiant) }
+        function poserSon(v: bool): void { EtatNotifications.poserSon(v) }
+        function poserVolume(v: int): void { EtatNotifications.poserVolume(v) }
 
         // icone — glyphe de l'état, tel que le lisent la cloche et la bascule. Entrées : aucune. Sortie : son nom.
         // Erreurs : aucune. Dépendances : EtatNotifications.

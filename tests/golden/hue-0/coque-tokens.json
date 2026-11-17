@@ -1780,5 +1780,11 @@
     "hauteurMin": 320,
     "lignes": 2,
     "cascade": 60
+  },
+  "son": {
+    "arrivee": "/usr/share/sounds/ocean/stereo/message-new-instant.oga",
+    "urgence": "/usr/share/sounds/ocean/stereo/dialog-warning.oga",
+    "salve": 2000,
+    "renouvellement": 60000
   }
 }

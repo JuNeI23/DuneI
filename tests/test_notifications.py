@@ -1181,7 +1181,7 @@ class EtatNotificationsTest(EssaiCoque, unittest.TestCase):
         self.demarrer()
         self.appel("essai", "basculer")
         self.appel("essai", "retirer", "Signal")
-        self.ecrit({"nePasDeranger": True, "retirees": ["Signal"]})
+        self.ecrit({"nePasDeranger": True, "retirees": ["Signal"], "son": True, "volumeSon": 100})
         self.demarrer()
         self.assertEqual(self.etat(), {"nePasDeranger": True, "retirees": ["Signal"]})
 
@@ -1202,7 +1202,7 @@ class EtatNotificationsTest(EssaiCoque, unittest.TestCase):
         self.demarrer()
         self.assertEqual(self.etat(), {"nePasDeranger": False, "retirees": []})
         self.appel("essai", "basculer")
-        self.ecrit({"nePasDeranger": True, "retirees": []})
+        self.ecrit({"nePasDeranger": True, "retirees": [], "son": True, "volumeSon": 100})
 
     def test_ipc(self):
         self.demarrer()
@@ -1210,6 +1210,50 @@ class EtatNotificationsTest(EssaiCoque, unittest.TestCase):
         self.appel("notifications", "basculerNePasDeranger")
         self.assertEqual(self.appel("notifications", "nePasDeranger"), "true")
         self.assertTrue(self.etat()["nePasDeranger"])
+
+    def son(self) -> tuple[str, str]:
+        """Réglages du son lus par l'IPC « notifications » (L2-68). Sortie : (son, volumeSon) en texte.
+        Erreurs : celles d'appel. Dépendances : appel."""
+        return self.appel("notifications", "son"), self.appel("notifications", "volumeSon")
+
+    def test_son_par_defaut(self):
+        self.demarrer()
+        self.assertEqual(self.son(), ("true", "100"))
+        self.assertFalse(self.fichier().exists())
+
+    def test_son_persiste(self):
+        self.demarrer()
+        self.appel("essai", "poserSon", "false")
+        self.appel("essai", "poserVolume", 40)
+        self.ecrit({"nePasDeranger": False, "retirees": [], "son": False, "volumeSon": 40})
+        self.demarrer()
+        self.assertEqual(self.son(), ("false", "40"))
+
+    def test_fichier_ancien(self):
+        # Un fichier écrit avant L2-68 ne porte ni « son » ni « volumeSon » : les défauts s'appliquent, et la
+        # première écriture garde « ne pas déranger » et les applications retirées.
+        self.fichier().write_text('{"nePasDeranger": true, "retirees": ["a"]}')
+        self.demarrer()
+        self.assertEqual(self.son(), ("true", "100"))
+        self.appel("essai", "poserVolume", 50)
+        self.ecrit({"nePasDeranger": True, "retirees": ["a"], "son": True, "volumeSon": 50})
+
+    def test_volume_borne(self):
+        self.demarrer()
+        self.appel("essai", "poserVolume", 140)
+        self.assertEqual(self.son()[1], "100")
+        self.appel("essai", "poserVolume", -5)
+        self.assertEqual(self.son()[1], "0")
+
+
+class JetonsSonTest(unittest.TestCase):
+    """Les jetons de la voix des notifications (L2-68), tels que la coque les lit dans coque-tokens.json."""
+
+    def test_jetons_son(self):
+        son = json.loads((ROOT / "generated" / "coque-tokens.json").read_text())["son"]
+        self.assertEqual(son, {"arrivee": "/usr/share/sounds/ocean/stereo/message-new-instant.oga",
+                               "urgence": "/usr/share/sounds/ocean/stereo/dialog-warning.oga",
+                               "salve": 2000, "renouvellement": 60000})
 
 
 @unittest.skipUnless(os.environ.get("WAYLAND_DISPLAY") and QS, "session Wayland et Quickshell requis")
