@@ -1531,3 +1531,55 @@ class FenetrePanneauReduitTest(FenetrePanneauTest):
 
 for _nom in [n for n in vars(FenetrePanneauTest) if n.startswith("test_") and n != "test_sequence"]:
     setattr(FenetrePanneauReduitTest, _nom, None)
+
+
+@unittest.skipUnless(os.environ.get("WAYLAND_DISPLAY") and QS, "session Wayland et Quickshell requis")
+class PageNotificationsTest(EssaiCoque, unittest.TestCase):
+    """La page Notifications de Paramètres : interrupteur de « ne pas déranger » et applications retirées."""
+
+    essai = ESSAI / "page"
+    teintes = (55,)
+    environnement = CarteTest.environnement
+
+    def setUp(self):
+        super().setUp()
+        self.installer(55)
+        self.lancer(self.dir)
+        self.attendre("essai : prêt")
+        self.jusqua(lambda: self.appel("pret") == "true", "jetons chargés")
+
+    appel = PileTest.appel
+    jusqua = PanneauTest.jusqua
+
+    def etat(self) -> dict:
+        """État de la page. Sortie : dictionnaire (voir etat dans la coque d'essai)."""
+        return json.loads(self.appel("etat"))
+
+    def test_interrupteur_dans_les_deux_sens(self):
+        e = self.etat()
+        self.assertEqual((e["interrupteur"], e["nePasDeranger"], e["phrase"]), (False, False, "Désactivé"))
+        self.appel("basculer")
+        e = self.etat()
+        self.assertEqual((e["interrupteur"], e["nePasDeranger"]), (True, True))
+        self.assertEqual(e["phrase"], "Activé : les cartes sont retenues")
+        self.appel("poser", "false")
+        self.assertFalse(self.etat()["interrupteur"])
+
+    def test_retirees(self):
+        e = self.etat()
+        self.assertEqual((e["rangees"], e["vide"]), ([], True))
+        self.appel("retirer", "Signal")
+        self.appel("retirer", "inconnue.desktop.absente")
+        e = self.etat()
+        self.assertEqual((e["rangees"], e["vide"]), (["Signal", "inconnue.desktop.absente"], False))
+        self.appel("remettre", "Signal")
+        self.assertEqual(self.etat()["retirees"], ["inconnue.desktop.absente"])
+        self.appel("remettre", "inconnue.desktop.absente")
+        self.jusqua(lambda: self.etat()["vide"], "ligne « Aucune application retirée »")
+        self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
+
+    def test_atteindre(self):
+        self.appel("atteindre", "ne-pas-deranger")
+        self.assertEqual(self.etat()["montre"], "nePasDeranger")
+        self.appel("atteindre", "retirees")
+        self.assertEqual(self.etat()["montre"], "retirees")

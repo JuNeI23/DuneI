@@ -18,7 +18,8 @@ import Quickshell
 // registre ne charge rien). L'index de la page Wi-Fi déclare l'interrupteur, le réseau joint et ses tuiles (proposés
 // seulement quand un réseau est joint : exige « joint »), les réseaux enregistrés et le réseau masqué ; celui de la
 // page Filaire, la carte « Ethernet » et les profils ; celui de la page VPN, ses connexions. Chaque page suit ces
-// ancres dans sa fonction atteindre.
+// ancres dans sa fonction atteindre. Page Notifications (L2-67) : PageNotifications du module Notifications, groupe
+// « Système » ; son index déclare « ne pas déranger » et les applications retirées.
 Singleton {
     property var pages: [
         { id: "wifi", groupe: "Réseau", libelle: "Wi-Fi", glyphe: "network-wireless-signal-excellent", teinte: 3,
@@ -39,6 +40,11 @@ Singleton {
         { id: "vpn", groupe: "Réseau", libelle: "VPN", glyphe: "network-vpn", teinte: 1,
           composant: Qt.resolvedUrl("../Reseau/PageVpn.qml"), index: [
             { page: "vpn", chemin: ["vpn", "connexions"], libelle: "Connexions VPN", motsCles: ["tunnel", "WireGuard", "OpenVPN"], exige: "" }
+          ] },
+        { id: "notifications", groupe: "Système", libelle: "Notifications", glyphe: "preferences-system-notifications", teinte: 0,
+          composant: Qt.resolvedUrl("../Notifications/PageNotifications.qml"), index: [
+            { page: "notifications", chemin: ["notifications", "ne-pas-deranger"], libelle: "Ne pas déranger", motsCles: ["silence", "cartes", "retenir"], exige: "" },
+            { page: "notifications", chemin: ["notifications", "retirees"], libelle: "Applications retirées", motsCles: ["ne plus garder", "remettre", "exclure"], exige: "" }
           ] }
     ]
     readonly property var index: [].concat(...pages.map(p => p.index))
