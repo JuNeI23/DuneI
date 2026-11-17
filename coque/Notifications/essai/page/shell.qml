@@ -8,7 +8,7 @@ import "Notifications"
 
 // Coque d'essai de la page Notifications de Paramètres, sous la plateforme offscreen.
 // Rôle : pose la vraie PageNotifications, dans une fenêtre jamais montrée, sur un conteneur factice, et la pilote par
-// IPC : interrupteur, « Remettre », lecture des rangées. tests/test_notifications.py (PageNotificationsTest) la lance.
+// IPC : interrupteur, « Remettre », lecture des rangées, carte Son (L2-68, Voix remplacée par un témoin). tests/test_notifications.py (PageNotificationsTest) la lance.
 // Entrées : DUNEI_TOKENS_DIR, lu par Theme ; DUNEI_ETAT_DIR, où EtatNotifications lit et écrit son fichier.
 // Sortie : « essai : prêt » au démarrage ; voir l'IpcHandler. Erreurs : celles de Theme, dans le journal.
 // Dépendances : quickshell ≥ 0.3 (IpcHandler, FloatingWindow), PageNotifications, EtatNotifications, liens Theme,
@@ -23,6 +23,13 @@ ShellRoot {
         function montrer(item) { montre = item }
     }
 
+    // Témoin de la voix : compte les aperçus, sans rien jouer.
+    QtObject {
+        id: temoin
+        property int apercus: 0
+        function jouer(nom) { apercus++ }
+    }
+
     FloatingWindow {
         implicitWidth: 700
         implicitHeight: 800
@@ -32,6 +39,7 @@ ShellRoot {
             id: page
             width: 600
             conteneur: conteneur
+            voix: temoin
         }
     }
 
@@ -64,6 +72,27 @@ ShellRoot {
 
         // remettre — clic sur « Remettre » d'une application retirée. Entrée : identifiant. Sortie : aucune.
         function remettre(identifiant: string): void { page.remettre(identifiant) }
+
+        // etatSon — JSON {interrupteur, son, curseur (valeur du curseur), volumeSon, valeur (texte montré), hauteur (de
+        // la rangée de volume), carte (hauteur de la carte Son, telle que sa mise en page la pose), apercus (aperçus
+        // joués), decalage (position de la ligne Volume dans sa rangée : négative quand elle remonte sous la rangée
+        // précédente)}. Sortie : texte. Erreurs : aucune.
+        function etatSon(): string {
+            return JSON.stringify({interrupteur: page.interrupteurSon.checked, son: EtatNotifications.son,
+                curseur: page.curseurVolume.value, volumeSon: EtatNotifications.volumeSon,
+                valeur: EtatNotifications.volumeSon + " %", hauteur: page.rangeeVolume.height, carte: page.carteSon.height,
+                decalage: page.rangeeVolume.children.find(c => c.libelle === "Volume").y,
+                apercus: temoin.apercus})
+        }
+
+        // basculerSon — clic sur l'interrupteur « Activé » de la carte Son. Sortie : aucune.
+        function basculerSon(): void { page.interrupteurSon.toggle(); page.interrupteurSon.toggled() }
+
+        // deplacer, relacher — un pas du curseur de volume (glissement ou clavier), puis la fin d'un glissement : le
+        // gabarit T.Slider ne laisse pas poser pressed, la page reçoit donc ce que ses gestionnaires lui transmettent.
+        // Entrées : v, en pour cent ; enGlissement. Sortie : aucune.
+        function deplacer(v: int, enGlissement: bool): void { page.curseurVolume.value = v; page.deplacer(v, enGlissement) }
+        function relacher(): void { page.relacher() }
 
         // atteindre — demande de la recherche. Entrée : ancre, la seconde partie du chemin. Sortie : aucune.
         function atteindre(ancre: string): void { page.atteindre(["notifications", ancre]) }

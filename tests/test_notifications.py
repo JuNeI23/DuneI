@@ -1900,3 +1900,54 @@ class PageNotificationsTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(self.etat()["montre"], "enTete")
         self.appel("atteindre", "retirees")
         self.assertEqual(self.etat()["montre"], "retirees")
+
+    def son(self) -> dict:
+        """État de la carte Son. Sortie : dictionnaire (voir etatSon dans la coque d'essai)."""
+        return json.loads(self.appel("etatSon"))
+
+    def test_carte_son(self):
+        e = self.son()
+        self.assertEqual((e["interrupteur"], e["son"], e["curseur"], e["volumeSon"], e["valeur"]),
+                         (True, True, 100, 100, "100 %"))
+        self.assertGreater(e["hauteur"], 0)
+
+    def test_couper_replie(self):
+        # La carte elle-même doit suivre le repli : sa mise en page (ColumnLayout) lit la hauteur implicite des
+        # rangées, et une rangée qui n'animerait que sa hauteur propre ferait sauter la carte à la fin du ressort.
+        depliee, rangee = self.son()["carte"], self.son()["hauteur"]
+        self.appel("basculerSon")
+        self.assertFalse(self.son()["son"])
+        vues, fin = [], time.monotonic() + DELAI
+        decalages = []
+        while (h := (e := self.son())["carte"]) > depliee - rangee + 2:
+            self.assertLess(time.monotonic(), fin, f"carte Son à {h}")
+            vues.append(h)
+            decalages.append(e["decalage"])
+        # La ligne remonte sous « Activé » au lieu d'être rognée par le bas : son filet, en haut, part le premier
+        # au lieu de rester seul à la fin du repli.
+        self.assertTrue(any(d < 0 for d in decalages), decalages)
+        time.sleep(0.08)
+        self.assertTrue(any(depliee - rangee < h < depliee for h in vues), vues)
+        # Sans traîne : la carte ne s'attarde pas à un ou deux pixels de sa fin, ce qui se voit comme un repli en deux
+        # temps.
+        self.assertEqual(self.son()["carte"], depliee - rangee)
+        self.appel("basculerSon")
+        vues = []
+        while (h := self.son()["carte"]) < depliee:
+            self.assertLess(time.monotonic(), fin + DELAI, f"carte Son à {h}")
+            vues.append(h)
+        self.assertTrue(any(depliee - rangee < h < depliee for h in vues), vues)
+
+    def test_apercu_au_relachement(self):
+        for v in (30, 40, 55):
+            self.appel("deplacer", v, "true")
+        self.assertEqual((self.son()["volumeSon"], self.son()["apercus"]), (55, 0))
+        self.appel("relacher")
+        self.assertEqual((self.son()["volumeSon"], self.son()["apercus"], self.son()["valeur"]), (55, 1, "55 %"))
+        # Au clavier, chaque pas est un geste entier : l'aperçu part aussitôt.
+        self.appel("deplacer", 60, "false")
+        self.assertEqual((self.son()["volumeSon"], self.son()["apercus"]), (60, 2))
+
+    def test_atteindre_son(self):
+        self.appel("atteindre", "son")
+        self.assertEqual(self.etat()["montre"], "son")

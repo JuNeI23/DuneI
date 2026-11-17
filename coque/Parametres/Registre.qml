@@ -44,6 +44,7 @@ Singleton {
         { id: "notifications", groupe: "Système", libelle: "Notifications", glyphe: "preferences-system-notifications", teinte: 0,
           composant: Qt.resolvedUrl("../Notifications/PageNotifications.qml"), index: [
             { page: "notifications", chemin: ["notifications", "ne-pas-deranger"], libelle: "Ne pas déranger", motsCles: ["silence", "cartes", "retenir"], exige: "" },
+            { page: "notifications", chemin: ["notifications", "son"], libelle: "Son", motsCles: ["volume", "sonnerie", "volume des notifications"], exige: "" },
             { page: "notifications", chemin: ["notifications", "retirees"], libelle: "Applications retirées", motsCles: ["ne plus garder", "remettre", "exclure"], exige: "" }
           ] }
     ]
