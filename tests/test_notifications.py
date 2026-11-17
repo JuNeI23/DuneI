@@ -170,6 +170,80 @@ class PileTest(EssaiCoque, unittest.TestCase):
         Sortie : aucune. Erreurs : échec du test au délai. Dépendances : jusqua, attente."""
         self.jusqua(lambda: self.attente()[:3] == attendu, f"attente {attendu} attendue, vue {self.attente()}", delai)
 
+    def sons(self) -> list[str]:
+        """Voix émises par la pile (signal sonner, L2-68), dans l'ordre. Entrées : aucune. Sortie : liste.
+        Erreurs : CalledProcessError si l'appel IPC échoue. Dépendances : appel."""
+        return [x for x in self.appel("sons").split(",") if x]
+
+    def maj(self, id_: str, **champs) -> None:
+        """Mise à jour sur place d'une notification (replaces_id), champ par champ dans l'ordre donné, en un seul
+        appel IPC. Entrées : id_ ; champs, propriétés de la notification. Sortie : aucune.
+        Erreurs : CalledProcessError si l'appel IPC échoue. Dépendances : appel."""
+        self.appel("majCarte", id_, json.dumps(champs))
+
+    def test_son_nouvelle(self):
+        self.gardee()
+        self.assertEqual(self.sons(), ["arrivee"])
+        self.gardee(urgence=2)
+        self.assertEqual(self.sons(), ["arrivee", "urgence"])
+        self.creer()
+        self.assertEqual(self.sons(), ["arrivee", "urgence"])
+
+    def test_son_rafale(self):
+        for _ in range(3):
+            self.gardee()
+        self.assertEqual(self.sons(), ["arrivee"])
+
+    def test_son_generation(self):
+        self.gardee(generation=True)
+        self.assertEqual(self.sons(), [])
+
+    def test_son_plein_ecran(self):
+        self.appel("pleinEcran", "true")
+        self.gardee()
+        self.assertEqual(self.sons(), [])
+        self.gardee(urgence=2)
+        self.assertEqual(self.sons(), ["urgence"])
+
+    def test_son_desactive(self):
+        self.appel("sonActif", "false")
+        self.gardee(urgence=2)
+        self.assertEqual(self.sons(), [])
+
+    def test_remplacement_par_cle_recent_muet(self):
+        self.gardee(etiquette="t")
+        self.gardee(etiquette="t")
+        self.assertEqual(self.sons(), ["arrivee"])
+
+    def test_mise_a_jour_carte_recente_muette(self):
+        n = self.gardee()
+        self.maj(n, body="x")
+        self.assertEqual(self.sons(), ["arrivee"])
+
+    def test_mise_a_jour_carte_ancienne_sonne(self):
+        n = self.gardee()
+        self.appel("vieillir", n, 61000)
+        self.appel("vieillirSon", 61000)
+        self.maj(n, body="x")
+        self.assertEqual(self.sons(), ["arrivee", "arrivee"])
+
+    def test_mise_a_jour_devient_critique(self):
+        n = self.gardee()
+        self.maj(n, urgency=2)
+        self.assertEqual(self.sons(), ["arrivee", "urgence"])
+        m = self.gardee(etiquette="u")
+        self.maj(m, body="x", urgency=2)
+        self.assertEqual(self.sons(), ["arrivee", "urgence", "urgence"])
+
+    def test_mise_a_jour_attente_ancienne_sonne(self):
+        self.appel("deranger", "true")
+        n = self.gardee()
+        self.attendue(1, False, ["1"])
+        self.appel("deranger", "false")
+        self.appel("vieillir", n, 61000)
+        self.maj(n, body="x")
+        self.assertEqual(self.sons(), ["arrivee"])
+
     def test_gardee_passe_a_l_attente(self):
         self.gardee()
         self.attendue(1, False, ["1"])

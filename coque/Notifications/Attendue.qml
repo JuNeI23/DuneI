@@ -10,7 +10,7 @@ import Quickshell
 // Entrées : notification (objet à l'interface de Quickshell.Services.Notifications.Notification), cle (clé de
 // remplacement, etiquettes.js), arrivee, sortante (posée par l'attente : fermée, encore montrée le temps de son
 // animation de sortie), verrou (fabrique posée par l'attente).
-// Sorties : signaux fermee(raison) et renouvelee().
+// Sorties : signaux fermee(raison) et renouvelee(precedente) ; urgenceConnue, instantané de l'urgence, comme Entree.
 // Erreurs : aucune. Dépendances : verrou (RetainableLock dans la coque).
 // Durée de vie : comme Entree, l'attendue retient sa notification par un verrou jusqu'à sa propre destruction, pour
 // que l'entrée sortante garde son contenu pendant l'animation de sortie.
@@ -22,23 +22,36 @@ Scope {
     property date arrivee: new Date()
     property bool sortante: false
     property Component verrou
+    property int urgenceConnue: -1
 
     signal fermee(int raison)
-    signal renouvelee()
+    signal renouvelee(var precedente)
 
-    Component.onCompleted: verrou?.createObject(attendue, {object: Qt.binding(() => attendue.notification)})
+    // renouveler — suite d'une mise à jour sur place : annonce la version remplacée, puis prend la nouvelle urgence.
+    // L'heure d'arrivée est remise par la pile (Pile.reprendre). Entrées : aucune. Sortie : signal
+    // renouvelee({age, urgence}), en ms. Erreurs : aucune. Dépendances : urgenceConnue.
+    function renouveler() {
+        const precedente = {age: Date.now() - arrivee.getTime(), urgence: urgenceConnue}
+        urgenceConnue = notification.urgency
+        renouvelee(precedente)
+    }
+
+    Component.onCompleted: {
+        verrou?.createObject(attendue, {object: Qt.binding(() => attendue.notification)})
+        urgenceConnue = notification?.urgency ?? -1
+    }
 
     Connections {
         target: attendue.notification
-        function onSummaryChanged() { attendue.renouvelee() }
-        function onBodyChanged() { attendue.renouvelee() }
-        function onAppNameChanged() { attendue.renouvelee() }
-        function onAppIconChanged() { attendue.renouvelee() }
-        function onImageChanged() { attendue.renouvelee() }
-        function onUrgencyChanged() { attendue.renouvelee() }
-        function onExpireTimeoutChanged() { attendue.renouvelee() }
-        function onActionsChanged() { attendue.renouvelee() }
-        function onHintsChanged() { attendue.renouvelee() }
+        function onSummaryChanged() { attendue.renouveler() }
+        function onBodyChanged() { attendue.renouveler() }
+        function onAppNameChanged() { attendue.renouveler() }
+        function onAppIconChanged() { attendue.renouveler() }
+        function onImageChanged() { attendue.renouveler() }
+        function onUrgencyChanged() { attendue.renouveler() }
+        function onExpireTimeoutChanged() { attendue.renouveler() }
+        function onActionsChanged() { attendue.renouveler() }
+        function onHintsChanged() { attendue.renouveler() }
         function onClosed(raison) { attendue.fermee(raison) }
     }
 }

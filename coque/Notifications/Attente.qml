@@ -14,8 +14,8 @@ import "garde.js" as Garde
 // de la coque tenait (posés par MemoireAttente ; voir connue).
 // Sorties : entrees (Attendue, plus récente en tête, sortantes comprises) ; vivantes, les entrées non sortantes ;
 // nombre, leur compte, celui que porte la cloche ; critique, vrai si l'une d'elles est critique ; groupes, les
-// vivantes rangées par application (garde.js, grouper) ; signal renouvelee(a), quand la notification d'une entrée est
-// mise à jour sur place : la pile décide alors de la remontrer en carte.
+// vivantes rangées par application (garde.js, grouper) ; signal renouvelee(a, precedente), quand la notification d'une
+// entrée est mise à jour sur place ({age, urgence} de la version remplacée, voir Attendue.renouveler) : la pile décide alors de la remontrer en carte.
 // Rechargement de la coque : connus est posé par MemoireAttente, qui tient les identifiants des vivantes d'une
 // génération à l'autre ; la pile y reconnaît les notifications qui retournent au panneau sans repasser en carte.
 // Erreurs : aucune. Dépendances : Attendue, garde.js.
@@ -33,7 +33,7 @@ Scope {
     readonly property bool critique: vivantes.some(a => a.notification.urgency === 2)
     readonly property var groupes: Garde.grouper(vivantes)
 
-    signal renouvelee(var a)
+    signal renouvelee(var a, var precedente)
 
     // Plus aucune vue : les sortantes, dont aucune ligne n'achèvera le repli, sont oubliées aussitôt.
     onMontreeChanged: if (!montree) entrees.filter(a => a.sortante).forEach(oublier)
@@ -49,7 +49,7 @@ Scope {
     function ajouter(n, cle, arrivee) {
         const a = fabrique.createObject(attente, {notification: n, cle: cle, arrivee: arrivee, verrou: attente.verrou})
         a.fermee.connect(() => fermer(a))
-        a.renouvelee.connect(() => attente.renouvelee(a))
+        a.renouvelee.connect(p => attente.renouvelee(a, p))
         entrees = [a].concat(entrees)
         return a
     }

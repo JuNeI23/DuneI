@@ -15,7 +15,9 @@ import "etiquettes.js" as Etiquettes
 // n'est donc pas vu ; notify-send joint toujours l'indice sender-pid, qui diffère d'un envoi à l'autre.
 // Entrées : notification (objet à l'interface de Quickshell.Services.Notifications.Notification), arrivee, cle,
 // affichee (posée par la pile), survolee (écrite par la carte), retenue (liée par la pile), sortante (posée par la
-// pile). Sorties : restant (ms, lecture seule pour les autres), duree, signaux echue() et fermee(raison).
+// pile). Sorties : restant (ms, lecture seule pour les autres), duree, signaux echue(), fermee(raison) et
+// renouvelee(precedente) ; urgenceConnue, l'urgence de la version courante, prise à la création puis à chaque
+// remplacement : un signal d'urgence arrive après que la notification a déjà changé, l'instantané garde l'ancienne.
 // Erreurs : sans jetons chargés, la durée par défaut vaut 0 et une notification au délai par défaut n'expire pas avant
 // leur chargement. Dépendances : Theme.notifications.duree, etiquettes.js, verrou (posé par la pile).
 // Durée de vie : une Notification de Quickshell est Retainable et détruite dès la fin des réactions à closed ;
@@ -42,8 +44,11 @@ Scope {
     // Instant monotone (ms) de la dernière reprise de la minuterie.
     property real depart: 0
 
+    property int urgenceConnue: -1
+
     signal echue()
     signal fermee(int raison)
+    signal renouvelee(var precedente)
 
     // lancer — reprend la minuterie avec le temps restant ; sans temps restant (durée pas encore connue), rien.
     // Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : minuterie.
@@ -66,14 +71,22 @@ Scope {
         if (active) lancer()
     }
 
-    // renouveler — suite d'un remplacement : l'heure d'arrivée devient l'instant présent et le compte est réarmé.
-    // Entrées, sortie, erreurs : aucune. Dépendances : rearmer.
-    function renouveler() { arrivee = new Date(); rearmer() }
+    // renouveler — suite d'un remplacement : l'heure d'arrivée devient l'instant présent, le compte est réarmé, et la
+    // version remplacée est annoncée (la pile en juge la voix, L2-68). Une mise à jour émet un signal par propriété
+    // changée : les suivants annoncent un âge nul et l'urgence déjà connue.
+    // Entrées : aucune. Sortie : signal renouvelee({age, urgence}), l'âge en ms et l'urgence de la version remplacée,
+    // lus avant la remise à l'heure. Erreurs : aucune. Dépendances : rearmer, urgenceConnue.
+    function renouveler() {
+        const precedente = {age: Date.now() - arrivee.getTime(), urgence: urgenceConnue}
+        urgenceConnue = notification.urgency; arrivee = new Date(); rearmer()
+        renouvelee(precedente)
+    }
 
     onActiveChanged: active ? lancer() : suspendre()
     onDureeChanged: rearmer()
     Component.onCompleted: {
         verrou?.createObject(entree, {object: Qt.binding(() => entree.notification)})
+        urgenceConnue = notification?.urgency ?? -1
         rearmer()
     }
 

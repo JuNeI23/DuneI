@@ -9,7 +9,7 @@ import "Notifications/essai"
 // Rôle : crée des FausseNotification sur commande IPC et les remet à Pile ; pilote la retenue, le survol, le clic,
 // les actions, l'oubli, la fermeture par l'application et la mise à jour sur place ; rend l'état de la pile et le
 // journal des appels reçus par les notifications. Elle porte aussi l'attente (logique du panneau, L2-67) : ajout
-// direct, ouverture, action, écart, oubli, et son état. tests/test_notifications.py (PileTest, AttenteTest) la pilote.
+// direct, ouverture, action, écart, oubli, et son état. Elle tient le journal des voix émises par la pile (L2-68). tests/test_notifications.py (PileTest, AttenteTest) la pilote.
 // Entrées : DUNEI_TOKENS_DIR, lu par Theme (durée par défaut ramenée par le test).
 // Sortie : « essai : prêt » au démarrage ; voir l'IpcHandler. Erreurs : celles de Theme, dans le journal.
 // Les notifications factices ne sont pas Retainable : la pile reçoit FauxVerrou à la place de RetainableLock.
@@ -26,9 +26,13 @@ ShellRoot {
 
     Component.onCompleted: console.info("essai : prêt")
 
+    // Voix émises par la pile (signal sonner, L2-68), dans l'ordre ; rien n'est joué.
+    property var sons: []
+
     Pile {
         id: pile
         verrou: Component { FauxVerrou {} }
+        onSonner: voix => essai.sons = essai.sons.concat([voix])
     }
 
     // L'attente éprouvée : celle de la pile.
@@ -207,6 +211,35 @@ ShellRoot {
             return "affichees: " + pile.affichees.map(e => e.notification.id + (e.sortante ? "s" : "")).join(",")
                 + " | file: " + pile.file.map(e => e.notification.id).join(",")
         }
+
+        // sons — voix émises par la pile, séparées par des virgules. Entrées : aucune. Sortie : texte.
+        // Erreurs : aucune. Dépendances : sons.
+        function sons(): string { return essai.sons.join(",") }
+
+        // pleinEcran, sonActif — posent le plein écran et l'activation de la voix sur la pile. Entrée : v.
+        // Sortie : aucune. Erreurs : aucune. Dépendances : Pile.
+        function pleinEcran(v: bool): void { pile.pleinEcran = v }
+        function sonActif(v: bool): void { pile.sonActif = v }
+
+        // majCarte — mise à jour sur place (replaces_id) d'une notification, champ par champ dans l'ordre, comme le
+        // serveur qui émet un signal par propriété changée. Entrées : id ; champsJson, objet JSON des propriétés.
+        // Sortie : aucune. Erreurs : TypeError ou SyntaxError au journal. Dépendances : notifications.
+        function majCarte(id: int, champsJson: string): void {
+            const n = essai.notifications[id]
+            for (const [champ, valeur] of Object.entries(JSON.parse(champsJson))) n[champ] = valeur
+        }
+
+        // vieillir — recule l'heure d'arrivée de l'entrée, carte ou attente, qui tient la notification. Entrées : id ;
+        // ms. Sortie : aucune. Erreurs : TypeError au journal si aucune entrée ne la tient.
+        // Dépendances : entree, attendue.
+        function vieillir(id: int, ms: int): void {
+            const e = essai.entree(id) ?? essai.attendue(id)
+            e.arrivee = new Date(e.arrivee.getTime() - ms)
+        }
+
+        // vieillirSon — recule l'instant du dernier son joué, pour sortir de la rafale. Entrée : ms. Sortie : aucune.
+        // Erreurs : aucune. Dépendances : Pile.dernierSon.
+        function vieillirSon(ms: int): void { pile.dernierSon -= ms }
 
         // appels — journal des appels reçus par les notifications, séparés par des virgules. Entrées : aucune.
         // Sortie : texte. Erreurs : aucune. Dépendances : journal.
