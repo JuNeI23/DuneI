@@ -842,3 +842,90 @@ class GardeTest(EssaiCoque, unittest.TestCase):
                          [("B", "B", True, [2]), ("A", "A", False, [3, 1])])
         self.assertEqual(self.grouper((notif(""), 1)), [("", "Application inconnue", False, [1])])
         self.assertEqual(self.grouper(), [])
+
+
+@unittest.skipUnless(os.environ.get("WAYLAND_DISPLAY") and QS, "session Wayland et Quickshell requis")
+class EtatNotificationsTest(EssaiCoque, unittest.TestCase):
+    """L'état persistant des notifications : « ne pas déranger » et applications retirées, lus et écrits dans
+    notifications.json du dossier d'état (celui de l'essai, jamais celui de la session)."""
+
+    essai = ESSAI / "etat"
+    teintes = ()
+
+    def demarrer(self) -> None:
+        """Lance, ou relance, la coque d'essai sur le dossier de l'essai. Entrées, sortie : aucune.
+        Erreurs : échec du test si elle ne se déclare pas prête. Dépendances : lancer, attendre."""
+        self.lancer(self.dir)
+        self.attendre("essai : prêt")
+
+    def appel(self, cible: str, fonction: str, *args) -> str:
+        """Appelle une fonction IPC de la coque d'essai.
+
+        Entrées : cible — « essai » ou « notifications » ; fonction ; args, convertis en texte.
+        Sortie : la sortie standard de l'appel, sans blancs finaux.
+        Erreurs : CalledProcessError si l'appel échoue. Dépendances : qs, lancer.
+        """
+        return subprocess.run([QS, "ipc", "--pid", str(self.proc.pid), "call", cible, fonction, *map(str, args)],
+                              check=True, capture_output=True, text=True, timeout=DELAI).stdout.strip()
+
+    def etat(self) -> dict:
+        """État lu dans le singleton. Entrées : aucune. Sortie : {"nePasDeranger", "retirees"}.
+        Erreurs : celles d'appel. Dépendances : appel."""
+        return json.loads(self.appel("essai", "etat"))
+
+    def fichier(self):
+        """Chemin de notifications.json dans le dossier de l'essai. Entrées : aucune. Sortie : Path.
+        Erreurs : aucune. Dépendances : aucune."""
+        return self.dir / "notifications.json"
+
+    def ecrit(self, attendu: dict) -> None:
+        """Attend que le fichier contienne exactement l'état attendu. Entrée : attendu. Sortie : aucune.
+        Erreurs : échec du test au délai. Dépendances : fichier."""
+        fin = time.monotonic() + DELAI
+        while time.monotonic() < fin:
+            try:
+                if json.loads(self.fichier().read_text()) == attendu:
+                    return
+            except (OSError, ValueError):
+                pass
+            time.sleep(0.05)
+        self.fail(f"fichier attendu {attendu} : {self.fichier().read_text() if self.fichier().exists() else 'absent'}")
+
+    def test_defauts(self):
+        self.demarrer()
+        self.assertEqual(self.etat(), {"nePasDeranger": False, "retirees": []})
+        self.assertFalse(self.fichier().exists())
+
+    def test_ecriture_et_relecture(self):
+        self.demarrer()
+        self.appel("essai", "basculer")
+        self.appel("essai", "retirer", "Signal")
+        self.ecrit({"nePasDeranger": True, "retirees": ["Signal"]})
+        self.demarrer()
+        self.assertEqual(self.etat(), {"nePasDeranger": True, "retirees": ["Signal"]})
+
+    def test_retirer_remettre(self):
+        self.demarrer()
+        self.appel("essai", "retirer", "")
+        self.appel("essai", "retirer", "Signal")
+        self.appel("essai", "retirer", "Signal")
+        self.assertEqual(self.etat()["retirees"], ["Signal"])
+        self.appel("essai", "remettre", "Signal")
+        self.assertEqual(self.etat()["retirees"], [])
+        self.appel("essai", "poser", "true")
+        self.appel("essai", "poser", "true")
+        self.assertTrue(self.etat()["nePasDeranger"])
+
+    def test_fichier_illisible(self):
+        self.fichier().write_text('{"nePasDer')
+        self.demarrer()
+        self.assertEqual(self.etat(), {"nePasDeranger": False, "retirees": []})
+        self.appel("essai", "basculer")
+        self.ecrit({"nePasDeranger": True, "retirees": []})
+
+    def test_ipc(self):
+        self.demarrer()
+        self.assertEqual(self.appel("notifications", "nePasDeranger"), "false")
+        self.appel("notifications", "basculerNePasDeranger")
+        self.assertEqual(self.appel("notifications", "nePasDeranger"), "true")
+        self.assertTrue(self.etat()["nePasDeranger"])
