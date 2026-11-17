@@ -66,12 +66,13 @@ ShellRoot {
         // Erreurs : aucune. Dépendances : carte.
         function survoler(v: bool): void { carte.entree.survolee = v }
 
-        // etat — « source=…;titre=<couleur>;actions=<n>;libelles=a|b;visibles=…;mouvement=…;largeur=…;hauteur=…;
+        // etat — « source=…;titre=<couleur>;actions=<n>;libelles=a|b;rendus=a|b;visibles=…;mouvement=…;largeur=…;hauteur=…;
         // lignesCorps=…;app=…;heure=HH:mm ». Entrées : aucune. Sortie : texte. Erreurs : aucune.
         // Dépendances : carte.
         function etat(): string {
             return ["source=" + carte.sourceIcone, "titre=" + carte.couleurTitre, "actions=" + carte.actions.length,
-                    "libelles=" + carte.libelles.join("|"), "visibles=" + carte.actionsVisibles,
+                    "libelles=" + carte.libelles.join("|"), "rendus=" + carte.libellesRendus().join("|"),
+                    "visibles=" + carte.actionsVisibles,
                     "mouvement=" + carte.enMouvement, "largeur=" + carte.width, "hauteur=" + carte.implicitHeight,
                     "lignesCorps=" + carte.lignesCorps, "app=" + carte.texteApplication,
                     "heure=" + carte.texteHeure].join(";")

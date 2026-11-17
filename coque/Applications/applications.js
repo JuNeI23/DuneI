@@ -49,6 +49,23 @@ function fenetres(entree, toplevels) {
         .map(t => t.adresse)
 }
 
+// recentes — liste des fenêtres activées, la plus récente en tête, tenue par la coque elle-même : le relevé de
+// Hyprland (focusHistoryID) n'est à jour qu'au dernier rafraîchissement.
+// Entrées : liste, adresses déjà vues ; adresse, celle de la fenêtre qui vient d'être activée. Sortie : nouvelle
+// liste, l'adresse en tête et sans doublon, bornée à 64 adresses. Erreurs : aucune. Dépendances : aucune.
+function recentes(liste, adresse) {
+    return [adresse].concat(liste.filter(a => a !== adresse)).slice(0, 64)
+}
+
+// rang — rang d'usage d'une fenêtre, 0 pour la plus récente, à poser dans le champ historique d'une fenêtre.
+// Entrées : adresse ; liste, adresses activées vues par la coque (recentes) ; focusHistoryID, relevé de Hyprland
+// (null ou undefined s'il manque). Sortie : sa position dans liste si elle y figure ; sinon 1000 plus focusHistoryID,
+// ou 1000 plus un million sans relevé. Erreurs : aucune. Dépendances : aucune.
+function rang(adresse, liste, focusHistoryID) {
+    const i = liste.indexOf(adresse)
+    return i >= 0 ? i : 1000 + (focusHistoryID ?? 1e6)
+}
+
 // commandeFocus — expression Lua qui donne le focus à une fenêtre, bureau compris, à passer à Hyprland.dispatch.
 // Entrée : adresse, hexadécimale avec ou sans 0x. Sortie : l'expression hl.dsp.focus. Erreurs : aucune.
 // Dépendances : aucune.

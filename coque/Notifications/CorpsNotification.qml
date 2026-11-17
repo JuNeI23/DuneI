@@ -209,10 +209,13 @@ Item {
                 opacity: Math.max(0, fondu.value)
 
                 Repeater {
+                    id: rendues
                     model: carte.actions
 
                     Texte {
-                        required property QtObject modelData
+                        // var et non QtObject : l’« Ouvrir » propre à DuneI est un objet JavaScript, que QtObject
+                        // rendrait nul.
+                        required property var modelData
                         moyen: true
                         color: Theme.color?.accentStandalone ?? "transparent"
                         text: carte.libelle(modelData)
@@ -226,6 +229,11 @@ Item {
             }
         }
     }
+
+    // libellesRendus — textes des actions tels que les délégués de la rangée les affichent, lus par les essais.
+    // Entrées : aucune. Sortie : tableau de chaînes, « » pour un délégué sans texte. Erreurs : aucune.
+    // Dépendances : rendues.
+    function libellesRendus() { return Array.from({length: rendues.count}, (_, i) => rendues.itemAt(i)?.text ?? "") }
 
     // libelle — texte affiché d'une action. Entrée : action, objet à l'interface de NotificationAction.
     // Sortie : « Ouvrir » pour l'action « default », son texte sinon. Erreurs : aucune. Dépendances : aucune.

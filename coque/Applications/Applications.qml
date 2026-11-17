@@ -13,6 +13,26 @@ import "applications.js" as Logique
 // Dépendances : Quickshell (Singleton, DesktopEntries, execDetached), Quickshell.Hyprland (Hyprland.toplevels,
 // Hyprland.dispatch), applications.js, uwsm à l'exécution.
 Singleton {
+    id: applications
+
+    // Adresses des fenêtres activées depuis la création du singleton, la plus récente en tête (applications.js,
+    // recentes). Elles priment sur focusHistoryID, que Quickshell ne relit qu'au rafraîchissement de Hyprland.
+    property var recentes: []
+
+    // onActiveToplevelChanged — met en tête de recentes la fenêtre que Hyprland vient d'activer.
+    // Entrées : aucune (Hyprland.activeToplevel). Sortie : aucune. Erreurs : aucune ; sans fenêtre active, rien ne
+    // change. Dépendances : Hyprland.activeToplevel, Logique.recentes. Hors affichage Wayland (coque d'essai hors
+    // écran), aucune cible : Hyprland n'est pas interrogé.
+    Connections {
+        target: Quickshell.env("WAYLAND_DISPLAY") ? Hyprland : null
+        function onActiveToplevelChanged() {
+            const a = Hyprland.activeToplevel?.address
+            if (a) applications.recentes = Logique.recentes(applications.recentes, a)
+        }
+    }
+
+    // Component.onCompleted — amorçage. Entrées : WAYLAND_DISPLAY. Sorties : aucune. Erreurs : aucune.
+    // Dépendances : DesktopEntries, Hyprland.toplevels.
     // Quickshell ne lit les entrées de bureau et les fenêtres qu'au premier accès, de façon asynchrone : le singleton
     // les amorce dès sa création. Une liaison qui appelle resoudre se réévalue quand les entrées arrivent. Les fenêtres
     // ne s'amorcent que sous un affichage Wayland : une coque d'essai hors écran n'a pas de compositeur à interroger.
@@ -33,12 +53,12 @@ Singleton {
     // amenerOuLancer — donne le focus à la fenêtre la plus récemment utilisée de l'application, bureau compris, ou la
     // lance dans sa propre unité systemd si aucune n'est ouverte.
     // Entrée : entree, DesktopEntry (ou objet {id, startupClass}). Sortie : aucune. Erreurs : aucune.
-    // Dépendances : Hyprland.toplevels, Hyprland.dispatch, Quickshell.execDetached, Logique (fenetres, commandeFocus,
-    // commandeLancement).
+    // Dépendances : Hyprland.toplevels, Hyprland.dispatch, Quickshell.execDetached, recentes, Logique (rang, fenetres,
+    // commandeFocus, commandeLancement).
     function amenerOuLancer(entree) {
         const toplevels = Hyprland.toplevels.values.map(t => ({adresse: t.address,
             classe: t.wayland?.appId || t.lastIpcObject?.class || t.lastIpcObject?.initialClass || "",
-            historique: t.lastIpcObject?.focusHistoryID ?? 1e9}))
+            historique: Logique.rang(t.address, recentes, t.lastIpcObject?.focusHistoryID)}))
         const adresses = Logique.fenetres(entree, toplevels)
         if (adresses.length > 0) Hyprland.dispatch(Logique.commandeFocus(adresses[0]))
         else Quickshell.execDetached(Logique.commandeLancement(entree))

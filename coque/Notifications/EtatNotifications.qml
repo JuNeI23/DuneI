@@ -19,8 +19,8 @@ import "../Applications"
 // glyphe de l'état, cloche barrée sous « ne pas déranger », cloche sinon, lu par la cloche de la barre et la
 // bascule du panneau (D182) ; son, la voix des notifications activée ; volumeSon, son volume relatif au système, de 0
 // à 100.
-// Fonctions : basculer, poser, retirer, remettre, poserSon, poserVolume, actions. IPC : nePasDeranger, basculerNePasDeranger,
-// son, volumeSon.
+// Fonctions : basculer, poser, retirer, remettre, poserSon, poserVolume, actions. IPC : nePasDeranger,
+// basculerNePasDeranger, son, volumeSon.
 // Erreurs : aucune ; un fichier absent ou illisible donne les valeurs par défaut, et il est créé ou réécrit à la
 // première modification.
 // Dépendances : Quickshell (Singleton, env, stateDir), Quickshell.Io (FileView, JsonAdapter, IpcHandler),

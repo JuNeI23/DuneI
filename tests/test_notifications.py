@@ -722,6 +722,9 @@ class CarteTest(EssaiCoque, unittest.TestCase):
         # entrées de bureau ne sont lues qu'après l'arrivée de la notification.
         self.regler(app="Essai DuneI")
         self.jusqua(lambda: self.etat()["libelles"] == "Ouvrir", "« Ouvrir » propre")
+        # La rangée l'affiche vraiment : un objet hors QML ne doit pas arriver nul à son délégué.
+        self.assertEqual(self.etat()["rendus"], "Ouvrir")
+        self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
 
     def test_ouvrir_inconnue(self):
         self.regler(app="Essai DuneI")

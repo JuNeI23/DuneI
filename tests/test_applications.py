@@ -68,6 +68,18 @@ class ApplicationsTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(self.appeler("fenetres", DOLPHIN, toplevels), ["c3", "a1"])
         self.assertEqual(self.appeler("fenetres", DISCORD, toplevels), [])
 
+    def test_recentes(self):
+        # La fenêtre activée passe en tête, sans doublon ; la liste est bornée.
+        self.assertEqual(self.appeler("recentes", ["a", "b"], "b"), ["b", "a"])
+        self.assertEqual(self.appeler("recentes", [], "a"), ["a"])
+        self.assertEqual(len(self.appeler("recentes", [str(i) for i in range(64)], "x")), 64)
+
+    def test_rang(self):
+        # Une fenêtre vue activée par la coque passe avant toute fenêtre classée par le seul relevé de Hyprland.
+        self.assertEqual(self.appeler("rang", "b", ["a", "b"], 0), 1)
+        self.assertEqual(self.appeler("rang", "c", ["a"], 2), 1002)
+        self.assertEqual(self.appeler("rang", "c", [], None), 1001000)
+
     def test_commandes(self):
         attendu = 'hl.dsp.focus({ window = "address:0x564b9643c830" })'
         self.assertEqual(self.appeler("commandeFocus", "564b9643c830"), attendu)
