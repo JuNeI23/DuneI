@@ -17,6 +17,7 @@ Ignoré sans session Wayland ou sans Quickshell (contrôle de GitHub).
 import http.server
 import json
 import os
+import re
 import signal
 import struct
 import subprocess
@@ -1367,3 +1368,165 @@ class PanneauTest(EssaiCoque, unittest.TestCase):
         self.assertTrue(e["defilable"])
         self.appel("toutEffacer")
         self.jusqua(lambda: self.etat()["hauteur"] == 320 and not self.etat()["defilable"], "retour à la hauteur minimale", 20)
+
+
+class FenetrePanneauStatiqueTest(unittest.TestCase):
+    """La fenêtre de calque du panneau, qui ne se construit pas sous offscreen : règles lues dans le texte QML."""
+
+    def setUp(self):
+        self.fenetre = (ROOT / "coque" / "Notifications" / "CalquePanneau.qml").read_text(encoding="utf-8")
+
+    def test_calque(self):
+        for ligne in ('WlrLayershell.namespace: "dunei-panneau"', "WlrLayershell.layer: WlrLayer.Top",
+                      "anchors { top: true; right: true; bottom: true }", 'color: "transparent"', "exclusiveZone: 0",
+                      "WlrLayershell.keyboardFocus: racine.ouvert ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None"):
+            self.assertIn(ligne, self.fenetre)
+        self.assertIn('"^dunei-panneau$"', (ROOT / "generated" / "hyprland-layers.lua").read_text(encoding="utf-8"))
+
+    def test_surface_constante(self):
+        # La largeur de la fenêtre ne lit aucun ressort : seule la forme bouge (D132, D134).
+        largeur = re.search(r"implicitWidth:([^\n]*)", self.fenetre).group(1)
+        self.assertIn("Theme.panneau?.largeur", largeur)
+        self.assertNotRegex(largeur, r"\.value|largeurForme|hauteurForme")
+        self.assertNotIn("implicitHeight", re.sub(r"//.*", "", self.fenetre))
+
+    def test_prise_du_clavier(self):
+        # La barre de la cloche partage la prise : un clic sur la cloche ferme par la cloche, sans réouverture.
+        self.assertRegex(self.fenetre, r"HyprlandFocusGrab \{\s*windows: racine\.barre \? \[fenetre, racine\.barre\] : "
+                                       r"\[fenetre\]\s*active: racine\.ouvert\s*onCleared: racine\.ouvert = false")
+
+    def test_masque_sur_le_corps(self):
+        self.assertRegex(self.fenetre, r"mask: Region \{[^}]*width: forme\.charge \? ")
+
+    def test_calque_cree_a_la_demande(self):
+        # PanelWindow ne se compile pas sous offscreen : la logique ne le nomme pas, elle crée le calque par son fichier.
+        logique = (ROOT / "coque" / "Notifications" / "FenetrePanneau.qml").read_text(encoding="utf-8")
+        self.assertNotIn("PanelWindow {", logique)
+        self.assertIn('Qt.createComponent("CalquePanneau.qml")', logique)
+
+    def test_coque(self):
+        shell = (ROOT / "coque" / "shell.qml").read_text(encoding="utf-8")
+        self.assertRegex(shell, r"FenetrePanneau \{ id: panneau; centre: centre \}")
+        self.assertRegex(shell, r"Barre \{ modelData: ecran\.modelData; panneau: panneau \}")
+        # La mémoire de l'attente précède le Centre : elle est rechargée avant la réémission des notifications.
+        self.assertLess(shell.index("MemoireAttente {"), shell.index("Centre { id: centre }"))
+
+
+@unittest.skipUnless(os.environ.get("WAYLAND_DISPLAY") and QS, "session Wayland et Quickshell requis")
+class FenetrePanneauTest(EssaiCoque, unittest.TestCase):
+    """La logique de la fenêtre du panneau et sa forme animée, sous offscreen : séquence, hauteur, exclusivité."""
+
+    essai = ESSAI / "fenetre"
+    teintes = (55,)
+    environnement = CarteTest.environnement
+
+    def preparer(self) -> None:
+        """Dernière occasion de poser un fichier avant le lancement ; ne fait rien ici."""
+
+    def setUp(self):
+        super().setUp()
+        self.installer(55)
+        self.preparer()
+        self.lancer(self.dir)
+        self.attendre("essai : prêt")
+        self.jusqua(lambda: self.appel("pret") == "true", "jetons chargés")
+
+    appel = PileTest.appel
+    jusqua = PanneauTest.jusqua
+
+    def etat(self) -> dict:
+        """État de la fenêtre et de la forme. Sortie : dictionnaire (voir etat dans la coque d'essai)."""
+        return json.loads(self.appel("etat"))
+
+    def repos(self, ouvert: bool) -> dict:
+        """Attend le repos de la forme, ouverte ou fermée. Entrée : ouvert. Sortie : l'état au repos."""
+        return self.jusqua(lambda: (e := self.etat())["phase"] == "repos" and e["charge"] == ouvert and e,
+                           f"repos {'ouvert' if ouvert else 'fermé'}")
+
+    def test_sequence(self):
+        e = self.etat()
+        self.assertEqual((e["ouvert"], e["phase"], e["charge"], e["largeur"], e["masque"]),
+                         (False, "repos", False, 0, [0, 0, 0, 0]))
+        self.appel("marquer")
+        self.appel("basculer", "A")
+        e = self.repos(True)
+        self.assertEqual((e["ouvert"], e["ecran"], e["phases"]), (True, "A", ["forme", "entree", "repos"]))
+        # Le contenu a fini de paraître ; le ressort de la largeur achève sa course à une fraction de pixel près.
+        e = self.jusqua(lambda: (e := self.etat())["largeur"] == 364 and e, "largeur posée")
+        self.assertEqual((e["hauteur"], e["opacite"]), (320, 1))
+        # Le masque est le corps de la forme : collé au bord droit, sous l'évasement du haut.
+        self.assertEqual(e["masque"], [e["formeLargeur"] - 364, 13, 364, 320])
+        self.appel("marquer")
+        self.appel("basculer", "A")
+        e = self.repos(False)
+        self.assertEqual((e["ouvert"], e["phases"], e["largeur"], e["masque"]),
+                         (False, ["sortie", "repos"], 0, [0, 0, 0, 0]))
+        self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
+
+    def test_echap(self):
+        self.appel("basculer", "A")
+        self.repos(True)
+        self.appel("echap")
+        self.assertFalse(self.repos(False)["ouvert"])
+
+    def test_hauteur_suit_le_contenu(self):
+        self.appel("basculer", "A")
+        self.repos(True)
+        self.appel("marquer")
+        for app in ("A", "B", "C", "D", "E"):
+            self.appel("creer", app)
+        e = self.jusqua(lambda: (e := self.etat())["hauteur"] > 320 and len(e["hauteurs"]) > 3
+                        and e["hauteurs"][-1] == e["hauteur"] and self.etat()["hauteur"] == e["hauteur"] and e,
+                        "hauteur au repos")
+        # La forme rejoint la hauteur du contenu par des valeurs intermédiaires.
+        self.assertTrue(any(320 < h < e["hauteur"] for h in e["hauteurs"]), e["hauteurs"])
+
+    def test_hauteur_bornee(self):
+        self.appel("basculer", "A")
+        for i in range(40):
+            self.appel("creer", f"App{i}")
+        e = self.jusqua(lambda: (e := self.etat())["phase"] == "repos" and e["hauteur"] == self.etat()["hauteur"]
+                        and e["hauteur"] > 320 and e, "hauteur au repos")
+        self.assertLessEqual(e["hauteur"] + 2 * 13, e["formeHauteur"])
+
+    def test_exclusif(self):
+        self.appel("basculer", "A")
+        self.appel("ouvrirAutre")
+        self.assertFalse(self.etat()["ouvert"])
+        self.appel("basculer", "A")
+        self.assertEqual((self.etat()["ouvert"], self.appel("autreOuvert")), (True, "false"))
+
+    def test_ecrans(self):
+        self.appel("basculer", "A")
+        self.appel("basculer", "B")
+        e = self.etat()
+        self.assertEqual((e["ouvert"], e["ecran"]), (True, "B"))
+        self.appel("debrancher", "A")
+        self.assertTrue(self.etat()["ouvert"])
+        self.appel("debrancher", "B")
+        self.assertFalse(self.etat()["ouvert"])
+
+    def test_plein_ecran(self):
+        self.appel("pleinEcran", "true")
+        self.appel("basculer", "A")
+        self.assertFalse(self.etat()["ouvert"])
+
+
+class FenetrePanneauReduitTest(FenetrePanneauTest):
+    """Mouvement réduit : la forme prend sa taille d'un coup, seul le fondu du contenu dure."""
+
+    def preparer(self):
+        (self.dir / "mouvement.json").write_text('{"reduit": true}')
+
+    def test_sequence(self):
+        self.appel("marquer")
+        self.appel("basculer", "A")
+        e = self.etat()
+        self.assertEqual((e["largeur"], e["hauteur"]), (364, 320))
+        self.assertEqual(self.repos(True)["opacite"], 1)
+        self.appel("basculer", "A")
+        self.assertEqual(self.repos(False)["largeur"], 0)
+
+
+for _nom in [n for n in vars(FenetrePanneauTest) if n.startswith("test_") and n != "test_sequence"]:
+    setattr(FenetrePanneauReduitTest, _nom, None)

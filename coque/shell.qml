@@ -13,8 +13,9 @@ import "Reseau"
 // Coque de session de DuneI — racine chargée par « qs -c dunei » (unité dunei-coque.service).
 // Rôle : pose sur chaque écran le fond d'écran, une barre système et la presqu'île, dans le même Variants (le fond
 // d'abord, pour qu'il soit le plus bas), et, une seule fois hors de Variants, la fenêtre Réseau et l'application
-// Paramètres, construites seulement à leur demande, les notifications de connexion, le serveur de notifications (Centre) et la fenêtre de sa pile, sur
-// l'écran actif, l'ouvreuse de la galerie de fonds et l'annonceur de la jauge du son, à qui chaque presqu'île
+// Paramètres, construites seulement à leur demande, les notifications de connexion, le serveur de notifications
+// (Centre), précédé de la mémoire de son attente (MemoireAttente), la fenêtre de sa pile, sur l'écran actif, le
+// panneau des notifications (FenetrePanneau, ouvert par la cloche de chaque barre, à qui il est passé), l'ouvreuse de la galerie de fonds et l'annonceur de la jauge du son, à qui chaque presqu'île
 // s'inscrit à sa création et se retire à sa destruction (écran débranché). Chaque presqu'île réserve la hauteur du
 // module de la galerie, mesurée par l'ouvreuse : sa surface ne change jamais de taille (recette de L2-60).
 // Entrées : aucune ; l'écran de chaque barre vient de Quickshell.screens. Sortie : trois fenêtres de calque par écran ;
@@ -26,7 +27,7 @@ import "Reseau"
 // attend la fermeture de la galerie de l'ouvreuse sur son écran.
 // Erreurs : tokens absents ou invalides → fond, barre et presqu'île transparents, erreur de Theme dans le journal de Quickshell.
 // Dépendances : quickshell ≥ 0.3, modules Barre (Barre), Fond (Fond), Galerie (Ouvreuse), Notifications (Centre,
-// FenetreNotifications), Parametres (FenetreParametres), Presquile (Presquile, Annonceur, AnnonceurAlerte) et Reseau
+// FenetreNotifications, FenetrePanneau, MemoireAttente), Parametres (FenetreParametres), Presquile (Presquile, Annonceur, AnnonceurAlerte) et Reseau
 // (NotificationsReseau). Le Centre possède org.freedesktop.Notifications : aucun autre démon (dunst) ne doit le tenir.
 // Rendu du texte : la directive Env force l'anticrénelage en niveaux de gris, comme dans le banc du verre.
 ShellRoot {
@@ -38,7 +39,7 @@ ShellRoot {
             required property var modelData
 
             Fond { modelData: ecran.modelData }
-            Barre { modelData: ecran.modelData }
+            Barre { modelData: ecran.modelData; panneau: panneau }
             Presquile {
                 id: presquile
                 modelData: ecran.modelData
@@ -58,4 +59,5 @@ ShellRoot {
     MemoireAttente { attente: centre.attente }
     Centre { id: centre }
     FenetreNotifications { centre: centre }
+    FenetrePanneau { id: panneau; centre: centre }
 }

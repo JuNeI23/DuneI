@@ -13,3 +13,6 @@ CorpsNotification 1.0 CorpsNotification.qml
 LigneAttente 1.0 LigneAttente.qml
 GroupeAttente 1.0 GroupeAttente.qml
 Panneau 1.0 Panneau.qml
+FormePanneau 1.0 FormePanneau.qml
+FenetrePanneau 1.0 FenetrePanneau.qml
+CalquePanneau 1.0 CalquePanneau.qml
