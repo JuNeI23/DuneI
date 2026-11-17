@@ -39,7 +39,7 @@ ShellRoot {
             required property var modelData
 
             Fond { modelData: ecran.modelData }
-            Barre { modelData: ecran.modelData; panneau: panneau }
+            Barre { modelData: ecran.modelData; panneau: panneauNotifications }
             Presquile {
                 id: presquile
                 modelData: ecran.modelData
@@ -59,5 +59,5 @@ ShellRoot {
     MemoireAttente { attente: centre.attente }
     Centre { id: centre }
     FenetreNotifications { centre: centre }
-    FenetrePanneau { id: panneau; centre: centre }
+    FenetrePanneau { id: panneauNotifications; centre: centre }
 }

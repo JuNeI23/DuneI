@@ -1406,8 +1406,9 @@ class FenetrePanneauStatiqueTest(unittest.TestCase):
 
     def test_coque(self):
         shell = (ROOT / "coque" / "shell.qml").read_text(encoding="utf-8")
-        self.assertRegex(shell, r"FenetrePanneau \{ id: panneau; centre: centre \}")
-        self.assertRegex(shell, r"Barre \{ modelData: ecran\.modelData; panneau: panneau \}")
+        # L'identifiant ne s'appelle pas « panneau » : dans la Barre, ce nom désignerait sa propre propriété.
+        self.assertRegex(shell, r"FenetrePanneau \{ id: panneauNotifications; centre: centre \}")
+        self.assertRegex(shell, r"Barre \{ modelData: ecran\.modelData; panneau: panneauNotifications \}")
         # La mémoire de l'attente précède le Centre : elle est rechargée avant la réémission des notifications.
         self.assertLess(shell.index("MemoireAttente {"), shell.index("Centre { id: centre }"))
 

@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Hyprland
+import Quickshell.Io
 import "../Composants"
 
 // FenetrePanneau — panneau des notifications, presqu'île latérale ouverte par la cloche de la barre (L2-67).
@@ -15,7 +16,8 @@ import "../Composants"
 // n'est pas construite (coque d'essai sous offscreen, qui n'en a pas).
 // Sorties : attente, celle du centre, que lit la cloche (nombre, critique) ; ouvert ; ecran, l'écran du panneau ;
 // barre, la fenêtre de la barre dont la cloche l'a ouvert ; famille et exclusif, contrat du registre Overlays.
-// Fonction : basculer.
+// Fonction : basculer. IPC (cible « panneau ») : basculer, qui ouvre ou ferme le panneau sur l'écran actif, pour les
+// essais à l'écran et un futur raccourci clavier.
 // Erreurs : aucune ; sans écran, Quickshell pose la fenêtre sur l'écran par défaut.
 // Dépendances : quickshell ≥ 0.3 (Scope, Hyprland), CalquePanneau, Overlays.
 Scope {
@@ -42,6 +44,20 @@ Scope {
         barre = b
         ecran = e
         ouvert = true
+    }
+
+    IpcHandler {
+        target: "panneau"
+
+        // basculer — ouvre le panneau sur l'écran actif, ou le ferme s'il est ouvert. Entrées : aucune.
+        // Sortie : aucune. Erreurs : aucune ; sans effet en plein écran. Dépendances : racine (ouvert, ecran, barre).
+        function basculer(): void {
+            if (racine.ouvert) return void (racine.ouvert = false)
+            if (racine.pleinEcran) return
+            racine.barre = null
+            racine.ecran = Array.from(racine.ecrans).find(s => s.name === Hyprland.focusedMonitor?.name) ?? null
+            racine.ouvert = true
+        }
     }
 
     onOuvertChanged: ouvert ? Overlays.ouvrir(racine) : Overlays.fermer(racine)
