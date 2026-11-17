@@ -720,8 +720,9 @@ class CentreTest(EssaiCoque, unittest.TestCase):
 
     essai = ESSAI / "centre"
     teintes = (55,)
+    # La voix des notifications (L2-68) passe par le faux pw-play, qui note ses arguments sans rien jouer.
     environnement = {"QT_QPA_PLATFORM": "offscreen", "WAYLAND_DISPLAY": None, "DISPLAY": None,
-                     "HYPRLAND_INSTANCE_SIGNATURE": None}
+                     "HYPRLAND_INSTANCE_SIGNATURE": None, "DUNEI_PW_PLAY": str(ROOT / "tests" / "donnees" / "pw-play-temoin")}
     DUREE = 600
     # Durée explicite des envois qui ne doivent pas expirer pendant leurs vérifications.
     LONGUE = "4000"
@@ -734,6 +735,8 @@ class CentreTest(EssaiCoque, unittest.TestCase):
         # notify-send, l'application des cas historiques, est retirée du panneau : ses notifications expirent à
         # l'échéance de leur carte comme avant L2-67. Les cas de la garde envoient sous le nom « Garde ».
         (self.dir / "notifications.json").write_text(json.dumps({"nePasDeranger": False, "retirees": ["notify-send"]}))
+        self.temoin = self.dir / "sons.log"
+        self.environnement = {**self.environnement, "DUNEI_TEMOIN_SON": str(self.temoin)}
         demarrer(self, self.DUREE)
 
     def lancer(self, dossier) -> None:
@@ -750,6 +753,8 @@ class CentreTest(EssaiCoque, unittest.TestCase):
                "NO_COLOR": "1"}
         env = {cle: valeur for cle, valeur in env.items() if valeur is not None}
         adresse = self.dir.parent / "bus"
+        # Une relance dans le même test ne doit pas relire l'adresse du bus précédent.
+        adresse.unlink(missing_ok=True)
         script = 'printf "%s\\n%s" "$$" "$DBUS_SESSION_BUS_ADDRESS" > "$1.tmp"; mv "$1.tmp" "$1"; exec "$2" -p "$3"'
         with self.log.open("w") as sortie:
             self.proc = subprocess.Popen(["dbus-run-session", "--", "sh", "-c", script, "sh", str(adresse), QS,
@@ -824,6 +829,44 @@ class CentreTest(EssaiCoque, unittest.TestCase):
         """Attente du centre. Entrées : aucune. Sortie : {"nombre", "critique", "resumes"}.
         Erreurs : CalledProcessError si l'appel IPC échoue. Dépendances : appel."""
         return json.loads(self.appel("attente"))
+
+    def sons(self) -> list[str]:
+        """Lignes écrites par le faux pw-play, une par son lancé. Entrées : aucune. Sortie : liste.
+        Erreurs : aucune. Dépendances : temoin."""
+        return self.temoin.read_text().splitlines() if self.temoin.exists() else []
+
+    def test_voix_par_notify_send(self):
+        self.envoyer("-a", "Garde", "Essai")
+        ligne = self.jusqua(lambda: self.sons(), "un son attendu")[0]
+        for attendu in ("--media-role Notification", "state.restore-props = false", "--volume 1 ",
+                        "dialog-warning.oga"):
+            self.assertIn(attendu, ligne)
+
+    def test_voix_critique(self):
+        self.envoyer("-a", "Garde", "-u", "critical", "Essai")
+        self.assertIn("message-new-instant.oga", self.jusqua(lambda: self.sons(), "un son attendu")[0])
+
+    def test_suppress_sound(self):
+        self.envoyer("-a", "Garde", "-h", "boolean:suppress-sound:true", "-t", self.LONGUE, "Muette")
+        self.jusqua(lambda: self.etat()[0] == ["Muette"], "carte attendue")
+        time.sleep(0.3)
+        self.assertEqual(self.sons(), [])
+
+    def test_lecteur_absent(self):
+        self.environnement = {**self.environnement, "DUNEI_PW_PLAY": str(self.dir / "inexistant")}
+        demarrer(self, self.DUREE)
+        for resume in ("Un", "Deux"):
+            self.envoyer("-a", "Garde", "-u", "critical", resume)
+        self.jusqua(lambda: self.etat()[0] == ["Deux", "Un"], "deux cartes attendues")
+        self.assertEqual(self.journal().count("voix des notifications injouable"), 1, self.journal())
+
+    def test_pas_de_capacite_son(self):
+        capacites = subprocess.run(["gdbus", "call", "--session", "--dest", "org.freedesktop.Notifications",
+                                    "--object-path", "/org/freedesktop/Notifications", "--method",
+                                    "org.freedesktop.Notifications.GetCapabilities"], env=self.env_prive(),
+                                   check=True, capture_output=True, text=True, timeout=DELAI).stdout
+        self.assertIn("actions", capacites)
+        self.assertNotIn("'sound'", capacites)
 
     def test_gardee_reste_suivie(self):
         self.envoyer("-a", "Garde", "Mail", "Corps")
@@ -1325,8 +1368,9 @@ class JetonsSonTest(unittest.TestCase):
 
     def test_jetons_son(self):
         son = json.loads((ROOT / "generated" / "coque-tokens.json").read_text())["son"]
-        self.assertEqual(son, {"arrivee": "/usr/share/sounds/ocean/stereo/message-new-instant.oga",
-                               "urgence": "/usr/share/sounds/ocean/stereo/dialog-warning.oga",
+        # Inversées à l'écoute du 17 novembre 2026 : la brève pour l'arrivée, la plus longue pour l'urgence.
+        self.assertEqual(son, {"arrivee": "/usr/share/sounds/ocean/stereo/dialog-warning.oga",
+                               "urgence": "/usr/share/sounds/ocean/stereo/message-new-instant.oga",
                                "salve": 2000, "renouvellement": 60000})
 
 

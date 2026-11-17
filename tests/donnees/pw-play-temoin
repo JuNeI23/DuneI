@@ -1,0 +1,5 @@
+#!/bin/sh
+# pw-play-temoin — faux pw-play des essais de la voix des notifications (L2-68) : aucun son n'est joué.
+# Rôle : ajoute ses arguments, sur une ligne, au fichier que nomme DUNEI_TEMOIN_SON. Entrées : les arguments de
+# pw-play. Sortie : code 0. Erreurs : aucune. Dépendances : sh.
+printf '%s\n' "$*" >> "$DUNEI_TEMOIN_SON"
