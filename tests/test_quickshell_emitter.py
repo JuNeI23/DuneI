@@ -31,7 +31,7 @@ class QuickshellEmitterTest(unittest.TestCase):
         self.assertEqual(list(self.out), [
             "_generated", "hue", "space", "density", "radius", "window", "layout", "reglages", "breakpoints", "typo", "icons",
             "familles", "moments", "defaut", "themes", "pastilles", "bureau", "bureauxVirtuels", "presquile",
-            "galerie", "notifications", "cloche", "panneau"])
+            "galerie", "notifications", "cloche", "panneau", "son"])
         self.assertEqual(list(self.nuit), ["color", "states", "focus", "disabled", "elevation", "material", "glass", "render",
                                            "knob", "controls"])
 
