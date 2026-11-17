@@ -14,8 +14,12 @@ import "applications.js" as Logique
 // Hyprland.dispatch), applications.js, uwsm à l'exécution.
 Singleton {
     // Quickshell ne lit les entrées de bureau et les fenêtres qu'au premier accès, de façon asynchrone : le singleton
-    // les amorce dès sa création. Une liaison qui appelle resoudre se réévalue quand les entrées arrivent.
-    Component.onCompleted: [DesktopEntries.applications.values, Hyprland.toplevels.values]
+    // les amorce dès sa création. Une liaison qui appelle resoudre se réévalue quand les entrées arrivent. Les fenêtres
+    // ne s'amorcent que sous un affichage Wayland : une coque d'essai hors écran n'a pas de compositeur à interroger.
+    Component.onCompleted: {
+        DesktopEntries.applications.values
+        if (Quickshell.env("WAYLAND_DISPLAY")) Hyprland.toplevels.values
+    }
 
     // resoudre — entrée de bureau désignée par les indices d'une notification, si elle est sûre.
     // Entrées : desktopEntry, appName, chaînes éventuellement vides. Sortie : la DesktopEntry trouvée, ou null.

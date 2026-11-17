@@ -553,8 +553,12 @@ class CarteTest(EssaiCoque, unittest.TestCase):
     # La coque d'essai ne voit ni le compositeur ni le bus de session. Sans thème de plateforme, Qt n'y résout aucun
     # nom d'icône (le thème gtk3, qui le ferait, exige un affichage) : l'icône d'application s'y éprouve par chemin de
     # fichier, et la résolution par nom de Quickshell.iconPath a été sondée en session réelle.
+    # L'entrée factice « Essai DuneI » (tests/donnees/applications) s'ajoute aux entrées de bureau du système, pour
+    # éprouver l'« Ouvrir » propre à DuneI (L2-69).
     environnement = {"QT_QPA_PLATFORM": "offscreen", "WAYLAND_DISPLAY": None, "DISPLAY": None,
-                     "DBUS_SESSION_BUS_ADDRESS": "disabled:"}
+                     "DBUS_SESSION_BUS_ADDRESS": "disabled:",
+                     "XDG_DATA_DIRS": f"{ROOT / 'tests' / 'donnees' / 'applications'}:"
+                                      f"{os.environ.get('XDG_DATA_DIRS') or '/usr/local/share:/usr/share'}"}
     THEMES = (("dominante", "nuit"), ("dominante", "jour"), ("thematisee", "nuit"))
 
     def setUp(self):
@@ -712,6 +716,24 @@ class CarteTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(self.etat()["source"], "generique")
         time.sleep(0.5)
         self.assertEqual(requetes, [])
+
+    def test_ouvrir_propre(self):
+        # Sans action « default », une application identifiée reçoit l'« Ouvrir » de DuneI (L2-69), même si les
+        # entrées de bureau ne sont lues qu'après l'arrivée de la notification.
+        self.regler(app="Essai DuneI")
+        self.jusqua(lambda: self.etat()["libelles"] == "Ouvrir", "« Ouvrir » propre")
+
+    def test_ouvrir_inconnue(self):
+        self.regler(app="Essai DuneI")
+        self.jusqua(lambda: self.etat()["libelles"] == "Ouvrir", "« Ouvrir » propre")
+        self.regler(app="Inconnue")
+        self.jusqua(lambda: self.etat()["libelles"] == "", "aucun « Ouvrir »")
+
+    def test_ouvrir_pas_de_doublon(self):
+        self.regler(app="Essai DuneI", actions="default:Voir")
+        time.sleep(0.5)
+        etat = self.etat()
+        self.assertEqual((etat["actions"], etat["libelles"]), ("1", "Ouvrir"))
 
     def test_en_tete(self):
         self.regler(app="Signal")

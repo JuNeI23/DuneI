@@ -44,11 +44,11 @@ Item {
     readonly property real cote: Theme.notifications?.icone ?? 0
     readonly property real ecart: Theme.space?.scale[2] ?? 0
     readonly property real dpr: QsWindow.window?.devicePixelRatio ?? 1
-    // Actions dans leur ordre d'envoi, « default » (« Ouvrir ») en tête.
-    readonly property var actions: notification
-        ? Array.from(notification.actions).filter(a => a.identifier === "default")
-            .concat(Array.from(notification.actions).filter(a => a.identifier !== "default"))
-        : []
+    // Actions dans leur ordre d'envoi, « default » (« Ouvrir », celui de l'application ou celui de DuneI) en tête.
+    readonly property var actions: {
+        const liste = notification ? EtatNotifications.actions(notification) : []
+        return liste.filter(a => a.identifier === "default").concat(liste.filter(a => a.identifier !== "default"))
+    }
     readonly property string sourceIcone: photo.status === Image.Ready ? "image"
                                         : appli.status === Image.Ready ? "application" : "generique"
     readonly property bool actionsVisibles: depli.value > 0
