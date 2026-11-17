@@ -456,8 +456,9 @@ class RelanceTest(BarreIpc, unittest.TestCase):
         self.assertEqual((e["pleine"], e["forme"]), (True, "boule"))
         self.appeler("cliquerCloche", "droit")
         e = self.cloche()
-        self.assertEqual((e["icone"], e["forme"], e["nePasDeranger"], e["bascules"]),
-                         ("notifications-disabled", "boule", True, 0))
+        # Sous « ne pas déranger », la cloche barrée ne porte ni nombre ni boule (retour de recette de L2-67).
+        self.assertEqual((e["icone"], e["forme"], e["texte"], e["nePasDeranger"], e["bascules"]),
+                         ("notifications-disabled", "", "", True, 0))
         self.appeler("ouvrirPanneau", True)
         self.assertTrue(self.cloche()["ouvert"])
 
@@ -492,6 +493,16 @@ class RelanceTest(BarreIpc, unittest.TestCase):
             vues.append(v)
         self.assertTrue(any(0 < v < 1 for v in vues), vues)
         self.assertEqual(self.cloche()["texte"], "4")
+
+    def test_chiffres_centres(self):
+        # Le dessin des chiffres est centré dans la pilule, à un demi-pixel près (retour de recette de L2-67).
+        for nombre in (1, 7, 42, 150):
+            self.appeler("cloche", nombre, False)
+            self.jusqua_pastille(lambda m: m["pilule"] == 1)
+            time.sleep(0.6)
+            dx, dy = json.loads(self.appeler("centrageChiffres"))
+            self.assertLessEqual(abs(dx), 0.5, f"{nombre} : décalage horizontal {dx}")
+            self.assertLessEqual(abs(dy), 0.5, f"{nombre} : décalage vertical {dy}")
 
     def jusqua_pastille(self, condition) -> None:
         """Attend un état du mouvement de la pastille. Entrée : condition sur {pilule, boule, ancien}.

@@ -6,12 +6,12 @@ import "garde.js" as Garde
 
 // Panneau — contenu du panneau des notifications (L2-67) : ce qui reste à traiter, et « ne pas déranger ».
 // Rôle : de haut en bas, dans une marge intérieure de notifications.interieur : l'en-tête « Notifications » avec, à
-// droite, « Tout effacer » en texte à l'accent (absent quand rien n'attend) ; la bascule à glyphe de « ne pas
-// déranger » (Bascule, glyphe de lune) avec son libellé et son état ; puis les groupes par application (GroupeAttente),
-// le plus récent en tête, un groupe qui contient une critique passant devant ; sans rien à traiter, un état vide
-// (cloche et « Rien à traiter ») centré dans la place restante. Le panneau n'a pas de fond : sa fenêtre
-// (FenetrePanneau) fournit la forme de verre. Il se déclare montré à l'attente tant qu'il est monté, pour qu'une
-// entrée fermée reste le temps de son repli.
+// droite, « Tout effacer » en texte à l'accent (absent quand rien n'attend) ; la bascule à glyphe de « ne pas déranger
+// » (Bascule, glyphe de lune) avec un seul libellé, l'état présent (« Notifications actives » ou « Ne pas déranger ») ;
+// puis les groupes par application (GroupeAttente), le plus récent en tête, un groupe qui contient une critique passant
+// devant ; sans rien à traiter, un état vide (cloche et « Rien à traiter ») centré dans la place restante. Le panneau
+// n'a pas de fond : sa fenêtre (FenetrePanneau) fournit la forme de verre. Il se déclare montré à l'attente tant qu'il
+// est monté, pour qu'une entrée fermée reste le temps de son repli.
 // Hauteur : celle du contenu, jamais sous panneau.hauteurMin, jamais au-dessus de hauteurMax ; au-delà, la liste des
 // groupes défile sous l'en-tête et la bascule, qui restent fixes ; la molette suit le défilement lissé de
 // l'application Paramètres (motion.wheel), posé d'un coup en mouvement réduit.
@@ -49,8 +49,8 @@ FocusScope {
     readonly property bool clavier: liste.activeFocus
     readonly property bool vide: (attente?.nombre ?? 0) === 0
     readonly property bool effacable: !vide
-    readonly property string texteEtat: EtatNotifications.nePasDeranger ? qsTr("Activé : les cartes sont retenues")
-                                                                         : qsTr("Désactivé")
+    readonly property string texteEtat: EtatNotifications.nePasDeranger ? qsTr("Ne pas déranger")
+                                                                         : qsTr("Notifications actives")
     readonly property real fixe: marge + entete.height + ecart + reglage.height + ecart
     readonly property bool defilable: defilement.contentHeight > defilement.height + 0.5
     readonly property alias bascule: bascule
@@ -219,11 +219,21 @@ FocusScope {
             onToggled: EtatNotifications.poser(checked)
             Binding { target: bascule; property: "checked"; value: EtatNotifications.nePasDeranger }
         }
-        Column {
+        // Un seul libellé, qui dit l'état présent ; le passage de l'un à l'autre est un fondu croisé.
+        Ressort { id: fonduEtat; transition: "state"; nature: "fondu"; cible: EtatNotifications.nePasDeranger ? 1 : 0 }
+        Texte {
             anchors.verticalCenter: parent.verticalCenter
             x: bascule.width + panneau.ecart
-            Texte { moyen: true; text: qsTr("Ne pas déranger") }
-            Texte { echelon: 1; color: Theme.color?.textSecondary ?? "transparent"; text: panneau.texteEtat }
+            moyen: true
+            opacity: 1 - fonduEtat.value
+            text: qsTr("Notifications actives")
+        }
+        Texte {
+            anchors.verticalCenter: parent.verticalCenter
+            x: bascule.width + panneau.ecart
+            moyen: true
+            opacity: fonduEtat.value
+            text: qsTr("Ne pas déranger")
         }
     }
 

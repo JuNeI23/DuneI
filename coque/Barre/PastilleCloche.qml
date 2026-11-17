@@ -10,9 +10,12 @@ import "icones.js" as Icones
 // réduit ne garde que le fondu) ; le passage de l'une à l'autre est un fondu croisé ; un nombre qui change passe
 // lui aussi par un fondu croisé des chiffres, au ressort « state », pendant que la largeur de la pilule suit. La
 // pilule garde son dernier texte pendant qu'elle s'efface.
+// Les chiffres sont centrés sur leur dessin (boîte encrée mesurée par TextMetrics), arrondi au pixel.
 // Entrées : nombre, critique ; couleur, celle du texte de l'élément de barre (son ressort de couleur).
 // Sorties : texte, celui de la pilule (icones.js, textePastille) ; forme, « », « nombre » ou « boule » ; pilule et
-// boule, et ancien, l'ancien texte d'un fondu croisé des chiffres, lus par les essais. L'élément n'a pas de taille : il se pose dans le cadre du glyphe, dont il déborde.
+// boule, et ancien, l'ancien texte d'un fondu croisé des chiffres ; decalage, l'écart du dessin des chiffres au
+// centre de la pilule ; lus par les essais. L'élément n'a pas de taille : il se pose dans le cadre du glyphe, dont
+// il déborde.
 // Erreurs : aucune ; avant le chargement des jetons, les cotes sont nulles et rien n'est peint.
 // Dépendances : Theme (cloche, texteBureauOppose, color.error, typo), Ressort, icones.js.
 // Cotes (jetons [cloche]) : pilule haute de hauteur (13), large d'au moins autant, marge horizontale interieur (3),
@@ -29,6 +32,11 @@ Item {
     readonly property alias pilule: pilule
     readonly property alias boule: boule
     readonly property alias ancien: ancien
+    // Écart [dx, dy] entre le centre du dessin des chiffres (leur boîte encrée) et celui de la pilule (essais).
+    readonly property var decalage: [chiffres.x + mesure.tightBoundingRect.x + mesure.tightBoundingRect.width / 2
+                                         - pilule.width / 2,
+                                     chiffres.y + chiffres.baselineOffset + mesure.tightBoundingRect.y
+                                         + mesure.tightBoundingRect.height / 2 - pilule.height / 2]
     // Dernier texte non vide : celui que la pilule garde pendant son fondu de sortie ; _ancien, celui qu'il remplace.
     property string _montre: texte
     property string _ancien: ""
@@ -67,9 +75,17 @@ Item {
         scale: 0.5 + 0.5 * echellePilule.value
         transformOrigin: Item.Left
 
+        // Boîte encrée des chiffres montrés, relative à leur ligne de base.
+        TextMetrics { id: mesure; font: chiffres.font; text: pastille._montre }
+        TextMetrics { id: mesureAncien; font: chiffres.font; text: pastille._ancien }
+
         Text {
             id: chiffres
-            anchors.centerIn: parent
+            // Centré sur le dessin des chiffres, non sur leur boîte de ligne : celle-ci compte l'espace des
+            // descendantes et les approches, ce qui poussait les chiffres vers le bas et la droite.
+            x: Math.round((pilule.width - mesure.tightBoundingRect.width) / 2 - mesure.tightBoundingRect.x)
+            y: Math.round((pilule.height - mesure.tightBoundingRect.height) / 2 - mesure.tightBoundingRect.y
+                          - baselineOffset)
             opacity: Math.max(0, Math.min(1, croise.value))
             text: pastille._montre
             color: Theme.texteBureauOppose
@@ -79,7 +95,9 @@ Item {
         }
         Text {
             id: ancien
-            anchors.centerIn: parent
+            x: Math.round((pilule.width - mesureAncien.tightBoundingRect.width) / 2 - mesureAncien.tightBoundingRect.x)
+            y: Math.round((pilule.height - mesureAncien.tightBoundingRect.height) / 2
+                          - mesureAncien.tightBoundingRect.y - baselineOffset)
             visible: opacity > 0
             opacity: 1 - chiffres.opacity
             text: pastille._ancien

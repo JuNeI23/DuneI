@@ -153,6 +153,10 @@ ShellRoot {
             return JSON.stringify({pilule: p.pilule.opacity, boule: p.boule.opacity, ancien: p.ancien.opacity})
         }
 
+        // centrageChiffres — JSON [dx, dy] : écart entre le centre du dessin des chiffres et celui de la pilule.
+        // Entrées : aucune. Sortie : texte. Erreurs : aucune. Dépendances : notifications.pastille.
+        function centrageChiffres(): string { return JSON.stringify(notifications.pastille.decalage) }
+
         // reglerElement — pose pleine et fondu sur l'ElementBarre d'essai. Entrées : pleine, fondu. Sortie : aucune.
         // Erreurs : aucune. Dépendances : element.
         function reglerElement(pleine: bool, fondu: bool): void { element.pleine = pleine; element.fondu = fondu }

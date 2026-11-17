@@ -26,8 +26,7 @@ Item {
 
     property var conteneur: null
     readonly property var inscription: Registre.page("notifications")
-    readonly property string phrase: EtatNotifications.nePasDeranger ? qsTr("Activé : les cartes sont retenues")
-                                                                      : qsTr("Désactivé")
+    readonly property string phrase: EtatNotifications.nePasDeranger ? qsTr("Activé") : qsTr("Désactivé")
     readonly property bool vide: EtatNotifications.retirees.length === 0
     readonly property alias interrupteur: interrupteur
 

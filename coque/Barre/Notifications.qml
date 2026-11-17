@@ -5,11 +5,12 @@ import "icones.js" as Icones
 
 // Notifications — cloche de la barre (L2-67).
 // Rôle : dit sans qu'on l'ouvre s'il reste des notifications à traiter, ouvre le panneau où elles attendent, et porte
-// l'état « ne pas déranger ». Le glyphe est creux sans rien à traiter, plein dès une notification ; barré sous « ne
-// pas déranger » (le passage se fait en fondu croisé) ; la pastille posée dessus donne le nombre, ou une boule rouge
-// dès qu'une notification critique attend (PastilleCloche). Un clic gauche ouvre ou ferme le panneau sur l'écran de
-// cette barre ; un clic droit bascule « ne pas déranger » sans ouvrir le panneau. Tant que le panneau est ouvert sur
-// son écran, la cloche suit la règle des icônes dont le popover est ouvert (accent, glyphe plein, descente : D105).
+// l'état « ne pas déranger ». Le glyphe est creux sans rien à traiter, plein dès une notification ; barré sous « ne pas
+// déranger » (le passage se fait en fondu croisé) ; la pastille posée dessus donne le nombre, ou une boule rouge dès
+// qu'une notification critique attend (PastilleCloche), et rien sous « ne pas déranger ». Un clic gauche ouvre ou ferme
+// le panneau sur l'écran de cette barre ; un clic droit bascule « ne pas déranger » sans ouvrir le panneau. Tant que le
+// panneau est ouvert sur son écran, la cloche suit la règle des icônes dont le popover est ouvert (accent, glyphe
+// plein, descente : D105).
 // Entrées : panneau, l'objet à l'interface de FenetrePanneau (ouvert, ecran, attente : nombre et critique,
 // basculer(barre)), null par défaut : la cloche reste alors creuse et un clic gauche ne fait rien ; barre, la fenêtre
 // de la barre qui la porte (modelData : son écran), passée à basculer.
@@ -43,8 +44,9 @@ ElementBarre {
     PastilleCloche {
         id: pastille
         parent: cloche.cadreIcone
-        nombre: cloche.nombre
-        critique: cloche.critique
+        // Sous « ne pas déranger », la cloche barrée ne porte ni nombre ni boule (retour de recette de L2-67).
+        nombre: EtatNotifications.nePasDeranger ? 0 : cloche.nombre
+        critique: !EtatNotifications.nePasDeranger && cloche.critique
         couleur: cloche.couleurRessort.value
     }
 }

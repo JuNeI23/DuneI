@@ -1264,7 +1264,7 @@ class PanneauTest(EssaiCoque, unittest.TestCase):
         e = self.etat()
         self.assertEqual((e["hauteur"], e["vide"], e["toutEffacer"], e["groupes"], e["montree"]),
                          (320, True, False, [], True))
-        self.assertEqual(e["texteEtat"], "Désactivé")
+        self.assertEqual(e["texteEtat"], "Notifications actives")
 
     def test_groupes(self):
         for app in ("A", "B", "A", "A"):
@@ -1341,9 +1341,9 @@ class PanneauTest(EssaiCoque, unittest.TestCase):
     def test_bascule(self):
         self.appel("basculer")
         e = self.etat()
-        self.assertEqual((e["nePasDeranger"], e["texteEtat"]), (True, "Activé : les cartes sont retenues"))
+        self.assertEqual((e["nePasDeranger"], e["texteEtat"]), (True, "Ne pas déranger"))
         self.appel("basculer")
-        self.assertEqual(self.etat()["texteEtat"], "Désactivé")
+        self.assertEqual(self.etat()["texteEtat"], "Notifications actives")
 
     def test_clavier(self):
         for app in ("A", "B", "C"):
@@ -1600,7 +1600,7 @@ class PageNotificationsTest(EssaiCoque, unittest.TestCase):
         self.appel("basculer")
         e = self.etat()
         self.assertEqual((e["interrupteur"], e["nePasDeranger"]), (True, True))
-        self.assertEqual(e["phrase"], "Activé : les cartes sont retenues")
+        self.assertEqual(e["phrase"], "Activé")
         self.appel("poser", "false")
         self.assertFalse(self.etat()["interrupteur"])
 
