@@ -289,6 +289,11 @@ Sur caladan, avec Nicolas :
 8. Sourdine du système : rien ne s'entend. Volume système à 30 % : le son suit.
 9. Un son après plus de 10 s de silence, sur les haut-parleurs puis au casque Bluetooth : l'attaque est entière.
 
+Résultat, le 17 novembre 2026 : les points 1, 2, 3 (sous « ne pas déranger »), 4 (basse et éphémère), 6 et 7 ont été
+entendus et validés par Nicolas ; le point 9 l'a été pendant les épreuves. Le plein écran (point 3), l'application
+retirée (point 4), la notification Firefox `silent` (point 5) et la sourdine du système (point 8) sont couverts par
+les tests (`SonTest`, `PileTest`, `CentreTest`) et par l'épreuve du volume ; Nicolas les a jugés couverts.
+
 ## Historique des versions
 
 | Version | Date       | Changement                                                                       |
