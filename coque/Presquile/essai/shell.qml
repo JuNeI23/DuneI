@@ -39,6 +39,8 @@ ShellRoot {
 
     // Encoche sans fenêtre, de corps 96 : sa géométrie seule est éprouvée.
     Encoche { id: essaiEncoche; largeurCorps: 96 }
+    // Encoche latérale, collée au bord droit (panneau des notifications, L2-67).
+    Encoche { id: essaiLaterale; cote: "droite"; largeurCorps: 364; hauteur: 320 }
 
     // Module des bureaux sans fenêtre et sans Hyprland : idActif et special, écrits par l'IPC, remplacent leurs
     // liaisons par défaut dès la création, et rien ici n'appelle Hyprland.dispatch.
@@ -287,6 +289,19 @@ ShellRoot {
         // etirerEncoche — porte le corps de l'Encoche sans fenêtre à une largeur. Entrée : l, px logiques.
         // Sortie : la géométrie, comme encoche. Erreurs : aucune. Dépendances : encoche, Encoche.
         function etirerEncoche(l: real): string { essaiEncoche.largeurCorps = l; return encoche() }
+
+        // tracerLateral — tracé de la forme latérale aux dimensions explicites. Entrées : l, h, e, r (voir encoche.js).
+        // Sortie : le tracé SVG. Erreurs : aucune. Dépendances : encoche.js.
+        function tracerLateral(l: real, h: real, e: real, r: real): string { return Forme.tracerLateral(l, h, e, r) }
+
+        // laterale — géométrie de l'Encoche latérale sans fenêtre. Sortie : JSON {largeur, hauteur, corpsX, corpsY,
+        // corpsLargeur, corpsHauteur, trace}. Erreurs : aucune. Dépendances : Encoche.
+        function laterale(): string {
+            const e = essaiLaterale
+            return JSON.stringify({ largeur: e.implicitWidth, hauteur: e.implicitHeight, corpsX: e.corps.x,
+                                    corpsY: e.corps.y, corpsLargeur: e.corps.width, corpsHauteur: e.corps.height,
+                                    trace: e.trace })
+        }
 
         // tracerEncoche — tracé de l'encoche aux dimensions explicites, indépendant des jetons.
         // Entrées : l, largeur du corps ; h, hauteur ; e, évasement ; r, rayon (px logiques).
