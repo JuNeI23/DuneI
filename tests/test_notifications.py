@@ -768,3 +768,77 @@ class CentreTest(EssaiCoque, unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def notif(app: str = "App", bureau: str = "", urgence: int = 1, ephemere: bool = False) -> dict:
+    """Notification réduite aux propriétés que lisent les règles de garde.
+
+    Entrées : app — appName ; bureau — desktopEntry ; urgence — 0, 1 ou 2 ; ephemere — indice transient.
+    Sortie : dictionnaire à l'interface de Notification. Erreurs : aucune. Dépendances : aucune.
+    """
+    return {"appName": app, "desktopEntry": bureau, "urgency": urgence, "transient": ephemere}
+
+
+@unittest.skipUnless(os.environ.get("WAYLAND_DISPLAY") and QS, "session Wayland et Quickshell requis")
+class GardeTest(EssaiCoque, unittest.TestCase):
+    """Les règles de garde (garde.js), appelées par l'IPC d'une coque d'essai sans fenêtre."""
+
+    essai = ESSAI / "garde"
+    teintes = ()
+
+    def setUp(self):
+        super().setUp()
+        self.lancer(self.dir)
+        self.attendre("essai : prêt")
+
+    def appeler(self, fonction: str, *args):
+        """Appelle une fonction de garde.js et rend sa valeur décodée.
+
+        Entrées : fonction — nom exporté par garde.js ; args — ses arguments, transmis en JSON dans {"args": [...]}.
+        Sortie : la valeur retournée, décodée du JSON. Erreurs : échec du test si la fonction lève ;
+        CalledProcessError si l'appel IPC échoue. Dépendances : qs, lancer.
+        """
+        sortie = subprocess.run([QS, "ipc", "--pid", str(self.proc.pid), "call", "essai", "appeler", fonction,
+                                 json.dumps({"args": list(args)})], check=True, capture_output=True, text=True,
+                                timeout=DELAI).stdout.strip()
+        self.assertFalse(sortie.startswith("erreur"), sortie)
+        return json.loads(sortie)
+
+    def test_identifiant(self):
+        self.assertEqual(self.appeler("identifiant", notif("Thunderbird", "thunderbird")), "thunderbird")
+        self.assertEqual(self.appeler("identifiant", notif("Signal")), "Signal")
+        self.assertEqual(self.appeler("identifiant", notif("")), "")
+
+    def test_gardee(self):
+        self.assertTrue(self.appeler("gardee", notif(), []))
+        self.assertFalse(self.appeler("gardee", notif(ephemere=True), []))
+        self.assertFalse(self.appeler("gardee", notif(urgence=0), []))
+        self.assertFalse(self.appeler("gardee", notif("Signal"), ["Signal"]))
+        self.assertFalse(self.appeler("gardee", notif("Signal", urgence=2), ["Signal"]))
+        self.assertFalse(self.appeler("gardee", notif("Thunderbird", "thunderbird"), ["thunderbird"]))
+        self.assertTrue(self.appeler("gardee", notif("Thunderbird", "thunderbird"), ["Thunderbird"]))
+        self.assertTrue(self.appeler("gardee", notif(""), []))
+
+    def test_affichable(self):
+        for urgence in (0, 1, 2):
+            self.assertTrue(self.appeler("affichable", notif(urgence=urgence), False))
+        self.assertFalse(self.appeler("affichable", notif(urgence=0), True))
+        self.assertFalse(self.appeler("affichable", notif(urgence=1), True))
+        self.assertTrue(self.appeler("affichable", notif(urgence=2), True))
+
+    def grouper(self, *entrees) -> list[tuple]:
+        """Groupes rendus par grouper, réduits à (identifiant, nom, critique, heures d'arrivée de ses entrées).
+
+        Entrées : entrees — couples (notification, arrivee). Sortie : liste dans l'ordre des groupes.
+        Erreurs : celles d'appeler. Dépendances : appeler.
+        """
+        groupes = self.appeler("grouper", [{"notification": n, "arrivee": t} for n, t in entrees])
+        return [(g["identifiant"], g["nom"], g["critique"], [e["arrivee"] for e in g["entrees"]]) for g in groupes]
+
+    def test_grouper(self):
+        self.assertEqual(self.grouper((notif("A"), 1), (notif("B"), 2), (notif("A"), 3)),
+                         [("A", "A", False, [3, 1]), ("B", "B", False, [2])])
+        self.assertEqual(self.grouper((notif("A"), 1), (notif("B", urgence=2), 2), (notif("A"), 3)),
+                         [("B", "B", True, [2]), ("A", "A", False, [3, 1])])
+        self.assertEqual(self.grouper((notif(""), 1)), [("", "Application inconnue", False, [1])])
+        self.assertEqual(self.grouper(), [])
