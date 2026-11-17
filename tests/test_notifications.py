@@ -1049,6 +1049,75 @@ class GardeTest(EssaiCoque, unittest.TestCase):
 
 
 @unittest.skipUnless(os.environ.get("WAYLAND_DISPLAY") and QS, "session Wayland et Quickshell requis")
+class SonTest(EssaiCoque, unittest.TestCase):
+    """La règle de la voix des notifications (son.js, L2-68), appelée par l'IPC d'une coque d'essai sans fenêtre."""
+
+    essai = ESSAI / "son"
+    teintes = ()
+    appeler = GardeTest.appeler
+
+    def setUp(self):
+        super().setUp()
+        self.lancer(self.dir)
+        self.attendre("essai : prêt")
+
+    def voix(self, n: dict | None = None, **contexte) -> str:
+        """Voix rendue par son.js pour une notification et un contexte de base modifié.
+
+        Entrées : n — notification, par défaut gardée d'urgence normale ; contexte — champs du contexte qui
+        remplacent ceux de base (active, ni « ne pas déranger » ni plein écran, aucune retirée, maintenant 100000,
+        aucun son joué, nouvelle notification). Sortie : « », « arrivee » ou « urgence ». Erreurs : celles d'appeler.
+        Dépendances : appeler, notif.
+        """
+        c = {"active": True, "nePasDeranger": False, "pleinEcran": False, "retirees": [], "maintenant": 100000,
+             "dernierSon": -1e15, "precedente": None, "salve": 2000, "renouvellement": 60000} | contexte
+        return self.appeler("voix", notif() if n is None else n, c)
+
+    def test_nouvelle_sonne(self):
+        self.assertEqual(self.voix(), "arrivee")
+        self.assertEqual(self.voix(notif(urgence=2)), "urgence")
+
+    def test_desactive(self):
+        self.assertEqual(self.voix(active=False), "")
+        self.assertEqual(self.voix(notif(urgence=2), active=False), "")
+
+    def test_suppress_sound(self):
+        for urgence in (1, 2):
+            self.assertEqual(self.voix(notif(urgence=urgence) | {"hints": {"suppress-sound": True}}), "")
+
+    def test_non_gardee(self):
+        self.assertEqual(self.voix(notif(ephemere=True)), "")
+        self.assertEqual(self.voix(notif(urgence=0)), "")
+        self.assertEqual(self.voix(notif("Signal"), retirees=["Signal"]), "")
+
+    def test_ne_pas_deranger_et_plein_ecran(self):
+        for champ in ("nePasDeranger", "pleinEcran"):
+            self.assertEqual(self.voix(**{champ: True}), "")
+            self.assertEqual(self.voix(notif(urgence=2), **{champ: True}), "urgence")
+
+    def test_rafale(self):
+        self.assertEqual(self.voix(dernierSon=98500), "")
+        self.assertEqual(self.voix(dernierSon=98000), "arrivee")
+        self.assertEqual(self.voix(notif(urgence=2), dernierSon=98500), "urgence")
+
+    def test_mise_a_jour(self):
+        self.assertEqual(self.voix(precedente={"age": 59999, "urgence": 1}), "")
+        self.assertEqual(self.voix(precedente={"age": 60000, "urgence": 1}), "arrivee")
+        self.assertEqual(self.voix(notif(urgence=2), precedente={"age": 1000, "urgence": 1}), "urgence")
+        self.assertEqual(self.voix(notif(urgence=2), precedente={"age": 1000, "urgence": 2}), "")
+
+    def test_ordre(self):
+        self.assertEqual(self.voix(nePasDeranger=True, precedente={"age": 1000, "urgence": 1}), "")
+        self.assertEqual(self.voix(notif(urgence=2) | {"hints": {"suppress-sound": True}},
+                                   precedente={"age": 1000, "urgence": 1}), "")
+
+    def test_commande(self):
+        self.assertEqual(self.appeler("commande", "/x.oga", 80),
+                         ["pw-play", "--media-role", "Notification", "-P",
+                          '{ application.name = "DuneI" state.restore-props = false }', "--volume", "0.8", "/x.oga"])
+
+
+@unittest.skipUnless(os.environ.get("WAYLAND_DISPLAY") and QS, "session Wayland et Quickshell requis")
 class EtatNotificationsTest(EssaiCoque, unittest.TestCase):
     """L'état persistant des notifications : « ne pas déranger » et applications retirées, lus et écrits dans
     notifications.json du dossier d'état (celui de l'essai, jamais celui de la session)."""
