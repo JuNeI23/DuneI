@@ -146,11 +146,11 @@ ShellRoot {
                 nePasDeranger: EtatNotifications.nePasDeranger})
         }
 
-        // mouvementPastille — JSON {pilule, boule} : opacité de la pilule du nombre et de la boule.
+        // mouvementPastille — JSON {pilule, boule, ancien} : opacité de la pilule, de la boule et de l'ancien texte.
         // Entrées : aucune. Sortie : texte. Erreurs : aucune. Dépendances : notifications.pastille.
         function mouvementPastille(): string {
             const p = notifications.pastille
-            return JSON.stringify({pilule: p.pilule.opacity, boule: p.boule.opacity})
+            return JSON.stringify({pilule: p.pilule.opacity, boule: p.boule.opacity, ancien: p.ancien.opacity})
         }
 
         // reglerElement — pose pleine et fondu sur l'ElementBarre d'essai. Entrées : pleine, fondu. Sortie : aucune.

@@ -1360,6 +1360,39 @@ class PanneauTest(EssaiCoque, unittest.TestCase):
         self.appel("touche", "entree")
         self.assertEqual(self.appel("appels"), "2:dismiss,3:invoke:default")
 
+    def test_demontage_libere_les_sortantes(self):
+        # Fermée par son application pendant ou après un panneau monté, une entrée ne reste jamais retenue.
+        self.creer("A")
+        self.creer("B")
+        self.appel("fermerParApp", 1)
+        self.appel("monter", "false")
+        self.assertEqual(json.loads(self.appel("etat"))["entrees"], 1)
+        self.assertFalse(json.loads(self.appel("etat"))["montree"])
+        self.appel("fermerParApp", 2)
+        self.assertEqual(json.loads(self.appel("etat"))["entrees"], 0)
+        self.appel("monter", "true")
+        self.assertTrue(self.etat()["montree"])
+        self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
+
+    def test_tout_effacer_survit_au_demontage(self):
+        for app in ("A", "B", "C"):
+            self.creer(app)
+        self.appel("toutEffacer")
+        self.appel("monter", "false")
+        self.assertEqual(sorted(self.appel("appels").split(",")), ["1:dismiss", "2:dismiss", "3:dismiss"])
+
+    def test_clavier_garde_la_courante_en_vue(self):
+        self.appel("hauteurMax", 400)
+        for i in range(12):
+            self.creer(f"App{i}")
+        self.jusqua(lambda: self.etat()["defilable"], "liste défilante")
+        # Douze entrées, la plus récente en tête : la douzième flèche atteint la plus ancienne, tout en bas.
+        for _ in range(12):
+            self.appel("touche", "bas")
+        e = self.jusqua(lambda: (e := self.etat())["vue"] and e["vue"]["haut"] >= 0 and e["vue"]["bas"] <= e["vue"]["hauteur"]
+                        and e, "ligne courante dans la vue")
+        self.assertEqual(e["courante"], 1)
+
     def test_hauteur_max(self):
         self.appel("hauteurMax", 600)
         for i in range(30):
@@ -1505,6 +1538,12 @@ class FenetrePanneauTest(EssaiCoque, unittest.TestCase):
         self.appel("debrancher", "A")
         self.assertTrue(self.etat()["ouvert"])
         self.appel("debrancher", "B")
+        self.assertFalse(self.etat()["ouvert"])
+
+    def test_ecran_detruit(self):
+        # Un écran détruit avant que la liste des écrans ne change laisse ecran à null : le panneau se ferme aussi.
+        self.appel("basculer", "A")
+        self.appel("detruireEcran", "A")
         self.assertFalse(self.etat()["ouvert"])
 
     def test_plein_ecran(self):

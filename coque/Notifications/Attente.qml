@@ -9,7 +9,7 @@ import "garde.js" as Garde
 // closed de la notification. Si une vue montre l'attente (montree), l'entrée fermée devient sortante, cesse de
 // compter aussitôt, et la vue appelle oublier à la fin de son animation de sortie ; sans vue, elle est retirée et
 // détruite aussitôt. Le tableau est réaffecté à chaque changement, jamais modifié sur place.
-// Entrées : montree, vrai tant qu'une vue est montée ; verrou, fabrique du verrou des entrées (RetainableLock par
+// Entrées : montree, vrai tant qu'une vue est montée (à son démontage, les sortantes sont oubliées) ; verrou, fabrique du verrou des entrées (RetainableLock par
 // défaut, remplacé dans l'essai) ; connus, identifiants des notifications que l'attente de la génération précédente
 // de la coque tenait (posés par MemoireAttente ; voir connue).
 // Sorties : entrees (Attendue, plus récente en tête, sortantes comprises) ; vivantes, les entrées non sortantes ;
@@ -34,6 +34,9 @@ Scope {
     readonly property var groupes: Garde.grouper(vivantes)
 
     signal renouvelee(var a)
+
+    // Plus aucune vue : les sortantes, dont aucune ligne n'achèvera le repli, sont oubliées aussitôt.
+    onMontreeChanged: if (!montree) entrees.filter(a => a.sortante).forEach(oublier)
 
     Component {
         id: fabrique

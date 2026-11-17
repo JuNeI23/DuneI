@@ -474,12 +474,32 @@ class RelanceTest(BarreIpc, unittest.TestCase):
                 self.assertLess(time.monotonic(), fin, f"{cle} à {v} au lieu de {cible}")
                 vues.append(v)
             return vues
-        self.assertEqual(json.loads(self.appeler("mouvementPastille")), {"pilule": 0, "boule": 0})
+        self.assertEqual(json.loads(self.appeler("mouvementPastille")), {"pilule": 0, "boule": 0, "ancien": 0})
         self.appeler("cloche", 1, False)
         self.assertTrue(any(0 < v < 1 for v in suivre("pilule", 1)))
         self.appeler("cloche", 1, True)
         self.assertTrue(any(0 < v < 1 for v in suivre("boule", 1)))
         suivre("pilule", 0)
+
+    def test_chiffres_en_fondu(self):
+        # Un nombre qui change passe par un fondu croisé : l'ancien texte s'efface pendant que le nouveau paraît.
+        self.appeler("cloche", 3, False)
+        self.jusqua_pastille(lambda m: m["pilule"] == 1)
+        self.appeler("cloche", 4, False)
+        vues, fin = [], time.monotonic() + DELAI
+        while (v := json.loads(self.appeler("mouvementPastille"))["ancien"]) != 0 or not vues:
+            self.assertLess(time.monotonic(), fin, f"ancien texte à {v}")
+            vues.append(v)
+        self.assertTrue(any(0 < v < 1 for v in vues), vues)
+        self.assertEqual(self.cloche()["texte"], "4")
+
+    def jusqua_pastille(self, condition) -> None:
+        """Attend un état du mouvement de la pastille. Entrée : condition sur {pilule, boule, ancien}.
+        Sortie : aucune. Erreurs : échec du test au délai. Dépendances : appeler."""
+        fin = time.monotonic() + DELAI
+        while not condition(json.loads(self.appeler("mouvementPastille"))):
+            self.assertLess(time.monotonic(), fin, "pastille")
+            time.sleep(0.02)
 
     def test_vpn_lit_apres_ligne(self):
         self.valeur_apres_ligne("surveillerVpn", "vpn", "", "wireguard", "cat ", 1.5, "visible=true")

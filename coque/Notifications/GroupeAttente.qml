@@ -15,7 +15,7 @@ import "../Composants"
 // sortantes comprises, ou null ; attente, l'Attente ; hote, le Panneau (deplies, deplier, effacerGroupe,
 // nePlusGarder, pret).
 // Sorties : nom ; vivantes ; nombre, celui des entrées qui comptent ; deplie ; retirable ; autres, le libellé « N
-// autres » (vide s'il n'y en a pas) ; lignes, nombre de lignes montrées ; height, hauteur montrée.
+// autres » (vide s'il n'y en a pas) ; lignes, nombre de lignes montrées ; height, hauteur montrée. Fonction : ligneDe.
 // Erreurs : aucune. Dépendances : Quickshell (ScriptModel), LigneAttente, Separateur, Texte, Ressort, Theme (space,
 // density, color).
 // Cotes : ligne de titre de density.rowHeight ; « N autres » en texte tertiaire, aligné sur le texte des lignes ; écart de space.scale[1] (8) entre le filet, le titre et les lignes.
@@ -39,6 +39,13 @@ Item {
     // Dernier nom et dernier libellé non vides, gardés pendant le repli.
     property string _nom: nom
     property string _autres: autres
+
+    // ligneDe — ligne du groupe qui montre une entrée. Entrée : a, l'Attendue. Sortie : la LigneAttente, ou null.
+    // Erreurs : aucune. Dépendances : lignes (Repeater).
+    function ligneDe(a) {
+        for (let i = 0; i < lignesVues.count; i++) if (lignesVues.itemAt(i)?.attendue === a) return lignesVues.itemAt(i)
+        return null
+    }
 
     onNomChanged: if (nom !== "") _nom = nom
     onAutresChanged: if (autres !== "") _autres = autres
@@ -123,6 +130,7 @@ Item {
         }
 
         Repeater {
+            id: lignesVues
             model: ScriptModel { values: groupe.entrees }
 
             LigneAttente {

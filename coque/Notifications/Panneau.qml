@@ -60,8 +60,17 @@ FocusScope {
 
     implicitHeight: Math.min(hauteurMax, Math.max(Theme.panneau?.hauteurMin ?? 0, fixe + colonne.height + marge))
 
-    Component.onCompleted: Qt.callLater(() => panneau.pret = true)
-    Binding { target: panneau.attente; property: "montree"; value: true; when: panneau.attente !== null }
+    // Le panneau se déclare montré à sa création et ne l'est plus à sa destruction : un Binding détruit avec lui ne
+    // rendrait pas sa valeur à la cible (relecture finale de L2-67). Une cascade de « Tout effacer » interrompue par
+    // la fermeture du panneau va à son terme d'un coup.
+    Component.onCompleted: {
+        if (attente) attente.montree = true
+        Qt.callLater(() => panneau.pret = true)
+    }
+    Component.onDestruction: {
+        _cascade.forEach(effacerGroupe)
+        if (attente) attente.montree = false
+    }
 
     // deplier — déplie un groupe. Entrée : identifiant de l'application. Sortie : aucune. Erreurs : aucune.
     // Dépendances : deplies.
@@ -113,6 +122,43 @@ FocusScope {
         } else return false
         return true
     }
+
+    // vueCourante — position de la ligne courante dans la vue de la liste. Entrées : aucune. Sortie : { haut, bas,
+    // hauteur } en px (haut et bas de la ligne, hauteur de la vue), null sans ligne courante montrée.
+    // Erreurs : aucune. Dépendances : ligneDe, defilement.
+    function vueCourante() {
+        const l = ligneDe(courante)
+        if (!l) return null
+        const y = l.mapToItem(colonne, 0, 0).y - defilement.contentY
+        return {haut: y, bas: y + l.height, hauteur: defilement.height}
+    }
+
+    // ligneDe — LigneAttente qui montre une entrée. Entrée : a, l'Attendue. Sortie : la ligne, ou null.
+    // Erreurs : aucune. Dépendances : vues (GroupeAttente.ligneDe).
+    function ligneDe(a) {
+        for (let i = 0; a && i < vues.count; i++) {
+            const l = vues.itemAt(i)?.ligneDe(a)
+            if (l) return l
+        }
+        return null
+    }
+
+    // suivreCourante — fait défiler la liste juste assez pour que la ligne courante soit entière dans la vue, par la
+    // même animation que la molette (posée d'un coup en mouvement réduit). Entrées, sortie, erreurs : aucune.
+    // Dépendances : vueCourante, defilement, elan.
+    function suivreCourante() {
+        const v = vueCourante()
+        if (!v) return
+        const delta = v.haut < 0 ? v.haut : v.bas > v.hauteur ? v.bas - v.hauteur : 0
+        if (delta === 0) return
+        const cible = Math.max(0, Math.min(defilement.maximum, defilement.contentY + delta))
+        if (Theme.mouvementReduit) { elan.stop(); defilement.contentY = cible; return }
+        defilement.cible = cible
+        elan.to = cible
+        elan.restart()
+    }
+
+    onCouranteChanged: Qt.callLater(suivreCourante)
 
     // releve — relevé des groupes montrés, pour les essais. Entrées : aucune. Sortie : tableau de { nom, nombre,
     // deplie, autres, retirable, lignes }, dans l'ordre de l'écran, groupes en cours de repli exclus.

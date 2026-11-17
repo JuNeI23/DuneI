@@ -109,6 +109,13 @@ ShellRoot {
         // debrancher — retire un écran de la liste. Entrée : nom. Sortie : aucune.
         function debrancher(nom: string): void { panneau.ecrans = panneau.ecrans.filter(e => e.name !== nom) }
 
+        // detruireEcran — l'écran du panneau disparaît (ecran devient null) avant que la liste des écrans ne
+        // change. Entrée : nom. Sortie : aucune.
+        function detruireEcran(nom: string): void {
+            if (panneau.ecran?.name === nom) panneau.ecran = null
+            panneau.ecrans = panneau.ecrans.filter(e => e.name !== nom)
+        }
+
         // pleinEcran — pose le plein écran simulé. Entrée : v. Sortie : aucune.
         function pleinEcran(v: bool): void { panneau.pleinEcran = v }
 

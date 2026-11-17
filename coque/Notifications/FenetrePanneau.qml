@@ -61,7 +61,8 @@ Scope {
     }
 
     onOuvertChanged: ouvert ? Overlays.ouvrir(racine) : Overlays.fermer(racine)
-    onEcransChanged: if (ouvert && ecran && !Array.from(ecrans).includes(ecran)) ouvert = false
+    // L'écran du panneau a disparu : absent de la liste, ou déjà détruit (la référence est alors nulle).
+    onEcransChanged: if (ouvert && (!ecran || !Array.from(ecrans).includes(ecran))) ouvert = false
     onPleinEcranChanged: if (pleinEcran) ouvert = false
 
     // La fenêtre de calque vit dans son propre fichier, créé à la demande : sous la plateforme offscreen, le type
