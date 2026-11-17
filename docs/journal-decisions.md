@@ -4128,3 +4128,20 @@ dans son propre fichier (`CalquePanneau`), créé à la demande par la logique (
 *Touché : `coque/Presquile/encoche.js`, `Encoche.qml`, `coque/Notifications/FenetrePanneau.qml`, `CalquePanneau.qml`,
 `FormePanneau.qml`, `Panneau.qml`, `tokens.toml` (`[cloche]`, `[panneau]`, calque `dunei-panneau`).*
 
+
+### D181 · Recette de la cloche : un libellé d'état, rien sur la cloche sous « ne pas déranger »
+
+17 novembre 2026 · L2-67, recette à l'écran. Nicolas juge confus le libellé de la bascule du panneau : un titre
+« Ne pas déranger » en gras au-dessus de « Désactivé » ou de « Activé : les cartes sont retenues » se lit comme l'état
+présent alors que les notifications sont actives. La bascule ne porte plus qu'un libellé, l'état présent :
+« Notifications actives » ou « Ne pas déranger », passant de l'un à l'autre en fondu croisé ; la page de Paramètres dit
+« Activé » ou « Désactivé ». Sous « ne pas déranger », la cloche barrée ne porte ni nombre ni boule : l'utilisateur a
+choisi de ne pas être sollicité, la cloche ne le relance pas ; les entrées restent au panneau. Les chiffres de la
+pastille penchaient en bas à droite : ils étaient centrés sur leur boîte de ligne, qui compte les descendantes et les
+approches ; ils sont désormais centrés sur leur dessin, mesuré par `TextMetrics` et arrondi au pixel. L'ouverture
+d'une application au clic sur son entrée n'a pas pu être éprouvée sur un vrai courriel ; la PR est validée et on y
+reviendra au besoin. Essais : `PanneauTest.test_bascule`, `PageNotificationsTest`, `RelanceTest.test_cloche_etats`,
+`RelanceTest.test_chiffres_centres`.
+
+*Touché : `coque/Notifications/Panneau.qml`, `PageNotifications.qml`, `coque/Barre/Notifications.qml`,
+`PastilleCloche.qml`, bible (annexe E, 0.37).*

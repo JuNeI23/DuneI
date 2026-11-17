@@ -1,6 +1,6 @@
 # Cloche, panneau des notifications et « ne pas déranger » : conception (L2-67)
 
-Version 0.2, 2026-11-16.
+Version 0.3, 2026-11-17.
 
 ## Intention
 
@@ -300,3 +300,4 @@ ou illisible : valeurs par défaut, créé à la première écriture.
 |---------|------|-------------|
 | 0.1 | 2026-11-16 | Première rédaction après le remue-méninges, le repérage des rices, la maquette et l'épreuve des notifications gardées vivantes |
 | 0.2 | 2026-11-16 | Relecture du constructeur, faite par Claude lui-même (le sous-agent relecteur a été interrompu par la limite d'usage) : notifications sans délai d'expiration, propriété `id` pour le rechargement, cotes et glyphe de la bascule ; propriétés `transient`, `desktopEntry`, `lastGeneration`, `resident` et `trackedNotifications` vérifiées dans les types QML installés |
+| 0.3 | 2026-11-17 | Recette : la bascule du panneau ne porte qu'un libellé, l'état présent (« Notifications actives » ou « Ne pas déranger ») ; ni nombre ni boule sur la cloche sous « ne pas déranger » ; chiffres de la pastille centrés sur leur dessin (D181) |
