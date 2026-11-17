@@ -1,6 +1,6 @@
 # Son de notification : conception (L2-68)
 
-Version 0.2, 2026-11-17.
+Version 1.0, 2026-11-17.
 
 ## Intention
 
@@ -36,9 +36,10 @@ Le principe a été validé le 17 novembre 2026 :
    le déplacer fait entendre le son.
 9. **Réglages.** Une carte « Son » dans Paramètres › Notifications : une rangée « Activé » avec un interrupteur, puis
    une rangée de volume qui se replie quand le son est coupé.
-10. **Les sons.** KDE Ocean, pour les deux voix : `message-new-instant` pour l'Arrivée, `dialog-warning` pour
+10. **Les sons.** KDE Ocean, pour les deux voix : `dialog-warning` pour l'Arrivée, `message-new-instant` pour
     l'Urgence. Nicolas les a choisis à l'écoute, après quatre tours de synthèse de cordes qui ne l'ont pas convaincu
-    (voir Approches).
+    (voir Approches). À la première écoute réelle dans la coque, il les a inversés : le son de l'urgence était plus
+    court et discret, celui de l'arrivée long et intéressant, donc plus propre à donner envie d'aller voir.
 11. **La lecture.** `pw-play`, lancé à chaque son.
 
 Hors périmètre, décidé avec le principe : les sons propres des applications, l'alerte de batterie de la presqu'île,
@@ -164,7 +165,7 @@ La commande type :
 
 ```
 pw-play --media-role Notification -P '{ application.name = "DuneI" state.restore-props = false }' \
-        --volume 0.8 /usr/share/sounds/ocean/stereo/message-new-instant.oga
+        --volume 0.8 /usr/share/sounds/ocean/stereo/dialog-warning.oga
 ```
 
 Un son en cours n'est pas coupé par un suivant. La rafale rend ce cas rare, et une Urgence qui suit une Arrivée de
@@ -294,3 +295,4 @@ Sur caladan, avec Nicolas :
 |---------|------------|----------------------------------------------------------------------------------|
 | 0.1     | 2026-11-17 | Première rédaction : principe validé, voix KDE Ocean, lecture par `pw-play`.      |
 | 0.2     | 2026-11-17 | Relecture du constructeur (mise à jour qui devient critique, signal d'`Entree`) ; épreuves faites : attaque entière, `state.restore-props = false`, chemins d'Ocean. Validée par Nicolas. |
+| 1.0     | 2026-11-17 | Construite : voix inversées à l'écoute (Arrivée `dialog-warning`, Urgence `message-new-instant`) ; carte Son corrigée en recette pour un repli d'un seul geste (D185 à D188). |

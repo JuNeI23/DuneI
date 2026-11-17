@@ -20,8 +20,8 @@ règles validées, avec un réglage « Son » dans Paramètres › Notifications
 
 ## Contraintes globales
 
-- Voix : Arrivée = `/usr/share/sounds/ocean/stereo/message-new-instant.oga`, Urgence =
-  `/usr/share/sounds/ocean/stereo/dialog-warning.oga`, lues dans les jetons `[son]`, jamais en dur.
+- Voix (inversées à l'écoute, D185) : Arrivée = `/usr/share/sounds/ocean/stereo/dialog-warning.oga`, Urgence =
+  `/usr/share/sounds/ocean/stereo/message-new-instant.oga`, lues dans les jetons `[son]`, jamais en dur.
 - Commande exacte : `pw-play --media-role Notification -P '{ application.name = "DuneI" state.restore-props = false }'
   --volume <0..1> <fichier>`. Sans `state.restore-props = false`, le volume du curseur s'impose à toutes les
   notifications du système (épreuve du 17 novembre).

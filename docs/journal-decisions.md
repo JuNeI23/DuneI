@@ -4212,3 +4212,57 @@ la construction, et ne fondent jamais deux textes identiques. Essais : `PageNoti
 *Touché : `coque/Notifications/PageNotifications.qml`, `coque/Parametres/EnTetePage.qml`,
 `coque/Composants/Bascule.qml`, coque d'essai de la page, bible (chapitre 7 et annexe E, 0.38), backlog (version
 1.57), notes de direction (version 1.52).*
+
+### D185 · La voix des notifications est celle de KDE Ocean ; la voix propre de DuneI attend le lot 5
+
+17 novembre 2026 · L2-68. Nicolas voulait une voix inspirée de Dune et de l'introduction de *The Odyssey* : une
+corde ancienne, grave, sablonneuse. Quatre tours de synthèse ont été écoutés : des cordes pincées en Karplus-Strong
+(« trop guitare »), puis une lyre en boyau, à la frisure de chevalet et au grain de sable, en trois registres (« trop
+aigu », « beaucoup trop grave », puis « on n'y est pas »). Le timbre et la brièveté plaisaient ; la synthèse n'a pas
+convaincu. Nicolas s'est arrêté sur KDE Ocean, du paquet `ocean-sound-theme` (CC-BY-SA-4.0, non copié dans le dépôt).
+À la première écoute réelle dans la coque, il a inversé les deux voix : `dialog-warning`, bref et discret, devient
+l'Arrivée ; `message-new-instant`, plus long et plus intéressant, l'Urgence, parce qu'il donne envie d'aller voir.
+La maquette, les générateurs et les pistes (cielago, sietch, dunes chantantes, une tonalité par machine…) sont gardés
+dans l'atelier, `maquettes/son-notifications/`, pour L5-31.
+
+*Touché : `tokens.toml` (table `[son]`), `paquets.toml`, fiche de conception (1.0), bible (annexe E, 0.39), backlog
+(L2-68, L5-31, version 1.58), carnet (1.48), notes de direction (1.53).*
+
+### D186 · `pw-play`, sans enregistrer de volume pour le rôle Notification
+
+17 novembre 2026 · L2-68. Le repérage a comparé `pw-play`, `SoundEffect` de Qt Multimedia et libcanberra.
+`SoundEffect` ajoutait 52 Mo à la mémoire résidente de la coque ; libcanberra n'est plus entretenu. `pw-play`
+(paquet `pipewire-audio`) coûte environ 84 ms de lancement, un processus par son, et ne bloque rien. Il joue au rôle
+Notification, sur la sortie par défaut, à son volume et sous sa sourdine ; le curseur de la carte « Son » s'y
+multiplie par `--volume`. L'épreuve a montré que WirePlumber 0.5.19 (`node/state-stream.lua`) enregistre ce volume
+sous la clé commune `Output/Audio:media.role:Notification`, et l'impose ensuite à toutes les notifications sonores du
+système : la propriété `state.restore-props = false` l'en empêche. L'attaque des sons, après la mise en veille de la
+sortie, est entière sur les haut-parleurs comme au casque Bluetooth. Un lecteur absent ne bloque rien et n'est
+journalisé qu'une fois par session.
+
+*Touché : `coque/Notifications/son.js` (commande), `Voix.qml`, `Centre.qml`, carnet (1.48).*
+
+### D187 · La capacité « sound » n'est pas annoncée, mais `suppress-sound` est respecté
+
+17 novembre 2026 · L2-68. Annoncer « sound » dirait aux applications que le serveur joue leurs sons
+(`sound-file`, `sound-name`) ; DuneI n'en joue aucun, pour garder une seule voix cohérente. La capacité reste donc
+absente de `GetCapabilities`. L'indice `suppress-sound`, lui, fait taire la voix de DuneI : une application qui joue
+son propre son le demande ainsi. Essais : `SonTest.test_suppress_sound`, `CentreTest.test_suppress_sound`,
+`CentreTest.test_pas_de_capacite_son`.
+
+*Touché : `coque/Notifications/son.js`, `Centre.qml` (en-tête).*
+
+### D188 · Un repli finit d'un seul geste
+
+17 novembre 2026 · L2-68, recette de la carte « Son ». Nicolas a refusé trois fois le repli de la rangée Volume :
+sans animation, puis en deux temps, puis « la ligne se replie, puis la barre grise de séparation disparaît ». Il a
+vu le même défaut au repli du réseau actuel de la page Wi-Fi. Trois causes : dans une carte, la mise en page
+(`ColumnLayout`) lit la hauteur implicite, pas la hauteur, et la carte sautait à la fin ; le ressort `reveal`, presque
+critique, traînait 200 à 300 ms sur ses derniers pixels ; le contenu, rogné par le bas, gardait son filet du haut
+jusqu'à la fin. Désormais, une rangée qui se replie dans une carte anime sa hauteur implicite ; le contenu est calé
+en bas et remonte sous ce qui le précède ; le ressort se pose quand il reste moins de `popover.rest_threshold_px`
+(0,5 px) à parcourir. Le dépliant de réseau (`DepliantReseau`) suit la même règle. Essais :
+`PageNotificationsTest.test_couper_replie`, `ReseauParametresTest.test_repli_sans_traine`.
+
+*Touché : `coque/Notifications/PageNotifications.qml`, `coque/Reseau/DepliantReseau.qml`, coques d'essai de la page
+et de Paramètres, bible (section dépliable, 0.39).*
