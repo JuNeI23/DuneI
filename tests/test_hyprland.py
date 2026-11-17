@@ -208,17 +208,18 @@ class LayerRulesTest(unittest.TestCase):
 
     @unittest.skipUnless(LUA, "aucun interpréteur Lua")
     def test_une_regle_par_namespace(self):
-        self.assertEqual(self.probe("r.match.namespace")[:5],
-                         ["^dunei-barre$", "^dunei-attention$", "^dunei-presquile$", "^dunei-popovers$", "^dunei-notifications$"])
-        self.assertEqual(self.probe("tostring(r.blur) .. tostring(r.blur_popups) .. tostring(r.ignore_alpha)")[:5],
-                         ["truetrue0.58"] * 5)
+        self.assertEqual(self.probe("r.match.namespace")[:6],
+                         ["^dunei-barre$", "^dunei-attention$", "^dunei-presquile$", "^dunei-popovers$", "^dunei-notifications$",
+                          "^dunei-panneau$"])
+        self.assertEqual(self.probe("tostring(r.blur) .. tostring(r.blur_popups) .. tostring(r.ignore_alpha)")[:6],
+                         ["truetrue0.58"] * 6)
 
     @unittest.skipUnless(LUA, "aucun interpréteur Lua")
     def test_regle_no_anim(self):
         """Le fond n'est pas flouté : sa règle, venue de [bureau].namespace, ne retire que l'animation d'apparition."""
-        self.assertEqual(self.probe("r.name")[5:], ["dunei-fond"])
-        self.assertEqual(self.probe("r.match.namespace")[5:], ["^dunei-fond$"])
-        self.assertEqual(self.probe("tostring(r.no_anim) .. tostring(r.blur)")[5:], ["truenil"])
+        self.assertEqual(self.probe("r.name")[6:], ["dunei-fond"])
+        self.assertEqual(self.probe("r.match.namespace")[6:], ["^dunei-fond$"])
+        self.assertEqual(self.probe("tostring(r.no_anim) .. tostring(r.blur)")[6:], ["truenil"])
 
     @unittest.skipUnless(LUA, "aucun interpréteur Lua")
     def test_xray_sur_la_barre_seule(self):

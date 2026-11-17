@@ -348,7 +348,7 @@ halo_reach = 0.75            # portée du halo, en part du côté
 # Verre dépoli des surfaces de la coque (L2-04). Hyprland n'a qu'un thème : flou et règles de calque
 # ne varient pas avec le moment ; seules les opacités du verre, lues par la coque, le peuvent.
 [glass]
-namespaces = ["dunei-barre", "dunei-attention", "dunei-presquile", "dunei-popovers", "dunei-notifications"]   # calques de la coque floutés
+namespaces = ["dunei-barre", "dunei-attention", "dunei-presquile", "dunei-popovers", "dunei-notifications", "dunei-panneau"]   # calques de la coque floutés
 xray = ["dunei-barre"]       # flou du seul fond ; jamais un calque qui porte de l'E3
 ignore_alpha = 0.58          # > shade_opacity et scrim (jamais floutés), < opacité minimale du verre (0,60, D103)
 blur_size = 8
@@ -482,6 +482,22 @@ icone = 36                    # côté de l'icône ou de l'image de la carte
 interieur = 12                # marge intérieure de la carte
 lignes = 3                    # nombre maximal de lignes de corps affichées
 reprise = 1000                # ms d'attente après la fin d'un plein écran avant que la file ne s'écoule
+
+[cloche]                      # pastille posée sur la cloche de la barre (L2-67) ; px logiques
+hauteur = 13                  # hauteur de la pilule du nombre, et sa largeur minimale
+corps = 9.5                   # corps des chiffres, en gras et tabulaires
+interieur = 3                 # marge horizontale de la pilule, de part et d'autre des chiffres
+boule = 8                     # diamètre de la boule d'une notification critique
+pastille_x = 9                # position de la pilule depuis le coin haut gauche du glyphe
+pastille_y = -5
+boule_x = 10                  # position de la boule depuis le coin haut gauche du glyphe
+boule_y = -2
+
+[panneau]                     # panneau des notifications, presqu'île latérale (L2-67) ; px logiques sauf mention
+largeur = 364                 # largeur du corps : celle d'une carte et de ses marges intérieures
+hauteur_min = 320             # hauteur du corps quand rien n'attend
+lignes = 2                    # nombre maximal de lignes de corps d'une entrée
+cascade = 60                  # ms entre deux groupes écartés par « Tout effacer »
 
 [bureaux_virtuels]
 nombre = 4                   # bureaux 1 à n, liés à SUPER + 1…n ; le bureau spécial (accueil) n'est pas compté
