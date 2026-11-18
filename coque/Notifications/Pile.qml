@@ -15,8 +15,9 @@ import "son.js" as Son
 // Aiguillage (garde.js) : une notification gardée dont la minuterie arrive à son terme n'est pas fermée ; elle passe
 // à l'attente (le panneau), suivie et vivante, et sa carte sort par la même animation. Une notification non gardée
 // est expirée comme avant. Sous « ne pas déranger », une notification non critique ne s'affiche pas : gardée, elle va
-// droit à l'attente, sinon elle est expirée aussitôt. Un clic sur la carte ou sur une de ses actions traite la
-// notification : elle n'entre pas dans l'attente. Une notification qui remplace une entrée de l'attente (même clé, ou
+// droit à l'attente, sinon elle est expirée aussitôt. Un clic sur une action traite la notification : elle n'entre
+// pas dans l'attente. Un clic sur la carte ouvre (action « default ») ; sans rien à ouvrir, la carte finit comme à
+// son terme, et une notification gardée passe à l'attente (L2-69). Une notification qui remplace une entrée de l'attente (même clé, ou
 // mise à jour sur place) la retire de l'attente et repasse en carte si elle est affichable : elle ne compte jamais
 // deux fois. Après un rechargement de la coque, une notification que l'attente précédente tenait y retourne sans
 // repasser en carte.
@@ -33,7 +34,8 @@ import "son.js" as Son
 // (Attente : les notifications gardées qui attendent dans le panneau) ; signal sonner(voix), « arrivee » ou « urgence » ;
 // dernierSon, instant du dernier son émis en ms (-Infinity avant le premier).
 // Erreurs : sans jetons chargés, le plafond vaut 0 et tout reste en file jusqu'à leur chargement.
-// Dépendances : Entree, Attente, etiquettes.js, garde.js, son.js, Theme.notifications.plafond, Theme.son.
+// Dépendances : Entree, Attente, EtatNotifications (actions), etiquettes.js, garde.js, son.js,
+// Theme.notifications.plafond, Theme.son.
 Scope {
     id: pile
 
@@ -173,9 +175,15 @@ Scope {
         }
     }
 
-    // cliquer — clic sur une carte : la notification est écartée ; une entrée déjà sortante est ignorée.
-    // Entrée : e. Sortie : aucune. Erreurs : aucune. Dépendances : Notification.dismiss.
-    function cliquer(e) { if (!e.sortante) e.notification.dismiss() }
+    // cliquer — clic sur une carte : elle ouvre, comme une ligne du panneau, par son action « default » (celle de
+    // l'application ou l'« Ouvrir » propre à DuneI, L2-69) ; sans rien à ouvrir, elle finit comme à son terme (echoir),
+    // pour qu'un clic par mégarde ne perde pas une notification gardée. Une entrée déjà sortante est ignorée.
+    // Entrée : e. Sortie : aucune. Erreurs : aucune. Dépendances : EtatNotifications.actions, agir, echoir.
+    function cliquer(e) {
+        if (e.sortante) return
+        const defaut = EtatNotifications.actions(e.notification).find(a => a.identifier === "default")
+        defaut ? agir(e, defaut) : echoir(e)
+    }
 
     // agir — déclenche une action de la notification, puis l'écarte si elle est encore suivie (notification résidente,
     // que l'action ne ferme pas) ; une entrée déjà sortante est ignorée. Entrées : e ; action, objet à l'interface de NotificationAction. Sortie : aucune.

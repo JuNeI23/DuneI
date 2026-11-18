@@ -268,12 +268,21 @@ class PileTest(EssaiCoque, unittest.TestCase):
         self.attendre_appel("2:expire")
         self.assertEqual(self.attente()[:3], (0, False, []))
 
-    def test_clic_ne_passe_pas(self):
+    def test_clic_ouvre(self):
+        # Un clic sur la carte ouvre, comme une ligne du panneau : l'action « default » est déclenchée.
         self.gardee()
         self.appel("cliquer", 1)
         time.sleep(self.DUREE / 1000 + 0.3)
-        self.assertEqual(self.appels(), ["1:dismiss"])
+        self.assertEqual(self.appels(), ["1:invoke:default"])
         self.assertEqual(self.attente()[:3], (0, False, []))
+
+    def test_clic_sans_rien_a_ouvrir(self):
+        # Rien à ouvrir : un clic par mégarde ne perd pas la notification, elle passe à l'attente comme à son terme.
+        self.gardee()
+        self.appel("sansAction", 1)
+        self.appel("cliquer", 1)
+        self.attendue(1, False, ["1"])
+        self.assertEqual(self.appels(), [])
 
     def test_ne_pas_deranger(self):
         self.appel("deranger", "true")
@@ -483,7 +492,7 @@ class PileTest(EssaiCoque, unittest.TestCase):
     def test_clic_et_action(self):
         self.creer(delai=0)
         self.appel("cliquer", 1)
-        self.assertEqual(self.appels(), ["1:dismiss"])
+        self.assertEqual(self.appels(), ["1:invoke:default"])
         self.creer(delai=0)
         self.appel("residente", 2)
         self.appel("agir", 2, "default")
@@ -512,7 +521,7 @@ class PileTest(EssaiCoque, unittest.TestCase):
         self.appel("cliquer", 1)
         self.appel("cliquer", 1)
         self.appel("agir", 1, "default")
-        self.assertEqual(self.appels(), ["1:dismiss"])
+        self.assertEqual(self.appels(), ["1:invoke:default", "1:dismiss"])
         self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
 
     def test_oublier(self):
