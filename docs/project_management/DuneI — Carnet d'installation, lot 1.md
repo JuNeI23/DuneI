@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.48. Historique en fin de document.
+Version 1.49. Historique en fin de document.
 
 Socle amorçable.
 
@@ -2187,6 +2187,27 @@ sudo pacman -S --needed pipewire-audio ocean-sound-theme
   `EtatNotificationsTest`, `PageNotificationsTest`). Aucun test ne fait de bruit : la variable `DUNEI_PW_PLAY` remplace
   `pw-play` par `tests/donnees/pw-play-temoin`, qui note ses arguments.
 
+## L'« Ouvrir » propre à DuneI — L2-69
+
+Rien à installer : `uwsm` est déjà la session, et le module `coque/Applications` vient avec la coque.
+
+- **Ce qu'il fait.** Une notification dont l'application ne fournit pas d'action `default` reçoit tout de même
+  « Ouvrir », si la coque identifie l'application avec certitude (D189). Au clic, la fenêtre de l'application la plus
+  récemment utilisée reçoit le focus, bureau compris : `hl.dsp.focus({ window = "address:0x…" })`. Sans fenêtre, la
+  coque lance l'application dans sa propre unité systemd : `uwsm app -- <id>.desktop`.
+- **L'identification.** Dans l'ordre : id de l'entrée de bureau, `StartupWMClass`, puis nom affiché égal à `appName`,
+  sans tenir compte de la casse. Les entrées masquées (`NoDisplay`) et celles de terminal ne sont jamais retenues. Sans
+  identification sûre, rien n'est proposé : `notify-send Essai` ne montre pas « Ouvrir ».
+- **Le clic sur la carte.** Il ouvre : l'action `default` de l'application, ou l'« Ouvrir » de DuneI. Sans rien à
+  ouvrir, la carte finit comme à l'échéance et une notification gardée passe au panneau de la cloche, au lieu d'être
+  perdue.
+- **La fenêtre la plus récente.** La coque tient elle-même la liste des fenêtres activées (`Applications.recentes`),
+  Quickshell ne relisant le relevé de Hyprland (`focusHistoryID`) qu'au rafraîchissement.
+- **Le module.** `Applications.resoudre(desktopEntry, appName)` et `Applications.amenerOuLancer(entree)` ; la logique
+  pure est dans `coque/Applications/applications.js`. Le lanceur (L2-16) s'en servira tel quel.
+- **Les tests.** `python3 -m unittest tests.test_applications tests.test_notifications` (`ApplicationsTest`,
+  `CarteTest`). La carte voit l'entrée factice « Essai DuneI » de `tests/donnees/applications`, jamais lancée.
+
 ## Le mouvement des popovers — L2-06, L2-07, L2-47, L2-56
 
 Rien de plus à installer : la fenêtre des popovers est dans la coque (`dunei-coque.service`), et `make install` lie
@@ -2474,6 +2495,7 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 
 | Version | Date | Changement |
 | --- | --- | --- |
+| 1.49 | 2026-11-17 | « Ouvrir » propre à DuneI (L2-69) : module `coque/Applications`, focus par adresse, lancement par uwsm, clic sur la carte qui ouvre |
 | 1.48 | 2026-11-17 | Son de notification (L2-68) : `pipewire-audio` et `ocean-sound-theme`, voix, règles, lecture, réglages et tests |
 | 1.47 | 2026-11-17 | L3-26 : serveur de langage Python pour Claude Code, plugin `pyright-lsp` et paquet `pyright` (D164) ; LibreOffice (`libreoffice-fresh`) rejoint les outils, pour lire et écrire les PDF, Word et PowerPoint |
 | 1.46 | 2026-11-17 | Cloche et panneau des notifications (L2-67) : pastille, panneau, « ne pas déranger », applications retirées, état, tests (D176 à D180) |

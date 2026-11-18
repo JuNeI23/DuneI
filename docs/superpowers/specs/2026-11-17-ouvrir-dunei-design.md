@@ -1,6 +1,6 @@
 # « Ouvrir » propre à DuneI (L2-69) — fiche
 
-Version 1.0 — 2026-11-17
+Version 1.1 — 2026-11-18 · validée
 
 ## Intention
 
@@ -61,6 +61,10 @@ d'actions de la carte reçoit en tête une action propre à DuneI, de même form
 (`identifier: "default"`, libellé « Ouvrir »), dont `invoke()` appelle `amenerOuLancer` puis écarte la notification.
 Ainsi `CorpsNotification`, `Pile.agir`, `Attente.agir` et `Attente.ouvrir` la traitent sans cas particulier.
 
+**Le clic sur la carte** (ajouté en recette) — il déclenche l'action `default`, celle de l'application ou celle de
+DuneI. Sans rien à ouvrir, la carte finit comme à l'échéance : une notification gardée passe au panneau au lieu
+d'être perdue. Une croix de fermeture au survol est renvoyée à L2-70.
+
 ## Contraintes
 
 - uwsm est la session (`wayland-wm@hyprland`) ; `uwsm app` accepte un id d'entrée de bureau.
@@ -79,4 +83,5 @@ Ainsi `CorpsNotification`, `Pile.agir`, `Attente.agir` et `Attente.ouvrir` la tr
 
 | Version | Date | Changement |
 |---|---|---|
+| 1.1 | 2026-11-18 | Validée en recette ; un clic sur la carte ouvre, sans rien à ouvrir elle passe au panneau (D189) |
 | 1.0 | 2026-11-17 | Première rédaction : approche A, focus par adresse éprouvé |

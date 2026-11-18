@@ -4266,3 +4266,30 @@ en bas et remonte sous ce qui le précède ; le ressort se pose quand il reste m
 
 *Touché : `coque/Notifications/PageNotifications.qml`, `coque/Reseau/DepliantReseau.qml`, coques d'essai de la page
 et de Paramètres, bible (section dépliable, 0.39).*
+
+### D189 · « Ouvrir » sans action de l'application : amener ou lancer, sur une identification sûre
+
+17 novembre 2026 · L2-69. Quand une application n'envoie pas d'action `default`, la coque propose son propre
+« Ouvrir ». Nicolas a retenu trois choses. D'abord l'ordre : L2-69 avant le lanceur (L2-16), parce que le module qui
+trouve, amène et lance une application lui sert ensuite tel quel. Ensuite, si l'application est déjà ouverte, sa
+fenêtre la plus récemment utilisée reçoit le focus au lieu d'une seconde instance. Enfin, l'identification est
+prudente (approche A) : id de l'entrée de bureau, `StartupWMClass`, puis nom affiché égal à `appName`, sans casse.
+Ouvrir la mauvaise application serait pire que ne rien ouvrir : une table de substitutions à la manière d'end-4
+(approche B) attendra qu'une application précise résiste. L'activation par le protocole Wayland (approche C) est
+écartée, Hyprland pouvant l'ignorer et la coque passant partout par `Hyprland.dispatch`. Le focus passe par
+`hl.dsp.focus` sur l'adresse de la fenêtre, éprouvé sur caladan (bascule de bureau comprise). Le lancement passe par
+`uwsm app`, comme les raccourcis, pour que l'application ne vive pas sous la coque. Les entrées masquées et celles de
+terminal ne sont jamais retenues. Quickshell ne lit les entrées de bureau et les fenêtres qu'au premier accès, en
+asynchrone : le module les amorce dès sa création, et la carte relit son « Ouvrir » par une liaison réactive.
+
+La relecture a montré que le relevé d'usage de Hyprland (`focusHistoryID`) n'est relu par Quickshell qu'au
+rafraîchissement : la coque tient donc elle-même la liste des fenêtres activées, la plus récente en tête, et ne
+retombe sur le relevé de Hyprland que pour une fenêtre qu'elle n'a pas vue passer. En recette, Nicolas a perdu une
+notification d'un clic malencontreux : D162 voulait qu'un clic ferme la carte. Désormais, un clic sur la carte ouvre
+l'application (son action `default` ou l'« Ouvrir » de DuneI) ; sans rien à ouvrir, la carte finit comme à
+l'échéance, et une notification gardée passe au panneau au lieu d'être perdue. Fermer une carte sans l'ouvrir passe
+par l'échéance, en attendant une petite croix au survol (L2-70).
+
+*Touché : `coque/Applications/`, `coque/Notifications/EtatNotifications.qml`, `CorpsNotification.qml`,
+`Attente.qml`, `Pile.qml`, tests `test_applications`, `CarteTest` et `PileTest`, carnet (1.49), fiche
+`docs/superpowers/specs/2026-11-17-ouvrir-dunei-design.md`.*

@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.58. Historique en fin de document.
+Version 1.59. Historique en fin de document.
 
 La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **180 éléments** répartis en **cinq lots**, sur six chantiers.
 
@@ -322,7 +322,8 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L2-66 | B | Écrit | Fenêtre Son, sur le gabarit de la fenêtre Réseau (L2-65) — le lien « Réglages du son… » du popover du son (L2-12) l'ouvre ; volume par application, profils de la carte, effets et égaliseur y trouveront leur place ; repérage propre à faire avant la fiche ; réemploi des composants `Courbe`, `Tuile` et d'un dépliant dans le style de `DepliantReseau` ; même lot et même priorité que L2-65 (D153) — **reportée à plus tard (D163)**, comme toute feature qui ouvre une fenêtre du genre de la fenêtre Réseau ; depuis D165, elle prendra la forme d'une page « Son » de l'application Paramètres (L5-01), inscrite au registre |
 | L2-67 | B | Fait | Cloche des notifications — **fait (D176 à D180)** : la cloche de la barre porte le nombre de notifications à traiter (pilule, « 99+ ») ou une boule rouge dès qu'une critique attend, rien sous « ne pas déranger » ; elle ouvre le panneau des notifications, une presqu'île latérale de bord (groupes par application, « Tout effacer » en cascade, bascule « ne pas déranger » à libellé d'état unique) ; une notification vivante y reste jusqu'à son traitement, sauf les éphémères et les applications retirées (« Ne plus garder », « Remettre » dans Paramètres, page Notifications) ; la liste survit au rechargement de la coque ; clic droit sur la cloche : « ne pas déranger ». Fiche : `docs/superpowers/specs/2026-11-16-cloche-design.md` ; plan : `docs/superpowers/plans/2026-11-16-cloche.md` ; recette à l'écran validée le 2026-11-17, l'ouverture de l'application au clic restant à éprouver sur un vrai courriel ; après fusion, la bascule du panneau est allumée quand les notifications sont actives, sous la cloche, et éteinte sous « ne pas déranger », sous la cloche barrée (D182), et son pied mène aux réglages (« Réglages des notifications… », D183) ; la page Notifications de Paramètres suit le même sens, interrupteur dans l'en-tête (D184) |
 | L2-68 | C | Fait | Son de notification — **fait (D185 à D188)** : deux voix KDE Ocean, Arrivée (`dialog-warning`, brève) et Urgence (`message-new-instant`, plus longue), jouées par `pw-play` au rôle Notification sans enregistrer de volume de rôle (`state.restore-props = false`) ; une notification sonne si le panneau la garderait, une mise à jour seulement après une minute ou en devenant critique, une seule par rafale de 2 s, et les normales se taisent sous « ne pas déranger » et en plein écran ; carte « Son » dans Paramètres › Notifications (Activé, Volume relatif, aperçu au relâchement). La synthèse d'une voix propre à DuneI est renvoyée au lot 5 (L5-31). En recette, le repli du dépliant Wi-Fi a été corrigé de même (D188) |
-| L2-69 | C | Écrit | « Ouvrir » propre à DuneI — quand l'application ne fournit pas d'action `default`, la carte propose tout de même d'ouvrir l'application d'origine ; facultatif, après le lanceur (L2-19, D162) |
+| L2-69 | C | Fait | « Ouvrir » propre à DuneI — **fait (D189)** : quand l'application ne fournit pas d'action `default`, la carte et le panneau proposent tout de même « Ouvrir », si la coque identifie l'application avec certitude (id de l'entrée de bureau, `StartupWMClass`, nom affiché ; jamais une entrée masquée ou de terminal) ; « Ouvrir » amène la fenêtre la plus récemment utilisée, bureau compris, ou lance l'application par `uwsm app`. Un clic sur la carte ouvre ; sans rien à ouvrir, la carte finit comme à l'échéance et la notification gardée passe au panneau, au lieu d'être perdue. Module `coque/Applications`, repris par le lanceur (L2-16). Fiche : `docs/superpowers/specs/2026-11-17-ouvrir-dunei-design.md` ; recette à l'écran validée le 2026-11-18 |
+| L2-70 | C | Écrit | Croix de fermeture des cartes — une petite croix au survol ferme une carte de notification sans l'ouvrir, le clic sur la carte ouvrant désormais l'application (D189) |
 
 ### Lot 3 — la bascule
 
@@ -529,6 +530,7 @@ Le choix de la distribution de base et du compositeur, précédemment ouverts, s
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-12 | Version initiale, 137 éléments |
+| 1.59 | 2026-11-18 | L2-69 fait : « Ouvrir » propre à DuneI, clic sur la carte qui ouvre (D189) ; ajout de L2-70, croix de fermeture des cartes ; 181 éléments |
 | 1.58 | 2026-11-17 | L2-68 fait : voix KDE Ocean, règles de sonnerie, carte « Son » (D185 à D188) ; ajout de L5-31, voix propre de DuneI ; 180 éléments |
 | 1.57 | 2026-11-17 | L2-67 : la bascule du panneau est allumée quand les notifications sont actives, cloche ou cloche barrée (D182) ; le panneau mène aux réglages des notifications (D183) ; la page Notifications suit le même sens (D184) |
 | 1.56 | 2026-11-17 | L3-26 : serveur de langage Python pour Claude Code, à l'essai (D164) |
