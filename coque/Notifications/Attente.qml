@@ -92,10 +92,11 @@ Scope {
         if (n.resident && n.tracked) n.dismiss()
     }
 
-    // ouvrir — clic sur une entrée : son action « default » si l'application la fournit, sinon un simple écart.
-    // Entrée : a. Sortie : aucune. Erreurs : aucune. Dépendances : agir, ecarter.
+    // ouvrir — clic sur une entrée : son action « default », celle de l'application ou l'« Ouvrir » de DuneI (L2-69),
+    // sinon un simple écart. Entrée : a. Sortie : aucune. Erreurs : aucune.
+    // Dépendances : agir, ecarter, EtatNotifications.actions.
     function ouvrir(a) {
-        const defaut = a.notification.actions.find(x => x.identifier === "default")
+        const defaut = EtatNotifications.actions(a.notification).find(x => x.identifier === "default")
         defaut ? agir(a, defaut) : ecarter(a)
     }
 

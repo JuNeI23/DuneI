@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas — révisée le 22 octobre 2026
 
-Version 1.53. Historique en fin de document.
+Version 1.54. Historique en fin de document.
 
 *Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent soixante-quinze lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
 
@@ -634,14 +634,22 @@ est renvoyée au lot 5 (L5-31), avec sa maquette, gardée dans l'atelier. En rec
 en deux temps, sur la carte Son comme dans le dépliant du réseau Wi-Fi : le contenu remonte désormais sous la tête,
 et le ressort ne traîne plus sur ses derniers pixels (D188).
 
-Prochaine étape : **l'« Ouvrir » propre à DuneI** (L2-69). Le reste de L2-48, L2-57 (suites du popover Bluetooth),
-L2-58, L2-59 et L2-62 attendent leur tour.
+L'« Ouvrir » propre à DuneI (L2-69) est fait : une notification dont l'application n'envoie pas d'action `default`
+propose tout de même « Ouvrir », si la coque identifie l'application avec certitude ; la fenêtre la plus récemment
+utilisée de l'application est amenée, bureau compris, ou l'application est lancée par `uwsm app` (D189). Le module
+`coque/Applications` qui trouve, amène et lance une application servira tel quel au lanceur. En recette, Nicolas a
+perdu une notification d'un clic malencontreux : un clic sur la carte ouvre désormais l'application, et sans rien à
+ouvrir la notification passe au panneau au lieu d'être perdue. La croix de fermeture au survol devient L2-70.
+
+Prochaine étape : **le lanceur d'applications** (L2-16), qui reprend le module `coque/Applications`. Le reste de
+L2-48, L2-57 (suites du popover Bluetooth), L2-58, L2-59, L2-62 et L2-70 attendent leur tour.
 
 ## Historique des versions
 
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-10 | Version initiale |
+| 1.54 | 2026-11-18 | L2-69 fait : « Ouvrir » propre à DuneI, clic sur la carte qui ouvre (D189) ; ajout de L2-70 ; prochaine étape : L2-16 |
 | 1.53 | 2026-11-17 | L2-68 fait : voix KDE Ocean et ses règles, carte « Son », repli d'un seul geste (D185 à D188) ; voix propre renvoyée au lot 5 (L5-31) ; prochaine étape : L2-69 |
 | 1.52 | 2026-11-17 | L2-67, retour après fusion : la bascule du panneau est allumée quand les notifications sont actives (D182), le panneau mène aux réglages (D183), la page suit le même sens (D184) ; principe du son de notification arrêté (L2-68) |
 | 1.51 | 2026-11-17 | L2-67 fait : cloche à pastille, panneau des notifications, « ne pas déranger » (D176 à D180) ; prochaine étape : L2-68 |

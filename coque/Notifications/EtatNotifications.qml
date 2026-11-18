@@ -2,6 +2,7 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import "../Applications"
 
 // EtatNotifications — état persistant des notifications, partagé par la coque entière (L2-67).
 // Rôle : porte « ne pas déranger », la liste des applications retirées du panneau et les réglages de la voix (L2-68),
@@ -18,11 +19,12 @@ import Quickshell.Io
 // glyphe de l'état, cloche barrée sous « ne pas déranger », cloche sinon, lu par la cloche de la barre et la
 // bascule du panneau (D182) ; son, la voix des notifications activée ; volumeSon, son volume relatif au système, de 0
 // à 100.
-// Fonctions : basculer, poser, retirer, remettre, poserSon, poserVolume. IPC : nePasDeranger, basculerNePasDeranger,
-// son, volumeSon.
+// Fonctions : basculer, poser, retirer, remettre, poserSon, poserVolume, actions. IPC : nePasDeranger,
+// basculerNePasDeranger, son, volumeSon.
 // Erreurs : aucune ; un fichier absent ou illisible donne les valeurs par défaut, et il est créé ou réécrit à la
 // première modification.
-// Dépendances : Quickshell (Singleton, env, stateDir), Quickshell.Io (FileView, JsonAdapter, IpcHandler).
+// Dépendances : Quickshell (Singleton, env, stateDir), Quickshell.Io (FileView, JsonAdapter, IpcHandler),
+// Applications (resoudre, amenerOuLancer).
 Singleton {
     id: etat
 
@@ -52,6 +54,20 @@ Singleton {
     // Dépendances : adaptateur.
     function remettre(identifiant) {
         if (retirees.includes(identifiant)) adaptateur.retirees = retirees.filter(i => i !== identifiant)
+    }
+
+    // actions — actions proposées par une notification. Si l'application ne fournit pas d'action « default » mais
+    // qu'elle est identifiée avec certitude, l'« Ouvrir » propre à DuneI (L2-69) s'ajoute en tête : un objet de même
+    // forme qu'une NotificationAction, dont invoke amène ou lance l'application, puis écarte la notification.
+    // Entrée : n, objet à l'interface de Notification (actions, desktopEntry, appName, dismiss). Sortie : tableau
+    // d'actions ; appelée dans une liaison, elle se réévalue quand les entrées de bureau sont lues. Erreurs : aucune.
+    // Dépendances : Applications (resoudre, amenerOuLancer).
+    function actions(n) {
+        const propres = Array.from(n.actions)
+        if (propres.some(a => a.identifier === "default")) return propres
+        const entree = Applications.resoudre(n.desktopEntry, n.appName)
+        return entree ? [{identifier: "default", text: qsTr("Ouvrir"),
+                          invoke: () => { Applications.amenerOuLancer(entree); n.dismiss() }}].concat(propres) : propres
     }
 
     // poserSon — active ou coupe la voix des notifications. Entrée : v, l'état voulu. Sortie : aucune ; le fichier est

@@ -268,12 +268,21 @@ class PileTest(EssaiCoque, unittest.TestCase):
         self.attendre_appel("2:expire")
         self.assertEqual(self.attente()[:3], (0, False, []))
 
-    def test_clic_ne_passe_pas(self):
+    def test_clic_ouvre(self):
+        # Un clic sur la carte ouvre, comme une ligne du panneau : l'action « default » est déclenchée.
         self.gardee()
         self.appel("cliquer", 1)
         time.sleep(self.DUREE / 1000 + 0.3)
-        self.assertEqual(self.appels(), ["1:dismiss"])
+        self.assertEqual(self.appels(), ["1:invoke:default"])
         self.assertEqual(self.attente()[:3], (0, False, []))
+
+    def test_clic_sans_rien_a_ouvrir(self):
+        # Rien à ouvrir : un clic par mégarde ne perd pas la notification, elle passe à l'attente comme à son terme.
+        self.gardee()
+        self.appel("sansAction", 1)
+        self.appel("cliquer", 1)
+        self.attendue(1, False, ["1"])
+        self.assertEqual(self.appels(), [])
 
     def test_ne_pas_deranger(self):
         self.appel("deranger", "true")
@@ -483,7 +492,7 @@ class PileTest(EssaiCoque, unittest.TestCase):
     def test_clic_et_action(self):
         self.creer(delai=0)
         self.appel("cliquer", 1)
-        self.assertEqual(self.appels(), ["1:dismiss"])
+        self.assertEqual(self.appels(), ["1:invoke:default"])
         self.creer(delai=0)
         self.appel("residente", 2)
         self.appel("agir", 2, "default")
@@ -512,7 +521,7 @@ class PileTest(EssaiCoque, unittest.TestCase):
         self.appel("cliquer", 1)
         self.appel("cliquer", 1)
         self.appel("agir", 1, "default")
-        self.assertEqual(self.appels(), ["1:dismiss"])
+        self.assertEqual(self.appels(), ["1:invoke:default", "1:dismiss"])
         self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
 
     def test_oublier(self):
@@ -553,8 +562,12 @@ class CarteTest(EssaiCoque, unittest.TestCase):
     # La coque d'essai ne voit ni le compositeur ni le bus de session. Sans thème de plateforme, Qt n'y résout aucun
     # nom d'icône (le thème gtk3, qui le ferait, exige un affichage) : l'icône d'application s'y éprouve par chemin de
     # fichier, et la résolution par nom de Quickshell.iconPath a été sondée en session réelle.
+    # L'entrée factice « Essai DuneI » (tests/donnees/applications) s'ajoute aux entrées de bureau du système, pour
+    # éprouver l'« Ouvrir » propre à DuneI (L2-69).
     environnement = {"QT_QPA_PLATFORM": "offscreen", "WAYLAND_DISPLAY": None, "DISPLAY": None,
-                     "DBUS_SESSION_BUS_ADDRESS": "disabled:"}
+                     "DBUS_SESSION_BUS_ADDRESS": "disabled:",
+                     "XDG_DATA_DIRS": f"{ROOT / 'tests' / 'donnees' / 'applications'}:"
+                                      f"{os.environ.get('XDG_DATA_DIRS') or '/usr/local/share:/usr/share'}"}
     THEMES = (("dominante", "nuit"), ("dominante", "jour"), ("thematisee", "nuit"))
 
     def setUp(self):
@@ -712,6 +725,27 @@ class CarteTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(self.etat()["source"], "generique")
         time.sleep(0.5)
         self.assertEqual(requetes, [])
+
+    def test_ouvrir_propre(self):
+        # Sans action « default », une application identifiée reçoit l'« Ouvrir » de DuneI (L2-69), même si les
+        # entrées de bureau ne sont lues qu'après l'arrivée de la notification.
+        self.regler(app="Essai DuneI")
+        self.jusqua(lambda: self.etat()["libelles"] == "Ouvrir", "« Ouvrir » propre")
+        # La rangée l'affiche vraiment : un objet hors QML ne doit pas arriver nul à son délégué.
+        self.assertEqual(self.etat()["rendus"], "Ouvrir")
+        self.assertNotRegex(self.journal(), r"TypeError|ReferenceError|Cannot read")
+
+    def test_ouvrir_inconnue(self):
+        self.regler(app="Essai DuneI")
+        self.jusqua(lambda: self.etat()["libelles"] == "Ouvrir", "« Ouvrir » propre")
+        self.regler(app="Inconnue")
+        self.jusqua(lambda: self.etat()["libelles"] == "", "aucun « Ouvrir »")
+
+    def test_ouvrir_pas_de_doublon(self):
+        self.regler(app="Essai DuneI", actions="default:Voir")
+        time.sleep(0.5)
+        etat = self.etat()
+        self.assertEqual((etat["actions"], etat["libelles"]), ("1", "Ouvrir"))
 
     def test_en_tete(self):
         self.regler(app="Signal")

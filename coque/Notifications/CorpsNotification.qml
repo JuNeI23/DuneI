@@ -44,11 +44,11 @@ Item {
     readonly property real cote: Theme.notifications?.icone ?? 0
     readonly property real ecart: Theme.space?.scale[2] ?? 0
     readonly property real dpr: QsWindow.window?.devicePixelRatio ?? 1
-    // Actions dans leur ordre d'envoi, « default » (« Ouvrir ») en tête.
-    readonly property var actions: notification
-        ? Array.from(notification.actions).filter(a => a.identifier === "default")
-            .concat(Array.from(notification.actions).filter(a => a.identifier !== "default"))
-        : []
+    // Actions dans leur ordre d'envoi, « default » (« Ouvrir », celui de l'application ou celui de DuneI) en tête.
+    readonly property var actions: {
+        const liste = notification ? EtatNotifications.actions(notification) : []
+        return liste.filter(a => a.identifier === "default").concat(liste.filter(a => a.identifier !== "default"))
+    }
     readonly property string sourceIcone: photo.status === Image.Ready ? "image"
                                         : appli.status === Image.Ready ? "application" : "generique"
     readonly property bool actionsVisibles: depli.value > 0
@@ -209,10 +209,13 @@ Item {
                 opacity: Math.max(0, fondu.value)
 
                 Repeater {
+                    id: rendues
                     model: carte.actions
 
                     Texte {
-                        required property QtObject modelData
+                        // var et non QtObject : l’« Ouvrir » propre à DuneI est un objet JavaScript, que QtObject
+                        // rendrait nul.
+                        required property var modelData
                         moyen: true
                         color: Theme.color?.accentStandalone ?? "transparent"
                         text: carte.libelle(modelData)
@@ -226,6 +229,11 @@ Item {
             }
         }
     }
+
+    // libellesRendus — textes des actions tels que les délégués de la rangée les affichent, lus par les essais.
+    // Entrées : aucune. Sortie : tableau de chaînes, « » pour un délégué sans texte. Erreurs : aucune.
+    // Dépendances : rendues.
+    function libellesRendus() { return Array.from({length: rendues.count}, (_, i) => rendues.itemAt(i)?.text ?? "") }
 
     // libelle — texte affiché d'une action. Entrée : action, objet à l'interface de NotificationAction.
     // Sortie : « Ouvrir » pour l'action « default », son texte sinon. Erreurs : aucune. Dépendances : aucune.

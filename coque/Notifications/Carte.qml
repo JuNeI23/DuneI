@@ -11,7 +11,8 @@ import "../Composants"
 // Sorties : implicitHeight, contenu et marges compris (la largeur est fixée à Theme.notifications.largeur) ;
 // survolee ; sourceIcone (« image », « application » ou « generique ») ; actionsVisibles, vrai tant que la rangée
 // d'actions est au moins en partie dépliée ; enMouvement, vrai tant que le dépliant avance ; couleurTitre,
-// lignesCorps, libelles (textes des actions affichés), texteApplication et texteHeure, lus par les essais.
+// lignesCorps, libelles (textes des actions affichés), libellesRendus(), texteApplication et texteHeure, lus par
+// les essais.
 // Erreurs : aucune ; sans jetons chargés, la carte est de taille nulle et transparente.
 // Dépendances : Theme (notifications, radius), Composants (Surface, OmbreElevation), CorpsNotification, Entree, Pile.
 Item {
@@ -29,6 +30,10 @@ Item {
     readonly property alias enMouvement: contenu.enMouvement
     readonly property alias couleurTitre: contenu.couleurTitre
     readonly property alias lignesCorps: contenu.lignesCorps
+
+    // libellesRendus — textes des actions affichés par la rangée (CorpsNotification.libellesRendus), lus par les
+    // essais. Entrées : aucune. Sortie : tableau de chaînes. Erreurs : aucune. Dépendances : contenu.
+    function libellesRendus() { return contenu.libellesRendus() }
     readonly property alias libelles: contenu.libelles
     readonly property alias texteApplication: contenu.texteApplication
     readonly property alias texteHeure: contenu.texteHeure
