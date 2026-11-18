@@ -7,6 +7,7 @@ Entrées : aucune. Sorties : résultats unittest. Erreurs : échecs de test.
 Dépendances : qs (Quickshell ≥ 0.3), tests.test_coque_theme (EssaiCoque).
 """
 import json
+import os
 import subprocess
 import unittest
 
@@ -18,6 +19,7 @@ HTOP = {"id": "htop", "name": "Htop", "startupClass": "", "runInTerminal": True}
 E = [DOLPHIN, DISCORD, HTOP]
 
 
+@unittest.skipUnless(os.environ.get("WAYLAND_DISPLAY") and QS, "session Wayland et Quickshell requis")
 class ApplicationsTest(EssaiCoque, unittest.TestCase):
     """La logique des applications (applications.js), appelée par l'IPC d'une coque d'essai sans fenêtre."""
 
