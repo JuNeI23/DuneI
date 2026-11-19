@@ -18,9 +18,9 @@ import "../Applications/applications.js" as Apps
 // d'usage. Le clavier est traité ici, par touche(), qu'appellent la fenêtre et l'IPC des essais : un seul chemin.
 // Entrées : ouvert ; saisie ; clavierExclusif, vrai par défaut, que la fenêtre applique (une coque d'essai le met à
 //           faux pour ne jamais prendre le clavier de Nicolas) ; executeur, null par défaut : une fonction qui reçoit
-//           l'action à la place de son exécution réelle (coques d'essai) ; fenetree, vrai par défaut : faux, aucune
-//           fenêtre n'est construite (coque d'essai hors écran, qui pose elle-même un CadreLanceur). IPC « lanceur » : basculer, ouvrir, fermer,
-//           etat, taper, touche.
+//           l'action à la place de son exécution réelle (coques d'essai) ; fenetree, vrai par défaut : faux,
+//           aucune fenêtre n'est construite (coque d'essai hors écran, qui pose elle-même un CadreLanceur).
+//           IPC « lanceur » : basculer, ouvrir, fermer, etat, taper, touche.
 // Sorties : vue (« accueil » ou « scission »), accueil ({medaillons, puces}), resultats (classés), sel ({zone, rang,
 //           index}, forme de lanceur.js deplacer), choisi (le résultat de la ligne retenue), elements (ceux de son
 //           aperçu), confirmation, libellePrincipal, ecran (figé à l'ouverture), fenetre (la FenetreLanceur ouverte,

@@ -42,13 +42,16 @@ ShellRoot {
     IpcHandler {
         target: "essai"
 
-        // injecter — remplace des entrées des sources du lanceur. Entrée : json (clés de Sources). Sortie : aucune.
+        // injecter — remplace des entrées des sources du lanceur. Entrée : json, objet dont chaque clé (entrees,
+        // fenetres, cheminRoles, ipc) nomme une propriété de Sources. Sortie : aucune. Erreurs : SyntaxError au
+        // journal si le JSON est invalide. Dépendances : Lanceur.sources.
         function injecter(json: string): void {
             const d = JSON.parse(json)
             for (const cle in d) Lanceur.sources[cle] = d[cle]
         }
 
-        // focus — vrai si le champ du cadre a le focus actif. Sortie : « true » ou « false ».
+        // focus — dit si le champ du cadre a le focus actif de Qt. Entrées : aucune. Sortie : « true » ou « false »
+        // (« false » lanceur fermé). Erreurs : aucune. Dépendances : charge (CadreLanceur.champ).
         function focus(): string { return String(charge.item?.champ.activeFocus ?? false) }
 
         // cle — presse une vraie touche dans la fenêtre. Entrée : nom, « escape », « tab », « return », « down », « up ».
@@ -63,7 +66,8 @@ ShellRoot {
     IpcHandler {
         target: "notifications"
 
-        // nePasDeranger — faux état de « ne pas déranger ». Sortie : « true ».
+        // nePasDeranger — faux état de « ne pas déranger », lu par Sources.rafraichir. Entrées : aucune.
+        // Sortie : « true ». Erreurs : aucune. Dépendances : aucune.
         function nePasDeranger(): string { return "true" }
     }
 }

@@ -5,19 +5,22 @@ import "../Theme"
 // Plaque — plaque d'accent qui dit la sélection du lanceur (ligne, médaillon, puce, bouton, vignette).
 // Rôle : un aplat color.accent (ou la teinte demandée, color.error pour une confirmation), au reflet des médaillons
 // (dégradé de material.highlight, à l'opacité material.medallionSheen, sur la part material.medallionSheenReach de
-// la hauteur), au liseré haut material.edgeLight et au halo color.accentDiscret (sa teinte pour une confirmation),
-// ombre material.shadowBlur décalée de material.shadowOffsetY, sans opacité numérique sur la couleur. Elle glisse vers la géométrie cible au ressort reflow, et
-// s'étire un peu dans le sens du trajet tant qu'elle va vite, puis se pose. Sa première cible valable est posée sans
-// trajet, pour qu'elle n'arrive pas du coin du conteneur à l'ouverture.
+// la hauteur), au liseré haut material.edgeLight et au halo de la couleur halo (color.accentDiscret par défaut),
+// ombre material.shadowBlur décalée de material.shadowOffsetY, sans opacité numérique sur la couleur. Elle glisse
+// vers la géométrie cible au ressort reflow, et s'étire un peu dans le sens du trajet tant qu'elle va vite, puis
+// se pose. Sa première cible valable est posée sans trajet, pour qu'elle n'arrive pas du coin du conteneur à
+// l'ouverture.
 // Entrées : cible, rect (x, y, largeur, hauteur) dans le repère du parent ; rayon, rayon des coins ; teinte,
-// color.accent par défaut. Sorties : aucune autre que celles d'Item. Erreurs : aucune ; une cible de largeur nulle
-// masque la plaque. Dépendances : Ressort, ColorSpring, Theme (color, material), QtQuick.Effects (RectangularShadow).
+// color.accent par défaut ; halo, color.accentDiscret par défaut (les deux changent en fondu).
+// Sorties : aucune autre que celles d'Item. Erreurs : aucune ; une cible de largeur nulle masque la plaque.
+// Dépendances : Ressort, ColorSpring, Theme (color, material), QtQuick.Effects (RectangularShadow).
 Item {
     id: plaque
 
     property rect cible
     property real rayon: 0
     property color teinte: Theme.color?.accent ?? "transparent"
+    property color halo: Theme.color?.accentDiscret ?? "transparent"
     property bool posee: false
 
     x: rx.value
@@ -32,8 +35,8 @@ Item {
 
     // La teinte (accent, ou erreur d'une confirmation) change en fondu, au ressort des états.
     ColorSpring { id: fondu; target: plaque.teinte }
-    // Halo : l'accent discret (color.accentDiscret), ou la teinte d'erreur d'une confirmation, sans opacité ajoutée.
-    ColorSpring { id: halo; target: (plaque.teinte === Theme.color?.accent ? Theme.color?.accentDiscret : plaque.teinte) ?? "transparent" }
+    // Halo, à la couleur demandée par l'appelant, sans opacité ajoutée.
+    ColorSpring { id: halo; target: plaque.halo }
     Ressort { id: rx; transition: "reflow"; cible: plaque.cible.x }
     Ressort { id: ry; transition: "reflow"; cible: plaque.cible.y }
     Ressort { id: rw; transition: "reflow"; cible: plaque.cible.width }

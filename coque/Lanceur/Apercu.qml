@@ -57,7 +57,10 @@ Item {
              : cellule ? Qt.rect(zone.x + cellule.x - 3, zone.y + cellule.y - 3, cellule.width + 6, cellule.image.height + 6)
              : Qt.rect(0, 0, 0, 0)
         rayon: bouton ? cible.height / 2 : (Theme.radius?.panel ?? 0) + 3
-        teinte: (Lanceur.confirmation && bouton && apercu.choix === 0 ? Theme.color?.error : Theme.color?.accent) ?? "transparent"
+        readonly property bool confirme: Lanceur.confirmation && bouton !== null && apercu.choix === 0
+        teinte: (confirme ? Theme.color?.error : Theme.color?.accent) ?? "transparent"
+        // Aucun rôle d'erreur discret n'existe : une confirmation prend color.error pour halo aussi.
+        halo: (confirme ? Theme.color?.error : Theme.color?.accentDiscret) ?? "transparent"
     }
 
     // En-tête : médaillon, titre et sous-titre (tous les genres sauf le calcul et l'absence de résultat).
