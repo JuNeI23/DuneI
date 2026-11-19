@@ -161,7 +161,9 @@ class LogiqueTest(EssaiCoque, unittest.TestCase):
 
         Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : appeler.
         """
-        for s, attendu in (("12*7,5", True), ("kitty", False), ("fire", False), ("10 km en miles", True)):
+        for s, attendu in (("12*7,5", True), ("kitty", False), ("fire", False), ("10 km en miles", True),
+                           ("python3", False), ("7zip", False), ("exit 1", False), ("quit 1", False), (" (2+3)*4", True),
+                           ("€5 en $", True)):
             self.assertEqual(self.appeler("aEnvoyer", s), attendu, s)
 
     def test_traduire(self):
@@ -265,21 +267,17 @@ class CalculTest(EssaiCoque, unittest.TestCase):
 
     @unittest.skipUnless(shutil.which("qalc"), "qalc requis")
     def test_reponse_perimee_ignoree(self):
-        """Vérifie que la réponse d'une saisie remplacée aussitôt n'est jamais publiée.
+        """Vérifie que la réponse d'une saisie remplacée dans le même appel (avant toute réponse) n'est jamais publiée.
 
         Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : demarrer, demander, etat.
         """
         self.demarrer()
-        self.demander("2^10")
-        self.demander("2^3")
-        fin = time.monotonic() + DELAI
-        vues = set()
-        while time.monotonic() < fin and "8" not in vues:
-            vues.add(self.etat()["valeur"])
-            time.sleep(0.02)
+        subprocess.run([QS, "ipc", "--pid", str(self.proc.pid), "call", "essai", "demanderDeux", "2^10", "2^3"],
+                       check=True, capture_output=True, timeout=DELAI)
+        self.attendre("valeur : 8")
         time.sleep(0.5)
-        vues.add(self.etat()["valeur"])
-        self.assertEqual(vues - {""}, {"8"})
+        self.assertNotIn("valeur : 1024", self.journal())
+        self.assertEqual(self.etat()["valeur"], "8")
 
     def test_qalc_absent(self):
         """Vérifie que sans qalc le calcul se déclare indisponible, sans relance ni erreur hors l'avertissement unique.

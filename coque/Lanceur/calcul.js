@@ -11,10 +11,15 @@ const MOTS_CONVERSION = ["en", "vers"]
 const DUREES = ["h", "min", "s", "j", "jour", "jours", "heure", "heures", "seconde", "secondes"]
 
 // aEnvoyer — dit si une saisie mérite d'être soumise à qalc.
-// Entrée : saisie, chaîne. Sortie : vrai si elle contient un chiffre ; sans chiffre, qalc invente des résultats
-// (« kitty » donne « 0 t² »). Erreurs : aucune. Dépendances : aucune.
+// Entrée : saisie, chaîne. Sortie : vrai si elle contient un chiffre et commence (espaces écartés) par un chiffre,
+// une parenthèse, un signe, un séparateur décimal ou une monnaie (€ $ £). Sans chiffre, qalc invente des résultats
+// (« kitty » donne « 0 t² ») ; un nom d'application (« python3 », « 7zip ») ou une commande de qalc (« exit 1 »,
+// qui le tuerait) ne part jamais ;
+// un mot unique à lettres, sans espace ni opérateur (« 7zip »), est un nom, pas un calcul.
+// Erreurs : aucune. Dépendances : aucune.
 function aEnvoyer(saisie) {
-    return /\d/.test(saisie || "")
+    const s = (saisie || "").trim()
+    return /\d/.test(s) && /^[\d(\-+.,€$£]/.test(s) && !/^[^\s+\-*\/^%()×÷]*[a-z][^\s+\-*\/^%()×÷]*$/i.test(s)
 }
 
 // traduire — met une saisie française en syntaxe de qalc.

@@ -57,7 +57,9 @@ Scope {
         if (r.n === dernier) valeur = Logique.lire(ligne, r.envoye)
     }
 
-    // Une nouvelle ouverture redonne sa chance à qalc ; une fermeture efface tout.
+    // onActifChanged — une nouvelle ouverture redonne sa chance à qalc ; toute bascule efface requêtes et résultat.
+    // Entrées : aucune (lit actif). Sortie : file, courante, valeur et expression remises à vide ; disponible vrai à
+    // l'ouverture. Erreurs : aucune. Dépendances : aucune.
     onActifChanged: {
         file = []; courante = null; valeur = ""; expression = ""
         if (actif) disponible = true

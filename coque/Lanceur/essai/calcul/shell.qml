@@ -16,6 +16,9 @@ ShellRoot {
     Calcul {
         id: calcul
         actif: true
+        // onValeurChanged — journalise chaque valeur publiée, pour que les tests voient aussi les publications brèves.
+        // Entrées : aucune. Sortie : la ligne « valeur : <valeur> ». Erreurs : aucune. Dépendances : console.
+        onValeurChanged: console.log("valeur : " + valeur)
     }
 
     IpcHandler {
@@ -24,6 +27,10 @@ ShellRoot {
         // demander — soumet une saisie au calcul.
         // Entrée : saisie. Sortie : aucune. Erreurs : aucune. Dépendances : Calcul.demander.
         function demander(saisie: string): void { calcul.demander(saisie) }
+
+        // demanderDeux — soumet deux saisies d'affilée dans le même appel, avant toute réponse de qalc.
+        // Entrées : a, b. Sortie : aucune. Erreurs : aucune. Dépendances : Calcul.demander.
+        function demanderDeux(a: string, b: string): void { calcul.demander(a); calcul.demander(b) }
 
         // etat — état courant du calcul.
         // Entrées : aucune. Sortie : {expression, valeur, disponible} en JSON. Erreurs : aucune. Dépendances : Calcul.
