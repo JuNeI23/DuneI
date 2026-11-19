@@ -1,7 +1,6 @@
 import QtQuick
 import Quickshell
 import Quickshell.Io
-import Quickshell.Hyprland
 import "../Applications"
 import "../Parametres"
 import "lanceur.js" as Logique
@@ -14,22 +13,19 @@ import "../Applications/applications.js" as Apps
 // lanceur.js (classer). Forme d'un résultat : {cle, genre, titre, sousTitre, icone, type, retrait, app, pertinence,
 // principale, secondaires, apercu} ; une action : {libelle, genre, cible, confirmer}.
 // Entrées : entrees (entrées de bureau, DesktopEntries par défaut) ; fenetres ({adresse, classe, titre, bureau,
-// historique}, tirées de Hyprland.toplevels sous Wayland) ; poids (usage, lanceur.js poids) ; calcul (un Calcul, ou
+// historique}, Applications.toplevels() sous Wayland) ; poids (usage, lanceur.js poids) ; calcul (un Calcul, ou
 // null) ; cheminRoles (roles.lua) ; ipc (préfixe d'appel IPC de la coque). Les coques d'essai les remplacent.
 // Sorties : commandes (déclarées puis pages de Paramètres), etats ({id: état lisible}) ; fonctions chercher,
 // accueil, commande, rafraichir.
 // Erreurs : aucune ; un commandes.json ou un roles.lua illisible laisse sa liste vide.
 // Dépendances : Quickshell (DesktopEntries, env), Quickshell.Io (FileView, Process, StdioCollector),
-// Quickshell.Hyprland (Hyprland.toplevels), Applications (recentes, applications.js), Registre (Parametres),
+// Applications (toplevels, applications.js), Registre (Parametres),
 // lanceur.js, calcul.js, commandes.json ; qs à l'exécution pour lire les états.
 Scope {
     id: sources
 
     property var entrees: DesktopEntries.applications.values
-    property var fenetres: Quickshell.env("WAYLAND_DISPLAY") ? Hyprland.toplevels.values.map(t => ({
-        adresse: t.address, classe: t.wayland?.appId || t.lastIpcObject?.class || "", titre: t.title,
-        bureau: t.workspace?.name ?? "",
-        historique: Apps.rang(t.address, Applications.recentes, t.lastIpcObject?.focusHistoryID) })) : []
+    property var fenetres: Quickshell.env("WAYLAND_DISPLAY") ? Applications.toplevels() : []
     property var poids: ({})
     property var calcul: null
     property string cheminRoles: (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config")
@@ -93,7 +89,8 @@ Scope {
 
     // chercher — résultats d'une saisie, non classés.
     // Entrée : saisie. Sortie : tableau de résultats : le calcul si celui publié répond à cette saisie ; chaque
-    // application qui correspond, suivie de ses fenêtres en retrait ; les actions de bureau visées ; les fenêtres
+    // application qui correspond, suivie de ses fenêtres en retrait (une fenêtre déjà rangée sous une autre
+    // application ne se répète pas) ; les actions de bureau visées ; les fenêtres
     // dont seul le titre correspond ; les commandes. Une saisie vide ne donne rien. Erreurs : aucune.
     // Dépendances : Logique (pertinence, score, actionVisee), CalculLogique (aEnvoyer, traduire), Apps.fenetres,
     // application, fenetre, commandeResultat.
@@ -109,7 +106,10 @@ Scope {
             if (p > 0) {
                 const ouv = ouvertes(e)
                 r.push(application(e, p, ouv))
-                for (const f of ouv) { prises.add(f.adresse); r.push(fenetre(f, e, p, "app:" + e.id)) }
+                for (const f of ouv.filter(f => !prises.has(f.adresse))) {
+                    prises.add(f.adresse)
+                    r.push(fenetre(f, e, p, "app:" + e.id))
+                }
             }
             for (const a of Array.from(e.actions || []))
                 if (Logique.actionVisee(e.name, a.name, saisie))
@@ -130,7 +130,7 @@ Scope {
     }
 
     // accueil — ce que montre le lanceur sans saisie.
-    // Entrées : aucune. Sortie : {medaillons, puces} : six applications au plus (usage, puis rôles de roles.lua, puis
+    // Entrées : aucune. Sortie : {medaillons, puces} : six applications au plus (usage, puis rôles navigateur, terminal et fichiers de roles.lua, puis
     // ordre alphabétique) et trois commandes déclarées (usage, puis ordre du fichier). Erreurs : aucune.
     // Dépendances : Logique.frequentes, Apps.resoudre, entrees, poids, motsRoles, declarees, application,
     // commandeResultat.
@@ -151,11 +151,21 @@ Scope {
     function commande(id) { return commandes.find(k => k.id === id) }
 
     // rafraichir — relit, par IPC, l'état présent de chaque commande qui en déclare un (à l'ouverture du lanceur).
-    // Entrées : aucune. Sortie : aucune ; etats se met à jour à chaque réponse (« true » → « Activé », « false » →
-    // « Désactivé », sinon le texte rendu). Erreurs : aucune ; un appel qui échoue laisse l'état vide.
-    // Dépendances : lecture, ipc, commandes.
+    // Entrées : aucune. Sortie : aucune ; chaque état relu est d'abord effacé, puis etats se met à jour à chaque
+    // réponse (« true » → « Activé », « false » → « Désactivé », sinon le texte rendu). Erreurs : aucune ; un appel
+    // qui échoue ou ne démarre pas laisse l'état vide. Dépendances : lecture, ipc, commandes, ecrireEtat.
     function rafraichir() {
-        for (const k of commandes) if (k.etat) lecture.createObject(sources, { cle: k.id, command: ipc.concat(k.etat) })
+        for (const k of commandes) if (k.etat) {
+            ecrireEtat(k.id, "")
+            lecture.createObject(sources, { cle: k.id, command: ipc.concat(k.etat) })
+        }
+    }
+
+    // ecrireEtat — pose l'état présent d'une commande. Entrées : cle, id de la commande ; texte, réponse brute.
+    // Sortie : aucune ; etats est remplacé (« true » → « Activé », « false » → « Désactivé », sinon le texte).
+    // Erreurs : aucune. Dépendances : aucune.
+    function ecrireEtat(cle, texte) {
+        etats = Object.assign({}, etats, { [cle]: ({ "true": "Activé", "false": "Désactivé" })[texte] ?? texte })
     }
 
     // Lecteur d'état, un par commande et par rafraîchissement, détruit à sa sortie.
@@ -163,11 +173,17 @@ Scope {
         id: lecture
         Process {
             property string cle
+            property bool demarre: false
             running: true
             stdout: StdioCollector { id: sortie }
+            // onRunningChanged — retient le démarrage ; un processus qui s'arrête sans avoir démarré (qs introuvable)
+            // n'émet pas exited et se détruit ici. Entrées : aucune. Sortie : aucune. Erreurs : aucune.
+            // Dépendances : aucune.
+            onRunningChanged: if (running) demarre = true; else if (!demarre) destroy()
+            // onExited — pose l'état lu, vide si l'appel a échoué, puis détruit le lecteur.
+            // Entrée : code, code de sortie de qs. Sortie : aucune. Erreurs : aucune. Dépendances : ecrireEtat, sortie.
             onExited: code => {
-                const t = code === 0 ? sortie.text.trim() : ""
-                try { sources.etats = Object.assign({}, sources.etats, { [cle]: ({ "true": "Activé", "false": "Désactivé" })[t] ?? t }) }
+                try { sources.ecrireEtat(cle, code === 0 ? sortie.text.trim() : "") }
                 finally { destroy() }
             }
         }
@@ -182,13 +198,14 @@ Scope {
         onLoaded: { try { sources.declarees = JSON.parse(text()) } catch (e) { sources.declarees = [] } }
     }
 
-    // Rôles applicatifs, relus si le chemin change.
+    // Rôles applicatifs de l'accueil, dans l'ordre de la fiche (navigateur, terminal, fichiers), relus si le chemin
+    // change.
     FileView {
         path: sources.cheminRoles
         printErrors: false
         blockLoading: true
         // onLoaded — lit les logiciels des rôles. Entrées : aucune. Sortie : motsRoles. Erreurs : aucune.
         // Dépendances : Logique.lireRoles.
-        onLoaded: sources.motsRoles = Logique.lireRoles(text())
+        onLoaded: sources.motsRoles = Logique.lireRoles(text(), ["navigateur", "terminal", "fichiers"])
     }
 }

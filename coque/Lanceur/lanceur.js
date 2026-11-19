@@ -140,19 +140,22 @@ function deplacer(sel, touche, dispo) {
     return sel
 }
 
-// lireRoles — logiciels des rôles applicatifs déclarés dans roles.lua, pour compléter l'accueil.
-// Entrée : texte, le contenu de config/hypr/donnees/roles.lua (ou undefined). Sortie : le premier mot de la commande
-// de chaque rôle simple (« navigateur = "firefox" ») de la table de premier niveau, sans son chemin, dans l'ordre du
-// fichier ; les rôles à variantes (tables imbriquées) et les commentaires sont ignorés. Erreurs : aucune (un texte
-// vide ou illisible donne un tableau vide). Dépendances : aucune.
-function lireRoles(texte) {
-    const mots = []
+// lireRoles — logiciels de rôles applicatifs déclarés dans roles.lua, pour compléter l'accueil.
+// Entrées : texte, le contenu de config/hypr/donnees/roles.lua (ou undefined) ; noms, les rôles voulus, dans l'ordre
+// voulu. Sortie : pour chaque nom présent, le premier mot de la commande de ce rôle, sans son chemin (« kitty -1 »
+// donne « kitty ») ; un nom absent ou à variantes est sauté. Limites : seuls les rôles simples de la table de premier
+// niveau, écrits « nom = "commande" » sur une ligne, sont lus ; les rôles à variantes (tables imbriquées) sont
+// ignorés ; un commentaire « -- » est retiré jusqu'à la fin de la ligne, même dans une chaîne ; les accolades sont
+// comptées sans tenir compte des chaînes. Erreurs : aucune (un texte vide ou illisible donne un tableau vide).
+// Dépendances : aucune.
+function lireRoles(texte, noms) {
+    const roles = {}
     let niveau = 0
     for (const brute of (texte || "").split("\n")) {
         const ligne = brute.replace(/--.*$/, "")
-        const m = ligne.match(/^\s*\w+\s*=\s*"([^"\s]+)/)
-        if (m && niveau === 1) mots.push(m[1].split("/").pop())
+        const m = ligne.match(/^\s*(\w+)\s*=\s*"([^"\s]+)/)
+        if (m && niveau === 1) roles[m[1]] = m[2].split("/").pop()
         niveau += (ligne.match(/{/g) || []).length - (ligne.match(/}/g) || []).length
     }
-    return mots
+    return noms.filter(n => Object.prototype.hasOwnProperty.call(roles, n)).map(n => roles[n])
 }

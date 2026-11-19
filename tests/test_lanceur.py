@@ -111,13 +111,16 @@ class LogiqueTest(EssaiCoque, unittest.TestCase):
                          ["app:d", "app:a", "app:ff"])
 
     def test_lire_roles(self):
-        """Vérifie que seuls les rôles simples de premier niveau sont lus, par leur premier mot, dans l'ordre du fichier.
+        """Vérifie que les rôles demandés sont lus par leur nom, dans l'ordre demandé, par leur premier mot, et que les
+        rôles à variantes ou absents sont sautés.
 
         Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : appeler, config/hypr/donnees/roles.lua.
         """
         texte = (ROOT / "config" / "hypr" / "donnees" / "roles.lua").read_text()
-        self.assertEqual(self.appeler("lireRoles", texte), ["kitty", "dolphin", "firefox", "wofi"])
-        self.assertEqual(self.appeler("lireRoles", ""), [])
+        self.assertEqual(self.appeler("lireRoles", texte, ["navigateur", "terminal", "fichiers"]),
+                         ["firefox", "kitty", "dolphin"])
+        self.assertEqual(self.appeler("lireRoles", texte, ["capture", "inconnu", "lanceur"]), ["wofi"])
+        self.assertEqual(self.appeler("lireRoles", "", ["terminal"]), [])
 
     def test_usage_corrompu(self):
         """Vérifie que tout relevé qui n'est pas un objet valide est ramené à vide, et les entrées invalides écartées.
@@ -316,6 +319,8 @@ ENTREES = [
     entree("firefox", "Firefox", genericName="Navigateur web", startupClass="firefox",
            actions=[{"id": "new-window", "name": "Nouvelle fenêtre", "icon": ""},
                     {"id": "new-private-window", "name": "Nouvelle fenêtre privée", "icon": ""}]),
+    # Deuxième entrée de même classe : ses fenêtres sont déjà rangées sous Firefox et ne doivent pas se répéter.
+    entree("firefox-esr", "Firefox ESR", startupClass="firefox"),
     entree("kitty", "kitty", genericName="Terminal"),
     entree("org.kde.dolphin", "Dolphin", genericName="Gestionnaire de fichiers"),
 ] + [entree(n.lower(), n) for n in ("Alpha", "Bravo", "Charlie", "Delta", "Echo")]
@@ -378,6 +383,7 @@ class SourcesTest(EssaiCoque, unittest.TestCase):
         """
         r = self.chercher("fire")
         self.assertEqual([x["cle"] for x in r[:4]], ["app:firefox", "fen:0xa1", "fen:0xa2", "fen:0xa3"])
+        self.assertEqual(len({x["cle"] for x in r}), len(r))
         self.assertEqual(r[0]["type"], "3 fenêtres")
         self.assertEqual(r[0]["principale"], {"libelle": "Amener", "genre": "amener", "cible": "0xa2", "confirmer": False})
         self.assertEqual([a["cible"] for a in r[0]["secondaires"]], ["firefox:new-window", "firefox:new-private-window"])
@@ -428,7 +434,8 @@ class SourcesTest(EssaiCoque, unittest.TestCase):
         self.assertNotIn("calc", [x["cle"] for x in self.chercher("2+3")])
 
     def test_accueil_six_medaillons_trois_puces(self):
-        """Vérifie l'accueil : l'application la plus utilisée, puis les rôles de roles.lua, puis l'ordre alphabétique,
+        """Vérifie l'accueil : l'application la plus utilisée, puis les rôles navigateur, terminal et fichiers de
+        roles.lua, puis l'ordre alphabétique,
         six médaillons ; trois puces, la commande utilisée d'abord, puis l'ordre du fichier.
 
         Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : ipc.
@@ -436,9 +443,13 @@ class SourcesTest(EssaiCoque, unittest.TestCase):
         self.ipc("injecter", json.dumps({"poids": {"app:echo": 2, "cmd:veille": 1}}))
         a = self.ipc("accueil")
         self.assertEqual([m["cle"] for m in a["medaillons"]],
-                         ["app:echo", "app:kitty", "app:org.kde.dolphin", "app:firefox", "app:alpha", "app:bravo"])
-        self.assertEqual(a["medaillons"][3]["type"], "3 fenêtres")
+                         ["app:echo", "app:firefox", "app:kitty", "app:org.kde.dolphin", "app:alpha", "app:bravo"])
+        self.assertEqual(a["medaillons"][1]["type"], "3 fenêtres")
         self.assertEqual([p["cle"] for p in a["puces"]], ["cmd:veille", "cmd:ne-pas-deranger", "cmd:theme-jour"])
+
+
+class CommandesTest(unittest.TestCase):
+    """Le fichier des commandes déclarées du lanceur, lu sans coque : ce test tourne aussi hors session Wayland."""
 
     def test_commandes_json_valide(self):
         """Vérifie que chaque commande déclarée a tous ses champs et exactement un moyen d'exécution (ipc ou commande).
