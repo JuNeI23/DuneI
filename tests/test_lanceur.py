@@ -926,6 +926,27 @@ class ClavierTest(FenetreTest):
         for motif in ("TypeError", "ReferenceError", "Error:", "WARN qml"):
             self.assertNotIn(motif, self.journal())
 
+    def test_ligne_discrete_dans_l_apercu(self):
+        """Vérifie, par de vraies touches, que la plaque de la ligne retenue vise l'accent plein et son texte le
+        sur-accent tant que le curseur est dans la liste, puis le ton discret et le texte normal quand → le fait entrer
+        dans l'aperçu, et de nouveau l'accent quand ← le ramène.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : lanceur, taper, cle, essai_ipc,
+        jusqua.
+        """
+        self.lanceur("ouvrir")
+        self.jusqua(lambda: self.etat()["ouvert"], "lanceur ouvert")
+        self.taper("fire")
+        reperes = lambda: json.loads(self.essai_ipc("reperes") or "null")
+        r = self.jusqua(reperes, "liste affichée")
+        self.assertEqual((r["pleine"], r["surAccent"]), (True, True))
+        self.cle("right")
+        r = reperes()
+        self.assertEqual((r["pleine"], r["surAccent"]), (False, False))
+        self.cle("left")
+        r = reperes()
+        self.assertEqual((r["pleine"], r["surAccent"]), (True, True))
+
     test_ouvre_sur_accueil = test_premiere_lettre_scinde = test_effacer_revient_a_l_accueil = test_aucun_resultat = None
     test_tab_entre_dans_l_apercu = test_confirmation_eteindre = test_fenetre_disparue = test_ferme_libere = None
     test_sortie_animee = None

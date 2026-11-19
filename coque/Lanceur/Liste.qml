@@ -10,7 +10,9 @@ import "lanceur.js" as Logique
 // trouvées prennent color.accentStandalone hors de la plaque (soulignées sur elle), et le type en gris à droite. Une
 // fenêtre rangée sous son application est en retrait, à plus petite icône. Le calcul se lit « expression = valeur ».
 // La plaque d'accent glisse sous la ligne retenue (sel.rang), qui reste visible (la vue défile au besoin) ; les lignes
-// entrent en cascade à chaque nouvelle liste ; un clic choisit la ligne et l'exécute.
+// entrent en cascade à chaque nouvelle liste ; un clic choisit la ligne et l'exécute. Quand le curseur du clavier est
+// dans l'aperçu (actif faux), la plaque passe au ton discret color.accentDiscret et le texte de la ligne revient à ses
+// couleurs normales, au ressort des états ; tout revient à l'accent quand le curseur revient dans la liste.
 // Entrées : resultats (Lanceur.resultats) ; rang, la ligne retenue (Lanceur.sel.rang) ; saisie (Lanceur.saisie).
 // Sorties : aucune ; le pointeur appelle Lanceur.choisir. Erreurs : aucune ; une liste vide ne montre rien.
 // Dépendances : Lanceur (cotes, icone, choisir, sel), lanceur.js (surligner, expressionLisible), Plaque, Cascade, C.Icone, C.Texte,
@@ -24,6 +26,8 @@ ListView {
     property var resultats: Lanceur.resultats
     property int rang: Lanceur.sel.rang
     property string saisie: Lanceur.saisie
+    // Vrai tant que le curseur du clavier est dans la liste (la plaque porte alors l'accent plein).
+    property bool actif: Lanceur.sel.zone === "liste"
     readonly property real ligne: Lanceur.cotes.ligne
 
     // Modèle entier : les lignes suivent le contenu sans être recréées ; elles rejouent leur entrée en cascade à
@@ -48,16 +52,20 @@ ListView {
         z: -1
         cible: liste.count > 0 ? Qt.rect(0, liste.originY + liste.rang * liste.ligne, liste.width, liste.ligne) : Qt.rect(0, 0, 0, 0)
         rayon: Theme.radius?.panel ?? 0
+        teinte: (liste.actif ? Theme.color?.accent : Theme.color?.accentDiscret) ?? "transparent"
     }
 
     // reperes — géométrie de la plaque et de la ligne retenue dans un repère commun, pour les essais.
-    // Entrée : repere, Item où mapper. Sortie : {rang, plaque, ligne, hauteur, haut, bas} : plaque et ligne, ordonnées
-    // des bords hauts (ligne vaut null si la ligne n'est pas construite) ; hauteur, celle de la plaque peinte ; haut et
-    // bas, les bords de la zone visible de la liste. Erreurs : aucune. Dépendances : itemAtIndex, mapToItem.
+    // Entrée : repere, Item où mapper. Sortie : {rang, plaque, ligne, hauteur, haut, bas, pleine, surAccent} : plaque et
+    // ligne, ordonnées des bords hauts (ligne vaut null si la ligne n'est pas construite) ; hauteur, celle de la plaque
+    // peinte ; haut et bas, les bords de la zone visible de la liste ; pleine, vrai si la teinte visée de la plaque est
+    // color.accent ; surAccent, vrai si le texte de la ligne retenue vise color.onAccent. Erreurs : aucune.
+    // Dépendances : itemAtIndex, mapToItem, Qt.colorEqual.
     function reperes(repere) {
         const l = itemAtIndex(rang), p = plaque.mapToItem(repere, 0, 0), q = plaque.mapToItem(repere, 0, plaque.height)
         return { rang, plaque: p.y, hauteur: q.y - p.y, ligne: l ? l.mapToItem(repere, 0, 0).y : null,
-                 haut: mapToItem(repere, 0, 0).y, bas: mapToItem(repere, 0, height).y }
+                 haut: mapToItem(repere, 0, 0).y, bas: mapToItem(repere, 0, height).y,
+                 pleine: Qt.colorEqual(plaque.teinte, Theme.color?.accent ?? "transparent"), surAccent: l ? l.surAccent : null }
     }
 
     // texteMarque — titre en texte riche, lettres trouvées teintées (hors plaque) ou soulignées (sur la plaque).
@@ -76,6 +84,8 @@ ListView {
         required property int index
         readonly property var modelData: liste.resultats[index] ?? ({})
         readonly property bool choisie: index === liste.rang
+        // Texte sur l'accent plein : ligne retenue, curseur dans la liste.
+        readonly property bool surAccent: choisie && liste.actif
         readonly property bool symbolique: modelData.genre === "commande" || modelData.genre === "calcul"
         readonly property real retraitIcone: (modelData.retrait ? Theme.space?.scale[5] : Theme.space?.scale[2]) ?? 0
 
@@ -86,8 +96,8 @@ ListView {
 
         Cascade { id: entree; rang: l.index }
         Connections { target: liste; function onRejouer() { entree.rejouer() } }
-        ColorSpring { id: encre; target: (l.choisie ? Theme.color?.onAccent : Theme.color?.textPrimary) ?? "transparent" }
-        ColorSpring { id: gris; target: (l.choisie ? Theme.color?.onAccent : Theme.color?.textTertiary) ?? "transparent" }
+        ColorSpring { id: encre; target: (l.surAccent ? Theme.color?.onAccent : Theme.color?.textPrimary) ?? "transparent" }
+        ColorSpring { id: gris; target: (l.surAccent ? Theme.color?.onAccent : Theme.color?.textTertiary) ?? "transparent" }
 
         IconImage {
             id: image
@@ -115,7 +125,7 @@ ListView {
             elide: Text.ElideRight
             textFormat: l.modelData.genre === "calcul" ? Text.PlainText : Text.StyledText
             text: l.modelData.genre === "calcul" ? Logique.expressionLisible(liste.saisie) + " = " + l.modelData.titre
-                : liste.texteMarque(l.modelData.titre, l.choisie)
+                : liste.texteMarque(l.modelData.titre, l.surAccent)
             moyen: true
             color: encre.value
         }
