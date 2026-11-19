@@ -29,6 +29,8 @@ Scope {
         path: memoire.chemin
         printErrors: false
         blockLoading: true
+        // L'écriture est synchrone : le fichier est complet dès le retour de noter.
+        blockWrites: true
 
         // onLoaded — lit le relevé du disque. Entrées : aucune. Sortie : usage assaini ({} si le JSON est invalide).
         // Erreurs : aucune (l'exception d'analyse est rattrapée). Dépendances : Logique.assainir.

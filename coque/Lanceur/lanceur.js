@@ -61,10 +61,10 @@ function classer(resultats, poids) {
 }
 
 // depuis — équivalent d'Object.fromEntries, absent du moteur JavaScript de QML.
-// Entrée : paires, tableau de [clé, valeur]. Sortie : l'objet correspondant. Erreurs : aucune. Dépendances : aucune.
+// Entrée : paires, tableau de [clé, valeur]. Sortie : l'objet correspondant, sans la clé « __proto__ ». Erreurs : aucune. Dépendances : aucune.
 function depuis(paires) {
     const o = {}
-    for (const [c, v] of paires) o[c] = v
+    for (const [c, v] of paires) if (c !== "__proto__") o[c] = v
     return o
 }
 
@@ -103,7 +103,7 @@ function assainir(brut) {
 function frequentes(apps, poids, roles, n) {
     const cles = new Set(apps.map(a => a.cle))
     const usage = apps.filter(a => poids[a.cle] > 0).sort((a, b) => poids[b.cle] - poids[a.cle]).map(a => a.cle)
-    const titre = apps.slice().sort((a, b) => a.titre.localeCompare(b.titre)).map(a => a.cle)
+    const titre = apps.slice().sort((a, b) => (a.titre || "").localeCompare(b.titre || "")).map(a => a.cle)
     return [...new Set([...usage, ...roles.filter(r => cles.has(r)), ...titre])].slice(0, n)
 }
 
@@ -128,8 +128,9 @@ function deplacer(sel, touche, dispo) {
         return pas && (t === "left" || t === "right") ? vers("puces", dispo.puces, sel.index + pas) : sel
     case "liste": {
         if (t === "tab") return dispo.apercu > 0 ? {zone: "apercu", rang: sel.index, index: 0} : sel
-        const i = pas && t !== "left" && t !== "right" ? borne(sel.index + pas, dispo.lignes) : sel.index
-        return dispo.lignes > 0 ? {zone: "liste", rang: i, index: i} : sel
+        if (!pas || t === "left" || t === "right" || dispo.lignes <= 0) return sel
+        const i = borne(sel.index + pas, dispo.lignes)
+        return {zone: "liste", rang: i, index: i}
     }
     case "apercu":
         if (t === "escape" || t === "shift+tab") return {zone: "liste", rang: sel.rang, index: sel.rang}

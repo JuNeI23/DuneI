@@ -143,6 +143,9 @@ class LogiqueTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(self.appeler("deplacer", {**liste, "index": 4, "rang": 4}, "down", dispo)["index"], 4)
         self.assertEqual(self.appeler("deplacer", {**liste, "index": 0, "rang": 0}, "ctrl+k", dispo)["index"], 0)
         self.assertEqual(self.appeler("deplacer", liste, "escape", dispo), liste)
+        decalee = {"zone": "liste", "rang": 1, "index": 3}   # rang et index distincts : rien ne doit être recalé
+        for touche in ("escape", "left", "right", "inconnue"):
+            self.assertEqual(self.appeler("deplacer", decalee, touche, dispo), decalee)
         ap = self.appeler("deplacer", liste, "tab", dispo)
         self.assertEqual(ap, {"zone": "apercu", "rang": 2, "index": 0})
         ap = self.appeler("deplacer", ap, "right", dispo)
