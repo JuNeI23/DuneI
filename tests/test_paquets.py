@@ -29,7 +29,7 @@ class LireTest(unittest.TestCase):
         self.assertEqual(err, [])
         self.assertEqual(modele["depots"], ["core", "extra"])
         self.assertIn("mesa", modele["groupes"]["session"])
-        self.assertEqual(modele["provisoire"]["wofi"], "L2-16")
+        self.assertEqual(modele["provisoire"]["hyprshot"], "L2-30")
         self.assertEqual(modele["materiel"]["graphique"]["amd"], ["vulkan-radeon"])
         self.assertEqual(modele["materiel"]["graphique"]["intel"], ["vulkan-intel", "intel-media-driver"])
         self.assertEqual(modele["materiel"]["graphique"]["nvidia"], [])
@@ -173,7 +173,7 @@ class VoulusTest(unittest.TestCase):
 
     def test_caladan_voulus(self):
         v, avert = paquets.voulus(self.m, "caladan", {"amd"}, {"amd"})
-        self.assertTrue({"amd-ucode", "vulkan-radeon", "mesa", "sof-firmware", "wofi"} <= v)
+        self.assertTrue({"amd-ucode", "vulkan-radeon", "mesa", "sof-firmware", "hyprshot"} <= v)
         self.assertFalse({"vulkan-intel", "intel-ucode"} & v)
         self.assertEqual(avert, [])
 
@@ -368,7 +368,7 @@ class MainTest(unittest.TestCase):
         self.assertIn("sudo pacman -S --needed " + " ".join(sorted(self.veut)), journal)
         self.assertNotIn("-Rns", journal)
         self.assertIn("paquets provisoires : ", out)
-        self.assertIn("wofi → L2-16", out)
+        self.assertIn("hyprshot → L2-30", out)
 
     def test_marque_les_installes_comme_explicites(self):
         env = self.installe(FAKE_QQE="")

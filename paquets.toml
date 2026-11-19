@@ -85,7 +85,6 @@ outils = [
 
 # Paquet = élément du backlog qui le remplacera.
 [provisoire]
-wofi = "L2-16"                      # lanceur
 hyprshot = "L2-30"                  # capture d'écran
 network-manager-applet = "recours nm-connection-editor"   # éditeur de connexions de secours ; son applet est retirée (L2-11)
 dolphin = "L3-12"                   # gestionnaire de fichiers

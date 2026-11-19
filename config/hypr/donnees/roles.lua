@@ -6,7 +6,7 @@ return {
     terminal   = "kitty -1",  -- instance unique : chaque fenêtre s'ouvre dans le même processus (L1-18)
     fichiers   = "dolphin",
     navigateur = "firefox",
-    lanceur    = "wofi --show drun",  -- remplacé par le lanceur DuneI (L2-16)
+    lanceur    = "qs ipc -c dunei call lanceur basculer",  -- lanceur DuneI de la coque (L2-16)
     capture    = {                    -- remplacé par la capture DuneI (L2-30)
         zone    = "hyprshot -m region -o ~/Images/Captures",
         fenetre = "hyprshot -m window -o ~/Images/Captures",

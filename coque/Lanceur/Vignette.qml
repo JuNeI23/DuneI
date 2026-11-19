@@ -32,6 +32,8 @@ Item {
     ]
     Ressort { id: apparition; transition: "reveal"; nature: "fondu"; cible: vue.hasContent ? 1 : 0 }
     Ressort { id: survol; transition: "state"; cible: pointeur.hovered ? 1 : 0 }
+    // Fondu de l'anneau du survol : le ressort de déplacement ci-dessus ne porte pas d'opacité.
+    Ressort { id: anneau; transition: "state"; nature: "fondu"; cible: pointeur.hovered ? 1 : 0 }
 
     Rectangle {
         id: fond
@@ -84,7 +86,7 @@ Item {
         color: "transparent"
         border.width: 2
         border.color: Theme.color?.accentStandalone ?? "transparent"
-        opacity: survol.value
+        opacity: anneau.value
     }
 
     HoverHandler { id: pointeur; cursorShape: Qt.PointingHandCursor }

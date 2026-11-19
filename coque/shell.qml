@@ -5,6 +5,7 @@ import Quickshell
 import "Barre"
 import "Fond"
 import "Galerie"
+import "Lanceur"
 import "Notifications"
 import "Parametres"
 import "Presquile"
@@ -24,9 +25,10 @@ import "Reseau"
 // ou « Réglages réseau… » du popover) ; la galerie dans la
 // presqu'île de l'écran actif à la demande (IPC « galerie basculer », SUPER + W) ; la jauge du son à chaque
 // annonce d'EtatAudio (Annonceur) ; l'alerte de batterie à chaque palier franchi d'EtatEnergie (AnnonceurAlerte), qui
-// attend la fermeture de la galerie de l'ouvreuse sur son écran.
+// attend la fermeture de la galerie de l'ouvreuse sur son écran ; le lanceur (IPC « lanceur basculer », SUPER + R),
+// singleton du module Lanceur réveillé au démarrage.
 // Erreurs : tokens absents ou invalides → fond, barre et presqu'île transparents, erreur de Theme dans le journal de Quickshell.
-// Dépendances : quickshell ≥ 0.3, modules Barre (Barre), Fond (Fond), Galerie (Ouvreuse), Notifications (Centre,
+// Dépendances : quickshell ≥ 0.3, modules Barre (Barre), Fond (Fond), Galerie (Ouvreuse), Lanceur (Lanceur), Notifications (Centre,
 // FenetreNotifications, FenetrePanneau, MemoireAttente), Parametres (FenetreParametres), Presquile (Presquile, Annonceur, AnnonceurAlerte) et Reseau
 // (NotificationsReseau). Le Centre possède org.freedesktop.Notifications : aucun autre démon (dunst) ne doit le tenir.
 // Rendu du texte : la directive Env force l'anticrénelage en niveaux de gris, comme dans le banc du verre.
@@ -54,6 +56,8 @@ ShellRoot {
     Annonceur { id: annonceur }
     AnnonceurAlerte { id: alerte; galerie: ouvreuse.galerie }
     FenetreParametres {}
+    // Le singleton Lanceur ne naît qu'au premier accès : cette référence publie son IPC « lanceur » dès le démarrage.
+    Component.onCompleted: Lanceur.fermer()
     NotificationsReseau {}
     // Avant le Centre : la mémoire de l'attente est rechargée avant que le serveur ne réémette ses notifications.
     MemoireAttente { attente: centre.attente }

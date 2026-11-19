@@ -113,8 +113,8 @@ Item {
                 opacity: 1 - bascule.value
                 visible: opacity > 0
                 transform: [
-                    Translate { y: -(Theme.space?.scale[0] ?? 0) * bascule.value },
-                    Scale { origin.x: cotes.accueil.width / 2; xScale: 1 - 0.04 * bascule.value; yScale: xScale }
+                    Translate { y: -(Theme.space?.scale[0] ?? 0) * glisse.value },
+                    Scale { origin.x: cotes.accueil.width / 2; xScale: 1 - 0.04 * glisse.value; yScale: xScale }
                 ]
             }
 
@@ -123,7 +123,7 @@ Item {
                 anchors.fill: parent
                 opacity: bascule.value
                 visible: opacity > 0
-                transform: Translate { y: (1 - bascule.value) * (Theme.space?.scale[1] ?? 0) }
+                transform: Translate { y: (1 - glisse.value) * (Theme.space?.scale[1] ?? 0) }
 
                 C.Texte {
                     id: tete
@@ -155,6 +155,8 @@ Item {
             }
 
             Ressort { id: bascule; transition: "reveal"; nature: "fondu"; cible: cadre.scinde ? 1 : 0 }
+            // Même mouvement que la bascule, réservé au déplacement et à l'échelle : le fondu ne porte que l'opacité.
+            Ressort { id: glisse; transition: "reveal"; cible: cadre.scinde ? 1 : 0 }
         }
     }
 }

@@ -119,8 +119,17 @@ class LogiqueTest(EssaiCoque, unittest.TestCase):
         texte = (ROOT / "config" / "hypr" / "donnees" / "roles.lua").read_text()
         self.assertEqual(self.appeler("lireRoles", texte, ["navigateur", "terminal", "fichiers"]),
                          ["firefox", "kitty", "dolphin"])
-        self.assertEqual(self.appeler("lireRoles", texte, ["capture", "inconnu", "lanceur"]), ["wofi"])
+        self.assertEqual(self.appeler("lireRoles", texte, ["capture", "inconnu", "lanceur"]), ["qs"])
         self.assertEqual(self.appeler("lireRoles", "", ["terminal"]), [])
+
+    def test_role_lanceur(self):
+        """Vérifie que le rôle « lanceur » de roles.lua appelle l'IPC de la coque, et non plus wofi.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : config/hypr/donnees/roles.lua.
+        """
+        texte = (ROOT / "config" / "hypr" / "donnees" / "roles.lua").read_text()
+        self.assertRegex(texte, r'lanceur\s*=\s*"qs ipc -c dunei call lanceur basculer"')
+        self.assertNotIn("wofi", texte)
 
     def test_usage_corrompu(self):
         """Vérifie que tout relevé qui n'est pas un objet valide est ramené à vide, et les entrées invalides écartées.
@@ -617,6 +626,23 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
         largeurs = json.loads(self.essai_ipc("largeurs"))
         self.assertGreaterEqual(len([l for l in largeurs if 720 < l < 880]), 3, largeurs)
 
+    def test_aucun_resultat(self):
+        """Vérifie qu'une saisie qui ne trouve rien laisse l'aperçu vide, qu'Entrée n'exécute rien et que le lanceur
+        reste ouvert.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : ouvrir, taper, touche, etat,
+        jusqua, journal.
+        """
+        self.ouvrir()
+        self.taper("zzzz")
+        e = self.jusqua(lambda: (e := self.etat())["saisie"] == "zzzz" and e, "saisie prise en compte")
+        self.assertEqual((e["cles"], e["apercu"], e["principal"]), ([], [], ""))
+        self.touche("return")
+        time.sleep(0.5)
+        e = self.etat()
+        self.assertEqual((e["ouvert"], e["saisie"]), (True, "zzzz"))
+        self.assertNotIn("essai : exécuté", self.journal())
+
     def test_effacer_revient_a_l_accueil(self):
         """Vérifie qu'Échap vide d'abord la saisie (retour à l'accueil, lanceur ouvert), puis ferme sur un champ vide.
 
@@ -694,7 +720,7 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
         self.taper("fire")
         cles = self.etat()["cles"]
         self.assertEqual(cles[:4], ["app:firefox", "fen:0xa1", "fen:0xa2", "fen:0xa3"])
-        self.assertEqual(self.etat()["vignettes"], 3)
+        self.jusqua(lambda: self.etat()["vignettes"] == 3, "trois vignettes affichées")
         self.touche(*["down"] * (len(cles) - 1))
         self.assertEqual(self.etat()["sel"]["index"], len(cles) - 1)
         self.injecter(fenetres=[f for f in FENETRES if f["adresse"] != "0xa3"])
@@ -771,7 +797,7 @@ class ClavierTest(FenetreTest):
         self.cle("escape")
         self.assertFalse(self.etat()["ouvert"])
 
-    test_ouvre_sur_accueil = test_premiere_lettre_scinde = test_effacer_revient_a_l_accueil = None
+    test_ouvre_sur_accueil = test_premiere_lettre_scinde = test_effacer_revient_a_l_accueil = test_aucun_resultat = None
     test_tab_entre_dans_l_apercu = test_confirmation_eteindre = test_fenetre_disparue = test_ferme_libere = None
 
 
