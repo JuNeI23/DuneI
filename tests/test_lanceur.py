@@ -7,7 +7,10 @@ Dépendances : qs (Quickshell ≥ 0.3), tests.test_coque_theme (EssaiCoque).
 """
 import json
 import os
+import shutil
 import subprocess
+import tempfile
+import time
 import unittest
 
 from tests.test_coque_theme import DELAI, QS, ROOT, EssaiCoque
@@ -153,6 +156,34 @@ class LogiqueTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(self.appeler("deplacer", ap, "escape", dispo), liste)
         self.assertEqual(self.appeler("deplacer", ap, "shift+tab", dispo), liste)
 
+    def test_aenvoyer(self):
+        """Vérifie qu'une saisie n'est envoyée à qalc que si elle contient un chiffre.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : appeler.
+        """
+        for s, attendu in (("12*7,5", True), ("kitty", False), ("fire", False), ("10 km en miles", True)):
+            self.assertEqual(self.appeler("aEnvoyer", s), attendu, s)
+
+    def test_traduire(self):
+        """Vérifie la traduction française : « en » et « vers » deviennent to, pourcentage, cible forcée sauf durée.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : appeler.
+        """
+        self.assertEqual(self.appeler("traduire", "10 km en miles"), "10 km to -miles")
+        self.assertEqual(self.appeler("traduire", "30 °C vers °F"), "30 °C to -°F")
+        self.assertEqual(self.appeler("traduire", "3 h 20 min en min"), "3 h 20 min to min")
+        self.assertEqual(self.appeler("traduire", "20 % de 80"), "20% * 80")
+        self.assertEqual(self.appeler("traduire", "1,5 + 2,25"), "1,5 + 2,25")
+
+    def test_lire(self):
+        """Vérifie qu'une sortie vide, en erreur ou qui répète l'expression est rejetée, et qu'un résultat est gardé.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : appeler.
+        """
+        self.assertEqual(self.appeler("lire", "1 / 0", "1/0"), "")
+        self.assertEqual(self.appeler("lire", "error: x", "x"), "")
+        self.assertEqual(self.appeler("lire", "6,213711922 mi", "10 km to -miles"), "6,213711922 mi")
+
     def test_memoire_reecrit_un_fichier_corrompu(self):
         """Vérifie qu'un lanceur.json corrompu est réécrit sain au premier lancement noté.
 
@@ -168,6 +199,100 @@ class LogiqueTest(EssaiCoque, unittest.TestCase):
         usage = json.loads(fichier.read_text())
         self.assertEqual(list(usage), ["app:ff"])
         self.assertEqual(usage["app:ff"]["n"], 1)
+
+
+@unittest.skipUnless(os.environ.get("WAYLAND_DISPLAY") and QS, "session Wayland et Quickshell requis")
+class CalculTest(EssaiCoque, unittest.TestCase):
+    """Le calcul du lanceur (Calcul.qml), éprouvé sur une vraie coque d'essai sans fenêtre."""
+
+    essai = ROOT / "coque" / "Lanceur" / "essai" / "calcul"
+    teintes = ()
+
+    def demarrer(self, path: str | None = None) -> None:
+        """Lance la coque d'essai du calcul et attend qu'elle soit prête.
+
+        Entrée : path, valeur de PATH pour la coque (celle du test si None). Sortie : aucune ; self.proc tient la coque.
+        Erreurs : échec du test si « essai : prêt » n'apparaît pas. Dépendances : lancer, attendre.
+        """
+        if path is not None:
+            self.environnement = {"PATH": path}
+        self.lancer(self.dir)
+        self.attendre("essai : prêt")
+
+    def etat(self) -> dict:
+        """Lit l'état du calcul par l'IPC de la coque d'essai.
+
+        Entrées : aucune. Sortie : dictionnaire {expression, valeur, disponible}. Erreurs : CalledProcessError si
+        l'appel IPC échoue. Dépendances : qs, lancer.
+        """
+        return json.loads(subprocess.run([QS, "ipc", "--pid", str(self.proc.pid), "call", "essai", "etat"], check=True,
+                                         capture_output=True, text=True, timeout=DELAI).stdout.strip())
+
+    def demander(self, saisie: str) -> None:
+        """Soumet une saisie au calcul par l'IPC.
+
+        Entrée : saisie. Sortie : aucune. Erreurs : CalledProcessError si l'appel IPC échoue. Dépendances : qs, lancer.
+        """
+        subprocess.run([QS, "ipc", "--pid", str(self.proc.pid), "call", "essai", "demander", saisie], check=True,
+                       capture_output=True, timeout=DELAI)
+
+    def valeur_apres(self, saisie: str) -> str:
+        """Demande une saisie et rend la valeur publiée quand elle n'est plus vide.
+
+        Entrée : saisie. Sortie : la valeur. Erreurs : échec du test si rien n'est publié dans le délai.
+        Dépendances : demander, etat.
+        """
+        self.demander(saisie)
+        fin = time.monotonic() + DELAI
+        while time.monotonic() < fin:
+            valeur = self.etat()["valeur"]
+            if valeur:
+                return valeur
+            time.sleep(0.05)
+        self.fail(f"aucune valeur pour {saisie!r} :\n{self.journal()}")
+
+    @unittest.skipUnless(shutil.which("qalc"), "qalc requis")
+    def test_conversions_reelles(self):
+        """Vérifie un calcul, une conversion forcée en une unité et une virgule décimale, par un vrai qalc.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : demarrer, valeur_apres.
+        """
+        self.demarrer()
+        self.assertEqual(self.valeur_apres("12*7,5"), "90")
+        valeur = self.valeur_apres("10 km en miles")
+        self.assertTrue(valeur.startswith("6,21") and valeur.endswith("mi"), valeur)
+        self.assertEqual(self.valeur_apres("1,5 + 2,25"), "3,75")
+
+    @unittest.skipUnless(shutil.which("qalc"), "qalc requis")
+    def test_reponse_perimee_ignoree(self):
+        """Vérifie que la réponse d'une saisie remplacée aussitôt n'est jamais publiée.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : demarrer, demander, etat.
+        """
+        self.demarrer()
+        self.demander("2^10")
+        self.demander("2^3")
+        fin = time.monotonic() + DELAI
+        vues = set()
+        while time.monotonic() < fin and "8" not in vues:
+            vues.add(self.etat()["valeur"])
+            time.sleep(0.02)
+        time.sleep(0.5)
+        vues.add(self.etat()["valeur"])
+        self.assertEqual(vues - {""}, {"8"})
+
+    def test_qalc_absent(self):
+        """Vérifie que sans qalc le calcul se déclare indisponible, sans relance ni erreur hors l'avertissement unique.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : demarrer, demander, etat.
+        """
+        vide = tempfile.mkdtemp(dir=self.tmp.name)
+        self.demarrer(vide)
+        self.demander("12*7,5")
+        time.sleep(0.5)
+        self.assertEqual(self.etat(), {"expression": "", "valeur": "", "disponible": False})
+        self.assertLessEqual(self.journal().count("qalc"), 1, self.journal())
+        self.assertNotIn("ERROR", self.journal())
 
 
 if __name__ == "__main__":
