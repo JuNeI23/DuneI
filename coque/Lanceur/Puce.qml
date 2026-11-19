@@ -4,11 +4,14 @@ import "../Composants"
 
 // Puce — bouton en pilule du lanceur : suggestion de l'accueil ou bouton d'action de l'aperçu.
 // Rôle : un bouton neutre (fond controlRaised au repos, reflet des médaillons, filet material.glassLine) portant une
-// icône symbolique facultative, un libellé et, pour l'action principale, le rappel ↵. Choisie, la puce s'efface sur
+// icône symbolique facultative, un libellé et un rappel de touche (« ↵ » par défaut, « Ctrl ↵ » pour Nouvelle fenêtre),
+// qui apparaît et s'efface en fondu au ressort des états ; sa place est gardée si reserveRappel est vrai, pour que la
+// largeur de la puce ne saute pas quand le rappel passe d'un bouton à l'autre. Choisie, la puce s'efface sur
 // la plaque d'accent qui passe dessous : son fond s'éteint en fondu et son texte rejoint color.onAccent au ressort des
 // états. Un clic l'active.
-// Entrées : texte, libellé ; icone, nom freedesktop symbolique, vide par défaut ; rappel, vrai pour montrer « ↵ » ;
-// choisie, vrai quand la plaque est dessous. Sorties : activee(), émis au clic. Erreurs : aucune ; avant le
+// Entrées : texte, libellé ; icone, nom freedesktop symbolique, vide par défaut ; rappel, vrai pour montrer le rappel ;
+// texteRappel, « ↵ » par défaut ; reserveRappel, vrai pour garder la place du rappel caché ; choisie, vrai quand la
+// plaque est dessous. Sorties : activee(), émis au clic. Erreurs : aucune ; avant le
 // chargement des tokens, la puce est nulle et transparente.
 // Dépendances : Icone, Texte, Ressort, ColorSpring, Theme (density, space, typo, icons, color, stateColors, material).
 // Cotes : hauteur density.controlHeight (28, maquette 30), retrait space.scale[2] (12, maquette 14), écart
@@ -20,12 +23,15 @@ Item {
     property string texte
     property string icone
     property bool rappel: false
+    property string texteRappel: "↵"
+    property bool reserveRappel: false
     property bool choisie: false
     signal activee()
 
     implicitHeight: Theme.density?.controlHeight ?? 0
     implicitWidth: rangee.implicitWidth + 2 * (Theme.space?.scale[2] ?? 0)
 
+    Ressort { id: montreRappel; transition: "state"; nature: "fondu"; cible: puce.rappel ? 1 : 0 }
     Ressort { id: efface; transition: "state"; nature: "fondu"; cible: puce.choisie ? 1 : 0 }
     // Rappel ↵ : texte secondaire sur une puce neutre, sur-accent sur la plaque (aucune opacité sur une couleur de rôle).
     ColorSpring { id: rappelEncre; target: (puce.choisie ? Theme.color?.onAccent : Theme.color?.textSecondary) ?? "transparent" }
@@ -70,8 +76,9 @@ Item {
         }
         Texte {
             anchors.verticalCenter: parent.verticalCenter
-            visible: puce.rappel
-            text: "↵"
+            visible: puce.rappel || puce.reserveRappel
+            opacity: montreRappel.value
+            text: puce.texteRappel
             echelon: 0
             color: rappelEncre.value
         }

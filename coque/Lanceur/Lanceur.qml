@@ -14,14 +14,14 @@ import "../Applications/applications.js" as Apps
 // changement de la saisie, du calcul, des états des commandes, des fenêtres ou du relevé d'usage (liaisons de
 // accueil et resultats), et exécute l'action choisie avant de se fermer. C'est une attention du registre Overlays
 // (famille « attention ») : l'ouvrir ferme l'attention déjà ouverte, et une autre qui s'ouvre le ferme. Sa fenêtre,
-// FenetreLanceur, n'existe que pendant l'ouverture (LazyLoader) : fermé, le lanceur ne garde en mémoire que son relevé
-// d'usage. Le clavier est traité ici, par touche(), qu'appellent la fenêtre et l'IPC des essais : un seul chemin.
+// FenetreLanceur, n'existe que pendant l'ouverture et l'animation de sortie (LazyLoader, present) : fermé, le lanceur ne
+// garde en mémoire que son relevé d'usage. Le clavier est traité ici, par touche(), qu'appellent la fenêtre et l'IPC des essais : un seul chemin.
 // Entrées : ouvert ; saisie ; clavierExclusif, vrai par défaut, que la fenêtre applique (une coque d'essai le met à
 //           faux pour ne jamais prendre le clavier de Nicolas) ; executeur, null par défaut : une fonction qui reçoit
 //           l'action à la place de son exécution réelle (coques d'essai) ; fenetree, vrai par défaut : faux,
 //           aucune fenêtre n'est construite (coque d'essai hors écran, qui pose elle-même un CadreLanceur).
 //           IPC « lanceur » : basculer, ouvrir, fermer, etat, taper, touche.
-// Sorties : vue (« accueil » ou « scission »), accueil ({medaillons, puces}), resultats (classés), sel ({zone, rang,
+// Sorties : present (ouvert, ou fenêtre encore en sortie), sortant, vue (« accueil » ou « scission »), accueil ({medaillons, puces}), resultats (classés), sel ({zone, rang,
 //           index}, forme de lanceur.js deplacer), choisi (le résultat de la ligne retenue), elements (ceux de son
 //           aperçu), confirmation, libellePrincipal, ecran (figé à l'ouverture), fenetre (la FenetreLanceur ouverte,
 //           ou null), cotes (mesures de la maquette v3 rapportées aux jetons), famille.
@@ -41,14 +41,21 @@ Singleton {
     property bool clavierExclusif: true
     property var executeur: null
     property bool fenetree: true
+    // Vrai entre la fermeture et la fin de l'animation de sortie de la fenêtre ; la fenêtre reste chargée jusque-là.
+    property bool sortant: false
+    readonly property bool present: ouvert || sortant
     readonly property alias sources: sources
     readonly property var fenetre: chargeur.item?.fenetre ?? null
 
     readonly property string vue: saisie === "" ? "accueil" : "scission"
-    readonly property var accueil: ouvert ? sources.accueil() : ({ medaillons: [], puces: [] })
-    readonly property var resultats: ouvert && saisie !== "" ? Logique.classer(Logique.filtrer(sources.chercher(saisie)), sources.poids) : []
+    readonly property var accueil: present ? sources.accueil() : ({ medaillons: [], puces: [] })
+    readonly property var resultats: present && saisie !== "" ? Logique.classer(Logique.filtrer(sources.chercher(saisie)), sources.poids) : []
     readonly property var choisi: sel.zone === "liste" || sel.zone === "apercu" ? resultats[sel.rang] : undefined
     readonly property var elements: Logique.elementsApercu(choisi)
+
+    // boutons — actions des boutons de l'aperçu de la ligne retenue. Entrées : aucune. Sortie : tableau d'actions.
+    // Erreurs : aucune. Dépendances : elements.
+    function boutons() { return elements.filter(e => e.genre === "bouton").map(e => e.action) }
     readonly property string libellePrincipal: confirmation ? "Confirmer" : choisi?.principale?.libelle ?? ""
 
     // Mesures de la maquette v3, rapportées aux jetons les plus proches ; celles qu'aucun jeton ne porte (tailles du
@@ -74,6 +81,15 @@ Singleton {
     // fermer — ferme le lanceur. Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : ouvert.
     function fermer() { ouvert = false }
 
+    // sortieFinie — appelée par la fenêtre quand son animation de sortie est posée : la fenêtre est déchargée et la
+    // saisie vidée, pour que la prochaine fenêtre naisse sur l'accueil. Entrées : aucune. Sortie : aucune ; sans effet
+    // si le lanceur a été rouvert entre-temps. Erreurs : aucune. Dépendances : ouvert, sortant, saisie.
+    function sortieFinie() {
+        if (ouvert || !sortant) return
+        sortant = false
+        saisie = ""
+    }
+
     // icone — source d'une icône en couleur (application, fenêtre, action de bureau).
     // Entrée : nom, nom freedesktop ou chemin absolu. Sortie : url de l'image, l'icône d'exécutable du thème à défaut, « » sans nom.
     // Erreurs : aucune. Dépendances : Quickshell.iconPath.
@@ -85,11 +101,16 @@ Singleton {
     // bureau, historique} ou undefined si elle a disparu. Erreurs : aucune. Dépendances : sources.fenetres.
     function fenetreDe(adresse) { return sources.fenetres.find(f => f.adresse === adresse) }
 
+    // compter — nombre d'éléments de l'aperçu d'un genre. Entrées : liste, éléments (Logique.elementsApercu) ; genre,
+    // « bouton » ou « vignette ». Sortie : entier. Erreurs : aucune. Dépendances : aucune.
+    function compter(liste, genre) { return liste.filter(e => e.genre === genre).length }
+
     // dispo — nombre d'éléments de chaque zone, pour Logique.deplacer. Entrées : aucune. Sortie : {medaillons, puces,
-    // lignes, apercu}. Erreurs : aucune. Dépendances : accueil, resultats, elements.
+    // lignes, vignettes, boutons}, ces deux derniers pour l'aperçu de la ligne retenue. Erreurs : aucune.
+    // Dépendances : accueil, resultats, elements, compter.
     function dispo() {
         return { medaillons: accueil.medaillons.length, puces: accueil.puces.length, lignes: resultats.length,
-            apercu: elements.length }
+            vignettes: compter(elements, "vignette"), boutons: compter(elements, "bouton") }
     }
 
     // borner — garde la sélection dans ce qui existe quand l'accueil ou les résultats changent (fenêtre fermée,
@@ -100,17 +121,18 @@ Singleton {
         const z = sel.zone, n = z === "medaillons" ? accueil.medaillons.length : z === "puces" ? accueil.puces.length
             : resultats.length
         const i = Math.max(0, Math.min(n - 1, z === "apercu" ? sel.rang : sel.index))
-        if (z === "apercu" && (i !== sel.rang || sel.index >= Logique.elementsApercu(resultats[i]).length))
+        if (z === "apercu" && (i !== sel.rang || !Logique.elementApercu(Logique.elementsApercu(resultats[i]), sel)))
             sel = { zone: "liste", rang: i, index: i }
         else if (z !== "apercu" && i !== sel.index) sel = { zone: z, rang: z === "liste" ? i : sel.rang, index: i }
     }
 
-    // touche — traite une touche du lanceur. Entrée : nom, « escape », « return », « backspace », « up », « down »,
-    // « left », « right », « tab », « shift+tab », « ctrl+j » ou « ctrl+k ». Sortie : vrai si la touche est prise
-    // (← et → sont laissées au champ dans la liste). Échap annule une confirmation, puis ramène l'aperçu à la liste,
-    // sinon vide la saisie, sinon ferme ; toute touche de déplacement annule aussi une confirmation en attente.
-    // Erreurs : aucune.
-    // Dépendances : Logique.deplacer, dispo, entree, fermer.
+    // touche — traite une touche du lanceur. Entrée : nom, « escape », « return », « ctrl+return », « backspace »,
+    // « up », « down », « left », « right », « tab », « shift+tab », « ctrl+j » ou « ctrl+k ». Sortie : vrai si la
+    // touche est prise (← est laissée au champ dans la liste ; → y entre dans l'aperçu, comme Tab). Échap annule une
+    // confirmation, puis ramène l'aperçu à la liste, sinon vide la saisie, sinon ferme ; Ctrl + Entrée lance une
+    // nouvelle instance de l'application retenue dans la liste ; toute touche de déplacement annule aussi une
+    // confirmation en attente. Erreurs : aucune.
+    // Dépendances : Logique.deplacer, dispo, entree, nouvelleInstance, fermer.
     function touche(nom) {
         if (nom === "escape") {
             confirmation = false
@@ -120,9 +142,10 @@ Singleton {
             return true
         }
         if (nom === "return") { entree(); return true }
+        if (nom === "ctrl+return") { nouvelleInstance(); return true }
         if (nom === "backspace") { saisie = saisie.slice(0, -1); return true }
         if (!["up", "down", "left", "right", "tab", "shift+tab", "ctrl+j", "ctrl+k"].includes(nom)) return false
-        if ((nom === "left" || nom === "right") && sel.zone === "liste") return false
+        if (nom === "left" && sel.zone === "liste") return false
         confirmation = false
         sel = Logique.deplacer(sel, nom, dispo())
         return true
@@ -134,7 +157,7 @@ Singleton {
     function choix() {
         const z = sel.zone
         const r = z === "medaillons" ? accueil.medaillons[sel.index] : z === "puces" ? accueil.puces[sel.index] : choisi
-        const e = z === "apercu" ? elements[sel.index] : null
+        const e = z === "apercu" ? Logique.elementApercu(elements, sel) : null
         if (!r || (z === "apercu" && !e)) return null
         return { resultat: r, action: e ? e.action : r.principale, cle: e?.genre === "vignette" ? "fen:" + e.adresse : r.cle }
     }
@@ -148,26 +171,37 @@ Singleton {
         executer(c.action, c.cle)
     }
 
-    // choisir — sélectionne un élément au pointeur, puis l'exécute. Entrées : zone, index (rang de la liste pour
-    // « apercu », qui garde sa ligne). Sortie : aucune. Erreurs : aucune. Dépendances : sel, entree.
-    function choisir(zone, index) {
-        if (zone !== sel.zone || index !== sel.index) confirmation = false
-        sel = { zone, rang: zone === "liste" ? index : sel.rang, index }
+    // nouvelleInstance — Ctrl + Entrée : lance une nouvelle instance de l'application de la ligne retenue (qu'elle ait
+    // ou non des fenêtres), par le même chemin que « Nouvelle fenêtre », puis ferme. Entrées : aucune. Sortie : aucune.
+    // Erreurs : aucune ; hors d'une ligne d'application de la liste, rien. Dépendances : sel, choisi, executer.
+    function nouvelleInstance() {
+        if (sel.zone === "liste" && choisi?.genre === "application")
+            executer({ libelle: "Nouvelle fenêtre", genre: "nouvelle", cible: choisi.cle.slice(4), confirmer: false }, choisi.cle)
+    }
+
+    // choisir — sélectionne un élément au pointeur, puis l'exécute. Entrées : zone, index (dans la rangée pour
+    // « apercu », qui garde sa ligne) ; rangee, « boutons » ou « vignettes » pour l'aperçu. Sortie : aucune.
+    // Erreurs : aucune. Dépendances : sel, entree.
+    function choisir(zone, index, rangee) {
+        if (zone !== sel.zone || index !== sel.index || rangee !== sel.rangee) confirmation = false
+        sel = zone === "apercu" ? { zone, rang: sel.rang, index, rangee } : { zone, rang: zone === "liste" ? index : sel.rang, index }
         entree()
     }
 
     // executer — exécute une action, note l'usage et ferme le lanceur. Le texte copié l'est avant la fermeture : sous
     // Wayland, le presse-papiers n'est écrit que depuis une fenêtre qui a le focus.
-    // Entrées : action, {libelle, genre (« amener », « lancer », « action », « commande », « copier »), cible} ; cle,
+    // Entrées : action, {libelle, genre (« amener », « lancer », « nouvelle », « action », « commande », « copier »),
+    // cible} ; « nouvelle » lance toujours une nouvelle instance de l'entrée, sans amener ; cle,
     // la clé notée au relevé d'usage (facultative). Sortie : aucune. Erreurs : aucune ; une commande inconnue ne lance
     // rien. Dépendances : memoire, executeur, Hyprland.dispatch, Apps.commandeFocus, Applications (amenerOuLancer,
-    // lancerAction), sources (entrees, commande, ipc), Quickshell (execDetached, clipboardText).
+    // lancerAction), Apps.commandeLancement, sources (entrees, commande, ipc), Quickshell (execDetached, clipboardText).
     function executer(action, cle) {
         if (cle) memoire.noter(cle)
         if (executeur) executeur(action)
         else if (action.genre === "amener") Hyprland.dispatch(Apps.commandeFocus(action.cible))
         else if (action.genre === "lancer")
             Applications.amenerOuLancer(Array.from(sources.entrees).find(e => e.id === action.cible) ?? { id: action.cible })
+        else if (action.genre === "nouvelle") Quickshell.execDetached(Apps.commandeLancement({ id: action.cible }))
         else if (action.genre === "action") Applications.lancerAction(action.cible)
         else if (action.genre === "copier") Quickshell.clipboardText = action.cible
         else if (action.genre === "commande") {
@@ -178,20 +212,24 @@ Singleton {
         ouvert = false
     }
 
-    // onOuvertChanged — à l'ouverture, fige l'écran, repart d'une saisie vide sur l'accueil, relit les états des
-    // commandes et s'inscrit au registre des attentions ; à la fermeture, vide la saisie (la prochaine fenêtre naît
-    // sur l'accueil, sans passer par la scission) et s'en retire. Entrées : aucune. Sortie :
-    // aucune. Erreurs : aucune. Dépendances : ecranFocalise, sources.rafraichir, Overlays.
+    // onOuvertChanged — à l'ouverture, fige l'écran (sauf si la fenêtre, encore en sortie, est reprise sur le sien),
+    // repart d'une saisie vide sur l'accueil, relit les états des commandes et s'inscrit au registre des attentions ;
+    // à la fermeture, s'en retire et laisse la fenêtre jouer sa sortie (sortant) : la saisie n'est vidée qu'à la fin
+    // de celle-ci (sortieFinie), sans quoi le cadre repasserait à l'accueil en s'effaçant ; sans fenêtre (fenetree
+    // faux), la saisie est vidée aussitôt. Entrées : aucune. Sortie : aucune. Erreurs : aucune.
+    // Dépendances : ecranFocalise, sources.rafraichir, Overlays, chargeur.
     onOuvertChanged: {
         if (ouvert) {
-            ecran = ecranFocalise
+            if (!sortant) ecran = ecranFocalise
+            sortant = false
             saisie = ""
             sel = { zone: "medaillons", rang: 0, index: 0 }
             confirmation = false
             sources.rafraichir()
             Overlays.ouvrir(lanceur)
         } else {
-            saisie = ""
+            sortant = fenetre !== null
+            if (!sortant) saisie = ""
             Overlays.fermer(lanceur)
         }
     }
@@ -226,7 +264,7 @@ Singleton {
     // Si la création échoue, l'échec est journalisé et le lanceur se referme.
     LazyLoader {
         id: chargeur
-        active: lanceur.ouvert && lanceur.fenetree
+        active: lanceur.present && lanceur.fenetree
         component: Component {
             QtObject {
                 id: porteur
@@ -258,7 +296,9 @@ Singleton {
 
         // etat — état du lanceur en JSON : ouvert, saisie, vue, sel, cles (des résultats), medaillons et puces (clés
         // de l'accueil), apercu (genres de ses éléments), principal (libellé du bouton principal), confirmation,
-        // fenetre (vrai si elle existe), largeur et hauteur du cadre, vignettes (affichées dans l'aperçu).
+        // fenetre (vrai si elle existe), sortant (fenêtre en sortie), boutons (libellés des actions de l'aperçu),
+        // largeur et hauteur du cadre, vignettes (affichées dans l'aperçu), liste (repères de la plaque et de la ligne
+        // retenue, voir Liste.reperes).
         // Sortie : texte. Erreurs : aucune. Dépendances : lanceur, fenetre.
         function etat(): string {
             const f = lanceur.fenetre
@@ -266,7 +306,9 @@ Singleton {
                 cles: lanceur.resultats.map(r => r.cle), medaillons: lanceur.accueil.medaillons.map(r => r.cle),
                 puces: lanceur.accueil.puces.map(r => r.cle), apercu: lanceur.elements.map(e => e.genre),
                 principal: lanceur.libellePrincipal, confirmation: lanceur.confirmation, fenetre: f !== null,
-                largeur: f?.cadre.width ?? 0, hauteur: f?.cadre.height ?? 0, vignettes: f?.vignettes ?? 0 })
+                sortant: lanceur.sortant, boutons: lanceur.boutons().map(a => a.libelle),
+                largeur: f?.cadre.width ?? 0, hauteur: f?.cadre.height ?? 0, vignettes: f?.vignettes ?? 0,
+                liste: f?.cadre.reperes() ?? null })
         }
     }
 }

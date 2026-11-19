@@ -39,11 +39,25 @@ ListView {
     // Dépendances : positionViewAtIndex.
     onRangChanged: positionViewAtIndex(rang, ListView.Contain)
 
-    // Enfant déclaré d'un Flickable, la plaque rejoint son contenu et défile avec les lignes, sous elles.
+    // La plaque vit dans le contenu défilé (contentItem), comme les lignes : elle défile avec elles, et sa cible
+    // (rang × hauteur de ligne, plus originY) est dans le même repère que leur y. Déclarée simplement dans la ListView,
+    // elle restait dans le repère fixe de la vue, et tout défilement la décalait de contentY (bogue E de la recette 1).
     Plaque {
+        id: plaque
+        parent: liste.contentItem
         z: -1
-        cible: liste.count > 0 ? Qt.rect(0, liste.rang * liste.ligne, liste.width, liste.ligne) : Qt.rect(0, 0, 0, 0)
+        cible: liste.count > 0 ? Qt.rect(0, liste.originY + liste.rang * liste.ligne, liste.width, liste.ligne) : Qt.rect(0, 0, 0, 0)
         rayon: Theme.radius?.panel ?? 0
+    }
+
+    // reperes — géométrie de la plaque et de la ligne retenue dans un repère commun, pour les essais.
+    // Entrée : repere, Item où mapper. Sortie : {rang, plaque, ligne, hauteur, haut, bas} : plaque et ligne, ordonnées
+    // des bords hauts (ligne vaut null si la ligne n'est pas construite) ; hauteur, celle de la plaque peinte ; haut et
+    // bas, les bords de la zone visible de la liste. Erreurs : aucune. Dépendances : itemAtIndex, mapToItem.
+    function reperes(repere) {
+        const l = itemAtIndex(rang), p = plaque.mapToItem(repere, 0, 0), q = plaque.mapToItem(repere, 0, plaque.height)
+        return { rang, plaque: p.y, hauteur: q.y - p.y, ligne: l ? l.mapToItem(repere, 0, 0).y : null,
+                 haut: mapToItem(repere, 0, 0).y, bas: mapToItem(repere, 0, height).y }
     }
 
     // texteMarque — titre en texte riche, lettres trouvées teintées (hors plaque) ou soulignées (sur la plaque).

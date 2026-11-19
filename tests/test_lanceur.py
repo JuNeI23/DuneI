@@ -146,7 +146,7 @@ class LogiqueTest(EssaiCoque, unittest.TestCase):
 
         Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : appeler.
         """
-        dispo = {"medaillons": 6, "puces": 4, "lignes": 0, "apercu": 0}
+        dispo = {"medaillons": 6, "puces": 4, "lignes": 0, "vignettes": 0, "boutons": 0}
         med = {"zone": "medaillons", "rang": 0, "index": 0}
         self.assertEqual(self.appeler("deplacer", med, "left", dispo)["index"], 0)
         self.assertEqual(self.appeler("deplacer", med, "right", dispo)["index"], 1)
@@ -157,25 +157,57 @@ class LogiqueTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(self.appeler("deplacer", med, "down", {**dispo, "puces": 0}), med)
 
     def test_deplacer_liste_et_apercu(self):
-        """Vérifie la liste (bornes, ctrl+j/k), le passage à l'aperçu par tab et le retour par échap à la même ligne.
+        """Vérifie la liste (bornes, ctrl+j/k), l'entrée dans l'aperçu par tab comme par →, sur le premier bouton, et le
+        retour par échap, shift+tab ou ← au bord, à la même ligne.
 
         Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : appeler.
         """
-        dispo = {"medaillons": 0, "puces": 0, "lignes": 5, "apercu": 3}
+        dispo = {"medaillons": 0, "puces": 0, "lignes": 5, "vignettes": 2, "boutons": 3}
         liste = {"zone": "liste", "rang": 2, "index": 2}
         self.assertEqual(self.appeler("deplacer", liste, "ctrl+j", dispo)["index"], 3)
         self.assertEqual(self.appeler("deplacer", {**liste, "index": 4, "rang": 4}, "down", dispo)["index"], 4)
         self.assertEqual(self.appeler("deplacer", {**liste, "index": 0, "rang": 0}, "ctrl+k", dispo)["index"], 0)
         self.assertEqual(self.appeler("deplacer", liste, "escape", dispo), liste)
         decalee = {"zone": "liste", "rang": 1, "index": 3}   # rang et index distincts : rien ne doit être recalé
-        for touche in ("escape", "left", "right", "inconnue"):
+        for touche in ("escape", "left", "inconnue"):
             self.assertEqual(self.appeler("deplacer", decalee, touche, dispo), decalee)
-        ap = self.appeler("deplacer", liste, "tab", dispo)
-        self.assertEqual(ap, {"zone": "apercu", "rang": 2, "index": 0})
-        ap = self.appeler("deplacer", ap, "right", dispo)
-        self.assertEqual(ap["index"], 1)
-        self.assertEqual(self.appeler("deplacer", ap, "escape", dispo), liste)
-        self.assertEqual(self.appeler("deplacer", ap, "shift+tab", dispo), liste)
+        bouton = {"zone": "apercu", "rang": 2, "index": 0, "rangee": "boutons"}
+        for touche in ("tab", "right", "→"):
+            self.assertEqual(self.appeler("deplacer", liste, touche, dispo), bouton)
+        sans_bouton = {**dispo, "boutons": 0}
+        self.assertEqual(self.appeler("deplacer", liste, "tab", sans_bouton), {**bouton, "rangee": "vignettes"})
+        self.assertEqual(self.appeler("deplacer", liste, "right", {**dispo, "boutons": 0, "vignettes": 0}), liste)
+        ap = self.appeler("deplacer", bouton, "right", dispo)
+        self.assertEqual(ap, {**bouton, "index": 1})
+        for touche in ("escape", "shift+tab"):
+            self.assertEqual(self.appeler("deplacer", ap, touche, dispo), liste)
+        self.assertEqual(self.appeler("deplacer", ap, "left", dispo), bouton)
+        self.assertEqual(self.appeler("deplacer", bouton, "left", dispo), liste)
+
+    def test_deplacer_grille_de_l_apercu(self):
+        """Vérifie la grille de l'aperçu : ↓ ne déplace jamais à l'horizontale, ↑ monte des boutons aux vignettes en
+        bornant l'index, ← et → restent dans la rangée, ← au bord d'une rangée revient à la liste.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : appeler.
+        """
+        dispo = {"medaillons": 0, "puces": 0, "lignes": 5, "vignettes": 2, "boutons": 3}
+        b2 = {"zone": "apercu", "rang": 1, "index": 2, "rangee": "boutons"}
+        for touche in ("down", "ctrl+j"):
+            self.assertEqual(self.appeler("deplacer", b2, touche, dispo), b2)
+        v = self.appeler("deplacer", b2, "up", dispo)
+        self.assertEqual(v, {**b2, "index": 1, "rangee": "vignettes"})
+        self.assertEqual(self.appeler("deplacer", v, "up", dispo), v)
+        self.assertEqual(self.appeler("deplacer", v, "right", dispo), v)
+        self.assertEqual(self.appeler("deplacer", v, "down", dispo), {**b2, "index": 1})
+        v0 = self.appeler("deplacer", v, "left", dispo)
+        self.assertEqual(v0, {**v, "index": 0})
+        self.assertEqual(self.appeler("deplacer", v0, "left", dispo), {"zone": "liste", "rang": 1, "index": 1})
+        self.assertEqual(self.appeler("deplacer", b2, "up", {**dispo, "vignettes": 0}), b2)
+        elements = self.appeler("elementsApercu", {"principale": {"libelle": "Amener"}, "secondaires": [{"libelle": "B"}],
+                                                   "apercu": {"fenetres": ["0x1", "0x2"]}})
+        self.assertEqual(self.appeler("elementApercu", elements, v)["adresse"], "0x2")
+        self.assertEqual(self.appeler("elementApercu", elements, {**b2, "index": 1})["action"]["libelle"], "B")
+        self.assertIsNone(self.appeler("elementApercu", elements, {"zone": "liste", "rang": 0, "index": 0}))
 
     def test_filtrer(self):
         """Vérifie que les correspondances par lettres dans l'ordre disparaissent dès qu'un résultat correspond
@@ -443,6 +475,21 @@ class SourcesTest(EssaiCoque, unittest.TestCase):
         self.assertEqual((dolphin["type"], dolphin["principale"]["genre"], dolphin["principale"]["cible"]),
                          ("Application", "lancer", "org.kde.dolphin"))
 
+    def test_nouvelle_fenetre(self):
+        """Vérifie qu'une application ouverte sans action « new-window » (kitty) propose « Nouvelle fenêtre » juste après
+        Amener, qu'une application qui déclare cette action (Firefox) n'a pas le bouton générique, et qu'une application
+        fermée (Dolphin) n'en a pas.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : chercher.
+        """
+        kitty = [x for x in self.chercher("kitty") if x["cle"] == "app:kitty"][0]
+        self.assertEqual(kitty["principale"]["genre"], "amener")
+        self.assertEqual(kitty["secondaires"], [{"libelle": "Nouvelle fenêtre", "genre": "nouvelle", "cible": "kitty",
+                                                 "confirmer": False}])
+        firefox = self.chercher("fire")[0]
+        self.assertNotIn("nouvelle", [a["genre"] for a in firefox["secondaires"]])
+        self.assertEqual(self.chercher("dolph")[0]["secondaires"], [])
+
     def test_titre_seul_donne_une_fenetre_isolee(self):
         """Vérifie que « wiki », qui ne désigne que le titre d'une fenêtre, donne cette fenêtre seule, de type
         « Fenêtre », sans son application.
@@ -669,7 +716,7 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(e["cles"][0], "app:firefox")
         self.assertEqual(e["apercu"], ["bouton", "bouton", "bouton", "vignette", "vignette", "vignette"])
         self.touche("tab")
-        self.assertEqual((self.etat()["sel"]["zone"], self.etat()["sel"]["index"]), ("apercu", 0))
+        self.assertEqual(self.etat()["sel"], {"zone": "apercu", "rang": 0, "index": 0, "rangee": "boutons"})
         self.touche("right")
         self.assertEqual(self.etat()["sel"]["index"], 1)
         self.touche("escape")
@@ -734,6 +781,26 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
         for motif in ("TypeError", "ReferenceError", "Error:", "WARN scene", "WARN qml"):
             self.assertNotIn(motif, self.journal())
 
+    def test_sortie_animee(self):
+        """Vérifie qu'à la fermeture la fenêtre reste le temps de sa sortie (sortant), puis est déchargée, et qu'une
+        réouverture pendant la sortie reprend la même fenêtre, sans la décharger.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : ouvrir, lanceur, etat, jusqua.
+        """
+        self.ouvrir()
+        self.lanceur("fermer")
+        e = self.etat()
+        self.assertEqual((e["ouvert"], e["sortant"], e["fenetre"]), (False, True, True))
+        self.jusqua(lambda: not self.etat()["fenetre"], "fenêtre déchargée après la sortie")
+        self.assertFalse(self.etat()["sortant"])
+        self.ouvrir()
+        self.lanceur("fermer")
+        self.lanceur("ouvrir")
+        e = self.etat()
+        self.assertEqual((e["ouvert"], e["sortant"], e["fenetre"]), (True, False, True))
+        time.sleep(1)
+        self.assertTrue(self.etat()["fenetre"])
+
     def test_ferme_libere(self):
         """Vérifie qu'après fermeture la fenêtre du lanceur n'existe plus (LazyLoader), et qu'elle se reconstruit à la
         réouverture sur l'accueil, saisie vide.
@@ -797,8 +864,71 @@ class ClavierTest(FenetreTest):
         self.cle("escape")
         self.assertFalse(self.etat()["ouvert"])
 
+    def test_plaque_suit_la_liste_qui_defile(self):
+        """Vérifie qu'après une rafale de ↓ sans attente sur une liste plus haute que la vue, une fois les ressorts posés,
+        la plaque coïncide avec la ligne retenue à 1 px près, à sa hauteur, et que la ligne est visible.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : lanceur, taper, etat, essai_ipc, jusqua, QS.
+        """
+        self.lanceur("ouvrir")
+        self.jusqua(lambda: self.etat()["ouvert"], "lanceur ouvert")
+        self.taper("e")
+        reperes = lambda: json.loads(self.essai_ipc("reperes") or "null")
+        r = self.jusqua(lambda: (r := reperes()) and abs(r["largeur"] - 900) < 1 and r, "scission posée")
+        n = len(self.etat()["cles"])
+        visibles = (r["bas"] - r["haut"]) / 44
+        self.assertGreater(n, visibles + 2, r)
+        # Rafale : les appels partent sans attendre la réponse du précédent, comme une répétition du clavier.
+        rafale = [subprocess.Popen([QS, "ipc", "--pid", str(self.proc.pid), "call", "lanceur", "touche", "down"])
+                  for _ in range(n + 3)]
+        for p in rafale:
+            p.wait(timeout=DELAI)
+        cible = n - 1
+        for essai in range(2):
+            self.jusqua(lambda: self.etat()["sel"]["rang"] == cible, "dernière ligne retenue")
+            time.sleep(1.5)
+            r = reperes()
+            self.assertIsNotNone(r["ligne"], r)
+            self.assertAlmostEqual(r["plaque"], r["ligne"], delta=1, msg=r)
+            self.assertAlmostEqual(r["hauteur"], 44, delta=1, msg=r)
+            self.assertGreaterEqual(r["ligne"], r["haut"] - 1, r)
+            self.assertLessEqual(r["ligne"] + 44, r["bas"] + 1, r)
+            # Puis la rafale inverse, jusqu'à la première ligne.
+            rafale = [subprocess.Popen([QS, "ipc", "--pid", str(self.proc.pid), "call", "lanceur", "touche", "up"])
+                      for _ in range(n + 3)]
+            for p in rafale:
+                p.wait(timeout=DELAI)
+            cible = 0
+
+    def test_fleches_et_nouvelle_instance(self):
+        """Vérifie, par de vraies touches, que → entre dans l'aperçu sur le premier bouton, que ↑ monte aux vignettes,
+        que ← au bord revient à la liste, et que Ctrl + Entrée sur kitty lance une nouvelle instance et ferme.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : lanceur, taper, cle, etat,
+        attendre, jusqua, journal.
+        """
+        self.lanceur("ouvrir")
+        self.jusqua(lambda: self.etat()["ouvert"], "lanceur ouvert")
+        self.taper("fire")
+        self.cle("right")
+        self.assertEqual(self.etat()["sel"], {"zone": "apercu", "rang": 0, "index": 0, "rangee": "boutons"})
+        self.cle("up")
+        self.assertEqual(self.etat()["sel"]["rangee"], "vignettes")
+        self.cle("left")
+        self.assertEqual(self.etat()["sel"], {"zone": "liste", "rang": 0, "index": 0})
+        self.touche("escape")
+        self.taper("kitty")
+        e = self.etat()
+        self.assertEqual((e["cles"][0], e["boutons"]), ("app:kitty", ["Amener", "Nouvelle fenêtre"]))
+        self.cle("ctrl+return")
+        self.attendre("essai : exécuté nouvelle kitty")
+        self.jusqua(lambda: not self.etat()["ouvert"], "lanceur fermé")
+        for motif in ("TypeError", "ReferenceError", "Error:", "WARN qml"):
+            self.assertNotIn(motif, self.journal())
+
     test_ouvre_sur_accueil = test_premiere_lettre_scinde = test_effacer_revient_a_l_accueil = test_aucun_resultat = None
     test_tab_entre_dans_l_apercu = test_confirmation_eteindre = test_fenetre_disparue = test_ferme_libere = None
+    test_sortie_animee = None
 
 
 class CommandesTest(unittest.TestCase):

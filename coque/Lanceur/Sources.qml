@@ -42,7 +42,8 @@ Scope {
         icone: p.glyphe, ipc: ["parametres", "ouvrir", p.id], commande: null, etat: null, confirmer: false })))
 
     // action — une action de résultat.
-    // Entrées : libelle, genre (« amener », « lancer », « action », « commande », « copier »), cible, confirmer.
+    // Entrées : libelle, genre (« amener », « lancer », « nouvelle », « action », « commande », « copier »), cible,
+    // confirmer.
     // Sortie : {libelle, genre, cible, confirmer}. Erreurs : aucune. Dépendances : aucune.
     function action(libelle, genre, cible, confirmer) { return { libelle, genre, cible, confirmer: !!confirmer } }
 
@@ -54,7 +55,9 @@ Scope {
     }
 
     // application — résultat d'une application : ouverte, elle s'amène sur sa fenêtre la plus récente et porte
-    // « n fenêtres » ; fermée, elle se lance. Ses actions de bureau sont ses secondaires.
+    // « n fenêtres » ; fermée, elle se lance. Ses secondaires sont, si elle a une fenêtre et ne déclare pas d'action
+    // « new-window » (qui tient alors ce rôle), « Nouvelle fenêtre » (genre « nouvelle » : une nouvelle instance de son
+    // entrée, même chemin que « Lancer » mais sans amener), puis ses actions de bureau.
     // Entrées : e, entrée de bureau ; pertinence ; ouv, ses fenêtres (ouvertes). Sortie : le résultat.
     // Erreurs : aucune. Dépendances : action.
     function application(e, pertinence, ouv) {
@@ -63,7 +66,9 @@ Scope {
             icone: e.icon, type: n === 0 ? "Application" : n === 1 ? "1 fenêtre" : n + " fenêtres", retrait: false,
             app: "", pertinence,
             principale: n ? action("Amener", "amener", ouv[0].adresse) : action("Lancer", "lancer", e.id),
-            secondaires: Array.from(e.actions || []).map(a => action(a.name, "action", e.id + ":" + a.id)),
+            secondaires: (n && !Array.from(e.actions || []).some(a => a.id === "new-window")
+                ? [action("Nouvelle fenêtre", "nouvelle", e.id)] : [])
+                .concat(Array.from(e.actions || []).map(a => action(a.name, "action", e.id + ":" + a.id))),
             apercu: { fenetres: ouv.map(f => f.adresse) } }
     }
 

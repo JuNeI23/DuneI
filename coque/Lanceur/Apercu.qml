@@ -12,10 +12,14 @@ import "lanceur.js" as Logique
 //   - commande : médaillon à glyphe, libellé, état présent s'il en a un, Exécuter ;
 //   - calcul : « expression = », la valeur en très grand corps, Copier, le tout centré ;
 //   - aucun résultat : « Aucun résultat », sobre.
-// Les boutons (Puce) portent l'action principale, avec le rappel ↵, puis les secondaires. Une plaque d'accent unique
-// se tient sous le bouton principal ; quand le clavier entre dans l'aperçu (zone « apercu » de la sélection), elle
-// glisse vers le bouton ou la vignette choisis, qu'elle entoure. Pendant une confirmation, elle prend color.error et
-// le bouton principal dit « Confirmer ». Le contenu rejoue son entrée en cascade quand la ligne retenue change.
+// Les boutons (Puce) portent l'action principale, puis les secondaires. Le clavier y voit une grille dans l'ordre
+// visuel : la rangée des vignettes au-dessus, celle des boutons au pied (lanceur.js, deplacer). Une plaque d'accent
+// unique se tient sous un bouton : sous le bouton principal tant que la sélection est dans la liste, sous le bouton du
+// curseur dès qu'elle entre dans l'aperçu ; seul ce bouton porte le rappel ↵ (« Nouvelle fenêtre » porte toujours
+// « Ctrl ↵ », son raccourci depuis la liste), les autres restent neutres. Une vignette choisie grandit et s'entoure
+// d'accent (Vignette.choisie) ; la plaque s'efface alors en fondu, sur place. Pendant une confirmation, elle prend
+// color.error et le bouton principal dit « Confirmer ». Le contenu rejoue son entrée en cascade quand la ligne
+// retenue change.
 // Entrées : resultat (Lanceur.choisi) ; sel (Lanceur.sel) ; libellePrincipal (Lanceur.libellePrincipal) ;
 // Lanceur.confirmation et Lanceur.saisie (pour l'expression du calcul) sont lus directement.
 // Sorties : vignettes, le nombre de vignettes affichées ; rejouer(), émis quand la ligne retenue change.
@@ -40,8 +44,12 @@ Item {
     readonly property real marge: Theme.reglages?.pageMargin ?? 0
     readonly property real ecart: Theme.space?.scale[2] ?? 0
     readonly property bool grande: genre === "fenetre"
-    // Élément sous la plaque : celui de la sélection dans l'aperçu, le bouton principal sinon.
-    readonly property int choix: sel.zone === "apercu" ? sel.index : 0
+    // Bouton du curseur : celui de la sélection dans la rangée des boutons, le principal hors de l'aperçu, -1 quand
+    // une vignette est choisie. La plaque garde le dernier bouton choisi (boutonPlaque) pour s'effacer sur place.
+    readonly property int boutonChoisi: sel.zone !== "apercu" ? 0 : sel.rangee === "boutons" ? sel.index : -1
+    readonly property int vignetteChoisie: sel.zone === "apercu" && sel.rangee === "vignettes" ? sel.index : -1
+    property int boutonPlaque: 0
+    onBoutonChoisiChanged: if (boutonChoisi >= 0) boutonPlaque = boutonChoisi
     signal rejouer()
 
     // onCleChanged — rejoue l'entrée quand la ligne retenue change. Entrées : aucune. Sortie : rejouer().
@@ -49,15 +57,16 @@ Item {
     readonly property string cle: resultat?.cle ?? ""
     onCleChanged: rejouer()
 
-    // Plaque d'accent, sous le bouton ou la vignette choisis (qu'elle déborde alors de deux pixels, en anneau).
+    // Plaque d'accent, sous le bouton du curseur ; effacée en fondu, sur place, quand une vignette est choisie.
+    Ressort { id: plaqueVue; transition: "state"; nature: "fondu"; cible: apercu.boutonChoisi >= 0 ? 1 : 0 }
     Plaque {
-        readonly property Item bouton: apercu.choix < boutonsRepeteur.count ? boutonsRepeteur.itemAt(apercu.choix) : null
-        readonly property Item cellule: bouton ? null : grille.itemAt(apercu.choix - boutonsRepeteur.count)
-        cible: bouton ? Qt.rect(actions.x + bouton.x, actions.y + bouton.y, bouton.width, bouton.height)
-             : cellule ? Qt.rect(zone.x + cellule.x - 3, zone.y + cellule.y - 3, cellule.width + 6, cellule.image.height + 6)
-             : Qt.rect(0, 0, 0, 0)
-        rayon: bouton ? cible.height / 2 : (Theme.radius?.panel ?? 0) + 3
-        readonly property bool confirme: Lanceur.confirmation && bouton !== null && apercu.choix === 0
+        // itemAt n'est pas une liaison : count est lu pour réévaluer quand les boutons arrivent.
+        readonly property Item bouton: boutonsRepeteur.count && apercu.boutonPlaque < boutonsRepeteur.count
+            ? boutonsRepeteur.itemAt(apercu.boutonPlaque) : null
+        cible: bouton ? Qt.rect(actions.x + bouton.x, actions.y + bouton.y, bouton.width, bouton.height) : Qt.rect(0, 0, 0, 0)
+        rayon: cible.height / 2
+        opacity: plaqueVue.value
+        readonly property bool confirme: Lanceur.confirmation && apercu.boutonPlaque === 0
         teinte: (confirme ? Theme.color?.error : Theme.color?.accent) ?? "transparent"
         // Aucun rôle d'erreur discret n'existe : une confirmation prend color.error pour halo aussi.
         halo: (confirme ? Theme.color?.error : Theme.color?.accentDiscret) ?? "transparent"
@@ -156,7 +165,8 @@ Item {
                         adresse: c.adresse
                         width: parent.width
                         height: apercu.grande ? zone.height : width * 10 / 16
-                        onActivee: Lanceur.choisir("apercu", apercu.boutons.length + c.index)
+                        choisie: c.index === apercu.vignetteChoisie
+                        onActivee: Lanceur.choisir("apercu", c.index, "vignettes")
                     }
                     Texte {
                         visible: !apercu.grande
@@ -214,11 +224,14 @@ Item {
             delegate: Puce {
                 required property int index
                 readonly property var action: apercu.boutons[index]
+                readonly property bool nouvelle: action?.genre === "nouvelle"
                 texte: index === 0 ? Lanceur.libellePrincipal : action?.libelle ?? ""
                 icone: apercu.genre === "calcul" && index === 0 ? "edit-copy" : ""
-                rappel: index === 0
-                choisie: index === apercu.choix
-                onActivee: Lanceur.choisir("apercu", index)
+                texteRappel: nouvelle ? "Ctrl ↵" : "↵"
+                reserveRappel: true
+                rappel: nouvelle || index === apercu.boutonChoisi
+                choisie: index === apercu.boutonChoisi
+                onActivee: Lanceur.choisir("apercu", index, "boutons")
             }
         }
     }

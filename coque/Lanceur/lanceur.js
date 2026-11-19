@@ -109,17 +109,24 @@ function frequentes(apps, poids, roles, n) {
 }
 
 // deplacer — nouvelle sélection après une touche du clavier.
-// Entrées : sel, {zone, rang, index} où zone vaut « medaillons », « puces », « liste » ou « apercu », index est la
-// position dans la zone et rang la ligne de la liste retenue ; touche, « left », « right », « up », « down »
-// (ou ← → ↑ ↓), « ctrl+j », « ctrl+k », « tab », « shift+tab » ou « escape » ; dispo, {medaillons, puces, lignes,
-// apercu}, le nombre d'éléments de chaque zone. Sortie : la nouvelle sélection (sel même si rien ne bouge). Les
-// déplacements sont bornés, sans bouclage ; une zone vide est sautée. Échap n'est traité que depuis l'aperçu.
-// Erreurs : aucune. Dépendances : aucune.
+// Entrées : sel, {zone, rang, index, rangee} où zone vaut « medaillons », « puces », « liste » ou « apercu », index est
+// la position dans la zone (dans la rangée pour l'aperçu), rang la ligne de la liste retenue et rangee, pour l'aperçu
+// seulement, « vignettes » ou « boutons » ; touche, « left », « right », « up », « down » (ou ← → ↑ ↓), « ctrl+j »,
+// « ctrl+k », « tab », « shift+tab » ou « escape » ; dispo, {medaillons, puces, lignes, vignettes, boutons}, le nombre
+// d'éléments de chaque zone (vignettes et boutons : ceux de l'aperçu de la ligne retenue).
+// Sortie : la nouvelle sélection (sel même si rien ne bouge). Les déplacements sont bornés, sans bouclage ; une zone
+// vide est sautée. L'aperçu est une grille dans l'ordre visuel : la rangée des vignettes au-dessus, celle des boutons
+// en dessous ; on y entre par Tab ou → depuis la liste, sur le premier bouton (l'action par défaut), ou sur la première
+// vignette faute de bouton ; ← et → s'y déplacent dans la rangée, ↑ et ↓ (ou ctrl+k et ctrl+j) changent de rangée en
+// gardant l'index borné ; ← au bord gauche, Échap et shift+Tab reviennent à la ligne retenue de la liste. Échap n'est
+// traité que depuis l'aperçu. Erreurs : aucune. Dépendances : aucune.
 function deplacer(sel, touche, dispo) {
-    const t = {"←": "left", "→": "right", "↑": "up", "↓": "down"}[touche] || touche
+    const t = {"←": "left", "→": "right", "↑": "up", "↓": "down", "ctrl+k": "up", "ctrl+j": "down"}[touche] || touche
     const borne = (i, n) => Math.max(0, Math.min(n - 1, i))
     const vers = (zone, n, i) => n > 0 ? {zone, rang: sel.rang, index: borne(i, n)} : sel
-    const pas = {left: -1, right: 1, up: -1, down: 1, "ctrl+k": -1, "ctrl+j": 1}[t]
+    const pas = {left: -1, right: 1, up: -1, down: 1}[t]
+    const liste = {zone: "liste", rang: sel.rang, index: sel.rang}
+    const rangee = (r, i) => dispo[r] > 0 ? {zone: "apercu", rang: sel.rang, index: borne(i, dispo[r]), rangee: r} : sel
     switch (sel.zone) {
     case "medaillons":
         if (t === "down") return vers("puces", dispo.puces, sel.index)
@@ -128,16 +135,31 @@ function deplacer(sel, touche, dispo) {
         if (t === "up") return vers("medaillons", dispo.medaillons, sel.index)
         return pas && (t === "left" || t === "right") ? vers("puces", dispo.puces, sel.index + pas) : sel
     case "liste": {
-        if (t === "tab") return dispo.apercu > 0 ? {zone: "apercu", rang: sel.index, index: 0} : sel
-        if (!pas || t === "left" || t === "right" || dispo.lignes <= 0) return sel
+        if (t === "tab" || t === "right") {
+            const r = dispo.boutons > 0 ? "boutons" : dispo.vignettes > 0 ? "vignettes" : ""
+            return r ? {zone: "apercu", rang: sel.index, index: 0, rangee: r} : sel
+        }
+        if (!pas || t === "left" || dispo.lignes <= 0) return sel
         const i = borne(sel.index + pas, dispo.lignes)
         return {zone: "liste", rang: i, index: i}
     }
     case "apercu":
-        if (t === "escape" || t === "shift+tab") return {zone: "liste", rang: sel.rang, index: sel.rang}
-        return pas ? vers("apercu", dispo.apercu, sel.index + pas) : sel
+        if (t === "escape" || t === "shift+tab" || (t === "left" && sel.index <= 0)) return liste
+        if (t === "left" || t === "right") return rangee(sel.rangee, sel.index + pas)
+        if (t === "up" && sel.rangee === "boutons") return rangee("vignettes", sel.index)
+        if (t === "down" && sel.rangee === "vignettes") return rangee("boutons", sel.index)
+        return sel
     }
     return sel
+}
+
+// elementApercu — élément de l'aperçu désigné par une sélection.
+// Entrées : elements, tableau rendu par elementsApercu ; sel, la sélection (zone « apercu », rangee, index).
+// Sortie : l'élément d'index sel.index parmi ceux de genre « bouton » (rangée « boutons ») ou « vignette » (rangée
+// « vignettes ») ; null hors de l'aperçu ou hors des bornes. Erreurs : aucune. Dépendances : aucune.
+function elementApercu(elements, sel) {
+    if (!sel || sel.zone !== "apercu") return null
+    return elements.filter(e => e.genre === (sel.rangee === "vignettes" ? "vignette" : "bouton"))[sel.index] ?? null
 }
 
 // lireRoles — logiciels de rôles applicatifs déclarés dans roles.lua, pour compléter l'accueil.
@@ -185,10 +207,10 @@ function surligner(texte, saisie) {
     return segments.length ? segments : [{ texte: "", trouve: false }]
 }
 
-// elementsApercu — éléments de l'aperçu qu'atteint le clavier, dans l'ordre de ← et →.
+// elementsApercu — éléments de l'aperçu qu'atteint le clavier.
 // Entrée : r, un résultat (ou undefined). Sortie : tableau de {genre, action, adresse} : d'abord les boutons
 // (l'action principale, puis les secondaires), puis une vignette par fenêtre de l'aperçu, dont l'action amène la
-// fenêtre ; [] sans résultat. Erreurs : aucune. Dépendances : aucune.
+// fenêtre ; [] sans résultat. elementApercu y lit l'élément d'une sélection, par rangée. Erreurs : aucune. Dépendances : aucune.
 function elementsApercu(r) {
     if (!r) return []
     return [r.principale].concat(r.secondaires || []).filter(a => a).map(action => ({ genre: "bouton", action, adresse: "" }))

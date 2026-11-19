@@ -17,7 +17,7 @@ import "etats.js" as Etats
 // l'opacité material.medallionSheen, à la part material.medallionSheenReach de la hauteur ; aucun halo. Ailleurs, le médaillon reste un aplat.
 // Icône en couleur (lanceur, L2-16) : si image est posée, l'image en couleur, aux deux tiers du côté (68 %, maquette
 // du lanceur v3), remplace le glyphe ; refletRepos pose le reflet du relief « Doux » même au repos, comme les
-// médaillons du lanceur, qui ne sont jamais actifs (la plaque d'accent dit la sélection).
+// médaillons du lanceur ; le médaillon de la tuile choisie à l'accueil du lanceur est actif (fond d'accent).
 // Entrées : nom, icône freedesktop ; actif, faux par défaut ; image, url d'une icône en couleur, vide par défaut ;
 // tailleGlyphe, côté du glyphe, reglages.medallionGlyph par défaut ; refletRepos, faux par défaut.
 // Sorties : fond et glyphe, les couleurs peintes, lues par les essais.

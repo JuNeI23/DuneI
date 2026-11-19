@@ -11,29 +11,33 @@ import "../Theme"
 // qu'écrire « no recording context is ready » au journal, et n'est donc pas appelé. Tant que l'image n'est pas là, ou
 // pour une fenêtre sans Toplevel (fenêtre disparue, fausse fenêtre des essais), une fenêtre schématique la remplace :
 // un fond color.surfaceWindow sous une barre color.surfacePanel à trois points. Survolée, la vignette se soulève et s'entoure
-// d'accent ; un clic amène sa fenêtre.
-// Entrées : adresse, adresse Hyprland de la fenêtre ; au clavier, la plaque de l’aperçu l’entoure.
+// d'accent ; choisie au clavier, elle grandit à l'échelle galerie.echelle (comme la tuile choisie de l'accueil) et
+// s'entoure du même anneau d'accent, au ressort des états ; un clic amène sa fenêtre.
+// Entrées : adresse, adresse Hyprland de la fenêtre ; choisie, vrai quand le curseur du clavier est dessus.
 // Sorties : capturee, vrai une fois l'image reçue ; activee(), émis au clic. Erreurs : aucune.
 // Dépendances : Quickshell.Wayland (ScreencopyView), Quickshell.Hyprland (toplevels),
-// Ressort, Theme (color, radius, space).
+// Ressort, Theme (color, radius, space, galerie).
 // Cotes : coins radius.panel (10, maquette 8) ; barre de 12 % de la hauteur, au moins space.scale[1] ; points de
 // space.scale[0].
 Item {
     id: vignette
 
     required property string adresse
+    property bool choisie: false
     readonly property var toplevel: Hyprland.toplevels.values.find(t => t.address === adresse) ?? null
     readonly property bool capturee: vue.hasContent
     signal activee()
 
     transform: [
         Translate { y: -(Theme.space?.scale[0] ?? 0) * survol.value },
-        Scale { origin.x: vignette.width / 2; origin.y: vignette.height / 2; xScale: 1 + 0.03 * survol.value; yScale: xScale }
+        Scale { origin.x: vignette.width / 2; origin.y: vignette.height / 2; xScale: grandeur.value + 0.03 * survol.value; yScale: xScale }
     ]
     Ressort { id: apparition; transition: "reveal"; nature: "fondu"; cible: vue.hasContent ? 1 : 0 }
     Ressort { id: survol; transition: "state"; cible: pointeur.hovered ? 1 : 0 }
-    // Fondu de l'anneau du survol : le ressort de déplacement ci-dessus ne porte pas d'opacité.
-    Ressort { id: anneau; transition: "state"; nature: "fondu"; cible: pointeur.hovered ? 1 : 0 }
+    // Mise en avant de la vignette choisie au clavier : l'échelle des vignettes choisies (galerie.echelle).
+    Ressort { id: grandeur; transition: "state"; cible: vignette.choisie ? Theme.galerie?.echelle ?? 1 : 1 }
+    // Fondu de l'anneau du survol et du choix : les ressorts de déplacement ci-dessus ne portent pas d'opacité.
+    Ressort { id: anneau; transition: "state"; nature: "fondu"; cible: pointeur.hovered || vignette.choisie ? 1 : 0 }
 
     Rectangle {
         id: fond
@@ -78,7 +82,7 @@ Item {
         }
     }
 
-    // Anneau d'accent du survol, au-dessus de l'image.
+    // Anneau d'accent du survol et du choix, au-dessus de l'image.
     Rectangle {
         anchors.fill: parent
         anchors.margins: -2

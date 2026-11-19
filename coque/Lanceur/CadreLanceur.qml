@@ -11,19 +11,21 @@ import "../Composants" as C
 // prennent le relief « Doux ». Dedans : le champ Recherche agrandi, puis l'Accueil ou la scission (titre
 // « Résultats » et Liste, filet, Apercu), qui se croisent en fondu et en glissé. Les touches du champ passent par
 // Lanceur.touche ; le reste de la frappe va au champ, qui écrit Lanceur.saisie.
-// Entrées : apparition, de 0 à 1, l'entrée de la fenêtre (opacité, 94 à 100 %, glissé vers le haut), 1 par défaut.
-// Sorties : vignettes, le nombre de vignettes de l'aperçu ; champ, la Recherche (lue par les essais).
+// Entrées : apparition, de 0 à 1, l'opacité de l'entrée de la fenêtre, 1 par défaut ; montee, de 0 à 1, la montée du
+// cadre depuis reglages.pageRise plus bas (comme une page de Paramètres, aucune sous le mouvement réduit), 1 par défaut.
+// Sorties : vignettes, le nombre de vignettes de l'aperçu ; champ, la Recherche (lue par les essais) ; reperes().
 // Erreurs : aucune ; avant le chargement des tokens, le verre reste transparent.
 // Dépendances : Lanceur, Accueil, Liste, Apercu, Ressort, C.Surface, C.OmbreElevation, C.Recherche, C.Texte, Theme
 // (material, radius, space, typo, color, icons, police).
 // Cotes : champ à cotes.retrait (12) des bords, de cotes.champ de haut (48, maquette 50), corps à l'échelon 4 (18,
 // maquette 19), loupe de icons.sizes.default (20, maquette 19), texte à space.scale[4] (24, maquette 20) du bord ;
 // vues à partir du bas du champ ; liste de cotes.liste (340) puis un filet material.glassLine (un filet opaque se lirait
-// comme un trait blanc sur le verre du jour).
+// comme un trait blanc sur le verre du jour), retiré de cotes.retrait en haut et en bas.
 Item {
     id: cadre
 
     property real apparition: 1
+    property real montee: 1
     readonly property bool dnRelief: true
     readonly property var cotes: Lanceur.cotes
     readonly property bool scinde: Lanceur.vue === "scission"
@@ -33,20 +35,22 @@ Item {
     width: largeur.value
     height: hauteur.value
     opacity: cadre.apparition
-    transform: [
-        Translate { y: (1 - cadre.apparition) * (Theme.space?.scale[2] ?? 0) },
-        Scale { origin.x: cadre.width / 2; origin.y: 0; xScale: 0.94 + 0.06 * cadre.apparition; yScale: xScale }
-    ]
+    transform: Translate { y: Theme.mouvementReduit ? 0 : (1 - cadre.montee) * (Theme.reglages?.pageRise ?? 0) }
 
-    // nomTouche — nom d'une touche du lanceur. Entrée : event, KeyEvent. Sortie : « escape », « return », « up »,
-    // « down », « left », « right », « tab », « shift+tab », « ctrl+j », « ctrl+k », ou « » pour une autre touche.
-    // Erreurs : aucune. Dépendances : aucune.
+    // nomTouche — nom d'une touche du lanceur. Entrée : event, KeyEvent. Sortie : « escape », « return »,
+    // « ctrl+return », « up », « down », « left », « right », « tab », « shift+tab », « ctrl+j », « ctrl+k », ou « »
+    // pour une autre touche. Erreurs : aucune. Dépendances : aucune.
     function nomTouche(event) {
         const ctrl = event.modifiers & Qt.ControlModifier
-        return ({ [Qt.Key_Escape]: "escape", [Qt.Key_Return]: "return", [Qt.Key_Enter]: "return", [Qt.Key_Up]: "up",
+        const entree = ctrl ? "ctrl+return" : "return"
+        return ({ [Qt.Key_Escape]: "escape", [Qt.Key_Return]: entree, [Qt.Key_Enter]: entree, [Qt.Key_Up]: "up",
                   [Qt.Key_Down]: "down", [Qt.Key_Left]: "left", [Qt.Key_Right]: "right", [Qt.Key_Tab]: "tab",
                   [Qt.Key_Backtab]: "shift+tab", [Qt.Key_J]: ctrl ? "ctrl+j" : "", [Qt.Key_K]: ctrl ? "ctrl+k" : "" })[event.key] ?? ""
     }
+
+    // reperes — géométrie de la plaque de la liste et de sa ligne retenue, dans le repère du cadre (lue par les essais).
+    // Entrées : aucune. Sortie : voir Liste.reperes ; null hors de la scission. Erreurs : aucune. Dépendances : liste.
+    function reperes() { return cadre.scinde ? liste.reperes(cadre) : null }
 
     Ressort { id: largeur; transition: "window"; cible: cadre.scinde ? cotes.scission.width : cotes.accueil.width }
     Ressort { id: hauteur; transition: "window"; cible: cadre.scinde ? cotes.scission.height : cotes.accueil.height }
@@ -135,15 +139,18 @@ Item {
                     color: Theme.color?.textTertiary ?? "transparent"
                 }
                 Liste {
+                    id: liste
                     x: cotes.retrait
                     y: tete.y + tete.height + (Theme.space?.scale[0] ?? 0)
                     width: cotes.liste - cotes.retrait - (Theme.space?.scale[1] ?? 0)
                     height: parent.height - y - cotes.retrait
                 }
+                // Filet entre liste et aperçu, retiré de cotes.retrait en haut et en bas, comme le contenu du cadre.
                 Rectangle {
                     x: cotes.liste
+                    y: cotes.retrait
                     width: 1
-                    height: parent.height
+                    height: parent.height - 2 * cotes.retrait
                     color: Theme.material?.glassLine ?? "transparent"
                 }
                 Apercu {

@@ -6,12 +6,14 @@ import "../Composants"
 // Rôle : « Fréquentes », une rangée de six tuiles au plus, réparties sur toute la largeur, chacune un médaillon au
 // relief « Doux » (icône de l'application en couleur), son nom et, si l'application a une fenêtre ouverte, un point
 // d'accent ; puis « Suggestions », les puces des commandes. Les tuiles, puis les titres et les puces, entrent en
-// cascade. La plaque d'accent se pose sous la tuile ou la puce choisie (zones « medaillons » et « puces » de la
-// sélection) et y glisse au ressort ; un clic choisit et exécute. Une tuile survolée se soulève un peu.
+// cascade. La tuile choisie (zone « medaillons » de la sélection) grandit à l'échelle galerie.echelle, la mise en avant
+// des vignettes choisies, et son médaillon passe à l'accent (Medaillon actif), au ressort des états ; son nom passe du
+// texte secondaire au texte principal. La plaque d'accent ne dit plus que la puce choisie (zone « puces ») et y glisse
+// au ressort. Un clic choisit et exécute. Une tuile survolée se soulève un peu.
 // Entrées : donnees, {medaillons, puces} (Lanceur.accueil par défaut) ; sel, la sélection (Lanceur.sel).
 // Sorties : aucune ; un clic appelle Lanceur.choisir. Erreurs : aucune ; un accueil vide ne montre que ses titres.
 // Dépendances : Lanceur (accueil, sel, cotes, icone, choisir), Medaillon, Texte, Puce, Plaque, Cascade, Ressort,
-// ColorSpring, Theme (space, reglages, radius, color, motion).
+// ColorSpring, Theme (space, reglages, radius, color, motion, galerie).
 // Cotes : retrait reglages.pageMargin (20, maquette 22 en haut) ; tuile de cotes.tuile (92) de côté, médaillon de
 // cotes.medaillonAccueil (60), nom à l'échelon 1 (12) ; point de space.scale[0] (4) ; puces espacées de
 // space.scale[1] (8).
@@ -25,17 +27,14 @@ Item {
     readonly property real ecart: n > 1 ? (rangee.width - n * tuile) / (n - 1) : 0
     readonly property real marge: Theme.reglages?.pageMargin ?? 0
 
-    // Plaque d'accent sous la tuile ou la puce choisie, dans le repère de l'accueil (sans les glissés de cascade).
+    // Plaque d'accent sous la puce choisie, dans le repère de l'accueil (sans les glissés de cascade).
     Plaque {
-        // itemAt n'est pas une liaison : count est lu pour réévaluer quand les tuiles et les puces arrivent.
-        readonly property Item tuileChoisie: accueil.sel.zone === "medaillons" && tuiles.count ? tuiles.itemAt(accueil.sel.index) : null
+        // itemAt n'est pas une liaison : count est lu pour réévaluer quand les puces arrivent.
         readonly property Item puceChoisie: accueil.sel.zone === "puces" && puces.count ? puces.itemAt(accueil.sel.index) : null
-        cible: tuileChoisie ? Qt.rect(colonne.x + rangee.x + tuileChoisie.x, colonne.y + rangee.y + tuileChoisie.y,
-                                      tuileChoisie.width, tuileChoisie.height)
-             : puceChoisie ? Qt.rect(colonne.x + flux.x + puceChoisie.x, colonne.y + flux.y + puceChoisie.y,
+        cible: puceChoisie ? Qt.rect(colonne.x + flux.x + puceChoisie.x, colonne.y + flux.y + puceChoisie.y,
                                      puceChoisie.width, puceChoisie.height)
              : Qt.rect(0, 0, 0, 0)
-        rayon: tuileChoisie ? Theme.radius?.window ?? 0 : cible.height / 2
+        rayon: cible.height / 2
     }
 
     Column {
@@ -78,14 +77,16 @@ Item {
                     opacity: entree.value
                     transform: [
                         Translate { y: (1 - entree.value) * (Theme.space?.scale[1] ?? 0) - survol.value * (Theme.space?.scale[0] ?? 0) },
-                        Scale { origin.x: t.width / 2; origin.y: t.height / 2; xScale: 1 + 0.06 * survol.value; yScale: xScale }
+                        Scale { origin.x: t.width / 2; origin.y: t.height / 2; xScale: grandeur.value + 0.06 * survol.value; yScale: xScale }
                     ]
 
                     Cascade { id: entree; rang: t.index; base: 80 }
                     Ressort { id: survol; transition: "state"; cible: pointeur.hovered ? 1 : 0 }
+                    // Mise en avant de la tuile choisie : l'échelle des vignettes choisies (galerie.echelle).
+                    Ressort { id: grandeur; transition: "state"; cible: t.choisie ? Theme.galerie?.echelle ?? 1 : 1 }
                     ColorSpring {
                         id: encre
-                        target: (t.choisie ? Theme.color?.onAccent : Theme.color?.textSecondary) ?? "transparent"
+                        target: (t.choisie ? Theme.color?.textPrimary : Theme.color?.textSecondary) ?? "transparent"
                     }
 
                     Medaillon {
@@ -94,6 +95,7 @@ Item {
                         y: Theme.space?.scale[1] ?? 0
                         width: Lanceur.cotes.medaillonAccueil
                         image: Lanceur.icone(t.modelData.icone)
+                        actif: t.choisie
                         refletRepos: true
                     }
                     Texte {
@@ -114,7 +116,7 @@ Item {
                         width: Theme.space?.scale[0] ?? 0
                         height: width
                         radius: width / 2
-                        color: t.choisie ? encre.value : Theme.color?.accentStandalone ?? "transparent"
+                        color: Theme.color?.accentStandalone ?? "transparent"
                     }
 
                     HoverHandler { id: pointeur; cursorShape: Qt.PointingHandCursor }
