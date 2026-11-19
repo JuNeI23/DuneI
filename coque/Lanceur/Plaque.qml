@@ -5,8 +5,8 @@ import "../Theme"
 // Plaque — plaque d'accent qui dit la sélection du lanceur (ligne, médaillon, puce, bouton, vignette).
 // Rôle : un aplat color.accent (ou la teinte demandée, color.error pour une confirmation), au reflet des médaillons
 // (dégradé de material.highlight, à l'opacité material.medallionSheen, sur la part material.medallionSheenReach de
-// la hauteur), au liseré haut material.edgeLight et au halo de sa teinte (ombre material.shadowBlur, décalée de
-// material.shadowOffsetY, à 40 % comme la maquette v3). Elle glisse vers la géométrie cible au ressort reflow, et
+// la hauteur), au liseré haut material.edgeLight et au halo color.accentDiscret (sa teinte pour une confirmation),
+// ombre material.shadowBlur décalée de material.shadowOffsetY, sans opacité numérique sur la couleur. Elle glisse vers la géométrie cible au ressort reflow, et
 // s'étire un peu dans le sens du trajet tant qu'elle va vite, puis se pose. Sa première cible valable est posée sans
 // trajet, pour qu'elle n'arrive pas du coin du conteneur à l'ouverture.
 // Entrées : cible, rect (x, y, largeur, hauteur) dans le repère du parent ; rayon, rayon des coins ; teinte,
@@ -32,6 +32,8 @@ Item {
 
     // La teinte (accent, ou erreur d'une confirmation) change en fondu, au ressort des états.
     ColorSpring { id: fondu; target: plaque.teinte }
+    // Halo : l'accent discret (color.accentDiscret), ou la teinte d'erreur d'une confirmation, sans opacité ajoutée.
+    ColorSpring { id: halo; target: (plaque.teinte === Theme.color?.accent ? Theme.color?.accentDiscret : plaque.teinte) ?? "transparent" }
     Ressort { id: rx; transition: "reflow"; cible: plaque.cible.x }
     Ressort { id: ry; transition: "reflow"; cible: plaque.cible.y }
     Ressort { id: rw; transition: "reflow"; cible: plaque.cible.width }
@@ -50,8 +52,7 @@ Item {
         radius: plaque.rayon
         blur: Theme.material?.shadowBlur ?? 0
         offset.y: Theme.material?.shadowOffsetY ?? 0
-        color: fondu.value
-        opacity: 0.4
+        color: halo.value
     }
     Rectangle {
         anchors.fill: parent

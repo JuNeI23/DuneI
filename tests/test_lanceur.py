@@ -168,6 +168,18 @@ class LogiqueTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(self.appeler("deplacer", ap, "escape", dispo), liste)
         self.assertEqual(self.appeler("deplacer", ap, "shift+tab", dispo), liste)
 
+    def test_filtrer(self):
+        """Vérifie que les correspondances par lettres dans l'ordre disparaissent dès qu'un résultat correspond
+        franchement, que le calcul reste, et que rien n'est retiré sans correspondance franche.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : appeler, res.
+        """
+        r = [res("calc", "calcul", 1), res("app:firefox", "application", 4), res("app:impress", "application", 1),
+             res("cmd:filaire", "commande", 1), res("fen:0x1", "fenetre", 2)]
+        self.assertEqual([x["cle"] for x in self.appeler("filtrer", r)], ["calc", "app:firefox", "fen:0x1"])
+        faibles = [res("app:a", "application", 1), res("app:b", "application", 2)]
+        self.assertEqual([x["cle"] for x in self.appeler("filtrer", faibles)], ["app:a", "app:b"])
+
     def test_surligner(self):
         """Vérifie le découpage des lettres trouvées : sous-chaîne d'abord, accents ignorés, puis lettres dans l'ordre.
 
@@ -642,7 +654,8 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
 
     def test_confirmation_eteindre(self):
         """Vérifie qu'« Éteindre » demande un second Entrée : le premier n'exécute rien et le bouton principal devient
-        « Confirmer » ; ↓ puis ↑ annulent, et le libellé revient. Le second Entrée n'est jamais pressé.
+        « Confirmer » ; ↓ puis ↑ annulent, et le libellé revient ; armée depuis l'aperçu, Échap la retire en ramenant
+        la sélection à la liste. Le second Entrée n'est jamais pressé.
 
         Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : ouvrir, taper, touche, etat.
         """
@@ -661,6 +674,13 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
         e = self.etat()
         self.assertEqual((e["cles"][e["sel"]["index"]], e["principal"], e["confirmation"]),
                          ("cmd:eteindre", "Exécuter", False))
+        # Depuis l'aperçu : Échap ramène à la liste et annule la confirmation.
+        self.touche("tab", "return")
+        self.assertEqual((self.etat()["sel"]["zone"], self.etat()["confirmation"]), ("apercu", True))
+        self.touche("escape")
+        e = self.etat()
+        self.assertEqual((e["sel"]["zone"], e["saisie"], e["principal"], e["confirmation"]),
+                         ("liste", "éteindre", "Exécuter", False))
         self.assertNotIn("essai : exécuté", self.journal())
 
     def test_fenetre_disparue(self):
@@ -701,6 +721,58 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
         self.assertFalse(e["ouvert"])
         e = self.ouvrir()
         self.assertEqual((e["saisie"], e["vue"]), ("", "accueil"))
+
+
+@unittest.skipUnless(os.environ.get("WAYLAND_DISPLAY") and QS, "session Wayland et Quickshell requis")
+class ClavierTest(FenetreTest):
+    """Le chemin réel des touches (champ, Keys, Recherche, Lanceur.touche), pressées par QtTest dans un CadreLanceur
+    hors écran (plateforme offscreen, sans compositeur) : aucun clavier de la session n'est pris."""
+
+    essai = ROOT / "coque" / "Lanceur" / "essai" / "clavier"
+    environnement = {"WAYLAND_DISPLAY": None, "HYPRLAND_INSTANCE_SIGNATURE": None, "QT_QPA_PLATFORM": "offscreen"}
+
+    def setUp(self):
+        """Lance la coque hors écran sans la garde du plein écran (rien ne s'affiche).
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec si la coque n'est pas prête. Dépendances : EssaiCoque.setUp,
+        installer, lancer, attendre, injecter, ENTREES, FENETRES.
+        """
+        EssaiCoque.setUp(self)
+        self.installer(55)
+        self.lancer(self.dir)
+        self.attendre("essai : prêt")
+        self.injecter(entrees=ENTREES, fenetres=FENETRES,
+                      cheminRoles=str(ROOT / "config" / "hypr" / "donnees" / "roles.lua"),
+                      ipc=[QS, "ipc", "--pid", str(self.proc.pid), "call"])
+
+    def cle(self, *noms: str) -> None:
+        """Presse de vraies touches dans le cadre. Entrée : noms. Sortie : aucune. Dépendances : essai_ipc."""
+        for nom in noms:
+            self.essai_ipc("cle", nom)
+
+    def test_echap_par_le_vrai_chemin(self):
+        """Vérifie, par de vraies touches, qu'Échap ramène l'aperçu à la liste sans vider le champ, puis vide la saisie
+        et le champ (accueil), puis ferme ; Tab entre dans l'aperçu au lieu de déplacer le focus.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : lanceur, taper, cle, etat, jusqua.
+        """
+        self.lanceur("ouvrir")
+        self.jusqua(lambda: self.etat()["ouvert"], "lanceur ouvert")
+        self.taper("fire")
+        self.cle("tab")
+        self.assertEqual(self.etat()["sel"]["zone"], "apercu")
+        self.assertEqual(self.essai_ipc("focus"), "true")
+        self.cle("escape")
+        e = self.etat()
+        self.assertEqual((e["ouvert"], e["saisie"], e["sel"]["zone"]), (True, "fire", "liste"))
+        self.cle("escape")
+        e = self.etat()
+        self.assertEqual((e["ouvert"], e["saisie"], e["vue"]), (True, "", "accueil"))
+        self.cle("escape")
+        self.assertFalse(self.etat()["ouvert"])
+
+    test_ouvre_sur_accueil = test_premiere_lettre_scinde = test_effacer_revient_a_l_accueil = None
+    test_tab_entre_dans_l_apercu = test_confirmation_eteindre = test_fenetre_disparue = test_ferme_libere = None
 
 
 class CommandesTest(unittest.TestCase):

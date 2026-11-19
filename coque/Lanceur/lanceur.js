@@ -202,3 +202,12 @@ function elementsApercu(r) {
 function expressionLisible(saisie) {
     return (saisie || "").replace(/\*/g, " × ").replace(/\//g, " ÷ ").replace(/\s+/g, " ").trim()
 }
+
+// filtrer — écarte le bruit de la recherche floue : dès qu'un résultat correspond franchement (pertinence 3 ou plus,
+// début du texte ou d'un mot), ceux qui ne répondent que par lettres dans l'ordre (pertinence 1) sont retirés ; le
+// calcul est toujours gardé. Entrée : resultats, tableau de {genre, pertinence}. Sortie : nouveau tableau (le même
+// contenu si aucun résultat n'atteint 3). Erreurs : aucune. Dépendances : aucune.
+function filtrer(resultats) {
+    const net = resultats.some(r => r.genre !== "calcul" && r.pertinence >= 3)
+    return resultats.filter(r => !net || r.genre === "calcul" || r.pertinence !== 1)
+}

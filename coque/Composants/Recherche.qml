@@ -7,8 +7,10 @@ import "../Theme"
 // la couleur du texte indicatif ; à droite, le bouton d'effacement edit-clear, au texte secondaire, n'est visible que
 // s'il y a du texte et l'efface au clic, sans être un arrêt de tabulation. Désactivé, les deux icônes prennent la
 // couleur désactivée du texte. Échap efface le texte s'il y en a ; sur un champ vide, la touche n'est pas consommée et
-// remonte au parent (un Overlay la prend pour se fermer).
-// Entrées : text, placeholderText (« Rechercher » par défaut) et le reste de l'API de Champ.
+// remonte au parent (un Overlay la prend pour se fermer). Avec effaceSurEchap faux, Échap n'est jamais traité ici et
+// remonte toujours, texte ou non : le lanceur (L2-16) décide lui-même de vider la saisie ou de quitter l'aperçu.
+// Entrées : text, placeholderText (« Rechercher » par défaut), effaceSurEchap (vrai par défaut) et le reste de l'API
+// de Champ.
 // Sorties : celles de Champ ; loupe et effacer, les deux Icone, lues par les essais.
 // Erreurs : aucune ; avant le chargement des tokens, les cotes sont nulles et les icônes invisibles.
 // Dépendances : Champ, Icone, Theme (space, icons, color).
@@ -24,8 +26,11 @@ Champ {
     rayon: height / 2
     leftPadding: marge + loupe.taille + (Theme.space?.scale[0] ?? 0)
     rightPadding: leftPadding
+    property bool effaceSurEchap: true
+
     placeholderText: "Rechercher"
     Keys.onEscapePressed: event => {
+        if (!effaceSurEchap) { event.accepted = false; return }
         event.accepted = length > 0
         clear()
     }

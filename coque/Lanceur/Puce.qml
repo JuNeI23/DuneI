@@ -27,6 +27,8 @@ Item {
     implicitWidth: rangee.implicitWidth + 2 * (Theme.space?.scale[2] ?? 0)
 
     Ressort { id: efface; transition: "state"; nature: "fondu"; cible: puce.choisie ? 1 : 0 }
+    // Rappel ↵ : texte secondaire sur une puce neutre, sur-accent sur la plaque (aucune opacité sur une couleur de rôle).
+    ColorSpring { id: rappelEncre; target: (puce.choisie ? Theme.color?.onAccent : Theme.color?.textSecondary) ?? "transparent" }
     ColorSpring { id: encre; target: (puce.choisie ? Theme.color?.onAccent : Theme.color?.textPrimary) ?? "transparent" }
 
     Rectangle {
@@ -71,8 +73,7 @@ Item {
             visible: puce.rappel
             text: "↵"
             echelon: 0
-            opacity: 0.75
-            color: encre.value
+            color: rappelEncre.value
         }
     }
 

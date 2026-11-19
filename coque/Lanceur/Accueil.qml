@@ -110,7 +110,7 @@ Item {
                     Rectangle {
                         anchors.top: nom.bottom
                         anchors.horizontalCenter: parent.horizontalCenter
-                        visible: t.modelData.type !== "Application"
+                        visible: (t.modelData.apercu?.fenetres?.length ?? 0) > 0
                         width: Theme.space?.scale[0] ?? 0
                         height: width
                         radius: width / 2

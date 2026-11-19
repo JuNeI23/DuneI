@@ -33,6 +33,9 @@ Item {
     readonly property string genre: resultat?.genre ?? ""
     readonly property var boutons: resultat ? [resultat.principale].concat(resultat.secondaires || []).filter(a => a) : []
     readonly property var adresses: resultat?.apercu?.fenetres ?? []
+    // Clé des fenêtres affichées : une chaîne ne notifie que si elle change vraiment ; les vignettes ne sont donc
+    // recréées (une capture chacune) que si l'ensemble des fenêtres change, jamais au déplacement d'un bouton à l'autre.
+    readonly property string cleFenetres: adresses.join(" ")
     readonly property int vignettes: grille.count
     readonly property real marge: Theme.reglages?.pageMargin ?? 0
     readonly property real ecart: Theme.space?.scale[2] ?? 0
@@ -127,14 +130,14 @@ Item {
 
             Repeater {
                 id: grille
-                // Modèle entier : changer de bouton au clavier ne recrée pas les vignettes (une capture chacune).
-                model: zone.visible ? apercu.adresses.length : 0
+                model: zone.visible && apercu.cleFenetres ? apercu.cleFenetres.split(" ") : []
 
                 // Cellule — une vignette et, pour les petites, sa légende.
                 delegate: Column {
                     id: c
                     required property int index
-                    readonly property string adresse: apercu.adresses[index] ?? ""
+                    required property string modelData
+                    readonly property string adresse: modelData
                     readonly property var fenetre: Lanceur.fenetreDe(adresse)
                     readonly property alias image: v
                     width: apercu.grande ? zone.width : (zone.width - 2 * apercu.ecart) / 3

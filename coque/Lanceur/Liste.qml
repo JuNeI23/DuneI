@@ -113,7 +113,6 @@ ListView {
             text: l.modelData.type
             echelon: 1
             color: gris.value
-            opacity: l.choisie ? 0.8 : 1
         }
 
         // Le survol ne choisit pas la ligne : les lignes recréées à chaque frappe sous un pointeur immobile

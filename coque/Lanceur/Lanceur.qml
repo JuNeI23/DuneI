@@ -18,7 +18,8 @@ import "../Applications/applications.js" as Apps
 // d'usage. Le clavier est traité ici, par touche(), qu'appellent la fenêtre et l'IPC des essais : un seul chemin.
 // Entrées : ouvert ; saisie ; clavierExclusif, vrai par défaut, que la fenêtre applique (une coque d'essai le met à
 //           faux pour ne jamais prendre le clavier de Nicolas) ; executeur, null par défaut : une fonction qui reçoit
-//           l'action à la place de son exécution réelle (coques d'essai). IPC « lanceur » : basculer, ouvrir, fermer,
+//           l'action à la place de son exécution réelle (coques d'essai) ; fenetree, vrai par défaut : faux, aucune
+//           fenêtre n'est construite (coque d'essai hors écran, qui pose elle-même un CadreLanceur). IPC « lanceur » : basculer, ouvrir, fermer,
 //           etat, taper, touche.
 // Sorties : vue (« accueil » ou « scission »), accueil ({medaillons, puces}), resultats (classés), sel ({zone, rang,
 //           index}, forme de lanceur.js deplacer), choisi (le résultat de la ligne retenue), elements (ceux de son
@@ -39,12 +40,13 @@ Singleton {
     property bool confirmation: false
     property bool clavierExclusif: true
     property var executeur: null
+    property bool fenetree: true
     readonly property alias sources: sources
     readonly property var fenetre: chargeur.item?.fenetre ?? null
 
     readonly property string vue: saisie === "" ? "accueil" : "scission"
     readonly property var accueil: ouvert ? sources.accueil() : ({ medaillons: [], puces: [] })
-    readonly property var resultats: ouvert && saisie !== "" ? Logique.classer(sources.chercher(saisie), sources.poids) : []
+    readonly property var resultats: ouvert && saisie !== "" ? Logique.classer(Logique.filtrer(sources.chercher(saisie)), sources.poids) : []
     readonly property var choisi: sel.zone === "liste" || sel.zone === "apercu" ? resultats[sel.rang] : undefined
     readonly property var elements: Logique.elementsApercu(choisi)
     readonly property string libellePrincipal: confirmation ? "Confirmer" : choisi?.principale?.libelle ?? ""
@@ -105,11 +107,13 @@ Singleton {
 
     // touche — traite une touche du lanceur. Entrée : nom, « escape », « return », « backspace », « up », « down »,
     // « left », « right », « tab », « shift+tab », « ctrl+j » ou « ctrl+k ». Sortie : vrai si la touche est prise
-    // (← et → sont laissées au champ dans la liste). Échap ramène l'aperçu à la liste, sinon vide la saisie, sinon
-    // ferme ; toute touche de déplacement annule une confirmation en attente. Erreurs : aucune.
+    // (← et → sont laissées au champ dans la liste). Échap annule une confirmation, puis ramène l'aperçu à la liste,
+    // sinon vide la saisie, sinon ferme ; toute touche de déplacement annule aussi une confirmation en attente.
+    // Erreurs : aucune.
     // Dépendances : Logique.deplacer, dispo, entree, fermer.
     function touche(nom) {
         if (nom === "escape") {
+            confirmation = false
             if (sel.zone === "apercu") sel = Logique.deplacer(sel, nom, dispo())
             else if (saisie !== "") saisie = ""
             else fermer()
@@ -199,6 +203,11 @@ Singleton {
         confirmation = false
         sel = saisie === "" ? { zone: "medaillons", rang: 0, index: 0 } : { zone: "liste", rang: 0, index: 0 }
     }
+    // onCleChoisieChanged — un autre résultat sous la sélection (déplacement, fenêtre fermée, réponse du calcul)
+    // annule la confirmation en attente. Entrées : aucune. Sortie : confirmation à faux. Erreurs : aucune.
+    // Dépendances : choisi.
+    readonly property string cleChoisie: choisi?.cle ?? ""
+    onCleChoisieChanged: confirmation = false
     // onResultatsChanged, onAccueilChanged — bornent la sélection quand ce qui est affiché change. Entrées : aucune.
     // Sortie : aucune. Erreurs : aucune. Dépendances : borner.
     onResultatsChanged: borner()
@@ -217,7 +226,7 @@ Singleton {
     // Si la création échoue, l'échec est journalisé et le lanceur se referme.
     LazyLoader {
         id: chargeur
-        active: lanceur.ouvert
+        active: lanceur.ouvert && lanceur.fenetree
         component: Component {
             QtObject {
                 id: porteur
