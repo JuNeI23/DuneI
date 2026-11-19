@@ -110,6 +110,15 @@ class LogiqueTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(self.appeler("frequentes", apps, {"app:d": 3, "app:a": 1}, ["app:ff"], 3),
                          ["app:d", "app:a", "app:ff"])
 
+    def test_lire_roles(self):
+        """Vérifie que seuls les rôles simples de premier niveau sont lus, par leur premier mot, dans l'ordre du fichier.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : appeler, config/hypr/donnees/roles.lua.
+        """
+        texte = (ROOT / "config" / "hypr" / "donnees" / "roles.lua").read_text()
+        self.assertEqual(self.appeler("lireRoles", texte), ["kitty", "dolphin", "firefox", "wofi"])
+        self.assertEqual(self.appeler("lireRoles", ""), [])
+
     def test_usage_corrompu(self):
         """Vérifie que tout relevé qui n'est pas un objet valide est ramené à vide, et les entrées invalides écartées.
 
@@ -291,6 +300,159 @@ class CalculTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(self.etat(), {"expression": "", "valeur": "", "disponible": False})
         self.assertLessEqual(self.journal().count("qalc"), 1, self.journal())
         self.assertNotIn("ERROR", self.journal())
+
+
+def entree(ident: str, nom: str, **champs) -> dict:
+    """Construit une fausse entrée de bureau, aux noms de champs de DesktopEntry.
+
+    Entrées : ident, id de l'entrée ; nom, son nom ; champs, champs à remplacer (genericName, keywords, actions…).
+    Sortie : le dictionnaire de l'entrée. Erreurs : aucune. Dépendances : aucune.
+    """
+    return {"id": ident, "name": nom, "genericName": "", "keywords": [], "icon": ident, "comment": "",
+            "startupClass": "", "runInTerminal": False, "actions": [], **champs}
+
+
+ENTREES = [
+    entree("firefox", "Firefox", genericName="Navigateur web", startupClass="firefox",
+           actions=[{"id": "new-window", "name": "Nouvelle fenêtre", "icon": ""},
+                    {"id": "new-private-window", "name": "Nouvelle fenêtre privée", "icon": ""}]),
+    entree("kitty", "kitty", genericName="Terminal"),
+    entree("org.kde.dolphin", "Dolphin", genericName="Gestionnaire de fichiers"),
+] + [entree(n.lower(), n) for n in ("Alpha", "Bravo", "Charlie", "Delta", "Echo")]
+
+FENETRES = [
+    {"adresse": "0xa1", "classe": "firefox", "titre": "Accueil — Mozilla Firefox", "bureau": "1", "historique": 1},
+    {"adresse": "0xa2", "classe": "firefox", "titre": "Arch Wiki — Mozilla Firefox", "bureau": "2", "historique": 0},
+    {"adresse": "0xa3", "classe": "firefox", "titre": "Courriel — Mozilla Firefox", "bureau": "3", "historique": 2},
+    {"adresse": "0xb1", "classe": "kitty", "titre": "~", "bureau": "2", "historique": 3},
+]
+
+
+@unittest.skipUnless(os.environ.get("WAYLAND_DISPLAY") and QS, "session Wayland et Quickshell requis")
+class SourcesTest(EssaiCoque, unittest.TestCase):
+    """Les sources du lanceur (Sources.qml), nourries de fausses entrées et de fausses fenêtres par IPC."""
+
+    essai = ROOT / "coque" / "Lanceur" / "essai" / "sources"
+    teintes = ()
+    # Ni compositeur ni écran : les sources ne doivent rien lire de la session de Nicolas.
+    environnement = {"WAYLAND_DISPLAY": None, "QT_QPA_PLATFORM": "offscreen"}
+
+    def setUp(self):
+        """Lance la coque d'essai des sources, attend qu'elle soit prête et y injecte les fausses données.
+
+        Entrées : aucune. Sortie : aucune ; self.proc tient la coque. Erreurs : échec du test si « essai : prêt »
+        n'apparaît pas ; CalledProcessError si l'injection échoue. Dépendances : EssaiCoque.setUp, lancer, attendre,
+        ipc, ENTREES, FENETRES.
+        """
+        super().setUp()
+        self.lancer(self.dir)
+        self.attendre("essai : prêt")
+        self.ipc("injecter", json.dumps({
+            "entrees": ENTREES, "fenetres": FENETRES,
+            "cheminRoles": str(ROOT / "config" / "hypr" / "donnees" / "roles.lua"),
+            "ipc": [QS, "ipc", "--pid", str(self.proc.pid), "call"]}))
+
+    def ipc(self, fonction: str, *args: str):
+        """Appelle une fonction de la cible « essai » et rend sa sortie décodée du JSON (None si elle est vide).
+
+        Entrées : fonction, son nom ; args, ses arguments en chaînes. Sortie : la valeur décodée. Erreurs :
+        CalledProcessError si l'appel IPC échoue. Dépendances : qs, lancer.
+        """
+        sortie = subprocess.run([QS, "ipc", "--pid", str(self.proc.pid), "call", "essai", fonction, *args],
+                                check=True, capture_output=True, text=True, timeout=DELAI).stdout.strip()
+        return json.loads(sortie) if sortie else None
+
+    def chercher(self, saisie: str) -> list:
+        """Rend les résultats d'une saisie, classés par lanceur.js (classer, sans poids).
+
+        Entrée : saisie. Sortie : liste de résultats. Erreurs : celles d'ipc. Dépendances : ipc.
+        """
+        return self.ipc("classes", saisie)
+
+    def test_fire_donne_firefox_puis_ses_fenetres(self):
+        """Vérifie que « fire » donne Firefox ouverte (« 3 fenêtres », amenée sur la plus récente) puis ses trois
+        fenêtres en retrait (par titre, faute de poids), sans ses actions de bureau, que « fire priv » vise la fenêtre privée, et qu'une
+        application fermée se lance.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : chercher.
+        """
+        r = self.chercher("fire")
+        self.assertEqual([x["cle"] for x in r[:4]], ["app:firefox", "fen:0xa1", "fen:0xa2", "fen:0xa3"])
+        self.assertEqual(r[0]["type"], "3 fenêtres")
+        self.assertEqual(r[0]["principale"], {"libelle": "Amener", "genre": "amener", "cible": "0xa2", "confirmer": False})
+        self.assertEqual([a["cible"] for a in r[0]["secondaires"]], ["firefox:new-window", "firefox:new-private-window"])
+        self.assertEqual(r[0]["apercu"]["fenetres"], ["0xa2", "0xa1", "0xa3"])
+        self.assertTrue(all(x["retrait"] and x["app"] == "app:firefox" and x["genre"] == "fenetre" for x in r[1:4]))
+        self.assertEqual(r[2]["type"], "bureau 2")
+        self.assertNotIn("action", [x["genre"] for x in r])
+        self.assertIn("act:firefox:new-private-window", [x["cle"] for x in self.chercher("fire priv")])
+        dolphin = self.chercher("dolph")[0]
+        self.assertEqual((dolphin["type"], dolphin["principale"]["genre"], dolphin["principale"]["cible"]),
+                         ("Application", "lancer", "org.kde.dolphin"))
+
+    def test_titre_seul_donne_une_fenetre_isolee(self):
+        """Vérifie que « wiki », qui ne désigne que le titre d'une fenêtre, donne cette fenêtre seule, de type
+        « Fenêtre », sans son application.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : chercher.
+        """
+        r = self.chercher("wiki")
+        self.assertEqual([x["cle"] for x in r], ["fen:0xa2"])
+        self.assertEqual((r[0]["type"], r[0]["retrait"], r[0]["sousTitre"], r[0]["apercu"]["bureau"]),
+                         ("Fenêtre", False, "Firefox", "2"))
+        self.assertEqual(r[0]["principale"]["genre"], "amener")
+
+    def test_commandes_et_pages(self):
+        """Vérifie que « wi-fi » trouve la page Wi-Fi de Paramètres, que « déranger » trouve la commande avec son état
+        lu par IPC, et qu'« éteindre » demande une confirmation.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : ipc, chercher, attendre.
+        """
+        wifi = [x for x in self.chercher("wi-fi") if x["genre"] == "commande"]
+        self.assertEqual(wifi[0]["titre"], "Paramètres › Wi-Fi")
+        self.ipc("rafraichir")
+        self.attendre("essai : état Activé")
+        dnd = [x for x in self.chercher("déranger") if x["cle"] == "cmd:ne-pas-deranger"][0]
+        self.assertEqual((dnd["type"], dnd["apercu"]["etat"]), ("Commande", "Activé"))
+        eteindre = [x for x in self.chercher("éteindre") if x["cle"] == "cmd:eteindre"][0]
+        self.assertTrue(eteindre["principale"]["confirmer"])
+
+    def test_calcul_courant(self):
+        """Vérifie que la ligne de calcul n'apparaît que si le calcul publié répond à la saisie présente.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : ipc, chercher.
+        """
+        self.ipc("calculer", "2+2", "4")
+        r = self.chercher("2+2")
+        self.assertEqual((r[0]["cle"], r[0]["titre"], r[0]["principale"]["genre"]), ("calc", "4", "copier"))
+        self.assertNotIn("calc", [x["cle"] for x in self.chercher("2+3")])
+
+    def test_accueil_six_medaillons_trois_puces(self):
+        """Vérifie l'accueil : l'application la plus utilisée, puis les rôles de roles.lua, puis l'ordre alphabétique,
+        six médaillons ; trois puces, la commande utilisée d'abord, puis l'ordre du fichier.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : ipc.
+        """
+        self.ipc("injecter", json.dumps({"poids": {"app:echo": 2, "cmd:veille": 1}}))
+        a = self.ipc("accueil")
+        self.assertEqual([m["cle"] for m in a["medaillons"]],
+                         ["app:echo", "app:kitty", "app:org.kde.dolphin", "app:firefox", "app:alpha", "app:bravo"])
+        self.assertEqual(a["medaillons"][3]["type"], "3 fenêtres")
+        self.assertEqual([p["cle"] for p in a["puces"]], ["cmd:veille", "cmd:ne-pas-deranger", "cmd:theme-jour"])
+
+    def test_commandes_json_valide(self):
+        """Vérifie que chaque commande déclarée a tous ses champs et exactement un moyen d'exécution (ipc ou commande).
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : coque/Lanceur/commandes.json.
+        """
+        commandes = json.loads((ROOT / "coque" / "Lanceur" / "commandes.json").read_text())
+        champs = {"id", "libelle", "motsCles", "icone", "ipc", "commande", "etat", "confirmer"}
+        for c in commandes:
+            with self.subTest(c.get("id")):
+                self.assertEqual(set(c), champs)
+                self.assertEqual((c["ipc"] is None) + (c["commande"] is None), 1)
+                self.assertIsInstance(c["confirmer"], bool)
+        self.assertEqual(len({c["id"] for c in commandes}), len(commandes))
 
 
 if __name__ == "__main__":

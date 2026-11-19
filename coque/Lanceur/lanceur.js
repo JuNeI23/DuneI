@@ -2,7 +2,8 @@
 
 // lanceur.js — logique pure du lanceur d'applications (L2-16), sans dépendance à Quickshell.
 // Rôle : recherche floue (normalisation, score, pertinence), ciblage d'une action de bureau par la saisie, et
-// classement des résultats (calcul, groupes d'application avec leurs fenêtres, actions, commandes, fenêtres isolées).
+// classement des résultats (calcul, groupes d'application avec leurs fenêtres, actions, commandes, fenêtres isolées),
+// relevé d'usage, applications fréquentes et rôles de roles.lua, sélection au clavier.
 // Un résultat est un objet {cle, genre, titre, retrait, pertinence, app, …} ; seuls les champs lus par chaque
 // fonction sont requis. Entrées, sorties, erreurs : voir chaque fonction. Dépendances : aucune.
 
@@ -137,4 +138,21 @@ function deplacer(sel, touche, dispo) {
         return pas ? vers("apercu", dispo.apercu, sel.index + pas) : sel
     }
     return sel
+}
+
+// lireRoles — logiciels des rôles applicatifs déclarés dans roles.lua, pour compléter l'accueil.
+// Entrée : texte, le contenu de config/hypr/donnees/roles.lua (ou undefined). Sortie : le premier mot de la commande
+// de chaque rôle simple (« navigateur = "firefox" ») de la table de premier niveau, sans son chemin, dans l'ordre du
+// fichier ; les rôles à variantes (tables imbriquées) et les commentaires sont ignorés. Erreurs : aucune (un texte
+// vide ou illisible donne un tableau vide). Dépendances : aucune.
+function lireRoles(texte) {
+    const mots = []
+    let niveau = 0
+    for (const brute of (texte || "").split("\n")) {
+        const ligne = brute.replace(/--.*$/, "")
+        const m = ligne.match(/^\s*\w+\s*=\s*"([^"\s]+)/)
+        if (m && niveau === 1) mots.push(m[1].split("/").pop())
+        niveau += (ligne.match(/{/g) || []).length - (ligne.match(/}/g) || []).length
+    }
+    return mots
 }
