@@ -87,6 +87,8 @@ class ApplicationsTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(self.appeler("commandeFocus", "564b9643c830"), attendu)
         self.assertEqual(self.appeler("commandeFocus", "0x564b9643c830"), attendu)
         self.assertEqual(self.appeler("commandeLancement", DOLPHIN), ["uwsm", "app", "--", "org.kde.dolphin.desktop"])
+        self.assertEqual(self.appeler("commandeAction", "firefox:new-private-window"),
+                         ["uwsm", "app", "--", "firefox.desktop:new-private-window"])
 
 
 if __name__ == "__main__":

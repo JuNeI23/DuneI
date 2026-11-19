@@ -8,7 +8,8 @@ import "applications.js" as Logique
 // Rôle : relie la logique pure d'applications.js aux entrées de bureau de Quickshell (DesktopEntries, qui exclut déjà
 // les entrées NoDisplay) et aux fenêtres de Hyprland. Les notifications s'en servent pour leur « Ouvrir » propre ;
 // le lanceur (L2-16) appellera amenerOuLancer directement.
-// Entrées : aucune. Sorties : aucune. Fonctions : resoudre, toplevels, amenerOuLancer.
+// Entrées : aucune. Sorties : aucune. Fonctions : resoudre, toplevels, amenerOuLancer,
+// lancerAction.
 // Erreurs : aucune ; une application introuvable n'est ni amenée ni lancée.
 // Dépendances : Quickshell (Singleton, DesktopEntries, execDetached), Quickshell.Hyprland (Hyprland.toplevels,
 // Hyprland.dispatch), applications.js, uwsm à l'exécution.
@@ -72,4 +73,10 @@ Singleton {
         if (adresses.length > 0) Hyprland.dispatch(Logique.commandeFocus(adresses[0]))
         else Quickshell.execDetached(Logique.commandeLancement(entree))
     }
+
+    // lancerAction — lance une action de bureau d'une application (« Nouvelle fenêtre privée ») dans sa propre unité
+    // systemd, hors de l'arbre de processus de la coque, jamais par DesktopAction.execute().
+    // Entrée : cible, « <id de l'entrée>:<id de l'action> ». Sortie : aucune. Erreurs : aucune ; uwsm écrit son échec
+    // dans son journal. Dépendances : Quickshell.execDetached, Logique.commandeAction, uwsm à l'exécution.
+    function lancerAction(cible) { Quickshell.execDetached(Logique.commandeAction(cible)) }
 }

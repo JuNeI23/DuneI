@@ -159,3 +159,46 @@ function lireRoles(texte, noms) {
     }
     return noms.filter(n => Object.prototype.hasOwnProperty.call(roles, n)).map(n => roles[n])
 }
+
+// surligner — découpe un texte en segments, en marquant les lettres que la saisie y a trouvées.
+// Entrées : texte, chaîne affichée ; saisie, chaîne cherchée. Sortie : tableau de {texte, trouve} dont la
+// concaténation redonne le texte : la première sous-chaîne qui répond à la saisie, accents et casse ignorés, sinon ses
+// lettres prises dans l'ordre (comme le score 1) ; un seul segment non trouvé si rien ne répond ou si la saisie est
+// vide. Erreurs : aucune. Dépendances : normaliser.
+function surligner(texte, saisie) {
+    const lettres = Array.from(texte || ""), n = lettres.map(normaliser), s = normaliser(saisie)
+    const marques = lettres.map(() => false)
+    const debut = s ? n.findIndex((_, i) => n.slice(i).join("").startsWith(s) && n[i] !== "") : -1
+    if (debut >= 0) {
+        for (let i = debut, lu = 0; i < n.length && lu < s.length; i++) { marques[i] = true; lu += n[i].length }
+    } else if (s) {
+        let j = 0
+        n.forEach((c, i) => { if (j < s.length && c && s.startsWith(c, j)) { marques[i] = true; j += c.length } })
+        if (j < s.length) marques.fill(false)
+    }
+    const segments = []
+    lettres.forEach((c, i) => {
+        const dernier = segments[segments.length - 1]
+        if (dernier && dernier.trouve === marques[i]) dernier.texte += c
+        else segments.push({ texte: c, trouve: marques[i] })
+    })
+    return segments.length ? segments : [{ texte: "", trouve: false }]
+}
+
+// elementsApercu — éléments de l'aperçu qu'atteint le clavier, dans l'ordre de ← et →.
+// Entrée : r, un résultat (ou undefined). Sortie : tableau de {genre, action, adresse} : d'abord les boutons
+// (l'action principale, puis les secondaires), puis une vignette par fenêtre de l'aperçu, dont l'action amène la
+// fenêtre ; [] sans résultat. Erreurs : aucune. Dépendances : aucune.
+function elementsApercu(r) {
+    if (!r) return []
+    return [r.principale].concat(r.secondaires || []).filter(a => a).map(action => ({ genre: "bouton", action, adresse: "" }))
+        .concat(((r.apercu || {}).fenetres || []).map(adresse => ({ genre: "vignette", adresse,
+            action: { libelle: "Amener", genre: "amener", cible: adresse, confirmer: false } })))
+}
+
+// expressionLisible — saisie d'un calcul mise en forme pour l'affichage (« 12*7,5 » donne « 12 × 7,5 »).
+// Entrée : saisie, chaîne. Sortie : la saisie où « * » devient « × » et « / » devient « ÷ », entourés d'une espace,
+// les espaces répétées réduites à une et le texte rogné. Erreurs : aucune. Dépendances : aucune.
+function expressionLisible(saisie) {
+    return (saisie || "").replace(/\*/g, " × ").replace(/\//g, " ÷ ").replace(/\s+/g, " ").trim()
+}

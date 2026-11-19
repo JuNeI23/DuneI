@@ -10,7 +10,8 @@ import "Lanceur/lanceur.js" as Logique
 // (SourcesTest). Elle sert aussi la cible « notifications », dont l'état « ne pas déranger » vaut toujours « true ».
 // Entrées : commandes IPC injecter, calculer, classes, accueil, rafraichir. Sortie : JSON ; la ligne « essai : état
 // <état> » à chaque état reçu. Erreurs : aucune. Dépendances : quickshell ≥ 0.3 (Quickshell.Io), Sources, lanceur.js
-// (liens essai/sources/Lanceur, Applications et Parametres, car Quickshell ne suit pas les imports hors du dossier
+// (liens essai/sources/Lanceur, Applications, Parametres, Theme et Composants, ces deux derniers pour le singleton
+// Lanceur que déclare le qmldir du module, car Quickshell ne suit pas les imports hors du dossier
 // de la coque).
 ShellRoot {
     // Component.onCompleted — signale que la coque d'essai est prête.

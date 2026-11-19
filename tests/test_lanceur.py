@@ -168,6 +168,32 @@ class LogiqueTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(self.appeler("deplacer", ap, "escape", dispo), liste)
         self.assertEqual(self.appeler("deplacer", ap, "shift+tab", dispo), liste)
 
+    def test_surligner(self):
+        """Vérifie le découpage des lettres trouvées : sous-chaîne d'abord, accents ignorés, puis lettres dans l'ordre.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : appeler.
+        """
+        self.assertEqual(self.appeler("surligner", "Firefox", "fire"),
+                         [{"texte": "Fire", "trouve": True}, {"texte": "fox", "trouve": False}])
+        self.assertEqual(self.appeler("surligner", "Éteindre", "ete"),
+                         [{"texte": "Éte", "trouve": True}, {"texte": "indre", "trouve": False}])
+        self.assertEqual([s["trouve"] for s in self.appeler("surligner", "kitty", "kty")], [True, False, True, False, True])
+        self.assertEqual(self.appeler("surligner", "kitty", "zz"), [{"texte": "kitty", "trouve": False}])
+        self.assertEqual(self.appeler("expressionLisible", "12*7,5 / 2"), "12 × 7,5 ÷ 2")
+
+    def test_elements_apercu(self):
+        """Vérifie l'ordre des éléments de l'aperçu : principale, secondaires, puis une vignette par fenêtre.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : appeler.
+        """
+        a = lambda libelle: {"libelle": libelle, "genre": "action", "cible": libelle, "confirmer": False}
+        r = {"principale": a("Amener"), "secondaires": [a("Privée")], "apercu": {"fenetres": ["0x1", "0x2"]}}
+        e = self.appeler("elementsApercu", r)
+        self.assertEqual([(x["genre"], x["action"]["libelle"]) for x in e],
+                         [("bouton", "Amener"), ("bouton", "Privée"), ("vignette", "Amener"), ("vignette", "Amener")])
+        self.assertEqual(e[3]["action"]["cible"], "0x2")
+        self.assertEqual(self.appeler("elementsApercu", None), [])
+
     def test_aenvoyer(self):
         """Vérifie qu'une saisie n'est envoyée à qalc que si elle contient un chiffre.
 
@@ -446,6 +472,235 @@ class SourcesTest(EssaiCoque, unittest.TestCase):
                          ["app:echo", "app:firefox", "app:kitty", "app:org.kde.dolphin", "app:alpha", "app:bravo"])
         self.assertEqual(a["medaillons"][1]["type"], "3 fenêtres")
         self.assertEqual([p["cle"] for p in a["puces"]], ["cmd:veille", "cmd:ne-pas-deranger", "cmd:theme-jour"])
+
+
+def plein_ecran() -> bool:
+    """Dit si la fenêtre active de la session est en plein écran, pour ne jamais couvrir Nicolas pendant qu'il regarde
+    une vidéo ou travaille en plein écran.
+
+    Entrées : aucune. Sortie : vrai si hyprctl rend une fenêtre active au plein écran non nul ; faux sinon, ou si
+    hyprctl manque ou échoue. Erreurs : aucune. Dépendances : hyprctl.
+    """
+    try:
+        sortie = subprocess.run(["hyprctl", "activewindow", "-j"], capture_output=True, text=True, timeout=DELAI).stdout
+        return bool(json.loads(sortie or "{}").get("fullscreen"))
+    except (OSError, ValueError, subprocess.TimeoutExpired):
+        return False
+
+
+@unittest.skipUnless(os.environ.get("WAYLAND_DISPLAY") and QS, "session Wayland et Quickshell requis")
+class FenetreTest(EssaiCoque, unittest.TestCase):
+    """La fenêtre d'attention du lanceur, ouverte pour de bon dans la session, sans clavier (clavierExclusif faux),
+    pilotée par l'IPC « lanceur » (taper, touche) et nourrie de fausses sources. Chaque essai est court : la coque est
+    tuée à la fin, ce qui retire la fenêtre."""
+
+    essai = ROOT / "coque" / "Lanceur" / "essai" / "fenetre"
+    teintes = (55,)
+
+    def setUp(self):
+        """Lance la coque d'essai de la fenêtre, attend les jetons et injecte les fausses sources.
+
+        Entrées : aucune. Sortie : aucune ; self.proc tient la coque. Erreurs : test sauté si la fenêtre active est
+        en plein écran ; échec si la coque n'est pas prête dans le délai. Dépendances : plein_ecran, installer,
+        lancer, attendre, jusqua, ENTREES, FENETRES.
+        """
+        if plein_ecran():
+            self.skipTest("fenêtre active en plein écran : la fenêtre du lanceur ne doit pas la couvrir")
+        super().setUp()
+        self.installer(55)
+        self.lancer(self.dir)
+        self.attendre("essai : prêt")
+        self.jusqua(lambda: self.essai_ipc("pret") == "true", "jetons chargés")
+        self.injecter(entrees=ENTREES, fenetres=FENETRES,
+                      cheminRoles=str(ROOT / "config" / "hypr" / "donnees" / "roles.lua"),
+                      ipc=[QS, "ipc", "--pid", str(self.proc.pid), "call"])
+
+    def appel(self, cible: str, fonction: str, *args: str) -> str:
+        """Appelle une fonction IPC de la coque d'essai et rend sa sortie brute.
+
+        Entrées : cible, « lanceur » ou « essai » ; fonction ; args, ses arguments en chaînes. Sortie : texte rendu.
+        Erreurs : CalledProcessError si l'appel échoue. Dépendances : qs, lancer.
+        """
+        return subprocess.run([QS, "ipc", "--pid", str(self.proc.pid), "call", cible, fonction, *args], check=True,
+                              capture_output=True, text=True, timeout=DELAI).stdout.strip()
+
+    def essai_ipc(self, fonction: str, *args: str) -> str:
+        """Appelle la cible « essai ». Entrées : fonction, args. Sortie : texte rendu. Dépendances : appel."""
+        return self.appel("essai", fonction, *args)
+
+    def lanceur(self, fonction: str, *args: str) -> str:
+        """Appelle la cible « lanceur ». Entrées : fonction, args. Sortie : texte rendu. Dépendances : appel."""
+        return self.appel("lanceur", fonction, *args)
+
+    def injecter(self, **valeurs) -> None:
+        """Remplace des entrées des sources du lanceur. Entrées : valeurs, propriétés de Sources. Sortie : aucune.
+        Dépendances : essai_ipc."""
+        self.essai_ipc("injecter", json.dumps(valeurs))
+
+    def etat(self) -> dict:
+        """État du lanceur décodé du JSON de lanceur.etat. Sortie : dictionnaire. Dépendances : lanceur."""
+        return json.loads(self.lanceur("etat"))
+
+    def jusqua(self, condition, message: str):
+        """Attend qu'une condition rende une valeur vraie et la rend.
+
+        Entrées : condition, fonction sans argument ; message, ce qui est attendu. Sortie : la valeur rendue.
+        Erreurs : échec du test au délai, avec le journal. Dépendances : journal.
+        """
+        fin = time.monotonic() + DELAI
+        while time.monotonic() < fin:
+            valeur = condition()
+            if valeur:
+                return valeur
+            time.sleep(0.05)
+        self.fail(f"{message} attendu :\n{self.journal()}")
+
+    def ouvrir(self) -> dict:
+        """Ouvre le lanceur et attend que son cadre soit posé à la taille de l'accueil.
+
+        Entrées : aucune. Sortie : l'état. Erreurs : échec au délai. Dépendances : lanceur, etat, jusqua.
+        """
+        self.lanceur("ouvrir")
+        return self.jusqua(lambda: (e := self.etat())["fenetre"] and abs(e["largeur"] - 700) < 1 and e, "accueil posé")
+
+    def taper(self, texte: str) -> None:
+        """Ajoute du texte à la saisie. Entrée : texte. Sortie : aucune. Dépendances : lanceur."""
+        self.lanceur("taper", texte)
+
+    def touche(self, *noms: str) -> None:
+        """Presse des touches dans l'ordre. Entrée : noms (« down », « tab », « escape »…). Dépendances : lanceur."""
+        for nom in noms:
+            self.lanceur("touche", nom)
+
+    def test_ouvre_sur_accueil(self):
+        """Vérifie que le lanceur s'ouvre sur l'accueil, la plaque sur le premier médaillon, et qu'Entrée y lance
+        l'application la plus utilisée (ici la première des rôles, Firefox, ouverte : elle est amenée), note l'usage et
+        ferme.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : ouvrir, touche, etat, attendre.
+        """
+        e = self.ouvrir()
+        self.assertEqual((e["vue"], e["saisie"], e["sel"]["zone"], e["sel"]["index"]), ("accueil", "", "medaillons", 0))
+        self.assertEqual(e["medaillons"][:3], ["app:firefox", "app:kitty", "app:org.kde.dolphin"])
+        self.assertEqual(len(e["puces"]), 3)
+        self.assertAlmostEqual(e["hauteur"], 330, delta=1)
+        self.touche("return")
+        self.attendre("essai : exécuté amener 0xa2")
+        self.jusqua(lambda: not self.etat()["ouvert"], "lanceur fermé")
+        self.assertEqual(json.loads((self.dir / "lanceur.json").read_text())["app:firefox"]["n"], 1)
+
+    def test_premiere_lettre_scinde(self):
+        """Vérifie que la première lettre scinde le cadre : vue « scission », largeur qui rejoint 900 au ressort en
+        passant par des tailles intermédiaires, hauteur 470, plaque sur la première ligne.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : ouvrir, taper, etat, jusqua.
+        """
+        self.ouvrir()
+        self.essai_ipc("marquer")
+        self.taper("f")
+        e = self.jusqua(lambda: (e := self.etat())["vue"] == "scission" and abs(e["largeur"] - 900) < 1 and e,
+                        "cadre de la scission")
+        self.assertAlmostEqual(e["hauteur"], 470, delta=1)
+        self.assertEqual((e["sel"]["zone"], e["sel"]["index"]), ("liste", 0))
+        largeurs = json.loads(self.essai_ipc("largeurs"))
+        self.assertGreaterEqual(len([l for l in largeurs if 720 < l < 880]), 3, largeurs)
+
+    def test_effacer_revient_a_l_accueil(self):
+        """Vérifie qu'Échap vide d'abord la saisie (retour à l'accueil, lanceur ouvert), puis ferme sur un champ vide.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : ouvrir, taper, touche, etat.
+        """
+        self.ouvrir()
+        self.taper("fire")
+        self.assertEqual(self.etat()["vue"], "scission")
+        self.touche("escape")
+        e = self.etat()
+        self.assertEqual((e["ouvert"], e["saisie"], e["vue"], e["sel"]["zone"]), (True, "", "accueil", "medaillons"))
+        self.touche("escape")
+        self.assertFalse(self.etat()["ouvert"])
+
+    def test_tab_entre_dans_l_apercu(self):
+        """Vérifie que Tab fait entrer la sélection dans l'aperçu (bouton principal, puis → vers le suivant), qu'Échap
+        la ramène sur la ligne retenue, et qu'Entrée dans l'aperçu exécute l'élément choisi.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : ouvrir, taper, touche, etat.
+        """
+        self.ouvrir()
+        self.taper("fire")
+        e = self.etat()
+        self.assertEqual(e["cles"][0], "app:firefox")
+        self.assertEqual(e["apercu"], ["bouton", "bouton", "bouton", "vignette", "vignette", "vignette"])
+        self.touche("tab")
+        self.assertEqual((self.etat()["sel"]["zone"], self.etat()["sel"]["index"]), ("apercu", 0))
+        self.touche("right")
+        self.assertEqual(self.etat()["sel"]["index"], 1)
+        self.touche("escape")
+        e = self.etat()
+        self.assertEqual((e["ouvert"], e["saisie"], e["sel"]["zone"], e["sel"]["index"]), (True, "fire", "liste", 0))
+        self.touche("tab", "right", "return")
+        self.attendre("essai : exécuté action firefox:new-window")
+
+    def test_confirmation_eteindre(self):
+        """Vérifie qu'« Éteindre » demande un second Entrée : le premier n'exécute rien et le bouton principal devient
+        « Confirmer » ; ↓ puis ↑ annulent, et le libellé revient. Le second Entrée n'est jamais pressé.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : ouvrir, taper, touche, etat.
+        """
+        self.ouvrir()
+        self.taper("éteindre")
+        e = self.etat()
+        self.touche(*["down"] * e["cles"].index("cmd:eteindre"))
+        e = self.etat()
+        self.assertEqual((e["cles"][e["sel"]["index"]], e["principal"]), ("cmd:eteindre", "Exécuter"))
+        self.touche("return")
+        time.sleep(0.3)
+        e = self.etat()
+        self.assertNotIn("essai : exécuté", self.journal())
+        self.assertEqual((e["ouvert"], e["principal"], e["confirmation"]), (True, "Confirmer", True))
+        self.touche("down", "up")
+        e = self.etat()
+        self.assertEqual((e["cles"][e["sel"]["index"]], e["principal"], e["confirmation"]),
+                         ("cmd:eteindre", "Exécuter", False))
+        self.assertNotIn("essai : exécuté", self.journal())
+
+    def test_fenetre_disparue(self):
+        """Vérifie qu'une fenêtre fermée pendant l'ouverture quitte la liste et l'aperçu sans erreur, et que la
+        sélection, posée en dernière ligne, est bornée à la nouvelle dernière ligne.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : ouvrir, taper, touche, etat,
+        injecter, jusqua, journal.
+        """
+        self.ouvrir()
+        self.taper("fire")
+        cles = self.etat()["cles"]
+        self.assertEqual(cles[:4], ["app:firefox", "fen:0xa1", "fen:0xa2", "fen:0xa3"])
+        self.assertEqual(self.etat()["vignettes"], 3)
+        self.touche(*["down"] * (len(cles) - 1))
+        self.assertEqual(self.etat()["sel"]["index"], len(cles) - 1)
+        self.injecter(fenetres=[f for f in FENETRES if f["adresse"] != "0xa3"])
+        e = self.jusqua(lambda: (e := self.etat()) and "fen:0xa3" not in e["cles"] and e, "fenêtre retirée")
+        self.assertEqual(len(e["cles"]), len(cles) - 1)
+        self.assertEqual((e["sel"]["zone"], e["sel"]["index"], e["sel"]["rang"]), ("liste", len(cles) - 2, len(cles) - 2))
+        self.touche(*["up"] * len(cles))
+        e = self.etat()
+        self.assertEqual((e["cles"][e["sel"]["index"]], e["vignettes"]), ("app:firefox", 2))
+        time.sleep(0.3)
+        for motif in ("TypeError", "ReferenceError", "Error:", "WARN scene", "WARN qml"):
+            self.assertNotIn(motif, self.journal())
+
+    def test_ferme_libere(self):
+        """Vérifie qu'après fermeture la fenêtre du lanceur n'existe plus (LazyLoader), et qu'elle se reconstruit à la
+        réouverture sur l'accueil, saisie vide.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : ouvrir, taper, lanceur, etat.
+        """
+        self.ouvrir()
+        self.taper("kit")
+        self.lanceur("fermer")
+        e = self.jusqua(lambda: (e := self.etat()) and not e["fenetre"] and e, "fenêtre détruite")
+        self.assertFalse(e["ouvert"])
+        e = self.ouvrir()
+        self.assertEqual((e["saisie"], e["vue"]), ("", "accueil"))
 
 
 class CommandesTest(unittest.TestCase):
