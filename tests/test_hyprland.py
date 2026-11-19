@@ -247,6 +247,17 @@ class LayerRulesTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "xray"):
             self.layers(xray=["dunei-inconnu"])
 
+    @unittest.skipUnless(LUA, "aucun interpréteur Lua")
+    def test_attention_en_fondu(self):
+        """Le voile d'attention (lanceur, galerie) apparaît en fondu : seul son calque porte animation = "fade"."""
+        regles = dict(zip(self.probe("r.match.namespace"), self.probe("tostring(r.animation)")))
+        self.assertEqual(regles.pop("^dunei-attention$"), "fade")
+        self.assertEqual(set(regles.values()), {"nil"})
+
+    def test_fondu_hors_namespaces(self):
+        with self.assertRaisesRegex(ValueError, "fondu"):
+            self.layers(fondu=["dunei-inconnu"])
+
 
 class BindsTest(unittest.TestCase):
     """Fragment lu par les raccourcis : le pas de redimensionnement vient des jetons et reste sur l'échelle."""
