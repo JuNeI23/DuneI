@@ -32,7 +32,7 @@ import "Composants/ancrage.js" as Ancrage
 // <visible> <running> », « essai activitePhase <phase> », « essai activiteAncetre <bool> », « essai depliableOuvrir
 // <bool> », « essai basculeCocher <bool> », « essai valeurCopier », « essai pastillesForcer <état> », « essai pastillesReduire <bool> »,
 // « essai knobsActifs <bool> », « essai interrupteurCocher <bool> », « essai compteurValeur <n> », « essai deroulantRang <n> », « essai decocher »,
-// « essai radioCocher <rang> », « essai jaugeActive <bool> », « essai jaugeCoupe <bool> », « essai rangeeImposer <bool> », « essai boutonPrincipal <bool> », « essai boutonDanger <bool> », « essai inactif
+// « essai radioCocher <rang> », « essai jaugeActive <bool> », « essai jaugeCoupe <bool> », « essai surPlaque <bool> », « essai rangeeImposer <bool> », « essai boutonPrincipal <bool> », « essai boutonDanger <bool> », « essai inactif
 // <bool> », « essai reparenter », « essai texteMoyen », « essai anneauInactif <bool> », « essai survol <bool> »,
 // « essai champActif <bool> », « essai champTexte <texte> », « essai selectionLibre », « essai icone <nom> <bool> »,
 // « essai ouvrirFactice <A…E> », « essai fermerFactice <A…E> » et « essai materiauHauteur <px> ».
@@ -58,6 +58,8 @@ ShellRoot {
         Surface {
             id: panneau
             role: "surfacePanel"
+            // Plaque du curseur simulée sous tous les contrôles du panneau (essai surPlaque), pour l'inversion (L2-73).
+            property bool dnSurPlaque: false
 
             Item {
                 id: capteur
@@ -630,6 +632,12 @@ ShellRoot {
         function jaugeCibles(): void {
             essai.journal("jaugeCibles", [jaugeEssai.fondRemplie.target, jaugeEssai.fondIcone.target,
                 jaugeEssai.etat.fond].join(" "))
+        }
+
+        // surPlaque — pose ou retire la plaque du curseur simulée sous les contrôles du panneau. Entrée : valeur.
+        // Sortie : aucune. Erreurs : aucune. Dépendances : panneau (dnSurPlaque).
+        function surPlaque(valeur: bool): void {
+            panneau.dnSurPlaque = valeur
         }
 
         // jaugeCoupe — coupe ou rétablit la jauge d'essai. Entrée : valeur, nouvel état coupe. Sortie : aucune.

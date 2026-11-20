@@ -14,7 +14,9 @@ import "../Theme"
 // centrée dans le disque minimal, prend le texte de ce même Etat, le sur-accent : elle se lit sur l'accent comme la
 // coche d'une case. Le focus clavier n'a pas d'anneau (L2-73), la rangée qui porte la jauge le montre ; un clic ne
 // vole pas le focus d'un champ (focusPolicy Qt.TabFocus, § 7.3). Sur la plaque d'accent du curseur
-// (Etat.inverseSurPlaque), elle s'inverse : partie remplie au sur-accent, icône à l'accent (L2-73).
+// (Etat.inverseSurPlaque), elle s'inverse : partie remplie au sur-accent, icône à l'accent (L2-73) ; coupée sur la
+// plaque, jamais d'erreur rouge ni de gris sur l'orange : la partie remplie s'évide (le sur-accent rendu transparent,
+// la barre enfoncée paraît) et l'icône, posée sur cette barre, prend le texte secondaire.
 // Quand la jauge pilote une sourdine, l'icône est cliquable : un clic sur le carré de la hauteur de la barre, à
 // gauche, émet iconeCliquee sans toucher à value, et la jauge peut être coupée : son remplissage prend alors
 // text-disabled et son icône error, en fondu (ColorSpring).
@@ -65,12 +67,15 @@ T.Slider {
     // Couleurs de la partie remplie et de l'icône : celles de l'Etat, ou, coupée, text-disabled et error.
     ColorSpring {
         id: fondRemplie
-        target: jauge.coupe ? (Theme.color?.textDisabled ?? "transparent") : etat.fond
+        target: !jauge.coupe ? etat.fond
+            : etat.surPlaque ? Qt.alpha(Theme.color?.onAccent ?? "transparent", 0)
+            : Theme.color?.textDisabled ?? "transparent"
     }
 
     ColorSpring {
         id: fondIcone
-        target: jauge.coupe ? (Theme.color?.error ?? "transparent") : etat.texte
+        target: !jauge.coupe ? etat.texte
+            : (etat.surPlaque ? Theme.color?.textSecondary : Theme.color?.error) ?? "transparent"
     }
 
     // Zone cliquable de l'icône, au-dessus du gabarit : elle prend le clic avant T.Slider, qui garde tout le reste.

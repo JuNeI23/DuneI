@@ -533,6 +533,25 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(remplie, fond)
         self.assertNotEqual(icone, t["error"].lower())
 
+    def test_jauge_coupe_sur_la_plaque(self):
+        # L2-73 : sur la plaque du curseur, la jauge s'inverse (remplissage au sur-accent, icône à l'accent) ; coupée,
+        # ni rouge ni gris sur l'orange : le remplissage s'évide (sur-accent transparent) et l'icône prend le texte
+        # secondaire, posée sur la barre enfoncée ; coupée et non coupée restent distinctes.
+        self.demarrer()
+        t = self.tokens55()[0]["color"]
+        on, accent = t["onAccent"].lower(), t["accent"].lower()
+        self.ipc("surPlaque", "true")
+        # Hors coupure, la cible de la jauge est la couleur affichée de son Etat, qui rejoint l'inversion au ressort.
+        fin = time.monotonic() + 3
+        while (lu := self.valeur("jaugeCibles").lower().split()[:2]) != [on, accent] and time.monotonic() < fin:
+            time.sleep(0.05)
+        self.assertEqual(lu, [on, accent])
+        self.ipc("jaugeCoupe", "true")
+        remplie, icone = self.valeur("jaugeCibles").lower().split()[:2]
+        self.assertEqual((remplie, icone), ("#00" + on[1:], t["textSecondary"].lower()))
+        self.ipc("surPlaque", "false")
+        self.assertEqual(self.valeur("jaugeCibles").lower().split()[:2], [t["textDisabled"].lower(), t["error"].lower()])
+
     def attendre_jauge(self, attendu: list) -> None:
         """Relit la couleur de la partie remplie et celle de l'icône de la jauge jusqu'à ce qu'elles valent attendu.
 
@@ -1282,6 +1301,15 @@ class CoqueClavierTest(EssaiCoque, unittest.TestCase):
         # la plaque, et leurs contrôles s'inversent tous deux.
         self.ipc("survol", "R")
         self.assertEqual(self.valeur("inversion"), "true true true true true")
+
+    def test_zone_desactivee_sans_curseur(self):
+        # L2-73 : une ZoneCurseur dont le contrôle est désactivé ne prend jamais le curseur, au survol comme au focus.
+        self.demarrer()
+        self.ipc("caseActive", "false")
+        self.ipc("survol", "Z")
+        self.assertEqual(self.valeur("inversion").split()[4], "false")
+        self.ipc("caseActive", "true")
+        self.assertEqual(self.valeur("inversion").split()[4], "true")
 
     def test_barre_jamais_sans_arret(self):
         # Quand l'onglet coché est désactivé, il ne peut plus prendre le focus : les autres onglets redeviennent des

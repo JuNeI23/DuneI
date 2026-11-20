@@ -6,7 +6,8 @@ import "etats.js" as Etats
 // Rôle : depuis que l'anneau de focus a disparu (L2-73), un contrôle seul (la bascule Wi-Fi d'un popover, un
 // interrupteur d'en-tête, une jauge, un bouton texte comme « Actualiser ») montrerait son focus clavier par rien.
 // La zone enveloppe ce contrôle et suit le curseur de sa vue (Etat.suitCurseur) : survolée, ou quand le contrôle a
-// le focus clavier (visualFocus, ou activeFocus pour un simple Item atteint à la tabulation), elle prend le curseur
+// le focus clavier (visualFocus, ou activeFocus pour un simple Item atteint à la tabulation), et tant que le contrôle
+// est actif (enabled : un contrôle désactivé ne prend jamais le curseur), elle prend le curseur
 // et peint derrière lui l'aplat de la plaque des listes (Etat.curseurAplat : color.accent, ou l'accent sans chroma
 // sous inactive), sans ombre, au rayon radius.control, débordant de marge autour du contrôle sans changer sa mise en
 // page. La plaque paraît et s'efface au ressort des états ; hors du curseur, elle est transparente. Sous le curseur,
@@ -14,7 +15,8 @@ import "etats.js" as Etats
 // propre texte prend etat.texte, neutre au repos et au sur-accent sur la plaque.
 // Entrées : le contrôle, déclaré comme unique enfant (cible) : la zone l'adopte et il la remplit ; marge, débord de
 // la plaque autour du contrôle, space.scale[0] par défaut.
-// Sorties : etat, l'Etat de la plaque (couleurs, sousCurseur) ; hovered, visualFocus, down, lus par l'Etat ;
+// Sorties : etat, l'Etat de la plaque (couleurs, sousCurseur) ; hovered, visualFocus, down (down du contrôle, ou
+// pressed pour un gabarit qui n'a pas down, comme T.Slider), lus par l'Etat ;
 // dnSurPlaque, vrai sous le curseur ; plaque, le rectangle peint, lu par les essais.
 // Taille : la taille implicite du contrôle ; posée par l'appelant (largeur d'une mise en page), elle s'impose au
 // contrôle.
@@ -27,9 +29,10 @@ Item {
     property real marge: Theme.space?.scale[0] ?? 0
     readonly property alias etat: etat
     readonly property alias plaque: plaque
-    readonly property bool hovered: survol.hovered
-    readonly property bool visualFocus: cible ? (cible.visualFocus ?? cible.activeFocus) : false
-    readonly property bool down: cible?.down === true
+    readonly property bool actif: cible?.enabled ?? false
+    readonly property bool hovered: survol.hovered && actif
+    readonly property bool visualFocus: actif && (cible.visualFocus ?? cible.activeFocus)
+    readonly property bool down: (cible?.down ?? cible?.pressed) === true
     readonly property bool dnSurPlaque: etat.sousCurseur
 
     implicitWidth: cible?.implicitWidth ?? 0

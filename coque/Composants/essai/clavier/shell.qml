@@ -26,7 +26,7 @@ import "Composants"
 // <cursorFlashTime> », « essai : onglets <géométrie de la barre et de ses segments> », « essai : menu <rangée
 // courante du menu> <rangée courante du témoin> », « essai : ongletSurvole <interaction> <fond> » et « essai : jauge
 // <valeur> <focus clavier> », ainsi que contours, attention, anneaux, reglageCurseur, compteur, deroulant, pastilles,
-// pastillesCouleurs, bascule, activite, materiauDpr, contextuel, ancrage, curseurBoutons, plaqueListe, rangeeSeule et inversion (voir chaque fonction) ; « essai touche
+// pastillesCouleurs, bascule, activite, materiauDpr, contextuel, ancrage, curseurBoutons, plaqueListe, rangeeSeule, inversion et caseActive (voir chaque fonction) ; « essai touche
 // <tab|majtab|gauche|droite|haut|bas|espace|entree|echap> » frappe une touche, « essai activiteMarche <bool> » lance
 // ou arrête l'indicateur d'activité, « essai activiteCliches <dossier> <nombre> <pas> <affichage> <pause> » le
 // photographie à intervalle régulier, « essai molette <1|-1> » tourne la molette sur le compteur, « essai
@@ -344,6 +344,12 @@ ShellRoot {
                 function reglageCurseur(): void {
                     essai.journal("reglageCurseur", [reglageEssai.etat.selection, reglageEssai.etat.sousCurseur,
                                                      interrupteurReglage.etat.selection].join(" "))
+                }
+
+                // caseActive — active ou désactive la case de la zone Z. Entrée : valeur. Sortie : aucune.
+                // Erreurs : aucune. Dépendances : caseZone.
+                function caseActive(valeur: bool): void {
+                    caseZone.enabled = valeur
                 }
 
                 // inversion — journalise, pour l'interrupteur de R puis la case de Z : vrai s'il s'inverse sur la plaque,

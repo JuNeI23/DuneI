@@ -347,13 +347,15 @@ Item {
                                 implicitHeight: contenuActualiser.height
                                 // Clavier (bible, « Clavier ») : la tabulation l'atteint, Entrée et Espace l'activent ; un
                                 // clic ne donne pas le focus, si bien que la plaque ne suit le focus que venu du clavier.
-                                activeFocusOnTab: !page.balayage
+                                // Pendant la recherche, il est inactif : ni curseur, ni clic, ni tabulation.
+                                enabled: !page.balayage
+                                activeFocusOnTab: true
                                 Keys.onPressed: event => {
                                     event.accepted = [Qt.Key_Return, Qt.Key_Enter, Qt.Key_Space].includes(event.key)
                                     if (event.accepted) page.rechercher()
                                 }
-                                HoverHandler { enabled: !page.balayage; cursorShape: Qt.PointingHandCursor }
-                                TapHandler { enabled: !page.balayage; onTapped: page.rechercher() }
+                                HoverHandler { cursorShape: Qt.PointingHandCursor }
+                                TapHandler { onTapped: page.rechercher() }
                                 Row {
                                     id: contenuActualiser
                                     spacing: Theme.space?.scale[0] ?? 0
@@ -362,6 +364,8 @@ Item {
                                         visible: !page.balayage
                                         anchors.verticalCenter: parent.verticalCenter
                                         nom: "view-refresh"
+                                        // Variante pleine sous le curseur (D195).
+                                        pleine: zoneActualiser.etat.sousCurseur
                                         taille: Theme.icons?.sizes.dense ?? 0
                                         couleur: zoneActualiser.etat.texte
                                     }
