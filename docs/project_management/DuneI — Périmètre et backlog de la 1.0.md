@@ -2,9 +2,9 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.59. Historique en fin de document.
+Version 1.61. Historique en fin de document.
 
-La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **180 éléments** répartis en **cinq lots**, sur six chantiers.
+La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **184 éléments** répartis en **cinq lots**, sur six chantiers.
 
 Ce document dit ce qui est attendu, dans quel ordre, et à quelle condition c'est terminé. Il ne dit pas à quoi ça ressemble — c'est le rôle de la bible de design. En cas de contradiction : la bible l'emporte sur l'apparence, ce document l'emporte sur le périmètre.
 
@@ -269,7 +269,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L2-13 | B | Écrit | Indicateur d'énergie et son popover — **fait (D145 à D148), recette validée à l'écran par Nicolas le 2026-11-08** : batterie de la barre cliquable ; popover hébergé avec le pourcentage suivi du temps restant ou du temps jusqu'au plein, et le choix du profil d'énergie (Économie, Équilibré, Performance) par `PowerProfiles` de Quickshell, sans bascule automatique (D145) ; alerte de la presqu'île à 20 % (« Batterie faible », `warning`) et à 5 % (« Branchez le chargeur », `error`), seuils dans `energie.toml`, retenue derrière la galerie et le plein écran, priorité entre galerie et volume (D146) ; appareil lu dans `UPower.devices`, pourcentage en fraction, seuils sous `Theme.dir` (D147) ; segments déclarés et fond partant de la transparence dans les contrôles segmentés (D148). L'idée de D117 (couper les animations en `power-saver`) est écartée par Nicolas |
 | L2-14 | B | Écrit | Indicateur Bluetooth et son popover — **fait (D107, D108), recette validée à l'écran le 2026-11-03** : popover copié du popover réseau, bascule de la radio, « Mes appareils » (connecter, déconnecter, oublier par le chevron), « Appareils à proximité » (recherche, appairage sans code, confiance puis connexion), appareils anonymes masqués, préfixe « LE- » masqué, voisins à hauteur fixe ; appairage par `dunei-bluetooth-appairer` (agent `NoInputNoOutput`, transport `bredr` pour l'audio, profil audio attendu) ; « Connecté » exige la sortie PipeWire d'un appareil audio ; popovers de la barre exclusifs et fermés 1,5 s après le départ de la souris |
 | L2-15 | B | Écrit | Zone d'état des applications tierces |
-| L2-16 | B | Écrit | Lanceur — voile, flou par instantané, focus clavier ; touche `SUPER + R`, tenue par wofi au lot 1 |
+| L2-16 | B | Fait | Lanceur — **fait (D190 à D196)** : `SUPER + R` ouvre le lanceur de la coque, overlay d'attention à voile et clavier exclusif ; accueil (« Fréquentes », « Suggestions »), liste et aperçu à scission, fenêtres ouvertes comme actions, commandes DuneI, calculs et conversions par `qalc`, « Nouvelle fenêtre » pour toute application ; wofi est désinstallé |
 | L2-17 | B | Écrit | Sélecteur de fenêtres — vignettes en neutre pur |
 | L2-18 | B | Écrit | Sélecteur de bureaux — une teinte catégorielle par bureau |
 | L2-19 | B | Écrit | Notifications — couleurs sémantiques invariantes ; référence visuelle : `~/dunei-atelier/inspiration/Shoddyconfection962/notifications.jpg`. Consigne de Nicolas : en haut à droite, classique et bien dessinée ; la notification ne naît pas de l'îlot (conception de L2-01, § 2) — **fait (D162)** : la coque est le serveur `org.freedesktop.Notifications`, dunst est retiré ; module `coque/Notifications/`, cartes de verre e3 empilées en haut à droite, plafond de cinq, remplacement par étiquette de pile, plein écran qui retient les cartes ; recette à l'écran validée le 2026-11-13 ; cloche de la barre simplifiée, suite en L2-67 |
@@ -284,7 +284,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L2-28 | B | Mixte | Raccourcis clavier globaux et leur affichage ; touche réservée `SUPER + /` ; lire `hyprctl binds -j`, qui rend les descriptions de la table |
 | L2-29 | B | Écrit | Contrôle de la luminosité |
 | L2-30 | B | Écrit | Capture d'écran ; `Print` (zone), `SHIFT + Print` (fenêtre) et `CTRL + Print` (écran) lancent le rôle `capture`, tenu de façon provisoire par hyprshot : le remplacer, c'est changer ses trois variantes dans `roles.lua` et retirer le paquet de `[provisoire]` (D79) |
-| L2-31 | B | Écrit | Presse-papiers et historique |
+| L2-31 | B | Écrit | Presse-papiers et historique — **hors du lanceur** : il garde son propre raccourci et sa propre surface (fiche du lanceur) |
 | L2-32 | B | Écrit | Navigation clavier complète, boutons compris |
 | L2-33 | B | Écrit | Barre de défilement superposée — 8 px, 12 au survol |
 | L2-34 | C | Écrit | Brancher les tokens sur la bibliothèque de composants — **fait (D81)** : `coque-tokens.json` généré (couleurs sRGB, états composés, anneau de focus, matière, tailles), déployé sous `~/.config/dunei/` et surveillé par le module QML `coque/Theme` ; bascule de teinte d'un bloc, ressort de couleur `ColorSpring`, planche de contrôle `coque/outils/planche` (validée à l'écran) |
@@ -324,6 +324,10 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L2-68 | C | Fait | Son de notification — **fait (D185 à D188)** : deux voix KDE Ocean, Arrivée (`dialog-warning`, brève) et Urgence (`message-new-instant`, plus longue), jouées par `pw-play` au rôle Notification sans enregistrer de volume de rôle (`state.restore-props = false`) ; une notification sonne si le panneau la garderait, une mise à jour seulement après une minute ou en devenant critique, une seule par rafale de 2 s, et les normales se taisent sous « ne pas déranger » et en plein écran ; carte « Son » dans Paramètres › Notifications (Activé, Volume relatif, aperçu au relâchement). La synthèse d'une voix propre à DuneI est renvoyée au lot 5 (L5-31). En recette, le repli du dépliant Wi-Fi a été corrigé de même (D188) |
 | L2-69 | C | Fait | « Ouvrir » propre à DuneI — **fait (D189)** : quand l'application ne fournit pas d'action `default`, la carte et le panneau proposent tout de même « Ouvrir », si la coque identifie l'application avec certitude (id de l'entrée de bureau, `StartupWMClass`, nom affiché ; jamais une entrée masquée ou de terminal) ; « Ouvrir » amène la fenêtre la plus récemment utilisée, bureau compris, ou lance l'application par `uwsm app`. Un clic sur la carte ouvre ; sans rien à ouvrir, la carte finit comme à l'échéance et la notification gardée passe au panneau, au lieu d'être perdue. Module `coque/Applications`, repris par le lanceur (L2-16). Fiche : `docs/superpowers/specs/2026-11-17-ouvrir-dunei-design.md` ; recette à l'écran validée le 2026-11-18 |
 | L2-70 | C | Écrit | Croix de fermeture des cartes — une petite croix au survol ferme une carte de notification sans l'ouvrir, le clic sur la carte ouvrant désormais l'application (D189) |
+| L2-71 | C | Écrit | Recherche de fichiers dans le lanceur — repoussée par la fiche du lanceur (L2-16), sans lot fixé ; à repérer (index, `fd`, `plocate`, rices) avant toute décision |
+| L2-72 | C | Écrit | Sélecteur d'émojis — un sélecteur à part, avec son propre raccourci, pas une source du lanceur ; Nicolas en voit l'intérêt |
+| L2-73 | B | Écrit | Revue des autres modules de la coque contre la règle « l'accent de sélection n'appartient qu'à l'élément sous le curseur, un seul curseur par vue » (D191, bible 0.40) : barre, popovers, panneau de notifications, Paramètres, galerie |
+| L2-74 | C | Écrit | Lanceur, dettes de la relecture finale (L2-16) — mineurs relevés le 2026-11-20, aucun bloquant : (a) M2, la sélection tient par index et non par résultat quand la liste se réordonne (une fenêtre renommée, la réponse du calcul en tête) : `borner` doit d'abord replacer la sélection sur `cleChoisie` ; (b) M3, les touches ne sont pas filtrées pendant le fondu de sortie (`CadreLanceur`, `Keys.onPressed` à garder par `Lanceur.ouvert`) ; (c) M4, le relevé d'usage `lanceur.json` grossit sans fin de clés `fen:<adresse>` : élaguer dans `noter` sous un poids seuil, ou ne plus noter les fenêtres ; (d) M5, les fenêtres sont projetées lanceur fermé (`Sources.fenetres`), contre la fiche ; (e) M6, grandeurs écrites en dur à passer en cotes ou en jetons (`Medaillon` 0,68, `Apercu` 0,52, échelle de l'accueil 0,04, survols 0,06 et 0,03, anneau de `Vignette`, garde de 1000 ms) ; (f) M9, `Medaillon` instancie une `IconImage` vide dans tous les médaillons de la coque : la charger par un `Loader` ; (g) M10, l'essai de l'ordre action / retrait écoute tout `closelayer` de `dunei-attention` de la session : filtrer sur l'adresse du calque ; (h) défaut latent du calcul : une ligne « warning » de `qalc` avant le résultat est prise pour la réponse, et le vrai résultat est perdu. Rapport : `.superpowers/sdd/2026-11-19-lanceur/final-review-report.md` |
 
 ### Lot 3 — la bascule
 
@@ -426,7 +430,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L5-30 | — | Écrit | Résorber les points ouverts de l'annexe C |
 | L5-31 | C | Écrit | Voix de DuneI — remplacer les sons KDE Ocean de L2-68 par une voix propre : une corde ancienne, sablonneuse et brève, enregistrée ou de synthèse modale (quatre tours de Karplus-Strong n'ont pas convaincu, D185). Pistes : cielago, sietch, dunes chantantes, crysknife, bouclier, corne lointaine, variantes du pas sans rythme, espace acoustique unique, jour et nuit, une tonalité par machine, la teinte du thème en note. Maquette et cheminement dans l'atelier, `maquettes/son-notifications/` |
 
-**Volume total : 180 éléments** — 130 écrits, 43 configurés, 5 offerts, 2 mixtes.
+**Volume total : 185 éléments** — 135 écrits, 43 configurés, 5 offerts, 2 mixtes.
 
 Les deux tiers du travail sont de l'écrit, et les trois quarts de cet écrit se concentrent sur la coque et les écrans système. C'est cohérent avec la stratégie retenue, et c'est là que tout le risque se trouve.
 
@@ -530,6 +534,8 @@ Le choix de la distribution de base et du compositeur, précédemment ouverts, s
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-12 | Version initiale, 137 éléments |
+| 1.61 | 2026-11-20 | Ajout de L2-74, dettes du lanceur relevées par la relecture finale de L2-16 (M2 à M6, M9, M10, ligne « warning » de qalc) ; 185 éléments |
+| 1.60 | 2026-11-20 | L2-16 fait : lanceur de la coque, wofi retiré (D190 à D196) ; L2-31 précisé « hors du lanceur » ; ajout de L2-71 (recherche de fichiers), L2-72 (sélecteur d'émojis) et L2-73 (revue contre la règle du curseur) ; 184 éléments |
 | 1.59 | 2026-11-18 | L2-69 fait : « Ouvrir » propre à DuneI, clic sur la carte qui ouvre (D189) ; ajout de L2-70, croix de fermeture des cartes ; 181 éléments |
 | 1.58 | 2026-11-17 | L2-68 fait : voix KDE Ocean, règles de sonnerie, carte « Son » (D185 à D188) ; ajout de L5-31, voix propre de DuneI ; 180 éléments |
 | 1.57 | 2026-11-17 | L2-67 : la bascule du panneau est allumée quand les notifications sont actives, cloche ou cloche barrée (D182) ; le panneau mène aux réglages des notifications (D183) ; la page Notifications suit le même sens (D184) |

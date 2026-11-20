@@ -48,6 +48,7 @@ session = [
     "qt6-imageformats",             # fonds d'écran WebP et TIFF dans la coque (D123)
     "qt6-shadertools",              # compilation des shaders de la coque, qsb (D80)
     "libnotify",                    # notify-send, utilisé par les notifications de connexion de la coque (L2-11)
+    "libqalculate",                 # calcul et conversions du lanceur (L2-16)
     "hypridle",                     # échelle d'inactivité (D41)
     "hyprlock",                     # verrouillage (D41, D42)
     "greetd",                       # gestionnaire de connexion
@@ -84,7 +85,6 @@ outils = [
 
 # Paquet = élément du backlog qui le remplacera.
 [provisoire]
-wofi = "L2-16"                      # lanceur
 hyprshot = "L2-30"                  # capture d'écran
 network-manager-applet = "recours nm-connection-editor"   # éditeur de connexions de secours ; son applet est retirée (L2-11)
 dolphin = "L3-12"                   # gestionnaire de fichiers

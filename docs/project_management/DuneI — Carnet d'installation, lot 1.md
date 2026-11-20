@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.49. Historique en fin de document.
+Version 1.50. Historique en fin de document.
 
 Socle amorçable.
 
@@ -1394,7 +1394,7 @@ bureau spécial, `accueil`, qui s'affiche par-dessus le bureau courant.
 | `SUPER + 1…4` | Aller au bureau 1 à 4 |
 | `SUPER + Maj + 1…4` | Envoyer la fenêtre au bureau, sans la suivre |
 | `SUPER + S` / `SUPER + Maj + S` | Afficher ou masquer l'accueil / y ranger la fenêtre |
-| `SUPER + Q`, `E`, `F`, `R` | Terminal, fichiers, navigateur, lanceur (kitty, dolphin, firefox, wofi : provisoires) |
+| `SUPER + Q`, `E`, `F`, `R` | Terminal, fichiers, navigateur, lanceur (kitty, dolphin, firefox : provisoires ; le lanceur est celui de la coque, L2-16) |
 | `Print`, `SHIFT + Print`, `CTRL + Print` | Capturer une zone, une fenêtre choisie au clic, l'écran actif : rôle `capture`, tenu par hyprshot jusqu'à L2-30 ; image dans `~/Images/Captures` et dans le presse-papiers (D79) |
 | `SUPER + W` | Ouvrir ou refermer la galerie de fonds d'écran dans la presqu'île de l'écran actif (L2-60) |
 | `SUPER + L` | Verrouiller : `loginctl lock-session`, verrouilleur provisoire (L1-09, remplacé à L2-22) |
@@ -2208,6 +2208,25 @@ Rien à installer : `uwsm` est déjà la session, et le module `coque/Applicatio
 - **Les tests.** `python3 -m unittest tests.test_applications tests.test_notifications` (`ApplicationsTest`,
   `CarteTest`). La carte voit l'entrée factice « Essai DuneI » de `tests/donnees/applications`, jamais lancée.
 
+## Le lanceur d'applications — L2-16
+
+Un paquet à installer : `libqalculate`, qui fournit `qalc`, le moteur des calculs et des conversions du lanceur. Il est
+dans le groupe « session » de `paquets.toml`, donc `make install` le garde.
+
+- **Ce qu'il fait.** `SUPER + R` appelle `qs ipc -c dunei call lanceur basculer` (rôle `lanceur` de `roles.lua`). Le
+  lanceur lit les entrées de bureau par Quickshell, lance par `uwsm app` et amène une fenêtre ouverte par
+  `hl.dsp.focus` : il reprend le module `coque/Applications` de L2-69 tel quel (D190).
+- **wofi est retiré.** Il tenait la touche au lot 1, comme paquet provisoire de L2-16. Nicolas l'a désinstallé par
+  `sudo pacman -Rns wofi`, et sa ligne a quitté la table `[provisoire]` de `paquets.toml`. Procédure d'un paquet
+  provisoire qui a rempli son rôle : retirer sa ligne du modèle, désinstaller par `pacman -Rns` (dépendances comprises),
+  puis `make check`, qui refuse qu'un même paquet figure à la fois dans un groupe et dans `[provisoire]`.
+- **Le calque.** `dunei-attention` reçoit le style d'apparition `fade` dans les règles de calque générées (D192) : le
+  compositeur porte seul le fondu d'entrée et de sortie, flou compris.
+- **Vérifier.** `qs ipc -c dunei call lanceur etat` répond une fois la coque lancée ; `qalc 2+2` répond `2 + 2 = 4`.
+- **Les tests.** `python3 -m unittest tests.test_lanceur tests.test_paquets`. Les essais graphiques passent par la
+  coque d'essai, qui désactive le clavier exclusif (`clavierExclusif`, D194) et pilote la saisie par IPC ; ils exigent
+  un écran libre (Wayland et `qs`).
+
 ## Le mouvement des popovers — L2-06, L2-07, L2-47, L2-56
 
 Rien de plus à installer : la fenêtre des popovers est dans la coque (`dunei-coque.service`), et `make install` lie
@@ -2495,6 +2514,7 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 
 | Version | Date | Changement |
 | --- | --- | --- |
+| 1.50 | 2026-11-20 | Lanceur (L2-16, D190 à D196) : `libqalculate` installé, wofi désinstallé et retiré du modèle de paquets, style `fade` du calque d'attention |
 | 1.49 | 2026-11-17 | « Ouvrir » propre à DuneI (L2-69) : module `coque/Applications`, focus par adresse, lancement par uwsm, clic sur la carte qui ouvre |
 | 1.48 | 2026-11-17 | Son de notification (L2-68) : `pipewire-audio` et `ocean-sound-theme`, voix, règles, lecture, réglages et tests |
 | 1.47 | 2026-11-17 | L3-26 : serveur de langage Python pour Claude Code, plugin `pyright-lsp` et paquet `pyright` (D164) ; LibreOffice (`libreoffice-fresh`) rejoint les outils, pour lire et écrire les PDF, Word et PowerPoint |

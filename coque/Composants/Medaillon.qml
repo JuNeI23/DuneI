@@ -1,4 +1,5 @@
 import QtQuick
+import Quickshell.Widgets
 import "../Theme"
 import "etats.js" as Etats
 
@@ -14,15 +15,23 @@ import "etats.js" as Etats
 // Relief « Doux » (application Paramètres) : sous un ancêtre qui déclare dnRelief, le médaillon actif porte un reflet
 // léger, un dégradé du blanc des reflets (material.highlight) tombant du bord haut et éteint avant le bas, à
 // l'opacité material.medallionSheen, à la part material.medallionSheenReach de la hauteur ; aucun halo. Ailleurs, le médaillon reste un aplat.
-// Entrées : nom, icône freedesktop ; actif, faux par défaut.
+// Icône en couleur (lanceur, L2-16) : si image est posée, l'image en couleur, aux deux tiers du côté (68 %, maquette
+// du lanceur v3), remplace le glyphe ; refletRepos pose le reflet du relief « Doux » même au repos, comme les
+// médaillons du lanceur ; le médaillon de la tuile choisie à l'accueil du lanceur est actif (fond d'accent).
+// Entrées : nom, icône freedesktop ; actif, faux par défaut ; image, url d'une icône en couleur, vide par défaut ;
+// tailleGlyphe, côté du glyphe, reglages.medallionGlyph par défaut ; refletRepos, faux par défaut.
 // Sorties : fond et glyphe, les couleurs peintes, lues par les essais.
 // Erreurs : aucune ; avant le chargement des tokens, le médaillon est nul et transparent.
-// Dépendances : Icone, Theme (reglages, radius.panel, color, stateColors, material, ColorSpring), etats.js (herite).
+// Dépendances : Icone, Quickshell.Widgets (IconImage), Theme (reglages, radius.panel, color, stateColors, material,
+// ColorSpring), etats.js (herite).
 Rectangle {
     id: medaillon
 
     property string nom
     property bool actif: false
+    property url image
+    property int tailleGlyphe: Theme.reglages?.medallionGlyph ?? 0
+    property bool refletRepos: false
     readonly property color fond: fondu.value
     readonly property color glyphe: fonduGlyphe.value
 
@@ -35,8 +44,9 @@ Rectangle {
         anchors.centerIn: parent
         z: 1
         nom: medaillon.nom
+        visible: medaillon.image == ""
         pleine: medaillon.actif
-        taille: Theme.reglages?.medallionGlyph ?? 0
+        taille: medaillon.tailleGlyphe
         couleur: medaillon.glyphe
     }
 
@@ -53,12 +63,21 @@ Rectangle {
     // Reflet du relief « Doux », peint sur le fond et sous le glyphe, que son z garde au-dessus.
     Rectangle {
         anchors.fill: parent
-        visible: medaillon.actif && Etats.herite(medaillon, "dnRelief", false)
+        visible: (medaillon.actif || medaillon.refletRepos) && Etats.herite(medaillon, "dnRelief", false)
         radius: parent.radius
         opacity: Theme.material?.medallionSheen ?? 0
         gradient: Gradient {
             GradientStop { position: 0; color: Theme.material?.highlight ?? "transparent" }
             GradientStop { position: Theme.material?.medallionSheenReach ?? 0; color: "transparent" }
         }
+    }
+    // Icône en couleur, au-dessus du reflet.
+    IconImage {
+        anchors.centerIn: parent
+        z: 1
+        visible: medaillon.image != ""
+        source: medaillon.image
+        implicitSize: Math.round(medaillon.width * 0.68)
+        asynchronous: true
     }
 }

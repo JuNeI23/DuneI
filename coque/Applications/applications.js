@@ -79,3 +79,12 @@ function commandeFocus(adresse) {
 function commandeLancement(entree) {
     return ["uwsm", "app", "--", entree.id + ".desktop"]
 }
+
+// commandeAction — commande qui lance une action de bureau (Desktop Action) dans sa propre unité systemd, par uwsm,
+// dont la syntaxe est « <id>.desktop:<id de l'action> » (uwsm(1), sous-commande app).
+// Entrée : cible, « <id de l'entrée>:<id de l'action> », coupée au dernier deux-points. Sortie : tableau d'arguments
+// pour Quickshell.execDetached. Erreurs : aucune. Dépendances : aucune (uwsm à l'exécution).
+function commandeAction(cible) {
+    const i = cible.lastIndexOf(":")
+    return ["uwsm", "app", "--", cible.slice(0, i) + ".desktop:" + cible.slice(i + 1)]
+}

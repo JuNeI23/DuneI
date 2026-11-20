@@ -4293,3 +4293,93 @@ par l'échéance, en attendant une petite croix au survol (L2-70).
 *Touché : `coque/Applications/`, `coque/Notifications/EtatNotifications.qml`, `CorpsNotification.qml`,
 `Attente.qml`, `Pile.qml`, tests `test_applications`, `CarteTest` et `PileTest`, carnet (1.49), fiche
 `docs/superpowers/specs/2026-11-17-ouvrir-dunei-design.md`.*
+
+
+### D190 · Le lanceur d'applications de la coque remplace wofi
+
+19 novembre 2026 · L2-16. `SUPER + R` ouvre désormais le lanceur de la coque (overlay d'attention, voile, clavier
+exclusif), appelé par `qs ipc -c dunei call lanceur basculer` depuis le rôle `lanceur` de `roles.lua`. Nicolas voulait
+plus qu'une liste : un lieu mis en scène d'où l'on lance une application, retrouve une fenêtre, exécute une commande
+DuneI ou fait un calcul et une conversion, sans quitter le clavier. Les maquettes v1, jugées « un peu trop sobres », ont
+cédé la place à la v3 : l'accueil de la mise en scène S (« Fréquentes », « Suggestions ») et la scission de la mise en
+scène A (liste à gauche, aperçu à droite). Entrée fait toujours la même chose, l'action principale de la ligne
+choisie ; les fenêtres ouvertes d'une application sont ses actions, jamais des lignes concurrentes. Les calculs et
+conversions passent par `qalc` (paquet `libqalculate`) : la saisie n'est envoyée que si elle commence par un chiffre,
+« ( », « - », « + », « . », « , » ou un symbole monétaire, afin que « python3 » ou « 7zip » ne partent jamais chez
+`qalc` ; en contrepartie « sqrt(2) » n'est pas calculé et « 10km » doit s'écrire « 10 km ». L'ordre des rôles de
+l'accueil est celui de la fiche (navigateur, terminal, fichiers), lu par nom de rôle ; quand un résultat atteint une
+pertinence de préfixe, les résultats de simple sous-séquence sont écartés. wofi est désinstallé
+(`sudo pacman -Rns wofi`) et ne figure plus dans `paquets.toml`. Le lanceur réutilise le module
+`coque/Applications` de D189.
+
+*Touché : `coque/Lanceur/`, `config/hypr/donnees/roles.lua`, `paquets.toml`, tests `test_lanceur`, carnet (1.50), bible
+(0.40), fiche `docs/superpowers/specs/2026-11-19-lanceur-design.md` (1.2).*
+
+### D191 · L'accent de sélection n'appartient qu'à l'élément sous le curseur
+
+20 novembre 2026 · L2-16, recettes 2 et 3. Nicolas a relevé deux façons de montrer le curseur dans une même vue, et un
+accent posé sur des éléments qui n'étaient pas sélectionnés. La règle, qui vaut pour toute la coque et non pour le seul
+lanceur : l'accent de sélection n'appartient qu'à l'élément sous le curseur, et une vue montre le curseur d'une seule
+façon. Dans le lanceur, les médaillons et les puces sont marqués de la même manière ; les boutons de l'aperçu sont
+neutres et ne portent aucun curseur quand la sélection est dans la liste ; la ligne retenue, quand le curseur passe
+dans l'aperçu, reste visible en fond neutre (le « sélectionné inactif » de la bible). Les indicateurs ne sont pas des
+sélections et gardent leur accent : le point d'une application dont une fenêtre est ouverte, les lettres trouvées par
+la recherche (Nicolas a confirmé ces oranges à la recette 3). Le rouge de confirmation reste, c'est une action
+destructrice (bible). Les autres modules de la coque n'ont pas été revus contre cette règle : c'est une ligne de
+backlog (L2-73).
+
+*Touché : `coque/Lanceur/`, bible (0.40, « Les six états »).*
+
+### D192 · Le calque d'attention apparaît en fondu, porté par le compositeur
+
+20 novembre 2026 · L2-16, recette 2. Le flou du fond s'allumait d'un bloc dès que l'opacité du calque franchissait le
+seuil `ignore_alpha` : Nicolas voyait un flou brut avant que le cadre ne paraisse. La cause : le style d'apparition
+`popin` de Hyprland, qui étendait le flou avec le calque. Le calque `dunei-attention` reçoit donc le style `fade`
+(`glass.fondu`), et le compositeur porte seul le fondu d'entrée et de sortie, flou compris. La règle touche aussi
+`FenetreAttention` (la galerie de fonds), qui perd son `popin` : le coût est accepté, la cohérence des overlays
+d'attention valant mieux.
+
+*Touché : règles de calque Hyprland générées, `coque/Lanceur/FenetreLanceur.qml`, carnet (1.50).*
+
+### D193 · Le cadre monte depuis le bas de l'écran, au ressort `window`, et sort en fondu sur place
+
+20 novembre 2026 · L2-16, recette 2. Avec `page_rise` (6 px), la montée était invisible, et un défaut d'ordre
+d'initialisation l'annulait même tout à fait : `FenetreLanceur` posait la cible de ses ressorts avant que le `Ressort`
+enfant ne fût prêt, qui l'ignorait puis se posait d'un coup sur sa cible. Le cadre entre désormais par une translation
+depuis le bas de l'écran, au ressort `window`, comme le panneau de Paramètres (`slide bottom`, D172). La sortie est un
+fondu sur place, sans mouvement : un cadre qui repart vers le bas se lirait comme un second geste. Les ressorts sont
+posés après leur complétion.
+
+*Touché : `coque/Lanceur/FenetreLanceur.qml`, bible (« Mouvement »).*
+
+### D194 · Les actions du lanceur partent après le retrait du calque
+
+20 novembre 2026 · L2-16, recette 1. Lancer, amener ou exécuter ferme le lanceur ; si l'action partait avant le retrait
+du calque, la surface qui s'ouvre aurait pris le focus, puis le calque, toujours à clavier exclusif, le lui aurait
+repris. L'action n'est donc lancée qu'à l'évènement `closelayer` de Hyprland, une fois le calque retiré : la fenêtre
+ouverte garde le clavier. Le lanceur expose `clavierExclusif` (vrai par défaut) pour que la coque d'essai puisse le
+désactiver et piloter la saisie par IPC sans prendre le clavier de la machine.
+
+*Touché : `coque/Lanceur/`, tests `test_lanceur`.*
+
+### D195 · Les plaques de sélection du lanceur n'ont pas d'ombre
+
+20 novembre 2026 · L2-16, recette 2. Nicolas a vu l'ombre des plaques tomber vers le bas seulement. Le choix était
+entre aucune ombre et une ombre tout autour ; la sobriété a tranché : aucune. Le relief se limite au reflet et au
+liseré de la matière « Doux ». Le coût est un relief un peu moins marqué.
+
+*Touché : `coque/Lanceur/`.*
+
+### D196 · Navigation spatiale de l'aperçu et « Nouvelle fenêtre » pour toute application
+
+20 novembre 2026 · L2-16, recette 1. Dans la scission, les flèches suivent l'ordre visuel : → depuis la liste entre dans
+l'aperçu, ← au bord de l'aperçu ramène la sélection à la liste, au ressort, et ↑ ↓ passent d'une rangée à l'autre ; Tab,
+Maj+Tab et Échap restent des chemins de retour. Les vignettes de fenêtres sont lues par rangée logique. Nicolas a aussi
+demandé de pouvoir ouvrir une seconde fenêtre de n'importe quelle application : l'aperçu porte un bouton « Nouvelle
+fenêtre », qui lance l'action `new-window` de l'entrée de bureau si elle la déclare, sinon relance l'application, et
+Ctrl+Entrée le déclenche depuis la liste. Coût : un bouton de plus, et un rappel « Ctrl ↵ » affiché tant que le curseur
+n'est pas sur ce bouton ; sous le curseur, Entrée suffit et seul ↵ s'affiche (relecture finale). Restent à polir (sans
+décision) : l'espace réservé au rappel ↵ sur les boutons neutres, et l'instabilité rare de deux essais de clavier, non
+reproduite en six passages.
+
+*Touché : `coque/Lanceur/`, tests `test_lanceur`.*

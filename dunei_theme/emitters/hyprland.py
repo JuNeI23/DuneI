@@ -64,7 +64,8 @@ def _validate_glass(raw: dict) -> None:
     Sortie : aucune.
     Erreurs : ValueError si glass.ignore_alpha ne dépasse pas l'ombrage d'élévation ni le voile
               (render.scrim_opacity), qui ne doivent jamais être floutés, si elle atteint l'opacité
-              minimale du verre sur tous les moments (la config Hyprland est unique), ou si glass.xray nomme un calque absent de glass.namespaces.
+              minimale du verre sur tous les moments (la config Hyprland est unique), ou si glass.xray ou
+              glass.fondu nomme un calque absent de glass.namespaces.
     Dépendances : aucune.
     """
     g = raw["glass"]
@@ -75,8 +76,9 @@ def _validate_glass(raw: dict) -> None:
     if not plancher < g["ignore_alpha"] < plafond:
         raise ValueError(f"glass.ignore_alpha = {g['ignore_alpha']} : doit dépasser {plancher} (ombre, voile) "
                          f"et rester sous {plafond} (verre)")
-    if horsliste := [n for n in g["xray"] if n not in g["namespaces"]]:
-        raise ValueError(f"glass.xray = {horsliste} : calques absents de glass.namespaces {g['namespaces']}")
+    for cle in ("xray", "fondu"):
+        if horsliste := [n for n in g.get(cle, []) if n not in g["namespaces"]]:
+            raise ValueError(f"glass.{cle} = {horsliste} : calques absents de glass.namespaces {g['namespaces']}")
 
 
 def emit(model: dict) -> str:
@@ -166,7 +168,8 @@ def emit_layer_rules(model: dict) -> str:
     Entrée : model — sortie de model.resolve.
     Sortie : contenu de hyprland-layers.lua (une liste Lua retournée, appliquée par modules/regles.lua),
              une règle par calque de glass.namespaces : flou, flou des popups, seuil d'alpha ignoré
-             et, pour les calques de glass.xray seulement, flou du fond seul ; puis la règle du fond d'écran
+             et, pour les calques de glass.xray seulement, flou du fond seul ; pour ceux de glass.fondu,
+             l'animation « fade » (apparition et disparition en fondu, sans le popin des calques) ; puis la règle du fond d'écran
              ([bureau].namespace), sans flou, qui retire seulement l'animation d'apparition du calque.
     Erreurs : KeyError si le TOML brut ou [bureau].namespace manque ; ValueError transmise par _validate_glass.
     Dépendances : _validate_glass.
@@ -174,7 +177,8 @@ def emit_layer_rules(model: dict) -> str:
     g = model["raw"]["glass"]
     _validate_glass(model["raw"])
     rules = [f'    {{ name = "dunei-verre-{ns}", match = {{ namespace = "^{ns}$" }}, blur = true, '
-             f'blur_popups = true, ignore_alpha = {g["ignore_alpha"]}, xray = {str(ns in g["xray"]).lower()} }},'
+             f'blur_popups = true, ignore_alpha = {g["ignore_alpha"]}, xray = {str(ns in g["xray"]).lower()}'
+             f'{", animation = \"fade\"" if ns in g.get("fondu", []) else ""} }},'
              for ns in g["namespaces"]]
     fond = model["raw"]["bureau"]["namespace"]
     rules.append(f'    {{ name = "{fond}", match = {{ namespace = "^{fond}$" }}, no_anim = true }},')

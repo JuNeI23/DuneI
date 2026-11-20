@@ -59,6 +59,8 @@ FocusScope {
 
     readonly property int choisie: _choisie
     readonly property real effacement: efface.value
+    // Vrai quand la fenêtre qui porte le module a le clavier du compositeur (lu par l'IPC « galerie », etat).
+    readonly property bool fenetreActive: Window.active
 
     signal choisi(string chemin)
     signal fini(string chemin)
