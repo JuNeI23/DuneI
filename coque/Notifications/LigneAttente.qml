@@ -10,7 +10,8 @@ import "../Composants/etats.js" as Etats
 // son bouton d'écart. Un clic hors des actions ouvre la notification (Attente.ouvrir) ; le bouton l'écarte. Au survol
 // comme au clavier (l'entrée courante du panneau), elle prend le curseur de la vue du panneau (VueCurseur) :
 // l'aplat d'accent de la plaque des listes, sans contour de focus ; ses textes passent alors au sur-accent, en
-// fondu (L2-73).
+// fondu (L2-73). Survolée, elle devient aussi l'entrée courante du panneau, comme la rangée d'un menu de macOS :
+// Entrée et Suppr agissent sur la ligne qui porte la plaque (conception L2-73, arbitrage 1).
 // Mouvement : la ligne se déplie et se replie en hauteur et en fondu au ressort « reveal », découpée pendant le
 // mouvement (D157) : quand son groupe se déplie ou se replie (montree), quand elle arrive dans un panneau déjà
 // monté, et quand sa notification est fermée (sortante) ; repliée et sortante, elle fait oublier son entrée à
@@ -69,6 +70,9 @@ Item {
     }
 
     HoverHandler { id: survol }
+    // survol — fait de la ligne survolée l'entrée courante du panneau ; le pointeur qui la quitte ne change rien.
+    // Entrées, sortie, erreurs : aucune. Dépendances : hote (courante), attendue.
+    onHoveredChanged: if (hovered) hote.courante = attendue
     // Clic hors des actions et du bouton d'écart, qui saisissent le leur dès l'appui.
     TapHandler { id: clic; gesturePolicy: TapHandler.ReleaseWithinBounds; onTapped: ligne.attente.ouvrir(ligne.attendue) }
 

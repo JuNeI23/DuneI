@@ -25,7 +25,7 @@ import "garde.js" as Garde
 // bascule que la souris ou le clavier désigne en dernier ; aucun anneau de focus.
 // Clavier : la liste est un seul arrêt de tabulation ; les flèches déplacent l'entrée courante parmi les entrées
 // montrées, Entrée l'ouvre, Suppr l'écarte (l'entrée courante passe alors à la suivante). Tab va de la bascule à la
-// liste, puis à « Tout effacer », puis aux réglages.
+// liste, puis à « Tout effacer », puis aux réglages. Le survol d'une ligne en fait l'entrée courante (LigneAttente).
 // Entrées : attente, l'Attente ; hauteurMax, posée par la fenêtre (infinie par défaut).
 // Sorties : implicitHeight ; vide ; effacable, vrai quand « Tout effacer » est offert ; texteEtat, l'état de « ne pas
 // déranger » ; groupes, les entrées rangées par application, sortantes comprises ; deplies, identifiants des groupes
@@ -170,11 +170,12 @@ FocusScope {
     }
 
     // suivreCourante — fait défiler la liste juste assez pour que la ligne courante soit entière dans la vue, par la
-    // même animation que la molette (posée d'un coup en mouvement réduit). Entrées, sortie, erreurs : aucune.
-    // Dépendances : vueCourante, defilement, elan.
+    // même animation que la molette (posée d'un coup en mouvement réduit). Une ligne devenue courante par le survol ne
+    // fait pas défiler : la liste ne glisse pas sous le pointeur. Entrées, sortie, erreurs : aucune.
+    // Dépendances : ligneDe, vueCourante, defilement, elan.
     function suivreCourante() {
         const v = vueCourante()
-        if (!v) return
+        if (!v || ligneDe(courante)?.hovered) return
         const delta = v.haut < 0 ? v.haut : v.bas > v.hauteur ? v.bas - v.hauteur : 0
         if (delta === 0) return
         const cible = Math.max(0, Math.min(defilement.maximum, defilement.contentY + delta))

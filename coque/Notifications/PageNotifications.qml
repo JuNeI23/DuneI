@@ -18,6 +18,8 @@ import "../Reseau"
 // par application retirée du panneau (« Ne plus garder »), avec « Remettre » en bouton plat (texte neutre, plaque sous
 // le curseur), ou, sans application, la ligne « Aucune application retirée ». Remettre une application ne fait pas
 // revenir ses notifications passées. Une rangée qui paraît ou part se déplie ou se replie au ressort « reveal ».
+// Les deux interrupteurs et le curseur de volume, contrôles isolés sans rangée cliquable, sont posés dans une
+// ZoneCurseur : survolés ou atteints au clavier, ils portent la plaque du curseur (L2-73).
 // Le nom montré d'une application est celui de son entrée de bureau (DesktopEntries) quand l'identifiant en désigne
 // une, l'identifiant lui-même sinon.
 // Contrat de page (voir ConteneurPage) : conteneur, atteindre, implicitHeight.
@@ -28,7 +30,7 @@ import "../Reseau"
 // rangees, boutonsRemettre, nom, deplacer, relacher.
 // Erreurs : aucune.
 // Dépendances : Quickshell (DesktopEntries, ScriptModel), EnTetePage, TitreSection, Registre (Parametres) ; Groupe,
-// Ligne (Reseau) ; Bouton, Interrupteur, Curseur, Texte, Ressort ; EtatNotifications, Voix.
+// Ligne (Reseau) ; Bouton, Interrupteur, Curseur, ZoneCurseur, Texte, Ressort ; EtatNotifications, Voix.
 Item {
     id: page
 
@@ -94,11 +96,17 @@ Item {
             teinte: page.inscription?.teinte ?? 0
             titre: page.inscription?.libelle ?? ""
             etat: page.phrase
-            Interrupteur {
-                id: interrupteur
-                objectName: "notificationsActives"
-                checked: !EtatNotifications.nePasDeranger
-                onToggled: { EtatNotifications.poser(!checked); checked = Qt.binding(() => !EtatNotifications.nePasDeranger) }
+            // Contrôle isolé : sa zone porte la plaque du curseur, au survol comme au focus clavier (L2-73).
+            ZoneCurseur {
+                Interrupteur {
+                    id: interrupteur
+                    objectName: "notificationsActives"
+                    checked: !EtatNotifications.nePasDeranger
+                    onToggled: {
+                        EtatNotifications.poser(!checked)
+                        checked = Qt.binding(() => !EtatNotifications.nePasDeranger)
+                    }
+                }
             }
         }
 
@@ -112,11 +120,16 @@ Item {
                 width: carteSon.width
                 filet: false
                 libelle: qsTr("Activé")
-                Interrupteur {
-                    id: interrupteurSon
-                    objectName: "sonActif"
-                    checked: EtatNotifications.son
-                    onToggled: { EtatNotifications.poserSon(checked); checked = Qt.binding(() => EtatNotifications.son) }
+                ZoneCurseur {
+                    Interrupteur {
+                        id: interrupteurSon
+                        objectName: "sonActif"
+                        checked: EtatNotifications.son
+                        onToggled: {
+                            EtatNotifications.poserSon(checked)
+                            checked = Qt.binding(() => EtatNotifications.son)
+                        }
+                    }
                 }
             }
             Item {
@@ -142,13 +155,15 @@ Item {
                     libelle: qsTr("Volume")
                     Row {
                         spacing: Theme.space?.scale[2] ?? 0
-                        Curseur {
-                            id: curseurVolume
+                        ZoneCurseur {
                             anchors.verticalCenter: parent.verticalCenter
-                            from: 0; to: 100; stepSize: 5
-                            value: EtatNotifications.volumeSon
-                            onMoved: page.deplacer(value, pressed)
-                            onPressedChanged: if (!pressed) page.relacher()
+                            Curseur {
+                                id: curseurVolume
+                                from: 0; to: 100; stepSize: 5
+                                value: EtatNotifications.volumeSon
+                                onMoved: page.deplacer(value, pressed)
+                                onPressedChanged: if (!pressed) page.relacher()
+                            }
                         }
                         // Largeur de « 100 % » : le curseur ne bouge pas quand la valeur change de nombre de chiffres.
                         Texte {

@@ -1743,6 +1743,18 @@ class PanneauTest(EssaiCoque, unittest.TestCase):
         self.jusqua(lambda: all(not p["sous"] and p["fond"].startswith("#00")
                                 for p in json.loads(self.appel("plaques")).values()), "plaque retirée")
 
+    def test_survol_deplace_la_courante(self):
+        # Le survol d'une ligne en fait l'entrée courante, comme dans un menu de macOS (L2-73, arbitrage 1) : la ligne
+        # qui porte la plaque est celle sur laquelle Entrée et Suppr agissent.
+        self.creer("A")
+        self.creer("B")
+        self.jusqua(lambda: len(json.loads(self.appel("plaques"))) == 2, "deux lignes montrées")
+        for ident in (1, 2):
+            with self.subTest(ligne=ident):
+                self.appel("survoler", ident)
+                self.jusqua(lambda: self.etat()["courante"] == ident, "entrée courante sous le pointeur")
+                self.assertTrue(json.loads(self.appel("plaques"))[str(ident)]["sous"])
+
     def test_aucun_anneau_de_focus(self):
         # Ni l'entrée courante, ni « Tout effacer » ne portent plus d'anneau : la plaque du curseur le remplace.
         for fichier in ("Panneau", "LigneAttente"):
@@ -2004,6 +2016,16 @@ class PageNotificationsTest(EssaiCoque, unittest.TestCase):
         self.assertEqual([b["sous"] for b in json.loads(self.appel("remettres"))], [False, True])
         self.appel("curseur", -1)
         self.jusqua(lambda: not any(b["sous"] for b in json.loads(self.appel("remettres"))), "plaque retirée")
+
+    def test_controles_isoles_sous_le_curseur(self):
+        # Les deux interrupteurs et le curseur de volume n'ont ni rangée cliquable ni anneau : atteint au clavier, chacun
+        # porte la plaque du curseur de sa ZoneCurseur, et un seul à la fois (L2-73).
+        noms = ("interrupteur", "interrupteurSon", "curseurVolume")
+        self.assertEqual(json.loads(self.appel("plaques")), dict.fromkeys(noms, False))
+        for nom in noms:
+            with self.subTest(controle=nom):
+                self.appel("focaliser", nom)
+                self.assertEqual(json.loads(self.appel("plaques")), {n: n == nom for n in noms})
 
     def test_retirees(self):
         e = self.etat()
