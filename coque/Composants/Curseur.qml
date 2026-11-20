@@ -8,8 +8,8 @@ import "../Theme"
 // glissement, à la forme de macOS (§ 7.10). La piste, en pilule, est au fond du bureau (elevation.e0, bible :
 // « piste à E0 ») ; la partie remplie, de l'origine au centre de la poignée, est à l'accent, ou à l'accent sans
 // chroma sous le modificateur inactive (§ 7.5) ; la poignée, ronde et claire, prend le rôle color.knob du thème
-// actif, et knob.disabled, précalculé par l'émetteur, quand le curseur est désactivé. L'anneau de focus entoure
-// la poignée, sur visualFocus ; un clic ne vole pas le focus d'un champ (focusPolicy
+// actif, et knob.disabled, précalculé par l'émetteur, quand le curseur est désactivé. Le focus clavier n'a pas
+// d'anneau (L2-73), la rangée qui porte le curseur le montre ; un clic ne vole pas le focus d'un champ (focusPolicy
 // Qt.TabFocus, § 7.3).
 // Entrées : value, from, to, stepSize et le reste de l'API de T.Slider ; l'orientation verticale n'est pas
 // habillée.
@@ -19,7 +19,7 @@ import "../Theme"
 // Quand le thème traite les contrôles blancs (au jour), la poignée est cernée du contour controls.outline et porte
 // l'ombre controls.shadow, qui la détachent de la piste et du fond.
 // Dépendances : QtQuick.Templates, Quickshell (QsWindow : rapport de pixels, pour le filet), Theme (density,
-// elevation, stateColors, color.knob, knob.disabled, controls, hairline), Etat, AnneauFocus, OmbreControle.
+// elevation, stateColors, color.knob, knob.disabled, controls, hairline), Etat, OmbreControle.
 // Cotes : largeur implicite density.sliderWidth, piste de density.sliderTrack d'épaisseur, poignée de
 // density.sliderHandle ; rayons en demi-hauteur.
 T.Slider {
@@ -70,12 +70,6 @@ T.Slider {
 
         OmbreControle {
             cible: parent
-        }
-
-        AnneauFocus {
-            cible: parent
-            montre: curseur.visualFocus
-            inactif: etat.inactif
         }
     }
 }

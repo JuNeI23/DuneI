@@ -12,15 +12,16 @@ import "etats.js" as Etats
 // posée ici. La position du bouton est l'indice non coloré : l'état ne se lit jamais par la couleur seule
 // (bible, annexe E). Elle rejoint visualPosition, qui accompagne aussi le glissement, par le ressort state (Ressort) :
 // le bouton glisse d'un bout à l'autre au lieu de sauter, pendant que la couleur de la piste fond par l'Etat, sur le
-// même ressort (Recette 1 de L2-65, D157) ; le mouvement réduit le pose d'un coup. L'anneau de focus entoure la piste,
-// sur visualFocus ; un clic ne vole pas le focus d'un champ (focusPolicy Qt.TabFocus, § 7.3).
+// même ressort (Recette 1 de L2-65, D157) ; le mouvement réduit le pose d'un coup. Le focus clavier n'a pas
+// d'anneau (L2-73), la rangée qui porte l'interrupteur le montre par sa plaque ; un clic ne vole pas le focus d'un
+// champ (focusPolicy Qt.TabFocus, § 7.3).
 // Entrées : text, checked et le reste de l'API de T.Switch.
 // Sorties : etat, l'Etat de l'interrupteur (rôle, interaction, sélection, couleurs).
 // Erreurs : aucune ; avant le chargement des tokens, les cotes sont nulles et les couleurs transparentes.
 // Quand le thème traite les contrôles blancs (au jour), la piste prend le rôle controlOff, gris plein sur lequel le
 // bouton blanc se détache éteint (controls.offTrack), et le bouton est cerné du contour controls.outline.
 // Dépendances : QtQuick.Templates, Quickshell (QsWindow : rapport de pixels, pour le filet), Theme (density, space,
-// color.knob, knob.disabled, controls, hairline), etats.js (cran, herite), Etat, AnneauFocus, Texte, Ressort (module
+// color.knob, knob.disabled, controls, hairline), etats.js (cran, herite), Etat, Texte, Ressort (module
 // Theme).
 // Cotes : piste de density.switchWidth sur density.switchHeight, bouton de density.switchThumb, centré dans
 // la hauteur de la piste, donc à (switchHeight - switchThumb) / 2 de son bord (2 px) ; rayons en
@@ -66,12 +67,6 @@ T.Switch {
             color: (etat.interaction === "disabled" ? Theme.knob?.disabled : Theme.color?.knob) ?? "transparent"
             border.width: Theme.controls?.outline ? Theme.hairline(QsWindow.window?.devicePixelRatio ?? 1) ?? 0 : 0
             border.color: Theme.controls?.outline ?? "transparent"
-        }
-
-        AnneauFocus {
-            cible: piste
-            montre: interrupteur.visualFocus
-            inactif: etat.inactif
         }
     }
 

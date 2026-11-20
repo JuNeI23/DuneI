@@ -22,7 +22,7 @@ import "Composants/ancrage.js" as Ancrage
 // <clé> <valeur> » par commande IPC de lecture (cran, interaction, selection, sonde, naissances, fond, texte, anneau,
 // etat, ressort, ressortsFiges, image, controles, coches, cotes, glyphes, radios, jauge, jaugeIcone, jaugeHors,
 // jaugeCibles, progression, separateur,
-// champ, indicatif, tailleIcone, liste, arrets, rangee, rangeeImposees, bouton, overlays, overlaysFermes, pastilles, compteur,
+// champ, indicatif, tailleIcone, liste, arrets, rangee, rangeeImposees, bouton, boutonTexte, overlays, overlaysFermes, pastilles, compteur,
 // compteurLargeur, deroulant, recherche, rechercheCouleurs, secret, secretCopie, activite, depliable, depliableCotes, courbe, tuile, iconesControles,
 // bascule, reglages, valeur, fenetreAttention, fondus, fondusFin, knobs, contours, materiauSurfaces, verre, cleVerre, champMateriau, ombres).
 // Commandes sans journal : « essai rechercheTexte <texte> », « essai secretTexte <texte> », « essai secretALire
@@ -32,7 +32,7 @@ import "Composants/ancrage.js" as Ancrage
 // <visible> <running> », « essai activitePhase <phase> », « essai activiteAncetre <bool> », « essai depliableOuvrir
 // <bool> », « essai basculeCocher <bool> », « essai valeurCopier », « essai pastillesForcer <état> », « essai pastillesReduire <bool> »,
 // « essai knobsActifs <bool> », « essai interrupteurCocher <bool> », « essai compteurValeur <n> », « essai deroulantRang <n> », « essai decocher »,
-// « essai radioCocher <rang> », « essai jaugeActive <bool> », « essai jaugeCoupe <bool> », « essai rangeeImposer <bool> », « essai boutonPrincipal <bool> », « essai inactif
+// « essai radioCocher <rang> », « essai jaugeActive <bool> », « essai jaugeCoupe <bool> », « essai rangeeImposer <bool> », « essai boutonPrincipal <bool> », « essai boutonDanger <bool> », « essai inactif
 // <bool> », « essai reparenter », « essai texteMoyen », « essai anneauInactif <bool> », « essai survol <bool> »,
 // « essai champActif <bool> », « essai champTexte <texte> », « essai selectionLibre », « essai icone <nom> <bool> »,
 // « essai ouvrirFactice <A…E> », « essai fermerFactice <A…E> » et « essai materiauHauteur <px> ».
@@ -232,7 +232,7 @@ ShellRoot {
                     icone: "network-wireless"
                     iconeActive: true
                 }
-                ReglageLigne { id: reglageSimple; width: parent.width; titre: "Simple"; plaque: true }
+                ReglageLigne { id: reglageSimple; width: parent.width; titre: "Simple" }
                 Medaillon { id: medaillonInactif; nom: "network-wireless" }
             }
 
@@ -1247,6 +1247,19 @@ ShellRoot {
         // Dépendances : boutonEssai.
         function boutonPrincipal(valeur: bool): void {
             boutonEssai.principal = valeur
+        }
+
+        // boutonDanger — fait du bouton d'essai un bouton destructeur, ou un bouton ordinaire.
+        // Entrées : valeur, nouvelle valeur de danger. Sortie : aucune. Erreurs : aucune. Dépendances : boutonEssai.
+        function boutonDanger(valeur: bool): void {
+            boutonEssai.danger = valeur
+        }
+
+        // boutonTexte — journalise la couleur du texte du bouton d'essai.
+        // Entrées : aucune. Sortie : aucune ; « essai : boutonTexte <#rrggbb> ». Erreurs : aucune.
+        // Dépendances : boutonEssai (le texte, second enfant de la rangée centrée de son contenu), journal.
+        function boutonTexte(): void {
+            essai.journal("boutonTexte", boutonEssai.contentItem.children[0].children[1].color)
         }
 
         // estMateriau — dit si un élément est un Materiau, d'après le nom de type que rend son toString.

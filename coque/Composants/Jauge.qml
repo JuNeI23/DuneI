@@ -12,8 +12,8 @@ import "../Theme"
 // si bien qu'il donne l'accent, ou l'accent sans chroma sous le modificateur inactive (§ 7.5), à l'interaction de la
 // jauge (survol, pression, et désactivé, qui la ternit), par les ressorts de couleur de l'Etat. L'icône facultative,
 // centrée dans le disque minimal, prend le texte de ce même Etat, le sur-accent : elle se lit sur l'accent comme la
-// coche d'une case. L'anneau de focus entoure la barre, sur visualFocus ; un clic ne vole pas le focus d'un champ
-// (focusPolicy Qt.TabFocus, § 7.3).
+// coche d'une case. Le focus clavier n'a pas d'anneau (L2-73), la rangée qui porte la jauge le montre ; un clic ne
+// vole pas le focus d'un champ (focusPolicy Qt.TabFocus, § 7.3).
 // Quand la jauge pilote une sourdine, l'icône est cliquable : un clic sur le carré de la hauteur de la barre, à
 // gauche, émet iconeCliquee sans toucher à value, et la jauge peut être coupée : son remplissage prend alors
 // text-disabled et son icône error, en fondu (ColorSpring).
@@ -24,12 +24,12 @@ import "../Theme"
 // Signal : iconeCliquee(), émis par un clic sur l'icône.
 // L'orientation verticale n'est pas habillée.
 // Sorties : etat, l'Etat de la jauge (rôle, interaction, sélection, couleurs de la partie remplie et de l'icône) ;
-// down, copie de pressed, que lit Etats.interaction (T.Slider n'a pas de down) ; barre, remplie, symbole et anneau, la
-// barre, sa partie remplie, l'icône et l'anneau de focus, lus par les essais ; zoneIcone, la zone cliquable de
+// down, copie de pressed, que lit Etats.interaction (T.Slider n'a pas de down) ; barre, remplie et symbole, la
+// barre, sa partie remplie et l'icône, lus par les essais ; zoneIcone, la zone cliquable de
 // l'icône ; fondRemplie et fondIcone, les ressorts de couleur de la partie remplie et de l'icône.
 // Erreurs : aucune ; avant le chargement des tokens, les cotes sont nulles et les couleurs transparentes ; un nom
 // d'icône introuvable ne peint rien.
-// Dépendances : QtQuick.Templates, Theme (density, elevation, color, ColorSpring), Etat, AnneauFocus, Icone.
+// Dépendances : QtQuick.Templates, Theme (density, elevation, color, ColorSpring), Etat, Icone.
 // Cotes : largeur implicite density.sliderWidth, hauteur implicite density.controlHeight, comme le curseur,
 // pour s'aligner sur une rangée de contrôles ; barre de density.sliderBar de haut ; icône de density.sliderBarIcon ;
 // rayons en demi-hauteur.
@@ -44,7 +44,6 @@ T.Slider {
     readonly property alias barre: barre
     readonly property alias remplie: remplie
     readonly property alias symbole: symbole
-    readonly property alias anneau: anneau
     readonly property alias zoneIcone: zoneIcone
     readonly property alias fondRemplie: fondRemplie
     readonly property alias fondIcone: fondIcone
@@ -109,13 +108,6 @@ T.Slider {
             nom: jauge.icone
             taille: Theme.density?.sliderBarIcon ?? 0
             couleur: fondIcone.value
-        }
-
-        AnneauFocus {
-            id: anneau
-            cible: parent
-            montre: jauge.visualFocus
-            inactif: etat.inactif
         }
     }
 }

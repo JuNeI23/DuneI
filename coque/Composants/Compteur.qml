@@ -13,8 +13,8 @@ import "etats.js" as Etats
 // ensemble la hauteur du contrôle, au rayon radius.control aux coins extérieurs et au rôle un cran au-dessus du
 // conteneur. Chaque demi-bouton porte son chevron dessiné et suit ses propres états (up.pressed, up.hovered, et
 // leurs pendants pour down) ; T.SpinBox désactive le demi-bouton dont la borne est atteinte, qui prend alors
-// l'état désactivé. L'anneau de focus clavier entoure l'ensemble, sur visualFocus. Le champ garde le rôle du
-// conteneur, sans cran (§ 7.4), et son texte se ternit quand le compteur est désactivé.
+// l'état désactivé. Le focus clavier n'a pas d'anneau (L2-73) : la rangée qui porte le compteur le montre. Le
+// champ garde le rôle du conteneur, sans cran (§ 7.4), et son texte se ternit quand le compteur est désactivé.
 // Largeur : fixe, celle du plus long des textes de from et de to écrits avec le chiffre le plus large de la police,
 // pour qu'aucune valeur ne redimensionne le contrôle ni ne déborde du champ, que les chiffres de la police soient
 // tabulaires ou non.
@@ -22,11 +22,10 @@ import "etats.js" as Etats
 // wheelEnabled vaut vrai par défaut. Un compteur non éditable ne vole pas le focus d'un champ (Qt.TabFocus,
 // § 7.3) ; éditable, il le prend au clic, comme un champ (Qt.StrongFocus).
 // Sorties : etat, l'Etat du champ (rôle, interaction, couleurs) ; etatHaut et etatBas, ceux des deux
-// demi-boutons ; largeurTexte, la largeur réservée au texte ; champ et anneau, le fond du champ et l'anneau de
-// focus, lus par les essais.
+// demi-boutons ; largeurTexte, la largeur réservée au texte ; champ, le fond du champ, lu par les essais.
 // Erreurs : aucune ; avant le chargement des tokens, les cotes sont nulles et les couleurs transparentes.
 // Dépendances : QtQuick.Templates (SpinBox), Quickshell (propriété attachée QsWindow : rapport de pixels de la
-// fenêtre, pour le filet), Theme (density, elevation, radius, space, police, color, hairline), Etat, AnneauFocus,
+// fenêtre, pour le filet), Theme (density, elevation, radius, space, police, color, hairline), Etat,
 // Chevron, etats.js (herite).
 // Cotes : hauteur density.controlHeight ; stepper de density.stepperWidth, écarté du champ de space.scale[0] (4) ;
 // retrait du texte dans le champ space.scale[1] (8).
@@ -37,7 +36,6 @@ T.SpinBox {
     readonly property Etat etatHaut: up.indicator?.etat ?? null
     readonly property Etat etatBas: down.indicator?.etat ?? null
     readonly property alias champ: champ
-    readonly property alias anneau: anneau
     readonly property real stepper: Theme.density?.stepperWidth ?? 0
     readonly property real retrait: Theme.space?.scale[1] ?? 0
     // Largeur du texte, valable pour toute valeur : chaque chiffre des textes des deux bornes est remplacé par le
@@ -92,7 +90,7 @@ T.SpinBox {
         clip: true
     }
 
-    // Le fond couvre tout le contrôle, pour que l'anneau entoure le champ et le stepper ; il ne peint que le champ.
+    // Le fond couvre tout le contrôle, champ et stepper ; il ne peint que le champ.
     background: Rectangle {
         radius: Theme.radius?.control ?? 0
         color: "transparent"
@@ -105,13 +103,6 @@ T.SpinBox {
             color: Theme.elevation?.field?.fill ?? "transparent"
             border.width: Theme.hairline(QsWindow.window?.devicePixelRatio ?? 1) ?? 0
             border.color: Theme.color?.borderSubtle ?? "transparent"
-        }
-
-        AnneauFocus {
-            id: anneau
-            cible: parent
-            montre: compteur.visualFocus
-            inactif: etat.inactif
         }
     }
 

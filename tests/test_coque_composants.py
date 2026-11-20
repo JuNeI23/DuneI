@@ -244,11 +244,12 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
         # et la jauge gardent controlRaised. Tous ne prennent le focus qu'à la tabulation (Qt.TabFocus vaut 1).
         self.demarrer()
         self.assertEqual(self.valeur("controles"), ", ".join(["surfaceRaised 1"] * 5 + ["controlRaised 1"] * 2))
-        # Case, interrupteur, onglet et radio cochés : l'accent, puis l'accent sans chroma sous le modificateur
-        # inactive.
-        self.assertEqual(self.valeur("coches"), "active active active active")
+        # Case, interrupteur et radio cochés : l'accent, puis l'accent sans chroma sous le modificateur inactive.
+        # L'onglet coché est une valeur choisie qui suit le curseur (L2-73) : hors de lui, il reste neutre
+        # (sélection inactive), sous le modificateur inactive compris.
+        self.assertEqual(self.valeur("coches"), "active active inactive active")
         self.ipc("inactif", "true")
-        self.assertEqual(self.valeur("coches"), "activeMuted activeMuted activeMuted activeMuted")
+        self.assertEqual(self.valeur("coches"), "activeMuted activeMuted inactive activeMuted")
 
     def test_cotes_des_controles(self):
         # Hauteur du bouton, boîte de la case, piste de l'interrupteur, largeur, poignée et piste du curseur, puis
@@ -440,14 +441,24 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
                          ["0", "1196", "518", "NaN", "12", "1336", "1436", "1020", "1221", "0", "1328", "8"])
 
     def test_bouton_principal(self):
-        # Le bouton principal d'un dialogue est sélectionné : l'accent, puis l'accent sans chroma sous le
-        # modificateur inactive ; un bouton ordinaire n'a aucune sélection.
+        # Le bouton principal d'un dialogue n'est plus sélectionné (L2-73) : hors du curseur, il reste neutre comme un
+        # bouton ordinaire, sous le modificateur inactive compris ; seul le curseur pose l'accent.
         self.demarrer()
         self.assertEqual(self.valeur("bouton"), "false none")
         self.ipc("boutonPrincipal", "true")
-        self.assertEqual(self.valeur("bouton"), "true active")
+        self.assertEqual(self.valeur("bouton"), "true none")
         self.ipc("inactif", "true")
-        self.assertEqual(self.valeur("bouton"), "true activeMuted")
+        self.assertEqual(self.valeur("bouton"), "true none")
+
+    def test_bouton_danger(self):
+        # Un bouton destructeur (danger) écrit son texte en color.error dès le repos, sans sélection ; un bouton
+        # ordinaire garde le texte de son état.
+        self.demarrer()
+        erreur = self.tokens55()[0]["color"]["error"].lower()
+        self.assertNotEqual(self.valeur("boutonTexte").lower(), erreur)
+        self.ipc("boutonDanger", "true")
+        self.assertEqual(self.valeur("boutonTexte").lower(), erreur)
+        self.assertEqual(self.valeur("bouton"), "false none")
 
     def test_coche_dessinee(self):
         # La coche de la case et le point du radio sont des tracés vectoriels (QtQuick.Shapes), sans aucune icône :
@@ -588,9 +599,9 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
 
     def test_controles_blancs(self):
         # À la nuit, aucun contour ni ombre, et la piste éteinte garde le fond de son Etat (surfaceRaised sur le
-        # panneau) : la nuit ne change pas. Au jour, le contour d'un pixel cerne le bouton, le disque, la poignée
-        # et le disque éteint de la bascule, mais pas l'onglet coché hors barre, à l'accent ; la poignée porte son
-        # ombre ; la piste éteinte et le disque éteint prennent controlOff.
+        # panneau) : la nuit ne change pas. Au jour, le contour d'un pixel cerne le bouton, le disque, la poignée,
+        # l'onglet coché hors barre, neutre hors du curseur (L2-73), et le disque éteint de la bascule ; la poignée
+        # porte son ombre ; la piste éteinte et le disque éteint prennent controlOff.
         self.demarrer()
         self.ipc("interrupteurCocher", "false")
         self.ipc("basculeCocher", "false")
@@ -601,7 +612,7 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
             jour = moment == "jour"
             piste = (vue["color"]["controlOff"] if jour else vue["states"]["surfaceRaised"]["none"]["rest"]["fill"])
             n = "1" if jour else "0"
-            attendu = f'{n} {n} {n} 0 {n} {str(jour).lower()} {piste} {piste}'
+            attendu = f'{n} {n} {n} {n} {n} {str(jour).lower()} {piste} {piste}'
             with self.subTest(moment=moment or "nuit"):
                 self.assertEqual(self.lire_jusqua("contours", attendu), attendu.lower())
 
@@ -841,11 +852,12 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(lire()[6:9], [milieu, milieu, f"1/{o:g}"])
 
     def test_ressorts_figes(self):
-        # Sobriété (D80) : le champ et le compteur ne peignent pas le fond de leur Etat, la section dépliable ni son
-        # fond ni son texte. Au survol forcé, leurs ressorts restent à l'arrêt, alors que celui du fond du contrôle
-        # simulé, qui le peint, démarre (contre-épreuve). Le texte ne change pas au survol : son ressort reste arrêté.
+        # Sobriété (D80) : le champ et le compteur ne peignent pas le fond de leur Etat. Au survol forcé, leurs
+        # ressorts restent à l'arrêt, alors que celui du fond du contrôle simulé, qui le peint, démarre
+        # (contre-épreuve), comme celui de l'en-tête de la section dépliable, qui peint la plaque du curseur depuis
+        # L2-73. Le texte ne change pas au survol : son ressort reste arrêté.
         self.demarrer()
-        self.assertEqual(self.valeur("ressortsFiges"), "true/false false/false false/false false/false")
+        self.assertEqual(self.valeur("ressortsFiges"), "true/false false/false false/false true/false")
 
     def test_depliable(self):
         # Repliée, la section cache son contenu et son chevron pointe à droite (rotation -90 du chevron bas) ;
@@ -881,8 +893,8 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
             time.sleep(0.05)
         self.assertEqual((lu[2], lu[5]), ("false", "0"))
         self.ipc("depliableOuvrir", "true")
-        # L'en-tête laisse à l'anneau de focus, posé sur son fond, un retrait de space.scale[1] de chaque côté du
-        # contenu : le libellé ne touche plus l'anneau. Le bloc reste aligné sur le libellé.
+        # L'en-tête laisse à la plaque du curseur, peinte sur son fond, un retrait de space.scale[1] de chaque côté
+        # du contenu : le libellé ne touche pas son bord. Le bloc reste aligné sur le libellé.
         marge, ecart = tokens["space"]["scale"][1], tokens["space"]["scale"][0]
         chevron = tokens["icons"]["sizes"]["dense"]
         gauche, droite, bloc = self.valeur("depliableCotes").split()
@@ -1177,7 +1189,7 @@ class CoqueClavierTest(EssaiCoque, unittest.TestCase):
         # Défaut relevé à l'écran : chaque onglet était un arrêt de tabulation, si bien que Maj+Tab depuis l'onglet
         # coché « composants » menait à « tokens », dans la même barre ; la barre gardait le focus et l'onglet
         # coché, l'accent. La barre n'a plus qu'un arrêt, l'onglet coché ; les flèches changent d'onglet en y
-        # portant un focus clavier (anneau visible).
+        # portant un focus clavier (le curseur s'y pose).
         self.demarrer()
         self.ipc("touche", "tab")
         self.assertEqual(self.valeur("focus"), "avant 1 none inactive true")
@@ -1208,31 +1220,51 @@ class CoqueClavierTest(EssaiCoque, unittest.TestCase):
         self.assertEqual((rayon, hauteur, marge), (str(rc), str(d["controlHeight"]), str(retrait)))
         self.assertEqual((l0, l1), (lmax, lmax))
         self.assertEqual((hs, rs), (str(h0), str(rc - retrait)))
-        self.assertEqual(nu, "#00000000")
-        self.ipc("survolerOnglet")
-        # Le ressort d'état d'un segment non coché part de la transparence au survol comme au repos : sinon son fond
-        # opaque paraîtrait au premier instant de la pression (gris, noir, gris constatés à l'écran).
-        # Le ressort peut finir de glisser vers la transparence après la création : on attend qu'il s'y pose.
-        # Une ligne de moins de trois champs est complétée de champs vides : l'échec reste lisible, sans IndexError.
+        # Le fond du segment non coché est sa propre teinte rendue transparente, d'où le ressort part sans noir ; le
+        # ressort peut finir d'y glisser après la création, d'où la relecture.
         fin = time.monotonic() + DELAI
-        while (survol := self.valeur("ongletSurvole").split() + [""] * 3)[2][:3] != "#00" and time.monotonic() < fin:
+        while (nu := self.valeur("onglets").split()[-1])[:3] != "#00" and time.monotonic() < fin:
             time.sleep(0.1)
-        self.assertEqual(survol[:2], ["hover", "#00000000"])
-        self.assertEqual(survol[2][:3], "#00", survol)
+        self.assertEqual(nu[:3], "#00", nu)
+        # Le survol pose le curseur sur le segment survolé (L2-73) : il prend l'aplat d'accent de la plaque, et le
+        # segment coché redevient neutre (sélection inactive) pendant ce temps ; jamais deux segments à l'accent.
+        accent = tokens["states"]["surfacePanel"]["active"]["rest"]["fill"].lower()
+        self.ipc("survolerOnglet")
+        self.assertEqual(self.valeur("focus").split()[2:4], ["active", "inactive"])
+        fin = time.monotonic() + DELAI
+        while (survol := self.valeur("ongletSurvole").lower().split() + [""] * 3)[2] != accent and time.monotonic() < fin:
+            time.sleep(0.1)
+        self.assertEqual(survol[0], "hover")
+        self.assertEqual(survol[1:3], [accent, accent], survol)
 
-    def test_anneau_sur_la_barre(self):
-        # Défaut relevé à l'écran : l'anneau du segment coché chevauchait le segment voisin. La barre étant l'unique
-        # arrêt de tabulation, l'anneau entoure la barre entière, au focus clavier d'un de ses segments, et le
-        # segment n'en montre aucun.
+    def test_curseur_sur_la_barre(self):
+        # La barre d'onglets n'a plus d'anneau (L2-73) : au focus clavier, le curseur se pose sur le segment coché,
+        # qui prend l'accent ; les flèches le déplacent avec le choix, et la sortie de la barre rend au segment coché
+        # sa sélection neutre. Ni la barre, ni un segment, ni un contrôle allumé ne déclarent encore d'anneau.
         self.demarrer()
-        self.assertEqual(self.valeur("anneauOnglets"), "false false")
+        self.assertEqual(self.valeur("anneaux"), "false false false false false false false")
         self.ipc("touche", "tab")
         self.ipc("touche", "tab")
-        self.assertEqual(self.valeur("anneauOnglets"), "true false")
+        self.assertEqual(self.valeur("focus"), "composants 1 none active true")
         self.ipc("touche", "gauche")
-        self.assertEqual(self.valeur("anneauOnglets"), "true false")
+        self.assertEqual(self.valeur("focus"), "tokens 0 active none true")
         self.ipc("touche", "majtab")
-        self.assertEqual(self.valeur("anneauOnglets"), "false false")
+        self.assertEqual(self.valeur("focus"), "avant 0 inactive none true")
+
+    def test_reglage_ligne_porte_le_curseur(self):
+        # Le focus clavier d'un contrôle porté par une ReglageLigne pose le curseur sur toute la rangée, qui prend
+        # l'aplat d'accent, et l'interrupteur allumé garde sa sélection d'allumé ; le survol de la rangée fait de même,
+        # et la souris qui la quitte le retire.
+        self.demarrer()
+        self.assertEqual(self.valeur("reglageCurseur"), "none false active")
+        self.ipc("focaliser", "interrupteur")
+        self.assertEqual(self.valeur("reglageCurseur"), "active true active")
+        self.ipc("focaliser", "bulle")
+        self.assertEqual(self.valeur("reglageCurseur"), "none false active")
+        self.ipc("survol", "R")
+        self.assertEqual(self.valeur("reglageCurseur"), "active true active")
+        self.ipc("survol", "aucun")
+        self.assertEqual(self.valeur("reglageCurseur"), "none false active")
 
     def test_barre_jamais_sans_arret(self):
         # Quand l'onglet coché est désactivé, il ne peut plus prendre le focus : les autres onglets redeviennent des
@@ -1244,8 +1276,8 @@ class CoqueClavierTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(self.valeur("focus").split()[0], "tokens")
 
     def test_jauge_clavier(self):
-        # La jauge est un arrêt de tabulation après le champ ; les flèches la règlent et l'anneau de focus clavier
-        # entoure la barre.
+        # La jauge est un arrêt de tabulation après le champ, qui prend un focus clavier (visualFocus) ; les flèches
+        # la règlent.
         self.demarrer()
         for _ in range(5):  # avant, composants, apres, champ, jauge
             self.ipc("touche", "tab")
@@ -1258,7 +1290,7 @@ class CoqueClavierTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(self.valeur("jauge"), "0.4 true")
 
     def test_compteur_clavier(self):
-        # Le compteur est un arrêt de tabulation après la jauge, son anneau entoure l'ensemble ; les flèches haut et
+        # Le compteur est un arrêt de tabulation après la jauge, au focus clavier (visualFocus) ; les flèches haut et
         # bas et la molette changent la valeur entre ses bornes, et le demi-bouton de la borne atteinte se désactive.
         self.demarrer()
         for _ in range(6):  # avant, composants, apres, champ, jauge, compteur
@@ -1356,7 +1388,7 @@ class CoqueClavierTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(self.valeur("bulle").split()[-1], "2")
 
     def test_depliable_clavier(self):
-        # L'en-tête de la section est un arrêt de tabulation après la recherche, entouré de l'anneau au clavier ;
+        # L'en-tête de la section est un arrêt de tabulation après la recherche, qui porte le curseur au clavier ;
         # Espace et Entrée basculent la section, le clic aussi. Le bloc se replie sur le ressort reveal (D157) : il reste
         # visible le temps du repli, d'où la relecture jusqu'à l'état attendu.
         self.demarrer()
@@ -1384,15 +1416,15 @@ class CoqueClavierTest(EssaiCoque, unittest.TestCase):
         return lu
 
     def test_bascule_clavier(self):
-        # La bascule est un arrêt de tabulation après l'en-tête de la section, entourée d'un anneau rond au clavier
-        # (visualFocus) ; Espace l'allume puis l'éteint, et allumée elle prend l'accent.
+        # La bascule est un arrêt de tabulation après l'en-tête de la section, qui prend un focus clavier (visualFocus)
+        # sans anneau ; Espace l'allume puis l'éteint, et allumée elle prend l'accent.
         self.demarrer()
         for _ in range(10):  # … recherche, en-tête de la section, bascule
             self.ipc("touche", "tab")
         self.assertEqual(self.valeur("focus").split()[0], "bascule")
-        self.assertEqual(self.valeur("bascule"), "false none true true")
+        self.assertEqual(self.valeur("bascule"), "false none true")
         self.ipc("touche", "espace")
-        self.assertEqual(self.valeur("bascule"), "true active true true")
+        self.assertEqual(self.valeur("bascule"), "true active true")
         self.ipc("touche", "espace")
         self.assertEqual(self.valeur("bascule").split()[0], "false")
 
