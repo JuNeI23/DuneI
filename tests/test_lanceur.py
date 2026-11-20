@@ -781,25 +781,37 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
         for motif in ("TypeError", "ReferenceError", "Error:", "WARN scene", "WARN qml"):
             self.assertNotIn(motif, self.journal())
 
-    def test_sortie_animee(self):
-        """Vérifie qu'à la fermeture la fenêtre reste le temps de sa sortie (sortant), puis est déchargée, et qu'une
-        réouverture pendant la sortie reprend la même fenêtre, sans la décharger.
+    def test_action_apres_retrait_du_calque(self):
+        """Vérifie qu'à la fermeture la fenêtre reste le temps de son fondu de sortie (sortant), puis est déchargée et
+        son calque retiré ; qu'une réouverture pendant la sortie reprend la même fenêtre ; et qu'une action choisie ne
+        part qu'une fois le calque retiré par Hyprland (closelayer), quand le clavier du lanceur est rendu : c'est ce
+        qui laisse à la galerie, ouverte depuis le lanceur, le clavier qu'elle prend (recette 2).
 
-        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : ouvrir, lanceur, etat, jusqua.
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : ouvrir, lanceur, taper, touche,
+        etat, attendre, jusqua, journal.
         """
         self.ouvrir()
         self.lanceur("fermer")
         e = self.etat()
         self.assertEqual((e["ouvert"], e["sortant"], e["fenetre"]), (False, True, True))
-        self.jusqua(lambda: not self.etat()["fenetre"], "fenêtre déchargée après la sortie")
-        self.assertFalse(self.etat()["sortant"])
+        self.attendre("essai : calque retiré")
+        self.assertEqual((self.etat()["sortant"], self.etat()["fenetre"]), (False, False))
         self.ouvrir()
         self.lanceur("fermer")
         self.lanceur("ouvrir")
         e = self.etat()
         self.assertEqual((e["ouvert"], e["sortant"], e["fenetre"]), (True, False, True))
-        time.sleep(1)
-        self.assertTrue(self.etat()["fenetre"])
+        self.ouvrir()
+        self.taper("galerie")
+        self.assertEqual(self.etat()["cles"][0], "cmd:galerie")
+        self.touche("return")
+        self.attendre("essai : exécuté commande galerie")
+        # L'action part dans la notification même du retrait : la coque d'essai, abonnée après le lanceur au même
+        # événement, écrit « calque retiré » juste après « exécuté », sans autre ligne entre les deux.
+        lignes = self.journal().splitlines()
+        i = max(n for n, l in enumerate(lignes) if "exécuté commande galerie" in l)
+        self.assertIn("essai : calque retiré", lignes[i + 1] if i + 1 < len(lignes) else "", lignes[i - 2:])
+        self.assertFalse(self.etat()["differee"])
 
     def test_ferme_libere(self):
         """Vérifie qu'après fermeture la fenêtre du lanceur n'existe plus (LazyLoader), et qu'elle se reconstruit à la
@@ -928,8 +940,8 @@ class ClavierTest(FenetreTest):
 
     def test_ligne_discrete_dans_l_apercu(self):
         """Vérifie, par de vraies touches, que la plaque de la ligne retenue vise l'accent plein et son texte le
-        sur-accent tant que le curseur est dans la liste, puis le ton discret et le texte normal quand → le fait entrer
-        dans l'aperçu, et de nouveau l'accent quand ← le ramène.
+        sur-accent tant que le curseur est dans la liste, puis un fond neutre sans accent et le texte normal quand →
+        le fait entrer dans l'aperçu, et de nouveau l'accent quand ← le ramène.
 
         Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : lanceur, taper, cle, essai_ipc,
         jusqua.
@@ -949,7 +961,7 @@ class ClavierTest(FenetreTest):
 
     test_ouvre_sur_accueil = test_premiere_lettre_scinde = test_effacer_revient_a_l_accueil = test_aucun_resultat = None
     test_tab_entre_dans_l_apercu = test_confirmation_eteindre = test_fenetre_disparue = test_ferme_libere = None
-    test_sortie_animee = None
+    test_action_apres_retrait_du_calque = None
 
 
 class CommandesTest(unittest.TestCase):

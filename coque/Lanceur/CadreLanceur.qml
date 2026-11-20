@@ -11,8 +11,8 @@ import "../Composants" as C
 // prennent le relief « Doux ». Dedans : le champ Recherche agrandi, puis l'Accueil ou la scission (titre
 // « Résultats » et Liste, filet, Apercu), qui se croisent en fondu et en glissé. Les touches du champ passent par
 // Lanceur.touche ; le reste de la frappe va au champ, qui écrit Lanceur.saisie.
-// Entrées : apparition, de 0 à 1, l'opacité de l'entrée de la fenêtre, 1 par défaut ; montee, de 0 à 1, la montée du
-// cadre depuis reglages.pageRise plus bas (comme une page de Paramètres, aucune sous le mouvement réduit), 1 par défaut.
+// Entrées : depart, distance en pixels sous sa place d'où le cadre monte (0 par défaut) ; montee, de 0 à 1, la part
+// faite de cette montée (1 par défaut) : translation pure, sans échelle ni opacité (le fondu est celui du compositeur).
 // Sorties : vignettes, le nombre de vignettes de l'aperçu ; champ, la Recherche (lue par les essais) ; reperes().
 // Erreurs : aucune ; avant le chargement des tokens, le verre reste transparent.
 // Dépendances : Lanceur, Accueil, Liste, Apercu, Ressort, C.Surface, C.OmbreElevation, C.Recherche, C.Texte, Theme
@@ -24,7 +24,7 @@ import "../Composants" as C
 Item {
     id: cadre
 
-    property real apparition: 1
+    property real depart: 0
     property real montee: 1
     readonly property bool dnRelief: true
     readonly property var cotes: Lanceur.cotes
@@ -34,8 +34,7 @@ Item {
 
     width: largeur.value
     height: hauteur.value
-    opacity: cadre.apparition
-    transform: Translate { y: Theme.mouvementReduit ? 0 : (1 - cadre.montee) * (Theme.reglages?.pageRise ?? 0) }
+    transform: Translate { y: (1 - cadre.montee) * cadre.depart }
 
     // nomTouche — nom d'une touche du lanceur. Entrée : event, KeyEvent. Sortie : « escape », « return »,
     // « ctrl+return », « up », « down », « left », « right », « tab », « shift+tab », « ctrl+j », « ctrl+k », ou « »

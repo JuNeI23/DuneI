@@ -179,5 +179,15 @@ Scope {
         // basculer — voir la fonction de l'ouvreuse. Entrées : aucune. Sortie : aucune. Erreurs : aucune.
         // Dépendances : ouvreuse.basculer.
         function basculer(): void { ouvreuse.basculer() }
+
+        // etat — état de la galerie en JSON : ouvert ; montee, vrai si le module est monté et visible ; focus, vrai si
+        // le module a le focus de sa fenêtre ; clavier, vrai si sa fenêtre a le clavier du compositeur (les flèches
+        // l'atteignent seulement quand focus et clavier sont vrais). Entrées : aucune. Sortie : texte.
+        // Erreurs : aucune. Dépendances : ouvreuse (ouvert, _montee).
+        function etat(): string {
+            const g = ouvreuse._montee
+            return JSON.stringify({ ouvert: ouvreuse.ouvert, montee: !!g, focus: g?.activeFocus ?? false,
+                clavier: g?.fenetreActive ?? false })
+        }
     }
 }

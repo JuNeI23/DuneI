@@ -3,6 +3,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import Quickshell.Hyprland
 import "Theme"
 import "Lanceur"
 
@@ -14,8 +15,9 @@ import "Lanceur"
 // maquette. Elle sert la cible « notifications », dont l'état « ne pas déranger » vaut toujours « true ».
 // Entrées : DUNEI_TOKENS_DIR et DUNEI_ETAT_DIR (jetons, thème et relevé d'usage de l'essai) ; IPC « essai » :
 // injecter, marquer, largeurs, pret. Sorties : « essai : prêt » au démarrage ; « essai : exécuté <genre> <cible> » à
-// chaque action. Erreurs : celles de Theme et du lanceur, dans le journal.
-// Dépendances : quickshell ≥ 0.3 (IpcHandler), Lanceur, Theme ; liens essai/fenetre/Theme, Composants, Applications,
+// chaque action ; « essai : calque retiré » quand Hyprland retire un calque dunei-attention (closelayer), pour que les
+// essais vérifient qu'une action ne part qu'après ce retrait. Erreurs : celles de Theme et du lanceur, dans le journal.
+// Dépendances : quickshell ≥ 0.3 (IpcHandler, Hyprland.rawEvent), Lanceur, Theme ; liens essai/fenetre/Theme, Composants, Applications,
 // Parametres, Barre et Lanceur, car Quickshell ne suit pas les imports hors du dossier de la coque.
 ShellRoot {
     id: essai
@@ -36,6 +38,13 @@ ShellRoot {
     Connections {
         target: Lanceur.fenetre?.cadre ?? null
         function onWidthChanged() { essai.largeurs = essai.largeurs.concat([Lanceur.fenetre.cadre.width]) }
+    }
+
+    // onRawEvent — journalise le retrait d'un calque d'attention. Entrée : e, l'événement Hyprland. Sortie : la ligne
+    // « essai : calque retiré ». Erreurs : aucune. Dépendances : Hyprland.rawEvent.
+    Connections {
+        target: Hyprland
+        function onRawEvent(e) { if (e.name === "closelayer" && e.data === "dunei-attention") console.log("essai : calque retiré") }
     }
 
     IpcHandler {
