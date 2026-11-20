@@ -32,7 +32,7 @@ import "Composants/ancrage.js" as Ancrage
 // <visible> <running> », « essai activitePhase <phase> », « essai activiteAncetre <bool> », « essai depliableOuvrir
 // <bool> », « essai basculeCocher <bool> », « essai valeurCopier », « essai pastillesForcer <état> », « essai pastillesReduire <bool> »,
 // « essai knobsActifs <bool> », « essai interrupteurCocher <bool> », « essai compteurValeur <n> », « essai deroulantRang <n> », « essai decocher »,
-// « essai radioCocher <rang> », « essai jaugeActive <bool> », « essai jaugeCoupe <bool> », « essai surPlaque <bool> », « essai rangeeImposer <bool> », « essai boutonPrincipal <bool> », « essai boutonDanger <bool> », « essai inactif
+// « essai radioCocher <rang> », « essai jaugeActive <bool> », « essai jaugeCoupe <bool> », « essai surPlaque <bool> », « essai rangeeImposer <bool> », « essai rangeeCurseur <bool> », « essai boutonDanger <bool> », « essai inactif
 // <bool> », « essai reparenter », « essai texteMoyen », « essai survol <bool> »,
 // « essai champActif <bool> », « essai champTexte <texte> », « essai selectionLibre », « essai icone <nom> <bool> »,
 // « essai ouvrirFactice <A…E> », « essai fermerFactice <A…E> » et « essai materiauHauteur <px> ».
@@ -1163,6 +1163,13 @@ ShellRoot {
             r.teinteTexte = valeur ? Theme.color?.error ?? "transparent" : "transparent"
         }
 
+        // rangeeCurseur — donne le curseur de la liste d'essai à sa rangée 0, ou le lui retire, comme le survol.
+        // Entrée : valeur, vrai pour le donner. Sortie : aucune. Erreurs : aucune. Dépendances : listeEssai (dnVue).
+        function rangeeCurseur(valeur: bool): void {
+            const r = listeEssai.itemAtIndex(0)
+            valeur ? listeEssai.dnVue.prendre(r) : listeEssai.dnVue.lacher(r)
+        }
+
         // rangeeImposees — journalise, pour la rangée 0, la variante pleine de son icône, les cibles de couleur
         // de l'icône et du libellé, et le drapeau gras avec la graisse du libellé. Entrées : aucune. Sortie :
         // aucune ; « essai : rangeeImposees <bool> <#icône> <#libellé> <gras> <graisse> ». Erreurs : aucune.
@@ -1221,18 +1228,11 @@ ShellRoot {
             essai.journal("serrage", fenetres.map(Ancrage.origine).concat(cadres).join(" "))
         }
 
-        // bouton — journalise la propriété principal du bouton d'essai et la sélection de son Etat.
-        // Entrées : aucune. Sortie : aucune ; « essai : bouton <bool> <sélection> ». Erreurs : aucune.
+        // bouton — journalise la sélection de l'Etat du bouton d'essai.
+        // Entrées : aucune. Sortie : aucune ; « essai : bouton <sélection> ». Erreurs : aucune.
         // Dépendances : boutonEssai.
         function bouton(): void {
-            essai.journal("bouton", boutonEssai.principal + " " + boutonEssai.etat.selection)
-        }
-
-        // boutonPrincipal — fait du bouton d'essai le bouton principal d'un dialogue, ou un bouton ordinaire.
-        // Entrées : valeur, nouvelle valeur de principal. Sortie : aucune. Erreurs : aucune.
-        // Dépendances : boutonEssai.
-        function boutonPrincipal(valeur: bool): void {
-            boutonEssai.principal = valeur
+            essai.journal("bouton", boutonEssai.etat.selection)
         }
 
         // boutonDanger — fait du bouton d'essai un bouton destructeur, ou un bouton ordinaire.

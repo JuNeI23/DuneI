@@ -411,6 +411,22 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
         self.assertNotIn(texte, (t["accent"].lower(), t["error"].lower()))
         self.assertEqual(gras, "false")
 
+    def test_rangee_teintes_sous_le_curseur(self):
+        # Sous le curseur, la rangée oublie ses teintes imposées (L2-73) : icône et libellé prennent le texte de l'état,
+        # le sur-accent de la plaque, jamais un gris ni un orange sur l'orange ; le curseur parti, les teintes
+        # reviennent.
+        self.demarrer()
+        t = self.tokens55()[0]["color"]
+        sur = t["onAccent"].lower()
+        self.ipc("rangeeImposer", "true")
+        self.ipc("rangeeCurseur", "true")
+        fin = time.monotonic() + DELAI  # le texte de l'état rejoint le sur-accent au ressort des états
+        while (lu := self.valeur("rangeeImposees").lower().split()[1:3]) != [sur, sur] and time.monotonic() < fin:
+            time.sleep(0.05)
+        self.assertEqual(lu, [sur, sur])
+        self.ipc("rangeeCurseur", "false")
+        self.assertEqual(self.valeur("rangeeImposees").lower().split()[1:3], [t["accent"].lower(), t["error"].lower()])
+
     def test_rangee_transparente_au_repos(self):
         # Défaut relevé à l'écran : sur le verre d'un menu, chaque rangée au repos peignait la couleur opaque de sa
         # surface et formait une plaque distincte. Dans une Liste, la rangée ne peint plus jamais son fond, au repos,
@@ -430,15 +446,13 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(self.valeur("serrage").split(),
                          ["0", "1196", "518", "NaN", "12", "1336", "1436", "1020", "1221", "0", "1328", "8"])
 
-    def test_bouton_principal(self):
-        # Le bouton principal d'un dialogue n'est plus sélectionné (L2-73) : hors du curseur, il reste neutre comme un
-        # bouton ordinaire, sous le modificateur inactive compris ; seul le curseur pose l'accent.
+    def test_bouton_neutre(self):
+        # Hors du curseur, un bouton n'est jamais sélectionné (L2-73), sous le modificateur inactive compris : seul le
+        # curseur pose l'accent.
         self.demarrer()
-        self.assertEqual(self.valeur("bouton"), "false none")
-        self.ipc("boutonPrincipal", "true")
-        self.assertEqual(self.valeur("bouton"), "true none")
+        self.assertEqual(self.valeur("bouton"), "none")
         self.ipc("inactif", "true")
-        self.assertEqual(self.valeur("bouton"), "true none")
+        self.assertEqual(self.valeur("bouton"), "none")
 
     def test_bouton_danger(self):
         # Un bouton destructeur (danger) écrit son texte en color.error dès le repos, sans sélection, en fondu au
@@ -451,7 +465,7 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
         while (lu := self.valeur("boutonTexte").lower()) != erreur and time.monotonic() < fin:
             time.sleep(0.05)
         self.assertEqual(lu, erreur)
-        self.assertEqual(self.valeur("bouton"), "false none")
+        self.assertEqual(self.valeur("bouton"), "none")
 
     def test_coche_dessinee(self):
         # La coche de la case et le point du radio sont des tracés vectoriels (QtQuick.Shapes), sans aucune icône :
@@ -532,7 +546,7 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
         on, accent = t["onAccent"].lower(), t["accent"].lower()
         self.ipc("surPlaque", "true")
         # Hors coupure, la cible de la jauge est la couleur affichée de son Etat, qui rejoint l'inversion au ressort.
-        fin = time.monotonic() + 3
+        fin = time.monotonic() + DELAI
         while (lu := self.valeur("jaugeCibles").lower().split()[:2]) != [on, accent] and time.monotonic() < fin:
             time.sleep(0.05)
         self.assertEqual(lu, [on, accent])
@@ -987,9 +1001,10 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
     def test_reglages(self):
         # Carte et rangées de réglage de la fenêtre Réseau : la rangée à aide prend reglages.rowHelp (erreur en
         # plus), la simple reglages.row ; le texte s'aligne sur reglages.textColumn ; la carte ajoute deux gardes de
-        # space.scale[0] ; le médaillon prend reglages.medallion et radius.panel ; actif, il porte l'accent plein et
-        # la variante pleine de l'icône ; inactif, la sélection neutre (controlRaised au repos) et l'icône
-        # ordinaire ; la rangée hérite du rôle surfaceRaised de la carte.
+        # space.scale[0] ; le médaillon prend reglages.medallion et radius.panel ; actif, c'est un indicateur (L2-73) :
+        # le fond neutre (controlRaised au repos), qui reste lisible sur la plaque d'accent du curseur, et la variante
+        # pleine de l'icône ; inactif, le même fond neutre et l'icône ordinaire ; la rangée hérite du rôle surfaceRaised
+        # de la carte.
         self.demarrer()
         tokens = self.tokens55()[0]
         r, garde = tokens["reglages"], tokens["space"]["scale"][0]
@@ -998,7 +1013,8 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
         self.assertGreater(erreur, 0)
         self.assertEqual([lu[0], int(lu[2])], [f"{garde}/{2 * garde}", r["row"]])
         self.assertEqual(lu[3:6], [str(r["textColumn"]), str(r["medallion"]), str(tokens["radius"]["panel"])])
-        self.assertEqual(lu[6:8], [tokens["color"]["accent"].lower(), tokens["states"]["controlRaised"]["none"]["rest"]["fill"].lower()])
+        neutre = tokens["states"]["controlRaised"]["none"]["rest"]["fill"].lower()
+        self.assertEqual(lu[6:8], [neutre, neutre])
         self.assertEqual(lu[8:], ["true", "false", "surfaceRaised"])
 
     def test_valeur_copie(self):
@@ -1440,12 +1456,12 @@ class CoqueClavierTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(self.relire("depliable", "true true true").split()[:2], ["true", "true"])
 
     def relire(self, cle: str, attendu: str) -> str:
-        """Relit une valeur journalisée jusqu'à ce qu'elle vaille l'attendu, pendant trois secondes au plus.
+        """Relit une valeur journalisée jusqu'à ce qu'elle vaille l'attendu, pendant DELAI secondes au plus.
 
         Entrées : cle — fonction IPC de lecture ; attendu — valeur visée. Sortie : la dernière valeur lue, que le test
         compare. Erreurs : celles de valeur. Dépendances : valeur.
         """
-        fin = time.monotonic() + 3
+        fin = time.monotonic() + DELAI
         while (lu := self.valeur(cle)) != attendu and time.monotonic() < fin:
             time.sleep(0.05)
         return lu
@@ -1671,8 +1687,7 @@ class CoqueClavierTest(EssaiCoque, unittest.TestCase):
 
     def test_curseur_unique(self):
         # Une vue n'a qu'un curseur (L2-73) : le focus clavier le pose sur le bouton A, le survol de B le lui prend,
-        # et la souris qui quitte B le retire de la vue ; le focus clavier resté sur A n'y repose pas l'accent tant
-        # qu'on ne retape pas.
+        # et la souris qui quitte B le rend au focus clavier resté sur A, qui ne reste jamais sans marque.
         self.demarrer()
         self.ipc("focaliser", "bulle")
         self.ipc("touche", "tab")
@@ -1680,7 +1695,47 @@ class CoqueClavierTest(EssaiCoque, unittest.TestCase):
         self.ipc("survol", "B")
         self.assertEqual(self.valeur("curseurBoutons"), "none active B")
         self.ipc("survol", "aucun")
-        self.assertEqual(self.valeur("curseurBoutons"), "none none aucun")
+        self.assertEqual(self.relire("curseurBoutons", "active none A"), "active none A")
+
+    def test_touche_reprend_le_curseur(self):
+        # Le pointeur posé sur B garde le curseur, mais Espace, qui enfonce A focalisé au clavier, le ramène sur A :
+        # la touche est le dernier mouvement, et la plaque montre le bouton qui agit.
+        self.demarrer()
+        self.ipc("focaliser", "bulle")
+        self.ipc("touche", "tab")
+        self.ipc("survol", "B")
+        self.assertEqual(self.valeur("curseurBoutons"), "none active B")
+        self.ipc("touche", "espace")
+        self.assertEqual(self.valeur("curseurBoutons"), "active none A")
+
+    def test_ligne_reprend_le_curseur(self):
+        # Le pointeur qui quitte le bouton d'action E pour revenir sur sa rangée C rend la plaque à la rangée, encore
+        # survolée, même quand le focus clavier est ailleurs dans la vue (sur A) : le survol, dernier mouvement,
+        # l'emporte sur le focus.
+        self.demarrer()
+        self.ipc("focaliser", "bulle")
+        self.ipc("touche", "tab")
+        self.ipc("survol", "C")
+        self.assertEqual(self.valeur("rangeeSeule", "C").split()[1], "true")
+        self.ipc("survol", "E")
+        self.assertEqual(self.valeur("rangeeSeule", "C").split()[1], "false")
+        self.ipc("survol", "C")
+        time.sleep(0.2)  # laisse passer le tour où le focus clavier reprendrait le curseur s'il l'emportait
+        self.assertEqual(self.valeur("rangeeSeule", "C").split()[1], "true")
+        self.assertEqual(self.valeur("curseurBoutons").split()[2], "aucun")
+
+    def test_valeur_sans_contour(self):
+        # La valeur copiable n'a plus de contour de focus orange (L2-73) : atteinte au clavier ou survolée, elle porte
+        # la plaque du curseur, l'aplat d'accent ; aucun de ses enfants ne peint de contour.
+        self.demarrer()
+        accent = self.tokens55()[0]["states"]["surfaceWindow"]["active"]["rest"]["fill"].lower()
+        self.assertEqual(self.valeur("valeurCurseur").split()[0::2], ["false", "0"])
+        self.ipc("focaliser", "valeur")
+        self.assertEqual(self.valeur("valeurCurseur").lower(), f"true {accent} 0")
+        self.ipc("focaliser", "bulle")
+        self.assertEqual(self.valeur("valeurCurseur").split()[0], "false")
+        self.ipc("survol", "V")
+        self.assertEqual(self.valeur("valeurCurseur").lower(), f"true {accent} 0")
 
     def test_curseur_oublie_a_la_fermeture(self):
         # Le porteur rendu invisible (une vue qui se ferme) lâche le curseur, sans erreur au journal.
@@ -1742,14 +1797,14 @@ class CoqueClavierTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(self.valeur("boutonCouleurs", "B").lower().split()[2], repos)
 
     def relire_si(self, nom: str, condition) -> list[str]:
-        """Relit les couleurs d'un bouton de la vue jusqu'à ce qu'elles remplissent une condition, pendant trois
+        """Relit les couleurs d'un bouton de la vue jusqu'à ce qu'elles remplissent une condition, pendant DELAI
         secondes au plus, le temps que leurs ressorts rejoignent leur cible.
 
         Entrées : nom — "A" ou "B" ; condition — fonction qui reçoit les champs lus, en minuscules, et rend vrai quand
                   l'état visé est atteint.
         Sortie : les derniers champs lus, que le test compare. Erreurs : celles de valeur. Dépendances : valeur.
         """
-        fin = time.monotonic() + 3
+        fin = time.monotonic() + DELAI
         while not condition(lu := self.valeur("boutonCouleurs", nom).lower().split()) and time.monotonic() < fin:
             time.sleep(0.05)
         return lu

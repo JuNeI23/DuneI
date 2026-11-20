@@ -14,7 +14,8 @@ import "etats.js" as Etats
 // interrupteur allumé reste à l'accent) et n'a pas d'anneau de focus. Hors du curseur, la plaque est transparente.
 // Sur la plaque, le titre et l'aide passent au sur-accent de l'état, en fondu au même ressort, et la rangée déclare
 // dnSurPlaque : un contrôle allumé qu'elle porte s'y inverse (Etat.inverseSurPlaque).
-// Entrées : titre ; aide ; icone et iconeActive, transmis au Medaillon ; erreur, ligne d'erreur sous la rangée ; le
+// Entrées : titre ; aide ; icone et iconeActive, transmis au Medaillon, un indicateur (fond neutre, glyphe à l'accent
+// autonome quand il est actif) qui reste lisible sur la plaque ; erreur, ligne d'erreur sous la rangée ; le
 // contrôle, déclaré comme enfant.
 // Sorties : texteX, abscisse de la colonne de texte ; base, hauteur sans l'erreur ; corps, hauteur du corps (base,
 // ou celle d'un contrôle plus haut, bordée de space.scale[1]) ; largeurLibre, largeur laissée au contrôle ; survole
@@ -98,6 +99,7 @@ Item {
         visible: ligne.icone !== ""
         nom: ligne.icone
         actif: ligne.iconeActive
+        indicateur: true
     }
     Column {
         id: titreColonne

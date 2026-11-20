@@ -15,14 +15,14 @@ import "../Theme"
 // construite à l'ouverture et détruite à la fermeture (D80).
 // Largeur : celle du plus long des choix, pour que changer de valeur ne redimensionne pas le bouton.
 // Entrées : model, la liste des choix (chaînes) ; currentIndex, rang de la valeur choisie, 0 par défaut ; le
-// reste de l'API de Bouton (enabled, principal…), hors text, que displayText remplit.
+// reste de l'API de Bouton (enabled, danger…), hors text, que displayText remplit.
 // Sorties : displayText, le texte de la valeur choisie (vide hors du modèle) ; signal activated(index), émis quand
 // l'utilisateur choisit un élément, au menu ou aux flèches ; menu, l'Overlay ; liste, la Liste du menu ouvert,
 // null fermé ; auClavier, vrai si la dernière ouverture vient du clavier ; ces trois dernières, en lecture seule,
 // sont lues par les essais.
 // Erreurs : aucune ; un modèle vide montre un bouton sans texte, dont le menu est vide ; avant le chargement des
 // tokens, les cotes sont nulles et les couleurs transparentes.
-// Dépendances : Bouton (fond, états, anneau), Overlay (famille contextuel), Liste, Rangee (accessoire), Coche,
+// Dépendances : Bouton (fond, états, curseur), Overlay (famille contextuel), Liste, Rangee (accessoire), Coche,
 // Chevron, Texte, Theme (density, icons, space).
 // Cotes : double chevron de icons.sizes.dense, écarté du texte de space.scale[1] (8) ; colonne de la coche de
 // density.checkSize.

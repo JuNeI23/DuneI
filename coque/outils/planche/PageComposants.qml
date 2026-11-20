@@ -337,7 +337,7 @@ Surface {
                     anchors.right: parent.right
                     spacing: Theme.space.scale[1]
                     Bouton { text: "Annuler"; onClicked: attention.ouvert = false }
-                    Bouton { text: "Valider"; principal: true; onClicked: attention.ouvert = false }
+                    Bouton { text: "Valider"; onClicked: attention.ouvert = false }
                 }
             }
         }
@@ -491,7 +491,6 @@ Surface {
         Grille {
             titre: "Bouton"
             variantes: [{ libelle: "texte" }, { libelle: "icône et texte", proprietes: { icone: "document-save" } },
-                        { libelle: "principal", proprietes: { principal: true } },
                         { libelle: "plat", proprietes: { plat: true } },
                         { libelle: "danger", proprietes: { danger: true } },
                         { libelle: "plat danger", proprietes: { plat: true, danger: true } }]
@@ -608,7 +607,7 @@ Surface {
         // Le menu du déroulant vivant ne s'ouvre qu'à la main, comme les overlays de l'en-tête.
         Grille {
             titre: "Menu déroulant"
-            variantes: [{ libelle: "valeur" }, { libelle: "principal", proprietes: { principal: true } }]
+            variantes: [{ libelle: "valeur" }]
             modele: Component { Deroulant { model: ["Automatique", "Clair", "Sombre"] } }
 
             Deroulant {

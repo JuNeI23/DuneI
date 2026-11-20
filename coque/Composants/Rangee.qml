@@ -30,19 +30,25 @@ import "etats.js" as Etats
 // graisse moyenne, comme le réseau joint du popover, faux par défaut ; pleine, variante pleine de l'icône
 // (Icone.pleine), faux par défaut ; teinteIcone et teinteTexte, couleurs imposées à l'icône et au libellé,
 // transparentes par défaut : les couleurs de l'état s'appliquent alors, sinon l'imposée les remplace, en fondu
-// (ColorSpring), et elle l'emporte sur accentue.
+// (ColorSpring), et elle l'emporte sur accentue ; sous le curseur, l'icône et le libellé prennent toujours le texte de
+// l'état (le sur-accent de la plaque), teinte imposée et accent autonome compris, pour ne jamais peindre de gris ni
+// d'orange sur l'orange ; teinteSecondaire et teinteTertiaire, couleurs hors du curseur du texte secondaire et
+// tertiaire d'un suffixe, color.textSecondary et color.textTertiary par défaut (le Bluetooth y met color.warning pour
+// un appareil en erreur).
 // Sorties : etat, l'Etat de la rangée (rôle, interaction, sélection, curseur, couleurs) ; dansListe, vrai quand la
 // rangée est le délégué d'une Liste ; gras, vrai quand le libellé est en graisse moyenne (par défaut accentue, ou
 // rangée sélectionnée d'une colonne de navigation ; l'appelant peut le poser), que suit un contentItem remplacé ;
 // fondIcone et fondTexte, les ressorts des couleurs de l'icône et du libellé ; libelle, le Texte du libellé par
-// défaut ; glyphe, l'Icone ; dnSurPlaque, vrai sous le curseur ; signal active(), émis au clic et à Entrée (la Liste
+// défaut ; glyphe, l'Icone ; dnSurPlaque, vrai sous le curseur ; encreSecondaire et encreTertiaire, les encres d'un
+// suffixe : teinteSecondaire et teinteTertiaire hors du curseur, l'encre de la plaque sous lui, en fondu
+// (transparentes, sans ressort, pour une rangée sans suffixe) ; signal active(), émis au clic et à Entrée (la Liste
 // l'émet pour sa rangée courante).
 // Erreurs : aucune ; hors d'une ListView, la rangée garde sa largeur implicite et n'est jamais courante ni
 // sélectionnée par currentIndex ; avant le chargement des tokens, les cotes sont nulles et les couleurs transparentes.
 // Le clic suppose une Liste : une ListView ordinaire ne déclare pas focusClavier, que le clic écrit.
 // Dépendances : QtQuick.Templates (ItemDelegate), QtQuick.Layouts, propriétés attachées ListView (view,
 // isCurrentItem) et Liste (focusClavier, selectionSuitCourant, navigation, curseurDedans) ; Theme (density, radius,
-// space), Etat, Texte, Icone, etats.js (herite).
+// space, color, ColorSpring), Etat, Texte, Icone, etats.js (herite).
 // Cotes : hauteur density.rowHeight ; pastille en retrait de space.scale[0] (4) des bords, rayon radius.control ;
 // retrait horizontal du contenu space.scale[2] (12), soit 8 dans la pastille ; écart entre icône et libellé
 // space.scale[1] (8) ; icône de icons.sizes.dense (16), centrée dans la hauteur par la mise en page (§ 7.10, v0.7). La
@@ -59,6 +65,10 @@ T.ItemDelegate {
     property bool pleine: false
     property color teinteIcone: "transparent"
     property color teinteTexte: "transparent"
+    property color teinteSecondaire: Theme.color?.textSecondary ?? "transparent"
+    property color teinteTertiaire: Theme.color?.textTertiary ?? "transparent"
+    readonly property color encreSecondaire: ressortSecondaire.value
+    readonly property color encreTertiaire: ressortTertiaire.value
 
     readonly property alias etat: etat
     readonly property bool dnSurPlaque: etat.sousCurseur
@@ -115,16 +125,30 @@ T.ItemDelegate {
     }
 
     // Couleurs de l'icône et du libellé : celles de l'état (ou de l'accent autonome pour un libellé accentué), ou
-    // la teinte imposée quand elle n'est pas transparente, en fondu.
+    // la teinte imposée quand elle n'est pas transparente, en fondu ; sous le curseur, toujours celles de l'état.
     ColorSpring {
         id: fondIcone
-        target: rangee.teinteIcone.a > 0 ? rangee.teinteIcone : etat.texte
+        target: rangee.teinteIcone.a > 0 && !etat.sousCurseur ? rangee.teinteIcone : etat.texte
     }
 
     ColorSpring {
         id: fondTexte
-        target: rangee.teinteTexte.a > 0 ? rangee.teinteTexte
+        target: etat.sousCurseur ? etat.texte : rangee.teinteTexte.a > 0 ? rangee.teinteTexte
             : rangee.accentue ? Theme.color?.accentStandalone ?? "transparent" : etat.texte
+    }
+
+    // Encres d'un suffixe : la teinte hors du curseur, l'encre de la plaque sous lui. Sans suffixe, la cible reste
+    // transparente et le ressort ne démarre jamais (sobriété, D80).
+    ColorSpring {
+        id: ressortSecondaire
+        target: !rangee.suffixe ? "transparent" : etat.sousCurseur ? etat.encres?.text ?? "transparent"
+            : rangee.teinteSecondaire
+    }
+
+    ColorSpring {
+        id: ressortTertiaire
+        target: !rangee.suffixe ? "transparent" : etat.sousCurseur ? etat.encres?.text ?? "transparent"
+            : rangee.teinteTertiaire
     }
 
     // Fond : une pastille de sélection et de curseur, premier enfant du fond, en retrait de space.scale[0] de

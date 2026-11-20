@@ -20,8 +20,7 @@ import "etats.js" as Etats
 // dit un état : la cloche des notifications, le Bluetooth), faux par défaut : le glyphe change alors d'un coup, comme
 // celui du Wi-Fi, qui suit la force du signal (D182).
 // Sorties : avecLibelle, vrai si text n'est pas vide ; etat, l'Etat de la bascule ; disque, glyphe et libelle,
-// lus par les essais ; sortant, le glyphe sortant d'un fondu, et ancienne, le nom qu'il peint ; cibleFocus (le
-// disque), que la planche entoure de l'anneau.
+// lus par les essais ; sortant, le glyphe sortant d'un fondu, et ancienne, le nom qu'il peint.
 // Erreurs : aucune ; un glyphe absent du thème laisse le disque vide ; avant le chargement des tokens, les cotes sont
 // nulles et les couleurs transparentes.
 // Quand le thème traite les contrôles blancs (au jour), le disque éteint prend le rôle controlOff, gris plein
@@ -39,7 +38,6 @@ T.Button {
     readonly property alias disque: disque
     readonly property alias glyphe: glyphe
     readonly property alias libelle: libelle
-    readonly property alias cibleFocus: disque
     readonly property alias sortant: sortant
     property bool fondu: false
     // Nom du glyphe montré avant le dernier changement, peint par le glyphe sortant pendant un fondu.

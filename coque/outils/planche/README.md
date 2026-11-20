@@ -46,7 +46,7 @@ page est chargée à la demande par un `Loader` : seule la page visible existe, 
   `Theme.states`.
 - **Bouton d'essai** : survol et pression à la souris, interrupteurs « sélectionné », « sélection inactive »,
   « désactivé », « conteneur inactif », choix du rôle, focus par tabulation (anneau `Theme.focus`, atténué en
-  conteneur inactif) ; la barre d'espace bascule la sélection. Fond et texte sont portés par deux `ColorSpring`,
+  conteneur inactif : une démonstration des jetons `focus.*`, que la coque ne montre plus depuis L2-73) ; la barre d'espace bascule la sélection. Fond et texte sont portés par deux `ColorSpring`,
   donc par le ressort `transitions.state` ; la légende indique l'état courant et « en vol » pendant le ressort.
 - **Élévations** e0 à e3 : fond, reflet `sheenTop` sur `material.sheenMaxHeight`, arêtes claire et sombre,
   ombrage. L'ombre portée de la planche emprunte `window.floatingShadow` (portée, décalage) et
@@ -67,9 +67,8 @@ horizontal dans une fenêtre tuilée d'environ 750 pixels de large, et ses blocs
 fenêtre plus large.
 
 - **En-tête** : deux boutons : « Ouvrir une attention » (un `Overlay` attention : un champ
-  et deux boutons qui la ferment, dont « Valider », bouton `principal`) et « Ouvrir un menu » (un `Overlay`
-  contextuel ancré sous le bouton : quatre `Rangee` dans une `Liste` dont la sélection suit le pointeur,
-  `selectionSuitSurvol` ; ouvert à la souris, il ne montre pas le contour de sa rangée courante).
+  et deux boutons qui la ferment, dont « Valider ») et « Ouvrir un menu » (un `Overlay` contextuel ancré sous le
+  bouton : quatre `Rangee` dans une `Liste`, dont le survol déplace la rangée courante et la plaque du curseur).
 - **Primitives** : les trois rôles de `Surface` avec un `Bouton` et le rôle qu'il prend un cran au-dessus ;
   chaque échelon de `Texte` en régulier et moyen ; les icônes `non-starred`, `starred`, `starred` pleine
   (repli de D82) et `object-select` ; `Separateur` horizontal et vertical ; `Progression` à 0, 35 et 100 %.
@@ -78,13 +77,13 @@ fenêtre plus large.
   (la plaque d'accent, survol ou clavier), pressé sous le curseur, désactivé et, pour un contrôle qui s'allume
   (`Bouton`, `Case`, `Radio`, `Interrupteur`, `Curseur`, `Jauge`, `Bascule`), « sur la plaque » : le contrôle posé
   sur la plaque d'accent d'une `ZoneCurseur`, inversé (le champ n'a que repos, survol et désactivé, puisqu'il n'a
-  pas de plaque ; les pastilles n'ont qu'une ligne, puisqu'elles n'ont pas d'`Etat`) ; en colonnes, les variantes (bouton texte, avec icône ou principal, case
+  pas de plaque ; les pastilles n'ont qu'une ligne, puisqu'elles n'ont pas d'`Etat`) ; en colonnes, les variantes (case
   décochée et cochée, radio décoché et coché, onglet non coché ou coché,
-  chacun jugé dans une barre de deux segments, bouton texte, avec icône, principal, plat, danger et plat danger,
+  chacun jugé dans une barre de deux segments, bouton texte, avec icône, plat, danger et plat danger,
   jauge à 0 et à 0,5
   avec l'icône `audio-volume-high`, pastilles au repos, au survol, pressées, inactives et avec la réduction
   désactivée, compteur à 5 et à sa borne haute, dont le survol et la pression se figent sur le demi-bouton haut,
-  déroulant ordinaire ou principal, rangée non sélectionnée, sélectionnée (neutre hors du curseur, à l'accent dessous) ou sélectionnée en colonne de navigation, champ vide ou
+  déroulant, rangée non sélectionnée, sélectionnée (neutre hors du curseur, à l'accent dessous) ou sélectionnée en colonne de navigation, champ vide ou
   rempli), pour que la grille reste étroite. À côté, ou dessous quand la largeur manque, derrière un filet
   vertical, un exemplaire vivant : pour le radio, un groupe exclusif de trois ; pour la jauge, deux jauges, l'une
   avec `audio-volume-high`, l'autre avec `display-brightness` ; pour les pastilles, un groupe et le dernier signal

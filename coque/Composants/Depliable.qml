@@ -19,16 +19,15 @@ import "../Theme"
 // bloc est aligné sur le libellé ; faux, il part du bord gauche de la section (une carte pleine largeur) ; contenu,
 // propriété par défaut : les éléments déclarés dans la Depliable, posés en colonne dans le bloc.
 // Sorties : etat, l'Etat de l'en-tête ; entete (objectName « entete »), chevron, bloc, cadre (l'élément découpé qui
-// porte le bloc, à la hauteur montrée) et cibleFocus (le fond de l'en-tête, que la planche entoure de l'anneau),
-// lus par les essais et la planche ; progression, de 0 (replié) à 1 (déplié) ; enMouvement, vrai tant que
-// le ressort avance ; largeurContenu, la largeur offerte au contenu, celle de la section moins le retrait du bloc.
-// Erreurs : aucune ; avant le chargement des tokens, les cotes sont nulles et les couleurs transparentes.
-// Dépendances : QtQuick.Templates, Theme (density, icons, space, radius, color, ColorSpring), Etat, VueCurseur (par
-// Etat), Chevron, Texte, Ressort (transition reveal ; le mouvement réduit pose le chevron et la hauteur d'un coup).
-// Cotes : en-tête de density.rowHeight de haut, au rayon radius.small ; le contenu y est en retrait de space.scale[1]
-// (8) à gauche et à droite, pour que la plaque du curseur, peinte sur le fond, ne touche ni le chevron ni la fin du
-// libellé (v0.7) ; chevron de icons.sizes.dense ; écart entre le chevron et le libellé space.scale[0] (4) ; le bloc
-// est en retrait de ce retrait, du chevron et de cet écart, donc aligné sur le libellé.
+// porte le bloc, à la hauteur montrée), lus par les essais et la planche ; progression, de 0 (replié) à 1 (déplié) ;
+// enMouvement, vrai tant que le ressort avance ; largeurContenu, la largeur offerte au contenu, celle de la section
+// moins le retrait du bloc. Erreurs : aucune ; avant le chargement des tokens, les cotes sont nulles et les couleurs
+// transparentes. Dépendances : QtQuick.Templates, Theme (density, icons, space, radius, color, ColorSpring), Etat,
+// VueCurseur (par Etat), Chevron, Texte, Ressort (transition reveal ; le mouvement réduit pose le chevron et la hauteur
+// d'un coup). Cotes : en-tête de density.rowHeight de haut, au rayon radius.small ; le contenu y est en retrait de
+// space.scale[1] (8) à gauche et à droite, pour que la plaque du curseur, peinte sur le fond, ne touche ni le chevron
+// ni la fin du libellé (v0.7) ; chevron de icons.sizes.dense ; écart entre le chevron et le libellé space.scale[0] (4)
+// ; le bloc est en retrait de ce retrait, du chevron et de cet écart, donc aligné sur le libellé.
 Column {
     id: depliable
 
@@ -41,7 +40,6 @@ Column {
     readonly property alias chevron: chevron
     readonly property alias bloc: bloc
     readonly property alias cadre: cadre
-    readonly property alias cibleFocus: fond
     readonly property real progression: (pivot.value + 90) / 90
     readonly property bool enMouvement: pivot.moving
     readonly property real largeurContenu: width - bloc.leftPadding
