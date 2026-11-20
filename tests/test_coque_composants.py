@@ -535,8 +535,8 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
 
     def test_jauge_coupe_sur_la_plaque(self):
         # L2-73 : sur la plaque du curseur, la jauge s'inverse (remplissage au sur-accent, icône à l'accent) ; coupée,
-        # ni rouge ni gris sur l'orange : le remplissage s'évide (sur-accent transparent) et l'icône prend le texte
-        # secondaire, posée sur la barre enfoncée ; coupée et non coupée restent distinctes.
+        # ni rouge ni gris sur l'orange : le remplissage garde le sur-accent mais s'évide (son opacité rejoint 0, ce que
+        # la coque d'essai ne journalise pas) et l'icône prend le texte secondaire, posée sur la barre enfoncée.
         self.demarrer()
         t = self.tokens55()[0]["color"]
         on, accent = t["onAccent"].lower(), t["accent"].lower()
@@ -548,7 +548,7 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(lu, [on, accent])
         self.ipc("jaugeCoupe", "true")
         remplie, icone = self.valeur("jaugeCibles").lower().split()[:2]
-        self.assertEqual((remplie, icone), ("#00" + on[1:], t["textSecondary"].lower()))
+        self.assertEqual((remplie, icone), (on, t["textSecondary"].lower()))
         self.ipc("surPlaque", "false")
         self.assertEqual(self.valeur("jaugeCibles").lower().split()[:2], [t["textDisabled"].lower(), t["error"].lower()])
 
