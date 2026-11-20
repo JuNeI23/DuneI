@@ -4377,8 +4377,9 @@ l'aperçu, ← au bord de l'aperçu ramène la sélection à la liste, au ressor
 Maj+Tab et Échap restent des chemins de retour. Les vignettes de fenêtres sont lues par rangée logique. Nicolas a aussi
 demandé de pouvoir ouvrir une seconde fenêtre de n'importe quelle application : l'aperçu porte un bouton « Nouvelle
 fenêtre », qui lance l'action `new-window` de l'entrée de bureau si elle la déclare, sinon relance l'application, et
-Ctrl+Entrée le déclenche depuis la liste. Coût : un bouton de plus, et un rappel « Ctrl ↵ » toujours affiché. Restent
-à polir (sans décision) : l'espace réservé au rappel ↵ sur les boutons neutres, et l'instabilité rare de deux essais
-de clavier, non reproduite en six passages.
+Ctrl+Entrée le déclenche depuis la liste. Coût : un bouton de plus, et un rappel « Ctrl ↵ » affiché tant que le curseur
+n'est pas sur ce bouton ; sous le curseur, Entrée suffit et seul ↵ s'affiche (relecture finale). Restent à polir (sans
+décision) : l'espace réservé au rappel ↵ sur les boutons neutres, et l'instabilité rare de deux essais de clavier, non
+reproduite en six passages.
 
 *Touché : `coque/Lanceur/`, tests `test_lanceur`.*
