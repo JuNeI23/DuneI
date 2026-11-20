@@ -11,7 +11,9 @@ import "../Composants"
 // quand « survolee » est vrai, sur deux ressorts « reveal » (hauteur et opacité), et se replie ensuite. Avec enTete
 // (la carte), une ligne d'en-tête porte le nom de l'application en capitales et l'heure d'arrivée ; sans elle
 // (l'entrée du panneau, dont le groupe nomme déjà l'application), l'heure se pose à droite du titre. Le titre passe en
-// error pour une notification critique, rien d'autre ne change. Aucun fond : le parent fournit la surface.
+// error pour une notification critique, rien d'autre ne change. Les actions sont des boutons plats (Bouton) : texte
+// neutre au repos, plaque du curseur sous lui. La tuile de l'icône générique est neutre, jamais à l'accent : rien
+// d'autre que le curseur ne porte l'aplat d'accent (L2-73). Aucun fond : le parent fournit la surface.
 // Chaîne d'icône : l'image jointe, en disque, si elle est chargée ; sinon l'icône de l'application (nom résolu par
 // Quickshell.iconPath, ou chemin de fichier), dans un carré arrondi ; sinon la cloche de la coque. Une image ou une
 // icône introuvable ne laisse qu'un refus de chargement de Qt au journal, et la chaîne passe au maillon suivant. Rien
@@ -20,15 +22,16 @@ import "../Composants"
 // Entrées : notification (objet à l'interface de Notification) ; arrivee, son heure d'arrivée ; lignes, nombre
 // maximal de lignes de corps ; enTete, vrai par défaut ; survolee, posé par le parent : déplie les actions. La largeur
 // est posée par le parent. estompe, de 0 à 1 : part dont l'heure posée à droite du titre s'efface (l'entrée du panneau y
-// montre son bouton d'écart au survol), 0 par défaut.
-// Sorties : implicitHeight ; sourceIcone (« image », « application » ou « generique ») ; actionsVisibles, vrai tant
+// montre son bouton d'écart au survol), 0 par défaut ; surPlaque, vrai quand le parent peint la plaque d'accent du
+// curseur derrière le contenu : les textes passent alors au sur-accent (color.onAccent), en fondu, faux par défaut.
+// Sorties : implicitHeight ;  sourceIcone (« image », « application » ou « generique ») ; actionsVisibles, vrai tant
 // que la rangée d'actions est au moins en partie dépliée ; enMouvement, vrai tant que le dépliant avance ;
 // couleurTitre, lignesCorps, libelles (textes des actions affichés), texteApplication et texteHeure, lus par les
 // essais ; signal action(a), au clic sur une action (objet à l'interface de NotificationAction).
 // Erreurs : aucune ; sans jetons chargés, le contenu est de taille nulle et transparent.
 // Dépendances : Quickshell (iconPath, QsWindow), Quickshell.Widgets (ClippingRectangle),
 // Quickshell.Services.Notifications (NotificationUrgency), Theme (notifications, color, radius, space, police),
-// Composants (Texte, Icone), Ressort.
+// Composants (Bouton, Texte, Icone), Ressort, ColorSpring (module Theme).
 // Corps : balisage StyledText de Qt, sans ses images (balises <img> retirées) ; ses liens restent inertes (aucun
 // gestionnaire de lien) et prennent la couleur du corps.
 Item {
@@ -40,6 +43,7 @@ Item {
     property bool enTete: true
     property bool survolee: false
     property real estompe: 0
+    property bool surPlaque: false
 
     readonly property real cote: Theme.notifications?.icone ?? 0
     readonly property real ecart: Theme.space?.scale[2] ?? 0
@@ -65,6 +69,20 @@ Item {
 
     Ressort { id: depli; transition: "reveal"; cible: carte.survolee && carte.actions.length > 0 ? 1 : 0 }
     Ressort { id: fondu; transition: "reveal"; nature: "fondu"; cible: depli.cible }
+
+    // Encre — couleur d'un texte du contenu, en fondu : celle du jeton donné hors de la plaque, le sur-accent sur elle.
+    // Entrée : base, la couleur hors plaque. Sortie : value, la couleur affichée. Erreurs : aucune ; sans jetons,
+    // transparente. Dépendances : ColorSpring (module Theme), Theme (color.onAccent), surPlaque.
+    component Encre: ColorSpring {
+        property color base
+        target: carte.surPlaque ? Theme.color?.onAccent ?? "transparent" : base
+    }
+    Encre { id: encreApplication; base: Theme.color?.textTertiary ?? "transparent" }
+    Encre { id: encreHeure; base: Theme.color?.textTertiary ?? "transparent" }
+    Encre { id: encreHeureTitre; base: Theme.color?.textTertiary ?? "transparent" }
+    Encre { id: encreTitre; base: (carte.notification?.urgency === NotificationUrgency.Critical ? Theme.color?.error
+                                                                                               : Theme.color?.textPrimary) ?? "transparent" }
+    Encre { id: encreCorps; base: Theme.color?.textSecondary ?? "transparent" }
 
     Item {
         id: icone
@@ -112,10 +130,10 @@ Item {
         Rectangle {
             anchors.fill: parent
             radius: Theme.radius?.small ?? 0
-            color: Theme.color?.accent ?? "transparent"
+            color: Theme.stateColors("controlRaised", "none", "rest")?.fill ?? "transparent"
             visible: carte.sourceIcone === "generique"
 
-            Icone { anchors.centerIn: parent; nom: "preferences-system-notifications"; couleur: Theme.color?.onAccent ?? "transparent" }
+            Icone { anchors.centerIn: parent; nom: "preferences-system-notifications"; couleur: Theme.color?.textSecondary ?? "transparent" }
         }
     }
 
@@ -137,7 +155,7 @@ Item {
                 echelon: 0
                 moyen: true
                 elide: Text.ElideRight
-                color: Theme.color?.textTertiary ?? "transparent"
+                color: encreApplication.value
                 text: (carte.notification?.appName ?? "").toUpperCase()
             }
             Texte {
@@ -145,7 +163,7 @@ Item {
                 anchors.right: parent.right
                 echelon: 0
                 tabulaire: true
-                color: Theme.color?.textTertiary ?? "transparent"
+                color: encreHeure.value
                 text: carte.texteHeure
             }
         }
@@ -157,8 +175,7 @@ Item {
             moyen: true
             elide: Text.ElideRight
             maximumLineCount: 1
-            color: carte.notification?.urgency === NotificationUrgency.Critical ? Theme.color?.error ?? "transparent"
-                                                                               : Theme.color?.textPrimary ?? "transparent"
+            color: encreTitre.value
             text: carte.notification?.summary ?? ""
 
             // Sans ligne d'en-tête (entrée du panneau), l'heure se pose à droite du titre, sur sa ligne de base.
@@ -170,7 +187,7 @@ Item {
                 anchors.baseline: parent.baseline
                 echelon: 0
                 tabulaire: true
-                color: Theme.color?.textTertiary ?? "transparent"
+                color: encreHeureTitre.value
                 text: carte.texteHeure
             }
         }
@@ -184,7 +201,7 @@ Item {
             textFormat: Text.StyledText
             maximumLineCount: carte.lignes
             elide: Text.ElideRight
-            color: Theme.color?.textSecondary ?? "transparent"
+            color: encreCorps.value
             // Les liens restent inertes : ils prennent la couleur du corps, pas celle de Qt.
             lineHeightMode: Text.FixedHeight
             lineHeight: Math.round(font.pixelSize * (Theme.typo?.lineHeightBody ?? 1))
@@ -212,18 +229,13 @@ Item {
                     id: rendues
                     model: carte.actions
 
-                    Texte {
+                    Bouton {
                         // var et non QtObject : l’« Ouvrir » propre à DuneI est un objet JavaScript, que QtObject
                         // rendrait nul.
                         required property var modelData
-                        moyen: true
-                        color: Theme.color?.accentStandalone ?? "transparent"
+                        plat: true
                         text: carte.libelle(modelData)
-
-                        TapHandler {
-                            gesturePolicy: TapHandler.ReleaseWithinBounds
-                            onTapped: carte.action(parent.modelData)
-                        }
+                        onClicked: carte.action(modelData)
                     }
                 }
             }
@@ -234,6 +246,10 @@ Item {
     // Entrées : aucune. Sortie : tableau de chaînes, « » pour un délégué sans texte. Erreurs : aucune.
     // Dépendances : rendues.
     function libellesRendus() { return Array.from({length: rendues.count}, (_, i) => rendues.itemAt(i)?.text ?? "") }
+
+    // boutonsRendus — boutons des actions tels que les délégués de la rangée les montrent, lus par les essais.
+    // Entrées : aucune. Sortie : tableau de Bouton, dans l'ordre des actions. Erreurs : aucune. Dépendances : rendues.
+    function boutonsRendus() { return Array.from({length: rendues.count}, (_, i) => rendues.itemAt(i)) }
 
     // libelle — texte affiché d'une action. Entrée : action, objet à l'interface de NotificationAction.
     // Sortie : « Ouvrir » pour l'action « default », son texte sinon. Erreurs : aucune. Dépendances : aucune.

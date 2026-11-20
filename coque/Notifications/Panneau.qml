@@ -7,19 +7,22 @@ import "garde.js" as Garde
 
 // Panneau — contenu du panneau des notifications (L2-67) : ce qui reste à traiter, et « ne pas déranger ».
 // Rôle : de haut en bas, dans une marge intérieure de notifications.interieur : l'en-tête « Notifications » avec, à
-// droite, « Tout effacer » en texte à l'accent (absent quand rien n'attend) ; la bascule à glyphe des notifications
-// (Bascule), allumée quand elles sont actives, éteinte sous « ne pas déranger », sous la cloche ou la cloche barrée
-// en fondu croisé (D182), avec un seul libellé, l'état présent (« Notifications actives » ou « Ne pas déranger ») ;
-// puis les groupes par application (GroupeAttente), le plus récent en tête, un groupe qui contient une critique passant
-// devant ; sans rien à traiter, un état vide (cloche et « Rien à traiter ») centré dans la place restante. Le panneau
-// n'a pas de fond : sa fenêtre (FenetrePanneau) fournit la forme de verre. Au pied, sous un filet translucide
+// droite, « Tout effacer » (Bouton plat et danger : texte rouge, plaque rouge sous le curseur ; absent quand rien
+// n'attend) ; la bascule à glyphe des notifications (Bascule, dans une ZoneCurseur qui lui porte la plaque du curseur),
+// allumée quand elles sont actives, éteinte sous « ne pas déranger », sous la cloche ou la cloche barrée en fondu
+// croisé (D182), avec un seul libellé, l'état présent (« Notifications actives » ou « Ne pas déranger ») ; puis les
+// groupes par application (GroupeAttente), le plus récent en tête, un groupe qui contient une critique passant devant ;
+// sans rien à traiter, un état vide (cloche et « Rien à traiter ») centré dans la place restante. Le panneau n'a pas de
+// fond : sa fenêtre (FenetrePanneau) fournit la forme de verre. Au pied, sous un filet translucide
 // (material.glassLine), l'action en texte seul « Réglages des notifications… » ouvre la page Notifications de
-// l'application Paramètres et demande la fermeture du panneau, comme le pied du popover de réglage rapide (D105). Il se déclare montré à l'attente tant qu'il
-// est monté, pour qu'une entrée fermée reste le temps de son repli.
+// l'application Paramètres et demande la fermeture du panneau, comme le pied du popover de réglage rapide (D105). Il se
+// déclare montré à l'attente tant qu'il est monté, pour qu'une entrée fermée reste le temps de son repli.
 // Hauteur : celle du contenu, jamais sous panneau.hauteurMin, jamais au-dessus de hauteurMax ; au-delà, la liste des
 // groupes défile entre l'en-tête et la bascule, en haut, et le pied, en bas, qui restent fixes ; la molette suit le défilement lissé de
 // l'application Paramètres (motion.wheel), posé d'un coup en mouvement réduit.
 // « Tout effacer » écarte les groupes en cascade, du haut vers le bas, à panneau.cascade ms l'un de l'autre.
+// Curseur : le panneau déclare l'arbitre dnVue (VueCurseur) : une seule plaque à la fois, sur la ligne, l'action ou la
+// bascule que la souris ou le clavier désigne en dernier ; aucun anneau de focus.
 // Clavier : la liste est un seul arrêt de tabulation ; les flèches déplacent l'entrée courante parmi les entrées
 // montrées, Entrée l'ouvre, Suppr l'écarte (l'entrée courante passe alors à la suivante). Tab va de la bascule à la
 // liste, puis à « Tout effacer », puis aux réglages.
@@ -29,17 +32,19 @@ import "garde.js" as Garde
 // groupes dépliés ; visibles, les entrées montrées dans l'ordre de l'écran ; courante, l'entrée courante au clavier ;
 // lienReglages, la rangée « Réglages des notifications… » ; signal fermer(), la demande de fermeture du panneau ;
 // clavier, vrai tant que la liste a le focus ; defilable ; pret, vrai une fois le panneau monté (les lignes et
-// groupes qui naissent ensuite se déplient) ; bascule, lue par les essais. Fonctions : deplier, effacerGroupe,
+// groupes qui naissent ensuite se déplient) ; bascule, effacer (« Tout effacer ») et groupesVus (le Repeater des groupes), lus par les essais. Fonctions : deplier, effacerGroupe,
 // nePlusGarder, toutEffacer, reglages, touche, releve.
 // Erreurs : aucune ; sans jetons chargés, les cotes sont nulles.
-// Dépendances : Quickshell (ScriptModel), GroupeAttente, Bascule, Rangee, Separateur, Texte, Icone, Ressort, garde.js,
-// EtatNotifications, EtatParametres, Attente, Theme (panneau, notifications, space, color, density, material,
+// Dépendances : Quickshell (ScriptModel), GroupeAttente, Bascule, ZoneCurseur, Bouton, VueCurseur, Rangee, Separateur,
+// Texte, Icone, Ressort, garde.js, EtatNotifications, EtatParametres, Attente, Theme (panneau, notifications, space, color, density, material,
 // motion.wheel).
 FocusScope {
     id: panneau
 
     property QtObject attente: null
     property real hauteurMax: Infinity
+    // Arbitre du curseur du panneau : une seule entrée, action ou bascule porte la plaque à la fois (L2-73).
+    property VueCurseur dnVue: VueCurseur {}
     // Rôle de fond lu par les contrôles descendants (Etats.herite) : celui des cartes et des popovers de verre.
     readonly property string dnRole: "surfaceRaised"
     readonly property real marge: Theme.notifications?.interieur ?? 0
@@ -61,6 +66,8 @@ FocusScope {
     readonly property bool defilable: defilement.contentHeight > defilement.height + 0.5
     readonly property alias bascule: bascule
     readonly property alias lienReglages: lienReglages
+    readonly property alias effacer: effacer
+    readonly property alias groupesVus: vues
     // Hauteur d'une rangée d'action en texte, celle du pied du popover de réglage rapide.
     readonly property real hauteurLigne: (Theme.density?.controlHeight ?? 0) + (Theme.space?.scale[0] ?? 0)
     property bool pret: false
@@ -204,23 +211,20 @@ FocusScope {
         height: titre.implicitHeight
 
         Texte { id: titre; echelon: 3; moyen: true; text: qsTr("Notifications") }
-        Texte {
+        Bouton {
             id: effacer
             anchors.right: parent.right
-            anchors.baseline: titre.baseline
+            anchors.rightMargin: -horizontalPadding
+            anchors.verticalCenter: titre.verticalCenter
             visible: opacity > 0
             opacity: efface.value
-            echelon: 1
-            moyen: true
-            activeFocusOnTab: panneau.effacable
+            enabled: panneau.effacable
+            plat: true
+            danger: true
             KeyNavigation.tab: lienReglages
-            color: Theme.color?.accentStandalone ?? "transparent"
             text: qsTr("Tout effacer")
-            Keys.onReturnPressed: panneau.toutEffacer()
-            Keys.onSpacePressed: panneau.toutEffacer()
+            onClicked: panneau.toutEffacer()
             Ressort { id: efface; transition: "state"; nature: "fondu"; cible: panneau.effacable ? 1 : 0 }
-            TapHandler { gesturePolicy: TapHandler.ReleaseWithinBounds; onTapped: panneau.toutEffacer() }
-            AnneauFocus { cible: effacer; montre: effacer.activeFocus }
         }
     }
 
@@ -232,13 +236,15 @@ FocusScope {
         width: entete.width
         height: bascule.height
 
-        Bascule {
-            id: bascule
-            icone: EtatNotifications.icone
-            fondu: true
-            KeyNavigation.tab: liste
-            onToggled: EtatNotifications.poser(!checked)
-            Binding { target: bascule; property: "checked"; value: !EtatNotifications.nePasDeranger }
+        ZoneCurseur {
+            Bascule {
+                id: bascule
+                icone: EtatNotifications.icone
+                fondu: true
+                KeyNavigation.tab: liste
+                onToggled: EtatNotifications.poser(!checked)
+                Binding { target: bascule; property: "checked"; value: !EtatNotifications.nePasDeranger }
+            }
         }
         // Un seul libellé, qui dit l'état présent ; le passage de l'un à l'autre est un fondu croisé.
         Ressort { id: fonduEtat; transition: "state"; nature: "fondu"; cible: EtatNotifications.nePasDeranger ? 1 : 0 }

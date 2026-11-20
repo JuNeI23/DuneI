@@ -20,7 +20,8 @@ import "etats.js" as Etats
 // d'un dialogue, faux par défaut : il le désigne sans le peindre ; danger, vrai pour une action destructrice, faux
 // par défaut.
 // Sorties : etat, l'Etat du bouton (rôle, interaction, sélection, couleurs), lu par la planche et les essais ;
-// rouge, vrai pour un bouton destructeur actif ; rougePlein, vrai quand il porte en plus le curseur.
+// rouge, vrai pour un bouton destructeur actif ; rougePlein, vrai quand il porte en plus le curseur ; teinte,
+// la couleur affichée de son texte et de son icône.
 // Erreurs : aucune ; avant le chargement des tokens, les cotes sont nulles et les couleurs transparentes.
 // Dépendances : QtQuick.Templates, Quickshell (QsWindow : rapport de pixels, pour le filet), Theme (density,
 // radius, space, controls, hairline, color.error, color.onAccent, pastilles.errorPressed, ColorSpring), etats.js
@@ -33,6 +34,7 @@ T.AbstractButton {
     property string icone
     property bool principal: false
     property bool danger: false
+    property bool plat: false
     readonly property alias etat: etat
 
     focusPolicy: Qt.TabFocus
@@ -52,17 +54,20 @@ T.AbstractButton {
         controle: bouton
         suitCurseur: true
         curseurAplat: true
+        fondReposTransparent: bouton.plat
+        fondSurvolTransparent: bouton.plat
     }
 
     // Couleurs d'un bouton destructeur ; pour un bouton ordinaire, leur cible reste transparente et leurs ressorts ne
     // démarrent jamais (sobriété, D80). Désactivé, le bouton destructeur reprend les couleurs de son état.
+    readonly property color teinte: rangee.teinte
     readonly property bool rouge: danger && enabled
     readonly property bool rougePlein: rouge && etat.sousCurseur
     ColorSpring {
         id: fondDanger
         target: (!bouton.danger ? "transparent" : bouton.rougePlein
                  ? (bouton.down ? Theme.pastilles?.errorPressed : Theme.color?.error)
-                 : etat.couleurs?.fill) ?? "transparent"
+                 : bouton.plat ? etat.fond : etat.couleurs?.fill) ?? "transparent"
     }
     ColorSpring {
         id: encreDanger
@@ -73,7 +78,7 @@ T.AbstractButton {
     background: Rectangle {
         radius: Theme.radius?.control ?? 0
         color: bouton.danger ? fondDanger.value : etat.fond
-        border.width: Theme.controls?.outline && Etats.contoure(etat.selection) ? Theme.hairline(QsWindow.window?.devicePixelRatio ?? 1) ?? 0 : 0
+        border.width: !bouton.plat && Theme.controls?.outline && Etats.contoure(etat.selection) ? Theme.hairline(QsWindow.window?.devicePixelRatio ?? 1) ?? 0 : 0
         border.color: Theme.controls?.outline ?? "transparent"
     }
 

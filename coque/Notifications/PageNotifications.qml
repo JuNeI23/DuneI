@@ -15,7 +15,7 @@ import "../Reseau"
 // de 5 et sa valeur ; la rangée de volume se replie au ressort « reveal » quand le son est coupé. Le volume est écrit
 // à chaque pas ; l'aperçu (l'Arrivée au nouveau volume) part une seule fois par geste : au relâchement d'un
 // glissement, ou à chaque pas fait au clavier, jamais pendant un glissement. Puis la carte « Applications retirées »,
-// une rangée par application retirée du panneau (« Ne plus garder »), avec « Remettre » en texte à l'accent, ou,
+// une rangée par application retirée du panneau (« Ne plus garder »), avec « Remettre » en bouton plat (texte neutre, plaque sous le curseur), ou,
 // sans application, la ligne « Aucune application retirée ». Remettre une application ne fait pas revenir ses
 // notifications passées. Une rangée qui paraît ou part se déplie ou se replie au ressort « reveal ».
 // Le nom montré d'une application est celui de son entrée de bureau (DesktopEntries) quand l'identifiant en désigne
@@ -24,11 +24,11 @@ import "../Reseau"
 // Entrées : conteneur, le ConteneurPage, posé par lui ;
 // voix, la lecture des aperçus (Voix par défaut, un témoin dans l'essai).
 // Sorties : phrase, l'état des notifications ; vide, vrai sans application retirée ; interrupteur, enTete,
-// interrupteurSon, curseurVolume, rangeeVolume et carteSon, lus par les essais. Fonctions : atteindre, remettre, rangees, nom,
+// interrupteurSon, curseurVolume, rangeeVolume et carteSon, lus par les essais. Fonctions : atteindre, remettre, rangees, boutonsRemettre, nom,
 // deplacer, relacher.
 // Erreurs : aucune.
 // Dépendances : Quickshell (DesktopEntries, ScriptModel), EnTetePage, TitreSection, Registre (Parametres) ; Groupe,
-// Ligne (Reseau) ; Interrupteur, Curseur, Texte, Ressort ; EtatNotifications, Voix.
+// Ligne (Reseau) ; Bouton, Interrupteur, Curseur, Texte, Ressort ; EtatNotifications, Voix.
 Item {
     id: page
 
@@ -77,6 +77,10 @@ Item {
     // rangees — noms des applications retirées montrées, dans l'ordre, pour les essais. Entrées : aucune.
     // Sortie : tableau de textes. Erreurs : aucune. Dépendances : EtatNotifications.
     function rangees() { return EtatNotifications.retirees.map(nom) }
+
+    // boutonsRemettre — boutons « Remettre » des rangées montrées, dans l'ordre, pour les essais. Entrées : aucune.
+    // Sortie : tableau de Bouton. Erreurs : aucune. Dépendances : retirees (Repeater).
+    function boutonsRemettre() { return Array.from({length: retirees.count}, (_, i) => retirees.itemAt(i).bouton) }
 
     Column {
         id: colonne
@@ -169,11 +173,13 @@ Item {
             width: parent.width
 
             Repeater {
+                id: retirees
                 model: ScriptModel { values: EtatNotifications.retirees }
                 delegate: Item {
                     id: rangee
                     required property string modelData
                     required property int index
+                    readonly property alias bouton: remettre
                     width: carteRetirees.width
                     height: Math.max(0, apparition.value) * ligne.implicitHeight
                     clip: apparition.moving
@@ -183,14 +189,11 @@ Item {
                         width: parent.width
                         filet: rangee.index > 0
                         libelle: page.nom(rangee.modelData)
-                        Texte {
-                            moyen: true
-                            color: Theme.color?.accentStandalone ?? "transparent"
+                        Bouton {
+                            id: remettre
+                            plat: true
                             text: qsTr("Remettre")
-                            TapHandler {
-                                gesturePolicy: TapHandler.ReleaseWithinBounds
-                                onTapped: page.remettre(rangee.modelData)
-                            }
+                            onClicked: page.remettre(rangee.modelData)
                         }
                     }
                 }

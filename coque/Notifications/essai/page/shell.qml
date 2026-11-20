@@ -4,6 +4,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import "Theme"
+import "Composants"
 import "Notifications"
 
 // Coque d'essai de la page Notifications de Paramètres, sous la plateforme offscreen.
@@ -35,11 +36,18 @@ ShellRoot {
         implicitHeight: 800
         color: "transparent"
 
-        PageNotifications {
-            id: page
+        // Racine visuelle de la vue, qui porte l'arbitre du curseur comme FenetreParametres en production.
+        Item {
+            property VueCurseur dnVue: VueCurseur {}
             width: 600
-            conteneur: conteneur
-            voix: temoin
+            height: 800
+
+            PageNotifications {
+                id: page
+                width: 600
+                conteneur: conteneur
+                voix: temoin
+            }
         }
     }
 
@@ -55,6 +63,23 @@ ShellRoot {
             return JSON.stringify({interrupteur: page.interrupteur.checked, nePasDeranger: EtatNotifications.nePasDeranger,
                 retirees: EtatNotifications.retirees, rangees: page.rangees(), vide: page.vide, phrase: page.phrase,
                 montre: conteneur.montre?.objectName ?? ""})
+        }
+
+        // remettres — JSON des boutons « Remettre » : [{texte, plat, danger, couleur, fond, sous}], texte du bouton, vrai
+        // pour un bouton plat ou destructeur, couleur de son texte, fond affiché, et si le curseur est sur lui. Entrées :
+        // aucune. Sortie : texte. Erreurs : aucune. Dépendances : page (boutonsRemettre).
+        function remettres(): string {
+            return JSON.stringify(page.boutonsRemettre().map(b => ({texte: b.text, plat: b.plat, danger: b.danger,
+                couleur: String(b.teinte), fond: String(b.background.color), sous: b.etat.sousCurseur,
+                neutre: String(b.etat.texteNeutre)})))
+        }
+
+        // curseur — pose le curseur de la vue sur le bouton « Remettre » d'une rangée, comme le survol, ou le lâche. Entrée :
+        // rang de la rangée, -1 pour lâcher. Sortie : aucune. Erreurs : TypeError au journal sans cette rangée.
+        // Dépendances : page (boutonsRemettre).
+        function curseur(rang: int): void {
+            const vue = page.parent.dnVue
+            if (rang < 0) vue.porteur = null; else vue.prendre(page.boutonsRemettre()[rang])
         }
 
         // basculer — clic sur l'interrupteur des notifications, dans l'en-tête. Sortie : aucune.
