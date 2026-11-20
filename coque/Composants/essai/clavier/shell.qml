@@ -9,7 +9,7 @@ import "Composants"
 // Rôle : ouvre une FloatingWindow (un Bouton « avant », une barre Onglets avec les onglets « tokens » et « composants
 // », ce dernier coché, un Bouton « apres », un Champ, une Jauge, un Compteur, un Deroulant, des Pastilles, une
 // Recherche, une Depliable, une Bascule, une Activite, un Bouton « bulle » qui porte une Infobulle sans texte (jamais
-// de fenêtre), une vue munie d'un arbitre du curseur (VueCurseur) et de deux Bouton A et B qui le suivent, puis deux Liste côte à côte, un menu et un témoin, dont chaque rangée retient son activation, et une ReglageLigne R qui porte un Interrupteur allumé) et
+// de fenêtre), une vue munie d'un arbitre du curseur (VueCurseur) et de deux Bouton A et B qui le suivent, puis deux Liste côte à côte, un menu et un témoin, dont chaque rangée retient son activation, une ReglageLigne R qui porte un Interrupteur allumé et une ZoneCurseur Z autour d'une Case cochée) et
 // y synthétise des touches et des mouvements du pointeur par le TestEvent de QtTest, pour que
 // tests/test_coque_composants.py éprouve ce que la coque sans fenêtre ne peut pas exécuter : le focus actif, la
 // tabulation, le clignotement du curseur, la mise en page de la barre (qui attend le polissage d'une fenêtre) et le
@@ -26,7 +26,7 @@ import "Composants"
 // <cursorFlashTime> », « essai : onglets <géométrie de la barre et de ses segments> », « essai : menu <rangée
 // courante du menu> <rangée courante du témoin> », « essai : ongletSurvole <interaction> <fond> » et « essai : jauge
 // <valeur> <focus clavier> », ainsi que contours, attention, anneaux, reglageCurseur, compteur, deroulant, pastilles,
-// pastillesCouleurs, bascule, activite, materiauDpr, contextuel, ancrage, curseurBoutons, plaqueListe et rangeeSeule (voir chaque fonction) ; « essai touche
+// pastillesCouleurs, bascule, activite, materiauDpr, contextuel, ancrage, curseurBoutons, plaqueListe, rangeeSeule et inversion (voir chaque fonction) ; « essai touche
 // <tab|majtab|gauche|droite|haut|bas|espace|entree|echap> » frappe une touche, « essai activiteMarche <bool> » lance
 // ou arrête l'indicateur d'activité, « essai activiteCliches <dossier> <nombre> <pas> <affichage> <pause> » le
 // photographie à intervalle régulier, « essai molette <1|-1> » tourne la molette sur le compteur, « essai
@@ -188,6 +188,13 @@ ShellRoot {
                     titre: "Réglage"
                     Interrupteur { id: interrupteurReglage; checked: true }
                 }
+
+                // Zone du curseur Z autour d'une Case cochée, contrôle isolé : son focus clavier ou son survol y pose
+                // le curseur, et la case cochée s'inverse sur la plaque (L2-73).
+                ZoneCurseur {
+                    id: zoneEssai
+                    Case { id: caseZone; checked: true }
+                }
             }
 
             // Rangée des deux listes, qui sont assez hautes pour les montrer toutes. La plateforme offscreen met
@@ -252,7 +259,7 @@ ShellRoot {
                 // Dépendances : boutonBulle, deroulantEssai, listeMenu, interrupteurReglage.
                 function focaliser(nom: string): void {
                     ({ bulle: boutonBulle, deroulant: deroulantEssai, menu: listeMenu,
-                       interrupteur: interrupteurReglage })[nom].forceActiveFocus(Qt.TabFocusReason)
+                       interrupteur: interrupteurReglage, case: caseZone })[nom].forceActiveFocus(Qt.TabFocusReason)
                 }
 
                 // touche — frappe une touche dans la fenêtre, comme le clavier.
@@ -337,6 +344,17 @@ ShellRoot {
                 function reglageCurseur(): void {
                     essai.journal("reglageCurseur", [reglageEssai.etat.selection, reglageEssai.etat.sousCurseur,
                                                      interrupteurReglage.etat.selection].join(" "))
+                }
+
+                // inversion — journalise, pour l'interrupteur de R puis la case de Z : vrai s'il s'inverse sur la plaque,
+                // puis vrai si la cible de son fond est l'encre de la plaque et celle de son texte l'accent de la plaque ;
+                // enfin vrai si Z porte le curseur. Entrées : aucune. Sortie : aucune ; « essai : inversion <bool> <bool>
+                // <bool> <bool> <bool> ». Erreurs : aucune. Dépendances : interrupteurReglage, caseZone, zoneEssai, journal.
+                function inversion(): void {
+                    const inverse = c => [c.etat.inverse, String(c.etat.children[0].target) === String(c.etat.encres.text)
+                                          && String(c.etat.children[1].target) === String(c.etat.encres.fill)]
+                    essai.journal("inversion", [...inverse(interrupteurReglage), ...inverse(caseZone),
+                                                zoneEssai.etat.sousCurseur].join(" "))
                 }
 
                 // materiauDpr — journalise le rapport de pixels que reçoit le Materiau du fond du champ, celui de la
@@ -645,7 +663,7 @@ ShellRoot {
                 // Erreurs : TypeError pour un nom inconnu. Dépendances : boutonA, boutonB, rangeeSeule, rangeeLibre,
                 // reglageEssai, listeMenu, rechercheEssai, clavier (TestEvent).
                 function survol(nom: string): void {
-                    const c = ({ A: boutonA, B: boutonB, C: rangeeSeule, D: rangeeLibre, R: reglageEssai,
+                    const c = ({ A: boutonA, B: boutonB, C: rangeeSeule, D: rangeeLibre, R: reglageEssai, Z: zoneEssai,
                                  aucun: rechercheEssai })[nom]
                         ?? listeMenu.itemAtIndex(Number(nom))
                     clavier.mouseMove(c, c.width / 2, c.height / 2, -1, Qt.NoButton, Qt.NoModifier)

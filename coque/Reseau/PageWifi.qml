@@ -49,8 +49,8 @@ import "nmcli.js" as Nmcli
 // l'ordre est retenu garde sa rangée, inerte, jusqu'à la mise à jour suivante.
 // Dépendances : EnTetePage, Registre, EtatParametres, ConteneurPage (Parametres) ; Jonction, RangeeReseau,
 // DepliantReseau, SousPageProfils, SousPageMasque, Ligne, nmcli.js (profilsFenetre, repartir, partager, formatDebit),
-// EtatReseau ; Carte, Courbe, Interrupteur, Activite, Icone, Texte ; RessortVue, Ressort, Theme (reglages, space,
-// color, icons, radius, focus, motion).
+// EtatReseau ; Carte, Courbe, Interrupteur, ZoneCurseur, Activite, Icone, Texte ; RessortVue, Ressort, Theme (reglages, space,
+// color, icons, motion).
 // Cotes : en-tête de section de space.scale[3] au-dessus du titre (échelon 1, graisse moyenne, accent autonome) et
 // space.scale[1] au-dessous ; carte de fin à space.blockGap de la liste ; mini-courbe de reglages.sparklineWidth ×
 // sparklineHeight.
@@ -275,11 +275,14 @@ Item {
             teinte: page.inscription?.teinte ?? 0
             titre: page.inscription?.libelle ?? ""
             etat: page.phrase
-            Interrupteur {
-                objectName: "radio"
-                enabled: page.etat.carte ?? true
-                checked: !!page.etat.radio
-                onToggled: { page.etat.allumer(checked); checked = Qt.binding(() => !!page.etat.radio) }
+            // Contrôle isolé : sa zone porte la plaque du curseur, au survol comme au focus clavier (L2-73).
+            ZoneCurseur {
+                Interrupteur {
+                    objectName: "radio"
+                    enabled: page.etat.carte ?? true
+                    checked: !!page.etat.radio
+                    onToggled: { page.etat.allumer(checked); checked = Qt.binding(() => !!page.etat.radio) }
+                }
             }
         }
 
@@ -328,51 +331,46 @@ Item {
                         color: Theme.color?.accentStandalone ?? "transparent"
                     }
                     // « Actualiser », au bord droit de l'en-tête des autres réseaux ; pendant la recherche,
-                    // « Recherche… » et l'indicateur d'activité le remplacent.
+                    // « Recherche… » et l'indicateur d'activité le remplacent. Bouton texte neutre au repos, il porte la
+                    // plaque du curseur par sa zone, et son texte passe alors à l'encre de la plaque (L2-73).
                     Loader {
                         active: titreSection.section === "Autres réseaux"
                         anchors.right: parent.right
                         anchors.rightMargin: Theme.space?.scale[0] ?? 0
                         y: Theme.space?.scale[3] ?? 0
-                        sourceComponent: Item {
-                            id: actualiser
-                            objectName: "actualiser"
-                            implicitWidth: contenuActualiser.width
-                            implicitHeight: contenuActualiser.height
-                            // Clavier (bible, « Clavier ») : la tabulation l'atteint, Entrée et Espace l'activent, et
-                            // le contour de focus ne paraît que pour un focus venu du clavier.
-                            activeFocusOnTab: !page.balayage
-                            Keys.onPressed: event => {
-                                event.accepted = [Qt.Key_Return, Qt.Key_Enter, Qt.Key_Space].includes(event.key)
-                                if (event.accepted) page.rechercher()
-                            }
-                            HoverHandler { enabled: !page.balayage; cursorShape: Qt.PointingHandCursor }
-                            TapHandler { enabled: !page.balayage; onTapped: page.rechercher() }
-                            Rectangle {
-                                anchors.fill: parent
-                                anchors.margins: -(Theme.focus?.rowOffset ?? 0) - (Theme.space?.scale[0] ?? 0)
-                                visible: actualiser.activeFocus
-                                radius: Theme.radius?.control ?? 0
-                                color: "transparent"
-                                border.width: Theme.focus?.width ?? 0
-                                border.color: Theme.focus?.color ?? "transparent"
-                            }
-                            Row {
-                                id: contenuActualiser
-                                spacing: Theme.space?.scale[0] ?? 0
-                                Activite { visible: page.balayage; anchors.verticalCenter: parent.verticalCenter }
-                                Icone {
-                                    visible: !page.balayage
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    nom: "view-refresh"
-                                    taille: Theme.icons?.sizes.dense ?? 0
-                                    couleur: Theme.color?.accentStandalone ?? "transparent"
+                        sourceComponent: ZoneCurseur {
+                            id: zoneActualiser
+                            Item {
+                                id: actualiser
+                                objectName: "actualiser"
+                                implicitWidth: contenuActualiser.width
+                                implicitHeight: contenuActualiser.height
+                                // Clavier (bible, « Clavier ») : la tabulation l'atteint, Entrée et Espace l'activent ; un
+                                // clic ne donne pas le focus, si bien que la plaque ne suit le focus que venu du clavier.
+                                activeFocusOnTab: !page.balayage
+                                Keys.onPressed: event => {
+                                    event.accepted = [Qt.Key_Return, Qt.Key_Enter, Qt.Key_Space].includes(event.key)
+                                    if (event.accepted) page.rechercher()
                                 }
-                                Texte {
-                                    text: page.balayage ? "Recherche…" : "Actualiser"
-                                    echelon: 1
-                                    moyen: !page.balayage
-                                    color: (page.balayage ? Theme.color?.textTertiary : Theme.color?.accentStandalone) ?? "transparent"
+                                HoverHandler { enabled: !page.balayage; cursorShape: Qt.PointingHandCursor }
+                                TapHandler { enabled: !page.balayage; onTapped: page.rechercher() }
+                                Row {
+                                    id: contenuActualiser
+                                    spacing: Theme.space?.scale[0] ?? 0
+                                    Activite { visible: page.balayage; anchors.verticalCenter: parent.verticalCenter }
+                                    Icone {
+                                        visible: !page.balayage
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        nom: "view-refresh"
+                                        taille: Theme.icons?.sizes.dense ?? 0
+                                        couleur: zoneActualiser.etat.texte
+                                    }
+                                    Texte {
+                                        text: page.balayage ? "Recherche…" : "Actualiser"
+                                        echelon: 1
+                                        moyen: !page.balayage
+                                        color: (page.balayage ? Theme.color?.textTertiary : zoneActualiser.etat.texte) ?? "transparent"
+                                    }
                                 }
                             }
                         }

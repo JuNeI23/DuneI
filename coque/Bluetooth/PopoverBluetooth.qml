@@ -32,8 +32,8 @@ import "bluetooth.js" as Bt
 // Sorties : ferme(), voir Overlay ; panneau, le contenu construit (null tant qu'il ne l'est pas, ou une fois détruit),
 // lu par les essais ; fonduContenu, fonduDisque, reinitialiser(), voir ci-dessus.
 // Erreurs : un echec(adresse, message) de l'état s'affiche sur la ligne de l'appareil.
-// Dépendances : Overlay (famille contextuel), Bascule, Activite, Infobulle, Rangee, Icone, Texte, Ressort, Theme
-// (density, space, icons, color, motion par Ressort), VueCurseur, EtatBluetooth, bluetooth.js (trierAppareils,
+// Dépendances : Overlay (famille contextuel), Bascule, ZoneCurseur, Activite, Infobulle, Rangee, Icone, Texte, Ressort,
+// Theme (density, space, icons, color, motion par Ressort), VueCurseur, EtatBluetooth, bluetooth.js (trierAppareils,
 // iconeAppareil), Quickshell.Bluetooth (BluetoothDeviceState).
 // Cotes : celles du popover réseau ; surface de 288 px, panneau de 280 px, contenu à space.scale[2] (12) du bord,
 // rangées de density.controlHeight plus space.scale[0] (32 px) ; au plus quatre lignes visibles pour « Mes
@@ -365,18 +365,21 @@ Overlay {
 
         // La bascule de la radio, déclarée avant la colonne : elle garde sa place dans l'ordre de tabulation, la
         // première, et se pose par-dessus l'emplacement que l'en-tête lui réserve, au pixel près.
-        Bascule {
-            id: bascule
-            objectName: "bascule"
+        // Contrôle isolé : sa zone porte la plaque du curseur, sur laquelle la bascule allumée s'inverse (L2-73).
+        ZoneCurseur {
             z: 1
             x: colonne.x + entete.x + emplacement.x
             y: colonne.y + entete.y + emplacement.y
             opacity: panneau.fonduDisque
-            icone: panneau.etat.allume ? "bluetooth-active" : "bluetooth-disabled"
-            fondu: true
-            enabled: panneau.etat.disponible
-            checked: panneau.etat.allume
-            onToggled: { panneau.etat.allumer(checked); checked = Qt.binding(() => panneau.etat.allume) }
+            Bascule {
+                id: bascule
+                objectName: "bascule"
+                icone: panneau.etat.allume ? "bluetooth-active" : "bluetooth-disabled"
+                fondu: true
+                enabled: panneau.etat.disponible
+                checked: panneau.etat.allume
+                onToggled: { panneau.etat.allumer(checked); checked = Qt.binding(() => panneau.etat.allume) }
+            }
         }
 
         ColumnLayout {

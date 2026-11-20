@@ -12,13 +12,14 @@ import "etats.js" as Etats
 // clavier (visualFocus), elle prend la plaque d'accent sur toute sa largeur (l'aplat color.accent, ou l'accent sans
 // chroma sous inactive), qui paraît et s'efface au ressort des états ; le contrôle garde ses propres couleurs (un
 // interrupteur allumé reste à l'accent) et n'a pas d'anneau de focus. Hors du curseur, la plaque est transparente.
-// Sur la plaque, le titre et l'aide passent au sur-accent de l'état, en fondu au même ressort.
+// Sur la plaque, le titre et l'aide passent au sur-accent de l'état, en fondu au même ressort, et la rangée déclare
+// dnSurPlaque : un contrôle allumé qu'elle porte s'y inverse (Etat.inverseSurPlaque).
 // Entrées : titre ; aide ; icone et iconeActive, transmis au Medaillon ; erreur, ligne d'erreur sous la rangée ; le
 // contrôle, déclaré comme enfant.
 // Sorties : texteX, abscisse de la colonne de texte ; base, hauteur sans l'erreur ; corps, hauteur du corps (base,
 // ou celle d'un contrôle plus haut, bordée de space.scale[1]) ; largeurLibre, largeur laissée au contrôle ; survole
 // et hovered, la rangée est survolée ; visualFocus, un élément porté par la rangée a le focus clavier ; etat, l'Etat
-// de la plaque, lu par les essais.
+// de la plaque, lu par les essais ; dnSurPlaque, vrai sous le curseur, hérité par le contrôle porté.
 // Hauteur : reglages.row, ou reglages.rowHelp avec une aide, ou celle du contrôle s'il est plus haut ; l'erreur
 // s'ajoute dessous. Le texte sans médaillon reste sur
 // la même colonne (rangée alignée). La rangée remplit la largeur de sa Carte (Layout.fillWidth).
@@ -40,6 +41,7 @@ Item {
     readonly property bool down: false
     readonly property bool visualFocus: porte(Window.activeFocusItem)
     readonly property alias etat: etat
+    readonly property bool dnSurPlaque: etat.sousCurseur
     default property alias controle: emplacement.data
 
     Layout.fillWidth: true

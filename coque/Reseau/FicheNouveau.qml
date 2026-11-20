@@ -18,7 +18,7 @@ import "nmcli.js" as Nmcli
 // ajoute(uuid, nom), uuid vide si nmcli ne l'a pas donné, et annule().
 // Erreurs : celles de nmcli, sous le formulaire ; une réponse arrivée après la destruction de la fiche est ignorée.
 // Dépendances : EtatReseau (executer), nmcli.js (argsAjouter, uuidAjoute), Groupe, Ligne, Texte, Champ, ChampSecret,
-// Onglets, Onglet, Case, Bouton, Theme.
+// Onglets, Onglet, Case, ZoneCurseur, Bouton, Theme.
 // Cotes : sections espacées de space.scale[1] (8), champs de 290 px.
 ColumnLayout {
     id: fiche
@@ -107,7 +107,8 @@ ColumnLayout {
         Ligne {
             libelle: "Réseau caché"
             aide: "Le réseau ne diffuse pas son nom"
-            Case { id: cache; objectName: "cache" }
+            // Contrôle isolé dans une ligne non cliquable : sa zone porte la plaque du curseur (L2-73).
+            ZoneCurseur { Case { id: cache; objectName: "cache" } }
         }
     }
 

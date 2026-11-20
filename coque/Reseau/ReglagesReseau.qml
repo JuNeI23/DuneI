@@ -16,7 +16,8 @@ import "../Composants"
 // (Depliable, pleine largeur), qui n'agrandit que le dépliant courant (D155) : son contenu, fourni par le dépliant
 // (avances, un AvancesReseau), n'est chargé que déplié ou en mouvement. Pied : « Rejoindre » pour un réseau à portée
 // et non actif, « Se déconnecter » pour le profil actif (D155), puis « Oublier ce réseau », qui demande confirmation
-// (Annuler, Oublier).
+// (Annuler, et « Oublier », bouton destructeur en color.error, L2-73). Les interrupteurs, contrôles isolés de leurs
+// tuiles, portent la plaque du curseur par leur zone (ZoneCurseur).
 // Entrées : profil, le ProfilReseau de la vue (lu, valeurs, erreurs, securite, ouvert, actif, secretLu et ses
 // fonctions) ; filaire, vrai pour un profil filaire ; portee, vrai si le réseau est à portée ; nom, le nom du réseau
 // (texte de la confirmation) ; avances, le composant des réglages avancés, null par défaut (section masquée).
@@ -24,8 +25,8 @@ import "../Composants"
 // pli, la section « Réglages avancés » ; contenuAvances, son contenu chargé (null replié) ; securite, le texte de la
 // tuile Sécurité ; confirmer, vrai pendant la confirmation de l'oubli.
 // Erreurs : celles du ProfilReseau, sous le réglage concerné ; celle de la lecture et de l'oubli sous la grille.
-// Dépendances : Tuile, ChampSecret, Interrupteur, Compteur, Bouton, Texte, Separateur, Depliable, Theme (space,
-// color, density), ProfilReseau.
+// Dépendances : Tuile, ChampSecret, Interrupteur, ZoneCurseur, Compteur, Bouton, Texte, Separateur, Depliable,
+// Theme (space, color, density), ProfilReseau.
 ColumnLayout {
     id: reglages
 
@@ -136,14 +137,16 @@ ColumnLayout {
         Tuile {
             Layout.alignment: Qt.AlignTop
             libelle: "Connexion automatique"
-            Interrupteur {
-                id: auto
-                objectName: "auto"
-                text: checked ? "Oui" : "Non"
-                onToggled: reglages.profil.appliquer("autoconnect", {autoconnect: checked})
-                Binding {
-                    target: auto; property: "checked"; restoreMode: Binding.RestoreNone
-                    value: reglages.valeurs.autoconnect ?? false
+            ZoneCurseur {
+                Interrupteur {
+                    id: auto
+                    objectName: "auto"
+                    text: checked ? "Oui" : "Non"
+                    onToggled: reglages.profil.appliquer("autoconnect", {autoconnect: checked})
+                    Binding {
+                        target: auto; property: "checked"; restoreMode: Binding.RestoreNone
+                        value: reglages.valeurs.autoconnect ?? false
+                    }
                 }
             }
             Erreur { cle: "autoconnect" }
@@ -152,14 +155,16 @@ ColumnLayout {
             Layout.alignment: Qt.AlignTop
             visible: reglages.wifi
             libelle: "Données limitées"
-            Interrupteur {
-                id: donnees
-                objectName: "donnees"
-                text: checked ? "Oui" : "Non"
-                onToggled: reglages.profil.appliquer("facture", {facture: checked ? "yes" : "no"})
-                Binding {
-                    target: donnees; property: "checked"; restoreMode: Binding.RestoreNone
-                    value: reglages.valeurs.facture === "yes"
+            ZoneCurseur {
+                Interrupteur {
+                    id: donnees
+                    objectName: "donnees"
+                    text: checked ? "Oui" : "Non"
+                    onToggled: reglages.profil.appliquer("facture", {facture: checked ? "yes" : "no"})
+                    Binding {
+                        target: donnees; property: "checked"; restoreMode: Binding.RestoreNone
+                        value: reglages.valeurs.facture === "yes"
+                    }
                 }
             }
             Erreur { cle: "facture" }
@@ -232,7 +237,7 @@ ColumnLayout {
         Bouton {
             objectName: "confirmer"
             text: "Oublier"
-            principal: true
+            danger: true
             onClicked: { reglages.confirmer = false; reglages.profil.oublier() }
         }
     }

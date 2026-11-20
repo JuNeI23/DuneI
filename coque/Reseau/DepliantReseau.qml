@@ -23,6 +23,9 @@ import "../Barre/icones.js" as Icones
 // il retire sa demande au repli, à sa destruction et dès que la fenêtre se cache (FenetreParametres.fermer la
 // cache avant de la détruire).
 // Secret : dès que le dépliant n'est plus à l'écran (montre faux), le mot de passe lu est vidé et masqué.
+// La tête suit le curseur de sa vue (Ligne cliquable, L2-73) : sous lui, glyphe de signal, cadenas et chevron passent
+// à l'encre de la plaque ; le médaillon d'un réseau connecté est un indicateur, au fond neutre et au glyphe à l'accent
+// autonome.
 // En tête, avant le chevron, l'appelant peut poser un contenu de fin (fin) : la page Wi-Fi de l'application
 // Paramètres y met la mini-courbe des débits du réseau joint, et demande alors la sonde même replié (veille).
 // Entrées : rangee, la rangée du profil (uuid, nom, icone, actif, wifi, appareil ; portee, et force et security
@@ -98,6 +101,7 @@ ColumnLayout {
     }
 
     Ligne {
+        id: tete
         objectName: "tete"
         filet: false
         hauteur: Theme.reglages?.rowLead ?? 0
@@ -125,7 +129,7 @@ ColumnLayout {
                 anchors.fill: parent
                 sens: "bas"
                 rotation: pivot.value
-                couleur: Theme.color?.textTertiary ?? "transparent"
+                couleur: tete.encreTertiaire
             }
         }
     }
@@ -136,6 +140,8 @@ ColumnLayout {
             implicitHeight: implicitWidth
             IconeSignal {
                 anchors.centerIn: parent
+                teinte: tete.encreAide
+                teinteCadenas: tete.encreTertiaire
                 force: depliant.portee ? Math.round((depliant.rangee?.force ?? 0) * 100) : -1
                 // Cadenas d'un réseau à portée qui demande un mot de passe, selon la sécurité du réseau présent, comme
                 // Jonction.securise : ni ouvert, ni OWE, ni inconnu.

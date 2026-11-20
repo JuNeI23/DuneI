@@ -12,7 +12,8 @@ import "nmcli.js" as Nmcli
 // cache (il n'est plus détruit à la fermeture ; D80 reste vrai pour un popover non hébergé), tenu à la marge d'écran
 // des overlays ancrés à la barre (Overlay.margeEcran). Il suit les popovers sobres d'inspiration/anhphong : compact,
 // carré, sur le verre de E3 (D103), il porte de haut en bas : l'en-tête, dont la bascule à glyphe allume ou coupe le
-// Wi-Fi (accent plein allumée, neutre éteinte), avec le nom du réseau joint et son état (« Connecté », « Connecté
+// Wi-Fi (accent plein allumée, neutre éteinte ; sa zone porte la plaque du curseur, sur laquelle, allumée, elle
+// s'inverse, L2-73), avec le nom du réseau joint et son état (« Connecté », « Connecté
 // sans internet », « Portail de connexion », « Partage du téléphone »…) ; derrière un portail captif, « Ouvrir la
 // page de connexion » ; « Réseaux à proximité », petite étiquette au texte secondaire avec le bouton de nouvelle
 // recherche, que l'indicateur d'activité remplace tant que le balayage relancé n'a pas rendu sa liste ; la liste des
@@ -47,7 +48,7 @@ import "nmcli.js" as Nmcli
 // lu par les essais ; fonduContenu, fonduDisque, reinitialiser(), voir ci-dessus.
 // Erreurs : un connectionFailed déplie la ligne de mot de passe avec « Mot de passe refusé » (raison
 // d'authentification) ou « Connexion impossible ». Le texte d'un mot de passe ne passe jamais au journal.
-// Dépendances : Overlay (famille contextuel), Bascule, Activite, Infobulle, Rangee, Bouton, BlocSecret, Jonction, Separateur,
+// Dépendances : Overlay (famille contextuel), Bascule, ZoneCurseur, VueCurseur, Activite, Infobulle, Rangee, Bouton, BlocSecret, Jonction, Separateur,
 // Icone, Texte, Theme (density, space, material, reglages, motion par Ressort), Ressort, EtatReseau, EtatParametres,
 // nmcli.js (profilsFenetre, repartir, resume), icones.js (iconeForce), Quickshell.Networking (ConnectionFailReason, ConnectionState, WifiSecurityType).
 // Cotes : surface de 72 × space.scale[0] (288 px) de large comme l'essai D5, panneau de 280 px dans le retrait de
@@ -126,6 +127,8 @@ Overlay {
     FocusScope {
         id: panneau
 
+        // Arbitre du curseur du popover : une seule rangée ou un seul contrôle porte le curseur à la fois (L2-73).
+        property VueCurseur dnVue: VueCurseur {}
         readonly property real marge: Theme.space?.scale[2] ?? 0
         readonly property real hauteurLigne: (Theme.density?.controlHeight ?? 0) + (Theme.space?.scale[0] ?? 0)
         readonly property var etat: popover.etat
@@ -332,18 +335,20 @@ Overlay {
         // Elle suit la radio réelle après chaque bascule ; sans carte Wi-Fi, désactivée, elle montre le lien. Elle est
         // déclarée avant la colonne : elle garde sa place dans l'ordre de tabulation, la première, et se pose par-dessus
         // l'emplacement que l'en-tête lui réserve, au pixel près.
-        Bascule {
-            id: bascule
-            objectName: "bascule"
+        ZoneCurseur {
             z: 1
             x: colonne.x + entete.x + emplacement.x
             y: colonne.y + entete.y + emplacement.y
             opacity: panneau.fonduDisque
-            readonly property bool allumee: panneau.etat.carte ? panneau.etat.radio : panneau.etat.connecte
-            icone: panneau.etat.icone
-            enabled: panneau.etat.carte
-            checked: allumee
-            onToggled: { panneau.etat.allumer(checked); checked = Qt.binding(() => bascule.allumee) }
+            Bascule {
+                id: bascule
+                objectName: "bascule"
+                readonly property bool allumee: panneau.etat.carte ? panneau.etat.radio : panneau.etat.connecte
+                icone: panneau.etat.icone
+                enabled: panneau.etat.carte
+                checked: allumee
+                onToggled: { panneau.etat.allumer(checked); checked = Qt.binding(() => bascule.allumee) }
+            }
         }
 
         ColumnLayout {

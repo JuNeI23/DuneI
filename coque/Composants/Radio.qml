@@ -12,7 +12,8 @@ import "../Theme"
 // l'indice non coloré (bible, annexe E) ; il est dessiné par un tracé vectoriel (QtQuick.Shapes), comme la coche
 // de la case, et ne se règle pas par instance. Le focus clavier n'a pas d'anneau (L2-73) : la rangée qui porte le
 // radio le montre par sa plaque ; un clic ne vole pas le focus d'un champ (focusPolicy Qt.TabFocus, § 7.3).
-// Chaque radio est un arrêt de tabulation, comme une case.
+// Chaque radio est un arrêt de tabulation, comme une case. Coché sur la plaque d'accent du curseur
+// (Etat.inverseSurPlaque), il s'inverse : disque au sur-accent, point à l'accent, libellé à l'encre de la plaque.
 // Exclusivité : autoExclusive, vrai par défaut dans Qt, rend exclusifs les radios qui partagent un même parent ;
 // cocher l'un décoche les autres, et un clic sur le radio coché le laisse coché. Pour des radios dispersés dans
 // plusieurs parents, ou mêlés à d'autres boutons, on les déclare dans un ButtonGroup (QtQuick.Controls) par
@@ -40,6 +41,7 @@ T.RadioButton {
         id: etat
         controle: radio
         selectionne: radio.checked
+        inverseSurPlaque: true
     }
 
     indicator: Rectangle {
@@ -82,7 +84,7 @@ T.RadioButton {
     contentItem: Texte {
         leftPadding: radio.indicator.width + (radio.text ? radio.spacing : 0)
         text: radio.text
-        color: etat.texteNeutre
+        color: etat.libelle
         verticalAlignment: Text.AlignVCenter
     }
 }

@@ -1269,6 +1269,20 @@ class CoqueClavierTest(EssaiCoque, unittest.TestCase):
         self.ipc("survol", "aucun")
         self.assertEqual(self.valeur("reglageCurseur"), "none false active")
 
+    def test_controle_allume_inverse_sur_la_plaque(self):
+        # L2-73 : un contrôle allumé posé sur la plaque d'accent du curseur s'inverse (fond à l'encre de la plaque,
+        # marque à son accent), dans une ReglageLigne comme dans une ZoneCurseur ; hors de la plaque, il garde l'accent.
+        self.demarrer()
+        self.assertEqual(self.valeur("inversion"), "false false false false false")
+        self.ipc("focaliser", "interrupteur")
+        self.assertEqual(self.valeur("inversion"), "true true false false false")
+        self.ipc("focaliser", "case")
+        self.assertEqual(self.valeur("inversion"), "false false true true true")
+        # Hors d'une vue munie d'un arbitre, chacun suit la règle locale : R survolée et Z focalisée portent toutes deux
+        # la plaque, et leurs contrôles s'inversent tous deux.
+        self.ipc("survol", "R")
+        self.assertEqual(self.valeur("inversion"), "true true true true true")
+
     def test_barre_jamais_sans_arret(self):
         # Quand l'onglet coché est désactivé, il ne peut plus prendre le focus : les autres onglets redeviennent des
         # arrêts, pour que la barre ne soit jamais sautée par la tabulation.

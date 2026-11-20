@@ -13,7 +13,8 @@ import "etats.js" as Etats
 // réduire (bible, annexe E). Le libellé se tient sur le conteneur, hors du disque : il prend le texte non sélectionné
 // du même état, comme celui de l'interrupteur. Un clic ou Espace bascule ; c'est un arrêt de tabulation, et un clic
 // ne vole pas le focus d'un champ (focusPolicy Qt.TabFocus, § 7.3) ; le focus clavier n'a pas d'anneau (L2-73), la
-// rangée qui porte la bascule le montre par sa plaque.
+// rangée qui porte la bascule le montre par sa plaque. Allumée sur la plaque d'accent du curseur
+// (Etat.inverseSurPlaque), elle s'inverse : disque au sur-accent, glyphe à l'accent, libellé à l'encre de la plaque.
 // Entrées : icone, nom freedesktop du glyphe ; text, libellé facultatif ; checked, toggled et le reste de l'API de
 // T.Button ; fondu, vrai pour qu'un changement de glyphe passe par un fondu croisé au ressort « state » (glyphe qui
 // dit un état : la cloche des notifications, le Bluetooth), faux par défaut : le glyphe change alors d'un coup, comme
@@ -63,6 +64,7 @@ T.Button {
         id: etat
         controle: bascule
         selectionne: bascule.checked
+        inverseSurPlaque: true
         role: Theme.controls?.offTrack ? "controlOff" : Etats.cran(Etats.herite(bascule, "dnRole", "surfaceWindow"))
     }
 
@@ -111,7 +113,7 @@ T.Button {
             visible: bascule.avecLibelle
             echelon: 1
             text: bascule.text
-            color: etat.texteNeutre
+            color: etat.libelle
         }
     }
 }

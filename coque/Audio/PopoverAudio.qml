@@ -30,8 +30,8 @@ import "../Barre/icones.js" as Icones
 // lu par les essais ; fonduContenu, fonduDisque, disque, reinitialiser(), voir le panneau.
 // Erreurs : aucune ; sans sortie ou sans entrée par défaut, le sous-titre est vide et aucune ligne n'est active. Un
 // nœud qui ne peut devenir défaut (micro d'une prise sans fiche) garde sa ligne : la choisir ne change rien.
-// Dépendances : QtQuick.Templates (Slider.SnapAlways), Overlay (famille contextuel), Jauge, Rangee, Separateur, Texte,
-// VueCurseur, Ressort, Theme (density, space, color,
+// Dépendances : QtQuick.Templates (Slider.SnapAlways), Overlay (famille contextuel), Jauge, ZoneCurseur, Rangee,
+// Separateur, Texte, VueCurseur, Ressort, Theme (density, space, color,
 // material), EtatAudio, audio.js (libelle, iconeAppareil), Barre/icones.js (iconeAudio, iconeMicro).
 // Cotes : celles du popover Bluetooth ; surface de 288 px, panneau de 70 * space.scale[0] (280), contenu à
 // space.scale[2] (12) du bord, rangées de density.controlHeight plus space.scale[0] (32 px).
@@ -52,7 +52,8 @@ Overlay {
     // ;
     // pendant le glisser, le ressort ne s'applique pas et la poignée suit la souris.
     // Entrées : niveau, le niveau de l'état. Sorties : celles de Jauge (moved, iconeCliquee) ; poser(), qui pose la
-    // valeur sur le niveau sans glissement. Erreurs : aucune. Dépendances : Jauge, Ressort.
+    // valeur sur le niveau sans glissement. La jauge se pose dans une ZoneCurseur, qui la place dans la colonne et
+    // porte la plaque du curseur (L2-73). Erreurs : aucune. Dépendances : Jauge, Ressort.
     component JaugeNiveau: Jauge {
         id: jaugeNiveau
         property int niveau
@@ -65,9 +66,6 @@ Overlay {
         stepSize: 1
         // La valeur reste entière au glisser comme au clic : le niveau se règle au centième.
         snapMode: T.Slider.SnapAlways
-        Layout.fillWidth: true
-        Layout.leftMargin: Theme.space?.scale[2] ?? 0
-        Layout.rightMargin: Theme.space?.scale[2] ?? 0
         // Tenue, la cible est la valeur de la poignée, posée à chaque mouvement : relâchée, le ressort repart d'elle.
         // Un pas au clavier, sans poignée tenue, ne pose rien : le ressort glisse vers le niveau que l'état renverra.
         Ressort { id: suivi; transition: "reflow"; cible: jaugeNiveau.pressed ? jaugeNiveau.value : jaugeNiveau.niveau }
@@ -170,14 +168,20 @@ Overlay {
                 }
             }
 
-            JaugeNiveau {
-                id: jaugeSon
-                objectName: "jaugeSon"
-                niveau: panneau.etat.volume
-                coupe: panneau.etat.muet
-                icone: Icones.iconeAudio(true, panneau.etat.muet, panneau.etat.volume)
-                onMoved: panneau.etat.reglerVolume(value)
-                onIconeCliquee: panneau.etat.basculerSon()
+            // Contrôle isolé : sa zone porte la plaque du curseur, sur laquelle la jauge s'inverse (L2-73).
+            ZoneCurseur {
+                Layout.fillWidth: true
+                Layout.leftMargin: Theme.space?.scale[2] ?? 0
+                Layout.rightMargin: Theme.space?.scale[2] ?? 0
+                JaugeNiveau {
+                    id: jaugeSon
+                    objectName: "jaugeSon"
+                    niveau: panneau.etat.volume
+                    coupe: panneau.etat.muet
+                    icone: Icones.iconeAudio(true, panneau.etat.muet, panneau.etat.volume)
+                    onMoved: panneau.etat.reglerVolume(value)
+                    onIconeCliquee: panneau.etat.basculerSon()
+                }
             }
             Texte {
                 objectName: "sectionSortie"
@@ -208,14 +212,20 @@ Overlay {
                 moyen: true
                 color: (panneau.etat.micMuet ? Theme.color?.error : Theme.color?.textSecondary) ?? "transparent"
             }
-            JaugeNiveau {
-                id: jaugeMicro
-                objectName: "jaugeMicro"
-                niveau: panneau.etat.niveauMicro
-                coupe: panneau.etat.micMuet
-                icone: Icones.iconeMicro(panneau.etat.micMuet)
-                onMoved: panneau.etat.reglerMicro(value)
-                onIconeCliquee: panneau.etat.basculerMicro()
+            // Contrôle isolé : sa zone porte la plaque du curseur, sur laquelle la jauge s'inverse (L2-73).
+            ZoneCurseur {
+                Layout.fillWidth: true
+                Layout.leftMargin: Theme.space?.scale[2] ?? 0
+                Layout.rightMargin: Theme.space?.scale[2] ?? 0
+                JaugeNiveau {
+                    id: jaugeMicro
+                    objectName: "jaugeMicro"
+                    niveau: panneau.etat.niveauMicro
+                    coupe: panneau.etat.micMuet
+                    icone: Icones.iconeMicro(panneau.etat.micMuet)
+                    onMoved: panneau.etat.reglerMicro(value)
+                    onIconeCliquee: panneau.etat.basculerMicro()
+                }
             }
             Appareils {
                 objectName: "entrees"

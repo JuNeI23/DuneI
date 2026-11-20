@@ -268,6 +268,18 @@ ShellRoot {
                 }
                 // saisir — remplit le mot de passe de la ligne dépliée. Entrée : texte.
                 function saisir(texte: string): void { porteur.item.panneau.bloc.secret.text = texte }
+                // encres — couleurs des textes nommés du panneau, montrés ou non, et l'accent du thème, en JSON :
+                // {textes: {texte: [couleurs]}, accent, accentStandalone}. Entrée : liste, textes séparés par « | ».
+                // Sortie : texte JSON. Erreurs : aucune.
+                function encres(liste: string): string {
+                    const p = porteur.item.panneau
+                    const tous = (r, t) => Array.from(r.children).reduce((l, e) => l.concat(t(e) ? [e] : [], tous(e, t)), [])
+                    const textes = {}
+                    for (const t of liste.split("|"))
+                        textes[t] = tous(p, o => o.text === t && o.color !== undefined).map(o => String(o.color))
+                    return JSON.stringify({textes, accent: String(Theme.color.accent),
+                                           accentStandalone: String(Theme.color.accentStandalone)})
+                }
                 // activer — action nommée : rejoindre, reglages, portail, bascule (clic sur la bascule du Wi-Fi),
                 // rechercher (bouton de recherche), deconnecter (« Se déconnecter » du pied). Entrée : cle.
                 function activer(cle: string): void {

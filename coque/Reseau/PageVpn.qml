@@ -9,7 +9,7 @@ import "nmcli.js" as Nmcli
 // Rôle : reprend le contenu de la page VPN de l'ancienne fenêtre, dans la disposition de l'application. De haut en
 // bas : la carte d'en-tête (EnTetePage : vignette, « VPN », phrase d'état : « Connecté à <nom> », « Déconnecté » ou
 // « Aucune connexion »), puis la carte « Mes VPN » : une Ligne par profil de type vpn ou wireguard (médaillon
-// network-vpn, à l'accent quand la connexion est active ; nom ; type en aide, « WireGuard » ou « VPN ») et, à droite,
+// network-vpn, indicateur au glyphe à l'accent autonome quand la connexion est active ; nom ; type en aide, « WireGuard » ou « VPN ») et, à droite,
 // un Interrupteur qui monte ou descend la connexion. L'interrupteur suit l'état réel lu par EtatReseau : après chaque
 // action, la liaison est rétablie, si bien qu'un refus le remet à sa place et que l'erreur de nmcli paraît sous la
 // rangée, à la couleur d'erreur. Sans profil : « Aucune connexion VPN. » et une ligne d'aide qui annonce que l'ajout
@@ -17,8 +17,8 @@ import "nmcli.js" as Nmcli
 // Commandes : « nmcli -w 30 connection up uuid <uuid> » et « nmcli -w 10 connection down uuid <uuid> ». Ni --ask ni
 // agent de secrets : une connexion qui réclame un mot de passe échoue aussitôt (« Secrets were required, but not
 // provided ») au lieu d'attendre un terminal, et -w borne l'attente ; aucun secret n'est lu, écrit ni journalisé.
-// Clavier : chaque interrupteur s'atteint à la tabulation et bascule à Espace, avec le contour de focus de la bible
-// (« Clavier » et « Interrupteur »).
+// Clavier : chaque interrupteur s'atteint à la tabulation et bascule à Espace ; sa zone (ZoneCurseur) porte alors la
+// plaque du curseur, qui remplace le contour de focus (L2-73).
 // Contrat de page (voir ConteneurPage) : conteneur, atteindre, implicitHeight.
 // Entrées : conteneur, le ConteneurPage, posé par lui ; etat, la source de l'état, EtatReseau par défaut (profils,
 // executer).
@@ -27,7 +27,7 @@ import "nmcli.js" as Nmcli
 // Fonctions : atteindre, basculer.
 // Erreurs : un échec de nmcli se montre sous la rangée et remet l'interrupteur à l'état réel.
 // Dépendances : EnTetePage, TitreSection, Registre, ConteneurPage (Parametres) ; Groupe, Ligne, Interrupteur, Texte,
-// Theme, nmcli.js, EtatReseau.
+// ZoneCurseur, Theme, nmcli.js, EtatReseau.
 Item {
     id: page
 
@@ -114,11 +114,14 @@ Item {
                     libelle: c.nom
                     aide: c.type
                     erreur: page.erreurs[modelData] ?? ""
-                    Interrupteur {
-                        objectName: "interrupteur"
-                        enabled: !(modelData in page.enCours)
-                        checked: page.enCours[modelData] ?? c.actif
-                        onToggled: { page.basculer(modelData, checked); checked = Qt.binding(() => page.enCours[modelData] ?? c.actif) }
+                    // Contrôle isolé dans une ligne non cliquable : sa zone porte la plaque du curseur (L2-73).
+                    ZoneCurseur {
+                        Interrupteur {
+                            objectName: "interrupteur"
+                            enabled: !(modelData in page.enCours)
+                            checked: page.enCours[modelData] ?? c.actif
+                            onToggled: { page.basculer(modelData, checked); checked = Qt.binding(() => page.enCours[modelData] ?? c.actif) }
+                        }
                     }
                 }
             }

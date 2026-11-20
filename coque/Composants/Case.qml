@@ -12,7 +12,8 @@ import "../Theme"
 // tracé vectoriel à la manière de macOS et non icône du thème (§ 7.10), dont les points et le trait sont des
 // fractions du côté de la boîte. Un état mixte (tiret) viendra par le même moyen. Le focus clavier n'a pas
 // d'anneau (L2-73) : la rangée qui porte la case le montre par sa plaque ; un clic ne vole pas le focus d'un
-// champ (focusPolicy Qt.TabFocus, § 7.3).
+// champ (focusPolicy Qt.TabFocus, § 7.3). Cochée sur la plaque d'accent du curseur (Etat.inverseSurPlaque), elle
+// s'inverse : boîte au sur-accent, coche à l'accent, libellé à l'encre de la plaque (L2-73).
 // Entrées : text, checked et le reste de l'API de T.CheckBox.
 // Sorties : etat, l'Etat de la boîte (rôle, interaction, sélection, couleurs).
 // Erreurs : aucune ; avant le chargement des tokens, les cotes sont nulles et les couleurs transparentes.
@@ -35,6 +36,7 @@ T.CheckBox {
         id: etat
         controle: caseACocher
         selectionne: caseACocher.checked
+        inverseSurPlaque: true
     }
 
     indicator: Rectangle {
@@ -60,7 +62,7 @@ T.CheckBox {
     contentItem: Texte {
         leftPadding: caseACocher.indicator.width + (caseACocher.text ? caseACocher.spacing : 0)
         text: caseACocher.text
-        color: etat.texteNeutre
+        color: etat.libelle
         verticalAlignment: Text.AlignVCenter
     }
 }

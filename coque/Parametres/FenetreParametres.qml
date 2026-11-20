@@ -21,7 +21,7 @@ import "../Composants"
 // « parametres fermer ».
 // Erreurs : aucune ; avant le chargement des tokens, la fenêtre n'est pas construite.
 // Dépendances : quickshell ≥ 0.3 (LazyLoader, FloatingWindow, IpcHandler), EtatParametres, BarreLaterale,
-// ConteneurPage, Surface, PastillesFenetre, Theme (reglages, space).
+// ConteneurPage, Surface, PastillesFenetre, VueCurseur, Theme (reglages, space).
 // Cotes : reglages.windowWidth × windowHeight par défaut, au moins windowMinWidth × windowMinHeight ; colonne de
 // reglages.sidebarWidth ; pastilles à space.scale[2] du coin haut gauche. Fond (D136) : la fenêtre est transparente
 // et sa Surface ne peint rien ; la colonne est une Surface surfacePanel en verre (glass.sidebar), que Hyprland
@@ -79,6 +79,8 @@ Scope {
                 anchors.fill: parent
                 role: "surfaceWindow"
                 peinte: false
+                // Arbitre du curseur de la fenêtre : barre latérale et page n'en montrent qu'un à la fois (L2-73).
+                property VueCurseur dnVue: VueCurseur {}
                 // Échap quitte la sous-page ; au niveau de la page mère, la touche poursuit son chemin.
                 Keys.onEscapePressed: event => {
                     event.accepted = conteneur.niveau > 0

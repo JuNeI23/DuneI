@@ -496,7 +496,7 @@ ShellRoot {
         // Entrées : aucune. Sortie : aucune ; « essai : ressort <raideur> <raideur> ». Erreurs : aucune.
         // Dépendances : etatEssai, dont les deux premiers enfants sont les ColorSpring déclarés par Etat.qml.
         function ressort(): void {
-            essai.journal("ressort", etatEssai.children.map(r => r.params?.stiffness).join(" "))
+            essai.journal("ressort", etatEssai.children.slice(0, 2).map(r => r.params?.stiffness).join(" "))
         }
 
         // ressortsFiges — force le survol sur l'Etat du contrôle simulé, du champ, du compteur et de la section

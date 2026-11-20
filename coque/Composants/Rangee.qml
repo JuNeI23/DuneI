@@ -5,21 +5,22 @@ import "../Theme"
 import "etats.js" as Etats
 
 // Rangee — rangée d'une Liste : libellé, icône facultative, sélection et curseur.
-// Rôle : habille le gabarit sans style T.ItemDelegate (conception, § 7.1). La rangée prend le rôle de son
-// conteneur, sans cran (§ 7.4). Elle est sélectionnée quand elle est la rangée courante, ou, si la liste ne fait pas
-// suivre la sélection, quand l'appelant pose selectionnee (§ 7.5). Elle suit le curseur de sa vue (Etat.suitCurseur) :
-// survolée, elle le prend et, dans une Liste, devient la rangée courante, comme dans un menu de macOS ; la Liste le
-// lui donne aussi au clavier. Dans une Liste, la rangée ne peint pas son fond : la plaque de la liste se tient sous la
-// rangée courante, à l'accent sous le curseur, au fond neutre controlRaised sinon, et le libellé de la rangée sous le
-// curseur passe en onAccent (couleurs de la sélection active). Hors d'une Liste (seule dans un popover, ou dans un
-// Repeater), la rangée garde son propre fond, une pastille arrondie en retrait des bords à la manière de macOS
-// (§ 7.10) : l'aplat d'accent de la plaque sous le curseur (Etat.curseurAplat), transparente sinon, survolée sans
-// le curseur comprise, pour laisser voir le fond de verre ou opaque du conteneur au lieu d'en repeindre la couleur
-// (une sélection fournie y garde le fond neutre de la clé « inactive »). Dans une colonne de navigation (Liste.navigation), la rangée sélectionnée prend un
-// fond neutre levé d'un cran (controlRaised, Etat.selectionNeutre) et son libellé passe en graisse moyenne. Aucun
-// contour ni anneau de focus : le curseur suffit (L2-73). La rangée n'accepte aucun focus : la liste est l'unique
-// arrêt. Un clic en fait la rangée courante, donne le focus à la liste sans le compter comme clavier, puis émet
-// active().
+// Rôle : habille le gabarit sans style T.ItemDelegate (conception, § 7.1). La rangée prend le rôle de son conteneur,
+// sans cran (§ 7.4). Elle est sélectionnée quand elle est la rangée courante, ou, si la liste ne fait pas suivre la
+// sélection, quand l'appelant pose selectionnee (§ 7.5). Elle suit le curseur de sa vue (Etat.suitCurseur) : survolée,
+// elle le prend et, dans une Liste, devient la rangée courante, comme dans un menu de macOS ; la Liste le lui donne
+// aussi au clavier. Dans une Liste, la rangée ne peint pas son fond : la plaque de la liste se tient sous la rangée
+// courante, à l'accent sous le curseur, au fond neutre controlRaised sinon, et le libellé de la rangée sous le curseur
+// passe en onAccent (couleurs de la sélection active). Hors d'une Liste (seule dans un popover, ou dans un Repeater),
+// la rangée garde son propre fond, une pastille arrondie en retrait des bords à la manière de macOS (§ 7.10) : l'aplat
+// d'accent de la plaque sous le curseur (Etat.curseurAplat), transparente sinon, survolée sans le curseur comprise,
+// pour laisser voir le fond de verre ou opaque du conteneur au lieu d'en repeindre la couleur (une sélection fournie y
+// garde le fond neutre de la clé « inactive »). Dans une colonne de navigation (Liste.navigation), la rangée
+// sélectionnée prend un fond neutre levé d'un cran (controlRaised, Etat.selectionNeutre) et son libellé passe en
+// graisse moyenne. Aucun contour ni anneau de focus : le curseur suffit (L2-73). Sous le curseur, la rangée déclare
+// dnSurPlaque : un contrôle allumé qu'elle porte s'inverse sur la plaque (Etat.inverseSurPlaque). La rangée n'accepte
+// aucun focus : la liste est l'unique arrêt. Un clic en fait la rangée courante, donne le focus à la liste sans le
+// compter comme clavier, puis émet active().
 // Entrées : index, requis, rang dans le modèle (fourni par la ListView) ; text, libellé ; icone, nom
 // freedesktop d'une icône symbolique, vide par défaut (pas d'icône) ; selectionnee, sélection fournie par
 // l'appelant quand la liste ne la fait pas suivre currentIndex ; accessoire, composant facultatif posé en tête
@@ -34,7 +35,8 @@ import "etats.js" as Etats
 // rangée est le délégué d'une Liste ; gras, vrai quand le libellé est en graisse moyenne (par défaut accentue, ou
 // rangée sélectionnée d'une colonne de navigation ; l'appelant peut le poser), que suit un contentItem remplacé ;
 // fondIcone et fondTexte, les ressorts des couleurs de l'icône et du libellé ; libelle, le Texte du libellé par
-// défaut ; glyphe, l'Icone ; signal active(), émis au clic et à Entrée (la Liste l'émet pour sa rangée courante).
+// défaut ; glyphe, l'Icone ; dnSurPlaque, vrai sous le curseur ; signal active(), émis au clic et à Entrée (la Liste
+// l'émet pour sa rangée courante).
 // Erreurs : aucune ; hors d'une ListView, la rangée garde sa largeur implicite et n'est jamais courante ni
 // sélectionnée par currentIndex ; avant le chargement des tokens, les cotes sont nulles et les couleurs transparentes.
 // Le clic suppose une Liste : une ListView ordinaire ne déclare pas focusClavier, que le clic écrit.
@@ -59,6 +61,7 @@ T.ItemDelegate {
     property color teinteTexte: "transparent"
 
     readonly property alias etat: etat
+    readonly property bool dnSurPlaque: etat.sousCurseur
     readonly property alias fondIcone: fondIcone
     readonly property alias fondTexte: fondTexte
     property bool gras: accentue || (vue?.navigation ?? false) && etat.selectionne

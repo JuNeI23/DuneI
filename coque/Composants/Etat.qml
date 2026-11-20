@@ -33,18 +33,27 @@ import "etats.js" as Etats
 // selectionne et focusDansGroupe comme avant, si bien que les contrôles allumés gardent leur accent ; curseurAplat,
 // faux par défaut : vrai, sous le curseur, les couleurs sont celles du repos au survol, pour que la marque du
 // curseur garde l'aplat unique de la plaque des listes (color.accent, ou l'accent muet sous inactive) ; la pression
-// garde ses couleurs (active/pressed), pour que le geste se lise.
+// garde ses couleurs (active/pressed), pour que le geste se lise ; inverseSurPlaque, faux par défaut : vrai pour un
+// contrôle qui dit « allumé » par l'accent (interrupteur, bascule, case, radio, jauge, curseur). Posé sur la plaque
+// d'accent du curseur (un ancêtre déclare dnSurPlaque vrai : ReglageLigne, Rangee, Ligne, ZoneCurseur sous le
+// curseur), un tel contrôle sélectionné s'inverse, comme les coches blanches d'un menu surligné de macOS : son fond
+// prend l'encre de la plaque (color.onAccent) et son texte, glyphe ou bouton, l'accent de la plaque (L2-73) ; sinon
+// l'orange se fondrait dans l'orange. L'inversion suit le même ressort que la plaque.
 // Sorties : interaction, selection, inactif (clés des tokens) ; levee, vrai pour une sélection neutre (selectionNeutre)
 // peinte en controlRaised, hors du curseur ; vue, l'arbitre du curseur hérité (null sans suitCurseur ou sans vue) ;
 // sousCurseur, vrai quand le contrôle porte le curseur (toujours faux sans suitCurseur), pour un composant qui peint
 // la marque du curseur ailleurs que sur ce fond ; fond, texte, couleurs affichées ; texteNeutre, le
 // texte du même rôle et de la même interaction sans sélection, sans ressort, pour un libellé posé à côté d'une
-// marque sélectionnable (case, radio, interrupteur, bascule) ou d'un en-tête sans fond (section dépliable).
+// marque sélectionnable (case, radio, interrupteur, bascule) ou d'un en-tête sans fond (section dépliable) ;
+// surPlaque, vrai quand inverseSurPlaque est posé et qu'un ancêtre porte la plaque du curseur ; inverse, vrai quand
+// le contrôle sélectionné s'y inverse ; encres, les couleurs de la plaque (fill : l'accent, text : le sur-accent, ou
+// celles de l'accent sans chroma sous inactive, désactivées pour un contrôle désactivé) ; libelle, la couleur du
+// libellé posé à côté de la marque : texteNeutre hors de la plaque, l'encre de la plaque sur elle, en fondu.
 // Erreurs : aucune ; avant le chargement des tokens ou pour une combinaison absente, les couleurs restent
 // transparentes.
 // Dépendances : Theme (stateColors, motion), ColorSpring (module Theme), VueCurseur, etats.js (herite, cran,
 // interaction, selection, sousCurseur). Les deux ColorSpring sont les premiers enfants de l'élément, dans cet ordre (fond,
-// texte) : la coque d'essai les lit ainsi.
+// texte), le ressort du libellé les suit : la coque d'essai les lit ainsi.
 Item {
     id: etat
 
@@ -59,6 +68,7 @@ Item {
     property bool selectionNeutre: false
     property bool suitCurseur: false
     property bool curseurAplat: false
+    property bool inverseSurPlaque: false
     property string role: Etats.cran(Etats.herite(controle, "dnRole", "surfaceWindow"))
     readonly property bool inactif: Etats.herite(controle, "dnInactive", false)
     readonly property string interaction: forcer || Etats.interaction(controle)
@@ -71,6 +81,11 @@ Item {
     readonly property var couleurs: levee ? Theme.stateColors("controlRaised", "none", "rest")
         : Theme.stateColors(role, selection,
                             curseurAplat && sousCurseur && interaction === "hover" ? "rest" : interaction)
+    readonly property bool surPlaque: inverseSurPlaque && Etats.herite(controle, "dnSurPlaque", false)
+    readonly property bool inverse: surPlaque && selectionne
+    readonly property var encres: Theme.stateColors(role, inactif ? "activeMuted" : "active",
+                                                    interaction === "disabled" ? "disabled" : "rest")
+    readonly property color libelle: ressortLibelle.value
     readonly property color fond: ressortFond.value
     readonly property color texte: ressortTexte.value
     readonly property color texteNeutre: Theme.stateColors(role, "none", interaction)?.text ?? "transparent"
@@ -80,7 +95,8 @@ Item {
     ColorSpring {
         id: ressortFond
         readonly property color plein: etat.peintFond ? (etat.couleurs?.fill ?? "transparent") : "transparent"
-        target: etat.selection === "none" && (etat.fondReposTransparent
+        target: etat.inverse ? (etat.encres?.text ?? "transparent")
+            : etat.selection === "none" && (etat.fondReposTransparent
             && (etat.interaction === "rest" || etat.interaction === "disabled")
             || etat.fondSurvolTransparent && etat.interaction === "hover")
             ? Qt.alpha(plein, 0) : plein
@@ -88,7 +104,16 @@ Item {
 
     ColorSpring {
         id: ressortTexte
-        target: etat.peintTexte ? (etat.couleurs?.text ?? "transparent") : "transparent"
+        target: !etat.peintTexte ? "transparent"
+            : (etat.inverse ? etat.encres?.fill : etat.couleurs?.text) ?? "transparent"
+    }
+
+    // Libellé d'une marque : hors de la plaque, il suit texteNeutre ; sur elle, l'encre de la plaque. Sans
+    // inverseSurPlaque, la cible reste transparente et le ressort ne démarre jamais (sobriété, D80).
+    ColorSpring {
+        id: ressortLibelle
+        target: !etat.inverseSurPlaque ? "transparent"
+            : etat.surPlaque ? etat.encres?.text ?? "transparent" : etat.texteNeutre
     }
 
     // suivre — prend ou lâche le curseur de la vue pour le contrôle.
