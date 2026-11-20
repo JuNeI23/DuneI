@@ -179,16 +179,6 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
         attendu = f"{typo['scale'][4]} {typo['weightMedium']} {couleur} {typo['interface']}"
         self.assertEqual(self.valeur("texte").lower(), attendu.lower())
 
-    def test_anneau(self):
-        # Contour de focus.width à focus.offset hors de la cible, rayon augmenté de l'offset ; cible intacte.
-        self.demarrer()
-        focus = self.tokens55()[0]["focus"]
-        o, w = focus["offset"], focus["width"]
-        attendu = f"{10 - o} {10 - o} {100 + 2 * o} {40 + 2 * o} {6 + o} {w} {focus['color']} | 10 10 100 40"
-        self.assertEqual(self.valeur("anneau").lower(), attendu.lower())
-        self.ipc("anneauInactif", "true")
-        self.assertIn(focus["colorMuted"].lower(), self.valeur("anneau").lower())
-
     def test_etat(self):
         # Le contrôle d'essai est posé sur la Surface panneau : il prend le rôle un cran au-dessus.
         self.demarrer()

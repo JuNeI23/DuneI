@@ -52,8 +52,8 @@ import "etats.js" as Etats
 // Erreurs : aucune ; avant le chargement des tokens ou pour une combinaison absente, les couleurs restent
 // transparentes.
 // Dépendances : Theme (stateColors, motion), ColorSpring (module Theme), VueCurseur, etats.js (herite, cran,
-// interaction, selection, sousCurseur). Les deux ColorSpring sont les premiers enfants de l'élément, dans cet ordre (fond,
-// texte), le ressort du libellé les suit : la coque d'essai les lit ainsi.
+// interaction, selection, sousCurseur). Les deux ColorSpring sont les premiers enfants de l'élément, dans cet ordre
+// (fond, texte), le ressort du libellé les suit : la coque d'essai les lit ainsi.
 Item {
     id: etat
 

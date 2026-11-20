@@ -9,16 +9,16 @@ import "Composants"
 // Rôle : ouvre une FloatingWindow (un Bouton « avant », une barre Onglets avec les onglets « tokens » et « composants
 // », ce dernier coché, un Bouton « apres », un Champ, une Jauge, un Compteur, un Deroulant, des Pastilles, une
 // Recherche, une Depliable, une Bascule, une Activite, un Bouton « bulle » qui porte une Infobulle sans texte (jamais
-// de fenêtre), une vue munie d'un arbitre du curseur (VueCurseur) et de deux Bouton A et B qui le suivent, puis deux Liste côte à côte, un menu et un témoin, dont chaque rangée retient son activation, une ReglageLigne R qui porte un Interrupteur allumé et une ZoneCurseur Z autour d'une Case cochée) et
-// y synthétise des touches et des mouvements du pointeur par le TestEvent de QtTest, pour que
-// tests/test_coque_composants.py éprouve ce que la coque sans fenêtre ne peut pas exécuter : le focus actif, la
-// tabulation, le clignotement du curseur, la mise en page de la barre (qui attend le polissage d'une fenêtre) et le
-// survol.
-// Garde de plateforme : la coque journalise Qt.platform.pluginName dès son chargement, et son LazyLoader ne
-// construit la fenêtre que sous la plateforme offscreen, où elle ne paraît jamais à l'écran et où ni les touches
-// ni le pointeur n'atteignent le bureau. Lancée sous une autre plateforme (wayland compris), elle n'ouvre donc
-// aucune fenêtre et ne se déclare jamais prête ; le test lit la ligne de plateforme avant d'attendre « prêt » et
-// échoue en la nommant.
+// de fenêtre), une vue munie d'un arbitre du curseur (VueCurseur) et de deux Bouton A et B qui le suivent, puis deux
+// Liste côte à côte, un menu et un témoin, dont chaque rangée retient son activation, une ReglageLigne R qui porte un
+// Interrupteur allumé et une ZoneCurseur Z autour d'une Case cochée) et y synthétise des touches et des mouvements du
+// pointeur par le TestEvent de QtTest, pour que tests/test_coque_composants.py éprouve ce que la coque sans fenêtre
+// ne peut pas exécuter : le focus actif, la tabulation, le clignotement du curseur, la mise en page de la barre (qui
+// attend le polissage d'une fenêtre) et le survol. Garde de plateforme : la coque journalise Qt.platform.pluginName
+// dès son chargement, et son LazyLoader ne construit la fenêtre que sous la plateforme offscreen, où elle ne paraît
+// jamais à l'écran et où ni les touches ni le pointeur n'atteignent le bureau. Lancée sous une autre plateforme
+// (wayland compris), elle n'ouvre donc aucune fenêtre et ne se déclare jamais prête ; le test lit la ligne de
+// plateforme avant d'attendre « prêt » et échoue en la nommant.
 // Entrées : DUNEI_TOKENS_DIR, lu par Theme ; QT_QPA_PLATFORM, posé à offscreen par le test.
 // Sortie : journal de Theme, « essai : plateforme <nom> » au chargement, « essai : prêt true » à l'ouverture de la
 // fenêtre, puis une ligne par commande IPC de lecture : « essai : focus <élément> <onglet courant> <sélection de
@@ -26,7 +26,8 @@ import "Composants"
 // <cursorFlashTime> », « essai : onglets <géométrie de la barre et de ses segments> », « essai : menu <rangée
 // courante du menu> <rangée courante du témoin> », « essai : ongletSurvole <interaction> <fond> » et « essai : jauge
 // <valeur> <focus clavier> », ainsi que contours, attention, anneaux, reglageCurseur, compteur, deroulant, pastilles,
-// pastillesCouleurs, bascule, activite, materiauDpr, contextuel, ancrage, curseurBoutons, plaqueListe, rangeeSeule, inversion et caseActive (voir chaque fonction) ; « essai touche
+// pastillesCouleurs, bascule, activite, materiauDpr, contextuel, ancrage, curseurBoutons, plaqueListe, rangeeSeule,
+// inversion et caseActive (voir chaque fonction) ; « essai touche
 // <tab|majtab|gauche|droite|haut|bas|espace|entree|echap> » frappe une touche, « essai activiteMarche <bool> » lance
 // ou arrête l'indicateur d'activité, « essai activiteCliches <dossier> <nombre> <pas> <affichage> <pause> » le
 // photographie à intervalle régulier, « essai molette <1|-1> » tourne la molette sur le compteur, « essai
@@ -41,15 +42,16 @@ import "Composants"
 // et « essai survolerMobile » créent, détruisent ou survolent la cible de l'infobulle mobile ; recherche, depliable,
 // bulle, survolerBulle et mobile journalisent (voir chaque fonction), « essai survoler <rang> » pose le pointeur sur
 // une rangée de chaque liste, « essai survolerOnglet » sur l'onglet « tokens » et « essai ongletActif <bool> » active
-// ou désactive l'onglet « composants », « essai survol <A|B|C|D|R|rang|aucun> » pose le pointeur sur le bouton A, B, la rangée C, D ou R, une rangée du menu ou ailleurs,
-// « essai curseurVisible <A|B|vue|menu> <bool> » montre ou cache l'un d'eux, leur vue ou le menu, « essai curseurAutreVue » leur donne un autre arbitre,
-// « essai boutonDanger <A|B> <bool> » fait de l'un d'eux un bouton destructeur, « essai appuyer <A|B> <bool> » l'enfonce ou le relâche,
-// « essai boutonCouleurs <A|B> » journalise ses couleurs, « essai curseurInactif <bool> » pose le modificateur inactive sur leur vue et « essai curseurSelectionne <bool> » sélectionne A, sans
-// journaliser. Erreurs : celles de Theme et des liaisons, dans le
-// journal ; un nom de touche inconnu lève une TypeError.
-// Dépendances : quickshell ≥ 0.3 (FloatingWindow, LazyLoader, IpcHandler), QtTest (TestEvent), modules Theme
-// et Composants. Import : les liens Theme -> ../Theme et Composants -> ../Composants les posent sous la racine de
-// cette coque, comme dans la coque d'essai voisine.
+// ou désactive l'onglet « composants », « essai survol <A|B|C|D|R|rang|aucun> » pose le pointeur sur le bouton A, B,
+// la rangée C, D ou R, une rangée du menu ou ailleurs, « essai curseurVisible <A|B|vue|menu> <bool> » montre ou cache
+// l'un d'eux, leur vue ou le menu, « essai curseurAutreVue » leur donne un autre arbitre, « essai boutonDanger <A|B>
+// <bool> » fait de l'un d'eux un bouton destructeur, « essai appuyer <A|B> <bool> » l'enfonce ou le relâche, « essai
+// boutonCouleurs <A|B> » journalise ses couleurs, « essai curseurInactif <bool> » pose le modificateur inactive sur
+// leur vue et « essai curseurSelectionne <bool> » sélectionne A, sans journaliser. Erreurs : celles de Theme et des
+// liaisons, dans le journal ; un nom de touche inconnu lève une TypeError. Dépendances : quickshell ≥ 0.3
+// (FloatingWindow, LazyLoader, IpcHandler), QtTest (TestEvent), modules Theme et Composants. Import : les liens Theme
+// -> ../Theme et Composants -> ../Composants les posent sous la racine de cette coque, comme dans la coque d'essai
+// voisine.
 ShellRoot {
     id: essai
 
@@ -180,8 +182,8 @@ ShellRoot {
                     Liste { id: listeTemoin; property int activee: -1; model: 3; delegate: rangee; width: 100; height: 3 * Theme.density.rowHeight }
                 }
 
-                // Rangée de réglage R qui porte un Interrupteur allumé, dernier arrêt de tabulation : le focus clavier de
-                // l'interrupteur ou le survol de la rangée y pose le curseur.
+                // Rangée de réglage R qui porte un Interrupteur allumé, dernier arrêt de tabulation : le focus
+                // clavier de l'interrupteur ou le survol de la rangée y pose le curseur.
                 ReglageLigne {
                     id: reglageEssai
                     width: 200
@@ -352,10 +354,11 @@ ShellRoot {
                     caseZone.enabled = valeur
                 }
 
-                // inversion — journalise, pour l'interrupteur de R puis la case de Z : vrai s'il s'inverse sur la plaque,
-                // puis vrai si la cible de son fond est l'encre de la plaque et celle de son texte l'accent de la plaque ;
-                // enfin vrai si Z porte le curseur. Entrées : aucune. Sortie : aucune ; « essai : inversion <bool> <bool>
-                // <bool> <bool> <bool> ». Erreurs : aucune. Dépendances : interrupteurReglage, caseZone, zoneEssai, journal.
+                // inversion — journalise, pour l'interrupteur de R puis la case de Z : vrai s'il s'inverse sur la
+                // plaque, puis vrai si la cible de son fond est l'encre de la plaque et celle de son texte l'accent
+                // de la plaque ; enfin vrai si Z porte le curseur. Entrées : aucune. Sortie : aucune ; « essai :
+                // inversion <bool> <bool> <bool> <bool> <bool> ». Erreurs : aucune. Dépendances :
+                // interrupteurReglage, caseZone, zoneEssai, journal.
                 function inversion(): void {
                     const inverse = c => [c.etat.inverse, String(c.etat.children[0].target) === String(c.etat.encres.text)
                                           && String(c.etat.children[1].target) === String(c.etat.encres.fill)]
@@ -520,9 +523,9 @@ ShellRoot {
                     clavier.mouseClick(e, e.width / 2, e.height / 2, Qt.LeftButton, Qt.NoModifier, -1)
                 }
 
-                // depliable — journalise l'état de la section : ouverte, bloc de contenu visible, en-tête sous le curseur.
-                // Entrées : aucune. Sortie : aucune ; « essai : depliable <bool> <bool> <bool> ». Erreurs : aucune.
-                // Dépendances : depliableEssai (bloc, etat), journal.
+                // depliable — journalise l'état de la section : ouverte, bloc de contenu visible, en-tête sous le
+                // curseur. Entrées : aucune. Sortie : aucune ; « essai : depliable <bool> <bool> <bool> ». Erreurs :
+                // aucune. Dépendances : depliableEssai (bloc, etat), journal.
                 function depliable(): void {
                     const d = depliableEssai
                     essai.journal("depliable", [d.ouvert, d.bloc.visible, d.etat.sousCurseur].join(" "))
@@ -664,10 +667,10 @@ ShellRoot {
                 }
 
                 // survol — pose le pointeur au centre du bouton A ou B, ou d'une rangée de la liste du menu, ou l'en
-                // retire en le posant sur la recherche. Entrée : nom, "A", "B", "C" (la rangée seule), "D" (la rangée libre),
-                // "R" (la rangée de réglage), un rang de rangée du menu ("0", "1", "2") ou "aucun". Sortie : aucune.
-                // Erreurs : TypeError pour un nom inconnu. Dépendances : boutonA, boutonB, rangeeSeule, rangeeLibre,
-                // reglageEssai, listeMenu, rechercheEssai, clavier (TestEvent).
+                // retire en le posant sur la recherche. Entrée : nom, "A", "B", "C" (la rangée seule), "D" (la rangée
+                // libre), "R" (la rangée de réglage), un rang de rangée du menu ("0", "1", "2") ou "aucun". Sortie :
+                // aucune. Erreurs : TypeError pour un nom inconnu. Dépendances : boutonA, boutonB, rangeeSeule,
+                // rangeeLibre, reglageEssai, listeMenu, rechercheEssai, clavier (TestEvent).
                 function survol(nom: string): void {
                     const c = ({ A: boutonA, B: boutonB, C: rangeeSeule, D: rangeeLibre, R: reglageEssai, Z: zoneEssai,
                                  aucun: rechercheEssai })[nom]
@@ -692,8 +695,9 @@ ShellRoot {
                     essai.journal("rangeeSeule", r.etat.children[0].target + " " + r.etat.sousCurseur)
                 }
 
-                // curseurAutreVue — donne aux boutons A et B un autre arbitre du curseur, encore vide, comme un contrôle
-                // qui change de vue. Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : vueCurseur.
+                // curseurAutreVue — donne aux boutons A et B un autre arbitre du curseur, encore vide, comme un
+                // contrôle qui change de vue. Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances :
+                // vueCurseur.
                 function curseurAutreVue(): void {
                     vueCurseur.dnVue = vueCurseur.autreVue
                 }

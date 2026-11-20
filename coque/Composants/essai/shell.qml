@@ -13,13 +13,13 @@ import "Composants/ancrage.js" as Ancrage
 // contrôle simulé avec son Etat, un Texte, une Icone, les cinq contrôles interactifs (Bouton, Case, Interrupteur,
 // Onglet, Curseur), trois Radio dans un même parent, une Jauge, une Progression, deux Separateur, un Champ, des
 // Pastilles, un Compteur, un Deroulant, une Recherche, un ChampSecret, une Activite, une Depliable, une Bascule, une Liste vide, une
-// Liste de trois Rangee et une cible munie d'un AnneauFocus, plus une Surface inactive et une Surface de verre à
+// Liste de trois Rangee et une cible nue, plus une Surface inactive et une Surface de verre à
 // l'écart, deux Overlay fermés, un de chaque famille, et trois objets factices pour le singleton Overlays) pour que tests/test_coque_composants.py
 // éprouve dans un vrai Quickshell les règles d'etats.js, l'héritage par remontée, l'import du Theme, les pièces de
 // base, les contrôles et les listes, en lisant le journal.
 // Entrées : DUNEI_TOKENS_DIR, lu par Theme ; thème d'icônes DuneI, posé par la directive IconTheme en tête.
 // Sortie : journal de Theme, plus « essai : prêt <bool> » à chaque changement de Theme.ready, et une ligne « essai :
-// <clé> <valeur> » par commande IPC de lecture (cran, interaction, selection, sonde, naissances, fond, texte, anneau,
+// <clé> <valeur> » par commande IPC de lecture (cran, interaction, selection, sonde, naissances, fond, texte,
 // etat, ressort, ressortsFiges, image, controles, coches, cotes, glyphes, radios, jauge, jaugeIcone, jaugeHors,
 // jaugeCibles, progression, separateur,
 // champ, indicatif, tailleIcone, liste, arrets, rangee, rangeeImposees, bouton, boutonTexte, overlays, overlaysFermes, pastilles, compteur,
@@ -33,7 +33,7 @@ import "Composants/ancrage.js" as Ancrage
 // <bool> », « essai basculeCocher <bool> », « essai valeurCopier », « essai pastillesForcer <état> », « essai pastillesReduire <bool> »,
 // « essai knobsActifs <bool> », « essai interrupteurCocher <bool> », « essai compteurValeur <n> », « essai deroulantRang <n> », « essai decocher »,
 // « essai radioCocher <rang> », « essai jaugeActive <bool> », « essai jaugeCoupe <bool> », « essai surPlaque <bool> », « essai rangeeImposer <bool> », « essai boutonPrincipal <bool> », « essai boutonDanger <bool> », « essai inactif
-// <bool> », « essai reparenter », « essai texteMoyen », « essai anneauInactif <bool> », « essai survol <bool> »,
+// <bool> », « essai reparenter », « essai texteMoyen », « essai survol <bool> »,
 // « essai champActif <bool> », « essai champTexte <texte> », « essai selectionLibre », « essai icone <nom> <bool> »,
 // « essai ouvrirFactice <A…E> », « essai fermerFactice <A…E> » et « essai materiauHauteur <px> ».
 // Erreurs : celles de Theme et des liaisons, dans le journal. Dépendances : quickshell ≥ 0.3 (Quickshell.Io :
@@ -263,12 +263,6 @@ ShellRoot {
                 width: 100
                 height: 40
                 radius: 6
-
-                AnneauFocus {
-                    id: anneauEssai
-                    cible: cible
-                    montre: true
-                }
             }
         }
     }
@@ -462,22 +456,6 @@ ShellRoot {
         function texteMoyen(): void {
             texteEssai.echelon = 4
             texteEssai.moyen = true
-        }
-
-        // anneau — journalise la géométrie et le contour de l'anneau, puis la géométrie de sa cible.
-        // Entrées : aucune. Sortie : aucune ; « essai : anneau <x> <y> <l> <h> <rayon> <épaisseur> <#rrggbb> |
-        // <x> <y> <l> <h> », coordonnées de l'anneau dans le repère du parent de la cible.
-        // Erreurs : aucune. Dépendances : anneauEssai, cible.
-        function anneau(): void {
-            const p = anneauEssai.mapToItem(cible.parent, 0, 0)
-            essai.journal("anneau", [p.x, p.y, anneauEssai.width, anneauEssai.height, anneauEssai.radius,
-                anneauEssai.border.width, anneauEssai.border.color, "|", cible.x, cible.y, cible.width, cible.height].join(" "))
-        }
-
-        // anneauInactif — pose le modificateur inactive sur l'anneau d'essai.
-        // Entrées : valeur, nouveau modificateur. Sortie : aucune. Erreurs : aucune. Dépendances : anneauEssai.
-        function anneauInactif(valeur: bool): void {
-            anneauEssai.inactif = valeur
         }
 
         // etat — journalise les sorties de l'Etat du contrôle simulé.

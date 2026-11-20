@@ -15,11 +15,11 @@ import "etats.js" as Etats
 // Un bouton destructeur (danger) actif écrit son texte et son icône en color.error sur son fond neutre ; sous le
 // curseur, comme la puce danger du lanceur, il se remplit de color.error (pastilles.errorPressed pressé) et son texte
 // passe en color.onAccent : jamais de rouge sur la plaque orange. Posé sur la plaque d'une ligne (un ancêtre déclare
-// dnSurPlaque), un bouton plat ou destructeur écrit aussi son texte en color.onAccent, en fondu. Ses couleurs passent par deux ColorSpring.
-// Entrées : text, clicked et le reste de l'API de T.AbstractButton ; icone, nom freedesktop facultatif, posé
-// avant le texte (seule, sans text, le bouton est réduit à son icône) ; principal, vrai pour le bouton par défaut
-// d'un dialogue, faux par défaut : il le désigne sans le peindre ; danger, vrai pour une action destructrice, faux
-// par défaut.
+// dnSurPlaque), un bouton plat ou destructeur écrit aussi son texte en color.onAccent, en fondu. Ses couleurs passent
+// par deux ColorSpring. Entrées : text, clicked et le reste de l'API de T.AbstractButton ; icone, nom freedesktop
+// facultatif, posé avant le texte (seule, sans text, le bouton est réduit à son icône) ; principal, vrai pour le
+// bouton par défaut d'un dialogue, faux par défaut : il le désigne sans le peindre ; danger, vrai pour une action
+// destructrice, faux par défaut.
 // Sorties : etat, l'Etat du bouton (rôle, interaction, sélection, couleurs), lu par la planche et les essais ;
 // rouge, vrai pour un bouton destructeur actif ; rougePlein, vrai quand il porte en plus le curseur ; teinte,
 // la couleur affichée de son texte et de son icône.
@@ -82,7 +82,8 @@ T.AbstractButton {
     background: Rectangle {
         radius: Theme.radius?.control ?? 0
         color: bouton.danger ? fondDanger.value : etat.fond
-        border.width: !bouton.plat && Theme.controls?.outline && Etats.contoure(etat.selection) ? Theme.hairline(QsWindow.window?.devicePixelRatio ?? 1) ?? 0 : 0
+        border.width: !bouton.plat && Theme.controls?.outline && Etats.contoure(etat.selection)
+            ? Theme.hairline(QsWindow.window?.devicePixelRatio ?? 1) ?? 0 : 0
         border.color: Theme.controls?.outline ?? "transparent"
     }
 

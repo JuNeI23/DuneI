@@ -44,7 +44,8 @@ class QuickshellEmitterTest(unittest.TestCase):
                                                 "windowHeight": 640, "windowMinWidth": 720, "windowMinHeight": 480,
                                                 "entryHeight": 32, "thumb": 22, "thumbGlyph": 14, "networksShown": 5,
                                                 "sidebarWidth": 244, "pageMargin": 20, "pageRise": 6,
-                                                "thumbLarge": 44, "sparklineWidth": 92, "sparklineHeight": 30})
+                                                "thumbLarge": 44, "sparklineWidth": 92, "sparklineHeight": 30,
+                                                "evidence": 0.32})
 
     def test_reglages_parametres(self):
         """Vérifie les jetons de l'application Paramètres : les quatre cotes de la barre latérale et de la liste des

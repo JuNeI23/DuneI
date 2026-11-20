@@ -23,7 +23,7 @@ import "recherche.js" as Moteur
 // Sorties : champ, la Recherche ; liste, la Liste des pages ; resultats, la Liste des résultats ; trouves, les
 // résultats ([{ page, chemin, libelle }]) ; cherche, vrai quand le champ porte un terme ; rang, rang de la page
 // courante ; plaque, la Plaque de la liste des pages (y, height) ; ciblePlaque, l'ordonnée qu'elle vise. Fonctions :
-// choisir, parcourir.
+// choisir, parcourir, rentrer, viser.
 // Erreurs : aucune ; avant le chargement des tokens, les cotes sont nulles.
 // Dépendances : EtatParametres (page, presents, ouvrir), Registre, recherche.js (chercher), Recherche, Liste, Rangee,
 // Texte, Vignette, VueCurseur (par Liste), Theme (reglages, space, color).
@@ -76,6 +76,8 @@ Item {
         if (liste.curseurDedans) return
         const porteur = liste.dnVue.porteur
         liste.currentIndex = rang
+        // Écriture directe voulue : elle rétablit le porteur d'avant le changement de rangée courante, sans le cycle
+        // prendre/lâcher, qui ferait de la rangée de la page courante la porteuse du curseur.
         liste.dnVue.porteur = porteur
     }
 
