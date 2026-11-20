@@ -16,7 +16,8 @@ import "../Composants"
 // sortantes comprises, ou null ; attente, l'Attente ; hote, le Panneau (deplies, deplier, effacerGroupe,
 // nePlusGarder, pret).
 // Sorties : nom ; vivantes ; nombre, celui des entrées qui comptent ; deplie ; retirable ; autres, le libellé « N
-// autres » (vide s'il n'y en a pas) ; lignes, nombre de lignes montrées ; height, hauteur montrée. boutonNePlusGarder et boutonEffacer, lus par les essais. Fonction : ligneDe.
+// autres » (vide s'il n'y en a pas) ; lignes, nombre de lignes montrées ; height, hauteur montrée. boutonNePlusGarder
+// et boutonEffacer, lus par les essais. Fonction : ligneDe.
 // Erreurs : aucune. Dépendances : Quickshell (ScriptModel), LigneAttente, Bouton, Separateur, Texte, Ressort,
 // Theme (space, density, color).
 // Cotes : ligne de titre de density.rowHeight ; « N autres » en texte tertiaire, aligné sur le texte des lignes ;
@@ -104,7 +105,6 @@ Item {
                 id: gestes
                 anchors.verticalCenter: parent.verticalCenter
                 anchors.right: parent.right
-                anchors.rightMargin: groupe.ecart - (Theme.space?.scale[2] ?? 0)
                 spacing: Theme.space?.scale[0] ?? 0
                 visible: opacity > 0
                 opacity: actions.value

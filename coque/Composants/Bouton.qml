@@ -14,7 +14,8 @@ import "etats.js" as Etats
 // (controls.outline, au jour), le bouton hors du curseur en est cerné d'un filet d'un pixel physique, comme la case.
 // Un bouton destructeur (danger) actif écrit son texte et son icône en color.error sur son fond neutre ; sous le
 // curseur, comme la puce danger du lanceur, il se remplit de color.error (pastilles.errorPressed pressé) et son texte
-// passe en color.onAccent : jamais de rouge sur la plaque orange. Ses couleurs passent par deux ColorSpring.
+// passe en color.onAccent : jamais de rouge sur la plaque orange. Posé sur la plaque d'une ligne (un ancêtre déclare
+// dnSurPlaque), un bouton plat ou destructeur écrit aussi son texte en color.onAccent, en fondu. Ses couleurs passent par deux ColorSpring.
 // Entrées : text, clicked et le reste de l'API de T.AbstractButton ; icone, nom freedesktop facultatif, posé
 // avant le texte (seule, sans text, le bouton est réduit à son icône) ; principal, vrai pour le bouton par défaut
 // d'un dialogue, faux par défaut : il le désigne sans le peindre ; danger, vrai pour une action destructrice, faux
@@ -63,6 +64,9 @@ T.AbstractButton {
     readonly property color teinte: rangee.teinte
     readonly property bool rouge: danger && enabled
     readonly property bool rougePlein: rouge && etat.sousCurseur
+    // Vrai quand un ancêtre (la ligne d'une liste) porte la plaque d'accent du curseur : le texte d'un bouton plat ou
+    // destructeur s'y écrit au sur-accent (color.onAccent), jamais en neutre ni en rouge sur l'orange.
+    readonly property bool surPlaque: Etats.herite(bouton, "dnSurPlaque", false)
     ColorSpring {
         id: fondDanger
         target: (!bouton.danger ? "transparent" : bouton.rougePlein
@@ -71,8 +75,8 @@ T.AbstractButton {
     }
     ColorSpring {
         id: encreDanger
-        target: (!bouton.danger ? "transparent" : bouton.rougePlein ? Theme.color?.onAccent
-                 : bouton.rouge ? Theme.color?.error : etat.couleurs?.text) ?? "transparent"
+        target: (!(bouton.danger || bouton.plat) ? "transparent" : bouton.rougePlein || bouton.surPlaque
+                 ? Theme.color?.onAccent : bouton.rouge ? Theme.color?.error : etat.couleurs?.text) ?? "transparent"
     }
 
     background: Rectangle {
@@ -89,7 +93,7 @@ T.AbstractButton {
 
         Row {
             id: rangee
-            readonly property color teinte: bouton.danger ? encreDanger.value : etat.texte
+            readonly property color teinte: bouton.danger || bouton.plat ? encreDanger.value : etat.texte
             anchors.centerIn: parent
             spacing: bouton.spacing
 

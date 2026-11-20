@@ -667,6 +667,20 @@ class CarteTest(EssaiCoque, unittest.TestCase):
         self.regler(corps=f'a <img src="{photo}" width="500" height="500"> b')
         self.assertEqual(self.etat()["hauteur"], sans)
 
+    def test_action_prend_la_plaque_au_survol(self):
+        # Les cartes de la pile ont leur propre arbitre du curseur : une action, plate au repos, y prend la plaque
+        # d'accent sous le curseur, et la rend en le quittant (L2-73).
+        accent = self.vue(55)["color"]["accent"].lower()
+        self.regler(actions="default:Activer,x:Plus tard")
+        self.jusqua(lambda: len(json.loads(self.appel("actionsCouleurs"))) == 2, "actions rendues")
+        self.assertTrue(all(not b["sous"] and b["fond"].startswith("#00")
+                            for b in json.loads(self.appel("actionsCouleurs"))))
+        self.appel("curseurAction", 1)
+        self.jusqua(lambda: json.loads(self.appel("actionsCouleurs"))[1]["fond"].lower() == accent, "plaque d'accent")
+        self.assertEqual([b["sous"] for b in json.loads(self.appel("actionsCouleurs"))], [False, True])
+        self.appel("curseurAction", -1)
+        self.jusqua(lambda: not any(b["sous"] for b in json.loads(self.appel("actionsCouleurs"))), "plaque retirée")
+
     def test_actions(self):
         # Sans survol, la rangée reste repliée dès la première pose des actions.
         self.regler(actions="default:Activer,x:Plus tard")
@@ -1713,12 +1727,18 @@ class PanneauTest(EssaiCoque, unittest.TestCase):
         self.creer("B")
         repos = json.loads(self.appel("plaques"))
         self.assertEqual([(p["sous"], p["fond"][:3]) for p in repos.values()], [(False, "#00")] * 2)
-        self.appel("curseur", 1)
-        self.jusqua(lambda: json.loads(self.appel("plaques"))["1"]["fond"].lower() == jetons["accent"].lower()
-                    and json.loads(self.appel("plaques"))["1"]["encre"].lower() == jetons["onAccent"].lower(),
+        premier = {"A": 1, "B": 2}[self.groupes()[0][0]]  # la ligne dont boutons() lit les actions
+        self.appel("curseur", premier)
+        self.jusqua(lambda: json.loads(self.appel("plaques"))[str(premier)]["fond"].lower() == jetons["accent"].lower()
+                    and json.loads(self.appel("plaques"))[str(premier)]["encre"].lower() == jetons["onAccent"].lower(),
                     "plaque d'accent et texte sur-accent")
-        self.appel("curseur", 2)
-        self.assertEqual({k: p["sous"] for k, p in json.loads(self.appel("plaques")).items()}, {"1": False, "2": True})
+        # Les actions dépliées sur la ligne qui porte la plaque s'y écrivent au sur-accent, jamais en neutre.
+        self.jusqua(lambda: all(b["texte"].lower() == jetons["onAccent"].lower() for b in self.boutons()["actions"]),
+                    "actions au sur-accent sur la plaque")
+        autre = 3 - premier
+        self.appel("curseur", autre)
+        self.assertEqual({k: p["sous"] for k, p in json.loads(self.appel("plaques")).items()},
+                         {str(premier): False, str(autre): True})
         self.appel("curseur", 0)
         self.jusqua(lambda: all(not p["sous"] and p["fond"].startswith("#00")
                                 for p in json.loads(self.appel("plaques")).values()), "plaque retirée")

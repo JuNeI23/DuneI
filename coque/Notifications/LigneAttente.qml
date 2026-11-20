@@ -19,8 +19,8 @@ import "../Composants/etats.js" as Etats
 // montree, faux quand le groupe replié la cache.
 // Sorties : hovered, down et visualFocus (vrai pour l'entrée courante au clavier), lus par son Etat ; dnSurPlaque,
 // vrai sous le curseur ; etat et contenuNotification, lus par les essais ; height, hauteur montrée.
-// Erreurs : aucune. Dépendances : CorpsNotification, Etat, Icone, Ressort, ColorSpring, etats.js, VueCurseur (par Etat), Theme
-// (panneau, space, radius, icons, color), Attente (ouvrir, agir, ecarter, oublier).
+// Erreurs : aucune. Dépendances : CorpsNotification, Etat, Icone, Ressort, ColorSpring, etats.js, VueCurseur (par
+// Etat), Theme (panneau, space, radius, icons, color), Attente (ouvrir, agir, ecarter, oublier).
 // Cotes : retrait intérieur de space.scale[1] (8) ; pastille au rayon radius.control ; bouton d'écart de
 // icons.sizes.dense, glyphe edit-clear.
 Item {

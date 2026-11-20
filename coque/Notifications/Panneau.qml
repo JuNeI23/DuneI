@@ -18,8 +18,8 @@ import "garde.js" as Garde
 // l'application Paramètres et demande la fermeture du panneau, comme le pied du popover de réglage rapide (D105). Il se
 // déclare montré à l'attente tant qu'il est monté, pour qu'une entrée fermée reste le temps de son repli.
 // Hauteur : celle du contenu, jamais sous panneau.hauteurMin, jamais au-dessus de hauteurMax ; au-delà, la liste des
-// groupes défile entre l'en-tête et la bascule, en haut, et le pied, en bas, qui restent fixes ; la molette suit le défilement lissé de
-// l'application Paramètres (motion.wheel), posé d'un coup en mouvement réduit.
+// groupes défile entre l'en-tête et la bascule, en haut, et le pied, en bas, qui restent fixes ; la molette suit le
+// défilement lissé de l'application Paramètres (motion.wheel), posé d'un coup en mouvement réduit.
 // « Tout effacer » écarte les groupes en cascade, du haut vers le bas, à panneau.cascade ms l'un de l'autre.
 // Curseur : le panneau déclare l'arbitre dnVue (VueCurseur) : une seule plaque à la fois, sur la ligne, l'action ou la
 // bascule que la souris ou le clavier désigne en dernier ; aucun anneau de focus.
@@ -27,17 +27,17 @@ import "garde.js" as Garde
 // montrées, Entrée l'ouvre, Suppr l'écarte (l'entrée courante passe alors à la suivante). Tab va de la bascule à la
 // liste, puis à « Tout effacer », puis aux réglages.
 // Entrées : attente, l'Attente ; hauteurMax, posée par la fenêtre (infinie par défaut).
-// Sorties : implicitHeight ; vide ; effacable, vrai quand « Tout effacer » est offert ; texteEtat, l'état de « ne
-// pas déranger » ; groupes, les entrées rangées par application, sortantes comprises ; deplies, identifiants des
-// groupes dépliés ; visibles, les entrées montrées dans l'ordre de l'écran ; courante, l'entrée courante au clavier ;
+// Sorties : implicitHeight ; vide ; effacable, vrai quand « Tout effacer » est offert ; texteEtat, l'état de « ne pas
+// déranger » ; groupes, les entrées rangées par application, sortantes comprises ; deplies, identifiants des groupes
+// dépliés ; visibles, les entrées montrées dans l'ordre de l'écran ; courante, l'entrée courante au clavier ;
 // lienReglages, la rangée « Réglages des notifications… » ; signal fermer(), la demande de fermeture du panneau ;
-// clavier, vrai tant que la liste a le focus ; defilable ; pret, vrai une fois le panneau monté (les lignes et
-// groupes qui naissent ensuite se déplient) ; bascule, effacer (« Tout effacer ») et groupesVus (le Repeater des groupes), lus par les essais. Fonctions : deplier, effacerGroupe,
-// nePlusGarder, toutEffacer, reglages, touche, releve.
+// clavier, vrai tant que la liste a le focus ; defilable ; pret, vrai une fois le panneau monté (les lignes et groupes
+// qui naissent ensuite se déplient) ; bascule, effacer (« Tout effacer ») et groupesVus (le Repeater des groupes), lus
+// par les essais. Fonctions : deplier, effacerGroupe, nePlusGarder, toutEffacer, reglages, touche, releve.
 // Erreurs : aucune ; sans jetons chargés, les cotes sont nulles.
 // Dépendances : Quickshell (ScriptModel), GroupeAttente, Bascule, ZoneCurseur, Bouton, VueCurseur, Rangee, Separateur,
-// Texte, Icone, Ressort, garde.js, EtatNotifications, EtatParametres, Attente, Theme (panneau, notifications, space, color, density, material,
-// motion.wheel).
+// Texte, Icone, Ressort, garde.js, EtatNotifications, EtatParametres, Attente, Theme (panneau, notifications, space,
+// color, density, material, motion.wheel).
 FocusScope {
     id: panneau
 

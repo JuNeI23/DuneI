@@ -66,6 +66,19 @@ ShellRoot {
         // Erreurs : aucune. Dépendances : carte.
         function survoler(v: bool): void { carte.entree.survolee = v }
 
+        // curseurAction — pose le curseur de la carte sur une de ses actions, comme le survol, ou le lâche. Entrée : rang
+        // de l'action, -1 pour lâcher. Sortie : aucune. Erreurs : TypeError au journal sans cette action.
+        // Dépendances : carte (dnVue, boutonsRendus).
+        function curseurAction(rang: int): void {
+            if (rang < 0) carte.dnVue.porteur = null; else carte.dnVue.prendre(carte.boutonsRendus()[rang])
+        }
+
+        // actionsCouleurs — JSON [{sous, fond}] des boutons d'action : vrai sous le curseur, fond affiché. Entrées :
+        // aucune. Sortie : texte. Erreurs : aucune. Dépendances : carte (boutonsRendus).
+        function actionsCouleurs(): string {
+            return JSON.stringify(carte.boutonsRendus().map(b => ({sous: b.etat.sousCurseur, fond: String(b.background.color)})))
+        }
+
         // etat — « source=…;titre=<couleur>;actions=<n>;libelles=a|b;rendus=a|b;visibles=…;mouvement=…;largeur=…;hauteur=…;
         // lignesCorps=…;app=…;heure=HH:mm ». Entrées : aucune. Sortie : texte. Erreurs : aucune.
         // Dépendances : carte.

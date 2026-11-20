@@ -7,25 +7,25 @@ import "../Parametres"
 import "../Reseau"
 
 // PageNotifications — page Notifications de l'application Paramètres (L2-67).
-// Rôle : de haut en bas, la carte d'en-tête (EnTetePage : vignette, « Notifications », phrase d'état « Actives » ou
-// « Ne pas déranger », et l'Interrupteur, à droite, comme celui du Wi-Fi), dont l'interrupteur suit le sens de la
-// bascule du panneau : allumé, les notifications sont actives ; éteint, « ne pas déranger » (D184). Il est d'accord
-// avec la bascule et le clic droit sur la cloche, puisque tous lisent et écrivent EtatNotifications. Puis la carte
-// « Son » (L2-68) : la rangée « Activé », avec son Interrupteur, et la rangée « Volume », un Curseur de 0 à 100 % au pas
-// de 5 et sa valeur ; la rangée de volume se replie au ressort « reveal » quand le son est coupé. Le volume est écrit
-// à chaque pas ; l'aperçu (l'Arrivée au nouveau volume) part une seule fois par geste : au relâchement d'un
-// glissement, ou à chaque pas fait au clavier, jamais pendant un glissement. Puis la carte « Applications retirées »,
-// une rangée par application retirée du panneau (« Ne plus garder »), avec « Remettre » en bouton plat (texte neutre, plaque sous le curseur), ou,
-// sans application, la ligne « Aucune application retirée ». Remettre une application ne fait pas revenir ses
-// notifications passées. Une rangée qui paraît ou part se déplie ou se replie au ressort « reveal ».
+// Rôle : de haut en bas, la carte d'en-tête (EnTetePage : vignette, « Notifications », phrase d'état « Actives » ou «
+// Ne pas déranger », et l'Interrupteur, à droite, comme celui du Wi-Fi), dont l'interrupteur suit le sens de la bascule
+// du panneau : allumé, les notifications sont actives ; éteint, « ne pas déranger » (D184). Il est d'accord avec la
+// bascule et le clic droit sur la cloche, puisque tous lisent et écrivent EtatNotifications. Puis la carte « Son »
+// (L2-68) : la rangée « Activé », avec son Interrupteur, et la rangée « Volume », un Curseur de 0 à 100 % au pas de 5
+// et sa valeur ; la rangée de volume se replie au ressort « reveal » quand le son est coupé. Le volume est écrit à
+// chaque pas ; l'aperçu (l'Arrivée au nouveau volume) part une seule fois par geste : au relâchement d'un glissement,
+// ou à chaque pas fait au clavier, jamais pendant un glissement. Puis la carte « Applications retirées », une rangée
+// par application retirée du panneau (« Ne plus garder »), avec « Remettre » en bouton plat (texte neutre, plaque sous
+// le curseur), ou, sans application, la ligne « Aucune application retirée ». Remettre une application ne fait pas
+// revenir ses notifications passées. Une rangée qui paraît ou part se déplie ou se replie au ressort « reveal ».
 // Le nom montré d'une application est celui de son entrée de bureau (DesktopEntries) quand l'identifiant en désigne
 // une, l'identifiant lui-même sinon.
 // Contrat de page (voir ConteneurPage) : conteneur, atteindre, implicitHeight.
 // Entrées : conteneur, le ConteneurPage, posé par lui ;
 // voix, la lecture des aperçus (Voix par défaut, un témoin dans l'essai).
 // Sorties : phrase, l'état des notifications ; vide, vrai sans application retirée ; interrupteur, enTete,
-// interrupteurSon, curseurVolume, rangeeVolume et carteSon, lus par les essais. Fonctions : atteindre, remettre, rangees, boutonsRemettre, nom,
-// deplacer, relacher.
+// interrupteurSon, curseurVolume, rangeeVolume et carteSon, lus par les essais. Fonctions : atteindre, remettre,
+// rangees, boutonsRemettre, nom, deplacer, relacher.
 // Erreurs : aucune.
 // Dépendances : Quickshell (DesktopEntries, ScriptModel), EnTetePage, TitreSection, Registre (Parametres) ; Groupe,
 // Ligne (Reseau) ; Bouton, Interrupteur, Curseur, Texte, Ressort ; EtatNotifications, Voix.
