@@ -44,7 +44,7 @@ Chacun a son test dans la tâche 1 ou 2.
 
 ---
 
-### Tâche 1 : arbitre du curseur et `Etat`
+### Task 1 — arbitre du curseur et `Etat`
 
 **Fichiers :**
 - Créer : `coque/Composants/VueCurseur.qml`
@@ -79,7 +79,7 @@ Chacun a son test dans la tâche 1 ou 2.
 - [ ] **Étape 4 :** mêmes tests, puis `python -m unittest tests.test_coque_composants` → tout passe.
 - [ ] **Étape 5 :** commit « Composants : un seul curseur par vue, arbitré par VueCurseur (L2-73) ».
 
-### Tâche 2 : plaque partagée, `Liste` et `Rangee`
+### Task 2 — plaque partagée, `Liste` et `Rangee`
 
 **Fichiers :**
 - Déplacer : `coque/Lanceur/Plaque.qml` → `coque/Composants/Plaque.qml` (le lanceur l'importe de `Composants` ;
@@ -111,7 +111,7 @@ Chacun a son test dans la tâche 1 ou 2.
 - [ ] **Étape 4 :** `python -m unittest tests.test_coque_composants tests.test_lanceur` → tout passe.
 - [ ] **Étape 5 :** commit « Composants : la plaque du lanceur sert à toutes les listes, le survol déplace la rangée courante (L2-73) ».
 
-### Tâche 3 : boutons, onglets, contrôles sans anneau
+### Task 3 — boutons, onglets, contrôles sans anneau
 
 **Fichiers :** `coque/Composants/Bouton.qml`, `Onglet.qml`, `Onglets.qml`, `ReglageLigne.qml`, `Depliable.qml`,
 `Jauge.qml`, `Curseur.qml`, `Compteur.qml`, `Case.qml`, `Radio.qml`, `Bascule.qml`, `Interrupteur.qml` ;
@@ -141,7 +141,7 @@ localement). Test : `tests/test_coque_composants.py`.
 - [ ] **Étape 4 :** `python -m unittest tests.test_coque_composants` → tout passe.
 - [ ] **Étape 5 :** commit « Composants : boutons, onglets et réglages portent le curseur par la plaque, anneau retiré (L2-73) ».
 
-### Tâche 4 : Réseau
+### Task 4 — Réseau
 
 **Fichiers :** `coque/Reseau/BlocSecret.qml:47`, `ReglagesReseau.qml:215,232-237`, `FicheNouveau.qml:132`,
 `PopoverReseau.qml:391`, `DepliantReseau.qml:108-109`, `PageVpn.qml:113`, `PageWifi.qml:369-375`,
@@ -157,7 +157,7 @@ localement). Test : `tests/test_coque_composants.py`.
   nécessaire : plaque neutre, glyphe accent ; `Ligne` passe par `Etat.suitCurseur`, sans contour).
 - [ ] **Étape 4 :** tests Réseau → passent. **Étape 5 :** commit « Réseau : accents hors curseur retirés, Oublier en rouge (L2-73) ».
 
-### Tâche 5 : Notifications
+### Task 5 — Notifications
 
 **Fichiers :** `coque/Notifications/Panneau.qml:217,223`, `GroupeAttente.qml:112,122`, `CorpsNotification.qml:220`,
 `PageNotifications.qml:188`, `LigneAttente.qml:49,78-85`. Racine de vue : le panneau. Test : module de test
@@ -169,7 +169,7 @@ Notifications existant.
 - [ ] **Étapes 2 à 4 :** échec, implémentation, succès.
 - [ ] **Étape 5 :** commit « Notifications : actions neutres au repos, effacements en rouge, un seul curseur (L2-73) ».
 
-### Tâche 6 : Paramètres
+### Task 6 — Paramètres
 
 **Fichiers :** `coque/Parametres/BarreLaterale.qml:94,136-138,156,173-183`, `ConteneurPage.qml:303-315`, racine de
 la fenêtre (`dnVue` unique pour barre latérale et page). Test : module de test Paramètres existant.
@@ -184,7 +184,7 @@ la fenêtre (`dnVue` unique pour barre latérale et page). Test : module de test
   soumettre à Nicolas à l'écran avant de la figer.
 - [ ] **Étape 4 :** succès. **Étape 5 :** commit « Paramètres : barre latérale sans ombre, un seul curseur par fenêtre (L2-73) ».
 
-### Tâche 7 : planche, documentation, recette
+### Task 7 — planche, documentation, recette
 
 **Fichiers :** `coque/outils/planche/PageComposants.qml`, `shell.qml` ; bible (L338, L343-345, L384, L910, L957 et
 annexe E : version et historique) ; `docs/journal-decisions.md` (D197 : une marque unique du curseur, la plaque, à la
