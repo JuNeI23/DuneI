@@ -216,6 +216,8 @@ class CoquilleTest(EssaiCoque, unittest.TestCase):
         e = self.ouvrir("wifi")
         ys = e["ys"]
         self.assertEqual([ys[1] - ys[0], ys[2] - ys[1]], [self.entree, self.entree])
+        # Sous charge, la plaque peut ne pas être encore posée au premier relevé : on attend sa première pose.
+        e = self.jusqua(lambda e: e["plaque"]["hauteur"] == self.entree, "plaque posée")
         self.assertEqual((e["plaque"]["y"], e["plaque"]["hauteur"], e["gras"]), (ys[0], self.entree, "Wi-Fi"))
         self.ipc("parametres", "ouvrir", "vpn")
         # La plaque vise aussitôt la nouvelle entrée, puis la rejoint par son ressort.
