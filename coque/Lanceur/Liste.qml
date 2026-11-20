@@ -11,12 +11,13 @@ import "lanceur.js" as Logique
 // fenêtre rangée sous son application est en retrait, à plus petite icône. Le calcul se lit « expression = valeur ».
 // La plaque d'accent glisse sous la ligne retenue (sel.rang), qui reste visible (la vue défile au besoin) ; les lignes
 // entrent en cascade à chaque nouvelle liste ; un clic choisit la ligne et l'exécute. Quand le curseur du clavier est
-// dans l'aperçu (actif faux), la plaque passe au ton discret color.accentDiscret et le texte de la ligne revient à ses
-// couleurs normales, au ressort des états ; tout revient à l'accent quand le curseur revient dans la liste.
+// dans l'aperçu (actif faux), l'accent n'appartient plus à la ligne : la plaque passe au fond neutre du survol
+// (états surfaceRaised, sans sélection, survol), qui dit seulement quelle ligne est prévisualisée, et le texte revient
+// à ses couleurs normales, au ressort des états ; l'accent revient quand le curseur revient dans la liste.
 // Entrées : resultats (Lanceur.resultats) ; rang, la ligne retenue (Lanceur.sel.rang) ; saisie (Lanceur.saisie).
 // Sorties : aucune ; le pointeur appelle Lanceur.choisir. Erreurs : aucune ; une liste vide ne montre rien.
 // Dépendances : Lanceur (cotes, icone, choisir, sel), lanceur.js (surligner, expressionLisible), Plaque, Cascade, C.Icone, C.Texte,
-// ColorSpring, Quickshell.Widgets (IconImage), Theme (space, typo, color, radius, icons).
+// ColorSpring, Quickshell.Widgets (IconImage), Theme (space, typo, color, radius, icons, stateColors).
 // Cotes : retrait des lignes space.scale[2] (12), fenêtre rangée à space.scale[5] (32, maquette 28) ; icône de
 // icons.sizes.comfortable (24, maquette 26), de icons.sizes.default (20) en retrait ; titre à l'échelon 2 (13) en
 // graisse moyenne ; type à l'échelon 1 (12) ; plaque aux coins radius.panel (10).
@@ -52,7 +53,7 @@ ListView {
         z: -1
         cible: liste.count > 0 ? Qt.rect(0, liste.originY + liste.rang * liste.ligne, liste.width, liste.ligne) : Qt.rect(0, 0, 0, 0)
         rayon: Theme.radius?.panel ?? 0
-        teinte: (liste.actif ? Theme.color?.accent : Theme.color?.accentDiscret) ?? "transparent"
+        teinte: (liste.actif ? Theme.color?.accent : Theme.stateColors("surfaceRaised", "none", "hover")?.fill) ?? "transparent"
     }
 
     // reperes — géométrie de la plaque et de la ligne retenue dans un repère commun, pour les essais.

@@ -10,9 +10,10 @@ import "../Theme"
 // Quickshell 0.3.2) ; un captureFrame() appelé plus tôt, même au tour de boucle suivant l'affichage, ne fait
 // qu'écrire « no recording context is ready » au journal, et n'est donc pas appelé. Tant que l'image n'est pas là, ou
 // pour une fenêtre sans Toplevel (fenêtre disparue, fausse fenêtre des essais), une fenêtre schématique la remplace :
-// un fond color.surfaceWindow sous une barre color.surfacePanel à trois points. Survolée, la vignette se soulève et s'entoure
-// d'accent ; choisie au clavier, elle grandit à l'échelle galerie.echelle (comme la tuile choisie de l'accueil) et
-// s'entoure du même anneau d'accent, au ressort des états ; un clic amène sa fenêtre.
+// un fond color.surfaceWindow sous une barre color.surfacePanel à trois points. Survolée, la vignette se soulève seulement (comme
+// une tuile de l'accueil) ; choisie au clavier, elle grandit à l'échelle galerie.echelle (comme la tuile choisie de
+// l'accueil) et s'entoure d'un anneau d'accent, au ressort des états : l'accent n'appartient qu'à l'élément sous le
+// curseur du clavier. Un clic amène sa fenêtre.
 // Entrées : adresse, adresse Hyprland de la fenêtre ; choisie, vrai quand le curseur du clavier est dessus.
 // Sorties : capturee, vrai une fois l'image reçue ; activee(), émis au clic. Erreurs : aucune.
 // Dépendances : Quickshell.Wayland (ScreencopyView), Quickshell.Hyprland (toplevels),
@@ -36,8 +37,8 @@ Item {
     Ressort { id: survol; transition: "state"; cible: pointeur.hovered ? 1 : 0 }
     // Mise en avant de la vignette choisie au clavier : l'échelle des vignettes choisies (galerie.echelle).
     Ressort { id: grandeur; transition: "state"; cible: vignette.choisie ? Theme.galerie?.echelle ?? 1 : 1 }
-    // Fondu de l'anneau du survol et du choix : les ressorts de déplacement ci-dessus ne portent pas d'opacité.
-    Ressort { id: anneau; transition: "state"; nature: "fondu"; cible: pointeur.hovered || vignette.choisie ? 1 : 0 }
+    // Fondu de l'anneau du choix : les ressorts de déplacement ci-dessus ne portent pas d'opacité.
+    Ressort { id: anneau; transition: "state"; nature: "fondu"; cible: vignette.choisie ? 1 : 0 }
 
     Rectangle {
         id: fond
@@ -82,7 +83,7 @@ Item {
         }
     }
 
-    // Anneau d'accent du survol et du choix, au-dessus de l'image.
+    // Anneau d'accent du choix au clavier, au-dessus de l'image.
     Rectangle {
         anchors.fill: parent
         anchors.margins: -2

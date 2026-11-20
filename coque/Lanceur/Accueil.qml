@@ -6,13 +6,14 @@ import "../Composants"
 // Rôle : « Fréquentes », une rangée de six tuiles au plus, réparties sur toute la largeur, chacune un médaillon au
 // relief « Doux » (icône de l'application en couleur), son nom et, si l'application a une fenêtre ouverte, un point
 // d'accent ; puis « Suggestions », les puces des commandes. Les tuiles, puis les titres et les puces, entrent en
-// cascade. La tuile choisie (zone « medaillons » de la sélection) grandit à l'échelle galerie.echelle, la mise en avant
-// des vignettes choisies, et son médaillon passe à l'accent (Medaillon actif), au ressort des états ; son nom passe du
-// texte secondaire au texte principal. La plaque d'accent ne dit plus que la puce choisie (zone « puces ») et y glisse
-// au ressort. Un clic choisit et exécute. Une tuile survolée se soulève un peu.
+// cascade. Médaillons et puces montrent le curseur de la même façon, sur l'élément lui-même : la tuile choisie (zone
+// « medaillons » de la sélection) grandit à l'échelle galerie.echelle, la mise en avant des éléments choisis, et son
+// médaillon passe à l'accent (Medaillon actif), au ressort des états, son nom passant du texte secondaire au texte
+// principal ; la puce choisie (zone « puces ») prend de même le fond d'accent et grandit (Puce choisie). Aucune plaque
+// ne glisse entre elles. Un clic choisit et exécute. Une tuile survolée se soulève un peu.
 // Entrées : donnees, {medaillons, puces} (Lanceur.accueil par défaut) ; sel, la sélection (Lanceur.sel).
 // Sorties : aucune ; un clic appelle Lanceur.choisir. Erreurs : aucune ; un accueil vide ne montre que ses titres.
-// Dépendances : Lanceur (accueil, sel, cotes, icone, choisir), Medaillon, Texte, Puce, Plaque, Cascade, Ressort,
+// Dépendances : Lanceur (accueil, sel, cotes, icone, choisir), Medaillon, Texte, Puce, Cascade, Ressort,
 // ColorSpring, Theme (space, reglages, radius, color, motion, galerie).
 // Cotes : retrait reglages.pageMargin (20, maquette 22 en haut) ; tuile de cotes.tuile (92) de côté, médaillon de
 // cotes.medaillonAccueil (60), nom à l'échelon 1 (12) ; point de space.scale[0] (4) ; puces espacées de
@@ -26,16 +27,6 @@ Item {
     readonly property real tuile: Lanceur.cotes.tuile
     readonly property real ecart: n > 1 ? (rangee.width - n * tuile) / (n - 1) : 0
     readonly property real marge: Theme.reglages?.pageMargin ?? 0
-
-    // Plaque d'accent sous la puce choisie, dans le repère de l'accueil (sans les glissés de cascade).
-    Plaque {
-        // itemAt n'est pas une liaison : count est lu pour réévaluer quand les puces arrivent.
-        readonly property Item puceChoisie: accueil.sel.zone === "puces" && puces.count ? puces.itemAt(accueil.sel.index) : null
-        cible: puceChoisie ? Qt.rect(colonne.x + flux.x + puceChoisie.x, colonne.y + flux.y + puceChoisie.y,
-                                     puceChoisie.width, puceChoisie.height)
-             : Qt.rect(0, 0, 0, 0)
-        rayon: cible.height / 2
-    }
 
     Column {
         id: colonne

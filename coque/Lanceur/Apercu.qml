@@ -13,19 +13,19 @@ import "lanceur.js" as Logique
 //   - calcul : « expression = », la valeur en très grand corps, Copier, le tout centré ;
 //   - aucun résultat : « Aucun résultat », sobre.
 // Les boutons (Puce) portent l'action principale, puis les secondaires. Le clavier y voit une grille dans l'ordre
-// visuel : la rangée des vignettes au-dessus, celle des boutons au pied (lanceur.js, deplacer). Une plaque d'accent
-// unique se tient sous un bouton : sous le bouton principal tant que la sélection est dans la liste, sous le bouton du
-// curseur dès qu'elle entre dans l'aperçu ; seul ce bouton porte le rappel ↵ (« Nouvelle fenêtre » porte toujours
-// « Ctrl ↵ », son raccourci depuis la liste), les autres restent neutres. Une vignette choisie grandit et s'entoure
-// d'accent (Vignette.choisie) ; la plaque s'efface alors en fondu, sur place. Pendant une confirmation, elle prend
-// color.error et le bouton principal dit « Confirmer ». Le contenu rejoue son entrée en cascade quand la ligne
-// retenue change.
+// visuel : la rangée des vignettes au-dessus, celle des boutons au pied (lanceur.js, deplacer). L'accent n'appartient
+// qu'à l'élément sous le curseur : tant que le curseur est dans la liste, tous les boutons sont neutres, et le bouton
+// principal porte seulement le rappel ↵ en texte secondaire, pour dire ce que fait Entrée ; dès que le curseur entre
+// dans l'aperçu, seul l'élément sous lui prend l'accent (Puce choisie, Vignette choisie) et porte ↵. « Nouvelle
+// fenêtre » porte toujours « Ctrl ↵ », son raccourci depuis la liste. Pendant une confirmation, le bouton principal dit
+// « Confirmer » sur le fond color.error (Puce danger), où que soit le curseur. Le contenu rejoue son entrée en cascade
+// quand la ligne // retenue change.
 // Entrées : resultat (Lanceur.choisi) ; sel (Lanceur.sel) ; libellePrincipal (Lanceur.libellePrincipal) ;
 // Lanceur.confirmation et Lanceur.saisie (pour l'expression du calcul) sont lus directement.
 // Sorties : vignettes, le nombre de vignettes affichées ; rejouer(), émis quand la ligne retenue change.
 // Erreurs : aucune ; une fenêtre disparue retire sa vignette avec le résultat qui la portait.
 // Dépendances : Lanceur (choisi, sel, cotes, icone, fenetreDe, choisir, libellePrincipal, confirmation), Medaillon,
-// Texte, Puce, Plaque, Vignette, Cascade, lanceur.js (expressionLisible), Theme (space, reglages, typo, color, radius).
+// Texte, Puce, Vignette, Cascade, lanceur.js (expressionLisible), Theme (space, reglages, typo, color, radius).
 // Cotes : retrait reglages.pageMargin (20, maquette 20 × 26) ; écart vertical space.scale[2] (12, maquette 14) ;
 // médaillon de cotes.medaillonApercu (64) ; titre à l'échelon 5 (22) en graisse moyenne ; valeur du calcul au corps
 // cotes.resultat (64) ; expression à l'échelon 4 (18) ; légendes à l'échelon 0 (11) ; vignettes en 16 / 10.
@@ -44,33 +44,16 @@ Item {
     readonly property real marge: Theme.reglages?.pageMargin ?? 0
     readonly property real ecart: Theme.space?.scale[2] ?? 0
     readonly property bool grande: genre === "fenetre"
-    // Bouton du curseur : celui de la sélection dans la rangée des boutons, le principal hors de l'aperçu, -1 quand
-    // une vignette est choisie. La plaque garde le dernier bouton choisi (boutonPlaque) pour s'effacer sur place.
-    readonly property int boutonChoisi: sel.zone !== "apercu" ? 0 : sel.rangee === "boutons" ? sel.index : -1
-    readonly property int vignetteChoisie: sel.zone === "apercu" && sel.rangee === "vignettes" ? sel.index : -1
-    property int boutonPlaque: 0
-    onBoutonChoisiChanged: if (boutonChoisi >= 0) boutonPlaque = boutonChoisi
+    // Curseur dans l'aperçu : bouton ou vignette sous lui (-1 pour la rangée qui ne l'a pas, ou hors de l'aperçu).
+    readonly property bool dansApercu: sel.zone === "apercu"
+    readonly property int boutonChoisi: dansApercu && sel.rangee === "boutons" ? sel.index : -1
+    readonly property int vignetteChoisie: dansApercu && sel.rangee === "vignettes" ? sel.index : -1
     signal rejouer()
 
     // onCleChanged — rejoue l'entrée quand la ligne retenue change. Entrées : aucune. Sortie : rejouer().
     // Erreurs : aucune. Dépendances : resultat.cle.
     readonly property string cle: resultat?.cle ?? ""
     onCleChanged: rejouer()
-
-    // Plaque d'accent, sous le bouton du curseur ; effacée en fondu, sur place, quand une vignette est choisie.
-    Ressort { id: plaqueVue; transition: "state"; nature: "fondu"; cible: apercu.boutonChoisi >= 0 ? 1 : 0 }
-    Plaque {
-        // itemAt n'est pas une liaison : count est lu pour réévaluer quand les boutons arrivent.
-        readonly property Item bouton: boutonsRepeteur.count && apercu.boutonPlaque < boutonsRepeteur.count
-            ? boutonsRepeteur.itemAt(apercu.boutonPlaque) : null
-        cible: bouton ? Qt.rect(actions.x + bouton.x, actions.y + bouton.y, bouton.width, bouton.height) : Qt.rect(0, 0, 0, 0)
-        rayon: cible.height / 2
-        opacity: plaqueVue.value
-        readonly property bool confirme: Lanceur.confirmation && apercu.boutonPlaque === 0
-        teinte: (confirme ? Theme.color?.error : Theme.color?.accent) ?? "transparent"
-        // Aucun rôle d'erreur discret n'existe : une confirmation prend color.error pour halo aussi.
-        halo: (confirme ? Theme.color?.error : Theme.color?.accentDiscret) ?? "transparent"
-    }
 
     // En-tête : médaillon, titre et sous-titre (tous les genres sauf le calcul et l'absence de résultat).
     Row {
@@ -229,8 +212,9 @@ Item {
                 icone: apercu.genre === "calcul" && index === 0 ? "edit-copy" : ""
                 texteRappel: nouvelle ? "Ctrl ↵" : "↵"
                 reserveRappel: true
-                rappel: nouvelle || index === apercu.boutonChoisi
+                rappel: nouvelle || (apercu.dansApercu ? index === apercu.boutonChoisi : index === 0)
                 choisie: index === apercu.boutonChoisi
+                danger: index === 0 && Lanceur.confirmation
                 onActivee: Lanceur.choisir("apercu", index, "boutons")
             }
         }
