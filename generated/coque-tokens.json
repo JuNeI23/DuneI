@@ -109,7 +109,8 @@
     "pageRise": 6,
     "thumbLarge": 44,
     "sparklineWidth": 92,
-    "sparklineHeight": 30
+    "sparklineHeight": 30,
+    "evidence": 0.32
   },
   "breakpoints": {
     "compact": 480,

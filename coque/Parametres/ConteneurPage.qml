@@ -28,7 +28,7 @@ import "../Composants"
 // construites ; enEvidence, l'élément mis en évidence, null sinon. Fonctions : pousser, revenir, montrer, cran.
 // Erreurs : aucune ; une page dont le fichier ne charge pas laisse son emplacement vide, l'erreur de Qt au journal.
 // Dépendances : Registre, EtatParametres (page, chemin), Ressort, Bouton, Theme (motion.wheel, motion.delays, space,
-// focus, radius, mouvementReduit), QtQuick (Flickable, WheelHandler, NumberAnimation).
+// color.accentDiscret, reglages.evidence, radius, mouvementReduit), QtQuick (Flickable, WheelHandler, NumberAnimation).
 // Cotes : pages en retrait de reglages.pageMargin ; rangée de retour séparée de sa sous-page de space.scale[1] ; la
 // page entrante monte de reglages.pageRise.
 // Relief : dnRelief, vrai, que les cartes et les médaillons des pages héritent pour prendre le relief « Doux ».
@@ -300,18 +300,19 @@ Item {
                 }
             }
 
-            // Cadre de mise en évidence : le contour de focus, autour de l'élément montré, en fondu.
+            // Mise en évidence : un voile color.accentDiscret sur le cadre de l'élément atteint, sans contour ni ombre,
+            // qui paraît puis s'éteint en fondu jusqu'à l'opacité reglages.evidence au plus : posé au-dessus de la page,
+            // il laisse lire le réglage, et ne reprend ni l'aplat ni la teinte de la plaque du curseur. Il reste sur le
+            // dernier cadre pendant son extinction.
             Rectangle {
                 x: conteneur.cadre.x
                 y: conteneur.cadre.y
                 width: conteneur.cadre.width
                 height: conteneur.cadre.height
                 visible: opacity > 0
-                opacity: evidence.value
+                opacity: evidence.value * (Theme.reglages?.evidence ?? 0)
                 radius: Theme.radius?.control ?? 0
-                color: "transparent"
-                border.width: Theme.focus?.width ?? 0
-                border.color: Theme.focus?.color ?? "transparent"
+                color: Theme.color?.accentDiscret ?? "transparent"
             }
         }
     }
