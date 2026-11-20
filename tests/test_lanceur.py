@@ -813,6 +813,27 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
         self.assertIn("essai : calque retiré", lignes[i + 1] if i + 1 < len(lignes) else "", lignes[i - 2:])
         self.assertFalse(self.etat()["differee"])
 
+    def test_reouverture_annule_l_action(self):
+        """Vérifie qu'une réouverture pendant la sortie annule l'action qui attendait le retrait du calque : Entrée
+        sur « Galerie » ferme le lanceur et met l'action en attente ; rouvert aussitôt, il n'a plus d'action en attente,
+        et rien n'est exécuté, ni au retrait d'un calque ni à la garde d'une seconde.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion ; test sauté si le calque a été retiré avant la
+        réouverture (session trop lente pour le scénario). Dépendances : ouvrir, taper, touche, lanceur, etat, journal.
+        """
+        self.ouvrir()
+        self.taper("galerie")
+        self.assertEqual(self.etat()["cles"][0], "cmd:galerie")
+        self.touche("return")
+        self.lanceur("ouvrir")
+        e = self.etat()
+        if "essai : exécuté" in self.journal():
+            self.skipTest("calque retiré avant la réouverture : le scénario n'a pas pu être joué")
+        self.assertEqual((e["ouvert"], e["sortant"], e["differee"]), (True, False, False))
+        time.sleep(1.3)
+        self.assertNotIn("essai : exécuté", self.journal())
+        self.assertTrue(self.etat()["ouvert"])
+
     def test_ferme_libere(self):
         """Vérifie qu'après fermeture la fenêtre du lanceur n'existe plus (LazyLoader), et qu'elle se reconstruit à la
         réouverture sur l'accueil, saisie vide.
@@ -959,9 +980,35 @@ class ClavierTest(FenetreTest):
         r = reperes()
         self.assertEqual((r["pleine"], r["surAccent"]), (True, True))
 
+    def test_confirmation_sur_une_puce(self):
+        """Vérifie qu'une confirmation armée sur une puce de l'accueil se voit : « Éteindre », placée en tête des
+        suggestions par un faux poids d'usage, est choisie par ↓ puis Entrée ; rien n'est exécuté, la puce passe en
+        danger et dit « Confirmer » ; ↑ annule et lui rend son libellé neutre. Le second Entrée n'est jamais pressé.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : lanceur, injecter, cle, etat,
+        essai_ipc, jusqua, journal.
+        """
+        self.injecter(poids={"cmd:eteindre": 5})
+        self.lanceur("ouvrir")
+        self.jusqua(lambda: self.etat()["ouvert"], "lanceur ouvert")
+        self.assertEqual(self.etat()["puces"][0], "cmd:eteindre")
+        puce = lambda: json.loads(self.essai_ipc("puce") or "null")
+        self.cle("down")
+        self.assertEqual(self.etat()["sel"]["zone"], "puces")
+        self.assertEqual(puce(), {"texte": "Éteindre", "danger": False})
+        self.cle("return")
+        time.sleep(0.3)
+        e = self.etat()
+        self.assertEqual((e["ouvert"], e["confirmation"]), (True, True))
+        self.assertEqual(puce(), {"texte": "Confirmer", "danger": True})
+        self.assertNotIn("essai : exécuté", self.journal())
+        self.cle("up", "down")
+        self.assertEqual((self.etat()["confirmation"], puce()), (False, {"texte": "Éteindre", "danger": False}))
+        self.assertNotIn("essai : exécuté", self.journal())
+
     test_ouvre_sur_accueil = test_premiere_lettre_scinde = test_effacer_revient_a_l_accueil = test_aucun_resultat = None
     test_tab_entre_dans_l_apercu = test_confirmation_eteindre = test_fenetre_disparue = test_ferme_libere = None
-    test_action_apres_retrait_du_calque = None
+    test_action_apres_retrait_du_calque = test_reouverture_annule_l_action = None
 
 
 class CommandesTest(unittest.TestCase):

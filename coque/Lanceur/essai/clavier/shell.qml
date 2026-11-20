@@ -12,7 +12,7 @@ import "Lanceur"
 // calque) et y presse de vraies touches de Qt par un TestCase de QtTest (keyClick) : l'évènement suit le chemin réel,
 // du champ (Keys.onPressed) à la Recherche, jusqu'à Lanceur.touche. Aucun clavier de la session n'est jamais pris.
 // tests/test_lanceur.py (ClavierTest) la pilote.
-// Entrées : DUNEI_TOKENS_DIR et DUNEI_ETAT_DIR ; IPC « essai » : injecter, cle, focus, reperes,
+// Entrées : DUNEI_TOKENS_DIR et DUNEI_ETAT_DIR ; IPC « essai » : injecter, cle, focus, reperes, puce,
 // capturer. Sorties : « essai : prêt » au
 // démarrage ; « essai : exécuté <genre> <cible> » à chaque action. Erreurs : celles de Theme, dans le journal.
 // Dépendances : quickshell ≥ 0.3 (IpcHandler, FloatingWindow), QtTest (TestCase), Lanceur, CadreLanceur, Theme ; liens
@@ -62,6 +62,11 @@ ShellRoot {
             const c = charge.item, r = c?.reperes() ?? null
             return JSON.stringify(r ? Object.assign({ largeur: c.width }, r) : null)
         }
+
+        // puce — libellé et état de danger de la puce de l'accueil sous le curseur (voir Accueil.puceChoisie).
+        // Entrées : aucune. Sortie : objet JSON {texte, danger} ; « null » lanceur fermé ou curseur hors des puces.
+        // Erreurs : aucune. Dépendances : charge (CadreLanceur.accueil).
+        function puce(): string { return JSON.stringify(charge.item?.accueil.puceChoisie() ?? null) }
 
         // capturer — enregistre l'image du cadre hors écran, pour comparer le rendu à la maquette sans rien montrer.
         // Entrée : chemin, fichier PNG. Sortie : aucune ; « essai : capturé » au journal une fois l'image écrite.

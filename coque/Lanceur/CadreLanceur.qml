@@ -13,7 +13,8 @@ import "../Composants" as C
 // Lanceur.touche ; le reste de la frappe va au champ, qui écrit Lanceur.saisie.
 // Entrées : depart, distance en pixels sous sa place d'où le cadre monte (0 par défaut) ; montee, de 0 à 1, la part
 // faite de cette montée (1 par défaut) : translation pure, sans échelle ni opacité (le fondu est celui du compositeur).
-// Sorties : vignettes, le nombre de vignettes de l'aperçu ; champ, la Recherche (lue par les essais) ; reperes().
+// Sorties : vignettes, le nombre de vignettes de l'aperçu ; champ, la Recherche, et accueil, l'Accueil (lus par les
+// essais) ; reperes().
 // Erreurs : aucune ; avant le chargement des tokens, le verre reste transparent.
 // Dépendances : Lanceur, Accueil, Liste, Apercu, Ressort, C.Surface, C.OmbreElevation, C.Recherche, C.Texte, Theme
 // (material, radius, space, typo, color, icons, police).
@@ -31,6 +32,7 @@ Item {
     readonly property bool scinde: Lanceur.vue === "scission"
     readonly property int vignettes: apercu.vignettes
     readonly property alias champ: champ
+    readonly property alias accueil: accueil
 
     width: largeur.value
     height: hauteur.value
@@ -110,6 +112,7 @@ Item {
             clip: true
 
             Accueil {
+                id: accueil
                 width: cotes.accueil.width
                 height: parent.height
                 anchors.horizontalCenter: parent.horizontalCenter

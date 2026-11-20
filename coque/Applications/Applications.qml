@@ -7,9 +7,8 @@ import "applications.js" as Logique
 // Applications — trouver, amener ou lancer une application (L2-69).
 // Rôle : relie la logique pure d'applications.js aux entrées de bureau de Quickshell (DesktopEntries, qui exclut déjà
 // les entrées NoDisplay) et aux fenêtres de Hyprland. Les notifications s'en servent pour leur « Ouvrir » propre ;
-// le lanceur (L2-16) appellera amenerOuLancer directement.
-// Entrées : aucune. Sorties : aucune. Fonctions : resoudre, toplevels, amenerOuLancer,
-// lancerAction.
+// le lanceur (L2-16) emploie toplevels, amenerOuLancer et lancerAction.
+// Entrées : aucune. Sorties : aucune. Fonctions : resoudre, toplevels, amenerOuLancer, lancerAction.
 // Erreurs : aucune ; une application introuvable n'est ni amenée ni lancée.
 // Dépendances : Quickshell (Singleton, DesktopEntries, execDetached), Quickshell.Hyprland (Hyprland.toplevels,
 // Hyprland.dispatch), applications.js, uwsm à l'exécution.

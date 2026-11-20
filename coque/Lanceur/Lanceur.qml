@@ -27,10 +27,11 @@ import "../Applications/applications.js" as Apps
 //           aucune fenêtre n'est construite (coque d'essai hors écran, qui pose elle-même un CadreLanceur).
 //           IPC « lanceur » : basculer, ouvrir, fermer, etat, taper, touche.
 // Sorties : present (ouvert, ou fenêtre encore en sortie), sortant, differee (l'action en attente du retrait du
-//           calque, ou null), vue (« accueil » ou « scission »), accueil ({medaillons, puces}), resultats (classés), sel ({zone, rang,
-//           index}, forme de lanceur.js deplacer), choisi (le résultat de la ligne retenue), elements (ceux de son
-//           aperçu), confirmation, libellePrincipal, ecran (figé à l'ouverture), fenetre (la FenetreLanceur ouverte,
-//           ou null), cotes (mesures de la maquette v3 rapportées aux jetons), famille.
+//           calque, ou null), vue (« accueil » ou « scission »), accueil ({medaillons, puces}), resultats (classés),
+//           sel ({zone, rang, index, rangee}, forme de lanceur.js deplacer ; rangee pour l'aperçu seulement),
+//           choisi (le résultat de la ligne retenue), elements (ceux de son aperçu), confirmation, libellePrincipal,
+//           ecran (figé à l'ouverture), fenetre (la FenetreLanceur ouverte, ou null), cotes (mesures de la maquette
+//           v3 rapportées aux jetons), famille.
 // Erreurs : aucune ; une fenêtre qui ne peut être construite est journalisée et le lanceur se referme ; une action
 //           inconnue ne fait que fermer.
 // Dépendances : Quickshell (Singleton, LazyLoader, execDetached, clipboardText, iconPath), Quickshell.Io
@@ -211,13 +212,14 @@ Singleton {
         ouvert = false
     }
 
-    // realiserDifferee — exécute l'action en attente, une seule fois. Entrées : aucune. Sortie : aucune.
-    // Erreurs : aucune ; sans action en attente, rien. Dépendances : differee, realiser, garde.
+    // realiserDifferee — exécute l'action en attente, une seule fois, et jamais sous un lanceur ouvert.
+    // Entrées : aucune. Sortie : aucune. Erreurs : aucune ; sans action en attente, ou lanceur rouvert, rien.
+    // Dépendances : differee, realiser, garde, ouvert.
     function realiserDifferee() {
         const a = differee
         differee = null
         garde.stop()
-        if (a) realiser(a)
+        if (a && !ouvert) realiser(a)
     }
 
     // realiser — exécute une action. « nouvelle » lance toujours une nouvelle instance de l'entrée, sans amener.
@@ -251,15 +253,18 @@ Singleton {
     Timer { id: garde; interval: 1000; onTriggered: lanceur.realiserDifferee() }
 
     // onOuvertChanged — à l'ouverture, fige l'écran (sauf si la fenêtre, encore en sortie, est reprise sur le sien),
-    // repart d'une saisie vide sur l'accueil, relit les états des commandes et s'inscrit au registre des attentions ;
+    // annule l'action qui attendait le retrait du calque (rouvrir pendant la sortie, c'est changer d'avis), repart d'une
+    // saisie vide sur l'accueil, relit les états des commandes et s'inscrit au registre des attentions ;
     // à la fermeture, s'en retire et laisse la fenêtre jouer son fondu de sortie (sortant) : la saisie n'est vidée qu'à
     // la fin de celui-ci (sortieFinie), sans quoi le cadre repasserait à l'accueil en s'effaçant ; sans fenêtre
     // (fenetree faux), la saisie est vidée aussitôt. Entrées : aucune. Sortie : aucune. Erreurs : aucune.
-    // Dépendances : ecranFocalise, sources.rafraichir, Overlays, fenetre.
+    // Dépendances : ecranFocalise, sources.rafraichir, Overlays, fenetre, differee, garde.
     onOuvertChanged: {
         if (ouvert) {
             if (!sortant) ecran = ecranFocalise
             sortant = false
+            differee = null
+            garde.stop()
             saisie = ""
             sel = { zone: "medaillons", rang: 0, index: 0 }
             confirmation = false

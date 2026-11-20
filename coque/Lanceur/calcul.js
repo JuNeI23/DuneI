@@ -14,8 +14,8 @@ const DUREES = ["h", "min", "s", "j", "jour", "jours", "heure", "heures", "secon
 // Entrée : saisie, chaîne. Sortie : vrai si elle contient un chiffre et commence (espaces écartés) par un chiffre,
 // une parenthèse, un signe, un séparateur décimal ou une monnaie (€ $ £). Sans chiffre, qalc invente des résultats
 // (« kitty » donne « 0 t² ») ; un nom d'application (« python3 », « 7zip ») ou une commande de qalc (« exit 1 »,
-// qui le tuerait) ne part jamais ;
-// un mot unique à lettres, sans espace ni opérateur (« 7zip »), est un nom, pas un calcul.
+// qui le tuerait) ne part jamais : un mot unique à lettres, sans espace ni opérateur (« 7zip »), est un nom, pas un
+// calcul.
 // Erreurs : aucune. Dépendances : aucune.
 function aEnvoyer(saisie) {
     const s = (saisie || "").trim()

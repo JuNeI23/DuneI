@@ -17,9 +17,9 @@ import "lanceur.js" as Logique
 // qu'à l'élément sous le curseur : tant que le curseur est dans la liste, tous les boutons sont neutres, et le bouton
 // principal porte seulement le rappel ↵ en texte secondaire, pour dire ce que fait Entrée ; dès que le curseur entre
 // dans l'aperçu, seul l'élément sous lui prend l'accent (Puce choisie, Vignette choisie) et porte ↵. « Nouvelle
-// fenêtre » porte toujours « Ctrl ↵ », son raccourci depuis la liste. Pendant une confirmation, le bouton principal dit
-// « Confirmer » sur le fond color.error (Puce danger), où que soit le curseur. Le contenu rejoue son entrée en cascade
-// quand la ligne // retenue change.
+// fenêtre » porte « Ctrl ↵ », son raccourci depuis la liste, sauf sous le curseur, où Entrée suffit et seul ↵
+// s'affiche. Pendant une confirmation, le bouton principal dit « Confirmer » sur le fond color.error (Puce danger),
+// où que soit le curseur. Le contenu rejoue son entrée en cascade quand la ligne retenue change.
 // Entrées : resultat (Lanceur.choisi) ; sel (Lanceur.sel) ; libellePrincipal (Lanceur.libellePrincipal) ;
 // Lanceur.confirmation et Lanceur.saisie (pour l'expression du calcul) sont lus directement.
 // Sorties : vignettes, le nombre de vignettes affichées ; rejouer(), émis quand la ligne retenue change.
@@ -210,7 +210,7 @@ Item {
                 readonly property bool nouvelle: action?.genre === "nouvelle"
                 texte: index === 0 ? Lanceur.libellePrincipal : action?.libelle ?? ""
                 icone: apercu.genre === "calcul" && index === 0 ? "edit-copy" : ""
-                texteRappel: nouvelle ? "Ctrl ↵" : "↵"
+                texteRappel: nouvelle && index !== apercu.boutonChoisi ? "Ctrl ↵" : "↵"
                 reserveRappel: true
                 rappel: nouvelle || (apercu.dansApercu ? index === apercu.boutonChoisi : index === 0)
                 choisie: index === apercu.boutonChoisi

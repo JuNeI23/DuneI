@@ -10,10 +10,14 @@ import "../Composants"
 // « medaillons » de la sélection) grandit à l'échelle galerie.echelle, la mise en avant des éléments choisis, et son
 // médaillon passe à l'accent (Medaillon actif), au ressort des états, son nom passant du texte secondaire au texte
 // principal ; la puce choisie (zone « puces ») prend de même le fond d'accent et grandit (Puce choisie). Aucune plaque
-// ne glisse entre elles. Un clic choisit et exécute. Une tuile survolée se soulève un peu.
-// Entrées : donnees, {medaillons, puces} (Lanceur.accueil par défaut) ; sel, la sélection (Lanceur.sel).
-// Sorties : aucune ; un clic appelle Lanceur.choisir. Erreurs : aucune ; un accueil vide ne montre que ses titres.
-// Dépendances : Lanceur (accueil, sel, cotes, icone, choisir), Medaillon, Texte, Puce, Cascade, Ressort,
+// ne glisse entre elles. Pendant une confirmation (« Éteindre », « Redémarrer »), la puce choisie dit « Confirmer » sur
+// le fond color.error (Puce danger), comme le bouton principal de l'aperçu. Un clic choisit et exécute. Une tuile
+// survolée se soulève un peu.
+// Entrées : donnees, {medaillons, puces} (Lanceur.accueil par défaut) ; sel, la sélection (Lanceur.sel) ;
+// Lanceur.confirmation, lu directement.
+// Sorties : puceChoisie(), lue par les essais ; un clic appelle Lanceur.choisir. Erreurs : aucune ; un accueil vide
+// ne montre que ses titres.
+// Dépendances : Lanceur (accueil, sel, cotes, icone, choisir, confirmation), Medaillon, Texte, Puce, Cascade, Ressort,
 // ColorSpring, Theme (space, reglages, radius, color, motion, galerie).
 // Cotes : retrait reglages.pageMargin (20, maquette 22 en haut) ; tuile de cotes.tuile (92) de côté, médaillon de
 // cotes.medaillonAccueil (60), nom à l'échelon 1 (12) ; point de space.scale[0] (4) ; puces espacées de
@@ -27,6 +31,14 @@ Item {
     readonly property real tuile: Lanceur.cotes.tuile
     readonly property real ecart: n > 1 ? (rangee.width - n * tuile) / (n - 1) : 0
     readonly property real marge: Theme.reglages?.pageMargin ?? 0
+
+    // puceChoisie — libellé et état de danger de la puce sous le curseur (lue par les essais).
+    // Entrées : aucune. Sortie : {texte, danger}, ou null hors de la zone « puces ». Erreurs : aucune.
+    // Dépendances : puces (Repeater), sel.
+    function puceChoisie() {
+        const p = sel.zone === "puces" ? puces.itemAt(sel.index) : null
+        return p ? { texte: p.texte, danger: p.danger } : null
+    }
 
     Column {
         id: colonne
@@ -138,9 +150,12 @@ Item {
                     id: p
                     required property int index
                     readonly property var modelData: accueil.donnees.puces[index] ?? ({})
-                    texte: modelData.titre
-                    icone: modelData.icone
+                    texte: confirmee ? "Confirmer" : modelData.titre ?? ""
+                    icone: modelData.icone ?? ""
                     choisie: accueil.sel.zone === "puces" && accueil.sel.index === index
+                    // Confirmation armée sur cette puce : fond color.error au ressort des couleurs (Puce danger).
+                    readonly property bool confirmee: choisie && Lanceur.confirmation
+                    danger: confirmee
                     opacity: entreePuce.value
                     transform: Translate { y: (1 - entreePuce.value) * (Theme.space?.scale[1] ?? 0) }
                     onActivee: Lanceur.choisir("puces", index)
