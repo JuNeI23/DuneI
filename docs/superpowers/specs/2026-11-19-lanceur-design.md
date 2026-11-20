@@ -1,6 +1,6 @@
 # Lanceur d'applications (L2-16) — fiche
 
-Version 1.1 — 2026-11-19 · validée
+Version 1.2 — 2026-11-20 · faite
 
 ## Intention
 
@@ -76,7 +76,7 @@ durées. Nicolas a choisi **b** pour les conversions.
 
 - `qs ipc -c dunei call lanceur basculer` ouvre ou ferme le lanceur ; le rôle `lanceur` de
   `config/hypr/donnees/roles.lua` l'appelle à la place de `wofi --show drun`, et `SUPER + R` le garde. wofi quitte
-  `paquets.toml` s'il n'y sert plus à rien d'autre.
+  `paquets.toml` s'il n'y sert plus à rien d'autre (fait : désinstallé et retiré du modèle).
 - Overlay d'attention : sur l'écran du moniteur focalisé, voile `material.shade`, clavier exclusif. Échap efface la
   saisie, puis ferme sur un champ vide. Un clic sur le voile ferme. Lancer, amener ou exécuter ferme le lanceur.
 - À l'ouverture, la saisie repart vide et l'accueil s'affiche.
@@ -200,6 +200,32 @@ d'une fenêtre ne sont capturées que si elles sont affichées.
   lanceur précisé dans L2-31).
 - Le carnet : l'installation de libqalculate, le retrait de wofi.
 
+### Décisions des recettes (v1.2)
+
+Trois recettes à l'écran, avec Nicolas, ont ajouté ce que la fiche ne pouvait pas savoir (journal D191 à D196) :
+
+- **Un seul curseur.** L'accent de sélection n'appartient qu'à l'élément sous le curseur, et une vue montre le curseur
+  d'une seule façon : médaillons et puces marqués pareil, boutons neutres sans curseur, ligne retenue en fond neutre
+  quand le curseur est dans l'aperçu. Les indicateurs (point d'une fenêtre ouverte, lettres trouvées) gardent leur
+  accent ; le rouge de confirmation reste. Cette règle vaut pour toute la coque (D191, bible 0.40). Elle corrige la
+  phrase « plaque unique d'accent » de « Forme et matière » : la plaque d'accent suit le curseur, rien d'autre.
+- **Fondu du compositeur.** Le calque `dunei-attention` reçoit le style `fade` ; le flou ne s'allume plus d'un bloc au
+  seuil `ignore_alpha` (D192).
+- **Entrée et sortie.** Le cadre entre par une translation depuis le bas de l'écran, au ressort `window` comme
+  Paramètres (D172), et sort en fondu sur place (D193).
+- **Focus.** Lancer, amener ou exécuter agit après le retrait du calque (`closelayer`), pour que la surface ouverte
+  garde le clavier (D194).
+- **Plaques sans ombre** (D195).
+- **Navigation spatiale de l'aperçu.** → depuis la liste entre dans l'aperçu, ← au bord le rend à la liste au ressort,
+  ↑ ↓ passent entre rangées ; Tab, Maj+Tab et Échap restent des retours (D196).
+- **« Nouvelle fenêtre ».** Bouton de l'aperçu pour toute application (action `new-window` déclarée, sinon relance) et
+  Ctrl+Entrée depuis la liste (D196).
+- **Dérogations de construction.** La saisie n'est envoyée à `qalc` que si elle commence par un chiffre, « ( », « - »,
+  « + », « . », « , » ou un symbole monétaire : « sqrt(2) » n'est pas calculé et « 10km » doit s'écrire « 10 km »
+  (D190). Le plafond de cascade est `motion.stagger_cap` (5), non 10.
+- **Nouvelles lignes de backlog.** Recherche de fichiers (L2-71), sélecteur d'émojis (L2-72), revue des autres modules
+  contre la règle du curseur (L2-73) ; L2-31 reste « hors du lanceur ».
+
 ## Laissé au constructeur
 
 - Le module `Lanceur` de la coque et le découpage des sources en fichiers, dans le style des modules existants ; la
@@ -219,3 +245,4 @@ d'une fenêtre ne sont capturées que si elles sont affichées.
 | --- | --- | --- |
 | 1.0 | 2026-11-19 | Première rédaction, après les maquettes v1 à v3 et les essais de `ScreencopyView` et de `qalc` |
 | 1.1 | 2026-11-19 | Relecture du constructeur : clavier de l'accueil et de l'aperçu, premier lancement, actions visées, confirmation ; validée |
+| 1.2 | 2026-11-20 | Faite : décisions des trois recettes (curseur unique, fondu du compositeur, montée au ressort `window`, focus après `closelayer`, plaques sans ombre, navigation spatiale, « Nouvelle fenêtre ») ; D190 à D196 |

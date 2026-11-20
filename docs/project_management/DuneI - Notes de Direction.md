@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas — révisée le 22 octobre 2026
 
-Version 1.54. Historique en fin de document.
+Version 1.55. Historique en fin de document.
 
 *Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent soixante-quinze lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
 
@@ -641,14 +641,26 @@ utilisée de l'application est amenée, bureau compris, ou l'application est lan
 perdu une notification d'un clic malencontreux : un clic sur la carte ouvre désormais l'application, et sans rien à
 ouvrir la notification passe au panneau au lieu d'être perdue. La croix de fermeture au survol devient L2-70.
 
-Prochaine étape : **le lanceur d'applications** (L2-16), qui reprend le module `coque/Applications`. Le reste de
-L2-48, L2-57 (suites du popover Bluetooth), L2-58, L2-59, L2-62 et L2-70 attendent leur tour.
+Le lanceur d'applications (L2-16) est fait et validé à l'écran en trois recettes (D190 à D196). `SUPER + R` ouvre le
+lanceur de la coque et non plus wofi, désinstallé : accueil de « Fréquentes » et de « Suggestions », scission
+liste-aperçu, fenêtres ouvertes comme actions, commandes DuneI, calculs et conversions par `qalc`, « Nouvelle fenêtre »
+pour toute application. Les recettes ont fixé une règle pour toute la coque : l'accent de sélection n'appartient qu'à
+l'élément sous le curseur, et une vue montre le curseur d'une seule façon (D191, bible 0.40) ; les autres modules ne
+l'ont pas encore subie, d'où L2-73. Le calque d'attention apparaît en fondu par le compositeur (D192), le cadre monte
+depuis le bas au ressort de Paramètres (D193), les actions partent après le retrait du calque (D194). La recherche de
+fichiers (L2-71) et le sélecteur d'émojis (L2-72) entrent au backlog, la recherche de fichiers n'ayant pas de lot.
+
+Prochaine étape : **L2-73, la revue des autres modules de la coque contre la règle du curseur**, courte et de grand
+effet sur la cohérence, puis **le sélecteur de fenêtres (L2-17)**, autre overlay d'attention qui hérite du voile, du
+fondu et de la montée du lanceur. Le reste de L2-48, L2-57 (suites du popover Bluetooth), L2-58, L2-59, L2-62 et L2-70
+attendent leur tour.
 
 ## Historique des versions
 
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-10 | Version initiale |
+| 1.55 | 2026-11-20 | L2-16 fait : lanceur de la coque, wofi retiré, règle du curseur de sélection pour toute la coque (D190 à D196) ; ajout de L2-71 à L2-73 ; prochaine étape : L2-73 puis L2-17 |
 | 1.54 | 2026-11-18 | L2-69 fait : « Ouvrir » propre à DuneI, clic sur la carte qui ouvre (D189) ; ajout de L2-70 ; prochaine étape : L2-16 |
 | 1.53 | 2026-11-17 | L2-68 fait : voix KDE Ocean et ses règles, carte « Son », repli d'un seul geste (D185 à D188) ; voix propre renvoyée au lot 5 (L5-31) ; prochaine étape : L2-69 |
 | 1.52 | 2026-11-17 | L2-67, retour après fusion : la bascule du panneau est allumée quand les notifications sont actives (D182), le panneau mène aux réglages (D183), la page suit le même sens (D184) ; principe du son de notification arrêté (L2-68) |

@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas
 
-Document normatif. Version 0.39. Historique en fin de document.
+Document normatif. Version 0.40. Historique en fin de document.
 
 ## Comment lire ce document
 
@@ -339,6 +339,10 @@ Ils ne sont **pas exclusifs** : une rangée peut être sélectionnée, survolée
 | **Sélectionné actif** | Fond d'accent, texte sur-accent, **icône en variante pleine**. |
 | **Sélectionné inactif** | Fond neutre, sans accent. Indispensable en tuilage : sans lui, cinq panneaux affichent cinq accents et plus rien n'indique où l'on tape. |
 | **Désactivé** | Chroma fortement réduit, luminosité rapprochée du fond, ombre supprimée. |
+
+### L'accent de sélection suit le curseur
+
+Règle de toute la coque, née du lanceur (D191) : **l'accent de sélection n'appartient qu'à l'élément sous le curseur**, et **une vue montre le curseur d'une seule façon**. Deux éléments de même nature (médaillons et puces, par exemple) se marquent pareil ; un bouton qui ne porte pas le curseur reste neutre, et la ligne retenue quand le curseur est ailleurs (dans un aperçu, dans un autre panneau) se montre en fond neutre, comme le « sélectionné inactif ». Les **indicateurs** ne sont pas des sélections et gardent leur accent : point d'une application dont une fenêtre est ouverte, lettres trouvées par une recherche. Le rouge de confirmation d'une action destructrice reste. Les plaques de sélection n'ont pas d'ombre (D195).
 
 ### Le cran des contrôles
 
@@ -940,7 +944,7 @@ Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si 
 
 | Composant | Famille | Élév. | Primitives | Transition | Règles particulières |
 | --- | --- | --- | --- | --- | --- |
-| Lanceur | attention | E3 | `overlay` + `field` + `row` | `overlay` | Voile 0.55 + flou instantané. Focus clavier dès l'ouverture |
+| Lanceur | attention | E3 | `overlay` + `field` + `row` | `overlay` | Voile 0.55 + flou instantané, apparu en fondu par le compositeur (D192). Focus clavier dès l'ouverture. Le cadre monte depuis le bas au ressort `window`, sort en fondu sur place (D193). Un seul curseur, plaques sans ombre (D191, D195) |
 | Sélecteur de fenêtres | attention | E3 | `overlay` + `surface` | `overlay` | Vignettes : neutre pur, pas de teinte de thème |
 | Sélecteur de bureaux | attention | E3 | `overlay` + `row` | `overlay` | Chaque bureau porte une teinte de la palette catégorielle |
 | Menu de déconnexion | attention | E3 | `overlay` + `interactive` | `overlay` | Action destructrice en `error`, jamais en accent |
@@ -997,3 +1001,4 @@ Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si 
 | 0.37 | 2026-11-17 | Annexe E : cloche de la barre et sa pastille (nombre, boule `error`, rien sous « ne pas déranger ») ; presqu'île latérale du panneau des notifications, à libellé d'état unique (L2-67, D176 à D181) |
 | 0.38 | 2026-11-17 | Annexe E : la bascule du panneau des notifications est allumée quand elles sont actives, sous la cloche, et éteinte sous « ne pas déranger », sous la cloche barrée ; une bascule à glyphe dont le glyphe dit un état passe en fondu croisé (D182) ; le panneau prend un pied, « Réglages des notifications… » (D183). Chapitre 7 : la phrase d'état de la carte d'en-tête passe en fondu croisé ; la page Notifications porte son interrupteur dans l'en-tête, au sens du panneau (D184) |
 | 0.39 | 2026-11-17 | Annexe E : voix des notifications, deux sons KDE Ocean, quand ils sonnent, carte « Son » de Paramètres (L2-68, D185 à D187) ; section dépliable : un repli finit d'un seul geste, le contenu remonte sous la tête et le ressort se pose sous le seuil de repos (D188) |
+| 0.40 | 2026-11-20 | Règle générale « l'accent de sélection suit le curseur » (D191), ligne « Lanceur » de la couche 3 : fondu du compositeur, montée au ressort `window`, plaques sans ombre (L2-16, D190 à D196) |
