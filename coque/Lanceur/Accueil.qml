@@ -153,9 +153,11 @@ Item {
                     texte: confirmee ? "Confirmer" : modelData.titre ?? ""
                     icone: modelData.icone ?? ""
                     choisie: accueil.sel.zone === "puces" && accueil.sel.index === index
-                    // Confirmation armée sur cette puce : fond color.error au ressort des couleurs (Puce danger).
+                    // Confirmation armée sur cette puce : fond color.error au ressort des couleurs (Puce danger) et rappel ↵,
+                    // comme « Confirmer ↵ » de la fiche.
                     readonly property bool confirmee: choisie && Lanceur.confirmation
                     danger: confirmee
+                    rappel: confirmee
                     opacity: entreePuce.value
                     transform: Translate { y: (1 - entreePuce.value) * (Theme.space?.scale[1] ?? 0) }
                     onActivee: Lanceur.choisir("puces", index)
