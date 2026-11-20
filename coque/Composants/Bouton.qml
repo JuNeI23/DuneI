@@ -12,16 +12,19 @@ import "etats.js" as Etats
 // (color.accent et le sur-accent, ou l'accent sans chroma sous le modificateur inactive) ; aucun anneau de focus.
 // Hors du curseur, il reste neutre, bouton principal compris. Quand le thème donne un contour aux contrôles blancs
 // (controls.outline, au jour), le bouton hors du curseur en est cerné d'un filet d'un pixel physique, comme la case.
-// Un bouton destructeur (danger) actif écrit son texte et son icône en color.error, au repos comme sous le
-// curseur ; les jetons d'états n'ont pas de rôle d'erreur, si bien que son fond reste celui de son état.
+// Un bouton destructeur (danger) actif écrit son texte et son icône en color.error sur son fond neutre ; sous le
+// curseur, comme la puce danger du lanceur, il se remplit de color.error (pastilles.errorPressed pressé) et son texte
+// passe en color.onAccent : jamais de rouge sur la plaque orange. Ses couleurs passent par deux ColorSpring.
 // Entrées : text, clicked et le reste de l'API de T.AbstractButton ; icone, nom freedesktop facultatif, posé
 // avant le texte (seule, sans text, le bouton est réduit à son icône) ; principal, vrai pour le bouton par défaut
 // d'un dialogue, faux par défaut : il le désigne sans le peindre ; danger, vrai pour une action destructrice, faux
 // par défaut.
-// Sorties : etat, l'Etat du bouton (rôle, interaction, sélection, couleurs), lu par la planche et les essais.
+// Sorties : etat, l'Etat du bouton (rôle, interaction, sélection, couleurs), lu par la planche et les essais ;
+// rouge, vrai pour un bouton destructeur actif ; rougePlein, vrai quand il porte en plus le curseur.
 // Erreurs : aucune ; avant le chargement des tokens, les cotes sont nulles et les couleurs transparentes.
 // Dépendances : QtQuick.Templates, Quickshell (QsWindow : rapport de pixels, pour le filet), Theme (density,
-// radius, space, controls, hairline, color.error), etats.js (contoure), Etat, VueCurseur (par Etat), Texte, Icone.
+// radius, space, controls, hairline, color.error, color.onAccent, pastilles.errorPressed, ColorSpring), etats.js
+// (contoure), Etat, VueCurseur (par Etat), Texte, Icone.
 // Cotes : retrait horizontal space.scale[2] (12), écart entre l'icône et le texte space.scale[0] (4) ; icône de
 // icons.sizes.dense (16), plus petite que la taille par défaut, à côté du texte (conception, § 7.10, v0.7).
 T.AbstractButton {
@@ -51,9 +54,25 @@ T.AbstractButton {
         curseurAplat: true
     }
 
+    // Couleurs d'un bouton destructeur ; pour un bouton ordinaire, leur cible reste transparente et leurs ressorts ne
+    // démarrent jamais (sobriété, D80). Désactivé, le bouton destructeur reprend les couleurs de son état.
+    readonly property bool rouge: danger && enabled
+    readonly property bool rougePlein: rouge && etat.sousCurseur
+    ColorSpring {
+        id: fondDanger
+        target: (!bouton.danger ? "transparent" : bouton.rougePlein
+                 ? (bouton.down ? Theme.pastilles?.errorPressed : Theme.color?.error)
+                 : etat.couleurs?.fill) ?? "transparent"
+    }
+    ColorSpring {
+        id: encreDanger
+        target: (!bouton.danger ? "transparent" : bouton.rougePlein ? Theme.color?.onAccent
+                 : bouton.rouge ? Theme.color?.error : etat.couleurs?.text) ?? "transparent"
+    }
+
     background: Rectangle {
         radius: Theme.radius?.control ?? 0
-        color: etat.fond
+        color: bouton.danger ? fondDanger.value : etat.fond
         border.width: Theme.controls?.outline && Etats.contoure(etat.selection) ? Theme.hairline(QsWindow.window?.devicePixelRatio ?? 1) ?? 0 : 0
         border.color: Theme.controls?.outline ?? "transparent"
     }
@@ -65,7 +84,7 @@ T.AbstractButton {
 
         Row {
             id: rangee
-            readonly property color teinte: bouton.danger && bouton.enabled ? Theme.color?.error ?? "transparent" : etat.texte
+            readonly property color teinte: bouton.danger ? encreDanger.value : etat.texte
             anchors.centerIn: parent
             spacing: bouton.spacing
 

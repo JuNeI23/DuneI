@@ -451,13 +451,16 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(self.valeur("bouton"), "true none")
 
     def test_bouton_danger(self):
-        # Un bouton destructeur (danger) écrit son texte en color.error dès le repos, sans sélection ; un bouton
-        # ordinaire garde le texte de son état.
+        # Un bouton destructeur (danger) écrit son texte en color.error dès le repos, sans sélection, en fondu au
+        # ressort des états ; un bouton ordinaire garde le texte de son état.
         self.demarrer()
         erreur = self.tokens55()[0]["color"]["error"].lower()
         self.assertNotEqual(self.valeur("boutonTexte").lower(), erreur)
         self.ipc("boutonDanger", "true")
-        self.assertEqual(self.valeur("boutonTexte").lower(), erreur)
+        fin = time.monotonic() + DELAI  # la teinte rejoint sa cible au ressort des états
+        while (lu := self.valeur("boutonTexte").lower()) != erreur and time.monotonic() < fin:
+            time.sleep(0.05)
+        self.assertEqual(lu, erreur)
         self.assertEqual(self.valeur("bouton"), "false none")
 
     def test_coche_dessinee(self):
@@ -1675,6 +1678,49 @@ class CoqueClavierTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(self.valeur("curseurBoutons"), "active none A")
         self.ipc("survol", "B")
         self.assertEqual(self.valeur("curseurBoutons"), "inactive active B")
+
+    def test_bouton_danger_sous_le_curseur(self):
+        # Un bouton destructeur n'écrit jamais en rouge sur la plaque orange : au repos, texte color.error sur son fond
+        # neutre ; sous le curseur, fond color.error et texte color.onAccent, comme la puce danger du lanceur ; pressé
+        # sous le curseur, fond pastilles.errorPressed. Les couleurs rejoignent leur cible au ressort des états.
+        self.demarrer()
+        tokens = self.tokens55()[0]
+        erreur, sur = tokens["color"]["error"].lower(), tokens["color"]["onAccent"].lower()
+        presse = tokens["pastilles"]["errorPressed"].lower()
+        self.ipc("boutonDanger", "A", "true")
+        self.assertEqual(self.relire_si("A", lambda v: v[1] == erreur)[1], erreur)
+        self.ipc("survol", "A")
+        self.assertEqual(self.relire_si("A", lambda v: v[:2] == [erreur, sur])[:2], [erreur, sur])
+        self.ipc("appuyer", "A", "true")
+        self.assertEqual(self.relire_si("A", lambda v: v[0] == presse)[0], presse)
+        self.ipc("appuyer", "A", "false")
+
+    def test_pression_sous_le_curseur(self):
+        # Sous le curseur, le survol garde l'aplat du repos (active/rest), mais la pression n'est pas avalée : le
+        # bouton pressé vise le fond active/pressed, distinct du repos, puis revient au repos relâché.
+        self.demarrer()
+        actif = self.tokens55()[0]["states"]["surfacePanel"]["active"]
+        repos, presse = actif["rest"]["fill"].lower(), actif["pressed"]["fill"].lower()
+        self.assertNotEqual(presse, repos)
+        self.ipc("survol", "B")
+        self.assertEqual(self.valeur("boutonCouleurs", "B").lower().split()[2], repos)
+        self.ipc("appuyer", "B", "true")
+        self.assertEqual(self.valeur("boutonCouleurs", "B").lower().split()[2], presse)
+        self.ipc("appuyer", "B", "false")
+        self.assertEqual(self.valeur("boutonCouleurs", "B").lower().split()[2], repos)
+
+    def relire_si(self, nom: str, condition) -> list[str]:
+        """Relit les couleurs d'un bouton de la vue jusqu'à ce qu'elles remplissent une condition, pendant trois
+        secondes au plus, le temps que leurs ressorts rejoignent leur cible.
+
+        Entrées : nom — "A" ou "B" ; condition — fonction qui reçoit les champs lus, en minuscules, et rend vrai quand
+                  l'état visé est atteint.
+        Sortie : les derniers champs lus, que le test compare. Erreurs : celles de valeur. Dépendances : valeur.
+        """
+        fin = time.monotonic() + 3
+        while not condition(lu := self.valeur("boutonCouleurs", nom).lower().split()) and time.monotonic() < fin:
+            time.sleep(0.05)
+        return lu
 
     def test_attention_sans_fenetre(self):
         # Si la fenêtre d'attention ne peut se construire (ici, la plateforme offscreen n'a pas de PanelWindow),

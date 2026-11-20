@@ -31,9 +31,9 @@ import "etats.js" as Etats
 // groupe qui a le focus (l'accent, ou l'accent sans chroma sous inactive) sous le curseur, et hors du curseur une
 // sélection fournie (selectionne) reste toujours « inactive », jamais à l'accent (L2-73). Faux, la sélection suit
 // selectionne et focusDansGroupe comme avant, si bien que les contrôles allumés gardent leur accent ; curseurAplat,
-// faux par défaut : vrai, sous le curseur, les couleurs sont celles du repos, quels que soient le survol et la
-// pression, pour que la marque du curseur garde l'aplat unique de la plaque des listes (color.accent, ou l'accent
-// muet sous inactive).
+// faux par défaut : vrai, sous le curseur, les couleurs sont celles du repos au survol, pour que la marque du
+// curseur garde l'aplat unique de la plaque des listes (color.accent, ou l'accent muet sous inactive) ; la pression
+// garde ses couleurs (active/pressed), pour que le geste se lise.
 // Sorties : interaction, selection, inactif (clés des tokens) ; levee, vrai pour une sélection neutre (selectionNeutre)
 // peinte en controlRaised, hors du curseur ; vue, l'arbitre du curseur hérité (null sans suitCurseur ou sans vue) ;
 // sousCurseur, vrai quand le contrôle porte le curseur (toujours faux sans suitCurseur), pour un composant qui peint
@@ -69,7 +69,8 @@ Item {
         : Etats.selection(selectionne, focusDansGroupe, inactif)
     readonly property bool levee: selectionNeutre && selectionne && !sousCurseur
     readonly property var couleurs: levee ? Theme.stateColors("controlRaised", "none", "rest")
-        : Theme.stateColors(role, selection, curseurAplat && sousCurseur ? "rest" : interaction)
+        : Theme.stateColors(role, selection,
+                            curseurAplat && sousCurseur && interaction === "hover" ? "rest" : interaction)
     readonly property color fond: ressortFond.value
     readonly property color texte: ressortTexte.value
     readonly property color texteNeutre: Theme.stateColors(role, "none", interaction)?.text ?? "transparent"

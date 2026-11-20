@@ -43,7 +43,8 @@ import "Composants"
 // une rangée de chaque liste, « essai survolerOnglet » sur l'onglet « tokens » et « essai ongletActif <bool> » active
 // ou désactive l'onglet « composants », « essai survol <A|B|C|D|R|rang|aucun> » pose le pointeur sur le bouton A, B, la rangée C, D ou R, une rangée du menu ou ailleurs,
 // « essai curseurVisible <A|B|vue|menu> <bool> » montre ou cache l'un d'eux, leur vue ou le menu, « essai curseurAutreVue » leur donne un autre arbitre,
-// « essai curseurInactif <bool> » pose le modificateur inactive sur leur vue et « essai curseurSelectionne <bool> » sélectionne A, sans
+// « essai boutonDanger <A|B> <bool> » fait de l'un d'eux un bouton destructeur, « essai appuyer <A|B> <bool> » l'enfonce ou le relâche,
+// « essai boutonCouleurs <A|B> » journalise ses couleurs, « essai curseurInactif <bool> » pose le modificateur inactive sur leur vue et « essai curseurSelectionne <bool> » sélectionne A, sans
 // journaliser. Erreurs : celles de Theme et des liaisons, dans le
 // journal ; un nom de touche inconnu lève une TypeError.
 // Dépendances : quickshell ≥ 0.3 (FloatingWindow, LazyLoader, IpcHandler), QtTest (TestEvent), modules Theme
@@ -601,6 +602,32 @@ ShellRoot {
                 function appuyerBulle(): void {
                     clavier.mouseClick(boutonBulle, boutonBulle.width / 2, boutonBulle.height / 2, Qt.LeftButton,
                                        Qt.NoModifier, -1)
+                }
+
+                // boutonDanger — fait du bouton A ou B un bouton destructeur, ou un bouton ordinaire.
+                // Entrées : nom, "A" ou "B" ; valeur, nouvelle valeur de danger. Sortie : aucune.
+                // Erreurs : TypeError pour un nom inconnu. Dépendances : boutonA, boutonB.
+                function boutonDanger(nom: string, valeur: bool): void {
+                    ({ A: boutonA, B: boutonB })[nom].danger = valeur
+                }
+
+                // boutonCouleurs — journalise la couleur peinte du fond du bouton A ou B, celle de son texte, puis le
+                // fond visé par son Etat. Entrée : nom, "A" ou "B". Sortie : aucune ; « essai : boutonCouleurs <#fond>
+                // <#texte> <#fond d'état> ». Erreurs : TypeError pour un nom inconnu. Dépendances : boutonA, boutonB
+                // (le texte, second enfant de la rangée centrée de son contenu), journal.
+                function boutonCouleurs(nom: string): void {
+                    const b = ({ A: boutonA, B: boutonB })[nom]
+                    essai.journal("boutonCouleurs", [b.background.color, b.contentItem.children[0].children[1].color,
+                                                     b.etat.couleurs?.fill].join(" "))
+                }
+
+                // appuyer — enfonce ou relâche le bouton de la souris au centre du bouton A ou B.
+                // Entrées : nom, "A" ou "B" ; appui, vrai pour enfoncer, faux pour relâcher. Sortie : aucune.
+                // Erreurs : TypeError pour un nom inconnu. Dépendances : boutonA, boutonB, clavier (TestEvent).
+                function appuyer(nom: string, appui: bool): void {
+                    const b = ({ A: boutonA, B: boutonB })[nom]
+                    if (appui) clavier.mousePress(b, b.width / 2, b.height / 2, Qt.LeftButton, Qt.NoModifier, -1)
+                    else clavier.mouseRelease(b, b.width / 2, b.height / 2, Qt.LeftButton, Qt.NoModifier, -1)
                 }
 
                 // curseurBoutons — journalise la sélection de l'Etat des boutons A et B, puis le porteur du curseur
