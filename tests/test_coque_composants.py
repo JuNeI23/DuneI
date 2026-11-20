@@ -1612,6 +1612,48 @@ class CoqueClavierTest(EssaiCoque, unittest.TestCase):
                          [c["error"], c["borderDefault"], c["successPressed"]])
         self.ipc("appuyerPastille", "2", "false")
 
+    def test_curseur_unique(self):
+        # Une vue n'a qu'un curseur (L2-73) : le focus clavier le pose sur le bouton A, le survol de B le lui prend,
+        # et la souris qui quitte B le retire de la vue ; le focus clavier resté sur A n'y repose pas l'accent tant
+        # qu'on ne retape pas.
+        self.demarrer()
+        self.ipc("focaliser", "bulle")
+        self.ipc("touche", "tab")
+        self.assertEqual(self.valeur("curseurBoutons"), "active none A")
+        self.ipc("survol", "B")
+        self.assertEqual(self.valeur("curseurBoutons"), "none active B")
+        self.ipc("survol", "aucun")
+        self.assertEqual(self.valeur("curseurBoutons"), "none none aucun")
+
+    def test_curseur_oublie_a_la_fermeture(self):
+        # Le porteur rendu invisible (une vue qui se ferme) lâche le curseur, sans erreur au journal.
+        self.demarrer()
+        self.ipc("survol", "B")
+        self.assertEqual(self.valeur("curseurBoutons").split()[2], "B")
+        self.ipc("curseurVisible", "B", "false")
+        self.assertEqual(self.valeur("curseurBoutons").split()[2], "aucun")
+        for erreur in ERREURS + ("Cannot read property",):
+            with self.subTest(erreur=erreur):
+                self.assertNotIn(erreur, self.journal())
+
+    def test_curseur_inactif(self):
+        # Sous le modificateur inactive, le curseur prend l'accent sans chroma.
+        self.demarrer()
+        self.ipc("curseurInactif", "true")
+        self.ipc("survol", "A")
+        self.assertEqual(self.valeur("curseurBoutons"), "activeMuted none A")
+
+    def test_selection_hors_curseur_neutre(self):
+        # Hors du curseur, la sélection fournie d'un élément qui suit le curseur reste neutre (inactive), jamais à
+        # l'accent ; le curseur posé sur lui l'y met, et l'en retire en partant.
+        self.demarrer()
+        self.ipc("curseurSelectionne", "true")
+        self.assertEqual(self.valeur("curseurBoutons"), "inactive none aucun")
+        self.ipc("survol", "A")
+        self.assertEqual(self.valeur("curseurBoutons"), "active none A")
+        self.ipc("survol", "B")
+        self.assertEqual(self.valeur("curseurBoutons"), "inactive active B")
+
     def test_attention_sans_fenetre(self):
         # Si la fenêtre d'attention ne peut se construire (ici, la plateforme offscreen n'a pas de PanelWindow),
         # l'Overlay journalise l'échec et se referme, et le registre Overlays ne retient aucune attention fantôme.

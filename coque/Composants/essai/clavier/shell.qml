@@ -9,7 +9,7 @@ import "Composants"
 // Rôle : ouvre une FloatingWindow (un Bouton « avant », une barre Onglets avec les onglets « tokens » et « composants
 // », ce dernier coché, un Bouton « apres », un Champ, une Jauge, un Compteur, un Deroulant, des Pastilles, une
 // Recherche, une Depliable, une Bascule, une Activite, un Bouton « bulle » qui porte une Infobulle sans texte (jamais
-// de fenêtre), puis deux Liste côte à côte, un menu qui porte selectionSuitSurvol et un témoin qui ne le porte pas) et
+// de fenêtre), une vue munie d'un arbitre du curseur (VueCurseur) et de deux Bouton A et B qui le suivent, puis deux Liste côte à côte, un menu qui porte selectionSuitSurvol et un témoin qui ne le porte pas) et
 // y synthétise des touches et des mouvements du pointeur par le TestEvent de QtTest, pour que
 // tests/test_coque_composants.py éprouve ce que la coque sans fenêtre ne peut pas exécuter : le focus actif, la
 // tabulation, le clignotement du curseur, la mise en page de la barre (qui attend le polissage d'une fenêtre) et le
@@ -26,7 +26,7 @@ import "Composants"
 // <cursorFlashTime> », « essai : onglets <géométrie de la barre et de ses segments> », « essai : menu <rangée
 // courante du menu> <rangée courante du témoin> », « essai : ongletSurvole <interaction> <fond> » et « essai : jauge
 // <valeur> <anneau visible> », ainsi que contours, attention, anneauOnglets, compteur, deroulant, pastilles,
-// pastillesCouleurs, bascule, activite, materiauDpr, contextuel et ancrage (voir chaque fonction) ; « essai touche
+// pastillesCouleurs, bascule, activite, materiauDpr, contextuel, ancrage et curseurBoutons (voir chaque fonction) ; « essai touche
 // <tab|majtab|gauche|droite|haut|bas|espace|entree|echap> » frappe une touche, « essai activiteMarche <bool> » lance
 // ou arrête l'indicateur d'activité, « essai activiteCliches <dossier> <nombre> <pas> <affichage> <pause> » le
 // photographie à intervalle régulier, « essai molette <1|-1> » tourne la molette sur le compteur, « essai
@@ -41,7 +41,10 @@ import "Composants"
 // et « essai survolerMobile » créent, détruisent ou survolent la cible de l'infobulle mobile ; recherche, depliable,
 // bulle, survolerBulle et mobile journalisent (voir chaque fonction), « essai survoler <rang> » pose le pointeur sur
 // une rangée de chaque liste, « essai survolerOnglet » sur l'onglet « tokens » et « essai ongletActif <bool> » active
-// ou désactive l'onglet « composants », sans journaliser. Erreurs : celles de Theme et des liaisons, dans le
+// ou désactive l'onglet « composants », « essai survol <A|B|aucun> » pose le pointeur sur le bouton A, B ou ailleurs,
+// « essai curseurVisible <A|B> <bool> » montre ou cache l'un d'eux, « essai curseurInactif <bool> » pose le
+// modificateur inactive sur leur vue et « essai curseurSelectionne <bool> » fait de A le bouton principal, sans
+// journaliser. Erreurs : celles de Theme et des liaisons, dans le
 // journal ; un nom de touche inconnu lève une TypeError.
 // Dépendances : quickshell ≥ 0.3 (FloatingWindow, LazyLoader, IpcHandler), QtTest (TestEvent), modules Theme
 // et Composants. Import : les liens Theme -> ../Theme et Composants -> ../Composants les posent sous la racine de
@@ -146,6 +149,16 @@ ShellRoot {
                     objectName: "bulle"
                     text: "Bulle"
                     onClicked: clics++
+                }
+
+                // Vue munie d'un arbitre du curseur (VueCurseur), qui peut porter le modificateur inactive : deux
+                // boutons A et B, dont l'état suit le curseur, juste après le bouton « bulle » dans la tabulation.
+                Row {
+                    id: vueCurseur
+                    property VueCurseur dnVue: VueCurseur {}
+                    property bool dnInactive: false
+                    Bouton { id: boutonA; text: "A"; hoverEnabled: true; etat.suitCurseur: true }
+                    Bouton { id: boutonB; text: "B"; hoverEnabled: true; etat.suitCurseur: true }
                 }
 
                 Infobulle { id: infobulleEssai; cible: boutonBulle }
@@ -560,6 +573,42 @@ ShellRoot {
                 function appuyerBulle(): void {
                     clavier.mouseClick(boutonBulle, boutonBulle.width / 2, boutonBulle.height / 2, Qt.LeftButton,
                                        Qt.NoModifier, -1)
+                }
+
+                // curseurBoutons — journalise la sélection de l'Etat des boutons A et B, puis le porteur du curseur
+                // de leur vue. Entrées : aucune. Sortie : aucune ; « essai : curseurBoutons <sélection A> <sélection
+                // B> <A|B|aucun> ». Erreurs : aucune. Dépendances : boutonA, boutonB, vueCurseur, journal.
+                function curseurBoutons(): void {
+                    const p = vueCurseur.dnVue.porteur
+                    essai.journal("curseurBoutons", [boutonA.etat.selection, boutonB.etat.selection,
+                        p === boutonA ? "A" : p === boutonB ? "B" : "aucun"].join(" "))
+                }
+
+                // survol — pose le pointeur au centre du bouton A ou B, ou l'en retire en le posant sur la recherche.
+                // Entrée : nom, "A", "B" ou "aucun". Sortie : aucune. Erreurs : TypeError pour un nom inconnu.
+                // Dépendances : boutonA, boutonB, rechercheEssai, clavier (TestEvent).
+                function survol(nom: string): void {
+                    const c = ({ A: boutonA, B: boutonB, aucun: rechercheEssai })[nom]
+                    clavier.mouseMove(c, c.width / 2, c.height / 2, -1, Qt.NoButton, Qt.NoModifier)
+                }
+
+                // curseurVisible — montre ou cache le bouton A ou B, comme une vue qui se ferme.
+                // Entrées : nom, "A" ou "B" ; visible, vrai pour le montrer. Sortie : aucune.
+                // Erreurs : TypeError pour un nom inconnu. Dépendances : boutonA, boutonB.
+                function curseurVisible(nom: string, visible: bool): void {
+                    ({ A: boutonA, B: boutonB })[nom].visible = visible
+                }
+
+                // curseurInactif — pose ou retire le modificateur inactive sur la vue des boutons A et B.
+                // Entrée : valeur, nouveau dnInactive. Sortie : aucune. Erreurs : aucune. Dépendances : vueCurseur.
+                function curseurInactif(valeur: bool): void {
+                    vueCurseur.dnInactive = valeur
+                }
+
+                // curseurSelectionne — fait du bouton A le bouton principal, donc un élément sélectionné.
+                // Entrée : valeur, nouveau principal. Sortie : aucune. Erreurs : aucune. Dépendances : boutonA.
+                function curseurSelectionne(valeur: bool): void {
+                    boutonA.principal = valeur
                 }
 
                 // focus — journalise l'élément qui a le focus actif, l'onglet courant et la sélection des onglets.

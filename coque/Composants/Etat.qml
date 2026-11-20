@@ -24,15 +24,22 @@ import "etats.js" as Etats
 // fond la couleur d'état depuis sa propre teinte, sans passer par le noir ; fondSurvolTransparent, faux par défaut :
 // vrai, le survol (non sélectionné) fait de même, pour un élément qui ne se peint qu'à la pression (le segment d'une
 // barre d'onglets) et dont le ressort, resté sur le fond de survol opaque, le ferait apparaître au premier instant
-// de la pression.
+// de la pression ; suitCurseur, faux par défaut : vrai, l'état prend le curseur de sa vue (l'arbitre VueCurseur
+// hérité par dnVue) au survol et au focus clavier, et le lâche quand l'un ou l'autre cesse ou quand le contrôle
+// devient invisible ou est détruit ; sa sélection vaut alors celle d'un élément sélectionné dans un groupe qui a le
+// focus (l'accent, ou l'accent sans chroma sous inactive) sous le curseur, et hors du curseur une sélection fournie
+// (selectionne) reste toujours « inactive », jamais à l'accent (L2-73). Faux, la sélection suit selectionne et
+// focusDansGroupe comme avant, si bien que les contrôles allumés gardent leur accent.
 // Sorties : interaction, selection, inactif (clés des tokens) ; levee, vrai pour une sélection neutre (selectionNeutre)
-// peinte en controlRaised ; fond, texte, couleurs affichées ; texteNeutre, le
+// peinte en controlRaised, hors du curseur ; vue, l'arbitre du curseur hérité (null sans suitCurseur ou sans vue) ;
+// sousCurseur, vrai quand le contrôle porte le curseur (toujours faux sans suitCurseur), pour un composant qui peint
+// la marque du curseur ailleurs que sur ce fond ; fond, texte, couleurs affichées ; texteNeutre, le
 // texte du même rôle et de la même interaction sans sélection, sans ressort, pour un libellé posé à côté d'une
 // marque sélectionnable (case, radio, interrupteur, bascule) ou d'un en-tête sans fond (section dépliable).
 // Erreurs : aucune ; avant le chargement des tokens ou pour une combinaison absente, les couleurs restent
 // transparentes.
-// Dépendances : Theme (stateColors, motion), ColorSpring (module Theme), etats.js (herite, cran,
-// interaction, selection). Les deux ColorSpring sont les premiers enfants de l'élément, dans cet ordre (fond,
+// Dépendances : Theme (stateColors, motion), ColorSpring (module Theme), VueCurseur, etats.js (herite, cran,
+// interaction, selection, sousCurseur). Les deux ColorSpring sont les premiers enfants de l'élément, dans cet ordre (fond,
 // texte) : la coque d'essai les lit ainsi.
 Item {
     id: etat
@@ -46,12 +53,16 @@ Item {
     property bool fondReposTransparent: false
     property bool fondSurvolTransparent: false
     property bool selectionNeutre: false
+    property bool suitCurseur: false
     property string role: Etats.cran(Etats.herite(controle, "dnRole", "surfaceWindow"))
     readonly property bool inactif: Etats.herite(controle, "dnInactive", false)
     readonly property string interaction: forcer || Etats.interaction(controle)
-    readonly property string selection: selectionNeutre && selectionne ? "inactive"
+    readonly property VueCurseur vue: suitCurseur ? Etats.herite(controle, "dnVue", null) : null
+    readonly property bool sousCurseur: suitCurseur && Etats.sousCurseur(controle, vue)
+    readonly property string selection: sousCurseur ? Etats.selection(true, true, inactif)
+        : (suitCurseur || selectionNeutre) && selectionne ? "inactive"
         : Etats.selection(selectionne, focusDansGroupe, inactif)
-    readonly property bool levee: selectionNeutre && selectionne
+    readonly property bool levee: selectionNeutre && selectionne && !sousCurseur
     readonly property var couleurs: levee ? Theme.stateColors("controlRaised", "none", "rest")
         : Theme.stateColors(role, selection, interaction)
     readonly property color fond: ressortFond.value
@@ -72,5 +83,24 @@ Item {
     ColorSpring {
         id: ressortTexte
         target: etat.peintTexte ? (etat.couleurs?.text ?? "transparent") : "transparent"
+    }
+
+    // suivre — prend ou lâche le curseur de la vue pour le contrôle.
+    // Entrée : pris, vrai pour prendre le curseur, faux pour le lâcher. Sortie : aucune.
+    // Erreurs : aucune ; sans vue, rien. Dépendances : vue (VueCurseur), controle.
+    function suivre(pris: bool) {
+        if (vue) pris ? vue.prendre(controle) : vue.lacher(controle)
+    }
+
+    Component.onDestruction: suivre(false)
+
+    // Le survol et le focus clavier du contrôle déplacent le curseur de la vue ; un contrôle caché le lâche. Un
+    // contrôle simulé sans visualFocus n'émet pas ce signal, d'où ignoreUnknownSignals.
+    Connections {
+        target: etat.vue ? etat.controle : null
+        ignoreUnknownSignals: true
+        function onHoveredChanged() { etat.suivre(etat.controle.hovered) }
+        function onVisualFocusChanged() { etat.suivre(etat.controle.visualFocus) }
+        function onVisibleChanged() { if (!etat.controle.visible) etat.suivre(false) }
     }
 }
