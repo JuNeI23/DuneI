@@ -25,8 +25,9 @@ import "etats.js" as Etats
 // vrai, le survol (non sélectionné) fait de même, pour un élément qui ne se peint qu'à la pression (le segment d'une
 // barre d'onglets) et dont le ressort, resté sur le fond de survol opaque, le ferait apparaître au premier instant
 // de la pression ; suitCurseur, faux par défaut : vrai, l'état prend le curseur de sa vue (l'arbitre VueCurseur
-// hérité par dnVue) au survol et au focus clavier, et le lâche quand l'un ou l'autre cesse ou quand le contrôle
-// devient invisible ou est détruit ; sa sélection vaut alors celle d'un élément sélectionné dans un groupe qui a le
+// hérité par dnVue) au survol et au focus clavier, ou dès sa création, son changement de vue ou son retour à la
+// visibilité s'il est déjà survolé ou focalisé, et le lâche quand l'un ou l'autre cesse ou quand le contrôle
+// devient invisible (par un ancêtre compris) ou est détruit ; sa sélection vaut alors celle d'un élément sélectionné dans un groupe qui a le
 // focus (l'accent, ou l'accent sans chroma sous inactive) sous le curseur, et hors du curseur une sélection fournie
 // (selectionne) reste toujours « inactive », jamais à l'accent (L2-73). Faux, la sélection suit selectionne et
 // focusDansGroupe comme avant, si bien que les contrôles allumés gardent leur accent.
@@ -92,15 +93,29 @@ Item {
         if (vue) pris ? vue.prendre(controle) : vue.lacher(controle)
     }
 
-    Component.onDestruction: suivre(false)
+    // synchroniser — aligne le curseur sur l'état présent du contrôle : un contrôle visible déjà survolé ou focalisé
+    // au clavier le prend, tout autre le lâche. Sert quand aucun signal de survol ni de focus ne viendra : à la
+    // création, au changement de vue et au retour à la visibilité (un contrôle qui paraît sous le pointeur immobile).
+    // Entrées : aucune. Sortie : aucune. Erreurs : aucune ; sans vue, rien. Un contrôle simulé sans visualFocus
+    // compte comme sans focus. Dépendances : suivre, controle (visible, hovered, visualFocus).
+    function synchroniser() {
+        suivre(controle.visible && (controle.hovered || controle.visualFocus === true))
+    }
 
-    // Le survol et le focus clavier du contrôle déplacent le curseur de la vue ; un contrôle caché le lâche. Un
-    // contrôle simulé sans visualFocus n'émet pas ce signal, d'où ignoreUnknownSignals.
+    Component.onCompleted: synchroniser()
+    Component.onDestruction: suivre(false)
+    onVueChanged: synchroniser()
+
+    // Le survol et le focus clavier du contrôle déplacent le curseur de la vue ; un contrôle caché, lui-même ou par un
+    // ancêtre (visible suit la visibilité effective), le lâche, et il le reprend en reparaissant survolé. Le pointeur
+    // qui quitte un contrôle lui retire le curseur même si le focus clavier y reste : c'est voulu, le dernier mouvement
+    // place le curseur, et la vue n'en montre aucun jusqu'au prochain geste. Un contrôle simulé sans visualFocus
+    // n'émet pas ce signal, d'où ignoreUnknownSignals.
     Connections {
         target: etat.vue ? etat.controle : null
         ignoreUnknownSignals: true
         function onHoveredChanged() { etat.suivre(etat.controle.hovered) }
         function onVisualFocusChanged() { etat.suivre(etat.controle.visualFocus) }
-        function onVisibleChanged() { if (!etat.controle.visible) etat.suivre(false) }
+        function onVisibleChanged() { etat.synchroniser() }
     }
 }

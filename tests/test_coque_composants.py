@@ -355,9 +355,10 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
         # Sélection fournie par l'appelant : la rangée 0 seule, quel que soit currentIndex.
         self.ipc("selectionLibre")
         self.assertEqual(self.valeur("liste"), "-1 inactive none none")
-        # Sous le modificateur inactive, la sélection prend l'accent sans chroma.
+        # Sous le modificateur inactive, la sélection hors du curseur reste neutre (L2-73) : l'accent sans chroma
+        # n'appartient qu'au curseur.
         self.ipc("inactif", "true")
-        self.assertEqual(self.valeur("liste"), "-1 activeMuted none none")
+        self.assertEqual(self.valeur("liste"), "-1 inactive none none")
 
     def test_liste_de_navigation(self):
         # Colonne de navigation : la rangée sélectionnée ne prend jamais l'accent (clé « inactive », même sous le
@@ -386,21 +387,16 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
 
     def test_rangee(self):
         # La rangée prend le rôle de son conteneur (surfacePanel, sans cran), la hauteur density.rowHeight et la
-        # largeur de la liste (200). Sa pastille de sélection, au rayon radius.control, est en retrait de
-        # space.scale[0] de chaque bord de la liste et garde toute la hauteur. Le contour de focus suit le même
-        # rectangle arrondi, rentré de -focus.rowOffset pixel (rayon diminué d'autant), à l'épaisseur et à la
-        # couleur de focus ; il reste masqué tant que la liste n'a pas le focus clavier (sans fenêtre, il ne paraît
-        # jamais ici : son affichage se vérifie à l'écran). Sous le modificateur inactive, il passe en
-        # focus.colorMuted.
+        # largeur de la liste (200). Sa pastille, au rayon radius.control, est en retrait de space.scale[0] de chaque
+        # bord de la liste et garde toute la hauteur, sans contour de focus (L2-73). La plaque de la liste se pose
+        # sous la rangée courante sur ce même rectangle arrondi ; sans curseur dans la liste, elle prend le fond
+        # neutre controlRaised.
         self.demarrer()
         tokens = self.tokens55()[0]
-        focus, h = tokens["focus"], tokens["density"]["comfortable"]["rowHeight"]
-        d, r, rayon = -focus["rowOffset"], tokens["space"]["scale"][0], tokens["radius"]["control"]
-        attendu = (f"surfacePanel {h} 200 | {r} {200 - 2 * r} {h} {rayon} | {r + d} {d} {200 - 2 * r - 2 * d} "
-                   f"{h - 2 * d} {rayon - d} {focus['width']} {focus['color']} false")
+        h, r, rayon = tokens["density"]["comfortable"]["rowHeight"], tokens["space"]["scale"][0], tokens["radius"]["control"]
+        neutre = tokens["states"]["controlRaised"]["none"]["rest"]["fill"]
+        attendu = (f"surfacePanel {h} 200 | {r} {200 - 2 * r} {h} {rayon} | {r} 0 {200 - 2 * r} {h} {rayon} {neutre} | 0")
         self.assertEqual(self.valeur("rangee").lower(), attendu.lower())
-        self.ipc("inactif", "true")
-        self.assertIn(focus["colorMuted"].lower(), self.valeur("rangee").lower())
 
     def test_rangee_pleine(self):
         # Posée pleine, la rangée demande à son icône la variante pleine ; par défaut, l'icône est de fer.
@@ -426,16 +422,10 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
 
     def test_rangee_transparente_au_repos(self):
         # Défaut relevé à l'écran : sur le verre d'un menu, chaque rangée au repos peignait la couleur opaque de sa
-        # surface et formait une plaque distincte. Ni survolée, ni pressée, ni sélectionnée, la pastille est
-        # transparente, désactivée comprise (une entrée grisée d'un menu) ; sélectionnée ou survolée, elle garde sa
-        # couleur d'état, opaque.
+        # surface et formait une plaque distincte. Dans une Liste, la rangée ne peint plus jamais son fond, au repos,
+        # courante, survolée ou désactivée : la plaque de la liste le peint à sa place (L2-73).
         self.demarrer()
-        repos, choisie, survol, retour, desactivee = map(float, self.valeur("pastillesRangees").split())
-        self.assertEqual(desactivee, 0)
-        self.assertEqual(repos, 0)
-        self.assertEqual(choisie, 1)
-        self.assertEqual(survol, 1)
-        self.assertEqual(retour, 0)
+        self.assertEqual(self.valeur("pastillesRangees").split(), ["0"] * 5)
 
     def test_serrage_du_cadre(self):
         # Défaut relevé à l'écran : près du bord gauche, le menu tombait 12 px à droite de son bouton, la fenêtre
@@ -1664,20 +1654,103 @@ class CoqueClavierTest(EssaiCoque, unittest.TestCase):
         self.attendre_valeur("attention", "false null")
 
     def test_menu_selection_suit_survol(self):
-        # Dans un menu, la Liste porte selectionSuitSurvol : le pointeur posé sur une rangée en fait la rangée
-        # courante, donc sélectionnée. Sans ce drapeau, une Liste garde sa rangée courante sous le pointeur.
+        # Le survol d'une rangée en fait la rangée courante, donc sélectionnée, dans toute Liste (L2-73) : le menu
+        # comme le témoin suivent le pointeur.
         self.demarrer()
         self.assertEqual(self.valeur("menu"), "0 0")
         self.ipc("survoler", "2")
-        self.assertEqual(self.valeur("menu"), "2 0")
+        self.assertEqual(self.valeur("menu"), "2 2")
 
-    def test_menu_sans_contour(self):
-        # Défaut relevé à l'écran : à l'ouverture d'un menu à la souris, la rangée courante portait le contour de
-        # focus, le focus donné à la liste passant pour une navigation au clavier. Dans un menu (selectionSuitSurvol),
-        # la pastille de sélection suffit, comme sur macOS : pas de contour, même focusClavier vrai ; une liste
-        # ordinaire focalisée au clavier garde le sien.
+    def test_pas_de_contour(self):
+        # La plaque remplace le contour de focus (L2-73) : aucune rangée ne montre de contour, ni au clavier (liste
+        # focalisée, focusClavier vrai) ni sous le pointeur.
         self.demarrer()
-        self.assertEqual(self.valeur("contours"), "false true")
+        self.ipc("survol", "1")
+        self.assertEqual(self.valeur("contours"), "0 0")
+
+    def plaque(self) -> list:
+        """Lit la plaque de la liste du menu de la coque d'essai du clavier.
+
+        Rôle : traduit la teinte visée de la plaque en « accent » (sélection active du rôle surfaceWindow, au repos),
+        « neutre » (fond controlRaised au repos) ou la couleur lue, pour des comparaisons lisibles.
+        Entrées : aucune. Sortie : [courante, teinte, rang de la plaque, porteur, activée], en chaînes.
+        Erreurs : échec du test si la coque ne répond pas. Dépendances : valeur, tokens55.
+        """
+        etats = self.tokens55()[0]["states"]
+        noms = {etats["surfaceWindow"]["active"]["rest"]["fill"].lower(): "accent",
+                etats["controlRaised"]["none"]["rest"]["fill"].lower(): "neutre"}
+        lu = self.valeur("plaqueListe").split()
+        lu[1] = noms.get(lu[1].lower(), lu[1])
+        return lu
+
+    def test_survol_deplace_la_courante(self):
+        # Le survol d'une rangée en fait la rangée courante et lui donne le curseur : la plaque d'accent s'y pose, et
+        # Entrée, la liste focalisée, active cette rangée.
+        self.demarrer()
+        self.ipc("survol", "2")
+        self.assertEqual(self.plaque(), ["2", "accent", "2", "2", "-1"])
+        self.ipc("focaliser", "menu")
+        self.ipc("touche", "entree")
+        self.assertEqual(self.plaque(), ["2", "accent", "2", "2", "2"])
+
+    def test_fleche_apres_survol(self):
+        # Après un survol, la flèche part de la rangée survolée et emporte le curseur sur la nouvelle courante.
+        self.demarrer()
+        self.ipc("survol", "1")
+        self.ipc("focaliser", "menu")
+        self.ipc("touche", "bas")
+        self.assertEqual(self.plaque(), ["2", "accent", "2", "2", "-1"])
+
+    def test_pointeur_quitte_la_liste(self):
+        # Le pointeur qui quitte la liste emporte le curseur : la rangée courante reste marquée par la plaque, au fond
+        # neutre controlRaised.
+        self.demarrer()
+        self.ipc("survol", "1")
+        self.ipc("survol", "aucun")
+        self.assertEqual(self.plaque(), ["1", "neutre", "1", "aucun", "-1"])
+
+    def test_curseur_a_l_ouverture(self):
+        # Une liste qui paraît sous le pointeur immobile donne le curseur à la rangée survolée : la plaque d'accent
+        # s'y pose dès l'ouverture.
+        self.demarrer()
+        self.ipc("curseurVisible", "menu", "false")
+        self.ipc("survol", "1")
+        self.ipc("curseurVisible", "menu", "true")
+        fin = time.monotonic() + DELAI
+        while self.plaque() != ["1", "accent", "1", "1", "-1"] and time.monotonic() < fin:
+            time.sleep(0.1)
+        self.assertEqual(self.plaque(), ["1", "accent", "1", "1", "-1"])
+
+    def test_rangee_seule(self):
+        # Hors d'une Liste, la rangée peint son propre fond : l'accent sous le curseur (au survol), transparent sinon,
+        # même encore survolée quand le clavier a posé le curseur ailleurs dans sa vue.
+        self.demarrer()
+        accent = self.tokens55()[0]["states"]["surfaceWindow"]["active"]["hover"]["fill"]
+        self.ipc("survol", "C")
+        self.assertEqual(self.valeur("rangeeSeule").lower(), f"{accent} true".lower())
+        self.ipc("focaliser", "bulle")
+        self.ipc("touche", "tab")
+        self.assertEqual(self.valeur("curseurBoutons").split()[2], "A")
+        fond, porte = self.valeur("rangeeSeule").split()
+        self.assertEqual((fond[:3], porte), ("#00", "false"))
+
+    def test_curseur_au_changement_de_vue(self):
+        # Un contrôle déjà survolé qui change de vue prend le curseur de sa nouvelle vue sans attendre de geste.
+        self.demarrer()
+        self.ipc("survol", "B")
+        self.ipc("curseurAutreVue")
+        self.assertEqual(self.valeur("curseurBoutons"), "none active B")
+
+    def test_curseur_oublie_par_l_ancetre(self):
+        # Le porteur caché par un ancêtre (sa vue entière qui se ferme) lâche le curseur, sans erreur au journal.
+        self.demarrer()
+        self.ipc("survol", "B")
+        self.assertEqual(self.valeur("curseurBoutons").split()[2], "B")
+        self.ipc("curseurVisible", "vue", "false")
+        self.assertEqual(self.valeur("curseurBoutons").split()[2], "aucun")
+        for erreur in ERREURS + ("Cannot read property",):
+            with self.subTest(erreur=erreur):
+                self.assertNotIn(erreur, self.journal())
 
     def test_curseur_du_champ(self):
         # Défaut relevé à l'écran : le curseur de texte restait affiché après la perte du focus. TextInput ne

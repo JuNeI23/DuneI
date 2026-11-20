@@ -62,10 +62,9 @@ import "ancrage.js" as Ancrage
 //               des clics), Quickshell.Hyprland (Hyprland, HyprlandFocusGrab), ancrage.js (origine, gaucheCadre),
 //               Theme (radius, space), Surface, OmbreElevation, Overlays, MinuterieDepart, FenetreAttention (chargée par son adresse,
 //               qui emploie le Cadre déclaré ici).
-// Liste ouverte à la souris : Liste passe focusClavier à vrai dès qu'elle reçoit le focus. Un menu
-// (selectionSuitSurvol) ne montre jamais le contour de sa rangée courante ; une autre Liste le montrerait, et
-// l'ouvreur d'un Overlay ouvert à la souris pose alors focusClavier = false sur elle une fois le focus donné ;
-// l'Overlay ne le détecte pas.
+// Liste ouverte à la souris : Liste passe focusClavier à vrai dès qu'elle reçoit le focus, et donne alors le curseur
+// à sa rangée courante ; l'ouvreur d'un Overlay ouvert à la souris pose focusClavier = false sur elle une fois le
+// focus donné, pour le lui retirer ; l'Overlay ne le détecte pas.
 QtObject {
     id: overlay
 

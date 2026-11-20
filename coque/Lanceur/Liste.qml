@@ -16,7 +16,7 @@ import "lanceur.js" as Logique
 // à ses couleurs normales, au ressort des états ; l'accent revient quand le curseur revient dans la liste.
 // Entrées : resultats (Lanceur.resultats) ; rang, la ligne retenue (Lanceur.sel.rang) ; saisie (Lanceur.saisie).
 // Sorties : aucune ; le pointeur appelle Lanceur.choisir. Erreurs : aucune ; une liste vide ne montre rien.
-// Dépendances : Lanceur (cotes, icone, choisir, sel), lanceur.js (surligner, expressionLisible), Plaque, Cascade, C.Icone, C.Texte,
+// Dépendances : Lanceur (cotes, icone, choisir, sel), lanceur.js (surligner, expressionLisible), C.Plaque, Cascade, C.Icone, C.Texte,
 // ColorSpring, Quickshell.Widgets (IconImage), Theme (space, typo, color, radius, icons, stateColors).
 // Cotes : retrait des lignes space.scale[2] (12), fenêtre rangée à space.scale[5] (32, maquette 28) ; icône de
 // icons.sizes.comfortable (24, maquette 26), de icons.sizes.default (20) en retrait ; titre à l'échelon 2 (13) en
@@ -47,7 +47,7 @@ ListView {
     // La plaque vit dans le contenu défilé (contentItem), comme les lignes : elle défile avec elles, et sa cible
     // (rang × hauteur de ligne, plus originY) est dans le même repère que leur y. Déclarée simplement dans la ListView,
     // elle restait dans le repère fixe de la vue, et tout défilement la décalait de contentY (bogue E de la recette 1).
-    Plaque {
+    C.Plaque {
         id: plaque
         parent: liste.contentItem
         z: -1

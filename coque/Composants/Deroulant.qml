@@ -4,12 +4,12 @@ import "../Theme"
 // Deroulant — menu déroulant de la coque, sur le modèle du bouton contextuel de macOS.
 // Rôle : un Bouton qui montre la valeur choisie à gauche et le double chevron haut-bas de macOS, dessiné, à droite
 // (conception, § 7.10). Un clic, Espace ou Entrée ouvre un Overlay contextuel ancré sous le bouton, qui porte une
-// Liste des choix : sa sélection suit le pointeur (selectionSuitSurvol), comme dans un menu de macOS, et
+// Liste des choix : sa sélection suit le pointeur, comme dans toute Liste et dans un menu de macOS, et
 // l'élément choisi porte en tête la Coche dessinée de la case. Choisir un élément, au clic ou à Entrée, ferme le
 // menu, en fait la valeur et émet activated ; Échap ou un clic à l'extérieur ferment sans rien changer. Ouvert au
-// clavier, le menu montre le contour de sa rangée courante dès sa construction (Liste.focusClavier part de
-// auClavier) ; ouvert à la souris, il ne le montre pas (focusClavier repasse à faux juste après l'arrivée du
-// focus, que la Liste prend pour un geste du clavier). Fermé, les flèches haut et bas changent la valeur sans
+// clavier, le menu donne le curseur, donc la plaque d'accent, à sa rangée courante dès sa construction
+// (Liste.focusClavier part de auClavier) ; ouvert à la souris, il le lui retire aussitôt (focusClavier repasse à faux
+// juste après l'arrivée du focus, que la Liste prend pour un geste du clavier), et le pointeur le pose. Fermé, les flèches haut et bas changent la valeur sans
 // ouvrir le menu, comme sur macOS. Il n'est pas bâti sur T.ComboBox, dont le menu, un Popup, ne sort pas de la
 // fenêtre : l'Overlay contextuel est une fenêtre surgissante (PopupWindow), construite à l'ouverture et détruite
 // à la fermeture (D80).
@@ -54,7 +54,7 @@ Bouton {
     Keys.onDownPressed: if (!menu.ouvert) deplacer(1)
 
     // ouvrir — ouvre le menu des choix sous le bouton.
-    // Entrée : clavier, vrai si l'ouverture vient du clavier (le contour de la rangée courante sera montré).
+    // Entrée : clavier, vrai si l'ouverture vient du clavier (la rangée courante prendra le curseur).
     // Sortie : aucune. Erreurs : aucune. Dépendances : menu (Overlay), interne (auClavier).
     function ouvrir(clavier: bool): void {
         interne.auClavier = clavier
@@ -123,7 +123,6 @@ Bouton {
         Liste {
             id: choix
             focus: true
-            selectionSuitSurvol: true
             currentIndex: deroulant.currentIndex
             focusClavier: deroulant.auClavier
             implicitWidth: deroulant.width

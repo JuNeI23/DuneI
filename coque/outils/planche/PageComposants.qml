@@ -9,8 +9,8 @@ import "Composants"
 // manipule ; deux panneaux identiques, dont l'un porte dnInactive, pour juger le modificateur inactive et l'accent
 // muet ; deux boutons qui ouvrent un overlay de chaque famille. Les états figés ne passent par aucune valeur de
 // design : Etat.forcer remplace l'interaction lue, la sélection s'écrit dans l'Etat de l'exemplaire, l'anneau de focus
-// est un AnneauFocus montré, le contour de rangée passe par Rangee.forcerContour, et désactivé est un vrai enabled
-// faux. Mise en page : la page prend la largeur qu'on lui donne et ses rangées passent à la ligne (Flow), si bien
+// est un AnneauFocus montré, la rangée n'a pas de case de focus (le curseur seul la marque, L2-73), et désactivé est un
+// vrai enabled faux. Mise en page : la page prend la largeur qu'on lui donne et ses rangées passent à la ligne (Flow), si bien
 // qu'elle tient sans défilement horizontal dans une fenêtre tuilée d'environ 750 pixels de large, et s'étale côte à
 // côte dans une fenêtre plus large.
 // Entrées : largeur, largeur offerte à la page en pixels logiques (la fenêtre moins ses marges) ; la page lit
@@ -66,7 +66,7 @@ Surface {
     //           enfant déclaré.
     // Sortie : colonne titrée. Erreurs : aucune ; une clé de proprietes inconnue du contrôle lève une erreur
     //          au journal, si bien que les variantes ne nomment que des propriétés du contrôle.
-    // Dépendances : Etat (forcer, selectionne, focusDansGroupe), Rangee (forcerContour), AnneauFocus,
+    // Dépendances : Etat (forcer, selectionne, focusDansGroupe), AnneauFocus,
     //               Separateur, Legende, Titre.
     component Grille: Column {
         id: grille
@@ -90,7 +90,7 @@ Surface {
         //           "hover", "pressed", "disabled" ou "focus".
         // Sortie : aucune ; l'exemplaire est modifié en place, ses liaisons d'état remplacées par des valeurs.
         // Erreurs : aucune hors celle d'une propriété inconnue (voir l'en-tête de Grille).
-        // Dépendances : Etat, Rangee.forcerContour, composant anneau.
+        // Dépendances : Etat, composant anneau.
         function force(item, variante, etat) {
             for (const cle in variante.proprietes ?? {}) item[cle] = variante.proprietes[cle]
             if (variante.selection) {
@@ -102,17 +102,13 @@ Surface {
             else if (etat !== "rest") item.etat.forcer = etat
         }
 
-        // montreFocus — montre le focus d'un exemplaire sans lui donner le focus : contour de la pastille pour
-        // une rangée, anneau autour de l'élément qui le porte d'ordinaire pour un contrôle (cibleFocus si
+        // montreFocus — montre le focus d'un exemplaire sans lui donner le focus : anneau autour de l'élément qui le
+        // porte d'ordinaire pour un contrôle (cibleFocus si
         // l'exemplaire la déclare, comme le fond entier d'un compteur ; poignée d'un curseur, boîte ou piste
         // d'une case ou d'un interrupteur ; fond sinon, qui est la piste pour une barre d'onglets).
         // Entrées : item, l'exemplaire. Sortie : aucune. Erreurs : aucune.
-        // Dépendances : Rangee.forcerContour, AnneauFocus (composant anneau).
+        // Dépendances : AnneauFocus (composant anneau).
         function montreFocus(item) {
-            if (item.forcerContour !== undefined) {
-                item.forcerContour = true
-                return
-            }
             const c = item.cibleFocus ?? item.handle ?? item.indicator ?? item.background
             anneau.createObject(c, { cible: c, montre: true, inactif: Qt.binding(() => item.etat.inactif) })
         }
@@ -293,7 +289,7 @@ Surface {
                     onClicked: attention.ouvert = true
                 }
 
-                // Ouvert à la souris, le menu ne montre pas le contour de sa rangée courante (voir menu).
+                // Ouvert à la souris, le menu ne donne pas le curseur à sa rangée courante (voir menu).
                 Bouton {
                     id: boutonMenu
                     text: "Ouvrir un menu"
@@ -332,8 +328,8 @@ Surface {
         }
 
         // Overlay contextuel : un menu de quatre rangées ancré sous son bouton, dont la sélection suit le pointeur
-        // comme dans un menu de macOS (selectionSuitSurvol). alaSouris retient que le menu a été ouvert à la
-        // souris : la liste reçoit alors le focus sans montrer le contour de sa rangée courante, le temps que
+        // comme dans un menu de macOS, comme dans toute Liste. alaSouris retient que le menu a été ouvert à la
+        // souris : la liste reçoit alors le focus sans donner le curseur à sa rangée courante, le temps que
         // Liste passe focusClavier à vrai à l'arrivée du focus et que la page le repasse à faux juste après.
         Overlay {
             id: menu
@@ -346,7 +342,6 @@ Surface {
             Liste {
                 id: listeMenu
                 focus: true
-                selectionSuitSurvol: true
                 implicitWidth: 3 * Theme.space.scale[7]
                 implicitHeight: count * Theme.density.rowHeight
                 model: [
@@ -701,6 +696,8 @@ Surface {
                 { libelle: "sélection active", selection: "active" },
                 { libelle: "sélection inactive", selection: "inactive" }
             ]
+            // La rangée n'a plus de marque de focus propre : le curseur, survol ou clavier, la marque (L2-73).
+            etats: ["rest", "hover", "pressed", "disabled"]
             modele: Component { Rangee { index: 0; width: 5 * Theme.space.scale[5]; text: "Rangée"; icone: "folder" } }
 
             Liste {

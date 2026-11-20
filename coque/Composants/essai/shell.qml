@@ -1152,17 +1152,17 @@ ShellRoot {
                 .map(i => r(i)?.activeFocusOnTab + " " + r(i)?.focusPolicy)].join(" "))
         }
 
-        // rangee — journalise, pour la rangée 1, le rôle de son Etat, sa hauteur et sa largeur, puis la
-        // géométrie et le rayon de sa pastille de sélection, et enfin la géométrie, le rayon, l'épaisseur, la
-        // couleur et la visibilité de son contour de focus, dans le repère de la rangée. Entrées : aucune.
-        // Sortie : aucune ; « essai : rangee <rôle> <h> <l> | <x> <l> <h> <rayon> | <x> <y> <l> <h> <rayon>
-        // <épaisseur> <#rrggbb> <bool> ». Erreurs : aucune. Dépendances : listeEssai ; la pastille est le premier
-        // enfant du fond de la rangée, le contour le premier enfant de la pastille.
+        // rangee — journalise, pour la rangée 1 (la courante), le rôle de son Etat, sa hauteur et sa largeur, puis la
+        // géométrie et le rayon de sa pastille, dans le repère de la rangée, puis la cible de la plaque de la liste,
+        // dans le repère de la rangée, son rayon et sa teinte visée, enfin le nombre d'enfants de la pastille (aucun
+        // contour). Entrées : aucune. Sortie : aucune ; « essai : rangee <rôle> <h> <l> | <x> <l> <h> <rayon> | <x>
+        // <y> <l> <h> <rayon> <#teinte> | <enfants> ». Erreurs : aucune. Dépendances : listeEssai (plaque) ; la
+        // pastille est le premier enfant du fond de la rangée.
         function rangee(): void {
-            const r = listeEssai.itemAtIndex(1), t = r.background.children[0], c = t.children[0]
-            const p = c.mapToItem(r, 0, 0)
+            const r = listeEssai.itemAtIndex(1), t = r.background.children[0], c = listeEssai.plaque.cible
             essai.journal("rangee", [r.etat.role, r.height, r.width, "|", t.mapToItem(r, 0, 0).x, t.width, t.height,
-                t.radius, "|", p.x, p.y, c.width, c.height, c.radius, c.border.width, c.border.color, c.visible].join(" "))
+                t.radius, "|", c.x - r.x, c.y - r.y, c.width, c.height, listeEssai.plaque.rayon, listeEssai.plaque.teinte,
+                "|", t.children.length].join(" "))
         }
 
         // rangeeImposer — pose sur la rangée 0 de la liste d'essai une icône, la variante pleine, des teintes
