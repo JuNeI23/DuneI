@@ -41,7 +41,7 @@ import "Composants"
 // et « essai survolerMobile » créent, détruisent ou survolent la cible de l'infobulle mobile ; recherche, depliable,
 // bulle, survolerBulle et mobile journalisent (voir chaque fonction), « essai survoler <rang> » pose le pointeur sur
 // une rangée de chaque liste, « essai survolerOnglet » sur l'onglet « tokens » et « essai ongletActif <bool> » active
-// ou désactive l'onglet « composants », « essai survol <A|B|C|rang|aucun> » pose le pointeur sur le bouton A, B, la rangée C, une rangée du menu ou ailleurs,
+// ou désactive l'onglet « composants », « essai survol <A|B|C|D|rang|aucun> » pose le pointeur sur le bouton A, B, la rangée C ou D, une rangée du menu ou ailleurs,
 // « essai curseurVisible <A|B|vue|menu> <bool> » montre ou cache l'un d'eux, leur vue ou le menu, « essai curseurAutreVue » leur donne un autre arbitre,
 // « essai curseurInactif <bool> » pose le modificateur inactive sur leur vue et « essai curseurSelectionne <bool> » fait de A le bouton principal, sans
 // journaliser. Erreurs : celles de Theme et des liaisons, dans le
@@ -163,6 +163,10 @@ ShellRoot {
                     Bouton { id: boutonB; text: "B"; hoverEnabled: true; etat.suitCurseur: true }
                     Rangee { id: rangeeSeule; index: 0; width: 60; text: "C"; hoverEnabled: true }
                 }
+
+                // Rangee D hors de toute liste et de toute vue munie d'un arbitre : elle suit la règle locale du
+                // curseur (survolée ou focalisée au clavier).
+                Rangee { id: rangeeLibre; index: 0; width: 60; text: "D"; hoverEnabled: true }
 
                 Infobulle { id: infobulleEssai; cible: boutonBulle }
 
@@ -588,11 +592,11 @@ ShellRoot {
                 }
 
                 // survol — pose le pointeur au centre du bouton A ou B, ou d'une rangée de la liste du menu, ou l'en
-                // retire en le posant sur la recherche. Entrée : nom, "A", "B", "C" (la rangée seule), un rang de
+                // retire en le posant sur la recherche. Entrée : nom, "A", "B", "C" (la rangée seule), "D" (la rangée libre), un rang de
                 // rangée du menu ("0", "1", "2") ou "aucun". Sortie : aucune. Erreurs : TypeError pour un nom inconnu.
-                // Dépendances : boutonA, boutonB, rangeeSeule, listeMenu, rechercheEssai, clavier (TestEvent).
+                // Dépendances : boutonA, boutonB, rangeeSeule, rangeeLibre, listeMenu, rechercheEssai, clavier (TestEvent).
                 function survol(nom: string): void {
-                    const c = ({ A: boutonA, B: boutonB, C: rangeeSeule, aucun: rechercheEssai })[nom]
+                    const c = ({ A: boutonA, B: boutonB, C: rangeeSeule, D: rangeeLibre, aucun: rechercheEssai })[nom]
                         ?? listeMenu.itemAtIndex(Number(nom))
                     clavier.mouseMove(c, c.width / 2, c.height / 2, -1, Qt.NoButton, Qt.NoModifier)
                 }
@@ -605,11 +609,13 @@ ShellRoot {
                     ({ A: boutonA, B: boutonB, vue: vueCurseur, menu: listeMenu })[nom].visible = visible
                 }
 
-                // rangeeSeule — journalise la couleur visée par le ressort de fond de la rangée C, hors de toute liste,
-                // et vrai si elle porte le curseur. Entrées : aucune. Sortie : aucune ; « essai : rangeeSeule <#fond>
-                // <bool> ». Erreurs : aucune. Dépendances : rangeeSeule (Etat, ressort de fond premier enfant), journal.
-                function rangeeSeule(): void {
-                    essai.journal("rangeeSeule", rangeeSeule.etat.children[0].target + " " + rangeeSeule.etat.sousCurseur)
+                // rangeeSeule — journalise la couleur visée par le ressort de fond de la rangée C (dans la vue A/B) ou
+                // D (hors de toute vue), hors de toute liste, et vrai si elle porte le curseur. Entrée : nom, "C" ou
+                // "D". Sortie : aucune ; « essai : rangeeSeule <#fond> <bool> ». Erreurs : TypeError pour un nom
+                // inconnu. Dépendances : rangeeSeule, rangeeLibre (Etat, ressort de fond premier enfant), journal.
+                function rangeeSeule(nom: string): void {
+                    const r = ({ C: rangeeSeule, D: rangeeLibre })[nom]
+                    essai.journal("rangeeSeule", r.etat.children[0].target + " " + r.etat.sousCurseur)
                 }
 
                 // curseurAutreVue — donne aux boutons A et B un autre arbitre du curseur, encore vide, comme un contrôle

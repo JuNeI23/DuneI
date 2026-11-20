@@ -33,8 +33,8 @@ import "bluetooth.js" as Bt
 // lu par les essais ; fonduContenu, fonduDisque, reinitialiser(), voir ci-dessus.
 // Erreurs : un echec(adresse, message) de l'état s'affiche sur la ligne de l'appareil.
 // Dépendances : Overlay (famille contextuel), Bascule, Activite, Infobulle, Rangee, Icone, Texte, Ressort, Theme
-// (density, space, icons, color, motion par Ressort), EtatBluetooth, bluetooth.js (trierAppareils, iconeAppareil),
-// Quickshell.Bluetooth (BluetoothDeviceState).
+// (density, space, icons, color, motion par Ressort), VueCurseur, EtatBluetooth, bluetooth.js (trierAppareils,
+// iconeAppareil), Quickshell.Bluetooth (BluetoothDeviceState).
 // Cotes : celles du popover réseau ; surface de 288 px, panneau de 280 px, contenu à space.scale[2] (12) du bord,
 // rangées de density.controlHeight plus space.scale[0] (32 px) ; au plus quatre lignes visibles pour « Mes
 // appareils », la suite défile ; « Appareils à proximité » a une hauteur fixe de cinq lignes (fiche 0.3).
@@ -288,6 +288,8 @@ Overlay {
     FocusScope {
         id: panneau
 
+        // Arbitre du curseur du popover : une seule rangée ou un seul contrôle porte le curseur à la fois (L2-73).
+        property VueCurseur dnVue: VueCurseur {}
         readonly property real marge: Theme.space?.scale[2] ?? 0
         readonly property real hauteurLigne: (Theme.density?.controlHeight ?? 0) + (Theme.space?.scale[0] ?? 0)
         readonly property var etat: popover.etat

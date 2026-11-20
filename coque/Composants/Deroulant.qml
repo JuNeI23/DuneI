@@ -9,8 +9,8 @@ import "../Theme"
 // menu, en fait la valeur et émet activated ; Échap ou un clic à l'extérieur ferment sans rien changer. Ouvert au
 // clavier, le menu donne le curseur, donc la plaque d'accent, à sa rangée courante dès sa construction
 // (Liste.focusClavier part de auClavier) ; ouvert à la souris, il le lui retire aussitôt (focusClavier repasse à faux
-// juste après l'arrivée du focus, que la Liste prend pour un geste du clavier), et le pointeur le pose. Fermé, les flèches haut et bas changent la valeur sans
-// ouvrir le menu, comme sur macOS. Il n'est pas bâti sur T.ComboBox, dont le menu, un Popup, ne sort pas de la
+// juste après l'arrivée du focus, que la Liste prend pour un geste du clavier), et le pointeur le pose. Fermé, les
+// flèches haut et bas changent la valeur sans ouvrir le menu, comme sur macOS. Il n'est pas bâti sur T.ComboBox, dont le menu, un Popup, ne sort pas de la
 // fenêtre : l'Overlay contextuel est une fenêtre surgissante (PopupWindow), construite à l'ouverture et détruite
 // à la fermeture (D80).
 // Largeur : celle du plus long des choix, pour que changer de valeur ne redimensionne pas le bouton.

@@ -1722,16 +1722,28 @@ class CoqueClavierTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(self.plaque(), ["1", "accent", "1", "1", "-1"])
 
     def test_rangee_seule(self):
-        # Hors d'une Liste, la rangée peint son propre fond : l'accent sous le curseur (au survol), transparent sinon,
-        # même encore survolée quand le clavier a posé le curseur ailleurs dans sa vue.
+        # Hors d'une Liste, la rangée peint son propre fond : l'aplat d'accent de la plaque (sélection active au repos,
+        # color.accent) sous le curseur, transparent sinon, même encore survolée quand le clavier a posé le curseur
+        # ailleurs dans sa vue.
         self.demarrer()
-        accent = self.tokens55()[0]["states"]["surfaceWindow"]["active"]["hover"]["fill"]
+        accent = self.tokens55()[0]["states"]["surfaceWindow"]["active"]["rest"]["fill"]
         self.ipc("survol", "C")
-        self.assertEqual(self.valeur("rangeeSeule").lower(), f"{accent} true".lower())
+        self.assertEqual(self.valeur("rangeeSeule", "C").lower(), f"{accent} true".lower())
         self.ipc("focaliser", "bulle")
         self.ipc("touche", "tab")
         self.assertEqual(self.valeur("curseurBoutons").split()[2], "A")
-        fond, porte = self.valeur("rangeeSeule").split()
+        fond, porte = self.valeur("rangeeSeule", "C").split()
+        self.assertEqual((fond[:3], porte), ("#00", "false"))
+
+    def test_rangee_sans_vue(self):
+        # Sans arbitre du curseur dans ses ancêtres, la rangée seule suit la règle locale : survolée, elle porte le
+        # curseur et prend l'aplat d'accent ; quittée, elle redevient transparente.
+        self.demarrer()
+        accent = self.tokens55()[0]["states"]["surfaceWindow"]["active"]["rest"]["fill"]
+        self.ipc("survol", "D")
+        self.assertEqual(self.valeur("rangeeSeule", "D").lower(), f"{accent} true".lower())
+        self.ipc("survol", "aucun")
+        fond, porte = self.valeur("rangeeSeule", "D").split()
         self.assertEqual((fond[:3], porte), ("#00", "false"))
 
     def test_curseur_au_changement_de_vue(self):

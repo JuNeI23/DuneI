@@ -26,11 +26,14 @@ import "etats.js" as Etats
 // barre d'onglets) et dont le ressort, resté sur le fond de survol opaque, le ferait apparaître au premier instant
 // de la pression ; suitCurseur, faux par défaut : vrai, l'état prend le curseur de sa vue (l'arbitre VueCurseur
 // hérité par dnVue) au survol et au focus clavier, ou dès sa création, son changement de vue ou son retour à la
-// visibilité s'il est déjà survolé ou focalisé, et le lâche quand l'un ou l'autre cesse ou quand le contrôle
-// devient invisible (par un ancêtre compris) ou est détruit ; sa sélection vaut alors celle d'un élément sélectionné dans un groupe qui a le
-// focus (l'accent, ou l'accent sans chroma sous inactive) sous le curseur, et hors du curseur une sélection fournie
-// (selectionne) reste toujours « inactive », jamais à l'accent (L2-73). Faux, la sélection suit selectionne et
-// focusDansGroupe comme avant, si bien que les contrôles allumés gardent leur accent.
+// visibilité s'il est déjà survolé ou focalisé, et le lâche quand l'un ou l'autre cesse ou quand le contrôle devient
+// invisible (par un ancêtre compris) ou est détruit ; sa sélection vaut alors celle d'un élément sélectionné dans un
+// groupe qui a le focus (l'accent, ou l'accent sans chroma sous inactive) sous le curseur, et hors du curseur une
+// sélection fournie (selectionne) reste toujours « inactive », jamais à l'accent (L2-73). Faux, la sélection suit
+// selectionne et focusDansGroupe comme avant, si bien que les contrôles allumés gardent leur accent ; curseurAplat,
+// faux par défaut : vrai, sous le curseur, les couleurs sont celles du repos, quels que soient le survol et la
+// pression, pour que la marque du curseur garde l'aplat unique de la plaque des listes (color.accent, ou l'accent
+// muet sous inactive).
 // Sorties : interaction, selection, inactif (clés des tokens) ; levee, vrai pour une sélection neutre (selectionNeutre)
 // peinte en controlRaised, hors du curseur ; vue, l'arbitre du curseur hérité (null sans suitCurseur ou sans vue) ;
 // sousCurseur, vrai quand le contrôle porte le curseur (toujours faux sans suitCurseur), pour un composant qui peint
@@ -55,6 +58,7 @@ Item {
     property bool fondSurvolTransparent: false
     property bool selectionNeutre: false
     property bool suitCurseur: false
+    property bool curseurAplat: false
     property string role: Etats.cran(Etats.herite(controle, "dnRole", "surfaceWindow"))
     readonly property bool inactif: Etats.herite(controle, "dnInactive", false)
     readonly property string interaction: forcer || Etats.interaction(controle)
@@ -65,7 +69,7 @@ Item {
         : Etats.selection(selectionne, focusDansGroupe, inactif)
     readonly property bool levee: selectionNeutre && selectionne && !sousCurseur
     readonly property var couleurs: levee ? Theme.stateColors("controlRaised", "none", "rest")
-        : Theme.stateColors(role, selection, interaction)
+        : Theme.stateColors(role, selection, curseurAplat && sousCurseur ? "rest" : interaction)
     readonly property color fond: ressortFond.value
     readonly property color texte: ressortTexte.value
     readonly property color texteNeutre: Theme.stateColors(role, "none", interaction)?.text ?? "transparent"

@@ -31,7 +31,7 @@ import "../Barre/icones.js" as Icones
 // Erreurs : aucune ; sans sortie ou sans entrée par défaut, le sous-titre est vide et aucune ligne n'est active. Un
 // nœud qui ne peut devenir défaut (micro d'une prise sans fiche) garde sa ligne : la choisir ne change rien.
 // Dépendances : QtQuick.Templates (Slider.SnapAlways), Overlay (famille contextuel), Jauge, Rangee, Separateur, Texte,
-// Ressort, Theme (density, space, color,
+// VueCurseur, Ressort, Theme (density, space, color,
 // material), EtatAudio, audio.js (libelle, iconeAppareil), Barre/icones.js (iconeAudio, iconeMicro).
 // Cotes : celles du popover Bluetooth ; surface de 288 px, panneau de 70 * space.scale[0] (280), contenu à
 // space.scale[2] (12) du bord, rangées de density.controlHeight plus space.scale[0] (32 px).
@@ -116,6 +116,8 @@ Overlay {
     FocusScope {
         id: panneau
 
+        // Arbitre du curseur du popover : une seule rangée ou un seul contrôle porte le curseur à la fois (L2-73).
+        property VueCurseur dnVue: VueCurseur {}
         readonly property real marge: Theme.space?.scale[2] ?? 0
         readonly property real hauteurLigne: (Theme.density?.controlHeight ?? 0) + (Theme.space?.scale[0] ?? 0)
         readonly property var etat: popover.etat

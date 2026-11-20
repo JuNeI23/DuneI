@@ -13,9 +13,9 @@ import "etats.js" as Etats
 // rangée courante, à l'accent sous le curseur, au fond neutre controlRaised sinon, et le libellé de la rangée sous le
 // curseur passe en onAccent (couleurs de la sélection active). Hors d'une Liste (seule dans un popover, ou dans un
 // Repeater), la rangée garde son propre fond, une pastille arrondie en retrait des bords à la manière de macOS
-// (§ 7.10) : l'accent sous le curseur, transparente sinon, survolée sans le curseur comprise, pour laisser voir le
-// fond de verre ou opaque du conteneur au lieu d'en repeindre la couleur (une sélection fournie y garde le fond
-// neutre de la clé « inactive »). Dans une colonne de navigation (Liste.navigation), la rangée sélectionnée prend un
+// (§ 7.10) : l'aplat d'accent de la plaque sous le curseur (Etat.curseurAplat), transparente sinon, survolée sans
+// le curseur comprise, pour laisser voir le fond de verre ou opaque du conteneur au lieu d'en repeindre la couleur
+// (une sélection fournie y garde le fond neutre de la clé « inactive »). Dans une colonne de navigation (Liste.navigation), la rangée sélectionnée prend un
 // fond neutre levé d'un cran (controlRaised, Etat.selectionNeutre) et son libellé passe en graisse moyenne. Aucun
 // contour ni anneau de focus : le curseur suffit (L2-73). La rangée n'accepte aucun focus : la liste est l'unique
 // arrêt. Un clic en fait la rangée courante, donne le focus à la liste sans le compter comme clavier, puis émet
@@ -104,6 +104,7 @@ T.ItemDelegate {
         role: Etats.herite(rangee, "dnRole", "surfaceWindow")
         selectionne: (rangee.vue?.selectionSuitCourant ?? true) ? rangee.courante : rangee.selectionnee
         suitCurseur: true
+        curseurAplat: true
         peintFond: !rangee.dansListe
         fondReposTransparent: true
         fondSurvolTransparent: true
