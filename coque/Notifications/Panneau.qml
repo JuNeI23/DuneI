@@ -7,8 +7,8 @@ import "garde.js" as Garde
 
 // Panneau — contenu du panneau des notifications (L2-67) : ce qui reste à traiter, et « ne pas déranger ».
 // Rôle : de haut en bas, dans une marge intérieure de notifications.interieur : l'en-tête « Notifications » avec, à
-// droite, « Tout effacer » (Bouton plat et danger : texte rouge, plaque rouge sous le curseur ; absent quand rien
-// n'attend) ; la bascule à glyphe des notifications (Bascule, dans une ZoneCurseur qui lui porte la plaque du curseur),
+// droite, « Tout effacer » (Bouton plat et danger, sans marque : un lien en texte rouge, sans plaque ; absent quand rien
+// n'attend) ; la bascule à glyphe des notifications (Bascule, dans une ZoneCurseur neutre : sans plaque, elle garde son propre survol),
 // allumée quand elles sont actives, éteinte sous « ne pas déranger », sous la cloche ou la cloche barrée en fondu
 // croisé (D182), avec un seul libellé, l'état présent (« Notifications actives » ou « Ne pas déranger ») ; puis les
 // groupes par application (GroupeAttente), le plus récent en tête, un groupe qui contient une critique passant devant ;
@@ -217,6 +217,7 @@ FocusScope {
             anchors.right: parent.right
             anchors.rightMargin: -horizontalPadding
             anchors.verticalCenter: titre.verticalCenter
+            marque: false
             visible: opacity > 0
             opacity: efface.value
             enabled: panneau.effacable
@@ -238,6 +239,7 @@ FocusScope {
         height: bascule.height
 
         ZoneCurseur {
+            marque: false
             Bascule {
                 id: bascule
                 icone: EtatNotifications.icone

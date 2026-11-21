@@ -21,7 +21,9 @@ import "etats.js" as Etats
 // plein y garde le fond et le texte de son état, qui le détachent de la plaque. Ses couleurs passent par des
 // ColorSpring. Entrées : text, clicked et le reste de l'API de T.AbstractButton ; icone, nom freedesktop
 // facultatif, posé avant le texte (seule, sans text, le bouton est réduit à son icône) ; danger, vrai pour une
-// action destructrice, faux par défaut ; plat, vrai pour un bouton sans fond hors du curseur, faux par défaut.
+// action destructrice, faux par défaut ; plat, vrai pour un bouton sans fond hors du curseur, faux par défaut ;
+// marque, vrai par défaut : faux, le bouton ne prend jamais le curseur de sa vue ni sa plaque, et reste un lien
+// en texte (action d'en-tête d'un popover, recette de L2-73).
 // Sorties : etat, l'Etat du bouton (rôle, interaction, sélection, couleurs), lu par la planche et les essais ;
 // rouge, vrai pour un bouton destructeur actif ; rougePlein, vrai quand il porte en plus le curseur ; surPlaque, vrai
 // pour un bouton plat posé sur la plaque d'un ancêtre ; teinte, la couleur affichée de son texte et de son icône.
@@ -37,6 +39,7 @@ T.AbstractButton {
     property string icone
     property bool danger: false
     property bool plat: false
+    property bool marque: true
     readonly property alias etat: etat
 
     focusPolicy: Qt.TabFocus
@@ -55,7 +58,7 @@ T.AbstractButton {
     Etat {
         id: etat
         controle: bouton
-        suitCurseur: true
+        suitCurseur: bouton.marque
         curseurAplat: true
         fondReposTransparent: bouton.plat
         fondSurvolTransparent: bouton.plat
@@ -65,7 +68,7 @@ T.AbstractButton {
     // démarrent jamais (sobriété, D80). Désactivé, le bouton destructeur reprend les couleurs de son état.
     readonly property color teinte: rangee.teinte
     readonly property bool rouge: danger && enabled
-    readonly property bool rougePlein: rouge && etat.sousCurseur
+    readonly property bool rougePlein: rouge && marque && etat.sousCurseur
     // Vrai quand un ancêtre (la ligne d'une liste) porte la plaque d'accent du curseur sous un bouton plat : son texte
     // s'y écrit au sur-accent (color.onAccent), jamais en neutre ni en rouge sur l'orange. Un bouton plein garde le
     // fond de son état : le sur-accent y serait illisible.
