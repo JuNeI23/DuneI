@@ -17,8 +17,8 @@ import "nmcli.js" as Nmcli
 // masqué et replié, et rien n'y est chargé ; sans carte ni adresse, la section « Ethernet » disparaît. Sans profil,
 // « Aucun profil filaire. » ; la section « Profils » disparaît quand le seul profil est l'actif. Aucune logique nmcli
 // n'est dupliquée ici.
-// Clavier : les têtes des dépliants sont des Ligne cliquables (tabulation, Entrée, Espace, contour de focus : bible,
-// « Clavier »).
+// Clavier : les têtes des dépliants sont des Ligne cliquables (tabulation, Entrée, Espace : bible, « Clavier ») ;
+// atteintes au clavier, elles portent la plaque du curseur (L2-73).
 // Contrat de page (voir ConteneurPage) : conteneur, atteindre, implicitHeight.
 // Entrées : conteneur, le ConteneurPage, posé par lui ; etat, la source de l'état, EtatReseau par défaut (profils,
 // filaire, carteFilaire, appareilFilaire et son lien hasLink, appareil, et ce que lisent les tuiles).

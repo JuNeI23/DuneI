@@ -3,6 +3,7 @@ import QtQuick.Layouts
 import Quickshell.Bluetooth
 import "../Theme"
 import "../Composants"
+import "../Composants/etats.js" as Etats
 import "bluetooth.js" as Bt
 
 // PopoverBluetooth — popover du Bluetooth, ancré sous l'indicateur Bluetooth de la barre (L2-14).
@@ -57,11 +58,15 @@ Overlay {
     Component.onDestruction: if (demande) etat.recherche = false
 
     // BoutonIcone — bouton réduit à une icône, sans fond, comme les boutons d'outil de macOS (copie du popover réseau).
-    // Rôle : icône au texte secondaire, au texte primaire survolée ; le clic émet clique().
-    // Entrées : nom, l'icône. Sorties : signal clique(). Erreurs : aucune. Dépendances : Icone, Theme.
+    // Rôle : icône au texte secondaire, au texte primaire survolée, au sur-accent (color.onAccent) posée sur la
+    // plaque du curseur (un ancêtre, sa ZoneCurseur, déclare dnSurPlaque), en fondu au ressort des états ; le clic
+    // émet clique().
+    // Entrées : nom, l'icône. Sorties : signal clique() ; surPlaque, vrai sur la plaque. Erreurs : aucune.
+    // Dépendances : Icone, Theme (density, icons, color, ColorSpring), etats.js (herite).
     component BoutonIcone: Item {
         id: boutonIcone
         property string nom
+        readonly property bool surPlaque: Etats.herite(boutonIcone, "dnSurPlaque", false)
         signal clique()
         implicitWidth: Theme.density?.controlHeight ?? 0
         implicitHeight: implicitWidth
@@ -70,7 +75,12 @@ Overlay {
             anchors.centerIn: parent
             nom: boutonIcone.nom
             taille: Theme.icons?.sizes.dense ?? 0
-            couleur: (survol.hovered ? Theme.color?.textPrimary : Theme.color?.textSecondary) ?? "transparent"
+            couleur: encre.value
+        }
+        ColorSpring {
+            id: encre
+            target: (boutonIcone.surPlaque ? Theme.color?.onAccent : survol.hovered ? Theme.color?.textPrimary
+                     : Theme.color?.textSecondary) ?? "transparent"
         }
         HoverHandler { id: survol }
         TapHandler { onTapped: boutonIcone.clique() }
@@ -241,6 +251,7 @@ Overlay {
             icone: ligne.icone
             text: Bt.nomAffiche(ligne.appareil?.name)
             onActive: panneau.choisir(ligne)
+            teinteSecondaire: (ligne.erreur !== "" ? Theme.color?.warning : Theme.color?.textSecondary) ?? "transparent"
             suffixe: Component {
                 Row {
                     spacing: Theme.space?.scale[1] ?? 0
@@ -249,7 +260,8 @@ Overlay {
                         visible: ligne.statut !== ""
                         text: ligne.statut
                         echelon: 1
-                        color: (ligne.erreur !== "" ? Theme.color?.warning : Theme.color?.textSecondary) ?? "transparent"
+                        // Sur la plaque du curseur, le statut passe à l'encre de la plaque, en fondu (Rangee).
+                        color: rangeeLigne.encreSecondaire
                     }
                     Activite { anchors.verticalCenter: parent.verticalCenter; visible: ligne.occupe }
                 }
@@ -447,7 +459,12 @@ Overlay {
                     objectName: "recherche"
                     implicitWidth: Theme.density?.controlHeight ?? 0
                     implicitHeight: implicitWidth
-                    BoutonIcone { anchors.fill: parent; visible: !panneau.etat.enRecherche; nom: "view-refresh"; onClique: panneau.relancer() }
+                    // Bouton isolé : sa zone porte la plaque du curseur au survol, comme les autres contrôles (L2-73).
+                    ZoneCurseur {
+                        anchors.fill: parent
+                        visible: !panneau.etat.enRecherche
+                        BoutonIcone { nom: "view-refresh"; onClique: panneau.relancer() }
+                    }
                     Activite { objectName: "activiteRecherche"; anchors.centerIn: parent; visible: panneau.etat.enRecherche }
                     Infobulle { cible: recherche; texte: "Rechercher les appareils" }
                 }

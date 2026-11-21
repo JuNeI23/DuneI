@@ -44,7 +44,7 @@ Item {
             Layout.alignment: Qt.AlignRight
             spacing: bloc.marge
             Bouton { text: "Annuler"; onClicked: bloc.annuler() }
-            Bouton { text: "Rejoindre"; principal: true; enabled: !bloc.occupe; onClicked: bloc.rejoindre() }
+            Bouton { text: "Rejoindre"; enabled: !bloc.occupe; onClicked: bloc.rejoindre() }
         }
     }
 }

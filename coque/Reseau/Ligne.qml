@@ -23,8 +23,9 @@ import "../Composants/etats.js" as Etats
 // couleurAide, couleur de l'aide, texte secondaire par défaut (l'accent autonome d'un réseau en cours de connexion) ;
 // titre, faux par défaut : vrai, le libellé passe à l'échelon 3 en graisse moyenne, pour le nom d'un réseau en tête
 // de son dépliant détaillé (Recette 1 de L2-65, D156) ; cote, le retrait du contenu aux deux bords, space.scale[2] par
-// défaut (0 pour une rangée posée dans un dépliant, alignée sur sa grille) ; bordABord, vrai pour une plaque de survol qui va d'un bord à l'autre de la carte, au rayon
-// radius.panel (rangées des cartes de l'application Paramètres), faux par défaut ; et le contrôle déclaré comme enfant.
+// défaut (0 pour une rangée posée dans un dépliant, alignée sur sa grille) ; bordABord, vrai pour une plaque du curseur
+// qui va d'un bord à l'autre de la carte, au rayon radius.panel (rangées des cartes de l'application Paramètres), faux
+// par défaut ; et le contrôle déclaré comme enfant.
 // Sortie : signal clique(), émis au clic, à Entrée ou à Espace d'une rangée cliquable ; hovered, down, visualFocus
 // (lus par Etat) ; sousCurseur, vrai quand la rangée porte le curseur ; dnSurPlaque, son synonyme hérité par le
 // contenu ; encrePlaque, l'encre de la plaque ; encreAide et encreTertiaire, le texte secondaire (ou couleurAide) et
@@ -49,7 +50,7 @@ ColumnLayout {
     property bool titre: false
     default property alias controle: emplacement.data
     property real cote: Theme.space?.scale[2] ?? 0
-    // Vrai pour une rangée posée dans une carte de l'application Paramètres : sa plaque de survol va d'un bord à
+    // Vrai pour une rangée posée dans une carte de l'application Paramètres : sa plaque du curseur va d'un bord à
     // l'autre de la carte, au rayon de celle-ci, au lieu de rester en retrait de reglages.sidebarInset.
     property bool bordABord: false
     Layout.fillWidth: true

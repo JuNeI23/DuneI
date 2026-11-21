@@ -3,6 +3,7 @@ import QtQuick.Layouts
 import Quickshell.Networking
 import "../Theme"
 import "../Composants"
+import "../Composants/etats.js" as Etats
 import "../Parametres"
 import "../Barre/icones.js" as Icones
 import "nmcli.js" as Nmcli
@@ -80,11 +81,15 @@ Overlay {
     Component.onDestruction: if (ouvert) etat.recherche = false
 
     // BoutonIcone — bouton réduit à une icône, sans fond, comme les boutons d'outil de macOS.
-    // Rôle : icône au texte secondaire, au texte primaire survolée ; le clic émet clique().
-    // Entrées : nom, l'icône. Sorties : signal clique(). Erreurs : aucune. Dépendances : Icone, Theme.
+    // Rôle : icône au texte secondaire, au texte primaire survolée, au sur-accent (color.onAccent) posée sur la
+    // plaque du curseur (un ancêtre, sa ZoneCurseur, déclare dnSurPlaque), en fondu au ressort des états ; le clic
+    // émet clique().
+    // Entrées : nom, l'icône. Sorties : signal clique() ; surPlaque, vrai sur la plaque. Erreurs : aucune.
+    // Dépendances : Icone, Theme (density, icons, color, ColorSpring), etats.js (herite).
     component BoutonIcone: Item {
         id: boutonIcone
         property string nom
+        readonly property bool surPlaque: Etats.herite(boutonIcone, "dnSurPlaque", false)
         signal clique()
         implicitWidth: Theme.density?.controlHeight ?? 0
         implicitHeight: implicitWidth
@@ -93,7 +98,12 @@ Overlay {
             anchors.centerIn: parent
             nom: boutonIcone.nom
             taille: Theme.icons?.sizes.dense ?? 0
-            couleur: (survol.hovered ? Theme.color?.textPrimary : Theme.color?.textSecondary) ?? "transparent"
+            couleur: encre.value
+        }
+        ColorSpring {
+            id: encre
+            target: (boutonIcone.surPlaque ? Theme.color?.onAccent : survol.hovered ? Theme.color?.textPrimary
+                     : Theme.color?.textSecondary) ?? "transparent"
         }
         HoverHandler { id: survol }
         TapHandler { onTapped: boutonIcone.clique() }
@@ -393,7 +403,6 @@ Overlay {
                     Layout.alignment: Qt.AlignRight
                     icone: "web-browser"
                     text: "Ouvrir la page de connexion"
-                    principal: true
                     onClicked: { panneau.etat.ouvrirPortail(); panneau.fermer() }
                 }
             }
@@ -409,7 +418,12 @@ Overlay {
                     objectName: "recherche"
                     implicitWidth: Theme.density?.controlHeight ?? 0
                     implicitHeight: implicitWidth
-                    BoutonIcone { anchors.fill: parent; visible: !panneau.balayage; nom: "view-refresh"; onClique: panneau.rechercher() }
+                    // Bouton isolé : sa zone porte la plaque du curseur au survol, comme les autres contrôles (L2-73).
+                    ZoneCurseur {
+                        anchors.fill: parent
+                        visible: !panneau.balayage
+                        BoutonIcone { nom: "view-refresh"; onClique: panneau.rechercher() }
+                    }
                     Activite { objectName: "activiteRecherche"; anchors.centerIn: parent; visible: panneau.balayage }
                     Infobulle { objectName: "infobulleRecherche"; cible: recherche; texte: "Rechercher les réseaux" }
                 }
@@ -519,7 +533,9 @@ Overlay {
                                             visible: ligne.enConnexion
                                             text: "Connexion…"
                                             echelon: 1
-                                            color: Theme.color?.textSecondary ?? "transparent"
+                                            // Encres de la rangée : leur teinte hors du curseur, celle de la plaque
+                                            // sous lui, en fondu.
+                                            color: rangee.encreSecondaire
                                         }
                                         Activite { anchors.verticalCenter: parent.verticalCenter; visible: ligne.enConnexion }
                                         Icone {
@@ -527,7 +543,7 @@ Overlay {
                                             visible: panneau.securise(ligne.modelData)
                                             nom: "network-wireless-encrypted"
                                             taille: Theme.icons?.sizes.dense ?? 0
-                                            couleur: Theme.color?.textTertiary ?? "transparent"
+                                            couleur: rangee.encreTertiaire
                                         }
                                     }
                                 }

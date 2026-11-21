@@ -217,7 +217,6 @@ ColumnLayout {
             objectName: "rejoindre"
             visible: reglages.profil.actif || reglages.portee
             text: reglages.profil.actif ? "Se déconnecter" : "Rejoindre"
-            principal: !reglages.profil.actif
             onClicked: reglages.profil.connecter()
         }
         Item { Layout.fillWidth: true }

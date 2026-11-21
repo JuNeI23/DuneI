@@ -130,7 +130,6 @@ ColumnLayout {
         Bouton {
             objectName: "ajouter"
             text: "Ajouter"
-            principal: true
             enabled: fiche.valide && !fiche.enCours
             onClicked: fiche.ajouter()
         }
