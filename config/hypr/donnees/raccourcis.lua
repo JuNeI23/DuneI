@@ -14,7 +14,8 @@ M.touches = {
     { touches = "SUPER + V",       action = "flottant", description = "Rendre la fenêtre flottante ou tuilée" },
     { touches = "SUPER + J",       action = "decoupe",  description = "Changer le sens de découpe" },
     { touches = "SUPER + ALT + P", action = "epingler", description = "Épingler la fenêtre flottante sur tous les bureaux" },
-    { touches = "SUPER + Tab",     action = "suivante", description = "Passer à la fenêtre suivante" },
+    -- Sélecteur de fenêtres de la coque (L2-17) : SUPER tenu, Tab avance, SHIFT + Tab recule (géré par la coque).
+    { touches = "SUPER + Tab",     action = "global", raccourci = "dunei:selecteur", description = "Choisir une fenêtre" },
     -- Bureau spécial
     { touches = "SUPER + S",         action = "special", description = "Afficher ou masquer l'accueil" },
     { touches = "SUPER + SHIFT + S", action = "ranger",  description = "Ranger la fenêtre dans l'accueil" },

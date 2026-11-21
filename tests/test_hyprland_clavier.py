@@ -70,7 +70,7 @@ def expected() -> dict[str, tuple[str, str]]:
         "SUPER + V": ("dsp.window.float({action=toggle})", "{}"),
         "SUPER + J": ("dsp.layout(togglesplit)", "{}"),
         "SUPER + ALT + P": ("dsp.window.pin({action=toggle})", "{}"),
-        "SUPER + Tab": ("dsp.window.cycle_next({})", "{}"),
+        "SUPER + Tab": ("dsp.global(dunei:selecteur)", "{}"),
         "SUPER + S": ("dsp.workspace.toggle_special(accueil)", "{}"),
         "SUPER + SHIFT + S": ("dsp.window.move({follow=false,workspace=special:accueil})", "{}"),
         "SUPER + Q": ("dsp.exec_cmd(uwsm app -- T)", "{}"),
@@ -194,6 +194,11 @@ class ClavierTest(unittest.TestCase):
                          f'}} }}, {ROLES})\n')
         self.assertEqual(len([l for l in out if l[0] == "bind"]), 2)
 
+    def test_selecteur_bound_without_shift_variant(self):
+        bound = {l[1] for l in self.apply_real() if l[0] == "bind"}
+        self.assertIn("SUPER + Tab", bound)
+        self.assertNotIn("SUPER + SHIFT + Tab", bound)
+
     def test_refusals(self):
         cases = {
             "combinaison vide": '{ touches = "SUPER + ", action = "fermer", description = "a" }',
@@ -203,6 +208,8 @@ class ClavierTest(unittest.TestCase):
             "direction inconnue « gauche »": '{ touches = "SUPER + C", action = "focus", direction = "gauche", description = "a" }',
             "paramètre « commande » manquant": '{ touches = "SUPER + C", action = "commande", comande = "ls", description = "a" }',
             "paramètre « bureau » manquant": '{ touches = "SUPER + C", action = "envoyer", description = "a" }',
+            "paramètre « raccourci » manquant": '{ touches = "SUPER + C", action = "global", description = "a" }',
+            "action inconnue « suivante »": '{ touches = "SUPER + C", action = "suivante", description = "a" }',
             "paramètre « role » manquant": '{ touches = "SUPER + C", action = "role", description = "a" }',
             "variante « nil » invalide pour le rôle « capture »":
                 '{ touches = "SUPER + C", action = "role", role = "capture", description = "a" }',
