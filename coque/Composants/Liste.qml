@@ -15,8 +15,7 @@ import "etats.js" as Etats
 // touche reçue ou l'arrivée du focus le passent à vrai, un clic dans une rangée le repasse à faux (Rangee s'en
 // charge). Le focus obtenu au clavier donne le curseur à la rangée courante, toute touche le lui rend, et une
 // nouvelle rangée courante le reprend tant qu'il est dans la liste ; à la perte de ce focus, la rangée courante le
-// lâche, sauf si le pointeur la survole ; libéré par le pointeur qui quitte un élément, il revient à la rangée
-// courante tant que la liste garde ce focus.
+// lâche, sauf si le pointeur la survole.
 // Entrées : model, delegate (une Rangee) et le reste de l'API de ListView ; selectionSuitCourant, vrai par
 // défaut : la rangée courante est la rangée sélectionnée ; faux, chaque rangée lit sa propriété selectionnee,
 // fournie par l'appelant ; focusClavier, que l'appelant peut aussi écrire, par exemple pour retirer le curseur après
@@ -29,8 +28,8 @@ import "etats.js" as Etats
 // (cible, teinte), pour les essais.
 // Erreurs : aucune ; Entrée sur une liste vide, ou dont le délégué n'est pas une Rangee, n'active rien ; une liste
 // vide ne montre pas de plaque.
-// Dépendances : QtQuick (ListView, Keys, Connections, Qt.callLater), Rangee comme délégué, Plaque, VueCurseur, Theme
-// (space, radius, stateColors), etats.js (herite).
+// Dépendances : QtQuick (ListView, Keys), Rangee comme délégué, Plaque, VueCurseur, Theme (space, radius,
+// stateColors), etats.js (herite).
 // Cotes : la plaque reprend la pastille d'une rangée, en retrait de space.scale[0] de chaque bord, au rayon
 // radius.control.
 // Limite connue : Qt 6.12 n'expose pas de focusReason sur Item ; l'arrivée du focus ne distingue donc pas la
@@ -55,23 +54,10 @@ ListView {
     // La liste atteinte au clavier donne le curseur à sa rangée courante ; quittée, elle le reprend à cette rangée,
     // sauf si le pointeur la survole encore.
     onAuClavierChanged: if (currentItem) auClavier ? dnVue.prendre(currentItem) : currentItem.hovered || dnVue.lacher(currentItem)
-    // Une nouvelle rangée courante (flèche, survol) reprend le curseur s'il est dans la liste, ou si la liste a le
-    // focus du clavier : la ListView retire le focus à l'ancienne rangée courante, qui lâche alors le curseur, avant de
+    // Une nouvelle rangée courante (flèche, survol) reprend le curseur s'il est dans la liste, ou si la liste a le focus
+    // du clavier : la ListView retire le focus à l'ancienne rangée courante, qui lâche alors le curseur, avant de
     // changer currentItem.
     onCurrentItemChanged: if (currentItem && (curseurDedans || auClavier)) dnVue.prendre(currentItem)
-
-    // reprendre — rend le curseur de la vue, s'il est libre, à la rangée courante de la liste atteinte au clavier.
-    // Entrées : aucune. Sortie : aucune. Erreurs : aucune ; curseur déjà porté, liste sans focus clavier ou sans
-    // rangée courante : rien. Dépendances : dnVue (VueCurseur), auClavier, currentItem.
-    function reprendre() {
-        if (!dnVue.porteur && auClavier && currentItem) dnVue.prendre(currentItem)
-    }
-    // Le pointeur qui quitte un élément libère le curseur : la liste qui garde le focus du clavier le reprend au tour
-    // suivant, après un élément encore survolé, comme les contrôles (Etat.reprendre).
-    Connections {
-        target: liste.dnVue
-        function onPorteurChanged() { if (!liste.dnVue.porteur && liste.auClavier) Qt.callLater(liste.reprendre) }
-    }
 
     // Toute touche reçue rend le curseur à la rangée courante. Seule Entrée est consommée, pour activer la rangée
     // courante : les autres touches poursuivent vers la ListView, dont la navigation aux flèches reste ainsi active.

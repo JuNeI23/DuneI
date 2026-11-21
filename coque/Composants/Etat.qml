@@ -18,11 +18,11 @@ import "etats.js" as Etats
 // réagir au survol ni à la pression, comme la sélection d'une barre latérale de macOS : c'est la rangée choisie
 // d'une colonne de navigation ; peintFond et peintTexte, vrais par défaut : faux quand le contrôle ne peint pas
 // cette couleur, qui reste alors transparente, si bien que son ressort ne démarre jamais (sobriété, D80) ;
-// fondReposTransparent, faux par
-// défaut : vrai, le fond ni survolé, ni pressé, ni sélectionné (au repos ou désactivé) vise sa couleur rendue
-// transparente, pour un élément qui ne se distingue pas de son conteneur au repos (une rangée) et ne doit pas en
-// repeindre la couleur opaque, qui se détacherait d'une surface de verre. L'opacité seule change : le ressort
-// fond la couleur d'état depuis sa propre teinte, sans passer par le noir ; fondSurvolTransparent, faux par défaut :
+// fondReposTransparent, faux par défaut : vrai, le fond ni survolé, ni pressé, ni sélectionné (au repos ou
+// désactivé) vise sa couleur rendue transparente, pour un élément qui ne se distingue pas de son conteneur au repos
+// (une rangée) et ne doit pas en repeindre la couleur opaque, qui se détacherait d'une surface de verre. L'opacité
+// seule change : le ressort fond la couleur d'état depuis sa propre teinte, sans passer par le noir ;
+// fondSurvolTransparent, faux par défaut :
 // vrai, le survol (non sélectionné) fait de même, pour un élément qui ne se peint qu'à la pression (le segment d'une
 // barre d'onglets) et dont le ressort, resté sur le fond de survol opaque, le ferait apparaître au premier instant
 // de la pression ; suitCurseur, faux par défaut : vrai, l'état prend le curseur de sa vue (l'arbitre VueCurseur

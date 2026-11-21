@@ -32,7 +32,7 @@ import "Composants/ancrage.js" as Ancrage
 // <visible> <running> », « essai activitePhase <phase> », « essai activiteAncetre <bool> », « essai depliableOuvrir
 // <bool> », « essai basculeCocher <bool> », « essai valeurCopier », « essai pastillesForcer <état> », « essai pastillesReduire <bool> »,
 // « essai knobsActifs <bool> », « essai interrupteurCocher <bool> », « essai compteurValeur <n> », « essai deroulantRang <n> », « essai decocher »,
-// « essai radioCocher <rang> », « essai jaugeActive <bool> », « essai jaugeCoupe <bool> », « essai surPlaque <bool> », « essai rangeeImposer <bool> », « essai rangeeCurseur <bool> », « essai boutonDanger <bool> », « essai inactif
+// « essai radioCocher <rang> », « essai jaugeActive <bool> », « essai jaugeCoupe <bool> », « essai surPlaque <bool> », « essai rangeeImposer <bool> », « essai rangeeCurseur <bool> », « essai rangeeEncres », « essai boutonDanger <bool> », « essai inactif
 // <bool> », « essai reparenter », « essai texteMoyen », « essai survol <bool> »,
 // « essai champActif <bool> », « essai champTexte <texte> », « essai selectionLibre », « essai icone <nom> <bool> »,
 // « essai ouvrirFactice <A…E> », « essai fermerFactice <A…E> » et « essai materiauHauteur <px> ».
@@ -243,6 +243,9 @@ ShellRoot {
             Liste {
                 id: listeVide
             }
+
+            // Suffixe vide, que « essai rangeeEncres » pose sur la rangée 0 pour en éveiller les encres.
+            Component { id: suffixeVide; Item {} }
 
             Liste {
                 id: listeEssai
@@ -1168,6 +1171,16 @@ ShellRoot {
         function rangeeCurseur(valeur: bool): void {
             const r = listeEssai.itemAtIndex(0)
             valeur ? listeEssai.dnVue.prendre(r) : listeEssai.dnVue.lacher(r)
+        }
+
+        // rangeeEncres — pose un suffixe vide sur la rangée 0 de la liste d'essai et journalise ses encres de suffixe,
+        // secondaire puis tertiaire. Entrées : aucune. Sortie : aucune ; « essai : rangeeEncres <#secondaire>
+        // <#tertiaire> ». Erreurs : aucune. Dépendances : listeEssai, suffixeVide, Rangee (encreSecondaire,
+        // encreTertiaire), journal.
+        function rangeeEncres(): void {
+            const r = listeEssai.itemAtIndex(0)
+            r.suffixe = suffixeVide
+            essai.journal("rangeeEncres", r.encreSecondaire + " " + r.encreTertiaire)
         }
 
         // rangeeImposees — journalise, pour la rangée 0, la variante pleine de son icône, les cibles de couleur

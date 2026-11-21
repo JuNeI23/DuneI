@@ -427,6 +427,22 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
         self.ipc("rangeeCurseur", "false")
         self.assertEqual(self.valeur("rangeeImposees").lower().split()[1:3], [t["accent"].lower(), t["error"].lower()])
 
+    def test_encres_du_suffixe(self):
+        # Le suffixe d'une rangée (« Connexion… », un cadenas, un statut) lit les encres de la rangée : texte secondaire
+        # et tertiaire hors du curseur, encre de la plaque sous lui, en fondu (L2-73).
+        self.demarrer()
+        t = self.tokens55()[0]["color"]
+        sur = t["onAccent"].lower()
+        def lire(attendu: list) -> list:
+            fin = time.monotonic() + DELAI
+            while (lu := self.valeur("rangeeEncres").lower().split()) != attendu and time.monotonic() < fin:
+                time.sleep(0.05)
+            return lu
+        hors = [t["textSecondary"].lower(), t["textTertiary"].lower()]
+        self.assertEqual(lire(hors), hors)
+        self.ipc("rangeeCurseur", "true")
+        self.assertEqual(lire([sur, sur]), [sur, sur])
+
     def test_rangee_transparente_au_repos(self):
         # Défaut relevé à l'écran : sur le verre d'un menu, chaque rangée au repos peignait la couleur opaque de sa
         # surface et formait une plaque distincte. Dans une Liste, la rangée ne peint plus jamais son fond, au repos,
