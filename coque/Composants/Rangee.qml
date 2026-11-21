@@ -128,13 +128,13 @@ T.ItemDelegate {
     // la teinte imposée quand elle n'est pas transparente, en fondu ; sous le curseur, toujours celles de l'état.
     ColorSpring {
         id: fondIcone
-        target: rangee.teinteIcone.a > 0 && !etat.sousCurseur ? rangee.teinteIcone : etat.texte
+        target: rangee.teinteIcone.a > 0 && !etat.sousCurseur ? rangee.teinteIcone : etat.texteCible
     }
 
     ColorSpring {
         id: fondTexte
-        target: etat.sousCurseur ? etat.texte : rangee.teinteTexte.a > 0 ? rangee.teinteTexte
-            : rangee.accentue ? Theme.color?.accentStandalone ?? "transparent" : etat.texte
+        target: etat.sousCurseur ? etat.texteCible : rangee.teinteTexte.a > 0 ? rangee.teinteTexte
+            : rangee.accentue ? Theme.color?.accentStandalone ?? "transparent" : etat.texteCible
     }
 
     // Encres d'un suffixe : la teinte hors du curseur, l'encre de la plaque sous lui. Sans suffixe, la cible reste

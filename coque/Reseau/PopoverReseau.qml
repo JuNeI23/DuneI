@@ -13,8 +13,8 @@ import "nmcli.js" as Nmcli
 // cache (il n'est plus détruit à la fermeture ; D80 reste vrai pour un popover non hébergé), tenu à la marge d'écran
 // des overlays ancrés à la barre (Overlay.margeEcran). Il suit les popovers sobres d'inspiration/anhphong : compact,
 // carré, sur le verre de E3 (D103), il porte de haut en bas : l'en-tête, dont la bascule à glyphe allume ou coupe le
-// Wi-Fi (accent plein allumée, neutre éteinte ; sa zone porte la plaque du curseur, sur laquelle, allumée, elle
-// s'inverse, L2-73), avec le nom du réseau joint et son état (« Connecté », « Connecté
+// Wi-Fi (accent plein allumée, neutre éteinte ; sa zone reste neutre, sans plaque du curseur, recette de L2-73),
+// avec le nom du réseau joint et son état (« Connecté », « Connecté
 // sans internet », « Portail de connexion », « Partage du téléphone »…) ; derrière un portail captif, « Ouvrir la
 // page de connexion » ; « Réseaux à proximité », petite étiquette au texte secondaire avec le bouton de nouvelle
 // recherche, que l'indicateur d'activité remplace tant que le balayage relancé n'a pas rendu sa liste ; la liste des
@@ -81,9 +81,9 @@ Overlay {
     Component.onDestruction: if (ouvert) etat.recherche = false
 
     // BoutonIcone — bouton réduit à une icône, sans fond, comme les boutons d'outil de macOS.
-    // Rôle : icône au texte secondaire, au texte primaire survolée, au sur-accent (color.onAccent) posée sur la
-    // plaque du curseur (un ancêtre, sa ZoneCurseur, déclare dnSurPlaque), en fondu au ressort des états ; le clic
-    // émet clique().
+    // Rôle : icône au texte secondaire, au texte primaire survolée, en fondu au ressort des états ; posée sur une
+    // plaque du curseur (un ancêtre déclare dnSurPlaque), elle passerait au sur-accent (color.onAccent), ce que la
+    // zone neutre du popover ne fait jamais ; le clic émet clique().
     // Entrées : nom, l'icône. Sorties : signal clique() ; surPlaque, vrai sur la plaque. Erreurs : aucune.
     // Dépendances : Icone, Theme (density, icons, color, ColorSpring), etats.js (herite).
     component BoutonIcone: Item {
@@ -346,6 +346,7 @@ Overlay {
         // déclarée avant la colonne : elle garde sa place dans l'ordre de tabulation, la première, et se pose par-dessus
         // l'emplacement que l'en-tête lui réserve, au pixel près.
         ZoneCurseur {
+            marque: false
             z: 1
             x: colonne.x + entete.x + emplacement.x
             y: colonne.y + entete.y + emplacement.y
@@ -418,8 +419,9 @@ Overlay {
                     objectName: "recherche"
                     implicitWidth: Theme.density?.controlHeight ?? 0
                     implicitHeight: implicitWidth
-                    // Bouton isolé : sa zone porte la plaque du curseur au survol, comme les autres contrôles (L2-73).
+                    // Bouton isolé : sa zone reste neutre (marque faux), le bouton garde son propre survol (recette de L2-73).
                     ZoneCurseur {
+                        marque: false
                         anchors.fill: parent
                         visible: !panneau.balayage
                         BoutonIcone { nom: "view-refresh"; onClique: panneau.rechercher() }

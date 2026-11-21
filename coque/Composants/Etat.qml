@@ -46,7 +46,8 @@ import "etats.js" as Etats
 // Sorties : interaction, selection, inactif (clés des tokens) ; levee, vrai pour une sélection neutre (selectionNeutre)
 // peinte en controlRaised, hors du curseur ; vue, l'arbitre du curseur hérité (null sans suitCurseur ou sans vue) ;
 // sousCurseur, vrai quand le contrôle porte le curseur (toujours faux sans suitCurseur), pour un composant qui peint
-// la marque du curseur ailleurs que sur ce fond ; fond, texte, couleurs affichées ; texteNeutre, le
+// la marque du curseur ailleurs que sur ce fond ; fond, texte, couleurs affichées ; texteCible, la cible du texte
+// sans ressort, que vise tout ressort qui suit le texte de l'état ; texteNeutre, le
 // texte du même rôle et de la même interaction sans sélection, sans ressort, pour un libellé posé à côté d'une
 // marque sélectionnable (case, radio, interrupteur, bascule) ou d'un en-tête sans fond (section dépliable) ;
 // surPlaque, vrai quand inverseSurPlaque est posé et qu'un ancêtre porte la plaque du curseur ; inverse, vrai quand
@@ -105,10 +106,14 @@ Item {
             ? Qt.alpha(plein, 0) : plein
     }
 
+    // texteCible — la couleur que vise le texte, sans ressort : un ressort qui suit le texte d'un état doit viser
+    // cette cible et non etat.texte, sans quoi deux ressorts s'enchaînent et le texte arrive avec un retard visible.
+    readonly property color texteCible: !etat.peintTexte ? "transparent"
+        : (etat.inverse ? etat.encres?.fill : etat.couleurs?.text) ?? "transparent"
+
     ColorSpring {
         id: ressortTexte
-        target: !etat.peintTexte ? "transparent"
-            : (etat.inverse ? etat.encres?.fill : etat.couleurs?.text) ?? "transparent"
+        target: etat.texteCible
     }
 
     // Libellé d'une marque : hors de la plaque, il suit texteNeutre ; sur elle, l'encre de la plaque. Sans

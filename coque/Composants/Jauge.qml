@@ -79,7 +79,7 @@ T.Slider {
 
     ColorSpring {
         id: fondIcone
-        target: !jauge.coupe ? etat.texte
+        target: !jauge.coupe ? etat.texteCible
             : (etat.surPlaque ? Theme.color?.textSecondary : Theme.color?.error) ?? "transparent"
     }
 

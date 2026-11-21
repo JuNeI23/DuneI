@@ -52,8 +52,8 @@ Overlay {
     // ;
     // pendant le glisser, le ressort ne s'applique pas et la poignée suit la souris.
     // Entrées : niveau, le niveau de l'état. Sorties : celles de Jauge (moved, iconeCliquee) ; poser(), qui pose la
-    // valeur sur le niveau sans glissement. La jauge se pose dans une ZoneCurseur, qui la place dans la colonne et
-    // porte la plaque du curseur (L2-73). Erreurs : aucune. Dépendances : Jauge, Ressort.
+    // valeur sur le niveau sans glissement. La jauge se pose dans une ZoneCurseur neutre (marque faux), qui la place
+    // dans la colonne sans plaque du curseur (recette de L2-73). Erreurs : aucune. Dépendances : Jauge, Ressort.
     component JaugeNiveau: Jauge {
         id: jaugeNiveau
         property int niveau
@@ -168,8 +168,9 @@ Overlay {
                 }
             }
 
-            // Contrôle isolé : sa zone porte la plaque du curseur, sur laquelle la jauge s'inverse (L2-73).
+            // Contrôle isolé : sa zone reste neutre (marque faux), la jauge garde son propre survol (recette de L2-73).
             ZoneCurseur {
+                marque: false
                 Layout.fillWidth: true
                 Layout.leftMargin: Theme.space?.scale[2] ?? 0
                 Layout.rightMargin: Theme.space?.scale[2] ?? 0
@@ -212,8 +213,9 @@ Overlay {
                 moyen: true
                 color: (panneau.etat.micMuet ? Theme.color?.error : Theme.color?.textSecondary) ?? "transparent"
             }
-            // Contrôle isolé : sa zone porte la plaque du curseur, sur laquelle la jauge s'inverse (L2-73).
+            // Contrôle isolé : sa zone reste neutre (marque faux), la jauge garde son propre survol (recette de L2-73).
             ZoneCurseur {
+                marque: false
                 Layout.fillWidth: true
                 Layout.leftMargin: Theme.space?.scale[2] ?? 0
                 Layout.rightMargin: Theme.space?.scale[2] ?? 0

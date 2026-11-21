@@ -97,10 +97,10 @@ Item {
         color: etat.fond
     }
     // Encres de la valeur et de « Copié » : leur couleur hors du curseur, le texte de l'état (le sur-accent) sous lui.
-    ColorSpring { id: encreValeur; target: etat.sousCurseur ? etat.texte : valeur.couleur }
+    ColorSpring { id: encreValeur; target: etat.sousCurseur ? etat.texteCible : valeur.couleur }
     ColorSpring {
         id: encreCopie
-        target: etat.sousCurseur ? etat.texte : Theme.color?.accentStandalone ?? "transparent"
+        target: etat.sousCurseur ? etat.texteCible : Theme.color?.accentStandalone ?? "transparent"
     }
 
     activeFocusOnTab: copiable

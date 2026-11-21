@@ -14,7 +14,9 @@ import "etats.js" as Etats
 // la zone déclare dnSurPlaque : un contrôle allumé s'y inverse (Etat.inverseSurPlaque) ; un contenu qui peint son
 // propre texte prend etat.texte, neutre au repos et au sur-accent sur la plaque.
 // Entrées : le contrôle, déclaré comme unique enfant (cible) : la zone l'adopte et il la remplit ; marge, débord de
-// la plaque autour du contrôle, space.scale[0] par défaut.
+// la plaque autour du contrôle, space.scale[0] par défaut ; marque, vrai par défaut : faux, la zone n'est plus
+// qu'une enveloppe neutre, qui ne prend jamais le curseur et ne peint rien, et le contrôle garde son propre survol
+// (les popovers, où Nicolas a refusé la plaque autour des glyphes et des jauges, recette de L2-73).
 // Sorties : etat, l'Etat de la plaque (couleurs, sousCurseur) ; hovered, visualFocus, down (down du contrôle, ou
 // pressed pour un gabarit qui n'a pas down, comme T.Slider), lus par l'Etat ;
 // dnSurPlaque, vrai sous le curseur ; plaque, le rectangle peint, lu par les essais.
@@ -27,9 +29,10 @@ Item {
 
     default property Item cible
     property real marge: Theme.space?.scale[0] ?? 0
+    property bool marque: true
     readonly property alias etat: etat
     readonly property alias plaque: plaque
-    readonly property bool actif: cible?.enabled ?? false
+    readonly property bool actif: marque && (cible?.enabled ?? false)
     readonly property bool hovered: survol.hovered && actif
     readonly property bool visualFocus: actif && (cible.visualFocus ?? cible.activeFocus)
     readonly property bool down: (cible?.down ?? cible?.pressed) === true
