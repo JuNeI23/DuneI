@@ -20,7 +20,8 @@
     "stable": 5000,
     "dismiss": 1500,
     "liste": 30,
-    "alerte": 4000
+    "alerte": 4000,
+    "selecteur": 150
   },
   "periods": {
     "spinner": 1200
