@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas
 
-Document normatif. Version 0.41. Historique en fin de document.
+Document normatif. Version 0.42. Historique en fin de document.
 
 ## Comment lire ce document
 
@@ -387,7 +387,8 @@ S'applique en cascade et met à zéro le chroma des accents.
 **Grammaire des raccourcis du système.** `SUPER` agit ou va ; `SUPER + Maj` emporte la fenêtre active
 (la même action, la fenêtre suit) ; `SUPER + Ctrl` redimensionne ; `SUPER + Alt` porte les actions rares
 ou système, que la touche supplémentaire protège d'un appui accidentel. Un raccourci qui déroge à cette
-grammaire est une dérogation, consignée au journal. Une application se lance par son rôle (terminal,
+grammaire est une dérogation, consignée au journal : ainsi le geste tenu du sélecteur de fenêtres (`SUPER` tenu,
+`Tab` avance, le relâchement amène), `SUPER + Maj + Tab` n'étant pas lié au compositeur (D201). Une application se lance par son rôle (terminal,
 fichiers, navigateur, lanceur), jamais par le nom d'un logiciel.
 
 ### Formes
@@ -956,7 +957,7 @@ Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si 
 | Composant | Famille | Élév. | Primitives | Transition | Règles particulières |
 | --- | --- | --- | --- | --- | --- |
 | Lanceur | attention | E3 | `overlay` + `field` + `row` | `overlay` | Voile 0.55 + flou instantané, apparu en fondu par le compositeur (D192). Focus clavier dès l'ouverture. Le cadre monte depuis le bas au ressort `window`, sort en fondu sur place (D193). Un seul curseur, plaques sans ombre (D191, D195) |
-| Sélecteur de fenêtres | attention | E3 | `overlay` + `surface` | `overlay` | Vignettes : neutre pur, pas de teinte de thème |
+| Sélecteur de fenêtres | attention | E3 | `overlay` + `surface` | `overlay` | Geste tenu : `SUPER + Tab` ouvre, chaque Tab avance, `Maj + Tab` recule, le relâchement de SUPER amène la fenêtre après le retrait du calque (D194, D200, D201) ; Échap ou un clic sur le voile annulent ; un tap bref ne montre rien. Clavier exclusif dès l'ouverture, calque invisible jusqu'au délai `delays.selecteur`, puis voile et flou instantané du lanceur en fondu par le compositeur (D192), cadre en verre qui monte au ressort `window` (D193). Une rangée de vignettes figées des fenêtres des bureaux 1 à 4, de la plus récente à la plus ancienne, à hauteur fixe et largeur bornée (`[selecteur]`), qui défile au ressort `navigate` pour garder la sélection visible ; sous la rangée, médaillon, titre en `text-primary` et « bureau n » en `text-secondary`. Vignettes : neutre pur, l'image seule, sans teinte ni voile posés dessus ; cadre et fenêtre d'attente gardent les surfaces du thème (D201). Curseur : la plaque d'accent plate sous la vignette choisie, qui grandit à `galerie.echelle`, sans anneau ; le survol déplace la plaque, le clic valide (D191, D202) |
 | Sélecteur de bureaux | attention | E3 | `overlay` + `row` | `overlay` | Chaque bureau porte une teinte de la palette catégorielle |
 | Menu de déconnexion | attention | E3 | `overlay` + `interactive` | `overlay` | Action destructrice en `error`, jamais en accent |
 | Verrouillage / connexion | attention | E0 | `overlay` + `text` + `field` | `spectacle` | Registre de spectacle. Horloge en grand corps, poids léger |
@@ -1014,3 +1015,4 @@ Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si 
 | 0.39 | 2026-11-17 | Annexe E : voix des notifications, deux sons KDE Ocean, quand ils sonnent, carte « Son » de Paramètres (L2-68, D185 à D187) ; section dépliable : un repli finit d'un seul geste, le contenu remonte sous la tête et le ressort se pose sous le seuil de repos (D188) |
 | 0.40 | 2026-11-20 | Règle générale « l'accent de sélection suit le curseur » (D191), ligne « Lanceur » de la couche 3 : fondu du compositeur, montée au ressort `window`, plaques sans ombre (L2-16, D190 à D196) |
 | 0.41 | 2026-11-21 | Chapitre 7 : la règle « l'accent de sélection suit le curseur » appliquée à toute la coque (un arbitre `VueCurseur` par vue, la plaque d'accent plate comme seule marque à la souris comme au clavier, indicateurs distincts, contrôles isolés par `ZoneCurseur`, inversion sur la plaque, destructif en rouge, popovers sans plaque autour des petits contrôles) ; focus sans anneau ni contour orange ; annexe E : rangée, bouton, onglets, curseur, jauge, bascule à glyphe, menu, popover et panneau des notifications mis à jour (L2-73, D197 à D199) |
+| 0.42 | 2026-11-21 | Ligne « Sélecteur de fenêtres » de la couche 3 : geste tenu, calque invisible jusqu'au délai, rangée de vignettes figées qui défile, neutre pur limité à l'image, plaque d'accent sans anneau ; grammaire des raccourcis : dérogation du geste tenu, `SUPER + Maj + Tab` non lié (L2-17, D200 à D202) |

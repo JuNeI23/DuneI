@@ -1,6 +1,6 @@
 # Sélecteur de fenêtres (L2-17) — fiche de conception
 
-Version 0.2 — 2026-11-21
+Version 0.3 — 2026-11-21
 
 ## Intention
 
@@ -102,7 +102,8 @@ Moins de deux fenêtres : `SUPER + Tab` ne fait rien.
   visible, comme la galerie de fonds.
 - **Curseur** : la vignette choisie est posée sur la plaque d'accent plate, la marque unique du curseur de
   la coque (D191, bible 0.41), et grandit à `galerie.echelle`. Pas d'anneau. Une seule plaque par vue : un
-  `VueCurseur` arbitre, le dernier mouvement (Tab ou survol) l'emporte ; à la différence du lanceur, le
+  `VueCurseur` arbitre, le dernier mouvement (Tab ou survol) l'emporte (construit sans `VueCurseur` : la plaque
+  suit la sélection, que le survol écrit, D202) ; à la différence du lanceur, le
   survol déplace donc le curseur.
 - Sous la rangée, une seule ligne pour la vignette choisie : icône de l'application (médaillon du lanceur),
   titre en `text-primary`, puis « bureau n » en `text-secondary`.
@@ -161,3 +162,4 @@ délai.
 |---|---|---|
 | 0.1 | 2026-11-21 | Première rédaction, après l'essai du relâchement de SUPER sur caladan |
 | 0.2 | 2026-11-21 | Relecture du constructeur : neutre pur limité à l'image, `SUPER + SHIFT + Tab` non lié |
+| 0.3 | 2026-11-21 | Après la construction : une seule marque du curseur, la plaque qui suit la sélection, sans `VueCurseur` ; le `GlobalShortcut` déclaré dans `coque/shell.qml` et non dans le singleton (D200, D202) |

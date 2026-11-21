@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.51. Historique en fin de document.
+Version 1.52. Historique en fin de document.
 
 Socle amorçable.
 
@@ -1388,7 +1388,7 @@ bureau spécial, `accueil`, qui s'affiche par-dessus le bureau courant.
 | `SUPER + J` | Changer le sens de découpe |
 | `SUPER + Alt + P` | Épingler une flottante sur tous les bureaux |
 | `SUPER + flèches` | Focus dans la direction |
-| `SUPER + Tab` | Fenêtre suivante |
+| `SUPER + Tab` | Choisir une fenêtre (sélecteur de la coque, L2-17) : SUPER tenu, chaque Tab avance, `Maj + Tab` recule, le relâchement amène la fenêtre ; un tap bref ramène à la précédente |
 | `SUPER + Maj + flèches` | Déplacer la fenêtre |
 | `SUPER + Ctrl + flèches` | Redimensionner, par pas de 48 px logiques |
 | `SUPER + 1…4` | Aller au bureau 1 à 4 |
@@ -2254,6 +2254,38 @@ le reste de la coque.
   `qs`). Sous charge, `test_radio_eteinte` et les essais qui attendent 3 s échouent parfois : les relancer seuls avant
   de conclure à une régression (L2-78).
 
+## Le sélecteur de fenêtres — L2-17
+
+Aucun paquet à installer : la feature ne touche que la coque, la liaison de `SUPER + Tab`, deux jetons et les tests.
+`make install` la déploie comme le reste de la coque.
+
+- **Le geste.** `SUPER + Tab` ouvre le sélecteur, sans rien montrer d'abord : la sélection se pose sur la deuxième
+  fenêtre, la première étant la fenêtre active. SUPER tenu, chaque `Tab` avance d'une vignette, en boucle, et
+  `Maj + Tab` recule. Si SUPER est encore tenu après 150 ms (`delays.selecteur`), le voile et le cadre apparaissent.
+  Relâcher SUPER amène la fenêtre choisie, bureau compris, après le retrait du calque ; un tap bref ramène ainsi à la
+  fenêtre précédente sans aucun affichage. Échap ou un clic sur le voile annulent. À la souris, survoler une vignette
+  y déplace la sélection, la cliquer la valide. Avec moins de deux fenêtres, `SUPER + Tab` ne fait rien. Le sélecteur
+  montre toutes les fenêtres des bureaux 1 à 4, tous écrans confondus, le bureau spécial exclu, de la plus récemment
+  active à la plus ancienne ; au-delà de la largeur de l'écran, la rangée défile pour garder la sélection visible.
+- **La liaison.** Dans `config/hypr/donnees/raccourcis.lua`, `SUPER + Tab` prend l'action `global`, qui lie
+  `hl.dsp.global("dunei:selecteur")` ; l'action `suivante` (`cycle_next`) a disparu. Le raccourci global est déclaré
+  par la coque, dans `coque/shell.qml` (`GlobalShortcut`, appid `dunei`, nom `selecteur`), et non dans le module : un
+  second client Quickshell qui inscrirait la même paire planterait (D200). `SUPER + SHIFT + Tab` n'est pas lié : il
+  n'agit que pendant le geste, où il recule (D201).
+- **Les jetons.** `delays.selecteur = 150` dans `motion.toml` ; table `[selecteur]` de `tokens.toml` : `hauteur = 140`,
+  `largeur_min = 100`, `largeur_max = 320`, `ecart = 16`. `make tokens` et `make motion` les reportent dans
+  `generated/` ; les fichiers témoins de `tests/golden/` sont à jour.
+- **Le module.** `coque/Selecteur/` : le singleton `Selecteur.qml` (état, sélection, IPC, action différée jusqu'au
+  `closelayer` de `dunei-attention`), la fenêtre de calque `FenetreSelecteur.qml`, le cadre `CadreSelecteur.qml` et la
+  logique pure `selecteur.js`. La vignette est partagée avec le lanceur : `coque/Composants/VignetteFenetre.qml`.
+- **Vérifier.** `hyprctl globalshortcuts` liste `dunei:selecteur` ; `qs -c dunei ipc call selecteur etat` rend l'état
+  du sélecteur en JSON (ouvert, montré, index, adresses de la liste figée, action en attente). À l'écran, sur les
+  bureaux 1 à 4 : un tap bref ne montre aucun éclair, un geste tenu montre les vignettes et la plaque d'accent sous la
+  vignette choisie, le relâchement amène la fenêtre.
+- **Les tests.** `python3 -m unittest tests.test_selecteur tests.test_hyprland_clavier tests.test_quickshell_emitter`.
+  Les essais graphiques passent par la coque d'essai `coque/Selecteur/essai/fenetre/`, qui coupe le clavier exclusif,
+  ne déclare aucun raccourci global et se pilote par IPC ; ils exigent un écran libre (Wayland et `qs`).
+
 ## Le mouvement des popovers — L2-06, L2-07, L2-47, L2-56
 
 Rien de plus à installer : la fenêtre des popovers est dans la coque (`dunei-coque.service`), et `make install` lie
@@ -2541,6 +2573,7 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 
 | Version | Date | Changement |
 | --- | --- | --- |
+| 1.52 | 2026-11-21 | Le sélecteur de fenêtres (L2-17, D200 à D202) : `SUPER + Tab` devient le geste tenu du sélecteur de la coque, liaison globale `dunei:selecteur`, jetons `delays.selecteur` et `[selecteur]`, vérification et tests |
 | 1.51 | 2026-11-21 | Le curseur dans toute la coque (L2-73, D197 à D199) : `VueCurseur`, `ZoneCurseur`, `Plaque` partagée, `AnneauFocus` retiré, jeton `[reglages] evidence`, tests et instabilités connues |
 | 1.50 | 2026-11-20 | Lanceur (L2-16, D190 à D196) : `libqalculate` installé, wofi désinstallé et retiré du modèle de paquets, style `fade` du calque d'attention |
 | 1.49 | 2026-11-17 | « Ouvrir » propre à DuneI (L2-69) : module `coque/Applications`, focus par adresse, lancement par uwsm, clic sur la carte qui ouvre |

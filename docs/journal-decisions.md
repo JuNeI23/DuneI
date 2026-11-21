@@ -4460,3 +4460,86 @@ enchaînés faisaient traîner le libellé derrière la plaque.
 *Touché : `coque/Audio/PopoverAudio.qml`, `coque/Bluetooth/PopoverBluetooth.qml`, `coque/Reseau/PopoverReseau.qml`,
 `coque/Notifications/Panneau.qml`, `coque/Composants/ZoneCurseur.qml`, `Bouton.qml`, `Etat.qml`, tests
 `test_coque_composants`, `test_notifications`, bible (0.41).*
+
+## 2026-11-21 — Sélecteur de fenêtres (L2-17)
+
+### D200 · Le relâchement de SUPER vu par la coque, chaque Tab porté par un raccourci global
+
+21 novembre 2026 · L2-17, essai sur caladan puis mesure du constructeur. Le geste tenu exige de voir le relâchement
+de SUPER. Deux voies ont été éprouvées par une coque jetable sur le vrai `SUPER + Tab` (fiche, section « Détection du
+relâchement de SUPER ») : une sous-carte (submap) de Hyprland avec une liaison `release` sur `Super_L`, et un calque de
+la coque à clavier exclusif. La sous-carte n'a jamais vu le relâchement, la documentation de Hyprland précisant qu'une
+liaison `release` sur une touche de modification ne se déclenche que hors combinaison ; de plus, `SUPER + SHIFT + Tab`
+y déclenchait la liaison de `SUPER + Tab`. Le calque, lui, a reçu le relâchement de `Key_Meta` à chaque geste, y
+compris sur un tap de 46 ms. La voie de la coque est donc retenue : le calque prend le clavier exclusif dès le premier
+Tab, avant même d'être visible.
+
+Les Tab suivants, SUPER tenu, restent interceptés par la liaison de Hyprland : chacun doit donc atteindre la coque sans
+délai perceptible. Deux transports ont été mesurés, dix fois chacun, depuis le dispatch de Hyprland (`hyprctl eval`)
+jusqu'à l'appel de `Selecteur.avancer` : le raccourci global de Quickshell (`GlobalShortcut`, lié par
+`hl.dsp.global("dunei:selecteur")`), médiane 6 ms (de 5 à 7 ms) ; `qs ipc` lancé par le compositeur (`exec_cmd`),
+médiane 33 ms (de 32 à 35 ms) ; `qs ipc` lancé depuis un shell, médiane 24 ms (de 23 à 25 ms). Le trajet du clavier au
+compositeur, commun aux deux voies, n'a pas été mesuré, faute de clavier virtuel sur la machine. Le raccourci global
+est retenu : il ne lance aucun processus par touche et il est le plus rapide. L'action `suivante` et
+`hl.dsp.window.cycle_next` disparaissent au profit d'une action `global`, qui exige un paramètre `raccourci`.
+
+Le `GlobalShortcut` est déclaré dans `coque/shell.qml`, et non dans le singleton `Selecteur` : deux clients Quickshell
+qui inscrivent la même paire `appid:nom` font planter le second, et une coque d'essai qui charge le singleton ferait
+tomber la coque de la session. La coque d'essai n'en déclare donc aucun et se pilote par IPC.
+
+*Touché : `config/hypr/donnees/raccourcis.lua`, `config/hypr/modules/clavier.lua`, `coque/shell.qml`,
+`coque/Selecteur/`, tests `test_hyprland_clavier`, `test_selecteur`, carnet (1.52), fiche
+`docs/superpowers/specs/2026-11-21-selecteur-fenetres-design.md`.*
+
+### D201 · Dérogation du geste tenu ; `SUPER + SHIFT + Tab` non lié ; neutre pur limité à l'image
+
+21 novembre 2026 · L2-17, tranché par Nicolas. La grammaire des raccourcis de la bible veut que `SUPER` agisse ou
+aille d'un seul appui. Le sélecteur y déroge : `SUPER + Tab` ouvre un geste tenu, où SUPER reste enfoncé, chaque Tab
+avance d'une vignette et le relâchement de SUPER amène la fenêtre choisie. La dérogation est accordée parce que c'est
+le geste que la main connaît de macOS et qu'il fait de l'aller-retour entre deux fenêtres le geste le plus court de la
+session ; un tap bref ramène à la fenêtre précédente sans rien afficher. Pour ne pas entamer la grammaire
+« `SUPER + Maj` emporte la fenêtre active », `SUPER + SHIFT + Tab` n'est pas lié au compositeur : sélecteur fermé, il ne
+fait rien ; sélecteur ouvert, il n'agit que pendant le geste, où il arrive au calque en `Key_Backtab` et recule d'un
+cran. Enfin, la règle « vignettes en neutre pur » de la bible vise l'image seule : la capture de chaque fenêtre
+s'affiche telle quelle, sans teinte ni voile posés dessus, et les vignettes non choisies ne portent pas le voile de la
+galerie de fonds. Le cadre en verre et la fenêtre schématique d'attente gardent les surfaces du thème déjà validées ;
+aucune couleur nouvelle n'est introduite.
+
+*Touché : `config/hypr/donnees/raccourcis.lua`, `coque/Selecteur/`, bible (0.42), fiche
+`docs/superpowers/specs/2026-11-21-selecteur-fenetres-design.md`.*
+
+### D202 · Une seule marque du curseur sans arbitre, survol gardé, lanceur retenu, calque invisible pendant le délai
+
+21 novembre 2026 · L2-17, construction et relecture, recette validée par Nicolas. Cinq choix de construction
+précisent la fiche.
+
+- **Une seule marque du curseur, sans `VueCurseur`.** La plaque d'accent plate suit `Selecteur.index` ; le survol de la
+  souris, après un vrai mouvement du pointeur, écrit cet index, et un Tab le fait avancer : le dernier mouvement
+  l'emporte, comme le veut D197. La vignette ne grandit à `galerie.echelle` et ne se soulève que si elle est choisie :
+  le sélecteur pose `VignetteFenetre.survolActif: false`, car un soulèvement au survol indépendant de la plaque faisait
+  voir deux curseurs (relecture de la tâche 4). L'arbitre `VueCurseur` que prévoyait la fiche, devenu sans objet
+  puisque rien ne lisait son porteur, n'est pas utilisé.
+- **Garde de survol.** Un pointeur immobile sous le cadre au moment où il apparaît ne vole pas la sélection posée au
+  clavier : seul un mouvement réel du pointeur déplace la plaque. Un survol sans mouvement est ignoré, ce qui est le
+  prix accepté.
+- **Le lanceur retient son action différée.** Ouvrir le sélecteur ferme le lanceur (famille `attention` d'`Overlays`) ;
+  le lanceur ne réalise son action différée que si aucun overlay d'attention n'est ouvert (`!Overlays.attention`), pour
+  qu'elle ne parte pas sous le sélecteur.
+- **Vignette partagée.** La vignette du lanceur est devenue `coque/Composants/VignetteFenetre.qml`, partagée par les
+  deux modules ; elle gagne les propriétés `anneau` et `survolActif`. Le sélecteur pose `anneau: false` ; le lanceur
+  garde son anneau d'aperçu, conformément à sa ligne de la bible.
+- **Calque invisible pendant le délai.** Pendant les 150 ms de `delays.selecteur`, le calque est posé avec
+  `HyprlandWindow.opacity` à 0 et un masque d'entrée vide ; une capture `grim` prise pendant le délai est identique à
+  l'écran de base, sans voile ni flou. Le repli par un namespace distinct, que la fiche prévoyait à défaut, n'a pas été
+  nécessaire.
+
+Les jetons validés en recette sont `delays.selecteur = 150` dans `motion.toml`, et la table `[selecteur]` de
+`tokens.toml` : hauteur des vignettes 140, largeur minimale 100, largeur maximale 320, écart 16. Recette à l'écran le
+21 novembre sur caladan, bureaux 1 à 4 : tap bref, geste tenu, `SHIFT + Tab`, Échap, clic sur le voile, souris et
+aspect ; verdict de Nicolas : « tout est bon », sans correction.
+
+*Touché : `coque/Selecteur/` (`Selecteur.qml`, `FenetreSelecteur.qml`, `CadreSelecteur.qml`, `selecteur.js`, essais),
+`coque/Composants/VignetteFenetre.qml` (ex-`coque/Lanceur/Vignette.qml`), `coque/Lanceur/Lanceur.qml`,
+`coque/Lanceur/Apercu.qml`, `coque/Theme/Theme.qml`, `motion.toml`, `tokens.toml`, émetteur Quickshell, golden
+`coque-tokens.json` et `motion.json`, tests `test_selecteur`, `test_quickshell_emitter`, `test_motion_checks`,
+`test_motion_generate`, bible (0.42), plan `docs/superpowers/plans/2026-11-21-selecteur-fenetres.md`.*

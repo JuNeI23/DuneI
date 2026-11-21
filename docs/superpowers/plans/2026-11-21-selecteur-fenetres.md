@@ -1,5 +1,7 @@
 # Sélecteur de fenêtres (L2-17) — plan d'implémentation
 
+Version 0.2 — 2026-11-21
+
 > **Pour les agents :** sous-compétence requise : superpowers:subagent-driven-development (recommandée) ou
 > superpowers:executing-plans pour exécuter ce plan tâche par tâche. Les étapes se cochent (`- [ ]`).
 
@@ -160,7 +162,8 @@ Construction (au patron de `coque/Lanceur/Lanceur.qml` et `FenetreLanceur.qml`, 
 - Clavier (`Keys` du cadre, traduit en noms puis `Selecteur.touche`) : relâchement de `Key_Meta`/`Key_Super_L`
   → `valider` ; `Key_Backtab`, ou `Key_Tab` avec Shift → `avancer(-1)` ; `Key_Escape` → `annuler` ; tout autre
   appui sans `Qt.MetaModifier` → `valider` (relâchement perdu).
-- Souris : survol d'une vignette → `choisir(i)` et `dnVue.prendre` ; clic → `choisir(i)` puis `valider`.
+- Souris : survol d'une vignette → `choisir(i)` ; clic → `choisir(i)` puis `valider`. *Note de la construction :
+  l'appel `dnVue.prendre` prévu ici a été retiré avec le `VueCurseur`, la plaque suivant `Selecteur.index` (D202).*
 - `valider()` : fenêtre encore présente dans `Hyprland.toplevels` → action différée `amener` ; sinon fermeture
   seule.
 
@@ -223,3 +226,4 @@ Construction (au patron de `coque/Lanceur/Lanceur.qml` et `FenetreLanceur.qml`, 
 | Version | Date | Changement |
 |---|---|---|
 | 0.1 | 2026-11-21 | Première rédaction, d'après la fiche 0.2 |
+| 0.2 | 2026-11-21 | Note de la construction : le survol n'appelle plus `dnVue.prendre`, le `VueCurseur` ayant été retiré du sélecteur (D202) |
