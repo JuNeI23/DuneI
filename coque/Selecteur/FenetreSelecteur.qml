@@ -52,6 +52,9 @@ PanelWindow {
 
     // Montée du cadre, lancée à l'apparition : le ressort, créé sur la cible 0, est prêt bien avant le délai.
     Ressort { id: montee; transition: "window"; cible: 0 }
+    // onAfficheChanged — à l'apparition, lance la montée du cadre. Entrées : aucune (affiche, devenu vrai). Sortie :
+    // montee.cible posé à 1. Erreurs : aucune ; à la disparition, rien : le cadre reste posé pendant le fondu.
+    // Dépendances : affiche, montee.
     onAfficheChanged: if (affiche) montee.cible = 1
 
     // Voile : un clic hors du cadre annule.
@@ -62,6 +65,9 @@ PanelWindow {
 
         MouseArea {
             anchors.fill: parent
+            // onClicked — un clic hors du cadre annule le sélecteur. Entrée : m, l'événement de souris (position dans le
+            // voile). Sortie : Selecteur.annuler() appelé ; un clic sur le cadre ne fait rien ici. Erreurs : aucune.
+            // Dépendances : cadre (contains, mapFromItem), Selecteur.annuler.
             onClicked: m => { if (!cadre.contains(cadre.mapFromItem(voile, m.x, m.y))) Selecteur.annuler() }
         }
     }

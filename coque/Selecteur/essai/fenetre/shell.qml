@@ -43,14 +43,16 @@ ShellRoot {
     }
 
     // onMontreChanged — mesure le délai entre l'ouverture par l'IPC « essai ouvrir » et l'apparition du sélecteur.
-    // Entrées : aucune. Sortie : la ligne « essai : montré après <n> ms ». Erreurs : aucune. Dépendances : Selecteur.
+    // Entrées : aucune (Selecteur.montre, devenu vrai ou faux). Sortie : la ligne « essai : montré après <n> ms »,
+    // seulement quand montre devient vrai. Erreurs : aucune. Dépendances : Selecteur.montre, essai.ouverture.
     Connections {
         target: Selecteur
         function onMontreChanged() { if (Selecteur.montre) console.log("essai : montré après " + (Date.now() - essai.ouverture) + " ms") }
     }
 
-    // onRawEvent — journalise le retrait d'un calque d'attention. Entrée : e, l'événement Hyprland. Sortie : la ligne
-    // « essai : calque retiré ». Erreurs : aucune. Dépendances : Hyprland.rawEvent.
+    // onRawEvent — journalise le retrait d'un calque d'attention. Entrée : e, l'événement brut de Hyprland (name,
+    // data). Sortie : la ligne « essai : calque retiré » pour closelayer>>dunei-attention, rien pour un autre
+    // événement. Erreurs : aucune. Dépendances : Hyprland.rawEvent.
     Connections {
         target: Hyprland
         function onRawEvent(e) { if (e.name === "closelayer" && e.data === "dunei-attention") console.log("essai : calque retiré") }

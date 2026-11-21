@@ -69,6 +69,9 @@ ShellRoot {
         appid: "dunei"
         name: "selecteur"
         description: "Sélecteur de fenêtres : ouvrir ou avancer d'un cran"
+        // onPressed — chaque pression du raccourci ouvre le sélecteur ou avance la sélection d'un cran. Entrées :
+        // aucune (le raccourci global dunei:selecteur, appelé par Hyprland). Sortie : aucune. Erreurs : aucune ;
+        // moins de deux fenêtres, rien. Dépendances : Selecteur.avancer.
         onPressed: Selecteur.avancer(1)
     }
     NotificationsReseau {}

@@ -83,9 +83,11 @@ Singleton {
 
     // avancer — SUPER + Tab : ouvre le sélecteur fermé, sinon déplace la sélection en boucle. Entrée : pas, +1 pour
     // avancer, -1 pour reculer. Sortie : aucune. Erreurs : aucune ; fermé et avec moins de deux fenêtres retenues, rien.
-    // Dépendances : liste, index, ouvert, releve, Logique (fenetres, avancer).
+    // Dépendances : liste, index, ouvert, releve, source, Hyprland.refreshToplevels (relève la taille des fenêtres, dont
+    // dépend la largeur des vignettes, sans attendre : la liaison de largeurs suit), Logique (fenetres, avancer).
     function avancer(pas: int) {
         if (ouvert) { index = Logique.avancer(index, liste.length, pas); return }
+        if (!source) Hyprland.refreshToplevels()
         const l = Logique.fenetres(releve())
         if (l.length < 2) return
         liste = l
@@ -114,13 +116,14 @@ Singleton {
     // touche — entrée clavier unique du sélecteur, appelée par le cadre et par l'IPC des essais.
     // Entrées : nom, « ReleaseSuper » (relâchement de SUPER), « Backtab » (Maj + Tab), « Tab », « Escape » ou le nom
     // de toute autre touche ; superTenu, vrai si le modificateur SUPER accompagne l'événement. Sortie : aucune.
-    // Le relâchement de SUPER valide ; Maj + Tab recule ; Tab, SUPER tenu, avance ; Échap annule ; toute autre touche
-    // reçue sans SUPER tenu valide, en secours d'un relâchement perdu ; avec SUPER tenu, elle est ignorée.
+    // Le relâchement de SUPER valide ; Maj + Tab, SUPER tenu, recule ; Tab, SUPER tenu, avance ; Échap annule ; toute
+    // autre touche reçue sans SUPER tenu, Maj + Tab compris, valide, en secours d'un relâchement perdu ; avec SUPER
+    // tenu, elle est ignorée.
     // Erreurs : aucune ; fermé, rien. Dépendances : ouvert, valider, avancer, annuler.
     function touche(nom: string, superTenu: bool) {
         if (!ouvert) return
         if (nom === "ReleaseSuper") valider()
-        else if (nom === "Backtab") avancer(-1)
+        else if (nom === "Backtab" && superTenu) avancer(-1)
         else if (nom === "Escape") annuler()
         else if (nom === "Tab" && superTenu) avancer(1)
         else if (!superTenu) valider()
@@ -163,11 +166,21 @@ Singleton {
         else if (action.genre === "amener") Hyprland.dispatch(Apps.commandeFocus(action.cible))
     }
 
-    // Retrait du calque par le compositeur : l'action en attente part. Hyprland émet closelayer>>dunei-attention au
-    // démappage du calque, après lui avoir retiré le clavier.
+    // onRawEvent — retrait du calque par le compositeur : l'action en attente part. Hyprland émet
+    // closelayer>>dunei-attention au démappage du calque, après lui avoir retiré le clavier.
+    // Entrée : e, l'événement brut de Hyprland (name, data). Sortie : aucune. Erreurs : aucune ; sans action en attente
+    // ou pour un autre événement, rien. Dépendances : Hyprland.rawEvent, differee, realiserDifferee.
     Connections {
         target: Hyprland
         function onRawEvent(e) { if (selecteur.differee && e.name === "closelayer" && e.data === "dunei-attention") selecteur.realiserDifferee() }
+    }
+    // onAttentionChanged — quand une autre attention que le sélecteur s'ouvre (le lanceur), l'action en attente est
+    // abandonnée : c'est changer d'avis, et elle ne doit pas écraser le choix du nouveau geste en partant à son tour au
+    // retrait du calque. Entrées : aucune. Sortie : differee remis à null. Erreurs : aucune ; sans autre attention
+    // ouverte, rien. Dépendances : Overlays.attention, differee.
+    Connections {
+        target: Overlays
+        function onAttentionChanged() { if (Overlays.attention && Overlays.attention !== selecteur) selecteur.differee = null }
     }
     // Garde : si l'événement de retrait ne vient pas (connexion à Hyprland perdue), l'action part quand même, au plus
     // une seconde après la fermeture ; ce délai technique, bien au-delà du fondu de sortie, n'est jamais atteint quand
@@ -211,6 +224,10 @@ Singleton {
                 readonly property Component composant: Qt.createComponent("FenetreSelecteur.qml")
                 readonly property var fenetre: composant.status === Component.Ready ? composant.createObject(porteur) : null
 
+                // Component.onCompleted — vérifie que la fenêtre a été construite ; sinon journalise l'échec et referme le
+                // sélecteur. Entrées : aucune. Sortie : aucune ; sans fenêtre, ouvert repasse à faux au tour de boucle
+                // suivant. Erreurs : l'avertissement « Sélecteur : fenêtre non construite » avec l'erreur du composant.
+                // Dépendances : fenetre, composant, selecteur.ouvert, Qt.callLater.
                 Component.onCompleted: {
                     if (fenetre) return
                     console.warn("Sélecteur : fenêtre non construite. " + composant.errorString())

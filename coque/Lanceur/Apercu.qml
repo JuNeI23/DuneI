@@ -1,5 +1,6 @@
 import QtQuick
 import "../Theme"
+import "../Applications"
 import "../Composants"
 import "lanceur.js" as Logique
 
@@ -73,7 +74,7 @@ Item {
             id: medaillon
             width: Lanceur.cotes.medaillonApercu
             readonly property bool symbolique: apercu.genre === "commande"
-            image: symbolique ? "" : Lanceur.icone(apercu.resultat?.icone)
+            image: symbolique ? "" : Applications.icone(apercu.resultat?.icone)
             nom: symbolique ? apercu.resultat?.icone ?? "" : ""
             tailleGlyphe: Math.round(width * 0.52)
             refletRepos: true

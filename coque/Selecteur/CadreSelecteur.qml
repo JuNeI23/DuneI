@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import "../Theme"
+import "../Applications"
 import "../Composants" as C
 import "selecteur.js" as Logique
 
@@ -13,18 +14,19 @@ import "selecteur.js" as Logique
 // défile au ressort navigate pour garder la vignette choisie entière dans la vue (selecteur.js decalage). Le cadre
 // prend la largeur de la rangée, ou celle de la légende si elle est plus longue. La vignette choisie grandit à
 // galerie.echelle (VignetteFenetre) et se pose sur la plaque d'accent plate (C.Plaque), seule marque du curseur, qui
-// la suit à son propre ressort ; aucune teinte ni voile n'est posé sur les images (neutre pur). Sous
-// la rangée, une ligne pour la vignette choisie : le médaillon de son application, son titre en text-primary, puis
-// « bureau n » en text-secondary. Une seule marque du curseur, portée par la sélection : la vignette survolée ne se
-// soulève pas (survolActif faux), le survol déplace la sélection elle-même. Le survol ne déplace la sélection qu'une fois le pointeur bougé dans le cadre : un
-// pointeur immobile sous le cadre qui apparaît ne la prend pas à la place du clavier. Les touches passent par
-// Selecteur.touche, traduites en noms.
-// Entrées : largeurDispo, largeur que le cadre ne doit pas dépasser (rangée et titre de la légende y sont bornés) ; depart, distance en pixels sous sa place d'où le
-// cadre monte (0 par défaut) ; montee, de 0 à 1, la part faite de cette montée (1 par défaut) : translation pure.
+// la suit à son propre ressort ; aucune teinte ni voile n'est posé sur les images (neutre pur). Sous la rangée, une
+// ligne pour la vignette choisie : le médaillon de son application, son titre en text-primary, puis « bureau n » en
+// text-secondary. Une seule marque du curseur, portée par la sélection : la vignette survolée ne se soulève pas
+// (survolActif faux), le survol déplace la sélection elle-même. Le survol ne déplace la sélection qu'une fois le
+// pointeur bougé dans le cadre : un pointeur immobile sous le cadre qui apparaît ne la prend pas à la place du
+// clavier. Les touches passent par Selecteur.touche, traduites en noms.
+// Entrées : largeurDispo, largeur que le cadre ne doit pas dépasser (rangée et titre de la légende y sont bornés) ;
+// depart, distance en pixels sous sa place d'où le cadre monte (0 par défaut) ; montee, de 0 à 1, la part faite de
+// cette montée (1 par défaut) : translation pure.
 // Sorties : vignettes, le Repeater des vignettes ; nomTouche(event).
 // Erreurs : aucune ; avant le chargement des tokens, le verre reste transparent et le cadre nul.
-// Dépendances : Quickshell (DesktopEntries, iconPath), Selecteur (liste, index, largeurs, choisie, choisir, valider,
-// touche), selecteur.js (decalage), Ressort, C.Surface, C.OmbreElevation, C.VignetteFenetre, C.Plaque,
+// Dépendances : Quickshell (DesktopEntries), Applications (icone), Selecteur (liste, index, largeurs, choisie,
+// choisir, valider, touche), selecteur.js (decalage), Ressort, C.Surface, C.OmbreElevation, C.VignetteFenetre, C.Plaque,
 // C.Medaillon, C.Texte, Theme (selecteur, galerie, material, radius, space, color).
 // Cotes : retrait space.scale[4] (24) autour du contenu ; jeu de la plaque space.scale[1] (8) au-delà de la vignette
 // grandie ; légende à space.scale[2] (12) sous la rangée, médaillon de reglages.medallion (32), éléments espacés de
@@ -84,7 +86,8 @@ Item {
     property point origine: Qt.point(-1, -1)
     property bool bouge: false
     // onPointChanged — note la première position du pointeur, puis le déclare bougé au-delà de space.scale[0].
-    // Entrées : aucune. Sortie : origine, bouge. Erreurs : aucune. Dépendances : Theme (space).
+    // Entrées : aucune (la position vient du HoverHandler : point.scenePosition). Sortie : origine, bouge. Erreurs :
+    // aucune ; avant le chargement des tokens, le seuil vaut 0. Dépendances : Theme (space).
     HoverHandler {
         onPointChanged: {
             const p = point.scenePosition
@@ -159,10 +162,15 @@ Item {
                         height: cadre.haut
 
                         // Survol après un mouvement du pointeur : la vignette prend la sélection.
-                        HoverHandler { id: survol }
-                        readonly property bool visee: cadre.bouge && survol.hovered
+                        readonly property bool visee: cadre.bouge && survolee
+                        // onViseeChanged — la vignette visée par le pointeur prend la sélection. Entrées : aucune
+                        // (visee, devenu vrai). Sortie : Selecteur.index, par Selecteur.choisir. Erreurs : aucune ;
+                        // visee retombé à faux, rien. Dépendances : visee, index, Selecteur.choisir.
                         onViseeChanged: if (visee) Selecteur.choisir(index)
-                        // onActivee — un clic choisit la vignette et valide aussitôt.
+                        // onActivee — un clic choisit la vignette et valide aussitôt. Entrées : aucune (signal activee
+                        // de VignetteFenetre). Sortie : le sélecteur se ferme et amène la fenêtre. Erreurs : aucune ;
+                        // une fenêtre disparue n'est pas amenée (Selecteur.valider). Dépendances : index,
+                        // Selecteur.choisir, Selecteur.valider.
                         onActivee: { Selecteur.choisir(index); Selecteur.valider() }
                     }
                 }
@@ -180,7 +188,7 @@ Item {
 
             C.Medaillon {
                 id: medaillon
-                image: Quickshell.iconPath(legende.icone, "application-x-executable")
+                image: Applications.icone(legende.icone) || Applications.icone("application-x-executable")
                 refletRepos: true
             }
             C.Texte {

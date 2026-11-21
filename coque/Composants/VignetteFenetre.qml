@@ -19,7 +19,7 @@ import "../Theme"
 // Entrées : adresse, adresse Hyprland de la fenêtre ; choisie, vrai quand le curseur du clavier est dessus ;
 // anneau, vrai par défaut, montre l'anneau d'accent de la vignette choisie ; survolActif, vrai par défaut, soulève la
 // vignette survolée.
-// Sorties : capturee, vrai une fois l'image reçue ; activee(), émis au clic. Erreurs : aucune.
+// Sorties : survolee, vrai tant que le pointeur est dessus ; capturee, vrai une fois l'image reçue ; activee(), émis au clic. Erreurs : aucune.
 // Dépendances : Quickshell.Wayland (ScreencopyView), Quickshell.Hyprland (toplevels),
 // Ressort, Theme (color, radius, space, galerie).
 // Cotes : coins radius.panel (10, maquette 8) ; barre de 12 % de la hauteur, au moins space.scale[1] ; points de
@@ -31,6 +31,8 @@ Item {
     property bool choisie: false
     property bool anneau: true
     property bool survolActif: true
+    // Vrai tant que le pointeur est sur la vignette, que survolActif soulève celle-ci ou non (le sélecteur s'en sert).
+    readonly property bool survolee: pointeur.hovered
     readonly property var toplevel: Hyprland.toplevels.values.find(t => t.address === adresse) ?? null
     readonly property bool capturee: vue.hasContent
     signal activee()

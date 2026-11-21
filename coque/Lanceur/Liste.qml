@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell.Widgets
 import "../Theme"
+import "../Applications"
 import "../Composants" as C
 import "lanceur.js" as Logique
 
@@ -105,7 +106,7 @@ ListView {
             x: l.retraitIcone
             anchors.verticalCenter: parent.verticalCenter
             visible: !l.symbolique
-            source: visible ? Lanceur.icone(l.modelData.icone) : ""
+            source: visible ? Applications.icone(l.modelData.icone) : ""
             implicitSize: (l.modelData.retrait ? Theme.icons?.sizes.default : Theme.icons?.sizes.comfortable) ?? 0
             asynchronous: true
         }

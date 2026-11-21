@@ -270,6 +270,15 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
         self.touche("a", False)
         self.attendre("essai : exécuté amener 0xb2")
 
+    def test_backtab_sans_super(self):
+        """Vérifie que Maj + Tab reçu sans SUPER tenu (relâchement perdu) valide au lieu de reculer.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : ouvrir, touche, attendre.
+        """
+        self.ouvrir()
+        self.touche("Backtab", False)
+        self.attendre("essai : exécuté amener 0xb2")
+
     def test_fenetre_disparue(self):
         """Vérifie qu'une fenêtre choisie fermée avant le relâchement n'est pas amenée, sans erreur au journal, et que
         la liste reste figée pendant le geste.
@@ -289,6 +298,8 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
     def test_action_apres_retrait(self):
         """Vérifie que la fenêtre choisie n'est amenée qu'au retrait du calque par Hyprland (closelayer), bien avant la
         garde d'une seconde : la ligne « exécuté » touche la ligne « calque retiré », émises dans la même notification.
+        Tolérance : le seuil de 0,8 s laisse de la marge à une session chargée tout en excluant la garde d'une seconde ;
+        le voisinage d'une ligne de part et d'autre admet qu'une autre ligne du journal s'intercale.
 
         Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : ouvrir, attendre, touche, etat,
         journal.
@@ -337,3 +348,6 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
             self.skipTest("action du lanceur partie avant l'ouverture du sélecteur : le scénario n'a pas pu être joué")
         self.sans_execution()
         self.assertTrue(self.etat()["ouvert"])
+        # L'action du lanceur est abandonnée à l'ouverture du sélecteur : elle ne part pas non plus une fois celui-ci fermé.
+        self.selecteur("annuler")
+        self.sans_execution()

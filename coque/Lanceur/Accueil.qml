@@ -1,5 +1,6 @@
 import QtQuick
 import "../Theme"
+import "../Applications"
 import "../Composants"
 
 // Accueil — vue du lanceur sans saisie : applications fréquentes et suggestions (L2-16, maquette v3).
@@ -97,7 +98,7 @@ Item {
                         anchors.horizontalCenter: parent.horizontalCenter
                         y: Theme.space?.scale[1] ?? 0
                         width: Lanceur.cotes.medaillonAccueil
-                        image: Lanceur.icone(t.modelData.icone)
+                        image: Applications.icone(t.modelData.icone)
                         actif: t.choisie
                         refletRepos: true
                     }
