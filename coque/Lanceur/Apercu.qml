@@ -16,7 +16,7 @@ import "lanceur.js" as Logique
 // visuel : la rangée des vignettes au-dessus, celle des boutons au pied (lanceur.js, deplacer). L'accent n'appartient
 // qu'à l'élément sous le curseur : tant que le curseur est dans la liste, tous les boutons sont neutres, et le bouton
 // principal porte seulement le rappel ↵ en texte secondaire, pour dire ce que fait Entrée ; dès que le curseur entre
-// dans l'aperçu, seul l'élément sous lui prend l'accent (Puce choisie, Vignette choisie) et porte ↵. « Nouvelle
+// dans l'aperçu, seul l'élément sous lui prend l'accent (Puce choisie, VignetteFenetre choisie) et porte ↵. « Nouvelle
 // fenêtre » porte « Ctrl ↵ », son raccourci depuis la liste, sauf sous le curseur, où Entrée suffit et seul ↵
 // s'affiche. Pendant une confirmation, le bouton principal dit « Confirmer » sur le fond color.error (Puce danger),
 // où que soit le curseur. Le contenu rejoue son entrée en cascade quand la ligne retenue change.
@@ -25,7 +25,7 @@ import "lanceur.js" as Logique
 // Sorties : vignettes, le nombre de vignettes affichées ; rejouer(), émis quand la ligne retenue change.
 // Erreurs : aucune ; une fenêtre disparue retire sa vignette avec le résultat qui la portait.
 // Dépendances : Lanceur (choisi, sel, cotes, icone, fenetreDe, choisir, libellePrincipal, confirmation), Medaillon,
-// Texte, Puce, Vignette, Cascade, lanceur.js (expressionLisible), Theme (space, reglages, typo, color, radius).
+// Texte, Puce, VignetteFenetre, Cascade, lanceur.js (expressionLisible), Theme (space, reglages, typo, color, radius).
 // Cotes : retrait reglages.pageMargin (20, maquette 20 × 26) ; écart vertical space.scale[2] (12, maquette 14) ;
 // médaillon de cotes.medaillonApercu (64) ; titre à l'échelon 5 (22) en graisse moyenne ; valeur du calcul au corps
 // cotes.resultat (64) ; expression à l'échelon 4 (18) ; légendes à l'échelon 0 (11) ; vignettes en 16 / 10.
@@ -143,7 +143,7 @@ Item {
                     Cascade { id: entree; rang: c.index + 1; base: 20 }
                     Connections { target: apercu; function onRejouer() { entree.rejouer() } }
 
-                    Vignette {
+                    VignetteFenetre {
                         id: v
                         adresse: c.adresse
                         width: parent.width
