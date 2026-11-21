@@ -212,14 +212,15 @@ Singleton {
         ouvert = false
     }
 
-    // realiserDifferee — exécute l'action en attente, une seule fois, et jamais sous un lanceur ouvert.
-    // Entrées : aucune. Sortie : aucune. Erreurs : aucune ; sans action en attente, ou lanceur rouvert, rien.
-    // Dépendances : differee, realiser, garde, ouvert.
+    // realiserDifferee — exécute l'action en attente, une seule fois, et jamais sous une attention ouverte : le lanceur
+    // rouvert, ou le sélecteur de fenêtres ouvert pendant le retrait du calque (L2-17), c'est changer d'avis.
+    // Entrées : aucune. Sortie : aucune. Erreurs : aucune ; sans action en attente, ou sous une attention ouverte, rien.
+    // Dépendances : differee, realiser, garde, Overlays.attention.
     function realiserDifferee() {
         const a = differee
         differee = null
         garde.stop()
-        if (a && !ouvert) realiser(a)
+        if (a && !Overlays.attention) realiser(a)
     }
 
     // realiser — exécute une action. « nouvelle » lance toujours une nouvelle instance de l'entrée, sans amener.

@@ -2,6 +2,7 @@
 //@ pragma Env QSG_DISTANCEFIELD_ANTIALIASING=gray
 import QtQuick
 import Quickshell
+import Quickshell.Hyprland
 import "Barre"
 import "Fond"
 import "Galerie"
@@ -10,6 +11,7 @@ import "Notifications"
 import "Parametres"
 import "Presquile"
 import "Reseau"
+import "Selecteur"
 
 // Coque de session de DuneI — racine chargée par « qs -c dunei » (unité dunei-coque.service).
 // Rôle : pose sur chaque écran le fond d'écran, une barre système et la presqu'île, dans le même Variants (le fond
@@ -26,11 +28,14 @@ import "Reseau"
 // presqu'île de l'écran actif à la demande (IPC « galerie basculer », SUPER + W) ; la jauge du son à chaque
 // annonce d'EtatAudio (Annonceur) ; l'alerte de batterie à chaque palier franchi d'EtatEnergie (AnnonceurAlerte), qui
 // attend la fermeture de la galerie de l'ouvreuse sur son écran ; le lanceur (IPC « lanceur basculer », SUPER + R),
-// singleton du module Lanceur réveillé au démarrage.
+// singleton du module Lanceur réveillé au démarrage ; le sélecteur de fenêtres (SUPER + Tab, raccourci global
+// dunei:selecteur déclaré ici), singleton du module Selecteur réveillé de même. Le raccourci global vit dans la coque
+// de session et non dans le singleton : le protocole des raccourcis globaux de Hyprland refuse deux clients sur la
+// même paire appid:nom, et une coque d'essai qui charge le singleton ferait tomber l'une des deux.
 // Erreurs : tokens absents ou invalides → fond, barre et presqu'île transparents, erreur de Theme dans le journal de Quickshell.
-// Dépendances : quickshell ≥ 0.3, modules Barre (Barre), Fond (Fond), Galerie (Ouvreuse), Lanceur (Lanceur), Notifications (Centre,
-// FenetreNotifications, FenetrePanneau, MemoireAttente), Parametres (FenetreParametres), Presquile (Presquile, Annonceur, AnnonceurAlerte) et Reseau
-// (NotificationsReseau). Le Centre possède org.freedesktop.Notifications : aucun autre démon (dunst) ne doit le tenir.
+// Dépendances : quickshell ≥ 0.3 (GlobalShortcut de Quickshell.Hyprland), modules Barre (Barre), Fond (Fond), Galerie (Ouvreuse), Lanceur (Lanceur), Notifications (Centre,
+// FenetreNotifications, FenetrePanneau, MemoireAttente), Parametres (FenetreParametres), Presquile (Presquile, Annonceur, AnnonceurAlerte), Reseau
+// (NotificationsReseau) et Selecteur (Selecteur). Le Centre possède org.freedesktop.Notifications : aucun autre démon (dunst) ne doit le tenir.
 // Rendu du texte : la directive Env force l'anticrénelage en niveaux de gris, comme dans le banc du verre.
 ShellRoot {
     Variants {
@@ -56,8 +61,16 @@ ShellRoot {
     Annonceur { id: annonceur }
     AnnonceurAlerte { id: alerte; galerie: ouvreuse.galerie }
     FenetreParametres {}
-    // Le singleton Lanceur ne naît qu'au premier accès : cette référence publie son IPC « lanceur » dès le démarrage.
-    Component.onCompleted: Lanceur.fermer()
+    // Les singletons Lanceur et Selecteur ne naissent qu'au premier accès : ces références publient leurs IPC
+    // « lanceur » et « selecteur » dès le démarrage.
+    Component.onCompleted: { Lanceur.fermer(); Selecteur.annuler() }
+    // SUPER + Tab : Hyprland appelle ce raccourci global à chaque Tab, sans lancer de processus.
+    GlobalShortcut {
+        appid: "dunei"
+        name: "selecteur"
+        description: "Sélecteur de fenêtres : ouvrir ou avancer d'un cran"
+        onPressed: Selecteur.avancer(1)
+    }
     NotificationsReseau {}
     // Avant le Centre : la mémoire de l'attente est rechargée avant que le serveur ne réémette ses notifications.
     MemoireAttente { attente: centre.attente }
