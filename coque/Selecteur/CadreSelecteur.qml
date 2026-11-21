@@ -15,16 +15,16 @@ import "selecteur.js" as Logique
 // galerie.echelle (VignetteFenetre) et se pose sur la plaque d'accent plate (C.Plaque), seule marque du curseur, qui
 // la suit à son propre ressort ; aucune teinte ni voile n'est posé sur les images (neutre pur). Sous
 // la rangée, une ligne pour la vignette choisie : le médaillon de son application, son titre en text-primary, puis
-// « bureau n » en text-secondary. Le cadre déclare l'arbitre du curseur de sa vue (dnVue) : la vignette choisie, au
-// clavier ou au survol, le porte. Le survol ne déplace la sélection qu'une fois le pointeur bougé dans le cadre : un
+// « bureau n » en text-secondary. Une seule marque du curseur, portée par la sélection : la vignette survolée ne se
+// soulève pas (survolActif faux), le survol déplace la sélection elle-même. Le survol ne déplace la sélection qu'une fois le pointeur bougé dans le cadre : un
 // pointeur immobile sous le cadre qui apparaît ne la prend pas à la place du clavier. Les touches passent par
 // Selecteur.touche, traduites en noms.
 // Entrées : largeurDispo, largeur que le cadre ne doit pas dépasser (rangée et titre de la légende y sont bornés) ; depart, distance en pixels sous sa place d'où le
 // cadre monte (0 par défaut) ; montee, de 0 à 1, la part faite de cette montée (1 par défaut) : translation pure.
-// Sorties : dnVue ; vignettes, le Repeater des vignettes ; nomTouche(event).
+// Sorties : vignettes, le Repeater des vignettes ; nomTouche(event).
 // Erreurs : aucune ; avant le chargement des tokens, le verre reste transparent et le cadre nul.
 // Dépendances : Quickshell (DesktopEntries, iconPath), Selecteur (liste, index, largeurs, choisie, choisir, valider,
-// touche), selecteur.js (decalage), Ressort, C.Surface, C.OmbreElevation, C.VignetteFenetre, C.Plaque, C.VueCurseur,
+// touche), selecteur.js (decalage), Ressort, C.Surface, C.OmbreElevation, C.VignetteFenetre, C.Plaque,
 // C.Medaillon, C.Texte, Theme (selecteur, galerie, material, radius, space, color).
 // Cotes : retrait space.scale[4] (24) autour du contenu ; jeu de la plaque space.scale[1] (8) au-delà de la vignette
 // grandie ; légende à space.scale[2] (12) sous la rangée, médaillon de reglages.medallion (32), éléments espacés de
@@ -36,7 +36,6 @@ Item {
     property real depart: 0
     property real montee: 1
     readonly property bool dnRelief: true
-    property C.VueCurseur dnVue: C.VueCurseur {}
     readonly property alias vignettes: vignettes
 
     readonly property real retrait: Theme.space?.scale[4] ?? 0
@@ -93,11 +92,6 @@ Item {
             else if (Math.hypot(p.x - cadre.origine.x, p.y - cadre.origine.y) > (Theme.space?.scale[0] ?? 0)) cadre.bouge = true
         }
     }
-
-    // La vignette choisie au clavier porte le curseur de la vue. Entrées : aucune. Sortie : dnVue. Erreurs : aucune.
-    // Dépendances : vignettes, Selecteur.index.
-    readonly property Item vignetteChoisie: (vignettes.count, vignettes.itemAt(Selecteur.index))
-    onVignetteChoisieChanged: if (vignetteChoisie) dnVue.prendre(vignetteChoisie)
 
     C.OmbreElevation { cible: corps; niveau: "e3"; evidee: true }
 
@@ -158,15 +152,16 @@ Item {
                         required property var modelData
                         adresse: modelData.adresse
                         anneau: false
+                        survolActif: false
                         choisie: index === Selecteur.index
                         x: cadre.abscisses[index] ?? 0
                         width: cadre.largeurs[index] ?? 0
                         height: cadre.haut
 
-                        // Survol après un mouvement du pointeur : la vignette prend la sélection et le curseur.
+                        // Survol après un mouvement du pointeur : la vignette prend la sélection.
                         HoverHandler { id: survol }
                         readonly property bool visee: cadre.bouge && survol.hovered
-                        onViseeChanged: if (visee) { Selecteur.choisir(index); cadre.dnVue.prendre(v) }
+                        onViseeChanged: if (visee) Selecteur.choisir(index)
                         // onActivee — un clic choisit la vignette et valide aussitôt.
                         onActivee: { Selecteur.choisir(index); Selecteur.valider() }
                     }
