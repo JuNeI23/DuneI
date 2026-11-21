@@ -1333,6 +1333,18 @@ class CoqueClavierTest(EssaiCoque, unittest.TestCase):
         self.ipc("caseActive", "true")
         self.assertEqual(self.valeur("inversion").split()[4], "true")
 
+    def test_zone_sans_marque_ni_au_survol_ni_a_la_pression(self):
+        # Recette de L2-73 : une ZoneCurseur sans marque ne prend le curseur ni au survol, ni au focus, ni à la
+        # pression, et ne relaie pas la pression de son contrôle : sa plaque reste transparente.
+        self.demarrer()
+        self.ipc("zoneMarque", "false")
+        self.ipc("survol", "Z")
+        self.ipc("appuyer", "Z", "true")
+        sous, down, fond = self.valeur("zonePlaque").split()
+        self.ipc("appuyer", "Z", "false")
+        self.assertEqual((sous, down), ("false", "false"))
+        self.assertTrue(fond.startswith("#00"), fond)
+
     def test_barre_jamais_sans_arret(self):
         # Quand l'onglet coché est désactivé, il ne peut plus prendre le focus : les autres onglets redeviennent des
         # arrêts, pour que la barre ne soit jamais sautée par la tabulation.

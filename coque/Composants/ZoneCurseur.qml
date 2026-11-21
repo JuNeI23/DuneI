@@ -35,7 +35,7 @@ Item {
     readonly property bool actif: marque && (cible?.enabled ?? false)
     readonly property bool hovered: survol.hovered && actif
     readonly property bool visualFocus: actif && (cible.visualFocus ?? cible.activeFocus)
-    readonly property bool down: (cible?.down ?? cible?.pressed) === true
+    readonly property bool down: actif && (cible?.down ?? cible?.pressed) === true
     readonly property bool dnSurPlaque: etat.sousCurseur
 
     implicitWidth: cible?.implicitWidth ?? 0

@@ -369,6 +369,20 @@ ShellRoot {
                     caseZone.enabled = valeur
                 }
 
+                // zoneMarque — pose la propriété marque de la zone Z. Entrée : valeur. Sortie : aucune.
+                // Erreurs : aucune. Dépendances : zoneEssai.
+                function zoneMarque(valeur: bool): void {
+                    zoneEssai.marque = valeur
+                }
+
+                // zonePlaque — journalise, pour la zone Z : vrai si elle porte le curseur, vrai si elle relaie une
+                // pression, puis la couleur visée par le ressort de sa plaque. Entrées : aucune. Sortie : aucune ;
+                // « essai : zonePlaque <bool> <bool> <#fond> ». Erreurs : aucune. Dépendances : zoneEssai, journal.
+                function zonePlaque(): void {
+                    essai.journal("zonePlaque", [zoneEssai.etat.sousCurseur, zoneEssai.down,
+                                                 zoneEssai.etat.children[0].target].join(" "))
+                }
+
                 // valeurCurseur — journalise, pour la valeur V : vrai si elle porte le curseur, la couleur visée par le
                 // ressort de sa plaque, puis le nombre de ses enfants dont le contour prend la couleur de focus
                 // (Theme.focus.color, celle de l'ancien contour de focus). Entrées : aucune. Sortie : aucune ;
@@ -674,11 +688,12 @@ ShellRoot {
                                                      b.etat.couleurs?.fill].join(" "))
                 }
 
-                // appuyer — enfonce ou relâche le bouton de la souris au centre du bouton A ou B.
-                // Entrées : nom, "A" ou "B" ; appui, vrai pour enfoncer, faux pour relâcher. Sortie : aucune.
-                // Erreurs : TypeError pour un nom inconnu. Dépendances : boutonA, boutonB, clavier (TestEvent).
+                // appuyer — enfonce ou relâche le bouton de la souris au centre du bouton A ou B, ou de la case de
+                // la zone Z. Entrées : nom, "A", "B" ou "Z" ; appui, vrai pour enfoncer, faux pour relâcher.
+                // Sortie : aucune. Erreurs : TypeError pour un nom inconnu. Dépendances : boutonA, boutonB, caseZone,
+                // clavier (TestEvent).
                 function appuyer(nom: string, appui: bool): void {
-                    const b = ({ A: boutonA, B: boutonB })[nom]
+                    const b = ({ A: boutonA, B: boutonB, Z: caseZone })[nom]
                     if (appui) clavier.mousePress(b, b.width / 2, b.height / 2, Qt.LeftButton, Qt.NoModifier, -1)
                     else clavier.mouseRelease(b, b.width / 2, b.height / 2, Qt.LeftButton, Qt.NoModifier, -1)
                 }
