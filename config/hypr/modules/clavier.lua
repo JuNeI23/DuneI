@@ -7,7 +7,8 @@ local M = {}
 local SENS = { left = { -1, 0 }, right = { 1, 0 }, up = { 0, -1 }, down = { 0, 1 } }
 -- Paramètre que chaque action exige ; une direction doit en outre appartenir à SENS.
 local REQUIS = { focus = "direction", deplacer = "direction", redimensionner = "direction",
-                 bureau = "bureau", envoyer = "bureau", role = "role", commande = "commande" }
+                 bureau = "bureau", envoyer = "bureau", role = "role", commande = "commande",
+                 global = "raccourci" }
 -- Actions de geste connues de hl.gesture.
 local GESTES = { workspace = true, special = true }
 -- Nom canonique de chaque modificateur, pour reconnaître deux écritures de la même combinaison.
@@ -33,7 +34,7 @@ M.ACTIONS = {
     flottant       = function() return hl.dsp.window.float({ action = "toggle" }) end,
     decoupe        = function() return hl.dsp.layout("togglesplit") end,
     epingler       = function() return hl.dsp.window.pin({ action = "toggle" }) end,
-    suivante       = function() return hl.dsp.window.cycle_next({}) end,
+    global         = function(e) return hl.dsp.global(e.raccourci) end,
     focus          = function(e) return hl.dsp.focus({ direction = e.direction }) end,
     deplacer       = function(e) return hl.dsp.window.move({ direction = e.direction }) end,
     redimensionner = function(e, c)

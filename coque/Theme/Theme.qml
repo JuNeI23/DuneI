@@ -75,6 +75,8 @@ Singleton {
     readonly property var reglages: tokens?.reglages
     // Galerie de fonds d'écran (L2-60) : vignette, coupe, échelle, voile, délai de fermeture, pas du pavé, dossier.
     readonly property var galerie: tokens?.galerie
+    // Sélecteur de fenêtres (L2-17) : hauteur, largeurs minimale et maximale des vignettes, écart.
+    readonly property var selecteur: tokens?.selecteur
     // Pile de notifications (L2-19) : largeur, marge, écart, plafond, durée par défaut, icône, intérieur, lignes de corps.
     readonly property var notifications: tokens?.notifications
     // Pastille de la cloche (L2-67) : hauteur, corps, intérieur, boule et positions sur le glyphe.

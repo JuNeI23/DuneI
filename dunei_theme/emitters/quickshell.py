@@ -300,6 +300,7 @@ def emit(model: dict) -> str:
         "bureauxVirtuels": {"nombre": bureaux(raw)},
         "presquile": _camel_keys(raw["presquile"]),
         "galerie": _camel_keys(raw["galerie"]),
+        "selecteur": _camel_keys(raw["selecteur"]),
         "notifications": _camel_keys(raw["notifications"]),
         "cloche": _camel_keys(raw["cloche"]),
         "panneau": _camel_keys(raw["panneau"]),

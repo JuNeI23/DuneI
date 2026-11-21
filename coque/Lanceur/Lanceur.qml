@@ -34,7 +34,7 @@ import "../Applications/applications.js" as Apps
 //           v3 rapportées aux jetons), famille.
 // Erreurs : aucune ; une fenêtre qui ne peut être construite est journalisée et le lanceur se referme ; une action
 //           inconnue ne fait que fermer.
-// Dépendances : Quickshell (Singleton, LazyLoader, execDetached, clipboardText, iconPath), Quickshell.Io
+// Dépendances : Quickshell (Singleton, LazyLoader, execDetached, clipboardText), Quickshell.Io
 //           (IpcHandler), Quickshell.Hyprland (focusedMonitor, dispatch, rawEvent), QtQuick (Timer), Theme, Overlays, Applications, Sources,
 //           Calcul, MemoireLanceur, FenetreLanceur.qml, lanceur.js, applications.js.
 Singleton {
@@ -98,13 +98,6 @@ Singleton {
         if (ouvert || !sortant) return
         sortant = false
         saisie = ""
-    }
-
-    // icone — source d'une icône en couleur (application, fenêtre, action de bureau).
-    // Entrée : nom, nom freedesktop ou chemin absolu. Sortie : url de l'image, l'icône d'exécutable du thème à défaut, « » sans nom.
-    // Erreurs : aucune. Dépendances : Quickshell.iconPath.
-    function icone(nom) {
-        return !nom ? "" : nom.startsWith("/") ? "file://" + nom : Quickshell.iconPath(nom, "application-x-executable")
     }
 
     // fenetreDe — fenêtre des sources désignée par son adresse. Entrée : adresse. Sortie : {adresse, classe, titre,
@@ -212,14 +205,15 @@ Singleton {
         ouvert = false
     }
 
-    // realiserDifferee — exécute l'action en attente, une seule fois, et jamais sous un lanceur ouvert.
-    // Entrées : aucune. Sortie : aucune. Erreurs : aucune ; sans action en attente, ou lanceur rouvert, rien.
-    // Dépendances : differee, realiser, garde, ouvert.
+    // realiserDifferee — exécute l'action en attente, une seule fois, et jamais sous une attention ouverte : le lanceur
+    // rouvert, ou le sélecteur de fenêtres ouvert pendant le retrait du calque (L2-17), c'est changer d'avis.
+    // Entrées : aucune. Sortie : aucune. Erreurs : aucune ; sans action en attente, ou sous une attention ouverte, rien.
+    // Dépendances : differee, realiser, garde, Overlays.attention.
     function realiserDifferee() {
         const a = differee
         differee = null
         garde.stop()
-        if (a && !ouvert) realiser(a)
+        if (a && !Overlays.attention) realiser(a)
     }
 
     // realiser — exécute une action. « nouvelle » lance toujours une nouvelle instance de l'entrée, sans amener.
@@ -241,11 +235,21 @@ Singleton {
         }
     }
 
-    // Retrait du calque par le compositeur : l'action en attente part. Hyprland émet closelayer>>dunei-attention au
-    // démappage du calque, après lui avoir retiré le clavier.
+    // onRawEvent — retrait du calque par le compositeur : l'action en attente part. Hyprland émet
+    // closelayer>>dunei-attention au démappage du calque, après lui avoir retiré le clavier.
+    // Entrée : e, l'événement brut de Hyprland (name, data). Sortie : aucune. Erreurs : aucune ; sans action en attente
+    // ou pour un autre événement, rien. Dépendances : Hyprland.rawEvent, differee, realiserDifferee.
     Connections {
         target: Hyprland
         function onRawEvent(e) { if (lanceur.differee && e.name === "closelayer" && e.data === "dunei-attention") lanceur.realiserDifferee() }
+    }
+    // onAttentionChanged — quand une autre attention que le lanceur s'ouvre (le sélecteur de fenêtres), l'action en
+    // attente est abandonnée : c'est changer d'avis, et elle ne doit pas écraser le choix du nouveau geste en partant à
+    // son tour au retrait du calque. Entrées : aucune. Sortie : differee remis à null. Erreurs : aucune ; sans autre
+    // attention ouverte, rien. Dépendances : Overlays.attention, differee.
+    Connections {
+        target: Overlays
+        function onAttentionChanged() { if (Overlays.attention && Overlays.attention !== lanceur) lanceur.differee = null }
     }
     // Garde : si l'événement de retrait ne vient pas (connexion à Hyprland perdue), l'action part quand même, au plus
     // une seconde après la fermeture ; ce délai technique, bien au-delà du fondu de sortie (201 ms au ressort overlay),

@@ -2,9 +2,9 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.62. Historique en fin de document.
+Version 1.64. Historique en fin de document.
 
-La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **189 éléments** répartis en **cinq lots**, sur six chantiers.
+La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **190 éléments** répartis en **cinq lots**, sur six chantiers.
 
 Ce document dit ce qui est attendu, dans quel ordre, et à quelle condition c'est terminé. Il ne dit pas à quoi ça ressemble — c'est le rôle de la bible de design. En cas de contradiction : la bible l'emporte sur l'apparence, ce document l'emporte sur le périmètre.
 
@@ -270,7 +270,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L2-14 | B | Écrit | Indicateur Bluetooth et son popover — **fait (D107, D108), recette validée à l'écran le 2026-11-03** : popover copié du popover réseau, bascule de la radio, « Mes appareils » (connecter, déconnecter, oublier par le chevron), « Appareils à proximité » (recherche, appairage sans code, confiance puis connexion), appareils anonymes masqués, préfixe « LE- » masqué, voisins à hauteur fixe ; appairage par `dunei-bluetooth-appairer` (agent `NoInputNoOutput`, transport `bredr` pour l'audio, profil audio attendu) ; « Connecté » exige la sortie PipeWire d'un appareil audio ; popovers de la barre exclusifs et fermés 1,5 s après le départ de la souris |
 | L2-15 | B | Écrit | Zone d'état des applications tierces |
 | L2-16 | B | Fait | Lanceur — **fait (D190 à D196)** : `SUPER + R` ouvre le lanceur de la coque, overlay d'attention à voile et clavier exclusif ; accueil (« Fréquentes », « Suggestions »), liste et aperçu à scission, fenêtres ouvertes comme actions, commandes DuneI, calculs et conversions par `qalc`, « Nouvelle fenêtre » pour toute application ; wofi est désinstallé |
-| L2-17 | B | Écrit | Sélecteur de fenêtres — vignettes en neutre pur |
+| L2-17 | B | Fait | Sélecteur de fenêtres — vignettes en neutre pur — **fait (D200 à D202)** : `SUPER + Tab` ouvre un geste tenu dans la coque (clavier exclusif, relâchement de SUPER vu par le calque), chaque Tab avance par un raccourci global de Quickshell (`dunei:selecteur`, médiane 6 ms), `Maj + Tab` recule, le relâchement amène la fenêtre après le retrait du calque, Échap et le clic sur le voile annulent ; un tap bref ramène à la fenêtre précédente sans rien montrer (délai `delays.selecteur` de 150 ms, calque invisible jusque-là) ; vignettes figées des bureaux 1 à 4, de la plus récente à la plus ancienne, en neutre pur limité à l'image, plaque d'accent plate sous la vignette choisie, défilement au-delà de l'écran ; `SUPER + SHIFT + Tab` non lié ; vignette partagée avec le lanceur (`VignetteFenetre`) ; dettes en L2-79 |
 | L2-18 | B | Écrit | Sélecteur de bureaux — une teinte catégorielle par bureau |
 | L2-19 | B | Écrit | Notifications — couleurs sémantiques invariantes ; référence visuelle : `~/dunei-atelier/inspiration/Shoddyconfection962/notifications.jpg`. Consigne de Nicolas : en haut à droite, classique et bien dessinée ; la notification ne naît pas de l'îlot (conception de L2-01, § 2) — **fait (D162)** : la coque est le serveur `org.freedesktop.Notifications`, dunst est retiré ; module `coque/Notifications/`, cartes de verre e3 empilées en haut à droite, plafond de cinq, remplacement par étiquette de pile, plein écran qui retient les cartes ; recette à l'écran validée le 2026-11-13 ; cloche de la barre simplifiée, suite en L2-67 |
 | L2-20 | B | Écrit | Menu contextuel du bureau — part du point de clic |
@@ -332,6 +332,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L2-76 | C | Écrit | Mini-courbe des débits sur la plaque — la courbe à deux séries de la rangée du réseau joint (`PageWifi`) garde ses couleurs catégorielles sur la plaque, faute d'encre de la plaque pour deux séries ; trouver une paire lisible sur l'accent, sans couleur inventée (relecture finale de L2-73) |
 | L2-77 | C | Écrit | « Actualiser » perd le focus clavier — dans la page Wi-Fi de Paramètres, le bouton « Actualiser » perd le focus clavier pendant une recherche de réseaux et ne le retrouve pas à la fin ; le curseur au clavier doit y revenir (relecture de la tâche 4 de L2-73) |
 | L2-78 | C | Écrit | Tests sensibles au minutage — `test_radio_eteinte` et les essais qui attendent 3 s échouent parfois quand la machine est chargée ; remplacer les attentes fixes par des attentes de condition bornées (relevé pendant L2-73) |
+| L2-79 | C | Écrit | Sélecteur de fenêtres, dettes des relectures (L2-17) — mineurs relevés le 2026-11-21, aucun bloquant ; la relecture finale en a réglé une partie (voir l'historique, 1.64), et il reste : (a) un second `SUPER + Tab` arrivé pendant le fondu de sortie, ou avant `closelayer`, efface sans bruit la fenêtre choisie au geste précédent (`Selecteur.qml`, `differee = null` à l'ouverture, patron du lanceur) ; (c) l'origine du pointeur et son mouvement (`origine`, `bouge`) ne sont pas remis à zéro à une réouverture pendant le fondu ; (d) le `closelayer` du lanceur, de même namespace `dunei-attention`, peut déclencher tôt l'action différée du sélecteur (même défaut que L2-74 g)) ; (f) `selecteur.js` rend NaN pour un index hors bornes alors que son commentaire n'annonce aucune erreur ; (g) couverture : invariant `largeurMin < largeurMax` non éprouvé, `Theme.selecteur` absent de `test_coque_theme`, borne droite du défilement à un index intermédiaire et bureau numérique non testés ; (h) le commentaire de l'écart, dans `tokens.toml`, le dit échelon de `spacing.scale` sans que rien ne l'y lie ; (i) deux tests graphiques sont instables sous la charge de `make check`, sans lien avec L2-17 et déjà instables sur `main` : `test_notifications.CarteTest.test_actions` (hauteur relevée avant la fin du ressort, 78,0015 contre 78 ; un échec sur trois en isolé sur `main`) et `test_reseau.PageWifiTest.test_cinq_rangees` (boucle de liaison de `PageWifi.qml:312`, vert en isolé) |
 
 ### Lot 3 — la bascule
 
@@ -434,7 +435,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L5-30 | — | Écrit | Résorber les points ouverts de l'annexe C |
 | L5-31 | C | Écrit | Voix de DuneI — remplacer les sons KDE Ocean de L2-68 par une voix propre : une corde ancienne, sablonneuse et brève, enregistrée ou de synthèse modale (quatre tours de Karplus-Strong n'ont pas convaincu, D185). Pistes : cielago, sietch, dunes chantantes, crysknife, bouclier, corne lointaine, variantes du pas sans rythme, espace acoustique unique, jour et nuit, une tonalité par machine, la teinte du thème en note. Maquette et cheminement dans l'atelier, `maquettes/son-notifications/` |
 
-**Volume total : 189 éléments** — 139 écrits, 43 configurés, 5 offerts, 2 mixtes.
+**Volume total : 190 éléments** — 140 écrits, 43 configurés, 5 offerts, 2 mixtes.
 
 Les deux tiers du travail sont de l'écrit, et les trois quarts de cet écrit se concentrent sur la coque et les écrans système. C'est cohérent avec la stratégie retenue, et c'est là que tout le risque se trouve.
 
@@ -538,6 +539,8 @@ Le choix de la distribution de base et du compositeur, précédemment ouverts, s
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-12 | Version initiale, 137 éléments |
+| 1.64 | 2026-11-21 | L2-79 : la relecture finale de L2-17 règle `Backtab` sans SUPER, les commentaires réglementaires, la tolérance du test, l'action différée du lanceur écrasant le sélecteur, l'icône commune (`Applications.icone`), le relevé des fenêtres à l'ouverture et le double `HoverHandler` ; restent (a), (c), (d), (f), (g), (h), et (i) pour deux tests graphiques instables relevés par `make check` ; 190 éléments |
+| 1.63 | 2026-11-21 | L2-17 fait : sélecteur de fenêtres de la coque, geste tenu de `SUPER + Tab`, raccourci global, neutre pur limité à l'image, plaque d'accent sans anneau (D200 à D202) ; ajout de L2-79, dettes des relectures du sélecteur ; 190 éléments |
 | 1.62 | 2026-11-21 | L2-73 fait : le curseur dans toute la coque, une marque unique, la plaque d'accent plate, popovers sans plaque autour des petits contrôles (D197 à D199) ; ajout de L2-75 (activité sur la plaque), L2-76 (mini-courbe sur la plaque), L2-77 (focus d'« Actualiser ») et L2-78 (tests sensibles au minutage) ; 189 éléments |
 | 1.61 | 2026-11-20 | Ajout de L2-74, dettes du lanceur relevées par la relecture finale de L2-16 (M2 à M6, M9, M10, ligne « warning » de qalc) ; 185 éléments |
 | 1.60 | 2026-11-20 | L2-16 fait : lanceur de la coque, wofi retiré (D190 à D196) ; L2-31 précisé « hors du lanceur » ; ajout de L2-71 (recherche de fichiers), L2-72 (sélecteur d'émojis) et L2-73 (revue contre la règle du curseur) ; 184 éléments |

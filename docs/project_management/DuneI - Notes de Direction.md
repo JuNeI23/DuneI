@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas — révisée le 22 octobre 2026
 
-Version 1.56. Historique en fin de document.
+Version 1.57. Historique en fin de document.
 
 *Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent soixante-quinze lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
 
@@ -664,15 +664,30 @@ backlog : l'indicateur d'activité et la mini-courbe des débits gardent leurs c
 « Actualiser » perd le focus clavier pendant une recherche (L2-77), et des tests sensibles au minutage sont instables
 sous charge (L2-78).
 
-Prochaine étape : **le sélecteur de fenêtres (L2-17)**, autre overlay d'attention qui hérite du voile, du fondu et de
-la montée du lanceur, et désormais de son arbitre du curseur. Le reste de L2-48, L2-57 (suites du popover Bluetooth),
-L2-58, L2-59, L2-62, L2-70 et les défauts L2-74 à L2-78 attendent leur tour.
+Le sélecteur de fenêtres (L2-17) est fait et validé à l'écran par Nicolas le 21 novembre, sans correction de recette
+(D200 à D202). `SUPER + Tab` ne saute plus à l'aveugle : SUPER tenu, chaque Tab avance d'une vignette, `Maj + Tab`
+recule, le relâchement de SUPER amène la fenêtre choisie après le retrait du calque, et Échap ou un clic sur le voile
+annulent. Un tap bref ramène à la fenêtre précédente sans rien montrer : le calque prend le clavier dès le premier Tab
+mais reste invisible pendant 150 ms. Un essai sur caladan a écarté la sous-carte de Hyprland, qui ne voit pas le
+relâchement d'une touche de modification, au profit du calque de la coque ; chaque Tab arrive par un raccourci global
+de Quickshell, mesuré à 6 ms de médiane contre 24 à 33 ms pour `qs ipc` (D200). Le geste tenu est une dérogation
+consignée à la grammaire « `SUPER` agit ou va », `SUPER + SHIFT + Tab` reste libre hors du geste, et le neutre pur des
+vignettes vise l'image seule (D201). Les vignettes figées des bureaux 1 à 4 portent la plaque d'accent plate sous la
+vignette choisie, sans arbitre `VueCurseur` : la plaque suit la sélection, que le survol écrit ; la vignette du lanceur
+est devenue un composant partagé (D202). Le sélecteur pose le moule des overlays d'attention à venir. Les mineurs des
+relectures entrent au backlog en L2-79.
+
+Prochaine étape : **le sélecteur de bureaux (L2-18)**, que le lot 2 associe au sélecteur de fenêtres et qui en reprend
+le moule (contrôleur, calque à la demande, voile, fondu et montée du lanceur, plaque d'accent), avec une teinte de la
+palette catégorielle par bureau ; le menu de déconnexion (L2-23) suivra le même moule. Le reste de L2-48, L2-57 (suites
+du popover Bluetooth), L2-58, L2-59, L2-62, L2-70 et les défauts L2-74 à L2-79 attendent leur tour.
 
 ## Historique des versions
 
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-10 | Version initiale |
+| 1.57 | 2026-11-21 | L2-17 fait : sélecteur de fenêtres de la coque, geste tenu de `SUPER + Tab`, raccourci global, neutre pur limité à l'image (D200 à D202) ; ajout de L2-79 ; prochaine étape : L2-18 |
 | 1.56 | 2026-11-21 | L2-73 fait : le curseur dans toute la coque, une seule marque, la plaque d'accent plate, popovers sans plaque autour des petits contrôles (D197 à D199) ; ajout de L2-75 à L2-78 ; prochaine étape : L2-17 |
 | 1.55 | 2026-11-20 | L2-16 fait : lanceur de la coque, wofi retiré, règle du curseur de sélection pour toute la coque (D190 à D196) ; ajout de L2-71 à L2-73 ; prochaine étape : L2-73 puis L2-17 |
 | 1.54 | 2026-11-18 | L2-69 fait : « Ouvrir » propre à DuneI, clic sur la carte qui ouvre (D189) ; ajout de L2-70 ; prochaine étape : L2-16 |

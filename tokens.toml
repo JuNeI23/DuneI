@@ -473,6 +473,12 @@ tenue = 200                  # ms pendant lesquelles la vignette validée reste 
 pas = 60                     # px de pixelDelta du pavé tactile qui valent un pas de sélection ; réglé à la recette
 dossier = "~/Documents/Images/Wallpapers"   # dossier des images, « ~ » développé à l'exécution
 
+[selecteur]                   # sélecteur de fenêtres, SUPER + Tab (L2-17) ; px logiques ; valeurs de départ, jugées à la recette
+hauteur = 140                 # hauteur d'une vignette de fenêtre
+largeur_min = 100             # largeur minimale d'une vignette, pour une fenêtre très étroite ou très haute
+largeur_max = 320             # largeur maximale d'une vignette, pour une fenêtre très large
+ecart = 16                    # espace entre deux vignettes (échelon de spacing.scale)
+
 [notifications]               # pile de notifications de la coque (L2-19) ; px logiques sauf mention ; ms pour duree
 largeur = 340                 # largeur d'une carte
 marge = 8                     # distance de la pile au bord de l'écran

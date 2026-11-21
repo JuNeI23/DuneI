@@ -32,6 +32,8 @@ liste   = 30                      # Attente, à l'ouverture du popover réseau, 
                                   # le cadre : les réseaux reviennent un par un, en une douzaine de ms (D118, L2-06).
 alerte  = 4000                    # Tenue de l'alerte d'énergie dans la presqu'île, comptée depuis la montée effective
                                   # du module (phase « entree » de la scène), avant qu'elle ne se replie seule (L2-13).
+selecteur = 150                   # Attente, après SUPER + Tab, avant l'apparition du sélecteur de fenêtres : un tap bref
+                                  # change de fenêtre sans que le voile ne clignote (L2-17).
 
 [periods]                         # Durée d'un cycle des mouvements continus, en millisecondes.
 spinner = 1200                    # Un cycle de la vague des trois grains de l'indicateur d'activité.

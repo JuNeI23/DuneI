@@ -31,7 +31,7 @@ class QuickshellEmitterTest(unittest.TestCase):
         self.assertEqual(list(self.out), [
             "_generated", "hue", "space", "density", "radius", "window", "layout", "reglages", "breakpoints", "typo", "icons",
             "familles", "moments", "defaut", "themes", "pastilles", "bureau", "bureauxVirtuels", "presquile",
-            "galerie", "notifications", "cloche", "panneau", "son"])
+            "galerie", "selecteur", "notifications", "cloche", "panneau", "son"])
         self.assertEqual(list(self.nuit), ["color", "states", "focus", "disabled", "elevation", "material", "glass", "render",
                                            "knob", "controls"])
 
@@ -87,6 +87,10 @@ class QuickshellEmitterTest(unittest.TestCase):
         self.assertEqual(self.out["galerie"], {"largeur": 160, "hauteur": 90, "coupe": 56, "echelle": 1.06,
                                                "voile": 0.30, "delai": 2000, "tenue": 200, "pas": 60,
                                                "dossier": "~/Documents/Images/Wallpapers"})
+
+    def test_selecteur(self):
+        """Vérifie les jetons du sélecteur de fenêtres : hauteur de la vignette, largeurs minimale et maximale, écart."""
+        self.assertEqual(self.out["selecteur"], {"hauteur": 140, "largeurMin": 100, "largeurMax": 320, "ecart": 16})
 
     def test_notifications(self):
         """Vérifie les jetons de la pile de notifications : largeur, marge, écart, plafond, durée, icône, intérieur,

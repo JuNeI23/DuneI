@@ -8,7 +8,7 @@ import "applications.js" as Logique
 // Rôle : relie la logique pure d'applications.js aux entrées de bureau de Quickshell (DesktopEntries, qui exclut déjà
 // les entrées NoDisplay) et aux fenêtres de Hyprland. Les notifications s'en servent pour leur « Ouvrir » propre ;
 // le lanceur (L2-16) emploie toplevels, amenerOuLancer et lancerAction.
-// Entrées : aucune. Sorties : aucune. Fonctions : resoudre, toplevels, amenerOuLancer, lancerAction.
+// Entrées : aucune. Sorties : aucune. Fonctions : icone, resoudre, toplevels, amenerOuLancer, lancerAction.
 // Erreurs : aucune ; une application introuvable n'est ni amenée ni lancée.
 // Dépendances : Quickshell (Singleton, DesktopEntries, execDetached), Quickshell.Hyprland (Hyprland.toplevels,
 // Hyprland.dispatch), applications.js, uwsm à l'exécution.
@@ -39,6 +39,14 @@ Singleton {
     Component.onCompleted: {
         DesktopEntries.applications.values
         if (Quickshell.env("WAYLAND_DISPLAY")) Hyprland.toplevels.values
+    }
+
+    // icone — source d'une icône en couleur (application, fenêtre, action de bureau), commune au lanceur et au
+    // sélecteur de fenêtres.
+    // Entrée : nom, nom freedesktop ou chemin absolu. Sortie : url de l'image, l'icône d'exécutable du thème à défaut,
+    // « » sans nom. Erreurs : aucune. Dépendances : Quickshell.iconPath.
+    function icone(nom) {
+        return !nom ? "" : nom.startsWith("/") ? "file://" + nom : Quickshell.iconPath(nom, "application-x-executable")
     }
 
     // resoudre — entrée de bureau désignée par les indices d'une notification, si elle est sûre.

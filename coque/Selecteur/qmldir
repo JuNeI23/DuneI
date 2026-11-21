@@ -1,0 +1,3 @@
+module Selecteur
+singleton Selecteur 1.0 Selecteur.qml
+CadreSelecteur 1.0 CadreSelecteur.qml

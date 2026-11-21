@@ -1755,6 +1755,12 @@
     "pas": 60,
     "dossier": "~/Documents/Images/Wallpapers"
   },
+  "selecteur": {
+    "hauteur": 140,
+    "largeurMin": 100,
+    "largeurMax": 320,
+    "ecart": 16
+  },
   "notifications": {
     "largeur": 340,
     "marge": 8,
