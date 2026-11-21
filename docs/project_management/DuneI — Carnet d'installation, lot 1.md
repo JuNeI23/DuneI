@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.50. Historique en fin de document.
+Version 1.51. Historique en fin de document.
 
 Socle amorçable.
 
@@ -2227,6 +2227,33 @@ dans le groupe « session » de `paquets.toml`, donc `make install` le garde.
   coque d'essai, qui désactive le clavier exclusif (`clavierExclusif`, D194) et pilote la saisie par IPC ; ils exigent
   un écran libre (Wayland et `qs`).
 
+## Le curseur dans toute la coque — L2-73
+
+Aucun paquet à installer : la feature ne touche que la coque, un jeton et les tests. `make install` la déploie comme
+le reste de la coque.
+
+- **Ce qui change.** Dans toute la coque, le curseur se montre d'une seule façon : la plaque d'accent plate du
+  lanceur, sous l'élément survolé à la souris ou atteint au clavier (D197). L'anneau de focus orange a disparu, et les
+  boutons orange au repos sont devenus neutres. Les indicateurs (icône d'un popover ouvert, appareil actif, réseau
+  connecté, contrôle allumé) gardent leur accent, sans plaque. Une action destructrice est rouge (D198). Dans les
+  popovers Audio, Bluetooth et Réseau et dans le panneau des notifications, glyphes, bascules et jauges n'ont aucune
+  plaque, et « Tout effacer » est un lien rouge en texte (D199).
+- **Les composants.** `coque/Composants/VueCurseur.qml`, l'arbitre d'une vue, se déclare sur la racine d'une fenêtre
+  ou d'un popover par `property VueCurseur dnVue: VueCurseur {}` ; un module neuf qui l'oublie retombe sur la règle
+  locale (survol ou focus), sans garantie d'un seul curseur. `ZoneCurseur.qml` enveloppe un contrôle isolé pour lui
+  donner la plaque ; `marque: false` la neutralise (popovers). `Plaque.qml` a quitté `coque/Lanceur/` pour
+  `coque/Composants/`. `AnneauFocus.qml` est supprimé.
+- **Le jeton.** `[reglages] evidence = 0.32` dans `tokens.toml` : l'opacité de pointe du voile `accentDiscret` qui
+  marque, dans Paramètres, le réglage atteint par la recherche. `make tokens` le reporte dans `generated/` ; les
+  fichiers témoins de `tests/golden/` sont à jour.
+- **Vérifier.** La planche montre chaque composant au repos, au survol, au clavier et en sélection inactive :
+  `qs -n -p coque/outils/planche`, avec `DUNEI_TOKENS_DIR` comme l'indique son `README.md`. À l'écran, dans chaque
+  module, une seule plaque à la fois, aucun contour orange, et rien d'orange qu'on puisse prendre pour le curseur.
+- **Les tests.** `python3 -m unittest tests.test_coque_composants tests.test_parametres tests.test_reseau
+  tests.test_notifications tests.test_quickshell_emitter`. Les essais graphiques exigent un écran libre (Wayland et
+  `qs`). Sous charge, `test_radio_eteinte` et les essais qui attendent 3 s échouent parfois : les relancer seuls avant
+  de conclure à une régression (L2-78).
+
 ## Le mouvement des popovers — L2-06, L2-07, L2-47, L2-56
 
 Rien de plus à installer : la fenêtre des popovers est dans la coque (`dunei-coque.service`), et `make install` lie
@@ -2514,6 +2541,7 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 
 | Version | Date | Changement |
 | --- | --- | --- |
+| 1.51 | 2026-11-21 | Le curseur dans toute la coque (L2-73, D197 à D199) : `VueCurseur`, `ZoneCurseur`, `Plaque` partagée, `AnneauFocus` retiré, jeton `[reglages] evidence`, tests et instabilités connues |
 | 1.50 | 2026-11-20 | Lanceur (L2-16, D190 à D196) : `libqalculate` installé, wofi désinstallé et retiré du modèle de paquets, style `fade` du calque d'attention |
 | 1.49 | 2026-11-17 | « Ouvrir » propre à DuneI (L2-69) : module `coque/Applications`, focus par adresse, lancement par uwsm, clic sur la carte qui ouvre |
 | 1.48 | 2026-11-17 | Son de notification (L2-68) : `pipewire-audio` et `ocean-sound-theme`, voix, règles, lecture, réglages et tests |

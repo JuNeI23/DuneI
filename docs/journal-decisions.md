@@ -4383,3 +4383,80 @@ décision) : l'espace réservé au rappel ↵ sur les boutons neutres, et l'inst
 reproduite en six passages.
 
 *Touché : `coque/Lanceur/`, tests `test_lanceur`.*
+
+## 2026-11-21 — Le curseur dans toute la coque (L2-73)
+
+### D197 · Un arbitre du curseur par vue, une seule marque : la plaque d'accent plate
+
+21 novembre 2026 · L2-73, recette avec Nicolas. D191 posait la règle ; L2-73 l'applique à toute la coque et la loge
+dans les composants partagés, pour que les modules suivants, le sélecteur de fenêtres (L2-17) en tête, la respectent
+d'office. Nicolas a retenu l'option A : la marque du curseur est, partout, la plaque d'accent du lanceur (aplat
+`color.accent`, texte et icône en `onAccent`, icône en variante pleine), plate et sans ombre (D195), que le curseur
+vienne de la souris ou du clavier. Le survol et le focus clavier ne se montrent donc plus de deux façons : l'anneau
+de focus (`AnneauFocus`) et les contours intérieurs des rangées disparaissent, le fond neutre du survol aussi. Une vue
+(une fenêtre, barre latérale comprise, ou un popover entier) porte un arbitre, `VueCurseur`, déclaré sur sa racine
+(`dnVue`) et retrouvé par remontée ; il retient l'unique porteur du curseur, et le dernier mouvement, souris ou
+clavier, l'emporte : une vue ne montre jamais deux plaques. Dans une liste, la plaque glisse d'une ligne à l'autre au
+ressort `reflow` (le composant `Plaque` quitte le lanceur pour `coque/Composants`) ; sur un élément isolé, elle paraît
+et s'efface au ressort des états. Hors du curseur, la ligne retenue d'une liste et la page courante de la barre
+latérale de Paramètres restent en fond neutre (le « sélectionné inactif »), sans ombre. Les états ne sont pas des
+sélections : un popover ouvert (icône de la barre à l'accent), un appareil audio actif, un réseau ou un VPN connecté
+(médaillon neutre, glyphe à l'accent autonome), le bureau courant, un contrôle allumé (interrupteur, bascule, case,
+radio), une jauge ou une progression sont des indicateurs, qui gardent leur accent sans jamais prendre la forme de la
+plaque. Sans arbitre, un `Etat` retombe sur la règle locale (survol ou focus clavier). Deux exceptions demeurent : le
+lanceur, où le survol ne déplace pas le curseur parce que la vue se pilote au clavier, et `Liste`, qui ne reprend pas
+le curseur au simple retour du focus clavier après un survol, comme le documente la barre latérale de Paramètres
+(« le curseur reste où il est ») ; la plaque y reparaît à la touche suivante. Le cadre de mise en évidence d'un réglage
+atteint par la recherche, qui empruntait le contour de focus, devient un voile `color.accentDiscret`, pour ne pas
+ressembler au curseur (D198).
+
+*Touché : `coque/Composants/` (`VueCurseur`, `Etat`, `etats.js`, `Plaque`, `Liste`, `Rangee`, `ReglageLigne`,
+`Depliable`, `Onglet`, `Onglets`, `Medaillon`, retrait d'`AnneauFocus`), `coque/Lanceur/`, `coque/Parametres/`,
+`coque/Reseau/`, `coque/Notifications/`, `coque/Audio/`, `coque/Bluetooth/`, `coque/Energie/`, planche, tests
+`test_coque_composants`, `test_parametres`, `test_reseau`, `test_notifications`, bible (0.41), fiche
+`docs/superpowers/specs/2026-11-20-curseur-coque-design.md`.*
+
+### D198 · Contrôles isolés sous la plaque, inversion sur la plaque, destructif en rouge, jeton `evidence`
+
+21 novembre 2026 · L2-73. Sans anneau de focus, un contrôle qui n'a ni rangée ni plaque naturelle (la bascule Wi-Fi
+d'un en-tête, un interrupteur isolé, un bouton texte comme « Actualiser ») ne montrerait plus son focus clavier par
+rien. Le composant `ZoneCurseur` l'enveloppe : survolée ou focalisée au clavier, tant que le contrôle est actif, elle
+prend le curseur de sa vue et peint derrière lui l'aplat de la plaque, au rayon `radius.control`, en débordant de
+`space.scale[0]` sans changer la mise en page ; un contrôle désactivé ne prend jamais le curseur. Dans Paramètres, le
+curseur au clavier se pose sur la rangée qui porte le contrôle (`ReglageLigne`), même pour un curseur de valeur, une
+jauge, un compteur ou un déroulant ; un champ de saisie n'a pas de plaque, son caret le marque. Les boutons principaux
+et les boutons texte, orange au repos jusque-là (« Rejoindre », « Ajouter », « Actualiser », « Remettre », actions des
+notifications), deviennent neutres au repos et ne prennent l'accent que sous le curseur. Un contrôle allumé posé sur
+une plaque s'inverse (piste en `onAccent`, bouton ou glyphe à l'accent), comme les coches blanches des menus de macOS
+sur la surbrillance ; sinon l'orange se perdrait sur l'orange. Les suffixes des rangées (chevrons, compteurs, débits)
+prennent les encres de la plaque, et une jauge coupée s'évide sur la plaque par son opacité, sans couleur dérivée. Une
+action destructrice (« Oublier », « Effacer ») écrit son texte en `color.error` au repos ; sous le curseur, elle se
+remplit de `color.error` comme la puce de confirmation du lanceur, parce que du texte rouge sur une plaque orange
+serait illisible. Enfin, le voile de mise en évidence de Paramètres monte jusqu'à l'opacité d'un jeton nouveau,
+`[reglages] evidence = 0.32` : c'est une opacité et non une couleur, posée sur `color.accentDiscret`, et son rôle est
+distinct de celui du voile de la galerie de fonds, qu'on n'a donc pas réemployé. S'il déplaisait, le retour au voile
+de la galerie tiendrait en une ligne.
+
+*Touché : `coque/Composants/` (`ZoneCurseur`, `Bouton` : `danger`, `plat`, `teinte`, `Interrupteur`, `Bascule`,
+`Case`, `Radio`, `Jauge`, `Curseur`, `Compteur`, `Deroulant`, `Valeur`), `coque/Reseau/`, `coque/Notifications/`,
+`coque/Parametres/ConteneurPage.qml`, `tokens.toml` (`[reglages] evidence`), golden `coque-tokens.json`, tests
+`test_coque_composants`, `test_quickshell_emitter`, `test_reseau`, `test_notifications`, bible (0.41).*
+
+### D199 · Popovers et panneau des notifications sans plaque autour des petits contrôles ; texte des rangées sans retard
+
+21 novembre 2026 · L2-73, recette avec Nicolas. À l'écran, la plaque d'accent posée autour d'un petit glyphe, d'une
+bascule ou d'une jauge dans un popover s'est révélée lourde et masquait le contrôle qu'elle devait désigner. Dans les
+popovers Audio, Bluetooth et Réseau, et dans le panneau des notifications, ces contrôles ne portent donc aucune plaque,
+ni au survol ni à la pression : leur `ZoneCurseur` prend `marque: false`, n'est plus qu'une enveloppe neutre, ne prend
+pas le curseur de la vue et ne relaie plus la pression du contrôle, qui garde son propre survol. Les rangées de ces
+popovers gardent la plaque. Compromis accepté par Nicolas : ces contrôles n'ont plus de marque visible au focus
+clavier (tabulation) ; les popovers se pilotent d'abord à la souris, et la navigation au clavier n'y a pas été ajoutée
+(fiche, non-objectifs). Pour la même raison, `Bouton` reçoit `marque: false` : « Tout effacer », en haut du panneau
+des notifications, redevient un lien rouge en texte seul, sans plaque, car la plaque pleine collait au bord de
+l'écran. Enfin, le texte d'une rangée doit suivre le survol sans retard : `Etat.texteCible` donne la couleur visée
+directement, et le ressort de couleur du texte vise cette cible, jamais un autre ressort de couleur ; deux ressorts
+enchaînés faisaient traîner le libellé derrière la plaque.
+
+*Touché : `coque/Audio/PopoverAudio.qml`, `coque/Bluetooth/PopoverBluetooth.qml`, `coque/Reseau/PopoverReseau.qml`,
+`coque/Notifications/Panneau.qml`, `coque/Composants/ZoneCurseur.qml`, `Bouton.qml`, `Etat.qml`, tests
+`test_coque_composants`, `test_notifications`, bible (0.41).*

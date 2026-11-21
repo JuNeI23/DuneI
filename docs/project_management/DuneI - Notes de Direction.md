@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas — révisée le 22 octobre 2026
 
-Version 1.55. Historique en fin de document.
+Version 1.56. Historique en fin de document.
 
 *Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent soixante-quinze lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
 
@@ -650,16 +650,30 @@ l'ont pas encore subie, d'où L2-73. Le calque d'attention apparaît en fondu pa
 depuis le bas au ressort de Paramètres (D193), les actions partent après le retrait du calque (D194). La recherche de
 fichiers (L2-71) et le sélecteur d'émojis (L2-72) entrent au backlog, la recherche de fichiers n'ayant pas de lot.
 
-Prochaine étape : **L2-73, la revue des autres modules de la coque contre la règle du curseur**, courte et de grand
-effet sur la cohérence, puis **le sélecteur de fenêtres (L2-17)**, autre overlay d'attention qui hérite du voile, du
-fondu et de la montée du lanceur. Le reste de L2-48, L2-57 (suites du popover Bluetooth), L2-58, L2-59, L2-62 et L2-70
-attendent leur tour.
+La revue de la coque contre la règle du curseur (L2-73) est faite et validée à l'écran par Nicolas le 21 novembre
+(D197 à D199). Partout, le curseur se montre d'une seule façon, à la souris comme au clavier : la plaque d'accent plate
+du lanceur. Chaque fenêtre et chaque popover porte un arbitre, `VueCurseur`, qui garantit une seule plaque par vue ;
+l'anneau de focus orange a disparu ; les boutons orange au repos sont devenus neutres, les actions destructrices
+rouges ; les indicateurs (popover ouvert, appareil actif, réseau connecté, contrôle allumé) gardent leur accent sans
+jamais prendre la forme de la plaque. Les contrôles isolés reçoivent la plaque par `ZoneCurseur`, et un contrôle
+allumé s'inverse sur la plaque. La recette a corrigé un excès : dans les popovers et le panneau des notifications, une
+plaque autour d'un petit glyphe, d'une bascule ou d'une jauge était lourde et masquait le contrôle ; ils n'en portent
+plus, au prix d'un focus clavier invisible sur ces seuls contrôles, et « Tout effacer » redevient un lien rouge. La règle
+vit désormais dans les composants partagés : le sélecteur de fenêtres l'aura d'office. Quatre défauts mineurs entrent au
+backlog : l'indicateur d'activité et la mini-courbe des débits gardent leurs couleurs sur la plaque (L2-75, L2-76),
+« Actualiser » perd le focus clavier pendant une recherche (L2-77), et des tests sensibles au minutage sont instables
+sous charge (L2-78).
+
+Prochaine étape : **le sélecteur de fenêtres (L2-17)**, autre overlay d'attention qui hérite du voile, du fondu et de
+la montée du lanceur, et désormais de son arbitre du curseur. Le reste de L2-48, L2-57 (suites du popover Bluetooth),
+L2-58, L2-59, L2-62, L2-70 et les défauts L2-74 à L2-78 attendent leur tour.
 
 ## Historique des versions
 
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-10 | Version initiale |
+| 1.56 | 2026-11-21 | L2-73 fait : le curseur dans toute la coque, une seule marque, la plaque d'accent plate, popovers sans plaque autour des petits contrôles (D197 à D199) ; ajout de L2-75 à L2-78 ; prochaine étape : L2-17 |
 | 1.55 | 2026-11-20 | L2-16 fait : lanceur de la coque, wofi retiré, règle du curseur de sélection pour toute la coque (D190 à D196) ; ajout de L2-71 à L2-73 ; prochaine étape : L2-73 puis L2-17 |
 | 1.54 | 2026-11-18 | L2-69 fait : « Ouvrir » propre à DuneI, clic sur la carte qui ouvre (D189) ; ajout de L2-70 ; prochaine étape : L2-16 |
 | 1.53 | 2026-11-17 | L2-68 fait : voix KDE Ocean et ses règles, carte « Son », repli d'un seul geste (D185 à D188) ; voix propre renvoyée au lot 5 (L5-31) ; prochaine étape : L2-69 |
