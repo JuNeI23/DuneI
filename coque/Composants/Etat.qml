@@ -8,52 +8,88 @@ import "etats.js" as Etats
 // fait rejoindre aux couleurs Theme.stateColors par deux ColorSpring, au ressort transitions.state.in, retour au
 // repos compris (conception, § 7.8). Élément non visuel : il ne peint rien lui-même.
 // Entrées : controle, le contrôle observé (enabled, down, hovered, comme un gabarit de QtQuick.Templates),
-// dont les ancêtres portent dnRole et dnInactive ; selectionne ; focusDansGroupe, vrai par défaut ; role, rôle
-// de fond, par défaut le cran au-dessus du dnRole hérité (surfaceWindow à la racine) ; forcer, réservée à la
-// planche de contrôle : une clé d'interaction ("hover", "pressed"…) qui, non vide, remplace celle que lit le
-// contrôle, pour montrer un état sans geste ; vide par défaut, et jamais posée par une surface de la coque ;
+// dont les ancêtres portent dnRole et dnInactive ; selectionne ; role, rôle de fond, par défaut le cran au-dessus du
+// dnRole hérité (surfaceWindow à la racine) ; forcer, réservée à la planche de contrôle : une clé d'interaction
+// ("hover", "pressed"…) qui, non vide, remplace celle que lit le contrôle, pour montrer un état sans geste ; vide par
+// défaut, et jamais posée par une surface de la coque ;
 // selectionNeutre, faux par défaut : vrai, une sélection prend toujours la clé « inactive » (sans accent ni accent
 // muet) et les couleurs au repos du rôle controlRaised, un cran levé, neutre et légèrement teinté, distinct du
 // panneau et de son survol aux deux moments (la sélection inactive du jour se confond avec surfacePanel), sans
 // réagir au survol ni à la pression, comme la sélection d'une barre latérale de macOS : c'est la rangée choisie
-// d'une colonne de navigation ; peintFond et peintTexte, vrais par défaut : faux quand le contrôle ne peint pas cette couleur, qui reste alors
-// transparente, si bien que son ressort ne démarre jamais (sobriété, D80) ; fondReposTransparent, faux par
-// défaut : vrai, le fond ni survolé, ni pressé, ni sélectionné (au repos ou désactivé) vise sa couleur rendue
-// transparente, pour un élément qui ne se distingue pas de son conteneur au repos (une rangée) et ne doit pas en
-// repeindre la couleur opaque, qui se détacherait d'une surface de verre. L'opacité seule change : le ressort
-// fond la couleur d'état depuis sa propre teinte, sans passer par le noir ; fondSurvolTransparent, faux par défaut :
+// d'une colonne de navigation ; peintFond et peintTexte, vrais par défaut : faux quand le contrôle ne peint pas
+// cette couleur, qui reste alors transparente, si bien que son ressort ne démarre jamais (sobriété, D80) ;
+// fondReposTransparent, faux par défaut : vrai, le fond ni survolé, ni pressé, ni sélectionné (au repos ou
+// désactivé) vise sa couleur rendue transparente, pour un élément qui ne se distingue pas de son conteneur au repos
+// (une rangée) et ne doit pas en repeindre la couleur opaque, qui se détacherait d'une surface de verre. L'opacité
+// seule change : le ressort fond la couleur d'état depuis sa propre teinte, sans passer par le noir ;
+// fondSurvolTransparent, faux par défaut :
 // vrai, le survol (non sélectionné) fait de même, pour un élément qui ne se peint qu'à la pression (le segment d'une
 // barre d'onglets) et dont le ressort, resté sur le fond de survol opaque, le ferait apparaître au premier instant
-// de la pression.
+// de la pression ; suitCurseur, faux par défaut : vrai, l'état prend le curseur de sa vue (l'arbitre VueCurseur
+// hérité par dnVue) au survol et au focus clavier, ou dès sa création, son changement de vue ou son retour à la
+// visibilité s'il est déjà survolé ou focalisé, et le lâche quand l'un ou l'autre cesse ou quand le contrôle devient
+// invisible (par un ancêtre compris) ou est détruit ; il le reprend aussi à la pression (down, la souris ou Espace
+// sur le contrôle focalisé), et quand le curseur de la vue redevient libre alors qu'il est encore survolé (une ligne
+// que le pointeur retrouve en quittant son bouton d'action) ou, à défaut d'un élément survolé, focalisé au clavier,
+// pour que le focus clavier ne reste jamais sans marque ; sa sélection vaut alors celle d'un élément sélectionné dans
+// un groupe qui a le focus (l'accent, ou l'accent sans chroma sous inactive) sous le curseur, et hors du curseur une
+// sélection fournie (selectionne) reste toujours « inactive », jamais à l'accent (L2-73). Faux, la sélection suit
+// selectionne comme avant, à l'accent, si bien que les contrôles allumés gardent leur accent ; curseurAplat,
+// faux par défaut : vrai, sous le curseur, les couleurs sont celles du repos au survol, pour que la marque du
+// curseur garde l'aplat unique de la plaque des listes (color.accent, ou l'accent muet sous inactive) ; la pression
+// garde ses couleurs (active/pressed), pour que le geste se lise ; inverseSurPlaque, faux par défaut : vrai pour un
+// contrôle qui dit « allumé » par l'accent (interrupteur, bascule, case, radio, jauge, curseur). Posé sur la plaque
+// d'accent du curseur (un ancêtre déclare dnSurPlaque vrai : ReglageLigne, Rangee, Ligne, ZoneCurseur sous le
+// curseur), un tel contrôle sélectionné s'inverse, comme les coches blanches d'un menu surligné de macOS : son fond
+// prend l'encre de la plaque (color.onAccent) et son texte, glyphe ou bouton, l'accent de la plaque (L2-73) ; sinon
+// l'orange se fondrait dans l'orange. L'inversion suit le même ressort que la plaque.
 // Sorties : interaction, selection, inactif (clés des tokens) ; levee, vrai pour une sélection neutre (selectionNeutre)
-// peinte en controlRaised ; fond, texte, couleurs affichées ; texteNeutre, le
+// peinte en controlRaised, hors du curseur ; vue, l'arbitre du curseur hérité (null sans suitCurseur ou sans vue) ;
+// sousCurseur, vrai quand le contrôle porte le curseur (toujours faux sans suitCurseur), pour un composant qui peint
+// la marque du curseur ailleurs que sur ce fond ; fond, texte, couleurs affichées ; texteCible, la cible du texte
+// sans ressort, que vise tout ressort qui suit le texte de l'état ; texteNeutre, le
 // texte du même rôle et de la même interaction sans sélection, sans ressort, pour un libellé posé à côté d'une
-// marque sélectionnable (case, radio, interrupteur, bascule) ou d'un en-tête sans fond (section dépliable).
+// marque sélectionnable (case, radio, interrupteur, bascule) ou d'un en-tête sans fond (section dépliable) ;
+// surPlaque, vrai quand inverseSurPlaque est posé et qu'un ancêtre porte la plaque du curseur ; inverse, vrai quand
+// le contrôle sélectionné s'y inverse ; encres, les couleurs de la plaque (fill : l'accent, text : le sur-accent, ou
+// celles de l'accent sans chroma sous inactive, désactivées pour un contrôle désactivé) ; libelle, la couleur du
+// libellé posé à côté de la marque : texteNeutre hors de la plaque, l'encre de la plaque sur elle, en fondu.
 // Erreurs : aucune ; avant le chargement des tokens ou pour une combinaison absente, les couleurs restent
 // transparentes.
-// Dépendances : Theme (stateColors, motion), ColorSpring (module Theme), etats.js (herite, cran,
-// interaction, selection). Les deux ColorSpring sont les premiers enfants de l'élément, dans cet ordre (fond,
-// texte) : la coque d'essai les lit ainsi.
+// Dépendances : Theme (stateColors, motion), ColorSpring (module Theme), VueCurseur, Qt.callLater, etats.js (herite,
+// cran, interaction, selection, sousCurseur). Les deux ColorSpring sont les premiers enfants de l'élément, dans cet
+// ordre (fond, texte), le ressort du libellé les suit : la coque d'essai les lit ainsi.
 Item {
     id: etat
 
     required property Item controle
     property bool selectionne: false
-    property bool focusDansGroupe: true
     property string forcer: ""
     property bool peintFond: true
     property bool peintTexte: true
     property bool fondReposTransparent: false
     property bool fondSurvolTransparent: false
     property bool selectionNeutre: false
+    property bool suitCurseur: false
+    property bool curseurAplat: false
+    property bool inverseSurPlaque: false
     property string role: Etats.cran(Etats.herite(controle, "dnRole", "surfaceWindow"))
     readonly property bool inactif: Etats.herite(controle, "dnInactive", false)
     readonly property string interaction: forcer || Etats.interaction(controle)
-    readonly property string selection: selectionNeutre && selectionne ? "inactive"
-        : Etats.selection(selectionne, focusDansGroupe, inactif)
-    readonly property bool levee: selectionNeutre && selectionne
+    readonly property VueCurseur vue: suitCurseur ? Etats.herite(controle, "dnVue", null) : null
+    readonly property bool sousCurseur: suitCurseur && Etats.sousCurseur(controle, vue)
+    readonly property string selection: sousCurseur ? Etats.selection(true, true, inactif)
+        : (suitCurseur || selectionNeutre) && selectionne ? "inactive"
+        : Etats.selection(selectionne, true, inactif)
+    readonly property bool levee: selectionNeutre && selectionne && !sousCurseur
     readonly property var couleurs: levee ? Theme.stateColors("controlRaised", "none", "rest")
-        : Theme.stateColors(role, selection, interaction)
+        : Theme.stateColors(role, selection,
+                            curseurAplat && sousCurseur && interaction === "hover" ? "rest" : interaction)
+    readonly property bool surPlaque: inverseSurPlaque && Etats.herite(controle, "dnSurPlaque", false)
+    readonly property bool inverse: surPlaque && selectionne
+    readonly property var encres: Theme.stateColors(role, inactif ? "activeMuted" : "active",
+                                                    interaction === "disabled" ? "disabled" : "rest")
+    readonly property color libelle: ressortLibelle.value
     readonly property color fond: ressortFond.value
     readonly property color texte: ressortTexte.value
     readonly property color texteNeutre: Theme.stateColors(role, "none", interaction)?.text ?? "transparent"
@@ -63,14 +99,82 @@ Item {
     ColorSpring {
         id: ressortFond
         readonly property color plein: etat.peintFond ? (etat.couleurs?.fill ?? "transparent") : "transparent"
-        target: etat.selection === "none" && (etat.fondReposTransparent
+        target: etat.inverse ? (etat.encres?.text ?? "transparent")
+            : etat.selection === "none" && (etat.fondReposTransparent
             && (etat.interaction === "rest" || etat.interaction === "disabled")
             || etat.fondSurvolTransparent && etat.interaction === "hover")
             ? Qt.alpha(plein, 0) : plein
     }
 
+    // texteCible — la couleur que vise le texte, sans ressort : un ressort qui suit le texte d'un état doit viser
+    // cette cible et non etat.texte, sans quoi deux ressorts s'enchaînent et le texte arrive avec un retard visible.
+    readonly property color texteCible: !etat.peintTexte ? "transparent"
+        : (etat.inverse ? etat.encres?.fill : etat.couleurs?.text) ?? "transparent"
+
     ColorSpring {
         id: ressortTexte
-        target: etat.peintTexte ? (etat.couleurs?.text ?? "transparent") : "transparent"
+        target: etat.texteCible
+    }
+
+    // Libellé d'une marque : hors de la plaque, il suit texteNeutre ; sur elle, l'encre de la plaque. Sans
+    // inverseSurPlaque, la cible reste transparente et le ressort ne démarre jamais (sobriété, D80).
+    ColorSpring {
+        id: ressortLibelle
+        target: !etat.inverseSurPlaque ? "transparent"
+            : etat.surPlaque ? etat.encres?.text ?? "transparent" : etat.texteNeutre
+    }
+
+    // suivre — prend ou lâche le curseur de la vue pour le contrôle.
+    // Entrée : pris, vrai pour prendre le curseur, faux pour le lâcher. Sortie : aucune.
+    // Erreurs : aucune ; sans vue, rien. Dépendances : vue (VueCurseur), controle.
+    function suivre(pris: bool) {
+        if (vue) pris ? vue.prendre(controle) : vue.lacher(controle)
+    }
+
+    // synchroniser — aligne le curseur sur l'état présent du contrôle : un contrôle visible déjà survolé ou focalisé
+    // au clavier le prend, tout autre le lâche. Sert quand aucun signal de survol ni de focus ne viendra : à la
+    // création, au changement de vue et au retour à la visibilité (un contrôle qui paraît sous le pointeur immobile).
+    // Entrées : aucune. Sortie : aucune. Erreurs : aucune ; sans vue, rien. Un contrôle simulé sans visualFocus
+    // compte comme sans focus. Dépendances : suivre, controle (visible, hovered, visualFocus).
+    function synchroniser() {
+        suivre(controle.visible && (controle.hovered || controle.visualFocus === true))
+    }
+
+    // reprendre — prend le curseur de la vue s'il est libre et que le contrôle visible est encore survolé ou focalisé
+    // au clavier. Sert quand le porteur lâche le curseur : un élément survolé le reprend aussitôt, un élément focalisé
+    // au tour de boucle suivant (Qt.callLater), pour que le survol, dernier mouvement, l'emporte sur le focus.
+    // Entrées : aucune. Sortie : aucune. Erreurs : aucune ; sans vue ou curseur déjà porté, rien.
+    // Dépendances : vue (VueCurseur), controle (visible, hovered, visualFocus).
+    function reprendre() {
+        if (vue && !vue.porteur && controle.visible && (controle.hovered || controle.visualFocus === true))
+            vue.prendre(controle)
+    }
+
+    Component.onCompleted: synchroniser()
+    Component.onDestruction: suivre(false)
+    onVueChanged: synchroniser()
+
+    // Le survol, le focus clavier et la pression du contrôle déplacent le curseur de la vue ; un contrôle caché,
+    // lui-même ou par un ancêtre (visible suit la visibilité effective), le lâche, et il le reprend en reparaissant
+    // survolé. Le pointeur qui quitte un contrôle lui retire le curseur même si le focus clavier y reste ; l'arbitre
+    // libéré, le second Connections le rend à l'élément encore survolé, sinon à celui qui a le focus clavier. Un
+    // contrôle simulé sans visualFocus ni down n'émet pas ces signaux, d'où ignoreUnknownSignals.
+    Connections {
+        target: etat.vue ? etat.controle : null
+        ignoreUnknownSignals: true
+        function onHoveredChanged() { etat.suivre(etat.controle.hovered) }
+        function onVisualFocusChanged() { etat.suivre(etat.controle.visualFocus) }
+        function onDownChanged() { if (etat.controle.down) etat.suivre(true) }
+        function onVisibleChanged() { etat.synchroniser() }
+    }
+
+    // Curseur libéré : l'élément survolé le reprend aussitôt, l'élément focalisé au clavier au tour suivant.
+    Connections {
+        target: etat.vue
+        function onPorteurChanged() {
+            if (etat.vue.porteur) return
+            if (etat.controle.hovered) etat.reprendre()
+            else if (etat.controle.visualFocus === true) Qt.callLater(etat.reprendre)
+        }
     }
 }

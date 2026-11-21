@@ -60,8 +60,8 @@ Item {
                     required property var modelData
                     objectName: modelData.cle
                     titre: modelData.titre
-                    plaque: modelData.cle === "enregistres"
-                    TapHandler { enabled: ligne.plaque; onTapped: page.atteindre([page.cle, "enregistres"]) }
+                    readonly property bool ouvre: modelData.cle === "enregistres"
+                    TapHandler { enabled: ligne.ouvre; onTapped: page.atteindre([page.cle, "enregistres"]) }
                 }
             }
         }

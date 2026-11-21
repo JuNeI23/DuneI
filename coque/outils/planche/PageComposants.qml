@@ -4,15 +4,17 @@ import "Composants"
 
 // PageComposants — page « Composants » de la planche de contrôle : la bibliothèque du module Composants rendue
 // dans ses états, pour la juger à l'écran (conception des composants, § 9).
-// Rôle : pour chaque primitive et chaque contrôle, une grille d'exemplaires figés dans leurs états (repos, survol,
-// pressé, désactivé, focus, croisés avec la sélection quand le contrôle en a une) à côté d'un exemplaire vivant qu'on
-// manipule ; deux panneaux identiques, dont l'un porte dnInactive, pour juger le modificateur inactive et l'accent
-// muet ; deux boutons qui ouvrent un overlay de chaque famille. Les états figés ne passent par aucune valeur de
-// design : Etat.forcer remplace l'interaction lue, la sélection s'écrit dans l'Etat de l'exemplaire, l'anneau de focus
-// est un AnneauFocus montré, le contour de rangée passe par Rangee.forcerContour, et désactivé est un vrai enabled
-// faux. Mise en page : la page prend la largeur qu'on lui donne et ses rangées passent à la ligne (Flow), si bien
-// qu'elle tient sans défilement horizontal dans une fenêtre tuilée d'environ 750 pixels de large, et s'étale côte à
-// côte dans une fenêtre plus large.
+// Rôle : pour chaque primitive et chaque contrôle, une grille d'exemplaires figés dans leurs états (repos, sous le
+// curseur, pressé sous le curseur, désactivé et, pour un contrôle qui s'allume, allumé sur la plaque du curseur,
+// croisés avec la sélection ou l'allumage quand le contrôle en a un) à côté d'un exemplaire vivant qu'on manipule ;
+// deux panneaux identiques, dont l'un porte dnInactive, pour juger le modificateur inactive et l'accent muet ; deux
+// boutons qui ouvrent un overlay de chaque famille. Les états figés ne passent par aucune valeur de design :
+// Etat.forcer remplace l'interaction lue, la sélection s'écrit dans l'Etat de l'exemplaire, le curseur est pris dans
+// l'arbitre propre de chaque case (VueCurseur, un seul porteur par case), la plaque d'accent d'un contrôle isolé est
+// une ZoneCurseur montrée sous le curseur, et désactivé est un vrai enabled faux. Aucun anneau de focus n'existe plus
+// (L2-73) : le curseur, à la souris comme au clavier, est la plaque. Mise en page : la page prend la largeur qu'on lui
+// donne et ses rangées passent à la ligne (Flow), si bien qu'elle tient sans défilement horizontal dans une fenêtre
+// tuilée d'environ 750 pixels de large, et s'étale côte à côte dans une fenêtre plus large.
 // Entrées : largeur, largeur offerte à la page en pixels logiques (la fenêtre moins ses marges) ; la page lit
 // Theme, déjà prêt quand la planche la construit.
 // Sorties : la page, une Surface surfaceWindow de la largeur offerte, haute de son contenu et de son retrait ;
@@ -21,7 +23,7 @@ import "Composants"
 // large bloc (une grille d'états) laisse ce bloc déborder.
 // Dépendances : Theme (space, radius, density, typo, color), module Composants (Surface, Texte, Icone, Bouton, Bascule,
 // Case, Radio, Interrupteur, Onglet, Onglets, Curseur, Jauge, Champ, Pastilles, Compteur, Deroulant, Recherche, ChampSecret,
-// Activite, Depliable, Infobulle, Liste, Rangee, Separateur, Progression, AnneauFocus, Etat, Overlay). Le menu
+// Activite, Depliable, Infobulle, Liste, Rangee, Separateur, Progression, ZoneCurseur, VueCurseur, Etat, Overlay). Le menu
 // du déroulant vivant ne s'ouvre, lui aussi, qu'à la main, comme l'infobulle, au survol. Les overlays ne s'ouvrent qu'à
 // la demande de Nicolas, par leurs boutons : l'attention prend le clavier en exclusif.
 Surface {
@@ -36,6 +38,9 @@ Surface {
     // niveau, ne se verrait pas.
     role: "surfaceWindow"
     radius: Theme.radius.window
+    // Arbitre du curseur de la page : un seul porteur parmi les exemplaires vivants, comme dans une fenêtre réelle ;
+    // chaque case figée d'une Grille a le sien.
+    property VueCurseur dnVue: VueCurseur {}
     implicitWidth: largeur
     implicitHeight: colonne.implicitHeight + 2 * Theme.space.blockGap
 
@@ -55,29 +60,33 @@ Surface {
     }
 
     // Grille — section d'un contrôle : ses exemplaires figés dans chaque état, puis un exemplaire vivant.
-    // Rôle : charge le modèle une fois par case, une ligne par état (une interaction, ou le focus) et une
-    // colonne par variante (décoché, coché, sélection…), et fige chaque exemplaire par force(). Les états sont
+    // Rôle : charge le modèle une fois par case, une ligne par état (une interaction, ou « plaque ») et une
+    // colonne par variante (décoché, coché, sélection…), et fige chaque exemplaire par force(). Chaque case porte
+    // son arbitre du curseur (VueCurseur) : l'état « sous le curseur » y donne le curseur à l'exemplaire, qui
+    // montre alors la plaque d'accent ; la ligne « plaque » enveloppe l'exemplaire d'une ZoneCurseur sous le curseur,
+    // pour juger un contrôle allumé inversé sur la plaque (dnSurPlaque). Les états sont
     // en lignes pour que la grille reste étroite ; l'exemplaire vivant, précédé d'un filet vertical, passe sous
     // la grille quand la largeur manque. Ce composant en ligne ne lit rien hors de lui : il ne partage pas la
     // portée de la page ; sa largeur est celle de son parent.
     // Entrées : titre ; modele, composant du contrôle, porteur d'etat ; variantes, liste de {libelle,
-    //           proprietes, selection}, où proprietes s'affecte à l'exemplaire et selection ("active" ou
-    //           "inactive") s'écrit dans son Etat ; etats, clés d'interaction et "focus" ; l'exemplaire vivant,
-    //           enfant déclaré.
+    //           proprietes, selection}, où proprietes s'affecte à l'exemplaire et selection (« oui », ou « neutre »
+    //           pour la sélection neutre d'une colonne de navigation) le sélectionne dans son Etat ; etats, clés
+    //           d'interaction ("rest", "hover", "pressed", "disabled") et "plaque" ; l'exemplaire vivant, enfant
+    //           déclaré.
     // Sortie : colonne titrée. Erreurs : aucune ; une clé de proprietes inconnue du contrôle lève une erreur
     //          au journal, si bien que les variantes ne nomment que des propriétés du contrôle.
-    // Dépendances : Etat (forcer, selectionne, focusDansGroupe), Rangee (forcerContour), AnneauFocus,
-    //               Separateur, Legende, Titre.
+    // Dépendances : Etat (forcer, selectionne, selectionNeutre), VueCurseur, ZoneCurseur, Separateur, Legende,
+    //               Titre.
     component Grille: Column {
         id: grille
 
         property alias titre: entete.text
         property Component modele
         property var variantes: [{ libelle: "exemplaire" }]
-        property var etats: ["rest", "hover", "pressed", "disabled", "focus"]
+        property var etats: ["rest", "hover", "pressed", "disabled"]
         default property alias vivant: zoneVivante.data
-        readonly property var noms: ({ rest: "repos", hover: "survol", pressed: "pressé", disabled: "désactivé",
-                                       focus: "focus clavier" })
+        readonly property var noms: ({ rest: "repos", hover: "sous le curseur", pressed: "pressé sous le curseur",
+                                       disabled: "désactivé", plaque: "sur la plaque" })
         // Cases de la grille, ligne après ligne : l'en-tête des variantes, puis pour chaque état son libellé et
         // un exemplaire par variante. Aucun libellé n'est vide : Grid saute les éléments de taille nulle, ce
         // qui décalerait les cases suivantes.
@@ -87,34 +96,23 @@ Surface {
 
         // force — fige un exemplaire de la grille dans l'état de sa case, sans geste ni valeur de design.
         // Entrées : item, l'exemplaire chargé ; variante, {libelle, proprietes, selection} ; etat, "rest",
-        //           "hover", "pressed", "disabled" ou "focus".
+        //           "hover", "pressed" ou "disabled" ; vue, l'arbitre du curseur de la case ; porteur, l'élément qui
+        //           prend le curseur, par défaut le contrôle observé par l'Etat de l'exemplaire.
         // Sortie : aucune ; l'exemplaire est modifié en place, ses liaisons d'état remplacées par des valeurs.
+        // Un survol ou une pression se donnent toujours sous le curseur : l'exemplaire le prend dans la vue.
         // Erreurs : aucune hors celle d'une propriété inconnue (voir l'en-tête de Grille).
-        // Dépendances : Etat, Rangee.forcerContour, composant anneau.
-        function force(item, variante, etat) {
+        // Dépendances : Etat (forcer, controle), VueCurseur (prendre).
+        function force(item, variante, etat, vue, porteur) {
             for (const cle in variante.proprietes ?? {}) item[cle] = variante.proprietes[cle]
             if (variante.selection) {
                 item.etat.selectionne = true
-                item.etat.focusDansGroupe = variante.selection === "active"
+                item.etat.selectionNeutre = variante.selection === "neutre"
             }
             if (etat === "disabled") item.enabled = false
-            else if (etat === "focus") montreFocus(item)
-            else if (etat !== "rest") item.etat.forcer = etat
-        }
-
-        // montreFocus — montre le focus d'un exemplaire sans lui donner le focus : contour de la pastille pour
-        // une rangée, anneau autour de l'élément qui le porte d'ordinaire pour un contrôle (cibleFocus si
-        // l'exemplaire la déclare, comme le fond entier d'un compteur ; poignée d'un curseur, boîte ou piste
-        // d'une case ou d'un interrupteur ; fond sinon, qui est la piste pour une barre d'onglets).
-        // Entrées : item, l'exemplaire. Sortie : aucune. Erreurs : aucune.
-        // Dépendances : Rangee.forcerContour, AnneauFocus (composant anneau).
-        function montreFocus(item) {
-            if (item.forcerContour !== undefined) {
-                item.forcerContour = true
-                return
+            else if (etat !== "rest") {
+                item.etat.forcer = etat
+                vue.prendre(porteur ?? item.etat.controle)
             }
-            const c = item.cibleFocus ?? item.handle ?? item.indicator ?? item.background
-            anneau.createObject(c, { cible: c, montre: true, inactif: Qt.binding(() => item.etat.inactif) })
         }
 
         width: parent ? parent.width : implicitWidth
@@ -136,12 +134,19 @@ Surface {
                 Repeater {
                     model: grille.cases
 
+                    // Une case : son arbitre du curseur, puis l'exemplaire (enveloppé sur la ligne « plaque ») ou un libellé.
                     Loader {
+                        id: cellule
                         required property var modelData
-                        sourceComponent: modelData.variante ? grille.modele : etiquette
+                        property VueCurseur dnVue: VueCurseur {}
+                        sourceComponent: !modelData.variante ? etiquette
+                            : modelData.etat === "plaque" ? enveloppe : grille.modele
                         onLoaded: {
-                            if (modelData.variante) grille.force(item, modelData.variante, modelData.etat)
-                            else item.text = modelData.texte
+                            if (!modelData.variante) item.text = modelData.texte
+                            else if (modelData.etat === "plaque") {
+                                item.etat.forcer = "hover"
+                                grille.force(item.exemplaire, modelData.variante, "hover", dnVue, item)
+                            } else grille.force(item, modelData.variante, modelData.etat, dnVue)
                         }
                     }
                 }
@@ -172,13 +177,22 @@ Surface {
         }
 
         Component { id: etiquette; Legende {} }
-        Component { id: anneau; AnneauFocus {} }
+
+        // Enveloppe — ZoneCurseur sous le curseur autour d'un exemplaire du modèle, pour la ligne « plaque ».
+        // Entrées : le modèle de la grille. Sortie : exemplaire, le contrôle chargé. Erreurs : aucune.
+        // Dépendances : ZoneCurseur, grille (modele).
+        Component {
+            id: enveloppe
+            ZoneCurseur {
+                readonly property Item exemplaire: charge.item
+                Loader { id: charge; sourceComponent: grille.modele }
+            }
+        }
     }
 
     // OngletEnBarre — barre Onglets de deux segments, dont le premier tient lieu d'exemplaire dans une Grille.
     // Rôle : un segment ne se juge que sur sa piste ; cette barre expose l'Etat de son premier segment, pour que
-    // Grille.force agisse sur lui. L'anneau de focus se montre autour de la piste (le fond de la barre), comme
-    // celui d'une barre focalisée au clavier. currentIndex choisit le segment coché (le premier par défaut) ;
+    // Grille.force agisse sur lui. currentIndex choisit le segment coché (le premier par défaut) ;
     // enabled faux désactive les deux.
     // Entrées : currentIndex, enabled et le reste de l'API d'Onglets. Sorties : etat, l'Etat du premier segment.
     // Erreurs : aucune. Dépendances : Onglets, Onglet.
@@ -191,13 +205,10 @@ Surface {
 
     // CompteurEnGrille — Compteur de 0 à 10 dont le demi-bouton haut tient lieu d'exemplaire dans une Grille.
     // Rôle : les états d'un compteur se lisent sur son stepper ; ce porteur expose l'Etat du demi-bouton haut,
-    // pour que Grille.force y fige le survol et la pression, et le fond entier du compteur comme cible de
-    // l'anneau de focus, qui entoure l'ensemble. enabled faux désactive tout le compteur.
-    // Entrées : value, la valeur ; enabled. Sorties : etat, l'Etat du demi-bouton haut ; cibleFocus, le fond du
-    // compteur. Erreurs : aucune. Dépendances : Compteur.
+    // pour que Grille.force y fige le survol et la pression. enabled faux désactive tout le compteur.
+    // Entrées : value, la valeur ; enabled. Sorties : etat, l'Etat du demi-bouton haut. Erreurs : aucune. Dépendances : Compteur.
     component CompteurEnGrille: Item {
         readonly property Etat etat: compteur.etatHaut
-        readonly property Item cibleFocus: compteur.background
         property alias value: compteur.value
 
         implicitWidth: compteur.implicitWidth
@@ -207,7 +218,7 @@ Surface {
     }
 
     // PanneauEssai — panneau de contrôles courants, pour comparer deux panneaux identiques dont l'un porte
-    // dnInactive : accents en activeMuted, anneau en focus.colorMuted, contenu ni terni ni estompé. Ses
+    // dnInactive : accents en activeMuted, contenu ni terni ni estompé. Ses
     // contrôles sont rangés sur quatre lignes courtes, pour que deux panneaux tiennent côte à côte dès que la
     // fenêtre s'élargit un peu.
     // Entrées : titre ; dnInactive, le modificateur, faux par défaut. Sortie : surface surfacePanel.
@@ -293,7 +304,7 @@ Surface {
                     onClicked: attention.ouvert = true
                 }
 
-                // Ouvert à la souris, le menu ne montre pas le contour de sa rangée courante (voir menu).
+                // Ouvert à la souris, le menu ne donne pas le curseur à sa rangée courante (voir menu).
                 Bouton {
                     id: boutonMenu
                     text: "Ouvrir un menu"
@@ -326,14 +337,14 @@ Surface {
                     anchors.right: parent.right
                     spacing: Theme.space.scale[1]
                     Bouton { text: "Annuler"; onClicked: attention.ouvert = false }
-                    Bouton { text: "Valider"; principal: true; onClicked: attention.ouvert = false }
+                    Bouton { text: "Valider"; onClicked: attention.ouvert = false }
                 }
             }
         }
 
         // Overlay contextuel : un menu de quatre rangées ancré sous son bouton, dont la sélection suit le pointeur
-        // comme dans un menu de macOS (selectionSuitSurvol). alaSouris retient que le menu a été ouvert à la
-        // souris : la liste reçoit alors le focus sans montrer le contour de sa rangée courante, le temps que
+        // comme dans un menu de macOS, comme dans toute Liste. alaSouris retient que le menu a été ouvert à la
+        // souris : la liste reçoit alors le focus sans donner le curseur à sa rangée courante, le temps que
         // Liste passe focusClavier à vrai à l'arrivée du focus et que la page le repasse à faux juste après.
         Overlay {
             id: menu
@@ -346,7 +357,6 @@ Surface {
             Liste {
                 id: listeMenu
                 focus: true
-                selectionSuitSurvol: true
                 implicitWidth: 3 * Theme.space.scale[7]
                 implicitHeight: count * Theme.density.rowHeight
                 model: [
@@ -481,7 +491,10 @@ Surface {
         Grille {
             titre: "Bouton"
             variantes: [{ libelle: "texte" }, { libelle: "icône et texte", proprietes: { icone: "document-save" } },
-                        { libelle: "principal", proprietes: { principal: true } }]
+                        { libelle: "plat", proprietes: { plat: true } },
+                        { libelle: "danger", proprietes: { danger: true } },
+                        { libelle: "plat danger", proprietes: { plat: true, danger: true } }]
+            etats: ["rest", "hover", "pressed", "disabled", "plaque"]
             modele: Component { Bouton { text: "Valider" } }
             Bouton { text: "Valider"; icone: "document-save" }
         }
@@ -489,6 +502,7 @@ Surface {
         Grille {
             titre: "Case"
             variantes: [{ libelle: "décochée" }, { libelle: "cochée", proprietes: { checked: true } }]
+            etats: ["rest", "hover", "pressed", "disabled", "plaque"]
             modele: Component { Case { text: "Option" } }
             Case { text: "Option" }
         }
@@ -497,6 +511,7 @@ Surface {
         Grille {
             titre: "Radio"
             variantes: [{ libelle: "décoché" }, { libelle: "coché", proprietes: { checked: true } }]
+            etats: ["rest", "hover", "pressed", "disabled", "plaque"]
             modele: Component { Radio { text: "Option" } }
             Radio { text: "Premier"; checked: true }
             Radio { text: "Deuxième" }
@@ -506,6 +521,7 @@ Surface {
         Grille {
             titre: "Interrupteur"
             variantes: [{ libelle: "éteint" }, { libelle: "allumé", proprietes: { checked: true } }]
+            etats: ["rest", "hover", "pressed", "disabled", "plaque"]
             modele: Component { Interrupteur { text: "Option" } }
             Interrupteur { text: "Option" }
         }
@@ -516,8 +532,7 @@ Surface {
             titre: "Onglets"
             variantes: [
                 { libelle: "non coché", proprietes: { currentIndex: 1 } },
-                { libelle: "coché, barre focalisée", selection: "active" },
-                { libelle: "coché, barre sans focus", selection: "inactive" }
+                { libelle: "coché", selection: "oui" }
             ]
             modele: Component { OngletEnBarre {} }
 
@@ -531,6 +546,7 @@ Surface {
         Grille {
             titre: "Curseur"
             variantes: [{ libelle: "valeur 0,5", proprietes: { value: 0.5 } }]
+            etats: ["rest", "hover", "pressed", "disabled", "plaque"]
             modele: Component { Curseur {} }
             Curseur { value: 0.5 }
         }
@@ -539,6 +555,7 @@ Surface {
             titre: "Jauge"
             variantes: [{ libelle: "valeur 0", proprietes: { value: 0, icone: "audio-volume-high" } },
                         { libelle: "valeur 0,5", proprietes: { value: 0.5, icone: "audio-volume-high" } }]
+            etats: ["rest", "hover", "pressed", "disabled", "plaque"]
             modele: Component { Jauge {} }
             Jauge { value: 0.6; icone: "audio-volume-high" }
             Jauge { value: 0.3; icone: "display-brightness" }
@@ -547,7 +564,7 @@ Surface {
         Grille {
             titre: "Champ de saisie"
             variantes: [{ libelle: "vide" }, { libelle: "rempli", proprietes: { text: "Texte saisi" } }]
-            // Pas de ligne de focus : le champ n'a pas d'anneau, son curseur clignotant se juge sur le vivant.
+            // Le champ n'a ni anneau ni plaque : son curseur clignotant se juge sur le vivant.
             etats: ["rest", "hover", "disabled"]
             modele: Component { Champ { placeholderText: "Texte indicatif" } }
             Champ { placeholderText: "Texte indicatif" }
@@ -590,7 +607,7 @@ Surface {
         // Le menu du déroulant vivant ne s'ouvre qu'à la main, comme les overlays de l'en-tête.
         Grille {
             titre: "Menu déroulant"
-            variantes: [{ libelle: "valeur" }, { libelle: "principal", proprietes: { principal: true } }]
+            variantes: [{ libelle: "valeur" }]
             modele: Component { Deroulant { model: ["Automatique", "Clair", "Sombre"] } }
 
             Deroulant {
@@ -603,7 +620,7 @@ Surface {
         Grille {
             titre: "Champ de recherche"
             variantes: [{ libelle: "vide" }, { libelle: "rempli", proprietes: { text: "Planche" } }]
-            // Comme le champ : pas d'anneau, le curseur clignotant se juge sur le vivant.
+            // Comme le champ : ni anneau ni plaque, le curseur clignotant se juge sur le vivant.
             etats: ["rest", "hover", "disabled"]
             modele: Component { Recherche {} }
             Recherche {}
@@ -613,7 +630,7 @@ Surface {
             titre: "Champ secret"
             variantes: [{ libelle: "vide" }, { libelle: "masqué", proprietes: { text: "Planche" } },
                         { libelle: "révélé", proprietes: { text: "Planche", revele: true } }]
-            // Comme le champ : pas d'anneau ; l'œil bascule la révélation sur le vivant.
+            // Comme le champ : ni anneau ni plaque ; l'œil bascule la révélation sur le vivant.
             etats: ["rest", "hover", "disabled"]
             modele: Component { ChampSecret { placeholderText: "Mot de passe" } }
             ChampSecret { placeholderText: "Mot de passe" }
@@ -636,10 +653,9 @@ Surface {
             }
         }
 
-        // L'état de l'en-tête se fige par son Etat (etat) et son anneau entoure son fond (cibleFocus).
+        // L'état de l'en-tête se fige par son Etat (etat) ; sous le curseur, une plaque d'accent le marque.
         Grille {
             titre: "Section dépliable"
-            etats: ["rest", "hover", "disabled", "focus"]
             variantes: [{ libelle: "repliée" }, { libelle: "dépliée", proprietes: { ouvert: true } }]
             modele: Component {
                 Depliable {
@@ -660,6 +676,7 @@ Surface {
         Grille {
             titre: "Bascule à glyphe"
             variantes: [{ libelle: "éteinte" }, { libelle: "allumée", proprietes: { checked: true } }]
+            etats: ["rest", "hover", "pressed", "disabled", "plaque"]
             modele: Component { Bascule { icone: "network-wireless" } }
 
             Row {
@@ -698,9 +715,11 @@ Surface {
             titre: "Rangée et liste"
             variantes: [
                 { libelle: "non sélectionnée" },
-                { libelle: "sélection active", selection: "active" },
-                { libelle: "sélection inactive", selection: "inactive" }
+                { libelle: "sélectionnée", selection: "oui" },
+                { libelle: "sélectionnée, navigation", selection: "neutre" }
             ]
+            // Sélectionnée hors du curseur, la rangée est neutre (sélectionné inactif) ; sous le curseur, la plaque
+            // d'accent la marque : c'est la sélection active (L2-73).
             modele: Component { Rangee { index: 0; width: 5 * Theme.space.scale[5]; text: "Rangée"; icone: "folder" } }
 
             Liste {

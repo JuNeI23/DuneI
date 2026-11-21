@@ -12,15 +12,17 @@ import "etats.js" as Etats
 // posée ici. La position du bouton est l'indice non coloré : l'état ne se lit jamais par la couleur seule
 // (bible, annexe E). Elle rejoint visualPosition, qui accompagne aussi le glissement, par le ressort state (Ressort) :
 // le bouton glisse d'un bout à l'autre au lieu de sauter, pendant que la couleur de la piste fond par l'Etat, sur le
-// même ressort (Recette 1 de L2-65, D157) ; le mouvement réduit le pose d'un coup. L'anneau de focus entoure la piste,
-// sur visualFocus ; un clic ne vole pas le focus d'un champ (focusPolicy Qt.TabFocus, § 7.3).
+// même ressort (Recette 1 de L2-65, D157) ; le mouvement réduit le pose d'un coup. Le focus clavier n'a pas
+// d'anneau (L2-73), la rangée qui porte l'interrupteur le montre par sa plaque ; un clic ne vole pas le focus d'un
+// champ (focusPolicy Qt.TabFocus, § 7.3). Allumé sur la plaque d'accent du curseur (Etat.inverseSurPlaque), il
+// s'inverse : piste au sur-accent, bouton à l'accent, en fondu au ressort des états (L2-73).
 // Entrées : text, checked et le reste de l'API de T.Switch.
 // Sorties : etat, l'Etat de l'interrupteur (rôle, interaction, sélection, couleurs).
 // Erreurs : aucune ; avant le chargement des tokens, les cotes sont nulles et les couleurs transparentes.
 // Quand le thème traite les contrôles blancs (au jour), la piste prend le rôle controlOff, gris plein sur lequel le
 // bouton blanc se détache éteint (controls.offTrack), et le bouton est cerné du contour controls.outline.
 // Dépendances : QtQuick.Templates, Quickshell (QsWindow : rapport de pixels, pour le filet), Theme (density, space,
-// color.knob, knob.disabled, controls, hairline), etats.js (cran, herite), Etat, AnneauFocus, Texte, Ressort (module
+// color.knob, knob.disabled, controls, hairline, ColorSpring), etats.js (cran, herite), Etat, Texte, Ressort (module
 // Theme).
 // Cotes : piste de density.switchWidth sur density.switchHeight, bouton de density.switchThumb, centré dans
 // la hauteur de la piste, donc à (switchHeight - switchThumb) / 2 de son bord (2 px) ; rayons en
@@ -39,7 +41,15 @@ T.Switch {
         id: etat
         controle: interrupteur
         selectionne: interrupteur.checked
+        inverseSurPlaque: true
         role: Theme.controls?.offTrack ? "controlOff" : Etats.cran(Etats.herite(interrupteur, "dnRole", "surfaceWindow"))
+    }
+
+    // Couleur du bouton : celle du thème (knob, ou knob.disabled désactivé), l'accent de la plaque quand il s'inverse.
+    ColorSpring {
+        id: teinteBouton
+        target: (etat.inverse ? etat.encres?.fill
+                 : etat.interaction === "disabled" ? Theme.knob?.disabled : Theme.color?.knob) ?? "transparent"
     }
 
     // Position affichée du bouton, de 0 à 1, qui rejoint visualPosition par le ressort state.
@@ -63,15 +73,9 @@ T.Switch {
             width: Theme.density?.switchThumb ?? 0
             height: width
             radius: height / 2
-            color: (etat.interaction === "disabled" ? Theme.knob?.disabled : Theme.color?.knob) ?? "transparent"
+            color: teinteBouton.value
             border.width: Theme.controls?.outline ? Theme.hairline(QsWindow.window?.devicePixelRatio ?? 1) ?? 0 : 0
             border.color: Theme.controls?.outline ?? "transparent"
-        }
-
-        AnneauFocus {
-            cible: piste
-            montre: interrupteur.visualFocus
-            inactif: etat.inactif
         }
     }
 
@@ -79,7 +83,7 @@ T.Switch {
     contentItem: Texte {
         leftPadding: interrupteur.indicator.width + (interrupteur.text ? interrupteur.spacing : 0)
         text: interrupteur.text
-        color: etat.texteNeutre
+        color: etat.libelle
         verticalAlignment: Text.AlignVCenter
     }
 }

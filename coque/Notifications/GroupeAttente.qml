@@ -5,9 +5,10 @@ import "../Composants"
 
 // GroupeAttente — les notifications en attente d'une application, dans le panneau (L2-67).
 // Rôle : sous un filet (Separateur), une ligne de titre porte le nom de l'application en capitales et, à droite, le
-// nombre de ses notifications ; au survol du groupe, deux actions en texte remplacent le nombre, en fondu croisé :
-// « Effacer » (écarte le groupe) et « Ne plus garder » (écarte le groupe et retire l'application du panneau ;
-// absente pour une application anonyme, que l'on ne peut pas retirer sans faire taire toutes les anonymes). Replié,
+// nombre de ses notifications ; au survol du groupe, deux actions en texte (boutons plats) remplacent le nombre, en
+// fondu croisé : « Effacer » (écarte le groupe, en rouge : Bouton danger) et « Ne plus garder » (écarte le groupe et
+// retire l'application du panneau ; absente pour une application anonyme, que l'on ne peut pas retirer sans faire
+// taire toutes les anonymes). Replié,
 // le groupe ne montre que sa notification la plus récente et, s'il en a d'autres, « N autres » ; un clic sur ce
 // libellé le déplie : chaque ligne se déplie au ressort « reveal » (LigneAttente). Le groupe garde ses entrées
 // sortantes le temps de leur repli ; quand plus aucune ne compte, il se replie tout entier.
@@ -15,10 +16,12 @@ import "../Composants"
 // sortantes comprises, ou null ; attente, l'Attente ; hote, le Panneau (deplies, deplier, effacerGroupe,
 // nePlusGarder, pret).
 // Sorties : nom ; vivantes ; nombre, celui des entrées qui comptent ; deplie ; retirable ; autres, le libellé « N
-// autres » (vide s'il n'y en a pas) ; lignes, nombre de lignes montrées ; height, hauteur montrée. Fonction : ligneDe.
-// Erreurs : aucune. Dépendances : Quickshell (ScriptModel), LigneAttente, Separateur, Texte, Ressort, Theme (space,
-// density, color).
-// Cotes : ligne de titre de density.rowHeight ; « N autres » en texte tertiaire, aligné sur le texte des lignes ; écart de space.scale[1] (8) entre le filet, le titre et les lignes.
+// autres » (vide s'il n'y en a pas) ; lignes, nombre de lignes montrées ; height, hauteur montrée. boutonNePlusGarder
+// et boutonEffacer, lus par les essais. Fonction : ligneDe.
+// Erreurs : aucune. Dépendances : Quickshell (ScriptModel), LigneAttente, Bouton, Separateur, Texte, Ressort,
+// Theme (space, density, color).
+// Cotes : ligne de titre de density.rowHeight ; « N autres » en texte tertiaire, aligné sur le texte des lignes ;
+// écart de space.scale[1] (8) entre le filet, le titre et les lignes.
 Item {
     id: groupe
 
@@ -39,6 +42,8 @@ Item {
     // Dernier nom et dernier libellé non vides, gardés pendant le repli.
     property string _nom: nom
     property string _autres: autres
+    readonly property alias boutonNePlusGarder: nePlusGarder
+    readonly property alias boutonEffacer: effacerGroupe
 
     // ligneDe — ligne du groupe qui montre une entrée. Entrée : a, l'Attendue. Sortie : la LigneAttente, ou null.
     // Erreurs : aucune. Dépendances : lignes (Repeater).
@@ -100,31 +105,23 @@ Item {
                 id: gestes
                 anchors.verticalCenter: parent.verticalCenter
                 anchors.right: parent.right
-                anchors.rightMargin: groupe.ecart
-                spacing: Theme.space?.scale[2] ?? 0
+                spacing: Theme.space?.scale[0] ?? 0
                 visible: opacity > 0
                 opacity: actions.value
 
-                Texte {
+                Bouton {
+                    id: nePlusGarder
                     visible: groupe.retirable
-                    echelon: 1
-                    moyen: true
-                    color: Theme.color?.accentStandalone ?? "transparent"
+                    plat: true
                     text: qsTr("Ne plus garder")
-                    TapHandler {
-                        gesturePolicy: TapHandler.ReleaseWithinBounds
-                        onTapped: groupe.hote.nePlusGarder(groupe.identifiant)
-                    }
+                    onClicked: groupe.hote.nePlusGarder(groupe.identifiant)
                 }
-                Texte {
-                    echelon: 1
-                    moyen: true
-                    color: Theme.color?.accentStandalone ?? "transparent"
+                Bouton {
+                    id: effacerGroupe
+                    plat: true
+                    danger: true
                     text: qsTr("Effacer")
-                    TapHandler {
-                        gesturePolicy: TapHandler.ReleaseWithinBounds
-                        onTapped: groupe.hote.effacerGroupe(groupe.identifiant)
-                    }
+                    onClicked: groupe.hote.effacerGroupe(groupe.identifiant)
                 }
             }
         }

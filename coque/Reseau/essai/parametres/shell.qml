@@ -4,6 +4,7 @@ import Quickshell
 import Quickshell.Io
 import QtTest
 import "Reseau"
+import "Theme"
 import "Parametres"
 
 // Coque d'essai des pages du réseau dans l'application Paramètres, sous la plateforme offscreen.
@@ -320,6 +321,33 @@ ShellRoot {
         // cliquerNouveau — clic sur « ajouter » ou « annuler » de la fiche « Nouveau réseau ». Entrée : nom.
         function cliquerNouveau(nom: string): void {
             essai.trouver(fenetre.conteneur.courante.fiche, i => i.objectName === nom).clicked()
+        }
+
+        // encres — couleurs des textes nommés de la fenêtre, montrés ou non, et couleurs de référence du thème, en JSON :
+        // {textes: {texte: [couleurs des Texte qui le portent]}, accent, accentStandalone, neutre (fond au repos du rôle
+        // controlRaised)}. Sert à vérifier qu'aucun bouton ni texte d'action n'est à l'accent au repos (L2-73).
+        // Entrée : liste, les textes séparés par « | ». Sortie : texte JSON. Erreurs : aucune.
+        function encres(liste: string): string {
+            const textes = {}
+            for (const t of liste.split("|"))
+                textes[t] = essai.tous(fenetre.conteneur, o => o.text === t && o.color !== undefined).map(o => String(o.color))
+            return JSON.stringify({textes, accent: String(Theme.color.accent),
+                                   accentStandalone: String(Theme.color.accentStandalone),
+                                   neutre: String(Theme.stateColors("controlRaised", "none", "rest").fill)})
+        }
+
+        // medaillon — couleurs peintes par le médaillon de la tête du dépliant d'un profil, en JSON : {fond, glyphe}, vide
+        // sans médaillon. Entrée : uuid. Sortie : texte JSON. Erreurs : aucune.
+        function medaillon(uuid: string): string {
+            const m = essai.trouver(essai.trouver(essai.depliant(uuid), o => o.objectName === "tete"),
+                                    o => o.glyphe !== undefined && o.fond !== undefined && o.indicateur !== undefined)
+            return JSON.stringify(m ? {fond: String(m.fond), glyphe: String(m.glyphe)} : {})
+        }
+
+        // danger — le bouton nommé d'un dépliant est-il destructeur ? Entrées : uuid ; nom, l'objectName du bouton.
+        // Sortie : « true » ou « false ». Erreurs : bouton absent, TypeError au journal.
+        function danger(uuid: string, nom: string): string {
+            return JSON.stringify(essai.trouver(essai.depliant(uuid), o => o.objectName === nom).danger)
         }
 
         // fermer — ferme la fenêtre comme le compositeur. Entrées : aucune. Sortie : aucune.

@@ -74,6 +74,17 @@ function selection(selectionne, focusDansGroupe, inactif) {
     return !selectionne ? "none" : inactif ? "activeMuted" : focusDansGroupe ? "active" : "inactive"
 }
 
+// sousCurseur — l'élément porte-t-il le curseur de sa vue ?
+// Rôle : une vue munie d'un arbitre (VueCurseur) n'a qu'un porteur, le dernier élément survolé ou focalisé au
+//        clavier ; sans arbitre, chaque élément porte le curseur tant qu'il est survolé ou focalisé au clavier.
+// Entrées : controle, l'élément (hovered, visualFocus, comme un gabarit de QtQuick.Templates) ; vue, l'arbitre
+//           hérité, ou null.
+// Sortie : vrai si l'élément est sous le curseur.
+// Erreurs : aucune ; hovered ou visualFocus absent compte faux. Dépendances : aucune.
+function sousCurseur(controle, vue) {
+    return vue ? vue.porteur === controle : !!(controle.hovered || controle.visualFocus)
+}
+
 // contoure — le fond d'un contrôle dans cette sélection est-il blanc au jour, donc à cerner d'un contour ?
 // Rôle : un contrôle sans sélection ou en sélection inactive garde le fond clair de son rôle ; sélectionné à
 //        l'accent (active) ou à l'accent muet (activeMuted), il porte un fond coloré qui se détache seul.

@@ -1,32 +1,35 @@
 import QtQuick
 import QtQuick.Layouts
-import Quickshell
 import "../Theme"
 import "../Composants"
 import "recherche.js" as Moteur
 
 // BarreLaterale — barre latérale de l'application Paramètres : champ de recherche, puis pages ou résultats.
 // Rôle : liste les pages du registre sous le titre de leur groupe, en entrées compactes (vignette et libellé). La
-// page courante porte une plaque de sélection unique, qui glisse d'une entrée à l'autre par le ressort « reflow » ;
-// son libellé passe en graisse moyenne. La liste est une colonne de navigation (Liste.navigation) : un clic ouvre la
-// page, et au clavier la page suit les flèches, comme une barre latérale de macOS. Dès que le champ porte un terme,
-// les entrées laissent place aux résultats de la recherche (libellé du réglage, page d'origine) : un clic, ou Entrée
+// liste est une colonne de navigation (Liste.navigation) et sa plaque, la seule de la barre, marque à la fois le
+// curseur de la fenêtre et la page courante (conception L2-73, arbitrage 1 : une vue, la fenêtre entière) : à
+// l'accent sur l'entrée survolée, ou sur l'entrée courante quand la liste est parcourue au clavier ; au fond neutre
+// controlRaised, sans ombre (D195), sur la page courante quand le curseur est ailleurs. Le libellé de la page courante
+// passe en graisse moyenne. Le survol ne déplace que le curseur : un clic ou Entrée ouvre la page, et les flèches la
+// changent, comme une barre latérale de macOS ; le pointeur sorti de la liste, la plaque revient à la page courante.
+// Dès que le champ porte un terme, les entrées laissent place aux résultats de la recherche (libellé du réglage, page
+// d'origine), dont le courant, celui qu'Entrée ouvrirait, porte le curseur, comme au lanceur : un clic, ou Entrée
 // depuis le champ, ouvre la page du résultat courant et conduit à son réglage, puis vide le champ ; les flèches haut
 // et bas, depuis le champ, changent de résultat courant ; Échap vide le champ et rend la liste des pages.
-// La liste reçoit le focus à l'ouverture, pour les flèches, sans montrer le contour de focus, réservé au focus venu
-// du clavier : tant qu'aucune touche n'a été frappée dans la barre, chaque arrivée du focus sur la liste est effacée.
+// La liste reçoit le focus à l'ouverture, pour les flèches, sans y poser le curseur, réservé au focus venu du
+// clavier : tant qu'aucune touche n'a été frappée dans la barre, chaque arrivée du focus sur la liste est effacée.
 // Entrées : enTete, hauteur réservée en haut pour les pastilles de la fenêtre, 0 par défaut ; pages et index, ceux du
 // Registre par défaut.
 // Sorties : champ, la Recherche ; liste, la Liste des pages ; resultats, la Liste des résultats ; trouves, les
 // résultats ([{ page, chemin, libelle }]) ; cherche, vrai quand le champ porte un terme ; rang, rang de la page
-// courante ; plaque, l'élément de la plaque (y, height) ; ciblePlaque, l'ordonnée qu'elle vise. Fonction : choisir.
+// courante ; plaque, la Plaque de la liste des pages (y, height) ; ciblePlaque, l'ordonnée qu'elle vise. Fonctions :
+// choisir, parcourir, rentrer, viser.
 // Erreurs : aucune ; avant le chargement des tokens, les cotes sont nulles.
 // Dépendances : EtatParametres (page, presents, ouvrir), Registre, recherche.js (chercher), Recherche, Liste, Rangee,
-// Texte, Vignette, OmbreControle, Ressort, Theme (reglages, space, radius, color, material.edgeLight, hairline),
-// Quickshell (QsWindow, pour le filet).
+// Texte, Vignette, VueCurseur (par Liste), Theme (reglages, space, color).
 // Cotes : retrait reglages.sidebarInset ; entrées de reglages.entryHeight, résultats plus hauts de space.scale[1] ;
-// titre de groupe en échelon 0, à space.scale[2] au-dessus et space.scale[0] au-dessous ; plaque au rayon
-// radius.control, sous un liseré clair d'un pixel physique.
+// titre de groupe en échelon 0, à space.scale[2] au-dessus et space.scale[0] au-dessous ; la plaque est celle de
+// Liste.
 Item {
     id: barre
 
@@ -37,15 +40,13 @@ Item {
     readonly property var trouves: Moteur.chercher(index, champ.text, EtatParametres.presents)
     readonly property bool cherche: champ.text.trim() !== ""
     readonly property real retrait: Theme.reglages?.sidebarInset ?? 0
-    readonly property real ciblePlaque: { liste.contentHeight; liste.count; return liste.itemAtIndex(rang)?.y ?? 0 }
-    readonly property Item plaque: liste.highlightItem
+    readonly property real ciblePlaque: liste.plaque.cible.y
+    readonly property Item plaque: liste.plaque
     readonly property alias champ: champ
     readonly property alias liste: liste
     readonly property alias resultats: resultats
-    // Vrai dès qu'une touche a été frappée dans la barre ; posee, vrai une fois la barre mise en page : avant, la
-    // plaque se pose sur sa cible au lieu de glisser depuis le haut.
+    // Vrai dès qu'une touche a été frappée dans la barre.
     property bool clavierUtilise: false
-    property bool posee: false
 
     // choisir — ouvre la page d'un résultat et conduit à son réglage, puis vide le champ et rend le focus à la liste
     // des pages. Entrée : resultat, { page, chemin, libelle }. Sortie : aucune. Erreurs : aucune.
@@ -56,12 +57,42 @@ Item {
         liste.forceActiveFocus()
     }
 
-    // marquer — rend la barre « posée », au tour qui suit sa construction. Entrées : aucune. Sortie : aucune.
-    // Erreurs : aucune. Dépendances : aucune.
-    function marquer() { posee = true }
+    // parcourir — flèche du clavier dans la liste des pages : rend l'entrée voisine courante, lui donne le curseur et
+    // ouvre sa page. Le survol, qui change aussi l'entrée courante, n'ouvre ainsi jamais rien.
+    // Entrée : pas, -1 vers le haut, 1 vers le bas. Sortie : aucune. Erreurs : aucune ; en bout de liste, l'entrée
+    // courante reste, et sa page n'est rouverte que si ce n'est pas déjà la page montrée : une sous-page ouverte n'est
+    // pas refermée. Dépendances : liste (Liste, dnVue), rang, EtatParametres.ouvrir.
+    function parcourir(pas) {
+        liste.focusClavier = true
+        pas < 0 ? liste.decrementCurrentIndex() : liste.incrementCurrentIndex()
+        liste.dnVue.prendre(liste.currentItem)
+        if (liste.currentIndex !== rang) EtatParametres.ouvrir(pages[liste.currentIndex].id, [])
+    }
+
+    // rentrer — rend la plaque à la page courante quand le curseur a quitté la liste des pages. Le retour est de place
+    // seulement : le curseur reste où il est (ailleurs dans la fenêtre, ou nulle part), même si la liste, qui a le
+    // focus du clavier, le reprendrait en changeant d'entrée courante. Entrées : aucune. Sortie : aucune.
+    // Erreurs : aucune ; le curseur revenu dans la liste entre-temps, rien. Dépendances : liste (Liste, dnVue), rang.
+    function rentrer() {
+        if (liste.curseurDedans) return
+        const porteur = liste.dnVue.porteur
+        liste.currentIndex = rang
+        // Écriture directe voulue : elle rétablit le porteur d'avant le changement de rangée courante, sans le cycle
+        // prendre/lâcher, qui ferait de la rangée de la page courante la porteuse du curseur.
+        liste.dnVue.porteur = porteur
+    }
+
+    // viser — donne le curseur au résultat courant, celui qu'Entrée ouvrirait, tant que le champ a le focus : la
+    // frappe et les flèches sont des gestes du clavier, qui l'emportent sur le dernier survol. Entrée : libre, vrai
+    // pour ne le prendre que si personne ne le porte (le pointeur vient de quitter un résultat). Sortie : aucune.
+    // Erreurs : aucune ; sans recherche ou sans résultat, rien. Dépendances : resultats (Liste, dnVue), champ.
+    function viser(libre) {
+        if (cherche && champ.activeFocus && resultats.currentItem && !(libre && resultats.dnVue.porteur))
+            resultats.dnVue.prendre(resultats.currentItem)
+    }
 
     onRangChanged: liste.currentIndex = rang
-    Component.onCompleted: { liste.currentIndex = rang; liste.forceActiveFocus(); Qt.callLater(marquer) }
+    Component.onCompleted: { liste.currentIndex = rang; liste.forceActiveFocus() }
     Item { id: capteurTouches; Keys.onPressed: event => { barre.clavierUtilise = true; event.accepted = false } }
     Connections {
         target: liste
@@ -93,8 +124,9 @@ Item {
         selectionSuitCourant: false
         navigation: true
         Keys.forwardTo: [capteurTouches]
-        onCurrentIndexChanged: if (focusClavier && currentIndex >= 0 && currentIndex !== barre.rang)
-            EtatParametres.ouvrir(barre.pages[currentIndex].id, [])
+        Keys.onUpPressed: barre.parcourir(-1)
+        Keys.onDownPressed: barre.parcourir(1)
+        onCurseurDedansChanged: if (!curseurDedans) Qt.callLater(barre.rentrer)
 
         section.property: "groupe"
         section.delegate: Item {
@@ -112,48 +144,12 @@ Item {
             }
         }
 
-        // Plaque de sélection : une seule pour la liste, peinte sous les entrées, que le ressort conduit à l'entrée
-        // de la page courante.
-        highlightFollowsCurrentItem: false
-        highlight: Item {
-            width: liste.width
-            height: Theme.reglages?.entryHeight ?? 0
-            y: glisse.value
-            visible: barre.rang >= 0
-
-            Ressort {
-                id: glisse
-                transition: "reflow"
-                cible: barre.ciblePlaque
-                onCibleChanged: if (!barre.posee) poser()
-            }
-            Rectangle {
-                id: fond
-                x: Theme.space?.scale[0] ?? 0
-                width: parent.width - 2 * x
-                height: parent.height
-                radius: Theme.radius?.control ?? 0
-                color: Theme.color?.controlRaised ?? "transparent"
-
-                OmbreControle { cible: fond }
-                Rectangle {
-                    x: fond.radius
-                    width: parent.width - 2 * x
-                    height: Theme.hairline(QsWindow.window?.devicePixelRatio ?? 1) ?? 0
-                    color: Theme.material?.edgeLight ?? "transparent"
-                }
-            }
-        }
-
         delegate: Rangee {
             id: entree
             required property var modelData
-            readonly property bool choisie: index === barre.rang
 
             implicitHeight: Theme.reglages?.entryHeight ?? 0
-            gras: choisie
-            // L'entrée choisie ne peint pas de survol par-dessus sa plaque.
-            hoverEnabled: !choisie
+            selectionnee: index === barre.rang
             onActive: EtatParametres.ouvrir(modelData.id, [])
 
             contentItem: RowLayout {
@@ -164,7 +160,7 @@ Item {
                     text: entree.modelData.libelle
                     moyen: entree.gras
                     elide: Text.ElideRight
-                    color: (entree.choisie ? Theme.color?.textEmphasis : entree.etat.texte) ?? "transparent"
+                    color: entree.etat.texte
                 }
             }
         }
@@ -181,6 +177,8 @@ Item {
         interactive: false
         model: barre.trouves
         navigation: true
+        onCurrentItemChanged: barre.viser(false)
+        onCurseurDedansChanged: if (!curseurDedans) Qt.callLater(barre.viser, true)
 
         delegate: Rangee {
             id: resultat

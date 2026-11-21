@@ -408,6 +408,8 @@ ShellRoot {
                                         onClicked: choisi.coche = !choisi.coche
                                     }
                                     // Anneau de focus : hors du bouton, à l'écart offset, atténué en conteneur inactif.
+                                    // C'est une démonstration des jetons focus.*, que la coque ne montre plus (L2-73) :
+                                    // le curseur de chaque vue est une plaque d'accent.
                                     Rectangle {
                                         visible: essai.activeFocus
                                         anchors.fill: parent

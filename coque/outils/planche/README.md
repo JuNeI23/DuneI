@@ -46,7 +46,7 @@ page est chargée à la demande par un `Loader` : seule la page visible existe, 
   `Theme.states`.
 - **Bouton d'essai** : survol et pression à la souris, interrupteurs « sélectionné », « sélection inactive »,
   « désactivé », « conteneur inactif », choix du rôle, focus par tabulation (anneau `Theme.focus`, atténué en
-  conteneur inactif) ; la barre d'espace bascule la sélection. Fond et texte sont portés par deux `ColorSpring`,
+  conteneur inactif : une démonstration des jetons `focus.*`, que la coque ne montre plus depuis L2-73) ; la barre d'espace bascule la sélection. Fond et texte sont portés par deux `ColorSpring`,
   donc par le ressort `transitions.state` ; la légende indique l'état courant et « en vol » pendant le ressort.
 - **Élévations** e0 à e3 : fond, reflet `sheenTop` sur `material.sheenMaxHeight`, arêtes claire et sombre,
   ombrage. L'ombre portée de la planche emprunte `window.floatingShadow` (portée, décalage) et
@@ -67,46 +67,46 @@ horizontal dans une fenêtre tuilée d'environ 750 pixels de large, et ses blocs
 fenêtre plus large.
 
 - **En-tête** : deux boutons : « Ouvrir une attention » (un `Overlay` attention : un champ
-  et deux boutons qui la ferment, dont « Valider », bouton `principal`) et « Ouvrir un menu » (un `Overlay`
-  contextuel ancré sous le bouton : quatre `Rangee` dans une `Liste` dont la sélection suit le pointeur,
-  `selectionSuitSurvol` ; ouvert à la souris, il ne montre pas le contour de sa rangée courante).
+  et deux boutons qui la ferment, dont « Valider ») et « Ouvrir un menu » (un `Overlay` contextuel ancré sous le
+  bouton : quatre `Rangee` dans une `Liste`, dont le survol déplace la rangée courante et la plaque du curseur).
 - **Primitives** : les trois rôles de `Surface` avec un `Bouton` et le rôle qu'il prend un cran au-dessus ;
   chaque échelon de `Texte` en régulier et moyen ; les icônes `non-starred`, `starred`, `starred` pleine
   (repli de D82) et `object-select` ; `Separateur` horizontal et vertical ; `Progression` à 0, 35 et 100 %.
 - **Une grille par contrôle** (`Bouton`, `Case`, `Radio`, `Interrupteur`, `Onglets`, `Curseur`, `Jauge`,
-  `Champ`, `Pastilles`, `Compteur`, `Deroulant`, `Rangee`) : en lignes, repos, survol, pressé, désactivé et focus
-  clavier (le champ n'a pas de ligne de focus, puisqu'il n'a pas d'anneau ; les pastilles n'ont qu'une ligne,
-  puisqu'elles n'ont pas d'`Etat`) ; en colonnes, les variantes (bouton texte, avec icône ou principal, case
-  décochée et cochée, radio décoché et coché, onglet non coché, coché dans une barre focalisée ou sans focus,
-  chacun jugé dans une barre de deux segments dont l'anneau de focus entoure toute la piste, jauge à 0 et à 0,5
+  `Champ`, `Pastilles`, `Compteur`, `Deroulant`, `Rangee`) : en lignes, repos, sous le curseur
+  (la plaque d'accent, survol ou clavier), pressé sous le curseur, désactivé et, pour un contrôle qui s'allume
+  (`Bouton`, `Case`, `Radio`, `Interrupteur`, `Curseur`, `Jauge`, `Bascule`), « sur la plaque » : le contrôle posé
+  sur la plaque d'accent d'une `ZoneCurseur`, inversé (le champ n'a que repos, survol et désactivé, puisqu'il n'a
+  pas de plaque ; les pastilles n'ont qu'une ligne, puisqu'elles n'ont pas d'`Etat`) ; en colonnes, les variantes (case
+  décochée et cochée, radio décoché et coché, onglet non coché ou coché,
+  chacun jugé dans une barre de deux segments, bouton texte, avec icône, plat, danger et plat danger,
+  jauge à 0 et à 0,5
   avec l'icône `audio-volume-high`, pastilles au repos, au survol, pressées, inactives et avec la réduction
   désactivée, compteur à 5 et à sa borne haute, dont le survol et la pression se figent sur le demi-bouton haut,
-  déroulant ordinaire ou principal, rangée non sélectionnée ou en sélection active ou inactive, champ vide ou
+  déroulant, rangée non sélectionnée, sélectionnée (neutre hors du curseur, à l'accent dessous) ou sélectionnée en colonne de navigation, champ vide ou
   rempli), pour que la grille reste étroite. À côté, ou dessous quand la largeur manque, derrière un filet
   vertical, un exemplaire vivant : pour le radio, un groupe exclusif de trois ; pour la jauge, deux jauges, l'une
   avec `audio-volume-high`, l'autre avec `display-brightness` ; pour les pastilles, un groupe et le dernier signal
   émis ; pour le compteur, un compteur de 0 à 10 et un compteur éditable de 0 à 100 ; pour le déroulant, un menu
   de trois choix et le dernier choix activé (son menu ne s'ouvre qu'à la main) ; pour la rangée, une `Liste` de
   six rangées, un seul arrêt de tabulation.
-- **Compléments à la macOS** (§ 7.10) : une grille `Recherche` (vide et remplie, sans ligne de focus, comme le
+- **Compléments à la macOS** (§ 7.10) : une grille `Recherche` (vide et remplie, sans plaque, comme le
   champ ; vivant : un champ de recherche, qu'Échap ou son bouton d'effacement vident) ; une grille `Activite` d'une
   seule ligne, les trois grains arrêtés au début de leur cycle puis figés à mi-cycle (phase 0,5) ; vivant : les
   trois grains, arrêtés par défaut pour que la page ne coûte rien au repos, et l'interrupteur « En marche » ; une
-  grille `Depliable` (repliée et dépliée, en repos, survol, désactivé et focus clavier, l'anneau entourant
-  l'en-tête, en retrait du chevron et du libellé ; vivant : une section qui porte une case et un interrupteur) ; une
-  grille `Bascule à glyphe` (éteinte et allumée, en repos, survol, pressé, désactivé et focus clavier, l'anneau rond
-  autour du disque ; vivant : trois bascules à libellé, `network-wireless` allumée, `bluetooth-active` et
+  grille `Depliable` (repliée et dépliée, en repos, sous le curseur et désactivé ; vivant : une section qui porte une case et un interrupteur) ; une
+  grille `Bascule à glyphe` (éteinte et allumée, en repos, sous le curseur, pressé, désactivé et sur la plaque ; vivant : trois bascules à libellé, `network-wireless` allumée, `bluetooth-active` et
   `night-light`) ; enfin la section `Infobulle`, un bouton qui en porte une : elle paraît après `delays.tooltip`
   (500 ms) de survol continu et se ferme au départ du pointeur ou au clic. Elle ne se fige pas et ne s'ouvre qu'à la
   main.
 - **Modificateur inactive** : deux panneaux identiques (case cochée, radio coché, interrupteur, curseur, barre
   d'onglets, bouton, bascule allumée, champ, pastilles, compteur, déroulant, progression, liste), le second sous
-  `dnInactive: true`, pour juger l'accent muet (`activeMuted`) et l'anneau atténué.
+  `dnInactive: true`, pour juger l'accent muet (`activeMuted`).
 
 Les états figés ne portent aucune valeur de design : `Etat.forcer` (réservée à la planche) remplace
-l'interaction lue par le contrôle, la sélection s'écrit dans l'`Etat` de l'exemplaire, l'anneau de focus est un
-`AnneauFocus` montré autour de l'élément qui le porte, le contour d'une rangée passe par `Rangee.forcerContour`
-(réservée à la planche), et l'état désactivé est un vrai `enabled: false`.
+l'interaction lue par le contrôle, la sélection s'écrit dans l'`Etat` de l'exemplaire, le curseur est pris dans l'arbitre
+`VueCurseur` propre à chaque case (un seul porteur par case), la ligne « sur la plaque » enveloppe l'exemplaire d'une
+`ZoneCurseur` sous le curseur, et l'état désactivé est un vrai `enabled: false`. Il n'existe plus d'anneau de focus.
 
 Les overlays, le menu du déroulant et l'infobulle ne s'ouvrent qu'à la main : l'attention prend le clavier en
 exclusif sur tout l'écran, un contextuel le prend par `HyprlandFocusGrab`, et l'infobulle ne le prend jamais.

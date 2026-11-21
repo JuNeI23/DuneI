@@ -3,6 +3,7 @@ import "../Theme"
 import "../Composants"
 import "../Parametres"
 import "nmcli.js" as Nmcli
+import "../Composants/etats.js" as Etats
 
 // PageWifi — page Wi-Fi de l'application Paramètres (fiche du 14 novembre 2026, section 6).
 // Rôle : de haut en bas, la carte d'en-tête (EnTetePage : vignette, « Wi-Fi », phrase d'état, interrupteur de la
@@ -49,8 +50,8 @@ import "nmcli.js" as Nmcli
 // l'ordre est retenu garde sa rangée, inerte, jusqu'à la mise à jour suivante.
 // Dépendances : EnTetePage, Registre, EtatParametres, ConteneurPage (Parametres) ; Jonction, RangeeReseau,
 // DepliantReseau, SousPageProfils, SousPageMasque, Ligne, nmcli.js (profilsFenetre, repartir, partager, formatDebit),
-// EtatReseau ; Carte, Courbe, Interrupteur, Activite, Icone, Texte ; RessortVue, Ressort, Theme (reglages, space,
-// color, icons, radius, focus, motion).
+// EtatReseau ; Carte, Courbe, Interrupteur, ZoneCurseur, Activite, Icone, Texte ; RessortVue, Ressort, Theme (reglages,
+// space, color, icons, motion, ColorSpring) ; etats.js (herite), pour les encres de la mini-courbe.
 // Cotes : en-tête de section de space.scale[3] au-dessus du titre (échelon 1, graisse moyenne, accent autonome) et
 // space.scale[1] au-dessous ; carte de fin à space.blockGap de la liste ; mini-courbe de reglages.sparklineWidth ×
 // sparklineHeight.
@@ -275,11 +276,14 @@ Item {
             teinte: page.inscription?.teinte ?? 0
             titre: page.inscription?.libelle ?? ""
             etat: page.phrase
-            Interrupteur {
-                objectName: "radio"
-                enabled: page.etat.carte ?? true
-                checked: !!page.etat.radio
-                onToggled: { page.etat.allumer(checked); checked = Qt.binding(() => !!page.etat.radio) }
+            // Contrôle isolé : sa zone porte la plaque du curseur, au survol comme au focus clavier (L2-73).
+            ZoneCurseur {
+                Interrupteur {
+                    objectName: "radio"
+                    enabled: page.etat.carte ?? true
+                    checked: !!page.etat.radio
+                    onToggled: { page.etat.allumer(checked); checked = Qt.binding(() => !!page.etat.radio) }
+                }
             }
         }
 
@@ -328,51 +332,50 @@ Item {
                         color: Theme.color?.accentStandalone ?? "transparent"
                     }
                     // « Actualiser », au bord droit de l'en-tête des autres réseaux ; pendant la recherche,
-                    // « Recherche… » et l'indicateur d'activité le remplacent.
+                    // « Recherche… » et l'indicateur d'activité le remplacent. Bouton texte neutre au repos, il porte la
+                    // plaque du curseur par sa zone, et son texte passe alors à l'encre de la plaque (L2-73).
                     Loader {
                         active: titreSection.section === "Autres réseaux"
                         anchors.right: parent.right
                         anchors.rightMargin: Theme.space?.scale[0] ?? 0
                         y: Theme.space?.scale[3] ?? 0
-                        sourceComponent: Item {
-                            id: actualiser
-                            objectName: "actualiser"
-                            implicitWidth: contenuActualiser.width
-                            implicitHeight: contenuActualiser.height
-                            // Clavier (bible, « Clavier ») : la tabulation l'atteint, Entrée et Espace l'activent, et
-                            // le contour de focus ne paraît que pour un focus venu du clavier.
-                            activeFocusOnTab: !page.balayage
-                            Keys.onPressed: event => {
-                                event.accepted = [Qt.Key_Return, Qt.Key_Enter, Qt.Key_Space].includes(event.key)
-                                if (event.accepted) page.rechercher()
-                            }
-                            HoverHandler { enabled: !page.balayage; cursorShape: Qt.PointingHandCursor }
-                            TapHandler { enabled: !page.balayage; onTapped: page.rechercher() }
-                            Rectangle {
-                                anchors.fill: parent
-                                anchors.margins: -(Theme.focus?.rowOffset ?? 0) - (Theme.space?.scale[0] ?? 0)
-                                visible: actualiser.activeFocus
-                                radius: Theme.radius?.control ?? 0
-                                color: "transparent"
-                                border.width: Theme.focus?.width ?? 0
-                                border.color: Theme.focus?.color ?? "transparent"
-                            }
-                            Row {
-                                id: contenuActualiser
-                                spacing: Theme.space?.scale[0] ?? 0
-                                Activite { visible: page.balayage; anchors.verticalCenter: parent.verticalCenter }
-                                Icone {
-                                    visible: !page.balayage
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    nom: "view-refresh"
-                                    taille: Theme.icons?.sizes.dense ?? 0
-                                    couleur: Theme.color?.accentStandalone ?? "transparent"
+                        sourceComponent: ZoneCurseur {
+                            id: zoneActualiser
+                            Item {
+                                id: actualiser
+                                objectName: "actualiser"
+                                implicitWidth: contenuActualiser.width
+                                implicitHeight: contenuActualiser.height
+                                // Clavier (bible, « Clavier ») : la tabulation l'atteint, Entrée et Espace l'activent ; un
+                                // clic ne donne pas le focus, si bien que la plaque ne suit le focus que venu du clavier.
+                                // Pendant la recherche, il est inactif : ni curseur, ni clic, ni tabulation.
+                                enabled: !page.balayage
+                                activeFocusOnTab: true
+                                Keys.onPressed: event => {
+                                    event.accepted = [Qt.Key_Return, Qt.Key_Enter, Qt.Key_Space].includes(event.key)
+                                    if (event.accepted) page.rechercher()
                                 }
-                                Texte {
-                                    text: page.balayage ? "Recherche…" : "Actualiser"
-                                    echelon: 1
-                                    moyen: !page.balayage
-                                    color: (page.balayage ? Theme.color?.textTertiary : Theme.color?.accentStandalone) ?? "transparent"
+                                HoverHandler { cursorShape: Qt.PointingHandCursor }
+                                TapHandler { onTapped: page.rechercher() }
+                                Row {
+                                    id: contenuActualiser
+                                    spacing: Theme.space?.scale[0] ?? 0
+                                    Activite { visible: page.balayage; anchors.verticalCenter: parent.verticalCenter }
+                                    Icone {
+                                        visible: !page.balayage
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        nom: "view-refresh"
+                                        // Variante pleine sous le curseur (D195).
+                                        pleine: zoneActualiser.etat.sousCurseur
+                                        taille: Theme.icons?.sizes.dense ?? 0
+                                        couleur: zoneActualiser.etat.texte
+                                    }
+                                    Texte {
+                                        text: page.balayage ? "Recherche…" : "Actualiser"
+                                        echelon: 1
+                                        moyen: !page.balayage
+                                        color: (page.balayage ? Theme.color?.textTertiary : zoneActualiser.etat.texte) ?? "transparent"
+                                    }
                                 }
                             }
                         }
@@ -450,6 +453,7 @@ Item {
                     Component {
                         id: rangeePlus
                         Ligne {
+                            id: lignePlus
                             filet: !delegue.premier
                             tete: Component { Item { implicitWidth: Theme.reglages?.medallion ?? 0 } }
                             libelle: page.tous ? "Réduire la liste"
@@ -462,7 +466,7 @@ Item {
                                 nom: "go-next"
                                 rotation: pivot.value
                                 taille: Theme.icons?.sizes.dense ?? 0
-                                couleur: Theme.color?.textTertiary ?? "transparent"
+                                couleur: lignePlus.encreTertiaire
                                 Ressort { id: pivot; transition: "reveal"; cible: page.tous ? 90 : 0 }
                             }
                         }
@@ -476,9 +480,11 @@ Item {
         Carte {
             width: parent.width
             visible: page.allume
-            // Sans garde : les rangées touchent les bords de la carte, que leur plaque de survol couvre en entier.
+            // Sans garde : les rangées touchent les bords de la carte, que leur plaque du curseur couvre en entier.
             garde: 0
+            // Chevrons et compteur lisent l'encre tertiaire de leur Ligne : l'encre de la plaque sous le curseur.
             Ligne {
+                id: ligneEnregistres
                 objectName: "enregistres"
                 filet: false
                 tete: Component { Item { implicitWidth: Theme.reglages?.medallion ?? 0 } }
@@ -491,18 +497,23 @@ Item {
                     text: page.enregistres.length
                     echelon: 1
                     tabulaire: true
-                    color: Theme.color?.textTertiary ?? "transparent"
+                    color: ligneEnregistres.encreTertiaire
                 }
-                Icone { nom: "go-next"; taille: Theme.icons?.sizes.dense ?? 0; couleur: Theme.color?.textTertiary ?? "transparent" }
+                Icone {
+                    nom: "go-next"
+                    taille: Theme.icons?.sizes.dense ?? 0
+                    couleur: ligneEnregistres.encreTertiaire
+                }
             }
             Ligne {
+                id: ligneMasque
                 objectName: "masque"
                 tete: Component { Item { implicitWidth: Theme.reglages?.medallion ?? 0 } }
                 libelle: "Rejoindre un réseau masqué…"
                 cliquable: true
                 bordABord: true
                 onClique: page.ouvrirMasque()
-                Icone { nom: "go-next"; taille: Theme.icons?.sizes.dense ?? 0; couleur: Theme.color?.textTertiary ?? "transparent" }
+                Icone { nom: "go-next"; taille: Theme.icons?.sizes.dense ?? 0; couleur: ligneMasque.encreTertiaire }
             }
         }
     }
@@ -521,7 +532,9 @@ Item {
 
     // Mini-courbe des débits, sur la tête du réseau joint replié : la courbe de la dernière minute, puis la réception
     // et l'envoi du dernier relevé, tant que l'appareil lu est celui du réseau joint. Elle s'efface en fondu quand le
-    // réseau joint est déplié.
+    // réseau joint est déplié. Sur la plaque du curseur de la tête (dnSurPlaque hérité), les débits passent à l'encre
+    // de la plaque (encrePlaque de la Ligne), en fondu ; la courbe garde ses deux couleurs catégorielles, faute d'une
+    // encre de plaque pour deux séries.
     Component {
         id: miniCourbe
         Row {
@@ -544,12 +557,18 @@ Item {
                 Repeater {
                     model: parent.parent.series
                     Texte {
+                        id: debit
                         required property var modelData
                         readonly property var lu: Nmcli.formatDebit(modelData.valeurs[modelData.valeurs.length - 1] ?? 0)
                         text: modelData.signe + " " + lu.valeur + " " + lu.unite
                         echelon: 0
                         tabulaire: true
-                        color: modelData.couleur
+                        color: encreDebit.value
+                        ColorSpring {
+                            id: encreDebit
+                            target: Etats.herite(debit, "dnSurPlaque", false)
+                                ? Etats.herite(debit, "encrePlaque", "transparent") : debit.modelData.couleur
+                        }
                     }
                 }
             }

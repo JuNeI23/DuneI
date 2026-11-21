@@ -83,7 +83,8 @@ class CoquilleTest(EssaiCoque, unittest.TestCase):
 
     essai = ESSAI / "fenetre"
     teintes = (55,)
-    environnement = {"QT_QPA_PLATFORM": "offscreen"}
+    # Sous offscreen, Qt Quick Controls n'active pas le survol par défaut, que la session active.
+    environnement = {"QT_QPA_PLATFORM": "offscreen", "QT_QUICK_CONTROLS_HOVER_ENABLED": "1"}
 
     def setUp(self):
         super().setUp()
@@ -215,6 +216,8 @@ class CoquilleTest(EssaiCoque, unittest.TestCase):
         e = self.ouvrir("wifi")
         ys = e["ys"]
         self.assertEqual([ys[1] - ys[0], ys[2] - ys[1]], [self.entree, self.entree])
+        # Sous charge, la plaque peut ne pas être encore posée au premier relevé : on attend sa première pose.
+        e = self.jusqua(lambda e: e["plaque"]["hauteur"] == self.entree, "plaque posée")
         self.assertEqual((e["plaque"]["y"], e["plaque"]["hauteur"], e["gras"]), (ys[0], self.entree, "Wi-Fi"))
         self.ipc("parametres", "ouvrir", "vpn")
         # La plaque vise aussitôt la nouvelle entrée, puis la rejoint par son ressort.
@@ -225,6 +228,59 @@ class CoquilleTest(EssaiCoque, unittest.TestCase):
         self.ipc("essai", "touche", "haut")
         e = self.jusqua(lambda e: e["page"] == "filaire", "page suivie au clavier")
         self.assertEqual(e["plaque"]["cible"], ys[1])
+
+    def test_page_courante_sans_ombre(self):
+        # La page courante est marquée par la seule plaque de la liste, au fond neutre, sans ombre (D195).
+        e = self.ouvrir("filaire")
+        c = e["curseur"]
+        self.assertEqual(c["ombres"], 0)
+        self.assertEqual((c["pages"]["courant"], c["pages"]["dedans"], c["pages"]["teinte"]), (1, False, c["neutre"]))
+
+    def test_barre_laterale_un_curseur(self):
+        # Le survol d'une autre entrée y porte la plaque d'accent, sans ouvrir sa page.
+        self.ouvrir("filaire")
+        self.ipc("essai", "survoler", "2")
+        e = self.jusqua(lambda e: e["curseur"]["pages"]["courant"] == 2, "plaque sur l'entrée survolée")
+        p = e["curseur"]["pages"]
+        self.assertEqual((p["dedans"], e["page"]), (True, "filaire"))
+        self.assertNotEqual(p["teinte"], e["curseur"]["neutre"])
+        # Le pointeur sorti de la liste, la plaque revient, neutre, à la page courante, et non à la dernière survolée.
+        self.ipc("essai", "survoler", "-1")
+        e = self.jusqua(lambda e: e["curseur"]["pages"]["courant"] == 1, "plaque rendue à la page courante")
+        self.assertEqual((e["curseur"]["pages"]["dedans"], e["curseur"]["pages"]["teinte"]),
+                         (False, e["curseur"]["neutre"]))
+        # Au clavier, la flèche ouvre la page voisine, qui porte la plaque d'accent.
+        self.ipc("essai", "touche", "haut")
+        e = self.jusqua(lambda e: e["page"] == "wifi", "page suivie au clavier")
+        self.assertEqual((e["curseur"]["pages"]["courant"], e["curseur"]["pages"]["dedans"]), (0, True))
+        # Après le clavier, le survol déplace encore le curseur seul : il n'ouvre aucune page.
+        self.ipc("essai", "survoler", "3")
+        e = self.jusqua(lambda e: e["curseur"]["pages"]["courant"] == 3, "plaque sur l'entrée survolée")
+        time.sleep(0.2)
+        self.assertEqual(self.etat()["page"], "wifi")
+        self.ipc("essai", "survoler", "-1")
+        e = self.jusqua(lambda e: e["curseur"]["pages"]["courant"] == 0, "plaque rendue à la page courante")
+        self.assertEqual((e["page"], e["curseur"]["pages"]["dedans"]), ("wifi", False))
+
+    def test_resultat_retenu_porte_le_curseur(self):
+        # Le résultat qu'Entrée ouvrirait porte la plaque d'accent, comme au lanceur.
+        self.ouvrir("vpn")
+        self.ipc("essai", "saisir", "reseau")
+        e = self.etat()
+        self.assertGreaterEqual(len(e["resultats"]), 2)
+        r = e["curseur"]["resultats"]
+        self.assertEqual((r["courant"], r["dedans"]), (0, True))
+        self.assertNotEqual(r["teinte"], e["curseur"]["neutre"])
+        self.ipc("essai", "touche", "bas")
+        e = self.jusqua(lambda e: e["curseur"]["resultats"]["courant"] == 1, "résultat suivant")
+        self.assertTrue(e["curseur"]["resultats"]["dedans"])
+        # Le pointeur qui survole puis quitte un résultat laisse le curseur au résultat courant.
+        self.ipc("essai", "survoler", "0")
+        self.jusqua(lambda e: e["curseur"]["resultats"]["courant"] == 0, "résultat survolé")
+        self.ipc("essai", "survoler", "-1")
+        time.sleep(0.2)
+        r = self.etat()["curseur"]["resultats"]
+        self.assertEqual((r["courant"], r["dedans"]), (0, True))
 
     def test_recherche_filtre_et_ouvre(self):
         self.ouvrir("vpn")

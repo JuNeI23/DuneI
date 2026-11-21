@@ -12,15 +12,20 @@ import "etats.js" as Etats
 // rejoignent leurs couleurs en fondu, par deux ColorSpring au ressort des états : un onglet de la colonne de la
 // fenêtre Réseau qu'on choisit ou qu'on quitte change de couleur sans à-coup (Recette 1 de L2-65, D157) ; la variante
 // pleine du glyphe, elle, se pose d'un coup.
+// Indicateur (L2-73) : un médaillon actif qui dit un état (réseau ou VPN connecté) et non une sélection garde le fond
+// neutre du repos (controlRaised) et prend le glyphe plein à l'accent autonome (color.accentStandalone) : l'aplat
+// d'accent n'appartient qu'à la plaque du curseur, sur laquelle le médaillon reste ainsi lisible.
 // Relief « Doux » (application Paramètres) : sous un ancêtre qui déclare dnRelief, le médaillon actif porte un reflet
 // léger, un dégradé du blanc des reflets (material.highlight) tombant du bord haut et éteint avant le bas, à
 // l'opacité material.medallionSheen, à la part material.medallionSheenReach de la hauteur ; aucun halo. Ailleurs, le médaillon reste un aplat.
 // Icône en couleur (lanceur, L2-16) : si image est posée, l'image en couleur, aux deux tiers du côté (68 %, maquette
 // du lanceur v3), remplace le glyphe ; refletRepos pose le reflet du relief « Doux » même au repos, comme les
 // médaillons du lanceur ; le médaillon de la tuile choisie à l'accueil du lanceur est actif (fond d'accent).
-// Entrées : nom, icône freedesktop ; actif, faux par défaut ; image, url d'une icône en couleur, vide par défaut ;
-// tailleGlyphe, côté du glyphe, reglages.medallionGlyph par défaut ; refletRepos, faux par défaut.
-// Sorties : fond et glyphe, les couleurs peintes, lues par les essais.
+// Entrées : nom, icône freedesktop ; actif, faux par défaut ; indicateur, faux par défaut ; image, url d'une icône en
+// couleur, vide par défaut ; tailleGlyphe, côté du glyphe, reglages.medallionGlyph par défaut ; refletRepos, faux par
+// défaut.
+// Sorties : fond et glyphe, les couleurs peintes, lues par les essais ; plein, vrai pour l'aplat d'accent (actif
+// hors indicateur).
 // Erreurs : aucune ; avant le chargement des tokens, le médaillon est nul et transparent.
 // Dépendances : Icone, Quickshell.Widgets (IconImage), Theme (reglages, radius.panel, color, stateColors, material,
 // ColorSpring), etats.js (herite).
@@ -29,6 +34,8 @@ Rectangle {
 
     property string nom
     property bool actif: false
+    property bool indicateur: false
+    readonly property bool plein: actif && !indicateur
     property url image
     property int tailleGlyphe: Theme.reglages?.medallionGlyph ?? 0
     property bool refletRepos: false
@@ -53,17 +60,18 @@ Rectangle {
     // Les ressorts suivent l'icône : elle reste le premier enfant, que la coque d'essai lit ainsi.
     ColorSpring {
         id: fondu
-        target: (medaillon.actif ? Theme.color?.accent
+        target: (medaillon.plein ? Theme.color?.accent
             : Theme.stateColors("controlRaised", "none", "rest")?.fill) ?? "transparent"
     }
     ColorSpring {
         id: fonduGlyphe
-        target: (medaillon.actif ? Theme.color?.onAccent : Theme.color?.textSecondary) ?? "transparent"
+        target: (medaillon.plein ? Theme.color?.onAccent : medaillon.actif ? Theme.color?.accentStandalone
+                 : Theme.color?.textSecondary) ?? "transparent"
     }
     // Reflet du relief « Doux », peint sur le fond et sous le glyphe, que son z garde au-dessus.
     Rectangle {
         anchors.fill: parent
-        visible: (medaillon.actif || medaillon.refletRepos) && Etats.herite(medaillon, "dnRelief", false)
+        visible: (medaillon.plein || medaillon.refletRepos) && Etats.herite(medaillon, "dnRelief", false)
         radius: parent.radius
         opacity: Theme.material?.medallionSheen ?? 0
         gradient: Gradient {

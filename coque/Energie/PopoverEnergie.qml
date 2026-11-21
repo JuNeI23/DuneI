@@ -19,8 +19,8 @@ import "energie.js" as Energie
 // Sorties : ferme(), voir Overlay ; panneau, le contenu construit (null tant qu'il ne l'est pas, ou une fois détruit),
 // lu par les essais ; fonduContenu, fonduDisque, disque, reinitialiser(), voir le panneau.
 // Erreurs : aucune ; sans batterie, les textes sont vides (la barre n'ouvre alors pas le popover).
-// Dépendances : Overlay (famille contextuel), Onglets, Onglet, Texte, Theme (density, space, color, typo, police),
-// EtatEnergie, energie.js (nomProfil).
+// Dépendances : Overlay (famille contextuel), Onglets, Onglet, VueCurseur, Texte, Theme (density, space, color, typo,
+// police), EtatEnergie, energie.js (nomProfil).
 // Cotes : celles du popover audio ; surface de 288 px, panneau de 70 * space.scale[0] (280), contenu à space.scale[2]
 // (12) du bord.
 Overlay {
@@ -64,6 +64,9 @@ Overlay {
 
         readonly property real marge: Theme.space?.scale[2] ?? 0
         readonly property var etat: popover.etat
+        // Arbitre du curseur de la vue (L2-73) : le segment survolé et le segment focalisé au clavier ne portent jamais
+        // la plaque ensemble ; le dernier mouvement l'emporte.
+        property VueCurseur dnVue: VueCurseur {}
 
         // Fondus que l'hôte des popovers pose, de 0 à 1. Sans bascule, fonduContenu porte tout le contenu et
         // fonduDisque, gardé pour le contrat de l'hôte, n'a rien à fondre. Sans hôte, ils restent à 1.

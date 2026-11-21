@@ -12,8 +12,12 @@ import "../Theme"
 // si bien qu'il donne l'accent, ou l'accent sans chroma sous le modificateur inactive (§ 7.5), à l'interaction de la
 // jauge (survol, pression, et désactivé, qui la ternit), par les ressorts de couleur de l'Etat. L'icône facultative,
 // centrée dans le disque minimal, prend le texte de ce même Etat, le sur-accent : elle se lit sur l'accent comme la
-// coche d'une case. L'anneau de focus entoure la barre, sur visualFocus ; un clic ne vole pas le focus d'un champ
-// (focusPolicy Qt.TabFocus, § 7.3).
+// coche d'une case. Le focus clavier n'a pas d'anneau (L2-73), la rangée qui porte la jauge le montre ; un clic ne
+// vole pas le focus d'un champ (focusPolicy Qt.TabFocus, § 7.3). Sur la plaque d'accent du curseur
+// (Etat.inverseSurPlaque), elle s'inverse : partie remplie au sur-accent, icône à l'accent (L2-73) ; coupée sur la
+// plaque, jamais d'erreur rouge ni de gris sur l'orange : la partie remplie s'évide (elle garde le sur-accent mais
+// son opacité rejoint 0 au ressort des états, en fondu ; aucune couleur n'est dérivée), la barre enfoncée paraît, et
+// l'icône, posée sur cette barre, prend le texte secondaire.
 // Quand la jauge pilote une sourdine, l'icône est cliquable : un clic sur le carré de la hauteur de la barre, à
 // gauche, émet iconeCliquee sans toucher à value, et la jauge peut être coupée : son remplissage prend alors
 // text-disabled et son icône error, en fondu (ColorSpring).
@@ -24,12 +28,13 @@ import "../Theme"
 // Signal : iconeCliquee(), émis par un clic sur l'icône.
 // L'orientation verticale n'est pas habillée.
 // Sorties : etat, l'Etat de la jauge (rôle, interaction, sélection, couleurs de la partie remplie et de l'icône) ;
-// down, copie de pressed, que lit Etats.interaction (T.Slider n'a pas de down) ; barre, remplie, symbole et anneau, la
-// barre, sa partie remplie, l'icône et l'anneau de focus, lus par les essais ; zoneIcone, la zone cliquable de
-// l'icône ; fondRemplie et fondIcone, les ressorts de couleur de la partie remplie et de l'icône.
+// down, copie de pressed, que lit Etats.interaction (T.Slider n'a pas de down) ; barre, remplie et symbole, la
+// barre, sa partie remplie et l'icône, lus par les essais ; zoneIcone, la zone cliquable de
+// l'icône ; fondRemplie et fondIcone, les ressorts de couleur de la partie remplie et de l'icône ; evidement, le
+// ressort d'opacité de la partie remplie (0 coupée sur la plaque, 1 sinon).
 // Erreurs : aucune ; avant le chargement des tokens, les cotes sont nulles et les couleurs transparentes ; un nom
 // d'icône introuvable ne peint rien.
-// Dépendances : QtQuick.Templates, Theme (density, elevation, color, ColorSpring), Etat, AnneauFocus, Icone.
+// Dépendances : QtQuick.Templates, Theme (density, elevation, color, ColorSpring, Ressort), Etat, Icone.
 // Cotes : largeur implicite density.sliderWidth, hauteur implicite density.controlHeight, comme le curseur,
 // pour s'aligner sur une rangée de contrôles ; barre de density.sliderBar de haut ; icône de density.sliderBarIcon ;
 // rayons en demi-hauteur.
@@ -44,10 +49,10 @@ T.Slider {
     readonly property alias barre: barre
     readonly property alias remplie: remplie
     readonly property alias symbole: symbole
-    readonly property alias anneau: anneau
     readonly property alias zoneIcone: zoneIcone
     readonly property alias fondRemplie: fondRemplie
     readonly property alias fondIcone: fondIcone
+    readonly property alias evidement: evidement
 
     focusPolicy: Qt.TabFocus
     stepSize: (to - from) / 10
@@ -59,17 +64,23 @@ T.Slider {
         controle: jauge
         role: "controlRaised"
         selectionne: true
+        inverseSurPlaque: true
     }
 
     // Couleurs de la partie remplie et de l'icône : celles de l'Etat, ou, coupée, text-disabled et error.
     ColorSpring {
         id: fondRemplie
-        target: jauge.coupe ? (Theme.color?.textDisabled ?? "transparent") : etat.fond
+        target: !jauge.coupe ? etat.fond
+            : (etat.surPlaque ? Theme.color?.onAccent : Theme.color?.textDisabled) ?? "transparent"
     }
+
+    // Opacité de la partie remplie : coupée sur la plaque, elle s'évide en fondu ; partout ailleurs, elle est pleine.
+    Ressort { id: evidement; transition: "state"; nature: "fondu"; cible: jauge.coupe && etat.surPlaque ? 0 : 1 }
 
     ColorSpring {
         id: fondIcone
-        target: jauge.coupe ? (Theme.color?.error ?? "transparent") : etat.texte
+        target: !jauge.coupe ? etat.texteCible
+            : (etat.surPlaque ? Theme.color?.textSecondary : Theme.color?.error) ?? "transparent"
     }
 
     // Zone cliquable de l'icône, au-dessus du gabarit : elle prend le clic avant T.Slider, qui garde tout le reste.
@@ -99,6 +110,7 @@ T.Slider {
             height: barre.height
             radius: height / 2
             color: fondRemplie.value
+            opacity: evidement.value
         }
 
         Icone {
@@ -109,13 +121,6 @@ T.Slider {
             nom: jauge.icone
             taille: Theme.density?.sliderBarIcon ?? 0
             couleur: fondIcone.value
-        }
-
-        AnneauFocus {
-            id: anneau
-            cible: parent
-            montre: jauge.visualFocus
-            inactif: etat.inactif
         }
     }
 }

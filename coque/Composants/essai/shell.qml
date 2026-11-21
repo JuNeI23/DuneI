@@ -13,16 +13,16 @@ import "Composants/ancrage.js" as Ancrage
 // contrôle simulé avec son Etat, un Texte, une Icone, les cinq contrôles interactifs (Bouton, Case, Interrupteur,
 // Onglet, Curseur), trois Radio dans un même parent, une Jauge, une Progression, deux Separateur, un Champ, des
 // Pastilles, un Compteur, un Deroulant, une Recherche, un ChampSecret, une Activite, une Depliable, une Bascule, une Liste vide, une
-// Liste de trois Rangee et une cible munie d'un AnneauFocus, plus une Surface inactive et une Surface de verre à
+// Liste de trois Rangee et une cible nue, plus une Surface inactive et une Surface de verre à
 // l'écart, deux Overlay fermés, un de chaque famille, et trois objets factices pour le singleton Overlays) pour que tests/test_coque_composants.py
 // éprouve dans un vrai Quickshell les règles d'etats.js, l'héritage par remontée, l'import du Theme, les pièces de
 // base, les contrôles et les listes, en lisant le journal.
 // Entrées : DUNEI_TOKENS_DIR, lu par Theme ; thème d'icônes DuneI, posé par la directive IconTheme en tête.
 // Sortie : journal de Theme, plus « essai : prêt <bool> » à chaque changement de Theme.ready, et une ligne « essai :
-// <clé> <valeur> » par commande IPC de lecture (cran, interaction, selection, sonde, naissances, fond, texte, anneau,
+// <clé> <valeur> » par commande IPC de lecture (cran, interaction, selection, sonde, naissances, fond, texte,
 // etat, ressort, ressortsFiges, image, controles, coches, cotes, glyphes, radios, jauge, jaugeIcone, jaugeHors,
 // jaugeCibles, progression, separateur,
-// champ, indicatif, tailleIcone, liste, arrets, rangee, rangeeImposees, bouton, overlays, overlaysFermes, pastilles, compteur,
+// champ, indicatif, tailleIcone, liste, arrets, rangee, rangeeImposees, bouton, boutonTexte, overlays, overlaysFermes, pastilles, compteur,
 // compteurLargeur, deroulant, recherche, rechercheCouleurs, secret, secretCopie, activite, depliable, depliableCotes, courbe, tuile, iconesControles,
 // bascule, reglages, valeur, fenetreAttention, fondus, fondusFin, knobs, contours, materiauSurfaces, verre, cleVerre, champMateriau, ombres).
 // Commandes sans journal : « essai rechercheTexte <texte> », « essai secretTexte <texte> », « essai secretALire
@@ -32,8 +32,8 @@ import "Composants/ancrage.js" as Ancrage
 // <visible> <running> », « essai activitePhase <phase> », « essai activiteAncetre <bool> », « essai depliableOuvrir
 // <bool> », « essai basculeCocher <bool> », « essai valeurCopier », « essai pastillesForcer <état> », « essai pastillesReduire <bool> »,
 // « essai knobsActifs <bool> », « essai interrupteurCocher <bool> », « essai compteurValeur <n> », « essai deroulantRang <n> », « essai decocher »,
-// « essai radioCocher <rang> », « essai jaugeActive <bool> », « essai jaugeCoupe <bool> », « essai rangeeImposer <bool> », « essai boutonPrincipal <bool> », « essai inactif
-// <bool> », « essai reparenter », « essai texteMoyen », « essai anneauInactif <bool> », « essai survol <bool> »,
+// « essai radioCocher <rang> », « essai jaugeActive <bool> », « essai jaugeCoupe <bool> », « essai surPlaque <bool> », « essai rangeeImposer <bool> », « essai rangeeCurseur <bool> », « essai rangeeEncres », « essai boutonDanger <bool> », « essai inactif
+// <bool> », « essai reparenter », « essai texteMoyen », « essai survol <bool> »,
 // « essai champActif <bool> », « essai champTexte <texte> », « essai selectionLibre », « essai icone <nom> <bool> »,
 // « essai ouvrirFactice <A…E> », « essai fermerFactice <A…E> » et « essai materiauHauteur <px> ».
 // Erreurs : celles de Theme et des liaisons, dans le journal. Dépendances : quickshell ≥ 0.3 (Quickshell.Io :
@@ -58,6 +58,8 @@ ShellRoot {
         Surface {
             id: panneau
             role: "surfacePanel"
+            // Plaque du curseur simulée sous tous les contrôles du panneau (essai surPlaque), pour l'inversion (L2-73).
+            property bool dnSurPlaque: false
 
             Item {
                 id: capteur
@@ -232,7 +234,7 @@ ShellRoot {
                     icone: "network-wireless"
                     iconeActive: true
                 }
-                ReglageLigne { id: reglageSimple; width: parent.width; titre: "Simple"; plaque: true }
+                ReglageLigne { id: reglageSimple; width: parent.width; titre: "Simple" }
                 Medaillon { id: medaillonInactif; nom: "network-wireless" }
             }
 
@@ -241,6 +243,9 @@ ShellRoot {
             Liste {
                 id: listeVide
             }
+
+            // Suffixe vide, que « essai rangeeEncres » pose sur la rangée 0 pour en éveiller les encres.
+            Component { id: suffixeVide; Item {} }
 
             Liste {
                 id: listeEssai
@@ -261,12 +266,6 @@ ShellRoot {
                 width: 100
                 height: 40
                 radius: 6
-
-                AnneauFocus {
-                    id: anneauEssai
-                    cible: cible
-                    montre: true
-                }
             }
         }
     }
@@ -462,22 +461,6 @@ ShellRoot {
             texteEssai.moyen = true
         }
 
-        // anneau — journalise la géométrie et le contour de l'anneau, puis la géométrie de sa cible.
-        // Entrées : aucune. Sortie : aucune ; « essai : anneau <x> <y> <l> <h> <rayon> <épaisseur> <#rrggbb> |
-        // <x> <y> <l> <h> », coordonnées de l'anneau dans le repère du parent de la cible.
-        // Erreurs : aucune. Dépendances : anneauEssai, cible.
-        function anneau(): void {
-            const p = anneauEssai.mapToItem(cible.parent, 0, 0)
-            essai.journal("anneau", [p.x, p.y, anneauEssai.width, anneauEssai.height, anneauEssai.radius,
-                anneauEssai.border.width, anneauEssai.border.color, "|", cible.x, cible.y, cible.width, cible.height].join(" "))
-        }
-
-        // anneauInactif — pose le modificateur inactive sur l'anneau d'essai.
-        // Entrées : valeur, nouveau modificateur. Sortie : aucune. Erreurs : aucune. Dépendances : anneauEssai.
-        function anneauInactif(valeur: bool): void {
-            anneauEssai.inactif = valeur
-        }
-
         // etat — journalise les sorties de l'Etat du contrôle simulé.
         // Entrées : aucune. Sortie : aucune ; « essai : etat <rôle> <interaction> <sélection> <inactif> <fond>
         // <texte> ». Erreurs : aucune. Dépendances : etatEssai.
@@ -496,7 +479,7 @@ ShellRoot {
         // Entrées : aucune. Sortie : aucune ; « essai : ressort <raideur> <raideur> ». Erreurs : aucune.
         // Dépendances : etatEssai, dont les deux premiers enfants sont les ColorSpring déclarés par Etat.qml.
         function ressort(): void {
-            essai.journal("ressort", etatEssai.children.map(r => r.params?.stiffness).join(" "))
+            essai.journal("ressort", etatEssai.children.slice(0, 2).map(r => r.params?.stiffness).join(" "))
         }
 
         // ressortsFiges — force le survol sur l'Etat du contrôle simulé, du champ, du compteur et de la section
@@ -630,6 +613,12 @@ ShellRoot {
         function jaugeCibles(): void {
             essai.journal("jaugeCibles", [jaugeEssai.fondRemplie.target, jaugeEssai.fondIcone.target,
                 jaugeEssai.etat.fond].join(" "))
+        }
+
+        // surPlaque — pose ou retire la plaque du curseur simulée sous les contrôles du panneau. Entrée : valeur.
+        // Sortie : aucune. Erreurs : aucune. Dépendances : panneau (dnSurPlaque).
+        function surPlaque(valeur: bool): void {
+            panneau.dnSurPlaque = valeur
         }
 
         // jaugeCoupe — coupe ou rétablit la jauge d'essai. Entrée : valeur, nouvel état coupe. Sortie : aucune.
@@ -1152,17 +1141,17 @@ ShellRoot {
                 .map(i => r(i)?.activeFocusOnTab + " " + r(i)?.focusPolicy)].join(" "))
         }
 
-        // rangee — journalise, pour la rangée 1, le rôle de son Etat, sa hauteur et sa largeur, puis la
-        // géométrie et le rayon de sa pastille de sélection, et enfin la géométrie, le rayon, l'épaisseur, la
-        // couleur et la visibilité de son contour de focus, dans le repère de la rangée. Entrées : aucune.
-        // Sortie : aucune ; « essai : rangee <rôle> <h> <l> | <x> <l> <h> <rayon> | <x> <y> <l> <h> <rayon>
-        // <épaisseur> <#rrggbb> <bool> ». Erreurs : aucune. Dépendances : listeEssai ; la pastille est le premier
-        // enfant du fond de la rangée, le contour le premier enfant de la pastille.
+        // rangee — journalise, pour la rangée 1 (la courante), le rôle de son Etat, sa hauteur et sa largeur, puis la
+        // géométrie et le rayon de sa pastille, dans le repère de la rangée, puis la cible de la plaque de la liste,
+        // dans le repère de la rangée, son rayon et sa teinte visée, enfin le nombre d'enfants de la pastille (aucun
+        // contour). Entrées : aucune. Sortie : aucune ; « essai : rangee <rôle> <h> <l> | <x> <l> <h> <rayon> | <x>
+        // <y> <l> <h> <rayon> <#teinte> | <enfants> ». Erreurs : aucune. Dépendances : listeEssai (plaque) ; la
+        // pastille est le premier enfant du fond de la rangée.
         function rangee(): void {
-            const r = listeEssai.itemAtIndex(1), t = r.background.children[0], c = t.children[0]
-            const p = c.mapToItem(r, 0, 0)
+            const r = listeEssai.itemAtIndex(1), t = r.background.children[0], c = listeEssai.plaque.cible
             essai.journal("rangee", [r.etat.role, r.height, r.width, "|", t.mapToItem(r, 0, 0).x, t.width, t.height,
-                t.radius, "|", p.x, p.y, c.width, c.height, c.radius, c.border.width, c.border.color, c.visible].join(" "))
+                t.radius, "|", c.x - r.x, c.y - r.y, c.width, c.height, listeEssai.plaque.rayon, listeEssai.plaque.teinte,
+                "|", t.children.length].join(" "))
         }
 
         // rangeeImposer — pose sur la rangée 0 de la liste d'essai une icône, la variante pleine, des teintes
@@ -1175,6 +1164,23 @@ ShellRoot {
             r.gras = valeur
             r.teinteIcone = valeur ? Theme.color?.accent ?? "transparent" : "transparent"
             r.teinteTexte = valeur ? Theme.color?.error ?? "transparent" : "transparent"
+        }
+
+        // rangeeCurseur — donne le curseur de la liste d'essai à sa rangée 0, ou le lui retire, comme le survol.
+        // Entrée : valeur, vrai pour le donner. Sortie : aucune. Erreurs : aucune. Dépendances : listeEssai (dnVue).
+        function rangeeCurseur(valeur: bool): void {
+            const r = listeEssai.itemAtIndex(0)
+            valeur ? listeEssai.dnVue.prendre(r) : listeEssai.dnVue.lacher(r)
+        }
+
+        // rangeeEncres — pose un suffixe vide sur la rangée 0 de la liste d'essai et journalise ses encres de suffixe,
+        // secondaire puis tertiaire. Entrées : aucune. Sortie : aucune ; « essai : rangeeEncres <#secondaire>
+        // <#tertiaire> ». Erreurs : aucune. Dépendances : listeEssai, suffixeVide, Rangee (encreSecondaire,
+        // encreTertiaire), journal.
+        function rangeeEncres(): void {
+            const r = listeEssai.itemAtIndex(0)
+            r.suffixe = suffixeVide
+            essai.journal("rangeeEncres", r.encreSecondaire + " " + r.encreTertiaire)
         }
 
         // rangeeImposees — journalise, pour la rangée 0, la variante pleine de son icône, les cibles de couleur
@@ -1235,18 +1241,24 @@ ShellRoot {
             essai.journal("serrage", fenetres.map(Ancrage.origine).concat(cadres).join(" "))
         }
 
-        // bouton — journalise la propriété principal du bouton d'essai et la sélection de son Etat.
-        // Entrées : aucune. Sortie : aucune ; « essai : bouton <bool> <sélection> ». Erreurs : aucune.
+        // bouton — journalise la sélection de l'Etat du bouton d'essai.
+        // Entrées : aucune. Sortie : aucune ; « essai : bouton <sélection> ». Erreurs : aucune.
         // Dépendances : boutonEssai.
         function bouton(): void {
-            essai.journal("bouton", boutonEssai.principal + " " + boutonEssai.etat.selection)
+            essai.journal("bouton", boutonEssai.etat.selection)
         }
 
-        // boutonPrincipal — fait du bouton d'essai le bouton principal d'un dialogue, ou un bouton ordinaire.
-        // Entrées : valeur, nouvelle valeur de principal. Sortie : aucune. Erreurs : aucune.
-        // Dépendances : boutonEssai.
-        function boutonPrincipal(valeur: bool): void {
-            boutonEssai.principal = valeur
+        // boutonDanger — fait du bouton d'essai un bouton destructeur, ou un bouton ordinaire.
+        // Entrées : valeur, nouvelle valeur de danger. Sortie : aucune. Erreurs : aucune. Dépendances : boutonEssai.
+        function boutonDanger(valeur: bool): void {
+            boutonEssai.danger = valeur
+        }
+
+        // boutonTexte — journalise la couleur du texte du bouton d'essai.
+        // Entrées : aucune. Sortie : aucune ; « essai : boutonTexte <#rrggbb> ». Erreurs : aucune.
+        // Dépendances : boutonEssai (le texte, second enfant de la rangée centrée de son contenu), journal.
+        function boutonTexte(): void {
+            essai.journal("boutonTexte", boutonEssai.contentItem.children[0].children[1].color)
         }
 
         // estMateriau — dit si un élément est un Materiau, d'après le nom de type que rend son toString.

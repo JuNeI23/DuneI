@@ -5,11 +5,13 @@ import "../Composants"
 import "../Barre/icones.js" as Icones
 
 // RangeeReseau — rangée compacte d'un réseau Wi-Fi à portée, dans la liste de la page Wi-Fi.
-// Rôle : une Ligne cliquable (clavier, contour de focus et plaque de survol compris) qui porte, de gauche à droite,
-// le glyphe du réseau dans la colonne des médaillons (force du signal, ou partage de connexion pour un profil vu
-// facturé), son nom, puis l'invite « Rejoindre », qui paraît en fondu au survol, et le cadenas d'un réseau sécurisé
-// (un réseau ouvert ne porte rien, D170). Pendant la connexion, la rangée reste à sa place : son glyphe et la ligne « Connexion… »
-// passent à l'accent autonome, et l'indicateur d'activité remplace l'invite et le cadenas. Sous la rangée, le mot de
+// Rôle : une Ligne cliquable (clavier et plaque du curseur compris) qui porte, de gauche à droite, le glyphe du réseau
+// dans la colonne des médaillons (force du signal, ou partage de connexion pour un profil vu facturé), son nom, puis
+// l'invite « Rejoindre », qui paraît en fondu quand la rangée porte le curseur, à l'encre de la plaque, jamais à
+// l'accent (L2-73), et le cadenas d'un réseau sécurisé (un réseau ouvert ne porte rien, D170). Sous le curseur,
+// glyphe et cadenas passent à l'encre de la plaque avec le libellé. Pendant la connexion, la rangée reste à sa place :
+// son glyphe et la ligne « Connexion… » passent à l'accent autonome (l'encre de la plaque sous le curseur), et
+// l'indicateur d'activité remplace l'invite et le cadenas. Sous la rangée, le mot de
 // passe (BlocSecret) se déplie et se replie en animant sa hauteur, sur le ressort reveal ; il n'est chargé que
 // déplié ou en mouvement, et sa saisie disparaît avec lui.
 // Entrées : nom ; force, signal de 0 à 1 ; securise, vrai si le réseau demande un mot de passe ; partage, vrai pour
@@ -48,7 +50,7 @@ ColumnLayout {
     function reveler() { if (bloc) bloc.secret.revele = true }
 
     Ressort { id: pli; transition: "reveal"; cible: rangee.ouverte ? 1 : 0 }
-    Ressort { id: invite; transition: "state"; nature: "fondu"; cible: ligne.hovered && !rangee.enConnexion ? 1 : 0 }
+    Ressort { id: invite; transition: "state"; nature: "fondu"; cible: ligne.sousCurseur && !rangee.enConnexion ? 1 : 0 }
 
     Ligne {
         id: ligne
@@ -63,7 +65,7 @@ ColumnLayout {
                     nom: rangee.partage ? "network-wireless-hotspot" : Icones.iconeForce(rangee.force)
                     pleine: true
                     taille: Theme.reglages?.medallionGlyph ?? 0
-                    couleur: (rangee.enConnexion ? Theme.color?.accentStandalone : Theme.color?.textSecondary) ?? "transparent"
+                    couleur: ligne.encreAide
                 }
             }
         }
@@ -80,13 +82,13 @@ ColumnLayout {
             text: "Rejoindre"
             echelon: 1
             moyen: true
-            color: Theme.color?.accentStandalone ?? "transparent"
+            color: ligne.encrePlaque
         }
         Icone {
             visible: rangee.securise && !rangee.enConnexion
             nom: "network-wireless-encrypted"
             taille: Theme.icons?.sizes.dense ?? 0
-            couleur: Theme.color?.textTertiary ?? "transparent"
+            couleur: ligne.encreTertiaire
         }
         // L'indicateur d'activité n'est bâti que pour la rangée en connexion : une longue liste n'en paie pas le prix.
         Loader { active: rangee.enConnexion; visible: active; sourceComponent: Activite {} }

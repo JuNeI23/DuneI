@@ -640,6 +640,15 @@ class PopoverTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(p["infobulle"], "Rechercher les réseaux")
         self.assertFalse(p["activite"])
 
+    def test_portail_neutre_au_repos(self):
+        # L2-73 : « Ouvrir la page de connexion », bouton principal, a un texte neutre au repos.
+        self.ouvrir()
+        self.ipc("connectivite", "portal")
+        e = json.loads(self.ipc("encres", "Ouvrir la page de connexion"))
+        self.assertTrue(e["textes"]["Ouvrir la page de connexion"])
+        for c in e["textes"]["Ouvrir la page de connexion"]:
+            self.assertNotIn(c, (e["accent"], e["accentStandalone"]))
+
     def test_bascule_coupe_et_rallume(self):
         # Un clic sur la bascule coupe le Wi-Fi ; la bascule suit ensuite la radio réelle (ici, factice, inchangée).
         self.ouvrir()
@@ -2387,6 +2396,53 @@ class ReseauParametresTest(EssaiCoque, unittest.TestCase):
         while "connection delete hotspot-1" not in self.appels():
             self.assertLess(time.monotonic(), fin, self.appels())
             time.sleep(0.05)
+
+    def test_oublier_en_rouge(self):
+        # L2-73 : la confirmation « Oublier » est destructrice, en color.error, au repos comme sous le curseur.
+        self.deplier()
+        self.ipc("essai", "regler", "hotspot-1", "oublier")
+        self.depliant(lambda d: d["confirmer"], "confirmation demandée", "hotspot-1")
+        self.assertTrue(json.loads(self.ipc("essai", "danger", "hotspot-1", "confirmer")))
+
+    def test_medaillon_connecte_neutre(self):
+        # L2-73 : le médaillon du réseau connecté est un indicateur, jamais la plaque du curseur : fond neutre
+        # (controlRaised au repos), glyphe à l'accent autonome.
+        self.deplier_joint()
+        ref = json.loads(self.ipc("essai", "encres", ""))
+        fin = time.monotonic() + DELAI
+        while (m := json.loads(self.ipc("essai", "medaillon", "wifi-1"))) != {"fond": ref["neutre"], "glyphe": ref["accentStandalone"]}:
+            self.assertLess(time.monotonic(), fin, m)
+            time.sleep(0.05)
+
+    def test_aucun_accent_au_repos(self):
+        # L2-73 : au repos, « Actualiser », « Rejoindre » (invite de rangée et bouton du pied) et « Ajouter » ont un
+        # texte neutre : l'accent n'appartient qu'au curseur.
+        self.ipc("parametres", "ouvrir", "wifi")
+        self.jusqua(lambda e: e["fenetre"] and e["rangees"], "fenêtre construite")
+        self.ipc("essai", "nouveau")
+        self.jusqua(lambda e: e["nouvelle"].get("visible"), "fiche du réseau masqué")
+        self.ipc("essai", "retour")
+        self.jusqua(lambda e: e["niveau"] == 0, "retour à la page Wi-Fi")
+        # « Actualiser » cède sa place à « Recherche… » pendant un balayage : il est attendu.
+        fin = time.monotonic() + DELAI
+        while not (e := json.loads(self.ipc("essai", "encres", "Actualiser|Rejoindre")))["textes"]["Actualiser"]:
+            self.assertLess(time.monotonic(), fin, "« Actualiser » présent")
+            time.sleep(0.05)
+        self.assertTrue(e["textes"]["Rejoindre"], "« Rejoindre » présent")
+        for texte, couleurs in e["textes"].items():
+            for c in couleurs:
+                self.assertNotIn(c, (e["accent"], e["accentStandalone"]), texte)
+
+    def test_ajouter_neutre(self):
+        # L2-73 : le bouton principal « Ajouter » de la fiche du réseau masqué est neutre au repos.
+        self.ipc("parametres", "ouvrir", "wifi")
+        self.jusqua(lambda e: e["fenetre"] and e["rangees"], "fenêtre construite")
+        self.ipc("essai", "nouveau")
+        self.jusqua(lambda e: e["nouvelle"].get("visible"), "fiche du réseau masqué")
+        e = json.loads(self.ipc("essai", "encres", "Ajouter"))
+        self.assertTrue(e["textes"]["Ajouter"])
+        for c in e["textes"]["Ajouter"]:
+            self.assertNotIn(c, (e["accent"], e["accentStandalone"]))
 
     def test_modifications_rapprochees(self):
         # Réécrit pour le dépliant (L2-65), où se trouve désormais la priorité. Course éprouvée : les lectures sont

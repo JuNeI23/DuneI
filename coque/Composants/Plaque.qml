@@ -1,9 +1,9 @@
 import QtQuick
 import "../Theme"
 
-// Plaque — plaque qui marque la ligne retenue de la liste du lanceur.
-// Rôle : un aplat de la teinte demandée (color.accent sous le curseur, un fond neutre de survol quand le curseur est
-// ailleurs), au reflet des médaillons (dégradé de material.highlight, à l'opacité material.medallionSheen, sur la part
+// Plaque — plaque qui marque la ligne retenue d'une liste : celle du lanceur, et celle de toute Liste de la coque.
+// Rôle : un aplat de la teinte demandée (l'accent sous le curseur, un fond neutre quand le curseur est ailleurs : le
+// survol neutre au lanceur, controlRaised dans une Liste), au reflet des médaillons (dégradé de material.highlight, à l'opacité material.medallionSheen, sur la part
 // material.medallionSheenReach de la hauteur) et au liseré haut material.edgeLight, sans ombre ni halo (recette 2 :
 // une ombre décalée vers le bas bavait sous la ligne), sans opacité numérique sur la couleur. Elle glisse vers la
 // géométrie cible au ressort reflow, et s'étire un peu dans le sens du trajet tant qu'elle va vite, puis se pose. Sa

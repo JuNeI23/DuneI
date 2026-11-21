@@ -14,12 +14,14 @@ import "../Composants"
 // lignesCorps, libelles (textes des actions affichés), libellesRendus(), texteApplication et texteHeure, lus par
 // les essais.
 // Erreurs : aucune ; sans jetons chargés, la carte est de taille nulle et transparente.
-// Dépendances : Theme (notifications, radius), Composants (Surface, OmbreElevation), CorpsNotification, Entree, Pile.
+// Dépendances : Theme (notifications, radius), Composants (Surface, OmbreElevation, VueCurseur), CorpsNotification, Entree, Pile.
 Item {
     id: carte
 
     required property QtObject entree
     required property QtObject pile
+    // Arbitre du curseur de la carte : ses actions y prennent la plaque au survol, comme dans le panneau (L2-73).
+    property VueCurseur dnVue: VueCurseur {}
 
     readonly property QtObject notification: entree?.notification ?? null
     readonly property real interieur: Theme.notifications?.interieur ?? 0
@@ -34,6 +36,10 @@ Item {
     // libellesRendus — textes des actions affichés par la rangée (CorpsNotification.libellesRendus), lus par les
     // essais. Entrées : aucune. Sortie : tableau de chaînes. Erreurs : aucune. Dépendances : contenu.
     function libellesRendus() { return contenu.libellesRendus() }
+
+    // boutonsRendus — boutons des actions affichés (CorpsNotification.boutonsRendus), lus par les essais. Entrées :
+    // aucune. Sortie : tableau de Bouton. Erreurs : aucune. Dépendances : contenu.
+    function boutonsRendus() { return contenu.boutonsRendus() }
     readonly property alias libelles: contenu.libelles
     readonly property alias texteApplication: contenu.texteApplication
     readonly property alias texteHeure: contenu.texteHeure

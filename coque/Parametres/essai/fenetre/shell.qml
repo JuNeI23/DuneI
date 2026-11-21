@@ -5,6 +5,7 @@ import Quickshell
 import Quickshell.Io
 import QtTest
 import "Composants"
+import "Theme"
 import "Parametres"
 
 // Coque d'essai de la coquille de l'application Paramètres.
@@ -62,6 +63,17 @@ ShellRoot {
         e.destroy()
     }
 
+    // plaque — état de la plaque d'une Liste. Entrée : l, la Liste. Sortie : { courant, dedans, teinte }.
+    // Erreurs : aucune. Dépendances : Liste (currentIndex, curseurDedans, plaque).
+    function plaque(l) { return { courant: l.currentIndex, dedans: l.curseurDedans, teinte: String(l.plaque.teinte) } }
+
+    // ombres — compte les OmbreControle sous un élément, lui compris. Entrée : o, l'élément. Sortie : le compte.
+    // Erreurs : aucune. Dépendances : aucune.
+    function ombres(o) {
+        return (String(o).startsWith("OmbreControle") ? 1 : 0)
+            + Array.from(o.children ?? []).reduce((n, e) => n + essai.ombres(e), 0)
+    }
+
     IpcHandler {
         target: "essai"
 
@@ -70,8 +82,10 @@ ShellRoot {
         // des entrées), gras (libellé de l'entrée en graisse moyenne), entreesVisibles ; plaque { y, cible, hauteur } ;
         // champ (texte de la recherche) ; resultats [{ libelle, origine }] ; chargees (pages construites) ;
         // defilement { y, cible, max, anime } ; niveau, retour, glisse (pile de sous-pages) ; evidence (objectName
-        // de l'élément mis en évidence, vide sinon) }. Erreurs : aucune ; fenêtre fermée, seuls les quatre premiers
-        // champs sont renseignés. Dépendances : fenetre, EtatParametres, Registre.
+        // de l'élément mis en évidence, vide sinon) ; curseur { pages, resultats : { courant (currentIndex),
+        // dedans (curseurDedans), teinte (teinte visée par la plaque) } ; neutre, le fond controlRaised ; ombres,
+        // nombre d'OmbreControle dans la barre } }. Erreurs : aucune ; fenêtre fermée, seuls les quatre premiers
+        // champs sont renseignés. Dépendances : fenetre, EtatParametres, Registre, Theme (stateColors).
         function etat(): string {
             const e = { ouverte: EtatParametres.ouverte, page: EtatParametres.page, chemin: EtatParametres.chemin, fenetre: !!fenetre.fenetre }
             if (!e.fenetre) return JSON.stringify(e)
@@ -90,8 +104,21 @@ ShellRoot {
                 chargees: c.chargees,
                 defilement: { y: c.defilement.contentY, cible: c.cible, max: c.maximum, anime: c.anime },
                 niveau: c.niveau, retour: c.niveau ? "‹ " + c.retour : "", glisse: c.glisse,
-                evidence: c.enEvidence?.objectName ?? ""
+                evidence: c.enEvidence?.objectName ?? "",
+                curseur: { pages: essai.plaque(b.liste), resultats: essai.plaque(b.resultats),
+                    neutre: String(Theme.stateColors("controlRaised", "none", "rest").fill), ombres: essai.ombres(b) }
             }))
+        }
+
+        // survoler — pose le pointeur sur une rangée de la liste visible de la barre (pages, ou résultats pendant une
+        // recherche), ou hors des listes, au bas de la barre, pour un rang négatif. Entrée : rang. Sortie : aucune.
+        // Erreurs : rang absent, TypeError au journal. Dépendances : QtTest (TestEvent), fenetre.barre.
+        function survoler(rang: int): void {
+            const b = fenetre.barre, r = rang < 0 ? null : (b.cherche ? b.resultats : b.liste).itemAtIndex(rang)
+            const e = Qt.createQmlObject("import QtTest; TestEvent {}", b)
+            r ? e.mouseMove(r, r.width / 2, r.height / 2, -1, Qt.NoButton, Qt.NoModifier)
+              : e.mouseMove(b, b.width / 2, b.height - 2, -1, Qt.NoButton, Qt.NoModifier)
+            e.destroy()
         }
 
         // saisir — écrit un terme dans le champ de recherche, qui prend le focus. Entrée : texte. Sortie : aucune.

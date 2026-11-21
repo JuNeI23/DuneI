@@ -3,6 +3,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import QtTest
 import "Theme"
 import "Notifications"
 import "Notifications/essai"
@@ -14,8 +15,8 @@ import "Parametres"
 // tests/test_notifications.py (PanneauTest) la pilote.
 // Entrées : DUNEI_TOKENS_DIR, lu par Theme ; DUNEI_ETAT_DIR, où EtatNotifications lit et écrit son fichier.
 // Sortie : « essai : prêt » au démarrage ; voir l'IpcHandler. Erreurs : celles de Theme, dans le journal.
-// Dépendances : quickshell ≥ 0.3 (IpcHandler, FloatingWindow), Panneau, Attente, EtatNotifications,
-// FausseNotification, FauxVerrou, liens Theme, Composants et Notifications ; thème d'icônes DuneI.
+// Dépendances : quickshell ≥ 0.3 (IpcHandler, FloatingWindow), QtTest (TestEvent, pour le survol), Panneau, Attente,
+// EtatNotifications, FausseNotification, FauxVerrou, liens Theme, Composants et Notifications ; thème d'icônes DuneI.
 ShellRoot {
     id: essai
 
@@ -39,6 +40,8 @@ ShellRoot {
         id: fabrique
         FausseNotification {}
     }
+
+    TestEvent { id: souris }
 
     FloatingWindow {
         implicitWidth: 400
@@ -132,6 +135,48 @@ ShellRoot {
         function nePlusGarder(identifiant: string): void { panneau.nePlusGarder(identifiant) }
         function toutEffacer(): void { panneau.toutEffacer() }
         function basculer(): void { panneau.bascule.toggle(); panneau.bascule.toggled() }
+
+        // curseur — pose le curseur de la vue sur la ligne qui montre une notification, comme le survol de la souris.
+        // Entrée : id de la notification, 0 pour lâcher le curseur. Sortie : aucune. Erreurs : TypeError au journal si
+        // aucune ligne ne la montre. Dépendances : panneau (dnVue, ligneDe).
+        function curseur(id: int): void {
+            const l = id === 0 ? null : panneau.ligneDe(essai.attendue(id))
+            if (l) panneau.dnVue.prendre(l); else panneau.dnVue.porteur = null
+        }
+
+        // survoler — pose le pointeur au centre de la ligne qui montre une notification, comme la souris. Entrée : id
+        // de la notification. Sortie : aucune. Erreurs : TypeError au journal si aucune ligne ne la montre.
+        // Dépendances : panneau (ligneDe), souris (TestEvent).
+        function survoler(id: int): void {
+            const l = panneau.ligneDe(essai.attendue(id))
+            souris.mouseMove(l, l.width / 2, l.height / 2, -1, Qt.NoButton, Qt.NoModifier)
+        }
+
+        // plaques — JSON {id: {sous, fond}} des lignes montrées : vrai quand la ligne porte le curseur, et son fond.
+        // Entrées : aucune. Sortie : texte. Erreurs : aucune. Dépendances : panneau, attenteEssai.
+        function plaques(): string {
+            const sortie = {}
+            for (const a of attenteEssai.entrees) {
+                const l = panneau.ligneDe(a)
+                if (l) sortie[a.notification.id] = {sous: l.etat.sousCurseur, fond: String(l.etat.fond),
+                                                    encre: String(l.contenuNotification.couleurTitre)}
+            }
+            return JSON.stringify(sortie)
+        }
+
+        // boutons — JSON des boutons de texte du panneau : « Tout effacer » (effacer), les deux actions du premier
+        // groupe (groupe : nePlusGarder, effacer) et les actions de la première ligne (actions), chacun {danger, plat,
+        // texte, fond, neutre} (couleurs affichées, texte neutre de son état). Entrées : aucune. Sortie : texte.
+        // Erreurs : aucune. Dépendances : panneau.
+        function boutons(): string {
+            const lire = b => ({danger: b.danger, plat: b.plat, texte: String(b.teinte), fond: String(b.background.color),
+                                neutre: String(b.etat.texteNeutre)})
+            const g = panneau.groupesVus.itemAt(0)
+            const l = g ? g.ligneDe(g.vivantes[0]) : null
+            return JSON.stringify({effacer: lire(panneau.effacer),
+                groupe: g ? {nePlusGarder: lire(g.boutonNePlusGarder), effacer: lire(g.boutonEffacer)} : null,
+                actions: l ? l.contenuNotification.boutonsRendus().map(lire) : []})
+        }
 
         // reglages — clic sur « Réglages des notifications… », par le signal de sa rangée. Entrées : aucune.
         // Sortie : aucune. Erreurs : TypeError au journal sans panneau monté. Dépendances : panneau.

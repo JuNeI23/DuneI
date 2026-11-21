@@ -533,6 +533,7 @@ page_rise = 6                 # montée de la page entrante, en fondu-glissé
 thumb_large = 44              # côté de la grande vignette d'une carte d'en-tête de page
 sparkline_width = 92          # largeur de la mini-courbe des débits, sur la rangée du réseau joint
 sparkline_height = 30         # hauteur de la mini-courbe des débits
+evidence = 0.32               # opacité de pointe (fraction, non px) du fond accentDiscret posé sur le réglage atteint par la recherche
 
 [layout]
 sidebar_default = 240

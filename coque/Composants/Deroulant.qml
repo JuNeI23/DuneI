@@ -4,25 +4,25 @@ import "../Theme"
 // Deroulant — menu déroulant de la coque, sur le modèle du bouton contextuel de macOS.
 // Rôle : un Bouton qui montre la valeur choisie à gauche et le double chevron haut-bas de macOS, dessiné, à droite
 // (conception, § 7.10). Un clic, Espace ou Entrée ouvre un Overlay contextuel ancré sous le bouton, qui porte une
-// Liste des choix : sa sélection suit le pointeur (selectionSuitSurvol), comme dans un menu de macOS, et
+// Liste des choix : sa sélection suit le pointeur, comme dans toute Liste et dans un menu de macOS, et
 // l'élément choisi porte en tête la Coche dessinée de la case. Choisir un élément, au clic ou à Entrée, ferme le
 // menu, en fait la valeur et émet activated ; Échap ou un clic à l'extérieur ferment sans rien changer. Ouvert au
-// clavier, le menu montre le contour de sa rangée courante dès sa construction (Liste.focusClavier part de
-// auClavier) ; ouvert à la souris, il ne le montre pas (focusClavier repasse à faux juste après l'arrivée du
-// focus, que la Liste prend pour un geste du clavier). Fermé, les flèches haut et bas changent la valeur sans
-// ouvrir le menu, comme sur macOS. Il n'est pas bâti sur T.ComboBox, dont le menu, un Popup, ne sort pas de la
-// fenêtre : l'Overlay contextuel est une fenêtre surgissante (PopupWindow), construite à l'ouverture et détruite
-// à la fermeture (D80).
+// clavier, le menu donne le curseur, donc la plaque d'accent, à sa rangée courante dès sa construction
+// (Liste.focusClavier part de auClavier) ; ouvert à la souris, il le lui retire aussitôt (focusClavier repasse à faux
+// juste après l'arrivée du focus, que la Liste prend pour un geste du clavier), et le pointeur le pose. Fermé, les
+// flèches haut et bas changent la valeur sans ouvrir le menu, comme sur macOS. Il n'est pas bâti sur T.ComboBox, dont
+// le menu, un Popup, ne sort pas de la fenêtre : l'Overlay contextuel est une fenêtre surgissante (PopupWindow),
+// construite à l'ouverture et détruite à la fermeture (D80).
 // Largeur : celle du plus long des choix, pour que changer de valeur ne redimensionne pas le bouton.
 // Entrées : model, la liste des choix (chaînes) ; currentIndex, rang de la valeur choisie, 0 par défaut ; le
-// reste de l'API de Bouton (enabled, principal…), hors text, que displayText remplit.
+// reste de l'API de Bouton (enabled, danger…), hors text, que displayText remplit.
 // Sorties : displayText, le texte de la valeur choisie (vide hors du modèle) ; signal activated(index), émis quand
 // l'utilisateur choisit un élément, au menu ou aux flèches ; menu, l'Overlay ; liste, la Liste du menu ouvert,
 // null fermé ; auClavier, vrai si la dernière ouverture vient du clavier ; ces trois dernières, en lecture seule,
 // sont lues par les essais.
 // Erreurs : aucune ; un modèle vide montre un bouton sans texte, dont le menu est vide ; avant le chargement des
 // tokens, les cotes sont nulles et les couleurs transparentes.
-// Dépendances : Bouton (fond, états, anneau), Overlay (famille contextuel), Liste, Rangee (accessoire), Coche,
+// Dépendances : Bouton (fond, états, curseur), Overlay (famille contextuel), Liste, Rangee (accessoire), Coche,
 // Chevron, Texte, Theme (density, icons, space).
 // Cotes : double chevron de icons.sizes.dense, écarté du texte de space.scale[1] (8) ; colonne de la coche de
 // density.checkSize.
@@ -54,7 +54,7 @@ Bouton {
     Keys.onDownPressed: if (!menu.ouvert) deplacer(1)
 
     // ouvrir — ouvre le menu des choix sous le bouton.
-    // Entrée : clavier, vrai si l'ouverture vient du clavier (le contour de la rangée courante sera montré).
+    // Entrée : clavier, vrai si l'ouverture vient du clavier (la rangée courante prendra le curseur).
     // Sortie : aucune. Erreurs : aucune. Dépendances : menu (Overlay), interne (auClavier).
     function ouvrir(clavier: bool): void {
         interne.auClavier = clavier
@@ -123,7 +123,6 @@ Bouton {
         Liste {
             id: choix
             focus: true
-            selectionSuitSurvol: true
             currentIndex: deroulant.currentIndex
             focusClavier: deroulant.auClavier
             implicitWidth: deroulant.width

@@ -4,21 +4,23 @@ import QtQuick.Templates as T
 import "../Theme"
 import "etats.js" as Etats
 
-// Rangee — rangée d'une Liste : libellé, icône facultative, sélection en pastille et contour de focus.
-// Rôle : habille le gabarit sans style T.ItemDelegate (conception, § 7.1). La rangée prend le rôle de son
-// conteneur, sans cran : ni survolée, ni pressée, ni sélectionnée, désactivée comprise, sa pastille est transparente
-// et laisse voir le fond de la liste (§ 7.4), opaque ou de verre, au lieu d'en repeindre la couleur. Elle est
-// sélectionnée quand elle est la rangée courante, ou, si la liste ne fait pas suivre la sélection, quand l'appelant
-// pose selectionnee (§ 7.5) ; la sélection prend l'accent quand la liste a le focus, sauf dans une colonne de
-// navigation (Liste.navigation) : elle y prend un fond neutre levé d'un cran (controlRaised, Etat.selectionNeutre)
-// et son libellé passe en graisse moyenne. Sélection et survol se peignent
-// dans une pastille arrondie en retrait des bords de la liste, à la manière de macOS (§ 7.10). Le focus se montre par
-// un contour sans fond de focus.width, qui suit la pastille rentré de -focus.rowOffset pixel, et jamais par un anneau
-// ni par un changement de fond (§ 7.3) ; il paraît sur la rangée courante d'une liste qui a le focus obtenu au
-// clavier, sauf dans un menu (selectionSuitSurvol) : la pastille de sélection y suffit, comme sur macOS, et le
-// contour ne paraît jamais, même au clavier. La rangée n'accepte aucun focus : la liste est l'unique arrêt. Un clic
-// en fait la rangée courante, donne le focus à la liste sans montrer le contour, puis émet active(). Dans une liste
-// qui porte selectionSuitSurvol (un menu), le survol en fait aussi la rangée courante.
+// Rangee — rangée d'une Liste : libellé, icône facultative, sélection et curseur.
+// Rôle : habille le gabarit sans style T.ItemDelegate (conception, § 7.1). La rangée prend le rôle de son conteneur,
+// sans cran (§ 7.4). Elle est sélectionnée quand elle est la rangée courante, ou, si la liste ne fait pas suivre la
+// sélection, quand l'appelant pose selectionnee (§ 7.5). Elle suit le curseur de sa vue (Etat.suitCurseur) : survolée,
+// elle le prend et, dans une Liste, devient la rangée courante, comme dans un menu de macOS ; la Liste le lui donne
+// aussi au clavier. Dans une Liste, la rangée ne peint pas son fond : la plaque de la liste se tient sous la rangée
+// courante, à l'accent sous le curseur, au fond neutre controlRaised sinon, et le libellé de la rangée sous le curseur
+// passe en onAccent (couleurs de la sélection active). Hors d'une Liste (seule dans un popover, ou dans un Repeater),
+// la rangée garde son propre fond, une pastille arrondie en retrait des bords à la manière de macOS (§ 7.10) : l'aplat
+// d'accent de la plaque sous le curseur (Etat.curseurAplat), transparente sinon, survolée sans le curseur comprise,
+// pour laisser voir le fond de verre ou opaque du conteneur au lieu d'en repeindre la couleur (une sélection fournie y
+// garde le fond neutre de la clé « inactive »). Dans une colonne de navigation (Liste.navigation), la rangée
+// sélectionnée prend un fond neutre levé d'un cran (controlRaised, Etat.selectionNeutre) et son libellé passe en
+// graisse moyenne. Aucun contour ni anneau de focus : le curseur suffit (L2-73). Sous le curseur, la rangée déclare
+// dnSurPlaque : un contrôle allumé qu'elle porte s'inverse sur la plaque (Etat.inverseSurPlaque). La rangée n'accepte
+// aucun focus : la liste est l'unique arrêt. Un clic en fait la rangée courante, donne le focus à la liste sans le
+// compter comme clavier, puis émet active().
 // Entrées : index, requis, rang dans le modèle (fourni par la ListView) ; text, libellé ; icone, nom
 // freedesktop d'une icône symbolique, vide par défaut (pas d'icône) ; selectionnee, sélection fournie par
 // l'appelant quand la liste ne la fait pas suivre currentIndex ; accessoire, composant facultatif posé en tête
@@ -28,41 +30,48 @@ import "etats.js" as Etats
 // graisse moyenne, comme le réseau joint du popover, faux par défaut ; pleine, variante pleine de l'icône
 // (Icone.pleine), faux par défaut ; teinteIcone et teinteTexte, couleurs imposées à l'icône et au libellé,
 // transparentes par défaut : les couleurs de l'état s'appliquent alors, sinon l'imposée les remplace, en fondu
-// (ColorSpring), et elle l'emporte sur accentue ; forcerContour, réservée à la planche de contrôle : montre le contour
-// de focus sans que la liste ait le focus, faux par défaut.
-// Sorties : etat, l'Etat de la rangée (rôle, interaction, sélection, couleurs) ; gras, vrai quand le libellé est
-// en graisse moyenne (par défaut accentue, ou rangée sélectionnée d'une colonne de navigation ; l'appelant peut le
-// poser), que suit un contentItem remplacé ; fondIcone et fondTexte, les ressorts des couleurs de l'icône et du
-// libellé ; libelle, le Texte du libellé par défaut ; glyphe, l'Icone ; signal active(), émis au clic et à Entrée
-// (la Liste l'émet pour sa rangée courante).
-// Erreurs : aucune ; hors d'une ListView, la rangée garde sa largeur implicite, n'est jamais courante ni
-// sélectionnée par currentIndex, et se comporte comme si son groupe avait le focus ; avant le chargement des
-// tokens, les cotes sont nulles et les couleurs transparentes. Le clic suppose une Liste : une ListView
-// ordinaire ne déclare pas focusClavier, que le clic écrit.
+// (ColorSpring), et elle l'emporte sur accentue ; sous le curseur, l'icône et le libellé prennent toujours le texte de
+// l'état (le sur-accent de la plaque), teinte imposée et accent autonome compris, pour ne jamais peindre de gris ni
+// d'orange sur l'orange ; teinteSecondaire et teinteTertiaire, couleurs hors du curseur du texte secondaire et
+// tertiaire d'un suffixe, color.textSecondary et color.textTertiary par défaut (le Bluetooth y met color.warning pour
+// un appareil en erreur).
+// Sorties : etat, l'Etat de la rangée (rôle, interaction, sélection, curseur, couleurs) ; dansListe, vrai quand la
+// rangée est le délégué d'une Liste ; gras, vrai quand le libellé est en graisse moyenne (par défaut accentue, ou
+// rangée sélectionnée d'une colonne de navigation ; l'appelant peut le poser), que suit un contentItem remplacé ;
+// fondIcone et fondTexte, les ressorts des couleurs de l'icône et du libellé ; libelle, le Texte du libellé par
+// défaut ; glyphe, l'Icone ; dnSurPlaque, vrai sous le curseur ; encreSecondaire et encreTertiaire, les encres d'un
+// suffixe : teinteSecondaire et teinteTertiaire hors du curseur, l'encre de la plaque sous lui, en fondu
+// (transparentes, sans ressort, pour une rangée sans suffixe) ; signal active(), émis au clic et à Entrée (la Liste
+// l'émet pour sa rangée courante).
+// Erreurs : aucune ; hors d'une ListView, la rangée garde sa largeur implicite et n'est jamais courante ni
+// sélectionnée par currentIndex ; avant le chargement des tokens, les cotes sont nulles et les couleurs transparentes.
+// Le clic suppose une Liste : une ListView ordinaire ne déclare pas focusClavier, que le clic écrit.
 // Dépendances : QtQuick.Templates (ItemDelegate), QtQuick.Layouts, propriétés attachées ListView (view,
-// isCurrentItem) et Liste (focusClavier, selectionSuitCourant, selectionSuitSurvol, navigation) ; Theme (density,
-// focus,
-// radius, space), Etat, Texte, Icone, etats.js (herite).
+// isCurrentItem) et Liste (focusClavier, selectionSuitCourant, navigation, curseurDedans) ; Theme (density, radius,
+// space, color, ColorSpring), Etat, Texte, Icone, etats.js (herite).
 // Cotes : hauteur density.rowHeight ; pastille en retrait de space.scale[0] (4) des bords, rayon radius.control ;
 // retrait horizontal du contenu space.scale[2] (12), soit 8 dans la pastille ; écart entre icône et libellé
 // space.scale[1] (8) ; icône de icons.sizes.dense (16), centrée dans la hauteur par la mise en page (§ 7.10, v0.7). La
-// pastille est le premier enfant du fond et le contour le premier enfant de la pastille : la coque d'essai les lit
-// ainsi.
+// pastille est le premier enfant du fond : la coque d'essai la lit ainsi.
 T.ItemDelegate {
     id: rangee
 
     required property int index
     property string icone
     property bool selectionnee: false
-    property bool forcerContour: false
     property Component accessoire: null
     property Component suffixe: null
     property bool accentue: false
     property bool pleine: false
     property color teinteIcone: "transparent"
     property color teinteTexte: "transparent"
+    property color teinteSecondaire: Theme.color?.textSecondary ?? "transparent"
+    property color teinteTertiaire: Theme.color?.textTertiary ?? "transparent"
+    readonly property color encreSecondaire: ressortSecondaire.value
+    readonly property color encreTertiaire: ressortTertiaire.value
 
     readonly property alias etat: etat
+    readonly property bool dnSurPlaque: etat.sousCurseur
     readonly property alias fondIcone: fondIcone
     readonly property alias fondTexte: fondTexte
     property bool gras: accentue || (vue?.navigation ?? false) && etat.selectionne
@@ -72,8 +81,7 @@ T.ItemDelegate {
     // viseraient cet enfant, qui n'est pas le délégué.
     readonly property ListView vue: ListView.view
     readonly property bool courante: ListView.isCurrentItem
-    readonly property bool contourMontre: forcerContour || courante && !(vue?.selectionSuitSurvol ?? false)
-        && (vue?.activeFocus ?? false) && (vue?.focusClavier ?? false)
+    readonly property bool dansListe: vue?.curseurDedans !== undefined
 
     signal active()
 
@@ -84,7 +92,7 @@ T.ItemDelegate {
     implicitHeight: Theme.density?.rowHeight ?? 0
     horizontalPadding: Theme.space?.scale[2] ?? 0
 
-    // clic — fait de la rangée la rangée courante, donne le focus à la liste sans montrer le contour, puis
+    // clic — fait de la rangée la rangée courante, donne le focus à la liste sans le compter comme clavier, puis
     // émet active(). Entrées : aucune. Sortie : aucune. Erreurs : aucune ; hors d'une ListView, seul active()
     // est émis. Dépendances : vue (Liste).
     onClicked: {
@@ -96,59 +104,63 @@ T.ItemDelegate {
         active()
     }
 
-    // survol — dans une liste qui porte selectionSuitSurvol (un menu), fait de la rangée survolée la rangée
-    // courante, donc la rangée sélectionnée. Entrées : aucune. Sortie : aucune. Erreurs : aucune ; ailleurs, et
-    // quand le pointeur quitte la rangée, rien ne se passe. Dépendances : vue (Liste, selectionSuitSurvol).
-    onHoveredChanged: if (hovered && (vue?.selectionSuitSurvol ?? false)) vue.currentIndex = index
+    // survol — dans une Liste, fait de la rangée survolée la rangée courante, donc la rangée sélectionnée ; l'Etat
+    // lui donne le curseur. Entrées : aucune. Sortie : aucune. Erreurs : aucune ; hors d'une Liste, et quand le
+    // pointeur quitte la rangée, la rangée courante ne change pas. Dépendances : vue (Liste), dansListe.
+    onHoveredChanged: if (hovered && dansListe) vue.currentIndex = index
 
-    // La rangée reste au rôle de son conteneur : pas de cran, donc le dnRole hérité tel quel.
+    // La rangée reste au rôle de son conteneur : pas de cran, donc le dnRole hérité tel quel. Dans une Liste, la
+    // plaque peint le fond à sa place ; ailleurs, survolée sans le curseur, elle reste transparente.
     Etat {
         id: etat
         controle: rangee
         role: Etats.herite(rangee, "dnRole", "surfaceWindow")
         selectionne: (rangee.vue?.selectionSuitCourant ?? true) ? rangee.courante : rangee.selectionnee
-        focusDansGroupe: rangee.vue?.activeFocus ?? true
+        suitCurseur: true
+        curseurAplat: true
+        peintFond: !rangee.dansListe
         fondReposTransparent: true
+        fondSurvolTransparent: true
         selectionNeutre: rangee.vue?.navigation ?? false
     }
 
     // Couleurs de l'icône et du libellé : celles de l'état (ou de l'accent autonome pour un libellé accentué), ou
-    // la teinte imposée quand elle n'est pas transparente, en fondu.
+    // la teinte imposée quand elle n'est pas transparente, en fondu ; sous le curseur, toujours celles de l'état.
     ColorSpring {
         id: fondIcone
-        target: rangee.teinteIcone.a > 0 ? rangee.teinteIcone : etat.texte
+        target: rangee.teinteIcone.a > 0 && !etat.sousCurseur ? rangee.teinteIcone : etat.texteCible
     }
 
     ColorSpring {
         id: fondTexte
-        target: rangee.teinteTexte.a > 0 ? rangee.teinteTexte
-            : rangee.accentue ? Theme.color?.accentStandalone ?? "transparent" : etat.texte
+        target: etat.sousCurseur ? etat.texteCible : rangee.teinteTexte.a > 0 ? rangee.teinteTexte
+            : rangee.accentue ? Theme.color?.accentStandalone ?? "transparent" : etat.texteCible
     }
 
-    // Fond : une pastille de sélection et de survol, premier enfant du fond, en retrait de space.scale[0] de
-    // chaque bord de la liste et sur toute la hauteur, au rayon radius.control, comme la sélection d'une barre
-    // latérale ou d'un menu de macOS (§ 7.10). Son premier enfant est le contour de focus : sans fond, il suit le
-    // même rectangle arrondi, rentré de -rowOffset (−1 donne un pixel vers l'intérieur) et au rayon diminué
-    // d'autant.
+    // Encres d'un suffixe : la teinte hors du curseur, l'encre de la plaque sous lui. Sans suffixe, la cible reste
+    // transparente et le ressort ne démarre jamais (sobriété, D80).
+    ColorSpring {
+        id: ressortSecondaire
+        target: !rangee.suffixe ? "transparent" : etat.sousCurseur ? etat.encres?.text ?? "transparent"
+            : rangee.teinteSecondaire
+    }
+
+    ColorSpring {
+        id: ressortTertiaire
+        target: !rangee.suffixe ? "transparent" : etat.sousCurseur ? etat.encres?.text ?? "transparent"
+            : rangee.teinteTertiaire
+    }
+
+    // Fond : une pastille de sélection et de curseur, premier enfant du fond, en retrait de space.scale[0] de
+    // chaque bord et sur toute la hauteur, au rayon radius.control, comme la sélection d'une barre latérale ou d'un
+    // menu de macOS (§ 7.10) ; transparente dans une Liste, dont la plaque prend le relais.
     background: Item {
         Rectangle {
-            id: pastille
             anchors.fill: parent
             anchors.leftMargin: Theme.space?.scale[0] ?? 0
             anchors.rightMargin: anchors.leftMargin
             radius: Theme.radius?.control ?? 0
             color: etat.fond
-
-            Rectangle {
-                readonly property real decalage: Theme.focus?.rowOffset ?? 0
-                anchors.fill: parent
-                anchors.margins: -decalage
-                radius: pastille.radius + decalage
-                visible: rangee.contourMontre
-                color: "transparent"
-                border.width: Theme.focus?.width ?? 0
-                border.color: (etat.inactif ? Theme.focus?.colorMuted : Theme.focus?.color) ?? "transparent"
-            }
         }
     }
 

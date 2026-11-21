@@ -8,9 +8,10 @@ import "../Theme"
 // glissement, à la forme de macOS (§ 7.10). La piste, en pilule, est au fond du bureau (elevation.e0, bible :
 // « piste à E0 ») ; la partie remplie, de l'origine au centre de la poignée, est à l'accent, ou à l'accent sans
 // chroma sous le modificateur inactive (§ 7.5) ; la poignée, ronde et claire, prend le rôle color.knob du thème
-// actif, et knob.disabled, précalculé par l'émetteur, quand le curseur est désactivé. L'anneau de focus entoure
-// la poignée, sur visualFocus ; un clic ne vole pas le focus d'un champ (focusPolicy
-// Qt.TabFocus, § 7.3).
+// actif, et knob.disabled, précalculé par l'émetteur, quand le curseur est désactivé. Le focus clavier n'a pas
+// d'anneau (L2-73), la rangée qui porte le curseur le montre ; un clic ne vole pas le focus d'un champ (focusPolicy
+// Qt.TabFocus, § 7.3). Sur la plaque d'accent du curseur (Etat.inverseSurPlaque), la partie remplie prend l'encre
+// de la plaque (le sur-accent) et la poignée son accent, en fondu au ressort des états (L2-73).
 // Entrées : value, from, to, stepSize et le reste de l'API de T.Slider ; l'orientation verticale n'est pas
 // habillée.
 // Sorties : etat, l'Etat de la poignée (rôle, interaction, sélection, couleurs) ; down, copie de pressed, que
@@ -19,7 +20,7 @@ import "../Theme"
 // Quand le thème traite les contrôles blancs (au jour), la poignée est cernée du contour controls.outline et porte
 // l'ombre controls.shadow, qui la détachent de la piste et du fond.
 // Dépendances : QtQuick.Templates, Quickshell (QsWindow : rapport de pixels, pour le filet), Theme (density,
-// elevation, stateColors, color.knob, knob.disabled, controls, hairline), Etat, AnneauFocus, OmbreControle.
+// elevation, stateColors, color.knob, knob.disabled, controls, hairline, ColorSpring), Etat, OmbreControle.
 // Cotes : largeur implicite density.sliderWidth, piste de density.sliderTrack d'épaisseur, poignée de
 // density.sliderHandle ; rayons en demi-hauteur.
 T.Slider {
@@ -37,6 +38,19 @@ T.Slider {
         id: etat
         controle: curseur
         role: "controlRaised"
+        inverseSurPlaque: true
+    }
+
+    // Couleurs de la partie remplie et de la poignée : l'accent (désactivé : la couleur désactivée de la sélection)
+    // et le bouton clair du thème, ou, sur la plaque, l'encre et l'accent de la plaque.
+    ColorSpring {
+        id: teinteRemplie
+        target: (etat.surPlaque ? etat.encres?.text : etat.encres?.fill) ?? "transparent"
+    }
+    ColorSpring {
+        id: teintePoignee
+        target: (etat.surPlaque ? etat.encres?.fill
+                 : etat.interaction === "disabled" ? Theme.knob?.disabled : Theme.color?.knob) ?? "transparent"
     }
 
     background: Rectangle {
@@ -53,8 +67,7 @@ T.Slider {
             width: curseur.visualPosition * (curseur.availableWidth - curseur.poignee) + curseur.poignee / 2
             height: parent.height
             radius: height / 2
-            color: Theme.stateColors(etat.role, etat.inactif ? "activeMuted" : "active",
-                                     etat.interaction === "disabled" ? "disabled" : "rest")?.fill ?? "transparent"
+            color: teinteRemplie.value
         }
     }
 
@@ -64,18 +77,12 @@ T.Slider {
         width: curseur.poignee
         height: width
         radius: width / 2
-        color: (etat.interaction === "disabled" ? Theme.knob?.disabled : Theme.color?.knob) ?? "transparent"
+        color: teintePoignee.value
         border.width: Theme.controls?.outline ? Theme.hairline(QsWindow.window?.devicePixelRatio ?? 1) ?? 0 : 0
         border.color: Theme.controls?.outline ?? "transparent"
 
         OmbreControle {
             cible: parent
-        }
-
-        AnneauFocus {
-            cible: parent
-            montre: curseur.visualFocus
-            inactif: etat.inactif
         }
     }
 }

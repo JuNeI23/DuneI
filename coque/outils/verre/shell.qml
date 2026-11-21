@@ -78,7 +78,6 @@ ShellRoot {
 
             Liste {
                 focus: true
-                selectionSuitSurvol: true
                 implicitWidth: 3 * Theme.space.scale[7]
                 implicitHeight: count * Theme.density.rowHeight
                 model: [{ texte: "Ouvrir" }, { texte: "Copier" }, { texte: "Supprimer" }]
@@ -98,7 +97,6 @@ ShellRoot {
 
             Liste {
                 focus: true
-                selectionSuitSurvol: true
                 implicitWidth: 3 * Theme.space.scale[7]
                 implicitHeight: count * Theme.density.rowHeight
                 model: [{ texte: "Ouvrir" }, { texte: "Copier" }]

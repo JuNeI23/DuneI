@@ -7,17 +7,21 @@ import "../Composants/etats.js" as Etats
 // Rôle : montre le contenu de la notification (CorpsNotification, sans ligne d'en-tête : le groupe nomme déjà
 // l'application) sans plaque propre : on ne pose pas de verre sur du verre. Au survol, elle prend l'état de rangée de
 // la bible (pastille de survol, transparente au repos), déplie ses actions en texte et montre, à la place de l'heure,
-// son bouton d'écart. Un clic hors des actions ouvre la notification (Attente.ouvrir) ; le bouton l'écarte. Au
-// clavier, l'entrée courante du panneau porte le contour de focus des rangées.
+// son bouton d'écart. Un clic hors des actions ouvre la notification (Attente.ouvrir) ; le bouton l'écarte. Au survol
+// comme au clavier (l'entrée courante du panneau), elle prend le curseur de la vue du panneau (VueCurseur) :
+// l'aplat d'accent de la plaque des listes, sans contour de focus ; ses textes passent alors au sur-accent, en
+// fondu (L2-73). Survolée, elle devient aussi l'entrée courante du panneau, comme la rangée d'un menu de macOS :
+// Entrée et Suppr agissent sur la ligne qui porte la plaque (conception L2-73, arbitrage 1).
 // Mouvement : la ligne se déplie et se replie en hauteur et en fondu au ressort « reveal », découpée pendant le
 // mouvement (D157) : quand son groupe se déplie ou se replie (montree), quand elle arrive dans un panneau déjà
 // monté, et quand sa notification est fermée (sortante) ; repliée et sortante, elle fait oublier son entrée à
 // l'attente.
 // Entrées : attendue, l'Attendue montrée ; attente, l'Attente ; hote, le Panneau (courante, clavier, pret) ;
 // montree, faux quand le groupe replié la cache.
-// Sorties : hovered et down, lus par son Etat ; height, hauteur montrée.
-// Erreurs : aucune. Dépendances : CorpsNotification, Etat, Icone, Ressort, etats.js, Theme (panneau, space, radius,
-// focus, icons, color), Attente (ouvrir, agir, ecarter, oublier).
+// Sorties : hovered, down et visualFocus (vrai pour l'entrée courante au clavier), lus par son Etat ; dnSurPlaque,
+// vrai sous le curseur ; etat et contenuNotification, lus par les essais ; height, hauteur montrée.
+// Erreurs : aucune. Dépendances : CorpsNotification, Etat, Icone, Ressort, ColorSpring, etats.js, VueCurseur (par
+// Etat), Theme (panneau, space, radius, icons, color), Attente (ouvrir, agir, ecarter, oublier).
 // Cotes : retrait intérieur de space.scale[1] (8) ; pastille au rayon radius.control ; bouton d'écart de
 // icons.sizes.dense, glyphe edit-clear.
 Item {
@@ -29,6 +33,10 @@ Item {
     property bool montree: true
     readonly property bool hovered: survol.hovered
     readonly property bool down: clic.pressed
+    readonly property alias etat: etat
+    readonly property alias contenuNotification: contenu
+    readonly property bool visualFocus: courante
+    readonly property bool dnSurPlaque: etat.sousCurseur
     readonly property bool courante: hote.courante === attendue && hote.clavier
     readonly property real retrait: Theme.space?.scale[1] ?? 0
     readonly property bool presente: montree && !(attendue?.sortante ?? true)
@@ -46,6 +54,11 @@ Item {
 
     Ressort { id: presence; transition: "reveal"; cible: ligne.presente ? 1 : 0; onMovingChanged: ligne.verifier() }
     Ressort { id: fondu; transition: "reveal"; nature: "fondu"; cible: presence.cible }
+    // Encre du bouton d'écart : le texte secondaire hors de la plaque, le sur-accent sur elle, en fondu.
+    ColorSpring {
+        id: encreEcart
+        target: (etat.sousCurseur ? Theme.color?.onAccent : Theme.color?.textSecondary) ?? "transparent"
+    }
     Ressort { id: ecartable; transition: "state"; nature: "fondu"; cible: ligne.hovered ? 1 : 0 }
 
     // Une ligne qui naît dans un panneau déjà monté se déplie ; à l'ouverture du panneau, elle est posée.
@@ -57,6 +70,9 @@ Item {
     }
 
     HoverHandler { id: survol }
+    // survol — fait de la ligne survolée l'entrée courante du panneau ; le pointeur qui la quitte ne change rien.
+    // Entrées, sortie, erreurs : aucune. Dépendances : hote (courante), attendue.
+    onHoveredChanged: if (hovered) hote.courante = attendue
     // Clic hors des actions et du bouton d'écart, qui saisissent le leur dès l'appui.
     TapHandler { id: clic; gesturePolicy: TapHandler.ReleaseWithinBounds; onTapped: ligne.attente.ouvrir(ligne.attendue) }
 
@@ -64,7 +80,10 @@ Item {
         id: etat
         controle: ligne
         role: Etats.herite(ligne, "dnRole", "surfaceWindow")
+        suitCurseur: true
+        curseurAplat: true
         fondReposTransparent: true
+        fondSurvolTransparent: true
         peintTexte: false
     }
 
@@ -73,17 +92,6 @@ Item {
         anchors.fill: parent
         radius: Theme.radius?.control ?? 0
         color: etat.fond
-
-        Rectangle {
-            readonly property real decalage: Theme.focus?.rowOffset ?? 0
-            anchors.fill: parent
-            anchors.margins: -decalage
-            radius: pastille.radius + decalage
-            visible: ligne.courante
-            color: "transparent"
-            border.width: Theme.focus?.width ?? 0
-            border.color: Theme.focus?.color ?? "transparent"
-        }
     }
 
     CorpsNotification {
@@ -96,6 +104,7 @@ Item {
         lignes: Theme.panneau?.lignes ?? 1
         enTete: false
         survolee: ligne.hovered
+        surPlaque: etat.sousCurseur
         estompe: ecartable.value
         onAction: a => ligne.attente.agir(ligne.attendue, a)
     }
@@ -109,7 +118,7 @@ Item {
         opacity: ecartable.value
         taille: Theme.icons?.sizes.dense ?? 0
         nom: "edit-clear"
-        couleur: Theme.color?.textSecondary ?? "transparent"
+        couleur: encreEcart.value
 
         TapHandler { gesturePolicy: TapHandler.ReleaseWithinBounds; onTapped: ligne.attente.ecarter(ligne.attendue) }
     }

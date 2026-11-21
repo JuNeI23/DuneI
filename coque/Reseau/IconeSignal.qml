@@ -8,7 +8,9 @@ import "../Barre/icones.js" as Icones
 // secondaire, aux paliers de la barre (iconeForce) : la part absente du signal reste lisible, comme dans la maquette
 // de la fenêtre Réseau. Hors de portée, seul le glyphe discret paraît. Une seule taille, icons.sizes.dense, pour
 // toutes les listes de la fenêtre.
-// Entrées : force, de 0 à 100, ou -1 hors de portée ; securise, vrai pour montrer le cadenas (faux par défaut).
+// Entrées : force, de 0 à 100, ou -1 hors de portée ; securise, vrai pour montrer le cadenas (faux par défaut) ;
+// teinte et teinteCadenas, couleurs de la force et du cadenas, texte secondaire et tertiaire par défaut (la rangée
+// qui porte le curseur y met l'encre de sa plaque).
 // Sorties : aucune. Erreurs : aucune ; avant le chargement des tokens, l'icône est nulle et transparente.
 // Dépendances : Icone, Theme (icons, space, color), icones.js (iconeForce).
 Row {
@@ -16,6 +18,8 @@ Row {
 
     property int force: -1
     property bool securise: false
+    property color teinte: Theme.color?.textSecondary ?? "transparent"
+    property color teinteCadenas: Theme.color?.textTertiary ?? "transparent"
     readonly property int taille: Theme.icons?.sizes.dense ?? 0
 
     spacing: Theme.space?.scale[0] ?? 0
@@ -32,13 +36,13 @@ Row {
             visible: iconeSignal.force >= 0
             nom: Icones.iconeForce(iconeSignal.force / 100)
             taille: iconeSignal.taille
-            couleur: Theme.color?.textSecondary ?? "transparent"
+            couleur: iconeSignal.teinte
         }
     }
     Icone {
         visible: iconeSignal.securise
         nom: "network-wireless-encrypted"
         taille: iconeSignal.taille
-        couleur: Theme.color?.textTertiary ?? "transparent"
+        couleur: iconeSignal.teinteCadenas
     }
 }

@@ -2,9 +2,9 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.61. Historique en fin de document.
+Version 1.62. Historique en fin de document.
 
-La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **184 éléments** répartis en **cinq lots**, sur six chantiers.
+La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **189 éléments** répartis en **cinq lots**, sur six chantiers.
 
 Ce document dit ce qui est attendu, dans quel ordre, et à quelle condition c'est terminé. Il ne dit pas à quoi ça ressemble — c'est le rôle de la bible de design. En cas de contradiction : la bible l'emporte sur l'apparence, ce document l'emporte sur le périmètre.
 
@@ -326,8 +326,12 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L2-70 | C | Écrit | Croix de fermeture des cartes — une petite croix au survol ferme une carte de notification sans l'ouvrir, le clic sur la carte ouvrant désormais l'application (D189) |
 | L2-71 | C | Écrit | Recherche de fichiers dans le lanceur — repoussée par la fiche du lanceur (L2-16), sans lot fixé ; à repérer (index, `fd`, `plocate`, rices) avant toute décision |
 | L2-72 | C | Écrit | Sélecteur d'émojis — un sélecteur à part, avec son propre raccourci, pas une source du lanceur ; Nicolas en voit l'intérêt |
-| L2-73 | B | Écrit | Revue des autres modules de la coque contre la règle « l'accent de sélection n'appartient qu'à l'élément sous le curseur, un seul curseur par vue » (D191, bible 0.40) : barre, popovers, panneau de notifications, Paramètres, galerie |
+| L2-73 | B | Fait | Revue des autres modules de la coque contre la règle « l'accent de sélection n'appartient qu'à l'élément sous le curseur, un seul curseur par vue » (D191, bible 0.40) — **fait (D197 à D199)** : un arbitre `VueCurseur` par vue, la plaque d'accent plate comme seule marque à la souris comme au clavier, l'anneau de focus retiré ; indicateurs distincts des sélections ; contrôles isolés sous `ZoneCurseur`, inversion des contrôles allumés sur la plaque, destructif en rouge, jeton `[reglages] evidence` ; popovers et panneau des notifications sans plaque autour des glyphes, bascules et jauges (`marque` faux), « Tout effacer » en lien rouge ; Réseau, Notifications, Paramètres, Audio, Bluetooth et Énergie revus, galerie déjà conforme |
 | L2-74 | C | Écrit | Lanceur, dettes de la relecture finale (L2-16) — mineurs relevés le 2026-11-20, aucun bloquant : (a) M2, la sélection tient par index et non par résultat quand la liste se réordonne (une fenêtre renommée, la réponse du calcul en tête) : `borner` doit d'abord replacer la sélection sur `cleChoisie` ; (b) M3, les touches ne sont pas filtrées pendant le fondu de sortie (`CadreLanceur`, `Keys.onPressed` à garder par `Lanceur.ouvert`) ; (c) M4, le relevé d'usage `lanceur.json` grossit sans fin de clés `fen:<adresse>` : élaguer dans `noter` sous un poids seuil, ou ne plus noter les fenêtres ; (d) M5, les fenêtres sont projetées lanceur fermé (`Sources.fenetres`), contre la fiche ; (e) M6, grandeurs écrites en dur à passer en cotes ou en jetons (`Medaillon` 0,68, `Apercu` 0,52, échelle de l'accueil 0,04, survols 0,06 et 0,03, anneau de `Vignette`, garde de 1000 ms) ; (f) M9, `Medaillon` instancie une `IconImage` vide dans tous les médaillons de la coque : la charger par un `Loader` ; (g) M10, l'essai de l'ordre action / retrait écoute tout `closelayer` de `dunei-attention` de la session : filtrer sur l'adresse du calque ; (h) défaut latent du calcul : une ligne « warning » de `qalc` avant le résultat est prise pour la réponse, et le vrai résultat est perdu. Rapport : `.superpowers/sdd/2026-11-19-lanceur/final-review-report.md` |
+| L2-75 | C | Écrit | Indicateur d'activité sur la plaque — dans les suffixes d'une rangée sous le curseur, l'indicateur `Activite` reste à l'accent sur la plaque d'accent, orange sur orange ; il doit prendre l'encre de la plaque comme les chevrons et les compteurs (relecture finale de L2-73) |
+| L2-76 | C | Écrit | Mini-courbe des débits sur la plaque — la courbe à deux séries de la rangée du réseau joint (`PageWifi`) garde ses couleurs catégorielles sur la plaque, faute d'encre de la plaque pour deux séries ; trouver une paire lisible sur l'accent, sans couleur inventée (relecture finale de L2-73) |
+| L2-77 | C | Écrit | « Actualiser » perd le focus clavier — dans la page Wi-Fi de Paramètres, le bouton « Actualiser » perd le focus clavier pendant une recherche de réseaux et ne le retrouve pas à la fin ; le curseur au clavier doit y revenir (relecture de la tâche 4 de L2-73) |
+| L2-78 | C | Écrit | Tests sensibles au minutage — `test_radio_eteinte` et les essais qui attendent 3 s échouent parfois quand la machine est chargée ; remplacer les attentes fixes par des attentes de condition bornées (relevé pendant L2-73) |
 
 ### Lot 3 — la bascule
 
@@ -430,7 +434,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L5-30 | — | Écrit | Résorber les points ouverts de l'annexe C |
 | L5-31 | C | Écrit | Voix de DuneI — remplacer les sons KDE Ocean de L2-68 par une voix propre : une corde ancienne, sablonneuse et brève, enregistrée ou de synthèse modale (quatre tours de Karplus-Strong n'ont pas convaincu, D185). Pistes : cielago, sietch, dunes chantantes, crysknife, bouclier, corne lointaine, variantes du pas sans rythme, espace acoustique unique, jour et nuit, une tonalité par machine, la teinte du thème en note. Maquette et cheminement dans l'atelier, `maquettes/son-notifications/` |
 
-**Volume total : 185 éléments** — 135 écrits, 43 configurés, 5 offerts, 2 mixtes.
+**Volume total : 189 éléments** — 139 écrits, 43 configurés, 5 offerts, 2 mixtes.
 
 Les deux tiers du travail sont de l'écrit, et les trois quarts de cet écrit se concentrent sur la coque et les écrans système. C'est cohérent avec la stratégie retenue, et c'est là que tout le risque se trouve.
 
@@ -534,6 +538,7 @@ Le choix de la distribution de base et du compositeur, précédemment ouverts, s
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-10-12 | Version initiale, 137 éléments |
+| 1.62 | 2026-11-21 | L2-73 fait : le curseur dans toute la coque, une marque unique, la plaque d'accent plate, popovers sans plaque autour des petits contrôles (D197 à D199) ; ajout de L2-75 (activité sur la plaque), L2-76 (mini-courbe sur la plaque), L2-77 (focus d'« Actualiser ») et L2-78 (tests sensibles au minutage) ; 189 éléments |
 | 1.61 | 2026-11-20 | Ajout de L2-74, dettes du lanceur relevées par la relecture finale de L2-16 (M2 à M6, M9, M10, ligne « warning » de qalc) ; 185 éléments |
 | 1.60 | 2026-11-20 | L2-16 fait : lanceur de la coque, wofi retiré (D190 à D196) ; L2-31 précisé « hors du lanceur » ; ajout de L2-71 (recherche de fichiers), L2-72 (sélecteur d'émojis) et L2-73 (revue contre la règle du curseur) ; 184 éléments |
 | 1.59 | 2026-11-18 | L2-69 fait : « Ouvrir » propre à DuneI, clic sur la carte qui ouvre (D189) ; ajout de L2-70, croix de fermeture des cartes ; 181 éléments |

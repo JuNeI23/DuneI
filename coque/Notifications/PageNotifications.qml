@@ -7,28 +7,30 @@ import "../Parametres"
 import "../Reseau"
 
 // PageNotifications — page Notifications de l'application Paramètres (L2-67).
-// Rôle : de haut en bas, la carte d'en-tête (EnTetePage : vignette, « Notifications », phrase d'état « Actives » ou
-// « Ne pas déranger », et l'Interrupteur, à droite, comme celui du Wi-Fi), dont l'interrupteur suit le sens de la
-// bascule du panneau : allumé, les notifications sont actives ; éteint, « ne pas déranger » (D184). Il est d'accord
-// avec la bascule et le clic droit sur la cloche, puisque tous lisent et écrivent EtatNotifications. Puis la carte
-// « Son » (L2-68) : la rangée « Activé », avec son Interrupteur, et la rangée « Volume », un Curseur de 0 à 100 % au pas
-// de 5 et sa valeur ; la rangée de volume se replie au ressort « reveal » quand le son est coupé. Le volume est écrit
-// à chaque pas ; l'aperçu (l'Arrivée au nouveau volume) part une seule fois par geste : au relâchement d'un
-// glissement, ou à chaque pas fait au clavier, jamais pendant un glissement. Puis la carte « Applications retirées »,
-// une rangée par application retirée du panneau (« Ne plus garder »), avec « Remettre » en texte à l'accent, ou,
-// sans application, la ligne « Aucune application retirée ». Remettre une application ne fait pas revenir ses
-// notifications passées. Une rangée qui paraît ou part se déplie ou se replie au ressort « reveal ».
+// Rôle : de haut en bas, la carte d'en-tête (EnTetePage : vignette, « Notifications », phrase d'état « Actives » ou «
+// Ne pas déranger », et l'Interrupteur, à droite, comme celui du Wi-Fi), dont l'interrupteur suit le sens de la bascule
+// du panneau : allumé, les notifications sont actives ; éteint, « ne pas déranger » (D184). Il est d'accord avec la
+// bascule et le clic droit sur la cloche, puisque tous lisent et écrivent EtatNotifications. Puis la carte « Son »
+// (L2-68) : la rangée « Activé », avec son Interrupteur, et la rangée « Volume », un Curseur de 0 à 100 % au pas de 5
+// et sa valeur ; la rangée de volume se replie au ressort « reveal » quand le son est coupé. Le volume est écrit à
+// chaque pas ; l'aperçu (l'Arrivée au nouveau volume) part une seule fois par geste : au relâchement d'un glissement,
+// ou à chaque pas fait au clavier, jamais pendant un glissement. Puis la carte « Applications retirées », une rangée
+// par application retirée du panneau (« Ne plus garder »), avec « Remettre » en bouton plat (texte neutre, plaque sous
+// le curseur), ou, sans application, la ligne « Aucune application retirée ». Remettre une application ne fait pas
+// revenir ses notifications passées. Une rangée qui paraît ou part se déplie ou se replie au ressort « reveal ».
+// Les deux interrupteurs et le curseur de volume, contrôles isolés sans rangée cliquable, sont posés dans une
+// ZoneCurseur : survolés ou atteints au clavier, ils portent la plaque du curseur (L2-73).
 // Le nom montré d'une application est celui de son entrée de bureau (DesktopEntries) quand l'identifiant en désigne
 // une, l'identifiant lui-même sinon.
 // Contrat de page (voir ConteneurPage) : conteneur, atteindre, implicitHeight.
 // Entrées : conteneur, le ConteneurPage, posé par lui ;
 // voix, la lecture des aperçus (Voix par défaut, un témoin dans l'essai).
 // Sorties : phrase, l'état des notifications ; vide, vrai sans application retirée ; interrupteur, enTete,
-// interrupteurSon, curseurVolume, rangeeVolume et carteSon, lus par les essais. Fonctions : atteindre, remettre, rangees, nom,
-// deplacer, relacher.
+// interrupteurSon, curseurVolume, rangeeVolume et carteSon, lus par les essais. Fonctions : atteindre, remettre,
+// rangees, boutonsRemettre, nom, deplacer, relacher.
 // Erreurs : aucune.
 // Dépendances : Quickshell (DesktopEntries, ScriptModel), EnTetePage, TitreSection, Registre (Parametres) ; Groupe,
-// Ligne (Reseau) ; Interrupteur, Curseur, Texte, Ressort ; EtatNotifications, Voix.
+// Ligne (Reseau) ; Bouton, Interrupteur, Curseur, ZoneCurseur, Texte, Ressort ; EtatNotifications, Voix.
 Item {
     id: page
 
@@ -78,6 +80,10 @@ Item {
     // Sortie : tableau de textes. Erreurs : aucune. Dépendances : EtatNotifications.
     function rangees() { return EtatNotifications.retirees.map(nom) }
 
+    // boutonsRemettre — boutons « Remettre » des rangées montrées, dans l'ordre, pour les essais. Entrées : aucune.
+    // Sortie : tableau de Bouton. Erreurs : aucune. Dépendances : retirees (Repeater).
+    function boutonsRemettre() { return Array.from({length: retirees.count}, (_, i) => retirees.itemAt(i).bouton) }
+
     Column {
         id: colonne
         width: parent.width
@@ -90,11 +96,17 @@ Item {
             teinte: page.inscription?.teinte ?? 0
             titre: page.inscription?.libelle ?? ""
             etat: page.phrase
-            Interrupteur {
-                id: interrupteur
-                objectName: "notificationsActives"
-                checked: !EtatNotifications.nePasDeranger
-                onToggled: { EtatNotifications.poser(!checked); checked = Qt.binding(() => !EtatNotifications.nePasDeranger) }
+            // Contrôle isolé : sa zone porte la plaque du curseur, au survol comme au focus clavier (L2-73).
+            ZoneCurseur {
+                Interrupteur {
+                    id: interrupteur
+                    objectName: "notificationsActives"
+                    checked: !EtatNotifications.nePasDeranger
+                    onToggled: {
+                        EtatNotifications.poser(!checked)
+                        checked = Qt.binding(() => !EtatNotifications.nePasDeranger)
+                    }
+                }
             }
         }
 
@@ -108,11 +120,16 @@ Item {
                 width: carteSon.width
                 filet: false
                 libelle: qsTr("Activé")
-                Interrupteur {
-                    id: interrupteurSon
-                    objectName: "sonActif"
-                    checked: EtatNotifications.son
-                    onToggled: { EtatNotifications.poserSon(checked); checked = Qt.binding(() => EtatNotifications.son) }
+                ZoneCurseur {
+                    Interrupteur {
+                        id: interrupteurSon
+                        objectName: "sonActif"
+                        checked: EtatNotifications.son
+                        onToggled: {
+                            EtatNotifications.poserSon(checked)
+                            checked = Qt.binding(() => EtatNotifications.son)
+                        }
+                    }
                 }
             }
             Item {
@@ -138,13 +155,15 @@ Item {
                     libelle: qsTr("Volume")
                     Row {
                         spacing: Theme.space?.scale[2] ?? 0
-                        Curseur {
-                            id: curseurVolume
+                        ZoneCurseur {
                             anchors.verticalCenter: parent.verticalCenter
-                            from: 0; to: 100; stepSize: 5
-                            value: EtatNotifications.volumeSon
-                            onMoved: page.deplacer(value, pressed)
-                            onPressedChanged: if (!pressed) page.relacher()
+                            Curseur {
+                                id: curseurVolume
+                                from: 0; to: 100; stepSize: 5
+                                value: EtatNotifications.volumeSon
+                                onMoved: page.deplacer(value, pressed)
+                                onPressedChanged: if (!pressed) page.relacher()
+                            }
                         }
                         // Largeur de « 100 % » : le curseur ne bouge pas quand la valeur change de nombre de chiffres.
                         Texte {
@@ -169,11 +188,13 @@ Item {
             width: parent.width
 
             Repeater {
+                id: retirees
                 model: ScriptModel { values: EtatNotifications.retirees }
                 delegate: Item {
                     id: rangee
                     required property string modelData
                     required property int index
+                    readonly property alias bouton: remettre
                     width: carteRetirees.width
                     height: Math.max(0, apparition.value) * ligne.implicitHeight
                     clip: apparition.moving
@@ -183,14 +204,11 @@ Item {
                         width: parent.width
                         filet: rangee.index > 0
                         libelle: page.nom(rangee.modelData)
-                        Texte {
-                            moyen: true
-                            color: Theme.color?.accentStandalone ?? "transparent"
+                        Bouton {
+                            id: remettre
+                            plat: true
                             text: qsTr("Remettre")
-                            TapHandler {
-                                gesturePolicy: TapHandler.ReleaseWithinBounds
-                                onTapped: page.remettre(rangee.modelData)
-                            }
+                            onClicked: page.remettre(rangee.modelData)
                         }
                     }
                 }

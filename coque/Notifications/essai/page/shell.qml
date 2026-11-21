@@ -4,11 +4,13 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import "Theme"
+import "Composants"
 import "Notifications"
 
 // Coque d'essai de la page Notifications de Paramètres, sous la plateforme offscreen.
 // Rôle : pose la vraie PageNotifications, dans une fenêtre jamais montrée, sur un conteneur factice, et la pilote par
-// IPC : interrupteur, « Remettre », lecture des rangées, carte Son (L2-68, Voix remplacée par un témoin). tests/test_notifications.py (PageNotificationsTest) la lance.
+// IPC : interrupteur, « Remettre », lecture des rangées, carte Son (L2-68, Voix remplacée par un témoin), focus et
+// plaques des contrôles isolés. tests/test_notifications.py (PageNotificationsTest) la lance.
 // Entrées : DUNEI_TOKENS_DIR, lu par Theme ; DUNEI_ETAT_DIR, où EtatNotifications lit et écrit son fichier.
 // Sortie : « essai : prêt » au démarrage ; voir l'IpcHandler. Erreurs : celles de Theme, dans le journal.
 // Dépendances : quickshell ≥ 0.3 (IpcHandler, FloatingWindow), PageNotifications, EtatNotifications, liens Theme,
@@ -35,11 +37,18 @@ ShellRoot {
         implicitHeight: 800
         color: "transparent"
 
-        PageNotifications {
-            id: page
+        // Racine visuelle de la vue, qui porte l'arbitre du curseur comme FenetreParametres en production.
+        Item {
+            property VueCurseur dnVue: VueCurseur {}
             width: 600
-            conteneur: conteneur
-            voix: temoin
+            height: 800
+
+            PageNotifications {
+                id: page
+                width: 600
+                conteneur: conteneur
+                voix: temoin
+            }
         }
     }
 
@@ -55,6 +64,23 @@ ShellRoot {
             return JSON.stringify({interrupteur: page.interrupteur.checked, nePasDeranger: EtatNotifications.nePasDeranger,
                 retirees: EtatNotifications.retirees, rangees: page.rangees(), vide: page.vide, phrase: page.phrase,
                 montre: conteneur.montre?.objectName ?? ""})
+        }
+
+        // remettres — JSON des boutons « Remettre » : [{texte, plat, danger, couleur, fond, sous}], texte du bouton,
+        // vrai pour un bouton plat ou destructeur, couleur de son texte, fond affiché, et si le curseur est sur lui.
+        // Entrées : aucune. Sortie : texte. Erreurs : aucune. Dépendances : page (boutonsRemettre).
+        function remettres(): string {
+            return JSON.stringify(page.boutonsRemettre().map(b => ({texte: b.text, plat: b.plat, danger: b.danger,
+                couleur: String(b.teinte), fond: String(b.background.color), sous: b.etat.sousCurseur,
+                neutre: String(b.etat.texteNeutre)})))
+        }
+
+        // curseur — pose le curseur de la vue sur le bouton « Remettre » d'une rangée, comme le survol, ou le lâche.
+        // Entrée : rang de la rangée, -1 pour lâcher. Sortie : aucune. Erreurs : TypeError au journal sans cette
+        // rangée. Dépendances : page (boutonsRemettre).
+        function curseur(rang: int): void {
+            const vue = page.parent.dnVue
+            if (rang < 0) vue.porteur = null; else vue.prendre(page.boutonsRemettre()[rang])
         }
 
         // basculer — clic sur l'interrupteur des notifications, dans l'en-tête. Sortie : aucune.
@@ -93,6 +119,19 @@ ShellRoot {
         // Entrées : v, en pour cent ; enGlissement. Sortie : aucune.
         function deplacer(v: int, enGlissement: bool): void { page.curseurVolume.value = v; page.deplacer(v, enGlissement) }
         function relacher(): void { page.relacher() }
+
+        // focaliser — donne le focus du clavier à l'interrupteur de l'en-tête, à celui du son ou au curseur de volume,
+        // comme la tabulation. Entrée : nom, « interrupteur », « interrupteurSon » ou « curseurVolume ». Sortie :
+        // aucune. Erreurs : TypeError au journal pour un nom inconnu. Dépendances : page.
+        function focaliser(nom: string): void { page[nom].forceActiveFocus(Qt.TabFocusReason) }
+
+        // plaques — JSON {interrupteur, interrupteurSon, curseurVolume} : vrai si le parent du contrôle (sa
+        // ZoneCurseur) porte la plaque du curseur (dnSurPlaque). Sortie : texte. Erreurs : aucune. Dépendances : page.
+        function plaques(): string {
+            const sur = c => c.parent?.dnSurPlaque === true
+            return JSON.stringify({interrupteur: sur(page.interrupteur), interrupteurSon: sur(page.interrupteurSon),
+                curseurVolume: sur(page.curseurVolume)})
+        }
 
         // atteindre — demande de la recherche. Entrée : ancre, la seconde partie du chemin. Sortie : aucune.
         function atteindre(ancre: string): void { page.atteindre(["notifications", ancre]) }

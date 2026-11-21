@@ -3,6 +3,7 @@ import QtQuick.Layouts
 import Quickshell.Networking
 import "../Theme"
 import "../Composants"
+import "../Composants/etats.js" as Etats
 import "../Parametres"
 import "../Barre/icones.js" as Icones
 import "nmcli.js" as Nmcli
@@ -12,7 +13,8 @@ import "nmcli.js" as Nmcli
 // cache (il n'est plus détruit à la fermeture ; D80 reste vrai pour un popover non hébergé), tenu à la marge d'écran
 // des overlays ancrés à la barre (Overlay.margeEcran). Il suit les popovers sobres d'inspiration/anhphong : compact,
 // carré, sur le verre de E3 (D103), il porte de haut en bas : l'en-tête, dont la bascule à glyphe allume ou coupe le
-// Wi-Fi (accent plein allumée, neutre éteinte), avec le nom du réseau joint et son état (« Connecté », « Connecté
+// Wi-Fi (accent plein allumée, neutre éteinte ; sa zone reste neutre, sans plaque du curseur, recette de L2-73),
+// avec le nom du réseau joint et son état (« Connecté », « Connecté
 // sans internet », « Portail de connexion », « Partage du téléphone »…) ; derrière un portail captif, « Ouvrir la
 // page de connexion » ; « Réseaux à proximité », petite étiquette au texte secondaire avec le bouton de nouvelle
 // recherche, que l'indicateur d'activité remplace tant que le balayage relancé n'a pas rendu sa liste ; la liste des
@@ -47,7 +49,7 @@ import "nmcli.js" as Nmcli
 // lu par les essais ; fonduContenu, fonduDisque, reinitialiser(), voir ci-dessus.
 // Erreurs : un connectionFailed déplie la ligne de mot de passe avec « Mot de passe refusé » (raison
 // d'authentification) ou « Connexion impossible ». Le texte d'un mot de passe ne passe jamais au journal.
-// Dépendances : Overlay (famille contextuel), Bascule, Activite, Infobulle, Rangee, Bouton, BlocSecret, Jonction, Separateur,
+// Dépendances : Overlay (famille contextuel), Bascule, ZoneCurseur, VueCurseur, Activite, Infobulle, Rangee, Bouton, BlocSecret, Jonction, Separateur,
 // Icone, Texte, Theme (density, space, material, reglages, motion par Ressort), Ressort, EtatReseau, EtatParametres,
 // nmcli.js (profilsFenetre, repartir, resume), icones.js (iconeForce), Quickshell.Networking (ConnectionFailReason, ConnectionState, WifiSecurityType).
 // Cotes : surface de 72 × space.scale[0] (288 px) de large comme l'essai D5, panneau de 280 px dans le retrait de
@@ -79,11 +81,15 @@ Overlay {
     Component.onDestruction: if (ouvert) etat.recherche = false
 
     // BoutonIcone — bouton réduit à une icône, sans fond, comme les boutons d'outil de macOS.
-    // Rôle : icône au texte secondaire, au texte primaire survolée ; le clic émet clique().
-    // Entrées : nom, l'icône. Sorties : signal clique(). Erreurs : aucune. Dépendances : Icone, Theme.
+    // Rôle : icône au texte secondaire, au texte primaire survolée, en fondu au ressort des états ; posée sur une
+    // plaque du curseur (un ancêtre déclare dnSurPlaque), elle passerait au sur-accent (color.onAccent), ce que la
+    // zone neutre du popover ne fait jamais ; le clic émet clique().
+    // Entrées : nom, l'icône. Sorties : signal clique() ; surPlaque, vrai sur la plaque. Erreurs : aucune.
+    // Dépendances : Icone, Theme (density, icons, color, ColorSpring), etats.js (herite).
     component BoutonIcone: Item {
         id: boutonIcone
         property string nom
+        readonly property bool surPlaque: Etats.herite(boutonIcone, "dnSurPlaque", false)
         signal clique()
         implicitWidth: Theme.density?.controlHeight ?? 0
         implicitHeight: implicitWidth
@@ -92,7 +98,12 @@ Overlay {
             anchors.centerIn: parent
             nom: boutonIcone.nom
             taille: Theme.icons?.sizes.dense ?? 0
-            couleur: (survol.hovered ? Theme.color?.textPrimary : Theme.color?.textSecondary) ?? "transparent"
+            couleur: encre.value
+        }
+        ColorSpring {
+            id: encre
+            target: (boutonIcone.surPlaque ? Theme.color?.onAccent : survol.hovered ? Theme.color?.textPrimary
+                     : Theme.color?.textSecondary) ?? "transparent"
         }
         HoverHandler { id: survol }
         TapHandler { onTapped: boutonIcone.clique() }
@@ -126,6 +137,8 @@ Overlay {
     FocusScope {
         id: panneau
 
+        // Arbitre du curseur du popover : une seule rangée ou un seul contrôle porte le curseur à la fois (L2-73).
+        property VueCurseur dnVue: VueCurseur {}
         readonly property real marge: Theme.space?.scale[2] ?? 0
         readonly property real hauteurLigne: (Theme.density?.controlHeight ?? 0) + (Theme.space?.scale[0] ?? 0)
         readonly property var etat: popover.etat
@@ -332,18 +345,21 @@ Overlay {
         // Elle suit la radio réelle après chaque bascule ; sans carte Wi-Fi, désactivée, elle montre le lien. Elle est
         // déclarée avant la colonne : elle garde sa place dans l'ordre de tabulation, la première, et se pose par-dessus
         // l'emplacement que l'en-tête lui réserve, au pixel près.
-        Bascule {
-            id: bascule
-            objectName: "bascule"
+        ZoneCurseur {
+            marque: false
             z: 1
             x: colonne.x + entete.x + emplacement.x
             y: colonne.y + entete.y + emplacement.y
             opacity: panneau.fonduDisque
-            readonly property bool allumee: panneau.etat.carte ? panneau.etat.radio : panneau.etat.connecte
-            icone: panneau.etat.icone
-            enabled: panneau.etat.carte
-            checked: allumee
-            onToggled: { panneau.etat.allumer(checked); checked = Qt.binding(() => bascule.allumee) }
+            Bascule {
+                id: bascule
+                objectName: "bascule"
+                readonly property bool allumee: panneau.etat.carte ? panneau.etat.radio : panneau.etat.connecte
+                icone: panneau.etat.icone
+                enabled: panneau.etat.carte
+                checked: allumee
+                onToggled: { panneau.etat.allumer(checked); checked = Qt.binding(() => bascule.allumee) }
+            }
         }
 
         ColumnLayout {
@@ -388,7 +404,6 @@ Overlay {
                     Layout.alignment: Qt.AlignRight
                     icone: "web-browser"
                     text: "Ouvrir la page de connexion"
-                    principal: true
                     onClicked: { panneau.etat.ouvrirPortail(); panneau.fermer() }
                 }
             }
@@ -404,7 +419,13 @@ Overlay {
                     objectName: "recherche"
                     implicitWidth: Theme.density?.controlHeight ?? 0
                     implicitHeight: implicitWidth
-                    BoutonIcone { anchors.fill: parent; visible: !panneau.balayage; nom: "view-refresh"; onClique: panneau.rechercher() }
+                    // Bouton isolé : sa zone reste neutre (marque faux), le bouton garde son propre survol (recette de L2-73).
+                    ZoneCurseur {
+                        marque: false
+                        anchors.fill: parent
+                        visible: !panneau.balayage
+                        BoutonIcone { nom: "view-refresh"; onClique: panneau.rechercher() }
+                    }
                     Activite { objectName: "activiteRecherche"; anchors.centerIn: parent; visible: panneau.balayage }
                     Infobulle { objectName: "infobulleRecherche"; cible: recherche; texte: "Rechercher les réseaux" }
                 }
@@ -514,7 +535,9 @@ Overlay {
                                             visible: ligne.enConnexion
                                             text: "Connexion…"
                                             echelon: 1
-                                            color: Theme.color?.textSecondary ?? "transparent"
+                                            // Encres de la rangée : leur teinte hors du curseur, celle de la plaque
+                                            // sous lui, en fondu.
+                                            color: rangee.encreSecondaire
                                         }
                                         Activite { anchors.verticalCenter: parent.verticalCenter; visible: ligne.enConnexion }
                                         Icone {
@@ -522,7 +545,7 @@ Overlay {
                                             visible: panneau.securise(ligne.modelData)
                                             nom: "network-wireless-encrypted"
                                             taille: Theme.icons?.sizes.dense ?? 0
-                                            couleur: Theme.color?.textTertiary ?? "transparent"
+                                            couleur: rangee.encreTertiaire
                                         }
                                     }
                                 }
