@@ -16,8 +16,8 @@ import "recherche.js" as Moteur
 // d'origine), dont le courant, celui qu'Entrée ouvrirait, porte le curseur, comme au lanceur : un clic, ou Entrée
 // depuis le champ, ouvre la page du résultat courant et conduit à son réglage, puis vide le champ ; les flèches haut
 // et bas, depuis le champ, changent de résultat courant ; Échap vide le champ et rend la liste des pages.
-// La liste reçoit le focus à l'ouverture, pour les flèches, sans montrer le contour de focus, réservé au focus venu
-// du clavier : tant qu'aucune touche n'a été frappée dans la barre, chaque arrivée du focus sur la liste est effacée.
+// La liste reçoit le focus à l'ouverture, pour les flèches, sans y poser le curseur, réservé au focus venu du
+// clavier : tant qu'aucune touche n'a été frappée dans la barre, chaque arrivée du focus sur la liste est effacée.
 // Entrées : enTete, hauteur réservée en haut pour les pastilles de la fenêtre, 0 par défaut ; pages et index, ceux du
 // Registre par défaut.
 // Sorties : champ, la Recherche ; liste, la Liste des pages ; resultats, la Liste des résultats ; trouves, les
@@ -60,12 +60,13 @@ Item {
     // parcourir — flèche du clavier dans la liste des pages : rend l'entrée voisine courante, lui donne le curseur et
     // ouvre sa page. Le survol, qui change aussi l'entrée courante, n'ouvre ainsi jamais rien.
     // Entrée : pas, -1 vers le haut, 1 vers le bas. Sortie : aucune. Erreurs : aucune ; en bout de liste, l'entrée
-    // courante reste et sa page s'ouvre. Dépendances : liste (Liste, dnVue), EtatParametres.ouvrir.
+    // courante reste, et sa page n'est rouverte que si ce n'est pas déjà la page montrée : une sous-page ouverte n'est
+    // pas refermée. Dépendances : liste (Liste, dnVue), rang, EtatParametres.ouvrir.
     function parcourir(pas) {
         liste.focusClavier = true
         pas < 0 ? liste.decrementCurrentIndex() : liste.incrementCurrentIndex()
         liste.dnVue.prendre(liste.currentItem)
-        EtatParametres.ouvrir(pages[liste.currentIndex].id, [])
+        if (liste.currentIndex !== rang) EtatParametres.ouvrir(pages[liste.currentIndex].id, [])
     }
 
     // rentrer — rend la plaque à la page courante quand le curseur a quitté la liste des pages. Le retour est de place

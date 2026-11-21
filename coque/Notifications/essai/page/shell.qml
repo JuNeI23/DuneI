@@ -9,12 +9,12 @@ import "Notifications"
 
 // Coque d'essai de la page Notifications de Paramètres, sous la plateforme offscreen.
 // Rôle : pose la vraie PageNotifications, dans une fenêtre jamais montrée, sur un conteneur factice, et la pilote par
-// IPC : interrupteur, « Remettre », lecture des rangées, carte Son (L2-68, Voix remplacée par un témoin).
-// tests/test_notifications.py (PageNotificationsTest) la lance. Entrées : DUNEI_TOKENS_DIR, lu par Theme ;
-// DUNEI_ETAT_DIR, où EtatNotifications lit et écrit son fichier. Sortie : « essai : prêt » au démarrage ; voir
-// l'IpcHandler. Erreurs : celles de Theme, dans le journal. Dépendances : quickshell ≥ 0.3 (IpcHandler,
-// FloatingWindow), PageNotifications, EtatNotifications, liens Theme, Composants, Parametres, Reseau et Notifications ;
-// thème d'icônes DuneI.
+// IPC : interrupteur, « Remettre », lecture des rangées, carte Son (L2-68, Voix remplacée par un témoin), focus et
+// plaques des contrôles isolés. tests/test_notifications.py (PageNotificationsTest) la lance.
+// Entrées : DUNEI_TOKENS_DIR, lu par Theme ; DUNEI_ETAT_DIR, où EtatNotifications lit et écrit son fichier.
+// Sortie : « essai : prêt » au démarrage ; voir l'IpcHandler. Erreurs : celles de Theme, dans le journal.
+// Dépendances : quickshell ≥ 0.3 (IpcHandler, FloatingWindow), PageNotifications, EtatNotifications, liens Theme,
+// Composants, Parametres, Reseau et Notifications ; thème d'icônes DuneI.
 ShellRoot {
     Component.onCompleted: console.info("essai : prêt")
 
