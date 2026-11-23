@@ -4,7 +4,7 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Hyprland
 import "../Theme"
-import "../Composants"
+import "../Composants" as C
 import "../Applications"
 import "selecteur.js" as Logique
 import "../Applications/applications.js" as Apps
@@ -12,62 +12,73 @@ import "../Applications/applications.js" as Apps
 // Selecteur — contrôleur unique du sélecteur de fenêtres (L2-17) : geste tenu de SUPER + Tab, état, exécution et IPC.
 // Rôle : au premier SUPER + Tab, relève les fenêtres des bureaux 1 à 4 de la plus récente à la plus ancienne
 // (selecteur.js fenetres sur Applications.toplevels()), fige cette liste pour tout le geste, pose la sélection sur la
-// deuxième (la première est la fenêtre active) et ouvre aussitôt sa fenêtre de calque, clavier exclusif, sans rien
-// montrer : c'est ce clavier qui reçoit le relâchement de SUPER. Si SUPER est encore tenu au délai delays.selecteur,
-// montre passe à vrai et la fenêtre apparaît. Chaque SUPER + Tab suivant avance d'un cran, en boucle ; Maj + Tab,
-// SUPER tenu, recule ; relâcher SUPER valide ; Échap et un clic sur le voile annulent. Valider ferme le sélecteur et
-// amène la fenêtre choisie, bureau compris, une fois le calque retiré par le compositeur (événement closelayer de
-// dunei-attention, D194), pour que la fenêtre amenée garde le clavier que Hyprland lui rend à ce retrait ; une fenêtre
-// fermée pendant le geste n'est pas amenée. C'est une attention du registre Overlays (famille « attention ») :
-// l'ouvrir ferme le lanceur, et le lanceur qui s'ouvre le ferme. Sa fenêtre, FenetreSelecteur, n'existe que pendant
-// l'ouverture et son fondu de sortie (LazyLoader, present). Le clavier est traité ici, par touche(), qu'appellent le
-// cadre et l'IPC des essais : un seul chemin.
-// Entrées : ouvert ; clavierExclusif, vrai par défaut, que la fenêtre applique (une coque d'essai le met à faux pour
-//           ne jamais prendre le clavier de Nicolas) ; executeur, null par défaut : une fonction qui reçoit l'action à
-//           la place de son exécution réelle (coques d'essai) ; fenetree, vrai par défaut : faux, aucune fenêtre n'est
-//           construite ; source, null par défaut : un tableau de fenêtres qui remplace Applications.toplevels() (coques
-//           d'essai ; chaque fenêtre peut y porter taille, [largeur, hauteur], à la place du relevé de Hyprland).
+// deuxième (la première est la fenêtre active) et ouvre aussitôt sa Scene (L2-80), clavier exclusif, sans rien
+// montrer : c'est ce clavier qui reçoit le relâchement de SUPER. Si SUPER est encore tenu au délai delays.selecteur
+// (Scene.delai), la scène se montre. Chaque SUPER + Tab suivant avance d'un cran, en boucle ; Maj + Tab, SUPER tenu,
+// recule ; relâcher SUPER valide ; Échap et un clic sur le voile annulent. Valider passe par Scene.executer : le
+// sélecteur se ferme et la fenêtre choisie, bureau compris, n'est amenée qu'au retrait de son calque par le
+// compositeur (closelayer de son propre namespace, espace, D194), pour qu'elle garde le clavier que Hyprland lui rend
+// à ce retrait ; une fenêtre fermée pendant le geste n'est pas amenée. La Scene porte l'ouverture, le délai, le fondu
+// de sortie, l'inscription au registre Overlays (famille « attention » : l'ouvrir ferme le lanceur, et le lanceur qui
+// s'ouvre le ferme) et la garde d'une seconde ; son cadre est CadreSelecteur. Le clavier est traité ici, par touche(),
+// qu'appellent le cadre et l'IPC des essais : un seul chemin.
+// Entrées : clavierExclusif, vrai par défaut, transmis à la scène (une coque d'essai le met à faux pour ne jamais
+//           prendre le clavier de Nicolas) ; executeur, null par défaut : une fonction qui reçoit l'action à la place
+//           de son exécution réelle (coques d'essai) ; fenetree, vrai par défaut : faux, aucune fenêtre n'est
+//           construite et l'action part aussitôt ; source, null par défaut : un tableau de fenêtres qui remplace
+//           Applications.toplevels() (coques d'essai ; chaque fenêtre peut y porter taille, [largeur, hauteur], à la
+//           place du relevé de Hyprland).
 //           IPC « selecteur » : avancer, valider, annuler, touche, etat. Le raccourci global dunei:selecteur, qui
 //           appelle avancer(1), est déclaré par la coque de session (coque/shell.qml) : le protocole des raccourcis
 //           globaux refuse deux clients sur la même paire appid:nom, et une coque d'essai qui chargerait ce singleton
 //           à côté de la coque installée ferait tomber l'une des deux.
-// Sorties : famille ; montre (vrai après le délai) ; liste (fenêtres figées à l'ouverture) ; index (la sélection) ;
-//           choisie (la fenêtre sous la sélection, ou null) ; largeurs (de chaque vignette, selecteur.js largeur) ;
-//           present (ouvert, ou fenêtre encore en sortie) ; sortant ; differee (l'action en attente du retrait du
-//           calque, ou null) ; ecran (figé à l'ouverture) ; fenetre (la FenetreSelecteur ouverte, ou null).
-// Erreurs : aucune ; une fenêtre qui ne peut être construite est journalisée et le sélecteur se referme ; moins de
+// Sorties : ouvert (alias de la scène, s'affecte) ; famille ; montre, sortant, differee et fenetre (lus sur la scène :
+//           montrée après le délai, fenêtre en sortie, action en attente du retrait du calque ou null, FenetreScene
+//           ouverte ou null) ; espace (« dunei-attention-selecteur », le namespace de son calque) ; liste (fenêtres
+//           figées à l'ouverture) ; index (la sélection) ; choisie (la fenêtre sous la sélection, ou null) ; largeurs
+//           (de chaque vignette, selecteur.js largeur).
+// Erreurs : aucune ; une fenêtre qui ne peut être construite est journalisée par la scène, qui se referme ; moins de
 //           deux fenêtres, avancer ne fait rien.
-// Dépendances : Quickshell (Singleton, LazyLoader), Quickshell.Io (IpcHandler), Quickshell.Hyprland (focusedMonitor,
-//           toplevels, dispatch, rawEvent), QtQuick (Timer), Theme (selecteur, motion.delays), Overlays, Applications,
-//           FenetreSelecteur.qml, selecteur.js, applications.js (commandeFocus).
+// Dépendances : Quickshell (Singleton), Quickshell.Io (IpcHandler), Quickshell.Hyprland (toplevels, dispatch,
+//           refreshToplevels), Theme (selecteur, motion.delays), C.Scene, CadreSelecteur, Applications, selecteur.js,
+//           applications.js (commandeFocus).
 Singleton {
     id: selecteur
 
-    property bool ouvert: false
+    property alias ouvert: scene.ouvert
     readonly property string famille: "attention"
-    property bool montre: false
+    readonly property bool montre: scene.montre
+    readonly property bool sortant: scene.sortant
+    readonly property var differee: scene.differee
+    readonly property var fenetre: scene.fenetre
+    // Namespace du calque du sélecteur, propre à lui (L2-80), lu par la coque d'essai.
+    readonly property string espace: "dunei-attention-selecteur"
     property var liste: []
     property int index: 0
     property bool clavierExclusif: true
     property var executeur: null
     property bool fenetree: true
     property var source: null
-    // Vrai entre la fermeture et la fin du fondu de sortie de la fenêtre ; la fenêtre reste chargée jusque-là.
-    property bool sortant: false
-    readonly property bool present: ouvert || sortant
-    // Action choisie qui attend le retrait du calque du sélecteur par le compositeur (voir executer).
-    property var differee: null
-    readonly property var fenetre: chargeur.item?.fenetre ?? null
     readonly property var choisie: liste[index] ?? null
     readonly property var largeurs: liste.map(f => {
         const t = taille(f)
         return Theme.selecteur ? Logique.largeur(t[0], t[1], Theme.selecteur) : 0
     })
 
-    // Écran du moniteur focalisé, suivi en continu, et écran de la fenêtre, figé à l'ouverture.
-    readonly property var ecranFocalise: Quickshell.screens.find(s => s.name === Hyprland.focusedMonitor?.name)
-        ?? Quickshell.screens[0]
-    property var ecran: null
+    C.Scene {
+        id: scene
+        cadre: Component { CadreSelecteur {} }
+        clavierExclusif: selecteur.clavierExclusif
+        executeur: selecteur.executeur
+        fenetree: selecteur.fenetree
+        espace: selecteur.espace
+        delai: Theme.motion?.delays.selecteur ?? 0
+
+        // onRealiser — l'action part, aucun exécuteur n'étant posé : amener donne le focus à la fenêtre, bureau
+        // compris. Entrée : action, {genre (« amener »), cible (adresse)}. Sortie : aucune. Erreurs : aucune ; un
+        // genre inconnu ne fait rien. Dépendances : Hyprland.dispatch, Apps.commandeFocus.
+        onRealiser: action => { if (action.genre === "amener") Hyprland.dispatch(Apps.commandeFocus(action.cible)) }
+    }
 
     // releve — fenêtres vues par le sélecteur à cet instant. Entrées : aucune. Sortie : tableau de {adresse, classe,
     // titre, bureau, historique}, source s'il est posé, sinon Applications.toplevels(). Erreurs : aucune.
@@ -101,11 +112,11 @@ Singleton {
 
     // valider — ferme le sélecteur et amène la fenêtre choisie, si elle est encore ouverte. Entrées : aucune.
     // Sortie : aucune. Erreurs : aucune ; fermé, rien ; une fenêtre fermée pendant le geste n'est pas amenée.
-    // Dépendances : ouvert, choisie, releve, executer.
+    // Dépendances : ouvert, choisie, releve, scene.executer.
     function valider() {
         if (!ouvert) return
         const f = choisie
-        if (f && releve().some(x => x.adresse === f.adresse)) executer({ genre: "amener", cible: f.adresse })
+        if (f && releve().some(x => x.adresse === f.adresse)) scene.executer({ genre: "amener", cible: f.adresse })
         else ouvert = false
     }
 
@@ -129,114 +140,6 @@ Singleton {
         else if (!superTenu) valider()
     }
 
-    // sortieFinie — appelée par la fenêtre quand son fondu de sortie est posé : la fenêtre est déchargée (son calque
-    // retiré, ce qui fait partir l'action en attente) et montre retombe. Entrées : aucune. Sortie : aucune ; sans effet
-    // si le sélecteur a été rouvert entre-temps. Erreurs : aucune. Dépendances : ouvert, sortant, montre.
-    function sortieFinie() {
-        if (ouvert || !sortant) return
-        sortant = false
-        montre = false
-    }
-
-    // executer — ferme le sélecteur et fait exécuter l'action : aussitôt sans fenêtre (fenetree faux, ou fenêtre non
-    // construite), sinon une fois le calque retiré par le compositeur (differee, voir la connexion à Hyprland).
-    // Entrée : action, {genre (« amener »), cible (adresse)}. Sortie : aucune. Erreurs : aucune.
-    // Dépendances : fenetre, realiser, differee, garde, ouvert.
-    function executer(action) {
-        if (!fenetre) realiser(action)
-        else { differee = action; garde.restart() }
-        ouvert = false
-    }
-
-    // realiserDifferee — exécute l'action en attente, une seule fois, et jamais sous une attention ouverte (le
-    // sélecteur rouvert, ou le lanceur ouvert entre-temps : c'est changer d'avis). Entrées : aucune. Sortie : aucune.
-    // Erreurs : aucune ; sans action en attente, rien. Dépendances : differee, realiser, garde, Overlays.attention.
-    function realiserDifferee() {
-        const a = differee
-        differee = null
-        garde.stop()
-        if (a && !Overlays.attention) realiser(a)
-    }
-
-    // realiser — exécute une action : amener donne le focus à la fenêtre, bureau compris. Entrée : action (voir
-    // executer). Sortie : aucune. Erreurs : aucune ; un genre inconnu ne fait rien.
-    // Dépendances : executeur, Hyprland.dispatch, Apps.commandeFocus.
-    function realiser(action) {
-        if (executeur) executeur(action)
-        else if (action.genre === "amener") Hyprland.dispatch(Apps.commandeFocus(action.cible))
-    }
-
-    // onRawEvent — retrait du calque par le compositeur : l'action en attente part. Hyprland émet
-    // closelayer>>dunei-attention au démappage du calque, après lui avoir retiré le clavier.
-    // Entrée : e, l'événement brut de Hyprland (name, data). Sortie : aucune. Erreurs : aucune ; sans action en attente
-    // ou pour un autre événement, rien. Dépendances : Hyprland.rawEvent, differee, realiserDifferee.
-    Connections {
-        target: Hyprland
-        function onRawEvent(e) { if (selecteur.differee && e.name === "closelayer" && e.data === "dunei-attention") selecteur.realiserDifferee() }
-    }
-    // onAttentionChanged — quand une autre attention que le sélecteur s'ouvre (le lanceur), l'action en attente est
-    // abandonnée : c'est changer d'avis, et elle ne doit pas écraser le choix du nouveau geste en partant à son tour au
-    // retrait du calque. Entrées : aucune. Sortie : differee remis à null. Erreurs : aucune ; sans autre attention
-    // ouverte, rien. Dépendances : Overlays.attention, differee.
-    Connections {
-        target: Overlays
-        function onAttentionChanged() { if (Overlays.attention && Overlays.attention !== selecteur) selecteur.differee = null }
-    }
-    // Garde : si l'événement de retrait ne vient pas (connexion à Hyprland perdue), l'action part quand même, au plus
-    // une seconde après la fermeture ; ce délai technique, bien au-delà du fondu de sortie, n'est jamais atteint quand
-    // le compositeur répond.
-    Timer { id: garde; interval: 1000; onTriggered: selecteur.realiserDifferee() }
-
-    // Délai d'affichage : un tap bref (relâchement avant lui) valide sans rien montrer.
-    Timer { id: delai; interval: Theme.motion?.delays.selecteur ?? 0; onTriggered: if (selecteur.ouvert) selecteur.montre = true }
-
-    // onOuvertChanged — à l'ouverture, fige l'écran (sauf si la fenêtre, encore en sortie, est reprise sur le sien),
-    // annule l'action qui attendait le retrait du calque, cache la fenêtre jusqu'au délai et s'inscrit au registre des
-    // attentions ; à la fermeture, arrête le délai, s'en retire et laisse la fenêtre jouer son fondu de sortie
-    // (sortant). Entrées : aucune. Sortie : aucune. Erreurs : aucune.
-    // Dépendances : ecranFocalise, Overlays, fenetre, differee, garde, delai, montre.
-    onOuvertChanged: {
-        if (ouvert) {
-            if (!sortant) ecran = ecranFocalise
-            sortant = false
-            differee = null
-            garde.stop()
-            montre = false
-            delai.restart()
-            Overlays.ouvrir(selecteur)
-        } else {
-            delai.stop()
-            sortant = fenetre !== null
-            if (!sortant) montre = false
-            Overlays.fermer(selecteur)
-        }
-    }
-
-    // La fenêtre vit dans FenetreSelecteur.qml, que ce porteur ne compile qu'à l'ouverture, comme le lanceur : un
-    // fichier qui nomme PanelWindow ne se charge pas sous une plateforme sans dorsale de couches. Si la création
-    // échoue, l'échec est journalisé et le sélecteur se referme.
-    LazyLoader {
-        id: chargeur
-        active: selecteur.present && selecteur.fenetree
-        component: Component {
-            QtObject {
-                id: porteur
-                readonly property Component composant: Qt.createComponent("FenetreSelecteur.qml")
-                readonly property var fenetre: composant.status === Component.Ready ? composant.createObject(porteur) : null
-
-                // Component.onCompleted — vérifie que la fenêtre a été construite ; sinon journalise l'échec et referme le
-                // sélecteur. Entrées : aucune. Sortie : aucune ; sans fenêtre, ouvert repasse à faux au tour de boucle
-                // suivant. Erreurs : l'avertissement « Sélecteur : fenêtre non construite » avec l'erreur du composant.
-                // Dépendances : fenetre, composant, selecteur.ouvert, Qt.callLater.
-                Component.onCompleted: {
-                    if (fenetre) return
-                    console.warn("Sélecteur : fenêtre non construite. " + composant.errorString())
-                    Qt.callLater(() => selecteur.ouvert = false)
-                }
-            }
-        }
-    }
-
     IpcHandler {
         target: "selecteur"
 
@@ -253,7 +156,7 @@ Singleton {
 
         // etat — état du sélecteur en JSON : ouvert, montre, index, adresses (de la liste figée), fenetre (vrai si elle
         // existe), sortant (fenêtre en sortie), differee (vrai si une action attend le retrait du calque).
-        // Sortie : texte. Erreurs : aucune. Dépendances : selecteur.
+        // Sortie : texte. Erreurs : aucune. Dépendances : selecteur, lu sur sa scène.
         function etat(): string {
             return JSON.stringify({ ouvert: selecteur.ouvert, montre: selecteur.montre, index: selecteur.index,
                 adresses: selecteur.liste.map(f => f.adresse), fenetre: selecteur.fenetre !== null,

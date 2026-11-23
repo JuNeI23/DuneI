@@ -16,19 +16,20 @@ function fenetres(toplevels) {
 
 // avancer — déplace la sélection en boucle.
 // Entrées : index, position actuelle ; n, nombre de fenêtres (strictement positif) ; pas, déplacement, négatif pour
-// reculer. Sortie : le nouvel index, dans [0, n[. Erreurs : aucune (NaN si n vaut 0). Dépendances : aucune.
+// reculer. Sortie : le nouvel index, dans [0, n[ ; 0 si n n'est pas strictement positif (liste vide), au lieu de NaN
+// (L2-79 f). Erreurs : aucune. Dépendances : aucune.
 function avancer(index, n, pas) {
-    return ((index + pas) % n + n) % n
+    return n > 0 ? ((index + pas) % n + n) % n : 0
 }
 
 // decalage — abscisse de départ de la rangée de vignettes, pour que la vignette choisie reste entière dans la vue.
 // Entrées : index, vignette choisie ; largeurs, largeur de chaque vignette en pixels ; ecart, espace entre deux
-// vignettes ; vue, largeur visible. Sortie : 0 quand la rangée tient dans la vue ; sinon l'abscisse (≤ 0) qui
-// centre la vignette choisie, bornée pour qu'aucun vide ne reste à gauche ni à droite. Erreurs : aucune.
-// Dépendances : aucune.
+// vignettes ; vue, largeur visible. Sortie : 0 quand la rangée tient dans la vue, ou quand index sort de largeurs
+// (au lieu de NaN, L2-79 f) ; sinon l'abscisse (≤ 0) qui centre la vignette choisie, bornée pour qu'aucun vide ne
+// reste à gauche ni à droite. Erreurs : aucune. Dépendances : aucune.
 function decalage(index, largeurs, ecart, vue) {
     const total = largeurs.reduce((s, w) => s + w, 0) + ecart * Math.max(0, largeurs.length - 1)
-    if (total <= vue) return 0
+    if (total <= vue || !(index >= 0 && index < largeurs.length)) return 0
     const debut = largeurs.slice(0, index).reduce((s, w) => s + w + ecart, 0)
     return Math.round(Math.min(0, Math.max(vue - total, (vue - largeurs[index]) / 2 - debut)))
 }
