@@ -8,6 +8,7 @@ import "Theme"
 import "Barre"
 import "Reseau"
 import "Notifications"
+import "Deconnexion"
 import "Barre/icones.js" as Icones
 import "Barre/forme.js" as Forme
 
@@ -39,6 +40,14 @@ ShellRoot {
         Parametres { id: parametres }
         Vpn { id: vpn }
         Notifications { id: notifications; panneau: fauxPanneau; barre: fausseBarre }
+    }
+
+    // Component.onCompleted — réveille le singleton Deconnexion (son IPC) sans fenêtre ni exécution réelle : le clic
+    // du logo n'ouvre qu'un état. Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : Deconnexion.
+    Component.onCompleted: {
+        Deconnexion.fenetree = false
+        Deconnexion.clavierExclusif = false
+        Deconnexion.executeur = a => console.log("essai : exécuté " + a.id)
     }
 
     // Faux panneau des notifications, à l'interface que la cloche lit (FenetrePanneau) : il compte les bascules.
@@ -144,6 +153,14 @@ ShellRoot {
                 bascules: fauxPanneau.bascules, barre: fauxPanneau.derniere === fausseBarre,
                 nePasDeranger: EtatNotifications.nePasDeranger})
         }
+
+        // cliquerLogo — clic gauche sur le logo, par son signal. Entrées : aucune. Sortie : aucune. Erreurs : aucune.
+        // Dépendances : logo (clicked).
+        function cliquerLogo(): void { logo.clicked() }
+
+        // etatLogo — JSON {cliquable, ouvert} du logo. Entrées : aucune. Sortie : texte. Erreurs : aucune.
+        // Dépendances : logo.
+        function etatLogo(): string { return JSON.stringify({cliquable: logo.cliquable, ouvert: logo.ouvert}) }
 
         // mouvementPastille — JSON {pilule, boule, ancien} : opacité de la pilule, de la boule et de l'ancien texte.
         // Entrées : aucune. Sortie : texte. Erreurs : aucune. Dépendances : notifications.pastille.

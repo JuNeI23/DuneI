@@ -350,7 +350,10 @@ class IndicateursStatiqueTest(unittest.TestCase):
         self.assertIn("cliquable: true", qml["JourNuit.qml"])
         self.assertIn('["dunei-theme", "bascule"]', qml["JourNuit.qml"])
         cliquables = sorted(nom for nom in INDICATEURS if "cliquable: true" in qml[f"{nom}.qml"])
-        self.assertEqual(cliquables, ["Audio", "Batterie", "Bluetooth", "JourNuit", "Notifications", "Parametres", "Reseau"])
+        self.assertEqual(cliquables, ["Audio", "Batterie", "Bluetooth", "JourNuit", "Logo", "Notifications", "Parametres",
+                                    "Reseau"])
+        # Le logo bascule le menu de déconnexion (L2-23).
+        self.assertRegex(qml["Logo.qml"], r"onClicked:\s*Deconnexion\.basculer\(\)")
         # La cloche ouvre le panneau des notifications par son clic gauche et bascule « ne pas déranger » au droit.
         self.assertRegex(qml["Notifications.qml"], r"onClicked:\s*panneau\?\.basculer\(barre\)")
         self.assertRegex(qml["Notifications.qml"], r"acceptedButtons:\s*Qt\.RightButton")
@@ -459,6 +462,24 @@ class RelanceTest(BarreIpc, unittest.TestCase):
                          ("notifications-disabled", "", "", True, 0))
         self.appeler("ouvrirPanneau", True)
         self.assertTrue(self.cloche()["ouvert"])
+
+    def test_logo_ouvre_deconnexion(self):
+        """Un clic sur le logo ouvre le menu de déconnexion, un second le referme.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec si le logo n'est pas cliquable ou si l'IPC « deconnexion »
+        ne dit pas « ouvert » après le clic. Dépendances : appeler (cliquerLogo), qs (cible « deconnexion »).
+        """
+        def etat() -> bool:
+            sortie = subprocess.run([QS, "ipc", "--pid", str(self.proc.pid), "call", "deconnexion", "etat"],
+                                    check=True, capture_output=True, text=True, timeout=DELAI).stdout
+            return json.loads(sortie)["ouvert"]
+        self.assertFalse(etat())
+        self.assertEqual(json.loads(self.appeler("etatLogo")), {"cliquable": True, "ouvert": False})
+        self.appeler("cliquerLogo")
+        self.assertTrue(etat())
+        self.assertTrue(json.loads(self.appeler("etatLogo"))["ouvert"])
+        self.appeler("cliquerLogo")
+        self.assertFalse(etat())
 
     def test_cloche_clics(self):
         self.appeler("cliquerCloche", "gauche")
