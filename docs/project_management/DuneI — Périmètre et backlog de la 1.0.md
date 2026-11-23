@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.64. Historique en fin de document.
+Version 1.65. Historique en fin de document.
 
 La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **190 éléments** répartis en **cinq lots**, sur six chantiers.
 
@@ -271,7 +271,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L2-15 | B | Écrit | Zone d'état des applications tierces |
 | L2-16 | B | Fait | Lanceur — **fait (D190 à D196)** : `SUPER + R` ouvre le lanceur de la coque, overlay d'attention à voile et clavier exclusif ; accueil (« Fréquentes », « Suggestions »), liste et aperçu à scission, fenêtres ouvertes comme actions, commandes DuneI, calculs et conversions par `qalc`, « Nouvelle fenêtre » pour toute application ; wofi est désinstallé |
 | L2-17 | B | Fait | Sélecteur de fenêtres — vignettes en neutre pur — **fait (D200 à D202)** : `SUPER + Tab` ouvre un geste tenu dans la coque (clavier exclusif, relâchement de SUPER vu par le calque), chaque Tab avance par un raccourci global de Quickshell (`dunei:selecteur`, médiane 6 ms), `Maj + Tab` recule, le relâchement amène la fenêtre après le retrait du calque, Échap et le clic sur le voile annulent ; un tap bref ramène à la fenêtre précédente sans rien montrer (délai `delays.selecteur` de 150 ms, calque invisible jusque-là) ; vignettes figées des bureaux 1 à 4, de la plus récente à la plus ancienne, en neutre pur limité à l'image, plaque d'accent plate sous la vignette choisie, défilement au-delà de l'écran ; `SUPER + SHIFT + Tab` non lié ; vignette partagée avec le lanceur (`VignetteFenetre`) ; dettes en L2-79 |
-| L2-18 | B | Écrit | Sélecteur de bureaux — une teinte catégorielle par bureau |
+| L2-18 | B | Retiré | Sélecteur de bureaux — **retiré (D203)** : Nicolas n'en veut pas ; `SUPER + 1…4` reste la seule façon de changer de bureau |
 | L2-19 | B | Écrit | Notifications — couleurs sémantiques invariantes ; référence visuelle : `~/dunei-atelier/inspiration/Shoddyconfection962/notifications.jpg`. Consigne de Nicolas : en haut à droite, classique et bien dessinée ; la notification ne naît pas de l'îlot (conception de L2-01, § 2) — **fait (D162)** : la coque est le serveur `org.freedesktop.Notifications`, dunst est retiré ; module `coque/Notifications/`, cartes de verre e3 empilées en haut à droite, plafond de cinq, remplacement par étiquette de pile, plein écran qui retient les cartes ; recette à l'écran validée le 2026-11-13 ; cloche de la barre simplifiée, suite en L2-67 |
 | L2-20 | B | Écrit | Menu contextuel du bureau — part du point de clic |
 | L2-21 | B | Écrit | Infobulles — délai de 500 ms |
@@ -538,6 +538,7 @@ Le choix de la distribution de base et du compositeur, précédemment ouverts, s
 
 | Version | Date | Changement |
 | --- | --- | --- |
+| 1.65 | 2026-11-23 | L2-18 retiré : pas de sélecteur de bureaux (D203) ; 190 éléments |
 | 1.0 | 2026-10-12 | Version initiale, 137 éléments |
 | 1.64 | 2026-11-21 | L2-79 : la relecture finale de L2-17 règle `Backtab` sans SUPER, les commentaires réglementaires, la tolérance du test, l'action différée du lanceur écrasant le sélecteur, l'icône commune (`Applications.icone`), le relevé des fenêtres à l'ouverture et le double `HoverHandler` ; restent (a), (c), (d), (f), (g), (h), et (i) pour deux tests graphiques instables relevés par `make check` ; 190 éléments |
 | 1.63 | 2026-11-21 | L2-17 fait : sélecteur de fenêtres de la coque, geste tenu de `SUPER + Tab`, raccourci global, neutre pur limité à l'image, plaque d'accent sans anneau (D200 à D202) ; ajout de L2-79, dettes des relectures du sélecteur ; 190 éléments |

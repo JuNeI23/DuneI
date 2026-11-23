@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas
 
-Document normatif. Version 0.42. Historique en fin de document.
+Document normatif. Version 0.43. Historique en fin de document.
 
 ## Comment lire ce document
 
@@ -899,7 +899,7 @@ La règle initiale disait que toute surface de couche 3 s'accompagne d'un voile 
 
 La distinction correcte porte sur **ce que l'overlay demande à l'utilisateur** :
 
-**Overlay d'attention** — il suspend le travail et attend une décision. Lanceur, sélecteur de fenêtres, sélecteur de bureaux, menu de déconnexion, dialogue modal, verrouillage. → Voile + flou par instantané + `overlay`. Un seul à la fois.
+**Overlay d'attention** — il suspend le travail et attend une décision. Lanceur, sélecteur de fenêtres, menu de déconnexion, dialogue modal, verrouillage. → Voile + flou par instantané + `overlay`. Un seul à la fois.
 
 **Overlay contextuel** — il prolonge une action en cours sans l'interrompre. Menu contextuel, popover, liste déroulante, infobulle, notification. → Ombre seule. **Ni voile ni flou.** Peut coexister avec un autre. Les popovers de la barre, eux, s'excluent entre eux (D108). Le flou proscrit ici est celui de l'écran ; le verre dépoli du jour, propre à la surface de l'overlay (§ 5), reste permis.
 
@@ -958,7 +958,6 @@ Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si 
 | --- | --- | --- | --- | --- | --- |
 | Lanceur | attention | E3 | `overlay` + `field` + `row` | `overlay` | Voile 0.55 + flou instantané, apparu en fondu par le compositeur (D192). Focus clavier dès l'ouverture. Le cadre monte depuis le bas au ressort `window`, sort en fondu sur place (D193). Un seul curseur, plaques sans ombre (D191, D195) |
 | Sélecteur de fenêtres | attention | E3 | `overlay` + `surface` | `overlay` | Geste tenu : `SUPER + Tab` ouvre, chaque Tab avance, `Maj + Tab` recule, le relâchement de SUPER amène la fenêtre après le retrait du calque (D194, D200, D201) ; Échap ou un clic sur le voile annulent ; un tap bref ne montre rien. Clavier exclusif dès l'ouverture, calque invisible jusqu'au délai `delays.selecteur`, puis voile et flou instantané du lanceur en fondu par le compositeur (D192), cadre en verre qui monte au ressort `window` (D193). Une rangée de vignettes figées des fenêtres des bureaux 1 à 4, de la plus récente à la plus ancienne, à hauteur fixe et largeur bornée (`[selecteur]`), qui défile au ressort `navigate` pour garder la sélection visible ; sous la rangée, médaillon, titre en `text-primary` et « bureau n » en `text-secondary`. Vignettes : neutre pur, l'image seule, sans teinte ni voile posés dessus ; cadre et fenêtre d'attente gardent les surfaces du thème (D201). Curseur : la plaque d'accent plate sous la vignette choisie, qui grandit à `galerie.echelle`, sans anneau ; le survol déplace la plaque, le clic valide (D191, D202) |
-| Sélecteur de bureaux | attention | E3 | `overlay` + `row` | `overlay` | Chaque bureau porte une teinte de la palette catégorielle |
 | Menu de déconnexion | attention | E3 | `overlay` + `interactive` | `overlay` | Action destructrice en `error`, jamais en accent |
 | Verrouillage / connexion | attention | E0 | `overlay` + `text` + `field` | `spectacle` | Registre de spectacle. Horloge en grand corps, poids léger |
 | Menu contextuel | contextuel | E3 | `surface` + `row` | `reveal` | **Ni voile ni flou** de l'écran ; verre dépoli le jour comme la nuit (D85, D103). Part du point de clic, sans écart. Aucun contour de focus sur ses rangées : la plaque du curseur suit le survol (D88, D197) |
@@ -972,6 +971,7 @@ Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si 
 
 | Version | Date | Changement |
 | --- | --- | --- |
+| 0.43 | 2026-11-23 | Le sélecteur de bureaux quitte les overlays d'attention et le tableau des surfaces : L2-18 est retiré (D203) |
 | 0.4 | 2026-10-10 | Version de référence |
 | 0.4.1 | 2026-10-12 | Annexe D : la cible compositeur est un module Lua (Hyprland 0.56) |
 | 0.5.1 | 2026-10-12 | Échelon 10 à 0,935 ; sémantiques jamais en fond de texte ; liens = signal court (D12) |
