@@ -53,7 +53,7 @@ class SceneTest(EssaiCoque, unittest.TestCase):
 
     def etat(self) -> dict:
         """État de la scène décodé du JSON d'essai.etat. Sortie : dictionnaire {ouvert, present, fenetre, sortant,
-        differee, montre}. Dépendances : appel."""
+        differee, montre, opacite}. Dépendances : appel."""
         return json.loads(self.appel("essai", "etat"))
 
     def jusqua(self, condition, message: str):
@@ -200,9 +200,19 @@ class SceneTest(EssaiCoque, unittest.TestCase):
         debut = time.monotonic()
         self.appel("essai", "fermer")
         self.jusqua(lambda: not self.etat()["sortant"], "sortie posée")
+        self.assertFalse(self.etat()["fenetre"])
         self.assertLess(time.monotonic() - debut, 0.3)
         time.sleep(0.4)
         self.assertFalse(self.etat()["montre"])
+
+    def test_sans_delai_opaque_des_la_creation(self):
+        """Vérifie que sans délai la surface est opaque dès la construction de la fenêtre : seul le fondu du
+        compositeur porte l'entrée, sans ressort d'opacité par-dessus.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : ouvrir.
+        """
+        e = self.ouvrir()
+        self.assertEqual((e["montre"], e["opacite"]), (True, 1))
 
 
 if __name__ == "__main__":

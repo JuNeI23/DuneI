@@ -99,10 +99,12 @@ ShellRoot {
         function evenement(nom: string, donnee: string): void { scene.surEvenement(nom, donnee) }
 
         // etat — état de la scène. Entrées : aucune. Sortie : JSON {ouvert, present, fenetre (vrai si construite),
-        // sortant, differee (l'action en attente, ou null), montre}. Erreurs : aucune. Dépendances : scene.
+        // sortant, differee (l'action en attente, ou null), montre, opacite (l'opacité que Hyprland applique à la
+        // surface de la fenêtre, ou null sans fenêtre)}. Erreurs : aucune. Dépendances : scene.
         function etat(): string {
             return JSON.stringify({ ouvert: scene.ouvert, present: scene.present, fenetre: scene.fenetre !== null,
-                                    sortant: scene.sortant, differee: scene.differee, montre: scene.montre })
+                                    sortant: scene.sortant, differee: scene.differee, montre: scene.montre,
+                                    opacite: scene.fenetre?.HyprlandWindow.opacity ?? null })
         }
     }
 
