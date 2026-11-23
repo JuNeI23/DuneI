@@ -1762,9 +1762,9 @@
     "ecart": 16
   },
   "deconnexion": {
-    "cote": 88,
-    "glyphe": 40,
-    "ecart": 24,
+    "cote": 128,
+    "glyphe": 56,
+    "ecart": 36,
     "agrandi": 1.15,
     "lettreGrisee": 0.7
   },

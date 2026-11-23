@@ -480,9 +480,9 @@ largeur_max = 320             # largeur maximale d'une vignette, pour une fenêt
 ecart = 16                    # espace entre deux vignettes (échelon de spacing.scale)
 
 [deconnexion]                 # menu de déconnexion, SUPER + Échap (L2-23) ; px logiques ; maquette deconnexion-v1 validée
-cote = 88                     # côté d'une vignette en verre
-glyphe = 40                   # côté du glyphe dans la vignette
-ecart = 24                    # espace entre deux boutons (échelon de spacing.scale)
+cote = 128                    # côté d'une vignette en verre (88 dans la maquette, agrandi à la demande)
+glyphe = 56                   # côté du glyphe dans la vignette
+ecart = 36                    # espace entre deux boutons, assez large pour le bouton agrandi et son libellé
 agrandi = 1.15                # facteur du bouton sous le curseur, autour de son centre, sans pousser ses voisins
 lettreGrisee = 0.7            # opacité de la lettre d'accès d'un bouton gris (1 sous le curseur)
 # Couleurs, toutes tirées du thème : le bouton choisi suit la recette de material.thumb teintée de color.accent

@@ -22,9 +22,9 @@ import "../Composants" as C
 // Erreurs : aucune ; avant le chargement des tokens, la rangée est vide et de taille nulle.
 // Dépendances : Deconnexion, C.VignetteVerre, C.Texte, Ressort, ColorSpring, Theme (deconnexion, dont lettreGrisee,
 // space, radius, color, bureau).
-// Cotes (maquette deconnexion-v1 validée) : vignette deconnexion.cote (88), glyphe deconnexion.glyphe (40), écart
-// deconnexion.ecart (24), coins radius.window (12) ; libellé à l'échelon 3 (15) en graisse moyenne, space.scale[1]
-// (8) sous la vignette ; lettre à l'échelon 1 (12).
+// Cotes (maquette deconnexion-v1 validée, agrandie à la demande de Nicolas) : vignette deconnexion.cote (128), glyphe
+// deconnexion.glyphe (56), écart deconnexion.ecart (36), coins radius.window (12) ; libellé à l'échelon 4 (18), celui
+// des titres de section, en graisse moyenne, space.scale[1] (8) sous la vignette ; lettre à l'échelon 3 (15).
 Row {
     id: cadre
 
@@ -156,7 +156,7 @@ Row {
                     anchors.horizontalCenter: parent.horizontalCenter
                     opacity: croise.value
                     text: bouton.libelle
-                    echelon: 3
+                    echelon: 4
                     moyen: true
                     color: encre.value
                 }
@@ -165,7 +165,7 @@ Row {
                     visible: opacity > 0
                     opacity: 1 - croise.value
                     text: bouton.ancien
-                    echelon: 3
+                    echelon: 4
                     moyen: true
                     color: encre.value
                 }
@@ -176,7 +176,7 @@ Row {
                 y: texte.y + texte.height
                 opacity: eclat.value
                 text: bouton.modelData.lettre ?? ""
-                echelon: 1
+                echelon: 3
                 color: Theme.bureau?.texteClairSurvol ?? "transparent"
             }
         }
