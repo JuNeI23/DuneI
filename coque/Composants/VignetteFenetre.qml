@@ -17,7 +17,7 @@ import "../Theme"
 // un fond color.surfaceWindow sous une barre color.surfacePanel à trois points. Survolée, la vignette se soulève seulement (comme
 // une tuile de l'accueil) ; choisie au clavier, elle grandit du facteur agrandi, galerie.echelle par défaut (comme la
 // tuile choisie de l'accueil) et, si anneau est vrai, s'entoure d'un anneau d'accent, au ressort des états : l'accent n'appartient
-// qu'à l'élément sous le curseur du clavier. Sans anneau (le sélecteur pose sa propre plaque), ni anneau ni fondu
+// qu'à l'élément sous le curseur du clavier. Sans anneau (le sélecteur marque le curseur par l'agrandissement et l'estompe), ni anneau ni fondu
 // d'anneau ; l'échelle demeure. Sans survolActif (le sélecteur, où le survol déplace déjà la sélection), le survol ne
 // soulève ni ne grandit la vignette : la seule marque du curseur reste celle de la sélection. Un clic amène sa fenêtre.
 // Entrées : adresse, adresse Hyprland de la fenêtre ; choisie, vrai quand le curseur du clavier est dessus ;
@@ -27,8 +27,8 @@ import "../Theme"
 // vignettes non choisies du sélecteur), au ressort state.
 // Sorties : survolee, vrai tant que le pointeur est dessus ; capturee, vrai une fois l'image reçue ; vue et image, la
 // capture native et sa source d'effet (lues par les essais) ; activee(), émis au clic. Erreurs : aucune.
-// Dépendances : Quickshell.Wayland (ScreencopyView), Quickshell.Hyprland (toplevels),
-// Ressort, Theme (color, radius, space, galerie).
+// Dépendances : QtQuick (ShaderEffectSource), Quickshell.Wayland (ScreencopyView), Quickshell.Hyprland (toplevels),
+// Ressort, Theme (color, radius, space, galerie, material).
 // Cotes : coins radius.panel (10, maquette 8) ; barre de 12 % de la hauteur, au moins space.scale[1] ; points de
 // space.scale[0].
 Item {

@@ -4659,7 +4659,7 @@ autres sont grisées par une opacité de 0,5 (`selecteur.estompe`), animée au r
 déconnexion, choisie par Nicolas parmi trois options. Écartées : l'agrandissement accompagné d'un liseré d'accent, qui
 ramène l'orange ; l'agrandissement seul, le moins lisible quand les Tab s'enchaînent. Ce choix assouplit D201 : le
 « neutre pur, l'image seule » vaut désormais pour la vignette choisie, les autres recevant une opacité réduite, sans
-teinte ni couleur ajoutée. Conséquence à juger à l'écran : l'estompe par opacité laisse voir le fond à travers les
+teinte ni couleur ajoutée. La légende (titre et « bureau n ») prend les libellés clairs du menu de déconnexion (D205), posée sur le voile, et non plus `text-primary` et `text-secondary`. Conséquence à juger à l'écran : l'estompe par opacité laisse voir le fond à travers les
 vignettes grisées.
 
 *Touché : `coque/Selecteur/CadreSelecteur.qml`, `coque/Composants/VignetteFenetre.qml`, `tokens.toml` (`[selecteur]`),

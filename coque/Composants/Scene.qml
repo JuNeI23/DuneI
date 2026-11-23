@@ -6,8 +6,8 @@ import Quickshell.Hyprland
 // sélecteur et du lanceur.
 // Rôle : tient l'ouverture d'une attention, son inscription au registre Overlays (famille « attention » : l'ouvrir
 // ferme le lanceur ou le sélecteur, et l'ouverture de l'un d'eux la ferme), sa fenêtre FenetreScene chargée à la
-// demande et son fondu de sortie, puis l'exécution différée de l'action choisie. Le comportement est celui du
-// sélecteur (Selecteur.qml) : executer ferme la scène et ne fait partir l'action qu'au retrait du calque de la scène
+// demande et son fondu de sortie, puis l'exécution différée de l'action choisie. Le comportement est repris du
+// sélecteur de L2-17 : executer ferme la scène et ne fait partir l'action qu'au retrait du calque de la scène
 // (namespace espace) par le compositeur (événement closelayer, D194), pour que la fenêtre visée garde le clavier que
 // Hyprland rend à ce retrait ; une garde d'une seconde la fait partir si l'événement ne vient pas. Chaque client a son
 // propre namespace (L2-80) : le retrait d'un autre calque d'attention, le lanceur en fondu par exemple, ne fait rien

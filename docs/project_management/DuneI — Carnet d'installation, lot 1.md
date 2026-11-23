@@ -1891,7 +1891,7 @@ Hyprland floute ce qui se trouve derrière une surface de calque dont l'alpha d�
 générées depuis `[glass]` de `tokens.toml` :
 
 - `generated/hyprland-layers.lua` : une règle `dunei-verre-<namespace>` par namespace (`dunei-barre`,
-  `dunei-attention`, `dunei-attention-selecteur`, `dunei-attention-deconnexion`), avec `blur`, `blur_popups`, `ignore_alpha = 0.6`, et `xray` sur `dunei-barre` seule ;
+  `dunei-attention`, `dunei-attention-selecteur`, `dunei-attention-deconnexion`), avec `blur`, `blur_popups`, `ignore_alpha = 0.58`, et `xray` sur `dunei-barre` seule ;
 - `generated/hyprland-tokens.lua` : le flou global (`decoration.blur`, taille 8, deux passes, `popups = false`, pour
   ne pas flouter les popups des applications) ;
 - `config/hypr/modules/regles.lua` applique la liste par une boucle :

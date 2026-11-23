@@ -32,7 +32,7 @@ import "../Applications/applications.js" as Apps
 //           appelle avancer(1), est déclaré par la coque de session (coque/shell.qml) : le protocole des raccourcis
 //           globaux refuse deux clients sur la même paire appid:nom, et une coque d'essai qui chargerait ce singleton
 //           à côté de la coque installée ferait tomber l'une des deux.
-// Sorties : ouvert (alias de la scène, s'affecte) ; famille ; montre, sortant, differee et fenetre (lus sur la scène :
+// Sorties : ouvert (alias de la scène, s'affecte) ; montre, sortant, differee et fenetre (lus sur la scène :
 //           montrée après le délai, fenêtre en sortie, action en attente du retrait du calque ou null, FenetreScene
 //           ouverte ou null) ; espace (« dunei-attention-selecteur », le namespace de son calque) ; liste (fenêtres
 //           figées à l'ouverture) ; index (la sélection) ; choisie (la fenêtre sous la sélection, ou null) ; largeurs
@@ -46,7 +46,6 @@ Singleton {
     id: selecteur
 
     property alias ouvert: scene.ouvert
-    readonly property string famille: "attention"
     readonly property bool montre: scene.montre
     readonly property bool sortant: scene.sortant
     readonly property var differee: scene.differee
