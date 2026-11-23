@@ -1,0 +1,19 @@
+Glyphes hors Phosphor du thème d'icônes DuneI
+=============================================
+
+hyprland.svg
+------------
+Logo officiel de Hyprland (la goutte seule), copié tel quel, sans retouche.
+
+Source : dépôt officiel hyprwm/hyprland-website, fichier static/imgs/logo/hyprland_short.svg, dernier commit
+f3f753435fc579fa655fb5bcde1f89a0dbdb994f (2026-11-11), identique à https://hypr.land/imgs/logo/hyprland_short.svg.
+Empreinte sha256 : c7e675dfd023e2e7406edcd0ab5f34ca1f20f4d84a1b9245da0368abf7ffe4ca
+
+Licence : le nom « Hyprland » et son logo sont des marques déposées de Hyprland Development dans l'Union
+européenne. Le logo n'est pas sous la licence BSD-3-Clause du code : tous droits réservés, son usage relève de la
+politique des marques de Hyprland (https://hypr.land/trademark-usage/, version du 11 novembre 2026). Cette politique
+permet, sans demande individuelle, d'employer le logo officiel pour désigner Hyprland comme composant logiciel
+employé par un projet, à condition de ne pas le déformer ni le rogner ; le redimensionnement proportionnel et
+l'ajustement des couleurs sont permis. DuneI l'emploie ainsi pour l'action « Quitter Hyprland » : la génération du
+thème le rend monochrome et recolorable, sans en changer la forme. DuneI n'est ni affilié à Hyprland Development ni
+approuvé par lui.

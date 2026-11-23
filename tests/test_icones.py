@@ -6,12 +6,13 @@ import tomllib
 import unittest
 from pathlib import Path
 
-from generate_icones import composer, generer, index_theme, recolorable
-from phosphor import charger, glyphes, nom_fichier
+from generate_icones import composer, generer, index_theme, monochrome, recolorable
+from phosphor import charger, externes, glyphes, nom_fichier
 
 ROOT = Path(__file__).resolve().parent.parent
 TABLE = ROOT / "icones" / "correspondances.toml"
 SVG = ROOT / "icones" / "phosphor"
+EXTERNES = ROOT / "icones" / "externes"
 
 ATTENDUS = (
     [f"battery-level-{n}" for n in range(0, 101, 10)]
@@ -29,7 +30,7 @@ ATTENDUS = (
     + ["audio-volume-muted", "audio-volume-low", "audio-volume-medium", "audio-volume-high",
        "microphone-sensitivity-muted", "microphone-sensitivity-high", "audio-headset", "audio-input-microphone"]
     + ["battery-caution"]
-    + ["system-lock-screen", "system-suspend", "system-log-out", "system-reboot", "system-shutdown"]
+    + ["system-lock-screen", "system-suspend", "system-reboot", "system-shutdown"]
 )
 
 
@@ -67,6 +68,63 @@ class IconesTest(unittest.TestCase):
             t.write_text('[source]\ngraisse = "regular"\n[a]\n"x" = "bell"\n[b]\n"x" = "sun"\n', encoding="utf-8")
             with self.assertRaises(ValueError):
                 charger(t)
+
+    def test_externes(self):
+        """Le logo de Hyprland est le seul glyphe hors Phosphor (recette 1 de L2-23), versionné avec sa licence.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec si la section [externes] change, si un SVG externe manque
+        ou n'est nommé par aucune entrée, ou si la licence ne cite pas la politique des marques de Hyprland.
+        Dépendances : phosphor.externes, icones/externes/.
+        """
+        self.assertEqual(externes(TABLE), {"hyprland": "externes/hyprland.svg"})
+        self.assertEqual({p.name for p in EXTERNES.glob("*.svg")}, {"hyprland.svg"})
+        self.assertNotIn("hyprland", self.noms)
+        licence = (EXTERNES / "LICENSE").read_text(encoding="utf-8")
+        for attendu in ("hyprwm/hyprland-website", "https://hypr.land/trademark-usage/", "tous droits réservés"):
+            self.assertIn(attendu, licence)
+
+    def test_doublon_externe_refuse(self):
+        """Un nom à la fois dans [externes] et dans un groupe Phosphor est refusé.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec si charger accepte le doublon. Dépendances : charger.
+        """
+        with tempfile.TemporaryDirectory() as d:
+            t = Path(d) / "t.toml"
+            t.write_text('[source]\ngraisse = "bold"\n[a]\n"x" = "bell"\n[externes]\n"x" = "externes/x.svg"\n',
+                         encoding="utf-8")
+            with self.assertRaises(ValueError):
+                charger(t)
+
+    def test_monochrome(self):
+        """monochrome retire dégradés, styles et classes, garde la forme et la boîte de vue.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec si une couleur propre subsiste ou si la forme change.
+        Dépendances : monochrome, recolorable.
+        """
+        logo = ('<?xml version="1.0"?><svg id="L" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><defs>'
+                '<style>.a{fill:url(#g)}</style><linearGradient id="g"><stop stop-color="#00a8f4"/></linearGradient>'
+                '</defs><path class="a" fill="#123456" d="M1 1"/></svg>')
+        m = monochrome(logo)
+        self.assertEqual(m, '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><path d="M1 1"/></svg>')
+        r = recolorable(m)
+        self.assertEqual(r.count('fill="currentColor"'), 1)
+        self.assertNotIn("#00a8f4", r)
+
+    def test_externe_genere(self):
+        """Les deux variantes du logo de Hyprland sont la même image, monochrome et recolorable.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec si une variante manque, diffère de l'autre ou garde le
+        dégradé d'origine. Dépendances : generer, monochrome, recolorable.
+        """
+        with tempfile.TemporaryDirectory() as d:
+            generer(ROOT, Path(d))
+            dossier = Path(d) / "DuneI" / "symbolic"
+            attendu = recolorable(monochrome((EXTERNES / "hyprland.svg").read_text(encoding="utf-8")))
+            for suffixe in ("", "-fill"):
+                texte = (dossier / f"hyprland{suffixe}-symbolic.svg").read_text(encoding="utf-8")
+                self.assertEqual(texte, attendu)
+                self.assertNotIn("url(#", texte)
+                self.assertIn('class="ColorScheme-Text"', texte)
 
     def test_index_theme(self):
         t = index_theme("DuneI", ["Adwaita", "breeze-dark", "hicolor"])

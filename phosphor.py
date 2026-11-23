@@ -21,6 +21,8 @@ from pathlib import Path
 
 TABLE = Path("icones/correspondances.toml")
 DEST = Path("icones/phosphor")
+# Section de la table qui nomme les glyphes hors Phosphor (voir externes) ; charger l'écarte.
+EXTERNES = "externes"
 
 
 def charger(chemin: Path) -> tuple[dict, dict[str, str]]:
@@ -28,23 +30,35 @@ def charger(chemin: Path) -> tuple[dict, dict[str, str]]:
 
     Entrée : chemin — fichier TOML avec une section [source] et des groupes nom freedesktop → nom Phosphor
               (ou « base+pastille », voir glyphes).
-    Sortie : (section source, dictionnaire fusionné de tous les autres groupes).
-    Erreurs : ValueError si un nom freedesktop figure dans deux groupes, ou si la section [source] manque ;
-              OSError si le fichier est illisible.
-    Dépendances : tomllib.
+    Sortie : (section source, dictionnaire fusionné de tous les autres groupes, hors [externes]).
+    Erreurs : ValueError si un nom freedesktop figure dans deux groupes (y compris [externes]), ou si la section
+              [source] manque ; OSError si le fichier est illisible.
+    Dépendances : tomllib, EXTERNES.
     """
     brut = tomllib.loads(chemin.read_text(encoding="utf-8"))
     if "source" not in brut:
         raise ValueError(f"{chemin} : section [source] absente")
     noms: dict[str, str] = {}
+    vus = set(brut.get(EXTERNES, {}))
     for groupe, table in brut.items():
-        if groupe == "source":
+        if groupe in ("source", EXTERNES):
             continue
         for nom, phosphor in table.items():
-            if nom in noms:
+            if nom in noms or nom in vus:
                 raise ValueError(f"{chemin} : le nom « {nom} » figure dans deux groupes")
             noms[nom] = phosphor
     return brut["source"], noms
+
+
+def externes(chemin: Path) -> dict[str, str]:
+    """Glyphes hors Phosphor de la table de correspondance.
+
+    Entrée : chemin — fichier TOML de la table.
+    Sortie : dictionnaire nom freedesktop → chemin du SVG relatif à icones/ (section [externes], vide si absente).
+    Erreurs : OSError si le fichier est illisible ; tomllib.TOMLDecodeError (ValueError) s'il est mal formé.
+    Dépendances : tomllib, EXTERNES.
+    """
+    return dict(tomllib.loads(chemin.read_text(encoding="utf-8")).get(EXTERNES, {}))
 
 
 def glyphes(valeur: str) -> list[str]:
