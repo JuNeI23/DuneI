@@ -4632,3 +4632,18 @@ pixels que l'œil ne distingue pas. Si Nicolas tient au 36, il faudra l'ajouter 
 
 *Touché : `coque/Composants/Scene.qml`, `coque/Composants/FenetreScene.qml`, `tokens.toml` (`[deconnexion]`), tests
 `test_scene`, `test_deconnexion`.*
+
+### D210 · « Quitter Hyprland » remplace « Déconnexion »
+
+23 novembre 2026 · L2-23, à la recette. L'action `deconnexion` du menu devient `quitter`, libellé « Quitter Hyprland »,
+lettre Q. Nicolas n'aura jamais plusieurs sessions utilisateur : l'action ne ramène pas à un écran de connexion où
+choisir un autre compte, elle quitte réellement Hyprland par `uwsm stop`, et le libellé le dit. Le lanceur la trouve par
+« quitter » ou « hyprland » (la commande garde les mots-clés session et logout). Son glyphe est le logo de Hyprland,
+qui n'est pas dans Phosphor : la table des icônes gagne une section `[externes]`, que `make phosphor` ne touche pas et
+que `phosphor.py` refuse de voir recouper un groupe Phosphor. Le logo est rendu monochrome (dégradé et couleurs propres
+retirés) pour être recoloré comme un glyphe Phosphor ; c'est une marque déposée, utilisée selon la politique de
+Hyprland. `sign-out` sort de la table et `system-log-out` du thème généré. La même recette a complété le masque de
+saisie de la barre (logo et engrenage des Réglages), et noté qu'une icône neuve exige le redémarrage de la coque.
+
+*Touché : `coque/Deconnexion/actions.json`, `coque/Lanceur/commandes.json`, `icones/correspondances.toml`,
+`phosphor.py`, `generate_icones.py`, `coque/Barre/Barre.qml`, tests, carnet (1.55), fiche du menu (1.3).*

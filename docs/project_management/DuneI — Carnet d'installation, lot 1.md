@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.54. Historique en fin de document.
+Version 1.55. Historique en fin de document.
 
 Socle amorçable.
 
@@ -2297,11 +2297,23 @@ Aucun paquet à installer : la feature ne touche que la coque, deux liaisons de 
   `qs ipc -c dunei call deconnexion basculer`. Échap, un clic sur le voile ou un autre overlay d'attention le ferment.
   **`SUPER + ALT + M` (« Quitter la session », `uwsm stop`) reste lié** : c'est l'issue de secours si la coque est
   tombée (D207).
-- **Les boutons.** Verrouiller (L), Veille (S), Déconnexion (D), Redémarrer (R), Éteindre (E), déclarés dans
+- **Les boutons.** Verrouiller (L), Veille (S), Quitter Hyprland (Q), Redémarrer (R), Éteindre (E), déclarés dans
   `coque/Deconnexion/actions.json`. Flèches, Tab et `Maj + Tab` déplacent le curseur ; une lettre, Entrée, Espace ou un
   clic appuient. Le bouton sous le curseur est agrandi et teinté d'accent, les autres sont gris. Verrouiller et Veille
   partent au premier appui ; les trois autres s'arment (bouton en `error`, « Confirmer ») et partent au second. Les
   touches répétées sont ignorées (D205). Le menu apparaît depuis le centre de l'écran (D209).
+  « Quitter Hyprland » exécute `uwsm stop` : elle quitte réellement Hyprland, Nicolas n'ayant jamais plusieurs sessions
+  utilisateur (D210). Le lanceur la trouve par « quitter » ou « hyprland ».
+- **Le logo de Hyprland.** Il n'appartient pas à Phosphor : `icones/correspondances.toml` le déclare dans la section
+  `[externes]` (`"hyprland" = "externes/hyprland.svg"`). `generate_icones.py` en retire le dégradé et les couleurs
+  propres pour en faire une forme monochrome, recolorée comme un glyphe Phosphor. C'est une marque déposée, utilisée
+  selon la politique de Hyprland.
+- **Après l'ajout d'une icône, redémarrer la coque.** Qt garde en cache la résolution d'une icône faite avant que le
+  glyphe n'entre dans le thème : à la recette, Redémarrer montrait le glyphe de Breeze au lieu d'`arrow-clockwise`.
+  Après `make install` d'une icône neuve, lancer `systemctl --user restart dunei-coque.service`.
+- **Le masque de saisie de la barre.** Tout élément cliquable de `Barre.qml` doit avoir sa région dans le `mask` : sans
+  elle, le compositeur laisse passer le clic au bureau, sans aucun message. À la recette, le logo Arch et l'engrenage des
+  Réglages en manquaient. Un test exige désormais une région pour chaque élément `cliquable: true`.
 - **Le module.** `coque/Deconnexion/` : le singleton `Deconnexion.qml` (état, curseur, armement, IPC `deconnexion` avec
   `basculer()` et `ouvrir(action)`), le cadre `CadreDeconnexion.qml`, la logique pure `deconnexion.js` et
   `actions.json`. Le socle est partagé : `coque/Composants/Scene.qml` et `FenetreScene.qml` (D204), la vignette en verre
@@ -2604,6 +2616,7 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 
 | Version | Date | Changement |
 | --- | --- | --- |
+| 1.55 | 2026-11-23 | Recette du menu de déconnexion (L2-23) : « Quitter Hyprland » (D210), logo de Hyprland hors Phosphor, masque de saisie de la barre complété, redémarrage de la coque après une icône neuve |
 | 1.54 | 2026-11-23 | Le menu de déconnexion (L2-23, D204 à D209) : `SUPER + Échap` et le logo l'ouvrent, `SUPER + ALT + M` gardé en secours, module `coque/Deconnexion/`, socle `Scene`, table `[deconnexion]` |
 | 1.53 | 2026-11-23 | Les bureaux restent sans teinte : le sélecteur de bureaux (L2-18) est retiré (D203) |
 | 1.52 | 2026-11-21 | Le sélecteur de fenêtres (L2-17, D200 à D202) : `SUPER + Tab` devient le geste tenu du sélecteur de la coque, liaison globale `dunei:selecteur`, jetons `delays.selecteur` et `[selecteur]`, vérification et tests |

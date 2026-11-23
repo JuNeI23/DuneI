@@ -1,6 +1,6 @@
 # Menu de déconnexion (L2-23) — fiche
 
-Version 1.2 — 2026-11-23 · en cours, recette à faire
+Version 1.3 — 2026-11-23 · faite, recette validée
 
 ## Intention
 
@@ -19,9 +19,9 @@ rebranchera dans une feature suivante, qui corrigera en même temps ses défauts
 ## Objectifs
 
 - Ouvrir le menu d'un clic sur le logo de la barre ou par `SUPER + Échap`.
-- Cinq actions : Verrouiller, Veille, Déconnexion, Redémarrer, Éteindre, chacune atteignable à la souris, aux flèches
+- Cinq actions : Verrouiller, Veille, Quitter Hyprland, Redémarrer, Éteindre, chacune atteignable à la souris, aux flèches
   et par sa lettre.
-- Confirmer par un double appui les trois actions qui perdent le travail ouvert (Déconnexion, Redémarrer, Éteindre).
+- Confirmer par un double appui les trois actions qui perdent le travail ouvert (Quitter Hyprland, Redémarrer, Éteindre).
 - Décrire les actions dans un fichier de données, pour en ajouter, retirer ou réordonner une sans toucher au code.
 - Faire passer « Redémarrer » et « Éteindre » du lanceur par ce menu, ce qui supprime la confirmation provisoire du
   lanceur.
@@ -94,8 +94,9 @@ Disposition, de gauche à droite, centrée sur l'écran :
      ┌──────┐   ┌──────┐   ┌──────┐   ┌──────┐   ┌──────┐
      │  🔒  │   │  ☾   │   │  ⇥   │   │  ↻   │   │  ⏻   │
      └──────┘   └──────┘   └──────┘   └──────┘   └──────┘
-   Verrouiller   Veille   Déconnexion Redémarrer  Éteindre
-        L           S          D           R          E
+   Verrouiller   Veille   Quitter     Redémarrer  Éteindre
+                                 Hyprland
+        L           S          Q           R          E
 ```
 
 - Chaque bouton est une vignette en verre, sur le modèle des icônes de la page Paramètres : le composant
@@ -133,7 +134,7 @@ Disposition, de gauche à droite, centrée sur l'écran :
 ### Confirmation par double appui
 
 - Verrouiller et Veille partent au premier appui.
-- Déconnexion, Redémarrer et Éteindre (`confirmer: true` dans le fichier de données) : le premier appui **arme** le
+- Quitter Hyprland, Redémarrer et Éteindre (`confirmer: true` dans le fichier de données) : le premier appui **arme** le
   bouton. Il reste agrandi, sa teinte passe de `color.accent` à `color.error` et son libellé devient « Confirmer », par une
   transition animée.
   Le second appui sur le même bouton, par le même moyen ou un autre (lettre, Entrée, clic), exécute.
@@ -149,7 +150,7 @@ identifiant, libellé, lettre, glyphe, commande, `confirmer`.
 | --- | --- | --- | --- | --- |
 | verrouiller | Verrouiller | L | `loginctl lock-session` | non |
 | veille | Veille | S | `systemctl suspend` | non |
-| deconnexion | Déconnexion | D | `uwsm stop` | oui |
+| quitter | Quitter Hyprland | Q | `uwsm stop` | oui |
 | redemarrer | Redémarrer | R | `systemctl reboot` | oui |
 | eteindre | Éteindre | E | `systemctl poweroff` | oui |
 
@@ -168,7 +169,7 @@ identifiant, libellé, lettre, glyphe, commande, `confirmer`.
 - Le mécanisme de confirmation du lanceur (`confirmer`) disparaît, faute de client : la puce perd sa variante `danger`
   et la fiche du lanceur est mise à jour (1.3). Le lanceur résout désormais ses commandes par `Sources.ligne(id)`, qui
   rend la ligne de commande d'une commande DuneI.
-- Une commande « Déconnexion » entre au lanceur sur le même modèle.
+- Une commande « Quitter Hyprland » (mots-clés quitter, hyprland, session, logout) entre au lanceur sur le même modèle.
 
 ## Contraintes
 
@@ -177,7 +178,7 @@ identifiant, libellé, lettre, glyphe, commande, `confirmer`.
 - Couleurs par jetons seulement ; graisse bold des glyphes (D101) ; tout changement visible s'anime.
 - Sobriété (D80) : la fenêtre et le contenu ne sont construits qu'à l'ouverture et détruits à la fermeture.
 - Code agnostique de la machine : aucune commande propre à caladan ; uwsm est déjà requis par l'installation.
-- Essais sur les bureaux 1 à 4 seulement ; jamais d'action réelle de veille, d'extinction ou de déconnexion pendant les
+- Essais sur les bureaux 1 à 4 seulement ; jamais d'action réelle de veille, d'extinction ou de sortie de Hyprland pendant les
   tests automatiques. La recette sur caladan les éprouve une fois, à la main, avec l'accord de Nicolas.
 
 ## Tests
@@ -211,3 +212,4 @@ environ 200 ms trop tôt.
 | 1.0 | 2026-11-23 | Première écriture, après repérage (wlogout, rices Quickshell) et choix de Nicolas |
 | 1.1 | 2026-11-23 | Socle `Scene` tiré du lanceur et du sélecteur, au lieu d'une option sans cadre d'`Overlay`, qui n'a pas de fondu de sortie |
 | 1.2 | 2026-11-23 | Maquette refaite deux fois : plus de plaque d'accent (rejetée par Nicolas), bouton sous le curseur agrandi de 1,15 et teinté d'accent, autres gris, armé en `error` ; accent seul, sans teinte par bouton ; interface agrandie (cote 128, glyphe 56, écart 32, libellés à l'échelon 4) ; apparition depuis le centre (`montee: false`) ; `VueCurseur` abandonné ; `VignetteVerre` ; touches répétées filtrées ; lanceur par `Sources.ligne` (D204 à D209) |
+| 1.3 | 2026-11-23 | Recette validée : « Déconnexion » devient « Quitter Hyprland » (D210) ; statut « faite » |

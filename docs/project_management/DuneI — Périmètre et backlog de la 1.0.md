@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.66. Historique en fin de document.
+Version 1.67. Historique en fin de document.
 
 La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **191 éléments** répartis en **cinq lots**, sur six chantiers.
 
@@ -276,7 +276,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L2-20 | B | Écrit | Menu contextuel du bureau — part du point de clic |
 | L2-21 | B | Écrit | Infobulles — délai de 500 ms |
 | L2-22 | B | Écrit | Verrouillage — registre de spectacle ; `SUPER + L` est déjà lié à `loginctl lock-session` (L1-09, D41) ; le verrouilleur provisoire, `hyprlock`, ne se nomme qu'à un endroit, `verrouilleur` dans `energie.toml`, et c'est le seul point à remplacer ; l'esthétique du verrouillage reste ouverte, Nicolas acceptant d'y investir de la ressource machine |
-| L2-23 | B | En recette | Menu de déconnexion — action destructrice en `error` — **construit, recette à faire (D204 à D209)** : overlay d'attention sans plaque (socle `Scene`), cinq boutons en verre (`VignetteVerre`), celui sous le curseur agrandi de 1,15 et teinté d'accent, les autres gris, armé en `error` avec « Confirmer » ; double appui pour Déconnexion, Redémarrer et Éteindre ; ouvert par le logo et `SUPER + Échap`, `SUPER + ALT + M` gardé en secours ; le lanceur l'ouvre armé |
+| L2-23 | B | Fait | Menu de déconnexion — action destructrice en `error` (D204 à D210) : overlay d'attention sans plaque (socle `Scene`), cinq boutons en verre (`VignetteVerre`), celui sous le curseur agrandi de 1,15 et teinté d'accent, les autres gris, armé en `error` avec « Confirmer » ; double appui pour Quitter Hyprland, Redémarrer et Éteindre ; ouvert par le logo et `SUPER + Échap`, `SUPER + ALT + M` gardé en secours ; le lanceur l'ouvre armé. Recette validée à l'écran par Nicolas le 23 novembre ; elle a corrigé le masque de saisie de la barre (logo et engrenage des Réglages) et renommé « Déconnexion » en « Quitter Hyprland » (D210) |
 | L2-24 | B | Écrit | Agent d'authentification — il devra entrer dans `session.toml` (unité systemd utilisateur) pour démarrer avec la session (L1-10, D50) |
 | L2-25 | B | Configuré | Trousseau de secrets |
 | L2-26 | B | Écrit | Démon de thème — rechargement à chaud |
@@ -539,6 +539,7 @@ Le choix de la distribution de base et du compositeur, précédemment ouverts, s
 
 | Version | Date | Changement |
 | --- | --- | --- |
+| 1.67 | 2026-11-23 | L2-23 fait : recette validée, « Déconnexion » devient « Quitter Hyprland » (D210) |
 | 1.66 | 2026-11-23 | L2-23 en recette (D204 à D209) ; ajout de L2-80, reprise du sélecteur de fenêtres sur `Scene` ; 191 éléments |
 | 1.65 | 2026-11-23 | L2-18 retiré : pas de sélecteur de bureaux (D203) ; 190 éléments |
 | 1.0 | 2026-10-12 | Version initiale, 137 éléments |
