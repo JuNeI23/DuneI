@@ -4,6 +4,7 @@ import Quickshell.Io
 import "nmcli.js" as Nmcli
 import "Barre"
 import "Reseau"
+import "Deconnexion"
 
 // Coque d'essai du module Reseau, sans aucune fenêtre.
 // Rôle : expose par IPC (cible « reseau ») les fonctions pures de nmcli.js, et le singleton EtatReseau (cible
@@ -12,9 +13,19 @@ import "Reseau"
 // Entrées : commande IPC appeler <fonction> <{"args": [...]} en JSON>. Sortie : le résultat encodé en JSON, ou
 // « erreur : <message> » si la fonction lève. Erreurs : nom de fonction inconnu, JSON invalide (même forme de
 // retour). Dépendances : quickshell ≥ 0.3 (Quickshell.Io), nmcli.js (lien essai/nmcli.js, car Quickshell ne
-// suit pas les imports hors du dossier de la coque ; liens essai/Barre et essai/Reseau pour la même raison).
+// suit pas les imports hors du dossier de la coque ; liens essai/Barre, essai/Reseau et essai/Deconnexion pour la
+// même raison ; Deconnexion y est neutralisé : ni fenêtre, ni clavier, ni exécution réelle).
 ShellRoot {
-    Component.onCompleted: console.log("reseau : prêt")
+    // Component.onCompleted — neutralise le singleton Deconnexion que le module Barre importe (Logo) : aucune
+    // fenêtre, aucun clavier, et une exécution remplacée par une ligne de journal, pour qu'aucun clic sur un logo ne
+    // puisse lancer de vraie commande. Entrées : aucune. Sortie : la ligne « reseau : prêt ». Erreurs : aucune.
+    // Dépendances : Deconnexion, console.
+    Component.onCompleted: {
+        Deconnexion.fenetree = false
+        Deconnexion.clavierExclusif = false
+        Deconnexion.executeur = a => console.log("essai : exécuté " + a.id)
+        console.log("reseau : prêt")
+    }
 
     // Les deux lecteurs de EtatReseau : un seul moniteur doit tourner quand ils sont tous deux instanciés.
     Item {
