@@ -7,15 +7,16 @@ import "../Composants" as C
 // Chaque bouton empile une vignette en verre (C.VignetteVerre, glyphe Phosphor bold), son libellé et sa lettre
 // d'accès.
 // Le bouton sous le curseur (Deconnexion.index) est agrandi du facteur deconnexion.agrandi autour de son centre, en
-// transformation, sans déplacer ses voisins ; sa vignette prend le verre teinté de color.accent, son libellé le texte
-// clair du bureau. Les autres sont gris et de même taille : vignette neutre, libellé et lettre au texte clair de
-// survol du bureau, lettre à l'opacité deconnexion.lettreGrisee. Le bouton armé (Deconnexion.arme) prend
+// transformation, sans déplacer ses voisins ; sa vignette prend le verre teinté de color.accent, son libellé le
+// texte clair du bureau. Les autres sont gris et de même taille : vignette neutre, libellé et lettre au texte clair
+// de survol du bureau, lettre à l'opacité deconnexion.lettreGrisee. Le bouton armé (Deconnexion.arme) prend
 // color.error et dit « Confirmer ». Tout changement s'anime : l'échelle au Ressort « state », les couleurs par
-// ColorSpring (chacun visant un jeton), le libellé par un fondu croisé au ressort « state », comme la phrase d'état d'EnTetePage. Le survol ne
-// pose le curseur qu'une fois le pointeur bougé de plus de space.scale[0] depuis sa première position vue, comme
-// CadreSelecteur : un pointeur immobile sous le menu qui apparaît ne le prend pas au clavier ni ne désarme. Un clic
-// appuie sur le bouton (Deconnexion.appuyer). Il reçoit le clavier : sa racine porte focus: true, car le Loader de
-// FenetreScene est une portée de focus, et chaque appui passe par Deconnexion.touche, l'auto-répétition écartée.
+// ColorSpring (chacun visant un jeton), le libellé par un fondu croisé au ressort « state », comme la phrase d'état
+// d'EnTetePage. Le survol ne pose le curseur qu'une fois le pointeur bougé de plus de space.scale[0] depuis sa
+// première position vue, comme CadreSelecteur : un pointeur immobile sous le menu qui apparaît ne le prend pas au
+// clavier ni ne désarme. Un clic appuie sur le bouton (Deconnexion.appuyer). Il reçoit le clavier : sa racine porte
+// focus: true, car le Loader de FenetreScene est une portée de focus, et chaque appui passe par Deconnexion.touche,
+// l'auto-répétition écartée.
 // Entrées : aucune (Deconnexion : actions, index, arme, choisir, appuyer, touche).
 // Sorties : boutons, le Repeater des boutons (chacun expose libelle, le texte voulu, et peint, le texte du libellé
 // courant) ; nomTouche(event) ; pointeur(p), lu aussi par la coque d'essai pour simuler le survol.
@@ -23,7 +24,7 @@ import "../Composants" as C
 // Dépendances : Deconnexion, C.VignetteVerre, C.Texte, Ressort, ColorSpring, Theme (deconnexion, dont lettreGrisee,
 // space, radius, color, bureau).
 // Cotes (maquette deconnexion-v1 validée, agrandie à la demande de Nicolas) : vignette deconnexion.cote (128), glyphe
-// deconnexion.glyphe (56), écart deconnexion.ecart (36), coins radius.window (12) ; libellé à l'échelon 4 (18), celui
+// deconnexion.glyphe (56), écart deconnexion.ecart (32), coins radius.window (12) ; libellé à l'échelon 4 (18), celui
 // des titres de section, en graisse moyenne, space.scale[1] (8) sous la vignette ; lettre à l'échelon 3 (15).
 Row {
     id: cadre
