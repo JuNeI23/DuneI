@@ -1,0 +1,12 @@
+[
+  {"id": "verrouiller", "libelle": "Verrouiller", "lettre": "L", "icone": "system-lock-screen",
+   "commande": ["loginctl", "lock-session"], "confirmer": false},
+  {"id": "veille", "libelle": "Veille", "lettre": "S", "icone": "system-suspend",
+   "commande": ["systemctl", "suspend"], "confirmer": false},
+  {"id": "quitter", "libelle": "Quitter Hyprland", "lettre": "Q", "icone": "hyprland",
+   "commande": ["uwsm", "stop"], "confirmer": true},
+  {"id": "redemarrer", "libelle": "Redémarrer", "lettre": "R", "icone": "system-reboot",
+   "commande": ["systemctl", "reboot"], "confirmer": true},
+  {"id": "eteindre", "libelle": "Éteindre", "lettre": "E", "icone": "system-shutdown",
+   "commande": ["systemctl", "poweroff"], "confirmer": true}
+]

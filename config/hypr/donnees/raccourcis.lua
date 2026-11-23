@@ -35,6 +35,9 @@ M.touches = {
     -- Coque : la galerie de fonds d'écran (L2-60), par la cible IPC « galerie » de la coque « dunei ».
     { touches = "SUPER + W", action = "commande", commande = "qs ipc -c dunei call galerie basculer",
       description = "Choisir le fond d'écran" },
+    -- Coque : le menu de déconnexion (L2-23), par la cible IPC « deconnexion ». SUPER + ALT + M reste l'issue de secours.
+    { touches = "SUPER + Escape", action = "commande", commande = "qs ipc -c dunei call deconnexion basculer",
+      description = "Ouvrir le menu de déconnexion" },
     -- Souris
     { touches = "SUPER + mouse:272", action = "glisser", drapeaux = { mouse = true }, description = "Déplacer la fenêtre à la souris" },
     { touches = "SUPER + mouse:273", action = "etirer",  drapeaux = { mouse = true }, description = "Redimensionner la fenêtre à la souris" },

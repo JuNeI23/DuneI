@@ -11,8 +11,9 @@ import "../Energie"
 // Barre — barre système de DuneI, posée en haut de chaque écran (L2-08, L2-09).
 // Rôle : fenêtre de calque de 28 px, transparente, qui réserve 28 px en haut de l'écran ; à gauche le logo et
 // l'horloge, à droite les indicateurs, au centre rien. Aucun fond ni capsule : les éléments se posent sur le
-// bureau. Le masque de saisie ne couvre que l'interrupteur jour/nuit, les indicateurs réseau, Bluetooth, audio et
-// batterie, et la cloche, seuls éléments cliquables : partout ailleurs les clics traversent la barre jusqu'au bureau. Elle ne prend
+// bureau. Le masque de saisie ne couvre que le logo, la cloche, les indicateurs batterie, réseau, Bluetooth et audio,
+// l'interrupteur jour/nuit et l'entrée des réglages, seuls éléments cliquables : partout ailleurs les clics traversent
+// la barre jusqu'au bureau. Elle ne prend
 // jamais le focus clavier. Elle porte le popover du réseau, ceux du Bluetooth, du son et de l'énergie, chacun ancré sous son
 // indicateur et rendu par la fenêtre unique HotePopovers.
 // Entrées : modelData, l'écran que lui donne le Variants de la coque ; panneau, le panneau des notifications
@@ -37,8 +38,9 @@ PanelWindow {
     implicitHeight: 28
     exclusiveZone: 28
     color: "transparent"
-    // Masque de saisie posé sur l'interrupteur et sur les indicateurs réseau, Bluetooth et audio, leurs coordonnées cumulées rangée par
-    // rangée (D100) : une Region qui nomme un item ne suit que ses déplacements dans son parent, et l'apparition
+    // Masque de saisie posé sur chaque élément cliquable (voir l'en-tête), leurs coordonnées cumulées rangée par
+    // rangée (D100). Un élément cliquable absent du masque ne reçoit aucun clic réel : le compositeur le laisse passer
+    // au bureau (le logo, recette 1 de L2-23) : une Region qui nomme un item ne suit que ses déplacements dans son parent, et l'apparition
     // d'une icône à leur droite (le réseau au lancement ou au réveil) faisait glisser la rangée sans déplacer le
     // masque, laissé sur l'icône voisine. Invisible (matériel absent), l'indicateur sort de la rangée (un Item
     // invisible n'y occupe plus de place) : sa région est alors mise à zéro, pour ne pas intercepter les clics du
@@ -79,6 +81,18 @@ PanelWindow {
             width: cloche.visible ? cloche.width : 0
             height: cloche.height
         }
+        Region {
+            x: rangee.x + droite.x + parametres.x
+            y: rangee.y + droite.y + parametres.y
+            width: parametres.visible ? parametres.width : 0
+            height: parametres.height
+        }
+        Region {
+            x: rangee.x + gauche.x + logo.x
+            y: rangee.y + gauche.y + logo.y
+            width: logo.visible ? logo.width : 0
+            height: logo.height
+        }
     }
     WlrLayershell.namespace: "dunei-barre"
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
@@ -89,10 +103,11 @@ PanelWindow {
         spacing: 0
 
         RowLayout {
+            id: gauche
             Layout.alignment: Qt.AlignLeft | Qt.AlignVCenter
             spacing: Theme.space?.scale[1] ?? 0
 
-            Logo {}
+            Logo { id: logo }
             Horloge {}
         }
 
@@ -122,7 +137,7 @@ PanelWindow {
                 id: audio
                 onOuvertChanged: popoverAudio.ouvert = ouvert
             }
-            Parametres {}
+            Parametres { id: parametres }
         }
     }
 

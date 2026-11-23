@@ -1,5 +1,6 @@
 # Table de correspondance du thème d'icônes DuneI (conception 2026-10-31, § 5).
-# Régénérer les sources avec `make phosphor`.
+# Régénérer les sources avec `make phosphor`. La section [externes] nomme les glyphes hors Phosphor, versionnés à la
+# main sous icones/externes/ avec leur licence : `make phosphor` ne les touche pas.
 
 [source]
 version = "2.1.1"
@@ -98,3 +99,16 @@ graisse = "bold"
 # Alerte d'énergie de la presqu'île (L2-13) : le symbole d'attention, le même pour les deux paliers.
 [energie]
 "battery-caution" = "warning"
+
+# Menu de déconnexion (L2-23) : les actions, validées sur la maquette deconnexion-v1 ; « Quitter Hyprland » porte le
+# logo de Hyprland, dans la section [externes].
+[deconnexion]
+"system-lock-screen" = "lock"
+"system-suspend" = "moon"
+"system-reboot" = "arrow-clockwise"
+"system-shutdown" = "power"
+
+# Glyphes hors Phosphor (recette 1 de L2-23) : nom freedesktop = SVG versionné sous icones/, à une seule forme, servi
+# pour la variante de la graisse comme pour la variante pleine, rendu monochrome et recolorable par la génération.
+[externes]
+"hyprland" = "externes/hyprland.svg"

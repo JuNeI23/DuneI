@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Générateur du thème d'icônes XDG DuneI.
 
-Lit la table icones/correspondances.toml (une entrée « base+pastille » compose deux glyphes en un SVG) et les SVG Phosphor versionnés, puis écrit sous generated/icons/<thème>/
+Lit la table icones/correspondances.toml (une entrée « base+pastille » compose deux glyphes en un SVG), les SVG
+Phosphor versionnés et les glyphes hors Phosphor de sa section [externes] (rendus monochromes), puis écrit sous generated/icons/<thème>/
 un index.theme et, pour chaque nom freedesktop, les variantes symbolic/<nom>-symbolic.svg (graisse de la table)
 et symbolic/<nom>-fill-symbolic.svg (variante pleine). Le nom du thème et son héritage viennent de
 tokens.toml [icons]. Aucun accès au réseau.
@@ -18,7 +19,7 @@ import sys
 import tomllib
 from pathlib import Path
 
-from phosphor import DEST, TABLE, charger, glyphes, nom_fichier
+from phosphor import DEST, TABLE, charger, externes, glyphes, nom_fichier
 
 # Couleur de repli du texte, reprise par la feuille de style que GTK remplace par la couleur du thème.
 COULEUR_REPLI = "#bebebe"
@@ -60,6 +61,24 @@ def recolorable(svg: str) -> str:
     if m.group(2):  # racine auto-fermante : on la rouvre pour loger la feuille.
         return svg[: m.start()] + racine + style + "</svg>" + svg[m.end():]
     return svg[: m.start()] + racine + style + svg[m.end():]
+
+
+def monochrome(svg: str) -> str:
+    """Rend monochrome un glyphe hors Phosphor (un logo en dégradé), sans toucher à sa forme.
+
+    Entrée : svg — texte d'un SVG dont les formes tirent leur couleur d'une feuille de style, de classes ou de
+             définitions (dégradés).
+    Sortie : le même SVG sans prologue XML, sans <defs>, sans <style> ni attribut class, id, fill ou stroke sur les
+             formes : elles héritent du fill="currentColor" que pose ensuite recolorable.
+    Erreurs : ValueError si aucune racine <svg> n'est trouvée. Dépendances : re, contenu.
+    """
+    m = re.search(r"<svg\b([^>]*)>", svg)
+    if not m:
+        raise ValueError("racine <svg> introuvable")
+    corps = re.sub(r"<defs\b.*?</defs>|<style\b.*?</style>|<style\b[^>]*/>", "", contenu(svg), flags=re.S)
+    corps = re.sub(r'\s(?:class|id|fill|stroke|style)="[^"]*"', "", corps)
+    racine = re.sub(r'\s(?:id|class|fill)="[^"]*"', "", m.group(1))
+    return f"<svg{racine}>{corps.strip()}</svg>"
 
 
 # Composition d'une pastille (voir composer) : échelle de la pastille, position de son coin en haut à gauche,
@@ -104,8 +123,10 @@ def generer(repo: Path, sortie: Path) -> list[Path]:
 
     Entrées : repo — racine du dépôt (tokens.toml, table et SVG) ; sortie — dossier parent des thèmes.
     Sortie : chemins des fichiers écrits, index.theme en tête puis les SVG dans l'ordre alphabétique des noms.
+    Les glyphes hors Phosphor (section [externes]) donnent la même image, monochrome, aux deux variantes.
     Erreurs : TypeError si une entrée compose plus de deux glyphes ; FileNotFoundError dont le message nomme le SVG source manquant ; OSError, ValueError (table,
-              tokens.toml) en cas de lecture impossible. Dépendances : phosphor.charger, phosphor.nom_fichier.
+              tokens.toml) en cas de lecture impossible. Dépendances : phosphor.charger, phosphor.externes,
+              phosphor.nom_fichier, monochrome, recolorable, composer.
     """
     icones = tomllib.loads((repo / "tokens.toml").read_text(encoding="utf-8")).get("icons", {})
     manquantes = [k for k in ("xdg_theme", "xdg_inherits") if k not in icones]
@@ -125,6 +146,13 @@ def generer(repo: Path, sortie: Path) -> list[Path]:
                     raise FileNotFoundError(f"SVG Phosphor manquant : {chemin}")
                 textes.append(chemin.read_text(encoding="utf-8"))
             contenus[f"{freedesktop}{suffixe}-symbolic.svg"] = recolorable(composer(*textes) if len(textes) == 2 else textes[0])
+    for freedesktop, relatif in sorted(externes(repo / TABLE).items()):
+        chemin = repo / TABLE.parent / relatif
+        if not chemin.is_file():
+            raise FileNotFoundError(f"SVG externe manquant : {chemin}")
+        texte = recolorable(monochrome(chemin.read_text(encoding="utf-8")))
+        for suffixe in ("", "-fill"):
+            contenus[f"{freedesktop}{suffixe}-symbolic.svg"] = texte
     racine = sortie / nom
     shutil.rmtree(racine, ignore_errors=True)
     (racine / "symbolic").mkdir(parents=True)

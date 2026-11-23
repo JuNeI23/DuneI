@@ -1,0 +1,3 @@
+module Deconnexion
+singleton Deconnexion 1.0 Deconnexion.qml
+CadreDeconnexion 1.0 CadreDeconnexion.qml

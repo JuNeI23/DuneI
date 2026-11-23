@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas
 
-Document normatif. Version 0.43. Historique en fin de document.
+Document normatif. Version 0.44. Historique en fin de document.
 
 ## Comment lire ce document
 
@@ -413,6 +413,8 @@ Les contrôles reprennent **les formes et les proportions de macOS**, à la dema
 - **Priorité.** Un nombre à régler reste un Compteur de la bible (champ et stepper), jamais une pastille faite pour l'occasion.
 
 **Le motif du popover de réglage rapide (D105).** Le popover de la barre (réseau, et ceux qui suivront) tient en 288 px de large et suit les popovers sobres d'inspiration : carré, sur le verre de E3 (D103). Il porte de haut en bas l'en-tête (bascule à glyphe, nom de l'élément joint, état), la liste (pour le réseau, la règle des cinq de la page Wi-Fi : profils enregistrés à portée d'abord, partage de connexion compris, D167), puis, sous un filet `material.glassLine`, les actions en texte seul, sans bouton plein. L'élément joint ne paraît que dans l'en-tête, jamais dans la liste. Un mot de passe se déplie sous sa ligne, sans plaque. Tant que le popover est ouvert, l'icône de la barre qui l'a ouvert prend l'accent et sa variante pleine. **Un seul popover de la barre est ouvert à la fois**, et il se ferme quand le pointeur l'a quitté, lui et son icône, depuis `motion.delays.dismiss` (1,5 s), sauf pendant une saisie ou une action en cours (D108). Exception à l'élément joint : un appareil Bluetooth connecté reste aussi dans « Mes appareils », d'où on le déconnecte ou l'oublie ; « Oublier » se déplie sous la ligne par un chevron, en texte seul (D107).
+
+**Le bouton de session (D205, D209).** Le menu de déconnexion pose cinq boutons carrés directement sur le voile, sans cadre ni plaque : chacun est une vignette en verre (`VignetteVerre`, recette de `material.thumb`) portant un glyphe Phosphor bold, avec son libellé en dessous (échelon 4) puis sa lettre d'accès, discrète. Le bouton sous le curseur, au clavier comme à la souris, est **agrandi de 1,15** autour de son centre et **teinté `color.accent`** dans le verre, sans pousser ses voisins ; les autres sont **gris**, de même taille (verre neutre sans teinte ni halo, glyphe `color.textSecondary`). L'accent est la seule couleur : aucune teinte par bouton, et aucune plaque d'accent, que Nicolas a rejetée. **Armé**, un bouton d'action destructrice reste agrandi, passe en `color.error` et prend le libellé « Confirmer » ; déplacer le curseur ou fermer désarme. Le menu apparaît depuis le centre de l'écran (échelle de 0,92 à 1, ressort `window`), sans monter ; les touches répétées sont ignorées. Cote 128, glyphe 56, écart 32 (échelon de `spacing.scale`).
 
 ## 8. Fenêtrage et grille
 
@@ -958,7 +960,7 @@ Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si 
 | --- | --- | --- | --- | --- | --- |
 | Lanceur | attention | E3 | `overlay` + `field` + `row` | `overlay` | Voile 0.55 + flou instantané, apparu en fondu par le compositeur (D192). Focus clavier dès l'ouverture. Le cadre monte depuis le bas au ressort `window`, sort en fondu sur place (D193). Un seul curseur, plaques sans ombre (D191, D195) |
 | Sélecteur de fenêtres | attention | E3 | `overlay` + `surface` | `overlay` | Geste tenu : `SUPER + Tab` ouvre, chaque Tab avance, `Maj + Tab` recule, le relâchement de SUPER amène la fenêtre après le retrait du calque (D194, D200, D201) ; Échap ou un clic sur le voile annulent ; un tap bref ne montre rien. Clavier exclusif dès l'ouverture, calque invisible jusqu'au délai `delays.selecteur`, puis voile et flou instantané du lanceur en fondu par le compositeur (D192), cadre en verre qui monte au ressort `window` (D193). Une rangée de vignettes figées des fenêtres des bureaux 1 à 4, de la plus récente à la plus ancienne, à hauteur fixe et largeur bornée (`[selecteur]`), qui défile au ressort `navigate` pour garder la sélection visible ; sous la rangée, médaillon, titre en `text-primary` et « bureau n » en `text-secondary`. Vignettes : neutre pur, l'image seule, sans teinte ni voile posés dessus ; cadre et fenêtre d'attente gardent les surfaces du thème (D201). Curseur : la plaque d'accent plate sous la vignette choisie, qui grandit à `galerie.echelle`, sans anneau ; le survol déplace la plaque, le clic valide (D191, D202) |
-| Menu de déconnexion | attention | E3 | `overlay` + `interactive` | `overlay` | Action destructrice en `error`, jamais en accent |
+| Menu de déconnexion | attention | E3 | `overlay` + `interactive` | `overlay` | Cinq boutons de session sans plaque (voir « Le bouton de session »), ouverts par le logo de la barre ou `SUPER + Échap`, apparus depuis le centre au ressort `window`. Action destructrice en `error` une fois armée, jamais en accent |
 | Verrouillage / connexion | attention | E0 | `overlay` + `text` + `field` | `spectacle` | Registre de spectacle. Horloge en grand corps, poids léger |
 | Menu contextuel | contextuel | E3 | `surface` + `row` | `reveal` | **Ni voile ni flou** de l'écran ; verre dépoli le jour comme la nuit (D85, D103). Part du point de clic, sans écart. Aucun contour de focus sur ses rangées : la plaque du curseur suit le survol (D88, D197) |
 | Popover, liste déroulante | contextuel | E3 | `surface` + `row` | `overlay` | Part de son élément déclencheur, à `space.scale[0]` sous lui ; glisse au lieu de se retourner (D88) ; popover de réglage rapide : 288 px, élément joint dans l'en-tête seulement, mot de passe sans plaque, actions en texte seul sous `glassLine`, icône de la barre à l'accent et pleine tant qu'il est ouvert, un indicateur et non une sélection (D105, D197) ; rangées sous la plaque du curseur, glyphes, bascules et jauges sans plaque (D199) ; un seul popover de la barre à la fois, fermé 1,5 s après le départ du pointeur (D108) ; popover de la barre : le cadre naît sous l'icône et y retourne, ses bords partent d'un même ressort `overlay`, le contenu reste fixe et le cadre le découvre, le verre n'est jamais estompé, le disque de l'en-tête reste plein pendant un passage (D110 à D114) |
@@ -971,6 +973,7 @@ Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si 
 
 | Version | Date | Changement |
 | --- | --- | --- |
+| 0.44 | 2026-11-23 | Chapitre 7 : composant « bouton de session » (vignette en verre, agrandi et teinté d'accent au curseur, autres gris, armé en `error`, sans plaque) ; ligne « Menu de déconnexion » de la couche 3 (D205, D209) |
 | 0.43 | 2026-11-23 | Le sélecteur de bureaux quitte les overlays d'attention et le tableau des surfaces : L2-18 est retiré (D203) |
 | 0.4 | 2026-10-10 | Version de référence |
 | 0.4.1 | 2026-10-12 | Annexe D : la cible compositeur est un module Lua (Hyprland 0.56) |

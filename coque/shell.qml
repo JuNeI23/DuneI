@@ -4,6 +4,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Hyprland
 import "Barre"
+import "Deconnexion"
 import "Fond"
 import "Galerie"
 import "Lanceur"
@@ -18,24 +19,29 @@ import "Selecteur"
 // d'abord, pour qu'il soit le plus bas), et, une seule fois hors de Variants, la fenêtre Réseau et l'application
 // Paramètres, construites seulement à leur demande, les notifications de connexion, le serveur de notifications
 // (Centre), précédé de la mémoire de son attente (MemoireAttente), la fenêtre de sa pile, sur l'écran actif, le
-// panneau des notifications (FenetrePanneau, ouvert par la cloche de chaque barre, à qui il est passé), l'ouvreuse de la galerie de fonds et l'annonceur de la jauge du son, à qui chaque presqu'île
-// s'inscrit à sa création et se retire à sa destruction (écran débranché). Chaque presqu'île réserve la hauteur du
-// module de la galerie, mesurée par l'ouvreuse : sa surface ne change jamais de taille (recette de L2-60).
-// Entrées : aucune ; l'écran de chaque barre vient de Quickshell.screens. Sortie : trois fenêtres de calque par écran ;
-// la fenêtre de la pile de notifications (une seule, sur l'écran actif) et les cartes de chaque notification reçue ;
-// l'application Paramètres quand elle est ouverte (IPC « parametres ouvrir <page> », icône des réglages de la barre
-// ou « Réglages réseau… » du popover) ; la galerie dans la
-// presqu'île de l'écran actif à la demande (IPC « galerie basculer », SUPER + W) ; la jauge du son à chaque
-// annonce d'EtatAudio (Annonceur) ; l'alerte de batterie à chaque palier franchi d'EtatEnergie (AnnonceurAlerte), qui
-// attend la fermeture de la galerie de l'ouvreuse sur son écran ; le lanceur (IPC « lanceur basculer », SUPER + R),
-// singleton du module Lanceur réveillé au démarrage ; le sélecteur de fenêtres (SUPER + Tab, raccourci global
-// dunei:selecteur déclaré ici), singleton du module Selecteur réveillé de même. Le raccourci global vit dans la coque
-// de session et non dans le singleton : le protocole des raccourcis globaux de Hyprland refuse deux clients sur la
-// même paire appid:nom, et une coque d'essai qui charge le singleton ferait tomber l'une des deux.
-// Erreurs : tokens absents ou invalides → fond, barre et presqu'île transparents, erreur de Theme dans le journal de Quickshell.
-// Dépendances : quickshell ≥ 0.3 (GlobalShortcut de Quickshell.Hyprland), modules Barre (Barre), Fond (Fond), Galerie (Ouvreuse), Lanceur (Lanceur), Notifications (Centre,
-// FenetreNotifications, FenetrePanneau, MemoireAttente), Parametres (FenetreParametres), Presquile (Presquile, Annonceur, AnnonceurAlerte), Reseau
-// (NotificationsReseau) et Selecteur (Selecteur). Le Centre possède org.freedesktop.Notifications : aucun autre démon (dunst) ne doit le tenir.
+// panneau des notifications (FenetrePanneau, ouvert par la cloche de chaque barre, à qui il est passé), l'ouvreuse
+// de la galerie de fonds et l'annonceur de la jauge du son, à qui chaque presqu'île s'inscrit à sa création et se
+// retire à sa destruction (écran débranché). Chaque presqu'île réserve la hauteur du module de la galerie, mesurée
+// par l'ouvreuse : sa surface ne change jamais de taille (recette de L2-60).
+// Entrées : aucune ; l'écran de chaque barre vient de Quickshell.screens. Sortie : trois fenêtres de calque par
+// écran ; la fenêtre de la pile de notifications (une seule, sur l'écran actif) et les cartes de chaque notification
+// reçue ; l'application Paramètres quand elle est ouverte (IPC « parametres ouvrir <page> », icône des réglages de
+// la barre ou « Réglages réseau… » du popover) ; la galerie dans la presqu'île de l'écran actif à la demande (IPC
+// « galerie basculer », SUPER + W) ; la jauge du son à chaque annonce d'EtatAudio (Annonceur) ; l'alerte de batterie
+// à chaque palier franchi d'EtatEnergie (AnnonceurAlerte), qui attend la fermeture de la galerie de l'ouvreuse sur
+// son écran ; le lanceur (IPC « lanceur basculer », SUPER + R), singleton du module Lanceur réveillé au démarrage ;
+// le sélecteur de fenêtres (SUPER + Tab, raccourci global dunei:selecteur déclaré ici), singleton du module
+// Selecteur réveillé de même ; le menu de déconnexion (IPC « deconnexion basculer », SUPER + Échap, logo de la
+// barre), singleton du module Deconnexion réveillé de même. Le raccourci global vit dans la coque de session et non
+// dans le singleton : le protocole des raccourcis globaux de Hyprland refuse deux clients sur la même paire
+// appid:nom, et une coque d'essai qui charge le singleton ferait tomber l'une des deux.
+// Erreurs : tokens absents ou invalides → fond, barre et presqu'île transparents, erreur de Theme dans le journal de
+// Quickshell.
+// Dépendances : quickshell ≥ 0.3 (GlobalShortcut de Quickshell.Hyprland), modules Barre (Barre), Fond (Fond),
+// Galerie (Ouvreuse), Lanceur (Lanceur), Notifications (Centre, FenetreNotifications, FenetrePanneau,
+// MemoireAttente), Parametres (FenetreParametres), Presquile (Presquile, Annonceur, AnnonceurAlerte), Reseau
+// (NotificationsReseau), Selecteur (Selecteur) et Deconnexion (Deconnexion). Le Centre possède
+// org.freedesktop.Notifications : aucun autre démon (dunst) ne doit le tenir.
 // Rendu du texte : la directive Env force l'anticrénelage en niveaux de gris, comme dans le banc du verre.
 ShellRoot {
     Variants {
@@ -61,9 +67,9 @@ ShellRoot {
     Annonceur { id: annonceur }
     AnnonceurAlerte { id: alerte; galerie: ouvreuse.galerie }
     FenetreParametres {}
-    // Les singletons Lanceur et Selecteur ne naissent qu'au premier accès : ces références publient leurs IPC
-    // « lanceur » et « selecteur » dès le démarrage.
-    Component.onCompleted: { Lanceur.fermer(); Selecteur.annuler() }
+    // Les singletons Lanceur, Selecteur et Deconnexion ne naissent qu'au premier accès : ces références publient leurs
+    // IPC « lanceur », « selecteur » et « deconnexion » dès le démarrage.
+    Component.onCompleted: { Lanceur.fermer(); Selecteur.annuler(); Deconnexion.annuler() }
     // SUPER + Tab : Hyprland appelle ce raccourci global à chaque Tab, sans lancer de processus.
     GlobalShortcut {
         appid: "dunei"

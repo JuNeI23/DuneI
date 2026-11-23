@@ -350,7 +350,10 @@ class IndicateursStatiqueTest(unittest.TestCase):
         self.assertIn("cliquable: true", qml["JourNuit.qml"])
         self.assertIn('["dunei-theme", "bascule"]', qml["JourNuit.qml"])
         cliquables = sorted(nom for nom in INDICATEURS if "cliquable: true" in qml[f"{nom}.qml"])
-        self.assertEqual(cliquables, ["Audio", "Batterie", "Bluetooth", "JourNuit", "Notifications", "Parametres", "Reseau"])
+        self.assertEqual(cliquables, ["Audio", "Batterie", "Bluetooth", "JourNuit", "Logo", "Notifications", "Parametres",
+                                    "Reseau"])
+        # Le logo bascule le menu de déconnexion (L2-23).
+        self.assertRegex(qml["Logo.qml"], r"onClicked:\s*Deconnexion\.basculer\(\)")
         # La cloche ouvre le panneau des notifications par son clic gauche et bascule « ne pas déranger » au droit.
         self.assertRegex(qml["Notifications.qml"], r"onClicked:\s*panneau\?\.basculer\(barre\)")
         self.assertRegex(qml["Notifications.qml"], r"acceptedButtons:\s*Qt\.RightButton")
@@ -459,6 +462,24 @@ class RelanceTest(BarreIpc, unittest.TestCase):
                          ("notifications-disabled", "", "", True, 0))
         self.appeler("ouvrirPanneau", True)
         self.assertTrue(self.cloche()["ouvert"])
+
+    def test_logo_ouvre_deconnexion(self):
+        """Un clic sur le logo ouvre le menu de déconnexion, un second le referme.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec si le logo n'est pas cliquable ou si l'IPC « deconnexion »
+        ne dit pas « ouvert » après le clic. Dépendances : appeler (cliquerLogo), qs (cible « deconnexion »).
+        """
+        def etat() -> bool:
+            sortie = subprocess.run([QS, "ipc", "--pid", str(self.proc.pid), "call", "deconnexion", "etat"],
+                                    check=True, capture_output=True, text=True, timeout=DELAI).stdout
+            return json.loads(sortie)["ouvert"]
+        self.assertFalse(etat())
+        self.assertEqual(json.loads(self.appeler("etatLogo")), {"cliquable": True, "ouvert": False})
+        self.appeler("cliquerLogo")
+        self.assertTrue(etat())
+        self.assertTrue(json.loads(self.appeler("etatLogo"))["ouvert"])
+        self.appeler("cliquerLogo")
+        self.assertFalse(etat())
 
     def test_cloche_clics(self):
         self.appeler("cliquerCloche", "gauche")
@@ -591,34 +612,37 @@ class BarreStructureTest(unittest.TestCase):
         self.assertIn("WlrKeyboardFocus.None", self.barre)
 
     def test_masque_ne_couvre_que_les_cliquables(self):
-        masque = re.search(r"mask:\s*Region\s*\{([^{}]*)Region\s*\{([^{}]*)\}\s*Region\s*\{([^{}]*)\}\s*"
-                           r"Region\s*\{([^{}]*)\}\s*Region\s*\{([^{}]*)\}\s*Region\s*\{([^{}]*)\}\s*\}", self.barre)
+        """Le masque de saisie couvre chaque indicateur cliquable de la barre, et lui seul (D100, recette L2-23).
+
+        Rôle : un élément cliquable absent du masque ne reçoit jamais de clic réel, le compositeur le laissant passer
+        au bureau ; les essais qui émettent « clicked » par IPC ne le voient pas (le logo, recette 1 de L2-23).
+        Entrées : aucune. Sortie : aucune. Erreurs : échec si un cliquable manque au masque, si une région vise un
+        élément d'affichage, ou si une région ne suit pas sa rangée ou la visibilité de son élément.
+        Dépendances : Barre.qml, les fichiers QML des indicateurs (cliquable: true).
+        """
+        masque = re.search(r"mask:\s*Region\s*\{(.*?)\n    \}\n", self.barre, re.S)
         self.assertIsNotNone(masque)
-        regions = masque.groups()
-        # Six régions : l'interrupteur, puis cinq enfants, les indicateurs réseau, Bluetooth, audio et batterie et la
-        # cloche, chacune suivant sa position dans la rangée.
-        self.assertEqual(len(regions), 6)
         self.assertNotRegex(self.barre, r"\bitem:")
+        # Identifiant de chaque indicateur posé dans la barre, et ceux dont le composant est cliquable.
+        poses = dict(re.findall(r"\b(" + "|".join(INDICATEURS) + r")\s*\{\s*id:\s*(\w+)", self.barre))
+        cliquables = {nom for nom in INDICATEURS
+                      if "cliquable: true" in (ROOT / "coque" / "Barre" / f"{nom}.qml").read_text(encoding="utf-8")}
+        self.assertEqual(cliquables - poses.keys(), set(), "indicateur cliquable sans identifiant dans la barre")
+        attendus = {poses[nom] for nom in cliquables}
         # Une Region qui nomme un item ne suit que ses déplacements dans son parent : le masque se calcule par
-        # rangée, pour suivre aussi le glissement de la rangée quand une icône apparaît à droite (D100).
-        for corps, nom in zip(regions, ("jourNuit", "reseau", "bluetooth", "audio", "batterie", "cloche")):
-            self.assertRegex(corps, rf"x:\s*rangee\.x\s*\+\s*droite\.x\s*\+\s*{nom}\.x\b")
-            self.assertRegex(corps, rf"y:\s*rangee\.y\s*\+\s*droite\.y\s*\+\s*{nom}\.y\b")
-            self.assertRegex(corps, rf"height:\s*{nom}\.height\b")
-        self.assertRegex(regions[0], r"width:\s*jourNuit\.width\b")
-        # Invisible (matériel absent), l'indicateur garde sa largeur : le masque ne doit alors rien couvrir.
-        self.assertRegex(regions[1], r"width:\s*reseau\.visible\s*\?\s*reseau\.width\s*:\s*0\b")
-        self.assertRegex(regions[2], r"width:\s*bluetooth\.visible\s*\?\s*bluetooth\.width\s*:\s*0\b")
-        self.assertRegex(regions[3], r"width:\s*audio\.visible\s*\?\s*audio\.width\s*:\s*0\b")
-        self.assertRegex(regions[4], r"width:\s*batterie\.visible\s*\?\s*batterie\.width\s*:\s*0\b")
-        self.assertRegex(regions[5], r"width:\s*cloche\.visible\s*\?\s*cloche\.width\s*:\s*0\b")
-        self.assertRegex(self.barre, r"Notifications\s*\{\s*id:\s*cloche\b")
-        self.assertRegex(self.barre, r"Audio\s*\{\s*id:\s*audio\b")
-        self.assertRegex(self.barre, r"Batterie\s*\{\s*id:\s*batterie\b")
-        self.assertRegex(self.barre, r"Bluetooth\s*\{\s*id:\s*bluetooth\b")
-        self.assertRegex(self.barre, r"JourNuit\s*\{\s*id:\s*jourNuit\b")
-        self.assertRegex(self.barre, r"Reseau\s*\{\s*id:\s*reseau\b")
+        # rangée, pour suivre aussi le glissement de la rangée quand une icône apparaît (D100).
+        couverts = re.findall(r"x:\s*rangee\.x\s*\+\s*(gauche|droite)\.x\s*\+\s*(\w+)\.x\b", masque.group(1))
+        self.assertEqual({nom for _, nom in couverts}, attendus)
+        self.assertEqual(len(couverts), len(attendus))
+        for rangee, nom in couverts:
+            self.assertRegex(masque.group(1), rf"y:\s*rangee\.y\s*\+\s*{rangee}\.y\s*\+\s*{nom}\.y\b")
+            self.assertRegex(masque.group(1), rf"height:\s*{nom}\.height\b")
+            # Invisible (matériel absent, logo sans jeton), l'indicateur garde sa largeur : le masque ne doit alors
+            # rien couvrir. L'interrupteur, toujours visible, porte la région racine.
+            if nom != "jourNuit":
+                self.assertRegex(masque.group(1), rf"width:\s*{nom}\.visible\s*\?\s*{nom}\.width\s*:\s*0\b")
         self.assertRegex(self.barre, r"RowLayout\s*\{\s*id:\s*rangee\b")
+        self.assertRegex(self.barre, r"RowLayout\s*\{\s*id:\s*gauche\b")
         self.assertRegex(self.barre, r"RowLayout\s*\{\s*id:\s*droite\b")
 
     def test_survol_reserve_aux_cliquables(self):

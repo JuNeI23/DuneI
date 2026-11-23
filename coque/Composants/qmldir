@@ -33,6 +33,7 @@ Progression 1.0 Progression.qml
 Radio 1.0 Radio.qml
 Rangee 1.0 Rangee.qml
 Recherche 1.0 Recherche.qml
+Scene 1.0 Scene.qml
 Separateur 1.0 Separateur.qml
 Surface 1.0 Surface.qml
 Texte 1.0 Texte.qml
@@ -41,6 +42,8 @@ Carte 1.0 Carte.qml
 Medaillon 1.0 Medaillon.qml
 ReglageLigne 1.0 ReglageLigne.qml
 Valeur 1.0 Valeur.qml
+VignetteVerre 1.0 VignetteVerre.qml
 VignetteFenetre 1.0 VignetteFenetre.qml
+Lueur 1.0 Lueur.qml
 VueCurseur 1.0 VueCurseur.qml
 ZoneCurseur 1.0 ZoneCurseur.qml

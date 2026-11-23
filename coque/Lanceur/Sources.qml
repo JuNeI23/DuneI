@@ -11,12 +11,12 @@ import "../Applications/applications.js" as Apps
 // Rôle : transforme une saisie en résultats non classés (applications, leurs fenêtres, actions de bureau, commandes
 // DuneI, pages de Paramètres, calcul) et compose l'accueil (six médaillons, trois puces). Le classement reste à
 // lanceur.js (classer). Forme d'un résultat : {cle, genre, titre, sousTitre, icone, type, retrait, app, pertinence,
-// principale, secondaires, apercu} ; une action : {libelle, genre, cible, confirmer}.
+// principale, secondaires, apercu} ; une action : {libelle, genre, cible}.
 // Entrées : entrees (entrées de bureau, DesktopEntries par défaut) ; fenetres ({adresse, classe, titre, bureau,
 // historique}, Applications.toplevels() sous Wayland) ; poids (usage, lanceur.js poids) ; calcul (un Calcul, ou
 // null) ; cheminRoles (roles.lua) ; ipc (préfixe d'appel IPC de la coque). Les coques d'essai les remplacent.
 // Sorties : commandes (déclarées puis pages de Paramètres), etats ({id: état lisible}) ; fonctions chercher,
-// accueil, commande, rafraichir.
+// accueil, commande, ligne, rafraichir.
 // Erreurs : aucune ; un commandes.json ou un roles.lua illisible laisse sa liste vide.
 // Dépendances : Quickshell (DesktopEntries, env), Quickshell.Io (FileView, Process, StdioCollector),
 // Applications (toplevels, applications.js), Registre (Parametres),
@@ -39,13 +39,12 @@ Scope {
     readonly property var commandes: declarees.concat(Registre.pages.map(p => ({
         id: "parametres-" + p.id, libelle: "Paramètres › " + p.libelle,
         motsCles: [p.libelle, p.groupe].concat(...p.index.map(i => [i.libelle].concat(i.motsCles))),
-        icone: p.glyphe, ipc: ["parametres", "ouvrir", p.id], commande: null, etat: null, confirmer: false })))
+        icone: p.glyphe, ipc: ["parametres", "ouvrir", p.id], commande: null, etat: null })))
 
     // action — une action de résultat.
-    // Entrées : libelle, genre (« amener », « lancer », « nouvelle », « action », « commande », « copier »), cible,
-    // confirmer.
-    // Sortie : {libelle, genre, cible, confirmer}. Erreurs : aucune. Dépendances : aucune.
-    function action(libelle, genre, cible, confirmer) { return { libelle, genre, cible, confirmer: !!confirmer } }
+    // Entrées : libelle, genre (« amener », « lancer », « nouvelle », « action », « commande », « copier »), cible.
+    // Sortie : {libelle, genre, cible}. Erreurs : aucune. Dépendances : aucune.
+    function action(libelle, genre, cible) { return { libelle, genre, cible } }
 
     // ouvertes — fenêtres d'une application, de la plus récemment utilisée à la plus ancienne.
     // Entrée : e, entrée de bureau. Sortie : tableau de fenêtres. Erreurs : aucune.
@@ -88,7 +87,7 @@ Scope {
     function commandeResultat(c, pertinence) {
         return { cle: "cmd:" + c.id, genre: "commande", titre: c.libelle, sousTitre: "", icone: c.icone,
             type: "Commande", retrait: false, app: "", pertinence,
-            principale: action("Exécuter", "commande", c.id, c.confirmer), secondaires: [],
+            principale: action("Exécuter", "commande", c.id), secondaires: [],
             apercu: { etat: etats[c.id] || "" } }
     }
 
@@ -151,9 +150,18 @@ Scope {
     }
 
     // commande — commande désignée par son id, pour l'exécuter.
-    // Entrée : id. Sortie : la commande ({id, libelle, motsCles, icone, ipc, commande, etat, confirmer}) ou undefined.
+    // Entrée : id. Sortie : la commande ({id, libelle, motsCles, icone, ipc, commande, etat}) ou undefined.
     // Erreurs : aucune. Dépendances : commandes.
     function commande(id) { return commandes.find(k => k.id === id) }
+
+    // ligne — ligne de commande d'une commande DuneI, telle que Lanceur.realiser la lance, sans rien exécuter.
+    // Entrée : id, identifiant de la commande. Sortie : le préfixe ipc suivi de k.ipc pour une commande de la coque,
+    // k.commande pour une commande externe, null pour un id inconnu ou une commande sans ligne. Erreurs : aucune.
+    // Dépendances : commande, ipc.
+    function ligne(id) {
+        const k = commande(id)
+        return k?.ipc ? ipc.concat(k.ipc) : k?.commande ?? null
+    }
 
     // rafraichir — relit, par IPC, l'état présent de chaque commande qui en déclare un (à l'ouverture du lanceur).
     // Entrées : aucune. Sortie : aucune ; chaque état relu est d'abord effacé, puis etats se met à jour à chaque

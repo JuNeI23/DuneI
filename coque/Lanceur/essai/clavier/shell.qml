@@ -63,8 +63,8 @@ ShellRoot {
             return JSON.stringify(r ? Object.assign({ largeur: c.width }, r) : null)
         }
 
-        // puce — libellé et état de danger de la puce de l'accueil sous le curseur (voir Accueil.puceChoisie).
-        // Entrées : aucune. Sortie : objet JSON {texte, danger} ; « null » lanceur fermé ou curseur hors des puces.
+        // puce — libellé de la puce de l'accueil sous le curseur (voir Accueil.puceChoisie).
+        // Entrées : aucune. Sortie : objet JSON {texte} ; « null » lanceur fermé ou curseur hors des puces.
         // Erreurs : aucune. Dépendances : charge (CadreLanceur.accueil).
         function puce(): string { return JSON.stringify(charge.item?.accueil.puceChoisie() ?? null) }
 

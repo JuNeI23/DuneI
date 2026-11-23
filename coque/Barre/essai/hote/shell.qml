@@ -6,6 +6,7 @@ import Quickshell.Io
 import "Theme"
 import "Composants"
 import "Barre"
+import "Deconnexion"
 
 // Coque d'essai du cadre des popovers et du chemin hébergé d'Overlay, dans une fenêtre offscreen.
 // Rôle : porte quatre Overlay hébergés au contenu factice (e a la forme exacte de a), un Overlay ordinaire et un
@@ -16,9 +17,20 @@ import "Barre"
 // Sortie : « essai : prêt true » à l'ouverture de la fenêtre, « essai : ferme <nom> » à chaque fermeture, et le
 // résultat de chaque appel IPC. Erreurs : celles de Theme et des liaisons, dans le journal.
 // Dépendances : quickshell ≥ 0.3 (FloatingWindow, LazyLoader, IpcHandler), QtTest (TestEvent), modules Theme,
-// Composants et Barre, par les liens posés sous cette racine.
+// Composants, Barre et Deconnexion, par les liens posés sous cette racine ; Deconnexion est neutralisé (ni fenêtre,
+// ni clavier, ni exécution réelle).
 ShellRoot {
     id: essai
+
+    // Component.onCompleted — neutralise le singleton Deconnexion que le module Barre importe (Logo) : aucune
+    // fenêtre, aucun clavier, et une exécution remplacée par une ligne de journal, pour qu'aucun clic sur un logo ne
+    // puisse lancer de vraie commande. Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : Deconnexion,
+    // console.
+    Component.onCompleted: {
+        Deconnexion.fenetree = false
+        Deconnexion.clavierExclusif = false
+        Deconnexion.executeur = a => console.log("essai : exécuté " + a.id)
+    }
 
     // Panneaux factices construits, par nom, et forme du cadre au premier fondu de chacun.
     property var panneaux: ({})

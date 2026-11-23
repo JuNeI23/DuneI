@@ -31,7 +31,7 @@ class QuickshellEmitterTest(unittest.TestCase):
         self.assertEqual(list(self.out), [
             "_generated", "hue", "space", "density", "radius", "window", "layout", "reglages", "breakpoints", "typo", "icons",
             "familles", "moments", "defaut", "themes", "pastilles", "bureau", "bureauxVirtuels", "presquile",
-            "galerie", "selecteur", "notifications", "cloche", "panneau", "son"])
+            "galerie", "selecteur", "deconnexion", "notifications", "cloche", "panneau", "son"])
         self.assertEqual(list(self.nuit), ["color", "states", "focus", "disabled", "elevation", "material", "glass", "render",
                                            "knob", "controls"])
 
@@ -91,6 +91,16 @@ class QuickshellEmitterTest(unittest.TestCase):
     def test_selecteur(self):
         """Vérifie les jetons du sélecteur de fenêtres : hauteur de la vignette, largeurs minimale et maximale, écart."""
         self.assertEqual(self.out["selecteur"], {"hauteur": 140, "largeurMin": 100, "largeurMax": 320, "ecart": 16})
+
+    def test_echelle_apparition(self):
+        """Vérifie l'échelle de départ d'un cadre de scène qui grandit depuis son centre (Scene, montee faux)."""
+        self.assertEqual(self.out["window"]["echelleApparition"], 0.92)
+
+    def test_deconnexion(self):
+        """Vérifie les jetons du menu de déconnexion : côté de la vignette, côté du glyphe, écart, agrandissement,
+        opacité de la lettre grisée."""
+        self.assertEqual(self.out["deconnexion"], {"cote": 128, "glyphe": 56, "ecart": 32, "agrandi": 1.15,
+                                                   "lettreGrisee": 0.7})
 
     def test_notifications(self):
         """Vérifie les jetons de la pile de notifications : largeur, marge, écart, plafond, durée, icône, intérieur,
