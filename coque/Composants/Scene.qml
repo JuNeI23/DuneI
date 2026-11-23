@@ -7,9 +7,12 @@ import Quickshell.Hyprland
 // Rôle : tient l'ouverture d'une attention, son inscription au registre Overlays (famille « attention » : l'ouvrir
 // ferme le lanceur ou le sélecteur, et l'ouverture de l'un d'eux la ferme), sa fenêtre FenetreScene chargée à la
 // demande et son fondu de sortie, puis l'exécution différée de l'action choisie. Le comportement est celui du
-// sélecteur (Selecteur.qml), sans son délai d'affichage : executer ferme la scène et ne fait partir l'action qu'au
-// retrait du calque dunei-attention par le compositeur (événement closelayer, D194), pour que la fenêtre visée garde
-// le clavier que Hyprland rend à ce retrait ; une garde d'une seconde la fait partir si l'événement ne vient pas.
+// sélecteur (Selecteur.qml) : executer ferme la scène et ne fait partir l'action qu'au retrait du calque de la scène
+// (namespace espace) par le compositeur (événement closelayer, D194), pour que la fenêtre visée garde le clavier que
+// Hyprland rend à ce retrait ; une garde d'une seconde la fait partir si l'événement ne vient pas. Chaque client a son
+// propre namespace (L2-80) : le retrait d'un autre calque d'attention, le lanceur en fondu par exemple, ne fait rien
+// partir. Un délai d'affichage optionnel (delai) garde la fenêtre construite, clavier compris, mais invisible jusqu'à
+// son terme : le geste tenu du sélecteur ; une fermeture avant ce terme ne montre rien et n'a pas de fondu.
 // L'action en attente est abandonnée si une autre attention s'ouvre ou si la scène est rouverte : c'est changer
 // d'avis. Sobriété (D80) : la fenêtre n'existe que pendant l'ouverture et son fondu de sortie (LazyLoader, present).
 // Instancié comme enfant par un contrôleur client, qui déclare le cadre et exécute les actions.
@@ -21,11 +24,16 @@ import Quickshell.Hyprland
 //           executeur, null par défaut : une fonction qui reçoit l'action à la place du signal realiser (coques
 //           d'essai) ; fenetree, vrai par défaut : faux, aucune fenêtre n'est construite et l'action part aussitôt ;
 //           montee, vrai par défaut : le cadre monte du bas de l'écran au ressort window ; faux, il grandit depuis
-//           son centre, de l'échelle window.echelleApparition à 1, au même ressort, pendant le fondu du compositeur.
+//           son centre, de l'échelle window.echelleApparition à 1, au même ressort, pendant le fondu du compositeur ;
+//           espace, « dunei-attention » par défaut : le namespace du calque, qui doit figurer dans glass.namespaces et
+//           glass.fondu de tokens.toml pour être flouté et paraître en fondu ; delai, 0 par défaut : le délai
+//           d'affichage, en millisecondes.
 // Sorties : famille, « attention » ; present (ouvert, ou fenêtre encore en sortie) ; sortant ; ecran (figé à
-//           l'ouverture) ; fenetre (la FenetreScene construite, ou null) ; differee (l'action en attente du retrait du
-//           calque, ou null) ; executer(action), sortieFinie() ; signal realiser(action), émis quand une action doit
-//           partir et qu'aucun executeur n'est posé : le client l'exécute.
+//           l'ouverture) ; montre (vrai dès l'ouverture sans délai, au terme du délai sinon si la scène est encore
+//           ouverte ; gardé vrai par une réouverture pendant la sortie, remis à faux à la fin de celle-ci) ; fenetre
+//           (la FenetreScene construite, ou null) ; differee (l'action en attente du retrait du calque, ou null) ;
+//           executer(action), sortieFinie(), surEvenement(nom, donnee) ; signal realiser(action), émis quand une
+//           action doit partir et qu'aucun executeur n'est posé : le client l'exécute.
 // Erreurs : aucune ; une fenêtre qui ne peut être construite est journalisée (« Scène : fenêtre non construite ») et
 //           la scène se referme.
 // Dépendances : Quickshell (LazyLoader, screens), Quickshell.Hyprland (focusedMonitor, rawEvent), QtQuick (Timer,
@@ -39,10 +47,14 @@ QtObject {
     property var executeur: null
     property bool fenetree: true
     property bool montee: true
+    property string espace: "dunei-attention"
+    property int delai: 0
     readonly property string famille: "attention"
     // Vrai entre la fermeture et la fin du fondu de sortie de la fenêtre ; la fenêtre reste chargée jusque-là.
     property bool sortant: false
     readonly property bool present: ouvert || sortant
+    // Vrai quand la fenêtre doit être visible (voir delai) ; la fenêtre affiche ouvert && montre.
+    property bool montre: false
     // Action choisie qui attend le retrait du calque de la scène par le compositeur (voir executer).
     property var differee: null
     readonly property var fenetre: chargeur.item?.fenetre ?? null
@@ -65,11 +77,20 @@ QtObject {
     }
 
     // sortieFinie — appelée par la fenêtre quand son fondu de sortie est posé : la fenêtre est déchargée, son calque
-    // retiré, ce qui fait partir l'action en attente. Entrées : aucune. Sortie : aucune ; sans effet si la scène a été
-    // rouverte entre-temps. Erreurs : aucune. Dépendances : ouvert, sortant.
+    // retiré, ce qui fait partir l'action en attente, et montre retombe. Entrées : aucune. Sortie : aucune ; sans
+    // effet si la scène a été rouverte entre-temps. Erreurs : aucune. Dépendances : ouvert, sortant, montre.
     function sortieFinie() {
         if (ouvert || !sortant) return
         sortant = false
+        montre = false
+    }
+
+    // surEvenement — reçoit un événement brut de Hyprland : le retrait du calque de la scène (closelayer de son
+    // namespace) fait partir l'action en attente ; celui d'un autre calque n'y touche pas. Entrées : nom, le nom de
+    // l'événement ; donnee, sa donnée (le namespace pour closelayer). Sortie : aucune. Erreurs : aucune ; sans action
+    // en attente, rien. Dépendances : differee, espace, realiserDifferee.
+    function surEvenement(nom: string, donnee: string) {
+        if (differee !== null && nom === "closelayer" && donnee === espace) realiserDifferee()
     }
 
     // realiserDifferee — fait partir l'action en attente, une seule fois, et jamais sous une attention ouverte (la
@@ -89,30 +110,37 @@ QtObject {
         else realiser(action)
     }
 
-    // onOuvertChanged — à l'ouverture, fige l'écran (sauf si la fenêtre, encore en sortie, est reprise sur le sien),
-    // annule l'action qui attendait le retrait du calque et s'inscrit au registre des attentions ; à la fermeture, s'en
-    // retire et laisse la fenêtre jouer son fondu de sortie (sortant). Entrées : aucune. Sortie : aucune.
-    // Erreurs : aucune. Dépendances : ecranFocalise, Overlays, fenetre, differee, garde.
+    // onOuvertChanged — à l'ouverture, fige l'écran et lance le délai d'affichage (sauf si la fenêtre, encore en
+    // sortie, est reprise sur son écran et reste montrée), annule l'action qui attendait le retrait du calque et
+    // s'inscrit au registre des attentions ; à la fermeture, arrête le délai, s'en retire et laisse la fenêtre jouer son
+    // fondu de sortie (sortant) si elle a été montrée ; sinon, rien n'est visible, et la fenêtre est déchargée aussitôt.
+    // Entrées : aucune. Sortie : aucune. Erreurs : aucune.
+    // Dépendances : ecranFocalise, Overlays, fenetre, differee, garde, attente, delai, montre.
     onOuvertChanged: {
         if (ouvert) {
-            if (!sortant) ecran = ecranFocalise
+            if (!sortant) {
+                ecran = ecranFocalise
+                montre = delai === 0
+                if (!montre) attente.restart()
+            }
             sortant = false
             differee = null
             garde.stop()
             Overlays.ouvrir(scene)
         } else {
-            sortant = fenetre !== null
+            attente.stop()
+            sortant = fenetre !== null && montre
+            if (!sortant) montre = false
             Overlays.fermer(scene)
         }
     }
 
-    // onRawEvent — retrait du calque par le compositeur : l'action en attente part. Hyprland émet
-    // closelayer>>dunei-attention au démappage du calque, après lui avoir retiré le clavier.
-    // Entrée : e, l'événement brut de Hyprland (name, data). Sortie : aucune. Erreurs : aucune ; sans action en attente
-    // ou pour un autre événement, rien. Dépendances : Hyprland.rawEvent, differee, realiserDifferee.
+    // onRawEvent — transmet chaque événement brut de Hyprland à surEvenement : Hyprland émet closelayer>><espace> au
+    // démappage du calque, après lui avoir retiré le clavier. Entrée : e, l'événement brut (name, data). Sortie :
+    // aucune. Erreurs : aucune. Dépendances : Hyprland.rawEvent, surEvenement.
     readonly property Connections retrait: Connections {
         target: Hyprland
-        function onRawEvent(e) { if (scene.differee !== null && e.name === "closelayer" && e.data === "dunei-attention") scene.realiserDifferee() }
+        function onRawEvent(e) { scene.surEvenement(e.name, e.data) }
     }
 
     // onAttentionChanged — quand une autre attention que la scène s'ouvre (le lanceur, le sélecteur), l'action en
@@ -128,6 +156,9 @@ QtObject {
     // une seconde après la fermeture ; ce délai technique, bien au-delà du fondu de sortie, n'est jamais atteint quand
     // le compositeur répond.
     readonly property Timer garde: Timer { interval: 1000; onTriggered: scene.realiserDifferee() }
+
+    // Délai d'affichage : à son terme, la scène encore ouverte est montrée ; une fermeture avant l'arrête.
+    readonly property Timer attente: Timer { interval: scene.delai; onTriggered: if (scene.ouvert) scene.montre = true }
 
     // La fenêtre vit dans FenetreScene.qml, que ce porteur ne compile qu'à l'ouverture, comme FenetreAttention : un
     // fichier qui nomme PanelWindow ne se charge pas sous une plateforme sans dorsale de couches. Si la création

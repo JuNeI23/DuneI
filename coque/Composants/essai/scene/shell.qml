@@ -15,11 +15,12 @@ import "Lanceur"
 // sert aussi aux captures de la montée et du fondu. Elle sert la cible « notifications », dont l'état « ne pas
 // déranger » vaut toujours « true ».
 // Entrées : DUNEI_TOKENS_DIR et DUNEI_ETAT_DIR (jetons, thème et relevé d'usage de l'essai) ; IPC « essai » : pret,
-// ouvrir, fermer, executer, apparition (montée ou apparition depuis le centre), echelle (échelle du cadre), etat.
+// ouvrir, fermer, executer, apparition (montée ou apparition depuis le centre), echelle (échelle du cadre), delai
+// (délai d'affichage), espace (namespace du calque), evenement (événement de Hyprland simulé), etat.
 // Sorties : « essai : prêt » au démarrage ; « essai : exécuté <id> » à chaque action de la scène (« essai : exécuté
 // lanceur <genre> » pour le lanceur) ; « essai : fenêtre construite » à chaque construction de la fenêtre de la
-// scène ; « essai : calque retiré » quand Hyprland retire un calque dunei-attention (closelayer), pour que les essais
-// vérifient qu'une action ne part qu'après ce retrait.
+// scène ; « essai : calque retiré » quand Hyprland retire le calque de la scène (closelayer de scene.espace), pour
+// que les essais vérifient qu'une action ne part qu'après ce retrait.
 // Erreurs : celles de Theme, de la scène et du lanceur, dans le journal.
 // Dépendances : quickshell ≥ 0.3 (IpcHandler, Hyprland.rawEvent), Scene, Lanceur, Theme ; liens essai/scene/Theme,
 // Composants, Lanceur, Applications, Barre, Parametres et Deconnexion, car Quickshell ne suit pas les imports hors du
@@ -54,12 +55,12 @@ ShellRoot {
         console.log("essai : prêt")
     }
 
-    // onRawEvent — journalise le retrait d'un calque d'attention. Entrée : e, l'événement brut de Hyprland (name,
-    // data). Sortie : la ligne « essai : calque retiré » pour closelayer>>dunei-attention, rien pour un autre
-    // événement. Erreurs : aucune. Dépendances : Hyprland.rawEvent.
+    // onRawEvent — journalise le retrait du calque de la scène. Entrée : e, l'événement brut de Hyprland (name,
+    // data). Sortie : la ligne « essai : calque retiré » pour closelayer>><scene.espace>, rien pour un autre
+    // événement. Erreurs : aucune. Dépendances : Hyprland.rawEvent, scene.espace.
     Connections {
         target: Hyprland
-        function onRawEvent(e) { if (e.name === "closelayer" && e.data === "dunei-attention") console.log("essai : calque retiré") }
+        function onRawEvent(e) { if (e.name === "closelayer" && e.data === scene.espace) console.log("essai : calque retiré") }
     }
 
     IpcHandler {
@@ -85,11 +86,23 @@ ShellRoot {
         // en texte, ou « » si la fenêtre n'est pas construite. Erreurs : aucune. Dépendances : scene.fenetre.cadre.
         function echelle(): string { return String(scene.fenetre?.cadre?.parent?.scale ?? "") }
 
+        // delai — pose le délai d'affichage de la prochaine ouverture. Entrée : ms, en millisecondes. Sortie : aucune.
+        // Erreurs : aucune. Dépendances : scene.delai.
+        function delai(ms: int): void { scene.delai = ms }
+
+        // espace — pose le namespace du calque de la prochaine ouverture. Entrée : nom, le namespace. Sortie : aucune.
+        // Erreurs : aucune. Dépendances : scene.espace.
+        function espace(nom: string): void { scene.espace = nom }
+
+        // evenement — simule un événement brut de Hyprland reçu par la scène. Entrées : nom, le nom de l'événement ;
+        // donnee, sa donnée. Sortie : aucune. Erreurs : aucune. Dépendances : scene.surEvenement.
+        function evenement(nom: string, donnee: string): void { scene.surEvenement(nom, donnee) }
+
         // etat — état de la scène. Entrées : aucune. Sortie : JSON {ouvert, present, fenetre (vrai si construite),
-        // sortant, differee (l'action en attente, ou null)}. Erreurs : aucune. Dépendances : scene.
+        // sortant, differee (l'action en attente, ou null), montre}. Erreurs : aucune. Dépendances : scene.
         function etat(): string {
             return JSON.stringify({ ouvert: scene.ouvert, present: scene.present, fenetre: scene.fenetre !== null,
-                                    sortant: scene.sortant, differee: scene.differee })
+                                    sortant: scene.sortant, differee: scene.differee, montre: scene.montre })
         }
     }
 
