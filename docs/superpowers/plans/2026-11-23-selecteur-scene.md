@@ -59,7 +59,9 @@ d'essai par IPC.
   ouverte ; remis à faux à la fin de la sortie) ; `function surEvenement(nom: string, donnee: string)`, qui fait partir
   l'action en attente si `nom === "closelayer" && donnee === espace` (la `Connections` à `Hyprland.rawEvent` l'appelle).
 - Produit, sur `FenetreScene` : `WlrLayershell.namespace: scene.espace` ; voile, masque, fondu et montée suivent
-  `affiche = scene.ouvert && scene.montre` (patron de `FenetreSelecteur.qml` : `onAfficheChanged` lance la montée).
+  `affiche = scene.ouvert && scene.montre` (patron de `FenetreSelecteur.qml` : opacité `HyprlandWindow.opacity` au
+  ressort `overlay` vers `affiche`, `onAfficheChanged` lance la montée ; si `affiche` est déjà vrai à la création, la
+  montée part par `Qt.callLater` comme aujourd'hui). Une réouverture pendant la sortie garde `montre` vrai.
 
 - [ ] **Étape 1 : tests en échec** dans `tests/test_scene.py` :
   - `test_retrait_d_un_autre_calque` : `espace("dunei-attention-essai")`, ouvrir, `executer("x")`,
@@ -89,7 +91,7 @@ d'essai par IPC.
 
 **Interfaces :**
 - Consomme : rien des autres tâches.
-- Produit, sur `VignetteFenetre` : `property real estompe: 1` (opacité de l'image, animée au ressort `state`) ;
+- Produit, sur `VignetteFenetre` : `property real estompe: 1` (opacité de la vignette entière, repli compris, animée au ressort `state`) ;
   `property real agrandi: Theme.galerie?.echelle ?? 1` (facteur appliqué quand `choisie`, que le sélecteur remplace par
   `Theme.selecteur.agrandi`). Le lanceur ne change rien et garde `galerie.echelle`.
 - Rendu : la `ScreencopyView` prend `sourceSize` pour taille, `visible: false` ; une `ShaderEffectSource`
@@ -136,9 +138,12 @@ d'essai par IPC.
   - `test_titre_long_sans_decalage` : relever l'abscisse de la rangée, injecter un titre de 300 caractères sur la
     fenêtre choisie, relever de nouveau → égalité, et la largeur du titre ≤ largeur visible de la rangée.
   - `test_reouverture_remet_le_pointeur` : ouvrir, fermer, rouvrir pendant le fondu → `origine` et `bouge` du cadre
-    remis à leur valeur initiale (L2-79 c).
+    remis à leur valeur initiale (L2-79 c) ; `CadreSelecteur` les remet lui-même sur `Selecteur.ouvert`, comme
+    `CadreDeconnexion`.
   - `test_retrait_du_lanceur_ignore` : action en attente, `evenement("closelayer", "dunei-attention")` → l'action
     n'est pas partie (L2-79 d).
+  - Toutes les coques d'essai qui écoutent `closelayer` de `dunei-attention` en dur (`Selecteur/essai/fenetre`,
+    `Deconnexion/essai/fenetre`, `Composants/essai/scene`) lisent désormais le namespace de leur scène.
   - Les tests existants qui visaient `FenetreSelecteur` passent par `Selecteur.fenetre` ; `test_montre_apres_delai`,
     `test_tap_bref_valide_sans_montrer`, `test_action_apres_retrait`, `test_action_du_lanceur_retenue` restent.
   - `LogiqueTest.test_index_hors_bornes` : `decalage` et `largeur` rendent 0 pour un index hors bornes, au lieu de NaN

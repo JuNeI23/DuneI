@@ -1,6 +1,6 @@
 # Sélecteur de fenêtres sur `Scene` (L2-80) — fiche
 
-Version 1.0 — 2026-11-23 · écrite, en attente de validation
+Version 1.1 — 2026-11-23 · validée par Nicolas
 
 ## Intention
 
@@ -63,7 +63,8 @@ l'agrandissement de la vignette choisie aggrave.
 - `ScreencopyView` à sa taille native (`sourceSize`), invisible, servie par une `ShaderEffectSource` (`mipmap: true`,
   `smooth: true`, `hideSource: true`, `live: false` une fois la capture arrivée) qui occupe la vignette. Le composant
   est partagé avec le lanceur, qui gagne la même netteté.
-- Une propriété d'estompe (opacité de l'image) que le client pilote ; le sélecteur la pose sur les vignettes non
+- Une propriété d'estompe (opacité de la vignette entière, repli schématique compris, pour que la vignette choisie se
+  distingue même avant l'arrivée de la capture) que le client pilote ; le sélecteur la pose sur les vignettes non
   choisies. Valeur de départ : jeton `selecteur.estompe = 0.5`, jugé à la recette, animé au ressort `state`.
 - La vignette choisie grandit autour de son centre sans pousser ses voisines. Facteur : jeton propre au sélecteur
   (`selecteur.agrandi`, départ 1.15 comme le menu), plutôt que `galerie.echelle` (1.06), trop discret sans plaque.
@@ -87,7 +88,16 @@ l'agrandissement de la vignette choisie aggrave.
 - `Scene` gagne le délai d'affichage du geste tenu : une option `delai` (0 par défaut), en millisecondes, pendant
   lequel la fenêtre est construite avec le clavier exclusif mais reste invisible ; le sélecteur y pose
   `delays.selecteur`. Une fermeture avant le délai ne montre rien et n'a pas de fondu.
-- `Scene` remet à zéro, à chaque ouverture, l'état de pointeur de son cadre (origine et mouvement), ce qui règle L2-79 c).
+- Le fondu d'entrée et la montée suivent l'affichage (ouvert et délai écoulé), pas la création de la fenêtre : le
+  fondu « fade » du compositeur se joue à la création, pendant l'invisibilité, et ne se verrait pas. `FenetreScene`
+  reprend donc le mécanisme de `FenetreSelecteur` : opacité de la fenêtre au ressort `overlay` vers l'affichage, montée
+  lancée quand l'affichage commence. Sans délai (menu de déconnexion), rien ne change.
+- Une réouverture pendant le fondu de sortie reprend la fenêtre et la garde visible, sans rejouer le délai : un second
+  `SUPER + Tab` rapide ne fait pas clignoter le sélecteur (choix du constructeur, comportement actuel de `Scene`).
+- `CadreSelecteur` remet lui-même à zéro l'état de son pointeur (origine et mouvement) à chaque ouverture, comme
+  `CadreDeconnexion`, ce qui règle L2-79 c).
+- L2-79 a) reste ouvert, volontairement : `Scene` abandonne l'action en attente quand la scène est rouverte (D204,
+  « changer d'avis ») ; un second geste arrivé avant le retrait du calque efface donc le choix du premier.
 - Le sélecteur garde la montée au ressort `window` (D193), comportement par défaut de `Scene` (`montee` vrai).
 
 ### Le `closelayer` d'un autre calque (L2-79 d, L2-74 g)
@@ -96,7 +106,9 @@ Chaque client de `Scene` reçoit son propre namespace de calque, `dunei-attentio
 `-selecteur`), au lieu du `dunei-attention` commun ; `Scene` n'écoute que le `closelayer` du sien. Les règles de calque
 de Hyprland (flou, fondu seul) sont générées depuis `tokens.toml` par correspondance exacte : les nouveaux namespaces y
 sont ajoutés (`namespaces` et `fondu` de la section des calques), et le lanceur garde `dunei-attention` jusqu'à son
-propre rebranchement. Le défaut disparaît sans heuristique sur l'ordre des événements.
+propre rebranchement. Le défaut disparaît pour les clients de `Scene` sans heuristique sur l'ordre des événements. Le
+lanceur partage encore `dunei-attention` avec les attentions d'`Overlay` (`FenetreAttention`) : son propre défaut se
+réglera à son rebranchement.
 
 ### Défauts mineurs réglés au passage
 
@@ -125,4 +137,5 @@ propre rebranchement. Le défaut disparaît sans heuristique sur l'ordre des év
 
 | Version | Date | Changement |
 |---|---|---|
+| 1.1 | 2026-11-23 | Relecture du constructeur : fondu et montée à l'affichage, réouverture sans délai, pointeur remis à zéro par le cadre, estompe de la vignette entière, L2-79 a) laissé ouvert |
 | 1.0 | 2026-11-23 | Première écriture : marquage A, netteté par mipmap, rebranchement sur `Scene`, namespace par client |
