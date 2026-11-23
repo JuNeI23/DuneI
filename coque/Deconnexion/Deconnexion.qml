@@ -117,24 +117,24 @@ Singleton {
 
     // lancer — exécute pour de bon la commande d'une action, par un Process qui journalise son échec.
     // Entrée : action, une entrée de actions (commande). Sortie : aucune.
-    // Erreurs : aucune levée ; un échec est journalisé par le Process (voir lanceur). Dépendances : lanceur.
-    function lancer(action) { lanceur.createObject(deconnexion, { ident: action.id, command: action.commande }) }
+    // Erreurs : aucune levée ; un échec est journalisé par le Process (voir commande). Dépendances : commande.
+    function lancer(action) { commande.createObject(deconnexion, { ident: action.id, command: action.commande }) }
 
     // Un Process par action lancée, détruit à sa sortie : execDetached ne rend pas le code de sortie, que la fiche
     // demande de journaliser.
     Component {
-        id: lanceur
+        id: commande
         Process {
             property string ident
             property bool demarre: false
             running: true
-            // onRunningChanged — retient le démarrage ; un processus qui s'arrête sans avoir démarré (commande
-            // introuvable) n'émet pas exited : il est journalisé et détruit ici. Entrées : aucune. Sortie : aucune.
-            // Erreurs : l'avertissement « Déconnexion : <id> n'a pas démarré ». Dépendances : aucune.
-            onRunningChanged: {
-                if (running) demarre = true
-                else if (!demarre) { console.warn("Déconnexion : " + ident + " n'a pas démarré"); destroy() }
-            }
+            // onStarted — retient le démarrage effectif du processus. Entrées : aucune. Sortie : demarre. Erreurs :
+            // aucune. Dépendances : aucune.
+            onStarted: demarre = true
+            // onRunningChanged — un processus qui s'arrête sans avoir démarré (commande introuvable) n'émet ni
+            // started ni exited : il est journalisé et détruit ici. Entrées : aucune. Sortie : aucune.
+            // Erreurs : l'avertissement « Déconnexion : <id> n'a pas démarré ». Dépendances : demarre.
+            onRunningChanged: if (!running && !demarre) { console.warn("Déconnexion : " + ident + " n'a pas démarré"); destroy() }
             // onExited — journalise un code de sortie non nul, puis détruit le processus. Entrée : code. Sortie :
             // aucune. Erreurs : l'avertissement « Déconnexion : <id> a échoué (code <n>) ». Dépendances : aucune.
             onExited: code => {
@@ -155,6 +155,11 @@ Singleton {
             try { deconnexion.actions = Logique.valider(JSON.parse(text())) }
             catch (e) { console.warn("Déconnexion : actions.json illisible. " + e.message); deconnexion.actions = [] }
         }
+        // onLoadFailed — actions.json introuvable ou illisible : le menu reste sans action et ne s'ouvre pas.
+        // Entrée : error, le code FileViewError. Sortie : aucune. Erreurs : l'avertissement « Déconnexion :
+        // actions.json introuvable » ou « illisible », avec le code. Dépendances : FileViewError.
+        onLoadFailed: error => console.warn("Déconnexion : actions.json "
+            + (error === FileViewError.FileNotFound ? "introuvable" : "illisible") + " (" + FileViewError.toString(error) + ")")
     }
 
     IpcHandler {

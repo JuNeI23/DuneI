@@ -15,7 +15,8 @@ import "Deconnexion"
 // exécution par une ligne de journal : aucune vraie veille, extinction, déconnexion ni aucun verrouillage.
 // tests/test_deconnexion.py (ControleurTest) la pilote ; elle sert aussi aux captures du menu. Elle sert la cible
 // « notifications », dont l'état « ne pas déranger » vaut toujours « true ».
-// Entrées : DUNEI_TOKENS_DIR et DUNEI_ETAT_DIR (jetons, thème et relevé d'usage de l'essai) ; IPC « essai » : pret.
+// Entrées : DUNEI_TOKENS_DIR et DUNEI_ETAT_DIR (jetons, thème et relevé d'usage de l'essai) ; IPC « essai » : pret,
+// survoler (survol simulé), libelle (libellé rendu d'un bouton), lancerFactice (journal des échecs du Process).
 // Sorties : « essai : prêt » au démarrage ; « essai : exécuté <id> » à chaque action du menu (« essai : exécuté
 // lanceur <genre> » pour le lanceur) ; « essai : fenêtre construite » à chaque construction de la fenêtre du menu ;
 // « essai : calque retiré » quand Hyprland retire un calque dunei-attention (closelayer), pour que les essais
@@ -74,6 +75,12 @@ ShellRoot {
         // libelle — libellé rendu par le bouton i (« Confirmer » s'il est armé). Entrée : i, rang du bouton.
         // Sortie : le texte, ou « » sans cadre. Erreurs : aucune. Dépendances : Deconnexion.fenetre.cadre (boutons).
         function libelle(i: int): string { return Deconnexion.fenetre?.cadre?.boutons.itemAt(i)?.libelle ?? "" }
+
+        // lancerFactice — lance pour de bon, par Deconnexion.lancer, une commande inoffensive, pour éprouver le journal
+        // des échecs du Process : jamais une action du menu. Entrées : id, identifiant journalisé ; programme, la
+        // commande sans argument (« false », ou un nom introuvable). Sortie : aucune ; le journal reçoit l'échec.
+        // Erreurs : aucune. Dépendances : Deconnexion.lancer.
+        function lancerFactice(id: string, programme: string): void { Deconnexion.lancer({ id: id, commande: [programme] }) }
     }
 
     IpcHandler {

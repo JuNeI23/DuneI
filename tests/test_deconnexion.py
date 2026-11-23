@@ -83,7 +83,7 @@ class LogiqueTest(EssaiCoque, unittest.TestCase):
 
         Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : appeler, ACTIONS.
         """
-        self.assertTrue(self.appeler("appui", ACTIONS, -1, 1)["executer"])
+        self.assertEqual(self.appeler("appui", ACTIONS, -1, 1), {"arme": -1, "executer": True})
         self.assertEqual(self.appeler("appui", ACTIONS, -1, 4), {"arme": 4, "executer": False})
         self.assertEqual(self.appeler("appui", ACTIONS, 4, 4), {"arme": 4, "executer": True})
 
@@ -184,11 +184,12 @@ class ControleurTest(EssaiCoque, unittest.TestCase):
     def test_ouvrir_arme(self):
         """Vérifie que ouvrir("eteindre") ouvre le menu avec Éteindre sous le curseur et armé.
 
-        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : appel, etat.
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : appel, etat, sans_execution.
         """
         self.appel("deconnexion", "ouvrir", "eteindre")
         e = self.etat()
         self.assertEqual((e["ouvert"], e["index"], e["arme"]), (True, 4, 4))
+        self.sans_execution()
 
     def test_ouvrir_menu_deja_ouvert(self):
         """Vérifie que ouvrir, menu déjà ouvert, le garde ouvert, déplace et arme le curseur, sans reconstruire la
@@ -203,6 +204,7 @@ class ControleurTest(EssaiCoque, unittest.TestCase):
         self.appel("deconnexion", "ouvrir", "inconnu")
         e = self.etat()
         self.assertEqual((e["ouvert"], e["index"], e["arme"]), (True, 0, -1))
+        time.sleep(0.3)  # Une reconstruction éventuelle aurait le temps de paraître au journal.
         self.assertEqual(self.journal().count("essai : fenêtre construite"), 1, self.journal())
 
     def test_fleches_boucle(self):
@@ -276,13 +278,20 @@ class ControleurTest(EssaiCoque, unittest.TestCase):
         self.sans_execution()
 
     def test_lettre_autre_bouton_desarme(self):
-        """Vérifie que la lettre d'un autre bouton désarme et l'exécute : E puis S met en veille, sans éteindre.
+        """Vérifie que la lettre d'un autre bouton désarme : E puis R arme Redémarrer à la place d'Éteindre, E réarme
+        Éteindre, sans rien exécuter ; puis S met en veille, sans éteindre.
 
-        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : basculer, touches, attendre,
-        journal.
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : basculer, touches, etat,
+        sans_execution, attendre, journal.
         """
         self.basculer()
-        self.touches("e", "s")
+        self.touches("e", "r")
+        e = self.etat()
+        self.assertEqual((e["ouvert"], e["index"], e["arme"]), (True, 3, 3))
+        self.touches("e")
+        self.assertEqual(self.etat()["arme"], 4)
+        self.sans_execution()
+        self.touches("s")
         self.attendre("essai : exécuté veille")
         time.sleep(1.3)
         self.assertNotIn("essai : exécuté eteindre", self.journal())
@@ -298,6 +307,8 @@ class ControleurTest(EssaiCoque, unittest.TestCase):
         e = self.etat()
         self.assertEqual((e["ouvert"], e["arme"]), (False, -1))
         self.sans_execution()
+        e = self.basculer()
+        self.assertEqual((e["ouvert"], e["index"], e["arme"]), (True, 0, -1))
 
     def test_ouvrir_arme_survol_immobile(self):
         """Vérifie la garde de mouvement réel du survol : menu ouvert sur Éteindre armé, un premier point du pointeur
@@ -342,6 +353,17 @@ class ControleurTest(EssaiCoque, unittest.TestCase):
         self.assertFalse(self.etat()["ouvert"])
         self.assertTrue(json.loads(self.appel("lanceur", "etat"))["ouvert"])
         self.sans_execution()
+
+    def test_journal_process(self):
+        """Vérifie le journal des échecs du Process de lancement, par des commandes inoffensives et non par une action
+        du menu : « false » finit en code 1, un programme introuvable ne démarre pas.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : appel, attendre.
+        """
+        self.appel("essai", "lancerFactice", "faux", "false")
+        self.attendre("Déconnexion : faux a échoué (code 1)")
+        self.appel("essai", "lancerFactice", "absent", "dunei-commande-introuvable")
+        self.attendre("Déconnexion : absent n'a pas démarré")
 
 
 if __name__ == "__main__":
