@@ -59,6 +59,21 @@ ShellRoot {
 
         // pret — vrai une fois les jetons et le mouvement chargés. Sortie : « true » ou « false ».
         function pret(): string { return String(Theme.ready && Theme.motion !== null) }
+
+        // survoler — pousse un point du pointeur au gestionnaire de survol du menu, au centre du bouton i décalé de
+        // (dx, dy), comme le ferait son HoverHandler. Entrées : i, rang du bouton ; dx, dy, décalage en pixels.
+        // Sortie : « ok », ou « sans cadre » si la fenêtre du menu n'est pas construite. Erreurs : aucune.
+        // Dépendances : Deconnexion.fenetre.cadre (boutons, pointeur).
+        function survoler(i: int, dx: real, dy: real): string {
+            const c = Deconnexion.fenetre?.cadre, b = c?.boutons.itemAt(i)
+            if (!b) return "sans cadre"
+            c.pointeur(b.mapToItem(null, b.width / 2 + dx, b.height / 2 + dy))
+            return "ok"
+        }
+
+        // libelle — libellé rendu par le bouton i (« Confirmer » s'il est armé). Entrée : i, rang du bouton.
+        // Sortie : le texte, ou « » sans cadre. Erreurs : aucune. Dépendances : Deconnexion.fenetre.cadre (boutons).
+        function libelle(i: int): string { return Deconnexion.fenetre?.cadre?.boutons.itemAt(i)?.libelle ?? "" }
     }
 
     IpcHandler {
