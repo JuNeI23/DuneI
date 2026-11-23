@@ -1,6 +1,6 @@
 # Menu de déconnexion (L2-23) — fiche
 
-Version 1.0 — 2026-11-23 · écrite
+Version 1.1 — 2026-11-23 · écrite
 
 ## Intention
 
@@ -73,9 +73,12 @@ l'appui maintenu ou le compte à rebours : c'est la grammaire déjà connue du l
 
 - Un overlay de la famille attention, sur l'écran du moniteur focalisé : voile `material.shade` sur tout l'écran et flou
   par instantané du compositeur (namespace `dunei-attention`).
-- **Sans cadre** : les boutons sont posés directement sur le voile, sans plaque `surfaceRaised` autour. La primitive
-  `Overlay` gagne pour cela une option qui supprime le `Cadre` de `FenetreAttention` (nom laissé au constructeur, par
-  exemple `nu: true`). C'est le socle dont héritera le sélecteur de fenêtres.
+- **Sans cadre** : les boutons sont posés directement sur le voile, sans plaque `surfaceRaised` autour.
+- **Socle commun** : la primitive `Overlay` détruit sa fenêtre à la fermeture, sans fondu de sortie, ce qui enfreindrait
+  la règle « animer chaque état ». Le socle est donc tiré du lanceur et du sélecteur, qui savent sortir en fondu : un
+  contrôleur `Composants/Scene.qml` (ouverture, registre `Overlays`, fenêtre chargée à la demande, sortie en fondu,
+  action différée jusqu'au retrait du calque) et une fenêtre `Composants/FenetreScene.qml` (voile, flou, montée du
+  cadre, fondu de sortie). Le menu en est le premier client ; le sélecteur et le lanceur s'y rebrancheront.
 - Entrée et sortie : fondu et montée du contenu, avec les mêmes jetons de mouvement que le lanceur et le sélecteur.
 
 ### Boutons
@@ -181,7 +184,6 @@ vignettes trop serrées, plaque de verre inutile.
 
 ## Laissé au constructeur
 
-- Le nom de l'option sans cadre de `Overlay` et la façon de la porter dans `FenetreAttention`.
 - L'emplacement du module (`coque/Deconnexion/`) et le partage de `Vignette` entre Paramètres et le menu.
 - Les jetons de taille des vignettes et d'écart entre boutons, proposés sur maquette puis validés par Nicolas.
 - La forme de l'appel IPC avec argument depuis `commandes.json`, si le champ `ipc` actuel n'en porte pas.
@@ -191,3 +193,4 @@ vignettes trop serrées, plaque de verre inutile.
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-11-23 | Première écriture, après repérage (wlogout, rices Quickshell) et choix de Nicolas |
+| 1.1 | 2026-11-23 | Socle `Scene` tiré du lanceur et du sélecteur, au lieu d'une option sans cadre d'`Overlay`, qui n'a pas de fondu de sortie |
