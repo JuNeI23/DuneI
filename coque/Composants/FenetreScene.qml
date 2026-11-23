@@ -13,8 +13,9 @@ import "../Theme"
 // overlay de fadeLayersIn ; son fondu multiplie le calque entier, flou compris, qui apparaît donc progressivement sans
 // franchir d'un bloc le seuil glass.ignore_alpha (D192). Le voile et le cadre restent à l'opacité QML 1. Si
 // scene.montee, le cadre part sous le bord bas de l'écran, hors champ, et monte jusqu'à sa place au ressort window,
-// translation pure (D193) ; sinon, il se pose à sa place. Sous le mouvement réduit, le ressort se pose aussitôt et
-// seul le fondu reste. Disparition : sur place, en fondu au ressort overlay, par l'opacité que Hyprland applique à la
+// translation pure (D193) ; sinon, il grandit depuis son centre, de l'échelle window.echelleApparition à 1, au même
+// ressort window et en même temps que le fondu du compositeur. Sous le mouvement réduit, le ressort se pose aussitôt
+// et seul le fondu reste. Disparition : sur place, en fondu au ressort overlay, par l'opacité que Hyprland applique à la
 // surface (HyprlandWindow.opacity, protocole hyprland-surface-v1), qui multiplie elle aussi le flou ; le compositeur
 // n'efface pas un calque détruit, qui disparaîtrait d'un coup. À la fermeture, le clavier exclusif est rendu et la
 // fenêtre devient transparente au pointeur aussitôt ; le fondu posé, elle signale scene.sortieFinie, qui la
@@ -24,7 +25,7 @@ import "../Theme"
 // Sorties : cadre, l'élément instancié depuis scene.cadre, ou null (lu par les essais) ; eteinte.
 // Erreurs : aucune ; avant le chargement des tokens, le voile reste transparent.
 // Dépendances : Quickshell (PanelWindow, ExclusionMode, Region), Quickshell.Wayland (WlrLayershell),
-// Quickshell.Hyprland (HyprlandWindow), Scene, Ressort, Theme (material).
+// Quickshell.Hyprland (HyprlandWindow), Scene, Ressort, Theme (material, window.echelleApparition).
 PanelWindow {
     id: fenetre
 
@@ -76,7 +77,7 @@ PanelWindow {
         }
     }
 
-    // Cadre : le contenu du client, centré, qui reçoit le focus. Sans montée, il est posé à sa place.
+    // Cadre : le contenu du client, centré, qui reçoit le focus. Sans montée, il grandit depuis son centre.
     Loader {
         id: charge
         x: Math.round((fenetre.width - width) / 2)
@@ -85,5 +86,9 @@ PanelWindow {
         sourceComponent: fenetre.scene.cadre
         // Départ sous le bord bas de l'écran : le haut du cadre y est posé, hors champ.
         transform: Translate { y: fenetre.scene.montee ? (1 - montee.value) * (fenetre.height - charge.y) : 0 }
+        // Sans montée, l'échelle part de window.echelleApparition et rejoint 1 avec le ressort ; l'origine de la
+        // transformation est le centre du cadre (Item.Center, par défaut).
+        readonly property real depart: Theme.window?.echelleApparition ?? 1
+        scale: fenetre.scene.montee ? 1 : depart + (1 - depart) * montee.value
     }
 }

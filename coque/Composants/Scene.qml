@@ -20,8 +20,8 @@ import Quickshell.Hyprland
 //           de Nicolas) ;
 //           executeur, null par défaut : une fonction qui reçoit l'action à la place du signal realiser (coques
 //           d'essai) ; fenetree, vrai par défaut : faux, aucune fenêtre n'est construite et l'action part aussitôt ;
-//           montee, vrai par défaut : le cadre monte du bas de l'écran au ressort window ; faux, il se pose à sa place
-//           et seul le fondu du compositeur reste.
+//           montee, vrai par défaut : le cadre monte du bas de l'écran au ressort window ; faux, il grandit depuis
+//           son centre, de l'échelle window.echelleApparition à 1, au même ressort, pendant le fondu du compositeur.
 // Sorties : famille, « attention » ; present (ouvert, ou fenêtre encore en sortie) ; sortant ; ecran (figé à
 //           l'ouverture) ; fenetre (la FenetreScene construite, ou null) ; differee (l'action en attente du retrait du
 //           calque, ou null) ; executer(action), sortieFinie() ; signal realiser(action), émis quand une action doit

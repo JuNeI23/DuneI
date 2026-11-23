@@ -42,6 +42,8 @@ Singleton {
         clavierExclusif: deconnexion.clavierExclusif
         executeur: deconnexion.executeur
         fenetree: deconnexion.fenetree
+        // Le menu paraît depuis le centre de l'écran, sans monter du bas (demande de Nicolas).
+        montee: false
 
         // onRealiser — l'action part, aucun exécuteur n'étant posé : sa commande est lancée.
         // Entrée : action, une entrée de actions. Sortie : aucune. Erreurs : voir lancer. Dépendances : lancer.
