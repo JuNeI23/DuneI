@@ -4552,3 +4552,83 @@ ses autres usages (étiquettes, coloration syntaxique, séries de données, type
 déconnexion (L2-23) devient la prochaine étape et reprend seul le moule du sélecteur de fenêtres.
 
 *Documents touchés : backlog (1.65), bible (0.43), carnet (1.53), notes de direction (1.58).*
+
+### D204 · Un socle `Scene` pour les overlays d'attention sans cadre
+
+23 novembre 2026 · L2-23, fiche 1.1 puis construction. La primitive `Overlay` détruit sa fenêtre à la fermeture, sans
+fondu de sortie : un menu bâti dessus aurait enfreint la règle « animer chaque état ». Le lanceur et le sélecteur de
+fenêtres, eux, savent sortir en fondu, chacun avec son propre code. Le socle est donc tiré de leur moule en deux
+composants de `coque/Composants/` : `Scene.qml`, le contrôleur (ouverture, registre `Overlays`, fenêtre chargée à la
+demande, sortie en fondu, action différée jusqu'au retrait du calque), et `FenetreScene.qml`, la fenêtre (voile, flou
+par instantané, cadre, fondu de sortie). Le menu de déconnexion en est le premier client ; le sélecteur et le lanceur
+s'y rebrancheront à la reprise du sélecteur, plutôt que de recopier le moule une troisième fois. Une option
+`Overlay` sans cadre a été écartée : elle aurait laissé le défaut du fondu de sortie.
+
+*Touché : `coque/Composants/Scene.qml`, `coque/Composants/FenetreScene.qml`, tests `test_scene`, fiche
+`docs/superpowers/specs/2026-11-23-menu-deconnexion-design.md`.*
+
+### D205 · Menu sans plaque : bouton agrandi et teinté accent, autres gris, double appui, lettres
+
+23 novembre 2026 · L2-23, maquette refaite deux fois et validée par Nicolas. La fiche prévoyait la plaque d'accent plate
+du curseur sous le bouton choisi, comme le sélecteur de fenêtres. Nicolas l'a rejetée à l'écran : « le fond orange »
+l'insupporte. Le menu n'a donc **aucune plaque** : le bouton sous le curseur, survolé ou choisi au clavier, est agrandi
+de 1,15 autour de son centre et teinté `color.accent` dans le verre (recette de `material.thumb`), sans pousser ses
+voisins ; les autres boutons sont gris, de même taille, en verre neutre (fond `color.controlOff` le jour, glyphe
+`color.textSecondary`, libellé `bureau.texteClairSurvol`). L'accent est la seule couleur du menu : il n'y a plus de
+teinte par bouton, et le champ correspondant disparaît de `actions.json` et de sa validation. L'arbitre `VueCurseur`
+devient inutile puisqu'une seule marque existe. Les boutons sont des vignettes en verre, partagées avec la page
+Paramètres sous le nom `VignetteVerre` (l'ancien nom aurait masqué la `Vignette` de la Galerie ; `Lueur` passe dans
+`Composants/` avec elle). Une lettre d'accès par action (L, S, D, R, E) la déclenche.
+
+Le double appui protège les trois actions destructrices (`confirmer: true`) : le premier appui **arme** le bouton, qui
+reste agrandi, passe de `color.accent` à `color.error` et prend le libellé « Confirmer » ; le second exécute. Déplacer le
+curseur ou fermer désarme. Verrouiller et Veille partent au premier appui. Les touches répétées sont filtrées : maintenir
+E enfoncé n'arme ni n'exécute jamais deux fois, donc n'éteint jamais la machine. La relecture de la tâche 3 avait
+relevé ce défaut critique d'auto-répétition.
+
+*Touché : `coque/Deconnexion/` (`Deconnexion.qml`, `CadreDeconnexion.qml`, `deconnexion.js`, `actions.json`, essais),
+`coque/Composants/VignetteVerre.qml`, `coque/Composants/Lueur.qml`, `coque/Parametres/`, `tokens.toml`, tests
+`test_deconnexion`, bible (0.44), fiche du menu (1.2).*
+
+### D206 · `SUPER + Échap` et le logo de la barre
+
+23 novembre 2026 · L2-23. Deux entrées ouvrent le menu : un clic sur le logo Arch de la barre (`Barre/Logo.qml`, devenu
+cliquable), qui bascule, et `SUPER + Échap`, ligne de `config/hypr/donnees/raccourcis.lua` qui appelle l'IPC de la
+coque (`qs ipc -c dunei call deconnexion basculer`). La touche était libre, et la grammaire « `SUPER` agit ou va » est
+respectée : un seul appui. Échap, un clic sur le voile ou l'ouverture d'un autre overlay d'attention ferment le menu.
+
+*Touché : `coque/Barre/Logo.qml`, `config/hypr/donnees/raccourcis.lua`, `coque/shell.qml`, carnet (1.54).*
+
+### D207 · `SUPER + ALT + M` gardé comme issue de secours
+
+23 novembre 2026 · L2-23, à la demande de Nicolas. `SUPER + ALT + M` (« Quitter la session », `uwsm stop` en un appui)
+reste tel quel. Le menu est un composant de la coque : si Quickshell est tombé ou bloqué, il n'existe plus. Une issue
+qui ne dépend pas de la coque est donc conservée, protégée d'un appui accidentel par la touche `ALT` (grammaire des
+actions système de la bible).
+
+*Touché : aucun fichier de code ; commentaire de `config/hypr/donnees/raccourcis.lua`, carnet (1.54).*
+
+### D208 · Le lanceur ouvre le menu armé et perd sa confirmation
+
+23 novembre 2026 · L2-23. Les commandes « Redémarrer » et « Éteindre » du lanceur n'exécutent plus `systemctl` derrière
+un double Entrée : elles ouvrent le menu par l'IPC `deconnexion ouvrir(action)`, avec le bouton déjà sous le curseur et
+armé. Le chemin de Nicolas reste `SUPER + R`, « etei », Entrée, Entrée, mais la confirmation montrée est celle du menu.
+Le mécanisme de confirmation du lanceur, sans client, disparaît : la puce perd sa variante `danger`, et le lanceur
+résout ses commandes par `Sources.ligne(id)`, qui rend la ligne de commande d'une commande DuneI. Le calque qui apparaît
+sous un pointeur immobile ne déplace pas le curseur, sans quoi l'ouverture armée aurait été désarmée à l'insu de
+Nicolas.
+
+*Touché : `coque/Lanceur/` (`commandes.json`, `Puce.qml`, `Sources`), `coque/Deconnexion/`, tests `test_lanceur`,
+fiche du lanceur (1.3).*
+
+### D209 · Apparition depuis le centre et interface agrandie
+
+23 novembre 2026 · L2-23, demandes de Nicolas à la recette de la maquette. Le menu n'est pas une liste posée en bas de
+l'écran comme le lanceur : il apparaît **depuis le centre**, de l'échelle 0,92 à 1 au ressort `window`, en fondu, et ne
+monte plus. `Scene` gagne l'option `montee`, vraie par défaut (lanceur, sélecteur), que le menu pose à `false`.
+L'interface est agrandie : cote 128, glyphe 56, libellés à l'échelon 4. Nicolas avait demandé un écart de 36 ; la bible
+borne l'espacement aux échelons de `spacing.scale`, dont 36 est absent, et l'écart est ramené à 32, au prix de quatre
+pixels que l'œil ne distingue pas. Si Nicolas tient au 36, il faudra l'ajouter à l'échelle plutôt que le poser en dur.
+
+*Touché : `coque/Composants/Scene.qml`, `coque/Composants/FenetreScene.qml`, `tokens.toml` (`[deconnexion]`), tests
+`test_scene`, `test_deconnexion`.*

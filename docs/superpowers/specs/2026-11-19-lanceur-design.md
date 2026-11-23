@@ -1,6 +1,6 @@
 # Lanceur d'applications (L2-16) — fiche
 
-Version 1.2 — 2026-11-20 · faite
+Version 1.3 — 2026-11-23 · faite
 
 ## Intention
 
@@ -152,11 +152,11 @@ icône, type, score, action principale, actions secondaires, aperçu). Le classe
   `Applications.amenerOuLancer` (module de L2-69).
 - **Fenêtres** : `Hyprland.toplevels`, rattachées à leur application par la résolution de L2-69.
 - **Commandes** : déclarées dans un fichier de données (libellé, mots-clés, icône, appel IPC ou commande, état présent
-  facultatif, confirmation facultative), pour qu'on en ajoute une sans toucher au code. Liste de départ : chaque page
+  facultatif), pour qu'on en ajoute une sans toucher au code. Liste de départ : chaque page
   de Paramètres, « Ne pas déranger », jour et nuit, galerie de fonds d'écran, verrouiller, veille, redémarrer,
-  éteindre. Redémarrer et éteindre demandent une confirmation tant que le menu de déconnexion (L2-23) n'existe pas (choix de
-  Claude) : le premier Entrée fait passer le bouton de l'aperçu à « Confirmer ↵ », en `color.error` (bible : action
-  destructrice), le second exécute ; changer de ligne annule. Verrouiller et veille passent par des commandes
+  éteindre. Redémarrer et éteindre ouvrent le menu de déconnexion (L2-23), armé sur le bon bouton : la confirmation n'est plus
+  celle du lanceur, mais celle du menu, où un Entrée de plus exécute (fiche du menu, section « Lanceur » ; D208). Le
+  lanceur ne porte plus de mécanisme de confirmation, et la puce n'a plus de variante `danger`. Verrouiller et veille passent par des commandes
   externes (`loginctl`, `systemctl`), faute de cible IPC.
 - **Calcul** : `qalc`, voir plus bas.
 
@@ -207,7 +207,7 @@ Trois recettes à l'écran, avec Nicolas, ont ajouté ce que la fiche ne pouvait
 - **Un seul curseur.** L'accent de sélection n'appartient qu'à l'élément sous le curseur, et une vue montre le curseur
   d'une seule façon : médaillons et puces marqués pareil, boutons neutres sans curseur, ligne retenue en fond neutre
   quand le curseur est dans l'aperçu. Les indicateurs (point d'une fenêtre ouverte, lettres trouvées) gardent leur
-  accent ; le rouge de confirmation reste. Cette règle vaut pour toute la coque (D191, bible 0.40). Elle corrige la
+  accent ; le rouge de confirmation, désormais porté par le menu de déconnexion, reste. Cette règle vaut pour toute la coque (D191, bible 0.40). Elle corrige la
   phrase « plaque unique d'accent » de « Forme et matière » : la plaque d'accent suit le curseur, rien d'autre.
 - **Fondu du compositeur.** Le calque `dunei-attention` reçoit le style `fade` ; le flou ne s'allume plus d'un bloc au
   seuil `ignore_alpha` (D192).
@@ -246,3 +246,4 @@ Trois recettes à l'écran, avec Nicolas, ont ajouté ce que la fiche ne pouvait
 | 1.0 | 2026-11-19 | Première rédaction, après les maquettes v1 à v3 et les essais de `ScreencopyView` et de `qalc` |
 | 1.1 | 2026-11-19 | Relecture du constructeur : clavier de l'accueil et de l'aperçu, premier lancement, actions visées, confirmation ; validée |
 | 1.2 | 2026-11-20 | Faite : décisions des trois recettes (curseur unique, fondu du compositeur, montée au ressort `window`, focus après `closelayer`, plaques sans ombre, navigation spatiale, « Nouvelle fenêtre ») ; D190 à D196 |
+| 1.3 | 2026-11-23 | Confirmation retirée : « Redémarrer » et « Éteindre » ouvrent le menu de déconnexion armé (L2-23, D208) ; les commandes DuneI sont résolues par `Sources.ligne` |

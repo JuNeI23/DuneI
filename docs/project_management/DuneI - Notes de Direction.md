@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas — révisée le 22 octobre 2026
 
-Version 1.58. Historique en fin de document.
+Version 1.59. Historique en fin de document.
 
 *Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent soixante-quinze lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
 
@@ -679,15 +679,25 @@ relectures entrent au backlog en L2-79.
 
 Le sélecteur de bureaux (L2-18) est retiré à la demande de Nicolas, qui n'en veut pas (D203) : `SUPER + 1…4` suffit.
 
-Prochaine étape : **le menu de déconnexion (L2-23)**, overlay d'attention qui reprend le moule du sélecteur de fenêtres
-(contrôleur, calque à la demande, voile, fondu et montée du lanceur, plaque d'accent), avec l'action destructrice en
-`error`. Le reste de L2-48, L2-57 (suites
-du popover Bluetooth), L2-58, L2-59, L2-62, L2-70 et les défauts L2-74 à L2-79 attendent leur tour.
+Le menu de déconnexion (L2-23) est construit et attend sa recette (D204 à D209). Un clic sur le logo de la barre ou
+`SUPER + Échap` ouvre un overlay d'attention de cinq boutons en verre : Verrouiller, Veille, Déconnexion, Redémarrer,
+Éteindre. La maquette a été refaite deux fois : Nicolas a rejeté la plaque d'accent (« le fond orange » l'insupporte),
+et le bouton sous le curseur est désormais agrandi de 1,15 et teinté d'accent, les autres étant gris ; l'accent est la
+seule couleur. Les trois actions destructrices s'arment au premier appui (bouton en `error`, « Confirmer ») et
+s'exécutent au second ; les touches répétées sont filtrées. Le menu apparaît depuis le centre de l'écran, sans monter.
+Il est le premier client du socle `Scene`, tiré du lanceur et du sélecteur. Le lanceur l'ouvre armé pour « Redémarrer »
+et « Éteindre » et perd sa confirmation ; `SUPER + ALT + M` reste l'issue de secours.
+
+Prochaine étape : **la recette de L2-23** à l'écran par Nicolas (logo, `SUPER + Échap`, clavier, double appui, chemin du
+lanceur, jour et nuit, puis verrouillage, veille et extinction réels), **puis la reprise du sélecteur de fenêtres
+(L2-80)** sur `Scene`, avec ses quatre défauts. Le reste de L2-48, L2-57 (suites du popover Bluetooth), L2-58, L2-59,
+L2-62, L2-70 et les défauts L2-74 à L2-79 attendent leur tour.
 
 ## Historique des versions
 
 | Version | Date | Changement |
 | --- | --- | --- |
+| 1.59 | 2026-11-23 | L2-23 construit, en recette (D204 à D209) ; prochaine étape : la recette, puis la reprise du sélecteur (L2-80) |
 | 1.58 | 2026-11-23 | L2-18 retiré (D203) ; prochaine étape : L2-23, menu de déconnexion |
 | 1.0 | 2026-10-10 | Version initiale |
 | 1.57 | 2026-11-21 | L2-17 fait : sélecteur de fenêtres de la coque, geste tenu de `SUPER + Tab`, raccourci global, neutre pur limité à l'image (D200 à D202) ; ajout de L2-79 ; prochaine étape : L2-18 |

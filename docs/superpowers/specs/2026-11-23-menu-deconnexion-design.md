@@ -1,6 +1,6 @@
 # Menu de déconnexion (L2-23) — fiche
 
-Version 1.1 — 2026-11-23 · écrite
+Version 1.2 — 2026-11-23 · en cours, recette à faire
 
 ## Intention
 
@@ -10,7 +10,7 @@ provisoire que la fiche du lanceur réservait à l'attente de L2-23. Le menu de 
 visible et direct : un clic sur le logo Arch de la barre, ou `SUPER + Échap`, ouvre un overlay d'attention portant
 cinq boutons en verre. Il s'inspire de wlogout, que les rices utilisent beaucoup (une grille de gros boutons, une
 lettre par action, des actions déclarées dans un fichier), mais il est construit dans la coque Quickshell, pour suivre
-la bible : voile et flou par instantané, plaque d'accent du curseur, action destructrice en `error`, jetons de couleur
+la bible : voile et flou par instantané, accent de sélection porté par le seul bouton sous le curseur, action destructrice en `error`, jetons de couleur
 et de mouvement, un seul overlay d'attention à la fois.
 
 Le menu est aussi le premier client d'un socle d'overlay d'attention sans cadre. Le sélecteur de fenêtres (L2-17) s'y
@@ -77,9 +77,12 @@ l'appui maintenu ou le compte à rebours : c'est la grammaire déjà connue du l
 - **Socle commun** : la primitive `Overlay` détruit sa fenêtre à la fermeture, sans fondu de sortie, ce qui enfreindrait
   la règle « animer chaque état ». Le socle est donc tiré du lanceur et du sélecteur, qui savent sortir en fondu : un
   contrôleur `Composants/Scene.qml` (ouverture, registre `Overlays`, fenêtre chargée à la demande, sortie en fondu,
-  action différée jusqu'au retrait du calque) et une fenêtre `Composants/FenetreScene.qml` (voile, flou, montée du
+  action différée jusqu'au retrait du calque) et une fenêtre `Composants/FenetreScene.qml` (voile, flou, apparition du
   cadre, fondu de sortie). Le menu en est le premier client ; le sélecteur et le lanceur s'y rebrancheront.
-- Entrée et sortie : fondu et montée du contenu, avec les mêmes jetons de mouvement que le lanceur et le sélecteur.
+- Entrée et sortie : le contenu **apparaît depuis le centre de l'écran**, de l'échelle 0,92 à 1 au ressort `window`, en
+  fondu ; il ne monte plus depuis le bas, comme le font le lanceur et le sélecteur. `Scene` porte pour cela l'option
+  `montee: false`, que le menu pose ; la montée reste le comportement par défaut des deux autres. La sortie est un
+  fondu sur place, avec les mêmes jetons de mouvement.
 
 ### Boutons
 
@@ -97,16 +100,23 @@ Disposition, de gauche à droite, centrée sur l'écran :
 
 - Chaque bouton est une vignette en verre, sur le modèle des icônes de la page Paramètres : le composant
   `Parametres/Vignette.qml` (teinte mêlée, halo, reflet, liseré, givré la nuit et à halo le jour, tout depuis
-  `Theme.material.thumb`) est déplacé dans `Composants/` ou rendu réutilisable, pas recopié. Sa taille pour le menu
-  est un jeton à poser dans `tokens.toml` (la vignette de Paramètres est trop petite pour un overlay plein écran).
+  `Theme.material.thumb`) est déplacé dans `Composants/`, pas recopié, sous le nom `VignetteVerre` : l'ancien nom
+  aurait masqué la `Vignette` de la Galerie de fonds d'écran. `Lueur`, qu'elle utilise, passe elle aussi dans
+  `Composants/`. Les tailles sont des jetons de la table `[deconnexion]` de `tokens.toml` : cote 128, glyphe 56, écart
+  32 (l'échelon `spacing.scale` de la bible ; Nicolas avait demandé 36, qui n'y figure pas), facteur d'agrandissement
+  1,15. L'interface a été agrandie à sa demande après la première maquette ; les libellés passent à l'échelon 4.
 - Glyphes : Phosphor en graisse bold (D101), par le module d'icônes de la coque. `icones/correspondances.toml` n'a
   encore aucune entrée pour ces cinq actions : cinq correspondances freedesktop → Phosphor s'y ajoutent, validées sur
-  la maquette, puis `generate_icones.py` et `tests/test_icones.py`. Teinte de chaque vignette : un indice
-  de `Theme.color.categorical`, déclaré dans le fichier de données ; jamais de couleur inventée.
-- Sous la vignette, le libellé (échelon de texte de la bible), puis la lettre d'accès, discrète.
-- Curseur : la plaque d'accent plate (règle du curseur, D197 à D199), sous le bouton survolé ou choisi au clavier,
-  arbitrée par `VueCurseur` ; une seule plaque à la fois. Le passage d'un bouton à l'autre s'anime par les ressorts
-  de la coque.
+  la maquette, puis `generate_icones.py` et `tests/test_icones.py`. **Aucune teinte par bouton** : l'accent est la
+  seule couleur du menu, et le fichier de données ne porte plus de champ de teinte. Jamais de couleur inventée.
+- Sous la vignette, le libellé (échelon 4), puis la lettre d'accès, discrète.
+- **Curseur, sans plaque.** La maquette a été refaite deux fois : une plaque d'accent derrière le bouton, comme le
+  sélecteur de fenêtres, a été rejetée par Nicolas, que « le fond orange insupporte ». Le bouton sous le curseur,
+  survolé ou choisi au clavier, est **agrandi de 1,15 autour de son centre** et **teinté `color.accent` dans le verre**
+  (recette de `material.thumb`), sans pousser ses voisins. Les autres boutons sont **gris et de même taille** : verre
+  neutre sans teinte ni halo, fond `color.controlOff` le jour, glyphe `color.textSecondary`, libellé en
+  `bureau.texteClairSurvol`. Une seule marque à la fois ; le passage d'un bouton à l'autre s'anime par les ressorts de
+  la coque.
 
 ### Clavier et souris
 
@@ -116,13 +126,16 @@ Disposition, de gauche à droite, centrée sur l'écran :
 - Clic : appuie sur le bouton cliqué ; survol : déplace le curseur. Seul un vrai mouvement du pointeur compte comme
   survol : le calque qui apparaît sous un pointeur immobile ne déplace pas le curseur, sans quoi l'ouverture armée
   depuis le lanceur serait désarmée à l'insu de Nicolas (choix de Claude).
+- Les touches répétées sont ignorées : maintenir une lettre ou Entrée enfoncé ne compte que pour un appui, de sorte que
+  maintenir E ne peut ni armer puis exécuter, ni éteindre la machine.
 - À l'ouverture par le logo ou par `SUPER + Échap`, le curseur est sur le premier bouton (Verrouiller).
 
 ### Confirmation par double appui
 
 - Verrouiller et Veille partent au premier appui.
 - Déconnexion, Redémarrer et Éteindre (`confirmer: true` dans le fichier de données) : le premier appui **arme** le
-  bouton. Sa plaque passe de l'accent à `color.error` et son libellé devient « Confirmer », par une transition animée.
+  bouton. Il reste agrandi, sa teinte passe de `color.accent` à `color.error` et son libellé devient « Confirmer », par une
+  transition animée.
   Le second appui sur le même bouton, par le même moyen ou un autre (lettre, Entrée, clic), exécute.
 - Déplacer le curseur vers un autre bouton, ou fermer le menu, désarme ; le retour à l'état normal s'anime aussi.
 - Au clavier, `E E` éteint, `R R` redémarre, `D D` déconnecte.
@@ -130,7 +143,7 @@ Disposition, de gauche à droite, centrée sur l'écran :
 ### Actions et fichier de données
 
 Un fichier `coque/Deconnexion/actions.json`, sur le modèle de `coque/Lanceur/commandes.json`, une entrée par bouton :
-identifiant, libellé, lettre, glyphe, teinte, commande, `confirmer`.
+identifiant, libellé, lettre, glyphe, commande, `confirmer`.
 
 | Identifiant | Libellé | Lettre | Commande | Confirmer |
 | --- | --- | --- | --- | --- |
@@ -152,8 +165,9 @@ identifiant, libellé, lettre, glyphe, teinte, commande, `confirmer`.
   Entrée : elles ouvrent le menu par l'IPC, avec `ouvrir("redemarrer")` ou `ouvrir("eteindre")`. Le bouton correspondant
   est alors sous le curseur et déjà armé : un Entrée de plus exécute. Le chemin de Nicolas devient `SUPER + R`, « etei »,
   Entrée, Entrée, et la confirmation montrée est celle du menu.
-- Le mécanisme de confirmation du lanceur (`confirmer`) disparaît s'il n'a plus de client ; la fiche du lanceur et sa
-  documentation sont mises à jour.
+- Le mécanisme de confirmation du lanceur (`confirmer`) disparaît, faute de client : la puce perd sa variante `danger`
+  et la fiche du lanceur est mise à jour (1.3). Le lanceur résout désormais ses commandes par `Sources.ligne(id)`, qui
+  rend la ligne de commande d'une commande DuneI.
 - Une commande « Déconnexion » entre au lanceur sur le même modèle.
 
 ## Contraintes
@@ -180,7 +194,9 @@ identifiant, libellé, lettre, glyphe, teinte, commande, `confirmer`.
 
 Feature suivante : le sélecteur de fenêtres (L2-17) se rebranche sur l'overlay sans cadre et corrige quatre défauts
 relevés par Nicolas le 23 novembre : vignettes trop pixelisées, titre long (page Firefox) qui décale l'affichage,
-vignettes trop serrées, plaque de verre inutile.
+vignettes trop serrées, plaque de verre inutile. Cette reprise traitera aussi un défaut parqué du socle hérité du
+sélecteur : le `closelayer` d'un autre calque d'attention (le lanceur en fondu) peut faire partir une action différée
+environ 200 ms trop tôt.
 
 ## Laissé au constructeur
 
@@ -194,3 +210,4 @@ vignettes trop serrées, plaque de verre inutile.
 | --- | --- | --- |
 | 1.0 | 2026-11-23 | Première écriture, après repérage (wlogout, rices Quickshell) et choix de Nicolas |
 | 1.1 | 2026-11-23 | Socle `Scene` tiré du lanceur et du sélecteur, au lieu d'une option sans cadre d'`Overlay`, qui n'a pas de fondu de sortie |
+| 1.2 | 2026-11-23 | Maquette refaite deux fois : plus de plaque d'accent (rejetée par Nicolas), bouton sous le curseur agrandi de 1,15 et teinté d'accent, autres gris, armé en `error` ; accent seul, sans teinte par bouton ; interface agrandie (cote 128, glyphe 56, écart 32, libellés à l'échelon 4) ; apparition depuis le centre (`montee: false`) ; `VueCurseur` abandonné ; `VignetteVerre` ; touches répétées filtrées ; lanceur par `Sources.ligne` (D204 à D209) |

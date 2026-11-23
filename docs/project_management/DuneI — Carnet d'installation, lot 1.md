@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.53. Historique en fin de document.
+Version 1.54. Historique en fin de document.
 
 Socle amorçable.
 
@@ -1398,7 +1398,8 @@ bureau spécial, `accueil`, qui s'affiche par-dessus le bureau courant.
 | `Print`, `SHIFT + Print`, `CTRL + Print` | Capturer une zone, une fenêtre choisie au clic, l'écran actif : rôle `capture`, tenu par hyprshot jusqu'à L2-30 ; image dans `~/Images/Captures` et dans le presse-papiers (D79) |
 | `SUPER + W` | Ouvrir ou refermer la galerie de fonds d'écran dans la presqu'île de l'écran actif (L2-60) |
 | `SUPER + L` | Verrouiller : `loginctl lock-session`, verrouilleur provisoire (L1-09, remplacé à L2-22) |
-| `SUPER + Alt + M` | Quitter la session (`uwsm stop`) |
+| `SUPER + Échap` | Ouvrir ou fermer le menu de déconnexion (coque, L2-23) |
+| `SUPER + Alt + M` | Quitter la session (`uwsm stop`), issue de secours gardée en un appui |
 | `SUPER + Alt + R` | Recharger la configuration (`hyprctl reload`) |
 | `SUPER + clic gauche / droit` glissé | Déplacer / redimensionner à la souris |
 | `SUPER + molette` | Bureau occupé suivant ou précédent, sans jamais en créer un cinquième |
@@ -2286,6 +2287,36 @@ Aucun paquet à installer : la feature ne touche que la coque, la liaison de `SU
   Les essais graphiques passent par la coque d'essai `coque/Selecteur/essai/fenetre/`, qui coupe le clavier exclusif,
   ne déclare aucun raccourci global et se pilote par IPC ; ils exigent un écran libre (Wayland et `qs`).
 
+## Le menu de déconnexion — L2-23
+
+Aucun paquet à installer : la feature ne touche que la coque, deux liaisons de touches, la table `[deconnexion]` de
+`tokens.toml` et les tests. `make install` la déploie comme le reste de la coque.
+
+- **L'ouverture.** Un clic sur le logo Arch de la barre, ou `SUPER + Échap`, ouvre le menu ; le même geste le ferme.
+  `SUPER + Échap` est une ligne de `config/hypr/donnees/raccourcis.lua` qui appelle
+  `qs ipc -c dunei call deconnexion basculer`. Échap, un clic sur le voile ou un autre overlay d'attention le ferment.
+  **`SUPER + ALT + M` (« Quitter la session », `uwsm stop`) reste lié** : c'est l'issue de secours si la coque est
+  tombée (D207).
+- **Les boutons.** Verrouiller (L), Veille (S), Déconnexion (D), Redémarrer (R), Éteindre (E), déclarés dans
+  `coque/Deconnexion/actions.json`. Flèches, Tab et `Maj + Tab` déplacent le curseur ; une lettre, Entrée, Espace ou un
+  clic appuient. Le bouton sous le curseur est agrandi et teinté d'accent, les autres sont gris. Verrouiller et Veille
+  partent au premier appui ; les trois autres s'arment (bouton en `error`, « Confirmer ») et partent au second. Les
+  touches répétées sont ignorées (D205). Le menu apparaît depuis le centre de l'écran (D209).
+- **Le module.** `coque/Deconnexion/` : le singleton `Deconnexion.qml` (état, curseur, armement, IPC `deconnexion` avec
+  `basculer()` et `ouvrir(action)`), le cadre `CadreDeconnexion.qml`, la logique pure `deconnexion.js` et
+  `actions.json`. Le socle est partagé : `coque/Composants/Scene.qml` et `FenetreScene.qml` (D204), la vignette en verre
+  `VignetteVerre.qml`, et `Lueur.qml`, déplacée de `Parametres/`.
+- **Les jetons.** Table `[deconnexion]` de `tokens.toml` : `cote = 128`, `glyphe = 56`, `ecart = 32`, `agrandi = 1.15`,
+  `lettre_grisee = 0.7`. `make tokens` les reporte dans `generated/` ; les fichiers témoins de `tests/golden/` sont à
+  jour.
+- **Le lanceur.** « Redémarrer » et « Éteindre » ouvrent le menu armé par `deconnexion ouvrir(action)` : le chemin
+  `SUPER + R`, « etei », Entrée, Entrée reste le même (D208).
+- **Vérifier.** `qs -c dunei ipc call deconnexion basculer` ouvre le menu. À l'écran, sur les bureaux 1 à 4 : le bouton
+  choisi est agrandi et teinté, un second appui sur E arme puis éteint ; ne jamais lancer d'action réelle sans accord.
+- **Les tests.** `python3 -m unittest tests.test_deconnexion tests.test_scene tests.test_lanceur`. Les essais
+  graphiques passent par `coque/Deconnexion/essai/` et `coque/Composants/essai/scene/`, où les commandes sont remplacées
+  par une fausse commande ; ils exigent un écran libre (Wayland et `qs`).
+
 ## Le mouvement des popovers — L2-06, L2-07, L2-47, L2-56
 
 Rien de plus à installer : la fenêtre des popovers est dans la coque (`dunei-coque.service`), et `make install` lie
@@ -2573,6 +2604,7 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 
 | Version | Date | Changement |
 | --- | --- | --- |
+| 1.54 | 2026-11-23 | Le menu de déconnexion (L2-23, D204 à D209) : `SUPER + Échap` et le logo l'ouvrent, `SUPER + ALT + M` gardé en secours, module `coque/Deconnexion/`, socle `Scene`, table `[deconnexion]` |
 | 1.53 | 2026-11-23 | Les bureaux restent sans teinte : le sélecteur de bureaux (L2-18) est retiré (D203) |
 | 1.52 | 2026-11-21 | Le sélecteur de fenêtres (L2-17, D200 à D202) : `SUPER + Tab` devient le geste tenu du sélecteur de la coque, liaison globale `dunei:selecteur`, jetons `delays.selecteur` et `[selecteur]`, vérification et tests |
 | 1.51 | 2026-11-21 | Le curseur dans toute la coque (L2-73, D197 à D199) : `VueCurseur`, `ZoneCurseur`, `Plaque` partagée, `AnneauFocus` retiré, jeton `[reglages] evidence`, tests et instabilités connues |

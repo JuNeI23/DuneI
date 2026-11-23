@@ -2,9 +2,9 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.65. Historique en fin de document.
+Version 1.66. Historique en fin de document.
 
-La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **190 éléments** répartis en **cinq lots**, sur six chantiers.
+La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **191 éléments** répartis en **cinq lots**, sur six chantiers.
 
 Ce document dit ce qui est attendu, dans quel ordre, et à quelle condition c'est terminé. Il ne dit pas à quoi ça ressemble — c'est le rôle de la bible de design. En cas de contradiction : la bible l'emporte sur l'apparence, ce document l'emporte sur le périmètre.
 
@@ -276,7 +276,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L2-20 | B | Écrit | Menu contextuel du bureau — part du point de clic |
 | L2-21 | B | Écrit | Infobulles — délai de 500 ms |
 | L2-22 | B | Écrit | Verrouillage — registre de spectacle ; `SUPER + L` est déjà lié à `loginctl lock-session` (L1-09, D41) ; le verrouilleur provisoire, `hyprlock`, ne se nomme qu'à un endroit, `verrouilleur` dans `energie.toml`, et c'est le seul point à remplacer ; l'esthétique du verrouillage reste ouverte, Nicolas acceptant d'y investir de la ressource machine |
-| L2-23 | B | Écrit | Menu de déconnexion — action destructrice en `error` |
+| L2-23 | B | En recette | Menu de déconnexion — action destructrice en `error` — **construit, recette à faire (D204 à D209)** : overlay d'attention sans plaque (socle `Scene`), cinq boutons en verre (`VignetteVerre`), celui sous le curseur agrandi de 1,15 et teinté d'accent, les autres gris, armé en `error` avec « Confirmer » ; double appui pour Déconnexion, Redémarrer et Éteindre ; ouvert par le logo et `SUPER + Échap`, `SUPER + ALT + M` gardé en secours ; le lanceur l'ouvre armé |
 | L2-24 | B | Écrit | Agent d'authentification — il devra entrer dans `session.toml` (unité systemd utilisateur) pour démarrer avec la session (L1-10, D50) |
 | L2-25 | B | Configuré | Trousseau de secrets |
 | L2-26 | B | Écrit | Démon de thème — rechargement à chaud |
@@ -333,6 +333,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L2-77 | C | Écrit | « Actualiser » perd le focus clavier — dans la page Wi-Fi de Paramètres, le bouton « Actualiser » perd le focus clavier pendant une recherche de réseaux et ne le retrouve pas à la fin ; le curseur au clavier doit y revenir (relecture de la tâche 4 de L2-73) |
 | L2-78 | C | Écrit | Tests sensibles au minutage — `test_radio_eteinte` et les essais qui attendent 3 s échouent parfois quand la machine est chargée ; remplacer les attentes fixes par des attentes de condition bornées (relevé pendant L2-73) |
 | L2-79 | C | Écrit | Sélecteur de fenêtres, dettes des relectures (L2-17) — mineurs relevés le 2026-11-21, aucun bloquant ; la relecture finale en a réglé une partie (voir l'historique, 1.64), et il reste : (a) un second `SUPER + Tab` arrivé pendant le fondu de sortie, ou avant `closelayer`, efface sans bruit la fenêtre choisie au geste précédent (`Selecteur.qml`, `differee = null` à l'ouverture, patron du lanceur) ; (c) l'origine du pointeur et son mouvement (`origine`, `bouge`) ne sont pas remis à zéro à une réouverture pendant le fondu ; (d) le `closelayer` du lanceur, de même namespace `dunei-attention`, peut déclencher tôt l'action différée du sélecteur (même défaut que L2-74 g)) ; (f) `selecteur.js` rend NaN pour un index hors bornes alors que son commentaire n'annonce aucune erreur ; (g) couverture : invariant `largeurMin < largeurMax` non éprouvé, `Theme.selecteur` absent de `test_coque_theme`, borne droite du défilement à un index intermédiaire et bureau numérique non testés ; (h) le commentaire de l'écart, dans `tokens.toml`, le dit échelon de `spacing.scale` sans que rien ne l'y lie ; (i) deux tests graphiques sont instables sous la charge de `make check`, sans lien avec L2-17 et déjà instables sur `main` : `test_notifications.CarteTest.test_actions` (hauteur relevée avant la fin du ressort, 78,0015 contre 78 ; un échec sur trois en isolé sur `main`) et `test_reseau.PageWifiTest.test_cinq_rangees` (boucle de liaison de `PageWifi.qml:312`, vert en isolé) |
+| L2-80 | B | Écrit | Sélecteur de fenêtres, reprise sur `Scene` (suite de L2-23) — rebrancher le sélecteur sur le socle `Composants/Scene` ; corriger quatre défauts relevés par Nicolas le 23 novembre : vignettes pixelisées, titre long (page Firefox) qui décale l'affichage, vignettes trop serrées, plaque de verre inutile ; retirer la plaque d'accent, que Nicolas a rejetée sur le menu de déconnexion (« le fond orange » l'insupporte) au profit du bouton agrandi et teinté, à lui soumettre ; traiter le défaut parqué du `closelayer` d'un autre calque d'attention (le lanceur en fondu), qui peut faire partir une action différée environ 200 ms trop tôt |
 
 ### Lot 3 — la bascule
 
@@ -435,7 +436,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L5-30 | — | Écrit | Résorber les points ouverts de l'annexe C |
 | L5-31 | C | Écrit | Voix de DuneI — remplacer les sons KDE Ocean de L2-68 par une voix propre : une corde ancienne, sablonneuse et brève, enregistrée ou de synthèse modale (quatre tours de Karplus-Strong n'ont pas convaincu, D185). Pistes : cielago, sietch, dunes chantantes, crysknife, bouclier, corne lointaine, variantes du pas sans rythme, espace acoustique unique, jour et nuit, une tonalité par machine, la teinte du thème en note. Maquette et cheminement dans l'atelier, `maquettes/son-notifications/` |
 
-**Volume total : 190 éléments** — 140 écrits, 43 configurés, 5 offerts, 2 mixtes.
+**Volume total : 191 éléments** — 141 écrits, 43 configurés, 5 offerts, 2 mixtes.
 
 Les deux tiers du travail sont de l'écrit, et les trois quarts de cet écrit se concentrent sur la coque et les écrans système. C'est cohérent avec la stratégie retenue, et c'est là que tout le risque se trouve.
 
@@ -538,6 +539,7 @@ Le choix de la distribution de base et du compositeur, précédemment ouverts, s
 
 | Version | Date | Changement |
 | --- | --- | --- |
+| 1.66 | 2026-11-23 | L2-23 en recette (D204 à D209) ; ajout de L2-80, reprise du sélecteur de fenêtres sur `Scene` ; 191 éléments |
 | 1.65 | 2026-11-23 | L2-18 retiré : pas de sélecteur de bureaux (D203) ; 190 éléments |
 | 1.0 | 2026-10-12 | Version initiale, 137 éléments |
 | 1.64 | 2026-11-21 | L2-79 : la relecture finale de L2-17 règle `Backtab` sans SUPER, les commentaires réglementaires, la tolérance du test, l'action différée du lanceur écrasant le sélecteur, l'icône commune (`Applications.icone`), le relevé des fenêtres à l'ouverture et le double `HoverHandler` ; restent (a), (c), (d), (f), (g), (h), et (i) pour deux tests graphiques instables relevés par `make check` ; 190 éléments |
