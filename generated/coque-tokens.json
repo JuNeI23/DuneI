@@ -1765,7 +1765,7 @@
   "deconnexion": {
     "cote": 128,
     "glyphe": 56,
-    "ecart": 36,
+    "ecart": 32,
     "agrandi": 1.15,
     "lettreGrisee": 0.7
   },

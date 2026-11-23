@@ -95,7 +95,7 @@ class QuickshellEmitterTest(unittest.TestCase):
     def test_deconnexion(self):
         """Vérifie les jetons du menu de déconnexion : côté de la vignette, côté du glyphe, écart, agrandissement,
         opacité de la lettre grisée."""
-        self.assertEqual(self.out["deconnexion"], {"cote": 128, "glyphe": 56, "ecart": 36, "agrandi": 1.15,
+        self.assertEqual(self.out["deconnexion"], {"cote": 128, "glyphe": 56, "ecart": 32, "agrandi": 1.15,
                                                    "lettreGrisee": 0.7})
 
     def test_notifications(self):
