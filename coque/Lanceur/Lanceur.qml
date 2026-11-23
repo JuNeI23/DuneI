@@ -213,7 +213,7 @@ Singleton {
     // realiser — exécute une action. « nouvelle » lance toujours une nouvelle instance de l'entrée, sans amener.
     // Entrée : action (voir executer). Sortie : aucune. Erreurs : aucune ; une commande inconnue ne lance rien.
     // Dépendances : executeur, Hyprland.dispatch, Apps.commandeFocus, Applications (amenerOuLancer, lancerAction),
-    // Apps.commandeLancement, sources (entrees, commande, ipc), Quickshell (execDetached, clipboardText).
+    // Apps.commandeLancement, sources (entrees, ligne), Quickshell (execDetached, clipboardText).
     function realiser(action) {
         if (executeur) executeur(action)
         else if (action.genre === "amener") Hyprland.dispatch(Apps.commandeFocus(action.cible))
@@ -223,9 +223,8 @@ Singleton {
         else if (action.genre === "action") Applications.lancerAction(action.cible)
         else if (action.genre === "copier") Quickshell.clipboardText = action.cible
         else if (action.genre === "commande") {
-            const k = sources.commande(action.cible)
-            if (k?.ipc) Quickshell.execDetached(sources.ipc.concat(k.ipc))
-            else if (k?.commande) Quickshell.execDetached(k.commande)
+            const l = sources.ligne(action.cible)
+            if (l) Quickshell.execDetached(l)
         }
     }
 

@@ -521,6 +521,17 @@ class SourcesTest(EssaiCoque, unittest.TestCase):
             self.assertEqual((cmds[i]["ipc"], cmds[i]["commande"]), (["deconnexion", "ouvrir", i], None))
             self.assertNotIn("confirmer", cmds[i])
 
+    def test_ligne_de_commande(self):
+        """Vérifie la ligne que realiser lancerait pour « eteindre » avec le préfixe IPC de la session, sans rien
+        exécuter : l'appel deconnexion ouvrir eteindre de la coque dunei ; un id inconnu ne donne aucune ligne.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : ipc.
+        """
+        self.ipc("injecter", json.dumps({"ipc": ["qs", "ipc", "-c", "dunei", "call"]}))
+        self.assertEqual(self.ipc("ligne", "eteindre"),
+                         ["qs", "ipc", "-c", "dunei", "call", "deconnexion", "ouvrir", "eteindre"])
+        self.assertIsNone(self.ipc("ligne", "inconnu"))
+
     def test_calcul_courant(self):
         """Vérifie que la ligne de calcul n'apparaît que si le calcul publié répond à la saisie présente.
 
@@ -984,7 +995,7 @@ class ClavierTest(FenetreTest):
         self.assertEqual(self.etat()["puces"][0], "cmd:eteindre")
         self.cle("down")
         self.assertEqual(self.etat()["sel"]["zone"], "puces")
-        self.assertEqual(json.loads(self.essai_ipc("puce") or "null"), {"texte": "Éteindre", "danger": False})
+        self.assertEqual(json.loads(self.essai_ipc("puce") or "null"), {"texte": "Éteindre"})
         self.cle("return")
         self.attendre("essai : exécuté commande eteindre")
         self.jusqua(lambda: not self.etat()["ouvert"], "lanceur fermé")

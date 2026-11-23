@@ -8,8 +8,8 @@ import "Lanceur/lanceur.js" as Logique
 // Rôle : charge Sources, y injecte par IPC (cible « essai ») de fausses entrées de bureau, de fausses fenêtres, un
 // usage, un faux calcul et un préfixe d'appel IPC vers elle-même, puis rend ses résultats pour tests/test_lanceur.py
 // (SourcesTest). Elle sert aussi la cible « notifications », dont l'état « ne pas déranger » vaut toujours « true ».
-// Entrées : commandes IPC injecter, calculer, classes, accueil, rafraichir. Sortie : JSON ; la ligne « essai : état
-// <état> » à chaque état reçu. Erreurs : aucune. Dépendances : quickshell ≥ 0.3 (Quickshell.Io), Sources, lanceur.js
+// Entrées : commandes IPC injecter, calculer, classes, accueil, ligne, rafraichir. Sortie : JSON ; la ligne « essai :
+// état <état> » à chaque état reçu. Erreurs : aucune. Dépendances : quickshell ≥ 0.3 (Quickshell.Io), Sources, lanceur.js
 // (liens essai/sources/Lanceur, Applications, Parametres, Theme et Composants, ces deux derniers pour le singleton
 // Lanceur que déclare le qmldir du module, car Quickshell ne suit pas les imports hors du dossier
 // de la coque).
@@ -58,6 +58,10 @@ ShellRoot {
         // accueil — accueil des sources. Entrées : aucune. Sortie : {medaillons, puces} en JSON. Erreurs : aucune.
         // Dépendances : Sources.accueil.
         function accueil(): string { return JSON.stringify(sources.accueil()) }
+
+        // ligne — ligne de commande d'une commande DuneI, sans rien exécuter. Entrée : id. Sortie : tableau JSON, ou
+        // « null » pour un id inconnu. Erreurs : aucune. Dépendances : Sources.ligne.
+        function ligne(id: string): string { return JSON.stringify(sources.ligne(id)) }
 
         // rafraichir — relit les états des commandes. Entrées : aucune. Sortie : aucune. Erreurs : aucune.
         // Dépendances : Sources.rafraichir.

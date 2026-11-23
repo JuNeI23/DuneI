@@ -16,7 +16,7 @@ import "../Applications/applications.js" as Apps
 // historique}, Applications.toplevels() sous Wayland) ; poids (usage, lanceur.js poids) ; calcul (un Calcul, ou
 // null) ; cheminRoles (roles.lua) ; ipc (préfixe d'appel IPC de la coque). Les coques d'essai les remplacent.
 // Sorties : commandes (déclarées puis pages de Paramètres), etats ({id: état lisible}) ; fonctions chercher,
-// accueil, commande, rafraichir.
+// accueil, commande, ligne, rafraichir.
 // Erreurs : aucune ; un commandes.json ou un roles.lua illisible laisse sa liste vide.
 // Dépendances : Quickshell (DesktopEntries, env), Quickshell.Io (FileView, Process, StdioCollector),
 // Applications (toplevels, applications.js), Registre (Parametres),
@@ -153,6 +153,15 @@ Scope {
     // Entrée : id. Sortie : la commande ({id, libelle, motsCles, icone, ipc, commande, etat}) ou undefined.
     // Erreurs : aucune. Dépendances : commandes.
     function commande(id) { return commandes.find(k => k.id === id) }
+
+    // ligne — ligne de commande d'une commande DuneI, telle que Lanceur.realiser la lance, sans rien exécuter.
+    // Entrée : id, identifiant de la commande. Sortie : le préfixe ipc suivi de k.ipc pour une commande de la coque,
+    // k.commande pour une commande externe, null pour un id inconnu ou une commande sans ligne. Erreurs : aucune.
+    // Dépendances : commande, ipc.
+    function ligne(id) {
+        const k = commande(id)
+        return k?.ipc ? ipc.concat(k.ipc) : k?.commande ?? null
+    }
 
     // rafraichir — relit, par IPC, l'état présent de chaque commande qui en déclare un (à l'ouverture du lanceur).
     // Entrées : aucune. Sortie : aucune ; chaque état relu est d'abord effacé, puis etats se met à jour à chaque
