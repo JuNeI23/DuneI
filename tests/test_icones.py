@@ -29,6 +29,7 @@ ATTENDUS = (
     + ["audio-volume-muted", "audio-volume-low", "audio-volume-medium", "audio-volume-high",
        "microphone-sensitivity-muted", "microphone-sensitivity-high", "audio-headset", "audio-input-microphone"]
     + ["battery-caution"]
+    + ["system-lock-screen", "system-suspend", "system-log-out", "system-reboot", "system-shutdown"]
 )
 
 

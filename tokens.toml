@@ -479,6 +479,17 @@ largeur_min = 100             # largeur minimale d'une vignette, pour une fenêt
 largeur_max = 320             # largeur maximale d'une vignette, pour une fenêtre très large
 ecart = 16                    # espace entre deux vignettes (échelon de spacing.scale)
 
+[deconnexion]                 # menu de déconnexion, SUPER + Échap (L2-23) ; px logiques ; maquette deconnexion-v1 validée
+cote = 88                     # côté d'une vignette en verre
+glyphe = 40                   # côté du glyphe dans la vignette
+ecart = 24                    # espace entre deux boutons (échelon de spacing.scale)
+agrandi = 1.15                # facteur du bouton sous le curseur, autour de son centre, sans pousser ses voisins
+# Couleurs, toutes tirées du thème : le bouton choisi suit la recette de material.thumb teintée de color.accent
+# (color.error une fois armé) ; les autres sont gris, en verre neutre sans teinte ni halo, glyphe color.textSecondary.
+# Fond des vignettes grises : thumb.ground la nuit, color.controlOff le jour, plus sombre que thumb.ground pour que le
+# bouton choisi se détache autant qu'à la nuit. Liseré gris : material.highlight la nuit, color.borderDefault le jour.
+# Libellés sur le voile, sombre aux deux moments : bureau.texteClair (choisi), bureau.texteClairSurvol (gris).
+
 [notifications]               # pile de notifications de la coque (L2-19) ; px logiques sauf mention ; ms pour duree
 largeur = 340                 # largeur d'une carte
 marge = 8                     # distance de la pile au bord de l'écran

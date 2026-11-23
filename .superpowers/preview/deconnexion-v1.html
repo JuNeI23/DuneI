@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><title>Menu de déconnexion — v1</title>
+<style>
+/* Couleurs ARGB de Qt (#AARRGGBB) traduites en rgba() : shade #5c000000 = noir à 0,36 ; edgeLight #14ffffff = blanc
+   à 0,078 la nuit, #00ffffff = transparent le jour.
+   Jetons lus dans generated/coque-tokens.json, famille dominante (le thème actif de caladan), nuit et jour.
+   Aucune couleur n'est calculée : chaque couche est une couleur des jetons, seule son opacité est réglée. */
+.nuit{--ground:#1d1d1d;--tint:.24;--halo:0;--sheen:.24;--edge:.1;--t2:#a8a8a8;--lisN:#ffffff;--acc:#a35300;--groundN:#1d1d1d;
+  --err:#d33a3c;--shade:rgba(0,0,0,.36);
+  --c0:#e69052;--c1:#c1a637;--c2:#66be7b;--c3:#01bbda;--c4:#e783ac}
+.jour{--ground:#f4f4f4;--tint:0;--halo:.42;--sheen:.14;--edge:.38;--t2:#636363;--lisN:#cecece;--acc:#a35300;--groundN:#dbdbdb;
+  --err:#990016;--shade:rgba(0,0,0,.36);
+  --c0:#974c00;--c1:#766200;--c2:#137738;--c3:#006f83;--c4:#9a3e67}
+/* Valeurs de départ du brief : cote 88, glyphe 40, ecart 24 ; rayon de la vignette radius.window (12).
+   Plus de plaque (direction de Nicolas, 2026-11-23) : le bouton sous le curseur est agrandi d'un facteur proposé
+   de 1,15 autour de son centre, sans pousser ses voisins, et seul en couleur, celle de color.accent ; les autres sont grisés. Gris de jour assombri : fond
+   color.controlOff (#dbdbdb) au lieu de thumb.ground (#f4f4f4) ; la nuit, thumb.ground (#1d1d1d). */
+/* Le voile reste sombre aux deux moments : libellé et lettre prennent le texte clair du bureau. Bouton choisi :
+   libellé bureau.texteClair, lettre bureau.texteClairSurvol ; bouton grisé : libellé bureau.texteClairSurvol, lettre
+   la même à l'opacité 0,7 (color.textSecondary du moment est illisible de jour sur le voile). */
+:root{--bt1:#f5f5f5;--bt2:#bebebe;--cote:88px;--glyphe:40px;--ecart:24px;--rv:12px;--agr:1.15}
+*{box-sizing:border-box;margin:0}
+body{background:#202020;color:#e9e9e9;font:13px/1.45 "Source Sans 3";padding:14px 18px}
+h1{font-size:18px;font-weight:550;margin-bottom:2px}
+.sub{color:#a8a8a8;margin-bottom:10px}
+.grille{display:grid;grid-template-columns:auto 1fr 1fr;gap:10px 14px;align-items:center}
+.ent{font-size:15px;font-weight:550;text-align:center}
+.etat{font-size:13px;font-weight:550;writing-mode:vertical-rl;transform:rotate(180deg);color:#a8a8a8}
+.desk{position:relative;height:208px;background:#4c7dc0;border-radius:10px;overflow:hidden}
+.voile{position:absolute;inset:0;background:var(--shade)}
+.rang{position:absolute;inset:0;display:flex;justify-content:center;align-items:center;gap:var(--ecart)}
+.bt{position:relative;width:var(--cote);display:flex;flex-direction:column;align-items:center}
+.bt.cur{transform:scale(var(--agr))}
+/* Vignette : recette de Parametres/Vignette.qml, couche par couche, en couleur pour le bouton choisi. */
+.vg{position:relative;width:var(--cote);height:var(--cote);border-radius:var(--rv);overflow:hidden;background:var(--ground)}
+.vg i{position:absolute;inset:0;border-radius:var(--rv)}
+.vg .tint{background:var(--c);opacity:var(--tint)}
+.vg .halo{background:radial-gradient(circle calc(.75*var(--cote)) at 30% 0,var(--c),transparent);opacity:var(--halo)}
+.vg .sheen{background:radial-gradient(circle calc(.55*var(--cote)) at 50% 0,#ffffff,transparent);opacity:var(--sheen)}
+.vg .lis{border:1px solid #ffffff;opacity:var(--edge)}
+.jour .vg .lis{border-color:var(--c)}
+.vg svg{position:absolute;left:50%;top:50%;width:var(--glyphe);height:var(--glyphe);transform:translate(-50%,-50%);fill:var(--c)}
+/* Vignette grisée : verre neutre, même fond thumb.ground et même reflet, ni teinte mêlée ni halo ; liseré au blanc
+   des reflets la nuit, color.borderDefault le jour, à thumb.edge ; glyphe en color.textSecondary du moment. */
+.bt:not(.cur) .tint,.bt:not(.cur) .halo{display:none}
+.bt:not(.cur) .vg .lis{border-color:var(--lisN)}
+.bt:not(.cur) .vg svg{fill:var(--t2)}
+.bt:not(.cur) .vg{background:var(--groundN)}
+.lib{position:relative;margin-top:8px;font-size:15px;font-weight:550;color:var(--bt2);white-space:nowrap}
+.let{position:relative;font-size:12px;color:var(--bt2);opacity:.7}
+.cur .lib{color:var(--bt1)}
+.cur .let{opacity:1}
+</style></head><body>
+<h1>Menu de déconnexion (L2-23) — maquette v1 (sans plaque)</h1>
+<div class="sub">Curseur : le bouton choisi est agrandi (1,15) et à l'accent (color.accent), les autres grisés (fond controlOff de jour) ; armé, Éteindre prend color.error et dit « Confirmer ». Cinq vignettes en verre sur le voile material.shade, sans cadre. Vignette 88, glyphe 40, écart 24 (valeurs de départ). Phosphor bold : lock, moon, sign-out, arrow-clockwise, power. Famille dominante. Libellés au texte clair du bureau aux deux moments. Fond : la couleur unie de bureau.json (#4c7dc0), le bureau réel de caladan.</div>
+<div class="grille" id="g"></div>
+<script>
+// Chemins des glyphes Phosphor bold 2.1.1 (archive npm épinglée de icones/correspondances.toml, sha256 vérifiée).
+const P={
+lock:'M208,76H180V56A52,52,0,0,0,76,56V76H48A20,20,0,0,0,28,96V208a20,20,0,0,0,20,20H208a20,20,0,0,0,20-20V96A20,20,0,0,0,208,76ZM100,56a28,28,0,0,1,56,0V76H100ZM204,204H52V100H204Zm-60-52a16,16,0,1,1-16-16A16,16,0,0,1,144,152Z',
+moon:'M236.37,139.4a12,12,0,0,0-12-3A84.07,84.07,0,0,1,119.6,31.59a12,12,0,0,0-15-15A108.86,108.86,0,0,0,49.69,55.07,108,108,0,0,0,136,228a107.09,107.09,0,0,0,64.93-21.69,108.86,108.86,0,0,0,38.44-54.94A12,12,0,0,0,236.37,139.4Zm-49.88,47.74A84,84,0,0,1,68.86,69.51,84.93,84.93,0,0,1,92.27,48.29Q92,52.13,92,56A108.12,108.12,0,0,0,200,164q3.87,0,7.71-.27A84.79,84.79,0,0,1,186.49,187.14Z',
+out:'M124,216a12,12,0,0,1-12,12H48a12,12,0,0,1-12-12V40A12,12,0,0,1,48,28h64a12,12,0,0,1,0,24H60V204h52A12,12,0,0,1,124,216Zm108.49-96.49-40-40a12,12,0,0,0-17,17L195,116H112a12,12,0,0,0,0,24h83l-19.52,19.51a12,12,0,0,0,17,17l40-40A12,12,0,0,0,232.49,119.51Z',
+reb:'M244,56v48a12,12,0,0,1-12,12H184a12,12,0,1,1,0-24H201.1l-19-17.38c-.13-.12-.26-.24-.38-.37A76,76,0,1,0,127,204h1a75.53,75.53,0,0,0,52.15-20.72,12,12,0,0,1,16.49,17.45A99.45,99.45,0,0,1,128,228h-1.37A100,100,0,1,1,198.51,57.06L220,76.72V56a12,12,0,0,1,24,0Z',
+pow:'M116,128V48a12,12,0,0,1,24,0v80a12,12,0,0,1-24,0Zm66.55-82a12,12,0,0,0-13.1,20.1C191.41,80.37,204,103,204,128a76,76,0,0,1-152,0c0-25,12.59-47.63,34.55-61.95A12,12,0,0,0,73.45,46C44.56,64.78,28,94.69,28,128a100,100,0,0,0,200,0C228,94.69,211.44,64.78,182.55,46Z'};
+const B=[['lock','Verrouiller','L',3],['moon','Veille','S',1],['out','Déconnexion','D',2],['reb','Redémarrer','R',0],['pow','Éteindre','E',4]];
+const E=[['Ouverture, curseur sur Verrouiller',0,-1],['Curseur sur Veille',1,-1],['Éteindre armé',4,4]];
+const bt=(b,i,cur,arme)=>`<div class="bt${i===cur?' cur':''}${i===arme?' arme':''}" style="--c:var(${i===arme?'--err':'--acc'})">
+  <div class="vg"><i class="tint"></i><i class="halo"></i><i class="sheen"></i><i class="lis"></i><svg viewBox="0 0 256 256"><path d="${P[b[0]]}"/></svg></div>
+  <div class="lib">${i===arme?'Confirmer':b[1]}</div><div class="let">${b[2]}</div></div>`;
+const desk=(m,e)=>`<div class="desk ${m}"><div class="voile"></div><div class="rang">${B.map((b,i)=>bt(b,i,e[1],e[2])).join('')}</div></div>`;
+document.getElementById('g').innerHTML='<div></div><div class="ent">Nuit</div><div class="ent">Jour</div>'+
+  E.map(e=>`<div class="etat">${e[0]}</div>${desk('nuit',e)}${desk('jour',e)}`).join('');
+</script>
+</body></html>

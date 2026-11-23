@@ -77,6 +77,8 @@ Singleton {
     readonly property var galerie: tokens?.galerie
     // Sélecteur de fenêtres (L2-17) : hauteur, largeurs minimale et maximale des vignettes, écart.
     readonly property var selecteur: tokens?.selecteur
+    // Menu de déconnexion (L2-23) : côté des vignettes, côté du glyphe, écart, agrandissement du bouton choisi.
+    readonly property var deconnexion: tokens?.deconnexion
     // Pile de notifications (L2-19) : largeur, marge, écart, plafond, durée par défaut, icône, intérieur, lignes de corps.
     readonly property var notifications: tokens?.notifications
     // Pastille de la cloche (L2-67) : hauteur, corps, intérieur, boule et positions sur le glyphe.

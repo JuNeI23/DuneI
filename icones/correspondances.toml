@@ -98,3 +98,11 @@ graisse = "bold"
 # Alerte d'énergie de la presqu'île (L2-13) : le symbole d'attention, le même pour les deux paliers.
 [energie]
 "battery-caution" = "warning"
+
+# Menu de déconnexion (L2-23) : les cinq actions, validées sur la maquette deconnexion-v1.
+[deconnexion]
+"system-lock-screen" = "lock"
+"system-suspend" = "moon"
+"system-log-out" = "sign-out"
+"system-reboot" = "arrow-clockwise"
+"system-shutdown" = "power"

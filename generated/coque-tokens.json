@@ -1761,6 +1761,12 @@
     "largeurMax": 320,
     "ecart": 16
   },
+  "deconnexion": {
+    "cote": 88,
+    "glyphe": 40,
+    "ecart": 24,
+    "agrandi": 1.15
+  },
   "notifications": {
     "largeur": 340,
     "marge": 8,
