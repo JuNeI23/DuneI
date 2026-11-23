@@ -16,6 +16,6 @@
    "icone": "system-reboot", "ipc": ["deconnexion", "ouvrir", "redemarrer"], "commande": null, "etat": null},
   {"id": "eteindre", "libelle": "Éteindre", "motsCles": ["arrêter", "poweroff", "shutdown"],
    "icone": "system-shutdown", "ipc": ["deconnexion", "ouvrir", "eteindre"], "commande": null, "etat": null},
-  {"id": "deconnexion", "libelle": "Déconnexion", "motsCles": ["quitter", "session", "logout"],
-   "icone": "system-log-out", "ipc": ["deconnexion", "ouvrir", "deconnexion"], "commande": null, "etat": null}
+  {"id": "quitter", "libelle": "Quitter Hyprland", "motsCles": ["quitter", "hyprland", "session", "logout"],
+   "icone": "hyprland", "ipc": ["deconnexion", "ouvrir", "quitter"], "commande": null, "etat": null}
 ]

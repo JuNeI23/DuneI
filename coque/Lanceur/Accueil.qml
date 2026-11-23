@@ -11,7 +11,7 @@ import "../Composants"
 // « medaillons » de la sélection) grandit à l'échelle galerie.echelle, la mise en avant des éléments choisis, et son
 // médaillon passe à l'accent (Medaillon actif), au ressort des états, son nom passant du texte secondaire au texte
 // principal ; la puce choisie (zone « puces ») prend de même le fond d'accent et grandit (Puce choisie). Aucune plaque
-// ne glisse entre elles. « Éteindre », « Redémarrer » et « Déconnexion » n'ont pas de confirmation ici : ils ouvrent le
+// ne glisse entre elles. « Éteindre », « Redémarrer » et « Quitter Hyprland » n'ont pas de confirmation ici : ils ouvrent le
 // menu de déconnexion, qui s'arme seul. Un clic choisit et exécute. Une tuile survolée se soulève un peu.
 // Entrées : donnees, {medaillons, puces} (Lanceur.accueil par défaut) ; sel, la sélection (Lanceur.sel).
 // Sorties : puceChoisie(), lue par les essais ; un clic appelle Lanceur.choisir. Erreurs : aucune ; un accueil vide

@@ -23,7 +23,7 @@ ACTIONS = [
      "commande": ["loginctl", "lock-session"], "confirmer": False},
     {"id": "veille", "libelle": "Veille", "lettre": "S", "icone": "system-suspend",
      "commande": ["systemctl", "suspend"], "confirmer": False},
-    {"id": "deconnexion", "libelle": "Déconnexion", "lettre": "D", "icone": "system-log-out",
+    {"id": "quitter", "libelle": "Quitter Hyprland", "lettre": "Q", "icone": "hyprland",
      "commande": ["uwsm", "stop"], "confirmer": True},
     {"id": "redemarrer", "libelle": "Redémarrer", "lettre": "R", "icone": "system-reboot",
      "commande": ["systemctl", "reboot"], "confirmer": True},
@@ -76,6 +76,8 @@ class LogiqueTest(EssaiCoque, unittest.TestCase):
         Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : appeler, ACTIONS.
         """
         self.assertEqual(self.appeler("indexLettre", ACTIONS, "e"), 4)
+        self.assertEqual(self.appeler("indexLettre", ACTIONS, "q"), 2)
+        self.assertEqual(self.appeler("indexLettre", ACTIONS, "D"), -1)
         self.assertEqual(self.appeler("indexLettre", ACTIONS, "Z"), -1)
 
     def test_appui(self):
@@ -312,8 +314,8 @@ class ControleurTest(EssaiCoque, unittest.TestCase):
 
     def test_ouvrir_arme_survol_immobile(self):
         """Vérifie la garde de mouvement réel du survol : menu ouvert sur Éteindre armé, un premier point du pointeur
-        sur Déconnexion, sans déplacement, ne prend pas le curseur ni ne désarme, pas plus qu'un déplacement de 3 px,
-        sous le seuil space.scale[0] (4 px) ; un déplacement au-delà le pose sur Déconnexion et désarme.
+        sur Quitter Hyprland, sans déplacement, ne prend pas le curseur ni ne désarme, pas plus qu'un déplacement de
+        3 px, sous le seuil space.scale[0] (4 px) ; un déplacement au-delà le pose sur Quitter Hyprland et désarme.
 
         Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : appel, etat, jusqua,
         sans_execution.
@@ -403,6 +405,21 @@ class SourceTest(unittest.TestCase):
         """
         qml = (ROOT / "coque" / "Deconnexion" / "CadreDeconnexion.qml").read_text(encoding="utf-8")
         self.assertRegex(qml, r"Keys\.onPressed:[^}]*if \(event\.isAutoRepeat\) return[^}]*Deconnexion\.touche\(")
+
+    def test_actions_declarees(self):
+        """Vérifie que actions.json déclare les actions de la fiche, dans son ordre : « Quitter Hyprland » (id quitter,
+        lettre Q, logo de Hyprland) quitte la session par uwsm stop après confirmation (recette 1 de L2-23), et que
+        chaque icône existe dans le thème DuneI généré, en variante creuse et pleine.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : ROOT, ACTIONS,
+        generated/icons/DuneI.
+        """
+        actions = json.loads((ROOT / "coque" / "Deconnexion" / "actions.json").read_text(encoding="utf-8"))
+        self.assertEqual(actions, ACTIONS)
+        symboliques = ROOT / "generated" / "icons" / "DuneI" / "symbolic"
+        for action in actions:
+            for suffixe in ("", "-fill"):
+                self.assertTrue((symboliques / f"{action['icone']}{suffixe}-symbolic.svg").is_file(), action["icone"])
 
 
 if __name__ == "__main__":

@@ -517,9 +517,13 @@ class SourcesTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(eteindre["principale"], {"libelle": "Exécuter", "genre": "commande", "cible": "eteindre"})
         # Les trois commandes de session passent par l'IPC du menu, déjà armé, et ne portent aucune commande directe.
         cmds = {c["id"]: c for c in json.loads((ROOT / "coque/Lanceur/commandes.json").read_text())}
-        for i in ("redemarrer", "eteindre", "deconnexion"):
+        for i in ("redemarrer", "eteindre", "quitter"):
             self.assertEqual((cmds[i]["ipc"], cmds[i]["commande"]), (["deconnexion", "ouvrir", i], None))
             self.assertNotIn("confirmer", cmds[i])
+        # « Quitter Hyprland » porte le logo de Hyprland et se trouve par ses quatre mots-clés (recette 1 de L2-23).
+        self.assertEqual((cmds["quitter"]["libelle"], cmds["quitter"]["icone"], cmds["quitter"]["motsCles"]),
+                         ("Quitter Hyprland", "hyprland", ["quitter", "hyprland", "session", "logout"]))
+        self.assertIn("cmd:quitter", [x["cle"] for x in self.chercher("hyprland")])
 
     def test_ligne_de_commande(self):
         """Vérifie la ligne que realiser lancerait pour « eteindre » avec le préfixe IPC de la session, sans rien

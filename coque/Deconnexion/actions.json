@@ -3,7 +3,7 @@
    "commande": ["loginctl", "lock-session"], "confirmer": false},
   {"id": "veille", "libelle": "Veille", "lettre": "S", "icone": "system-suspend",
    "commande": ["systemctl", "suspend"], "confirmer": false},
-  {"id": "deconnexion", "libelle": "Déconnexion", "lettre": "D", "icone": "system-log-out",
+  {"id": "quitter", "libelle": "Quitter Hyprland", "lettre": "Q", "icone": "hyprland",
    "commande": ["uwsm", "stop"], "confirmer": true},
   {"id": "redemarrer", "libelle": "Redémarrer", "lettre": "R", "icone": "system-reboot",
    "commande": ["systemctl", "reboot"], "confirmer": true},

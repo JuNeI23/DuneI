@@ -8,8 +8,8 @@ import "deconnexion.js" as Logique
 // Deconnexion — contrôleur unique du menu de déconnexion (L2-23) : actions, curseur, double appui, exécution et IPC.
 // Rôle : lit les actions déclarées dans actions.json (validées par deconnexion.js valider), tient le curseur (index)
 // et le bouton armé (arme, -1 si aucun), et porte une Scene (famille « attention » du registre Overlays) dont le
-// cadre est CadreDeconnexion. Verrouiller et Veille partent au premier appui ; Déconnexion, Redémarrer et Éteindre
-// (confirmer) s'arment au premier et partent au second sur le même bouton, quel que soit le moyen (lettre, Entrée,
+// cadre est CadreDeconnexion. Verrouiller et Veille partent au premier appui ; Quitter Hyprland, Redémarrer et
+// Éteindre (confirmer) s'arment au premier et partent au second sur le même bouton, quel que soit le moyen (lettre, Entrée,
 // Espace, clic). Tout déplacement du curseur vers un autre bouton, et toute fermeture, désarment. L'action choisie
 // passe par Scene.executer : le menu se ferme, et la commande ne part qu'au retrait du calque dunei-attention, pour
 // que hyprlock ou la veille ne trouvent pas le calque encore posé. Le clavier est traité ici, par touche(), qu'appellent
