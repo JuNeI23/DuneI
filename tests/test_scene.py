@@ -131,6 +131,18 @@ class SceneTest(EssaiCoque, unittest.TestCase):
         self.assertTrue(self.etat()["fenetre"])
         self.assertEqual(self.journal().count("essai : fenêtre construite"), 1, self.journal())
 
+    def test_apparition_depuis_le_centre(self):
+        """Vérifie qu'une scène sans montée (montee faux) fait grandir son cadre depuis une échelle inférieure à 1
+        (window.echelleApparition) et le pose à l'échelle 1 au bout de son ressort.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : appel, ouvrir, jusqua.
+        """
+        self.appel("essai", "apparition", "false")
+        self.ouvrir()
+        vues = []
+        self.jusqua(lambda: vues.append(float(self.appel("essai", "echelle"))) or vues[-1] == 1, "cadre à l'échelle 1")
+        self.assertLess(min(vues), 1, vues)
+
     def test_lanceur_ferme_scene(self):
         """Vérifie que le lanceur, de la même famille « attention », ferme la scène en s'ouvrant, sans qu'aucune
         action parte, ni au retrait du calque ni à la garde d'une seconde.

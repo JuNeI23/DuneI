@@ -15,7 +15,7 @@ import "Lanceur"
 // sert aussi aux captures de la montée et du fondu. Elle sert la cible « notifications », dont l'état « ne pas
 // déranger » vaut toujours « true ».
 // Entrées : DUNEI_TOKENS_DIR et DUNEI_ETAT_DIR (jetons, thème et relevé d'usage de l'essai) ; IPC « essai » : pret,
-// ouvrir, fermer, executer, etat. Sorties : « essai : prêt » au démarrage ; « essai : exécuté <id> » à chaque action
+// ouvrir, fermer, executer, apparition (montée ou apparition depuis le centre), echelle (échelle du cadre), etat. Sorties : « essai : prêt » au démarrage ; « essai : exécuté <id> » à chaque action
 // de la scène (« essai : exécuté lanceur <genre> » pour le lanceur) ; « essai : fenêtre construite » à chaque
 // construction de la fenêtre de la scène ; « essai : calque retiré » quand Hyprland retire un calque dunei-attention
 // (closelayer), pour que les essais vérifient qu'une action ne part qu'après ce retrait.
@@ -74,6 +74,15 @@ ShellRoot {
         // executer — ferme la scène en faisant exécuter une action (voir Scene.executer). Entrée : id, l'action, une
         // simple chaîne ici. Sortie : aucune. Erreurs : aucune. Dépendances : scene.executer.
         function executer(id: string): void { scene.executer(id) }
+
+        // apparition — choisit la façon dont le cadre paraît à la prochaine ouverture. Entrée : montee, vrai pour la
+        // montée depuis le bas, faux pour l'apparition depuis le centre. Sortie : aucune. Erreurs : aucune.
+        // Dépendances : scene.montee.
+        function apparition(montee: bool): void { scene.montee = montee }
+
+        // echelle — échelle courante du cadre, portée par le Loader de la fenêtre. Entrées : aucune. Sortie : l'échelle
+        // en texte, ou « » si la fenêtre n'est pas construite. Erreurs : aucune. Dépendances : scene.fenetre.cadre.
+        function echelle(): string { return String(scene.fenetre?.cadre?.parent?.scale ?? "") }
 
         // etat — état de la scène. Entrées : aucune. Sortie : JSON {ouvert, present, fenetre (vrai si construite),
         // sortant, differee (l'action en attente, ou null)}. Erreurs : aucune. Dépendances : scene.

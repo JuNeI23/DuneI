@@ -92,6 +92,10 @@ class QuickshellEmitterTest(unittest.TestCase):
         """Vérifie les jetons du sélecteur de fenêtres : hauteur de la vignette, largeurs minimale et maximale, écart."""
         self.assertEqual(self.out["selecteur"], {"hauteur": 140, "largeurMin": 100, "largeurMax": 320, "ecart": 16})
 
+    def test_echelle_apparition(self):
+        """Vérifie l'échelle de départ d'un cadre de scène qui grandit depuis son centre (Scene, montee faux)."""
+        self.assertEqual(self.out["window"]["echelleApparition"], 0.92)
+
     def test_deconnexion(self):
         """Vérifie les jetons du menu de déconnexion : côté de la vignette, côté du glyphe, écart, agrandissement,
         opacité de la lettre grisée."""
