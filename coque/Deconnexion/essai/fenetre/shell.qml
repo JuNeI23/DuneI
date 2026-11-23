@@ -17,7 +17,8 @@ import "Deconnexion"
 // tests/test_deconnexion.py (ControleurTest) la pilote ; elle sert aussi aux captures du menu. Elle sert la cible
 // « notifications », dont l'état « ne pas déranger » vaut toujours « true ».
 // Entrées : DUNEI_TOKENS_DIR et DUNEI_ETAT_DIR (jetons, thème et relevé d'usage de l'essai) ; IPC « essai » : pret,
-// survoler (survol simulé), libelle (libellé rendu d'un bouton), lancerFactice (journal des échecs du Process).
+// survoler (survol simulé), cliquerAuDessus (clic simulé sur le voile), libelle (libellé rendu d'un bouton),
+// lancerFactice (journal des échecs du Process).
 // Sorties : « essai : prêt » au démarrage ; « essai : exécuté <id> » à chaque action du menu (« essai : exécuté
 // lanceur <genre> » pour le lanceur) ; « essai : fenêtre construite » à chaque construction de la fenêtre du menu ;
 // « essai : calque retiré » quand Hyprland retire un calque dunei-attention (closelayer), pour que les essais
@@ -80,6 +81,19 @@ ShellRoot {
             const c = Deconnexion.fenetre?.cadre, b = c?.boutons.itemAt(i)
             if (!b) return "sans cadre"
             c.pointeur(b.mapToItem(null, b.width / 2 + dx, b.height / 2 + dy))
+            return "ok"
+        }
+
+        // cliquerAuDessus — simule un clic sur le voile, d pixels au-dessus du bord haut du bouton i à sa taille de
+        // repos, au milieu de sa largeur, comme le ferait le MouseArea du voile. Entrées : i, rang du bouton ; d,
+        // distance en pixels. Sortie : « ok », ou « sans cadre » si la fenêtre du menu n'est pas construite ; le menu
+        // se ferme si le point tombe hors du cadre. Erreurs : aucune. Dépendances : Deconnexion.fenetre (cadre,
+        // cliquerVoile).
+        function cliquerAuDessus(i: int, d: real): string {
+            const f = Deconnexion.fenetre, b = f?.cadre?.boutons.itemAt(i)
+            if (!b) return "sans cadre"
+            const p = b.mapToItem(null, b.width / 2, b.height / 2)
+            f.cliquerVoile(p.x, p.y - b.height / 2 - d)
             return "ok"
         }
 

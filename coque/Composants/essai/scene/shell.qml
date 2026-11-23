@@ -15,14 +15,15 @@ import "Lanceur"
 // sert aussi aux captures de la montée et du fondu. Elle sert la cible « notifications », dont l'état « ne pas
 // déranger » vaut toujours « true ».
 // Entrées : DUNEI_TOKENS_DIR et DUNEI_ETAT_DIR (jetons, thème et relevé d'usage de l'essai) ; IPC « essai » : pret,
-// ouvrir, fermer, executer, apparition (montée ou apparition depuis le centre), echelle (échelle du cadre), etat. Sorties : « essai : prêt » au démarrage ; « essai : exécuté <id> » à chaque action
-// de la scène (« essai : exécuté lanceur <genre> » pour le lanceur) ; « essai : fenêtre construite » à chaque
-// construction de la fenêtre de la scène ; « essai : calque retiré » quand Hyprland retire un calque dunei-attention
-// (closelayer), pour que les essais vérifient qu'une action ne part qu'après ce retrait.
+// ouvrir, fermer, executer, apparition (montée ou apparition depuis le centre), echelle (échelle du cadre), etat.
+// Sorties : « essai : prêt » au démarrage ; « essai : exécuté <id> » à chaque action de la scène (« essai : exécuté
+// lanceur <genre> » pour le lanceur) ; « essai : fenêtre construite » à chaque construction de la fenêtre de la
+// scène ; « essai : calque retiré » quand Hyprland retire un calque dunei-attention (closelayer), pour que les essais
+// vérifient qu'une action ne part qu'après ce retrait.
 // Erreurs : celles de Theme, de la scène et du lanceur, dans le journal.
 // Dépendances : quickshell ≥ 0.3 (IpcHandler, Hyprland.rawEvent), Scene, Lanceur, Theme ; liens essai/scene/Theme,
-// Composants, Lanceur, Applications, Barre et Parametres, car Quickshell ne suit pas les imports hors du dossier de la
-// coque.
+// Composants, Lanceur, Applications, Barre, Parametres et Deconnexion, car Quickshell ne suit pas les imports hors du
+// dossier de la coque.
 ShellRoot {
     id: essai
 

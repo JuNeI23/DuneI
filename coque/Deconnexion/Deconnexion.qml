@@ -167,14 +167,18 @@ Singleton {
     IpcHandler {
         target: "deconnexion"
 
-        // basculer — ouvre ou ferme le menu (voir Deconnexion.basculer). Sortie : aucune.
+        // basculer — ouvre ou ferme le menu (voir Deconnexion.basculer). Entrées : aucune. Sortie : aucune.
+        // Erreurs : aucune ; sans action valide, le menu ne s'ouvre pas. Dépendances : deconnexion.basculer.
         function basculer(): void { deconnexion.basculer() }
 
         // ouvrir — ouvre le menu sur une action, armée si elle demande confirmation (voir Deconnexion.ouvrir).
-        // Entrée : id. Sortie : aucune.
+        // Entrée : id, identifiant d'une action de actions.json. Sortie : aucune. Erreurs : aucune ; un id inconnu
+        // ouvre sur le premier bouton, désarmé, comme Deconnexion.ouvrir. Dépendances : deconnexion.ouvrir.
         function ouvrir(id: string): void { deconnexion.ouvrir(id) }
 
-        // touche — presse une touche dans le menu (voir Deconnexion.touche). Entrée : nom. Sortie : aucune.
+        // touche — presse une touche dans le menu (voir Deconnexion.touche). Entrée : nom, « Left », « Right »,
+        // « Tab », « Backtab », « Return », « Enter », « space », « Escape » ou une lettre d'accès. Sortie : aucune.
+        // Erreurs : aucune ; menu fermé ou touche inconnue, l'appel est sans effet. Dépendances : deconnexion.touche.
         function touche(nom: string): void { deconnexion.touche(nom) }
 
         // etat — état du menu en JSON : ouvert, index, arme, ids (des actions validées), fenetre (vrai si elle

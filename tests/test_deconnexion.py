@@ -335,6 +335,24 @@ class ControleurTest(EssaiCoque, unittest.TestCase):
         self.assertEqual((e["index"], e["arme"]), (2, -1))
         self.sans_execution()
 
+    def test_clic_sur_le_debord(self):
+        """Vérifie qu'un clic sur le débord du bouton agrandi ne ferme pas le menu : menu ouvert sur Verrouiller, sous
+        le curseur et donc agrandi de deconnexion.agrandi (débord de 13 px en haut), un clic simulé sur le voile 8 px
+        au-dessus du bord de repos du bouton tombe dans la marge intérieure de la rangée et le menu reste ouvert ; un
+        clic 60 px au-dessus, hors du cadre, le ferme, ce qui prouve que la simulation atteint bien le voile.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : basculer, appel, etat,
+        sans_execution.
+        """
+        self.basculer()
+        # L'apparition depuis le centre et l'agrandissement du bouton choisi doivent être posés.
+        time.sleep(1.0)
+        self.assertEqual(self.appel("essai", "cliquerAuDessus", "0", "8"), "ok")
+        self.assertTrue(self.etat()["ouvert"])
+        self.assertEqual(self.appel("essai", "cliquerAuDessus", "0", "60"), "ok")
+        self.assertFalse(self.etat()["ouvert"])
+        self.sans_execution()
+
     def test_libelle_confirmer(self):
         """Vérifie que le bouton armé peint « Confirmer » et reprend son libellé une fois désarmé.
 
@@ -371,6 +389,20 @@ class ControleurTest(EssaiCoque, unittest.TestCase):
         self.attendre("Déconnexion : faux a échoué (code 1)")
         self.appel("essai", "lancerFactice", "absent", "dunei-commande-introuvable")
         self.attendre("Déconnexion : absent n'a pas démarré")
+
+
+class SourceTest(unittest.TestCase):
+    """Garde-fous lus dans le source du menu, là où l'IPC ne peut rien simuler."""
+
+    def test_auto_repetition_ecartee(self):
+        """Vérifie que Keys.onPressed du cadre écarte l'auto-répétition avant d'appeler Deconnexion.touche : une touche
+        tenue enfoncée exécuterait sinon une action armée (Éteindre) d'un seul geste. L'IPC « touche » passe à côté de
+        Keys.onPressed, d'où la lecture du source.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : ROOT.
+        """
+        qml = (ROOT / "coque" / "Deconnexion" / "CadreDeconnexion.qml").read_text(encoding="utf-8")
+        self.assertRegex(qml, r"Keys\.onPressed:[^}]*if \(event\.isAutoRepeat\) return[^}]*Deconnexion\.touche\(")
 
 
 if __name__ == "__main__":

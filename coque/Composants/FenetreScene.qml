@@ -4,7 +4,8 @@ import Quickshell.Wayland
 import Quickshell.Hyprland
 import "../Theme"
 
-// FenetreScene — fenêtre d'une Scene (L2-23) : voile plein écran et cadre centré qui monte du bas.
+// FenetreScene — fenêtre d'une Scene (L2-23) : voile plein écran et cadre centré qui monte du bas ou grandit depuis
+// son centre.
 // Rôle : PanelWindow plein écran sur l'écran figé à l'ouverture (scene.ecran), couche overlay, namespace
 // « dunei-attention » (flouté par le compositeur, le voile restant net sous ignore_alpha), clavier exclusif si
 // scene.clavierExclusif, aucun espace réservé ; le composant scene.cadre y est instancié au centre de l'écran et
@@ -22,7 +23,8 @@ import "../Theme"
 // décharge. Une réouverture pendant la sortie reprend la même fenêtre. Un clic sur le voile, hors du cadre, ferme la
 // scène.
 // Entrées : scene, la Scene qui la porte (ecran, cadre, ouvert, clavierExclusif, montee), requise.
-// Sorties : cadre, l'élément instancié depuis scene.cadre, ou null (lu par les essais) ; eteinte.
+// Sorties : cadre, l'élément instancié depuis scene.cadre, ou null (lu par les essais) ; eteinte ; cliquerVoile(x, y),
+// appelé aussi par les essais pour simuler un clic.
 // Erreurs : aucune ; avant le chargement des tokens, le voile reste transparent.
 // Dépendances : Quickshell (PanelWindow, ExclusionMode, Region), Quickshell.Wayland (WlrLayershell),
 // Quickshell.Hyprland (HyprlandWindow), Scene, Ressort, Theme (material, window.echelleApparition).
@@ -62,6 +64,12 @@ PanelWindow {
     // montee.cible posé à 1. Erreurs : aucune. Dépendances : montee, Qt.callLater.
     Component.onCompleted: Qt.callLater(() => montee.cible = 1)
 
+    // cliquerVoile — un clic sur le voile hors du cadre ferme la scène. Entrées : x, y, position du clic dans la
+    // fenêtre (celle du voile, qui la couvre). Sortie : scene.ouvert passé à faux si le point tombe hors du Loader du
+    // cadre ; un clic sur le cadre ne fait rien ici. Erreurs : aucune. Dépendances : charge (contains, mapFromItem),
+    // voile, scene.ouvert.
+    function cliquerVoile(x, y) { if (!charge.contains(charge.mapFromItem(voile, x, y))) scene.ouvert = false }
+
     // Voile : un clic hors du cadre ferme la scène.
     Rectangle {
         id: voile
@@ -70,10 +78,9 @@ PanelWindow {
 
         MouseArea {
             anchors.fill: parent
-            // onClicked — un clic hors du cadre ferme la scène. Entrée : m, l'événement de souris (position dans le
-            // voile). Sortie : scene.ouvert passé à faux ; un clic sur le cadre ne fait rien ici. Erreurs : aucune.
-            // Dépendances : charge (contains, mapFromItem), scene.ouvert.
-            onClicked: m => { if (!charge.contains(charge.mapFromItem(voile, m.x, m.y))) fenetre.scene.ouvert = false }
+            // onClicked — transmet le clic à cliquerVoile. Entrée : m, l'événement de souris (position dans le voile).
+            // Sortie : aucune. Erreurs : aucune. Dépendances : cliquerVoile.
+            onClicked: m => fenetre.cliquerVoile(m.x, m.y)
         }
     }
 

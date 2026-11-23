@@ -17,9 +17,10 @@ import "../Composants" as C
 // clavier ni ne désarme. Un clic appuie sur le bouton (Deconnexion.appuyer). Il reçoit le clavier : sa racine porte
 // focus: true, car le Loader de FenetreScene est une portée de focus, et chaque appui passe par Deconnexion.touche,
 // l'auto-répétition écartée.
-// Entrées : aucune (Deconnexion : actions, index, arme, choisir, appuyer, touche).
+// Entrées : aucune (Deconnexion : ouvert, actions, index, arme, choisir, appuyer, touche).
 // Sorties : boutons, le Repeater des boutons (chacun expose libelle, le texte voulu, et peint, le texte du libellé
-// courant) ; nomTouche(event) ; pointeur(p), lu aussi par la coque d'essai pour simuler le survol.
+// courant) ; nomTouche(event) ; pointeur(p), lu aussi par la coque d'essai pour simuler le survol ; une marge
+// intérieure égale au débord du bouton agrandi.
 // Erreurs : aucune ; avant le chargement des tokens, la rangée est vide et de taille nulle.
 // Dépendances : Deconnexion, C.VignetteVerre, C.Texte, Ressort, ColorSpring, Theme (deconnexion, dont lettreGrisee,
 // space, radius, color, bureau).
@@ -32,6 +33,19 @@ Row {
     focus: true
     spacing: Theme.deconnexion?.ecart ?? 0
     readonly property alias boutons: boutons
+
+    // Débord du bouton agrandi : grandi de deconnexion.agrandi autour de son centre, il dépasse sa place de
+    // (agrandi - 1) / 2 de sa taille de chaque côté. La marge intérieure de la rangée l'absorbe, en haut et en bas
+    // d'après la hauteur d'un bouton, à gauche et à droite d'après deconnexion.cote (l'écart couvre les voisins) :
+    // le Loader de la scène, le voile qui teste un clic contre lui et le HoverHandler couvrent ainsi le bouton
+    // agrandi en entier. La marge est symétrique, la rangée reste centrée. hauteurBouton lit boutons.count pour se
+    // réévaluer quand les boutons sont créés.
+    readonly property real debord: ((Theme.deconnexion?.agrandi ?? 1) - 1) / 2
+    readonly property real hauteurBouton: boutons.count > 0 ? boutons.itemAt(0)?.height ?? 0 : 0
+    topPadding: Math.ceil(debord * hauteurBouton)
+    bottomPadding: topPadding
+    leftPadding: Math.ceil(debord * (Theme.deconnexion?.cote ?? 0))
+    rightPadding: leftPadding
 
     // nomTouche — nom d'une touche pour Deconnexion.touche, comme CadreSelecteur.nomTouche. Entrée : event, KeyEvent
     // d'appui. Sortie : « Backtab » (Maj + Tab), « Tab », « Left », « Right », « Return », « Enter », « space »,
@@ -60,6 +74,20 @@ Row {
     property point origine: Qt.point(-1, -1)
     property bool bouge: false
     property int survole: -1
+
+    // onOuvertChanged — chaque ouverture repart d'un pointeur inconnu : une réouverture pendant le fondu de sortie
+    // reprend le même cadre, dont la garde de mouvement doit être réarmée. Entrées : aucune (Deconnexion.ouvert).
+    // Sortie : origine remise à (-1, -1), bouge à faux, survole à -1 quand le menu s'ouvre. Erreurs : aucune.
+    // Dépendances : Deconnexion.ouvert, origine, bouge, survole.
+    Connections {
+        target: Deconnexion
+        function onOuvertChanged() {
+            if (!Deconnexion.ouvert) return
+            cadre.origine = Qt.point(-1, -1)
+            cadre.bouge = false
+            cadre.survole = -1
+        }
+    }
 
     // pointeur — reçoit une position du pointeur : note la première, déclare le pointeur bougé au-delà de
     // space.scale[0], puis, une fois bougé, pose le curseur sur le bouton où il entre (Deconnexion.choisir).

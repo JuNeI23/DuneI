@@ -22,7 +22,10 @@ function valider(actions) {
             && Array.isArray(a.commande) && a.commande.length > 0 && a.commande.every(texte)
         if (!complete) { console.warn("Déconnexion : action incomplète écartée : " + JSON.stringify(a)); return false }
         const lettre = a.lettre.toLowerCase()
-        if (prises.has(lettre)) { console.warn("Déconnexion : lettre « " + a.lettre + " » en double, action « " + a.id + " » écartée"); return false }
+        if (prises.has(lettre)) {
+            console.warn("Déconnexion : lettre « " + a.lettre + " » en double, action « " + a.id + " » écartée")
+            return false
+        }
         prises.add(lettre)
         return true
     })
