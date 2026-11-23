@@ -4543,3 +4543,12 @@ aspect ; verdict de Nicolas : « tout est bon », sans correction.
 `coque/Lanceur/Apercu.qml`, `coque/Theme/Theme.qml`, `motion.toml`, `tokens.toml`, émetteur Quickshell, golden
 `coque-tokens.json` et `motion.json`, tests `test_selecteur`, `test_quickshell_emitter`, `test_motion_checks`,
 `test_motion_generate`, bible (0.42), plan `docs/superpowers/plans/2026-11-21-selecteur-fenetres.md`.*
+
+### D203 · Pas de sélecteur de bureaux
+
+23 novembre 2026 · L2-18, retiré avant toute conception. Nicolas ne veut pas de sélecteur de bureaux : `SUPER + 1…4`
+reste la seule façon de changer de bureau, et les quatre bureaux restent sans teinte. La palette catégorielle garde
+ses autres usages (étiquettes, coloration syntaxique, séries de données, types de périphériques). Le menu de
+déconnexion (L2-23) devient la prochaine étape et reprend seul le moule du sélecteur de fenêtres.
+
+*Documents touchés : backlog (1.65), bible (0.43), carnet (1.53), notes de direction (1.58).*

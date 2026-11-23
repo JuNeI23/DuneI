@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.52. Historique en fin de document.
+Version 1.53. Historique en fin de document.
 
 Socle amorçable.
 
@@ -1377,7 +1377,7 @@ redimensionnement vient du jeton `window.resize_step` (48), par `generated/hyprl
 **Grammaire** (bible, ch. 7) : `SUPER` agit ou va ; `SUPER + Maj` emporte la fenêtre active ;
 `SUPER + Ctrl` redimensionne ; `SUPER + Alt` porte les actions rares ou système.
 
-Quatre bureaux (D96), sans nom au lot 1 — la palette catégorielle qui les distingue arrive avec L2-18 — et un
+Quatre bureaux (D96), sans nom ni teinte — le sélecteur de bureaux qui devait les colorer est retiré (D203) — et un
 bureau spécial, `accueil`, qui s'affiche par-dessus le bureau courant.
 
 | Raccourci | Action |
@@ -2573,6 +2573,7 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 
 | Version | Date | Changement |
 | --- | --- | --- |
+| 1.53 | 2026-11-23 | Les bureaux restent sans teinte : le sélecteur de bureaux (L2-18) est retiré (D203) |
 | 1.52 | 2026-11-21 | Le sélecteur de fenêtres (L2-17, D200 à D202) : `SUPER + Tab` devient le geste tenu du sélecteur de la coque, liaison globale `dunei:selecteur`, jetons `delays.selecteur` et `[selecteur]`, vérification et tests |
 | 1.51 | 2026-11-21 | Le curseur dans toute la coque (L2-73, D197 à D199) : `VueCurseur`, `ZoneCurseur`, `Plaque` partagée, `AnneauFocus` retiré, jeton `[reglages] evidence`, tests et instabilités connues |
 | 1.50 | 2026-11-20 | Lanceur (L2-16, D190 à D196) : `libqalculate` installé, wofi désinstallé et retiré du modèle de paquets, style `fade` du calque d'attention |

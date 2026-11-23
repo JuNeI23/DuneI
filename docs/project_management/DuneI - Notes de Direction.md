@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas — révisée le 22 octobre 2026
 
-Version 1.57. Historique en fin de document.
+Version 1.58. Historique en fin de document.
 
 *Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent soixante-quinze lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
 
@@ -677,15 +677,18 @@ vignette choisie, sans arbitre `VueCurseur` : la plaque suit la sélection, que 
 est devenue un composant partagé (D202). Le sélecteur pose le moule des overlays d'attention à venir. Les mineurs des
 relectures entrent au backlog en L2-79.
 
-Prochaine étape : **le sélecteur de bureaux (L2-18)**, que le lot 2 associe au sélecteur de fenêtres et qui en reprend
-le moule (contrôleur, calque à la demande, voile, fondu et montée du lanceur, plaque d'accent), avec une teinte de la
-palette catégorielle par bureau ; le menu de déconnexion (L2-23) suivra le même moule. Le reste de L2-48, L2-57 (suites
+Le sélecteur de bureaux (L2-18) est retiré à la demande de Nicolas, qui n'en veut pas (D203) : `SUPER + 1…4` suffit.
+
+Prochaine étape : **le menu de déconnexion (L2-23)**, overlay d'attention qui reprend le moule du sélecteur de fenêtres
+(contrôleur, calque à la demande, voile, fondu et montée du lanceur, plaque d'accent), avec l'action destructrice en
+`error`. Le reste de L2-48, L2-57 (suites
 du popover Bluetooth), L2-58, L2-59, L2-62, L2-70 et les défauts L2-74 à L2-79 attendent leur tour.
 
 ## Historique des versions
 
 | Version | Date | Changement |
 | --- | --- | --- |
+| 1.58 | 2026-11-23 | L2-18 retiré (D203) ; prochaine étape : L2-23, menu de déconnexion |
 | 1.0 | 2026-10-10 | Version initiale |
 | 1.57 | 2026-11-21 | L2-17 fait : sélecteur de fenêtres de la coque, geste tenu de `SUPER + Tab`, raccourci global, neutre pur limité à l'image (D200 à D202) ; ajout de L2-79 ; prochaine étape : L2-18 |
 | 1.56 | 2026-11-21 | L2-73 fait : le curseur dans toute la coque, une seule marque, la plaque d'accent plate, popovers sans plaque autour des petits contrôles (D197 à D199) ; ajout de L2-75 à L2-78 ; prochaine étape : L2-17 |
