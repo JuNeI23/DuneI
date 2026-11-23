@@ -19,13 +19,12 @@ import "lanceur.js" as Logique
 // principal porte seulement le rappel ↵ en texte secondaire, pour dire ce que fait Entrée ; dès que le curseur entre
 // dans l'aperçu, seul l'élément sous lui prend l'accent (Puce choisie, VignetteFenetre choisie) et porte ↵. « Nouvelle
 // fenêtre » porte « Ctrl ↵ », son raccourci depuis la liste, sauf sous le curseur, où Entrée suffit et seul ↵
-// s'affiche. Pendant une confirmation, le bouton principal dit « Confirmer » sur le fond color.error (Puce danger),
-// où que soit le curseur. Le contenu rejoue son entrée en cascade quand la ligne retenue change.
+// s'affiche. Le contenu rejoue son entrée en cascade quand la ligne retenue change.
 // Entrées : resultat (Lanceur.choisi) ; sel (Lanceur.sel) ; libellePrincipal (Lanceur.libellePrincipal) ;
-// Lanceur.confirmation et Lanceur.saisie (pour l'expression du calcul) sont lus directement.
+// Lanceur.saisie (pour l'expression du calcul) est lu directement.
 // Sorties : vignettes, le nombre de vignettes affichées ; rejouer(), émis quand la ligne retenue change.
 // Erreurs : aucune ; une fenêtre disparue retire sa vignette avec le résultat qui la portait.
-// Dépendances : Lanceur (choisi, sel, cotes, icone, fenetreDe, choisir, libellePrincipal, confirmation), Medaillon,
+// Dépendances : Lanceur (choisi, sel, cotes, icone, fenetreDe, choisir, libellePrincipal), Medaillon,
 // Texte, Puce, VignetteFenetre, Cascade, lanceur.js (expressionLisible), Theme (space, reglages, typo, color, radius).
 // Cotes : retrait reglages.pageMargin (20, maquette 20 × 26) ; écart vertical space.scale[2] (12, maquette 14) ;
 // médaillon de cotes.medaillonApercu (64) ; titre à l'échelon 5 (22) en graisse moyenne ; valeur du calcul au corps
@@ -215,7 +214,6 @@ Item {
                 reserveRappel: true
                 rappel: nouvelle || (apercu.dansApercu ? index === apercu.boutonChoisi : index === 0)
                 choisie: index === apercu.boutonChoisi
-                danger: index === 0 && Lanceur.confirmation
                 onActivee: Lanceur.choisir("apercu", index, "boutons")
             }
         }

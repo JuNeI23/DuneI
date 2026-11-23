@@ -11,14 +11,12 @@ import "../Composants"
 // « medaillons » de la sélection) grandit à l'échelle galerie.echelle, la mise en avant des éléments choisis, et son
 // médaillon passe à l'accent (Medaillon actif), au ressort des états, son nom passant du texte secondaire au texte
 // principal ; la puce choisie (zone « puces ») prend de même le fond d'accent et grandit (Puce choisie). Aucune plaque
-// ne glisse entre elles. Pendant une confirmation (« Éteindre », « Redémarrer »), la puce choisie dit « Confirmer » sur
-// le fond color.error (Puce danger), comme le bouton principal de l'aperçu. Un clic choisit et exécute. Une tuile
-// survolée se soulève un peu.
-// Entrées : donnees, {medaillons, puces} (Lanceur.accueil par défaut) ; sel, la sélection (Lanceur.sel) ;
-// Lanceur.confirmation, lu directement.
+// ne glisse entre elles. « Éteindre », « Redémarrer » et « Déconnexion » n'ont pas de confirmation ici : ils ouvrent le
+// menu de déconnexion, qui s'arme seul. Un clic choisit et exécute. Une tuile survolée se soulève un peu.
+// Entrées : donnees, {medaillons, puces} (Lanceur.accueil par défaut) ; sel, la sélection (Lanceur.sel).
 // Sorties : puceChoisie(), lue par les essais ; un clic appelle Lanceur.choisir. Erreurs : aucune ; un accueil vide
 // ne montre que ses titres.
-// Dépendances : Lanceur (accueil, sel, cotes, icone, choisir, confirmation), Medaillon, Texte, Puce, Cascade, Ressort,
+// Dépendances : Lanceur (accueil, sel, cotes, icone, choisir), Medaillon, Texte, Puce, Cascade, Ressort,
 // ColorSpring, Theme (space, reglages, radius, color, motion, galerie).
 // Cotes : retrait reglages.pageMargin (20, maquette 22 en haut) ; tuile de cotes.tuile (92) de côté, médaillon de
 // cotes.medaillonAccueil (60), nom à l'échelon 1 (12) ; point de space.scale[0] (4) ; puces espacées de
@@ -151,14 +149,9 @@ Item {
                     id: p
                     required property int index
                     readonly property var modelData: accueil.donnees.puces[index] ?? ({})
-                    texte: confirmee ? "Confirmer" : modelData.titre ?? ""
+                    texte: modelData.titre ?? ""
                     icone: modelData.icone ?? ""
                     choisie: accueil.sel.zone === "puces" && accueil.sel.index === index
-                    // Confirmation armée sur cette puce : fond color.error au ressort des couleurs (Puce danger) et rappel ↵,
-                    // comme « Confirmer ↵ » de la fiche.
-                    readonly property bool confirmee: choisie && Lanceur.confirmation
-                    danger: confirmee
-                    rappel: confirmee
                     opacity: entreePuce.value
                     transform: Translate { y: (1 - entreePuce.value) * (Theme.space?.scale[1] ?? 0) }
                     onActivee: Lanceur.choisir("puces", index)

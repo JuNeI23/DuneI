@@ -10,7 +10,7 @@ import "lanceur.js" as Logique
 import "../Applications/applications.js" as Apps
 
 // Lanceur — contrôleur unique du lanceur d'applications (L2-16) : état, clavier, exécution et IPC.
-// Rôle : tient l'état du lanceur (ouvert, saisie, sélection, confirmation en attente), interroge les sources à chaque
+// Rôle : tient l'état du lanceur (ouvert, saisie, sélection), interroge les sources à chaque
 // changement de la saisie, du calcul, des états des commandes, des fenêtres ou du relevé d'usage (liaisons de
 // accueil et resultats), et exécute l'action choisie avant de se fermer. C'est une attention du registre Overlays
 // (famille « attention ») : l'ouvrir ferme l'attention déjà ouverte, et une autre qui s'ouvre le ferme. Sa fenêtre,
@@ -29,7 +29,7 @@ import "../Applications/applications.js" as Apps
 // Sorties : present (ouvert, ou fenêtre encore en sortie), sortant, differee (l'action en attente du retrait du
 //           calque, ou null), vue (« accueil » ou « scission »), accueil ({medaillons, puces}), resultats (classés),
 //           sel ({zone, rang, index, rangee}, forme de lanceur.js deplacer ; rangee pour l'aperçu seulement),
-//           choisi (le résultat de la ligne retenue), elements (ceux de son aperçu), confirmation, libellePrincipal,
+//           choisi (le résultat de la ligne retenue), elements (ceux de son aperçu), libellePrincipal,
 //           ecran (figé à l'ouverture), fenetre (la FenetreLanceur ouverte, ou null), cotes (mesures de la maquette
 //           v3 rapportées aux jetons), famille.
 // Erreurs : aucune ; une fenêtre qui ne peut être construite est journalisée et le lanceur se referme ; une action
@@ -44,7 +44,6 @@ Singleton {
     readonly property string famille: "attention"
     property string saisie: ""
     property var sel: ({ zone: "medaillons", rang: 0, index: 0 })
-    property bool confirmation: false
     property bool clavierExclusif: true
     property var executeur: null
     property bool fenetree: true
@@ -65,7 +64,7 @@ Singleton {
     // boutons — actions des boutons de l'aperçu de la ligne retenue. Entrées : aucune. Sortie : tableau d'actions.
     // Erreurs : aucune. Dépendances : elements.
     function boutons() { return elements.filter(e => e.genre === "bouton").map(e => e.action) }
-    readonly property string libellePrincipal: confirmation ? "Confirmer" : choisi?.principale?.libelle ?? ""
+    readonly property string libellePrincipal: choisi?.principale?.libelle ?? ""
 
     // Mesures de la maquette v3, rapportées aux jetons les plus proches ; celles qu'aucun jeton ne porte (tailles du
     // cadre, colonne de la liste, tuile) sont écrites ici, une fois.
@@ -131,14 +130,12 @@ Singleton {
 
     // touche — traite une touche du lanceur. Entrée : nom, « escape », « return », « ctrl+return », « backspace »,
     // « up », « down », « left », « right », « tab », « shift+tab », « ctrl+j » ou « ctrl+k ». Sortie : vrai si la
-    // touche est prise (← est laissée au champ dans la liste ; → y entre dans l'aperçu, comme Tab). Échap annule une
-    // confirmation, puis ramène l'aperçu à la liste, sinon vide la saisie, sinon ferme ; Ctrl + Entrée lance une
-    // nouvelle instance de l'application retenue dans la liste ; toute touche de déplacement annule aussi une
-    // confirmation en attente. Erreurs : aucune.
+    // touche est prise (← est laissée au champ dans la liste ; → y entre dans l'aperçu, comme Tab). Échap ramène
+    // l'aperçu à la liste, sinon vide la saisie, sinon ferme ; Ctrl + Entrée lance une nouvelle instance de
+    // l'application retenue dans la liste. Erreurs : aucune.
     // Dépendances : Logique.deplacer, dispo, entree, nouvelleInstance, fermer.
     function touche(nom) {
         if (nom === "escape") {
-            confirmation = false
             if (sel.zone === "apercu") sel = Logique.deplacer(sel, nom, dispo())
             else if (saisie !== "") saisie = ""
             else fermer()
@@ -149,7 +146,6 @@ Singleton {
         if (nom === "backspace") { saisie = saisie.slice(0, -1); return true }
         if (!["up", "down", "left", "right", "tab", "shift+tab", "ctrl+j", "ctrl+k"].includes(nom)) return false
         if (nom === "left" && sel.zone === "liste") return false
-        confirmation = false
         sel = Logique.deplacer(sel, nom, dispo())
         return true
     }
@@ -165,12 +161,11 @@ Singleton {
         return { resultat: r, action: e ? e.action : r.principale, cle: e?.genre === "vignette" ? "fen:" + e.adresse : r.cle }
     }
 
-    // entree — Entrée : exécute ce qui est choisi ; une action à confirmer demande d'abord un second Entrée.
+    // entree — Entrée : exécute ce qui est choisi ; les actions de session ouvrent le menu de déconnexion, qui s'arme seul.
     // Entrées : aucune. Sortie : aucune. Erreurs : aucune ; sans choix, rien. Dépendances : choix, executer.
     function entree() {
         const c = choix()
         if (!c) return
-        if (c.action.confirmer && !confirmation) { confirmation = true; return }
         executer(c.action, c.cle)
     }
 
@@ -179,14 +174,13 @@ Singleton {
     // Erreurs : aucune ; hors d'une ligne d'application de la liste, rien. Dépendances : sel, choisi, executer.
     function nouvelleInstance() {
         if (sel.zone === "liste" && choisi?.genre === "application")
-            executer({ libelle: "Nouvelle fenêtre", genre: "nouvelle", cible: choisi.cle.slice(4), confirmer: false }, choisi.cle)
+            executer({ libelle: "Nouvelle fenêtre", genre: "nouvelle", cible: choisi.cle.slice(4) }, choisi.cle)
     }
 
     // choisir — sélectionne un élément au pointeur, puis l'exécute. Entrées : zone, index (dans la rangée pour
     // « apercu », qui garde sa ligne) ; rangee, « boutons » ou « vignettes » pour l'aperçu. Sortie : aucune.
     // Erreurs : aucune. Dépendances : sel, entree.
     function choisir(zone, index, rangee) {
-        if (zone !== sel.zone || index !== sel.index || rangee !== sel.rangee) confirmation = false
         sel = zone === "apercu" ? { zone, rang: sel.rang, index, rangee } : { zone, rang: zone === "liste" ? index : sel.rang, index }
         entree()
     }
@@ -271,7 +265,6 @@ Singleton {
             garde.stop()
             saisie = ""
             sel = { zone: "medaillons", rang: 0, index: 0 }
-            confirmation = false
             sources.rafraichir()
             Overlays.ouvrir(lanceur)
         } else {
@@ -285,14 +278,8 @@ Singleton {
     // Sortie : aucune. Erreurs : aucune. Dépendances : calcul.demander.
     onSaisieChanged: {
         calcul.demander(saisie)
-        confirmation = false
         sel = saisie === "" ? { zone: "medaillons", rang: 0, index: 0 } : { zone: "liste", rang: 0, index: 0 }
     }
-    // onCleChoisieChanged — un autre résultat sous la sélection (déplacement, fenêtre fermée, réponse du calcul)
-    // annule la confirmation en attente. Entrées : aucune. Sortie : confirmation à faux. Erreurs : aucune.
-    // Dépendances : choisi.
-    readonly property string cleChoisie: choisi?.cle ?? ""
-    onCleChoisieChanged: confirmation = false
     // onResultatsChanged, onAccueilChanged — bornent la sélection quand ce qui est affiché change. Entrées : aucune.
     // Sortie : aucune. Erreurs : aucune. Dépendances : borner.
     onResultatsChanged: borner()
@@ -342,7 +329,7 @@ Singleton {
         function touche(nom: string): void { if (lanceur.ouvert) lanceur.touche(nom) }
 
         // etat — état du lanceur en JSON : ouvert, saisie, vue, sel, cles (des résultats), medaillons et puces (clés
-        // de l'accueil), apercu (genres de ses éléments), principal (libellé du bouton principal), confirmation,
+        // de l'accueil), apercu (genres de ses éléments), principal (libellé du bouton principal),
         // fenetre (vrai si elle existe), sortant (fenêtre en sortie), differee (vrai si une action attend le retrait du
         // calque), boutons (libellés des actions de l'aperçu),
         // largeur et hauteur du cadre, vignettes (affichées dans l'aperçu), liste (repères de la plaque et de la ligne
@@ -353,7 +340,7 @@ Singleton {
             return JSON.stringify({ ouvert: lanceur.ouvert, saisie: lanceur.saisie, vue: lanceur.vue, sel: lanceur.sel,
                 cles: lanceur.resultats.map(r => r.cle), medaillons: lanceur.accueil.medaillons.map(r => r.cle),
                 puces: lanceur.accueil.puces.map(r => r.cle), apercu: lanceur.elements.map(e => e.genre),
-                principal: lanceur.libellePrincipal, confirmation: lanceur.confirmation, fenetre: f !== null,
+                principal: lanceur.libellePrincipal, fenetre: f !== null,
                 sortant: lanceur.sortant, differee: lanceur.differee !== null, boutons: lanceur.boutons().map(a => a.libelle),
                 largeur: f?.cadre.width ?? 0, hauteur: f?.cadre.height ?? 0, vignettes: f?.vignettes ?? 0,
                 liste: f?.cadre.reperes() ?? null })

@@ -239,7 +239,7 @@ class LogiqueTest(EssaiCoque, unittest.TestCase):
 
         Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : appeler.
         """
-        a = lambda libelle: {"libelle": libelle, "genre": "action", "cible": libelle, "confirmer": False}
+        a = lambda libelle: {"libelle": libelle, "genre": "action", "cible": libelle}
         r = {"principale": a("Amener"), "secondaires": [a("Privée")], "apercu": {"fenetres": ["0x1", "0x2"]}}
         e = self.appeler("elementsApercu", r)
         self.assertEqual([(x["genre"], x["action"]["libelle"]) for x in e],
@@ -464,7 +464,7 @@ class SourcesTest(EssaiCoque, unittest.TestCase):
         self.assertEqual([x["cle"] for x in r[:4]], ["app:firefox", "fen:0xa1", "fen:0xa2", "fen:0xa3"])
         self.assertEqual(len({x["cle"] for x in r}), len(r))
         self.assertEqual(r[0]["type"], "3 fenêtres")
-        self.assertEqual(r[0]["principale"], {"libelle": "Amener", "genre": "amener", "cible": "0xa2", "confirmer": False})
+        self.assertEqual(r[0]["principale"], {"libelle": "Amener", "genre": "amener", "cible": "0xa2"})
         self.assertEqual([a["cible"] for a in r[0]["secondaires"]], ["firefox:new-window", "firefox:new-private-window"])
         self.assertEqual(r[0]["apercu"]["fenetres"], ["0xa2", "0xa1", "0xa3"])
         self.assertTrue(all(x["retrait"] and x["app"] == "app:firefox" and x["genre"] == "fenetre" for x in r[1:4]))
@@ -484,8 +484,7 @@ class SourcesTest(EssaiCoque, unittest.TestCase):
         """
         kitty = [x for x in self.chercher("kitty") if x["cle"] == "app:kitty"][0]
         self.assertEqual(kitty["principale"]["genre"], "amener")
-        self.assertEqual(kitty["secondaires"], [{"libelle": "Nouvelle fenêtre", "genre": "nouvelle", "cible": "kitty",
-                                                 "confirmer": False}])
+        self.assertEqual(kitty["secondaires"], [{"libelle": "Nouvelle fenêtre", "genre": "nouvelle", "cible": "kitty"}])
         firefox = self.chercher("fire")[0]
         self.assertNotIn("nouvelle", [a["genre"] for a in firefox["secondaires"]])
         self.assertEqual(self.chercher("dolph")[0]["secondaires"], [])
@@ -504,7 +503,7 @@ class SourcesTest(EssaiCoque, unittest.TestCase):
 
     def test_commandes_et_pages(self):
         """Vérifie que « wi-fi » trouve la page Wi-Fi de Paramètres, que « déranger » trouve la commande avec son état
-        lu par IPC, et qu'« éteindre » demande une confirmation.
+        lu par IPC, et qu'« éteindre » ouvre le menu de déconnexion par IPC, sans confirmation propre.
 
         Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : ipc, chercher, attendre.
         """
@@ -515,7 +514,12 @@ class SourcesTest(EssaiCoque, unittest.TestCase):
         dnd = [x for x in self.chercher("déranger") if x["cle"] == "cmd:ne-pas-deranger"][0]
         self.assertEqual((dnd["type"], dnd["apercu"]["etat"]), ("Commande", "Activé"))
         eteindre = [x for x in self.chercher("éteindre") if x["cle"] == "cmd:eteindre"][0]
-        self.assertTrue(eteindre["principale"]["confirmer"])
+        self.assertEqual(eteindre["principale"], {"libelle": "Exécuter", "genre": "commande", "cible": "eteindre"})
+        # Les trois commandes de session passent par l'IPC du menu, déjà armé, et ne portent aucune commande directe.
+        cmds = {c["id"]: c for c in json.loads((ROOT / "coque/Lanceur/commandes.json").read_text())}
+        for i in ("redemarrer", "eteindre", "deconnexion"):
+            self.assertEqual((cmds[i]["ipc"], cmds[i]["commande"]), (["deconnexion", "ouvrir", i], None))
+            self.assertNotIn("confirmer", cmds[i])
 
     def test_calcul_courant(self):
         """Vérifie que la ligne de calcul n'apparaît que si le calcul publié répond à la saisie présente.
@@ -725,12 +729,12 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
         self.touche("tab", "right", "return")
         self.attendre("essai : exécuté action firefox:new-window")
 
-    def test_confirmation_eteindre(self):
-        """Vérifie qu'« Éteindre » demande un second Entrée : le premier n'exécute rien et le bouton principal devient
-        « Confirmer » ; ↓ puis ↑ annulent, et le libellé revient ; armée depuis l'aperçu, Échap la retire en ramenant
-        la sélection à la liste. Le second Entrée n'est jamais pressé.
+    def test_eteindre_ouvre_le_menu(self):
+        """Vérifie qu'Entrée sur « Éteindre » exécute aussitôt la commande « eteindre » (dont l'IPC est
+        « deconnexion ouvrir eteindre », voir test_commandes_et_pages) sans second Entrée, et ferme le lanceur : le
+        menu de déconnexion porte seul l'armement. L'exécuteur d'essai journalise l'action, rien n'est lancé.
 
-        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : ouvrir, taper, touche, etat.
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : ouvrir, taper, touche, etat, attendre.
         """
         self.ouvrir()
         self.taper("éteindre")
@@ -739,22 +743,8 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
         e = self.etat()
         self.assertEqual((e["cles"][e["sel"]["index"]], e["principal"]), ("cmd:eteindre", "Exécuter"))
         self.touche("return")
-        time.sleep(0.3)
-        e = self.etat()
-        self.assertNotIn("essai : exécuté", self.journal())
-        self.assertEqual((e["ouvert"], e["principal"], e["confirmation"]), (True, "Confirmer", True))
-        self.touche("down", "up")
-        e = self.etat()
-        self.assertEqual((e["cles"][e["sel"]["index"]], e["principal"], e["confirmation"]),
-                         ("cmd:eteindre", "Exécuter", False))
-        # Depuis l'aperçu : Échap ramène à la liste et annule la confirmation.
-        self.touche("tab", "return")
-        self.assertEqual((self.etat()["sel"]["zone"], self.etat()["confirmation"]), ("apercu", True))
-        self.touche("escape")
-        e = self.etat()
-        self.assertEqual((e["sel"]["zone"], e["saisie"], e["principal"], e["confirmation"]),
-                         ("liste", "éteindre", "Exécuter", False))
-        self.assertNotIn("essai : exécuté", self.journal())
+        self.attendre("essai : exécuté commande eteindre")
+        self.jusqua(lambda: not self.etat()["ouvert"], "lanceur fermé")
 
     def test_fenetre_disparue(self):
         """Vérifie qu'une fenêtre fermée pendant l'ouverture quitte la liste et l'aperçu sans erreur, et que la
@@ -980,34 +970,27 @@ class ClavierTest(FenetreTest):
         r = reperes()
         self.assertEqual((r["pleine"], r["surAccent"]), (True, True))
 
-    def test_confirmation_sur_une_puce(self):
-        """Vérifie qu'une confirmation armée sur une puce de l'accueil se voit : « Éteindre », placée en tête des
-        suggestions par un faux poids d'usage, est choisie par ↓ puis Entrée ; rien n'est exécuté, la puce passe en
-        danger et dit « Confirmer » ; ↑ annule et lui rend son libellé neutre. Le second Entrée n'est jamais pressé.
+    def test_puce_eteindre_ouvre_le_menu(self):
+        """Vérifie que la puce « Éteindre » de l'accueil, placée en tête des suggestions par un faux poids d'usage,
+        n'a plus de confirmation : ↓ puis Entrée exécutent aussitôt la commande « eteindre » (dont l'IPC ouvre le menu
+        de déconnexion) et ferment le lanceur ; la puce reste neutre avant l'appui.
 
         Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : lanceur, injecter, cle, etat,
-        essai_ipc, jusqua, journal.
+        essai_ipc, jusqua, attendre.
         """
         self.injecter(poids={"cmd:eteindre": 5})
         self.lanceur("ouvrir")
         self.jusqua(lambda: self.etat()["ouvert"], "lanceur ouvert")
         self.assertEqual(self.etat()["puces"][0], "cmd:eteindre")
-        puce = lambda: json.loads(self.essai_ipc("puce") or "null")
         self.cle("down")
         self.assertEqual(self.etat()["sel"]["zone"], "puces")
-        self.assertEqual(puce(), {"texte": "Éteindre", "danger": False})
+        self.assertEqual(json.loads(self.essai_ipc("puce") or "null"), {"texte": "Éteindre", "danger": False})
         self.cle("return")
-        time.sleep(0.3)
-        e = self.etat()
-        self.assertEqual((e["ouvert"], e["confirmation"]), (True, True))
-        self.assertEqual(puce(), {"texte": "Confirmer", "danger": True})
-        self.assertNotIn("essai : exécuté", self.journal())
-        self.cle("up", "down")
-        self.assertEqual((self.etat()["confirmation"], puce()), (False, {"texte": "Éteindre", "danger": False}))
-        self.assertNotIn("essai : exécuté", self.journal())
+        self.attendre("essai : exécuté commande eteindre")
+        self.jusqua(lambda: not self.etat()["ouvert"], "lanceur fermé")
 
     test_ouvre_sur_accueil = test_premiere_lettre_scinde = test_effacer_revient_a_l_accueil = test_aucun_resultat = None
-    test_tab_entre_dans_l_apercu = test_confirmation_eteindre = test_fenetre_disparue = test_ferme_libere = None
+    test_tab_entre_dans_l_apercu = test_eteindre_ouvre_le_menu = test_fenetre_disparue = test_ferme_libere = None
     test_action_apres_retrait_du_calque = test_reouverture_annule_l_action = None
 
 
@@ -1020,12 +1003,11 @@ class CommandesTest(unittest.TestCase):
         Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : coque/Lanceur/commandes.json.
         """
         commandes = json.loads((ROOT / "coque" / "Lanceur" / "commandes.json").read_text())
-        champs = {"id", "libelle", "motsCles", "icone", "ipc", "commande", "etat", "confirmer"}
+        champs = {"id", "libelle", "motsCles", "icone", "ipc", "commande", "etat"}
         for c in commandes:
             with self.subTest(c.get("id")):
                 self.assertEqual(set(c), champs)
                 self.assertEqual((c["ipc"] is None) + (c["commande"] is None), 1)
-                self.assertIsInstance(c["confirmer"], bool)
         self.assertEqual(len({c["id"] for c in commandes}), len(commandes))
 
 

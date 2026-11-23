@@ -215,7 +215,7 @@ function elementsApercu(r) {
     if (!r) return []
     return [r.principale].concat(r.secondaires || []).filter(a => a).map(action => ({ genre: "bouton", action, adresse: "" }))
         .concat(((r.apercu || {}).fenetres || []).map(adresse => ({ genre: "vignette", adresse,
-            action: { libelle: "Amener", genre: "amener", cible: adresse, confirmer: false } })))
+            action: { libelle: "Amener", genre: "amener", cible: adresse } })))
 }
 
 // expressionLisible — saisie d'un calcul mise en forme pour l'affichage (« 12*7,5 » donne « 12 × 7,5 »).
