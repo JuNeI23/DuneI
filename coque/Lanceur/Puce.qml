@@ -9,12 +9,11 @@ import "../Composants"
 // largeur de la puce ne saute pas quand le rappel passe d'un bouton à l'autre. Le curseur se montre comme sur les
 // médaillons de l'accueil, sur l'élément lui-même : choisie, la puce prend le fond color.accent, son contenu passe à
 // color.onAccent et elle grandit à galerie.echelle, au ressort des états ; seule la puce sous le curseur porte
-// l'accent. En danger, son fond passe à color.error, contenu en color.onAccent, choisie ou
-// non : c'est un état de danger, pas une sélection. Un clic l'active.
+// l'accent. Un clic l'active.
 // Entrées : texte, libellé ; icone, nom freedesktop symbolique, vide par défaut ; rappel, vrai pour montrer le rappel ;
 // texteRappel, « ↵ » par défaut ; reserveRappel, vrai pour garder la place du rappel caché ; choisie, vrai sous le
-// curseur ; danger, vrai pour une action destructrice. Sorties : activee(), émis au clic. Erreurs : aucune ; avant le
-// chargement des tokens, la puce est nulle et transparente.
+// curseur. Sorties : activee(), émis au clic. Erreurs : aucune ; avant le chargement des tokens, la puce est nulle
+// et transparente.
 // Dépendances : Icone, Texte, Ressort, ColorSpring, Theme (density, space, typo, icons, color, stateColors, material,
 // galerie).
 // Cotes : hauteur density.controlHeight (28, maquette 30), retrait space.scale[2] (12, maquette 14), écart
@@ -29,9 +28,6 @@ Item {
     property string texteRappel: "↵"
     property bool reserveRappel: false
     property bool choisie: false
-    property bool danger: false
-    // Vrai quand le fond porte une couleur pleine (accent ou erreur) : le contenu passe alors à color.onAccent.
-    readonly property bool pleine: choisie || danger
     signal activee()
 
     implicitHeight: Theme.density?.controlHeight ?? 0
@@ -42,15 +38,16 @@ Item {
     Ressort { id: montreRappel; transition: "state"; nature: "fondu"; cible: puce.rappel ? 1 : 0 }
     // Croissance de la puce choisie, à l'échelle des éléments choisis (galerie.echelle), comme les médaillons.
     Ressort { id: grandeur; transition: "state"; cible: puce.choisie ? Theme.galerie?.echelle ?? 1 : 1 }
-    // Fond : neutre au repos, accent sous le curseur, erreur en danger.
+    // Fond : neutre au repos, accent sous le curseur.
     ColorSpring {
         id: fond
-        target: (puce.danger ? Theme.color?.error : puce.choisie ? Theme.color?.accent
-                 : Theme.stateColors("controlRaised", "none", "rest")?.fill) ?? "transparent"
+        target: (puce.choisie ? Theme.color?.accent : Theme.stateColors("controlRaised", "none", "rest")?.fill)
+                ?? "transparent"
     }
-    // Rappel ↵ : texte secondaire sur une puce neutre, sur-accent sur un fond plein (aucune opacité sur une couleur de rôle).
-    ColorSpring { id: rappelEncre; target: (puce.pleine ? Theme.color?.onAccent : Theme.color?.textSecondary) ?? "transparent" }
-    ColorSpring { id: encre; target: (puce.pleine ? Theme.color?.onAccent : Theme.color?.textPrimary) ?? "transparent" }
+    // Rappel ↵ : texte secondaire sur une puce neutre, sur-accent sur l'accent (aucune opacité sur une couleur de
+    // rôle).
+    ColorSpring { id: rappelEncre; target: (puce.choisie ? Theme.color?.onAccent : Theme.color?.textSecondary) ?? "transparent" }
+    ColorSpring { id: encre; target: (puce.choisie ? Theme.color?.onAccent : Theme.color?.textPrimary) ?? "transparent" }
 
     Rectangle {
         anchors.fill: parent

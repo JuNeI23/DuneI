@@ -31,12 +31,12 @@ Item {
     readonly property real ecart: n > 1 ? (rangee.width - n * tuile) / (n - 1) : 0
     readonly property real marge: Theme.reglages?.pageMargin ?? 0
 
-    // puceChoisie — libellé et état de danger de la puce sous le curseur (lue par les essais).
-    // Entrées : aucune. Sortie : {texte, danger}, ou null hors de la zone « puces ». Erreurs : aucune.
+    // puceChoisie — libellé de la puce sous le curseur (lue par les essais).
+    // Entrées : aucune. Sortie : {texte}, ou null hors de la zone « puces ». Erreurs : aucune.
     // Dépendances : puces (Repeater), sel.
     function puceChoisie() {
         const p = sel.zone === "puces" ? puces.itemAt(sel.index) : null
-        return p ? { texte: p.texte, danger: p.danger } : null
+        return p ? { texte: p.texte } : null
     }
 
     Column {
