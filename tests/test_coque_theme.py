@@ -197,6 +197,17 @@ class CoqueThemeTest(EssaiCoque, unittest.TestCase):
         # Theme.ready ne passe à vrai qu'une fois les raccourcis de groupe (Theme.color…) réévalués.
         self.attendre("essai : prêt true, couleurs définies")
 
+    def test_jetons_selecteur(self):
+        """Vérifie que les jetons lus par Theme portent la section selecteur entière (L2-79 g, L2-80) : hauteur,
+        bornes de largeur ordonnées, écart, agrandissement de la vignette choisie et estompe des autres.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : tokens.
+        """
+        s = json.loads(self.tokens(55).read_text(encoding="utf-8"))["selecteur"]
+        self.assertTrue({"hauteur", "largeurMin", "largeurMax"} <= s.keys(), s)
+        self.assertLess(s["largeurMin"], s["largeurMax"])
+        self.assertEqual((s["ecart"], s["agrandi"], s["estompe"]), (32, 1.15, 0.5))
+
     def test_remplacement_par_renommage(self):
         self.installer(55)
         self.lancer(self.dir)

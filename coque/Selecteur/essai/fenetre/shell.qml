@@ -18,7 +18,7 @@ import "Selecteur"
 // pilote ; elle sert aussi aux captures contre le croquis de la fiche. Elle sert la cible « notifications », dont
 // l'état « ne pas déranger » vaut toujours « true ».
 // Entrées : DUNEI_TOKENS_DIR et DUNEI_ETAT_DIR (jetons, thème et relevé d'usage de l'essai) ; IPC « essai » : pret,
-// ouvrir, injecter. Sorties : « essai : prêt » au démarrage ; « essai : exécuté <genre> <cible> » à chaque action ;
+// ouvrir, injecter, vignette. Sorties : « essai : prêt » au démarrage ; « essai : exécuté <genre> <cible> » à chaque action ;
 // « essai : montré après <n> ms » quand le sélecteur se montre, n mesuré depuis l'appel à « essai ouvrir » ; « essai : calque
 // retiré » quand Hyprland retire un calque dunei-attention (closelayer), pour que les essais vérifient qu'une action
 // ne part qu'après ce retrait. Erreurs : celles de Theme, du sélecteur et du lanceur, dans le journal.
@@ -72,6 +72,17 @@ ShellRoot {
         // {adresse, classe, titre, bureau, historique, taille} (un tableau nu n'est pas un argument unique pour
         // « qs ipc call »). Sortie : aucune. Erreurs : aucune. Dépendances : Selecteur.source.
         function injecter(json: string): void { Selecteur.source = JSON.parse(json).fenetres }
+
+        // vignette — état de rendu d'une vignette du sélecteur ouvert. Entrée : i, rang de la vignette. Sortie : JSON
+        // {capturee, mipmap, texture, capture}, texture et capture en [largeur, hauteur] (taille de la texture de la
+        // source d'effet, taille native de la capture) ; « null » sans fenêtre ou sans vignette à ce rang. Erreurs :
+        // aucune. Dépendances : Selecteur.fenetre (cadre.vignettes), VignetteFenetre (capturee, image, vue).
+        function vignette(i: int): string {
+            const v = Selecteur.fenetre?.cadre.vignettes.itemAt(i) ?? null
+            return v ? JSON.stringify({ capturee: v.capturee, mipmap: v.image.mipmap,
+                texture: [v.image.textureSize.width, v.image.textureSize.height],
+                capture: [v.vue.sourceSize.width, v.vue.sourceSize.height] }) : "null"
+        }
     }
 
     IpcHandler {

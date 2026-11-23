@@ -351,3 +351,49 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
         # L'action du lanceur est abandonnée à l'ouverture du sélecteur : elle ne part pas non plus une fois celui-ci fermé.
         self.selecteur("annuler")
         self.sans_execution()
+
+    def vignette(self, i: int) -> dict | None:
+        """État de rendu d'une vignette du sélecteur, décodé du JSON de l'IPC « essai vignette ».
+
+        Entrée : i, rang de la vignette. Sortie : dictionnaire {capturee, mipmap, texture, capture}, ou None si la
+        vignette n'existe pas (ou si l'IPC est absente). Erreurs : aucune. Dépendances : appel.
+        """
+        try:
+            return json.loads(self.appel("essai", "vignette", str(i)))
+        except json.JSONDecodeError:
+            return None
+
+    def test_vignette_mipmap(self):
+        """Vérifie que la première vignette, celle d'une vraie fenêtre des bureaux 1 à 4, affiche sa capture par une
+        source d'effet à paliers (mipmap) dont la texture garde la taille native de la capture.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion ; test sauté sans vraie fenêtre sur les bureaux
+        1 à 4. Dépendances : hyprctl, injecter, appel, jusqua, vignette.
+        """
+        clients = json.loads(subprocess.run(["hyprctl", "clients", "-j"], capture_output=True, text=True).stdout or "[]")
+        vraie = next((c for c in clients if c["mapped"] and c["workspace"]["name"] in ("1", "2", "3", "4")), None)
+        if vraie is None:
+            self.skipTest("aucune vraie fenêtre sur les bureaux 1 à 4 à capturer")
+        # Hyprland nomme ses fenêtres sans le préfixe 0x dans ses événements, comme HyprlandToplevel.address.
+        self.injecter([dict(FENETRES[0], adresse=vraie["address"].removeprefix("0x"), taille=vraie["size"]),
+                       *FENETRES[1:]])
+        self.appel("essai", "ouvrir")
+        v = self.jusqua(lambda: (v := self.vignette(0)) and v["capturee"] and v, "capture de la première vignette")
+        self.assertTrue(v["mipmap"])
+        self.assertGreater(v["capture"][0], 0)
+        self.assertEqual(v["texture"], v["capture"])
+
+    def test_vignette_sans_capture(self):
+        """Vérifie qu'une fausse fenêtre, sans Toplevel, garde le repli à trois points (capturee faux), sans
+        avertissement QML au journal.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : appel, attendre, jusqua,
+        vignette, journal.
+        """
+        self.appel("essai", "ouvrir")
+        self.attendre("essai : montré après")
+        v = self.jusqua(lambda: self.vignette(0), "première vignette")
+        time.sleep(0.5)
+        self.assertFalse(self.vignette(0)["capturee"])
+        self.assertNotIn(" WARN ", self.journal())
+

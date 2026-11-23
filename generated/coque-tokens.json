@@ -1760,7 +1760,9 @@
     "hauteur": 140,
     "largeurMin": 100,
     "largeurMax": 320,
-    "ecart": 16
+    "ecart": 32,
+    "agrandi": 1.15,
+    "estompe": 0.5
   },
   "deconnexion": {
     "cote": 128,
