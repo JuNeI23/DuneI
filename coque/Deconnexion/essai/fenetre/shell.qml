@@ -12,7 +12,8 @@ import "Deconnexion"
 // exécuter pour de bon.
 // Rôle : charge les singletons Deconnexion et Lanceur (ce dernier pour l'essai de la famille « attention »), leur
 // retire le clavier exclusif (les touches passent par les IPC « deconnexion » et « lanceur ») et remplace leur
-// exécution par une ligne de journal : aucune vraie veille, extinction, déconnexion ni aucun verrouillage.
+// exécution par une ligne de journal : aucune vraie veille, extinction, déconnexion ni aucun verrouillage. La fenêtre
+// du menu reçoit un masque d'entrée vide : le pointeur réel n'y entre pas, le survol est simulé par l'IPC.
 // tests/test_deconnexion.py (ControleurTest) la pilote ; elle sert aussi aux captures du menu. Elle sert la cible
 // « notifications », dont l'état « ne pas déranger » vaut toujours « true ».
 // Entrées : DUNEI_TOKENS_DIR et DUNEI_ETAT_DIR (jetons, thème et relevé d'usage de l'essai) ; IPC « essai » : pret,
@@ -47,12 +48,22 @@ ShellRoot {
         function onRawEvent(e) { if (e.name === "closelayer" && e.data === "dunei-attention") console.log("essai : calque retiré") }
     }
 
-    // onFenetreChanged — journalise chaque construction de la fenêtre du menu, pour vérifier qu'un ouvrir sur un menu
-    // déjà ouvert la reprend. Entrées : aucune. Sortie : la ligne « essai : fenêtre construite » quand la fenêtre
-    // devient non nulle. Erreurs : aucune. Dépendances : Deconnexion.fenetre.
+    // Masque d'entrée vide, posé sur la fenêtre du menu de l'essai : le vrai pointeur de Nicolas, immobile au
+    // centre de l'écran, ne la survole jamais, et seuls les points de l'IPC survoler atteignent le cadre.
+    Region { id: sansPointeur }
+
+    // onFenetreChanged — retire le pointeur réel de chaque fenêtre du menu construite et la journalise, pour vérifier
+    // qu'un ouvrir sur un menu déjà ouvert la reprend. Entrées : aucune. Sortie : mask de la fenêtre remplacé par
+    // sansPointeur (la liaison du menu réel est rompue dans l'essai seulement) ; la ligne « essai : fenêtre
+    // construite » quand la fenêtre devient non nulle. Erreurs : aucune. Dépendances : Deconnexion.fenetre (mask),
+    // sansPointeur.
     Connections {
         target: Deconnexion
-        function onFenetreChanged() { if (Deconnexion.fenetre) console.log("essai : fenêtre construite") }
+        function onFenetreChanged() {
+            if (!Deconnexion.fenetre) return
+            Deconnexion.fenetre.mask = sansPointeur
+            console.log("essai : fenêtre construite")
+        }
     }
 
     IpcHandler {

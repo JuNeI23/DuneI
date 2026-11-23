@@ -320,8 +320,9 @@ class ControleurTest(EssaiCoque, unittest.TestCase):
         """
         self.appel("deconnexion", "ouvrir", "eteindre")
         self.jusqua(lambda: self.etat()["fenetre"], "fenêtre du menu")
-        # Les points sont en coordonnées de la scène : la montée du cadre doit être posée, sinon le centre du bouton
-        # se déplace entre deux points et simule un mouvement que le pointeur n'a pas fait.
+        # Les points sont en coordonnées de la scène : l'apparition du cadre depuis le centre, à l'échelle
+        # window.echelleApparition, doit être posée, sinon le centre du bouton se déplace entre deux points et simule
+        # un mouvement que le pointeur n'a pas fait.
         time.sleep(1.0)
         self.assertEqual(self.appel("essai", "survoler", "2", "0", "0"), "ok")
         e = self.etat()
