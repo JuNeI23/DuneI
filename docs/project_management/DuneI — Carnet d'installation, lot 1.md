@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.55. Historique en fin de document.
+Version 1.56. Historique en fin de document.
 
 Socle amorçable.
 
@@ -1891,7 +1891,7 @@ Hyprland floute ce qui se trouve derrière une surface de calque dont l'alpha d�
 générées depuis `[glass]` de `tokens.toml` :
 
 - `generated/hyprland-layers.lua` : une règle `dunei-verre-<namespace>` par namespace (`dunei-barre`,
-  `dunei-attention`), avec `blur`, `blur_popups`, `ignore_alpha = 0.6`, et `xray` sur `dunei-barre` seule ;
+  `dunei-attention`, `dunei-attention-selecteur`, `dunei-attention-deconnexion`), avec `blur`, `blur_popups`, `ignore_alpha = 0.6`, et `xray` sur `dunei-barre` seule ;
 - `generated/hyprland-tokens.lua` : le flou global (`decoration.blur`, taille 8, deux passes, `popups = false`, pour
   ne pas flouter les popups des applications) ;
 - `config/hypr/modules/regles.lua` applique la liste par une boucle :
@@ -2274,18 +2274,28 @@ Aucun paquet à installer : la feature ne touche que la coque, la liaison de `SU
   second client Quickshell qui inscrirait la même paire planterait (D200). `SUPER + SHIFT + Tab` n'est pas lié : il
   n'agit que pendant le geste, où il recule (D201).
 - **Les jetons.** `delays.selecteur = 150` dans `motion.toml` ; table `[selecteur]` de `tokens.toml` : `hauteur = 140`,
-  `largeur_min = 100`, `largeur_max = 320`, `ecart = 16`. `make tokens` et `make motion` les reportent dans
+  `largeur_min = 100`, `largeur_max = 320`, `ecart = 32` ; depuis L2-80, `agrandi = 1.15` (facteur de la vignette choisie) et `estompe = 0.5` (opacité des vignettes non choisies). `make tokens` et `make motion` les reportent dans
   `generated/` ; les fichiers témoins de `tests/golden/` sont à jour.
 - **Le module.** `coque/Selecteur/` : le singleton `Selecteur.qml` (état, sélection, IPC, action différée jusqu'au
-  `closelayer` de `dunei-attention`), la fenêtre de calque `FenetreSelecteur.qml`, le cadre `CadreSelecteur.qml` et la
-  logique pure `selecteur.js`. La vignette est partagée avec le lanceur : `coque/Composants/VignetteFenetre.qml`.
+  `closelayer` de son propre calque), le cadre `CadreSelecteur.qml` et la logique pure `selecteur.js`. Depuis L2-80, le
+  sélecteur est client du socle `coque/Composants/Scene.qml` (comme le menu de déconnexion) : la fenêtre de calque
+  `FenetreSelecteur.qml` a disparu et le délai d'affichage de 150 ms est une option de `Scene`. La vignette est partagée avec le lanceur : `coque/Composants/VignetteFenetre.qml`.
 - **Vérifier.** `hyprctl globalshortcuts` liste `dunei:selecteur` ; `qs -c dunei ipc call selecteur etat` rend l'état
   du sélecteur en JSON (ouvert, montré, index, adresses de la liste figée, action en attente). À l'écran, sur les
-  bureaux 1 à 4 : un tap bref ne montre aucun éclair, un geste tenu montre les vignettes et la plaque d'accent sous la
-  vignette choisie, le relâchement amène la fenêtre.
+  bureaux 1 à 4 : un tap bref ne montre aucun éclair, un geste tenu montre les vignettes et la vignette choisie agrandie et
+  en pleine image, les autres grisées, le relâchement amène la fenêtre.
 - **Les tests.** `python3 -m unittest tests.test_selecteur tests.test_hyprland_clavier tests.test_quickshell_emitter`.
   Les essais graphiques passent par la coque d'essai `coque/Selecteur/essai/fenetre/`, qui coupe le clavier exclusif,
   ne déclare aucun raccourci global et se pilote par IPC ; ils exigent un écran libre (Wayland et `qs`).
+- **Les calques (L2-80).** Chaque client de `Scene` porte son propre namespace de calque : `dunei-attention-selecteur`
+  pour le sélecteur, `dunei-attention-deconnexion` pour le menu de déconnexion. `Scene` n'écoute que le `closelayer` du
+  sien, si bien qu'une action différée ne part plus quand un autre calque d'attention (le lanceur en fondu) se retire.
+  Le lanceur garde `dunei-attention` jusqu'à son propre rebranchement (L2-81). Les règles de calque de Hyprland (flou et
+  fondu seul) sont générées depuis `tokens.toml` par correspondance exacte de namespace : les deux nouveaux namespaces
+  sont inscrits dans `namespaces` et `fondu` de la section `[glass]`. **`make tokens` puis `make install` sont
+  nécessaires** pour que `generated/hyprland-layers.lua` et `~/.config` portent ces règles ; sans elles, le sélecteur
+  s'afficherait sans flou ni fondu. Vérification : `hyprctl layers` montre `dunei-attention-selecteur` pendant un
+  geste tenu.
 
 ## Le menu de déconnexion — L2-23
 
@@ -2616,6 +2626,7 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 
 | Version | Date | Changement |
 | --- | --- | --- |
+| 1.56 | 2026-11-23 | Le sélecteur de fenêtres sur `Scene` (L2-80, D211 à D214) : namespace de calque par client de `Scene` et règles de calque générées depuis `[glass]`, jetons `agrandi` et `estompe`, écart porté à 32, `make install` nécessaire |
 | 1.55 | 2026-11-23 | Recette du menu de déconnexion (L2-23) : « Quitter Hyprland » (D210), logo de Hyprland hors Phosphor, masque de saisie de la barre complété, redémarrage de la coque après une icône neuve |
 | 1.54 | 2026-11-23 | Le menu de déconnexion (L2-23, D204 à D209) : `SUPER + Échap` et le logo l'ouvrent, `SUPER + ALT + M` gardé en secours, module `coque/Deconnexion/`, socle `Scene`, table `[deconnexion]` |
 | 1.53 | 2026-11-23 | Les bureaux restent sans teinte : le sélecteur de bureaux (L2-18) est retiré (D203) |
