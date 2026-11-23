@@ -26,7 +26,7 @@ import "recherche.js" as Moteur
 // choisir, parcourir, rentrer, viser.
 // Erreurs : aucune ; avant le chargement des tokens, les cotes sont nulles.
 // Dépendances : EtatParametres (page, presents, ouvrir), Registre, recherche.js (chercher), Recherche, Liste, Rangee,
-// Texte, Vignette, VueCurseur (par Liste), Theme (reglages, space, color).
+// Texte, VignetteVerre, VueCurseur (par Liste), Theme (reglages, space, color).
 // Cotes : retrait reglages.sidebarInset ; entrées de reglages.entryHeight, résultats plus hauts de space.scale[1] ;
 // titre de groupe en échelon 0, à space.scale[2] au-dessus et space.scale[0] au-dessous ; la plaque est celle de
 // Liste.
@@ -154,7 +154,7 @@ Item {
 
             contentItem: RowLayout {
                 spacing: Theme.space?.scale[1] ?? 0
-                Vignette { glyphe: entree.modelData.glyphe; teinte: entree.modelData.teinte }
+                VignetteVerre { glyphe: entree.modelData.glyphe; teinte: entree.modelData.teinte }
                 Texte {
                     Layout.fillWidth: true
                     text: entree.modelData.libelle

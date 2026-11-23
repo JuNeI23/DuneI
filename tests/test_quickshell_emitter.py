@@ -93,8 +93,10 @@ class QuickshellEmitterTest(unittest.TestCase):
         self.assertEqual(self.out["selecteur"], {"hauteur": 140, "largeurMin": 100, "largeurMax": 320, "ecart": 16})
 
     def test_deconnexion(self):
-        """Vérifie les jetons du menu de déconnexion : côté de la vignette, côté du glyphe, écart, agrandissement."""
-        self.assertEqual(self.out["deconnexion"], {"cote": 88, "glyphe": 40, "ecart": 24, "agrandi": 1.15})
+        """Vérifie les jetons du menu de déconnexion : côté de la vignette, côté du glyphe, écart, agrandissement,
+        opacité de la lettre grisée."""
+        self.assertEqual(self.out["deconnexion"], {"cote": 88, "glyphe": 40, "ecart": 24, "agrandi": 1.15,
+                                                   "lettreGrisee": 0.7})
 
     def test_notifications(self):
         """Vérifie les jetons de la pile de notifications : largeur, marge, écart, plafond, durée, icône, intérieur,

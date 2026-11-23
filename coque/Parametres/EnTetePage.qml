@@ -8,13 +8,13 @@ import "../Composants"
 // de page), sur laquelle une lueur discrète de la teinte de la page part du coin de la vignette, à l'intensité
 // material.headerGlow et jusqu'à la part material.headerGlowReach de sa largeur. L'état de la page, que la barre latérale ne montre plus, se lit
 // ici.
-// Entrées : glyphe et teinte, transmis à la Vignette ; titre ; etat, phrase d'état, vide par défaut (la ligne
+// Entrées : glyphe et teinte, transmis à la VignetteVerre ; titre ; etat, phrase d'état, vide par défaut (la ligne
 // disparaît), qui passe d'une phrase à l'autre en fondu croisé au ressort « state » (D184) ; le contrôle (un
 // Interrupteur, par exemple), déclaré comme enfant, se pose à droite.
-// Sorties : dnRole (« surfaceRaised »), que lisent les contrôles posés dans la carte ; vignette, la Vignette ;
+// Sorties : dnRole (« surfaceRaised »), que lisent les contrôles posés dans la carte ; vignette, la VignetteVerre ;
 // sortante, la phrase sortante d'un fondu, et ancienne, le texte qu'elle peint, lues par les essais.
 // Erreurs : aucune ; avant le chargement des tokens, les cotes sont nulles et le fond transparent.
-// Dépendances : Vignette, Lueur, Carte, Texte, Theme (color, radius, space, reglages, icons, material.headerGlow,
+// Dépendances : VignetteVerre, Lueur, Carte, Texte, Theme (color, radius, space, reglages, icons, material.headerGlow,
 // material.headerGlowReach), QtQuick.Layouts.
 // Cotes : vignette de reglages.thumbLarge, au rayon radius.panel, glyphe de icons.sizes.comfortable ; retraits
 // de space.scale[3] à l'horizontale et de space.scale[2] à la verticale ; titre en échelon 4, état en échelon 1.
@@ -59,7 +59,7 @@ Item {
         width: parent.width - 2 * x
         spacing: Theme.space?.scale[3] ?? 0
 
-        Vignette {
+        VignetteVerre {
             id: vignette
             glyphe: enTete.glyphe
             teinte: enTete.teinte

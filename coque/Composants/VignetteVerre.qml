@@ -1,8 +1,8 @@
 import QtQuick
 import "../Theme"
 
-// Vignette — vignette en « verre » : un carré arrondi teinté, son glyphe dans la teinte (pages de réglages, menu de
-// déconnexion).
+// VignetteVerre — vignette en « verre » : un carré arrondi teinté, son glyphe dans la teinte (pages de réglages,
+// menu de déconnexion). Nommée ainsi pour ne pas masquer la Vignette locale de la Galerie, qui importe Composants.
 // Rôle : peint, de bas en haut, le fond d'une carte, la teinte mêlée à ce fond, un halo de la teinte parti du coin
 // haut gauche, un reflet clair tombant du bord haut, un liseré d'un pixel, puis le glyphe. Les quatre intensités
 // viennent de Theme.material.thumb, qui change avec le moment : la nuit donne un verre givré (teinte mêlée et reflet,

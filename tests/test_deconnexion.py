@@ -312,15 +312,21 @@ class ControleurTest(EssaiCoque, unittest.TestCase):
 
     def test_ouvrir_arme_survol_immobile(self):
         """Vérifie la garde de mouvement réel du survol : menu ouvert sur Éteindre armé, un premier point du pointeur
-        sur Déconnexion, sans déplacement, ne prend pas le curseur ni ne désarme ; un déplacement au-delà de
-        space.scale[0] (4 px) le pose sur Déconnexion et désarme.
+        sur Déconnexion, sans déplacement, ne prend pas le curseur ni ne désarme, pas plus qu'un déplacement de 3 px,
+        sous le seuil space.scale[0] (4 px) ; un déplacement au-delà le pose sur Déconnexion et désarme.
 
         Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : appel, etat, jusqua,
         sans_execution.
         """
         self.appel("deconnexion", "ouvrir", "eteindre")
         self.jusqua(lambda: self.etat()["fenetre"], "fenêtre du menu")
+        # Les points sont en coordonnées de la scène : la montée du cadre doit être posée, sinon le centre du bouton
+        # se déplace entre deux points et simule un mouvement que le pointeur n'a pas fait.
+        time.sleep(1.0)
         self.assertEqual(self.appel("essai", "survoler", "2", "0", "0"), "ok")
+        e = self.etat()
+        self.assertEqual((e["index"], e["arme"]), (4, 4))
+        self.assertEqual(self.appel("essai", "survoler", "2", "3", "0"), "ok")
         e = self.etat()
         self.assertEqual((e["index"], e["arme"]), (4, 4))
         self.assertEqual(self.appel("essai", "survoler", "2", "10", "0"), "ok")
@@ -329,7 +335,7 @@ class ControleurTest(EssaiCoque, unittest.TestCase):
         self.sans_execution()
 
     def test_libelle_confirmer(self):
-        """Vérifie que le bouton armé dit « Confirmer » et reprend son libellé une fois désarmé.
+        """Vérifie que le bouton armé peint « Confirmer » et reprend son libellé une fois désarmé.
 
         Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : basculer, touches, appel.
         """

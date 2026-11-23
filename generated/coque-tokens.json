@@ -1765,7 +1765,8 @@
     "cote": 88,
     "glyphe": 40,
     "ecart": 24,
-    "agrandi": 1.15
+    "agrandi": 1.15,
+    "lettreGrisee": 0.7
   },
   "notifications": {
     "largeur": 340,

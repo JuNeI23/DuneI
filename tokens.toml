@@ -484,6 +484,7 @@ cote = 88                     # côté d'une vignette en verre
 glyphe = 40                   # côté du glyphe dans la vignette
 ecart = 24                    # espace entre deux boutons (échelon de spacing.scale)
 agrandi = 1.15                # facteur du bouton sous le curseur, autour de son centre, sans pousser ses voisins
+lettreGrisee = 0.7            # opacité de la lettre d'accès d'un bouton gris (1 sous le curseur)
 # Couleurs, toutes tirées du thème : le bouton choisi suit la recette de material.thumb teintée de color.accent
 # (color.error une fois armé) ; les autres sont gris, en verre neutre sans teinte ni halo, glyphe color.textSecondary.
 # Fond des vignettes grises : thumb.ground la nuit, color.controlOff le jour, plus sombre que thumb.ground pour que le

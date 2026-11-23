@@ -4,23 +4,24 @@ import "../Composants" as C
 
 // CadreDeconnexion — contenu du menu de déconnexion (L2-23), posé au centre de l'écran par la Scene du contrôleur.
 // Rôle : une rangée centrée de boutons, un par action, sans Surface ni plaque autour, posée sur le voile de la scène.
-// Chaque bouton empile une vignette en verre (C.Vignette, glyphe Phosphor bold), son libellé et sa lettre d'accès.
+// Chaque bouton empile une vignette en verre (C.VignetteVerre, glyphe Phosphor bold), son libellé et sa lettre
+// d'accès.
 // Le bouton sous le curseur (Deconnexion.index) est agrandi du facteur deconnexion.agrandi autour de son centre, en
 // transformation, sans déplacer ses voisins ; sa vignette prend le verre teinté de color.accent, son libellé le texte
 // clair du bureau. Les autres sont gris et de même taille : vignette neutre, libellé et lettre au texte clair de
-// survol du bureau, lettre à l'opacité lettreGrisee. Le bouton armé (Deconnexion.arme) prend color.error et dit
-// « Confirmer ». Tout changement s'anime : l'échelle au Ressort « state », les couleurs par ColorSpring (chacun visant
-// un jeton), le libellé par un fondu croisé au ressort « state », comme la phrase d'état d'EnTetePage. Le survol ne
+// survol du bureau, lettre à l'opacité deconnexion.lettreGrisee. Le bouton armé (Deconnexion.arme) prend
+// color.error et dit « Confirmer ». Tout changement s'anime : l'échelle au Ressort « state », les couleurs par
+// ColorSpring (chacun visant un jeton), le libellé par un fondu croisé au ressort « state », comme la phrase d'état d'EnTetePage. Le survol ne
 // pose le curseur qu'une fois le pointeur bougé de plus de space.scale[0] depuis sa première position vue, comme
 // CadreSelecteur : un pointeur immobile sous le menu qui apparaît ne le prend pas au clavier ni ne désarme. Un clic
 // appuie sur le bouton (Deconnexion.appuyer). Il reçoit le clavier : sa racine porte focus: true, car le Loader de
 // FenetreScene est une portée de focus, et chaque appui passe par Deconnexion.touche, l'auto-répétition écartée.
 // Entrées : aucune (Deconnexion : actions, index, arme, choisir, appuyer, touche).
-// Sorties : boutons, le Repeater des boutons (chacun expose libelle, le texte rendu) ; nomTouche(event) ;
-// pointeur(p), lu aussi par la coque d'essai pour simuler le survol.
+// Sorties : boutons, le Repeater des boutons (chacun expose libelle, le texte voulu, et peint, le texte du libellé
+// courant) ; nomTouche(event) ; pointeur(p), lu aussi par la coque d'essai pour simuler le survol.
 // Erreurs : aucune ; avant le chargement des tokens, la rangée est vide et de taille nulle.
-// Dépendances : Deconnexion, C.Vignette, C.Texte, Ressort, ColorSpring, Theme (deconnexion, space, radius, color,
-// bureau).
+// Dépendances : Deconnexion, C.VignetteVerre, C.Texte, Ressort, ColorSpring, Theme (deconnexion, dont lettreGrisee,
+// space, radius, color, bureau).
 // Cotes (maquette deconnexion-v1 validée) : vignette deconnexion.cote (88), glyphe deconnexion.glyphe (40), écart
 // deconnexion.ecart (24), coins radius.window (12) ; libellé à l'échelon 3 (15) en graisse moyenne, space.scale[1]
 // (8) sous la vignette ; lettre à l'échelon 1 (12).
@@ -30,8 +31,6 @@ Row {
     focus: true
     spacing: Theme.deconnexion?.ecart ?? 0
     readonly property alias boutons: boutons
-    // Opacité de la lettre d'un bouton gris, choix de la maquette validée.
-    readonly property real lettreGrisee: 0.7
 
     // nomTouche — nom d'une touche pour Deconnexion.touche, comme CadreSelecteur.nomTouche. Entrée : event, KeyEvent
     // d'appui. Sortie : « Backtab » (Maj + Tab), « Tab », « Left », « Right », « Return », « Enter », « space »,
@@ -76,9 +75,14 @@ Row {
         if (i >= 0) Deconnexion.choisir(i)
     }
 
-    // onPointChanged — transmet chaque position du pointeur à pointeur. Entrées : aucune (point.scenePosition).
-    // Sortie : aucune. Erreurs : aucune. Dépendances : pointeur.
-    HoverHandler { onPointChanged: if (hovered) cadre.pointeur(point.scenePosition) }
+    HoverHandler {
+        // onPointChanged — transmet chaque position du pointeur à pointeur. Entrées : aucune (point.scenePosition).
+        // Sortie : aucune. Erreurs : aucune. Dépendances : pointeur.
+        onPointChanged: if (hovered) cadre.pointeur(point.scenePosition)
+        // onHoveredChanged — le pointeur sorti du cadre ne survole plus aucun bouton : y rentrer sur le même bouton y
+        // reposera le curseur. Entrées : aucune. Sortie : survole remis à -1. Erreurs : aucune. Dépendances : survole.
+        onHoveredChanged: if (!hovered) cadre.survole = -1
+    }
 
     Repeater {
         id: boutons
@@ -91,6 +95,8 @@ Row {
             readonly property bool choisi: Deconnexion.index === index
             readonly property bool arme: Deconnexion.arme === index
             readonly property string libelle: arme ? "Confirmer" : modelData.libelle
+            // Texte peint par le libellé courant, lu par la coque d'essai.
+            readonly property string peint: actuel.text
             // Libellé montré avant le dernier changement, peint par le libellé sortant pendant le fondu croisé ; le
             // libellé montré est tenu à la main, une liaison pouvant se mettre à jour avant onLibelleChanged.
             property string ancien: ""
@@ -100,6 +106,8 @@ Row {
             height: vignette.height + (Theme.space?.scale[1] ?? 0) + texte.height + lettre.height
             scale: grandeur.value
 
+            // Component.onCompleted — retient le libellé montré à la création, sans fondu. Entrées : aucune. Sortie :
+            // _montre. Erreurs : aucune. Dépendances : libelle.
             Component.onCompleted: _montre = libelle
             // onLibelleChanged — lance le fondu croisé de l'ancien libellé au nouveau. Entrées : aucune. Sortie :
             // ancien, _montre, croise relancé de 0. Erreurs : aucune. Dépendances : croise.
@@ -114,13 +122,18 @@ Row {
                 id: encre
                 target: (bouton.choisi ? Theme.bureau?.texteClair : Theme.bureau?.texteClairSurvol) ?? "transparent"
             }
-            Ressort { id: eclat; transition: "state"; nature: "fondu"; cible: bouton.choisi ? 1 : cadre.lettreGrisee }
+            Ressort {
+                id: eclat
+                transition: "state"
+                nature: "fondu"
+                cible: bouton.choisi ? 1 : Theme.deconnexion?.lettreGrisee ?? 1
+            }
 
             // onTapped — un clic appuie sur le bouton. Entrées : aucune. Sortie : Deconnexion.appuyer. Erreurs :
             // aucune. Dépendances : index, Deconnexion.appuyer.
             TapHandler { onTapped: Deconnexion.appuyer(bouton.index) }
 
-            C.Vignette {
+            C.VignetteVerre {
                 id: vignette
                 anchors.horizontalCenter: parent.horizontalCenter
                 glyphe: bouton.modelData.icone

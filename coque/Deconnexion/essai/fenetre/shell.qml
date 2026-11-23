@@ -72,9 +72,9 @@ ShellRoot {
             return "ok"
         }
 
-        // libelle — libellé rendu par le bouton i (« Confirmer » s'il est armé). Entrée : i, rang du bouton.
+        // libelle — libellé peint par le bouton i (« Confirmer » s'il est armé). Entrée : i, rang du bouton.
         // Sortie : le texte, ou « » sans cadre. Erreurs : aucune. Dépendances : Deconnexion.fenetre.cadre (boutons).
-        function libelle(i: int): string { return Deconnexion.fenetre?.cadre?.boutons.itemAt(i)?.libelle ?? "" }
+        function libelle(i: int): string { return Deconnexion.fenetre?.cadre?.boutons.itemAt(i)?.peint ?? "" }
 
         // lancerFactice — lance pour de bon, par Deconnexion.lancer, une commande inoffensive, pour éprouver le journal
         // des échecs du Process : jamais une action du menu. Entrées : id, identifiant journalisé ; programme, la
