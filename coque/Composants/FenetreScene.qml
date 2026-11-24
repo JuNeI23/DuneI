@@ -9,8 +9,8 @@ import "../Theme"
 // Rôle : PanelWindow plein écran sur l'écran figé à l'ouverture (scene.ecran), couche overlay, namespace
 // scene.espace (flouté par le compositeur, le voile restant net sous ignore_alpha), clavier exclusif si
 // scene.clavierExclusif, aucun espace réservé ; le composant scene.cadre y est instancié, centré ou placé en
-// hauteur par scene.positionner, et reçoit le focus. Le calque ne change jamais de taille : seul le cadre s'anime. Reprise de FenetreLanceur,
-// supprimée depuis (L2-81).
+// hauteur par scene.positionner, et reçoit le focus. Le calque ne change jamais de taille : seul le cadre s'anime.
+// Reprise de FenetreLanceur, supprimée depuis (L2-81).
 // Affichage : la fenêtre est construite dès l'ouverture, mais ne se montre qu'avec scene.montre, ou aussitôt sans
 // délai (affiche) ; avant, l'opacité que Hyprland applique à la surface vaut 0 et le masque d'entrée est vide (délai
 // du sélecteur, reprise de FenetreSelecteur). Apparition : sans délai, le compositeur la porte, par la règle de

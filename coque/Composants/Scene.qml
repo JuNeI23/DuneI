@@ -18,9 +18,9 @@ import Quickshell.Hyprland
 // Instancié comme enfant par un contrôleur client, qui déclare le cadre et exécute les actions.
 // Entrées : ouvert, qui s'affecte et ne se lie pas (le registre Overlays et la fenêtre l'écrivent) ; cadre, le
 //           composant posé au centre de l'écran, qui reçoit le focus (le Loader de la fenêtre est une portée de
-//           focus : la racine du cadre, ou l'élément qui doit recevoir les touches, porte focus: true) ; clavierExclusif, vrai
-//           par défaut, que la fenêtre applique (une coque d'essai le met à faux pour ne jamais prendre le clavier
-//           de Nicolas) ;
+//           focus : la racine du cadre, ou l'élément qui doit recevoir les touches, porte focus: true) ;
+//           clavierExclusif, vrai par défaut, que la fenêtre applique (une coque d'essai le met à faux pour ne jamais
+//           prendre le clavier de Nicolas) ;
 //           executeur, null par défaut : une fonction qui reçoit l'action à la place du signal realiser (coques
 //           d'essai) ; fenetree, vrai par défaut : faux, aucune fenêtre n'est construite et l'action part aussitôt ;
 //           montee, vrai par défaut : le cadre monte du bas de l'écran au ressort window ; faux, il grandit depuis

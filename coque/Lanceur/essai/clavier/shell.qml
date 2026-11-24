@@ -14,7 +14,8 @@ import "Lanceur"
 // tests/test_lanceur.py (ClavierTest) la pilote.
 // Entrées : DUNEI_TOKENS_DIR et DUNEI_ETAT_DIR ; IPC « essai » : injecter, cle, focus, reperes, puce,
 // capturer, tenir (le cadre reste posé après la fermeture, comme pendant le fondu de sortie).
-// Sorties : « essai : prêt » au démarrage ; « essai : exécuté <genre> <cible> » à chaque action. Erreurs : celles de Theme, dans le journal.
+// Sorties : « essai : prêt » au démarrage ; « essai : exécuté <genre> <cible> » à chaque action.
+// Erreurs : celles de Theme, dans le journal.
 // Dépendances : quickshell ≥ 0.3 (IpcHandler, FloatingWindow), QtTest (TestCase), Lanceur, CadreLanceur, Theme ; liens
 // essai/clavier/Theme, Composants, Applications, Parametres, Barre et Lanceur.
 ShellRoot {
