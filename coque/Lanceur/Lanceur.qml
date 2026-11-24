@@ -48,6 +48,10 @@ Singleton {
     readonly property string espace: "dunei-attention-lanceur"
     property string saisie: ""
     property var sel: ({ zone: "medaillons", rang: 0, index: 0 })
+    // Ce que désigne sel (voir retenir), et vrai si la sélection a bougé depuis la dernière frappe.
+    property string cleChoisie: ""
+    property string adresseChoisie: ""
+    property bool bouge: false
     property bool clavierExclusif: true
     property var executeur: null
     property bool fenetree: true
@@ -103,17 +107,37 @@ Singleton {
             vignettes: compter(elements, "vignette"), boutons: compter(elements, "bouton") }
     }
 
-    // borner — garde la sélection dans ce qui existe quand l'accueil ou les résultats changent (fenêtre fermée,
-    // réponse du calcul) : la ligne retenue est bornée à la dernière, et une sélection d'aperçu qui ne tient plus
-    // revient à la liste. Entrées : aucune. Sortie : aucune ; sel est remplacée si elle sort des bornes.
-    // Erreurs : aucune. Dépendances : sel, accueil, resultats, Logique.elementsApercu.
+    // retenir — retient ce que désigne la sélection, pour la suivre quand ce qui est affiché change. Entrées : aucune.
+    // Sortie : aucune ; cleChoisie reçoit la clé du résultat retenu et adresseChoisie celle de la vignette de l'aperçu
+    // (« » faute d'élément). Erreurs : aucune. Dépendances : sel, accueil, resultats, choisi, elements,
+    // Logique.elementApercu.
+    function retenir() {
+        const r = sel.zone === "medaillons" || sel.zone === "puces" ? accueil[sel.zone][sel.index] : choisi
+        cleChoisie = r?.cle ?? ""
+        adresseChoisie = Logique.elementApercu(elements, sel)?.adresse ?? ""
+    }
+
+    // borner — fait suivre à la sélection l'élément retenu quand l'accueil ou les résultats changent sans nouvelle
+    // frappe (fenêtre ouverte, fermée ou renommée, réponse du calcul) ; tant que rien n'a bougé depuis la dernière
+    // frappe, un calcul arrivé en tête prend la sélection. Un élément disparu laisse sa place à son voisin ; une
+    // sélection d'aperçu dont le résultat a disparu ou dont l'élément ne tient plus revient à la liste.
+    // Entrées : aucune. Sortie : aucune ; sel, cleChoisie et adresseChoisie sont remises à jour. Erreurs : aucune.
+    // Dépendances : sel, accueil, resultats, cleChoisie, adresseChoisie, bouge, retenir, Logique (suivre,
+    // elementsApercu, elementApercu).
     function borner() {
-        const z = sel.zone, n = z === "medaillons" ? accueil.medaillons.length : z === "puces" ? accueil.puces.length
-            : resultats.length
-        const i = Math.max(0, Math.min(n - 1, z === "apercu" ? sel.rang : sel.index))
-        if (z === "apercu" && (i !== sel.rang || !Logique.elementApercu(Logique.elementsApercu(resultats[i]), sel)))
-            sel = { zone: "liste", rang: i, index: i }
-        else if (z !== "apercu" && i !== sel.index) sel = { zone: z, rang: z === "liste" ? i : sel.rang, index: i }
+        const z = sel.zone, apercu = z === "apercu"
+        const liste = z === "medaillons" || z === "puces" ? accueil[z] : resultats
+        const i = Logique.suivre(liste.map(r => r.cle), cleChoisie, apercu ? sel.rang : sel.index,
+            z === "liste" && !bouge && resultats[0]?.genre === "calcul")
+        if (apercu) {
+            const elems = Logique.elementsApercu(resultats[i])
+            const v = adresseChoisie ? Logique.suivre(elems.filter(e => e.genre === "vignette").map(e => e.adresse),
+                adresseChoisie, sel.index, false) : sel.index
+            const voulue = { zone: z, rang: i, index: v, rangee: sel.rangee }
+            const tient = resultats[i]?.cle === cleChoisie && Logique.elementApercu(elems, voulue)
+            sel = tient ? voulue : { zone: "liste", rang: i, index: i }
+        } else if (i !== sel.index) sel = { zone: z, rang: z === "liste" ? i : sel.rang, index: i }
+        retenir()
     }
 
     // touche — traite une touche du lanceur. Entrée : nom, « escape », « return », « ctrl+return », « backspace »,
@@ -121,10 +145,10 @@ Singleton {
     // touche est prise (← est laissée au champ dans la liste ; → y entre dans l'aperçu, comme Tab). Échap ramène
     // l'aperçu à la liste, sinon vide la saisie, sinon ferme ; Ctrl + Entrée lance une nouvelle instance de
     // l'application retenue dans la liste. Erreurs : aucune.
-    // Dépendances : Logique.deplacer, dispo, entree, nouvelleInstance, fermer.
+    // Dépendances : Logique.deplacer, dispo, bouger, entree, nouvelleInstance, fermer.
     function touche(nom) {
         if (nom === "escape") {
-            if (sel.zone === "apercu") sel = Logique.deplacer(sel, nom, dispo())
+            if (sel.zone === "apercu") { sel = Logique.deplacer(sel, nom, dispo()); bouger() }
             else if (saisie !== "") saisie = ""
             else fermer()
             return true
@@ -135,8 +159,13 @@ Singleton {
         if (!["up", "down", "left", "right", "tab", "shift+tab", "ctrl+j", "ctrl+k"].includes(nom)) return false
         if (nom === "left" && sel.zone === "liste") return false
         sel = Logique.deplacer(sel, nom, dispo())
+        bouger()
         return true
     }
+
+    // bouger — note que la sélection a été déplacée à la main et retient ce qu'elle désigne. Entrées : aucune.
+    // Sortie : aucune ; bouge devient vrai. Erreurs : aucune. Dépendances : bouge, retenir.
+    function bouger() { bouge = true; retenir() }
 
     // choix — résultat et action désignés par la sélection. Entrées : aucune. Sortie : {resultat, action, cle} ou
     // null si rien n'est choisi ; la clé notée est celle du résultat, ou « fen:<adresse> » pour une vignette.
@@ -167,9 +196,10 @@ Singleton {
 
     // choisir — sélectionne un élément au pointeur, puis l'exécute. Entrées : zone, index (dans la rangée pour
     // « apercu », qui garde sa ligne) ; rangee, « boutons » ou « vignettes » pour l'aperçu. Sortie : aucune.
-    // Erreurs : aucune. Dépendances : sel, entree.
+    // Erreurs : aucune. Dépendances : sel, bouger, entree.
     function choisir(zone, index, rangee) {
         sel = zone === "apercu" ? { zone, rang: sel.rang, index, rangee } : { zone, rang: zone === "liste" ? index : sel.rang, index }
+        bouger()
         entree()
     }
 
@@ -208,12 +238,24 @@ Singleton {
 
     // onOuvertChanged — à l'ouverture, repart d'une saisie vide sur l'accueil et relit les états des commandes ;
     // l'écran, le registre des attentions et l'action en attente sont l'affaire de la scène. Entrées : aucune.
-    // Sortie : aucune. Erreurs : aucune. Dépendances : saisie, sel, sources.rafraichir.
+    // Sortie : aucune. Erreurs : aucune. Dépendances : saisie, reprendre, sources.rafraichir.
     onOuvertChanged: {
         if (!ouvert) return
         saisie = ""
-        sel = { zone: "medaillons", rang: 0, index: 0 }
+        reprendre()
         sources.rafraichir()
+    }
+
+    // reprendre — repose la sélection en tête de la vue, rien n'étant encore retenu : resultats et accueil peuvent ne
+    // pas être à jour, et c'est borner qui retient l'élément de tête, à leur changement ou au plus tard au tour suivant.
+    // Entrées : aucune. Sortie : aucune ; sel, cleChoisie, adresseChoisie et bouge repartent de zéro. Erreurs : aucune.
+    // Dépendances : saisie, borner.
+    function reprendre() {
+        cleChoisie = ""
+        adresseChoisie = ""
+        bouge = false
+        sel = { zone: saisie === "" ? "medaillons" : "liste", rang: 0, index: 0 }
+        Qt.callLater(borner)
     }
 
     // onPresentChanged — la saisie n'est vidée qu'à la fin du fondu de sortie, quand la fenêtre est déchargée
@@ -222,13 +264,14 @@ Singleton {
     // Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : present, saisie.
     onPresentChanged: if (!present) saisie = ""
 
-    // onSaisieChanged — soumet la saisie au calcul et pose la sélection en tête de la vue. Entrées : aucune.
-    // Sortie : aucune. Erreurs : aucune. Dépendances : calcul.demander.
+    // onSaisieChanged — pose la sélection en tête de la vue, avant que la réponse effacée du calcul ne change les
+    // résultats, puis soumet la saisie au calcul. Entrées : aucune. Sortie : aucune. Erreurs : aucune.
+    // Dépendances : reprendre, calcul.demander.
     onSaisieChanged: {
+        reprendre()
         calcul.demander(saisie)
-        sel = saisie === "" ? { zone: "medaillons", rang: 0, index: 0 } : { zone: "liste", rang: 0, index: 0 }
     }
-    // onResultatsChanged, onAccueilChanged — bornent la sélection quand ce qui est affiché change. Entrées : aucune.
+    // onResultatsChanged, onAccueilChanged — font suivre la sélection quand ce qui est affiché change. Entrées : aucune.
     // Sortie : aucune. Erreurs : aucune. Dépendances : borner.
     onResultatsChanged: borner()
     onAccueilChanged: borner()

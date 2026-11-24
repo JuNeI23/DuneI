@@ -85,6 +85,19 @@ class LogiqueTest(EssaiCoque, unittest.TestCase):
         cles = [x["cle"] for x in self.appeler("classer", r, {"app:ff": 9, "fen:1": 5, "fen:2": 1})]
         self.assertEqual(cles, ["calc", "app:ff", "fen:1", "fen:2", "app:kit", "cmd:x"])
 
+    def test_suivre(self):
+        """Vérifie que la sélection suit la clé du résultat, garde sa place bornée quand il a disparu, et revient en
+        tête pour un calcul.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : appeler.
+        """
+        for cles, cle, index, calcul, attendu in (
+                (["a", "b", "c"], "c", 1, False, 2), (["x", "a", "b"], "a", 0, False, 1),
+                (["a", "b"], "z", 1, False, 1), (["a"], "z", 5, False, 0), ([], "a", 2, False, 0),
+                (["calc", "a"], "a", 0, True, 0), (["a", "b"], "", 1, False, 1)):
+            with self.subTest(cles=cles, cle=cle, index=index, calcul=calcul):
+                self.assertEqual(self.appeler("suivre", cles, cle, index, calcul), attendu)
+
     def test_noter_et_poids(self):
         """Vérifie que deux notes du jour pèsent 2 et qu'une note vieille de quatorze jours pèse 0,5.
 
@@ -786,6 +799,100 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
         for motif in ("TypeError", "ReferenceError", "Error:", "WARN scene", "WARN qml"):
             self.assertNotIn(motif, self.journal())
 
+    def choisie(self) -> str:
+        """Clé du résultat retenu dans la liste. Entrées : aucune. Sortie : la clé. Dépendances : etat."""
+        e = self.etat()
+        return e["cles"][e["sel"]["index"]]
+
+    def test_selection_suit_le_resultat(self):
+        """Vérifie que la sélection reste sur la fenêtre visée quand une autre, placée avant elle, disparaît puis
+        revient.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : ouvrir, taper, touche, injecter,
+        choisie, etat, jusqua.
+        """
+        self.ouvrir()
+        self.taper("fire")
+        self.touche("down", "down")
+        self.assertEqual(self.choisie(), "fen:0xa2")
+        self.injecter(fenetres=[f for f in FENETRES if f["adresse"] != "0xa1"])
+        self.jusqua(lambda: "fen:0xa1" not in self.etat()["cles"], "fenêtre retirée")
+        self.assertEqual((self.choisie(), self.etat()["sel"]["index"]), ("fen:0xa2", 1))
+        self.injecter(fenetres=FENETRES)
+        self.jusqua(lambda: "fen:0xa1" in self.etat()["cles"], "fenêtre revenue")
+        self.assertEqual((self.choisie(), self.etat()["sel"]["index"]), ("fen:0xa2", 2))
+
+    def test_frappe_remet_en_tete(self):
+        """Vérifie qu'une nouvelle frappe remet la sélection en tête, même si le résultat retenu reste dans la liste,
+        et que le résultat de tête est ensuite suivi.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : ouvrir, taper, touche, injecter,
+        choisie, etat, jusqua.
+        """
+        self.ouvrir()
+        self.taper("fir")
+        self.touche("down", "down")
+        self.taper("e")
+        self.assertEqual((self.etat()["sel"]["index"], self.choisie()), (0, "app:firefox"))
+        self.injecter(entrees=[entree("fire", "Fire"), *ENTREES])
+        self.jusqua(lambda: "app:fire" in self.etat()["cles"], "application ajoutée")
+        self.assertEqual(self.choisie(), "app:firefox")
+
+    def test_vignette_suivie(self):
+        """Vérifie que la vignette choisie dans l'aperçu garde sa fenêtre quand une vignette placée avant elle disparaît.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : ouvrir, taper, touche, injecter,
+        etat, jusqua, attendre.
+        """
+        self.ouvrir()
+        self.taper("fire")
+        self.touche("tab", "up", "right")
+        self.assertEqual(self.etat()["sel"], {"zone": "apercu", "rang": 0, "index": 1, "rangee": "vignettes"})
+        self.injecter(fenetres=[f for f in FENETRES if f["adresse"] != "0xa2"])
+        self.jusqua(lambda: "fen:0xa2" not in self.etat()["cles"], "fenêtre retirée")
+        self.assertEqual(self.etat()["sel"], {"zone": "apercu", "rang": 0, "index": 0, "rangee": "vignettes"})
+        self.touche("return")
+        self.attendre("essai : exécuté amener 0xa1")
+
+    def test_apercu_disparu_revient_a_la_liste(self):
+        """Vérifie que la disparition du résultat dont on parcourt l'aperçu ramène la sélection à la liste, sans
+        désigner l'aperçu du voisin.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : ouvrir, taper, touche, injecter,
+        etat, jusqua.
+        """
+        self.ouvrir()
+        self.taper("fire")
+        self.touche("down", "tab")
+        self.assertEqual(self.etat()["sel"]["zone"], "apercu")
+        self.injecter(fenetres=[f for f in FENETRES if f["adresse"] != "0xa1"])
+        self.jusqua(lambda: "fen:0xa1" not in self.etat()["cles"], "fenêtre retirée")
+        self.assertEqual(self.etat()["sel"], {"zone": "liste", "rang": 1, "index": 1})
+
+    def test_calcul_prend_la_tete(self):
+        """Vérifie qu'un calcul arrivé en tête prend la sélection tant que rien n'a bougé, et la laisse au résultat
+        retenu sinon.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : ouvrir, taper, touche, injecter,
+        choisie, etat, jusqua.
+        """
+        fenetres = [dict(FENETRES[3], adresse=a, titre=t) for a, t in (("0xc1", "12*3 devis"), ("0xc2", "12*3 facture"))]
+        muet, parle = {"valeur": "", "expression": ""}, {"valeur": "36", "expression": "12*3"}
+        self.injecter(entrees=[], fenetres=fenetres, calcul=muet)
+        self.ouvrir()
+        self.taper("12*3")
+        self.assertEqual(self.choisie(), "fen:0xc1")
+        self.injecter(calcul=parle)
+        self.jusqua(lambda: "calc" in self.etat()["cles"], "calcul arrivé")
+        self.assertEqual(self.choisie(), "calc")
+        self.injecter(calcul=muet)
+        self.jusqua(lambda: "calc" not in self.etat()["cles"], "calcul parti")
+        self.touche("down")
+        self.assertEqual(self.choisie(), "fen:0xc2")
+        self.injecter(calcul=parle)
+        self.jusqua(lambda: "calc" in self.etat()["cles"], "calcul revenu")
+        self.assertEqual(self.choisie(), "fen:0xc2")
+
     def test_action_apres_retrait_du_calque(self):
         """Vérifie qu'à la fermeture la fenêtre reste le temps de son fondu de sortie (sortant), puis est déchargée et
         son calque retiré ; qu'une réouverture pendant la sortie reprend la même fenêtre ; et qu'une action choisie ne
@@ -1090,6 +1197,8 @@ class ClavierTest(FenetreTest):
     test_ouvre_sur_accueil = test_premiere_lettre_scinde = test_effacer_revient_a_l_accueil = test_aucun_resultat = None
     test_tab_entre_dans_l_apercu = test_eteindre_ouvre_le_menu = test_fenetre_disparue = test_ferme_libere = None
     test_action_apres_retrait_du_calque = test_reouverture_annule_l_action = None
+    test_selection_suit_le_resultat = test_frappe_remet_en_tete = test_vignette_suivie = None
+    test_apercu_disparu_revient_a_la_liste = test_calcul_prend_la_tete = None
 
 
 class CommandesTest(unittest.TestCase):

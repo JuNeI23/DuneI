@@ -153,6 +153,17 @@ function deplacer(sel, touche, dispo) {
     return sel
 }
 
+// suivre — place d'une sélection quand la liste change sous elle.
+// Entrées : cles, clés de la nouvelle liste ; cle, clé de l'élément retenu (« » si aucun) ; index, sa place dans
+// l'ancienne liste ; calculEnTete, vrai si un calcul arrivé en tête doit prendre la sélection. Sortie : 0 pour un tel
+// calcul ; sinon la place de cle dans cles ; sinon, l'élément ayant disparu, index ramené dans la liste (0 si elle est
+// vide). Erreurs : aucune. Dépendances : aucune.
+function suivre(cles, cle, index, calculEnTete) {
+    if (calculEnTete) return 0
+    const i = cles.indexOf(cle)
+    return i >= 0 ? i : Math.max(0, Math.min(cles.length - 1, index))
+}
+
 // elementApercu — élément de l'aperçu désigné par une sélection.
 // Entrées : elements, tableau rendu par elementsApercu ; sel, la sélection (zone « apercu », rangee, index).
 // Sortie : l'élément d'index sel.index parmi ceux de genre « bouton » (rangée « boutons ») ou « vignette » (rangée
