@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Hyprland
+import "../Composants"
 import "../Theme"
 import "../Energie"
 
@@ -12,7 +13,7 @@ import "../Energie"
 // une presqu'île déjà posée), le motif par lequel l'Ouvreuse relance le sien ; il s'arrête si le module cesse d'être
 // visible (une galerie ouverte par-dessus) et repart entier à son retour ; à son terme, la demande est libérée et la
 // presqu'île se replie seule. La presqu'île n'est pas libre tant que Theme n'est pas prêt (le délai serait sans
-// valeur), quand l'espace de travail de l'écran actif porte une fenêtre en plein écran (la presqu'île, sur la couche
+// valeur), quand l'écran actif montre un vrai plein écran (la presqu'île, sur la couche
 // Top, y est cachée), ni quand la galerie est montée sur cet écran : l'alerte attend alors (enAttente), et s'affiche,
 // pour son délai entier, dès la sortie du plein écran ou la fermeture de la galerie. La reprise suit la liaison libre,
 // sans aucun sondage, et vise l'écran actif au moment de l'affichage, non celui du franchissement ; une galerie ouverte
@@ -30,7 +31,7 @@ import "../Energie"
 // Sorties : enAttente, le palier retenu (0 sinon) ; affiche, le palier montré, lu par le module Alerte ; cible, la
 //           presqu'île qui porte l'alerte (null sinon) ; demandes « alerte » et leur libération.
 // Erreurs : aucune ; sans presqu'île sur l'écran actif, l'alerte attend qu'il en ait une.
-// Dépendances : quickshell ≥ 0.3 (Hyprland), Theme (motion.delays.alerte), EtatEnergie, Alerte.
+// Dépendances : quickshell ≥ 0.3 (Hyprland), Theme (motion.delays.alerte), EtatEnergie, PleinEcran, Alerte.
 Scope {
     id: annonceur
 
@@ -40,7 +41,7 @@ Scope {
     property int affiche: 0
     // Écran actif et plein écran : mêmes liaisons, et mêmes raisons, que dans l'Ouvreuse.
     property var ecranActif: Quickshell.screens.find(s => s.name === Hyprland.focusedMonitor?.name) ?? null
-    property bool pleinEcran: Hyprland.focusedMonitor?.activeWorkspace?.hasFullscreen ?? false
+    property bool pleinEcran: PleinEcran.sur(Hyprland.focusedMonitor?.name ?? "")
     property var etat: EtatEnergie
     property Component galerie: null
     property Component alerte: Component { Alerte { palier: annonceur.affiche } }

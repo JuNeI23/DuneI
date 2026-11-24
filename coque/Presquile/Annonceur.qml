@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Hyprland
+import "../Composants"
 import "../Theme"
 import "../Audio"
 
@@ -10,7 +11,7 @@ import "../Audio"
 // la presqu'île rend le module suivant de son arbitre, par ordre de priorité : la galerie (3) si elle est ouverte,
 // l'alerte d'énergie (2) si elle est affichée, sinon les bureaux. Le volume (1) passe sous l'une et l'autre. Une rafale
 // d'annonces ne monte le module qu'une fois : une demande renouvelée est sans effet dans l'arbitre, et le module lit
-// lui-même l'annonce courante. Rien ne s'ouvre si l'espace de travail de l'écran actif porte une fenêtre en plein
+// lui-même l'annonce courante. Rien ne s'ouvre si l'écran actif montre un vrai plein
 // écran (la presqu'île, sur la couche Top, y est cachée). Si l'écran actif change pendant l'affichage, la demande en
 // cours reste posée sur l'ancienne presqu'île et se libère à la fin du délai de 1,5 s ; l'annonce suivante vise la
 // nouvelle. Une presqu'île retirée (écran débranché) est oubliée.
@@ -20,7 +21,7 @@ import "../Audio"
 //           remplacent ecranActif, pleinEcran, etat et volume.
 // Sorties : cible, la presqu'île qui porte la jauge (null sinon) ; demandes « volume » et leur libération.
 // Erreurs : aucune ; sans presqu'île sur l'écran actif, ou en plein écran, une annonce ne montre rien.
-// Dépendances : quickshell ≥ 0.3 (Hyprland), Theme (motion.delays.dismiss), EtatAudio, Volume.
+// Dépendances : quickshell ≥ 0.3 (Hyprland), Theme (motion.delays.dismiss), EtatAudio, PleinEcran, Volume.
 Scope {
     id: annonceur
 
@@ -28,7 +29,7 @@ Scope {
     property var cible: null
     // Écran actif et plein écran : mêmes liaisons, et mêmes raisons, que dans l'Ouvreuse.
     property var ecranActif: Quickshell.screens.find(s => s.name === Hyprland.focusedMonitor?.name) ?? null
-    property bool pleinEcran: Hyprland.focusedMonitor?.activeWorkspace?.hasFullscreen ?? false
+    property bool pleinEcran: PleinEcran.sur(Hyprland.focusedMonitor?.name ?? "")
     property var etat: EtatAudio
     property Component volume: Component { Volume {} }
 

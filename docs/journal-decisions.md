@@ -4805,3 +4805,36 @@ lui passe `currency conversion off`, si bien qu'un montant reste dans la monnaie
 que si on la demande (« 20 € en $ »). Écarté : changer la langue du système, qui touche bien plus que le lanceur.
 
 *Touché : `coque/Lanceur/Calcul.qml`, tests `test_lanceur`.*
+
+### D220 · La presqu'île glisse hors du bord haut et y rentre
+
+24 novembre 2026 · fin de L2-48. Nicolas a choisi que la presqu'île bouge seule, sans la barre, et par glissement :
+l'encoche descend du bord haut au démarrage et à la sortie d'un plein écran, et y remonte à l'entrée. Écartées : la
+rétractation en îlot, trop longue au départ et qui remonterait le module à chaque fois, et la couche overlay, qui
+reviendrait sur D97 et laisserait une surface au-dessus des jeux et des vidéos.
+
+- **Ressort `overlay`**, celui du fondu que Hyprland applique aux calques hauts, pour que les deux gestes
+  restent ensemble. Éprouvé sur l'écran : ce fondu laisse le départ nettement visible environ 70 ms. Aucune règle
+  `no_anim`, qui le couperait. En mouvement réduit, un second ressort, de nature « fondu »,
+  porte l'opacité, sans déplacement.
+- **Démarrage.** L'apparition attend `presquile.apparition` (250 ms) après le thème prêt : Hyprland ouvre le calque avec
+  un léger zoom, qui détacherait l'encoche du bord.
+- **Masque de saisie en coordonnées.** `Region` ne suit que l'élément qu'on lui donne, pas ses parents : lié au corps de
+  l'encoche, il serait resté hors de l'écran et la presqu'île n'aurait plus reçu de clic. Replié, il est vide.
+- **Pixel physique.** L'ordonnée s'y cale ; entre deux pixels, le bas de la forme se peignait à moitié (capture).
+
+*Touché : `coque/Presquile/` (`Glissement.qml`, `Presquile.qml`), `tokens.toml`, tests `test_presquile`, bible, carnet,
+fiche `docs/superpowers/specs/2026-11-24-presquile-apparition-design.md` (1.1).*
+
+### D221 · Le plein écran est celui du protocole Wayland, lu en un seul endroit
+
+24 novembre 2026 · L2-48, précise D129. `hasFullscreen` de Hyprland vaut vrai aussi pour une fenêtre agrandie, qui ne
+masque pourtant rien : cinq lecteurs s'y trompaient (galerie, volume, alerte de batterie, notifications et leur panneau).
+Le protocole des fenêtres Wayland n'annonce `fullscreen` que pour le vrai plein écran, éprouvé sur l'écran ;
+`PleinEcran`, singleton de `Composants`, le lit écran par écran, le bureau spécial ouvert faisant foi à la place de
+l'espace actif, comme dans Hyprland. Le suivi du bureau spécial y est repris du module des bureaux. Une galerie ouverte
+quand un plein écran commence se ferme, comme le panneau des notifications : elle garderait sinon le clavier sans être
+visible.
+
+*Touché : `coque/Composants/` (`PleinEcran.qml`, `pleinecran.js`), `coque/Presquile/`, `coque/Galerie/Ouvreuse.qml`,
+`coque/Notifications/` (`Centre.qml`, `FenetrePanneau.qml`), tests `test_presquile` et `test_galerie`.*

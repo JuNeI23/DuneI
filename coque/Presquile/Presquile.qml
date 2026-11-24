@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Wayland
+import "../Composants" as Composants
 import "../Theme"
 
 // Presquile — surface de la presqu'île, posée au centre du bord haut de chaque écran (L2-46).
@@ -12,9 +13,12 @@ import "../Theme"
 // l'encoche suit celle du module par les deux Ressorts « window » de la scène : immobile tant que le module garde sa
 // taille, elle s'étire sans saut quand il en change.
 // Changer de module déroule la séquence de la scène (L2-48) : fondu de sortie, étirement, fondu d'entrée ; en
-// mouvement réduit, la taille se pose aussitôt et seuls les fondus restent. La fenêtre réserve en plus
+// mouvement réduit, la taille se pose aussitôt et seuls les fondus restent. L'encoche glisse hors du bord haut au
+// démarrage (Theme prêt, puis presquile.apparition) et à la sortie d'un vrai plein écran de son écran, et y rentre à
+// l'entrée (Glissement), sans que la fenêtre bouge. La fenêtre réserve en plus
 // de l'encoche la marge de son ombre, pour qu'elle ne soit pas coupée. Le masque de saisie ne couvre que le corps de
-// l'encoche : partout ailleurs, les clics traversent. Elle ne réserve aucune place et ne prend jamais le focus clavier.
+// l'encoche, et rien quand elle est repliée : partout ailleurs, les clics traversent. Elle ne réserve aucune place et ne
+// prend jamais le focus clavier.
 // Entrées : modelData, l'écran que lui donne le Variants de la coque (obligatoire) ; demander(cle, composant,
 //           priorite) et liberer(cle), par lesquels les modules (galerie 3, alerte 2, volume 1) réclament la
 //           presqu'île, que tranche un Arbitre : le composant de contenu est un Item déclarant implicitWidth et
@@ -28,8 +32,9 @@ import "../Theme"
 //           clavier (HyprlandFocusGrab).
 // Erreurs : sans jeton de thème, l'encoche est vide et la fenêtre reste posée ; un module sans taille laisse l'encoche
 //           à la hauteur des jetons.
-// Dépendances : quickshell ≥ 0.3 (PanelWindow, Region, WlrLayershell), Arbitre, Encoche, Scene, Bureaux, Ressort,
-// Theme.
+// Dépendances : quickshell ≥ 0.3 (PanelWindow, Region, WlrLayershell), Arbitre, Encoche, Glissement, Scene, Bureaux,
+// Ressort, Composants (PleinEcran), Theme (ready, tokens.presquile).
+// Composants est importé sous son nom : il porte lui aussi un type Scene.
 PanelWindow {
     id: surface
 
@@ -58,6 +63,20 @@ PanelWindow {
     readonly property Ressort largeur: scene.ressortLargeur
     readonly property Ressort hauteur: scene.ressortHauteur
 
+    // Vrai une fois échue l'attente qui suit le thème prêt : le calque, posé, ne bouge plus quand l'encoche descend.
+    property bool apparue: false
+    Timer {
+        interval: Theme.tokens?.presquile?.apparition ?? 0
+        running: Theme.ready && !surface.apparue
+        onTriggered: surface.apparue = true
+    }
+
+    Glissement {
+        id: glissement
+        presente: surface.apparue && !Composants.PleinEcran.sur(surface.modelData?.name ?? "")
+        course: encoche.hauteur + encoche.marge
+    }
+
     screen: modelData
     anchors { top: true; left: true; right: true }
     // Pleine largeur, et hauteur tenue par la scène pendant le mouvement : seule la forme s'anime, jamais la fenêtre.
@@ -71,7 +90,12 @@ PanelWindow {
     onImplicitHeightChanged: Qt.callLater(() => encoche.Window.window?.update())
     exclusionMode: ExclusionMode.Ignore
     color: "transparent"
-    mask: Region { item: encoche.corps }
+    // Posé à la place finale du corps, et non lié à lui : Region ne voit pas bouger les parents de son élément.
+    mask: Region {
+        x: encoche.x + encoche.corps.x
+        width: glissement.presente ? encoche.largeurCorps : 0
+        height: glissement.presente ? encoche.hauteur : 0
+    }
     WlrLayershell.namespace: "dunei-presquile"
     WlrLayershell.layer: WlrLayer.Top
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
@@ -79,6 +103,9 @@ PanelWindow {
     Encoche {
         id: encoche
         x: (surface.width - implicitWidth) / 2
+        // Calée sur le pixel physique : entre deux, le bas de la forme se peint à moitié.
+        y: Math.round(glissement.decalage * surface.devicePixelRatio) / surface.devicePixelRatio
+        opacity: glissement.opacite
         // Noms qualifiés : dans ce bloc, « hauteur » désignerait la propriété de l'Encoche elle-même.
         largeurCorps: surface.largeur.value
         hauteur: surface.hauteur.value

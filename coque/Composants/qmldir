@@ -1,5 +1,6 @@
 module Composants
 singleton Overlays 1.0 Overlays.qml
+singleton PleinEcran 1.0 PleinEcran.qml
 Activite 1.0 Activite.qml
 Bascule 1.0 Bascule.qml
 Bouton 1.0 Bouton.qml

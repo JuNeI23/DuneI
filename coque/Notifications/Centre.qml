@@ -2,6 +2,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Hyprland
 import Quickshell.Services.Notifications
+import "../Composants"
 import "../Theme"
 
 // Centre — serveur de notifications unique de la coque (L2-19) : la coque possède org.freedesktop.Notifications.
@@ -14,19 +15,19 @@ import "../Theme"
 // (make install, toute modification de coque/), les notifications encore suivies de la génération précédente sont
 // réémises par onNotification (lastGeneration vrai) et reprennent place dans la nouvelle pile, minuterie à neuf ; sans
 // cela, cartes et file disparaîtraient sans avoir été vues.
-// Entrées : pleinEcran, vrai tant que l'espace de travail actif de l'écran actif a une fenêtre en plein écran (même
-// liaison que dans AnnonceurAlerte) ; retenue, vraie pendant le plein écran et encore notifications.reprise ms après
+// Entrées : pleinEcran, vrai tant que l'écran actif montre une fenêtre en vrai plein écran (PleinEcran, comme dans
+// AnnonceurAlerte) ; retenue, vraie pendant le plein écran et encore notifications.reprise ms après
 // sa fin, pour que la première carte n'entre pas pendant l'animation de sortie du plein écran (recette de L2-19) ;
 // une coque d'essai la remplace.
 // Sorties : pile, la Pile des notifications reçues ; attente, l'Attente de la pile (notifications gardées).
 // Erreurs : si un autre démon tient déjà le nom org.freedesktop.Notifications, Quickshell le journalise et aucune
 // notification n'arrive.
 // Dépendances : quickshell ≥ 0.3 (Quickshell.Services.Notifications, Quickshell.Hyprland), Pile, Attente,
-// EtatNotifications, Voix.
+// EtatNotifications, PleinEcran, Voix.
 NotificationServer {
     id: centre
 
-    readonly property bool pleinEcran: Hyprland.focusedMonitor?.activeWorkspace?.hasFullscreen ?? false
+    readonly property bool pleinEcran: PleinEcran.sur(Hyprland.focusedMonitor?.name ?? "")
     property bool retenue: pleinEcran || reprise.running
     readonly property Timer reprise: Timer { interval: Theme.notifications?.reprise ?? 0 }
 

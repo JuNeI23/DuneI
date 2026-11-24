@@ -10,7 +10,7 @@ import "galerie.js" as Logique
 // Rôle : expose par IPC (cible « galerie ») basculer(), que lie SUPER + W. Ouvrir monte le module Galerie dans la
 // presqu'île de l'écran actif seule, par une demande de priorité 3 à l'arbitre de la presqu'île, libérée à la
 // fermeture ; rien ne s'ouvre si
-// l'espace de travail de l'écran actif porte une fenêtre en plein écran (la presqu'île, sur la couche Top, serait
+// l'écran actif montre une fenêtre en vrai plein écran (la presqu'île, sur la couche Top, serait
 // cachée tout en prenant le clavier). L'ouvreuse est un contextuel exclusif du registre Overlays (D108) : l'ouvrir
 // ferme le popover de la barre éventuellement ouvert, et un popover qui s'ouvre la referme. Pendant l'ouverture, un
 // HyprlandFocusGrab sur la fenêtre de la presqu'île prend le clavier ; sa levée (clic en dehors) referme la galerie.
@@ -28,8 +28,8 @@ import "galerie.js" as Logique
 // Entrées : les presqu'îles, inscrites par inscrire() et retirées par retirer() ; chacune porte modelData (son écran),
 //           module (composant arbitré, lu), demander() et liberer() (par lesquelles l'ouvreuse réclame et rend la
 //           presqu'île), contenu et phase (lus), et fenetre (la fenêtre du grab, ou null) ;
-//           ecranActif, l'écran du moniteur focalisé d'Hyprland ; pleinEcran, vrai si son espace de travail actif
-//           porte une fenêtre en plein écran (HyprlandWorkspace.hasFullscreen, éprouvé sous Quickshell 0.3.2) ;
+//           ecranActif, l'écran du moniteur focalisé d'Hyprland ; pleinEcran, vrai s'il montre un vrai plein écran
+//           (PleinEcran), dont le début referme la galerie ;
 //           commande, le programme d'application, dunei-fond par défaut ; galerie, le composant du module.
 //           Les essais remplacent ecranActif, pleinEcran, commande et galerie.
 // Sorties : ouvert ; cible, la presqu'île qui porte la galerie (null fermée) ; famille et exclusif, lus par Overlays ;
@@ -39,7 +39,7 @@ import "galerie.js" as Logique
 // Erreurs : sans presqu'île sur l'écran actif, basculer() n'ouvre rien ; un code de sortie non nul de la commande
 //           écrit « galerie : <programme> a échoué (<code>) » au journal (le nom de base du premier élément de la
 //           commande, dunei-fond par défaut), le fond reste inchangé.
-// Dépendances : quickshell ≥ 0.3 (IpcHandler, Process, Hyprland, HyprlandFocusGrab), Theme (imageBureau), Overlays,
+// Dépendances : quickshell ≥ 0.3 (IpcHandler, Process, Hyprland, HyprlandFocusGrab), Theme (imageBureau), Overlays, PleinEcran,
 //               Galerie, galerie.js (identique).
 Scope {
     id: ouvreuse
@@ -57,7 +57,7 @@ Scope {
     // vaut undefined au premier accès. Une liaison sur Hyprland.monitorFor(s) === focusedMonitor ne se réévalue pas
     // quand focusedMonitor se remplit (constaté sous Quickshell 0.3.2) : elle resterait nulle.
     property var ecranActif: Quickshell.screens.find(s => s.name === Hyprland.focusedMonitor?.name) ?? null
-    property bool pleinEcran: Hyprland.focusedMonitor?.activeWorkspace?.hasFullscreen ?? false
+    property bool pleinEcran: PleinEcran.sur(Hyprland.focusedMonitor?.name ?? "")
     property var commande: ["dunei-fond"]
     property Component galerie: Component { Galerie {} }
 
@@ -123,6 +123,8 @@ Scope {
     }
 
     onOuvertChanged: if (!ouvert) rendre()
+    // Un plein écran qui commence recouvre la presqu'île : la galerie garderait le clavier sans être visible.
+    onPleinEcranChanged: if (pleinEcran) ouvert = false
     // Au tour de boucle suivant si Theme est déjà prêt : le démarrage de la coque finit d'abord de créer ses fenêtres.
     // Sinon, la mesure attend Theme : une galerie sans jetons n'a pas de hauteur.
     Component.onCompleted: if (Theme.ready) Qt.callLater(prechauffer)
