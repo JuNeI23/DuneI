@@ -1,0 +1,2 @@
+module Autorisation
+singleton Autorisation 1.0 Autorisation.qml

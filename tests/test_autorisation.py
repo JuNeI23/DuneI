@@ -1,16 +1,18 @@
 """Tests de l'agent d'authentification de la coque (L2-24).
 
 Rôle : éprouve la logique pure d'autorisation.js (réglages et relevé de faillock, état, ligne d'état, rafale d'échecs)
-dans un vrai Quickshell, par l'IPC de la coque d'essai coque/Autorisation/essai/logique. Aucun essai n'ouvre de
-conversation PAM ni polkit, et aucun ne lance faillock.
+dans un vrai Quickshell, par l'IPC de la coque d'essai coque/Autorisation/essai/logique ; puis le contrôleur
+Autorisation, sans fenêtre ni clavier, par la coque d'essai coque/Autorisation/essai/fenetre, dont les flux et le
+lecteur de faillock sont factices. Aucun essai n'ouvre de conversation PAM ni polkit, et aucun ne lance faillock.
 Entrées : aucune. Sorties : résultats unittest. Erreurs : échecs de test.
 Dépendances : qs (Quickshell ≥ 0.3), tests.test_coque_theme (EssaiCoque).
 """
 import json
 import os
 import subprocess
+import time
 import unittest
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from tests.test_coque_theme import DELAI, QS, ROOT, EssaiCoque
 
@@ -110,3 +112,195 @@ class LogiqueTest(EssaiCoque, unittest.TestCase):
         self.assertTrue(self.appeler("rafale", [0, 400], 900))
         self.assertFalse(self.appeler("rafale", [0, 400], 1200))
         self.assertFalse(self.appeler("rafale", [0], 100))
+
+
+SECRET = "factice-7d1f"     # Mot de passe factice, qui ne doit paraître dans aucun journal.
+
+
+def releve(n: int) -> str:
+    """Relevé de faillock de n échecs valides, dans la minute passée. Entrée : n. Sortie : texte. Erreurs : aucune."""
+    t = datetime.now() - timedelta(seconds=30)
+    return ENTETE + f"{t:%Y-%m-%d %H:%M:%S} SVC   polkit-1                                         V\n" * n
+
+
+@unittest.skipUnless(os.environ.get("WAYLAND_DISPLAY") and QS, "session Wayland et Quickshell requis")
+class ControleurTest(EssaiCoque, unittest.TestCase):
+    """Le contrôleur Autorisation, sans fenêtre, sur de faux flux, piloté par l'IPC « essai »."""
+
+    essai = ROOT / "coque" / "Autorisation" / "essai" / "fenetre"
+    teintes = (55,)
+
+    def setUp(self):
+        """Lance la coque d'essai et attend les jetons. Entrées : aucune. Sortie : aucune. Erreurs : échec au délai.
+        Dépendances : installer, lancer, attendre, jusqua."""
+        super().setUp()
+        self.installer(55)
+        self.lancer(self.dir)
+        self.attendre("essai : prêt")
+        self.jusqua(lambda: self.appel("pret") == "true", "jetons chargés")
+
+    def appel(self, fonction: str, *args: str, cible: str = "essai") -> str:
+        """Appelle une fonction IPC. Entrées : fonction, args, cible. Sortie : texte rendu.
+        Erreurs : CalledProcessError. Dépendances : qs."""
+        return subprocess.run([QS, "ipc", "--pid", str(self.proc.pid), "call", cible, fonction, *args], check=True,
+                              capture_output=True, text=True, timeout=DELAI).stdout.strip()
+
+    def etat(self) -> dict:
+        """État de l'agent, par l'IPC « autorisation ». Sortie : {ouvert, etat, ligne, saisieOuverte}."""
+        return json.loads(self.appel("etat", cible="autorisation"))
+
+    def jusqua(self, condition, message: str):
+        """Attend qu'une condition rende une valeur vraie et la rend. Entrées : condition, message.
+        Sortie : la valeur. Erreurs : échec du test au délai. Dépendances : journal."""
+        fin = time.monotonic() + DELAI
+        while time.monotonic() < fin:
+            valeur = condition()
+            if valeur:
+                return valeur
+            time.sleep(0.05)
+        self.fail(f"{message} attendu :\n{self.journal()}")
+
+    def demander(self, **props) -> int:
+        """Nouvelle demande factice. Entrées : propriétés du flux. Sortie : son rang."""
+        return int(self.appel("demander", json.dumps(props)))
+
+    def saisie(self) -> dict:
+        """Attend la fin de la garde de frappe. Sortie : l'état."""
+        return self.jusqua(lambda: (e := self.etat())["saisieOuverte"] and e, "saisie ouverte")
+
+    def appels(self, i: int = 0) -> list:
+        """Appels reçus par un faux flux. Entrée : i, son rang. Sortie : liste."""
+        return json.loads(self.appel("appels", str(i)))["appels"]
+
+    def vides(self) -> int:
+        """Nombre de vidages du champ. Sortie : entier."""
+        return json.loads(self.appel("appels", "0"))["vides"]
+
+    def test_ouverture_envoi_succes(self):
+        """Une demande ouvre, un envoi part une seule fois, le succès ferme. Erreurs : assertion."""
+        self.demander()
+        self.assertEqual((self.etat()["ouvert"], self.etat()["etat"]), (True, "saisie"))
+        self.saisie()
+        avant = self.vides()
+        self.appel("soumettre", SECRET)
+        self.appel("soumettre", SECRET)
+        self.assertEqual(self.appels(), [["submit", SECRET]])
+        self.assertEqual(self.etat()["etat"], "verification")
+        self.assertGreater(self.vides(), avant)
+        self.appel("poser", "0", '{"isSuccessful": true, "isCompleted": true}')
+        self.assertEqual((self.etat()["ouvert"], self.etat()["etat"]), (False, "succes"))
+        self.assertEqual(self.appels(), [["submit", SECRET]])
+        self.assertNotIn(SECRET, self.journal())
+        self.assertNotIn(SECRET, self.appel("etat", cible="autorisation"))
+
+    def test_envois_refuses(self):
+        """Réponse vide, hors demande de réponse ou sans flux : rien ne part. Erreurs : assertion."""
+        self.appel("soumettre", SECRET)
+        self.demander()
+        self.saisie()
+        self.appel("soumettre", "")
+        self.appel("poser", "0", '{"isResponseRequired": false}')
+        self.assertEqual(self.etat()["etat"], "attente")
+        self.appel("soumettre", SECRET)
+        self.assertEqual(self.appels(), [])
+
+    def test_garde_de_frappe(self):
+        """Tant que des touches tombent, la saisie reste fermée et rien ne part ; elle s'ouvre après. Erreurs : assertion."""
+        self.appel("frapper", "true")
+        self.demander()
+        time.sleep(1)
+        self.assertFalse(self.etat()["saisieOuverte"])
+        self.appel("soumettre", SECRET)
+        self.assertEqual(self.appels(), [])
+        self.appel("frapper", "false")
+        self.saisie()
+        self.appel("frapper", "true")     # Une fois la saisie ouverte, taper ne la referme plus.
+        time.sleep(0.3)
+        self.assertTrue(self.etat()["saisieOuverte"])
+
+    def test_seconde_demande(self):
+        """La seconde demande reprend la fenêtre, champ vidé, garde relancée ; le premier flux est laissé (essai réel
+        2a), et rien ne part sur aucun des deux. Erreurs : assertion."""
+        self.demander()
+        self.saisie()
+        avant = self.vides()
+        self.appel("frapper", "true")
+        self.appel("frapper", "true")
+        self.assertEqual(self.demander(message="Seconde"), 1)
+        self.assertFalse(self.etat()["saisieOuverte"])
+        self.assertGreater(self.vides(), avant)
+        self.appel("soumettre", SECRET)
+        self.appel("poser", "0", '{"isCancelled": true, "isCompleted": true}')
+        self.assertTrue(self.etat()["ouvert"])
+        self.assertEqual((self.appels(0), self.appels(1)), ([], []))
+        self.appel("frapper", "false")
+        self.saisie()
+        self.appel("soumettre", SECRET)
+        self.assertEqual((self.appels(0), self.appels(1)), ([], [["submit", SECRET]]))
+
+    def test_annulation_unique(self):
+        """Annuler, ou une autre attention ouverte, annule une seule fois. Erreurs : assertion."""
+        self.demander()
+        self.appel("annuler")
+        self.appel("annuler")
+        self.assertEqual((self.appels(0), self.etat()["ouvert"]), ([["annuler"]], False))
+        self.demander()
+        self.appel("attention")
+        self.assertEqual((self.appels(1), self.etat()["ouvert"]), ([["annuler"]], False))
+
+    def test_close_par_polkit(self):
+        """Une demande close par polkit, ou un flux retiré, ferme sans annulation. Erreurs : assertion."""
+        self.demander()
+        self.appel("poser", "0", '{"isCancelled": true, "isCompleted": true}')
+        self.assertEqual((self.appels(0), self.etat()["ouvert"]), ([], False))
+        self.demander()
+        self.appel("clore")
+        self.assertEqual((self.appels(1), self.etat()["ouvert"]), ([], False))
+
+    def test_echec_et_essais_restants(self):
+        """Après un échec, faillock est relu et la ligne compte les essais restants. Erreurs : assertion."""
+        self.demander()
+        self.saisie()
+        self.appel("lire", json.dumps({"faillock": releve(1), "conf": "deny = 5\n"}))
+        self.appel("soumettre", SECRET)
+        self.appel("emettre", "0", "authenticationFailed")
+        self.appel("poser", "0", '{"isResponseRequired": true}')
+        e = self.etat()
+        self.assertEqual((e["etat"], e["ligne"]["texte"], e["saisieOuverte"]),
+                         ("saisie", "Mot de passe incorrect. Quatre essais restants.", True))
+
+    def test_lecteur_illisible(self):
+        """Un lecteur qui lève laisse le champ ouvert. Erreurs : assertion."""
+        self.appel("lire", "leve")
+        self.demander()
+        self.saisie()
+        self.appel("soumettre", SECRET)
+        self.appel("emettre", "0", "authenticationFailed")
+        self.appel("poser", "0", '{"isResponseRequired": true}')
+        e = self.etat()
+        self.assertEqual((e["etat"], e["ligne"]["texte"]), ("saisie", "Mot de passe incorrect."))
+
+    def test_verrouille(self):
+        """Compte verrouillé à l'ouverture : rien ne part, l'heure est dite. Erreurs : assertion."""
+        self.appel("lire", json.dumps({"faillock": releve(5), "conf": "deny = 5\n"}))
+        self.demander()
+        self.appel("soumettre", SECRET)
+        e = self.etat()
+        self.assertEqual((e["etat"], e["saisieOuverte"], self.appels()), ("verrouille", False, []))
+        self.assertRegex(e["ligne"]["texte"], r"^Compte verrouillé\. Réessayer à \d+ h \d\d\.$")
+
+    def test_rafale(self):
+        """Trois échecs en chaîne annulent la demande, une fois. Erreurs : assertion."""
+        self.demander()
+        for _ in range(3):
+            self.appel("emettre", "0", "authenticationFailed")
+        self.assertEqual((self.appels(), self.etat()["ouvert"]), ([["annuler"]], False))
+
+    def test_identite(self):
+        """L'utilisateur courant est retenu s'il figure dans la liste, sinon le choix de polkit reste. Erreurs : assertion."""
+        moi = {"string": os.environ["USER"], "isGroup": False}
+        root = {"string": "root", "isGroup": False}
+        self.demander(identities=[root, moi], selectedIdentity=root)
+        self.assertEqual(json.loads(self.appel("identite", "0")), moi)
+        self.demander(identities=[root], selectedIdentity=root)
+        self.assertEqual(json.loads(self.appel("identite", "1")), root)
