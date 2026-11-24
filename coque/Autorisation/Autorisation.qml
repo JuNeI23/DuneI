@@ -54,7 +54,7 @@ Singleton {
     readonly property var fenetre: scene.fenetre
     // Écran de la demande, figé à l'ouverture : il borne la hauteur du cadre.
     readonly property var ecran: scene.ecran
-    readonly property bool saisieOuverte: etat === "saisie" && Theme.motion !== null && !garde.running
+    readonly property bool saisieOuverte: flux !== null && etat === "saisie" && Theme.motion !== null && !garde.running
     readonly property var ligne: Logique.ligne(etat, { echec: echec, restants: restants, jusqua: jusqua, supplement: supplement })
     readonly property string utilisateur: Quickshell.env("USER") ?? ""
 

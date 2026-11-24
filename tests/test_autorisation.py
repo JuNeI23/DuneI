@@ -258,8 +258,9 @@ class ControleurTest(EssaiCoque, unittest.TestCase):
         self.appel("poser", "0", '{"isCancelled": true, "isCompleted": true}')
         self.assertEqual((self.appels(0), self.etat()["ouvert"]), ([], False))
         self.demander()
+        self.saisie()
         self.appel("clore")
-        self.assertEqual((self.appels(1), self.etat()["ouvert"]), ([], False))
+        self.assertEqual((self.appels(1), self.etat()["ouvert"], self.etat()["saisieOuverte"]), ([], False, False))
 
     def test_succes_dans_l_ordre_de_quickshell(self):
         """Au succès, Quickshell retire le flux avant de signaler la fin (essai réel 3) : « Autorisé » se montre quand
