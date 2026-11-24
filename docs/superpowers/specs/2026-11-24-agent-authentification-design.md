@@ -1,6 +1,6 @@
 # Agent d'authentification (L2-24)
 
-Version 1.0 — 2026-11-24 — validée par Nicolas, essais réels sur caladan au lieu d'une VM
+Version 1.1 — 2026-11-24 — validée par Nicolas, essais réels sur caladan au lieu d'une VM ; essais 1 et 2 faits
 
 ## Intention
 
@@ -14,13 +14,20 @@ que ce confort rende le compte plus facile à verrouiller.
 
 - **Enregistrement.** `PolkitAgent` s'enregistre depuis `app-graphical.slice`, la tranche de la coque, et reçoit les
   demandes. La source lue annonçait un échec possible pour un service utilisateur (PR #875) : il ne s'est pas produit.
-- **Annulation.** Une conversation PAM rompue compte comme un échec : quatre demandes annulées ou abandonnées sans mot de
+- **Annulation, sans la règle.** Une conversation PAM rompue compte comme un échec : quatre demandes annulées ou abandonnées sans mot de
   passe ont verrouillé le compte dix minutes. Défaut connu de polkit (#713) ; correctif proposé (#719), non publié.
+- **Annulation, avec la règle** (essais réels 1, 2a et 2b) : quatre conversations rompues, aucun échec dans `faillock`.
+  Le code rendu est bien `PAM_AUTHTOK_ERR` (« Authentication token manipulation error » au journal).
 - **Compte verrouillé.** PAM envoie deux messages (« The account is locked… », « 10 minutes left… »), puis demande quand
   même le mot de passe : `pam_faillock preauth` est `required`.
 - **Demandes simultanées.** La seconde remplace la première (#1312) ; la première ne reçoit plus rien, jusqu'à ce que son
   demandeur abandonne, et Quickshell écrit alors « the cancelled request was not found in the queue ».
-- **Demandeur tué** pendant 0,7 s d'attente : le flux est resté ouvert jusqu'à l'annulation par la sonde.
+  Essai réel 2a, règle posée : annuler le premier flux, remplacé, a fermé aussi le second. `flow` est passé à null, les
+  deux conversations PAM ont été rompues ; le premier demandeur a reçu « Request dismissed », le second est resté sans
+  réponse huit secondes, jusqu'à ce que la sonde le tue.
+- **Demandeur tué** pendant 0,7 s d'attente : le flux est resté ouvert jusqu'à l'annulation par la sonde. À l'essai réel
+  2b, demandeur tué au bout d'une seconde, le flux s'est clos en deux millisecondes : `isCancelled`, puis
+  `isCompleted` vrais, `isResponseRequired` resté vrai, puis `flow` null. Aucun plantage.
 - **Plantage** (lu, non reproduit) : mémoire libérée quand polkitd annule une demande (#1016), ouvert en 0.3.2.
 - **Contenu.** `message`, `actionId` et identités sont fournis ; l'icône était vide ; ni la ligne de commande complète ni
   le processus appelant ne le sont (lu). Les textes suivent `LANG`, ici `en_US.UTF-8`.
@@ -107,9 +114,9 @@ Tout texte PAM que DuneI ne reconnaît pas s'affiche tel quel dans la ligne d'é
 - Un clic sur le voile ne ferme pas : `Scene` gagne `voileFerme`, vrai par défaut, que ce client met à faux.
 - Une demande close par polkit ferme la scène. `cancelAuthenticationRequest` n'est appelée qu'une fois par flux, jamais
   après `isCompleted`.
-- Une seconde demande reprend la fenêtre en place, champ vidé, garde de frappe relancée. Le sort du premier flux
-  (annulation explicite, ou abandon à son demandeur) se décide sur une sonde, menée une fois la règle PAM prouvée et avant
-  d'écrire la machine à états ; si l'annuler trouble le second, il est laissé, et la limite est documentée.
+- Une seconde demande reprend la fenêtre en place, champ vidé, garde de frappe relancée. Le premier flux est laissé,
+  jamais annulé : l'annuler ferme le second (essai réel 2a). Limite : le premier demandeur attend sans réponse, jusqu'à
+  ce qu'il abandonne ou soit arrêté.
 
 ### Garde de frappe
 
@@ -128,7 +135,7 @@ la ligne dit seulement « Mot de passe incorrect. » et le champ reste ouvert : 
 
 - **`systeme/etc/pam.d/polkit-1`**, qui prime sur celui du paquet : la pile `auth` de `system-auth` y est écrite en
   toutes lettres, et `pam_unix` y porte `authtok_err=die conv_err=die`, ce qui arrête la pile avant `authfail`.
-  `account`, `password` et `session` gardent leur `include`. Le code rendu est **déduit du journal**, à prouver sur caladan.
+  `account`, `password` et `session` gardent leur `include`. Prouvé sur caladan (essais réels 1 et 2).
   Dérive : `make install` compare la pile à celle de `/etc/pam.d/system-auth` et avertit, sans bloquer. Ni la CI ni
   `make check` ne le font, leur conteneur n'ayant pas les fichiers de caladan.
 - **`systeme/etc/security/faillock.conf`** : `deny = 5`, le reste aux valeurs par défaut (10 minutes de verrou).
@@ -161,6 +168,7 @@ la ligne dit seulement « Mot de passe incorrect. » et le champ reste ouvert : 
 
 | Version | Date | Changement |
 |---|---|---|
+| 1.1 | 2026-11-24 | Essais réels 1 et 2 : règle prouvée, premier flux laissé à son demandeur, demandeur tué clos par polkit |
 | 1.0 | 2026-11-24 | Validée ; la VM cède la place à des essais réels, règle PAM d'abord |
 | 0.2 | 2026-11-24 | Relecture de constructeur : gardes de développement et de marche, VM, seconde demande, verrou lu dans `faillock`, dérive, retour arrière |
 | 0.1 | 2026-11-24 | Première version |
