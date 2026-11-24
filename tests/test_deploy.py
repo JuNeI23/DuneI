@@ -772,6 +772,80 @@ class DeployTest(unittest.TestCase):
         self.assertTrue(any("root" in e for e in err))
 
 
+class SystemeTest(unittest.TestCase):
+    """Fichiers système repris ou refusés, et dérive de la règle PAM de polkit (L2-24)."""
+
+    REGLE = ("#%PAM-1.0\n# Posé par DuneI depuis systeme/\n"
+             "auth  required  pam_faillock.so  preauth\n"
+             "-auth  [success=2 default=ignore]  pam_systemd_home.so\n"
+             "auth  [success=1 authtok_err=die conv_err=die default=bad]  pam_unix.so  try_first_pass nullok\n"
+             "account  include  system-auth\n")
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name) / "racine"
+        self.repo = Path(self.tmp.name) / "depot"
+        self.env = mock.patch.dict(os.environ, {"DUNEI_SYSROOT": str(self.root)})
+        self.env.start()
+        self.cible = self.root / "etc/essai.conf"
+        self.cible.parent.mkdir(parents=True)
+        self.ecrire("etc/essai.conf", "# Essai\n# Posé par DuneI depuis systeme/\ndeny = 5\n")
+
+    def tearDown(self):
+        self.env.stop()
+        self.tmp.cleanup()
+
+    def ecrire(self, rel, texte):
+        """Écrit un fichier de systeme/ dans le dépôt factice."""
+        src = self.repo / deploy.SYSTEME / rel
+        src.parent.mkdir(parents=True, exist_ok=True)
+        src.write_text(texte, encoding="utf-8")
+
+    def types(self):
+        """Types des actions prévues, puis erreurs."""
+        actions, err = deploy.plan_systeme(self.repo, self.root)
+        return [a[0] for a in actions], err
+
+    def assert_refus(self):
+        """Vérifie que la cible étrangère est refusée et qu'aucune copie n'est prévue."""
+        types, err = self.types()
+        self.assertEqual(types, [])
+        self.assertEqual(err, [f"{self.cible} existe mais n'a pas été posé par DuneI"])
+
+    def test_reprise_tout_en_commentaires(self):
+        self.cible.write_text("# a\n\n  # b\n", encoding="utf-8")
+        self.assertEqual(self.types(), (["sudo-copy"], []))
+
+    def test_reprise_refusee_si_reglage(self):
+        self.cible.write_text("# a\ndeny = 3\n", encoding="utf-8")
+        self.assert_refus()
+
+    def test_reprise_refusee_si_lien(self):
+        vrai = self.root / "etc/ailleurs.conf"
+        vrai.write_text("# a\n", encoding="utf-8")
+        self.cible.symlink_to(vrai)
+        self.assert_refus()
+
+    def test_reprise_refusee_si_illisible(self):
+        self.cible.write_bytes(b"# \xff\xfe\n")
+        self.assert_refus()
+
+    def test_derive_pam(self):
+        self.ecrire("etc/pam.d/polkit-1", self.REGLE)
+        pam = self.root / "etc/pam.d/system-auth"
+        self.assertNotIn("pam-derive", self.types()[0])
+        pam.parent.mkdir(parents=True)
+        identique = "\n".join(l.replace("authtok_err=die conv_err=die ", "").replace("  ", " ")
+                              for l in self.REGLE.splitlines() if "auth " in l) + "\npassword required pam_unix.so\n"
+        pam.write_text(identique, encoding="utf-8")
+        self.assertNotIn("pam-derive", self.types()[0])
+        pam.write_text(identique + "auth required pam_neuf.so\n", encoding="utf-8")
+        actions, err = deploy.plan_systeme(self.repo, self.root)
+        self.assertEqual((err, actions[-1]), ([], ("pam-derive", pam)))
+        self.assertIn("pam-derive", deploy.NOTES)
+        self.assertIn(str(pam), deploy.describe(actions[-1]))
+
+
 class SocleTest(unittest.TestCase):
     """Services système de services.toml : activation et pare-feu (L1-25), état de systemd simulé."""
 
