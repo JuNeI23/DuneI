@@ -261,6 +261,18 @@ class ControleurTest(EssaiCoque, unittest.TestCase):
         self.appel("clore")
         self.assertEqual((self.appels(1), self.etat()["ouvert"]), ([], False))
 
+    def test_succes_dans_l_ordre_de_quickshell(self):
+        """Au succès, Quickshell retire le flux avant de signaler la fin (essai réel 3) : « Autorisé » se montre quand
+        même, puis l'île se ferme. Erreurs : assertion."""
+        self.demander()
+        self.saisie()
+        self.appel("soumettre", SECRET)
+        self.appel("poser", "0", '{"isSuccessful": true}')
+        self.appel("clore")
+        self.assertEqual((self.etat()["ouvert"], self.etat()["etat"], self.etat()["clavier"]), (True, "succes", False))
+        self.jusqua(lambda: not self.etat()["ouvert"], "fermeture après « Autorisé »")
+        self.assertEqual(self.appels(), [["submit", SECRET]])
+
     def test_echec_et_essais_restants(self):
         """Après un échec, faillock est relu et la ligne compte les essais restants. Erreurs : assertion."""
         self.demander()

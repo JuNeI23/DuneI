@@ -144,11 +144,11 @@ Singleton {
 
     // surFlux — reçoit la demande courante de l'agent. Entrée : f, le flux, ou null quand l'agent n'en a plus.
     // Sortie : fenêtre ouverte, ou reprise en place, sur la nouvelle demande, champ vidé et garde relancée ; null ferme
-    // sans annuler. Erreurs : aucune ; le flux déjà courant ou un flux déjà clos ne change rien.
+    // sans annuler, après « Autorisé » si la demande est accordée : Quickshell retire le flux avant d'en signaler la fin. Erreurs : aucune ; le flux déjà courant ou un flux déjà clos ne change rien.
     // Dépendances : choisirIdentite, lire, evaluer, garde, finir.
     function surFlux(f) {
         if (f === flux) return
-        if (!f) { finir(false); return }
+        if (!f) { finir(flux.isSuccessful); return }
         if (f.isCompleted) return
         sortie.stop()
         flux = f
