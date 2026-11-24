@@ -303,10 +303,11 @@ Singleton {
         target: "autorisation"
 
         // etat — état de l'agent en JSON : ouvert, etat, ligne, saisieOuverte, fenetre (vrai si construite), clavier (vrai
-        // si la demande le prend) ; jamais le texte saisi. Entrées : aucune. Sortie : texte. Erreurs : aucune. Dépendances : autorisation.
+        // si la demande le prend), enregistre (agent reçu par polkit) ; jamais le texte saisi. Entrées : aucune. Sortie : texte. Erreurs : aucune. Dépendances : autorisation.
         function etat(): string {
             return JSON.stringify({ ouvert: autorisation.ouvert, etat: autorisation.etat, ligne: autorisation.ligne,
-                                    saisieOuverte: autorisation.saisieOuverte, fenetre: autorisation.fenetre !== null, clavier: autorisation.prendClavier })
+                                    saisieOuverte: autorisation.saisieOuverte, fenetre: autorisation.fenetre !== null, clavier: autorisation.prendClavier,
+                                    enregistre: autorisation.agent?.enregistre ?? false })
         }
     }
 }

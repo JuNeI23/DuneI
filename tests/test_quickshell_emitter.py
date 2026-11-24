@@ -109,7 +109,7 @@ class QuickshellEmitterTest(unittest.TestCase):
 
     def test_autorisation(self):
         """Vérifie les jetons de l'agent d'authentification : mise en marche, cotes de l'île et poussée d'échec (L2-24)."""
-        self.assertEqual(self.out["autorisation"], {"active": False, "largeur": 460, "annonce": 190, "vignette": 56, "glyphe": 26,
+        self.assertEqual(self.out["autorisation"], {"active": True, "largeur": 460, "annonce": 190, "vignette": 56, "glyphe": 26,
                                                     "rangee": 32, "rayon": 18, "secousse": 7})
 
     def test_notifications(self):

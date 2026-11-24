@@ -313,7 +313,9 @@ class ControleurTest(EssaiCoque, unittest.TestCase):
 
     def test_agent_enregistre(self):
         """Règle posée et agent en marche : un seul agent, aucun avis. Erreurs : assertion."""
+        self.assertFalse(self.etat()["enregistre"])
         self.assertEqual(self.agent(), {"agents": 1, "avis": 0, "present": True})
+        self.assertTrue(self.etat()["enregistre"])
 
     def test_agent_sans_regle(self):
         """Règle absente ou sans la marque de DuneI : rien n'est chargé. Erreurs : assertion."""

@@ -1778,7 +1778,7 @@
     "lettreGrisee": 0.7
   },
   "autorisation": {
-    "active": false,
+    "active": true,
     "largeur": 460,
     "annonce": 190,
     "vignette": 56,

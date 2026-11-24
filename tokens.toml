@@ -504,7 +504,7 @@ lettre_grisee = 0.7           # opacité de la lettre d'accès d'un bouton gris 
 # Libellés sur le voile, sombre aux deux moments : bureau.texteClair (choisi), bureau.texteClairSurvol (gris).
 
 [autorisation]                # agent d'authentification polkit (L2-24)
-active = false                # la coque s'enregistre comme agent ; faux, rien n'est chargé
+active = true                 # la coque s'enregistre comme agent ; faux, rien n'est chargé
 largeur = 460                 # corps de l'île ouverte ; px logiques ; maquette autorisation-v3 (G1) validée
 annonce = 190                 # corps de l'île pendant l'annonce et « Autorisé »
 vignette = 56                 # côté de la vignette en verre
