@@ -79,7 +79,8 @@ class PresquileStructureTest(unittest.TestCase):
         self.assertRegex(code, r"Timer\s*\{[^}]*interval:\s*Theme\.tokens\?\.presquile\?\.apparition[^}]*running:\s*Theme\.ready")
         self.assertRegex(code, r"presente:\s*surface\.apparue && !Composants\.PleinEcran\.sur\(surface\.modelData\.name\)")
         self.assertRegex(code, r"course:\s*encoche\.hauteur \+ encoche\.marge")
-        self.assertIn("y: glissement.decalage", code)
+        # Calée sur le pixel physique : entre deux, le bas de la forme se peint à moitié (capture du démarrage).
+        self.assertIn("y: Math.round(glissement.decalage * surface.devicePixelRatio) / surface.devicePixelRatio", code)
         self.assertIn("opacity: glissement.opacite", code)
 
     def test_module_et_ressort(self):

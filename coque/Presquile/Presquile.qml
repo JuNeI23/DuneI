@@ -100,7 +100,8 @@ PanelWindow {
     Encoche {
         id: encoche
         x: (surface.width - implicitWidth) / 2
-        y: glissement.decalage
+        // Calée sur le pixel physique : entre deux, le bas de la forme se peint à moitié.
+        y: Math.round(glissement.decalage * surface.devicePixelRatio) / surface.devicePixelRatio
         opacity: glissement.opacite
         // Noms qualifiés : dans ce bloc, « hauteur » désignerait la propriété de l'Encoche elle-même.
         largeurCorps: surface.largeur.value
