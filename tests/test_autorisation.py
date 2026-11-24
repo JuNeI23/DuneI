@@ -326,23 +326,23 @@ class ControleurTest(EssaiCoque, unittest.TestCase):
     def test_agent_enregistre(self):
         """Règle posée et agent en marche : un seul agent, aucun avis. Erreurs : assertion."""
         self.assertFalse(self.etat()["enregistre"])
-        self.assertEqual(self.agent(), {"agents": 1, "avis": 0, "present": True})
+        self.assertEqual(self.agent(), {"agents": 1, "avis": 0, "chevauchements": 0, "present": True})
         self.assertTrue(self.etat()["enregistre"])
 
     def test_agent_sans_regle(self):
         """Règle absente ou sans la marque de DuneI : rien n'est chargé. Erreurs : assertion."""
-        self.assertEqual(self.agent(regle=None), {"agents": 0, "avis": 0, "present": False})
-        self.assertEqual(self.agent(regle="#%PAM-1.0\nauth include system-auth\n"), {"agents": 0, "avis": 0, "present": False})
+        self.assertEqual(self.agent(regle=None), {"agents": 0, "avis": 0, "chevauchements": 0, "present": False})
+        self.assertEqual(self.agent(regle="#%PAM-1.0\nauth include system-auth\n"), {"agents": 0, "avis": 0, "chevauchements": 0, "present": False})
 
     def test_agent_debraye(self):
         """Mise en marche à faux : rien n'est chargé. Erreurs : assertion."""
-        self.assertEqual(self.agent(actif=False), {"agents": 0, "avis": 0, "present": False})
+        self.assertEqual(self.agent(actif=False), {"agents": 0, "avis": 0, "chevauchements": 0, "present": False})
         self.assertTrue(self.agent(actif=True)["present"])
         self.assertFalse(self.agent(actif=False)["present"])     # Débrayé à chaud, l'agent est retiré.
 
     def test_agent_refuse(self):
         """Agent qui ne s'enregistre pas : trois reprises, puis un seul avis. Erreurs : assertion."""
-        self.assertEqual(self.agent(bon=False), {"agents": 4, "avis": 1, "present": True})
+        self.assertEqual(self.agent(bon=False), {"agents": 4, "avis": 1, "chevauchements": 0, "present": True})
 
     def test_agent_flux(self):
         """Le flux de l'agent ouvre la demande ; son retrait la ferme. Erreurs : assertion."""
@@ -363,6 +363,7 @@ class ControleurTest(EssaiCoque, unittest.TestCase):
         root = {"string": "root", "isGroup": False}
         self.demander(identities=[root, moi], selectedIdentity=root)
         self.assertEqual(json.loads(self.appel("identite", "0")), moi)
+        self.assertEqual(self.etat()["ligne"], {"texte": "", "erreur": False})     # Choisir n'est pas échouer.
         self.demander(identities=[root], selectedIdentity=root)
         self.assertEqual(json.loads(self.appel("identite", "1")), root)
 
@@ -416,6 +417,25 @@ class CadreTest(ControleurTest):
         self.assertFalse(self.cadre()["champ"])
         self.saisie()
         self.montre(champ=True)
+
+    def test_clavier_arrive_tard(self):
+        """Le clavier arrivé au cadre relance la garde : une frappe en cours ailleurs n'entre pas (relecture, I1)."""
+        self.demander()
+        self.saisie()
+        self.appel("armer")
+        self.assertFalse(self.etat()["saisieOuverte"])
+        self.assertFalse(self.cadre()["champ"])
+        self.saisie()
+        self.assertNotIn("Binding loop", self.journal())
+
+    def test_champ_sans_historique(self):
+        """Vidé, le champ ne garde rien à rétablir par Ctrl+Z."""
+        self.demander()
+        self.saisie()
+        self.montre(champ=True)
+        self.appel("taper", SECRET)
+        self.appel("demander", "{}")
+        self.montre(longueur=0, annulable=False)
 
     def test_verrouille_fermer(self):
         """Verrouillé : champ inactif, « Fermer » seul, qui annule."""
@@ -472,6 +492,7 @@ class CadreTest(ControleurTest):
             if c := json.loads(self.appel("cadre")):
                 vus.add(tuple(c["forme"]))
         self.assertLessEqual(vus, {(95, 28), (190, 28), (460, 134)})
+        self.assertIn((460, 134), vus)
 
 
 # Le cadre hérite des outils du contrôleur, pas de ses essais.

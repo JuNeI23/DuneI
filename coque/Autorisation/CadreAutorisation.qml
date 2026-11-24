@@ -63,8 +63,20 @@ FocusScope {
     height: plafond
 
     // Component.onCompleted — lance l'annonce au tour de boucle suivant, les ressorts étant prêts, puis l'ouverture au
-    // terme de la garde. Entrées : aucune. Sortie : partie, ouverte. Erreurs : aucune. Dépendances : ouverture.
-    Component.onCompleted: Qt.callLater(() => { cadre.partie = true; ouverture.restart() })
+    // terme de la garde. Entrées : aucune. Sortie : partie, ouverte. Erreurs : aucune. Dépendances : armer.
+    Component.onCompleted: Qt.callLater(() => { cadre.partie = true; cadre.armer() })
+    // Le clavier est arrivé à la fenêtre. Le focus du cadre ne convient pas : il change aussi quand le champ le prend.
+    readonly property bool clavierRecu: Window.active
+    // onClavierRecuChanged — la garde repart de l'arrivée du clavier. Entrées : aucune. Sortie : voir armer. Erreurs :
+    // aucune. Dépendances : armer.
+    onClavierRecuChanged: if (clavierRecu) armer()
+
+    // armer — relance d'un même geste la garde de frappe et l'ouverture de l'île : le champ ne s'active pas avant d'être
+    // visible. Entrées : aucune. Sortie : garde, ouverture. Erreurs : aucune. Dépendances : Autorisation.armer, ouverture.
+    function armer() {
+        Autorisation.armer()
+        ouverture.restart()
+    }
     Timer { id: ouverture; interval: Theme.motion?.delays.gardeFrappe ?? 0; onTriggered: cadre.ouverte = true }
 
     // touche — touche reçue par la racine. Entrée : nom, « escape » ou une autre. Sortie : annulation, ou garde relancée.
@@ -84,9 +96,11 @@ FocusScope {
 
     Connections {
         target: Autorisation
-        // onVider — vide le champ et masque de nouveau la saisie. Entrées : aucune. Sortie : champ vide. Erreurs : aucune.
-        function onVider() { champ.clear(); champ.revele = false }
+        // onVider — vide le champ, historique d'annulation compris (clear() le garderait), et masque de nouveau la saisie.
+        // Entrées : aucune. Sortie : champ vide. Erreurs : aucune. Dépendances : champ.
+        function onVider() { champ.text = ""; champ.revele = false }
         // onSaisieOuverteChanged — la saisie ouverte prend le clavier. Entrées : aucune. Sortie : focus du champ.
+        // Erreurs : aucune. Dépendances : champ.
         function onSaisieOuverteChanged() { if (Autorisation.saisieOuverte) champ.forceActiveFocus() }
         // onEchecsChanged — un mot de passe refusé pousse le champ une fois ; le ressort le ramène. La vitesse est celle
         // qui porte le ressort « window » à la poussée voulue. Entrées : aucune. Sortie : secousse. Erreurs : aucune.

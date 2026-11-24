@@ -19,7 +19,7 @@ import "autorisation.js" as Logique
 //           demarrer() charge l'agent réel : la coque de session seule l'appelle. IPC « autorisation » : etat.
 // Sorties : flux (null au repos) ; ouvert ; etat (voir Logique.etat ; garde sa dernière valeur pendant la sortie de la
 //           fenêtre) ; message, action (textes reçus, à peindre en texte brut) ; ligne ({texte, erreur}) ; saisieOuverte
-//           (état saisie et garde écoulée) ; fenetre ; ecran ; prendClavier ; frappe(), soumettre(texte), annuler() ; signal vider(), émis quand
+//           (état saisie et garde écoulée) ; fenetre ; ecran ; prendClavier ; armer(), frappe(), soumettre(texte), annuler() ; signal vider(), émis quand
 //           le champ doit se vider.
 // Erreurs : règle PAM absente ou agent non enregistré après trois reprises : journal, puis une notification ; faillock ou faillock.conf absents ou illisibles laissent le champ ouvert, sans essais restants : PAM décide.
 // Dépendances : Quickshell (Singleton), Quickshell.Io (Process, StdioCollector, FileView, IpcHandler), C.Scene, CadreAutorisation, Theme
@@ -47,6 +47,11 @@ Singleton {
         "Autorisations indisponibles", "La coque n'a pas pu s'enregistrer auprès de polkit."])
     property var agent: null
     property int tentatives: 0
+    property bool enDestruction: false
+    property bool aConstruire: false
+    // Vrai une fois la garde de frappe écoulée. Timer.running ne convient pas : restart() le fait passer un instant à faux,
+    // ce qui ouvrirait la saisie le temps d'une notification.
+    property bool gardeEchue: false
     property var lecteur: null
     property bool clavierExclusif: true
     property bool fenetree: true
@@ -54,7 +59,7 @@ Singleton {
     readonly property var fenetre: scene.fenetre
     // Écran de la demande, figé à l'ouverture : il borne la hauteur du cadre.
     readonly property var ecran: scene.ecran
-    readonly property bool saisieOuverte: flux !== null && etat === "saisie" && Theme.motion !== null && !garde.running
+    readonly property bool saisieOuverte: flux !== null && etat === "saisie" && Theme.motion !== null && gardeEchue
     readonly property var ligne: Logique.ligne(etat, { echec: echec, restants: restants, jusqua: jusqua, supplement: supplement })
     readonly property string utilisateur: Quickshell.env("USER") ?? ""
 
@@ -98,11 +103,13 @@ Singleton {
         construire()
     }
 
-    // construire — (re)construit l'agent, en lit aussitôt la demande (rechargement de la coque) et arme la vérification
-    // de son enregistrement. Entrées : aucune. Sortie : agent. Erreurs : composant illisible : avertissement au journal.
-    // Dépendances : fabrique, surFlux, verification.
+    // construire — construit l'agent, en lit aussitôt la demande (rechargement de la coque) et arme la vérification de
+    // son enregistrement ; tant que le précédent n'est pas détruit, l'attend : Quickshell ignore un second agent.
+    // Entrées : aucune. Sortie : agent. Erreurs : composant illisible : avertissement au journal.
+    // Dépendances : fabrique, surFlux, verification, enDestruction.
     function construire() {
-        agent?.destroy()
+        if (enDestruction) { aConstruire = true; return }
+        aConstruire = false
         const c = fabrique ?? Qt.createComponent("AgentPolkit.qml")
         agent = c.createObject(autorisation)
         if (!agent) console.warn("Autorisation : agent non construit. " + c.errorString())
@@ -111,11 +118,25 @@ Singleton {
         verification.restart()
     }
 
+    // detruire — détruit l'agent ; une construction demandée entre-temps part une fois la destruction achevée.
+    // Entrées : aucune. Sortie : agent null, enDestruction. Erreurs : aucune ; sans agent, rien. Dépendances : construire.
+    function detruire() {
+        const ancien = agent
+        agent = null
+        if (!ancien) return
+        enDestruction = true
+        ancien.Component.destruction.connect(() => Qt.callLater(() => {
+            autorisation.enDestruction = false
+            if (autorisation.aConstruire && autorisation.marche) autorisation.construire()
+        }))
+        ancien.destroy()
+    }
+
     // verifier — reprend l'enregistrement manqué après chaque délai de reprises, puis le signale une fois.
-    // Entrées : aucune. Sortie : agent reconstruit, ou avertissement. Erreurs : aucune. Dépendances : construire, avertir.
+    // Entrées : aucune. Sortie : agent reconstruit, ou avertissement. Erreurs : aucune. Dépendances : detruire, construire, avertir.
     function verifier() {
         if (agent?.enregistre) return
-        if (tentatives < reprises.length) { tentatives++; construire() }
+        if (tentatives < reprises.length) { tentatives++; detruire(); construire() }
         else avertir()
     }
 
@@ -123,12 +144,12 @@ Singleton {
     Component { id: lecteurRegle; FileView { path: autorisation.regle; blockLoading: true; printErrors: false } }
 
     // retirer — débraye l'agent à chaud : la demande en cours est annulée, l'agent détruit. Entrées : aucune. Sortie :
-    // agent null. Erreurs : aucune. Dépendances : annuler, verification.
+    // agent null. Erreurs : aucune. Dépendances : annuler, verification, detruire.
     function retirer() {
         verification.stop()
+        aConstruire = false
         annuler()
-        agent?.destroy()
-        agent = null
+        detruire()
     }
 
     // onMarcheChanged — les jetons peuvent se charger, ou changer, après demarrer. Entrées : aucune. Sortie : agent
@@ -144,13 +165,14 @@ Singleton {
 
     // surFlux — reçoit la demande courante de l'agent. Entrée : f, le flux, ou null quand l'agent n'en a plus.
     // Sortie : fenêtre ouverte, ou reprise en place, sur la nouvelle demande, champ vidé et garde relancée ; null ferme
-    // sans annuler, après « Autorisé » si la demande est accordée : Quickshell retire le flux avant d'en signaler la fin. Erreurs : aucune ; le flux déjà courant ou un flux déjà clos ne change rien.
+    // sans annuler, après « Autorisé » si la demande est accordée. Erreurs : aucune ; le flux déjà courant ou un flux déjà clos ne change rien.
     // Dépendances : choisirIdentite, lire, evaluer, garde, finir.
     function surFlux(f) {
         if (f === flux) return
         if (!f) { finir(accordee()); return }
         if (f.isCompleted) return
         sortie.stop()
+        choisirIdentite(f)
         flux = f
         message = f.message
         action = f.actionId
@@ -159,20 +181,20 @@ Singleton {
         echec = false
         echecs = []
         jusqua = null
-        garde.restart()
+        armer()
         vider()
-        choisirIdentite()
         lire()
         evaluer()
         ouvert = true
     }
 
     // choisirIdentite — retient l'utilisateur courant s'il figure dans la liste ; sinon le choix de polkit reste. Écrire
-    // une identité relance la conversation PAM : rien n'est écrit si elle est déjà retenue.
-    // Entrées : aucune. Sortie : flux.selectedIdentity. Erreurs : aucune. Dépendances : flux, utilisateur.
-    function choisirIdentite() {
-        const moi = Array.from(flux.identities ?? []).find(i => !i.isGroup && i.string === utilisateur)
-        if (moi && flux.selectedIdentity?.string !== moi.string) flux.selectedIdentity = moi
+    // une identité relance la conversation PAM, et Quickshell l'annonce comme un échec : rien n'est écrit si elle est déjà
+    // retenue, et le flux n'est écouté qu'ensuite.
+    // Entrée : f, un flux. Sortie : f.selectedIdentity. Erreurs : aucune. Dépendances : utilisateur.
+    function choisirIdentite(f) {
+        const moi = Array.from(f.identities ?? []).find(i => !i.isGroup && i.string === utilisateur)
+        if (moi && f.selectedIdentity?.string !== moi.string) f.selectedIdentity = moi
     }
 
     // evaluer — recalcule l'état de la demande en cours. Entrées : aucune. Sortie : etat ; sans flux, il garde sa
@@ -181,9 +203,17 @@ Singleton {
         if (flux) etat = Logique.etat({ termine: false, verrouille: jusqua !== null, enVol: enVol, requis: flux.isResponseRequired })
     }
 
+    // armer — relance la garde de frappe, quand la fenêtre est prête puis quand elle reçoit le clavier : jusque-là, les
+    // touches vont ailleurs. Entrées : aucune. Sortie : garde, gardeEchue. Erreurs : aucune ; sans demande, rien. Dépendances : garde.
+    function armer() {
+        if (!flux) return
+        gardeEchue = false
+        garde.restart()
+    }
+
     // frappe — une touche pressée tant que la garde court la relance ; ensuite, taper ne la relance plus.
     // Entrées : aucune. Sortie : garde. Erreurs : aucune. Dépendances : garde.
-    function frappe() { if (garde.running) garde.restart() }
+    function frappe() { if (flux && !gardeEchue) garde.restart() }
 
     // soumettre — envoie la réponse à PAM. Entrée : texte, la réponse. Sortie : aucune ; le champ est vidé.
     // Erreurs : aucune ; texte vide, garde en cours, compte verrouillé ou réponse non attendue : rien ne part.
@@ -212,6 +242,7 @@ Singleton {
         if (!flux) { ouvert = false; return }
         flux = null
         garde.stop()
+        gardeEchue = false
         vider()
         if (!reussi) { ouvert = false; return }
         etat = "succes"
@@ -257,8 +288,8 @@ Singleton {
         evaluer()
     }
 
-    // Garde de frappe : silence du clavier exigé avant que le champ n'accepte les touches, à partir de chaque flux.
-    Timer { id: garde; interval: Theme.motion?.delays.gardeFrappe ?? 0 }
+    // Garde de frappe : silence du clavier exigé avant que le champ n'accepte les touches, à partir de chaque flux, de la fenêtre prête, puis du clavier reçu.
+    Timer { id: garde; interval: Theme.motion?.delays.gardeFrappe ?? 0; onTriggered: autorisation.gardeEchue = true }
 
     // Tenue d'« Autorisé » avant la fermeture.
     Timer { id: sortie; interval: Theme.motion?.delays.autorise ?? 0; onTriggered: autorisation.ouvert = false }

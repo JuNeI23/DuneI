@@ -1,6 +1,6 @@
 # Agent d'authentification (L2-24)
 
-Version 1.2 — 2026-11-24 — validée par Nicolas ; la carte centrée cède la place à l'île (maquette v3, G1 sans « Annuler »)
+Version 1.3 — 2026-11-24 — validée par Nicolas ; la carte centrée cède la place à l'île (maquette v3, G1 sans « Annuler »)
 
 ## Intention
 
@@ -129,7 +129,8 @@ l'identifiant, tel quel.
 ### Garde de frappe
 
 La fenêtre peut s'ouvrir pendant une frappe ailleurs, et un texte suivi d'Entrée partirait comme mot de passe. Le champ
-n'accepte donc les touches qu'après `delays.gardeFrappe` (400 ms) sans frappe, comptées à partir de chaque flux. « Autoriser »
+n'accepte donc les touches qu'après `delays.gardeFrappe` (400 ms) sans frappe, comptées à partir de chaque flux, puis de nouveau dès que la
+fenêtre est prête et qu'elle reçoit le clavier. « Autoriser »
 suit la même garde. Échap reste actif.
 
 ### Essais restants et verrou
@@ -176,6 +177,7 @@ la ligne dit seulement « Mot de passe incorrect. » et le champ reste ouvert : 
 
 | Version | Date | Changement |
 |---|---|---|
+| 1.3 | 2026-11-24 | Relecture de la branche : garde comptée du clavier reçu, reprises d'enregistrement après destruction de l'agent |
 | 1.2 | 2026-11-24 | Carte centrée remplacée par l'île, « Annuler » retiré, succès montré |
 | 1.1 | 2026-11-24 | Essais réels 1 et 2 : règle prouvée, premier flux laissé à son demandeur, demandeur tué clos par polkit |
 | 1.0 | 2026-11-24 | Validée ; la VM cède la place à des essais réels, règle PAM d'abord |

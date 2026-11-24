@@ -15,7 +15,8 @@ import "Autorisation"
 // pilote ; elle sert aussi aux captures. Elle sert la cible « notifications », dont l'état « ne pas déranger » vaut
 // toujours « true ».
 // Entrées : DUNEI_TOKENS_DIR et DUNEI_ETAT_DIR ; IPC « essai » : pret, fenetree, lire, demander, poser, emettre, appels,
-// soumettre, annuler, frapper, voiler, attention.
+// soumettre, annuler, frapper, identite, agent, agentEtat, fluxAgent, terminerSansSucces, clore, cadre, taper, entree,
+// touche, cliquer, voile, armer, couvert, attention.
 // Sorties : « essai : prêt » au démarrage. Erreurs : celles de Theme et d'Autorisation, dans le journal.
 // Dépendances : quickshell ≥ 0.3 (IpcHandler), Autorisation, Overlays, Theme ; liens essai/fenetre/ vers les modules de
 // la coque, car Quickshell ne suit pas les imports hors du dossier de la coque.
@@ -42,6 +43,10 @@ ShellRoot {
             property string actionId
             property var identities: []
             property var selectedIdentity: null
+            // Changer l'identité relance la conversation : Quickshell émet alors un échec (flow.cpp).
+            onSelectedIdentityChanged: if (pret) authenticationFailed()
+            property bool pret: false
+            Component.onCompleted: pret = true
             property bool isResponseRequired: false
             property bool responseVisible: false
             property string inputPrompt: "Password: "
@@ -64,13 +69,17 @@ ShellRoot {
     // Faux agent : enregistré ou non selon bonAgent ; chaque construction est comptée.
     property bool bonAgent: false
     property int agents: 0
+    property int vivants: 0
+    property int chevauchements: 0
     property int avis: 0
     Component {
         id: fauxAgent
         QtObject {
             property bool enregistre: essai.bonAgent
             property var flux: null
-            Component.onCompleted: essai.agents++
+            // Quickshell ignore un agent né avant la fin du précédent : deux agents ne doivent jamais coexister.
+            Component.onCompleted: { essai.agents++; essai.vivants++; if (essai.vivants > 1) essai.chevauchements++ }
+            Component.onDestruction: essai.vivants--
         }
     }
 
@@ -127,8 +136,8 @@ ShellRoot {
             Autorisation.demarrer()
         }
 
-        // agentEtat — agents construits et avis émis. Entrées : aucune. Sortie : JSON {agents, avis, present}.
-        function agentEtat(): string { return JSON.stringify({ agents: essai.agents, avis: essai.avis, present: Autorisation.agent !== null }) }
+        // agentEtat — agents construits et avis émis. Entrées : aucune. Sortie : JSON {agents, avis, chevauchements, present}.
+        function agentEtat(): string { return JSON.stringify({ agents: essai.agents, avis: essai.avis, chevauchements: essai.chevauchements, present: Autorisation.agent !== null }) }
 
         // fluxAgent — flux porté par le faux agent, comme le ferait polkit, ou null. Entrée : i, rang, −1 pour null.
         // Sortie : aucune.
@@ -176,13 +185,16 @@ ShellRoot {
             const c = Autorisation.fenetre?.cadre
             if (!c) return "null"
             return JSON.stringify({ titre: c.titre.text, message: c.message.text, brut: c.message.textFormat === Text.PlainText,
-                ligne: c.ligne.text, longueur: c.champ.length, champ: c.champ.enabled,
+                ligne: c.ligne.text, longueur: c.champ.length, annulable: c.champ.canUndo, champ: c.champ.enabled,
                 autoriser: [c.autoriser.visible, c.autoriser.enabled], fermer: c.fermer.visible,
                 activite: c.activite.visible, annonce: c.annonce.text, annonceOpacite: c.annonce.parent.opacity,
                 hauteur: c.hauteurOuverte, forme: [c.encoche.largeurCorps, c.encoche.hauteur], saisieLargeur: c.champ.width,
                 ecran: Autorisation.fenetre.height, y: c.parent.y, couvert: Overlays.ecranCouvert, role: c.autoriser.etat.role,
                 bas: c.autoriser.mapToItem(c, 0, c.autoriser.height).y })
         }
+
+        // armer — simule l'arrivée du clavier au cadre. Entrées : aucune. Sortie : aucune.
+        function armer(): void { Autorisation.fenetre.cadre.armer() }
 
         // couvert — écran dont la presqu'île est couverte. Entrées : aucune. Sortie : son nom, ou « ».
         function couvert(): string { return Overlays.ecranCouvert }
