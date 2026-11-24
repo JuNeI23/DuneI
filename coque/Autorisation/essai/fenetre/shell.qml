@@ -134,6 +134,15 @@ ShellRoot {
         // Sortie : aucune.
         function fluxAgent(i: int): void { Autorisation.agent.flux = i < 0 ? null : essai.flux[i] }
 
+        // terminerSansSucces — fin d'un flux accordé dans l'ordre de Quickshell 0.3.2 : le flux, terminé mais pas encore
+        // marqué réussi, est retiré avant que sa fin ne nous soit signalée. Entrée : i, son rang. Sortie : aucune.
+        function terminerSansSucces(i: int): void {
+            const f = essai.flux[i]
+            f.isCompleted = true
+            Autorisation.surFlux(null)
+            f.isSuccessful = true
+        }
+
         // clore — fait passer le flux courant à null, comme l'agent. Entrées : aucune. Sortie : aucune.
         function clore(): void { Autorisation.surFlux(null) }
 

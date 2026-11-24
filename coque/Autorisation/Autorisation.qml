@@ -148,7 +148,7 @@ Singleton {
     // Dépendances : choisirIdentite, lire, evaluer, garde, finir.
     function surFlux(f) {
         if (f === flux) return
-        if (!f) { finir(flux.isSuccessful); return }
+        if (!f) { finir(accordee()); return }
         if (f.isCompleted) return
         sortie.stop()
         flux = f
@@ -218,6 +218,11 @@ Singleton {
         sortie.restart()
     }
 
+    // accordee — la demande en cours vient-elle d'être accordée ? Quickshell ne termine un flux que s'il est accordé ou
+    // annulé, mais en émet la fin avant de poser isSuccessful (0.3.2) : seul « terminé et non annulé » est sûr.
+    // Entrées : aucune. Sortie : booléen. Erreurs : aucune. Dépendances : flux.
+    function accordee() { return flux.isCompleted && !flux.isCancelled }
+
     // echouer — un mot de passe refusé : la ligne le dit et le compte est relu ; trois échecs en chaîne annulent, car
     // Quickshell rouvre une conversation PAM à chaque échec, sans plafond. Entrées : aucune. Sortie : echec, echecs.
     // Erreurs : aucune. Dépendances : Logique.rafale, annuler, lire, evaluer.
@@ -275,7 +280,7 @@ Singleton {
         function onSupplementaryMessageChanged() { autorisation.supplement = autorisation.flux.supplementaryMessage }
         function onAuthenticationFailed() { autorisation.echouer() }
         function onAuthenticationSucceeded() { autorisation.finir(true) }
-        function onIsCompletedChanged() { if (autorisation.flux?.isCompleted) autorisation.finir(autorisation.flux.isSuccessful) }
+        function onIsCompletedChanged() { if (autorisation.flux?.isCompleted) autorisation.finir(autorisation.accordee()) }
     }
 
     Process {

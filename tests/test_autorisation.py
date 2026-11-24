@@ -263,13 +263,12 @@ class ControleurTest(EssaiCoque, unittest.TestCase):
         self.assertEqual((self.appels(1), self.etat()["ouvert"], self.etat()["saisieOuverte"]), ([], False, False))
 
     def test_succes_dans_l_ordre_de_quickshell(self):
-        """Au succès, Quickshell retire le flux avant de signaler la fin (essai réel 3) : « Autorisé » se montre quand
-        même, puis l'île se ferme. Erreurs : assertion."""
+        """Au succès, Quickshell signale la fin et retire le flux avant de poser isSuccessful (essais réels 3 et 4c) :
+        « Autorisé » se montre quand même, puis l'île se ferme. Erreurs : assertion."""
         self.demander()
         self.saisie()
         self.appel("soumettre", SECRET)
-        self.appel("poser", "0", '{"isSuccessful": true}')
-        self.appel("clore")
+        self.appel("terminerSansSucces", "0")
         self.assertEqual((self.etat()["ouvert"], self.etat()["etat"], self.etat()["clavier"]), (True, "succes", False))
         self.jusqua(lambda: not self.etat()["ouvert"], "fermeture après « Autorisé »")
         self.assertEqual(self.appels(), [["submit", SECRET]])
