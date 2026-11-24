@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Hyprland
+import "../Composants"
 import "../Theme"
 import "../Audio"
 
@@ -20,7 +21,7 @@ import "../Audio"
 //           remplacent ecranActif, pleinEcran, etat et volume.
 // Sorties : cible, la presqu'île qui porte la jauge (null sinon) ; demandes « volume » et leur libération.
 // Erreurs : aucune ; sans presqu'île sur l'écran actif, ou en plein écran, une annonce ne montre rien.
-// Dépendances : quickshell ≥ 0.3 (Hyprland), Theme (motion.delays.dismiss), EtatAudio, Volume.
+// Dépendances : quickshell ≥ 0.3 (Hyprland), Theme (motion.delays.dismiss), EtatAudio, PleinEcran, Volume.
 Scope {
     id: annonceur
 
@@ -28,7 +29,7 @@ Scope {
     property var cible: null
     // Écran actif et plein écran : mêmes liaisons, et mêmes raisons, que dans l'Ouvreuse.
     property var ecranActif: Quickshell.screens.find(s => s.name === Hyprland.focusedMonitor?.name) ?? null
-    property bool pleinEcran: Hyprland.focusedMonitor?.activeWorkspace?.hasFullscreen ?? false
+    property bool pleinEcran: PleinEcran.sur(Hyprland.focusedMonitor?.name ?? "")
     property var etat: EtatAudio
     property Component volume: Component { Volume {} }
 

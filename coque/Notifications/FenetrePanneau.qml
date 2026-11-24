@@ -19,7 +19,7 @@ import "../Composants"
 // Fonction : basculer. IPC (cible « panneau ») : basculer, qui ouvre ou ferme le panneau sur l'écran actif, pour les
 // essais à l'écran et un futur raccourci clavier.
 // Erreurs : aucune ; sans écran, Quickshell pose la fenêtre sur l'écran par défaut.
-// Dépendances : quickshell ≥ 0.3 (Scope, Hyprland), CalquePanneau, Overlays.
+// Dépendances : quickshell ≥ 0.3 (Scope, Hyprland), CalquePanneau, Overlays, PleinEcran.
 Scope {
     id: racine
 
@@ -31,7 +31,7 @@ Scope {
     property var ecran: null
     property var barre: null
     property var ecrans: Quickshell.screens
-    property bool pleinEcran: Hyprland.focusedMonitor?.activeWorkspace?.hasFullscreen ?? false
+    property bool pleinEcran: PleinEcran.sur(Hyprland.focusedMonitor?.name ?? "")
     property bool fenetree: true
 
     // basculer — clic sur la cloche d'une barre : ferme le panneau s'il est ouvert sur l'écran de cette barre,

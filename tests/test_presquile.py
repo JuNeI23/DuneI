@@ -51,6 +51,17 @@ class PresquileStructureTest(unittest.TestCase):
         coque = re.sub(r"//.*", "", (ROOT / "coque/shell.qml").read_text(encoding="utf-8"))
         self.assertRegex(coque, r"Presquile\s*\{[^}]*reserve:\s*ouvreuse\.hauteurModule")
 
+    def test_lecture_unique_du_plein_ecran(self):
+        # hasFullscreen confond une fenêtre agrandie et un plein écran : aucun code de la coque ne le lit, et les cinq
+        # lecteurs passent par PleinEcran, sur l'écran focalisé.
+        for chemin in (ROOT / "coque").rglob("*.qml"):
+            if not chemin.is_symlink():
+                self.assertNotIn("hasFullscreen", re.sub(r"//.*", "", chemin.read_text(encoding="utf-8")), chemin)
+        for nom in ("Galerie/Ouvreuse", "Presquile/Annonceur", "Presquile/AnnonceurAlerte", "Notifications/Centre",
+                    "Notifications/FenetrePanneau"):
+            self.assertIn('property bool pleinEcran: PleinEcran.sur(Hyprland.focusedMonitor?.name ?? "")',
+                          (ROOT / "coque" / f"{nom}.qml").read_text(encoding="utf-8"), nom)
+
     def test_masque_a_la_place_finale(self):
         # Region ne suit que l'élément qu'on lui donne, pas ses parents : lié à encoche.corps, le masque ne verrait pas
         # l'encoche glisser. Il se pose donc en coordonnées, à la place finale du corps, et il est vide tant que

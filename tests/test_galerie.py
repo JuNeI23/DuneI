@@ -494,6 +494,16 @@ class OuvreuseTest(GalerieDossier, unittest.TestCase):
         self.assertIsNone(e["popover"])
         self.sonder(lambda: self.ouvreuse()["galeries"] == 0, "aucune galerie orpheline")
 
+    def test_plein_ecran_pendant_l_ouverture(self):
+        # Un plein écran qui commence recouvre la presqu'île : la galerie se ferme et rend le clavier et la presqu'île.
+        self.basculer()
+        self.attendre_module("B", "galerie")
+        self.regler(plein=True)
+        # Lu aussitôt : plus tard, le délai d'abandon aurait refermé la galerie de toute façon.
+        e = self.ouvreuse()
+        self.assertEqual((e["ouvert"], e["cible"], e["popover"]), (False, None, None))
+        self.attendre_module("B", "bureaux")
+
     def test_plein_ecran(self):
         self.regler(plein=True)
         self.basculer()

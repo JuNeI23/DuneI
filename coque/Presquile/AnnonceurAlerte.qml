@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Hyprland
+import "../Composants"
 import "../Theme"
 import "../Energie"
 
@@ -30,7 +31,7 @@ import "../Energie"
 // Sorties : enAttente, le palier retenu (0 sinon) ; affiche, le palier montré, lu par le module Alerte ; cible, la
 //           presqu'île qui porte l'alerte (null sinon) ; demandes « alerte » et leur libération.
 // Erreurs : aucune ; sans presqu'île sur l'écran actif, l'alerte attend qu'il en ait une.
-// Dépendances : quickshell ≥ 0.3 (Hyprland), Theme (motion.delays.alerte), EtatEnergie, Alerte.
+// Dépendances : quickshell ≥ 0.3 (Hyprland), Theme (motion.delays.alerte), EtatEnergie, PleinEcran, Alerte.
 Scope {
     id: annonceur
 
@@ -40,7 +41,7 @@ Scope {
     property int affiche: 0
     // Écran actif et plein écran : mêmes liaisons, et mêmes raisons, que dans l'Ouvreuse.
     property var ecranActif: Quickshell.screens.find(s => s.name === Hyprland.focusedMonitor?.name) ?? null
-    property bool pleinEcran: Hyprland.focusedMonitor?.activeWorkspace?.hasFullscreen ?? false
+    property bool pleinEcran: PleinEcran.sur(Hyprland.focusedMonitor?.name ?? "")
     property var etat: EtatEnergie
     property Component galerie: null
     property Component alerte: Component { Alerte { palier: annonceur.affiche } }
