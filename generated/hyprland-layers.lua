@@ -7,5 +7,7 @@ return {
     { name = "dunei-verre-dunei-popovers", match = { namespace = "^dunei-popovers$" }, blur = true, blur_popups = true, ignore_alpha = 0.58, xray = false },
     { name = "dunei-verre-dunei-notifications", match = { namespace = "^dunei-notifications$" }, blur = true, blur_popups = true, ignore_alpha = 0.58, xray = false },
     { name = "dunei-verre-dunei-panneau", match = { namespace = "^dunei-panneau$" }, blur = true, blur_popups = true, ignore_alpha = 0.58, xray = false },
+    { name = "dunei-verre-dunei-attention-selecteur", match = { namespace = "^dunei-attention-selecteur$" }, blur = true, blur_popups = true, ignore_alpha = 0.58, xray = false, animation = "fade" },
+    { name = "dunei-verre-dunei-attention-deconnexion", match = { namespace = "^dunei-attention-deconnexion$" }, blur = true, blur_popups = true, ignore_alpha = 0.58, xray = false, animation = "fade" },
     { name = "dunei-fond", match = { namespace = "^dunei-fond$" }, no_anim = true },
 }

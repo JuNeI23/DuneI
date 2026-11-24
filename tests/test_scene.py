@@ -2,7 +2,8 @@
 
 Rôle : éprouve un Scene ouvert pour de bon dans la session, sans prendre le clavier, par la coque d'essai
 coque/Composants/essai/scene : construction de la fenêtre à l'ouverture, sortie en fondu, action différée jusqu'au
-retrait du calque dunei-attention, réouverture pendant la sortie et fermeture par le lanceur (registre Overlays).
+retrait du calque de la scène (son namespace, et non celui d'un autre calque), délai d'affichage, réouverture
+pendant la sortie et fermeture par le lanceur (registre Overlays).
 Entrées : aucune. Sorties : résultats unittest. Erreurs : échecs de test.
 Dépendances : qs (Quickshell ≥ 0.3), tests.test_coque_theme (EssaiCoque), tests.test_lanceur (plein_ecran).
 """
@@ -52,7 +53,7 @@ class SceneTest(EssaiCoque, unittest.TestCase):
 
     def etat(self) -> dict:
         """État de la scène décodé du JSON d'essai.etat. Sortie : dictionnaire {ouvert, present, fenetre, sortant,
-        differee}. Dépendances : appel."""
+        differee, montre, opacite}. Dépendances : appel."""
         return json.loads(self.appel("essai", "etat"))
 
     def jusqua(self, condition, message: str):
@@ -155,6 +156,63 @@ class SceneTest(EssaiCoque, unittest.TestCase):
         self.assertTrue(json.loads(self.appel("lanceur", "etat"))["ouvert"])
         time.sleep(1.3)
         self.assertNotIn("essai : exécuté", self.journal())
+
+    def test_retrait_d_un_autre_calque(self):
+        """Vérifie que l'action en attente ne part qu'au retrait du calque de la scène, son propre namespace (espace),
+        et pas au retrait d'un autre calque d'attention (le lanceur en fondu, dunei-attention). Les événements sont
+        simulés par l'IPC evenement, qui appelle Scene.surEvenement comme le ferait Hyprland.rawEvent.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : appel, ouvrir, etat, attendre,
+        journal, hyprctl (le calque porte bien le namespace posé).
+        """
+        self.appel("essai", "espace", "dunei-attention-essai")
+        self.ouvrir()
+        calques = subprocess.run(["hyprctl", "layers", "-j"], capture_output=True, text=True, timeout=DELAI).stdout
+        self.assertIn('"namespace": "dunei-attention-essai"', calques)
+        self.appel("essai", "executer", "x")
+        self.appel("essai", "evenement", "closelayer", "dunei-attention")
+        self.assertEqual(self.etat()["differee"], "x")
+        self.assertNotIn("essai : exécuté", self.journal())
+        self.appel("essai", "evenement", "closelayer", "dunei-attention-essai")
+        self.attendre("essai : exécuté x")
+        self.assertIsNone(self.etat()["differee"])
+
+    def test_delai_invisible(self):
+        """Vérifie qu'avec un délai d'affichage la fenêtre est construite dès l'ouverture mais que la scène n'est
+        montrée qu'au terme du délai.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : appel, ouvrir, etat.
+        """
+        self.appel("essai", "delai", "300")
+        e = self.ouvrir()
+        self.assertEqual((e["fenetre"], e["montre"]), (True, False))
+        time.sleep(0.5)
+        self.assertTrue(self.etat()["montre"])
+
+    def test_fermeture_avant_delai(self):
+        """Vérifie qu'une fermeture avant le terme du délai ne montre rien et qu'aucun fondu de sortie n'est attendu :
+        sortant repasse à faux en moins de 0,3 s.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : appel, ouvrir, etat, jusqua.
+        """
+        self.appel("essai", "delai", "300")
+        self.ouvrir()
+        debut = time.monotonic()
+        self.appel("essai", "fermer")
+        self.jusqua(lambda: not self.etat()["sortant"], "sortie posée")
+        self.assertFalse(self.etat()["fenetre"])
+        self.assertLess(time.monotonic() - debut, 0.3)
+        time.sleep(0.4)
+        self.assertFalse(self.etat()["montre"])
+
+    def test_sans_delai_opaque_des_la_creation(self):
+        """Vérifie que sans délai la surface est opaque dès la construction de la fenêtre : seul le fondu du
+        compositeur porte l'entrée, sans ressort d'opacité par-dessus.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : ouvrir.
+        """
+        e = self.ouvrir()
+        self.assertEqual((e["montre"], e["opacite"]), (True, 1))
 
 
 if __name__ == "__main__":

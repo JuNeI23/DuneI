@@ -21,8 +21,8 @@ import "Deconnexion"
 // lancerFactice (journal des échecs du Process).
 // Sorties : « essai : prêt » au démarrage ; « essai : exécuté <id> » à chaque action du menu (« essai : exécuté
 // lanceur <genre> » pour le lanceur) ; « essai : fenêtre construite » à chaque construction de la fenêtre du menu ;
-// « essai : calque retiré » quand Hyprland retire un calque dunei-attention (closelayer), pour que les essais
-// vérifient qu'une action ne part qu'après ce retrait.
+// « essai : calque retiré » quand Hyprland retire le calque du menu (closelayer de Deconnexion.espace), pour que
+// les essais vérifient qu'une action ne part qu'après ce retrait.
 // Erreurs : celles de Theme, du menu et du lanceur, dans le journal.
 // Dépendances : quickshell ≥ 0.3 (IpcHandler, Hyprland.rawEvent), Deconnexion, Lanceur, Theme ; liens
 // essai/fenetre/Theme, Composants, Lanceur, Applications, Barre, Parametres et Deconnexion, car Quickshell ne suit pas
@@ -42,11 +42,11 @@ ShellRoot {
     }
 
     // onRawEvent — journalise le retrait d'un calque d'attention. Entrée : e, l'événement brut de Hyprland (name,
-    // data). Sortie : la ligne « essai : calque retiré » pour closelayer>>dunei-attention, rien pour un autre
-    // événement. Erreurs : aucune. Dépendances : Hyprland.rawEvent.
+    // data). Sortie : la ligne « essai : calque retiré » pour closelayer>><Deconnexion.espace>, rien pour un autre
+    // événement. Erreurs : aucune. Dépendances : Hyprland.rawEvent, Deconnexion.espace.
     Connections {
         target: Hyprland
-        function onRawEvent(e) { if (e.name === "closelayer" && e.data === "dunei-attention") console.log("essai : calque retiré") }
+        function onRawEvent(e) { if (e.name === "closelayer" && e.data === Deconnexion.espace) console.log("essai : calque retiré") }
     }
 
     // Masque d'entrée vide, posé sur la fenêtre du menu de l'essai : le vrai pointeur de Nicolas, immobile au

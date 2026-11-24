@@ -11,7 +11,7 @@ import "deconnexion.js" as Logique
 // cadre est CadreDeconnexion. Verrouiller et Veille partent au premier appui ; Quitter Hyprland, Redémarrer et
 // Éteindre (confirmer) s'arment au premier et partent au second sur le même bouton, quel que soit le moyen (lettre, Entrée,
 // Espace, clic). Tout déplacement du curseur vers un autre bouton, et toute fermeture, désarment. L'action choisie
-// passe par Scene.executer : le menu se ferme, et la commande ne part qu'au retrait du calque dunei-attention, pour
+// passe par Scene.executer : le menu se ferme, et la commande ne part qu'au retrait de son calque (espace), pour
 // que hyprlock ou la veille ne trouvent pas le calque encore posé. Le clavier est traité ici, par touche(), qu'appellent
 // le cadre et l'IPC : un seul chemin.
 // Entrées : clavierExclusif, vrai par défaut, transmis à la scène (une coque d'essai le met à faux pour ne jamais
@@ -19,7 +19,8 @@ import "deconnexion.js" as Logique
 //           de son exécution réelle (coques d'essai) ; fenetree, vrai par défaut : faux, aucune fenêtre n'est
 //           construite et l'action part aussitôt. IPC « deconnexion » : basculer, ouvrir, touche, etat.
 // Sorties : ouvert (alias de la scène, s'affecte) ; actions (tableau validé) ; index ; arme ; fenetre (la fenêtre
-//           de la scène, ou null) ; basculer(), ouvrir(id), annuler(), choisir(i), appuyer(i), touche(nom).
+//           de la scène, ou null) ; espace (« dunei-attention-deconnexion », le namespace de son calque) ;
+//           basculer(), ouvrir(id), annuler(), choisir(i), appuyer(i), touche(nom).
 // Erreurs : un actions.json illisible laisse actions vide (journalisé) ; une commande qui échoue (code non nul) ou
 //           qui ne démarre pas est journalisée par console.warn, le menu étant déjà fermé.
 // Dépendances : Quickshell (Singleton), Quickshell.Io (FileView, Process, IpcHandler), C.Scene, CadreDeconnexion,
@@ -35,6 +36,8 @@ Singleton {
     property var executeur: null
     property bool fenetree: true
     readonly property var fenetre: scene.fenetre
+    // Namespace du calque du menu, propre à lui (L2-80), lu par la coque d'essai.
+    readonly property string espace: "dunei-attention-deconnexion"
 
     C.Scene {
         id: scene
@@ -44,6 +47,7 @@ Singleton {
         fenetree: deconnexion.fenetree
         // Le menu paraît depuis le centre de l'écran, sans monter du bas (demande de Nicolas).
         montee: false
+        espace: deconnexion.espace
 
         // onRealiser — l'action part, aucun exécuteur n'étant posé : sa commande est lancée.
         // Entrée : action, une entrée de actions. Sortie : aucune. Erreurs : voir lancer. Dépendances : lancer.

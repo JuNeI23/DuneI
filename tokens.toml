@@ -348,9 +348,10 @@ halo_reach = 0.75            # portée du halo, en part du côté
 # Verre dépoli des surfaces de la coque (L2-04). Hyprland n'a qu'un thème : flou et règles de calque
 # ne varient pas avec le moment ; seules les opacités du verre, lues par la coque, le peuvent.
 [glass]
-namespaces = ["dunei-barre", "dunei-attention", "dunei-presquile", "dunei-popovers", "dunei-notifications", "dunei-panneau"]   # calques de la coque floutés
+namespaces = ["dunei-barre", "dunei-attention", "dunei-presquile", "dunei-popovers", "dunei-notifications", "dunei-panneau",
+              "dunei-attention-selecteur", "dunei-attention-deconnexion"]   # calques de la coque floutés ; un namespace par client de Scene (L2-80)
 xray = ["dunei-barre"]       # flou du seul fond ; jamais un calque qui porte de l'E3
-fondu = ["dunei-attention"]   # calques qui apparaissent et disparaissent en fondu seul, sans le popin de layersIn/layersOut
+fondu = ["dunei-attention", "dunei-attention-selecteur", "dunei-attention-deconnexion"]   # calques qui apparaissent et disparaissent en fondu seul, sans le popin de layersIn/layersOut
 ignore_alpha = 0.58          # > shade_opacity et scrim (jamais floutés), < opacité minimale du verre (0,60, D103)
 blur_size = 8
 blur_passes = 2
@@ -478,7 +479,9 @@ dossier = "~/Documents/Images/Wallpapers"   # dossier des images, « ~ » dével
 hauteur = 140                 # hauteur d'une vignette de fenêtre
 largeur_min = 100             # largeur minimale d'une vignette, pour une fenêtre très étroite ou très haute
 largeur_max = 320             # largeur maximale d'une vignette, pour une fenêtre très large
-ecart = 16                    # espace entre deux vignettes (échelon de spacing.scale)
+ecart = 32                    # espace entre deux vignettes (échelon de spacing.scale), assez large pour la vignette agrandie
+agrandi = 1.15                # facteur de la vignette choisie, autour de son centre, sans pousser ses voisines (comme le menu)
+estompe = 0.5                 # opacité des vignettes non choisies, sans teinte ; la choisie reste pleine
 
 [deconnexion]                 # menu de déconnexion, SUPER + Échap (L2-23) ; px logiques ; maquette deconnexion-v1 validée
 cote = 128                    # côté d'une vignette en verre (88 dans la maquette, agrandi à la demande)

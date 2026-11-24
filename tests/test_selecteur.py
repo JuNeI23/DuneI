@@ -90,6 +90,18 @@ class LogiqueTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(self.appeler("decalage", 0, dix, 16, 1000), 0)               # bord gauche à l'origine
         milieu = self.appeler("decalage", 4, dix, 16, 1000)                           # centrée sur la vignette 4
         self.assertEqual(milieu + 4 * 216 + 100, 500)
+        self.assertEqual(self.appeler("decalage", 8, dix, 16, 1000) + total, 1000)   # borne droite, index intermédiaire
+
+    def test_index_hors_bornes(self):
+        """Vérifie qu'un index hors de la liste, ou une liste vide, rend 0 au lieu de NaN (L2-79 f), pour le
+        défilement comme pour l'avance de la sélection.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : appeler.
+        """
+        dix = [200] * 10
+        self.assertEqual(self.appeler("decalage", 10, dix, 16, 1000), 0)
+        self.assertEqual(self.appeler("decalage", -1, dix, 16, 1000), 0)
+        self.assertEqual(self.appeler("avancer", 0, 0, 1), 0)
 
     def test_largeur_bornee(self):
         """Vérifie la largeur d'une vignette selon le format, bornée, et le repli quand la hauteur est nulle.
@@ -351,3 +363,141 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
         # L'action du lanceur est abandonnée à l'ouverture du sélecteur : elle ne part pas non plus une fois celui-ci fermé.
         self.selecteur("annuler")
         self.sans_execution()
+
+    def vignette(self, i: int) -> dict | None:
+        """État de rendu d'une vignette du sélecteur, décodé du JSON de l'IPC « essai vignette ».
+
+        Entrée : i, rang de la vignette. Sortie : dictionnaire {capturee, mipmap, texture, capture, estompe, echelle},
+        ou None si la vignette n'existe pas (ou si l'IPC est absente). Erreurs : aucune. Dépendances : appel.
+        """
+        try:
+            return json.loads(self.appel("essai", "vignette", str(i)))
+        except json.JSONDecodeError:
+            return None
+
+    def cadre(self) -> dict | None:
+        """État du cadre du sélecteur, décodé du JSON de l'IPC « essai cadre ».
+
+        Sortie : dictionnaire {plaque, surface, ombre, rangee, vue, titre, origine, bouge}, ou None sans cadre (ou si
+        l'IPC est absente ou lève). Erreurs : aucune. Dépendances : appel.
+        """
+        try:
+            return json.loads(self.appel("essai", "cadre"))
+        except json.JSONDecodeError:
+            return None
+
+    def test_sans_plaque_ni_surface(self):
+        """Vérifie que le cadre ne porte plus ni verre (C.Surface), ni ombre d'élévation, ni plaque d'accent : la
+        rangée et sa légende flottent sur le voile.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : ouvrir, attendre, jusqua, cadre.
+        """
+        self.ouvrir()
+        self.attendre("essai : montré après")
+        c = self.jusqua(self.cadre, "cadre du sélecteur")
+        self.assertEqual((c["plaque"], c["surface"], c["ombre"]), (False, False, False))
+
+    def test_estompe_et_agrandi(self):
+        """Vérifie que la vignette choisie (la deuxième) reste pleine et grandit vers selecteur.agrandi (1,15), que
+        les autres sont estompées à selecteur.estompe (0,5), et que l'estompe suit la sélection quand elle avance.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : ouvrir, attendre, jusqua,
+        vignette, selecteur.
+        """
+        self.ouvrir()
+        self.attendre("essai : montré après")
+        v = self.jusqua(lambda: (v := self.vignette(1)) and v["echelle"] > 1.14 and v, "vignette choisie agrandie")
+        self.assertEqual(v["estompe"], 1)
+        self.assertAlmostEqual(v["echelle"], 1.15, delta=0.01)
+        self.assertEqual([self.vignette(i)["estompe"] for i in (0, 2, 3)], [0.5, 0.5, 0.5])
+        self.selecteur("avancer", "1")
+        self.assertEqual([self.vignette(i)["estompe"] for i in range(4)], [0.5, 0.5, 1, 0.5])
+
+    def test_titre_long_sans_decalage(self):
+        """Vérifie qu'un titre de 300 caractères sur la fenêtre choisie ne déplace pas la rangée, et que la largeur du
+        titre reste bornée par la largeur visible de la rangée.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : ouvrir, attendre, jusqua,
+        cadre, appel.
+        """
+        self.ouvrir()
+        self.attendre("essai : montré après")
+        avant = self.jusqua(self.cadre, "cadre du sélecteur")
+        self.assertEqual(self.appel("essai", "titre", "Une page web au titre interminable — " * 8), "ok")
+        apres = self.cadre()
+        self.assertEqual(apres["rangee"], avant["rangee"])
+        self.assertGreater(apres["titre"], 0)
+        self.assertLessEqual(apres["titre"], apres["vue"])
+
+    def test_reouverture_remet_le_pointeur(self):
+        """Vérifie qu'une réouverture pendant le fondu de sortie reprend la fenêtre montrée et remet à zéro l'état du
+        pointeur du cadre (origine, bouge) : un pointeur bougé au geste précédent ne prend pas la sélection (L2-79 c).
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : ouvrir, attendre, appel, cadre,
+        selecteur, etat.
+        """
+        self.ouvrir()
+        self.attendre("essai : montré après")
+        self.assertEqual(self.appel("essai", "pointeur", "100", "100"), "ok")
+        self.assertEqual(self.appel("essai", "pointeur", "300", "300"), "ok")
+        self.assertTrue(self.cadre()["bouge"])
+        self.selecteur("annuler")
+        self.assertTrue(self.etat()["sortant"])
+        self.selecteur("avancer", "1")
+        e, c = self.etat(), self.cadre()
+        self.assertEqual((e["ouvert"], e["montre"], e["fenetre"]), (True, True, True))
+        self.assertEqual((c["origine"], c["bouge"]), ([-1, -1], False))
+
+    def test_retrait_du_lanceur_ignore(self):
+        """Vérifie que le calque du sélecteur porte son propre namespace (dunei-attention-selecteur) et que le retrait
+        d'un calque dunei-attention (le lanceur en fondu) ne fait pas partir l'action en attente (L2-79 d) ; le retrait
+        du calque du sélecteur la fait partir ensuite. L'événement du lanceur est simulé par l'IPC evenement, qui
+        appelle Scene.surEvenement comme le ferait Hyprland.rawEvent.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : ouvrir, attendre, hyprctl, touche,
+        appel, etat, journal.
+        """
+        self.ouvrir()
+        self.attendre("essai : montré après")
+        calques = subprocess.run(["hyprctl", "layers", "-j"], capture_output=True, text=True, timeout=DELAI).stdout
+        self.assertIn('"namespace": "dunei-attention-selecteur"', calques)
+        self.touche("ReleaseSuper", False)
+        self.assertEqual(self.appel("essai", "evenement", "closelayer", "dunei-attention"), "ok")
+        self.assertTrue(self.etat()["differee"])
+        self.assertNotIn("essai : exécuté", self.journal())
+        self.attendre("essai : exécuté amener 0xb2")
+
+    def test_vignette_mipmap(self):
+        """Vérifie que la première vignette, celle d'une vraie fenêtre des bureaux 1 à 4, affiche sa capture par une
+        source d'effet à paliers (mipmap) dont la texture garde la taille native de la capture.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion ; test sauté sans vraie fenêtre sur les bureaux
+        1 à 4. Dépendances : hyprctl, injecter, appel, jusqua, vignette.
+        """
+        clients = json.loads(subprocess.run(["hyprctl", "clients", "-j"], capture_output=True, text=True).stdout or "[]")
+        vraie = next((c for c in clients if c["mapped"] and c["workspace"]["name"] in ("1", "2", "3", "4")), None)
+        if vraie is None:
+            self.skipTest("aucune vraie fenêtre sur les bureaux 1 à 4 à capturer")
+        # Hyprland nomme ses fenêtres sans le préfixe 0x dans ses événements, comme HyprlandToplevel.address.
+        self.injecter([dict(FENETRES[0], adresse=vraie["address"].removeprefix("0x"), taille=vraie["size"]),
+                       *FENETRES[1:]])
+        self.appel("essai", "ouvrir")
+        v = self.jusqua(lambda: (v := self.vignette(0)) and v["capturee"] and v, "capture de la première vignette")
+        self.assertTrue(v["mipmap"])
+        self.assertGreater(v["capture"][0], 0)
+        self.assertEqual(v["texture"], v["capture"])
+
+    def test_vignette_sans_capture(self):
+        """Vérifie qu'une fausse fenêtre, sans Toplevel, garde le repli à trois points (capturee faux), sans
+        avertissement QML au journal.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : appel, attendre, jusqua,
+        vignette, journal.
+        """
+        self.appel("essai", "ouvrir")
+        self.attendre("essai : montré après")
+        v = self.jusqua(lambda: self.vignette(0), "première vignette")
+        time.sleep(0.5)
+        self.assertFalse(self.vignette(0)["capturee"])
+        self.assertNotIn(" WARN ", self.journal())
+

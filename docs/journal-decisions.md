@@ -4647,3 +4647,74 @@ saisie de la barre (logo et engrenage des Réglages), et noté qu'une icône neu
 
 *Touché : `coque/Deconnexion/actions.json`, `coque/Lanceur/commandes.json`, `icones/correspondances.toml`,
 `phosphor.py`, `generate_icones.py`, `coque/Barre/Barre.qml`, tests, carnet (1.55), fiche du menu (1.3).*
+
+## 2026-11-23 — Sélecteur de fenêtres sur Scene (L2-80)
+
+### D211 · Marquage du curseur du sélecteur : agrandi, les autres grisés
+
+23 novembre 2026 · L2-80. La plaque d'accent orange sous la vignette choisie disparaît : Nicolas l'avait rejetée sur le
+menu de déconnexion (D205, « le fond orange » l'insupporte) et le sélecteur la portait encore. La vignette choisie
+grandit à 1,15 (`selecteur.agrandi`) autour de son centre, sans pousser ses voisines, et s'affiche en pleine image ; les
+autres sont grisées par une opacité de 0,5 (`selecteur.estompe`), animée au ressort `state`. C'est la logique du menu de
+déconnexion, choisie par Nicolas parmi trois options. Écartées : l'agrandissement accompagné d'un liseré d'accent, qui
+ramène l'orange ; l'agrandissement seul, le moins lisible quand les Tab s'enchaînent. Ce choix assouplit D201 : le
+« neutre pur, l'image seule » vaut désormais pour la vignette choisie, les autres recevant une opacité réduite, sans
+teinte ni couleur ajoutée. La légende (titre et « bureau n ») prend les libellés clairs du menu de déconnexion (D205), posée sur le voile, et non plus `text-primary` et `text-secondary`. Conséquence à juger à l'écran : l'estompe par opacité laisse voir le fond à travers les
+vignettes grisées.
+
+*Touché : `coque/Selecteur/CadreSelecteur.qml`, `coque/Composants/VignetteFenetre.qml`, `tokens.toml` (`[selecteur]`),
+bible (0.45), fiche du sélecteur (1.1).*
+
+### D212 · Vignettes nettes : capture native et paliers, figée à l'arrivée
+
+23 novembre 2026 · L2-80. Quickshell 0.3.2 n'offre ni mipmap ni réduction de qualité sur `ScreencopyView` : Qt réduit
+d'un seul coup une capture de 2560 px à 200 px environ, d'où le crénelage, que l'agrandissement de la vignette choisie
+aurait aggravé. La capture garde donc sa taille native, hors écran, et une `ShaderEffectSource` à `mipmap: true` l'affiche
+à la taille de la vignette avec un filtrage par paliers ; elle est figée (`live: false`) dès que la capture est arrivée,
+la vignette étant gelée pendant l'ouverture. Le composant étant partagé, le lanceur gagne la même netteté. Coût : une
+recopie et le calcul des paliers une fois par ouverture, et environ 16 Mo de mémoire graphique par fenêtre pendant
+l'ouverture, libérés à la fermeture. Le temps d'ouverture mesuré sur dix vignettes ne change pas : environ 145 ms avant
+comme après, c'est-à-dire le délai d'affichage de 150 ms, les captures arrivant avant lui. Écartées : une réduction en
+plusieurs passes successives, qui demande plus de code pour un résultat un peu moins fin et sans gain de vitesse ; des
+vignettes plus grandes, qui atténuent le crénelage sans le supprimer. Le coût en mémoire avec beaucoup de fenêtres reste
+à mesurer (L2-79).
+
+Complément du 24 novembre, après la recette. `clip` ne rognant qu'au rectangle, les captures claires (Dolphin,
+LibreOffice) montraient des coins pointus, que les captures sombres cachaient sur le voile : un `MultiEffect` masque
+désormais l'image aux coins `radius.panel` de la vignette, avec un bord adouci (seuil 0,5, étalement 1). La fenêtre
+schématique de repli, avec son bord `glassLine` et son fond, restait sous l'image, à 1 px de marge : quand la vignette
+grandissait, ce liseré clair apparaissait par moments à gauche ou en haut d'une capture sombre. Elle est ôtée dès que
+l'image est pleinement apparue, et l'image couvre la vignette entière. L'image étant figée, le masque ne coûte qu'un
+dessin par vignette ; l'agrandissement et l'estompe restent de simples transformations.
+
+*Touché : `coque/Composants/VignetteFenetre.qml`, tests `test_selecteur`, `test_lanceur`.*
+
+### D213 · Un namespace de calque par client de Scene
+
+23 novembre 2026 · L2-80, règle L2-79 d) et L2-74 g). Tous les calques d'attention partageaient `dunei-attention` : le
+`closelayer` du lanceur en fondu pouvait donc faire partir une action différée d'un autre client environ 200 ms trop tôt.
+Chaque client de `Scene` reçoit désormais son propre namespace, `dunei-attention-<client>` (`-selecteur`,
+`-deconnexion`), et `Scene` n'écoute que le `closelayer` du sien : le défaut disparaît sans heuristique sur l'ordre des
+événements. Les règles de calque de Hyprland (flou, fondu seul) étant générées depuis `tokens.toml` par correspondance
+exacte, les deux namespaces sont ajoutés à `namespaces` et `fondu` de la section `[glass]` ; `make install` est
+nécessaire pour qu'elles prennent effet. Le lanceur garde `dunei-attention` jusqu'à son rebranchement sur `Scene`
+(L2-81), qui réglera son propre défaut, le namespace partagé avec `FenetreAttention`.
+
+*Touché : `coque/Composants/Scene.qml`, `coque/Selecteur/Selecteur.qml`, `coque/Deconnexion/`, `tokens.toml`
+(`[glass]`), `generated/hyprland-layers.lua`, tests `test_scene`, `test_selecteur`, `test_deconnexion`, carnet (1.56).*
+
+### D214 · Le délai d'affichage du geste tenu appartient à Scene
+
+23 novembre 2026 · L2-80. `Scene` gagne l'option `delai` (0 par défaut), en millisecondes : pendant ce délai, la fenêtre
+est construite avec le clavier exclusif mais reste invisible ; le sélecteur y pose `delays.selecteur`. La propriété
+`montre` dit que la scène est ouverte et le délai écoulé. Le fondu d'entrée et la montée suivent l'affichage, non la
+création de la fenêtre : le fondu « fade » du compositeur se joue à la création, pendant l'invisibilité, et ne se
+verrait pas ; `FenetreScene` anime donc l'opacité au ressort `overlay` vers l'affichage et lance la montée quand
+l'affichage commence. Sans délai (menu de déconnexion), la surface naît opaque et rien ne change. Une fermeture avant le
+délai ne montre rien et n'a pas de fondu. Une réouverture pendant le fondu de sortie reprend la fenêtre et la garde
+visible sans rejouer le délai, de sorte qu'un second `SUPER + Tab` rapide ne fait pas clignoter le sélecteur. Écarté :
+laisser le délai à chaque client, qui aurait gardé deux copies du même mécanisme, ce que la reprise sur `Scene` voulait
+éviter. L2-79 a) reste ouvert : `Scene` abandonne l'action en attente à la réouverture (D204, « changer d'avis »).
+
+*Touché : `coque/Composants/Scene.qml`, `coque/Composants/FenetreScene.qml`, `coque/Selecteur/Selecteur.qml`, tests
+`test_scene`, `test_selecteur`.*
