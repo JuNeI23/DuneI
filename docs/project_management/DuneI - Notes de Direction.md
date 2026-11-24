@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas — révisée le 22 octobre 2026
 
-Version 1.65. Historique en fin de document.
+Version 1.66. Historique en fin de document.
 
 *Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent soixante-quinze lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
 
@@ -710,20 +710,21 @@ passage : les touches pendant le fondu de sortie (b), les fenêtres suivies lanc
 avec la galerie (g). Les trois attentions plein écran, menu de déconnexion, sélecteur et lanceur, n'ont plus qu'un seul
 mécanisme d'ouverture et de sortie.
 
-Les dernières dettes du lanceur sont réglées et attendent la recette (L2-74 a, c, e, f et h, D216 et D217) : la sélection
+Les dernières dettes du lanceur sont réglées (L2-74 a, c, e, f et h, D216 et D217) et Nicolas a validé la recette à
+l'écran le 24 novembre : la sélection
 suit le résultat visé, et non sa position, sauf un calcul arrivé en tête tant que rien n'a bougé ; les fenêtres quittent
 le relevé d'usage et se rangent par titre ; les grandeurs écrites en dur sont devenues des jetons, sans changer de
 valeur ; le médaillon ne crée son icône en couleur que s'il en a une ; un avertissement de qalc ne passe plus pour la
 réponse. Les réponses que qalc invente (« 5 asdfg ») sont notées L2-82.
 
-Prochaine étape : **la recette à l'écran de L2-74, puis la fusion**. Ensuite, à proposer, L2-82 (réponses inventées par
-qalc), puis le reste de L2-48, L2-57 (suites du popover Bluetooth), L2-58, L2-59, L2-62, L2-70 et les défauts L2-75 à
+Prochaine étape, à proposer : **L2-82, les réponses inventées par qalc dans le lanceur**. Ensuite, le reste de L2-48, L2-57 (suites du popover Bluetooth), L2-58, L2-59, L2-62, L2-70 et les défauts L2-75 à
 L2-79.
 
 ## Historique des versions
 
 | Version | Date | Changement |
 | --- | --- | --- |
+| 1.66 | 2026-11-24 | L2-74 fait (recette validée) ; prochaine étape : L2-82, les réponses inventées par qalc |
 | 1.65 | 2026-11-24 | L2-74 en recette (D216, D217), ajout de L2-82 ; prochaine étape : la recette à l'écran, puis la fusion |
 | 1.64 | 2026-11-24 | L2-81 fait (recette validée) ; prochaine étape : le reste de L2-74, dettes du lanceur |
 | 1.63 | 2026-11-24 | L2-81 en recette (D215) ; prochaine étape : la recette à l'écran, puis la fusion |
