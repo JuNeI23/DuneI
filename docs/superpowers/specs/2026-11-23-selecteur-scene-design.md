@@ -1,6 +1,6 @@
 # Sélecteur de fenêtres sur `Scene` (L2-80) — fiche
 
-Version 1.1 — 2026-11-23 · validée par Nicolas
+Version 1.2 — 2026-11-24 · faite, recette validée
 
 ## Intention
 
@@ -138,4 +138,5 @@ réglera à son rebranchement.
 | Version | Date | Changement |
 |---|---|---|
 | 1.1 | 2026-11-23 | Relecture du constructeur : fondu et montée à l'affichage, réouverture sans délai, pointeur remis à zéro par le cadre, estompe de la vignette entière, L2-79 a) laissé ouvert |
+| 1.2 | 2026-11-24 | Faite, recette validée : coins arrondis par masque, liseré de la fenêtre de repli ôté, titre à l'échelon 4 moyen |
 | 1.0 | 2026-11-23 | Première écriture : marquage A, netteté par mipmap, rebranchement sur `Scene`, namespace par client |

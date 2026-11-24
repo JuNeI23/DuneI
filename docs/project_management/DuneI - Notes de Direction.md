@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas — révisée le 22 octobre 2026
 
-Version 1.61. Historique en fin de document.
+Version 1.62. Historique en fin de document.
 
 *Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent soixante-quinze lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
 
@@ -693,17 +693,17 @@ révélé que le logo de la barre et l'engrenage des Réglages manquaient au mas
 au bureau ; un test exige désormais une région de masque pour chaque élément cliquable. « Déconnexion » est devenue
 « Quitter Hyprland », avec le logo de Hyprland (D210), Nicolas n'ayant jamais plusieurs sessions utilisateur.
 
-Le sélecteur de fenêtres est repris sur `Scene` (L2-80, D211 à D214) et attend la recette de Nicolas. Il n'a plus de
+Le sélecteur de fenêtres est repris sur `Scene` (L2-80, D211 à D214) ; Nicolas a validé la recette à l'écran le 24 novembre. Il n'a plus de
 cadre ni de plaque de verre : la rangée et sa légende sont posées sur le voile, comme le menu de déconnexion, avec un
 écart de 32. La vignette choisie grandit à 1,15 en pleine image et les autres sont grisées à 0,5 d'opacité, ce qui
 assouplit D201 (D211). Les vignettes sont nettes par un filtrage par paliers de la capture native, sans ralentir
 l'ouverture, mesurée à environ 145 ms avant comme après (D212) ; le titre long est coupé par « … » sans déplacer la
 rangée. Chaque client de `Scene` a son propre namespace de calque (D213), ce qui règle pour lui le `closelayer` d'un
-autre calque, et `Scene` porte le délai d'affichage du geste tenu (D214). Trois points sont à juger à l'écran :
-l'estompe par opacité laisse voir le fond à travers les vignettes grisées, la légende « bureau n » est peu lisible sur
-un fond clair, et une marge horizontale a été ajoutée aux extrémités de la rangée pour la vignette agrandie.
+autre calque, et `Scene` porte le délai d'affichage du geste tenu (D214). La recette a corrigé les coins des captures
+claires, restés pointus, et un liseré clair qui apparaissait autour des captures sombres pendant l'agrandissement ; le
+titre de la légende a pris la taille des libellés du menu de déconnexion (complément de D212).
 
-Prochaine étape : **la recette de L2-80 à l'écran**, puis la fusion, puis, à proposer, **L2-81, le lanceur sur
+Prochaine étape : à proposer, **L2-81, le lanceur sur
 `Scene`**, qui réglera son `closelayer` partagé avec `FenetreAttention` (L2-74 g). Le reste de L2-48, L2-57 (suites du
 popover Bluetooth), L2-58, L2-59, L2-62, L2-70 et les défauts L2-74 à L2-79 attendent leur tour.
 
@@ -711,6 +711,7 @@ popover Bluetooth), L2-58, L2-59, L2-62, L2-70 et les défauts L2-74 à L2-79 at
 
 | Version | Date | Changement |
 | --- | --- | --- |
+| 1.62 | 2026-11-24 | L2-80 fait (recette validée, coins arrondis, liseré ôté, titre plus grand) ; prochaine étape : L2-81, le lanceur sur `Scene` |
 | 1.61 | 2026-11-23 | L2-80 en recette (D211 à D214) ; prochaine étape : la recette à l'écran, puis la fusion, puis L2-81, le lanceur sur `Scene` |
 | 1.60 | 2026-11-23 | L2-23 fait (recette validée, D210) ; prochaine étape : la reprise du sélecteur de fenêtres sur `Scene` (L2-80) |
 | 1.59 | 2026-11-23 | L2-23 construit, en recette (D204 à D209) ; prochaine étape : la recette, puis la reprise du sélecteur (L2-80) |
