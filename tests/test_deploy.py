@@ -846,6 +846,33 @@ class SystemeTest(unittest.TestCase):
         self.assertIn(str(pam), deploy.describe(actions[-1]))
 
 
+class ReglesSystemeTest(unittest.TestCase):
+    """Règles d'authentification réelles de systeme/ (L2-24)."""
+
+    def test_regles_systeme(self):
+        pam, conf = ((ROOT / "systeme" / f).read_text(encoding="utf-8").splitlines()
+                     for f in (deploy.PAM_REGLE, "etc/security/faillock.conf"))
+        for lignes in (pam, conf):
+            self.assertIn(deploy.SYSTEM_MARK, lignes[1])
+        self.assertEqual(pam[0], "#%PAM-1.0")
+        unix = [l.split() for l in pam if "pam_unix.so" in l and not l.startswith("#")]
+        self.assertEqual([u[0] for u in unix], ["auth"])
+        self.assertIn("authtok_err=die", unix[0])
+        self.assertIn("conv_err=die", unix[0])
+        self.assertEqual([l for l in conf if l and not l.startswith("#")], ["deny = 5"])
+
+    def test_regle_pam_reprend_system_auth(self):
+        pile = deploy._pile_auth((ROOT / "systeme" / deploy.PAM_REGLE).read_text(encoding="utf-8"))
+        self.assertEqual(pile, [
+            "auth required pam_faillock.so preauth",
+            "-auth [success=2 default=ignore] pam_systemd_home.so",
+            "auth [success=1 default=bad] pam_unix.so try_first_pass nullok",
+            "auth [default=die] pam_faillock.so authfail",
+            "auth optional pam_permit.so",
+            "auth required pam_env.so",
+            "auth required pam_faillock.so authsucc"])
+
+
 class SocleTest(unittest.TestCase):
     """Services système de services.toml : activation et pare-feu (L1-25), état de systemd simulé."""
 
