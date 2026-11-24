@@ -1,6 +1,6 @@
 # Agent d'authentification (L2-24)
 
-Version 0.2 — 2026-11-24 — à valider par Nicolas
+Version 1.0 — 2026-11-24 — validée par Nicolas, essais réels sur caladan au lieu d'une VM
 
 ## Intention
 
@@ -53,7 +53,7 @@ que ce confort rende le compte plus facile à verrouiller.
 | Programme propre à DuneI | Vraie file, commande complète | Code de sécurité à écrire et à entretenir |
 
 `hyprpolkitagent` reste le secours possible ; un seul agent peut être enregistré par session. Nicolas a aussi accepté la
-règle PAM ci-dessous, éprouvée d'abord en VM, et demandé que le compte tolère cinq mots de passe
+règle PAM ci-dessous, et demandé que le compte tolère cinq mots de passe
 faux au lieu de trois.
 
 ## Conception
@@ -67,8 +67,8 @@ faux au lieu de trois.
 - **`CadreAutorisation`** : cadre E3, `ChampSecret`, deux `Bouton`, cotes et couleurs des jetons seuls.
 - **Débrayage** : `autorisation.active` dans `tokens.toml` ; faux, le `Loader` ne construit rien.
 - **Garde de développement** : `~/.config/quickshell/dunei` est un lien vers le dépôt, donc tout module écrit est vivant.
-  `autorisation.active` reste faux, et les deux fichiers PAM restent hors de `systeme/`, que `make install` copie en
-  entier, jusqu'à la preuve en VM. Le commit qui les active est le dernier, après l'accord de Nicolas.
+  `autorisation.active` reste faux jusqu'à la preuve de la règle PAM et l'accord de Nicolas ; le commit qui l'active est
+  le dernier.
 - **Garde de marche** : l'agent ne s'enregistre que si `/etc/pam.d/polkit-1` porte la marque de DuneI.
 - **Enregistrement manqué** : le `Loader` est reconstruit après 2, 10 puis 60 s ; au-delà, une notification de la coque
   le signale une fois.
@@ -108,8 +108,8 @@ Tout texte PAM que DuneI ne reconnaît pas s'affiche tel quel dans la ligne d'é
 - Une demande close par polkit ferme la scène. `cancelAuthenticationRequest` n'est appelée qu'une fois par flux, jamais
   après `isCompleted`.
 - Une seconde demande reprend la fenêtre en place, champ vidé, garde de frappe relancée. Le sort du premier flux
-  (annulation explicite, ou abandon à son demandeur) se décide sur une sonde en VM, menée avant d'écrire la machine à
-  états ; si l'annuler trouble le second, il est laissé, et la limite est documentée.
+  (annulation explicite, ou abandon à son demandeur) se décide sur une sonde, menée une fois la règle PAM prouvée et avant
+  d'écrire la machine à états ; si l'annuler trouble le second, il est laissé, et la limite est documentée.
 
 ### Garde de frappe
 
@@ -128,7 +128,7 @@ la ligne dit seulement « Mot de passe incorrect. » et le champ reste ouvert : 
 
 - **`systeme/etc/pam.d/polkit-1`**, qui prime sur celui du paquet : la pile `auth` de `system-auth` y est écrite en
   toutes lettres, et `pam_unix` y porte `authtok_err=die conv_err=die`, ce qui arrête la pile avant `authfail`.
-  `account`, `password` et `session` gardent leur `include`. Le code rendu est **déduit du journal**, à prouver en VM.
+  `account`, `password` et `session` gardent leur `include`. Le code rendu est **déduit du journal**, à prouver sur caladan.
   Dérive : `make install` compare la pile à celle de `/etc/pam.d/system-auth` et avertit, sans bloquer. Ni la CI ni
   `make check` ne le font, leur conteneur n'ayant pas les fichiers de caladan.
 - **`systeme/etc/security/faillock.conf`** : `deny = 5`, le reste aux valeurs par défaut (10 minutes de verrou).
@@ -145,13 +145,14 @@ la ligne dit seulement « Mot de passe incorrect. » et le champ reste ouvert : 
 ## Vérification
 
 - **Essais isolés** (flux factice) : chaque état, vide refusé, garde de frappe, fermetures, seconde demande, débrayage.
-- **Machine d'essai** : le disque de la VM de recette n'existe plus. L'image officielle d'Arch pour le nuage, téléchargée
-  et vérifiée, tourne dans QEMU sans fenêtre, avec un compte et un mot de passe jetables ; la branche y arrive par SSH,
-  depuis la machine. Aucun paquet ne s'ajoute à caladan, et rien de la VM n'entre dans le dépôt.
-- **VM** : règle PAM (trois annulations, 0 échec compté ; un mauvais mot de passe, 1 échec), verrou au cinquième,
-  demandes simultanées, demandeur tué, coque tuée pendant une demande (clavier rendu), rechargement.
-- **Caladan** : rien n'est posé dans `/etc/pam.d` avant la preuve en VM ; chaque essai réel est annoncé avec son risque,
-  `faillock --user` lu avant et après. Un terminal `sudo -s` reste ouvert pendant la pose.
+- **Essais réels sur caladan**, sans VM, par choix de Nicolas, qui accepte un verrou de dix minutes. Chacun est annoncé
+  avec son risque, `faillock --user` lu avant et après, et rien ne remet le compteur à zéro sans Nicolas. La règle ne
+  touche que polkit ; Nicolas la pose lui-même (`sudo`), un terminal `sudo -s` ouvert.
+  1. Règle PAM : une seule annulation, 0 échec attendu. Un échec compté arrête les essais.
+  2. Sonde des demandes simultanées et du demandeur tué, la règle prouvée.
+  3. Mauvais mot de passe : un échec compté et « Quatre essais restants », puis le bon mot de passe.
+  4. Coque tuée pendant une demande (clavier rendu), rechargement, verrou au cinquième échec : en dernier, avec l'accord
+     de Nicolas, le verrou fermant aussi `sudo` et hyprlock.
 - **Retour arrière** : `autorisation.active` à faux suffit pour l'agent. Pour les règles, annuler le commit qui les pose
   (sinon `make install` les repose), puis `sudo rm /etc/pam.d/polkit-1` et commenter `deny` dans `faillock.conf`.
 - **Recette** par Nicolas ; documentation : bible (tableau des surfaces), journal, backlog (L2-24), carnet, notes.
@@ -160,5 +161,6 @@ la ligne dit seulement « Mot de passe incorrect. » et le champ reste ouvert : 
 
 | Version | Date | Changement |
 |---|---|---|
+| 1.0 | 2026-11-24 | Validée ; la VM cède la place à des essais réels, règle PAM d'abord |
 | 0.2 | 2026-11-24 | Relecture de constructeur : gardes de développement et de marche, VM, seconde demande, verrou lu dans `faillock`, dérive, retour arrière |
 | 0.1 | 2026-11-24 | Première version |
