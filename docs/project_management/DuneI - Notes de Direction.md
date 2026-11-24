@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas — révisée le 22 octobre 2026
 
-Version 1.62. Historique en fin de document.
+Version 1.63. Historique en fin de document.
 
 *Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent soixante-quinze lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
 
@@ -703,14 +703,22 @@ autre calque, et `Scene` porte le délai d'affichage du geste tenu (D214). La re
 claires, restés pointus, et un liseré clair qui apparaissait autour des captures sombres pendant l'agrandissement ; le
 titre de la légende a pris la taille des libellés du menu de déconnexion (complément de D212).
 
-Prochaine étape : à proposer, **L2-81, le lanceur sur
-`Scene`**, qui réglera son `closelayer` partagé avec `FenetreAttention` (L2-74 g). Le reste de L2-48, L2-57 (suites du
-popover Bluetooth), L2-58, L2-59, L2-62, L2-70 et les défauts L2-74 à L2-79 attendent leur tour.
+Le lanceur est à son tour repris sur `Scene` (L2-81, D215), sans aucun changement visible : il a son propre namespace
+de calque, `dunei-attention-lanceur`, et reste au tiers haut de l'écran grâce à une fonction de placement que `Scene`
+accepte désormais de chacun de ses clients. `FenetreLanceur.qml` disparaît ; trois dettes de L2-74 sont réglées au
+passage : les touches pendant le fondu de sortie (b), les fenêtres suivies lanceur fermé (d) et le `closelayer` partagé
+avec la galerie (g). Les trois attentions plein écran, menu de déconnexion, sélecteur et lanceur, n'ont plus qu'un seul
+mécanisme d'ouverture et de sortie.
+
+Prochaine étape : **la recette à l'écran de L2-81 par Nicolas**, puis la fusion. Ensuite, à proposer : le reste de
+L2-74 (a, c, e, f, h), de L2-48, L2-57 (suites du popover Bluetooth), L2-58, L2-59, L2-62, L2-70 et les défauts L2-75 à
+L2-79.
 
 ## Historique des versions
 
 | Version | Date | Changement |
 | --- | --- | --- |
+| 1.63 | 2026-11-24 | L2-81 en recette (D215) ; prochaine étape : la recette à l'écran, puis la fusion |
 | 1.62 | 2026-11-24 | L2-80 fait (recette validée, coins arrondis, liseré ôté, titre plus grand) ; prochaine étape : L2-81, le lanceur sur `Scene` |
 | 1.61 | 2026-11-23 | L2-80 en recette (D211 à D214) ; prochaine étape : la recette à l'écran, puis la fusion, puis L2-81, le lanceur sur `Scene` |
 | 1.60 | 2026-11-23 | L2-23 fait (recette validée, D210) ; prochaine étape : la reprise du sélecteur de fenêtres sur `Scene` (L2-80) |

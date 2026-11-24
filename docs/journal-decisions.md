@@ -4718,3 +4718,25 @@ laisser le délai à chaque client, qui aurait gardé deux copies du même méca
 
 *Touché : `coque/Composants/Scene.qml`, `coque/Composants/FenetreScene.qml`, `coque/Selecteur/Selecteur.qml`, tests
 `test_scene`, `test_selecteur`.*
+
+### D215 · Le lanceur sur Scene, placé par une fonction du client
+
+24 novembre 2026 · L2-81, règle L2-74 b), d) et g). Le lanceur était le dernier client d'attention à porter sa propre
+copie du mécanisme de `Scene` : chargeur de fenêtre, fondu de sortie, action différée au retrait du calque, garde d'une
+seconde, abandon de l'action quand une autre attention s'ouvre. Il instancie désormais une `Scene` de namespace
+`dunei-attention-lanceur` et ne garde que ce qui lui est propre (saisie, sélection, sources, calcul, cotes, IPC) ;
+`FenetreLanceur.qml` est supprimée. Pour que rien ne change à l'écran, `Scene` gagne `positionner`, une fonction
+`(hauteurFenetre, hauteurCadre) → y` fournie par le client, que `FenetreScene` applique au haut du cadre ; sans elle, le
+cadre reste centré. Celle du lanceur le tient au tiers haut, bord haut fixe, comme avant : le centre de la scission au
+tiers de l'écran, jamais plus haut que `cotes.retrait`. Écartés : une énumération de positions (« centre », « tiers »),
+que chaque nouveau client aurait allongée ; centrer le lanceur, dont le bord haut aurait sauté à chaque passage de
+l'accueil à la scission ; garder `FenetreLanceur` en ne passant que le contrôleur sur `Scene`, qui aurait laissé deux
+fenêtres presque identiques. La copie dans le presse-papiers part toujours aussitôt, avant la fermeture, car Wayland
+n'écrit le presse-papiers que depuis une fenêtre qui a le focus. Au passage : le cadre ne traite plus aucune touche
+lanceur fermé, pendant le fondu de sortie (b) ; les sources ne suivent les fenêtres de la session que lanceur présent,
+grâce à `Sources.actif` (d) ; l'action différée ne part plus qu'au retrait du calque du lanceur, et non à celui de la
+galerie, qui garde seule `dunei-attention` (g). `make install` est nécessaire pour la nouvelle règle de calque.
+
+*Touché : `coque/Composants/Scene.qml`, `coque/Composants/FenetreScene.qml`, `coque/Lanceur/` (`Lanceur.qml`,
+`CadreLanceur.qml`, `Sources.qml`, `FenetreLanceur.qml` supprimée, coques d'essai), `tokens.toml` (`[glass]`),
+`generated/hyprland-layers.lua`, tests `test_scene`, `test_lanceur`, `test_hyprland*`, carnet (1.57).*
