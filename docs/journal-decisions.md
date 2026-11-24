@@ -4740,3 +4740,34 @@ galerie, qui garde seule `dunei-attention` (g). `make install` est nécessaire p
 *Touché : `coque/Composants/Scene.qml`, `coque/Composants/FenetreScene.qml`, `coque/Lanceur/` (`Lanceur.qml`,
 `CadreLanceur.qml`, `Sources.qml`, `FenetreLanceur.qml` supprimée, coques d'essai), `tokens.toml` (`[glass]`),
 `generated/hyprland-layers.lua`, tests `test_scene`, `test_lanceur`, `test_hyprland*`, carnet (1.57).*
+
+### D216 · Au lanceur, la sélection suit le résultat
+
+24 novembre 2026 · L2-74 a. La sélection retenait une position : quand une fenêtre changeait de titre ou se fermait, ou
+quand le calcul répondait, la liste glissait dessous et Entrée pouvait lancer le voisin de ce que l'on visait. Elle
+retient désormais la clé du résultat (`suivre`, dans `lanceur.js`), et, dans l'aperçu, l'adresse de la fenêtre dont la
+vignette est choisie. Nicolas a choisi, entre trois règles, la première : elle suit toujours le résultat, sauf un calcul
+arrivé en tête, qui prend la sélection tant que rien n'a bougé depuis la dernière frappe. Écartées : la suivre sans
+exception, qui obligeait à remonter d'un cran pour prendre un calcul arrivé après ; rester en tête tant que l'on n'a
+pas bougé, qui laissait un nouveau venu prendre Entrée de vitesse. Une frappe remet la sélection en tête ; un résultat
+disparu laisse la place à son voisin ; l'aperçu d'un résultat disparu ramène à la liste, pour qu'Entrée n'exécute jamais
+l'action d'un résultat qui n'a pas été visé.
+
+*Touché : `coque/Lanceur/Lanceur.qml`, `coque/Lanceur/lanceur.js`, tests `test_lanceur`, bible, carnet.*
+
+### D217 · Les fenêtres quittent le relevé d'usage, les grandeurs du lanceur passent en jetons
+
+24 novembre 2026 · L2-74 c, e, f et h. Le relevé `lanceur.json` notait aussi les fenêtres, par leur adresse, qui ne vaut
+que le temps de leur vie et que Hyprland peut réattribuer : il aurait grossi sans fin de clés mortes, et une fenêtre
+neuve aurait pu hériter d'un poids. Elles n'y entrent plus, celles qui y seraient sont écartées à la lecture, et les
+fenêtres d'une application se rangent par titre. Écarté : un élagage des clés de faible poids, qui aurait gardé un
+relevé sans valeur entre deux sessions. Les grandeurs écrites en dur gardent leur valeur et changent de place : en
+jetons quand elles sont partagées (`reglages.medallion_image`, table `[vignette]`, `delays.garde` du mouvement pour la
+garde de `Scene`), dans `cotes` du lanceur quand elles lui sont propres. Le médaillon ne crée son icône en couleur, par
+un `Loader`, que si une image est posée : la plupart de ceux de la coque n'ont qu'un glyphe. Enfin une ligne « warning »
+ou « error » de qalc est sautée au lieu de passer pour la réponse ; ce défaut n'a pas pu être reproduit avec qalc 5.13.1
+en mode `-t`, où aucune expression bancale ne l'a déclenché. Les essais ont montré un défaut plus gênant, les réponses
+inventées, noté L2-82. `make install` est nécessaire pour les nouveaux jetons.
+
+*Touché : `coque/Lanceur/`, `coque/Composants/` (`Medaillon.qml`, `VignetteFenetre.qml`, `Scene.qml`),
+`coque/Theme/Theme.qml`, `tokens.toml`, `motion.toml`, émetteurs et contrôles, `generated/`, références, tests, carnet.*
