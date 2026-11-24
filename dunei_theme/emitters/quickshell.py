@@ -301,6 +301,7 @@ def emit(model: dict) -> str:
         "presquile": _camel_keys(raw["presquile"]),
         "galerie": _camel_keys(raw["galerie"]),
         "selecteur": _camel_keys(raw["selecteur"]),
+        "vignette": _camel_keys(raw["vignette"]),
         "deconnexion": _camel_keys(raw["deconnexion"]),
         "notifications": _camel_keys(raw["notifications"]),
         "cloche": _camel_keys(raw["cloche"]),

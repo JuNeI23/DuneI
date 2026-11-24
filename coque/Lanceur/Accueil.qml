@@ -79,7 +79,11 @@ Item {
                     opacity: entree.value
                     transform: [
                         Translate { y: (1 - entree.value) * (Theme.space?.scale[1] ?? 0) - survol.value * (Theme.space?.scale[0] ?? 0) },
-                        Scale { origin.x: t.width / 2; origin.y: t.height / 2; xScale: grandeur.value + 0.06 * survol.value; yScale: xScale }
+                        Scale {
+                            origin { x: t.width / 2; y: t.height / 2 }
+                            xScale: grandeur.value + Lanceur.cotes.survolTuile * survol.value
+                            yScale: xScale
+                        }
                     ]
 
                     Cascade { id: entree; rang: t.index; base: 80 }

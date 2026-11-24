@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Hyprland
+import "../Theme"
 
 // Scene — contrôleur d'une attention plein écran qui sort en fondu (L2-23) : socle du menu de déconnexion, puis du
 // sélecteur et du lanceur.
@@ -39,7 +40,8 @@ import Quickshell.Hyprland
 // Erreurs : aucune ; une fenêtre qui ne peut être construite est journalisée (« Scène : fenêtre non construite ») et
 //           la scène se referme.
 // Dépendances : Quickshell (LazyLoader, screens), Quickshell.Hyprland (focusedMonitor, rawEvent), QtQuick (Timer,
-//           Connections), Overlays, FenetreScene.qml (chargée par son adresse, comme FenetreAttention).
+//           Connections), Overlays, Theme (motion.delays.garde), FenetreScene.qml (chargée par son adresse, comme
+//           FenetreAttention).
 QtObject {
     id: scene
 
@@ -156,9 +158,12 @@ QtObject {
     }
 
     // Garde : si l'événement de retrait ne vient pas (connexion à Hyprland perdue), l'action part quand même, au plus
-    // une seconde après la fermeture ; ce délai technique, bien au-delà du fondu de sortie, n'est jamais atteint quand
-    // le compositeur répond.
-    readonly property Timer garde: Timer { interval: 1000; onTriggered: scene.realiserDifferee() }
+    // delays.garde (une seconde) après la fermeture ; ce délai technique, bien au-delà du fondu de sortie, n'est jamais
+    // atteint quand le compositeur répond.
+    readonly property Timer garde: Timer {
+        interval: Theme.motion?.delays.garde ?? 0
+        onTriggered: scene.realiserDifferee()
+    }
 
     // Délai d'affichage : à son terme, la scène encore ouverte est montrée ; une fermeture avant l'arrête.
     readonly property Timer attente: Timer { interval: scene.delai; onTriggered: if (scene.ouvert) scene.montre = true }

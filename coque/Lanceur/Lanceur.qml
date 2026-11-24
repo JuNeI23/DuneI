@@ -81,7 +81,10 @@ Singleton {
         retrait: Theme.space?.scale[2] ?? 0, champ: Theme.space?.scale[6] ?? 0,
         liste: 340, ligne: Theme.reglages?.row ?? 0, tuile: 92,
         medaillonAccueil: Theme.reglages?.rowLead ?? 0, medaillonApercu: Theme.space?.scale[7] ?? 0,
-        resultat: Theme.space?.scale[7] ?? 0
+        resultat: Theme.space?.scale[7] ?? 0,
+        // Parts : glyphe dans le médaillon de l'aperçu, échelle ajoutée à la tuile survolée, échelle perdue par
+        // l'accueil qui s'efface.
+        glypheApercu: 0.52, survolTuile: 0.06, retraitAccueil: 0.04
     })
 
     // basculer — ouvre le lanceur fermé, ferme le lanceur ouvert. Entrées : aucune. Sortie : aucune.

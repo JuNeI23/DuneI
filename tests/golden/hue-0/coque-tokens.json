@@ -93,6 +93,7 @@
     "rowLead": 60,
     "medallion": 32,
     "medallionGlyph": 18,
+    "medallionImage": 0.68,
     "textColumn": 56,
     "sidebarInset": 8,
     "tabHeight": 48,
@@ -1763,6 +1764,10 @@
     "ecart": 32,
     "agrandi": 1.15,
     "estompe": 0.5
+  },
+  "vignette": {
+    "survol": 0.03,
+    "anneau": 2
   },
   "deconnexion": {
     "cote": 128,

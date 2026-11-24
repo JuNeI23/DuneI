@@ -1049,6 +1049,20 @@ ShellRoot {
                 Etats.herite(reglageEssai, "dnRole", "")].join(" "))
         }
 
+        // imageMedaillon — journalise si le médaillon d'essai tient une icône en couleur, puis le côté de celle qu'il crée
+        // quand une image est posée ; l'image est retirée ensuite. Une icône est un enfant direct ou l'élément d'un
+        // chargeur. Entrées : aucune. Sortie : aucune ; « essai : imageMedaillon <bool> <côté> ». Erreurs : aucune.
+        // Dépendances : medaillonInactif, journal.
+        function imageMedaillon(): void {
+            const icone = () => Array.from(medaillonInactif.children).map(c => c.item !== undefined ? c.item : c)
+                .find(c => c && c.implicitSize !== undefined)
+            const vide = icone() !== undefined
+            medaillonInactif.image = "image://icon/firefox"
+            const cote = icone()?.implicitSize ?? 0
+            medaillonInactif.image = ""
+            essai.journal("imageMedaillon", [vide, cote].join(" "))
+        }
+
         // valeur — journalise la valeur d'essai : texte, copie en cours, opacité de la valeur puis de « Copié »,
         // texte du presse-papiers. Entrées : aucune. Sortie : aucune ; « essai : valeur <texte> <bool> <o1> <o2>
         // <presse-papiers> ». Erreurs : aucune. Dépendances : valeurEssai, Quickshell.clipboardText.

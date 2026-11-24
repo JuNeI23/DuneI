@@ -31,15 +31,15 @@ class QuickshellEmitterTest(unittest.TestCase):
         self.assertEqual(list(self.out), [
             "_generated", "hue", "space", "density", "radius", "window", "layout", "reglages", "breakpoints", "typo", "icons",
             "familles", "moments", "defaut", "themes", "pastilles", "bureau", "bureauxVirtuels", "presquile",
-            "galerie", "selecteur", "deconnexion", "notifications", "cloche", "panneau", "son"])
+            "galerie", "selecteur", "vignette", "deconnexion", "notifications", "cloche", "panneau", "son"])
         self.assertEqual(list(self.nuit), ["color", "states", "focus", "disabled", "elevation", "material", "glass", "render",
                                            "knob", "controls"])
 
     def test_reglages(self):
-        """Vérifie les vingt-trois formes des fenêtres de réglages (D104, D105, application Paramètres), émises en
+        """Vérifie les vingt-quatre formes des fenêtres de réglages (D104, D105, application Paramètres), émises en
         camelCase sous reglages."""
         self.assertEqual(self.out["reglages"], {"row": 44, "rowHelp": 52, "rowLead": 60, "medallion": 32,
-                                                "medallionGlyph": 18, "textColumn": 56, "sidebarInset": 8,
+                                                "medallionGlyph": 18, "medallionImage": 0.68, "textColumn": 56, "sidebarInset": 8,
                                                 "tabHeight": 48, "fieldWidth": 290, "windowWidth": 840,
                                                 "windowHeight": 640, "windowMinWidth": 720, "windowMinHeight": 480,
                                                 "entryHeight": 32, "thumb": 22, "thumbGlyph": 14, "networksShown": 5,
@@ -91,6 +91,10 @@ class QuickshellEmitterTest(unittest.TestCase):
     def test_selecteur(self):
         """Vérifie les jetons du sélecteur de fenêtres : hauteur de la vignette, largeurs minimale et maximale, écart."""
         self.assertEqual(self.out["selecteur"], {"hauteur": 140, "largeurMin": 100, "largeurMax": 320, "ecart": 32, "agrandi": 1.15, "estompe": 0.5})
+
+    def test_vignette(self):
+        """Vérifie les jetons des vignettes de fenêtre : part du survol, épaisseur et écart de l'anneau du choix."""
+        self.assertEqual(self.out["vignette"], {"survol": 0.03, "anneau": 2})
 
     def test_echelle_apparition(self):
         """Vérifie l'échelle de départ d'un cadre de scène qui grandit depuis son centre (Scene, montee faux)."""
