@@ -336,6 +336,7 @@ class CadreTest(ControleurTest):
         self.assertEqual((c["titre"], c["message"], c["brut"], c["y"]),
                          ("Autorisation requise", "Lancer <b>x</b>", True, 0))
         self.assertGreater(c["saisieLargeur"], 300)
+        self.assertEqual(c["role"], "controlRaised")     # Un cran au-dessus du conteneur E3 (bible).
         self.assertNotEqual(c["couvert"], "")
         self.appel("taper", SECRET)
         self.montre(autoriser=[True, True])

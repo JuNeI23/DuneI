@@ -36,6 +36,8 @@ FocusScope {
     readonly property alias fermer: fermer
     readonly property alias activite: activite
     readonly property alias annonce: annonce
+    // Rôle du fond, lu par les contrôles : l'Encoche peint la matière E3.
+    readonly property string dnRole: "surfaceRaised"
     readonly property var cotes: Theme.autorisation
     readonly property var ile: Theme.tokens?.presquile
     readonly property bool verrouille: Autorisation.etat === "verrouille"

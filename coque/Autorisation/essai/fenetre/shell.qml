@@ -139,7 +139,7 @@ ShellRoot {
                 autoriser: [c.autoriser.visible, c.autoriser.enabled], fermer: c.fermer.visible,
                 activite: c.activite.visible, annonce: c.annonce.text, annonceOpacite: c.annonce.parent.opacity,
                 hauteur: c.hauteurOuverte, forme: [c.encoche.largeurCorps, c.encoche.hauteur], saisieLargeur: c.champ.width,
-                ecran: Autorisation.fenetre.height, y: c.parent.y, couvert: Overlays.ecranCouvert,
+                ecran: Autorisation.fenetre.height, y: c.parent.y, couvert: Overlays.ecranCouvert, role: c.autoriser.etat.role,
                 bas: c.autoriser.mapToItem(c, 0, c.autoriser.height).y })
         }
 
