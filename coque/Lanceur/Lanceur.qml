@@ -209,8 +209,8 @@ Singleton {
     // trouve le clavier rendu, comme si elle partait de son raccourci, ou aussitôt sans fenêtre (coque d'essai hors
     // écran) ; la scène la rend par son signal realiser.
     // Entrées : action, {libelle, genre (« amener », « lancer », « nouvelle », « action », « commande », « copier »),
-    // cible} ; cle, la clé notée au relevé d'usage (facultative). Sortie : aucune. Erreurs : aucune.
-    // Dépendances : memoire, realiser, scene.executer, ouvert.
+    // cible} ; cle, la clé notée au relevé d'usage (facultative ; une fenêtre n'y entre pas). Sortie : aucune.
+    // Erreurs : aucune. Dépendances : memoire, realiser, scene.executer, ouvert.
     function executer(action, cle) {
         if (cle) memoire.noter(cle)
         if (action.genre !== "copier") return scene.executer(action)

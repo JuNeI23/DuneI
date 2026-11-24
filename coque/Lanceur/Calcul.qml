@@ -46,12 +46,12 @@ Scope {
     }
 
     // lireLigne — range une ligne de la sortie de qalc : « > expression » ouvre une réponse, la première ligne non
-    // vide qui suit en est le résultat. L'écho peut arriver précédé d'un saut de ligne (suite du prompt « > » précédent).
-    // Entrée : ligne. Sortie : aucune ; valeur reçoit le résultat si la requête est la dernière. Erreurs : aucune.
-    // Dépendances : Logique.lire.
+    // vide qui suit, messages de qalc sautés (L2-74 h), en est le résultat. L'écho peut arriver précédé d'un saut de
+    // ligne (suite du prompt « > » précédent). Entrée : ligne. Sortie : aucune ; valeur reçoit le résultat si la
+    // requête est la dernière. Erreurs : aucune. Dépendances : Logique (lire, avertissement).
     function lireLigne(ligne) {
         if (ligne.trim().startsWith("> ")) { courante = file.shift() || null; return }
-        if (!courante || !ligne.trim()) return
+        if (!courante || !ligne.trim() || Logique.avertissement(ligne)) return
         const r = courante
         courante = null
         if (r.n === dernier) valeur = Logique.lire(ligne, r.envoye)

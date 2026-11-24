@@ -12,6 +12,7 @@ import subprocess
 import tempfile
 import time
 import unittest
+from pathlib import Path
 
 from tests.test_coque_theme import DELAI, QS, ROOT, EssaiCoque
 
@@ -75,14 +76,15 @@ class LogiqueTest(EssaiCoque, unittest.TestCase):
         self.assertFalse(self.appeler("actionVisee", "Firefox", "Nouvelle fenêtre privée", "fire"))
 
     def test_classer_application_puis_fenetres(self):
-        """Vérifie le classement : calcul, application suivie de ses fenêtres par poids, puis commandes.
+        """Vérifie le classement : calcul, application suivie de ses fenêtres par titre (leur poids
+        ne compte pas, L2-74 c), puis commandes.
 
         Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : appeler.
         """
         r = [res("fen:2", "fenetre", 3, retrait=True, app="app:ff"), res("app:kit", "application", 4),
              res("app:ff", "application", 4), res("cmd:x", "commande", 4), res("calc", "calcul", 0),
              res("fen:1", "fenetre", 3, retrait=True, app="app:ff")]
-        cles = [x["cle"] for x in self.appeler("classer", r, {"app:ff": 9, "fen:1": 5, "fen:2": 1})]
+        cles = [x["cle"] for x in self.appeler("classer", r, {"app:ff": 9, "fen:1": 1, "fen:2": 5})]
         self.assertEqual(cles, ["calc", "app:ff", "fen:1", "fen:2", "app:kit", "cmd:x"])
 
     def test_suivre(self):
@@ -108,6 +110,7 @@ class LogiqueTest(EssaiCoque, unittest.TestCase):
         u = self.appeler("noter", u, "a", 100 * jour)
         self.assertEqual(u["a"], {"n": 2, "dernier": 100 * jour})
         self.assertEqual(self.appeler("poids", u, 100 * jour), {"a": 2})
+        self.assertEqual(self.appeler("noter", u, "fen:0xa1", 100 * jour), u)
         self.assertAlmostEqual(self.appeler("poids", {"b": {"n": 1, "dernier": 86 * jour}}, 100 * jour)["b"], 0.5)
 
     def test_frequentes_completees(self):
@@ -151,7 +154,8 @@ class LogiqueTest(EssaiCoque, unittest.TestCase):
         """
         for brut in ("x", [1], {"a": {"n": -1}}, None):
             self.assertEqual(self.appeler("assainir", brut), {})
-        self.assertEqual(self.appeler("assainir", {"a": {"n": 2, "dernier": 5}, "b": {"n": 1.5, "dernier": 5}}),
+        self.assertEqual(self.appeler("assainir", {"a": {"n": 2, "dernier": 5}, "b": {"n": 1.5, "dernier": 5},
+                                                   "fen:0xa1": {"n": 3, "dernier": 5}}),
                          {"a": {"n": 2, "dernier": 5}})
 
     def test_deplacer_accueil(self):
@@ -288,6 +292,9 @@ class LogiqueTest(EssaiCoque, unittest.TestCase):
         """
         self.assertEqual(self.appeler("lire", "1 / 0", "1/0"), "")
         self.assertEqual(self.appeler("lire", "error: x", "x"), "")
+        self.assertTrue(self.appeler("avertissement", "  warning: x"))
+        self.assertTrue(self.appeler("avertissement", "\x1b[31merror: x"))
+        self.assertFalse(self.appeler("avertissement", "6"))
         self.assertEqual(self.appeler("lire", "6,213711922 mi", "10 km to -miles"), "6,213711922 mi")
 
     def test_memoire_reecrit_un_fichier_corrompu(self):
@@ -382,6 +389,17 @@ class CalculTest(EssaiCoque, unittest.TestCase):
         time.sleep(0.5)
         self.assertNotIn("valeur : 1024", self.journal())
         self.assertEqual(self.etat()["valeur"], "8")
+
+    def test_avertissement_saute(self):
+        """Vérifie qu'une ligne d'avertissement de qalc ne prend pas la place du résultat qui la suit (faux qalc).
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : demarrer, valeur_apres.
+        """
+        faux = Path(tempfile.mkdtemp(dir=self.tmp.name)) / "qalc"
+        faux.write_text("#!/bin/sh\nwhile read -r l; do printf '> %s\\n\\n  warning: x\\n\\n  42\\n\\n' \"$l\"; done\n")
+        faux.chmod(0o755)
+        self.demarrer(f"{faux.parent}:{os.environ['PATH']}")
+        self.assertEqual(self.valeur_apres("12*7,5"), "42")
 
     def test_qalc_absent(self):
         """Vérifie que sans qalc le calcul se déclare indisponible, sans relance ni erreur hors l'avertissement unique.
