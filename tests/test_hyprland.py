@@ -219,8 +219,8 @@ class LayerRulesTest(unittest.TestCase):
     def test_regle_no_anim(self):
         """Le fond n'est pas flouté : sa règle, venue de [bureau].namespace, ne retire que l'animation d'apparition."""
         self.assertEqual(self.probe("r.name")[9:], ["dunei-fond"])
-        self.assertEqual(self.probe("r.match.namespace")[8:], ["^dunei-fond$"])
-        self.assertEqual(self.probe("tostring(r.no_anim) .. tostring(r.blur)")[8:], ["truenil"])
+        self.assertEqual(self.probe("r.match.namespace")[9:], ["^dunei-fond$"])
+        self.assertEqual(self.probe("tostring(r.no_anim) .. tostring(r.blur)")[9:], ["truenil"])
 
     @unittest.skipUnless(LUA, "aucun interpréteur Lua")
     def test_xray_sur_la_barre_seule(self):
