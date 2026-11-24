@@ -292,7 +292,18 @@ class LogiqueTest(EssaiCoque, unittest.TestCase):
                 ("20 mètres carrés en cm²", "20 m^2 to -cm^2"), ("8 Mbit en Mo", "8 Mbit to -MB"),
                 ("10 livres en kg", "10 lb to -kg"), ("10 livres sterling en euros", "10 GBP to -EUR"),
                 ("3 noeuds en km/h", "3 knot to -km/h"), ("2 sqrt(9)", "2 sqrt(9)"), ("(3+4)*2", "(3+4)*2"),
-                ("2 pi", "2 pi"), ("5!", "5!"), ("2^10", "2^10"), ("3 sin(30 degrés)", "3 sin(30 deg)")):
+                ("2 pi", "2 pi"), ("5!", "5!"), ("2^10", "2^10"), ("3 sin(30 degrés)", "3 sin(30 deg)"),
+                ("1 500 m en km", "1500 m to -km"), ("1\u202f234,56 €", "1234,56 €"), ("12 500 / 4", "12500 / 4"),
+                ("1/2 m en cm", "(1/2) m to -cm"), ("3 * 1/2 m en cm", "3 * (1/2) m to -cm"),
+                ("100 km/2 h en km/h", "100 km/2 h to -km/h"),
+                ("120 km / 90 km/h en min", "120 km / (90 km/h) to min"),
+                ("100 km / 2 h 30 min en km/h", "100 km / (2 h 30 min) to -km/h"),
+                ("10 h - 2 h 30 min", "10 h - (2 h 30 min)"),
+                ("30 degrés celsius en fahrenheit", "30 °C to -°F"), ("300 degrés kelvin en celsius", "300 K to -°C"),
+                ("3 + 4 =", "3 + 4"), ("5 k€ en $", "5 k€ to -$"), ("100 ¥ en €", "100 JPY to -€"),
+                ("255 en hex", "255 to hex"), ("2 √9", "2 sqrt(9)"), ("2**10", "2^10"), ("12 V / 4 ohms", "12 V / 4 ohm"),
+                ("10 km in miles", "10 km to -mi"), ("10 in in cm", "10 in to -cm"), ("5 Mo en Ko", "5 MB to -kB"),
+                ("360 degrés / 2 K", "360 deg / 2 K")):
             with self.subTest(saisie=saisie):
                 self.assertEqual(self.appeler("traduire", saisie), attendu)
 
@@ -303,7 +314,10 @@ class LogiqueTest(EssaiCoque, unittest.TestCase):
         """
         for saisie in ("5 asdfg", "12 pommes + 3", "10 m en bananes", "5 m en s", "90 km/h en kg", "3 cafés", "12 python",
                        "7 zip", "5 mo en Go", "5 +", "10 km en", "3 cm + 2 s", "5 m + 3", "68 degrés en celsius",
-                       "20 € en kg", "10 km en 5 m", "3 x", "5 km en m en cm", "2 ; 3", "4 constructor", ""):
+                       "20 € en kg", "10 km en 5 m", "3 x", "5 km en m en cm", "2 ; 3", "4 constructor", "",
+                       "2x + 3", "5x - 2", "3x4 + 2x - 1", "5 in cm", "192.168.1.1", "24.11.2026", "1,000.5 + 1",
+                       "06 12 34 56 78", "20 % 80", "20 % (80)", "1 E3", "5 E", "2 round(3,7 m)", "10 km mod 3 km",
+                       "20 degrés / s en K/s", "5 hbar", "255 m en hex"):
             with self.subTest(saisie=saisie):
                 self.assertEqual(self.appeler("traduire", saisie), "")
 
@@ -334,6 +348,26 @@ class LogiqueTest(EssaiCoque, unittest.TestCase):
         usage = json.loads(fichier.read_text())
         self.assertEqual(list(usage), ["app:ff"])
         self.assertEqual(usage["app:ff"]["n"], 1)
+
+
+# Valeur attendue de chaque unité de unites.js (hors monnaies), par unité de référence.
+FACTEURS = {
+    "m": {"m": 1, "in": 0.0254, "ft": 0.3048, "yd": 0.9144, "mi": 1609.344, "nmi": 1852, "ly": 9.4607304725808e15,
+          "au": 149597870700, "pc": 3.0856775814914e16},
+    "m^2": {"ha": 1e4, "acre": 4046.8564224},
+    "L": {"L": 1, "gal": 3.785411784, "cup": 0.24, "fl_oz": 0.0295735295625},
+    "g": {"g": 1, "t": 1e6, "lb": 453.59237, "oz": 28.349523125, "stone": 6350.29318},
+    "s": {"s": 1, "min": 60, "h": 3600, "d": 86400, "week": 604800, "month": 2629800, "year": 31557600},
+    "m/s": {"km/h": 1 / 3.6, "mi/h": 0.44704, "knot": 1852 / 3600},
+    "K": {"°C": 1, "°F": 1, "K": 1},
+    "rad": {"deg": 0.017453292519943, "rad": 1, "gon": 0.015707963267949, "turn": 6.2831853071796},
+    "Hz": {"Hz": 1}, "N": {"N": 1},
+    "J": {"J": 1, "Wh": 3600, "cal": 4.184, "eV": 1.602176634e-19},
+    "W": {"W": 1, "hp": 745.69987158227},
+    "Pa": {"Pa": 1, "bar": 1e5, "mbar": 100, "kbar": 1e8, "atm": 101325, "psi": 6894.757293168, "mmHg": 133.322387415},
+    "A": {"A": 1}, "A*s": {"Ah": 3600}, "V": {"V": 1}, "ohm": {"ohm": 1},
+    "B": {"B": 1, "bit": 0.125, "kB": 1000}, "B/s": {"bit/s": 0.125},
+}
 
 
 @unittest.skipUnless(os.environ.get("WAYLAND_DISPLAY") and QS, "session Wayland et Quickshell requis")
@@ -395,9 +429,14 @@ class CalculTest(EssaiCoque, unittest.TestCase):
         self.demarrer()
         for saisie, attendu in (("12*7,5", "90"), ("3 pieds en m", "0,9144 m"), ("5 jours en h", "120 h"),
                                 ("20 degrés en fahrenheit", "68 °F"), ("10 kWh en MJ", "36 MJ"),
-                                ("2 h 30 min en min", "150 min"), ("15 % de 80", "12"), ("5 ft 3 in en cm", "160,02 cm"),
+                                ("2 h 30 min en min", "150 min"), ("15 % de 80", "12"),
+                                ("5 ft 3 in en cm", "160,02 cm"),
                                 ("90 km/h en m/s", "25 m/s"), ("3 x 4", "12"), ("3 noeuds en km/h", "5,556 km/h"),
-                                ("10 livres en kg", "4,5359237 kg"), ("8 Mbit en Mo", "1 MB")):
+                                ("10 livres en kg", "4,5359237 kg"), ("8 Mbit en Mo", "1 MB"),
+                                ("1 500 m en km", "1,5 km"), ("1/2 m en cm", "50 cm"), ("255 en hex", "0xFF"),
+                                ("120 km / 90 km/h en min", "80 min"), ("12 V / 4 ohms", "3 A"), ("2 √9", "6"),
+                                ("100 km / 2 h 30 min en km/h", "40 km/h"), ("10 h - 2 h 30 min", "7 h + 30 min"),
+                                ("10 in in cm", "25,4 cm")):
             with self.subTest(saisie=saisie):
                 self.assertEqual(self.valeur_apres(saisie), attendu)
         valeur = self.valeur_apres("10 km en miles")
@@ -438,28 +477,35 @@ class CalculTest(EssaiCoque, unittest.TestCase):
 
     @unittest.skipUnless(shutil.which("qalc"), "qalc requis")
     def test_vocabulaire_reel(self):
-        """Vérifie qu'un vrai qalc lit chaque unité de unites.js, seule puis préfixée, dans sa grandeur.
+        """Vérifie qu'un vrai qalc lit chaque unité de unites.js à sa valeur, préfixes compris, dans les deux sens.
 
-        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion, qui nomme l'unité. Dépendances : qalc, unites.js.
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion, qui nomme l'unité ; les cours des monnaies
+        varient, seule leur lecture est vérifiée. Dépendances : qalc, unites.js, FACTEURS.
         """
-        reference = {"L": "m", "L2": "m^2", "L3": "L", "M": "kg", "T": "s", "L T-1": "m/s", "K": "K", "A": "rad",
-                     "T-1": "Hz", "M L T-2": "N", "M L2 T-2": "J", "M L2 T-3": "W", "M L-1 T-2": "Pa", "I": "A",
-                     "I T": "A*s", "M L2 T-3 I-1": "V", "D": "B", "D T-1": "B/s", "E": "EUR"}
+        petits = {"p": 1e-12, "n": 1e-9, "µ": 1e-6, "m": 1e-3, "c": 1e-2, "d": 1e-1, "da": 10, "h": 100}
+        grands = {"k": 1e3, "M": 1e6, "G": 1e9, "T": 1e12, "P": 1e15}
+        binaires = {"Ki": 2**10, "Mi": 2**20, "Gi": 2**30, "Ti": 2**40}
+        prefixes = {"": {}, "si": petits | grands, "k": grands, "bi": grands | binaires}
         lignes = re.findall(r'^    \["([^"]+)", "([^"]+)", "[^"]*", "[^"]*", "(\w*)"\],$',
                             (ROOT / "coque/Lanceur/unites.js").read_text(), re.M)
-        self.assertGreater(len(lignes), 70)
-        cas = [(p + u, g) for u, g, prefixes in lignes
-               for p in ([""] + {"": [], "si": ["m", "k"], "k": ["k"], "bi": ["k", "Mi"]}[prefixes])]
-        sortie = subprocess.run(["qalc", "-t", "-defaults", "-s", "decimal comma on", "-s", "color 0"], text=True,
-                                input="".join(f"2 {u} to -{reference[g]}\n" for u, g in cas), capture_output=True,
-                                timeout=60).stdout
+        self.assertEqual({u for u, g, _ in lignes if g != "E"}, {u for us in FACTEURS.values() for u in us})
+        facteurs = {u: (ref, f) for ref, us in FACTEURS.items() for u, f in us.items()}
+        cas = []
+        for u, g, p in lignes:
+            ref, f = ("EUR", None) if g == "E" else facteurs[u]
+            for symbole, n in [("", 1)] + list(prefixes[p].items()):
+                cas += [(f"1 {symbole + u} to -{ref}", f and f * n), (f"1 {ref} to -{symbole + u}", f and 1 / (f * n))]
+        sortie = subprocess.run(["qalc", "-t", "-defaults", "-s", "color 0"], input="".join(c + "\n" for c, _ in cas),
+                                capture_output=True, text=True, timeout=120).stdout
         reponses = re.findall(r"^> .*\n\s*\n?\s*(\S.*)$", sortie, re.M)
         self.assertEqual(len(reponses), len(cas), sortie)
-        symboles = {"EUR": "€", "A*s": "C|A·s|s·A|A × s", "m^2": "m²", "B/s": "B/s"}
-        for (u, g), reponse in zip(cas, reponses):
-            with self.subTest(unite=u):
-                self.assertRegex(reponse, rf"^[−€\d].*(?:{symboles.get(reference[g], reference[g])})|^€")
-                self.assertNotRegex(reponse, r"[(·×]" if g != "I T" else r"[(]")
+        for (saisie, attendu), reponse in zip(cas, reponses):
+            with self.subTest(saisie=saisie):
+                self.assertNotRegex(reponse, r"[()]")
+                lu = re.match(r"[^\d()·×]*(\d[\d.]*(?:E[−-]?\d+)?)", reponse)
+                self.assertTrue(lu, reponse)
+                if attendu and "K" not in saisie.split()[-1] and "°" not in saisie:
+                    self.assertAlmostEqual(float(lu[1].replace("−", "-")) / attendu, 1, 5, reponse)
 
     @unittest.skipUnless(shutil.which("qalc"), "qalc requis")
     def test_reponse_perimee_ignoree(self):

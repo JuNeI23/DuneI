@@ -49,7 +49,7 @@ const UNITES = [
 
     ["°C", "K", "°C", "celsius|degre celsius", ""],
     ["°F", "K", "°F", "fahrenheit|degre fahrenheit", ""],
-    ["K", "K", "K", "kelvin", ""],
+    ["K", "K", "K", "kelvin|degre kelvin", ""],
 
     ["deg", "A", "°|deg", "degre|degree", ""],
     ["rad", "A", "rad", "radian", "si"],
@@ -68,7 +68,9 @@ const UNITES = [
     ["hp", "M L2 T-3", "hp", "horsepower", ""],
 
     ["Pa", "M L-1 T-2", "Pa", "pascal", "si"],
-    ["bar", "M L-1 T-2", "bar", "bar", "si"],
+    ["bar", "M L-1 T-2", "bar", "bar", ""],
+    ["mbar", "M L-1 T-2", "mbar", "millibar", ""],
+    ["kbar", "M L-1 T-2", "kbar", "kilobar", ""],
     ["atm", "M L-1 T-2", "atm", "atmosphere", ""],
     ["psi", "M L-1 T-2", "psi", "", ""],
     ["mmHg", "M L-1 T-2", "mmHg", "", ""],
@@ -76,19 +78,21 @@ const UNITES = [
     ["A", "I", "A", "ampere", "si"],
     ["Ah", "I T", "Ah", "amperheure|ampere heure", "si"],
     ["V", "M L2 T-3 I-1", "V", "volt", "si"],
+    ["ohm", "M L2 T-3 I-2", "\u03a9|\u2126", "ohm", "si"],
 
     ["B", "D", "o|B", "octet|byte", "bi"],
+    ["kB", "D", "Ko|KB", "", ""],
     ["bit", "D", "bit|b", "bit", "bi"],
     ["bit/s", "D T-1", "bps", "", "bi"],
 
-    ["€", "E", "€", "", ""],
-    ["$", "E", "$", "", ""],
-    ["£", "E", "£", "", ""],
+    ["€", "E", "€", "", "k"],
+    ["$", "E", "$", "", "k"],
+    ["£", "E", "£", "", "k"],
     ["EUR", "E", "", "eur|euro", ""],
     ["USD", "E", "", "usd|dollar", ""],
     ["GBP", "E", "", "gbp|livre sterling", ""],
     ["CHF", "E", "", "chf|franc suisse", ""],
-    ["JPY", "E", "", "jpy|yen", ""],
+    ["JPY", "E", "¥", "jpy|yen", ""],
     ["CNY", "E", "", "cny|yuan", ""],
     ["CAD", "E", "", "cad|dollar canadien", ""],
     ["AUD", "E", "", "aud|dollar australien", ""],
@@ -115,27 +119,32 @@ const UNITES = [
 
 // Préfixes : [symbole qalc, autres symboles, nom]. Les petits n'ont de sens ni pour une donnée ni pour une tonne.
 const PETITS = [
-    ["p", "", "pico"], ["n", "", "nano"], ["µ", "μ", "micro"], ["m", "", "milli"], ["c", "", "centi"], ["d", "", "deci"],
-    ["da", "", "deca"], ["h", "", "hecto"],
+    ["p", "", "pico"], ["n", "", "nano"], ["µ", "μ", "micro"], ["m", "", "milli"], ["c", "", "centi"],
+    ["d", "", "deci"], ["da", "", "deca"], ["h", "", "hecto"],
 ]
 const GRANDS = [["k", "", "kilo"], ["M", "", "mega"], ["G", "", "giga"], ["T", "", "tera"], ["P", "", "peta"]]
 const BINAIRES = [["Ki", "", "kibi"], ["Mi", "", "mebi"], ["Gi", "", "gibi"], ["Ti", "", "tebi"]]
 const PREFIXES = { "": [], si: PETITS.concat(GRANDS), k: GRANDS, bi: GRANDS.concat(BINAIRES) }
 
-// Constantes : mot saisi, nom qalc.
-const CONSTANTES = [["pi", "pi"], ["π", "pi"], ["e", "e"]]
+// Constantes : mot saisi, à la casse près (« 5 E » n'est pas 5 e), nom qalc.
+const CONSTANTES = [["pi", "pi"], ["Pi", "pi"], ["π", "pi"], ["e", "e"]]
+
+// Bases de numération admises comme cible d'une conversion : mot saisi, nom qalc.
+const BASES = [["hex", "hex"], ["hexa", "hex"], ["hexadecimal", "hex"], ["bin", "bin"], ["binaire", "bin"],
+               ["oct", "oct"], ["octal", "oct"]]
 
 // Fonctions à un argument. « racine » divise la grandeur par deux, « garde » la conserve, « nombre » exige un nombre
 // ou un angle et rend un nombre.
 const FONCTIONS = [
-    ["sqrt", "racine"], ["abs", "garde"], ["round", "garde"], ["floor", "garde"], ["ceil", "garde"], ["sin", "nombre"],
-    ["cos", "nombre"], ["tan", "nombre"], ["asin", "nombre"], ["acos", "nombre"], ["atan", "nombre"], ["ln", "nombre"],
+    ["sqrt", "racine"], ["abs", "garde"], ["round", "nombre"], ["floor", "nombre"], ["ceil", "nombre"],
+    ["sin", "nombre"], ["cos", "nombre"], ["tan", "nombre"], ["asin", "nombre"], ["acos", "nombre"], ["atan", "nombre"],
+    ["ln", "nombre"],
     ["log", "nombre"], ["log2", "nombre"], ["log10", "nombre"], ["exp", "nombre"],
 ]
 
-// Mots qui valent un opérateur, et mots qui introduisent une conversion.
+// Mots qui valent un opérateur, et mots qui introduisent une conversion (« in » après une unité, sinon c'est le pouce).
 const OPERATEURS = [["x", "×"], ["fois", "×"], ["par", "/"], ["plus", "+"], ["moins", "-"], ["mod", "mod"]]
-const CONVERSIONS = ["en", "vers", "to"]
+const CONVERSIONS = ["en", "vers", "to", "in"]
 
 // Exposants écrits en mots.
 const EXPOSANTS = [["carre", 2], ["cube", 3]]

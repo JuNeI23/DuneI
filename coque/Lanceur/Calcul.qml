@@ -67,7 +67,8 @@ Scope {
 
     Process {
         id: processus
-        // « -defaults » : qalc ne lit ni n'écrit les réglages du terminal (qalc.cfg), qui changeraient ses réponses (D218).
+        // « -defaults » : qalc ne lit ni n'écrit les réglages du terminal (qalc.cfg), qui fausseraient
+        // ses réponses (D218).
         command: ["qalc", "-t", "-defaults", "-s", "decimal comma on", "-s", "color 0", "-s", "upxrates 1"]
         running: calcul.actif && calcul.disponible
         stdinEnabled: true
