@@ -349,9 +349,11 @@ halo_reach = 0.75            # portée du halo, en part du côté
 # ne varient pas avec le moment ; seules les opacités du verre, lues par la coque, le peuvent.
 [glass]
 namespaces = ["dunei-barre", "dunei-attention", "dunei-presquile", "dunei-popovers", "dunei-notifications", "dunei-panneau",
-              "dunei-attention-selecteur", "dunei-attention-deconnexion", "dunei-attention-lanceur"]   # calques de la coque floutés ; un namespace par client de Scene (L2-80, L2-81)
+              "dunei-attention-selecteur", "dunei-attention-deconnexion", "dunei-attention-lanceur",
+              "dunei-attention-autorisation"]   # calques de la coque floutés ; un namespace par client de Scene (L2-80, L2-81)
 xray = ["dunei-barre"]       # flou du seul fond ; jamais un calque qui porte de l'E3
-fondu = ["dunei-attention", "dunei-attention-selecteur", "dunei-attention-deconnexion", "dunei-attention-lanceur"]   # calques qui apparaissent et disparaissent en fondu seul, sans le popin de layersIn/layersOut
+fondu = ["dunei-attention", "dunei-attention-selecteur", "dunei-attention-deconnexion", "dunei-attention-lanceur",
+         "dunei-attention-autorisation"]   # calques qui apparaissent et disparaissent en fondu seul, sans le popin de layersIn/layersOut
 ignore_alpha = 0.58          # > shade_opacity et scrim (jamais floutés), < opacité minimale du verre (0,60, D103)
 blur_size = 8
 blur_passes = 2
@@ -500,6 +502,10 @@ lettre_grisee = 0.7           # opacité de la lettre d'accès d'un bouton gris 
 # Fond des vignettes grises : thumb.ground la nuit, color.controlOff le jour, plus sombre que thumb.ground pour que le
 # bouton choisi se détache autant qu'à la nuit. Liseré gris : material.highlight la nuit, color.borderDefault le jour.
 # Libellés sur le voile, sombre aux deux moments : bureau.texteClair (choisi), bureau.texteClairSurvol (gris).
+
+[autorisation]                # agent d'authentification polkit (L2-24)
+active = false                # la coque s'enregistre comme agent ; faux, rien n'est chargé
+largeur = 400                 # largeur de la carte, en px logiques
 
 [notifications]               # pile de notifications de la coque (L2-19) ; px logiques sauf mention ; ms pour duree
 largeur = 340                 # largeur d'une carte

@@ -1777,6 +1777,10 @@
     "agrandi": 1.15,
     "lettreGrisee": 0.7
   },
+  "autorisation": {
+    "active": false,
+    "largeur": 400
+  },
   "notifications": {
     "largeur": 340,
     "marge": 8,

@@ -36,6 +36,8 @@ selecteur = 150                   # Attente, après SUPER + Tab, avant l'apparit
                                   # change de fenêtre sans que le voile ne clignote (L2-17).
 garde   = 1000                    # Attente, après la fermeture d'une scène, de l'événement qui retire son calque : s'il ne
                                   # vient pas, l'action part quand même (Scene).
+gardeFrappe = 400                 # Silence du clavier exigé avant que le champ d'une demande d'autorisation n'accepte les
+                                  # touches : une frappe destinée ailleurs n'y entre pas (L2-24).
 
 [periods]                         # Durée d'un cycle des mouvements continus, en millisecondes.
 spinner = 1200                    # Un cycle de la vague des trois grains de l'indicateur d'activité.

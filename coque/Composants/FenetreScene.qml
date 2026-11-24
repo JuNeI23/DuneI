@@ -84,11 +84,11 @@ PanelWindow {
     // fondu. Dépendances : affiche, montee, Qt.callLater.
     onAfficheChanged: if (affiche) Qt.callLater(() => montee.cible = 1)
 
-    // cliquerVoile — un clic sur le voile hors du cadre ferme la scène. Entrées : x, y, position du clic dans la
+    // cliquerVoile — un clic sur le voile hors du cadre ferme la scène, si elle l'accepte (voileFerme). Entrées : x, y, position du clic dans la
     // fenêtre (celle du voile, qui la couvre). Sortie : scene.ouvert passé à faux si le point tombe hors du Loader du
     // cadre ; un clic sur le cadre ne fait rien ici. Erreurs : aucune. Dépendances : charge (contains, mapFromItem),
-    // voile, scene.ouvert.
-    function cliquerVoile(x, y) { if (!charge.contains(charge.mapFromItem(voile, x, y))) scene.ouvert = false }
+    // voile, scene.ouvert, scene.voileFerme.
+    function cliquerVoile(x, y) { if (scene.voileFerme && !charge.contains(charge.mapFromItem(voile, x, y))) scene.ouvert = false }
 
     // Voile : un clic hors du cadre ferme la scène.
     Rectangle {

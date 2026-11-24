@@ -22,7 +22,8 @@
     "liste": 30,
     "alerte": 4000,
     "selecteur": 150,
-    "garde": 1000
+    "garde": 1000,
+    "gardeFrappe": 400
   },
   "periods": {
     "spinner": 1200

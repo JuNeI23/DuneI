@@ -31,7 +31,7 @@ class QuickshellEmitterTest(unittest.TestCase):
         self.assertEqual(list(self.out), [
             "_generated", "hue", "space", "density", "radius", "window", "layout", "reglages", "breakpoints", "typo", "icons",
             "familles", "moments", "defaut", "themes", "pastilles", "bureau", "bureauxVirtuels", "presquile",
-            "galerie", "selecteur", "vignette", "deconnexion", "notifications", "cloche", "panneau", "son"])
+            "galerie", "selecteur", "vignette", "deconnexion", "autorisation", "notifications", "cloche", "panneau", "son"])
         self.assertEqual(list(self.nuit), ["color", "states", "focus", "disabled", "elevation", "material", "glass", "render",
                                            "knob", "controls"])
 
@@ -106,6 +106,10 @@ class QuickshellEmitterTest(unittest.TestCase):
         opacité de la lettre grisée."""
         self.assertEqual(self.out["deconnexion"], {"cote": 128, "glyphe": 56, "ecart": 32, "agrandi": 1.15,
                                                    "lettreGrisee": 0.7})
+
+    def test_autorisation(self):
+        """Vérifie les jetons de l'agent d'authentification : mise en marche et largeur de la carte (L2-24)."""
+        self.assertEqual(self.out["autorisation"], {"active": False, "largeur": 400})
 
     def test_notifications(self):
         """Vérifie les jetons de la pile de notifications : largeur, marge, écart, plafond, durée, icône, intérieur,

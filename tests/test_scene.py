@@ -84,6 +84,19 @@ class SceneTest(EssaiCoque, unittest.TestCase):
         e = self.ouvrir()
         self.assertEqual((e["ouvert"], e["present"], e["fenetre"]), (True, True, True))
 
+    def test_clic_sur_le_voile(self):
+        """Vérifie qu'un clic sur le voile ferme la scène par défaut, et la laisse ouverte si voileFerme est faux.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : ouvrir, appel, etat.
+        """
+        self.ouvrir()
+        self.appel("essai", "voileFerme", "false")
+        self.appel("essai", "cliquerVoile")
+        self.assertTrue(self.etat()["ouvert"])
+        self.appel("essai", "voileFerme", "true")
+        self.appel("essai", "cliquerVoile")
+        self.assertFalse(self.etat()["ouvert"])
+
     def test_sortie_en_fondu(self):
         """Vérifie qu'à la fermeture la scène passe aussitôt en sortie, fenêtre gardée, puis que la fenêtre est
         déchargée une fois le fondu posé.
