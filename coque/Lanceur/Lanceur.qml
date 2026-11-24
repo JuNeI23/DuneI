@@ -216,8 +216,9 @@ Singleton {
         sources.rafraichir()
     }
 
-    // onPresentChanged — la saisie n'est vidée qu'à la fin du fondu de sortie, quand la fenêtre est déchargée (aussitôt
-    // sans fenêtre), sans quoi le cadre repasserait à l'accueil en s'effaçant ; la prochaine fenêtre naît sur l'accueil.
+    // onPresentChanged — la saisie n'est vidée qu'à la fin du fondu de sortie, quand la fenêtre est déchargée
+    // (aussitôt sans fenêtre), sans quoi le cadre repasserait à l'accueil en s'effaçant ; la prochaine fenêtre naît sur
+    // l'accueil.
     // Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : present, saisie.
     onPresentChanged: if (!present) saisie = ""
 

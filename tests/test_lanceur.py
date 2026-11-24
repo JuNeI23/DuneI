@@ -875,6 +875,21 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
         self.attendre("essai : exécuté commande galerie")
         self.assertIn("essai : calque retiré", self.journal())
 
+    def test_saisie_gardee_pendant_le_fondu(self):
+        """Vérifie que la saisie survit au fondu de sortie, pour que le cadre ne repasse pas à l'accueil en s'effaçant,
+        et qu'elle n'est vidée qu'au retrait du calque.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : ouvrir, taper, lanceur, etat,
+        attendre, jusqua.
+        """
+        self.ouvrir()
+        self.taper("kit")
+        self.lanceur("fermer")
+        e = self.etat()
+        self.assertEqual((e["ouvert"], e["sortant"], e["saisie"], e["vue"]), (False, True, "kit", "scission"))
+        self.attendre("essai : calque retiré")
+        self.jusqua(lambda: self.etat()["saisie"] == "", "saisie vidée après le fondu")
+
     def test_position_au_tiers(self):
         """Vérifie que le cadre du lanceur est tenu au tiers haut de l'écran, bord haut fixe : son haut vaut
         max(cotes.retrait, round(hauteur / 3 − cotes.scission.height / 2)), à l'accueil comme à la scission.
@@ -927,10 +942,13 @@ class ClavierTest(FenetreTest):
     def test_position_au_tiers(self):
         """Sans objet hors écran : aucune fenêtre de calque n'y est construite."""
 
+    def test_saisie_gardee_pendant_le_fondu(self):
+        """Sans objet hors écran : aucune fenêtre de calque n'y est construite."""
+
     def test_touches_ignorees_lanceur_ferme(self):
         """Vérifie, par de vraies touches, qu'un cadre encore affiché lanceur fermé (le fondu de sortie) ne traite
-        aucune touche : ni la frappe ni la sélection ne changent (L2-74 b). La coque d'essai garde son cadre après la fermeture
-        (IPC tenir), comme FenetreScene le garde pendant le fondu.
+        aucune touche : ni la frappe ni la sélection ne changent (L2-74 b). La coque d'essai garde son cadre après la
+        fermeture (IPC tenir), comme FenetreScene le garde pendant le fondu.
 
         Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : lanceur, essai_ipc, cle, etat,
         jusqua.

@@ -18,7 +18,7 @@ import Quickshell.Hyprland
 // Instancié comme enfant par un contrôleur client, qui déclare le cadre et exécute les actions.
 // Entrées : ouvert, qui s'affecte et ne se lie pas (le registre Overlays et la fenêtre l'écrivent) ; cadre, le
 //           composant posé au centre de l'écran, qui reçoit le focus (le Loader de la fenêtre est une portée de
-//           focus : la racine du cadre doit porter focus: true pour recevoir les touches) ; clavierExclusif, vrai
+//           focus : la racine du cadre, ou l'élément qui doit recevoir les touches, porte focus: true) ; clavierExclusif, vrai
 //           par défaut, que la fenêtre applique (une coque d'essai le met à faux pour ne jamais prendre le clavier
 //           de Nicolas) ;
 //           executeur, null par défaut : une fonction qui reçoit l'action à la place du signal realiser (coques
@@ -51,7 +51,7 @@ QtObject {
     property bool montee: true
     property string espace: "dunei-attention"
     property int delai: 0
-property var positionner: null
+    property var positionner: null
     readonly property string famille: "attention"
     // Vrai entre la fermeture et la fin du fondu de sortie de la fenêtre ; la fenêtre reste chargée jusque-là.
     property bool sortant: false

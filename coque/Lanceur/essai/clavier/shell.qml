@@ -13,8 +13,8 @@ import "Lanceur"
 // du champ (Keys.onPressed) à la Recherche, jusqu'à Lanceur.touche. Aucun clavier de la session n'est jamais pris.
 // tests/test_lanceur.py (ClavierTest) la pilote.
 // Entrées : DUNEI_TOKENS_DIR et DUNEI_ETAT_DIR ; IPC « essai » : injecter, cle, focus, reperes, puce,
-// capturer, tenir (le cadre reste posé après la fermeture, comme pendant le fondu de sortie). Sorties : « essai : prêt » au
-// démarrage ; « essai : exécuté <genre> <cible> » à chaque action. Erreurs : celles de Theme, dans le journal.
+// capturer, tenir (le cadre reste posé après la fermeture, comme pendant le fondu de sortie).
+// Sorties : « essai : prêt » au démarrage ; « essai : exécuté <genre> <cible> » à chaque action. Erreurs : celles de Theme, dans le journal.
 // Dépendances : quickshell ≥ 0.3 (IpcHandler, FloatingWindow), QtTest (TestCase), Lanceur, CadreLanceur, Theme ; liens
 // essai/clavier/Theme, Composants, Applications, Parametres, Barre et Lanceur.
 ShellRoot {
@@ -91,7 +91,8 @@ ShellRoot {
             charge.item?.champ.forceActiveFocus()
             const ctrl = nom.startsWith("ctrl+")
             testeur.keyClick({ escape: Qt.Key_Escape, tab: Qt.Key_Tab, "return": Qt.Key_Return, down: Qt.Key_Down,
-                               up: Qt.Key_Up, left: Qt.Key_Left, right: Qt.Key_Right, a: Qt.Key_A }[ctrl ? nom.slice(5) : nom],
+                               up: Qt.Key_Up, left: Qt.Key_Left, right: Qt.Key_Right,
+                               a: Qt.Key_A }[ctrl ? nom.slice(5) : nom],
                              ctrl ? Qt.ControlModifier : Qt.NoModifier)
         }
     }

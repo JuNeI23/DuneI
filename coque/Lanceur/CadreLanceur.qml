@@ -2,7 +2,8 @@ import QtQuick
 import "../Theme"
 import "../Composants" as C
 
-// CadreLanceur — cadre du lanceur (L2-16) : verre, champ, accueil ou scission ; contenu de la FenetreScene du lanceur (L2-81).
+// CadreLanceur — cadre du lanceur (L2-16) : verre, champ, accueil ou scission ; contenu de la
+// FenetreScene du lanceur (L2-81).
 // Rôle : séparé de la fenêtre de calque pour être éprouvé hors écran (coque d'essai essai/clavier, plateforme
 // offscreen, où une vraie touche de Qt suit le chemin réel du champ). Il passe de l'accueil (cotes.accueil, coins
 // cotes.rayonAccueil) à la scission (cotes.scission, coins radius.window) au ressort window, en largeur, en hauteur

@@ -46,7 +46,9 @@ ShellRoot {
     // « essai : calque retiré ». Erreurs : aucune. Dépendances : Hyprland.rawEvent.
     Connections {
         target: Hyprland
-        function onRawEvent(e) { if (e.name === "closelayer" && e.data === Lanceur.espace) console.log("essai : calque retiré") }
+        function onRawEvent(e) {
+            if (e.name === "closelayer" && e.data === Lanceur.espace) console.log("essai : calque retiré")
+        }
     }
 
     IpcHandler {

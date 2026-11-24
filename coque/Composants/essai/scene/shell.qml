@@ -110,7 +110,8 @@ ShellRoot {
 
         // etat — état de la scène. Entrées : aucune. Sortie : JSON {ouvert, present, fenetre (vrai si construite),
         // sortant, differee (l'action en attente, ou null), montre, opacite (l'opacité que Hyprland applique à la
-        // surface de la fenêtre, ou null sans fenêtre), haut (le y du Loader du cadre, ou null sans fenêtre)}. Erreurs : aucune. Dépendances : scene.
+        // surface de la fenêtre, ou null sans fenêtre), haut (le y du Loader du cadre, ou null sans
+        // fenêtre)}. Erreurs : aucune. Dépendances : scene.
         function etat(): string {
             return JSON.stringify({ ouvert: scene.ouvert, present: scene.present, fenetre: scene.fenetre !== null,
                                     sortant: scene.sortant, differee: scene.differee, montre: scene.montre,
