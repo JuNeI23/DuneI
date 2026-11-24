@@ -18,11 +18,11 @@ import "autorisation.js" as Logique
 //           scène. IPC « autorisation » : etat.
 // Sorties : flux (null au repos) ; ouvert ; etat (voir Logique.etat ; garde sa dernière valeur pendant la sortie de la
 //           fenêtre) ; message, action (textes reçus, à peindre en texte brut) ; ligne ({texte, erreur}) ; saisieOuverte
-//           (état saisie et garde écoulée) ; fenetre ; ecran ; frappe(), soumettre(texte), annuler() ; signal vider(), émis quand
+//           (état saisie et garde écoulée) ; fenetre ; ecran ; prendClavier ; frappe(), soumettre(texte), annuler() ; signal vider(), émis quand
 //           le champ doit se vider.
 // Erreurs : faillock ou faillock.conf absents ou illisibles laissent le champ ouvert, sans essais restants : PAM décide.
 // Dépendances : Quickshell (Singleton), Quickshell.Io (Process, StdioCollector, FileView, IpcHandler), C.Scene, CadreAutorisation, Theme
-//           (motion.delays.gardeFrappe), autorisation.js.
+//           (motion.delays : gardeFrappe, autorise), C.Overlays (ecranCouvert), autorisation.js.
 Singleton {
     id: autorisation
 
@@ -47,20 +47,25 @@ Singleton {
     readonly property var ligne: Logique.ligne(etat, { echec: echec, restants: restants, jusqua: jusqua, supplement: supplement })
     readonly property string utilisateur: Quickshell.env("USER") ?? ""
 
+    // Le clavier est pris pendant une demande, et rendu dès qu'elle est accordée, avant que l'île ne se replie.
+    readonly property bool prendClavier: etat !== "succes"
+
     signal vider()
 
     C.Scene {
         id: scene
         cadre: Component { CadreAutorisation {} }
-        clavierExclusif: autorisation.clavierExclusif
+        clavierExclusif: autorisation.clavierExclusif && autorisation.prendClavier
         fenetree: autorisation.fenetree
         montee: false
+        grandit: false
+        positionner: () => 0
         voileFerme: false
         espace: "dunei-attention-autorisation"
 
         // onOuvertChanged — toute fermeture d'une demande en cours vaut annulation (autre attention ouverte, fenêtre non
         // construite). Entrées : aucune. Sortie : aucune ; sans flux, rien. Erreurs : aucune. Dépendances : annuler.
-        onOuvertChanged: if (!ouvert) autorisation.annuler()
+        onOuvertChanged: if (!ouvert) { sortie.stop(); autorisation.annuler() }
     }
 
     // surFlux — reçoit la demande courante de l'agent. Entrée : f, le flux, ou null quand l'agent n'en a plus.
@@ -71,6 +76,7 @@ Singleton {
         if (f === flux) return
         if (!f) { finir(false); return }
         if (f.isCompleted) return
+        sortie.stop()
         flux = f
         message = f.message
         action = f.actionId
@@ -125,15 +131,17 @@ Singleton {
         if (f && !f.isCompleted) f.cancelAuthenticationRequest()
     }
 
-    // finir — oublie la demande et ferme la fenêtre, sans annuler. Entrée : reussi, vrai si polkit l'a accordée.
+    // finir — oublie la demande et ferme la fenêtre, sans annuler ; accordée, « Autorisé » tient d'abord
+    // delays.autorise. Entrée : reussi, vrai si polkit l'a accordée.
     // Sortie : flux null, etat « succes » si reussi, champ vidé, garde arrêtée. Erreurs : aucune. Dépendances : scene.
     function finir(reussi: bool) {
         if (!flux) { ouvert = false; return }
         flux = null
-        if (reussi) etat = "succes"
         garde.stop()
         vider()
-        ouvert = false
+        if (!reussi) { ouvert = false; return }
+        etat = "succes"
+        sortie.restart()
     }
 
     // echouer — un mot de passe refusé : la ligne le dit et le compte est relu ; trois échecs en chaîne annulent, car
@@ -172,6 +180,12 @@ Singleton {
 
     // Garde de frappe : silence du clavier exigé avant que le champ n'accepte les touches, à partir de chaque flux.
     Timer { id: garde; interval: Theme.motion?.delays.gardeFrappe ?? 0 }
+
+    // Tenue d'« Autorisé » avant la fermeture.
+    Timer { id: sortie; interval: Theme.motion?.delays.autorise ?? 0; onTriggered: autorisation.ouvert = false }
+
+    // La presqu'île de l'écran s'efface sous l'île de la demande, et revient à la fermeture.
+    Binding { target: C.Overlays; property: "ecranCouvert"; value: scene.ouvert && scene.fenetre ? scene.ecran?.name ?? "" : "" }
 
     Connections {
         target: autorisation.flux
@@ -214,11 +228,11 @@ Singleton {
     IpcHandler {
         target: "autorisation"
 
-        // etat — état de l'agent en JSON : ouvert, etat, ligne, saisieOuverte, fenetre (vrai si construite) ; jamais le
-        // texte saisi. Entrées : aucune. Sortie : texte. Erreurs : aucune. Dépendances : autorisation.
+        // etat — état de l'agent en JSON : ouvert, etat, ligne, saisieOuverte, fenetre (vrai si construite), clavier (vrai
+        // si la demande le prend) ; jamais le texte saisi. Entrées : aucune. Sortie : texte. Erreurs : aucune. Dépendances : autorisation.
         function etat(): string {
             return JSON.stringify({ ouvert: autorisation.ouvert, etat: autorisation.etat, ligne: autorisation.ligne,
-                                    saisieOuverte: autorisation.saisieOuverte, fenetre: autorisation.fenetre !== null })
+                                    saisieOuverte: autorisation.saisieOuverte, fenetre: autorisation.fenetre !== null, clavier: autorisation.prendClavier })
         }
     }
 }

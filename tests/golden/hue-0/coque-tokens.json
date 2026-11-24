@@ -1779,7 +1779,13 @@
   },
   "autorisation": {
     "active": false,
-    "largeur": 400
+    "largeur": 460,
+    "annonce": 190,
+    "vignette": 56,
+    "glyphe": 26,
+    "rangee": 32,
+    "rayon": 18,
+    "secousse": 7
   },
   "notifications": {
     "largeur": 340,

@@ -505,7 +505,13 @@ lettre_grisee = 0.7           # opacité de la lettre d'accès d'un bouton gris 
 
 [autorisation]                # agent d'authentification polkit (L2-24)
 active = false                # la coque s'enregistre comme agent ; faux, rien n'est chargé
-largeur = 400                 # largeur de la carte, en px logiques
+largeur = 460                 # corps de l'île ouverte ; px logiques ; maquette autorisation-v3 (G1) validée
+annonce = 190                 # corps de l'île pendant l'annonce et « Autorisé »
+vignette = 56                 # côté de la vignette en verre
+glyphe = 26                   # côté du cadenas dans la vignette
+rangee = 32                   # hauteur du champ et du bouton
+rayon = 18                    # angles bas de l'île ouverte
+secousse = 7                  # poussée du champ à l'échec, en px
 
 [notifications]               # pile de notifications de la coque (L2-19) ; px logiques sauf mention ; ms pour duree
 largeur = 340                 # largeur d'une carte

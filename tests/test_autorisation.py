@@ -190,7 +190,9 @@ class ControleurTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(self.etat()["etat"], "verification")
         self.assertGreater(self.vides(), avant)
         self.appel("poser", "0", '{"isSuccessful": true, "isCompleted": true}')
-        self.assertEqual((self.etat()["ouvert"], self.etat()["etat"]), (False, "succes"))
+        self.assertEqual((self.etat()["ouvert"], self.etat()["etat"]), (True, "succes"))
+        self.assertEqual(self.etat()["clavier"], False)
+        self.jusqua(lambda: not self.etat()["ouvert"], "fermeture après « Autorisé »")
         self.assertEqual(self.appels(), [["submit", SECRET]])
         self.assertNotIn(SECRET, self.journal())
         self.assertNotIn(SECRET, self.appel("etat", cible="autorisation"))
@@ -330,10 +332,11 @@ class CadreTest(ControleurTest):
         """Textes, champ et boutons en saisie ; Entrée et « Autoriser » envoient une fois et vident le champ."""
         self.demander(message="Lancer <b>x</b>", actionId="org.dunei.essai")
         self.saisie()
-        c = self.montre(champ=True, fermer=False, ligne="")
-        self.assertEqual((c["titre"], c["message"], c["brut"], c["action"], c["largeur"]),
-                         ("Autorisation requise", "Lancer <b>x</b>", True, "org.dunei.essai", 400))
-        self.assertEqual((c["autoriser"], c["annuler"]), ([True, False], [True, True]))
+        c = self.montre(champ=True, fermer=False, ligne="org.dunei.essai", autoriser=[True, False], forme=[460, 134])
+        self.assertEqual((c["titre"], c["message"], c["brut"], c["y"]),
+                         ("Autorisation requise", "Lancer <b>x</b>", True, 0))
+        self.assertGreater(c["saisieLargeur"], 300)
+        self.assertNotEqual(c["couvert"], "")
         self.appel("taper", SECRET)
         self.montre(autoriser=[True, True])
         self.appel("entree")
@@ -360,33 +363,36 @@ class CadreTest(ControleurTest):
         """Verrouillé : champ inactif, « Fermer » seul, qui annule."""
         self.appel("lire", json.dumps({"faillock": releve(5), "conf": "deny = 5\n"}))
         self.demander()
-        c = self.montre(fermer=True, autoriser=[False, False], annuler=[False, False])
+        c = self.montre(fermer=True, autoriser=[False, False])
         self.assertFalse(c["champ"])
         self.appel("cliquer", "fermer")
         self.assertEqual(self.appels(), [["annuler"]])
 
-    def test_echap_annuler_voile(self):
-        """Échap et « Annuler » annulent une fois ; le voile ne ferme pas."""
+    def test_echap_voile(self):
+        """Échap annule une fois ; le voile ne ferme pas ; la presqu'île est rendue à la fermeture."""
         self.demander()
         self.cadre()
         self.appel("voile")
         self.assertEqual((self.appels(), self.etat()["ouvert"]), ([], True))
         self.appel("touche", "escape")
         self.assertEqual((self.appels(), self.etat()["ouvert"]), ([["annuler"]], False))
+        self.jusqua(lambda: self.appel("couvert") == "", "presqu'île rendue")
+
+    def test_annonce_et_succes(self):
+        """L'île annonce avant de s'ouvrir, et dit « Autorisé » une fois la demande accordée, repliée."""
         self.demander()
-        self.cadre()
-        self.appel("cliquer", "annuler")
-        self.assertEqual((self.appels(1), self.etat()["ouvert"]), ([["annuler"]], False))
+        c = self.montre(annonce="Autorisation requise")
+        self.montre(annonceOpacite=0, forme=[460, 134])
+        self.appel("poser", "0", '{"isSuccessful": true, "isCompleted": true}')
+        self.montre(annonce="Autorisé", forme=[190, 28], annonceOpacite=1)
 
     def test_message_tres_long(self):
         """Un message de 2 000 caractères, sur plusieurs lignes, laisse la carte dans l'écran et les boutons dedans."""
         self.demander(message="mot " * 400 + "\n" * 100 + "x" * 400, actionId="org." + "a" * 300)
-        c = self.jusqua(lambda: (c := self.cadre()) and c["hauteur"] > 400 and c, "cadre posé")
-        time.sleep(0.5)
-        c = self.cadre()
-        self.assertLessEqual(c["hauteur"], c["ecran"] - 2 * 48)
+        c = self.jusqua(lambda: (c := self.cadre()) and c["forme"] == [460, c["hauteur"]] and c, "île ouverte")
+        self.assertLessEqual(c["hauteur"], c["ecran"] - 48)
         self.assertLessEqual(c["bas"], c["hauteur"])
-        self.assertEqual(c["largeur"], 400)
+        self.assertEqual(c["forme"], [460, c["hauteur"]])
 
     def test_seconde_demande_vide_le_champ(self):
         """La seconde demande vide le champ et change les textes."""
@@ -402,9 +408,12 @@ class CadreTest(ControleurTest):
         (self.dir / "mouvement.json").write_text('{"reduit": true}')
         time.sleep(0.5)
         self.demander()
-        c = self.cadre()
-        time.sleep(0.3)
-        self.assertEqual((c["y"], c["hauteur"]), (self.cadre()["y"], self.cadre()["hauteur"]))
+        vus = set()
+        fin = time.monotonic() + 1.2
+        while time.monotonic() < fin:
+            if c := json.loads(self.appel("cadre")):
+                vus.add(tuple(c["forme"]))
+        self.assertLessEqual(vus, {(95, 28), (190, 28), (460, 134)})
 
 
 # Le cadre hérite des outils du contrôleur, pas de ses essais.

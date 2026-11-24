@@ -23,7 +23,8 @@
     "alerte": 4000,
     "selecteur": 150,
     "garde": 1000,
-    "gardeFrappe": 400
+    "gardeFrappe": 400,
+    "autorise": 800
   },
   "periods": {
     "spinner": 1200

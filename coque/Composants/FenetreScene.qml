@@ -118,6 +118,6 @@ PanelWindow {
         // Sans montée, l'échelle part de window.echelleApparition et rejoint 1 avec le ressort ; l'origine de la
         // transformation est le centre du cadre (Item.Center, par défaut).
         readonly property real depart: Theme.window?.echelleApparition ?? 1
-        scale: fenetre.scene.montee ? 1 : depart + (1 - depart) * montee.value
+        scale: fenetre.scene.montee || !fenetre.scene.grandit ? 1 : depart + (1 - depart) * montee.value
     }
 }

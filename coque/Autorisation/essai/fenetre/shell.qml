@@ -127,18 +127,24 @@ ShellRoot {
         function frapper(oui: bool): void { frappes.running = oui }
 
         // cadre — ce que montre le cadre. Entrées : aucune. Sortie : JSON, ou « null » sans cadre : titre, message et son
-        // format, action, ligne peinte, longueur du champ (jamais son texte), champ actif, autoriser et annuler
-        // (visibles et actifs), fermer (visible), activite (visible), hauteur, écran, bas des boutons, y du cadre.
+        // format, ligne peinte (identifiant, ou état), longueur du champ (jamais son texte), champ actif, autoriser
+        // (visible et actif), fermer (visible), activite (visible), annonce peinte et son opacité, hauteur de l'île
+        // ouverte, forme courante (largeur, hauteur), écran, bas des boutons, y du cadre, largeur du champ, écran
+        // couvert annoncé à la presqu'île.
         function cadre(): string {
             const c = Autorisation.fenetre?.cadre
             if (!c) return "null"
             return JSON.stringify({ titre: c.titre.text, message: c.message.text, brut: c.message.textFormat === Text.PlainText,
-                action: c.action.text, ligne: c.ligne.text, longueur: c.champ.length, champ: c.champ.enabled,
-                autoriser: [c.autoriser.visible, c.autoriser.enabled], annuler: [c.annuler.visible, c.annuler.enabled],
-                fermer: c.fermer.visible, activite: c.activite.visible, hauteur: c.height, largeur: c.width,
-                ecran: Autorisation.fenetre.height, y: c.parent.y,
+                ligne: c.ligne.text, longueur: c.champ.length, champ: c.champ.enabled,
+                autoriser: [c.autoriser.visible, c.autoriser.enabled], fermer: c.fermer.visible,
+                activite: c.activite.visible, annonce: c.annonce.text, annonceOpacite: c.annonce.parent.opacity,
+                hauteur: c.hauteurOuverte, forme: [c.encoche.largeurCorps, c.encoche.hauteur], saisieLargeur: c.champ.width,
+                ecran: Autorisation.fenetre.height, y: c.parent.y, couvert: Overlays.ecranCouvert,
                 bas: c.autoriser.mapToItem(c, 0, c.autoriser.height).y })
         }
+
+        // couvert — écran dont la presqu'île est couverte. Entrées : aucune. Sortie : son nom, ou « ».
+        function couvert(): string { return Overlays.ecranCouvert }
 
         // taper, entree, touche — écrit le texte factice dans le champ, valide le champ, presse une touche du cadre.
         // Entrées : texte ; nom, « escape » ou une autre. Sortie : aucune.
@@ -146,7 +152,7 @@ ShellRoot {
         function entree(): void { Autorisation.fenetre.cadre.champ.accepted() }
         function touche(nom: string): void { Autorisation.fenetre.cadre.touche(nom) }
 
-        // cliquer — clique un bouton. Entrée : nom, « autoriser », « annuler » ou « fermer ». Sortie : aucune.
+        // cliquer — clique un bouton. Entrée : nom, « autoriser » ou « fermer ». Sortie : aucune.
         function cliquer(nom: string): void { const b = Autorisation.fenetre.cadre[nom]; if (b.enabled) b.clicked() }
 
         // voile — clic simulé au coin de la fenêtre. Entrées : aucune. Sortie : aucune.

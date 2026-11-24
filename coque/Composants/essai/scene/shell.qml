@@ -83,6 +83,10 @@ ShellRoot {
         // Dépendances : scene.montee.
         function apparition(montee: bool): void { scene.montee = montee }
 
+        // grandir — choisit si un cadre sans montée grandit depuis son centre. Entrée : oui. Sortie : aucune. Erreurs :
+        // aucune. Dépendances : scene.grandit.
+        function grandir(oui: bool): void { scene.grandit = oui }
+
         // echelle — échelle courante du cadre, portée par le Loader de la fenêtre. Entrées : aucune. Sortie : l'échelle
         // en texte, ou « » si la fenêtre n'est pas construite. Erreurs : aucune. Dépendances : scene.fenetre.cadre.
         function echelle(): string { return String(scene.fenetre?.cadre?.parent?.scale ?? "") }

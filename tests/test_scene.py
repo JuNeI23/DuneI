@@ -157,6 +157,16 @@ class SceneTest(EssaiCoque, unittest.TestCase):
         self.jusqua(lambda: vues.append(float(self.appel("essai", "echelle"))) or vues[-1] == 1, "cadre à l'échelle 1")
         self.assertLess(min(vues), 1, vues)
 
+    def test_sans_apparition(self):
+        """Vérifie qu'un cadre qui porte son propre mouvement (grandit faux) reste à l'échelle 1 dès l'ouverture.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : appel, ouvrir.
+        """
+        self.appel("essai", "apparition", "false")
+        self.appel("essai", "grandir", "false")
+        self.ouvrir()
+        self.assertEqual(self.appel("essai", "echelle"), "1")
+
     def test_placement_fourni(self):
         """Vérifie que la fonction de placement fournie par le client (Scene.positionner) fixe le haut du cadre : posée
         à 40 px par l'IPC placer, le cadre s'arrête à y = 40 une fois la montée posée, au lieu d'être centré.
