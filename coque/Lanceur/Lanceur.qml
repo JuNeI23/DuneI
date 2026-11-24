@@ -112,12 +112,13 @@ Singleton {
 
     // retenir — retient ce que désigne la sélection, pour la suivre quand ce qui est affiché change. Entrées : aucune.
     // Sortie : aucune ; cleChoisie reçoit la clé du résultat retenu et adresseChoisie celle de la vignette de l'aperçu
-    // (« » faute d'élément). Erreurs : aucune. Dépendances : sel, accueil, resultats, choisi, elements,
-    // Logique.elementApercu.
+    // (« » faute d'élément). Elle lit resultats et non choisi ni elements : quand resultats change, ces liaisons ne
+    // sont pas encore réévaluées et désignent l'ancienne liste. Erreurs : aucune. Dépendances : sel, accueil,
+    // resultats, Logique (elementsApercu, elementApercu).
     function retenir() {
-        const r = sel.zone === "medaillons" || sel.zone === "puces" ? accueil[sel.zone][sel.index] : choisi
+        const r = sel.zone === "medaillons" || sel.zone === "puces" ? accueil[sel.zone][sel.index] : resultats[sel.rang]
         cleChoisie = r?.cle ?? ""
-        adresseChoisie = Logique.elementApercu(elements, sel)?.adresse ?? ""
+        adresseChoisie = Logique.elementApercu(Logique.elementsApercu(r), sel)?.adresse ?? ""
     }
 
     // borner — fait suivre à la sélection l'élément retenu quand l'accueil ou les résultats changent sans nouvelle
@@ -171,7 +172,8 @@ Singleton {
     function bouger() { bouge = true; retenir() }
 
     // choix — résultat et action désignés par la sélection. Entrées : aucune. Sortie : {resultat, action, cle} ou
-    // null si rien n'est choisi ; la clé notée est celle du résultat, ou « fen:<adresse> » pour une vignette.
+    // null si rien n'est choisi ; la clé soumise au relevé d'usage est celle du résultat, ou « fen:<adresse> »
+    // pour une vignette, que le relevé écarte.
     // Erreurs : aucune. Dépendances : sel, accueil, resultats, elements.
     function choix() {
         const z = sel.zone
@@ -206,11 +208,11 @@ Singleton {
         entree()
     }
 
-    // executer — note l'usage, ferme le lanceur et fait exécuter l'action : aussitôt pour une copie (sous Wayland, le
-    // presse-papiers n'est écrit que depuis une fenêtre qui a le focus) ; sinon par la scène (Scene.executer), qui la
-    // fait partir une fois le fondu de sortie fini et le calque du lanceur retiré par le compositeur, pour que l'action
-    // trouve le clavier rendu, comme si elle partait de son raccourci, ou aussitôt sans fenêtre (coque d'essai hors
-    // écran) ; la scène la rend par son signal realiser.
+    // executer — soumet la clé au relevé d'usage, ferme le lanceur et fait exécuter l'action : aussitôt pour une copie
+    // (sous Wayland, le presse-papiers n'est écrit que depuis une fenêtre qui a le focus) ; sinon par la scène
+    // (Scene.executer), qui la fait partir une fois le fondu de sortie fini et le calque du lanceur retiré par le
+    // compositeur, pour que l'action trouve le clavier rendu, comme si elle partait de son raccourci, ou aussitôt sans
+    // fenêtre (coque d'essai hors écran) ; la scène la rend par son signal realiser.
     // Entrées : action, {libelle, genre (« amener », « lancer », « nouvelle », « action », « commande », « copier »),
     // cible} ; cle, la clé notée au relevé d'usage (facultative ; une fenêtre n'y entre pas). Sortie : aucune.
     // Erreurs : aucune. Dépendances : memoire, realiser, scene.executer, ouvert.

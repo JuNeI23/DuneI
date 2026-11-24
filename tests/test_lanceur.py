@@ -911,6 +911,43 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
         self.jusqua(lambda: "calc" in self.etat()["cles"], "calcul revenu")
         self.assertEqual(self.choisie(), "fen:0xc2")
 
+    def test_frappe_change_la_tete(self):
+        """Vérifie qu'une frappe qui change la tête de liste y pose la sélection, quand l'ancienne tête reste plus bas,
+        et que la nouvelle tête est la ligne suivie ensuite.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : ouvrir, taper, injecter, choisie,
+        etat, jusqua.
+        """
+        noms = [entree("fa-fi", "Fa Fi"), entree("fichiers", "Fichiers"), entree("firefox", "Firefox")]
+        self.injecter(entrees=noms, fenetres=[])
+        self.ouvrir()
+        self.taper("f")
+        self.assertEqual(self.choisie(), "app:fa-fi")
+        self.taper("i")
+        time.sleep(0.2)   # un tour de boucle au moins : la sélection suivie ne doit pas bouger après coup
+        self.assertEqual((self.etat()["sel"]["index"], self.choisie()), (0, "app:fichiers"))
+        self.injecter(entrees=[entree("fiche", "Fiche"), *noms])
+        self.jusqua(lambda: "app:fiche" in self.etat()["cles"], "application ajoutée")
+        self.assertEqual(self.choisie(), "app:fichiers")
+
+    def test_voisin_herite_suivi(self):
+        """Vérifie que le voisin qui prend la place d'un résultat disparu est suivi à son tour.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : ouvrir, taper, injecter, choisie,
+        etat, jusqua.
+        """
+        fen = lambda a, t: dict(FENETRES[3], adresse=a, titre=t)
+        a, b, c = fen("0xd1", "zed b"), fen("0xd2", "zed c"), fen("0xd3", "zed a")
+        self.injecter(entrees=[], fenetres=[a, b])
+        self.ouvrir()
+        self.taper("zed")
+        self.assertEqual(self.choisie(), "fen:0xd1")
+        self.injecter(fenetres=[b])
+        self.jusqua(lambda: self.etat()["cles"] == ["fen:0xd2"], "fenêtre retirée")
+        self.injecter(fenetres=[b, c])
+        self.jusqua(lambda: len(self.etat()["cles"]) == 2, "fenêtre ajoutée")
+        self.assertEqual(self.choisie(), "fen:0xd2")
+
     def test_action_apres_retrait_du_calque(self):
         """Vérifie qu'à la fermeture la fenêtre reste le temps de son fondu de sortie (sortant), puis est déchargée et
         son calque retiré ; qu'une réouverture pendant la sortie reprend la même fenêtre ; et qu'une action choisie ne
@@ -1146,6 +1183,29 @@ class ClavierTest(FenetreTest):
                 p.wait(timeout=DELAI)
             cible = 0
 
+    def test_ligne_suivie_visible(self):
+        """Vérifie que la ligne retenue reste visible sous la plaque quand des résultats apparaissent avant elle, sans
+        touche, sur une liste plus haute que la vue.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : lanceur, taper, touche, etat,
+        injecter, essai_ipc, jusqua.
+        """
+        fen = lambda i, t: dict(FENETRES[3], adresse=f"0xe{i:02d}", titre=f"zed {t} {i:02d}")
+        bas = [fen(i, "m") for i in range(14)]
+        self.injecter(entrees=[], fenetres=bas)
+        self.lanceur("ouvrir")
+        self.taper("zed")
+        self.jusqua(lambda: len(self.etat()["cles"]) == 14, "quatorze fenêtres")
+        self.touche(*["down"] * 13)
+        self.injecter(fenetres=bas + [fen(i, "a") for i in range(20, 25)])
+        self.jusqua(lambda: self.etat()["sel"]["rang"] == 18, "ligne suivie")
+        time.sleep(1.5)
+        r = json.loads(self.essai_ipc("reperes"))
+        self.assertIsNotNone(r["ligne"], r)
+        self.assertAlmostEqual(r["plaque"], r["ligne"], delta=1, msg=r)
+        self.assertGreaterEqual(r["ligne"], r["haut"] - 1, r)
+        self.assertLessEqual(r["ligne"] + 44, r["bas"] + 1, r)
+
     def test_fleches_et_nouvelle_instance(self):
         """Vérifie, par de vraies touches, que → entre dans l'aperçu sur le premier bouton, que ↑ monte aux vignettes,
         que ← au bord revient à la liste, et que Ctrl + Entrée sur kitty lance une nouvelle instance et ferme.
@@ -1217,6 +1277,7 @@ class ClavierTest(FenetreTest):
     test_action_apres_retrait_du_calque = test_reouverture_annule_l_action = None
     test_selection_suit_le_resultat = test_frappe_remet_en_tete = test_vignette_suivie = None
     test_apercu_disparu_revient_a_la_liste = test_calcul_prend_la_tete = None
+    test_frappe_change_la_tete = test_voisin_herite_suivi = None
 
 
 class CommandesTest(unittest.TestCase):
