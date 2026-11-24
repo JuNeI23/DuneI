@@ -4838,3 +4838,51 @@ visible.
 
 *Touché : `coque/Composants/` (`PleinEcran.qml`, `pleinecran.js`), `coque/Presquile/`, `coque/Galerie/Ouvreuse.qml`,
 `coque/Notifications/` (`Centre.qml`, `FenetrePanneau.qml`), tests `test_presquile` et `test_galerie`.*
+
+### D222 · L'agent d'authentification vit dans la coque
+
+24 novembre 2026 · L2-24, précise D50. Aucun agent polkit ne tournait : toute demande de droits hors d'un terminal échouait.
+L'agent de Quickshell (`Quickshell.Services.Polkit`) est chargé dans la coque. Claude recommandait un second processus, un
+plantage connu (#1016) pouvant emporter la coque ; Nicolas a préféré la voie la plus courte, systemd relançant la coque en
+une seconde (essai réel 4a). Il n'entre donc pas dans `session.toml` : il démarre avec `dunei-coque`. Il ne se charge que si
+`autorisation.active` vaut vrai et si `/etc/pam.d/polkit-1` porte la marque de DuneI ; seule la coque de session appelle
+`demarrer()`, jamais une coque d'essai.
+
+Limites connues de Quickshell 0.3.2 : une seconde demande remplace la première, laissée à son demandeur, car l'annuler ferme
+aussi la seconde (essai réel 2a) ; ni la ligne de commande complète ni le processus appelant ne sont fournis ; le mot de
+passe n'est pas effacé de la mémoire. La fin d'un flux est signalée avant `isSuccessful` : est accordée une demande
+terminée et non annulée.
+
+*Touché : `coque/Autorisation/`, `coque/shell.qml`, `coque/Composants/` (`Scene`, `FenetreScene`, `Overlays`), fiche
+`docs/superpowers/specs/2026-11-24-agent-authentification-design.md` (1.2).*
+
+### D223 · Une demande polkit annulée ne compte plus comme un échec
+
+24 novembre 2026 · L2-24. polkit 128 rompt la conversation PAM à l'annulation, et `pam_faillock` la comptait comme un
+mauvais mot de passe (polkit #713, correctif #719 non publié) : une sonde a ainsi verrouillé le compte de Nicolas.
+`systeme/etc/pam.d/polkit-1`, propre à polkit, reprend la pile `auth` de `system-auth` en toutes lettres et arrête
+`pam_unix` sur `authtok_err` et `conv_err`, avant `authfail`. Prouvé sur caladan : demandes annulées, demandeurs et coque
+tués, aucun échec ; un mauvais mot de passe compte toujours. `preauth` reste `required` : en `requisite`, l'échec immédiat
+ferait boucler Quickshell. Si `system-auth` change, `make install` le signale sans bloquer.
+
+*Touché : `systeme/etc/pam.d/polkit-1`, `deploy.py`, `tests/test_deploy.py`.*
+
+### D224 · Cinq mots de passe faux avant le verrou, au lieu de trois
+
+24 novembre 2026 · L2-24, demande de Nicolas. `deny = 5` dans `systeme/etc/security/faillock.conf` ; l'intervalle (quinze
+minutes) et le verrou (dix minutes) gardent leurs défauts. La règle vaut pour `sudo`, la connexion, hyprlock et polkit, qui
+partagent le même compteur. Le paquet livre ce fichier tout en commentaires : `make install` reprend désormais un fichier
+étranger qui ne règle rien, et refuse toujours les autres. Le verrou au cinquième échec n'a pas été éprouvé en vrai.
+
+*Touché : `systeme/etc/security/faillock.conf`, `deploy.py`.*
+
+### D225 · La demande d'autorisation sort de la presqu'île
+
+24 novembre 2026 · L2-24. La première carte, centrée, n'a pas plu ; après trois maquettes, Nicolas a choisi une île
+(v3, G1) sans bouton « Annuler », Échap suffisant. La fenêtre de l'agent la dessine elle-même, à la forme de la presqu'île,
+qui s'efface dessous : la vraie ne prend pas le clavier, perd sa prise à un clic à côté et passe sous un plein écran. L'île
+annonce pendant la garde de frappe (400 ms sans touche avant que le champ n'accepte la saisie), s'ouvre, puis se replie sur
+« Autorisé ». Clavier exclusif, voile derrière, un clic sur le voile ne ferme pas : choix de Claude, non contestés.
+
+*Touché : `coque/Autorisation/`, `coque/Presquile/Presquile.qml`, `coque/Composants/`, `motion.toml`, `tokens.toml`, bible
+(annexe E), maquettes `.superpowers/preview/autorisation-v1` à `v3`.*
