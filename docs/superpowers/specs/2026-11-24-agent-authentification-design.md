@@ -1,6 +1,6 @@
 # Agent d'authentification (L2-24)
 
-Version 0.1 — 2026-11-24 — à valider par Nicolas
+Version 0.2 — 2026-11-24 — à valider par Nicolas
 
 ## Intention
 
@@ -53,7 +53,8 @@ que ce confort rende le compte plus facile à verrouiller.
 | Programme propre à DuneI | Vraie file, commande complète | Code de sécurité à écrire et à entretenir |
 
 `hyprpolkitagent` reste le secours possible ; un seul agent peut être enregistré par session. Nicolas a aussi accepté la
-règle PAM ci-dessous, éprouvée d'abord en VM, et demandé cinq essais.
+règle PAM ci-dessous, éprouvée d'abord en VM, et demandé que le compte tolère cinq mots de passe
+faux au lieu de trois.
 
 ## Conception
 
@@ -64,7 +65,11 @@ règle PAM ci-dessous, éprouvée d'abord en VM, et demandé cinq essais.
   états. Le flux s'injecte, pour qu'un essai lui donne un objet factice : aucun essai ne touche polkit ni PAM.
 - **`autorisation.js`** : logique pure (états, lecture de `faillock`, textes).
 - **`CadreAutorisation`** : cadre E3, `ChampSecret`, deux `Bouton`, cotes et couleurs des jetons seuls.
-- **Débrayage** : `autorisation.active` dans `tokens.toml`, vrai par défaut ; faux, le `Loader` ne construit rien.
+- **Débrayage** : `autorisation.active` dans `tokens.toml` ; faux, le `Loader` ne construit rien.
+- **Garde de développement** : `~/.config/quickshell/dunei` est un lien vers le dépôt, donc tout module écrit est vivant.
+  `autorisation.active` reste faux, et les deux fichiers PAM restent hors de `systeme/`, que `make install` copie en
+  entier, jusqu'à la preuve en VM. Le commit qui les active est le dernier, après l'accord de Nicolas.
+- **Garde de marche** : l'agent ne s'enregistre que si `/etc/pam.d/polkit-1` porte la marque de DuneI.
 - **Enregistrement manqué** : le `Loader` est reconstruit après 2, 10 puis 60 s ; au-delà, une notification de la coque
   le signale une fois.
 - **Flux déjà ouvert** au chargement (rechargement de la coque) : `isActive` et `flow` sont lus au démarrage.
@@ -102,25 +107,30 @@ Tout texte PAM que DuneI ne reconnaît pas s'affiche tel quel dans la ligne d'é
 - Un clic sur le voile ne ferme pas : `Scene` gagne `voileFerme`, vrai par défaut, que ce client met à faux.
 - Une demande close par polkit ferme la scène. `cancelAuthenticationRequest` n'est appelée qu'une fois par flux, jamais
   après `isCompleted`.
-- Une seconde demande reprend la fenêtre en place, champ vidé.
+- Une seconde demande reprend la fenêtre en place, champ vidé, garde de frappe relancée. Le sort du premier flux
+  (annulation explicite, ou abandon à son demandeur) se décide sur une sonde en VM, menée avant d'écrire la machine à
+  états ; si l'annuler trouble le second, il est laissé, et la limite est documentée.
 
 ### Garde de frappe
 
 La fenêtre peut s'ouvrir pendant une frappe ailleurs, et un texte suivi d'Entrée partirait comme mot de passe. Le champ
-n'accepte donc les touches qu'après `delays.gardeFrappe` (400 ms) sans frappe depuis l'affichage. Échap et « Annuler »
-restent actifs.
+n'accepte donc les touches qu'après `delays.gardeFrappe` (400 ms) sans frappe, comptées à partir de chaque flux. « Autoriser »
+suit la même garde. Échap et « Annuler » restent actifs.
 
-### Essais restants
+### Essais restants et verrou
 
-Après un échec, la coque lit `faillock --user <utilisateur>` (lecture seule) et `deny` dans `/etc/security/faillock.conf`
-(3 si absent). Si la lecture échoue, la ligne dit seulement « Mot de passe incorrect. »
+À l'ouverture et après chaque échec, la coque lit `faillock --user <utilisateur>` (lecture seule), ainsi que `deny`,
+`fail_interval` et `unlock_time` dans `/etc/security/faillock.conf` (3, 900 et 600 s si absents). Elle en tire les essais
+restants, l'état Verrouillé et l'heure de déverrouillage, jamais du texte de PAM, qui suit `LANG`. Si la lecture échoue,
+la ligne dit seulement « Mot de passe incorrect. » et le champ reste ouvert : PAM décide.
 
 ### Règles système
 
 - **`systeme/etc/pam.d/polkit-1`**, qui prime sur celui du paquet : la pile `auth` de `system-auth` y est écrite en
   toutes lettres, et `pam_unix` y porte `authtok_err=die conv_err=die`, ce qui arrête la pile avant `authfail`.
   `account`, `password` et `session` gardent leur `include`. Le code rendu est **déduit du journal**, à prouver en VM.
-  Dérive possible : un contrôle compare la pile à `/etc/pam.d/system-auth` et prévient si elle a changé.
+  Dérive : `make install` compare la pile à celle de `/etc/pam.d/system-auth` et avertit, sans bloquer. Ni la CI ni
+  `make check` ne le font, leur conteneur n'ayant pas les fichiers de caladan.
 - **`systeme/etc/security/faillock.conf`** : `deny = 5`, le reste aux valeurs par défaut (10 minutes de verrou).
 - **`make install`** refuse un fichier qu'il n'a pas posé. Il apprend à reprendre un fichier existant dont toutes les
   lignes sont vides ou en commentaire ; tout autre fichier étranger reste refusé.
@@ -135,15 +145,20 @@ Après un échec, la coque lit `faillock --user <utilisateur>` (lecture seule) e
 ## Vérification
 
 - **Essais isolés** (flux factice) : chaque état, vide refusé, garde de frappe, fermetures, seconde demande, débrayage.
+- **Machine d'essai** : le disque de la VM de recette n'existe plus. L'image officielle d'Arch pour le nuage, téléchargée
+  et vérifiée, tourne dans QEMU sans fenêtre, avec un compte et un mot de passe jetables ; la branche y arrive par SSH,
+  depuis la machine. Aucun paquet ne s'ajoute à caladan, et rien de la VM n'entre dans le dépôt.
 - **VM** : règle PAM (trois annulations, 0 échec compté ; un mauvais mot de passe, 1 échec), verrou au cinquième,
   demandes simultanées, demandeur tué, coque tuée pendant une demande (clavier rendu), rechargement.
 - **Caladan** : rien n'est posé dans `/etc/pam.d` avant la preuve en VM ; chaque essai réel est annoncé avec son risque,
-  `faillock --user` lu avant et après. Retour arrière : `sudo rm /etc/pam.d/polkit-1`, un terminal `sudo -s` ouvert
-  pendant la pose.
+  `faillock --user` lu avant et après. Un terminal `sudo -s` reste ouvert pendant la pose.
+- **Retour arrière** : `autorisation.active` à faux suffit pour l'agent. Pour les règles, annuler le commit qui les pose
+  (sinon `make install` les repose), puis `sudo rm /etc/pam.d/polkit-1` et commenter `deny` dans `faillock.conf`.
 - **Recette** par Nicolas ; documentation : bible (tableau des surfaces), journal, backlog (L2-24), carnet, notes.
 
 ## Historique des versions
 
 | Version | Date | Changement |
 |---|---|---|
+| 0.2 | 2026-11-24 | Relecture de constructeur : gardes de développement et de marche, VM, seconde demande, verrou lu dans `faillock`, dérive, retour arrière |
 | 0.1 | 2026-11-24 | Première version |
