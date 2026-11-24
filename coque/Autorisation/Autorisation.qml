@@ -15,12 +15,13 @@ import "autorisation.js" as Logique
 // soumettre à flux.submit : il n'est ni retenu, ni journalisé, ni rendu par l'IPC.
 // Entrées : surFlux(f) ; lecteur, null par défaut : une fonction qui rend {faillock, conf}, à la place de la commande
 //           faillock et de faillock.conf (coques d'essai) ; clavierExclusif et fenetree, vrais par défaut, transmis à la
-//           scène. IPC « autorisation » : etat.
+//           scène ; marche (autorisation.active), regle, fabrique, reprises et avertir, remplacés par les essais.
+//           demarrer() charge l'agent réel : la coque de session seule l'appelle. IPC « autorisation » : etat.
 // Sorties : flux (null au repos) ; ouvert ; etat (voir Logique.etat ; garde sa dernière valeur pendant la sortie de la
 //           fenêtre) ; message, action (textes reçus, à peindre en texte brut) ; ligne ({texte, erreur}) ; saisieOuverte
 //           (état saisie et garde écoulée) ; fenetre ; ecran ; prendClavier ; frappe(), soumettre(texte), annuler() ; signal vider(), émis quand
 //           le champ doit se vider.
-// Erreurs : faillock ou faillock.conf absents ou illisibles laissent le champ ouvert, sans essais restants : PAM décide.
+// Erreurs : règle PAM absente ou agent non enregistré après trois reprises : journal, puis une notification ; faillock ou faillock.conf absents ou illisibles laissent le champ ouvert, sans essais restants : PAM décide.
 // Dépendances : Quickshell (Singleton), Quickshell.Io (Process, StdioCollector, FileView, IpcHandler), C.Scene, CadreAutorisation, Theme
 //           (motion.delays : gardeFrappe, autorise), C.Overlays (ecranCouvert), autorisation.js.
 Singleton {
@@ -36,6 +37,16 @@ Singleton {
     property var restants: null
     property var jusqua: null
     property string supplement: ""
+    // Agent réel (AgentPolkit), construit par demarrer, que seule la coque de session appelle.
+    property bool marche: Theme.autorisation?.active ?? false
+    property bool demarree: false
+    property string regle: "/etc/pam.d/polkit-1"
+    property Component fabrique: null
+    property var reprises: [2000, 10000, 60000]
+    property var avertir: () => Quickshell.execDetached(["notify-send", "-a", "DuneI", "-i", "system-lock-screen",
+        "Autorisations indisponibles", "La coque n'a pas pu s'enregistrer auprès de polkit."])
+    property var agent: null
+    property int tentatives: 0
     property var lecteur: null
     property bool clavierExclusif: true
     property bool fenetree: true
@@ -66,6 +77,69 @@ Singleton {
         // onOuvertChanged — toute fermeture d'une demande en cours vaut annulation (autre attention ouverte, fenêtre non
         // construite). Entrées : aucune. Sortie : aucune ; sans flux, rien. Erreurs : aucune. Dépendances : annuler.
         onOuvertChanged: if (!ouvert) { sortie.stop(); autorisation.annuler() }
+    }
+
+    // demarrer — construit l'agent si la mise en marche le permet et si la règle PAM de DuneI est posée : sans elle,
+    // chaque annulation compterait comme un échec. Appelée par la coque de session, jamais par une coque d'essai avec le
+    // vrai agent. Entrées : aucune. Sortie : agent. Erreurs : règle absente : avertissement au journal, rien de chargé.
+    // Dépendances : marche, lecteurRegle, construire.
+    function demarrer() {
+        demarree = true
+        if (!marche || agent) return
+        // Un FileView neuf à chaque lecture : rechargé, il garderait le texte d'un fichier disparu.
+        const pam = lecteurRegle.createObject(autorisation)
+        const posee = (pam.text().split("\n")[1] ?? "").includes("Posé par DuneI")
+        pam.destroy()
+        if (!posee) {
+            console.warn("Autorisation : " + regle + " n'est pas la règle de DuneI, agent non chargé (make install)")
+            return
+        }
+        tentatives = 0
+        construire()
+    }
+
+    // construire — (re)construit l'agent, en lit aussitôt la demande (rechargement de la coque) et arme la vérification
+    // de son enregistrement. Entrées : aucune. Sortie : agent. Erreurs : composant illisible : avertissement au journal.
+    // Dépendances : fabrique, surFlux, verification.
+    function construire() {
+        agent?.destroy()
+        const c = fabrique ?? Qt.createComponent("AgentPolkit.qml")
+        agent = c.createObject(autorisation)
+        if (!agent) console.warn("Autorisation : agent non construit. " + c.errorString())
+        else surFlux(agent.flux)
+        verification.interval = reprises[tentatives] ?? reprises[0]
+        verification.restart()
+    }
+
+    // verifier — reprend l'enregistrement manqué après chaque délai de reprises, puis le signale une fois.
+    // Entrées : aucune. Sortie : agent reconstruit, ou avertissement. Erreurs : aucune. Dépendances : construire, avertir.
+    function verifier() {
+        if (agent?.enregistre) return
+        if (tentatives < reprises.length) { tentatives++; construire() }
+        else avertir()
+    }
+
+    Timer { id: verification; onTriggered: autorisation.verifier() }
+    Component { id: lecteurRegle; FileView { path: autorisation.regle; blockLoading: true; printErrors: false } }
+
+    // retirer — débraye l'agent à chaud : la demande en cours est annulée, l'agent détruit. Entrées : aucune. Sortie :
+    // agent null. Erreurs : aucune. Dépendances : annuler, verification.
+    function retirer() {
+        verification.stop()
+        annuler()
+        agent?.destroy()
+        agent = null
+    }
+
+    // onMarcheChanged — les jetons peuvent se charger, ou changer, après demarrer. Entrées : aucune. Sortie : agent
+    // construit ou retiré. Erreurs : aucune. Dépendances : demarree, demarrer, retirer.
+    onMarcheChanged: if (demarree) marche ? demarrer() : retirer()
+
+    Connections {
+        target: autorisation.agent
+        ignoreUnknownSignals: true
+        // onFluxChanged — la demande de l'agent change. Entrées : aucune. Sortie : voir surFlux.
+        function onFluxChanged() { autorisation.surFlux(autorisation.agent.flux) }
     }
 
     // surFlux — reçoit la demande courante de l'agent. Entrée : f, le flux, ou null quand l'agent n'en a plus.

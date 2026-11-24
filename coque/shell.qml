@@ -3,6 +3,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Hyprland
+import "Autorisation"
 import "Barre"
 import "Deconnexion"
 import "Fond"
@@ -40,7 +41,7 @@ import "Selecteur"
 // Dépendances : quickshell ≥ 0.3 (GlobalShortcut de Quickshell.Hyprland), modules Barre (Barre), Fond (Fond),
 // Galerie (Ouvreuse), Lanceur (Lanceur), Notifications (Centre, FenetreNotifications, FenetrePanneau,
 // MemoireAttente), Parametres (FenetreParametres), Presquile (Presquile, Annonceur, AnnonceurAlerte), Reseau
-// (NotificationsReseau), Selecteur (Selecteur) et Deconnexion (Deconnexion). Le Centre possède
+// (NotificationsReseau), Selecteur (Selecteur), Deconnexion (Deconnexion) et Autorisation (Autorisation). Le Centre possède
 // org.freedesktop.Notifications : aucun autre démon (dunst) ne doit le tenir.
 // Rendu du texte : la directive Env force l'anticrénelage en niveaux de gris, comme dans le banc du verre.
 ShellRoot {
@@ -67,9 +68,10 @@ ShellRoot {
     Annonceur { id: annonceur }
     AnnonceurAlerte { id: alerte; galerie: ouvreuse.galerie }
     FenetreParametres {}
+    // L'agent d'authentification s'enregistre ici, et seulement ici : les coques d'essai ne le font jamais (L2-24).
     // Les singletons Lanceur, Selecteur et Deconnexion ne naissent qu'au premier accès : ces références publient leurs
     // IPC « lanceur », « selecteur » et « deconnexion » dès le démarrage.
-    Component.onCompleted: { Lanceur.fermer(); Selecteur.annuler(); Deconnexion.annuler() }
+    Component.onCompleted: { Lanceur.fermer(); Selecteur.annuler(); Deconnexion.annuler(); Autorisation.demarrer() }
     // SUPER + Tab : Hyprland appelle ce raccourci global à chaque Tab, sans lancer de processus.
     GlobalShortcut {
         appid: "dunei"

@@ -300,6 +300,49 @@ class ControleurTest(EssaiCoque, unittest.TestCase):
             self.appel("emettre", "0", "authenticationFailed")
         self.assertEqual((self.appels(), self.etat()["ouvert"]), ([["annuler"]], False))
 
+    REGLE = "#%PAM-1.0\n# Posé par DuneI depuis systeme/\n"
+
+    def agent(self, actif=True, bon=True, regle=REGLE) -> dict:
+        """Démarre le faux agent sur une règle PAM factice, et attend 1,2 s (reprises comprises). Sortie : agentEtat."""
+        chemin = self.dir / "polkit-1"
+        if regle is not None:
+            chemin.write_text(regle, encoding="utf-8")
+        self.appel("agent", str(actif).lower(), str(chemin), str(bon).lower())
+        time.sleep(1.2)
+        return json.loads(self.appel("agentEtat"))
+
+    def test_agent_enregistre(self):
+        """Règle posée et agent en marche : un seul agent, aucun avis. Erreurs : assertion."""
+        self.assertEqual(self.agent(), {"agents": 1, "avis": 0, "present": True})
+
+    def test_agent_sans_regle(self):
+        """Règle absente ou sans la marque de DuneI : rien n'est chargé. Erreurs : assertion."""
+        self.assertEqual(self.agent(regle=None), {"agents": 0, "avis": 0, "present": False})
+        self.assertEqual(self.agent(regle="#%PAM-1.0\nauth include system-auth\n"), {"agents": 0, "avis": 0, "present": False})
+
+    def test_agent_debraye(self):
+        """Mise en marche à faux : rien n'est chargé. Erreurs : assertion."""
+        self.assertEqual(self.agent(actif=False), {"agents": 0, "avis": 0, "present": False})
+        self.assertTrue(self.agent(actif=True)["present"])
+        self.assertFalse(self.agent(actif=False)["present"])     # Débrayé à chaud, l'agent est retiré.
+
+    def test_agent_refuse(self):
+        """Agent qui ne s'enregistre pas : trois reprises, puis un seul avis. Erreurs : assertion."""
+        self.assertEqual(self.agent(bon=False), {"agents": 4, "avis": 1, "present": True})
+
+    def test_agent_flux(self):
+        """Le flux de l'agent ouvre la demande ; son retrait la ferme. Erreurs : assertion."""
+        self.agent()
+        self.demander()
+        self.appel("annuler")
+        i = self.demander()
+        self.appel("annuler")
+        self.appel("poser", str(i), '{"isCompleted": false}')
+        self.appel("fluxAgent", str(i))
+        self.assertTrue(self.etat()["ouvert"])
+        self.appel("fluxAgent", "-1")
+        self.assertFalse(self.etat()["ouvert"])
+
     def test_identite(self):
         """L'utilisateur courant est retenu s'il figure dans la liste, sinon le choix de polkit reste. Erreurs : assertion."""
         moi = {"string": os.environ["USER"], "isGroup": False}

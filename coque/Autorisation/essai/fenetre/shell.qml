@@ -61,6 +61,19 @@ ShellRoot {
         }
     }
 
+    // Faux agent : enregistré ou non selon bonAgent ; chaque construction est comptée.
+    property bool bonAgent: false
+    property int agents: 0
+    property int avis: 0
+    Component {
+        id: fauxAgent
+        QtObject {
+            property bool enregistre: essai.bonAgent
+            property var flux: null
+            Component.onCompleted: essai.agents++
+        }
+    }
+
     // Autre attention, pour l'essai du registre.
     QtObject {
         id: autre
@@ -101,6 +114,25 @@ ShellRoot {
             Autorisation.surFlux(f)
             return String(essai.flux.length - 1)
         }
+
+        // agent — prépare le faux agent et démarre l'enregistrement. Entrées : actif, la mise en marche ; regle, chemin
+        // de la règle PAM ; bon, l'agent s'enregistre ou non. Sortie : aucune.
+        function agent(actif: bool, regle: string, bon: bool): void {
+            essai.bonAgent = bon
+            Autorisation.fabrique = fauxAgent
+            Autorisation.regle = regle
+            Autorisation.reprises = [100, 150, 200]
+            Autorisation.avertir = () => essai.avis++
+            Autorisation.marche = actif
+            Autorisation.demarrer()
+        }
+
+        // agentEtat — agents construits et avis émis. Entrées : aucune. Sortie : JSON {agents, avis, present}.
+        function agentEtat(): string { return JSON.stringify({ agents: essai.agents, avis: essai.avis, present: Autorisation.agent !== null }) }
+
+        // fluxAgent — flux porté par le faux agent, comme le ferait polkit, ou null. Entrée : i, rang, −1 pour null.
+        // Sortie : aucune.
+        function fluxAgent(i: int): void { Autorisation.agent.flux = i < 0 ? null : essai.flux[i] }
 
         // clore — fait passer le flux courant à null, comme l'agent. Entrées : aucune. Sortie : aucune.
         function clore(): void { Autorisation.surFlux(null) }
