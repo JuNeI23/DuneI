@@ -18,10 +18,10 @@ import "autorisation.js" as Logique
 //           scène. IPC « autorisation » : etat.
 // Sorties : flux (null au repos) ; ouvert ; etat (voir Logique.etat ; garde sa dernière valeur pendant la sortie de la
 //           fenêtre) ; message, action (textes reçus, à peindre en texte brut) ; ligne ({texte, erreur}) ; saisieOuverte
-//           (état saisie et garde écoulée) ; fenetre ; frappe(), soumettre(texte), annuler() ; signal vider(), émis quand
+//           (état saisie et garde écoulée) ; fenetre ; ecran ; frappe(), soumettre(texte), annuler() ; signal vider(), émis quand
 //           le champ doit se vider.
 // Erreurs : faillock ou faillock.conf absents ou illisibles laissent le champ ouvert, sans essais restants : PAM décide.
-// Dépendances : Quickshell (Singleton), Quickshell.Io (Process, StdioCollector, FileView, IpcHandler), C.Scene, Theme
+// Dépendances : Quickshell (Singleton), Quickshell.Io (Process, StdioCollector, FileView, IpcHandler), C.Scene, CadreAutorisation, Theme
 //           (motion.delays.gardeFrappe), autorisation.js.
 Singleton {
     id: autorisation
@@ -41,6 +41,8 @@ Singleton {
     property bool fenetree: true
     property alias ouvert: scene.ouvert
     readonly property var fenetre: scene.fenetre
+    // Écran de la demande, figé à l'ouverture : il borne la hauteur du cadre.
+    readonly property var ecran: scene.ecran
     readonly property bool saisieOuverte: etat === "saisie" && Theme.motion !== null && !garde.running
     readonly property var ligne: Logique.ligne(etat, { echec: echec, restants: restants, jusqua: jusqua, supplement: supplement })
     readonly property string utilisateur: Quickshell.env("USER") ?? ""
@@ -49,6 +51,7 @@ Singleton {
 
     C.Scene {
         id: scene
+        cadre: Component { CadreAutorisation {} }
         clavierExclusif: autorisation.clavierExclusif
         fenetree: autorisation.fenetree
         montee: false

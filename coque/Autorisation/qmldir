@@ -1,2 +1,3 @@
 module Autorisation
 singleton Autorisation 1.0 Autorisation.qml
+CadreAutorisation 1.0 CadreAutorisation.qml

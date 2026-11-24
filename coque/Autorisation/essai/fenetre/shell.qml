@@ -126,6 +126,32 @@ ShellRoot {
         function annuler(): void { Autorisation.annuler() }
         function frapper(oui: bool): void { frappes.running = oui }
 
+        // cadre — ce que montre le cadre. Entrées : aucune. Sortie : JSON, ou « null » sans cadre : titre, message et son
+        // format, action, ligne peinte, longueur du champ (jamais son texte), champ actif, autoriser et annuler
+        // (visibles et actifs), fermer (visible), activite (visible), hauteur, écran, bas des boutons, y du cadre.
+        function cadre(): string {
+            const c = Autorisation.fenetre?.cadre
+            if (!c) return "null"
+            return JSON.stringify({ titre: c.titre.text, message: c.message.text, brut: c.message.textFormat === Text.PlainText,
+                action: c.action.text, ligne: c.ligne.text, longueur: c.champ.length, champ: c.champ.enabled,
+                autoriser: [c.autoriser.visible, c.autoriser.enabled], annuler: [c.annuler.visible, c.annuler.enabled],
+                fermer: c.fermer.visible, activite: c.activite.visible, hauteur: c.height, largeur: c.width,
+                ecran: Autorisation.fenetre.height, y: c.parent.y,
+                bas: c.autoriser.mapToItem(c, 0, c.autoriser.height).y })
+        }
+
+        // taper, entree, touche — écrit le texte factice dans le champ, valide le champ, presse une touche du cadre.
+        // Entrées : texte ; nom, « escape » ou une autre. Sortie : aucune.
+        function taper(texte: string): void { Autorisation.fenetre.cadre.champ.text = texte }
+        function entree(): void { Autorisation.fenetre.cadre.champ.accepted() }
+        function touche(nom: string): void { Autorisation.fenetre.cadre.touche(nom) }
+
+        // cliquer — clique un bouton. Entrée : nom, « autoriser », « annuler » ou « fermer ». Sortie : aucune.
+        function cliquer(nom: string): void { const b = Autorisation.fenetre.cadre[nom]; if (b.enabled) b.clicked() }
+
+        // voile — clic simulé au coin de la fenêtre. Entrées : aucune. Sortie : aucune.
+        function voile(): void { Autorisation.fenetre.cliquerVoile(1, 1) }
+
         // attention — ouvre une autre attention, qui ferme celle de l'agent. Sortie : aucune.
         function attention(): void { autre.ouvert = true; Overlays.ouvrir(autre) }
     }

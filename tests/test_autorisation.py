@@ -2,7 +2,8 @@
 
 Rôle : éprouve la logique pure d'autorisation.js (réglages et relevé de faillock, état, ligne d'état, rafale d'échecs)
 dans un vrai Quickshell, par l'IPC de la coque d'essai coque/Autorisation/essai/logique ; puis le contrôleur
-Autorisation, sans fenêtre ni clavier, par la coque d'essai coque/Autorisation/essai/fenetre, dont les flux et le
+Autorisation, sans fenêtre ni clavier, puis son cadre, sa fenêtre ouverte pour de bon
+dans la session sans prendre le clavier, par la coque d'essai coque/Autorisation/essai/fenetre, dont les flux et le
 lecteur de faillock sont factices. Aucun essai n'ouvre de conversation PAM ni polkit, et aucun ne lance faillock.
 Entrées : aucune. Sorties : résultats unittest. Erreurs : échecs de test.
 Dépendances : qs (Quickshell ≥ 0.3), tests.test_coque_theme (EssaiCoque).
@@ -15,6 +16,7 @@ import unittest
 from datetime import datetime, timedelta
 
 from tests.test_coque_theme import DELAI, QS, ROOT, EssaiCoque
+from tests.test_lanceur import plein_ecran
 
 ENTETE = "junei:\nWhen                Type  Source                                           Valid\n"
 # Relevé du 24 novembre, quatre échecs dont un périmé (I), tel que faillock --user l'écrit.
@@ -304,3 +306,108 @@ class ControleurTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(json.loads(self.appel("identite", "0")), moi)
         self.demander(identities=[root], selectedIdentity=root)
         self.assertEqual(json.loads(self.appel("identite", "1")), root)
+
+
+class CadreTest(ControleurTest):
+    """Le cadre de la demande, sa fenêtre de calque ouverte pour de bon dans la session, sans clavier."""
+
+    def setUp(self):
+        """Comme ControleurTest, fenêtre construite. Erreurs : test sauté si la fenêtre active est en plein écran."""
+        if plein_ecran():
+            self.skipTest("fenêtre active en plein écran : la demande ne doit pas la couvrir")
+        super().setUp()
+        self.appel("fenetree", "true")
+
+    def cadre(self) -> dict:
+        """Ce que montre le cadre, une fois construit. Sortie : dictionnaire (voir essai.cadre)."""
+        return self.jusqua(lambda: json.loads(self.appel("cadre")), "cadre")
+
+    def montre(self, **attendus) -> dict:
+        """Attend que le cadre montre les valeurs attendues (fondus posés). Sortie : le cadre. Erreurs : échec au délai."""
+        return self.jusqua(lambda: (c := self.cadre()) and all(c[k] == v for k, v in attendus.items()) and c, attendus)
+
+    def test_saisie(self):
+        """Textes, champ et boutons en saisie ; Entrée et « Autoriser » envoient une fois et vident le champ."""
+        self.demander(message="Lancer <b>x</b>", actionId="org.dunei.essai")
+        self.saisie()
+        c = self.montre(champ=True, fermer=False, ligne="")
+        self.assertEqual((c["titre"], c["message"], c["brut"], c["action"], c["largeur"]),
+                         ("Autorisation requise", "Lancer <b>x</b>", True, "org.dunei.essai", 400))
+        self.assertEqual((c["autoriser"], c["annuler"]), ([True, False], [True, True]))
+        self.appel("taper", SECRET)
+        self.montre(autoriser=[True, True])
+        self.appel("entree")
+        self.assertEqual(self.appels(), [["submit", SECRET]])
+        self.montre(longueur=0, champ=False, activite=True, ligne="Vérification")
+        self.appel("emettre", "0", "authenticationFailed")
+        self.appel("poser", "0", '{"isResponseRequired": true}')
+        self.montre(champ=True, activite=False, ligne="Mot de passe incorrect.")
+        self.appel("taper", SECRET)
+        self.appel("cliquer", "autoriser")
+        self.assertEqual(self.appels(), [["submit", SECRET]] * 2)
+
+    def test_garde(self):
+        """Pendant la garde, le champ et « Autoriser » sont inactifs ; une touche du cadre la relance."""
+        self.demander()
+        for _ in range(8):
+            self.appel("touche", "a")
+            self.assertFalse(self.etat()["saisieOuverte"])
+        self.assertFalse(self.cadre()["champ"])
+        self.saisie()
+        self.montre(champ=True)
+
+    def test_verrouille_fermer(self):
+        """Verrouillé : champ inactif, « Fermer » seul, qui annule."""
+        self.appel("lire", json.dumps({"faillock": releve(5), "conf": "deny = 5\n"}))
+        self.demander()
+        c = self.montre(fermer=True, autoriser=[False, False], annuler=[False, False])
+        self.assertFalse(c["champ"])
+        self.appel("cliquer", "fermer")
+        self.assertEqual(self.appels(), [["annuler"]])
+
+    def test_echap_annuler_voile(self):
+        """Échap et « Annuler » annulent une fois ; le voile ne ferme pas."""
+        self.demander()
+        self.cadre()
+        self.appel("voile")
+        self.assertEqual((self.appels(), self.etat()["ouvert"]), ([], True))
+        self.appel("touche", "escape")
+        self.assertEqual((self.appels(), self.etat()["ouvert"]), ([["annuler"]], False))
+        self.demander()
+        self.cadre()
+        self.appel("cliquer", "annuler")
+        self.assertEqual((self.appels(1), self.etat()["ouvert"]), ([["annuler"]], False))
+
+    def test_message_tres_long(self):
+        """Un message de 2 000 caractères, sur plusieurs lignes, laisse la carte dans l'écran et les boutons dedans."""
+        self.demander(message="mot " * 400 + "\n" * 100 + "x" * 400, actionId="org." + "a" * 300)
+        c = self.jusqua(lambda: (c := self.cadre()) and c["hauteur"] > 400 and c, "cadre posé")
+        time.sleep(0.5)
+        c = self.cadre()
+        self.assertLessEqual(c["hauteur"], c["ecran"] - 2 * 48)
+        self.assertLessEqual(c["bas"], c["hauteur"])
+        self.assertEqual(c["largeur"], 400)
+
+    def test_seconde_demande_vide_le_champ(self):
+        """La seconde demande vide le champ et change les textes."""
+        self.demander()
+        self.saisie()
+        self.montre(champ=True)
+        self.appel("taper", SECRET)
+        self.demander(message="Seconde")
+        self.montre(longueur=0, message="Seconde")
+
+    def test_mouvement_reduit(self):
+        """Mouvement réduit : la carte ne se déplace ni ne grandit, elle est posée d'emblée."""
+        (self.dir / "mouvement.json").write_text('{"reduit": true}')
+        time.sleep(0.5)
+        self.demander()
+        c = self.cadre()
+        time.sleep(0.3)
+        self.assertEqual((c["y"], c["hauteur"]), (self.cadre()["y"], self.cadre()["hauteur"]))
+
+
+# Le cadre hérite des outils du contrôleur, pas de ses essais.
+for _nom in [n for n in vars(ControleurTest) if n.startswith("test_")]:
+    if _nom not in vars(CadreTest):
+        setattr(CadreTest, _nom, None)
