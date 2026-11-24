@@ -12,8 +12,9 @@ import "../Applications/applications.js" as Apps
 // DuneI, pages de Paramètres, calcul) et compose l'accueil (six médaillons, trois puces). Le classement reste à
 // lanceur.js (classer). Forme d'un résultat : {cle, genre, titre, sousTitre, icone, type, retrait, app, pertinence,
 // principale, secondaires, apercu} ; une action : {libelle, genre, cible}.
-// Entrées : entrees (entrées de bureau, DesktopEntries par défaut) ; fenetres ({adresse, classe, titre, bureau,
-// historique}, Applications.toplevels() sous Wayland) ; poids (usage, lanceur.js poids) ; calcul (un Calcul, ou
+// Entrées : entrees (entrées de bureau, DesktopEntries par défaut) ; actif, vrai par défaut : faux, les fenêtres ne
+// sont pas suivies (lanceur fermé, L2-74 d) ; fenetres ({adresse, classe, titre, bureau, historique},
+// Applications.toplevels() sous Wayland et actif, [] sinon) ; poids (usage, lanceur.js poids) ; calcul (un Calcul, ou
 // null) ; cheminRoles (roles.lua) ; ipc (préfixe d'appel IPC de la coque). Les coques d'essai les remplacent.
 // Sorties : commandes (déclarées puis pages de Paramètres), etats ({id: état lisible}) ; fonctions chercher,
 // accueil, commande, ligne, rafraichir.
@@ -25,7 +26,8 @@ Scope {
     id: sources
 
     property var entrees: DesktopEntries.applications.values
-    property var fenetres: Quickshell.env("WAYLAND_DISPLAY") ? Applications.toplevels() : []
+    property bool actif: true
+    property var fenetres: actif && Quickshell.env("WAYLAND_DISPLAY") ? Applications.toplevels() : []
     property var poids: ({})
     property var calcul: null
     property string cheminRoles: (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config")

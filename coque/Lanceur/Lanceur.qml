@@ -12,48 +12,51 @@ import "../Applications/applications.js" as Apps
 // Lanceur — contrôleur unique du lanceur d'applications (L2-16) : état, clavier, exécution et IPC.
 // Rôle : tient l'état du lanceur (ouvert, saisie, sélection), interroge les sources à chaque
 // changement de la saisie, du calcul, des états des commandes, des fenêtres ou du relevé d'usage (liaisons de
-// accueil et resultats), et exécute l'action choisie avant de se fermer. C'est une attention du registre Overlays
-// (famille « attention ») : l'ouvrir ferme l'attention déjà ouverte, et une autre qui s'ouvre le ferme. Sa fenêtre,
-// FenetreLanceur, n'existe que pendant l'ouverture et son fondu de sortie (LazyLoader, present) : fermé, le lanceur ne
-// garde en mémoire que son relevé d'usage. Le clavier est traité ici, par touche(), qu'appellent la fenêtre et l'IPC
+// accueil et resultats), et exécute l'action choisie avant de se fermer. Ouverture, fenêtre et sortie sont confiées à
+// une Scene (L2-81), comme pour le sélecteur et le menu de déconnexion : elle inscrit le lanceur au registre Overlays
+// (famille « attention » : l'ouvrir ferme l'attention déjà ouverte, et une autre qui s'ouvre le ferme), construit sa
+// FenetreScene, dont le cadre est un CadreLanceur tenu au tiers haut de l'écran (positionner), seulement pendant
+// l'ouverture et le fondu de sortie : fermé, le lanceur ne garde en mémoire que son relevé d'usage, et ses sources ne
+// suivent plus les fenêtres (Sources.actif). Le clavier est traité ici, par touche(), qu'appellent le cadre et l'IPC
 // des essais : un seul chemin. Une action choisie n'est exécutée qu'une fois le calque du lanceur retiré par le
-// compositeur (événement closelayer de dunei-attention), à la fin du fondu de sortie : c'est à ce retrait que Hyprland
-// rend le clavier à la fenêtre précédente, et une surface de la coque ouverte avant lui (galerie) perdait aussitôt le
-// clavier qu'elle venait de prendre (recette 2). La copie fait exception : sous Wayland, le presse-papiers ne s'écrit
-// que depuis une fenêtre qui a le focus, elle se fait donc avant la fermeture.
+// compositeur (closelayer de son propre namespace, dunei-attention-lanceur), à la fin du fondu de sortie : c'est à ce
+// retrait que Hyprland rend le clavier à la fenêtre précédente, et une surface de la coque ouverte avant lui (galerie)
+// perdait aussitôt le clavier qu'elle venait de prendre (recette 2). La copie fait exception : sous Wayland, le
+// presse-papiers ne s'écrit que depuis une fenêtre qui a le focus, elle se fait donc avant la fermeture.
 // Entrées : ouvert ; saisie ; clavierExclusif, vrai par défaut, que la fenêtre applique (une coque d'essai le met à
 //           faux pour ne jamais prendre le clavier de Nicolas) ; executeur, null par défaut : une fonction qui reçoit
 //           l'action à la place de son exécution réelle (coques d'essai) ; fenetree, vrai par défaut : faux,
-//           aucune fenêtre n'est construite (coque d'essai hors écran, qui pose elle-même un CadreLanceur).
+//           aucune fenêtre n'est construite (coque d'essai hors écran, qui pose elle-même un CadreLanceur) ; tous trois
+//           sont transmis à la scène.
 //           IPC « lanceur » : basculer, ouvrir, fermer, etat, taper, touche.
 // Sorties : present (ouvert, ou fenêtre encore en sortie), sortant, differee (l'action en attente du retrait du
 //           calque, ou null), vue (« accueil » ou « scission »), accueil ({medaillons, puces}), resultats (classés),
 //           sel ({zone, rang, index, rangee}, forme de lanceur.js deplacer ; rangee pour l'aperçu seulement),
 //           choisi (le résultat de la ligne retenue), elements (ceux de son aperçu), libellePrincipal,
-//           ecran (figé à l'ouverture), fenetre (la FenetreLanceur ouverte, ou null), cotes (mesures de la maquette
-//           v3 rapportées aux jetons), famille.
+//           ecran (figé à l'ouverture), fenetre (la FenetreScene ouverte, ou null), espace (le namespace du calque),
+//           cotes (mesures de la maquette v3 rapportées aux jetons) ; present, sortant, differee, ecran et fenetre
+//           sont lus sur la scène.
 // Erreurs : aucune ; une fenêtre qui ne peut être construite est journalisée et le lanceur se referme ; une action
 //           inconnue ne fait que fermer.
-// Dépendances : Quickshell (Singleton, LazyLoader, execDetached, clipboardText), Quickshell.Io
-//           (IpcHandler), Quickshell.Hyprland (focusedMonitor, dispatch, rawEvent), QtQuick (Timer), Theme, Overlays, Applications, Sources,
-//           Calcul, MemoireLanceur, FenetreLanceur.qml, lanceur.js, applications.js.
+// Dépendances : Quickshell (Singleton, execDetached, clipboardText), Quickshell.Io (IpcHandler),
+//           Quickshell.Hyprland (dispatch), Theme, Scene, Applications, Sources, Calcul, MemoireLanceur, CadreLanceur,
+//           lanceur.js, applications.js.
 Singleton {
     id: lanceur
 
-    property bool ouvert: false
-    readonly property string famille: "attention"
+    property alias ouvert: scene.ouvert
+    readonly property string espace: "dunei-attention-lanceur"
     property string saisie: ""
     property var sel: ({ zone: "medaillons", rang: 0, index: 0 })
     property bool clavierExclusif: true
     property var executeur: null
     property bool fenetree: true
-    // Vrai entre la fermeture et la fin du fondu de sortie de la fenêtre ; la fenêtre reste chargée jusque-là.
-    property bool sortant: false
-    readonly property bool present: ouvert || sortant
-    // Action choisie qui attend le retrait du calque du lanceur par le compositeur (voir executer).
-    property var differee: null
+    readonly property bool sortant: scene.sortant
+    readonly property bool present: scene.present
+    readonly property var differee: scene.differee
+    readonly property var fenetre: scene.fenetre
+    readonly property var ecran: scene.ecran
     readonly property alias sources: sources
-    readonly property var fenetre: chargeur.item?.fenetre ?? null
 
     readonly property string vue: saisie === "" ? "accueil" : "scission"
     readonly property var accueil: present ? sources.accueil() : ({ medaillons: [], puces: [] })
@@ -77,27 +80,12 @@ Singleton {
         resultat: Theme.space?.scale[7] ?? 0
     })
 
-    // Écran du moniteur focalisé, suivi en continu (voir Overlay), et écran de la fenêtre, figé à l'ouverture.
-    readonly property var ecranFocalise: Quickshell.screens.find(s => s.name === Hyprland.focusedMonitor?.name)
-        ?? Quickshell.screens[0]
-    property var ecran: null
-
     // basculer — ouvre le lanceur fermé, ferme le lanceur ouvert. Entrées : aucune. Sortie : aucune.
     // Erreurs : aucune. Dépendances : ouvert.
     function basculer() { ouvert = !ouvert }
 
     // fermer — ferme le lanceur. Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : ouvert.
     function fermer() { ouvert = false }
-
-    // sortieFinie — appelée par la fenêtre quand son fondu de sortie est posé : la fenêtre est déchargée (son calque
-    // retiré, ce qui fait partir l'action en attente) et la saisie vidée, pour que la prochaine fenêtre naisse sur
-    // l'accueil. Entrées : aucune. Sortie : aucune ; sans effet si le lanceur a été rouvert entre-temps. Erreurs : aucune.
-    // Dépendances : ouvert, sortant, saisie.
-    function sortieFinie() {
-        if (ouvert || !sortant) return
-        sortant = false
-        saisie = ""
-    }
 
     // fenetreDe — fenêtre des sources désignée par son adresse. Entrée : adresse. Sortie : {adresse, classe, titre,
     // bureau, historique} ou undefined si elle a disparu. Erreurs : aucune. Dépendances : sources.fenetres.
@@ -186,28 +174,18 @@ Singleton {
     }
 
     // executer — note l'usage, ferme le lanceur et fait exécuter l'action : aussitôt pour une copie (sous Wayland, le
-    // presse-papiers n'est écrit que depuis une fenêtre qui a le focus) ou sans fenêtre (coque d'essai hors écran) ;
-    // sinon une fois le fondu de sortie fini et le calque du lanceur retiré par le compositeur (differee, voir la
-    // connexion à Hyprland), pour que l'action trouve le clavier rendu, comme si elle partait de son raccourci.
+    // presse-papiers n'est écrit que depuis une fenêtre qui a le focus) ; sinon par la scène (Scene.executer), qui la
+    // fait partir une fois le fondu de sortie fini et le calque du lanceur retiré par le compositeur, pour que l'action
+    // trouve le clavier rendu, comme si elle partait de son raccourci, ou aussitôt sans fenêtre (coque d'essai hors
+    // écran) ; la scène la rend par son signal realiser.
     // Entrées : action, {libelle, genre (« amener », « lancer », « nouvelle », « action », « commande », « copier »),
     // cible} ; cle, la clé notée au relevé d'usage (facultative). Sortie : aucune. Erreurs : aucune.
-    // Dépendances : memoire, fenetre, realiser, differee.
+    // Dépendances : memoire, realiser, scene.executer, ouvert.
     function executer(action, cle) {
         if (cle) memoire.noter(cle)
-        if (action.genre === "copier" || !fenetre) realiser(action)
-        else { differee = action; garde.restart() }
+        if (action.genre !== "copier") return scene.executer(action)
+        realiser(action)
         ouvert = false
-    }
-
-    // realiserDifferee — exécute l'action en attente, une seule fois, et jamais sous une attention ouverte : le lanceur
-    // rouvert, ou le sélecteur de fenêtres ouvert pendant le retrait du calque (L2-17), c'est changer d'avis.
-    // Entrées : aucune. Sortie : aucune. Erreurs : aucune ; sans action en attente, ou sous une attention ouverte, rien.
-    // Dépendances : differee, realiser, garde, Overlays.attention.
-    function realiserDifferee() {
-        const a = differee
-        differee = null
-        garde.stop()
-        if (a && !Overlays.attention) realiser(a)
     }
 
     // realiser — exécute une action. « nouvelle » lance toujours une nouvelle instance de l'entrée, sans amener.
@@ -228,50 +206,20 @@ Singleton {
         }
     }
 
-    // onRawEvent — retrait du calque par le compositeur : l'action en attente part. Hyprland émet
-    // closelayer>>dunei-attention au démappage du calque, après lui avoir retiré le clavier.
-    // Entrée : e, l'événement brut de Hyprland (name, data). Sortie : aucune. Erreurs : aucune ; sans action en attente
-    // ou pour un autre événement, rien. Dépendances : Hyprland.rawEvent, differee, realiserDifferee.
-    Connections {
-        target: Hyprland
-        function onRawEvent(e) { if (lanceur.differee && e.name === "closelayer" && e.data === "dunei-attention") lanceur.realiserDifferee() }
-    }
-    // onAttentionChanged — quand une autre attention que le lanceur s'ouvre (le sélecteur de fenêtres), l'action en
-    // attente est abandonnée : c'est changer d'avis, et elle ne doit pas écraser le choix du nouveau geste en partant à
-    // son tour au retrait du calque. Entrées : aucune. Sortie : differee remis à null. Erreurs : aucune ; sans autre
-    // attention ouverte, rien. Dépendances : Overlays.attention, differee.
-    Connections {
-        target: Overlays
-        function onAttentionChanged() { if (Overlays.attention && Overlays.attention !== lanceur) lanceur.differee = null }
-    }
-    // Garde : si l'événement de retrait ne vient pas (connexion à Hyprland perdue), l'action part quand même, au plus
-    // une seconde après la fermeture ; ce délai technique, bien au-delà du fondu de sortie (201 ms au ressort overlay),
-    // n'est jamais atteint quand le compositeur répond.
-    Timer { id: garde; interval: 1000; onTriggered: lanceur.realiserDifferee() }
-
-    // onOuvertChanged — à l'ouverture, fige l'écran (sauf si la fenêtre, encore en sortie, est reprise sur le sien),
-    // annule l'action qui attendait le retrait du calque (rouvrir pendant la sortie, c'est changer d'avis), repart d'une
-    // saisie vide sur l'accueil, relit les états des commandes et s'inscrit au registre des attentions ;
-    // à la fermeture, s'en retire et laisse la fenêtre jouer son fondu de sortie (sortant) : la saisie n'est vidée qu'à
-    // la fin de celui-ci (sortieFinie), sans quoi le cadre repasserait à l'accueil en s'effaçant ; sans fenêtre
-    // (fenetree faux), la saisie est vidée aussitôt. Entrées : aucune. Sortie : aucune. Erreurs : aucune.
-    // Dépendances : ecranFocalise, sources.rafraichir, Overlays, fenetre, differee, garde.
+    // onOuvertChanged — à l'ouverture, repart d'une saisie vide sur l'accueil et relit les états des commandes ;
+    // l'écran, le registre des attentions et l'action en attente sont l'affaire de la scène. Entrées : aucune.
+    // Sortie : aucune. Erreurs : aucune. Dépendances : saisie, sel, sources.rafraichir.
     onOuvertChanged: {
-        if (ouvert) {
-            if (!sortant) ecran = ecranFocalise
-            sortant = false
-            differee = null
-            garde.stop()
-            saisie = ""
-            sel = { zone: "medaillons", rang: 0, index: 0 }
-            sources.rafraichir()
-            Overlays.ouvrir(lanceur)
-        } else {
-            sortant = fenetre !== null
-            if (!sortant) saisie = ""
-            Overlays.fermer(lanceur)
-        }
+        if (!ouvert) return
+        saisie = ""
+        sel = { zone: "medaillons", rang: 0, index: 0 }
+        sources.rafraichir()
     }
+
+    // onPresentChanged — la saisie n'est vidée qu'à la fin du fondu de sortie, quand la fenêtre est déchargée (aussitôt
+    // sans fenêtre), sans quoi le cadre repasserait à l'accueil en s'effaçant ; la prochaine fenêtre naît sur l'accueil.
+    // Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : present, saisie.
+    onPresentChanged: if (!present) saisie = ""
 
     // onSaisieChanged — soumet la saisie au calcul et pose la sélection en tête de la vue. Entrées : aucune.
     // Sortie : aucune. Erreurs : aucune. Dépendances : calcul.demander.
@@ -288,29 +236,25 @@ Singleton {
     Calcul { id: calcul; actif: lanceur.ouvert }
     Sources {
         id: sources
+        actif: lanceur.present
         calcul: calcul
         poids: Logique.poids(memoire.usage, Date.now())
     }
 
-    // La fenêtre vit dans FenetreLanceur.qml, que ce porteur ne compile qu'à l'ouverture (comme Overlay le fait de
-    // FenetreAttention) : un fichier qui nomme PanelWindow ne se charge pas sous une plateforme sans dorsale de couches.
-    // Si la création échoue, l'échec est journalisé et le lanceur se referme.
-    LazyLoader {
-        id: chargeur
-        active: lanceur.present && lanceur.fenetree
-        component: Component {
-            QtObject {
-                id: porteur
-                readonly property Component composant: Qt.createComponent("FenetreLanceur.qml")
-                readonly property var fenetre: composant.status === Component.Ready ? composant.createObject(porteur) : null
-
-                Component.onCompleted: {
-                    if (fenetre) return
-                    console.warn("Lanceur : fenêtre non construite. " + composant.errorString())
-                    Qt.callLater(() => lanceur.ouvert = false)
-                }
-            }
-        }
+    // Scène du lanceur : ouverture, registre des attentions, fenêtre, fondu de sortie et action différée. Le cadre
+    // est tenu au tiers haut de l'écran, bord haut fixe : le centre de la scission y tombe, jamais plus haut que
+    // cotes.retrait, et l'accueil, moins haut, garde le même bord haut. La scène ne reçoit pas d'executeur : realiser
+    // lit celui du lanceur.
+    Scene {
+        id: scene
+        cadre: Component { CadreLanceur {} }
+        espace: lanceur.espace
+        clavierExclusif: lanceur.clavierExclusif
+        fenetree: lanceur.fenetree
+        positionner: h => Math.max(lanceur.cotes.retrait, Math.round(h / 3 - lanceur.cotes.scission.height / 2))
+        // onRealiser — exécute l'action que la scène fait partir. Entrée : action. Sortie : aucune. Erreurs : aucune.
+        // Dépendances : realiser.
+        onRealiser: action => lanceur.realiser(action)
     }
 
     IpcHandler {
@@ -332,7 +276,8 @@ Singleton {
         // fenetre (vrai si elle existe), sortant (fenêtre en sortie), differee (vrai si une action attend le retrait du
         // calque), boutons (libellés des actions de l'aperçu),
         // largeur et hauteur du cadre, vignettes (affichées dans l'aperçu), liste (repères de la plaque et de la ligne
-        // retenue, voir Liste.reperes).
+        // retenue, voir Liste.reperes), haut
+        // (le haut du cadre dans la fenêtre, ou null sans fenêtre).
         // Sortie : texte. Erreurs : aucune. Dépendances : lanceur, fenetre.
         function etat(): string {
             const f = lanceur.fenetre
@@ -341,8 +286,8 @@ Singleton {
                 puces: lanceur.accueil.puces.map(r => r.cle), apercu: lanceur.elements.map(e => e.genre),
                 principal: lanceur.libellePrincipal, fenetre: f !== null,
                 sortant: lanceur.sortant, differee: lanceur.differee !== null, boutons: lanceur.boutons().map(a => a.libelle),
-                largeur: f?.cadre.width ?? 0, hauteur: f?.cadre.height ?? 0, vignettes: f?.vignettes ?? 0,
-                liste: f?.cadre.reperes() ?? null })
+                largeur: f?.cadre.width ?? 0, hauteur: f?.cadre.height ?? 0, vignettes: f?.cadre.vignettes ?? 0,
+                liste: f?.cadre.reperes() ?? null, haut: f?.cadre.parent.y ?? null })
         }
     }
 }

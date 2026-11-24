@@ -2,7 +2,7 @@ import QtQuick
 import "../Theme"
 import "../Composants" as C
 
-// CadreLanceur — cadre du lanceur (L2-16) : verre, champ, accueil ou scission ; contenu de FenetreLanceur.
+// CadreLanceur — cadre du lanceur (L2-16) : verre, champ, accueil ou scission ; contenu de la FenetreScene du lanceur (L2-81).
 // Rôle : séparé de la fenêtre de calque pour être éprouvé hors écran (coque d'essai essai/clavier, plateforme
 // offscreen, où une vraie touche de Qt suit le chemin réel du champ). Il passe de l'accueil (cotes.accueil, coins
 // cotes.rayonAccueil) à la scission (cotes.scission, coins radius.window) au ressort window, en largeur, en hauteur
@@ -11,8 +11,8 @@ import "../Composants" as C
 // prennent le relief « Doux ». Dedans : le champ Recherche agrandi, puis l'Accueil ou la scission (titre
 // « Résultats » et Liste, filet, Apercu), qui se croisent en fondu et en glissé. Les touches du champ passent par
 // Lanceur.touche ; le reste de la frappe va au champ, qui écrit Lanceur.saisie.
-// Entrées : depart, distance en pixels sous sa place d'où le cadre monte (0 par défaut) ; montee, de 0 à 1, la part
-// faite de cette montée (1 par défaut) : translation pure, sans échelle ni opacité (le fondu est celui du compositeur).
+// Entrées : aucune ; la montée depuis le bas de l'écran est celle du Loader de FenetreScene. Les touches ne sont
+// traitées que lanceur ouvert : pendant le fondu de sortie, la saisie et la sélection restent figées (L2-74 b).
 // Sorties : vignettes, le nombre de vignettes de l'aperçu ; champ, la Recherche, et accueil, l'Accueil (lus par les
 // essais) ; reperes().
 // Erreurs : aucune ; avant le chargement des tokens, le verre reste transparent.
@@ -25,8 +25,6 @@ import "../Composants" as C
 Item {
     id: cadre
 
-    property real depart: 0
-    property real montee: 1
     readonly property bool dnRelief: true
     readonly property var cotes: Lanceur.cotes
     readonly property bool scinde: Lanceur.vue === "scission"
@@ -36,7 +34,6 @@ Item {
 
     width: largeur.value
     height: hauteur.value
-    transform: Translate { y: (1 - cadre.montee) * cadre.depart }
 
     // nomTouche — nom d'une touche du lanceur. Entrée : event, KeyEvent. Sortie : « escape », « return »,
     // « ctrl+return », « up », « down », « left », « right », « tab », « shift+tab », « ctrl+j », « ctrl+k », ou « »
@@ -96,9 +93,11 @@ Item {
             onTextChanged: if (text !== Lanceur.saisie) Lanceur.saisie = text
             // Keys.onPressed — les touches du lanceur passent par Lanceur.touche avant le traitement propre du
             // champ ; Échap n'est plus traité par la Recherche (effaceSurEchap faux) et suit toujours ce chemin.
+            // Lanceur fermé (fondu de sortie), toute touche est prise sans effet, frappe comprise.
             // Entrée : event. Sortie : event.accepted si la touche est prise. Erreurs : aucune.
-            // Dépendances : nomTouche, Lanceur.touche.
+            // Dépendances : nomTouche, Lanceur.touche, Lanceur.ouvert.
             Keys.onPressed: event => {
+                if (!Lanceur.ouvert) return event.accepted = true
                 const nom = cadre.nomTouche(event)
                 if (nom && Lanceur.touche(nom)) event.accepted = true
             }

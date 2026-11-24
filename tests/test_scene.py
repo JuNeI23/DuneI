@@ -167,9 +167,19 @@ class SceneTest(EssaiCoque, unittest.TestCase):
         time.sleep(1.3)
         self.assertNotIn("essai : exécuté", self.journal())
 
+    def test_fenetres_hors_ouverture(self):
+        """Vérifie que le lanceur fermé ne suit pas les fenêtres de la session (L2-74 d) : ses sources n'en listent
+        aucune, puis les listent dès son ouverture (la session en compte au moins une, le terminal des essais).
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : appel, jusqua.
+        """
+        self.assertEqual(self.appel("essai", "fenetresLanceur"), "0")
+        self.appel("lanceur", "ouvrir")
+        self.jusqua(lambda: int(self.appel("essai", "fenetresLanceur")) > 0, "fenêtres suivies, lanceur ouvert")
+
     def test_retrait_d_un_autre_calque(self):
         """Vérifie que l'action en attente ne part qu'au retrait du calque de la scène, son propre namespace (espace),
-        et pas au retrait d'un autre calque d'attention (le lanceur en fondu, dunei-attention). Les événements sont
+        et pas au retrait d'un autre calque d'attention (la galerie en fondu, dunei-attention). Les événements sont
         simulés par l'IPC evenement, qui appelle Scene.surEvenement comme le ferait Hyprland.rawEvent.
 
         Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : appel, ouvrir, etat, attendre,

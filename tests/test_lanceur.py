@@ -853,6 +853,46 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
         e = self.ouvrir()
         self.assertEqual((e["saisie"], e["vue"]), ("", "accueil"))
 
+    def test_namespace_propre(self):
+        """Vérifie que le calque du lanceur porte son propre namespace, dunei-attention-lanceur, et que son action en
+        attente ne part pas au retrait d'un calque dunei-attention (la galerie) mais à celui de son propre calque
+        (L2-74 g). Le retrait de la galerie est simulé par l'IPC evenement, qui appelle Scene.surEvenement comme le
+        ferait Hyprland.rawEvent ; celui du lanceur est le vrai.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion ; test sauté si le calque du lanceur a été
+        retiré avant la simulation (session trop lente pour le scénario). Dépendances : ouvrir, taper, touche,
+        essai_ipc, etat, attendre, journal, hyprctl.
+        """
+        self.ouvrir()
+        calques = subprocess.run(["hyprctl", "layers", "-j"], capture_output=True, text=True, timeout=DELAI).stdout
+        self.assertIn('"namespace": "dunei-attention-lanceur"', calques)
+        self.assertNotIn('"namespace": "dunei-attention"', calques)
+        self.taper("galerie")
+        self.touche("return")
+        if self.essai_ipc("evenement", "closelayer", "dunei-attention") != "ok":
+            self.skipTest("calque retiré avant la simulation : le scénario n'a pas pu être joué")
+        self.assertNotIn("essai : exécuté", self.journal())
+        self.attendre("essai : exécuté commande galerie")
+        self.assertIn("essai : calque retiré", self.journal())
+
+    def test_position_au_tiers(self):
+        """Vérifie que le cadre du lanceur est tenu au tiers haut de l'écran, bord haut fixe : son haut vaut
+        max(cotes.retrait, round(hauteur / 3 − cotes.scission.height / 2)), à l'accueil comme à la scission.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : ouvrir, taper, etat, jusqua,
+        hyprctl (moniteur focalisé), generated/coque-tokens.json (space.scale).
+        """
+        moniteurs = json.loads(subprocess.run(["hyprctl", "monitors", "-j"], capture_output=True, text=True,
+                                              timeout=DELAI).stdout)
+        m = next(m for m in moniteurs if m["focused"])
+        hauteur = (m["width"] if m["transform"] % 2 else m["height"]) / m["scale"]
+        retrait = json.loads((ROOT / "generated" / "coque-tokens.json").read_text())["space"]["scale"][2]
+        attendu = max(retrait, round(hauteur / 3 - 470 / 2))
+        self.assertEqual(self.ouvrir()["haut"], attendu)
+        self.taper("fire")
+        self.jusqua(lambda: abs(self.etat()["largeur"] - 900) < 1, "scission posée")
+        self.assertEqual(self.etat()["haut"], attendu)
+
 
 @unittest.skipUnless(os.environ.get("WAYLAND_DISPLAY") and QS, "session Wayland et Quickshell requis")
 class ClavierTest(FenetreTest):
@@ -880,6 +920,31 @@ class ClavierTest(FenetreTest):
         """Presse de vraies touches dans le cadre. Entrée : noms. Sortie : aucune. Dépendances : essai_ipc."""
         for nom in noms:
             self.essai_ipc("cle", nom)
+
+    def test_namespace_propre(self):
+        """Sans objet hors écran : aucune fenêtre de calque n'y est construite."""
+
+    def test_position_au_tiers(self):
+        """Sans objet hors écran : aucune fenêtre de calque n'y est construite."""
+
+    def test_touches_ignorees_lanceur_ferme(self):
+        """Vérifie, par de vraies touches, qu'un cadre encore affiché lanceur fermé (le fondu de sortie) ne traite
+        aucune touche : ni la frappe ni la sélection ne changent (L2-74 b). La coque d'essai garde son cadre après la fermeture
+        (IPC tenir), comme FenetreScene le garde pendant le fondu.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : lanceur, essai_ipc, cle, etat,
+        jusqua.
+        """
+        self.essai_ipc("tenir")
+        self.lanceur("ouvrir")
+        self.jusqua(lambda: self.etat()["ouvert"], "lanceur ouvert")
+        self.lanceur("fermer")
+        sel = self.etat()["sel"]
+        self.cle("a")
+        self.cle("return")
+        e = self.etat()
+        self.assertEqual((e["ouvert"], e["saisie"], e["sel"]), (False, "", sel))
+        self.assertNotIn("essai : exécuté", self.journal())
 
     def test_echap_par_le_vrai_chemin(self):
         """Vérifie, par de vraies touches, qu'Échap ramène l'aperçu à la liste sans vider le champ, puis vide la saisie

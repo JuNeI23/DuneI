@@ -10,7 +10,7 @@ import Quickshell.Hyprland
 // sélecteur de L2-17 : executer ferme la scène et ne fait partir l'action qu'au retrait du calque de la scène
 // (namespace espace) par le compositeur (événement closelayer, D194), pour que la fenêtre visée garde le clavier que
 // Hyprland rend à ce retrait ; une garde d'une seconde la fait partir si l'événement ne vient pas. Chaque client a son
-// propre namespace (L2-80) : le retrait d'un autre calque d'attention, le lanceur en fondu par exemple, ne fait rien
+// propre namespace (L2-80) : le retrait d'un autre calque d'attention, la galerie en fondu par exemple, ne fait rien
 // partir. Un délai d'affichage optionnel (delai) garde la fenêtre construite, clavier compris, mais invisible jusqu'à
 // son terme : le geste tenu du sélecteur ; une fermeture avant ce terme ne montre rien et n'a pas de fondu.
 // L'action en attente est abandonnée si une autre attention s'ouvre ou si la scène est rouverte : c'est changer

@@ -16,8 +16,8 @@ import "Lanceur"
 // déranger » vaut toujours « true ».
 // Entrées : DUNEI_TOKENS_DIR et DUNEI_ETAT_DIR (jetons, thème et relevé d'usage de l'essai) ; IPC « essai » : pret,
 // ouvrir, fermer, executer, apparition (montée ou apparition depuis le centre), echelle (échelle du cadre), delai
-// (délai d'affichage), placer (placement du cadre), espace (namespace du calque), evenement (événement de Hyprland
-// simulé), etat.
+// (délai d'affichage), placer (placement du cadre), fenetresLanceur (fenêtres suivies par le lanceur), espace
+// (namespace du calque), evenement (événement de Hyprland simulé), etat.
 // Sorties : « essai : prêt » au démarrage ; « essai : exécuté <id> » à chaque action de la scène (« essai : exécuté
 // lanceur <genre> » pour le lanceur) ; « essai : fenêtre construite » à chaque construction de la fenêtre de la
 // scène ; « essai : calque retiré » quand Hyprland retire le calque de la scène (closelayer de scene.espace), pour
@@ -103,6 +103,10 @@ ShellRoot {
         // evenement — simule un événement brut de Hyprland reçu par la scène. Entrées : nom, le nom de l'événement ;
         // donnee, sa donnée. Sortie : aucune. Erreurs : aucune. Dépendances : scene.surEvenement.
         function evenement(nom: string, donnee: string): void { scene.surEvenement(nom, donnee) }
+
+        // fenetresLanceur — nombre de fenêtres de la session que suivent les sources du lanceur. Entrées : aucune.
+        // Sortie : l'entier en texte. Erreurs : aucune. Dépendances : Lanceur.sources.fenetres.
+        function fenetresLanceur(): string { return String(Lanceur.sources.fenetres.length) }
 
         // etat — état de la scène. Entrées : aucune. Sortie : JSON {ouvert, present, fenetre (vrai si construite),
         // sortant, differee (l'action en attente, ou null), montre, opacite (l'opacité que Hyprland applique à la

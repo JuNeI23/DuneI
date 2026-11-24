@@ -14,11 +14,13 @@ import "Lanceur"
 // hauteurs de sa forme. tests/test_lanceur.py (FenetreTest) la pilote ; elle sert aussi aux captures contre la
 // maquette. Elle sert la cible « notifications », dont l'état « ne pas déranger » vaut toujours « true ».
 // Entrées : DUNEI_TOKENS_DIR et DUNEI_ETAT_DIR (jetons, thème et relevé d'usage de l'essai) ; IPC « essai » :
-// injecter, marquer, largeurs, pret. Sorties : « essai : prêt » au démarrage ; « essai : exécuté <genre> <cible> » à
-// chaque action ; « essai : calque retiré » quand Hyprland retire un calque dunei-attention (closelayer), pour que les
-// essais vérifient qu'une action ne part qu'après ce retrait. Erreurs : celles de Theme et du lanceur, dans le journal.
-// Dépendances : quickshell ≥ 0.3 (IpcHandler, Hyprland.rawEvent), Lanceur, Theme ; liens essai/fenetre/Theme, Composants, Applications,
-// Parametres, Barre et Lanceur, car Quickshell ne suit pas les imports hors du dossier de la coque.
+// injecter, marquer, largeurs, evenement, pret. Sorties : « essai : prêt » au démarrage ; « essai : exécuté <genre>
+// <cible> » à chaque action ; « essai : calque retiré » quand Hyprland retire le calque du lanceur,
+// dunei-attention-lanceur (closelayer), pour que les essais vérifient qu'une action ne part qu'après ce retrait.
+// Erreurs : celles de Theme et du lanceur, dans le journal.
+// Dépendances : quickshell ≥ 0.3 (IpcHandler, Hyprland.rawEvent), Lanceur, Theme ; liens essai/fenetre/Theme,
+// Composants, Applications, Parametres, Barre et Lanceur, car Quickshell ne suit pas les imports hors du dossier de la
+// coque.
 ShellRoot {
     id: essai
 
@@ -44,7 +46,7 @@ ShellRoot {
     // « essai : calque retiré ». Erreurs : aucune. Dépendances : Hyprland.rawEvent.
     Connections {
         target: Hyprland
-        function onRawEvent(e) { if (e.name === "closelayer" && e.data === "dunei-attention") console.log("essai : calque retiré") }
+        function onRawEvent(e) { if (e.name === "closelayer" && e.data === Lanceur.espace) console.log("essai : calque retiré") }
     }
 
     IpcHandler {
@@ -66,6 +68,15 @@ ShellRoot {
 
         // largeurs — relevé des largeurs du cadre depuis marquer. Sortie : tableau JSON.
         function largeurs(): string { return JSON.stringify(essai.largeurs) }
+
+        // evenement — simule un événement brut de Hyprland reçu par la scène du lanceur, tant que sa fenêtre existe.
+        // Entrées : nom, le nom de l'événement ; donnee, sa donnée. Sortie : « ok », ou « absent » sans fenêtre.
+        // Erreurs : aucune. Dépendances : Lanceur.fenetre (FenetreScene.scene), Scene.surEvenement.
+        function evenement(nom: string, donnee: string): string {
+            if (!Lanceur.fenetre) return "absent"
+            Lanceur.fenetre.scene.surEvenement(nom, donnee)
+            return "ok"
+        }
     }
 
     IpcHandler {
