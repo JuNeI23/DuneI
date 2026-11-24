@@ -976,8 +976,8 @@ Le test : *l'utilisateur peut-il continuer à lire ce qu'il y a derrière ?* Si 
 | --- | --- | --- |
 | 0.45 | 2026-11-23 | Ligne « Sélecteur de fenêtres » de la couche 3 : plus de cadre ni de plaque de verre, rangée et légende posées sur le voile, vignette choisie agrandie à 1,15 en pleine image et autres grisées à 0,5, écart 32, titre coupé sans déplacer la rangée, vignettes nettes par paliers (L2-80, D211, D212) |
 | 0.46 | 2026-11-24 | Ligne « Sélecteur de fenêtres » : vignettes aux coins arrondis quelle que soit la capture, titre de la légende à l'échelon 4 moyen comme les libellés du menu de déconnexion (recette L2-80, D212) |
-| 0.48 | 2026-11-24 | Section Presqu'île et annexe E : glissement hors du bord haut au démarrage et au plein écran (D220), fenêtre agrandie distincte du plein écran (D221) |
 | 0.47 | 2026-11-24 | Ligne « Lanceur » de la couche 3 : la sélection suit le résultat visé (D216) |
+| 0.48 | 2026-11-24 | Section Presqu'île et annexe E : glissement hors du bord haut au démarrage et au plein écran (D220), fenêtre agrandie distincte du plein écran (D221) |
 | 0.44 | 2026-11-23 | Chapitre 7 : composant « bouton de session » (vignette en verre, agrandi et teinté d'accent au curseur, autres gris, armé en `error`, sans plaque) ; ligne « Menu de déconnexion » de la couche 3 (D205, D209) |
 | 0.43 | 2026-11-23 | Le sélecteur de bureaux quitte les overlays d'attention et le tableau des surfaces : L2-18 est retiré (D203) |
 | 0.4 | 2026-10-10 | Version de référence |

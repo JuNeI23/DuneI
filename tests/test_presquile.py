@@ -77,7 +77,7 @@ class PresquileStructureTest(unittest.TestCase):
         # L'apparition attend le thème puis le jeton, et le vrai plein écran de l'écran la retire.
         code = re.sub(r"//.*", "", self.surface)
         self.assertRegex(code, r"Timer\s*\{[^}]*interval:\s*Theme\.tokens\?\.presquile\?\.apparition[^}]*running:\s*Theme\.ready")
-        self.assertRegex(code, r"presente:\s*surface\.apparue && !Composants\.PleinEcran\.sur\(surface\.modelData\.name\)")
+        self.assertRegex(code, r"presente:\s*surface\.apparue && !Composants\.PleinEcran\.sur\(surface\.modelData\?\.name \?\? \"\"\)")
         self.assertRegex(code, r"course:\s*encoche\.hauteur \+ encoche\.marge")
         # Calée sur le pixel physique : entre deux, le bas de la forme se peint à moitié (capture du démarrage).
         self.assertIn("y: Math.round(glissement.decalage * surface.devicePixelRatio) / surface.devicePixelRatio", code)
@@ -262,6 +262,12 @@ class PleinEcranTest(PresquileIpc, unittest.TestCase):
     def test_liaison_suivie(self):
         # Une liaison qui appelle porte suit la fenêtre : entrée, puis sortie du plein écran.
         self.assertEqual([self.appeler("pleinLiaison", p) for p in (False, True, False)], ["false", "true", "false"])
+
+    def test_special_note(self):
+        # Le bureau spécial noté d'un moniteur se relit, une liaison le suit, et les autres moniteurs n'en voient rien.
+        self.assertEqual(self.appeler("pleinNoter", "A", "special:dunei"), "special:dunei")
+        self.assertEqual(self.appeler("pleinSpecial", "B"), "-")
+        self.assertEqual(self.appeler("pleinNoter", "A", "-"), "-")
 
     def test_ecran_inconnu(self):
         self.assertEqual(self.appeler("pleinSur", "INCONNU"), "false")

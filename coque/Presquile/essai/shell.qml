@@ -20,7 +20,8 @@ import "Audio"
 // par une source et deux presqu'îles factices ; alerteModule, le rendu du module Alerte réel ;
 // volumeAnnoncer, volumeMicro, volumeSourdine, volumeNiveau et volumeEtat, le module Volume réel dans une scène sans fenêtre (débord
 // du remplissage hors de l'encoche, jointures, disposition du son coupé) ; audioTenir et audioPopover, le compte des
-// popovers audio ouverts d'EtatAudio ; pleinPorte, pleinCourant, pleinLiaison, pleinSur et pleinSpecial, la lecture du vrai
+// popovers audio ouverts d'EtatAudio ; pleinPorte, pleinCourant, pleinLiaison, pleinNoter, pleinSur et
+// pleinSpecial, la lecture du vrai
 // plein écran (pleinecran.js et PleinEcran) ; glisser, glisserInterrompu, glisserCourse et glissementEtat, le Glissement. Les tâches suivantes y ajoutent leurs composants et leurs fonctions IPC.
 // Entrées : DUNEI_TOKENS_DIR, lu par Theme ; QT_QPA_PLATFORM, posé à offscreen par le test ; QT_SCALE_FACTOR, pour
 // une capture agrandie ; QT_QUICK_BACKEND=rhi et QSG_RHI_BACKEND=opengl pour une capture fidèle (la plateforme
@@ -64,6 +65,9 @@ ShellRoot {
         }
         onOpaciteChanged: console.info("essai : go " + opacite)
     }
+
+    // Liaison sur le bureau spécial du moniteur « A » : elle doit suivre ce que PleinEcran note.
+    QtObject { id: specialLu; readonly property string nom: Composants.PleinEcran.special("A") }
 
     // Espace factice : sa liaison « lu » doit suivre l'état de sa fenêtre, comme celles de la coque.
     QtObject {
@@ -336,6 +340,13 @@ ShellRoot {
         // pleinSur — PleinEcran.sur d'un moniteur. Entrée : nom. Sortie : « true » ou « false ». Erreurs : aucune.
         // Dépendances : PleinEcran.
         function pleinSur(nom: string): string { return String(Composants.PleinEcran.sur(nom)) }
+
+        // pleinNoter — note le bureau spécial d'un moniteur et rend ce qu'une liaison en lit. Entrées : nom ; special,
+        // « - » pour aucun. Sortie : nom lu, « - » pour aucun. Erreurs : aucune. Dépendances : PleinEcran, specialLu.
+        function pleinNoter(nom: string, special: string): string {
+            Composants.PleinEcran.noter(nom, special === "-" ? "" : special)
+            return specialLu.nom || "-"
+        }
 
         // pleinSpecial — PleinEcran.special d'un moniteur. Entrée : nom. Sortie : nom du spécial ouvert, « - » pour
         // aucun. Erreurs : aucune. Dépendances : PleinEcran.

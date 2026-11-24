@@ -11,7 +11,7 @@ import "../Audio"
 // la presqu'île rend le module suivant de son arbitre, par ordre de priorité : la galerie (3) si elle est ouverte,
 // l'alerte d'énergie (2) si elle est affichée, sinon les bureaux. Le volume (1) passe sous l'une et l'autre. Une rafale
 // d'annonces ne monte le module qu'une fois : une demande renouvelée est sans effet dans l'arbitre, et le module lit
-// lui-même l'annonce courante. Rien ne s'ouvre si l'espace de travail de l'écran actif porte une fenêtre en plein
+// lui-même l'annonce courante. Rien ne s'ouvre si l'écran actif montre un vrai plein
 // écran (la presqu'île, sur la couche Top, y est cachée). Si l'écran actif change pendant l'affichage, la demande en
 // cours reste posée sur l'ancienne presqu'île et se libère à la fin du délai de 1,5 s ; l'annonce suivante vise la
 // nouvelle. Une presqu'île retirée (écran débranché) est oubliée.

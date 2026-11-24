@@ -13,9 +13,12 @@ import "../Theme"
 // l'encoche suit celle du module par les deux Ressorts « window » de la scène : immobile tant que le module garde sa
 // taille, elle s'étire sans saut quand il en change.
 // Changer de module déroule la séquence de la scène (L2-48) : fondu de sortie, étirement, fondu d'entrée ; en
-// mouvement réduit, la taille se pose aussitôt et seuls les fondus restent. La fenêtre réserve en plus
+// mouvement réduit, la taille se pose aussitôt et seuls les fondus restent. L'encoche glisse hors du bord haut au
+// démarrage (Theme prêt, puis presquile.apparition) et à la sortie d'un vrai plein écran de son écran, et y rentre à
+// l'entrée (Glissement), sans que la fenêtre bouge. La fenêtre réserve en plus
 // de l'encoche la marge de son ombre, pour qu'elle ne soit pas coupée. Le masque de saisie ne couvre que le corps de
-// l'encoche : partout ailleurs, les clics traversent. Elle ne réserve aucune place et ne prend jamais le focus clavier.
+// l'encoche, et rien quand elle est repliée : partout ailleurs, les clics traversent. Elle ne réserve aucune place et ne
+// prend jamais le focus clavier.
 // Entrées : modelData, l'écran que lui donne le Variants de la coque (obligatoire) ; demander(cle, composant,
 //           priorite) et liberer(cle), par lesquels les modules (galerie 3, alerte 2, volume 1) réclament la
 //           presqu'île, que tranche un Arbitre : le composant de contenu est un Item déclarant implicitWidth et
@@ -70,7 +73,7 @@ PanelWindow {
 
     Glissement {
         id: glissement
-        presente: surface.apparue && !Composants.PleinEcran.sur(surface.modelData.name)
+        presente: surface.apparue && !Composants.PleinEcran.sur(surface.modelData?.name ?? "")
         course: encoche.hauteur + encoche.marge
     }
 

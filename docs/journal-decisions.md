@@ -4813,9 +4813,10 @@ l'encoche descend du bord haut au démarrage et à la sortie d'un plein écran, 
 rétractation en îlot, trop longue au départ et qui remonterait le module à chaque fois, et la couche overlay, qui
 reviendrait sur D97 et laisserait une surface au-dessus des jeux et des vidéos.
 
-- **Un seul ressort, `overlay`**, celui du fondu que Hyprland applique aux calques hauts, pour que les deux gestes
+- **Ressort `overlay`**, celui du fondu que Hyprland applique aux calques hauts, pour que les deux gestes
   restent ensemble. Éprouvé sur l'écran : ce fondu laisse le départ nettement visible environ 70 ms. Aucune règle
-  `no_anim`, qui le couperait. En mouvement réduit, le même ressort devient un fondu, sans déplacement.
+  `no_anim`, qui le couperait. En mouvement réduit, un second ressort, de nature « fondu »,
+  porte l'opacité, sans déplacement.
 - **Démarrage.** L'apparition attend `presquile.apparition` (250 ms) après le thème prêt : Hyprland ouvre le calque avec
   un léger zoom, qui détacherait l'encoche du bord.
 - **Masque de saisie en coordonnées.** `Region` ne suit que l'élément qu'on lui donne, pas ses parents : lié au corps de
