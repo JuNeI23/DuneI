@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.58. Historique en fin de document.
+Version 1.59. Historique en fin de document.
 
 Socle amorçable.
 
@@ -2229,6 +2229,9 @@ dans le groupe « session » de `paquets.toml`, donc `make install` le garde.
 - **La sélection** suit le résultat visé quand la liste change, sauf un calcul arrivé en tête tant que rien n'a bougé
   (L2-74, D216). Les grandeurs partagées viennent des jetons `[vignette]`, `reglages.medallion_image` et
   `delays.garde` ; `make install` est nécessaire après leur ajout.
+- **Vocabulaire du calcul.** Les unités, monnaies et fonctions comprises sont dans `coque/Lanceur/unites.js`, une ligne
+  par unité ; un mot absent fait taire le calcul. `qalc` est lancé avec `-defaults` et ignore `qalc.cfg` (L2-82, D218) ; un montant
+  garde sa monnaie (L2-83, D219).
 - **Vérifier.** `qs ipc -c dunei call lanceur etat` répond une fois la coque lancée ; `qalc 2+2` répond `2 + 2 = 4`.
 - **Les tests.** `python3 -m unittest tests.test_lanceur tests.test_paquets`. Les essais graphiques passent par la
   coque d'essai, qui désactive le clavier exclusif (`clavierExclusif`, D194) et pilote la saisie par IPC ; ils exigent
@@ -2633,6 +2636,7 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 
 | Version | Date | Changement |
 | --- | --- | --- |
+| 1.59 | 2026-11-24 | Vocabulaire du calcul du lanceur et `qalc -defaults` (L2-82, D218), montants dans leur monnaie (L2-83, D219) |
 | 1.58 | 2026-11-24 | Dettes du lanceur (L2-74, D216 et D217) : relevé d'usage sans fenêtres, sélection par résultat, nouveaux jetons, `make install` nécessaire |
 | 1.57 | 2026-11-24 | Le lanceur sur `Scene` (L2-81, D215) : namespace `dunei-attention-lanceur` ajouté aux règles de calque, `FenetreLanceur.qml` supprimée, `make install` nécessaire |
 | 1.56 | 2026-11-23 | Le sélecteur de fenêtres sur `Scene` (L2-80, D211 à D214) : namespace de calque par client de `Scene` et règles de calque générées depuis `[glass]`, jetons `agrandi` et `estompe`, écart porté à 32, `make install` nécessaire |

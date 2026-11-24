@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas — révisée le 22 octobre 2026
 
-Version 1.66. Historique en fin de document.
+Version 1.68. Historique en fin de document.
 
 *Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent soixante-quinze lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
 
@@ -716,13 +716,21 @@ que rien n'a bougé ; les fenêtres quittent le relevé d'usage et se rangent pa
 sont devenues des jetons, sans changer de valeur ; le médaillon ne crée son icône en couleur que s'il en a une ; un
 avertissement de qalc ne passe plus pour la réponse. Les réponses que qalc invente (« 5 asdfg ») sont notées L2-82.
 
-Prochaine étape, à proposer : **L2-82, les réponses inventées par qalc dans le lanceur**. Ensuite, le reste de L2-48,
-L2-57 (suites du popover Bluetooth), L2-58, L2-59, L2-62, L2-70 et les défauts L2-75 à L2-79.
+Le lanceur ne calcule que ce qu'il comprend (L2-82, D218), recette validée par Nicolas le 24 novembre : un vocabulaire propre à DuneI, unités françaises
+comprises, fait autorité ; un mot inconnu, une saisie inachevée ou deux grandeurs différentes font taire le calcul au
+lieu de laisser qalc inventer ; qalc ne lit ni n'écrit plus les réglages du terminal.
+
+Un montant garde désormais sa monnaie, « 3 * 5 € » répondant en euros (L2-83, D219).
+
+Prochaine étape, à proposer : **le reste de L2-48**, ou l'un de L2-57 (suites du popover Bluetooth), L2-58, L2-59, L2-62,
+L2-70, des défauts L2-75 à L2-79 et des mineurs du calcul L2-84.
 
 ## Historique des versions
 
 | Version | Date | Changement |
 | --- | --- | --- |
+| 1.68 | 2026-11-24 | L2-82 et L2-83 faits (D218, D219) ; prochaine étape à proposer : le reste de L2-48 |
+| 1.67 | 2026-11-24 | L2-82 en recette (D218) ; prochaine étape : sa recette, puis L2-83 |
 | 1.66 | 2026-11-24 | L2-74 fait (recette validée) ; prochaine étape : L2-82, les réponses inventées par qalc |
 | 1.65 | 2026-11-24 | L2-74 en recette (D216, D217), ajout de L2-82 ; prochaine étape : la recette à l'écran, puis la fusion |
 | 1.64 | 2026-11-24 | L2-81 fait (recette validée) ; prochaine étape : le reste de L2-74, dettes du lanceur |

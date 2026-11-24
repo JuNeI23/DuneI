@@ -25,14 +25,14 @@ Scope {
 
     // demander — soumet une saisie à qalc.
     // Entrée : saisie, chaîne. Sortie : aucune ; expression et valeur sont remises à vide, puis valeur reçoit la
-    // réponse si elle est encore la dernière. Une saisie sans chiffre n'est jamais envoyée.
+    // réponse si elle est encore la dernière. Une saisie sans chiffre ou incomprise (L2-82) n'est jamais envoyée.
     // Sans effet si qalc est indisponible. Erreurs : aucune. Dépendances : Logique.aEnvoyer, Logique.traduire, vider.
     function demander(saisie) {
         if (!disponible) return
         dernier++
         valeur = ""
-        if (!Logique.aEnvoyer(saisie)) { expression = ""; return }
-        expression = Logique.traduire(saisie)
+        expression = Logique.aEnvoyer(saisie) ? Logique.traduire(saisie) : ""
+        if (!expression) return
         file.push({ n: dernier, envoye: expression, ecrit: false })
         vider()
     }
@@ -67,7 +67,11 @@ Scope {
 
     Process {
         id: processus
-        command: ["qalc", "-t", "-s", "decimal comma on", "-s", "color 0", "-s", "upxrates 1"]
+        // « -defaults » : qalc ne lit ni n'écrit les réglages du terminal (qalc.cfg), qui fausseraient
+        // ses réponses (D218). « currency conversion off » : un montant garde sa monnaie au lieu de passer dans celle de
+        // la langue du système (D219).
+        command: ["qalc", "-t", "-defaults", "-s", "decimal comma on", "-s", "color 0", "-s", "upxrates 1",
+                  "-s", "currency conversion off"]
         running: calcul.actif && calcul.disponible
         stdinEnabled: true
         stdout: SplitParser { onRead: ligne => calcul.lireLigne(ligne) }

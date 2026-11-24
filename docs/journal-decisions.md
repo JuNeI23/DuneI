@@ -4771,3 +4771,37 @@ inventées, noté L2-82. `make install` est nécessaire pour les nouveaux jetons
 
 *Touché : `coque/Lanceur/`, `coque/Composants/` (`Medaillon.qml`, `VignetteFenetre.qml`, `Scene.qml`),
 `coque/Theme/Theme.qml`, `tokens.toml`, `motion.toml`, émetteurs et contrôles, `generated/`, références, tests, carnet.*
+
+### D218 · Le lanceur ne calcule que ce qu'il comprend, d'après un vocabulaire à lui
+
+24 novembre 2026 · L2-82. qalc lit un mot inconnu comme une suite d'unités et de variables et répond toujours :
+« 5 asdfg » valait 432 qg·s², mais aussi « 3 pieds en m » 2,56 s, « 5 jours en h » 1,39 × 10⁻³⁰ B·h·u, et une
+conversion impossible (« 5 m en s ») rendait la valeur de départ. Nicolas a choisi de comprendre les unités françaises
+plutôt que de se taire devant elles, et une table propre à DuneI (`coque/Lanceur/unites.js`) qui fait autorité : un mot
+absent fait taire le calcul, et les deux côtés d'une conversion ou d'une somme doivent avoir la même grandeur, unités
+composées comprises. Conséquences assumées : une unité rare reste muette jusqu'à ce qu'on ajoute sa ligne ; « livre »
+est la masse anglaise ; « degré » est un angle, sauf face à Fahrenheit ou Kelvin, si bien que « 68 degrés en celsius »,
+ambigu, reste muet ; une saisie inachevée (« 5 + »), une équation (« 2x + 3 »), une adresse ou une date ne montrent
+plus de réponse ; « % » devant un nombre n'est plus un modulo (« mod » le reste, entre nombres), et « million », « kwh »,
+« 2 sin 30 » sans parenthèse et « 4 atan(1) en ° » ne sont pas compris. La saisie est réécrite avec des parenthèses là où
+qalc grouperait selon les espaces (« 120 km / 90 km/h », « 10 h - 2 h 30 min ») : la relecture a montré que les deux
+lectures divergeaient. Écarté : le vocabulaire de
+`qalc --list-*`, qui laisse passer des noms obscurs et ne dit pas les grandeurs ; le réglage
+`limit implicit multiplication`, qui casse « kWh » et dont le mode `-t` tait les erreurs. qalc est lancé avec
+`-defaults` : il enregistrait en quittant ses options dans `~/.config/qalculate/qalc.cfg`, partagé avec le terminal, où
+un réglage changeait les réponses du lanceur ; il n'y lit ni n'y écrit plus rien. Chaque unité de la table est éprouvée
+par un vrai qalc, à sa valeur, préfixes compris et dans les deux sens, car certains noms trompent (« 1 kn » y vaut
+1000n, « hbar » la constante de Planck). Les essais ont montré qu'un montant en euros se
+répond en dollars quand la langue du système est américaine : réglé par D219.
+
+*Touché : `coque/Lanceur/` (`unites.js`, `calcul.js`, `Calcul.qml`), tests `test_lanceur`, carnet, fiche
+`docs/superpowers/specs/2026-11-24-calcul-vocabulaire-design.md` (1.1).*
+
+### D219 · Un montant garde sa monnaie
+
+24 novembre 2026 · L2-83. qalc convertit de lui-même tout montant dans la monnaie de la langue du système : sous
+`LANG=en_US.UTF-8`, « 3 * 5 € » répondait « $16,41 » et « 20 € + 10 % » « $24,07 ». Nicolas veut des euros : le lanceur
+lui passe `currency conversion off`, si bien qu'un montant reste dans la monnaie saisie et qu'une conversion ne se fait
+que si on la demande (« 20 € en $ »). Écarté : changer la langue du système, qui touche bien plus que le lanceur.
+
+*Touché : `coque/Lanceur/Calcul.qml`, tests `test_lanceur`.*
