@@ -1,6 +1,6 @@
 # Réponses inventées par qalc (L2-82) — conception courte
 
-Version 1.0 · 24 novembre 2026
+Version 1.1 · 24 novembre 2026
 
 ## Intention
 
@@ -21,7 +21,7 @@ la saisie, et il doit comprendre les unités écrites en français (choix de Nic
    gardent leur casse. « x » entre deux nombres vaut « × ».
 4. **Le qalc du lanceur ne dépend plus de celui du terminal.** qalc enregistre ses options en quittant dans
    `~/.config/qalculate/qalc.cfg` : le lanceur y écrit la virgule décimale et l'absence de couleur, et un réglage fait
-   au terminal change ses réponses. Le lanceur a désormais son propre dossier de configuration ; les taux de change, dans
+   au terminal change ses réponses. Lancé avec `-defaults`, il n'en lit ni n'en réécrit rien ; les taux de change, dans
    `~/.local/share/qalculate`, restent communs.
 
 ## Vocabulaire couvert
@@ -59,11 +59,12 @@ miles », « 10 kWh en MJ », « 2 h 30 min en min », « 15 % de 80 », « 5 ft
 ## Laissé à l'exécutant
 
 La table va dans un fichier de données à part, `coque/Lanceur/unites.js`, lu par `calcul.js` ; noms internes, calcul
-des grandeurs composées, emplacement du dossier de configuration et forme des tests restent libres. Chaque nom qalc de la
+des grandeurs composées et forme des tests restent libres. Chaque nom qalc de la
 table est éprouvé par un vrai qalc (« 1 kn » y vaut par exemple 1000n, et non un nœud). Décision au journal : D218.
 
 ## Historique des versions
 
 | Version | Date | Objet |
 |---|---|---|
-| 1.0 | 2026-11-24 | Conception soumise à Nicolas (approche 1) |
+| 1.0 | 2026-11-24 | Conception validée par Nicolas (approche 1) |
+| 1.1 | 2026-11-24 | Objectif 4 tenu par l'option `-defaults` de qalc, éprouvée, plutôt que par un dossier séparé |
