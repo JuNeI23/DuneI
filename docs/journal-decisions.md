@@ -4792,7 +4792,16 @@ lectures divergeaient. Écarté : le vocabulaire de
 un réglage changeait les réponses du lanceur ; il n'y lit ni n'y écrit plus rien. Chaque unité de la table est éprouvée
 par un vrai qalc, à sa valeur, préfixes compris et dans les deux sens, car certains noms trompent (« 1 kn » y vaut
 1000n, « hbar » la constante de Planck). Les essais ont montré qu'un montant en euros se
-répond en dollars quand la langue du système est américaine, ce qui est noté L2-83.
+répond en dollars quand la langue du système est américaine : réglé par D219.
 
 *Touché : `coque/Lanceur/` (`unites.js`, `calcul.js`, `Calcul.qml`), tests `test_lanceur`, carnet, fiche
 `docs/superpowers/specs/2026-11-24-calcul-vocabulaire-design.md` (1.1).*
+
+### D219 · Un montant garde sa monnaie
+
+24 novembre 2026 · L2-83. qalc convertit de lui-même tout montant dans la monnaie de la langue du système : sous
+`LANG=en_US.UTF-8`, « 3 * 5 € » répondait « $16,41 » et « 20 € + 10 % » « $24,07 ». Nicolas veut des euros : le lanceur
+lui passe `currency conversion off`, si bien qu'un montant reste dans la monnaie saisie et qu'une conversion ne se fait
+que si on la demande (« 20 € en $ »). Écarté : changer la langue du système, qui touche bien plus que le lanceur.
+
+*Touché : `coque/Lanceur/Calcul.qml`, tests `test_lanceur`.*

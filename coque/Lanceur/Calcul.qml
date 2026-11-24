@@ -68,8 +68,10 @@ Scope {
     Process {
         id: processus
         // « -defaults » : qalc ne lit ni n'écrit les réglages du terminal (qalc.cfg), qui fausseraient
-        // ses réponses (D218).
-        command: ["qalc", "-t", "-defaults", "-s", "decimal comma on", "-s", "color 0", "-s", "upxrates 1"]
+        // ses réponses (D218). « currency conversion off » : un montant garde sa monnaie au lieu de passer dans celle de
+        // la langue du système (D219).
+        command: ["qalc", "-t", "-defaults", "-s", "decimal comma on", "-s", "color 0", "-s", "upxrates 1",
+                  "-s", "currency conversion off"]
         running: calcul.actif && calcul.disponible
         stdinEnabled: true
         stdout: SplitParser { onRead: ligne => calcul.lireLigne(ligne) }

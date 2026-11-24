@@ -436,7 +436,8 @@ class CalculTest(EssaiCoque, unittest.TestCase):
                                 ("1 500 m en km", "1,5 km"), ("1/2 m en cm", "50 cm"), ("255 en hex", "0xFF"),
                                 ("120 km / 90 km/h en min", "80 min"), ("12 V / 4 ohms", "3 A"), ("2 √9", "6"),
                                 ("100 km / 2 h 30 min en km/h", "40 km/h"), ("10 h - 2 h 30 min", "7 h + 30 min"),
-                                ("10 in in cm", "25,4 cm")):
+                                ("10 in in cm", "25,4 cm"), ("3 * 5 €", "€15"), ("20 € + 10 %", "€22"),
+                                ("3 * 5 $", "$15")):
             with self.subTest(saisie=saisie):
                 self.assertEqual(self.valeur_apres(saisie), attendu)
         valeur = self.valeur_apres("10 km en miles")
