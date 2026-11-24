@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Effects
 import Quickshell.Wayland
 import Quickshell.Hyprland
 import "../Theme"
@@ -12,7 +13,8 @@ import "../Theme"
 // 0.3.2 n'offre pas de mipmap sur ScreencopyView et Qt réduirait d'un seul coup une capture de 2560 px à 200 px, d'où
 // un crénelage ; la vue garde donc sa taille native, cachée, et une ShaderEffectSource à paliers (mipmap) l'affiche à
 // la taille de la vignette. La source ne suit la vue que jusqu'à l'arrivée de la capture, puis se fige : la recopie et
-// le calcul des paliers ne se font qu'une fois par vignette. Tant que l'image n'est pas là, ou
+// le calcul des paliers ne se font qu'une fois par vignette. Un MultiEffect masque l'image aux coins de la vignette,
+// car clip ne rogne qu'au rectangle : sans lui, une capture claire montrait des coins pointus (L2-80). Tant que l'image n'est pas là, ou
 // pour une fenêtre sans Toplevel (fenêtre disparue, fausse fenêtre des essais), une fenêtre schématique la remplace :
 // un fond color.surfaceWindow sous une barre color.surfacePanel à trois points. Survolée, la vignette se soulève seulement (comme
 // une tuile de l'accueil) ; choisie au clavier, elle grandit du facteur agrandi, galerie.echelle par défaut (comme la
@@ -27,7 +29,7 @@ import "../Theme"
 // vignettes non choisies du sélecteur), au ressort state.
 // Sorties : survolee, vrai tant que le pointeur est dessus ; capturee, vrai une fois l'image reçue ; vue et image, la
 // capture native et sa source d'effet (lues par les essais) ; activee(), émis au clic. Erreurs : aucune.
-// Dépendances : QtQuick (ShaderEffectSource), Quickshell.Wayland (ScreencopyView), Quickshell.Hyprland (toplevels),
+// Dépendances : QtQuick (ShaderEffectSource), QtQuick.Effects (MultiEffect), Quickshell.Wayland (ScreencopyView), Quickshell.Hyprland (toplevels),
 // Ressort, Theme (color, radius, space, galerie, material).
 // Cotes : coins radius.panel (10, maquette 8) ; barre de 12 % de la hauteur, au moins space.scale[1] ; points de
 // space.scale[0].
@@ -62,9 +64,12 @@ Item {
     // Fondu de l'anneau du choix : les ressorts de déplacement ci-dessus ne portent pas d'opacité.
     Ressort { id: fonduAnneau; transition: "state"; nature: "fondu"; cible: vignette.anneau && vignette.choisie ? 1 : 0 }
 
+    // Fenêtre schématique, tant que l'image n'est pas pleinement apparue ; ôtée ensuite, pour qu'aucun liseré clair
+    // (son bord, son fond) ne transparaisse autour d'une capture sombre quand la vignette grandit (L2-80).
     Rectangle {
         id: fond
         anchors.fill: parent
+        visible: apparition.value < 1
         radius: Theme.radius?.panel ?? 0
         color: Theme.color?.surfaceWindow ?? "transparent"
         border.width: 1
@@ -72,7 +77,6 @@ Item {
         clip: true
 
         Rectangle {
-            visible: !vue.hasContent
             width: parent.width
             height: Math.max(Theme.space?.scale[1] ?? 0, parent.height * 0.12)
             color: Theme.color?.surfacePanel ?? "transparent"
@@ -94,30 +98,51 @@ Item {
                 }
             }
         }
+    }
 
-        // Capture à sa taille native, jamais affichée elle-même.
-        ScreencopyView {
-            id: vue
-            width: sourceSize.width
-            height: sourceSize.height
-            visible: false
-            captureSource: vignette.toplevel?.wayland ?? null
-            live: false
-        }
+    // Capture à sa taille native, jamais affichée elle-même.
+    ScreencopyView {
+        id: vue
+        width: sourceSize.width
+        height: sourceSize.height
+        visible: false
+        captureSource: vignette.toplevel?.wayland ?? null
+        live: false
+    }
 
-        // Capture réduite par paliers à la taille de la vignette, figée dès son arrivée.
-        ShaderEffectSource {
-            id: image
-            anchors.fill: parent
-            anchors.margins: 1
-            sourceItem: vue
-            textureSize: vue.sourceSize
-            mipmap: true
-            smooth: true
-            hideSource: true
-            live: !vue.hasContent
-            opacity: apparition.value
-        }
+    // Capture réduite par paliers à la taille de la vignette, figée dès son arrivée ; affichée par l'effet ci-dessous.
+    ShaderEffectSource {
+        id: image
+        anchors.fill: parent
+        visible: false
+        sourceItem: vue
+        textureSize: vue.sourceSize
+        mipmap: true
+        smooth: true
+        hideSource: true
+        live: !vue.hasContent
+    }
+
+    // Masque des coins : la vignette entière, aux coins radius.panel.
+    Rectangle {
+        id: masque
+        anchors.fill: parent
+        visible: false
+        layer.enabled: true
+        radius: fond.radius
+        color: "black"
+    }
+
+    // Image arrondie : toute capture, claire ou sombre, prend les coins de la vignette ; bord du masque adouci.
+    MultiEffect {
+        anchors.fill: parent
+        visible: vue.hasContent
+        opacity: apparition.value
+        source: image
+        maskEnabled: true
+        maskSource: masque
+        maskThresholdMin: 0.5
+        maskSpreadAtMin: 1.0
     }
 
     // Anneau d'accent du choix au clavier, au-dessus de l'image.

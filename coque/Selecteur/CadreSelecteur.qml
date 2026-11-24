@@ -15,7 +15,7 @@ import "selecteur.js" as Logique
 // l'opacité de la vignette entière ; les deux s'animent au ressort state (VignetteFenetre). La marge de la rangée
 // absorbe l'agrandissement, pour que rien ne soit rogné : en haut et en bas d'après selecteur.hauteur, à gauche et à
 // droite d'après selecteur.largeurMax. Sous la rangée, centrée, une ligne pour la vignette choisie : le médaillon de
-// son application, son titre au texte clair du bureau, puis « bureau n » au texte clair de survol, les libellés du
+// son application, son titre au texte clair du bureau, à la taille des libellés du menu de déconnexion (échelon 4, moyen), puis « bureau n » au texte clair de survol, les libellés du
 // menu de déconnexion sur le même voile ; le titre est borné par la largeur visible de la rangée et coupé par « … ».
 // La largeur du cadre ne dépend que de la rangée : un titre long ne la déplace jamais. Une seule marque du curseur,
 // portée par la sélection : la vignette survolée ne se soulève pas (survolActif faux), le survol déplace la sélection
@@ -184,6 +184,8 @@ Item {
             width: Math.min(implicitWidth, Math.max(0, cadre.vue - medaillon.width - bureau.width - 2 * legende.spacing))
             elide: Text.ElideRight
             text: legende.f?.titre ?? ""
+            echelon: 4
+            moyen: true
             color: Theme.bureau?.texteClair ?? "transparent"
         }
         C.Texte {

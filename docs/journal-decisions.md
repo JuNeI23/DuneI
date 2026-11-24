@@ -4679,6 +4679,14 @@ plusieurs passes successives, qui demande plus de code pour un résultat un peu 
 vignettes plus grandes, qui atténuent le crénelage sans le supprimer. Le coût en mémoire avec beaucoup de fenêtres reste
 à mesurer (L2-79).
 
+Complément du 24 novembre, après la recette. `clip` ne rognant qu'au rectangle, les captures claires (Dolphin,
+LibreOffice) montraient des coins pointus, que les captures sombres cachaient sur le voile : un `MultiEffect` masque
+désormais l'image aux coins `radius.panel` de la vignette, avec un bord adouci (seuil 0,5, étalement 1). La fenêtre
+schématique de repli, avec son bord `glassLine` et son fond, restait sous l'image, à 1 px de marge : quand la vignette
+grandissait, ce liseré clair apparaissait par moments à gauche ou en haut d'une capture sombre. Elle est ôtée dès que
+l'image est pleinement apparue, et l'image couvre la vignette entière. L'image étant figée, le masque ne coûte qu'un
+dessin par vignette ; l'agrandissement et l'estompe restent de simples transformations.
+
 *Touché : `coque/Composants/VignetteFenetre.qml`, tests `test_selecteur`, `test_lanceur`.*
 
 ### D213 · Un namespace de calque par client de Scene
