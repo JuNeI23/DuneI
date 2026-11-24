@@ -144,6 +144,16 @@ class SceneTest(EssaiCoque, unittest.TestCase):
         self.jusqua(lambda: vues.append(float(self.appel("essai", "echelle"))) or vues[-1] == 1, "cadre à l'échelle 1")
         self.assertLess(min(vues), 1, vues)
 
+    def test_placement_fourni(self):
+        """Vérifie que la fonction de placement fournie par le client (Scene.positionner) fixe le haut du cadre : posée
+        à 40 px par l'IPC placer, le cadre s'arrête à y = 40 une fois la montée posée, au lieu d'être centré.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : appel, ouvrir, jusqua, etat.
+        """
+        self.appel("essai", "placer", "40")
+        self.ouvrir()
+        self.jusqua(lambda: self.etat()["haut"] == 40, "cadre posé à 40 px du haut")
+
     def test_lanceur_ferme_scene(self):
         """Vérifie que le lanceur, de la même famille « attention », ferme la scène en s'ouvrant, sans qu'aucune
         action parte, ni au retrait du calque ni à la garde d'une seconde.

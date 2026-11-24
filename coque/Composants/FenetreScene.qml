@@ -103,11 +103,13 @@ PanelWindow {
         }
     }
 
-    // Cadre : le contenu du client, centré, qui reçoit le focus. Sans montée, il grandit depuis son centre.
+    // Cadre : le contenu du client, centré, ou placé en hauteur par scene.positionner quand le client la fournit ; il
+    // reçoit le focus. Sans montée, il grandit depuis son centre.
     Loader {
         id: charge
         x: Math.round((fenetre.width - width) / 2)
-        y: Math.round((fenetre.height - height) / 2)
+        y: Math.round(fenetre.scene.positionner ? fenetre.scene.positionner(fenetre.height, height)
+                                                : (fenetre.height - height) / 2)
         focus: true
         sourceComponent: fenetre.scene.cadre
         // Départ sous le bord bas de l'écran : le haut du cadre y est posé, hors champ.

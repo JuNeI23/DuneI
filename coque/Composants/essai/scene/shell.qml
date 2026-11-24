@@ -16,7 +16,8 @@ import "Lanceur"
 // déranger » vaut toujours « true ».
 // Entrées : DUNEI_TOKENS_DIR et DUNEI_ETAT_DIR (jetons, thème et relevé d'usage de l'essai) ; IPC « essai » : pret,
 // ouvrir, fermer, executer, apparition (montée ou apparition depuis le centre), echelle (échelle du cadre), delai
-// (délai d'affichage), espace (namespace du calque), evenement (événement de Hyprland simulé), etat.
+// (délai d'affichage), placer (placement du cadre), espace (namespace du calque), evenement (événement de Hyprland
+// simulé), etat.
 // Sorties : « essai : prêt » au démarrage ; « essai : exécuté <id> » à chaque action de la scène (« essai : exécuté
 // lanceur <genre> » pour le lanceur) ; « essai : fenêtre construite » à chaque construction de la fenêtre de la
 // scène ; « essai : calque retiré » quand Hyprland retire le calque de la scène (closelayer de scene.espace), pour
@@ -94,17 +95,23 @@ ShellRoot {
         // Erreurs : aucune. Dépendances : scene.espace.
         function espace(nom: string): void { scene.espace = nom }
 
+        // placer — fournit à la scène une fonction de placement qui pose le haut du cadre à une hauteur fixe.
+        // Entrée : haut, en pixels depuis le haut de la fenêtre. Sortie : aucune. Erreurs : aucune. Dépendances :
+        // scene.positionner.
+        function placer(haut: int): void { scene.positionner = () => haut }
+
         // evenement — simule un événement brut de Hyprland reçu par la scène. Entrées : nom, le nom de l'événement ;
         // donnee, sa donnée. Sortie : aucune. Erreurs : aucune. Dépendances : scene.surEvenement.
         function evenement(nom: string, donnee: string): void { scene.surEvenement(nom, donnee) }
 
         // etat — état de la scène. Entrées : aucune. Sortie : JSON {ouvert, present, fenetre (vrai si construite),
         // sortant, differee (l'action en attente, ou null), montre, opacite (l'opacité que Hyprland applique à la
-        // surface de la fenêtre, ou null sans fenêtre)}. Erreurs : aucune. Dépendances : scene.
+        // surface de la fenêtre, ou null sans fenêtre), haut (le y du Loader du cadre, ou null sans fenêtre)}. Erreurs : aucune. Dépendances : scene.
         function etat(): string {
             return JSON.stringify({ ouvert: scene.ouvert, present: scene.present, fenetre: scene.fenetre !== null,
                                     sortant: scene.sortant, differee: scene.differee, montre: scene.montre,
-                                    opacite: scene.fenetre?.HyprlandWindow.opacity ?? null })
+                                    opacite: scene.fenetre?.HyprlandWindow.opacity ?? null,
+                                    haut: scene.fenetre?.cadre?.parent?.y ?? null })
         }
     }
 
