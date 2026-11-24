@@ -462,6 +462,8 @@ marge = 14                   # marge intérieure, de part et d'autre du contenu
 entree = 0.10                # part du reste à parcourir des ressorts de taille sous laquelle le fondu d'entrée commence (L2-48)
 sortie = 0.50                # opacité de l'ancien contenu sous laquelle l'étirement commence, pendant que l'ancien
                              # finit de s'effacer (chevauchement voulu à la recette de L2-60)
+apparition = 250             # ms entre le thème prêt et l'apparition : le temps que l'ouverture du calque par Hyprland
+                             # se pose, qui détacherait sinon l'encoche du bord (L2-48)
 
 [galerie]                    # galerie de fonds d'écran, dans la presqu'île (L2-60) ; px logiques sauf mention
 largeur = 160                # largeur d'une vignette

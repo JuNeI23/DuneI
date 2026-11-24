@@ -21,7 +21,7 @@ import "Audio"
 // volumeAnnoncer, volumeMicro, volumeSourdine, volumeNiveau et volumeEtat, le module Volume réel dans une scène sans fenêtre (débord
 // du remplissage hors de l'encoche, jointures, disposition du son coupé) ; audioTenir et audioPopover, le compte des
 // popovers audio ouverts d'EtatAudio ; pleinPorte, pleinCourant, pleinLiaison, pleinSur et pleinSpecial, la lecture du vrai
-// plein écran (pleinecran.js et PleinEcran). Les tâches suivantes y ajoutent leurs composants et leurs fonctions IPC.
+// plein écran (pleinecran.js et PleinEcran) ; glisser, glisserInterrompu, glisserCourse et glissementEtat, le Glissement. Les tâches suivantes y ajoutent leurs composants et leurs fonctions IPC.
 // Entrées : DUNEI_TOKENS_DIR, lu par Theme ; QT_QPA_PLATFORM, posé à offscreen par le test ; QT_SCALE_FACTOR, pour
 // une capture agrandie ; QT_QUICK_BACKEND=rhi et QSG_RHI_BACKEND=opengl pour une capture fidèle (la plateforme
 // offscreen choisit sinon le rendu logiciel, qui ne peint ni shader ni remplissage par texture). Commandes IPC :
@@ -48,6 +48,22 @@ ShellRoot {
     // Module des bureaux sans fenêtre et sans Hyprland : idActif et special, écrits par l'IPC, remplacent leurs
     // liaisons par défaut dès la création, et rien ici n'appelle Hyprland.dispatch.
     Bureaux { id: essaiBureaux; ecran: null; idActif: 0; special: "" }
+
+    // Glissement sans fenêtre, replié : sa trajectoire est lue par tests/test_presquile.py. Une interruption demandée
+    // bascule la présence à la première image où l'encoche est à mi-course.
+    Glissement {
+        id: essaiGlissement
+        property bool interrompre: false
+        course: 40
+        onDecalageChanged: {
+            console.info("essai : gd " + decalage)
+            if (!interrompre || decalage < -course / 2) return
+            interrompre = false
+            console.info("essai : gd interrompu")
+            presente = false
+        }
+        onOpaciteChanged: console.info("essai : go " + opacite)
+    }
 
     // Espace factice : sa liaison « lu » doit suivre l'état de sa fenêtre, comme celles de la coque.
     QtObject {
@@ -274,6 +290,25 @@ ShellRoot {
         function pasMolette(cumul: real, delta: real): string { return JSON.stringify(Bureaux.pasMolette(cumul, delta)) }
         function cibleMolette(idActif: int, pas: int, nombre: int): int { return Bureaux.cibleMolette(idActif, pas, nombre) }
         function lireSpecial(donnees: string): string { return Plein.lireSpecial(donnees) }
+
+        // glisser — change la présence du glissement d'essai. Entrée : presente. Sortie : aucune. Erreurs : aucune.
+        // Dépendances : essaiGlissement.
+        function glisser(presente: bool): void { essaiGlissement.presente = presente }
+
+        // glisserInterrompu — fait entrer le glissement d'essai, qui repart à mi-course. Entrées : aucune.
+        // Sortie : aucune ; « essai : gd interrompu » au journal. Erreurs : aucune. Dépendances : essaiGlissement.
+        function glisserInterrompu(): void { essaiGlissement.interrompre = true; essaiGlissement.presente = true }
+
+        // glisserCourse — change la course du glissement d'essai. Entrée : course, px. Sortie : aucune.
+        // Erreurs : aucune. Dépendances : essaiGlissement.
+        function glisserCourse(course: real): void { essaiGlissement.course = course }
+
+        // glissementEtat — photographie du glissement d'essai. Entrées : aucune.
+        // Sortie : JSON {decalage, opacite, mobile}. Erreurs : aucune. Dépendances : essaiGlissement.
+        function glissementEtat(): string {
+            const g = essaiGlissement
+            return JSON.stringify({ decalage: g.decalage, opacite: g.opacite, mobile: g.mobile })
+        }
 
         // pleinPorte — dit si un espace factice porte un vrai plein écran. Entrée : json, objet {fenetres}, liste de
         // ses fenêtres ({wayland: {fullscreen}} ou {wayland: null}), ou null pour un espace absent.

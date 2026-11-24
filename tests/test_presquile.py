@@ -51,10 +51,25 @@ class PresquileStructureTest(unittest.TestCase):
         coque = re.sub(r"//.*", "", (ROOT / "coque/shell.qml").read_text(encoding="utf-8"))
         self.assertRegex(coque, r"Presquile\s*\{[^}]*reserve:\s*ouvreuse\.hauteurModule")
 
-    def test_masque_sur_le_corps(self):
+    def test_masque_a_la_place_finale(self):
+        # Region ne suit que l'élément qu'on lui donne, pas ses parents : lié à encoche.corps, le masque ne verrait pas
+        # l'encoche glisser. Il se pose donc en coordonnées, à la place finale du corps, et il est vide tant que
+        # l'encoche n'est pas présente.
         masque = re.search(r"mask:\s*Region\s*\{([^}]*)\}", self.surface)
         self.assertIsNotNone(masque)
-        self.assertEqual(re.findall(r"item:\s*([\w.]+)", masque.group(1)), ["encoche.corps"])
+        self.assertNotIn("item:", masque.group(1))
+        self.assertIn("x: encoche.x + encoche.corps.x", masque.group(1))
+        self.assertIn("width: glissement.presente ? encoche.largeurCorps : 0", masque.group(1))
+        self.assertIn("height: glissement.presente ? encoche.hauteur : 0", masque.group(1))
+
+    def test_glissement(self):
+        # L'apparition attend le thème puis le jeton, et le vrai plein écran de l'écran la retire.
+        code = re.sub(r"//.*", "", self.surface)
+        self.assertRegex(code, r"Timer\s*\{[^}]*interval:\s*Theme\.tokens\?\.presquile\?\.apparition[^}]*running:\s*Theme\.ready")
+        self.assertRegex(code, r"presente:\s*surface\.apparue && !Composants\.PleinEcran\.sur\(surface\.modelData\.name\)")
+        self.assertRegex(code, r"course:\s*encoche\.hauteur \+ encoche\.marge")
+        self.assertIn("y: glissement.decalage", code)
+        self.assertIn("opacity: glissement.opacite", code)
 
     def test_module_et_ressort(self):
         # Le module est arbitré, en lecture seule ; les bureaux sont le défaut de l'arbitre.
@@ -993,6 +1008,72 @@ class ChangementReduitTest(ChangementTest):
         self.assertEqual(entree, sorted(entree))
         self.assertGreater(len(entree), 5)
         self.assertIn(["o", "0"], [t.split()[:2] for t in traces[:traces.index("contenu grand")]])
+
+
+class GlissementTest(PresquileIpc, unittest.TestCase):
+    """Glissement de la presqu'île, course 40 : hors du bord à la création, il entre et sort par un ressort."""
+
+    def valeurs(self, cle: str, depuis: int = 0) -> list:
+        """Valeurs journalisées du glissement. Entrées : cle, « gd » (décalage) ou « go » (opacité) ; depuis, indice.
+        Sortie : liste de réels. Erreurs : aucune. Dépendances : journal."""
+        return [float(v) for v in re.findall(rf"essai : {cle} (\S+)", self.journal())][depuis:]
+
+    def poser(self, presente: bool) -> dict:
+        """Change la présence et attend le repos. Sortie : JSON {decalage, opacite, mobile} au repos.
+        Erreurs : échec du test à l'expiration. Dépendances : appeler."""
+        self.appeler("glisser", presente)
+        fin = time.monotonic() + DELAI
+        while (etat := self.json("glissementEtat"))["mobile"]:
+            self.assertLess(time.monotonic(), fin, "le glissement ne se pose pas")
+            time.sleep(0.02)
+        return etat
+
+    def test_replie_a_la_creation(self):
+        self.assertEqual(self.json("glissementEtat"), {"decalage": -40, "opacite": 1, "mobile": False})
+
+    def test_entree_et_sortie(self):
+        # Les valeurs posées à la création précèdent le mouvement.
+        depart, opacites = len(self.valeurs("gd")), len(self.valeurs("go"))
+        self.assertEqual(self.poser(True)["decalage"], 0)
+        entree = self.valeurs("gd", depart)
+        self.assertTrue([v for v in entree if -40 < v < 0], entree)
+        self.assertLessEqual(max(entree), 0, "l'encoche ne se détache jamais du bord")
+        self.assertEqual(self.poser(False)["decalage"], -40)
+        self.assertTrue([v for v in self.valeurs("gd", depart + len(entree)) if -40 < v < 0])
+        self.assertEqual(self.valeurs("go", opacites), [], "hors mouvement réduit, l'opacité ne bouge pas")
+
+    def test_interruption_sans_saut(self):
+        # La bascule part du QML, en plein vol : la valeur qui suit est voisine de celle d'avant.
+        self.appeler("glisserInterrompu")
+        self.attendre("essai : gd interrompu")
+        self.poser(False)
+        traces = re.findall(r"essai : gd (\S+)", self.journal())
+        rang = traces.index("interrompu")
+        avant, apres = float(traces[rang - 1]), float(traces[rang + 1])
+        self.assertTrue(-40 < avant < 0, avant)
+        self.assertLess(abs(apres - avant), 10)
+
+    def test_course_changee_repliee(self):
+        # La hauteur de l'encoche change pendant qu'elle est repliée : elle reste entièrement hors de l'écran.
+        self.appeler("glisserCourse", 120)
+        self.assertEqual(self.json("glissementEtat")["decalage"], -120)
+
+
+class GlissementReduitTest(GlissementTest):
+    """Mouvement réduit : un fondu remplace le déplacement."""
+
+    def preparer(self):
+        (self.dir / "mouvement.json").write_text('{"reduit": true}')
+
+    test_replie_a_la_creation = test_interruption_sans_saut = test_course_changee_repliee = None
+
+    def test_entree_et_sortie(self):
+        self.assertEqual(self.json("glissementEtat"), {"decalage": 0, "opacite": 0, "mobile": False})
+        depart = len(self.valeurs("gd"))
+        self.assertEqual(self.poser(True), {"decalage": 0, "opacite": 1, "mobile": False})
+        self.assertTrue([v for v in self.valeurs("go") if 0 < v < 1])
+        self.assertEqual(self.poser(False), {"decalage": 0, "opacite": 0, "mobile": False})
+        self.assertEqual(self.valeurs("gd", depart), [])
 
 
 class EncocheTest(PresquileIpc, unittest.TestCase):

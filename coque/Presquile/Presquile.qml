@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Wayland
+import "../Composants" as Composants
 import "../Theme"
 
 // Presquile — surface de la presqu'île, posée au centre du bord haut de chaque écran (L2-46).
@@ -28,8 +29,9 @@ import "../Theme"
 //           clavier (HyprlandFocusGrab).
 // Erreurs : sans jeton de thème, l'encoche est vide et la fenêtre reste posée ; un module sans taille laisse l'encoche
 //           à la hauteur des jetons.
-// Dépendances : quickshell ≥ 0.3 (PanelWindow, Region, WlrLayershell), Arbitre, Encoche, Scene, Bureaux, Ressort,
-// Theme.
+// Dépendances : quickshell ≥ 0.3 (PanelWindow, Region, WlrLayershell), Arbitre, Encoche, Glissement, Scene, Bureaux,
+// Ressort, Composants (PleinEcran), Theme (ready, tokens.presquile).
+// Composants est importé sous son nom : il porte lui aussi un type Scene.
 PanelWindow {
     id: surface
 
@@ -58,6 +60,20 @@ PanelWindow {
     readonly property Ressort largeur: scene.ressortLargeur
     readonly property Ressort hauteur: scene.ressortHauteur
 
+    // Vrai une fois échue l'attente qui suit le thème prêt : le calque, posé, ne bouge plus quand l'encoche descend.
+    property bool apparue: false
+    Timer {
+        interval: Theme.tokens?.presquile?.apparition ?? 0
+        running: Theme.ready && !surface.apparue
+        onTriggered: surface.apparue = true
+    }
+
+    Glissement {
+        id: glissement
+        presente: surface.apparue && !Composants.PleinEcran.sur(surface.modelData.name)
+        course: encoche.hauteur + encoche.marge
+    }
+
     screen: modelData
     anchors { top: true; left: true; right: true }
     // Pleine largeur, et hauteur tenue par la scène pendant le mouvement : seule la forme s'anime, jamais la fenêtre.
@@ -71,7 +87,12 @@ PanelWindow {
     onImplicitHeightChanged: Qt.callLater(() => encoche.Window.window?.update())
     exclusionMode: ExclusionMode.Ignore
     color: "transparent"
-    mask: Region { item: encoche.corps }
+    // Posé à la place finale du corps, et non lié à lui : Region ne voit pas bouger les parents de son élément.
+    mask: Region {
+        x: encoche.x + encoche.corps.x
+        width: glissement.presente ? encoche.largeurCorps : 0
+        height: glissement.presente ? encoche.hauteur : 0
+    }
     WlrLayershell.namespace: "dunei-presquile"
     WlrLayershell.layer: WlrLayer.Top
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
@@ -79,6 +100,8 @@ PanelWindow {
     Encoche {
         id: encoche
         x: (surface.width - implicitWidth) / 2
+        y: glissement.decalage
+        opacity: glissement.opacite
         // Noms qualifiés : dans ce bloc, « hauteur » désignerait la propriété de l'Encoche elle-même.
         largeurCorps: surface.largeur.value
         hauteur: surface.hauteur.value
