@@ -1,6 +1,6 @@
 # Agent d'authentification (L2-24)
 
-Version 1.1 — 2026-11-24 — validée par Nicolas, essais réels sur caladan au lieu d'une VM ; essais 1 et 2 faits
+Version 1.2 — 2026-11-24 — validée par Nicolas ; la carte centrée cède la place à l'île (maquette v3, G1 sans « Annuler »)
 
 ## Intention
 
@@ -37,7 +37,7 @@ que ce confort rende le compte plus facile à verrouiller.
 ## Buts
 
 1. Une demande ouvre une fenêtre d'attention qui montre le message reçu et l'identifiant de l'action.
-2. Le mot de passe se saisit, se révèle par l'œil, s'envoie par Entrée ou « Autoriser » ; « Annuler » et Échap annulent.
+2. Le mot de passe se saisit, se révèle par l'œil, s'envoie par Entrée ou « Autoriser » ; Échap annule.
 3. Les états attente, échec, compte verrouillé et succès se lisent, et chaque passage s'anime.
 4. Une annulation ne compte plus comme un échec ; un mauvais mot de passe compte toujours.
 5. Le compte se verrouille au cinquième échec au lieu du troisième, partout : `sudo`, connexion, hyprlock, agent.
@@ -71,7 +71,7 @@ faux au lieu de trois.
   `Scene` (namespace `dunei-attention-autorisation`, déclaré dans `glass.namespaces` et `glass.fondu`) et la machine à
   états. Le flux s'injecte, pour qu'un essai lui donne un objet factice : aucun essai ne touche polkit ni PAM.
 - **`autorisation.js`** : logique pure (états, lecture de `faillock`, textes).
-- **`CadreAutorisation`** : cadre E3, `ChampSecret`, deux `Bouton`, cotes et couleurs des jetons seuls.
+- **`CadreAutorisation`** : `Encoche`, `VignetteVerre`, `ChampSecret`, `Bouton`, cotes et couleurs des jetons seuls.
 - **Débrayage** : `autorisation.active` dans `tokens.toml` ; faux, le `Loader` ne construit rien.
 - **Garde de développement** : `~/.config/quickshell/dunei` est un lien vers le dépôt, donc tout module écrit est vivant.
   `autorisation.active` reste faux jusqu'à la preuve de la règle PAM et l'accord de Nicolas ; le commit qui l'active est
@@ -83,34 +83,42 @@ faux au lieu de trois.
 
 ### Surface
 
+La première carte, centrée, n'a pas plu ; trois maquettes ont suivi (`.superpowers/preview/autorisation-v1` à `v3.html`).
+Nicolas a choisi la demande dans la presqu'île, agencement G1, sans bouton « Annuler ».
+
 ```
-        Autorisation requise
-  Authentication is needed to run `/usr/bin/id'…
-  org.freedesktop.policykit.exec
-
-  [ Mot de passe                          👁 ]
-  Mot de passe incorrect. Quatre essais restants.
-
-                    Annuler   Autoriser
+  ╲__________________________________________╱
+   [cadenas]  Autorisation requise
+              Authentication is needed to run `/usr/bin/id'…
+              org.freedesktop.policykit.exec
+   [ Mot de passe                    👁 ] Autoriser
 ```
 
-Plein écran sur l'écran focalisé, voile, clavier exclusif, carte centrée sans montée, au-dessus d'un plein écran.
-Titre et boutons en français ; message et identifiant d'action affichés tels que reçus.
+- **L'île est dessinée par la fenêtre de l'agent**, collée au bord haut, avec la forme de la presqu'île (`Encoche`), sur
+  l'écran focalisé, voile derrière. La vraie presqu'île ne prend pas le clavier, perd sa prise à un clic à côté et passe
+  sous un plein écran ; la fenêtre de l'agent garde le clavier exclusif et passe au-dessus. La vraie s'efface en fondu
+  sous celle de l'agent, sur cet écran seulement (`Overlays.ecranCouvert`), et revient à la fermeture.
+- **Mouvement** au ressort `window`, comme la presqu'île : de la taille de repos à l'annonce (cadenas et « Autorisation
+  requise »), puis à l'île ouverte après `delays.gardeFrappe` ; à la fin, « Autorisé » pendant `delays.autorise` (800 ms),
+  puis repli. L'échec donne une seule poussée au champ (`autorisation.secousse`). En mouvement réduit, tailles posées.
+- **Cotes** : 460 px de large, marge 16, vignette 56, rangée du bas 32 ; un message long allonge l'île, puis défile.
+- Titre et boutons en français ; message et identifiant d'action affichés tels que reçus.
 
-| État | Champ | Ligne d'état | Boutons |
+| État | Champ | Ligne sous le message | Action |
 |---|---|---|---|
-| Attente de PAM | inactif | vide | Annuler |
-| Saisie | actif, focus | vide ou dernier échec | Annuler, Autoriser (actif si non vide) |
-| Vérification | inactif, vidé | `Activite` et « Vérification » | Annuler |
+| Attente de PAM | inactif | identifiant de l'action | Autoriser, inactif |
+| Saisie | actif, focus | identifiant, ou dernier échec | Autoriser (actif si non vide) |
+| Vérification | inactif, vidé | `Activite` et « Vérification » | Autoriser, inactif |
 | Échec | vidé, focus | « Mot de passe incorrect. N essais restants. », en `error` | comme Saisie |
 | Verrouillé | inactif | « Compte verrouillé. Réessayer à 16 h 38. » | Fermer |
-| Succès | inactif | vide ; la scène se ferme | aucun |
+| Succès | île repliée | « Autorisé » | aucune ; clavier rendu aussitôt |
 
-Tout texte PAM que DuneI ne reconnaît pas s'affiche tel quel dans la ligne d'état.
+La vignette passe à `color.error` à l'échec et au verrou. Tout texte PAM que DuneI ne reconnaît pas remplace
+l'identifiant, tel quel.
 
 ### Fermetures
 
-- Toute fermeture d'une demande en cours vaut annulation : bouton, Échap, ou autre attention ouverte par-dessus.
+- Toute fermeture d'une demande en cours vaut annulation : « Fermer », Échap, ou autre attention ouverte par-dessus.
 - Un clic sur le voile ne ferme pas : `Scene` gagne `voileFerme`, vrai par défaut, que ce client met à faux.
 - Une demande close par polkit ferme la scène. `cancelAuthenticationRequest` n'est appelée qu'une fois par flux, jamais
   après `isCompleted`.
@@ -122,7 +130,7 @@ Tout texte PAM que DuneI ne reconnaît pas s'affiche tel quel dans la ligne d'é
 
 La fenêtre peut s'ouvrir pendant une frappe ailleurs, et un texte suivi d'Entrée partirait comme mot de passe. Le champ
 n'accepte donc les touches qu'après `delays.gardeFrappe` (400 ms) sans frappe, comptées à partir de chaque flux. « Autoriser »
-suit la même garde. Échap et « Annuler » restent actifs.
+suit la même garde. Échap reste actif.
 
 ### Essais restants et verrou
 
@@ -168,6 +176,7 @@ la ligne dit seulement « Mot de passe incorrect. » et le champ reste ouvert : 
 
 | Version | Date | Changement |
 |---|---|---|
+| 1.2 | 2026-11-24 | Carte centrée remplacée par l'île, « Annuler » retiré, succès montré |
 | 1.1 | 2026-11-24 | Essais réels 1 et 2 : règle prouvée, premier flux laissé à son demandeur, demandeur tué clos par polkit |
 | 1.0 | 2026-11-24 | Validée ; la VM cède la place à des essais réels, règle PAM d'abord |
 | 0.2 | 2026-11-24 | Relecture de constructeur : gardes de développement et de marche, VM, seconde demande, verrou lu dans `faillock`, dérive, retour arrière |
