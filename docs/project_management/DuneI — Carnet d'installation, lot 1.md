@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.59. Historique en fin de document.
+Version 1.60. Historique en fin de document.
 
 Socle amorçable.
 
@@ -2022,7 +2022,8 @@ Rien de plus à installer : la presqu'île est dans la même coque (`dunei-coque
 aucune étape.
 
 - Elle occupe le centre du haut de l'écran : une encoche continue de 28 px, en couche haute, qui montre les quatre
-  bureaux (points identiques, pilule d'accent discret sur le bureau courant). Le plein écran la masque avec la barre.
+  bureaux (points identiques, pilule d'accent discret sur le bureau courant). Le vrai plein écran la masque avec la barre ; elle glisse hors du bord haut à
+  l'entrée et en redescend à la sortie, comme au démarrage (L2-48, D220). Une fenêtre agrandie ne masque rien (D221).
 - Souris : clic sur un quart de sa largeur pour rejoindre le bureau, molette pour passer au suivant ou au précédent
   (bornée de 1 à 4, sans rebouclage). Pendant que le bureau spécial est ouvert, la pilule reste en place et grise ;
   un clic dessus ferme le spécial, un clic sur un autre point le ferme puis rejoint ce bureau.
@@ -2449,7 +2450,7 @@ jetons. La table des raccourcis est liée au dépôt : Hyprland connaît SUPER +
 
 | Geste | Effet |
 | --- | --- |
-| SUPER + W | Ouvre la galerie sur l'écran actif, ou la referme ; ne fait rien si l'espace de travail actif a une fenêtre en plein écran, et ferme un popover de la barre ouvert |
+| SUPER + W | Ouvre la galerie sur l'écran actif, ou la referme ; ne fait rien si l'écran actif montre une fenêtre en vrai plein écran, qui la referme s'il commence pendant qu'elle est ouverte, et ferme un popover de la barre ouvert |
 | Flèches, molette, pavé tactile à deux doigts | Sélection précédente ou suivante, sans bouclage aux bouts |
 | Entrée, clic sur la sélection ou sur une vignette entière | Applique l'image ; les autres vignettes s'effacent, puis la presqu'île se rétracte pendant que l'image monte |
 | Clic sur une vignette coupée | La sélectionne sans l'appliquer |
@@ -2636,6 +2637,7 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 
 | Version | Date | Changement |
 | --- | --- | --- |
+| 1.60 | 2026-11-24 | Apparition et disparition de la presqu'île (L2-48, D220), vrai plein écran lu en un seul endroit (D221) |
 | 1.59 | 2026-11-24 | Vocabulaire du calcul du lanceur et `qalc -defaults` (L2-82, D218), montants dans leur monnaie (L2-83, D219) |
 | 1.58 | 2026-11-24 | Dettes du lanceur (L2-74, D216 et D217) : relevé d'usage sans fenêtres, sélection par résultat, nouveaux jetons, `make install` nécessaire |
 | 1.57 | 2026-11-24 | Le lanceur sur `Scene` (L2-81, D215) : namespace `dunei-attention-lanceur` ajouté aux règles de calque, `FenetreLanceur.qml` supprimée, `make install` nécessaire |
