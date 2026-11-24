@@ -3,6 +3,8 @@ import Quickshell
 import Quickshell.Io
 import "Theme"
 import "Presquile"
+import "Composants" as Composants
+import "Composants/pleinecran.js" as Plein
 import "Presquile/bureaux.js" as Bureaux
 import "Presquile/encoche.js" as Forme
 import "Audio"
@@ -18,7 +20,8 @@ import "Audio"
 // par une source et deux presqu'îles factices ; alerteModule, le rendu du module Alerte réel ;
 // volumeAnnoncer, volumeMicro, volumeSourdine, volumeNiveau et volumeEtat, le module Volume réel dans une scène sans fenêtre (débord
 // du remplissage hors de l'encoche, jointures, disposition du son coupé) ; audioTenir et audioPopover, le compte des
-// popovers audio ouverts d'EtatAudio. Les tâches suivantes y ajoutent leurs composants et leurs fonctions IPC.
+// popovers audio ouverts d'EtatAudio ; pleinPorte, pleinCourant, pleinLiaison, pleinSur et pleinSpecial, la lecture du vrai
+// plein écran (pleinecran.js et PleinEcran). Les tâches suivantes y ajoutent leurs composants et leurs fonctions IPC.
 // Entrées : DUNEI_TOKENS_DIR, lu par Theme ; QT_QPA_PLATFORM, posé à offscreen par le test ; QT_SCALE_FACTOR, pour
 // une capture agrandie ; QT_QUICK_BACKEND=rhi et QSG_RHI_BACKEND=opengl pour une capture fidèle (la plateforme
 // offscreen choisit sinon le rendu logiciel, qui ne peint ni shader ni remplissage par texture). Commandes IPC :
@@ -45,6 +48,14 @@ ShellRoot {
     // Module des bureaux sans fenêtre et sans Hyprland : idActif et special, écrits par l'IPC, remplacent leurs
     // liaisons par défaut dès la création, et rien ici n'appelle Hyprland.dispatch.
     Bureaux { id: essaiBureaux; ecran: null; idActif: 0; special: "" }
+
+    // Espace factice : sa liaison « lu » doit suivre l'état de sa fenêtre, comme celles de la coque.
+    QtObject {
+        id: espaceFactice
+        property QtObject fenetre: QtObject { property QtObject wayland: QtObject { property bool fullscreen: false } }
+        property QtObject toplevels: QtObject { property var values: [espaceFactice.fenetre] }
+        readonly property bool lu: Plein.porte(espaceFactice)
+    }
 
     // Modules de la scène d'essai : les bureaux, sans Hyprland, et un module factice « grand » de taille connue.
     // Chaque module d'essai journalise sa destruction (« detruit <nom> ») : aucun contenu ne doit rester orphelin.
@@ -262,7 +273,38 @@ ShellRoot {
         function indexPilule(idActif: int, nombre: int): int { return Bureaux.indexPilule(idActif, nombre) }
         function pasMolette(cumul: real, delta: real): string { return JSON.stringify(Bureaux.pasMolette(cumul, delta)) }
         function cibleMolette(idActif: int, pas: int, nombre: int): int { return Bureaux.cibleMolette(idActif, pas, nombre) }
-        function lireSpecial(donnees: string): string { return Bureaux.lireSpecial(donnees) }
+        function lireSpecial(donnees: string): string { return Plein.lireSpecial(donnees) }
+
+        // pleinPorte — dit si un espace factice porte un vrai plein écran. Entrée : json, objet {fenetres}, liste de
+        // ses fenêtres ({wayland: {fullscreen}} ou {wayland: null}), ou null pour un espace absent.
+        // Sortie : « true » ou « false ». Erreurs : JSON invalide, au journal. Dépendances : pleinecran.js.
+        function pleinPorte(json: string): string {
+            const f = JSON.parse(json).fenetres
+            return String(Plein.porte(f === null ? null : { toplevels: { values: f } }))
+        }
+
+        // pleinCourant — espace courant, parmi « special:dunei » et l'actif « 1 ». Entrée : special, nom du spécial
+        // ouvert, ou « - » pour aucun. Sortie : nom de l'espace, ou « null ». Erreurs : aucune.
+        // Dépendances : pleinecran.js.
+        function pleinCourant(special: string): string {
+            const actif = { name: "1" }
+            return Plein.courant(special === "-" ? "" : special, actif, [actif, { name: "special:dunei" }])?.name ?? "null"
+        }
+
+        // pleinLiaison — passe la fenêtre factice en plein écran, ou l'en sort, et rend une liaison posée sur porte.
+        // Entrée : plein. Sortie : « true » ou « false ». Erreurs : aucune. Dépendances : espaceFactice, pleinecran.js.
+        function pleinLiaison(plein: bool): string {
+            espaceFactice.fenetre.wayland.fullscreen = plein
+            return String(espaceFactice.lu)
+        }
+
+        // pleinSur — PleinEcran.sur d'un moniteur. Entrée : nom. Sortie : « true » ou « false ». Erreurs : aucune.
+        // Dépendances : PleinEcran.
+        function pleinSur(nom: string): string { return String(Composants.PleinEcran.sur(nom)) }
+
+        // pleinSpecial — PleinEcran.special d'un moniteur. Entrée : nom. Sortie : nom du spécial ouvert, « - » pour
+        // aucun. Erreurs : aucune. Dépendances : PleinEcran.
+        function pleinSpecial(nom: string): string { return Composants.PleinEcran.special(nom) || "-" }
         function commandeBureau(id: int): string { return Bureaux.commandeBureau(id) }
         function commandesClic(id: int, idActif: int, special: string): string {
             return JSON.stringify(Bureaux.commandesClic(id, idActif, special))

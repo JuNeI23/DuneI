@@ -37,13 +37,6 @@ function cibleMolette(idActif, pas, nombre) {
     return cible === idActif ? 0 : cible
 }
 
-// lireSpecial — nom du bureau spécial ouvert.
-// Entrée : donnees, données de l'événement Hyprland activespecial (« nom,moniteur »).
-// Sortie : le nom (« special:accueil »), ou "" si aucun spécial n'est ouvert. Erreurs : aucune.
-function lireSpecial(donnees) {
-    return donnees.split(",")[0]
-}
-
 // commandeBureau — expression Hyprland qui donne le focus à un bureau ; seul endroit qui la construit.
 // Entrée : id, identifiant du bureau. Sortie : expression hl.dsp.* à passer à Hyprland.dispatch.
 // Erreurs : aucune.

@@ -217,6 +217,30 @@ class BureauxTest(PresquileIpc, unittest.TestCase):
                          ['hl.dsp.workspace.toggle_special("accueil")', FOCUS3])
 
 
+class PleinEcranTest(PresquileIpc, unittest.TestCase):
+    """Lecture du vrai plein écran (pleinecran.js, PleinEcran), sur des espaces factices : une fenêtre agrandie n'en est
+    pas un, et le bureau spécial ouvert fait foi."""
+
+    def test_porte(self):
+        for fenetres, attendu in (([], "false"), (None, "false"), ([{"wayland": None}], "false"),
+                                  ([{"wayland": {"fullscreen": False, "maximized": True}}], "false"),
+                                  ([{"wayland": None}, {"wayland": {"fullscreen": True}}], "true")):
+            # L'objet évite que « qs ipc » ne prenne une liste pour une suite d'arguments.
+            self.assertEqual(self.appeler("pleinPorte", json.dumps({"fenetres": fenetres})), attendu, fenetres)
+
+    def test_courant(self):
+        for special, attendu in (("-", "1"), ("special:dunei", "special:dunei"), ("special:inconnu", "null")):
+            self.assertEqual(self.appeler("pleinCourant", special), attendu, special)
+
+    def test_liaison_suivie(self):
+        # Une liaison qui appelle porte suit la fenêtre : entrée, puis sortie du plein écran.
+        self.assertEqual([self.appeler("pleinLiaison", p) for p in (False, True, False)], ["false", "true", "false"])
+
+    def test_ecran_inconnu(self):
+        self.assertEqual(self.appeler("pleinSur", "INCONNU"), "false")
+        self.assertEqual(self.appeler("pleinSpecial", "INCONNU"), "-")
+
+
 class BureauxModuleTest(PresquileIpc, unittest.TestCase):
     """Module « bureaux » de la presqu'île, éprouvé sans Hyprland : l'essai écrit idActif et special directement."""
 
