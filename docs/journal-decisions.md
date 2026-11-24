@@ -4771,3 +4771,23 @@ inventées, noté L2-82. `make install` est nécessaire pour les nouveaux jetons
 
 *Touché : `coque/Lanceur/`, `coque/Composants/` (`Medaillon.qml`, `VignetteFenetre.qml`, `Scene.qml`),
 `coque/Theme/Theme.qml`, `tokens.toml`, `motion.toml`, émetteurs et contrôles, `generated/`, références, tests, carnet.*
+
+### D218 · Le lanceur ne calcule que ce qu'il comprend, d'après un vocabulaire à lui
+
+24 novembre 2026 · L2-82. qalc lit un mot inconnu comme une suite d'unités et de variables et répond toujours :
+« 5 asdfg » valait 432 qg·s², mais aussi « 3 pieds en m » 2,56 s, « 5 jours en h » 1,39 × 10⁻³⁰ B·h·u, et une
+conversion impossible (« 5 m en s ») rendait la valeur de départ. Nicolas a choisi de comprendre les unités françaises
+plutôt que de se taire devant elles, et une table propre à DuneI (`coque/Lanceur/unites.js`) qui fait autorité : un mot
+absent fait taire le calcul, et les deux côtés d'une conversion ou d'une somme doivent avoir la même grandeur, unités
+composées comprises. Conséquences assumées : une unité rare reste muette jusqu'à ce qu'on ajoute sa ligne ; « livre »
+est la masse anglaise ; « degré » est un angle, sauf face à Fahrenheit ou Kelvin, si bien que « 68 degrés en celsius »,
+ambigu, reste muet ; une saisie inachevée (« 5 + ») ne montre plus de réponse. Écarté : le vocabulaire de
+`qalc --list-*`, qui laisse passer des noms obscurs et ne dit pas les grandeurs ; le réglage
+`limit implicit multiplication`, qui casse « kWh » et dont le mode `-t` tait les erreurs. qalc est lancé avec
+`-defaults` : il enregistrait en quittant ses options dans `~/.config/qalculate/qalc.cfg`, partagé avec le terminal, où
+un réglage changeait les réponses du lanceur ; il n'y lit ni n'y écrit plus rien. Chaque unité de la table est éprouvée
+par un vrai qalc, dont certains noms trompent (« 1 kn » y vaut 1000n). Les essais ont montré qu'un montant en euros se
+répond en dollars quand la langue du système est américaine, ce qui est noté L2-83.
+
+*Touché : `coque/Lanceur/` (`unites.js`, `calcul.js`, `Calcul.qml`), tests `test_lanceur`, carnet, fiche
+`docs/superpowers/specs/2026-11-24-calcul-vocabulaire-design.md` (1.1).*
