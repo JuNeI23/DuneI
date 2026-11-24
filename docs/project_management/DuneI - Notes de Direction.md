@@ -711,14 +711,13 @@ avec la galerie (g). Les trois attentions plein écran, menu de déconnexion, s�
 mécanisme d'ouverture et de sortie.
 
 Les dernières dettes du lanceur sont réglées (L2-74 a, c, e, f et h, D216 et D217) et Nicolas a validé la recette à
-l'écran le 24 novembre : la sélection
-suit le résultat visé, et non sa position, sauf un calcul arrivé en tête tant que rien n'a bougé ; les fenêtres quittent
-le relevé d'usage et se rangent par titre ; les grandeurs écrites en dur sont devenues des jetons, sans changer de
-valeur ; le médaillon ne crée son icône en couleur que s'il en a une ; un avertissement de qalc ne passe plus pour la
-réponse. Les réponses que qalc invente (« 5 asdfg ») sont notées L2-82.
+l'écran le 24 novembre : la sélection suit le résultat visé, et non sa position, sauf un calcul arrivé en tête tant
+que rien n'a bougé ; les fenêtres quittent le relevé d'usage et se rangent par titre ; les grandeurs écrites en dur
+sont devenues des jetons, sans changer de valeur ; le médaillon ne crée son icône en couleur que s'il en a une ; un
+avertissement de qalc ne passe plus pour la réponse. Les réponses que qalc invente (« 5 asdfg ») sont notées L2-82.
 
-Prochaine étape, à proposer : **L2-82, les réponses inventées par qalc dans le lanceur**. Ensuite, le reste de L2-48, L2-57 (suites du popover Bluetooth), L2-58, L2-59, L2-62, L2-70 et les défauts L2-75 à
-L2-79.
+Prochaine étape, à proposer : **L2-82, les réponses inventées par qalc dans le lanceur**. Ensuite, le reste de L2-48,
+L2-57 (suites du popover Bluetooth), L2-58, L2-59, L2-62, L2-70 et les défauts L2-75 à L2-79.
 
 ## Historique des versions
 
