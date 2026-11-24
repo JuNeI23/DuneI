@@ -10,7 +10,7 @@ import Quickshell.Hyprland
 // sélecteur de L2-17 : executer ferme la scène et ne fait partir l'action qu'au retrait du calque de la scène
 // (namespace espace) par le compositeur (événement closelayer, D194), pour que la fenêtre visée garde le clavier que
 // Hyprland rend à ce retrait ; une garde d'une seconde la fait partir si l'événement ne vient pas. Chaque client a son
-// propre namespace (L2-80) : le retrait d'un autre calque d'attention, le lanceur en fondu par exemple, ne fait rien
+// propre namespace (L2-80) : le retrait d'un autre calque d'attention, la galerie en fondu par exemple, ne fait rien
 // partir. Un délai d'affichage optionnel (delai) garde la fenêtre construite, clavier compris, mais invisible jusqu'à
 // son terme : le geste tenu du sélecteur ; une fermeture avant ce terme ne montre rien et n'a pas de fondu.
 // L'action en attente est abandonnée si une autre attention s'ouvre ou si la scène est rouverte : c'est changer
@@ -18,16 +18,18 @@ import Quickshell.Hyprland
 // Instancié comme enfant par un contrôleur client, qui déclare le cadre et exécute les actions.
 // Entrées : ouvert, qui s'affecte et ne se lie pas (le registre Overlays et la fenêtre l'écrivent) ; cadre, le
 //           composant posé au centre de l'écran, qui reçoit le focus (le Loader de la fenêtre est une portée de
-//           focus : la racine du cadre doit porter focus: true pour recevoir les touches) ; clavierExclusif, vrai
-//           par défaut, que la fenêtre applique (une coque d'essai le met à faux pour ne jamais prendre le clavier
-//           de Nicolas) ;
+//           focus : la racine du cadre, ou l'élément qui doit recevoir les touches, porte focus: true) ;
+//           clavierExclusif, vrai par défaut, que la fenêtre applique (une coque d'essai le met à faux pour ne jamais
+//           prendre le clavier de Nicolas) ;
 //           executeur, null par défaut : une fonction qui reçoit l'action à la place du signal realiser (coques
 //           d'essai) ; fenetree, vrai par défaut : faux, aucune fenêtre n'est construite et l'action part aussitôt ;
 //           montee, vrai par défaut : le cadre monte du bas de l'écran au ressort window ; faux, il grandit depuis
 //           son centre, de l'échelle window.echelleApparition à 1, au même ressort, pendant le fondu du compositeur ;
 //           espace, « dunei-attention » par défaut : le namespace du calque, qui doit figurer dans glass.namespaces et
 //           glass.fondu de tokens.toml pour être flouté et paraître en fondu ; delai, 0 par défaut : le délai
-//           d'affichage, en millisecondes.
+//           d'affichage, en millisecondes ; positionner, null par défaut (cadre centré) : une fonction
+//           (hauteurFenetre, hauteurCadre) → y qui rend le haut du cadre dans la fenêtre, pour un client qui le tient
+//           ailleurs qu'au centre (le lanceur, au tiers haut, L2-81).
 // Sorties : famille, « attention » ; present (ouvert, ou fenêtre encore en sortie) ; sortant ; ecran (figé à
 //           l'ouverture) ; montre (vrai dès l'ouverture sans délai, au terme du délai sinon si la scène est encore
 //           ouverte ; gardé vrai par une réouverture pendant la sortie, remis à faux à la fin de celle-ci) ; fenetre
@@ -49,6 +51,7 @@ QtObject {
     property bool montee: true
     property string espace: "dunei-attention"
     property int delai: 0
+    property var positionner: null
     readonly property string famille: "attention"
     // Vrai entre la fermeture et la fin du fondu de sortie de la fenêtre ; la fenêtre reste chargée jusque-là.
     property bool sortant: false

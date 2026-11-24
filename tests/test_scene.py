@@ -144,6 +144,16 @@ class SceneTest(EssaiCoque, unittest.TestCase):
         self.jusqua(lambda: vues.append(float(self.appel("essai", "echelle"))) or vues[-1] == 1, "cadre à l'échelle 1")
         self.assertLess(min(vues), 1, vues)
 
+    def test_placement_fourni(self):
+        """Vérifie que la fonction de placement fournie par le client (Scene.positionner) fixe le haut du cadre : posée
+        à 40 px par l'IPC placer, le cadre s'arrête à y = 40 une fois la montée posée, au lieu d'être centré.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : appel, ouvrir, jusqua, etat.
+        """
+        self.appel("essai", "placer", "40")
+        self.ouvrir()
+        self.jusqua(lambda: self.etat()["haut"] == 40, "cadre posé à 40 px du haut")
+
     def test_lanceur_ferme_scene(self):
         """Vérifie que le lanceur, de la même famille « attention », ferme la scène en s'ouvrant, sans qu'aucune
         action parte, ni au retrait du calque ni à la garde d'une seconde.
@@ -157,9 +167,19 @@ class SceneTest(EssaiCoque, unittest.TestCase):
         time.sleep(1.3)
         self.assertNotIn("essai : exécuté", self.journal())
 
+    def test_fenetres_hors_ouverture(self):
+        """Vérifie que le lanceur fermé ne suit pas les fenêtres de la session (L2-74 d) : ses sources n'en listent
+        aucune, puis les listent dès son ouverture (la session en compte au moins une, le terminal des essais).
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : appel, jusqua.
+        """
+        self.assertEqual(self.appel("essai", "fenetresLanceur"), "0")
+        self.appel("lanceur", "ouvrir")
+        self.jusqua(lambda: int(self.appel("essai", "fenetresLanceur")) > 0, "fenêtres suivies, lanceur ouvert")
+
     def test_retrait_d_un_autre_calque(self):
         """Vérifie que l'action en attente ne part qu'au retrait du calque de la scène, son propre namespace (espace),
-        et pas au retrait d'un autre calque d'attention (le lanceur en fondu, dunei-attention). Les événements sont
+        et pas au retrait d'un autre calque d'attention (la galerie en fondu, dunei-attention). Les événements sont
         simulés par l'IPC evenement, qui appelle Scene.surEvenement comme le ferait Hyprland.rawEvent.
 
         Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : appel, ouvrir, etat, attendre,

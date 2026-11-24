@@ -8,8 +8,9 @@ import "../Theme"
 // son centre.
 // Rôle : PanelWindow plein écran sur l'écran figé à l'ouverture (scene.ecran), couche overlay, namespace
 // scene.espace (flouté par le compositeur, le voile restant net sous ignore_alpha), clavier exclusif si
-// scene.clavierExclusif, aucun espace réservé ; le composant scene.cadre y est instancié au centre de l'écran et
-// reçoit le focus. Le calque ne change jamais de taille : seul le cadre s'anime. Reprise de FenetreLanceur.
+// scene.clavierExclusif, aucun espace réservé ; le composant scene.cadre y est instancié, centré ou placé en
+// hauteur par scene.positionner, et reçoit le focus. Le calque ne change jamais de taille : seul le cadre s'anime.
+// Reprise de FenetreLanceur, supprimée depuis (L2-81).
 // Affichage : la fenêtre est construite dès l'ouverture, mais ne se montre qu'avec scene.montre, ou aussitôt sans
 // délai (affiche) ; avant, l'opacité que Hyprland applique à la surface vaut 0 et le masque d'entrée est vide (délai
 // du sélecteur, reprise de FenetreSelecteur). Apparition : sans délai, le compositeur la porte, par la règle de
@@ -27,8 +28,8 @@ import "../Theme"
 // fenêtre devient transparente au pointeur aussitôt ; le fondu posé, elle signale scene.sortieFinie, qui la
 // décharge. Fermée avant l'affichage, elle est déchargée par la scène sans fondu. Une réouverture pendant la sortie
 // reprend la même fenêtre, toujours montrée. Un clic sur le voile, hors du cadre, ferme la scène.
-// Entrées : scene, la Scene qui la porte (ecran, cadre, ouvert, montre, delai, espace, clavierExclusif, montee),
-// requise.
+// Entrées : scene, la Scene qui la porte (ecran, cadre, ouvert, montre, delai, espace, clavierExclusif, montee,
+// positionner), requise.
 // Sorties : cadre, l'élément instancié depuis scene.cadre, ou null (lu par les essais) ; affiche, vrai quand la
 // scène est ouverte et montrée (ou sans délai) ; eteinte ; cliquerVoile(x, y), appelé aussi par les essais pour
 // simuler un clic.
@@ -103,11 +104,13 @@ PanelWindow {
         }
     }
 
-    // Cadre : le contenu du client, centré, qui reçoit le focus. Sans montée, il grandit depuis son centre.
+    // Cadre : le contenu du client, centré, ou placé en hauteur par scene.positionner quand le client la fournit ; il
+    // reçoit le focus. Sans montée, il grandit depuis son centre.
     Loader {
         id: charge
         x: Math.round((fenetre.width - width) / 2)
-        y: Math.round((fenetre.height - height) / 2)
+        y: Math.round(fenetre.scene.positionner ? fenetre.scene.positionner(fenetre.height, height)
+                                                : (fenetre.height - height) / 2)
         focus: true
         sourceComponent: fenetre.scene.cadre
         // Départ sous le bord bas de l'écran : le haut du cadre y est posé, hors champ.

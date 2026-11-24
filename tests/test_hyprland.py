@@ -208,18 +208,19 @@ class LayerRulesTest(unittest.TestCase):
 
     @unittest.skipUnless(LUA, "aucun interpréteur Lua")
     def test_une_regle_par_namespace(self):
-        self.assertEqual(self.probe("r.match.namespace")[:8],
+        self.assertEqual(self.probe("r.match.namespace")[:9],
                          ["^dunei-barre$", "^dunei-attention$", "^dunei-presquile$", "^dunei-popovers$", "^dunei-notifications$",
-                          "^dunei-panneau$", "^dunei-attention-selecteur$", "^dunei-attention-deconnexion$"])
+                          "^dunei-panneau$", "^dunei-attention-selecteur$", "^dunei-attention-deconnexion$",
+                          "^dunei-attention-lanceur$"])
         self.assertEqual(self.probe("tostring(r.blur) .. tostring(r.blur_popups) .. tostring(r.ignore_alpha)")[:8],
                          ["truetrue0.58"] * 8)
 
     @unittest.skipUnless(LUA, "aucun interpréteur Lua")
     def test_regle_no_anim(self):
         """Le fond n'est pas flouté : sa règle, venue de [bureau].namespace, ne retire que l'animation d'apparition."""
-        self.assertEqual(self.probe("r.name")[8:], ["dunei-fond"])
-        self.assertEqual(self.probe("r.match.namespace")[8:], ["^dunei-fond$"])
-        self.assertEqual(self.probe("tostring(r.no_anim) .. tostring(r.blur)")[8:], ["truenil"])
+        self.assertEqual(self.probe("r.name")[9:], ["dunei-fond"])
+        self.assertEqual(self.probe("r.match.namespace")[9:], ["^dunei-fond$"])
+        self.assertEqual(self.probe("tostring(r.no_anim) .. tostring(r.blur)")[9:], ["truenil"])
 
     @unittest.skipUnless(LUA, "aucun interpréteur Lua")
     def test_xray_sur_la_barre_seule(self):
@@ -252,7 +253,8 @@ class LayerRulesTest(unittest.TestCase):
         """Les voiles d'attention (lanceur, galerie, sélecteur, menu de déconnexion) apparaissent en fondu : seuls
         leurs calques portent animation = "fade"."""
         regles = dict(zip(self.probe("r.match.namespace"), self.probe("tostring(r.animation)")))
-        for namespace in ("^dunei-attention$", "^dunei-attention-selecteur$", "^dunei-attention-deconnexion$"):
+        for namespace in ("^dunei-attention$", "^dunei-attention-selecteur$", "^dunei-attention-deconnexion$",
+                          "^dunei-attention-lanceur$"):
             self.assertEqual(regles.pop(namespace), "fade")
         self.assertEqual(set(regles.values()), {"nil"})
 
