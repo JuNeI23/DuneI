@@ -21,7 +21,8 @@
     "dismiss": 1500,
     "liste": 30,
     "alerte": 4000,
-    "selecteur": 150
+    "selecteur": 150,
+    "garde": 1000
   },
   "periods": {
     "spinner": 1200

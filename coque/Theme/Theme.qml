@@ -77,6 +77,8 @@ Singleton {
     readonly property var galerie: tokens?.galerie
     // Sélecteur de fenêtres (L2-17) : hauteur, largeurs minimale et maximale des vignettes, écart.
     readonly property var selecteur: tokens?.selecteur
+    // Vignette de fenêtre (L2-74) : part d'échelle du survol, anneau du choix (épaisseur et écart).
+    readonly property var vignette: tokens?.vignette
     // Menu de déconnexion (L2-23) : côté des vignettes, côté du glyphe, écart, agrandissement du bouton choisi,
     // opacité de la lettre d'un bouton gris (lettreGrisee).
     readonly property var deconnexion: tokens?.deconnexion

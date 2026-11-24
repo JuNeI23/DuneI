@@ -1014,6 +1014,13 @@ class CoqueComposantsTest(EssaiCoque, unittest.TestCase):
         for _ in range(10):
             self.assertEqual(self.valeur("basculeSortant").split()[0], "0")
 
+    def test_image_medaillon(self):
+        """Vérifie qu'un médaillon sans image ne crée aucune icône en couleur (L2-74 f), et que celle d'un médaillon à
+        image prend la part reglages.medallionImage de son côté."""
+        self.demarrer()
+        r = self.tokens55()[0]["reglages"]
+        self.assertEqual(self.valeur("imageMedaillon"), f"false {round(r['medallion'] * r['medallionImage'])}")
+
     def test_reglages(self):
         # Carte et rangées de réglage de la fenêtre Réseau : la rangée à aide prend reglages.rowHelp (erreur en
         # plus), la simple reglages.row ; le texte s'aligne sur reglages.textColumn ; la carte ajoute deux gardes de

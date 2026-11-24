@@ -49,14 +49,14 @@ function actionVisee(nomApp, nomAction, saisie) {
 // classer — ordre d'affichage des résultats du lanceur.
 // Entrées : resultats, tableau de résultats (les fenêtres rangées portent retrait et app, la clé de leur application) ;
 // poids, objet {clé: nombre} d'usage. Sortie : nouveau tableau : le calcul d'abord ; puis les groupes d'application
-// (l'application suivie de ses fenêtres rangées par poids décroissant, puis par titre), puis les actions, les commandes et les
+// (l'application suivie de ses fenêtres rangées par titre), puis les actions, les commandes et les
 // fenêtres isolées ; chaque rang trié par pertinence, poids puis titre. Erreurs : aucune. Dépendances : aucune.
 function classer(resultats, poids) {
     const p = r => poids[r.cle] || 0
     const ordre = (a, b) => b.pertinence - a.pertinence || p(b) - p(a) || (a.titre || "").localeCompare(b.titre || "")
     const rang = g => resultats.filter(r => r.genre === g && !r.retrait).sort(ordre)
     const rangees = a => resultats.filter(r => r.retrait && r.app === a.cle)
-                                    .sort((x, y) => p(y) - p(x) || (x.titre || "").localeCompare(y.titre || ""))
+                                    .sort((x, y) => (x.titre || "").localeCompare(y.titre || ""))
     return [].concat(rang("calcul"), ...rang("application").map(a => [a].concat(rangees(a))),
                      rang("action"), rang("commande"), rang("fenetre"))
 }
@@ -69,11 +69,17 @@ function depuis(paires) {
     return o
 }
 
+// duree — dit si une clé désigne un résultat qui dure assez pour être noté au relevé d'usage.
+// Entrée : cle. Sortie : faux pour une fenêtre (« fen:<adresse> »), dont l'adresse ne vaut que le temps de sa vie et
+// peut être reprise par une autre ; vrai sinon. Erreurs : aucune. Dépendances : aucune.
+function duree(cle) { return !cle.startsWith("fen:") }
+
 // noter — enregistre une utilisation dans le relevé d'usage.
 // Entrées : usage, objet {clé: {n, dernier}} ; cle, la clé du résultat lancé ; maintenant, l'instant en millisecondes.
 // Sortie : un nouvel objet d'usage où n de la clé augmente de un et dernier vaut maintenant (l'entrée n'est pas
-// modifiée). Erreurs : aucune. Dépendances : aucune.
+// modifiée) ; usage lui-même pour une clé qui ne dure pas. Erreurs : aucune. Dépendances : duree.
 function noter(usage, cle, maintenant) {
+    if (!duree(cle)) return usage
     return Object.assign({}, usage, {[cle]: {n: ((usage[cle] || {}).n || 0) + 1, dernier: maintenant}})
 }
 
@@ -88,11 +94,11 @@ function poids(usage, maintenant) {
 
 // assainir — remet d'aplomb un relevé d'usage lu sur le disque.
 // Entrée : brut, n'importe quelle valeur lue du fichier. Sortie : un objet {clé: {n, dernier}} ne gardant que les
-// entrées dont n est un entier au moins égal à un et dernier un nombre fini ; {} si brut n'est pas un objet simple.
-// Erreurs : aucune. Dépendances : aucune.
+// entrées dont la clé dure, n est un entier au moins égal à un et dernier un nombre fini ; {} si brut n'est pas un
+// objet simple. Erreurs : aucune. Dépendances : duree.
 function assainir(brut) {
     if (!brut || typeof brut !== "object" || Array.isArray(brut)) return {}
-    return depuis(Object.entries(brut).filter(([, u]) => u && Number.isInteger(u.n) && u.n >= 1
+    return depuis(Object.entries(brut).filter(([c, u]) => duree(c) && u && Number.isInteger(u.n) && u.n >= 1
         && typeof u.dernier === "number" && isFinite(u.dernier)).map(([c, u]) => [c, {n: u.n, dernier: u.dernier}]))
 }
 
@@ -151,6 +157,17 @@ function deplacer(sel, touche, dispo) {
         return sel
     }
     return sel
+}
+
+// suivre — place d'une sélection quand la liste change sous elle.
+// Entrées : cles, clés de la nouvelle liste ; cle, clé de l'élément retenu (« » si aucun) ; index, sa place dans
+// l'ancienne liste ; calculEnTete, vrai si un calcul arrivé en tête doit prendre la sélection. Sortie : 0 pour un tel
+// calcul ; sinon la place de cle dans cles ; sinon, l'élément ayant disparu, index ramené dans la liste (0 si elle est
+// vide). Erreurs : aucune. Dépendances : aucune.
+function suivre(cles, cle, index, calculEnTete) {
+    if (calculEnTete) return 0
+    const i = cles.indexOf(cle)
+    return i >= 0 ? i : Math.max(0, Math.min(cles.length - 1, index))
 }
 
 // elementApercu — élément de l'aperçu désigné par une sélection.

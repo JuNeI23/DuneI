@@ -75,7 +75,7 @@ Item {
             readonly property bool symbolique: apercu.genre === "commande"
             image: symbolique ? "" : Applications.icone(apercu.resultat?.icone)
             nom: symbolique ? apercu.resultat?.icone ?? "" : ""
-            tailleGlyphe: Math.round(width * 0.52)
+            tailleGlyphe: Math.round(width * Lanceur.cotes.glypheApercu)
             refletRepos: true
         }
         Column {

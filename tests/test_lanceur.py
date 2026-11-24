@@ -12,6 +12,7 @@ import subprocess
 import tempfile
 import time
 import unittest
+from pathlib import Path
 
 from tests.test_coque_theme import DELAI, QS, ROOT, EssaiCoque
 
@@ -75,15 +76,29 @@ class LogiqueTest(EssaiCoque, unittest.TestCase):
         self.assertFalse(self.appeler("actionVisee", "Firefox", "Nouvelle fenêtre privée", "fire"))
 
     def test_classer_application_puis_fenetres(self):
-        """Vérifie le classement : calcul, application suivie de ses fenêtres par poids, puis commandes.
+        """Vérifie le classement : calcul, application suivie de ses fenêtres par titre (leur poids
+        ne compte pas, L2-74 c), puis commandes.
 
         Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : appeler.
         """
         r = [res("fen:2", "fenetre", 3, retrait=True, app="app:ff"), res("app:kit", "application", 4),
              res("app:ff", "application", 4), res("cmd:x", "commande", 4), res("calc", "calcul", 0),
              res("fen:1", "fenetre", 3, retrait=True, app="app:ff")]
-        cles = [x["cle"] for x in self.appeler("classer", r, {"app:ff": 9, "fen:1": 5, "fen:2": 1})]
+        cles = [x["cle"] for x in self.appeler("classer", r, {"app:ff": 9, "fen:1": 1, "fen:2": 5})]
         self.assertEqual(cles, ["calc", "app:ff", "fen:1", "fen:2", "app:kit", "cmd:x"])
+
+    def test_suivre(self):
+        """Vérifie que la sélection suit la clé du résultat, garde sa place bornée quand il a disparu, et revient en
+        tête pour un calcul.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : appeler.
+        """
+        for cles, cle, index, calcul, attendu in (
+                (["a", "b", "c"], "c", 1, False, 2), (["x", "a", "b"], "a", 0, False, 1),
+                (["a", "b"], "z", 1, False, 1), (["a"], "z", 5, False, 0), ([], "a", 2, False, 0),
+                (["calc", "a"], "a", 0, True, 0), (["a", "b"], "", 1, False, 1)):
+            with self.subTest(cles=cles, cle=cle, index=index, calcul=calcul):
+                self.assertEqual(self.appeler("suivre", cles, cle, index, calcul), attendu)
 
     def test_noter_et_poids(self):
         """Vérifie que deux notes du jour pèsent 2 et qu'une note vieille de quatorze jours pèse 0,5.
@@ -95,6 +110,7 @@ class LogiqueTest(EssaiCoque, unittest.TestCase):
         u = self.appeler("noter", u, "a", 100 * jour)
         self.assertEqual(u["a"], {"n": 2, "dernier": 100 * jour})
         self.assertEqual(self.appeler("poids", u, 100 * jour), {"a": 2})
+        self.assertEqual(self.appeler("noter", u, "fen:0xa1", 100 * jour), u)
         self.assertAlmostEqual(self.appeler("poids", {"b": {"n": 1, "dernier": 86 * jour}}, 100 * jour)["b"], 0.5)
 
     def test_frequentes_completees(self):
@@ -138,7 +154,8 @@ class LogiqueTest(EssaiCoque, unittest.TestCase):
         """
         for brut in ("x", [1], {"a": {"n": -1}}, None):
             self.assertEqual(self.appeler("assainir", brut), {})
-        self.assertEqual(self.appeler("assainir", {"a": {"n": 2, "dernier": 5}, "b": {"n": 1.5, "dernier": 5}}),
+        self.assertEqual(self.appeler("assainir", {"a": {"n": 2, "dernier": 5}, "b": {"n": 1.5, "dernier": 5},
+                                                   "fen:0xa1": {"n": 3, "dernier": 5}}),
                          {"a": {"n": 2, "dernier": 5}})
 
     def test_deplacer_accueil(self):
@@ -275,6 +292,9 @@ class LogiqueTest(EssaiCoque, unittest.TestCase):
         """
         self.assertEqual(self.appeler("lire", "1 / 0", "1/0"), "")
         self.assertEqual(self.appeler("lire", "error: x", "x"), "")
+        self.assertTrue(self.appeler("avertissement", "  warning: x"))
+        self.assertTrue(self.appeler("avertissement", "\x1b[31merror: x"))
+        self.assertFalse(self.appeler("avertissement", "6"))
         self.assertEqual(self.appeler("lire", "6,213711922 mi", "10 km to -miles"), "6,213711922 mi")
 
     def test_memoire_reecrit_un_fichier_corrompu(self):
@@ -369,6 +389,17 @@ class CalculTest(EssaiCoque, unittest.TestCase):
         time.sleep(0.5)
         self.assertNotIn("valeur : 1024", self.journal())
         self.assertEqual(self.etat()["valeur"], "8")
+
+    def test_avertissement_saute(self):
+        """Vérifie qu'une ligne d'avertissement de qalc ne prend pas la place du résultat qui la suit (faux qalc).
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : demarrer, valeur_apres.
+        """
+        faux = Path(tempfile.mkdtemp(dir=self.tmp.name)) / "qalc"
+        faux.write_text("#!/bin/sh\nwhile read -r l; do printf '> %s\\n\\n  warning: x\\n\\n  42\\n\\n' \"$l\"; done\n")
+        faux.chmod(0o755)
+        self.demarrer(f"{faux.parent}:{os.environ['PATH']}")
+        self.assertEqual(self.valeur_apres("12*7,5"), "42")
 
     def test_qalc_absent(self):
         """Vérifie que sans qalc le calcul se déclare indisponible, sans relance ni erreur hors l'avertissement unique.
@@ -786,6 +817,137 @@ class FenetreTest(EssaiCoque, unittest.TestCase):
         for motif in ("TypeError", "ReferenceError", "Error:", "WARN scene", "WARN qml"):
             self.assertNotIn(motif, self.journal())
 
+    def choisie(self) -> str:
+        """Clé du résultat retenu dans la liste. Entrées : aucune. Sortie : la clé. Dépendances : etat."""
+        e = self.etat()
+        return e["cles"][e["sel"]["index"]]
+
+    def test_selection_suit_le_resultat(self):
+        """Vérifie que la sélection reste sur la fenêtre visée quand une autre, placée avant elle, disparaît puis
+        revient.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : ouvrir, taper, touche, injecter,
+        choisie, etat, jusqua.
+        """
+        self.ouvrir()
+        self.taper("fire")
+        self.touche("down", "down")
+        self.assertEqual(self.choisie(), "fen:0xa2")
+        self.injecter(fenetres=[f for f in FENETRES if f["adresse"] != "0xa1"])
+        self.jusqua(lambda: "fen:0xa1" not in self.etat()["cles"], "fenêtre retirée")
+        self.assertEqual((self.choisie(), self.etat()["sel"]["index"]), ("fen:0xa2", 1))
+        self.injecter(fenetres=FENETRES)
+        self.jusqua(lambda: "fen:0xa1" in self.etat()["cles"], "fenêtre revenue")
+        self.assertEqual((self.choisie(), self.etat()["sel"]["index"]), ("fen:0xa2", 2))
+
+    def test_frappe_remet_en_tete(self):
+        """Vérifie qu'une nouvelle frappe remet la sélection en tête, même si le résultat retenu reste dans la liste,
+        et que le résultat de tête est ensuite suivi.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : ouvrir, taper, touche, injecter,
+        choisie, etat, jusqua.
+        """
+        self.ouvrir()
+        self.taper("fir")
+        self.touche("down", "down")
+        self.taper("e")
+        self.assertEqual((self.etat()["sel"]["index"], self.choisie()), (0, "app:firefox"))
+        self.injecter(entrees=[entree("fire", "Fire"), *ENTREES])
+        self.jusqua(lambda: "app:fire" in self.etat()["cles"], "application ajoutée")
+        self.assertEqual(self.choisie(), "app:firefox")
+
+    def test_vignette_suivie(self):
+        """Vérifie que la vignette choisie dans l'aperçu garde sa fenêtre quand une vignette placée avant elle disparaît.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : ouvrir, taper, touche, injecter,
+        etat, jusqua, attendre.
+        """
+        self.ouvrir()
+        self.taper("fire")
+        self.touche("tab", "up", "right")
+        self.assertEqual(self.etat()["sel"], {"zone": "apercu", "rang": 0, "index": 1, "rangee": "vignettes"})
+        self.injecter(fenetres=[f for f in FENETRES if f["adresse"] != "0xa2"])
+        self.jusqua(lambda: "fen:0xa2" not in self.etat()["cles"], "fenêtre retirée")
+        self.assertEqual(self.etat()["sel"], {"zone": "apercu", "rang": 0, "index": 0, "rangee": "vignettes"})
+        self.touche("return")
+        self.attendre("essai : exécuté amener 0xa1")
+
+    def test_apercu_disparu_revient_a_la_liste(self):
+        """Vérifie que la disparition du résultat dont on parcourt l'aperçu ramène la sélection à la liste, sans
+        désigner l'aperçu du voisin.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : ouvrir, taper, touche, injecter,
+        etat, jusqua.
+        """
+        self.ouvrir()
+        self.taper("fire")
+        self.touche("down", "tab")
+        self.assertEqual(self.etat()["sel"]["zone"], "apercu")
+        self.injecter(fenetres=[f for f in FENETRES if f["adresse"] != "0xa1"])
+        self.jusqua(lambda: "fen:0xa1" not in self.etat()["cles"], "fenêtre retirée")
+        self.assertEqual(self.etat()["sel"], {"zone": "liste", "rang": 1, "index": 1})
+
+    def test_calcul_prend_la_tete(self):
+        """Vérifie qu'un calcul arrivé en tête prend la sélection tant que rien n'a bougé, et la laisse au résultat
+        retenu sinon.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : ouvrir, taper, touche, injecter,
+        choisie, etat, jusqua.
+        """
+        fenetres = [dict(FENETRES[3], adresse=a, titre=t) for a, t in (("0xc1", "12*3 devis"), ("0xc2", "12*3 facture"))]
+        muet, parle = {"valeur": "", "expression": ""}, {"valeur": "36", "expression": "12*3"}
+        self.injecter(entrees=[], fenetres=fenetres, calcul=muet)
+        self.ouvrir()
+        self.taper("12*3")
+        self.assertEqual(self.choisie(), "fen:0xc1")
+        self.injecter(calcul=parle)
+        self.jusqua(lambda: "calc" in self.etat()["cles"], "calcul arrivé")
+        self.assertEqual(self.choisie(), "calc")
+        self.injecter(calcul=muet)
+        self.jusqua(lambda: "calc" not in self.etat()["cles"], "calcul parti")
+        self.touche("down")
+        self.assertEqual(self.choisie(), "fen:0xc2")
+        self.injecter(calcul=parle)
+        self.jusqua(lambda: "calc" in self.etat()["cles"], "calcul revenu")
+        self.assertEqual(self.choisie(), "fen:0xc2")
+
+    def test_frappe_change_la_tete(self):
+        """Vérifie qu'une frappe qui change la tête de liste y pose la sélection, quand l'ancienne tête reste plus bas,
+        et que la nouvelle tête est la ligne suivie ensuite.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : ouvrir, taper, injecter, choisie,
+        etat, jusqua.
+        """
+        noms = [entree("fa-fi", "Fa Fi"), entree("fichiers", "Fichiers"), entree("firefox", "Firefox")]
+        self.injecter(entrees=noms, fenetres=[])
+        self.ouvrir()
+        self.taper("f")
+        self.assertEqual(self.choisie(), "app:fa-fi")
+        self.taper("i")
+        time.sleep(0.2)   # un tour de boucle au moins : la sélection suivie ne doit pas bouger après coup
+        self.assertEqual((self.etat()["sel"]["index"], self.choisie()), (0, "app:fichiers"))
+        self.injecter(entrees=[entree("fiche", "Fiche"), *noms])
+        self.jusqua(lambda: "app:fiche" in self.etat()["cles"], "application ajoutée")
+        self.assertEqual(self.choisie(), "app:fichiers")
+
+    def test_voisin_herite_suivi(self):
+        """Vérifie que le voisin qui prend la place d'un résultat disparu est suivi à son tour.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : ouvrir, taper, injecter, choisie,
+        etat, jusqua.
+        """
+        fen = lambda a, t: dict(FENETRES[3], adresse=a, titre=t)
+        a, b, c = fen("0xd1", "zed b"), fen("0xd2", "zed c"), fen("0xd3", "zed a")
+        self.injecter(entrees=[], fenetres=[a, b])
+        self.ouvrir()
+        self.taper("zed")
+        self.assertEqual(self.choisie(), "fen:0xd1")
+        self.injecter(fenetres=[b])
+        self.jusqua(lambda: self.etat()["cles"] == ["fen:0xd2"], "fenêtre retirée")
+        self.injecter(fenetres=[b, c])
+        self.jusqua(lambda: len(self.etat()["cles"]) == 2, "fenêtre ajoutée")
+        self.assertEqual(self.choisie(), "fen:0xd2")
+
     def test_action_apres_retrait_du_calque(self):
         """Vérifie qu'à la fermeture la fenêtre reste le temps de son fondu de sortie (sortant), puis est déchargée et
         son calque retiré ; qu'une réouverture pendant la sortie reprend la même fenêtre ; et qu'une action choisie ne
@@ -1021,6 +1183,29 @@ class ClavierTest(FenetreTest):
                 p.wait(timeout=DELAI)
             cible = 0
 
+    def test_ligne_suivie_visible(self):
+        """Vérifie que la ligne retenue reste visible sous la plaque quand des résultats apparaissent avant elle, sans
+        touche, sur une liste plus haute que la vue.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : lanceur, taper, touche, etat,
+        injecter, essai_ipc, jusqua.
+        """
+        fen = lambda i, t: dict(FENETRES[3], adresse=f"0xe{i:02d}", titre=f"zed {t} {i:02d}")
+        bas = [fen(i, "m") for i in range(14)]
+        self.injecter(entrees=[], fenetres=bas)
+        self.lanceur("ouvrir")
+        self.taper("zed")
+        self.jusqua(lambda: len(self.etat()["cles"]) == 14, "quatorze fenêtres")
+        self.touche(*["down"] * 13)
+        self.injecter(fenetres=bas + [fen(i, "a") for i in range(20, 25)])
+        self.jusqua(lambda: self.etat()["sel"]["rang"] == 18, "ligne suivie")
+        time.sleep(1.5)
+        r = json.loads(self.essai_ipc("reperes"))
+        self.assertIsNotNone(r["ligne"], r)
+        self.assertAlmostEqual(r["plaque"], r["ligne"], delta=1, msg=r)
+        self.assertGreaterEqual(r["ligne"], r["haut"] - 1, r)
+        self.assertLessEqual(r["ligne"] + 44, r["bas"] + 1, r)
+
     def test_fleches_et_nouvelle_instance(self):
         """Vérifie, par de vraies touches, que → entre dans l'aperçu sur le premier bouton, que ↑ monte aux vignettes,
         que ← au bord revient à la liste, et que Ctrl + Entrée sur kitty lance une nouvelle instance et ferme.
@@ -1090,6 +1275,9 @@ class ClavierTest(FenetreTest):
     test_ouvre_sur_accueil = test_premiere_lettre_scinde = test_effacer_revient_a_l_accueil = test_aucun_resultat = None
     test_tab_entre_dans_l_apercu = test_eteindre_ouvre_le_menu = test_fenetre_disparue = test_ferme_libere = None
     test_action_apres_retrait_du_calque = test_reouverture_annule_l_action = None
+    test_selection_suit_le_resultat = test_frappe_remet_en_tete = test_vignette_suivie = None
+    test_apercu_disparu_revient_a_la_liste = test_calcul_prend_la_tete = None
+    test_frappe_change_la_tete = test_voisin_herite_suivi = None
 
 
 class CommandesTest(unittest.TestCase):

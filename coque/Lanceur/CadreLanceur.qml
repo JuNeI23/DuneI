@@ -120,7 +120,11 @@ Item {
                 visible: opacity > 0
                 transform: [
                     Translate { y: -(Theme.space?.scale[0] ?? 0) * glisse.value },
-                    Scale { origin.x: cotes.accueil.width / 2; xScale: 1 - 0.04 * glisse.value; yScale: xScale }
+                    Scale {
+                        origin.x: cotes.accueil.width / 2
+                        xScale: 1 - cotes.retraitAccueil * glisse.value
+                        yScale: xScale
+                    }
                 ]
             }
 

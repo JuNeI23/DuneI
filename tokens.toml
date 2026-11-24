@@ -483,6 +483,10 @@ ecart = 32                    # espace entre deux vignettes (échelon de spacing
 agrandi = 1.15                # facteur de la vignette choisie, autour de son centre, sans pousser ses voisines (comme le menu)
 estompe = 0.5                 # opacité des vignettes non choisies, sans teinte ; la choisie reste pleine
 
+[vignette]                    # vignette de fenêtre du lanceur et du sélecteur (L2-74) ; px logiques sauf mention
+survol = 0.03                 # part d'échelle ajoutée à la vignette survolée
+anneau = 2                    # épaisseur de l'anneau d'accent de la vignette choisie, et son écart à la vignette
+
 [deconnexion]                 # menu de déconnexion, SUPER + Échap (L2-23) ; px logiques ; maquette deconnexion-v1 validée
 cote = 128                    # côté d'une vignette en verre (88 dans la maquette, agrandi à la demande)
 glyphe = 56                   # côté du glyphe dans la vignette
@@ -537,6 +541,7 @@ row_help = 52                 # hauteur d'une ligne avec texte d'aide
 row_lead = 60                 # hauteur d'une ligne de tête (réseau joint)
 medallion = 32                # diamètre du médaillon d'icône de tête de ligne
 medallion_glyph = 18          # taille du glyphe dans le médaillon
+medallion_image = 0.68        # part du côté du médaillon que prend une icône en couleur (maquette du lanceur v3)
 text_column = 56              # colonne du texte, et retrait du filet de séparation
 sidebar_inset = 8             # retrait du plateau détaché de la barre latérale
 tab_height = 48               # hauteur de la barre d'onglets

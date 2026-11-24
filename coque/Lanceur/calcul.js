@@ -35,13 +35,22 @@ function traduire(saisie) {
     return m[1] + " to " + (DUREES.includes(cible.toLowerCase()) ? "" : "-") + cible
 }
 
+// nettoyer — retire d'une ligne de qalc les codes de couleur et les espaces des bords.
+// Entrée : ligne. Sortie : la ligne nettoyée. Erreurs : aucune. Dépendances : aucune.
+function nettoyer(ligne) { return (ligne || "").replace(/\x1b\[[0-9;]*m/g, "").trim() }
+
+// avertissement — dit si une ligne de qalc est un message et non un résultat.
+// Entrée : ligne. Sortie : vrai si elle commence par « error » ou « warning ». Erreurs : aucune.
+// Dépendances : nettoyer.
+function avertissement(ligne) { return /^(error|warning)/i.test(nettoyer(ligne)) }
+
 // lire — extrait le résultat d'une réponse de qalc.
 // Entrées : sortie, la ligne de résultat de qalc ; envoye, l'expression qui lui a été soumise. Sortie : la ligne
-// nettoyée des codes de couleur, ou « » si elle est vide, commence par « error » ou « warning », ou répète
-// l'expression à l'espace près (« 1 / 0 »). Erreurs : aucune. Dépendances : aucune.
+// nettoyée, ou « » si elle est vide, est un avertissement ou répète l'expression à l'espace près (« 1 / 0 »).
+// Erreurs : aucune. Dépendances : nettoyer, avertissement.
 function lire(sortie, envoye) {
-    const propre = (sortie || "").replace(/\x1b\[[0-9;]*m/g, "").trim()
+    const propre = nettoyer(sortie)
     const sansEspace = t => t.replace(/\s+/g, "")
-    if (!propre || /^(error|warning)/i.test(propre) || sansEspace(propre) === sansEspace(envoye || "")) return ""
+    if (!propre || avertissement(sortie) || sansEspace(propre) === sansEspace(envoye || "")) return ""
     return propre
 }

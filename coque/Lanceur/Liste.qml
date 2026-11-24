@@ -44,6 +44,10 @@ ListView {
     // onRangChanged — garde la ligne retenue visible. Entrées : aucune. Sortie : aucune. Erreurs : aucune.
     // Dépendances : positionViewAtIndex.
     onRangChanged: positionViewAtIndex(rang, ListView.Contain)
+    // onCountChanged — garde visible la ligne retenue, que la sélection suivie déplace sans touche : son rang change
+    // avant le nombre de lignes, dont le changement remet ensuite la vue en haut. Entrées : aucune. Sortie : aucune.
+    // Erreurs : aucune. Dépendances : positionViewAtIndex.
+    onCountChanged: positionViewAtIndex(rang, ListView.Contain)
 
     // La plaque vit dans le contenu défilé (contentItem), comme les lignes : elle défile avec elles, et sa cible
     // (rang × hauteur de ligne, plus originY) est dans le même repère que leur y. Déclarée simplement dans la ListView,

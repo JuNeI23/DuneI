@@ -30,7 +30,7 @@ import "../Theme"
 // Sorties : survolee, vrai tant que le pointeur est dessus ; capturee, vrai une fois l'image reçue ; vue et image, la
 // capture native et sa source d'effet (lues par les essais) ; activee(), émis au clic. Erreurs : aucune.
 // Dépendances : QtQuick (ShaderEffectSource), QtQuick.Effects (MultiEffect), Quickshell.Wayland (ScreencopyView), Quickshell.Hyprland (toplevels),
-// Ressort, Theme (color, radius, space, galerie, material).
+// Ressort, Theme (color, radius, space, galerie, vignette, material).
 // Cotes : coins radius.panel (10, maquette 8) ; barre de 12 % de la hauteur, au moins space.scale[1] ; points de
 // space.scale[0].
 Item {
@@ -53,7 +53,11 @@ Item {
     opacity: estompee.value
     transform: [
         Translate { y: -(Theme.space?.scale[0] ?? 0) * survol.value },
-        Scale { origin.x: vignette.width / 2; origin.y: vignette.height / 2; xScale: grandeur.value + 0.03 * survol.value; yScale: xScale }
+        Scale {
+            origin { x: vignette.width / 2; y: vignette.height / 2 }
+            xScale: grandeur.value + (Theme.vignette?.survol ?? 0) * survol.value
+            yScale: xScale
+        }
     ]
     Ressort { id: apparition; transition: "reveal"; nature: "fondu"; cible: vue.hasContent ? 1 : 0 }
     Ressort { id: survol; transition: "state"; cible: vignette.survolActif && pointeur.hovered ? 1 : 0 }
@@ -148,10 +152,10 @@ Item {
     // Anneau d'accent du choix au clavier, au-dessus de l'image.
     Rectangle {
         anchors.fill: parent
-        anchors.margins: -2
-        radius: fond.radius + 2
+        anchors.margins: -(Theme.vignette?.anneau ?? 0)
+        radius: fond.radius + (Theme.vignette?.anneau ?? 0)
         color: "transparent"
-        border.width: 2
+        border.width: Theme.vignette?.anneau ?? 0
         border.color: Theme.color?.accentStandalone ?? "transparent"
         visible: vignette.anneau
         opacity: fonduAnneau.value
