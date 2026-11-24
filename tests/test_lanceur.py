@@ -7,6 +7,7 @@ Dépendances : qs (Quickshell ≥ 0.3), tests.test_coque_theme (EssaiCoque).
 """
 import json
 import os
+import re
 import shutil
 import subprocess
 import tempfile
@@ -275,15 +276,36 @@ class LogiqueTest(EssaiCoque, unittest.TestCase):
             self.assertEqual(self.appeler("aEnvoyer", s), attendu, s)
 
     def test_traduire(self):
-        """Vérifie la traduction française : « en » et « vers » deviennent to, pourcentage, cible forcée sauf durée.
+        """Vérifie la traduction : unités françaises, « en » et « vers », pourcentage, cible forcée sauf durée (L2-82).
 
         Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : appeler.
         """
-        self.assertEqual(self.appeler("traduire", "10 km en miles"), "10 km to -miles")
-        self.assertEqual(self.appeler("traduire", "30 °C vers °F"), "30 °C to -°F")
-        self.assertEqual(self.appeler("traduire", "3 h 20 min en min"), "3 h 20 min to min")
-        self.assertEqual(self.appeler("traduire", "20 % de 80"), "20% * 80")
-        self.assertEqual(self.appeler("traduire", "1,5 + 2,25"), "1,5 + 2,25")
+        for saisie, attendu in (
+                ("10 km en miles", "10 km to -mi"), ("30 °C vers °F", "30 °C to -°F"), ("10 km to mi", "10 km to -mi"),
+                ("3 h 20 min en min", "3 h 20 min to min"), ("100 min en heures", "100 min to h"),
+                ("20 % de 80", "20% * 80"), ("1,5 + 2,25", "1,5 + 2,25"), ("3 pieds en m", "3 ft to -m"),
+                ("5 jours en h", "5 d to h"), ("20 degrés en fahrenheit", "20 °C to -°F"),
+                ("50 fahrenheit en degrés", "50 °F to -°C"), ("90 degrés en rad", "90 deg to -rad"),
+                ("3 x 4", "3 × 4"), ("10 kWh en MJ", "10 kWh to -MJ"), ("2 kilowattheures en MJ", "2 kWh to -MJ"),
+                ("5 ft 3 in en cm", "5 ft 3 in to -cm"), ("€5 en $", "€5 to -$"), ("20 eur en USD", "20 EUR to -USD"),
+                ("20 € + 10 %", "20 € + 10%"), ("90 km/h en m/s", "90 km/h to -m/s"), ("3 m² en cm2", "3 m^2 to -cm^2"),
+                ("20 mètres carrés en cm²", "20 m^2 to -cm^2"), ("8 Mbit en Mo", "8 Mbit to -MB"),
+                ("10 livres en kg", "10 lb to -kg"), ("10 livres sterling en euros", "10 GBP to -EUR"),
+                ("3 noeuds en km/h", "3 knot to -km/h"), ("2 sqrt(9)", "2 sqrt(9)"), ("(3+4)*2", "(3+4)*2"),
+                ("2 pi", "2 pi"), ("5!", "5!"), ("2^10", "2^10"), ("3 sin(30 degrés)", "3 sin(30 deg)")):
+            with self.subTest(saisie=saisie):
+                self.assertEqual(self.appeler("traduire", saisie), attendu)
+
+    def test_traduire_muette(self):
+        """Vérifie qu'une saisie incomprise, inachevée ou de grandeurs incompatibles n'est pas traduite.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : appeler.
+        """
+        for saisie in ("5 asdfg", "12 pommes + 3", "10 m en bananes", "5 m en s", "90 km/h en kg", "3 cafés", "12 python",
+                       "7 zip", "5 mo en Go", "5 +", "10 km en", "3 cm + 2 s", "5 m + 3", "68 degrés en celsius",
+                       "20 € en kg", "10 km en 5 m", "3 x", "5 km en m en cm", "2 ; 3", "4 constructor", ""):
+            with self.subTest(saisie=saisie):
+                self.assertEqual(self.appeler("traduire", saisie), "")
 
     def test_lire(self):
         """Vérifie qu'une sortie vide, en erreur ou qui répète l'expression est rejetée, et qu'un résultat est gardé.
@@ -371,10 +393,73 @@ class CalculTest(EssaiCoque, unittest.TestCase):
         Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : demarrer, valeur_apres.
         """
         self.demarrer()
-        self.assertEqual(self.valeur_apres("12*7,5"), "90")
+        for saisie, attendu in (("12*7,5", "90"), ("3 pieds en m", "0,9144 m"), ("5 jours en h", "120 h"),
+                                ("20 degrés en fahrenheit", "68 °F"), ("10 kWh en MJ", "36 MJ"),
+                                ("2 h 30 min en min", "150 min"), ("15 % de 80", "12"), ("5 ft 3 in en cm", "160,02 cm"),
+                                ("90 km/h en m/s", "25 m/s"), ("3 x 4", "12"), ("3 noeuds en km/h", "5,556 km/h"),
+                                ("10 livres en kg", "4,5359237 kg"), ("8 Mbit en Mo", "1 MB")):
+            with self.subTest(saisie=saisie):
+                self.assertEqual(self.valeur_apres(saisie), attendu)
         valeur = self.valeur_apres("10 km en miles")
         self.assertTrue(valeur.startswith("6,21") and valeur.endswith("mi"), valeur)
         self.assertEqual(self.valeur_apres("1,5 + 2,25"), "3,75")
+
+    @unittest.skipUnless(shutil.which("qalc"), "qalc requis")
+    def test_saisie_incomprise(self):
+        """Vérifie qu'une saisie incomprise n'envoie rien à qalc et efface la réponse précédente.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : demarrer, valeur_apres, etat.
+        """
+        self.demarrer()
+        self.valeur_apres("2+2")
+        self.demander("5 asdfg")
+        time.sleep(0.3)
+        self.assertEqual(self.etat(), {"expression": "", "valeur": "", "disponible": True})
+        self.assertEqual(self.valeur_apres("2+3"), "5")   # les requêtes restent appariées à leurs réponses
+
+    @unittest.skipUnless(shutil.which("qalc"), "qalc requis")
+    def test_reglages_du_terminal(self):
+        """Vérifie que les réglages de qalc enregistrés au terminal n'ont pas d'effet et ne sont jamais réécrits.
+
+        Entrées : aucune (un qalc.cfg piégé, où « 10 kWh en MJ » vaudrait 0,00001 MJ). Sortie : aucune.
+        Erreurs : échec d'assertion. Dépendances : demarrer, valeur_apres.
+        """
+        reglages = Path(tempfile.mkdtemp(dir=self.tmp.name))
+        fichier = reglages / "qalculate" / "qalc.cfg"
+        fichier.parent.mkdir()
+        fichier.write_text("[General]\nversion=5.13.1\n[Mode]\nlimit_implicit_multiplication=1\n")
+        avant = fichier.read_text()
+        self.environnement = {"XDG_CONFIG_HOME": str(reglages)}
+        self.demarrer()
+        self.assertEqual(self.valeur_apres("10 kWh en MJ"), "36 MJ")
+        self.proc.terminate()
+        self.proc.wait(DELAI)
+        self.assertEqual(fichier.read_text(), avant)
+
+    @unittest.skipUnless(shutil.which("qalc"), "qalc requis")
+    def test_vocabulaire_reel(self):
+        """Vérifie qu'un vrai qalc lit chaque unité de unites.js, seule puis préfixée, dans sa grandeur.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion, qui nomme l'unité. Dépendances : qalc, unites.js.
+        """
+        reference = {"L": "m", "L2": "m^2", "L3": "L", "M": "kg", "T": "s", "L T-1": "m/s", "K": "K", "A": "rad",
+                     "T-1": "Hz", "M L T-2": "N", "M L2 T-2": "J", "M L2 T-3": "W", "M L-1 T-2": "Pa", "I": "A",
+                     "I T": "A*s", "M L2 T-3 I-1": "V", "D": "B", "D T-1": "B/s", "E": "EUR"}
+        lignes = re.findall(r'^    \["([^"]+)", "([^"]+)", "[^"]*", "[^"]*", "(\w*)"\],$',
+                            (ROOT / "coque/Lanceur/unites.js").read_text(), re.M)
+        self.assertGreater(len(lignes), 70)
+        cas = [(p + u, g) for u, g, prefixes in lignes
+               for p in ([""] + {"": [], "si": ["m", "k"], "k": ["k"], "bi": ["k", "Mi"]}[prefixes])]
+        sortie = subprocess.run(["qalc", "-t", "-defaults", "-s", "decimal comma on", "-s", "color 0"], text=True,
+                                input="".join(f"2 {u} to -{reference[g]}\n" for u, g in cas), capture_output=True,
+                                timeout=60).stdout
+        reponses = re.findall(r"^> .*\n\s*\n?\s*(\S.*)$", sortie, re.M)
+        self.assertEqual(len(reponses), len(cas), sortie)
+        symboles = {"EUR": "€", "A*s": "C|A·s|s·A|A × s", "m^2": "m²", "B/s": "B/s"}
+        for (u, g), reponse in zip(cas, reponses):
+            with self.subTest(unite=u):
+                self.assertRegex(reponse, rf"^[−€\d].*(?:{symboles.get(reference[g], reference[g])})|^€")
+                self.assertNotRegex(reponse, r"[(·×]" if g != "I T" else r"[(]")
 
     @unittest.skipUnless(shutil.which("qalc"), "qalc requis")
     def test_reponse_perimee_ignoree(self):
