@@ -4790,8 +4790,8 @@ lectures divergeaient. Écarté : le vocabulaire de
 `limit implicit multiplication`, qui casse « kWh » et dont le mode `-t` tait les erreurs. qalc est lancé avec
 `-defaults` : il enregistrait en quittant ses options dans `~/.config/qalculate/qalc.cfg`, partagé avec le terminal, où
 un réglage changeait les réponses du lanceur ; il n'y lit ni n'y écrit plus rien. Chaque unité de la table est éprouvée
-par un vrai qalc, à sa valeur, préfixes compris et dans les deux sens, car certains noms trompent (« 1 kn » y vaut 1000n, « hbar »
-la constante de Planck). Les essais ont montré qu'un montant en euros se
+par un vrai qalc, à sa valeur, préfixes compris et dans les deux sens, car certains noms trompent (« 1 kn » y vaut
+1000n, « hbar » la constante de Planck). Les essais ont montré qu'un montant en euros se
 répond en dollars quand la langue du système est américaine, ce qui est noté L2-83.
 
 *Touché : `coque/Lanceur/` (`unites.js`, `calcul.js`, `Calcul.qml`), tests `test_lanceur`, carnet, fiche
