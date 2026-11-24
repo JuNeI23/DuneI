@@ -104,7 +104,7 @@ commence par « error » ou « warning », dont `lire` se sert.
   reste le premier enfant. Test : la coque d'essai des composants rapporte qu'aucune `IconImage` n'existe sans image.
 - [ ] `make tokens motion`, puis `make golden` (seules les nouvelles clés changent : `git diff --stat tests/golden`).
 - [ ] **Réussite :** `python3 -m unittest tests.test_quickshell_emitter tests.test_motion_checks
-  tests.test_motion_generate tests.test_composants tests.test_lanceur tests.test_selecteur tests.test_scene` vert ;
+  tests.test_motion_generate tests.test_coque_composants tests.test_lanceur tests.test_selecteur tests.test_scene` vert ;
   captures identiques aux références.
 - [ ] **Commit :** « Lanceur (L2-74 e, f) : grandeurs en jetons, médaillon léger ».
 
