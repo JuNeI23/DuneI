@@ -80,6 +80,7 @@ class ModulesTest(unittest.TestCase):
                                                      "layer\tdunei-verre-dunei-attention-selecteur",
                                                      "layer\tdunei-verre-dunei-attention-deconnexion",
                                                      "layer\tdunei-verre-dunei-attention-lanceur",
+                                                     "layer\tdunei-verre-dunei-attention-autorisation",
                                                      "layer\tdunei-fond",
                                                      "rule\tsans-agrandissement", "rule\tglisser-xwayland",
                                                      "rule\tfenetre-parametres",
