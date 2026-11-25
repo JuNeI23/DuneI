@@ -81,7 +81,8 @@ class PresquileStructureTest(unittest.TestCase):
         self.assertRegex(code, r"course:\s*encoche\.hauteur \+ encoche\.marge")
         # Calée sur le pixel physique : entre deux, le bas de la forme se peint à moitié (capture du démarrage).
         self.assertIn("y: Math.round(glissement.decalage * surface.devicePixelRatio) / surface.devicePixelRatio", code)
-        self.assertIn("opacity: glissement.opacite", code)
+        self.assertIn("opacity: glissement.opacite * (1 - couverture.value)", code)
+        self.assertIn("cible: nomEcran && Composants.Overlays.ecranCouvert === nomEcran ? 1 : 0", code)
 
     def test_module_et_ressort(self):
         # Le module est arbitré, en lecture seule ; les bureaux sont le défaut de l'arbitre.
@@ -113,9 +114,11 @@ class PresquileStructureTest(unittest.TestCase):
                     ident = re.search(r"id:\s*(\w+)", corps).group(1)
                     self.assertEqual(nature.group(1), natures.pop(ident), (nom, ident))
             self.assertFalse(natures, nom)
-        # La surface ne déclare plus de ressort : elle lit ceux de sa scène.
+        # La surface ne déclare plus de ressort de taille, elle lit ceux de sa scène : un seul fondu, qui l'efface sous
+        # l'île d'une demande d'autorisation (L2-24).
         surface = re.sub(r"//.*", "", (ROOT / "coque" / "Presquile" / "Presquile.qml").read_text(encoding="utf-8"))
-        self.assertEqual(re.findall(r"Ressort\s*\{", surface), [])
+        self.assertEqual(re.findall(r'Ressort\s*\{ id: (\w+); transition: "\w+"; nature: "(\w+)"', surface), [("couverture", "fondu")])
+        self.assertEqual(len(re.findall(r"Ressort\s*\{", surface)), 1)
 
     def test_volume_hauteur_du_gabarit(self):
         # D132 : le module Volume a la hauteur de la presqu'île, lue du gabarit, comme les bureaux ; seule sa largeur

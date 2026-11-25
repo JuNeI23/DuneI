@@ -17,7 +17,7 @@ import "Lanceur"
 // Entrées : DUNEI_TOKENS_DIR et DUNEI_ETAT_DIR (jetons, thème et relevé d'usage de l'essai) ; IPC « essai » : pret,
 // ouvrir, fermer, executer, apparition (montée ou apparition depuis le centre), echelle (échelle du cadre), delai
 // (délai d'affichage), placer (placement du cadre), fenetresLanceur (fenêtres suivies par le lanceur), espace
-// (namespace du calque), evenement (événement de Hyprland simulé), etat.
+// (namespace du calque), voileFerme et cliquerVoile (clic simulé sur le voile), evenement (événement de Hyprland simulé), etat.
 // Sorties : « essai : prêt » au démarrage ; « essai : exécuté <id> » à chaque action de la scène (« essai : exécuté
 // lanceur <genre> » pour le lanceur) ; « essai : fenêtre construite » à chaque construction de la fenêtre de la
 // scène ; « essai : calque retiré » quand Hyprland retire le calque de la scène (closelayer de scene.espace), pour
@@ -83,6 +83,10 @@ ShellRoot {
         // Dépendances : scene.montee.
         function apparition(montee: bool): void { scene.montee = montee }
 
+        // grandir — choisit si un cadre sans montée grandit depuis son centre. Entrée : oui. Sortie : aucune. Erreurs :
+        // aucune. Dépendances : scene.grandit.
+        function grandir(oui: bool): void { scene.grandit = oui }
+
         // echelle — échelle courante du cadre, portée par le Loader de la fenêtre. Entrées : aucune. Sortie : l'échelle
         // en texte, ou « » si la fenêtre n'est pas construite. Erreurs : aucune. Dépendances : scene.fenetre.cadre.
         function echelle(): string { return String(scene.fenetre?.cadre?.parent?.scale ?? "") }
@@ -103,6 +107,14 @@ ShellRoot {
         // evenement — simule un événement brut de Hyprland reçu par la scène. Entrées : nom, le nom de l'événement ;
         // donnee, sa donnée. Sortie : aucune. Erreurs : aucune. Dépendances : scene.surEvenement.
         function evenement(nom: string, donnee: string): void { scene.surEvenement(nom, donnee) }
+
+        // voileFerme — choisit si un clic sur le voile ferme la scène. Entrée : ferme. Sortie : aucune. Erreurs :
+        // aucune. Dépendances : scene.voileFerme.
+        function voileFerme(ferme: bool): void { scene.voileFerme = ferme }
+
+        // cliquerVoile — clic simulé au coin de la fenêtre, sur le voile. Entrées : aucune. Sortie : aucune. Erreurs :
+        // aucune. Dépendances : scene.fenetre.cliquerVoile.
+        function cliquerVoile(): void { scene.fenetre?.cliquerVoile(1, 1) }
 
         // fenetresLanceur — nombre de fenêtres de la session que suivent les sources du lanceur. Entrées : aucune.
         // Sortie : l'entier en texte. Erreurs : aucune. Dépendances : Lanceur.sources.fenetres.

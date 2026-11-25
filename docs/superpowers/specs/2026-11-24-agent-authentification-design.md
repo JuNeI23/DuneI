@@ -1,0 +1,185 @@
+# Agent d'authentification (L2-24)
+
+Version 1.3 — 2026-11-24 — validée par Nicolas ; la carte centrée cède la place à l'île (maquette v3, G1 sans « Annuler »)
+
+## Intention
+
+Aucun agent polkit ne tourne dans la session : toute demande de droits d'administrateur faite hors d'un terminal échoue
+(« no agent is available »). La coque doit recevoir ces demandes, dire qui demande quoi et prendre le mot de passe, sans
+que ce confort rende le compte plus facile à verrouiller.
+
+## Ce qui a été relevé
+
+Éprouvé sur caladan le 24 novembre par une sonde jetable (quickshell 0.3.2, polkit 128), sauf mention contraire.
+
+- **Enregistrement.** `PolkitAgent` s'enregistre depuis `app-graphical.slice`, la tranche de la coque, et reçoit les
+  demandes. La source lue annonçait un échec possible pour un service utilisateur (PR #875) : il ne s'est pas produit.
+- **Annulation, sans la règle.** Une conversation PAM rompue compte comme un échec : quatre demandes annulées ou abandonnées sans mot de
+  passe ont verrouillé le compte dix minutes. Défaut connu de polkit (#713) ; correctif proposé (#719), non publié.
+- **Annulation, avec la règle** (essais réels 1, 2a et 2b) : quatre conversations rompues, aucun échec dans `faillock`.
+  Le code rendu est bien `PAM_AUTHTOK_ERR` (« Authentication token manipulation error » au journal).
+- **Compte verrouillé.** PAM envoie deux messages (« The account is locked… », « 10 minutes left… »), puis demande quand
+  même le mot de passe : `pam_faillock preauth` est `required`.
+- **Demandes simultanées.** La seconde remplace la première (#1312) ; la première ne reçoit plus rien, jusqu'à ce que son
+  demandeur abandonne, et Quickshell écrit alors « the cancelled request was not found in the queue ».
+  Essai réel 2a, règle posée : annuler le premier flux, remplacé, a fermé aussi le second. `flow` est passé à null, les
+  deux conversations PAM ont été rompues ; le premier demandeur a reçu « Request dismissed », le second est resté sans
+  réponse huit secondes, jusqu'à ce que la sonde le tue.
+- **Demandeur tué** pendant 0,7 s d'attente : le flux est resté ouvert jusqu'à l'annulation par la sonde. À l'essai réel
+  2b, demandeur tué au bout d'une seconde, le flux s'est clos en deux millisecondes : `isCancelled`, puis
+  `isCompleted` vrais, `isResponseRequired` resté vrai, puis `flow` null. Aucun plantage.
+- **Plantage** (lu, non reproduit) : mémoire libérée quand polkitd annule une demande (#1016), ouvert en 0.3.2.
+- **Contenu.** `message`, `actionId` et identités sont fournis ; l'icône était vide ; ni la ligne de commande complète ni
+  le processus appelant ne le sont (lu). Les textes suivent `LANG`, ici `en_US.UTF-8`.
+- **Portée de `faillock`.** `sudo`, greetd et hyprlock passent par `system-auth` : ils partagent le même compteur.
+- **Mot de passe** (lu) : Quickshell ne l'efface pas de la mémoire. La coque ne peut que vider son champ aussitôt.
+
+## Buts
+
+1. Une demande ouvre une fenêtre d'attention qui montre le message reçu et l'identifiant de l'action.
+2. Le mot de passe se saisit, se révèle par l'œil, s'envoie par Entrée ou « Autoriser » ; Échap annule.
+3. Les états attente, échec, compte verrouillé et succès se lisent, et chaque passage s'anime.
+4. Une annulation ne compte plus comme un échec ; un mauvais mot de passe compte toujours.
+5. Le compte se verrouille au cinquième échec au lieu du troisième, partout : `sudo`, connexion, hyprlock, agent.
+6. L'agent se débraye sans toucher au reste de la coque.
+
+## Hors périmètre, et échecs à éviter
+
+- `sudo` au terminal, trousseau (L2-25), empreinte (L2-37), verrouillage (L2-22), choix d'une autre identité.
+- Le mot de passe n'est jamais journalisé, écrit, copié, ni passé en argument ou par IPC.
+- Rien ne s'envoie sans geste de Nicolas ; jamais de réponse vide ; jamais d'envoi hors `isResponseRequired`.
+- Un texte venu d'une application ne peut ni mettre en forme, ni remplacer les libellés de DuneI : `Text.PlainText`.
+- 0 % de processeur au repos ; aucune fenêtre construite sans demande.
+
+## Approches
+
+| Approche | Avantage | Coût |
+|---|---|---|
+| **Dans la coque (choisie par Nicolas le 24 novembre)** | La plus courte ; `Scene`, thème et registre des attentions repris tels quels | Un plantage de Quickshell emporte la coque, que systemd relance |
+| Second Quickshell réservé à l'agent (recommandée par Claude) | Un plantage ne coûte que la demande | Unité de plus, mémoire, registre partagé entre deux processus |
+| Programme propre à DuneI | Vraie file, commande complète | Code de sécurité à écrire et à entretenir |
+
+`hyprpolkitagent` reste le secours possible ; un seul agent peut être enregistré par session. Nicolas a aussi accepté la
+règle PAM ci-dessous, et demandé que le compte tolère cinq mots de passe
+faux au lieu de trois.
+
+## Conception
+
+### Module `coque/Autorisation`
+
+- **`Autorisation`**, singleton réveillé au démarrage comme `Deconnexion`, porte `PolkitAgent` dans un `Loader`, une
+  `Scene` (namespace `dunei-attention-autorisation`, déclaré dans `glass.namespaces` et `glass.fondu`) et la machine à
+  états. Le flux s'injecte, pour qu'un essai lui donne un objet factice : aucun essai ne touche polkit ni PAM.
+- **`autorisation.js`** : logique pure (états, lecture de `faillock`, textes).
+- **`CadreAutorisation`** : `Encoche`, `VignetteVerre`, `ChampSecret`, `Bouton`, cotes et couleurs des jetons seuls.
+- **Débrayage** : `autorisation.active` dans `tokens.toml` ; faux, le `Loader` ne construit rien.
+- **Garde de développement** : `~/.config/quickshell/dunei` est un lien vers le dépôt, donc tout module écrit est vivant.
+  `autorisation.active` reste faux jusqu'à la preuve de la règle PAM et l'accord de Nicolas ; le commit qui l'active est
+  le dernier.
+- **Garde de marche** : l'agent ne s'enregistre que si `/etc/pam.d/polkit-1` porte la marque de DuneI.
+- **Enregistrement manqué** : le `Loader` est reconstruit après 2, 10 puis 60 s ; au-delà, une notification de la coque
+  le signale une fois.
+- **Flux déjà ouvert** au chargement (rechargement de la coque) : `isActive` et `flow` sont lus au démarrage.
+
+### Surface
+
+La première carte, centrée, n'a pas plu ; trois maquettes ont suivi (`.superpowers/preview/autorisation-v1` à `v3.html`).
+Nicolas a choisi la demande dans la presqu'île, agencement G1, sans bouton « Annuler ».
+
+```
+  ╲__________________________________________╱
+   [cadenas]  Autorisation requise
+              Authentication is needed to run `/usr/bin/id'…
+              org.freedesktop.policykit.exec
+   [ Mot de passe                    👁 ] Autoriser
+```
+
+- **L'île est dessinée par la fenêtre de l'agent**, collée au bord haut, avec la forme de la presqu'île (`Encoche`), sur
+  l'écran focalisé, voile derrière. La vraie presqu'île ne prend pas le clavier, perd sa prise à un clic à côté et passe
+  sous un plein écran ; la fenêtre de l'agent garde le clavier exclusif et passe au-dessus. La vraie s'efface en fondu
+  sous celle de l'agent, sur cet écran seulement (`Overlays.ecranCouvert`), et revient à la fermeture.
+- **Mouvement** au ressort `window`, comme la presqu'île : de la taille de repos à l'annonce (cadenas et « Autorisation
+  requise »), puis à l'île ouverte après `delays.gardeFrappe` ; à la fin, « Autorisé » pendant `delays.autorise` (800 ms),
+  puis repli. L'échec donne une seule poussée au champ (`autorisation.secousse`). En mouvement réduit, tailles posées.
+- **Cotes** : 460 px de large, marge 16, vignette 56, rangée du bas 32 ; un message long allonge l'île, puis défile.
+- Titre et boutons en français ; message et identifiant d'action affichés tels que reçus.
+
+| État | Champ | Ligne sous le message | Action |
+|---|---|---|---|
+| Attente de PAM | inactif | identifiant de l'action | Autoriser, inactif |
+| Saisie | actif, focus | identifiant, ou dernier échec | Autoriser (actif si non vide) |
+| Vérification | inactif, vidé | `Activite` et « Vérification » | Autoriser, inactif |
+| Échec | vidé, focus | « Mot de passe incorrect. N essais restants. », en `error` | comme Saisie |
+| Verrouillé | inactif | « Compte verrouillé. Réessayer à 16 h 38. » | Fermer |
+| Succès | île repliée | « Autorisé » | aucune ; clavier rendu aussitôt |
+
+La vignette passe à `color.error` à l'échec et au verrou. Tout texte PAM que DuneI ne reconnaît pas remplace
+l'identifiant, tel quel.
+
+### Fermetures
+
+- Toute fermeture d'une demande en cours vaut annulation : « Fermer », Échap, ou autre attention ouverte par-dessus.
+- Un clic sur le voile ne ferme pas : `Scene` gagne `voileFerme`, vrai par défaut, que ce client met à faux.
+- Une demande close par polkit ferme la scène. `cancelAuthenticationRequest` n'est appelée qu'une fois par flux, jamais
+  après `isCompleted`.
+- Une seconde demande reprend la fenêtre en place, champ vidé, garde de frappe relancée. Le premier flux est laissé,
+  jamais annulé : l'annuler ferme le second (essai réel 2a). Limite : le premier demandeur attend sans réponse, jusqu'à
+  ce qu'il abandonne ou soit arrêté.
+
+### Garde de frappe
+
+La fenêtre peut s'ouvrir pendant une frappe ailleurs, et un texte suivi d'Entrée partirait comme mot de passe. Le champ
+n'accepte donc les touches qu'après `delays.gardeFrappe` (400 ms) sans frappe, comptées à partir de chaque flux, puis de nouveau dès que la
+fenêtre est prête et qu'elle reçoit le clavier. « Autoriser »
+suit la même garde. Échap reste actif.
+
+### Essais restants et verrou
+
+À l'ouverture et après chaque échec, la coque lit `faillock --user <utilisateur>` (lecture seule), ainsi que `deny`,
+`fail_interval` et `unlock_time` dans `/etc/security/faillock.conf` (3, 900 et 600 s si absents). Elle en tire les essais
+restants, l'état Verrouillé et l'heure de déverrouillage, jamais du texte de PAM, qui suit `LANG`. Si la lecture échoue,
+la ligne dit seulement « Mot de passe incorrect. » et le champ reste ouvert : PAM décide.
+
+### Règles système
+
+- **`systeme/etc/pam.d/polkit-1`**, qui prime sur celui du paquet : la pile `auth` de `system-auth` y est écrite en
+  toutes lettres, et `pam_unix` y porte `authtok_err=die conv_err=die`, ce qui arrête la pile avant `authfail`.
+  `account`, `password` et `session` gardent leur `include`. Prouvé sur caladan (essais réels 1 et 2).
+  Dérive : `make install` compare la pile à celle de `/etc/pam.d/system-auth` et avertit, sans bloquer. Ni la CI ni
+  `make check` ne le font, leur conteneur n'ayant pas les fichiers de caladan.
+- **`systeme/etc/security/faillock.conf`** : `deny = 5`, le reste aux valeurs par défaut (10 minutes de verrou).
+- **`make install`** refuse un fichier qu'il n'a pas posé. Il apprend à reprendre un fichier existant dont toutes les
+  lignes sont vides ou en commentaire ; tout autre fichier étranger reste refusé.
+
+## Choix de Claude, à corriger au besoin
+
+- `preauth` reste `required` : en `requisite`, l'échec immédiat ferait boucler Quickshell, qui rouvre une session à
+  chaque échec sans plafond. Pour la même raison, trois échecs en moins d'une seconde annulent la demande.
+- L'écran reste en place en mouvement réduit ; les passages d'état s'y font en fondu.
+- L'identité retenue est l'utilisateur courant s'il figure dans la liste, sinon la première.
+
+## Vérification
+
+- **Essais isolés** (flux factice) : chaque état, vide refusé, garde de frappe, fermetures, seconde demande, débrayage.
+- **Essais réels sur caladan**, sans VM, par choix de Nicolas, qui accepte un verrou de dix minutes. Chacun est annoncé
+  avec son risque, `faillock --user` lu avant et après, et rien ne remet le compteur à zéro sans Nicolas. La règle ne
+  touche que polkit ; Nicolas la pose lui-même (`sudo`), un terminal `sudo -s` ouvert.
+  1. Règle PAM : une seule annulation, 0 échec attendu. Un échec compté arrête les essais.
+  2. Sonde des demandes simultanées et du demandeur tué, la règle prouvée.
+  3. Mauvais mot de passe : un échec compté et « Quatre essais restants », puis le bon mot de passe.
+  4. Coque tuée pendant une demande (clavier rendu), rechargement, verrou au cinquième échec : en dernier, avec l'accord
+     de Nicolas, le verrou fermant aussi `sudo` et hyprlock.
+- **Retour arrière** : `autorisation.active` à faux suffit pour l'agent. Pour les règles, annuler le commit qui les pose
+  (sinon `make install` les repose), puis `sudo rm /etc/pam.d/polkit-1` et commenter `deny` dans `faillock.conf`.
+- **Recette** par Nicolas ; documentation : bible (tableau des surfaces), journal, backlog (L2-24), carnet, notes.
+
+## Historique des versions
+
+| Version | Date | Changement |
+|---|---|---|
+| 1.3 | 2026-11-24 | Relecture de la branche : garde comptée du clavier reçu, reprises d'enregistrement après destruction de l'agent |
+| 1.2 | 2026-11-24 | Carte centrée remplacée par l'île, « Annuler » retiré, succès montré |
+| 1.1 | 2026-11-24 | Essais réels 1 et 2 : règle prouvée, premier flux laissé à son demandeur, demandeur tué clos par polkit |
+| 1.0 | 2026-11-24 | Validée ; la VM cède la place à des essais réels, règle PAM d'abord |
+| 0.2 | 2026-11-24 | Relecture de constructeur : gardes de développement et de marche, VM, seconde demande, verrou lu dans `faillock`, dérive, retour arrière |
+| 0.1 | 2026-11-24 | Première version |

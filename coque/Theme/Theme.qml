@@ -82,6 +82,8 @@ Singleton {
     // Menu de déconnexion (L2-23) : côté des vignettes, côté du glyphe, écart, agrandissement du bouton choisi,
     // opacité de la lettre d'un bouton gris (lettreGrisee).
     readonly property var deconnexion: tokens?.deconnexion
+    // Agent d'authentification (L2-24) : mise en marche, cotes de l'île, poussée d'échec.
+    readonly property var autorisation: tokens?.autorisation
     // Pile de notifications (L2-19) : largeur, marge, écart, plafond, durée par défaut, icône, intérieur, lignes de corps.
     readonly property var notifications: tokens?.notifications
     // Pastille de la cloche (L2-67) : hauteur, corps, intérieur, boule et positions sur le glyphe.

@@ -1,0 +1,18 @@
+#%PAM-1.0
+# Posé par DuneI depuis systeme/ — NE PAS MODIFIER À LA MAIN : make install le remplace.
+#
+# Authentification des demandes polkit (L2-24). Ce fichier prime sur celui du paquet, /usr/lib/pam.d/polkit-1, et reprend
+# en toutes lettres la pile auth de system-auth. Seul écart : authtok_err=die conv_err=die sur pam_unix. Une demande
+# annulée rompt la conversation sans mot de passe ; la pile s'arrête alors avant authfail, et l'annulation ne compte pas
+# comme un échec de connexion. Un mauvais mot de passe compte toujours. make install signale un system-auth qui change.
+
+auth       required                    pam_faillock.so      preauth
+-auth      [success=2 default=ignore]  pam_systemd_home.so
+auth       [success=1 authtok_err=die conv_err=die default=bad]  pam_unix.so  try_first_pass nullok
+auth       [default=die]               pam_faillock.so      authfail
+auth       optional                    pam_permit.so
+auth       required                    pam_env.so
+auth       required                    pam_faillock.so      authsucc
+account    include                     system-auth
+password   include                     system-auth
+session    include                     system-auth

@@ -49,7 +49,9 @@ mis de côté sous le nom .avant-dunei, et un lien remplacé par un fichier est 
 - systeme : chaque fichier de systeme/ est copié sous la racine du système, /etc compris, avec sudo, et
   seulement s'il manque ou diffère ; {utilisateur} est rempli par l'utilisateur courant ; un fichier de
   logind.conf.d recharge logind, sans le redémarrer ; un fichier sous etc/systemd/system recharge systemd ;
-  un fichier sous etc/NetworkManager/ recharge NetworkManager, sans couper les connexions. Le compte courant
+  un fichier sous etc/NetworkManager/ recharge NetworkManager, sans couper les connexions. Un fichier de
+  paquet tout en commentaires est repris ; tout autre fichier étranger est refusé. Une note signale une pile
+  system-auth qui ne concorde plus avec la règle PAM de polkit (L2-24). Le compte courant
   doit appartenir au groupe wheel : le panneau réseau écrit les profils système par polkit (L2-11).
 - socle : chaque unité système de services.toml (liste blanche, sur le modèle de session.toml) est activée
   et démarrée avec sudo si elle ne l'est pas ; si ufw.service y figure et que etc/ufw/ufw.conf n'indique
@@ -110,6 +112,9 @@ SESSION_VERSION = "0.1.0"
 UNITES = "config/systemd/user"                               # Unités et surcharges utilisateur du dépôt, copiées sous systemd/user/.
 MASQUE = "systemd/user/wayland-session-xdg-autostart@.target"  # Autostart XDG d'uwsm, masqué : liste blanche.
 SESSION_WANTS = "systemd/user/graphical-session.target.wants"  # Services accrochés à la session graphique.
+PAM_REGLE = "etc/pam.d/polkit-1"                              # Règle PAM de polkit, écrite en toutes lettres (L2-24).
+PAM_SOURCE = "etc/pam.d/system-auth"                         # Pile du système dont la règle est reprise.
+PAM_OPTIONS = "authtok_err=die conv_err=die "                # Seul écart voulu : une annulation ne compte pas.
 CHAMP = b"{utilisateur}"                                     # Champ des fichiers système, rempli par l'utilisateur courant.
 CONNEXION = ("greetd", "tuigreet")                           # Gestionnaire de connexion et écran provisoire exigés (L1-10).
 GESTIONNAIRE = "greetd.service"
@@ -539,22 +544,62 @@ def _systeme_actif(unite: str) -> bool:
         return False
 
 
+def _sans_reglage(path: Path) -> bool:
+    """Reconnaissance d'un fichier qui ne règle rien : toutes ses lignes sont vides ou en commentaire (#).
+
+    Entrée : path — fichier existant, qui n'est pas un lien. Sortie : vrai s'il ne règle rien ; faux sinon, ou
+             s'il est illisible (dossier, droits, encodage).
+    Erreurs : aucune. Dépendances : aucune.
+    """
+    try:
+        lignes = path.read_text(encoding="utf-8").splitlines()
+    except (OSError, UnicodeDecodeError):
+        return False
+    return all(not l.strip() or l.lstrip().startswith("#") for l in lignes)
+
+
+def _pile_auth(texte: str) -> list[str]:
+    """Lignes auth et -auth d'un fichier PAM, espaces normalisés et options propres à DuneI ôtées.
+
+    Entrée : texte — contenu du fichier. Sortie : lignes dans l'ordre. Erreurs : aucune. Dépendances : PAM_OPTIONS.
+    """
+    lignes = (" ".join(l.split()) for l in texte.splitlines())
+    return [l.replace(PAM_OPTIONS, "") for l in lignes if l.startswith(("auth ", "-auth "))]
+
+
+def _derive_pam(repo: Path, root: Path) -> bool:
+    """Écart entre la pile d'authentification de la règle polkit de DuneI et celle de system-auth (L2-24).
+
+    Entrées : repo — racine du dépôt ; root — racine du système. Sortie : vrai si les piles diffèrent ; faux si
+              elles concordent ou si l'un des deux fichiers est absent ou illisible.
+    Erreurs : aucune. Dépendances : _pile_auth, SYSTEME, PAM_REGLE, PAM_SOURCE.
+    """
+    try:
+        regle = (repo / SYSTEME / PAM_REGLE).read_text(encoding="utf-8")
+        source = (root / PAM_SOURCE).read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return False
+    return _pile_auth(regle) != _pile_auth(source)
+
+
 def plan_systeme(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
     """Inspection des fichiers système, sans aucune modification.
 
     Entrées : repo — racine du dépôt ; home — dossier de configuration racine, inutilisé ici.
     Sortie : (copies avec sudo des fichiers absents ou différents, une fois {utilisateur} rempli ; puis
              rechargement de logind si l'un d'eux est sous logind.conf.d, de NetworkManager s'il est sous
-             etc/NetworkManager et actif (sinon il lira le fichier à son démarrage), et daemon-reload si l'un d'eux est sous etc/systemd/system ; erreurs). Aucune action si tout est identique.
+             etc/NetworkManager et actif (sinon il lira le fichier à son démarrage), et daemon-reload si l'un d'eux est sous etc/systemd/system ; enfin un avis si la pile de system-auth ne
+             concorde plus avec la règle polkit ; erreurs). Aucune action si tout est identique. Un fichier de paquet
+             qui ne règle rien (commentaires seuls) est repris.
     Erreurs : KeyError (par utilisateur) si l'uid n'a pas de compte ; sinon aucune exception, un fichier ou
-              un lien étranger à la place d'un fichier de DuneI devient un message. Dépendances : system_root, utilisateur, _ours, SYSTEME, SYSTEM_MARK, CHAMP.
+              un lien étranger à la place d'un fichier de DuneI devient un message. Dépendances : system_root, utilisateur, _ours, _sans_reglage, _derive_pam, SYSTEME, SYSTEM_MARK, CHAMP.
     """
     root, actions, err = system_root(os.environ), [], []
     nom = utilisateur().encode()
     for src in sorted(p for p in (repo / SYSTEME).rglob("*") if p.is_file()):
         rel = src.relative_to(repo / SYSTEME)
         dst, contenu = root / rel, src.read_bytes().replace(CHAMP, nom)
-        if dst.is_symlink() or (dst.exists() and not _ours(dst, SYSTEM_MARK)):
+        if dst.is_symlink() or (dst.exists() and not _ours(dst, SYSTEM_MARK) and not _sans_reglage(dst)):
             err.append(f"{dst} existe mais n'a pas été posé par DuneI")
         elif not dst.exists() or dst.read_bytes() != contenu:
             actions.append(("sudo-copy", src, dst, contenu))
@@ -565,6 +610,8 @@ def plan_systeme(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
         actions.append(("sudo-reload", "NetworkManager"))
     if any(p[:3] == ("etc", "systemd", "system") for p in rels):
         actions.append(("sudo-daemon-reload",))
+    if _derive_pam(repo, root):
+        actions.append(("pam-derive", root / PAM_SOURCE))
     return actions, err
 
 
@@ -820,7 +867,7 @@ def plan_socle(repo: Path, home: Path) -> tuple[list[tuple], list[str]]:
     return actions, err
 
 
-NOTES = ("hors-liste", "chemin", "rtk-remplace", "atelier-saute", "atelier-sans-claude", "atelier-plugins-echec", "gsettings-absent")  # Signalements affichés après le bilan : ils n'agissent pas et ne bloquent pas.
+NOTES = ("hors-liste", "chemin", "rtk-remplace", "atelier-saute", "atelier-sans-claude", "atelier-plugins-echec", "gsettings-absent", "pam-derive")  # Signalements affichés après le bilan : ils n'agissent pas et ne bloquent pas.
 DESTINATIONS = {"hypr": plan_hypr, "fontconfig": plan_fontconfig, "coque": plan_coque, "icones": plan_icones, "applis": plan_applis,
                 "bin": plan_bin, "fonds": plan_fonds, "crochets": plan_crochets, "rtk": atelier.plan_rtk, "atelier": atelier.plan_atelier, "services": plan_services, "systeme": plan_systeme, "socle": plan_socle, "maj": plan_maj,
                 "connexion": plan_connexion}  # Nom → planification, dans l'ordre d'exécution (sudo en dernier).
@@ -888,6 +935,7 @@ def describe(action: tuple) -> str:
         "atelier-repris": "{0} avait remplacé son lien : son contenu est repris dans le clone (git status le montre) et le lien est remis",
         "atelier-repris-garde": "{0} avait une modification non validée dans le clone : conservée sous le nom {1} avant la reprise",
         "atelier-garde": "{0} existait déjà : conservé sous le nom {1}, remplacé par le lien de l'atelier",
+        "pam-derive": "la pile auth de {0} ne concorde plus avec etc/pam.d/polkit-1 de DuneI : revoir la règle (L2-24)",
         "hors-liste": "{0} est accroché à la session sans figurer dans session.toml ; laissé en place",
     }[kind].format(*args)
 

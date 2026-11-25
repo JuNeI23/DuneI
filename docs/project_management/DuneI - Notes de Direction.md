@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas — révisée le 22 octobre 2026
 
-Version 1.69. Historique en fin de document.
+Version 1.70. Historique en fin de document.
 
 *Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent soixante-quinze lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
 
@@ -726,6 +726,10 @@ La presqu'île glisse désormais hors du bord haut au démarrage et à la sortie
 (L2-48, D220), recette validée par Nicolas le 24 novembre ; la coque ne confond plus une fenêtre agrandie avec un plein
 écran (D221).
 
+Les demandes de droits d'administrateur passent désormais par la coque (L2-24, D222 à D225), recette validée par Nicolas le
+24 novembre : une île sort de la presqu'île, dit ce qui est demandé et prend le mot de passe ; une annulation ne compte plus
+comme un échec, et le compte tolère cinq mots de passe faux.
+
 Prochaine étape, à proposer : l'un de L2-57 (suites du popover Bluetooth), L2-58, L2-59,
 L2-62, L2-70, des défauts L2-75 à L2-79 et des mineurs du calcul L2-84.
 
@@ -733,6 +737,7 @@ L2-62, L2-70, des défauts L2-75 à L2-79 et des mineurs du calcul L2-84.
 
 | Version | Date | Changement |
 | --- | --- | --- |
+| 1.70 | 2026-11-24 | L2-24 fait (D222 à D225), recette validée ; prochaine étape inchangée |
 | 1.69 | 2026-11-24 | L2-48 fait (D220, D221), recette validée ; prochaine étape à proposer : L2-57 à L2-59, L2-62, L2-70, défauts L2-75 à L2-79, L2-84 |
 | 1.68 | 2026-11-24 | L2-82 et L2-83 faits (D218, D219) ; prochaine étape à proposer : le reste de L2-48 |
 | 1.67 | 2026-11-24 | L2-82 en recette (D218) ; prochaine étape : sa recette, puis L2-83 |

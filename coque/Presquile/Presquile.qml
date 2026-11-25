@@ -33,7 +33,7 @@ import "../Theme"
 // Erreurs : sans jeton de thème, l'encoche est vide et la fenêtre reste posée ; un module sans taille laisse l'encoche
 //           à la hauteur des jetons.
 // Dépendances : quickshell ≥ 0.3 (PanelWindow, Region, WlrLayershell), Arbitre, Encoche, Glissement, Scene, Bureaux,
-// Ressort, Composants (PleinEcran), Theme (ready, tokens.presquile).
+// Ressort, Composants (PleinEcran, Overlays.ecranCouvert), Theme (ready, tokens.presquile).
 // Composants est importé sous son nom : il porte lui aussi un type Scene.
 PanelWindow {
     id: surface
@@ -77,6 +77,10 @@ PanelWindow {
         course: encoche.hauteur + encoche.marge
     }
 
+    // L'île d'une demande d'autorisation, de même forme, couvre celle-ci sur son écran : elle s'efface en fondu (L2-24).
+    readonly property string nomEcran: surface.modelData?.name ?? ""
+    Ressort { id: couverture; transition: "overlay"; nature: "fondu"; cible: nomEcran && Composants.Overlays.ecranCouvert === nomEcran ? 1 : 0 }
+
     screen: modelData
     anchors { top: true; left: true; right: true }
     // Pleine largeur, et hauteur tenue par la scène pendant le mouvement : seule la forme s'anime, jamais la fenêtre.
@@ -105,7 +109,7 @@ PanelWindow {
         x: (surface.width - implicitWidth) / 2
         // Calée sur le pixel physique : entre deux, le bas de la forme se peint à moitié.
         y: Math.round(glissement.decalage * surface.devicePixelRatio) / surface.devicePixelRatio
-        opacity: glissement.opacite
+        opacity: glissement.opacite * (1 - couverture.value)
         // Noms qualifiés : dans ce bloc, « hauteur » désignerait la propriété de l'Encoche elle-même.
         largeurCorps: surface.largeur.value
         hauteur: surface.hauteur.value

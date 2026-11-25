@@ -84,6 +84,19 @@ class SceneTest(EssaiCoque, unittest.TestCase):
         e = self.ouvrir()
         self.assertEqual((e["ouvert"], e["present"], e["fenetre"]), (True, True, True))
 
+    def test_clic_sur_le_voile(self):
+        """Vérifie qu'un clic sur le voile ferme la scène par défaut, et la laisse ouverte si voileFerme est faux.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : ouvrir, appel, etat.
+        """
+        self.ouvrir()
+        self.appel("essai", "voileFerme", "false")
+        self.appel("essai", "cliquerVoile")
+        self.assertTrue(self.etat()["ouvert"])
+        self.appel("essai", "voileFerme", "true")
+        self.appel("essai", "cliquerVoile")
+        self.assertFalse(self.etat()["ouvert"])
+
     def test_sortie_en_fondu(self):
         """Vérifie qu'à la fermeture la scène passe aussitôt en sortie, fenêtre gardée, puis que la fenêtre est
         déchargée une fois le fondu posé.
@@ -143,6 +156,16 @@ class SceneTest(EssaiCoque, unittest.TestCase):
         vues = []
         self.jusqua(lambda: vues.append(float(self.appel("essai", "echelle"))) or vues[-1] == 1, "cadre à l'échelle 1")
         self.assertLess(min(vues), 1, vues)
+
+    def test_sans_apparition(self):
+        """Vérifie qu'un cadre qui porte son propre mouvement (grandit faux) reste à l'échelle 1 dès l'ouverture.
+
+        Entrées : aucune. Sortie : aucune. Erreurs : échec d'assertion. Dépendances : appel, ouvrir.
+        """
+        self.appel("essai", "apparition", "false")
+        self.appel("essai", "grandir", "false")
+        self.ouvrir()
+        self.assertEqual(self.appel("essai", "echelle"), "1")
 
     def test_placement_fourni(self):
         """Vérifie que la fonction de placement fournie par le client (Scene.positionner) fixe le haut du cadre : posée

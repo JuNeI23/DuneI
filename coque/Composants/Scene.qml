@@ -30,7 +30,9 @@ import "../Theme"
 //           glass.fondu de tokens.toml pour être flouté et paraître en fondu ; delai, 0 par défaut : le délai
 //           d'affichage, en millisecondes ; positionner, null par défaut (cadre centré) : une fonction
 //           (hauteurFenetre, hauteurCadre) → y qui rend le haut du cadre dans la fenêtre, pour un client qui le tient
-//           ailleurs qu'au centre (le lanceur, au tiers haut, L2-81).
+//           ailleurs qu'au centre (le lanceur, au tiers haut, L2-81) ; voileFerme, vrai par défaut : un clic sur le
+//           voile ferme la scène (la demande d'autorisation le met à faux, L2-24) ; grandit, vrai par défaut : faux, un cadre sans montée reste à
+//           l'échelle 1 et porte son propre mouvement (l'île de la demande d'autorisation, L2-24).
 // Sorties : famille, « attention » ; present (ouvert, ou fenêtre encore en sortie) ; sortant ; ecran (figé à
 //           l'ouverture) ; montre (vrai dès l'ouverture sans délai, au terme du délai sinon si la scène est encore
 //           ouverte ; gardé vrai par une réouverture pendant la sortie, remis à faux à la fin de celle-ci) ; fenetre
@@ -54,6 +56,8 @@ QtObject {
     property string espace: "dunei-attention"
     property int delai: 0
     property var positionner: null
+    property bool voileFerme: true
+    property bool grandit: true
     readonly property string famille: "attention"
     // Vrai entre la fermeture et la fin du fondu de sortie de la fenêtre ; la fenêtre reste chargée jusque-là.
     property bool sortant: false

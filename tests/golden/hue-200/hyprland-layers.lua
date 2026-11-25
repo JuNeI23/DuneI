@@ -10,5 +10,6 @@ return {
     { name = "dunei-verre-dunei-attention-selecteur", match = { namespace = "^dunei-attention-selecteur$" }, blur = true, blur_popups = true, ignore_alpha = 0.58, xray = false, animation = "fade" },
     { name = "dunei-verre-dunei-attention-deconnexion", match = { namespace = "^dunei-attention-deconnexion$" }, blur = true, blur_popups = true, ignore_alpha = 0.58, xray = false, animation = "fade" },
     { name = "dunei-verre-dunei-attention-lanceur", match = { namespace = "^dunei-attention-lanceur$" }, blur = true, blur_popups = true, ignore_alpha = 0.58, xray = false, animation = "fade" },
+    { name = "dunei-verre-dunei-attention-autorisation", match = { namespace = "^dunei-attention-autorisation$" }, blur = true, blur_popups = true, ignore_alpha = 0.58, xray = false, animation = "fade" },
     { name = "dunei-fond", match = { namespace = "^dunei-fond$" }, no_anim = true },
 }

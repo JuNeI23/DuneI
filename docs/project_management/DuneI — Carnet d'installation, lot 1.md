@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.60. Historique en fin de document.
+Version 1.61. Historique en fin de document.
 
 Socle amorçable.
 
@@ -2350,6 +2350,22 @@ Aucun paquet à installer : la feature ne touche que la coque, deux liaisons de 
   graphiques passent par `coque/Deconnexion/essai/` et `coque/Composants/essai/scene/`, où les commandes sont remplacées
   par une fausse commande ; ils exigent un écran libre (Wayland et `qs`).
 
+## L'agent d'authentification — L2-24
+
+Aucun paquet à installer : polkit et PAM sont déjà là. `make install` pose deux fichiers avec `sudo`.
+
+- **Les règles.** `/etc/pam.d/polkit-1` prime sur celui du paquet : une demande annulée ne compte plus dans `faillock`
+  (D223). `/etc/security/faillock.conf` : `deny = 5` (D224). Garder un terminal `sudo -s` ouvert pendant la pose.
+- **L'agent.** `autorisation.active` dans `tokens.toml` l'allume ; il se charge avec la coque, si la règle PAM est posée.
+  `qs ipc -c dunei call autorisation etat` dit s'il est enregistré (`enregistre`) ; il ne rend jamais le texte saisi.
+  Enregistrement manqué : reprise après 2, 10 puis 60 s, puis une notification. Un seul agent par session.
+- **Le secours.** Coque tombée : `SUPER + Q`, puis `systemctl --user reset-failed dunei-coque && systemctl --user restart
+  dunei-coque`. Retour arrière de l'agent : `active = false`, `make install`. Retour arrière des règles : annuler le commit
+  qui les pose, puis `sudo rm /etc/pam.d/polkit-1` et commenter `deny`.
+- **Vérifier.** `pkexec /usr/bin/id` fait sortir l'île ; `faillock --user $USER` se lit avant et après. Les essais
+  automatiques (`tests.test_autorisation`) n'ouvrent jamais de conversation PAM ni polkit.
+- **Le verrou.** Cinq échecs en quinze minutes ferment le compte dix minutes, `sudo` et hyprlock compris.
+
 ## Le mouvement des popovers — L2-06, L2-07, L2-47, L2-56
 
 Rien de plus à installer : la fenêtre des popovers est dans la coque (`dunei-coque.service`), et `make install` lie
@@ -2637,6 +2653,7 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 
 | Version | Date | Changement |
 | --- | --- | --- |
+| 1.61 | 2026-11-24 | L'agent d'authentification (L2-24, D222 à D225) : règle PAM de polkit, `faillock.conf`, module `Autorisation`, secours |
 | 1.60 | 2026-11-24 | Apparition et disparition de la presqu'île (L2-48, D220), vrai plein écran lu en un seul endroit (D221) |
 | 1.59 | 2026-11-24 | Vocabulaire du calcul du lanceur et `qalc -defaults` (L2-82, D218), montants dans leur monnaie (L2-83, D219) |
 | 1.58 | 2026-11-24 | Dettes du lanceur (L2-74, D216 et D217) : relevé d'usage sans fenêtres, sélection par résultat, nouveaux jetons, `make install` nécessaire |
