@@ -10,8 +10,8 @@ import "Verrou"
 // de l'état du compositeur par une commande echo (session tenue par défaut) et sa recherche d'un lanceur par false
 // (aucun lanceur). tests/test_verrou.py (ControleurTest) la pilote par l'IPC « verrou » du singleton, comme le
 // lanceur, et par l'IPC « essai ». Elle trace la position et l'opacité du bloc à chaque changement.
-// Entrées : DUNEI_TOKENS_DIR et DUNEI_ETAT_DIR ; IPC « essai » : pret, lecture, lanceur, position, reduit, demarrer,
-// ouvrir, ouverts, mesure, trace.
+// Entrées : DUNEI_TOKENS_DIR et DUNEI_ETAT_DIR ; IPC « essai » : pret, lecture, lanceur, recherche, position,
+// reduit, demarrer, ouvrir, ouverts, mesure, trace.
 // Sorties : « essai : prêt » au démarrage. Erreurs : celles de Theme et de Verrou, dans le journal.
 // Dépendances : quickshell ≥ 0.3 (IpcHandler), Verrou, Overlays, Theme ; liens essai/fenetre/ vers les modules de la
 // coque, car Quickshell ne suit pas les imports hors du dossier de la coque.
@@ -60,6 +60,9 @@ ShellRoot {
 
         // lanceur — fait passer un lanceur pour vivant ou non. Entrée : oui.
         function lanceur(oui: bool): void { Verrou.presence = [oui ? "true" : "false"] }
+
+        // recherche — la recherche d'un lanceur sort avec le code donné (124 : délai dépassé). Entrée : code.
+        function recherche(code: int): void { Verrou.presence = ["sh", "-c", "exit " + code] }
 
         // position — position courante du bloc (1 posé, 0 caché). Sortie : texte.
         function position(): string { return String(Verrou.position) }

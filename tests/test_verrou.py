@@ -435,6 +435,17 @@ class ControleurTest(EssaiCoque, unittest.TestCase):
         self.appel("lanceur", "false")
         self.jusqua(lambda: not self.etat()["pose"], "remontée sans lanceur", 3.5)
 
+    def test_recherche_indecidable_garde_le_bloc(self):
+        """Compositeur qui dit la session ouverte, recherche du lanceur qui expire (124) ou échoue (2) : rien ne compte,
+        le bloc reste posé et garde le clavier."""
+        self.appel("lecture", "false")
+        self.verrou("poserSec", 1)
+        for code in ("124", "2"):
+            self.appel("recherche", code)
+            time.sleep(2.5)
+            self.assertTrue(self.etat()["pose"], f"remonté sur une recherche indécidable ({code})")
+            self.assertTrue(self.mesure()["clavier"])
+
     def test_session_tenue_reste(self):
         """Tant que le compositeur dit la session tenue, le bloc posé reste."""
         self.verrou("poserSec", 1)
@@ -516,20 +527,20 @@ class SourceTest(unittest.TestCase):
         self.assertRegex(apparition, r"WlrLayershell\.keyboardFocus:\s*WlrKeyboardFocus\.None")
 
     def test_lectures_bornees(self):
-        """La lecture du compositeur et la recherche d'un lanceur sont bornées dans le temps ; la recherche vise l'unité
-        du lanceur et son script hors unité."""
+        """La lecture du compositeur et la recherche d'un lanceur (pgrep, qui couvre le script dans son unité comme hors
+        d'elle) sont bornées dans le temps."""
         source = self.lire("Verrou/Verrou.qml")
         self.assertIn('property var lecture: ["timeout", "1", "hyprctl", "-j", "locked"]', source)
-        self.assertIn("timeout 1 systemctl --user is-active --quiet dunei-verrou.scope", source)
-        self.assertIn("timeout 1 pgrep -u", source)
+        self.assertIn('property var presence: ["timeout", "1", "pgrep", "-u",', source)
 
     def test_motif_du_lanceur(self):
         """Le motif de pgrep reconnaît le lanceur lancé par son shebang, et ni lui-même, ni un éditeur, ni un autre
         script du même préfixe."""
-        motif = re.compile(r"^(/usr)?/bin/sh [^ ]*/[d]unei-verrou( |$)")
+        texte = re.search(r'property string motifLanceur: "([^"]*)"', self.lire("Verrou/Verrou.qml")).group(1)
+        motif = re.compile(texte)
         self.assertTrue(motif.search("/bin/sh /home/n/.config/hypr/scripts/dunei-verrou"))
         self.assertTrue(motif.search("/usr/bin/sh /home/n/.config/hypr/scripts/dunei-verrou --sec"))
-        for autre in ("sh -c timeout 1 pgrep -f '^(/usr)?/bin/sh [^ ]*/[d]unei-verrou( |$)'",
+        for autre in ("timeout 1 pgrep -u n -f ^(/usr)?/bin/sh [^ ]*/[d]unei-verrou( |$)",
                       "nvim /home/n/DuneI/config/hypr/scripts/dunei-verrou",
                       "/bin/sh /home/n/.config/hypr/scripts/dunei-verrou-initial"):
             self.assertIsNone(motif.search(autre), autre)

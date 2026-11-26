@@ -172,8 +172,11 @@ Singleton {
         // rien. Dépendances : attendu, repriseVerrou, surFlux.
         function onVerrouChanged() {
             if (C.Overlays.verrou || !autorisation.attendu) return
-            autorisation.repriseVerrou = true
-            autorisation.surFlux(autorisation.attendu)
+            const f = autorisation.attendu
+            autorisation.repriseVerrou = !f.isCompleted
+            autorisation.surFlux(f)
+            // surFlux a pu sortir sans ouvrir (flux déjà courant ou clos) : rien n'est alors repris.
+            if (autorisation.flux !== f || !autorisation.ouvert) autorisation.repriseVerrou = false
         }
     }
 

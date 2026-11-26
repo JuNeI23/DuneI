@@ -17,21 +17,24 @@ import "verrou.js" as Logique
 // Overlays.verrou est vrai de la chute à la fin de la remontée, presqu'île revenue au verre : la vraie presqu'île
 // s'efface dessous, les notifications et les demandes d'autorisation attendent. Sans lanceur, tant que le bloc est
 // posé, la coque lit l'état du compositeur chaque seconde : deux lectures franches « rendu » de suite, sans lanceur
-// vivant, rendent le clavier et font remonter le bloc. Un lanceur vivant (unité dunei-verrou.scope active, ou script
-// dunei-verrou hors unité) mène le verrou : ses relances de hyprlock laissent la session un temps « rendue », et le
-// bloc doit alors rester. demarrer(), appelé par la coque de session, pose le bloc sans chute si la session
+// vivant, rendent le clavier et font remonter le bloc. Un lanceur vivant (le script dunei-verrou, dans son unité
+// dunei-verrou.scope ou hors d'elle) mène le verrou : ses relances de hyprlock laissent la session un temps
+// « rendue », et le bloc doit alors rester. Dans le doute, le bloc reste : seule l'absence certaine d'un lanceur
+// compte. demarrer(), appelé par la coque de session, pose le bloc sans chute si la session
 // est déjà tenue. Le calque d'apparition se retire d'office après delays.verrouSecours.
 // Entrées : IPC « verrou » : tomber, poserSec, apparaitre, ceder, remonter (chacun à ordre, entier), abreger (sans
 //           ordre : il ne fait qu'abréger ce qui est en cours) et etat ; demarrer() ; fenetree, vrai par défaut (faux :
 //           aucun calque, pour les essais) ; clavierExclusif, vrai par défaut ; lecture, commande qui écrit l'état du
 //           compositeur en JSON ({"locked": bool}), hyprctl -j locked borné à 1 s par défaut ; presence, commande
-//           qui sort à 0 si un lanceur vit (systemctl, pgrep), bornée de même ; toutes deux remplacées par les essais.
+//           qui cherche un lanceur, pgrep borné de même (0 : un lanceur vit, 1 : aucun, tout autre code :
+//           indécidable) ; toutes deux remplacées par les essais ; motifLanceur, le motif de pgrep.
 // Sorties : ordre ; couvre (bloc voulu posé) ; pose (posé et immobile) ; remonte (remontée demandée, pas finie) ;
 //           position (1 posé, 0 caché ; fixe à 1 en mouvement réduit) ; opacite ; matiere (1 image, 0 verre) ;
 //           actif (vaut Overlays.verrou) ; montre (calque du bloc mappé : actif, et un tour de boucle de plus) ;
 //           apparition (calque d'apparition mappé) ; vu ; contenuBloc ; prendClavier ; signal tombe().
 // Erreurs : ordre périmé : ignoré ; lecture illisible ou commande absente : la lecture ne compte pas comme rendue ;
-//           présence d'un lanceur indécidable (commande muette ou absente) : compté comme rendu, faute de lanceur vu.
+//           recherche d'un lanceur indécidable (délai dépassé, erreur de pgrep, commande absente) : le « rendu » ne
+//           compte pas et la série n'avance pas ; le bloc reste.
 // Dépendances : Quickshell (Singleton, Variants), Quickshell.Io (Process, StdioCollector, IpcHandler), Ressort, Theme
 //           (motion.delays : verrouRetrait, verrouSecours ; mouvementReduit), C.Overlays (popover, attention, verrou),
 //           verrou.js (ordreValable), Bloc.qml, Apparition.qml.
@@ -48,9 +51,10 @@ Singleton {
     property bool fenetree: true
     property bool clavierExclusif: true
     property var lecture: ["timeout", "1", "hyprctl", "-j", "locked"]
-    // Le motif [d] ne se reconnaît pas lui-même dans la ligne de commande du sh qui lance pgrep.
-    property var presence: ["sh", "-c", "timeout 1 systemctl --user is-active --quiet dunei-verrou.scope || "
-        + "timeout 1 pgrep -u \"$(id -u)\" -f '^(/usr)?/bin/sh [^ ]*/[d]unei-verrou( |$)' >/dev/null"]
+    // Lanceur lancé par son shebang, dans son unité comme hors d'elle ; ni un éditeur ouvert sur le script, ni
+    // dunei-verrou-initial, ni la commande de recherche elle-même (motif [d]).
+    readonly property string motifLanceur: "^(/usr)?/bin/sh [^ ]*/[d]unei-verrou( |$)"
+    property var presence: ["timeout", "1", "pgrep", "-u", Quickshell.env("USER") ?? "", "-f", motifLanceur]
     // Lectures franches « rendu » consécutives du suivi ; mode de la lecture en cours (« suivi » ou « demarrage »).
     property int rendus: 0
     property string pour: "suivi"
@@ -209,11 +213,15 @@ Singleton {
         if (!chercheur.running) chercheur.running = true
     }
 
-    // compter — un « rendu » lu : compté seulement si aucun lanceur ne vit ; deux de suite font remonter le bloc.
-    // Entrée : lanceur, vrai si un lanceur vit. Sortie : rendus ; clavier rendu et remontée au second.
-    // Erreurs : aucune ; bloc qui n'est plus posé, la série repart de zéro. Dépendances : relever.
-    function compter(lanceur) {
-        rendus = pose && !lanceur ? rendus + 1 : 0
+    // compter — un « rendu » lu : compté seulement si la recherche dit qu'aucun lanceur ne vit ; deux de suite font
+    // remonter le bloc. Entrée : code, code de sortie de la recherche (0 : lanceur vivant, 1 : aucun lanceur).
+    // Sortie : rendus ; clavier rendu et remontée au second. Erreurs : tout autre code (124 au délai, 2 ou 3 en erreur
+    // de pgrep) est indécidable : rien ne compte, la série reste où elle est ; bloc qui n'est plus posé, ou lanceur
+    // vivant, la série repart de zéro. Dépendances : relever.
+    function compter(code) {
+        if (!pose || code === 0) { rendus = 0; return }
+        if (code !== 1) return
+        rendus++
         if (rendus >= 2) { rendus = 0; relever() }
     }
 
@@ -229,8 +237,8 @@ Singleton {
     Process {
         id: chercheur
         command: verrou.presence
-        // onExited — code 0 : un lanceur vit. Entrées : code, statut. Sortie : voir compter.
-        onExited: (code, statut) => verrou.compter(code === 0)
+        // onExited — remet le code de la recherche à compter. Entrées : code, statut. Sortie : voir compter.
+        onExited: (code, statut) => verrou.compter(code)
     }
 
     // Suivi du compositeur, une lecture par seconde tant que le bloc est posé ; la série repart à chaque pose.
