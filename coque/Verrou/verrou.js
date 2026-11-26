@@ -34,6 +34,9 @@ function physique(px, echelle) { return Math.round(px * echelle) }
 // Erreurs : aucune. Dépendances : aucune.
 function ordreValable(recu, courant) { return recu >= courant }
 
+// Taille de l'initiale dans la pastille, en multiple de la taille du nom : partagée par Contenu.qml et confHyprlock.
+var TAILLE_INITIALE = 1.6
+
 // Échappements internes : texte Pango (&, <, >), mot de shell entre apostrophes, dièse de hyprlang (# devient ##).
 const pango = t => String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
 const sh = t => "'" + String(t).replace(/'/g, "'\\''") + "'"
@@ -41,11 +44,11 @@ const diese = t => String(t).replace(/#/g, "##")
 const rgb = c => "rgb(" + String(c).replace("#", "") + ")"
 
 // confHyprlock — texte complet de hyprlock.conf.
-// Entrées : ecrans, tableau de {nom, largeur, hauteur, echelle, images:{fond, pastille, champ, pastilleVide,
-// champVide}} ; j, {verrou (jetons en pixels logiques), delais (inutilisé : le rafraîchissement de secours est fixe à
-// 10 s), couleurs {fond, heures, minutes, erreur} en #rrggbb, utilisateur (nom affiché, facultatif)} ; marqueur,
-// chemin du fichier dont l'existence vide le contenu relayé ; repli, image transparente prise quand un écran n'a pas
-// d'image. Sortie : la configuration, une section par écran puis l'aplat sans nom (fond et champ) en zindex -2 : tous
+// Entrées : ecrans, tableau de {nom, largeur, hauteur (pixels logiques), echelle, images:{fond, pastille, champ,
+// pastilleVide, champVide}} ; j, {verrou (jetons en pixels logiques), delais (inutilisé : le rafraîchissement de
+// secours est fixe à 10 s), couleurs {fond, heures, minutes, erreur} en #rrggbb, utilisateur (nom affiché,
+// facultatif)} ; marqueur, chemin du fichier dont l'existence vide le contenu relayé ; repli, image transparente prise
+// quand un écran n'a pas d'image. Sortie : la configuration, une section par écran puis l'aplat sans nom (fond et champ) en zindex -2 : tous
 // les écrans connus le recouvrent d'un fond opaque, il n'apparaît que sur un écran branché pendant le verrou.
 // Erreurs : aucune ; un champ manquant produit « undefined » dans le texte. Dépendances : physique.
 function confHyprlock(ecrans, j, marqueur, repli) {
@@ -72,20 +75,25 @@ function confHyprlock(ecrans, j, marqueur, repli) {
         "    valign = bottom", "    position = 0, " + physique(v.champBas, ref.echelle), "    zindex = " + zindex, "}"].join("\n")
     const parEcran = e => {
         const i = e.images || {}, p = x => physique(x, e.echelle)
+        // centre — décalage vers le haut, depuis le milieu de l'écran, d'une étiquette centrée en valign center sur le
+        // point situé à haut pixels logiques du haut de l'écran : Contenu.qml centre de même l'horloge, l'initiale et
+        // le nom, si bien qu'aucune mesure de police n'entre dans la configuration.
+        const centre = haut => Math.round(e.echelle * (e.hauteur / 2 - haut))
         const heureMin = "printf " + sh(balise(c.heures, v.horloge, e.echelle, 200, "%s") + balise(c.minutes, v.horloge, e.echelle, 200, "%s"))
             + " \"$(date +%H)\" \"$(date +%M)\""
         const fixe = (px, couleur, poids, texte) => "printf '%s' " + sh(balise(couleur, px, e.echelle, poids, texte))
         return [
             "background {", "    monitor = " + e.nom, "    color = " + rgb(c.fond), ...(i.fond ? ["    path = " + i.fond] : []),
             "    zindex = -1", "}",
-            etiquette(e, v.horloge, -p(v.horlogeHaut), "top", heureMin),
+            etiquette(e, v.horloge, centre(v.horlogeHaut + v.horlogeLigne / 2), "center", heureMin),
             etiquette(e, v.date, -p(v.dateHaut), "top", "printf " + sh(balise(c.minutes, v.date, e.echelle, 400, "%s"))
                 + " \"$(date '+%w %-d %-m' | awk -v J=" + sh(JOURS.join(" ")) + " -v M=" + sh(MOIS.join(" "))
                 + " '{split(J, a, \" \"); split(M, b, \" \"); print a[$1 + 1] \" \" $2 \" \" b[$3]}')\""),
             image(e, i.pastille, i.pastilleVide, p(v.pastille), p(v.pastilleBas)),
-            etiquette(e, v.nomTaille * 1.6, p(v.pastilleBas + v.pastille / 2 - 14), "bottom",
-                fixe(v.nomTaille * 1.6, c.heures, 400, initiale)),
-            etiquette(e, v.nomTaille, p(v.pastilleBas - 44), "bottom", fixe(v.nomTaille, c.heures, 400, nom)),
+            etiquette(e, v.nomTaille * TAILLE_INITIALE, centre(e.hauteur - v.pastilleBas - v.pastille / 2), "center",
+                fixe(v.nomTaille * TAILLE_INITIALE, c.heures, 400, initiale)),
+            etiquette(e, v.nomTaille, centre(e.hauteur - (v.champBas + v.champHauteur + v.pastilleBas) / 2), "center",
+                fixe(v.nomTaille, c.heures, 400, nom)),
             image(e, i.champ, i.champVide, p(v.champHauteur), p(v.champBas)),
             champ(e, e.nom, 1),
         ].join("\n\n")

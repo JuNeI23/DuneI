@@ -514,9 +514,10 @@ rayon = 18                    # angles bas de l'île ouverte
 secousse = 7                  # poussée du champ à l'échec, en px
 
 [verrou]                      # écran de verrouillage, verrou hyprlock relayé par la coque (L2-22) ; px logiques sauf mention
-horloge = 700                 # corps de l'horloge ; l'heure est en ses chiffres, les minutes dessous
-horloge_haut = 34              # marge haute de l'horloge
-recul = 3.4                   # recul de l'horloge sur la hauteur de l'écran, en %
+horloge = 700                 # corps de l'horloge ; heures et minutes sur une ligne
+horloge_haut = 34              # haut de la ligne de l'horloge, depuis le haut de l'écran
+horloge_ligne = 500            # hauteur de la ligne de l'horloge, chiffres centrés dedans (maquette verrou-v2)
+recul = 3.4                   # échelle de l'horloge au départ de l'apparition, ramenée à 1
 date = 22                     # corps de la date
 date_haut = 556                # position de la date depuis le haut
 pastille = 72                 # côté de la pastille de l'utilisateur

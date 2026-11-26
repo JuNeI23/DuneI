@@ -1,20 +1,23 @@
-"""Tests du verrouillage de la coque (L2-22) : logique pure de verrou.js.
+"""Tests du verrouillage de la coque (L2-22) : logique pure de verrou.js et production des fichiers de hyprlock.
 
-Rôle : éprouve dans un vrai Quickshell, par la coque d'essai coque/Verrou/essai/logique, les fonctions pures du
-verrou : date longue, heures et minutes, pixels physiques, configuration de hyprlock, ordre des messages.
+Rôle : éprouve dans un vrai Quickshell, par les coques d'essai coque/Verrou/essai/logique et essai/production, les
+fonctions pures du verrou (date longue, heures et minutes, pixels physiques, configuration de hyprlock, ordre des
+messages) et la production des images et de hyprlock.conf par Production.qml.
 Entrées : aucune. Sorties : résultats unittest. Erreurs : échecs de test.
-Dépendances : qs (Quickshell ≥ 0.3), tests.test_coque_theme (EssaiCoque).
+Dépendances : qs (Quickshell ≥ 0.3), tests.test_coque_theme (EssaiCoque), Pillow pour l'image de bureau d'essai.
 """
 import json
 import os
 import re
+import struct
 import subprocess
 import unittest
+from pathlib import Path
 
 from tests.test_coque_theme import DELAI, QS, ROOT, EssaiCoque
 
 # Jetons du verrou, tels que generated/coque-tokens.json les publie.
-VERROU = {"horloge": 700, "horlogeHaut": 34, "recul": 3.4, "date": 22, "dateHaut": 556, "pastille": 72,
+VERROU = {"horloge": 700, "horlogeHaut": 34, "horlogeLigne": 500, "recul": 3.4, "date": 22, "dateHaut": 556, "pastille": 72,
           "nomTaille": 17, "champLargeur": 280, "champHauteur": 36, "champBas": 56, "pastilleBas": 160}
 COULEURS = {"fond": "#0f0703", "heures": "#f5f5f5", "minutes": "#bebebe", "erreur": "#d33a3c"}
 IMAGES = {"fond": "/r/fond.png", "pastille": "/r/p.png", "champ": "/r/c.png",
@@ -86,6 +89,19 @@ class LogiqueTest(EssaiCoque, unittest.TestCase):
         self.assertIn('weight="200"', horloge)
         for attendu in ("size = 90", "size = 350, 45", "position = 0, 70", "position = 0, 200"):
             self.assertIn(attendu, c)
+
+    def test_conf_centres(self):
+        """Vérifie les étiquettes centrées sur un point de l'écran, comme Contenu.qml : horloge au milieu de sa ligne
+        (34 + 500 / 2 depuis le haut), initiale au centre de la pastille (160 + 72 / 2 depuis le bas), nom entre le champ
+        et la pastille ((56 + 36 + 160) / 2 depuis le bas) ; décalage vers le haut depuis le milieu d'un écran de 1200
+        à 1,25. Entrées, sortie : aucune. Erreurs : échec. Dépendances : conf.
+        """
+        etiquettes = re.findall(r"label \{.*?\n\}", self.conf(), re.S)
+        attendus = {'size="672000"': 395, ">N</span>": round(1.25 * (196 - 600)), ">nicolas</span>": -592}
+        for marque, y in attendus.items():
+            bloc = next(b for b in etiquettes if marque in b)
+            self.assertIn("valign = center", bloc, marque)
+            self.assertIn("position = 0, %d\n" % y, bloc, marque)
 
     def test_conf_diese(self):
         """Vérifie qu'aucune couleur n'a un seul dièse et que chaque foreground est en ##. Erreurs : échec."""
@@ -163,6 +179,73 @@ class LogiqueTest(EssaiCoque, unittest.TestCase):
         """Vérifie l'ordre des messages. Entrées, sortie : aucune. Erreurs : échec. Dépendances : appeler."""
         self.assertFalse(self.appeler("ordreValable", 3, 4))
         self.assertTrue(self.appeler("ordreValable", 4, 4))
+
+
+def taille_png(chemin: Path) -> tuple[int, int]:
+    """Largeur et hauteur d'une image PNG, lues dans son en-tête IHDR.
+
+    Entrée : chemin du fichier. Sortie : (largeur, hauteur). Erreurs : OSError si le fichier manque ; struct.error si
+    l'en-tête est tronqué. Dépendances : struct.
+    """
+    return struct.unpack(">II", chemin.read_bytes()[16:24])
+
+
+@unittest.skipUnless(os.environ.get("WAYLAND_DISPLAY") and QS, "session Wayland et Quickshell requis")
+class ProductionTest(EssaiCoque, unittest.TestCase):
+    """La production des fichiers de hyprlock (Production.qml), pour un écran d'essai fictif de 640 × 400 à 1,25."""
+
+    essai = ROOT / "coque" / "Verrou" / "essai" / "production"
+    teintes = (55,)
+    ECRAN = {"nom": "ESSAI-1", "largeur": 640, "hauteur": 400, "echelle": 1.25}
+
+    def produire(self, image: bool) -> Path:
+        """Lance la coque d'essai, produit les fichiers de l'écran d'essai et rend le dossier de sortie.
+
+        Entrée : image, vrai pour poser une image de bureau (dégradé vertical de 1600 × 1000) dans bureau.json. Sortie : le
+        dossier verrou/ de DUNEI_ETAT_DIR. Erreurs : échec si « essai : produit ESSAI-1 » manque.
+        Dépendances : installer, lancer, attendre, ipc, Pillow.
+        """
+        self.installer(55)
+        if image:
+            from PIL import Image
+            source = Path(self.tmp.name) / "bureau.png"
+            Image.linear_gradient("L").resize((1600, 1000)).convert("RGB").save(source)
+            (self.dir / "bureau.json").write_text(json.dumps({"origine": "essai", "fond": "#808080", "image": str(source)}))
+        self.lancer(self.dir)
+        self.attendre("essai : prêt")
+        self.ipc("produire", json.dumps({"ecrans": [self.ECRAN]}))
+        self.attendre("essai : produit ESSAI-1")
+        return self.dir / "verrou"
+
+    def test_production(self):
+        """Vérifie les cinq images, leurs tailles physiques, l'absence de provisoire et les chemins cités par la conf.
+
+        Entrées, sortie : aucune. Erreurs : échec. Dépendances : produire, taille_png.
+        """
+        dossier = self.produire(image=True)
+        attendues = {"fond-ESSAI-1.png": (800, 500), "pastille-ESSAI-1.png": (90, 90), "champ-ESSAI-1.png": (350, 45),
+                     "pastille-ESSAI-1-vide.png": (90, 90), "champ-ESSAI-1-vide.png": (350, 45)}
+        for nom, taille in attendues.items():
+            self.assertEqual(taille_png(dossier / nom), taille, nom)
+        self.assertEqual([p.name for p in dossier.iterdir() if "tmp" in p.name], [])
+        conf = (dossier / "hyprlock.conf").read_text(encoding="utf-8")
+        self.assertEqual(set(re.findall(r"/[^\s']+\.png", conf)), {str(dossier / nom) for nom in attendues})
+        self.assertIn("monitor = ESSAI-1", conf)
+        self.assertIn("size = 90", conf)
+
+    def test_fond_image_et_aplat(self):
+        """Vérifie que le fond porte l'image du bureau, et qu'il est un aplat surface-base sans image.
+
+        Entrées, sortie : aucune. Erreurs : échec. Dépendances : produire, vue, Pillow.
+        """
+        from PIL import Image
+        image = Image.open(self.produire(image=True) / "fond-ESSAI-1.png").convert("RGB")
+        self.assertLess(image.getpixel((400, 5))[0] + 200, image.getpixel((400, 495))[0], "le dégradé de l'image manque")
+        self.arreter()
+        (self.dir / "bureau.json").unlink()
+        fond = Image.open(self.produire(image=False) / "fond-ESSAI-1.png").convert("RGB")
+        base = self.vue(55)["color"]["surfaceBase"]
+        self.assertEqual({c for _, c in fond.getcolors()}, {tuple(int(base[i:i + 2], 16) for i in (1, 3, 5))})
 
 
 if __name__ == "__main__":
