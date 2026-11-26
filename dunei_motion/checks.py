@@ -15,6 +15,9 @@ from .spring import critical_spring, exit_spring, spring, unit_mass, zeta
 VERSION = "0.1.0"
 SECTIONS = ("meta", "rules", "delays", "periods", "spinner", "popover", "wheel", "transitions", "hyprland", "hyprland_reduced")
 REDUCED_FLOOR_MS = 100   # Plancher du fondu réduit fixé par la bible.
+# Plafond de verrouAttente, en ms : le lanceur dunei-verrou pose le verrou au plus tard 1,5 s après l'appel (L2-22) ; il
+# faut laisser à hyprlock environ 200 ms pour prendre le verrou après l'échéance de la pose.
+VERROU_ATTENTE_MAX = 1300
 
 # Types acceptés, désignés par leur nom dans les messages d'erreur.
 KINDS = {
@@ -198,6 +201,11 @@ def errors(raw: dict) -> list[str]:
         err += _bounds("rules : ressort réduit", critical_spring(raw["rules"]["reduced_fade_ms"]))
     err += [f"{section} : {k} doit être strictement positif" for section in ("delays", "periods")
             for k, v in raw[section].items() if v <= 0]
+    # Les délais du verrou sont lus par l'arithmétique du shell (dunei-verrou), qui n'accepte que des entiers.
+    err += [f"delays : {k} doit être un entier de millisecondes, lu par le shell de dunei-verrou"
+            for k, v in raw["delays"].items() if k.startswith("verrou") and not isinstance(v, int)]
+    if raw["delays"]["verrouAttente"] > VERROU_ATTENTE_MAX:
+        err.append(f"delays : verrouAttente au plus {VERROU_ATTENTE_MAX} ms, pour un verrou posé en 1,5 s au plus")
     err += [f"spinner : {k} doit être compris entre 0 et 1 exclus" for k in ("rest_scale", "rest_opacity")
             if not 0 < raw["spinner"][k] < 1]
     err += [f"popover : {k} doit être strictement positif" for k in ("icon_travel_px", "rest_threshold_px")

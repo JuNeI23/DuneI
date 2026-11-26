@@ -39,9 +39,14 @@ LANCEMENTS=3 USR2=12
 
 # duree — délai d'animation en millisecondes, lu dans les jetons de mouvement.
 # Entrées : $1, clé de `delays` dans motion.json ; $2, valeur par défaut (celle de motion.toml).
-# Sortie : le délai sur la sortie standard. Erreurs : fichier absent ou illisible, clé manquante → valeur par défaut.
-# Dépendances : jq.
-duree() { v=$(jq -r --arg k "$1" '.delays[$k] // empty' "$MOTION" 2>/dev/null); echo "${v:-$2}"; }
+# Sortie : le délai sur la sortie standard. Erreurs : fichier absent ou illisible, clé manquante, valeur qui n'est pas
+# un entier positif écrit en chiffres (1000.5, -1, texte) → valeur par défaut, car l'arithmétique du shell n'accepte
+# que des entiers et une valeur fautive l'arrêterait avant tout verrou. Dépendances : jq.
+duree() {
+    v=$(jq -r --arg k "$1" '.delays[$k] // empty' "$MOTION" 2>/dev/null)
+    case $v in '' | *[!0-9]*) v=$2 ;; esac
+    echo "$v"
+}
 
 # maintenant — horloge en millisecondes. Sortie : l'heure Unix en ms. Dépendances : date (GNU, %3N).
 maintenant() { date +%s%3N; }
@@ -97,13 +102,15 @@ intercepte() {
 }
 
 # minutes — envoie SIGUSR2 à hyprlock au début de chaque minute, pour que l'horloge suive. Tourne en fond.
-# Entrée : $1, PID de hyprlock. Sortie : aucune ; s'arrête sur SIGTERM en emportant son `sleep`.
+# Entrée : $1, PID de hyprlock. Sortie : aucune ; s'arrête sur SIGTERM en emportant son `sleep`, et de lui-même dès que
+# hyprlock n'est plus vivant, ce qui couvre un lanceur tué par SIGKILL, qui ne peut plus l'arrêter.
 # Erreurs : signal envoyé seulement si hyprlock l'intercepte, son effet par défaut étant de tuer.
-# Dépendances : date, sleep, intercepte.
+# Dépendances : date, sleep, vivant, intercepte.
 minutes() {
     trap 'kill "$s" 2>/dev/null; exit 0' TERM
-    while :; do
+    while vivant "$1"; do
         n=$(date +%S); sleep $((60 - ${n#0})) & s=$!; wait "$s"
+        vivant "$1" || break
         ! intercepte "$1" "$USR2" || kill -USR2 "$1" 2>/dev/null
     done
 }
@@ -156,9 +163,13 @@ attendre_tenu() {
 }
 
 # suivre — attend la fin d'un verrou mené par un autre : le verrou vu tenu puis franchement rendu.
-# Entrée : $1, 1 si l'appelant a déjà lu un « oui » franc (le premier « non » vaut alors déverrouillage), 0 sinon.
+# Entrées : $1, 1 si l'appelant a déjà lu un « oui » franc (le premier « non » vaut alors déverrouillage), 0 sinon ;
+#           $2, facultatif, échéance en ms (horloge de `maintenant`) de l'attente d'une unité encore active alors que
+#           la session est franchement rendue : c'est l'unité d'un verrou qui finit (remontée du bloc, coque muette
+#           jusqu'à $MUETTE_REMONTEE ms), et l'appel ne doit pas l'attendre au-delà de sa propre échéance de pose.
 # Sortie : 0 au déverrouillage ; 1 si, pour l'appel extérieur seulement, l'unité du lanceur se termine sans que le
-# verrou ait été vu tenu (le lanceur placé ne consulte jamais l'unité, qui est la sienne) ; 2 si le compositeur reste
+# verrou ait été vu tenu (le lanceur placé ne consulte jamais l'unité, qui est la sienne) ; 3 si l'échéance $2 passe
+# sur un « non » franc, l'unité toujours active et le verrou jamais vu tenu ; 2 si le compositeur reste
 # muet $SUIVI_MUET ms de suite (Hyprland mort ou figé) : le suivi y renonce, sans rien conclure sur la session, pour
 # que l'unité ne survive pas au compositeur. Une réponse manquante isolée ne conclut rien. Pas de 20 ms jusqu'au
 # verrou tenu, puis de 0,2 s, pour ne pas interroger le compositeur 50 fois par seconde pendant tout le verrou.
@@ -176,7 +187,8 @@ suivre() {
             oui) vu=1 ;;
             non) [ "$vu" = 1 ] && return 0
                  [ -z "${DUNEI_VERROU_PORTEE:-}" ] || return 1
-                 systemctl --user is-active --quiet "$UNITE.scope" || return 1 ;;
+                 systemctl --user is-active --quiet "$UNITE.scope" || return 1
+                 [ -z "${2:-}" ] || [ "$(maintenant)" -lt "$2" ] || return 3 ;;
         esac
         if [ "$vu" = 1 ]; then sleep "$BORNE"; else sleep 0.02; fi
     done
@@ -202,10 +214,16 @@ if [ -n "${DUNEI_VERROU_PORTEE:-}" ]; then
     d="${DUNEI_VERROU_DEBUT:-}"; case $d in '' | *[!0-9]*) ;; *) [ "$d" -gt "$debut" ] || debut=$d ;; esac
 fi
 
+# Délais d'animation, lus avant le placement : l'échéance de la pose (debut + ATTENTE) borne aussi le suivi d'une
+# unité qui finit.
+ATTENTE=$(duree verrouAttente 1000) APPARITION=$(duree verrouApparition 1500) CESSION=$(duree verrouCession 350)
+
 # Placement dans l'unité transitoire. Unité déjà là : un autre appel mène le verrou, on le suit ; s'il finit sans
 # verrou tenu (appel arrivé pendant la fin d'un verrou), on retente le placement une fois, en verrou sec pour tenir la
-# borne depuis l'appel réel (DUNEI_VERROU_SANS_CHUTE). systemd-run en échec pour
-# une autre cause : le verrou passe avant l'unité, le lanceur continue hors d'elle.
+# borne depuis l'appel réel (DUNEI_VERROU_SANS_CHUTE). Si l'unité reste active, la session franchement rendue, au-delà
+# de l'échéance de la pose (remontée d'un verrou qui finit, coque muette), on ne l'attend plus : le verrou sec part
+# hors unité, à côté d'elle, comme après un échec de systemd-run. systemd-run en échec pour une autre cause : le
+# verrou passe avant l'unité, le lanceur continue hors d'elle.
 if [ -z "${DUNEI_VERROU_PORTEE:-}" ]; then
     trace="$RUN/verrou-place-$$" relu=0 sans_chute=
     trap 'rm -f "$trace"' EXIT
@@ -213,8 +231,10 @@ if [ -z "${DUNEI_VERROU_PORTEE:-}" ]; then
     while :; do
         if systemctl --user is-active --quiet "$UNITE.scope"; then
             ! veille || : >"$SEC"
-            suivre 0; c=$?
+            suivre 0 $((debut + ATTENTE)); c=$?
             [ "$c" != 0 ] || exit 0
+            [ "$c" != 3 ] || { logger -t "$UNITE" "unité encore active, session rendue, à l'échéance : verrou hors unité"
+                DUNEI_VERROU_DEBUT="$debut" DUNEI_VERROU_SANS_CHUTE=1 DUNEI_VERROU_PORTEE=- exec "$0" "$@"; }
             { [ "$c" = 1 ] && [ "$relu" = 0 ]; } || exit 1
             relu=1 sans_chute=1; continue
         fi
@@ -229,7 +249,6 @@ if [ -z "${DUNEI_VERROU_PORTEE:-}" ]; then
 fi
 [ "$DUNEI_VERROU_PORTEE" = - ] || : >"$DUNEI_VERROU_PORTEE"
 
-ATTENTE=$(duree verrouAttente 1000) APPARITION=$(duree verrouApparition 1500) CESSION=$(duree verrouCession 350)
 n=$(cat "$ORDRE" 2>/dev/null); case $n in '' | *[!0-9]*) n=0 ;; esac
 ordre=$((n + 1)); echo "$ordre" >"$ORDRE"
 boucle='' abrege=0 spectacle=1 sec=0 a_ceder=0 vu=0 essais=0 rapides=0 inconnus=0

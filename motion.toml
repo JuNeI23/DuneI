@@ -38,11 +38,11 @@ garde   = 1000                    # Attente, après la fermeture d'une scène, d
                                   # vient pas, l'action part quand même (Scene).
 gardeFrappe = 400                 # Silence du clavier exigé avant que le champ d'une demande d'autorisation n'accepte les
                                   # touches : une frappe destinée ailleurs n'y entre pas (L2-24).
-verrouAttente     = 1000          # Délai au plus tard, après l'appel, avant que le bloc opaque ne soit posé (L2-22).
-verrouApparition  = 1500          # Tenue maximale du calque d'apparition du verrou, avant son retrait (L2-22).
-verrouCession     = 350           # Durée de la cession de l'affichage entre la coque et hyprlock (L2-22).
-verrouRetrait     = 200           # Durée du retrait du calque d'apparition une fois hyprlock affiché (L2-22).
-verrouSecours     = 2500          # Retrait d'office du calque d'apparition si aucun signal ne le retire (L2-22).
+verrouAttente = 1000              # Délai au plus tard, après l'appel, avant que le bloc opaque ne soit posé (L2-22).
+verrouApparition = 1500           # Tenue maximale du calque d'apparition du verrou, avant son retrait (L2-22).
+verrouCession = 350               # Durée de la cession de l'affichage entre la coque et hyprlock (L2-22).
+verrouRetrait = 200               # Retrait du contenu au déverrouillage, avant la remontée du bloc (L2-22, Verrou.qml).
+verrouSecours = 2500              # Retrait d'office du calque d'apparition si aucun signal ne le retire (L2-22).
 autorise = 800                    # Tenue d'« Autorisé » dans l'île repliée, une fois la demande accordée (L2-24).
 
 [periods]                         # Durée d'un cycle des mouvements continus, en millisecondes.

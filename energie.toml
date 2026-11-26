@@ -10,10 +10,13 @@ version = "0.2.0"
 faible   = 20         # « Batterie faible », en orange, dans la presqu'île.
 critique = 5          # « Branchez le chargeur », en rouge ; toujours sous le seuil faible.
 
+# Chaque commande est exécutée par sh -c, qui développe ses variables : dunei-verrou vit dans les scripts de Hyprland,
+# liés sous ~/.config/hypr/scripts par deploy.py, hors du PATH ; il est donc nommé par son chemin complet, comme
+# dunei-attenuer dans generated/hypridle.conf.
 [commandes]
-verrouiller  = "loginctl lock-session"                    # Seul chemin vers le verrouillage.
-verrouilleur = "dunei-verrou"                             # Seul endroit où le verrouilleur est nommé (L2-22).
-verrouilleur_initial = "dunei-verrou --sec"               # Variante du verrou initial de la session : échec fermé (L1-10, L2-22).
+verrouiller  = "loginctl lock-session"                                              # Seul chemin vers le verrouillage.
+verrouilleur = '"${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/dunei-verrou"'      # Seul endroit où le verrouilleur est nommé (L2-22).
+verrouilleur_initial = '"${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/dunei-verrou" --sec'   # Verrou initial de la session : échec fermé (L1-10, L2-22).
 
 [attenuation]
 niveau = 10           # Luminosité de l'écran atténué, en % ; jamais au-dessus de la luminosité courante.

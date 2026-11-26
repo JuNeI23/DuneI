@@ -58,6 +58,20 @@ class ErrorsTest(unittest.TestCase):
                 r = raw(); r[section]["tooltipp"] = 1
                 self.check(r, section, "tooltipp", "inconnue")
 
+    def test_delais_du_verrou_entiers(self):
+        """Les délais du verrou, lus par l'arithmétique du shell de dunei-verrou, sont des entiers."""
+        for key in ("verrouAttente", "verrouApparition", "verrouCession", "verrouRetrait", "verrouSecours"):
+            with self.subTest(key=key):
+                r = raw(); r["delays"][key] = 1000.5 if key == "verrouAttente" else r["delays"][key] + 0.5
+                self.check(r, "delays", key, "entier")
+
+    def test_attente_du_verrou_plafonnee(self):
+        """verrouAttente est plafonné à 1300 ms, pour un verrou posé en 1,5 s au plus ; 1300 passe."""
+        r = raw(); r["delays"]["verrouAttente"] = 1301
+        self.check(r, "verrouAttente", "1300")
+        r = raw(); r["delays"]["verrouAttente"] = 1300
+        self.assertEqual(errors(r), [])
+
     def test_spinner(self):
         """La pose de repos de l'indicateur d'activité est exigée, entre 0 et 1 exclus, et sa courbe est l'une de
         celles que l'indicateur sait reproduire."""

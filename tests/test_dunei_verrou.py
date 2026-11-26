@@ -9,6 +9,7 @@ la suppression du dossier (GNU timeout change de groupe de processus, mais pas d
 
 import json
 import os
+import re
 import shutil
 import signal
 import subprocess
@@ -518,6 +519,62 @@ class DuneiVerrouTest(unittest.TestCase):
         self.assertFalse((self.run_dir / "verrou-apparition").exists())
         self.assertEqual([c.rsplit(" ", 1)[1] for c in self.lancements()], ["marqueur=oui", "marqueur=non"])
         self.assertSousSuite(["apparaitre", "hyprlock", "ceder", "remonter"], self.etapes())
+
+    def test_delai_non_entier(self):
+        # Une valeur non entière de motion.json ne fait pas mourir le shell dans son arithmétique : la valeur par
+        # défaut la remplace et le verrou est posé.
+        (self.t / "config/dunei/motion.json").write_text(json.dumps({"delays": {**DELAIS, "verrouAttente": 1000.5}}),
+                                                         encoding="utf-8")
+        res = self.run_script()
+        self.assertEqual(res.returncode, 0, res.stderr)
+        self.assertEqual(len(self.lancements()), 1)
+        self.assertSousSuite(["tomber", "etat", "hyprlock", "remonter"], self.etapes())
+
+    def test_unite_qui_finit_bornee(self):
+        # Appel juste après un déverrouillage : l'unité du verrou précédent reste active 2 s (remontée, coque muette),
+        # la session franchement rendue. L'appel ne l'attend que jusqu'à l'échéance de la pose, puis pose un verrou sec
+        # hors unité : hyprlock part moins de 1,5 s après l'appel.
+        (self.t / "unite").touch()
+
+        def retirer():
+            """Retire l'unité 2 s après le départ, sans que le verrou ait été tenu."""
+            time.sleep(2.0)
+            (self.t / "unite").unlink()
+
+        fil = threading.Thread(target=retirer)
+        debut = time.time() * 1000
+        fil.start()
+        res = self.run_script()
+        fil.join()
+        self.assertEqual(res.returncode, 0, res.stderr)
+        self.assertEqual(len(self.lancements()), 1)
+        lance = int((self.t / "lancements").read_text().split()[0])
+        self.assertLess(lance - debut, 1500)
+        self.assertNotIn("tomber", self.etapes())
+        self.assertSousSuite(["poserSec", "hyprlock", "remonter"], self.etapes())
+        self.assertTrue(any(c.startswith("logger") and "hors unité" in c for c in self.calls()))
+
+    def test_minutes_cesse_sans_hyprlock(self):
+        # La boucle de l'horloge, orpheline après un SIGKILL du lanceur, s'arrête d'elle-même quand hyprlock meurt. Un
+        # faux date rend la seconde 59 : chaque tour ne dort qu'une seconde.
+        texte = SCRIPT.read_text(encoding="utf-8")
+        fonctions = "\n".join(re.search(rf"^{nom}\(\) \{{\n.*?^\}}\n", texte, re.S | re.M).group(0)
+                              for nom in ("vivant", "intercepte", "minutes"))
+        (self.t / "bin" / "date").write_text("#!/bin/sh\necho 59\n", encoding="utf-8")
+        (self.t / "bin" / "date").chmod(0o755)
+        hyprlock = subprocess.Popen([shutil.which("sleep"), "30"], start_new_session=True, env=self.env)
+        self.sessions.append(hyprlock.pid)
+        boucle = subprocess.Popen([shutil.which("sh"), "-c", f'PROC={self.t / "proc"} USR2=12\n{fonctions}\nminutes {hyprlock.pid}'],
+                                  env=self.env, start_new_session=True)
+        self.sessions.append(boucle.pid)
+        try:
+            time.sleep(0.3)
+            self.assertIsNone(boucle.poll(), "la boucle s'arrête alors que hyprlock vit")
+            hyprlock.kill()
+            hyprlock.wait()
+            self.assertEqual(boucle.wait(timeout=3), 0)
+        finally:
+            self.tuer_sessions()
 
     def test_usage(self):
         self.assertEqual(self.run_script("--vite").returncode, 2)

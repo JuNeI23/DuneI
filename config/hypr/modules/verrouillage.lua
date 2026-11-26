@@ -1,4 +1,4 @@
--- Module du verrouillage : réglages du compositeur autour du verrouilleur, (L1-09, L2-22).
+-- Module du verrouillage : réglages du compositeur autour du verrouilleur (L1-09, L2-22).
 local M = {}
 
 -- apply : autorise la relance d'un verrouilleur tombé. Sans cette option, une session dont le verrouilleur
