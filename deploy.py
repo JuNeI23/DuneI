@@ -119,7 +119,7 @@ CHAMP = b"{utilisateur}"                                     # Champ des fichier
 CONNEXION = ("greetd", "tuigreet")                           # Gestionnaire de connexion et écran provisoire exigés (L1-10).
 GESTIONNAIRE = "greetd.service"
 DM = "etc/systemd/system/display-manager.service"            # Alias du gestionnaire de connexion actif, sous la racine.
-VERROUILLEUR = "hyprlock"                                    # Verrouilleur exigé ; provisoire, remplacé à L2-22.
+VERROUILLEUR = "hyprlock"                                    # Verrouilleur exigé, lancé par dunei-verrou (L2-22).
 # Applications configurées par DuneI : exécutable exigé, paquet qui le fournit, fichier du dépôt, lien sous
 # le dossier de configuration.
 APPLIS = (("kitty", "kitty", "config/kitty/kitty.conf", "kitty/kitty.conf"),)  # Terminal provisoire jusqu'à L3-11 (L1-18).
