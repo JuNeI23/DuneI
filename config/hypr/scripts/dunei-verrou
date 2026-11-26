@@ -12,7 +12,7 @@
 #          verrou-sec (demande d'abréger, posée par un second appel avant une veille), verrou-ordre (compteur),
 #          verrou-place-<pid> (trace : le lanceur placé a bien démarré). DUNEI_VERROU_PROC remplace la racine de /proc
 #          pour la lecture de SigCgt (essais) ; DUNEI_VERROU_PORTEE marque l'appel déjà placé (chemin de sa trace,
-#          ou « - » hors unité).
+#          ou « - » hors unité) ; DUNEI_VERROU_DEBUT porte l'heure de l'appel (ms), d'où part l'échéance de la pose.
 # Sortie : 0 si la session a été tenue puis rendue ; 1 si le verrou n'a jamais été tenu après trois lancements ;
 #          2 si l'usage est faux.
 # Erreurs : chaque lancement sans verrou tenu, chaque relance, une échéance dépassée et un échec de systemd-run sont
@@ -59,14 +59,14 @@ verrou() {
 # tenu — dit si la session est sûrement verrouillée. Sortie : code 0 sur « oui » seulement. Dépendances : verrou.
 tenu() { [ "$(verrou)" = oui ]; }
 
-# rendu — dit si la session est sûrement déverrouillée, en relisant par pas de 20 ms tant que la réponse manque.
-# Sortie : code 0 sur un « non » franc ; non nul sur « oui » ou après $INCONNU_MAX ms sans réponse (alors tenue).
-# Dépendances : verrou, maintenant.
-rendu() {
+# verrou_franc — état de la session, relu par pas de 20 ms tant que la réponse manque, au plus $INCONNU_MAX ms.
+# Sortie : « oui », « non », ou « inconnu » si le compositeur est resté muet : un inconnu ne vaut ni verrou tenu ni
+# session rendue. Dépendances : verrou, maintenant.
+verrou_franc() {
     f=$(($(maintenant) + INCONNU_MAX))
     while :; do
-        case $(verrou) in non) return 0 ;; oui) return 1 ;; esac
-        [ "$(maintenant)" -lt "$f" ] || return 1
+        e=$(verrou)
+        { [ "$e" = inconnu ] && [ "$(maintenant)" -lt "$f" ]; } || { echo "$e"; return; }
         sleep 0.02
     done
 }
@@ -176,27 +176,31 @@ remonter() {
 
 [ $# -eq 0 ] || { [ $# -eq 1 ] && [ "$1" = --sec ]; } || { echo "usage : dunei-verrou [--sec]" >&2; exit 2; }
 mkdir -p "$RUN"
+# Heure de l'appel, transmise au lanceur placé : l'échéance de la pose part d'elle, placement compris.
+debut="${DUNEI_VERROU_DEBUT:-}"; case $debut in '' | *[!0-9]*) debut=$(maintenant) ;; esac
 
 # Placement dans l'unité transitoire. Unité déjà là : un autre appel mène le verrou, on le suit ; s'il finit sans
 # verrou tenu (appel arrivé pendant la fin d'un verrou), on retente le placement une fois. systemd-run en échec pour
 # une autre cause : le verrou passe avant l'unité, le lanceur continue hors d'elle.
 if [ -z "${DUNEI_VERROU_PORTEE:-}" ]; then
     trace="$RUN/verrou-place-$$" relu=0
+    trap 'rm -f "$trace"' EXIT
+    trap 'exit 1' HUP INT TERM
     while :; do
         if systemctl --user is-active --quiet "$UNITE.scope"; then
             ! veille || : >"$SEC"
             suivre && exit 0
             [ "$relu" = 0 ] || exit 1
-            relu=1; continue
+            relu=1; debut=$(maintenant); continue
         fi
         rm -f "$SEC" "$trace"
-        DUNEI_VERROU_PORTEE="$trace" systemd-run --user --scope --unit="$UNITE" --collect --quiet "$0" "$@"; c=$?
+        DUNEI_VERROU_DEBUT="$debut" DUNEI_VERROU_PORTEE="$trace" systemd-run --user --scope --unit="$UNITE" --collect --quiet "$0" "$@"; c=$?
         [ ! -e "$trace" ] || { rm -f "$trace"; exit "$c"; }
         systemctl --user is-active --quiet "$UNITE.scope" && continue
         break
     done
     logger -t "$UNITE" "systemd-run en échec ($c) : verrou hors unité"
-    DUNEI_VERROU_PORTEE=- exec "$0" "$@"
+    DUNEI_VERROU_DEBUT="$debut" DUNEI_VERROU_PORTEE=- exec "$0" "$@"
 fi
 [ "$DUNEI_VERROU_PORTEE" = - ] || : >"$DUNEI_VERROU_PORTEE"
 
@@ -218,7 +222,7 @@ fi
 if [ "$sec" = 1 ] || [ "${1:-}" = --sec ] || veille; then spectacle=0; ipc poserSec "$ordre" >/dev/null 2>&1
 else
     echo "$$" >"$MARQUEUR"
-    f=$(($(maintenant) + ATTENTE))
+    f=$((debut + ATTENTE))
     if ipc tomber "$ordre" >/dev/null 2>&1; then attendre_pose "$f"
     else spectacle=0; rm -f "$MARQUEUR"; ipc poserSec "$ordre" >/dev/null 2>&1 &
     fi
@@ -249,13 +253,18 @@ while :; do
     fi
     wait "$pid"
     kill "$boucle" 2>/dev/null; boucle=''
-    if ! rendu; then
-        # Session encore tenue : relance. Deux sorties rapides de suite passent au repli, chacune après une pause.
-        vu=1
+    etat=$(verrou_franc)
+    if [ "$etat" != non ]; then
+        # Session encore tenue, ou compositeur muet : relance. Seul un « oui » franc vaut verrou vu ; un inconnu ne
+        # compte ni comme tenu ni comme lancement manqué. Un autre hyprlock vivant (second lanceur hors unité) garde
+        # déjà la session : on le suit, puis on remonte le bloc sous notre ordre. Deux sorties rapides de suite
+        # passent au repli, chacune après une pause.
+        [ "$etat" = oui ] && vu=1
+        if [ "$etat" = oui ] && pgrep -x hyprlock >/dev/null; then suivre; c=$?; [ "$c" != 0 ] || remonter; exit "$c"; fi
         if [ "$tue" = 0 ] && [ $(($(maintenant) - lance)) -lt "$RAPIDE" ]; then rapides=$((rapides + 1)); sleep "$PAUSE"
         else rapides=0
         fi
-        logger -t "$UNITE" "hyprlock sorti, session encore tenue : relance ($conf)"; continue
+        logger -t "$UNITE" "hyprlock sorti, session $etat : relance ($conf)"; continue
     fi
     [ "$vu" = 1 ] && { remonter; exit 0; }
     essais=$((essais + 1))
