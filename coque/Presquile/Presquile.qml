@@ -82,6 +82,13 @@ PanelWindow {
     readonly property string nomEcran: surface.modelData?.name ?? ""
     Ressort { id: couverture; transition: "overlay"; nature: "fondu"
               cible: Composants.Overlays.verrou || nomEcran && Composants.Overlays.ecranCouvert === nomEcran ? 1 : 0 }
+    Connections {
+        target: Composants.Overlays
+        // onVerrouChanged — la presqu'île du bloc remontée et revenue au verre, identique à celle-ci, la vraie reprend
+        // d'un coup à sa place, sans fondu qui creuserait le verre ; en mouvement réduit, elle revient en fondu.
+        // Entrées : aucune. Sortie : couverture posée. Erreurs : aucune. Dépendances : couverture, Theme.mouvementReduit.
+        function onVerrouChanged() { if (!Composants.Overlays.verrou && !Theme.mouvementReduit) couverture.poser() }
+    }
 
     screen: modelData
     anchors { top: true; left: true; right: true }

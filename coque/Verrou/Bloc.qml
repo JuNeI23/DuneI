@@ -2,31 +2,37 @@ import QtQuick
 import QtQuick.Shapes
 import Quickshell
 import Quickshell.Wayland
+import Quickshell.Hyprland
 import "../Composants" as C
 import "../Presquile" as P
 import "../Theme"
 
 // Bloc — le bloc opaque qui tombe sur la session d'un écran et reste sous le verrou (L2-22).
 // Rôle : calque dunei-verrou en couche Overlay, de la taille de l'écran, mappé tant que Verrou.montre : la surface ne
-// change jamais de taille (D132), seul son contenu bouge. Le bloc (Contenu avec fond, image du bureau) est décalé de
+// change jamais de taille (D132), seul son contenu bouge. Le bloc prend la taille et l'échelle de l'écran, et non
+// celles du calque : caché, le calque n'a pas de taille, et l'image du bureau doit être décodée avant la chute (sans
+// quoi les premières images de la chute montrent l'aplat). Le bloc (Contenu avec fond, image du bureau) est décalé de
 // (1 − Verrou.position) × hauteur vers le haut, calé sur le pixel physique, à l'opacité Verrou.opacite ; son contenu
 // est posé à la cession, sans mouvement (il est sous le verrou), et se retire au déverrouillage. Sous son bord bas
 // pend sa presqu'île, à la forme de la vraie au repos (P.Encoche, évasements compris) : du verre au repos, l'image du
-// bas du bloc pendant le mouvement (Verrou.matiere), en fondu croisé avec la vraie (Verrou.effacement). Pas de
+// bas du bloc pendant le mouvement (Verrou.matiere). Elle se montre entière dès le mappage, sur la vraie qui s'efface
+// dessous, et la vraie reprend d'un coup à la fin, à l'identique (Presquile.qml) ; elle porte les
+// points des bureaux, comme la vraie au repos (maquette verrou-v1), inertes : un clic n'y change rien. Pas de
 // presqu'île sur un écran en vrai plein écran, où la vraie est cachée. Le calque prend le clavier en exclusif tant que
 // Verrou.prendClavier, et n'en fait rien : Échap n'annule rien ; il couvre tout l'écran, les clics ne passent pas.
 // Entrées : modelData, l'écran (obligatoire). Sorties : la fenêtre de calque. Erreurs : aucune ; avant les jetons, la
 // presqu'île est vide et le fond est un aplat surface-base.
-// Dépendances : quickshell ≥ 0.3 (PanelWindow, WlrLayershell), Verrou, Contenu, P.Encoche, C.PleinEcran,
+// Dépendances : quickshell ≥ 0.3 (PanelWindow, WlrLayershell, Hyprland.monitorFor), Verrou, Contenu, P.Encoche,
+// P.Bureaux, C.PleinEcran,
 // QtQuick.Shapes (ShapePath.fillItem), Theme (tokens.presquile, tokens.bureauxVirtuels).
 PanelWindow {
     id: fenetre
 
     required property var modelData
-    readonly property var ile: Theme.tokens?.presquile
+    readonly property var cotes: Theme.tokens?.presquile
     readonly property int bureaux: Theme.tokens?.bureauxVirtuels?.nombre ?? 0
     // Largeur du corps de la vraie presqu'île au repos (comme CadreAutorisation).
-    readonly property real repos: ile ? ile.pilule + (bureaux - 1) * (ile.point + ile.ecart) + 2 * ile.marge : 0
+    readonly property real repos: cotes ? cotes.pilule + (bureaux - 1) * (cotes.point + cotes.ecart) + 2 * cotes.marge : 0
 
     screen: modelData
     visible: Verrou.montre
@@ -37,17 +43,20 @@ PanelWindow {
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.keyboardFocus: Verrou.prendClavier ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
+    // Échelle de l'écran : celle de Hyprland, ou le rapport de pixels du calque avant la première lecture.
+    readonly property real echelle: Hyprland.monitorFor(modelData)?.scale || devicePixelRatio
+
     Item {
         id: bloc
-        width: fenetre.width
-        height: fenetre.height
-        y: -Math.round((1 - Verrou.position) * height * fenetre.devicePixelRatio) / fenetre.devicePixelRatio
+        width: fenetre.modelData?.width ?? 0
+        height: fenetre.modelData?.height ?? 0
+        y: -Math.round((1 - Verrou.position) * height * fenetre.echelle) / fenetre.echelle
         opacity: Verrou.opacite
 
         Contenu {
             id: contenu
             anchors.fill: parent
-            echelle: fenetre.devicePixelRatio
+            echelle: fenetre.echelle
             vu: Verrou.contenuBloc
             entreeAnimee: false
         }
@@ -60,7 +69,6 @@ PanelWindow {
             y: bloc.height
             width: encoche.implicitWidth
             height: encoche.implicitHeight
-            opacity: Verrou.effacement
 
             P.Encoche { id: encoche; largeurCorps: fenetre.repos }
 
@@ -83,6 +91,14 @@ PanelWindow {
                     fillItem: bande
                     PathSvg { path: encoche.trace }
                 }
+            }
+
+            P.Bureaux {
+                x: encoche.evasement
+                width: fenetre.repos
+                height: encoche.hauteur
+                ecran: fenetre.modelData
+                enabled: false
             }
         }
     }

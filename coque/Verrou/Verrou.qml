@@ -25,8 +25,7 @@ import "verrou.js" as Logique
 //           compositeur en JSON ({"locked": bool}), hyprctl -j locked par défaut (remplacée par les essais).
 // Sorties : ordre ; couvre (bloc voulu posé) ; pose (posé et immobile) ; remonte (remontée demandée, pas finie) ;
 //           position (1 posé, 0 caché ; fixe à 1 en mouvement réduit) ; opacite ; matiere (1 image, 0 verre) ;
-//           effacement (opacité de la presqu'île du bloc, en fondu croisé avec la vraie) ; montre (calques du bloc
-//           mappés) ; apparition (calque d'apparition mappé) ; vu ; contenuBloc ; prendClavier ; signal tombe().
+//           actif (vaut Overlays.verrou) ; montre (calque du bloc mappé : actif, et un tour de boucle de plus) ; apparition (calque d'apparition mappé) ; vu ; contenuBloc ; prendClavier ; signal tombe().
 // Erreurs : ordre périmé : ignoré ; lecture illisible ou commande absente : la lecture ne compte pas comme rendue.
 // Dépendances : Quickshell (Singleton, Variants), Quickshell.Io (Process, StdioCollector, IpcHandler), Ressort, Theme
 //           (motion.delays : verrouRetrait, verrouSecours ; mouvementReduit), C.Overlays (popover, attention, verrou),
@@ -53,9 +52,8 @@ Singleton {
     readonly property real opacite: reduit ? fondu.value : 1
     readonly property bool pose: couvre && position === 1 && opacite === 1
     readonly property real matiere: image.value
-    readonly property real effacement: croise.value
     readonly property bool actif: couvre || descente.value > 0 || fondu.value > 0 || image.value > 0
-    readonly property bool montre: actif || croise.value > 0
+    readonly property bool montre: actif || tenue.running
     readonly property bool prendClavier: clavier && clavierExclusif
 
     signal tombe()
@@ -65,14 +63,16 @@ Singleton {
     Ressort { id: fondu; transition: "spectacle"; nature: "fondu"; cible: verrou.couvre ? 1 : 0 }
     // Matière de la presqu'île du bloc : l'image dès que le bloc quitte le repos, le verre une fois remonté.
     Ressort { id: image; transition: "state"; nature: "fondu"; cible: !verrou.reduit && (verrou.couvre || descente.value > 0) ? 1 : 0 }
-    // Fondu croisé de la presqu'île du bloc avec la vraie, qui suit Overlays.verrou au même ressort.
-    Ressort { id: croise; transition: "overlay"; nature: "fondu"; cible: verrou.actif ? 1 : 0 }
+    // Le calque du bloc reste mappé jusqu'au tour de boucle suivant la fin : la vraie presqu'île, reposée d'un coup à
+    // l'identique, est déjà demandée. Relevé au banc : ni vide ni verre doublé, alors qu'une tenue de 32 ms doublait
+    // le verre une image.
+    Timer { id: tenue; interval: 0 }
 
     Binding { target: C.Overlays; property: "verrou"; value: verrou.actif }
 
-    // onActifChanged — la remontée finie, plus rien n'est en cours. Entrées : aucune. Sortie : remonte.
-    // Erreurs : aucune.
-    onActifChanged: if (!actif) remonte = false
+    // onActifChanged — la remontée finie, plus rien n'est en cours ; le calque tient encore un tour de boucle.
+    // Entrées : aucune. Sortie : remonte, tenue. Erreurs : aucune.
+    onActifChanged: if (!actif) { remonte = false; tenue.restart() }
 
     // accepter — retient un ordre s'il n'est pas périmé. Entrée : o, ordre reçu. Sortie : vrai s'il est accepté (ordre
     // devient o). Erreurs : aucune. Dépendances : Logique.ordreValable.
@@ -117,7 +117,6 @@ Singleton {
         descente.poser()
         fondu.poser()
         image.poser()
-        croise.poser()
         contenuBloc = true
     }
 
