@@ -178,6 +178,16 @@ class ControleurTest(EssaiCoque, unittest.TestCase):
         """Nombre de vidages du champ. Sortie : entier."""
         return json.loads(self.appel("appels", "0"))["vides"]
 
+    def test_attend_le_verrou(self):
+        """Une demande reçue sous le bloc du verrou attend sa remontée, puis s'ouvre (L2-22). Erreurs : assertion."""
+        self.appel("verrou", "true")
+        self.demander()
+        time.sleep(0.3)
+        self.assertFalse(self.etat()["ouvert"])
+        self.appel("verrou", "false")
+        self.jusqua(lambda: self.etat()["ouvert"], "demande ouverte à la remontée")
+        self.assertEqual(self.appels(), [])
+
     def test_ouverture_envoi_succes(self):
         """Une demande ouvre, un envoi part une seule fois, le succès ferme. Erreurs : assertion."""
         self.demander()

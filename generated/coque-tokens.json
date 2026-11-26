@@ -1833,6 +1833,13 @@
     "champLargeur": 280,
     "champHauteur": 36,
     "champBas": 56,
-    "pastilleBas": 160
+    "pastilleBas": 160,
+    "apparitionPastille": 500,
+    "apparitionDate": 550,
+    "apparitionMot": 70,
+    "apparitionNom": 620,
+    "apparitionChamp": 720,
+    "courseDate": 34,
+    "courseNom": 14
   }
 }

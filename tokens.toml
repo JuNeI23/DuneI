@@ -350,7 +350,8 @@ halo_reach = 0.75            # portée du halo, en part du côté
 [glass]
 namespaces = ["dunei-barre", "dunei-attention", "dunei-presquile", "dunei-popovers", "dunei-notifications", "dunei-panneau",
               "dunei-attention-selecteur", "dunei-attention-deconnexion", "dunei-attention-lanceur",
-              "dunei-attention-autorisation"]   # calques de la coque floutés ; un namespace par client de Scene (L2-80, L2-81)
+              "dunei-attention-autorisation", "dunei-verrou"]   # calques de la coque floutés ; un namespace par client de Scene
+                                                                  # (L2-80, L2-81) ; le bloc du verrou, pour le verre de sa presqu'île (L2-22)
 xray = ["dunei-barre"]       # flou du seul fond ; jamais un calque qui porte de l'E3
 fondu = ["dunei-attention", "dunei-attention-selecteur", "dunei-attention-deconnexion", "dunei-attention-lanceur",
          "dunei-attention-autorisation"]   # calques qui apparaissent et disparaissent en fondu seul, sans le popin de layersIn/layersOut
@@ -527,6 +528,13 @@ champ_largeur = 280            # largeur du champ de mot de passe
 champ_hauteur = 36             # hauteur du champ de mot de passe
 champ_bas = 56                 # distance du champ au bas de l'écran
 pastille_bas = 160             # distance de la pastille au bas de l'écran
+apparition_pastille = 500     # ms après le départ du recul de l'horloge : la pastille grandit (maquette verrou-v2)
+apparition_date = 550         # ms : le premier mot de la date monte de sous sa ligne
+apparition_mot = 70           # ms entre deux mots de la date
+apparition_nom = 620          # ms : le nom monte en fondant
+apparition_champ = 720        # ms : le champ s'ouvre depuis un rond
+course_date = 34              # montée des mots de la date, depuis sous leur ligne
+course_nom = 14               # montée du nom
 
 [notifications]               # pile de notifications de la coque (L2-19) ; px logiques sauf mention ; ms pour duree
 largeur = 340                 # largeur d'une carte

@@ -16,7 +16,7 @@ import "Autorisation"
 // toujours « true ».
 // Entrées : DUNEI_TOKENS_DIR et DUNEI_ETAT_DIR ; IPC « essai » : pret, fenetree, lire, demander, poser, emettre, appels,
 // soumettre, annuler, frapper, identite, agent, agentEtat, fluxAgent, terminerSansSucces, clore, cadre, taper, entree,
-// touche, cliquer, voile, armer, couvert, attention.
+// touche, cliquer, voile, armer, couvert, verrou, attention.
 // Sorties : « essai : prêt » au démarrage. Erreurs : celles de Theme et d'Autorisation, dans le journal.
 // Dépendances : quickshell ≥ 0.3 (IpcHandler), Autorisation, Overlays, Theme ; liens essai/fenetre/ vers les modules de
 // la coque, car Quickshell ne suit pas les imports hors du dossier de la coque.
@@ -210,6 +210,9 @@ ShellRoot {
 
         // voile — clic simulé au coin de la fenêtre. Entrées : aucune. Sortie : aucune.
         function voile(): void { Autorisation.fenetre.cliquerVoile(1, 1) }
+
+        // verrou — simule le bloc du verrou (Overlays.verrou, L2-22). Entrée : oui. Sortie : aucune.
+        function verrou(oui: bool): void { Overlays.verrou = oui }
 
         // attention — ouvre une autre attention, qui ferme celle de l'agent. Sortie : aucune.
         function attention(): void { autre.ouvert = true; Overlays.ouvrir(autre) }

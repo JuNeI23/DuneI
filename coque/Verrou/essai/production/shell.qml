@@ -11,7 +11,8 @@ import "Verrou"
 // (deux produire() rapprochés), garde <ms> (délai de garde d'une production).
 // Sorties : « essai : prêt » quand les jetons sont chargés ; « essai : produit <noms des écrans> » à la fin de chaque
 // production. Erreurs : celles de Theme et de Production, dans le journal.
-// Dépendances : quickshell ≥ 0.3 (IpcHandler) ; liens essai/production/Theme et Verrou, car Quickshell ne suit pas
+// Dépendances : quickshell ≥ 0.3 (IpcHandler) ; liens essai/production/Theme, Verrou et les modules que charge
+// le dossier Verrou (Composants, Presquile, Audio, Barre, Energie), car Quickshell ne suit pas
 // les imports hors du dossier de la coque.
 ShellRoot {
     id: essai

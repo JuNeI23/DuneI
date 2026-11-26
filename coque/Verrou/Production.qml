@@ -239,8 +239,10 @@ Scope {
                                  [videChamp, images.champVide]]
                 // pas — rend le travail i puis le suivant ; la taille demandée est divisée par le rapport de pixels,
                 // que grabToImage applique.
+                // Un rappel tardif d'une génération abandonnée ne libère la fenêtre que si elle ne sert pas déjà à la
+                // génération suivante.
                 const pas = i => {
-                    if (!production.courant(g)) { ecran = null; return }
+                    if (!production.courant(g)) { if (generation === g) ecran = null; return }
                     if (i === travaux.length) { ecran = null; return production.rendu(e, images) }
                     const [item, chemin] = travaux[i]
                     const taille = Qt.size(Logique.physique(item.width, e.echelle) / d,

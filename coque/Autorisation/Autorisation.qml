@@ -13,7 +13,7 @@ import "autorisation.js" as Logique
 // d'annulation : celui-ci ne part donc qu'une fois, et jamais après une demande close. Une seconde demande remplace la
 // première, qui est laissée : l'annuler fermerait la seconde (essai réel 2a). Le mot de passe ne fait que passer de
 // soumettre à flux.submit : il n'est ni retenu, ni journalisé, ni rendu par l'IPC.
-// Entrées : surFlux(f) ; lecteur, null par défaut : une fonction qui rend {faillock, conf}, à la place de la commande
+// Entrées : surFlux(f), retenu sous le verrou (C.Overlays.verrou) jusqu'à la remontée du bloc ; lecteur, null par défaut : une fonction qui rend {faillock, conf}, à la place de la commande
 //           faillock et de faillock.conf (coques d'essai) ; clavierExclusif et fenetree, vrais par défaut, transmis à la
 //           scène ; marche (autorisation.active), regle, fabrique, reprises et avertir, remplacés par les essais.
 //           demarrer() charge l'agent réel : la coque de session seule l'appelle. IPC « autorisation » : etat.
@@ -55,6 +55,8 @@ Singleton {
     property var lecteur: null
     property bool clavierExclusif: true
     property bool fenetree: true
+    // Demande reçue sous le verrou (L2-22), reprise à la remontée du bloc ; null sinon.
+    property var attendu: null
     property alias ouvert: scene.ouvert
     readonly property var fenetre: scene.fenetre
     // Écran de la demande, figé à l'ouverture : il borne la hauteur du cadre.
@@ -157,6 +159,13 @@ Singleton {
     onMarcheChanged: if (demarree) marche ? demarrer() : retirer()
 
     Connections {
+        target: C.Overlays
+        // onVerrouChanged — le bloc du verrou remonté, la demande retenue reprend. Entrées : aucune. Sortie : voir
+        // surFlux. Erreurs : aucune ; sans demande retenue, rien. Dépendances : attendu, surFlux.
+        function onVerrouChanged() { if (!C.Overlays.verrou && autorisation.attendu) autorisation.surFlux(autorisation.attendu) }
+    }
+
+    Connections {
         target: autorisation.agent
         ignoreUnknownSignals: true
         // onFluxChanged — la demande de l'agent change. Entrées : aucune. Sortie : voir surFlux.
@@ -165,9 +174,13 @@ Singleton {
 
     // surFlux — reçoit la demande courante de l'agent. Entrée : f, le flux, ou null quand l'agent n'en a plus.
     // Sortie : fenêtre ouverte, ou reprise en place, sur la nouvelle demande, champ vidé et garde relancée ; null ferme
-    // sans annuler, après « Autorisé » si la demande est accordée. Erreurs : aucune ; le flux déjà courant ou un flux déjà clos ne change rien.
-    // Dépendances : choisirIdentite, lire, evaluer, garde, finir.
+    // sans annuler, après « Autorisé » si la demande est accordée. Tant que le bloc du verrou est là (Overlays.verrou,
+    // L2-22), une demande est retenue dans attendu, sans fenêtre, et reprise à la fin de sa remontée ; un null l'oublie.
+    // Erreurs : aucune ; le flux déjà courant ou un flux déjà clos ne change rien.
+    // Dépendances : choisirIdentite, lire, evaluer, garde, finir, C.Overlays.verrou.
     function surFlux(f) {
+        if (C.Overlays.verrou && f) { attendu = f; return }
+        attendu = null
         if (f === flux) return
         if (!f) { finir(accordee()); return }
         if (f.isCompleted) return

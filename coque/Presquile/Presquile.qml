@@ -33,7 +33,7 @@ import "../Theme"
 // Erreurs : sans jeton de thème, l'encoche est vide et la fenêtre reste posée ; un module sans taille laisse l'encoche
 //           à la hauteur des jetons.
 // Dépendances : quickshell ≥ 0.3 (PanelWindow, Region, WlrLayershell), Arbitre, Encoche, Glissement, Scene, Bureaux,
-// Ressort, Composants (PleinEcran, Overlays.ecranCouvert), Theme (ready, tokens.presquile).
+// Ressort, Composants (PleinEcran, Overlays.ecranCouvert, Overlays.verrou), Theme (ready, tokens.presquile).
 // Composants est importé sous son nom : il porte lui aussi un type Scene.
 PanelWindow {
     id: surface
@@ -77,9 +77,11 @@ PanelWindow {
         course: encoche.hauteur + encoche.marge
     }
 
-    // L'île d'une demande d'autorisation, de même forme, couvre celle-ci sur son écran : elle s'efface en fondu (L2-24).
+    // L'île d'une demande d'autorisation, de même forme, couvre celle-ci sur son écran : elle s'efface en fondu (L2-24) ;
+    // de même sur tous les écrans sous la presqu'île du bloc du verrou, du départ du bloc à la fin de sa remontée (L2-22).
     readonly property string nomEcran: surface.modelData?.name ?? ""
-    Ressort { id: couverture; transition: "overlay"; nature: "fondu"; cible: nomEcran && Composants.Overlays.ecranCouvert === nomEcran ? 1 : 0 }
+    Ressort { id: couverture; transition: "overlay"; nature: "fondu"
+              cible: Composants.Overlays.verrou || nomEcran && Composants.Overlays.ecranCouvert === nomEcran ? 1 : 0 }
 
     screen: modelData
     anchors { top: true; left: true; right: true }

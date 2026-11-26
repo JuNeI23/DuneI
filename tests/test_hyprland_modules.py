@@ -81,6 +81,7 @@ class ModulesTest(unittest.TestCase):
                                                      "layer\tdunei-verre-dunei-attention-deconnexion\tnil\tnil\tnil",
                                                      "layer\tdunei-verre-dunei-attention-lanceur\tnil\tnil\tnil",
                                                      "layer\tdunei-verre-dunei-attention-autorisation\tnil\tnil\tnil",
+                                                     "layer\tdunei-verre-dunei-verrou\tnil\tnil\tnil",
                                                      "layer\tdunei-fond\tnil\tnil\ttrue",
                                                      "layer\tdunei-verrou\t-100\tnil\ttrue",
                                                      "layer\tdunei-verrou-apparition\t-101\t1\ttrue",

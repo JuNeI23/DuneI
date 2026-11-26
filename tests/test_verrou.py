@@ -1,8 +1,11 @@
-"""Tests du verrouillage de la coque (L2-22) : logique pure de verrou.js et production des fichiers de hyprlock.
+"""Tests du verrouillage de la coque (L2-22) : logique pure de verrou.js, production des fichiers de hyprlock et
+contrôleur du bloc.
 
-Rôle : éprouve dans un vrai Quickshell, par les coques d'essai coque/Verrou/essai/logique et essai/production, les
-fonctions pures du verrou (date longue, heures et minutes, pixels physiques, configuration de hyprlock, ordre des
-messages) et la production des images et de hyprlock.conf par Production.qml.
+Rôle : éprouve dans un vrai Quickshell, par les coques d'essai coque/Verrou/essai/logique, essai/production et
+essai/fenetre, les fonctions pures du verrou (date longue, heures et minutes, pixels physiques, configuration de
+hyprlock, ordre des messages), la production des images et de hyprlock.conf par Production.qml, et le singleton Verrou
+(chute, remontée, ordre, apparition, suivi du compositeur, mouvement réduit), sans fenêtre ni clavier ; SourceTest lit
+les sources des calques et des modules touchés.
 Entrées : aucune. Sorties : résultats unittest. Erreurs : échecs de test.
 Dépendances : qs (Quickshell ≥ 0.3), tests.test_coque_theme (EssaiCoque), Pillow pour l'image de bureau d'essai.
 """
@@ -314,6 +317,185 @@ class ProductionTest(EssaiCoque, unittest.TestCase):
         fond = Image.open(self.produire(image=False) / "fond-ESSAI-1.png").convert("RGB")
         base = self.vue(55)["color"]["surfaceBase"]
         self.assertEqual({c for _, c in fond.getcolors()}, {tuple(int(base[i:i + 2], 16) for i in (1, 3, 5))})
+
+
+@unittest.skipUnless(os.environ.get("WAYLAND_DISPLAY") and QS, "session Wayland et Quickshell requis")
+class ControleurTest(EssaiCoque, unittest.TestCase):
+    """Le singleton Verrou, sans fenêtre ni clavier, piloté par ses IPC « verrou » et « essai ». La lecture du
+    compositeur est remplacée par une commande echo : jamais le vrai hyprctl, jamais le vrai verrou."""
+
+    essai = ROOT / "coque" / "Verrou" / "essai" / "fenetre"
+    teintes = (55,)
+
+    def setUp(self):
+        """Lance la coque d'essai et attend les jetons. Entrées : aucune. Sortie : aucune. Erreurs : échec au délai.
+        Dépendances : installer, lancer, attendre, jusqua."""
+        super().setUp()
+        self.installer(55)
+        self.lancer(self.dir)
+        self.attendre("essai : prêt")
+        self.jusqua(lambda: self.appel("pret") == "true", "jetons chargés")
+
+    def appel(self, fonction: str, *args: str, cible: str = "essai") -> str:
+        """Appelle une fonction IPC. Entrées : fonction, args, cible (« essai » ou « verrou »). Sortie : texte rendu.
+        Erreurs : CalledProcessError. Dépendances : qs."""
+        return subprocess.run([QS, "ipc", "--pid", str(self.proc.pid), "call", cible, fonction, *args], check=True,
+                              capture_output=True, text=True, timeout=DELAI).stdout.strip()
+
+    def verrou(self, fonction: str, *args) -> str:
+        """Appelle la cible « verrou », comme le lanceur. Entrées : fonction, arguments. Sortie : texte rendu."""
+        return self.appel(fonction, *map(str, args), cible="verrou")
+
+    def etat(self) -> dict:
+        """État rendu au lanceur. Sortie : {pose, ordre, apparition, remonte}."""
+        return json.loads(self.verrou("etat"))
+
+    def mesure(self) -> dict:
+        """État interne lu par l'essai. Sortie : {position, opacite, verrou, montre, clavier, vu, contenuBloc}."""
+        return json.loads(self.appel("mesure"))
+
+    def jusqua(self, condition, message: str, delai: float = DELAI):
+        """Attend qu'une condition rende une valeur vraie et la rend. Entrées : condition, message, delai (s).
+        Sortie : la valeur. Erreurs : échec du test au délai. Dépendances : journal."""
+        fin = time.monotonic() + delai
+        while time.monotonic() < fin:
+            valeur = condition()
+            if valeur:
+                return valeur
+            time.sleep(0.02)
+        self.fail(f"{message} attendu en {delai} s :\n{self.journal()}")
+
+    def test_ordre_perime(self):
+        """Un ordre plus ancien que le courant est ignoré : tomber(5) puis remonter(4) laisse le bloc posé."""
+        self.verrou("tomber", 5)
+        self.jusqua(lambda: self.etat()["pose"], "bloc posé")
+        self.verrou("remonter", 4)
+        time.sleep(0.5)
+        self.assertEqual((self.etat()["pose"], self.etat()["ordre"], self.etat()["remonte"]), (True, 5, False))
+        self.assertTrue(self.mesure()["verrou"])
+
+    def test_chute_puis_remontee(self):
+        """Le bloc est posé en moins d'une seconde, prend le clavier, et remonte jusqu'à disparaître ; Overlays.verrou
+        tient de la chute à la fin de la remontée."""
+        self.verrou("tomber", 1)
+        debut = time.monotonic()
+        self.assertTrue(self.mesure()["verrou"])
+        self.jusqua(lambda: self.etat()["pose"], "bloc posé", 1.0)
+        self.assertLess(time.monotonic() - debut, 1.0)
+        m = self.mesure()
+        self.assertEqual((m["position"], m["clavier"], m["montre"]), (1, True, True))
+        self.verrou("remonter", 1)
+        self.assertFalse(self.mesure()["clavier"])
+        self.jusqua(lambda: self.etat()["remonte"], "remontée en cours", 1.0)
+        self.jusqua(lambda: not self.mesure()["montre"], "bloc caché")
+        m, e = self.mesure(), self.etat()
+        self.assertEqual((m["position"], m["verrou"], e["pose"], e["remonte"]), (0, False, False, False))
+
+    def test_ferme_le_reste(self):
+        """La chute ferme le popover exclusif et l'attention ouverts."""
+        self.appel("ouvrir")
+        self.assertEqual(json.loads(self.appel("ouverts")), [True, True])
+        self.verrou("tomber", 1)
+        self.assertEqual(json.loads(self.appel("ouverts")), [False, False])
+
+    def test_session_ouverte_remonte(self):
+        """Bloc posé sans chute en cours, compositeur qui dit la session ouverte : clavier rendu et remontée en moins
+        de 3 s ; jamais avant deux lectures franches."""
+        self.appel("lecture", "false")
+        self.verrou("poserSec", 1)
+        debut = time.monotonic()
+        self.assertTrue(self.etat()["pose"])
+        time.sleep(0.8)
+        self.assertTrue(self.etat()["pose"], "remonté sur une seule lecture")
+        self.jusqua(lambda: not self.etat()["pose"], "remontée", 3.0 - (time.monotonic() - debut))
+        self.assertFalse(self.mesure()["clavier"])
+        self.jusqua(lambda: not self.mesure()["montre"], "bloc caché")
+
+    def test_session_tenue_reste(self):
+        """Tant que le compositeur dit la session tenue, le bloc posé reste."""
+        self.verrou("poserSec", 1)
+        time.sleep(2.5)
+        self.assertTrue(self.etat()["pose"])
+
+    def test_demarrage_sous_verrou(self):
+        """Démarrée pendant un verrou, la coque pose son bloc sans chute ; session ouverte, rien."""
+        self.appel("demarrer")
+        self.jusqua(lambda: self.etat()["pose"], "bloc posé au démarrage", 1.0)
+        self.assertEqual(self.mesure()["position"], 1)
+
+    def test_apparition_secours(self):
+        """Sans cession, le calque d'apparition est retiré d'office après delays.verrouSecours (2,5 s), et le contenu
+        est posé dans le bloc."""
+        self.verrou("poserSec", 1)
+        self.verrou("apparaitre", 1)
+        debut = time.monotonic()
+        self.assertTrue(self.etat()["apparition"])
+        time.sleep(2.0)
+        self.assertTrue(self.etat()["apparition"], "retiré trop tôt")
+        self.jusqua(lambda: not self.etat()["apparition"], "apparition retirée", 3.2 - (time.monotonic() - debut))
+        self.assertTrue(self.mesure()["contenuBloc"])
+
+    def test_cession(self):
+        """La cession retire l'apparition et pose le contenu dans le bloc, sans mouvement."""
+        self.verrou("tomber", 1)
+        self.jusqua(lambda: self.etat()["pose"], "bloc posé")
+        self.verrou("apparaitre", 1)
+        self.assertEqual(self.mesure()["vu"], True)
+        self.verrou("ceder", 1)
+        m = self.mesure()
+        self.assertEqual((self.etat()["apparition"], m["contenuBloc"], m["vu"]), (False, True, True))
+
+    def test_abreger(self):
+        """Une veille en pleine chute pose le bloc aussitôt et coupe l'apparition."""
+        self.verrou("tomber", 1)
+        self.verrou("abreger")
+        e = self.etat()
+        self.assertEqual((e["pose"], e["apparition"]), (True, False))
+
+    def test_reduit(self):
+        """Mouvement réduit : la chute et la remontée sont des fondus, le bloc ne bouge pas."""
+        self.appel("reduit", "true")
+        self.assertEqual(self.mesure()["position"], 1)
+        self.verrou("tomber", 1)
+        self.jusqua(lambda: self.etat()["pose"], "bloc posé")
+        self.verrou("remonter", 1)
+        self.jusqua(lambda: not self.mesure()["montre"], "bloc caché")
+        trace = json.loads(self.appel("trace"))
+        self.assertEqual(trace["positions"], [], "le bloc a bougé")
+        self.assertGreater(trace["opacitesIntermediaires"], 1)
+
+
+class SourceTest(unittest.TestCase):
+    """Les sources des calques du verrou et des modules qu'il touche, lues par expressions régulières."""
+
+    def lire(self, chemin: str) -> str:
+        """Texte d'un fichier de la coque. Entrée : chemin depuis coque/. Sortie : le texte."""
+        return (ROOT / "coque" / chemin).read_text(encoding="utf-8")
+
+    def test_calques(self):
+        """Bloc : dunei-verrou en couche Overlay ; apparition : dunei-verrou-apparition, Overlay, masque vide, sans
+        clavier."""
+        bloc, apparition = self.lire("Verrou/Bloc.qml"), self.lire("Verrou/Apparition.qml")
+        self.assertRegex(bloc, r'WlrLayershell\.namespace:\s*"dunei-verrou"')
+        self.assertRegex(bloc, r"WlrLayershell\.layer:\s*WlrLayer\.Overlay")
+        self.assertRegex(apparition, r'WlrLayershell\.namespace:\s*"dunei-verrou-apparition"')
+        self.assertRegex(apparition, r"WlrLayershell\.layer:\s*WlrLayer\.Overlay")
+        self.assertRegex(apparition, r"mask:\s*Region\s*\{\s*\}")
+        self.assertRegex(apparition, r"WlrLayershell\.keyboardFocus:\s*WlrKeyboardFocus\.None")
+
+    def test_ressort_spectacle(self):
+        """La chute et la remontée vont au ressort « spectacle »."""
+        self.assertRegex(self.lire("Verrou/Verrou.qml"), r'Ressort\s*\{\s*id:\s*descente;\s*transition:\s*"spectacle"')
+
+    def test_modules_sous_verrou(self):
+        """Presqu'île couverte, notifications retenues, demande d'autorisation retenue sous le verrou ; la coque de
+        session réveille le singleton et produit les fichiers de hyprlock."""
+        self.assertRegex(self.lire("Presquile/Presquile.qml"), r"cible:\s*Composants\.Overlays\.verrou\s*\|\|")
+        self.assertRegex(self.lire("Notifications/Centre.qml"), r"retenue:\s*pleinEcran\s*\|\|\s*Overlays\.verrou")
+        self.assertRegex(self.lire("Autorisation/Autorisation.qml"), r"if \(C\.Overlays\.verrou && f\) \{ attendu = f")
+        shell = self.lire("shell.qml")
+        self.assertRegex(shell, r"Verrou\.demarrer\(\)")
+        self.assertRegex(shell, r"\n    Production \{")
 
 
 if __name__ == "__main__":

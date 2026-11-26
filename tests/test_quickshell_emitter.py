@@ -108,11 +108,13 @@ class QuickshellEmitterTest(unittest.TestCase):
                                                    "lettreGrisee": 0.7})
 
     def test_verrou(self):
-        """Les jetons du verrouillage (L2-22) sont émis en camelCase sous verrou, en px logiques."""
+        """Les jetons du verrouillage (L2-22) sont émis en camelCase sous verrou, en px logiques ou en ms (apparition*)."""
         self.assertEqual(self.out["verrou"], {"horloge": 700, "horlogeHaut": 34, "horlogeLigne": 500,
                                               "horlogeInterlettrage": -8, "recul": 3.4, "date": 22, "dateHaut": 556,
                                               "pastille": 72, "nomTaille": 17, "champLargeur": 280, "champHauteur": 36,
-                                              "champBas": 56, "pastilleBas": 160})
+                                              "champBas": 56, "pastilleBas": 160, "apparitionPastille": 500,
+                                              "apparitionDate": 550, "apparitionMot": 70, "apparitionNom": 620,
+                                              "apparitionChamp": 720, "courseDate": 34, "courseNom": 14})
 
     def test_autorisation(self):
         """Vérifie les jetons de l'agent d'authentification : mise en marche, cotes de l'île et poussée d'échec (L2-24)."""
