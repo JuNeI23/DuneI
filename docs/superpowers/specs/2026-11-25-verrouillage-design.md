@@ -1,6 +1,6 @@
 # Verrouillage (L2-22)
 
-Version 1.2 — 2026-11-26 — validée par Nicolas
+Version 1.3 — 2026-11-26 — validée par Nicolas en 1.2, relevés du banc ajoutés
 
 ## Intention
 
@@ -51,6 +51,19 @@ d'essai était magenta, pour que la moindre image d'elle se voie.
   famille se nomme dans le balisage.
 - `misc:session_lock_xray` est faux, sans réglage explicite ; le module du verrouillage l'écrira.
 - **Vérité du verrou.** `hyprctl -j locked` rend l'état du compositeur (relevé sur caladan, session ouverte : faux).
+
+Éprouvé le 26 novembre au même banc, avec deux sorties sans tête nommées (1920 × 1200 à 1,25 et 1280 × 800 à 1) :
+
+- **Champ sur fond transparent.** Un `input-field` sans fond ni contour au repos, posé sur l'image du champ, montre
+  les points en blanc à chaque touche, sur les deux écrans à la fois. À l'échec, le contour prend la couleur
+  `fail_color` et le texte `$FAIL` affiche le message de PAM (« pam_authenticate failed ») ; avec `pam_unix`, ce retour
+  vient entre 0,4 et 1,9 s après Entrée, le temps du délai d'échec du module. Verrou pris en 167 à 171 ms.
+- **Pile PAM qui ne demande rien.** Avec `pam_deny` seul, `hyprlock` relance l'authentification sans fin (572
+  tentatives en quelques secondes) puis plante sur une double libération ; le compositeur garde le verrou et montre
+  son écran de secours. Le banc d'échec empile donc `pam_unix` puis `pam_deny` : le mot de passe est demandé, puis
+  refusé.
+- **`PreparingForSleep`.** Lu une fois sur caladan au repos : `b false` (forme de `busctl get-property`). La valeur en
+  veille se relève à la recette.
 
 ## Buts
 
@@ -185,7 +198,7 @@ verrou) ; backlog L2-22 ; carnet. `deploy.py` et la mention « provisoire » sui
 
 ## Non éprouvé, à traiter au plan
 
-Règle `order` entre calques ; plusieurs écrans ; points du champ et retour d'échec sur fond transparent ; retrait du contenu au déverrouillage ;
+Règle `order` entre calques ; plusieurs écrans ; retrait du contenu au déverrouillage ;
 `PreparingForSleep` lu au moment voulu ; `grabToImage` par écran ; vrai mot de passe. Ce dernier se fait à la recette,
 tapé par Nicolas, après annonce du risque pour `faillock`.
 
@@ -205,3 +218,4 @@ tapé par Nicolas, après annonce du risque pour `faillock`.
 | 1.0 | 2026-11-25 | Fiche proposée : relais nu, recul, presqu'île taillée, horloge monumentale |
 | 1.1 | 2026-11-25 | Relecture : vérité unique du verrou, échecs du lanceur, calques concurrents, apparition après le verrou, veille en cours de chute |
 | 1.2 | 2026-11-26 | Validée ; échec du verrou en cours de session : session ouverte et notification critique |
+| 1.3 | 2026-11-26 | Relevés du banc : champ sur fond transparent et retour d'échec, pile PAM du banc, `PreparingForSleep` au repos |
