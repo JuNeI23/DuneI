@@ -1,6 +1,6 @@
 # Verrouillage (L2-22)
 
-Version 1.3 — 2026-11-26 — validée par Nicolas en 1.2, relevés du banc ajoutés
+Version 1.4 — 2026-11-26 — validée par Nicolas en 1.2, relevés du banc ajoutés
 
 ## Intention
 
@@ -134,7 +134,8 @@ de `hyprlock` au journal depuis le 19 octobre, sur 46 démarrages). Avant une ve
 ### La coque : `coque/Verrou/`
 
 - **Le bloc** : calque `dunei-verrou`, couche `Overlay` (la couche haute passe sous un plein écran), un par écran,
-  opaque, au-dessus de tout autre calque par la règle `order`, à éprouver ; il prend le clavier dès le départ, et Échap
+  opaque, au-dessus de tout autre calque par la règle `order = -100` (relevé au banc : l'ordre le plus bas est
+  dessiné au-dessus) ; il prend le clavier dès le départ, et Échap
   n'annule rien. De taille fixe, son contenu bouge (D132). Il tombe
   et remonte au ressort `spectacle`, sans rebond ; une remontée demandée pendant une chute repart de sa position.
 - **La presqu'île du bloc** : dessinée par lui sous son bord bas, à la forme de la vraie, qui s'efface dessous comme pour
@@ -175,7 +176,9 @@ Un écran branché pendant le verrou, inconnu du fichier, montre un aplat opaque
   menu de déconnexion (D205). Tout est opaque : aucune translucidité dans le contenu relayé.
 - Sans image de fond, le bloc est un aplat `surface-base`.
 - Mouvement réduit : le bloc apparaît et disparaît en fondu, le contenu aussi ; la presqu'île ne change pas de matière.
-- Chaque écran reçoit son bloc et son verrou ; l'horloge et le profil sont sur tous.
+- Chaque écran reçoit son bloc et son verrou ; l'horloge et le profil sont sur tous. La section sans nom de `hyprlock`
+  s'applique à tous les écrans : elle est en `zindex = -2`, cachée sous le fond opaque des écrans connus, et seule
+  visible sur un écran branché pendant le verrou (relevé au banc).
 
 ### Documents
 
@@ -198,7 +201,7 @@ verrou) ; backlog L2-22 ; carnet. `deploy.py` et la mention « provisoire » sui
 
 ## Non éprouvé, à traiter au plan
 
-Règle `order` entre calques ; plusieurs écrans ; retrait du contenu au déverrouillage ;
+Retrait du contenu au déverrouillage ;
 `PreparingForSleep` lu au moment voulu ; `grabToImage` par écran ; vrai mot de passe. Ce dernier se fait à la recette,
 tapé par Nicolas, après annonce du risque pour `faillock`.
 
@@ -219,3 +222,4 @@ tapé par Nicolas, après annonce du risque pour `faillock`.
 | 1.1 | 2026-11-25 | Relecture : vérité unique du verrou, échecs du lanceur, calques concurrents, apparition après le verrou, veille en cours de chute |
 | 1.2 | 2026-11-26 | Validée ; échec du verrou en cours de session : session ouverte et notification critique |
 | 1.3 | 2026-11-26 | Relevés du banc : champ sur fond transparent et retour d'échec, pile PAM du banc, `PreparingForSleep` au repos |
+| 1.4 | 2026-11-26 | Valeurs corrigées par le banc : `order = -100` pour le bloc, section sans nom en `zindex = -2` |

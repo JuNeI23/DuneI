@@ -3,7 +3,7 @@
 > **Pour les agents :** sous-skill requis : superpowers:subagent-driven-development (recommandé) ou
 > superpowers:executing-plans, tâche par tâche. Les étapes se cochent (`- [ ]`).
 
-Version 1.0 — 2026-11-26
+Version 1.1 — 2026-11-26
 
 **But :** un bloc à l'image du fond tombe sur la session, `hyprlock` le relaie nu, la coque joue l'apparition en recul
 au-dessus du verrou puis cède à ses textes ; au déverrouillage, le contenu se retire et le bloc remonte.
@@ -88,8 +88,8 @@ fiche : scripts jetables dans le bloc-notes de la session.
   `date = 22`, `dateHaut = 556`, `pastille = 72`, `nomTaille = 17`, `champLargeur = 280`, `champHauteur = 36`,
   `champBas = 56`, `pastilleBas = 160`.
 - `generated.energie` : `verrouilleur = "dunei-verrou"`, `verrouilleur_initial = "dunei-verrou --sec"`.
-- Règles de calque : `dunei-verrou` en `order = 100` (valeur de la tâche 1) ; `dunei-verrou-apparition` en
-  `above_lock = 1`, `order = 101`, `no_anim = true` ; `dunei-verrou` en `no_anim = true`.
+- Règles de calque : `dunei-verrou` en `order = -100` (relevé de la tâche 1 : l'ordre le plus bas est dessiné au-dessus) ; `dunei-verrou-apparition` en
+  `above_lock = 1`, `order = -101`, `no_anim = true` ; `dunei-verrou` en `no_anim = true`.
 - `verrouillage.lua` : `misc = { allow_session_lock_restore = true, session_lock_xray = false }`.
 
 - [ ] **Étape 1 : tests en échec.** `test_energie_checks.test_commands` exige `verrouilleur_initial` (absente → erreur
@@ -118,7 +118,7 @@ fiche : scripts jetables dans le bloc-notes de la session.
 - `physique(px: number, echelle: number) -> int` : `Math.round(px * echelle)`.
 - `confHyprlock(ecrans: [{nom, largeur, hauteur, echelle, images}], j: {verrou, delais, couleurs}, marqueur: string,
   repli: string) -> string` : texte complet de `hyprlock.conf`, une section `monitor` par écran plus l'aplat sans nom
-  en `zindex = -1` ; `images` = `{fond, pastille, champ, pastilleVide, champVide}`.
+  en `zindex = -2` ; `images` = `{fond, pastille, champ, pastilleVide, champVide}`.
 - `ordreValable(recu: int, courant: int) -> bool` : vrai si `recu >= courant`.
 
 - [ ] **Étape 1 : tests en échec**, valeurs exactes :
@@ -131,7 +131,7 @@ fiche : scripts jetables dans le bloc-notes de la session.
   - `test_conf_marqueur` : chaque étiquette est `cmd[update:10000:1]` et teste `[ -e <marqueur> ]` ; chaque image a
     `reload_time = 0` et un `reload_cmd` qui rend la version vide tant que le marqueur existe.
   - `test_section_generique` : la section sans nom n'a que `background` (couleur `surface-base`) et `input-field`, en
-    `zindex = -1`, sans étiquette ni image.
+    `zindex = -2`, sans étiquette ni image.
   - `test_ordre` : `ordreValable(3, 4)` faux, `ordreValable(4, 4)` vrai.
 - [ ] **Étape 2 : vérifier l'échec** : `python3 -m unittest tests.test_verrou.LogiqueTest` → FAIL.
 - [ ] **Étape 3 : implémenter** `verrou.js`. Échappement du texte Pango : `&`, `<`, `>` ; le nom vient de
@@ -292,3 +292,4 @@ clavier, remonter. Au démarrage, `locked` vrai → `poserSec`. Calque d'apparit
 | Version | Date | Changement |
 | --- | --- | --- |
 | 1.0 | 2026-11-26 | Plan initial, d'après la fiche 1.2 |
+| 1.1 | 2026-11-26 | Relevés de la tâche 1 : `order` négatif, section sans nom en `zindex = -2` |
