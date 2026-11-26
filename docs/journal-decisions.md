@@ -5006,3 +5006,31 @@ de `energie.toml` sur `dunei-verrou` vient en dernier, une fois le tout éprouv�
 pu se produire avec la configuration produite.
 
 *Touché : `coque/shell.qml`, `coque/Verrou/Production.qml`, `energie.toml`, `config/hypr/hyprlock.conf`.*
+
+### D235 · Relecture finale du verrou : chemin du lanceur, bornes et coût mémoire assumé
+
+26 novembre 2026 · L2-22, relecture finale. **Chemin du lanceur.** `energie.toml` nommait `dunei-verrou` nu, alors que
+le script vit dans `config/hypr/scripts/`, lié sous `~/.config/hypr/scripts/` : `deploy.py` ne lie dans `~/.local/bin`
+que `config/bin/`. `hypridle` (`lock_cmd`) et `dunei-verrou-initial` (`sh -c "$1"`) rendaient 127 : aucun verrou, une
+veille déverrouillée, et `uwsm stop` à chaque ouverture de session. Le défaut venait du plan, qui nommait la commande
+sans dire où le script était déployé, et aucun test ne résolvait la commande générée. La commande porte désormais le
+chemin complet, `"${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/dunei-verrou"`, développé par `sh -c`, comme
+`dunei-attenuer` dans `hypridle.conf` : `energie.toml` reste le seul endroit qui nomme le verrouilleur, et peut nommer
+n'importe quelle commande, ce qu'un préfixe ajouté par les émetteurs aurait interdit. Le motif de recherche de la coque
+reconnaît le lanceur ainsi lancé (`/bin/sh <chemin>/dunei-verrou`). Un test résout la commande générée sous `sh -c`,
+avec un HOME temporaire où le dépôt est lié comme le fait `deploy.py`.
+
+**Bornes.** Les délais `verrou*` de `motion.toml` sont des entiers (lus par l'arithmétique du shell, qui s'arrêtait sur
+`1000.5` avant tout verrou ; le lanceur retombe aussi sur sa valeur par défaut), et `verrouAttente` ne dépasse pas
+1300 ms, pour un verrou posé en 1,5 s au plus. Un appel qui trouve active l'unité d'un verrou qui finit (remontée du
+bloc, coque muette jusqu'à 2 s), la session franchement rendue, ne l'attend que jusqu'à l'échéance de la pose, puis pose
+un verrou sec hors unité, à côté d'elle, comme après un échec de `systemd-run` : l'ordre plus récent rend périmée la
+remontée de l'ancien lanceur. Une production des fichiers de `hyprlock` abandonnée par sa garde est rejouée à la fin du
+verrou.
+
+**Coût mémoire assumé.** Chaque `Bloc` garde l'image du bureau décodée à la taille physique de son écran, soit 16 à 33 Mo
+par écran selon la définition, pendant toute la session : la décoder à la chute montrait l'aplat aux premières images.
+Le confort de la chute l'emporte sur cette mémoire, sans budget fixé pour la coque (D80).
+
+*Touché : `energie.toml`, `generated/hypridle.conf`, `generated/energie.lua`, `config/hypr/scripts/dunei-verrou`,
+`dunei_motion/checks.py`, `motion.toml`, `coque/Verrou/`, carnet.*

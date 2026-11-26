@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.62. Historique en fin de document.
+Version 1.63. Historique en fin de document.
 
 Socle amorçable.
 
@@ -980,9 +980,9 @@ Une vidéo en lecture plein écran suspend l'échelle : Firefox demande le bloca
 
 **Rétroéclairage du clavier pendant la veille.** Le pilote `thinkpad_acpi` l'éteint à la mise en veille (`kbdlight_suspend`, `led_classdev_suspend`) ; constat visuel à l'écran en attente.
 
-**`hyprlock.conf`, repli** (D41, D234). Configuration minimale, liée sous `~/.config/hypr/` : curseur masqué, saisie vide ignorée, fond uni, champ de saisie, empreinte désactivée. Aucun choix esthétique : ses couleurs sont figées et ne suivent pas le thème. Depuis L2-22, ce n'est plus la configuration normale mais le repli du lanceur, quand la configuration produite par la coque est absente ou ne donne aucun verrou. `SUPER + L` lance `loginctl lock-session` ; `energie.toml` est le seul endroit qui nomme le verrouilleur (`verrouilleur`, désormais `dunei-verrou`). `misc.allow_session_lock_restore` est vrai : un `hyprlock` planté se relance depuis un autre terminal, avec authentification.
+**`hyprlock.conf`, repli** (D41, D234). Configuration minimale, liée sous `~/.config/hypr/` : curseur masqué, saisie vide ignorée, fond uni, champ de saisie, empreinte désactivée. Aucun choix esthétique : ses couleurs sont figées et ne suivent pas le thème. Depuis L2-22, ce n'est plus la configuration normale mais le repli du lanceur, quand la configuration produite par la coque est absente ou ne donne aucun verrou. `SUPER + L` lance `loginctl lock-session` ; `energie.toml` est le seul endroit qui nomme le verrouilleur (`verrouilleur`, désormais `dunei-verrou`, nommé par son chemin complet `"${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/dunei-verrou"`, car les scripts de Hyprland ne sont pas dans le PATH). `misc.allow_session_lock_restore` est vrai : un `hyprlock` planté se relance depuis un autre terminal, avec authentification.
 
-**Le verrouillage (L2-22, D226 à D234).** `SUPER + L`, le menu de déconnexion, le lanceur et l'échelle d'inactivité passent par `loginctl lock-session`, qui appelle `dunei-verrou` (clé `verrouilleur` de `energie.toml`). Ce lanceur, un script POSIX de `config/hypr/scripts/`, se place dans sa propre unité transitoire (`systemd-run --user`), pour qu'un redémarrage d'`hypridle` ne tue ni lui ni `hyprlock`, puis : demande à la coque de faire tomber le bloc ; lance `hyprlock --no-fade-in` avec la configuration produite, au plus 1 s après l'appel ; envoie `SIGUSR2` à `hyprlock` une fois le verrou tenu et l'apparition finie, puis chaque minute pour l'horloge ; et fait remonter le bloc au déverrouillage. La seule vérité du verrou est `hyprctl -j locked`. La variante `dunei-verrou --sec` (clé `verrouilleur_initial`, verrou de l'ouverture de session) et la mise en veille posent le verrou sans chute ni apparition.
+**Le verrouillage (L2-22, D226 à D234).** `SUPER + L`, le menu de déconnexion, le lanceur et l'échelle d'inactivité passent par `loginctl lock-session`, qui appelle `dunei-verrou` (clé `verrouilleur` de `energie.toml`). Ce lanceur, un script POSIX de `config/hypr/scripts/`, lié sous `~/.config/hypr/scripts/` et non dans `~/.local/bin`, est nommé par son chemin complet : `hypridle` (`lock_cmd`) et `dunei-verrou-initial` l'exécutent par `sh -c`, qui développe `${XDG_CONFIG_HOME:-$HOME/.config}`, comme pour `dunei-attenuer` ; un nom nu rendait 127, sans verrou. Il se place dans sa propre unité transitoire (`systemd-run --user`), pour qu'un redémarrage d'`hypridle` ne tue ni lui ni `hyprlock`, puis : demande à la coque de faire tomber le bloc (un appel qui trouve encore active l'unité d'un verrou qui finit, la session rendue, ne l'attend que jusqu'à l'échéance de la pose, puis pose un verrou sec hors unité, toujours en 1,5 s au plus) ; lance `hyprlock --no-fade-in` avec la configuration produite, au plus 1 s après l'appel ; envoie `SIGUSR2` à `hyprlock` une fois le verrou tenu et l'apparition finie, puis chaque minute pour l'horloge ; et fait remonter le bloc au déverrouillage. La seule vérité du verrou est `hyprctl -j locked`. La variante `dunei-verrou --sec` (clé `verrouilleur_initial`, verrou de l'ouverture de session) et la mise en veille posent le verrou sans chute ni apparition.
 
 La coque produit à l'avance les fichiers de `hyprlock` dans `~/.local/state/dunei/verrou/` : par écran, `fond-<écran>.png`, `pastille-<écran>.png`, `champ-<écran>.png` et les versions vides `pastille-<écran>-vide.png` et `champ-<écran>-vide.png`, en pixels physiques, et un `hyprlock.conf` à sections `monitor`. Elle les reproduit à chaque changement de fond, de thème, de préférence de mouvement ou d'écran, en fichier provisoire puis renommage. Si ce dossier est absent ou donne un verrou qui ne tient pas, le lanceur retombe sur `~/.config/hypr/hyprlock.conf` (le repli ci-dessus) : trois lancements en tout, puis, à l'ouverture de session, `uwsm stop`, et en cours de session une notification critique « Verrouillage impossible » et la session laissée ouverte (D231).
 
@@ -1186,6 +1186,7 @@ greetd greetd-tuigreet
 | `config/systemd/user/nm-applet.service` | `~/.config/systemd/user/` | Unité de l'applet réseau, première de la liste à être écrite par DuneI |
 | `config/hypr/modules/demarrage.lua` | `~/.config/hypr/modules/` (lien) | Verrou initial (D51) |
 | `config/hypr/scripts/dunei-verrou-initial` | `~/.config/hypr/scripts/` (lien) | Trois tentatives du verrouilleur, puis `uwsm stop` |
+| `config/hypr/scripts/dunei-verrou` | `~/.config/hypr/scripts/` (lien) | Lanceur du verrou (L2-22), nommé par son chemin complet dans `energie.toml` |
 | `generated/energie.lua` | `~/.config/hypr/generated/` | Commande du verrouilleur, tirée d'`energie.toml` |
 
 *Depuis L2-11, cette unité n'est plus posée : `session.toml` la retire (`retires`), voir « Le réseau : popover et fenêtre — L2-11 ».*
@@ -2672,6 +2673,7 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 
 | Version | Date | Changement |
 | --- | --- | --- |
+| 1.63 | 2026-11-26 | Verrouillage, relecture finale (D235) : `dunei-verrou` nommé par son chemin complet dans `energie.toml`, hors du PATH ; suivi borné d'une unité qui finit ; lanceur ajouté à la table des fichiers déployés |
 | 1.62 | 2026-11-26 | Le verrouillage (L2-22, D226 à D234) : lanceur `dunei-verrou`, fichiers produits dans `~/.local/state/dunei/verrou/`, repli `hyprlock.conf`, dépendance `pgrep`, `make install` avant la recette, liste de recette ; `SUPER + L` |
 | 1.61 | 2026-11-24 | L'agent d'authentification (L2-24, D222 à D225) : règle PAM de polkit, `faillock.conf`, module `Autorisation`, secours |
 | 1.60 | 2026-11-24 | Apparition et disparition de la presqu'île (L2-48, D220), vrai plein écran lu en un seul endroit (D221) |
