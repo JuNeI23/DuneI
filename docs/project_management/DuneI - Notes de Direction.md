@@ -730,7 +730,7 @@ Les demandes de droits d'administrateur passent désormais par la coque (L2-24, 
 24 novembre : une île sort de la presqu'île, dit ce qui est demandé et prend le mot de passe ; une annulation ne compte plus
 comme un échec, et le compte tolère cinq mots de passe faux.
 
-Le verrouillage est écrit (L2-22, D226 à D234) et attend sa recette à l'écran : `hyprlock` reste le verrouilleur et la coque
+Le verrouillage est écrit (L2-22, D226 à D235) et attend sa recette à l'écran : `hyprlock` reste le verrouilleur et la coque
 lui donne le spectacle. Un bloc à l'image du fond tombe du haut vers le bas et cache la session ; l'horloge monumentale
 arrive en recul, puis la date, la pastille et le champ ; le chemin inverse remonte le bloc au déverrouillage. Le lanceur
 `dunei-verrou` ne tient pour vérité que `hyprctl -j locked` ; une session dont le verrou échoue en cours de route reste
@@ -746,7 +746,7 @@ L2-37, l'empreinte, qui vient juste après.
 
 | Version | Date | Changement |
 | --- | --- | --- |
-| 1.71 | 2026-11-26 | L2-22 écrit (D226 à D234), recette à l'écran en attente ; `hyprlock` emprunté, spectacle à DuneI ; prochaine étape : la recette, puis L2-37 |
+| 1.71 | 2026-11-26 | L2-22 écrit (D226 à D235), recette à l'écran en attente ; `hyprlock` emprunté, spectacle à DuneI ; prochaine étape : la recette, puis L2-37 |
 | 1.70 | 2026-11-24 | L2-24 fait (D222 à D225), recette validée ; prochaine étape inchangée |
 | 1.69 | 2026-11-24 | L2-48 fait (D220, D221), recette validée ; prochaine étape à proposer : L2-57 à L2-59, L2-62, L2-70, défauts L2-75 à L2-79, L2-84 |
 | 1.68 | 2026-11-24 | L2-82 et L2-83 faits (D218, D219) ; prochaine étape à proposer : le reste de L2-48 |
