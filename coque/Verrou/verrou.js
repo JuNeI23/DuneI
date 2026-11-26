@@ -49,7 +49,7 @@ const rgb = c => "rgb(" + String(c).replace("#", "") + ")"
 // les écrans connus le recouvrent d'un fond opaque, il n'apparaît que sur un écran branché pendant le verrou.
 // Erreurs : aucune ; un champ manquant produit « undefined » dans le texte. Dépendances : physique.
 function confHyprlock(ecrans, j, marqueur, repli) {
-    const v = j.verrou, c = j.couleurs, nom = pango(j.utilisateur || ""), initiale = pango(Array.from(j.utilisateur || "")[0] || "").toUpperCase()
+    const v = j.verrou, c = j.couleurs, nom = pango(j.utilisateur || ""), initiale = pango(String(Array.from(j.utilisateur || "")[0] || "").toUpperCase())
     const vide = "[ -e " + sh(marqueur) + " ]"
     // balise — texte Pango d'une étiquette : famille nommée dans le balisage, couleur en ##, taille exacte en 1/1024 pt.
     const balise = (couleur, px, e, poids, texte) => '<span font_family="Source Sans 3" weight="' + poids + '" foreground="'
@@ -60,14 +60,16 @@ function confHyprlock(ecrans, j, marqueur, repli) {
         "    halign = center", "    valign = " + valign, "    position = 0, " + y, "}"].join("\n")
     // image — bloc image échangé par reload_cmd : version vide tant que le marqueur existe.
     const image = (e, plein, vid, taille, y) => ["image {", "    monitor = " + e.nom, "    path = " + (vid || repli),
-        "    reload_time = 0", "    reload_cmd = " + vide + " && echo " + sh(vid || repli) + " || echo " + sh(plein || repli),
+        "    rounding = 0", "    border_size = 0", "    reload_time = 0", "    reload_cmd = " + vide + " && echo " + sh(vid || repli) + " || echo " + sh(plein || repli),
         "    size = " + taille, "    halign = center", "    valign = bottom", "    position = 0, " + y, "}"].join("\n")
-    const champ = (e, zindex) => ["input-field {", ...(e ? ["    monitor = " + e.nom] : []),
-        "    size = " + (e ? physique(v.champLargeur, e.echelle) + ", " + physique(v.champHauteur, e.echelle) : "1, 1"),
+    // champ — bloc input-field. Entrées : ref, écran de référence pour la taille et la position (echelle) ; nom, nom de
+    // l'écran visé ou null pour la section sans nom ; zindex. Sortie : le bloc.
+    const champ = (ref, nom, zindex) => ["input-field {", ...(nom ? ["    monitor = " + nom] : []),
+        "    size = " + physique(v.champLargeur, ref.echelle) + ", " + physique(v.champHauteur, ref.echelle),
         "    inner_color = rgba(00000000)", "    outer_color = rgba(00000000)", "    check_color = rgba(00000000)",
         "    fail_color = " + rgb(c.erreur), "    font_color = " + rgb(c.heures), "    fade_on_empty = false",
         "    placeholder_text =", "    fail_text = $PAMFAIL", "    outline_thickness = 2", "    halign = center",
-        "    valign = bottom", "    position = 0, " + (e ? physique(v.champBas, e.echelle) : 0), "    zindex = " + zindex, "}"].join("\n")
+        "    valign = bottom", "    position = 0, " + physique(v.champBas, ref.echelle), "    zindex = " + zindex, "}"].join("\n")
     const parEcran = e => {
         const i = e.images || {}, p = x => physique(x, e.echelle)
         const heureMin = "printf " + sh(balise(c.heures, v.horloge, e.echelle, 200, "%s") + balise(c.minutes, v.horloge, e.echelle, 200, "%s"))
@@ -78,13 +80,14 @@ function confHyprlock(ecrans, j, marqueur, repli) {
             "    zindex = -1", "}",
             etiquette(e, v.horloge, -p(v.horlogeHaut), "top", heureMin),
             etiquette(e, v.date, -p(v.dateHaut), "top", "printf " + sh(balise(c.minutes, v.date, e.echelle, 400, "%s"))
-                + " \"$(LC_ALL=fr_FR.UTF-8 date '+%A %-d %B' | tr '[:upper:]' '[:lower:]')\""),
+                + " \"$(date '+%w %-d %-m' | awk -v J=" + sh(JOURS.join(" ")) + " -v M=" + sh(MOIS.join(" "))
+                + " '{split(J, a, \" \"); split(M, b, \" \"); print a[$1 + 1] \" \" $2 \" \" b[$3]}')\""),
             image(e, i.pastille, i.pastilleVide, p(v.pastille), p(v.pastilleBas)),
             etiquette(e, v.nomTaille * 1.6, p(v.pastilleBas + v.pastille / 2 - 14), "bottom",
                 fixe(v.nomTaille * 1.6, c.heures, 400, initiale)),
             etiquette(e, v.nomTaille, p(v.pastilleBas - 44), "bottom", fixe(v.nomTaille, c.heures, 400, nom)),
             image(e, i.champ, i.champVide, p(v.champHauteur), p(v.champBas)),
-            champ(e, 1),
+            champ(e, e.nom, 1),
         ].join("\n\n")
     }
     const premier = ecrans[0]
@@ -94,7 +97,6 @@ function confHyprlock(ecrans, j, marqueur, repli) {
         "auth {", "    fingerprint {", "        enabled = false", "    }", "}",
         ...ecrans.map(parEcran),
         ["background {", "    color = " + rgb(c.fond), "    zindex = -2", "}"].join("\n"),
-        champ(null, -2).replace("size = 1, 1", "size = " + (premier ? physique(v.champLargeur, premier.echelle) + ", "
-            + physique(v.champHauteur, premier.echelle) : "1, 1")).replace("position = 0, 0", "position = 0, " + (premier ? physique(v.champBas, premier.echelle) : 0)),
+        champ(premier || { echelle: 1 }, null, -2),
     ].join("\n\n") + "\n"
 }

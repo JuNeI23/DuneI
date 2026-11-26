@@ -81,7 +81,9 @@ class LogiqueTest(EssaiCoque, unittest.TestCase):
         """Vérifie tailles et positions à l'échelle 1,25. Entrées, sortie : aucune. Erreurs : échec."""
         c = self.conf()
         self.assertIn('size="%d"' % round(700 * 1.25 * 0.75 * 1024), c)
-        self.assertIn('size="672000"', c)
+        horloge = next(b for b in re.findall(r"label \{.*?\n\}", c, re.S) if 'size="672000"' in b)
+        self.assertIn('font_family="Source Sans 3"', horloge)
+        self.assertIn('weight="200"', horloge)
         for attendu in ("size = 90", "size = 350, 45", "position = 0, 70", "position = 0, 200"):
             self.assertIn(attendu, c)
 
@@ -128,6 +130,34 @@ class LogiqueTest(EssaiCoque, unittest.TestCase):
         c = self.conf(utilisateur="a<b&'c")
         self.assertIn("a&lt;b&amp;", c)
         self.assertNotIn("a<b", c)
+
+    def test_initiale_majuscule(self):
+        """Vérifie que l'initiale est mise en majuscule avant l'échappement. Entrées, sortie : aucune. Erreurs : échec."""
+        c = self.conf(utilisateur="&x")
+        self.assertIn(">&amp;</span>", c)
+        self.assertNotIn("&AMP;", c)
+
+    def test_images_sans_bordure(self):
+        """Vérifie que les images n'héritent ni du rayon ni de la bordure par défaut. Entrées, sortie : aucune."""
+        for bloc in re.findall(r"image \{.*?\n\}", self.conf(), re.S):
+            self.assertIn("rounding = 0", bloc)
+            self.assertIn("border_size = 0", bloc)
+
+    def test_date_sans_locale(self):
+        """Vérifie que la commande de date n'a pas de locale et rend « mercredi 25 novembre » sous LC_ALL=C.
+
+        Entrées, sortie : aucune. Erreurs : échec. Dépendances : conf, sh.
+        """
+        c = self.conf()
+        date = next(b for b in re.findall(r"label \{.*?\n\}", c, re.S) if "date '" in b)
+        self.assertNotIn("LC_ALL", date)
+        self.assertNotIn("%A", date)
+        self.assertNotIn("%B", date)
+        commande = re.search(r"\] \|\| (.*)", date.split("text = cmd[update:10000:1] ")[1]).group(1)
+        commande = commande.replace("date '+%w %-d %-m'", "echo '3 25 11'")
+        sortie = subprocess.run(["sh", "-c", commande], env={"LC_ALL": "C", "PATH": os.environ["PATH"]},
+                                capture_output=True, text=True, check=True).stdout
+        self.assertIn(">mercredi 25 novembre</span>", sortie)
 
     def test_ordre(self):
         """Vérifie l'ordre des messages. Entrées, sortie : aucune. Erreurs : échec. Dépendances : appeler."""
