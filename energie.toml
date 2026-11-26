@@ -12,7 +12,8 @@ critique = 5          # « Branchez le chargeur », en rouge ; toujours sous le 
 
 [commandes]
 verrouiller  = "loginctl lock-session"                    # Seul chemin vers le verrouillage.
-verrouilleur = "pidof hyprlock || hyprlock --no-fade-in --immediate-render"  # Seul endroit où le verrouilleur est nommé (provisoire, L2-22).
+verrouilleur = "dunei-verrou"                             # Seul endroit où le verrouilleur est nommé (L2-22).
+verrouilleur_initial = "dunei-verrou --sec"               # Variante du verrou initial de la session : échec fermé (L1-10, L2-22).
 
 [attenuation]
 niveau = 10           # Luminosité de l'écran atténué, en % ; jamais au-dessus de la luminosité courante.

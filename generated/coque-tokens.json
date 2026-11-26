@@ -1819,5 +1819,18 @@
     "urgence": "/usr/share/sounds/ocean/stereo/message-new-instant.oga",
     "salve": 2000,
     "renouvellement": 60000
+  },
+  "verrou": {
+    "horloge": 700,
+    "horlogeHaut": 34,
+    "recul": 3.4,
+    "date": 22,
+    "dateHaut": 556,
+    "pastille": 72,
+    "nomTaille": 17,
+    "champLargeur": 280,
+    "champHauteur": 36,
+    "champBas": 56,
+    "pastilleBas": 160
   }
 }

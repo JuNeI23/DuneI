@@ -24,6 +24,11 @@
     "selecteur": 150,
     "garde": 1000,
     "gardeFrappe": 400,
+    "verrouAttente": 1000,
+    "verrouApparition": 1500,
+    "verrouCession": 350,
+    "verrouRetrait": 200,
+    "verrouSecours": 2500,
     "autorise": 800
   },
   "periods": {

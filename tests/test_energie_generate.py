@@ -36,7 +36,7 @@ class GenerateTest(unittest.TestCase):
 
     def test_general(self):
         text = self.generate()
-        for line in ("    lock_cmd = pidof hyprlock || hyprlock --no-fade-in --immediate-render",
+        for line in ("    lock_cmd = dunei-verrou",
                      "    before_sleep_cmd = loginctl lock-session",
                      "    after_sleep_cmd = hyprctl dispatch 'hl.dsp.dpms({ action = \"on\" })'",
                      "    inhibit_sleep = 3", "    ignore_dbus_inhibit = false",
@@ -101,19 +101,26 @@ class LuaTargetTest(unittest.TestCase):
 
     def roundtrip(self, cmd: str) -> str:
         """Évalue le module émis pour une commande donnée et rend la valeur lue par Lua."""
-        text = lua_target.emit({"verrouilleur": cmd})
+        text = lua_target.emit({"verrouilleur": cmd, "verrouilleur_initial": cmd})
         res = subprocess.run([LUA, "-e", f"io.write((load([==[{text}]==])()).verrouilleur)"],
                              capture_output=True, text=True)
         self.assertEqual(res.returncode, 0, res.stderr)
         return res.stdout
 
     def test_marked_as_generated(self):
-        self.assertIn("GÉNÉRÉ depuis energie.toml", lua_target.emit({"verrouilleur": "x"}).splitlines()[0])
+        self.assertIn("GÉNÉRÉ depuis energie.toml", lua_target.emit({"verrouilleur": "x", "verrouilleur_initial": "x"}).splitlines()[0])
 
     @unittest.skipUnless(LUA, "aucun interpréteur Lua")
     def test_real_command_roundtrips(self):
         cmd = "pidof hyprlock || hyprlock --no-fade-in --immediate-render"
         self.assertEqual(self.roundtrip(cmd), cmd)
+
+    @unittest.skipUnless(LUA, "aucun interpréteur Lua")
+    def test_initial_command_roundtrips(self):
+        text = lua_target.emit({"verrouilleur": "a", "verrouilleur_initial": "a --sec"})
+        res = subprocess.run([LUA, "-e", f"io.write((load([==[{text}]==])()).verrouilleur_initial)"],
+                             capture_output=True, text=True)
+        self.assertEqual((res.returncode, res.stdout), (0, "a --sec"))
 
     @unittest.skipUnless(LUA, "aucun interpréteur Lua")
     def test_quotes_and_backslashes_roundtrip(self):

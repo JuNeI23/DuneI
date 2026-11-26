@@ -83,6 +83,7 @@ class ChecksTest(unittest.TestCase):
 
     def test_commands(self):
         self.refused(lambda r: r["commandes"].update(verrouilleur=" "), "« verrouilleur » manquante ou vide")
+        self.refused(lambda r: r["commandes"].pop("verrouilleur_initial"), "« verrouilleur_initial » manquante ou vide")
         self.refused(lambda r: r.pop("commandes"), "« verrouiller » manquante ou vide")
 
     def test_version(self):

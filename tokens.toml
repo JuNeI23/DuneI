@@ -513,6 +513,19 @@ rangee = 32                   # hauteur du champ et du bouton
 rayon = 18                    # angles bas de l'île ouverte
 secousse = 7                  # poussée du champ à l'échec, en px
 
+[verrou]                      # écran de verrouillage, verrou hyprlock relayé par la coque (L2-22) ; px logiques sauf mention
+horloge = 700                 # corps de l'horloge ; l'heure est en ses chiffres, les minutes dessous
+horlogeHaut = 34              # marge haute de l'horloge
+recul = 3.4                   # recul de l'horloge sur la hauteur de l'écran, en %
+date = 22                     # corps de la date
+dateHaut = 556                # position de la date depuis le haut
+pastille = 72                 # côté de la pastille de l'utilisateur
+nomTaille = 17                # corps du nom de l'utilisateur
+champLargeur = 280            # largeur du champ de mot de passe
+champHauteur = 36             # hauteur du champ de mot de passe
+champBas = 56                 # distance du champ au bas de l'écran
+pastilleBas = 160             # distance de la pastille au bas de l'écran
+
 [notifications]               # pile de notifications de la coque (L2-19) ; px logiques sauf mention ; ms pour duree
 largeur = 340                 # largeur d'une carte
 marge = 8                     # distance de la pile au bord de l'écran
