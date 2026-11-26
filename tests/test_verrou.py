@@ -23,7 +23,7 @@ from tests.test_coque_theme import DELAI, QS, ROOT, EssaiCoque
 # Jetons du verrou, tels que generated/coque-tokens.json les publie.
 VERROU = {"horloge": 700, "horlogeHaut": 34, "horlogeLigne": 500, "horlogeInterlettrage": -8, "recul": 3.4,
           "date": 22, "dateHaut": 556, "pastille": 72, "nomTaille": 17, "champLargeur": 280, "champHauteur": 36,
-          "champBas": 56, "pastilleBas": 160}
+          "champBas": 56, "pastilleBas": 139}
 COULEURS = {"fond": "#0f0703", "heures": "#f5f5f5", "minutes": "#bebebe", "emphase": "#fdf3ec", "erreur": "#d33a3c"}
 IMAGES = {"fond": "/r/fond.png", "pastille": "/r/p.png", "champ": "/r/c.png",
           "pastilleVide": "/r/pv.png", "champVide": "/r/cv.png"}
@@ -93,17 +93,17 @@ class LogiqueTest(EssaiCoque, unittest.TestCase):
         horloge = next(b for b in re.findall(r"label \{.*?\n\}", c, re.S) if 'size="672000"' in b)
         self.assertIn('font_family="Source Sans 3"', horloge)
         self.assertIn('weight="200"', horloge)
-        for attendu in ("size = 90", "size = 350, 45", "position = 0, 70", "position = 0, 200"):
+        for attendu in ("size = 90", "size = 350, 45", "position = 0, 70", "position = 0, 174"):
             self.assertIn(attendu, c)
 
     def test_conf_centres(self):
         """Vérifie les étiquettes centrées sur un point de l'écran, comme Contenu.qml : horloge au milieu de sa ligne
-        (34 + 500 / 2 depuis le haut), initiale au centre de la pastille (160 + 72 / 2 depuis le bas), nom entre le
-        champ et la pastille ((56 + 36 + 160) / 2 depuis le bas) ; décalage vers le haut depuis le milieu d'un écran
+        (34 + 500 / 2 depuis le haut), initiale au centre de la pastille (139 + 72 / 2 depuis le bas), nom entre le
+        champ et la pastille ((56 + 36 + 139) / 2 depuis le bas) ; décalage vers le haut depuis le milieu d'un écran
         de 1200 à 1,25. Entrées, sortie : aucune. Erreurs : échec. Dépendances : conf.
         """
         etiquettes = re.findall(r"label \{.*?\n\}", self.conf(), re.S)
-        attendus = {'size="672000"': 395, ">N</span>": round(1.25 * (196 - 600)), ">nicolas</span>": -592}
+        attendus = {'size="672000"': 395, ">N</span>": round(1.25 * (175 - 600)), ">nicolas</span>": -606}
         for marque, y in attendus.items():
             bloc = next(b for b in etiquettes if marque in b)
             self.assertIn("valign = center", bloc, marque)
@@ -391,6 +391,18 @@ class ControleurTest(EssaiCoque, unittest.TestCase):
         m, e = self.mesure(), self.etat()
         self.assertEqual((m["position"], m["verrou"], e["pose"], e["remonte"]), (0, False, False, False))
 
+    def test_remontee_en_pleine_chute(self):
+        """Une remontée demandée en pleine chute repart de la position courante, sans saut, et redescend à zéro."""
+        self.verrou("tomber", 1)
+        self.jusqua(lambda: 0.2 < float(self.appel("position")) < 0.8, "chute à mi-course", 1.0)
+        avant = float(self.appel("position"))
+        self.verrou("remonter", 1)
+        apres = float(self.appel("position"))
+        self.assertLess(abs(apres - avant), 0.2, "saut de position")
+        self.assertGreater(apres, 0.05)
+        self.jusqua(lambda: not self.mesure()["montre"], "bloc caché")
+        self.assertEqual(self.mesure()["position"], 0)
+
     def test_ferme_le_reste(self):
         """La chute ferme le popover exclusif et l'attention ouverts."""
         self.appel("ouvrir")
@@ -411,6 +423,18 @@ class ControleurTest(EssaiCoque, unittest.TestCase):
         self.assertFalse(self.mesure()["clavier"])
         self.jusqua(lambda: not self.mesure()["montre"], "bloc caché")
 
+    def test_lanceur_vivant_garde_le_bloc(self):
+        """Compositeur qui dit la session ouverte, mais un lanceur vit (il relance hyprlock) : le bloc reste posé et
+        garde le clavier ; le lanceur parti, il remonte comme sans lanceur."""
+        self.appel("lecture", "false")
+        self.appel("lanceur", "true")
+        self.verrou("poserSec", 1)
+        time.sleep(3.2)
+        self.assertTrue(self.etat()["pose"], "remonté sous un lanceur vivant")
+        self.assertTrue(self.mesure()["clavier"])
+        self.appel("lanceur", "false")
+        self.jusqua(lambda: not self.etat()["pose"], "remontée sans lanceur", 3.5)
+
     def test_session_tenue_reste(self):
         """Tant que le compositeur dit la session tenue, le bloc posé reste."""
         self.verrou("poserSec", 1)
@@ -418,10 +442,18 @@ class ControleurTest(EssaiCoque, unittest.TestCase):
         self.assertTrue(self.etat()["pose"])
 
     def test_demarrage_sous_verrou(self):
-        """Démarrée pendant un verrou, la coque pose son bloc sans chute ; session ouverte, rien."""
+        """Démarrée pendant un verrou, la coque pose son bloc sans chute."""
         self.appel("demarrer")
         self.jusqua(lambda: self.etat()["pose"], "bloc posé au démarrage", 1.0)
         self.assertEqual(self.mesure()["position"], 1)
+
+    def test_demarrage_session_ouverte(self):
+        """Démarrée sur une session ouverte, la coque ne pose rien et ne prend pas le clavier."""
+        self.appel("lecture", "false")
+        self.appel("demarrer")
+        time.sleep(0.8)
+        m, e = self.mesure(), self.etat()
+        self.assertEqual((e["pose"], m["montre"], m["clavier"], m["verrou"]), (False, False, False, False))
 
     def test_apparition_secours(self):
         """Sans cession, le calque d'apparition est retiré d'office après delays.verrouSecours (2,5 s), et le contenu
@@ -483,6 +515,25 @@ class SourceTest(unittest.TestCase):
         self.assertRegex(apparition, r"mask:\s*Region\s*\{\s*\}")
         self.assertRegex(apparition, r"WlrLayershell\.keyboardFocus:\s*WlrKeyboardFocus\.None")
 
+    def test_lectures_bornees(self):
+        """La lecture du compositeur et la recherche d'un lanceur sont bornées dans le temps ; la recherche vise l'unité
+        du lanceur et son script hors unité."""
+        source = self.lire("Verrou/Verrou.qml")
+        self.assertIn('property var lecture: ["timeout", "1", "hyprctl", "-j", "locked"]', source)
+        self.assertIn("timeout 1 systemctl --user is-active --quiet dunei-verrou.scope", source)
+        self.assertIn("timeout 1 pgrep -u", source)
+
+    def test_motif_du_lanceur(self):
+        """Le motif de pgrep reconnaît le lanceur lancé par son shebang, et ni lui-même, ni un éditeur, ni un autre
+        script du même préfixe."""
+        motif = re.compile(r"^(/usr)?/bin/sh [^ ]*/[d]unei-verrou( |$)")
+        self.assertTrue(motif.search("/bin/sh /home/n/.config/hypr/scripts/dunei-verrou"))
+        self.assertTrue(motif.search("/usr/bin/sh /home/n/.config/hypr/scripts/dunei-verrou --sec"))
+        for autre in ("sh -c timeout 1 pgrep -f '^(/usr)?/bin/sh [^ ]*/[d]unei-verrou( |$)'",
+                      "nvim /home/n/DuneI/config/hypr/scripts/dunei-verrou",
+                      "/bin/sh /home/n/.config/hypr/scripts/dunei-verrou-initial"):
+            self.assertIsNone(motif.search(autre), autre)
+
     def test_ressort_spectacle(self):
         """La chute et la remontée vont au ressort « spectacle »."""
         self.assertRegex(self.lire("Verrou/Verrou.qml"), r'Ressort\s*\{\s*id:\s*descente;\s*transition:\s*"spectacle"')
@@ -495,6 +546,9 @@ class SourceTest(unittest.TestCase):
         self.assertRegex(self.lire("Autorisation/Autorisation.qml"), r"if \(C\.Overlays\.verrou && f\) \{ attendu = f")
         shell = self.lire("shell.qml")
         self.assertRegex(shell, r"Verrou\.demarrer\(\)")
+        self.assertRegex(shell, r"function onTombe\(\) \{ Lanceur\.fermer\(\); Selecteur\.annuler\(\); "
+                                r"Deconnexion\.annuler\(\) \}")
+        self.assertRegex(shell, r"Connections \{\s*target: Verrou")
         self.assertRegex(shell, r"\n    Production \{")
 
 

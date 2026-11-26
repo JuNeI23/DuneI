@@ -112,7 +112,7 @@ class QuickshellEmitterTest(unittest.TestCase):
         self.assertEqual(self.out["verrou"], {"horloge": 700, "horlogeHaut": 34, "horlogeLigne": 500,
                                               "horlogeInterlettrage": -8, "recul": 3.4, "date": 22, "dateHaut": 556,
                                               "pastille": 72, "nomTaille": 17, "champLargeur": 280, "champHauteur": 36,
-                                              "champBas": 56, "pastilleBas": 160, "apparitionPastille": 500,
+                                              "champBas": 56, "pastilleBas": 139, "apparitionPastille": 500,
                                               "apparitionDate": 550, "apparitionMot": 70, "apparitionNom": 620,
                                               "apparitionChamp": 720, "courseDate": 34, "courseNom": 14})
 

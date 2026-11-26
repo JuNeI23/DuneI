@@ -16,17 +16,22 @@ import "verrou.js" as Logique
 // se ferment et le signal tombe() laisse la coque de session fermer lanceur, sélecteur et menu de déconnexion.
 // Overlays.verrou est vrai de la chute à la fin de la remontée, presqu'île revenue au verre : la vraie presqu'île
 // s'efface dessous, les notifications et les demandes d'autorisation attendent. Sans lanceur, tant que le bloc est
-// posé, la coque lit l'état du compositeur chaque seconde : deux lectures franches « rendu » de suite rendent le
-// clavier et font remonter le bloc. demarrer(), appelé par la coque de session, pose le bloc sans chute si la session
+// posé, la coque lit l'état du compositeur chaque seconde : deux lectures franches « rendu » de suite, sans lanceur
+// vivant, rendent le clavier et font remonter le bloc. Un lanceur vivant (unité dunei-verrou.scope active, ou script
+// dunei-verrou hors unité) mène le verrou : ses relances de hyprlock laissent la session un temps « rendue », et le
+// bloc doit alors rester. demarrer(), appelé par la coque de session, pose le bloc sans chute si la session
 // est déjà tenue. Le calque d'apparition se retire d'office après delays.verrouSecours.
 // Entrées : IPC « verrou » : tomber, poserSec, apparaitre, ceder, remonter (chacun à ordre, entier), abreger (sans
 //           ordre : il ne fait qu'abréger ce qui est en cours) et etat ; demarrer() ; fenetree, vrai par défaut (faux :
 //           aucun calque, pour les essais) ; clavierExclusif, vrai par défaut ; lecture, commande qui écrit l'état du
-//           compositeur en JSON ({"locked": bool}), hyprctl -j locked par défaut (remplacée par les essais).
+//           compositeur en JSON ({"locked": bool}), hyprctl -j locked borné à 1 s par défaut ; presence, commande
+//           qui sort à 0 si un lanceur vit (systemctl, pgrep), bornée de même ; toutes deux remplacées par les essais.
 // Sorties : ordre ; couvre (bloc voulu posé) ; pose (posé et immobile) ; remonte (remontée demandée, pas finie) ;
 //           position (1 posé, 0 caché ; fixe à 1 en mouvement réduit) ; opacite ; matiere (1 image, 0 verre) ;
-//           actif (vaut Overlays.verrou) ; montre (calque du bloc mappé : actif, et un tour de boucle de plus) ; apparition (calque d'apparition mappé) ; vu ; contenuBloc ; prendClavier ; signal tombe().
-// Erreurs : ordre périmé : ignoré ; lecture illisible ou commande absente : la lecture ne compte pas comme rendue.
+//           actif (vaut Overlays.verrou) ; montre (calque du bloc mappé : actif, et un tour de boucle de plus) ;
+//           apparition (calque d'apparition mappé) ; vu ; contenuBloc ; prendClavier ; signal tombe().
+// Erreurs : ordre périmé : ignoré ; lecture illisible ou commande absente : la lecture ne compte pas comme rendue ;
+//           présence d'un lanceur indécidable (commande muette ou absente) : compté comme rendu, faute de lanceur vu.
 // Dépendances : Quickshell (Singleton, Variants), Quickshell.Io (Process, StdioCollector, IpcHandler), Ressort, Theme
 //           (motion.delays : verrouRetrait, verrouSecours ; mouvementReduit), C.Overlays (popover, attention, verrou),
 //           verrou.js (ordreValable), Bloc.qml, Apparition.qml.
@@ -42,7 +47,10 @@ Singleton {
     property bool clavier: false
     property bool fenetree: true
     property bool clavierExclusif: true
-    property var lecture: ["hyprctl", "-j", "locked"]
+    property var lecture: ["timeout", "1", "hyprctl", "-j", "locked"]
+    // Le motif [d] ne se reconnaît pas lui-même dans la ligne de commande du sh qui lance pgrep.
+    property var presence: ["sh", "-c", "timeout 1 systemctl --user is-active --quiet dunei-verrou.scope || "
+        + "timeout 1 pgrep -u \"$(id -u)\" -f '^(/usr)?/bin/sh [^ ]*/[d]unei-verrou( |$)' >/dev/null"]
     // Lectures franches « rendu » consécutives du suivi ; mode de la lecture en cours (« suivi » ou « demarrage »).
     property int rendus: 0
     property string pour: "suivi"
@@ -62,7 +70,8 @@ Singleton {
     Ressort { id: descente; transition: "spectacle"; seuil: 0.001; cible: verrou.couvre ? 1 : 0 }
     Ressort { id: fondu; transition: "spectacle"; nature: "fondu"; cible: verrou.couvre ? 1 : 0 }
     // Matière de la presqu'île du bloc : l'image dès que le bloc quitte le repos, le verre une fois remonté.
-    Ressort { id: image; transition: "state"; nature: "fondu"; cible: !verrou.reduit && (verrou.couvre || descente.value > 0) ? 1 : 0 }
+    Ressort { id: image; transition: "state"; nature: "fondu"
+              cible: !verrou.reduit && (verrou.couvre || descente.value > 0) ? 1 : 0 }
     // Le calque du bloc reste mappé jusqu'au tour de boucle suivant la fin : la vraie presqu'île, reposée d'un coup à
     // l'identique, est déjà demandée. Relevé au banc : ni vide ni verre doublé, alors qu'une tenue de 32 ms doublait
     // le verre une image.
@@ -190,14 +199,21 @@ Singleton {
     }
 
     // conclure — tire la conséquence d'une lecture. Entrée : texte, la sortie de la commande. Sortie : bloc posé au
-    // démarrage si la session est tenue ; au suivi, deux « rendu » de suite sans chute en cours font remonter le bloc.
-    // Erreurs : texte illisible : ni tenu ni rendu, la série repart de zéro. Dépendances : poserSec, relever.
+    // démarrage si la session est tenue ; au suivi, un « rendu » lance la recherche d'un lanceur (compter).
+    // Erreurs : texte illisible : ni tenu ni rendu, la série repart de zéro. Dépendances : poserSec, chercheur.
     function conclure(texte) {
         let locked = null
         try { locked = JSON.parse(texte).locked } catch (e) { locked = null }
         if (pour === "demarrage") { if (locked === true && !couvre) poserSec(ordre); return }
-        if (!pose) { rendus = 0; return }
-        rendus = locked === false ? rendus + 1 : 0
+        if (!pose || locked !== false) { rendus = 0; return }
+        if (!chercheur.running) chercheur.running = true
+    }
+
+    // compter — un « rendu » lu : compté seulement si aucun lanceur ne vit ; deux de suite font remonter le bloc.
+    // Entrée : lanceur, vrai si un lanceur vit. Sortie : rendus ; clavier rendu et remontée au second.
+    // Erreurs : aucune ; bloc qui n'est plus posé, la série repart de zéro. Dépendances : relever.
+    function compter(lanceur) {
+        rendus = pose && !lanceur ? rendus + 1 : 0
         if (rendus >= 2) { rendus = 0; relever() }
     }
 
@@ -208,6 +224,13 @@ Singleton {
             // onStreamFinished — remet la sortie de la commande à conclure. Entrées : aucune. Sortie : aucune.
             onStreamFinished: verrou.conclure(text)
         }
+    }
+
+    Process {
+        id: chercheur
+        command: verrou.presence
+        // onExited — code 0 : un lanceur vit. Entrées : code, statut. Sortie : voir compter.
+        onExited: (code, statut) => verrou.compter(code === 0)
     }
 
     // Suivi du compositeur, une lecture par seconde tant que le bloc est posé ; la série repart à chaque pose.
@@ -225,7 +248,11 @@ Singleton {
     Timer {
         id: secours
         interval: Theme.motion?.delays.verrouSecours ?? 0
-        onTriggered: { verrou.contenuBloc = verrou.couvre || verrou.contenuBloc; verrou.apparition = false }
+        onTriggered: {
+            verrou.contenuBloc = verrou.couvre || verrou.contenuBloc
+            verrou.vu = false
+            verrou.apparition = false
+        }
     }
 
     Variants {

@@ -157,7 +157,8 @@ Item {
         }
     }
 
-    // Date : trois mots séparés d'une espace de la police, chacun montant de sous sa ligne, rognée à la hauteur du texte.
+    // Date : trois mots séparés d'une espace de la police, chacun montant de sous sa ligne ; la boîte est rognée à la
+    // hauteur du texte.
     Item {
         anchors.horizontalCenter: parent.horizontalCenter
         y: contenu.v.dateHaut ?? 0

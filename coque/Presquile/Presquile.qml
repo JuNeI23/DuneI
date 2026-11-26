@@ -77,17 +77,23 @@ PanelWindow {
         course: encoche.hauteur + encoche.marge
     }
 
-    // L'île d'une demande d'autorisation, de même forme, couvre celle-ci sur son écran : elle s'efface en fondu (L2-24) ;
-    // de même sur tous les écrans sous la presqu'île du bloc du verrou, du départ du bloc à la fin de sa remontée (L2-22).
+    // L'île d'une demande d'autorisation, de même forme, couvre celle-ci sur son écran : elle s'efface en fondu
+    // (L2-24) ; de même sur tous les écrans sous la presqu'île du bloc du verrou, du départ du bloc à la fin de sa
+    // remontée (L2-22).
     readonly property string nomEcran: surface.modelData?.name ?? ""
     Ressort { id: couverture; transition: "overlay"; nature: "fondu"
               cible: Composants.Overlays.verrou || nomEcran && Composants.Overlays.ecranCouvert === nomEcran ? 1 : 0 }
     Connections {
         target: Composants.Overlays
         // onVerrouChanged — la presqu'île du bloc remontée et revenue au verre, identique à celle-ci, la vraie reprend
-        // d'un coup à sa place, sans fondu qui creuserait le verre ; en mouvement réduit, elle revient en fondu.
-        // Entrées : aucune. Sortie : couverture posée. Erreurs : aucune. Dépendances : couverture, Theme.mouvementReduit.
-        function onVerrouChanged() { if (!Composants.Overlays.verrou && !Theme.mouvementReduit) couverture.poser() }
+        // d'un coup à sa place, sans fondu qui creuserait le verre ; en mouvement réduit, elle revient en fondu. La
+        // décision attend le tour de boucle suivant : une demande d'autorisation reprise à la remontée a alors annoncé
+        // son écran, et la couverture, toujours due, ne bouge pas. Entrées : aucune. Sortie : couverture posée, ou
+        // rien. Erreurs : aucune. Dépendances : couverture, Theme.mouvementReduit, Qt.callLater.
+        function onVerrouChanged() {
+            if (Composants.Overlays.verrou || Theme.mouvementReduit) return
+            Qt.callLater(() => { if (couverture.cible === 0) couverture.poser() })
+        }
     }
 
     screen: modelData

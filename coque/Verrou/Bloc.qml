@@ -23,8 +23,7 @@ import "../Theme"
 // Entrées : modelData, l'écran (obligatoire). Sorties : la fenêtre de calque. Erreurs : aucune ; avant les jetons, la
 // presqu'île est vide et le fond est un aplat surface-base.
 // Dépendances : quickshell ≥ 0.3 (PanelWindow, WlrLayershell, Hyprland.monitorFor), Verrou, Contenu, P.Encoche,
-// P.Bureaux, C.PleinEcran,
-// QtQuick.Shapes (ShapePath.fillItem), Theme (tokens.presquile, tokens.bureauxVirtuels).
+// P.Bureaux, C.PleinEcran, QtQuick.Shapes (ShapePath.fillItem), Theme (tokens.presquile, tokens.bureauxVirtuels).
 PanelWindow {
     id: fenetre
 
@@ -32,7 +31,8 @@ PanelWindow {
     readonly property var cotes: Theme.tokens?.presquile
     readonly property int bureaux: Theme.tokens?.bureauxVirtuels?.nombre ?? 0
     // Largeur du corps de la vraie presqu'île au repos (comme CadreAutorisation).
-    readonly property real repos: cotes ? cotes.pilule + (bureaux - 1) * (cotes.point + cotes.ecart) + 2 * cotes.marge : 0
+    readonly property real repos: cotes ? cotes.pilule + (bureaux - 1) * (cotes.point + cotes.ecart) + 2 * cotes.marge
+                                        : 0
 
     screen: modelData
     visible: Verrou.montre

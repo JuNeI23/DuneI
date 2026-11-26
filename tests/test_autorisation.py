@@ -184,7 +184,10 @@ class ControleurTest(EssaiCoque, unittest.TestCase):
         self.demander()
         time.sleep(0.3)
         self.assertFalse(self.etat()["ouvert"])
+        self.assertEqual(self.appel("couvert"), "")
         self.appel("verrou", "false")
+        # Couverte dès la reprise, sans attendre une fenêtre : la presqu'île ne réapparaît pas entre les deux.
+        self.assertNotEqual(self.appel("couvert"), "")
         self.jusqua(lambda: self.etat()["ouvert"], "demande ouverte à la remontée")
         self.assertEqual(self.appels(), [])
 
