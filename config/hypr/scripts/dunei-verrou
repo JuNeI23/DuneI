@@ -15,7 +15,8 @@
 #          ou « - » hors unité) ; DUNEI_VERROU_DEBUT porte l'heure de l'appel (ms), d'où part l'échéance de la pose ;
 #          DUNEI_VERROU_SANS_CHUTE impose le verrou sec au lanceur placé (placement retenté).
 # Sortie : 0 si la session a été tenue puis rendue ; 1 si le verrou n'a jamais été tenu après trois lancements,
-#          ou si le compositeur est resté muet trois fois de suite ; 2 si l'usage est faux.
+#          si le compositeur est resté muet trois fois de suite, ou s'il est resté muet $SUIVI_MUET ms de suite
+#          pendant le suivi d'un autre verrou ; 2 si l'usage est faux.
 # Erreurs : chaque lancement sans verrou tenu, chaque relance, une échéance dépassée et un échec de systemd-run sont
 #           écrits au journal (logger -t dunei-verrou) ; après trois lancements sans verrou, la session reste ouverte,
 #           le bloc remonte et une notification critique « Verrouillage impossible » s'affiche, sauf avec `--sec` :
@@ -31,8 +32,9 @@ MOTION="${XDG_CONFIG_HOME:-$HOME/.config}/dunei/motion.json"
 PROC="${DUNEI_VERROU_PROC:-/proc}"
 UNITE=dunei-verrou COQUE=dunei-coque.service
 # Bornes, en ms : réponse d'un appel extérieur ; verrou pris par hyprlock ; compositeur muet avant de le croire tenu ;
-# coque muette à la remontée ; sortie « rapide » de hyprlock ; pause avant de relancer après une sortie rapide (s).
-BORNE=0.2 BORNE_MS=200 ECHEANCE=2500 INCONNU_MAX=2000 MUETTE_REMONTEE=2000 RAPIDE=1000 PAUSE=0.5
+# coque muette à la remontée ; sortie « rapide » de hyprlock ; pause avant de relancer après une sortie rapide (s) ;
+# compositeur muet de suite pendant le suivi d'un autre verrou, avant d'y renoncer.
+BORNE=0.2 BORNE_MS=200 ECHEANCE=2500 INCONNU_MAX=2000 MUETTE_REMONTEE=2000 RAPIDE=1000 PAUSE=0.5 SUIVI_MUET=5000
 LANCEMENTS=3 USR2=12
 
 # duree — délai d'animation en millisecondes, lu dans les jetons de mouvement.
@@ -151,13 +153,21 @@ attendre_tenu() {
 # suivre — attend la fin d'un verrou mené par un autre : le verrou vu tenu puis franchement rendu.
 # Entrée : $1, 1 si l'appelant a déjà lu un « oui » franc (le premier « non » vaut alors déverrouillage), 0 sinon.
 # Sortie : 0 au déverrouillage ; 1 si, pour l'appel extérieur seulement, l'unité du lanceur se termine sans que le
-# verrou ait été vu tenu (le lanceur placé ne consulte jamais l'unité, qui est la sienne). Une réponse manquante ne
-# conclut rien. Pas de 20 ms jusqu'au verrou tenu, puis de 0,2 s, pour ne pas interroger le compositeur 50 fois par
-# seconde pendant tout le verrou. Dépendances : verrou, systemctl.
+# verrou ait été vu tenu (le lanceur placé ne consulte jamais l'unité, qui est la sienne) ; 2 si le compositeur reste
+# muet $SUIVI_MUET ms de suite (Hyprland mort ou figé) : le suivi y renonce, sans rien conclure sur la session, pour
+# que l'unité ne survive pas au compositeur. Une réponse manquante isolée ne conclut rien. Pas de 20 ms jusqu'au
+# verrou tenu, puis de 0,2 s, pour ne pas interroger le compositeur 50 fois par seconde pendant tout le verrou.
+# Erreurs : le renoncement est écrit au journal. Dépendances : verrou, maintenant, systemctl, logger.
 suivre() {
-    vu=$1
+    vu=$1 muet=
     while :; do
-        case $(verrou) in
+        e=$(verrou)
+        if [ "$e" != inconnu ]; then muet=
+        elif [ -z "$muet" ]; then muet=$(($(maintenant) + SUIVI_MUET))
+        elif [ "$(maintenant)" -ge "$muet" ]; then
+            logger -t "$UNITE" "compositeur muet $SUIVI_MUET ms pendant le suivi : abandon"; return 2
+        fi
+        case $e in
             oui) vu=1 ;;
             non) [ "$vu" = 1 ] && return 0
                  [ -z "${DUNEI_VERROU_PORTEE:-}" ] || return 1
@@ -198,8 +208,9 @@ if [ -z "${DUNEI_VERROU_PORTEE:-}" ]; then
     while :; do
         if systemctl --user is-active --quiet "$UNITE.scope"; then
             ! veille || : >"$SEC"
-            suivre 0 && exit 0
-            [ "$relu" = 0 ] || exit 1
+            suivre 0; c=$?
+            [ "$c" != 0 ] || exit 0
+            { [ "$c" = 1 ] && [ "$relu" = 0 ]; } || exit 1
             relu=1 sans_chute=1; continue
         fi
         rm -f "$SEC" "$trace"
@@ -224,7 +235,7 @@ trap 'exit 1' HUP INT TERM
 # Session déjà tenue : un verrouilleur vivant la garde, on attend qu'elle soit rendue ; sans lui (verrou orphelin),
 # hyprlock la reprend en verrou sec.
 if tenu; then
-    if pgrep -u "$(id -u)" -x hyprlock >/dev/null; then suivre 1; exit $?; fi
+    if pgrep -u "$(id -u)" -x hyprlock >/dev/null; then suivre 1 || exit 1; exit 0; fi
     logger -t "$UNITE" "session tenue sans verrouilleur : reprise par hyprlock"; sec=1
 fi
 
@@ -274,7 +285,7 @@ while :; do
             [ "$inconnus" -lt "$LANCEMENTS" ] || break
         fi
         if [ "$etat" = oui ] && pgrep -u "$(id -u)" -x hyprlock >/dev/null; then
-            suivre 1; c=$?; [ "$c" != 0 ] || remonter; exit "$c"
+            suivre 1 || exit 1; remonter; exit 0
         fi
         if [ "$tue" = 0 ] && [ $(($(maintenant) - lance)) -lt "$RAPIDE" ]; then rapides=$((rapides + 1)); sleep "$PAUSE"
         else rapides=0

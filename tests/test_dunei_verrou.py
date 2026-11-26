@@ -1,8 +1,15 @@
 """Lanceur du verrou — dunei-verrou exécuté avec de faux hyprlock, hyprctl, qs, busctl, systemd-run, systemctl,
-notify-send et logger dans le PATH ; aucun verrou réel, aucune notification réelle (L2-22)."""
+notify-send et logger dans le PATH ; aucun verrou réel, aucune notification réelle (L2-22).
+
+Le PATH des essais ne contient que deux dossiers du dossier temporaire : les faux outils, et des liens vers les seuls
+utilitaires système nécessaires (OUTILS). Aucun dossier système n'y figure, si bien qu'un processus qui survivrait à la
+suppression du dossier ne trouverait plus aucune commande, et jamais les vrais outils de la session. Chaque lancement
+ouvre sa propre session ; tout processus de cette session, ou portant le dossier dans son environnement, est tué avant
+la suppression du dossier (GNU timeout change de groupe de processus, mais pas de session)."""
 
 import json
 import os
+import shutil
 import signal
 import subprocess
 import tempfile
@@ -39,8 +46,10 @@ FAKES = {
                    'while case "$1" in --*) true;; *) false;; esac; do shift; done\nexec "$@"\n',
     "systemctl": LOG.format(name="systemctl") + '[ "$2" != is-active ] || [ -e "$FAKE_DIR/unite" ]\n',
     "notify-send": LOG.format(name="notify-send"),
-    # pgrep : FAKE_PGREP_REND=1 simule l'autre hyprlock qui rend la session juste après avoir été trouvé.
+    # pgrep : FAKE_PGREP_REND=1 simule l'autre hyprlock qui rend la session juste après avoir été trouvé ;
+    # FAKE_PGREP_MUET=1, le compositeur qui devient muet pour de bon juste après.
     "pgrep": LOG.format(name="pgrep") + '[ -n "${FAKE_PGREP_REND:-}" ] && echo false > "$FAKE_DIR/locked"\n'
+             '[ -n "${FAKE_PGREP_MUET:-}" ] && echo 100000 > "$FAKE_DIR/muet"\n'
              'exit "${FAKE_PGREP:-1}"\n',
     "logger": LOG.format(name="logger"),
     # hyprlock : le n-ième lancement suit le n-ième mot de $FAKE_HYPRLOCK (le dernier ensuite). « tient » : verrou tenu
@@ -70,6 +79,8 @@ FAKES = {
                 '[ "$mode" = fige ] && { echo 5 > "$FAKE_DIR/muet"; exit 1; }\n'
                 '[ "$mode" = garde ] && exit 1\n[ "$mode" = dort ] && exit 1\necho false > "$FAKE_DIR/locked"\n',
 }
+# Utilitaires système appelés par le lanceur et par les faux outils, liés un à un dans le dossier temporaire.
+OUTILS = ("cat", "date", "id", "jq", "mkdir", "rm", "sed", "sleep", "timeout", "wc")
 # Délais raccourcis pour les essais, sous la forme de generated/motion.json.
 DELAIS = {"verrouAttente": 1000, "verrouApparition": 150, "verrouCession": 50, "verrouRetrait": 20, "verrouSecours": 300}
 
@@ -90,48 +101,84 @@ class DuneiVerrouTest(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.t = t = Path(self.tmp.name)
-        for d in ("bin", "run", "config/dunei", "state/dunei/verrou", "proc"):
+        for d in ("bin", "sys", "run", "config/dunei", "state/dunei/verrou", "proc"):
             (t / d).mkdir(parents=True)
         for name, body in FAKES.items():
             (t / "bin" / name).write_text("#!/bin/sh\n" + body, encoding="utf-8")
             (t / "bin" / name).chmod(0o755)
+        for outil in OUTILS:
+            (t / "sys" / outil).symlink_to(shutil.which(outil))
         (t / "config/dunei/motion.json").write_text(json.dumps({"delays": DELAIS}), encoding="utf-8")
-        self.groupes = []
+        self.sessions = []
         self.conf = t / "state/dunei/verrou/hyprlock.conf"
         self.conf.write_text("# produite\n", encoding="utf-8")
         self.repli = t / "config/hypr/hyprlock.conf"
         self.log, self.run_dir = t / "log", t / "run" / "dunei"
         env = {k: v for k, v in os.environ.items() if k != "DUNEI_VERROU_PORTEE"}
-        self.env = {**env, "PATH": f"{t / 'bin'}:{env['PATH']}", "FAKE_LOG": str(self.log), "FAKE_DIR": str(t),
+        self.env = {**env, "PATH": f"{t / 'bin'}:{t / 'sys'}", "FAKE_LOG": str(self.log), "FAKE_DIR": str(t),
                     "XDG_RUNTIME_DIR": str(t / "run"), "XDG_CONFIG_HOME": str(t / "config"),
                     "XDG_STATE_HOME": str(t / "state"), "DUNEI_VERROU_PROC": str(t / "proc")}
 
     def tearDown(self):
         # Aucun processus d'un essai ne survit à son dossier : privé de ses faux outils, il atteindrait les vrais.
-        for groupe in self.groupes:
-            try:
-                os.killpg(groupe, signal.SIGKILL)
-            except ProcessLookupError:
-                pass
+        self.tuer_sessions()
         self.tmp.cleanup()
 
+    def restants(self) -> list[int]:
+        """Processus vivants des essais : membres d'une session ouverte par lancer(), ou portant FAKE_DIR=<dossier>.
+
+        Entrées : self.sessions (PID des lancements, chefs de leur session) et self.tmp.
+        Sortie : liste des PID trouvés dans /proc, zombies exclus (ils n'exécutent plus rien).
+        Erreurs : un processus disparu ou illisible pendant la lecture est ignoré. Dépendances : /proc (Linux)."""
+        marque = f"FAKE_DIR={self.tmp.name}".encode() + b"\0"
+        trouves = []
+        for entree in os.listdir("/proc"):
+            if not entree.isdigit() or int(entree) == os.getpid():
+                continue
+            try:
+                champs = Path(f"/proc/{entree}/stat").read_text().rsplit(")", 1)[1].split()
+                if champs[0] in "ZX":
+                    continue
+                if int(champs[3]) in self.sessions or marque in Path(f"/proc/{entree}/environ").read_bytes():
+                    trouves.append(int(entree))
+            except (OSError, IndexError, ValueError):
+                continue
+        return trouves
+
+    def tuer_sessions(self):
+        """Tue (SIGKILL) tous les processus des essais, jusqu'à n'en plus trouver aucun.
+
+        Entrées : aucune, voir restants(). Sortie : aucune ; les sessions tuées sont retirées de la liste.
+        Erreurs : échec de l'essai si des processus survivent encore au bout de 5 s. Dépendances : restants()."""
+        for _ in range(250):
+            pids = self.restants()
+            if not pids:
+                self.sessions.clear()
+                return
+            for pid in pids:
+                try:
+                    os.kill(pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+            time.sleep(0.02)
+        self.fail(f"processus d'essai toujours vivants : {self.restants()}")
+
     def lancer(self, *args: str, **env: str) -> subprocess.Popen:
-        """Lance le lanceur dans son propre groupe de processus, retenu pour être tué en fin d'essai."""
+        """Lance le lanceur dans sa propre session, retenue pour être tuée en fin d'essai."""
         proc = subprocess.Popen([str(SCRIPT), *args], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
                                 env={**self.env, **env}, start_new_session=True)
-        self.groupes.append(proc.pid)
+        self.sessions.append(proc.pid)
         return proc
 
     def run_script(self, *args: str, **env: str) -> subprocess.CompletedProcess:
-        """Lance le lanceur avec les faux outils et les variables FAKE_* données ; borné à 20 s, groupe tué ensuite."""
+        """Lance le lanceur avec les faux outils et les variables FAKE_* données ; borné à 20 s, session tuée ensuite."""
         proc = self.lancer(*args, **env)
         try:
             out, err = proc.communicate(timeout=20)
         finally:
-            try:
-                os.killpg(proc.pid, signal.SIGKILL)
-            except ProcessLookupError:
-                pass
+            proc.kill()
+            proc.wait()
+            self.tuer_sessions()
         return subprocess.CompletedProcess(proc.args, proc.returncode, out, err)
 
     def calls(self) -> list[str]:
@@ -360,6 +407,28 @@ class DuneiVerrouTest(unittest.TestCase):
         res = self.run_script(FAKE_HYPRLOCK="muet")
         self.assertEqual(res.returncode, 1)
         self.assertSousSuite(["notify-send", "remonter"], self.etapes())
+
+    def test_suivi_muet_appel_exterieur(self):
+        # Un autre lanceur mène le verrou et le compositeur meurt : le second appel renonce, code 1, sans boucler.
+        (self.t / "unite").touch()
+        (self.t / "muet").write_text("100000\n")
+        debut = time.time()
+        res = self.run_script()
+        self.assertEqual(res.returncode, 1, res.stderr)
+        self.assertLess(time.time() - debut, 10)
+        self.assertEqual(self.lancements(), [])
+        self.assertTrue(any(c.startswith("logger") and "suivi" in c for c in self.calls()))
+
+    def test_suivi_muet_lanceur_place(self):
+        # Le lanceur placé suit un autre hyprlock et le compositeur meurt : il renonce, code 1, sans remonter le bloc,
+        # et son unité se termine avec lui.
+        (self.t / "locked").write_text("true\n")
+        debut = time.time()
+        res = self.run_script(DUNEI_VERROU_PORTEE="-", FAKE_PGREP="0", FAKE_PGREP_MUET="1")
+        self.assertEqual(res.returncode, 1, res.stderr)
+        self.assertLess(time.time() - debut, 10)
+        self.assertEqual(self.lancements(), [])
+        self.assertNotIn("remonter", self.etapes())
 
     def test_debut_herite_ignore(self):
         # Une heure d'appel héritée par l'appel extérieur est ignorée : la chute se joue en entier.
