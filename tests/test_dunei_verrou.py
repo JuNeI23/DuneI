@@ -39,7 +39,9 @@ FAKES = {
                    'while case "$1" in --*) true;; *) false;; esac; do shift; done\nexec "$@"\n',
     "systemctl": LOG.format(name="systemctl") + '[ "$2" != is-active ] || [ -e "$FAKE_DIR/unite" ]\n',
     "notify-send": LOG.format(name="notify-send"),
-    "pgrep": LOG.format(name="pgrep") + 'exit "${FAKE_PGREP:-1}"\n',
+    # pgrep : FAKE_PGREP_REND=1 simule l'autre hyprlock qui rend la session juste après avoir été trouvé.
+    "pgrep": LOG.format(name="pgrep") + '[ -n "${FAKE_PGREP_REND:-}" ] && echo false > "$FAKE_DIR/locked"\n'
+             'exit "${FAKE_PGREP:-1}"\n',
     "logger": LOG.format(name="logger"),
     # hyprlock : le n-ième lancement suit le n-ième mot de $FAKE_HYPRLOCK (le dernier ensuite). « tient » : verrou tenu
     # $FAKE_TENUE pas de 20 ms puis rendu ; « garde » : sort au bout de 15 pas en laissant le verrou ; « vite » : sort
@@ -94,6 +96,7 @@ class DuneiVerrouTest(unittest.TestCase):
             (t / "bin" / name).write_text("#!/bin/sh\n" + body, encoding="utf-8")
             (t / "bin" / name).chmod(0o755)
         (t / "config/dunei/motion.json").write_text(json.dumps({"delays": DELAIS}), encoding="utf-8")
+        self.groupes = []
         self.conf = t / "state/dunei/verrou/hyprlock.conf"
         self.conf.write_text("# produite\n", encoding="utf-8")
         self.repli = t / "config/hypr/hyprlock.conf"
@@ -104,11 +107,32 @@ class DuneiVerrouTest(unittest.TestCase):
                     "XDG_STATE_HOME": str(t / "state"), "DUNEI_VERROU_PROC": str(t / "proc")}
 
     def tearDown(self):
+        # Aucun processus d'un essai ne survit à son dossier : privé de ses faux outils, il atteindrait les vrais.
+        for groupe in self.groupes:
+            try:
+                os.killpg(groupe, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
         self.tmp.cleanup()
 
+    def lancer(self, *args: str, **env: str) -> subprocess.Popen:
+        """Lance le lanceur dans son propre groupe de processus, retenu pour être tué en fin d'essai."""
+        proc = subprocess.Popen([str(SCRIPT), *args], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+                                env={**self.env, **env}, start_new_session=True)
+        self.groupes.append(proc.pid)
+        return proc
+
     def run_script(self, *args: str, **env: str) -> subprocess.CompletedProcess:
-        """Lance le lanceur avec les faux outils et les variables FAKE_* données ; borné à 20 s."""
-        return subprocess.run([str(SCRIPT), *args], capture_output=True, text=True, env={**self.env, **env}, timeout=20)
+        """Lance le lanceur avec les faux outils et les variables FAKE_* données ; borné à 20 s, groupe tué ensuite."""
+        proc = self.lancer(*args, **env)
+        try:
+            out, err = proc.communicate(timeout=20)
+        finally:
+            try:
+                os.killpg(proc.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+        return subprocess.CompletedProcess(proc.args, proc.returncode, out, err)
 
     def calls(self) -> list[str]:
         """Appels consignés, dans l'ordre."""
@@ -242,10 +266,12 @@ class DuneiVerrouTest(unittest.TestCase):
 
         fil = threading.Thread(target=retirer)
         fil.start()
-        res = self.run_script(FAKE_BUSCTL="b true")
+        res = self.run_script()
         fil.join()
         self.assertEqual(res.returncode, 0, res.stderr)
         self.assertEqual(len(self.lancements()), 1)
+        # Le placement retenté se fait en verrou sec, pour tenir la borne depuis l'appel réel.
+        self.assertNotIn("tomber", self.etapes())
         self.assertSousSuite(["poserSec", "hyprlock", "remonter"], self.etapes())
 
     def test_echeance_sans_verrou(self):
@@ -298,7 +324,7 @@ class DuneiVerrouTest(unittest.TestCase):
         self.assertSousSuite(["pgrep", "remonter"], self.etapes())
 
     def test_trace_nettoyee(self):
-        proc = subprocess.Popen([str(SCRIPT)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=self.env)
+        proc = self.lancer()
         for _ in range(200):
             if list(self.run_dir.glob("verrou-place-*")):
                 break
@@ -306,6 +332,48 @@ class DuneiVerrouTest(unittest.TestCase):
         proc.send_signal(signal.SIGTERM)
         proc.wait(timeout=20)
         self.assertEqual(list(self.run_dir.glob("verrou-place-*")), [])
+
+    def test_suivi_course_au_depart(self):
+        # L'autre hyprlock rend la session entre le « oui » lu et le suivi : le lanceur placé rend 0, sans boucler
+        # sur sa propre unité (toujours active).
+        (self.t / "unite").touch()
+        (self.t / "locked").write_text("true\n")
+        res = self.run_script(DUNEI_VERROU_PORTEE="-", FAKE_PGREP="0", FAKE_PGREP_REND="1")
+        self.assertEqual(res.returncode, 0, res.stderr)
+        self.assertEqual(self.lancements(), [])
+
+    def test_suivi_course_a_la_relance(self):
+        (self.t / "unite").touch()
+        res = self.run_script(DUNEI_VERROU_PORTEE="-", FAKE_HYPRLOCK="garde", FAKE_PGREP="0", FAKE_PGREP_REND="1")
+        self.assertEqual(res.returncode, 0, res.stderr)
+        self.assertEqual(len(self.lancements()), 1)
+        self.assertSousSuite(["pgrep", "remonter"], self.etapes())
+
+    def test_muet_permanent_sec(self):
+        # Compositeur muet trois fois de suite : échec du verrou, jamais 0.
+        res = self.run_script("--sec", FAKE_HYPRLOCK="muet")
+        self.assertEqual(res.returncode, 1)
+        self.assertEqual(len(self.lancements()), 3)
+        self.assertNotIn("remonter", self.etapes())
+
+    def test_muet_permanent_notifie(self):
+        res = self.run_script(FAKE_HYPRLOCK="muet")
+        self.assertEqual(res.returncode, 1)
+        self.assertSousSuite(["notify-send", "remonter"], self.etapes())
+
+    def test_debut_herite_ignore(self):
+        # Une heure d'appel héritée par l'appel extérieur est ignorée : la chute se joue en entier.
+        res = self.run_script(DUNEI_VERROU_DEBUT="1")
+        self.assertEqual(res.returncode, 0, res.stderr)
+        self.assertSousSuite(["tomber", "etat", "hyprlock", "apparaitre"], self.etapes())
+
+    def test_debut_plafonne(self):
+        # Une heure d'appel future, côté placé, est ramenée à maintenant : hyprlock part à l'échéance de la pose.
+        debut = time.time() * 1000
+        res = self.run_script(DUNEI_VERROU_PORTEE="-", DUNEI_VERROU_DEBUT=str(int(debut) + 60000), FAKE_POSE="non")
+        self.assertEqual(res.returncode, 0, res.stderr)
+        lance = int((self.t / "lancements").read_text().split()[0])
+        self.assertLess(lance - debut, DELAIS["verrouAttente"] + 300)
 
     def test_systemd_run_en_panne(self):
         res = self.run_script(FAKE_SYSTEMD_RUN="panne")
@@ -329,6 +397,7 @@ class DuneiVerrouTest(unittest.TestCase):
         etapes = self.etapes()
         self.assertNotIn("tomber", etapes)
         self.assertSousSuite(["pgrep", "poserSec", "hyprlock", "remonter"], etapes)
+        self.assertIn(f"pgrep -u {os.getuid()} -x hyprlock", self.calls())
 
     def test_ordre_corrompu(self):
         self.run_dir.mkdir()
@@ -348,8 +417,7 @@ class DuneiVerrouTest(unittest.TestCase):
 
     def test_hup_retire_le_marqueur(self):
         marqueur = self.run_dir / "verrou-apparition"
-        proc = subprocess.Popen([str(SCRIPT)], stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                env={**self.env, "FAKE_POSE": "non"})
+        proc = self.lancer(FAKE_POSE="non")
         for _ in range(200):
             if marqueur.exists() and marqueur.read_text().strip():
                 break
