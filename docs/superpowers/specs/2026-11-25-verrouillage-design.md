@@ -1,6 +1,6 @@
 # Verrouillage (L2-22)
 
-Version 1.1 — 2026-11-25 — proposée à Nicolas, après relecture par un regard neuf
+Version 1.2 — 2026-11-26 — validée par Nicolas
 
 ## Intention
 
@@ -114,8 +114,9 @@ cours de route abrège le spectacle et pose le verrou aussitôt. Le bloc est alo
 que la remontée ait lieu quand même. `SUPER + L`, le menu de déconnexion, le lanceur et l'inactivité jouent la chute.
 
 **Échec du verrou.** Après trois lancements sans verrou tenu : à l'ouverture de session, `uwsm stop`, comme aujourd'hui.
-Sinon, question ouverte à Nicolas ; proposition : la session reste ouverte, le bloc remonte, et une notification critique
-« Verrouillage impossible » s'affiche, un travail non enregistré valant plus qu'une fermeture imprévue.
+Sinon, décidé par Nicolas : la session reste ouverte, le bloc remonte, et une notification critique « Verrouillage
+impossible » s'affiche ; un travail non enregistré vaut plus qu'une fermeture imprévue, et le cas est rare (aucun échec
+de `hyprlock` au journal depuis le 19 octobre, sur 46 démarrages). Avant une veille, la machine dort alors déverrouillée.
 
 ### La coque : `coque/Verrou/`
 
@@ -203,3 +204,4 @@ tapé par Nicolas, après annonce du risque pour `faillock`.
 | --- | --- | --- |
 | 1.0 | 2026-11-25 | Fiche proposée : relais nu, recul, presqu'île taillée, horloge monumentale |
 | 1.1 | 2026-11-25 | Relecture : vérité unique du verrou, échecs du lanceur, calques concurrents, apparition après le verrou, veille en cours de chute |
+| 1.2 | 2026-11-26 | Validée ; échec du verrou en cours de session : session ouverte et notification critique |
