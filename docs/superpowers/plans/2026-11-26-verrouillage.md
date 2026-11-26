@@ -3,7 +3,7 @@
 > **Pour les agents :** sous-skill requis : superpowers:subagent-driven-development (recommandé) ou
 > superpowers:executing-plans, tâche par tâche. Les étapes se cochent (`- [ ]`).
 
-Version 1.1 — 2026-11-26
+Version 1.2 — 2026-11-26
 
 **But :** un bloc à l'image du fond tombe sur la session, `hyprlock` le relaie nu, la coque joue l'apparition en recul
 au-dessus du verrou puis cède à ses textes ; au déverrouillage, le contenu se retire et le bloc remonte.
@@ -86,7 +86,7 @@ fiche : scripts jetables dans le bloc-notes de la session.
   `verrouCession = 350`, `verrouRetrait = 200`, `verrouSecours = 2500` (retrait d'office du calque d'apparition).
 - `Theme.verrou` (jetons `[verrou]`, en px logiques) : `horloge = 700`, `horlogeHaut = 34`, `recul = 3.4`,
   `date = 22`, `dateHaut = 556`, `pastille = 72`, `nomTaille = 17`, `champLargeur = 280`, `champHauteur = 36`,
-  `champBas = 56`, `pastilleBas = 160`.
+  `champBas = 56`, `pastilleBas = 139`.
 - `generated.energie` : `verrouilleur = "dunei-verrou"`, `verrouilleur_initial = "dunei-verrou --sec"`.
 - Règles de calque : `dunei-verrou` en `order = -100` (relevé de la tâche 1 : l'ordre le plus bas est dessiné au-dessus) ; `dunei-verrou-apparition` en
   `above_lock = 1`, `order = -101`, `no_anim = true` ; `dunei-verrou` en `no_anim = true`.
@@ -209,7 +209,7 @@ et rendre 0 (ou 1 si l'unité se termine sans verrou tenu). Sec si `--sec`, si `
   renommé, la conf en dernier.
 
 - [ ] **Étape 1 : test en échec** `test_production` : avec `DUNEI_ETAT_DIR` temporaire et un écran d'essai, après
-  `produire()`, les six images et la conf existent ; `fond-*.png` a la taille physique ; aucun `.tmp` ne reste ; la conf
+  `produire()`, les cinq images et la conf existent ; `fond-*.png` a la taille physique ; aucun `.tmp` ne reste ; la conf
   cite exactement ces chemins.
 - [ ] **Étape 2 : vérifier l'échec**, **étape 3 : implémenter** (fond rendu comme `Affichage.qml:295-305` :
   `PreserveAspectCrop`, `autoTransform`, `sourceSize` physique), **étape 4 : test OK**.
@@ -293,3 +293,4 @@ clavier, remonter. Au démarrage, `locked` vrai → `poserSec`. Calque d'apparit
 | --- | --- | --- |
 | 1.0 | 2026-11-26 | Plan initial, d'après la fiche 1.2 |
 | 1.1 | 2026-11-26 | Relevés de la tâche 1 : `order` négatif, section sans nom en `zindex = -2` |
+| 1.2 | 2026-11-26 | Relevés de la fin : `pastilleBas` ramené à 139 (maquette v2), cinq images par écran et non six |

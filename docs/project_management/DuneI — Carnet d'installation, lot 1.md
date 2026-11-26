@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.61. Historique en fin de document.
+Version 1.62. Historique en fin de document.
 
 Socle amorçable.
 
@@ -954,7 +954,7 @@ hypridle hyprlock upower brightnessctl
 
 `power-profiles-daemon` et non un gestionnaire d'économie classique. La raison est architecturale : **il expose les profils sur D-Bus, donc c'est à lui que parlera l'indicateur d'énergie du lot 2** (L2-13). Un outil qui ne s'adresse qu'en ligne de commande obligerait à écrire une interface contre des fichiers, ce qui est fragile et laid. Les deux ne s'installent pas ensemble : ils se disputent le contrôle. `upower` et `brightnessctl` sont déjà présents sur `caladan`, mais ils sont nécessaires à l'échelle (sans UPower, `dunei-sur-batterie` répond « batterie »).
 
-`hypridle` 0.1.8-2 et `hyprlock` 0.9.6-3, dépôt officiel, installés par `sudo pacman -S --needed hypridle hyprlock` (D41, D42). `hypridle` joue l'échelle d'inactivité ; `hyprlock` est le verrouilleur provisoire, remplacé à L2-22.
+`hypridle` 0.1.8-2 et `hyprlock` 0.9.6-3, dépôt officiel, installés par `sudo pacman -S --needed hypridle hyprlock` (D41, D42). `hypridle` joue l'échelle d'inactivité ; `hyprlock` est le verrouilleur, auquel L2-22 a donné son spectacle : voir « Le verrouillage (L2-22) » plus bas.
 
 **La source : `energie.toml`.** Comme `motion.toml`, un fichier à la racine du dépôt donne les délais, en secondes depuis le début de l'inactivité. `make energie` (aussi appelée par `make check` et `make install`) lance `generate_energie.py`, qui vérifie les délais, puis écrit `generated/hypridle.conf`, où chaque palier existe une fois par alimentation. Depuis L2-13 (version 0.2.0 de la source), la section `[alerte]` porte aussi les seuils d'alerte de la batterie, `faible = 20` et `critique = 5`, en pourcentage, entiers de 1 à 99, le critique strictement sous le faible ; ils partent dans `generated/energie.json`, lu par la coque. Changer un seuil demande `make install`, puis un redémarrage de la coque (`systemctl --user restart dunei-coque`). Pour éprouver l'alerte sans vider la batterie, on relève temporairement les seuils au-dessus du pourcentage courant, on installe et on redémarre la coque : l'alerte part au démarrage ; on rétablit ensuite 20 et 5. Une source fautive est refusée avec le nom du palier en cause : délais entiers et strictement positifs, ordre strict, un palier présent exige ceux qui le précèdent (aucune veille sans verrouillage), niveau d'atténuation entre 1 et 100. `hypridle.conf` est copié sous `~/.config/hypr/hypridle.conf`, où `hypridle` le cherche.
 
@@ -980,7 +980,13 @@ Une vidéo en lecture plein écran suspend l'échelle : Firefox demande le bloca
 
 **Rétroéclairage du clavier pendant la veille.** Le pilote `thinkpad_acpi` l'éteint à la mise en veille (`kbdlight_suspend`, `led_classdev_suspend`) ; constat visuel à l'écran en attente.
 
-**`hyprlock.conf`, provisoire** (D41). Configuration minimale, liée sous `~/.config/hypr/` : curseur masqué, saisie vide ignorée, fond uni, champ de saisie, empreinte désactivée. Aucun choix esthétique : ses couleurs ne sont pas des valeurs de design, et l'esthétique du verrouillage reste ouverte. `SUPER + L` lance `loginctl lock-session` ; `energie.toml` est le seul endroit qui nomme le verrouilleur (`verrouilleur`). `misc.allow_session_lock_restore` est vrai : un `hyprlock` planté se relance depuis un autre terminal, avec authentification.
+**`hyprlock.conf`, repli** (D41, D234). Configuration minimale, liée sous `~/.config/hypr/` : curseur masqué, saisie vide ignorée, fond uni, champ de saisie, empreinte désactivée. Aucun choix esthétique : ses couleurs sont figées et ne suivent pas le thème. Depuis L2-22, ce n'est plus la configuration normale mais le repli du lanceur, quand la configuration produite par la coque est absente ou ne donne aucun verrou. `SUPER + L` lance `loginctl lock-session` ; `energie.toml` est le seul endroit qui nomme le verrouilleur (`verrouilleur`, désormais `dunei-verrou`). `misc.allow_session_lock_restore` est vrai : un `hyprlock` planté se relance depuis un autre terminal, avec authentification.
+
+**Le verrouillage (L2-22, D226 à D234).** `SUPER + L`, le menu de déconnexion, le lanceur et l'échelle d'inactivité passent par `loginctl lock-session`, qui appelle `dunei-verrou` (clé `verrouilleur` de `energie.toml`). Ce lanceur, un script POSIX de `config/hypr/scripts/`, se place dans sa propre unité transitoire (`systemd-run --user`), pour qu'un redémarrage d'`hypridle` ne tue ni lui ni `hyprlock`, puis : demande à la coque de faire tomber le bloc ; lance `hyprlock --no-fade-in` avec la configuration produite, au plus 1 s après l'appel ; envoie `SIGUSR2` à `hyprlock` une fois le verrou tenu et l'apparition finie, puis chaque minute pour l'horloge ; et fait remonter le bloc au déverrouillage. La seule vérité du verrou est `hyprctl -j locked`. La variante `dunei-verrou --sec` (clé `verrouilleur_initial`, verrou de l'ouverture de session) et la mise en veille posent le verrou sans chute ni apparition.
+
+La coque produit à l'avance les fichiers de `hyprlock` dans `~/.local/state/dunei/verrou/` : par écran, `fond-<écran>.png`, `pastille-<écran>.png`, `champ-<écran>.png` et les versions vides `pastille-<écran>-vide.png` et `champ-<écran>-vide.png`, en pixels physiques, et un `hyprlock.conf` à sections `monitor`. Elle les reproduit à chaque changement de fond, de thème, de préférence de mouvement ou d'écran, en fichier provisoire puis renommage. Si ce dossier est absent ou donne un verrou qui ne tient pas, le lanceur retombe sur `~/.config/hypr/hyprlock.conf` (le repli ci-dessus) : trois lancements en tout, puis, à l'ouverture de session, `uwsm stop`, et en cours de session une notification critique « Verrouillage impossible » et la session laissée ouverte (D231).
+
+**Dépendances.** `pgrep`, du paquet `procps-ng` (déjà présent sur Arch par `base`), sert à chercher le lanceur et `hyprlock` ; `hyprctl`, `systemd-run`, `busctl` et `qs` (Quickshell) sont déjà requis. **`make install` est à lancer avant la recette** : il dépose le lanceur, bascule `energie.toml` sur `dunei-verrou`, régénère les règles de calque (`dunei-verrou`, `dunei-verrou-apparition`) et redéploie les jetons dont le repli dépend ; la coque doit ensuite être redémarrée (`qs` neuf : un module de coque ou une icône neufs ne se rechargent pas à chaud) pour produire les fichiers.
 
 **Fichier système et déploiement** (D45). `systeme/etc/systemd/logind.conf.d/10-dunei.conf` reproduit l'arborescence de `/etc` et porte la marque DuneI. `make install` le compare à `/etc/systemd/logind.conf.d/10-dunei.conf` : identique, rien ; absent ou différent, copie par `sudo install -m 644` puis `systemctl reload systemd-logind` ; présent sans marque, refus. `sudo` n'est demandé que si une copie est prévue. Ordre des destinations : `hypr`, `fontconfig`, `services`, `systeme` ; `hypridle.service` est activé puis redémarré quand sa configuration change, avant tout `sudo`.
 
@@ -1043,6 +1049,19 @@ Un « Power key pressed short » sans « Suspending... » à la suite prouve qu'
 - [ ] Garde du réveil : au prochain appui fantôme, « Power key pressed short » sans « Suspending... » (version à 13 s, à réinstaller par `make install` dans un vrai terminal) — *en attente*
 - [ ] Couvercle fermé avec un écran externe : écran interne éteint, pas de veille, retour à la réouverture, débranchement capot fermé — *en attente* (aucun écran externe)
 - [ ] Comportement de `hl.on` et des liaisons au rechargement de Hyprland, couvercle fermé — *en attente* (aucun écran externe)
+
+**Recette du verrouillage (L2-22)**, à l'écran par Nicolas, après `make install` et le redémarrage de la coque. Le mot de passe est tapé par lui seul ; l'annonce du risque `faillock` précède l'essai : une demande annulée ou un mot de passe faux compte, et cinq échecs en quinze minutes ferment le compte dix minutes (D224). Jamais d'essai PAM de Claude sur le compte réel.
+
+- [ ] `SUPER + L` : le bloc tombe du haut vers le bas, sans flou, la presqu'île pendue sous son bord ; l'horloge arrive en recul, puis la date, la pastille, le nom et le champ ; aucune image de la session entre-temps
+- [ ] Menu de déconnexion (`SUPER + Échap`), bouton « Verrouiller » : même chute
+- [ ] Lanceur (`SUPER + R`) : même chute ; le lanceur se ferme au départ du bloc
+- [ ] Inactivité : le verrou de l'échelle (300 s sur secteur) joue la chute
+- [ ] Couvercle : fermé puis rouvert, retour sur le verrou, sans image du bureau, sans animation pendant la veille
+- [ ] Ouverture de session : le verrou initial est sec, sans chute, et la remontée se joue après le déverrouillage
+- [ ] Mot de passe faux (tapé par Nicolas, risque annoncé) : le contour du champ prend la couleur d'erreur, le message de PAM s'affiche ; puis le mot de passe juste déverrouille, le bloc remonte
+- [ ] Nuit puis jour : les heures et les minutes restent lisibles et opaques, la presqu'île revient au verre une fois le bloc remonté
+- [ ] Mouvement réduit : le bloc apparaît et disparaît en fondu, le contenu aussi, la presqu'île ne change pas de matière
+- [ ] Horloge : juger à l'écran l'écart d'anticrénelage accepté (D227), au moment de la cession, pas de scintillement des chiffres
 
 ### Veille — le point le plus fragile de cette machine
 
@@ -1397,7 +1416,7 @@ bureau spécial, `accueil`, qui s'affiche par-dessus le bureau courant.
 | `SUPER + Q`, `E`, `F`, `R` | Terminal, fichiers, navigateur, lanceur (kitty, dolphin, firefox : provisoires ; le lanceur est celui de la coque, L2-16) |
 | `Print`, `SHIFT + Print`, `CTRL + Print` | Capturer une zone, une fenêtre choisie au clic, l'écran actif : rôle `capture`, tenu par hyprshot jusqu'à L2-30 ; image dans `~/Images/Captures` et dans le presse-papiers (D79) |
 | `SUPER + W` | Ouvrir ou refermer la galerie de fonds d'écran dans la presqu'île de l'écran actif (L2-60) |
-| `SUPER + L` | Verrouiller : `loginctl lock-session`, verrouilleur provisoire (L1-09, remplacé à L2-22) |
+| `SUPER + L` | Verrouiller : `loginctl lock-session`, qui lance `dunei-verrou` (L1-09, L2-22) |
 | `SUPER + Échap` | Ouvrir ou fermer le menu de déconnexion (coque, L2-23) |
 | `SUPER + Alt + M` | Quitter la session (`uwsm stop`), issue de secours gardée en un appui |
 | `SUPER + Alt + R` | Recharger la configuration (`hyprctl reload`) |
@@ -2653,6 +2672,7 @@ Une session qui marche au prix de trois commandes non écrites est un échec du 
 
 | Version | Date | Changement |
 | --- | --- | --- |
+| 1.62 | 2026-11-26 | Le verrouillage (L2-22, D226 à D234) : lanceur `dunei-verrou`, fichiers produits dans `~/.local/state/dunei/verrou/`, repli `hyprlock.conf`, dépendance `pgrep`, `make install` avant la recette, liste de recette ; `SUPER + L` |
 | 1.61 | 2026-11-24 | L'agent d'authentification (L2-24, D222 à D225) : règle PAM de polkit, `faillock.conf`, module `Autorisation`, secours |
 | 1.60 | 2026-11-24 | Apparition et disparition de la presqu'île (L2-48, D220), vrai plein écran lu en un seul endroit (D221) |
 | 1.59 | 2026-11-24 | Vocabulaire du calcul du lanceur et `qalc -defaults` (L2-82, D218), montants dans leur monnaie (L2-83, D219) |

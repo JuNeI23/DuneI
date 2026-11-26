@@ -4886,3 +4886,123 @@ annonce pendant la garde de frappe (400 ms sans touche avant que le champ n'acce
 
 *Touché : `coque/Autorisation/`, `coque/Presquile/Presquile.qml`, `coque/Composants/`, `motion.toml`, `tokens.toml`, bible
 (annexe E), maquettes `.superpowers/preview/autorisation-v1` à `v3`.*
+
+## 2026-11-26 — Verrouillage (L2-22)
+
+### D226 · `hyprlock` reste le verrouilleur, et le bloc tombe nu
+
+26 novembre 2026 · L2-22, précise D41 et D51. Voie A, décidée par Nicolas : `hyprlock` est gardé, parce qu'il est éprouvé,
+qu'il a sa pile PAM et qu'il tient aussi lieu d'écran de connexion (D51) ; un verrouilleur écrit dans la coque
+(`WlSessionLock`) laisserait l'écran de secours d'Hyprland au premier plantage de la coque, et il faudrait refaire ce que
+`hyprlock` fait déjà sûrement. La coque lui donne le spectacle : un bloc opaque à l'image du fond d'écran tombe du haut
+vers le bas, sans flou, et cache la session entièrement. Le relais est nu, aussi voulu par Nicolas : le bloc tombe sans
+contenu, `hyprlock` le relaie nu, et le contenu apparaît ensuite au-dessus du verrou. Un relais complet aurait été plus
+simple à accorder, mais il n'offrait pas d'apparition ; un verrou lancé avant la chute aurait fait tomber le bloc sur du
+noir, Hyprland cachant la session aussitôt. Le relais a été mesuré au banc : dix entrées et dix sorties, environ 3 900
+images, écart nul entre le bloc et le fond de `hyprlock`, ni noir ni image de la session.
+
+*Touché : `config/hypr/scripts/dunei-verrou`, `coque/Verrou/`, `energie.toml`, `config/hypr/modules/verrouillage.lua`.*
+
+### D227 · L'apparition recule au ressort `spectacle`
+
+26 novembre 2026 · L2-22. L'horloge arrive plus grande que l'écran (échelle 3,4) et recule jusqu'à sa place (échelle 1)
+en fondant ; la date, la pastille, le nom et le champ suivent aux délais des jetons. Le recul est joué par le vrai ressort
+`spectacle` (environ 0,57 s) et non par la courbe CSS de la maquette v2 : le jeton de mouvement fait foi, la maquette
+l'approximait. Si la recette le juge trop vif, la retouche est un jeton. L'écart d'anticrénelage de l'horloge est accepté :
+le seuil de 0,2 fixé pour la différence entre l'horloge de la coque et celle de `hyprlock` n'est pas tenu (0,21 et 0,53
+mesurés), l'écart vient de l'anticrénelage seul et aucune translation ne l'améliore. À juger à l'écran par Nicolas, à la
+recette : au pire, un léger scintillement des chiffres à la cession.
+
+*Touché : `coque/Verrou/Contenu.qml`, `tokens.toml` (section du verrou).*
+
+### D228 · La presqu'île est taillée dans l'image du bloc
+
+26 novembre 2026 · L2-22, variante 2 choisie par Nicolas : la presqu'île reste pendue au bord bas du bloc « comme si
+c'était un prolongement », dessinée par le bloc lui-même, à la forme de la vraie, qui s'efface dessous comme l'île
+d'autorisation (D225). Verre au repos, elle fond vers l'image au départ du bloc, puis revient au verre une fois le bloc
+remonté, avant que la vraie reprenne : à la condition posée par Nicolas, elle retrouve sa couleur d'origine, l'animation
+finie. Sous mouvement réduit, elle ne change pas de matière. Le flou du calque `dunei-verrou` ne sert qu'à ce verre au
+repos : il a été mesuré (cadence côté client pendant cinq chutes et cinq remontées, deux configurations d'écran) sans
+coût mesurable, et le namespace est donc déclaré dans `glass.namespaces`.
+
+*Touché : `coque/Verrou/`, `tokens.toml` (`glass.namespaces`).*
+
+### D229 · Calques du verrou : ordre négatif, `above_lock = 1`, entrée vide
+
+26 novembre 2026 · L2-22, relevés du banc imbriqué du 25 et du 26 novembre. Le bloc est un calque `dunei-verrou` en couche
+`Overlay`, opaque, `order = -100` : l'ordre le plus bas est dessiné au-dessus de tout autre calque, ce que la fiche
+avait inversé avant le relevé. Le calque d'apparition, `dunei-verrou-apparition`, porte `above_lock = 1`, jamais 2, qui
+le rendrait interactif ; son masque d'entrée est vide, il ne prend aucun clavier (le clavier va à `hyprlock`) et il n'est
+mappé que le temps de l'apparition, avec `order = -101` pour passer au-dessus du bloc. La section sans nom de
+`hyprlock`, qui s'applique à tous les écrans, est en `zindex = -2` : cachée sous le fond opaque des écrans connus, elle
+n'est visible que sur un écran branché pendant le verrou, où elle montre un aplat opaque. Les calques d'apparition et de
+production sont nommés dans `HORS_VERRE` du test d'outils, chacun avec sa raison, et un test garde qu'ils ne figurent
+jamais aussi au verre ; une déclaration dans `tokens.toml` aurait été possible, le test suffit et reste plus près de ce
+qu'il garde.
+
+*Touché : `config/hypr/modules/verrouillage.lua`, `tests/test_outils.py`, `coque/Verrou/`.*
+
+### D230 · La vérité du verrou est `hyprctl -j locked`
+
+26 novembre 2026 · L2-22. Le lanceur et la coque lisent l'état du compositeur, `hyprctl -j locked`, et rien d'autre : ni le
+nom d'un processus, ni un code de sortie, ni une durée ne tiennent lieu de verrou. Toute commande extérieure est bornée
+dans le temps. La coque ne suit cet état que lorsque le bloc est posé **sans lanceur** (relevé chaque seconde) : un
+lanceur vivant décide seul de la remontée, sinon la coque remonterait en plein verrou. Le suivi est fermé en cas de doute :
+la recherche du lanceur ne compte « aucun lanceur » que sur le seul code 1 de `pgrep` (dépendance nouvelle, procps-ng), et
+un compositeur muet plus de 5 secondes rend le code 1, un Hyprland muet étant mort et la session avec lui. Un compositeur
+muet en permanence relance sans fin à intervalle espacé, sans notification : il ne montre plus rien de la session de toute
+façon, et le seul coût est un journal bavard.
+
+*Touché : `config/hypr/scripts/dunei-verrou`, `coque/Verrou/`, `docs/project_management/` (carnet).*
+
+### D231 · Un verrou qui échoue en cours de session laisse la session ouverte
+
+26 novembre 2026 · L2-22, décision de Nicolas. Après trois lancements sans verrou tenu (deux essais, puis le repli
+`hyprlock.conf`), à l'ouverture de session le lanceur ferme la session par `uwsm stop`, comme avant (D51). En cours de
+session, la session reste ouverte, le bloc remonte et une notification critique « Verrouillage impossible » s'affiche : un
+travail non enregistré vaut plus qu'une fermeture imprévue, et le cas est rare (aucun échec de `hyprlock` au journal depuis
+le 19 octobre, sur 46 démarrages). Avant une veille, la machine dort alors déverrouillée. **Risque résiduel accepté** : si la
+coque est tuée pendant la chute ou l'attente, avant que `hyprlock` tienne le verrou, la session reste visible au plus
+0,3 s, le temps que la coque soit relancée, car aucun autre processus ne couvre l'écran à cet instant et lancer
+`hyprlock` plus tôt tuerait la chute. Au banc, la coque tuée pendant la chute ou l'attente a laissé quelques images de session
+(de 1 à 13, avant puis après correctif, sur 0,2 s environ) ; tuée pendant l'apparition, la cession ou la remontée, elle n'en a
+laissé aucune.
+
+*Touché : `config/hypr/scripts/dunei-verrou`, `config/hypr/scripts/dunei-verrou-initial`.*
+
+### D232 · Ce que `hyprlock` affiche : cinq images, une date sans locale, la pastille à 139
+
+26 novembre 2026 · L2-22. La coque produit pour chaque écran cinq images : le fond, la pastille et le champ, et les
+versions vides de ces deux dernières. Le fond n'est jamais échangé, donc il n'a pas de version vide ; la fiche et le plan
+parlaient de six images. La date est composée par une commande qui n'emploie ni `%A` ni `%B` : `fr_FR` n'est pas installée
+sur `caladan`, et la date serait sortie en anglais ; les noms des jours et des mois viennent de tables écrites dans la
+configuration produite, ce qui reste vrai sur toute machine Arch. La pastille est à 139 px du bas (`pastille_bas = 139`),
+valeur mesurée sur la maquette v2 validée (138,955) ; la première valeur, 160, plaçait la pastille environ 21 px trop haut.
+La maquette fait foi pour la géométrie. Là où la fiche est muette, la maquette l'est aussi pour la date (couleur des heures),
+le nom (graisse 550) et l'initiale, et pour l'interlettrage de l'horloge (-8 px).
+
+*Touché : `tokens.toml`, `coque/Verrou/` (`Production.qml`, `verrou.js`).*
+
+### D233 · Les rôles de couleur de la pastille, du champ et de l'emphase suivent la maquette
+
+26 novembre 2026 · L2-22, bible. La pastille est en `controlRaised` ; le champ de mot de passe, en `surfaceBase` avec un
+contour `borderSubtle` ; l'emphase (heures, nom) en `textEmphasis`. Un premier jet les posait en couleurs de bureau
+opposées au fond, qui ne sont pas celles de la maquette. Aucune couleur n'est inventée ni recalculée : tout vient des
+jetons, et `test_coque_qml.py` le contrôle. Les heures sont en `texteClair` et les minutes en `texteClairSurvol`, ou leurs
+équivalents foncés selon le fond publié, comme pour le menu de déconnexion (D205) ; tout le contenu relayé est opaque,
+parce que des minutes translucides brillent pendant que les deux horloges se superposent (écart de 1,97 ramené à 0,09 en
+opaque).
+
+*Touché : `coque/Verrou/Contenu.qml`.*
+
+### D234 · La production du verrou est branchée dans `shell.qml`
+
+26 novembre 2026 · L2-22. `Production`, qui écrit les images et la configuration de `hyprlock` dans
+`~/.local/state/dunei/verrou/`, est instanciée par `shell.qml` (avec `Verrou.demarrer()`) à la tâche qui rend la coque
+réelle, et non à celle qui l'écrit : le contenu et sa production se testent d'abord à part. Elle repart à chaque
+changement de fond, de thème, de préférence de mouvement ou d'écran, écrit en fichier provisoire puis renomme, et la bascule
+de `energie.toml` sur `dunei-verrou` vient en dernier, une fois le tout éprouvé au banc. Le repli
+`~/.config/hypr/hyprlock.conf` garde ses couleurs figées, qui dériveront du thème : il ne sert qu'à un verrou qui n'a pas
+pu se produire avec la configuration produite.
+
+*Touché : `coque/shell.qml`, `coque/Verrou/Production.qml`, `energie.toml`, `config/hypr/hyprlock.conf`.*

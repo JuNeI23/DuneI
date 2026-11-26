@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas — révisée le 22 octobre 2026
 
-Version 1.70. Historique en fin de document.
+Version 1.71. Historique en fin de document.
 
 *Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent soixante-quinze lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
 
@@ -37,7 +37,7 @@ Ces exclusions sont explicites. Aucune n'est un oubli, et aucune ne se rediscute
 
 Trois voies étaient possibles. Assembler des composants existants et les thématiser mène vite à un plafond : ces composants n'ont ni nos six états composables, ni notre vocabulaire de mouvement, ni notre modèle d'élévation. On obtient un rice réussi, pas un système — c'est exactement l'état qu'on veut quitter. Partir d'un bureau intégré et le recolorer offre gratuitement toutes les fonctions système, mais engage un bras de fer permanent contre une identité héritée.
 
-**La voie retenue est la troisième :** le compositeur reste un logiciel tiers, et toute la coque — barre, lanceur, overlays, réglages, verrouillage, panneau de thème — est écrite par nous, au-dessus des tokens. C'est la seule qui rende la bible opposable ligne par ligne.
+**La voie retenue est la troisième :** le compositeur reste un logiciel tiers, et toute la coque — barre, lanceur, overlays, réglages, spectacle du verrouillage, panneau de thème — est écrite par nous, au-dessus des tokens. C'est la seule qui rende la bible opposable ligne par ligne.
 
 **Ce qu'on n'écrit pas :** la suite applicative. Le chapitre 12 désigne une famille dominante coopérative, et cette famille fournit une suite complète — fichiers, terminal, éditeur, archives, visionneuses, capture, calculatrice. On la prend telle quelle, thématisée au palier B. **Le sur-mesure là où il se voit, l'emprunt là où il ne se voit pas.**
 
@@ -245,7 +245,7 @@ rétroéclairage du clavier sont vérifiés, sans une ligne de code (D40). Proch
 **Énergie et veille — 16 octobre 2026.** La machine verrouille avant de dormir et dort d'elle-même. Une
 échelle d'inactivité à quatre paliers (atténuation, verrouillage, écran éteint, veille) vit dans
 `energie.toml`, avec un jeu de délais pour la batterie et un autre pour le secteur ; `hypridle` la joue,
-`hyprlock` verrouille de façon provisoire, par un seul point que le lot 2 remplacera. Le bouton marche met
+`hyprlock` verrouille, par un seul point (`verrouilleur`), que le lot 2 a rempli par `dunei-verrou` : `hyprlock` reste emprunté, le spectacle est à DuneI (L2-22). Le bouton marche met
 en veille ; le couvercle est confié à logind, et Hyprland n'y gère que l'écran interne. Le premier fichier
 système de DuneI est déployé par `make install`, avec `sudo` seulement s'il diffère. Le micrologiciel n'offre
 que la veille `s2idle` ; elle tient bien : la nuit du 15 au 16 octobre, le sommeil matériel a
@@ -730,13 +730,23 @@ Les demandes de droits d'administrateur passent désormais par la coque (L2-24, 
 24 novembre : une île sort de la presqu'île, dit ce qui est demandé et prend le mot de passe ; une annulation ne compte plus
 comme un échec, et le compte tolère cinq mots de passe faux.
 
-Prochaine étape, à proposer : l'un de L2-57 (suites du popover Bluetooth), L2-58, L2-59,
-L2-62, L2-70, des défauts L2-75 à L2-79 et des mineurs du calcul L2-84.
+Le verrouillage est écrit (L2-22, D226 à D234) et attend sa recette à l'écran : `hyprlock` reste le verrouilleur et la coque
+lui donne le spectacle. Un bloc à l'image du fond tombe du haut vers le bas et cache la session ; l'horloge monumentale
+arrive en recul, puis la date, la pastille et le champ ; le chemin inverse remonte le bloc au déverrouillage. Le lanceur
+`dunei-verrou` ne tient pour vérité que `hyprctl -j locked` ; une session dont le verrou échoue en cours de route reste
+ouverte, avec une notification critique. Éprouvé au banc imbriqué : aucune image de la session entre la pose du bloc et sa
+remontée, sur dix cycles et sur chaque panne de la coque. Une réserve : sur un écran de moins de 830 px logiques de haut,
+la pastille recouvre la date (L2-85).
+
+Prochaine étape : la recette de L2-22 par Nicolas, après `make install` et le redémarrage de la coque (`SUPER + L`, menu,
+lanceur, inactivité, couvercle, ouverture de session, mot de passe faux puis juste, jour et nuit, mouvement réduit), puis
+L2-37, l'empreinte, qui vient juste après.
 
 ## Historique des versions
 
 | Version | Date | Changement |
 | --- | --- | --- |
+| 1.71 | 2026-11-26 | L2-22 écrit (D226 à D234), recette à l'écran en attente ; `hyprlock` emprunté, spectacle à DuneI ; prochaine étape : la recette, puis L2-37 |
 | 1.70 | 2026-11-24 | L2-24 fait (D222 à D225), recette validée ; prochaine étape inchangée |
 | 1.69 | 2026-11-24 | L2-48 fait (D220, D221), recette validée ; prochaine étape à proposer : L2-57 à L2-59, L2-62, L2-70, défauts L2-75 à L2-79, L2-84 |
 | 1.68 | 2026-11-24 | L2-82 et L2-83 faits (D218, D219) ; prochaine étape à proposer : le reste de L2-48 |
