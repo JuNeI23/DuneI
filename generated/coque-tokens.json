@@ -1824,6 +1824,7 @@
     "horloge": 700,
     "horlogeHaut": 34,
     "horlogeLigne": 500,
+    "horlogeInterlettrage": -8,
     "recul": 3.4,
     "date": 22,
     "dateHaut": 556,

@@ -109,8 +109,9 @@ class QuickshellEmitterTest(unittest.TestCase):
 
     def test_verrou(self):
         """Les jetons du verrouillage (L2-22) sont émis en camelCase sous verrou, en px logiques."""
-        self.assertEqual(self.out["verrou"], {"horloge": 700, "horlogeHaut": 34, "horlogeLigne": 500, "recul": 3.4,
-                                              "date": 22, "dateHaut": 556, "pastille": 72, "nomTaille": 17, "champLargeur": 280, "champHauteur": 36,
+        self.assertEqual(self.out["verrou"], {"horloge": 700, "horlogeHaut": 34, "horlogeLigne": 500,
+                                              "horlogeInterlettrage": -8, "recul": 3.4, "date": 22, "dateHaut": 556,
+                                              "pastille": 72, "nomTaille": 17, "champLargeur": 280, "champHauteur": 36,
                                               "champBas": 56, "pastilleBas": 160})
 
     def test_autorisation(self):

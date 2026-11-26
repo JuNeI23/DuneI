@@ -82,8 +82,8 @@ Singleton {
     // Menu de déconnexion (L2-23) : côté des vignettes, côté du glyphe, écart, agrandissement du bouton choisi,
     // opacité de la lettre d'un bouton gris (lettreGrisee).
     readonly property var deconnexion: tokens?.deconnexion
-    // Verrouillage (L2-22) : horloge (taille, haut, recul de l'apparition), date (taille, haut), pastille et nom, champ
-    // (largeur, hauteur, bas), en pixels logiques.
+    // Verrouillage (L2-22) : horloge (taille, haut, hauteur de ligne horlogeLigne, interlettrage horlogeInterlettrage,
+    // recul de l'apparition), date (taille, haut), pastille et nom, champ (largeur, hauteur, bas), en pixels logiques.
     readonly property var verrou: tokens?.verrou
     // Agent d'authentification (L2-24) : mise en marche, cotes de l'île, poussée d'échec.
     readonly property var autorisation: tokens?.autorisation

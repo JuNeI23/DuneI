@@ -7,7 +7,8 @@ import "Verrou"
 // Coque d'essai de la production des fichiers de hyprlock (L2-22).
 // Rôle : charge Production.qml sur une liste d'écrans fictifs, vide au départ (rien n'est produit), que l'IPC pose ;
 // tests/test_verrou.py (ProductionTest) lit ensuite les fichiers écrits dans DUNEI_ETAT_DIR/verrou.
-// Entrées : DUNEI_TOKENS_DIR et DUNEI_ETAT_DIR ; IPC « essai » : produire <{"ecrans": [...]} en JSON>.
+// Entrées : DUNEI_TOKENS_DIR et DUNEI_ETAT_DIR ; IPC « essai » : produire <{"ecrans": [...]} en JSON>, relancer
+// (deux produire() rapprochés), garde <ms> (délai de garde d'une production).
 // Sorties : « essai : prêt » quand les jetons sont chargés ; « essai : produit <noms des écrans> » à la fin de chaque
 // production. Erreurs : celles de Theme et de Production, dans le journal.
 // Dépendances : quickshell ≥ 0.3 (IpcHandler) ; liens essai/production/Theme et Verrou, car Quickshell ne suit pas
@@ -25,6 +26,7 @@ ShellRoot {
     Connections { target: Theme; function onReadyChanged() { essai.signaler() } }
 
     Production {
+        id: production
         ecrans: essai.ecrans
         onProduit: console.log("essai : produit " + essai.ecrans.map(e => e.nom).join(" "))
     }
@@ -36,5 +38,13 @@ ShellRoot {
         // Entrée : json, un objet {"ecrans": [{nom, largeur, hauteur, echelle}]}. Sortie : aucune.
         // Erreurs : JSON invalide → exception au journal. Dépendances : Production.
         function produire(json: string): void { essai.ecrans = JSON.parse(json).ecrans }
+
+        // relancer — appelle produire() deux fois de suite : la seconde doit être rejouée à la fin de la première.
+        // Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : Production.produire.
+        function relancer(): void { production.produire(); production.produire() }
+
+        // garde — fixe le délai de garde des productions suivantes. Entrée : ms. Sortie : aucune. Erreurs : aucune.
+        // Dépendances : Production.garde.
+        function garde(ms: int): void { production.garde = ms }
     }
 }

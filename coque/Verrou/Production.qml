@@ -14,18 +14,21 @@ import "verrou.js" as Logique
 // est rejouée à sa fin. Le rendu passe par grabToImage, qui exige une fenêtre : un calque d'un pixel, transparent, sans
 // entrée ni clavier, posé en arrière-plan sur chaque écran, porte un Contenu caché. Une image n'est rendue qu'une fois
 // le rapport de pixels de ce calque égal à l'échelle de Hyprland (Qt passe par 2 puis 1 avant l'échelle fractionnaire)
-// et l'image du bureau décodée, ou après deux secondes d'attente, avec un avertissement.
+// et l'image du bureau décodée, ou après deux secondes d'attente, avec un avertissement. Le Contenu caché ne charge
+// l'image du bureau que pendant un rendu. Une production qui dépasse sa garde (un rendu qui ne rappelle jamais, écran
+// éteint ou verrouillé) est abandonnée ; son numéro de génération fait ignorer ses rappels tardifs.
 // Entrées : ecrans, liste de {nom, largeur, hauteur (pixels logiques), echelle}, par défaut les écrans de Quickshell
-// avec l'échelle de Hyprland ; DUNEI_ETAT_DIR, sinon $XDG_STATE_HOME/dunei, sinon ~/.local/state/dunei : le dossier
-// d'état, dont verrou/ reçoit les fichiers ; XDG_RUNTIME_DIR (marqueur dunei/verrou-apparition) ; USER (nom affiché).
+// avec l'échelle de Hyprland ; garde, délai maximal d'une production en ms (10 000) ; DUNEI_ETAT_DIR, sinon
+// $XDG_STATE_HOME/dunei, sinon ~/.local/state/dunei : le dossier d'état, dont verrou/ reçoit les fichiers ;
+// XDG_RUNTIME_DIR (marqueur dunei/verrou-apparition) ; USER (nom affiché).
 // Relance d'elle-même au changement des écrans ou de leur échelle, de l'image du bureau, de Theme.bureauClair, de
 // Theme.mouvementReduit et des jetons (thème choisi).
 // Sorties : produire() ; dans verrou/ : fond-<écran>.png, pastille-<écran>.png, champ-<écran>.png,
 // pastille-<écran>-vide.png, champ-<écran>-vide.png et hyprlock.conf ; signal produit() à la fin d'une production
 // réussie ; enCours.
 // Erreurs : jetons non chargés, aucun écran ou échelle inconnue → rien n'est produit (relance au changement suivant) ;
-// dossier impossible à créer, image non rendue ou non écrite, renommage en échec → console.warn, la configuration
-// n'est pas réécrite et l'ancienne reste en place.
+// dossier impossible à créer, image non rendue ou non écrite, renommage ou écriture de la configuration en échec,
+// garde dépassée (« délai dépassé ») → console.warn, et l'ancienne configuration reste en place.
 // Dépendances : Contenu.qml, verrou.js (confHyprlock, physique), Theme, Quickshell (Variants, PanelWindow, env),
 // Quickshell.Hyprland (monitorFor, refreshMonitors, rawEvent), Quickshell.Io (Process, FileView), mkdir, sh, mv.
 Scope {
@@ -37,8 +40,11 @@ Scope {
         || Quickshell.env("HOME") + "/.local/state") + "/dunei") + "/verrou"
     readonly property string marqueur: Quickshell.env("XDG_RUNTIME_DIR") + "/dunei/verrou-apparition"
     property bool enCours: false
-    // Production redemandée pendant enCours ; écrans restant à rendre ; écrans rendus, avec leurs images.
+    property int garde: 10000
+    // Production redemandée pendant enCours ; numéro de la production en cours ; écrans restant à rendre ; écrans
+    // rendus, avec leurs images.
     property bool _encore: false
+    property int _generation: 0
     property var _file: []
     property var _faits: []
 
@@ -52,10 +58,17 @@ Scope {
         if (!Theme.ready || !ecrans.length || ecrans.some(e => !(e.echelle > 0))) return
         enCours = true
         _encore = false
+        _generation++
         _file = ecrans.slice()
         _faits = []
+        surveillance.restart()
+        preparer.generation = _generation
         preparer.running = true
     }
+
+    // courant — vrai si un rappel appartient à la production en cours, faux pour celui d'une production abandonnée.
+    // Entrée : g, numéro de génération retenu par le rappel. Sortie : booléen. Erreurs : aucune. Dépendances : aucune.
+    function courant(g) { return enCours && g === _generation }
 
     // suivant — confie le premier écran restant au calque de son écran (le premier calque pour un écran inconnu de
     // Quickshell), ou renomme les images quand tous sont rendus.
@@ -63,6 +76,7 @@ Scope {
     function suivant() {
         if (!_file.length) {
             // Le moteur JavaScript de Qt n'a pas flatMap : les chemins s'aplatissent par concat.
+            renommer.generation = _generation
             renommer.command = ["sh", "-c", 'for f do mv -f -- "$f" "${f%.tmp.png}.png" || exit 1; done', "sh",
                                 ...[].concat(..._faits.map(e => Object.values(e.images))).map(provisoire)]
             renommer.running = true
@@ -70,7 +84,7 @@ Scope {
         }
         const e = _file[0]
         const fenetre = fenetres.instances.find(f => f.modelData.name === e.nom) ?? fenetres.instances[0]
-        if (fenetre) fenetre.rendre(e)
+        if (fenetre) fenetre.rendre(e, _generation)
         else echec("aucun calque de rendu")
     }
 
@@ -87,11 +101,22 @@ Scope {
     // Erreurs : aucune. Dépendances : aucune.
     function provisoire(chemin) { return chemin.replace(/\.png$/, ".tmp.png") }
 
+    // terminer — conclut une production réussie, la configuration en place.
+    // Entrées : aucune. Sortie : signal produit, production redemandée rejouée. Erreurs : aucune.
+    // Dépendances : surveillance, relance.
+    function terminer() {
+        surveillance.stop()
+        enCours = false
+        produit()
+        if (_encore) relance.restart()
+    }
+
     // echec — abandonne la production en cours, l'ancienne configuration restant en place.
     // Entrée : raison, texte du journal. Sortie : aucune ; rejoue une production redemandée. Erreurs : aucune.
     // Dépendances : relance.
     function echec(raison) {
         console.warn("Production du verrou : " + raison)
+        surveillance.stop()
         enCours = false
         if (_encore) relance.restart()
     }
@@ -116,37 +141,52 @@ Scope {
 
     // Les changements arrivent en salve (jetons, puis fond publié) : une seule production après le dernier.
     Timer { id: relance; interval: 300; onTriggered: production.produire() }
+    // Garde d'une production : passé ce délai, elle est abandonnée et la suivante peut partir.
+    Timer { id: surveillance; interval: production.garde; onTriggered: production.echec("délai dépassé") }
 
     Process {
         id: preparer
+        property int generation: 0
         command: ["mkdir", "-p", production.dossier]
-        onExited: code => code === 0 ? production.suivant() : production.echec("dossier " + production.dossier)
+        // onExited — le dossier existe : le premier écran se rend. Entrées : code de sortie. Sortie : suivant.
+        // Erreurs : code non nul → echec ; production abandonnée entre-temps → rien. Dépendances : courant.
+        onExited: code => {
+            if (!production.courant(generation)) return
+            code === 0 ? production.suivant() : production.echec("dossier " + production.dossier)
+        }
     }
 
     Process {
         id: renommer
+        property int generation: 0
         // onExited — les images sont en place : la configuration s'écrit en dernier.
-        // Entrées : code de sortie de sh. Sortie : hyprlock.conf, signal produit. Erreurs : code non nul → echec.
-        // Dépendances : Logique.confHyprlock, conf, Theme.
+        // Entrées : code de sortie de sh. Sortie : écriture de hyprlock.conf, conclue par conf.onSaved.
+        // Erreurs : code non nul → echec ; production abandonnée entre-temps → rien.
+        // Dépendances : courant, Logique.confHyprlock, conf, Theme.
         onExited: code => {
+            if (!production.courant(generation)) return
             if (code !== 0) return production.echec("renommage des images")
             const j = { verrou: Theme.verrou, utilisateur: Quickshell.env("USER") ?? "",
                         couleurs: { fond: String(Theme.color.surfaceBase), heures: String(Theme.texteBureau),
-                                    minutes: String(Theme.texteBureauSurvol), erreur: String(Theme.color.error) } }
-            conf.setText(Logique.confHyprlock(production._faits, j, production.marqueur,
-                                              production._faits[0].images.pastilleVide))
-            production.enCours = false
-            production.produit()
-            if (production._encore) relance.restart()
+                                    minutes: String(Theme.texteBureauSurvol), emphase: String(Theme.color.textEmphasis),
+                                    erreur: String(Theme.color.error) } }
+            const texte = Logique.confHyprlock(production._faits, j, production.marqueur,
+                                               production._faits[0].images.pastilleVide)
+            // FileView n'écrit pas, et n'émet pas saved, un texte égal à celui qu'il tient déjà.
+            if (conf.text() === texte) production.terminer()
+            else conf.setText(texte)
         }
     }
 
+    // La configuration n'est qu'écrite, jamais lue : preload faux, aucune lecture au démarrage.
     FileView {
         id: conf
         path: production.dossier + "/hyprlock.conf"
-        printErrors: false
+        preload: false
         blockWrites: true
         atomicWrites: true
+        onSaved: production.terminer()
+        onSaveFailed: error => production.echec("écriture de hyprlock.conf (" + FileViewError.toString(error) + ")")
     }
 
     Variants {
@@ -156,8 +196,10 @@ Scope {
         PanelWindow {
             id: fenetre
             required property ShellScreen modelData
-            // Écran en cours de rendu, et instant limite de l'attente du rapport de pixels et du décodage.
+            // Écran en cours de rendu (null hors rendu : l'image du bureau n'est alors pas chargée), génération de la
+            // production qui l'a demandé, et instant limite de l'attente du rapport de pixels et du décodage.
             property var ecran: null
+            property int generation: 0
             property real limite: 0
 
             screen: modelData
@@ -172,10 +214,11 @@ Scope {
             mask: Region {}
 
             // rendre — prend un écran à rendre et attend que le calque et l'image soient prêts.
-            // Entrée : e, l'écran. Sortie : aucune ; l'échelle de Hyprland se relit et guet démarre. Erreurs : aucune.
-            // Dépendances : guet, Hyprland.refreshMonitors.
-            function rendre(e) {
+            // Entrées : e, l'écran ; g, la génération de la production. Sortie : aucune ; l'échelle de Hyprland se
+            // relit et guet démarre. Erreurs : aucune. Dépendances : guet, Hyprland.refreshMonitors.
+            function rendre(e, g) {
                 ecran = e
+                generation = g
                 Hyprland.refreshMonitors()
                 limite = Date.now() + 2000
                 guet.restart()
@@ -183,9 +226,10 @@ Scope {
 
             // graver — rend les cinq images de l'écran en cours, l'une après l'autre, puis les remet à production.
             // Entrées : aucune (ecran, devicePixelRatio). Sortie : aucune ; production.rendu ou production.echec.
-            // Erreurs : rendu refusé ou fichier non écrit → production.echec. Dépendances : atelier, Logique.physique.
+            // Erreurs : rendu refusé ou fichier non écrit → production.echec ; production abandonnée → l'écran est
+            // libéré sans suite. Dépendances : atelier, production.courant, Logique.physique.
             function graver() {
-                const e = ecran, d = devicePixelRatio, base = production.dossier + "/"
+                const e = ecran, g = generation, d = devicePixelRatio, base = production.dossier + "/"
                 const images = { fond: base + "fond-" + e.nom + ".png", pastille: base + "pastille-" + e.nom + ".png",
                                  champ: base + "champ-" + e.nom + ".png",
                                  pastilleVide: base + "pastille-" + e.nom + "-vide.png",
@@ -196,7 +240,8 @@ Scope {
                 // pas — rend le travail i puis le suivant ; la taille demandée est divisée par le rapport de pixels,
                 // que grabToImage applique.
                 const pas = i => {
-                    if (i === travaux.length) return production.rendu(e, images)
+                    if (!production.courant(g)) { ecran = null; return }
+                    if (i === travaux.length) { ecran = null; return production.rendu(e, images) }
                     const [item, chemin] = travaux[i]
                     const taille = Qt.size(Logique.physique(item.width, e.echelle) / d,
                                            Logique.physique(item.height, e.echelle) / d)
@@ -213,6 +258,7 @@ Scope {
                 interval: 50
                 repeat: true
                 onTriggered: {
+                    if (!production.courant(fenetre.generation)) { stop(); fenetre.ecran = null; return }
                     const pret = Math.abs(fenetre.devicePixelRatio - (Hyprland.monitorFor(fenetre.screen)?.scale ?? 0))
                         < 0.001 && atelier.pret
                     if (!pret && Date.now() < fenetre.limite) return
@@ -229,6 +275,7 @@ Scope {
                 width: fenetre.ecran?.largeur ?? 0
                 height: fenetre.ecran?.hauteur ?? 0
                 echelle: fenetre.ecran?.echelle ?? 1
+                avecImage: fenetre.ecran !== null
             }
             Item { id: videPastille; visible: false; width: atelier.pastille.width; height: atelier.pastille.height }
             Item { id: videChamp; visible: false; width: atelier.champ.width; height: atelier.champ.height }

@@ -11,15 +11,17 @@ import os
 import re
 import struct
 import subprocess
+import time
 import unittest
 from pathlib import Path
 
 from tests.test_coque_theme import DELAI, QS, ROOT, EssaiCoque
 
 # Jetons du verrou, tels que generated/coque-tokens.json les publie.
-VERROU = {"horloge": 700, "horlogeHaut": 34, "horlogeLigne": 500, "recul": 3.4, "date": 22, "dateHaut": 556, "pastille": 72,
-          "nomTaille": 17, "champLargeur": 280, "champHauteur": 36, "champBas": 56, "pastilleBas": 160}
-COULEURS = {"fond": "#0f0703", "heures": "#f5f5f5", "minutes": "#bebebe", "erreur": "#d33a3c"}
+VERROU = {"horloge": 700, "horlogeHaut": 34, "horlogeLigne": 500, "horlogeInterlettrage": -8, "recul": 3.4,
+          "date": 22, "dateHaut": 556, "pastille": 72, "nomTaille": 17, "champLargeur": 280, "champHauteur": 36,
+          "champBas": 56, "pastilleBas": 160}
+COULEURS = {"fond": "#0f0703", "heures": "#f5f5f5", "minutes": "#bebebe", "emphase": "#fdf3ec", "erreur": "#d33a3c"}
 IMAGES = {"fond": "/r/fond.png", "pastille": "/r/p.png", "champ": "/r/c.png",
           "pastilleVide": "/r/pv.png", "champVide": "/r/cv.png"}
 MARQUEUR = "/run/user/1000/dunei/verrou.marqueur"
@@ -76,7 +78,8 @@ class LogiqueTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(self.appeler("minutes", "2026-11-25T07:05:00"), "05")
 
     def test_physique(self):
-        """Vérifie la conversion en pixels physiques. Entrées, sortie : aucune. Erreurs : échec. Dépendances : appeler."""
+        """Vérifie la conversion en pixels physiques. Entrées, sortie : aucune. Erreurs : échec.
+        Dépendances : appeler."""
         self.assertEqual(self.appeler("physique", 700, 1.25), 875)
         self.assertEqual(self.appeler("physique", 36, 1.25), 45)
 
@@ -92,9 +95,9 @@ class LogiqueTest(EssaiCoque, unittest.TestCase):
 
     def test_conf_centres(self):
         """Vérifie les étiquettes centrées sur un point de l'écran, comme Contenu.qml : horloge au milieu de sa ligne
-        (34 + 500 / 2 depuis le haut), initiale au centre de la pastille (160 + 72 / 2 depuis le bas), nom entre le champ
-        et la pastille ((56 + 36 + 160) / 2 depuis le bas) ; décalage vers le haut depuis le milieu d'un écran de 1200
-        à 1,25. Entrées, sortie : aucune. Erreurs : échec. Dépendances : conf.
+        (34 + 500 / 2 depuis le haut), initiale au centre de la pastille (160 + 72 / 2 depuis le bas), nom entre le
+        champ et la pastille ((56 + 36 + 160) / 2 depuis le bas) ; décalage vers le haut depuis le milieu d'un écran
+        de 1200 à 1,25. Entrées, sortie : aucune. Erreurs : échec. Dépendances : conf.
         """
         etiquettes = re.findall(r"label \{.*?\n\}", self.conf(), re.S)
         attendus = {'size="672000"': 395, ">N</span>": round(1.25 * (196 - 600)), ">nicolas</span>": -592}
@@ -102,6 +105,26 @@ class LogiqueTest(EssaiCoque, unittest.TestCase):
             bloc = next(b for b in etiquettes if marque in b)
             self.assertIn("valign = center", bloc, marque)
             self.assertIn("position = 0, %d\n" % y, bloc, marque)
+
+    def test_conf_roles(self):
+        """Vérifie les rôles de la maquette v2 : interlettrage de l'horloge à l'échelle (en 1/1024 px physique), date
+        en couleur des heures, initiale et points du champ en emphase, nom et initiale en graisse 550.
+        Entrées, sortie : aucune.
+        Erreurs : échec. Dépendances : conf.
+        """
+        c = self.conf()
+        etiquettes = re.findall(r"label \{.*?\n\}", c, re.S)
+        horloge = next(b for b in etiquettes if 'size="672000"' in b)
+        self.assertEqual(horloge.count('letter_spacing="%d"' % round(-8 * 1.25 * 1024)), 2)
+        date = next(b for b in etiquettes if "date '" in b)
+        self.assertIn('foreground="##f5f5f5"', date)
+        initiale = next(b for b in etiquettes if ">N</span>" in b)
+        self.assertIn('foreground="##fdf3ec"', initiale)
+        self.assertIn('weight="550"', initiale)
+        nom = next(b for b in etiquettes if ">nicolas</span>" in b)
+        self.assertIn('foreground="##f5f5f5"', nom)
+        self.assertIn('weight="550"', nom)
+        self.assertEqual(re.findall(r"font_color = (.*)", c), ["rgb(fdf3ec)"] * 2)
 
     def test_conf_diese(self):
         """Vérifie qu'aucune couleur n'a un seul dièse et que chaque foreground est en ##. Erreurs : échec."""
@@ -121,12 +144,14 @@ class LogiqueTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(len(images), 2)
         for bloc in images:
             self.assertIn("reload_time = 0", bloc)
-            self.assertRegex(bloc, r"reload_cmd = \[ -e '%s' \] && echo '/r/(pv|cv)\.png' \|\| echo" % re.escape(MARQUEUR))
+            self.assertRegex(bloc, r"reload_cmd = \[ -e '%s' \] && echo '/r/(pv|cv)\.png' \|\| echo"
+                             % re.escape(MARQUEUR))
 
     def test_section_generique(self):
         """Vérifie la section sans nom : fond et champ seuls, zindex -2. Entrées, sortie : aucune. Erreurs : échec."""
         c = self.conf()
-        generique = [b for b in re.findall(r"(\w[\w-]*) \{\n(.*?)\n\}", c, re.S) if "monitor" not in b[1] and b[0] in ("background", "input-field", "label", "image")]
+        generique = [b for b in re.findall(r"(\w[\w-]*) \{\n(.*?)\n\}", c, re.S)
+                     if "monitor" not in b[1] and b[0] in ("background", "input-field", "label", "image")]
         self.assertEqual(sorted(g[0] for g in generique if g[0] in ("background", "input-field", "label", "image")),
                          ["background", "input-field"])
         for _, corps in generique:
@@ -148,7 +173,8 @@ class LogiqueTest(EssaiCoque, unittest.TestCase):
         self.assertNotIn("a<b", c)
 
     def test_initiale_majuscule(self):
-        """Vérifie que l'initiale est mise en majuscule avant l'échappement. Entrées, sortie : aucune. Erreurs : échec."""
+        """Vérifie que l'initiale est mise en majuscule avant l'échappement. Entrées, sortie : aucune.
+        Erreurs : échec."""
         c = self.conf(utilisateur="&x")
         self.assertIn(">&amp;</span>", c)
         self.assertNotIn("&AMP;", c)
@@ -201,8 +227,8 @@ class ProductionTest(EssaiCoque, unittest.TestCase):
     def produire(self, image: bool) -> Path:
         """Lance la coque d'essai, produit les fichiers de l'écran d'essai et rend le dossier de sortie.
 
-        Entrée : image, vrai pour poser une image de bureau (dégradé vertical de 1600 × 1000) dans bureau.json. Sortie : le
-        dossier verrou/ de DUNEI_ETAT_DIR. Erreurs : échec si « essai : produit ESSAI-1 » manque.
+        Entrée : image, vrai pour poser une image de bureau (dégradé vertical de 1600 × 1000) dans bureau.json.
+        Sortie : le dossier verrou/ de DUNEI_ETAT_DIR. Erreurs : échec si « essai : produit ESSAI-1 » manque.
         Dépendances : installer, lancer, attendre, ipc, Pillow.
         """
         self.installer(55)
@@ -210,12 +236,53 @@ class ProductionTest(EssaiCoque, unittest.TestCase):
             from PIL import Image
             source = Path(self.tmp.name) / "bureau.png"
             Image.linear_gradient("L").resize((1600, 1000)).convert("RGB").save(source)
-            (self.dir / "bureau.json").write_text(json.dumps({"origine": "essai", "fond": "#808080", "image": str(source)}))
+            bureau = {"origine": "essai", "fond": "#808080", "image": str(source)}
+            (self.dir / "bureau.json").write_text(json.dumps(bureau))
         self.lancer(self.dir)
         self.attendre("essai : prêt")
         self.ipc("produire", json.dumps({"ecrans": [self.ECRAN]}))
         self.attendre("essai : produit ESSAI-1")
         return self.dir / "verrou"
+
+    def test_echec_dossier(self):
+        """Vérifie qu'un dossier impossible à créer (un fichier porte son nom) est signalé, sans production.
+
+        Entrées, sortie : aucune. Erreurs : échec. Dépendances : installer, lancer, attendre, ipc.
+        """
+        self.installer(55)
+        (self.dir / "verrou").write_text("")
+        self.lancer(self.dir)
+        self.attendre("essai : prêt")
+        self.ipc("produire", json.dumps({"ecrans": [self.ECRAN]}))
+        self.attendre("Production du verrou : dossier")
+        self.assertNotIn("essai : produit", self.journal())
+
+    def test_relance_pendant_production(self):
+        """Vérifie que deux produire() rapprochés donnent deux productions, la seconde rejouée à la fin de la première.
+
+        Entrées, sortie : aucune. Erreurs : échec. Dépendances : produire, ipc, attendre.
+        """
+        self.produire(image=False)
+        self.ipc("relancer")
+        self.attendre("essai : produit ESSAI-1", 3)
+
+    def test_garde(self):
+        """Vérifie qu'une production qui dépasse sa garde est abandonnée sans bloquer la suivante, et que ses rappels
+        tardifs sont ignorés. Entrées, sortie : aucune. Erreurs : échec. Dépendances : installer, lancer, attendre, ipc.
+        """
+        self.installer(55)
+        self.lancer(self.dir)
+        self.attendre("essai : prêt")
+        self.ipc("garde", "1")
+        self.ipc("produire", json.dumps({"ecrans": [self.ECRAN]}))
+        self.attendre("Production du verrou : délai dépassé")
+        self.ipc("garde", "10000")
+        self.ipc("produire", json.dumps({"ecrans": [dict(self.ECRAN, nom="ESSAI-2")]}))
+        self.attendre("essai : produit ESSAI-2")
+        time.sleep(0.5)
+        self.assertEqual(self.journal().count("essai : produit"), 1)
+        conf = (self.dir / "verrou" / "hyprlock.conf").read_text(encoding="utf-8")
+        self.assertNotIn("ESSAI-1", conf)
 
     def test_production(self):
         """Vérifie les cinq images, leurs tailles physiques, l'absence de provisoire et les chemins cités par la conf.
@@ -229,7 +296,7 @@ class ProductionTest(EssaiCoque, unittest.TestCase):
             self.assertEqual(taille_png(dossier / nom), taille, nom)
         self.assertEqual([p.name for p in dossier.iterdir() if "tmp" in p.name], [])
         conf = (dossier / "hyprlock.conf").read_text(encoding="utf-8")
-        self.assertEqual(set(re.findall(r"/[^\s']+\.png", conf)), {str(dossier / nom) for nom in attendues})
+        self.assertEqual(set(re.findall(r"/[^\s']+\.png", conf)), {str(dossier / n) for n in attendues})
         self.assertIn("monitor = ESSAI-1", conf)
         self.assertIn("size = 90", conf)
 
@@ -240,7 +307,8 @@ class ProductionTest(EssaiCoque, unittest.TestCase):
         """
         from PIL import Image
         image = Image.open(self.produire(image=True) / "fond-ESSAI-1.png").convert("RGB")
-        self.assertLess(image.getpixel((400, 5))[0] + 200, image.getpixel((400, 495))[0], "le dégradé de l'image manque")
+        self.assertLess(image.getpixel((400, 5))[0] + 200, image.getpixel((400, 495))[0],
+                        "le dégradé de l'image manque")
         self.arreter()
         (self.dir / "bureau.json").unlink()
         fond = Image.open(self.produire(image=False) / "fond-ESSAI-1.png").convert("RGB")

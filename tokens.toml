@@ -517,6 +517,7 @@ secousse = 7                  # poussée du champ à l'échec, en px
 horloge = 700                 # corps de l'horloge ; heures et minutes sur une ligne
 horloge_haut = 34              # haut de la ligne de l'horloge, depuis le haut de l'écran
 horloge_ligne = 500            # hauteur de la ligne de l'horloge, chiffres centrés dedans (maquette verrou-v2)
+horloge_interlettrage = -8     # espace ajouté après chaque chiffre de l'horloge (letter-spacing de la maquette)
 recul = 3.4                   # échelle de l'horloge au départ de l'apparition, ramenée à 1
 date = 22                     # corps de la date
 date_haut = 556                # position de la date depuis le haut

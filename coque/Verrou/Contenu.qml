@@ -12,12 +12,14 @@ import "verrou.js" as Logique
 // toute cote se lit dans Theme.verrou, comme dans confHyprlock (verrou.js).
 // Entrées : width et height, taille logique de l'écran ; echelle, rapport pixels physiques / logiques de l'écran
 // (décodage de l'image à sa taille physique) ; progres, de 0 (horloge à l'échelle Theme.verrou.recul) à 1 (posé, par
-// défaut) ; avecFond, faux pour ne pas peindre le fond (l'apparition, posée sur celui de hyprlock) ; utilisateur, nom
-// affiché, $USER par défaut.
+// défaut) ; avecFond, faux pour ne pas peindre le fond (l'apparition, posée sur celui de hyprlock) ; avecImage, faux
+// pour ne pas charger l'image du bureau (Production.qml hors rendu) ; utilisateur, nom affiché, $USER par défaut.
 // Sorties : fond, pastille et champ, les éléments que Production.qml rend en images (le fond est rendu même caché) ;
 // pret, faux tant que l'image du bureau se décode.
-// Couleurs : fond surface-base sous l'image ; heures et nom texteBureau, minutes et date texteBureauSurvol (clair ou
-// foncé selon Theme.bureauClair, D205) ; pastille et champ en aplat texteBureauOppose, tous opaques.
+// Rôles de la maquette verrou-v2 : fond surface-base sous l'image ; heures, date et nom texteBureau, minutes
+// texteBureauSurvol (clair ou foncé selon Theme.bureauClair, D205) ; pastille control-raised et initiale
+// text-emphasis ; champ surface-base à liseré border-subtle d'un pixel logique ; tout opaque. Horloge en interlettrage
+// horlogeInterlettrage ; nom et initiale en typo.weightMedium.
 // Erreurs : image du bureau illisible → aplat surface-base seul (journal de Qt). Dépendances : Theme (verrou, typo,
 // color, imageBureau, texteBureau…), Theme/fichiers.js (url), verrou.js (heures, minutes, dateLongue,
 // TAILLE_INITIALE), Quickshell (SystemClock, env).
@@ -27,6 +29,7 @@ Item {
     property real echelle: 1
     property real progres: 1
     property bool avecFond: true
+    property bool avecImage: true
     property string utilisateur: Quickshell.env("USER") ?? ""
     readonly property Item fond: _fond
     readonly property Item pastille: _pastille
@@ -34,11 +37,13 @@ Item {
     readonly property bool pret: image.status !== Image.Loading
     readonly property var v: Theme.verrou ?? ({})
 
-    // police — police du verrou : famille de l'interface, taille en pixels logiques, graisse donnée.
-    // Entrées : px, taille ; poids, graisse (Font.ExtraLight pour l'horloge, Font.Normal sinon). Sortie : une valeur
-    // font. Erreurs : aucune ; une taille nulle (jetons absents) devient 1. Dépendances : Theme.typo.
-    function police(px, poids) {
-        return Qt.font({ family: Theme.typo?.interface ?? "", pixelSize: px || 1, weight: poids })
+    // police — police du verrou : famille de l'interface, taille en pixels logiques, graisse et interlettrage donnés.
+    // Entrées : px, taille ; poids, graisse ; espace, interlettrage en pixels logiques (facultatif, 0 par défaut).
+    // Sortie : une valeur font. Erreurs : aucune ; une taille nulle (jetons absents) devient 1.
+    // Dépendances : Theme.typo.
+    function police(px, poids, espace) {
+        return Qt.font({ family: Theme.typo?.interface ?? "", pixelSize: px || 1, weight: poids,
+                         letterSpacing: espace ?? 0 })
     }
 
     SystemClock { id: horloge; precision: SystemClock.Minutes }
@@ -52,7 +57,7 @@ Item {
         Image {
             id: image
             anchors.fill: parent
-            source: Theme.imageBureau ? Fichiers.url(Theme.imageBureau) : ""
+            source: contenu.avecImage && Theme.imageBureau ? Fichiers.url(Theme.imageBureau) : ""
             fillMode: Image.PreserveAspectCrop
             clip: true
             asynchronous: true
@@ -63,21 +68,23 @@ Item {
     }
 
     // Horloge : heures et minutes sur une ligne, centrées dans la ligne de horlogeLigne posée à horlogeHaut (comme la
-    // ligne CSS de la maquette) ; le recul l'agrandit autour de son centre.
+    // ligne CSS de la maquette) ; le recul l'agrandit autour de son centre. Qt ajoute l'interlettrage après le dernier
+    // chiffre, Pango non : la ligne se décale d'un demi-interlettrage pour tomber sur celle de hyprlock.
     Row {
         anchors.horizontalCenter: parent.horizontalCenter
+        anchors.horizontalCenterOffset: (contenu.v.horlogeInterlettrage ?? 0) / 2
         y: (contenu.v.horlogeHaut ?? 0) + (contenu.v.horlogeLigne ?? 0) / 2 - height / 2
         scale: (contenu.v.recul ?? 1) + (1 - (contenu.v.recul ?? 1)) * contenu.progres
         Text {
             text: Logique.heures(horloge.date)
             color: Theme.texteBureau
-            font: contenu.police(contenu.v.horloge, Font.ExtraLight)
+            font: contenu.police(contenu.v.horloge, Font.ExtraLight, contenu.v.horlogeInterlettrage)
             renderType: Text.CurveRendering
         }
         Text {
             text: Logique.minutes(horloge.date)
             color: Theme.texteBureauSurvol
-            font: contenu.police(contenu.v.horloge, Font.ExtraLight)
+            font: contenu.police(contenu.v.horloge, Font.ExtraLight, contenu.v.horlogeInterlettrage)
             renderType: Text.CurveRendering
         }
     }
@@ -86,7 +93,7 @@ Item {
         anchors.horizontalCenter: parent.horizontalCenter
         y: contenu.v.dateHaut ?? 0
         text: Logique.dateLongue(horloge.date)
-        color: Theme.texteBureauSurvol
+        color: Theme.texteBureau
         font: contenu.police(contenu.v.date, Font.Normal)
     }
 
@@ -99,26 +106,28 @@ Item {
         width: contenu.v.pastille ?? 0
         height: width
         radius: width / 2
-        color: Theme.texteBureauOppose
+        color: Theme.color?.controlRaised ?? "transparent"
     }
     Text {
         anchors.centerIn: _pastille
         text: (Array.from(contenu.utilisateur)[0] ?? "").toUpperCase()
-        color: Theme.texteBureau
-        font: contenu.police((contenu.v.nomTaille ?? 0) * Logique.TAILLE_INITIALE, Font.Normal)
+        color: Theme.color?.textEmphasis ?? "transparent"
+        font: contenu.police((contenu.v.nomTaille ?? 0) * Logique.TAILLE_INITIALE,
+                             Theme.typo?.weightMedium ?? Font.Medium)
     }
 
     // Nom : centré dans l'espace entre le haut du champ et le bas de la pastille.
     Text {
         anchors.horizontalCenter: parent.horizontalCenter
-        y: contenu.height - ((contenu.v.champBas ?? 0) + (contenu.v.champHauteur ?? 0) + (contenu.v.pastilleBas ?? 0)) / 2
-            - height / 2
+        y: contenu.height - height / 2
+            - ((contenu.v.champBas ?? 0) + (contenu.v.champHauteur ?? 0) + (contenu.v.pastilleBas ?? 0)) / 2
         text: contenu.utilisateur
         color: Theme.texteBureau
-        font: contenu.police(contenu.v.nomTaille, Font.Normal)
+        font: contenu.police(contenu.v.nomTaille, Theme.typo?.weightMedium ?? Font.Medium)
     }
 
-    // Champ : une gélule pleine, le bas à champBas du bas de l'écran ; hyprlock y pose ses points et son contour d'échec.
+    // Champ : une gélule pleine à liseré, le bas à champBas du bas de l'écran ; hyprlock y pose ses points et son
+    // contour d'échec.
     Rectangle {
         id: _champ
         anchors.horizontalCenter: parent.horizontalCenter
@@ -126,6 +135,8 @@ Item {
         width: contenu.v.champLargeur ?? 0
         height: contenu.v.champHauteur ?? 0
         radius: height / 2
-        color: Theme.texteBureauOppose
+        color: Theme.color?.surfaceBase ?? "transparent"
+        border.width: 1
+        border.color: Theme.color?.borderSubtle ?? "transparent"
     }
 }
