@@ -3,6 +3,7 @@ notify-send et logger dans le PATH ; aucun verrou réel, aucune notification ré
 
 import json
 import os
+import signal
 import subprocess
 import tempfile
 import threading
@@ -16,26 +17,33 @@ LOG = 'echo "{name} $*" >> "$FAKE_LOG"\n'
 # Chaque faux outil consigne son appel dans $FAKE_LOG. L'état du verrou vit dans $FAKE_DIR/locked (« true » ou
 # « false »), lu par le faux hyprctl et basculé par le faux hyprlock.
 FAKES = {
-    # hyprctl -j locked : rend l'état du fichier, faux par défaut.
-    "hyprctl": 'printf \'{"locked": %s}\\n\' "$(cat "$FAKE_DIR/locked" 2>/dev/null || echo false)"\n',
-    # qs ipc -c dunei call verrou <méthode> [ordre] : $FAKE_QS=muet ne répond jamais ; etat rend le bloc posé sous
+    # hyprctl -j locked : rend l'état du fichier, faux par défaut ; muet tant que le compteur $FAKE_DIR/muet est positif.
+    "hyprctl": 'if [ -e "$FAKE_DIR/muet" ]; then\n'
+               '    n=$(cat "$FAKE_DIR/muet"); [ "$n" -gt 0 ] && { echo $((n - 1)) > "$FAKE_DIR/muet"; exec sleep 1; }\n'
+               '    rm -f "$FAKE_DIR/muet"\nfi\n'
+               'printf \'{"locked": %s}\\n\' "$(cat "$FAKE_DIR/locked" 2>/dev/null || echo false)"\n',
+    # qs ipc -c dunei call verrou <méthode> [ordre] : $FAKE_QS=muet ne répond jamais, =fige ne répond pas à etat ; etat rend le bloc posé sous
     # l'ordre courant (FAKE_POSE=non : jamais posé) et, si FAKE_VEILLE=1, annonce la veille en touchant verrou-sec.
     "qs": LOG.format(name="qs") + '[ "${FAKE_QS:-}" = muet ] && exec sleep 1\n'
+          '[ "${FAKE_QS:-}" = fige ] && [ "$6" = etat ] && exec sleep 1\n'
           'if [ "$6" = etat ]; then\n'
           '    [ "${FAKE_VEILLE:-}" = 1 ] && : > "$XDG_RUNTIME_DIR/dunei/verrou-sec"\n'
           '    p=true; [ "${FAKE_POSE:-}" = non ] && p=false\n'
           '    printf \'{"pose": %s, "ordre": %s}\\n\' "$p" "$(cat "$XDG_RUNTIME_DIR/dunei/verrou-ordre")"\n'
           'fi\n',
     "busctl": LOG.format(name="busctl") + 'echo "${FAKE_BUSCTL:-b false}"\n',
-    # systemd-run : échoue si l'unité existe ($FAKE_DIR/unite), sinon exécute directement sa commande.
+    # systemd-run : échoue si l'unité existe ($FAKE_DIR/unite) ou si FAKE_SYSTEMD_RUN=panne, sinon exécute sa commande.
     "systemd-run": LOG.format(name="systemd-run") + '[ -e "$FAKE_DIR/unite" ] && exit 1\n'
+                   '[ "${FAKE_SYSTEMD_RUN:-}" = panne ] && exit 1\n'
                    'while case "$1" in --*) true;; *) false;; esac; do shift; done\nexec "$@"\n',
     "systemctl": LOG.format(name="systemctl") + '[ "$2" != is-active ] || [ -e "$FAKE_DIR/unite" ]\n',
     "notify-send": LOG.format(name="notify-send"),
+    "pgrep": LOG.format(name="pgrep") + 'exit "${FAKE_PGREP:-1}"\n',
     "logger": LOG.format(name="logger"),
     # hyprlock : le n-ième lancement suit le n-ième mot de $FAKE_HYPRLOCK (le dernier ensuite). « tient » : verrou tenu
-    # $FAKE_TENUE pas de 20 ms puis rendu ; « garde » : sort au bout de 15 pas en laissant le verrou ; « jamais » :
-    # sort sans verrou. Il écrit son masque SigCgt ($FAKE_SIGCGT) sous la fausse racine de /proc et consigne la
+    # $FAKE_TENUE pas de 20 ms puis rendu ; « garde » : sort au bout de 15 pas en laissant le verrou ; « vite » : sort
+    # aussitôt en laissant le verrou ; « fige » : comme « garde », mais rend le compositeur muet 5 appels ; « dort » :
+    # vit 10 s sans prendre le verrou ; « jamais » : sort sans verrou. Il écrit son masque SigCgt ($FAKE_SIGCGT) sous la fausse racine de /proc et consigne la
     # présence du marqueur, l'heure de son lancement et chaque SIGUSR2 reçu.
     "hyprlock": 'm=non; [ -e "$XDG_RUNTIME_DIR/dunei/verrou-apparition" ] && m=oui\n'
                 'echo "hyprlock $* marqueur=$m" >> "$FAKE_LOG"\n'
@@ -48,11 +56,14 @@ FAKES = {
                 'trap \'echo "hyprlock USR2" >> "$FAKE_LOG"\' USR2\n'
                 'case "$mode" in\n'
                 '    jamais) sleep 0.05; exit 1 ;;\n'
-                '    garde) echo true > "$FAKE_DIR/locked"; i=15 ;;\n'
+                '    dort) i=500 ;;\n'
+                '    vite) echo true > "$FAKE_DIR/locked"; exit 1 ;;\n'
+                '    garde|fige) echo true > "$FAKE_DIR/locked"; i=15 ;;\n'
                 '    *) echo true > "$FAKE_DIR/locked"; i=${FAKE_TENUE:-40} ;;\n'
                 'esac\n'
                 'while [ "$i" -gt 0 ]; do sleep 0.02; i=$((i - 1)); done\n'
-                '[ "$mode" = garde ] && exit 1\necho false > "$FAKE_DIR/locked"\n',
+                '[ "$mode" = fige ] && { echo 5 > "$FAKE_DIR/muet"; exit 1; }\n'
+                '[ "$mode" = garde ] && exit 1\n[ "$mode" = dort ] && exit 1\necho false > "$FAKE_DIR/locked"\n',
 }
 # Délais raccourcis pour les essais, sous la forme de generated/motion.json.
 DELAIS = {"verrouAttente": 1000, "verrouApparition": 150, "verrouCession": 50, "verrouRetrait": 20, "verrouSecours": 300}
@@ -217,7 +228,8 @@ class DuneiVerrouTest(unittest.TestCase):
         self.assertGreaterEqual(time.time() - debut, 0.5)
         self.assertEqual(self.lancements(), [])
 
-    def test_second_appel_sans_verrou(self):
+    def test_second_appel_pendant_la_fin(self):
+        # L'unité finit sans que le verrou ait été vu tenu : le placement est retenté une fois et le verrou posé.
         (self.t / "unite").touch()
 
         def retirer():
@@ -229,8 +241,83 @@ class DuneiVerrouTest(unittest.TestCase):
         fil.start()
         res = self.run_script(FAKE_BUSCTL="b true")
         fil.join()
-        self.assertEqual(res.returncode, 1)
-        self.assertTrue((self.run_dir / "verrou-sec").exists())
+        self.assertEqual(res.returncode, 0, res.stderr)
+        self.assertEqual(len(self.lancements()), 1)
+        self.assertSousSuite(["poserSec", "hyprlock", "remonter"], self.etapes())
+
+    def test_echeance_sans_verrou(self):
+        res = self.run_script(FAKE_HYPRLOCK="dort dort tient")
+        self.assertEqual(res.returncode, 0, res.stderr)
+        confs = [c.split(" -c ")[1].split()[0] for c in self.lancements()]
+        self.assertEqual(confs, [str(self.conf), str(self.conf), str(self.repli)])
+        self.assertEqual(len([c for c in self.calls() if "non pris" in c]), 2)
+
+    def test_sorties_rapides_repli(self):
+        res = self.run_script(FAKE_HYPRLOCK="vite vite vite tient")
+        self.assertEqual(res.returncode, 0, res.stderr)
+        confs = [c.split(" -c ")[1].split()[0] for c in self.lancements()]
+        self.assertEqual(confs, [str(self.conf), str(self.conf), str(self.repli), str(self.repli)])
+        heures = [int(h) for h in (self.t / "lancements").read_text().split()]
+        self.assertTrue(all(b - a >= 450 for a, b in zip(heures, heures[1:])), heures)
+
+    def test_compositeur_muet(self):
+        # Compositeur muet à la sortie de hyprlock, session encore tenue : jamais prise pour rendue.
+        res = self.run_script(FAKE_HYPRLOCK="fige tient")
+        self.assertEqual(res.returncode, 0, res.stderr)
+        self.assertEqual(len(self.lancements()), 2)
+        self.assertEqual(self.etapes().count("remonter"), 1)
+
+    def test_systemd_run_en_panne(self):
+        res = self.run_script(FAKE_SYSTEMD_RUN="panne")
+        self.assertEqual(res.returncode, 0, res.stderr)
+        self.assertEqual(len(self.lancements()), 1)
+        self.assertTrue(any(c.startswith("logger") and "systemd-run" in c for c in self.calls()))
+
+    def test_coque_figee_delai(self):
+        # La coque répond à tomber puis se fige : hyprlock part au plus tard à l'échéance de verrouAttente.
+        debut = time.time() * 1000
+        res = self.run_script(FAKE_QS="fige")
+        self.assertEqual(res.returncode, 0, res.stderr)
+        lance = int((self.t / "lancements").read_text().split()[0])
+        self.assertLess(lance - debut, DELAIS["verrouAttente"] + 100)
+
+    def test_verrou_orphelin(self):
+        # Session tenue sans verrouilleur vivant : hyprlock la reprend en verrou sec.
+        (self.t / "locked").write_text("true\n")
+        res = self.run_script()
+        self.assertEqual(res.returncode, 0, res.stderr)
+        etapes = self.etapes()
+        self.assertNotIn("tomber", etapes)
+        self.assertSousSuite(["pgrep", "poserSec", "hyprlock", "remonter"], etapes)
+
+    def test_ordre_corrompu(self):
+        self.run_dir.mkdir()
+        (self.run_dir / "verrou-ordre").write_text("abc\n")
+        res = self.run_script()
+        self.assertEqual(res.returncode, 0, res.stderr)
+        self.assertIn("qs ipc -c dunei call verrou tomber 1", self.calls())
+
+    def test_sec_garde_dans_le_lanceur_place(self):
+        # Le lanceur placé n'efface pas le verrou-sec qu'un second appel a pu poser : la chute est abrégée.
+        self.run_dir.mkdir()
+        (self.run_dir / "verrou-sec").touch()
+        res = self.run_script(DUNEI_VERROU_PORTEE="-")
+        self.assertEqual(res.returncode, 0, res.stderr)
+        self.assertSousSuite(["tomber", "abreger", "hyprlock"], self.etapes())
+        self.assertNotIn("apparaitre", self.etapes())
+
+    def test_hup_retire_le_marqueur(self):
+        marqueur = self.run_dir / "verrou-apparition"
+        proc = subprocess.Popen([str(SCRIPT)], stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                env={**self.env, "FAKE_POSE": "non"})
+        for _ in range(200):
+            if marqueur.exists() and marqueur.read_text().strip():
+                break
+            time.sleep(0.01)
+        os.kill(int(marqueur.read_text()), signal.SIGHUP)
+        proc.communicate(timeout=20)
+        self.assertEqual(proc.returncode, 1)
+        self.assertFalse(marqueur.exists())
 
     def test_sigusr2_garde(self):
         res = self.run_script(FAKE_SIGCGT="0000000000004203")
