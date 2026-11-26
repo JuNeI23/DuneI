@@ -11,7 +11,7 @@ import "Verrou"
 // (aucun lanceur). tests/test_verrou.py (ControleurTest) la pilote par l'IPC « verrou » du singleton, comme le
 // lanceur, et par l'IPC « essai ». Elle trace la position et l'opacité du bloc à chaque changement.
 // Entrées : DUNEI_TOKENS_DIR et DUNEI_ETAT_DIR ; IPC « essai » : pret, lecture, lanceur, recherche, position,
-// reduit, demarrer, ouvrir, ouverts, mesure, trace.
+// reduit, demarrer, ouvrir, ouverts, mesure, montres, trace.
 // Sorties : « essai : prêt » au démarrage. Erreurs : celles de Theme et de Verrou, dans le journal.
 // Dépendances : quickshell ≥ 0.3 (IpcHandler), Verrou, Overlays, Theme ; liens essai/fenetre/ vers les modules de la
 // coque, car Quickshell ne suit pas les imports hors du dossier de la coque.
@@ -20,6 +20,8 @@ ShellRoot {
 
     property var positions: []
     property int opacitesIntermediaires: 0
+    // Suite des valeurs prises par Verrou.montre, chacune avec l'état actif au même instant.
+    property var montres: []
 
     // Component.onCompleted — retire calques et clavier, pose une lecture « session tenue », signale la coque prête.
     // Entrées : aucune. Sortie : la ligne « essai : prêt ». Erreurs : aucune. Dépendances : Verrou.
@@ -38,6 +40,8 @@ ShellRoot {
             if (!essai.positions.includes(Verrou.position)) essai.positions = essai.positions.concat([Verrou.position])
         }
         function onOpaciteChanged() { if (Verrou.opacite > 0 && Verrou.opacite < 1) essai.opacitesIntermediaires++ }
+        // Trace du mappage du bloc : chaque changement de montre, avec actif. Entrées : aucune.
+        function onMontreChanged() { essai.montres = essai.montres.concat([[Verrou.montre, Verrou.actif]]) }
     }
 
     // Faux popover exclusif et fausse attention, pour l'essai de fermeture.
@@ -94,6 +98,9 @@ ShellRoot {
                                     montre: Verrou.montre, clavier: Verrou.clavier, vu: Verrou.vu,
                                     contenuBloc: Verrou.contenuBloc })
         }
+
+        // montres — suite des [montre, actif] vus à chaque changement de montre, en JSON.
+        function montres(): string { return JSON.stringify(essai.montres) }
 
         // trace — positions distinctes et nombre d'opacités intermédiaires vues depuis le dernier reduit(), en JSON.
         function trace(): string {

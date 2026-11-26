@@ -14,6 +14,7 @@ import os
 import re
 import struct
 import subprocess
+import tempfile
 import time
 import unittest
 from pathlib import Path
@@ -27,6 +28,8 @@ VERROU = {"horloge": 700, "horlogeHaut": 34, "horlogeLigne": 500, "horlogeInterl
 COULEURS = {"fond": "#0f0703", "heures": "#f5f5f5", "minutes": "#bebebe", "emphase": "#fdf3ec", "erreur": "#d33a3c"}
 IMAGES = {"fond": "/r/fond.png", "pastille": "/r/p.png", "champ": "/r/c.png",
           "pastilleVide": "/r/pv.png", "champVide": "/r/cv.png"}
+# Famille et graisses passées par l'appelant, volontairement distinctes des jetons réels : la conf doit les reprendre.
+POLICE = {"famille": "Essai Sans", "horloge": 210, "date": 410, "nom": 560}
 MARQUEUR = "/run/user/1000/dunei/verrou.marqueur"
 REPLI = "/r/repli.png"
 ECRAN = {"nom": "eDP-1", "largeur": 1920, "hauteur": 1200, "echelle": 1.25, "images": IMAGES}
@@ -68,7 +71,7 @@ class LogiqueTest(EssaiCoque, unittest.TestCase):
         Entrées : ecrans, liste d'écrans ou None ; utilisateur, nom affiché. Sortie : le texte de la configuration.
         Erreurs : voir appeler. Dépendances : appeler.
         """
-        j = {"verrou": VERROU, "delais": {}, "couleurs": COULEURS, "utilisateur": utilisateur}
+        j = {"verrou": VERROU, "delais": {}, "couleurs": COULEURS, "police": POLICE, "utilisateur": utilisateur}
         return self.appeler("confHyprlock", [ECRAN] if ecrans is None else ecrans, j, MARQUEUR, REPLI)
 
     def test_date(self):
@@ -91,8 +94,8 @@ class LogiqueTest(EssaiCoque, unittest.TestCase):
         c = self.conf()
         self.assertIn('size="%d"' % round(700 * 1.25 * 0.75 * 1024), c)
         horloge = next(b for b in re.findall(r"label \{.*?\n\}", c, re.S) if 'size="672000"' in b)
-        self.assertIn('font_family="Source Sans 3"', horloge)
-        self.assertIn('weight="200"', horloge)
+        self.assertIn('font_family="Essai Sans"', horloge)
+        self.assertIn('weight="210"', horloge)
         for attendu in ("size = 90", "size = 350, 45", "position = 0, 70", "position = 0, 174"):
             self.assertIn(attendu, c)
 
@@ -111,7 +114,7 @@ class LogiqueTest(EssaiCoque, unittest.TestCase):
 
     def test_conf_roles(self):
         """Vérifie les rôles de la maquette v2 : interlettrage de l'horloge à l'échelle (en 1/1024 px physique), date
-        en couleur des heures, initiale et points du champ en emphase, nom et initiale en graisse 550.
+        en couleur des heures, initiale et points du champ en emphase ; graisses et famille reprises de j.police.
         Entrées, sortie : aucune.
         Erreurs : échec. Dépendances : conf.
         """
@@ -123,10 +126,12 @@ class LogiqueTest(EssaiCoque, unittest.TestCase):
         self.assertIn('foreground="##f5f5f5"', date)
         initiale = next(b for b in etiquettes if ">N</span>" in b)
         self.assertIn('foreground="##fdf3ec"', initiale)
-        self.assertIn('weight="550"', initiale)
+        self.assertIn('weight="560"', initiale)
         nom = next(b for b in etiquettes if ">nicolas</span>" in b)
         self.assertIn('foreground="##f5f5f5"', nom)
-        self.assertIn('weight="550"', nom)
+        self.assertIn('weight="560"', nom)
+        self.assertIn('weight="410"', date)
+        self.assertIn('font_family="Essai Sans"', date)
         self.assertEqual(re.findall(r"font_color = (.*)", c), ["rgb(fdf3ec)"] * 2)
 
     def test_conf_diese(self):
@@ -287,6 +292,23 @@ class ProductionTest(EssaiCoque, unittest.TestCase):
         conf = (self.dir / "verrou" / "hyprlock.conf").read_text(encoding="utf-8")
         self.assertNotIn("ESSAI-1", conf)
 
+    def test_echec_rejoue_a_la_fin_du_verrou(self):
+        """Vérifie qu'une production abandonnée par sa garde sous le verrou (rendu qui ne rappelle jamais) est rejouée
+        quand le verrou se lève. Entrées, sortie : aucune. Erreurs : échec. Dépendances : installer, lancer, attendre,
+        ipc, journal."""
+        self.installer(55)
+        self.lancer(self.dir)
+        self.attendre("essai : prêt")
+        self.ipc("verrou", "true")
+        self.ipc("garde", "1")
+        self.ipc("produire", json.dumps({"ecrans": [self.ECRAN]}))
+        self.attendre("Production du verrou : délai dépassé")
+        self.ipc("garde", "10000")
+        time.sleep(0.5)
+        self.assertNotIn("essai : produit", self.journal())
+        self.ipc("verrou", "false")
+        self.attendre("essai : produit ESSAI-1")
+
     def test_production(self):
         """Vérifie les cinq images, leurs tailles physiques, l'absence de provisoire et les chemins cités par la conf.
 
@@ -302,6 +324,9 @@ class ProductionTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(set(re.findall(r"/[^\s']+\.png", conf)), {str(dossier / n) for n in attendues})
         self.assertIn("monitor = ESSAI-1", conf)
         self.assertIn("size = 90", conf)
+        # Famille et graisses tirées des jetons : horloge en ExtraLight, date régulière, nom et initiale moyens.
+        for attendu in ('font_family="Source Sans 3" weight="200"', 'weight="400"', 'weight="550"'):
+            self.assertIn(attendu, conf)
 
     def test_fond_image_et_aplat(self):
         """Vérifie que le fond porte l'image du bureau, et qu'il est un aplat surface-base sans image.
@@ -390,6 +415,15 @@ class ControleurTest(EssaiCoque, unittest.TestCase):
         self.jusqua(lambda: not self.mesure()["montre"], "bloc caché")
         m, e = self.mesure(), self.etat()
         self.assertEqual((m["position"], m["verrou"], e["pose"], e["remonte"]), (0, False, False, False))
+
+    def test_montre_sans_battement(self):
+        """Le calque du bloc se mappe une fois à la chute et se démappe une fois, après la fin d'actif : jamais faux
+        tant qu'actif, quel que soit l'ordre des notifications."""
+        self.verrou("tomber", 1)
+        self.jusqua(lambda: self.etat()["pose"], "bloc posé")
+        self.verrou("remonter", 1)
+        self.jusqua(lambda: not self.mesure()["montre"], "bloc caché")
+        self.assertEqual(json.loads(self.appel("montres")), [[True, True], [False, False]])
 
     def test_remontee_en_pleine_chute(self):
         """Une remontée demandée en pleine chute repart de la position courante, sans saut, et redescend à zéro."""
@@ -531,7 +565,7 @@ class SourceTest(unittest.TestCase):
         d'elle) sont bornées dans le temps."""
         source = self.lire("Verrou/Verrou.qml")
         self.assertIn('property var lecture: ["timeout", "1", "hyprctl", "-j", "locked"]', source)
-        self.assertIn('property var presence: ["timeout", "1", "pgrep", "-u",', source)
+        self.assertIn('property var presence: ["timeout", "1", "sh", "-c", ', source)
 
     def test_motif_du_lanceur(self):
         """Le motif de pgrep reconnaît le lanceur lancé par son shebang, et ni lui-même, ni un éditeur, ni un autre
@@ -544,6 +578,22 @@ class SourceTest(unittest.TestCase):
                       "nvim /home/n/DuneI/config/hypr/scripts/dunei-verrou",
                       "/bin/sh /home/n/.config/hypr/scripts/dunei-verrou-initial"):
             self.assertIsNone(motif.search(autre), autre)
+
+    def test_presence_sans_user(self):
+        """Sans USER, la recherche d'un lanceur désigne l'utilisateur par son uid et rend le code de pgrep, remplacé ici
+        par un faux qui consigne ses arguments : jamais un « -u » vide, toujours indécidable."""
+        source = self.lire("Verrou/Verrou.qml")
+        script = re.search(r'property var presence: \["timeout", "1", "sh", "-c", \'([^\']*)\', "sh", motifLanceur\]',
+                           source).group(1)
+        motif = re.search(r'property string motifLanceur: "([^"]*)"', source).group(1)
+        with tempfile.TemporaryDirectory() as tmp:
+            faux = Path(tmp) / "pgrep"
+            faux.write_text('#!/bin/sh\necho "$*"\nexit 1\n', encoding="utf-8")
+            faux.chmod(0o755)
+            env = {k: v for k, v in os.environ.items() if k not in ("USER", "LOGNAME")}
+            res = subprocess.run(["/bin/sh", "-c", script, "sh", motif], capture_output=True, text=True, timeout=5,
+                                 env={**env, "PATH": f"{tmp}:/usr/bin:/bin"})
+        self.assertEqual((res.returncode, res.stdout.strip()), (1, f"-u {os.getuid()} -f {motif}"))
 
     def test_ressort_spectacle(self):
         """La chute et la remontée vont au ressort « spectacle »."""

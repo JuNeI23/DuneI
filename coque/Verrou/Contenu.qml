@@ -165,7 +165,7 @@ Item {
         width: mots.width
         height: mots.height
         clip: true
-        FontMetrics { id: metriqueDate; font: contenu.police(contenu.v.date, Font.Normal) }
+        FontMetrics { id: metriqueDate; font: contenu.police(contenu.v.date, Theme.typo?.weightRegular ?? Font.Normal) }
         Row {
             id: mots
             spacing: metriqueDate.advanceWidth(" ")

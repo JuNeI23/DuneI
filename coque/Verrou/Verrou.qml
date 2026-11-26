@@ -26,12 +26,13 @@ import "verrou.js" as Logique
 //           ordre : il ne fait qu'abréger ce qui est en cours) et etat ; demarrer() ; fenetree, vrai par défaut (faux :
 //           aucun calque, pour les essais) ; clavierExclusif, vrai par défaut ; lecture, commande qui écrit l'état du
 //           compositeur en JSON ({"locked": bool}), hyprctl -j locked borné à 1 s par défaut ; presence, commande
-//           qui cherche un lanceur, pgrep borné de même (0 : un lanceur vit, 1 : aucun, tout autre code :
+//           qui cherche un lanceur de l'utilisateur (uid de id -u), pgrep borné de même (0 : un lanceur vit, 1 : aucun, tout autre code :
 //           indécidable) ; toutes deux remplacées par les essais ; motifLanceur, le motif de pgrep.
 // Sorties : ordre ; couvre (bloc voulu posé) ; enPlace (voulu posé, à sa place) ; pose (posé et immobile) ;
 //           remonte (remontée demandée, pas finie) ; position (1 posé, 0 caché ; fixe à 1 en mouvement réduit) ;
 //           opacite ; matiere (1 image, 0 verre) ;
-//           actif (vaut Overlays.verrou) ; montre (calque du bloc mappé : actif, et un tour de boucle de plus) ;
+//           actif (vaut Overlays.verrou) ; montre (calque du bloc mappé : vrai dès actif, faux un tour de boucle après
+//           la fin d'actif, s'il ne l'est pas redevenu) ;
 //           apparition (calque d'apparition mappé) ; vu ; contenuBloc ; prendClavier ; signal tombe().
 // Erreurs : ordre périmé : ignoré ; lecture illisible ou commande absente : la lecture ne compte pas comme rendue ;
 //           recherche d'un lanceur indécidable (délai dépassé, erreur de pgrep, commande absente) : le « rendu » ne
@@ -55,7 +56,9 @@ Singleton {
     // Lanceur lancé par son shebang, dans son unité comme hors d'elle ; ni un éditeur ouvert sur le script, ni
     // dunei-verrou-initial, ni la commande de recherche elle-même (motif [d]).
     readonly property string motifLanceur: "^(/usr)?/bin/sh [^ ]*/[d]unei-verrou( |$)"
-    property var presence: ["timeout", "1", "pgrep", "-u", Quickshell.env("USER") ?? "", "-f", motifLanceur]
+    // L'utilisateur est désigné par son uid, que id -u donne même quand USER manque ; exec garde le code de pgrep, et un
+    // id en échec (-u vide) fait échouer pgrep : indécidable, jamais « aucun lanceur ».
+    property var presence: ["timeout", "1", "sh", "-c", 'exec pgrep -u "$(id -u)" -f "$1"', "sh", motifLanceur]
     // Lectures franches « rendu » consécutives du suivi ; mode de la lecture en cours (« suivi » ou « demarrage »).
     property int rendus: 0
     property string pour: "suivi"
@@ -68,7 +71,9 @@ Singleton {
     readonly property bool pose: enPlace && opacite === 1
     readonly property real matiere: image.value
     readonly property bool actif: couvre || descente.value > 0 || fondu.value > 0 || image.value > 0
-    readonly property bool montre: actif || tenue.running
+    // Calque du bloc mappé : posé à vrai dès actif, rendu faux par tenue seulement, jamais par une liaison dont l'ordre
+    // de réévaluation, face à onActifChanged, pourrait le faire tomber à faux une image avant la tenue.
+    property bool montre: false
     readonly property bool prendClavier: clavier && clavierExclusif
 
     signal tombe()
@@ -82,13 +87,18 @@ Singleton {
     // Le calque du bloc reste mappé jusqu'au tour de boucle suivant la fin : la vraie presqu'île, reposée d'un coup à
     // l'identique, est déjà demandée. Relevé au banc : ni vide ni verre doublé, alors qu'une tenue de 32 ms doublait
     // le verre une image.
-    Timer { id: tenue; interval: 0 }
+    Timer { id: tenue; interval: 0; onTriggered: if (!verrou.actif) verrou.montre = false }
 
     Binding { target: C.Overlays; property: "verrou"; value: verrou.actif }
 
-    // onActifChanged — la remontée finie, plus rien n'est en cours ; le calque tient encore un tour de boucle.
-    // Entrées : aucune. Sortie : remonte, tenue. Erreurs : aucune.
-    onActifChanged: if (!actif) { remonte = false; tenue.restart() }
+    // onActifChanged — actif : le calque se mappe aussitôt (une tenue en attente est annulée) ; la remontée finie, plus
+    // rien n'est en cours, et le calque tient encore un tour de boucle avant que tenue ne le démappe, s'il est toujours
+    // inactif. Entrées : aucune. Sortie : montre, remonte, tenue. Erreurs : aucune.
+    onActifChanged: {
+        if (actif) { tenue.stop(); montre = true; return }
+        remonte = false
+        tenue.restart()
+    }
 
     // accepter — retient un ordre s'il n'est pas périmé. Entrée : o, ordre reçu. Sortie : vrai s'il est accepté (ordre
     // devient o). Erreurs : aucune. Dépendances : Logique.ordreValable.

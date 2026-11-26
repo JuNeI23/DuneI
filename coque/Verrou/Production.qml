@@ -3,6 +3,7 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
 import Quickshell.Hyprland
+import "../Composants" as C
 import "../Theme"
 import "verrou.js" as Logique
 
@@ -16,20 +17,22 @@ import "verrou.js" as Logique
 // le rapport de pixels de ce calque égal à l'échelle de Hyprland (Qt passe par 2 puis 1 avant l'échelle fractionnaire)
 // et l'image du bureau décodée, ou après deux secondes d'attente, avec un avertissement. Le Contenu caché ne charge
 // l'image du bureau que pendant un rendu. Une production qui dépasse sa garde (un rendu qui ne rappelle jamais, écran
-// éteint ou verrouillé) est abandonnée ; son numéro de génération fait ignorer ses rappels tardifs.
+// éteint ou verrouillé) est abandonnée ; son numéro de génération fait ignorer ses rappels tardifs. Une production en
+// échec (garde dépassée, écran branché ou coque redémarrée sous verrou) est retenue et rejouée quand le verrou se lève
+// (C.Overlays.verrou repasse à faux), pour que le verrou suivant ne trouve pas un écran sans section.
 // Entrées : ecrans, liste de {nom, largeur, hauteur (pixels logiques), echelle}, par défaut les écrans de Quickshell
 // avec l'échelle de Hyprland ; garde, délai maximal d'une production en ms (10 000) ; DUNEI_ETAT_DIR, sinon
 // $XDG_STATE_HOME/dunei, sinon ~/.local/state/dunei : le dossier d'état, dont verrou/ reçoit les fichiers ;
 // XDG_RUNTIME_DIR (marqueur dunei/verrou-apparition) ; USER (nom affiché).
 // Relance d'elle-même au changement des écrans ou de leur échelle, de l'image du bureau, de Theme.bureauClair, de
-// Theme.mouvementReduit et des jetons (thème choisi).
+// Theme.mouvementReduit et des jetons (thème choisi), et à la fin du verrou après une production en échec.
 // Sorties : produire() ; dans verrou/ : fond-<écran>.png, pastille-<écran>.png, champ-<écran>.png,
 // pastille-<écran>-vide.png, champ-<écran>-vide.png et hyprlock.conf ; signal produit() à la fin d'une production
 // réussie ; enCours.
 // Erreurs : jetons non chargés, aucun écran ou échelle inconnue → rien n'est produit (relance au changement suivant) ;
 // dossier impossible à créer, image non rendue ou non écrite, renommage ou écriture de la configuration en échec,
 // garde dépassée (« délai dépassé ») → console.warn, et l'ancienne configuration reste en place.
-// Dépendances : Contenu.qml, verrou.js (confHyprlock, physique), Theme, Quickshell (Variants, PanelWindow, env),
+// Dépendances : Contenu.qml, verrou.js (confHyprlock, physique), Theme, C.Overlays (verrou), Quickshell (Variants, PanelWindow, env),
 // Quickshell.Hyprland (monitorFor, refreshMonitors, rawEvent), Quickshell.Io (Process, FileView), mkdir, sh, mv.
 Scope {
     id: production
@@ -41,9 +44,10 @@ Scope {
     readonly property string marqueur: Quickshell.env("XDG_RUNTIME_DIR") + "/dunei/verrou-apparition"
     property bool enCours: false
     property int garde: 10000
-    // Production redemandée pendant enCours ; numéro de la production en cours ; écrans restant à rendre ; écrans
-    // rendus, avec leurs images.
+    // Production redemandée pendant enCours ; dernière production en échec, à rejouer à la fin du verrou ; numéro de la
+    // production en cours ; écrans restant à rendre ; écrans rendus, avec leurs images.
     property bool _encore: false
+    property bool _manquee: false
     property int _generation: 0
     property var _file: []
     property var _faits: []
@@ -102,22 +106,24 @@ Scope {
     function provisoire(chemin) { return chemin.replace(/\.png$/, ".tmp.png") }
 
     // terminer — conclut une production réussie, la configuration en place.
-    // Entrées : aucune. Sortie : signal produit, production redemandée rejouée. Erreurs : aucune.
-    // Dépendances : surveillance, relance.
+    // Entrées : aucune. Sortie : signal produit, échec précédent oublié, production redemandée rejouée.
+    // Erreurs : aucune. Dépendances : surveillance, relance.
     function terminer() {
         surveillance.stop()
         enCours = false
+        _manquee = false
         produit()
         if (_encore) relance.restart()
     }
 
     // echec — abandonne la production en cours, l'ancienne configuration restant en place.
-    // Entrée : raison, texte du journal. Sortie : aucune ; rejoue une production redemandée. Erreurs : aucune.
-    // Dépendances : relance.
+    // Entrée : raison, texte du journal. Sortie : aucune ; l'échec est retenu (_manquee) pour être rejoué à la fin du
+    // verrou, et une production redemandée est rejouée. Erreurs : aucune. Dépendances : relance.
     function echec(raison) {
         console.warn("Production du verrou : " + raison)
         surveillance.stop()
         enCours = false
+        _manquee = true
         if (_encore) relance.restart()
     }
 
@@ -130,6 +136,11 @@ Scope {
         function onBureauClairChanged() { relance.restart() }
         function onMouvementReduitChanged() { relance.restart() }
         function onTokensChanged() { relance.restart() }
+    }
+    // Fin du verrou : une production en échec, souvent faute de rendu sous le verrou, est rejouée.
+    Connections {
+        target: C.Overlays
+        function onVerrouChanged() { if (!C.Overlays.verrou && production._manquee) relance.restart() }
     }
     // Un écran branché, retiré ou reconfiguré : l'échelle de Hyprland se relit, ce qui change ecrans.
     Connections {
@@ -169,7 +180,12 @@ Scope {
             const j = { verrou: Theme.verrou, utilisateur: Quickshell.env("USER") ?? "",
                         couleurs: { fond: String(Theme.color.surfaceBase), heures: String(Theme.texteBureau),
                                     minutes: String(Theme.texteBureauSurvol), emphase: String(Theme.color.textEmphasis),
-                                    erreur: String(Theme.color.error) } }
+                                    erreur: String(Theme.color.error) },
+                        // Famille et graisses de Contenu.qml : horloge en ExtraLight, date en régulière, nom et
+                        // initiale en moyenne, depuis les jetons typo.
+                        police: { famille: Theme.typo?.interface ?? "", horloge: Font.ExtraLight,
+                                  date: Theme.typo?.weightRegular ?? Font.Normal,
+                                  nom: Theme.typo?.weightMedium ?? Font.Medium } }
             const texte = Logique.confHyprlock(production._faits, j, production.marqueur,
                                                production._faits[0].images.pastilleVide)
             // FileView n'écrit pas, et n'émet pas saved, un texte égal à celui qu'il tient déjà.
@@ -178,7 +194,8 @@ Scope {
         }
     }
 
-    // La configuration n'est qu'écrite, jamais lue : preload faux, aucune lecture au démarrage.
+    // Aucune lecture au démarrage (preload faux) : le fichier n'est lu qu'au premier conf.text(), qui compare le texte
+    // produit à celui en place pour ne pas réécrire un fichier identique.
     FileView {
         id: conf
         path: production.dossier + "/hyprlock.conf"
