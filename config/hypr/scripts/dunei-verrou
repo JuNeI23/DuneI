@@ -126,11 +126,16 @@ patienter() {
 # attendre_pose — attend que la coque dise le bloc posé sous l'ordre courant, jusqu'à l'échéance donnée.
 # Entrée : $1, échéance en ms (horloge de `maintenant`), prise avant `tomber`. Aucun `etat` n'est lancé à moins de
 #          0,2 s de l'échéance : hyprlock part au plus tard à l'échéance. Sortie : aucune ; une veille demandée
-#          l'interrompt et retire le marqueur (plus d'apparition à jouer). Dépendances : ipc, jq, maintenant.
+#          l'interrompt et retire le marqueur (plus d'apparition à jouer). Une coque qui a répondu à `tomber` puis
+#          disparaît (`qs ipc` en échec sans dépasser sa borne : aucune instance) ne porte plus de bloc : l'attente
+#          cesse aussitôt, le marqueur est retiré, et hyprlock part sans attendre l'échéance, la session étant à nu.
+#          Une coque seulement lente (borne dépassée, code 124) est encore attendue. Dépendances : ipc, jq, maintenant.
 attendre_pose() {
     while [ $(($(maintenant) + BORNE_MS)) -lt "$1" ]; do
         veille_demandee && { rm -f "$MARQUEUR"; return; }
-        ipc etat 2>/dev/null | jq -e --argjson o "$ordre" '.pose and .ordre == $o' >/dev/null 2>&1 && return
+        r=$(ipc etat 2>/dev/null); c=$?
+        [ "$c" = 0 ] || [ "$c" = 124 ] || { rm -f "$MARQUEUR"; return; }
+        printf '%s' "$r" | jq -e --argjson o "$ordre" '.pose and .ordre == $o' >/dev/null 2>&1 && return
         sleep 0.02
     done
 }

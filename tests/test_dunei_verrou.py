@@ -29,10 +29,12 @@ FAKES = {
                '    n=$(cat "$FAKE_DIR/muet"); [ "$n" -gt 0 ] && { echo $((n - 1)) > "$FAKE_DIR/muet"; exec sleep 1; }\n'
                '    rm -f "$FAKE_DIR/muet"\nfi\n'
                'printf \'{"locked": %s}\\n\' "$(cat "$FAKE_DIR/locked" 2>/dev/null || echo false)"\n',
-    # qs ipc -c dunei call verrou <méthode> [ordre] : $FAKE_QS=muet ne répond jamais, =fige ne répond pas à etat ; etat rend le bloc posé sous
+    # qs ipc -c dunei call verrou <méthode> [ordre] : $FAKE_QS=muet ne répond jamais, =fige ne répond pas à etat, =morte
+    # rend le code 255 de qs sans instance à etat (coque morte en pleine chute) ; etat rend le bloc posé sous
     # l'ordre courant (FAKE_POSE=non : jamais posé) et, si FAKE_VEILLE=1, annonce la veille en touchant verrou-sec.
     "qs": LOG.format(name="qs") + '[ "${FAKE_QS:-}" = muet ] && exec sleep 1\n'
           '[ "${FAKE_QS:-}" = fige ] && [ "$6" = etat ] && exec sleep 1\n'
+          '[ "${FAKE_QS:-}" = morte ] && [ "$6" = etat ] && exit 255\n'
           'if [ "$6" = etat ]; then\n'
           '    [ "${FAKE_VEILLE:-}" = 1 ] && : > "$XDG_RUNTIME_DIR/dunei/verrou-sec"\n'
           '    p=true; [ "${FAKE_POSE:-}" = non ] && p=false\n'
@@ -249,6 +251,19 @@ class DuneiVerrouTest(unittest.TestCase):
         lance = int((self.t / "lancements").read_text().split()[0])
         self.assertLess(lance - debut, DELAIS["verrouAttente"])
         self.assertFalse((self.run_dir / "verrou-sec").exists())
+
+    def test_coque_morte_en_chute(self):
+        """Coque morte en pleine chute (banc de la tâche 7) : plus de bloc, hyprlock part aussitôt, sans apparition."""
+        debut = time.time() * 1000
+        res = self.run_script(FAKE_QS="morte")
+        self.assertEqual(res.returncode, 0, res.stderr)
+        etapes = self.etapes()
+        self.assertSousSuite(["tomber", "etat", "hyprlock", "remonter"], etapes)
+        self.assertEqual(etapes.count("etat"), 1)
+        self.assertNotIn("apparaitre", etapes)
+        self.assertEqual(self.lancements(), [f"hyprlock --no-fade-in -c {self.conf} marqueur=non"])
+        lance = int((self.t / "lancements").read_text().split()[0])
+        self.assertLess(lance - debut, DELAIS["verrouAttente"] / 2)
 
     def test_jamais_tenu_repli(self):
         res = self.run_script(FAKE_HYPRLOCK="jamais jamais tient")
