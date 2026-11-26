@@ -1,0 +1,206 @@
+#!/bin/sh
+# dunei-verrou — lanceur du verrouillage de DuneI (L2-22), nommé « verrouilleur » dans energie.toml.
+# Rôle : joue la chute du bloc de la coque, pose le verrou de hyprlock, cède l'écran de la coque à hyprlock, puis,
+#        au déverrouillage, fait remonter le bloc. Une seule vérité, `hyprctl -j locked` : ni un nom de processus,
+#        ni un code de sortie, ni une durée n'en tiennent lieu. Toute commande extérieure est bornée dans le temps.
+#        Verrou sec, sans chute ni apparition : `--sec` (ouverture de session), veille annoncée par logind, logind ou
+#        coque muets. Le lanceur se place dans sa propre unité transitoire (`dunei-verrou.scope`), pour qu'un
+#        redémarrage d'hypridle ne tue ni lui ni hyprlock ; un second appel attend le déverrouillage.
+# Entrée : `--sec`, facultatif. Délais lus dans ~/.config/dunei/motion.json (`delays.verrou*`), valeurs par défaut
+#          sinon. Fichiers d'exécution sous $XDG_RUNTIME_DIR/dunei : verrou-apparition (marqueur, PID du lanceur),
+#          verrou-sec (demande d'abréger, posée par un second appel avant une veille), verrou-ordre (compteur).
+#          DUNEI_VERROU_PROC remplace la racine de /proc (essais) ; DUNEI_VERROU_PORTEE marque l'appel déjà placé.
+# Sortie : 0 si la session a été tenue puis rendue ; 1 si le verrou n'a jamais été tenu après trois lancements ;
+#          2 si l'usage est faux.
+# Erreurs : chaque lancement sans verrou tenu et chaque relance sont écrits au journal (logger -t dunei-verrou) ;
+#           après trois lancements sans verrou, la session reste ouverte, le bloc remonte et une notification
+#           critique « Verrouillage impossible » s'affiche, sauf avec `--sec` : dunei-verrou-initial ferme alors la
+#           session et le bloc reste posé.
+# Dépendances : sh, hyprlock, hyprctl, jq, qs (coque, cible IPC `verrou`), busctl, systemd-run, systemctl, timeout,
+#               date (GNU, millisecondes), notify-send, logger.
+
+RUN="${XDG_RUNTIME_DIR:?XDG_RUNTIME_DIR absent}/dunei"
+MARQUEUR="$RUN/verrou-apparition" SEC="$RUN/verrou-sec" ORDRE="$RUN/verrou-ordre"
+CONF="${XDG_STATE_HOME:-$HOME/.local/state}/dunei/verrou/hyprlock.conf"
+REPLI="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/hyprlock.conf"
+MOTION="${XDG_CONFIG_HOME:-$HOME/.config}/dunei/motion.json"
+PROC="${DUNEI_VERROU_PROC:-/proc}"
+UNITE=dunei-verrou COQUE=dunei-coque.service
+LANCEMENTS=3 MUETTE_REMONTEE=2000 USR2=12
+
+# duree — délai d'animation en millisecondes, lu dans les jetons de mouvement.
+# Entrées : $1, clé de `delays` dans motion.json ; $2, valeur par défaut (celle de motion.toml).
+# Sortie : le délai sur la sortie standard. Erreurs : fichier absent ou illisible, clé manquante → valeur par défaut.
+# Dépendances : jq.
+duree() { v=$(jq -r --arg k "$1" '.delays[$k] // empty' "$MOTION" 2>/dev/null); echo "${v:-$2}"; }
+
+# maintenant — horloge en millisecondes. Sortie : l'heure Unix en ms. Dépendances : date (GNU, %3N).
+maintenant() { date +%s%3N; }
+
+# ipc — appel borné à la coque. Entrées : méthode de la cible `verrou` et ses arguments.
+# Sortie : la réponse de la coque ; code non nul si elle est absente ou muette plus de 0,2 s. Dépendances : qs, timeout.
+ipc() { timeout 0.2 qs ipc -c dunei call verrou "$@"; }
+
+# tenu — dit si la session est verrouillée, d'après le compositeur.
+# Sortie : code 0 si `hyprctl -j locked` rend vrai ; non nul sinon, compositeur muet compris (borné à 0,2 s).
+# Dépendances : hyprctl, jq, timeout.
+tenu() { [ "$(timeout 0.2 hyprctl -j locked 2>/dev/null | jq -r .locked 2>/dev/null)" = true ]; }
+
+# veille — dit si une mise en veille est annoncée.
+# Sortie : code 0 si logind annonce `PreparingForSleep` ou ne rend pas « b false » en 0,2 s ; non nul au repos.
+# Dépendances : busctl, timeout.
+veille() {
+    [ "$(timeout 0.2 busctl get-property org.freedesktop.login1 /org/freedesktop/login1 \
+        org.freedesktop.login1.Manager PreparingForSleep 2>/dev/null)" != "b false" ]
+}
+
+# intercepte — dit si un processus intercepte un signal, d'après le masque SigCgt de /proc/<pid>/status.
+# Entrées : $1, PID ; $2, numéro du signal. Sortie : code 0 si le bit du signal (rang $2 - 1) est levé.
+# Erreurs : processus disparu ou masque illisible → non nul. Dépendances : sed ; DUNEI_VERROU_PROC (racine de /proc).
+intercepte() {
+    m=$(sed -n 's/^SigCgt:[[:space:]]*//p' "$PROC/$1/status" 2>/dev/null)
+    [ -n "$m" ] && [ $(((0x$m >> ($2 - 1)) & 1)) -eq 1 ]
+}
+
+# minutes — envoie SIGUSR2 à hyprlock au début de chaque minute, pour que l'horloge suive. Tourne en fond.
+# Entrée : $1, PID de hyprlock. Sortie : aucune ; s'arrête sur SIGTERM en emportant son `sleep`.
+# Erreurs : signal envoyé seulement si hyprlock l'intercepte, son effet par défaut étant de tuer.
+# Dépendances : date, sleep, intercepte.
+minutes() {
+    trap 'kill "$s" 2>/dev/null; exit 0' TERM
+    while :; do
+        n=$(date +%S); sleep $((60 - ${n#0})) & s=$!; wait "$s"
+        ! intercepte "$1" "$USR2" || kill -USR2 "$1" 2>/dev/null
+    done
+}
+
+# veille_demandee — dit si une veille a été annoncée en cours de route et, la première fois, abrège le spectacle.
+# Sortie : code 0 si verrou-sec existe (la coque reçoit alors `abreger` une seule fois) ; non nul sinon.
+# Dépendances : ipc.
+veille_demandee() {
+    [ -e "$SEC" ] || return 1
+    [ "$abrege" = 1 ] || { ipc abreger >/dev/null 2>&1; abrege=1; }
+}
+
+# patienter — attend par pas de 20 ms, en relisant verrou-sec.
+# Entrée : $1, durée en ms. Sortie : code 0 au terme ; 1 dès qu'une veille est demandée. Dépendances : maintenant.
+patienter() {
+    f=$(($(maintenant) + $1))
+    while [ "$(maintenant)" -lt "$f" ]; do veille_demandee && return 1; sleep 0.02; done
+}
+
+# attendre_pose — attend que la coque dise le bloc posé sous l'ordre courant, au plus $ATTENTE ms.
+# Sortie : aucune ; une veille demandée l'interrompt et retire le marqueur (plus d'apparition à jouer).
+# Dépendances : ipc, jq, maintenant, veille_demandee.
+attendre_pose() {
+    f=$(($(maintenant) + ATTENTE))
+    while [ "$(maintenant)" -lt "$f" ]; do
+        veille_demandee && { rm -f "$MARQUEUR"; return; }
+        ipc etat 2>/dev/null | jq -e --argjson o "$ordre" '.pose and .ordre == $o' >/dev/null 2>&1 && return
+        sleep 0.02
+    done
+}
+
+# attendre_tenu — attend, par pas de 20 ms, que le verrou soit tenu ou que hyprlock s'en aille.
+# Entrée : $1, PID de hyprlock. Sortie : code 0 si le verrou est tenu ; non nul si hyprlock est sorti avant.
+# Dépendances : tenu, veille_demandee ; sh qui récolte ses enfants (bash, /bin/sh d'Arch), pour `kill -0`.
+attendre_tenu() {
+    until tenu; do
+        kill -0 "$1" 2>/dev/null || return 1
+        veille_demandee
+        sleep 0.02
+    done
+}
+
+# suivre — attend la fin d'un verrou mené par un autre appel : le verrou vu tenu puis rendu.
+# Sortie : 0 au déverrouillage ; 1 si l'unité du lanceur se termine sans que le verrou ait été vu tenu.
+# Pas de 20 ms jusqu'au verrou tenu, puis de 0,2 s, pour ne pas interroger le compositeur 50 fois par seconde
+# pendant tout le verrou. Dépendances : tenu, systemctl.
+suivre() {
+    vu=0
+    while :; do
+        if tenu; then vu=1
+        elif [ "$vu" = 1 ]; then return 0
+        elif ! systemctl --user is-active --quiet "$UNITE.scope"; then return 1
+        fi
+        if [ "$vu" = 1 ]; then sleep 0.2; else sleep 0.02; fi
+    done
+}
+
+# remonter — fait remonter le bloc ; une coque muette 2 s est relancée (elle repart sans bloc, la session ouverte).
+# Sortie : aucune. Dépendances : ipc, maintenant, systemctl.
+remonter() {
+    f=$(($(maintenant) + MUETTE_REMONTEE))
+    until ipc remonter "$ordre" >/dev/null 2>&1; do
+        [ "$(maintenant)" -lt "$f" ] || { logger -t "$UNITE" "coque muette à la remontée : relance"
+            systemctl --user restart "$COQUE"; return; }
+        sleep 0.02
+    done
+}
+
+[ $# -eq 0 ] || { [ $# -eq 1 ] && [ "$1" = --sec ]; } || { echo "usage : dunei-verrou [--sec]" >&2; exit 2; }
+
+# Placement dans l'unité transitoire ; si elle existe déjà, un autre appel mène le verrou : on le suit.
+if [ -z "${DUNEI_VERROU_PORTEE:-}" ]; then
+    DUNEI_VERROU_PORTEE=1 systemd-run --user --scope --unit="$UNITE" --collect --quiet "$0" "$@" && exit 0
+    c=$?
+    systemctl --user is-active --quiet "$UNITE.scope" || exit "$c"
+    veille && { mkdir -p "$RUN"; : >"$SEC"; }
+    suivre; exit $?
+fi
+
+ATTENTE=$(duree verrouAttente 1000) APPARITION=$(duree verrouApparition 1500) CESSION=$(duree verrouCession 350)
+mkdir -p "$RUN"
+rm -f "$SEC"
+n=$(cat "$ORDRE" 2>/dev/null); ordre=$((${n:-0} + 1)); echo "$ordre" >"$ORDRE"
+boucle='' abrege=0 spectacle=1 a_ceder=0 vu=0 essais=0
+trap 'rm -f "$MARQUEUR" "$SEC"; [ -z "$boucle" ] || kill "$boucle" 2>/dev/null' EXIT
+trap 'exit 1' INT TERM
+
+# Session déjà tenue par un autre verrouilleur : rien à poser, on attend qu'elle soit rendue.
+if tenu; then suivre; exit $?; fi
+
+# 1. Chute, ou verrou sec. Le bloc sec est posé sans mouvement sous le verrou, pour que la remontée ait lieu.
+if [ "${1:-}" = --sec ] || veille; then spectacle=0; ipc poserSec "$ordre" >/dev/null 2>&1
+else
+    echo "$$" >"$MARQUEUR"
+    if ipc tomber "$ordre" >/dev/null 2>&1; then attendre_pose
+    else spectacle=0; rm -f "$MARQUEUR"; ipc poserSec "$ordre" >/dev/null 2>&1 &
+    fi
+fi
+[ -e "$MARQUEUR" ] || spectacle=0
+
+# 2 à 4. Verrou, cession, fin de hyprlock ; relancé tant que la session reste tenue.
+while :; do
+    conf="$CONF"; { [ "$essais" -ge $((LANCEMENTS - 1)) ] || [ ! -r "$CONF" ]; } && conf="$REPLI"
+    hyprlock --no-fade-in -c "$conf" & pid=$!
+    minutes "$pid" & boucle=$!
+    tue=0
+    if attendre_tenu "$pid"; then
+        vu=1
+        if [ -e "$MARQUEUR" ]; then
+            if [ "$spectacle" = 1 ] && ! veille_demandee; then
+                ipc apparaitre "$ordre" >/dev/null 2>&1; a_ceder=1; patienter "$APPARITION"
+            fi
+            # Sans SIGUSR2 intercepté, hyprlock est relancé pour relire ses étiquettes sans le marqueur.
+            rm -f "$MARQUEUR"; spectacle=0
+            if intercepte "$pid" "$USR2"; then kill -USR2 "$pid"; else kill -KILL "$pid"; tue=1; fi
+        fi
+        if [ "$a_ceder" = 1 ] && [ "$tue" = 0 ]; then
+            patienter "$CESSION"; ipc ceder "$ordre" >/dev/null 2>&1; a_ceder=0
+        fi
+    fi
+    wait "$pid"
+    kill "$boucle" 2>/dev/null; boucle=''
+    if tenu; then vu=1; logger -t "$UNITE" "hyprlock sorti, session encore tenue : relance"; continue; fi
+    [ "$vu" = 1 ] && { remonter; exit 0; }
+    essais=$((essais + 1))
+    logger -t "$UNITE" "verrou jamais tenu, lancement $essais sur $LANCEMENTS ($conf)"
+    [ "$essais" -lt "$LANCEMENTS" ] || break
+done
+
+# Échec du verrou : à l'ouverture de session, dunei-verrou-initial ferme la session ; sinon elle reste ouverte.
+[ "${1:-}" = --sec ] && exit 1
+timeout 2 notify-send -u critical "Verrouillage impossible" "hyprlock n'a pas tenu le verrou ; la session reste ouverte."
+remonter
+exit 1
