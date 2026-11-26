@@ -28,8 +28,9 @@ import "verrou.js" as Logique
 //           compositeur en JSON ({"locked": bool}), hyprctl -j locked borné à 1 s par défaut ; presence, commande
 //           qui cherche un lanceur, pgrep borné de même (0 : un lanceur vit, 1 : aucun, tout autre code :
 //           indécidable) ; toutes deux remplacées par les essais ; motifLanceur, le motif de pgrep.
-// Sorties : ordre ; couvre (bloc voulu posé) ; pose (posé et immobile) ; remonte (remontée demandée, pas finie) ;
-//           position (1 posé, 0 caché ; fixe à 1 en mouvement réduit) ; opacite ; matiere (1 image, 0 verre) ;
+// Sorties : ordre ; couvre (bloc voulu posé) ; enPlace (voulu posé, à sa place) ; pose (posé et immobile) ;
+//           remonte (remontée demandée, pas finie) ; position (1 posé, 0 caché ; fixe à 1 en mouvement réduit) ;
+//           opacite ; matiere (1 image, 0 verre) ;
 //           actif (vaut Overlays.verrou) ; montre (calque du bloc mappé : actif, et un tour de boucle de plus) ;
 //           apparition (calque d'apparition mappé) ; vu ; contenuBloc ; prendClavier ; signal tombe().
 // Erreurs : ordre périmé : ignoré ; lecture illisible ou commande absente : la lecture ne compte pas comme rendue ;
@@ -62,7 +63,9 @@ Singleton {
     readonly property bool reduit: Theme.mouvementReduit
     readonly property real position: reduit ? 1 : descente.value
     readonly property real opacite: reduit ? fondu.value : 1
-    readonly property bool pose: couvre && position === 1 && opacite === 1
+    // Bloc à sa place, séparé de l'opacité : la position vient du ressort de déplacement, qui ne porte aucune opacité.
+    readonly property bool enPlace: couvre && position === 1
+    readonly property bool pose: enPlace && opacite === 1
     readonly property real matiere: image.value
     readonly property bool actif: couvre || descente.value > 0 || fondu.value > 0 || image.value > 0
     readonly property bool montre: actif || tenue.running
