@@ -9,6 +9,7 @@ la suppression du dossier (GNU timeout change de groupe de processus, mais pas d
 hyprlock recevoir SIGUSR1, qui déverrouillerait toute la session : tearDown le vérifie pour chacun."""
 
 import json
+import re
 import os
 import shutil
 import signal
@@ -28,13 +29,13 @@ FAKES = {
     # Coque simulée, lue (.) par les faux qs et hyprctl : son état vit sous $FAKE_DIR/coque (couvre : heure de la pose ;
     # ordre ; pris : heure du verrou pris ; mort : heure de sa disparition ; tombe : disparue après tomber ; revenu :
     # relancée une fois). evoluer() fait passer le temps : FAKE_PRISE ms après la pose (100 par défaut, 2,5 s pour
-    # « lente »), la coque tient le verrou (locked = true) ; FAKE_TENUE ms plus tard (500 par défaut), la session est
+    # « lente », jamais pour « fige »), la coque tient le verrou (locked = true) ; FAKE_TENUE ms plus tard (500 par défaut), la session est
     # rendue comme par un succès PAM (locked = false). Une coque morte garde le verrou du compositeur et ne rend rien ;
     # « revient » reparaît FAKE_RETOUR ms après (1000 par défaut), sous l'ordre 0, et repose son bloc si la session est
     # tenue, comme demarrer().
     "fake-coque": 'D="$FAKE_DIR/coque"; mkdir -p "$D"\nnow=$(date +%s%3N)\nmode=${FAKE_COQUE:-tient}\n'
                   '[ -e "$D/debut" ] || echo "$now" > "$D/debut"\n'
-                  'prise=${FAKE_PRISE:-100}; [ "$mode" = lente ] && prise=2500\n'
+                  'prise=${FAKE_PRISE:-100}; [ "$mode" = lente ] && prise=2500; [ "$mode" = fige ] && prise=99999999\n'
                   'evoluer() {\n'
                   '    if [ -e "$D/mort" ]; then\n'
                   '        [ "$mode" = revient ] && [ $((now - $(cat "$D/mort"))) -ge "${FAKE_RETOUR:-1000}" ] || return 0\n'
@@ -56,7 +57,7 @@ FAKES = {
                '. "$FAKE_DIR/bin/fake-coque"; evoluer\n'
                'printf \'{"locked": %s}\\n\' "$(cat "$FAKE_DIR/locked" 2>/dev/null || echo false)"\n',
     # qs ipc -c dunei call verrou <méthode> [ordre], selon FAKE_COQUE : « tient » (défaut), « absente » (code 255 de qs
-    # sans instance), « muette » (dort 1 s), « lente » (tient après 2,5 s), « tard » (255 pendant FAKE_TARD ms, 500 par
+    # sans instance), « muette » (dort 1 s), « fige » (répond à tout sauf à etat, où elle dort 1 s), « lente » (tient après 2,5 s), « tard » (255 pendant FAKE_TARD ms, 500 par
     # défaut, puis tient), « tombe » (répond à tomber, puis 255 pour de bon), « meurt » (255 dès que tient a été rendu
     # une fois, pour de bon), « revient » (comme meurt, puis tient de nouveau). tomber et poserSec posent le bloc sous
     # un ordre qui n'est pas périmé ; remonter est ignoré sous le verrou ; etat rend {pose, ordre, tient, couvre,
@@ -65,6 +66,7 @@ FAKES = {
     "qs": LOG.format(name="qs") + '. "$FAKE_DIR/bin/fake-coque"\n'
           '[ "$1" = -p ] && { echo "rideau : posé"; exec sleep 30; }\n'
           'case $mode in absente) exit 255 ;; muette) exec sleep 1 ;; esac\n'
+          '[ "$mode" = fige ] && [ "$6" = etat ] && exec sleep 1\n'
           '[ "$mode" = tard ] && [ $((now - $(cat "$D/debut"))) -lt "${FAKE_TARD:-500}" ] && exit 255\n'
           '[ -e "$D/tombe" ] && exit 255\n'
           'evoluer\n[ -e "$D/mort" ] && exit 255\n'
@@ -81,8 +83,7 @@ FAKES = {
           'esac\nexit 0\n',
     # stdbuf -oL <commande> : exécute sa commande, options retirées.
     "stdbuf": LOG.format(name="stdbuf") + 'while case "$1" in -*) true;; *) false;; esac; do shift; done\nexec "$@"\n',
-    "busctl": LOG.format(name="busctl") + '[ -n "${FAKE_BUSCTL_LENT:-}" ] && sleep 0.15\n'
-              'echo "${FAKE_BUSCTL:-b false}"\n',
+    "busctl": LOG.format(name="busctl") + 'echo "${FAKE_BUSCTL:-b false}"\n',
     # systemd-run : échoue si l'unité existe ($FAKE_DIR/unite) ou si FAKE_SYSTEMD_RUN=panne, sinon exécute sa commande.
     "systemd-run": LOG.format(name="systemd-run") + '[ -e "$FAKE_DIR/unite" ] && exit 1\n'
                    '[ "${FAKE_SYSTEMD_RUN:-}" = panne ] && exit 1\n'
@@ -100,12 +101,13 @@ FAKES = {
     # verrou ; « vite » : sort aussitôt en laissant le verrou ; « fige » : comme « garde », mais rend le compositeur muet
     # 5 appels ; « dort » : vit 10 s sans prendre le verrou ; « jamais » : sort sans verrou ; « muet » : sort sans
     # verrou en rendant le compositeur muet 12 appels (plus de 2 s). À la prise du verrou, il écrit onLockLocked sur sa
-    # sortie ; il consigne son lancement, son heure, et chaque TERM ou USR1 reçu (USR1 rendrait la session).
+    # sortie ; il consigne son lancement, son heure, et chaque TERM ou USR1 reçu (USR1 rendrait la session). Avec
+    # FAKE_HYPRLOCK_SOURD=1, il consigne TERM sans en mourir.
     "hyprlock": 'echo "hyprlock $*" >> "$FAKE_LOG"\n'
                 'date +%s%3N >> "$FAKE_DIR/lancements"\n'
                 'n=$(wc -l < "$FAKE_DIR/lancements"); set -- ${FAKE_HYPRLOCK:-tient}\n'
                 '[ "$n" -gt $# ] && n=$#; eval "mode=\\${$n}"\n'
-                'trap \'echo "hyprlock TERM" >> "$FAKE_LOG"; exit 143\' TERM\n'
+                'trap \'echo "hyprlock TERM" >> "$FAKE_LOG"; [ -n "${FAKE_HYPRLOCK_SOURD:-}" ] || exit 143\' TERM\n'
                 'trap \'echo "hyprlock USR1" >> "$FAKE_LOG"; echo false > "$FAKE_DIR/locked"; exit 0\' USR1\n'
                 'prendre() { echo true > "$FAKE_DIR/locked"; echo onLockLocked; }\n'
                 'case "$mode" in\n'
@@ -123,7 +125,7 @@ FAKES = {
 # Utilitaires système appelés par le lanceur et par les faux outils, liés un à un dans le dossier temporaire.
 OUTILS = ("cat", "date", "id", "jq", "mkdir", "rm", "sed", "sleep", "timeout", "wc")
 # Délais du verrou, sous la forme de generated/motion.json.
-DELAIS = {"verrouAttente": 1500, "verrouReprise": 3000}
+DELAIS = {"verrouAttente": 1500}
 
 
 def etape(ligne: str) -> str:
@@ -286,6 +288,20 @@ class DuneiVerrouTest(unittest.TestCase):
         self.assertLess(self.lancement() - debut, 1800)
         self.assertSousSuite(["tomber", "etat", "hyprlock", "etat", "kill -TERM", "remonter"], self.etapes())
 
+    def test_hyprlock_sourd_a_term(self):
+        # Un hyprlock qui survit au SIGTERM du relais est tué au bout de la borne ; le lanceur finit, code 0.
+        res = self.run_script(FAKE_COQUE="lente", FAKE_HYPRLOCK_TENUE="8000", FAKE_HYPRLOCK_SOURD="1")
+        self.assertEqual(res.returncode, 0, res.stderr)
+        self.assertSousSuite(["kill -TERM", "logger", "remonter"], self.etapes())
+        self.assertTrue(any(c.startswith("logger") and "sourd" in c for c in self.calls()))
+
+    def test_coque_figee_echeance(self):
+        # La coque répond à tomber puis se fige sur etat (borne de 0,2 s à chaque tour) : hyprlock part à l'échéance.
+        debut = time.time() * 1000
+        res = self.run_script(FAKE_COQUE="fige")
+        self.assertEqual(res.returncode, 0, res.stderr)
+        self.assertLess(self.lancement() - debut, DELAIS["verrouAttente"] + 100)
+
     def test_coque_disparue_en_chute(self):
         # La coque répond à tomber puis disparaît : plus de bloc, hyprlock part sans attendre l'échéance.
         debut = time.time() * 1000
@@ -360,7 +376,7 @@ class DuneiVerrouTest(unittest.TestCase):
         self.assertIn("secours de la voie B", texte.splitlines()[0])
         self.assertIn("cmd[update:60000] date '+%w %-d %-m' | awk", texte)
         self.assertIn("fade_on_empty = true", texte)
-        self.assertNotIn("path", texte)
+        self.assertIsNone(re.search(r"^\s*(image|path)\b", texte, re.M))
 
     # Relances de hyprlock, coque absente.
 

@@ -39,8 +39,9 @@ MOTION="${XDG_CONFIG_HOME:-$HOME/.config}/dunei/motion.json"
 UNITE=dunei-verrou COQUE=dunei-coque.service
 # Bornes, en ms : réponse d'un appel extérieur ; verrou pris par hyprlock ; compositeur muet avant de le croire tenu ;
 # coque muette à la remontée ; sortie « rapide » de hyprlock ; pause avant de relancer après une sortie rapide (s) ;
-# compositeur muet de suite pendant le suivi d'un verrou, avant d'y renoncer.
+# compositeur muet de suite pendant le suivi d'un verrou, avant d'y renoncer ; sortie de hyprlock après SIGTERM.
 BORNE=0.2 BORNE_MS=200 ECHEANCE=2500 INCONNU_MAX=2000 MUETTE_REMONTEE=2000 RAPIDE=1000 PAUSE=0.5 SUIVI_MUET=5000
+TERME=1000
 LANCEMENTS=3
 
 # duree — délai d'animation en millisecondes, lu dans les jetons de mouvement.
@@ -100,10 +101,13 @@ veille() {
 }
 
 # sonder — état de la coque, d'après son `etat`, sous l'ordre courant.
+# Entrées : aucune ; lit $ordre.
 # Sortie : « tient » (verrou acquis sous l'ordre courant), « couvre » (bloc voulu sous l'ordre courant, verrou pas
 #          encore acquis), « repond » (coque vivante sans bloc sous l'ordre courant : jamais avertie, relancée, ou
 #          posée d'elle-même sous un autre ordre), « muette » (borne de 0,2 s dépassée, ou réponse illisible), ou
-#          « absente » (qs en échec sans dépasser sa borne : aucune instance). Dépendances : ipc, jq ; $ordre.
+#          « absente » (qs en échec sans dépasser sa borne : aucune instance).
+# Erreurs : aucune n'est remontée ; une coque muette ou illisible n'est jamais prise pour absente ni pour tenante.
+# Dépendances : ipc, jq.
 sonder() {
     r=$(ipc etat 2>/dev/null); c=$?
     case $c in 0) ;; 124) echo muette; return ;; *) echo absente; return ;; esac
@@ -134,12 +138,17 @@ secours() {
 # Sortie : coque au verrou sous l'ordre courant → hyprlock terminé par SIGTERM, attendu, puis tenant=coque et vu=1 ;
 #          coque qui répond sans bloc sous l'ordre courant → `poserSec`, une fois par apparition de la coque ; coque
 #          absente → apparue=0, pour que son retour reçoive de nouveau `poserSec`. Erreurs : jamais de SIGUSR1, qui
-#          rendrait toute la session ; un `poserSec` sans réponse est retenté au tour suivant.
-# Dépendances : sonder, ipc, logger.
+#          rendrait toute la session ; un hyprlock encore vivant $TERME ms après le SIGTERM est tué (SIGKILL, sans
+#          risque : la coque tient déjà le verrou) et l'écart est écrit au journal ; un `poserSec` sans réponse est
+#          retenté au tour suivant. Dépendances : sonder, ipc, vivant, maintenant, logger.
 relayer() {
     case $(sonder) in
         tient) logger -t "$UNITE" "coque au verrou : hyprlock terminé"
-               kill -TERM "$pid" 2>/dev/null; wait "$pid"; tenant=coque vu=1 ;;
+               kill -TERM "$pid" 2>/dev/null; g=$(($(maintenant) + TERME))
+               while vivant "$pid" && [ "$(maintenant)" -lt "$g" ]; do sleep 0.02; done
+               ! vivant "$pid" || { logger -t "$UNITE" "hyprlock sourd à SIGTERM en $TERME ms : tué"
+                   kill -KILL "$pid" 2>/dev/null; }
+               wait "$pid"; tenant=coque vu=1 ;;
         repond) [ "$apparue" = 1 ] || { ipc poserSec "$ordre" >/dev/null 2>&1 && apparue=1; } ;;
         absente) apparue=0 ;;
     esac
@@ -259,15 +268,16 @@ else
 fi
 
 # 2. Échéance. Attente, par pas de 20 ms, de la session tenue par la coque sous l'ordre courant. Aucun `etat` n'est
-# lancé à moins de 0,2 s de l'échéance, pour que hyprlock parte à son heure. Une coque disparue ne porte plus de bloc :
+# lancé à moins de 0,4 s de l'échéance (`etat` puis `tenu`, bornés chacun à 0,2 s), pour que hyprlock parte à son heure. Une coque disparue ne porte plus de bloc :
 # hyprlock part aussitôt. À l'échéance, une session tenue reste à la coque (hyprlock lui volerait le verrou) ; sinon,
 # hyprlock part.
 f=$((debut + ATTENTE))
 while [ -z "$tenant" ]; do
     veille_demandee
-    if [ $(($(maintenant) + BORNE_MS)) -lt "$f" ]; then
+    if [ $(($(maintenant) + 2 * BORNE_MS)) -lt "$f" ]; then
         e=$(sonder)
-        [ "$e" != absente ] || { logger -t "$UNITE" "coque disparue pendant la chute : hyprlock"; secours; break; }
+        [ "$e" != absente ] || { logger -t "$UNITE" "coque disparue pendant la chute : hyprlock"; apparue=0; secours
+            break; }
         [ "$e" = tient ] && tenu && { tenant=coque vu=1; break; }
     elif [ "$(maintenant)" -ge "$f" ]; then
         if tenu; then tenant=coque vu=1
