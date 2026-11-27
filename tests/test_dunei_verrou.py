@@ -63,9 +63,10 @@ FAKES = {
     # un ordre qui n'est pas périmé ; remonter est ignoré sous le verrou ; etat rend {pose, ordre, tient, couvre,
     # remonte} et, si FAKE_VEILLE=1, annonce la veille en touchant verrou-sec. qs -p (rideau) est consigné, se dit posé
     # sur sa sortie, consigne « rideau posé <DUNEI_RIDEAU_COULEUR> », puis vit jusqu'à un TERM, consigné
-    # « rideau TERM ».
+    # « rideau TERM » ; avec FAKE_RIDEAU_SOURD=1, il consigne TERM sans en mourir.
     "qs": LOG.format(name="qs") + '. "$FAKE_DIR/bin/fake-coque"\n'
-          '[ "$1" = -p ] && { trap \'echo "rideau TERM" >> "$FAKE_LOG"; exit 0\' TERM; echo "rideau : posé"\n'
+          '[ "$1" = -p ] && { trap \'echo "rideau TERM" >> "$FAKE_LOG"; [ -n "${FAKE_RIDEAU_SOURD:-}" ] || exit 0\' TERM\n'
+          '    echo "rideau : posé"\n'
           '    echo "rideau posé $DUNEI_RIDEAU_COULEUR" >> "$FAKE_LOG"; while :; do sleep 0.02; done; }\n'
           'case $mode in absente) exit 255 ;; muette) exec sleep 1 ;; esac\n'
           '[ "$mode" = fige ] && [ "$6" = etat ] && exec sleep 1\n'
@@ -93,8 +94,9 @@ FAKES = {
     "systemctl": LOG.format(name="systemctl") + '[ "$2" != is-active ] || [ -e "$FAKE_DIR/unite" ]\n',
     "notify-send": LOG.format(name="notify-send"),
     # pgrep : FAKE_PGREP_REND=1 simule l'autre hyprlock qui rend la session juste après avoir été trouvé ;
-    # FAKE_PGREP_MUET=1, le compositeur qui devient muet pour de bon juste après.
-    "pgrep": LOG.format(name="pgrep") + '[ -n "${FAKE_PGREP_REND:-}" ] && echo false > "$FAKE_DIR/locked"\n'
+    # FAKE_PGREP_MUET=1, le compositeur qui devient muet pour de bon juste après ; FAKE_PGREP_LENT=1, pgrep qui dort 1 s
+    # puis répond « aucun ».
+    "pgrep": LOG.format(name="pgrep") + '[ -n "${FAKE_PGREP_LENT:-}" ] && { sleep 1; exit 1; }\n' + '[ -n "${FAKE_PGREP_REND:-}" ] && echo false > "$FAKE_DIR/locked"\n'
              '[ -n "${FAKE_PGREP_MUET:-}" ] && echo 100000 > "$FAKE_DIR/muet"\n'
              'exit "${FAKE_PGREP:-1}"\n',
     "logger": LOG.format(name="logger"),
@@ -541,6 +543,76 @@ class DuneiVerrouTest(unittest.TestCase):
         self.assertEqual(self.lancements(), [])
         self.assertNotIn("tomber", self.etapes())
         self.assertSousSuite(["etat", "poserSec", "etat", "remonter"], self.etapes())
+
+    def test_deja_tenu_par_la_coque_qui_meurt(self):
+        # La coque tient déjà le verrou, puis meurt pour de bon : la garde lui laisse verrouReprise, puis rideau et
+        # hyprlock.
+        (self.t / "locked").write_text("true\n")
+        (self.t / "coque").mkdir()
+        maintenant = f"{int(time.time() * 1000)}\n"
+        for nom in ("couvre", "pris"):
+            (self.t / "coque" / nom).write_text(maintenant)
+        debut = time.time() * 1000
+        res = self.run_script(FAKE_COQUE="meurt")
+        self.assertEqual(res.returncode, 0, res.stderr)
+        self.assertSousSuite(["etat", "rideau posé", "hyprlock", "rideau TERM", "remonter"], self.etapes())
+        self.assertGreaterEqual(self.lancement() - debut, 3000)
+        self.assertLess(self.lancement() - debut, 4000)
+
+    def test_pgrep_muet_jamais_sans_verrouilleur(self):
+        # pgrep muet plus de 0,2 s sur une session tenue sans coque : un verrouilleur est peut-être là, on suit la
+        # session au lieu de lancer hyprlock par-dessus.
+        (self.t / "locked").write_text("true\n")
+
+        def deverrouiller():
+            """Rend la session 1 s après le départ."""
+            time.sleep(1)
+            (self.t / "locked").write_text("false\n")
+
+        fil = threading.Thread(target=deverrouiller)
+        fil.start()
+        res = self.run_script(FAKE_COQUE="absente", FAKE_PGREP_LENT="1")
+        fil.join()
+        self.assertEqual(res.returncode, 0, res.stderr)
+        self.assertEqual(self.lancements(), [])
+        self.assertIn("pgrep", self.etapes())
+
+    # Rideau.
+
+    def test_rideau_a_la_relance(self):
+        # hyprlock sort en laissant le verrou, sans coque : la relance se fait derrière le rideau.
+        res = self.run_script(FAKE_COQUE="absente", FAKE_HYPRLOCK="garde tient")
+        self.assertEqual(res.returncode, 0, res.stderr)
+        self.assertSousSuite(["hyprlock", "rideau posé", "hyprlock", "rideau TERM", "remonter"], self.etapes())
+        self.assertEqual(self.etapes().count("rideau posé"), 1)
+
+    def test_rideau_retire_par_le_relais(self):
+        # Rideau posé, hyprlock sans onLockLocked ; la coque arrive et tient : hyprlock reçoit TERM, le rideau aussi.
+        (self.t / "locked").write_text("true\n")
+        res = self.run_script(FAKE_COQUE="tard", FAKE_TARD="600", FAKE_HYPRLOCK="dort")
+        self.assertEqual(res.returncode, 0, res.stderr)
+        self.assertSousSuite(["rideau posé", "hyprlock", "poserSec", "kill -TERM", "rideau TERM", "remonter"],
+                             self.etapes())
+
+    def test_rideau_retire_a_la_sortie(self):
+        # Le lanceur tué (SIGTERM) pendant que le rideau est posé le retire en sortant.
+        (self.t / "locked").write_text("true\n")
+        proc = self.lancer(DUNEI_VERROU_PORTEE="-", FAKE_COQUE="absente", FAKE_HYPRLOCK="dort")
+        for _ in range(250):
+            if "rideau posé" in self.etapes() and self.lancements():
+                break
+            time.sleep(0.02)
+        proc.send_signal(signal.SIGTERM)
+        proc.wait(timeout=20)
+        self.assertIn("rideau TERM", self.etapes())
+
+    def test_rideau_sourd_a_term(self):
+        # Un rideau qui survit à TERM est tué au bout de la borne : il ne couvre jamais le bureau rendu.
+        (self.t / "locked").write_text("true\n")
+        res = self.run_script(FAKE_COQUE="absente", FAKE_RIDEAU_SOURD="1")
+        self.assertEqual(res.returncode, 0, res.stderr)
+        self.assertSousSuite(["rideau posé", "hyprlock", "rideau TERM", "logger", "remonter"], self.etapes())
+        self.assertTrue(any(c.startswith("logger") and "rideau sourd" in c for c in self.calls()))
 
     # Garde : coque disparue pendant le verrou.
 

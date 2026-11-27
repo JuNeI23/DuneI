@@ -9,8 +9,8 @@
 #        (coque/Rideau, `qs -p`, un calque opaque par écran) est posé, puis hyprlock reprend le verrou derrière lui, et
 #        le rideau est retiré à la ligne `onLockLocked` de hyprlock : sans lui, Hyprland montrerait la session 20 à
 #        70 ms entre son écran mort et le nouveau verrou. Un hyprlock qui sort en laissant le verrou le rend à la coque
-#        si elle répond. Session trouvée tenue à l'appel : suivie si la coque ou un hyprlock la tient, reprise par la
-#        coque vivante, sinon par hyprlock derrière le rideau.
+#        si elle répond. Session trouvée tenue à l'appel : gardée par la coque si elle tient ou vit,
+#        suivie si un hyprlock la tient, sinon reprise par hyprlock derrière le rideau.
 #        Quand la coque tient le verrou pendant que hyprlock le garde (secours, ouverture de session), hyprlock est
 #        terminé par SIGTERM, jamais par SIGUSR1, qui rendrait toute la session, verrou de la coque compris. Une seule
 #        vérité, `hyprctl -j locked` : ni un nom de processus, ni un code de sortie, ni une durée n'en tiennent lieu,
@@ -38,8 +38,8 @@
 #           s'affiche, sauf avec `--sec` : dunei-verrou-initial ferme alors la session et le bloc reste posé.
 # Dépendances : sh, hyprlock, stdbuf (coreutils : sortie de hyprlock ligne par ligne, pour que `onLockLocked` arrive à
 #               temps), hyprctl, jq, qs (coque, cible IPC `verrou` : tomber, poserSec, remonter, abreger, etat ; rideau,
-#               ~/.config/quickshell/dunei/Rideau/shell.qml), busctl, systemd-run, systemctl, pgrep, id, timeout, sed,
-#               cat, kill, date (GNU, millisecondes), notify-send, logger ; /proc (Linux).
+#               ~/.config/quickshell/dunei/Rideau/shell.qml), busctl, systemd-run, systemctl, pgrep (borné), id,
+#               timeout, sed, cat, kill, date (GNU, millisecondes), notify-send, logger ; /proc (Linux).
 
 RUN="${XDG_RUNTIME_DIR:?XDG_RUNTIME_DIR absent}/dunei"
 SEC="$RUN/verrou-sec" ORDRE="$RUN/verrou-ordre" JOURNAL="$RUN/verrou-hyprlock.log"
@@ -165,9 +165,29 @@ rideau_poser() {
     done
 }
 
-# rideau_retirer — retire le rideau, s'il est posé. Entrées : aucune ; lit $rideau. Sortie : rideau vidé.
-# Erreurs : aucune ; un rideau déjà mort est ignoré. Dépendances : kill.
-rideau_retirer() { [ -z "$rideau" ] || { kill "$rideau" 2>/dev/null; rideau=; }; }
+# rideau_retirer — retire le rideau, s'il est posé : SIGTERM, attente de sa fin par pas de 20 ms, au plus $TERME ms,
+# puis SIGKILL s'il vit encore, et récolte du processus. Un rideau survivant couvrirait le bureau rendu et garderait
+# l'unité du lanceur active. Entrées : aucune ; lit $rideau. Sortie : rideau vidé.
+# Erreurs : un rideau déjà mort est ignoré ; un rideau sourd à SIGTERM est tué et l'écart est écrit au journal.
+# Dépendances : kill, vivant, maintenant, logger.
+rideau_retirer() {
+    [ -n "$rideau" ] || return 0
+    kill "$rideau" 2>/dev/null; g=$(($(maintenant) + TERME))
+    while vivant "$rideau" && [ "$(maintenant)" -lt "$g" ]; do sleep 0.02; done
+    ! vivant "$rideau" || { logger -t "$UNITE" "rideau sourd à SIGTERM en $TERME ms : tué"
+        kill -KILL "$rideau" 2>/dev/null; }
+    wait "$rideau" 2>/dev/null; rideau=
+}
+
+# verrouilleur — dit si un hyprlock de l'utilisateur vit peut-être encore (second lanceur hors unité).
+# Sortie : code 0 si pgrep en trouve un, ou s'il ne répond pas en 0,2 s (un doute ne vaut jamais « aucun
+#          verrouilleur », qui mènerait à lancer hyprlock par-dessus) ; non nul s'il répond qu'il n'y en a aucun.
+# Erreurs : le doute est écrit au journal. Dépendances : pgrep, id, timeout, logger.
+verrouilleur() {
+    timeout "$BORNE" pgrep -u "$(id -u)" -x hyprlock >/dev/null; c=$?
+    [ "$c" != 124 ] || { logger -t "$UNITE" "pgrep muet : verrouilleur présumé vivant"; return 0; }
+    [ "$c" = 0 ]
+}
 
 # rideau_lever — retire le rideau dès que hyprlock tient le verrou (ligne `onLockLocked` de son journal), au plus
 # $ECHEANCE ms après son lancement. Entrées : aucune ; lit $rideau, $lance. Sortie : aucune.
@@ -310,15 +330,17 @@ rideau=''
 trap 'rm -f "$SEC"; rideau_retirer' EXIT
 trap 'exit 1' HUP INT TERM
 
-# Session déjà tenue. La coque au verrou (sous quelque ordre que ce soit : relancée, elle le reprend d'elle-même) ou
-# un hyprlock vivant la gardent : on la suit jusqu'au déverrouillage, puis le bloc remonte. Sinon, la coque vivante
-# reçoit poserSec et passe à la garde, chrono de reprise lancé ; sans elle, hyprlock la reprend derrière le rideau.
+# Session déjà tenue. La coque au verrou (sous quelque ordre que ce soit : relancée, elle le reprend d'elle-même)
+# reçoit poserSec, qui lui donne l'ordre courant, et passe à la garde : si elle meurt ensuite, la reprise par hyprlock
+# derrière le rideau reste assurée. Un hyprlock vivant (ou pgrep muet) la garde : on la suit jusqu'au déverrouillage,
+# puis le bloc remonte. Sinon, la coque vivante sans verrou reçoit poserSec et passe à la garde, chrono de reprise
+# lancé ; sans elle, hyprlock la reprend derrière le rideau.
 if tenu; then
-    if [ "$(ipc etat 2>/dev/null | jq -r .tient 2>/dev/null)" = true ] || pgrep -u "$(id -u)" -x hyprlock >/dev/null
-    then suivre 1 || exit 1; remonter; exit 0
-    fi
-    case $(sonder) in
-        tient | couvre | repond) logger -t "$UNITE" "session tenue sans verrouilleur : reprise par la coque"
+    tient=$(ipc etat 2>/dev/null | jq -r .tient 2>/dev/null)
+    if [ "$tient" != true ] && verrouilleur; then suivre 1 || exit 1; remonter; exit 0; fi
+    case $tient:$(sonder) in
+        true:* | *:tient | *:couvre | *:repond)
+            logger -t "$UNITE" "session tenue sans verrouilleur : garde par la coque"
             ! ipc poserSec "$ordre" >/dev/null 2>&1 || apparue=1
             tenant=coque reprise=$(($(maintenant) + REPRISE)) ;;
         *) logger -t "$UNITE" "session tenue sans verrouilleur ni coque : hyprlock"; secours ;;
@@ -422,7 +444,7 @@ while :; do
                 tenant=coque reprise=$(($(maintenant) + REPRISE)); continue ;;
             esac
         fi
-        if [ "$e" = oui ] && pgrep -u "$(id -u)" -x hyprlock >/dev/null; then suivre 1 || exit 1; issue=fin; break; fi
+        if [ "$e" = oui ] && verrouilleur; then suivre 1 || exit 1; issue=fin; break; fi
         [ "$tue" = 1 ] || [ $(($(maintenant) - lance)) -ge "$RAPIDE" ] || sleep "$PAUSE"
         logger -t "$UNITE" "hyprlock sorti, session $e : relance"; secours ;;
     esac
