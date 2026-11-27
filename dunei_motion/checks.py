@@ -15,9 +15,9 @@ from .spring import critical_spring, exit_spring, spring, unit_mass, zeta
 VERSION = "0.1.0"
 SECTIONS = ("meta", "rules", "delays", "periods", "spinner", "popover", "wheel", "transitions", "hyprland", "hyprland_reduced")
 REDUCED_FLOOR_MS = 100   # Plancher du fondu réduit fixé par la bible.
-# Plafond de verrouAttente, en ms : le lanceur dunei-verrou pose le verrou au plus tard 1,5 s après l'appel (L2-22) ; il
-# faut laisser à hyprlock environ 200 ms pour prendre le verrou après l'échéance de la pose.
-VERROU_ATTENTE_MAX = 1300
+# Plafond de verrouAttente, en ms : la session est verrouillée au plus tard 1,5 s après l'appel (L2-22), échéance
+# comprise.
+VERROU_ATTENTE_MAX = 1500
 
 # Types acceptés, désignés par leur nom dans les messages d'erreur.
 KINDS = {
@@ -31,7 +31,7 @@ KINDS = {
 META_KEYS = {"name": "texte", "prefix": "texte"}
 RULE_KEYS = {"exit_ratio": "nombre", "exit_tolerance": "nombre", "overshoot_allowed": "liste de textes",
              "stagger_allowed": "liste de textes", "stagger_cap": "nombre", "reduced_fade_ms": "nombre"}
-DELAY_KEYS = {"tooltip": "nombre", "scan": "nombre", "copied": "nombre", "stable": "nombre", "dismiss": "nombre", "liste": "nombre", "alerte": "nombre", "selecteur": "nombre", "garde": "nombre", "gardeFrappe": "nombre", "autorise": "nombre", "verrouAttente": "nombre", "verrouApparition": "nombre", "verrouCession": "nombre", "verrouRetrait": "nombre", "verrouSecours": "nombre"}     # Attentes de l'interface, en millisecondes.
+DELAY_KEYS = {"tooltip": "nombre", "scan": "nombre", "copied": "nombre", "stable": "nombre", "dismiss": "nombre", "liste": "nombre", "alerte": "nombre", "selecteur": "nombre", "garde": "nombre", "gardeFrappe": "nombre", "autorise": "nombre", "verrouAttente": "nombre", "verrouRelais": "nombre", "verrouRelaisMax": "nombre", "verrouChampRepos": "nombre", "verrouMessage": "nombre", "verrouPam": "nombre", "verrouReprise": "nombre", "verrouSecousse": "nombre", "verrouRetrait": "nombre"}     # Attentes de l'interface, en millisecondes.
 PERIOD_KEYS = {"spinner": "nombre"}    # Cycles des mouvements continus, en millisecondes.
 # Pose de repos et courbe de la vague de l'indicateur d'activité.
 SPINNER_KEYS = {"rest_scale": "nombre", "rest_opacity": "nombre", "easing": "texte"}
@@ -205,7 +205,7 @@ def errors(raw: dict) -> list[str]:
     err += [f"delays : {k} doit être un entier de millisecondes, lu par le shell de dunei-verrou"
             for k, v in raw["delays"].items() if k.startswith("verrou") and not isinstance(v, int)]
     if raw["delays"]["verrouAttente"] > VERROU_ATTENTE_MAX:
-        err.append(f"delays : verrouAttente au plus {VERROU_ATTENTE_MAX} ms, pour un verrou posé en 1,5 s au plus")
+        err.append(f"delays : verrouAttente au plus {VERROU_ATTENTE_MAX} ms, pour une session verrouillée en 1,5 s au plus")
     err += [f"spinner : {k} doit être compris entre 0 et 1 exclus" for k in ("rest_scale", "rest_opacity")
             if not 0 < raw["spinner"][k] < 1]
     err += [f"popover : {k} doit être strictement positif" for k in ("icon_travel_px", "rest_threshold_px")

@@ -36,8 +36,7 @@ import "Verrou"
 // Selecteur réveillé de même ; le menu de déconnexion (IPC « deconnexion basculer », SUPER + Échap, logo de la
 // barre), singleton du module Deconnexion réveillé de même ; le bloc du verrou (IPC « verrou », commandé par
 // dunei-verrou), singleton du module Verrou réveillé de même, qui pose son bloc si la coque démarre pendant un verrou,
-// et dont la chute ferme ici lanceur, sélecteur et menu de déconnexion ; les fichiers de hyprlock, produits d'avance
-// par Production pour qu'ils existent avant le premier verrou (L2-22). Le raccourci global vit dans la coque de session et non
+// et dont la chute ferme ici lanceur, sélecteur et menu de déconnexion (L2-22). Le raccourci global vit dans la coque de session et non
 // dans le singleton : le protocole des raccourcis globaux de Hyprland refuse deux clients sur la même paire
 // appid:nom, et une coque d'essai qui charge le singleton ferait tomber l'une des deux.
 // Erreurs : tokens absents ou invalides → fond, barre et presqu'île transparents, erreur de Theme dans le journal de
@@ -46,7 +45,7 @@ import "Verrou"
 // Galerie (Ouvreuse), Lanceur (Lanceur), Notifications (Centre, FenetreNotifications, FenetrePanneau,
 // MemoireAttente), Parametres (FenetreParametres), Presquile (Presquile, Annonceur, AnnonceurAlerte), Reseau
 // (NotificationsReseau), Selecteur (Selecteur), Deconnexion (Deconnexion), Autorisation (Autorisation) et Verrou
-// (Verrou, Production). Le Centre possède
+// (Verrou). Le Centre possède
 // org.freedesktop.Notifications : aucun autre démon (dunst) ne doit le tenir.
 // Rendu du texte : la directive Env force l'anticrénelage en niveaux de gris, comme dans le banc du verre.
 ShellRoot {
@@ -85,7 +84,6 @@ ShellRoot {
         // Erreurs : aucune. Dépendances : Lanceur.fermer, Selecteur.annuler, Deconnexion.annuler.
         function onTombe() { Lanceur.fermer(); Selecteur.annuler(); Deconnexion.annuler() }
     }
-    Production {}
     // SUPER + Tab : Hyprland appelle ce raccourci global à chaque Tab, sans lancer de processus.
     GlobalShortcut {
         appid: "dunei"

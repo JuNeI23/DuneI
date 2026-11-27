@@ -47,7 +47,7 @@ class ErrorsTest(unittest.TestCase):
     def test_timings(self):
         """Le délai d'infobulle, la borne de la recherche de réseaux, la tenue du retour « Copié », la stabilité d'un état du réseau, l'attente avant la fermeture d'un popover quitté par la souris, la tenue de l'alerte d'énergie et la période de
         l'indicateur d'activité sont exigés, numériques et strictement positifs."""
-        for section, key in (("delays", "tooltip"), ("delays", "scan"), ("delays", "copied"), ("delays", "stable"), ("delays", "dismiss"), ("delays", "alerte"), ("delays", "selecteur"), ("delays", "garde"), ("delays", "gardeFrappe"), ("delays", "autorise"), ("delays", "verrouAttente"), ("delays", "verrouApparition"), ("delays", "verrouCession"), ("delays", "verrouRetrait"), ("delays", "verrouSecours"), ("periods", "spinner")):
+        for section, key in (("delays", "tooltip"), ("delays", "scan"), ("delays", "copied"), ("delays", "stable"), ("delays", "dismiss"), ("delays", "alerte"), ("delays", "selecteur"), ("delays", "garde"), ("delays", "gardeFrappe"), ("delays", "autorise"), ("delays", "verrouAttente"), ("delays", "verrouRelais"), ("delays", "verrouRelaisMax"), ("delays", "verrouChampRepos"), ("delays", "verrouMessage"), ("delays", "verrouPam"), ("delays", "verrouReprise"), ("delays", "verrouSecousse"), ("delays", "verrouRetrait"), ("periods", "spinner")):
             with self.subTest(section=section):
                 r = raw(); del r[section][key]
                 self.check(r, section, key, "manquante")
@@ -60,16 +60,16 @@ class ErrorsTest(unittest.TestCase):
 
     def test_delais_du_verrou_entiers(self):
         """Les délais du verrou, lus par l'arithmétique du shell de dunei-verrou, sont des entiers."""
-        for key in ("verrouAttente", "verrouApparition", "verrouCession", "verrouRetrait", "verrouSecours"):
+        for key in ("verrouAttente", "verrouRelais", "verrouRelaisMax", "verrouChampRepos", "verrouMessage", "verrouPam", "verrouReprise", "verrouSecousse", "verrouRetrait"):
             with self.subTest(key=key):
-                r = raw(); r["delays"][key] = 1000.5 if key == "verrouAttente" else r["delays"][key] + 0.5
+                r = raw(); r["delays"][key] = 1500.5 if key == "verrouAttente" else r["delays"][key] + 0.5
                 self.check(r, "delays", key, "entier")
 
     def test_attente_du_verrou_plafonnee(self):
-        """verrouAttente est plafonné à 1300 ms, pour un verrou posé en 1,5 s au plus ; 1300 passe."""
-        r = raw(); r["delays"]["verrouAttente"] = 1301
-        self.check(r, "verrouAttente", "1300")
-        r = raw(); r["delays"]["verrouAttente"] = 1300
+        """verrouAttente est plafonné à 1500 ms, pour une session verrouillée en 1,5 s au plus ; 1500 passe."""
+        r = raw(); r["delays"]["verrouAttente"] = 1501
+        self.check(r, "verrouAttente", "1500")
+        r = raw(); r["delays"]["verrouAttente"] = 1500
         self.assertEqual(errors(r), [])
 
     def test_spinner(self):

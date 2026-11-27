@@ -21,7 +21,7 @@ import "verrou.js" as Logique
 // dunei-verrou.scope ou hors d'elle) mène le verrou : ses relances de hyprlock laissent la session un temps
 // « rendue », et le bloc doit alors rester. Dans le doute, le bloc reste : seule l'absence certaine d'un lanceur
 // compte. demarrer(), appelé par la coque de session, pose le bloc sans chute si la session
-// est déjà tenue. Le calque d'apparition se retire d'office après delays.verrouSecours.
+// est déjà tenue. Le calque d'apparition se retire d'office après 2,5 s.
 // Entrées : IPC « verrou » : tomber, poserSec, apparaitre, ceder, remonter (chacun à ordre, entier), abreger (sans
 //           ordre : il ne fait qu'abréger ce qui est en cours) et etat ; demarrer() ; fenetree, vrai par défaut (faux :
 //           aucun calque, pour les essais) ; clavierExclusif, vrai par défaut ; lecture, commande qui écrit l'état du
@@ -38,7 +38,7 @@ import "verrou.js" as Logique
 //           recherche d'un lanceur indécidable (délai dépassé, erreur de pgrep, commande absente) : le « rendu » ne
 //           compte pas et la série n'avance pas ; le bloc reste.
 // Dépendances : Quickshell (Singleton, Variants), Quickshell.Io (Process, StdioCollector, IpcHandler), Ressort, Theme
-//           (motion.delays : verrouRetrait, verrouSecours ; mouvementReduit), C.Overlays (popover, attention, verrou),
+//           (motion.delays : verrouRetrait ; mouvementReduit), C.Overlays (popover, attention, verrou),
 //           verrou.js (ordreValable), Bloc.qml, Apparition.qml.
 Singleton {
     id: verrou
@@ -158,7 +158,7 @@ Singleton {
     }
 
     // apparaitre — montre le calque d'apparition au-dessus du verrou et y joue l'apparition du contenu ; il se retire
-    // d'office après verrouSecours. Entrée : o, ordre. Sortie : aucune. Erreurs : ordre périmé ignoré.
+    // d'office après 2,5 s. Entrée : o, ordre. Sortie : aucune. Erreurs : ordre périmé ignoré.
     // Dépendances : accepter, secours.
     function apparaitre(o) {
         if (!accepter(o)) return
@@ -265,10 +265,11 @@ Singleton {
 
     Timer { id: retrait; interval: Theme.motion?.delays.verrouRetrait ?? 0; onTriggered: verrou.finirRetrait() }
 
-    // Retrait d'office du calque d'apparition : le contenu est alors posé dans le bloc.
+    // Retrait d'office du calque d'apparition : le contenu est alors posé dans le bloc. Durée provisoire, fixée ici
+    // depuis le retrait du délai verrouSecours des jetons ; ce calque disparaît à la réécriture du contrôleur (L2-22).
     Timer {
         id: secours
-        interval: Theme.motion?.delays.verrouSecours ?? 0
+        interval: 2500
         onTriggered: {
             verrou.contenuBloc = verrou.couvre || verrou.contenuBloc
             verrou.vu = false

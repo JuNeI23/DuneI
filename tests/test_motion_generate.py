@@ -25,7 +25,7 @@ class GenerateTest(unittest.TestCase):
             self.assertEqual(res.returncode, 0, res.stderr)
             data = json.loads((Path(tmp) / "motion.json").read_text(encoding="utf-8"))
             self.assertEqual(data["transitions"]["navigate"]["in"]["settle_ms"], 353)
-            self.assertEqual((data["delays"], data["periods"]), ({"tooltip": 500, "scan": 6000, "copied": 1500, "stable": 5000, "dismiss": 1500, "liste": 30, "alerte": 4000, "selecteur": 150, "garde": 1000, "gardeFrappe": 400, "autorise": 800, "verrouAttente": 1000, "verrouApparition": 1500, "verrouCession": 350, "verrouRetrait": 200, "verrouSecours": 2500}, {"spinner": 1200}))
+            self.assertEqual((data["delays"], data["periods"]), ({"tooltip": 500, "scan": 6000, "copied": 1500, "stable": 5000, "dismiss": 1500, "liste": 30, "alerte": 4000, "selecteur": 150, "garde": 1000, "gardeFrappe": 400, "autorise": 800, "verrouAttente": 1500, "verrouRelais": 50, "verrouRelaisMax": 250, "verrouChampRepos": 8000, "verrouMessage": 3000, "verrouPam": 10000, "verrouReprise": 3000, "verrouSecousse": 420, "verrouRetrait": 200}, {"spinner": 1200}))
             # La pose de repos et la courbe de l'indicateur d'activité viennent du mouvement, non du QML.
             self.assertEqual(data["spinner"], {"rest_scale": 0.6, "rest_opacity": 0.35, "easing": "InOutSine"})
             # Les trois valeurs du mouvement des popovers sont émises telles quelles.

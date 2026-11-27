@@ -514,7 +514,7 @@ rangee = 32                   # hauteur du champ et du bouton
 rayon = 18                    # angles bas de l'île ouverte
 secousse = 7                  # poussée du champ à l'échec, en px
 
-[verrou]                      # écran de verrouillage, verrou hyprlock relayé par la coque (L2-22) ; px logiques sauf mention
+[verrou]                      # verrou de la coque (L2-22) ; px logiques sauf mention ; ms pour apparition_*
 horloge = 700                 # corps de l'horloge ; heures et minutes sur une ligne
 horloge_haut = 34             # haut de la ligne de l'horloge, depuis le haut de l'écran
 horloge_ligne = 500           # hauteur de la ligne de l'horloge, chiffres centrés dedans (maquette verrou-v2)
@@ -522,19 +522,25 @@ horloge_interlettrage = -8    # espace ajouté après chaque chiffre de l'horlog
 recul = 3.4                   # échelle de l'horloge au départ de l'apparition, ramenée à 1
 date = 22                     # corps de la date
 date_haut = 556               # position de la date depuis le haut
-pastille = 72                 # côté de la pastille de l'utilisateur
-nom_taille = 17               # corps du nom de l'utilisateur
 champ_largeur = 280           # largeur du champ de mot de passe
 champ_hauteur = 36            # hauteur du champ de mot de passe
 champ_bas = 56                # distance du champ au bas de l'écran
-pastille_bas = 139            # distance de la pastille au bas de l'écran (maquette verrou-v2 mesurée : 138,955)
-apparition_pastille = 500     # ms après le départ du recul de l'horloge : la pastille grandit (maquette verrou-v2)
+point = 8                     # diamètre d'un point du champ
+point_ecart = 7               # espace entre deux points du champ
+message = 15                  # corps du message d'échec sous le champ
+message_bas = 24              # distance du message au champ
+media = 16                    # corps du titre et de l'artiste du média
+media_haut = 606              # position du média depuis le haut de l'écran
+media_largeur = 640           # largeur maximale de la ligne du média
+pochette = 30                 # côté de la pochette du média
+pochette_rayon = 6            # rayon des angles de la pochette
+media_ecart = 10              # espace entre la pochette et le texte du média
 apparition_date = 550         # ms : le premier mot de la date monte de sous sa ligne
 apparition_mot = 70           # ms entre deux mots de la date
-apparition_nom = 620          # ms : le nom monte en fondant
-apparition_champ = 720        # ms : le champ s'ouvre depuis un rond
+apparition_media = 620        # ms : le média monte en fondant
 course_date = 34              # montée des mots de la date, depuis sous leur ligne
-course_nom = 14               # montée du nom
+course_media = 14             # montée du média
+secousse = 12                 # poussée du champ à l'échec, en px
 
 [notifications]               # pile de notifications de la coque (L2-19) ; px logiques sauf mention ; ms pour duree
 largeur = 340                 # largeur d'une carte

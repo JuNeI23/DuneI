@@ -204,7 +204,7 @@ Item {
         opacity: contenu.reduit ? ePastille.f : 1
         text: (Array.from(contenu.utilisateur)[0] ?? "").toUpperCase()
         color: Theme.color?.textEmphasis ?? "transparent"
-        font: contenu.police((contenu.v.nomTaille ?? 0) * Logique.TAILLE_INITIALE,
+        font: contenu.police((contenu.v.nomTaille ?? 0) * 1.6,
                              Theme.typo?.weightMedium ?? Font.Medium)
     }
 
