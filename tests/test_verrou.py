@@ -859,6 +859,48 @@ class SourceTest(unittest.TestCase):
         self.assertRegex(bloc, r'WlrLayershell\.namespace:\s*"dunei-verrou"')
         self.assertRegex(bloc, r"WlrLayershell\.layer:\s*WlrLayer\.Overlay")
         self.assertFalse((ROOT / "coque" / "Verrou" / "Apparition.qml").exists())
+        for dossier in ("coque", "config"):
+            for f in (ROOT / dossier).rglob("*"):
+                if f.is_file() and f.suffix in (".qml", ".lua", ".toml"):
+                    self.assertNotIn("dunei-verrou-apparition", f.read_text(encoding="utf-8"), f.as_posix())
+        self.assertNotIn("dunei-verrou-apparition", (ROOT / "tests" / "test_outils.py").read_text(encoding="utf-8"))
+
+    def test_surface(self):
+        """Surface : surface du verrou de session, couleur en jeton, contenu plein écran lié au contrôleur, clavier
+        transmis à la saisie, et déclarée comme surface du WlSessionLock."""
+        surface = self.lire("Verrou/Surface.qml")
+        self.assertRegex(surface, r"WlSessionLockSurface\s*\{")
+        self.assertRegex(surface, r"color:\s*Theme\.color\?\.surfaceBase")
+        self.assertRegex(surface, r"Keys\.onPressed")
+        self.assertIn("Verrou.saisie.touche(event.key, event.text)", surface)
+        self.assertIn("event.accepted = true", surface)
+        self.assertRegex(surface, r"focus:\s*true")
+        self.assertRegex(self.lire("Verrou/Verrou.qml"), r"surface:\s*Component\s*\{\s*Surface\s*\{\s*\}\s*\}")
+        self.assertIn("Surface 1.0 Surface.qml", self.lire("Verrou/qmldir"))
+
+    def test_image_partagee(self):
+        """L'image du bureau est la même dans le bloc et la surface (même Contenu) : cache: true, jamais false."""
+        contenu = self.lire("Verrou/Contenu.qml")
+        self.assertIn("cache: true", contenu)
+        self.assertNotIn("cache: false", contenu)
+
+    def test_shell_sans_production(self):
+        """La coque de session ne charge plus la production d'images de hyprlock."""
+        self.assertNotIn("Production", self.lire("shell.qml"))
+        for chemin in ("Verrou/Production.qml", "Verrou/essai/production", "Verrou/Apparition.qml"):
+            self.assertFalse((ROOT / "coque" / chemin).exists(), chemin)
+
+    def test_bloc_relais(self):
+        """Le bloc signale sa première image et transmet le clavier tant que le contrôleur le lui laisse."""
+        bloc = self.lire("Verrou/Bloc.qml")
+        self.assertRegex(bloc, r"onFrameSwapped:[^\n]*Verrou\.dessine\(modelData\.name\)")
+        self.assertIn("Verrou.saisie.touche(event.key, event.text)", bloc)
+        self.assertIn("Verrou.prendClavier", bloc)
+
+    def test_sources_coupees_pendant_le_verrou(self):
+        """Un rechargement à chaud libérerait le verrou : la surveillance des fichiers se coupe tant qu'il est actif."""
+        verrou = self.lire("Verrou/Verrou.qml")
+        self.assertRegex(verrou, r"Quickshell\.watchFiles\s*=\s*!")
 
     def test_lectures_bornees(self):
         """La lecture du compositeur et la recherche d'un lanceur (pgrep, qui couvre le script dans son unité comme hors

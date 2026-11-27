@@ -120,13 +120,26 @@ Singleton {
     Binding { target: C.Overlays; property: "verrou"; value: verrou.actif }
 
     // Verrou de session : demandé seulement avec les fenêtres (jamais dans les coques d'essai), et seulement par voulu.
-    // Sa surface (Surface.qml) vient à la tâche suivante du plan.
-    WlSessionLock { id: session; locked: verrou.fenetree && verrou.voulu }
+    // Sa surface (Surface.qml) montre le contenu, une par écran.
+    WlSessionLock {
+        id: session
+        locked: verrou.fenetree && verrou.voulu
+        surface: Component { Surface {} }
+    }
+
+    // surveillerFichiers — règle la surveillance des fichiers de la coque : coupée tant que le verrou est actif. Un
+    // rechargement à chaud libère le verrou de session (relevé au banc, tâche 1) ; seule l'affectation impérative
+    // a été éprouvée, d'où ce gestionnaire plutôt qu'une liaison déclarative. La rallumer ne rejoue pas les
+    // changements faits pendant le verrou : c'est accepté. Entrées : aucune. Sortie : Quickshell.watchFiles. Erreurs :
+    // aucune. Dépendances : actif, Quickshell.
+    function surveillerFichiers() { Quickshell.watchFiles = !verrou.actif }
+    Component.onCompleted: surveillerFichiers()
 
     // onActifChanged — actif : le calque se mappe aussitôt (une tenue en attente est annulée) ; la remontée finie, plus
     // rien n'est en cours, et le calque tient encore un tour de boucle avant que tenue ne le démappe, s'il est toujours
     // inactif. Entrées : aucune. Sortie : montre, remonte, tenue. Erreurs : aucune.
     onActifChanged: {
+        surveillerFichiers()
         if (actif) { tenue.stop(); montre = true; return }
         remonte = false
         tenue.restart()

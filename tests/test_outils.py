@@ -13,11 +13,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 COQUE = ROOT / "coque"
 NAMESPACE = re.compile(r'WlrLayershell\.namespace\s*:\s*"([^"]+)"')
-# Calques du verrou (L2-22) volontairement hors du verre, chacun avec sa raison : rien à flouter sous eux.
-HORS_VERRE = {
-    "dunei-verrou-apparition": "contenu relayé au-dessus du verrou de session, sans fond (above_lock, regles.lua)",
-    "dunei-verrou-production": "calque d'un pixel, transparent, qui ne sert qu'au rendu des images de hyprlock",
-}
+# Calques volontairement hors du verre, chacun avec sa raison : rien à flouter sous eux. Aucun pour l'instant, le
+# verrou de la voie B étant déclaré dans les jetons.
+HORS_VERRE: dict[str, str] = {}
 
 
 def declares() -> set[str]:

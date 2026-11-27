@@ -19,13 +19,11 @@ M.behaviour = {
       animation = "slide bottom" },
 }
 
--- Règles de calque du verrouillage (L2-22), de comportement et non d'apparence : le verrou relayé passe devant tout
--- (ordre le plus bas dessiné au-dessus), le calque d'apparition au-dessus du verrou de session ; ni l'un ni l'autre
--- n'est animé par le compositeur, la coque porte seule leur mouvement.
+-- Règle de calque du verrouillage (L2-22), de comportement et non d'apparence : le bloc passe devant tout (ordre le
+-- plus bas dessiné au-dessus) et n'est pas animé par le compositeur, la coque porte seule son mouvement. Le contenu
+-- se montre dans la surface du verrou de session, qui n'a besoin d'aucune règle.
 M.verrou = {
     { name = "dunei-verrou", match = { namespace = "^dunei-verrou$" }, order = -100, no_anim = true },
-    { name = "dunei-verrou-apparition", match = { namespace = "^dunei-verrou-apparition$" }, above_lock = 1,
-      order = -101, no_anim = true },
 }
 
 -- sortie : style de sortie commun aux fenêtres, lu dans le mouvement généré (animation windowsOut).

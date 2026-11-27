@@ -84,7 +84,6 @@ class ModulesTest(unittest.TestCase):
                                                      "layer\tdunei-verre-dunei-verrou\tnil\tnil\tnil",
                                                      "layer\tdunei-fond\tnil\tnil\ttrue",
                                                      "layer\tdunei-verrou\t-100\tnil\ttrue",
-                                                     "layer\tdunei-verrou-apparition\t-101\t1\ttrue",
                                                      "rule\tsans-agrandissement", "rule\tglisser-xwayland",
                                                      "rule\tfenetre-parametres",
                                                      # La fenêtre Paramètres, et elle seule, reprend la sortie commune.

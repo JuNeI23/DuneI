@@ -19,7 +19,8 @@ import "../Theme"
 // dessous, et la vraie reprend d'un coup à la fin, à l'identique (Presquile.qml) ; elle porte les
 // points des bureaux, comme la vraie au repos (maquette verrou-v1), inertes : un clic n'y change rien. Pas de
 // presqu'île sur un écran en vrai plein écran, où la vraie est cachée. Le calque prend le clavier en exclusif tant que
-// Verrou.prendClavier, et n'en fait rien : Échap n'annule rien ; il couvre tout l'écran, les clics ne passent pas.
+// Verrou.prendClavier et le transmet à la saisie du verrou, qui l'accueille avant la surface ; il signale aussi à chaque
+// image rendue que son écran est dessiné (Verrou.dessine) ; il couvre tout l'écran, les clics ne passent pas.
 // Entrées : modelData, l'écran (obligatoire). Sorties : la fenêtre de calque. Erreurs : aucune ; avant les jetons, la
 // presqu'île est vide et le fond est un aplat surface-base.
 // Dépendances : quickshell ≥ 0.3 (PanelWindow, WlrLayershell, Hyprland.monitorFor), Verrou, Contenu, P.Encoche,
@@ -59,6 +60,23 @@ PanelWindow {
             echelle: fenetre.echelle
             vu: false
             entreeAnimee: false
+        }
+
+        // Relais : signale à chaque image rendue du calque que cet écran est dessiné, pour que le verrou de session
+        // soit demandé derrière un bloc visible. Entrée : aucune. Sortie : Verrou.dessine(nom de l'écran). Erreurs :
+        // aucune ; sans pose, rien. Dépendances : Verrou.pose, Verrou.dessine.
+        Connections {
+            target: bloc.Window.window
+            onFrameSwapped: if (Verrou.pose) Verrou.dessine(modelData.name)
+        }
+
+        // Clavier : tant que le bloc le prend, chaque touche va à la saisie du verrou. Entrée : event (key, text).
+        // Sortie : aucune, l'événement est accepté. Erreurs : aucune. Dépendances : Verrou.prendClavier, Verrou.saisie.
+        focus: Verrou.prendClavier
+        Keys.onPressed: event => {
+            if (!Verrou.prendClavier) return
+            Verrou.saisie.touche(event.key, event.text)
+            event.accepted = true
         }
 
         // Presqu'île du bloc, sous son bord bas.
