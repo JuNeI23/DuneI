@@ -145,15 +145,17 @@ Singleton {
         return true
     }
 
-    // couvrir — part vers le bloc posé : clavier pris, contenu retiré, saisie vidée, retrait annulé, images du relais
-    // oubliées, reste de la coque fermé. Entrées : aucune. Sortie : couvre, clavier, vu, dessines ; signal tombe().
-    // Erreurs : aucune. Dépendances : retrait, saisie, C.Overlays.
+    // couvrir — part vers le bloc posé : clavier pris, contenu retiré, saisie annulée (vérification comprise), retrait
+    // et libération d'un verrou précédent annulés, images du relais oubliées, reste de la coque fermé. Entrées : aucune.
+    // Sortie : couvre, clavier, vu, dessines ; signal tombe(). Erreurs : aucune.
+    // Dépendances : retrait, liberation, saisie, C.Overlays.
     function couvrir() {
         retrait.stop()
+        liberation.stop()
         dessines = ({})
         remonte = false
         vu = false
-        saisie.vider()
+        saisie.annuler()
         clavier = true
         couvre = true
         if (C.Overlays.popover) C.Overlays.popover.ouvert = false
@@ -221,13 +223,15 @@ Singleton {
     // relever — rend le verrou et le clavier ; le contenu montré se retire en verrouRetrait, puis le bloc remonte.
     // Appelé par remonter, par le succès de PAM et par le suivi du compositeur, seuls autorisés à rendre le verrou.
     // Entrées : aucune. Sortie : remonte, voulu, clavier, vu. Erreurs : aucune ; bloc non voulu ou remontée déjà
-    // demandée, rien d'autre que le clavier rendu. Dépendances : retrait, saisie, finirRetrait.
+    // demandée, rien d'autre que le clavier rendu. La libération en attente et la saisie (vérification comprise) sont
+    // annulées : rien ne passe au verrou suivant. Dépendances : retrait, liberation, saisie, finirRetrait.
     function relever() {
         clavier = false
+        liberation.stop()
         if (!recouvert()) return
         remonte = true
         voulu = false
-        saisie.vider()
+        saisie.annuler()
         if (vu) { vu = false; retrait.restart() }
         else finirRetrait()
     }

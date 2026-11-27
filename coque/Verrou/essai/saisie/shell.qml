@@ -8,7 +8,7 @@ import "Verrou"
 // Rôle : charge Saisie sur le dossier de piles DUNEI_ESSAI_PAM (jamais /etc/pam.d) et la pilote par l'IPC « essai »
 // pour tests/test_verrou.py (SaisieTest). Elle compte les succès et les secousses.
 // Entrées : DUNEI_TOKENS_DIR, DUNEI_ESSAI_PAM ; IPC « essai » : pret(bool), pile(nom), delais(repos, message, garde),
-// taper(texte), entree(), retour(), echap(), etat() (JSON {points, ouvert, verifie, message, reussis, secousses}).
+// taper(texte), entree(), retour(), echap(), annuler(), etat() (JSON {points, ouvert, verifie, message, reussis, secousses}).
 // Sorties : « essai : prêt » au démarrage. Erreurs : celles de Theme et de Saisie, dans le journal.
 // Dépendances : quickshell ≥ 0.3 (IpcHandler), Saisie, Theme ; liens essai/saisie/ vers les modules de la coque.
 ShellRoot {
@@ -45,6 +45,8 @@ ShellRoot {
         function entree(): void { saisie.touche(Qt.Key_Return, "\r") }
         function retour(): void { saisie.touche(Qt.Key_Backspace, "\b") }
         function echap(): void { saisie.touche(Qt.Key_Escape, "\u001b") }
+        // annuler — abandonne la saisie, vérification comprise. Entrées, sortie : aucune.
+        function annuler(): void { saisie.annuler() }
         // etat — l'état de la saisie et les compteurs. Sortie : JSON.
         function etat(): string {
             return JSON.stringify({ points: saisie.points, ouvert: saisie.ouvert, verifie: saisie.verifie,

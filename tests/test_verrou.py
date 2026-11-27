@@ -255,7 +255,9 @@ class ControleurTest(EssaiCoque, unittest.TestCase):
 
     def test_chute_puis_verrou(self):
         """tomber(1) : le bloc tombe et se pose en moins d'une seconde, le verrou est demandé au moins verrouRelais après
-        la pose, puis tenu ; le contenu se montre, animé, et le bloc rend le clavier à la surface du verrou."""
+        la pose, puis tenu ; le contenu se montre, animé, et le bloc rend le clavier à la surface du verrou.
+        Les bornes basses des délais prennent 0,9 × le délai : une minuterie grossière de Qt peut partir jusqu'à 5 % en
+        avance."""
         self.verrou("tomber", 1)
         debut = time.monotonic()
         m = self.mesure()
@@ -411,6 +413,80 @@ class ControleurTest(EssaiCoque, unittest.TestCase):
         e, m = self.etat(), self.mesure()
         self.assertEqual((e["pose"], e["ordre"], m["anime"]), (True, 2, False))
 
+    def test_entree_en_attente_ne_survit_pas(self):
+        """Entrée tapée avant le verrou, verrou refusé, remonter : l'Entrée en attente et le mot de passe sont oubliés ;
+        au verrou suivant, rien ne déverrouille sans nouvelle saisie (la pile « succes » accepterait tout)."""
+        self.appel("pile", "succes")
+        self.appel("refuser", "true")
+        self.verrou("tomber", 1)
+        self.appel("taper", "x")
+        self.appel("entree")
+        self.jusqua(lambda: self.mesure()["voulu"], "verrou demandé")
+        self.verrou("remonter", 1)
+        self.jusqua(lambda: not self.etat()["couvre"], "remontée")
+        self.appel("refuser", "false")
+        self.verrou("tomber", 2)
+        self.tenu()
+        time.sleep(0.5)
+        m = self.mesure()
+        self.assertEqual((self.etat()["couvre"], m["voulu"], m["points"], m["verifie"]), (True, True, 0, False))
+
+    def test_pam_en_cours_ne_survit_pas(self):
+        """Une vérification en cours (pile « lente ») quand le suivi rend la session est abandonnée : au verrou suivant,
+        le champ est libre et rien ne déverrouille sans nouvelle saisie."""
+        self.appel("pile", "lente")
+        self.verrou("tomber", 1)
+        self.tenu()
+        self.appel("taper", "x")
+        self.appel("entree")
+        self.jusqua(lambda: self.mesure()["verifie"], "vérification en cours")
+        self.appel("lecture", "false")
+        self.jusqua(lambda: not self.etat()["couvre"], "remontée", 3.5)
+        self.assertFalse(self.mesure()["verifie"])
+        self.appel("lecture", "true")
+        self.appel("pile", "succes")
+        self.verrou("tomber", 2)
+        self.tenu()
+        time.sleep(0.5)
+        m = self.mesure()
+        self.assertEqual((self.etat()["couvre"], m["voulu"], m["points"], m["verifie"]), (True, True, 0, False))
+
+    def test_liberation_ne_rend_pas_le_verrou_suivant(self):
+        """Succès de PAM, puis, avant verrouRetrait, verrou perdu, remontée et nouveau verrou sec : la libération du
+        premier verrou ne rend pas le second."""
+        self.appel("reagir", "reprendreAuSucces")
+        self.appel("pile", "succes")
+        self.verrou("tomber", 1)
+        self.tenu()
+        self.appel("taper", "x")
+        self.appel("entree")
+        self.jusqua(lambda: self.etat()["ordre"] == 2, "nouveau verrou")
+        time.sleep(self.delais["verrouRetrait"] / 1000 + 0.4)
+        e = self.etat()
+        self.assertEqual((e["couvre"], e["tient"], e["remonte"], self.mesure()["voulu"]), (True, True, False, True))
+
+    def test_remonter_pendant_le_relais(self):
+        """remonter reçu le bloc posé, pendant le relais : le verrou n'est jamais demandé et le bloc remonte."""
+        self.appel("attendre", "true")
+        self.appel("reagir", "remonterALaPose")
+        self.verrou("tomber", 1)
+        self.jusqua(lambda: self.etat()["pose"] or self.etat()["remonte"], "bloc posé")
+        self.jusqua(lambda: not self.mesure()["montre"], "bloc caché")
+        time.sleep(self.delais["verrouRelaisMax"] / 1000 + 0.1)
+        self.assertEqual((self.mesure()["voulu"], self.mesure()["tVoulu"]), (False, 0))
+
+    def test_tomber_pendant_le_retrait(self):
+        """Un tomber reçu pendant le retrait du contenu (suivi du compositeur) recouvre le bloc, resté à sa place, et le
+        verrou est repris."""
+        self.appel("reagir", "tomberALaRemontee")
+        self.verrou("tomber", 1)
+        self.tenu()
+        self.appel("lecture", "false")
+        self.jusqua(lambda: self.etat()["ordre"] == 2, "nouvelle chute", 3.5)
+        m = self.tenu()
+        e = self.etat()
+        self.assertEqual((e["couvre"], e["remonte"], m["position"]), (True, False, 1))
+
     def test_montre_sans_battement(self):
         """Le calque du bloc se mappe une fois à la chute et se démappe une fois, après la fin d'actif : jamais faux
         tant qu'actif, quel que soit l'ordre des notifications."""
@@ -549,6 +625,30 @@ class SaisieTest(EssaiCoque, unittest.TestCase):
         self.appel("pret", str(pret).lower())
         self.appel("taper", texte)
         self.appel("entree")
+
+    def test_annuler_pendant_pam(self):
+        """annuler pendant une vérification (pile « lente ») vide le champ et la termine ; l'ancienne conversation ne
+        rend ni succès ni secousse, et une nouvelle saisie se vérifie normalement."""
+        self.saisir("lente", "x")
+        self.jusqua(lambda: self.etat()["verifie"], "vérification en cours")
+        self.appel("annuler")
+        e = self.etat()
+        self.assertEqual((e["points"], e["verifie"], e["ouvert"]), (0, False, False))
+        time.sleep(0.5)
+        self.assertEqual((self.etat()["reussis"], self.etat()["secousses"]), (0, 0))
+        self.saisir("succes", "a")
+        self.jusqua(lambda: self.etat()["reussis"] == 1, "nouvelle vérification réussie")
+        self.assertEqual(self.etat()["secousses"], 0)
+
+    def test_annuler_entree_en_attente(self):
+        """annuler oublie une Entrée en attente du verrou : le verrou acquis ensuite ne lance aucune vérification."""
+        self.saisir("succes", "x", pret=False)
+        self.assertTrue(self.etat()["verifie"])
+        self.appel("annuler")
+        self.appel("pret", "true")
+        time.sleep(0.5)
+        e = self.etat()
+        self.assertEqual((e["reussis"], e["verifie"], e["points"]), (0, False, 0))
 
     def test_question_juste(self):
         """« bon » puis Entrée : un succès, le champ vidé. Entrées, sortie : aucune. Erreurs : échec."""

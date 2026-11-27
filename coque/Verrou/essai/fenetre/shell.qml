@@ -14,7 +14,7 @@ import "Verrou"
 // (Date.now, en ms) de la pose, de la demande du verrou, du retrait du contenu et du verrou rendu.
 // Entrées : DUNEI_TOKENS_DIR, DUNEI_ETAT_DIR et DUNEI_ESSAI_PAM ; IPC « essai » : pret, lecture, lanceur, recherche,
 // position, reduit, demarrer, ouvrir, ouverts, mesure, montres, trace, pile, taper, entree, dessiner, dessinAuto,
-// attendre, refuser, ecrans.
+// attendre, refuser, reagir, ecrans.
 // Sorties : « essai : prêt » au démarrage. Erreurs : celles de Theme et de Verrou, dans le journal.
 // Dépendances : quickshell ≥ 0.3 (IpcHandler), Verrou, Overlays, Theme ; liens essai/fenetre/ vers les modules de la
 // coque, car Quickshell ne suit pas les imports hors du dossier de la coque.
@@ -31,6 +31,9 @@ ShellRoot {
     property double tVuFaux: 0
     property double tVouluFaux: 0
     property bool dessinAuto: false
+    // Réaction enchaînée dans la coque, sans latence d'IPC : « remonterALaPose », « tomberALaRemontee »,
+    // « reprendreAuSucces », ou vide.
+    property string reaction: ""
 
     // Component.onCompleted — retire calques, verrou de session et clavier, pose une lecture « session tenue » et les
     // piles factices (un dossier inexistant si DUNEI_ESSAI_PAM manque), signale la coque prête.
@@ -59,6 +62,16 @@ ShellRoot {
             if (!Verrou.pose) return
             essai.tPose = Date.now()
             if (essai.dessinAuto) for (const e of Quickshell.screens) Verrou.dessine(e.name)
+            if (essai.reaction === "remonterALaPose") Qt.callLater(() => Verrou.remonter(Verrou.ordre))
+        }
+        // Réaction au départ de la remontée : la session est retenue et un nouveau verrou tombe pendant le retrait,
+        // au tour de boucle suivant, comme une IPC (jamais au milieu de relever).
+        function onRemonteChanged() {
+            if (!Verrou.remonte || essai.reaction !== "tomberALaRemontee") return
+            Qt.callLater(() => {
+                Verrou.lecture = ["echo", "{\"locked\": true}"]
+                Verrou.tomber(Verrou.ordre + 1)
+            })
         }
         function onVouluChanged() { if (Verrou.voulu) essai.tVoulu = Date.now(); else essai.tVouluFaux = Date.now() }
         function onVuChanged() { if (!Verrou.vu) essai.tVuFaux = Date.now() }
@@ -72,6 +85,21 @@ ShellRoot {
         property bool ouvert: false
     }
     QtObject { id: attention; property string famille: "attention"; property bool ouvert: false }
+
+    Connections {
+        target: Verrou.saisie
+        // Réaction au succès de PAM : verrou perdu, remontée, puis nouveau verrou sec, le tout avant verrouRetrait.
+        // Entrées : aucune. Sortie : aucune. Dépendances : Verrou.
+        function onReussi() {
+            if (essai.reaction !== "reprendreAuSucces") return
+            Qt.callLater(() => {
+                Verrou.refuserEssai = true
+                Verrou.remonter(Verrou.ordre)
+                Verrou.refuserEssai = false
+                Verrou.poserSec(Verrou.ordre + 1)
+            })
+        }
+    }
 
     IpcHandler {
         target: "essai"
@@ -118,6 +146,7 @@ ShellRoot {
                                     montre: Verrou.montre, clavier: Verrou.clavier, vu: Verrou.vu,
                                     voulu: Verrou.voulu, tient: Verrou.tient, anime: Verrou.anime,
                                     points: Verrou.saisie.points, message: Verrou.saisie.message,
+                                    verifie: Verrou.saisie.verifie,
                                     tPose: essai.tPose, tVoulu: essai.tVoulu, tVuFaux: essai.tVuFaux,
                                     tVouluFaux: essai.tVouluFaux })
         }
@@ -142,6 +171,9 @@ ShellRoot {
 
         // refuser — mode d'essai refuserEssai : le verrou demandé n'est jamais tenu. Entrée : oui.
         function refuser(oui: bool): void { Verrou.refuserEssai = oui }
+
+        // reagir — choisit la réaction enchaînée dans la coque (voir reaction). Entrée : nom, ou vide.
+        function reagir(nom: string): void { essai.reaction = nom }
 
         // ecrans — nombre d'écrans de Quickshell.screens. Sortie : texte.
         function ecrans(): string { return String(Quickshell.screens.length) }

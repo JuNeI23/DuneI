@@ -10,7 +10,7 @@ import "verrou.js" as Logique
 // de la vérification (une pile PAM muette est abandonnée). Aucune touche n'est lue pendant la vérification.
 // Entrées : pret (le verrou de session est acquis : Entrée avant lui attend), pile (nom de la pile PAM, « hyprlock »),
 // dossierPile (son dossier, « /etc/pam.d »), repos, dureeMessage et garde (délais en ms, les jetons par défaut) ;
-// touche(key, texte) et vider().
+// touche(key, texte), vider() et annuler().
 // Sorties : points (nombre de caractères saisis), ouvert, verifie, message ; signaux secoue() (échec, pour la
 // secousse) et reussi() (le verrou peut se lever). Erreurs : tout échec de PAM est affiché « Vérification impossible »,
 // le champ restant utilisable. Dépendances : quickshell ≥ 0.3 (Quickshell.Services.Pam), Theme.motion.delays, verrou.js.
@@ -67,6 +67,23 @@ Item {
     // vider — referme et vide le champ sans passer par une touche (le contrôleur le demande, par exemple au retrait).
     // Entrées, sortie : aucune. Erreurs : aucune. Dépendances : appliquer.
     function vider() { appliquer(Logique.frappe(etat, { nature: "repos", texte: "" })) }
+
+    // annuler — abandonne tout, vérification comprise : la conversation PAM en cours est abandonnée, une Entrée en
+    // attente du verrou est oubliée, le texte est effacé et les minuteries s'arrêtent (le contrôleur l'appelle à chaque
+    // début et fin de verrou, pour que rien ne passe d'un verrou au suivant). Relevé : abort() est synchrone, rend
+    // active faux et n'émet ni completed ni error ; une issue tardive serait de toute façon ignorée par terminer, la
+    // vérification n'étant plus en cours. Entrées, sortie : aucune. Erreurs : aucune.
+    // Dépendances : pam, delaiGarde, repos, effacement.
+    function annuler() {
+        enAttente = false
+        delaiGarde.stop()
+        if (pam.active) pam.abort()
+        repondu = false
+        messagePam = ""
+        repos.stop()
+        effacement.stop()
+        etat = ({ texte: "", ouvert: false, verifie: false, message: "" })
+    }
 
     // lancer — ouvre la conversation PAM, dès que le verrou est acquis, et arme la garde.
     // Entrées, sortie : aucune. Erreurs : start() faux (pile introuvable) donne « impossible ».
