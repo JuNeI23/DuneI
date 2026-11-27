@@ -9,7 +9,7 @@ import "Verrou"
 // Rôle : pilote Contenu par l'IPC « essai » pour tests/test_verrou.py (ContenuTest).
 // Entrées : DUNEI_TOKENS_DIR ; IPC « essai » : vu(bool), ouvrir(points), fermer(), message(texte), secouer(),
 // lecteurs(json), reduit(bool), mesure() (JSON {champLargeur, champOpacite, points, message, mediaVisible, titre,
-// artiste, decalageChamp}).
+// artiste, ligneLargeur, decalageChamp}).
 // Sorties : « essai : prêt » au démarrage. Erreurs : celles de Theme et de Contenu, dans le journal.
 // Dépendances : quickshell ≥ 0.3 (IpcHandler), Contenu, Media, Theme ; liens essai/contenu/ vers les modules de la coque.
 ShellRoot {

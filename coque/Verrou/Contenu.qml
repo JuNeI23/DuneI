@@ -53,7 +53,8 @@ Item {
     // Mesures lues par les essais : le champ, ses points, le message et la ligne du média tels qu'affichés.
     readonly property var mesures: ({ champLargeur: _champ.width, champOpacite: _champ.opacity,
                                       message: texteMessage.text, mediaVisible: ligne.visible,
-                                      titre: ligne.titre, artiste: ligne.artiste })
+                                      titre: ligne.titre, artiste: ligne.artiste,
+                                      ligneLargeur: ligne.width })
 
     // Entree — un élément qui apparaît : un ressort de déplacement d et un ressort de fondu f, de 0 (retiré) à 1
     // (posé), lancés après un retard à l'arrivée, sans retard au retrait.
@@ -215,7 +216,10 @@ Item {
 
         anchors.horizontalCenter: parent.horizontalCenter
         y: (contenu.v.mediaHaut ?? 0) + (1 - eMedia.d) * (contenu.v.courseMedia ?? 0)
-        width: Math.min(rang.implicitWidth, contenu.v.mediaLargeur ?? 0)
+        // Largeur naturelle des textes (implicitWidth ignore l'ellipse), sans lire celle de la rangée : aucun cycle.
+        readonly property real naturelle: (vignettePochette.visible ? vignettePochette.width + (contenu.v.mediaEcart ?? 0) : 0)
+            + texteTitre.implicitWidth + (texteArtiste.text !== "" ? (contenu.v.mediaEcart ?? 0) + texteArtiste.implicitWidth : 0)
+        width: Math.min(naturelle, contenu.v.mediaLargeur ?? 0)
         height: Math.max(vignettePochette.height, texteTitre.implicitHeight)
         opacity: eMedia.f
         visible: opacity > 0
@@ -240,9 +244,9 @@ Item {
             transition: "overlay"
             nature: "fondu"
             cible: 1
-            // onMovingChanged — le fondu de sortie fini, change de morceau et ramène la ligne. Entrées : aucune.
+            // onMovingChanged — le fondu de sortie fini, change de morceau et ramène la ligne (différé d'un tour de boucle : pas de cycle sur moving). Entrées : aucune.
             // Sortie : aucune. Erreurs : aucune. Dépendances : ligne.poserTexte.
-            onMovingChanged: if (!moving && cible === 0) { ligne.poserTexte(); cible = 1 }
+            onMovingChanged: if (!moving && cible === 0) Qt.callLater(() => { ligne.poserTexte(); cible = 1 })
         }
 
         Row {

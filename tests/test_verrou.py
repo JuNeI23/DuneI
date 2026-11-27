@@ -578,6 +578,18 @@ class ContenuTest(EssaiCoque, unittest.TestCase):
         m = self.jusqua(lambda: (lambda m: m if m["mediaVisible"] else None)(self.mesure()), "média visible", 3)
         self.assertEqual((m["titre"], m["artiste"]), ("Time", "· Hans Zimmer"))
 
+    def test_media_largeur(self):
+        """La ligne du média a une largeur propre, bornée à 640 px et atteinte par un titre très long (elliptique), sans
+        boucle de liaison dans le journal."""
+        self.appel("vu", "true")
+        self.appel("lecteurs", json.dumps({"isPlaying": True, "trackTitle": "Time", "trackArtist": "Hans Zimmer"}))
+        m = self.jusqua(lambda: (lambda m: m if m["mediaVisible"] and m["ligneLargeur"] > 0 else None)(self.mesure()),
+                        "ligne mesurée", 3)
+        self.assertLessEqual(m["ligneLargeur"], 640)
+        self.appel("lecteurs", json.dumps({"isPlaying": True, "trackTitle": "Time " * 60, "trackArtist": "Hans Zimmer"}))
+        self.jusqua(lambda: self.mesure()["ligneLargeur"] == 640, "ligne bornée à 640")
+        self.assertNotIn("binding loop", self.journal().lower())
+
     def test_secousse_et_reduit(self):
         """La secousse décale le champ puis le rend à 0 ; en mouvement réduit, il ne bouge pas."""
         self.appel("vu", "true")
