@@ -62,9 +62,11 @@ FAKES = {
     # une fois, pour de bon), « revient » (comme meurt, puis tient de nouveau). tomber et poserSec posent le bloc sous
     # un ordre qui n'est pas périmé ; remonter est ignoré sous le verrou ; etat rend {pose, ordre, tient, couvre,
     # remonte} et, si FAKE_VEILLE=1, annonce la veille en touchant verrou-sec. qs -p (rideau) est consigné, se dit posé
-    # et vit jusqu'à être tué.
+    # sur sa sortie, consigne « rideau posé <DUNEI_RIDEAU_COULEUR> », puis vit jusqu'à un TERM, consigné
+    # « rideau TERM ».
     "qs": LOG.format(name="qs") + '. "$FAKE_DIR/bin/fake-coque"\n'
-          '[ "$1" = -p ] && { echo "rideau : posé"; exec sleep 30; }\n'
+          '[ "$1" = -p ] && { trap \'echo "rideau TERM" >> "$FAKE_LOG"; exit 0\' TERM; echo "rideau : posé"\n'
+          '    echo "rideau posé $DUNEI_RIDEAU_COULEUR" >> "$FAKE_LOG"; while :; do sleep 0.02; done; }\n'
           'case $mode in absente) exit 255 ;; muette) exec sleep 1 ;; esac\n'
           '[ "$mode" = fige ] && [ "$6" = etat ] && exec sleep 1\n'
           '[ "$mode" = tard ] && [ $((now - $(cat "$D/debut"))) -lt "${FAKE_TARD:-500}" ] && exit 255\n'
@@ -129,9 +131,12 @@ DELAIS = {"verrouAttente": 1500}
 
 
 def etape(ligne: str) -> str:
-    """Nom court d'un appel consigné : méthode IPC, « rideau » pour qs -p, « kill -TERM » ou « kill -USR1 » pour un
-    signal reçu par hyprlock, sinon le nom de l'outil."""
+    """Nom court d'un appel consigné : méthode IPC, « rideau » pour qs -p, « rideau posé » et « rideau TERM » pour le
+    rideau prêt puis retiré, « kill -TERM » ou « kill -USR1 » pour un signal reçu par hyprlock, sinon le nom de
+    l'outil."""
     mots = ligne.split()
+    if mots[0] == "rideau":
+        return " ".join(mots[:2])
     if mots[0] == "qs":
         return "rideau" if mots[1] == "-p" else mots[6]
     if mots[0] == "hyprlock" and mots[1:2] in (["TERM"], ["USR1"]):
@@ -238,6 +243,20 @@ class DuneiVerrouTest(unittest.TestCase):
     def lancements(self) -> list[str]:
         """Lignes consignées par chaque lancement de hyprlock."""
         return [c for c in self.calls() if c.startswith("hyprlock -")]
+
+    def jetons(self, choix: dict | None):
+        """Installe des jetons de coque réduits (deux familles, deux moments) et, si choix est donné, theme.json.
+
+        Entrées : choix — {famille, moment}, ou None pour ne pas écrire theme.json.
+        Sortie : aucune ; fichiers écrits sous config/dunei. Erreurs : aucune. Dépendances : json."""
+        theme = lambda c: {"color": {"surfaceBase": c}}
+        tokens = {"defaut": {"famille": "thematisee", "moment": "nuit"}, "familles": ["thematisee", "dominante"],
+                  "moments": ["nuit", "jour"],
+                  "themes": {"thematisee": {"nuit": theme("#0f0703"), "jour": theme("#e6e6e6")},
+                             "dominante": {"nuit": theme("#040404")}}}
+        (self.t / "config/dunei/coque-tokens.json").write_text(json.dumps(tokens), encoding="utf-8")
+        if choix is not None:
+            (self.t / "config/dunei/theme.json").write_text(json.dumps(choix), encoding="utf-8")
 
     def lancement(self) -> int:
         """Heure (ms) du premier lancement de hyprlock."""
@@ -470,15 +489,99 @@ class DuneiVerrouTest(unittest.TestCase):
         self.assertEqual(len(self.lancements()), 1)
         self.assertSousSuite(["pgrep", "remonter"], self.etapes())
 
-    def test_verrou_orphelin(self):
-        # Session tenue sans verrouilleur vivant ni coque : hyprlock la reprend en verrou sec.
+    def test_deja_tenu_sans_verrouilleur(self):
+        # Session tenue sans verrouilleur vivant ni coque : rideau d'abord, à la couleur surface-base du thème choisi
+        # par theme.json, puis hyprlock ; le rideau est retiré à onLockLocked.
         (self.t / "locked").write_text("true\n")
+        self.jetons({"famille": "thematisee", "moment": "jour"})
         res = self.run_script(FAKE_COQUE="absente")
         self.assertEqual(res.returncode, 0, res.stderr)
         etapes = self.etapes()
         self.assertNotIn("tomber", etapes)
-        self.assertSousSuite(["pgrep", "poserSec", "hyprlock", "remonter"], etapes)
-        self.assertIn(f"pgrep -u {os.getuid()} -x hyprlock", self.calls())
+        self.assertNotIn("poserSec", etapes)
+        self.assertSousSuite(["rideau", "rideau posé", "hyprlock", "rideau TERM", "remonter"], etapes)
+        self.assertIn(f"qs -p {self.t / 'config/quickshell/dunei/Rideau/shell.qml'}", self.calls())
+        self.assertIn("rideau posé #e6e6e6", self.calls())
+        self.assertEqual(len(self.lancements()), 1)
+
+    def test_couleur_du_rideau_par_defaut(self):
+        # theme.json absent : thème par défaut des jetons ; jetons illisibles : noir.
+        (self.t / "locked").write_text("true\n")
+        self.jetons(None)
+        self.run_script(FAKE_COQUE="absente")
+        self.assertIn("rideau posé #0f0703", self.calls())
+        self.log.unlink()
+        (self.t / "locked").write_text("true\n")
+        (self.t / "config/dunei/coque-tokens.json").write_text("{", encoding="utf-8")
+        self.run_script(FAKE_COQUE="absente")
+        self.assertIn("rideau posé black", self.calls())
+
+    def test_deja_tenu_par_la_coque(self):
+        # La coque tient déjà le verrou (relancée sur une session tenue, sous son propre ordre) : on la suit, sans
+        # hyprlock ni rideau, puis le bloc remonte.
+        (self.t / "locked").write_text("true\n")
+        (self.t / "coque").mkdir()
+        maintenant = f"{int(time.time() * 1000)}\n"
+        for nom in ("couvre", "pris"):
+            (self.t / "coque" / nom).write_text(maintenant)
+        (self.t / "coque" / "ordre").write_text("0\n")
+        res = self.run_script()
+        self.assertEqual(res.returncode, 0, res.stderr)
+        etapes = self.etapes()
+        self.assertEqual(self.lancements(), [])
+        self.assertNotIn("rideau", etapes)
+        self.assertNotIn("tomber", etapes)
+        self.assertSousSuite(["etat", "remonter"], etapes)
+
+    def test_deja_tenu_coque_vivante(self):
+        # Session tenue sans verrouilleur, coque vivante sans bloc : elle reçoit poserSec et reprend le verrou.
+        (self.t / "locked").write_text("true\n")
+        res = self.run_script()
+        self.assertEqual(res.returncode, 0, res.stderr)
+        self.assertEqual(self.lancements(), [])
+        self.assertNotIn("tomber", self.etapes())
+        self.assertSousSuite(["etat", "poserSec", "etat", "remonter"], self.etapes())
+
+    # Garde : coque disparue pendant le verrou.
+
+    def test_coque_revient_a_temps(self):
+        # La coque meurt verrou tenu et revient 1 s plus tard, sous l'ordre 0 : poserSec lui rend l'ordre courant,
+        # elle tient de nouveau ; ni rideau ni hyprlock.
+        res = self.run_script(FAKE_COQUE="revient", FAKE_TENUE="2000")
+        self.assertEqual(res.returncode, 0, res.stderr)
+        etapes = self.etapes()
+        self.assertEqual(self.lancements(), [])
+        self.assertNotIn("rideau", etapes)
+        self.assertSousSuite(["tomber", "etat", "poserSec", "etat", "remonter"], etapes)
+
+    def test_coque_ne_revient_pas(self):
+        # La coque meurt verrou tenu : vers verrouReprise (3 s), rideau posé, puis hyprlock, puis rideau retiré ;
+        # hyprlock rend la session, le bloc est remonté, code 0. Sans jetons installés, le rideau est noir.
+        debut = time.time() * 1000
+        res = self.run_script(FAKE_COQUE="meurt")
+        self.assertEqual(res.returncode, 0, res.stderr)
+        etapes = self.etapes()
+        self.assertSousSuite(["tomber", "rideau", "rideau posé", "hyprlock", "rideau TERM", "remonter"], etapes)
+        self.assertEqual(len(self.lancements()), 1)
+        self.assertGreaterEqual(self.lancement() - debut, 3000)
+        self.assertLess(self.lancement() - debut, 4000)
+        self.assertIn("rideau posé black", self.calls())
+
+    def test_hyprlock_tombe_coque_reprend(self):
+        # --sec : hyprlock garde la session, la coque couvre sans encore tenir ; hyprlock sort en laissant le verrou :
+        # la coque, vivante, reçoit poserSec et reprend la garde, sans second hyprlock.
+        res = self.run_script("--sec", FAKE_HYPRLOCK="garde", FAKE_PRISE="1000")
+        self.assertEqual(res.returncode, 0, res.stderr)
+        etapes = self.etapes()
+        self.assertEqual(len(self.lancements()), 1)
+        self.assertEqual(etapes.count("poserSec"), 2)
+        self.assertSousSuite(["hyprlock", "poserSec", "poserSec", "remonter"], etapes)
+
+    def test_unite_restart_always(self):
+        # Une coque qui quitte pendant le verrou, même proprement, est relancée par systemd.
+        unite = (ROOT / "config/systemd/user/dunei-coque.service").read_text(encoding="utf-8")
+        self.assertIn("Restart=always", unite.splitlines())
+        self.assertNotIn("Restart=on-failure", unite)
 
     # Second appel et placement.
 

@@ -665,7 +665,7 @@ class BarreStructureTest(unittest.TestCase):
         self.assertIn("Variants", shell)
         self.assertIn("Presquile", shell)
         unite = (ROOT / "config" / "systemd" / "user" / "dunei-coque.service").read_text(encoding="utf-8")
-        for ligne in ("ExecStart=/usr/bin/qs -n -c dunei", "PartOf=graphical-session.target", "Restart=on-failure",
+        for ligne in ("ExecStart=/usr/bin/qs -n -c dunei", "PartOf=graphical-session.target", "Restart=always",
                       "MemoryTHP=madvise"):
             self.assertIn(ligne, unite)
         self.assertEqual(unite.splitlines()[1].split("—")[0].strip(), "# Posé par DuneI depuis config/")
