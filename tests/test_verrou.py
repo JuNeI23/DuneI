@@ -497,6 +497,114 @@ class SaisieTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(self.etat()["reussis"], 1)
 
 
+@unittest.skipUnless(os.environ.get("WAYLAND_DISPLAY") and QS, "session Wayland et Quickshell requis")
+class ContenuTest(EssaiCoque, unittest.TestCase):
+    """Le contenu du verrou (Contenu.qml) : champ caché, points, message, secousse et ligne du média, sur une fausse
+    saisie et de faux lecteurs : jamais le bus MPRIS réel."""
+
+    essai = ROOT / "coque" / "Verrou" / "essai" / "contenu"
+    teintes = (55,)
+
+    def setUp(self):
+        """Lance la coque d'essai et attend qu'elle réponde. Entrées : aucune. Sortie : aucune. Erreurs : échec au
+        délai. Dépendances : EssaiCoque.setUp, installer, lancer, attendre, jusqua."""
+        super().setUp()
+        self.installer(55)
+        self.lancer(self.dir)
+        self.attendre("essai : prêt")
+        self.jusqua(lambda: self.mesure() is not None, "coque joignable")
+
+    def appel(self, fonction: str, *args) -> str:
+        """Appelle l'IPC « essai ». Entrées : fonction, args. Sortie : texte rendu. Erreurs : CalledProcessError."""
+        return subprocess.run([QS, "ipc", "--pid", str(self.proc.pid), "call", "essai", fonction, *map(str, args)],
+                              check=True, capture_output=True, text=True, timeout=DELAI).stdout.strip()
+
+    def mesure(self):
+        """Mesures du contenu, ou None tant que l'IPC ne répond pas. Sortie : dict ou None."""
+        try:
+            return json.loads(self.appel("mesure"))
+        except (subprocess.CalledProcessError, json.JSONDecodeError):
+            return None
+
+    def jusqua(self, condition, message: str, delai: float = DELAI):
+        """Attend qu'une condition soit vraie. Entrées : condition, message, delai (s). Sortie : la valeur.
+        Erreurs : échec du test au délai. Dépendances : time."""
+        fin = time.monotonic() + delai
+        while time.monotonic() < fin:
+            valeur = condition()
+            if valeur:
+                return valeur
+            time.sleep(0.05)
+        self.fail(f"{message} (mesure : {self.mesure()})\n{self.journal()}")
+
+    def test_champ_cache_au_repos(self):
+        """Fermé, le champ est invisible."""
+        self.appel("vu", "true")
+        time.sleep(0.3)
+        self.assertEqual(self.mesure()["champOpacite"], 0)
+
+    def test_champ_s_ouvre(self):
+        """Ouvert, le champ atteint 280 px et l'opacité 1 en moins d'une seconde."""
+        self.appel("vu", "true")
+        self.appel("ouvrir", 0)
+        self.jusqua(lambda: (lambda m: m["champLargeur"] == 280 and m["champOpacite"] == 1)(self.mesure()),
+                    "champ ouvert", 1.5)
+
+    def test_points(self):
+        """Trois caractères saisis donnent trois points."""
+        self.appel("vu", "true")
+        self.appel("ouvrir", 3)
+        self.jusqua(lambda: self.mesure()["points"] == 3, "trois points")
+
+    def test_message(self):
+        """Le message de la saisie est affiché."""
+        self.appel("vu", "true")
+        self.appel("message", "Mot de passe incorrect")
+        self.jusqua(lambda: self.mesure()["message"] == "Mot de passe incorrect", "message affiché")
+
+    def test_media_absent_sans_lecteur(self):
+        """Ni liste vide ni lecteur à l'arrêt ne montrent la ligne du média."""
+        self.appel("vu", "true")
+        for lecteurs in ("[]", '{"isPlaying": false}'):
+            self.appel("lecteurs", lecteurs)
+            time.sleep(1.2)
+            self.assertFalse(self.mesure()["mediaVisible"], lecteurs)
+
+    def test_media_joue(self):
+        """Un lecteur en lecture montre son titre et son artiste précédé de « · »."""
+        self.appel("vu", "true")
+        self.appel("lecteurs", json.dumps({"isPlaying": True, "trackTitle": "Time",
+                                            "trackArtist": "Hans Zimmer", "trackArtUrl": ""}))
+        m = self.jusqua(lambda: (lambda m: m if m["mediaVisible"] else None)(self.mesure()), "média visible", 3)
+        self.assertEqual((m["titre"], m["artiste"]), ("Time", "· Hans Zimmer"))
+
+    def test_secousse_et_reduit(self):
+        """La secousse décale le champ puis le rend à 0 ; en mouvement réduit, il ne bouge pas."""
+        self.appel("vu", "true")
+        self.appel("ouvrir", 2)
+        self.jusqua(lambda: self.mesure()["champLargeur"] == 280, "champ ouvert")
+        self.appel("secouer")
+        vus = set()
+        fin = time.monotonic() + 0.6
+        while time.monotonic() < fin:
+            vus.add(round(self.mesure()["decalageChamp"]))
+            time.sleep(0.03)
+        self.assertTrue(any(v != 0 for v in vus), vus)
+        self.assertEqual(self.mesure()["decalageChamp"], 0)
+        self.appel("reduit", "true")
+        self.appel("secouer")
+        fin = time.monotonic() + 0.6
+        while time.monotonic() < fin:
+            self.assertEqual(self.mesure()["decalageChamp"], 0)
+            time.sleep(0.05)
+
+    def test_plus_de_pastille(self):
+        """Le contenu ne porte plus ni pastille, ni nom d'utilisateur."""
+        texte = (ROOT / "coque" / "Verrou" / "Contenu.qml").read_text(encoding="utf-8")
+        for mot in ("pastille", "utilisateur", "nomTaille"):
+            self.assertNotIn(mot, texte)
+
+
 class SourceTest(unittest.TestCase):
     """Les sources des calques du verrou et des modules qu'il touche, lues par expressions régulières."""
 
@@ -505,15 +613,11 @@ class SourceTest(unittest.TestCase):
         return (ROOT / "coque" / chemin).read_text(encoding="utf-8")
 
     def test_calques(self):
-        """Bloc : dunei-verrou en couche Overlay ; apparition : dunei-verrou-apparition, Overlay, masque vide, sans
-        clavier."""
-        bloc, apparition = self.lire("Verrou/Bloc.qml"), self.lire("Verrou/Apparition.qml")
+        """Bloc : dunei-verrou en couche Overlay ; le calque d'apparition n'existe plus."""
+        bloc = self.lire("Verrou/Bloc.qml")
         self.assertRegex(bloc, r'WlrLayershell\.namespace:\s*"dunei-verrou"')
         self.assertRegex(bloc, r"WlrLayershell\.layer:\s*WlrLayer\.Overlay")
-        self.assertRegex(apparition, r'WlrLayershell\.namespace:\s*"dunei-verrou-apparition"')
-        self.assertRegex(apparition, r"WlrLayershell\.layer:\s*WlrLayer\.Overlay")
-        self.assertRegex(apparition, r"mask:\s*Region\s*\{\s*\}")
-        self.assertRegex(apparition, r"WlrLayershell\.keyboardFocus:\s*WlrKeyboardFocus\.None")
+        self.assertFalse((ROOT / "coque" / "Verrou" / "Apparition.qml").exists())
 
     def test_lectures_bornees(self):
         """La lecture du compositeur et la recherche d'un lanceur (pgrep, qui couvre le script dans son unité comme hors

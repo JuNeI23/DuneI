@@ -1,54 +1,59 @@
 import QtQuick
+import QtQuick.Effects
 import Quickshell
 import "../Theme"
 import "../Theme/fichiers.js" as Fichiers
 import "verrou.js" as Logique
 
-// Contenu — l'écran verrouillé tel que la coque le dessine (L2-22) : fond du bureau, horloge monumentale, date,
-// pastille à initiale, nom et champ du mot de passe, avec leur apparition et leur retrait.
-// Rôle : un seul composant pour trois usages : le bloc qui tombe sur la session (Bloc.qml), l'apparition au-dessus du
-// verrou (Apparition.qml) et Production.qml, qui en rend le fond, la pastille et le champ en images pour hyprlock.
-// Les textes (horloge, date, initiale, nom) sont redessinés par les étiquettes de hyprlock aux mêmes places : toute
-// cote se lit dans Theme.verrou, comme dans confHyprlock (verrou.js).
-// Apparition (maquette verrou-v2, « recul ») : vu passé à vrai, l'horloge recule de Theme.verrou.recul à 1 en fondant,
-// puis, aux retards des jetons apparition*, la pastille grandit depuis rien, les trois mots de la date montent de sous
-// leur ligne, le nom monte en fondant et le champ s'ouvre depuis un rond ; tout au ressort « spectacle ». vu passé à
-// faux, tout revient à l'état de départ sans retard, au ressort « overlay » (environ 0,2 s, delays.verrouRetrait). En
-// mouvement réduit, les déplacements se posent et seuls les fondus restent : chaque élément apparaît en fondu.
+// Contenu — l'écran verrouillé tel que la coque le dessine (L2-22, voie B) : fond du bureau, horloge monumentale, date,
+// ligne du média, champ du mot de passe caché et message, avec leur apparition et leur retrait.
+// Rôle : un seul composant, celui du bloc qui tombe sur la session (Bloc.qml) ; la coque tient le verrou, hyprlock ne
+// reste qu'en secours. Toute cote se lit dans Theme.verrou (maquette verrou-v3).
+// Apparition : vu passé à vrai, l'horloge recule de Theme.verrou.recul à 1 en fondant, puis, aux retards des jetons
+// apparition*, les trois mots de la date montent de sous leur ligne et la ligne du média monte en fondant ; tout au
+// ressort « spectacle ». vu passé à faux, tout revient à l'état de départ sans retard, au ressort « overlay ». En
+// mouvement réduit, les déplacements se posent et seuls les fondus restent.
+// Champ : caché au repos (un rond de champHauteur, invisible, 10 px plus bas) ; il s'ouvre à la largeur champLargeur
+// quand la saisie est ouverte, au ressort « spectacle » ; chaque point grandit de 0 à 1 à son arrivée ; un échec secoue
+// le champ (verrouSecousse ms, sauf en mouvement réduit). Le message de la saisie se lit sous le champ, en accent.
+// Média : pochette et titre · artiste sur une ligne bornée à mediaLargeur (ellipse), absente quand rien ne joue ; un
+// changement de titre fond d'un titre à l'autre.
 // Entrées : width et height, taille logique de l'écran ; echelle, rapport pixels physiques / logiques de l'écran
 // (décodage de l'image à sa taille physique) ; vu, vrai par défaut : le contenu posé, faux : retiré (seul le fond
 // reste) ; entreeAnimee, vrai par défaut : faux, l'arrivée de vu se pose sans mouvement (bloc sous le verrou), le
-// retrait restant animé ; avecFond, faux pour ne pas peindre le fond (l'apparition, posée sur celui de hyprlock) ;
-// avecImage, faux pour ne pas charger l'image du bureau (Production.qml hors rendu) ; utilisateur, nom affiché, $USER
-// par défaut. À la création, l'état de vu se pose sans mouvement.
-// Sorties : fond, pastille et champ, les éléments que Production.qml rend en images (le fond est rendu même caché) ;
-// pret, faux tant que l'image du bureau se décode ; progres, avancée du recul de l'horloge (0 au départ, 1 posé) ;
-// enMouvement, vrai tant qu'un élément avance ; poser(), qui pose chaque élément sur l'état de vu.
-// Rôles de la maquette verrou-v2 : fond surface-base sous l'image ; heures, date et nom texteBureau, minutes
-// texteBureauSurvol (clair ou foncé selon Theme.bureauClair, D205) ; pastille control-raised et initiale
-// text-emphasis ; champ surface-base à liseré border-subtle d'un pixel logique ; tout opaque. Horloge en interlettrage
-// horlogeInterlettrage ; nom et initiale en typo.weightMedium.
+// retrait restant animé ; saisie, la Saisie dont le champ est le reflet (points, ouvert, verifie, message, signal
+// secoue), ou null ; media, le Media affiché, ou null. À la création, l'état de vu se pose sans mouvement.
+// Sorties : fond, l'élément du fond (rendu même contenu caché) ; pret, faux tant que l'image du bureau se décode ;
+// progres, avancée du recul de l'horloge (0 au départ, 1 posé) ; enMouvement, vrai tant qu'un élément avance ;
+// poser(), qui pose chaque élément sur l'état de vu ; mesures, objet de lecture des essais.
+// Rôles : fond surface-base sous l'image ; heures et date texteBureau, minutes texteBureauSurvol (clair ou foncé selon
+// Theme.bureauClair, D205) ; champ surface-base à liseré border-subtle d'un pixel logique ; points texteBureau ;
+// message accent ; titre texteBureau, artiste texteBureauSurvol. Horloge en interlettrage horlogeInterlettrage.
 // Erreurs : image du bureau illisible → aplat surface-base seul (journal de Qt). Dépendances : Theme (verrou, typo,
-// color, imageBureau, texteBureau…), Theme/fichiers.js (url), verrou.js (heures, minutes, dateLongue,
-// TAILLE_INITIALE), Quickshell (SystemClock, env).
+// color, imageBureau, texteBureau, motion, mouvementReduit…), Ressort, Theme/fichiers.js (url), verrou.js (heures,
+// minutes, dateLongue), Quickshell (SystemClock), QtQuick.Effects (MultiEffect).
 Item {
     id: contenu
 
     property real echelle: 1
     property bool vu: true
     property bool entreeAnimee: true
-    property bool avecFond: true
-    property bool avecImage: true
-    property string utilisateur: Quickshell.env("USER") ?? ""
+    property var saisie: null
+    property var media: null
     readonly property Item fond: _fond
-    readonly property Item pastille: _pastille
-    readonly property Item champ: _champ
     readonly property bool pret: image.status !== Image.Loading
     readonly property var v: Theme.verrou ?? ({})
     readonly property real progres: eHorloge.d
     readonly property bool reduit: Theme.mouvementReduit
-    readonly property var entrees: [eHorloge, ePastille, eMot0, eMot1, eMot2, eNom, eChamp]
-    readonly property bool enMouvement: entrees.some(e => e.enMouvement)
+    readonly property var entrees: [eHorloge, eMot0, eMot1, eMot2]
+    readonly property bool enMouvement: entrees.some(e => e.enMouvement) || eMedia.enMouvement || rChamp.moving
+        || secousse.running
+    readonly property bool champOuvert: vu && (saisie?.ouvert ?? false)
+    readonly property bool mediaVisible: vu && (media?.present ?? false)
+    // Mesures lues par les essais : le champ, ses points, le message et la ligne du média tels qu'affichés.
+    readonly property var mesures: ({ champLargeur: _champ.width, champOpacite: _champ.opacity,
+                                      message: texteMessage.text, mediaVisible: ligne.visible,
+                                      titre: ligne.titre, artiste: ligne.artiste })
 
     // Entree — un élément qui apparaît : un ressort de déplacement d et un ressort de fondu f, de 0 (retiré) à 1
     // (posé), lancés après un retard à l'arrivée, sans retard au retrait.
@@ -88,21 +93,33 @@ Item {
     }
 
     Entree { id: eHorloge }
-    Entree { id: ePastille; retard: contenu.v.apparitionPastille ?? 0 }
     Entree { id: eMot0; retard: contenu.v.apparitionDate ?? 0 }
     Entree { id: eMot1; retard: (contenu.v.apparitionDate ?? 0) + (contenu.v.apparitionMot ?? 0) }
     Entree { id: eMot2; retard: (contenu.v.apparitionDate ?? 0) + 2 * (contenu.v.apparitionMot ?? 0) }
-    Entree { id: eNom; retard: contenu.v.apparitionNom ?? 0 }
-    Entree { id: eChamp; retard: contenu.v.apparitionChamp ?? 0 }
+    Entree { id: eMedia; retard: contenu.v.apparitionMedia ?? 0 }
 
     // poser — pose chaque élément sur l'état de vu, sans mouvement. Entrées : aucune. Sortie : aucune.
     // Erreurs : aucune. Dépendances : Entree.poser.
-    function poser() { entrees.forEach(e => e.poser(vu)) }
+    function poser() {
+        entrees.forEach(e => e.poser(vu))
+        eMedia.poser(mediaVisible)
+    }
 
     // onVuChanged — lance l'apparition ou le retrait ; une arrivée sans entreeAnimee se pose.
     // Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : Entree.aller.
-    onVuChanged: entrees.forEach(e => e.aller(vu, !vu || entreeAnimee))
-    Component.onCompleted: poser()
+    onVuChanged: {
+        entrees.forEach(e => e.aller(vu, !vu || entreeAnimee))
+        eMedia.aller(mediaVisible, !vu || entreeAnimee)
+    }
+    Component.onCompleted: { poser(); if (saisie?.message) texteMessage.text = saisie.message }
+
+    // Un lecteur qui apparaît ou disparaît pendant que le contenu est vu : la ligne monte ou descend en fondant.
+    Connections {
+        target: contenu.media
+        // onPresentChanged — anime la ligne du média selon la présence d'un lecteur. Entrées : aucune. Sortie : aucune.
+        // Erreurs : aucune. Dépendances : Entree.aller.
+        function onPresentChanged() { if (contenu.vu) eMedia.aller(contenu.media.present, true) }
+    }
 
     // police — police du verrou : famille de l'interface, taille en pixels logiques, graisse et interlettrage donnés.
     // Entrées : px, taille ; poids, graisse ; espace, interlettrage en pixels logiques (facultatif, 0 par défaut).
@@ -119,17 +136,16 @@ Item {
     Item {
         id: _fond
         anchors.fill: parent
-        visible: contenu.avecFond
         Rectangle { anchors.fill: parent; color: Theme.color?.surfaceBase ?? "transparent" }
         Image {
             id: image
             anchors.fill: parent
-            source: contenu.avecImage && Theme.imageBureau ? Fichiers.url(Theme.imageBureau) : ""
+            source: Theme.imageBureau ? Fichiers.url(Theme.imageBureau) : ""
             fillMode: Image.PreserveAspectCrop
             clip: true
             asynchronous: true
             autoTransform: true
-            cache: false
+            cache: true
             sourceSize: Qt.size(width * contenu.echelle, height * contenu.echelle)
         }
     }
@@ -185,53 +201,179 @@ Item {
         }
     }
 
-    // Pastille : un rond plein, le bas à pastilleBas du bas de l'écran ; l'initiale est sa sœur, pour que l'image de
-    // la pastille n'en porte pas.
-    Rectangle {
-        id: _pastille
+    // Média : une ligne centrée à mediaHaut, pochette puis titre et artiste ; bornée à mediaLargeur, l'ellipse mange le
+    // titre puis l'artiste. Les textes affichés ne suivent le morceau qu'à travers un fondu, et gardent le dernier
+    // morceau pendant la sortie de la ligne.
+    Item {
+        id: ligne
+        property string titre: ""
+        property string artiste: ""
+        property string pochette: ""
+        readonly property string cibleTitre: contenu.media?.present ? contenu.media.titre : titre
+        readonly property string cibleArtiste: contenu.media?.present ? contenu.media.artiste : artiste
+        readonly property string ciblePochette: contenu.media?.present ? contenu.media.pochette : pochette
+
         anchors.horizontalCenter: parent.horizontalCenter
-        y: contenu.height - (contenu.v.pastilleBas ?? 0) - height
-        width: contenu.v.pastille ?? 0
-        height: width
-        radius: width / 2
-        color: Theme.color?.controlRaised ?? "transparent"
-        scale: ePastille.d
-        opacity: contenu.reduit ? ePastille.f : 1
-    }
-    Text {
-        anchors.centerIn: _pastille
-        scale: ePastille.d
-        opacity: contenu.reduit ? ePastille.f : 1
-        text: (Array.from(contenu.utilisateur)[0] ?? "").toUpperCase()
-        color: Theme.color?.textEmphasis ?? "transparent"
-        font: contenu.police((contenu.v.nomTaille ?? 0) * 1.6,
-                             Theme.typo?.weightMedium ?? Font.Medium)
+        y: (contenu.v.mediaHaut ?? 0) + (1 - eMedia.d) * (contenu.v.courseMedia ?? 0)
+        width: Math.min(rang.implicitWidth, contenu.v.mediaLargeur ?? 0)
+        height: Math.max(vignettePochette.height, texteTitre.implicitHeight)
+        opacity: eMedia.f
+        visible: opacity > 0
+
+        // changer — passe au morceau visé : aussitôt si la ligne est cachée ou à l'arrêt, sinon par un fondu de sortie
+        // puis d'entrée. Entrées : aucune. Sortie : aucune. Erreurs : aucune. Dépendances : fonduLigne.
+        function changer() {
+            if (cibleTitre === titre && cibleArtiste === artiste && ciblePochette === pochette) return
+            if (eMedia.f < 0.01 || !contenu.mediaVisible) { poserTexte(); return }
+            fonduLigne.cible = 0
+        }
+
+        // poserTexte — affiche le morceau visé. Entrées : aucune. Sortie : aucune. Erreurs : aucune.
+        function poserTexte() { titre = cibleTitre; artiste = cibleArtiste; pochette = ciblePochette }
+
+        onCibleTitreChanged: changer()
+        onCibleArtisteChanged: changer()
+        onCiblePochetteChanged: changer()
+
+        Ressort {
+            id: fonduLigne
+            transition: "overlay"
+            nature: "fondu"
+            cible: 1
+            // onMovingChanged — le fondu de sortie fini, change de morceau et ramène la ligne. Entrées : aucune.
+            // Sortie : aucune. Erreurs : aucune. Dépendances : ligne.poserTexte.
+            onMovingChanged: if (!moving && cible === 0) { ligne.poserTexte(); cible = 1 }
+        }
+
+        Row {
+            id: rang
+            width: parent.width
+            spacing: contenu.v.mediaEcart ?? 0
+            opacity: fonduLigne.value
+            Item {
+                id: vignettePochette
+                visible: ligne.pochette !== ""
+                width: visible ? (contenu.v.pochette ?? 0) : 0
+                height: contenu.v.pochette ?? 0
+                Image {
+                    id: imagePochette
+                    anchors.fill: parent
+                    source: ligne.pochette
+                    fillMode: Image.PreserveAspectCrop
+                    asynchronous: true
+                    visible: false
+                    layer.enabled: true
+                }
+                Rectangle {
+                    id: masquePochette
+                    anchors.fill: parent
+                    radius: contenu.v.pochetteRayon ?? 0
+                    visible: false
+                    layer.enabled: true
+                }
+                MultiEffect {
+                    anchors.fill: parent
+                    source: imagePochette
+                    maskEnabled: true
+                    maskSource: masquePochette
+                }
+            }
+            Text {
+                id: texteTitre
+                anchors.verticalCenter: parent.verticalCenter
+                width: Math.min(implicitWidth, Math.max(0, parent.width - vignettePochette.width
+                                - (vignettePochette.visible ? parent.spacing : 0) - (texteArtiste.text !== "" ? parent.spacing : 0)))
+                text: ligne.titre
+                color: Theme.texteBureau
+                font: contenu.police(contenu.v.media, Theme.typo?.weightRegular ?? Font.Normal)
+                elide: Text.ElideRight
+            }
+            Text {
+                id: texteArtiste
+                anchors.verticalCenter: parent.verticalCenter
+                width: Math.min(implicitWidth, Math.max(0, parent.width - vignettePochette.width - texteTitre.width
+                                - (vignettePochette.visible ? parent.spacing : 0) - (text !== "" ? parent.spacing : 0)))
+                text: ligne.artiste
+                color: Theme.texteBureauSurvol
+                font: contenu.police(contenu.v.media, Theme.typo?.weightRegular ?? Font.Normal)
+                elide: Text.ElideRight
+            }
+        }
     }
 
-    // Nom : centré dans l'espace entre le haut du champ et le bas de la pastille.
-    Text {
-        anchors.horizontalCenter: parent.horizontalCenter
-        y: contenu.height - height / 2
-            - ((contenu.v.champBas ?? 0) + (contenu.v.champHauteur ?? 0) + (contenu.v.pastilleBas ?? 0)) / 2
-        text: contenu.utilisateur
-        color: Theme.texteBureau
-        font: contenu.police(contenu.v.nomTaille, Theme.typo?.weightMedium ?? Font.Medium)
-        transform: Translate { y: (1 - eNom.d) * (contenu.v.courseNom ?? 0) }
-        opacity: eNom.f
-    }
-
-    // Champ : une gélule pleine à liseré, le bas à champBas du bas de l'écran ; hyprlock y pose ses points et son
-    // contour d'échec. Il s'ouvre depuis un rond de sa hauteur.
+    // Champ : une gélule pleine à liseré, le bas à champBas du bas de l'écran, cachée au repos (un rond invisible 10 px
+    // plus bas) ; elle s'ouvre depuis ce rond quand la saisie est ouverte. Les points y sont centrés.
+    Ressort { id: rChamp; transition: "spectacle"; cible: contenu.champOuvert ? 1 : 0 }
+    Ressort { id: champFondu; transition: "spectacle"; nature: "fondu"; cible: contenu.champOuvert ? 1 : 0 }
     Rectangle {
         id: _champ
         anchors.horizontalCenter: parent.horizontalCenter
-        y: contenu.height - (contenu.v.champBas ?? 0) - height
-        width: height + ((contenu.v.champLargeur ?? 0) - height) * eChamp.d
+        anchors.horizontalCenterOffset: contenu.decalage
+        y: contenu.height - (contenu.v.champBas ?? 0) - height + (1 - rChamp.value) * 10
+        width: height + ((contenu.v.champLargeur ?? 0) - height) * rChamp.value
         height: contenu.v.champHauteur ?? 0
-        opacity: eChamp.f
+        opacity: champFondu.value
         radius: height / 2
         color: Theme.color?.surfaceBase ?? "transparent"
         border.width: 1
         border.color: Theme.color?.borderSubtle ?? "transparent"
+        clip: true
+
+        Row {
+            anchors.centerIn: parent
+            spacing: contenu.v.pointEcart ?? 0
+            Repeater {
+                model: contenu.saisie?.points ?? 0
+                Rectangle {
+                    id: point
+                    width: contenu.v.point ?? 0
+                    height: width
+                    radius: width / 2
+                    color: Theme.texteBureau
+                    scale: arrivee.value
+                    Ressort { id: arrivee; transition: "spectacle"; cible: 0; Component.onCompleted: cible = 1 }
+                }
+            }
+        }
+    }
+
+    // décalage — décalage horizontal du champ pendant la secousse, en pixels logiques.
+    property real decalage: 0
+    readonly property int pasSecousse: (Theme.motion?.delays.verrouSecousse ?? 0) / 5
+
+    // Secousse d'un échec : le champ part de ±secousse puis de ±10, ±6 et ±3 avant de revenir à 0, en verrouSecousse ms ;
+    // elle n'a pas lieu en mouvement réduit.
+    SequentialAnimation {
+        id: secousse
+        NumberAnimation { target: contenu; property: "decalage"; to: -(contenu.v.secousse ?? 0); duration: contenu.pasSecousse; easing.type: Easing.InOutQuad }
+        NumberAnimation { target: contenu; property: "decalage"; to: 10; duration: contenu.pasSecousse; easing.type: Easing.InOutQuad }
+        NumberAnimation { target: contenu; property: "decalage"; to: -6; duration: contenu.pasSecousse; easing.type: Easing.InOutQuad }
+        NumberAnimation { target: contenu; property: "decalage"; to: 3; duration: contenu.pasSecousse; easing.type: Easing.InOutQuad }
+        NumberAnimation { target: contenu; property: "decalage"; to: 0; duration: contenu.pasSecousse; easing.type: Easing.InOutQuad }
+    }
+    Connections {
+        target: contenu.saisie
+        // onSecoue — lance la secousse du champ, sauf en mouvement réduit. Entrées : aucune. Sortie : aucune.
+        // Erreurs : aucune. Dépendances : secousse.
+        function onSecoue() { if (!contenu.reduit) secousse.restart() }
+    }
+
+    // Message : centré, le bas à messageBas du bas de l'écran, en accent ; il fond à l'arrivée et au départ et garde son
+    // dernier texte pendant le fondu de sortie.
+    Ressort { id: messageFondu; transition: "spectacle"; nature: "fondu"; cible: contenu.vu && (contenu.saisie?.message ?? "") !== "" ? 1 : 0 }
+    Text {
+        id: texteMessage
+        anchors.horizontalCenter: parent.horizontalCenter
+        y: contenu.height - (contenu.v.messageBas ?? 0) - height
+        opacity: messageFondu.value
+        color: Theme.color?.accent ?? "transparent"
+        font: contenu.police(contenu.v.message, Theme.typo?.weightRegular ?? Font.Normal)
+        text: ""
+        // Garde le dernier message non vide.
+        Connections {
+            target: contenu.saisie
+            // onMessageChanged — retient le message à afficher. Entrées : aucune. Sortie : aucune. Erreurs : aucune.
+            function onMessageChanged() { if (contenu.saisie.message !== "") texteMessage.text = contenu.saisie.message }
+        }
     }
 }

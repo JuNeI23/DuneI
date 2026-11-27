@@ -283,7 +283,6 @@ Singleton {
             id: ecran
             required property var modelData
             Bloc { modelData: ecran.modelData }
-            Apparition { modelData: ecran.modelData }
         }
     }
 
