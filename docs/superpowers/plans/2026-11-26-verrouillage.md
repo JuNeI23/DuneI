@@ -3,289 +3,516 @@
 > **Pour les agents :** sous-skill requis : superpowers:subagent-driven-development (recommandé) ou
 > superpowers:executing-plans, tâche par tâche. Les étapes se cochent (`- [ ]`).
 
-Version 1.2 — 2026-11-26
+Version 2.0 — 2026-11-27 — voie B
 
-**But :** un bloc à l'image du fond tombe sur la session, `hyprlock` le relaie nu, la coque joue l'apparition en recul
-au-dessus du verrou puis cède à ses textes ; au déverrouillage, le contenu se retire et le bloc remonte.
+**But :** la coque verrouille elle-même. Le bloc tombe, la coque prend le verrou derrière lui (`WlSessionLock`), joue
+l'apparition dans la surface du verrou, authentifie par `PamContext` et, au succès, rend le verrou au bloc, qui
+remonte. `hyprlock` ne sert plus qu'en secours.
 
-**Architecture :** un lanceur shell, `dunei-verrou`, est la seule autorité du déroulé ; il ne croit que
-`hyprctl -j locked`. La coque (module `coque/Verrou/`) dessine le bloc, la presqu'île du bloc, le contenu et
-l'apparition, et produit à l'avance la configuration et les images de `hyprlock`, écran par écran. `hyprlock` garde
-l'authentification.
+**Architecture :** le lanceur `dunei-verrou` ne dessine rien. Il commande la coque, la surveille par
+`hyprctl -j locked` et par l'IPC `verrou`, et lance `hyprlock` (repli statique) quand la coque fait défaut. Dans la
+coque, le singleton `Verrou` tient tout l'état : bloc, verrou, saisie et média. `Bloc.qml` (calque) et `Surface.qml`
+(surface du verrou) portent le même `Contenu`. `Saisie.qml` mène le champ et PAM, et `Media.qml` choisit le lecteur
+MPRIS. Un petit `Rideau` Quickshell séparé masque la reprise du verrou par `hyprlock`.
 
-**Technos :** Hyprland 0.57 (Lua), Quickshell 0.3.2 (QML), `hyprlock` 0.9.7, POSIX sh, Python 3 (`unittest`).
+**Technos :** Quickshell 0.3.2 (`Quickshell.Wayland.WlSessionLock`, `Quickshell.Services.Pam.PamContext`,
+`Quickshell.Services.Mpris`), Hyprland 0.57 (Lua), `hyprlock` 0.9.7 en secours, POSIX sh, Python 3 (`unittest`).
 
-**Fiche :** `docs/superpowers/specs/2026-11-25-verrouillage-design.md` (1.2, validée). Le plan s'appuie sur elle :
-l'exécutant lit les deux.
+**Fiche :** `docs/superpowers/specs/2026-11-25-verrouillage-design.md` (2.1, validée). L'exécutant lit les deux. Banc et
+recettes du banc B : `.superpowers/banc-b/` (`rapport.md`, `lance.sh`, `bac.sh`, `interieur.sh`, `exp/`, `qml/`,
+`pam/`).
 
 ## Contraintes globales
 
-- Aucune image de la session entre la pose du bloc et sa remontée ; verrou réel au plus 1,5 s après l'appel.
-- Vérité du verrou : `hyprctl -j locked` (`{"locked": true|false}`), jamais un nom de processus ni un code de sortie.
-- `hyprlock` sans `--immediate-render`, animations désactivées, empreinte désactivée (L2-37 à part).
-- Configuration de `hyprlock` en pixels physiques ; `font_size` entier, taille exacte par `size` (en 1/1024 pt) dans le
-  balisage Pango ; famille nommée dans le balisage (`font_family="Source Sans 3"`) ; `#` écrit `##`.
-- Étiquettes à masquer : `cmd[update:10000:1]` (le `:1` permet `SIGUSR2`) ; images échangées : `reload_time = 0` et
-  `reload_cmd`.
-- `SIGUSR2` seulement si le bit 12 du masque `SigCgt` de `/proc/<pid>/status` est levé.
-- Calque d'apparition : `above_lock = 1`, jamais 2 ; masque d'entrée vide ; aucun clavier.
-- Ressort `spectacle` pour la chute et la remontée ; aucune couleur hors jetons (`test_coque_qml.py`) ; contenu relayé
-  entièrement opaque (heures `texteClair`, minutes `texteClairSurvol`, ou leurs équivalents foncés selon `bureauClair`).
-- Commentaires complets en français sur chaque fonction (titre, rôle, entrées, sortie, erreurs, dépendances).
-- Essais visibles : bureaux 1 à 4, fenêtre visée par adresse ; aucun essai PAM sur le compte réel. Le banc imbriqué
-  (mémoire `banc-imbrique`) sert à tout ce qui verrouille.
-- Tests ciblés pendant la feature (`python3 -m unittest tests.<module>`) ; `make check` une fois avant la PR.
+- Aucune image de la session entre la pose du bloc et sa remontée, y compris quand la coque plante et revient. La
+  session est verrouillée au plus 1,5 s après l'appel (`verrouAttente = 1500`).
+- Vérité du verrou : `hyprctl -j locked`. Toute commande extérieure du lanceur est bornée (`timeout`).
+- **Jamais de `SIGUSR1` à `hyprlock`** : il déverrouille toute la session, verrou de la coque compris. Pour terminer
+  `hyprlock`, `SIGTERM`.
+- **Seul un succès PAM rend `locked = false` du `WlSessionLock`.** Aucune IPC ne le peut : `remonter` est ignoré tant
+  que la coque tient le verrou (`secure`). La seule exception est le suivi du compositeur : la session est déjà rendue.
+- Le verrou n'est jamais demandé sans le bloc dessous, posé et dessiné : après une première image de chaque écran,
+  plus `verrouRelais` (50 ms), et au plus `verrouRelaisMax` (250 ms) après la pose.
+- Aucun `WlSessionLock` réel hors du banc imbriqué. Les coques d'essai ont `Verrou.fenetree = false`, qui coupe aussi
+  le verrou. Les essais PAM n'utilisent que des piles factices (`pam_permit`, `pam_deny`,
+  `pam_exec expose_authtok`), jamais `/etc/pam.d/hyprlock`, jamais le compte réel, jamais `faillock`.
+- Pile PAM de la coque : `config: "hyprlock"`, `configDirectory: "/etc/pam.d"`. Un seul `start()` à la fois, aucune
+  relance automatique, garde `verrouPam` (10 s) puis `abort()`.
+- Textes exacts : « Mot de passe incorrect », « Vérification impossible ». Un message d'erreur de PAM
+  (`messageIsError`) s'affiche tel quel à la place du premier.
+- Le mot de passe ne va jamais au journal. Il est effacé dès que PAM a répondu.
+- Couleurs par jetons seulement (`test_coque_qml.py`). Heures, date et titre en `texteBureau` ; minutes et artiste en
+  `texteBureauSurvol`. Le champ est en `surface-base` avec un liseré `border-subtle`, ses points en `texteBureau`, et
+  le message en accent.
+- Ressort `spectacle` pour la chute, la remontée, le recul et l'ouverture du champ ; `overlay` pour le retrait. En
+  mouvement réduit, il ne reste que des fondus, et la secousse disparaît.
+- Commentaires complets en français sur chaque fonction : titre, rôle, entrées, sortie, erreurs, dépendances.
+- Tests ciblés pendant la feature (`python3 -m unittest tests.<module>`), `make check` une fois avant la PR. Tout ce
+  qui verrouille passe au banc imbriqué (mémoire `banc-imbrique`) : sessions tuées entières, jamais par nom.
 
 ## Points de vigilance (relecture)
 
-1. **Veille pendant la chute** (`SUPER + L` puis couvercle fermé) : le verrou est posé aussitôt, aucune animation ne
-   continue en veille. Test : tâche 4, `test_veille_en_cours_de_chute`.
-2. **`hyprlock` qui n'a jamais tenu le verrou** (configuration produite cassée) : repli `hyprlock.conf`, puis
-   notification, code non nul. Tests : tâche 4, `test_jamais_tenu_repli`, `test_trois_echecs_notifie`.
-3. **Second appel pendant un verrou** (boot et inactivité qui se croisent) : il attend le déverrouillage, ne rend jamais
-   0 avant. Test : tâche 4, `test_second_appel_attend`.
-4. **Coque redémarrée ou figée pendant le verrou** : le bloc ne reste jamais posé sur une session ouverte. Test : tâche 6,
-   `test_session_ouverte_remonte`.
-5. **Écran inconnu de la configuration produite** : aplat opaque, jamais de session. Test : tâche 3,
-   `test_section_generique`.
+1. **Écran qui ne dessine pas** (éteint, DPMS) au moment de la pose : sa première image ne vient jamais. Le verrou est
+   alors demandé à `verrouRelaisMax`, jamais attendu sans fin. Test `test_relais_plafonne` (tâche 5).
+2. **Première image de la surface du verrou sans le fond décodé** : un aplat apparaîtrait entre le bloc et la
+   surface. L'image est partagée par le cache de Qt (même URL, même `sourceSize`, `cache: true` des deux côtés) ;
+   l'écart entre les deux est mesuré au banc (tâches 1 et 10).
+3. **IPC hostile ou périmée** : `qs ipc call verrou remonter 999` pendant que la coque tient le verrou ne déverrouille
+   rien. Test `test_remonter_ignore_si_tenu` (tâche 5).
+4. **Touches pendant la vérification ou avant `secure`** : ignorées pendant PAM, jamais ajoutées à l'essai suivant ;
+   Entrée tapée avant `secure` attend `secure`. Tests `test_touches_ignorees_pendant_pam` et
+   `test_entree_avant_secure` (tâche 3).
+5. **Caractères composés et non ASCII** (touche morte, AltGr, `é`, `€`) : un caractère, un point, et Retour arrière
+   retire un caractère entier. Test `test_caracteres_composes` (tâche 2).
 
 ---
 
-### Tâche 1 : preuves restantes au banc
+### Tâche 1 : banc, rechargement et première image de la surface
 
-Ce que la fiche n'a pas encore éprouvé, avant d'écrire le code qui en dépend. Rien n'entre dans le dépôt hors de la
-fiche : scripts jetables dans le bloc-notes de la session.
+**Fichiers :** `.superpowers/banc-b/exp/q5.py` et `.superpowers/banc-b/qml/recharge/` (hors git) ; section ajoutée à
+`.superpowers/banc-b/rapport.md` ; « Ce qui a été relevé » de la fiche (version 2.2).
 
-- [ ] **Étape 1 : règle `order`.** Au banc, deux calques `Overlay` (bloc et témoin mappé après) ; avec
-  `hl.layer_rule({ match = { namespace = "^essai-bloc$" }, order = 100 })`, le bloc reste au-dessus du témoin.
-  Relever aussi un plein écran : le bloc le couvre.
-- [ ] **Étape 2 : deux écrans.** Deux sorties sans tête (1920 × 1200 à 1,25 et 1280 × 800 à 1), sections `monitor`
-  distinctes, une section sans nom en `zindex = -1` (aplat) : chaque écran montre sa propre section, l'aplat n'apparaît
-  pas en double, et un troisième écran ajouté pendant le verrou ne montre que l'aplat.
-- [ ] **Étape 3 : champ.** `input-field` transparent sur l'image du champ : points visibles en tapant (touches
-  envoyées au compositeur imbriqué), contour `error` et `$FAIL` à l'échec (PAM factice `pam_deny`).
-- [ ] **Étape 4 : `PreparingForSleep`.** Sur caladan, lire la propriété au repos (`false`) avec
-  `busctl get-property org.freedesktop.login1 /org/freedesktop/login1 org.freedesktop.login1.Manager PreparingForSleep`
-  et noter sa forme (`b false`). La valeur en veille se relève à la recette.
-- [ ] **Étape 5 : consigner** les relevés dans « Ce qui a été relevé » de la fiche (version 1.3), retirer de la liste
-  « Non éprouvé » ce qui l'est, commit `Verrouillage : preuves du banc (L2-22)`.
-  Un résultat contraire à la fiche arrête le plan : on en reparle avec Nicolas.
+- [ ] Au banc imbriqué, avec une coque d'essai qui tient un `WlSessionLock` `secure`, toucher un fichier QML du
+  dossier surveillé. Relever si le rechargement à chaud garde le verrou, l'abandonne (écran mort) ou plante.
+- [ ] Relever si `Quickshell.watchFiles = false`, posé pendant le verrou, empêche le rechargement, et si le
+  remettre à vrai recharge les changements différés.
+- [ ] Bloc (calque avec l'image du fond, `cache: true`), puis verrou demandé : relever si la première image de la
+  surface montre déjà l'image (écart de pixels bloc → surface sur un bandeau, comme au relevé du 25 novembre).
+- [ ] Relever si `Window.window.frameSwapped`, lu depuis un `Item` d'un `PanelWindow` et d'un `WlSessionLockSurface`,
+  arrive à chaque image.
+- [ ] Écrire les résultats au rapport et dans la fiche (2.2), puis committer la fiche. Si le rechargement détruit le
+  verrou, la tâche 6 pose `Quickshell.watchFiles: !Verrou.actif` ; s'il le garde, rien.
 
-### Tâche 2 : jetons, énergie et règles du compositeur
+### Tâche 2 : jetons, mouvement et logique pure
 
-**Fichiers :**
-- Modifier : `motion.toml` (`[delays]`), `dunei_motion/checks.py:31` (`DELAY_KEYS`), `tokens.toml` (section `[verrou]`),
-  `energie.toml`, `dunei_energie/checks.py:14`, `dunei_energie/emitters/lua.py`, `config/hypr/modules/demarrage.lua`,
-  `config/hypr/modules/verrouillage.lua`, `config/hypr/modules/regles.lua`.
-- Tests : `tests/test_motion_checks.py:50`, `tests/test_motion_generate.py:28`, `tests/test_energie_checks.py`,
-  `tests/test_energie_generate.py:104,111`, `tests/test_hyprland_modules.py`, `tests/test_hyprland_demarrage.py`,
-  goldens.
+**Fichiers :** `tokens.toml` (`[verrou]`), `motion.toml` (`delays`), `dunei_motion/checks.py` (`DELAY_KEYS`),
+`coque/Verrou/verrou.js`, `coque/Verrou/essai/logique/shell.qml`, `tests/test_verrou.py` (`LogiqueTest`),
+`tests/test_motion_checks.py`, `tests/test_motion_generate.py`, et les vérifications de jetons qui nomment les clés
+retirées.
 
 **Interfaces produites :**
-- `Theme.motion.delays` : `verrouAttente = 1000` (bloc posé au plus tard), `verrouApparition = 1500`,
-  `verrouCession = 350`, `verrouRetrait = 200`, `verrouSecours = 2500` (retrait d'office du calque d'apparition).
-- `Theme.verrou` (jetons `[verrou]`, en px logiques) : `horloge = 700`, `horlogeHaut = 34`, `recul = 3.4`,
-  `date = 22`, `dateHaut = 556`, `pastille = 72`, `nomTaille = 17`, `champLargeur = 280`, `champHauteur = 36`,
-  `champBas = 56`, `pastilleBas = 139`.
-- `generated.energie` : `verrouilleur = "dunei-verrou"`, `verrouilleur_initial = "dunei-verrou --sec"`.
-- Règles de calque : `dunei-verrou` en `order = -100` (relevé de la tâche 1 : l'ordre le plus bas est dessiné au-dessus) ; `dunei-verrou-apparition` en
-  `above_lock = 1`, `order = -101`, `no_anim = true` ; `dunei-verrou` en `no_anim = true`.
-- `verrouillage.lua` : `misc = { allow_session_lock_restore = true, session_lock_xray = false }`.
+- `verrou.js` : `frappe(etat, touche) -> {etat, action}` ;
+  `etat = {texte: string, ouvert: bool, verifie: bool, message: string}` ;
+  `touche = {nature: "imprimable"|"retour"|"echap"|"entree"|"repos", texte: string}` ;
+  `action ∈ {null, "rearmer", "verifier"}`.
+- `issue(etat, quoi, messagePam) -> {etat, action}` ; `quoi ∈ {"succes", "echec", "impossible"}` ;
+  `action ∈ {"deverrouiller", "secouer", null}`.
+- `lecteurActif(lecteurs) -> lecteur | null` : le premier dont `isPlaying` est vrai.
+- `ligneMedia(titre, artiste) -> {titre, artiste}` : `artiste` vaut `"· " + artiste`, ou `""` si l'artiste est vide.
+- Les fonctions `dateLongue`, `heures`, `minutes` et `ordreValable` restent. `confHyprlock`, `physique` et
+  `TAILLE_INITIALE` sont retirées.
+- Jetons `[verrou]` retirés : `pastille`, `nom_taille`, `pastille_bas`, `apparition_pastille`, `apparition_nom`,
+  `apparition_champ`, `course_nom`. Jetons ajoutés (camelCase dans `Theme.verrou`) :
+  - `point = 8`, `point_ecart = 7` ;
+  - `message = 15`, `message_bas = 24` ;
+  - `media = 16`, `media_haut = 606`, `media_largeur = 640` ;
+  - `pochette = 30`, `pochette_rayon = 6`, `media_ecart = 10` ;
+  - `apparition_media = 620`, `course_media = 14` ;
+  - `secousse = 12`.
+  L'en-tête de section devient « verrou de la coque ».
+- `delays` retirés : `verrouApparition`, `verrouCession`, `verrouSecours`. `verrouAttente` passe à 1500 (« échéance
+  du verrou après l'appel »). Ajoutés :
+  - `verrouRelais = 50`, `verrouRelaisMax = 250` ;
+  - `verrouChampRepos = 8000`, `verrouMessage = 3000` ;
+  - `verrouPam = 10000`, `verrouReprise = 3000`, `verrouSecousse = 420`.
+  `verrouRetrait = 200` reste.
 
-- [ ] **Étape 1 : tests en échec.** `test_energie_checks.test_commands` exige `verrouilleur_initial` (absente → erreur
-  nommant la clé) ; `test_hyprland_demarrage` attend que `apply()` lance `dunei-verrou-initial 'dunei-verrou --sec'` ;
-  `test_hyprland_modules.test_verrouillage` attend `session_lock_xray` faux (étendre le faux `hl`) ; la liste figée de
-  `test_regles_…` gagne les deux règles ; les listes de délais figées gagnent les cinq clés.
-- [ ] **Étape 2 : vérifier l'échec** : `python3 -m unittest tests.test_energie_checks tests.test_hyprland_demarrage
-  tests.test_hyprland_modules tests.test_motion_checks tests.test_motion_generate` → FAIL sur ces assertions.
-- [ ] **Étape 3 : implémenter.** Les deux règles vivent dans une table `M.verrou` de `regles.lua`, appliquée après
-  `generated.hyprland-layers` : ce sont des règles de comportement, pas d'apparence. `energie.toml` passe à
-  `verrouilleur = "dunei-verrou"` dès ici : le lanceur arrive à la tâche 4, et rien n'est déployé avant la PR.
-  `LuaTargetTest.roundtrip` (`tests/test_energie_generate.py:104,111`) reçoit la nouvelle clé.
-- [ ] **Étape 4 : générer et vérifier** : `make tokens motion energie golden`, puis les tests de l'étape 2 → OK.
-- [ ] **Étape 5 : commit** `Verrouillage : jetons, énergie et règles de calque (L2-22)`.
+- [ ] Écrire les tests `LogiqueTest`, appelés par l'IPC de la coque d'essai `essai/logique` :
+  - `test_premiere_touche_ouvre` : `frappe(vide, {imprimable, "a"})` donne `texte "a"`, `ouvert` vrai, action
+    `"rearmer"`.
+  - `test_retour_jusqu_a_vide_ferme` : depuis « ab », deux `retour` donnent `texte ""` et `ouvert` faux.
+  - `test_echap_et_repos_vident` : `echap` et `repos` donnent tous deux `{texte: "", ouvert: false}`.
+  - `test_entree_vide_ignoree` : rien ne change, action `null`.
+  - `test_entree_verifie` : `verifie` vrai, action `"verifier"`.
+  - `test_touches_ignorees_pendant_verification` : `verifie` vrai, et toute touche rend l'état inchangé.
+  - `test_frappe_efface_message` : un message posé disparaît à la touche imprimable suivante.
+  - `test_caracteres_composes` : « é » puis « € » donnent deux caractères ; un `retour` laisse « é » (`Array.from`).
+  - `test_issue_echec` : sans message PAM, `message` vaut « Mot de passe incorrect » ; avec
+    « The account is locked due to 3 failed logins. », ce texte tel quel. Le champ est vidé et fermé, `verifie` faux,
+    action `"secouer"`.
+  - `test_issue_impossible` : « Vérification impossible », champ vidé, action `null`.
+  - `test_issue_succes` : `texte` vide, action `"deverrouiller"`.
+  - `test_lecteur_actif` : `[{isPlaying: false}, {isPlaying: true, n: 2}, {isPlaying: true, n: 3}]` donne `n` = 2 ;
+    une liste vide ou sans lecteur qui joue donne `null`.
+  - `test_ligne_media` : `("Paul Atreides", "Hans Zimmer")` donne l'artiste « · Hans Zimmer » ; un artiste vide
+    donne `""`.
+  - Les tests de `confHyprlock` et de `physique` sont retirés.
+- [ ] Lancer `python3 -m unittest tests.test_verrou.LogiqueTest` : échec attendu sur les fonctions absentes.
+- [ ] Implémenter dans `verrou.js`, et modifier les jetons et les délais. `make tokens motion` régénère.
+- [ ] Relancer `LogiqueTest`, `tests.test_motion_checks`, `tests.test_motion_generate` et les tests de jetons
+  touchés : tous passent.
+- [ ] Committer : « Verrouillage voie B : jetons, délais et logique du champ, de PAM et du média (L2-22) ».
 
-### Tâche 3 : logique pure du verrou
+### Tâche 3 : saisie et PAM (`Saisie.qml`)
 
-**Fichiers :**
-- Créer : `coque/Verrou/verrou.js` (`.pragma library`), `coque/Verrou/essai/logique/shell.qml` et son lien
-  `verrou.js -> ../../verrou.js`.
-- Test : `tests/test_verrou.py` (classe `LogiqueTest(EssaiCoque, unittest.TestCase)`, méthode `appeler`).
-
-**Interfaces produites :**
-- `dateLongue(d: Date) -> string` : « mercredi 25 novembre », jour et mois en minuscules.
-- `heures(d: Date) -> string`, `minutes(d: Date) -> string` : deux chiffres.
-- `physique(px: number, echelle: number) -> int` : `Math.round(px * echelle)`.
-- `confHyprlock(ecrans: [{nom, largeur, hauteur, echelle, images}], j: {verrou, delais, couleurs}, marqueur: string,
-  repli: string) -> string` : texte complet de `hyprlock.conf`, une section `monitor` par écran plus l'aplat sans nom
-  en `zindex = -2` ; `images` = `{fond, pastille, champ, pastilleVide, champVide}`.
-- `ordreValable(recu: int, courant: int) -> bool` : vrai si `recu >= courant`.
-
-- [ ] **Étape 1 : tests en échec**, valeurs exactes :
-  - `test_date` : `dateLongue(2026-11-25)` = `"mercredi 25 novembre"`.
-  - `test_physique` : `physique(700, 1.25)` = 875 ; `physique(36, 1.25)` = 45.
-  - `test_conf_echelle` : pour un écran 1920 × 1200 à 1,25, la conf contient `size="` suivi de
-    `round(700 * 1.25 * 0.75 * 1024)` (soit 672000), `size = 90`, `size = 350, 45`, `position = 0, 70` et
-    `position = 0, 200`.
-  - `test_conf_diese` : aucune couleur n'y apparaît avec un seul `#` ; chaque `foreground` est en `##`.
-  - `test_conf_marqueur` : chaque étiquette est `cmd[update:10000:1]` et teste `[ -e <marqueur> ]` ; chaque image a
-    `reload_time = 0` et un `reload_cmd` qui rend la version vide tant que le marqueur existe.
-  - `test_section_generique` : la section sans nom n'a que `background` (couleur `surface-base`) et `input-field`, en
-    `zindex = -2`, sans étiquette ni image.
-  - `test_ordre` : `ordreValable(3, 4)` faux, `ordreValable(4, 4)` vrai.
-- [ ] **Étape 2 : vérifier l'échec** : `python3 -m unittest tests.test_verrou.LogiqueTest` → FAIL.
-- [ ] **Étape 3 : implémenter** `verrou.js`. Échappement du texte Pango : `&`, `<`, `>` ; le nom vient de
-  `Quickshell.env("USER")` côté appelant, jamais d'un fichier modifiable par un tiers.
-- [ ] **Étape 4 : tests** → OK.
-- [ ] **Étape 5 : commit** `Verrouillage : logique et configuration de hyprlock (L2-22)`.
-
-### Tâche 4 : le lanceur `dunei-verrou`
-
-**Fichiers :**
-- Créer : `config/hypr/scripts/dunei-verrou` (POSIX sh, exécutable).
-- Modifier : `config/hypr/hyprlock.conf` (repli : fond `surface-base`, horloge `$TIME`, champ, sans image ; en-tête
-  « repli de dunei-verrou »).
-- Test : `tests/test_dunei_verrou.py`, sur le modèle de `tests/test_verrou_initial.py:13-41` (faux binaires consignant
-  dans `$FAKE_LOG`) ; `tests/test_shellcheck.py` le couvre d'office.
+**Fichiers :** créer `coque/Verrou/Saisie.qml` et `coque/Verrou/essai/saisie/shell.qml`, avec ses liens vers
+`Theme`, `Composants` et `Verrou` (mémoire `module-coque-neuf`) ; modifier `coque/Verrou/qmldir` ; tests dans
+`tests/test_verrou.py` (`SaisieTest`).
 
 **Interfaces :**
-- Consomme (IPC de la tâche 6, cible `verrou`) : `tomber(ordre: int)`, `etat() -> {"pose": bool, "ordre": int}`,
-  `apparaitre(ordre: int)`, `ceder(ordre: int)`, `remonter(ordre: int)`, `poserSec(ordre: int)`, `abreger()`.
-  Chaque appel par `timeout 0.3 qs ipc -c dunei call verrou …`.
-- Produit : `dunei-verrou [--sec]`. Code 0 : la session a été tenue puis rendue. 1 : verrou jamais tenu après trois
-  lancements. 2 : usage.
-- Fichiers d'exécution : `$XDG_RUNTIME_DIR/dunei/verrou-apparition` (contient le PID du lanceur),
-  `$XDG_RUNTIME_DIR/dunei/verrou-sec` (demande d'abréger), `$XDG_RUNTIME_DIR/dunei/verrou-ordre` (compteur).
-- Configuration produite : `${XDG_STATE_HOME:-$HOME/.local/state}/dunei/verrou/hyprlock.conf` (tâche 5) ; repli :
-  `${XDG_CONFIG_HOME:-$HOME/.config}/hypr/hyprlock.conf`.
+- Consomme : `frappe` et `issue` (tâche 2), et `Theme.motion.delays` (`verrouChampRepos`, `verrouMessage`,
+  `verrouPam`).
+- Produit le composant `Saisie` (`Item`) :
+  - entrées : `pret` (bool : le verrou est `secure`), `pile` (`"hyprlock"`), `dossierPile` (`"/etc/pam.d"`) ;
+  - sorties : `points` (int), `ouvert`, `verifie`, `message` ;
+  - fonctions : `touche(key: int, texte: string)` et `vider()` ;
+  - signaux : `secoue()` et `reussi()`.
 
-Déroulé (la fiche, « Le lanceur », fait foi) : se réexécuter sous
-`systemd-run --user --scope --unit=dunei-verrou --collect` (variable `DUNEI_VERROU_PORTEE=1` contre la boucle) ; si
-l'unité existe déjà, toucher `verrou-sec` si la veille est annoncée, puis attendre `locked` faux après l'avoir vu vrai,
-et rendre 0 (ou 1 si l'unité se termine sans verrou tenu). Sec si `--sec`, si `PreparingForSleep` ne rend pas
-`b false` en 0,2 s, ou si la coque ne répond pas. Toutes les attentes par pas de 20 ms, relisant `verrou-sec`.
+  `touche` classe la frappe :
+  - `Qt.Key_Return` et `Qt.Key_Enter` : `entree` ;
+  - `Qt.Key_Backspace` : `retour` ;
+  - `Qt.Key_Escape` : `echap` ;
+  - un texte non vide sans caractère de contrôle : `imprimable` ;
+  - sinon, rien.
 
-- [ ] **Étape 1 : tests en échec.** Faux `hyprctl` qui rend `{"locked": …}` d'après un fichier d'état que le faux
-  `hyprlock` bascule (vrai au lancement, faux à sa sortie, ou jamais selon `FAKE_HYPRLOCK`), faux `qs`, `busctl`,
-  `systemd-run` (exécute directement sa commande), `notify-send`, `logger`. Tests :
-  - `test_chute_complete` : ordre des appels `tomber`, `etat`, `hyprlock`, `apparaitre`, `kill -USR2`, `ceder`,
-    `remonter` ; code 0 ; marqueur absent à la fin.
-  - `test_coque_muette_sec` : `qs` sans réponse → ni `tomber` suivi d'attente, ni `apparaitre` ; `hyprlock` lancé en
-    moins de 0,5 s ; `poserSec` tenté.
-  - `test_sec` : `--sec` → aucun `tomber`, `poserSec` puis `hyprlock`.
-  - `test_veille_annoncee` : `busctl` rend `b true` → sec.
-  - `test_veille_en_cours_de_chute` : `verrou-sec` créé pendant l'attente de la pose → `abreger`, `hyprlock` lancé au
-    pas suivant, aucun `apparaitre`.
-  - `test_jamais_tenu_repli` : premier `hyprlock` sort sans verrou → second avec la conf produite, troisième avec le
-    repli (`-c` relevé dans le journal).
-  - `test_trois_echecs_notifie` : trois sorties sans verrou → `notify-send -u critical` « Verrouillage impossible »,
-    `remonter`, code 1.
-  - `test_relance_si_tenu` : `hyprlock` sort, `locked` encore vrai → relancé.
-  - `test_second_appel_attend` : unité déjà présente et `locked` vrai → le second appel ne rend qu'après `locked` faux,
-    code 0.
-  - `test_sigusr2_garde` : faux `/proc` impossible à simuler simplement : la lecture passe par une fonction
-    `intercepte <pid> <signal>` surchargée par `DUNEI_VERROU_PROC` (racine de `/proc`) ; sans le bit 12, aucun
-    `kill -USR2`, le marqueur est quand même retiré et `hyprlock` relancé une fois sans marqueur.
-- [ ] **Étape 2 : vérifier l'échec** : `python3 -m unittest tests.test_dunei_verrou` → FAIL (script absent).
-- [ ] **Étape 3 : écrire le script.** Durées lues de `~/.config/dunei/motion.json` par `jq` si présent, valeurs de la
-  tâche 2 sinon. Le `SIGUSR2` de chaque minute part d'une boucle alignée sur la minute, arrêtée à la sortie de
-  `hyprlock`.
-- [ ] **Étape 4 : tests et shellcheck** : `python3 -m unittest tests.test_dunei_verrou tests.test_shellcheck` → OK.
-- [ ] **Étape 5 : commit** `Verrouillage : lanceur dunei-verrou (L2-22)`.
+- [ ] Créer la coque d'essai. Elle lit `DUNEI_ESSAI_PAM` (dossier des piles) et l'IPC `essai` :
+  - `pret(bool)`, `pile(nom)` ;
+  - `taper(texte)`, `entree()`, `retour()`, `echap()` ;
+  - `etat()` : JSON `{points, ouvert, verifie, message, reussis, secousses}`.
 
-### Tâche 5 : production des fichiers de `hyprlock`
+  `setUp` écrit dans un dossier temporaire :
+  - `succes` : `pam_permit` ;
+  - `echec` : `pam_deny` ;
+  - `question` : `pam_exec.so expose_authtok quiet <script>`, le script n'acceptant que « bon » (modèle :
+    `.superpowers/banc-b/pam/`) ;
+  - `lente` : `pam_exec` sur un script qui dort 30 s.
+- [ ] Écrire les tests `SaisieTest` :
+  - `test_question_juste` : « bon » puis Entrée donnent un `reussi`, puis `points` 0.
+  - `test_question_fausse` : « mauvais » puis Entrée donnent un `secoue` et le message « Mot de passe incorrect »,
+    effacé après `verrouMessage` (délai d'essai court) ou à la frappe suivante.
+  - `test_pile_introuvable` : « Vérification impossible », et le champ reste utilisable.
+  - `test_pam_lent_abandonne` : pile `lente`, garde de l'essai à 500 ms, puis « Vérification impossible ».
+  - `test_touches_ignorees_pendant_pam` : pile `lente`, « x » tapé pendant la vérification, `points` reste à 0 après
+    l'issue.
+  - `test_entree_avant_secure` : `pret` faux, Entrée, aucune vérification ; `pret` vrai, la vérification part seule.
+  - `test_repos_referme` : délai d'essai de 300 ms, après quoi le champ est fermé et vide.
+  - `test_un_seul_start` : deux Entrée rapprochées, une seule issue.
 
-**Fichiers :**
-- Créer : `coque/Verrou/Production.qml` (une `PanelWindow` invisible par écran n'est pas nécessaire : un `Item` hors
-  écran par écran, rendu par `grabToImage` à la taille physique).
-- Test : `tests/test_verrou.py`, classe `ProductionTest` (essai `coque/Verrou/essai/production/`, liens vers
-  `verrou.js`, `Production.qml`, `Contenu.qml`).
+  Les délais d'essai sont posés par des propriétés `repos`, `duréeMessage` et `garde` de `Saisie`, que la coque
+  d'essai écrase. Par défaut, elles valent les jetons.
+- [ ] Lancer `SaisieTest` : échec attendu.
+- [ ] Implémenter `Saisie.qml` : un `PamContext` enfant, l'état tenu par `frappe` et `issue`, et trois `Timer`
+  (`repos`, `message` et `garde`).
+  - Le premier `responseRequired` d'un `start()` reçoit `respond(texte)`. Une seconde question appelle `abort()` et
+    vaut « impossible ».
+  - `pamMessage` avec `messageIsError` garde le texte pour `issue`.
+  - `completed` : `Success` donne « succes », `Failed` « echec », tout autre résultat « impossible ». `error` donne
+    aussi « impossible ».
+  - Le texte est vidé dès `completed` ou `error`.
+- [ ] Relancer `SaisieTest` : tous passent.
+- [ ] Committer : « Verrouillage voie B : saisie du mot de passe et dialogue PAM de la coque (L2-22) ».
 
-**Interfaces :**
-- Consomme : `confHyprlock`, `physique` (tâche 3) ; `Contenu.qml` (tâche 6, rendu à l'état posé).
-- Produit : `Production.produire() -> void`, appelé au changement de `Theme.imageBureau`, `Theme.bureauClair`,
-  `Theme.mouvementReduit`, de la liste des écrans ou de leur échelle. Écrit dans `dossier/` : `fond-<écran>.png`,
-  `pastille-<écran>.png`, `champ-<écran>.png`, leurs `-vide`, puis `hyprlock.conf` ; chaque fichier en `.tmp` puis
-  renommé, la conf en dernier.
+### Tâche 4 : contenu et média (`Contenu.qml`, `Media.qml`)
 
-- [ ] **Étape 1 : test en échec** `test_production` : avec `DUNEI_ETAT_DIR` temporaire et un écran d'essai, après
-  `produire()`, les cinq images et la conf existent ; `fond-*.png` a la taille physique ; aucun `.tmp` ne reste ; la conf
-  cite exactement ces chemins.
-- [ ] **Étape 2 : vérifier l'échec**, **étape 3 : implémenter** (fond rendu comme `Affichage.qml:295-305` :
-  `PreserveAspectCrop`, `autoTransform`, `sourceSize` physique), **étape 4 : test OK**.
-- [ ] **Étape 5 : contrôle visuel au banc** : `hyprlock -c <conf produite>` sur le banc, capture comparée au bloc :
-  écart moyen inférieur à 0,5 sur le fond, à 0,2 sur l'horloge.
-- [ ] **Étape 6 : commit** `Verrouillage : configuration produite par la coque (L2-22)`.
-
-### Tâche 6 : le bloc, l'apparition et la presqu'île du bloc
-
-**Fichiers :**
-- Créer : `coque/Verrou/qmldir`, `Verrou.qml` (singleton, `IpcHandler { target: "verrou" }`), `Bloc.qml` (calque
-  `dunei-verrou`, un par écran par `Variants`), `Contenu.qml` (horloge, date, pastille à initiale, nom, champ ; propriété
-  `progres: real` de 0 à 1 qui pilote le recul), `Apparition.qml` (calque `dunei-verrou-apparition`), essais
-  `essai/fenetre/`.
-- Modifier : `coque/shell.qml` (import, réveil du singleton), `coque/Composants/Overlays.qml` (propriété
-  `verrou: bool`), `coque/Presquile/Presquile.qml:81` (la couverture vaut aussi quand `Overlays.verrou`),
-  `coque/Notifications/Centre.qml:37` (retenue sous verrou, sans écrire `EtatNotifications`),
-  `coque/Autorisation/Autorisation.qml:170-189` (un flux reçu sous verrou attend la remontée).
-- Test : `tests/test_verrou.py`, classe `ControleurTest` (essai `fenetre`, clavier et fenêtre désactivés comme pour
-  l'autorisation) ; `SourceTest` par expressions régulières sur le source.
+**Fichiers :** modifier `coque/Verrou/Contenu.qml` et `coque/Verrou/qmldir` ; créer `coque/Verrou/Media.qml` et
+`coque/Verrou/essai/contenu/shell.qml` ; tests dans `tests/test_verrou.py` (`ContenuTest`).
 
 **Interfaces :**
-- IPC `verrou` : celles de la tâche 4, plus `etat()` qui rend aussi `{"apparition": bool, "remonte": bool}`.
-- `Verrou.qml` : `tomber`, `poserSec`, `apparaitre`, `ceder`, `remonter`, `abreger`, tous à `ordre` ; ignore tout
-  `ordre` refusé par `ordreValable`.
+- `Media` (`QtObject`) :
+  - sorties : `present` (bool), `titre`, `artiste` (texte de `ligneMedia`), `pochette` (url, vide sans pochette) ;
+  - entrée : `lecteurs`, par défaut `Mpris.players.values`, remplacé par l'essai.
+- `Contenu` :
+  - entrées gardées : `echelle`, `vu`, `entreeAnimee` ;
+  - entrées nouvelles : `saisie` (`Saisie` ou `null`), `media` (`Media` ou `null`) ;
+  - sorties gardées : `fond`, `pret`, `progres`, `enMouvement`, `poser()` ;
+  - retirés : `pastille`, `champ` (sortie), `utilisateur`, `avecFond`, `avecImage`. `Image` passe à `cache: true`.
+- Géométrie (maquette `verrou-v3`) :
+  - champ centré, bas à `champBas` ; fermé, c'est un rond de `champHauteur`, d'opacité 0, 10 px plus bas ; ouvert,
+    il fait `champLargeur`, au ressort `spectacle` ;
+  - points de `point` et d'écart `pointEcart`, chacun grandissant de 0 à 1 à son arrivée ;
+  - message centré, bas à `messageBas`, corps `message`, accent ;
+  - ligne du média centrée à `mediaHaut` : pochette `pochette` aux coins `pochetteRayon` (absente sans url), puis
+    titre et artiste au corps `media`, écart `mediaEcart`, la ligne bornée à `mediaLargeur` avec une ellipse sur le
+    titre puis l'artiste ;
+  - apparition du média après `apparitionMedia`, montée de `courseMedia` en fondant ;
+  - absente quand `!media.present`, avec une sortie qui descend et fond ;
+  - un changement de titre fond d'un titre à l'autre ;
+  - la secousse : `saisie.secoue()` décale le champ de ±`secousse`, puis de ±10, ±6 et ±3, sur `verrouSecousse` ; elle
+    n'a pas lieu en mouvement réduit.
 
-Comportement (fiche, « La coque ») : chute et remontée au `Ressort { transition: "spectacle" }`, interruptibles depuis
-la position courante ; clavier exclusif dès `tomber`, rendu dès que `locked` est vu faux ; à `tomber`, `Lanceur.fermer()`,
-`Selecteur.annuler()`, `Deconnexion.annuler()`, `Overlays.popover.ouvert = false`, `Overlays.attention.ouvert = false` ;
-`Contenu` rendu sous le verrou (dans le bloc) et dans l'apparition ; minutes opaques. Presqu'île du bloc : `P.Encoche`
-sous le bord bas, `verre` au repos, image du bloc dès le départ, verre de nouveau quand la remontée est posée ;
-`Overlays.verrou` vrai de `tomber` à la fin de la remontée, ce qui efface la vraie. Sans lanceur : tant que le bloc est
-posé, `hyprctl -j locked` toutes les secondes par `Process` ; faux deux fois de suite sans chute en cours → rendre le
-clavier, remonter. Au démarrage, `locked` vrai → `poserSec`. Calque d'apparition retiré d'office après
-`verrouSecours`. Mouvement réduit : fondus, presqu'île sans changement de matière.
+- [ ] Créer la coque d'essai : un `Contenu` de 1536 × 960 dans un `Item`, sans fenêtre, avec une fausse saisie
+  (`QtObject` aux mêmes propriétés et au signal `secoue`) et une liste de faux lecteurs. Son IPC `essai` :
+  - `vu(bool)`, `ouvrir(points)`, `fermer()`, `message(texte)`, `secouer()` ;
+  - `lecteurs(json)`, `reduit(bool)` ;
+  - `mesure()` : JSON `{champLargeur, champOpacite, points, message, mediaVisible, titre, artiste, decalageChamp}`.
+- [ ] Écrire les tests `ContenuTest` :
+  - `test_champ_cache_au_repos` : opacité 0.
+  - `test_champ_s_ouvre` : largeur 280 et opacité 1, posées en moins de 1 s.
+  - `test_points` : trois points.
+  - `test_media_absent_sans_lecteur` : `[]` et `[{isPlaying: false}]` ne montrent pas la ligne.
+  - `test_media_joue` : titre et artiste lus, « · Hans Zimmer ».
+  - `test_secousse_et_reduit` : le champ se décale puis revient à 0 ; en mouvement réduit, aucun décalage.
+  - `test_plus_de_pastille` : `Contenu.qml` ne contient ni `pastille`, ni `utilisateur`, ni `nomTaille`.
+- [ ] Lancer `ContenuTest` : échec attendu.
+- [ ] Implémenter, puis relancer : tous passent, avec `tests.test_coque_qml` (couleurs par jetons).
+- [ ] Committer : « Verrouillage voie B : champ caché, message et média dans le contenu du verrou (L2-22) ».
 
-- [ ] **Étape 1 : tests en échec** :
-  - `test_ordre_perime` : `tomber(5)` puis `remonter(4)` → le bloc reste posé.
-  - `test_chute_puis_remontee` : `tomber(1)`, puis `etat().pose` devient vrai en moins de 1 s ; `remonter(1)` → bloc
-    caché, `Overlays.verrou` faux une fois posé.
-  - `test_ferme_le_reste` : un popover ouvert, `tomber(1)` → fermé.
-  - `test_session_ouverte_remonte` : faux `hyprctl` rendant `locked` faux, bloc posé sans chute en cours → remonté en
-    moins de 3 s.
-  - `test_apparition_secours` : `apparaitre(1)` sans `ceder` → calque retiré après `verrouSecours`.
-  - `test_reduit` : `mouvementReduit` → chute en fondu (opacité animée, position fixe).
-  - `SourceTest.test_calques` : namespaces `dunei-verrou` et `dunei-verrou-apparition`, `WlrLayer.Overlay`, masque vide
-    et `WlrKeyboardFocus.None` sur l'apparition.
-- [ ] **Étape 2 : vérifier l'échec**, **étape 3 : implémenter**, **étape 4 : tests OK** :
-  `python3 -m unittest tests.test_verrou tests.test_coque_qml tests.test_autorisation tests.test_notifications`.
-- [ ] **Étape 5 : contrôle visuel** : maquette `.superpowers/preview/verrou-v2.html` (`?a=aZ`) contre captures du banc à
-  des instants fixes (chute à 0,2 s, pose, apparition à 0,5 s et 1,5 s, cession) ; écarts notés, corrigés ou soumis.
-- [ ] **Étape 6 : commit** `Verrouillage : bloc, apparition et presqu'île du bloc (L2-22)`.
+### Tâche 5 : contrôleur (`Verrou.qml`)
 
-### Tâche 7 : bout à bout au banc, puis bascule
+**Fichiers :** modifier `coque/Verrou/Verrou.qml` et `coque/Verrou/essai/fenetre/shell.qml` ;
+`tests/test_verrou.py` (`ControleurTest`, réécrit pour la voie B).
 
-**Fichiers :** `deploy.py:122` (commentaire : `hyprlock` exigé, plus
-« provisoire »), `config/hypr/hyprlock.conf` (déjà repli).
+**Interfaces :**
+- Consomme : `Saisie` (tâche 3), `Media` (tâche 4), `ordreValable`.
+- État ajouté :
+  - `voulu` (bool : verrou demandé) ;
+  - `tient` (bool : `secure` du `WlSessionLock` ; sans fenêtre, il vaut `voulu`) ;
+  - `anime` (bool : l'apparition se joue ; faux en verrou sec ou abrégé) ;
+  - `saisie` (`Saisie`, avec `pret: tient`), `media` (`Media`) ;
+  - `dessine(nom: string)`, appelé par chaque bloc à une image posée.
+- État retiré : `apparition`, `contenuBloc`, `apparaitre`, `ceder` et le timer `secours`.
+- IPC `verrou` :
+  - `tomber(ordre)`, `poserSec(ordre)`, `remonter(ordre)`, `abreger()` ;
+  - `etat()` : JSON `{pose, ordre, tient, couvre, remonte}`.
+- Déroulé :
+  1. `couvrir` : `couvre`, `clavier`, `vu = false`, saisie vidée.
+  2. À `pose`, le relais attend une image de chaque écran de `Quickshell.screens`, plus `verrouRelais`, au plus
+     `verrouRelaisMax`. Sans fenêtre, le relais n'attend que `verrouRelais`.
+  3. `voulu = true`.
+  4. À `tient` : `clavier = false` et `vu = true`, avec `entreeAnimee = anime`.
+  5. `saisie.reussi` : `vu = false`, puis `verrouRetrait`, puis `voulu = false` et `relever()`.
+- Règles :
+  - `tomber` sous un `couvre` déjà vrai ne fait que prendre l'ordre ; `poserSec` sous un `couvre` déjà vrai vaut
+    `abreger`.
+  - `remonter` est sans effet si `tient`. Si `voulu` est vrai sans `tient` (verrou refusé), il remet
+    `voulu = false`, puis relève.
+  - Le suivi du compositeur (deux « rendus », aucun lanceur) remet `voulu = false` et relève, même si `tient`.
+  - `relever` est idempotent : rien si `!couvre || remonte`.
+  - `demarrer` : session tenue, `poserSec(ordre)`.
+  - `WlSessionLock { locked: verrou.fenetree && verrou.voulu }`, dans le singleton. Sa surface est `Surface`
+    (tâche 6). Cette tâche-ci ne pose que la propriété, avec `surface` à `null` tant que `Surface` n'existe pas.
 
-- [ ] **Étape 1 : banc complet.** Coque réelle (`qs -p coque`) dans le banc, `dunei-verrou` réel, PAM factice : dix
-  cycles sans image de session (bandeau magenta à zéro) ; coque tuée à chaque étape (chute, attente, apparition,
-  cession, remontée) ; veille simulée par `verrou-sec` en cours de chute ; deux écrans.
-- [ ] **Étape 2 : `make check`** → OK.
-- [ ] **Étape 3 : commit** `Verrouillage : bascule sur dunei-verrou (L2-22)`.
+- [ ] Coque d'essai : ajouter à l'IPC `essai` les commandes `taper`, `entree`, `pile` et `dessiner(nom)`, et étendre
+  `mesure` à `{voulu, tient, vu, anime, clavier, points, message}`. La pile vient de `DUNEI_ESSAI_PAM`, comme en
+  tâche 3.
+- [ ] Écrire les tests `ControleurTest` (ceux de l'apparition, de la cession et du secours sont retirés) :
+  - `test_chute_puis_verrou` : `tomber(1)` donne `pose`, puis `voulu` après au moins `verrouRelais`, puis `tient`,
+    `vu` et `anime` vrais, et `clavier` faux.
+  - `test_relais_plafonne` : avec la fenêtre simulée (`dessiner` jamais appelé, mode d'essai `attendreImages`), `voulu`
+    vient au plus `verrouRelaisMax` + 100 ms après `pose`.
+  - `test_poser_sec` : `voulu` vient sans chute, et `anime` reste faux.
+  - `test_abreger_pendant_chute` : posé à l'instant, `anime` faux.
+  - `test_deverrouillage_par_pam` : pile `question`, « bon » puis Entrée donnent `vu` faux, puis `voulu` faux après
+    `verrouRetrait`, puis la remontée.
+  - `test_echec_garde_le_verrou` : un mauvais mot de passe laisse `voulu` et `tient` vrais.
+  - `test_remonter_ignore_si_tenu` : `remonter(99)` sous `tient` ne change ni `voulu` ni `couvre`.
+  - `test_remonter_si_verrou_refuse` : `voulu` vrai sans `tient` (mode d'essai `refuser`), puis `remonter` donnent
+    `voulu` faux et le bloc remonte.
+  - `test_touches_pendant_la_chute` : « bo » tapé avant `tient`, « n » et Entrée après, et le déverrouillage a lieu.
+  - `test_suivi_rend_si_compositeur_rendu` : sous `tient`, lecture « false » et aucun lanceur donnent la remontée.
+  - `test_demarrer_session_tenue` : `demarrer` sous une lecture « true » donne `voulu` sans chute.
+  - `test_tomber_sous_couvre`.
 
-### Tâche 8 : documentation et recette
+  Les tests gardés de la version 1 (ordre périmé, `montre` sans battement, Overlays, popovers fermés, suivi et
+  recherche du lanceur, mouvement réduit) sont adaptés aux nouveaux noms.
+- [ ] Lancer `ControleurTest` : échec attendu.
+- [ ] Implémenter, puis relancer : tous passent.
+- [ ] Committer : « Verrouillage voie B : la coque prend le verrou derrière son bloc et le rend au succès PAM (L2-22) ».
 
-- [ ] **Étape 1 : documents.** Bible (ligne « Verrouillage / connexion », transitions, calques au-dessus du verrou) ;
-  notes de direction (ligne 40 amendée : `hyprlock` emprunté, spectacle à nous ; dernier paragraphe : prochaine étape
-  L2-37) ; backlog L2-22 fait ; carnet (section du verrou, `make install`) ; journal : voie A, relais nu, recul,
-  presqu'île taillée, calque `above_lock`, vérité `hyprctl locked`, échec en cours de session ; versions et
-  historiques de chaque document.
-- [ ] **Étape 2 : commit** `Documentation du verrouillage (L2-22)`, puis push et PR.
-- [ ] **Étape 3 : recette à l'écran par Nicolas,** après `make install` et redémarrage de la coque : `SUPER + L`, menu,
-  lanceur, inactivité, couvercle (veille), ouverture de session ; un mot de passe faux puis juste, tapés par lui après
-  annonce du risque `faillock` ; jour et nuit ; mouvement réduit. Puis fusion par `gh pr merge <n> --merge`, procédure
-  après fusion du carnet.
+### Tâche 6 : fenêtres et retrait de la voie A
+
+**Fichiers :**
+- créer `coque/Verrou/Surface.qml` ;
+- modifier `coque/Verrou/Bloc.qml`, `coque/Verrou/Verrou.qml` (surface et variants), `coque/Verrou/qmldir`,
+  `coque/shell.qml` (en-tête, `Production {}` retiré), `config/hypr/modules/regles.lua` (règle
+  `dunei-verrou-apparition` retirée), `tests/test_outils.py`, `tests/test_hyprland_modules.py` et les tests de
+  structure de `tests/test_verrou.py` ;
+- supprimer `Apparition.qml`, `Production.qml`, `essai/production/` et `ProductionTest`.
+
+**Interfaces :**
+- `Surface` (`WlSessionLockSurface`) :
+  - `color` en `surface-base` ;
+  - un `Contenu` plein écran avec `vu: Verrou.vu`, `entreeAnimee: Verrou.anime`, `saisie: Verrou.saisie`,
+    `media: Verrou.media` et l'échelle de l'écran ;
+  - un `Item` qui a le focus, dont `Keys.onPressed` appelle `Verrou.saisie.touche(event.key, event.text)` puis
+    `event.accepted = true`.
+- `Bloc` :
+  - `Contenu` avec `vu: false`, sans saisie ni média ;
+  - `Connections` sur `bloc.Window.window`, dont `onFrameSwapped` appelle `Verrou.dessine(modelData.name)` si
+    `Verrou.pose` ;
+  - même transfert du clavier vers `Verrou.saisie` tant que `Verrou.prendClavier` ;
+  - presqu'île inchangée.
+- `Verrou` :
+  - `WlSessionLock { surface: Component { Surface {} } }` ;
+  - les `Variants` ne portent plus que `Bloc` ;
+  - selon la tâche 1, `Quickshell.watchFiles: !verrou.actif`.
+
+- [ ] Écrire les tests de structure :
+  - `test_calques` : `dunei-verrou` en Overlay, et plus aucun `dunei-verrou-apparition` dans `coque/`, `config/` ni
+    `tests/test_outils.py`.
+  - `test_surface` : `WlSessionLockSurface`, `Keys.onPressed`, `Verrou.saisie.touche`.
+  - `test_image_partagee` : `cache: true` dans `Contenu.qml`, aucun `cache: false`.
+  - `test_shell_sans_production`.
+  - `test_regles_sans_above_lock` : la sortie Lua de `tests/test_hyprland_modules.py` ne compte plus que la règle
+    `dunei-verrou`.
+- [ ] Les lancer : échec attendu.
+- [ ] Implémenter et supprimer.
+- [ ] Relancer `tests.test_verrou`, `tests.test_hyprland_modules`, `tests.test_outils` et `tests.test_coque_qml` : tous
+  passent. Charger la coque d'essai `essai/fenetre` sans erreur QML au journal.
+- [ ] Committer : « Verrouillage voie B : surface du verrou, bloc relais, fin du calque d'apparition et de la
+  production (L2-22) ».
+
+### Tâche 7 : rideau
+
+**Fichiers :** créer `coque/Rideau/shell.qml` (lancé par `qs -p`, sans aucun import de la coque) ;
+`tests/test_rideau.py`.
+
+**Interface :** `qs -p <chemin>/Rideau/shell.qml`.
+- Il reçoit `DUNEI_RIDEAU_COULEUR` (`#rrggbb`), à défaut `#000000`, jamais transparent.
+- Il pose un `PanelWindow` par écran : couche Overlay, namespace `dunei-rideau`, ancré aux quatre bords, sans
+  clavier, `exclusionMode: Ignore`.
+- Il écrit « rideau : posé » au journal une fois que chaque écran a eu sa première image (`frameSwapped`).
+- Il ne fait rien d'autre et se tue par signal.
+
+- [ ] Écrire `test_rideau.py` :
+  - `test_structure` : namespace, couche, aucun `import "../`, couleur lue dans l'environnement.
+  - `test_pose` : lancé sous `QT_QPA_PLATFORM=offscreen`, la ligne « rideau : posé » vient en moins de 2 s, et le
+    processus est tué par son PID. Le test est sauté sans `qs`.
+- [ ] Le lancer : échec attendu. Implémenter, puis relancer : il passe.
+- [ ] Ajouter `dunei-rideau` aux espaces de noms connus de `tests/test_outils.py`. Committer : « Verrouillage voie B :
+  rideau opaque pour la reprise du verrou par hyprlock (L2-22) ».
+
+### Tâche 8 : lanceur, entrée et relais
+
+**Fichiers :** `config/hypr/scripts/dunei-verrou`, `config/hypr/hyprlock.conf`, `tests/test_dunei_verrou.py`.
+
+**Interfaces :**
+- Consomme l'IPC `etat` de la tâche 5 (`{pose, ordre, tient, couvre, remonte}`).
+- Le lanceur ne produit plus de configuration et n'a plus de marqueur, de `SIGUSR2`, de boucle `minutes`,
+  d'`intercepte` ni de cession. `CONF` disparaît : `hyprlock` lit toujours `REPLI` et se lance sous
+  `stdbuf -oL hyprlock --no-fade-in -c "$REPLI"`, sortie dans `$RUN/verrou-hyprlock.log`. Le placement dans l'unité,
+  `suivre`, `verrou_franc`, `veille`, les trois issues et l'échec du verrou restent tels quels.
+- Déroulé de l'entrée :
+  - `--sec` : `hyprlock` est lancé aussitôt (`tenant=hyprlock`), puis `ipc poserSec` est tenté sans attendre.
+  - Verrou sec (veille, `DUNEI_VERROU_SANS_CHUTE`), sinon chute : `ipc poserSec "$ordre"` ou
+    `ipc tomber "$ordre"`. En cas d'échec (coque absente ou muette au-delà de 0,2 s), `hyprlock` part aussitôt.
+  - Sinon, attente jusqu'à `debut + verrouAttente`, par pas de 20 ms, de `tenu` et de `etat` (`tient` sous l'ordre
+    courant) : alors `tenant=coque`.
+    - Une veille demandée envoie `abreger` une fois.
+    - Une coque disparue (code de `qs` autre que 0 ou 124) fait partir `hyprlock` aussitôt.
+    - À l'échéance, une session `tenu` est laissée à la coque ; sinon `hyprlock` part.
+- Relais vers la coque, à chaque tour de garde où `tenant=hyprlock` :
+  - `etat.tient` sous l'ordre courant : `kill -TERM` à `hyprlock`, puis `wait`, puis `tenant=coque` ;
+  - coque qui répond sans `couvre` : `ipc poserSec "$ordre"`, une fois par apparition de la coque.
+- `config/hypr/hyprlock.conf` :
+  - en-tête « secours de la voie B » ;
+  - une étiquette de date française, sur le modèle de l'ancienne `confHyprlock` (`date '+%w %-d %-m' | awk`), avec
+    `cmd[update:60000]` ;
+  - `fade_on_empty = true` sur le champ ;
+  - pas d'image.
+
+- [ ] Réécrire les faux outils de `test_dunei_verrou.py` :
+  - Faux `qs` : il garde l'état d'une coque simulée dans `$FAKE_DIR/coque` et suit `FAKE_COQUE` :
+    - `tient` (défaut) : `tomber` ou `poserSec` posent `couvre` ; `FAKE_PRISE` ms plus tard (défaut 100), `etat`
+      rend `tient` et écrit `locked = true`. `FAKE_TENUE` ms après, la session est rendue (`locked = false`) comme
+      par un succès PAM.
+    - `absente` : code 255 partout.
+    - `muette` : dort 1 s.
+    - `lente` : `tient` après 2,5 s.
+    - `tard` : 255 pendant `FAKE_TARD` ms, puis `tient`.
+    - `meurt` : 255 dès que `tient` a été rendu une fois, et pour de bon.
+    - `revient` : comme `meurt`, puis `tient` de nouveau après `FAKE_RETOUR` ms.
+    - `qs -p` est consigné comme « rideau ».
+  - Faux `hyprlock` : il consigne `TERM` et `USR1` reçus. À la prise du verrou, il écrit `onLockLocked` sur sa sortie.
+  - Faux `stdbuf` : il exécute sa commande.
+  - `tearDown` vérifie qu'aucun `hyprlock USR1` n'a été consigné, dans aucun test.
+- [ ] Écrire les tests de l'entrée (ceux du marqueur, du `SIGUSR2`, de la cession et de la configuration produite
+  sont retirés) :
+  - `test_chute_tenue_par_la_coque` : `tomber`, puis `etat`, puis `remonter`, code 0, aucun `hyprlock`.
+  - `test_coque_absente` : `hyprlock -c <repli>` est lancé moins de 0,3 s après l'appel.
+  - `test_coque_muette` : même chose, moins de 0,5 s après l'appel.
+  - `test_coque_lente_echeance` : `hyprlock` part entre 1,4 et 1,8 s, puis la coque tient et `hyprlock` reçoit
+    `TERM`.
+  - `test_coque_disparue_en_chute` : `hyprlock` sans attendre l'échéance.
+  - `test_ouverture_de_session` : `--sec` et `FAKE_COQUE=tard` donnent `hyprlock` avant tout `etat`, puis
+    `poserSec`, puis `TERM` ; code 0 au déverrouillage.
+  - `test_veille_annoncee` : `poserSec`, et jamais `tomber`.
+  - `test_veille_en_cours_de_chute` : un seul `abreger`.
+  - Gardés et adaptés : second appel, placement, trace, muets, échecs (trois lancements sans verrou avec la coque
+    absente).
+- [ ] Les lancer : échec attendu. Implémenter, puis relancer `tests.test_dunei_verrou` et
+  `tests.test_verrou_initial` : tous passent.
+- [ ] Committer : « Verrouillage voie B : le lanceur commande la coque et garde hyprlock en secours (L2-22) ».
+
+### Tâche 9 : lanceur, garde et reprise
+
+**Fichiers :** `config/hypr/scripts/dunei-verrou`, `config/systemd/user/dunei-coque.service`,
+`tests/test_dunei_verrou.py` et tout test qui lit l'unité.
+
+**Interfaces :**
+- `RIDEAU="${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/dunei/Rideau/shell.qml"`. Sa couleur vient de
+  `jq -r .color.surfaceBase` sur les jetons installés de la coque (chemin à lire dans `deploy.py`), à défaut `#000000`.
+- `rideau_poser` : `qs -p "$RIDEAU" >"$RUN/verrou-rideau.log" 2>&1 &`, puis attente de « rideau : posé », au plus
+  0,5 s. `rideau_retirer` : `kill` par PID. Le piège `EXIT` le retire aussi.
+- `secours` : rideau si la session est déjà `tenu`, puis `hyprlock`. Le rideau est retiré à la ligne `onLockLocked` du
+  journal de `hyprlock`, au plus à `ECHEANCE`.
+- Garde, un tour toutes les 0,2 s tant que la session n'est pas franchement rendue :
+  - `tenant=coque`, `etat` en échec (sans instance) ou sans `tient` : un chrono de `verrouReprise` part et n'est remis
+    à zéro que par un `tient`. Passé ce délai, `secours`, puis `tenant=hyprlock`.
+  - `tenant=hyprlock` et `hyprlock` sorti :
+    - session rendue : fin ;
+    - session tenue : si la coque répond, `poserSec`, puis `tenant=coque` avec le chrono lancé ; sinon `secours`
+      (compteurs de relance et sorties rapides de la version 1).
+- Session déjà tenue à l'entrée :
+  - `etat.tient` ou un `hyprlock` vivant : `suivre 1`, puis `remonter`, code 0 ;
+  - sinon, coque vivante : `poserSec`, puis la garde ;
+  - sinon : `secours`.
+- Fin : `remonter` dans tous les cas. Il est sans effet si la coque tient le verrou ou remonte déjà.
+- `dunei-coque.service` : `Restart=always`, commentaire à jour.
+
+- [ ] Écrire les tests de la garde :
+  - `test_coque_revient_a_temps` : `FAKE_COQUE=revient`, retour en 1 s ; aucun rideau, aucun `hyprlock`, code 0.
+  - `test_coque_ne_revient_pas` :
+    - `meurt` donne, vers 3 s, l'ordre rideau, puis `hyprlock`, puis rideau tué, et le rideau consigné comme posé
+      avant `hyprlock` ;
+    - `hyprlock` rend la session, puis `remonter` est tenté et le code vaut 0.
+  - `test_hyprlock_tombe_coque_reprend` : sous `tenant=hyprlock`, un `hyprlock` « garde » (sorti, verrou laissé) avec
+    une coque vivante donne `poserSec` et pas de second `hyprlock`.
+  - `test_deja_tenu_par_la_coque` : `suivre`, aucun `hyprlock`.
+  - `test_deja_tenu_sans_verrouilleur` : coque absente, verrou tenu, puis rideau et `hyprlock`.
+  - `test_jamais_sigusr1` : couvert par le `tearDown`.
+  - `test_unite_restart_always` : lecture du fichier d'unité.
+- [ ] Les lancer : échec attendu. Implémenter, puis relancer `tests.test_dunei_verrou` : tous passent.
+- [ ] Committer : « Verrouillage voie B : reprise du verrou derrière le rideau et coque relancée toujours (L2-22) ».
+
+### Tâche 10 : banc complet
+
+**Fichiers :** `.superpowers/banc-b/exp/` (hors git) ; « Ce qui a été relevé » de la fiche (2.3) ; `rapport.md`.
+
+Au banc imbriqué, avec la vraie coque de la branche (`coque/`, par un lien), le vrai lanceur, la pile factice
+`question` montée par `bwrap` à la place de `/etc/pam.d/hyprlock` (aucune variable ni réglage de production ne change
+la pile), la session magenta et deux sorties d'échelles différentes :
+
+- [ ] Dix cycles complets (chute, verrou, « bon », déverrouillage, remontée) : zéro image de session. L'écart
+  bloc → surface est nul à l'entrée comme à la sortie.
+- [ ] Coque tuée à chaque étape (en chute, au relais, sous le verrou, pendant PAM, au retrait), puis relancée par une
+  fausse unité : zéro image de session, et le verrou repris.
+- [ ] Coque tuée et non relancée : rideau, puis `hyprlock` ; zéro image de session.
+- [ ] `--sec`, puis la coque démarre : `hyprlock` est relayé par `SIGTERM` et la coque tient le verrou.
+- [ ] Un écran débranché puis rebranché sous le verrou (issue #1155) : relever ce qui arrive, et que la reprise
+  couvre le pire.
+- [ ] Mouvement réduit : fondus seuls.
+- [ ] Écrire les relevés dans la fiche (2.3) et committer la fiche.
+
+### Tâche 11 : documents
+
+**Fichiers :**
+- `docs/journal-decisions.md` : trois décisions nouvelles. D236 remplace D226 par la voie B, avec la mesure du banc.
+  D237 porte la reprise derrière le bloc et le rideau, `SIGUSR1` interdit et `Restart=always`. D238 porte le champ
+  caché, la pile PAM partagée, la garde PAM et le média. D232 à D234 sont marquées tombées.
+- La bible : verrouillage et transitions.
+- `docs/project_management/` : la direction (dernier paragraphe : la recette du verrou, puis L2-37), le backlog
+  (L2-22 en voie B, L2-85 tombe avec la pastille) et le carnet (recette du verrou en voie B, `faillock` annoncé avant
+  le vrai mot de passe).
+
+- [ ] Rédiger, chaque document avec sa version et son historique. Committer : « Documentation du verrouillage voie B
+  (L2-22, D236 à D238) ».
+
+## Après les tâches
+
+`make check` ; relecture finale de la branche ; proposition de `make install`, avec redémarrage de la coque, demandée
+à Nicolas ; recette à l'écran par Nicolas (vrai mot de passe tapé par lui, après annonce du risque `faillock`) ;
+fusion de la PR #78 ; procédure après fusion du carnet.
 
 ## Historique des versions
 
@@ -294,3 +521,4 @@ clavier, remonter. Au démarrage, `locked` vrai → `poserSec`. Calque d'apparit
 | 1.0 | 2026-11-26 | Plan initial, d'après la fiche 1.2 |
 | 1.1 | 2026-11-26 | Relevés de la tâche 1 : `order` négatif, section sans nom en `zindex = -2` |
 | 1.2 | 2026-11-26 | Relevés de la fin : `pastilleBas` ramené à 139 (maquette v2), cinq images par écran et non six |
+| 2.0 | 2026-11-27 | Voie B, d'après la fiche 2.1 : la coque verrouille, `hyprlock` en secours, rideau, champ caché, média |

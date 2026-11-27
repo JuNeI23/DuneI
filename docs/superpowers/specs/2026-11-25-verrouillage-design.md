@@ -1,6 +1,6 @@
 # Verrouillage (L2-22)
 
-Version 2.0 — 2026-11-27 — voie B : la coque devient le verrouilleur, `hyprlock` reste en secours (à valider)
+Version 2.1 — 2026-11-27 — voie B : la coque devient le verrouilleur, `hyprlock` reste en secours (validée)
 
 ## Intention
 
@@ -302,3 +302,4 @@ que PAM le donne ; MPRIS sous verrou ; `PreparingForSleep` au moment voulu.
 | 1.3 | 2026-11-26 | Relevés du banc : champ sur fond transparent et retour d'échec, pile PAM du banc, `PreparingForSleep` au repos |
 | 1.4 | 2026-11-26 | Valeurs corrigées par le banc : `order = -100` pour le bloc, section sans nom en `zindex = -2` |
 | 2.0 | 2026-11-27 | Voie B : la coque verrouille (`WlSessionLock`, `PamContext`), `hyprlock` en secours ; champ caché, sans pastille ni nom, média sous la date ; relevés du banc B |
+| 2.1 | 2026-11-27 | Validée par Nicolas |
