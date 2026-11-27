@@ -356,6 +356,147 @@ class ControleurTest(EssaiCoque, unittest.TestCase):
         self.assertGreater(trace["opacitesIntermediaires"], 1)
 
 
+@unittest.skipUnless(os.environ.get("WAYLAND_DISPLAY") and QS, "session Wayland et Quickshell requis")
+class SaisieTest(EssaiCoque, unittest.TestCase):
+    """Le champ de mot de passe et son dialogue PAM (Saisie.qml), sur des piles factices écrites dans un dossier
+    temporaire : jamais /etc/pam.d, jamais le compte réel, jamais faillock."""
+
+    essai = ROOT / "coque" / "Verrou" / "essai" / "saisie"
+    teintes = (55,)
+
+    def setUp(self):
+        """Écrit les piles factices, lance la coque d'essai et attend les jetons.
+
+        Entrées : aucune. Sortie : aucune ; self.piles est le dossier des piles. Erreurs : échec au délai.
+        Dépendances : EssaiCoque.setUp, installer, lancer, attendre, jusqua.
+        """
+        super().setUp()
+        self.piles = Path(self.tmp.name) / "pam"
+        self.piles.mkdir()
+        bon, lent = self.piles / "verifie.sh", self.piles / "lent.sh"
+        bon.write_text('#!/bin/sh\n# Accepte le seul mot « bon ».\nread -r mdp; [ "$mdp" = "bon" ]\n')
+        lent.write_text("#!/bin/sh\n# Pile trop lente : dort bien au-delà de la garde.\nexec sleep 30\n")
+        bon.chmod(0o755)
+        lent.chmod(0o755)
+        socle = "account required pam_permit.so\n"
+        (self.piles / "succes").write_text("auth required pam_permit.so\n" + socle)
+        (self.piles / "echec").write_text("auth required pam_deny.so\n" + socle)
+        # pam_exec seul rend une erreur système sur un mot faux ; la pile le ramène à un échec franc, comme pam_unix.
+        (self.piles / "question").write_text(f"auth [success=1 default=ignore] pam_exec.so expose_authtok quiet {bon}\n"
+                                             "auth requisite pam_deny.so\nauth required pam_permit.so\n" + socle)
+        (self.piles / "lente").write_text(f"auth required pam_exec.so expose_authtok quiet {lent}\n" + socle)
+        self.environnement = {"DUNEI_ESSAI_PAM": str(self.piles)}
+        self.installer(55)
+        self.lancer(self.dir)
+        self.attendre("essai : prêt")
+        self.jusqua(lambda: self.etat() is not None, "coque joignable")
+
+    def appel(self, fonction: str, *args) -> str:
+        """Appelle l'IPC « essai ». Entrées : fonction, args. Sortie : texte rendu. Erreurs : CalledProcessError."""
+        return subprocess.run([QS, "ipc", "--pid", str(self.proc.pid), "call", "essai", fonction, *map(str, args)],
+                              check=True, capture_output=True, text=True, timeout=DELAI).stdout.strip()
+
+    def etat(self):
+        """État de la saisie, ou None tant que l'IPC ne répond pas. Sortie : dict ou None."""
+        try:
+            return json.loads(self.appel("etat"))
+        except (subprocess.CalledProcessError, json.JSONDecodeError):
+            return None
+
+    def jusqua(self, condition, message: str, delai: float = DELAI):
+        """Attend qu'une condition soit vraie. Entrées : condition, message, delai (s). Sortie : la valeur.
+        Erreurs : échec du test au délai. Dépendances : time."""
+        fin = time.monotonic() + delai
+        while time.monotonic() < fin:
+            valeur = condition()
+            if valeur:
+                return valeur
+            time.sleep(0.05)
+        self.fail(f"{message} (état : {self.etat()})\n{self.journal()}")
+
+    def saisir(self, pile: str, texte: str, pret: bool = True):
+        """Choisit la pile, déclare le verrou acquis ou non, tape le texte puis Entrée. Entrées : pile, texte, pret."""
+        self.appel("pile", pile)
+        self.appel("pret", str(pret).lower())
+        self.appel("taper", texte)
+        self.appel("entree")
+
+    def test_question_juste(self):
+        """« bon » puis Entrée : un succès, le champ vidé. Entrées, sortie : aucune. Erreurs : échec."""
+        self.saisir("question", "bon")
+        self.jusqua(lambda: self.etat()["reussis"] == 1, "succès attendu")
+        e = self.etat()
+        self.assertEqual((e["points"], e["secousses"], e["verifie"]), (0, 0, False))
+
+    def test_question_fausse(self):
+        """« mauvais » : une secousse et le message, effacé après le délai court. Entrées, sortie : aucune."""
+        self.appel("delais", 8000, 600, 8000)
+        self.saisir("question", "mauvais")
+        self.jusqua(lambda: self.etat()["secousses"] == 1, "secousse attendue")
+        self.assertEqual(self.etat()["message"], "Mot de passe incorrect")
+        self.assertEqual(self.etat()["reussis"], 0)
+        self.jusqua(lambda: self.etat()["message"] == "", "message effacé après le délai")
+
+    def test_message_efface_a_la_frappe(self):
+        """La frappe suivante efface le message. Entrées, sortie : aucune. Erreurs : échec."""
+        self.saisir("question", "mauvais")
+        self.jusqua(lambda: self.etat()["message"] != "", "message attendu")
+        self.appel("taper", "a")
+        self.assertEqual(self.etat()["message"], "")
+
+    def test_pile_introuvable(self):
+        """Pile absente : « Vérification impossible », champ utilisable. Entrées, sortie : aucune."""
+        self.saisir("absente", "x")
+        self.jusqua(lambda: self.etat()["message"] == "Vérification impossible", "message attendu")
+        self.assertFalse(self.etat()["verifie"])
+        self.appel("taper", "y")
+        self.assertEqual((self.etat()["points"], self.etat()["ouvert"]), (1, True))
+
+    def test_pam_lent_abandonne(self):
+        """Pile lente, garde à 500 ms : « Vérification impossible ». Entrées, sortie : aucune."""
+        self.appel("delais", 8000, 3000, 500)
+        self.saisir("lente", "x")
+        self.jusqua(lambda: self.etat()["message"] == "Vérification impossible", "garde attendue", delai=5)
+        self.assertFalse(self.etat()["verifie"])
+
+    def test_touches_ignorees_pendant_pam(self):
+        """Une frappe pendant la vérification est ignorée. Entrées, sortie : aucune. Erreurs : échec."""
+        self.appel("delais", 8000, 3000, 800)
+        self.saisir("lente", "x")
+        self.jusqua(lambda: self.etat()["verifie"], "vérification en cours")
+        self.appel("taper", "x")
+        self.jusqua(lambda: self.etat()["message"] == "Vérification impossible", "issue attendue", delai=5)
+        self.assertEqual(self.etat()["points"], 0)
+
+    def test_entree_avant_secure(self):
+        """Avant le verrou acquis, Entrée n'ouvre aucune vérification ; une fois acquis, elle part seule."""
+        self.saisir("succes", "x", pret=False)
+        time.sleep(0.5)
+        self.assertEqual(self.etat()["reussis"], 0)
+        self.assertTrue(self.etat()["verifie"])
+        self.appel("pret", "true")
+        self.jusqua(lambda: self.etat()["reussis"] == 1, "vérification partie seule")
+
+    def test_repos_referme(self):
+        """Après le délai de repos, le champ est fermé et vide. Entrées, sortie : aucune. Erreurs : échec."""
+        self.appel("delais", 300, 3000, 8000)
+        self.appel("taper", "abc")
+        self.assertEqual((self.etat()["points"], self.etat()["ouvert"]), (3, True))
+        self.jusqua(lambda: not self.etat()["ouvert"], "champ refermé")
+        self.assertEqual(self.etat()["points"], 0)
+
+    def test_un_seul_start(self):
+        """Deux Entrée rapprochées : une seule issue. Entrées, sortie : aucune. Erreurs : échec."""
+        self.appel("pile", "succes")
+        self.appel("pret", "true")
+        self.appel("taper", "x")
+        self.appel("entree")
+        self.appel("entree")
+        self.jusqua(lambda: self.etat()["reussis"] >= 1, "succès attendu")
+        time.sleep(0.5)
+        self.assertEqual(self.etat()["reussis"], 1)
+
+
 class SourceTest(unittest.TestCase):
     """Les sources des calques du verrou et des modules qu'il touche, lues par expressions régulières."""
 
