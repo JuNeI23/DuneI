@@ -13,9 +13,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 COQUE = ROOT / "coque"
 NAMESPACE = re.compile(r'WlrLayershell\.namespace\s*:\s*"([^"]+)"')
-# Calques volontairement hors du verre, chacun avec sa raison : rien à flouter sous eux. Aucun pour l'instant, le
-# verrou de la voie B étant déclaré dans les jetons.
-HORS_VERRE: dict[str, str] = {}
+# Calques volontairement hors du verre, chacun avec sa raison : rien à flouter sous eux.
+HORS_VERRE: dict[str, str] = {
+    "dunei-rideau": "calque opaque d'une configuration Quickshell autonome, qui ne lit pas les jetons : rien à flouter",
+}
 
 
 def declares() -> set[str]:
