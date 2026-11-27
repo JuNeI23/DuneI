@@ -1,6 +1,6 @@
 # Verrouillage (L2-22)
 
-Version 2.1 — 2026-11-27 — voie B : la coque devient le verrouilleur, `hyprlock` reste en secours (validée)
+Version 2.2 — 2026-11-27 — voie B : la coque devient le verrouilleur, `hyprlock` reste en secours (validée)
 
 ## Intention
 
@@ -103,6 +103,28 @@ d'essai était magenta, pour que la moindre image d'elle se voie.
   `completed(Failed)` ; avec question, `messageChanged` puis `responseRequiredChanged(true)`, `respond()` accepté dans
   ce gestionnaire, puis `completed`. Une pile introuvable : `start()` rend faux et plus aucun signal n'arrive.
 - **MPRIS** n'est pas éprouvable au banc (aucun bus) : à la recette.
+
+Éprouvé le 27 novembre au même banc, pour la première tâche du plan, avec l'image du bureau réelle (4096 × 2304) sous
+le bloc et sous la surface ; section « T1 » du rapport du banc :
+
+- **Rechargement à chaud pendant le verrou.** La coque survit et recharge, mais la nouvelle génération reprend le
+  verrou de l'ancienne avec sa propre valeur de `locked`. Si elle part de faux, ce qui est le cas réel puisque l'état du
+  verrou vit dans la génération, elle **rend le verrou** : la session apparaît 59 ms après la modification du fichier et
+  reste visible, sans mot de passe ni écran mort. Si elle part de vrai, le verrou tient, mais les surfaces sont
+  recréées et l'écran mort gris de Hyprland s'intercale deux à trois images.
+- **`Quickshell.watchFiles`.** Posé à faux pendant le verrou, il empêche tout rechargement. Remis à vrai, il ne
+  recharge pas les changements faits entre-temps : seul un changement ultérieur recharge, avec le contenu le plus
+  récent. La tâche 6 coupe donc la surveillance tant que la coque tient le verrou (affectation impérative à chaque
+  changement de l'état du verrou) ; un fichier modifié pendant le verrou attend la modification suivante.
+- **Première image de la surface.** Avec la même URL, la même `sourceSize` et `cache: true` pour le bloc et la
+  surface, chargement asynchrone gardé, l'image est prête 10 à 25 ms après la création de la surface, avant sa première
+  image : écart nul entre le bloc et les quatre premières images de la surface, 6 passes sur 6, sur les deux écrans.
+  Sans le cache, la surface montre un aplat noir pendant 210 à 225 ms. En chargement synchrone, l'image est là aussi,
+  mais `secure` recule de 300 ms : écarté. Le bloc doit être mappé, son image chargée, quand la surface naît.
+- **`frameSwapped`.** Lu depuis un `Item` d'un `PanelWindow` comme d'une `WlSessionLockSurface`, il arrive à chaque
+  image rendue (60 par seconde sur une sortie à 60 Hz pendant une animation) et jamais quand rien ne bouge. La première
+  image se détecte donc ainsi, mais un écran qui ne dessine pas n'en émet aucune : le plafond `verrouRelaisMax` reste
+  nécessaire. Un calque mappé sous le verrou continue d'être rendu.
 
 ## Buts
 
@@ -267,8 +289,8 @@ direction, backlog L2-22 (L2-85 tombe avec la pastille), carnet (recette).
 - Coque qui ne revient pas dans les 3 s : rideau, puis `hyprlock` ; la coque relancée plus tard reprend le verrou
   derrière son bloc et le lanceur termine `hyprlock`.
 - `dunei-coque.service` en `Restart=always`.
-- Rechargement à chaud du QML pendant le verrou : à éprouver au banc dès la première tâche ; s'il détruit le verrou,
-  le rechargement est différé tant que la session est tenue.
+- Rechargement à chaud du QML pendant le verrou : différé tant que la session est tenue, puisqu'il rendrait le verrou
+  (relevé du 27 novembre, tâche 1).
 - Touches tapées pendant la chute gardées et reprises par le verrou.
 - Repli de `hyprlock` sans image : à l'ouverture de session, un aplat bref précède la coque.
 - Ouverture de session : `hyprlock` d'abord, puis la coque, au lieu d'attendre la coque : l'échec fermé passe avant
@@ -278,9 +300,9 @@ direction, backlog L2-22 (L2-85 tombe avec la pastille), carnet (recette).
 
 ## Non éprouvé, à traiter au plan
 
-Première image du calque comme signal (`frameSwapped` de la fenêtre) ; `PamContext` sur `/etc/pam.d/hyprlock` avec un
-vrai mot de passe (à la recette, tapé par Nicolas, après annonce du risque pour `faillock`) ; message de `faillock` tel
-que PAM le donne ; MPRIS sous verrou ; `PreparingForSleep` au moment voulu.
+`PamContext` sur `/etc/pam.d/hyprlock` avec un vrai mot de passe (à la recette, tapé par Nicolas, après annonce du
+risque pour `faillock`) ; message de `faillock` tel que PAM le donne ; MPRIS sous verrou ; `PreparingForSleep` au
+moment voulu.
 
 ## Vérification
 
@@ -303,3 +325,4 @@ que PAM le donne ; MPRIS sous verrou ; `PreparingForSleep` au moment voulu.
 | 1.4 | 2026-11-26 | Valeurs corrigées par le banc : `order = -100` pour le bloc, section sans nom en `zindex = -2` |
 | 2.0 | 2026-11-27 | Voie B : la coque verrouille (`WlSessionLock`, `PamContext`), `hyprlock` en secours ; champ caché, sans pastille ni nom, média sous la date ; relevés du banc B |
 | 2.1 | 2026-11-27 | Validée par Nicolas |
+| 2.2 | 2026-11-27 | Relevés de la tâche 1 : le rechargement à chaud rend le verrou, `watchFiles` coupé pendant le verrou ; image du bureau partagée par le cache dès la première image de la surface ; `frameSwapped` à chaque image rendue |
