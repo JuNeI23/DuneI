@@ -6,12 +6,15 @@ import "Composants"
 import "Verrou"
 
 // Coque d'essai du contrôleur du verrou (L2-22), sans calque, sans clavier, sans jamais lire le vrai compositeur.
-// Rôle : charge le singleton Verrou, fenêtres et clavier désactivés comme pour l'autorisation, et remplace sa lecture
-// de l'état du compositeur par une commande echo (session tenue par défaut) et sa recherche d'un lanceur par false
-// (aucun lanceur). tests/test_verrou.py (ControleurTest) la pilote par l'IPC « verrou » du singleton, comme le
-// lanceur, et par l'IPC « essai ». Elle trace la position et l'opacité du bloc à chaque changement.
-// Entrées : DUNEI_TOKENS_DIR et DUNEI_ETAT_DIR ; IPC « essai » : pret, lecture, lanceur, recherche, position,
-// reduit, demarrer, ouvrir, ouverts, mesure, montres, trace.
+// Rôle : charge le singleton Verrou, fenêtres, verrou de session et clavier désactivés comme pour l'autorisation, et
+// remplace sa lecture de l'état du compositeur par une commande echo (session tenue par défaut), sa recherche d'un
+// lanceur par false (aucun lanceur) et le dossier de ses piles PAM par DUNEI_ESSAI_PAM (pile « echec » par défaut ;
+// jamais /etc/pam.d). tests/test_verrou.py (ControleurTest) la pilote par l'IPC « verrou » du singleton, comme le
+// lanceur, et par l'IPC « essai ». Elle trace la position et l'opacité du bloc à chaque changement, et l'instant
+// (Date.now, en ms) de la pose, de la demande du verrou, du retrait du contenu et du verrou rendu.
+// Entrées : DUNEI_TOKENS_DIR, DUNEI_ETAT_DIR et DUNEI_ESSAI_PAM ; IPC « essai » : pret, lecture, lanceur, recherche,
+// position, reduit, demarrer, ouvrir, ouverts, mesure, montres, trace, pile, taper, entree, dessiner, dessinAuto,
+// attendre, refuser, ecrans.
 // Sorties : « essai : prêt » au démarrage. Erreurs : celles de Theme et de Verrou, dans le journal.
 // Dépendances : quickshell ≥ 0.3 (IpcHandler), Verrou, Overlays, Theme ; liens essai/fenetre/ vers les modules de la
 // coque, car Quickshell ne suit pas les imports hors du dossier de la coque.
@@ -22,11 +25,20 @@ ShellRoot {
     property int opacitesIntermediaires: 0
     // Suite des valeurs prises par Verrou.montre, chacune avec l'état actif au même instant.
     property var montres: []
+    // Instants de la pose, de la demande du verrou, du retrait du contenu et du verrou rendu ; dessin simulé à la pose.
+    property double tPose: 0
+    property double tVoulu: 0
+    property double tVuFaux: 0
+    property double tVouluFaux: 0
+    property bool dessinAuto: false
 
-    // Component.onCompleted — retire calques et clavier, pose une lecture « session tenue », signale la coque prête.
+    // Component.onCompleted — retire calques, verrou de session et clavier, pose une lecture « session tenue » et les
+    // piles factices (un dossier inexistant si DUNEI_ESSAI_PAM manque), signale la coque prête.
     // Entrées : aucune. Sortie : la ligne « essai : prêt ». Erreurs : aucune. Dépendances : Verrou.
     Component.onCompleted: {
         Verrou.fenetree = false
+        Verrou.saisie.dossierPile = Quickshell.env("DUNEI_ESSAI_PAM") || "/nonexistent/dunei-essai-pam"
+        Verrou.saisie.pile = "echec"
         Verrou.clavierExclusif = false
         Verrou.lecture = ["echo", "{\"locked\": true}"]
         Verrou.presence = ["false"]
@@ -42,6 +54,14 @@ ShellRoot {
         function onOpaciteChanged() { if (Verrou.opacite > 0 && Verrou.opacite < 1) essai.opacitesIntermediaires++ }
         // Trace du mappage du bloc : chaque changement de montre, avec actif. Entrées : aucune.
         function onMontreChanged() { essai.montres = essai.montres.concat([[Verrou.montre, Verrou.actif]]) }
+        // Instants du déroulé ; à la pose, le dessin simulé de chaque écran si dessinAuto. Entrées : aucune.
+        function onPoseChanged() {
+            if (!Verrou.pose) return
+            essai.tPose = Date.now()
+            if (essai.dessinAuto) for (const e of Quickshell.screens) Verrou.dessine(e.name)
+        }
+        function onVouluChanged() { if (Verrou.voulu) essai.tVoulu = Date.now(); else essai.tVouluFaux = Date.now() }
+        function onVuChanged() { if (!Verrou.vu) essai.tVuFaux = Date.now() }
     }
 
     // Faux popover exclusif et fausse attention, pour l'essai de fermeture.
@@ -96,8 +116,35 @@ ShellRoot {
         function mesure(): string {
             return JSON.stringify({ position: Verrou.position, opacite: Verrou.opacite, verrou: Overlays.verrou,
                                     montre: Verrou.montre, clavier: Verrou.clavier, vu: Verrou.vu,
-                                    contenuBloc: Verrou.contenuBloc })
+                                    voulu: Verrou.voulu, tient: Verrou.tient, anime: Verrou.anime,
+                                    points: Verrou.saisie.points, message: Verrou.saisie.message,
+                                    tPose: essai.tPose, tVoulu: essai.tVoulu, tVuFaux: essai.tVuFaux,
+                                    tVouluFaux: essai.tVouluFaux })
         }
+
+        // pile — choisit la pile PAM factice de la saisie. Entrée : nom.
+        function pile(nom: string): void { Verrou.saisie.pile = nom }
+
+        // taper — frappe chaque caractère du texte dans la saisie du verrou. Entrée : texte.
+        function taper(texte: string): void { for (const c of Array.from(texte)) Verrou.saisie.touche(0, c) }
+
+        // entree — frappe Entrée dans la saisie du verrou. Entrées : aucune.
+        function entree(): void { Verrou.saisie.touche(Qt.Key_Return, "\r") }
+
+        // dessiner — simule une image posée par le bloc d'un écran. Entrée : nom de l'écran.
+        function dessiner(nom: string): void { Verrou.dessine(nom) }
+
+        // dessinAuto — chaque écran dessine dès la pose. Entrée : oui.
+        function dessinAuto(oui: bool): void { essai.dessinAuto = oui }
+
+        // attendre — mode d'essai attendreImages du relais. Entrée : oui.
+        function attendre(oui: bool): void { Verrou.attendreImages = oui }
+
+        // refuser — mode d'essai refuserEssai : le verrou demandé n'est jamais tenu. Entrée : oui.
+        function refuser(oui: bool): void { Verrou.refuserEssai = oui }
+
+        // ecrans — nombre d'écrans de Quickshell.screens. Sortie : texte.
+        function ecrans(): string { return String(Quickshell.screens.length) }
 
         // montres — suite des [montre, actif] vus à chaque changement de montre, en JSON.
         function montres(): string { return JSON.stringify(essai.montres) }

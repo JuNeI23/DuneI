@@ -12,8 +12,8 @@ import "../Theme"
 // change jamais de taille (D132), seul son contenu bouge. Le bloc prend la taille et l'échelle de l'écran, et non
 // celles du calque : caché, le calque n'a pas de taille, et l'image du bureau doit être décodée avant la chute (sans
 // quoi les premières images de la chute montrent l'aplat). Le bloc (Contenu avec fond, image du bureau) est décalé de
-// (1 − Verrou.position) × hauteur vers le haut, calé sur le pixel physique, à l'opacité Verrou.opacite ; son contenu
-// est posé à la cession, sans mouvement (il est sous le verrou), et se retire au déverrouillage. Sous son bord bas
+// (1 − Verrou.position) × hauteur vers le haut, calé sur le pixel physique, à l'opacité Verrou.opacite ; il ne montre
+// que le fond, le contenu se montrant dans la surface du verrou (voie B). Sous son bord bas
 // pend sa presqu'île, à la forme de la vraie au repos (P.Encoche, évasements compris) : du verre au repos, l'image du
 // bas du bloc pendant le mouvement (Verrou.matiere). Elle se montre entière dès le mappage, sur la vraie qui s'efface
 // dessous, et la vraie reprend d'un coup à la fin, à l'identique (Presquile.qml) ; elle porte les
@@ -57,7 +57,7 @@ PanelWindow {
             id: contenu
             anchors.fill: parent
             echelle: fenetre.echelle
-            vu: Verrou.contenuBloc
+            vu: false
             entreeAnimee: false
         }
 

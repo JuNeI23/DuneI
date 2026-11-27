@@ -2,7 +2,7 @@
 
 Rôle : éprouve dans un vrai Quickshell, par les coques d'essai coque/Verrou/essai/logique et essai/fenetre, les
 fonctions pures du verrou (date longue, heures et minutes, ordre des messages, frappe, issue de PAM, média), et le singleton Verrou
-(chute, remontée, ordre, apparition, suivi du compositeur, mouvement réduit), sans fenêtre ni clavier ; SourceTest lit
+(chute, relais vers le verrou, déverrouillage par PAM, remontée, ordre, suivi du compositeur, mouvement réduit), sans fenêtre ni clavier ; SourceTest lit
 les sources des calques et des modules touchés.
 Entrées : aucune. Sorties : résultats unittest. Erreurs : échecs de test.
 Dépendances : qs (Quickshell ≥ 0.3), tests.test_coque_theme (EssaiCoque), Pillow pour l'image de bureau d'essai.
@@ -158,18 +158,46 @@ class LogiqueTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(self.appeler("ligneMedia", "Paul Atreides", "")["artiste"], "")
 
 
+def ecrire_piles(dossier: Path) -> None:
+    """Écrit les piles PAM factices des essais dans un dossier neuf : jamais /etc/pam.d, jamais le compte réel.
+
+    Entrée : dossier, le dossier à créer. Sortie : aucune ; il contient les piles succes (pam_permit), echec (pam_deny),
+    question (n'accepte que le mot « bon ») et lente (dort bien au-delà de la garde), et leurs deux scripts.
+    Erreurs : OSError si le dossier existe déjà ou ne peut être écrit. Dépendances : pam_permit, pam_deny, pam_exec.
+    """
+    dossier.mkdir()
+    bon, lent = dossier / "verifie.sh", dossier / "lent.sh"
+    bon.write_text('#!/bin/sh\n# Accepte le seul mot « bon ».\nread -r mdp; [ "$mdp" = "bon" ]\n')
+    lent.write_text("#!/bin/sh\n# Pile trop lente : dort bien au-delà de la garde.\nexec sleep 30\n")
+    bon.chmod(0o755)
+    lent.chmod(0o755)
+    socle = "account required pam_permit.so\n"
+    (dossier / "succes").write_text("auth required pam_permit.so\n" + socle)
+    (dossier / "echec").write_text("auth required pam_deny.so\n" + socle)
+    # pam_exec seul rend une erreur système sur un mot faux ; la pile le ramène à un échec franc, comme pam_unix.
+    (dossier / "question").write_text(f"auth [success=1 default=ignore] pam_exec.so expose_authtok quiet {bon}\n"
+                                      "auth requisite pam_deny.so\nauth required pam_permit.so\n" + socle)
+    (dossier / "lente").write_text(f"auth required pam_exec.so expose_authtok quiet {lent}\n" + socle)
+
+
 @unittest.skipUnless(os.environ.get("WAYLAND_DISPLAY") and QS, "session Wayland et Quickshell requis")
 class ControleurTest(EssaiCoque, unittest.TestCase):
     """Le singleton Verrou, sans fenêtre ni clavier, piloté par ses IPC « verrou » et « essai ». La lecture du
-    compositeur est remplacée par une commande echo : jamais le vrai hyprctl, jamais le vrai verrou."""
+    compositeur est remplacée par une commande echo, la saisie va sur des piles PAM factices : jamais le vrai hyprctl,
+    jamais le vrai verrou (sans fenêtre, tient vaut voulu, sauf en mode d'essai « refuser »), jamais /etc/pam.d."""
 
     essai = ROOT / "coque" / "Verrou" / "essai" / "fenetre"
     teintes = (55,)
 
     def setUp(self):
-        """Lance la coque d'essai et attend les jetons. Entrées : aucune. Sortie : aucune. Erreurs : échec au délai.
-        Dépendances : installer, lancer, attendre, jusqua."""
+        """Écrit les piles factices, lance la coque d'essai et attend les jetons. Entrées : aucune. Sortie : aucune ;
+        self.delais tient les délais du mouvement. Erreurs : échec au délai.
+        Dépendances : ecrire_piles, installer, lancer, attendre, jusqua."""
         super().setUp()
+        piles = Path(self.tmp.name) / "pam"
+        ecrire_piles(piles)
+        self.environnement = {"DUNEI_ESSAI_PAM": str(piles)}
+        self.delais = json.loads((Path(self.gen.name) / "motion" / "motion.json").read_text())["delays"]
         self.installer(55)
         self.lancer(self.dir)
         self.attendre("essai : prêt")
@@ -186,11 +214,12 @@ class ControleurTest(EssaiCoque, unittest.TestCase):
         return self.appel(fonction, *map(str, args), cible="verrou")
 
     def etat(self) -> dict:
-        """État rendu au lanceur. Sortie : {pose, ordre, apparition, remonte}."""
+        """État rendu au lanceur. Sortie : {pose, ordre, tient, couvre, remonte}."""
         return json.loads(self.verrou("etat"))
 
     def mesure(self) -> dict:
-        """État interne lu par l'essai. Sortie : {position, opacite, verrou, montre, clavier, vu, contenuBloc}."""
+        """État interne lu par l'essai. Sortie : {position, opacite, verrou, montre, clavier, vu, voulu, tient, anime,
+        points, message, tPose, tVoulu, tVuFaux, tVouluFaux} (temps en ms, horloge de la coque)."""
         return json.loads(self.appel("mesure"))
 
     def jusqua(self, condition, message: str, delai: float = DELAI):
@@ -204,35 +233,188 @@ class ControleurTest(EssaiCoque, unittest.TestCase):
             time.sleep(0.02)
         self.fail(f"{message} attendu en {delai} s :\n{self.journal()}")
 
+    def tenu(self):
+        """Attend que la coque tienne le verrou. Sortie : la mesure à cet instant. Erreurs : échec au délai."""
+        return self.jusqua(lambda: (m := self.mesure())["tient"] and m, "verrou tenu")
+
+    def sans_chute(self):
+        """Vérifie que le bloc n'a pris aucune position intermédiaire (posé d'un coup). Erreurs : échec du test."""
+        self.assertLessEqual(set(json.loads(self.appel("trace"))["positions"]), {0, 1}, "le bloc est tombé")
+
     def test_ordre_perime(self):
-        """Un ordre plus ancien que le courant est ignoré : tomber(5) puis remonter(4) laisse le bloc posé."""
+        """Un ordre plus ancien que le courant est ignoré : tomber(5) puis remonter(4) laisse le bloc posé, même quand
+        le verrou est refusé (remonter n'est alors plus bloqué par tient)."""
+        self.appel("refuser", "true")
         self.verrou("tomber", 5)
         self.jusqua(lambda: self.etat()["pose"], "bloc posé")
         self.verrou("remonter", 4)
         time.sleep(0.5)
-        self.assertEqual((self.etat()["pose"], self.etat()["ordre"], self.etat()["remonte"]), (True, 5, False))
+        e = self.etat()
+        self.assertEqual((e["pose"], e["ordre"], e["remonte"]), (True, 5, False))
         self.assertTrue(self.mesure()["verrou"])
 
-    def test_chute_puis_remontee(self):
-        """Le bloc est posé en moins d'une seconde, prend le clavier, et remonte jusqu'à disparaître ; Overlays.verrou
-        tient de la chute à la fin de la remontée."""
+    def test_chute_puis_verrou(self):
+        """tomber(1) : le bloc tombe et se pose en moins d'une seconde, le verrou est demandé au moins verrouRelais après
+        la pose, puis tenu ; le contenu se montre, animé, et le bloc rend le clavier à la surface du verrou."""
         self.verrou("tomber", 1)
         debut = time.monotonic()
-        self.assertTrue(self.mesure()["verrou"])
+        m = self.mesure()
+        self.assertEqual((m["verrou"], m["clavier"], m["voulu"]), (True, True, False))
         self.jusqua(lambda: self.etat()["pose"], "bloc posé", 1.0)
         self.assertLess(time.monotonic() - debut, 1.0)
+        m = self.tenu()
+        self.assertEqual((m["voulu"], m["vu"], m["anime"], m["clavier"], m["position"]), (True, True, True, False, 1))
+        self.assertGreaterEqual(m["tVoulu"] - m["tPose"], self.delais["verrouRelais"] * 0.9)
+        self.assertGreater(len(json.loads(self.appel("trace"))["positions"]), 2, "le bloc n'est pas tombé")
+        self.assertEqual((self.etat()["tient"], self.etat()["couvre"]), (True, True))
+
+    def test_relais_plafonne(self):
+        """En attente des images (mode d'essai attendreImages), sans qu'aucun écran ne dessine, le verrou est demandé au
+        plafond verrouRelaisMax après la pose, jamais attendu sans fin."""
+        if int(self.appel("ecrans")) == 0:
+            self.skipTest("aucun écran")
+        self.appel("attendre", "true")
+        self.verrou("tomber", 1)
+        m = self.jusqua(lambda: (m := self.mesure())["voulu"] and m, "verrou demandé", 2.0)
+        ecart = m["tVoulu"] - m["tPose"]
+        self.assertLessEqual(ecart, self.delais["verrouRelaisMax"] + 100)
+        self.assertGreaterEqual(ecart, self.delais["verrouRelaisMax"] * 0.9, "demandé sans attendre les images")
+
+    def test_relais_apres_images(self):
+        """En attente des images, chaque écran dessinant dès la pose, le verrou est demandé verrouRelais après, bien
+        avant le plafond."""
+        if int(self.appel("ecrans")) == 0:
+            self.skipTest("aucun écran")
+        self.appel("attendre", "true")
+        self.appel("dessinAuto", "true")
+        self.verrou("tomber", 1)
+        m = self.jusqua(lambda: (m := self.mesure())["voulu"] and m, "verrou demandé", 2.0)
+        ecart = m["tVoulu"] - m["tPose"]
+        self.assertGreaterEqual(ecart, self.delais["verrouRelais"] * 0.9)
+        self.assertLess(ecart, self.delais["verrouRelaisMax"] * 0.9)
+
+    def test_poser_sec(self):
+        """poserSec : le bloc est posé d'un coup, le verrou vient sans chute, et le contenu se montre sans animation."""
+        self.verrou("poserSec", 1)
+        self.assertTrue(self.etat()["pose"])
+        m = self.tenu()
+        self.assertEqual((m["anime"], m["vu"]), (False, True))
+        self.sans_chute()
+
+    def test_abreger_pendant_chute(self):
+        """Une veille annoncée en pleine chute pose le bloc à l'instant, sans animation du contenu."""
+        self.verrou("tomber", 1)
+        self.verrou("abreger")
+        self.assertTrue(self.etat()["pose"])
+        self.assertFalse(self.mesure()["anime"])
+        self.assertFalse(self.tenu()["anime"])
+
+    def test_deverrouillage_par_pam(self):
+        """Pile « question » : « bon » puis Entrée retirent le contenu, puis rendent le verrou verrouRetrait après ; le
+        clavier est rendu, le bloc remonte et Overlays.verrou tombe à la fin de la remontée."""
+        self.appel("pile", "question")
+        self.verrou("tomber", 1)
+        self.tenu()
+        self.appel("taper", "bon")
+        self.appel("entree")
+        self.jusqua(lambda: not self.mesure()["voulu"], "verrou rendu")
         m = self.mesure()
-        self.assertEqual((m["position"], m["clavier"], m["montre"]), (1, True, True))
-        self.verrou("remonter", 1)
-        self.assertFalse(self.mesure()["clavier"])
-        self.jusqua(lambda: self.etat()["remonte"], "remontée en cours", 1.0)
+        self.assertGreaterEqual(m["tVouluFaux"] - m["tVuFaux"], self.delais["verrouRetrait"] * 0.9)
+        self.assertEqual((m["vu"], m["tient"], m["clavier"], m["points"]), (False, False, False, 0))
         self.jusqua(lambda: not self.mesure()["montre"], "bloc caché")
         m, e = self.mesure(), self.etat()
-        self.assertEqual((m["position"], m["verrou"], e["pose"], e["remonte"]), (0, False, False, False))
+        self.assertEqual((m["position"], m["verrou"], e["pose"], e["couvre"], e["remonte"]), (0, False, False, False,
+                                                                                            False))
+
+    def test_echec_garde_le_verrou(self):
+        """Un mauvais mot de passe affiche « Mot de passe incorrect » et laisse le verrou tenu."""
+        self.appel("pile", "question")
+        self.verrou("tomber", 1)
+        self.tenu()
+        self.appel("taper", "faux")
+        self.appel("entree")
+        m = self.jusqua(lambda: (m := self.mesure())["message"] and m, "message d'échec")
+        self.assertEqual((m["message"], m["voulu"], m["tient"]), ("Mot de passe incorrect", True, True))
+        self.assertTrue(self.etat()["couvre"])
+
+    def test_remonter_ignore_si_tenu(self):
+        """Une IPC hostile ou périmée, remonter(99), sous un verrou tenu ne déverrouille rien et ne prend pas l'ordre."""
+        self.verrou("tomber", 1)
+        self.tenu()
+        self.verrou("remonter", 99)
+        time.sleep(0.3)
+        m, e = self.mesure(), self.etat()
+        self.assertEqual((m["voulu"], e["tient"], e["couvre"], e["remonte"], e["ordre"]), (True, True, True, False, 1))
+
+    def test_remonter_si_verrou_refuse(self):
+        """Verrou demandé mais refusé (mode d'essai « refuser ») : remonter rend la demande et le bloc remonte."""
+        self.appel("refuser", "true")
+        self.verrou("tomber", 1)
+        self.jusqua(lambda: self.mesure()["voulu"], "verrou demandé")
+        self.assertFalse(self.etat()["tient"])
+        self.verrou("remonter", 1)
+        self.assertFalse(self.mesure()["voulu"])
+        self.jusqua(lambda: not self.mesure()["montre"], "bloc caché")
+        self.assertEqual((self.etat()["couvre"], self.etat()["pose"]), (False, False))
+
+    def test_touches_pendant_la_chute(self):
+        """« bo » tapé pendant la chute, avant le verrou, est gardé ; « n » et Entrée après lui déverrouillent."""
+        self.appel("pile", "question")
+        self.verrou("tomber", 1)
+        self.appel("taper", "bo")
+        m = self.mesure()
+        self.assertEqual((m["tient"], m["points"]), (False, 2))
+        self.tenu()
+        self.appel("taper", "n")
+        self.appel("entree")
+        self.jusqua(lambda: not self.etat()["couvre"], "déverrouillage")
+
+    def test_suivi_rend_si_compositeur_rendu(self):
+        """Verrou tenu, compositeur qui dit la session rendue et aucun lanceur : la coque rend sa demande et le bloc
+        remonte (la session est déjà ouverte)."""
+        self.verrou("tomber", 1)
+        self.tenu()
+        self.appel("lecture", "false")
+        self.jusqua(lambda: not self.etat()["couvre"], "remontée", 3.5)
+        self.assertEqual((self.mesure()["voulu"], self.mesure()["clavier"]), (False, False))
+
+    def test_demarrer_session_tenue(self):
+        """Démarrée sous une session tenue, la coque pose son bloc sans chute et prend le verrou derrière lui."""
+        self.appel("demarrer")
+        m = self.tenu()
+        self.assertEqual((m["position"], m["anime"]), (1, False))
+        self.sans_chute()
+
+    def test_demarrage_session_ouverte(self):
+        """Démarrée sur une session ouverte, la coque ne pose rien, ne demande rien et ne prend pas le clavier."""
+        self.appel("lecture", "false")
+        self.appel("demarrer")
+        time.sleep(0.8)
+        m, e = self.mesure(), self.etat()
+        self.assertEqual((e["pose"], m["montre"], m["clavier"], m["verrou"], m["voulu"]), (False,) * 5)
+
+    def test_tomber_sous_couvre(self):
+        """Un second tomber pendant la chute ne fait que prendre l'ordre : la chute continue depuis sa position."""
+        self.verrou("tomber", 1)
+        self.jusqua(lambda: 0.1 < float(self.appel("position")) < 0.7, "chute en cours", 1.0)
+        avant = float(self.appel("position"))
+        self.verrou("tomber", 2)
+        self.assertGreaterEqual(float(self.appel("position")), avant)
+        e = self.etat()
+        self.assertEqual((e["ordre"], e["couvre"]), (2, True))
+        self.assertTrue(self.tenu()["anime"])
+
+    def test_poser_sec_sous_couvre(self):
+        """poserSec pendant la chute vaut abreger : le bloc est posé à l'instant, sans animation, l'ordre pris."""
+        self.verrou("tomber", 1)
+        self.verrou("poserSec", 2)
+        e, m = self.etat(), self.mesure()
+        self.assertEqual((e["pose"], e["ordre"], m["anime"]), (True, 2, False))
 
     def test_montre_sans_battement(self):
         """Le calque du bloc se mappe une fois à la chute et se démappe une fois, après la fin d'actif : jamais faux
         tant qu'actif, quel que soit l'ordre des notifications."""
+        self.appel("refuser", "true")
         self.verrou("tomber", 1)
         self.jusqua(lambda: self.etat()["pose"], "bloc posé")
         self.verrou("remonter", 1)
@@ -240,7 +422,8 @@ class ControleurTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(json.loads(self.appel("montres")), [[True, True], [False, False]])
 
     def test_remontee_en_pleine_chute(self):
-        """Une remontée demandée en pleine chute repart de la position courante, sans saut, et redescend à zéro."""
+        """Une remontée demandée en pleine chute, avant tout verrou, repart de la position courante, sans saut, et
+        redescend à zéro."""
         self.verrou("tomber", 1)
         self.jusqua(lambda: 0.2 < float(self.appel("position")) < 0.8, "chute à mi-course", 1.0)
         avant = float(self.appel("position"))
@@ -249,7 +432,7 @@ class ControleurTest(EssaiCoque, unittest.TestCase):
         self.assertLess(abs(apres - avant), 0.2, "saut de position")
         self.assertGreater(apres, 0.05)
         self.jusqua(lambda: not self.mesure()["montre"], "bloc caché")
-        self.assertEqual(self.mesure()["position"], 0)
+        self.assertEqual((self.mesure()["position"], self.mesure()["voulu"]), (0, False))
 
     def test_ferme_le_reste(self):
         """La chute ferme le popover exclusif et l'attention ouverts."""
@@ -259,8 +442,8 @@ class ControleurTest(EssaiCoque, unittest.TestCase):
         self.assertEqual(json.loads(self.appel("ouverts")), [False, False])
 
     def test_session_ouverte_remonte(self):
-        """Bloc posé sans chute en cours, compositeur qui dit la session ouverte : clavier rendu et remontée en moins
-        de 3 s ; jamais avant deux lectures franches."""
+        """Bloc posé sans chute, compositeur qui dit la session ouverte : clavier rendu et remontée en moins de 3 s ;
+        jamais avant deux lectures franches."""
         self.appel("lecture", "false")
         self.verrou("poserSec", 1)
         debut = time.monotonic()
@@ -268,84 +451,42 @@ class ControleurTest(EssaiCoque, unittest.TestCase):
         time.sleep(0.8)
         self.assertTrue(self.etat()["pose"], "remonté sur une seule lecture")
         self.jusqua(lambda: not self.etat()["pose"], "remontée", 3.0 - (time.monotonic() - debut))
-        self.assertFalse(self.mesure()["clavier"])
+        self.assertEqual((self.mesure()["clavier"], self.mesure()["voulu"]), (False, False))
         self.jusqua(lambda: not self.mesure()["montre"], "bloc caché")
 
     def test_lanceur_vivant_garde_le_bloc(self):
         """Compositeur qui dit la session ouverte, mais un lanceur vit (il relance hyprlock) : le bloc reste posé et
-        garde le clavier ; le lanceur parti, il remonte comme sans lanceur."""
+        le verrou demandé ; le lanceur parti, il remonte comme sans lanceur."""
         self.appel("lecture", "false")
         self.appel("lanceur", "true")
         self.verrou("poserSec", 1)
         time.sleep(3.2)
         self.assertTrue(self.etat()["pose"], "remonté sous un lanceur vivant")
-        self.assertTrue(self.mesure()["clavier"])
+        self.assertTrue(self.mesure()["voulu"])
         self.appel("lanceur", "false")
         self.jusqua(lambda: not self.etat()["pose"], "remontée sans lanceur", 3.5)
 
     def test_recherche_indecidable_garde_le_bloc(self):
         """Compositeur qui dit la session ouverte, recherche du lanceur qui expire (124) ou échoue (2) : rien ne compte,
-        le bloc reste posé et garde le clavier."""
+        le bloc reste posé et le verrou demandé."""
         self.appel("lecture", "false")
         self.verrou("poserSec", 1)
         for code in ("124", "2"):
             self.appel("recherche", code)
             time.sleep(2.5)
             self.assertTrue(self.etat()["pose"], f"remonté sur une recherche indécidable ({code})")
-            self.assertTrue(self.mesure()["clavier"])
+            self.assertTrue(self.mesure()["voulu"])
 
     def test_session_tenue_reste(self):
-        """Tant que le compositeur dit la session tenue, le bloc posé reste."""
+        """Tant que le compositeur dit la session tenue, le bloc posé reste et le verrou est gardé."""
         self.verrou("poserSec", 1)
         time.sleep(2.5)
-        self.assertTrue(self.etat()["pose"])
-
-    def test_demarrage_sous_verrou(self):
-        """Démarrée pendant un verrou, la coque pose son bloc sans chute."""
-        self.appel("demarrer")
-        self.jusqua(lambda: self.etat()["pose"], "bloc posé au démarrage", 1.0)
-        self.assertEqual(self.mesure()["position"], 1)
-
-    def test_demarrage_session_ouverte(self):
-        """Démarrée sur une session ouverte, la coque ne pose rien et ne prend pas le clavier."""
-        self.appel("lecture", "false")
-        self.appel("demarrer")
-        time.sleep(0.8)
-        m, e = self.mesure(), self.etat()
-        self.assertEqual((e["pose"], m["montre"], m["clavier"], m["verrou"]), (False, False, False, False))
-
-    def test_apparition_secours(self):
-        """Sans cession, le calque d'apparition est retiré d'office après delays.verrouSecours (2,5 s), et le contenu
-        est posé dans le bloc."""
-        self.verrou("poserSec", 1)
-        self.verrou("apparaitre", 1)
-        debut = time.monotonic()
-        self.assertTrue(self.etat()["apparition"])
-        time.sleep(2.0)
-        self.assertTrue(self.etat()["apparition"], "retiré trop tôt")
-        self.jusqua(lambda: not self.etat()["apparition"], "apparition retirée", 3.2 - (time.monotonic() - debut))
-        self.assertTrue(self.mesure()["contenuBloc"])
-
-    def test_cession(self):
-        """La cession retire l'apparition et pose le contenu dans le bloc, sans mouvement."""
-        self.verrou("tomber", 1)
-        self.jusqua(lambda: self.etat()["pose"], "bloc posé")
-        self.verrou("apparaitre", 1)
-        self.assertEqual(self.mesure()["vu"], True)
-        self.verrou("ceder", 1)
-        m = self.mesure()
-        self.assertEqual((self.etat()["apparition"], m["contenuBloc"], m["vu"]), (False, True, True))
-
-    def test_abreger(self):
-        """Une veille en pleine chute pose le bloc aussitôt et coupe l'apparition."""
-        self.verrou("tomber", 1)
-        self.verrou("abreger")
-        e = self.etat()
-        self.assertEqual((e["pose"], e["apparition"]), (True, False))
+        self.assertEqual((self.etat()["pose"], self.etat()["tient"]), (True, True))
 
     def test_reduit(self):
         """Mouvement réduit : la chute et la remontée sont des fondus, le bloc ne bouge pas."""
         self.appel("reduit", "true")
+        self.appel("refuser", "true")
         self.assertEqual(self.mesure()["position"], 1)
         self.verrou("tomber", 1)
         self.jusqua(lambda: self.etat()["pose"], "bloc posé")
@@ -368,23 +509,11 @@ class SaisieTest(EssaiCoque, unittest.TestCase):
         """Écrit les piles factices, lance la coque d'essai et attend les jetons.
 
         Entrées : aucune. Sortie : aucune ; self.piles est le dossier des piles. Erreurs : échec au délai.
-        Dépendances : EssaiCoque.setUp, installer, lancer, attendre, jusqua.
+        Dépendances : EssaiCoque.setUp, ecrire_piles, installer, lancer, attendre, jusqua.
         """
         super().setUp()
         self.piles = Path(self.tmp.name) / "pam"
-        self.piles.mkdir()
-        bon, lent = self.piles / "verifie.sh", self.piles / "lent.sh"
-        bon.write_text('#!/bin/sh\n# Accepte le seul mot « bon ».\nread -r mdp; [ "$mdp" = "bon" ]\n')
-        lent.write_text("#!/bin/sh\n# Pile trop lente : dort bien au-delà de la garde.\nexec sleep 30\n")
-        bon.chmod(0o755)
-        lent.chmod(0o755)
-        socle = "account required pam_permit.so\n"
-        (self.piles / "succes").write_text("auth required pam_permit.so\n" + socle)
-        (self.piles / "echec").write_text("auth required pam_deny.so\n" + socle)
-        # pam_exec seul rend une erreur système sur un mot faux ; la pile le ramène à un échec franc, comme pam_unix.
-        (self.piles / "question").write_text(f"auth [success=1 default=ignore] pam_exec.so expose_authtok quiet {bon}\n"
-                                             "auth requisite pam_deny.so\nauth required pam_permit.so\n" + socle)
-        (self.piles / "lente").write_text(f"auth required pam_exec.so expose_authtok quiet {lent}\n" + socle)
+        ecrire_piles(self.piles)
         self.environnement = {"DUNEI_ESSAI_PAM": str(self.piles)}
         self.installer(55)
         self.lancer(self.dir)
