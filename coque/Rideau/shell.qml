@@ -38,10 +38,14 @@ ShellRoot {
             exclusionMode: ExclusionMode.Ignore
             anchors { top: true; bottom: true; left: true; right: true }
 
+            // Sonde de la première image : le signal frameSwapped appartient à la QQuickWindow sous-jacente, que
+            // seul un élément visuel atteint par Window.window ; la PanelWindow elle-même ne l'émet pas.
+            Item { id: sonde }
+
             // Signale la première image présentée par cette fenêtre, une seule fois.
             // Entrée : aucune ; sortie : aucune ; erreurs : aucune ; dépendances : ShellRoot.imagePosee.
             Connections {
-                target: fenetre
+                target: sonde.Window.window
                 function onFrameSwapped() {
                     if (fenetre.vu) return
                     fenetre.vu = true

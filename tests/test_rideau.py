@@ -28,6 +28,10 @@ class RideauTest(unittest.TestCase):
         self.assertIn('Quickshell.env("DUNEI_RIDEAU_COULEUR")', texte)
         self.assertNotIn('import "../', texte)
         self.assertNotRegex(texte, r'import\s+"')
+        # frameSwapped vient de la QQuickWindow, atteinte par un élément ; la PanelWindow ne l'émet pas.
+        self.assertIn("sonde.Window.window", texte)
+        self.assertIn("onFrameSwapped", texte)
+        self.assertNotIn("target: fenetre", texte)
 
     @unittest.skipUnless(shutil.which("qs"), "Quickshell absent")
     def test_pose(self):
