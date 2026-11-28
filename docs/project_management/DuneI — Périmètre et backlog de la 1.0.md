@@ -4,7 +4,7 @@ Oct 12, 2026 · @Nicolas
 
 Version 1.79. Historique en fin de document.
 
-La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **196 éléments** répartis en **cinq lots**, sur six chantiers.
+La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **195 éléments** répartis en **cinq lots**, sur six chantiers.
 
 Ce document dit ce qui est attendu, dans quel ordre, et à quelle condition c'est terminé. Il ne dit pas à quoi ça ressemble — c'est le rôle de la bible de design. En cas de contradiction : la bible l'emporte sur l'apparence, ce document l'emporte sur le périmètre.
 
@@ -544,7 +544,7 @@ Le choix de la distribution de base et du compositeur, précédemment ouverts, s
 
 | Version | Date | Changement |
 | --- | --- | --- |
-| 1.79 | 2026-11-28 | L2-22 en voie B (D236 à D238), recette à l'écran en attente ; L2-85 retiré avec la pastille |
+| 1.79 | 2026-11-28 | L2-22 en voie B (D236 à D238), recette à l'écran en attente ; L2-85 retiré avec la pastille ; 195 éléments |
 | 1.78 | 2026-11-26 | L2-22 fait (D226 à D234), recette à l'écran en attente ; ajout de L2-85, pastille sur la date des petits écrans ; 196 éléments |
 | 1.77 | 2026-11-24 | L2-24 fait (D222 à D225), recette validée ; 195 éléments |
 | 1.76 | 2026-11-24 | L2-48 fait (D220, D221), recette validée ; 195 éléments |
