@@ -4974,7 +4974,7 @@ laissé aucune.
 
 ### D232 · Ce que `hyprlock` affiche : cinq images, une date sans locale, la pastille à 139
 
-*Tombée avec D236 le 28 novembre 2026 : la production des images et de la configuration de `hyprlock` (`Production.qml`, la pastille, le nom, le fond relayé) disparaît avec la voie A.*
+*Tombée avec D236 le 27 novembre 2026 : la production des images et de la configuration de `hyprlock` (`Production.qml`, la pastille, le nom, le fond relayé) disparaît avec la voie A.*
 
 26 novembre 2026 · L2-22. La coque produit pour chaque écran cinq images : le fond, la pastille et le champ, et les
 versions vides de ces deux dernières. Le fond n'est jamais échangé, donc il n'a pas de version vide ; la fiche et le plan
@@ -4989,7 +4989,7 @@ le nom (graisse 550) et l'initiale, et pour l'interlettrage de l'horloge (-8 px)
 
 ### D233 · Les rôles de couleur de la pastille, du champ et de l'emphase suivent la maquette
 
-*Tombée avec D236 le 28 novembre 2026 : la production des images et de la configuration de `hyprlock` (`Production.qml`, la pastille, le nom, le fond relayé) disparaît avec la voie A.*
+*Tombée avec D236 le 27 novembre 2026 : la production des images et de la configuration de `hyprlock` (`Production.qml`, la pastille, le nom, le fond relayé) disparaît avec la voie A.*
 
 26 novembre 2026 · L2-22, bible. La pastille est en `controlRaised` ; le champ de mot de passe, en `surfaceBase` avec un
 contour `borderSubtle` ; l'emphase (heures, nom) en `textEmphasis`. Un premier jet les posait en couleurs de bureau
@@ -5003,7 +5003,7 @@ opaque).
 
 ### D234 · La production du verrou est branchée dans `shell.qml`
 
-*Tombée avec D236 le 28 novembre 2026 : la production des images et de la configuration de `hyprlock` (`Production.qml`, la pastille, le nom, le fond relayé) disparaît avec la voie A.*
+*Tombée avec D236 le 27 novembre 2026 : la production des images et de la configuration de `hyprlock` (`Production.qml`, la pastille, le nom, le fond relayé) disparaît avec la voie A.*
 
 26 novembre 2026 · L2-22. `Production`, qui écrit les images et la configuration de `hyprlock` dans
 `~/.local/state/dunei/verrou/`, est instanciée par `shell.qml` (avec `Verrou.demarrer()`) à la tâche qui rend la coque
@@ -5030,8 +5030,9 @@ avec un HOME temporaire où le dépôt est lié comme le fait `deploy.py`.
 
 **Bornes.** Les délais `verrou*` de `motion.toml` sont des entiers (lus par l'arithmétique du shell, qui s'arrêtait sur
 `1000.5` avant tout verrou ; le lanceur retombe aussi sur sa valeur par défaut), et `verrouAttente` ne dépasse pas
-1300 ms, pour un verrou posé en 1,5 s au plus. Un appel qui trouve active l'unité d'un verrou qui finit (remontée du
-bloc, coque muette jusqu'à 2 s), la session franchement rendue, ne l'attend que jusqu'à l'échéance de la pose, puis pose
+1500 ms (`VERROU_ATTENTE_MAX` de `dunei_motion/checks.py`), pour une session verrouillée au plus 1,5 s après
+l'appel, échéance comprise. Un appel qui trouve active l'unité d'un verrou qui finit (remontée du bloc, coque muette
+jusqu'à 2 s), la session franchement rendue, ne l'attend que jusqu'à l'échéance de la pose, puis pose
 un verrou sec hors unité, à côté d'elle, comme après un échec de `systemd-run` : l'ordre plus récent rend périmée la
 remontée de l'ancien lanceur. Une production des fichiers de `hyprlock` abandonnée par sa garde est rejouée à la fin du
 verrou.
@@ -5098,6 +5099,18 @@ six. Coût : un `hyprlock` octroyé dont la ligne arriverait après 2,5 s serait
 session, quand l'octroi a suivi la ligne ; prudence avant élégance. Toute coque qui répond sous un autre ordre que le
 courant reçoit `poserSec`, sans attendre de l'avoir vue absente (sinon le lanceur lançait `hyprlock` par-dessus une
 coque qui tenait déjà le verrou).
+
+**Prise sous `hyprlock` (relecture finale, 28 novembre).** Seule la ligne `onLockLocked` prouve la prise par
+`hyprlock`, jamais `locked` : une reprise part sur une session déjà tenue, où `locked` vaut vrai avant toute demande,
+et le lanceur croyait alors `hyprlock` au verrou dès le premier tour ; un `hyprlock` qui ne le prenait jamais n'était ni
+tué ni relancé (écran mort pour de bon), et le rideau tombait à l'échéance sans la ligne. Désormais, sans la ligne
+2,5 s après le lancement, `hyprlock` est tué si le compositeur répond, et relancé derrière le même rideau, retiré à la
+ligne du suivant ; un compositeur muet ne le fait jamais tuer (il pouvait viser le seul verrouilleur vivant) ; ces
+lancements comptent parmi les trois de l'échec. Un `locked` sans réponse fait aussi poser le rideau avant une relance :
+un doute ne vaut jamais « rendu ». Enfin `systemctl` et `systemd-run`, qui passent par D-Bus (25 s par défaut), et
+`logger` (socket bloquante quand journald sature) sont bornés : un silence de `systemctl` vaut « unité active »,
+`systemd-run` qui n'a pas démarré le lanceur placé en 0,3 s est abandonné pour un verrou hors unité, et le journal
+s'écrit après l'action de sûreté.
 
 **Rechargement à chaud.** Une coque rechargée pendant le verrou rend le verrou de sa génération précédente (la session
 apparaît 59 ms après la modification). `Quickshell.watchFiles` est donc coupé tant que la coque tient le verrou ; remis

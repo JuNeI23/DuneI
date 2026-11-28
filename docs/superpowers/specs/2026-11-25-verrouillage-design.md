@@ -1,6 +1,6 @@
 # Verrouillage (L2-22)
 
-Version 2.4 — 2026-11-28 — voie B : la coque devient le verrouilleur, `hyprlock` reste en secours (validée)
+Version 2.5 — 2026-11-28 — voie B : la coque devient le verrouilleur, `hyprlock` reste en secours (validée)
 
 ## Intention
 
@@ -185,6 +185,10 @@ une fausse unité qui relance la coque 100 ms après sa sortie et un clavier vir
   à démarrer que `hyprlock`, n'y changerait rien. La fenêtre dure une centaine de millisecondes par verrouillage ; la
   contrainte « aucune image de la session entre la pose et la remontée » ne vaut donc que pour une coque qui plante
   verrou tenu.
+- **Limite connue : une relance de la coque dépensée par une sortie de `hyprlock`** (mineur de la tâche 10b). Si
+  `hyprlock` sort, la session tenue, pendant que la coque tient sous un autre ordre (`autre-tient`), il est relancé et
+  le relais suivant peut juger la coque supplantée et dépenser sur elle l'unique relance du verrou. L'issue est sûre :
+  `hyprlock` garde la session jusqu'au mot de passe.
 - **Restauration coupée** (`allow_session_lock_restore` faux) : la coque qui demande un verrou déjà tenu meurt d'une
   erreur de protocole et remeurt à chaque relance. L'option reste donc vraie.
 
@@ -242,8 +246,8 @@ extérieure est bornée dans le temps.
    (`config/hypr/hyprlock.conf`). Si la coque prend ensuite le verrou, voir « Relais vers la coque ».
 3. **Garde.** Verrou tenu, il attend le déverrouillage en lisant `locked` et l'état de la coque. Si la coque disparaît
    (IPC sans instance) pendant que la session est tenue, il laisse 3 s à la coque relancée par systemd pour reprendre
-   le verrou ; passé ce délai, il pose d'abord le rideau, puis lance `hyprlock` en secours, et retire le rideau une fois `hyprlock`
-   au verrou. Le **rideau** est une petite configuration Quickshell à part (`coque/Rideau/`, lancée par
+   le verrou ; passé ce délai, il pose d'abord le rideau, puis lance `hyprlock` en secours, et retire le rideau une fois
+   `hyprlock` au verrou, c'est-à-dire à sa ligne `onLockLocked`, jamais à une heure seule. Le **rideau** est une petite configuration Quickshell à part (`coque/Rideau/`, lancée par
    `qs -p`) : un calque `Overlay` opaque `surface-base` par écran, rien d'autre ; mesuré au banc, il masque la fuite
    de la reprise (0 image de session sur 10). L'unité de la coque passe à `Restart=always` : une coque qui quitte
    proprement pendant le verrou revient aussi.
@@ -263,6 +267,21 @@ donne jamais. Il relance alors la coque (`systemctl --user restart`, une fois
 par verrou), qui, revenue, pose son bloc et reprend le verrou par-dessus `hyprlock` ; le relais suivant est valable.
 Une coque qui répond sous un autre ordre que le courant (relancée) reçoit `poserSec` à chaque tour où elle le montre,
 sauf pendant sa remontée, qu'un `poserSec` ferait retomber.
+
+**Prise sous `hyprlock`.** Seule la ligne `onLockLocked` prouve que `hyprlock` tient le verrou, jamais `locked` : une
+reprise part sur une session déjà tenue (par la coque figée ou morte), où `locked` vaut vrai avant toute demande. Sans
+la ligne 2,5 s après son lancement, `hyprlock` ne tient rien (même règle que l'exception du relais) : si le compositeur
+répond (`locked` vrai ou faux), il est tué et relancé, derrière le même rideau, qui n'est retiré qu'à la ligne du
+suivant ou à la sortie de `hyprlock` ; un compositeur muet ne fait jamais tuer `hyprlock`. Ces lancements tués comptent
+parmi les trois de l'échec du verrou, si bien que le rideau ne reste pas sans fin. Toute relance de `hyprlock` se fait
+derrière le rideau, sauf sur une session franchement rendue : un `locked` sans réponse ne vaut jamais « rendu ». Rejoué au
+banc (coque tuée sans relance, premier `hyprlock` qui ne démarre qu'après 4 s) : `hyprlock` tué à 2,5 s, relancé derrière
+le même rideau, retiré à la ligne du second ; 0 image de session.
+
+**Bornes.** `systemctl --user is-active` est borné à 0,2 s ; un silence vaut « unité active », pour suivre plutôt que
+doubler, jusqu'à l'échéance de la pose, puis verrou sec hors unité. `systemd-run --scope` exécute le lanceur placé
+lui-même : seule son attente avant la trace `verrou-place` est bornée (0,3 s), puis le lanceur part hors unité.
+`logger` passe par une fonction bornée à 0,2 s, appelée après l'action de sûreté qu'elle décrit.
 
 Un second appel pendant que la session est verrouillée attend le déverrouillage et rend le même code.
 
@@ -400,3 +419,4 @@ moment voulu.
 | 2.2 | 2026-11-27 | Relevés de la tâche 1 : le rechargement à chaud rend le verrou, `watchFiles` coupé pendant le verrou ; image du bureau partagée par le cache dès la première image de la surface ; `frameSwapped` à chaque image rendue |
 | 2.3 | 2026-11-28 | Relevés de la tâche 10 (banc complet) : aucune image de session sur vingt cycles ni sous le verrou quand la coque tombe ; fuite en chute et au relais ; défauts du rideau périmé, du verrou supplanté et de la relance rapide |
 | 2.4 | 2026-11-28 | Tâche 10b : rideau sans journal périmé, relais conditionné à `onLockLocked` lu, à `depuis` (heure de la demande) et à une coque vue sans verrou, coque supplantée relancée, `poserSec` à toute coque sous un autre ordre ; relevés rejoués au banc ; fuite en chute et au relais notée comme limite connue |
+| 2.5 | 2026-11-28 | Relecture finale : prise sous `hyprlock` prouvée par `onLockLocked` seul, `hyprlock` sans ligne tué et relancé derrière le même rideau, jamais sur un compositeur muet ; rideau sauf sur une session franchement rendue ; `systemctl`, `systemd-run` et `logger` bornés ; mineur de la tâche 10b noté comme limite connue |

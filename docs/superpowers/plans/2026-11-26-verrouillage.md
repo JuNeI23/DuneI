@@ -3,7 +3,7 @@
 > **Pour les agents :** sous-skill requis : superpowers:subagent-driven-development (recommandé) ou
 > superpowers:executing-plans, tâche par tâche. Les étapes se cochent (`- [ ]`).
 
-Version 2.0 — 2026-11-27 — voie B
+Version 2.1 — 2026-11-28 — voie B
 
 **But :** la coque verrouille elle-même. Le bloc tombe, la coque prend le verrou derrière lui (`WlSessionLock`), joue
 l'apparition dans la surface du verrou, authentifie par `PamContext` et, au succès, rend le verrou au bloc, qui
@@ -70,7 +70,8 @@ recettes du banc B : `.superpowers/banc-b/` (`rapport.md`, `lance.sh`, `bac.sh`,
 ### Tâche 1 : banc, rechargement et première image de la surface
 
 **Fichiers :** `.superpowers/banc-b/exp/q5.py` et `.superpowers/banc-b/qml/recharge/` (hors git) ; section ajoutée à
-`.superpowers/banc-b/rapport.md` ; « Ce qui a été relevé » de la fiche (version 2.2).
+`.superpowers/banc-b/rapport.md` ; « Ce qui a été relevé » de la fiche (version 2.2 ; la fiche est aujourd'hui en
+2.5, qui fait foi).
 
 - [ ] Au banc imbriqué, avec une coque d'essai qui tient un `WlSessionLock` `secure`, toucher un fichier QML du
   dossier surveillé. Relever si le rechargement à chaud garde le verrou, l'abandonne (écran mort) ou plante.
@@ -80,7 +81,7 @@ recettes du banc B : `.superpowers/banc-b/` (`rapport.md`, `lance.sh`, `bac.sh`,
   surface montre déjà l'image (écart de pixels bloc → surface sur un bandeau, comme au relevé du 25 novembre).
 - [ ] Relever si `Window.window.frameSwapped`, lu depuis un `Item` d'un `PanelWindow` et d'un `WlSessionLockSurface`,
   arrive à chaque image.
-- [ ] Écrire les résultats au rapport et dans la fiche (2.2), puis committer la fiche. Si le rechargement détruit le
+- [ ] Écrire les résultats au rapport et dans la fiche (2.2, aujourd'hui 2.5), puis committer la fiche. Si le rechargement détruit le
   verrou, la tâche 6 pose `Quickshell.watchFiles: !Verrou.actif` ; s'il le garde, rien.
 
 ### Tâche 2 : jetons, mouvement et logique pure
@@ -494,6 +495,21 @@ la pile), la session magenta et deux sorties d'échelles différentes :
 - [ ] Mouvement réduit : fondus seuls.
 - [ ] Écrire les relevés dans la fiche (2.3) et committer la fiche.
 
+### Tâche 10b : corrections issues du banc complet
+
+Tâche ajoutée par décision du contrôleur, sur les défauts relevés par la tâche 10 (fiche 2.3), avec un brief à part.
+
+**Fichiers :** `config/hypr/scripts/dunei-verrou`, `coque/Verrou/Verrou.qml`, `coque/Verrou/Bloc.qml`,
+`tests/test_dunei_verrou.py`, `tests/test_verrou.py` ; fiche (2.4).
+
+- [ ] Rideau périmé : le journal du rideau est vidé avant son lancement, pour qu'un rideau lent ne soit jamais cru
+  posé sur la ligne d'un rideau précédent.
+- [ ] Verrou supplanté : la coque publie `depuis` (heure de sa demande du verrou) dans son `etat` ; le lanceur ne
+  termine `hyprlock` qu'après avoir lu son `onLockLocked`, si la demande de la coque suit cette lecture et si la coque a
+  été vue sans verrou depuis ; sinon il relance la coque, une fois par verrou, qui reprend le verrou par-dessus.
+- [ ] `poserSec` à toute coque qui répond sous un autre ordre que le courant, à chaque tour de la garde et du relais.
+- [ ] Rejouer les cas au banc, écrire les relevés dans la fiche (2.4) et committer.
+
 ### Tâche 11 : documents
 
 **Fichiers :**
@@ -522,3 +538,4 @@ fusion de la PR #78 ; procédure après fusion du carnet.
 | 1.1 | 2026-11-26 | Relevés de la tâche 1 : `order` négatif, section sans nom en `zindex = -2` |
 | 1.2 | 2026-11-26 | Relevés de la fin : `pastilleBas` ramené à 139 (maquette v2), cinq images par écran et non six |
 | 2.0 | 2026-11-27 | Voie B, d'après la fiche 2.1 : la coque verrouille, `hyprlock` en secours, rideau, champ caché, média |
+| 2.1 | 2026-11-28 | Tâche 10b ajoutée (corrections du banc complet) ; renvois de la tâche 1 à la fiche courante (2.5) |
