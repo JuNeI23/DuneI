@@ -5,7 +5,8 @@ import "Theme"
 import "Verrou"
 
 // Coque d'essai de la saisie du verrou (L2-22), sans fenêtre, sur des piles PAM factices.
-// Rôle : charge Saisie sur le dossier de piles DUNEI_ESSAI_PAM (jamais /etc/pam.d) et la pilote par l'IPC « essai »
+// Rôle : charge Saisie sur le dossier de piles DUNEI_ESSAI_PAM (jamais /etc/pam.d : sans la variable, un dossier
+//        inexistant, où aucune pile ne se trouve) et la pilote par l'IPC « essai »
 // pour tests/test_verrou.py (SaisieTest). Elle compte les succès et les secousses.
 // Entrées : DUNEI_TOKENS_DIR, DUNEI_ESSAI_PAM ; IPC « essai » : pret(bool), pile(nom), delais(repos, message, garde),
 // taper(texte), entree(), retour(), echap(), annuler(), etat() (JSON {points, ouvert, verifie, message, reussis, secousses}).
@@ -19,7 +20,7 @@ ShellRoot {
 
     Saisie {
         id: saisie
-        dossierPile: Quickshell.env("DUNEI_ESSAI_PAM")
+        dossierPile: Quickshell.env("DUNEI_ESSAI_PAM") || "/nonexistent/dunei-essai-pam"
         pile: "succes"
         onReussi: essai.reussis++
         onSecoue: essai.secousses++

@@ -1,3 +1,4 @@
+//@ pragma Env QSG_DISTANCEFIELD_ANTIALIASING=gray
 // Rideau de la voie B (L2-22) : calque Overlay opaque, un par écran, posé par le lanceur avant que hyprlock reprenne
 // un verrou abandonné, afin de masquer les quelques dizaines de millisecondes où la session reste visible.
 // Configuration Quickshell autonome, lancée par `qs -p` : elle n'importe rien de la coque, car Quickshell ne suit
