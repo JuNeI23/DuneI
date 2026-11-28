@@ -2,7 +2,7 @@
 
 Oct 12, 2026 · @Nicolas
 
-Version 1.78. Historique en fin de document.
+Version 1.79. Historique en fin de document.
 
 La 1.0 est une machine de référence qui tourne au quotidien et qui est belle : **196 éléments** répartis en **cinq lots**, sur six chantiers.
 
@@ -275,7 +275,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L2-19 | B | Écrit | Notifications — couleurs sémantiques invariantes ; référence visuelle : `~/dunei-atelier/inspiration/Shoddyconfection962/notifications.jpg`. Consigne de Nicolas : en haut à droite, classique et bien dessinée ; la notification ne naît pas de l'îlot (conception de L2-01, § 2) — **fait (D162)** : la coque est le serveur `org.freedesktop.Notifications`, dunst est retiré ; module `coque/Notifications/`, cartes de verre e3 empilées en haut à droite, plafond de cinq, remplacement par étiquette de pile, plein écran qui retient les cartes ; recette à l'écran validée le 2026-11-13 ; cloche de la barre simplifiée, suite en L2-67 |
 | L2-20 | B | Écrit | Menu contextuel du bureau — part du point de clic |
 | L2-21 | B | Écrit | Infobulles — délai de 500 ms |
-| L2-22 | B | Écrit | Verrouillage — registre de spectacle ; `SUPER + L` est déjà lié à `loginctl lock-session` (L1-09, D41) ; le verrouilleur provisoire, `hyprlock`, ne se nomme qu'à un endroit, `verrouilleur` dans `energie.toml`, et c'est le seul point à remplacer ; l'esthétique du verrouillage reste ouverte, Nicolas acceptant d'y investir de la ressource machine — **fait (D226 à D234), recette à l'écran en attente** : `hyprlock` gardé, lanceur `dunei-verrou` (seul nommé par `verrouilleur`), bloc qui tombe et remonte, apparition en recul, calques au-dessus du verrou ; reste la recette de Nicolas et L2-37 |
+| L2-22 | B | Écrit | Verrouillage — registre de spectacle ; `SUPER + L` est déjà lié à `loginctl lock-session` (L1-09, D41) ; le verrouilleur provisoire, `hyprlock`, ne se nomme qu'à un endroit, `verrouilleur` dans `energie.toml`, et c'est le seul point à remplacer ; l'esthétique du verrouillage reste ouverte, Nicolas acceptant d'y investir de la ressource machine — **fait (D236 à D238, voie B), recette à l'écran en attente** : la coque verrouille elle-même (`WlSessionLock`, `PamContext` sur la pile de `hyprlock`), un seul dessinateur de la chute à la remontée ; `hyprlock` n'est plus qu'un secours ; lanceur `dunei-verrou` (seul nommé par `verrouilleur`) qui commande la coque et garde le verrou, reprise derrière le bloc et le rideau, `Restart=always` ; champ caché, sans pastille ni nom, média sous la date ; reste la recette de Nicolas, puis L2-37 |
 | L2-23 | B | Fait | Menu de déconnexion — action destructrice en `error` (D204 à D210) : overlay d'attention sans plaque (socle `Scene`), cinq boutons en verre (`VignetteVerre`), celui sous le curseur agrandi de 1,15 et teinté d'accent, les autres gris, armé en `error` avec « Confirmer » ; double appui pour Quitter Hyprland, Redémarrer et Éteindre ; ouvert par le logo et `SUPER + Échap`, `SUPER + ALT + M` gardé en secours ; le lanceur l'ouvre armé. Recette validée à l'écran par Nicolas le 23 novembre ; elle a corrigé le masque de saisie de la barre (logo et engrenage des Réglages) et renommé « Déconnexion » en « Quitter Hyprland » (D210) |
 | L2-24 | B | Fait | Agent d'authentification — **fait (D222 à D225), recette validée par Nicolas le 2026-11-24** : agent polkit de la coque (module `Autorisation`), démarré avec `dunei-coque` et non par `session.toml` ; île à la forme de la presqu'île, garde de frappe, essais restants lus dans `faillock` ; règle PAM propre à polkit, pour qu'une annulation ne compte pas comme un échec ; cinq essais au lieu de trois |
 | L2-25 | B | Configuré | Trousseau de secrets |
@@ -338,7 +338,7 @@ Chaque élément porte un chantier, un lot et une nature. Le chantier dit qui fa
 | L2-82 | C | Fait | Lanceur, réponses inventées par qalc — **fait (D218), recette validée à l'écran par Nicolas le 24 novembre** : le lanceur ne répond que s'il comprend toute la saisie, d'après un vocabulaire à lui (`unites.js`), unités françaises comprises ; une conversion ou une somme de grandeurs différentes reste muette ; qalc lancé avec `-defaults`, à l'abri des réglages du terminal |
 | L2-83 | C | Fait | Lanceur, montants répondus en dollars — **fait (D219)** : qalc convertissait tout montant dans la monnaie de la langue du système ; le lanceur lui passe `currency conversion off`, un montant garde sa monnaie |
 | L2-84 | C | Écrit | Calcul du lanceur, mineurs de la relecture (L2-82) — `log` est le logarithme népérien de qalc ; muets : « ch » et « chevaux », « kwh », « million », « carrée » et « au carré », « dollars américains », « sqrt 9 » et « sin 30 » sans parenthèse, `log` à deux arguments, « 4 atan(1) en ° », « 5 N en kg », « 1 5/8 in » ; un collage de plus de 10 000 caractères peut ralentir la frappe (borner `aEnvoyer`) ; une saisie en forme Unicode décomposée n'est pas reconnue ; un échec unique, non identifié, de `test_lanceur` et un de `test_vignette_sans_capture`, non reproduits |
-| L2-85 | B | Écrit | Verrouillage, pastille sur la date des petits écrans — sur un écran de moins d'environ 830 px logiques de haut, la pastille recouvre la date (relevé de la tâche 5 de L2-22) ; correction proposée : réduire le haut de l'écran proportionnellement, par une fonction partagée par `Contenu.qml` et `confHyprlock` |
+| L2-85 | B | Retiré | Verrouillage, pastille sur la date des petits écrans — **retiré (D238)** : la pastille et le nom disparaissent de l'écran verrouillé (voie B, D236), le défaut tombe avec eux |
 
 ### Lot 3 — la bascule
 
@@ -544,6 +544,7 @@ Le choix de la distribution de base et du compositeur, précédemment ouverts, s
 
 | Version | Date | Changement |
 | --- | --- | --- |
+| 1.79 | 2026-11-28 | L2-22 en voie B (D236 à D238), recette à l'écran en attente ; L2-85 retiré avec la pastille |
 | 1.78 | 2026-11-26 | L2-22 fait (D226 à D234), recette à l'écran en attente ; ajout de L2-85, pastille sur la date des petits écrans ; 196 éléments |
 | 1.77 | 2026-11-24 | L2-24 fait (D222 à D225), recette validée ; 195 éléments |
 | 1.76 | 2026-11-24 | L2-48 fait (D220, D221), recette validée ; 195 éléments |

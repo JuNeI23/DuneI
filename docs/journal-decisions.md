@@ -4891,6 +4891,8 @@ annonce pendant la garde de frappe (400 ms sans touche avant que le champ n'acce
 
 ### D226 · `hyprlock` reste le verrouilleur, et le bloc tombe nu
 
+*Remplacée par D236 le 27 novembre 2026 : à l'écran, Nicolas a vu les deux coutures de la voie A (deux horloges superposées pendant la cession, puis le passage du rendu de `hyprlock` à celui de la coque). La coque verrouille elle-même, `hyprlock` ne reste qu'un secours.*
+
 26 novembre 2026 · L2-22, précise D41 et D51. Voie A, décidée par Nicolas : `hyprlock` est gardé, parce qu'il est éprouvé,
 qu'il a sa pile PAM et qu'il tient aussi lieu d'écran de connexion (D51) ; un verrouilleur écrit dans la coque
 (`WlSessionLock`) laisserait l'écran de secours d'Hyprland au premier plantage de la coque, et il faudrait refaire ce que
@@ -4972,6 +4974,8 @@ laissé aucune.
 
 ### D232 · Ce que `hyprlock` affiche : cinq images, une date sans locale, la pastille à 139
 
+*Tombée avec D236 le 28 novembre 2026 : la production des images et de la configuration de `hyprlock` (`Production.qml`, la pastille, le nom, le fond relayé) disparaît avec la voie A.*
+
 26 novembre 2026 · L2-22. La coque produit pour chaque écran cinq images : le fond, la pastille et le champ, et les
 versions vides de ces deux dernières. Le fond n'est jamais échangé, donc il n'a pas de version vide ; la fiche et le plan
 parlaient de six images. La date est composée par une commande qui n'emploie ni `%A` ni `%B` : `fr_FR` n'est pas installée
@@ -4985,6 +4989,8 @@ le nom (graisse 550) et l'initiale, et pour l'interlettrage de l'horloge (-8 px)
 
 ### D233 · Les rôles de couleur de la pastille, du champ et de l'emphase suivent la maquette
 
+*Tombée avec D236 le 28 novembre 2026 : la production des images et de la configuration de `hyprlock` (`Production.qml`, la pastille, le nom, le fond relayé) disparaît avec la voie A.*
+
 26 novembre 2026 · L2-22, bible. La pastille est en `controlRaised` ; le champ de mot de passe, en `surfaceBase` avec un
 contour `borderSubtle` ; l'emphase (heures, nom) en `textEmphasis`. Un premier jet les posait en couleurs de bureau
 opposées au fond, qui ne sont pas celles de la maquette. Aucune couleur n'est inventée ni recalculée : tout vient des
@@ -4996,6 +5002,8 @@ opaque).
 *Touché : `coque/Verrou/Contenu.qml`.*
 
 ### D234 · La production du verrou est branchée dans `shell.qml`
+
+*Tombée avec D236 le 28 novembre 2026 : la production des images et de la configuration de `hyprlock` (`Production.qml`, la pastille, le nom, le fond relayé) disparaît avec la voie A.*
 
 26 novembre 2026 · L2-22. `Production`, qui écrit les images et la configuration de `hyprlock` dans
 `~/.local/state/dunei/verrou/`, est instanciée par `shell.qml` (avec `Verrou.demarrer()`) à la tâche qui rend la coque
@@ -5034,3 +5042,83 @@ Le confort de la chute l'emporte sur cette mémoire, sans budget fixé pour la c
 
 *Touché : `energie.toml`, `generated/hypridle.conf`, `generated/energie.lua`, `config/hypr/scripts/dunei-verrou`,
 `dunei_motion/checks.py`, `motion.toml`, `coque/Verrou/`, carnet.*
+
+### D236 · La coque verrouille elle-même : la voie B remplace D226
+
+27 novembre 2026 · L2-22, remplace D226 et fait tomber D232 à D234. Décidée par Nicolas à l'écran, après avoir vu la
+voie A : tant que deux programmes dessinent le même écran, la couture entre l'horloge de la coque (Qt) et celle de
+`hyprlock` (Pango), puis entre leurs deux rendus au déverrouillage, s'atténue sans disparaître. La coque devient donc le
+verrouilleur (`WlSessionLock` et `PamContext` de Quickshell) et dessine seule, de la chute à la remontée ; `hyprlock`
+n'est plus qu'un secours (coque absente ou muette, échéance de 1,5 s, ouverture de session). Le risque qui avait fait
+choisir la voie A, un plantage de la coque laissant l'écran mort de Hyprland, est couvert par la reprise du verrou
+(`misc:allow_session_lock_restore`, déjà vrai) derrière un calque opaque.
+
+Preuves, relevées au banc imbriqué (Hyprland sous `bwrap`, sorties sans tête, pile PAM factice, `faillock` jamais
+touché) : verrou pris par la coque 9 à 29 ms après la demande ; relais du bloc vers la surface du verrou, dans un même
+processus, sans image de session dès 33 ms de recouvrement (8 sur 8 à 0 ms montrent la session, 2 sur 8 à 16 ms, aucune
+à 33 ms et plus) ; vingt cycles complets (chute, verrou, « bon », déverrouillage, remontée) sur deux écrans d'échelles
+différentes, zéro image de session, écart entre le bloc et la surface au plus 1,5 sur 255 ; image du bureau prête avant
+la première image de la surface (marge de 12 à 27 ms) grâce au cache partagé ; coque tuée verrou tenu : zéro image de
+session sur vingt reprises. Le détail est dans la fiche (2.4, « Ce qui a été relevé »).
+
+Coût : refaire le dialogue PAM dans la coque (le choix de D238 en limite la dépense), garder `hyprlock` en secours avec
+son relais et ses gardes (D237), et une **limite connue** : si la coque plante pendant la chute, avant qu'aucun verrou
+soit tenu, la session se voit 8 à 13 images jusqu'à la première image de `hyprlock` ; un rideau, plus lent à démarrer,
+n'y changerait rien. La contrainte « aucune image de session » vaut donc pour une coque qui plante verrou tenu. Nicolas en
+est informé.
+
+*Touché : `coque/Verrou/`, `config/hypr/scripts/dunei-verrou`, `coque/Rideau/`, `config/hypr/hyprlock.conf`, fiche du
+verrouillage 2.4, bible, direction, backlog, carnet.*
+
+### D237 · Reprise derrière le bloc et le rideau, `SIGUSR1` interdit, `Restart=always`
+
+28 novembre 2026 · L2-22, précise D236. **Reprise derrière un calque opaque.** Quand la coque tombe verrou tenu,
+Hyprland montre son écran mort, puis la session 1 à 4 images (20 à 70 ms) à chaque reprise du verrou. Un calque opaque
+mappé avant la demande masque cette fuite (0 image sur 20 reprises) : la coque relancée repose son bloc avant de
+demander le verrou ; si elle ne revient pas dans les 3 s, le lanceur pose un petit **rideau** (`coque/Rideau/`, un calque
+`Overlay` `surface-base` par écran) avant de lancer `hyprlock`, et le retire à son `onLockLocked`. L'option
+`lockdead_screen_delay = 0` supprimerait aussi la fuite mais griserait chaque verrouillage : écartée.
+`dunei-coque.service` passe à `Restart=always`, pour qu'une coque qui quitte proprement sous le verrou revienne aussi.
+
+**`SIGUSR1` interdit.** Mesuré : un `SIGUSR1` à `hyprlock` déverrouille toute la session, verrou de la coque compris,
+sans que la coque en soit avertie. Le relais vers la coque se fait par `SIGTERM`, et jamais une fois la coque seule au
+verrou par un autre signal.
+
+**Verrou supplanté.** Si `hyprlock` prend le verrou après la coque, Hyprland le lui donne sans avertir la coque ; le
+terminer laisse l'écran mort et le mot de passe impossible à taper. Le lanceur ne termine donc `hyprlock` qu'après avoir
+lu son `onLockLocked`, et si la coque a demandé son verrou après cette lecture (`depuis`, publié par la coque dans son
+`etat`, heure de la demande et non de l'octroi) et a été vue sans verrou depuis. Sinon il relance la coque, une fois par
+verrou, qui reprend le verrou par-dessus `hyprlock` ; la coque ne rend jamais elle-même un verrou supplanté. Rejoué au
+banc : verrou supplanté reconnu et coque relancée 18 ms après le réveil, aucune image d'écran mort.
+
+**Exception de 2,5 s.** Sans la ligne `onLockLocked` passé 2,5 s, `hyprlock` est tenu pour n'avoir jamais eu le verrou et
+terminé : au banc la ligne vient en 0,13 à 0,4 s, alors que sans cette exception le lanceur se figeait quatre fois sur
+six. Coût : un `hyprlock` octroyé dont la ligne arriverait après 2,5 s serait relayé, avec un écran mort possible.
+**Coût accepté** de l'horodatage à la demande : dans une course rare, un écran mort de 0,7 à 0,8 s, sans image de
+session, quand l'octroi a suivi la ligne ; prudence avant élégance. Toute coque qui répond sous un autre ordre que le
+courant reçoit `poserSec`, sans attendre de l'avoir vue absente (sinon le lanceur lançait `hyprlock` par-dessus une
+coque qui tenait déjà le verrou).
+
+**Rechargement à chaud.** Une coque rechargée pendant le verrou rend le verrou de sa génération précédente (la session
+apparaît 59 ms après la modification). `Quickshell.watchFiles` est donc coupé tant que la coque tient le verrou ; remis
+à vrai à la fin, il ne recharge pas ce qui a changé entre-temps : un `make install` pendant un verrou ne s'applique qu'au
+changement de fichier suivant. Un rechargement forcé à chaque déverrouillage aurait coûté plus.
+
+*Touché : `config/hypr/scripts/dunei-verrou`, `coque/Verrou/`, `coque/Rideau/`, `config/systemd/`, `config/hypr/modules/verrouillage.lua`.*
+
+### D238 · Champ caché, pile PAM de `hyprlock`, garde de 10 s et média sous la date
+
+28 novembre 2026 · L2-22, précise D236. **Champ caché.** Nicolas : « je suis chaud de ne pas montrer la barre du mdp tant
+que je n'ai rien écrit et la bulle "junei" ne sert fondamentalement pas à grand-chose ». La pastille et le nom
+disparaissent (L2-85 tombe avec elles) ; le champ n'existe qu'à la première touche, depuis un rond, et se referme après
+8 s sans frappe, à Échap ou au retrait du dernier point. **Pile PAM partagée.** Le `PamContext` lit
+`/etc/pam.d/hyprlock` : même politique et même `faillock` que le secours, rien de plus à installer ni à tenir à jour
+(choix de Claude, à corriger au besoin). **Garde de 10 s.** Une vérification PAM qui ne rend rien en 10 s est tenue pour
+un échec (« Vérification impossible ») et le champ reste utilisable : l'interface n'attend jamais sans fin une réponse de
+PAM. **Deux messages** : « Mot de passe incorrect » à un refus ; un message d'erreur de PAM (compte bloqué par `faillock`)
+s'affiche tel quel ; il reste 3 s, une nouvelle frappe l'efface. **Média.** Nicolas : « juste savoir ce qu'il se passe et
+quand rien ne joue il n'y a rien », « sous la date ». Une ligne : pochette, titre, « · artiste », du premier lecteur MPRIS
+qui joue ; rien en pause ; lecture seule, aucun contrôle. Le mot de passe n'est gardé que le temps de la vérification.
+Non éprouvé avant la recette : PAM sur le vrai compte et MPRIS (aucun bus au banc).
+
+*Touché : `coque/Verrou/`, `tokens.toml`, `motion.toml`, fiche du verrouillage 2.4.*

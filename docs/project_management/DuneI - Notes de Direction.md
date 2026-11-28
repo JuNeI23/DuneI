@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Nicolas — révisée le 22 octobre 2026
 
-Version 1.71. Historique en fin de document.
+Version 1.72. Historique en fin de document.
 
 *Pour le chef de projet. La bible complète fait treize chapitres, le backlog cent soixante-quinze lignes ; celle-ci dit ce qu'il faut en retenir pour piloter.*
 
@@ -730,22 +730,29 @@ Les demandes de droits d'administrateur passent désormais par la coque (L2-24, 
 24 novembre : une île sort de la presqu'île, dit ce qui est demandé et prend le mot de passe ; une annulation ne compte plus
 comme un échec, et le compte tolère cinq mots de passe faux.
 
-Le verrouillage est écrit (L2-22, D226 à D235) et attend sa recette à l'écran : `hyprlock` reste le verrouilleur et la coque
-lui donne le spectacle. Un bloc à l'image du fond tombe du haut vers le bas et cache la session ; l'horloge monumentale
-arrive en recul, puis la date, la pastille et le champ ; le chemin inverse remonte le bloc au déverrouillage. Le lanceur
-`dunei-verrou` ne tient pour vérité que `hyprctl -j locked` ; une session dont le verrou échoue en cours de route reste
-ouverte, avec une notification critique. Éprouvé au banc imbriqué : aucune image de la session entre la pose du bloc et sa
-remontée, sur dix cycles et sur chaque panne de la coque. Une réserve : sur un écran de moins de 830 px logiques de haut,
-la pastille recouvre la date (L2-85).
+Le verrouillage est écrit en voie B (L2-22, D236 à D238) et attend sa recette à l'écran. La première version gardait
+`hyprlock` comme verrouilleur ; Nicolas y a vu deux coutures, deux horloges superposées pendant la cession puis le passage
+d'un rendu à l'autre au déverrouillage. La coque verrouille donc elle-même (`WlSessionLock` et `PamContext`), seule à
+dessiner de la chute à la remontée ; `hyprlock` n'est plus qu'un secours. Un bloc à l'image du fond tombe du haut vers le
+bas et cache la session ; l'horloge monumentale arrive en recul, puis la date, puis le média en cours s'il y en a un ; il
+n'y a plus ni pastille ni nom, et le champ du mot de passe reste caché jusqu'à la première touche. Le lanceur
+`dunei-verrou` commande la coque et garde le verrou : une coque qui plante revient (`Restart=always`) et reprend le verrou
+derrière un calque opaque, un rideau couvre la session si elle tarde, et `hyprlock` ne la remplace qu'en dernier recours.
+Éprouvé au banc imbriqué : aucune image de la session sur vingt cycles complets, deux écrans d'échelles différentes, ni
+quand la coque tombe verrou tenu. Une limite connue, dite à Nicolas : si la coque plante pendant la chute, avant tout
+verrou, la session se voit 8 à 13 images. Un `make install` pendant un verrou ne s'applique qu'au changement de fichier
+suivant. L2-85 (pastille sur les petits écrans) tombe avec la pastille.
 
 Prochaine étape : la recette de L2-22 par Nicolas, après `make install` et le redémarrage de la coque (`SUPER + L`, menu,
-lanceur, inactivité, couvercle, ouverture de session, mot de passe faux puis juste, jour et nuit, mouvement réduit), puis
-L2-37, l'empreinte, qui vient juste après.
+inactivité, veille, ouverture de session, mot de passe faux puis juste, média qui joue puis en pause, jour et nuit,
+mouvement réduit ; le risque `faillock` est annoncé avant le vrai mot de passe), puis L2-37, l'empreinte, qui vient juste
+après.
 
 ## Historique des versions
 
 | Version | Date | Changement |
 | --- | --- | --- |
+| 1.72 | 2026-11-28 | L2-22 en voie B (D236 à D238) : la coque verrouille, `hyprlock` en secours ; recette à l'écran en attente, puis L2-37 |
 | 1.71 | 2026-11-26 | L2-22 écrit (D226 à D235), recette à l'écran en attente ; `hyprlock` emprunté, spectacle à DuneI ; prochaine étape : la recette, puis L2-37 |
 | 1.70 | 2026-11-24 | L2-24 fait (D222 à D225), recette validée ; prochaine étape inchangée |
 | 1.69 | 2026-11-24 | L2-48 fait (D220, D221), recette validée ; prochaine étape à proposer : L2-57 à L2-59, L2-62, L2-70, défauts L2-75 à L2-79, L2-84 |
