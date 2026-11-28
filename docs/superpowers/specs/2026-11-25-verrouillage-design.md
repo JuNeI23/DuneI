@@ -1,6 +1,6 @@
 # Verrouillage (L2-22)
 
-Version 2.2 — 2026-11-27 — voie B : la coque devient le verrouilleur, `hyprlock` reste en secours (validée)
+Version 2.3 — 2026-11-28 — voie B : la coque devient le verrouilleur, `hyprlock` reste en secours (validée)
 
 ## Intention
 
@@ -125,6 +125,46 @@ le bloc et sous la surface ; section « T1 » du rapport du banc :
   image rendue (60 par seconde sur une sortie à 60 Hz pendant une animation) et jamais quand rien ne bouge. La première
   image se détecte donc ainsi, mais un écran qui ne dessine pas n'en émet aucune : le plafond `verrouRelaisMax` reste
   nécessaire. Un calque mappé sous le verrou continue d'être rendu.
+
+Éprouvé les 27 et 28 novembre au même banc, pour la dixième tâche du plan, avec la vraie coque de la branche (par un
+lien), le vrai lanceur, la pile factice qui n'accepte que « bon » montée par `bwrap` à la place de `/etc/pam.d/hyprlock`,
+une fausse unité qui relance la coque 100 ms après sa sortie et un clavier virtuel du compositeur imbriqué ; section
+« T10 » du rapport du banc :
+
+- **Cycles complets.** Vingt cycles (chute, verrou, « bon », déverrouillage, remontée), filmés alternativement sur les
+  deux écrans : aucune image de session entre la pose du bloc et le déverrouillage (deux images comptées au bord d'un
+  cycle sont le début de la remontée, vue par une sonde en retard). Verrou tenu 0,94 à 1,13 s après l'appel. L'écart
+  entre le bloc et la surface reste dans le bruit (au plus 1,5 sur 255) à l'entrée comme à la sortie.
+- **Image prête avant la première image de la surface**, vingt surfaces sur vingt : marge de 24 à 27 ms à l'échelle 1,
+  de 12 à 13 ms à l'échelle 1,25, où le décodage est plus tardif.
+- **Coque tuée puis relancée.** Sous le verrou, pendant PAM et au retrait : aucune image de session ; l'écran mort tient
+  jusqu'au bloc de la coque revenue, qui reprend le verrou en 0,9 à 1,1 s, et le mot de passe est redemandé. En chute
+  et au relais, aucun verrou n'est encore tenu : la session se voit 8 à 13 images, jusqu'à la première image de
+  `hyprlock`, lancé aussitôt ; la coque revenue prend ensuite le verrou et le lanceur termine `hyprlock`.
+- **Coque tuée sans relance.** Écran mort, rideau à 3,4 s, `hyprlock` derrière lui, rideau retiré à `onLockLocked` ; le
+  rideau se voit une image dans la fenêtre de la fuite. **Défaut** : à une seconde reprise dans la même session, le
+  lanceur lit le « rideau : posé » de la précédente, car le journal du rideau n'est vidé que par le processus fils,
+  après `$(couleur)` ; `hyprlock` part avant le rideau, et la session s'est vue deux images.
+- **`--sec`, puis la coque** : elle prend le verrou derrière `hyprlock`, qui est terminé par `SIGTERM` ; elle tient.
+- **Écran débranché sous le verrou** : l'autre écran ne bouge pas, la coque tient. Rebranché : écran mort 0,6 s, puis la
+  surface de la coque avec son contenu ; aucune image de session, aucun plantage.
+- **Mouvement réduit** : le bloc apparaît et disparaît en fondu, 40 à 70 ms, sans aucun déplacement.
+- **Clavier réel du compositeur** : Entrée, le champ et les caractères composés (`é`, `€` par AltGr, `ê` par touche
+  morte) fonctionnent, chacun compte pour un point et Retour arrière en retire un entier. Avec la pile factice, un mot
+  faux affiche « Vérification impossible », car `pam_exec` rend une erreur système.
+- **Verrou supplanté.** Quand un `hyprlock` prend le verrou après la coque, Hyprland le lui donne, et la coque n'en est
+  pas avertie : `secure` reste vrai, aucune trace. Si le lanceur termine alors `hyprlock`, **l'écran mort reste**, et le
+  mot de passe ne peut plus être tapé. Le cas se produit au banc avec une coque figée plus de 3 s (reprise par `hyprlock`
+  derrière le rideau, sans relance en boucle, puis coque rendue : le lanceur la croit au verrou et termine `hyprlock`).
+  Une demande de la coque arrivée juste avant celle de `hyprlock` reste en suspens (`secure` faux) : sans dommage.
+  Parade proposée : ne relayer que vers une coque qui a pris le verrou après le `onLockLocked` de ce `hyprlock` (un
+  horodatage de la dernière prise dans `etat`), et, sinon, relancer la coque, qui reprend alors un verrou plus récent.
+- **Relance rapide de la coque.** Si les sondes du lanceur trouvent la coque muette pendant sa relance, jamais absente,
+  `poserSec` n'est jamais envoyé : la coque revenue tient le verrou sous l'ordre 0, le lanceur la croit sans verrou et
+  lance `hyprlock` par-dessus à 3 s ; on déverrouille par `hyprlock`, puis le bloc reste plus d'une seconde sur la
+  session ouverte.
+- **Restauration coupée** (`allow_session_lock_restore` faux) : la coque qui demande un verrou déjà tenu meurt d'une
+  erreur de protocole et remeurt à chaque relance. L'option reste donc vraie.
 
 ## Buts
 
@@ -326,3 +366,4 @@ moment voulu.
 | 2.0 | 2026-11-27 | Voie B : la coque verrouille (`WlSessionLock`, `PamContext`), `hyprlock` en secours ; champ caché, sans pastille ni nom, média sous la date ; relevés du banc B |
 | 2.1 | 2026-11-27 | Validée par Nicolas |
 | 2.2 | 2026-11-27 | Relevés de la tâche 1 : le rechargement à chaud rend le verrou, `watchFiles` coupé pendant le verrou ; image du bureau partagée par le cache dès la première image de la surface ; `frameSwapped` à chaque image rendue |
+| 2.3 | 2026-11-28 | Relevés de la tâche 10 (banc complet) : aucune image de session sur vingt cycles ni sous le verrou quand la coque tombe ; fuite en chute et au relais ; défauts du rideau périmé, du verrou supplanté et de la relance rapide |
