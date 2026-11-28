@@ -68,7 +68,7 @@ FAKES = {
     # au lieu d'absente pendant sa relance), « gele » (tient, puis dort sur etat de 200 ms à FAKE_GEL ms, 2000 par
     # défaut, après sa prise, comme figée par SIGSTOP, sauf une fois relancée). tomber et poserSec posent le bloc sous
     # un ordre qui n'est pas périmé ; remonter est ignoré sous le verrou ; etat rend {pose, ordre, tient, depuis,
-    # couvre, remonte} (depuis : heure de la prise, 0 sans verrou) et, si FAKE_VEILLE=1, annonce la veille en touchant
+    # couvre, remonte} (depuis : heure de la pose, qui tient lieu de demande du verrou, 0 sans verrou) et, si FAKE_VEILLE=1, annonce la veille en touchant
     # verrou-sec. qs -p (rideau) est consigné, attend FAKE_RIDEAU_DELAI s (0 par défaut), se dit posé sur sa sortie,
     # consigne « rideau posé <DUNEI_RIDEAU_COULEUR> », puis vit jusqu'à un TERM, consigné « rideau TERM » ; avec
     # FAKE_RIDEAU_SOURD=1, il consigne TERM sans en mourir.
@@ -89,7 +89,7 @@ FAKES = {
           '    tomber|poserSec) [ "$7" -ge "$o" ] && { echo "$7" > "$D/ordre"; [ -e "$D/couvre" ] || echo "$now" > "$D/couvre"; }\n'
           '                     [ "$mode" = tombe ] && : > "$D/tombe" ;;\n'
           '    remonter) [ -e "$D/pris" ] || rm -f "$D/couvre" ;;\n'
-          '    etat) c=false t=false p=0; [ -e "$D/couvre" ] && c=true; [ -e "$D/pris" ] && { t=true p=$(cat "$D/pris"); }\n'
+          '    etat) c=false t=false p=0; [ -e "$D/couvre" ] && c=true; [ -e "$D/pris" ] && { t=true p=$(cat "$D/couvre"); }\n'
           '          [ "${FAKE_VEILLE:-}" = 1 ] && : > "$XDG_RUNTIME_DIR/dunei/verrou-sec"\n'
           '          printf \'{"pose": %s, "ordre": %s, "tient": %s, "depuis": %s, "couvre": %s, "remonte": false}\\n\' '
           '"$c" "$(cat "$D/ordre" 2>/dev/null || echo 0)" "$t" "$p" "$c"\n'
@@ -119,7 +119,8 @@ FAKES = {
     # verrou ; « vite » : sort aussitôt en laissant le verrou ; « fige » : comme « garde », mais rend le compositeur muet
     # 5 appels ; « dort » : vit 10 s sans prendre le verrou ; « jamais » : sort sans verrou ; « muet » : sort sans
     # verrou en rendant le compositeur muet 12 appels (plus de 2 s). À la prise du verrou, il écrit onLockLocked sur sa
-    # sortie ; il consigne son lancement, son heure, et chaque TERM ou USR1 reçu (USR1 rendrait la session). Avec
+    # sortie, FAKE_HYPRLOCK_LIGNE s plus tard (0 par défaut), et consigne « ligne onLockLocked » ; il consigne aussi
+    # son lancement, son heure, et chaque TERM ou USR1 reçu (USR1 rendrait la session). Avec
     # FAKE_HYPRLOCK_SOURD=1, il consigne TERM sans en mourir.
     "hyprlock": 'echo "hyprlock $*" >> "$FAKE_LOG"\n'
                 'date +%s%3N >> "$FAKE_DIR/lancements"\n'
@@ -127,7 +128,8 @@ FAKES = {
                 '[ "$n" -gt $# ] && n=$#; eval "mode=\\${$n}"\n'
                 'trap \'echo "hyprlock TERM" >> "$FAKE_LOG"; [ -n "${FAKE_HYPRLOCK_SOURD:-}" ] || exit 143\' TERM\n'
                 'trap \'echo "hyprlock USR1" >> "$FAKE_LOG"; echo false > "$FAKE_DIR/locked"; exit 0\' USR1\n'
-                'prendre() { echo true > "$FAKE_DIR/locked"; echo onLockLocked; }\n'
+                'prendre() { echo true > "$FAKE_DIR/locked"; sleep "${FAKE_HYPRLOCK_LIGNE:-0}"; echo onLockLocked\n'
+                '    echo "ligne onLockLocked" >> "$FAKE_LOG"; }\n'
                 'case "$mode" in\n'
                 '    jamais) sleep 0.05; exit 1 ;;\n'
                 '    muet) sleep 0.05; echo 12 > "$FAKE_DIR/muet"; exit 1 ;;\n'
@@ -600,13 +602,29 @@ class DuneiVerrouTest(unittest.TestCase):
         self.assertSousSuite(["hyprlock", "rideau posé", "hyprlock", "rideau TERM", "remonter"], self.etapes())
         self.assertEqual(self.etapes().count("rideau posé"), 1)
 
-    def test_rideau_retire_par_le_relais(self):
-        # Rideau posé, hyprlock sans onLockLocked ; la coque arrive et tient : hyprlock reçoit TERM, le rideau aussi.
+    def test_sans_onlocklocked_relais_a_l_echeance(self):
+        # Rideau posé, hyprlock qui n'écrit jamais onLockLocked ; la coque arrive et tient : aucun TERM tant que
+        # l'échéance de hyprlock (2,5 s) ne prouve pas qu'il n'a pas reçu le verrou ; passée, le rideau est retiré et
+        # hyprlock reçoit TERM, sans relance de la coque.
         (self.t / "locked").write_text("true\n")
-        res = self.run_script(FAKE_COQUE="tard", FAKE_TARD="600", FAKE_HYPRLOCK="dort")
+        res = self.run_script(FAKE_COQUE="tard", FAKE_TARD="600", FAKE_HYPRLOCK="dort", FAKE_TENUE="5000")
         self.assertEqual(res.returncode, 0, res.stderr)
-        self.assertSousSuite(["rideau posé", "hyprlock", "poserSec", "kill -TERM", "rideau TERM", "remonter"],
+        self.assertNotIn("systemctl --user restart dunei-coque.service", self.calls())
+        self.assertSousSuite(["rideau posé", "hyprlock", "poserSec", "rideau TERM", "logger", "kill -TERM", "remonter"],
                              self.etapes())
+        self.assertTrue(any("sans onLockLocked" in c for c in self.calls()))
+
+    def test_relais_attend_onlocklocked(self):
+        # --sec : hyprlock prend le verrou mais n'écrit onLockLocked que 0,8 s plus tard ; la coque, qui a reçu
+        # poserSec, tient avant cette ligne. Aucun TERM avant la ligne ; lue, elle montre une demande de la coque
+        # antérieure (verrou tenu sans interruption) : la coque est relancée, reprend le verrou, et seulement alors
+        # hyprlock reçoit TERM.
+        res = self.run_script("--sec", FAKE_HYPRLOCK_LIGNE="0.8", FAKE_TENUE="5000", FAKE_HYPRLOCK_TENUE="8000")
+        self.assertEqual(res.returncode, 0, res.stderr)
+        etapes = self.etapes()
+        self.assertLess(etapes.index("ligne"), etapes.index("kill -TERM"))
+        self.assertSousSuite(["stdbuf", "poserSec", "ligne", "systemctl", "poserSec", "kill -TERM", "remonter"],
+                             etapes)
 
     def test_rideau_sans_journal_perime(self):
         # Deux reprises de suite par hyprlock derrière le rideau, sur un rideau lent à se dire posé : le second rideau

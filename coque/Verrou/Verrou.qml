@@ -41,8 +41,8 @@ import "verrou.js" as Logique
 //           de pgrep.
 // Sorties : ordre ; couvre (bloc voulu posé) ; enPlace (voulu posé, à sa place) ; pose (posé et immobile) ;
 //           remonte (remontée demandée, pas finie) ; voulu (verrou demandé) ; tient (verrou acquis : secure du
-//           WlSessionLock, ou voulu sans fenêtre) ; depuis (heure de la dernière prise du verrou, ms, 0 sans verrou
-//           tenu) ; anime (l'apparition du contenu se joue : faux en verrou sec ou
+//           WlSessionLock, ou voulu sans fenêtre) ; depuis (heure de la demande du verrou en cours, ms, 0 sans
+//           demande) ; anime (l'apparition du contenu se joue : faux en verrou sec ou
 //           abrégé) ; position (1 posé, 0 caché ; fixe à 1 en mouvement réduit) ; opacite ; matiere (1 image, 0 verre) ;
 //           actif (vaut Overlays.verrou) ; montre (calque du bloc mappé : vrai dès actif, faux un tour de boucle après
 //           la fin d'actif, s'il ne l'est pas redevenu) ; vu ; prendClavier ; saisie (Saisie, prête quand tient) ; media
@@ -98,8 +98,13 @@ Singleton {
     // Verrou acquis : le compositeur le dit sûr ; sans fenêtre, aucun verrou réel n'est demandé et la demande en tient
     // lieu, sauf en mode d'essai « refuser ».
     readonly property bool tient: fenetree ? session.secure : voulu && !refuserEssai
-    // Heure (ms, horloge Unix) à laquelle tient est devenu vrai pour la dernière fois, 0 sans verrou tenu : le lanceur
-    // la compare à la prise de hyprlock, pour ne jamais lui rendre un verrou que hyprlock a supplanté.
+    // Heure (ms, horloge Unix) de la demande du verrou en cours (passage de voulu à vrai), 0 sans demande : le lanceur
+    // la compare à sa lecture du onLockLocked de hyprlock, pour ne jamais lui rendre un verrou que hyprlock a supplanté.
+    // La demande précède toujours l'octroi : une coque qui traite l'octroi en retard (figée entre les deux) ne paraît
+    // jamais plus récente qu'elle n'est. Horloge murale, faute d'une horloge monotone commune à QML et au shell : un
+    // saut en avant entre la demande et la lecture ne fait que classer la coque supplantée (relance en trop) ; un saut
+    // en arrière pourrait la faire paraître plus récente, et le lanceur exige donc aussi de l'avoir vue sans verrou
+    // après sa lecture (voir dunei-verrou, relayer).
     property double depuis: 0
     // Relais en cours : le bloc est posé, le verrou n'est pas encore demandé ; images : chaque écran a dessiné.
     readonly property bool attend: pose && !voulu && !remonte
@@ -149,13 +154,14 @@ Singleton {
         tenue.restart()
     }
 
-    // onTientChanged — le verrou acquis, le bloc rend le clavier (la surface du verrou le reçoit), le contenu se
-    // montre dans la surface et l'heure de la prise est notée. Entrées : aucune. Sortie : clavier, vu, depuis.
-    // Erreurs : aucune ; verrou perdu, depuis revient à 0, rien d'autre (le lanceur le constate). Dépendances : tient.
-    onTientChanged: {
-        depuis = tient ? Date.now() : 0
-        if (tient) { clavier = false; vu = true }
-    }
+    // onTientChanged — le verrou acquis, le bloc rend le clavier (la surface du verrou le reçoit) et le contenu se
+    // montre dans la surface. Entrées : aucune. Sortie : clavier, vu. Erreurs : aucune ; verrou perdu, rien (le lanceur
+    // le constate). Dépendances : tient.
+    onTientChanged: if (tient) { clavier = false; vu = true }
+
+    // onVouluChanged — note l'heure de la demande du verrou, gardée tant qu'elle tient, remise à 0 à son retrait.
+    // Entrées : aucune. Sortie : depuis. Erreurs : aucune. Dépendances : voulu.
+    onVouluChanged: depuis = voulu ? Date.now() : 0
 
     // accepter — retient un ordre s'il n'est pas périmé. Entrée : o, ordre reçu. Sortie : vrai s'il est accepté (ordre
     // devient o). Erreurs : aucune. Dépendances : Logique.ordreValable.

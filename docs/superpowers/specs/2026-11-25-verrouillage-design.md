@@ -159,12 +159,19 @@ une fausse unité qui relance la coque 100 ms après sa sortie et un clavier vir
   mot de passe ne peut plus être tapé. Le cas se produit au banc avec une coque figée plus de 3 s (reprise par `hyprlock`
   derrière le rideau, sans relance en boucle, puis coque rendue : le lanceur la croit au verrou et termine `hyprlock`).
   Une demande de la coque arrivée juste avant celle de `hyprlock` reste en suspens (`secure` faux) : sans dommage.
-  **Corrigé** (tâche 10b) : `etat` publie `depuis`, l'heure de la dernière prise du verrou par la coque, et le lanceur
-  ne termine `hyprlock` que si cette prise suit sa lecture du `onLockLocked` ; sinon il relance la coque, une fois par
-  verrou, qui reprend le verrou par-dessus `hyprlock`. Rejoué (coque figée 6 s puis rendue) : verrou supplanté reconnu
+  **Corrigé** (tâche 10b) : `etat` publie `depuis`, l'heure de la demande du verrou par la coque (antérieure à son
+  octroi, donc prudente même si la coque traite l'octroi en retard), et le lanceur ne termine `hyprlock` qu'après avoir
+  lu son `onLockLocked`, si la demande de la coque suit cette lecture et si la coque a été vue sans verrou depuis (garde
+  contre un recul de l'horloge murale) ; sinon il relance la coque, une fois par verrou, qui reprend le verrou
+  par-dessus `hyprlock`. Rejoué (coque figée 6 s puis rendue) : verrou supplanté reconnu
   et coque relancée 18 ms après le réveil, coque revenue 0,14 s plus tard, sa surface au-dessus de `hyprlock` 0,85 s après,
   `hyprlock` terminé ensuite ; aucune image d'écran mort, « bon » déverrouille. Six courses à l'échéance (coque figée
   juste après la pose, rendue de 0 à 120 ms après le départ de `hyprlock`) : relais propre six fois, aucun écran mort.
+  Après la relecture (relais seulement après `onLockLocked`, `depuis` à la demande) : `hyprlock` sans ligne terminé à
+  l'échéance de 2,5 s trois fois, gardé jusqu'au mot de passe une fois ; deux fois, une coque dont la demande précède
+  la ligne mais dont l'octroi l'a suivie est jugée supplantée par prudence et relancée : **écran mort 0,7 à 0,8 s**,
+  jusqu'à la coque revenue, sans aucune image de session ; c'est le prix d'une règle qui ne connaît pas l'heure de
+  l'octroi.
   La coque ne rend jamais elle-même un verrou supplanté (`locked = false`) : rien ne prouve que ce soit sans danger.
 - **Relance rapide de la coque.** Si les sondes du lanceur trouvent la coque muette pendant sa relance, jamais absente,
   `poserSec` n'est jamais envoyé : la coque revenue tient le verrou sous l'ordre 0, le lanceur la croit sans verrou et
@@ -245,11 +252,17 @@ extérieure est bornée dans le temps.
 
 **Relais vers la coque.** Quand `hyprlock` tient le verrou (secours, ouverture de session) et que la coque répond
 `tient` (son verrou est `secure`), il termine `hyprlock` par `SIGTERM`, jamais par `SIGUSR1` : ce signal déverrouillerait
-toute la session, verrou de la coque compris. Il ne le fait que si la coque a pris son verrou (`depuis` de son `etat`,
-en ms) après qu'il a lu le `onLockLocked` de ce `hyprlock` : un verrou pris avant a été supplanté par `hyprlock`, et
-terminer celui-ci laisserait l'écran mort de Hyprland. Il relance alors la coque (`systemctl --user restart`, une fois
+toute la session, verrou de la coque compris. Tant qu'il n'a pas lu le `onLockLocked` de ce `hyprlock`, il ne relaie
+pas : rien ne prouve qui tient le verrou. Passé 2,5 s sans la ligne, `hyprlock` n'a pas reçu le verrou (il l'écrit dès
+l'octroi) : la coque qui tient est seule au verrou, et `hyprlock` est terminé. Après la ligne, il ne
+relaie que si la coque a demandé son verrou (`depuis` de son `etat`, en ms, heure de la demande et non de l'octroi)
+après cette lecture, et s'il l'a vue sans verrou depuis (ou l'a lui-même relancée) : un verrou demandé avant a été
+supplanté par `hyprlock`, et terminer celui-ci laisserait l'écran mort de Hyprland. Les deux heures sont murales : un
+recul de l'horloge pourrait rajeunir une demande, d'où la seconde preuve, qu'une coque supplantée, restée `secure`, ne
+donne jamais. Il relance alors la coque (`systemctl --user restart`, une fois
 par verrou), qui, revenue, pose son bloc et reprend le verrou par-dessus `hyprlock` ; le relais suivant est valable.
-Une coque qui répond sous un autre ordre que le courant (relancée) reçoit `poserSec` à chaque tour où elle le montre.
+Une coque qui répond sous un autre ordre que le courant (relancée) reçoit `poserSec` à chaque tour où elle le montre,
+sauf pendant sa remontée, qu'un `poserSec` ferait retomber.
 
 Un second appel pendant que la session est verrouillée attend le déverrouillage et rend le même code.
 
@@ -386,4 +399,4 @@ moment voulu.
 | 2.1 | 2026-11-27 | Validée par Nicolas |
 | 2.2 | 2026-11-27 | Relevés de la tâche 1 : le rechargement à chaud rend le verrou, `watchFiles` coupé pendant le verrou ; image du bureau partagée par le cache dès la première image de la surface ; `frameSwapped` à chaque image rendue |
 | 2.3 | 2026-11-28 | Relevés de la tâche 10 (banc complet) : aucune image de session sur vingt cycles ni sous le verrou quand la coque tombe ; fuite en chute et au relais ; défauts du rideau périmé, du verrou supplanté et de la relance rapide |
-| 2.4 | 2026-11-28 | Tâche 10b : rideau sans journal périmé, relais conditionné à `depuis` et coque supplantée relancée, `poserSec` à toute coque sous un autre ordre ; relevés rejoués au banc ; fuite en chute et au relais notée comme limite connue |
+| 2.4 | 2026-11-28 | Tâche 10b : rideau sans journal périmé, relais conditionné à `onLockLocked` lu, à `depuis` (heure de la demande) et à une coque vue sans verrou, coque supplantée relancée, `poserSec` à toute coque sous un autre ordre ; relevés rejoués au banc ; fuite en chute et au relais notée comme limite connue |

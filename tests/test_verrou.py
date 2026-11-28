@@ -271,8 +271,8 @@ class ControleurTest(EssaiCoque, unittest.TestCase):
         self.assertEqual((self.etat()["tient"], self.etat()["couvre"]), (True, True))
 
     def test_depuis(self):
-        """etat publie depuis : 0 tant que le verrou n'est pas tenu, puis l'heure (ms, horloge Unix) de la prise, et de
-        nouveau 0 une fois le verrou rendu par PAM ; le lanceur la compare à son onLockLocked."""
+        """etat publie depuis : 0 tant que le verrou n'est pas demandé, puis l'heure (ms, horloge Unix) de la demande,
+        et de nouveau 0 une fois le verrou rendu par PAM ; le lanceur la compare à son onLockLocked."""
         self.appel("pile", "question")
         self.assertEqual(self.etat()["depuis"], 0)
         avant = time.time() * 1000
@@ -285,6 +285,19 @@ class ControleurTest(EssaiCoque, unittest.TestCase):
         self.appel("entree")
         self.jusqua(lambda: not self.etat()["tient"], "verrou rendu")
         self.assertEqual(self.etat()["depuis"], 0)
+
+    def test_depuis_a_la_demande(self):
+        """depuis est l'heure de la demande du verrou, non celle de son octroi : verrou demandé mais refusé (mode d'essai
+        « refuser »), tient reste faux et depuis porte déjà l'heure de la demande. Une coque qui traiterait l'octroi en
+        retard ne paraît donc jamais plus récente qu'un hyprlock qui l'a supplantée."""
+        self.appel("refuser", "true")
+        avant = time.time() * 1000
+        self.verrou("tomber", 1)
+        self.jusqua(lambda: self.mesure()["voulu"], "verrou demandé", 2.0)
+        e = self.etat()
+        self.assertFalse(e["tient"])
+        self.assertGreaterEqual(e["depuis"], avant - 50)
+        self.assertLessEqual(e["depuis"], time.time() * 1000 + 50)
 
     def test_relais_plafonne(self):
         """En attente des images (mode d'essai attendreImages), sans qu'aucun écran ne dessine, le verrou est demandé au
