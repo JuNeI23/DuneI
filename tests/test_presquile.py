@@ -82,7 +82,8 @@ class PresquileStructureTest(unittest.TestCase):
         # Calée sur le pixel physique : entre deux, le bas de la forme se peint à moitié (capture du démarrage).
         self.assertIn("y: Math.round(glissement.decalage * surface.devicePixelRatio) / surface.devicePixelRatio", code)
         self.assertIn("opacity: glissement.opacite * (1 - couverture.value)", code)
-        self.assertIn("cible: nomEcran && Composants.Overlays.ecranCouvert === nomEcran ? 1 : 0", code)
+        self.assertIn("cible: Composants.Overlays.verrou || nomEcran && Composants.Overlays.ecranCouvert === nomEcran ? 1 : 0",
+                      code)
 
     def test_module_et_ressort(self):
         # Le module est arbitré, en lecture seule ; les bureaux sont le défaut de l'arbitre.

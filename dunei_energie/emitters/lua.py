@@ -11,15 +11,16 @@ import json
 def emit(model: dict) -> str:
     """Texte complet de energie.lua.
 
-    Entrée : model — sortie de dunei_energie.model.resolve (seule la clé verrouilleur est lue).
-    Sortie : module Lua qui rend { verrouilleur = "…" }. Les chaînes JSON sont des chaînes Lua valides
+    Entrée : model — sortie de dunei_energie.model.resolve (seules les clés verrouilleur et verrouilleur_initial sont lues).
+    Sortie : module Lua qui rend { verrouilleur = "…", verrouilleur_initial = "…" }. Les chaînes JSON sont des chaînes Lua valides
              pour tout texte sans caractère de contrôle ; checks refuse déjà une commande vide.
     Erreurs : KeyError si model est incomplet. Dépendances : json.
     """
     return "\n".join([
         "-- GÉNÉRÉ depuis energie.toml par generate_energie.py — NE PAS MODIFIER À LA MAIN",
-        "-- Usage : require(\"generated.energie\").verrouilleur — verrou initial (modules/demarrage.lua, L1-10).",
+        "-- Usage : require(\"generated.energie\").verrouilleur_initial — verrou initial (modules/demarrage.lua, L1-10).",
         "return {",
         f"    verrouilleur = {json.dumps(model['verrouilleur'], ensure_ascii=False)},",
+        f"    verrouilleur_initial = {json.dumps(model['verrouilleur_initial'], ensure_ascii=False)},",
         "}",
     ]) + "\n"

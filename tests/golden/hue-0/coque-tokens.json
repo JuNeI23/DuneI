@@ -1819,5 +1819,33 @@
     "urgence": "/usr/share/sounds/ocean/stereo/message-new-instant.oga",
     "salve": 2000,
     "renouvellement": 60000
+  },
+  "verrou": {
+    "horloge": 700,
+    "horlogeHaut": 34,
+    "horlogeLigne": 500,
+    "horlogeInterlettrage": -8,
+    "recul": 3.4,
+    "date": 22,
+    "dateHaut": 556,
+    "champLargeur": 280,
+    "champHauteur": 36,
+    "champBas": 56,
+    "point": 8,
+    "pointEcart": 7,
+    "message": 15,
+    "messageBas": 24,
+    "media": 16,
+    "mediaHaut": 606,
+    "mediaLargeur": 640,
+    "pochette": 30,
+    "pochetteRayon": 6,
+    "mediaEcart": 10,
+    "apparitionDate": 550,
+    "apparitionMot": 70,
+    "apparitionMedia": 620,
+    "courseDate": 34,
+    "courseMedia": 14,
+    "secousse": 12
   }
 }

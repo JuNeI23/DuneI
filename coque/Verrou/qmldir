@@ -1,0 +1,7 @@
+module Verrou
+singleton Verrou 1.0 Verrou.qml
+Bloc 1.0 Bloc.qml
+Contenu 1.0 Contenu.qml
+Media 1.0 Media.qml
+Saisie 1.0 Saisie.qml
+Surface 1.0 Surface.qml

@@ -17,8 +17,9 @@ import "../Theme"
 // cela, cartes et file disparaîtraient sans avoir été vues.
 // Entrées : pleinEcran, vrai tant que l'écran actif montre une fenêtre en vrai plein écran (PleinEcran, comme dans
 // AnnonceurAlerte) ; retenue, vraie pendant le plein écran et encore notifications.reprise ms après
-// sa fin, pour que la première carte n'entre pas pendant l'animation de sortie du plein écran (recette de L2-19) ;
-// une coque d'essai la remplace.
+// sa fin, pour que la première carte n'entre pas pendant l'animation de sortie du plein écran (recette de L2-19), et
+// tant que le bloc du verrou est là (Overlays.verrou, L2-22) : la notification attend dans la file sans s'annoncer, et
+// EtatNotifications n'est pas touché ; une coque d'essai la remplace.
 // Sorties : pile, la Pile des notifications reçues ; attente, l'Attente de la pile (notifications gardées).
 // Erreurs : si un autre démon tient déjà le nom org.freedesktop.Notifications, Quickshell le journalise et aucune
 // notification n'arrive.
@@ -28,7 +29,7 @@ NotificationServer {
     id: centre
 
     readonly property bool pleinEcran: PleinEcran.sur(Hyprland.focusedMonitor?.name ?? "")
-    property bool retenue: pleinEcran || reprise.running
+    property bool retenue: pleinEcran || Overlays.verrou || reprise.running
     readonly property Timer reprise: Timer { interval: Theme.notifications?.reprise ?? 0 }
 
     onPleinEcranChanged: if (!pleinEcran) reprise.restart()
@@ -36,7 +37,8 @@ NotificationServer {
         retenue: centre.retenue
         nePasDeranger: EtatNotifications.nePasDeranger
         retirees: EtatNotifications.retirees
-        pleinEcran: centre.pleinEcran
+        // Sous le verrou comme en plein écran, seule une notification critique sonne (son.js).
+        pleinEcran: centre.pleinEcran || Overlays.verrou
         sonActif: EtatNotifications.son
         onSonner: voix => Voix.jouer(voix)
     }

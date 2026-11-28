@@ -11,7 +11,7 @@ ORDRE = ("attenuation", "verrouillage", "ecran", "veille")   # Ordre imposé des
 ALIMENTATIONS = ("batterie", "secteur")
 SECTIONS = ("version", "commandes", "attenuation", "alerte", "paliers")
 SEUILS = ("faible", "critique")                              # Seuils d'alerte de la batterie, en % (L2-13).
-COMMANDES = ("verrouiller", "verrouilleur")
+COMMANDES = ("verrouiller", "verrouilleur", "verrouilleur_initial")
 
 
 def _entier(v) -> bool:

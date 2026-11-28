@@ -13,9 +13,10 @@ import "autorisation.js" as Logique
 // d'annulation : celui-ci ne part donc qu'une fois, et jamais après une demande close. Une seconde demande remplace la
 // première, qui est laissée : l'annuler fermerait la seconde (essai réel 2a). Le mot de passe ne fait que passer de
 // soumettre à flux.submit : il n'est ni retenu, ni journalisé, ni rendu par l'IPC.
-// Entrées : surFlux(f) ; lecteur, null par défaut : une fonction qui rend {faillock, conf}, à la place de la commande
-//           faillock et de faillock.conf (coques d'essai) ; clavierExclusif et fenetree, vrais par défaut, transmis à la
-//           scène ; marche (autorisation.active), regle, fabrique, reprises et avertir, remplacés par les essais.
+// Entrées : surFlux(f), retenu sous le verrou (C.Overlays.verrou) jusqu'à la remontée du bloc ; lecteur, null par
+//           défaut : une fonction qui rend {faillock, conf}, à la place de la commande faillock et de faillock.conf
+//           (coques d'essai) ; clavierExclusif et fenetree, vrais par défaut, transmis à la scène ; marche
+//           (autorisation.active), regle, fabrique, reprises et avertir, remplacés par les essais.
 //           demarrer() charge l'agent réel : la coque de session seule l'appelle. IPC « autorisation » : etat.
 // Sorties : flux (null au repos) ; ouvert ; etat (voir Logique.etat ; garde sa dernière valeur pendant la sortie de la
 //           fenêtre) ; message, action (textes reçus, à peindre en texte brut) ; ligne ({texte, erreur}) ; saisieOuverte
@@ -55,6 +56,13 @@ Singleton {
     property var lecteur: null
     property bool clavierExclusif: true
     property bool fenetree: true
+    // Demande reçue sous le verrou (L2-22), reprise à la remontée du bloc ; null sinon. repriseVerrou : vraie de cette
+    // reprise à l'arrivée de la fenêtre ou à la fermeture : l'écran est annoncé couvert dès la reprise.
+    property var attendu: null
+    property bool repriseVerrou: false
+    // onFenetreChanged — la fenêtre de la demande reprise est là : elle annonce désormais seule l'écran couvert.
+    // Entrées : aucune. Sortie : repriseVerrou. Erreurs : aucune.
+    onFenetreChanged: if (fenetre) repriseVerrou = false
     property alias ouvert: scene.ouvert
     readonly property var fenetre: scene.fenetre
     // Écran de la demande, figé à l'ouverture : il borne la hauteur du cadre.
@@ -157,6 +165,22 @@ Singleton {
     onMarcheChanged: if (demarree) marche ? demarrer() : retirer()
 
     Connections {
+        target: C.Overlays
+        // onVerrouChanged — le bloc du verrou remonté, la demande retenue reprend ; son écran est annoncé couvert sans
+        // attendre la fenêtre (reprise), pour que la presqu'île, qui décide au tour de boucle suivant, reste couverte
+        // sans saut. Entrées : aucune. Sortie : voir surFlux ; repriseVerrou. Erreurs : aucune ; sans demande retenue,
+        // rien. Dépendances : attendu, repriseVerrou, surFlux.
+        function onVerrouChanged() {
+            if (C.Overlays.verrou || !autorisation.attendu) return
+            const f = autorisation.attendu
+            autorisation.repriseVerrou = !f.isCompleted
+            autorisation.surFlux(f)
+            // surFlux a pu sortir sans ouvrir (flux déjà courant ou clos) : rien n'est alors repris.
+            if (autorisation.flux !== f || !autorisation.ouvert) autorisation.repriseVerrou = false
+        }
+    }
+
+    Connections {
         target: autorisation.agent
         ignoreUnknownSignals: true
         // onFluxChanged — la demande de l'agent change. Entrées : aucune. Sortie : voir surFlux.
@@ -165,9 +189,14 @@ Singleton {
 
     // surFlux — reçoit la demande courante de l'agent. Entrée : f, le flux, ou null quand l'agent n'en a plus.
     // Sortie : fenêtre ouverte, ou reprise en place, sur la nouvelle demande, champ vidé et garde relancée ; null ferme
-    // sans annuler, après « Autorisé » si la demande est accordée. Erreurs : aucune ; le flux déjà courant ou un flux déjà clos ne change rien.
-    // Dépendances : choisirIdentite, lire, evaluer, garde, finir.
+    // sans annuler, après « Autorisé » si la demande est accordée. Tant que le bloc du verrou est là (Overlays.verrou,
+    // L2-22), une demande est retenue dans attendu, sans fenêtre, et reprise à la fin de sa remontée ; un null
+    // l'oublie.
+    // Erreurs : aucune ; le flux déjà courant ou un flux déjà clos ne change rien.
+    // Dépendances : choisirIdentite, lire, evaluer, garde, finir, C.Overlays.verrou.
     function surFlux(f) {
+        if (C.Overlays.verrou && f) { attendu = f; return }
+        attendu = null
         if (f === flux) return
         if (!f) { finir(accordee()); return }
         if (f.isCompleted) return
@@ -239,6 +268,7 @@ Singleton {
     // delays.autorise. Entrée : reussi, vrai si polkit l'a accordée.
     // Sortie : flux null, etat « succes » si reussi, champ vidé, garde arrêtée. Erreurs : aucune. Dépendances : scene.
     function finir(reussi: bool) {
+        repriseVerrou = false
         if (!flux) { ouvert = false; return }
         flux = null
         garde.stop()
@@ -295,7 +325,12 @@ Singleton {
     Timer { id: sortie; interval: Theme.motion?.delays.autorise ?? 0; onTriggered: autorisation.ouvert = false }
 
     // La presqu'île de l'écran s'efface sous l'île de la demande, et revient à la fermeture.
-    Binding { target: C.Overlays; property: "ecranCouvert"; value: scene.ouvert && scene.fenetre ? scene.ecran?.name ?? "" : "" }
+    // Une demande reprise à la remontée du verrou couvre son écran dès la reprise, avant sa fenêtre.
+    Binding {
+        target: C.Overlays
+        property: "ecranCouvert"
+        value: scene.ouvert && (scene.fenetre || autorisation.repriseVerrou) ? scene.ecran?.name ?? "" : ""
+    }
 
     Connections {
         target: autorisation.flux

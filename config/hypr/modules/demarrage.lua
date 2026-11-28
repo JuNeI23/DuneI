@@ -42,8 +42,8 @@ end
 -- apply : masque le logo et le fond animé de Hyprland, enregistre le mode verrou-initial, puis, au
 --         signal hyprland.start et seulement au premier lancement depuis le démarrage (M.premier), lance
 --         dunei-verrou-initial avec le verrouilleur et entre dans le mode.
--- Entrée facultative, pour les tests : energie — par défaut generated.energie (energie.toml), chargé au
---         signal seulement.
+-- Entrée facultative, pour les tests : energie — par défaut generated.energie (energie.toml, clé
+--         verrouilleur_initial), chargé au signal seulement.
 -- Sortie : aucune. Erreurs : celles de l'API hl à l'enregistrement. Au signal, ni M.premier, ni
 --          energie.lua, ni l'entrée dans le mode n'empêchent le lancement : sans energie.lua, le mode
 --          bloque le clavier et M.SANS_ENERGIE l'écrit au journal.
@@ -61,7 +61,7 @@ function M.apply(energie)
         if ok and not p then return end
         -- energie.lua se charge ici, sous pcall : son absence ne doit pas empêcher le mode d'entrer.
         local lu, cmd = pcall(function()
-            return M.SCRIPT .. " " .. M.citer((energie or require("generated.energie")).verrouilleur)
+            return M.SCRIPT .. " " .. M.citer((energie or require("generated.energie")).verrouilleur_initial)
         end)
         -- Le verrouilleur part d'abord : une erreur du mode ne peut plus l'empêcher. exec_cmd est asynchrone
         -- et ce gestionnaire synchrone : aucune touche n'est traitée entre les deux appels.

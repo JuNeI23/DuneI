@@ -24,6 +24,15 @@
     "selecteur": 150,
     "garde": 1000,
     "gardeFrappe": 400,
+    "verrouAttente": 1500,
+    "verrouRelais": 50,
+    "verrouRelaisMax": 250,
+    "verrouChampRepos": 8000,
+    "verrouMessage": 3000,
+    "verrouPam": 10000,
+    "verrouReprise": 3000,
+    "verrouSecousse": 420,
+    "verrouRetrait": 200,
     "autorise": 800
   },
   "periods": {

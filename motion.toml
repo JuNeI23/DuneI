@@ -38,6 +38,15 @@ garde   = 1000                    # Attente, après la fermeture d'une scène, d
                                   # vient pas, l'action part quand même (Scene).
 gardeFrappe = 400                 # Silence du clavier exigé avant que le champ d'une demande d'autorisation n'accepte les
                                   # touches : une frappe destinée ailleurs n'y entre pas (L2-24).
+verrouAttente = 1500              # Échéance du verrou après l'appel : la session est verrouillée au plus tard alors (L2-22).
+verrouRelais = 50                 # Attente, après la première image du bloc de chaque écran, avant de demander le verrou (L2-22).
+verrouRelaisMax = 250             # Plafond de cette attente après la pose du bloc, même si un écran ne dessine pas (L2-22).
+verrouChampRepos = 8000           # Repos du clavier au bout duquel le champ de mot de passe se referme (L2-22).
+verrouMessage = 3000              # Durée d'affichage du message d'échec sous le champ (L2-22).
+verrouPam = 10000                 # Garde de la vérification PAM : au-delà, elle est abandonnée (L2-22).
+verrouReprise = 3000              # Délai de reprise du verrou après un signal du compositeur (L2-22).
+verrouSecousse = 420              # Durée de la secousse du champ à l'échec (L2-22).
+verrouRetrait = 200               # Retrait du contenu au déverrouillage, avant la remontée du bloc (L2-22, Verrou.qml).
 autorise = 800                    # Tenue d'« Autorisé » dans l'île repliée, une fois la demande accordée (L2-24).
 
 [periods]                         # Durée d'un cycle des mouvements continus, en millisecondes.

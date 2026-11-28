@@ -75,7 +75,7 @@ class EntryTest(unittest.TestCase):
 
     MODULES = ("env:QT_WAYLAND_DISABLE_WINDOWDECORATION,config:dunei,rule:couche-1-sans-ombre,"
                "rule:plein-ecran-nu,layer:dunei-verre-dunei-barre,layer:dunei-verre-dunei-attention,layer:dunei-verre-dunei-presquile,layer:dunei-verre-dunei-popovers,layer:dunei-verre-dunei-notifications,layer:dunei-verre-dunei-panneau,"
-               "layer:dunei-verre-dunei-attention-selecteur,layer:dunei-verre-dunei-attention-deconnexion,layer:dunei-verre-dunei-attention-lanceur,layer:dunei-verre-dunei-attention-autorisation,layer:dunei-fond,rule:sans-agrandissement,rule:glisser-xwayland,"
+               "layer:dunei-verre-dunei-attention-selecteur,layer:dunei-verre-dunei-attention-deconnexion,layer:dunei-verre-dunei-attention-lanceur,layer:dunei-verre-dunei-attention-autorisation,layer:dunei-verre-dunei-verrou,layer:dunei-fond,layer:dunei-verrou,rule:sans-agrandissement,rule:glisser-xwayland,"
                "rule:fenetre-parametres,on:window.open")
 
     DEMARRAGE = "config:dunei,submap,bind,on:hyprland.start"

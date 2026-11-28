@@ -9,7 +9,7 @@ import Quickshell
 // déroulantes, y compris celles d'un popover) n'y passent pas ; plusieurs peuvent coexister.
 // Entrées : les appels d'Overlay, ouvrir() quand un overlay s'ouvre et fermer() quand il se ferme.
 // Sorties : attention, l'overlay d'attention ouvert, ou null ; popover, le contextuel exclusif ouvert, ou null ;
-// deployes, le nombre de cadres de popovers encore déployés ou en repli ; ecranCouvert.
+// deployes, le nombre de cadres de popovers encore déployés ou en repli ; ecranCouvert ; verrou.
 // Erreurs : aucune ; un objet qui n'est ni une attention ni un contextuel exclusif est ignoré.
 // Dépendances : Quickshell (Singleton) ; tout objet portant famille, ouvert et, pour un popover, exclusif ; Overlay en
 // premier lieu.
@@ -23,6 +23,9 @@ Singleton {
     // Nom de l'écran dont la presqu'île est couverte par l'île d'une attention (demande d'autorisation, L2-24), « » sinon :
     // la presqu'île de cet écran s'efface en fondu.
     property string ecranCouvert: ""
+    // Vrai du départ du bloc du verrou à la fin de sa remontée (L2-22), écrit par le singleton Verrou : la presqu'île de
+    // chaque écran s'efface sous celle du bloc, les notifications sont retenues et une demande d'autorisation attend.
+    property bool verrou: false
 
     // ouvrir — retient une attention ou un popover exclusif qui vient de s'ouvrir et ferme celui de son emplacement.
     // Rôle : l'objet retenu est remplacé avant que l'ancien soit fermé ; ainsi, l'appel à fermer() que déclenche la

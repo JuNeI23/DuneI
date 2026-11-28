@@ -308,5 +308,6 @@ def emit(model: dict) -> str:
         "cloche": _camel_keys(raw["cloche"]),
         "panneau": _camel_keys(raw["panneau"]),
         "son": _camel_keys(raw["son"]),
+        "verrou": _camel_keys(raw["verrou"]),
     }
     return json.dumps(out, indent=2, ensure_ascii=False) + "\n"

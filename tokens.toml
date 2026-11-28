@@ -350,7 +350,8 @@ halo_reach = 0.75            # portée du halo, en part du côté
 [glass]
 namespaces = ["dunei-barre", "dunei-attention", "dunei-presquile", "dunei-popovers", "dunei-notifications", "dunei-panneau",
               "dunei-attention-selecteur", "dunei-attention-deconnexion", "dunei-attention-lanceur",
-              "dunei-attention-autorisation"]   # calques de la coque floutés ; un namespace par client de Scene (L2-80, L2-81)
+              "dunei-attention-autorisation", "dunei-verrou"]   # calques de la coque floutés ; un namespace par client de Scene
+                                                                  # (L2-80, L2-81) ; le bloc du verrou, pour le verre de sa presqu'île (L2-22)
 xray = ["dunei-barre"]       # flou du seul fond ; jamais un calque qui porte de l'E3
 fondu = ["dunei-attention", "dunei-attention-selecteur", "dunei-attention-deconnexion", "dunei-attention-lanceur",
          "dunei-attention-autorisation"]   # calques qui apparaissent et disparaissent en fondu seul, sans le popin de layersIn/layersOut
@@ -512,6 +513,34 @@ glyphe = 26                   # côté du cadenas dans la vignette
 rangee = 32                   # hauteur du champ et du bouton
 rayon = 18                    # angles bas de l'île ouverte
 secousse = 7                  # poussée du champ à l'échec, en px
+
+[verrou]                      # verrou de la coque (L2-22) ; px logiques sauf mention ; ms pour apparition_*
+horloge = 700                 # corps de l'horloge ; heures et minutes sur une ligne
+horloge_haut = 34             # haut de la ligne de l'horloge, depuis le haut de l'écran
+horloge_ligne = 500           # hauteur de la ligne de l'horloge, chiffres centrés dedans (maquette verrou-v2)
+horloge_interlettrage = -8    # espace ajouté après chaque chiffre de l'horloge (letter-spacing de la maquette)
+recul = 3.4                   # échelle de l'horloge au départ de l'apparition, ramenée à 1
+date = 22                     # corps de la date
+date_haut = 556               # position de la date depuis le haut
+champ_largeur = 280           # largeur du champ de mot de passe
+champ_hauteur = 36            # hauteur du champ de mot de passe
+champ_bas = 56                # distance du champ au bas de l'écran
+point = 8                     # diamètre d'un point du champ
+point_ecart = 7               # espace entre deux points du champ
+message = 15                  # corps du message d'échec sous le champ
+message_bas = 24              # distance du message au champ
+media = 16                    # corps du titre et de l'artiste du média
+media_haut = 606              # position du média depuis le haut de l'écran
+media_largeur = 640           # largeur maximale de la ligne du média
+pochette = 30                 # côté de la pochette du média
+pochette_rayon = 6            # rayon des angles de la pochette
+media_ecart = 10              # espace entre la pochette et le texte du média
+apparition_date = 550         # ms : le premier mot de la date monte de sous sa ligne
+apparition_mot = 70           # ms entre deux mots de la date
+apparition_media = 620        # ms : le média monte en fondant
+course_date = 34              # montée des mots de la date, depuis sous leur ligne
+course_media = 14             # montée du média
+secousse = 12                 # poussée du champ à l'échec, en px
 
 [notifications]               # pile de notifications de la coque (L2-19) ; px logiques sauf mention ; ms pour duree
 largeur = 340                 # largeur d'une carte

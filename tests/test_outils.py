@@ -13,6 +13,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 COQUE = ROOT / "coque"
 NAMESPACE = re.compile(r'WlrLayershell\.namespace\s*:\s*"([^"]+)"')
+# Calques volontairement hors du verre, chacun avec sa raison : rien à flouter sous eux.
+HORS_VERRE: dict[str, str] = {
+    "dunei-rideau": "calque opaque d'une configuration Quickshell autonome, qui ne lit pas les jetons : rien à flouter",
+}
 
 
 def declares() -> set[str]:
@@ -29,7 +33,8 @@ class NamespacesTest(unittest.TestCase):
         self.assertEqual(NAMESPACE.findall(texte), ["dunei-attention"])
 
     def test_namespaces_declares(self):
-        """Chaque namespace écrit dans coque/**/*.qml figure dans [glass].namespaces ou est [bureau].namespace dans tokens.toml."""
+        """Chaque namespace écrit dans coque/**/*.qml figure dans [glass].namespaces ou est [bureau].namespace dans tokens.toml,
+        sauf les calques du verrou nommés dans HORS_VERRE, qui ne doivent pas être floutés."""
         trouves = {}
         for f in COQUE.rglob("*.qml"):
             for n in NAMESPACE.findall(f.read_text(encoding="utf-8")):
@@ -37,7 +42,11 @@ class NamespacesTest(unittest.TestCase):
         self.assertTrue(trouves, "aucun namespace trouvé : motif périmé ?")
         for n, fichiers in trouves.items():
             with self.subTest(namespace=n):
-                self.assertIn(n, declares(), f"namespace non déclaré dans tokens.toml : {fichiers}")
+                self.assertIn(n, declares() | HORS_VERRE.keys(), f"namespace non déclaré dans tokens.toml : {fichiers}")
+
+    def test_hors_verre_jamais_flouté(self):
+        """Un calque déclaré hors du verre n'est pas, en même temps, dans [glass].namespaces."""
+        self.assertFalse(HORS_VERRE.keys() & declares())
 
     def test_banc_du_verre_porte_le_namespace_de_la_barre(self):
         """Le banc d'essai du verre emprunte le namespace de la future barre, pour éprouver ses règles de calque."""

@@ -20,13 +20,13 @@ hl = {
                   tostring(t.input.touchpad.clickfinger_behavior), tostring(t.input.kb_layout))
             if t.gestures then print("gestures", tostring(t.gestures.workspace_swipe_create_new)) end
         elseif t.misc then
-            print("misc", tostring(t.misc.allow_session_lock_restore))
+            print("misc", tostring(t.misc.allow_session_lock_restore), tostring(t.misc.session_lock_xray))
         else
             print("config", t.general.layout, tostring(t.dwindle.preserve_split))
         end
     end,
     window_rule = function(r) print("rule", r.name) end,
-    layer_rule = function(r) print("layer", r.name) end,
+    layer_rule = function(r) print("layer", r.name, tostring(r.order), tostring(r.above_lock), tostring(r.no_anim)) end,
     -- Le faux hl.on joue aussitôt le rappel sur la fenêtre Paramètres, puis sur une fenêtre quelconque.
     on = function(e, f)
         print("on", e)
@@ -71,24 +71,26 @@ class ModulesTest(unittest.TestCase):
 
     def test_regles_generated_layers_then_behaviour(self):
         self.assertEqual(self.run_module("regles"), ["rule\tcouche-1-sans-ombre", "rule\tplein-ecran-nu",
-                                                     "layer\tdunei-verre-dunei-barre",
-                                                     "layer\tdunei-verre-dunei-attention",
-                                                     "layer\tdunei-verre-dunei-presquile",
-                                                     "layer\tdunei-verre-dunei-popovers",
-                                                     "layer\tdunei-verre-dunei-notifications",
-                                                     "layer\tdunei-verre-dunei-panneau",
-                                                     "layer\tdunei-verre-dunei-attention-selecteur",
-                                                     "layer\tdunei-verre-dunei-attention-deconnexion",
-                                                     "layer\tdunei-verre-dunei-attention-lanceur",
-                                                     "layer\tdunei-verre-dunei-attention-autorisation",
-                                                     "layer\tdunei-fond",
+                                                     "layer\tdunei-verre-dunei-barre\tnil\tnil\tnil",
+                                                     "layer\tdunei-verre-dunei-attention\tnil\tnil\tnil",
+                                                     "layer\tdunei-verre-dunei-presquile\tnil\tnil\tnil",
+                                                     "layer\tdunei-verre-dunei-popovers\tnil\tnil\tnil",
+                                                     "layer\tdunei-verre-dunei-notifications\tnil\tnil\tnil",
+                                                     "layer\tdunei-verre-dunei-panneau\tnil\tnil\tnil",
+                                                     "layer\tdunei-verre-dunei-attention-selecteur\tnil\tnil\tnil",
+                                                     "layer\tdunei-verre-dunei-attention-deconnexion\tnil\tnil\tnil",
+                                                     "layer\tdunei-verre-dunei-attention-lanceur\tnil\tnil\tnil",
+                                                     "layer\tdunei-verre-dunei-attention-autorisation\tnil\tnil\tnil",
+                                                     "layer\tdunei-verre-dunei-verrou\tnil\tnil\tnil",
+                                                     "layer\tdunei-fond\tnil\tnil\ttrue",
+                                                     "layer\tdunei-verrou\t-100\tnil\ttrue",
                                                      "rule\tsans-agrandissement", "rule\tglisser-xwayland",
                                                      "rule\tfenetre-parametres",
                                                      # La fenêtre Paramètres, et elle seule, reprend la sortie commune.
                                                      "on\twindow.open", "dispatch\tanimation=popin 90% Paramètres"])
 
     def test_verrouillage(self):
-        self.assertEqual(self.run_module("verrouillage"), ["misc\ttrue"])
+        self.assertEqual(self.run_module("verrouillage"), ["misc\ttrue\tfalse"])
 
     def preference(self, contenu: str | None) -> str:
         """Exécute modules.motion.preference() avec mouvement.json de contenu donné dans un dossier temporaire.

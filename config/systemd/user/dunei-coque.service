@@ -11,7 +11,9 @@ ConditionEnvironment=WAYLAND_DISPLAY
 [Service]
 Type=exec
 ExecStart=/usr/bin/qs -n -c dunei
-Restart=on-failure
+# Relancée toujours, même après une sortie propre : la coque qui quitte pendant le verrou revient et le reprend
+# derrière son bloc avant que le lanceur ne passe la main à hyprlock (verrouReprise, L2-22).
+Restart=always
 Slice=app-graphical.slice
 # Pages géantes transparentes seulement sur demande explicite (madvise) : en mode « always », khugepaged regonfle en
 # pages de 2 Mo les zones que jemalloc a rendues, et la coque garde ce qu'elle a libéré (L2-60, mémoire de la galerie).
