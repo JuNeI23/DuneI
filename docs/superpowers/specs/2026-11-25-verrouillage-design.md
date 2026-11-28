@@ -1,6 +1,6 @@
 # Verrouillage (L2-22)
 
-Version 2.3 — 2026-11-28 — voie B : la coque devient le verrouilleur, `hyprlock` reste en secours (validée)
+Version 2.4 — 2026-11-28 — voie B : la coque devient le verrouilleur, `hyprlock` reste en secours (validée)
 
 ## Intention
 
@@ -144,7 +144,9 @@ une fausse unité qui relance la coque 100 ms après sa sortie et un clavier vir
 - **Coque tuée sans relance.** Écran mort, rideau à 3,4 s, `hyprlock` derrière lui, rideau retiré à `onLockLocked` ; le
   rideau se voit une image dans la fenêtre de la fuite. **Défaut** : à une seconde reprise dans la même session, le
   lanceur lit le « rideau : posé » de la précédente, car le journal du rideau n'est vidé que par le processus fils,
-  après `$(couleur)` ; `hyprlock` part avant le rideau, et la session s'est vue deux images.
+  après `$(couleur)` ; `hyprlock` part avant le rideau, et la session s'est vue deux images. **Corrigé** (tâche 10b) :
+  le lanceur vide le journal du rideau avant de le lancer ; rejoué, la seconde reprise pose le rideau (+3516 ms) avant
+  `hyprlock` (+3539 ms), aucune image de session.
 - **`--sec`, puis la coque** : elle prend le verrou derrière `hyprlock`, qui est terminé par `SIGTERM` ; elle tient.
 - **Écran débranché sous le verrou** : l'autre écran ne bouge pas, la coque tient. Rebranché : écran mort 0,6 s, puis la
   surface de la coque avec son contenu ; aucune image de session, aucun plantage.
@@ -157,12 +159,25 @@ une fausse unité qui relance la coque 100 ms après sa sortie et un clavier vir
   mot de passe ne peut plus être tapé. Le cas se produit au banc avec une coque figée plus de 3 s (reprise par `hyprlock`
   derrière le rideau, sans relance en boucle, puis coque rendue : le lanceur la croit au verrou et termine `hyprlock`).
   Une demande de la coque arrivée juste avant celle de `hyprlock` reste en suspens (`secure` faux) : sans dommage.
-  Parade proposée : ne relayer que vers une coque qui a pris le verrou après le `onLockLocked` de ce `hyprlock` (un
-  horodatage de la dernière prise dans `etat`), et, sinon, relancer la coque, qui reprend alors un verrou plus récent.
+  **Corrigé** (tâche 10b) : `etat` publie `depuis`, l'heure de la dernière prise du verrou par la coque, et le lanceur
+  ne termine `hyprlock` que si cette prise suit sa lecture du `onLockLocked` ; sinon il relance la coque, une fois par
+  verrou, qui reprend le verrou par-dessus `hyprlock`. Rejoué (coque figée 6 s puis rendue) : verrou supplanté reconnu
+  et coque relancée 18 ms après le réveil, coque revenue 0,14 s plus tard, sa surface au-dessus de `hyprlock` 0,85 s après,
+  `hyprlock` terminé ensuite ; aucune image d'écran mort, « bon » déverrouille. Six courses à l'échéance (coque figée
+  juste après la pose, rendue de 0 à 120 ms après le départ de `hyprlock`) : relais propre six fois, aucun écran mort.
+  La coque ne rend jamais elle-même un verrou supplanté (`locked = false`) : rien ne prouve que ce soit sans danger.
 - **Relance rapide de la coque.** Si les sondes du lanceur trouvent la coque muette pendant sa relance, jamais absente,
   `poserSec` n'est jamais envoyé : la coque revenue tient le verrou sous l'ordre 0, le lanceur la croit sans verrou et
   lance `hyprlock` par-dessus à 3 s ; on déverrouille par `hyprlock`, puis le bloc reste plus d'une seconde sur la
-  session ouverte.
+  session ouverte. **Corrigé** (tâche 10b) : toute coque qui répond sous un autre ordre que le courant reçoit
+  `poserSec`, sans attendre de l'avoir vue absente. Rejoué en forçant le cas (la coque absente rendue muette par la
+  trace du banc) : sondes muettes seulement, `poserSec` reçu à +1,03 à +1,05 s, la coque tient sous l'ordre courant,
+  aucun `hyprlock`. Six relances rapides ordinaires : de même.
+- **Limite connue : plantage de la coque en chute ou au relais.** Avant tout verrou tenu, aucun écran mort ne couvre la
+  session : elle se voit 8 à 13 images, jusqu'à la première image de `hyprlock`, lancé aussitôt. Le rideau, plus lent
+  à démarrer que `hyprlock`, n'y changerait rien. La fenêtre dure une centaine de millisecondes par verrouillage ; la
+  contrainte « aucune image de la session entre la pose et la remontée » ne vaut donc que pour une coque qui plante
+  verrou tenu.
 - **Restauration coupée** (`allow_session_lock_restore` faux) : la coque qui demande un verrou déjà tenu meurt d'une
   erreur de protocole et remeurt à chaque relance. L'option reste donc vraie.
 
@@ -230,7 +245,11 @@ extérieure est bornée dans le temps.
 
 **Relais vers la coque.** Quand `hyprlock` tient le verrou (secours, ouverture de session) et que la coque répond
 `tient` (son verrou est `secure`), il termine `hyprlock` par `SIGTERM`, jamais par `SIGUSR1` : ce signal déverrouillerait
-toute la session, verrou de la coque compris.
+toute la session, verrou de la coque compris. Il ne le fait que si la coque a pris son verrou (`depuis` de son `etat`,
+en ms) après qu'il a lu le `onLockLocked` de ce `hyprlock` : un verrou pris avant a été supplanté par `hyprlock`, et
+terminer celui-ci laisserait l'écran mort de Hyprland. Il relance alors la coque (`systemctl --user restart`, une fois
+par verrou), qui, revenue, pose son bloc et reprend le verrou par-dessus `hyprlock` ; le relais suivant est valable.
+Une coque qui répond sous un autre ordre que le courant (relancée) reçoit `poserSec` à chaque tour où elle le montre.
 
 Un second appel pendant que la session est verrouillée attend le déverrouillage et rend le même code.
 
@@ -367,3 +386,4 @@ moment voulu.
 | 2.1 | 2026-11-27 | Validée par Nicolas |
 | 2.2 | 2026-11-27 | Relevés de la tâche 1 : le rechargement à chaud rend le verrou, `watchFiles` coupé pendant le verrou ; image du bureau partagée par le cache dès la première image de la surface ; `frameSwapped` à chaque image rendue |
 | 2.3 | 2026-11-28 | Relevés de la tâche 10 (banc complet) : aucune image de session sur vingt cycles ni sous le verrou quand la coque tombe ; fuite en chute et au relais ; défauts du rideau périmé, du verrou supplanté et de la relance rapide |
+| 2.4 | 2026-11-28 | Tâche 10b : rideau sans journal périmé, relais conditionné à `depuis` et coque supplantée relancée, `poserSec` à toute coque sous un autre ordre ; relevés rejoués au banc ; fuite en chute et au relais notée comme limite connue |

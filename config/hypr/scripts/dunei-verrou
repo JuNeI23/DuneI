@@ -12,7 +12,10 @@
 #        si elle répond. Session trouvée tenue à l'appel : gardée par la coque si elle tient ou vit,
 #        suivie si un hyprlock la tient, sinon reprise par hyprlock derrière le rideau.
 #        Quand la coque tient le verrou pendant que hyprlock le garde (secours, ouverture de session), hyprlock est
-#        terminé par SIGTERM, jamais par SIGUSR1, qui rendrait toute la session, verrou de la coque compris. Une seule
+#        terminé par SIGTERM, jamais par SIGUSR1, qui rendrait toute la session, verrou de la coque compris ; seulement si
+#        la coque a pris le verrou après le `onLockLocked` de hyprlock (champ `depuis` de son `etat`) : un verrou pris
+#        avant a été supplanté par hyprlock, et le terminer laisserait l'écran mort de Hyprland ; la coque est alors
+#        relancée, une fois par verrou, pour reprendre le verrou par-dessus hyprlock. Une seule
 #        vérité, `hyprctl -j locked` : ni un nom de processus, ni un code de sortie, ni une durée n'en tiennent lieu,
 #        et une réponse manquante ne vaut jamais « rendu ». Toute commande extérieure est bornée dans le temps. Verrou
 #        sec, sans chute : `--sec` (ouverture de session : hyprlock d'abord, la coque n'étant pas encore là), veille
@@ -113,18 +116,24 @@ veille() {
 }
 
 # sonder — état de la coque, d'après son `etat`, sous l'ordre courant.
-# Entrées : aucune ; lit $ordre.
-# Sortie : « tient » (verrou acquis sous l'ordre courant), « couvre » (bloc voulu sous l'ordre courant, verrou pas
-#          encore acquis), « repond » (coque vivante sans bloc sous l'ordre courant : jamais avertie, relancée, ou
-#          posée d'elle-même sous un autre ordre), « muette » (borne de 0,2 s dépassée, ou réponse illisible), ou
-#          « absente » (qs en échec sans dépasser sa borne : aucune instance).
-# Erreurs : aucune n'est remontée ; une coque muette ou illisible n'est jamais prise pour absente ni pour tenante.
+# Entrées : aucune ; lit $ordre et $verrouille (heure de lecture de `onLockLocked`, vide si aucun hyprlock de ce
+#          lancement n'a encore pris le verrou).
+# Sortie : « tient » (verrou acquis sous l'ordre courant, après le `onLockLocked` de hyprlock s'il y en a un),
+#          « supplante » (verrou acquis sous l'ordre courant, mais avant ce `onLockLocked`, ou heure de prise absente :
+#          hyprlock l'a repris par-dessus, la coque ne tient plus rien), « couvre » (bloc voulu sous l'ordre courant,
+#          verrou pas encore acquis), « autre » (coque vivante sous un autre ordre : jamais avertie, relancée, ou posée
+#          d'elle-même), « repond » (coque vivante sans bloc sous l'ordre courant), « muette » (borne de 0,2 s dépassée,
+#          ou réponse illisible), ou « absente » (qs en échec sans dépasser sa borne : aucune instance).
+# Erreurs : aucune n'est remontée ; une coque muette ou illisible n'est jamais prise pour absente ni pour tenante, et
+#           une prise de même heure que la lecture de `onLockLocked` compte comme supplantée.
 # Dépendances : ipc, jq.
 sonder() {
     r=$(ipc etat 2>/dev/null); c=$?
     case $c in 0) ;; 124) echo muette; return ;; *) echo absente; return ;; esac
-    e=$(printf '%s' "$r" | jq -r --argjson o "$ordre" \
-        'if .ordre != $o then "repond" elif .tient then "tient" elif .couvre then "couvre" else "repond" end' 2>/dev/null)
+    e=$(printf '%s' "$r" | jq -r --argjson o "$ordre" --arg v "$verrouille" \
+        'if .ordre != $o then "autre"
+         elif .tient then (if $v != "" and (.depuis // 0) <= ($v | tonumber) then "supplante" else "tient" end)
+         elif .couvre then "couvre" else "repond" end' 2>/dev/null)
     echo "${e:-muette}"
 }
 
@@ -155,8 +164,11 @@ couleur() {
 # rideau_poser — pose le rideau et attend qu'il soit dessiné sur chaque écran.
 # Entrées : aucune. Sortie : rideau (PID du rideau) ; retour dès « rideau : posé » dans $VOILE, si le rideau meurt, ou
 #           au plus $RIDEAU_MAX ms après son lancement. Erreurs : aucune ; un rideau lent ou absent ne retarde jamais
-#           hyprlock au-delà de la borne. Dépendances : qs, couleur, vivant, maintenant, cat.
+#           hyprlock au-delà de la borne. Le journal est vidé ici, avant le lancement : la redirection du rideau n'est
+#           faite qu'après la lecture de sa couleur, et la boucle y lirait sinon le « posé » d'un rideau précédent.
+# Dépendances : qs, couleur, vivant, maintenant, cat.
 rideau_poser() {
+    : >"$VOILE"
     DUNEI_RIDEAU_COULEUR=$(couleur) qs -p "$RIDEAU" >"$VOILE" 2>&1 & rideau=$!
     g=$(($(maintenant) + RIDEAU_MAX))
     while vivant "$rideau" && [ "$(maintenant)" -lt "$g" ]; do
@@ -189,37 +201,44 @@ verrouilleur() {
     [ "$c" = 0 ]
 }
 
-# rideau_lever — retire le rideau dès que hyprlock tient le verrou (ligne `onLockLocked` de son journal), au plus
-# $ECHEANCE ms après son lancement. Entrées : aucune ; lit $rideau, $lance. Sortie : aucune.
-# Erreurs : aucune. Dépendances : rideau_retirer, maintenant, cat.
+# rideau_lever — note l'heure à laquelle la ligne `onLockLocked` de hyprlock est lue dans son journal, et retire le
+# rideau dès qu'elle l'est, au plus $ECHEANCE ms après le lancement de hyprlock.
+# Entrées : aucune ; lit $rideau, $lance, $verrouille. Sortie : verrouille (heure de la lecture, ms), une fois par
+# lancement ; rideau retiré s'il y a lieu. Erreurs : aucune. Dépendances : rideau_retirer, maintenant, cat.
 rideau_lever() {
+    [ -n "$verrouille" ] || case $(cat "$JOURNAL" 2>/dev/null) in *onLockLocked*) verrouille=$(maintenant) ;; esac
     [ -n "$rideau" ] || return 0
-    case $(cat "$JOURNAL" 2>/dev/null) in *onLockLocked*) rideau_retirer; return ;; esac
+    [ -z "$verrouille" ] || { rideau_retirer; return; }
     [ "$(maintenant)" -lt $((lance + ECHEANCE)) ] || rideau_retirer
 }
 
 # secours — lance hyprlock sur la configuration statique, sa sortie ligne par ligne au journal du verrou ; derrière le
 # rideau si la session est déjà tenue (verrou abandonné : sans rideau, la reprise laisserait voir la session).
 # Entrées : aucune. Sortie : pid (PID de hyprlock : stdbuf l'exécute à sa place), lance (heure du lancement, ms),
-#           tenant=hyprlock, pris=0 (verrou pas encore vu tenu sous ce lancement), tue=0, reprise vidée ; rideau posé
-#           s'il y a lieu. Erreurs : aucune ; un hyprlock qui ne prend pas le verrou est traité par la garde.
+#           tenant=hyprlock, pris=0 (verrou pas encore vu tenu sous ce lancement), tue=0, reprise et verrouille vidés ;
+#           rideau posé s'il y a lieu. Erreurs : aucune ; un hyprlock qui ne prend pas le verrou est traité par la garde.
 # Le journal est vidé avant le lancement : rideau_lever n'y lit jamais le `onLockLocked` d'un hyprlock précédent.
 # Dépendances : tenu, rideau_poser, stdbuf, hyprlock, maintenant.
 secours() {
     [ -n "$rideau" ] || ! tenu || rideau_poser
     : >"$JOURNAL"
     stdbuf -oL hyprlock --no-fade-in -c "$REPLI" >"$JOURNAL" 2>&1 & pid=$!
-    lance=$(maintenant) tenant=hyprlock pris=0 tue=0 reprise=
+    lance=$(maintenant) tenant=hyprlock pris=0 tue=0 reprise= verrouille=
 }
 
 # relayer — un tour de relais pendant que hyprlock garde la session.
-# Entrées : aucune ; lit $pid, $ordre et $apparue (1 si la coque présente a déjà reçu `poserSec`).
-# Sortie : coque au verrou sous l'ordre courant → hyprlock terminé par SIGTERM, attendu, puis tenant=coque et vu=1 ;
-#          rideau retiré, s'il restait ; coque qui répond sans bloc sous l'ordre courant → `poserSec`, une fois par
-#          apparition de la coque ; coque absente → apparue=0, pour que son retour reçoive de nouveau `poserSec`.
-#          Erreurs : jamais de SIGUSR1, qui rendrait toute la session ; un hyprlock encore vivant $TERME ms après le
-#          SIGTERM est tué (SIGKILL, sans risque : la coque tient déjà le verrou) et l'écart est écrit au journal ; un
-#          `poserSec` sans réponse est retenté au tour suivant. Dépendances : sonder, ipc, vivant, maintenant, logger.
+# Entrées : aucune ; lit $pid, $ordre, $verrouille (par sonder) et $relancee (1 si la coque a déjà été relancée sous
+#          ce verrou).
+# Sortie : coque au verrou sous l'ordre courant, pris après le `onLockLocked` de hyprlock → hyprlock terminé par
+#          SIGTERM, attendu, puis tenant=coque et vu=1 ; rideau retiré, s'il restait. Coque au verrou supplanté (pris
+#          avant ce `onLockLocked`) → aucun SIGTERM, qui laisserait l'écran mort de Hyprland pour de bon : la coque est
+#          relancée, une fois par verrou (relancee=1) ; revenue, elle pose son bloc et reprend le verrou par-dessus
+#          hyprlock, et le relais suivant est valable. Coque qui répond sous un autre ordre (relancée, même vue muette et
+#          jamais absente) → `poserSec` sous l'ordre courant, idempotent pour la coque, à chaque tour où elle le montre.
+# Erreurs : jamais de SIGUSR1, qui rendrait toute la session ; un hyprlock encore vivant $TERME ms après le SIGTERM est
+#           tué (SIGKILL, sans risque : la coque tient déjà le verrou) et l'écart est écrit au journal ; un `poserSec`
+#           sans réponse est retenté au tour suivant ; la relance d'une coque supplantée est écrite au journal, bornée
+#           à 2 s. Dépendances : sonder, ipc, vivant, maintenant, systemctl, timeout, logger.
 relayer() {
     case $(sonder) in
         tient) logger -t "$UNITE" "coque au verrou : hyprlock terminé"
@@ -228,8 +247,10 @@ relayer() {
                ! vivant "$pid" || { logger -t "$UNITE" "hyprlock sourd à SIGTERM en $TERME ms : tué"
                    kill -KILL "$pid" 2>/dev/null; }
                wait "$pid"; rideau_retirer; tenant=coque vu=1 reprise= ;;
-        repond) [ "$apparue" = 1 ] || { ipc poserSec "$ordre" >/dev/null 2>&1 && apparue=1; } ;;
-        absente) apparue=0 ;;
+        supplante) [ "$relancee" = 1 ] || { relancee=1
+                   logger -t "$UNITE" "coque au verrou supplanté par hyprlock : relance de la coque"
+                   timeout 2 systemctl --user restart "$COQUE"; } ;;
+        autre) ipc poserSec "$ordre" >/dev/null 2>&1 ;;
     esac
 }
 
@@ -321,11 +342,12 @@ fi
 
 n=$(cat "$ORDRE" 2>/dev/null); case $n in '' | *[!0-9]*) n=0 ;; esac
 ordre=$((n + 1)); echo "$ordre" >"$ORDRE"
-# tenant : qui garde la session (vide tant que personne, « coque » ou « hyprlock ») ; apparue : la coque présente a
-# reçu son ordre ; issue : fin (session rendue) ou echec (verrou jamais tenu, compositeur muet) ; reprise : échéance
-# (ms) laissée à la coque pour tenir de nouveau le verrou, vide tant qu'elle le tient ; rideau : PID du rideau posé.
-tenant='' apparue=0 abrege=0 sec=0 vu=0 essais=0 inconnus=0 muet='' issue='' pid='' pris=0 tue=0 lance=0 reprise=''
-rideau=''
+# tenant : qui garde la session (vide tant que personne, « coque » ou « hyprlock ») ; relancee : la coque supplantée
+# a déjà été relancée ; verrouille : heure (ms) de lecture du `onLockLocked` du hyprlock courant ; issue : fin
+# (session rendue) ou echec (verrou jamais tenu, compositeur muet) ; reprise : échéance (ms) laissée à la coque pour
+# tenir de nouveau le verrou, vide tant qu'elle le tient ; rideau : PID du rideau posé.
+tenant='' relancee=0 verrouille='' abrege=0 sec=0 vu=0 essais=0 inconnus=0 muet='' issue='' pid='' pris=0 tue=0 lance=0
+reprise='' rideau=''
 [ -z "${DUNEI_VERROU_SANS_CHUTE:-}" ] || sec=1
 trap 'rm -f "$SEC"; rideau_retirer' EXIT
 trap 'exit 1' HUP INT TERM
@@ -339,9 +361,9 @@ if tenu; then
     tient=$(ipc etat 2>/dev/null | jq -r .tient 2>/dev/null)
     if [ "$tient" != true ] && verrouilleur; then suivre 1 || exit 1; remonter; exit 0; fi
     case $tient:$(sonder) in
-        true:* | *:tient | *:couvre | *:repond)
+        true:* | *:tient | *:couvre | *:repond | *:autre)
             logger -t "$UNITE" "session tenue sans verrouilleur : garde par la coque"
-            ! ipc poserSec "$ordre" >/dev/null 2>&1 || apparue=1
+            ipc poserSec "$ordre" >/dev/null 2>&1
             tenant=coque reprise=$(($(maintenant) + REPRISE)) ;;
         *) logger -t "$UNITE" "session tenue sans verrouilleur ni coque : hyprlock"; secours ;;
     esac
@@ -351,12 +373,10 @@ fi
 # bloc sans mouvement (verrou sec) ou le fait tomber ; absente ou muette, hyprlock part aussitôt.
 if [ -n "$tenant" ]; then :
 elif [ "${1:-}" = --sec ]; then
-    secours; ! ipc poserSec "$ordre" >/dev/null 2>&1 || apparue=1
+    secours; ipc poserSec "$ordre" >/dev/null 2>&1
 else
     if [ "$sec" = 1 ] || veille; then ipc poserSec "$ordre" >/dev/null 2>&1; else ipc tomber "$ordre" >/dev/null 2>&1; fi
-    if [ $? = 0 ]; then apparue=1
-    else logger -t "$UNITE" "coque absente ou muette à l'entrée : hyprlock"; secours
-    fi
+    [ $? = 0 ] || { logger -t "$UNITE" "coque absente ou muette à l'entrée : hyprlock"; secours; }
 fi
 
 # 2. Échéance. Attente, par pas de 20 ms, de la session tenue par la coque sous l'ordre courant. Aucun `etat` n'est
@@ -368,7 +388,7 @@ while [ -z "$tenant" ]; do
     veille_demandee
     if [ $(($(maintenant) + 2 * BORNE_MS)) -lt "$f" ]; then
         e=$(sonder)
-        [ "$e" != absente ] || { logger -t "$UNITE" "coque disparue pendant la chute : hyprlock"; apparue=0; secours
+        [ "$e" != absente ] || { logger -t "$UNITE" "coque disparue pendant la chute : hyprlock"; secours
             break; }
         [ "$e" = tient ] && tenu && { tenant=coque vu=1; break; }
     elif [ "$(maintenant)" -ge "$f" ]; then
@@ -398,10 +418,7 @@ while :; do
         esac
         e=$(sonder)
         if [ "$e" = tient ]; then reprise=; else [ -n "$reprise" ] || reprise=$(($(maintenant) + REPRISE)); fi
-        case $e in
-            repond) [ "$apparue" = 1 ] || { ipc poserSec "$ordre" >/dev/null 2>&1 && apparue=1; } ;;
-            absente) apparue=0 ;;
-        esac
+        [ "$e" != autre ] || ipc poserSec "$ordre" >/dev/null 2>&1
         if [ -n "$reprise" ] && [ "$(maintenant)" -ge "$reprise" ] && tenu; then
             logger -t "$UNITE" "coque sans verrou depuis $REPRISE ms : hyprlock derrière le rideau"; secours; continue
         fi
@@ -415,7 +432,10 @@ while :; do
                 fi
             fi
             rideau_lever; relayer
-            if [ "$pris" = 1 ] && [ -z "$rideau" ]; then sleep "$BORNE"; else sleep 0.02; fi
+            # Pas de 20 ms tant que le rideau reste ou que `onLockLocked` n'est pas lu (au plus $ECHEANCE ms) : l'heure
+            # de sa lecture borne le relais, elle doit suivre de près la prise réelle.
+            if [ "$pris" = 1 ] && [ -z "$rideau" ] && { [ -n "$verrouille" ] || [ "$(maintenant)" -ge $((lance + ECHEANCE)) ]; }
+            then sleep "$BORNE"; else sleep 0.02; fi
             continue
         fi
         wait "$pid"; rideau_retirer
@@ -431,16 +451,16 @@ while :; do
         # Session encore tenue, ou compositeur muet. Seul un « oui » franc vaut verrou vu ; un inconnu ne compte ni
         # comme tenu ni comme lancement manqué, et trois de suite mènent à l'échec du verrou, jamais à 0. Une coque qui
         # répond reçoit poserSec et reprend la garde, chrono de reprise lancé : relancer hyprlock lui volerait le
-        # verrou. Un autre hyprlock vivant (second lanceur hors unité) la garde aussi : on le suit, puis on remonte le
+        # verrou. Une coque au verrou supplanté n'en fait pas partie : elle ne tient plus rien, hyprlock est relancé. Un autre hyprlock vivant (second lanceur hors unité) la garde aussi : on le suit, puis on remonte le
         # bloc sous notre ordre. Sinon hyprlock est relancé, après une pause s'il est sorti vite.
         if [ "$e" = oui ]; then vu=1 inconnus=0
         else inconnus=$((inconnus + 1)); logger -t "$UNITE" "compositeur muet, $inconnus fois de suite"
             [ "$inconnus" -lt "$LANCEMENTS" ] || { issue=echec; break; }
         fi
         if [ "$e" = oui ]; then
-            case $(sonder) in tient | couvre | repond)
+            case $(sonder) in tient | couvre | repond | autre)
                 logger -t "$UNITE" "hyprlock sorti, session tenue : rendue à la coque"
-                ! ipc poserSec "$ordre" >/dev/null 2>&1 || apparue=1
+                ipc poserSec "$ordre" >/dev/null 2>&1
                 tenant=coque reprise=$(($(maintenant) + REPRISE)); continue ;;
             esac
         fi

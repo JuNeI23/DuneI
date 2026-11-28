@@ -214,7 +214,7 @@ class ControleurTest(EssaiCoque, unittest.TestCase):
         return self.appel(fonction, *map(str, args), cible="verrou")
 
     def etat(self) -> dict:
-        """État rendu au lanceur. Sortie : {pose, ordre, tient, couvre, remonte}."""
+        """État rendu au lanceur. Sortie : {pose, ordre, tient, depuis, couvre, remonte}."""
         return json.loads(self.verrou("etat"))
 
     def mesure(self) -> dict:
@@ -269,6 +269,22 @@ class ControleurTest(EssaiCoque, unittest.TestCase):
         self.assertGreaterEqual(m["tVoulu"] - m["tPose"], self.delais["verrouRelais"] * 0.9)
         self.assertGreater(len(json.loads(self.appel("trace"))["positions"]), 2, "le bloc n'est pas tombé")
         self.assertEqual((self.etat()["tient"], self.etat()["couvre"]), (True, True))
+
+    def test_depuis(self):
+        """etat publie depuis : 0 tant que le verrou n'est pas tenu, puis l'heure (ms, horloge Unix) de la prise, et de
+        nouveau 0 une fois le verrou rendu par PAM ; le lanceur la compare à son onLockLocked."""
+        self.appel("pile", "question")
+        self.assertEqual(self.etat()["depuis"], 0)
+        avant = time.time() * 1000
+        self.verrou("tomber", 1)
+        self.tenu()
+        depuis = self.etat()["depuis"]
+        self.assertGreaterEqual(depuis, avant - 50)
+        self.assertLessEqual(depuis, time.time() * 1000 + 50)
+        self.appel("taper", "bon")
+        self.appel("entree")
+        self.jusqua(lambda: not self.etat()["tient"], "verrou rendu")
+        self.assertEqual(self.etat()["depuis"], 0)
 
     def test_relais_plafonne(self):
         """En attente des images (mode d'essai attendreImages), sans qu'aucun écran ne dessine, le verrou est demandé au
@@ -893,7 +909,8 @@ class SourceTest(unittest.TestCase):
     def test_bloc_relais(self):
         """Le bloc signale sa première image et transmet le clavier tant que le contrôleur le lui laisse."""
         bloc = self.lire("Verrou/Bloc.qml")
-        self.assertRegex(bloc, r"onFrameSwapped:[^\n]*Verrou\.dessine\(modelData\.name\)")
+        self.assertRegex(bloc, r"function onFrameSwapped\(\) \{[^\n]*Verrou\.dessine\(modelData\.name\)")
+        self.assertNotIn("onFrameSwapped:", bloc)
         self.assertIn("Verrou.saisie.touche(event.key, event.text)", bloc)
         self.assertIn("Verrou.prendClavier", bloc)
 

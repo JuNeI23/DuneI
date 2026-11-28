@@ -67,7 +67,7 @@ PanelWindow {
         // aucune ; sans pose, rien. Dépendances : Verrou.pose, Verrou.dessine.
         Connections {
             target: bloc.Window.window
-            onFrameSwapped: if (Verrou.pose) Verrou.dessine(modelData.name)
+            function onFrameSwapped() { if (Verrou.pose) Verrou.dessine(modelData.name) }
         }
 
         // Clavier : tant que le bloc le prend, chaque touche va à la saisie du verrou. Entrée : event (key, text).

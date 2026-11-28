@@ -31,16 +31,21 @@ FAKES = {
     # relancée une fois). evoluer() fait passer le temps : FAKE_PRISE ms après la pose (100 par défaut, 2,5 s pour
     # « lente », jamais pour « fige »), la coque tient le verrou (locked = true) ; FAKE_TENUE ms plus tard (500 par défaut), la session est
     # rendue comme par un succès PAM (locked = false). Une coque morte garde le verrou du compositeur et ne rend rien ;
-    # « revient » reparaît FAKE_RETOUR ms après (1000 par défaut), sous l'ordre 0, et repose son bloc si la session est
-    # tenue, comme demarrer().
+    # « revient » et « muee » reparaissent FAKE_RETOUR ms après (1000 par défaut), sous l'ordre 0, et reposent leur
+    # bloc si la session est tenue, comme demarrer(). relancer() fait de même aussitôt : c'est le redémarrage de
+    # l'unité par systemctl.
     "fake-coque": 'D="$FAKE_DIR/coque"; mkdir -p "$D"\nnow=$(date +%s%3N)\nmode=${FAKE_COQUE:-tient}\n'
                   '[ -e "$D/debut" ] || echo "$now" > "$D/debut"\n'
                   'prise=${FAKE_PRISE:-100}; [ "$mode" = lente ] && prise=2500; [ "$mode" = fige ] && prise=99999999\n'
+                  'relancer() {\n'
+                  '    rm -f "$D/mort" "$D/pris" "$D/couvre"; echo 0 > "$D/ordre"; : > "$D/revenu"\n'
+                  '    [ "$(cat "$FAKE_DIR/locked" 2>/dev/null)" = true ] && echo "$now" > "$D/couvre"\n'
+                  '}\n'
                   'evoluer() {\n'
                   '    if [ -e "$D/mort" ]; then\n'
-                  '        [ "$mode" = revient ] && [ $((now - $(cat "$D/mort"))) -ge "${FAKE_RETOUR:-1000}" ] || return 0\n'
-                  '        rm -f "$D/mort" "$D/pris" "$D/couvre"; echo 0 > "$D/ordre"; : > "$D/revenu"\n'
-                  '        [ "$(cat "$FAKE_DIR/locked" 2>/dev/null)" = true ] && echo "$now" > "$D/couvre"\n'
+                  '        case $mode in revient|muee) ;; *) return 0 ;; esac\n'
+                  '        [ $((now - $(cat "$D/mort"))) -ge "${FAKE_RETOUR:-1000}" ] || return 0\n'
+                  '        relancer\n'
                   '    fi\n'
                   '    if [ -e "$D/couvre" ] && [ ! -e "$D/pris" ] && [ $((now - $(cat "$D/couvre"))) -ge "$prise" ]; then\n'
                   '        echo "$now" > "$D/pris"; echo true > "$FAKE_DIR/locked"\n'
@@ -59,30 +64,36 @@ FAKES = {
     # qs ipc -c dunei call verrou <méthode> [ordre], selon FAKE_COQUE : « tient » (défaut), « absente » (code 255 de qs
     # sans instance), « muette » (dort 1 s), « fige » (répond à tout sauf à etat, où elle dort 1 s), « lente » (tient après 2,5 s), « tard » (255 pendant FAKE_TARD ms, 500 par
     # défaut, puis tient), « tombe » (répond à tomber, puis 255 pour de bon), « meurt » (255 dès que tient a été rendu
-    # une fois, pour de bon), « revient » (comme meurt, puis tient de nouveau). tomber et poserSec posent le bloc sous
-    # un ordre qui n'est pas périmé ; remonter est ignoré sous le verrou ; etat rend {pose, ordre, tient, couvre,
-    # remonte} et, si FAKE_VEILLE=1, annonce la veille en touchant verrou-sec. qs -p (rideau) est consigné, se dit posé
-    # sur sa sortie, consigne « rideau posé <DUNEI_RIDEAU_COULEUR> », puis vit jusqu'à un TERM, consigné
-    # « rideau TERM » ; avec FAKE_RIDEAU_SOURD=1, il consigne TERM sans en mourir.
+    # une fois, pour de bon), « revient » (comme meurt, puis tient de nouveau), « muee » (comme revient, mais muette
+    # au lieu d'absente pendant sa relance), « gele » (tient, puis dort sur etat de 200 ms à FAKE_GEL ms, 2000 par
+    # défaut, après sa prise, comme figée par SIGSTOP, sauf une fois relancée). tomber et poserSec posent le bloc sous
+    # un ordre qui n'est pas périmé ; remonter est ignoré sous le verrou ; etat rend {pose, ordre, tient, depuis,
+    # couvre, remonte} (depuis : heure de la prise, 0 sans verrou) et, si FAKE_VEILLE=1, annonce la veille en touchant
+    # verrou-sec. qs -p (rideau) est consigné, attend FAKE_RIDEAU_DELAI s (0 par défaut), se dit posé sur sa sortie,
+    # consigne « rideau posé <DUNEI_RIDEAU_COULEUR> », puis vit jusqu'à un TERM, consigné « rideau TERM » ; avec
+    # FAKE_RIDEAU_SOURD=1, il consigne TERM sans en mourir.
     "qs": LOG.format(name="qs") + '. "$FAKE_DIR/bin/fake-coque"\n'
           '[ "$1" = -p ] && { trap \'echo "rideau TERM" >> "$FAKE_LOG"; [ -n "${FAKE_RIDEAU_SOURD:-}" ] || exit 0\' TERM\n'
-          '    echo "rideau : posé"\n'
+          '    sleep "${FAKE_RIDEAU_DELAI:-0}"; echo "rideau : posé"\n'
           '    echo "rideau posé $DUNEI_RIDEAU_COULEUR" >> "$FAKE_LOG"; while :; do sleep 0.02; done; }\n'
           'case $mode in absente) exit 255 ;; muette) exec sleep 1 ;; esac\n'
           '[ "$mode" = fige ] && [ "$6" = etat ] && exec sleep 1\n'
           '[ "$mode" = tard ] && [ $((now - $(cat "$D/debut"))) -lt "${FAKE_TARD:-500}" ] && exit 255\n'
           '[ -e "$D/tombe" ] && exit 255\n'
-          'evoluer\n[ -e "$D/mort" ] && exit 255\n'
+          'evoluer\n[ -e "$D/mort" ] && { [ "$mode" = muee ] && exec sleep 1; exit 255; }\n'
+          '[ "$mode" = gele ] && [ "$6" = etat ] && [ -e "$D/pris" ] && [ ! -e "$D/revenu" ] '
+          '&& [ $((now - $(cat "$D/pris"))) -ge 200 ] && [ $((now - $(cat "$D/pris"))) -lt "${FAKE_GEL:-2000}" ] '
+          '&& exec sleep 1\n'
           'o=$(cat "$D/ordre" 2>/dev/null || echo 0)\n'
           'case $6 in\n'
           '    tomber|poserSec) [ "$7" -ge "$o" ] && { echo "$7" > "$D/ordre"; [ -e "$D/couvre" ] || echo "$now" > "$D/couvre"; }\n'
           '                     [ "$mode" = tombe ] && : > "$D/tombe" ;;\n'
           '    remonter) [ -e "$D/pris" ] || rm -f "$D/couvre" ;;\n'
-          '    etat) c=false t=false; [ -e "$D/couvre" ] && c=true; [ -e "$D/pris" ] && t=true\n'
+          '    etat) c=false t=false p=0; [ -e "$D/couvre" ] && c=true; [ -e "$D/pris" ] && { t=true p=$(cat "$D/pris"); }\n'
           '          [ "${FAKE_VEILLE:-}" = 1 ] && : > "$XDG_RUNTIME_DIR/dunei/verrou-sec"\n'
-          '          printf \'{"pose": %s, "ordre": %s, "tient": %s, "couvre": %s, "remonte": false}\\n\' '
-          '"$c" "$(cat "$D/ordre" 2>/dev/null || echo 0)" "$t" "$c"\n'
-          '          [ "$t" = true ] && case $mode in meurt|revient) [ -e "$D/revenu" ] || echo "$now" > "$D/mort" ;; esac ;;\n'
+          '          printf \'{"pose": %s, "ordre": %s, "tient": %s, "depuis": %s, "couvre": %s, "remonte": false}\\n\' '
+          '"$c" "$(cat "$D/ordre" 2>/dev/null || echo 0)" "$t" "$p" "$c"\n'
+          '          [ "$t" = true ] && case $mode in meurt|revient|muee) [ -e "$D/revenu" ] || echo "$now" > "$D/mort" ;; esac ;;\n'
           'esac\nexit 0\n',
     # stdbuf -oL <commande> : exécute sa commande, options retirées.
     "stdbuf": LOG.format(name="stdbuf") + 'while case "$1" in -*) true;; *) false;; esac; do shift; done\nexec "$@"\n',
@@ -91,7 +102,10 @@ FAKES = {
     "systemd-run": LOG.format(name="systemd-run") + '[ -e "$FAKE_DIR/unite" ] && exit 1\n'
                    '[ "${FAKE_SYSTEMD_RUN:-}" = panne ] && exit 1\n'
                    'while case "$1" in --*) true;; *) false;; esac; do shift; done\nexec "$@"\n',
-    "systemctl": LOG.format(name="systemctl") + '[ "$2" != is-active ] || [ -e "$FAKE_DIR/unite" ]\n',
+    # systemctl : is-active vrai si $FAKE_DIR/unite existe ; restart dunei-coque.service relance la coque simulée.
+    "systemctl": LOG.format(name="systemctl") + '[ "$2 $3" = "restart dunei-coque.service" ] && '
+                 '{ . "$FAKE_DIR/bin/fake-coque"; relancer; exit 0; }\n'
+                 '[ "$2" != is-active ] || [ -e "$FAKE_DIR/unite" ]\n',
     "notify-send": LOG.format(name="notify-send"),
     # pgrep : FAKE_PGREP_REND=1 simule l'autre hyprlock qui rend la session juste après avoir été trouvé ;
     # FAKE_PGREP_MUET=1, le compositeur qui devient muet pour de bon juste après ; FAKE_PGREP_LENT=1, pgrep qui dort 1 s
@@ -594,6 +608,45 @@ class DuneiVerrouTest(unittest.TestCase):
         self.assertSousSuite(["rideau posé", "hyprlock", "poserSec", "kill -TERM", "rideau TERM", "remonter"],
                              self.etapes())
 
+    def test_rideau_sans_journal_perime(self):
+        # Deux reprises de suite par hyprlock derrière le rideau, sur un rideau lent à se dire posé : le second rideau
+        # ne doit pas être cru posé sur la ligne restée du premier, et le dernier hyprlock ne part qu'après lui. Un jq
+        # ralenti de 0,1 s pour la seule lecture de la couleur (jq -rn) retarde le lancement du rideau, comme au banc :
+        # sans journal vidé par le lanceur, l'ancienne ligne y serait toujours lue.
+        jq = self.t / "bin" / "jq"
+        jq.write_text(f'#!/bin/sh\n[ "$1" = -rn ] && sleep 0.1\nexec {shutil.which("jq")} "$@"\n', encoding="utf-8")
+        jq.chmod(0o755)
+        res = self.run_script(FAKE_COQUE="absente", FAKE_HYPRLOCK="garde garde tient", FAKE_RIDEAU_DELAI="0.2")
+        self.assertEqual(res.returncode, 0, res.stderr)
+        self.assertEqual(len(self.lancements()), 3)
+        self.assertSousSuite(["hyprlock", "rideau", "rideau posé", "hyprlock", "rideau TERM", "rideau", "rideau posé",
+                              "hyprlock", "rideau TERM", "remonter"], self.etapes())
+
+    def test_relais_vers_verrou_posterieur(self):
+        # --sec : hyprlock prend le verrou (onLockLocked), la coque le prend après lui : son depuis est postérieur à la
+        # lecture de onLockLocked, le relais est valable, hyprlock reçoit TERM et la coque n'est pas relancée.
+        res = self.run_script("--sec", FAKE_COQUE="tard", FAKE_TARD="400", FAKE_HYPRLOCK_TENUE="5000")
+        self.assertEqual(res.returncode, 0, res.stderr)
+        self.assertSousSuite(["hyprlock", "poserSec", "kill -TERM", "remonter"], self.etapes())
+        self.assertNotIn("systemctl --user restart dunei-coque.service", self.calls())
+
+    def test_verrou_supplante_coque_relancee(self):
+        # La coque tient, puis se fige (SIGSTOP) plus de verrouReprise : hyprlock reprend le verrou derrière le rideau.
+        # Réveillée, elle répond tient, mais son depuis précède onLockLocked : son verrou est supplanté, un SIGTERM à
+        # hyprlock laisserait l'écran mort. La coque est relancée une fois ; revenue, elle reçoit poserSec, reprend le
+        # verrou par-dessus hyprlock, et seulement alors hyprlock reçoit TERM.
+        (self.t / "config/dunei/motion.json").write_text(json.dumps({"delays": {**DELAIS, "verrouReprise": 1000}}),
+                                                         encoding="utf-8")
+        res = self.run_script(FAKE_COQUE="gele", FAKE_GEL="2000", FAKE_TENUE="3000", FAKE_HYPRLOCK_TENUE="20000")
+        self.assertEqual(res.returncode, 0, res.stderr)
+        etapes, appels = self.etapes(), self.calls()
+        relance = "systemctl --user restart dunei-coque.service"
+        self.assertEqual(appels.count(relance), 1)
+        self.assertEqual(len(self.lancements()), 1)
+        self.assertLess(appels.index(relance), etapes.index("kill -TERM"))
+        self.assertSousSuite(["tomber", "hyprlock", "systemctl", "poserSec", "kill -TERM", "remonter"], etapes)
+        self.assertTrue(any(c.startswith("logger") and "supplanté" in c for c in appels))
+
     def test_rideau_retire_a_la_sortie(self):
         # Le lanceur tué (SIGTERM) pendant que le rideau est posé le retire en sortant.
         (self.t / "locked").write_text("true\n")
@@ -620,6 +673,16 @@ class DuneiVerrouTest(unittest.TestCase):
         # La coque meurt verrou tenu et revient 1 s plus tard, sous l'ordre 0 : poserSec lui rend l'ordre courant,
         # elle tient de nouveau ; ni rideau ni hyprlock.
         res = self.run_script(FAKE_COQUE="revient", FAKE_TENUE="2000")
+        self.assertEqual(res.returncode, 0, res.stderr)
+        etapes = self.etapes()
+        self.assertEqual(self.lancements(), [])
+        self.assertNotIn("rideau", etapes)
+        self.assertSousSuite(["tomber", "etat", "poserSec", "etat", "remonter"], etapes)
+
+    def test_coque_muette_puis_revenue(self):
+        # La coque, verrou tenu, reste muette (code 124) pendant sa relance, sans jamais être vue absente, et revient
+        # sous l'ordre 0 : elle reçoit poserSec sous l'ordre courant, tient de nouveau ; ni rideau ni hyprlock.
+        res = self.run_script(FAKE_COQUE="muee", FAKE_TENUE="2000")
         self.assertEqual(res.returncode, 0, res.stderr)
         etapes = self.etapes()
         self.assertEqual(self.lancements(), [])
