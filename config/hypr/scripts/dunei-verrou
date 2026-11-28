@@ -10,12 +10,13 @@
 #        le rideau est retiré à la ligne `onLockLocked` de hyprlock : sans lui, Hyprland montrerait la session 20 à
 #        70 ms entre son écran mort et le nouveau verrou. Sous hyprlock, seule cette ligne prouve la prise : sans elle
 #        $ECHEANCE ms après son lancement, hyprlock ne tient rien, il est tué et relancé derrière le même rideau, sauf
-#        si le compositeur est muet. Un hyprlock qui sort en laissant le verrou le rend à la coque si elle répond. Session trouvée tenue à l'appel : gardée par la coque si elle tient ou vit,
-#        suivie si un hyprlock la tient, sinon reprise par hyprlock derrière le rideau.
+#        si le compositeur est muet ou si la ligne arrive juste avant le kill (relue au dernier moment). Un hyprlock
+#        qui sort en laissant le verrou le rend à la coque si elle répond. Session trouvée tenue à l'appel : gardée par
+#        la coque si elle tient ou vit, suivie si un hyprlock la tient, sinon reprise par hyprlock derrière le rideau.
 #        Quand la coque tient le verrou pendant que hyprlock le garde (secours, ouverture de session), hyprlock est
 #        terminé par SIGTERM, jamais par SIGUSR1, qui rendrait toute la session, verrou de la coque compris ; seulement
-#        si la coque a pris le verrou après le `onLockLocked` de hyprlock (champ `depuis` de son `etat`) : un verrou pris
-#        avant a été supplanté par hyprlock, et le terminer laisserait l'écran mort de Hyprland ; la coque est alors
+#        si la coque a pris le verrou après le `onLockLocked` de hyprlock (champ `depuis` de son `etat`) : un verrou
+#        pris avant a été supplanté par hyprlock, et le terminer laisserait l'écran mort de Hyprland ; la coque est alors
 #        relancée, une fois par verrou, pour reprendre le verrou par-dessus hyprlock. Une seule
 #        vérité, `hyprctl -j locked` : ni un nom de processus, ni un code de sortie, ni une durée n'en tiennent lieu,
 #        et une réponse manquante ne vaut jamais « rendu ». Toute commande extérieure est bornée dans le temps. Verrou
@@ -38,8 +39,9 @@
 # Erreurs : chaque départ de hyprlock en secours, chaque lancement sans verrou tenu, chaque relance, chaque relais vers
 #           la coque, chaque reprise par hyprlock après verrouReprise, une échéance dépassée et un échec de
 #           systemd-run sont écrits au journal (logger -t dunei-verrou, borné, après l'action de sûreté décrite) ;
-#           après trois lancements sans verrou, la session reste ouverte, le bloc remonte et une notification
-#           critique « Verrouillage impossible » s'affiche, sauf avec `--sec` : dunei-verrou-initial ferme alors la session et le bloc reste posé.
+#           après trois lancements sans verrou, le bloc remonte et une notification critique « Verrouillage
+#           impossible » dit l'état de la session (ouverte, gardée par l'écran de secours d'Hyprland, ou inconnu),
+#           sauf avec `--sec` : dunei-verrou-initial ferme alors la session et le bloc reste posé.
 # Dépendances : sh, hyprlock, stdbuf (coreutils : sortie de hyprlock ligne par ligne, pour que `onLockLocked` arrive à
 #               temps), hyprctl, jq, qs (coque, cible IPC `verrou` : tomber, poserSec, remonter, abreger, etat ; rideau,
 #               ~/.config/quickshell/dunei/Rideau/shell.qml), busctl, systemd-run, systemctl, pgrep (borné), id,
@@ -52,12 +54,12 @@ JETONS="${XDG_CONFIG_HOME:-$HOME/.config}/dunei"
 RIDEAU="${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/dunei/Rideau/shell.qml"
 MOTION="$JETONS/motion.json" VOILE="$RUN/verrou-rideau.log"
 UNITE=dunei-verrou COQUE=dunei-coque.service
-# Bornes, en ms : réponse d'un appel extérieur ; démarrage du lanceur placé par systemd-run ; verrou pris par hyprlock ; compositeur muet avant de le croire tenu ;
-# coque muette à la remontée ; sortie « rapide » de hyprlock ; pause avant de relancer après une sortie rapide (s) ;
-# compositeur muet de suite pendant le suivi d'un verrou, avant d'y renoncer ; sortie de hyprlock après SIGTERM ;
-# rideau posé (première image de chaque écran).
-BORNE=0.2 BORNE_MS=200 PLACEMENT=300 ECHEANCE=2500 INCONNU_MAX=2000 MUETTE_REMONTEE=2000 RAPIDE=1000 PAUSE=0.5 SUIVI_MUET=5000
-TERME=1000 RIDEAU_MAX=500
+# Bornes, en ms : réponse d'un appel extérieur ; démarrage du lanceur placé par systemd-run ; verrou pris par
+# hyprlock ; compositeur muet avant de le croire tenu ; coque muette à la remontée ; sortie « rapide » de hyprlock ;
+# pause avant de relancer après une sortie rapide (s) ; compositeur muet de suite pendant le suivi d'un verrou, avant
+# d'y renoncer ; sortie de hyprlock après SIGTERM ; rideau posé (première image de chaque écran).
+BORNE=0.2 BORNE_MS=200 PLACEMENT=300 ECHEANCE=2500 INCONNU_MAX=2000 MUETTE_REMONTEE=2000 RAPIDE=1000 PAUSE=0.5
+SUIVI_MUET=5000 TERME=1000 RIDEAU_MAX=500
 LANCEMENTS=3
 
 # duree — délai d'animation en millisecondes, lu dans les jetons de mouvement.
@@ -367,7 +369,9 @@ ATTENTE=$(duree verrouAttente 1500) REPRISE=$(duree verrouReprise 3000)
 # hors unité, à côté d'elle, comme après un échec de systemd-run. systemd-run en échec pour une autre cause, ou qui
 # n'a pas démarré le lanceur placé (trace absente) en $PLACEMENT ms : le verrou passe avant l'unité, le lanceur continue
 # hors d'elle. systemd-run exécute le lanceur placé lui-même, sous son propre PID : seule son attente avant la trace est
-# bornée (rien d'autre n'a démarré, il est terminé) ; une fois la trace écrite, il est attendu jusqu'à sa fin.
+# bornée (rien d'autre n'a démarré, il est terminé) ; une fois la trace écrite, il est attendu jusqu'à sa fin. Un
+# systemd-run terminé ici mène toujours au verrou hors unité, même si la trace paraît entre le test et le signal : le
+# lanceur placé meurt alors avant tout verrou, et la demande ne doit pas se perdre avec lui.
 if [ -z "${DUNEI_VERROU_PORTEE:-}" ]; then
     trace="$RUN/verrou-place-$$" relu=0 sans_chute=
     trap 'rm -f "$trace"' EXIT
@@ -387,8 +391,9 @@ if [ -z "${DUNEI_VERROU_PORTEE:-}" ]; then
             systemd-run --user --scope --unit="$UNITE" --collect --quiet "$0" "$@" & p=$!
         g=$(($(maintenant) + PLACEMENT))
         while [ ! -e "$trace" ] && vivant "$p" && [ "$(maintenant)" -lt "$g" ]; do sleep 0.02; done
-        [ -e "$trace" ] || ! vivant "$p" || kill "$p" 2>/dev/null
+        abandon=0; [ -e "$trace" ] || ! vivant "$p" || { kill "$p" 2>/dev/null; abandon=1; }
         wait "$p"; c=$?
+        [ "$abandon" = 0 ] || { rm -f "$trace"; break; }
         [ ! -e "$trace" ] || { rm -f "$trace"; exit "$c"; }
         active && continue
         break
@@ -489,7 +494,10 @@ while :; do
             rideau_lever; relayer
             [ "$tenant" = hyprlock ] || continue
             [ -z "$verrouille" ] || [ "$pris" = 1 ] || pris=1 vu=1
-            if [ "$pris$tue" = 00 ] && [ "$(maintenant)" -ge $((lance + ECHEANCE)) ] && [ "$(verrou)" != inconnu ]; then
+            # La ligne est relue juste avant le kill : `relayer` et `verrou` peuvent avoir pris 0,6 s depuis la
+            # lecture du début du tour, et un hyprlock octroyé entre-temps serait le seul verrouilleur vivant.
+            if [ "$pris$tue" = 00 ] && [ "$(maintenant)" -ge $((lance + ECHEANCE)) ] && [ "$(verrou)" != inconnu ] \
+                && { rideau_lever; [ -z "$verrouille" ]; }; then
                 kill -KILL "$pid" 2>/dev/null; tue=1; journal "verrou non pris en $ECHEANCE ms : hyprlock tué"
             fi
             # Pas de 20 ms tant que `onLockLocked` n'est pas lu : l'heure de sa lecture borne le relais et le retrait
@@ -534,10 +542,16 @@ while :; do
 done
 
 # 4. Fin : la session rendue, le bloc remonte (sans effet si la coque remonte déjà). Échec du verrou : à l'ouverture de
-# session, dunei-verrou-initial ferme la session ; sinon elle reste ouverte. Le rideau ne survit pas au verrou.
+# session, dunei-verrou-initial ferme la session ; sinon la notification dit l'état de la session : ouverte, ou
+# gardée par l'écran de secours d'Hyprland après une reprise manquée. Le rideau ne survit pas au verrou.
 rideau_retirer
 [ "$issue" = fin ] && { remonter; exit 0; }
 [ "${1:-}" = --sec ] && exit 1
-timeout 2 notify-send -u critical "Verrouillage impossible" "hyprlock n'a pas tenu le verrou ; la session reste ouverte."
+case $(verrou) in
+    non) etat="la session reste ouverte" ;;
+    oui) etat="la session reste tenue par l'écran de secours d'Hyprland" ;;
+    *) etat="l'état de la session est inconnu" ;;
+esac
+timeout 2 notify-send -u critical "Verrouillage impossible" "hyprlock n'a pas tenu le verrou ; $etat."
 remonter
 exit 1

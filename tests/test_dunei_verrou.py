@@ -55,10 +55,14 @@ FAKES = {
                   '    fi\n'
                   '}\n',
     # hyprctl -j locked : rend l'état du fichier, faux par défaut, après avoir fait évoluer la coque ; muet tant que le
-    # compteur $FAKE_DIR/muet est positif.
+    # compteur $FAKE_DIR/muet est positif. Avec FAKE_LIGNE_TARDIVE=1, son premier appel après un lancement de hyprlock
+    # touche $FAKE_DIR/ligne-tardive (le hyprlock « tardif » prend alors le verrou) et attend 0,1 s avant de répondre.
     "hyprctl": 'if [ -e "$FAKE_DIR/muet" ]; then\n'
                '    n=$(cat "$FAKE_DIR/muet"); [ "$n" -gt 0 ] && { echo $((n - 1)) > "$FAKE_DIR/muet"; exec sleep 1; }\n'
                '    rm -f "$FAKE_DIR/muet"\nfi\n'
+               '[ -n "${FAKE_LIGNE_TARDIVE:-}" ] && [ -e "$FAKE_DIR/lancements" ] '
+               '&& [ ! -e "$FAKE_DIR/ligne-tardive" ] '
+               '&& { : > "$FAKE_DIR/ligne-tardive"; sleep 0.1; }\n'
                '. "$FAKE_DIR/bin/fake-coque"; evoluer\n'
                'printf \'{"locked": %s}\\n\' "$(cat "$FAKE_DIR/locked" 2>/dev/null || echo false)"\n',
     # qs ipc -c dunei call verrou <méthode> [ordre], selon FAKE_COQUE : « tient » (défaut), « absente » (code 255 de qs
@@ -131,12 +135,13 @@ FAKES = {
     # hyprlock : le n-ième lancement suit le n-ième mot de $FAKE_HYPRLOCK (le dernier ensuite). « tient » : verrou tenu
     # FAKE_HYPRLOCK_TENUE ms (800 par défaut) puis rendu ; « garde » : sort au bout de 15 pas de 20 ms en laissant le
     # verrou ; « vite » : sort aussitôt en laissant le verrou ; « fige » : comme « garde », mais rend le compositeur
-    # muet FAKE_FIGE_MUET appels (5 par défaut) ; « dort » : vit 10 s sans prendre le verrou ; « jamais » : sort sans
-    # verrou ; « muet » : sort sans verrou en rendant le compositeur muet 12 appels (plus de 2 s). À la prise du verrou,
-    # il écrit onLockLocked sur sa sortie, FAKE_HYPRLOCK_LIGNE s plus tard (0 par défaut), et consigne « ligne
-    # onLockLocked » ; il consigne aussi son lancement, son heure, et chaque TERM ou USR1 reçu ; avec
-    # FAKE_HYPRLOCK_MUET=n, il rend le compositeur muet n appels juste avant de prendre le verrou (USR1 rendrait la
-    # session). Avec FAKE_HYPRLOCK_SOURD=1, il consigne TERM sans en mourir.
+    # muet FAKE_FIGE_MUET appels (5 par défaut) ; « dort » : vit 10 s sans prendre le verrou ; « tardif » : attend
+    # $FAKE_DIR/ligne-tardive (10 s au plus), puis comme « tient » ; « jamais » : sort sans verrou ; « muet » : sort
+    # sans verrou en rendant le compositeur muet 12 appels (plus de 2 s). À la prise du verrou, il écrit onLockLocked
+    # sur sa sortie, FAKE_HYPRLOCK_LIGNE s plus tard (0 par défaut), et consigne « ligne onLockLocked » ; il consigne
+    # aussi son lancement, son heure, et chaque TERM ou USR1 reçu ; avec FAKE_HYPRLOCK_MUET=n, il rend le compositeur
+    # muet n appels juste avant de prendre le verrou (USR1 rendrait la session). Avec FAKE_HYPRLOCK_SOURD=1, il consigne
+    # TERM sans en mourir.
     "hyprlock": 'echo "hyprlock $*" >> "$FAKE_LOG"\n'
                 'date +%s%3N >> "$FAKE_DIR/lancements"\n'
                 'n=$(wc -l < "$FAKE_DIR/lancements"); set -- ${FAKE_HYPRLOCK:-tient}\n'
@@ -150,6 +155,8 @@ FAKES = {
                 '    jamais) sleep 0.05; exit 1 ;;\n'
                 '    muet) sleep 0.05; echo 12 > "$FAKE_DIR/muet"; exit 1 ;;\n'
                 '    dort) i=500 ;;\n'
+                '    tardif) j=500; while [ ! -e "$FAKE_DIR/ligne-tardive" ] && [ "$j" -gt 0 ]; do sleep 0.02\n'
+                '            j=$((j - 1)); done; prendre; i=$((${FAKE_HYPRLOCK_TENUE:-800} / 20)) ;;\n'
                 '    vite) prendre; exit 1 ;;\n'
                 '    garde|fige) prendre; i=15 ;;\n'
                 '    *) prendre; i=$((${FAKE_HYPRLOCK_TENUE:-800} / 20)) ;;\n'
@@ -447,6 +454,7 @@ class DuneiVerrouTest(unittest.TestCase):
         self.assertEqual(len(notes), 1)
         self.assertIn("-u critical", notes[0])
         self.assertIn("Verrouillage impossible", notes[0])
+        self.assertIn("la session reste ouverte", notes[0])
         self.assertSousSuite(["notify-send", "remonter"], self.etapes())
 
     def test_trois_echecs_a_l_ouverture(self):
@@ -553,6 +561,27 @@ class DuneiVerrouTest(unittest.TestCase):
         premier, second = [i for i, e in enumerate(etapes) if e == "hyprlock"]
         self.assertNotIn("rideau TERM", etapes[premier:second])
         self.assertTrue(any("non pris" in c for c in self.calls()))
+
+    def test_ligne_relue_avant_le_kill(self):
+        # hyprlock prend le verrou et écrit onLockLocked pendant la lecture du compositeur qui précède le kill de
+        # l'échéance : la ligne, relue juste avant, le sauve ; il n'est jamais tué et rend la session, code 0.
+        res = self.run_script(FAKE_COQUE="absente", FAKE_HYPRLOCK="tardif", FAKE_LIGNE_TARDIVE="1")
+        self.assertEqual(res.returncode, 0, res.stderr)
+        self.assertEqual(len(self.lancements()), 1)
+        self.assertIn("ligne onLockLocked", self.calls())
+        self.assertFalse(any("non pris" in c for c in self.calls()))
+
+    def test_reprise_manquee_notifie_l_etat(self):
+        # Reprise sans coque par trois hyprlock qui ne prennent jamais le verrou : échec, et la notification dit que la
+        # session reste tenue par l'écran de secours d'Hyprland, non qu'elle est ouverte.
+        (self.t / "locked").write_text("true\n")
+        res = self.run_script(FAKE_COQUE="absente", FAKE_HYPRLOCK="dort")
+        self.assertEqual(res.returncode, 1)
+        self.assertEqual(len(self.lancements()), 3)
+        notes = [c for c in self.calls() if c.startswith("notify-send")]
+        self.assertEqual(len(notes), 1)
+        self.assertIn("écran de secours d'Hyprland", notes[0])
+        self.assertNotIn("ouverte", notes[0])
 
     def test_autre_hyprlock_suivi(self):
         # Un autre hyprlock vivant garde la session à la sortie du nôtre : on le suit au lieu de relancer.

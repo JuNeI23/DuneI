@@ -297,7 +297,9 @@ verrou derrière lui, et le lanceur termine `hyprlock` (relais ci-dessus). Le re
 et l'horloge, pour que le passage à la coque reste discret.
 
 **Échec du verrou.** Inchangé (D231) : à l'ouverture de session, `uwsm stop` ; sinon la session reste ouverte, le bloc
-remonte et une notification critique « Verrouillage impossible » s'affiche.
+remonte et une notification critique « Verrouillage impossible » s'affiche. Après une reprise manquée (trois
+`hyprlock` tués sans `onLockLocked`), la session reste au contraire tenue par l'écran de secours d'Hyprland, et la
+notification le dit.
 
 ### La coque : `coque/Verrou/`
 
@@ -419,4 +421,4 @@ moment voulu.
 | 2.2 | 2026-11-27 | Relevés de la tâche 1 : le rechargement à chaud rend le verrou, `watchFiles` coupé pendant le verrou ; image du bureau partagée par le cache dès la première image de la surface ; `frameSwapped` à chaque image rendue |
 | 2.3 | 2026-11-28 | Relevés de la tâche 10 (banc complet) : aucune image de session sur vingt cycles ni sous le verrou quand la coque tombe ; fuite en chute et au relais ; défauts du rideau périmé, du verrou supplanté et de la relance rapide |
 | 2.4 | 2026-11-28 | Tâche 10b : rideau sans journal périmé, relais conditionné à `onLockLocked` lu, à `depuis` (heure de la demande) et à une coque vue sans verrou, coque supplantée relancée, `poserSec` à toute coque sous un autre ordre ; relevés rejoués au banc ; fuite en chute et au relais notée comme limite connue |
-| 2.5 | 2026-11-28 | Relecture finale : prise sous `hyprlock` prouvée par `onLockLocked` seul, `hyprlock` sans ligne tué et relancé derrière le même rideau, jamais sur un compositeur muet ; rideau sauf sur une session franchement rendue ; `systemctl`, `systemd-run` et `logger` bornés ; mineur de la tâche 10b noté comme limite connue |
+| 2.5 | 2026-11-28 | Relecture finale (et sa re-relecture : ligne relue avant le kill, notification fidèle à l'état de la session) : prise sous `hyprlock` prouvée par `onLockLocked` seul, `hyprlock` sans ligne tué et relancé derrière le même rideau, jamais sur un compositeur muet ; rideau sauf sur une session franchement rendue ; `systemctl`, `systemd-run` et `logger` bornés ; mineur de la tâche 10b noté comme limite connue |

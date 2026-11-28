@@ -81,8 +81,8 @@ recettes du banc B : `.superpowers/banc-b/` (`rapport.md`, `lance.sh`, `bac.sh`,
   surface montre déjà l'image (écart de pixels bloc → surface sur un bandeau, comme au relevé du 25 novembre).
 - [ ] Relever si `Window.window.frameSwapped`, lu depuis un `Item` d'un `PanelWindow` et d'un `WlSessionLockSurface`,
   arrive à chaque image.
-- [ ] Écrire les résultats au rapport et dans la fiche (2.2, aujourd'hui 2.5), puis committer la fiche. Si le rechargement détruit le
-  verrou, la tâche 6 pose `Quickshell.watchFiles: !Verrou.actif` ; s'il le garde, rien.
+- [ ] Écrire les résultats au rapport et dans la fiche (2.2, aujourd'hui 2.5), puis committer la fiche. Si le
+  rechargement détruit le verrou, la tâche 6 pose `Quickshell.watchFiles: !Verrou.actif` ; s'il le garde, rien.
 
 ### Tâche 2 : jetons, mouvement et logique pure
 
